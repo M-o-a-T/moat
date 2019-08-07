@@ -29,7 +29,7 @@ async def list_(obj, path):
     if len(path) > 2:
         raise click.UsageError("Only one or two path elements allowed")
     if len(path) == 2:
-        if path[1] == '*':
+        if path[1] == '-':
             path = path[:-1]
         path = [int(x,16) for x in path]
         res = await obj.client.get(*obj.cfg.owfs.prefix, *path, nchain=obj.meta)
@@ -43,7 +43,7 @@ async def list_(obj, path):
             if len(path) == 0:
                 if len(r.path) == 1:
                     f = "%02x" % (r.path[-1],)
-                    c = '*'
+                    c = '_'
                 else:
                     f = "%02x" % (r.path[-2],)
                     c = "%012x" % (r.path[-1],)
@@ -53,7 +53,7 @@ async def list_(obj, path):
                 rr[c] = r
             else:
                 if len(r.path) == 0:
-                    c = '*'
+                    c = '_'
                 else:
                     c = "%012x" % (r.path[-1],)
                 if not obj.meta:
@@ -155,4 +155,4 @@ async def monitor(obj):
     """
     from distkv_ext.owfs.task import task
     await task(obj.client, obj.cfg)
-    
+

@@ -8,24 +8,13 @@ Homepage: https://github.com/smurfix/distowfs
 
 Package: python3-distowfs
 Architecture: all
-Depends: ${misc:Depends}, ${python3:Depends}
+Depends: ${misc:Depends}, ${python3:Depends},
+  distkv,
+  python3-asyncowfs,
 Description: A distributed no-master key-value store
- ========
- DistOWFS
- ========
- .
  DistOWFS is a link between 1wire and DistKV.
  .
- It will
- .
- * add all discovered 1wire devices
- .
- * poll these devices as specified
- .
- * write values that it reads from 1wire to some DistKV entry
- .
- * monitor a DistKV entry and write any updates to 1wire
- .
- * work with DistKV's runner system, either centrally or distributed
- .
-
+ It will add all discovered 1wire devices, poll these devices as specified,
+ write values that it reads from 1wire to some DistKV entry, monitor a DistKV
+ entry and write any updates to 1wire, and work with DistKV's runner system,
+ either centrally or distributed.

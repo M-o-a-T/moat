@@ -1,4 +1,10 @@
-distowfs (0.2.0-1) smurf; urgency=low
+distowfs (0.2.0-2) unstable; urgency=medium
+
+  * Deps
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 10 Aug 2019 19:16:23 +0200
+
+distowfs (0.2.0-1) unstable; urgency=low
 
   * source package automatically created by stdeb 0.8.5
 

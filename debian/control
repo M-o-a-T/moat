@@ -6,11 +6,13 @@ Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 9)
 Standards-Version: 3.9.6
 Homepage: https://github.com/smurfix/distowfs
 
-Package: python3-distowfs
+Package: distkw-owfs
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   distkv,
   python3-asyncowfs,
+Replaces: python3-distowfs
+Conflicts: python3-distowfs
 Description: A distributed no-master key-value store
  DistOWFS is a link between 1wire and DistKV.
  .

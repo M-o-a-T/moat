@@ -1,0 +1,5 @@
+distowfs (0.2.0-1) smurf; urgency=low
+
+  * source package automatically created by stdeb 0.8.5
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 10 Aug 2019 19:10:20 +0200

@@ -1,3 +1,9 @@
+distowfs (0.2.1-1) unstable; urgency=medium
+
+  * Merge 0.2.1
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 27 Aug 2019 13:41:06 +0200
+
 distowfs (0.2.0-3) unstable; urgency=medium
 
   * Rename binary package

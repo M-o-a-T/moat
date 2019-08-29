@@ -51,56 +51,51 @@ class OWFSnode(ClientEntry):
         """
         Synpollers, watchers and attributes.
         """
-        if self.dev is None or self.dev.bus is None:
+        dev = self.dev
+        if dev is None or dev.bus is None:
             return
 
         val = combine_dict(self.value_or({}, Mapping), self.parent.value_or({}, Mapping))
+        poll = val.get('attr',{})
 
-        dev = self.dev
-        if dev is None:
-            self.poll = {}  # the bus forgets them
-            # self.monitors is cleared by the tasks
-        else:
-            poll = val.get('attr',{})
+        # set up polling
+        for k,v in self.poll.items():
+            kp = poll.get(k,{})
+            if not kp.get('dest',()) or kp.get('interval',-1) <= 0:
+                logger.error("POLL OFF 1 %s",k)
+                await dev.set_polling_interval(k,0)
+                await self.root.err.record_working("owfs", *self.subpath, k, "poll", comment="deleted")
 
-            # set up polling
-            for k,v in self.poll.items():
-                kp = poll.get(k,{})
-                if not kp.get('dest',()) or kp.get('interval',-1) <= 0:
-                    logger.error("POLL OFF 1 %s",k)
-                    await dev.set_polling_interval(k,0)
-                    await self.root.err.record_working("owfs", *self.subpath, k, "poll", comment="deleted")
+        for k,v in list(self.monitors.items()):
+            kp = poll.get(k,{})
+            if kp.get('src',()) != self.poll.get(k,{}).get('src',()):
+                logger.error("POLL OFF 2 %s",k)
+                await dev.set_polling_interval(k,0)
+                await v.cancel()
+                await self.root.err.record_working("owfs", *self.subpath, k, "write", comment="deleted")
 
-            for k,v in list(self.monitors.items()):
-                kp = poll.get(k,{})
-                if kp.get('src',()) != self.poll.get(k,{}).get('src',()):
-                    logger.error("POLL OFF 2 %s",k)
-                    await dev.set_polling_interval(k,0)
-                    await v.cancel()
-                    await self.root.err.record_working("owfs", *self.subpath, k, "write", comment="deleted")
+        for k,v in poll.items():
+            kp = self.poll.get(k,{})
+            try:
+                if v.get('dest',()):
+                    i = v.get('interval',-1)
+                    if i > 0:
+                        if not kp.get('dest',()) or kp.get('interval',-1) != i:
+                            logger.error("POLL ON %s %s",k,v)
+                            await dev.set_polling_interval(k,v['interval'])
+                        await self.root.err.record_working("owfs", *self.subpath, k, "poll", comment="replaced", data=v)
+            except Exception as exc:
+                await self.root.err.record_error("owfs", *self.subpath, k, "poll", data=v, exc=exc)
 
-            for k,v in poll.items():
-                kp = self.poll.get(k,{})
-                try:
-                    if v.get('dest',()):
-                        i = v.get('interval',-1)
-                        if i > 0:
-                            if not kp.get('dest',()) or kp.get('interval',-1) != i:
-                                logger.error("POLL ON %s %s",k,v)
-                                await dev.set_polling_interval(k,v['interval'])
-                            await self.root.err.record_working("owfs", *self.subpath, k, "poll", comment="replaced", data=v)
-                except Exception as exc:
-                    await self.root.err.record_error("owfs", *self.subpath, k, "poll", data=v, exc=exc)
-
-                vp = v.get('src',())
-                if vp:
-                    if kp.get('src',()) != vp or k not in self.monitors:
-                        evt = anyio.create_event()
-                        await self.client.tg.spawn(self._watch, k, v['src'], evt)
-                        await evt.wait()
+            vp = v.get('src',())
+            if vp:
+                if kp.get('src',()) != vp or k not in self.monitors:
+                    evt = anyio.create_event()
+                    await self.client.tg.spawn(self._watch, k, v['src'], evt)
+                    await evt.wait()
 
 
-            self.poll = poll
+        self.poll = poll
 
     async def _watch(self, k, src, evt):
         """

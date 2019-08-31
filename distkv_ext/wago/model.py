@@ -2,6 +2,7 @@
 DistKV client data model for Wago
 """
 import anyio
+from anyio.exceptions import ClosedResourceError
 
 from distkv.obj import ClientEntry, ClientRoot
 from distkv.util import combine_dict
@@ -15,13 +16,31 @@ class _WAGObase(ClientEntry):
     """
     Forward ``_update_server`` calls to child entries.
     """
+    _server = None
+
+    @property
+    def server(self):
+        if self._server is None:
+            self._server = self.parent.server
+        return self._server
+
     async def set_value(self, val):
         await super().set_value(val)
-        await self._update_server()
+        if self.server is not None:
+            await self._update_server()
+
+    async def update_server(self):
+        await self.parent.update_server()
 
     async def _update_server(self):
+        if not self.val_d(True,'present'):
+            return
+        await self.setup()
         for k in self:
             await k._update_server()
+
+    async def setup(self):
+        pass
 
 class _WAGOnode(_WAGObase):
     """
@@ -38,15 +57,11 @@ class _WAGOnode(_WAGObase):
         return self._path[-1]
 
     @property
-    def server(self):
-        return self._path[-4].server
-
-    @property
     def tg(self):
         return self.server.task_group
 
-    async def _update_server(self):
-        await super()._update_server()
+    async def setup(self):
+        await super().setup()
         if self.server is None:
             self._poll = None
             return
@@ -67,39 +82,47 @@ class WAGOinput(_WAGOnode):
     async def _poll_task(self, evt, dest):
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
+            rest = self.find_cfg('rest', default=False)
             async with self.server.monitor_input(self.card, self.port) as mon:
                 await evt.set()
                 async for val in mon:
-                    await self.client.set(*dest, value=val)
+                    await self.client.set(*dest, value=(val != rest))
 
     async def _count_task(self, evt, dest, intv, direc):
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
-            delta = await self.client.get(*dest).value_or(0, int)
+            delta = await self.client.get(*dest)
+            delta = delta.get('value', 0)
+            if not isinstance(delta, (int,float)):
+                delta = 0
 
             async with self.server.count_input(self.card, self.port, direction=direc, interval=intv) as mon:
                 await evt.set()
                 async for val in mon:
                     await self.client.set(*dest, value=val+delta)
 
-    async def _update_server(self):
-        await super()._update_server()
+    async def setup(self):
+        await super().setup()
 
+        if self.server is None:
+            return
         try:
             mode = self.find_cfg('mode')
             dest = self.find_cfg('dest')
         except KeyError:
-            logger.debug("Port not configured: %s %s %d %d", *self.subpath[-4:])
+            logger.info("mode or dest not set in %s", self.subpath)
+            # logger.debug("Port not configured: %s %s %d %d", *self.subpath[-4:])
             return
 
         evt = anyio.create_event()
-        if mode == "poll":
+        if mode == "read":
             await self.tg.spawn(self._poll_task, evt, dest)
         elif mode == "count":
             intv = self.find_cfg('interval')
             direc = self.find_cfg('count')
             await self.tg.spawn(self._count_task, evt, dest, intv, direc)
         else:
+            logger.info("mode not known (%r) in %s", mode, self.subpath)
             return  # mode unknown
         await evt.wait()
 
@@ -125,7 +148,8 @@ class WAGOoutput(_WAGOnode):
                     try:
                         val = msg.value
                     except AttributeError:
-                        await self.root.err.record_error("wago", *self.subpath, comment="Missing value: %r" % (msg,))
+                        if msg.get("state","") != "uptodate":
+                            await self.root.err.record_error("wago", *self.subpath, comment="Missing value: %r" % (msg,), data={"path":self.subpath})
                         continue
 
                     if val in (False,True,0,1):
@@ -162,18 +186,36 @@ class WAGOoutput(_WAGOnode):
         ``intv`` and ``direc`` may be numbers or paths, if the latter
         they're read from DistKV. ``cur`` must be a path.
 
-
         """
-        async def work_oneshot(self, evt):
+
+        async def work_oneshot(evt):
+            nonlocal t_on
             if isinstance(t_on, (list,tuple)):
                 t_on = (await self.client.get(*t_on)).value_or(None)
-            self._work = await self.server.write_timed_output(self.card, self.port, not negate, t_on)
-            if state is not None:
-                await self.client.set(*state, value=True)
-            await evt.set()
-            await self._work.wait()
-            if state is not None:
-                await self.client.set(*state, value=False)
+            try:
+                async with anyio.open_cancel_scope() as sc:
+                    async with self.server.write_timed_output(self.card, self.port, not negate, t_on) as work:
+                        self._work = sc
+                        self._work_done = anyio.create_event()
+                        await evt.set()
+                        if state is not None:
+                            await self.client.set(*state, value=True)
+
+                        await work.wait()
+            finally:
+                if self._work is sc:
+                    await self._work_done.set()
+                    self._work = None
+                    self._work_done = None
+
+                async with anyio.fail_after(2, shield=True):
+                    if state is not None:
+                        try:
+                            val = await self.server.read_output(self.card, self.port)
+                        except ClosedResourceError:
+                            pass
+                        else:
+                            await self.client.set(*state, value=(val != negate))
 
         if val:
             evt = anyio.create_event()
@@ -181,17 +223,20 @@ class WAGOoutput(_WAGOnode):
             await evt.wait()
         else:
             if self._work:
-                await self._work.aclose()
+                await self._work.cancel()
+                await self._work_done.wait()
             else:
                 await self._set_value(False, state, negate)
 
-    async def _pulsed_value(self, val, state, negate, t_on, t_off):
+    async def _pulse_value(self, val, state, negate, t_on, t_off):
         """
         Pulse the value.
 
         The state records the cycle ratio.
         """
-        async def work_pulsed(self, evt):
+        async def work_pulse(evt):
+            nonlocal t_on
+            nonlocal t_off
             if isinstance(t_on, (list,tuple)):
                 t_on = (await self.client.get(*t_on)).value_or(None)
             if isinstance(t_off, (list,tuple)):
@@ -199,45 +244,62 @@ class WAGOoutput(_WAGOnode):
             if t_on is None or t_off is None:
                 raise StopAsyncIteration
 
-            self._work = await self.server.write_pulsed_output(self.card, self.port, not negate, t_on, t_off)
-            if state is not None:
-                await self.client.set(*state, value=t_on/(t_on+t_off))
-            await evt.set()
-            await self._work.wait()
-            if state is not None:
-                await self.client.set(*state, value=0)
+            try:
+                async with anyio.open_cancel_scope() as sc:
+                    async with self.server.write_pulsed_output(self.card, self.port, not negate, t_on, t_off) as work:
+                        self._work = sc
+                        self._work_done = anyio.create_event()
+                        await evt.set()
+
+                        if state is not None:
+                            await self.client.set(*state, value=t_on/(t_on+t_off))
+
+                        await work.wait()
+            finally:
+                if self._work is sc:
+                    await self._work_done.set()
+                    self._work = None
+                    self._work_done = None
+
+                async with anyio.fail_after(2, shield=True):
+                    if state is not None:
+                        try:
+                            val = await self.server.read_output(self.card, self.port)
+                        except ClosedResourceError:
+                            pass
+                        else:
+                            await self.client.set(*state, value=(val != negate))
 
         if val:
             evt = anyio.create_event()
-            await self.server.task_group.spawn(work_pulsed, evt)
+            await self.server.task_group.spawn(work_pulse, evt)
             await evt.wait()
         else:
             if self._work:
-                await self._work.aclose()
+                await self._work.cancel()
+                await self._work_done.wait()
             else:
                 await self._set_value(False, state, negate)
 
-    async def _update_server(self):
+
+    async def setup(self):
+        await super().setup()
+        if self.server is None:
+            return
         if self._work:
             await self._work.aclose()
-        await super()._update_server()
 
         try:
             mode = self.find_cfg('mode')
             src = self.find_cfg('src')
         except KeyError:
-            logger.debug("Port not configured: %s %s %d %d", *self.subpath[-4:])
+            # logger.debug("Port not configured: %s %s %d %d", *self.subpath[-4:])
+            logger.info("mode or src not set in %s",self.subpath)
             return
 
         # Rest state. The input value in DistKV is always active=high.
         rest = self.find_cfg('rest', default=False)
-
-        # "On" time, for one-shot and pulse. If a list, points to it.
         t_on = self.find_cfg('t_on', default=None)
-        if isinstance(t_on, (list,tuple)):
-            t_on = (await self.client.get(*t_on)).value_or(None)
-
-        # "Off" time, for one-shot and pulse. If a list, points to it.
         t_off = self.find_cfg('t_off', default=None)
         state = self.find_cfg('state', default=None)
 
@@ -246,15 +308,19 @@ class WAGOoutput(_WAGOnode):
             await self.tg.spawn(self.with_output, evt, src, self._set_value, state, rest)
         elif mode == "oneshot":
             if t_on is None:
+                logger.info("t_on not set in %s",self.subpath)
                 return
             await self.tg.spawn(self.with_output, evt, src, self._oneshot_value, state, rest, t_on)
         elif mode == "pulse":
             if t_on is None:
+                logger.info("t_on not set in %s",self.subpath)
                 return
             if t_off is None:
+                logger.info("t_off not set in %s",self.subpath)
                 return
             await self.tg.spawn(self.with_output, evt, src, self._pulse_value, state, rest, t_on, t_off)
         else:
+            logger.info("mode not known (%r) in %s", mode, self.subpath)
             return
         await evt.wait()
 
@@ -284,9 +350,13 @@ class WAGOoutputBase(_WAGObaseNUM):
     cls = WAGOoutputCARD
 
 
-class WAGOserver(_WAGObase):
-    server = None
+class _WAGObaseSERV(_WAGObase):
+    async def set_value(self, val):
+        await super().set_value(val)
+        await self.update_server()
 
+
+class WAGOserver(_WAGObaseSERV):
     @classmethod
     def child_type(cls, name):
         if name == "input":
@@ -296,11 +366,14 @@ class WAGOserver(_WAGObase):
         return None
 
     async def set_server(self, server):
-        self.server = server
-        await self._update_value()
+        await self.parent.set_server(server)
 
-    async def update_server(self, server):
-        await self.parent.update_server(server)
+    async def setup(self):
+        await super().setup()
+        s = self.server
+        if s is not None:
+            await s.set_freq(self.find_cfg("poll"))
+            await s.set_ping_freq(self.find_cfg("ping"))
 
 
 class WAGOroot(_WAGObase, ClientRoot):
@@ -316,6 +389,10 @@ class WAGOroot(_WAGObase, ClientRoot):
             self.err = await ErrorRoot.as_handler(self.client)
         await super().run_starting()
 
+    @property
+    def server(self):
+        return self._server
+
     @classmethod
     def register(cls, typ):
         def acc(kls):
@@ -328,7 +405,10 @@ class WAGOroot(_WAGObase, ClientRoot):
             return WAGOserver
         return None
 
-    async def update_server(self, server):
+    async def update_server(self):
+        await self._update_server()
+
+    async def set_server(self, server):
         self._server = server
         await self._update_server()
 

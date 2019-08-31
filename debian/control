@@ -1,22 +1,22 @@
-Source: distowfs
+Source: distwago
 Maintainer: Matthias Urlichs <matthias@urlichs.de>
 Section: python
 Priority: optional
 Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 9)
 Standards-Version: 3.9.6
-Homepage: https://github.com/smurfix/distowfs
+Homepage: https://github.com/smurfix/distwago
 
-Package: distkw-owfs
+Package: distkw-wago
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   distkv,
-  python3-asyncowfs,
-Replaces: python3-distowfs
-Conflicts: python3-distowfs
+  python3-asyncwago,
+Replaces: python3-distwago
+Conflicts: python3-distwago
 Description: A distributed no-master key-value store
- DistOWFS is a link between 1wire and DistKV.
+ DistWAGO is a link between Wago controllers DistKV.
  .
- It will add all discovered 1wire devices, poll these devices as specified,
- write values that it reads from 1wire to some DistKV entry, monitor a DistKV
- entry and write any updates to 1wire, and work with DistKV's runner system,
- either centrally or distributed.
+ It will add all discovered Wago ports, monitor them as specified,
+ write values that it reads from the controller to some DistKV entry, monitor a
+ DistKV entry and write any updates to a controller, and work with DistKV's runner
+ system, either centrally or distributed.

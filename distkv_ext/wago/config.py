@@ -7,8 +7,10 @@ CFG = attrdict(
             port=29995,
         ),
 
-        interval=1,  # for counter reporting
-        poll=1,  # poll frequency
-        count=True,  # Pulses up/down/both; default Up
+        poll=0.1,  # poll frequency: server
+        ping=5,  # ping frequency: server
+
+        interval=1,  # for counter reporting: port
+        count=True,  # Pulses up=True/down=False/both=None, default Up: port
     )
 

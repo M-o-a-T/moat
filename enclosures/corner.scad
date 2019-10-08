@@ -2,30 +2,82 @@
 
 // All measurements are in mm.
 
-// side lengths
-side_x = 40;
-side_y = 100;
-side_z = 160;
-edge_miter = 1; // TODO
+/* version history
+1.1: published at Thingiverse
+1.2: add comments for Thingiverse Customizer
+1.3: generation of holes was missing in some views
+1.4: fix min distance of hole from lid edge
+1.5: configure offset of hooks from lid
+1.6: add dummy module to hopefully fix Customizer
+*/
+
+// length of first edge
+side_x = 70; // [20:250]
+
+// length of second edge
+side_y = 70; // [20:250]
+
+// length of third edge
+side_z = 70; // [20:250]
 
 // thickness of walls.
-wall_side = 2;
-wall_top = 3;
+wall_side = 2; // [10]
 
-// add mounting holes? at most n per side. They start in the corner and extend until there are either n/2 on a side or they get too close to the edge. NB: there's no collision check of holes vs. hooks!
-n_holes = 4;
-hole_inner = 2; // bore diameter
-hole_outer = 4; // ring
-hole_height = 1;
-hole_inner_sink = 1; // slant
-hole_edge = 10; // distance from the edge
-hole_offset = 30; // distance between holes
+// thickness of lid.
+wall_top = 3; // [10]
+
+// how much to cut off at the edge, for better fit to walls. Must be less than min side wall thickness.
+edge_miter = 1; // [0:0.1:2]
+
+// output: top, sides 1-3, all four on plane, assembled, w/o top, w/o side 1-3
+output = 4; // [0:1:9]
+
+/* add mounting holes? at most n per side. They start in the corner and extend until there are either n/2 on a side or they get too close to the edge. NB: there's no collision check of holes vs. hooks! */
+// number of mounting holes
+n_holes = 4; // [0:11]
+// bore diameter of hole, must be <ring
+hole_inner = 4; // [2:0.5:8]
+// diameter of strengthening ring
+hole_outer = 6; // [3:0.5:12]
+// height of strenghtening ring
+hole_height = 1; // [0:2]
+// sink inner edge of hole (for slanted-head screws)
+hole_inner_sink = 0.5; // [0:0.2:5]
+// distance of the holes from the edges
+hole_edge = 12; // [0:0.5:30]
+// distance between holes on the same edge
+hole_offset = 18; // [0:0.5:50]
 
 // separation between pieces when printing
-delta = 5;
+delta = 5; // [1:2:11]
+
+// number of hooks per edge, evenly spaced.
+n_hooks = 2; // [0:5]
+// hook width
+hook_width = 2; // [1:0.5:5]
+// width of the groove
+groove_width = 3; // [1:0.5:7]
+// additional offset of sides' hooks from lid (to prevent collisions with lid)
+hook_off_edge = 1; // [0.5:0.5:4]
+// hook depth (that's the part that bends)
+hook_depth = 1; // [0.5:0.25:2.5]
+// length of the part that bends
+hook_len = 6; // [1:0.5:10]
+// how far does the tip of the hook extend?
+hook_edge_depth = 1; // [0.5:0.25:3]
+// height of slanted part under the tip
+hook_edge = 1; // [1:0.5:3]
+// height of the head (from tip to top)
+hook_head = 2; // [1:0.5:5]
+// additional stremgthening of the base so the hook doesn't tear off
+hook_base = 1; // [0:0.5:3]
+
+// depth
+hook_base_depth = hook_base;
+
 
 /*
- * The pieces are joined with some fancy hooks, the parameters for which require some explaining.
+ * The pieces are joined with a couple of fancy hooks, the parameters for which require some explaining.
 
 This is the groove which the hook joins:
  
@@ -47,7 +99,7 @@ The hook, below, moves up and joins with the groove:
  | \ /---- the tip of the hook
  | / ----- height: hook_edge
  | | ----- height: hook_len-hook_base
-/ _|_----- height: hook_base
+/ _|_----- height: hook_base (ASCII art is wrong, it's on the outside)
      \
       \
        \
@@ -64,17 +116,10 @@ The hook shall be auto-placed so that it (a) meets with the groove and (b) isn't
 hook_edge must be smaller than hook_edge_depth, otherwise the sides can just slide apart. This is not a problem with the top. TODO allow different parameters for it.
 
 */
-n_hooks = 2; // per edge, evenly spaced.
-hook_width = 2; // extrusion of the hook
-groove_width = 3; // extrusion of the groove
 
-hook_depth = 2;
-hook_edge_depth = 1;
-hook_head = 2;
-hook_edge = 1;
-hook_len = 4;
-hook_base = 1;
-hook_base_depth = 0.5;
+module no_params_beyond_here() {
+    // this is a lie but prevents Customizer to look beyond this
+}
 
 HOOKS = [n_hooks,hook_width,groove_width,hook_depth,hook_edge_depth,hook_head,hook_edge,hook_len,hook_base,hook_base_depth];
 
@@ -260,44 +305,54 @@ module poly_hook_groove(n) {
 }
 
 
-module grooves_wall(n,off=0) {
-    for(x=[1:2:2*hc(-1-n,N_HOOKS)]) translate([0,0,axes[n]*(x+off)/2/(hc(-1-n,N_HOOKS)+1)])
+module hook_pos_wall(n,off=0) {
+    n_h = hc(-1-n,N_HOOKS);
+    n_h_lim = n_h + hook_off_edge+0.5;
+    for(x=[1:n_h])
+        let(xx=(off?-0.5:0)+x) 
+        translate([0,0,axes[n]*(off?n_h_lim-xx:xx)/n_h_lim])
         linear_extrude(hc(-1-n,H_G_WIDTH), center=true)
-            poly_hook_groove(-1-n);
+            children();
 }
 
-module grooves_edge(n,off=0) {
-    for(x=[1:hc(n,N_HOOKS)]) translate([0,0,edges[n]*(x+1)/(hc(n,N_HOOKS)+3)])
-        linear_extrude(hc(n,H_G_WIDTH), center=true)
-            poly_hook_groove(n);
+module grooves_wall(n,off=0) {
+    hook_pos_wall(n,off) poly_hook_groove(-1-n);
 }
 
 module hooks_wall(n, off=0) {
-    for(x=[1:2:2*hc(-1-n,N_HOOKS)]) translate([0,0,axes[n]*(x+off)/2/(hc(-1-n,N_HOOKS)+1)])
-        linear_extrude(hc(-1-n,H_WIDTH), center=true)
-            poly_hook(-1-n);
+    hook_pos_wall(n, off) poly_hook(-1-n);
 }
+
+module hook_pos_edge(n) {
+    for(x=[1:hc(n,N_HOOKS)]) translate([0,0,edges[n]*(x+1)/(hc(n,N_HOOKS)+3)])
+        linear_extrude(hc(n,H_G_WIDTH), center=true)
+            children();
+}
+
+
+module grooves_edge(n) {
+    hook_pos_edge(n) poly_hook_groove(n);
+}
+
 
 module hooks_edge(n) {
     a_chamfer = angle_c(angles2[n], wall_side,wall_top);
     rotate([0,90,0]) rotate(90)
     translate([wall_top/tan(a_chamfer),wall_top,0])
-    for(x=[1:hc(n,N_HOOKS)]) translate([0,0,edges[n]*(x+1)/(hc(n,N_HOOKS)+3)])
-        linear_extrude(hc(n,H_WIDTH), center=true)
-            poly_hook(n);
+    hook_pos_edge(n) poly_hook(n);
 }
 
 // the actual hole, slightly larger so that preview sees it
 module hole_bore() {
-    translate([0,0,-0.5]) cylinder(h=hole_height+wall_side+1,d=hole_inner);
+    union() {
+        translate([0,0,-0.5]) cylinder(h=hole_height+wall_side+1,d=hole_inner);
+        translate([0,0,wall_side+hole_height-hole_inner_sink]) cylinder(h=hole_inner_sink,d1=0,d2=hole_outer);
+    }
 }
 
 // an inward-slanted ring on the hole, for stability when screwing
 module hole_ring() {
-    difference() {
-        cylinder(h=hole_height+wall_side,d=hole_outer);
-        translate([0,0,wall_side+hole_height-hole_inner_sink]) cylinder(h=hole_inner_sink,d1=0,d2=hole_outer);
-    }
+    cylinder(h=hole_height+wall_side,d=hole_outer);
 }
 
 // Position the holes.
@@ -306,7 +361,7 @@ module hole_pos(n) {
     inner = hole_edge+wall_side;
     
     // how close to the lid edge may we get?
-    c_offset=wall_side/tan(angle_c(angles2[n], wall_top, wall_side))+hole_edge;
+    c_offset = wall_side/tan(angle_c(angles2[n], wall_top, wall_side)) + hole_outer/2 + hole_height/tan(angles2[n]);
     
     // Here we figure the corresponding max offsets. The first subtracted term gets us to the place we'd be if the holes were at the outer edge, but of course they aren't.
     lim_1 = axes[n+1] - c_offset / sin(90-angles1[n]) - inner*tan(angles1[n]);
@@ -344,12 +399,12 @@ module side(n) {
             chamfer_side(n+1);
         }
         
-        translate([wall_side,0,wall_side]) rotate([0,-90,-90]) grooves_wall(n+2);
+        translate([wall_side,0,wall_side]) rotate([0,-90,-90]) grooves_wall(n+2,0);
         translate([axes[n+1],wall_side,wall_side]) rotate([-90,-90,90]) grooves_wall(n+1,1);
         
         // Yes this can be simplified, but then it'll be unreadable.
         translate([0,axes[n+2],wall_side]) rotate(angles1[n]-90) translate([0,-wall_side/tan(a_chamfer),0]) rotate([0,90,0]) rotate([0,0,180]) grooves_edge(n);
-        translate([0,wall_side,wall_side]) rotate([0,90,0]) rotate([0,0,90])        hooks_wall(n+1);
+        translate([0,wall_side,wall_side]) rotate([0,90,0]) rotate([0,0,90])        hooks_wall(n+1,0);
         translate([wall_side,axes[n+2],wall_side]) rotate([90,0,0]) hooks_wall(n+2,1);
     }
 }
@@ -373,15 +428,15 @@ module mitered_edges() {
 }
 
 // show all sides where they belong
-module uncut_sides() {
-    make_holes(0) side(0);
-    to_next_side() color("red") make_holes(1) side(1);
-    to_next_side() to_next_side() color("green") make_holes(2) side(2);
+module uncut_sides(n=-1) {
+    if (n != 1) make_holes(0) side(0);
+    if (n != 2) to_next_side() color("red") make_holes(1) side(1);
+    if (n != 3) to_next_side() to_next_side() color("green") make_holes(2) side(2);
 }
 
-module sides() {
+module sides(n=-1) {
     difference() {
-        uncut_sides();
+        uncut_sides(n);
         mitered_edges();
     }
 }
@@ -425,23 +480,26 @@ module top() {
     }
 }
 
-module box() {
+module box(n=-1) {
     union() {
-        sides();
-        to_top() top();
+        sides(n);
+        if (n) to_top() top();
     }
 }
 
 module flat() {
-    translate([delta/2,-delta/2,0]) rotate(270)  side(1);
-    translate([delta/2,delta/2,0]) side(2);
-    translate([-delta/2,-delta/2,0]) rotate(180) side(0);
+    translate([delta/2,-delta/2,0]) rotate(270) make_holes(1) side(1);
+    translate([delta/2,delta/2,0]) make_holes(2) side(2);
+    translate([-delta/2,-delta/2,0]) rotate(180) make_holes(0) side(0);
     translate([-edges[2]-delta/2,delta/2,0]) top();
 }
 
-
-//top();
-//side(0);
-sides();
-//box();
-//flat();
+// output: top, sides 1-3, all four on plane, assembled, w/o top, w/o side 1-3
+if (output == 0)
+    top();
+else if (output <= 3)
+    make_holes(output) side(output);
+else if (output == 4)
+    flat();
+else
+    box(output-6);

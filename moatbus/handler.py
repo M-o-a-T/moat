@@ -285,8 +285,10 @@ class BaseHandler:
 
         elif self.state == S.READ_ACK:
             msg = self.clear_sending()
-            if bits == self.ack_mask:
+            if bits & self.ack_mask:
                 self._transmitted(msg, RES_SUCCESS)
+            elif bits & self.nack_mask:
+                self._transmitted(msg, RES_ERROR)
             elif not bits:
                 self.retry(msg, RES_MISSING)
             elif bits & self.ack_masks:

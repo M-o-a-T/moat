@@ -177,3 +177,22 @@ correctly. This would not work with a fill byte of zero: if the CRC already
 is zero, it would not be affected. In contrast, a zero CRC mixed with 0xFF
 is always non-zero.
 
+
+Acknowledgments
++++++++++++++++
+
+All correctly-received messages must be acknowledged. Incorrect messages
+(CRC error) *may* be reported.
+
+To ack a message, the receiver will take over immediately after the last
+change by the sender and assert wire 0. If that is not possible because
+wire 0 currently is the only asserted wire, wire 1 is asserted instead.
+
+To nack a message, the receiver will assert wire 1, except when either wire
+1 is claimed by Ack or wire 1 and 2 are the only asserted signals, in which
+case it will use wire 3.
+
+If the current state is not "no lines asserted", a two-wire system cannot
+send a NACK. As negative Acks are by definition unreliable, adding another
+cycle just to transmit a NACK isn't useful.
+

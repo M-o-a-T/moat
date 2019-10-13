@@ -78,6 +78,7 @@ class BaseHandler:
         self.BITS = BITS[wires]
         self.N_END = N_END[wires]
         self.VAL_END = self.MAX ** self.N_END -1
+        self.VAL_MAX = (1<<self.BITS) -1
 
         self.last = self.current = self.get_wire()
         self.settle = False
@@ -533,9 +534,12 @@ class BaseHandler:
         if self.nval == self.N_END and self.val == self.VAL_END:
             self.read_done()
         elif self.nval == self.LEN:
-            self.msg_in.add_chunk(self.BITS, self.val)
-            self.nval = 0
-            self.val = 0
+            if self.val > self.VAL_MAX:
+                self.error(ERR_CRC)
+            else:
+                self.msg_in.add_chunk(self.BITS, self.val)
+                self.nval = 0
+                self.val = 0
 
     def error(self, typ):
         if typ == ERR_HOLDTIME and not self.current:

@@ -41,6 +41,9 @@ RES_MISSING = 1
 RES_ERROR = 2
 RES_FATAL = 3
 
+T_BASE=16
+T_WAIT_IDLE = 3*T_BASE
+
 class BaseHandler:
     """
     This class implements bus message handling.
@@ -60,7 +63,7 @@ class BaseHandler:
     * timeout()         -- when the timeout runs out
     """
 
-    def __init__(self, bits=3, delay=2000):
+    def __init__(self, wires=3):
         """
         Set up a MoatBus handler using these many bits with this line
         delay.
@@ -69,14 +72,12 @@ class BaseHandler:
         change at A reliably arrives at B, no matter what A and B are.
         Delays shorter than that make no sense.
         """
-        self.bits = bits
-        self.MAX = (1<<bits)-1
-        self.LEN = LEN[bits]
-        self.BITS = BITS[bits]
-        self.N_END = N_END[bits]
+        self.WIRES = wires
+        self.MAX = (1<<wires)-1
+        self.LEN = LEN[wires]
+        self.BITS = BITS[wires]
+        self.N_END = N_END[wires]
         self.VAL_END = self.MAX ** self.N_END -1
-
-        self.delay = delay
 
         self.last = self.current = self.get_wire()
         self.settle = False
@@ -87,8 +88,7 @@ class BaseHandler:
         self.sending_q = None
         self.want_prio = None
 
-        self.collide = False
-        self.backoff = 1 # delay retries?
+        self.backoff = None
         self.no_backoff = False
         self.retries = None
 
@@ -101,7 +101,7 @@ class BaseHandler:
 
         self.state = S.WAIT_IDLE
         self.reset()
-        self._set_timeout(2)
+        self._set_timeout(T_WAIT_IDLE)
 
     def report_error(self, typ, **kw):
         """
@@ -167,7 +167,7 @@ class BaseHandler:
             self.last_zero = None if bits else 0
             if self.state > S.IDLE:
                 self.flapping += 1
-                if self.flapping > 2*self.bits:
+                if self.flapping > 2*self.WIRES:
                     self.error(ERR_FLAP)
                     return
             self.current = bits
@@ -204,7 +204,7 @@ class BaseHandler:
                 self.start_reader(True)
 
         elif self.state == S.WRITE_ACK:
-            if bits & ~(self.ack_all_bits | self.last):
+            if bits & ~(self.ack_masks | self.last):
                 self.error(ERR_BAD_COLLISION)
 
         elif self.state >= S.WRITE:
@@ -284,11 +284,11 @@ class BaseHandler:
 
         elif self.state == S.READ_ACK:
             msg = self.clear_sending()
-            if bits == self.ack_bits:
+            if bits == self.ack_mask:
                 self._transmitted(msg, RES_SUCCESS)
             elif not bits:
                 self.retry(msg, RES_MISSING)
-            elif bits & self.ack_all_bits:
+            elif bits & self.ack_masks:
                 self.retry(msg, RES_ERROR)
             else:
                 self.error(ERR_BAD_COLLISION)
@@ -300,11 +300,11 @@ class BaseHandler:
                 self.write_collision(bits &~ self.intended, True)
 
         elif self.state == S.WRITE_ACK:
-            if bits & ~self.ack_all_bits:
+            if bits & ~self.ack_masks:
                 self.error(ERR_BAD_COLLISION)
-            elif bits != self.ack_bits:
+            elif bits != self.ack_mask:
                 self.error(ERR_BAD_COLLISION)
-                self.write_collision(bits &~ self.ack_all_bits, True)
+                self.write_collision(bits &~ self.ack_masks, True)
             else:
                 self.set_state(S.WRITE_END)
 
@@ -376,10 +376,10 @@ class BaseHandler:
                 self.set_wire(self.intended)
 
         elif self.state == S.WRITE_ACK:
-            if bits &~ (self.last | self.ack_all_bits):
+            if bits &~ (self.last | self.ack_masks):
                 self.error(ERR_BAD_COLLISION)
             else:
-                self.set_wire(self.ack_bits)
+                self.set_wire(self.ack_mask)
 
         elif self.state == S.WRITE_END:
             self.set_state(S.WAIT_IDLE)
@@ -392,7 +392,6 @@ class BaseHandler:
         msg,self.sending = self.sending,None
         self.sending_q = None
         self.want_prio = None
-        self.collide = False
         return msg
 
     def start_reader(self, need_acquire:bool):
@@ -497,11 +496,11 @@ class BaseHandler:
         msg_in,self.msg_in = self.msg_in,None
         if not msg_in.check_crc():
             self.report_error(ERR_CRC)
-            self.set_ack_bits()
-            if not self.nack_bits:
+            self.set_ack_mask()
+            if not self.nack_mask:
                 self.set_state(S.WAIT_IDLE)
                 return
-            self.ack_bits = self.nack_bits # oh well
+            self.ack_mask = self.nack_mask # oh well
             self.set_state(S.WRITE_ACK)
         elif self.process(msg_in):
             self.set_state(S.WRITE_ACK)
@@ -510,12 +509,14 @@ class BaseHandler:
             self.set_state(S.WAIT_IDLE)
 
 
-    def set_ack_bits(self):
+    def set_ack_mask(self):
+        # This part is somewhat fragile. Cannot be helped.
         bits = self.last if self.settle else self.current
-        self.ack_bits = 2 if bits == 1 else 1
-        self.nack_bits = 0 if self.bits == 2 else 4 if bits == 3 or bits == 1 else 2
-        self.ack_all_bits = self.ack_bits | self.nack_bits
-        self.debug("AckBits %02x / %02x due to %02x/%d", self.ack_bits,self.nack_bits,bits,self.settle)
+
+        self.ack_mask = 2 if bits == 1 else 1
+        self.nack_mask = (0 if bits else 2) if self.WIRES == 2 else 4 if bits == 3 or bits == 1 else 2
+        self.ack_masks = self.ack_mask | self.nack_mask
+        self.debug("AckBits %02x / %02x due to %02x/%d", self.ack_mask,self.nack_mask,bits,self.settle)
 
     def read_next(self, bits):
         lb=self.last
@@ -551,7 +552,6 @@ class BaseHandler:
                 self.backoff *= 2
             else:
                 self.backoff *= 1.5
-            self.collide = True
 
         self.report_error(typ)
         self.reset()
@@ -575,12 +575,12 @@ class BaseHandler:
         self.pos = None
         self.cur_pos = None
         self.cur_chunk = None
-        self.ack_bits = None
+        self.ack_mask = None
         self.msg_in = BusMessage()
 
         self.val = 0
         self.nval = 0
-        self.backoff = 1
+        self.backoff = 16
         self.settle = False
 
     def set_state(self, state):
@@ -595,7 +595,7 @@ class BaseHandler:
             self.set_wire(0)
 
         if state in (S.READ_ACK, S.WRITE_ACK):
-            self.set_ack_bits()
+            self.set_ack_mask()
 
         if state in (S.READ_ACQUIRE, S.WRITE_ACQUIRE):
             self.no_backoff = False
@@ -605,10 +605,7 @@ class BaseHandler:
             assert not self.current
             self.state = state
             self.settle = True
-            if self.no_backoff and self.sending:
-                self.start_writer()
-            else:
-                self._set_timeout(self.backoff)
+            self._set_timeout(1 if self.no_backoff and self.sending else self.backoff)
 
         elif state < S.IDLE and self.state > S.IDLE:
             # Stop active work. Reset our machinery appropriately.

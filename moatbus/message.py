@@ -22,16 +22,11 @@ class BusMessage:
     data:BitArray = None
     with_crc = None
 
-    def __init__(self, frame_bits):
+    def __init__(self):
         """
         Set up an empty buffer.
-
-        @frame_bits is the number of bits per frame. Must be between 9 and
-        15 inclusive. Required for calculating whether there's a residual
-        byte in the last frame.
         """
         self._data = BitArray()
-        self.frame_bits = frame_bits
 
     def __repr__(self):
         return "<%s: %s>" % (self.__class__.__name__, " ".join("%s=%s"%(k,v) for k,v
@@ -64,6 +59,13 @@ class BusMessage:
         for adr in (self,dst, self.src):
             h_len += 3 if adr < 4 else 8
         return h_len//8+1
+
+    def pull_bits(self, off):
+        hdr = self.header
+        if off > 0:
+            return hdr + self._data[:off]
+        else:
+            return hdr[:hdr.length+off]
 
     def generate_crc(self):
         """
@@ -104,10 +106,11 @@ class BusMessage:
             crc.update(self._data[bits:bits+8].bytes)
             bits += 8
         if crc.crcValue:
-            raise CRCError(self)
+            return False
 
         del self._data[bits-8*crc.digest_size:]
         self.with_crc = False
+        return True
 
 
     def start_extract(self):
@@ -164,37 +167,60 @@ class BusMessage:
         self._data += BitArray(uint=data, length=frame_bits)
 
         if self.code is None:
-            frame_len = 3+3
-            b = self._data
-            if not b[0]:
-                frame_len += 5
-                if not b[8]:
-                    frame_len += 5
-            elif not b[3]:
-                frame_len += 5
-            frame_len += 8-(frame_len&7)
-            if self._data.length < frame_len:
+            self._gen_code()
+
+    def add_written(self, data):
+        """
+        Feed data into this buffer. (The buffer should initially be new.)
+
+        This is like `add_chunk` but accepts a BitArray. It's intended for
+        switching a writer to a reader, as it needs to feed the data it has
+        acquired to a new message.
+        """
+        self._data += data
+
+        if self.code is None:
+            self._gen_code()
+
+    def _gen_code(self):
+        frame_len = 3+3
+        b = self._data
+        if not b.length:
+            return
+        if not b[0]:
+            frame_len += 5
+            if b.length <= 8:
                 return
+            if not b[8]:
+                frame_len += 5
+        else:
+            if b.length <= 3:
+                return
+            if not b[3]:
+                frame_len += 5
+        frame_len += 8-(frame_len&7)
+        if self._data.length < frame_len:
+            return
 
-            b = self._data
-            off = 0
+        b = self._data
+        off = 0
 
-            if b[off]:
-                self.dst = b[off+1:off+3].uint
-                off += 3
-            else:
-                self.dst = b[off+1:off+8].uint+4
-                off += 8
-            if b[off]:
-                self.src = b[off+1:off+3].uint
-                off += 3
-            else:
-                self.src = b[off+1:off+8].uint+4
-                off += 8
+        if b[off]:
+            self.dst = b[off+1:off+3].uint
+            off += 3
+        else:
+            self.dst = b[off+1:off+8].uint+4
+            off += 8
+        if b[off]:
+            self.src = b[off+1:off+3].uint
+            off += 3
+        else:
+            self.src = b[off+1:off+8].uint+4
+            off += 8
 
-            self.code = b[off:frame_len].uint
-            self.with_crc = True
-            del self._data[0:frame_len]
+        self.code = b[off:frame_len].uint
+        self.with_crc = True
+        del self._data[0:frame_len]
 
     @property
     def data(self):

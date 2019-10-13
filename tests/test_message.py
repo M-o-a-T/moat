@@ -19,7 +19,7 @@ def seq(len):
 @pytest.mark.parametrize("dst", [1,4,130])
 @pytest.mark.parametrize("bits", [ones,zeroes,seq])
 def test_frame(length,frame,src,dst,bits):
-    i = BusMessage(frame)
+    i = BusMessage()
     d = bits(length)
     i.start_send()
     i.send_data(d)
@@ -30,7 +30,7 @@ def test_frame(length,frame,src,dst,bits):
     i.code = code
     i.generate_crc()
 
-    j = BusMessage(frame)
+    j = BusMessage()
     i.start_extract()
     j.start_add()
     while True:

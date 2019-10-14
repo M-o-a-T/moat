@@ -27,6 +27,7 @@ class Main:
         await self.trigger.set()
 
     async def add(self, client):
+        client.last_b = b''
         self.clients.add(client)
         await self.trigger_update()
 
@@ -64,6 +65,9 @@ class Main:
             self.report(0,val)
             b = bytes((val,))
             for c in list(self.clients):
+                if c.last_b == b:
+                    continue
+                c.last_b = b
                 try:
                     await c.send_all(b)
                 except BrokenPipeError:

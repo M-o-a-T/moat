@@ -140,8 +140,6 @@ class BusTest:
                 if isinstance(c, BaseHandler):
                     self.off_clients.add(c)
             del self.clients # drop circular refs
-            for c in self.off_clients:
-                pprint((c,vars(c)))
 
     def q(self, proc, *a, **kw):
         self.runner.add(proc,*a,**kw)
@@ -183,7 +181,7 @@ class Runner:
 
 
 class Handler(BaseHandler):
-    def __init__(self,master,addr, bits,**kw):
+    def __init__(self,master,addr, **kw):
         self.master = master
         self.test_data = 0
         self.errors = []
@@ -191,7 +189,7 @@ class Handler(BaseHandler):
         self.addr = addr
         self.incoming = []
 
-        super().__init__(bits=bits,**kw)
+        super().__init__(**kw)
 
     def debug(self, msg, *a):  
         self.master.report(self.addr, msg, *a)
@@ -200,7 +198,12 @@ class Handler(BaseHandler):
         self.errors.append(typ)
 
     def set_timeout(self, timeout):
-        timeout *= self.delay
+        if timeout < 0:
+            timeout = 0
+        elif timeout == 0:
+            timeout = 5
+        else:
+            timeout *= 11
         f=inspect.currentframe()
         self.master.report(self.addr, "T %d @%d %d %d",timeout,f.f_back.f_lineno,f.f_back.f_back.f_lineno,f.f_back.f_back.f_back.f_lineno)
 
@@ -239,22 +242,29 @@ addrs=[1,3,4,5,8,11,100,131]
 
 @pytest.mark.parametrize('n',[2,4,8])
 @pytest.mark.parametrize('bits',[2,3,4])
-@pytest.mark.parametrize('delay',[0,4])
-@pytest.mark.parametrize('max_delay',[0,4])
+@pytest.mark.parametrize('delay',[0,2])
+@pytest.mark.parametrize('max_delay',[0,2])
 @pytest.mark.parametrize('t_a',[11,15])
 def test_bus(n,bits, delay,max_delay,t_a):
     bus = BusTest(bits=bits, delay=delay,max_delay=max_delay,t_a=t_a)
     for i in range(n):
-        c = Handler(bus,addr=addrs[i],bits=bits, delay=t_a)
+        c = Handler(bus,addr=addrs[i],wires=bits)
         bus.add(c)
         bus.q(gen_data, c)
 
     bus.run()
 
-    for c in bus.off_clients:
-        # Everybody should have received everybody else's messages
-        assert len(c.incoming) == n-1, (c.addr,c.incoming)
-        for m in c.incoming:
-            assert int(m.data[:-1]) == m.src, m
-            assert m.data[-1] == b'!'[0], m
+    try:
+        for c in bus.off_clients:
+            # Everybody should have received everybody else's messages
+            assert len(c.incoming) == n-1, (c.addr,c.incoming)
+            for m in c.incoming:
+                assert int(m.data[:-1]) == m.src, m
+                assert m.data[-1] == b'!'[0], m
+    except Exception:
+        for c in bus.off_clients:
+            pprint((c,vars(c)))
+        for m in bus.reports:
+            print(m)
+        raise
 

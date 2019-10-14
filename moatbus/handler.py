@@ -21,10 +21,9 @@ class S(IntEnum):
     WRITE_END = 13 # entered after WRITE_ACK is verified
 
 
-LEN = [None,None, 7,5,3,3] # messages per chunk
-BITS = [None,None, 11,14,11,14] # messages per header chunk (11 bits)
-N_END = [None,None, 3,2,2,2] # flips at end
-HDR_BITS = 11
+LEN = [None,None, 7,5,3,3,2] # messages per chunk
+BITS = [None,None, 11,14,11,14,11] # messages per header chunk (11 bits)
+N_END = [None,None, 3,2,1,1,1] # flips at end
 
 ERR_FATAL = -10 ## marker
 ERR_HOLDTIME = -11
@@ -41,8 +40,9 @@ RES_MISSING = 1
 RES_ERROR = 2
 RES_FATAL = 3
 
-T_BASE=16
-T_WAIT_IDLE = 3*T_BASE
+T_BREAK = 0
+T_ZERO = 5
+T_ERROR = 10
 
 class BaseHandler:
     """
@@ -102,7 +102,7 @@ class BaseHandler:
 
         self.state = S.WAIT_IDLE
         self.reset()
-        self._set_timeout(T_WAIT_IDLE)
+        self._set_timeout(T_ZERO)
 
     def report_error(self, typ, **kw):
         """
@@ -118,7 +118,8 @@ class BaseHandler:
 
     def set_timeout(self, timeout):
         """
-        OVERRIDE: Arrange to call .timeout after @timeout usecs. Zero=off.
+        OVERRIDE: Arrange to call .timeout after @timeout usecs. <0=off,
+        zero=Timer B, anything else: Timer A.
         """
         raise RuntimeError("Override me")
     
@@ -197,7 +198,10 @@ class BaseHandler:
 
         if self.state == S.IDLE:
             assert bits
-            self.start_reader(True)
+            if self.no_backoff and self.sending:
+                self.start_writer()
+            else:
+                self.start_reader(True)
 
         elif self.state == S.WRITE_ACQUIRE:
             if bits &~ (self.want_prio | (self.want_prio-1)):
@@ -219,10 +223,12 @@ class BaseHandler:
         If the line is off, add to last_zero so that we can be accurate
         about WAIT_IDLE.
         """
-        if val == 0:
+        if val < 0:
             self.set_timeout(0)
             return
-        if self.last_zero is not None:
+        if val == T_ZERO and self.last_zero is not None:
+            val = max(T_ZERO-self.last_zero, 1)
+        if self.last_zero is not None and self.last_zero < T_ZERO:
             self.last_zero += val
         self.set_timeout(val)
 
@@ -243,8 +249,10 @@ class BaseHandler:
             self.debug("Change Done timer %s",self.state)
             self.timeout_settle()
             self.last = self.current
-            if self.state > S.IDLE:
-                self._set_timeout(2 if self.state >= S.WRITE else 5)
+            if self.state >= S.WRITE:
+                self._set_timeout(0)
+            elif self.state > S.IDLE:
+                self._set_timeout(T_ZERO)
         elif self.settle is False:
             self.debug("Delay Timer %s",self.state)
             self.next_step(True)
@@ -346,9 +354,9 @@ class BaseHandler:
             if timeout:
                 self.error(ERR_HOLDTIME)
             elif self.current:
-                self._set_timeout(0)
+                self._set_timeout(-1)
             else:
-                self._set_timeout(5)
+                self._set_timeout(T_ZERO)
 
         elif self.state == S.IDLE:
             # Bus was idle long enough. Start writing?
@@ -571,8 +579,6 @@ class BaseHandler:
         else:
             self.set_state(S.WAIT_IDLE)
 
-        if not self.get_wire():
-            self._set_timeout(5)
 
 
     def reset(self):
@@ -618,8 +624,12 @@ class BaseHandler:
             self.state = state
             self.reset()
             self.send_next()
-            if not self.current:
-                self._set_timeout(5-self.last_zero)
+            if self.current:
+                self._set_timeout(-1)
+            elif state == S.ERROR:
+                self._set_timeout(T_ERROR)
+            else:
+                self._set_timeout(T_ZERO)
 
         else:
             self.state = state

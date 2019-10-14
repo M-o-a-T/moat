@@ -1,7 +1,10 @@
 #!/usr/bin/python3
 
 """
-This is a simulated MoaT bus. It offers a Unix socket. Connected
+This is a simulated MoaT bus. It offers a Unix socket.
+
+*** This bus simulation is active high ***
+
 """
 import anyio
 import asyncclick as click
@@ -28,10 +31,14 @@ class Main:
         await self.trigger_update()
 
     async def remove(self, client):
-        self.clients.remove(client)
-        await self.trigger_update()
-        if not self.clients:
-            self.t = None
+        try:
+            self.clients.remove(client)
+        except KeyError:
+            pass
+        else:
+            await self.trigger_update()
+            if not self.clients:
+                self.t = None
 
     def report(self, n, val):
         if not self.verbose:
@@ -45,22 +52,28 @@ class Main:
 
     async def run(self):
         last = -1
+        val = 0
         while True:
-            await self.trigger.wait()
-            self.trigger = anyio.create_event()
-
-            val = 0xFF
-            for c in self.clients:
-                val &= c.data
-
-            await anyio.sleep((random()*self.max_delay+self.delay)/1000)
             if last != val:
-                self.report(0,val)
-                last = val
+                await anyio.sleep((random()*self.max_delay+self.delay)/1000)
+            else:
+                await self.trigger.wait()
+            if self.trigger.is_set():
+                self.trigger = anyio.create_event()
 
+            self.report(0,val)
             b = bytes((val,))
+            for c in list(self.clients):
+                try:
+                    await c.send_all(b)
+                except BrokenPipeError:
+                    await self.remove(c)
+
+            last = val
+            val = 0
             for c in self.clients:
-                await c.send_all(b)
+                if c.data is not None:
+                    val |= c.data
 
 @asynccontextmanager
 async def mainloop(tg,**kw):
@@ -73,13 +86,16 @@ async def serve(client, loop):
     _seq += 1
     n = _seq
 
-    client.data = 0xFF
+    client.data = None
     await loop.add(client)
     await loop.trigger_update()
     try:
         async with client:
             while True:
-                data = await client.receive_some(1)
+                try:
+                    data = await client.receive_some(1)
+                except ConnectionResetError:
+                    data = None
                 if not data:
                     return
                 client.data = data[0]

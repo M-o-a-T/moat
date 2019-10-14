@@ -36,13 +36,13 @@ int main(int argc, const char *argv[])
 	while(1) {
 		unsigned char c;
 		struct pollfd p = {socket_fd,POLLIN};
-		switch(poll(&p,1,1000)) {
+		switch(poll(&p,1,1000+rand()/(1+RAND_MAX/1000))) {
 		case -1:
 			perror("poll");
     		close(socket_fd);
 			return 1;
 		case 0:
-			c = 0xFF & ~(1<<(rand()%8));
+			c = 1<<(rand()%8);
     		write(socket_fd, &c, 1);
 			break;
 		case 1:

@@ -6,9 +6,9 @@ from typing import Union
 from bitstring import BitArray
 from enum import Enum
 
-import crcmod.predefined as crcmod
-CRC8 = crcmod.PredefinedCrc("crc-8-maxim")
-CRC16 = crcmod.PredefinedCrc("xmodem")
+import crcmod
+CRC8 = crcmod.Crc(0x197,rev=False)
+CRC16 = crcmod.Crc(0x1BAAD,rev=False)
 
 class CRCError(RuntimeError):
     pass
@@ -67,11 +67,13 @@ class BusMessage:
         else:
             return hdr[:hdr.length+off]
 
-    def generate_crc(self):
+    def add_crc(self, frame_len):
         """
         Add CRC to frame. @frame_len is bits per frame.
         """
         assert self.with_crc is False
+
+        msg_bits = self._data.length + 1 // required as remainder indicator
 
         if self._data.length & 7:
             self._data.append(uint=0,length=8-(self._data.length & 7))

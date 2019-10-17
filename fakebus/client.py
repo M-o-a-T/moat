@@ -5,6 +5,7 @@ from moatbus.handler import BaseHandler, ERR
 from contextlib import asynccontextmanager
 import time
 import sys
+import errno
 
 class Client(BaseHandler):
     def __init__(self, wires, timeout=0.01, timeout2=0.005, socket="/tmp/moatbus", verbose=False, dest=None):
@@ -88,6 +89,7 @@ class Client(BaseHandler):
         return self.__wire_in
 
     def set_wire(self, wire):
+        self.debug("OUT! %s",wire)
         self.__wire_out = wire
         if self.__c is not None:
             self.__c.cancel()
@@ -109,7 +111,7 @@ class Client(BaseHandler):
 
     def report_error(self, typ, **kw):
         if kw:
-            self.debug("ERROR %s %s",typ,kw)
+            self.debug("ERROR %s %s",typ,kw, v=True)
         else:
             self.debug("ERROR %s",typ)
         if typ == ERR.COLLISION:
@@ -117,8 +119,8 @@ class Client(BaseHandler):
         #import pdb;pdb.set_trace()
         pass # ERROR
 
-    def debug(self, msg, *a):
-        if not self.__v:
+    def debug(self, msg, *a, v=False):
+        if not v and not self.__v:
             return
         if a:
             msg %= a
@@ -126,7 +128,12 @@ class Client(BaseHandler):
         pass
 
     def set_timeout(self, t):
-        self.debug("TIME %f",t)
+        if t < 0:
+            self.debug("TIME --")
+        elif t == 0:
+            self.debug("TIME next")
+        else:
+            self.debug("TIME %.2f",t)
         if self.__c is not None:
             self.__c.cancel()
         if t < 0:
@@ -149,6 +156,9 @@ class Client(BaseHandler):
                 yield self
             except anyio.exceptions.ClosedResourceError:
                 pass
+            except EnvironmentError as e:
+                if e.errno != errno.EBADF:
+                    raise
 
     def __aiter__(self):
         return self

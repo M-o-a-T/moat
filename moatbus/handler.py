@@ -24,16 +24,16 @@ class S(IntEnum): # states
     WRITE_END = 13 # entered after WRITE_ACK is verified
 
 class ERR(IntEnum):
+    NOTHING = 1 # bus zero?
     COLLISION = -2 # will retry
-    FATAL = -10 ## marker
     HOLDTIME = -11
     ACQUIRE = -12
     CRC = -13
     BAD_COLLISION = -14
-    ACQUIRE_FATAL = -15 # this cannot happen unless the hardware is insane
-    NO_CHANGE = -16 # this cannot happen unless the reader code is broken
-    ZERO = -17 # no wire is set, which should not happen
-    FLAP = -18 # too many changes, too little timeouts
+    NO_CHANGE = -16 # bit flapping?
+    FATAL = -20 ## marker
+    FLAP = -21 # too many changes, too little timeouts
+    ACQUIRE_FATAL = -22 # this cannot happen unless the hardware is insane
 
 class RES(IntEnum):
     SUCCESS = 0
@@ -291,6 +291,8 @@ class BaseHandler:
         elif self.state == S.READ_ACQUIRE:
             if bits and not bits&(bits-1):
                 self.set_state(S.READ)
+            elif not bits:
+                self.error(ERR.NOTHING)
             else:
                 self.error(ERR.ACQUIRE_FATAL)
 
@@ -546,7 +548,10 @@ class BaseHandler:
         bits ^= self.last
         #print("BIT",self.addr,bits-1)
         if not bits:
-            self.error(ERR.NO_CHANGE)
+            # This may happen when the bus was zero and every writer saw a
+            # collision. They all go off the bus instantly, so after
+            # settling it's still zero.
+            self.error(ERR.NOTHING)
             return
 
         self.no_backoff = False
@@ -573,15 +578,15 @@ class BaseHandler:
 
         f=inspect.currentframe()
         self.debug("Error %d @%d %d %d",typ,f.f_back.f_lineno,f.f_back.f_back.f_lineno,f.f_back.f_back.f_back.f_lineno)
-        if typ<0:
-            if self.backoff < 2*T_BACKOFF:
-                self.backoff *= 2+2*random()
+        if typ < 0:
+            if self.backoff < 3*T_BACKOFF:
+                self.backoff *= 1.5+random()
             else:
-                self.backoff *= 1.5
+                self.backoff *= 1.2
 
         self.report_error(typ)
         self.reset()
-        if typ >= ERR.FATAL and self.sending is not None:
+        if typ <= ERR.FATAL and self.sending is not None:
             msg = self.clear_sending()
             self._transmitted(msg,RES.FATAL)
             self.set_state(S.WAIT_IDLE)

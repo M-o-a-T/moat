@@ -175,15 +175,16 @@ in-packet" protocol.
 CRC check
 +++++++++
 
-All messages are protected by a CRC. The algorithm is CRC-8-MAXIM when the
-message contains fewer than 8 data bytes, CRC-16-XMODEM otherwise.
+All messages are protected by a CRC. The algorithm uses polynomial x197
+when the message contains fewer than 8 data bytes, x1BAAD otherwise,
+no reflection.
 
 This means that the message header must be decoded before the receiver can
 verify the CRC. That is not a problem in practice because in order to save
 power, the typical receiver will have done this anyway.
 
-The sender simply appends the CRC to the message, high-end byte of the
-CRC16 first.
+The sender simply appends the CRC to the message. It pads the last frame
+wit 1-bits.
 
 The receiver ignores any partial byte. It first calculates the CRC over the
 whole message except for the last byte. If the CRC is zero *and* the last
@@ -199,10 +200,12 @@ fact any other value) is always non-zero.
 Choice of CRC parameters
 ------------------------
 
-We use the CRC-8-MAXIM because IoT frequently uses 1wire devices, thus you
-might already have code for it. CRC-16-XMODEM is fairly widely used. Both
-variants don't require initialization, reflection, or inversion, thus
-simplifying the code somewhat.
+The polynomials have been described by Koopman and Chakravarty in
+<http://users.ece.cmu.edu/~koopman/roses/dsn04/koopman04_crc_poly_embedded.pdf>
+as providing optimal Hamming distance (4).
+
+However, our errors do not directly affect the data; a single bit error
+changes anywhere between 1 and ~10 bits. Further research is required.
 
 
 Message Acknowledgment

@@ -103,6 +103,7 @@ class Client(BaseHandler):
         self.__done.append(ev)
 
     def process(self, msg):
+        self.debug("RCVD %r",msg)
         if self.__dest is not None and self.__dest == msg.dst:
             self.__msg = msg
             return True

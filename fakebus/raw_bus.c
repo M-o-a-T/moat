@@ -6,6 +6,9 @@
 #include <unistd.h>
 #include <string.h>
 
+/*
+ * A short test program to send random wire states to the fake bus
+ */
 int main(int argc, const char *argv[])
 {
     struct sockaddr_un address;
@@ -15,8 +18,8 @@ int main(int argc, const char *argv[])
     socket_fd = socket(PF_UNIX, SOCK_STREAM, 0);
     if(socket_fd < 0)
     {
-		printf("socket() failed\n");
-		return 1;
+        printf("socket() failed\n");
+        return 1;
     }
 
     /* start with a clean address structure */
@@ -29,38 +32,38 @@ int main(int argc, const char *argv[])
                (struct sockaddr *) &address, 
                sizeof(struct sockaddr_un)) != 0)
     {
-		printf("connect() failed\n");
-		return 1;
+        printf("connect() failed\n");
+        return 1;
     }
 
-	while(1) {
-		unsigned char c;
-		struct pollfd p = {socket_fd,POLLIN};
-		switch(poll(&p,1,1000+rand()/(1+RAND_MAX/1000))) {
-		case -1:
-			perror("poll");
-    		close(socket_fd);
-			return 1;
-		case 0:
-			c = 1<<(rand()%8);
-    		write(socket_fd, &c, 1);
-			break;
-		case 1:
-    		switch(read(socket_fd, &c, 1)) {
-			case -1:
-				perror("poll");
-				close(socket_fd);
-				return 1;
-			case 0:
-				close(socket_fd);
-				return 0;
-			case 1:
-				printf("%02x ",c);
-				fflush(stdout);
-				break;
-			}
-		}
-	}
+    while(1) {
+        unsigned char c;
+        struct pollfd p = {socket_fd,POLLIN,0};
+        switch(poll(&p,1,1000+rand()/(1+RAND_MAX/1000))) {
+        case -1:
+            perror("poll");
+            close(socket_fd);
+            return 1;
+        case 0:
+            c = 1<<(rand()%8);
+            write(socket_fd, &c, 1);
+            break;
+        case 1:
+            switch(read(socket_fd, &c, 1)) {
+            case -1:
+                perror("poll");
+                close(socket_fd);
+                return 1;
+            case 0:
+                close(socket_fd);
+                return 0;
+            case 1:
+                printf("%02x ",c);
+                fflush(stdout);
+                break;
+            }
+        }
+    }
     close(socket_fd);
     return 0;
 }

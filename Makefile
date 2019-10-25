@@ -33,13 +33,15 @@ AUTOSPHINXOPTS := -i *~ -i *.sw* -i Makefile*
 SPHINXBUILDDIR ?= $(BUILD_DIR)/sphinx/html
 ALLSPHINXOPTS ?= -d $(BUILD_DIR)/sphinx/doctrees $(SPHINXOPTS) docs
 
-code:	bin/test_handler_crc bin/test_crc bin/test_handler_crc_bus
+code:	bin/test_handler_crc bin/test_crc bin/test_handler_crc_bus bin/raw_bus
 
 bin/test_handler_crc_bus:	obj/test_handler_crc_bus.o obj/libmessage.a
 	gcc -o $@ $^
 bin/test_handler_crc:	obj/test_handler_crc.o obj/libmessage.a
 	gcc -o $@ $^
 bin/test_crc:	obj/test_crc.o obj/libmessage.a
+	gcc -o $@ $^
+bin/raw_bus:	obj/raw_bus.o
 	gcc -o $@ $^
 
 obj/libmessage.a: obj/message.o obj/crc.o
@@ -54,6 +56,8 @@ obj/test_handler_crc_bus.o:	fakebus/test_handler_crc_bus.c
 obj/test_handler_crc.o:	fakebus/test_handler_crc.c
 	gcc -g -O0 -W -c -I. -o $@ $^
 obj/test_crc.o:	fakebus/test_crc.c
+	gcc -g -O0 -W -c -I. -o $@ $^
+obj/raw_bus.o:	fakebus/raw_bus.c
 	gcc -g -O0 -W -c -I. -o $@ $^
 
 doc:

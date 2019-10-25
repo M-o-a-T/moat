@@ -187,12 +187,11 @@ u_int16_t msg_extract_chunk(BusMessage msg, u_int8_t frame_bits)
 {
     u_int16_t data = 0;
     u_int8_t fb;
-    u_int16_t end = msg->data_end<<3 + 8-; u_int8_t bits = msg->data_end_off;
 
     u_int8_t *buf = msg->data+msg->data_pos;
     u_int8_t bits = msg->data_pos_off;
 
-    u_int16_t x_bits = ((msg->data_end<<3) - data_end_off) - ((msg->data_pos<<3) - data_pos_off);
+    u_int16_t x_bits = ((msg->data_end<<3) - msg->data_end_off) - ((msg->data_pos<<3) - msg->data_pos_off);
     // should be 8-data_*_off in each term, but the 8 cancels out
 
     assert(frame_bits <= 16);
@@ -228,7 +227,7 @@ u_int16_t msg_extract_chunk(BusMessage msg, u_int8_t frame_bits)
     }
     if (x_bits) {
         assert(frame_bits<16);
-        if (x_bits >= 8)
+        if (x_bits >= 8) {
             // assume frame_bits=11, buffer contains only 2 bits:
             // before this: data = AB0-00000000
             // We want to return: 1000-00000AB0

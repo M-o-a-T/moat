@@ -1,5 +1,7 @@
 /*
 Message structure for MoatBus
+
+This interface mostly mimics message.py
 */
 
 #include <sys/types.h>
@@ -22,10 +24,8 @@ struct _BusMessage {
     u_int16_t data_end; // current write position: byte offset
     u_int8_t data_end_off; // current write position: non-filled bits
     u_int8_t hdr_len; // Length of header. 0: values are in the struct
-    char has_crc;
 };
 #define MSG_MAXHDR 3
-#define MSG_MAXCRC8 7 // CRC16 when larger
 #define MSG_MINBUF 30
 
 typedef struct _BusMessage *BusMessage;
@@ -44,34 +44,42 @@ void msg_read_header(BusMessage msg);
 
 // Start address of the message (data only)
 u_int8_t *msg_start(BusMessage msg);
-// Length of the message, excluding header and CRC
+// Length of the message, excluding header (bytes)
 u_int16_t msg_length(BusMessage msg);
+// Length of the complete message (bits)
+u_int16_t msg_bits(BusMessage msg);
 
 // copy the first @off bits to a new message
 BusMessage msg_copy_bits(BusMessage msg, u_int8_t off);
 
-// ensure there's a CRC
-void msg_add_crc(BusMessage msg);
-
-// check CRC, ensure there's no CRC
-char msg_check_crc(BusMessage msg);
-
-// prepare a buffer for sending
-void msg_start_extract(BusMessage msg);
-// are there more data to extract?
-char msg_extract_more(BusMessage msg);
-// extract a frame_bits wide chunk
-u_int16_t msg_extract_chunk(BusMessage msg, u_int8_t frame_bits);
-
-// prepare a buffer for receiving
-void msg_start_add(BusMessage msg);
-// received @frame_bits of data
-void msg_add_chunk(BusMessage msg, u_int8_t frame_bits, u_int16_t data);
+// sender
 
 // prepare a buffer to add content to be transmitted
 void msg_start_send(BusMessage msg);
 // add bytes, filling incomplete bytes with zero
 void msg_send_data(BusMessage msg, u_int8_t *data, u_int16_t len);
-// add bits
-void msg_send_bits(BusMessage msg, u_int8_t *data, u_int16_t off, u_int16_t len); // bits
 
+// prepare a buffer for sending
+void msg_start_extract(BusMessage msg);
+// are there more data to extract?
+char msg_extract_more(BusMessage msg);
+// extract a frame_bits wide chunk.
+// at the end of the message, fill with zeroes if <8 bits are missing
+//    otherwise align to 8-bit, return |(1<<frame_bits)
+u_int16_t msg_extract_chunk(BusMessage msg, u_int8_t frame_bits);
+
+// receiver
+
+// prepare a buffer for receiving
+void msg_start_add(BusMessage msg);
+// received @frame_bits of data
+void msg_add_chunk(BusMessage msg, u_int16_t data, u_int8_t frame_bits);
+
+// remove @bits of data from the end, return contents
+u_int16_t msg_drop(BusMessage msg, u_int8_t frame_bits);
+// remove residual bits
+void msg_align(BusMessage msg);
+
+// deprecated, only present for fakebus/test_handler_crc.c
+// add zero filler plus 1-bit "added more than 8 bits" flag + CRC
+void msg_fill_crc(BusMessage msg, u_int8_t frame_bits, u_int16_t crc, u_int8_t crc_bits);

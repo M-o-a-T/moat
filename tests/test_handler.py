@@ -70,8 +70,8 @@ class BusTest:
             assert not a
         elif a:
             val = val % a
-        if len(self.reports) > 500:
-            self.reports.popleft()
+#       if len(self.reports) > 500:
+#           self.reports.popleft()
         self.reports.append("%6d %s %s" % (t,n,val))
 
     def timeout(self):
@@ -195,6 +195,7 @@ class Handler(BaseHandler):
         self.master.report(self.addr, msg, *a)
 
     def report_error(self, typ, **kw):
+        self.debug("Error %d: %s", typ, " ".join("%s=%s" % (k,v) for k,v in kw.items()))
         self.errors.append(typ)
 
     def set_timeout(self, timeout):
@@ -231,17 +232,17 @@ class Handler(BaseHandler):
 def gen_data(client):
     msg = BusMessage()
     msg.src = client.addr
-    msg.dst = 3 if client.addr != 3 else 1
-    msg.code = 1 if msg.src<4 and msg.dst<4 else 210 if msg.src>4 and msg.dst>4 else 23
+    msg.dst = -3 if client.addr != -3 else -1
+    msg.code = 1 if msg.src<0 and msg.dst<0 else 210 if msg.src>=0 and msg.dst>=0 else 23
     msg.start_send()
     msg.send_data(b'%d!' % client.addr)
     client.send(msg)
     return 30
 
-addrs=[1,3,4,5,8,11,100,131]
+addrs=[-1,-3,3,5,8,11,100,125]
 
 @pytest.mark.parametrize('n',[2,4,8])
-@pytest.mark.parametrize('bits',[2,3,4])
+@pytest.mark.parametrize('bits',[4,2,3])
 @pytest.mark.parametrize('delay',[0,2])
 @pytest.mark.parametrize('max_delay',[0,2])
 @pytest.mark.parametrize('t_a',[11,15])
@@ -262,9 +263,9 @@ def test_bus(n,bits, delay,max_delay,t_a):
                 assert int(m.data[:-1]) == m.src, m
                 assert m.data[-1] == b'!'[0], m
     except Exception:
-        for c in bus.off_clients:
-            pprint((c,vars(c)))
-        for m in bus.reports:
-            print(m)
+        for cc in bus.off_clients:
+            pprint((c,vars(cc)))
+        for mm in bus.reports:
+            print(mm)
         raise
 

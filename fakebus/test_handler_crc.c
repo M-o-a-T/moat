@@ -1,12 +1,20 @@
-#include "moatbus/crc.h"
 #include "moatbus/message.h"
 #include <stdio.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include <assert.h>
 #include <string.h> // memcmp
+#include "moatbus/crc.h"
 
+//
+// Test program for high-level CRC checks
+//
+// This progran tests whether a CRC over the resulting message is a useable
+// way to recognize errors. Surprise: it is not. A single fault can fail
+// both CRC-6 and CRC-11.
+//
 int gnf = 999;
 int _C[] = {0,0,11,14,11,14,11};
 int _X[] = {0,0,7,5,3,3,2};
@@ -34,6 +42,7 @@ void run1(int N, int x, int nf) {
     }
     msg = msg_alloc(x);
     msg_start_send(msg);
+
     for(int xx=x;xx>0;--xx) {
         u_int8_t c = random()*256L/(RAND_MAX+1L);
         msg_send_data(msg,&c,1);
@@ -45,9 +54,30 @@ void run1(int N, int x, int nf) {
     msg->src = random()*(128+4L)/(RAND_MAX+1L)-4;
     msg->dst = random()*(128+4L)/(RAND_MAX+1L)-4;
     msg->code = 2;
+    msg_add_header(msg);
 
-    msg_add_crc(msg);
-    assert(msg_check_crc(msg));
+    u_int8_t msg_crc6(BusMessage m) {
+        u_int8_t *data = msg_start(m);
+        u_int8_t *data_end = data + msg_length(m);
+        u_int8_t c6 = 0;
+        for(; data < data_end; data++)
+            c6 = crc6_update(c6, *data,8);
+        return c6;
+    }
+
+    u_int16_t msg_crc11(BusMessage m) {
+        u_int8_t *data = msg_start(m);
+        u_int8_t *data_end = data + msg_length(m);
+        u_int16_t c11 = 0;
+        for(; data < data_end; data++)
+            c11 = crc11_update(c11, *data,8);
+        return c11;
+    }
+
+    if (0) // msg_bits(msg) <= 48) // without CRC
+        msg_fill_crc(msg, C, msg_crc6(msg), 6);
+    else
+        msg_fill_crc(msg, C, msg_crc11(msg), 11);
 
     u_int16_t n = 0;
     msg_start_extract(msg);
@@ -61,7 +91,6 @@ void run1(int N, int x, int nf) {
         for (u_int i=0;i<X;i++,n++)
             m_out[n+1] = m_out[n] ^ (b[i]+1);
     }
-    assert(msg_check_crc(msg));
 
     unsigned int l1 = 0;
     unsigned int l2 = n;
@@ -95,6 +124,7 @@ void run1(int N, int x, int nf) {
     for(int nn = 1; nn <= n; nn++) {
         int xc = c^m_out[nn];
         if (!xc) {
+            // fault created zero-change transition
             skip1++;
             goto out;
         }
@@ -103,22 +133,37 @@ void run1(int N, int x, int nf) {
 
         if(++xx == X) {
             if (v > CC) {
+                // fault created too large result
                 skip2++;
                 goto out;
             }
-            msg_add_chunk(mm,C,v);
+            msg_add_chunk(mm,v,C);
             v=0; xx=0;
         }
     }
+
+    char crc_ok;
+    u_int16_t c_x;
+    u_int16_t crc;
+    if (0) { // msg_bits(mm) <= 58) {
+        crc = msg_drop(mm, 6);
+        msg_align(mm, msg_drop(mm, 1));
+        crc_ok = (crc == (c_x = msg_crc6(mm)));
+    } else {
+        crc = msg_drop(mm, 11);
+        msg_align(mm, msg_drop(mm, 1));
+        crc_ok = (crc == (c_x = msg_crc11(mm)));
+    }
     if (!nf) {
-        assert(msg_check_crc(mm));
+        assert(crc_ok);
         msg_read_header(mm);
         assert(msg_length(msg) == msg_length(mm));
         assert(!memcmp(msg_start(msg),msg_start(mm),msg_length(msg)));
         assert(mm->src == msg->src);
         assert(mm->dst == msg->dst);
         assert(mm->code == msg->code);
-    } else if(msg_check_crc(mm) && memcmp(msg_start(msg),msg_start(mm),msg_length(msg))) {
+    } else if(crc_ok) {
+        assert (memcmp(msg_start(msg),msg_start(mm),msg_length(msg)));
         // Owch
         int onf = bad[N][nf];
         if ((onf == 0) || (onf > x)) {

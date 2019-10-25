@@ -15,8 +15,8 @@ def seq(len):
 
 @pytest.mark.parametrize("length", (0,1,2,3,4,5,7,8,9,10,11,15,16))
 @pytest.mark.parametrize("frame", [11,14])
-@pytest.mark.parametrize("src", [4,3,131])
-@pytest.mark.parametrize("dst", [1,4,130])
+@pytest.mark.parametrize("src", [2,33,-1])
+@pytest.mark.parametrize("dst", [1,44,-2])
 @pytest.mark.parametrize("bits", [ones,zeroes,seq])
 def test_frame(length,frame,src,dst,bits):
     i = BusMessage()
@@ -26,9 +26,8 @@ def test_frame(length,frame,src,dst,bits):
     assert i.data == d
     i.src = src
     i.dst = dst
-    code = 2 if src<4 and dst<4 else 252 if src>=4 and dst>=4 else 30
+    code = 2 if src<0 and dst<0 else 252 if src>=0 and dst>=0 else 30
     i.code = code
-    i.generate_crc()
 
     j = BusMessage()
     i.start_extract()
@@ -37,9 +36,9 @@ def test_frame(length,frame,src,dst,bits):
         x = i.extract_chunk(frame)
         if x is None:
             break
-        j.add_chunk(frame, x)
+        j.add_chunk(x, frame)
 
-    j.check_crc()
+    j.align()
     assert j.data == d
     assert j.src == src
     assert j.dst == dst

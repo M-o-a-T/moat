@@ -1,5 +1,6 @@
 from collections import deque
 from moatbus.message import BusMessage
+from moatbus.crc import CRC11
 from enum import IntEnum
 import inspect
 from random import random
@@ -18,10 +19,12 @@ class S(IntEnum): # states
     READ = 2
     READ_ACK = 3
     READ_ACQUIRE = 4
+    READ_CRC = 5
     WRITE = 10
     WRITE_ACQUIRE = 11
     WRITE_ACK = 12 # entered after READ sees the last bit
     WRITE_END = 13 # entered after WRITE_ACK is verified
+    WRITE_CRC = 14
 
 class ERR(IntEnum):
     NOTHING = 1 # bus zero?
@@ -40,6 +43,14 @@ class RES(IntEnum):
     MISSING = 1
     ERROR = 2
     FATAL = 3
+
+class W(IntEnum):
+    MORE = 0  # next: MORE/LAST/FINAL
+    CRC = 1   # next: READ  # writing the CRC
+    END = 2   # next: CRC   # writing the end marker
+    LAST = 3  # next: END   # writing the last word, < 2^N  # unused
+    FINAL = 4 # next: CRC   # writing the last word, >= 2^N
+
 
 T_BREAK = 0
 T_BACKOFF = 2
@@ -80,7 +91,9 @@ class BaseHandler:
         self.BITS = BITS[wires]
         self.N_END = N_END[wires]
         self.VAL_END = self.MAX ** self.N_END -1
-        self.VAL_MAX = (1<<self.BITS) -1
+        self.VAL_MAX = 1<<self.BITS
+        # The CRC is 11 bits, so on 3-wire we can skip a transition
+        self.LEN_CRC = (self.LEN-1) if wires == 3 else self.LEN
 
         self.last = self.current = self.get_wire()
         self.settle = False
@@ -90,6 +103,7 @@ class BaseHandler:
         self.sending = None
         self.sending_q = None
         self.want_prio = None
+        self.current_prio = None
 
         # Delay after a packet.
         self.backoff = T_BACKOFF
@@ -284,12 +298,18 @@ class BaseHandler:
 
         elif self.state == S.WRITE_ACQUIRE:
             if bits == self.want_prio:
+                self.current_prio = bits
+                self.crc = CRC11(self.WIRES)
+                self.debug("Init CRC %x", self.current_prio)
                 self.set_state(S.WRITE)
             else:
                 self.error(ERR.ACQUIRE_FATAL)
 
         elif self.state == S.READ_ACQUIRE:
             if bits and not bits&(bits-1):
+                self.current_prio = bits
+                self.crc = CRC11(self.WIRES)
+                self.debug("Init CRC %x", self.current_prio)
                 self.set_state(S.READ)
             elif not bits:
                 self.error(ERR.NOTHING)
@@ -297,6 +317,11 @@ class BaseHandler:
                 self.error(ERR.ACQUIRE_FATAL)
 
         elif self.state == S.READ:
+            self.crc.update(bits ^ self.current_prio)
+            self.debug("CRC add %x => %x",bits,self.crc.crc)
+            self.read_next(bits)
+
+        elif self.state == S.READ_CRC:
             self.read_next(bits)
 
         elif self.state == S.READ_ACK:
@@ -315,6 +340,13 @@ class BaseHandler:
             self.set_state(S.WAIT_IDLE)
 
         elif self.state == S.WRITE:
+            if bits != self.intended:
+                self.write_collision(bits &~ self.intended, True)
+            else:
+                self.crc.update(bits ^ self.current_prio)
+                self.debug("CRC add %x => %x",bits,self.crc.crc)
+
+        elif self.state == S.WRITE_CRC:
             if bits != self.intended:
                 self.write_collision(bits &~ self.intended, True)
 
@@ -388,7 +420,7 @@ class BaseHandler:
                 # Somebody didn't take their wire down in time
                 self.error(ERR.ACQUIRE_FATAL)
 
-        elif self.state == S.WRITE:
+        elif self.state in (S.WRITE, S.WRITE_CRC):
             if not self.write_next():
                 pass
             elif bits &~ (self.last | self.intended):
@@ -429,34 +461,60 @@ class BaseHandler:
         self.sending.start_extract()
         self.set_wire(self.want_prio)
         self.set_state(S.WRITE_ACQUIRE)
-
-    def gen_chunk(self):
+        self.write_state = W.MORE
+    
+    def gen_chunk(self) -> bool:
+        """
+        Generate the next couple of states to transmit, depending on the
+        state the writer is in.
+        """
         assert not self.cur_pos, self.cur_pos
-        if len(self.cur_chunk) == self.N_END:
-            return
-        xv = val = self.sending.extract_chunk(self.BITS)
-        if val is None:
-            assert self.cur_chunk
-            self.cur_pos = n = self.N_END
-            res = [self.MAX]*n
-        else:
+        res = None
+
+        if self.write_state == W.MORE:
+            val = self.sending.extract_chunk(self.BITS)
+            if val is None:
+                self.write_state = W.FINAL
+                self.cur_pos = n = self.N_END
+                res = [self.MAX]*n
+            elif val >= self.VAL_MAX:
+                self.write_state = W.FINAL
+            # else continue in W.MORE
+
+        elif self.write_state == W.CRC:
+            # Done.
+            return False
+
+        elif self.write_state in (W.END,W.FINAL):
+            # End marker done, send CRC
+            val = self.crc.finish()
+            self.debug("CRC is %x",self.crc.crc)
+            self.write_state = W.CRC
+            self.set_state(S.WRITE_CRC)
+
+        elif self.write_state == W.LAST:
+            raise NotImplementedError("unused state")
+
+        if res is None:
             res = []
-            self.cur_pos = n = self.LEN
+            self.skip_end = val >= self.VAL_MAX
+            self.cur_pos = n = self.LEN_CRC if self.write_state == W.CRC else self.LEN
+            oval=val
             while n:
                 val,p = divmod(val,self.MAX)
                 res.append(p+1)
                 n -= 1
+            assert not val, val
+            self.debug("Split %d: %s", oval," ".join("%d"%(x-1) for x in res))
+
         self.cur_chunk = res
-        assert not val, val
         return True
 
-    def write_next(self):
+    def write_next(self) -> bool:
         """
         Prepare to write the next piece.
         """
-        if not self.cur_pos:
-            self.gen_chunk()
-        if not self.cur_pos:
+        if not self.cur_pos and not self.gen_chunk():
             # switch to reading
             self.set_state(S.READ_ACK)
             return False
@@ -477,14 +535,17 @@ class BaseHandler:
         @settled: is the current value stable?
         """
         self.want_prio = bits & ~(bits-1)
-        self.report_error(ERR.COLLISION, src=self.sending.src, dst=self.sending.dst,prio=self.want_prio,off=self.sending.chunk_offset,pos=self.cur_pos,backoff=int(self.backoff*100)/100)
         # this leaves the lowest-numbered bit turned on
-        # this means that we separate our prio from the other sender's
-        msg = BusMessage()
+        # thus we separate our prio from the other sender's
+        self.report_error(ERR.COLLISION, src=self.sending.src, dst=self.sending.dst,prio=self.want_prio,off=self.sending.chunk_offset,pos=self.cur_pos,backoff=int(self.backoff*100)/100, settled=settled)
+
+        self.msg_in = msg = BusMessage()
         msg.start_add()
         off = self.sending.chunk_offset - self.BITS
         if off:
-            msg.add_written(self.sending.pull_bits(off))
+            c = self.sending.first_bits(off)
+            self.debug("Old Chunk: %s",c)
+            msg.add_written(c)
         self.val = 0
         n = len(self.cur_chunk)
         self.nval = 0
@@ -492,10 +553,13 @@ class BaseHandler:
             n -= 1
             self.val = self.val * self.MAX + self.cur_chunk[n]-1
             self.nval += 1
+            self.debug("Replay %x",self.cur_chunk[n]-1)
+            # not added to CRC: it already is in there
 
         bits = self.current
         self.set_state(S.READ)
         if settled:
+            self.crc.update(bits ^ self.current_prio)
             self.read_next(bits)
         self.no_backoff = True
 
@@ -516,10 +580,10 @@ class BaseHandler:
         if self.state == S.IDLE and not self.settle:
             self.start_writer()
 
-    def read_done(self):
+    def read_done(self, crc_ok: bool):
         self.no_backoff = False
         msg_in,self.msg_in = self.msg_in,None
-        if not msg_in.check_crc():
+        if not crc_ok:
             self.report_error(ERR.CRC)
             self.set_ack_mask()
             if not self.nack_mask:
@@ -527,11 +591,13 @@ class BaseHandler:
                 return
             self.ack_mask = self.nack_mask # oh well
             self.set_state(S.WRITE_ACK)
-        elif self.process(msg_in):
-            self.set_state(S.WRITE_ACK)
         else:
-            # The message is not for us
-            self.set_state(S.WAIT_IDLE)
+            msg_in.align()
+            if self.process(msg_in):
+                self.set_state(S.WRITE_ACK)
+            else:
+                # The message is not for us
+                self.set_state(S.WAIT_IDLE)
 
 
     def set_ack_mask(self):
@@ -558,15 +624,32 @@ class BaseHandler:
 
         self.val = self.val * self.MAX + bits-1
         self.nval += 1
-        if self.nval == self.N_END and self.val == self.VAL_END:
-            self.read_done()
-        elif self.nval == self.LEN:
-            if self.val > self.VAL_MAX:
-                self.error(ERR.CRC)
-            else:
-                self.msg_in.add_chunk(self.BITS, self.val)
-                self.nval = 0
-                self.val = 0
+        if self.state == S.READ_CRC:
+            if self.nval == self.LEN_CRC:
+                crc_final = self.crc.finish()
+                self.debug("CRC: local %x vs. remote %x",crc_final, self.val)
+                self.read_done(self.val == crc_final)
+        else: # S.READ
+            if self.nval == self.N_END and self.val == self.VAL_END:
+                self.read_crc()
+            elif self.nval == self.LEN:
+                if self.val >= self.VAL_MAX + (1<<(self.BITS-8)):
+                    self.error(ERR.CRC) # eventually. We hope.
+                elif self.val >= self.VAL_MAX:
+                    self.debug("Add Residual x%x", self.val-self.VAL_MAX)
+                    self.msg_in.add_chunk(self.val-self.VAL_MAX, self.BITS-8)
+                    self.read_crc()
+                else:
+                    self.debug("Add Chunk x%x",self.val)
+                    self.msg_in.add_chunk(self.val, self.BITS)
+                    self.nval = 0
+                    self.val = 0
+
+    def read_crc(self):
+        """Switch to reading the CRC."""
+        self.nval = 0
+        self.val = 0
+        self.set_state(S.READ_CRC)
 
     def error(self, typ):
         if typ == ERR.HOLDTIME and not self.current:

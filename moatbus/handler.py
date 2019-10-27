@@ -53,6 +53,7 @@ class W(IntEnum):
 
 
 T_BREAK = 0
+T_SETTLE = 1
 T_BACKOFF = 2
 T_ZERO = 5
 T_ERROR = 10
@@ -94,6 +95,7 @@ class BaseHandler:
         self.VAL_MAX = 1<<self.BITS
         # The CRC is 11 bits, so on 3-wire we can skip a transition
         self.LEN_CRC = (self.LEN-1) if wires == 3 else self.LEN
+        self.crc = CRC11(self.WIRES)
 
         self.last = self.current = self.get_wire()
         self.settle = False
@@ -101,7 +103,6 @@ class BaseHandler:
         self._q = deque()
         self._prio_q = deque()
         self.sending = None
-        self.sending_q = None
         self.want_prio = None
         self.current_prio = None
 
@@ -205,13 +206,13 @@ class BaseHandler:
 
         if self.state > S.IDLE:
             self.settle = True
-            self._set_timeout(1)
+            self._set_timeout(T_SETTLE)
 
     def wire_settle(self, bits):
         """
         The wire state has changed: now these bits are pulled low.
         """
-        self.debug("WS %02x",bits)
+        self.debug("Wire Settle %02x",bits)
 
         assert self.state >= S.IDLE
 
@@ -243,8 +244,8 @@ class BaseHandler:
         If the line is off, add to last_zero so that we can be accurate
         about WAIT_IDLE.
         """
-        if val < 0:
-            self.set_timeout(-1)
+        if val == 0:
+            self.set_timeout(0)
             return
         if val == T_ZERO and self.last_zero is not None:
             val = max(T_ZERO-self.last_zero, 1)
@@ -273,15 +274,12 @@ class BaseHandler:
                 self._set_timeout(0)
             elif self.state > S.IDLE:
                 self._set_timeout(T_ZERO)
-        elif self.settle is False:
+        else:
             self.debug("Delay Timer %s",self.state)
             self.next_step(True)
             if self.state > S.IDLE:
                 self.settle = True
                 self._set_timeout(1)
-        else:
-            # hard timeout
-            self.error(ERR.NO_CHANGE)
 
     def timeout_settle(self):
         """
@@ -299,7 +297,7 @@ class BaseHandler:
         elif self.state == S.WRITE_ACQUIRE:
             if bits == self.want_prio:
                 self.current_prio = bits
-                self.crc = CRC11(self.WIRES)
+                self.crc.reset()
                 self.debug("Init CRC %x", self.current_prio)
                 self.set_state(S.WRITE)
             else:
@@ -308,7 +306,7 @@ class BaseHandler:
         elif self.state == S.READ_ACQUIRE:
             if bits and not bits&(bits-1):
                 self.current_prio = bits
-                self.crc = CRC11(self.WIRES)
+                self.crc.reset()
                 self.debug("Init CRC %x", self.current_prio)
                 self.set_state(S.READ)
             elif not bits:
@@ -406,6 +404,8 @@ class BaseHandler:
                 self.start_writer()
             elif bits:
                 self.start_reader(True)
+            else:
+                self._set_timeout(-1)
 
         elif self.state < S.WRITE:
             if timeout:
@@ -443,7 +443,6 @@ class BaseHandler:
 
     def clear_sending(self):
         msg,self.sending = self.sending,None
-        self.sending_q = None
         self.want_prio = None
         return msg
 
@@ -497,7 +496,6 @@ class BaseHandler:
 
         if res is None:
             res = []
-            self.skip_end = val >= self.VAL_MAX
             self.cur_pos = n = self.LEN_CRC if self.write_state == W.CRC else self.LEN
             oval=val
             while n:
@@ -568,11 +566,9 @@ class BaseHandler:
         if self.sending is None:
             if self._prio_q:
                 self.sending = self._prio_q.popleft()
-                self.sending_q = self._prio_q
                 prio = True
             elif self._q:
                 self.sending = self._q.popleft()
-                self.sending_q = self._q
         if self.sending is None:
             return
         if self.want_prio is None:
@@ -689,6 +685,7 @@ class BaseHandler:
         self.cur_chunk = None
         self.ack_mask = None
         self.msg_in = BusMessage()
+        self.msg_in.start_add()
 
         self.val = 0
         self.nval = 0

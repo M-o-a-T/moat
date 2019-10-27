@@ -1,3 +1,6 @@
+#ifndef MOATBUS_MESSAGE
+#define MOATBUS_MESSAGE
+
 /*
 Message structure for MoatBus
 
@@ -36,6 +39,8 @@ BusMessage msg_alloc(u_int16_t maxlen);
 void msg_free(BusMessage msg);
 // Increase max buffer size
 void msg_resize(BusMessage msg, u_int16_t maxlen);
+// dump message
+const char* msg_info(BusMessage msg);
 
 // Add header bytes to the message
 void msg_add_header(BusMessage msg);
@@ -48,6 +53,8 @@ u_int8_t *msg_start(BusMessage msg);
 u_int16_t msg_length(BusMessage msg);
 // Length of the complete message (bits)
 u_int16_t msg_bits(BusMessage msg);
+// Length of already-processed/transmitted message (bits)
+u_int16_t msg_sent_bits(BusMessage msg);
 
 // copy the first @off bits to a new message
 BusMessage msg_copy_bits(BusMessage msg, u_int8_t off);
@@ -57,7 +64,7 @@ BusMessage msg_copy_bits(BusMessage msg, u_int8_t off);
 // prepare a buffer to add content to be transmitted
 void msg_start_send(BusMessage msg);
 // add bytes, filling incomplete bytes with zero
-void msg_send_data(BusMessage msg, u_int8_t *data, u_int16_t len);
+void msg_send_data(BusMessage msg, const u_int8_t *data, u_int16_t len);
 
 // prepare a buffer for sending
 void msg_start_extract(BusMessage msg);
@@ -74,6 +81,8 @@ u_int16_t msg_extract_chunk(BusMessage msg, u_int8_t frame_bits);
 void msg_start_add(BusMessage msg);
 // received @frame_bits of data
 void msg_add_chunk(BusMessage msg, u_int16_t data, u_int8_t frame_bits);
+// copy a chunk from transmitted message
+void msg_add_in(BusMessage msg, BusMessage orig, u_int16_t bits);
 
 // remove @bits of data from the end, return contents
 u_int16_t msg_drop(BusMessage msg, u_int8_t frame_bits);
@@ -83,3 +92,5 @@ void msg_align(BusMessage msg);
 // deprecated, only present for fakebus/test_handler_crc.c
 // add zero filler plus 1-bit "added more than 8 bits" flag + CRC
 void msg_fill_crc(BusMessage msg, u_int8_t frame_bits, u_int16_t crc, u_int8_t crc_bits);
+
+#endif

@@ -1,2 +1,4 @@
 __pycache__/
 fakebus/raw_bus
+/obj/
+/bin/

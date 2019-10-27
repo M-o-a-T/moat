@@ -70,7 +70,7 @@ class Main:
                 c.last_b = b
                 try:
                     await c.send_all(b)
-                except BrokenPipeError:
+                except (BrokenPipeError,EnvironmentError):
                     await self.remove(c)
 
             last = val

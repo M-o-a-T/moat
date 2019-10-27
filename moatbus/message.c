@@ -2,7 +2,9 @@
 Message structure for MoatBus
 */
 
+#define _GNU_SOURCE
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <assert.h>
 
@@ -44,6 +46,17 @@ void msg_resize(BusMessage msg, u_int16_t maxlen)
     }
 }
 
+static char *msg_info_buf = NULL;
+const char* msg_info(BusMessage msg)
+{
+    if(msg_info_buf)
+        free(msg_info_buf);
+    u_int16_t ml = msg_length(msg);
+    asprintf(&msg_info_buf, "Msg< src:%d dst:%d cmd:x%x %d:%*s >", msg->src,msg->dst,msg->code,
+            ml,ml,msg_start(msg));
+    return msg_info_buf;
+}
+
 // Start address of the message (data onlyy)
 u_int8_t *msg_start(BusMessage msg)
 {
@@ -60,6 +73,12 @@ u_int16_t msg_length(BusMessage msg)
 u_int16_t msg_bits(BusMessage msg)
 {
     return (msg->data_end-msg->data_off+msg->hdr_len)*8 + (8-msg->data_end_off);
+}
+
+// Length of already-processed/transmitted message (bits)
+u_int16_t msg_sent_bits(BusMessage msg)
+{
+    return (msg->data_pos-msg->data_off+msg->hdr_len)*8 + (8-msg->data_pos_off);
 }
 
 
@@ -213,15 +232,18 @@ u_int16_t msg_extract_chunk(BusMessage msg, u_int8_t frame_bits)
                 fb -= 8;
                 data |= *buf++ << fb;
             }
-        } else if(8-bits >= fb) {
+        } else if(bits >= fb) {
             u_int8_t m = ((1<<bits)-1);
             bits -= fb;
             data |= (*buf & m) >> bits;
+            if (!bits) {
+                buf += 1;
+                bits = 8;
+            }
             break;
         } else {
-            bits = 8-bits; // now temporarily contains # of available bits
             fb -= bits;
-            data |= (*buf & ((1<<bits)-1)) << fb;
+            data |= (*buf++ & ((1<<bits)-1)) << fb;
             bits = 8;
         }
     }
@@ -317,6 +339,19 @@ void msg_add_chunk(BusMessage msg, u_int16_t data, u_int8_t frame_bits)
     msg->data_end_off = bits;
 }
 
+void msg_add_in(BusMessage msg, BusMessage orig, u_int16_t bits)
+{
+    if(!bits)
+        return;
+    u_int8_t bb = bits & 7;
+    bits >>= 3;
+    msg_resize(msg, bits+3);
+    memcpy(msg->data+msg->data_off, orig->data+orig->data_off, bits+(bb != 0));
+
+    msg->data_end = msg->data_off + bits;
+    msg->data_end_off = 8-bb;
+}
+
 // prepare a buffer to add content to be transmitted
 void msg_start_send(BusMessage msg)
 {
@@ -325,7 +360,7 @@ void msg_start_send(BusMessage msg)
     msg->data_end_off = 8;
 }
 
-void msg_send_data(BusMessage msg, u_int8_t *data, u_int16_t len) // bytes
+void msg_send_data(BusMessage msg, const u_int8_t *data, u_int16_t len) // bytes
 {
     if (msg->data_end_off != 8) {
         msg->data_end += 1;

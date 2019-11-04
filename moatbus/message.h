@@ -9,24 +9,35 @@ This interface mostly mimics message.py
 
 #include <sys/types.h>
 
+enum HDL_RES {
+    RES_WORKING = 0,
+    RES_FREE,
+    RES_SUCCESS,
+    RES_MISSING,
+    RES_ERROR,
+    RES_FATAL,
+};
+
 struct _BusMessage {
     struct _BusMessage *next; // for chaining buffers
 
     // if all three are zero the data is in the message
     // // otherwise the header is authoritative, write to the message
-    int8_t src; // Server: -1…-4
-    int8_t dst; // Server: -1…-4
-    u_int8_t code;
+    int8_t src; // -4…127
+    int8_t dst; // -4…127
+    u_int8_t code; // 0…3/31/255
 
     u_int8_t *data;
-    u_int16_t data_max; // buffer length, bytes
+    u_int16_t data_max; // buffer length, bytes. Zero: external allocation
     u_int16_t data_off; // Offset for content (header is before this)
 
     u_int16_t data_pos; // current read position: byte offset
     u_int8_t data_pos_off; // current read position: non-filled bits
     u_int16_t data_end; // current write position: byte offset
     u_int8_t data_end_off; // current write position: non-filled bits
-    u_int8_t hdr_len; // Length of header. 0: values are in the struct
+    u_int8_t hdr_len; // Length of header. 0: need to call add_header / read_header
+
+    enum HDL_RES result;
 };
 #define MSG_MAXHDR 3
 #define MSG_MINBUF 30
@@ -35,6 +46,9 @@ typedef struct _BusMessage *BusMessage;
 
 // Allocate an empty message
 BusMessage msg_alloc(u_int16_t maxlen);
+// init a message allocated elsewhere. Requires MSG_MAXHDR free bytes in front!
+void msg_init(BusMessage msg, u_int8_t *data, u_int16_t len);
+
 // Free a message
 void msg_free(BusMessage msg);
 // Increase max buffer size

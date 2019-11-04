@@ -64,7 +64,7 @@ char fc_connect(FakeClient fc, const char *sockname)
     if(connect(socket_fd, 
                (struct sockaddr *) &address, 
                sizeof(struct sockaddr_un)) != 0) {
-        printf("connect() failed\n");
+        fprintf(stderr,"connect() failed\n");
         return 0;
     }
     fc->socket_fd = socket_fd;
@@ -86,7 +86,7 @@ char fc_process(FakeClient fc)
         return 0;
     case 1:
         if(fc->verbose) {
-            printf("WireIn %x: ",c);
+            fprintf(stderr,"WireIn %x: ",c);
             fflush(stdout);
         }
         fc->wire_in = c;
@@ -129,7 +129,7 @@ static void fcb_set_wire(void *ref, u_int8_t bits)
         fc->socket_fd = -1;
     }
     if(fc->verbose)
-        printf("WireOut %x\n",bits);
+        fprintf(stderr,"WireOut %x\n",bits);
 }
 
 static u_int8_t fcb_get_wire(void *ref)
@@ -141,7 +141,7 @@ static u_int8_t fcb_get_wire(void *ref)
 static char fcb_process(void *ref, BusMessage msg)
 {
     FakeClient fc = (FakeClient)ref;
-    printf("RCVD %d > %d (%d): %*s\n",msg->src,msg->dst,msg->code,msg_length(msg),msg_start(msg));
+    fprintf(stderr,"RCVD %d > %d (%d): %*s\n",msg->src,msg->dst,msg->code,msg_length(msg),msg_start(msg));
     fc->in_msg = msg;
 }
 
@@ -150,7 +150,7 @@ static void fcb_transmitted(void *ref, BusMessage msg, enum HDL_RES result)
     FakeClient fc = (FakeClient)ref;
     fc->out_msg = msg;
     fc->out_result = result;
-    printf("SENT %d > %d (%d): %*s\n",msg->src,msg->dst,msg->code,msg_length(msg),msg_start(msg));
+    fprintf(stderr,"SENT %d > %d (%d): %*s\n",msg->src,msg->dst,msg->code,msg_length(msg),msg_start(msg));
 }
 
 static void fcb_debug(void *ref, const char *text, va_list arg)
@@ -158,13 +158,13 @@ static void fcb_debug(void *ref, const char *text, va_list arg)
     FakeClient fc = (FakeClient)ref;
     if (!fc->verbose)
         return;
-    printf("DEBUG ");
+    fprintf(stderr,"DEBUG ");
     vprintf(text, arg);
 }
 
 static void fcb_report_error(void *ref, enum HDL_ERR err)
 {
     FakeClient fc = (FakeClient)ref;
-    printf("ERROR %d\n",err);
+    fprintf(stderr,"ERROR %d\n",err);
 }
 

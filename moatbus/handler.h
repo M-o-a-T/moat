@@ -29,14 +29,6 @@ enum HDL_ERR {
     ERR_CANNOT = -33,
 };
 
-enum HDL_RES {
-    RES_WORKING = 0,
-    RES_SUCCESS = 1,
-    RES_MISSING = 2,
-    RES_ERROR = 3,
-    RES_FATAL = 4,
-};
-
 #define T_OFF 0 // no timeout
 #define T_BREAK 1 // writer: timer B, between wire check and next change
 // anything greater is (n-T_BREAK)*timer A

@@ -4,7 +4,6 @@
 
 #include "moatbus/handler.h"
 #include "moatbus/message.h"
-#include "moatbus/crc.h"
 #include "moatbus/util.h"
 
 enum _S {

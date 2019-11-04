@@ -14,24 +14,39 @@ BusMessage msg_alloc(u_int16_t maxlen)
 {
     BusMessage msg;
     maxlen += 8; // header, additional frame, whatever
-    u_int8_t *data = calloc(maxlen, 1);
+    u_int8_t *data = malloc(maxlen);
+    memset(data,0,maxlen);
+
     msg = calloc(sizeof (*msg), 1);
     msg->data = data;
     msg->data_max = maxlen;
     msg->data_off = msg->data_end = MSG_MAXHDR;
+    msg->result = RES_FREE;
 
     return msg;
 }
 
+void msg_init(BusMessage msg, u_int8_t *data, u_int16_t len)
+{
+    memset(msg,0,sizeof(*msg));
+    msg->data = data-MSG_MAXHDR;
+    msg->data_off = MSG_MAXHDR;
+    msg->data_end = msg->data_off+len;
+    msg->result = RES_FREE;
+}
+
 void msg_free(BusMessage msg)
 {
-    free(msg->data);
+    if(msg->data_max)
+        free(msg->data);
     free(msg);
 }
 
 void msg_resize(BusMessage msg, u_int16_t maxlen)
 {
     u_int8_t *data;
+    if(msg->data_max == 0)
+        return; // TODO assertion error?
     if(msg->data_max >= maxlen)
         return;
     data = realloc(msg->data, maxlen);

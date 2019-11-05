@@ -2,26 +2,6 @@
 Wire format
 ===========
 
-The MoaT bus is designed to be a simple-to-implement, mostly-self-timing,
-collision-resistant, error-resistant, open-collector, multi master bus
-system.
-
-"Mostly self timing" means that the bus doesn't signal when data are ready.
-In contrast, when an I²C receiver sees a falling clock it knows that it may
-read the data *now*, and that it may hold the clock low until it's ready
-for the next bit. In contrast, the MoatBus uses a data change to signal
-that the message will be ready when the data state is settled, as rise and
-fall time may be different; if a receiver miss its time slot, it loses the
-message.
-
-"Collision resistant" means that while the system tries to avoid
-collisions, they are not always avoidable. However, the senders involved
-in a collision know how to resolve the problem so that one may proceed
-unimpeded.
-
-"Error resistant" means that every packet is CRC-checked and acknowledged.
-
-
 Principle of operation
 ======================
 

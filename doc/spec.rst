@@ -36,11 +36,51 @@ in your cable).
 Next problem: long wires have somewhat high impedance, which limit your
 transmission speed. You could use something like I2C but a software slave
 is annyoing to program and a hardware slave is too susceptible to noise;
-also, you need 16 bus transitions per byte. This is rather slow.
+also, you need 16 bus transitions per byte. This seems rather slow.
 
 The MoaT bus offers a solution to this problem. It requires four wires:
 ground, power, and two data lines. It adapts easily to more than two wires.
-It is multi-master and self-timing.
+
+-----------------
+MoaT bus features
+-----------------
+
+The MoaT bus is designed to be a simple-to-implement, mostly-self-timing,
+collision-resistant, error-resistant, multi master bus system.
+
+"Collision resistant" means that while the system tries to avoid
+collisions, that is not always possible. However, the senders involved  
+in a collision know how to resolve the problem so that one may proceed.
+Exponential back-off helps to prevent bus gridlock.  
+
+"Error resistant" means that every packet is CRC-checked and must be 
+acknowledged by the receiver.
+
+"Multi master" is a misnomer because there are no slaves. Every node may    
+send data to any other node when it wants to.
+
+"Simple to implement": you only need a microcontroller with some free
+open-collector binary ports and a somewhat-accurate timer. That's it.
+Port change interrupts are optional; the timer doesn't need to trigger an
+interrupt either. Messages are usually buffered but can be de/encoded on   
+the fly – though the decoder needs to check the CRC before acting on them.
+
+To explain "mostly self timing": contrast with an explicitly-clocked bus like
+I²C. The sender may wait arbitrarily long for the next bit; the receiver
+can even slow down the sender. Thus neither side needs to observe any hard
+timing requirements. The downside is that a single line is tied up for
+clocking, and you need two transitions per bit.
+
+On the other hand, a serial line is implicitly-clocked: both sender and
+receiver need to send / receive the next bit with an accurracy of 5% or
+better. If sender or receiver have higher latency than that and can't use a
+hardware UART, you're out of luck.
+                                                                            
+The MoaT bus takes some sort of middle road. While there is a nominal baud  
+rate, the sender may delay sending the next bit by at least 50%. The data
+rate cannot be slowed down further, thus it needs to accommodate the
+slowest receiver plus the propagation delay on the wire (which is likely to
+be the limiting factor anyway).
 
 
 Principle of operation
@@ -66,6 +106,7 @@ bus carry 14.86 bits, which seems good enough.
    complexity and doesn't buy us that much: 12 instead of 11 bits on the
    2-wire bus, no advantage with more wires. Thus, we won't do that.
 
+The details are described in 
 
 Bus Timing
 ++++++++++
@@ -477,7 +518,7 @@ the CRC bits shall be skipped and the 3/6-bit value left-padded to 8 bits.
 Replies
 =======
 
-Reply mesages are formatted like Function Code B or C messages, with the
+Reply messages are formatted like Function Code B or C messages, with the
 Request bit cleared. The function code is re-used to contain the (new)
 reply sender's current sequence number.
 

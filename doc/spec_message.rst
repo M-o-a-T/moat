@@ -73,12 +73,13 @@ door contacts), as well as address assignment.
 Bus address assignment is only used for slaves. Master systems are expected
 to know their address.
 
+In MoaT code, master addresses are identified using negative integers
+-1…-4, for addresses 3…0 (i.e. add or subtract 4).
 
-++++++++++++++++++
 Message priorities
 ++++++++++++++++++
 
-The MoaT bus has N wires, thus may have up to N priority levels when
+A MoaT bus with N wires may have up to N priority levels when
 arbitrating the bus.
 
 High-priority status should be given to
@@ -117,7 +118,8 @@ This table is to be interpreted top-down; the first match wins.
 ========  ===========  =======  ===========================
 Source    Destination  Command  Type
 ========  ===========  =======  ===========================
-Master 0  Master 0     random   Address assignment request
+Master 0  Master 0     1        Address assignment request
+Master 0  Master 0     *        reserved
 Master 0  Master X     any      reserved
 Master 0  Slave        result   Address assignment response
 Master X  Master 0     any      reserved
@@ -131,17 +133,19 @@ Address assignment
 
 The payload for all address assignment messages starts with four flag bits
 (reserved), four length bits, and that number of bytes +1 of device-specific
-serial number, MAC, or other device-specific identifier.
+serial number, MAC, or other device-specific identifier. More than 16
+address bytes are not allowed. Addresses shorter than 4 bytes are strongly
+discouraged.
 
-Serial numbers longer than 8 bytes are reserved.
-
-The result has the high bit set if there was an error.
+The result message's command field has the high bit set if there was an error.
+The data field shall be identical to the sender's (possibly excepting the
+flags) so that the receiver may easily identify its reply.
 
 * 0
   New address assigned.
 
 * 1
-  Old address found.
+  Existing address found.
 
 * 2…
   reserved
@@ -152,8 +156,16 @@ The result has the high bit set if there was an error.
 * 17
   Communication error, try again later.
 
-* 18…
+* 18
+  Flag incompatiblity
+
+* 19…
   reserved
+
+There currently are no flag bits defined.
+
+The server will clear any flags which it doesn't understand.
+
 
 Broadcast messages
 ==================
@@ -162,6 +174,7 @@ Slave devices may be configured, either statically or dynamically, to send
 broadcast messages, either periodically or when specific events happen.
 
 The details are described in the Data Dictionary specification, below.
+
 
 Direct messages
 ===============
@@ -193,24 +206,31 @@ Bit  Use
   7  readable flag.
   6  writable flag.
 Directories (r,w are both zero)
-  5  Enumeration. An additional nibble/byte follows that describes the
-     number of instances. May be zero if the feature is available but needs
-     to be dynamically configured.
-4…0  Number of entries
+  5  Enumeration flag
+  4  reserved, zero
+3…0  Number of entries -2
 Files (r and/or w are set)
 5…3  Type code
-2…0  Length
+2…0  Length, encoded
 ===  ======================================================================
 
 If bits 6+7 are clear, the entry is a directory. Bits 4…0 encode the number
-of entries minus one; on the root directory, bit 4 encodes whether multiple
-requests are supported.
+of entries minus one; on the root directory, bits 3…0 are used for this
+purpose while bit 4 encodes whether multiple requests are supported.
 
 If bits 6 or 7 are set, the entry is a file. Bits 4…0 encode the number of
 bytes readable or writeable, according to the following table below.
 
-Read/write requires an additional byte for accessing the n'th member of an
-enumeration after selecting it.
+The Enumeration flag states that this directory consists of a number of
+"essentially the same" subdirectories. . An additional nibble/byte with
+the number of instances follows. (That nibble may be zero if the feature is
+available but needs to be dynamically configured.)
+
+Read/write requests to enumerated directories consume an additional nibble
+or byte for accessing the specific member of an enumeration.
+
+Writeable variable-length entries use another nibble/byte which states the
+maximum length that can be written, minus one.
 
 All path elements are encoded in one nibble. Enumerations may contain up to
 128 entries (though they usually don't) by treating the high bit as an
@@ -227,7 +247,8 @@ Nibble(s)  Length
       9 0  25
         …  …
       F 7  128
-      F 8  reserved …
+      F 8  reserved
+        …  …
       F F  reserved
 =========  ===========
 
@@ -248,7 +269,7 @@ Data >10 bytes must be prefixed.
    000          0     var  UTF-8
    010          0     var  binary
    100          0     var  shortcut
-   110          0     var  reserved
+   110          0     var  broadcast dest+fn+timer+prefix
    001          0     1/2  bool (1 is True, others >0 reserved)
    011          0     1/2  nibble (unsigned)
    101          0     1/2  nibble (bits)
@@ -287,21 +308,21 @@ As an example, consider the complete data dictionary of a four-port binary
 I/O device::
 
     Lookup           Reply
-    00               11 80 FourPort
+    00               11 A0 FourPortThing
 
-    10               03 60 system
-    11               00 30 app
+    10               03 50 system
+    11               00 20 app
 
-    20 00            A9 50 flags
-    20 10            80 40 name
-    20 20            BD 30 MAC        # 6 bytes
-    20 30            84 26 serial     # 32bit
+    20 00            A9 40 flags
+    20 10            80 30 name
+    20 20            BD 20 MAC        # 6 bytes
+    20 30            84 50 serial     # 32-bit number
 
-    21 00            22 35 port
-    31 00            C8 50 drive      # bool r/w
-    31 01            C8 90 direction  # bool r/w
-    31 02            88 50 sense      # bool r
-    31 03            D2 80 shortcut   # quick access
+    21 00            22 33 port
+    31 00            C8 40 drive      # bool r/w
+    31 01            C8 80 direction  # bool r/w
+    31 02            88 40 sense      # bool r
+    31 03            D2 70 shortcut   # quick access
 
 Thus you could read the system name and device code with::
 
@@ -333,24 +354,37 @@ state. These should offer specialized entries for this function.
 Unprovoked messages
 -------------------
 
-MoatBus devices don't send periodic messages unless you tell them to.
-At the same time, polling is frowned upon. Thus, you need to tell the
-MoatBus device what to do.
+As polling is generally a bad idea (twice as many bus messages), MoatBus
+devices send events or periodic measurements on their own. However, the
+server needs to be able to teach them where to send them to.
 
 To do that, a directory entry may offer "broadcast" or "directcast"
 entries. Their value consists of the destination device (for directcast),
-the message code to use, and the timeout.
+the message code to use, and a timer.
+
+Variable length broadcast entries should be used for larger slaves with
+more than 24 timers.
 
 Periodic checks for exceeding limits can be done similarly. The suggested
 feature is to add a "timer" byte and "min"/"max" entries. The timer shall
 describe the period for checking the value; if it exceeds min or max the
 destination shall be updated even if the broadcast / directcast timer has
-not been reached. (The timer shall *not* be restarted.)
+not been reached. (The timer shall *not* auto-restart when that happens.)
 
 Timeouts are interpreted as an 8-bit unsigned minifloat with 4 exponent
 bits, 4 mantissa bits, and no NaN interpretation, scaled so that 2 == 1
 second. This affords a max timeout of 70 hours and an accurracy of +/- one
 minute on a one-hour timeout, which should be more than sufficient.
+
+Slaves are free to treat these timeouts as very approximate guidelines;
+when the master reads a timer, they should simply reply with the value that
+best approximates the timeout that they actually use.
+
+Writing a timeout value (re)starts the accompanying timer.
+
+Simple devices are free not to offer any programmable destinations, instead
+opting to simply broadcast the value in question with a pre-programmed
+code. The data dictionary must be used to document this.
 
 
 Shortcuts

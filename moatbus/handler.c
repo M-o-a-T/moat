@@ -353,17 +353,13 @@ void hdl_timer(BusHandler hdl)
         else if(h->state > S_IDLE)
             h_set_timeout(h, T_ZERO);
     }
-    else if(! h->settle) {
+    else {
         h_debug(h, "Delay Timer %s\n",h_state_name(h));
         h_next_step(h, TRUE);
         if(h->state > S_IDLE) {
             h->settle = TRUE;
             h_set_timeout(h, T_BREAK+1);
         }
-    }
-    else {
-        // hard timeout
-        h_error(h, ERR_NO_CHANGE);
     }
 }
 

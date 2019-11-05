@@ -2,12 +2,6 @@
 The MoaT bus
 ============
 
-
-+++++++++
-Rationale
-+++++++++
-
-
 --------------
 Why a new bus?
 --------------
@@ -43,11 +37,10 @@ ground, power, and two data lines. It adapts easily to more than two wires.
 It is multi-master and self-timing.
 
 
+----------------------
 Principle of operation
-======================
+----------------------
 
-Message transmission
---------------------
 
 A bus with N wires can assume 2^n states. The self-timing requirement
 enforces *some* transiton between states, thus each time slot can transmit
@@ -71,12 +64,13 @@ Every message must be acknowledged.
 The details are documented in ``doc/spec_wire.rst``.
 
 
-Addressing
-----------
+------------------------------
+Addressing and Message Content
+------------------------------
 
 More than 100 devices on a single bus are not realistic, esp. when the bus
 needs to supply power to all of them. Device addresses on the MoatBus thus
-are 7 bits wide.
+are 7 bits wide. More devices will be possible by forwarding.
 
 Lots of communication flows between small dumb devices and some central
 system. On the MoatBus there may be more than one of the latter, so the
@@ -89,9 +83,6 @@ the bus and have that device Just Work. Thus every device needs a MAC or
 similar unique address; one group address is thus reserved for address
 assignment.
 
-The details are documented in ``doc/spec_addr.rst``.
-
-
 Message content
 ---------------
 
@@ -99,5 +90,9 @@ MoatBus devices shall be auto-discoverable. Each device carries a data
 dictionary; if there's not enough ROM for it, the dictionary may be stored
 on the server and referred to by name.
 
-The details are documented in ``doc/spec_msg.rst``.
+Access to all features of a device is mediated by the dictionary. It may
+declare discoverable or even configurable shortcuts that can be used to
+shorten bus messages and simplify firmware code.
+
+The details are documented in ``doc/spec_message.rst``.
 

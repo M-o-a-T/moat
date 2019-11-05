@@ -21,7 +21,7 @@ static void sb_alloc_in(SerBus sb)
 }
 
 // Queue+send a message
-SerBus sb_init(void)
+SerBus sb_alloc(void)
 {
     SerBus sb = calloc(sizeof(*sb),1);
     sb_alloc_in(sb);
@@ -45,8 +45,8 @@ void sb_send(SerBus sb, BusMessage msg, u_int8_t prio)
     sb->m_out_last = msg;
     msg->next = NULL;
 
-    if (sb->s_out == S_DONE)
-        sb->s_out = S_IDLE;
+    if (sb->s_out == S_IDLE)
+        sb->s_out = S_INIT;
 }
 
 void sb_send_ack(SerBus sb)
@@ -126,12 +126,14 @@ int16_t sb_char_out(SerBus sb)
         }
         return -1;
     case S_INIT:
+        assert (sb->m_out != NULL);
         if (sb->ack_out) {
             --sb->ack_out;
             return 0x06;
         }
-        assert (sb->m_out != NULL);
         msg_start_extract(sb->m_out);
+        sb->s_out = S_LEN;
+        sb->crc_out = 0;
         return *prio; // TODO add actual prio
     case S_LEN:
         len = msg_bits(sb->m_out) >> 3;
@@ -167,7 +169,7 @@ int16_t sb_char_out(SerBus sb)
 }
 
 // Received message?
-BusMessage *sb_recv(SerBus sb, u_int8_t *prio)
+BusMessage sb_recv(SerBus sb, u_int8_t *prio)
 {
     if (sb->s_in != S_DONE)
         return NULL;
@@ -175,6 +177,8 @@ BusMessage *sb_recv(SerBus sb, u_int8_t *prio)
     BusMessage msg = sb->m_in;
     sb_alloc_in(sb);
     
+    msg_read_header(msg);
+    return msg;
 }
 
 u_int8_t sb_recv_ack(SerBus sb)

@@ -11,7 +11,7 @@ def zeroes(len):
 def ones(len):
     return b'\xFF' * len
 def seq(len):
-    return b''.join(bytes((x+1,)) for x in range(len))
+    return b''.join(bytes((randint(255),)) for x in range(len))
 
 @pytest.mark.parametrize("length", (0,1,2,3,4,5,7,8,9,10,11,15,16))
 @pytest.mark.parametrize("frame", [11,14])

@@ -323,10 +323,10 @@ void msg_start_add(BusMessage msg)
 
 void msg_add_chunk(BusMessage msg, u_int16_t data, u_int8_t frame_bits)
 {
+    msg_resize(msg, msg->data_end+3);
+
     u_int8_t *buf = msg->data+msg->data_end;
     u_int8_t bits = msg->data_end_off;
-
-    msg_resize(msg, msg->data_end+3);
 
     assert(frame_bits <= 16);
     while(frame_bits) {

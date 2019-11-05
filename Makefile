@@ -33,27 +33,31 @@ AUTOSPHINXOPTS := -i *~ -i *.sw* -i Makefile*
 SPHINXBUILDDIR ?= $(BUILD_DIR)/sphinx/html
 ALLSPHINXOPTS ?= -d $(BUILD_DIR)/sphinx/doctrees $(SPHINXOPTS) docs
 
-code:	bin/test_handler_crc bin/test_crc bin/test_handler_crc_bus bin/fake_monitor bin/fake_send bin/fake_recv
+code:	bin/test_handler_crc bin/test_crc bin/test_handler_crc_bus bin/fake_spam bin/fake_send bin/fake_recv bin/fake_serialbus
 
-bin/test_handler_crc_bus:	obj/test_handler_crc_bus.o obj/libmessage.a
-	gcc -o $@ $^
-bin/test_handler_crc:	obj/test_handler_crc.o obj/libmessage.a
-	gcc -o $@ $^
+#bin/test_handler_crc_bus:	obj/test_handler_crc_bus.o obj/libmessage.a
+#	gcc -o $@ $^
+#bin/test_handler_crc:	obj/test_handler_crc.o obj/libmessage.a
+#	gcc -o $@ $^
 bin/test_crc:	obj/test_crc.o obj/libmessage.a
 	gcc -o $@ $^
 bin/fake_recv:	obj/fake_recv.o obj/fake_client.o obj/libmessage.a
 	gcc -o $@ $^
 bin/fake_send:	obj/fake_send.o obj/fake_client.o obj/libmessage.a
 	gcc -o $@ $^
-bin/fake_monitor:	obj/fake_monitor.o
+bin/fake_spam:	obj/fake_spam.o
+	gcc -o $@ $^
+bin/fake_serialbus:	obj/fake_serialbus.o obj/fake_client.o obj/libmessage.a
 	gcc -o $@ $^
 
-obj/libmessage.a: obj/message.o obj/crc.o obj/handler.o
+obj/libmessage.a: obj/message.o obj/crc.o obj/handler.o obj/serial.o
 	ar r $@ $^
 
 obj/handler.o:	moatbus/handler.c
 	gcc -g -O0 -W -c -I. -o $@ $^
 obj/message.o:	moatbus/message.c
+	gcc -g -O0 -W -c -I. -o $@ $^
+obj/serial.o:	moatbus/serial.c
 	gcc -g -O0 -W -c -I. -o $@ $^
 obj/crc.o:	moatbus/crc.c
 	gcc -g -O0 -W -c -I. -o $@ $^
@@ -63,13 +67,15 @@ obj/test_handler_crc.o:	fakebus/test_handler_crc.c
 	gcc -g -O0 -W -c -I. -o $@ $^
 obj/test_crc.o:	fakebus/test_crc.c
 	gcc -g -O0 -W -c -I. -o $@ $^
-obj/fake_monitor.o:	fakebus/monitor.c
+obj/fake_spam.o:	fakebus/spam.c
 	gcc -g -O0 -W -c -I. -o $@ $^
 obj/fake_send.o:	fakebus/send.c
 	gcc -g -O0 -W -c -I. -o $@ $^
 obj/fake_recv.o:	fakebus/recv.c
 	gcc -g -O0 -W -c -I. -o $@ $^
 obj/fake_client.o:	fakebus/client.c
+	gcc -g -O0 -W -c -I. -o $@ $^
+obj/fake_serialbus.o:	fakebus/serialbus.c
 	gcc -g -O0 -W -c -I. -o $@ $^
 
 doc:

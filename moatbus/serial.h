@@ -67,7 +67,7 @@ void sb_char_in(SerBus sb, u_int8_t c);
 int16_t sb_char_out(SerBus sb);
 
 // Received message?
-BusMessage *sb_recv(SerBus sb, u_int8_t *prio);
+BusMessage sb_recv(SerBus sb, u_int8_t *prio);
 
 // Received some ACKs?
 u_int8_t sb_recv_ack(SerBus sb);

@@ -27,6 +27,6 @@ char fc_connect(FakeClient fc, const char *sockname);
 char fc_process(FakeClient fc);
 int fc_timeout(FakeClient fc);
 void fc_timer(FakeClient fc);
-void fc_send(FakeClient fc, BusMessage msg);
+void fc_send(FakeClient fc, BusMessage msg, u_int8_t prio);
 
 #endif

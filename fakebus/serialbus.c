@@ -78,7 +78,7 @@ int main(int argc, char* const* argv)
     fc->timeout2 = timerB;
     fc->verbose = verbose;
 
-    sb = sb_init();
+    sb = sb_alloc();
     
     if(!fc_connect(fc, sockname))
         return 1;
@@ -91,17 +91,17 @@ int main(int argc, char* const* argv)
             goto err;
         case 0:
             fc_timer(fc);
-            sb_timer(sb);
+            sb_idle(sb);
             break;
         default:
-            if(p[0].revents)
+            if(p[1].revents)
                 fc_process(fc);
 
-            if(p[1].revents) {
+            if(p[0].revents) {
                 u_int8_t c;
                 if(read(fileno(stdin),&c,1) != 1)
                     goto err;
-                sb_char_in(c);
+                sb_char_in(sb, c);
             }
             if(p[2].revents) {
                 u_int8_t c = sb_out;
@@ -122,15 +122,15 @@ int main(int argc, char* const* argv)
             fprintf(stderr,"SentMsg %d\n",fc->out_result);
             msg_free(fc->out_msg);
             fc->out_msg = NULL;
-            break;
         }
         if(sb_out == -1)
             sb_out = sb_char_out(sb);
 
         {
-            BufMessage m = sb_recv(sb);
+            u_int8_t prio = 0;
+            BusMessage m = sb_recv(sb, &prio);
             if (m != NULL)
-                fc_send(fc, m);
+                fc_send(fc, m, prio);
         }
         if(sb_recv_ack(sb)) {} // ignore
     }

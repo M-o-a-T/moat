@@ -48,8 +48,10 @@ class _CRC(metaclass=_CRCmeta):
     """
     Simple CRC update function. @n is the bit length of the input.
     """
-    def __init__(self, bits):
+    def __init__(self, bits=None):
         self.crc = 0
+        if bits is None:
+            bits = self._depth
         self._bits = bits
         self._table = table = []
         poly = self._poly
@@ -102,6 +104,7 @@ class CRC11(_CRC):
 class CRC16(_CRC):
     _poly = 0xAC9A # 0xBAAD
     _width = 16
+    _depth = 8
 
 if __name__ == "__main__":
     import sys
@@ -122,5 +125,5 @@ if __name__ == "__main__":
     else:
         #print(CRC6._table)
         #print(CRC8._table)
-        print(CRC11._table)
+        print(CRC16(8)._table)
         #print(CRC16._table)

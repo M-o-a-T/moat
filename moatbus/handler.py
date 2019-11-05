@@ -60,7 +60,7 @@ T_ERROR = 10
 
 class BaseHandler:
     """
-    This class implements bus message handling.
+    This Sans-IO handler implements bus message handling.
 
     You need to override these procedures:
 

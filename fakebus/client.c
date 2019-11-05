@@ -44,9 +44,9 @@ void fc_free(FakeClient fc)
     free(fc);
 }
 
-void fc_send(FakeClient fc, BusMessage msg)
+void fc_send(FakeClient fc, BusMessage msg, u_int8_t prio)
 {
-    hdl_send(fc->bus, msg, 0);
+    hdl_send(fc->bus, msg, prio);
 }
 
 char fc_connect(FakeClient fc, const char *sockname)
@@ -141,7 +141,8 @@ static u_int8_t fcb_get_wire(void *ref)
 static char fcb_process(void *ref, BusMessage msg)
 {
     FakeClient fc = (FakeClient)ref;
-    fprintf(stderr,"RCVD %d > %d (%d): %*s\n",msg->src,msg->dst,msg->code,msg_length(msg),msg_start(msg));
+    if(fc->verbose)
+        fprintf(stderr,"RCVD %d > %d (%d): %*s\n",msg->src,msg->dst,msg->code,msg_length(msg),msg_start(msg));
     fc->in_msg = msg;
 }
 
@@ -150,7 +151,8 @@ static void fcb_transmitted(void *ref, BusMessage msg, enum HDL_RES result)
     FakeClient fc = (FakeClient)ref;
     fc->out_msg = msg;
     fc->out_result = result;
-    fprintf(stderr,"SENT %d > %d (%d): %*s\n",msg->src,msg->dst,msg->code,msg_length(msg),msg_start(msg));
+    if(fc->verbose)
+        fprintf(stderr,"SENT %d > %d (%d): %*s\n",msg->src,msg->dst,msg->code,msg_length(msg),msg_start(msg));
 }
 
 static void fcb_debug(void *ref, const char *text, va_list arg)

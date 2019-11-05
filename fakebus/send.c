@@ -93,7 +93,7 @@ int main(int argc, char* const* argv)
         msg->code = cmd;
         msg_start_send(msg);
         msg_send_data(msg,arg,strlen(arg));
-        fc_send(fc, msg);
+        fc_send(fc, msg, 0);
     }
 
     while(1) {

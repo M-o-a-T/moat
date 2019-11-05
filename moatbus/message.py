@@ -49,7 +49,7 @@ class BusMessage:
         Return the header length.
         """
         h_len = 5
-        for adr in (self,dst, self.src):
+        for adr in (self.dst, self.src):
             h_len += 3 if adr < 0 else 8
         return h_len//8+1
 

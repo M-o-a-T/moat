@@ -268,7 +268,7 @@ u_int16_t msg_extract_chunk(BusMessage msg, u_int8_t frame_bits)
             // assume frame_bits=11, buffer contains only 2 bits:
             // before this: data = AB0-00000000
             // We want to return: 1000-00000AB0
-            data = (data>>8) | (1<<(frame_bits));
+            data = (data<<(x_bits-8)) | (1<<(frame_bits));
         } else {
             data <<= x_bits;
         }

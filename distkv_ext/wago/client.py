@@ -172,6 +172,8 @@ async def _attr(obj, attr, value, path, eval_, res=None):
 async def server(obj, name, host, port, delete):
     """
     Configure a server.
+
+    No arguments: list them.
     """
     if not name:
         if host or port or delete:

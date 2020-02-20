@@ -4,13 +4,14 @@ import sys
 import asyncclick as click
 from functools import partial
 from collections.abc import Mapping
+from collections import deque
 from netaddr import IPNetwork, EUI
 from operator import attrgetter
 
 from distkv.exceptions import ClientError
 from distkv.util import yprint, attrdict, combine_dict, data_get, NotGiven, path_eval
 from distkv.util import res_delete, res_get, res_update
-from distkv_ext.inv.model import InventoryRoot
+from distkv_ext.inv.model import InventoryRoot,Host
 
 import logging
 
@@ -287,6 +288,52 @@ async def host_port(ctx,name):
         obj.thing_port = name
         pass # click invokes the subcommand for us.
 
+#@host.command(name="find", short_help="Show the path to another host")  # added later
+@click.argument("dest",type=str,nargs=1)
+@click.pass_obj
+async def host_find(obj, dest):
+    """\
+        Find the path to another host.
+
+        A destination of '-' lists all unreachable hosts.
+        """
+    seen = set()
+    h = obj.inv.host.by_name(obj.thing_name)
+    todo = deque()
+    todo.append((h,()))
+    def work():
+        while todo:
+            w,wp = todo.popleft()
+            wx = w
+            if hasattr(w,'host'):
+                w = w.host
+            if w in seen:
+                continue
+            seen.add(w)
+            yield wx,wp
+
+            if hasattr(w,'port'):
+                for n,p in w.port.items():
+                    c = p.link_to
+                    if c is not None:
+                        todo.append((c,wp+(p,c)))
+
+    if dest == '-':
+        for hp,_ in work():
+            pass
+        for hp in obj.inv.host.all_children:
+            if hp not in seen:
+                print(hp)
+    else:
+        for hp,p in work():
+            if isinstance(hp,Host):
+                hx = hp
+            else:
+                hx = hp.host
+            if hx.name == dest:
+                print(*p)
+                break
+
 
 #@wire.command -- added later
 @click.argument("dest",type=str,nargs=-1)
@@ -329,7 +376,7 @@ inv_sub("host","domain",str,id_cb=rev_name, aux=(
     click.option("-n","--net",type=str,default=None, help="Network", callback=get_net),
     click.option("-i","--num",type=int,default=None, help="Position in network"),
     click.option("-a","--alloc",is_flag=True,default=None, help="Auto-allocate network ID"),
-    ), ext=(('host_port',{'name':'port','group':True,'short_help':"Manage ports",'invoke_without_command':True}),), postproc=host_post,
+    ), ext=(('host_port',{'name':'port','group':True,'short_help':"Manage ports",'invoke_without_command':True}),('host_find',{'name':'find','short_help':'Show the path to another host'})), postproc=host_post,
     short_help="Manage hosts")
 
 inv_sub("group",short_help="Manage host config groups")

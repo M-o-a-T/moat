@@ -1,0 +1,90 @@
+#!/usr/bin/python3
+
+"""
+This script loads a YAML inventory file into DistKV.
+
+The file looks like this::
+
+one.you.example:
+  descr: "Server One"
+  ports:
+    en0: {host: two.you.example, port: 'en0'}
+  vlan: '10'
+two.you.example:
+  descr: "Server Two"
+  ports:
+    en0: {host: one.you.example, port: 'en0'}
+  vlan: '10'
+
+Network addresses are looked up, the networks in question need to exist.
+VLANs are ignored. Bidirectional port links must match.
+
+Short names for hosts are built by reversing the first N labels, i.e.
+"you-one" and "you-two". N defaults to 2.
+"""
+
+import trio
+import asyncclick as click
+import yaml
+import logging
+from logging.config import dictConfig
+
+from distkv.client import open_client
+from distkv.default import CFG
+from distkv.util import combine_dict
+from distkv_ext.inv.model import InventoryRoot
+
+@click.command()
+@click.option("-c","--cfg",type=click.File(),default=None,help="DistKV config file")
+@click.option("-l","--labels",type=int,default=2,help="Labels to use (default 2)")
+@click.argument("file",type=click.File())
+async def main(file,cfg,labels):
+    """
+    """
+    if cfg:
+        cfg = yaml.safe_load(cfg)
+        cfg = combine_dict(cfg,CFG)
+    else:
+        cfg = CFG
+    dictConfig(cfg['logging'])
+
+    y = yaml.safe_load(file)
+    async with open_client(**cfg) as client:
+        inv = await InventoryRoot.as_handler(client)
+        # A create hosts
+        for k,v in y.items():
+            h = inv.host.by_domain(k, create=False)
+            if h is None:
+                h = inv.host.by_domain(k, create=True)
+                h.name = '-'.join(h.domain.split('.')[:labels][::-1])
+            for p in v.get('ports',{}):
+                if p not in h.port:
+                    h.add_port(p)
+            h.desc = v.get('descr')
+            h.loc = v.get('loc')
+            await h.save(wait=True)
+            
+        # B link hosts
+        if False:
+        #for k,v in y.items():
+            s = inv.host.by_domain(k, create=False)
+            for p,vv in v.get('ports',{}).items():
+                sp = s.port[p]
+                d = vv.get('host')
+                if d is None:
+                    continue
+                d = inv.host.by_domain(d, create=False)
+                dp = vv.get('port')
+                if dp is None:
+                    dp = d
+                else:
+                    dp = d.port[dp]
+                await sp.link(dp, wait=True)
+
+        # C assign addresses
+
+
+
+    
+if __name__ == "__main__":
+    main()

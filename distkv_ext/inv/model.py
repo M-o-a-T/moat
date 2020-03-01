@@ -61,13 +61,16 @@ class Cleaner:
         self._cleaner.append((ref(p),m, ref(o), a,k))
 
     async def set_value(self, value=NotGiven):
+        await super().set_value(value)
+        self._clean_up()
+
+    def _clean_up(self):
         d,self._cleaner = self._cleaner,[]
         for p,m,o,a,k in d:
             p = p()
             if p is None:
                 continue
             attrgetter(m)(p)(o(),*a,**k)
-        await super().set_value(value)
 
 class InventoryRoot(ClientRoot):
     cls = {}
@@ -201,20 +204,23 @@ class Network(Cleaner, SkipNone, AttrClientEntry):
                the left
         mac: ipv6: flag whether to use a host's MAC address
              True:yes,exclusively False:no None:both
+        virt: True if no port connection is required
 
-        Stored as ``inv net NETBITS NETNUMBER``.
+        Stored as ``inv net NETBITS NETNUMBER``. NETNUMBER is an unsigned
+        integer except when it's larger than 2**64 (msgpack can't store
+        these) in which case it's a 16-byte binary string instead. Sigh.
         """
-    ATTRS = ('desc','name','vlan','dhcp','master','shift')
+    ATTRS = ('desc','name','vlan','dhcp','master','shift','virt')
     AUX_ATTRS=('net',)
     desc=None
     name=None
     vlan=None
     shift=0
     dhcp=(1,0)
+    virt=False
     master=None
     _slaves=WeakSet()
     _next_adr = 2
-    _master=None
     _name=None
 
     def __init__(self,*a,**kw):
@@ -223,7 +229,10 @@ class Network(Cleaner, SkipNone, AttrClientEntry):
 
     @property
     def net(self):
-        return IPNetwork((self._path[-1],self.prefix))
+        n = self._path[-1]
+        if isinstance(n,bytes):
+            n = int.from_bytes(n, 'big')
+        return IPNetwork((n, self.prefix))
     
     @property
     def max(self):
@@ -237,7 +246,7 @@ class Network(Cleaner, SkipNone, AttrClientEntry):
     def __eq__(self,net):
         if isinstance(net,Network):
             net = net._name
-        return self.name == net._name
+        return self.name == net
 
     def __hash__(self):
         return hash(self._name)
@@ -296,6 +305,15 @@ class Network(Cleaner, SkipNone, AttrClientEntry):
             if t == last:
                 return None
 
+    def get_value(self, **kw):
+        """\
+            'virt' shall either be True or not present
+            """
+        res = super().get_value(**kw)
+        if not res.get('virt',True):
+            del res['virt']
+        return res
+
     async def set_value(self, value=NotGiven):
         """\
             Called by the network to update my value.
@@ -329,7 +347,7 @@ class Network(Cleaner, SkipNone, AttrClientEntry):
             a,b = self.dhcp
             # start,len. Thus start+len-1 is the top address and must be
             # <= the broadcast addr.
-            if a < 2 or a+b > self.max:
+            if b>1 and (a < 2 or a+b > self.max):
                 raise RuntimeError("Check DHCP params",self.dhcp)
         await super().save(wait=wait)
 
@@ -368,12 +386,23 @@ class NetRootB(ClientEntry):
         """
     def child_type(cls, name):
         if not isinstance(name,int):
+            if isinstance(name,bytes) and len(name)==16:
+                return Network
             return ClientEntry
         return Network
 
     async def update(self, value, _locked=False):
         raise ValueError("No values here!")
 
+    def get(self, val):
+        if isinstance(val,int) and val>=2**64:
+            val = val.to_bytes(16,'big')
+        return super().get(val)
+
+    def __getitem__(self, val):
+        if isinstance(val,int) and val>=2**64:
+            val = val.to_bytes(16,'big')
+        return super().__getitem__(val)
 
 @InventoryRoot.register("net")
 class NetRoot(NamedMixin, ClientEntry):
@@ -402,26 +431,28 @@ class NetRoot(NamedMixin, ClientEntry):
 
     def enclosing(self, net):
         """find the network containing this address"""
-        num = net.cidr.value
-        bits = net.prefixlen
-        mx=32 if bits<=32 else 128
-        if not bits:
-            raise KeyError(net)
-        while True:
-            bits -= 1
-            try:
-                num &= ~((1<<(mx-bits))-1)
-                return self[bits][num]
-            except KeyError:
-                if not bits:
-                    raise KeyError(net) from None
-                bits -= 1
+        if hasattr(net,'cidr'):
+            return self[net.prefixlen][net.cidr.value]
+        else:
+            n = IPNetwork(net)
+            if not n.prefixlen:
+                raise KeyError(net)
+            while n.prefixlen:
+                n.prefixlen -= 1
+                try:
+                    return self[n.prefixlen][n.cidr.value]
+                except KeyError:
+                    if not n.prefixlen:
+                        raise KeyError(net) from None
 
     def allocate(self, net):
         if not isinstance(net,IPNetwork):
             return super().allocate(net)
         n = super().allocate(net.prefixlen, exists=True)
-        return n.allocate(net.cidr.value)
+        val = net.cidr.value
+        if val >= 2**64:
+            val = val.to_bytes(16,'big')
+        return n.allocate(val)
 
     def get(self, net):
         if not isinstance(net,IPNetwork):
@@ -440,7 +471,7 @@ class NetRoot(NamedMixin, ClientEntry):
         raise ValueError("No values here!")
 
 
-class HostPort:
+class HostPort(Cleaner):
     ATTRS=('desc','mac')
     ATTRS2=('net','num')
     AUX_ATTRS=('netaddr','vlan','link_to')
@@ -453,6 +484,8 @@ class HostPort:
     def __init__(self, host,name,kv):
         self.host=host
         self.name=name
+
+        super().__init__()
 
         for a in self.ATTRS+self.ATTRS2:
             setattr(self,a,kv.pop(a,None))
@@ -476,6 +509,15 @@ class HostPort:
     @property
     def network(self):
         return self.host.root.net.by_name(self.net)
+
+    @network.setter
+    def network(self, net):
+        self.net = net.name
+
+    @network.deleter
+    def network(self):
+        self.net = None
+        self.num = None
 
     @property
     def vlan(self):
@@ -547,6 +589,9 @@ class HostPort:
             res['mac'] = res['mac'].packed
         return res
         
+    def set_value(self, _):
+        raise RuntimeError("This does not work.")
+
     def __repr__(self):
         return "<Port %s:%s>" % (self.host.name,self.name)
 
@@ -555,12 +600,13 @@ class HostPort:
 
 
 class Host(Cleaner, SkipNone, AttrClientEntry):
-    ATTRS = ('name','net','num','desc','loc','groups','cable')
-    AUX_ATTRS=('ports','domain','cable')
+    ATTRS = ('name','net','mac','num','desc','loc','groups')
+    AUX_ATTRS=('ports','domain','cable','netaddr')
     net=None
     ports=()
     name=None
     num=None
+    mac=None
     desc=None
     loc=None
     groups=()
@@ -578,7 +624,20 @@ class Host(Cleaner, SkipNone, AttrClientEntry):
 
     @property
     def network(self):
+        if self.net is None:
+            return None
         return self.root.net.by_name(self.net)
+
+    @network.setter
+    def network(self, net):
+        n = self.root.net[net]
+        self.net = n.name
+        self.num = net.value-n.net.value
+
+    @network.deleter
+    def network(self):
+        self.net = None
+        self.num = None
 
     @property
     def cable(self):
@@ -586,6 +645,11 @@ class Host(Cleaner, SkipNone, AttrClientEntry):
         if c is not None:
             c = c.other_end(self)
         return c
+
+    def _clean_up(self):
+        for p in self._ports.values():
+            p._clean_up()
+        super()._clean_up()
 
     @property
     def netaddr(self):
@@ -605,6 +669,36 @@ class Host(Cleaner, SkipNone, AttrClientEntry):
             yield self.root.net.net(n).net[self.num]
 
     @property
+    def connected_hosts(self):
+        """\
+            Iterator on all hosts reachable by this one.
+            """
+        todo = deque()
+        todo.append((self,()))   
+        def work():
+            while todo:    
+                w,wp = todo.popleft()
+                wx = w
+                if hasattr(w,'host'):
+                    w = w.host
+                if w in seen: 
+                    continue
+                seen.add(w)
+                yield wx,wp
+        
+                if hasattr(w,'port'):
+                    for n,p in w.port.items():
+                        c = p.link_to
+                        if c is not None:
+                            todo.append((c,wp+(p,c)))
+                        elif p.net:
+                            n = p.network
+                            if n.virt:
+                                for hh in n.hosts:
+                                    todo.append((hh,wp+(p,hh)))
+
+
+    @property
     def port(self):
         return self._ports
 
@@ -618,6 +712,8 @@ class Host(Cleaner, SkipNone, AttrClientEntry):
                 vv.append(c.other_end(self))
             if v.vlan:
                 vv.append(v.vlan)
+            if v.num:
+                vv.append(v.netaddr)
             r[k] = vv
         return r
 
@@ -663,13 +759,23 @@ class Host(Cleaner, SkipNone, AttrClientEntry):
             self._ports[k] = HostPort(self,k,v)
 
         self._hostroot._add_name(self)
-        n = self.network
+        n = self.net
         if n is not None and self.num is not None:
+            n = self.root.net.by_name(n)
             n._add_host(self)
+
         for p in self.port.values():
             n = p.network
             if n is not None and p.num is not None:
-                n._add_host(self)
+                n._add_host(p)
+
+        m = self.mac
+        if m is not None:
+            m = struct.unpack('>%dH'%(len(m)/2), m)
+            mm = 0
+            for m_ in m:
+                mm = (mm<<16)+m_
+            self.mac = EUI(mm,len(m)*16)
 
     async def link(self,other, *, wait=True):
         await self.root.cable.link(self, other, wait=wait)
@@ -686,6 +792,8 @@ class Host(Cleaner, SkipNone, AttrClientEntry):
         val['ports'] = p = {}
         for k,v in self._ports.items():
             p[k] = v.get_value()
+        if 'mac' in val:
+            val['mac'] = val['mac'].packed
         return val
 
     @property
@@ -1009,7 +1117,7 @@ class Wire(Cleaner, SkipNone, AttrClientEntry):
     def ports(self):
         r = {}
         for k,v in self._ports.items():
-            vv = "-"
+            vv = None
             c = self.root.cable.cable_for(v)
             if c is not None:
                 vv = c.other_end(self)
@@ -1053,13 +1161,9 @@ class Wire(Cleaner, SkipNone, AttrClientEntry):
 
     def __str__(self):
         a = self.ports['a']
-        if a is not None:
-            a = a.cable.other_end(a)
         if a is None:
             a = '-'
         b = self.ports['b']
-        if b is not None:
-            b = b.cable.other_end(b)
         if b is None:
             b = '-'
 

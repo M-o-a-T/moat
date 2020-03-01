@@ -221,7 +221,9 @@ def get_net(ctx,attr,val):
     return val
 
 def get_net_name(ctx,attr,val):
-    n = ctx.inv.net.by_name(val)
+    if val is None:
+        return None
+    n = ctx.obj.inv.net.by_name(val)
     if n is None:
         return KeyError(val)
     return n
@@ -237,6 +239,9 @@ def get_mac(ctx,attr,val):
 
 def net_apply(obj,kw):
     seen = 0
+    val = kw.pop('virt',None)
+    if val is not None:
+        obj.virt = val
     if kw.pop('mac'):
         obj.mac = True
         seen += 1
@@ -254,6 +259,7 @@ inv_sub("net","net",str, id_cb=get_net_tuple,aux=(
     click.option("-v","--vlan",type=str,default=None, help="VLAN to use"),
     click.option("-a","--dhcp",type=int,nargs=2, help="DHCP first+length"),
     click.option("-m","--mac",is_flag=True, help="use MAC as host part"),
+    click.option("-V/-R","--virt/--real",is_flag=True, help="Network without cables="),
     click.option("-M","--no-mac", is_flag=True,help="use hostnum"),
     click.option("-B","--both-mac", is_flag=True,help="use both MAC and hostnum (default)"),
     click.option("-S","--master",type=str,default=None, help="Network to attach this to", callback=get_net_name),
@@ -374,6 +380,7 @@ inv_sub("host","domain",str,id_cb=rev_name, aux=(
     click.option("-d","--desc",type=str,default=None, help="Description"),
     click.option("-l","--loc",type=str,default=None, help="Location"),
     click.option("-n","--net",type=str,default=None, help="Network", callback=get_net),
+    click.option("-m","--mac",type=str,default=None, help="MAC", callback=get_mac),
     click.option("-i","--num",type=int,default=None, help="Position in network"),
     click.option("-a","--alloc",is_flag=True,default=None, help="Auto-allocate network ID"),
     ), ext=(('host_port',{'name':'port','group':True,'short_help':"Manage ports",'invoke_without_command':True}),('host_find',{'name':'find','short_help':'Show the path to another host'})), postproc=host_post,

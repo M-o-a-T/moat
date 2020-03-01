@@ -558,8 +558,8 @@ class HostPort(Cleaner):
         if c is not None:
             await self.link(c, wait=True)
 
-    async def link(self,other, wait=True):
-        await self.host.root.cable.link(self, other, wait=wait)
+    async def link(self,other, wait=True, force=False):
+        await self.host.root.cable.link(self, other, wait=wait, force=force)
 
     async def unlink(self):
         await self.host.root.cable.unlink(self)
@@ -777,8 +777,8 @@ class Host(Cleaner, SkipNone, AttrClientEntry):
                 mm = (mm<<16)+m_
             self.mac = EUI(mm,len(m)*16)
 
-    async def link(self,other, *, wait=True):
-        await self.root.cable.link(self, other, wait=wait)
+    async def link(self,other, *, wait=True, force=False):
+        await self.root.cable.link(self, other, wait=wait, force=force)
 
     async def unlink(self, *, wait=False):
         await self.root.cable.unlink(self, wait=wait)
@@ -864,7 +864,7 @@ class CableRoot(ClientEntry):
                 raise ValueError("Already exists", c)
         return c
 
-    async def link(self, obj_a, obj_b, *, wait=True):
+    async def link(self, obj_a, obj_b, *, wait=True, force=False):
         """\
             Link ``obj_a`` to ``obj_b``.
 
@@ -875,6 +875,8 @@ class CableRoot(ClientEntry):
         c2 = self.cable_for(obj_b)
         if c1 is not None and c1 is c2:
             return
+        if not (force or (c1 is None and c2 is None)):
+            raise KeyError("Cable exists",c1,c2)
         if c1 is not None:
             await c1.delete()
         if c2 is not None:

@@ -344,8 +344,9 @@ async def host_find(obj, dest):
 #@wire.command -- added later
 @click.argument("dest",type=str,nargs=-1)
 @click.option("-A","--a-ends",is_flag=True,help="Link the A ends")
+@click.option("-f","--force",is_flag=True,help="Replace existing cables")
 @click.pass_obj
-async def wire_link(obj, dest,a_end,b_end):
+async def wire_link(obj, dest,a_end,b_end,force):
     """\
         Link the B ends of two wires.
         
@@ -372,7 +373,7 @@ async def wire_link(obj, dest,a_end,b_end):
         else:
             w = w.port['b']
             d = d.port['b']
-        await obj.inv.cable.link(w,d)
+        await obj.inv.cable.link(w,d, force=force)
 
 
 
@@ -482,8 +483,9 @@ async def hp_delete(obj):
 @click.argument("dest",type=str,nargs=-1)
 @click.option("-A","--a-end",is_flag=True,help="Dest is a wire, link to A end")
 @click.option("-B","--b-end",is_flag=True,help="Dest is a wire, link to B end")
+@click.option("-f","--force",is_flag=True,help="Replace existing cables")
 @click.pass_obj
-async def hp_link(obj, dest,a_end,b_end):
+async def hp_link(obj, dest,a_end,b_end, force):
     """\
         Link a port to another host or port.
         """
@@ -510,6 +512,6 @@ async def hp_link(obj, dest,a_end,b_end):
             d = d.port['b']
         elif len(dest) > 1:
             d = d.port[dest[1]]
-        await obj.inv.cable.link(p,d)
+        await obj.inv.cable.link(p,d, force=force)
 
 

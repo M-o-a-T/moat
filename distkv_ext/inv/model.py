@@ -708,8 +708,19 @@ class Host(Cleaner, SkipNone, AttrClientEntry):
         for k,v in self._ports.items():
             vv = []
             c = self.root.cable.cable_for(v)
+            cc = None
             if c is not None:
-                vv.append(c.other_end(self))
+                cc = c.other_end(self)
+                vv.append(cc) # port
+                while isinstance(getattr(cc,'host',None),Wire):
+                    cc = cc.host.other_end(cc) # wire's other end
+                    cv = self.root.cable.cable_for(cc)
+                    if cv is not None:
+                        vv[-1] = cc.host.name
+                        cc = cv.other_end(cc)
+                        vv.append(cc)
+                    else:
+                        cc = None
             if v.vlan:
                 vv.append(v.vlan)
             if v.num:
@@ -1129,6 +1140,13 @@ class Wire(Cleaner, SkipNone, AttrClientEntry):
     @property
     def name(self):
         return self.subpath[-1]
+
+    def other_end(self, port):
+        if port.name == 'a':
+            return self._ports['b']
+        elif port.name == 'b':
+            return self._ports['a']
+        return None
 
     @property
     def port(self):

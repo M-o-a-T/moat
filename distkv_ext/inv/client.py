@@ -359,7 +359,7 @@ async def host_find(obj, dest):
 @click.option("-A","--a-ends",is_flag=True,help="Link the A ends")
 @click.option("-f","--force",is_flag=True,help="Replace existing cables")
 @click.pass_obj
-async def wire_link(obj, dest,a_end,b_end,force):
+async def wire_link(obj, dest,a_ends,force):
     """\
         Link the B ends of two wires.
         
@@ -377,10 +377,10 @@ async def wire_link(obj, dest,a_end,b_end,force):
     if dest[0] == '-':
         await obj.inv.cable.unlink(w)
     else:
-        d = obj.inv.host.by_name(dest[0])
+        d = obj.inv.wire.by_name(dest[0])
         if d is None:
             raise KeyError(dest)
-        if a_end:
+        if a_ends:
             w = w.port['a']
             d = d.port['a']
         else:

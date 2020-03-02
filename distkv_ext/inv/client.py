@@ -11,7 +11,7 @@ from operator import attrgetter
 from distkv.exceptions import ClientError
 from distkv.util import yprint, attrdict, combine_dict, data_get, NotGiven, path_eval
 from distkv.util import res_delete, res_get, res_update
-from distkv_ext.inv.model import InventoryRoot,Host
+from distkv_ext.inv.model import InventoryRoot,Host,Wire
 
 import logging
 
@@ -337,7 +337,20 @@ async def host_find(obj, dest):
             else:
                 hx = hp.host
             if hx.name == dest:
-                print(*p)
+                pr = []
+                px = None
+                for pp in p:
+                    if getattr(pp,'host',None) is getattr(px,'host',False) and isinstance(pp.host,Wire):
+                        pr.append(pp.host)
+                        px = None
+                    else:
+                        if px is not None:
+                            pr.append(px)
+                        px = pp
+
+                if px is not None:
+                    pr.append(px)
+                print(*(p.name if isinstance(p,Wire) else p for p in pr))
                 break
 
 

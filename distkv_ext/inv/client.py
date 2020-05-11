@@ -5,7 +5,7 @@ import asyncclick as click
 from functools import partial
 from collections.abc import Mapping
 from collections import deque
-from netaddr import IPNetwork, EUI
+from netaddr import IPNetwork, EUI, IPAddress, AddrFormatError
 from operator import attrgetter
 
 from distkv.exceptions import ClientError
@@ -87,7 +87,9 @@ def inv_sub(*a,**kw):
                 v = getattr(n,k,None)
                 if v is not None:
                     if isinstance(v,dict):
-                        for kk,vv in sorted(v.items()):
+                        v=v.items()
+                    if isinstance(v,type({}.items())):
+                        for kk,vv in sorted(v):
                             if isinstance(vv,(tuple,list)):
                                 if vv:
                                     vv = " ".join(str(x) for x in vv)
@@ -206,6 +208,25 @@ def rev_wire(ctx, param, value):
 
 def host_post(ctx, values):
     obj = ctx.inv.host.by_name(ctx.thing_name)
+    net = values.get('net',None)
+    if net not in (None, '-'):
+        n = ctx.inv.net.by_name(net)
+        if n is None:
+            try:
+                na = IPAddress(net)
+            except AddrFormatError:
+                raise click.exceptions.UsageError("no such network: "+repr(net))
+            n = ctx.inv.net.enclosing(na)
+            if n is None:
+                raise RuntimeError("Network unknown",net)
+            if not values.get('num'):
+                num = na.value-n.net.value
+                if values.get('alloc') and num:
+                    raise RuntimeError("Need net address when allocating")
+                if num:
+                    values['num'] = num
+            values['net'] = n.name
+
     if values.pop('alloc',None):
         if values.get('num'):
             raise click.BadParameter("'num' and 'alloc' are mutually exclusive'",'alloc')
@@ -214,10 +235,10 @@ def host_post(ctx, values):
             raise click.BadParameter("Need a network to allocate a number in")
         values['num'] = ctx.inv.net.by_name(net).alloc()
 
+
 def get_net(ctx,attr,val):
     if val in (None,'-'):
         return val
-    #val = IPNetwork(val)
     return val
 
 def get_net_name(ctx,attr,val):
@@ -253,6 +274,12 @@ def net_apply(obj,kw):
         seen += 1
     if seen > 1:
         raise click.UsageError("Only one of -m/-M/-B please.")
+    if obj.mac is True:
+        if kw['shift'] > 0:
+            raise click.UsageError("You need to actually use the hostnum in order to shift it")
+        obj.shift = -1
+    elif obj.shift < 0:
+        obj.shift = 0
 
 inv_sub("net","net",str, id_cb=get_net_tuple,aux=(
     click.option("-d","--desc",type=str,default=None, help="Description"),
@@ -263,6 +290,7 @@ inv_sub("net","net",str, id_cb=get_net_tuple,aux=(
     click.option("-M","--no-mac", is_flag=True,help="use hostnum"),
     click.option("-B","--both-mac", is_flag=True,help="use both MAC and hostnum (default)"),
     click.option("-S","--master",type=str,default=None, help="Network to attach this to", callback=get_net_name),
+    click.option("-s","--shift",type=int, default=0, help="Shift for host number"),
     ), apply=net_apply,short_help="Manage networks")
 
 #@host.group -- added later
@@ -286,7 +314,7 @@ async def host_port(ctx,name):
             print(k,v)
     elif ctx.invoked_subcommand is None:
         p = h.port[name]
-        for k in p.ATTRS+p.AUX_ATTRS:
+        for k in p.ATTRS+p.AUX_ATTRS+p.ATTRS2:
             v=getattr(p,k)
             if v is not None:
                 print(k,v)
@@ -390,15 +418,21 @@ async def wire_link(obj, dest,a_ends,force):
 
 
 
-inv_sub("host","domain",str,id_cb=rev_name, aux=(
-    click.option("-d","--desc",type=str,default=None, help="Description"),
-    click.option("-l","--loc",type=str,default=None, help="Location"),
-    click.option("-n","--net",type=str,default=None, help="Network", callback=get_net),
-    click.option("-m","--mac",type=str,default=None, help="MAC", callback=get_mac),
-    click.option("-i","--num",type=int,default=None, help="Position in network"),
-    click.option("-a","--alloc",is_flag=True,default=None, help="Auto-allocate network ID"),
-    ), ext=(('host_port',{'name':'port','group':True,'short_help':"Manage ports",'invoke_without_command':True}),('host_find',{'name':'find','short_help':'Show the path to another host'})), postproc=host_post,
-    short_help="Manage hosts")
+inv_sub("host","domain",str,id_cb=rev_name,
+    aux=(
+        click.option("-d","--desc",type=str,default=None, help="Description"),
+        click.option("-l","--loc",type=str,default=None, help="Location"),
+        click.option("-n","--net",type=str,default=None, help="Network", callback=get_net),
+        click.option("-N","--name",type=str,default=None, help="Name (not when adding)"),
+        click.option("-m","--mac",type=str,default=None, help="MAC", callback=get_mac),
+        click.option("-i","--num",type=int,default=None, help="Position in network"),
+        click.option("-a","--alloc",is_flag=True,default=None, help="Auto-allocate network ID"),
+        ),
+    ext=(
+        ('host_port', {'name':'port','group':True,'short_help':"Manage ports",'invoke_without_command':True}),
+        ('host_find',{'name':'find','short_help':'Show the path to another host'}),
+        ),
+    postproc=host_post, short_help="Manage hosts")
 
 inv_sub("group",short_help="Manage host config groups")
 
@@ -463,13 +497,33 @@ async def hp_set(obj, name, **kw):
     await h.save()
 
 async def _hp_mod(obj,p, **kw):
+    net = kw.get('net',None)
+
+    if net not in (None, '-'):
+        n = p.host.root.net.by_name(net)
+        if n is None:
+            try:
+                na = IPAddress(net)
+            except AddrFormatError:
+                raise click.exceptions.UsageError("no such network: "+repr(net))
+            n = p.host.root.net.enclosing(na)
+            if n is None:
+                raise RuntimeError("Network unknown",net)
+            if not kw.get('num'):
+                num = na.value-n.net.value
+                if kw.get('alloc') and num:
+                    raise RuntimeError("Need net address when allocating")
+                if num:
+                    kw['num'] = num
+            kw['net'] = n.name
+
     if kw.pop('alloc',None):
         if kw.get('num'):
             raise click.BadParameter("'num' and 'alloc' are mutually exclusive'",'alloc')
-        net = kw.get('net', obj.net if obj else None)
+        net = kw.get('net', p.net if p else None)
         if net is None:
             raise click.BadParameter("Need a network to allocate a number in")
-        kw['num'] = obj.root.net.by_name(net).alloc()
+        kw['num'] = obj.host.root.net.by_name(net).alloc()
 
     for k,v in kw.items():
         if v is None:

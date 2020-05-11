@@ -65,8 +65,7 @@ async def main(file,cfg,labels):
             await h.save(wait=True)
             
         # B link hosts
-        if False:
-        #for k,v in y.items():
+        for k,v in y.items():
             s = inv.host.by_domain(k, create=False)
             for p,vv in v.get('ports',{}).items():
                 sp = s.port[p]

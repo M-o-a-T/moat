@@ -58,6 +58,25 @@ codec:
     - - -3
       - !!binary |
         LTM=
+  int bin:
+    decode: |
+      return int(value)
+    encode: |
+      return str(value).encode("utf-8")
+    in:
+    - - !!binary |
+        MQ==
+      - 1
+    - - !!binary |
+        LTM=
+      - -3
+    out:
+    - - 1
+      - !!binary |
+        MQ==
+    - - -3
+      - !!binary |
+        LTM=
 
   
 conv:

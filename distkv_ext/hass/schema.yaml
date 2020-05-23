@@ -1,0 +1,76 @@
+codec:
+  bool onoff bin:
+    decode: |
+      return value in ("on","ON",b"on",b"ON")
+    encode: |
+      return b"on" if value else b"off"
+    in:
+    - - !!binary |
+        b24=
+      - true
+    - - !!binary |
+        b2Zm
+      - false
+    out:
+    - - true
+      - !!binary |
+        b24=
+    - - false
+      - !!binary |
+        b2Zm
+  json bin:
+    decode: |
+      import simplejson as json
+      return json.loads(value.decode("utf-8"))
+    encode: |
+      import simplejson as json
+      return json.dumps(value).encode("utf-8")
+    in:
+    - - !!binary |
+        MTIz
+      - 123
+    - - !!binary |
+        bnVsbA==
+      - null
+    out:
+    - - 123
+      - !!binary |
+        MTIz
+    - - null
+      - !!binary |
+        bnVsbA==
+  float bin:
+    decode: |
+      return float(value)
+    encode: |
+      return str(value).encode("utf-8")
+    in:
+    - - !!binary |
+        MS41
+      - 1.5
+    - - !!binary |
+        LTM=
+      - -3
+    out:
+    - - 1.5
+      - !!binary |
+        MS41
+    - - -3
+      - !!binary |
+        LTM=
+
+  
+conv:
+  +:
+    config: [json, bin]
+  binary_sensor:
+    state: [bool, onoff, bin]
+  sensor:
+    state: [float, bin]
+  switch:
+    cmd: [bool, onoff, bin]
+    state: [bool, onoff, bin]
+  light:
+    cmd: [float, bin]
+    state: [float, bin]
+

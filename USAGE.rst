@@ -152,7 +152,7 @@ If you set a value that is evaluated to a mapping, exising values will be merged
 
 .. option:: -a, --attr NAME
 
-   The name of the attribute to display, change or delete. Use more than
+   The name of the attribute to display, change, or delete. Use more than
    once for nested values.
 
    Default: show all attributes.
@@ -161,21 +161,28 @@ If you set a value that is evaluated to a mapping, exising values will be merged
 
    The new value of the attribute.
 
-   To delete an attribute, use ``-ev-``.
-
-   Do not feorget ``-e`` if the value is numeric!
+   Do not forget ``-e`` if the value is numeric!
 
 .. option:: -e, --eval
 
    The attribute's value is a Python expression.
+
+   To delete an attribute, use ``--eval`` without ``--value``.
+
+.. option:: -s, --split
+
+   The attribute's value is a space-separated list of names.
+
+   If the list contains actual numbers, you need to use a Python expression
+   and "--eval".
 
 
 .. program:: distkv client wago list
 
 Print the current state of your Wago controllers.
 
-This command does not access the device; it is solely for displaying the
-configuration of its interaction with DistKV.
+This command does not access the device; it is used solely for displaying
+the configuration of the interaction with DistKV.
 
 .. option:: server
 

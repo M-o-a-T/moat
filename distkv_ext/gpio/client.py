@@ -77,15 +77,16 @@ async def attr_(obj, attr, value, path, eval_, split):
     await _attr(obj, attr, value, path, eval_)
 
 @cli.command()
+@click.option("-t", "--type", "typ", help="Port type. 'input' or 'output'.")
 @click.option("-m", "--mode", help="Port mode. Use '-' to disable.")
-@click.option("-a", "--attr", nargs=2, multiple=True, help="One attribute to set (NAME VALUE). MAy be used multiple times.")
+@click.option("-a", "--attr", nargs=2, multiple=True, help="One attribute to set (NAME VALUE). May be used multiple times.")
 @click.argument("path", nargs=-1)
 @click.pass_obj
-async def port(obj, path, mode, attr):
+async def port(obj, path, typ, mode, attr):
     """Set/get/delete port settings. This is a shortcut for the "attr" command.
 
     \b
-    Known attributes for modes:
+    Known attributes for types+modes:
       input:
         read: dest (path)
         count: + interval (float), count (+-x for up/down/both)
@@ -99,11 +100,13 @@ async def port(obj, path, mode, attr):
     "rest" is the state of the wire when the input is False.
     Floats may be paths, in which case they're read from there when starting.
     """
-    if len(path) != 4:
-        raise click.UsageError("Path must be 4 elements: server+type+card+port.")
-    res = await obj.client.get(*obj.cfg.gpio.prefix, *path_eval(path, (3,4)), nchain=obj.meta or 1)
+    if len(path) != 3:
+        raise click.UsageError("Path must be 3 elements: host gpioname linenr")
+    res = await obj.client.get(*obj.cfg.gpio.prefix, *path_eval(path, (3,)), nchain=obj.meta or 1)
     val = res.get('value', attrdict())
 
+    if type:
+        attr = (('type', typ),) + attr
     if mode:
         attr = (('mode', mode),) + attr
     for k,v in attr:
@@ -124,8 +127,7 @@ async def port(obj, path, mode, attr):
             else:
                 v = click.UsageError("'rest' wants one of + -")
         elif k in {"src", "dest"} or ' ' in v:
-            v = v.split(' ')
-            v = tuple(x for x in v if x != '')
+            v = v.split()
         else:
             try:
                 v = int(v)
@@ -217,7 +219,7 @@ async def server(obj, name, host, port, delete):
 
 
 @cli.command()
-@click.argument("name", nargs=1)
+@click.argument("name", nargs=2)
 @click.pass_obj
 async def monitor(obj, name):
     """Stand-alone task to monitor a single contoller.
@@ -226,5 +228,6 @@ async def monitor(obj, name):
     from distkv_ext.gpio.model import GPIOroot
     server = await GPIOroot.as_handler(obj.client)
     await server.wait_loaded()
-    await task(obj.client, obj.cfg.gpio, server[name], None)
+    chip = server[name[0]][name[1]]
+    await task(obj.client, obj.cfg.gpio, chip, None)
 

@@ -12,7 +12,7 @@ except ImportError:
 
 from distkv.util import combine_dict, NotGiven, attrdict
 from distkv.exceptions import ClientConnectionError
-from distkv_ext.gpio.model import GPIOroot, GPIOserver
+from distkv_ext.gpio.model import GPIOroot, GPIOchip
 
 import logging
 logger = logging.getLogger(__name__)

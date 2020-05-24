@@ -140,7 +140,7 @@ async def port(obj, path, typ, mode, attr):
             raise v
         val[k] = v
 
-    await _attr(obj, (), val, path, True, res)
+    await _attr(obj, (), val, path, False, res)
 
 async def _attr(obj, attr, value, path, eval_, res=None):
     # Sub-attr setter.

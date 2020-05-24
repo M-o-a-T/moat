@@ -73,11 +73,29 @@ class _GPIOnode(_GPIObase):
         pass
 
 
-class GPIOinput(_GPIOnode):
-    """Describes one input port.
-    
-    An input port is polled or counted.
+class GPIOline(_GPIOnode):
+    """Describes one GPIO line.
     """
+
+    async def setup(self):
+        await super().setup()
+        if self.chip is None:
+            return
+        if self._work:
+            await self._work.aclose()
+
+        try:
+            typ = self.find_cfg('type')
+        except KeyError:
+            typ = "NOT_SET"
+        if typ == "input":
+            await self._setup_input()
+        elif typ == "output":
+            await self._setup_output()
+        else:
+            await self.root.err.record_error("gpio", *self.subpath, comment="Line type not set", data={"path":self.subpath,"typ":typ}, exc=exc)
+
+    # Input #
 
     async def _poll_task(self, evt, dest):
         async with anyio.open_cancel_scope() as sc:
@@ -121,11 +139,7 @@ class GPIOinput(_GPIOnode):
                         await self.root.err.record_working("gpio", *self.subpath)
 
 
-    async def setup(self):
-        await super().setup()
-
-        if self.chip is None:
-            return
+    async def _setup_input(self):
         try:
             mode = self.find_cfg('mode')
             dest = self.find_cfg('dest')
@@ -147,13 +161,7 @@ class GPIOinput(_GPIOnode):
             return  # mode unknown
         await evt.wait()
 
-
-class GPIOoutput(_GPIOnode):
-    """Describes one output port.
-    
-    Output ports are written to or pulsed. In addition, a timeout may be given.
-    """
-    _work = None
+    # Output #
 
     async def with_output(self, evt, src, proc, *args):
         """
@@ -305,12 +313,7 @@ class GPIOoutput(_GPIOnode):
                 await self._set_value(None, False, state, negate)
 
 
-    async def setup(self):
-        await super().setup()
-        if self.schip is None:
-            return
-        if self._work:
-            await self._work.aclose()
+    async def _setup_output(self):
 
         try:
             mode = self.find_cfg('mode')
@@ -348,45 +351,22 @@ class GPIOoutput(_GPIOnode):
         await evt.wait()
 
 
+class GPIOchip(_GPIObase):
+    _chip = None
 
-class _GPIObaseNUM(_GPIObase):
-    """
-    A path element between 1 and 99 inclusive works.
-    """
-    cls = None
+    @property
+    def chip(self):
+        return self._chip
+
+    @property
+    def name(self):
+        return self._path[-1]
+
     @classmethod
     def child_type(cls, name):
-        if isinstance(name,int) and name>0 and name<1000:
-            return cls.cls
-        return None
-
-class GPIOinputCARD(_GPIObaseNUM):
-    cls = GPIOinput
-
-class GPIOoutputCARD(_GPIObaseNUM):
-    cls = GPIOoutput
-
-class GPIOinputBase(_GPIObaseNUM):
-    cls = GPIOinputCARD
-
-class GPIOoutputBase(_GPIObaseNUM):
-    cls = GPIOoutputCARD
-
-
-class _GPIObaseCHIP(_GPIObase):
-    async def set_value(self, val):
-        await super().set_value(val)
-        await self.update_chip()
-
-
-class GPIOchip(_GPIObaseCHIP):
-    @classmethod
-    def child_type(cls, name):
-        if name == "input":
-            return GPIOinputBase
-        if name == "output":
-            return GPIOoutputBase
-        return None
+        if not isinstance(name,int):
+            return None
+        return GPIOline
 
     async def update_chip(self):
         await self._update_chip()
@@ -402,6 +382,10 @@ class GPIOchip(_GPIObaseCHIP):
             await s.set_freq(self.find_cfg("poll"))
             await s.set_ping_freq(self.find_cfg("ping"))
 
+    async def set_value(self, val):
+        await super().set_value(val)
+        await self.update_chip()
+
 
 class GPIOhost(ClientEntry):
     def child_type(self, name):
@@ -411,7 +395,6 @@ class GPIOhost(ClientEntry):
 class GPIOroot(ClientRoot):
     CFG = "gpio"
     err = None
-    _chip = None
 
     async def run_starting(self):
         self._chip = None
@@ -420,5 +403,5 @@ class GPIOroot(ClientRoot):
         await super().run_starting()
 
     def child_type(self, name):
-        return GPIOchip
+        return GPIOhost
 

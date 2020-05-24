@@ -18,9 +18,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 async def task(client, cfg, chip: GPIOchip, evt=None):
-    cfg = combine_dict(server.value_or({}, Mapping).get('server',{}), cfg['server_default'])
-
-    with asyncgpio.open_chip(chip.name, **cfg) as srv:
+    with asyncgpio.open_chip(label=chip.name) as srv:
         chip.task_group = tg
         try:
             async with anyio.open_task_group() as tg:

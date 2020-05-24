@@ -93,7 +93,7 @@ class GPIOline(_GPIOnode):
         elif typ == "output":
             await self._setup_output()
         else:
-            await self.root.err.record_error("gpio", *self.subpath, comment="Line type not set", data={"path":self.subpath,"typ":typ}, exc=exc)
+            await self.root.err.record_error("gpio", *self.subpath, comment="Line type not known", data={"path":self.subpath,"typ":typ}, exc=exc)
 
     # Input #
 

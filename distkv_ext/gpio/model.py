@@ -1,5 +1,5 @@
 """
-DistKV client data model for Wago
+DistKV client data model for GPIO
 """
 import anyio
 from anyio.exceptions import ClosedResourceError
@@ -12,7 +12,7 @@ from collections import Mapping
 import logging
 logger = logging.getLogger(__name__)
         
-class _WAGObase(ClientEntry):
+class _GPIObase(ClientEntry):
     """
     Forward ``_update_server`` calls to child entries.
     """
@@ -42,7 +42,7 @@ class _WAGObase(ClientEntry):
     async def setup(self):
         pass
 
-class _WAGOnode(_WAGObase):
+class _GPIOnode(_GPIObase):
     """
     Base class for a single input or output.
     """
@@ -73,7 +73,7 @@ class _WAGOnode(_WAGObase):
         pass
 
 
-class WAGOinput(_WAGOnode):
+class GPIOinput(_GPIOnode):
     """Describes one input port.
     
     An input port is polled or counted.
@@ -127,7 +127,7 @@ class WAGOinput(_WAGOnode):
         await evt.wait()
 
 
-class WAGOoutput(_WAGOnode):
+class GPIOoutput(_GPIOnode):
     """Describes one output port.
     
     Output ports are written to or pulsed. In addition, a timeout may be given.
@@ -136,7 +136,7 @@ class WAGOoutput(_WAGOnode):
 
     async def with_output(self, evt, src, proc, *args):
         """
-        Task that monitors one entry and writes its value to the Wago controller.
+        Task that monitors one entry and writes its value to the GPIO controller.
 
         Also the value is mirrored to ``cur`` if that's set.
         """
@@ -149,7 +149,7 @@ class WAGOoutput(_WAGOnode):
                         val = msg.value
                     except AttributeError:
                         if msg.get("state","") != "uptodate":
-                            await self.root.err.record_error("wago", *self.subpath, comment="Missing value: %r" % (msg,), data={"path":self.subpath})
+                            await self.root.err.record_error("gpio", *self.subpath, comment="Missing value: %r" % (msg,), data={"path":self.subpath})
                         continue
 
                     if val in (False,True,0,1):
@@ -157,18 +157,18 @@ class WAGOoutput(_WAGOnode):
                         try:
                             await proc(val, *args)
                         except StopAsyncIteration:
-                            await self.root.err.record_error("wago", *self.subpath, data={'value': val}, comment="Stopped due to bad timer value")
+                            await self.root.err.record_error("gpio", *self.subpath, data={'value': val}, comment="Stopped due to bad timer value")
                             return
                         except Exception as exc:
-                            await self.root.err.record_error("wago", *self.subpath, data={'value': val}, exc=exc)
+                            await self.root.err.record_error("gpio", *self.subpath, data={'value': val}, exc=exc)
                         else:
-                            await self.root.err.record_working("wago", *self.subpath)
+                            await self.root.err.record_working("gpio", *self.subpath)
                     else:
-                        await self.root.err.record_error("wago", *self.subpath, comment="Bad value: %r" % (val,))
+                        await self.root.err.record_error("gpio", *self.subpath, comment="Bad value: %r" % (val,))
 
     async def _set_value(self, val, state, negate):
         """
-        Task that monitors one entry and writes its value to the Wago controller.
+        Task that monitors one entry and writes its value to the GPIO controller.
 
         Also the value is mirrored to ``cur`` if that's set.
         """
@@ -326,7 +326,7 @@ class WAGOoutput(_WAGOnode):
 
 
 
-class _WAGObaseNUM(_WAGObase):
+class _GPIObaseNUM(_GPIObase):
     """
     A path element between 1 and 99 inclusive works.
     """
@@ -337,32 +337,32 @@ class _WAGObaseNUM(_WAGObase):
             return cls.cls
         return None
 
-class WAGOinputCARD(_WAGObaseNUM):
-    cls = WAGOinput
+class GPIOinputCARD(_GPIObaseNUM):
+    cls = GPIOinput
 
-class WAGOoutputCARD(_WAGObaseNUM):
-    cls = WAGOoutput
+class GPIOoutputCARD(_GPIObaseNUM):
+    cls = GPIOoutput
 
-class WAGOinputBase(_WAGObaseNUM):
-    cls = WAGOinputCARD
+class GPIOinputBase(_GPIObaseNUM):
+    cls = GPIOinputCARD
 
-class WAGOoutputBase(_WAGObaseNUM):
-    cls = WAGOoutputCARD
+class GPIOoutputBase(_GPIObaseNUM):
+    cls = GPIOoutputCARD
 
 
-class _WAGObaseSERV(_WAGObase):
+class _GPIObaseSERV(_GPIObase):
     async def set_value(self, val):
         await super().set_value(val)
         await self.update_server()
 
 
-class WAGOserver(_WAGObaseSERV):
+class GPIOserver(_GPIObaseSERV):
     @classmethod
     def child_type(cls, name):
         if name == "input":
-            return WAGOinputBase
+            return GPIOinputBase
         if name == "output":
-            return WAGOoutputBase
+            return GPIOoutputBase
         return None
 
     async def set_server(self, server):
@@ -376,10 +376,10 @@ class WAGOserver(_WAGObaseSERV):
             await s.set_ping_freq(self.find_cfg("ping"))
 
 
-class WAGOroot(_WAGObase, ClientRoot):
+class GPIOroot(_GPIObase, ClientRoot):
     cls = {}
     reg = {}
-    CFG = "wago"
+    CFG = "gpio"
     err = None
     _server = None
 
@@ -402,7 +402,7 @@ class WAGOroot(_WAGObase, ClientRoot):
 
     def child_type(self, name):
         if self._server is None or name == self._server:
-            return WAGOserver
+            return GPIOserver
         return None
 
     async def update_server(self):

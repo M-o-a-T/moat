@@ -14,30 +14,30 @@ logger = logging.getLogger(__name__)
         
 class _GPIObase(ClientEntry):
     """
-    Forward ``_update_server`` calls to child entries.
+    Forward ``_update_chip`` calls to child entries.
     """
-    _server = None
+    _chip = None
 
     @property
-    def server(self):
-        if self._server is None:
-            self._server = self.parent.server
-        return self._server
+    def chip(self):
+        if self._chip is None:
+            self._chip = self.parent.chip
+        return self._chip
 
     async def set_value(self, val):
         await super().set_value(val)
-        if self.server is not None:
-            await self._update_server()
+        if self.chip is not None:
+            await self._update_chip()
 
-    async def update_server(self):
-        await self.parent.update_server()
+    async def update_chip(self):
+        await self.parent.update_chip()
 
-    async def _update_server(self):
+    async def _update_chip(self):
         if not self.val_d(True,'present'):
             return
         await self.setup()
         for k in self:
-            await k._update_server()
+            await k._update_chip()
 
     async def setup(self):
         pass
@@ -58,11 +58,11 @@ class _GPIOnode(_GPIObase):
 
     @property
     def tg(self):
-        return self.server.task_group
+        return self.chip.task_group
 
     async def setup(self):
         await super().setup()
-        if self.server is None:
+        if self.chip is None:
             self._poll = None
             return
 
@@ -83,46 +83,67 @@ class GPIOinput(_GPIOnode):
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
             rest = self.find_cfg('rest', default=False)
-            async with self.server.monitor_input(self.card, self.port) as mon:
+            async with self.chip.monitor_input(self.card, self.port) as mon:
                 await evt.set()
                 async for val in mon:
                     await self.client.set(*dest, value=(val != rest))
+                    await self.root.err.record_working("gpio", *self.subpath)
 
     async def _count_task(self, evt, dest, intv, direc):
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
-            delta = await self.client.get(*dest)
-            delta = delta.get('value', 0)
-            if not isinstance(delta, (int,float)):
-                delta = 0
+            async def get_value():
+                delta = await self.client.get(*dest, nchain=2)
+                ch={}
+                if 'value' in delta:
+                    ch['chain'] = delta.chain
 
-            async with self.server.count_input(self.card, self.port, direction=direc, interval=intv) as mon:
+                delta = delta.data.get('value', 0)
+                if not isinstance(delta, (int,float)):
+                    delta = 0
+                return delta,ch
+            delta,ch = await get_value()
+
+            async with self.chip.count_input(self.card, self.port, direction=direc, interval=intv) as mon:
                 await evt.set()
                 async for val in mon:
-                    await self.client.set(*dest, value=val+delta)
+                    try:
+                        res = await self.client.set(*dest, value=val+delta, nchain=2, **ch)
+                        ch['chain'] = res.chain
+                    except ServerError as exc:
+                        # Somebody else changed my value? Retry once.
+                        await self.root.err.record_error("gpio", *self.subpath, comment="Server error: %r" % (msg,), data={"path":self.subpath}, exc=exc)
+
+                        delta,ch = await get_value()
+                        res = await self.client.set(*dest, value=val+delta, nchain=2, **ch)
+                        ch['chain'] = res.chain
+                    else:
+                        await self.root.err.record_working("gpio", *self.subpath)
+
 
     async def setup(self):
         await super().setup()
 
-        if self.server is None:
+        if self.chip is None:
             return
         try:
             mode = self.find_cfg('mode')
             dest = self.find_cfg('dest')
         except KeyError:
-            logger.info("mode or dest not set in %s", self.subpath)
             # logger.debug("Port not configured: %s %s %d %d", *self.subpath[-4:])
+            await self.root.err.record_error("gpio", *self.subpath, comment="mode or dest not set", data={"path":self.subpath}, exc=exc)
             return
 
         evt = anyio.create_event()
         if mode == "read":
             await self.tg.spawn(self._poll_task, evt, dest)
         elif mode == "count":
+            # These two are in the global config and thus can't raise KeyError
             intv = self.find_cfg('interval')
             direc = self.find_cfg('count')
             await self.tg.spawn(self._count_task, evt, dest, intv, direc)
         else:
-            logger.info("mode not known (%r) in %s", mode, self.subpath)
+            await self.root.err.record_error("gpio", *self.subpath, comment="mode unknown", data={"path":self.subpath, "mode":mode})
             return  # mode unknown
         await evt.wait()
 
@@ -139,44 +160,49 @@ class GPIOoutput(_GPIOnode):
         Task that monitors one entry and writes its value to the GPIO controller.
 
         Also the value is mirrored to ``cur`` if that's set.
+
+        `proc` is called with the GPIO line, the current value from DistKV,
+        and the remaining arguments as given.
         """
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
-            async with self.client.watch(*src, min_depth=0, max_depth=0, fetch=True) as wp:
-                await evt.set()
-                async for msg in wp:
-                    try:
-                        val = msg.value
-                    except AttributeError:
-                        if msg.get("state","") != "uptodate":
-                            await self.root.err.record_error("gpio", *self.subpath, comment="Missing value: %r" % (msg,), data={"path":self.subpath})
-                        continue
-
-                    if val in (False,True,0,1):
-                        val = bool(val)
+            with self.chip.open(self.port, direction=gpio.DIRECTION_OUTPUT) as line:
+                async with self.client.watch(*src, min_depth=0, max_depth=0, fetch=True) as wp:
+                    await evt.set()
+                    async for msg in wp:
                         try:
-                            await proc(val, *args)
-                        except StopAsyncIteration:
-                            await self.root.err.record_error("gpio", *self.subpath, data={'value': val}, comment="Stopped due to bad timer value")
-                            return
-                        except Exception as exc:
-                            await self.root.err.record_error("gpio", *self.subpath, data={'value': val}, exc=exc)
-                        else:
-                            await self.root.err.record_working("gpio", *self.subpath)
-                    else:
-                        await self.root.err.record_error("gpio", *self.subpath, comment="Bad value: %r" % (val,))
+                            val = msg.value
+                        except AttributeError:
+                            if msg.get("state","") != "uptodate":
+                                await self.root.err.record_error("gpio", *self.subpath, comment="Missing value in msg", data={"path":self.subpath,"msg":msg})
+                            continue
 
-    async def _set_value(self, val, state, negate):
+                        if val in (False,True,0,1):
+                            val = bool(val)
+                            try:
+                                await proc(val, line, *args)
+                            except StopAsyncIteration:
+                                await self.root.err.record_error("gpio", *self.subpath, data={'value': val}, comment="Stopped due to bad timer value")
+                                return
+                            except Exception as exc:
+                                await self.root.err.record_error("gpio", *self.subpath, data={'value': val}, exc=exc)
+                            else:
+                                await self.root.err.record_working("gpio", *self.subpath)
+                        else:
+                            await self.root.err.record_error("gpio", *self.subpath, comment="Bad value: %r" % (val,))
+
+    async def _set_value(self, line, val, state, negate):
         """
         Task that monitors one entry and writes its value to the GPIO controller.
 
         Also the value is mirrored to ``cur`` if that's set.
         """
-        await self.server.write_output(self.card, self.port, val != negate)
+        if line is not None:
+            line.value = val != negate
         if state is not None:
             await self.client.set(*state, value=val)
 
-    async def _oneshot_value(self, val, state, negate, t_on):
+    async def _oneshot_value(self, line, val, state, negate, t_on):
         """
         Task that monitors one entry. Its value is written to the
         controller but if it's = ``direc`` it's reverted autonomously after
@@ -192,43 +218,37 @@ class GPIOoutput(_GPIOnode):
             nonlocal t_on
             if isinstance(t_on, (list,tuple)):
                 t_on = (await self.client.get(*t_on)).value_or(None)
-            try:
-                async with anyio.open_cancel_scope() as sc:
-                    async with self.server.write_timed_output(self.card, self.port, not negate, t_on) as work:
-                        self._work = sc
-                        self._work_done = anyio.create_event()
+            async with anyio.open_cancel_scope() as sc:
+                try:
+                    self._work = sc
+                    try:
+                        await self._set_value(line,True,state,negate)
                         await evt.set()
                         if state is not None:
                             await self.client.set(*state, value=True)
+                        await anyio.sleep(t_on)
 
-                        await work.wait()
-            finally:
-                if self._work is sc:
-                    await self._work_done.set()
-                    self._work = None
-                    self._work_done = None
-
-                async with anyio.fail_after(2, shield=True):
-                    if state is not None:
-                        try:
-                            val = await self.server.read_output(self.card, self.port)
-                        except ClosedResourceError:
-                            pass
-                        else:
-                            await self.client.set(*state, value=(val != negate))
+                    finally:
+                        async with anyio.fail_after(2, shield=True):
+                            await self._set_value(line,False,state,negate)
+                finally:
+                    if self._work is sc:
+                        await self._work_done.set()
+                        self._work = None
+                        self._work_done = None
 
         if val:
             evt = anyio.create_event()
-            await self.server.task_group.spawn(work_oneshot, evt)
+            await self.chip.task_group.spawn(work_oneshot, evt)
             await evt.wait()
         else:
             if self._work:
                 await self._work.cancel()
                 await self._work_done.wait()
             else:
-                await self._set_value(False, state, negate)
+                await self._set_value(None, False, state, negate)
 
-    async def _pulse_value(self, val, state, negate, t_on, t_off):
+    async def _pulse_value(self, line, val, state, negate, t_on, t_off):
         """
         Pulse the value.
 
@@ -246,13 +266,16 @@ class GPIOoutput(_GPIOnode):
 
             try:
                 async with anyio.open_cancel_scope() as sc:
-                    async with self.server.write_pulsed_output(self.card, self.port, not negate, t_on, t_off) as work:
-                        self._work = sc
-                        self._work_done = anyio.create_event()
-                        await evt.set()
-
-                        if state is not None:
-                            await self.client.set(*state, value=t_on/(t_on+t_off))
+                    self._work = sc
+                    self._work_done = anyio.create_event()
+                    await evt.set()
+                    if state is not None:
+                        await self.client.set(*state, value=t_on/(t_on+t_off))
+                    while True:
+                        line.value = not negate
+                        await anyio.sleep(t_on)
+                        line.value = negate
+                        await anyio.sleep(t_off)
 
                         await work.wait()
             finally:
@@ -264,7 +287,7 @@ class GPIOoutput(_GPIOnode):
                 async with anyio.fail_after(2, shield=True):
                     if state is not None:
                         try:
-                            val = await self.server.read_output(self.card, self.port)
+                            val = await self.chip.read_output(self.card, self.port)
                         except ClosedResourceError:
                             pass
                         else:
@@ -272,19 +295,19 @@ class GPIOoutput(_GPIOnode):
 
         if val:
             evt = anyio.create_event()
-            await self.server.task_group.spawn(work_pulse, evt)
+            await self.chip.task_group.spawn(work_pulse, evt)
             await evt.wait()
         else:
             if self._work:
                 await self._work.cancel()
                 await self._work_done.wait()
             else:
-                await self._set_value(False, state, negate)
+                await self._set_value(None, False, state, negate)
 
 
     async def setup(self):
         await super().setup()
-        if self.server is None:
+        if self.schip is None:
             return
         if self._work:
             await self._work.aclose()
@@ -333,7 +356,7 @@ class _GPIObaseNUM(_GPIObase):
     cls = None
     @classmethod
     def child_type(cls, name):
-        if isinstance(name,int) and name>0 and name<100:
+        if isinstance(name,int) and name>0 and name<1000:
             return cls.cls
         return None
 
@@ -350,13 +373,13 @@ class GPIOoutputBase(_GPIObaseNUM):
     cls = GPIOoutputCARD
 
 
-class _GPIObaseSERV(_GPIObase):
+class _GPIObaseCHIP(_GPIObase):
     async def set_value(self, val):
         await super().set_value(val)
-        await self.update_server()
+        await self.update_chip()
 
 
-class GPIOserver(_GPIObaseSERV):
+class GPIOchip(_GPIObaseCHIP):
     @classmethod
     def child_type(cls, name):
         if name == "input":
@@ -365,50 +388,37 @@ class GPIOserver(_GPIObaseSERV):
             return GPIOoutputBase
         return None
 
-    async def set_server(self, server):
-        await self.parent.set_server(server)
+    async def update_chip(self):
+        await self._update_chip()
+
+    async def set_chip(self, chip):
+        self._chip = chip
+        await self._update_chip()
 
     async def setup(self):
         await super().setup()
-        s = self.server
+        s = self.chip
         if s is not None:
             await s.set_freq(self.find_cfg("poll"))
             await s.set_ping_freq(self.find_cfg("ping"))
 
 
-class GPIOroot(_GPIObase, ClientRoot):
-    cls = {}
-    reg = {}
+class GPIOhost(ClientEntry):
+    def child_type(self, name):
+        return GPIOchip
+
+
+class GPIOroot(ClientRoot):
     CFG = "gpio"
     err = None
-    _server = None
+    _chip = None
 
-    async def run_starting(self, server=None):
-        self._server = server
+    async def run_starting(self):
+        self._chip = None
         if self.err is None:
             self.err = await ErrorRoot.as_handler(self.client)
         await super().run_starting()
 
-    @property
-    def server(self):
-        return self._server
-
-    @classmethod
-    def register(cls, typ):
-        def acc(kls):
-            cls.reg[typ] = kls
-            return kls
-        return acc
-
     def child_type(self, name):
-        if self._server is None or name == self._server:
-            return GPIOserver
-        return None
-
-    async def update_server(self):
-        await self._update_server()
-
-    async def set_server(self, server):
-        self._server = server
-        await self._update_server()
+        return GPIOchip
 

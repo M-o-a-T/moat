@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 
 async def task(client, cfg, chip: GPIOchip, evt=None):
     with asyncgpio.open_chip(label=chip.name) as srv:
-        chip.task_group = tg
         try:
-            async with anyio.open_task_group() as tg:
+            async with anyio.create_task_group() as tg:
+                chip.task_group = tg
                 await chip.set_chip(srv)
                 if evt is not None:
                     await evt.set()
@@ -29,5 +29,5 @@ async def task(client, cfg, chip: GPIOchip, evt=None):
                 while True:
                     await anyio.sleep(99999)
         finally:
-            chip._tg = None
+            chip.task_group = None
 

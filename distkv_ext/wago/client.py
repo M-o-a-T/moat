@@ -60,15 +60,20 @@ async def list(obj, path):
 @click.option("-a","--attr", multiple=True, help="Attribute to list or modify.")
 @click.option("-v","--value",help="New value of the attribute.")
 @click.option("-e", "--eval", "eval_", is_flag=True, help="The value shall be evaluated.")
+@click.option("-s", "--split", is_flag=True, help="The value shall be word-split.")
 @click.argument("path", nargs=-1)
 @click.pass_obj
-async def attr_(obj, attr, value, path, eval_):
+async def attr_(obj, attr, value, path, eval_, split):
     """Set/get/delete an attribute on a given Wago element.
 
     An evaluated '-' deletes the attribute.
     """
+    if split and eval_:
+        raise click.UsageError("split and eval don't work together.")
     if value and not attr:
         raise click.UsageError("Values must have locations ('-a ATTR').")
+    if split:
+        value = value.split()
     await _attr(obj, attr, value, path, eval_)
 
 @cli.command()

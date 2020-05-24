@@ -85,9 +85,8 @@ async def setup_conv(obj):
     """
     n=0
 
-    r = await obj.client.get(".hass")
-    conv = r.value['conv']
-    path = r.value['path']
+    conv = obj.hass.conv
+    path = obj.hass.path
 
     def construct_yaml_tuple(self, node):
         seq = self.construct_sequence(node)
@@ -113,13 +112,15 @@ async def setup_conv(obj):
     for k,v in cfg['conv'].items():
         for kk,vv in v.items():
             vv=dict(codec=vv)
-            for ap in ('+',),('+','+'):
-                p = ppa+(k,)+ap+(kk,)
-                r = await obj.client._request(action="get_internal",path=p)
-                if r.get('value',{}) != vv:
-                    print(*p)
-                    await obj.client._request(action="set_internal",path=p, value=vv)
-                    n += 1
+            if k == '+':
+                p = (*ppa,"#",*kk.split("/"))
+            else:
+                p = (*ppa,k,"#",*kk.split("/"))
+            r = await obj.client._request(action="get_internal",path=p)
+            if r.get('value',{}) != vv:
+                print(*p)
+                await obj.client._request(action="set_internal",path=p, value=vv)
+                n += 1
     return n
 
 
@@ -138,15 +139,34 @@ _types = {
         "light": attrdict(
             cmd=(str,"‹prefix›/light/‹path›/cmd","topic for commands","command_topic"),
             state=(str,"‹prefix›/light/‹path›/state","topic for state","state_topic"),
-            bright=(bool,False,"Brightness control?","brightness"),
-            bright_cmd=(str,"‹prefix›/light/‹path›/brightness/state","brightness control","brightness_command_topic"),
-            bright_state=(str,"‹prefix›/light/‹path›/brightness/cmd","brightness state","brightness_state_topic"),
+            brightcmd=(str,"‹prefix›/light/‹path›/brightness/state","brightness control","brightness_command_topic"),
+            brightstate=(str,"‹prefix›/light/‹path›/brightness/cmd","brightness state","brightness_state_topic"),
             _payload=True,
             ),
-        "binary_switch":attrdict(
+        "switch":attrdict(
             cmd=(str,"‹prefix›/binary_switch/‹path›/cmd","topic for commands","command_topic"),
             state=(str,"‹prefix›/binary_switch/‹path›/state","topic for state","state_topic"),
+            icon=(str,None,"Device icon","icon"),
             _payload=True,
+            ),
+        "binary_sensor":attrdict(
+            state=(str,"‹prefix›/binary_switch/‹path›/state","topic for state","state_topic"),
+            unit=(str,None,"Unit of measurement","unit_of_measurement"),
+            icon=(str,None,"Device icon","icon"),
+            ),
+        "sensor":attrdict(
+            state=(str,"‹prefix›/binary_switch/‹path›/state","topic for state","state_topic"),
+            unit=(str,None,"Unit of measurement","unit_of_measurement"),
+            cls=(str,None,"Device class","device_class"),
+            icon=(str,None,"Device icon","icon"),
+            ),
+        "lock": attrdict(
+            cmd=(str,"‹prefix›/lock/‹path›/cmd","topic for commands","command_topic"),
+            state=(str,"‹prefix›/lock/‹path›/state","topic for state","state_topic"),
+            on=(str,"on","payload to lock","payload_lock"),
+            off=(str,"off","payload to unlock","payload_unlock"),
+            ons=(str,"on","state for locked","state_locked"),
+            offs=(str,"off","state for unlocked","state_unlocked"),
             ),
         }
 
@@ -156,16 +176,16 @@ for _v in _types.values():
         _v.off=(str,"off","payload to turn off","payload_off")
     _v.name=(str,"‹type› ‹path›","The name of this device","name")
     _v.uid=(str,"dkv_‹tock›","A unique ID for this device","unique_id")
+    _v.device=(str,"","ID of the device this is part of","device")
 
 @cli.command()
 @click.pass_obj
-@click.option("-d","--delete",is_flag=True,help="delete this entry?")
 @click.option("-o","--option",multiple=True,help="Special entry (string)")
 @click.option("-O","--eval-option",multiple=True,help="Special entry (evaluated)")
 @click.option("-L","--list-options",is_flag=True,help="List possible options")
 @click.argument("typ", nargs=1)
 @click.argument("path", nargs=-1)
-async def set(obj,typ,path,delete,option,eval_option,list_options):
+async def set(obj,typ,path,option,eval_option,list_options):
     """
     Add or modify a device.
 
@@ -176,8 +196,8 @@ async def set(obj,typ,path,delete,option,eval_option,list_options):
         t = _types[typ]
     except KeyError:
         raise click.UsageError("I don't know this type.")
-    if list_options or delete:
-        if option or eval_option or (list_options and delete):
+    if list_options:
+        if option or eval_option:
             raise click.UsageError("Deletion and options at the same time? No.")
 
     if list_options:
@@ -205,15 +225,15 @@ async def set(obj,typ,path,delete,option,eval_option,list_options):
     else:
         val = attrdict(**res.value)
         r.chain = res.chain
-    if delete:
-        await obj.client.delete(*cp, **r)
-        return
 
     i=attrdict()
     for k in option:
         if k[0] in '-!':
-            k =k[1:]
+            k = k[1:]
             v = False
+            if t[k][1] is not bool:
+                val.pop(k,None)
+                continue
         elif '=' in k:
             k,v = k.split("=",1)
         else:
@@ -233,12 +253,14 @@ async def set(obj,typ,path,delete,option,eval_option,list_options):
             vv = "_".join(path)
         elif k == "cmd":
             vv = "/".join((obj.hass.path[-1],typ,*path,"cmd"))
-        elif k.endswith("_cmd"):
-            vv = "/".join((obj.hass.path[-1],typ,*path,k[:-4],"cmd"))
+        elif k.endswith("cmd"):
+            vv = "/".join((obj.hass.path[-1],typ,*path,k[:-3],"cmd"))
         elif k == "state":
             vv = "/".join((obj.hass.path[-1],typ,*path,"state"))
-        elif k.endswith("_state"):
-            vv = "/".join((obj.hass.path[-1],typ,*path,k[:-6],"state"))
+        elif k.endswith("state"):
+            vv = "/".join((obj.hass.path[-1],typ,*path,k[:-5],"state"))
+        elif v[1] == 0 or v[1] == "":
+            continue
         else:
             vv = v[1]
         try:
@@ -258,15 +280,26 @@ async def set(obj,typ,path,delete,option,eval_option,list_options):
     if "unique" in t and "unique_id" not in v:
         tock = await obj.client.get_tock()
         v['unique_id'] = "dkv_"+str(tock)
+    if "device_class" in v:
+        if v['device_class'] not in (None,"battery","humidity","illuninance","signal_strength","temperature","power","pressure","timestamp"):
+            raise click.UsageError("Device class %r is unknown" % (v['device_class'],))
+    if "device" in v:
+        dv=v["device"]
+        if not dv:
+            del v["device"]
+        elif isinstance(dv,str):
+            v["device"] = dict(identifiers=dv.split(":"))
+    v['retain'] = True
 
     await obj.client.set(*cp, value=v, **r)
 
 
 @cli.command()
 @click.pass_obj
+@click.option("-c","--cmd",is_flag=True,help="Use command-line names")
 @click.argument("typ", nargs=1)
 @click.argument("path", nargs=-1)
-async def get(obj,typ,path):
+async def get(obj,typ,path,cmd):
     """
     Display a device's config.
 
@@ -277,6 +310,13 @@ async def get(obj,typ,path):
     except KeyError:
         raise click.UsageError("I don't know this type.")
 
+    if cmd:
+        tt={}
+        for k,v in t.items():
+            tt[v[3]]=k
+        cmd = lambda x:tt.get(x,x)
+    else:
+        cmd = lambda x:x
     cp = obj.hass.path+(typ,)+path
     if not len(path):
         async for r in obj.client.get_tree(*cp):
@@ -289,7 +329,9 @@ async def get(obj,typ,path):
     if res.get('value',NotGiven) is NotGiven:
         print("Not found.")
         return
-    yprint(res.value, stream=obj.stdout)
+    val = res.value
+    for k,v in val.items():
+        print(cmd(k),v,file=obj.stdout)
 
 @cli.command()
 @click.pass_obj
@@ -314,8 +356,5 @@ async def delete(obj,typ,path):
         print("Not found.")
         return
     v = attrdict(**res.value)
-    r.chain = res.chain
-    await obj.client.delete(*cp, "config",**r)
-    await obj.client.delete(*cp, "state")
-    await obj.client.delete(*cp, "cmd")
+    await obj.client.delete_tree(*cp)
 

@@ -82,6 +82,7 @@ codec:
 conv:
   +:
     config: [json, bin]
+    online: [bool, onoff, bin]
   binary_sensor:
     state: [bool, onoff, bin]
   sensor:
@@ -90,6 +91,11 @@ conv:
     cmd: [bool, onoff, bin]
     state: [bool, onoff, bin]
   light:
-    cmd: [float, bin]
-    state: [float, bin]
+    cmd: [bool, onoff, bin]
+    state: [bool, onoff, bin]
+    bright/cmd: [float, bin]
+    bright/state: [float, bin]
+  lock:
+    cmd: [bool, onoff, bin]
+    state: [bool, onoff, bin]
 

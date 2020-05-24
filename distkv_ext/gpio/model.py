@@ -5,7 +5,7 @@ import anyio
 from anyio.exceptions import ClosedResourceError
 
 from distkv.obj import ClientEntry, ClientRoot
-from distkv.util import combine_dict
+from distkv.util import combine_dict, PathLongener
 from distkv.errors import ErrorRoot
 from distkv.exceptions import ServerError
 from collections import Mapping
@@ -205,7 +205,7 @@ class GPIOline(_GPIOnode):
             await self.task_group.spawn(self._count_task, evt, dest, intv, direc)
         else:
             await self.root.err.record_error("gpio", *self.subpath, comment="mode unknown", data={"path":self.subpath, "mode":mode})
-            return  # mode unknown
+            return
         await evt.wait()
 
     # Output #
@@ -221,10 +221,13 @@ class GPIOline(_GPIOnode):
         """
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
-            with self.chip.open(self.port, direction=gpio.DIRECTION_OUTPUT) as line:
+            with self.chip.line(self._path[-1]).open(direction=gpio.DIRECTION_OUTPUT) as line:
                 async with self.client.watch(*src, min_depth=0, max_depth=0, fetch=True) as wp:
+                    pl=PathLongener()
+                    old_val = None
                     await evt.set()
                     async for msg in wp:
+                        pl(msg)
                         try:
                             val = msg.value
                         except AttributeError:
@@ -234,8 +237,11 @@ class GPIOline(_GPIOnode):
 
                         if val in (False,True,0,1):
                             val = bool(val)
+                            if old_val is val:
+                                continue
+                            old_val = val
                             try:
-                                await proc(val, line, *args)
+                                await proc(line, val, *args)
                             except StopAsyncIteration:
                                 await self.root.err.record_error("gpio", *self.subpath, data={'value': val}, comment="Stopped due to bad timer value")
                                 return
@@ -276,6 +282,7 @@ class GPIOline(_GPIOnode):
             async with anyio.open_cancel_scope() as sc:
                 try:
                     self._work = sc
+                    self._work_done = anyio.create_event()
                     try:
                         await self._set_value(line,True,state,negate)
                         await evt.set()
@@ -294,7 +301,7 @@ class GPIOline(_GPIOnode):
 
         if val:
             evt = anyio.create_event()
-            await self.chip.task_group.spawn(work_oneshot, evt)
+            await self.task_group.spawn(work_oneshot, evt)
             await evt.wait()
         else:
             if self._work:
@@ -331,8 +338,6 @@ class GPIOline(_GPIOnode):
                         await anyio.sleep(t_on)
                         line.value = negate
                         await anyio.sleep(t_off)
-
-                        await work.wait()
             finally:
                 if self._work is sc:
                     await self._work_done.set()
@@ -342,7 +347,7 @@ class GPIOline(_GPIOnode):
                 async with anyio.fail_after(2, shield=True):
                     if state is not None:
                         try:
-                            val = await self.chip.read_output(self.card, self.port)
+                            val = line.value
                         except ClosedResourceError:
                             pass
                         else:
@@ -350,7 +355,7 @@ class GPIOline(_GPIOnode):
 
         if val:
             evt = anyio.create_event()
-            await self.chip.task_group.spawn(work_pulse, evt)
+            await self.task_group.spawn(work_pulse, evt)
             await evt.wait()
         else:
             if self._work:
@@ -380,19 +385,19 @@ class GPIOline(_GPIOnode):
             await self.task_group.spawn(self.with_output, evt, src, self._set_value, state, rest)
         elif mode == "oneshot":
             if t_on is None:
-                logger.info("t_on not set in %s",self.subpath)
+                await self.root.err.record_error("gpio", *self.subpath, comment="t_on not set", data={"path":self.subpath})
                 return
             await self.task_group.spawn(self.with_output, evt, src, self._oneshot_value, state, rest, t_on)
         elif mode == "pulse":
             if t_on is None:
-                logger.info("t_on not set in %s",self.subpath)
+                await self.root.err.record_error("gpio", *self.subpath, comment="t_on not set", data={"path":self.subpath})
                 return
             if t_off is None:
-                logger.info("t_off not set in %s",self.subpath)
+                await self.root.err.record_error("gpio", *self.subpath, comment="t_off not set", data={"path":self.subpath})
                 return
             await self.task_group.spawn(self.with_output, evt, src, self._pulse_value, state, rest, t_on, t_off)
         else:
-            logger.info("mode not known (%r) in %s", mode, self.subpath)
+            await self.root.err.record_error("gpio", *self.subpath, comment="mode unknown", data={"path":self.subpath, "mode":mode})
             return
         await evt.wait()
 

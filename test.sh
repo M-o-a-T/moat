@@ -45,6 +45,23 @@ TODO: automate that. As kernels on all those test VMs out there don't compile
 the gpio-mockup module, I didn't do that yet. Feel free.
 END
 
-distkv -vvvv client gpio monitor $H $chip
+distkv -vvvv client gpio monitor $H $chip &
+pid=$!
+trap 'kill -9 $pid' 0 1 2 15
 
+pat() {
+	p=$1
+	z=1
+	shift
+	for k ; do
+		echo -n $z > $E/$p
+		z=$(expr 1 - $z )
+		sleep $k
+	done
+	echo -n 0 > $p
+}
 
+# simulate a bouncing button
+pat 2 0.01 .1 .2 
+
+sleep 300

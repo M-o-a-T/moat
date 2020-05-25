@@ -90,15 +90,17 @@ async def port(obj, path, typ, mode, attr):
       input:
         read: dest (path)
         count: read + interval (float), count (+-x for up/down/both)
-        button: read + t_bounce (float), t_idle (float)
+        button: read + t_bounce (float), t_idle (float), skip (+- ignore noise?)
       output:
         write: src (path), state (path)
-        oneshot: write + t_on (float), rest (+-), state (path)
+        oneshot: write + t_on (float), state (path)
         pulse:   oneshot + t_off (float)
+      *:
+        low: bool (signals are active-low if true)
 
     \b
     Paths elements are separated by spaces.
-    "rest" is the state of the wire when the input is False.
+    "low" is the state of the wire when the input is False.
     Floats may be paths, in which case they're read from there when starting.
     """
     if len(path) != 3:
@@ -120,13 +122,13 @@ async def port(obj, path, typ, mode, attr):
                 v = None
             else:
                 v = click.UsageError("'count' wants one of + - X")
-        elif k == "rest":
+        elif k in ("low","skip"):
             if v == '+':
                 v = True
             elif v == '-':
                 v = False
             else:
-                v = click.UsageError("'rest' wants one of + -")
+                v = click.UsageError("'low' wants one of + -")
         elif k in {"src", "dest"} or ' ' in v:
             v = v.split()
         else:

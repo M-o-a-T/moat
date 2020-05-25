@@ -89,11 +89,12 @@ async def port(obj, path, typ, mode, attr):
     Known attributes for types+modes:
       input:
         read: dest (path)
-        count: + interval (float), count (+-x for up/down/both)
+        count: read + interval (float), count (+-x for up/down/both)
+        button: read + t_bounce (float), t_idle (float)
       output:
         write: src (path), state (path)
-        oneshot: + t_on (float), rest (+-), state (path)
-        pulse:   + t_off (float)
+        oneshot: write + t_on (float), rest (+-), state (path)
+        pulse:   oneshot + t_off (float)
 
     \b
     Paths elements are separated by spaces.

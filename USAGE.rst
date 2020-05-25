@@ -29,6 +29,8 @@ Port attributes
 * mode: a string. Allowed values and their meaning depend on the port's
   type.
 
+* low: Flag whether the line is inverted / active-low. Default False.
+
 ``input`` ports
 ---------------
 
@@ -38,8 +40,6 @@ read
 The current value of a wire on the controller is mirrored to some DistKV entry.
 
 * dest: the path to store the result at.
-
-* rest: Flag whether the line is inverted / active-low. Default False.
 
 count
 ~~~~~
@@ -51,6 +51,24 @@ The number of transitions of a wire on the controller is mirrored to some DistKV
 * count: Flag whether to count L>H transitions (True), H>L (False) or both (None).
 
 * interval: The time after which the counter is flushed, to avoid overwhelming the system when impulses arrive too fast.
+
+The first transition after more than ``interval`` seconds without change have passed
+is always signalled directly,
+then changes are accumulated and sent every ``interval`` seconds.
+
+button
+~~~~~~
+
+A sequence of (debounced) button presses. Reports the length of the signals in units of 't_bounce'.
+
+* dest: the path to store the result at.
+
+* t_bounce: min length of a single signal, seconds, default 0.05
+
+* t_idle: return after this time without change, default 1.5 seconds
+
+* skip: flag whether to ignore noisy signals (i.e. all changes shorter than t_bounce)
+
 
 ``output`` ports
 ----------------

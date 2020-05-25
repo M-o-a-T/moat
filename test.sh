@@ -23,16 +23,17 @@ cd "$cur"
 
 export PYTHONPATH=.:../asyncgpio
 
-distkv client gpio port -t input -m read -a dest "test a b gpio one" $H $chip 1
-distkv client gpio port -t input -m count -a dest "test a b gpio two" $H $chip 2
+#distkv client gpio port -t input -m read -a dest "test a b gpio one" $H $chip 1
+#distkv client gpio port -t input -m count -a dest "test a b gpio two" $H $chip 2
+#distkv client gpio port -t input -m button -a dest "test a b gpio six" $H $chip 6
 
-distkv client data set -ev False test a b gpio three
-distkv client data set -ev False test a b gpio four
-distkv client data set -ev False test a b gpio five
+#distkv client data set -ev False test a b gpio three
+#distkv client data set -ev False test a b gpio four
+#distkv client data set -ev False test a b gpio five
 
-distkv client gpio port -t output -m write -a src "test a b gpio three" -a state "test a b gpio three state" $H $chip 3
-distkv client gpio port -t output -m oneshot -a src "test a b gpio four" -a state "test a b gpio four state" -a t_on 3 $H $chip 4
-distkv client gpio port -t output -m pulse -a src "test a b gpio five" -a state "test a b gpio five state" -a t_on 3 -a t_off 5 $H $chip 5
+#distkv client gpio port -t output -m write -a src "test a b gpio three" -a state "test a b gpio three state" $H $chip 3
+#distkv client gpio port -t output -m oneshot -a src "test a b gpio four" -a state "test a b gpio four state" -a t_on 3 $H $chip 4
+#distkv client gpio port -t output -m pulse -a src "test a b gpio five" -a state "test a b gpio five state" -a t_on 3 -a t_off 5 $H $chip 5
 
 cat <<END
 All set up. Now, from a different terminal, play with setting "test a b gpio three" through "five"

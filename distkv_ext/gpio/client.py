@@ -179,53 +179,13 @@ async def _attr(obj, attr, value, path, eval_, res=None):
         yprint(res, stream=obj.stdout)
 
 
-@cli.command('server')
-@click.option("-h","--host",help="Host name of this server.")
-@click.option("-p","--port",help="Port of this server.")
-@click.option("-d","--delete",is_flag=True, help="Delete this server.")
-@click.argument("name", nargs=-1)
-@click.pass_obj
-async def server(obj, name, host, port, delete):
-    """
-    Configure a server.
-
-    No arguments: list them.
-    """
-    if not name:
-        if host or port or delete:
-            raise click.UsageError("Use a server name to set parameters")
-        async for r in obj.client.get_tree(*obj.cfg.gpio.prefix, min_depth=1, max_depth=1):
-            print(r.path[-1], file=obj.stdout)
-        return
-    elif len(name) > 1:
-        raise click.UsageError("Only one server allowed")
-    name = name[0]
-    if host or port:
-        if delete:
-            raise click.UsageError("You can't delete and set at the same time.")
-        value = attrdict()
-        if host:
-            value.host = host
-        if port:
-            if port == "-":
-                value.port = NotGiven
-            else:
-                value.port = int(port)
-    elif delete:
-        res = await obj.client.delete_tree(*obj.cfg.gpio.prefix, name, nchain=obj.meta)
-        if obj.meta:
-            yprint(res, stream=obj.stdout)
-        return
-    else:
-        value = None
-    await _attr(obj, ("server",), value, (name,), False)
-
-
 @cli.command()
 @click.argument("name", nargs=2)
 @click.pass_obj
 async def monitor(obj, name):
     """Stand-alone task to monitor a single contoller.
+
+    Required arguments: hostname controller
     """
     from distkv_ext.gpio.task import task
     from distkv_ext.gpio.model import GPIOroot

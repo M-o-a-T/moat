@@ -60,27 +60,31 @@ async def list(obj, path):
 @click.option("-a","--attr", multiple=True, help="Attribute to list or modify.")
 @click.option("-v","--value",help="New value of the attribute.")
 @click.option("-e", "--eval", "eval_", is_flag=True, help="The value shall be evaluated.")
+@click.option("-s", "--split", is_flag=True, help="The value shall be word-split.")
 @click.argument("path", nargs=-1)
 @click.pass_obj
-async def attr_(obj, attr, value, path, eval_):
+async def attr_(obj, attr, value, path, eval_, split):
     """Set/get/delete an attribute on a given Wago element.
 
-    An evaluated '-' deletes the attribute.
+    `--eval` without a value deletes the attribute.
     """
+    if split and eval_:
+        raise click.UsageError("split and eval don't work together.")
     if value and not attr:
         raise click.UsageError("Values must have locations ('-a ATTR').")
+    if split:
+        value = value.split()
     await _attr(obj, attr, value, path, eval_)
 
 @cli.command()
 @click.option("-m", "--mode", help="Port mode. Use '-' to disable.")
-@click.option("-a", "--attr", nargs=2, multiple=True, help="One attribute to set (NAME VALUE)")
+@click.option("-a", "--attr", nargs=2, multiple=True, help="One attribute to set (NAME VALUE). MAy be used multiple times.")
 @click.argument("path", nargs=-1)
 @click.pass_obj
 async def port(obj, path, mode, attr):
     """Set/get/delete port settings. This is a shortcut for the "attr" command.
 
-    An evaluated '-' deletes the attribute.
-
+    \b
     Known attributes for modes:
       input:
         read: dest (path)
@@ -90,6 +94,7 @@ async def port(obj, path, mode, attr):
         oneshot: + t_on (float), rest (+-), state (path)
         pulse:   + t_off (float)
 
+    \b
     Paths elements are separated by spaces.
     "rest" is the state of the wire when the input is False.
     Floats may be paths, in which case they're read from there when starting.
@@ -102,20 +107,22 @@ async def port(obj, path, mode, attr):
     if mode:
         attr = (('mode', mode),) + attr
     for k,v in attr:
-        if v == '-':
-            val.pop(k,None)
-        elif k == "count":
+        if k == "count":
             if v == '+':
                 v = True
             elif v == '-':
                 v = False
             elif v in 'xX*':
                 v = None
+            else:
+                v = click.UsageError("'count' wants one of + - X")
         elif k == "rest":
             if v == '+':
                 v = True
             elif v == '-':
                 v = False
+            else:
+                v = click.UsageError("'rest' wants one of + -")
         elif k in {"src", "dest"} or ' ' in v:
             v = v.split(' ')
             v = tuple(x for x in v if x != '')
@@ -127,6 +134,8 @@ async def port(obj, path, mode, attr):
                     v = float(v)
                 except ValueError:
                     pass
+        if isinstance(v,click.UsageError):
+            raise v
         val[k] = v
 
     await _attr(obj, (), val, path, True, res)
@@ -141,14 +150,16 @@ async def _attr(obj, attr, value, path, eval_, res=None):
     except AttributeError:
         res.chain = None
     if eval_:
-        if value == "-":
+        if value is None:
             value = res_delete(res, *attr)
-        elif isinstance(value, Mapping):
-            # replace
-            value = res_delete(res, *attr)
-            value = value._update(*attr, value=value)
         else:
-            value = res_update(res, *attr, value=value)
+            value = eval(value)
+            if isinstance(value, Mapping):
+                # replace
+                value = res_delete(res, *attr)
+                value = value._update(*attr, value=value)
+            else:
+                value = res_update(res, *attr, value=value)
     else:
         if value is None:
             if not attr and obj.meta:
@@ -172,6 +183,8 @@ async def _attr(obj, attr, value, path, eval_, res=None):
 async def server(obj, name, host, port, delete):
     """
     Configure a server.
+
+    No arguments: list them.
     """
     if not name:
         if host or port or delete:

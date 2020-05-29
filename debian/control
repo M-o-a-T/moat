@@ -6,13 +6,14 @@ Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 9)
 Standards-Version: 3.9.6
 Homepage: https://github.com/smurfix/distwago
 
-Package: distkw-wago
+Package: distkv-wago
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   distkv,
   python3-asyncwago,
-Replaces: python3-distwago
-Conflicts: python3-distwago
+Replaces: python3-distwago, distkw-wago
+Conflicts: python3-distwago, distkw-wago
+Provides: python3-distwago, distkw-wago
 Description: A distributed no-master key-value store
  DistWAGO is a link between Wago controllers DistKV.
  .

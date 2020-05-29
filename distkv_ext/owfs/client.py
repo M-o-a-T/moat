@@ -61,7 +61,7 @@ async def list_(obj, path):
                     r = r.value
                 res[c] = r
 
-    yprint(res)
+    yprint(res, stream=obj.stdout)
 
 
 @cli.command('attr')
@@ -110,12 +110,12 @@ async def attr_(obj,device,family,write,attr,interval,path):
         if interval:
             v['interval'] = interval
         if not v:
-            yprint(v)
+            yprint(v, stream=obj.stdout)
             return
 
     res = await obj.client.set(*obj.cfg.owfs.prefix, *fd, chain=res.get('chain',None), value=val)
     if obj.meta:
-        yprint(res)
+        yprint(res, stream=obj.stdout)
 
 
 @cli.command()
@@ -158,7 +158,7 @@ async def set(obj,device,family, value,eval_,name):
         val = res_update(res, *name, value=value)
     res = await obj.client.set(*obj.cfg.owfs.prefix, *fd, chain=res.get('chain',None), value=val)
     if obj.meta:
-        yprint(res)
+        yprint(res, stream=obj.stdout)
 
 
 @cli.command()

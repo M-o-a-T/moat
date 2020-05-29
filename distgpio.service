@@ -1,9 +1,7 @@
 [Unit]
 Description=DistKV GPIO server
-After=serf.service
-Wants=serf.service
-Conflicts=distkv-recover.service
-OnFailure=distkv-recover.service
+After=distkv.service
+Requires=distkv.service
 
 ConditionFileNotEmpty=/etc/distkv.cfg
 
@@ -14,11 +12,7 @@ WantedBy=multi-user.target
 Type=notify
 ExecStart=/usr/bin/distkv client gpio monitor $NAME
 
-User=distkv
-Group=distkv
-
-EnvironmentFile=/usr/lib/distkv/env
-EnvironmentFile=-/etc/distkv.env
+EnvironmentFile=/etc/distkv.env
 
 TimeoutSec=300
 WatchdogSec=10

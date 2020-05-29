@@ -151,7 +151,7 @@ async def _attr(obj, attr, value, path, eval_, res=None):
     # Sub-attr setter.
     # Special: if eval_ is True, a value of '-' deletes. A mapping replaces instead of updating.
     if res is None:
-        res = await obj.client.get(*obj.cfg.gpio.prefix, *path_eval(path, (3,4)), nchain=obj.meta or (value is not None))
+        res = await obj.client.get(*obj.cfg.gpio.prefix, *path_eval(path, (3,4)), nchain=obj.meta or 2)
     try:
         val = res.value
     except AttributeError:

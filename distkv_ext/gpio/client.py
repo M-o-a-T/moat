@@ -1,14 +1,14 @@
 # command line interface
 
 import sys
-import trio
+import anyio
 import asyncclick as click
 from functools import partial
 from collections.abc import Mapping
 
 from distkv.exceptions import ClientError
 from distkv.util import yprint, attrdict, combine_dict, data_get, NotGiven, path_eval
-from distkv.util import res_delete, res_get, res_update
+from distkv.util import res_delete, res_get, res_update, as_service
 
 import logging
 
@@ -197,7 +197,14 @@ async def monitor(obj, name):
     sub = server[name]
     if controller:
         sub = (sub[x] for x in controller)
-    async with trio.open_nursery() as n:
-        for chip in sub:
-            n.start_soon(task, obj.client, obj.cfg.gpio, chip, None)
+    async with as_service(obj) as s:
+        async with anyio.create_task_group() as tg:
+            e = []
+            for chip in sub:
+                evt = anyio.create_event()
+                await tg.spawn(task, obj.client, obj.cfg.gpio, chip, evt)
+                e.append(evt)
+            for evt in e:
+                await evt.wait()
+            await s.set()
 

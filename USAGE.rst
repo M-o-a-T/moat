@@ -67,7 +67,7 @@ A sequence of (debounced) button presses. Reports the length of the signals in u
 
 * t_idle: return after this time without change, default 1.5 seconds
 
-* skip: flag whether to ignore noisy signals (i.e. all changes shorter than t_bounce)
+* skip: flag whether to ignore noisy signals (i.e. signals where all changes shorter than t_bounce)
 
 
 ``output`` ports
@@ -158,8 +158,9 @@ lets you easily change more than one at a time.
 
 .. option:: path
 
-   The path to the port to be modified. Must be "SERVER TYPE CARD PORT".
-   Card and port are numeric, starting with 1.
+   The path to the port to be modified. Must be "SERVER CARD PORT"
+   (without quotes).
+   The port is numeric, starting with 0.
 
 
 .. program:: distkv client gpio attr
@@ -194,6 +195,12 @@ If you set a value that is evaluated to a mapping, exising values will be merged
    If the list contains actual numbers, you need to use a Python expression
    and "--eval".
 
+.. option:: path
+
+   The path to the port to be modified. Must be "SERVER CARD PORT"
+   (without quotes).
+   The port is numeric, starting with 0.
+
 
 .. program:: distkv client gpio list
 
@@ -203,6 +210,10 @@ This command does not access the device; it is used solely for displaying
 the configuration of the interaction with DistKV.
 
 .. option:: server
+
+   The server to access.
+
+.. option:: controller
 
    The GPIO controller to access.
 
@@ -225,58 +236,15 @@ the configuration of the interaction with DistKV.
 This is a stand-alone GPIO monitor. It connects to a single controller
 and runs polls and monitors.
 
-.. option:: server
+.. option:: name
 
-   The controller to connect to. Do not run this more than once for any given
+   The system's name, i.e. the server name you've been using in "… gpio 
    server.
 
+.. option:: controller…
 
+   The controller[s] to connect to. You can't run this more than once for
+   any given controller. Default: all controllers; note that new
+   controllers are not picked up automatically. (TODO.)
 
-Configure polling.
-
-If the device (and the given attribute) supports simultaneous conversion,
-this might cause results to be read more often than configured here.
-
-.. option:: -f, --family <code>
-
-   Change the poll interval's default for this family code.
-
-.. option:: -d, --device <family.device>
-
-   Change the poll interval for this device.
-
-.. option:: <attribute>
-
-   Set the interval on this attribute. Use a ``/`` separator for sub-attributes.
-
-.. option:: <interval>
-
-   The interval to poll at. Use ``-`` to disable polling.
-
-
-.. program:: distkv client gpio set
-
-You can use this command to add arbitrary values to a device's entry. Use
-this e.g. to add a note where the device is located, or to signal your own
-code.
-
-.. option:: -f, --family <code>
-
-   Change an attribute on this family code.
-
-.. option:: -d, --device <family.device>
-
-   Change an attribute on this device.
-
-.. option:: -v, --value
-
-   The value to set.
-
-.. option:: -e, --eval
-
-   Flag that the value is a Python expression and should be evaluated.
-
-.. option:: <name>…
-
-   The attribute name to set. Use more than once for accessing sub-dicts.
 

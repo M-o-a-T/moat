@@ -1,6 +1,7 @@
 # command line interface
 
 import sys
+import trio
 import asyncclick as click
 from functools import partial
 from collections.abc import Mapping
@@ -52,8 +53,9 @@ async def list(obj, path):
     if len(path) > 4:
         raise click.UsageError("Only up to four path elements allowed")
 
-    async for r in obj.client.get_tree(*obj.cfg.gpio.prefix, *path_eval(path, (3,4)), nchain=obj.meta, min_depth=1, max_depth=1):
-        print(r.path[-1], file=obj.stdout)
+    res = await obj.client._request(action="enumerate", path=(*obj.cfg.gpio.prefix, *path_eval(path, (3,4))), empty=True)
+    for r in res.result:
+        print(r, file=obj.stdout)
 
 
 @cli.command('attr')
@@ -180,17 +182,22 @@ async def _attr(obj, attr, value, path, eval_, res=None):
 
 
 @cli.command()
-@click.argument("name", nargs=2)
+@click.argument("name", nargs=1)
+@click.argument("controller", nargs=-1)
 @click.pass_obj
 async def monitor(obj, name):
     """Stand-alone task to monitor a single contoller.
 
-    Required arguments: hostname controller
+    The first argument must be the local host name.
     """
     from distkv_ext.gpio.task import task
     from distkv_ext.gpio.model import GPIOroot
     server = await GPIOroot.as_handler(obj.client)
     await server.wait_loaded()
-    chip = server[name[0]][name[1]]
-    await task(obj.client, obj.cfg.gpio, chip, None)
+    sub = server[name]
+    if controller:
+        sub = (sub[x] for x in controller)
+    async with trio.open_nursery() as n:
+        for chip in sub:
+            n.start_soon(task, obj.client, obj.cfg.gpio, chip, None)
 

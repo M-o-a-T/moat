@@ -185,7 +185,7 @@ async def _attr(obj, attr, value, path, eval_, res=None):
 @click.argument("name", nargs=1)
 @click.argument("controller", nargs=-1)
 @click.pass_obj
-async def monitor(obj, name):
+async def monitor(obj, name, controller):
     """Stand-alone task to monitor a single contoller.
 
     The first argument must be the local host name.

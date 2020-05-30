@@ -381,8 +381,8 @@ class GPIOline(_GPIOnode):
         ``intv`` seconds. The current state is written to ``cur``, if
         present.
 
-        ``intv`` and ``direc`` may be numbers or paths, if the latter
-        they're read from DistKV. ``cur`` must be a path.
+        ``t_on`` may be a number or a path, if the latter
+        it's read from DistKV. ``state`` must be a path.
 
         """
 

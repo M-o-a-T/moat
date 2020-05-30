@@ -398,8 +398,6 @@ class GPIOline(_GPIOnode):
                     try:
                         await self._set_value(line,True,state,negate)
                         await evt.set()
-                        if state is not None:
-                            await self.client.set(*state, value=True)
                         await anyio.sleep(t_on)
 
                     finally:

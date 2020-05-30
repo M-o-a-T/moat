@@ -92,7 +92,8 @@ async def port(obj, path, typ, mode, attr):
       input:
         read: dest (path)
         count: read + interval (float), count (+-x for up/down/both)
-        button: read + t_bounce (float), t_idle (float), skip (+- ignore noise?)
+        button: read + t_bounce (float), t_idle (float), skip (+- ignore noise?),
+                       t_clear (float)
       output:
         write: src (path), state (path)
         oneshot: write + t_on (float), state (path)

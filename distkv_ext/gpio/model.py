@@ -434,43 +434,40 @@ class GPIOline(_GPIOnode):
             if t_on is None or t_off is None:
                 raise StopAsyncIteration
 
-            try:
-                async with anyio.open_cancel_scope() as sc:
-                    self._work = sc
-                    self._work_done = anyio.create_event()
-                    await evt.set()
+            async with anyio.open_cancel_scope() as sc:
+                try:
+                    w, self._work = self._work,sc
+                    if w is not None:
+                        await w.cancel()
                     if state is not None:
                         await self.client.set(*state, value=t_on/(t_on+t_off))
                     while True:
                         line.value = not negate
+                        await evt.set()
                         await anyio.sleep(t_on)
                         line.value = negate
                         await anyio.sleep(t_off)
             finally:
-                if self._work is sc:
-                    await self._work_done.set()
-                    self._work = None
-                    self._work_done = None
-
+                await evt.set()
+                if self._work is not sc:
+                    return
+                self._work = None
+                if state is None:
+                    return
                 async with anyio.fail_after(2, shield=True):
-                    if state is not None:
-                        try:
-                            val = line.value
-                        except ClosedResourceError:
-                            pass
-                        else:
-                            await self.client.set(*state, value=(val != negate))
+                    try:
+                        val = line.value
+                    except ClosedResourceError:
+                        pass
+                    else:
+                        await self.client.set(*state, value=(val != negate))
 
         if val:
             evt = anyio.create_event()
             await self.task_group.spawn(work_pulse, evt)
             await evt.wait()
         else:
-            if self._work:
-                await self._work.cancel()
-                await self._work_done.wait()
-            else:
-                await self._set_value(None, False, state, negate)
+            await self._set_value(None, False, state, negate)
 
 
     async def _setup_output(self):

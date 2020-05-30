@@ -8,6 +8,7 @@ CFG = attrdict(
         low=False,     # if True, he default is active-low
         skip=False,     # ignore signals < t_bounce
         t_idle=1.5,     # input/button: max pulse width
+        t_clear=30,     # button: set to None after this
         t_bounce=0.05,  # input/button: min pulse width
     )
 

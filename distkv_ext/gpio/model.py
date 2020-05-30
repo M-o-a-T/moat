@@ -125,6 +125,7 @@ class GPIOline(_GPIOnode):
         skip = self.find_cfg('skip')
         bounce = self.find_cfg('t_bounce')
         idle = self.find_cfg('t_idle')
+        idle2 = self.find_cfg('t_clear')
         count = self.find_cfg('count')
 
         logger.debug("bounce %s idle %s count %s", bounce,idle,count)
@@ -204,14 +205,25 @@ class GPIOline(_GPIOnode):
                             res.append(int(td(e2,e0)/bounce))
                         e0 = e1 = e2
                         
+                clear = True
                 while True:
-                    e = await mon.__anext__()
+                    if clear and idle2:
+                        try:
+                            async with anyio.fail_after(idle2):
+                                e = await mon.__anext__()
+                        except TimeoutError:
+                            await self.client.set(*dest, value=None)
+                            res = False
+                            continue
+                    else:
+                        e = await mon.__anext__()
                     ival,res,oval = await record(e)
                     if not res:
                         continue
 
                     await self.client.set(*dest, value={"start":ival,"seq":res,"end":oval,"t":bounce})
                     await self.root.err.record_working("gpio", *self.subpath)
+                    clear = True
 
     async def _count_task(self, evt, dest, intv, direc):
         async with anyio.open_cancel_scope() as sc:

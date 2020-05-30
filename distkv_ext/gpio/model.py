@@ -109,7 +109,7 @@ class GPIOline(_GPIOnode):
     # Input #
 
     async def _poll_task(self, evt, dest):
-        low = self.find_cfg('low')
+        negate = self.find_cfg('low')
 
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
@@ -117,11 +117,11 @@ class GPIOline(_GPIOnode):
             with wire.monitor(gpio.REQUEST_EVENT_BOTH_EDGES) as mon:
                 await evt.set()
                 async for e in mon:
-                    await self.client.set(*dest, value=(e.value != low))
+                    await self.client.set(*dest, value=(e.value != negate))
                     await self.root.err.record_working("gpio", *self.subpath)
 
     async def _button_task(self, evt, dest):
-        low = self.find_cfg('low')
+        negate = self.find_cfg('low')
         skip = self.find_cfg('skip')
         bounce = self.find_cfg('t_bounce')
         idle = self.find_cfg('t_idle')
@@ -146,11 +146,11 @@ class GPIOline(_GPIOnode):
                     return "%03d.%03d" % (a[0]%1000, a[1]/1000000)
 
                 def inv(x):
-                    nonlocal low
+                    nonlocal negate
 
                     if x is None:
                         return x
-                    if low:
+                    if negate:
                         return not x
                     else:
                         return bool(x)
@@ -485,19 +485,19 @@ class GPIOline(_GPIOnode):
             return
 
         # Rest state. The input value in DistKV is always active=high.
-        low = self.find_cfg('low')
+        negate = self.find_cfg('low')
         t_on = self.find_cfg('t_on', default=None)
         t_off = self.find_cfg('t_off', default=None)
         state = self.find_cfg('state', default=None)
 
         evt = anyio.create_event()
         if mode == "write":
-            await self.task_group.spawn(self.with_output, evt, src, self._set_value, state, low)
+            await self.task_group.spawn(self.with_output, evt, src, self._set_value, state, negate)
         elif mode == "oneshot":
             if t_on is None:
                 await self.root.err.record_error("gpio", *self.subpath, comment="t_on not set", data={"path":self.subpath})
                 return
-            await self.task_group.spawn(self.with_output, evt, src, self._oneshot_value, state, low, t_on)
+            await self.task_group.spawn(self.with_output, evt, src, self._oneshot_value, state, negate, t_on)
         elif mode == "pulse":
             if t_on is None:
                 await self.root.err.record_error("gpio", *self.subpath, comment="t_on not set", data={"path":self.subpath})
@@ -505,7 +505,7 @@ class GPIOline(_GPIOnode):
             if t_off is None:
                 await self.root.err.record_error("gpio", *self.subpath, comment="t_off not set", data={"path":self.subpath})
                 return
-            await self.task_group.spawn(self.with_output, evt, src, self._pulse_value, state, low, t_on, t_off)
+            await self.task_group.spawn(self.with_output, evt, src, self._pulse_value, state, negate, t_on, t_off)
         else:
             await self.root.err.record_error("gpio", *self.subpath, comment="mode unknown", data={"path":self.subpath, "mode":mode})
             return

@@ -450,15 +450,14 @@ class GPIOline(_GPIOnode):
                     if self._work is not sc:
                         return
                     self._work = None
-                    if state is None:
-                        return
                     async with anyio.fail_after(2, shield=True):
                         try:
                             line.value = negate
                         except ClosedResourceError:
                             pass
                         else:
-                            await self.client.set(*state, value=False)
+                            if state is not None:
+                                await self.client.set(*state, value=False)
 
         if val:
             evt = anyio.create_event()
@@ -467,7 +466,7 @@ class GPIOline(_GPIOnode):
         else:
             w,self._work = self._work,None
             if w is not None:
-                w.cancel()
+                await w.cancel()
             await self._set_value(line, False, state, negate)
 
 

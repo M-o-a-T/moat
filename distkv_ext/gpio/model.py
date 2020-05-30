@@ -225,7 +225,10 @@ class GPIOline(_GPIOnode):
                     await self.root.err.record_working("gpio", *self.subpath)
                     clear = True
 
-    async def _count_task(self, evt, dest, intv, direc):
+    async def _count_task(self, evt, dest):
+        intv = self.find_cfg('interval')
+        direc = self.find_cfg('count')
+
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
 
@@ -306,9 +309,7 @@ class GPIOline(_GPIOnode):
             await self.task_group.spawn(self._poll_task, evt, dest)
         elif mode == "count":
             # These two are in the global config and thus can't raise KeyError
-            intv = self.find_cfg('interval')
-            direc = self.find_cfg('count')
-            await self.task_group.spawn(self._count_task, evt, dest, intv, direc)
+            await self.task_group.spawn(self._count_task, evt, dest)
         elif mode == "button":
             # These two are in the global config and thus can't raise KeyError
             await self.task_group.spawn(self._button_task, evt, dest)

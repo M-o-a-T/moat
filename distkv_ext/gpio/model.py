@@ -369,7 +369,7 @@ class GPIOline(_GPIOnode):
         Also the value is mirrored to ``cur`` if that's set.
         """
         if line is not None:
-            logger.debug("Setting %s to %s",line,value)
+            logger.debug("Setting %s to %s",line,val)
             line.value = val != negate
         if state is not None:
             await self.client.set(*state, value=val)

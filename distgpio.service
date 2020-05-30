@@ -17,5 +17,5 @@ EnvironmentFile=/etc/distkv.env
 TimeoutSec=300
 WatchdogSec=10
 
-Restart=Always
+Restart=always
 RestartSec=30

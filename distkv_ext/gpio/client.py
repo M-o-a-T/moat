@@ -110,10 +110,12 @@ async def port(obj, path, typ, mode, attr):
     res = await obj.client.get(*obj.cfg.gpio.prefix, *path_eval(path, (3,)), nchain=obj.meta or 1)
     val = res.get('value', attrdict())
 
-    if type:
-        attr = (('type', typ),) + attr
-    if mode:
-        attr = (('mode', mode),) + attr
+    if type is None:
+        raise click.UsageError("Port type is mandatory.")
+    if mode is None:
+        raise click.UsageError("Port mode is mandatory.")
+    attr = (('type', typ),) + attr
+    attr = (('mode', mode),) + attr
     for k,v in attr:
         if k == "count":
             if v == '+':
@@ -131,7 +133,7 @@ async def port(obj, path, typ, mode, attr):
                 v = False
             else:
                 v = click.UsageError("'low' wants one of + -")
-        elif k in {"src", "dest"} or ' ' in v:
+        elif k in {"src", "dest"} or (v is not None and ' ' in v):
             v = v.split()
         else:
             try:

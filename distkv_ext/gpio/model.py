@@ -447,20 +447,20 @@ class GPIOline(_GPIOnode):
                         await anyio.sleep(t_on)
                         line.value = negate
                         await anyio.sleep(t_off)
-            finally:
-                await evt.set()
-                if self._work is not sc:
-                    return
-                self._work = None
-                if state is None:
-                    return
-                async with anyio.fail_after(2, shield=True):
-                    try:
-                        val = line.value
-                    except ClosedResourceError:
-                        pass
-                    else:
-                        await self.client.set(*state, value=(val != negate))
+                finally:
+                    await evt.set()
+                    if self._work is not sc:
+                        return
+                    self._work = None
+                    if state is None:
+                        return
+                    async with anyio.fail_after(2, shield=True):
+                        try:
+                            val = line.value
+                        except ClosedResourceError:
+                            pass
+                        else:
+                            await self.client.set(*state, value=(val != negate))
 
         if val:
             evt = anyio.create_event()

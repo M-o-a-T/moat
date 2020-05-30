@@ -392,8 +392,9 @@ class GPIOline(_GPIOnode):
                 t_on = (await self.client.get(*t_on)).value_or(None)
             async with anyio.open_cancel_scope() as sc:
                 try:
-                    self._work = sc
-                    self._work_done = anyio.create_event()
+                    w, self._work = self._work,sc
+                    if w is not None:
+                        await w.cancel()
                     try:
                         await self._set_value(line,True,state,negate)
                         await evt.set()
@@ -402,24 +403,20 @@ class GPIOline(_GPIOnode):
                         await anyio.sleep(t_on)
 
                     finally:
-                        async with anyio.fail_after(2, shield=True):
-                            await self._set_value(line,False,state,negate)
+                        if self._work is sc:
+                            async with anyio.fail_after(2, shield=True):
+                                await self._set_value(line,False,state,negate)
                 finally:
+                    await evt.set() # safety
                     if self._work is sc:
-                        await self._work_done.set()
                         self._work = None
-                        self._work_done = None
 
         if val:
             evt = anyio.create_event()
             await self.task_group.spawn(work_oneshot, evt)
             await evt.wait()
         else:
-            if self._work:
-                await self._work.cancel()
-                await self._work_done.wait()
-            else:
-                await self._set_value(None, False, state, negate)
+            await self._set_value(None, False, state, negate)
 
     async def _pulse_value(self, line, val, state, negate, t_on, t_off):
         """

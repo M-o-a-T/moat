@@ -125,7 +125,8 @@ class GPIOline(_GPIOnode):
         skip = self.find_cfg('skip')
         bounce = self.find_cfg('t_bounce')
         idle = self.find_cfg('t_idle')
-        idle2 = self.find_cfg('t_clear')
+        idle_h = self.find_cfg('t_idle_on',idle)
+        idle_clear = self.find_cfg('t_clear')
         count = self.find_cfg('count')
 
         logger.debug("bounce %s idle %s count %s", bounce,idle,count)
@@ -163,7 +164,7 @@ class GPIOline(_GPIOnode):
                     # We record a single sequence of possibly-dirty signals.
                     # e0/e1: first+last change of a sequence with change intervals
                     #        shorter than `bounce`
-                    # e2: first change after that sequence, or None when timed out.
+                    # e2: first change after that sequence has settled, or None when timed out.
                     # 
                     res = []
                     e0 = e1
@@ -172,7 +173,7 @@ class GPIOline(_GPIOnode):
                     while True:
                         # wait for signal change
                         try:
-                            async with anyio.fail_after(idle):
+                            async with anyio.fail_after(idle_h if e1.value else idle):
                                 e2 = await mon.__anext__()
                                 logger.debug("See %s %s",e2.value,ts(e2))
                         except TimeoutError:
@@ -186,10 +187,11 @@ class GPIOline(_GPIOnode):
 
                         if td(e1,e0) > bounce and e1.value != e0.value:
                             # e0>e1 ends up where it started from, thus we have a dirty signal.
-                            # TODO add a flag to ignore it
                             if skip:
+                                # ignore it
                                 e1 = e0
                             else:
+                                # treat it as legitimate
                                 # logic see below
                                 if count is not bool(e1.value):
                                     res.append(int(td(e1,e0)/bounce))
@@ -207,9 +209,9 @@ class GPIOline(_GPIOnode):
                         
                 clear = True
                 while True:
-                    if clear and idle2:
+                    if clear and idle_clear:
                         try:
-                            async with anyio.fail_after(idle2):
+                            async with anyio.fail_after(idle_clear):
                                 e = await mon.__anext__()
                         except TimeoutError:
                             await self.client.set(*dest, value=False)

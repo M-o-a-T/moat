@@ -212,7 +212,7 @@ class GPIOline(_GPIOnode):
                             async with anyio.fail_after(idle2):
                                 e = await mon.__anext__()
                         except TimeoutError:
-                            await self.client.set(*dest, value=None)
+                            await self.client.set(*dest, value=False)
                             clear = False
                             continue
                     else:

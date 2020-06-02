@@ -88,6 +88,10 @@ class GPIOline(_GPIOnode):
     """
     _work = None
 
+    def __init__(self,*a,**k):
+        super().__init__(*a,**k)
+        self.logger = logging.getLogger(".".join(("gpio",self._path[-2],str(self._path[-1]))))
+
     async def setup(self):
         await super().setup()
         if self.chip is None:
@@ -128,13 +132,15 @@ class GPIOline(_GPIOnode):
         idle_h = self.find_cfg('t_idle_on',idle)
         idle_clear = self.find_cfg('t_clear')
         count = self.find_cfg('count')
+        flow = self.find_cfg('flow')
 
-        logger.debug("bounce %s idle %s count %s", bounce,idle,count)
+        self.logger.debug("bounce %s idle %s count %s", bounce,idle,count)
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
 
             wire = self.chip.line(self._path[-1])
             with wire.monitor(gpio.REQUEST_EVENT_BOTH_EDGES) as mon:
+                self.logger.debug("Init %s", mon.value)
                 await evt.set()
                 i = mon.__aiter__()
 
@@ -144,7 +150,7 @@ class GPIOline(_GPIOnode):
                     return a[0]-b[0]+(a[1]-b[1])/1000000000
                 def ts(a):
                     a = a.timestamp
-                    return "%03d.%03d" % (a[0]%1000, a[1]/1000000)
+                    return "%03d.%05d" % (a[0]%1000, a[1]/10000)
 
                 def inv(x):
                     nonlocal negate
@@ -168,44 +174,76 @@ class GPIOline(_GPIOnode):
                     # 
                     res = []
                     e0 = e1
+                    e2 = None
                     ival=e0.value
-                    logger.debug("Start %s %s",e1.value,ts(e1))
+                    self.logger.debug("Start %s %s",e1.value,ts(e1))
+                    debounce=True
+
                     while True:
                         # wait for signal change
                         try:
-                            async with anyio.fail_after(idle_h if e1.value else idle):
+                            async with anyio.fail_after(bounce if debounce else (idle_h if inv(e1.value) else idle)-bounce):
                                 e2 = await mon.__anext__()
-                                logger.debug("See %s %s",e2.value,ts(e2))
                         except TimeoutError:
-                            e2 = None
-                            e1x = e1
+                            if debounce:
+                                debounce = False
+                                if e2 is None:  # first pass, no bounce
+                                    e1.value = mon.value
+                                    e2 = e1
+                                    if flow:
+                                        await self.client.set(*dest, value={"start":not inv(e1.value),"seq":[0],"end":inv(e1.value),"t":bounce,"flow":True})
+                                else:
+                                    # flow stuff will happen below
+                                    e2.value = mon.value
+                                self.logger.debug("*** Current   *** %s",mon.value)
+                            else:
+                                self.logger.debug("Timeout %s %s",e1.value,ts(e1))
+                                e2 = None
+                                e1x = e1
                         else:
-                            # it bounced, so continue
-                            if td(e2,e1) < bounce:
-                                e1=e2
+                            self.logger.debug("See %s %s",e2.value,ts(e2))
+                            if debounce:
                                 continue
+                            debounce = True
 
                         if td(e1,e0) > bounce and e1.value != e0.value:
                             # e0>e1 ends up where it started from, thus we have a dirty signal.
+                            # This does not depend on e2.value because we don't know that yet.
                             if skip:
                                 # ignore it
+                                self.logger.debug("Skip: %s %s", ts(e0),ts(e1))
                                 e1 = e0
                             else:
                                 # treat it as legitimate
                                 # logic see below
                                 if count is not bool(e1.value):
+                                    self.logger.debug("Add+: %s %s", ts(e0),ts(e1))
                                     res.append(int(td(e1,e0)/bounce))
+                                else:
+                                    self.logger.debug("NoAdd+: %s %s", ts(e0),ts(e1))
                                 e0 = e1
+                            # equating e0 and e1 makes sure we won't
+                            # repeat this
 
                         if e2 is None:
-                            logger.debug("Done: %s %s",ival,res)
+                            self.logger.debug("Done: %s %s",ival,res)
                             return not ival,res,inv(e1x.value)
+
+                        if debounce:
+                            # we can't trust e2.value yet
+                            continue
 
                         # if count is None, count
                         # if count is e1.value, don't
                         if count is not bool(e2.value):
+                            # First change towards vs. first change away
+                            self.logger.debug("Add: %s %s", ts(e0),ts(e2))
                             res.append(int(td(e2,e0)/bounce))
+                        else:
+                            self.logger.debug("NoAdd: %s %s", ts(e0),ts(e2))
                         e0 = e1 = e2
+                        if flow:
+                            await self.client.set(*dest, value={"start":not ival,"seq":res,"end":inv(e2.value),"t":bounce,"flow":True})
                         
                 clear = True
                 while True:
@@ -274,14 +312,14 @@ class GPIOline(_GPIOnode):
                 # Otherwise we set the value at the first change, then every `intv` seconds.
                 while True:
                     if d is None:
-                        logger.debug("wait indefinitely in %s", self.subpath)
+                        self.logger.debug("wait indefinitely in %s", self.subpath)
                         e = await i.__anext__()
                         d = 1
                         await set_value()
                         assert d==0
                     tm = t + intv - await anyio.current_time()
                     if tm > 0:
-                        logger.debug("wait for %s in %s", tm, self.subpath)
+                        self.logger.debug("wait for %s in %s", tm, self.subpath)
                         try:
                             async with anyio.fail_after(tm):
                                 e = await i.__anext__()
@@ -371,7 +409,7 @@ class GPIOline(_GPIOnode):
         Also the value is mirrored to ``cur`` if that's set.
         """
         if line is not None:
-            logger.debug("Setting %s to %s",line,val)
+            self.logger.debug("Setting %s to %s",line,val)
             line.value = val != negate
         if state is not None:
             await self.client.set(*state, value=val)

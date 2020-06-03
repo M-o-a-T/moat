@@ -94,6 +94,18 @@ class GPIOline(_GPIOnode):
         super().__init__(*a,**k)
         self.logger = logging.getLogger(".".join(("gpio",self._path[-2],str(self._path[-1]))))
 
+    async def set_value(self, value):
+        await super().set_value(value)
+        if value is NotGiven:
+            await self._kill_task()
+            
+    async def _kill_task(self):
+        if self._task_scope is not None:
+            await self._task_scope.cancel()
+            await self._task_done.wait()
+            self._task_scope = None
+            self._task_done = None
+
     async def setup(self):
         await super().setup()
         if self.chip is None:
@@ -113,9 +125,7 @@ class GPIOline(_GPIOnode):
             await self.root.err.record_error("gpio", *self.subpath, comment="Line type not set", data={"path":self.subpath,"typ":typ})
 
     async def _task(self,p,*a,**k):
-        if self._task_scope is not None:
-            await self._task_scope.cancel()
-            await self._task_done.wait()
+        await self._kill_task()
         try:
             async with anyio.open_cancel_scope() as sc:
                 self._task_scope = sc

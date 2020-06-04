@@ -101,12 +101,12 @@ class _test(metaclass=_test_m):
                     if isinstance(msg,Pin):
                         in_pins.append(msg)
                         if len(in_pins) > len(want_pins):
-                            # protect against gettng flooded
+                            # protect against getting flooded
                             break
                     else:
                         in_msgs.append(msg)
                         if len(in_msgs) > len(want_msgs):
-                            # protect against gettng flooded
+                            # protect against getting flooded
                             break
         except TimeoutError:
             pass

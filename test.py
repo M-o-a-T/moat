@@ -202,7 +202,6 @@ class test_two_up(_test_in):
         await self.client.set(*self.dest, value=0)
         await self.assertMsg(0)
         self.pin.set(True)
-        await anyio.sleep(2)
         await self.assertMsg(PinIH, 1, timeout=0.3)
         await self.assertMsg(timeout=0.3)
         self.pin.set(False)
@@ -211,7 +210,7 @@ class test_two_up(_test_in):
         await self.assertMsg(PinIH, timeout=0.3)
         self.pin.set(False)
         await self.assertMsg(PinIL, timeout=0.3)
-        await self.assertMsg(2, timeout=2)
+        await self.assertMsg(2, timeout=5)
         await self.assertMsg(timeout=5)
         pass
 
@@ -240,7 +239,7 @@ class test_six(_test_out):
         pass
 
 async def main(label="gpio-mockup-A", host="HosT"):
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG,format="%(relativeCreated)d %(name)s %(message)s")
 
     async with test_client() as c, \
             GpioWatcher().run() as w, \
@@ -309,6 +308,6 @@ async def main(label="gpio-mockup-A", host="HosT"):
 
         pass # wait for shutdown
 
-clock = trio.testing.MockClock(rate=8,autojump_threshold=0.2)
+clock = trio.testing.MockClock(rate=1.5,autojump_threshold=0.2)
 trio.run(main, sys.argv[1] if len(sys.argv) > 1 else "gpio-mockup-A", clock=clock)
 

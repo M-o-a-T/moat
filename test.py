@@ -13,13 +13,6 @@ from distkv_ext.gpio.config import CFG
 import logging
 logger = logging.getLogger(__name__)
 
-tests = {}
-def reg(nr):
-    def wrap(fn):
-        tests[nr] = fn
-        return fn
-    return reg
-
 PinIH = Pin(False,True)
 PinIL = Pin(False,False)
 PinOH = Pin(True,True)
@@ -30,15 +23,23 @@ async def fwd_q(ts,queues):
         msg = await ts.__anext__()
         await queues[msg.path[-1]].put(msg.value)
 
+tests = {}
+#only = ("test_three","test_three_bounce",)
+#only = ("test_three_bounce_only",)
+only=()
+
 class _test_m(type):
     def __new__(cls, name, bases, classdict):
         result = type.__new__(cls, name, bases, classdict)
-        if result.pin is not None:
-            try:
-                tl = tests[result.pin]
-            except KeyError:
-                tl = tests[result.pin] = []
-            tl.append(result)
+        if result.pin is None:
+            return result
+        if only and name not in only:
+            return result
+        try:
+            tl = tests[result.pin]
+        except KeyError:
+            tl = tests[result.pin] = []
+        tl.append(result)
         return result
 
 class _test(metaclass=_test_m):
@@ -79,7 +80,7 @@ class _test(metaclass=_test_m):
         else:
             assert False, msg
 
-    async def assertMsg(self, *data, timeout=1):
+    async def assertMsg(self, *data, timeout=1, pick=None):
         """
         Check that the incoming messages match what we expect.
         """
@@ -104,6 +105,11 @@ class _test(metaclass=_test_m):
                             # protect against getting flooded
                             break
                     else:
+                        if pick:
+                            try:
+                                msg = msg[pick]
+                            except KeyError:
+                                raise KeyError((msg,set)) from None
                         in_msgs.append(msg)
                         if len(in_msgs) > len(want_msgs):
                             # protect against getting flooded
@@ -135,13 +141,12 @@ class test_one(_test_in):
 
         await self.assertMsg()
         self.pin.set(False)
-        await self.assertMsg(False)
+        await self.assertMsg()
         self.pin.set(True)
         await self.assertMsg(PinIH, True)
         self.pin.set(False)
         await self.assertMsg(PinIL, False)
         self.pin.set(False)
-        await self.assertMsg(False)
         await self.assertMsg()
         pass
 
@@ -160,7 +165,7 @@ class test_one_uniq(_test_in):
         self.pin.set(True)
         await self.assertMsg()
         self.pin.set(False)
-        await self.assertMsg(PinIL, False)
+        await self.assertMsg(PinIL)
         self.pin.set(False)
         await self.assertMsg()
         pass
@@ -216,8 +221,86 @@ class test_two_up(_test_in):
 
 class test_three(_test_in):
     pin = 3
-    prep = dict(mode="button")
+    prep = dict(mode="button",t_idle=1,t_bounce=0.1)
     async def run(self):
+        self.pin.set(False)
+        await self.flushMsgs(timeout=1.2)
+
+        await self.assertMsg()
+        await self.client.set(*self.dest, value=None)
+        await self.assertMsg(None)
+
+        self.pin.set(True)
+        await self.assertMsg(PinIH, timeout=0.4)
+        self.pin.set(False)
+        await self.assertMsg(PinIL, timeout=0.9)
+        await self.assertMsg((4,0), timeout=0.3, pick="seq")
+        pass
+
+class test_three_bounce(_test_in):
+    pin = 3
+    prep = dict(mode="button",t_idle=1,t_bounce=0.2)
+    async def run(self):
+        self.pin.set(False)
+        await self.flushMsgs(timeout=1.2)
+
+        await self.assertMsg()
+        await self.client.set(*self.dest, value=None)
+        await self.assertMsg(None)
+
+        self.pin.set(True)
+        for b in range(3):
+            await self.assertMsg(PinIH, timeout=0.15)
+            self.pin.set(False)
+            await self.assertMsg(PinIL, timeout=0.15)
+            self.pin.set(True)
+        await self.assertMsg(PinIH, timeout=0.35)
+        self.pin.set(False)
+        for b in range(3):
+            await self.assertMsg(PinIL, timeout=0.15)
+            self.pin.set(True)
+            await self.assertMsg(PinIH, timeout=0.15)
+            self.pin.set(False)
+        await self.assertMsg(PinIL, timeout=0.9)
+        await self.assertMsg((6,0), timeout=0.3, pick="seq")
+        pass
+
+class test_three_bounce_only(_test_in):
+    pin = 3
+    prep = dict(mode="button",t_idle=1,t_bounce=0.2)
+    async def run(self):
+        self.pin.set(False)
+        await self.flushMsgs(timeout=1.2)
+
+        await self.assertMsg()
+        await self.client.set(*self.dest, value=None)
+        await self.assertMsg(None)
+
+        for b in range(6):
+            self.pin.set(True)
+            await self.assertMsg(PinIH, timeout=0.15)
+            self.pin.set(False)
+            await self.assertMsg(PinIL, timeout=0.15)
+        await self.assertMsg(timeout=2)
+        pass
+
+class test_three_bounce_skip(_test_in):
+    pin = 3
+    prep = dict(mode="button",t_idle=1,t_bounce=0.2,skip=False)
+    async def run(self):
+        self.pin.set(False)
+        await self.flushMsgs(timeout=1.2)
+
+        await self.assertMsg()
+        await self.client.set(*self.dest, value=None)
+        await self.assertMsg(None)
+
+        for b in range(6):
+            self.pin.set(True)
+            await self.assertMsg(PinIH, timeout=0.15)
+            self.pin.set(False)
+            await self.assertMsg(PinIL, timeout=0.15)
+        await self.assertMsg((8,0),timeout=2,pick="seq")
         pass
 
 class test_four(_test_out):
@@ -242,7 +325,7 @@ async def main(label="gpio-mockup-A", host="HosT"):
     logging.basicConfig(level=logging.DEBUG,format="%(relativeCreated)d %(name)s %(message)s")
 
     async with test_client() as c, \
-            GpioWatcher().run() as w, \
+            GpioWatcher(interval=0.05).run() as w, \
             c.watch("test","state") as ts:
         ts = ts.__aiter__()  # currently a NOP but you never know
         server = await GPIOroot.as_handler(c)
@@ -308,6 +391,6 @@ async def main(label="gpio-mockup-A", host="HosT"):
 
         pass # wait for shutdown
 
-clock = trio.testing.MockClock(rate=1.5,autojump_threshold=0.2)
-trio.run(main, sys.argv[1] if len(sys.argv) > 1 else "gpio-mockup-A", clock=clock)
+#clock = trio.testing.MockClock(rate=1.5,autojump_threshold=0.2)
+trio.run(main, sys.argv[1] if len(sys.argv) > 1 else "gpio-mockup-A")#, clock=clock)
 

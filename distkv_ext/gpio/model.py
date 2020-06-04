@@ -139,19 +139,49 @@ class GPIOline(_GPIOnode):
 
     async def _poll_task(self, evt, dest):
         negate = self.find_cfg('low')
-        change = self.find_cfg('change', default=False)
+        change = self.find_cfg('change', default=None)
+        skip = self.find_cfg('skip')
+        bounce = self.find_cfg('t_bounce')
 
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
             wire = self.chip.line(self._path[-1])
-            old_value = None
             with wire.monitor(gpio.REQUEST_EVENT_BOTH_EDGES) as mon:
+                old_value = mon.value
+
+                async def set_value(value):
+                    if negate:
+                        value = not value
+                    if change is None or value == change:
+                        await self.client.set(*dest, value=value)
+
                 await evt.set()
-                async for e in mon:
-                    if change and old_value == e.value:
-                        continue
-                    old_value = e.value
-                    await self.client.set(*dest, value=(e.value != negate))
+                v = mon.value
+                i = mon.__aiter__()
+                while True:
+                    e = await i.__anext__()
+
+                    if not skip:
+                        # assume changed. E.g. old==0, so new==1, val:=1 if negate==0
+                        await set_value(not old_value)
+
+                    try:
+                        async with anyio.fail_after(bounce):
+                            while True:
+                                e = await i.__anext__()
+                    except TimeoutError:
+                        pass
+
+                    if old_value == e.value:
+                        # Some bouncery ended up where it started from.
+                        if not skip:
+                            # inverse of the above
+                            await set_value(old_value)
+                    else:
+                        if skip: # otherwise we already sent that
+                            await set_value(e.value)
+                        old_value = e.value
+
                     await self.root.err.record_working("gpio", *self.subpath)
 
     async def _button_task(self, evt, dest):
@@ -172,6 +202,7 @@ class GPIOline(_GPIOnode):
             with wire.monitor(gpio.REQUEST_EVENT_BOTH_EDGES) as mon:
                 self.logger.debug("Init %s", mon.value)
                 await evt.set()
+                ival = None
                 i = mon.__aiter__()
 
                 def td(a,b):
@@ -195,86 +226,86 @@ class GPIOline(_GPIOnode):
                 # inverting the conditions (and the results, below) is less work
                 # than inverting the input values
                 count = inv(count)
+                ival = mon.value
 
-                async def record(e1):
+                async def record(e1,ival):
                     # We record a single sequence of possibly-dirty signals.
                     # e0/e1: first+last change of a sequence with change intervals
                     #        shorter than `bounce`
                     # e2: first change after that sequence has settled, or None when timed out.
                     # 
                     res = []
+                    e1.value = None
                     e0 = e1
-                    e2 = None
-                    ival=e0.value
                     self.logger.debug("Start %s %s",e1.value,ts(e1))
-                    debounce=True
 
+                    e2 = None
+                    flow_bounce = flow
                     while True:
-                        # wait for signal change
+                        # start with debouncing
                         try:
-                            async with anyio.fail_after(bounce if debounce else (idle_h if inv(e1.value) else idle)-bounce):
+                            async with anyio.fail_after(bounce):
                                 e2 = await mon.__anext__()
                         except TimeoutError:
-                            if debounce:
-                                debounce = False
-                                if e2 is None:  # first pass, no bounce
-                                    e1.value = mon.value
-                                    e2 = e1
-                                    if flow:
-                                        await self.client.set(*dest, value={"start":not inv(e1.value),"seq":[0],"end":inv(e1.value),"t":bounce,"flow":True})
-                                else:
-                                    # flow stuff will happen below
-                                    e2.value = mon.value
-                                self.logger.debug("*** Current   *** %s",mon.value)
-                            else:
-                                self.logger.debug("Timeout %s %s",e1.value,ts(e1))
-                                e2 = None
-                                e1x = e1
+                            pass
                         else:
-                            self.logger.debug("See %s %s",e2.value,ts(e2))
-                            if debounce:
-                                continue
-                            debounce = True
+                            e1 = e2
+                            if flow_bounce and td(e1,e0) > bounce:
+                                flow_bounce = False
+                                await self.client.set(*dest, value={"start":inv(ival),"seq":res+[0],"end":inv(e1.value),"t":bounce,"flow":True})
+                            continue
 
-                        if td(e1,e0) > bounce and e1.value != e0.value:
-                            # e0>e1 ends up where it started from, thus we have a dirty signal.
-                            # This does not depend on e2.value because we don't know that yet.
-                            if skip:
-                                # ignore it
+                        if e2 is None:
+                            # didn't bounce at all? good.
+                            e2 = e1
+
+                        # If first time, assume we started from Idle.
+                        if e0.value is None:
+                            e0.value = not ival
+
+                        if e1.value != e0.value:
+                            # e0>e1 ends up where it started from, thus we had a dirty signal.
+                            if skip or td(e1,e0) < bounce:
+                                # ignore it. "Didn't happen."
                                 self.logger.debug("Skip: %s %s", ts(e0),ts(e1))
                                 e1 = e0
                             else:
-                                # treat it as legitimate
-                                # logic see below
+                                # treat e1 as legitimate
                                 if count is not bool(e1.value):
                                     self.logger.debug("Add+: %s %s", ts(e0),ts(e1))
                                     res.append(int(td(e1,e0)/bounce))
+                                    if flow:
+                                        await self.client.set(*dest, value={"start":not ival,"seq":res,"end":inv(e1.value),"t":bounce,"flow":True})
                                 else:
                                     self.logger.debug("NoAdd+: %s %s", ts(e0),ts(e1))
                                 e0 = e1
-                            # equating e0 and e1 makes sure we won't
-                            # repeat this
 
-                        if e2 is None:
-                            self.logger.debug("Done: %s %s",ival,res)
-                            return not ival,res,inv(e1x.value)
+                        # Now wait until timeout, or next signal
+                        try:
+                            async with anyio.fail_after((idle_h if inv(e1.value) else idle)-bounce):
+                                e2 = await mon.__anext__()
+                        except TimeoutError:
+                            if count is not bool(e1.value):
+                                # We have an infinite signal
+                                res.append(0)
+                                self.logger.debug("AddZero")
+                            return ival,inv(ival),res,inv(e1.value)
 
-                        if debounce:
-                            # we can't trust e2.value yet
-                            continue
-
-                        # if count is None, count
-                        # if count is e1.value, don't
-                        if count is not bool(e2.value):
+                        if count is not (not bool(e1.value)):
                             # First change towards vs. first change away
                             self.logger.debug("Add: %s %s", ts(e0),ts(e2))
                             res.append(int(td(e2,e0)/bounce))
                         else:
                             self.logger.debug("NoAdd: %s %s", ts(e0),ts(e2))
+
+                        # the new signal's value is not yet debounced, so assume for the moment
+                        # that it's a change.
+                        e2.value = not e1.value
                         e0 = e1 = e2
                         if flow:
                             await self.client.set(*dest, value={"start":not ival,"seq":res,"end":inv(e2.value),"t":bounce,"flow":True})
-                        
+                        flow_bounce = flow
+
                 clear = True
                 while True:
                     if clear and idle_clear:
@@ -287,11 +318,11 @@ class GPIOline(_GPIOnode):
                             continue
                     else:
                         e = await mon.__anext__()
-                    ival,res,oval = await record(e)
+                    ival,start_val,res,end_val = await record(e,ival)
                     if not res:
                         continue
 
-                    await self.client.set(*dest, value={"start":ival,"seq":res,"end":oval,"t":bounce})
+                    await self.client.set(*dest, value={"start":start_val,"seq":res,"end":end_val,"t":bounce})
                     await self.root.err.record_working("gpio", *self.subpath)
                     clear = True
 

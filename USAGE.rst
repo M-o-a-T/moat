@@ -34,6 +34,20 @@ Port attributes
 ``input`` ports
 ---------------
 
+Input ports are deemed dirty, i..e. they'll be de-bounced.
+
+The premise is that the host system has a GPIO interrupt. Thus a pin change
+interrupts the CPU, which then reads the port register, but at that time the
+state might have flipped back.
+
+Thus, AsyncGPIO's code does not trust the event's value until another
+``debounce`` seconds have passed without a change, at which time the last
+event's value is deemed to be authoritative.
+
+There is also a ``skip`` flag that tells AsyncGPIO whether "dirty" signals, i.e. those
+that bounce around for longer than ``t_bounce`` but then settle on the original
+level, should be ignored. The default is ``True``.
+
 read
 ~~~~
 
@@ -41,12 +55,20 @@ The current value of a wire on the controller is mirrored to some DistKV entry.
 
 * dest: the path to store the result at.
 
+* t_bounce: min length of a single signal, seconds, default 0.05
+
+* skip: flag whether to ignore noisy signals (i.e. signals where all changes shorter than t_bounce)
+
+* low: flag whether the wire's normal state is inverted.
+
 count
 ~~~~~
 
 The number of transitions of a wire on the controller is mirrored to some DistKV entry.
 
 * dest: the path to save the counter to.
+
+* t_bounce: min length of a single signal, seconds, default 0.05
 
 * count: Flag whether to count L>H transitions (True), H>L (False) or both (None).
 
@@ -63,17 +85,18 @@ A sequence of (debounced) button presses. Reports the length of the signals in u
 
 * dest: the path to save the result to.
 
-* low: flag whether the wire's normal state is inverted.
-
 * t_bounce: min length of a single signal, seconds, default 0.05
 
 * t_idle: return after this time without change, default 1.5 seconds
 
 * t_idle_on: return after this time "on" without change, default to ``t_idle``.
 
-* t_clear: after this time, the destination value will be cleared and replaced with ``None``.
+* t_clear: after this time, the destination value will be cleared and replaced with ``False``.
+  (``None`` is not used because that should be reserved for when the input is not available.)
 
 * skip: flag whether to ignore noisy signals (i.e. signals where all changes shorter than t_bounce)
+
+* low: flag whether the wire's normal state is inverted.
 
 * flow: send messages as the button sequence progresses.
 

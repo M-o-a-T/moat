@@ -5,7 +5,7 @@ import anyio
 from anyio.exceptions import ClosedResourceError
 
 from distkv.obj import ClientEntry, ClientRoot
-from distkv.util import combine_dict, PathLongener
+from distkv.util import combine_dict, PathLongener, NotGiven
 from distkv.errors import ErrorRoot
 from distkv.exceptions import ServerError
 from collections import Mapping
@@ -139,13 +139,18 @@ class GPIOline(_GPIOnode):
 
     async def _poll_task(self, evt, dest):
         negate = self.find_cfg('low')
+        change = self.find_cfg('change', default=False)
 
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
             wire = self.chip.line(self._path[-1])
+            old_value = None
             with wire.monitor(gpio.REQUEST_EVENT_BOTH_EDGES) as mon:
                 await evt.set()
                 async for e in mon:
+                    if change and old_value == e.value:
+                        continue
+                    old_value = e.value
                     await self.client.set(*dest, value=(e.value != negate))
                     await self.root.err.record_working("gpio", *self.subpath)
 
@@ -293,6 +298,7 @@ class GPIOline(_GPIOnode):
     async def _count_task(self, evt, dest):
         intv = self.find_cfg('interval')
         direc = self.find_cfg('count')
+        bounce = self.find_cfg('t_bounce')
 
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
@@ -310,16 +316,29 @@ class GPIOline(_GPIOnode):
 
             async def set_value():
                 nonlocal d,ch,val,t
+                self.logger.debug("SEND %d",d)
                 t = await anyio.current_time()
                 try:
                     res = await self.client.set(*dest, value=val+d, nchain=2, **ch)
                     ch['chain'] = res.chain
                 except ServerError as exc:
                     # Somebody else changed my value? Retry once.
-                    await self.root.err.record_error("gpio", *self.subpath, comment="Server error", data={"path":self.subpath, "value":val, **ch}, exc=exc)
+                    self.logger.debug("NOSEND %d",d)
+                    try:
+                        await self.root.err.record_error("gpio", *self.subpath, comment="Server error", data={"path":self.subpath, "value":val, **ch}, exc=exc)
 
-                    val,ch = await get_value()
-                    res = await self.client.set(*dest, value=val+d, nchain=2, **ch)
+                        val,ch = await get_value()
+                        res = await self.client.set(*dest, value=val+d, nchain=2, **ch)
+                    except ServerError as exc2:
+                        breakpoint()
+                        self.logger.exception("Owch %s",exc2)
+                        pass
+                    except BaseException as exc2:
+                        self.logger.exception("Owch2 %s",exc2)
+                        raise
+                    else:
+                        self.logger.debug("DIDSEND %d",d)
+
                 ch['chain'] = res.chain
                 await self.root.err.record_working("gpio", *self.subpath)
                 val += d
@@ -333,31 +352,45 @@ class GPIOline(_GPIOnode):
                 i = mon.__aiter__()
                 t = await anyio.current_time()
                 d = None
+                value=direc is False
+                debounce=True
+
                 # The idea here is that when d is None, nothing is happening, thus we don't wait.
                 # Otherwise we set the value at the first change, then every `intv` seconds.
                 while True:
                     if d is None:
-                        self.logger.debug("wait indefinitely in %s", self.subpath)
+                        self.logger.debug("wait in %s", self.subpath)
                         e = await i.__anext__()
-                        d = 1
-                        await set_value()
-                        assert d==0
+                        debounce = True
                     tm = t + intv - await anyio.current_time()
-                    if tm > 0:
-                        self.logger.debug("wait for %s in %s", tm, self.subpath)
-                        try:
-                            async with anyio.fail_after(tm):
-                                e = await i.__anext__()
-                        except TimeoutError:
-                            # Nothing happened before the timeout.
-                            if d == 0:
-                                d = None
-                                # Nothing continues to happen. Skip sending.
-                                continue
+                    if tm <= 0 and not debounce:
+                        await set_value()
+                        tm = intv
+                    self.logger.debug("wait for %s in %s, %s", bounce if debounce else tm, self.subpath, debounce)
+                    try:
+                        async with anyio.fail_after(bounce if debounce else tm):
+                            e = await i.__anext__()
+                    except TimeoutError:
+                        # Nothing happened before the timeout.
+                        self.logger.debug("wait timeout %s %s %s %s %s",debounce,value,mon.value,direc,d)
+                        if debounce:
+                            debounce = False
+                            if mon.value != value:
+                                value = mon.value
+                                if direc is not (not value):
+                                    if d is None:
+                                        d = 1
+                                        await set_value()
+                                    else:
+                                        d += 1
+                        elif d == 0:
+                            d = None
+                            # Nothing continues to happen. Skip sending.
                         else:
-                            d += 1
-                            continue
-                    await set_value()
+                            await set_value()
+                    else:
+                        self.logger.debug("wait debouncing")
+                        debounce = True
 
 
 

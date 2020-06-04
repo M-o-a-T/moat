@@ -485,17 +485,23 @@ class GPIOline(_GPIOnode):
                         else:
                             await self.root.err.record_error("gpio", *self.subpath, comment="Bad value: %r" % (val,))
 
-    async def _set_value(self, line, val, state, negate):
+    async def _set_value(self, line, value, state, negate):
         """
         Task that monitors one entry and writes its value to the GPIO controller.
 
         Also the value is mirrored to ``cur`` if that's set.
         """
+        change = self.find_cfg('change', default=None)
+
+        if negate:
+            value = not value
         if line is not None:
-            self.logger.debug("Setting %s to %s",line,val)
-            line.value = val != negate
+            self.logger.debug("Setting %s to %s",line,value)
+            line.value = value != negate
+        if isinstance(value,bool) and change == (not value):
+            return
         if state is not None:
-            await self.client.set(*state, value=val)
+            await self.client.set(*state, value=value)
 
     async def _oneshot_value(self, line, val, state, negate, t_on):
         """
@@ -537,7 +543,10 @@ class GPIOline(_GPIOnode):
             await self.task_group.spawn(work_oneshot, evt)
             await evt.wait()
         else:
-            await self._set_value(None, False, state, negate)
+            w, self._work = self._work,None
+            if w is not None:
+                await w.cancel()
+                await self._set_value(line, False, state, negate)
 
     async def _pulse_value(self, line, val, state, negate, t_on, t_off):
         """

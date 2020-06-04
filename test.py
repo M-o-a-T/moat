@@ -24,7 +24,7 @@ async def fwd_q(ts,queues):
         await queues[msg.path[-1]].put(msg.value)
 
 tests = {}
-#only = ("test_three","test_three_bounce",)
+#only = ("test_four","test_four_only",)
 #only = ("test_three_bounce_only",)
 only=()
 
@@ -132,6 +132,9 @@ class _test_out(_test):
         pr['src'] = ("test","gpio",self.pin)
         pr['state'] = ("test","state",self.pin)
 
+    async def set_src(self,value):
+        await self.client.set(*self.src, value=value)
+
 class test_one(_test_in):
     pin = 1
     prep = dict(mode="read")
@@ -148,7 +151,6 @@ class test_one(_test_in):
         await self.assertMsg(PinIL, False)
         self.pin.set(False)
         await self.assertMsg()
-        pass
 
 class test_one_uniq(_test_in):
     pin = 1
@@ -168,7 +170,6 @@ class test_one_uniq(_test_in):
         await self.assertMsg(PinIL)
         self.pin.set(False)
         await self.assertMsg()
-        pass
 
 class test_two(_test_in):
     pin = 2
@@ -194,7 +195,6 @@ class test_two(_test_in):
         self.pin.set(True)
         await self.assertMsg(PinIH, 5, timeout=0.3)
         await self.assertMsg(timeout=5)
-        pass
 
 class test_two_up(_test_in):
     pin = 2
@@ -217,7 +217,6 @@ class test_two_up(_test_in):
         await self.assertMsg(PinIL, timeout=0.3)
         await self.assertMsg(2, timeout=5)
         await self.assertMsg(timeout=5)
-        pass
 
 class test_three(_test_in):
     pin = 3
@@ -234,8 +233,8 @@ class test_three(_test_in):
         await self.assertMsg(PinIH, timeout=0.4)
         self.pin.set(False)
         await self.assertMsg(PinIL, timeout=0.9)
-        await self.assertMsg((4,0), timeout=0.3, pick="seq")
-        pass
+        await self.assertMsg((4,0), timeout=0.5, pick="seq")
+        await self.assertMsg()
 
 class test_three_bounce(_test_in):
     pin = 3
@@ -263,7 +262,6 @@ class test_three_bounce(_test_in):
             self.pin.set(False)
         await self.assertMsg(PinIL, timeout=0.9)
         await self.assertMsg((6,0), timeout=0.3, pick="seq")
-        pass
 
 class test_three_bounce_only(_test_in):
     pin = 3
@@ -282,7 +280,6 @@ class test_three_bounce_only(_test_in):
             self.pin.set(False)
             await self.assertMsg(PinIL, timeout=0.15)
         await self.assertMsg(timeout=2)
-        pass
 
 class test_three_bounce_skip(_test_in):
     pin = 3
@@ -301,25 +298,96 @@ class test_three_bounce_skip(_test_in):
             self.pin.set(False)
             await self.assertMsg(PinIL, timeout=0.15)
         await self.assertMsg((8,0),timeout=2,pick="seq")
-        pass
 
 class test_four(_test_out):
     pin = 4
     prep = dict(mode="write")
     async def run(self):
-        pass
+        await self.set_src(False)
+        await self.flushMsgs()
+
+        await self.set_src(True)
+        await self.assertMsg(PinOH,True)
+        await self.set_src(True)
+        await self.assertMsg()
+        await self.set_src(False)
+        await self.assertMsg(PinOL,False)
+        await self.set_src(False)
+        await self.assertMsg()
+
+class test_four_only(_test_out):
+    pin = 4
+    prep = dict(mode="write",change=True)
+    async def run(self):
+        await self.set_src(False)
+        await self.flushMsgs()
+
+        await self.set_src(True)
+        await self.assertMsg(PinOH,True)
+
+        await self.client.set(*self.state, value=None)
+        await self.assertMsg(None)
+
+        await self.set_src(False)
+        await self.assertMsg(PinOL)
+        await self.set_src(False)
+        await self.assertMsg()
+        await self.set_src(True)
+        await self.assertMsg(PinOH,True)
+        await self.set_src(False)
+        await self.assertMsg(PinOL)
 
 class test_five(_test_out):
     pin = 5
     prep = dict(mode="oneshot",t_on=1)
     async def run(self):
-        pass
+        await self.set_src(False)
+        await self.flushMsgs()
+
+        await self.set_src(True)
+        await self.assertMsg(PinOH,True, timeout=0.4)
+        await self.assertMsg(timeout=0.3)
+        await self.assertMsg(PinOL,False)
+        await self.set_src(False)
+        await self.assertMsg()
+
+        await self.set_src(True)
+        await self.assertMsg(PinOH,True, timeout=0.3)
+        await self.set_src(False)
+        await self.assertMsg(PinOL,False, timeout=0.3)
+        await self.assertMsg()
 
 class test_six(_test_out):
     pin = 6
     prep = dict(mode="pulse",t_on=1,t_off=3)
     async def run(self):
-        pass
+        await self.set_src(False)
+        await self.flushMsgs()
+
+        await self.set_src(True)
+        await self.assertMsg(PinOH,0.25, timeout=0.4)
+        await self.assertMsg(timeout=0.4)
+        await self.assertMsg(PinOL, timeout=0.4)
+        await self.set_src(False)
+        await self.assertMsg(False,timeout=0.2)
+        await self.assertMsg()
+
+        await self.set_src(True)
+        await self.assertMsg(PinOH,0.25, timeout=0.3)
+        await self.set_src(False)
+        await self.assertMsg(PinOL,False, timeout=0.3)
+        await self.assertMsg()
+
+        await self.set_src(True)
+        await self.assertMsg(PinOH,0.25, timeout=0.4)
+        for _ in range(3):
+            await self.assertMsg(timeout=0.3)
+            await self.assertMsg(PinOL, timeout=0.5)
+            await self.assertMsg(timeout=2.3)
+            await self.assertMsg(PinOH, timeout=0.5)
+        await self.set_src(False)
+        await self.assertMsg(PinOL,False, timeout=0.3)
+        await self.assertMsg()
 
 async def main(label="gpio-mockup-A", host="HosT"):
     logging.basicConfig(level=logging.DEBUG,format="%(relativeCreated)d %(name)s %(message)s")

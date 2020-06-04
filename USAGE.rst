@@ -46,7 +46,7 @@ count
 
 The number of transitions of a wire on the controller is mirrored to some DistKV entry.
 
-* dest: the path to store the counter at.
+* dest: the path to save the counter to.
 
 * count: Flag whether to count L>H transitions (True), H>L (False) or both (None).
 
@@ -61,13 +61,25 @@ button
 
 A sequence of (debounced) button presses. Reports the length of the signals in units of 't_bounce'.
 
-* dest: the path to store the result at.
+* dest: the path to save the result to.
+
+* low: flag whether the wire's normal state is inverted.
 
 * t_bounce: min length of a single signal, seconds, default 0.05
 
 * t_idle: return after this time without change, default 1.5 seconds
 
+* t_idle_on: return after this time "on" without change, default to ``t_idle``.
+
+* t_clear: after this time, the destination value will be cleared and replaced with ``None``.
+
 * skip: flag whether to ignore noisy signals (i.e. signals where all changes shorter than t_bounce)
+
+* flow: send messages as the button sequence progresses.
+
+* count: Flag whether to measure H states (True), L states (False) or both (None).
+
+Multiple interleaved buttons are not yet supported.
 
 
 ``output`` ports

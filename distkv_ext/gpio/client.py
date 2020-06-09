@@ -93,7 +93,7 @@ async def port(obj, path, typ, mode, attr):
         read: dest (path)
         count: read + interval (float), count (+-x for up/down/both)
         button: read + t_bounce (float), t_idle (float), skip (+- ignore noise?),
-                       t_clear (float)
+                       t_clear (float), flow (bool)
       output:
         write: src (path), state (path)
         oneshot: write + t_on (float), state (path)
@@ -115,8 +115,7 @@ async def port(obj, path, typ, mode, attr):
         raise click.UsageError("Port type is mandatory.")
     if mode is None:
         raise click.UsageError("Port mode is mandatory.")
-    attr = (('type', typ),) + attr
-    attr = (('mode', mode),) + attr
+    attr = (('type', typ),('mode', mode)) + attr
     for k,v in attr:
         if k == "count":
             if v == '+':
@@ -126,14 +125,14 @@ async def port(obj, path, typ, mode, attr):
             elif v in 'xX*':
                 v = None
             else:
-                v = click.UsageError("'count' wants one of + - X")
-        elif k in ("low","skip"):
+                v = click.UsageError("'%s' wants one of + - X" % (k,))
+        elif k in ("low","skip","flow"):
             if v == '+':
                 v = True
             elif v == '-':
                 v = False
             else:
-                v = click.UsageError("'low' wants one of + -")
+                v = click.UsageError("'%s' wants one of + -" % (k,))
         elif k in {"src", "dest"} or (v is not None and ' ' in v):
             v = v.split()
         else:
@@ -151,7 +150,7 @@ async def port(obj, path, typ, mode, attr):
     await _attr(obj, (), val, path, False, res)
 
 async def _attr(obj, attr, value, path, eval_, res=None):
-    # Sub-attr setter.
+    # Sub-attr setter. (Or whole-attr-setter if 'attr' is empty.)
     # Special: if eval_ is True, a value of '-' deletes. A mapping replaces instead of updating.
     if res is None:
         res = await obj.client.get(*obj.cfg.gpio.prefix, *path_eval(path, (3,4)), nchain=obj.meta or 2)

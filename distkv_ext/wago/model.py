@@ -357,6 +357,8 @@ class _WAGObaseSERV(_WAGObase):
 
 
 class WAGOserver(_WAGObaseSERV):
+    _server = None
+
     @classmethod
     def child_type(cls, name):
         if name == "input":
@@ -365,8 +367,13 @@ class WAGOserver(_WAGObaseSERV):
             return WAGOoutputBase
         return None
 
+    @property
+    def server(self):
+        return self._server
+
     async def set_server(self, server):
-        await self.parent.set_server(server)
+        self._server = server
+        await self._update_server()
 
     async def setup(self):
         await super().setup()
@@ -381,17 +388,12 @@ class WAGOroot(_WAGObase, ClientRoot):
     reg = {}
     CFG = "wago"
     err = None
-    _server = None
 
     async def run_starting(self, server=None):
         self._server = server
         if self.err is None:
             self.err = await ErrorRoot.as_handler(self.client)
         await super().run_starting()
-
-    @property
-    def server(self):
-        return self._server
 
     @classmethod
     def register(cls, typ):
@@ -401,14 +403,8 @@ class WAGOroot(_WAGObase, ClientRoot):
         return acc
 
     def child_type(self, name):
-        if self._server is None or name == self._server:
-            return WAGOserver
-        return None
+        return WAGOserver
 
     async def update_server(self):
-        await self._update_server()
-
-    async def set_server(self, server):
-        self._server = server
         await self._update_server()
 

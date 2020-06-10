@@ -1,9 +1,9 @@
 """
-WAGO task for DistKV
+KNX task for DistKV
 """
 
 import anyio
-import asyncwago as wago
+import xknx
 import socket
 try:
     from collections.abc import Mapping
@@ -12,12 +12,12 @@ except ImportError:
 
 from distkv.util import combine_dict, NotGiven, attrdict
 from distkv.exceptions import ClientConnectionError
-from distkv_ext.wago.model import WAGOroot, WAGOserver
+from distkv_ext.knx.model import KNXroot, KNXserver
 
 import logging
 logger = logging.getLogger(__name__)
 
-async def task(client, cfg, server: WAGOserver, evt=None):
+async def task(client, cfg, server: KNXserver, evt=None):
     cfg = combine_dict(server.value_or({}, Mapping).get('server',{}), cfg['server_default'])
 
     async def present(s, p):
@@ -65,7 +65,7 @@ async def task(client, cfg, server: WAGOserver, evt=None):
                 await present(s_type, False)
 
     try:
-        async with wago.open_server(**cfg) as srv:
+        async with xknx.open_server(**cfg) as srv:
             r = await srv.describe()
             await merge_types(server, r)
             await server.set_server(srv)

@@ -20,7 +20,7 @@ install:
 # need to use python3 sphinx-build
 PATH := /usr/share/sphinx/scripts/python3:${PATH}
 
-PACKAGE = distwago
+PACKAGE = distknx
 PYTHON ?= python3
 export PYTHONPATH=$(shell pwd)
 

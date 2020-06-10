@@ -1,5 +1,5 @@
 """
-DistKV client data model for Wago
+DistKV client data model for KNX
 """
 import anyio
 from anyio.exceptions import ClosedResourceError
@@ -12,7 +12,7 @@ from collections import Mapping
 import logging
 logger = logging.getLogger(__name__)
         
-class _WAGObase(ClientEntry):
+class _KNXbase(ClientEntry):
     """
     Forward ``_update_server`` calls to child entries.
     """
@@ -42,7 +42,7 @@ class _WAGObase(ClientEntry):
     async def setup(self):
         pass
 
-class _WAGOnode(_WAGObase):
+class _KNXnode(_KNXbase):
     """
     Base class for a single input or output.
     """
@@ -73,7 +73,7 @@ class _WAGOnode(_WAGObase):
         pass
 
 
-class WAGOinput(_WAGOnode):
+class KNXinput(_KNXnode):
     """Describes one input port.
     
     An input port is polled or counted.
@@ -127,7 +127,7 @@ class WAGOinput(_WAGOnode):
         await evt.wait()
 
 
-class WAGOoutput(_WAGOnode):
+class KNXoutput(_KNXnode):
     """Describes one output port.
     
     Output ports are written to or pulsed. In addition, a timeout may be given.
@@ -136,7 +136,7 @@ class WAGOoutput(_WAGOnode):
 
     async def with_output(self, evt, src, proc, *args):
         """
-        Task that monitors one entry and writes its value to the Wago controller.
+        Task that monitors one entry and writes its value to the KNX controller.
 
         Also the value is mirrored to ``cur`` if that's set.
         """
@@ -149,7 +149,7 @@ class WAGOoutput(_WAGOnode):
                         val = msg.value
                     except AttributeError:
                         if msg.get("state","") != "uptodate":
-                            await self.root.err.record_error("wago", *self.subpath, comment="Missing value: %r" % (msg,), data={"path":self.subpath})
+                            await self.root.err.record_error("knx", *self.subpath, comment="Missing value: %r" % (msg,), data={"path":self.subpath})
                         continue
 
                     if val in (False,True,0,1):
@@ -157,18 +157,18 @@ class WAGOoutput(_WAGOnode):
                         try:
                             await proc(val, *args)
                         except StopAsyncIteration:
-                            await self.root.err.record_error("wago", *self.subpath, data={'value': val}, comment="Stopped due to bad timer value")
+                            await self.root.err.record_error("knx", *self.subpath, data={'value': val}, comment="Stopped due to bad timer value")
                             return
                         except Exception as exc:
-                            await self.root.err.record_error("wago", *self.subpath, data={'value': val}, exc=exc)
+                            await self.root.err.record_error("knx", *self.subpath, data={'value': val}, exc=exc)
                         else:
-                            await self.root.err.record_working("wago", *self.subpath)
+                            await self.root.err.record_working("knx", *self.subpath)
                     else:
-                        await self.root.err.record_error("wago", *self.subpath, comment="Bad value: %r" % (val,))
+                        await self.root.err.record_error("knx", *self.subpath, comment="Bad value: %r" % (val,))
 
     async def _set_value(self, val, state, negate):
         """
-        Task that monitors one entry and writes its value to the Wago controller.
+        Task that monitors one entry and writes its value to the KNX controller.
 
         Also the value is mirrored to ``cur`` if that's set.
         """
@@ -203,12 +203,11 @@ class WAGOoutput(_WAGOnode):
 
                         await work.wait()
             finally:
-                if self._work is sc:
-                    await self._work_done.set()
-                    self._work = None
-                    self._work_done = None
-
                 async with anyio.fail_after(2, shield=True):
+                    await evt.set()  # safety
+                    if self._work is sc:
+                        self._work = None
+
                     if state is not None:
                         try:
                             val = await self.server.read_output(self.card, self.port)
@@ -326,7 +325,7 @@ class WAGOoutput(_WAGOnode):
 
 
 
-class _WAGObaseNUM(_WAGObase):
+class _KNXbaseNUM(_KNXbase):
     """
     A path element between 1 and 99 inclusive works.
     """
@@ -337,34 +336,34 @@ class _WAGObaseNUM(_WAGObase):
             return cls.cls
         return None
 
-class WAGOinputCARD(_WAGObaseNUM):
-    cls = WAGOinput
+class KNXinputCARD(_KNXbaseNUM):
+    cls = KNXinput
 
-class WAGOoutputCARD(_WAGObaseNUM):
-    cls = WAGOoutput
+class KNXoutputCARD(_KNXbaseNUM):
+    cls = KNXoutput
 
-class WAGOinputBase(_WAGObaseNUM):
-    cls = WAGOinputCARD
+class KNXinputBase(_KNXbaseNUM):
+    cls = KNXinputCARD
 
-class WAGOoutputBase(_WAGObaseNUM):
-    cls = WAGOoutputCARD
+class KNXoutputBase(_KNXbaseNUM):
+    cls = KNXoutputCARD
 
 
-class _WAGObaseSERV(_WAGObase):
+class _KNXbaseSERV(_KNXbase):
     async def set_value(self, val):
         await super().set_value(val)
         await self.update_server()
 
 
-class WAGOserver(_WAGObaseSERV):
+class KNXserver(_KNXbaseSERV):
     _server = None
 
     @classmethod
     def child_type(cls, name):
         if name == "input":
-            return WAGOinputBase
+            return KNXinputBase
         if name == "output":
-            return WAGOoutputBase
+            return KNXoutputBase
         return None
 
     @property
@@ -383,10 +382,10 @@ class WAGOserver(_WAGObaseSERV):
             await s.set_ping_freq(self.find_cfg("ping"))
 
 
-class WAGOroot(_WAGObase, ClientRoot):
+class KNXroot(_KNXbase, ClientRoot):
     cls = {}
     reg = {}
-    CFG = "wago"
+    CFG = "knx"
     err = None
 
     async def run_starting(self, server=None):
@@ -403,7 +402,7 @@ class WAGOroot(_WAGObase, ClientRoot):
         return acc
 
     def child_type(self, name):
-        return WAGOserver
+        return KNXserver
 
     async def update_server(self):
         await self._update_server()

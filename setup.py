@@ -3,19 +3,19 @@ from setuptools import setup, find_packages
 LONG_DESC = open("README.rst").read()
 
 setup(
-    name="distwago",
+    name="distknx",
     use_scm_version={"version_scheme": "guess-next-dev", "local_scheme": "dirty-tag"},
     description="A distributed no-master key-value store",
-    url="https://github.com/smurfix/distwago",
+    url="https://github.com/smurfix/distknx",
     long_description=LONG_DESC,
     author="Matthias Urlichs",
     author_email="matthias@urlichs.de",
     license="MIT -or- Apache License 2.0",
-    packages=["distkv_ext.wago"],
+    packages=["distkv_ext.knx"],
     setup_requires=["setuptools_scm", "pytest-runner", "trustme >= 0.5"],
     install_requires=[
         "distkv >= 0.13.1",
-        "asyncwago >= 0.30",
+        "xknx",
     ],
     tests_require=["trustme >= 0.5", "pytest", "flake8 >= 3.7"],
     keywords=["async", "key-values", "distributed"],

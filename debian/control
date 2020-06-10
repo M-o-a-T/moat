@@ -1,23 +1,15 @@
-Source: distwago
+Source: distknx
 Maintainer: Matthias Urlichs <matthias@urlichs.de>
 Section: python
 Priority: optional
 Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 13)
 Standards-Version: 3.9.6
-Homepage: https://github.com/smurfix/distwago
+Homepage: https://github.com/smurfix/distknx
 
-Package: distkv-wago
+Package: distkv-knx
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   distkv,
-  python3-asyncwago,
-Replaces: python3-distwago, distkw-wago
-Conflicts: python3-distwago, distkw-wago
-Provides: python3-distwago, distkw-wago
-Description: A distributed no-master key-value store
- DistWAGO is a link between Wago controllers DistKV.
- .
- It will add all discovered Wago ports, monitor them as specified,
- write values that it reads from the controller to some DistKV entry, monitor a
- DistKV entry and write any updates to a controller, and work with DistKV's runner
- system, either centrally or distributed.
+  python3-xknx,
+Description: KNX adapter for DistKV
+ DistKNX is a bidirectional link between KNX busses and DistKV.

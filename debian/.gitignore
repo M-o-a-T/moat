@@ -4,5 +4,5 @@
 /*.debhelper-build-stamp
 /*.substvars
 /debhelper-build-stamp
-/distkv-wago
-/distkv-wago@.service
+/distkv-knx
+/distkv-knx@.service

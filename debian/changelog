@@ -1,66 +1,6 @@
-distwago (0.5.4-1) unstable; urgency=medium
+distknx (0.1.0-1) unstable; urgency=medium
 
-  * Merge
+  * Initial copy from distwago
 
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 10 Jun 2020 12:38:02 +0200
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 10 Jun 2020 13:00:00 +0200
 
-distwago (0.5.3-1) unstable; urgency=medium
-
-  * Merge
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 10 Jun 2020 12:19:32 +0200
-
-distwago (0.5.2-1) unstable; urgency=medium
-
-  * Merge
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 10 Jun 2020 12:11:29 +0200
-
-distwago (0.5.1-1) unstable; urgency=medium
-
-  * Merge
-  * support systemd stuff
-
- -- Matthias Urlichs <matthias@urlichs.de>  Wed, 10 Jun 2020 09:45:32 +0200
-
-distwago (0.5.0-2) unstable; urgency=medium
-
-  * Stupid typo
-
- -- Matthias Urlichs <matthias@urlichs.de>  Fri, 29 May 2020 04:45:26 +0200
-
-distwago (0.5.0-1) unstable; urgency=medium
-
-  * Merge
-
- -- Matthias Urlichs <matthias@urlichs.de>  Thu, 28 May 2020 14:47:29 +0200
-
-distwago (0.3.0-1) unstable; urgency=medium
-
-  * Merge 0.3.0
-
- -- Matthias Urlichs <matthias@urlichs.de>  Sat, 31 Aug 2019 20:51:16 +0200
-
-distwago (0.2.1-1) unstable; urgency=medium
-
-  * Merge 0.2.1
-
- -- Matthias Urlichs <matthias@urlichs.de>  Tue, 27 Aug 2019 13:41:06 +0200
-
-distwago (0.2.0-3) unstable; urgency=medium
-
-  * Rename binary package
-
- -- Matthias Urlichs <matthias@urlichs.de>  Sat, 10 Aug 2019 19:19:32 +0200
-
-distwago (0.2.0-2) unstable; urgency=medium
-
-  * Deps
-
- -- Matthias Urlichs <matthias@urlichs.de>  Sat, 10 Aug 2019 19:16:23 +0200
-
-distwago (0.2.0-1) unstable; urgency=low
-
-  * source package automatically created by stdeb 0.8.5
-
- -- Matthias Urlichs <matthias@urlichs.de>  Sat, 10 Aug 2019 19:10:20 +0200

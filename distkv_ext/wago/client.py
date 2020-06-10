@@ -7,7 +7,7 @@ from collections.abc import Mapping
 
 from distkv.exceptions import ClientError
 from distkv.util import yprint, attrdict, combine_dict, data_get, NotGiven, path_eval
-from distkv.util import res_delete, res_get, res_update
+from distkv.util import res_delete, res_get, res_update, as_service
 
 import logging
 
@@ -227,5 +227,7 @@ async def monitor(obj, name):
     from distkv_ext.wago.model import WAGOroot
     server = await WAGOroot.as_handler(obj.client)
     await server.wait_loaded()
-    await task(obj.client, obj.cfg.wago, server[name], None)
+
+    async with as_service(obj) as srv:
+        await task(obj.client, obj.cfg.wago, server[name], srv)
 

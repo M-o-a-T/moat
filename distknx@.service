@@ -1,5 +1,5 @@
 [Unit]
-Description=DistKV WAGO server
+Description=DistKV KNX server
 After=distkv.service
 Requires=distkv.service
 
@@ -10,7 +10,7 @@ WantedBy=multi-user.target
 
 [Service]
 Type=notify
-ExecStart=/usr/bin/distkv client wago monitor %I
+ExecStart=/usr/bin/distkv client knx monitor %I
 
 EnvironmentFile=/etc/distkv.env
 

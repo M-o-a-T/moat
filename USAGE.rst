@@ -1,22 +1,22 @@
-==============
-Using DistWAGO
-==============
+=============
+Using DistKNX
+=============
 
-Run "distkv client wago monitor" to connect to the server on localhost.
+Run "distkv client knx monitor" to connect to the server on localhost.
 
-See "distkv dump cfg wago" for configuration options.
+See "distkv dump cfg knx" for configuration options.
 
 Data structure
 ==============
 
-On disk, the path to the port is ".distkv wago SERVER TYPE CARD PORT" by
+On disk, the path to a KNX group address is ".distkv knx BUS A B C" by
 default. All attributes are also looked up in the higher nodes, so you can
-set per-type or per-server defaults easily.
+set per-line or per-server defaults easily.
 
 Server attributes
 +++++++++++++++++
 
-* server: a dict with host and port. Set by ``distkv client wago server``.
+* server: a dict with host and port. Set by ``distkv client knx server``.
 
 * poll: The cylce time of the controller. Typical: 0.05 seconds.
 
@@ -113,12 +113,12 @@ Command line
 ============
 
 
-.. program:: distkv client wago
+.. program:: distkv client knx
 
 The main entry point for this extension.
 
 
-.. program:: distkv client wago port
+.. program:: distkv client knx port
 
 Print or modify port settings.
 
@@ -144,7 +144,7 @@ lets you easily change more than one at a time.
    Card and port are numeric, starting with 1.
 
 
-.. program:: distkv client wago attr
+.. program:: distkv client knx attr
 
 Print, modify or delete a single attribute.
 
@@ -177,34 +177,33 @@ If you set a value that is evaluated to a mapping, exising values will be merged
    and "--eval".
 
 
-.. program:: distkv client wago list
+.. program:: distkv client knx list
 
-Print the current state of your Wago controllers.
+Print the current state of your KNX controllers.
 
 This command does not access the device; it is used solely for displaying
 the configuration of the interaction with DistKV.
 
 .. option:: server
 
-   The Wago controller to access.
+   The KNX controller to access. By default DistKNX uses tunneling.
 
-.. option:: type
+.. option:: group1
 
-   The type of connection. Currently supported: ``input`` and ``output``
-   for 24 volt controls.
+   Group address 0…15.
 
-.. option:: card
+.. option:: group2
 
-   The card number. The first card should be 1 (assuming that it's recognized).
+   Group address 0…15.
 
-.. option:: port
+.. option:: group3
 
-   The port number. Ports are numbered starting with 1.
+   Group address 0…255.
 
 
-.. program:: distkv client wago monitor
+.. program:: distkv client knx monitor
 
-This is a stand-alone Wago monitor. It connects to a single controller
+This is a stand-alone KNX monitor. It connects to a single controller
 and runs polls and monitors.
 
 .. option:: server
@@ -236,15 +235,11 @@ this might cause results to be read more often than configured here.
    The interval to poll at. Use ``-`` to disable polling.
 
 
-.. program:: distkv client wago set
+.. program:: distkv client knx set
 
 You can use this command to add arbitrary values to a device's entry. Use
 this e.g. to add a note where the device is located, or to signal your own
 code.
-
-.. option:: -f, --family <code>
-
-   Change an attribute on this family code.
 
 .. option:: -d, --device <family.device>
 
@@ -257,6 +252,10 @@ code.
 .. option:: -e, --eval
 
    Flag that the value is a Python expression and should be evaluated.
+
+.. option:: -s, --split
+
+   Flag that the value is a multi-word string and should be split.
 
 .. option:: <name>…
 

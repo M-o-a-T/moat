@@ -13,11 +13,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-@main.group(short_help="Manage Wago controllers.")  # pylint: disable=undefined-variable
+@main.group(short_help="Manage KNX controllers.")  # pylint: disable=undefined-variable
 @click.pass_obj
 async def cli(obj):
     """
-    List Wago controllers, modify device handling …
+    List KNX controllers, modify device handling …
     """
     pass
 
@@ -32,7 +32,7 @@ async def dump(obj, path):
     if len(path) > 4:
         raise click.UsageError("Only up to four path elements allowed")
 
-    async for r in obj.client.get_tree(*obj.cfg.wago.prefix, *path_eval(path, (3,4)), nchain=obj.meta, max_depth=4-len(path)):
+    async for r in obj.client.get_tree(*obj.cfg.knx.prefix, *path_eval(path, (3,4)), nchain=obj.meta, max_depth=4-len(path)):
         pl = len(path) + len(r.path)
         rr = res
         if r.path:
@@ -52,7 +52,7 @@ async def list(obj, path):
     if len(path) > 4:
         raise click.UsageError("Only up to four path elements allowed")
 
-    async for r in obj.client.get_tree(*obj.cfg.wago.prefix, *path_eval(path, (3,4)), nchain=obj.meta, min_depth=1, max_depth=1):
+    async for r in obj.client.get_tree(*obj.cfg.knx.prefix, *path_eval(path, (3,4)), nchain=obj.meta, min_depth=1, max_depth=1):
         print(r.path[-1], file=obj.stdout)
 
 
@@ -64,7 +64,7 @@ async def list(obj, path):
 @click.argument("path", nargs=-1)
 @click.pass_obj
 async def attr_(obj, attr, value, path, eval_, split):
-    """Set/get/delete an attribute on a given Wago element.
+    """Set/get/delete an attribute on a given KNX element.
 
     `--eval` without a value deletes the attribute.
     """
@@ -101,7 +101,7 @@ async def port(obj, path, mode, attr):
     """
     if len(path) != 4:
         raise click.UsageError("Path must be 4 elements: server+type+card+port.")
-    res = await obj.client.get(*obj.cfg.wago.prefix, *path_eval(path, (3,4)), nchain=obj.meta or 1)
+    res = await obj.client.get(*obj.cfg.knx.prefix, *path_eval(path, (3,4)), nchain=obj.meta or 1)
     val = res.get('value', attrdict())
 
     if mode:
@@ -144,7 +144,7 @@ async def _attr(obj, attr, value, path, eval_, res=None):
     # Sub-attr setter.
     # Special: if eval_ is True, an empty value deletes. A mapping replaces instead of updating.
     if res is None:
-        res = await obj.client.get(*obj.cfg.wago.prefix, *path_eval(path, (3,4)), nchain=obj.meta or (value is not None))
+        res = await obj.client.get(*obj.cfg.knx.prefix, *path_eval(path, (3,4)), nchain=obj.meta or (value is not None))
     try:
         val = res.value
     except AttributeError:
@@ -170,7 +170,7 @@ async def _attr(obj, attr, value, path, eval_, res=None):
             return
         value = res_update(res, *attr, value=value)
 
-    res = await obj.client.set(*obj.cfg.wago.prefix, *path_eval(path, (3,4)), value=value, nchain=obj.meta, chain=res.chain)
+    res = await obj.client.set(*obj.cfg.knx.prefix, *path_eval(path, (3,4)), value=value, nchain=obj.meta, chain=res.chain)
     if obj.meta:
         yprint(res, stream=obj.stdout)
 
@@ -190,7 +190,7 @@ async def server(obj, name, host, port, delete):
     if not name:
         if host or port or delete:
             raise click.UsageError("Use a server name to set parameters")
-        async for r in obj.client.get_tree(*obj.cfg.wago.prefix, min_depth=1, max_depth=1):
+        async for r in obj.client.get_tree(*obj.cfg.knx.prefix, min_depth=1, max_depth=1):
             print(r.path[-1], file=obj.stdout)
         return
     elif len(name) > 1:
@@ -208,7 +208,7 @@ async def server(obj, name, host, port, delete):
             else:
                 value.port = int(port)
     elif delete:
-        res = await obj.client.delete_tree(*obj.cfg.wago.prefix, name, nchain=obj.meta)
+        res = await obj.client.delete_tree(*obj.cfg.knx.prefix, name, nchain=obj.meta)
         if obj.meta:
             yprint(res, stream=obj.stdout)
         return
@@ -223,11 +223,11 @@ async def server(obj, name, host, port, delete):
 async def monitor(obj, name):
     """Stand-alone task to monitor a single contoller.
     """
-    from distkv_ext.wago.task import task
-    from distkv_ext.wago.model import WAGOroot
-    server = await WAGOroot.as_handler(obj.client)
+    from distkv_ext.knx.task import task
+    from distkv_ext.knx.model import KNXroot
+    server = await KNXroot.as_handler(obj.client)
     await server.wait_loaded()
 
     async with as_service(obj) as srv:
-        await task(obj.client, obj.cfg.wago, server[name], srv)
+        await task(obj.client, obj.cfg.knx, server[name], srv)
 

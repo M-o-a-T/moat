@@ -1,17 +1,15 @@
-========
-DistWAGO
-========
+=======
+DistKNX
+=======
 
-DistWAGO is a link between WAGO controllers and DistKV.
+DistKNX is a link between KNX buses and DistKV.
 
 It will
 
-* add all discovered wago ports
-
-* monitor inputs as specified
+* query and monitor inputs as specified
 
 * write values that it reads from them to some DistKV entry
 
-* monitor a DistKV entry and write any updates to wago
+* monitor a DistKV entry and write any updates to KNX
 
 * work with DistKV's runner system, either centrally or distributed

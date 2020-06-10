@@ -6,3 +6,9 @@ export PYBUILD_NAME=distwago
 %:
 	dh $@ --with python3 --buildsystem=pybuild
 
+debian/distkv-wago@.service: distwago@.service
+	cp $< $@
+
+override_dh_auto_install: debian/distkv-wago@.service
+	dh_auto_install
+

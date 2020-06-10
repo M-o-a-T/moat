@@ -1,3 +1,10 @@
+distwago (0.5.1-1) unstable; urgency=medium
+
+  * Merge
+  * support systemd stuff
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 10 Jun 2020 09:45:32 +0200
+
 distwago (0.5.0-2) unstable; urgency=medium
 
   * Stupid typo

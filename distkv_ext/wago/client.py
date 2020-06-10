@@ -7,7 +7,7 @@ from collections.abc import Mapping
 
 from distkv.exceptions import ClientError
 from distkv.util import yprint, attrdict, combine_dict, data_get, NotGiven, path_eval
-from distkv.util import res_delete, res_get, res_update
+from distkv.util import res_delete, res_get, res_update, as_service
 
 import logging
 
@@ -78,7 +78,7 @@ async def attr_(obj, attr, value, path, eval_, split):
 
 @cli.command()
 @click.option("-m", "--mode", help="Port mode. Use '-' to disable.")
-@click.option("-a", "--attr", nargs=2, multiple=True, help="One attribute to set (NAME VALUE). MAy be used multiple times.")
+@click.option("-a", "--attr", nargs=2, multiple=True, help="One attribute to set (NAME VALUE). May be used multiple times.")
 @click.argument("path", nargs=-1)
 @click.pass_obj
 async def port(obj, path, mode, attr):
@@ -138,11 +138,11 @@ async def port(obj, path, mode, attr):
             raise v
         val[k] = v
 
-    await _attr(obj, (), val, path, True, res)
+    await _attr(obj, (), val, path, False, res)
 
 async def _attr(obj, attr, value, path, eval_, res=None):
     # Sub-attr setter.
-    # Special: if eval_ is True, a value of '-' deletes. A mapping replaces instead of updating.
+    # Special: if eval_ is True, an empty value deletes. A mapping replaces instead of updating.
     if res is None:
         res = await obj.client.get(*obj.cfg.wago.prefix, *path_eval(path, (3,4)), nchain=obj.meta or (value is not None))
     try:
@@ -169,6 +169,7 @@ async def _attr(obj, attr, value, path, eval_, res=None):
             yprint(val, stream=obj.stdout)
             return
         value = res_update(res, *attr, value=value)
+
     res = await obj.client.set(*obj.cfg.wago.prefix, *path_eval(path, (3,4)), value=value, nchain=obj.meta, chain=res.chain)
     if obj.meta:
         yprint(res, stream=obj.stdout)
@@ -226,5 +227,7 @@ async def monitor(obj, name):
     from distkv_ext.wago.model import WAGOroot
     server = await WAGOroot.as_handler(obj.client)
     await server.wait_loaded()
-    await task(obj.client, obj.cfg.wago, server[name], None)
+
+    async with as_service(obj) as srv:
+        await task(obj.client, obj.cfg.wago, server[name], srv)
 

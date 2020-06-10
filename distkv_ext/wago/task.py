@@ -3,7 +3,7 @@ WAGO task for DistKV
 """
 
 import anyio
-import wago
+import asyncwago as wago
 import socket
 try:
     from collections.abc import Mapping

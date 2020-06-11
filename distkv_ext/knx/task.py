@@ -4,7 +4,9 @@ KNX task for DistKV
 
 import anyio
 import xknx
+from xknx.io import ConnectionConfig, ConnectionType
 import socket
+
 try:
     from collections.abc import Mapping
 except ImportError:
@@ -17,57 +19,19 @@ from distkv_ext.knx.model import KNXroot, KNXserver
 import logging
 logger = logging.getLogger(__name__)
 
-async def task(client, cfg, server: KNXserver, evt=None):
-    cfg = combine_dict(server.value_or({}, Mapping).get('server',{}), cfg['server_default'])
-
-    async def present(s, p):
-        # Set the "present" attribute
-        if s.val_d(None, 'present') is not p:
-            await s.update(s.value_or(attrdict(), Mapping)._update('present', value=p))
-
-    async def merge_ports(s_card, r):
-        r = set(range(1, r+1))
-        for k in r:
-            try:
-                s_port = s_card[k]
-            except KeyError:
-                s_port = s_card.allocate(k)
-            await present(s_port, True)
-
-        for s_port in s_card:
-            if s_port._name not in r:
-                await present(s_port, False)
-
-    async def merge_cards(s_type, r):
-        for k,v in r.items():
-            try:
-                s_card = s_type[k]
-            except KeyError:
-                s_card = s_type.allocate(k)
-            await present(s_card, True)
-            await merge_ports(s_card,v)
-
-        for s_card in s_type:
-            if s_card._name not in r:
-                await present(s_card, False)
-
-    async def merge_types(server, r):
-        for k,v in r.items():
-            try:
-                s_type = server[k]
-            except KeyError:
-                s_type = server.allocate(k)
-            await present(s_type, True)
-            await merge_cards(s_type,v)
-
-        for s_type in server:
-            if s_type._name not in r:
-                await present(s_type, False)
+async def task(client, cfg, server: KNXserver, evt=None, local_ip=None):
+    cfg = combine_dict(server.value_or({}, Mapping), cfg['server_default'])
+    add = {}
+    if local_ip is not None:
+        add['local_ip'] = local_ip
 
     try:
-        async with xknx.open_server(**cfg) as srv:
-            r = await srv.describe()
-            await merge_types(server, r)
+        ccfg=ConnectionConfig(connection_type=ConnectionType.TUNNELING,
+            gateway_ip=cfg['host'],
+            gateway_port=cfg.get('port', 3671),
+            **add
+        )
+        async with xknx.XKNX().run(connection_config=ccfg) as srv:
             await server.set_server(srv)
             if evt is not None:
                 await evt.set()

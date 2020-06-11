@@ -32,7 +32,7 @@ async def dump(obj, path):
     if len(path) > 4:
         raise click.UsageError("Only up to four path elements allowed")
 
-    async for r in obj.client.get_tree(*obj.cfg.knx.prefix, *path_eval(path, (3,4)), nchain=obj.meta, max_depth=4-len(path)):
+    async for r in obj.client.get_tree(*obj.cfg.knx.prefix, *path_eval(path, (2,3,4)), nchain=obj.meta, max_depth=4-len(path)):
         pl = len(path) + len(r.path)
         rr = res
         if r.path:
@@ -52,7 +52,9 @@ async def list(obj, path):
     if len(path) > 4:
         raise click.UsageError("Only up to four path elements allowed")
 
-    async for r in obj.client.get_tree(*obj.cfg.knx.prefix, *path_eval(path, (3,4)), nchain=obj.meta, min_depth=1, max_depth=1):
+    async for r in obj.client.get_tree(*obj.cfg.knx.prefix, *path_eval(path, (2,3,4)), nchain=obj.meta, min_depth=1, max_depth=1, add_empty=True):
+        if not isinstance(r.path[-1], int):
+            continue
         print(r.path[-1], file=obj.stdout)
 
 
@@ -100,8 +102,8 @@ async def port(obj, path, mode, attr):
     Floats may be paths, in which case they're read from there when starting.
     """
     if len(path) != 4:
-        raise click.UsageError("Path must be 4 elements: server+type+card+port.")
-    res = await obj.client.get(*obj.cfg.knx.prefix, *path_eval(path, (3,4)), nchain=obj.meta or 1)
+        raise click.UsageError("Path must be 4 elements: bus+ga1+ga2+ga3.")
+    res = await obj.client.get(*obj.cfg.knx.prefix, *path_eval(path, (2,3,4)), nchain=obj.meta or 1)
     val = res.get('value', attrdict())
 
     if mode:
@@ -144,7 +146,7 @@ async def _attr(obj, attr, value, path, eval_, res=None):
     # Sub-attr setter.
     # Special: if eval_ is True, an empty value deletes. A mapping replaces instead of updating.
     if res is None:
-        res = await obj.client.get(*obj.cfg.knx.prefix, *path_eval(path, (3,4)), nchain=obj.meta or (value is not None))
+        res = await obj.client.get(*obj.cfg.knx.prefix, *path_eval(path, (2,3,4)), nchain=obj.meta or (value is not None))
     try:
         val = res.value
     except AttributeError:
@@ -170,7 +172,7 @@ async def _attr(obj, attr, value, path, eval_, res=None):
             return
         value = res_update(res, *attr, value=value)
 
-    res = await obj.client.set(*obj.cfg.knx.prefix, *path_eval(path, (3,4)), value=value, nchain=obj.meta, chain=res.chain)
+    res = await obj.client.set(*obj.cfg.knx.prefix, *path_eval(path, (2,3,4)), value=value, nchain=obj.meta, chain=res.chain)
     if obj.meta:
         yprint(res, stream=obj.stdout)
 

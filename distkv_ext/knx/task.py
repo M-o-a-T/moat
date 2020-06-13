@@ -19,7 +19,7 @@ from distkv_ext.knx.model import KNXroot, KNXserver
 import logging
 logger = logging.getLogger(__name__)
 
-async def task(client, cfg, server: KNXserver, evt=None, local_ip=None):
+async def task(client, cfg, server: KNXserver, evt=None, local_ip=None, initial=False):
     cfg = combine_dict(server.value_or({}, Mapping), cfg['server_default'])
     add = {}
     if local_ip is not None:
@@ -32,7 +32,7 @@ async def task(client, cfg, server: KNXserver, evt=None, local_ip=None):
             **add
         )
         async with xknx.XKNX().run(connection_config=ccfg) as srv:
-            await server.set_server(srv)
+            await server.set_server(srv, initial=initial)
             if evt is not None:
                 await evt.set()
 

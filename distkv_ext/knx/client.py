@@ -211,10 +211,11 @@ async def server(obj, bus, name, host, port, delete):
 
 @cli.command()
 @click.option("-l","--local-ip",help="Force this local IP address.")
+@click.option("-i","--initial", is_flag=True, help="Push existing outgoing states.")
 @click.argument("bus", nargs=1)
 @click.argument("server", nargs=-1)
 @click.pass_obj
-async def monitor(obj, bus, server, local_ip):
+async def monitor(obj, bus, server, local_ip, initial):
     """Stand-alone task to talk to a single server.
     """
     from distkv_ext.knx.task import task
@@ -231,5 +232,5 @@ async def monitor(obj, bus, server, local_ip):
 
 
     async with as_service(obj) as srv:
-        await task(obj.client, obj.cfg.knx, knx[bus][server], srv, local_ip=local_ip)
+        await task(obj.client, obj.cfg.knx, knx[bus][server], srv, local_ip=local_ip, initial=initial)
 

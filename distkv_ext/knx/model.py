@@ -37,14 +37,14 @@ class _KNXbase(ClientEntry):
     async def update_server(self):
         await self.parent.update_server()
 
-    async def _update_server(self):
+    async def _update_server(self, initial=False):
         if not self.val_d(True,'present'):
             return
-        await self.setup()
+        await self.setup(initial=initial)
         for k in self:
-            await k._update_server()
+            await k._update_server(initial=initial)
 
-    async def setup(self):
+    async def setup(self, initial=False):
         pass
 
 class _KNXnode(_KNXbase):
@@ -65,7 +65,7 @@ class _KNXnode(_KNXbase):
     def tg(self):
         return self.server.task_group
 
-    async def setup(self):
+    async def setup(self, initial=False):
         await super().setup()
         if self.server is None:
             self._task = None
@@ -127,7 +127,7 @@ class KNXnode(_KNXnode):
             await evt.set()
 
 
-    async def _task_out(self, evt, src):
+    async def _task_out(self, evt, src, initial=False):
         try:
             val = None
             mode = self.find_cfg('mode', default=None)
@@ -175,7 +175,7 @@ class KNXnode(_KNXnode):
                                 chain = res.chain
                 await tg.spawn(_rdr)
 
-                async with self.client.watch(*src, min_depth=0, max_depth=0, fetch=True, nchain=1) as wp:
+                async with self.client.watch(*src, min_depth=0, max_depth=0, fetch=initial, nchain=1) as wp:
                     await evt.set()
                     async for msg in wp:
                         if 'path' not in msg:
@@ -193,8 +193,8 @@ class KNXnode(_KNXnode):
         finally:
             await evt.set()
 
-    async def setup(self):
-        await super().setup()
+    async def setup(self, initial=False):
+        await super().setup(initial=initial)
 
         if self.server is None:
             return
@@ -211,7 +211,7 @@ class KNXnode(_KNXnode):
         elif typ == "out":
             src = self.find_cfg('src', default=None)
             if src is not None:
-                await self.spawn(self._task_out, evt, src)
+                await self.spawn(self._task_out, evt, src, initial)
             else:
                 logger.info("source not set in %s", self.subpath)
                 return
@@ -243,8 +243,8 @@ class KNXg1(_KNXbaseNUM):
     max_nr = 7
 
 class KNXserver(_KNXbase):
-    async def set_server(self, server):
-        await self.parent.set_server(server)
+    async def set_server(self, server, initial=False):
+        await self.parent.set_server(server, initial=initial)
 
 class KNXbus(_KNXbaseNUM):
     cls = KNXg1
@@ -266,9 +266,9 @@ class KNXbus(_KNXbaseNUM):
     def server(self):
         return self._server
 
-    async def set_server(self, server):
+    async def set_server(self, server, initial=False):
         self._server = server
-        await self._update_server()
+        await self._update_server(initial=initial)
 
 
 class KNXroot(_KNXbase, ClientRoot):

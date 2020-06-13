@@ -5,12 +5,12 @@ import anyio
 from anyio.exceptions import ClosedResourceError
 
 from distkv.obj import ClientEntry, ClientRoot
-from distkv.util import combine_dict
+from distkv.util import combine_dict, NotGiven
 from distkv.errors import ErrorRoot
 from collections import Mapping
 
 from xknx.telegram import GroupAddress
-from xknx.devices import Sensor
+from xknx.devices import Sensor, BinarySensor, Switch, ExposeSensor
 from xknx.remote_value import RemoteValueSensor
 
 

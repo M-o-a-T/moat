@@ -5,12 +5,12 @@ import anyio
 from anyio.exceptions import ClosedResourceError
 
 from distkv.obj import ClientEntry, ClientRoot
-from distkv.util import combine_dict
+from distkv.util import combine_dict, NotGiven
 from distkv.errors import ErrorRoot
 from collections import Mapping
 
 from xknx.telegram import GroupAddress
-from xknx.devices import Sensor
+from xknx.devices import Sensor, BinarySensor, Switch, ExposeSensor
 from xknx.remote_value import RemoteValueSensor
 
 
@@ -51,7 +51,8 @@ class _KNXnode(_KNXbase):
     """
     Base class for a single input or output.
     """
-    _poll = None
+    _task = None
+    _task_done = None
 
     @property
     def group(self):
@@ -67,19 +68,36 @@ class _KNXnode(_KNXbase):
     async def setup(self):
         await super().setup()
         if self.server is None:
-            self._poll = None
+            self._task = None
             return
+        await self._kill()
 
-        if self._poll is not None:
-            await self._poll.cancel()
-            self._poll = None
+    async def _kill(self):
+        if self._task is not None:
+            await self._task.cancel()
+            await self._task_done.wait()
+            self._task = None
+
+    async def spawn(self, p, *a, **k):
+        evt = anyio.create_event()
+        async def _spawn(evt,p,a,k):
+            await self._kill()
+            async with anyio.open_cancel_scope() as sc:
+                self._task = sc
+                self._task_done = anyio.create_event()
+                await evt.set()
+                try:
+                    await p(*a,**k)
+                finally:
+                    async with anyio.open_cancel_scope(shield=True):
+                        await self._task_done.set()
+        await self.tg.spawn(_spawn,evt,p,a,k)
+        await evt.wait()
 
 
 class KNXnode(_KNXnode):
     """Describes one port, i.e. incoming value to be read.
     """
-    _task_scope = None
-
     async def _task_in(self, evt, dest):
         try:
             mode = self.find_cfg('mode', default=None)
@@ -101,52 +119,47 @@ class KNXnode(_KNXnode):
                 logger.info("mode not known (%r) in %s", mode, self.subpath)
                 return
 
-            async with anyio.open_cancel_scope() as sc:
-                self._task_scope = sc
-                async with device.run() as dev:
-                    await evt.set()
-                    async for _ in dev:
-                        await self.client.set(*dest, value=get_val(device))
+            async with device.run() as dev:
+                await evt.set()
+                async for _ in dev:
+                    await self.client.set(*dest, value=get_val(device))
         finally:
-            self._task_scope = None
             await evt.set()
 
 
     async def _task_out(self, evt, src):
         try:
-            mode = self.find_cfg('mode', None)
+            mode = self.find_cfg('mode', default=None)
             if mode is None:
                 logger.info("mode not set in %s", self.subpath)
                 return
 
             args = dict(xknx=self.server, group_address=self.group,
                         name=mode+"."+".".join(str(x) for x in self.subpath))
-            if mode == "switch":
+            if mode == "binary":
                 device = Switch(**args)
                 async def set_val(dev, val):
                     if val:
                         await dev.set_on()
                     else:
                         await dev.set_off()
+
             elif mode in RemoteValueSensor.DPTMAP:
                 device = ExposeSensor(value_type=mode, **args)
                 set_val = device.set
+
             else:
                 logger.info("mode not known (%r) in %s", mode, self.subpath)
                 return
 
-            async with anyio.open_cancel_scope() as sc:
-                self._task_scope = sc
-                try:
-                    async with self.client.watch(*src, min_depth=0, max_depth=0, fetch=True) as wp:
-                        await evt.set()
-                        async for msg in wp:
-                            if msg.value is NotGiven:
-                                continue
-                            await set_val(device, msg.value)
-                finally:
-                    if self._task_scope == sc:
-                        self._task_scope = None
+            async with self.client.watch(*src, min_depth=0, max_depth=0, fetch=True) as wp:
+                await evt.set()
+                async for msg in wp:
+                    if 'path' not in msg:
+                        continue
+                    if msg.value is NotGiven:
+                        continue
+                    await set_val(device, msg.value)
 
         finally:
             await evt.set()
@@ -157,23 +170,19 @@ class KNXnode(_KNXnode):
         if self.server is None:
             return
 
-        typ = self.find_cfg('type')
-
-        if self._task_scope is not None:
-            await self._task_scope.cancel()
-
         evt = anyio.create_event()
+        typ = self.find_cfg('type')
         if typ == "in":
             dest = self.find_cfg('dest', default=None)
             if dest is not None:
-                await self.tg.spawn(self._task_in, evt, dest)
+                await self.spawn(self._task_in, evt, dest)
             else:
                 logger.info("destination not set in %s", self.subpath)
                 return
         elif typ == "out":
             src = self.find_cfg('src', default=None)
             if src is not None:
-                await self.tg.spawn(self._task_out, evt, src)
+                await self.spawn(self._task_out, evt, src)
             else:
                 logger.info("source not set in %s", self.subpath)
                 return
@@ -238,6 +247,10 @@ class KNXroot(_KNXbase, ClientRoot):
     reg = {}
     CFG = "knx"
     err = None
+
+    @property
+    def server(self):
+        return None
 
     async def run_starting(self, server=None):
         self._server = server

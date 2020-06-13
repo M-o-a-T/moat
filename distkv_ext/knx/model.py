@@ -129,23 +129,25 @@ class KNXnode(_KNXnode):
 
     async def _task_out(self, evt, src):
         try:
-            mode = self.find_cfg('mode', None)
+            mode = self.find_cfg('mode', default=None)
             if mode is None:
                 logger.info("mode not set in %s", self.subpath)
                 return
 
             args = dict(xknx=self.server, group_address=self.group,
                         name=mode+"."+".".join(str(x) for x in self.subpath))
-            if mode == "switch":
+            if mode == "binary":
                 device = Switch(**args)
                 async def set_val(dev, val):
                     if val:
                         await dev.set_on()
                     else:
                         await dev.set_off()
+
             elif mode in RemoteValueSensor.DPTMAP:
                 device = ExposeSensor(value_type=mode, **args)
                 set_val = device.set
+
             else:
                 logger.info("mode not known (%r) in %s", mode, self.subpath)
                 return
@@ -245,6 +247,10 @@ class KNXroot(_KNXbase, ClientRoot):
     reg = {}
     CFG = "knx"
     err = None
+
+    @property
+    def server(self):
+        return None
 
     async def run_starting(self, server=None):
         self._server = server

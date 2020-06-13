@@ -470,7 +470,7 @@ class GPIOline(_GPIOnode):
 
                         if val in (False,True,0,1):
                             val = bool(val)
-                            if old_val is val:
+                            if False and old_val is val:  # it's a command
                                 continue
                             old_val = val
                             try:

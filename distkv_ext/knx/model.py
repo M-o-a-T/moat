@@ -157,7 +157,7 @@ class KNXnode(_KNXnode):
                 logger.info("mode not known (%r) in %s", mode, self.subpath)
                 return
 
-            with anyio.create_task_group() as tg:
+            async with anyio.create_task_group() as tg:
                 lock = anyio.create_lock()
                 chain = None
 
@@ -165,14 +165,15 @@ class KNXnode(_KNXnode):
                     # The "goal" value may also be set by the bus. Thus we monitor
                     # the device we send on, and set the value accordingly.
                     nonlocal val
-                    async for _ in device:
-                        nval = get_val(device)
-                        if val is None or nval != val:
-                            async with lock:
-                                val = nval
-                                res = await self.client.set(*src, value=val, nchain=1)
-                                nonlocal chain
-                                chain = res.chain
+                    async with device.run() as dev:
+                        async for _ in dev:
+                            nval = get_val(device)
+                            if val is None or nval != val:
+                                async with lock:
+                                    val = nval
+                                    res = await self.client.set(*src, value=val, nchain=1)
+                                    nonlocal chain
+                                    chain = res.chain
                 await tg.spawn(_rdr)
 
                 async with self.client.watch(*src, min_depth=0, max_depth=0, fetch=initial, nchain=1) as wp:

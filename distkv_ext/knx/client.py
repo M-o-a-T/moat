@@ -212,7 +212,7 @@ async def server(obj, bus, name, host, port, delete):
 @cli.command()
 @click.option("-l","--local-ip",help="Force this local IP address.")
 @click.argument("bus", nargs=1)
-@click.argument("server", nargs=1)
+@click.argument("server", nargs=-1)
 @click.pass_obj
 async def monitor(obj, bus, server, local_ip):
     """Stand-alone task to talk to a single server.
@@ -221,6 +221,14 @@ async def monitor(obj, bus, server, local_ip):
     from distkv_ext.knx.model import KNXroot
     knx = await KNXroot.as_handler(obj.client)
     await knx.wait_loaded()
+
+    if not server and ' ' in bus:
+        bus,server = bus.split(' ')
+    elif len(server) != 1:
+        raise click.UsageError("Use a single server name")
+    else:
+        server = server[0]
+
 
     async with as_service(obj) as srv:
         await task(obj.client, obj.cfg.knx, knx[bus][server], srv, local_ip=local_ip)

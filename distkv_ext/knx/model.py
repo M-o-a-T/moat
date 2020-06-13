@@ -37,14 +37,14 @@ class _KNXbase(ClientEntry):
     async def update_server(self):
         await self.parent.update_server()
 
-    async def _update_server(self):
+    async def _update_server(self, initial=False):
         if not self.val_d(True,'present'):
             return
-        await self.setup()
+        await self.setup(initial=initial)
         for k in self:
-            await k._update_server()
+            await k._update_server(initial=initial)
 
-    async def setup(self):
+    async def setup(self, initial=False):
         pass
 
 class _KNXnode(_KNXbase):
@@ -65,7 +65,7 @@ class _KNXnode(_KNXbase):
     def tg(self):
         return self.server.task_group
 
-    async def setup(self):
+    async def setup(self, initial=False):
         await super().setup()
         if self.server is None:
             self._task = None
@@ -127,8 +127,9 @@ class KNXnode(_KNXnode):
             await evt.set()
 
 
-    async def _task_out(self, evt, src):
+    async def _task_out(self, evt, src, initial=False):
         try:
+            val = None
             mode = self.find_cfg('mode', default=None)
             if mode is None:
                 logger.info("mode not set in %s", self.subpath)
@@ -143,29 +144,58 @@ class KNXnode(_KNXnode):
                         await dev.set_on()
                     else:
                         await dev.set_off()
+                def get_val(dev):
+                    return dev.state
 
             elif mode in RemoteValueSensor.DPTMAP:
                 device = ExposeSensor(value_type=mode, **args)
                 set_val = device.set
+                def get_val(device):
+                    return device.sensor_value.value
 
             else:
                 logger.info("mode not known (%r) in %s", mode, self.subpath)
                 return
 
-            async with self.client.watch(*src, min_depth=0, max_depth=0, fetch=True) as wp:
-                await evt.set()
-                async for msg in wp:
-                    if 'path' not in msg:
-                        continue
-                    if msg.value is NotGiven:
-                        continue
-                    await set_val(device, msg.value)
+            async with anyio.create_task_group() as tg:
+                lock = anyio.create_lock()
+                chain = None
+
+                async def _rdr():
+                    # The "goal" value may also be set by the bus. Thus we monitor
+                    # the device we send on, and set the value accordingly.
+                    nonlocal val
+                    async with device.run() as dev:
+                        async for _ in dev:
+                            nval = get_val(device)
+                            if val is None or nval != val:
+                                async with lock:
+                                    val = nval
+                                    res = await self.client.set(*src, value=val, nchain=1)
+                                    nonlocal chain
+                                    chain = res.chain
+                await tg.spawn(_rdr)
+
+                async with self.client.watch(*src, min_depth=0, max_depth=0, fetch=initial, nchain=1) as wp:
+                    await evt.set()
+                    async for msg in wp:
+                        if 'path' not in msg:
+                            continue
+                        if msg.get('value', NotGiven) is NotGiven:
+                            continue
+                        async with lock:
+                            if msg.chain == chain:
+                                # This command is the one we previously
+                                # received, so don#t send it back out.
+                                continue
+                            val = msg.value
+                            await set_val(device, val)
 
         finally:
             await evt.set()
 
-    async def setup(self):
-        await super().setup()
+    async def setup(self, initial=False):
+        await super().setup(initial=initial)
 
         if self.server is None:
             return
@@ -182,7 +212,7 @@ class KNXnode(_KNXnode):
         elif typ == "out":
             src = self.find_cfg('src', default=None)
             if src is not None:
-                await self.spawn(self._task_out, evt, src)
+                await self.spawn(self._task_out, evt, src, initial)
             else:
                 logger.info("source not set in %s", self.subpath)
                 return
@@ -214,8 +244,8 @@ class KNXg1(_KNXbaseNUM):
     max_nr = 7
 
 class KNXserver(_KNXbase):
-    async def set_server(self, server):
-        await self.parent.set_server(server)
+    async def set_server(self, server, initial=False):
+        await self.parent.set_server(server, initial=initial)
 
 class KNXbus(_KNXbaseNUM):
     cls = KNXg1
@@ -237,9 +267,9 @@ class KNXbus(_KNXbaseNUM):
     def server(self):
         return self._server
 
-    async def set_server(self, server):
+    async def set_server(self, server, initial=False):
         self._server = server
-        await self._update_server()
+        await self._update_server(initial=initial)
 
 
 class KNXroot(_KNXbase, ClientRoot):

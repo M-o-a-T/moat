@@ -76,10 +76,11 @@ async def attr_(obj, attr, value, path, eval_, split):
         raise click.UsageError("Values must have locations ('-a ATTR').")
     if split:
         value = value.split()
+    path = tuple(path_eval(path, (2,3,4)))
     await _attr(obj, attr, value, path, eval_)
 
 @cli.command()
-@click.option("-t", "--type", "typ", help="Must be 'in' or 'out'.")
+@click.option("-t", "--type", "typ", help="Must be 'in' or 'out'. Use '-' to delete.")
 @click.option("-m", "--mode", help="Use '-' to disable.")
 @click.option("-a", "--attr", nargs=2, multiple=True, help="One attribute to set (NAME VALUE). May be used multiple times.")
 @click.argument("path", nargs=-1)
@@ -101,8 +102,15 @@ async def addr(obj, path, typ, mode, attr):
     """
     if len(path) != 4:
         raise click.UsageError("Path must be 4 elements: bus+ga1+ga2+ga3.")
-    res = await obj.client.get(*obj.cfg.knx.prefix, *path_eval(path, (2,3,4)), nchain=obj.meta or 1)
+    path = tuple(path_eval(path, (2,3,4)))
+    res = await obj.client.get(*obj.cfg.knx.prefix, *path, nchain=obj.meta or 1)
     val = res.get('value', attrdict())
+
+    if typ == '-':
+        res = await obj.client.delete(*obj.cfg.knx.prefix, *path, nchain=obj.meta)
+        if obj.meta:
+            yprint(res, stream=obj.stdout)
+        return
 
     if typ:
         attr = (('type', typ),) + attr
@@ -128,8 +136,7 @@ async def _attr(obj, attr, value, path, eval_, res=None, server=False):
     # Sub-attr setter.
     # Special: if eval_ is True, an empty value deletes. A mapping replaces instead of updating.
     if res is None:
-        res = await obj.client.get(*obj.cfg.knx.prefix, *(path if server
-            else path_eval(path, (2,3,4))), nchain=obj.meta or (value is not None))
+        res = await obj.client.get(*obj.cfg.knx.prefix, *path, nchain=obj.meta or (value is not None))
     try:
         val = res.value
     except AttributeError:
@@ -155,7 +162,7 @@ async def _attr(obj, attr, value, path, eval_, res=None, server=False):
             return
         value = res_update(res, *attr, value=value)
 
-    res = await obj.client.set(*obj.cfg.knx.prefix, *(path if server else path_eval(path, (2,3,4))), value=value, nchain=obj.meta, chain=res.chain)
+    res = await obj.client.set(*obj.cfg.knx.prefix, *path, value=value, nchain=obj.meta, chain=res.chain)
     if obj.meta:
         yprint(res, stream=obj.stdout)
 

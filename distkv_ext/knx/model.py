@@ -129,6 +129,7 @@ class KNXnode(_KNXnode):
 
     async def _task_out(self, evt, src):
         try:
+            val = None
             mode = self.find_cfg('mode', default=None)
             if mode is None:
                 logger.info("mode not set in %s", self.subpath)
@@ -143,23 +144,51 @@ class KNXnode(_KNXnode):
                         await dev.set_on()
                     else:
                         await dev.set_off()
+                def get_val(dev):
+                    return dev.state
 
             elif mode in RemoteValueSensor.DPTMAP:
                 device = ExposeSensor(value_type=mode, **args)
                 set_val = device.set
+                def get_val(device):
+                    return device.sensor_value.value
 
             else:
                 logger.info("mode not known (%r) in %s", mode, self.subpath)
                 return
 
-            async with self.client.watch(*src, min_depth=0, max_depth=0, fetch=True) as wp:
-                await evt.set()
-                async for msg in wp:
-                    if 'path' not in msg:
-                        continue
-                    if msg.value is NotGiven:
-                        continue
-                    await set_val(device, msg.value)
+            with anyio.create_task_group() as tg:
+                lock = anyio.create_lock()
+                chain = None
+
+                async def _rdr():
+                    # The "goal" value may also be set by the bus. Thus we monitor
+                    # the device we send on, and set the value accordingly.
+                    nonlocal val
+                    async for _ in device:
+                        nval = get_val(device)
+                        if val is None or nval != val:
+                            async with lock:
+                                val = nval
+                                res = await self.client.set(*src, value=val, nchain=1)
+                                nonlocal chain
+                                chain = res.chain
+                await tg.spawn(_rdr)
+
+                async with self.client.watch(*src, min_depth=0, max_depth=0, fetch=True, nchain=1) as wp:
+                    await evt.set()
+                    async for msg in wp:
+                        if 'path' not in msg:
+                            continue
+                        if msg.get('value', NotGiven) is NotGiven:
+                            continue
+                        async with lock:
+                            if msg.chain == chain:
+                                # This command is the one we previously
+                                # received, so don#t send it back out.
+                                continue
+                            val = msg.value
+                            await set_val(device, val)
 
         finally:
             await evt.set()

@@ -136,7 +136,7 @@ async def _attr(obj, attr, value, path, eval_, res=None, server=False):
     # Sub-attr setter.
     # Special: if eval_ is True, an empty value deletes. A mapping replaces instead of updating.
     if res is None:
-        res = await obj.client.get(*obj.cfg.knx.prefix, *path, nchain=obj.meta or (value is not None))
+        res = await obj.client.get(*obj.cfg.knx.prefix, *path, nchain=obj.meta or 1)
     try:
         val = res.value
     except AttributeError:

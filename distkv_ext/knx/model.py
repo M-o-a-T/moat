@@ -208,14 +208,14 @@ class KNXnode(_KNXnode):
             if dest is not None:
                 await self.spawn(self._task_in, evt, dest)
             else:
-                logger.info("destination not set in %s", self.subpath)
+                logger.info("'dest' not set in %s", self.subpath)
                 return
         elif typ == "out":
             src = self.find_cfg('src', default=None)
             if src is not None:
                 await self.spawn(self._task_out, evt, src, initial)
             else:
-                logger.info("source not set in %s", self.subpath)
+                logger.info("'src' not set in %s", self.subpath)
                 return
         else:
             logger.info("type not known (%r) in %s", typ, self.subpath)

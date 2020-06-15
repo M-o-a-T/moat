@@ -149,7 +149,8 @@ class KNXnode(_KNXnode):
 
             elif mode in RemoteValueSensor.DPTMAP:
                 device = ExposeSensor(value_type=mode, **args)
-                set_val = device.set
+                async def set_val(dev, val):
+                    return await dev.set(val)
                 def get_val(device):
                     return device.sensor_value.value
 

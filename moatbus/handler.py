@@ -325,17 +325,17 @@ class BaseHandler:
 
         elif self.state == S.READ_ACK:
             msg = self.clear_sending()
-            if bits & self.ack_mask:
+            if bits == self.ack_mask:
                 self._transmitted(msg, RES.SUCCESS)
-            elif bits & self.nack_mask:
-                self._transmitted(msg, RES.ERROR)
             elif not bits:
                 self.retry(msg, RES.MISSING)
-            elif bits & self.ack_masks:
+            elif bits == self.nack_mask:
                 self.retry(msg, RES.ERROR)
-            else:
+            elif bits & ~self.ack_masks:
                 self.error(ERR.BAD_COLLISION)
                 self.retry(msg, RES.FATAL)
+            else: # both ack anc nack are set
+                self._transmitted(msg, RES.MISSING)
             self.set_state(S.WAIT_IDLE)
 
         elif self.state == S.WRITE:

@@ -407,18 +407,17 @@ static void h_timeout_settle(Handler h)
     }
     else if(h->state == S_READ_ACK) {
         BusMessage msg = h_clear_sending(h);
-        if(bits & h->ack_mask)
+        if(bits == h->ack_mask)
             h_transmitted(h, msg, RES_SUCCESS);
-        else if(bits & h->nack_mask)
-            h_transmitted(h, msg, RES_ERROR);
         else if(!bits)
             h_retry(h, msg, RES_MISSING);
-        else if(bits & h->ack_masks)
+        else if(bits == h->nack_mask)
             h_retry(h, msg, RES_ERROR);
-        else {
+        else if(bits & ~h->ack_masks) {
             h_error(h, ERR_BAD_COLLISION);
             h_retry(h, msg, RES_FATAL);
-        }
+        } else // both ACK and NACK are set
+            h_retry(h, msg, RES_MISSING);
         h_set_state(h, S_WAIT_IDLE);
     }
     else if(h->state == S_WRITE) {

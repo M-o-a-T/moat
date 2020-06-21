@@ -150,17 +150,17 @@ class Runner:
     """
     addr = -1
 
-    def __init__(self,master):
-        self.master = master
+    def __init__(self,server):
+        self.server = server
         self.queue = deque()
-        master.add(self)
+        server.add(self)
 
         self.test_timer = 0
         self.test_data = 0 # fake
 
     def add(self, p,*a,**k):
         if not self.queue:
-            self.master.add(self)
+            self.server.add(self)
         self.queue.append((p,a,k))
         if not self.test_timer:
             self.test_timer = 1
@@ -170,7 +170,7 @@ class Runner:
 
     def timeout(self):
         if not self.queue:
-            self.master.remove(self)
+            self.server.remove(self)
             return
 
         r = self.queue.popleft()
@@ -181,8 +181,8 @@ class Runner:
 
 
 class Handler(BaseHandler):
-    def __init__(self,master,addr, **kw):
-        self.master = master
+    def __init__(self,server,addr, **kw):
+        self.server = server
         self.test_data = 0
         self.errors = []
         self.test_timer = 0
@@ -192,7 +192,7 @@ class Handler(BaseHandler):
         super().__init__(**kw)
 
     def debug(self, msg, *a):  
-        self.master.report(self.addr, msg, *a)
+        self.server.report(self.addr, msg, *a)
 
     def report_error(self, typ, **kw):
         self.debug("Error %d: %s", typ, " ".join("%s=%s" % (k,v) for k,v in kw.items()))
@@ -206,28 +206,28 @@ class Handler(BaseHandler):
         else:
             timeout *= 11
         f=inspect.currentframe()
-        self.master.report(self.addr, "T %d @%d %d %d",timeout,f.f_back.f_lineno,f.f_back.f_back.f_lineno,f.f_back.f_back.f_back.f_lineno)
+        self.server.report(self.addr, "T %d @%d %d %d",timeout,f.f_back.f_lineno,f.f_back.f_back.f_lineno,f.f_back.f_back.f_back.f_lineno)
 
         self.test_timer = timeout
 
     def get_wire(self):
-        return self.master.get_wire()
+        return self.server.get_wire()
 
     def set_wire(self, bits):
         if self.test_data != bits:
             self.test_data = bits
         f=inspect.currentframe()
-        self.master.report(self.addr, "%02x @%d %d %d",bits,f.f_back.f_lineno,f.f_back.f_back.f_lineno,f.f_back.f_back.f_back.f_lineno)
+        self.server.report(self.addr, "%02x @%d %d %d",bits,f.f_back.f_lineno,f.f_back.f_back.f_lineno,f.f_back.f_back.f_back.f_lineno)
 
-        self.master.check_wires()
+        self.server.check_wires()
         
     def process(self, msg):
         self.incoming.append(msg)
-        self.master.report(self.addr, "Rcvd:  %s",msg)
+        self.server.report(self.addr, "Rcvd:  %s",msg)
         return msg.dst == self.addr
 
     def transmitted(self,msg,res):
-        self.master.report(self.addr, "Sent:%d %s",res,msg)
+        self.server.report(self.addr, "Sent:%d %s",res,msg)
 
 def gen_data(client):
     msg = BusMessage()

@@ -18,9 +18,10 @@ class BaseBusHandler:
                 await bus.send(another_msg)
     """
 
-    def __init__(self):
+    def __init__(self, name=None):
         self._q_f = None # feed
         self._q = None
+        self.name = name
 
     @property
     @asynccontextmanager

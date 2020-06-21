@@ -29,8 +29,8 @@ Thus, we're talking about a four-wire bus (or more, if you have spare wires
 in your cable).
 
 Next problem: long wires have somewhat high impedance, which limit your
-transmission speed. You could use something like I²C, but a software slave
-is annyoing to program and a hardware slave is too susceptible to noise.
+transmission speed. You could use something like I²C, but a software client
+is annyoing to program and a hardware client is too susceptible to noise.
 Worse, you need 16 transitions per byte. This is rather slow.
 
 The MoaT bus offers a solution to this problem. It requires four wires:
@@ -62,6 +62,6 @@ Bus addressing
 
 There' no point in catering for more than ~100 devices on a bus, mainly
 because they all need to be powered. The MoaT bus thus limits its addresses
-to 7-bit integers. Master systems get two bits. One address is reserved for
+to 7-bit integers. Server systems get two bits. One address is reserved for
 address assignment.
 

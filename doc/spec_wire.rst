@@ -8,8 +8,8 @@ Principle of operation
 Rationale
 +++++++++
 
-A bus with N wires can assume 2^n states. The self-timing requirement
-enforces *some* transiton between states, thus each time slot can transmit
+A bus with N wires can assume 2^n states. The timing requirement enforces
+*some* transiton between states, thus each time slot can transmit
 log2(2^n-1) bits of information:
 
 =====  ======  ====
@@ -19,64 +19,93 @@ Wires  States  Bits
   3       7    2.81
   4      15    3.90
   5      31    4.95
+  6      63    5.97
 =====  ======  ====
 
-That's still wasteful: we can do better. Two transitions on a 2-wire system
-can have 9 states, or 3.16 bits. The next best value is seven transitions:
-3^7 = 2187 states or 11.09 bits.
+That's somewhat wasteful, but we can do better by combining multiple
+transitions until the fraction is as small as possible. Two transitions on
+a 2-wire system can have 9 states, or 3.16 bits. The next-best value is at
+seven transitions: 3^7 = 2187 states or 11.09 bits.
 
 With three wires, two transitions have 49 states or 5.61 bits. That's
-wasteful; the next "really good" value is at 5 transitions: 14.04 bits.
+still wasteful; the next "good" value is at 5 transitions: 14.04 bits.
 
 The same calculation with four or even five wires ends up at 11.23 or 14.86
 bits, with three transitions each. This is no longer an obvious "best" size
 because the fractions decrease until 15^10 (39.07 bits) or even 31^21
-(104.04 bits). But if we want to be able to implement this bus on an
-ATMega8 or a similar small-but-power-saving 8-bit CPUs, we need to keep the
-math simple, so the upper limit is 16 bits. Also, the end of a packet
-shouldn't have carry too many "wasted" information.
+(104.04 bits).
+
+However, there is a reason why we'd like to stay below 32 bits: If we want
+to be able to implement this bus on an ATMega8 or a similar small (but
+low-power) 8-bit CPUs, we need to keep the math simple.
+
+You might think that another reason to keep the frames small is that
+otherwise there'd be wasted space at the end of the last frame, but in
+practice that problem doesn't exist; see below.
+
+These considerations result in this final table:
+
+=====  ======  ====  ===========  ========
+Wires  States  Bits  Transitions  cum.Bits
+-----  ------  ----  -----------  --------
+  2       3    1.58       7        11.09
+  3       7    2.81       5        14.03
+  4      15    3.90       3        11.72
+  5      31    4.95       3        14.86
+  6      63    5.97       2        11.95
+=====  ======  ====  ===========  ========
 
 Since a message can contain excess bits, we can use an "illegal" sequence
 to terminate the message. Our messages thus don't need a length byte and
 can be generated on the fly if necessary.
 
-A 6-wire bus would carry an 11-bit frame in two transactions. That's the
-limit of what an 8-wire cable can do, so we'll stop here.
-
 Basics
 ++++++
 
-The message is split into 11- or 14-bit frames. An incomplete last frame
-is extended with 0-bits, plus one bit that indicates whether the padding is
-longer than 7 bits. Each frame is interpreted as an unsigned number.
+The message is split into 11- or 14-bit frames, depending on bus width.
+These frames are interpreted as big-endian unsigned integers.
 
-When a frame ends at a byte boundary, no filler bits are inserted. If
-the padding is exactly 8 bits wide, this fact is encoded by adding 2^11
-or 2^14 to the frame's numeric value. In this case there is no explicit
-end-of-message marker (see below).
+An incomplete last frame is extended to the right with 0-bits if that
+extension is shorter than 8 bits. Otherwise, bit 11 / 14 is set. This
+results in a 12- or 15-bit number, but its value is still lower than
+3^7 or 7^5.
 
-The frame is then repeatedly divided by 2^n-1, 'n' being the number of bus
-wires, until the highest-possible frame number would be zero (i.e.
-7/5/3/3/2 times, for 2/3/4/5/6-wire busses).
+This value is repeatedly divided by 3/7/…, or 2^n-1, n being the number of
+bus wires. The remainders of these divisions are collected in a list of
+7/5/… integers with a value between 0 and 3/7/….
 
 The list of remainders of this operation is reversed, i.e. the higher
-powers are transmitted first ("big-endian").
+powers are transmitted first. We'll see later why this is important.
 
-Each remainder from this list is incremented by 1. The result is
-interpreted as a bit mask. When sending a bit, the mask is XOR'd with the
-current bus state. Likewise, the receiver will read the bus state, XOR it
-with the previous state, subtract one, and add the result to the current
-frame's value (after multiplying the previous value by 2^n-1), thus
-recovering the frame's content.
+Each value on this list is incremented by 1. The result is interpreted as a
+bit mask. When sending a bit, the mask is XOR'd with the current bus state.
 
-Transmission is big-endian because the maximum number to be transmitted
-(2^11+2^3-1 / 2^14+2^6-1) does not start with 3/2/1+ factors of 2^n-2. We
-can thus use this sequence as an end-of-frame marker and skip transmitting
-the remaining digits as soon as we see it.
+To reverse this, the receiver will read the bus state, XOR it with the previous
+state, subtract one, and add the result to the current frame's value (after
+multiplying the previous value by 3/7/…), thus recovering the frame's
+content.
+
+Big-endianness and message termination
+--------------------------------------
+
+Examining the maximum value the highest-power integers on this list reveals
+that on a two-wire system, the last three entries (those with the highest
+power, contributing 3^6, 3^5 and 3^4) cannot all be 2, as 2*(3^6+3^5+3^4)
+is greater than 2^11+2^3. Similarly, the last two on a three-wire system
+can't all be 6 and the last remainder on a four-wire system can't be 14.
+
+The MoaTbus uses this fact to signal the end of a message if the excess bit
+was clear; if it was set, that's already unambiguous.
+We can save even more: setting the excess bit on the last message signals
+
+Error recovery
+--------------
 
 Every end-of-message marker is followed by an 11-bit CRC. On a 3-wire bus,
-the CRC frame is one bus transaction shorter than normal. CRC calculation
-is described below.
+the CRC frame requires one bus transaction less than normal frames. CRC
+calculation is described below.
+
+After the CRC, one slot is used for message acknowledgment.
 
 Bus Timing
 ++++++++++
@@ -157,12 +186,8 @@ their signal, the next state is "no wire is set", which is *still*
 indistinguishable from "sender B releases both wires" in the second case.
 
 The MoaT bus works around this problem: in the first case both A and B
-immediately drop their signal and set a fast-retry flag. 
-
-Also, all messages carry both sender and recipient addresses so that late
-collisions (i.e. in the message body the header) cannot happen. This
-reduces the possible impact of any elaborate "recover from a collision
-in-packet" protocol.
+immediately drop their signal and set a fast-retry flag. In the second case
+transmission continues, A will retry normally.
 
 
 CRC check
@@ -170,13 +195,14 @@ CRC check
 
 All messages are protected by a CRC. The CRC is a 11-bit checksum
 (generator 0x583, reversed). This polynomial has a Hamming distance of 4
-(i.e. it can always recongnize three errors) for messages up to 1023 bits.
+(i.e. it can always recognize three errors) for messages up to 1023 bits.
 On a 2-wire bus that's 73 frames or 100 bytes of "real" data, which should
 be sufficient. (119 on 3-wire, 116 on 4-wire.)
 
 The CRC is calculated over the actual bus wire states, XOR'd with the
-initial bus arbitration state, so that a complete message can be
-pre-calculated. The end-of-message bus flips are included.
+initial bus arbitration state, so that a complete message's CRC can be
+pre-calculated. The bus flips that indicate end-of-message are included in
+the CRC.
 
 The CRC is transmitted directly after the end-of-message marker.
 
@@ -193,23 +219,20 @@ CRC selection was constrained by these parameters:
 * It should be possible to not pre-calculate anything, and stream a message
   onto the bus as it is generated.
 
-* It's not possible to protect the "real" message with a CRC. Due to the
-  way messages are encoded on the bus, a single changed bit on the wire
-  will always affect 2 … 16 bits in the message. A CRC is not designed to
-  handle this; the test program `fakebus/test_handler_crc.c` demonstrates
-  that a single bit error in a short message might result in a valid CRC.
+* CRCs are usually calculated using the message's "real", content, i.e.
+  before encoding to a wire format. This is not possible here. See below.
 
-* Bus errors are bursty. Protecting against a single error is not
-  sufficient, i.e. a Hamming distance of 3 is required.
+* Bus errors are likely to affect mutiple bits. Protecting against a single
+  error is not sufficient, i.e. a Hamming distance of 3 is required.
 
 Embedding the CRC into a frame that also contains other data is a
 non-trivial exercise. The test program `fakebus/test_handler_crc_bus.c`
 demonstrates this. Thus, while the idea would significantly shorten smaller
 messages, it has been abandoned.
 
-The state after successful arbitration is XORed into the wire states as
+The state at successful arbitration is XORed into the wire states as
 they're fed to the CRC calculator. This ensures that the CRC does not
-depend on the message's priority (which might change, due to a collision)
+depend on the message's priority (which might change due to a collision)
 and thus can be pre-calculated if necessary.
 
 
@@ -220,14 +243,16 @@ A more straightforward implementation would be to simply run a CRC over the
 bytes of the message instead of the encoded frames' wire states. The only
 problem is that this does not work as expected.
 
-A test program (included in this archive, as of commit 1006054) has
-demonstrated that a CRC over the "high-level" message has a Hamming
-distance of two (2 wires) or even one (3+ wires). While this is a rare
-occurrence, the test demonstrates that if there are *any* errors, the
-resulting CRC is essentially random, thus a CRC-16 would admit a ~1/10⁶
+Due to the way messages are encoded on the bus, a single changed bit on the
+wire will always affect 3 … 16 bits of the message's resulting content. A
+CRC is not designed to handle this. The test program
+`fakebus/test_handler_crc.c` demonstrates that a single bit error in a
+short message can result in a valid CRC.
+
+The test also demonstrates that if there are *any* errors, the resulting
+CRC would essentially be random, thus a CRC-16 would admit a ~1/10⁶
 probability of accepting a broken message. The odds for a faulty CRC-8,
-which would otherwise be perfectly adequate for smaller messages, are even
-higher.
+which would otherwise be adequate for smaller messages, are even higher.
 
 The author is not quite comfortable with these odds.
 
@@ -253,15 +278,96 @@ change by the sender and assert wire 0. If that is not possible because
 wire 0 currently is the only asserted wire, wire 1 is asserted instead.
 
 To negative-ack a message, the receiver will assert wire 1, except when
-either wire 1 is claimed by Ack or wire 1 and 2 are the only asserted
-signals, in which case it will use wire 3. This results in no NAck being
-sent if there is no third wire.
+either wire 1 is claimed by Ack – or when wire 1 and 2 are the only
+asserted signals, in which case it will use wire 3. This results in no NACK
+being sendable if there is no third wire.
 
-NB: Our CRC prevents single- or double- bit errors which change the
-message's content, but it cannot protect against errors (even single-bit
-ones) that mimic the end of a message. The correct message length must be
-verified independently, by embedded explicit length and/or end-of-message
-elements.
+Algorithm
++++++++++
+
+Thus, the complete algorithms are:
+
+* calculate header+data checksum, append to packet buffer
+* repeat while the packet is not exhausted:
+  * repeat for each 11- or 14-bit chunk (14 bits for odd N)
+    * if last chunk:
+      * if more than 7 free bits:
+        * add 2^11 / 2^14
+        * remember not to send an end-of-packet sequence
+      * otherwise
+        * shift left
+    * clear flip sequence
+    * repeat 7/5/3/3 times (for N=2/3/4/5) (N=3: header requires 4 steps):
+      * divide by (2^N-1)
+      * add one
+      * append to flip sequence
+    * repeat until flip sequence is empty:
+      * take the last entry
+      * XOR that with the current state of the bus wires
+      * set bus to the result
+      * wait tA+tB
+* Send end-of-packet sequence (unless high value tells us not to):
+  * Once (N>3) / twice (N=2) / thre times (N=2),
+    * set to ~(old_state)
+    * wait tA+tB
+* Send 11-bit CRC (one frame, same as above but 4 not 5 transitions if N=3)
+* Clear bus state
+* Wait for Ack bit
+
+Each receiver will:
+
+* wait for bus idle (unless expecting an Ack frame)
+* wait until at least one wire is asserted
+* wait tA
+* if more than one wire is asserted:
+  * wait until only one wire is asserted
+  * if that doesn't happen for tA, abort
+* fetch the first chunk
+* check for valid destination
+* read more chunks until end-of-message
+* verify checksum
+
+Fetching a chunk means
+* set frame content to zero
+* repeat 7/5/3/3 times (for N=2/3/4/5):
+  * multiply frame content by (2^N-1)
+    (i.e. shift left 2^N and subtract old value)
+  * read bus state
+  * XOR with previous bus state
+  * subtract one
+  * add to frame
+  * after s=2(N=2: 3) steps of this:
+    * if frame == (2^N-1)^s -1:
+      * set end-of-message
+      * ignore incomplete frame
+* if frame > 2^N-1:
+  * subtract 2^N
+  * shift left 8 bits, add to frame
+  * set end-of-message
+* add frame to buffer
+
+Reading the bus state means:
+* wait 2*tB for any change of signal
+  * None? error if any line is set, otherwise aborted.
+* wait tA
+* read bus state
+
+Waiting for ACK means:
+* if only wire 1 is set, ACK is on wire 2, otherwise wire 1
+* deassert all wires
+* wait tA+tB
+* only the ACK wire is set? success
+* otherwise: fail. Retry later.
+
+There's also a NACK signal:
+* on a two wire system, it's wire 2 if no wires are set, otherwise there is no NACK.
+* if only wire 1, or only 1 and 2, is set, it's on wire 3.
+* otherwise it's on wire 2.
+
+The sender then decides whether to retry, and how often, depending on
+whether only ACK is set (success), only NACK (retry) or possibly ACK plus
+NACK (no retry) are set, or any other wires are held (collision).
+
 
 +++++++++++++++++++++++
 A short example message
@@ -278,18 +384,18 @@ Wires  State                                              CRC
     1  Sender arbitrates the bus (low prio)               remember for `xor`
     -  CRC is zeroed                                      000
     -  Convert 0xbf, 0b10111011-000, 1496, to base 15
-    -  Result : 6 9 B (hex): (6*15+10)*15+11
+    -  Result : 6 9 B (hex): (6*15+9)*15+11
     -  Add one: 7 A C
-    6  first nibble: 1 xor 7                              361 (add 1 xor 6)
-    C  second nibble: 6 xor A                             098 (add 1 xor C)
-    0  third nibble: C xor C                              5aa (add 1 xor 0)
-    F  first (on a 4+-wire bus: only) reversal            661 (add 1 xor F)
+    6  first nibble: 1 xor 7                              767 (add 1 xor 6)
+    C  second nibble: 6 xor A                             392 (add 1 xor C)
+    0  third nibble: C xor C                              097 (add 1 xor 0)
+    F  first (on a 4+-wire bus: only) reversal            343 (add 1 xor F)
     -  Convert CRC 0x661, 819, to base 15
-    -  Result : 7 3 C (hex): (3*15+9)*15+9
-    -  Add one: 8 4 D
-    7  first CRC nibble: F xor 8
-    3  second CRC nibble: 7 xor 4
-    E  third CRC nibble: 3 xor D
+    -  Result : 3 A A (hex): (3*15+10)*15+10
+    -  Add one: 4 B B
+    B  first CRC nibble: F xor 4
+    0  second CRC nibble: B xor B
+    B  third CRC nibble: 0 xor B
     1  Receiver acknowledges the message
     0  Bus is again at rest
 
@@ -300,13 +406,11 @@ You can calculate the CRC value with this command::
 The first argument is the number of wires, the second the initial bus
 state.
 
-The traditional way of verifying a CRC (append it to the message, the
-receiver gets a result of zero (or -1)) does not work here because of
-our bus encoding. Thus, the receiver must remember the CRC and check that
-the incoming value matches.
+
 
 ..
-   Notes on CRCs.
+   These tables collect various results of generating minimal message
+   lengths for a given CRC polynomial / error count.
    
    CRC-16:
         2    3    4    5    6    7    8    9   10   11   <- min len @ errors

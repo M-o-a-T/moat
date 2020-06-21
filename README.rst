@@ -28,8 +28,8 @@ Thus, we're talking about a four-wire bus (or more, if you have spare wires
 in your cable).
 
 Next problem: long wires have somewhat high impedance, which limit your
-transmission speed. You could use something like I2C but a software slave
-is annyoing to program and a hardware slave is too susceptible to noise;
+transmission speed. You could use something like I2C but a software client
+is annyoing to program and a hardware client is too susceptible to noise;
 also, you need 16 bus transitions per byte. This is rather slow.
 
 The MoaT bus offers a solution to this problem. It requires four wires:
@@ -74,8 +74,8 @@ are 7 bits wide. More devices will be possible by forwarding.
 
 Lots of communication flows between small dumb devices and some central
 system. On the MoatBus there may be more than one of the latter, so the
-master addresses get 2 bits. Master address 0 is reserved for
-group-addressed messages. Three "real" master systems is sufficient for
+server addresses get 2 bits. Server address 0 is reserved for
+group-addressed messages. Three "real" servers is sufficient for
 redundancy.
 
 Short addresses are nice, but so is the ability to plug a new device into

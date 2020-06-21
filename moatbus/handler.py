@@ -64,11 +64,12 @@ class BaseHandler:
 
     You need to override these procedures:
 
-    * set_timeout(dly)   -- call .timeout after dly*self.delay usecs; 0=disable
-    * set_wire(bits)     -- set (i.e. pull down) these bits
-    * get_wire()         -- return the bits that are currently set (i.e. low)
-    * process(msg)       -- this message has arrived, handle it!
-    * report_error(typ)  -- a problem has ocurred
+    * set_timeout(dly)      -- call .timeout after dly*self.delay usecs; 0=disable
+    * set_wire(bits)        -- set (i.e. pull down) these bits
+    * get_wire()            -- return the bits that are currently set (i.e. low)
+    * process(msg)          -- this message has arrived, handle it!
+    * report_error(typ)     -- a problem has ocurred
+    * transmitted(msg, res) -- this message has been sent with that result (RES.*)
 
     External code will call these methods:
     * send (msg, prio?) -- send a message with priority (or not).

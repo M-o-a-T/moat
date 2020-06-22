@@ -168,7 +168,7 @@ class Server:
         msg.src = src
         msg.dst = dest
         msg.code = code
-        msg.send_data(data)
+        msg.add_data(data)
 
         await self._back.send(msg, prio)
 

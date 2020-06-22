@@ -24,7 +24,7 @@ async def run(socket,timeout,timerb, source,dest,cmd, data,bits,verbose):
         msg.code = cmd
         data = ' '.join(data).encode("utf-8")
         msg.start_send()
-        msg.send_data(data)
+        msg.add_data(data)
 
         await client.send(dest,msg)
         print(msg.res)

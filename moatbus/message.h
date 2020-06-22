@@ -77,8 +77,8 @@ BusMessage msg_copy_bits(BusMessage msg, u_int8_t off);
 
 // prepare a buffer to add content to be transmitted
 void msg_start_send(BusMessage msg);
-// add bytes, filling incomplete bytes with zero
-void msg_send_data(BusMessage msg, const u_int8_t *data, u_int16_t len);
+// add bytes
+void msg_add_data(BusMessage msg, const u_int8_t *data, u_int16_t len);
 
 // prepare a buffer for sending
 void msg_start_extract(BusMessage msg);

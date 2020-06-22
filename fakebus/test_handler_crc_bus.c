@@ -43,7 +43,7 @@ char run1(u_int N, u_int datalen, u_int n_faults) {
     msg_start_send(msg);
     for(int xx=datalen;xx>0;--xx) {
         u_int8_t c = random()*256L/(RAND_MAX+1L);
-        msg_send_data(msg,&c,1);
+        msg_add_data(msg,&c,1);
     }
     u_int nc = ((datalen+5)*8+C-1)/C; // 3 bytes header, 1 frame CRC
     m_out = malloc(nc*X+5);

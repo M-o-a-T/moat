@@ -375,7 +375,7 @@ void msg_start_send(BusMessage msg)
     msg->data_end_off = 8;
 }
 
-void msg_send_data(BusMessage msg, const u_int8_t *data, u_int16_t len) // bytes
+void msg_add_data(BusMessage msg, const u_int8_t *data, u_int16_t len) // bytes
 {
     if (msg->data_end_off != 8) {
         msg->data_end += 1;

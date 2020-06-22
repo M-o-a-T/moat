@@ -45,7 +45,7 @@ void run1(int N, int x, int nf) {
 
     for(int xx=x;xx>0;--xx) {
         u_int8_t c = random()*256L/(RAND_MAX+1L);
-        msg_send_data(msg,&c,1);
+        msg_add_data(msg,&c,1);
     }
     u_int nc = ((x+5)*8+C-1)/C; // 3 bytes header, 2 bytes CRC
     m_out = malloc(nc*X+5);

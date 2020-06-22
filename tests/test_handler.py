@@ -235,7 +235,7 @@ def gen_data(client):
     msg.dst = -3 if client.addr != -3 else -1
     msg.code = 1 if msg.src<0 and msg.dst<0 else 210 if msg.src>=0 and msg.dst>=0 else 23
     msg.start_send()
-    msg.send_data(b'%d!' % client.addr)
+    msg.add_data(b'%d!' % client.addr)
     client.send(msg)
     return 30
 

@@ -164,7 +164,7 @@ void msg_add_header(BusMessage msg)
     if(msg->dst < 0) {
         if(msg->src < 0) {
             // 1 D D 1 S S C C
-            *--buf = 0x80 | (msg->dst<<5) | 0x10 | ((msg->src&0x03)<<2) | (msg->code&0x03);
+            *--buf = 0x80 | ((msg->dst&0x03)<<5) | 0x10 | ((msg->src&0x03)<<2) | (msg->code&0x03);
         } else {
             // 1 D D 0 S S S S | S S S C C C C C
             u_int8_t m = msg->src;
@@ -174,7 +174,7 @@ void msg_add_header(BusMessage msg)
     } else {
         if(msg->src < 0) {
             // 0 D D D D D D D | 1 S S C C C C C
-            *--buf = 0x80 | (msg->src<<5) | (msg->code&0x1F);
+            *--buf = 0x80 | ((msg->src&0x03)<<5) | (msg->code&0x1F);
             *--buf = msg->dst;
         } else {
             // 0 D D D D D D D | 0 S S S S S S S | CC

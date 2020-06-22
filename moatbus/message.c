@@ -26,6 +26,14 @@ BusMessage msg_alloc(u_int16_t maxlen)
     return msg;
 }
 
+BusMessage msg_copy(BusMessage orig)
+{
+    BusMessage msg = malloc(sizeof(BusMessage *));
+    memcpy(msg, orig, sizeof(BusMessage *));
+    msg->next = NULL;
+    return msg;
+}
+
 void msg_init(BusMessage msg, u_int8_t *data, u_int16_t len)
 {
     memset(msg,0,sizeof(*msg));

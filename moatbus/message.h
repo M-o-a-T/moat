@@ -48,6 +48,8 @@ typedef struct _BusMessage *BusMessage;
 BusMessage msg_alloc(u_int16_t maxlen);
 // init a message allocated elsewhere. Requires MSG_MAXHDR free bytes in front!
 void msg_init(BusMessage msg, u_int8_t *data, u_int16_t len);
+// copy an existing message (but not the data!)
+BusMessage msg_copy(BusMessage orig);
 
 // Free a message
 void msg_free(BusMessage msg);

@@ -48,10 +48,12 @@ class BusMessage:
         """
         Return the header length.
         """
-        h_len = 5
-        for adr in (self.dst, self.src):
-            h_len += 3 if adr < 0 else 8
-        return h_len//8+1
+        if self.dst < 0 and self.src < 0:
+            return 1
+        elif self.dst > 0 and self.src > 0:
+            return 3
+        else:
+            return 2
 
     def first_bits(self, off):
         """
@@ -73,15 +75,19 @@ class BusMessage:
         """
         pass
 
-    def send_data(self, data):
+    def add_data(self, data):
         """
         Add data (bytes) to this message.
 
         The buffer is stuffed with zeroes if not on a byte boundary.
+
+        This is synonymous to `buf += b"data"`.
         """
         if self._data.length & 7:
             self._data.append(uint=0,length=8-(self._data.length & 7))
         self._data.append(data)
+
+    __iadd__ = add_data
 
     def send_bits(self, **kw):
         """

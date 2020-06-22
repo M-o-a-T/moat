@@ -18,6 +18,12 @@ enum HDL_RES {
     RES_FATAL,
 };
 
+#ifndef __cplusplus
+typedef u_int8_t bool;
+#define true 1
+#define false 0
+#endif
+
 struct _BusMessage {
     struct _BusMessage *next; // for chaining buffers
 
@@ -85,7 +91,7 @@ void msg_add_data(BusMessage msg, const u_int8_t *data, u_int16_t len);
 // prepare a buffer for sending
 void msg_start_extract(BusMessage msg);
 // are there more data to extract?
-char msg_extract_more(BusMessage msg);
+bool msg_extract_more(BusMessage msg);
 // extract a frame_bits wide chunk.
 // at the end of the message, fill with zeroes if <8 bits are missing
 //    otherwise align to 8-bit, return |(1<<frame_bits)

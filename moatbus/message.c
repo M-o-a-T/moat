@@ -216,13 +216,13 @@ void msg_start_extract(BusMessage msg)
 }
 
 // are there more data to extract?
-char msg_extract_more(BusMessage msg)
+bool msg_extract_more(BusMessage msg)
 {
     if (msg->data_pos < msg->data_end)
-        return 1;
+        return true;
     if (msg->data_pos_off > msg->data_end_off)
-        return 1;
-    return 0;
+        return true;
+    return false;
 }
 
 u_int16_t msg_extract_chunk(BusMessage msg, u_int8_t frame_bits)

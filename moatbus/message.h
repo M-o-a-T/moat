@@ -87,6 +87,11 @@ BusMessage msg_copy_bits(BusMessage msg, u_int8_t off);
 void msg_start_send(BusMessage msg);
 // add bytes
 void msg_add_data(BusMessage msg, const u_int8_t *data, u_int16_t len);
+// add single byte
+static inline void msg_add_char(BusMessage msg, const u_int8_t ch) {
+    u_int8_t c = (ch);
+    msg_add_data(msg,&c,1);
+}
 
 // prepare a buffer for sending
 void msg_start_extract(BusMessage msg);

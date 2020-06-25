@@ -18,7 +18,7 @@ Physical bus interface
 Both use an I/O-less strategy so that they can be used however necessary.
 
 There currently is no implementation of a buffer-less sender or receiver.
-Feel free to add one …
+Feel free to add one.
 
 Encapsulation of bus messages is handled by ``moatbus/message``.
 
@@ -29,6 +29,12 @@ Serial bus interface
 The serial adapter is in ``moatbus/serial.c``; there's also a Python
 version. Both implement an I/O-less module which can be used in a variety
 of environments.
+
+-------------------------
+Microcontroller interface
+-------------------------
+
+TODO
 
 ++++++++++
 Simulation
@@ -62,7 +68,7 @@ and bidirectionally forwards messages from that to the fakebus and back.
 
 Like on the real bus, debugging disrupts the low-level bus simulator.
 
-For a full-stack simulation, "fakebus/master.py" starts the serial adapter
+For a full-stack simulation, "fakebus/server.py" starts the serial adapter
 and then attaches the bus master module to it.
 
 -------------------------

@@ -92,21 +92,30 @@ it is essential for quickly resolving conflicts.
 Message Types
 +++++++++++++
 
-This document implements messages of typecode zero. All others are
-application defined.
+This document describes all messages of code zero. Messages with that
+typecode which are not mentioned here are reserved. Messages with other
+codes are described elsewhere.
 
-========  ===========  =======  ===========================
+========  ===========  =======  ===========================================
 Source    Destination  Command  Type
-========  ===========  =======  ===========================
-Server 0  Server 0     0        address assignment request
-Server 0  Client       0        positive address assignment response
-Server 0  Server X     0        negative address assignment response (from server X)
-Server X  Server 0     0        all-client system control messages
-Server X  Client       0        specific-client system control messages
-Client    Server 0     0        poll (from client)
-Client    Server X     0        poll request (from server X)
-Client    Client       0        reserved
-========  ===========  =======  ===========================
+========  ===========  =======  ===========================================
+Client 0  Server 0     0        address assignment request
+Server 0  Client X     0        positive address assignment response
+Client 0  Server X     0        negative address assignment response
+--------  -----------  -------  -------------------------------------------
+Server X  Client 0     0        all-client system control messages
+Server X  Client X     0        specific-client system control messages
+Server X  Server X     0        ping request (x != y) / keepalive (x == y)
+Server X  Server 0     0        DistKV sync
+--------  -----------  -------  -------------------------------------------
+Client X  Server 0     0        poll, console (from client) 
+Client X  Server X     0        specific-client replies
+========  ===========  =======  ===========================================
+
+Source/Destination of address assignment messages are used mainly for
+disambiguation and don't otherwise "mean" anything. Devices with an address
+shall not react to AA messages. Devices without an address shall react on
+messages addressed to Client 0.
 
 Address assignment
 ==================
@@ -114,31 +123,50 @@ Address assignment
 The payload for all address assignment messages starts with four flag bits,
 four length bits, and that number of bytes +1 of device-specific serial
 number, MAC, or other device-specific identifier. Serial numbers longer
-than 16 bytes are not allowed. Serial numbers shorter than 4 bytes are
-strongly discouraged.
+than 16 bytes are not allowed as we don't need to number every grain of
+sand on the planet. Serial numbers shorter than 6 bytes are strongly
+discouraged because the likelihood of collisions is too high.
 
-Flags:
-* Bit 0 marks the client as a low-power system that doesn't listen for
+Request
+-------
+
+* Bit 3 indicates that this address is to be released, not acquired.
+  Sent by a device that has its firmware changed, or a server that could
+  not reach the device for a long time, or ….
+
+  If this bit is set, the other three are reserved.
+
+* Bit 2 marks the client as a low-power system that doesn't listen for
   commands all the time, i.e. it can only be talked to some time after
   receiving a "poll" message. 
-* Bits 3…1 are reserved.
+
+* Bit 1 states that the device has incomplete firmware. It started up
+  in boot loader mode.
+
+* Bit 0 is reserved.
 
 The result message uses a four-bit status code field. The rest of the data
 shall be identical to the sender's so that the receiver may easily identify
 its reply.
 
 
-Positive status codes:
+Positive response
+-----------------
 
 * Bit 3 is set if this assignment refers to an existing mapping. If it is
   zero, the device may expect some interrogatory messages / should tell the
   server about its capabilities / should clear any automatic transmission
   until (re-)instructed to do so by the server.
 
-* Bits 2…0 are reserved.
+* Bit 2 states that the device must stay in system/bootloader mode.
+  
+  The server must set this bit when the request has bit 1 set.
+
+* Bits 1…0 are reserved.
 
 
-Negative status codes:
+Negative response
+-----------------
 
 * If bit 3 is clear: client problem.
   * if bit 2 is set: the server is incompatible with one of the client flags 
@@ -160,10 +188,6 @@ Negative status codes:
 
 There currently are no flag bits defined.
 
-Negative replies 
-
-The server will clear any flags which it doesn't understand.
-
 All/Specific Client messages
 ============================
 
@@ -183,10 +207,20 @@ The following messages are defined:
 * 1
   Address Acquire
   Like 0/Poll, but only devices that don't have an address should react.
-  Can only be addressed to all clients; its meaning for specific clients is
-  reserved.
+  Can only be addressed to all clients.
+  
+* 1
+  Console input
+  Assuming that the device contains some sort of command interpreter, send
+  the message in the following bytes to it.
+  Can only be addressed to a specific client.
 
-* 2…12
+* 2
+  Firmware update.
+  TODO see separate document.
+  The "firmware version" subcommand may be sent as a broadcast.
+
+* 3…12
   Reserved
 
 * 13
@@ -219,26 +253,52 @@ The following messages are defined:
   for factory settings.
 
 
-Polling
-=======
+Client broadcasts
+=================
 
-Some clients may not always be online. In this case a client shall send a
-one-byte "poll request" message whenever it does listen to the bus. The
-byte contains four flag bits (reserved) and a signed exponent n; the client
-will listen for any messages during the following 2^n seconds, though it
-should extend that time until the bus is idle sufficiently long for any
-remaining messages to have been transmitted.
+The first byte contains a 4-bit type code and a type-specific value SV.
 
-The next byte, if present, contains a timer minifloat which tells the
-server approximately how long the client will be unavailable after it
-disconnects.
+The following types are defined:
 
-"Normal" messages sent by a polling client do not imply that the client is
-reachable.
+* 0
+  Poll
 
-A server may send a "poll request" message with the same semantics, asking
-the client to use that time / these times instead. The client shall reply
-with another Poll message that approximates the times it'll actually use as
-accurately as possible.
+  Some clients may not always be online. In this case a client shall send a
+  one- or two-byte "poll request" message whenever it does listen to the
+  bus. SV contains a signed exponent n; the client will listen for messages
+  during the following 2^n seconds, though it should extend that time until
+  the bus is idle sufficiently long for any remaining messages to have been
+  transmitted.
 
-Clients that do not require polling must not react to these messages.
+  The next byte, if present, contains a timer minifloat which tells the
+  server approximately how long the client will be unavailable after it
+  disconnects.
+
+  "Normal" messages sent by a polling client do not imply that the client is
+  reachable.
+
+* 1
+  Console
+
+Specific-client replies
+=======================
+
+The first byte contains a 4-bit type code and a type-specific value SV.
+
+The following types are defined:
+
+* 0
+  Poll reply
+  Content: serial number, as in address assignment request.
+  The SV is the length.
+
+* 1
+
+* 2
+  Firmware update ack
+  TODO separate document
+
+* 3
+  Firmware update reject
+  TODO separate document
+

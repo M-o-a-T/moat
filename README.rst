@@ -15,7 +15,7 @@ using cheap microcontrollers and little or no bus attachment hardware, on a
 possibly-unshielded random-topology bus.
 
 Data transfer using WLAN will not work because the sensors take too much
-power. Bluetoothe BLE needs mesh topology which is easy to get wrong. Besides,
+power. Bluetooth/BLE needs mesh topology which is easy to get wrong. Besides,
 all wireless ideas need additional hardware. Two-wire buses like KNX have
 the same problem. A three-wire bus like 1wire is too fiddly to write
 clients for. (Several people have tried.) Anyway, 1wire doesn't have
@@ -64,13 +64,13 @@ Every message must be acknowledged.
 The details are documented in ``doc/spec_wire.rst``.
 
 
-------------------------------
-Addressing and Message Content
-------------------------------
+----------
+Addressing
+----------
 
 More than 100 devices on a single bus are not realistic, esp. when the bus
 needs to supply power to all of them. Device addresses on the MoatBus thus
-are 7 bits wide. More devices will be possible by forwarding.
+are 7 bits wide. More devices will be possible by using gateways.
 
 Lots of communication flows between small dumb devices and some central
 system. On the MoatBus there may be more than one of the latter, so the
@@ -95,4 +95,5 @@ declare discoverable or even configurable shortcuts that can be used to
 shorten bus messages and simplify firmware code.
 
 The details are documented in ``doc/spec_message.rst``.
+
 

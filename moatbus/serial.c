@@ -55,7 +55,7 @@ void sb_send_ack(SerBus sb)
 }
 
 // process an incoming serial character
-void sb_char_in(SerBus sb, u_int8_t c)
+void sb_byte_in(SerBus sb, u_int8_t c)
 {
     sb->idle = 0;
     switch(sb->s_in) {
@@ -112,7 +112,7 @@ void sb_char_in(SerBus sb, u_int8_t c)
 }
 
 // Send char?
-int16_t sb_char_out(SerBus sb)
+int16_t sb_byte_out(SerBus sb)
 {
     static u_int8_t prio[] = "\x01\x02\x03\x04";
     u_int8_t c;

@@ -101,7 +101,7 @@ int main(int argc, char* const* argv)
                 u_int8_t c;
                 if(read(fileno(stdin),&c,1) != 1)
                     goto err;
-                sb_char_in(sb, c);
+                sb_byte_in(sb, c);
             }
             if(p[2].revents) {
                 u_int8_t c = sb_out;
@@ -124,7 +124,7 @@ int main(int argc, char* const* argv)
             fc->out_msg = NULL;
         }
         if(sb_out == -1)
-            sb_out = sb_char_out(sb);
+            sb_out = sb_byte_out(sb);
 
         {
             u_int8_t prio = 0;

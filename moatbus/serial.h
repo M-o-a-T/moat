@@ -61,10 +61,10 @@ void sb_send(SerBus sb, BusMessage msg, u_int8_t prio);
 void sb_send_ack(SerBus sb);
 
 // process an incoming serial character
-void sb_char_in(SerBus sb, u_int8_t c);
+void sb_byte_in(SerBus sb, u_int8_t c);
 
-// Send char? <0=no
-int16_t sb_char_out(SerBus sb);
+// Next char to send? -1 if done
+int16_t sb_byte_out(SerBus sb);
 
 // Received message?
 BusMessage sb_recv(SerBus sb, u_int8_t *prio);

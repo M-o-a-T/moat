@@ -10,11 +10,11 @@ all:
 # need to use python3 sphinx-build
 PATH := /usr/share/sphinx/scripts/python3:${PATH}
 
-PACKAGE = asyncari
+PACKAGE = moatbus
 PYTHON ?= python3
 export PYTHONPATH=$(shell pwd)
 
-PYTEST ?= ${PYTHON} $(shell which pytest-3)
+PYTEST ?= $(shell which pytest)
 TEST_OPTIONS ?= -xvvv --full-trace
 PYLINT_RC ?= .pylintrc
 
@@ -49,17 +49,24 @@ bin/fake_spam:	obj/fake_spam.o
 	gcc -o $@ $^
 bin/fake_serialbus:	obj/fake_serialbus.o obj/fake_client.o obj/libmessage.a
 	gcc -o $@ $^
+bin/test_minifloat:	obj/test_minifloat.o obj/util.o
+	gcc -o $@ $^
+
 
 obj/libmessage.a: obj/message.o obj/crc.o obj/handler.o obj/serial.o
 	ar r $@ $^
 
+obj/crc.o:	moatbus/crc.c
+	gcc -g -O0 -W -c -I. -o $@ $^
 obj/handler.o:	moatbus/handler.c
 	gcc -g -O0 -W -c -I. -o $@ $^
 obj/message.o:	moatbus/message.c
 	gcc -g -O0 -W -c -I. -o $@ $^
 obj/serial.o:	moatbus/serial.c
 	gcc -g -O0 -W -c -I. -o $@ $^
-obj/crc.o:	moatbus/crc.c
+obj/util.o:	moatbus/util.c
+	gcc -g -O0 -W -c -I. -o $@ $^
+obj/test_minifloat.o:	tests/test_minifloat.c
 	gcc -g -O0 -W -c -I. -o $@ $^
 obj/test_handler_crc_bus.o:	fakebus/test_handler_crc_bus.c
 	gcc -g -O0 -W -c -I. -o $@ $^
@@ -84,9 +91,9 @@ doc:
 livehtml: docs
 	sphinx-autobuild $(AUTOSPHINXOPTS) $(ALLSPHINXOPTS) $(SPHINXBUILDDIR)
 
-test:
-	$(PYTEST) $(PACKAGE) $(TEST_OPTIONS)
-
+test: bin/test_minifloat
+	$(PYTEST) tests $(TEST_OPTIONS)
+	bin/test_minifloat
 
 tagged:
 	git describe --tags --exact-match

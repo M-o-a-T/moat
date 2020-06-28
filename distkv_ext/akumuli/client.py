@@ -5,6 +5,7 @@ import asyncclick as click
 from functools import partial
 from collections.abc import Mapping
 
+from distkv.command import node_attr
 from distkv.exceptions import ClientError
 from distkv.util import yprint, attrdict, combine_dict, data_get, NotGiven, path_eval
 from distkv.util import res_delete, res_get, res_update, as_service
@@ -13,11 +14,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-@main.group(short_help="Manage Wago controllers.")  # pylint: disable=undefined-variable
+@main.group(short_help="Manage Akumuli storage.")  # pylint: disable=undefined-variable
 @click.pass_obj
 async def cli(obj):
     """
-    List Wago controllers, modify device handling …
+    List Akumuli storage, modify data handling …
     """
     pass
 
@@ -32,7 +33,7 @@ async def dump(obj, path):
     if len(path) > 4:
         raise click.UsageError("Only up to four path elements allowed")
 
-    async for r in obj.client.get_tree(*obj.cfg.wago.prefix, *path_eval(path, (3,4)), nchain=obj.meta, max_depth=4-len(path)):
+    async for r in obj.client.get_tree(*obj.cfg.akumuli.prefix, *path_eval(path, (3,4)), nchain=obj.meta, max_depth=4-len(path)):
         pl = len(path) + len(r.path)
         rr = res
         if r.path:
@@ -52,7 +53,7 @@ async def list(obj, path):
     if len(path) > 4:
         raise click.UsageError("Only up to four path elements allowed")
 
-    async for r in obj.client.get_tree(*obj.cfg.wago.prefix, *path_eval(path, (3,4)), nchain=obj.meta, min_depth=1, max_depth=1):
+    async for r in obj.client.get_tree(*obj.cfg.akumuli.prefix, *path_eval(path, (3,4)), nchain=obj.meta, min_depth=1, max_depth=1):
         print(r.path[-1], file=obj.stdout)
 
 
@@ -64,7 +65,7 @@ async def list(obj, path):
 @click.argument("path", nargs=-1)
 @click.pass_obj
 async def attr_(obj, attr, value, path, eval_, split):
-    """Set/get/delete an attribute on a given Wago element.
+    """Set/get/delete an attribute on a given akumuli element.
 
     `--eval` without a value deletes the attribute.
     """
@@ -74,7 +75,10 @@ async def attr_(obj, attr, value, path, eval_, split):
         raise click.UsageError("Values must have locations ('-a ATTR').")
     if split:
         value = value.split()
-    await _attr(obj, attr, value, path, eval_)
+    res = await node_attr(obj, attr, value, path_eval(path, (3,4)), eval_)
+
+    if obj.meta:
+        yprint(res, stream=obj.stdout)
 
 @cli.command()
 @click.option("-m", "--mode", help="Port mode. Use '-' to disable.")
@@ -101,7 +105,7 @@ async def port(obj, path, mode, attr):
     """
     if len(path) != 4:
         raise click.UsageError("Path must be 4 elements: server+type+card+port.")
-    res = await obj.client.get(*obj.cfg.wago.prefix, *path_eval(path, (3,4)), nchain=obj.meta or 1)
+    res = await obj.client.get(*obj.cfg.akumuli.prefix, *path_eval(path, (3,4)), nchain=obj.meta or 1)
     val = res.get('value', attrdict())
 
     if mode:
@@ -138,39 +142,8 @@ async def port(obj, path, mode, attr):
             raise v
         val[k] = v
 
-    await _attr(obj, (), val, path, False, res)
+    res = await node_attr(obj, path_eval(path, (3,4)), (), val, eval_=False, res=res)
 
-async def _attr(obj, attr, value, path, eval_, res=None):
-    # Sub-attr setter.
-    # Special: if eval_ is True, an empty value deletes. A mapping replaces instead of updating.
-    if res is None:
-        res = await obj.client.get(*obj.cfg.wago.prefix, *path_eval(path, (3,4)), nchain=obj.meta or (value is not None))
-    try:
-        val = res.value
-    except AttributeError:
-        res.chain = None
-    if eval_:
-        if value is None:
-            value = res_delete(res, *attr)
-        else:
-            value = eval(value)
-            if isinstance(value, Mapping):
-                # replace
-                value = res_delete(res, *attr)
-                value = value._update(*attr, value=value)
-            else:
-                value = res_update(res, *attr, value=value)
-    else:
-        if value is None:
-            if not attr and obj.meta:
-                val = res
-            else:
-                val = res_get(res, *attr)
-            yprint(val, stream=obj.stdout)
-            return
-        value = res_update(res, *attr, value=value)
-
-    res = await obj.client.set(*obj.cfg.wago.prefix, *path_eval(path, (3,4)), value=value, nchain=obj.meta, chain=res.chain)
     if obj.meta:
         yprint(res, stream=obj.stdout)
 
@@ -190,7 +163,7 @@ async def server(obj, name, host, port, delete):
     if not name:
         if host or port or delete:
             raise click.UsageError("Use a server name to set parameters")
-        async for r in obj.client.get_tree(*obj.cfg.wago.prefix, min_depth=1, max_depth=1):
+        async for r in obj.client.get_tree(*obj.cfg.akumuli.prefix, min_depth=1, max_depth=1):
             print(r.path[-1], file=obj.stdout)
         return
     elif len(name) > 1:
@@ -208,13 +181,16 @@ async def server(obj, name, host, port, delete):
             else:
                 value.port = int(port)
     elif delete:
-        res = await obj.client.delete_tree(*obj.cfg.wago.prefix, name, nchain=obj.meta)
+        res = await obj.client.delete_tree(*obj.cfg.akumuli.prefix, name, nchain=obj.meta)
         if obj.meta:
             yprint(res, stream=obj.stdout)
         return
     else:
         value = None
-    await _attr(obj, ("server",), value, (name,), False)
+    res = await node_attr(obj, (*obj.cfg.akumuli.prefix, name), ("server",), value)
+
+    if obj.meta:
+        yprint(res, stream=obj.stdout)
 
 
 @cli.command()
@@ -223,11 +199,11 @@ async def server(obj, name, host, port, delete):
 async def monitor(obj, name):
     """Stand-alone task to monitor a single contoller.
     """
-    from distkv_ext.wago.task import task
-    from distkv_ext.wago.model import WAGOroot
-    server = await WAGOroot.as_handler(obj.client)
+    from distkv_ext.akumuli.task import task
+    from distkv_ext.akumuli.model import AkumuliRoot
+    server = await AKUMULIroot.as_handler(obj.client)
     await server.wait_loaded()
 
     async with as_service(obj) as srv:
-        await task(obj.client, obj.cfg.wago, server[name], srv)
+        await task(obj.client, obj.cfg.akumuli, server[name], srv)
 

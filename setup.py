@@ -15,7 +15,7 @@ setup(
     setup_requires=["setuptools_scm", "pytest-runner", "trustme >= 0.5"],
     install_requires=[
         "distkv >= 0.13.1",
-        "asyncwago >= 0.30",
+        "asyncakumuli >= 0.1.0",
     ],
     tests_require=["trustme >= 0.5", "pytest", "flake8 >= 3.7"],
     keywords=["async", "key-values", "distributed"],

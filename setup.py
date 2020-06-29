@@ -17,7 +17,7 @@ setup(
         "distkv >= 0.30.1",
         "asyncowfs >= 0.10.2",
     ],
-    tests_require=["trustme >= 0.5", "pytest", "flake8 >= 3.7"],
+    tests_require=["trustme >= 0.5", "pytest", "flake8 >= 3.7", "pytest-trio"],
     keywords=["async", "key-values", "distributed"],
     python_requires=">=3.7",
     classifiers=[

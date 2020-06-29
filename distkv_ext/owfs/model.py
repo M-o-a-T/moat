@@ -6,7 +6,7 @@ import anyio
 from distkv.obj import ClientEntry, ClientRoot, AttrClientEntry
 from distkv.util import combine_dict
 from distkv.errors import ErrorRoot
-from collections import Mapping
+from collections.abc import Mapping
 
 import logging
 logger = logging.getLogger(__name__)

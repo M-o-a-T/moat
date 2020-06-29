@@ -5,7 +5,7 @@ OWFS task for DistKV
 import anyio
 from asyncowfs import OWFS
 from asyncowfs.event import DeviceEvent, DeviceLocated, DeviceNotFound, DeviceValue
-from collections import Mapping
+from collections.abc import Mapping
 
 from distkv.util import combine_dict, NotGiven
 from distkv_ext.owfs.model import OWFSroot

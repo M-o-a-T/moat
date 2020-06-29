@@ -1,0 +1,21 @@
+[Unit]
+Description=DistKV OWFS server
+After=distkv.service
+Requires=distkv.service
+
+ConditionFileNotEmpty=/etc/distkv.cfg
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/distkv client owfs monitor %I
+
+EnvironmentFile=/etc/distkv.env
+
+TimeoutSec=300
+WatchdogSec=10
+
+Restart=always
+RestartSec=30

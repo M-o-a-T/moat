@@ -3,7 +3,7 @@ DistKV client data model for 1wire
 """
 import anyio
 
-from distkv.obj import ClientEntry, ClientRoot
+from distkv.obj import ClientEntry, ClientRoot, AttrClientEntry
 from distkv.util import combine_dict
 from distkv.errors import ErrorRoot
 from collections import Mapping
@@ -55,47 +55,60 @@ class OWFSnode(ClientEntry):
         if dev is None or dev.bus is None:
             return
 
-        val = combine_dict(self.value_or({}, Mapping), self.parent.value_or({}, Mapping))
-        poll = val.get('attr',{})
+        v = self.value_or({}, Mapping)
+        val = combine_dict(v, self.parent.value_or({}, Mapping))
 
-        # set up polling
-        for k,v in self.poll.items():
-            kp = poll.get(k,{})
-            if not kp.get('dest',()) or kp.get('interval',-1) <= 0:
-                logger.error("POLL OFF 1 %s",k)
-                await dev.set_polling_interval(k,0)
-                await self.root.err.record_working("owfs", *self.subpath, k, "poll", comment="deleted")
+        dev = self.dev
+        if dev is None or dev.bus is None:
+            self.poll = {}  # the bus forgets them
+            # self.monitors is cleared by the tasks
+        else:
+            obus = v.get('bus',{})
+            bus = dict(server=dev.bus.server.name, path=dev.bus.path)
+            if bus != obus:
+                v['bus'] = bus
+                await self.update(v)
+            
+            poll = val.get('attr',{})
 
-        for k,v in list(self.monitors.items()):
-            kp = poll.get(k,{})
-            if kp.get('src',()) != self.poll.get(k,{}).get('src',()):
-                logger.error("POLL OFF 2 %s",k)
-                await dev.set_polling_interval(k,0)
-                await v.cancel()
-                await self.root.err.record_working("owfs", *self.subpath, k, "write", comment="deleted")
+            # set up polling
+            for k,v in self.poll.items():
+                kp = poll.get(k,{})
+                if not kp.get('dest',()) or kp.get('interval',-1) <= 0:
+                    logger.error("POLL OFF 1 %s",k)
+                    await dev.set_polling_interval(k,0)
+                    await self.root.err.record_working("owfs", *self.subpath, k, "poll", comment="deleted")
 
-        for k,v in poll.items():
-            kp = self.poll.get(k,{})
-            try:
-                if v.get('dest',()):
-                    i = v.get('interval',-1)
-                    if i > 0:
-                        if not kp.get('dest',()) or kp.get('interval',-1) != i:
-                            logger.error("POLL ON %s %s",k,v)
-                            await dev.set_polling_interval(k,v['interval'])
-                        await self.root.err.record_working("owfs", *self.subpath, k, "poll", comment="replaced", data=v)
-            except Exception as exc:
-                await self.root.err.record_error("owfs", *self.subpath, k, "poll", data=v, exc=exc)
+            for k,v in list(self.monitors.items()):
+                kp = poll.get(k,{})
+                if kp.get('src',()) != self.poll.get(k,{}).get('src',()):
+                    logger.error("POLL OFF 2 %s",k)
+                    await dev.set_polling_interval(k,0)
+                    await v.cancel()
+                    await self.root.err.record_working("owfs", *self.subpath, k, "write", comment="deleted")
 
-            vp = v.get('src',())
-            if vp:
-                if kp.get('src',()) != vp or k not in self.monitors:
-                    evt = anyio.create_event()
-                    await self.client.tg.spawn(self._watch, k, v['src'], evt)
-                    await evt.wait()
+            for k,v in poll.items():
+                kp = self.poll.get(k,{})
+                try:
+                    if v.get('dest',()):
+                        i = v.get('interval',-1)
+                        if i > 0:
+                            if not kp.get('dest',()) or kp.get('interval',-1) != i:
+                                logger.error("POLL ON %s %s",k,v)
+                                await dev.set_polling_interval(k,v['interval'])
+                            await self.root.err.record_working("owfs", *self.subpath, k, "poll", comment="replaced", data=v)
+                except Exception as exc:
+                    await self.root.err.record_error("owfs", *self.subpath, k, "poll", data=v, exc=exc)
+
+                vp = v.get('src',())
+                if vp:
+                    if kp.get('src',()) != vp or k not in self.monitors:
+                        evt = anyio.create_event()
+                        await self.client.tg.spawn(self._watch, k, v['src'], evt)
+                        await evt.wait()
 
 
-        self.poll = poll
+            self.poll = poll
 
     async def _watch(self, k, src, evt):
         """
@@ -134,6 +147,7 @@ class OWFSnode(ClientEntry):
 
 class OWFSfamily(ClientEntry):
     cls = OWFSnode
+
     @classmethod
     def child_type(cls, name):
         if not isinstance(name,int):
@@ -148,6 +162,20 @@ class OWFSfamily(ClientEntry):
             await c._update_value()
 
 
+class ServerEntry(AttrClientEntry):
+    ATTRS = ("server",)
+
+    @classmethod
+    def child_type(cls, name):
+        return ClientEntry
+
+
+class ServerRoot(ClientEntry):
+    @classmethod
+    def child_type(cls, name):
+        return ServerEntry
+
+
 class OWFSroot(ClientRoot):
     cls = {}
     reg = {}
@@ -159,6 +187,10 @@ class OWFSroot(ClientRoot):
             self.err = await ErrorRoot.as_handler(self.client)
         await super().run_starting()
 
+    @property
+    def server(self):
+        return self['server']
+
     @classmethod
     def register(cls, typ):
         def acc(kls):
@@ -169,7 +201,7 @@ class OWFSroot(ClientRoot):
     @classmethod
     def child_type(kls, name):
         if not isinstance(name,int):
-            return ClientEntry
+            return ServerRoot
         if name<0 or name>255:
             return ClientEntry
         try:

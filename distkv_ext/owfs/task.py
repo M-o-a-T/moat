@@ -23,14 +23,15 @@ async def mon(client, ow, hd):
 
             if isinstance(msg, DeviceEvent):
                 dev = msg.device
-                node = hd.allocate(dev.family, exists=True)
-                vf = node.value_or({}, Mapping)
-                node = node.allocate(dev.code, exists=True)
+                fam = hd.allocate(dev.family, exists=True)
+                vf = fam.value_or({}, Mapping)
+                node = fam.allocate(dev.code, exists=True)
                 v = node.value
                 if v is NotGiven:
                     v = {}
                     await node.update(v)
                 v = combine_dict(v,vf)
+                print(msg)
 
             if isinstance(msg, DeviceLocated):
                 await node.with_device(msg.device)
@@ -63,13 +64,16 @@ async def task(client, cfg, server=None, evt=None):
     async with OWFS() as ow:
         hd = await OWFSroot.as_handler(client)
         await ow.add_task(mon, client, ow, hd)
-        if server:
-            s = combine_dict(server, cfg.owfs.server_default)
-            await ow.add_server(**s)
+        port = cfg.owfs.port
+        if not server:
+            si = hd.server.items()
+        elif isinstance(server,str):
+            si = ((server,hd.server[server]),)
         else:
-            for s in cfg.owfs.server:
-                s = combine_dict(s,cfg.owfs.server_default)
-                await ow.add_server(**s)
+            si = ((s,hd.server[s]) for s in server)
+        for sname,s in si:
+            s = combine_dict(s.server, {"port":port})
+            await ow.add_server(name=sname, **s)
         if evt is not None:
             await evt.set()
         while True:

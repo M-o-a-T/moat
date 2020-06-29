@@ -50,13 +50,13 @@ async def mon(client, ow, hd):
                     logger.debug("VALUE %s %s %s",path,msg.attribute,msg.value)
                     res = None
                     try:
-                        res = await client.get(*path, nchain=2)
+                        res = await client.get(path, nchain=2)
                     except SyntaxError:
                         pass
                     else:
                         if res.get('value',NotGiven) == msg.value:
                             continue
-                    await client.set(*path, value=msg.value,
+                    await client.set(path, value=msg.value,
                             **({'chain': res.chain} if res is not None else {}))
 
 

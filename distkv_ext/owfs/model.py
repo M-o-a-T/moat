@@ -77,7 +77,7 @@ class OWFSnode(ClientEntry):
                 if not kp.get('dest',()) or kp.get('interval',-1) <= 0:
                     logger.debug("POLL OFF 1 %s",k)
                     await dev.set_polling_interval(k,0)
-                    await self.root.err.record_working("owfs", *self.subpath, k, "poll", comment="deleted")
+                    await self.root.err.record_working("owfs", self.subpath + (k, "poll"), comment="deleted")
 
             for k,v in list(self.monitors.items()):
                 kp = poll.get(k,{})
@@ -85,7 +85,7 @@ class OWFSnode(ClientEntry):
                     logger.debug("POLL OFF 2 %s",k)
                     await dev.set_polling_interval(k,0)
                     await v.cancel()
-                    await self.root.err.record_working("owfs", *self.subpath, k, "write", comment="deleted")
+                    await self.root.err.record_working("owfs", self.subpath + (k, "write"), comment="deleted")
 
             for k,v in poll.items():
                 kp = self.poll.get(k,{})
@@ -96,9 +96,9 @@ class OWFSnode(ClientEntry):
                             if not kp.get('dest',()) or kp.get('interval',-1) != i:
                                 logger.debug("POLL ON %s %s",k,v)
                                 await dev.set_polling_interval(k,v['interval'])
-                            await self.root.err.record_working("owfs", *self.subpath, k, "poll", comment="replaced", data=v)
+                            await self.root.err.record_working("owfs", self.subpath + (k, "poll"), comment="replaced", data=v)
                 except Exception as exc:
-                    await self.root.err.record_error("owfs", *self.subpath, k, "poll", data=v, exc=exc)
+                    await self.root.err.record_error("owfs", self.subpath + (k, "poll"), data=v, exc=exc)
 
                 vp = v.get('src',())
                 if vp:
@@ -126,7 +126,7 @@ class OWFSnode(ClientEntry):
 
                     await evt.set()
                     kp = [x for x in k.split('/') if k]
-                    await self.root.err.record_working("owfs", *self.subpath, k, "write", comment="replaced")
+                    await self.root.err.record_working("owfs", self.subpath + (k, "write"), comment="replaced")
 
                     async for msg in wp:
                         try:
@@ -135,11 +135,11 @@ class OWFSnode(ClientEntry):
                             pass
                         else:
                             if self.dev is None:
-                                await self.root.err.record_error("owfs", *self.subpath, k, "write", comment="device missing")
+                                await self.root.err.record_error("owfs", self.subpath + (k, "write"), comment="device missing")
                                 return
                             await self.dev.attr_set(*kp, value=val)
             except Exception as exc:
-                await self.root.err.record_error("owfs", *self.subpath, k, "write", exc=exc)
+                await self.root.err.record_error("owfs", self.subpath + (k, "write"), exc=exc)
             finally:
                 if self.monitors.get(k, None) is sc:
                     del self.monitors[k]

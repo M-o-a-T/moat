@@ -66,7 +66,7 @@ async def task(client, cfg, server=None, evt=None):
         await ow.add_task(mon, client, ow, hd)
         port = cfg.owfs.port
         if not server:
-            si = hd.server.items()
+            si = ((s._name,s) for s in hd.server)
         elif isinstance(server,str):
             si = ((server,hd.server[server]),)
         else:

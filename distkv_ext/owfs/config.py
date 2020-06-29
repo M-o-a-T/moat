@@ -1,7 +1,7 @@
-from distkv.util import attrdict
+from distkv.util import attrdict, Path
 
 CFG = attrdict(
-        prefix=('.distkv','onewire'),
+        prefix=Path('.distkv','onewire'),
         port=4304,
     )
 

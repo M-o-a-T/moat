@@ -75,14 +75,14 @@ class OWFSnode(ClientEntry):
             for k,v in self.poll.items():
                 kp = poll.get(k,{})
                 if not kp.get('dest',()) or kp.get('interval',-1) <= 0:
-                    logger.error("POLL OFF 1 %s",k)
+                    logger.debug("POLL OFF 1 %s",k)
                     await dev.set_polling_interval(k,0)
                     await self.root.err.record_working("owfs", *self.subpath, k, "poll", comment="deleted")
 
             for k,v in list(self.monitors.items()):
                 kp = poll.get(k,{})
                 if kp.get('src',()) != self.poll.get(k,{}).get('src',()):
-                    logger.error("POLL OFF 2 %s",k)
+                    logger.debug("POLL OFF 2 %s",k)
                     await dev.set_polling_interval(k,0)
                     await v.cancel()
                     await self.root.err.record_working("owfs", *self.subpath, k, "write", comment="deleted")
@@ -94,7 +94,7 @@ class OWFSnode(ClientEntry):
                         i = v.get('interval',-1)
                         if i > 0:
                             if not kp.get('dest',()) or kp.get('interval',-1) != i:
-                                logger.error("POLL ON %s %s",k,v)
+                                logger.debug("POLL ON %s %s",k,v)
                                 await dev.set_polling_interval(k,v['interval'])
                             await self.root.err.record_working("owfs", *self.subpath, k, "poll", comment="replaced", data=v)
                 except Exception as exc:

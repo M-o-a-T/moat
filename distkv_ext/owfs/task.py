@@ -47,7 +47,7 @@ async def mon(client, ow, hd):
                 except KeyError:
                     continue
                 else:
-                    logger.error("VALUE %s %s %s",path,msg.attribute,msg.value)
+                    logger.debug("VALUE %s %s %s",path,msg.attribute,msg.value)
                     res = None
                     try:
                         res = await client.get(*path, nchain=2)

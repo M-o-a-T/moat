@@ -9,8 +9,10 @@ from distkv.errors import ErrorRoot
 from collections.abc import Mapping
 
 import logging
+
 logger = logging.getLogger(__name__)
-        
+
+
 class OWFSnode(ClientEntry):
     poll = None
     dev = None
@@ -40,7 +42,7 @@ class OWFSnode(ClientEntry):
         self.dev = dev
         await self._update_value()
 
-    async def set_value(self, val):
+    async def set_value(self, val):  # pylint: disable=arguments-differ
         """
         Some attribute has been updated.
         """
@@ -63,50 +65,57 @@ class OWFSnode(ClientEntry):
             self.poll = {}  # the bus forgets them
             # self.monitors is cleared by the tasks
         else:
-            obus = v.get('bus',{})
+            obus = v.get("bus", {})
             bus = dict(server=dev.bus.server.name, path=dev.bus.path)
             if bus != obus:
-                v['bus'] = bus
+                v["bus"] = bus
                 await self.update(v)
-            
-            poll = val.get('attr',{})
+
+            poll = val.get("attr", {})
 
             # set up polling
-            for k,v in self.poll.items():
-                kp = poll.get(k,{})
-                if not kp.get('dest',()) or kp.get('interval',-1) <= 0:
-                    logger.debug("POLL OFF 1 %s",k)
-                    await dev.set_polling_interval(k,0)
-                    await self.root.err.record_working("owfs", self.subpath + (k, "poll"), comment="deleted")
+            for k, v in self.poll.items():
+                kp = poll.get(k, {})
+                if not kp.get("dest", ()) or kp.get("interval", -1) <= 0:
+                    logger.debug("POLL OFF 1 %s", k)
+                    await dev.set_polling_interval(k, 0)
+                    await self.root.err.record_working(
+                        "owfs", self.subpath + (k, "poll"), comment="deleted"
+                    )
 
-            for k,v in list(self.monitors.items()):
-                kp = poll.get(k,{})
-                if kp.get('src',()) != self.poll.get(k,{}).get('src',()):
-                    logger.debug("POLL OFF 2 %s",k)
-                    await dev.set_polling_interval(k,0)
+            for k, v in list(self.monitors.items()):
+                kp = poll.get(k, {})
+                if kp.get("src", ()) != self.poll.get(k, {}).get("src", ()):
+                    logger.debug("POLL OFF 2 %s", k)
+                    await dev.set_polling_interval(k, 0)
                     await v.cancel()
-                    await self.root.err.record_working("owfs", self.subpath + (k, "write"), comment="deleted")
+                    await self.root.err.record_working(
+                        "owfs", self.subpath + (k, "write"), comment="deleted"
+                    )
 
-            for k,v in poll.items():
-                kp = self.poll.get(k,{})
+            for k, v in poll.items():
+                kp = self.poll.get(k, {})
                 try:
-                    if v.get('dest',()):
-                        i = v.get('interval',-1)
+                    if v.get("dest", ()):
+                        i = v.get("interval", -1)
                         if i > 0:
-                            if not kp.get('dest',()) or kp.get('interval',-1) != i:
-                                logger.debug("POLL ON %s %s",k,v)
-                                await dev.set_polling_interval(k,v['interval'])
-                            await self.root.err.record_working("owfs", self.subpath + (k, "poll"), comment="replaced", data=v)
+                            if not kp.get("dest", ()) or kp.get("interval", -1) != i:
+                                logger.debug("POLL ON %s %s", k, v)
+                                await dev.set_polling_interval(k, v["interval"])
+                            await self.root.err.record_working(
+                                "owfs", self.subpath + (k, "poll"), comment="replaced", data=v
+                            )
                 except Exception as exc:
-                    await self.root.err.record_error("owfs", self.subpath + (k, "poll"), data=v, exc=exc)
+                    await self.root.err.record_error(
+                        "owfs", self.subpath + (k, "poll"), data=v, exc=exc
+                    )
 
-                vp = v.get('src',())
+                vp = v.get("src", ())
                 if vp:
-                    if kp.get('src',()) != vp or k not in self.monitors:
+                    if kp.get("src", ()) != vp or k not in self.monitors:
                         evt = anyio.create_event()
-                        await self.client.tg.spawn(self._watch, k, v['src'], evt)
+                        await self.client.tg.spawn(self._watch, k, v["src"], evt)
                         await evt.wait()
-
 
             self.poll = poll
 
@@ -125,8 +134,10 @@ class OWFSnode(ClientEntry):
                     self.monitors[k] = sc
 
                     await evt.set()
-                    kp = [x for x in k.split('/') if k]
-                    await self.root.err.record_working("owfs", self.subpath + (k, "write"), comment="replaced")
+                    kp = [x for x in k.split("/") if k]
+                    await self.root.err.record_working(
+                        "owfs", self.subpath + (k, "write"), comment="replaced"
+                    )
 
                     async for msg in wp:
                         try:
@@ -135,7 +146,9 @@ class OWFSnode(ClientEntry):
                             pass
                         else:
                             if self.dev is None:
-                                await self.root.err.record_error("owfs", self.subpath + (k, "write"), comment="device missing")
+                                await self.root.err.record_error(
+                                    "owfs", self.subpath + (k, "write"), comment="device missing"
+                                )
                                 return
                             await self.dev.attr_set(*kp, value=val)
             except Exception as exc:
@@ -150,13 +163,13 @@ class OWFSfamily(ClientEntry):
 
     @classmethod
     def child_type(cls, name):
-        if not isinstance(name,int):
+        if not isinstance(name, int):
             return ClientEntry
-        if name<=0 or name>16**12:
+        if name <= 0 or name > 16 ** 12:
             return ClientEntry
         return cls.cls
 
-    async def set_value(self, val):
+    async def set_value(self, val):  # pylint: disable=arguments-differ
         await super().set_value(val)
         for c in self:
             await c._update_value()
@@ -189,32 +202,34 @@ class OWFSroot(ClientRoot):
 
     @property
     def server(self):
-        return self['server']
+        return self["server"]
 
     @classmethod
     def register(cls, typ):
         def acc(kls):
             cls.reg[typ] = kls
             return kls
+
         return acc
 
     @classmethod
     def child_type(kls, name):
-        if not isinstance(name,int):
+        if not isinstance(name, int):
             return ServerRoot
-        if name<0 or name>255:
+        if name < 0 or name > 255:
             return ClientEntry
         try:
             return kls.cls[name]
         except KeyError:
+
             class FamilyX(OWFSfamily):
                 cls = kls.reg.get(name, OWFSnode)
+
             FamilyX.__name__ = "OWFSfamily_%02X" % (name,)
             kls.cls[name] = FamilyX
             return FamilyX
 
+
 @OWFSroot.register(0x10)
 class TempNode(OWFSnode):
     CFG = {"temperature": 30}
-
-

@@ -10,3 +10,6 @@ else
 		@echo "Please use 'python setup.py'."
 		@exit 1
 endif
+
+pytest:
+	sudo tests/test.sh

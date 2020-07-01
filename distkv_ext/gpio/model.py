@@ -12,8 +12,10 @@ from collections import Mapping
 import asyncgpio as gpio
 
 import logging
+
 logger = logging.getLogger(__name__)
-        
+
+
 def _DIR(d):
     if d is None:
         return gpio.REQUEST_EVENT_BOTH_EDGES
@@ -22,10 +24,12 @@ def _DIR(d):
     else:
         return gpio.REQUEST_EVENT_FALLING_EDGE
 
+
 class _GPIObase(ClientEntry):
     """
     Forward ``_update_chip`` calls to child entries.
     """
+
     _chip = None
 
     @property
@@ -43,7 +47,7 @@ class _GPIObase(ClientEntry):
         await self.parent.update_chip()
 
     async def _update_chip(self):
-        if not self.val_d(True,'present'):
+        if not self.val_d(True, "present"):
             return
         await self.setup()
         for k in self:
@@ -52,10 +56,12 @@ class _GPIObase(ClientEntry):
     async def setup(self):
         pass
 
+
 class _GPIOnode(_GPIObase):
     """
     Base class for a single input or output.
     """
+
     _poll = None
 
     @property
@@ -86,19 +92,20 @@ class _GPIOnode(_GPIObase):
 class GPIOline(_GPIOnode):
     """Describes one GPIO line.
     """
+
     _work = None
     _task_scope = None
     _task_done = None
 
-    def __init__(self,*a,**k):
-        super().__init__(*a,**k)
-        self.logger = logging.getLogger(".".join(("gpio",self._path[-2],str(self._path[-1]))))
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.logger = logging.getLogger(".".join(("gpio", self._path[-2], str(self._path[-1]))))
 
     async def set_value(self, value):
         await super().set_value(value)
         if value is NotGiven:
             await self._kill_task()
-            
+
     async def _kill_task(self):
         if self._task_scope is not None:
             await self._task_scope.cancel()
@@ -114,7 +121,7 @@ class GPIOline(_GPIOnode):
             await self._work.aclose()
 
         try:
-            typ = self.find_cfg('type')
+            typ = self.find_cfg("type")
         except KeyError:
             typ = "NOT_SET"
         if typ == "input":
@@ -122,15 +129,20 @@ class GPIOline(_GPIOnode):
         elif typ == "output":
             await self._setup_output()
         else:
-            await self.root.err.record_error("gpio", *self.subpath, comment="Line type not set", data={"path":self.subpath,"typ":typ})
+            await self.root.err.record_error(
+                "gpio",
+                *self.subpath,
+                comment="Line type not set",
+                data={"path": self.subpath, "typ": typ}
+            )
 
-    async def _task(self,p,*a,**k):
+    async def _task(self, p, *a, **k):
         await self._kill_task()
         try:
             async with anyio.open_cancel_scope() as sc:
                 self._task_scope = sc
                 self._task_done = anyio.create_event()
-                await p(*a,**k)
+                await p(*a, **k)
         finally:
             self._task_scope = None
             await self._task_done.set()
@@ -138,10 +150,10 @@ class GPIOline(_GPIOnode):
     # Input #
 
     async def _poll_task(self, evt, dest):
-        negate = self.find_cfg('low')
-        change = self.find_cfg('change', default=None)
-        skip = self.find_cfg('skip')
-        bounce = self.find_cfg('t_bounce')
+        negate = self.find_cfg("low")
+        change = self.find_cfg("change", default=None)
+        skip = self.find_cfg("skip")
+        bounce = self.find_cfg("t_bounce")
 
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
@@ -178,23 +190,23 @@ class GPIOline(_GPIOnode):
                             # inverse of the above
                             await set_value(old_value)
                     else:
-                        if skip: # otherwise we already sent that
+                        if skip:  # otherwise we already sent that
                             await set_value(e.value)
                         old_value = e.value
 
                     await self.root.err.record_working("gpio", *self.subpath)
 
     async def _button_task(self, evt, dest):
-        negate = self.find_cfg('low')
-        skip = self.find_cfg('skip')
-        bounce = self.find_cfg('t_bounce')
-        idle = self.find_cfg('t_idle')
-        idle_h = self.find_cfg('t_idle_on', default=idle)
-        idle_clear = self.find_cfg('t_clear')
-        count = self.find_cfg('count')
-        flow = self.find_cfg('flow')
+        negate = self.find_cfg("low")
+        skip = self.find_cfg("skip")
+        bounce = self.find_cfg("t_bounce")
+        idle = self.find_cfg("t_idle")
+        idle_h = self.find_cfg("t_idle_on", default=idle)
+        idle_clear = self.find_cfg("t_clear")
+        count = self.find_cfg("count")
+        flow = self.find_cfg("flow")
 
-        self.logger.debug("bounce %s idle %s count %s", bounce,idle,count)
+        self.logger.debug("bounce %s idle %s count %s", bounce, idle, count)
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
 
@@ -205,13 +217,14 @@ class GPIOline(_GPIOnode):
                 ival = None
                 i = mon.__aiter__()
 
-                def td(a,b):
-                    a=a.timestamp
-                    b=b.timestamp
-                    return a[0]-b[0]+(a[1]-b[1])/1000000000
+                def td(a, b):
+                    a = a.timestamp
+                    b = b.timestamp
+                    return a[0] - b[0] + (a[1] - b[1]) / 1000000000
+
                 def ts(a):
                     a = a.timestamp
-                    return "%03d.%05d" % (a[0]%1000, a[1]/10000)
+                    return "%03d.%05d" % (a[0] % 1000, a[1] / 10000)
 
                 def inv(x):
                     nonlocal negate
@@ -228,16 +241,16 @@ class GPIOline(_GPIOnode):
                 count = inv(count)
                 ival = mon.value
 
-                async def record(e1,ival):
+                async def record(e1, ival):
                     # We record a single sequence of possibly-dirty signals.
                     # e0/e1: first+last change of a sequence with change intervals
                     #        shorter than `bounce`
                     # e2: first change after that sequence has settled, or None when timed out.
-                    # 
+                    #
                     res = []
                     e1.value = None
                     e0 = e1
-                    self.logger.debug("Start %s %s",e1.value,ts(e1))
+                    self.logger.debug("Start %s %s", e1.value, ts(e1))
 
                     e2 = None
                     flow_bounce = flow
@@ -250,9 +263,18 @@ class GPIOline(_GPIOnode):
                             pass
                         else:
                             e1 = e2
-                            if flow_bounce and td(e1,e0) > bounce:
+                            if flow_bounce and td(e1, e0) > bounce:
                                 flow_bounce = False
-                                await self.client.set(*dest, value={"start":inv(ival),"seq":res+[0],"end":inv(e1.value),"t":bounce,"flow":True})
+                                await self.client.set(
+                                    *dest,
+                                    value={
+                                        "start": inv(ival),
+                                        "seq": res + [0],
+                                        "end": inv(e1.value),
+                                        "t": bounce,
+                                        "flow": True,
+                                    }
+                                )
                             continue
 
                         if e2 is None:
@@ -265,45 +287,65 @@ class GPIOline(_GPIOnode):
 
                         if e1.value != e0.value:
                             # e0>e1 ends up where it started from, thus we had a dirty signal.
-                            if skip or td(e1,e0) < bounce:
+                            if skip or td(e1, e0) < bounce:
                                 # ignore it. "Didn't happen."
-                                self.logger.debug("Skip: %s %s", ts(e0),ts(e1))
+                                self.logger.debug("Skip: %s %s", ts(e0), ts(e1))
                                 e1 = e0
                             else:
                                 # treat e1 as legitimate
                                 if count is not bool(e1.value):
-                                    self.logger.debug("Add+: %s %s", ts(e0),ts(e1))
-                                    res.append(int(td(e1,e0)/bounce))
+                                    self.logger.debug("Add+: %s %s", ts(e0), ts(e1))
+                                    res.append(int(td(e1, e0) / bounce))
                                     if flow:
-                                        await self.client.set(*dest, value={"start":not ival,"seq":res,"end":inv(e1.value),"t":bounce,"flow":True})
+                                        await self.client.set(
+                                            *dest,
+                                            value={
+                                                "start": not ival,
+                                                "seq": res,
+                                                "end": inv(e1.value),
+                                                "t": bounce,
+                                                "flow": True,
+                                            }
+                                        )
                                 else:
-                                    self.logger.debug("NoAdd+: %s %s", ts(e0),ts(e1))
+                                    self.logger.debug("NoAdd+: %s %s", ts(e0), ts(e1))
                                 e0 = e1
 
                         # Now wait until timeout, or next signal
                         try:
-                            async with anyio.fail_after((idle_h if inv(e1.value) else idle)-bounce):
+                            async with anyio.fail_after(
+                                (idle_h if inv(e1.value) else idle) - bounce
+                            ):
                                 e2 = await mon.__anext__()
                         except TimeoutError:
                             if count is not bool(e1.value):
                                 # We have an infinite signal
                                 res.append(0)
                                 self.logger.debug("AddZero")
-                            return ival,inv(ival),res,inv(e1.value)
+                            return ival, inv(ival), res, inv(e1.value)
 
                         if count is not (not bool(e1.value)):
                             # First change towards vs. first change away
-                            self.logger.debug("Add: %s %s", ts(e0),ts(e2))
-                            res.append(int(td(e2,e0)/bounce))
+                            self.logger.debug("Add: %s %s", ts(e0), ts(e2))
+                            res.append(int(td(e2, e0) / bounce))
                         else:
-                            self.logger.debug("NoAdd: %s %s", ts(e0),ts(e2))
+                            self.logger.debug("NoAdd: %s %s", ts(e0), ts(e2))
 
                         # the new signal's value is not yet debounced, so assume for the moment
                         # that it's a change.
                         e2.value = not e1.value
                         e0 = e1 = e2
                         if flow:
-                            await self.client.set(*dest, value={"start":not ival,"seq":res,"end":inv(e2.value),"t":bounce,"flow":True})
+                            await self.client.set(
+                                *dest,
+                                value={
+                                    "start": not ival,
+                                    "seq": res,
+                                    "end": inv(e2.value),
+                                    "t": bounce,
+                                    "flow": True,
+                                }
+                            )
                         flow_bounce = flow
 
                 clear = True
@@ -318,58 +360,66 @@ class GPIOline(_GPIOnode):
                             continue
                     else:
                         e = await mon.__anext__()
-                    ival,start_val,res,end_val = await record(e,ival)
+                    ival, start_val, res, end_val = await record(e, ival)
                     if not res:
                         continue
 
-                    await self.client.set(*dest, value={"start":start_val,"seq":res,"end":end_val,"t":bounce})
+                    await self.client.set(
+                        *dest, value={"start": start_val, "seq": res, "end": end_val, "t": bounce}
+                    )
                     await self.root.err.record_working("gpio", *self.subpath)
                     clear = True
 
     async def _count_task(self, evt, dest):
-        intv = self.find_cfg('interval')
-        direc = self.find_cfg('count')
-        bounce = self.find_cfg('t_bounce')
+        intv = self.find_cfg("interval")
+        direc = self.find_cfg("count")
+        bounce = self.find_cfg("t_bounce")
 
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
 
             async def get_value():
                 val = await self.client.get(*dest, nchain=2)
-                ch={}
-                if 'value' in val:
-                    ch['chain'] = val.chain
+                ch = {}
+                if "value" in val:
+                    ch["chain"] = val.chain
 
-                val = val.get('value', 0)
-                if not isinstance(val, (int,float)):
+                val = val.get("value", 0)
+                if not isinstance(val, (int, float)):
                     val = 0
-                return val,ch
+                return val, ch
 
             async def set_value():
-                nonlocal d,ch,val,t
-                self.logger.debug("SEND %d",d)
+                nonlocal d, ch, val, t
+                self.logger.debug("SEND %d", d)
                 t = await anyio.current_time()
                 try:
-                    res = await self.client.set(*dest, value=val+d, nchain=2, **ch)
-                    ch['chain'] = res.chain
+                    res = await self.client.set(*dest, value=val + d, nchain=2, **ch)
+                    ch["chain"] = res.chain
                 except ServerError as exc:
                     # Somebody probably changed my value. Retry once.
-                    self.logger.debug("NOSEND %d",d)
+                    self.logger.debug("NOSEND %d", d)
                     try:
 
-                        val,ch = await get_value()
-                        res = await self.client.set(*dest, value=val+d, nchain=2, **ch)
+                        val, ch = await get_value()
+                        res = await self.client.set(*dest, value=val + d, nchain=2, **ch)
                     except ServerError as exc2:
-                        await self.root.err.record_error("gpio", *self.subpath, comment="Server error", data={"path":self.subpath, "value":val, **ch}, exc=exc)
+                        await self.root.err.record_error(
+                            "gpio",
+                            *self.subpath,
+                            comment="Server error",
+                            data={"path": self.subpath, "value": val, **ch},
+                            exc=exc
+                        )
                     else:
-                        self.logger.debug("DIDSEND %d",d)
+                        self.logger.debug("DIDSEND %d", d)
 
-                ch['chain'] = res.chain
+                ch["chain"] = res.chain
                 await self.root.err.record_working("gpio", *self.subpath)
                 val += d
                 d = 0
 
-            val,ch = await get_value()
+            val, ch = await get_value()
 
             wire = self.chip.line(self._path[-1])
             # We debounce manually, thus we need both edges
@@ -379,7 +429,7 @@ class GPIOline(_GPIOnode):
                 t = await anyio.current_time()
                 d = None
                 value = mon.value
-                debounce=True
+                debounce = True
 
                 # The idea here is that when d is None, nothing is happening, thus we don't time out.
                 # Otherwise we send the value at first change, then every `intv` seconds.
@@ -408,7 +458,7 @@ class GPIOline(_GPIOnode):
                                         await set_value()
                                     else:
                                         d += 1
-                                        self.logger.debug("UP D %d",d)
+                                        self.logger.debug("UP D %d", d)
                         elif d == 0:
                             d = None
                             # Nothing continues to happen. Skip sending.
@@ -417,27 +467,36 @@ class GPIOline(_GPIOnode):
                     else:
                         debounce = True
 
-
-
     async def _setup_input(self):
         try:
-            mode = self.find_cfg('mode')
-            dest = self.find_cfg('dest')
+            mode = self.find_cfg("mode")
+            dest = self.find_cfg("dest")
         except KeyError:
-            await self.root.err.record_error("gpio", *self.subpath, comment="mode or dest not set", data={"path":self.subpath}, exc=exc)
+            await self.root.err.record_error(
+                "gpio",
+                *self.subpath,
+                comment="mode or dest not set",
+                data={"path": self.subpath},
+                exc=exc
+            )
             return
 
         evt = anyio.create_event()
         if mode == "read":
-            await self.task_group.spawn(self._task,self._poll_task, evt, dest)
+            await self.task_group.spawn(self._task, self._poll_task, evt, dest)
         elif mode == "count":
             # These two are in the global config and thus can't raise KeyError
-            await self.task_group.spawn(self._task,self._count_task, evt, dest)
+            await self.task_group.spawn(self._task, self._count_task, evt, dest)
         elif mode == "button":
             # These two are in the global config and thus can't raise KeyError
-            await self.task_group.spawn(self._task,self._button_task, evt, dest)
+            await self.task_group.spawn(self._task, self._button_task, evt, dest)
         else:
-            await self.root.err.record_error("gpio", *self.subpath, comment="mode unknown", data={"path":self.subpath, "mode":mode})
+            await self.root.err.record_error(
+                "gpio",
+                *self.subpath,
+                comment="mode unknown",
+                data={"path": self.subpath, "mode": mode}
+            )
             return
         await evt.wait()
 
@@ -456,7 +515,7 @@ class GPIOline(_GPIOnode):
             self._poll = sc
             with self.chip.line(self._path[-1]).open(direction=gpio.DIRECTION_OUTPUT) as line:
                 async with self.client.watch(*src, min_depth=0, max_depth=0, fetch=True) as wp:
-                    pl=PathLongener()
+                    pl = PathLongener()
                     old_val = None
                     await evt.set()
                     async for msg in wp:
@@ -464,11 +523,16 @@ class GPIOline(_GPIOnode):
                         try:
                             val = msg.value
                         except AttributeError:
-                            if msg.get("state","") != "uptodate":
-                                await self.root.err.record_error("gpio", *self.subpath, comment="Missing value in msg", data={"path":self.subpath,"msg":msg})
+                            if msg.get("state", "") != "uptodate":
+                                await self.root.err.record_error(
+                                    "gpio",
+                                    *self.subpath,
+                                    comment="Missing value in msg",
+                                    data={"path": self.subpath, "msg": msg}
+                                )
                             continue
 
-                        if val in (False,True,0,1):
+                        if val in (False, True, 0, 1):
                             val = bool(val)
                             if False and old_val is val:  # it's a command
                                 continue
@@ -476,14 +540,23 @@ class GPIOline(_GPIOnode):
                             try:
                                 await proc(line, val, *args)
                             except StopAsyncIteration:
-                                await self.root.err.record_error("gpio", *self.subpath, data={'value': val}, comment="Stopped due to bad timer value")
+                                await self.root.err.record_error(
+                                    "gpio",
+                                    *self.subpath,
+                                    data={"value": val},
+                                    comment="Stopped due to bad timer value"
+                                )
                                 return
                             except Exception as exc:
-                                await self.root.err.record_error("gpio", *self.subpath, data={'value': val}, exc=exc)
+                                await self.root.err.record_error(
+                                    "gpio", *self.subpath, data={"value": val}, exc=exc
+                                )
                             else:
                                 await self.root.err.record_working("gpio", *self.subpath)
                         else:
-                            await self.root.err.record_error("gpio", *self.subpath, comment="Bad value: %r" % (val,))
+                            await self.root.err.record_error(
+                                "gpio", *self.subpath, comment="Bad value: %r" % (val,)
+                            )
 
     async def _set_value(self, line, value, state, negate):
         """
@@ -491,14 +564,14 @@ class GPIOline(_GPIOnode):
 
         Also the value is mirrored to ``cur`` if that's set.
         """
-        change = self.find_cfg('change', default=None)
+        change = self.find_cfg("change", default=None)
 
         if negate:
             value = not value
         if line is not None:
-            self.logger.debug("Setting %s to %s",line,value)
+            self.logger.debug("Setting %s to %s", line, value)
             line.value = value != negate
-        if isinstance(value,bool) and change == (not value):
+        if isinstance(value, bool) and change == (not value):
             return
         if state is not None:
             await self.client.set(*state, value=value)
@@ -517,24 +590,24 @@ class GPIOline(_GPIOnode):
 
         async def work_oneshot(evt):
             nonlocal t_on
-            if isinstance(t_on, (list,tuple)):
+            if isinstance(t_on, (list, tuple)):
                 t_on = (await self.client.get(*t_on)).value_or(None)
             async with anyio.open_cancel_scope() as sc:
                 try:
-                    w, self._work = self._work,sc
+                    w, self._work = self._work, sc
                     if w is not None:
                         await w.cancel()
                     try:
-                        await self._set_value(line,True,state,negate)
+                        await self._set_value(line, True, state, negate)
                         await evt.set()
                         await anyio.sleep(t_on)
 
                     finally:
                         if self._work is sc:
                             async with anyio.fail_after(2, shield=True):
-                                await self._set_value(line,False,state,negate)
+                                await self._set_value(line, False, state, negate)
                 finally:
-                    await evt.set() # safety
+                    await evt.set()  # safety
                     if self._work is sc:
                         self._work = None
 
@@ -543,7 +616,7 @@ class GPIOline(_GPIOnode):
             await self.task_group.spawn(work_oneshot, evt)
             await evt.wait()
         else:
-            w, self._work = self._work,None
+            w, self._work = self._work, None
             if w is not None:
                 await w.cancel()
                 await self._set_value(line, False, state, negate)
@@ -554,23 +627,24 @@ class GPIOline(_GPIOnode):
 
         The state records the cycle ratio.
         """
+
         async def work_pulse(evt):
             nonlocal t_on
             nonlocal t_off
-            if isinstance(t_on, (list,tuple)):
+            if isinstance(t_on, (list, tuple)):
                 t_on = (await self.client.get(*t_on)).value_or(None)
-            if isinstance(t_off, (list,tuple)):
+            if isinstance(t_off, (list, tuple)):
                 t_off = (await self.client.get(*t_off)).value_or(None)
             if t_on is None or t_off is None:
                 raise StopAsyncIteration
 
             async with anyio.open_cancel_scope() as sc:
                 try:
-                    w, self._work = self._work,sc
+                    w, self._work = self._work, sc
                     if w is not None:
                         await w.cancel()
                     if state is not None:
-                        await self.client.set(*state, value=t_on/(t_on+t_off))
+                        await self.client.set(*state, value=t_on / (t_on + t_off))
                     while True:
                         line.value = not negate
                         await evt.set()
@@ -596,45 +670,69 @@ class GPIOline(_GPIOnode):
             await self.task_group.spawn(work_pulse, evt)
             await evt.wait()
         else:
-            w,self._work = self._work,None
+            w, self._work = self._work, None
             if w is not None:
                 await w.cancel()
             await self._set_value(line, False, state, negate)
 
-
     async def _setup_output(self):
 
         try:
-            mode = self.find_cfg('mode')
-            src = self.find_cfg('src')
+            mode = self.find_cfg("mode")
+            src = self.find_cfg("src")
         except KeyError:
-            logger.info("mode or src not set in %s",self.subpath)
+            logger.info("mode or src not set in %s", self.subpath)
             return
 
         # Rest state. The input value in DistKV is always active=high.
-        negate = self.find_cfg('low')
-        t_on = self.find_cfg('t_on', default=None)
-        t_off = self.find_cfg('t_off', default=None)
-        state = self.find_cfg('state', default=None)
+        negate = self.find_cfg("low")
+        t_on = self.find_cfg("t_on", default=None)
+        t_off = self.find_cfg("t_off", default=None)
+        state = self.find_cfg("state", default=None)
 
         evt = anyio.create_event()
         if mode == "write":
-            await self.task_group.spawn(self._task, self.with_output, evt, src, self._set_value, state, negate)
+            await self.task_group.spawn(
+                self._task, self.with_output, evt, src, self._set_value, state, negate
+            )
         elif mode == "oneshot":
             if t_on is None:
-                await self.root.err.record_error("gpio", *self.subpath, comment="t_on not set", data={"path":self.subpath})
+                await self.root.err.record_error(
+                    "gpio", *self.subpath, comment="t_on not set", data={"path": self.subpath}
+                )
                 return
-            await self.task_group.spawn(self._task, self.with_output, evt, src, self._oneshot_value, state, negate, t_on)
+            await self.task_group.spawn(
+                self._task, self.with_output, evt, src, self._oneshot_value, state, negate, t_on
+            )
         elif mode == "pulse":
             if t_on is None:
-                await self.root.err.record_error("gpio", *self.subpath, comment="t_on not set", data={"path":self.subpath})
+                await self.root.err.record_error(
+                    "gpio", *self.subpath, comment="t_on not set", data={"path": self.subpath}
+                )
                 return
             if t_off is None:
-                await self.root.err.record_error("gpio", *self.subpath, comment="t_off not set", data={"path":self.subpath})
+                await self.root.err.record_error(
+                    "gpio", *self.subpath, comment="t_off not set", data={"path": self.subpath}
+                )
                 return
-            await self.task_group.spawn(self._task, self.with_output, evt, src, self._pulse_value, state, negate, t_on, t_off)
+            await self.task_group.spawn(
+                self._task,
+                self.with_output,
+                evt,
+                src,
+                self._pulse_value,
+                state,
+                negate,
+                t_on,
+                t_off,
+            )
         else:
-            await self.root.err.record_error("gpio", *self.subpath, comment="mode unknown", data={"path":self.subpath, "mode":mode})
+            await self.root.err.record_error(
+                "gpio",
+                *self.subpath,
+                comment="mode unknown",
+                data={"path": self.subpath, "mode": mode}
+            )
             return
         await evt.wait()
 
@@ -652,7 +750,7 @@ class GPIOchip(_GPIObase):
 
     @classmethod
     def child_type(cls, name):
-        if not isinstance(name,int):
+        if not isinstance(name, int):
             return None
         return GPIOline
 
@@ -685,4 +783,3 @@ class GPIOroot(ClientRoot):
 
     def child_type(self, name):
         return GPIOhost
-

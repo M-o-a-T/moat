@@ -576,7 +576,9 @@ class GPIOline(_GPIOnode):
         if state is not None:
             await self.client.set(*state, value=value)
 
-    async def _oneshot_value(self, line, val, state, negate, t_on):  # pylint: disable=unused-argument
+    async def _oneshot_value(
+        self, line, val, state, negate, t_on
+    ):  # pylint: disable=unused-argument
         """
         Task that monitors one entry. Its value is written to the
         controller but if it's = ``direc`` it's reverted autonomously after
@@ -621,7 +623,9 @@ class GPIOline(_GPIOnode):
                 await w.cancel()
                 await self._set_value(line, False, state, negate)
 
-    async def _pulse_value(self, line, val, state, negate, t_on, t_off):  # pylint: disable=unused-argument
+    async def _pulse_value(
+        self, line, val, state, negate, t_on, t_off
+    ):  # pylint: disable=unused-argument
         """
         Pulse the value.
 

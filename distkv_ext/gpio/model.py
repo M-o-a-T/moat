@@ -417,7 +417,7 @@ class GPIOline(_GPIOnode):
                 val += d
                 d = 0
 
-            await get_value()  # dropped
+            val, ch = await get_value()  # pylint: disable=unused-variable ## nonsense
 
             wire = self.chip.line(self._path[-1])
             # We debounce manually, thus we need both edges

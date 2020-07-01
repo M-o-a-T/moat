@@ -13,3 +13,10 @@ It will
 * monitor a DistKV entry and write any updates to KNX
 
 * work with DistKV's runner system, either centrally or distributed
+
+
+Warning
+=======
+
+Currently this will only work with MoaT's fork of XKNX because we're using
+AnyIO and some other improvements.

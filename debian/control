@@ -2,14 +2,16 @@ Source: distknx
 Maintainer: Matthias Urlichs <matthias@urlichs.de>
 Section: python
 Priority: optional
-Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 13)
+Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 13),
+  distkv (>= 0.30),
+  python3-xknx,
 Standards-Version: 3.9.6
 Homepage: https://github.com/smurfix/distknx
 
 Package: distkv-knx
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
-  distkv,
+  distkv (>= 0.30),
   python3-xknx,
 Description: KNX adapter for DistKV
  DistKNX is a bidirectional link between KNX busses and DistKV.

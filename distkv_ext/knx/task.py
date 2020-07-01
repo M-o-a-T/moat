@@ -12,23 +12,26 @@ try:
 except ImportError:
     from collections import Mapping
 
-from distkv.util import combine_dict, NotGiven, attrdict
+from distkv.util import combine_dict
 from distkv.exceptions import ClientConnectionError
-from distkv_ext.knx.model import KNXroot, KNXserver
+from distkv_ext.knx.model import KNXserver
 
 import logging
+
 logger = logging.getLogger(__name__)
 
+
 async def task(client, cfg, server: KNXserver, evt=None, local_ip=None, initial=False):
-    cfg = combine_dict(server.value_or({}, Mapping), cfg['server_default'])
+    cfg = combine_dict(server.value_or({}, Mapping), cfg["server_default"])
     add = {}
     if local_ip is not None:
-        add['local_ip'] = local_ip
+        add["local_ip"] = local_ip
 
     try:
-        ccfg=ConnectionConfig(connection_type=ConnectionType.TUNNELING,
-            gateway_ip=cfg['host'],
-            gateway_port=cfg.get('port', 3671),
+        ccfg = ConnectionConfig(
+            connection_type=ConnectionType.TUNNELING,
+            gateway_ip=cfg["host"],
+            gateway_port=cfg.get("port", 3671),
             **add
         )
         async with xknx.XKNX().run(connection_config=ccfg) as srv:
@@ -41,5 +44,4 @@ async def task(client, cfg, server: KNXserver, evt=None, local_ip=None, initial=
     except TimeoutError:
         raise
     except socket.error as e:  # this would eat TimeoutError
-        raise ClientConnectionError(cfg['host'], cfg['port']) from e
-
+        raise ClientConnectionError(cfg["host"], cfg["port"]) from e

@@ -2,12 +2,10 @@
 DistKV client data model for KNX
 """
 import anyio
-from anyio.exceptions import ClosedResourceError
 
 from distkv.obj import ClientEntry, ClientRoot
-from distkv.util import combine_dict, NotGiven
+from distkv.util import NotGiven
 from distkv.errors import ErrorRoot
-from collections import Mapping
 
 from xknx.telegram import GroupAddress
 from xknx.devices import Sensor, BinarySensor, Switch, ExposeSensor
@@ -15,12 +13,15 @@ from xknx.remote_value import RemoteValueSensor
 
 
 import logging
+
 logger = logging.getLogger(__name__)
-        
+
+
 class _KNXbase(ClientEntry):
     """
     Forward ``_update_server`` calls to child entries.
     """
+
     _server = None
 
     @property
@@ -38,7 +39,7 @@ class _KNXbase(ClientEntry):
         await self.parent.update_server()
 
     async def _update_server(self, initial=False):
-        if not self.val_d(True,'present'):
+        if not self.val_d(True, "present"):
             return
         await self.setup(initial=initial)
         for k in self:
@@ -47,19 +48,21 @@ class _KNXbase(ClientEntry):
     async def setup(self, initial=False):
         pass
 
+
 class _KNXnode(_KNXbase):
     """
     Base class for a single input or output.
     """
+
     _task = None
     _task_done = None
 
     @property
     def group(self):
-        assert 0 <= self._path[-3] < 1<<5
-        assert 0 <= self._path[-2] < 1<<3
-        assert 0 <= self._path[-1] < 1<<8
-        return GroupAddress((self._path[-3]<<11) | (self._path[-2] << 8) | self._path[-1])
+        assert 0 <= self._path[-3] < 1 << 5
+        assert 0 <= self._path[-2] < 1 << 3
+        assert 0 <= self._path[-1] < 1 << 8
+        return GroupAddress((self._path[-3] << 11) | (self._path[-2] << 8) | self._path[-1])
 
     @property
     def tg(self):
@@ -80,33 +83,39 @@ class _KNXnode(_KNXbase):
 
     async def spawn(self, p, *a, **k):
         evt = anyio.create_event()
-        async def _spawn(evt,p,a,k):
+
+        async def _spawn(evt, p, a, k):
             await self._kill()
             async with anyio.open_cancel_scope() as sc:
                 self._task = sc
                 self._task_done = anyio.create_event()
                 await evt.set()
                 try:
-                    await p(*a,**k)
+                    await p(*a, **k)
                 finally:
                     async with anyio.open_cancel_scope(shield=True):
                         await self._task_done.set()
-        await self.tg.spawn(_spawn,evt,p,a,k)
+
+        await self.tg.spawn(_spawn, evt, p, a, k)
         await evt.wait()
 
 
 class KNXnode(_KNXnode):
     """Describes one port, i.e. incoming value to be read.
     """
+
     async def _task_in(self, evt, dest):
         try:
-            mode = self.find_cfg('mode', default=None)
+            mode = self.find_cfg("mode", default=None)
             if mode is None:
                 logger.info("mode not set in %s", self.subpath)
                 return
 
-            args = dict(xknx=self.server, group_address_state=self.group,
-                        name=mode+"."+".".join(str(x) for x in self.subpath))
+            args = dict(
+                xknx=self.server,
+                group_address_state=self.group,
+                name=mode + "." + ".".join(str(x) for x in self.subpath),
+            )
             if mode == "binary":
                 device = BinarySensor(**args)
                 get_val = lambda s: s.is_on()
@@ -126,31 +135,37 @@ class KNXnode(_KNXnode):
         finally:
             await evt.set()
 
-
     async def _task_out(self, evt, src, initial=False):
         try:
             val = None
-            mode = self.find_cfg('mode', default=None)
+            mode = self.find_cfg("mode", default=None)
             if mode is None:
                 logger.info("mode not set in %s", self.subpath)
                 return
 
-            args = dict(xknx=self.server, group_address=self.group,
-                        name=mode+"."+".".join(str(x) for x in self.subpath))
+            args = dict(
+                xknx=self.server,
+                group_address=self.group,
+                name=mode + "." + ".".join(str(x) for x in self.subpath),
+            )
             if mode == "binary":
                 device = Switch(**args)
+
                 async def set_val(dev, val):
                     if val:
                         await dev.set_on()
                     else:
                         await dev.set_off()
+
                 def get_val(dev):
                     return dev.state
 
             elif mode in RemoteValueSensor.DPTMAP:
                 device = ExposeSensor(value_type=mode, **args)
+
                 async def set_val(dev, val):
                     return await dev.set(val)
+
                 def get_val(device):
                     return device.sensor_value.value
 
@@ -175,14 +190,17 @@ class KNXnode(_KNXnode):
                                     res = await self.client.set(*src, value=val, nchain=1)
                                     nonlocal chain
                                     chain = res.chain
+
                 await tg.spawn(_rdr)
 
-                async with self.client.watch(*src, min_depth=0, max_depth=0, fetch=initial, nchain=1) as wp:
+                async with self.client.watch(
+                    *src, min_depth=0, max_depth=0, fetch=initial, nchain=1
+                ) as wp:
                     await evt.set()
                     async for msg in wp:
-                        if 'path' not in msg:
+                        if "path" not in msg:
                             continue
-                        if msg.get('value', NotGiven) is NotGiven:
+                        if msg.get("value", NotGiven) is NotGiven:
                             continue
                         async with lock:
                             if msg.chain == chain:
@@ -202,16 +220,16 @@ class KNXnode(_KNXnode):
             return
 
         evt = anyio.create_event()
-        typ = self.find_cfg('type')
+        typ = self.find_cfg("type")
         if typ == "in":
-            dest = self.find_cfg('dest', default=None)
+            dest = self.find_cfg("dest", default=None)
             if dest is not None:
                 await self.spawn(self._task_in, evt, dest)
             else:
                 logger.info("'dest' not set in %s", self.subpath)
                 return
         elif typ == "out":
-            src = self.find_cfg('src', default=None)
+            src = self.find_cfg("src", default=None)
             if src is not None:
                 await self.spawn(self._task_out, evt, src, initial)
             else:
@@ -227,26 +245,31 @@ class _KNXbaseNUM(_KNXbase):
     """
     A path element between 1 and 99 inclusive works.
     """
+
     cls = None
     max_nr = None
 
     @classmethod
     def child_type(cls, name):
-        if isinstance(name,int) and name >= 0 and name <= cls.max_nr:
+        if isinstance(name, int) and name >= 0 and name <= cls.max_nr:
             return cls.cls
         return None
+
 
 class KNXg2(_KNXbaseNUM):
     cls = KNXnode
     max_nr = 255
 
+
 class KNXg1(_KNXbaseNUM):
     cls = KNXg2
     max_nr = 7
 
+
 class KNXserver(_KNXbase):
     async def set_server(self, server, initial=False):
         await self.parent.set_server(server, initial=initial)
+
 
 class KNXbus(_KNXbaseNUM):
     cls = KNXg1
@@ -294,6 +317,7 @@ class KNXroot(_KNXbase, ClientRoot):
         def acc(kls):
             cls.reg[typ] = kls
             return kls
+
         return acc
 
     def child_type(self, name):
@@ -301,4 +325,3 @@ class KNXroot(_KNXbase, ClientRoot):
 
     async def update_server(self):
         await self._update_server()
-

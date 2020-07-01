@@ -1,8 +1,6 @@
-from setuptools import setup, find_packages
-
 LONG_DESC = open("README.rst").read()
 
-setup(
+setup(  # pylint: disable=undefined-variable
     name="distwago",
     use_scm_version={"version_scheme": "guess-next-dev", "local_scheme": "dirty-tag"},
     description="A distributed no-master key-value store",
@@ -13,10 +11,7 @@ setup(
     license="MIT -or- Apache License 2.0",
     packages=["distkv_ext.wago"],
     setup_requires=["setuptools_scm", "pytest-runner", "trustme >= 0.5"],
-    install_requires=[
-        "distkv >= 0.13.1",
-        "asyncwago >= 0.30",
-    ],
+    install_requires=["distkv >= 0.30.1", "asyncwago >= 0.30"],
     tests_require=["trustme >= 0.5", "pytest", "flake8 >= 3.7"],
     keywords=["async", "key-values", "distributed"],
     python_requires=">=3.7",

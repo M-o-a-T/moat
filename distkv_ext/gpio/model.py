@@ -130,7 +130,7 @@ class GPIOline(_GPIOnode):
         else:
             await self.root.err.record_error(
                 "gpio",
-                *self.subpath,
+                self.subpath,
                 comment="Line type not set",
                 data={"path": self.subpath, "typ": typ}
             )
@@ -164,7 +164,7 @@ class GPIOline(_GPIOnode):
                     if negate:
                         value = not value
                     if change is None or value == change:
-                        await self.client.set(*dest, value=value)
+                        await self.client.set(dest, value=value)
 
                 await evt.set()
                 mon_iter = mon.__aiter__()
@@ -192,7 +192,7 @@ class GPIOline(_GPIOnode):
                             await set_value(e.value)
                         old_value = e.value
 
-                    await self.root.err.record_working("gpio", *self.subpath)
+                    await self.root.err.record_working("gpio", self.subpath)
 
     async def _button_task(self, evt, dest):
         negate = self.find_cfg("low")
@@ -264,7 +264,7 @@ class GPIOline(_GPIOnode):
                             if flow_bounce and td(e1, e0) > bounce:
                                 flow_bounce = False
                                 await self.client.set(
-                                    *dest,
+                                    dest,
                                     value={
                                         "start": inv(ival),
                                         "seq": res + [0],
@@ -296,7 +296,7 @@ class GPIOline(_GPIOnode):
                                     res.append(int(td(e1, e0) / bounce))
                                     if flow:
                                         await self.client.set(
-                                            *dest,
+                                            dest,
                                             value={
                                                 "start": not ival,
                                                 "seq": res,
@@ -335,7 +335,7 @@ class GPIOline(_GPIOnode):
                         e0 = e1 = e2
                         if flow:
                             await self.client.set(
-                                *dest,
+                                dest,
                                 value={
                                     "start": not ival,
                                     "seq": res,
@@ -353,7 +353,7 @@ class GPIOline(_GPIOnode):
                             async with anyio.fail_after(idle_clear):
                                 e = await mon.__anext__()
                         except TimeoutError:
-                            await self.client.set(*dest, value=False)
+                            await self.client.set(dest, value=False)
                             clear = False
                             continue
                     else:
@@ -363,9 +363,9 @@ class GPIOline(_GPIOnode):
                         continue
 
                     await self.client.set(
-                        *dest, value={"start": start_val, "seq": res, "end": end_val, "t": bounce}
+                        dest, value={"start": start_val, "seq": res, "end": end_val, "t": bounce}
                     )
-                    await self.root.err.record_working("gpio", *self.subpath)
+                    await self.root.err.record_working("gpio", self.subpath)
                     clear = True
 
     async def _count_task(self, evt, dest):
@@ -377,7 +377,7 @@ class GPIOline(_GPIOnode):
             self._poll = sc
 
             async def get_value():
-                val = await self.client.get(*dest, nchain=2)
+                val = await self.client.get(dest, nchain=2)
                 ch = {}
                 if "value" in val:
                     ch["chain"] = val.chain
@@ -392,7 +392,7 @@ class GPIOline(_GPIOnode):
                 self.logger.debug("SEND %d", d)
                 t = await anyio.current_time()
                 try:
-                    res = await self.client.set(*dest, value=val + d, nchain=2, **ch)
+                    res = await self.client.set(dest, value=val + d, nchain=2, **ch)
                     ch["chain"] = res.chain
                 except ServerError as exc:
                     # Somebody probably changed my value. Retry once.
@@ -400,11 +400,11 @@ class GPIOline(_GPIOnode):
                     try:
 
                         val, ch = await get_value()
-                        res = await self.client.set(*dest, value=val + d, nchain=2, **ch)
+                        res = await self.client.set(dest, value=val + d, nchain=2, **ch)
                     except ServerError:
                         await self.root.err.record_error(
                             "gpio",
-                            *self.subpath,
+                            self.subpath,
                             comment="Server error",
                             data={"path": self.subpath, "value": val, **ch},
                             exc=exc
@@ -413,7 +413,7 @@ class GPIOline(_GPIOnode):
                         self.logger.debug("DIDSEND %d", d)
 
                 ch["chain"] = res.chain
-                await self.root.err.record_working("gpio", *self.subpath)
+                await self.root.err.record_working("gpio", self.subpath)
                 val += d
                 d = 0
 
@@ -474,7 +474,7 @@ class GPIOline(_GPIOnode):
         except KeyError as exc:
             await self.root.err.record_error(
                 "gpio",
-                *self.subpath,
+                self.subpath,
                 comment="mode or dest not set",
                 data={"path": self.subpath},
                 exc=exc
@@ -493,7 +493,7 @@ class GPIOline(_GPIOnode):
         else:
             await self.root.err.record_error(
                 "gpio",
-                *self.subpath,
+                self.subpath,
                 comment="mode unknown",
                 data={"path": self.subpath, "mode": mode}
             )
@@ -514,7 +514,7 @@ class GPIOline(_GPIOnode):
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
             with self.chip.line(self._path[-1]).open(direction=gpio.DIRECTION_OUTPUT) as line:
-                async with self.client.watch(*src, min_depth=0, max_depth=0, fetch=True) as wp:
+                async with self.client.watch(src, min_depth=0, max_depth=0, fetch=True) as wp:
                     pl = PathLongener()
                     old_val = None
                     await evt.set()
@@ -526,7 +526,7 @@ class GPIOline(_GPIOnode):
                             if msg.get("state", "") != "uptodate":
                                 await self.root.err.record_error(
                                     "gpio",
-                                    *self.subpath,
+                                    self.subpath,
                                     comment="Missing value in msg",
                                     data={"path": self.subpath, "msg": msg}
                                 )
@@ -542,20 +542,20 @@ class GPIOline(_GPIOnode):
                             except StopAsyncIteration:
                                 await self.root.err.record_error(
                                     "gpio",
-                                    *self.subpath,
+                                    self.subpath,
                                     data={"value": val},
                                     comment="Stopped due to bad timer value"
                                 )
                                 return
                             except Exception as exc:
                                 await self.root.err.record_error(
-                                    "gpio", *self.subpath, data={"value": val}, exc=exc
+                                    "gpio", self.subpath, data={"value": val}, exc=exc
                                 )
                             else:
-                                await self.root.err.record_working("gpio", *self.subpath)
+                                await self.root.err.record_working("gpio", self.subpath)
                         else:
                             await self.root.err.record_error(
-                                "gpio", *self.subpath, comment="Bad value: %r" % (val,)
+                                "gpio", self.subpath, comment="Bad value: %r" % (val,)
                             )
 
     async def _set_value(self, line, value, state, negate):
@@ -574,7 +574,7 @@ class GPIOline(_GPIOnode):
         if isinstance(value, bool) and change == (not value):
             return
         if state is not None:
-            await self.client.set(*state, value=value)
+            await self.client.set(state, value=value)
 
     async def _oneshot_value(
         self, line, val, state, negate, t_on
@@ -593,7 +593,7 @@ class GPIOline(_GPIOnode):
         async def work_oneshot(evt):
             nonlocal t_on
             if isinstance(t_on, (list, tuple)):
-                t_on = (await self.client.get(*t_on)).value_or(None)
+                t_on = (await self.client.get(t_on)).value_or(None)
             async with anyio.open_cancel_scope() as sc:
                 try:
                     w, self._work = self._work, sc
@@ -636,9 +636,9 @@ class GPIOline(_GPIOnode):
             nonlocal t_on
             nonlocal t_off
             if isinstance(t_on, (list, tuple)):
-                t_on = (await self.client.get(*t_on)).value_or(None)
+                t_on = (await self.client.get(t_on)).value_or(None)
             if isinstance(t_off, (list, tuple)):
-                t_off = (await self.client.get(*t_off)).value_or(None)
+                t_off = (await self.client.get(t_off)).value_or(None)
             if t_on is None or t_off is None:
                 raise StopAsyncIteration
 
@@ -648,7 +648,7 @@ class GPIOline(_GPIOnode):
                     if w is not None:
                         await w.cancel()
                     if state is not None:
-                        await self.client.set(*state, value=t_on / (t_on + t_off))
+                        await self.client.set(state, value=t_on / (t_on + t_off))
                     while True:
                         line.value = not negate
                         await evt.set()
@@ -666,7 +666,7 @@ class GPIOline(_GPIOnode):
                                 pass
                             else:
                                 if state is not None:
-                                    await self.client.set(*state, value=False)
+                                    await self.client.set(state, value=False)
 
         if val:
             evt = anyio.create_event()
@@ -701,7 +701,7 @@ class GPIOline(_GPIOnode):
         elif mode == "oneshot":
             if t_on is None:
                 await self.root.err.record_error(
-                    "gpio", *self.subpath, comment="t_on not set", data={"path": self.subpath}
+                    "gpio", self.subpath, comment="t_on not set", data={"path": self.subpath}
                 )
                 return
             await self.task_group.spawn(
@@ -710,12 +710,12 @@ class GPIOline(_GPIOnode):
         elif mode == "pulse":
             if t_on is None:
                 await self.root.err.record_error(
-                    "gpio", *self.subpath, comment="t_on not set", data={"path": self.subpath}
+                    "gpio", self.subpath, comment="t_on not set", data={"path": self.subpath}
                 )
                 return
             if t_off is None:
                 await self.root.err.record_error(
-                    "gpio", *self.subpath, comment="t_off not set", data={"path": self.subpath}
+                    "gpio", self.subpath, comment="t_off not set", data={"path": self.subpath}
                 )
                 return
             await self.task_group.spawn(
@@ -732,7 +732,7 @@ class GPIOline(_GPIOnode):
         else:
             await self.root.err.record_error(
                 "gpio",
-                *self.subpath,
+                self.subpath,
                 comment="mode unknown",
                 data={"path": self.subpath, "mode": mode}
             )

@@ -9,6 +9,7 @@ from asyncgpio.test import GpioWatcher, Pin
 from distkv_ext.gpio.task import task as GPIOtask
 from distkv_ext.gpio.model import GPIOroot
 from distkv_ext.gpio.config import CFG
+from distkv.util import Path
 
 import logging
 
@@ -27,9 +28,9 @@ async def fwd_q(ts, queues):
 
 
 tests = {}
+only = ()
 # only = ("test_four","test_four_only",)
 # only = ("test_three_bounce_only",)
-only = ()
 
 
 class _test_m(type):
@@ -341,11 +342,11 @@ class test_four(_test_out):
         await self.set_src(True)
         await self.assertMsg(PinOH, True)
         await self.set_src(True)
-        await self.assertMsg()
+        await self.assertMsg(True)
         await self.set_src(False)
         await self.assertMsg(PinOL, False)
         await self.set_src(False)
-        await self.assertMsg()
+        await self.assertMsg(False)
 
 
 class test_four_only(_test_out):
@@ -432,17 +433,17 @@ async def main(label="gpio-mockup-A", host="HosT"):
     logging.basicConfig(level=logging.DEBUG, format="%(relativeCreated)d %(name)s %(message)s")
 
     async with test_client() as c, GpioWatcher(interval=0.05).run() as w, c.watch(
-        "test", "state"
+        Path("test","state")
     ) as ts:
         ts = ts.__aiter__()  # currently a NOP but you never know
         server = await GPIOroot.as_handler(c)
         await server.wait_loaded()
 
-        controller = server.follow(host, label, create=None)
+        controller = server.follow(Path(host, label), create=None)
 
         async with anyio.create_task_group() as tg:
             evt = anyio.create_event()
-            await tg.spawn(GPIOtask, c, {"gpio": CFG}, controller, evt)
+            await tg.spawn(GPIOtask, controller, evt)
             await evt.wait()
 
             try:

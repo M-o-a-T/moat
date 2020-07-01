@@ -8,8 +8,7 @@ from functools import partial
 from collections.abc import Mapping
 
 from distkv.exceptions import ClientError
-from distkv.util import yprint, attrdict, combine_dict, data_get, NotGiven, path_eval
-from distkv.util import res_delete, res_get, res_update
+from distkv.util import yprint, attrdict, combine_dict, data_get, NotGiven, P
 
 import logging
 
@@ -33,7 +32,7 @@ async def cli(obj,test):
 @cli.command()
 @click.option("-i", "--init", is_flag=True, help="Actually set the data.")
 @click.option("-c", "--conv", help="The converter to use for HASS.")
-@click.argument("path", nargs=-1)
+@click.argument("path", nargs=1)
 @click.pass_obj
 async def init(obj, conv, path, init):
     """Set up stored data and paths for Home Assistant.
@@ -51,7 +50,8 @@ async def init(obj, conv, path, init):
     With '-i', this command saves the data; it can only be used once.
     Otherwise the current settings will be listed.
     """
-    res = await obj.client.get(*obj.hass_name)
+    path = P(path)
+    res = await obj.client.get(obj.hass_name)
     if res.get('value',NotGiven) is not NotGiven:
         if init or conv or path:
             raise click.UsageError("You already used this command.")
@@ -66,7 +66,7 @@ async def init(obj, conv, path, init):
             path="test retain cfg".split()
         else:
             path="home ass cfg".split()
-    await obj.client.set(*obj.hass_name, value=dict(conv=conv,path=path))
+    await obj.client.set(obj.hass_name, value=dict(conv=conv,path=path))
     print("Setup stored.")
     await setup_conv(obj)
 
@@ -139,8 +139,6 @@ _types = {
         "light": attrdict(
             cmd=(str,"‹prefix›/light/‹path›/cmd","topic for commands","command_topic"),
             state=(str,"‹prefix›/light/‹path›/state","topic for state","state_topic"),
-            brightcmd=(str,"‹prefix›/light/‹path›/brightness/state","brightness control","brightness_command_topic"),
-            brightstate=(str,"‹prefix›/light/‹path›/brightness/cmd","brightness state","brightness_state_topic"),
             _payload=True,
             ),
         "switch":attrdict(
@@ -153,6 +151,7 @@ _types = {
             state=(str,"‹prefix›/binary_switch/‹path›/state","topic for state","state_topic"),
             unit=(str,None,"Unit of measurement","unit_of_measurement"),
             icon=(str,None,"Device icon","icon"),
+            _payload=True,
             ),
         "sensor":attrdict(
             state=(str,"‹prefix›/binary_switch/‹path›/state","topic for state","state_topic"),
@@ -169,6 +168,16 @@ _types = {
             offs=(str,"off","state for unlocked","state_unlocked"),
             ),
         }
+_types_plus = {
+        "light": dict(
+            bright=dict(
+                brightcmd=(str,"‹prefix›/light/‹path›/brightness/state","brightness control","brightness_command_topic"),
+                brightstate=(str,"‹prefix›/light/‹path›/brightness/cmd","brightness state","brightness_state_topic"),
+                brightscale=(int,100,"brightness state","brightness_scale"),
+                cmdtype=(str,"brightness","Command type: brightness/first/last","on_command_type"),
+            ),
+        ),
+    }
 
 for _v in _types.values():
     if _v.pop('_payload',False):
@@ -178,46 +187,74 @@ for _v in _types.values():
     _v.uid=(str,"dkv_‹tock›","A unique ID for this device","unique_id")
     _v.device=(str,"","ID of the device this is part of","device")
 
-@cli.command()
+@cli.command("set", help="""Add or modify a device.
+
+Boolean states can be set with "-o NAME" and cleared with "-o -name".
+Others can be set with "-o NAME=VALUE" (string), "-O NAME=VALUE" (evaluated),
+or "-O NAME=.VALUE" (split by dots or slashes).
+
+Known types: %s
+"""%(" ".join(_types.keys()),))
 @click.pass_obj
 @click.option("-o","--option",multiple=True,help="Special entry (string)")
 @click.option("-O","--eval-option",multiple=True,help="Special entry (evaluated)")
 @click.option("-L","--list-options",is_flag=True,help="List possible options")
+@click.option("-p","--plus",multiple=True,help="Add a sub-option")
+@click.option("-f","--force",is_flag=True,help="Override some restrictions. Use with extreme caution.")
 @click.argument("typ", nargs=1)
-@click.argument("path", nargs=-1)
-async def set(obj,typ,path,option,eval_option,list_options):
+@click.argument("path", nargs=1)
+async def set_(obj,typ,path,option,eval_option,list_options,force,plus):
     """
     Add or modify a device.
 
     Boolean states can be set with "-o NAME" and cleared with "-o -name".
     Known types: %s
     """%(" ".join(_types.keys()),)
-    try:
-        t = _types[typ]
-    except KeyError:
-        raise click.UsageError("I don't know this type.")
+    path=P(path)
+    if typ == '-':
+        t = None
+    else:
+        try:
+            t = _types[typ].copy()
+            tp = _types_plus.get(typ, {})
+        except KeyError:
+            raise click.UsageError("I don't know this type.")
+        for p in plus:
+            try:
+                p = tp[p]
+            except KeyError:
+                raise click.UsageError("There are no options for '%s'.")
+            else:
+                t.update(p)
+
     if list_options:
         if option or eval_option:
             raise click.UsageError("Deletion and options at the same time? No.")
 
-    if list_options:
-        lm=[0,0,0,0]
-        for k,v in t.items():
-            lm[0]=max(lm[0],len(k))
-            lm[1]=max(lm[1],len(v[0].__name__))
-            lm[2]=max(lm[2],len(str(v[1])))
-            lm[3]=max(lm[3],len(v[2]))
-        fmt=" ".join("%-"+str(x)+"s" for x in lm)
-            
-        for k,v in t.items():
-            print(fmt % (k,v[0].__name__,v[1],v[2]))
+        if t is None:
+            for k in _types.keys():
+                print(k, file=obj.stdout)
+        else:
+            lm=[0,0,0,0]
+
+            for k,v in t.items():
+                lm[0]=max(lm[0],len(k))
+                lm[1]=max(lm[1],len(v[0].__name__))
+                lm[2]=max(lm[2],len(str(v[1])))
+                lm[3]=max(lm[3],len(v[2]))
+            fmt=" ".join("%-"+str(x)+"s" for x in lm)
+                
+            for k,v in t.items():
+                print(fmt % (k,v[0].__name__,v[1],v[2]), file=obj.stdout)
+            if tp:
+                print("Plus", " ".join(tp.keys()))
         return
 
     if len(path) not in (1,2):
         raise click.UsageError("The path must consist of 1 or 2 words.")
-    cp = obj.hass.path+(typ,)+path+("config",)
+    cp = obj.hass.path+(typ,*path,"config")
 
-    res = await obj.client.get(*cp, nchain=2)
+    res = await obj.client.get(cp, nchain=2)
     r=attrdict()
     if res.get('value',NotGiven) is NotGiven:
         val = attrdict()
@@ -241,24 +278,29 @@ async def set(obj,typ,path,option,eval_option,list_options):
         i[t[k][3]] = v
     for k in eval_option:
         k,v=k.split("=",1)
-        i[t[k][3]] = eval(v)
-    if "unique_id" in i and "unique_id" in val:
+        if v[0] in '/.':
+            i[t[k][3]] = v[1:].split(v[0])
+        else:
+            i[t[k][3]] = eval(v)
+    if "unique_id" in i and "unique_id" in val and not force:
         raise click.UsageError("A unique ID is fixed. You can't change it.")
 
     d=attrdict()
     for k,v in t.items():
-        if k == "unique":
+        if k == "uid":
             continue
-        if k == "name":
+        elif isinstance(v,dict):
+            continue  # plus option
+        elif k == "name":
             vv = "_".join(path)
         elif k == "cmd":
-            vv = "/".join((obj.hass.path[-1],typ,*path,"cmd"))
+            vv = "/".join((*obj.hass.path,typ,*path,"cmd"))
         elif k.endswith("cmd"):
-            vv = "/".join((obj.hass.path[-1],typ,*path,k[:-3],"cmd"))
+            vv = "/".join((*obj.hass.path,typ,*path,k[:-3],"cmd"))
         elif k == "state":
-            vv = "/".join((obj.hass.path[-1],typ,*path,"state"))
+            vv = "/".join((*obj.hass.path,typ,*path,"state"))
         elif k.endswith("state"):
-            vv = "/".join((obj.hass.path[-1],typ,*path,k[:-5],"state"))
+            vv = "/".join((*obj.hass.path,typ,*path,k[:-5],"state"))
         elif v[1] == 0 or v[1] == "":
             continue
         else:
@@ -277,7 +319,8 @@ async def set(obj,typ,path,option,eval_option,list_options):
                 raise click.UsageError("Option %r is not a %s" % (k,v[0].__name__))
 
     v=combine_dict(i,val,d)
-    if "unique" in t and "unique_id" not in v:
+    v = {k:v for k,v in v.items() if v is not None}
+    if "uid" in t and "unique_id" not in v:
         tock = await obj.client.get_tock()
         v['unique_id'] = "dkv_"+str(tock)
     if "device_class" in v:
@@ -289,22 +332,31 @@ async def set(obj,typ,path,option,eval_option,list_options):
             del v["device"]
         elif isinstance(dv,str):
             v["device"] = dict(identifiers=dv.split(":"))
-    v['retain'] = True
+    if 'cmd' in t:
+        v['retain'] = True
+    else:
+        v.pop('retain', None)
 
-    await obj.client.set(*cp, value=v, **r)
+    await obj.client.set(cp, value=v, **r)
 
 
-@cli.command()
+@cli.command(help="Display a device, list devices")
 @click.pass_obj
 @click.option("-c","--cmd",is_flag=True,help="Use command-line names")
 @click.argument("typ", nargs=1)
-@click.argument("path", nargs=-1)
+@click.argument("path", nargs=1)
 async def get(obj,typ,path,cmd):
     """
-    Display a device's config.
+    Display a device's configuration.
 
     Known types: %s
     """%(" ".join(_types.keys()),)
+    path=P(path)
+    if typ == '-':
+        res = await obj.client._request(action="enumerate",path=obj.hass.path, empty=True)
+        for r in res.result:
+            print(r, file=obj.stdout)
+        return
     try:
         t = _types[typ]
     except KeyError:
@@ -325,7 +377,7 @@ async def get(obj,typ,path,cmd):
             print(r.value.name, typ," ".join(r.path[:-1]))
         return
 
-    res = await obj.client.get(*cp, "config", nchain=2)
+    res = await obj.client.get(cp, "config", nchain=2)
     if res.get('value',NotGiven) is NotGiven:
         print("Not found.")
         return
@@ -333,16 +385,15 @@ async def get(obj,typ,path,cmd):
     for k,v in val.items():
         print(cmd(k),v,file=obj.stdout)
 
-@cli.command()
+@cli.command(help="Delete a device")
 @click.pass_obj
 @click.argument("typ", nargs=1)
-@click.argument("path", nargs=-1)
+@click.argument("path", nargs=1)
 async def delete(obj,typ,path):
+    """Delete a device.
     """
-    Delete a device.
 
-    Known types: %s
-    """%(" ".join(_types.keys()),)
+    path=P(path)
     try:
         t = _types[typ]
     except KeyError:

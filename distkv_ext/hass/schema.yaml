@@ -1,8 +1,10 @@
 codec:
   bool onoff bin:
     decode: |
+      if value == b'unknown': return None
       return value in ("on","ON",b"on",b"ON")
     encode: |
+      if value is None: return b'unknown'
       return b"on" if value else b"off"
     in:
     - - !!binary |
@@ -41,8 +43,12 @@ codec:
         bnVsbA==
   float bin:
     decode: |
+      if value == b'unknown': return None
+      if value == b'unavailable': return False
       return float(value)
     encode: |
+      if value is None: return b'unknown'
+      if value is False: return b'unavailable'
       return str(value).encode("utf-8")
     in:
     - - !!binary |
@@ -60,8 +66,12 @@ codec:
         LTM=
   int bin:
     decode: |
+      if value == b'unknown': return None
+      if value == b'unavailable': return False
       return int(value)
     encode: |
+      if value is None: return b'unknown'
+      if value is False: return b'unavailable'
       return str(value).encode("utf-8")
     in:
     - - !!binary |

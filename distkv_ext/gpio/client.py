@@ -1,13 +1,10 @@
 # command line interface
 
-import sys
 import anyio
 import asyncclick as click
-from functools import partial
 from collections.abc import Mapping
 
-from distkv.exceptions import ClientError
-from distkv.util import yprint, attrdict, combine_dict, data_get, NotGiven
+from distkv.util import yprint, attrdict
 from distkv.util import res_delete, res_get, res_update, as_service, P
 
 import logging
@@ -16,8 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 @main.group(short_help="Manage GPIO controllers.")  # pylint: disable=undefined-variable
-@click.pass_obj
-async def cli(obj):
+async def cli():
     """
     List GPIO controllers, modify device handling …
     """
@@ -38,7 +34,7 @@ async def dump(obj, path):
     async for r in obj.client.get_tree(
         obj.cfg.gpio.prefix + path, nchain=obj.meta, max_depth=4 - len(path)
     ):
-        pl = len(path) + len(r.path)
+        # pl = len(path) + len(r.path)
         rr = res
         if r.path:
             for rp in r.path:
@@ -47,10 +43,10 @@ async def dump(obj, path):
     yprint(res, stream=obj.stdout)
 
 
-@cli.command()
+@cli.command("list")
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def list(obj, path):
+async def list_(obj, path):
     """List the next stage.
     """
     res = {}
@@ -141,14 +137,14 @@ async def port(obj, path, typ, mode, attr):
             elif v in "xX*":
                 v = None
             else:
-                v = click.UsageError("'%s' wants one of + - X" % (k,))
+                raise click.UsageError("'%s' wants one of + - X" % (k,))
         elif k in ("low", "skip", "flow"):
             if v == "+":
                 v = True
             elif v == "-":
                 v = False
             else:
-                v = click.UsageError("'%s' wants one of + -" % (k,))
+                raise click.UsageError("'%s' wants one of + -" % (k,))
         elif k in {"src", "dest"} or (v is not None and " " in v):
             v = v.split()
         else:
@@ -159,8 +155,6 @@ async def port(obj, path, typ, mode, attr):
                     v = float(v)
                 except ValueError:
                     pass
-        if isinstance(v, click.UsageError):
-            raise v
         val[k] = v
 
     await _attr(obj, (), val, path, False, res)
@@ -179,7 +173,7 @@ async def _attr(obj, attr, value, path, eval_, res=None):
         if value is None:
             value = res_delete(res, attr)
         else:
-            value = eval(value)
+            value = eval(value)  # pylint: disable=eval-used
             if isinstance(value, Mapping):
                 # replace
                 value = res_delete(res, attr)
@@ -224,7 +218,7 @@ async def monitor(obj, name, controller):
             e = []
             for chip in sub:
                 evt = anyio.create_event()
-                await tg.spawn(task, obj.client, obj.cfg.gpio, chip, evt)
+                await tg.spawn(task, chip, evt)
                 e.append(evt)
             for evt in e:
                 await evt.wait()

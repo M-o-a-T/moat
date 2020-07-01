@@ -5,10 +5,9 @@ import anyio
 from anyio.exceptions import ClosedResourceError
 
 from distkv.obj import ClientEntry, ClientRoot
-from distkv.util import combine_dict, PathLongener, NotGiven
+from distkv.util import PathLongener, NotGiven
 from distkv.errors import ErrorRoot
 from distkv.exceptions import ServerError
-from collections import Mapping
 import asyncgpio as gpio
 
 import logging
@@ -38,7 +37,7 @@ class _GPIObase(ClientEntry):
             self._chip = self.parent.chip
         return self._chip
 
-    async def set_value(self, val):
+    async def set_value(self, val):  # pylint: disable=arguments-differ
         await super().set_value(val)
         if self.chip is not None:
             await self._update_chip()
@@ -101,7 +100,7 @@ class GPIOline(_GPIOnode):
         super().__init__(*a, **k)
         self.logger = logging.getLogger(".".join(("gpio", self._path[-2], str(self._path[-1]))))
 
-    async def set_value(self, value):
+    async def set_value(self, value):  # pylint: disable=arguments-differ
         await super().set_value(value)
         if value is NotGiven:
             await self._kill_task()
@@ -168,10 +167,9 @@ class GPIOline(_GPIOnode):
                         await self.client.set(*dest, value=value)
 
                 await evt.set()
-                v = mon.value
-                i = mon.__aiter__()
+                mon_iter = mon.__aiter__()
                 while True:
-                    e = await i.__anext__()
+                    e = await mon_iter.__anext__()
 
                     if not skip:
                         # assume changed. E.g. old==0, so new==1, val:=1 if negate==0
@@ -180,7 +178,7 @@ class GPIOline(_GPIOnode):
                     try:
                         async with anyio.fail_after(bounce):
                             while True:
-                                e = await i.__anext__()
+                                e = await mon_iter.__anext__()
                     except TimeoutError:
                         pass
 
@@ -215,7 +213,7 @@ class GPIOline(_GPIOnode):
                 self.logger.debug("Init %s", mon.value)
                 await evt.set()
                 ival = None
-                i = mon.__aiter__()
+                mon_iter = mon.__aiter__()
 
                 def td(a, b):
                     a = a.timestamp
@@ -258,7 +256,7 @@ class GPIOline(_GPIOnode):
                         # start with debouncing
                         try:
                             async with anyio.fail_after(bounce):
-                                e2 = await mon.__anext__()
+                                e2 = await mon_iter.__anext__()
                         except TimeoutError:
                             pass
                         else:
@@ -316,7 +314,7 @@ class GPIOline(_GPIOnode):
                             async with anyio.fail_after(
                                 (idle_h if inv(e1.value) else idle) - bounce
                             ):
-                                e2 = await mon.__anext__()
+                                e2 = await mon_iter.__anext__()
                         except TimeoutError:
                             if count is not bool(e1.value):
                                 # We have an infinite signal
@@ -403,7 +401,7 @@ class GPIOline(_GPIOnode):
 
                         val, ch = await get_value()
                         res = await self.client.set(*dest, value=val + d, nchain=2, **ch)
-                    except ServerError as exc2:
+                    except ServerError:
                         await self.root.err.record_error(
                             "gpio",
                             *self.subpath,
@@ -419,7 +417,7 @@ class GPIOline(_GPIOnode):
                 val += d
                 d = 0
 
-            val, ch = await get_value()
+            await get_value()  # dropped
 
             wire = self.chip.line(self._path[-1])
             # We debounce manually, thus we need both edges
@@ -431,11 +429,12 @@ class GPIOline(_GPIOnode):
                 value = mon.value
                 debounce = True
 
-                # The idea here is that when d is None, nothing is happening, thus we don't time out.
-                # Otherwise we send the value at first change, then every `intv` seconds.
+                # The idea here is that when d is None, nothing is happening, thus we don't time
+                # out. Otherwise we send the value at first change, then every `intv` seconds.
                 while True:
                     if d is None:
-                        e = await i.__anext__()
+                        await i.__anext__()
+                        # reading the value happens later
 
                         debounce = True
                         t = await anyio.current_time()
@@ -444,7 +443,8 @@ class GPIOline(_GPIOnode):
                         tm = max(0, t + intv - await anyio.current_time())
                     try:
                         async with anyio.fail_after(bounce if debounce else tm):
-                            e = await i.__anext__()
+                            await i.__anext__()
+                            # reading the value happens later
                     except TimeoutError:
                         # Nothing happened before the timeout.
                         if debounce:
@@ -471,7 +471,7 @@ class GPIOline(_GPIOnode):
         try:
             mode = self.find_cfg("mode")
             dest = self.find_cfg("dest")
-        except KeyError:
+        except KeyError as exc:
             await self.root.err.record_error(
                 "gpio",
                 *self.subpath,
@@ -576,7 +576,7 @@ class GPIOline(_GPIOnode):
         if state is not None:
             await self.client.set(*state, value=value)
 
-    async def _oneshot_value(self, line, val, state, negate, t_on):
+    async def _oneshot_value(self, line, val, state, negate, t_on):  # pylint: disable=unused-argument
         """
         Task that monitors one entry. Its value is written to the
         controller but if it's = ``direc`` it's reverted autonomously after
@@ -621,7 +621,7 @@ class GPIOline(_GPIOnode):
                 await w.cancel()
                 await self._set_value(line, False, state, negate)
 
-    async def _pulse_value(self, line, val, state, negate, t_on, t_off):
+    async def _pulse_value(self, line, val, state, negate, t_on, t_off):  # pylint: disable=unused-argument
         """
         Pulse the value.
 
@@ -653,17 +653,16 @@ class GPIOline(_GPIOnode):
                         await anyio.sleep(t_off)
                 finally:
                     await evt.set()
-                    if self._work is not sc:
-                        return
-                    self._work = None
-                    async with anyio.fail_after(2, shield=True):
-                        try:
-                            line.value = negate
-                        except ClosedResourceError:
-                            pass
-                        else:
-                            if state is not None:
-                                await self.client.set(*state, value=False)
+                    if self._work is sc:
+                        self._work = None
+                        async with anyio.fail_after(2, shield=True):
+                            try:
+                                line.value = negate
+                            except ClosedResourceError:
+                                pass
+                            else:
+                                if state is not None:
+                                    await self.client.set(*state, value=False)
 
         if val:
             evt = anyio.create_event()
@@ -774,6 +773,7 @@ class GPIOhost(ClientEntry):
 class GPIOroot(ClientRoot):
     CFG = "gpio"
     err = None
+    _chip = None
 
     async def run_starting(self):
         self._chip = None

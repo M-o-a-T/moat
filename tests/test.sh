@@ -23,4 +23,4 @@ cd "$cur"
 
 export PYTHONPATH=.:../asyncgpio
 
-python3 test.py $chip
+python3 tests/run.py $chip

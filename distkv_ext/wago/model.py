@@ -89,7 +89,7 @@ class WAGOinput(_WAGOnode):
             async with self.server.monitor_input(self.card, self.port) as mon:
                 await evt.set()
                 async for val in mon:
-                    await self.client.set(*dest, value=(val != rest))
+                    await self.client.set(dest, value=(val != rest))
 
     async def _count_task(self, evt, dest, intv, direc):
         async with anyio.open_cancel_scope() as sc:
@@ -104,7 +104,7 @@ class WAGOinput(_WAGOnode):
             ) as mon:
                 await evt.set()
                 async for val in mon:
-                    await self.client.set(*dest, value=val + delta)
+                    await self.client.set(dest, value=val + delta)
 
     async def setup(self):
         await super().setup()
@@ -149,7 +149,7 @@ class WAGOoutput(_WAGOnode):
         """
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
-            async with self.client.watch(*src, min_depth=0, max_depth=0, fetch=True) as wp:
+            async with self.client.watch(src, min_depth=0, max_depth=0, fetch=True) as wp:
                 await evt.set()
                 async for msg in wp:
                     try:
@@ -195,7 +195,7 @@ class WAGOoutput(_WAGOnode):
         """
         await self.server.write_output(self.card, self.port, val != negate)
         if state is not None:
-            await self.client.set(*state, value=val)
+            await self.client.set(state, value=val)
 
     async def _oneshot_value(self, val, state, negate, t_on):  # pylint: disable=unused-argument
         """
@@ -222,7 +222,7 @@ class WAGOoutput(_WAGOnode):
                         self._work_done = anyio.create_event()
                         await evt.set()
                         if state is not None:
-                            await self.client.set(*state, value=True)
+                            await self.client.set(state, value=True)
 
                         await work.wait()
             finally:
@@ -237,7 +237,7 @@ class WAGOoutput(_WAGOnode):
                         except ClosedResourceError:
                             pass
                         else:
-                            await self.client.set(*state, value=(val != negate))
+                            await self.client.set(state, value=(val != negate))
 
         if val:
             evt = anyio.create_event()
@@ -277,7 +277,7 @@ class WAGOoutput(_WAGOnode):
                         await evt.set()
 
                         if state is not None:
-                            await self.client.set(*state, value=t_on / (t_on + t_off))
+                            await self.client.set(state, value=t_on / (t_on + t_off))
 
                         await work.wait()
             finally:
@@ -293,7 +293,7 @@ class WAGOoutput(_WAGOnode):
                         except ClosedResourceError:
                             pass
                         else:
-                            await self.client.set(*state, value=(val != negate))
+                            await self.client.set(state, value=(val != negate))
 
         if val:
             evt = anyio.create_event()

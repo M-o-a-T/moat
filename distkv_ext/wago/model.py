@@ -158,7 +158,7 @@ class WAGOoutput(_WAGOnode):
                         if msg.get("state", "") != "uptodate":
                             await self.root.err.record_error(
                                 "wago",
-                                *self.subpath,
+                                self.subpath,
                                 comment="Missing value: %r" % (msg,),
                                 data={"path": self.subpath}
                             )
@@ -171,20 +171,20 @@ class WAGOoutput(_WAGOnode):
                         except StopAsyncIteration:
                             await self.root.err.record_error(
                                 "wago",
-                                *self.subpath,
+                                self.subpath,
                                 data={"value": val},
                                 comment="Stopped due to bad timer value"
                             )
                             return
                         except Exception as exc:
                             await self.root.err.record_error(
-                                "wago", *self.subpath, data={"value": val}, exc=exc
+                                "wago", self.subpath, data={"value": val}, exc=exc
                             )
                         else:
-                            await self.root.err.record_working("wago", *self.subpath)
+                            await self.root.err.record_working("wago", self.subpath)
                     else:
                         await self.root.err.record_error(
-                            "wago", *self.subpath, comment="Bad value: %r" % (val,)
+                            "wago", self.subpath, comment="Bad value: %r" % (val,)
                         )
 
     async def _set_value(self, val, state, negate):

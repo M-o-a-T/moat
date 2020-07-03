@@ -131,7 +131,7 @@ class KNXnode(_KNXnode):
             async with device.run() as dev:
                 await evt.set()
                 async for _ in dev:
-                    await self.client.set(*dest, value=get_val(device))
+                    await self.client.set(dest, value=get_val(device))
         finally:
             await evt.set()
 
@@ -187,14 +187,14 @@ class KNXnode(_KNXnode):
                             if val is None or nval != val:
                                 async with lock:
                                     val = nval
-                                    res = await self.client.set(*src, value=val, nchain=1)
+                                    res = await self.client.set(src, value=val, nchain=1)
                                     nonlocal chain
                                     chain = res.chain
 
                 await tg.spawn(_rdr)
 
                 async with self.client.watch(
-                    *src, min_depth=0, max_depth=0, fetch=initial, nchain=1
+                    src, min_depth=0, max_depth=0, fetch=initial, nchain=1
                 ) as wp:
                     await evt.set()
                     async for msg in wp:

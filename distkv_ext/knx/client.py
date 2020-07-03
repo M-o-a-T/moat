@@ -4,7 +4,7 @@ import asyncclick as click
 from collections.abc import Mapping
 
 from distkv.util import yprint, attrdict, NotGiven
-from distkv.util import res_delete, res_get, res_update, as_service, P
+from distkv.util import res_delete, res_get, res_update, as_service, P, Path
 
 import logging
 
@@ -66,14 +66,19 @@ async def list_(obj, path):
 @click.option("-v", "--value", help="New value of the attribute.")
 @click.option("-e", "--eval", "eval_", is_flag=True, help="The value shall be evaluated.")
 @click.option("-s", "--split", is_flag=True, help="The value shall be word-split.")
-@click.argument("path", nargs=1)
+@click.argument("bus", nargs=1)
+@click.argument("group", nargs=1)
 @click.pass_obj
-async def attr_(obj, attr, value, path, eval_, split):
+async def attr_(obj, attr, value, bus,group, eval_, split):
     """Set/get/delete an attribute on a given KNX element.
 
     `--eval` without a value deletes the attribute.
     """
-    path = P(path)
+    group = ( int(x) for x in group.split('/') ) if group else ()
+    path = Path(bus, *group)
+    if len(path) != 4:
+        raise click.UsageError("Group address must be 3 /-separated elements.")
+
     if split and eval_:
         raise click.UsageError("split and eval don't work together.")
     if value and not attr:
@@ -93,10 +98,11 @@ async def attr_(obj, attr, value, path, eval_, split):
     multiple=True,
     help="One attribute to set (NAME VALUE). May be used multiple times.",
 )
-@click.argument("path", nargs=1)
+@click.argument("bus", nargs=1)
+@click.argument("group", nargs=1)
 @click.pass_obj
-async def addr(obj, path, typ, mode, attr):
-    """Set/get/delete port settings. This is a shortcut for the "attr" command.
+async def addr(obj, bus, group, typ, mode, attr):
+    """Set/get/delete device settings. This is a shortcut for the "attr" command.
 
     \b
     Known attributes:
@@ -110,9 +116,10 @@ async def addr(obj, path, typ, mode, attr):
     \b
     Paths elements are separated by spaces.
     """
-    path = P(path)
+    group = ( int(x) for x in group.split('/') )
+    path = Path(bus, *group)
     if len(path) != 4:
-        raise click.UsageError("Path must be 4 elements: bus+ga1+ga2+ga3.")
+        raise click.UsageError("Group address must be 3 /-separated elements.")
     res = await obj.client.get(obj.cfg.knx.prefix + path, nchain=obj.meta or 1)
     val = res.get("value", attrdict())
 
@@ -127,9 +134,8 @@ async def addr(obj, path, typ, mode, attr):
     if mode:
         attr = (("mode", mode),) + attr
     for k, v in attr:
-        if k in {"src", "dest"} or " " in v:
-            v = v.split(" ")
-            v = tuple(x for x in v if x != "")
+        if k in {"src", "dest"}:
+            v = P(v)
         else:
             try:
                 v = int(v)

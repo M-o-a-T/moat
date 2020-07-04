@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from distkv.command import node_attr
 from distkv.exceptions import ClientError
 from distkv.util import yprint, attrdict, combine_dict, data_get, NotGiven, path_eval
-from distkv.util import res_delete, res_get, res_update, as_service
+from distkv.util import as_service, P, data_get
 
 import logging
 
@@ -24,58 +24,50 @@ async def cli(obj):
 
 
 @cli.command()
-@click.argument("path", nargs=-1)
+@click.argument("path", nargs=1)
 @click.pass_obj
 async def dump(obj, path):
     """Emit the current state as a YAML file.
     """
     res = {}
-    if len(path) > 4:
-        raise click.UsageError("Only up to four path elements allowed")
-
-    async for r in obj.client.get_tree(*obj.cfg.akumuli.prefix, *path_eval(path, (3,4)), nchain=obj.meta, max_depth=4-len(path)):
-        pl = len(path) + len(r.path)
-        rr = res
-        if r.path:
-            for rp in r.path:
-                rr = rr.setdefault(rp,{})
-        rr['_'] = r if obj.meta else r.value
-    yprint(res, stream=obj.stdout)
+    path = P(path)
+    await data_get(obj.cfg.akumuli.prefix+path)
 
 
 @cli.command()
-@click.argument("path", nargs=-1)
+@click.argument("path", nargs=1)
 @click.pass_obj
 async def list(obj, path):
     """List the next stage.
     """
     res = {}
-    if len(path) > 4:
-        raise click.UsageError("Only up to four path elements allowed")
+    path = P(path)
 
-    async for r in obj.client.get_tree(*obj.cfg.akumuli.prefix, *path_eval(path, (3,4)), nchain=obj.meta, min_depth=1, max_depth=1):
+    async for r in obj.client.get_tree(obj.cfg.akumuli.prefix+path, nchain=obj.meta, min_depth=1, max_depth=1):
         print(r.path[-1], file=obj.stdout)
 
 
 @cli.command('attr')
-@click.option("-a","--attr", multiple=True, help="Attribute to list or modify.")
+@click.option("-a","--attr",help="Attribute to list or modify.", default=':')
 @click.option("-v","--value",help="New value of the attribute.")
 @click.option("-e", "--eval", "eval_", is_flag=True, help="The value shall be evaluated.")
-@click.option("-s", "--split", is_flag=True, help="The value shall be word-split.")
-@click.argument("path", nargs=-1)
+@click.option("-p", "--path", "path_", is_flag=True, help="The value is a path.")
+@click.argument("path", nargs=1)
 @click.pass_obj
-async def attr_(obj, attr, value, path, eval_, split):
+async def attr_(obj, attr, value, path, eval_, path_):
     """Set/get/delete an attribute on a given akumuli element.
 
     `--eval` without a value deletes the attribute.
     """
-    if split and eval_:
+    path = P(path)
+
+    if path_ and eval_:
         raise click.UsageError("split and eval don't work together.")
     if value and not attr:
         raise click.UsageError("Values must have locations ('-a ATTR').")
-    if split:
-        value = value.split()
-    res = await node_attr(obj, attr, value, path_eval(path, (3,4)), eval_)
+    if path_:
+        value = P(value)
+    res = await node_attr(obj, obj.cfg.akumuli.prefix+path, P(attr), value, eval_=eval_)
 
     if obj.meta:
         yprint(res, stream=obj.stdout)
@@ -83,7 +75,7 @@ async def attr_(obj, attr, value, path, eval_, split):
 @cli.command()
 @click.option("-m", "--mode", help="Port mode. Use '-' to disable.")
 @click.option("-a", "--attr", nargs=2, multiple=True, help="One attribute to set (NAME VALUE). May be used multiple times.")
-@click.argument("path", nargs=-1)
+@click.argument("path", nargs=1)
 @click.pass_obj
 async def port(obj, path, mode, attr):
     """Set/get/delete port settings. This is a shortcut for the "attr" command.
@@ -103,9 +95,8 @@ async def port(obj, path, mode, attr):
     "rest" is the state of the wire when the input is False.
     Floats may be paths, in which case they're read from there when starting.
     """
-    if len(path) != 4:
-        raise click.UsageError("Path must be 4 elements: server+type+card+port.")
-    res = await obj.client.get(*obj.cfg.akumuli.prefix, *path_eval(path, (3,4)), nchain=obj.meta or 1)
+    oath = P(path)
+    res = await obj.client.get(obj.cfg.akumuli.prefix+path, nchain=obj.meta or 1)
     val = res.get('value', attrdict())
 
     if mode:
@@ -119,14 +110,14 @@ async def port(obj, path, mode, attr):
             elif v in 'xX*':
                 v = None
             else:
-                v = click.UsageError("'count' wants one of + - X")
+                raise click.UsageError("'count' wants one of + - X")
         elif k == "rest":
             if v == '+':
                 v = True
             elif v == '-':
                 v = False
             else:
-                v = click.UsageError("'rest' wants one of + -")
+                raise click.UsageError("'rest' wants one of + -")
         elif k in {"src", "dest"} or ' ' in v:
             v = v.split(' ')
             v = tuple(x for x in v if x != '')
@@ -138,11 +129,9 @@ async def port(obj, path, mode, attr):
                     v = float(v)
                 except ValueError:
                     pass
-        if isinstance(v,click.UsageError):
-            raise v
         val[k] = v
 
-    res = await node_attr(obj, path_eval(path, (3,4)), (), val, eval_=False, res=res)
+    res = await node_attr(obj, obj.cfg.akumuli.prefix+path, (), val, eval_=False, res=res)
 
     if obj.meta:
         yprint(res, stream=obj.stdout)
@@ -163,7 +152,7 @@ async def server(obj, name, host, port, delete):
     if not name:
         if host or port or delete:
             raise click.UsageError("Use a server name to set parameters")
-        async for r in obj.client.get_tree(*obj.cfg.akumuli.prefix, min_depth=1, max_depth=1):
+        async for r in obj.client.get_tree(obj.cfg.akumuli.prefix, min_depth=1, max_depth=1):
             print(r.path[-1], file=obj.stdout)
         return
     elif len(name) > 1:
@@ -181,13 +170,13 @@ async def server(obj, name, host, port, delete):
             else:
                 value.port = int(port)
     elif delete:
-        res = await obj.client.delete_tree(*obj.cfg.akumuli.prefix, name, nchain=obj.meta)
+        res = await obj.client.delete_tree(obj.cfg.akumuli.prefix+name, nchain=obj.meta)
         if obj.meta:
             yprint(res, stream=obj.stdout)
         return
     else:
         value = None
-    res = await node_attr(obj, (*obj.cfg.akumuli.prefix, name), ("server",), value)
+    res = await node_attr(obj, obj.cfg.akumuli.prefix|name, ("server",), value)
 
     if obj.meta:
         yprint(res, stream=obj.stdout)

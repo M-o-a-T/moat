@@ -1,10 +1,7 @@
-from distkv.util import attrdict
+from distkv.util import attrdict, Path
 
 CFG = attrdict(
-        prefix=('.distkv','akumuli'),
-        # There is no "server" entry, that's stored in the DistKV node
-        server_default=attrdict(
-            port=8282,
-        ),
-    )
-
+    prefix=Path(".distkv", "akumuli"),
+    # There is no "server" entry, that's stored in the DistKV node
+    server_default=attrdict(port=8282,),
+)

@@ -128,7 +128,7 @@ class OWFSnode(ClientEntry):
         """
         async with anyio.open_cancel_scope() as sc:
             try:
-                async with self.client.watch(*src, min_depth=0, max_depth=0, fetch=True) as wp:
+                async with self.client.watch(src, min_depth=0, max_depth=0, fetch=True) as wp:
                     if self.monitors.get(k, None) is not None:
                         await self.monitors[k].cancel()
                     self.monitors[k] = sc

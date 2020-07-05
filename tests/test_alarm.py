@@ -47,8 +47,8 @@ async def test_alarm(mock_clock):
         await st.tg.spawn(partial(owfs_mock["server"], client, tree=my_tree, evt=evt))
         await evt.wait()
         await st.run("owfs attr -d 10.345678.90 -i 5 temperature test.foo.temp")
-        await st.run("owfs attr -d 10.345678.90 -i 5 -w templow test.foo.low")
-        await st.run("owfs attr -d 10.345678.90 -i 5 -w what.ever test.foo.whatever")
+        await st.run("owfs attr -d 10.345678.90 -w templow test.foo.low")
+        await st.run("owfs attr -d 10.345678.90 -w what.ever test.foo.whatever")
         await anyio.sleep(10)
         await data_get(obj, Path())
 

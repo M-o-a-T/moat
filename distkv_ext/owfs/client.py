@@ -1,7 +1,7 @@
 # command line interface
 
 import asyncclick as click
-from distkv.util import yprint, attrdict, NotGiven, P
+from distkv.util import yprint, attrdict, NotGiven, P, as_service
 from distkv.command import node_attr
 
 import logging
@@ -215,4 +215,5 @@ async def monitor(obj, server):
     """
     from distkv_ext.owfs.task import task
 
-    await task(obj.client, obj.cfg, server)
+    async with as_service(obj) as srv:
+        await task(obj.client, obj.cfg, server, srv)

@@ -2,9 +2,8 @@
 
 import os
 import asyncclick as click
-import yaml
 
-from distkv.util import yprint, attrdict, combine_dict, NotGiven, P
+from distkv.util import yprint, attrdict, combine_dict, NotGiven, P, Path, yload
 
 import logging
 
@@ -19,83 +18,30 @@ async def cli(obj, test):
     Manage Home Assistant integration.
     """
     obj.hass_test = test
-    obj.hass_name = (".hass", "test") if test else (".hass",)
-    res = await obj.client.get(*obj.hass_name)
-    if res.get("value", NotGiven) is not NotGiven:
-        obj.hass = attrdict(**res.value)
-
-
-@cli.command("init")
-@click.option("-i", "--init", is_flag=True, help="Actually set the data.")
-@click.option("-c", "--conv", help="The converter to use for HASS.")
-@click.argument("path", nargs=1)
-@click.pass_obj
-async def init_(obj, conv, path, init):
-    """Set up stored data and paths for Home Assistant.
-
-    Arguments:
-    - The converter that uses the data conversion entries.
-      The default is 'hassco'.
-    - the path to the HASS subtree in DistKV which contains your
-      dynamically-configured entries. The default is 'home' 'ass' 'cfg',
-      or 'test' 'retain' 'cfg' when testing.
-
-    The path's last word is the "discovery_prefix" in Home Assistant's
-    MQTT configuration. It cannot contain a slash.
-
-    With '-i', this command saves the data; it can only be used once.
-    Otherwise the current settings will be listed.
-    """
-    path = P(path)
-    res = await obj.client.get(obj.hass_name)
-    if res.get("value", NotGiven) is not NotGiven:
-        if init or conv or path:
-            raise click.UsageError("You already used this command.")
-        yprint(res.value, stream=obj.stdout)
-        return
-    elif not init:
-        raise click.UsageError("You need to use the 'init' option to do this.")
-    if not conv:
-        conv = "hassco"
-    if not path:
-        if obj.hass_test:
-            path = "test retain cfg".split()
-        else:
-            path = "home ass cfg".split()
-    await obj.client.set(obj.hass_name, value=dict(conv=conv, path=path))
-    print("Setup stored.")
-    await setup_conv(obj)
+    if test:
+        obj.hass_name = Path("test","retain")
+    else:
+        obj.hass_name = Path("home","ass","dyn")
 
 
 @cli.command("conv")
+@click.option("-u", "--user", help="The user name used for HASS.", default="hassco")
 @click.pass_obj
-async def conv_(obj):
+async def conv_(obj, user):
     """Update stored converters."""
-    chg = await setup_conv(obj)
+    chg = await setup_conv(obj, user)
     if not chg:
         print("No changes.")
 
 
-async def setup_conv(obj):
+async def setup_conv(obj, user):
     """
     Set up converters.
     """
     n = 0
 
-    conv = obj.hass.conv
-    path = obj.hass.path
-
-    def construct_yaml_tuple(self, node):
-        seq = self.construct_sequence(node)
-        return tuple(seq)
-
-    # This is a hack, FIXME
-    from yaml.constructor import SafeConstructor
-
-    SafeConstructor.add_constructor(u"tag:yaml.org,2002:seq", construct_yaml_tuple)
-
     with open(os.path.join(os.path.dirname(__file__), "schema.yaml")) as f:
-        cfg = yaml.safe_load(f)
+        cfg =  yload(f)
     for k, v in cfg["codec"].items():
         k = k.split(" ")
         r = await obj.client._request(action="get_internal", path=["codec"] + k)
@@ -104,7 +50,7 @@ async def setup_conv(obj):
             await obj.client._request(action="set_internal", path=["codec"] + k, value=v)
             n += 1
 
-    ppa = ("conv", conv) + path
+    ppa = ("conv", user) + path
     for k, v in cfg["conv"].items():
         for kk, vv in v.items():
             vv = dict(codec=vv)
@@ -137,12 +83,14 @@ _types = {
         cmd=(str, "‹prefix›/light/‹path›/cmd", "topic for commands", "command_topic"),
         state=(str, "‹prefix›/light/‹path›/state", "topic for state", "state_topic"),
         _payload=True,
+        _payloads=True,
     ),
     "switch": attrdict(
         cmd=(str, "‹prefix›/binary_switch/‹path›/cmd", "topic for commands", "command_topic"),
         state=(str, "‹prefix›/binary_switch/‹path›/state", "topic for state", "state_topic"),
         icon=(str, None, "Device icon", "icon"),
         _payload=True,
+        _payloads=True,
     ),
     "binary_sensor": attrdict(
         state=(str, "‹prefix›/binary_switch/‹path›/state", "topic for state", "state_topic"),
@@ -190,6 +138,9 @@ for _v in _types.values():
     if _v.pop("_payload", False):
         _v.on = (str, "on", "payload to turn on", "payload_on")
         _v.off = (str, "off", "payload to turn off", "payload_off")
+    if _v.pop("_payloads", False):
+        _v.ons = (str, "on", "state when turned on", "state_on")
+        _v.offs = (str, "off", "state when turned off", "state_off")
     _v.name = (str, "‹type› ‹path›", "The name of this device", "name")
     _v.uid = (str, "dkv_‹tock›", "A unique ID for this device", "unique_id")
     _v.device = (str, "", "ID of the device this is part of", "device")
@@ -260,7 +211,7 @@ async def set_(obj, typ, path, option, eval_option, list_options, force, plus):
 
     if len(path) not in (1, 2):
         raise click.UsageError("The path must consist of 1 or 2 words.")
-    cp = obj.hass.path + (typ, *path, "config")
+    cp = obj.hass_name + (typ, *path, "config")
 
     res = await obj.client.get(cp, nchain=2)
     r = attrdict()
@@ -302,13 +253,13 @@ async def set_(obj, typ, path, option, eval_option, list_options, force, plus):
         elif k == "name":
             vv = "_".join(path)
         elif k == "cmd":
-            vv = "/".join((*obj.hass.path, typ, *path, "cmd"))
+            vv = "/".join((*obj.hass_name, typ, *path, "cmd"))
         elif k.endswith("cmd"):
-            vv = "/".join((*obj.hass.path, typ, *path, k[:-3], "cmd"))
+            vv = "/".join((*obj.hass_name, typ, *path, k[:-3], "cmd"))
         elif k == "state":
-            vv = "/".join((*obj.hass.path, typ, *path, "state"))
+            vv = "/".join((*obj.hass_name, typ, *path, "state"))
         elif k.endswith("state"):
-            vv = "/".join((*obj.hass.path, typ, *path, k[:-5], "state"))
+            vv = "/".join((*obj.hass_name, typ, *path, k[:-5], "state"))
         elif v[1] == 0 or v[1] == "":
             continue
         else:
@@ -358,7 +309,7 @@ async def set_(obj, typ, path, option, eval_option, list_options, force, plus):
     await obj.client.set(cp, value=v, **r)
 
 
-set.__doc__ = """
+set_.__doc__ = """
     Add or modify a device.
 
     Boolean states can be set with "-o NAME" and cleared with "-o -name".
@@ -376,7 +327,7 @@ set.__doc__ = """
 async def get(obj, typ, path, cmd):
     path = P(path)
     if typ == "-":
-        res = await obj.client._request(action="enumerate", path=obj.hass.path, empty=True)
+        res = await obj.client._request(action="enumerate", path=obj.hass_name, empty=True)
         for r in res.result:
             print(r, file=obj.stdout)
         return
@@ -392,15 +343,15 @@ async def get(obj, typ, path, cmd):
         cmd = lambda x: tt.get(x, x)
     else:
         cmd = lambda x: x
-    cp = obj.hass.path + (typ,) + path
+    cp = obj.hass_name + (typ,) + path
     if not len(path):
-        async for r in obj.client.get_tree(*cp):
+        async for r in obj.client.get_tree(cp):
             if r.path[-1] != "config":
                 continue
             print(r.value.name, typ, " ".join(r.path[:-1]))
         return
 
-    res = await obj.client.get(cp, "config", nchain=2)
+    res = await obj.client.get(cp|"config", nchain=2)
     if res.get("value", NotGiven) is NotGiven:
         print("Not found.")
         return
@@ -430,9 +381,9 @@ async def delete(obj, typ, path):
     if typ not in _types:
         raise click.UsageError("I don't know this type.")
 
-    cp = obj.hass.path + (typ,) + path
+    cp = obj.hass_name + (typ, *path)
 
-    res = await obj.client.get(*cp, "config", nchain=2)
+    res = await obj.client.get(cp, "config", nchain=2)
     if res.get("value", NotGiven) is NotGiven:
         print("Not found.")
         return

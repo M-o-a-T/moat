@@ -26,7 +26,7 @@ async def task(client, cfg, server: WAGOserver, evt=None):
     async def present(s, p):
         # Set the "present" attribute
         if s.val_d(None, "present") is not p:
-            await s.update(s.value_or(attrdict(), Mapping)._update("present", value=p))
+            await s.update(s.value_or(attrdict(), Mapping)._update(["present"], value=p))
 
     async def merge_ports(s_card, r):
         r = set(range(1, r + 1))

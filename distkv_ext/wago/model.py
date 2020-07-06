@@ -6,6 +6,7 @@ from anyio.exceptions import ClosedResourceError
 
 from distkv.obj import ClientEntry, ClientRoot
 from distkv.errors import ErrorRoot
+from distkv.util import Path
 
 import logging
 
@@ -94,7 +95,7 @@ class WAGOinput(_WAGOnode):
     async def _count_task(self, evt, dest, intv, direc):
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
-            delta = await self.client.get(*dest)
+            delta = await self.client.get(dest)
             delta = delta.get("value", 0)
             if not isinstance(delta, (int, float)):
                 delta = 0
@@ -211,8 +212,8 @@ class WAGOoutput(_WAGOnode):
 
         async def work_oneshot(evt):
             nonlocal t_on
-            if isinstance(t_on, (list, tuple)):
-                t_on = (await self.client.get(*t_on)).value_or(None)
+            if isinstance(t_on, (Path, list, tuple)):
+                t_on = (await self.client.get(t_on)).value_or(None)
             try:
                 async with anyio.open_cancel_scope() as sc:
                     async with self.server.write_timed_output(
@@ -260,10 +261,10 @@ class WAGOoutput(_WAGOnode):
         async def work_pulse(evt):
             nonlocal t_on
             nonlocal t_off
-            if isinstance(t_on, (list, tuple)):
-                t_on = (await self.client.get(*t_on)).value_or(None)
-            if isinstance(t_off, (list, tuple)):
-                t_off = (await self.client.get(*t_off)).value_or(None)
+            if isinstance(t_on, (Path, list, tuple)):
+                t_on = (await self.client.get(t_on)).value_or(None)
+            if isinstance(t_off, (Path, list, tuple)):
+                t_off = (await self.client.get(t_off)).value_or(None)
             if t_on is None or t_off is None:
                 raise StopAsyncIteration
 

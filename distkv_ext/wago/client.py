@@ -61,22 +61,22 @@ async def list_(obj, path):
 @click.option("-a", "--attr", multiple=True, help="Attribute to list or modify.")
 @click.option("-v", "--value", help="New value of the attribute.")
 @click.option("-e", "--eval", "eval_", is_flag=True, help="The value shall be evaluated.")
-@click.option("-s", "--split", is_flag=True, help="The value shall be word-split.")
-@click.argument("path", nargs=1)
+@click.option("-p", "--path", is_flag=True, help="The value is a path.")
+@click.argument("path_", nargs=1)
 @click.pass_obj
-async def attr_(obj, attr, value, path, eval_, split):
+async def attr_(obj, attr, value, path_, eval_, path):
     """Set/get/delete an attribute on a given Wago element.
 
     `--eval` without a value deletes the attribute.
     """
-    path = P(path)
+    path_ = P(path_)
     if split and eval_:
         raise click.UsageError("split and eval don't work together.")
     if value and not attr:
         raise click.UsageError("Values must have locations ('-a ATTR').")
-    if split:
-        value = value.split()
-    res = await node_attr(obj, obj.cfg.wago.prefix + path, attr, value, eval_=eval_)
+    if path:
+        value = P(value)
+    res = await node_attr(obj, obj.cfg.wago.prefix + path_, attr, value, eval_=eval_)
 
     if obj.meta:
         yprint(res, stream=obj.stdout)
@@ -137,8 +137,7 @@ async def port_(obj, path, mode, attr):
             else:
                 raise click.UsageError("'rest' wants one of + -")
         elif k in {"src", "dest"} or " " in v:
-            v = v.split(" ")
-            v = tuple(x for x in v if x != "")
+            v = P(v)
         else:
             try:
                 v = int(v)

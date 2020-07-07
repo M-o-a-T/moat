@@ -39,7 +39,6 @@ async def mon(client, ow, hd):
                     v = {}
                     await node.update(v)
                 v = combine_dict(v, vf)
-                print(msg)
 
             if isinstance(msg, DeviceLocated):
                 await node.with_device(msg.device)

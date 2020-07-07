@@ -1,7 +1,7 @@
-from distkv.util import attrdict
+from distkv.util import attrdict, Path
 
 CFG = attrdict(
-    prefix=(".distkv", "gpio"),
+    prefix=Path(".distkv", "gpio"),
     interval=1,  # input/count: Pulse reporting frequency
     count=True,  # input/count, input/button: Pulse direction
     # up down both=True False None

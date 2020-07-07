@@ -6,6 +6,8 @@ from collections.abc import Mapping
 from distkv.util import yprint, attrdict, NotGiven
 from distkv.util import res_delete, res_get, res_update, as_service, P, Path
 
+from xknx.remote_value import RemoteValueSensor
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -88,7 +90,23 @@ async def attr_(obj, attr, value, bus,group, eval_, split):
     await _attr(obj, attr, value, path, eval_)
 
 
-@cli.command()
+@cli.command("addr", help=f"""\
+Set/get/delete device settings. This is a shortcut for the "attr" command.
+
+\b
+Known attributes:
+    type=in:
+    mode (data type)
+    dest (path)
+    type=out:
+    mode (data type)
+    src (path)
+
+\b
+Paths elements are separated by spaces.
+
+Known modes: {" ".join(RemoteValueSensor.DPTMAP.keys())}
+""")
 @click.option("-t", "--type", "typ", help="Must be 'in' or 'out'. Use '-' to delete.")
 @click.option("-m", "--mode", help="Use '-' to disable.")
 @click.option(
@@ -103,18 +121,6 @@ async def attr_(obj, attr, value, bus,group, eval_, split):
 @click.pass_obj
 async def addr(obj, bus, group, typ, mode, attr):
     """Set/get/delete device settings. This is a shortcut for the "attr" command.
-
-    \b
-    Known attributes:
-      type=in:
-        mode (data type)
-        dest (path)
-      type=out:
-        mode (data type)
-        src (path)
-
-    \b
-    Paths elements are separated by spaces.
     """
     group = ( int(x) for x in group.split('/') )
     path = Path(bus, *group)

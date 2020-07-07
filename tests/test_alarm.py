@@ -28,6 +28,7 @@ basic_tree = {
         "simultaneous": {"temperature": 0},
         "10.345678.90": {
             "latesttemp": "12.5",
+            "temperature": "12.5",
             "templow": "15",
             "temphigh": "20",
             "what": {"ever": 123},
@@ -54,9 +55,11 @@ async def test_alarm(mock_clock):
 
         await client.set(P("test.foo.low"), 11)
         await client.set(P("test.foo.what.ever"), "Zapp!")
+        await anyio.sleep(1)
         res = await client.get(P("test.foo.temp"))
         assert res.value == 12.5
         dt["latesttemp"] = 42
+        dt["temperature"] = 42
         await anyio.sleep(6)
         res = await client.get(P("test.foo.temp"))
         await data_get(obj, Path())

@@ -4,10 +4,16 @@ OWFS task for DistKV
 
 import anyio
 from asyncowfs import OWFS
-from asyncowfs.event import DeviceEvent, DeviceLocated, DeviceNotFound, DeviceValue
+from asyncowfs.event import (
+    DeviceEvent,
+    DeviceLocated,
+    DeviceNotFound,
+    DeviceValue,
+    DeviceException,
+)
 from collections.abc import Mapping
 
-from distkv.util import combine_dict, NotGiven
+from distkv.util import combine_dict, NotGiven, Path
 from distkv_ext.owfs.model import OWFSroot
 
 import logging
@@ -41,9 +47,17 @@ async def mon(client, ow, hd):
             elif isinstance(msg, DeviceNotFound):
                 await node.with_device(None)
 
+            elif isinstance(msg, DeviceException):
+                # TODO log an error
+                await node.root.err.record_error(
+                    "onewire", Path.build(node.subpath) | msg.attribute, exc=msg.exception
+                )
+
             elif isinstance(msg, DeviceValue):
                 # Set an entry's value, if warranted.
                 # TODO select an attribute.
+                # TODO release the error
+
                 try:
                     path = v["attr"][msg.attribute]["dest"]
                 except KeyError:
@@ -60,6 +74,9 @@ async def mon(client, ow, hd):
                             continue
                     await client.set(
                         path, value=msg.value, **({"chain": res.chain} if res is not None else {})
+                    )
+                    await node.root.err.record_working(
+                        "onewire", Path.build(node.subpath) | msg.attribute
                     )
 
 

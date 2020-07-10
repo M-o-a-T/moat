@@ -1,7 +1,7 @@
 # command line interface
 
 import asyncclick as click
-from distkv.util import yprint, attrdict, NotGiven, P, as_service
+from distkv.util import yprint, attrdict, NotGiven, P, Path, as_service, data_get
 from distkv.command import node_attr
 
 import logging
@@ -18,55 +18,39 @@ async def cli():
 
 
 @cli.command("list")
-@click.argument("path", nargs=1)
+@click.option("-d", "--device", help="Device to access.")
+@click.option("-f", "--family", help="Device family to modify.")
 @click.pass_obj
-async def list_(obj, path):
+async def list_(obj, device, family):
     """Emit the current state as a YAML file.
     """
-    res = {}
-    path = P(path)
-    if len(path) > 2:
-        raise click.UsageError("Only one or two path elements allowed")
-    if len(path) == 2:
-        if path[1] == "-":
-            path = path[:-1]
-        path = [int(x, 16) for x in path]
-        res = await obj.client.get(obj.cfg.owfs.prefix + path, nchain=obj.meta)
-        if not obj.meta:
-            res = res.value
-
+    if device is not None and family is not None:
+        raise click.UsageError("Family and device code can't both be used")
+    if family:
+        f = int(family, 16)
+        path = Path(f)
+        def pm(p):
+            if len(p)<1:
+                return path
+            return Path("%02x.%12x"%(f, p[0]), *p[1:])
+    elif device:
+        f, d = device.split(".", 2)[0:2]
+        path = Path(int(f, 16), int(d, 16))
+        def pm(p):
+            return Path(device)+p
     else:
-        path = [int(x, 16) for x in path]
-        async for r in obj.client.get_tree(
-            obj.cfg.owfs.prefix + path,
-            nchain=obj.meta,
-            min_depth=max(0, 1 - len(path)),
-            max_depth=2 - len(path),
-        ):
-
-            if len(path) == 0:
-                if len(r.path) and not isinstance(r.path[0], int):
-                    continue
-                if len(r.path) == 1:
-                    f = "%02x" % (r.path[-1],)
-                    c = "_"
-                else:
-                    f = "%02x" % (r.path[-2],)
-                    c = "%012x" % (r.path[-1],)
-                rr = res.setdefault(f, {})
-                if not obj.meta:
-                    r = r.value
-                rr[c] = r
+        path = Path()
+        def pm(p):
+            if len(p) == 0:
+                return p
+            elif not isinstance(p[0], int):
+                return None
+            elif len(p) == 1:
+                return Path("%02x" % p[0])
             else:
-                if len(r.path) == 0:
-                    c = "_"
-                else:
-                    c = "%012x" % (r.path[-1],)
-                if not obj.meta:
-                    r = r.value
-                res[c] = r
+                return Path("%02x.%12x" % (p[0],p[1])) + p[2:]
 
-    yprint(res, stream=obj.stdout)
+    await data_get(obj, obj.cfg.owfs.prefix + path, as_dict='_', path_mangle=pm)
 
 
 @cli.command("attr", help="Mirror a device attribute to/from DistKV")
@@ -74,10 +58,11 @@ async def list_(obj, path):
 @click.option("-f", "--family", help="Device family to modify.")
 @click.option("-i", "--interval", type=float, help="read value every N seconds")
 @click.option("-w", "--write", is_flag=True, help="Write to the device")
+@click.option("-a", "--attr", "attr_", help="The node's attribute to use", default=":")
 @click.argument("attr", nargs=1)
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def attr_(obj, device, family, write, attr, interval, path):
+async def attr__(obj, device, family, write, attr, interval, path, attr_):
     """Show/add/modify an entry to repeatedly read an 1wire device's attribute.
 
     You can only set an interval, not a path, on family codes.
@@ -104,20 +89,21 @@ async def attr_(obj, device, family, write, attr, interval, path):
         f, d = device.split(".", 2)[0:2]
         fd = (int(f, 16), int(d, 16))
 
-    eval_ = False
-    val = NotGiven
+    attr = P(attr)
+    attr_ = P(attr_)
     if remove:
-        eval_ = True
+        res = await obj.client.delete(obj.cfg.owfs.prefix + fd + attr)
     else:
         val = dict()
         if path:
             val["src" if write else "dest"] = path
         if interval:
             val["interval"] = interval
-        if not val:
-            val = NotGiven
+        if len(attr_):
+            val["src_attr" if write else "dest_attr"] = attr_
 
-    res = await node_attr(obj, obj.cfg.owfs.prefix + fd, ("attr", attr,), value=val, eval_=eval_)
+        res = await obj.client.set(obj.cfg.owfs.prefix + fd + attr, value=val)
+
     if res is not None and obj.meta:
         yprint(res, stream=obj.stdout)
 

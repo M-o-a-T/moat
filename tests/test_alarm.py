@@ -31,7 +31,7 @@ basic_tree = {
             "temperature": "12.5",
             "templow": "15",
             "temphigh": "20",
-            "what": {"ever": 123},
+            "foo": {"bar": 123, "plugh.A": 1, "plugh.B": 2, "plugh.C": 3},
         },
     },
     "structure": structs,
@@ -47,22 +47,29 @@ async def test_alarm(mock_clock):
         obj = attrdict(client=client, meta=0, stdout=sys.stdout)
         await st.tg.spawn(partial(owfs_mock["server"], client, tree=my_tree, evt=evt))
         await evt.wait()
+        assert dt["foo"]["bar"] == 123
         await st.run("owfs attr -d 10.345678.90 -i 5 temperature test.foo.temp")
         await st.run("owfs attr -d 10.345678.90 -w templow test.foo.low")
-        await st.run("owfs attr -d 10.345678.90 -w what.ever test.foo.whatever")
+        await st.run("owfs attr -d 10.345678.90 -w foo.bar -a bar:1 test.foo.what.ever")
+        await st.run("owfs attr -d 10.345678.90 -i 4 -a baz:2 foo.plugh:1 test.foo.this")
+        res = await client.set(P("test.foo.this"), value={"this": "is", "baz": {3: 33}})
         await anyio.sleep(10)
         await data_get(obj, Path())
 
         await client.set(P("test.foo.low"), 11)
-        await client.set(P("test.foo.what.ever"), "Zapp!")
+        await client.set(P("test.foo.what.ever"), {"Hello": "No", "bar": {0: 99, 1: 13}})
         await anyio.sleep(1)
         res = await client.get(P("test.foo.temp"))
         assert res.value == 12.5
         dt["latesttemp"] = 42
         dt["temperature"] = 42
+        dt["foo"]["plugh.B"] = 22
         await anyio.sleep(6)
         res = await client.get(P("test.foo.temp"))
         await data_get(obj, Path())
         assert res.value == 42
+        assert dt["foo"]["bar"] == "13"
+        res = await client.get(P("test.foo.this"))
+        assert res.value == {"this": "is", "baz": {2: 22, 3: 33}}
 
         await st.tg.cancel_scope.cancel()

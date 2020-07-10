@@ -4,8 +4,9 @@ DistKV client data model for 1wire
 import anyio
 
 from distkv.obj import ClientEntry, ClientRoot, AttrClientEntry
-from distkv.util import combine_dict
+from distkv.util import combine_dict, attrdict
 from distkv.errors import ErrorRoot
+from distkv.exceptions import ClientChainError
 from collections.abc import Mapping
 
 import logging
@@ -13,14 +14,164 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class OWFSattr(ClientEntry):
+    watch_src = None
+    watch_src_attr = None
+    watch_src_scope = None
+    watch_dest = None
+    watch_dest_attr = None
+    watch_dest_interval = None
+    watch_dest_value = None
+    watch_dest_chain = None
+
+    @classmethod
+    def child_type(cls, name):
+        return cls
+
+    @property
+    def node(self):
+        return self.parent.node
+
+    @property
+    def attr(self):
+        return self.subpath[2:]  # without the device code
+
+    async def set_value(self, val):  # pylint: disable=arguments-differ
+        """
+        Some attribute has been updated.
+        """
+        await super().set_value(val)
+        await self._sync(False)
+
+    async def sync(self, force: bool):
+        for k in self:
+            await k.sync(force)
+        await self._sync(force)
+
+    async def _sync(self, force: bool):
+        val = combine_dict(self.value_or({}, Mapping), self.node.val)
+        dev = self.node.dev
+        if dev is None or dev.bus is None:
+            return
+
+        # write to OWFS
+        src = val.get("src", None)
+        src_attr = val.get("src_attr", ())
+        if force or src != self.watch_src:
+            if self.watch_src_scope is not None:
+                await self.watch_src_scope.cancel()
+            self.watch_src = src
+            self.watch_src_attr = src_attr
+            if src is not None:
+                evt = anyio.create_event()
+                await self.client.tg.spawn(self._watch_src, evt)
+                await evt.wait()
+            else:
+                await self.root.err.record_working(
+                    "owfs", self.subpath + ("write",), comment="dropped"
+                )
+
+        # poll OWFS
+        intv = val.get("interval", 0)
+        dest = val.get("dest")
+        dest_attr = val.get("dest_attr")
+        if force or dest != self.watch_dest or intv != self.watch_dest_interval:
+            await dev.set_polling_interval(self.attr, 0)
+            if intv > 0 and dest is not None:
+                self.watch_dest_interval = intv
+            self.watch_dest = dest
+            self.watch_dest_attr = dest_attr
+            if dest is not None and intv is not None:
+                await dev.set_polling_interval(self.attr, intv)
+            else:
+                await self.root.err.record_working(
+                    "owfs", self.subpath + ("read",), comment="dropped"
+                )
+        self.watch_dest_chain = None
+
+    async def dest_value(self, val):
+        """
+        Called by the task to update a polled value
+        """
+        try:
+            if self.watch_dest_attr:
+                retried = False
+                while True:
+                    if retried or self.watch_dest_chain is None:
+                        res = await self.client.get(self.watch_dest, nchain=3)
+                        self.watch_dest_value = res.value
+                        self.watch_dest_chain = res.chain if "value" in res else None
+                        retried = True
+                    nval = self.watch_dest_value
+                    if not isinstance(nval, attrdict):
+                        nval = attrdict()
+                    nval = nval._update(self.watch_dest_attr, val)
+                    try:
+                        await self.client.set(self.watch_dest, nval)
+                    except ClientChainError:
+                        if retried:
+                            raise
+                        retried = True
+                    break
+            else:
+                await self.client.set(self.watch_dest, val)
+
+        except Exception as exc:
+            await self.root.err.record_error("owfs", self.subpath + ("read",), exc=exc)
+        else:
+            await self.root.err.record_working("owfs", self.subpath + ("read",))
+
+    async def _watch_src(self, evt):
+        """
+        Task that monitors one entry and writes its value to the 1wire
+        device.
+        """
+        async with anyio.open_cancel_scope() as sc:
+            try:
+                async with self.client.watch(
+                    self.watch_src, min_depth=0, max_depth=0, fetch=True
+                ) as wp:
+                    if self.watch_src_scope is not None:
+                        await self.watch_src_scope.cancel()
+                    self.watch_src_scope = sc
+                    await evt.set()
+
+                    async for msg in wp:
+                        try:
+                            val = msg.value
+                            for k in self.watch_src_attr:
+                                val = val[k]
+                        except (KeyError, AttributeError):
+                            pass
+                        else:
+                            dev = self.node.dev
+                            if dev is None:
+                                await self.root.err.record_error(
+                                    "owfs", self.subpath + ("write",), comment="device missing"
+                                )
+                                return
+                            await dev.attr_set(*self.attr, value=val)
+                            await self.root.err.record_working(
+                                "owfs", self.subpath + ("write",), comment="write OK"
+                            )
+
+            except Exception as exc:
+                await self.root.err.record_error("owfs", self.subpath + ("write",), exc=exc)
+            finally:
+                if self.watch_src_scope is sc:
+                    self.watch_src_scope = None
+
+
 class OWFSnode(ClientEntry):
-    poll = None
     dev = None
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
-        self.poll = {}
-        self.monitors = {}
+        self.val = {}
+
+    @classmethod
+    def child_type(cls, name):
+        return OWFSattr
 
     @property
     def node(self):
@@ -30,9 +181,9 @@ class OWFSnode(ClientEntry):
     def family(self):
         return self._path[-2]
 
-    async def sync(self):
+    async def sync(self, force: bool = False):
         for k in self:
-            await k.sync()
+            await k.sync(force)
 
     async def with_device(self, dev):
         """
@@ -41,6 +192,7 @@ class OWFSnode(ClientEntry):
         """
         self.dev = dev
         await self._update_value()
+        await self.sync(True)
 
     async def set_value(self, val):  # pylint: disable=arguments-differ
         """
@@ -48,6 +200,7 @@ class OWFSnode(ClientEntry):
         """
         await super().set_value(val)
         await self._update_value()
+        await self.sync(False)
 
     async def _update_value(self):
         """
@@ -57,105 +210,7 @@ class OWFSnode(ClientEntry):
         if dev is None or dev.bus is None:
             return
 
-        v = self.value_or({}, Mapping)
-        val = combine_dict(v, self.parent.value_or({}, Mapping))
-
-        dev = self.dev
-        if dev is None or dev.bus is None:
-            self.poll = {}  # the bus forgets them
-            # self.monitors is cleared by the tasks
-        else:
-            obus = v.get("bus", {})
-            bus = dict(server=dev.bus.server.name, path=dev.bus.path)
-            if bus != obus:
-                v["bus"] = bus
-                await self.update(v)
-
-            poll = val.get("attr", {})
-
-            # set up polling
-            for k, v in self.poll.items():
-                kp = poll.get(k, {})
-                if not kp.get("dest", ()) or kp.get("interval", -1) <= 0:
-                    logger.debug("POLL OFF 1 %s", k)
-                    await dev.set_polling_interval(k, 0)
-                    await self.root.err.record_working(
-                        "owfs", self.subpath + (k, "poll"), comment="deleted"
-                    )
-
-            for k, v in list(self.monitors.items()):
-                kp = poll.get(k, {})
-                if kp.get("src", ()) != self.poll.get(k, {}).get("src", ()):
-                    logger.debug("POLL OFF 2 %s", k)
-                    await dev.set_polling_interval(k, 0)
-                    await v.cancel()
-                    await self.root.err.record_working(
-                        "owfs", self.subpath + (k, "write"), comment="deleted"
-                    )
-
-            for k, v in poll.items():
-                kp = self.poll.get(k, {})
-                try:
-                    if v.get("dest", ()):
-                        i = v.get("interval", -1)
-                        if i > 0:
-                            if not kp.get("dest", ()) or kp.get("interval", -1) != i:
-                                logger.debug("POLL ON %s %s", k, v)
-                                await dev.set_polling_interval(k, v["interval"])
-                            await self.root.err.record_working(
-                                "owfs", self.subpath + (k, "poll"), comment="replaced", data=v
-                            )
-                except Exception as exc:
-                    await self.root.err.record_error(
-                        "owfs", self.subpath + (k, "poll"), data=v, exc=exc
-                    )
-
-                vp = v.get("src", ())
-                if vp:
-                    if kp.get("src", ()) != vp or k not in self.monitors:
-                        evt = anyio.create_event()
-                        await self.client.tg.spawn(self._watch, k, v["src"], evt)
-                        await evt.wait()
-
-            self.poll = poll
-
-    async def _watch(self, k, src, evt):
-        """
-        Task that monitors one entry and writes its value to the 1wire
-        device.
-
-        TODO select an attribute.
-        """
-        async with anyio.open_cancel_scope() as sc:
-            try:
-                async with self.client.watch(src, min_depth=0, max_depth=0, fetch=True) as wp:
-                    if self.monitors.get(k, None) is not None:
-                        await self.monitors[k].cancel()
-                    self.monitors[k] = sc
-
-                    await evt.set()
-                    kp = [x for x in k.split("/") if k]
-                    await self.root.err.record_working(
-                        "owfs", self.subpath + (k, "write"), comment="replaced"
-                    )
-
-                    async for msg in wp:
-                        try:
-                            val = msg.value
-                        except AttributeError:
-                            pass
-                        else:
-                            if self.dev is None:
-                                await self.root.err.record_error(
-                                    "owfs", self.subpath + (k, "write"), comment="device missing"
-                                )
-                                return
-                            await self.dev.attr_set(*kp, value=val)
-            except Exception as exc:
-                await self.root.err.record_error("owfs", self.subpath + (k, "write"), exc=exc)
-            finally:
-                if self.monitors.get(k, None) is sc:
-                    del self.monitors[k]
+        self.val = combine_dict(self.value_or({}, Mapping), self.parent.value_or({}, Mapping))
 
 
 class OWFSfamily(ClientEntry):

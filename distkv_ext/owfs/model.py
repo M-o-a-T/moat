@@ -107,14 +107,14 @@ class OWFSattr(ClientEntry):
                         nval = attrdict()
                     nval = nval._update(self.watch_dest_attr, val)
                     try:
-                        await self.client.set(self.watch_dest, nval)
+                        await self.client.set(self.watch_dest, nval, idem=True)
                     except ClientChainError:
                         if retried:
                             raise
                         retried = True
                     break
             else:
-                await self.client.set(self.watch_dest, val)
+                await self.client.set(self.watch_dest, val, idem=True)
 
         except Exception as exc:
             await self.root.err.record_error("owfs", self.subpath + ("read",), exc=exc)

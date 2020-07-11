@@ -14,8 +14,11 @@ task = knx_task["task"]
 knx_model = load_ext("knx", "model")
 KNXroot = knx_model["KNXroot"]
 
+
 async def test_basic():
-    async with stdtest(test_0={"init": 125}, n=1, tocks=200) as st, st.client(0) as client, Tester().run() as t:
+    async with stdtest(test_0={"init": 125}, n=1, tocks=200) as st, st.client(
+        0
+    ) as client, Tester().run() as t:
         await st.run(f"knx server test localhost -h 127.0.0.1 -p {knx_mock['TCP_PORT']}")
         await st.run("knx addr -t in -m power test 1/2/3 -a dest test.some.power")
         await st.run("knx addr -t in -m binary test 1/2/4 -a dest test.some.switch")
@@ -27,17 +30,19 @@ async def test_basic():
 
         await st.run("data get -rd_ :", do_stdout=False)
 
-        cfg=attrdict()
+        cfg = attrdict()
         evt = anyio.create_event()
-        await st.tg.spawn(partial(task,client,client._cfg.knx,knx["test"]["localhost"],evt=evt))
+        await st.tg.spawn(
+            partial(task, client, client._cfg.knx, knx["test"]["localhost"], evt=evt)
+        )
         await evt.wait()
 
-        se = t.exposed_sensor("some_sensor","1/2/3", value_type="power")
-        sw = t.switch("some_switch","1/2/4")
-        sp = t.exposed_sensor("some_percent","1/2/5", value_type="percentU8")
-        te = t.sensor("some_other_sensor","2/3/4", value_type="power")
-        tw = t.binary_sensor("some_other_switch","2/3/5")
-        tp = t.sensor("some_other_percent","2/3/6", value_type="percentU8")
+        se = t.exposed_sensor("some_sensor", "1/2/3", value_type="power")
+        sw = t.switch("some_switch", "1/2/4")
+        sp = t.exposed_sensor("some_percent", "1/2/5", value_type="percentU8")
+        te = t.sensor("some_other_sensor", "2/3/4", value_type="power")
+        tw = t.binary_sensor("some_other_switch", "2/3/5")
+        tp = t.sensor("some_other_percent", "2/3/6", value_type="percentU8")
         assert te.sensor_value.value is None
         assert tw.state.value == 2  # None
         assert tp.sensor_value.value is None
@@ -63,4 +68,3 @@ async def test_basic():
         assert ve.value == 42
         assert vw.value == 1
         assert vp.value == 18
-

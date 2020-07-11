@@ -71,12 +71,12 @@ async def list_(obj, path):
 @click.argument("bus", nargs=1)
 @click.argument("group", nargs=1)
 @click.pass_obj
-async def attr_(obj, attr, value, bus,group, eval_, split):
+async def attr_(obj, attr, value, bus, group, eval_, split):
     """Set/get/delete an attribute on a given KNX element.
 
     `--eval` without a value deletes the attribute.
     """
-    group = ( int(x) for x in group.split('/') ) if group else ()
+    group = (int(x) for x in group.split("/")) if group else ()
     path = Path(bus, *group)
     if len(path) != 4:
         raise click.UsageError("Group address must be 3 /-separated elements.")
@@ -90,7 +90,9 @@ async def attr_(obj, attr, value, bus,group, eval_, split):
     await _attr(obj, attr, value, path, eval_)
 
 
-@cli.command("addr", help=f"""\
+@cli.command(
+    "addr",
+    help=f"""\
 Set/get/delete device settings. This is a shortcut for the "attr" command.
 
 \b
@@ -106,7 +108,8 @@ Known attributes:
 Paths elements are separated by spaces.
 
 Known modes: {" ".join(RemoteValueSensor.DPTMAP.keys())}
-""")
+""",
+)
 @click.option("-t", "--type", "typ", help="Must be 'in' or 'out'. Use '-' to delete.")
 @click.option("-m", "--mode", help="Use '-' to disable.")
 @click.option(
@@ -122,7 +125,7 @@ Known modes: {" ".join(RemoteValueSensor.DPTMAP.keys())}
 async def addr(obj, bus, group, typ, mode, attr):
     """Set/get/delete device settings. This is a shortcut for the "attr" command.
     """
-    group = ( int(x) for x in group.split('/') )
+    group = (int(x) for x in group.split("/"))
     path = Path(bus, *group)
     if len(path) != 4:
         raise click.UsageError("Group address must be 3 /-separated elements.")

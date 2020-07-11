@@ -20,6 +20,7 @@ from xknx.remote_value import RemoteValueSensor
 
 TCP_PORT = (os.getpid() + 25) % 10000 + 40000
 
+
 class Tester:
     _client = None
     _server = None
@@ -94,10 +95,10 @@ trace-mask = 0x3ff
             gateway_port=TCP_PORT,
         )
         async with self._daemon() as server:
-          async with xknx.XKNX().run(connection_config=ccfg) as client:
-            self._server = server
-            self._client = client
-            yield self
+            async with xknx.XKNX().run(connection_config=ccfg) as client:
+                self._server = server
+                self._client = client
+                yield self
 
     def switch(self, *a, **k):
         res = Switch(self._client, *a, **k)
@@ -118,4 +119,3 @@ trace-mask = 0x3ff
         res = ExposeSensor(self._client, *a, **k)
         self._client.devices.add(res)
         return res
-

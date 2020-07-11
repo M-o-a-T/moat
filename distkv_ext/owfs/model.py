@@ -160,7 +160,7 @@ class OWFSattr(ClientEntry):
                                     "owfs", self.subpath + ("write",), comment="device missing"
                                 )
                                 return
-                            await dev.attr_set(*self.attr, value=val)
+                            await dev.set(*self.attr, value=val)
                             await self.root.err.record_working(
                                 "owfs", self.subpath + ("write",), comment="write OK"
                             )

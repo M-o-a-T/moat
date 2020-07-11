@@ -106,6 +106,8 @@ class KNXnode(_KNXnode):
 
     async def _task_in(self, evt, dest):
         try:
+            idem = self.find_cfg("idem", default=True)
+
             mode = self.find_cfg("mode", default=None)
             if mode is None:
                 logger.info("mode not set in %s", self.subpath)
@@ -131,13 +133,14 @@ class KNXnode(_KNXnode):
             async with device.run() as dev:
                 await evt.set()
                 async for _ in dev:
-                    await self.client.set(dest, value=get_val(device))
+                    await self.client.set(dest, value=get_val(device), idem=idem)
         finally:
             await evt.set()
 
     async def _task_out(self, evt, src, initial=False):
         try:
             val = None
+            idem = self.find_cfg("idem", default=True)
             mode = self.find_cfg("mode", default=None)
             if mode is None:
                 logger.info("mode not set in %s", self.subpath)
@@ -187,7 +190,9 @@ class KNXnode(_KNXnode):
                             if val is None or nval != val:
                                 async with lock:
                                     val = nval
-                                    res = await self.client.set(src, value=val, nchain=1)
+                                    res = await self.client.set(
+                                        src, value=val, nchain=1, idem=idem
+                                    )
                                     nonlocal chain
                                     chain = res.chain
 

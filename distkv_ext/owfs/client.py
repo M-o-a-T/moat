@@ -29,17 +29,22 @@ async def list_(obj, device, family):
     if family:
         f = int(family, 16)
         path = Path(f)
+
         def pm(p):
-            if len(p)<1:
+            if len(p) < 1:
                 return path
-            return Path("%02x.%12x"%(f, p[0]), *p[1:])
+            return Path("%02x.%12x" % (f, p[0]), *p[1:])
+
     elif device:
         f, d = device.split(".", 2)[0:2]
         path = Path(int(f, 16), int(d, 16))
+
         def pm(p):
-            return Path(device)+p
+            return Path(device) + p
+
     else:
         path = Path()
+
         def pm(p):
             if len(p) == 0:
                 return p
@@ -48,9 +53,9 @@ async def list_(obj, device, family):
             elif len(p) == 1:
                 return Path("%02x" % p[0])
             else:
-                return Path("%02x.%12x" % (p[0],p[1])) + p[2:]
+                return Path("%02x.%12x" % (p[0], p[1])) + p[2:]
 
-    await data_get(obj, obj.cfg.owfs.prefix + path, as_dict='_', path_mangle=pm)
+    await data_get(obj, obj.cfg.owfs.prefix + path, as_dict="_", path_mangle=pm)
 
 
 @cli.command("attr", help="Mirror a device attribute to/from DistKV")
@@ -114,14 +119,18 @@ async def attr__(obj, device, family, write, attr, interval, path, attr_):
 @click.option("-v", "--value", help="The attribute to set or delete")
 @click.option("-e", "--eval", "eval_", is_flag=True, help="Whether to eval the value")
 @click.option("-s", "--split", is_flag=True, help="Split the value into words")
-@click.argument("name", nargs=1)
+@click.option("-a", "--attr", "attr_", help="The attribute to modify")
+@click.argument("name", nargs=1, default=":")
 @click.pass_obj
-async def set_(obj, device, family, value, eval_, name, split):
+async def set_(obj, device, family, value, eval_, name, split, attr_):
     """Set or delete some random attribute.
 
     For deletion, use '-ev-'.
     """
     name = P(name)
+    if not attr_:
+        raise click.UsageError("You need to name the attribute")
+    attr_ = P(attr_)
     if (device is not None) + (family is not None) != 1:
         raise click.UsageError("Either family or device code must be given")
     if not len(name):
@@ -131,6 +140,8 @@ async def set_(obj, device, family, value, eval_, name, split):
 
     if family:
         fd = (int(family, 16),)
+        if len(name):
+            raise click.UsageError("You can't use a subpath here.")
     else:
         f, d = device.split(".", 2)[0:2]
         fd = (int(f, 16), int(d, 16))
@@ -139,7 +150,7 @@ async def set_(obj, device, family, value, eval_, name, split):
         value = NotGiven
 
     res = await node_attr(
-        obj, obj.cfg.owfs.prefix + fd, name, value=value, eval_=eval_, split_=split
+        obj, obj.cfg.owfs.prefix + fd + name, attr_, value=value, eval_=eval_, split_=split
     )
     if res and obj.meta:
         yprint(res, stream=obj.stdout)

@@ -137,12 +137,22 @@ class OWFSattr(ClientEntry):
                     await evt.set()
 
                     async for msg in wp:
+                        logger.debug("Process %r", msg)
+                        if "path" not in msg:
+                            continue
                         try:
+                            k = "value"
                             val = msg.value
                             for k in self.watch_src_attr:
                                 val = val[k]
                         except (KeyError, AttributeError):
-                            pass
+                            await self.root.err.record_error(
+                                "owfs",
+                                self.subpath + ("write",),
+                                comment="Attribute missing",
+                                data={"key": k, "attr": self.watch_src_attr, "msg": msg},
+                            )
+                            return
                         else:
                             dev = self.node.dev
                             if dev is None:

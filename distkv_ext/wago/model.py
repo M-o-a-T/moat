@@ -148,12 +148,14 @@ class WAGOoutput(_WAGOnode):
 
         Also the value is mirrored to ``cur`` if that's set.
         """
+        preload = True
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
             async with self.client.watch(src, min_depth=0, max_depth=0, fetch=True) as wp:
                 async for msg in wp:
                     try:
                         val = msg.value
+                        preload = False
                     except AttributeError:
                         if msg.get("state", "") == "uptodate":
                             await evt.set()
@@ -169,7 +171,7 @@ class WAGOoutput(_WAGOnode):
                     if val in (False, True, 0, 1):
                         val = bool(val)
                         try:
-                            await proc(val, *args)
+                            await proc(val, preload, *args)
                         except StopAsyncIteration:
                             await self.root.err.record_error(
                                 "wago",
@@ -189,7 +191,7 @@ class WAGOoutput(_WAGOnode):
                             "wago", self.subpath, comment="Bad value: %r" % (val,)
                         )
 
-    async def _set_value(self, val, state, negate):
+    async def _set_value(self, val, preload, state, negate):
         """
         Task that monitors one entry and writes its value to the Wago controller.
 
@@ -199,7 +201,7 @@ class WAGOoutput(_WAGOnode):
         if state is not None:
             await self.client.set(state, value=val)
 
-    async def _oneshot_value(self, val, state, negate, t_on):  # pylint: disable=unused-argument
+    async def _oneshot_value(self, val, preload, state, negate, t_on):  # pylint: disable=unused-argument
         """
         Task that monitors one entry. Its value is written to the
         controller but if it's = ``direc`` it's reverted autonomously after
@@ -241,7 +243,7 @@ class WAGOoutput(_WAGOnode):
                         else:
                             await self.client.set(state, value=(val != negate))
 
-        if val:
+        if val and not preload:
             evt = anyio.create_event()
             await self.server.task_group.spawn(work_oneshot, evt)
             await evt.wait()
@@ -252,7 +254,7 @@ class WAGOoutput(_WAGOnode):
             else:
                 await self._set_value(False, state, negate)
 
-    async def _pulse_value(self, val, state, negate, t_on, t_off):
+    async def _pulse_value(self, val, preload, state, negate, t_on, t_off):
         """
         Pulse the value.
 

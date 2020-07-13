@@ -65,21 +65,21 @@ async def list_(obj, path):
 @click.option("-a", "--attr", multiple=True, help="Attribute to list or modify.")
 @click.option("-v", "--value", help="New value of the attribute.")
 @click.option("-e", "--eval", "eval_", is_flag=True, help="The value shall be evaluated.")
-@click.option("-s", "--split", is_flag=True, help="The value shall be word-split.")
+@click.option("-p", "--path", "path_", is_flag=True, help="The value is a path.")
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def attr_(obj, attr, value, path, eval_, split):
+async def attr_(obj, attr, value, path, eval_, path_):
     """Set/get/delete an attribute on a given GPIO element.
 
     `--eval` without a value deletes the attribute.
     """
     path = P(path)
-    if split and eval_:
+    if path_ and eval_:
         raise click.UsageError("split and eval don't work together.")
     if value and not attr:
         raise click.UsageError("Values must have locations ('-a ATTR').")
-    if split:
-        value = value.split()
+    if path_:
+        value = P(value)
     await _attr(obj, attr, value, path, eval_)
 
 

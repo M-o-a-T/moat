@@ -232,8 +232,6 @@ class WAGOoutput(_WAGOnode):
             finally:
                 async with anyio.fail_after(2, shield=True):
                     await evt.set()  # safety
-                    if self._work is sc:
-                        self._work = None
 
                     if state is not None:
                         try:
@@ -242,6 +240,9 @@ class WAGOoutput(_WAGOnode):
                             pass
                         else:
                             await self.client.set(state, value=(val != negate))
+                    if self._work is sc:
+                        self._work = None
+                        await self._work_done.set()
 
         if val and not preload:
             evt = anyio.create_event()
@@ -252,7 +253,7 @@ class WAGOoutput(_WAGOnode):
                 await self._work.cancel()
                 await self._work_done.wait()
             else:
-                await self._set_value(False, state, negate)
+                await self._set_value(False, None, state, negate)
 
     async def _pulse_value(self, val, preload, state, negate, t_on, t_off):
         """
@@ -308,7 +309,7 @@ class WAGOoutput(_WAGOnode):
                 await self._work.cancel()
                 await self._work_done.wait()
             else:
-                await self._set_value(False, state, negate)
+                await self._set_value(False, None, state, negate)
 
     async def setup(self):
         await super().setup()

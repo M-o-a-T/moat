@@ -64,7 +64,7 @@ class OWFSattr(ClientEntry):
             self.watch_src_attr = src_attr
             if src is not None:
                 evt = anyio.create_event()
-                await self.client.tg.spawn(self._watch_src, evt)
+                await self.root._tg.spawn(self._watch_src, evt)
                 await evt.wait()
             else:
                 await self.root.err.record_working(

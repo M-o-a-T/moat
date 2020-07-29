@@ -151,6 +151,7 @@ class WAGOoutput(_WAGOnode):
         preload = True
         async with anyio.open_cancel_scope() as sc:
             self._poll = sc
+            ready = False
             async with self.client.watch(src, min_depth=0, max_depth=0, fetch=True) as wp:
                 async for msg in wp:
                     try:
@@ -159,6 +160,7 @@ class WAGOoutput(_WAGOnode):
                     except AttributeError:
                         if msg.get("state", "") == "uptodate":
                             await evt.set()
+                            ready = True
                         else:
                             await self.root.err.record_error(
                                 "wago",
@@ -166,6 +168,9 @@ class WAGOoutput(_WAGOnode):
                                 comment="Missing value: %r" % (msg,),
                                 data={"path": self.subpath}
                             )
+                        continue
+
+                    if not ready:  # TODO
                         continue
 
                     if val in (False, True, 0, 1):

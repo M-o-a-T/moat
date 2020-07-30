@@ -48,8 +48,11 @@ async def mon(ow, hd):
 
             elif isinstance(msg, DeviceException):
                 # TODO log an error
+                attr = msg.attribute
+                if isinstance(msg.attribute, str):
+                    attr = (attr,)
                 await node.root.err.record_error(
-                    "onewire", Path.build(node.subpath) | msg.attribute, exc=msg.exception
+                    "onewire", Path.build(node.subpath) + attr, exc=msg.exception
                 )
 
             elif isinstance(msg, DeviceValue):
@@ -61,6 +64,7 @@ async def mon(ow, hd):
                     attr = (attr,)
                 node = node.follow(attr, create=False)
                 await node.dest_value(msg.value)
+                await node.root.err.record_working("onewire", Path.build(node.subpath) + attr)
 
 
 async def task(client, cfg, server=None, evt=None):

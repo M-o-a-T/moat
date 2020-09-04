@@ -68,10 +68,11 @@ async def list_(obj, path):
 @click.option("-v", "--value", help="New value of the attribute.")
 @click.option("-e", "--eval", "eval_", is_flag=True, help="The value shall be evaluated.")
 @click.option("-s", "--split", is_flag=True, help="The value shall be word-split.")
+@click.option("-p", "--path", "path_", is_flag=True, help="The value shall be path-split.")
 @click.argument("bus", nargs=1)
 @click.argument("group", nargs=1)
 @click.pass_obj
-async def attr_(obj, attr, value, bus, group, eval_, split):
+async def attr_(obj, attr, value, bus, group, eval_, path_, split):
     """Set/get/delete an attribute on a given KNX element.
 
     `--eval` without a value deletes the attribute.
@@ -81,12 +82,14 @@ async def attr_(obj, attr, value, bus, group, eval_, split):
     if len(path) != 4:
         raise click.UsageError("Group address must be 3 /-separated elements.")
 
-    if split and eval_:
+    if (split + eval_ + path_) > 1:
         raise click.UsageError("split and eval don't work together.")
     if value and not attr:
         raise click.UsageError("Values must have locations ('-a ATTR').")
     if split:
         value = value.split()
+    elif path_:
+        value = P(value)
     await _attr(obj, attr, value, path, eval_)
 
 

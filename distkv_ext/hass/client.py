@@ -83,7 +83,6 @@ _types = {
         cmd=(str, "‹prefix›/light/‹path›/cmd", "topic for commands", "command_topic"),
         state=(str, "‹prefix›/light/‹path›/state", "topic for state", "state_topic"),
         _payload=True,
-        _payloads=True,
     ),
     "switch": attrdict(
         cmd=(str, "‹prefix›/binary_switch/‹path›/cmd", "topic for commands", "command_topic"),
@@ -348,7 +347,7 @@ async def get(obj, typ, path, cmd):
         async for r in obj.client.get_tree(cp):
             if r.path[-1] != "config":
                 continue
-            print(r.value.name, typ, " ".join(r.path[:-1]))
+            print(r.value.name, typ, r.path[:-1])
         return
 
     res = await obj.client.get(cp|"config", nchain=2)
@@ -383,8 +382,8 @@ async def delete(obj, typ, path):
 
     cp = obj.hass_name + (typ, *path)
 
-    res = await obj.client.get(cp, "config", nchain=2)
+    res = await obj.client.get(cp|"config", nchain=2)
     if res.get("value", NotGiven) is NotGiven:
         print("Not found.")
         return
-    await obj.client.delete_tree(*cp)
+    await obj.client.delete_tree(cp)

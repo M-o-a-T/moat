@@ -56,10 +56,10 @@ interface {{0+p.port.name|int}}
   {%- for v in p.tagged %}
  switchport hybrid allowed vlan add {{ v.vlan }} tagged
   {%- endfor %}
-  {%- for v in p.blocked %}
- switchport forbidden vlan add {{ v.vlan }}
-  {%- endfor %}
  {%- endif %}
+ {%- for v in p.blocked %}
+ switchport forbidden vlan add {{ v.vlan }}
+ {%- endfor %}
  {%- for v in p.single %}
 ! only here: VLAN {{ v.vlan }}
  {%- endfor %}

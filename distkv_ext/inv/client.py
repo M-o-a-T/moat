@@ -426,7 +426,7 @@ async def host_template(obj, template):
                 d.tagged.remove(one)
             d.single = vl_one & d.tagged
             d.tagged -= vl_one
-            d.blocked -= vl_one
+            d.blocked |= vl_one
     data = dict(host=h, vlans=nport, ports=list(ports.values()))
     print(t.render(**data))
 

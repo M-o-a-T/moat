@@ -553,6 +553,30 @@ class HostPort(Cleaner):
         self.attrs = attrdict(kv)
 
     @property
+    def other_end(self):
+        """
+        Returns the host/port at the other end of a cable / cable run.
+
+        May also return an intermediate cable end if it dangles.
+        """
+        c = self.cable
+        if c is None:
+            return None
+
+        cc = c.other_end(self)
+        while isinstance(getattr(cc, "host", None), Wire):
+            cc = cc.host.other_end(cc)
+            cv = self.host.root.cable.cable_for(cc)
+            if cv is None:
+                return cc
+            cc = cv.other_end(cc)
+        return cc
+
+    @property
+    def cable(self):
+        return self.host.root.cable.cable_for(self)
+
+    @property
     def netaddr(self):
         if self.num is None:
             return None
@@ -592,6 +616,50 @@ class HostPort(Cleaner):
             self.attrs.vlan = vlan
         else:
             self.attrs.pop("vlan", None)
+
+    async def _connected_vlans(self, seen):
+        if self in seen:
+            return
+        seen.add(self)
+        if self.attrs.get('vlan',None):
+            # If the port's vlan is hardcoded, use that
+            yield self.attrs.vlan
+            n = self.attrs.vlan+'-'
+            for pn,p in self.host._ports.items():
+                if pn.startswith(n) and 'vlan' in p.attrs:
+                    yield p.attrs.vlan
+            return
+
+        if self.network and self.network.vlan:
+            yield self.network.vlan
+        h = self.other_end
+        h = getattr(h,"host",h)
+        if not isinstance(h,Host):
+            return
+        if h in seen:
+            return
+        seen.add(h)
+        if h.network and h.network.vlan:
+            yield h.network.vlan
+        for p in h._ports.values():
+            async for _v in p._connected_vlans(seen):
+                yield _v
+
+    async def connected_vlans(self):
+        """
+        Enumerate the VLANs to be connected to this port
+        """
+        seen = set()
+        vseen = set()
+        seen.add(self.host)
+        async for v in self._connected_vlans(seen):
+            n = self.host.root.vlan.by_name(v)
+            if n is None:
+                logger.error(f"VLAN {v} does not exist, {self}")
+                continue
+            vseen.add(n)
+        return vseen
+
 
     async def rename(self, name):
         h = self.host

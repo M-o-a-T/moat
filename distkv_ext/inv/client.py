@@ -1,11 +1,13 @@
 # command line interface
 
+import os
+
 import asyncclick as click
 from collections import deque
 from netaddr import IPNetwork, EUI, IPAddress, AddrFormatError
 from operator import attrgetter
 
-from distkv.util import data_get, P
+from distkv.util import data_get, P, attrdict
 from distkv_ext.inv.model import InventoryRoot, Host, Wire
 
 import logging
@@ -364,6 +366,7 @@ async def host_port(ctx, name):
         if ctx.invoked_subcommand is not None:
             raise click.BadParameter("The name '-' triggers a list and precludes subcommands.")
         for k, v in h.ports.items():
+            p = h._ports[k]
             print(k, v)
     elif ctx.invoked_subcommand is None:
         p = h.port[name]
@@ -375,6 +378,57 @@ async def host_port(ctx, name):
         obj.thing_port = name
         pass  # click invokes the subcommand for us.
 
+
+# @host.command(name="template", short_help="apply template")  # added later
+@click.argument("template", type=click.Path("r"), nargs=1)
+@click.pass_obj
+async def host_template(obj, template):
+    """\
+        Load a template, for generating a host configuration file.
+        """
+    import jinja2
+    e = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(template)), autoescape=False)
+    t = e.get_template(os.path.basename(template))
+    h = obj.inv.host.by_name(obj.thing_name)
+
+    nport = {}
+    ports = {}
+    one = None
+    none = None
+
+    for vl in obj.inv.vlan.all_children:
+        if vl.vlan == 1:
+            one = vl
+        elif vl.name == "init":
+            none = vl
+        nport[vl] = 0
+
+    for p in h._ports.values():
+        ports[p.name] = attrdict(port=p, untagged=None, tagged=set(), blocked=set(nport.keys()), single=set())
+
+    for d in ports.values():
+        vs = await d.port.connected_vlans()
+        for vl in vs:
+            nport[vl] += 1
+            d.tagged.add(vl)
+            d.blocked.remove(vl)
+        if not d.tagged:  # port empty
+            d.untagged = none
+
+    vl_one = set(k for k,v in nport.items() if v <= 1)
+    
+    for d in ports.values():
+        if len(d.tagged) == 1:
+            d.untagged = d.tagged.pop()
+        else:
+            if one in d.tagged:
+                d.untagged = one
+                d.tagged.remove(one)
+            d.single = vl_one & d.tagged
+            d.tagged -= vl_one
+            d.blocked -= vl_one
+    data = dict(host=h, vlans=nport, ports=list(ports.values()))
+    print(t.render(**data))
 
 # @host.command(name="find", short_help="Show the path to another host")  # added later
 @click.argument("dest", type=str, nargs=1)
@@ -391,6 +445,8 @@ async def host_find(obj, dest):
     todo.append((h, ()))
 
     def work():
+        # Enumerate all connected hosts.
+        # Wires are duck-typed as hosts with two ports.
         while todo:
             w, wp = todo.popleft()
             wx = w
@@ -503,6 +559,7 @@ inv_sub(
             },
         ),
         ("host_find", {"name": "find", "short_help": "Show the path to another host"}),
+        ("host_template", {"name": "template", "short_help": "Create config using this template"}),
     ),
     postproc=host_post,
     short_help="Manage hosts",

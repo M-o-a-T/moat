@@ -407,23 +407,36 @@ async def host_template(obj, template):
         ports[p.name] = attrdict(port=p, untagged=None, tagged=set(), blocked=set(nport.keys()), single=set())
 
     for d in ports.values():
+        va = d.port.vlan
+        vb = d.port.other_end.vlan if d.port.other_end else None
+        if va is None:
+            va = vb
+        elif vb is not None and va != vb:
+            print(f"Warning! inconsistent VLANs on port {d.port}", file=sys.stderr)
+
         vs = await d.port.connected_vlans()
         for vl in vs:
             nport[vl] += 1
             d.tagged.add(vl)
             d.blocked.remove(vl)
-        if not d.tagged:  # port empty
+        if va:
+            d.untagged = va
+            d.blocked.discard(va)
+            d.tagged.discard(va)
+        elif not d.tagged:  # port empty
+            nport[none] += 1
             d.untagged = none
+            d.blocked.discard(none)
 
     vl_one = set(k for k,v in nport.items() if v <= 1)
     
     for d in ports.values():
-        if len(d.tagged) == 1:
+        if len(d.tagged) == 1 and not d.untagged:
             d.untagged = d.tagged.pop()
         else:
             if one in d.tagged:
                 d.untagged = one
-                d.tagged.remove(one)
+                d.tagged.discard(one)
             d.single = vl_one & d.tagged
             d.tagged -= vl_one
             d.blocked |= vl_one

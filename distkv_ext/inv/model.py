@@ -1146,6 +1146,10 @@ class Cable(Cleaner, AttrClientEntry):
     _dest_b = None
 
     @property
+    def vlan(self):
+        return None
+
+    @property
     def _ppar(self):
         return self.parent.parent
 
@@ -1338,6 +1342,10 @@ class Wire(Cleaner, SkipNone, AttrClientEntry):
             raise KeyError("Duplicate name", self.name)
 
         return super().get_value()
+
+    @property
+    def vlan(self):
+        return None
 
     def __repr__(self):
         return "<Wire %s>" % (self.name,)

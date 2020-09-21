@@ -419,24 +419,28 @@ async def host_find(obj, dest):
                 hx = hp
             else:
                 hx = hp.host
-            if hx.name == dest:
-                pr = []
-                px = None
-                for pp in p:
-                    if getattr(pp, "host", None) is getattr(px, "host", False) and isinstance(
-                        pp.host, Wire
-                    ):
-                        pr.append(pp.host)
-                        px = None
-                    else:
-                        if px is not None:
-                            pr.append(px)
-                        px = pp
+            if hx.name != dest:
+                continue
+            
+            pr = []
+            px = None
+            # For routes through hosts, we print both host+port names.
+            # For wires, only the single wire name is interesting.
+            for pp in p:
+                if getattr(pp, "host", None) is getattr(px, "host", False) and isinstance(
+                    pp.host, Wire
+                ):
+                    pr.append(pp.host)
+                    px = None
+                else:
+                    if px is not None:
+                        pr.append(px)
+                    px = pp
 
-                if px is not None:
-                    pr.append(px)
-                print(*(p.name if isinstance(p, Wire) else p for p in pr))
-                break
+            if px is not None:
+                pr.append(px)
+            print(*(p.name if isinstance(p, Wire) else p for p in pr))
+            break
 
 
 # @wire.command -- added later

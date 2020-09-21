@@ -32,6 +32,9 @@ snmp community "sekrit"  rw
 !
 ip ssh
 !
+ip http session-timeout 60
+ip https session-timeout 60
+!
 management access-list default
 !
 {% for p in ports %}

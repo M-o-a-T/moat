@@ -2,7 +2,10 @@
 DistKV client data model for GPIO
 """
 import anyio
-from anyio.exceptions import ClosedResourceError
+try:
+    from anyio import ClosedResourceError
+except ImportError:
+    from anyio.exceptions import ClosedResourceError
 
 from distkv.obj import ClientEntry, ClientRoot
 from distkv.util import PathLongener, NotGiven

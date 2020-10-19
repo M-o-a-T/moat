@@ -220,7 +220,10 @@ inv_sub(
     "vlan",
     "id",
     int,
-    aux=(click.option("-d", "--desc", type=str, default=None, help="Description"),),
+    aux=(click.option("-d", "--desc", type=str, default=None, help="Description"),
+        click.option("-w", "--wlan", type=str, default=None, help="WLAN SSID"),
+        click.option("-p", "--passwd", type=str, default=None, help="WLAN pasword"),
+    ),
     short_help="Manage VLANs",
 )
 

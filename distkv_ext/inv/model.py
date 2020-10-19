@@ -126,9 +126,12 @@ class Vlan(Cleaner, SkipNone, AttrClientEntry):
         A single VLAN.
 
         Stored as ``inv vlan NUMBER``.
+
+        wlan: WLAN SSID
+        passwd: WLAN password
         """
 
-    ATTRS = ("desc", "name")
+    ATTRS = ("desc", "name", "passwd", "wlan")
     AUX_ATTRS = ("vlan",)
 
     name = None
@@ -235,6 +238,8 @@ class Network(Cleaner, SkipNone, AttrClientEntry):
     name = None
     vlan = None
     mac = False
+    wlan = None
+    passwd = None
     shift = 0
     dhcp = (1, 0)
     virt = False

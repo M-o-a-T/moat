@@ -809,7 +809,7 @@ static void h_error(Handler h, enum HDL_ERR typ)
         h_transmitted(h, msg,RES_FATAL);
         h_set_state(h, S_WAIT_IDLE);
     }
-    else if(0 < typ < ERR_FATAL)
+    else if((0 < typ) && (typ < ERR_FATAL))
         h_set_state(h, S_ERROR);
     else
         h_set_state(h, S_WAIT_IDLE);

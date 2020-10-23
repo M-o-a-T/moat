@@ -11,7 +11,7 @@ def zeroes(len):
 def ones(len):
     return b'\xFF' * len
 def seq(len):
-    return b''.join(bytes((randint(255),)) for x in range(len))
+    return b''.join(bytes((randint(0,255),)) for x in range(len))
 
 @pytest.mark.parametrize("length", (0,1,2,3,4,5,7,8,9,10,11,15,16))
 @pytest.mark.parametrize("frame", [11,14])
@@ -22,7 +22,7 @@ def test_frame(length,frame,src,dst,bits):
     i = BusMessage()
     d = bits(length)
     i.start_send()
-    i.send_data(d)
+    i.add_data(d)
     assert i.data == d
     i.src = src
     i.dst = dst

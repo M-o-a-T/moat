@@ -17,9 +17,8 @@ async def main():
 
             async with StreamBusHandler(backstream) as sb:
                 async with Server(sb) as m:
-                    await trio.sleep(1)
-                    await m.send(1,2,3,b'456')
-                    await trio.sleep(99999)
+                    async for evt in m:
+                        print(m)
     except trio.ClosedResourceError:
         print("Closed.", file=sys.stderr)
 

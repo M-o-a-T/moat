@@ -7,12 +7,35 @@ It can thus accept values from 0…32 in steps of 0.25, 0.5 to 48, 1 to 64,
 and so on until steps of 4096 from 65536 to 126976.
 """
 
+class CtxObj:
+    """
+    Add an async context manager that calls `_ctx` to run the context.
+
+    Usage::
+        class Foo(CtxObj):
+            @asynccontextmanager
+            async def _ctx(self):
+                yield self # or whatever
+
+        async with Foo() as self_or_whatever:
+            pass
+    """
+    async def __aenter__(self):
+        self.__ctx = ctx = self._ctx()
+        return await ctx.__aenter__()
+
+    def __aexit__(self, *tb):
+        return self.__ctx.__aexit__(*tb)
+
+# minifloat granularity
+MINI_F = 1/4
+
 def mini2byte(f):
     """
     Convert a float to a byte-sized minifloat:
     """
 
-    f = int(f*4+0.5)
+    f = int(f/MINI_F+0.5)
     if f <= 32:
         return f
     exp = 1
@@ -29,7 +52,7 @@ def byte2mini(m):
         return m/4
     exp = (m>>4)-1
     m = 16+(m&0xf)
-    return (1<<exp)*m/4
+    return (1<<exp)*m*MINI_F
 
 
 if __name__ == "__main__":

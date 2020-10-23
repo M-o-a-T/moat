@@ -1,6 +1,6 @@
 #
 """
-Base class for sending MoaT messages on a Trio system
+Send bus messages to a Trio stream
 """
 
 import trio
@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 
 from . import BaseBusHandler
 from ..serial import SerBus
+from ..util import CtxObj
 from weakref import ref
 
 
@@ -33,7 +34,7 @@ class _Bus(SerBus):
         self.stream()._process_ack()
 
 
-class StreamBusHandler(BaseBusHandler):
+class StreamBusHandler(BaseBusHandler, CtxObj):
     """
     This class defines the interface for exchanging MoaT messages on any
     Trio stream.
@@ -56,13 +57,6 @@ class StreamBusHandler(BaseBusHandler):
         self.errors = dict()
         self._timeout_evt = trio.Event()
         self._timeout_tick = tick
-
-    async def __aenter__(self):
-        self.__ctx = ctx = self._ctx()
-        return await ctx.__aenter__()
-
-    def __aexit__(self, *tb):
-        return self.__ctx.__aexit__(*tb)
 
     @asynccontextmanager
     async def _ctx(self):

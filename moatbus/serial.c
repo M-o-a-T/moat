@@ -8,16 +8,27 @@ Serial handler for MoatBus
 #include <stdlib.h>
 #include <assert.h>
 
+#include "moatbus/type.h"
 #include "moatbus/serial.h"
 #include "moatbus/crc.h"
 
 
-static void sb_alloc_in(SerBus sb)
+static void sb_clear_in(SerBus sb)
 {
-    sb->m_in = msg_alloc(20);
     sb->crc_in = 0;
     sb->s_in = S_IDLE;
     msg_start_add(sb->m_in);
+}
+
+static void sb_alloc_in(SerBus sb)
+{
+    BusMessage msg = msg_alloc(20);
+    if (sb->m_in_first != NULL)
+        sb->m_in->next = msg;
+    else
+        sb->m_in_first = msg;
+    sb->m_in = msg;
+    sb_clear_in(sb);
 }
 
 // Queue+send a message
@@ -30,8 +41,16 @@ SerBus sb_alloc(void)
 
 void sb_free(SerBus sb)
 {
-    if (sb->m_in)
-        msg_free(sb->m_in);
+    while (sb->m_in_first) {
+        BusMessage msg = sb->m_in_first;
+        sb->m_in_first = msg->next;
+        msg_free(msg);
+    }
+    while (sb->m_out) {
+        BusMessage msg = sb->m_out;
+        sb->m_out = msg->next;
+        msg_free(msg);
+    }
     free(sb);
 }
 
@@ -47,11 +66,6 @@ void sb_send(SerBus sb, BusMessage msg, u_int8_t prio)
 
     if (sb->s_out == S_IDLE)
         sb->s_out = S_INIT;
-}
-
-void sb_send_ack(SerBus sb)
-{
-    sb->ack_out ++;
 }
 
 // process an incoming serial character
@@ -95,18 +109,14 @@ void sb_byte_in(SerBus sb, u_int8_t c)
         break;
     case S_CRC2:
         sb->crc_in ^= c;
-        if (sb->crc_in) {
+        if (sb->crc_in)
             sb->err_crc++;
-            sb->s_in = S_IDLE;
-            sb->crc_in = 0;
-            msg_start_add(sb->m_in);
-        }
         else
-            sb->s_in = S_DONE;
+            sb_alloc_in(sb);
+        sb_clear_in(sb);
         break;
-    case S_DONE:
-        // ugh, overflow
-        sb->err_overflow++;
+
+    case S_DONE: // should not happen
         break;
     }
 }
@@ -165,17 +175,22 @@ int16_t sb_byte_out(SerBus sb)
         else
             sb->s_out = S_INIT;
         return c;
+
+    case S_DONE:  // should not happen
+        break;
     }
+    return 0x00;  // should not happen
 }
 
 // Received message?
 BusMessage sb_recv(SerBus sb, u_int8_t *prio)
 {
-    if (sb->s_in != S_DONE)
+    if (sb->m_in == sb->m_in_first)
         return NULL;
 
-    BusMessage msg = sb->m_in;
-    sb_alloc_in(sb);
+    BusMessage msg = sb->m_in_first;
+    sb->m_in_first = msg->next;
+    sb->ack_out ++;
     
     msg_read_header(msg);
     return msg;
@@ -188,7 +203,7 @@ u_int8_t sb_recv_ack(SerBus sb)
     return c;
 }
 
-char sb_idle(SerBus sb) {
+bool sb_idle(SerBus sb) {
     if (sb->s_in != S_IDLE) {
         if(++sb->idle > 3) {
             sb->idle = 0;
@@ -197,10 +212,10 @@ char sb_idle(SerBus sb) {
             sb->crc_in = 0;
             msg_start_add(sb->m_in);
         }
-        return 1;
+        return true;
     } else {
         sb->idle = 0;
-        return 0;
+        return false;
     }
 }
 

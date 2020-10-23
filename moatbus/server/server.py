@@ -4,6 +4,7 @@ This module implements the basics for a bus server.
 
 import trio
 from contextlib import asynccontextmanager
+from distkv.codec import packer,unpacker
 
 from .backend import BaseBusHandler
 from .message import BusMessage
@@ -47,7 +48,7 @@ class DirectMsg(ServerEvent):
 class CommandHandler:
     pass
 
-class Server:
+class Server(CtxObj):
     """
     Bus server.
 
@@ -55,11 +56,13 @@ class Server:
 
         async with Server(backend, id) as server:
             async for evt in server:
-                await server.handle_event(evt)
+                await handle_event(evt)
     """
     _check_task = None
 
     def __init__(self, backend:BaseBusHandler, id=1):
+        if id<1 or id>3:
+            raise RuntimeError("My ID must be within 1…3")
         self.log = logging.getLogger("%s.%s" % (__name__, backend.name))
         self._back = backend
         self.id2obj = dict()
@@ -84,67 +87,62 @@ class Server:
             if nid == self._next_id:
                 raise NoFreeID(self)
 
-    def with_serial(self, serial, bus_id=None):
-        try:
-            obj = self.ser2obj[serial]
-        except KeyError:
-            obj = Obj(serial)
-            if bus_id is not None:
-                obj.__reg_id = bus_id
-            obj.attach(self)
-        else:
-            self.logger.warn("Server sync problem? %r: %d vs. %d", obj, obj.__reg_id, bus_id)
-            if obj.__reg_id > bus_id:
-                obj.detach()
-                obj.__reg_id = bus_id
-                obj.attach(self)
-        return obj
-
     def register(self, obj):
         """
-        Register a bus object. Multiple calls are OK.
+        Register a bus object.
+
+        This should only be called from `obj.register`.
         """
         self.deregister(obj)
-        try:
-            # Happens when we observe another server's assignment
-            new_id = obj.__reg_id
-        except AttributeError:
+        # Happens when we observe another server's assignment
+        new_id = obj.client_id
+        if new_id is None:
             new_id = self.get_free_id()
 
         self.ser2obj[obj.serial] = obj
         self.id2obj[new_id] = obj
-        obj.__reg_id = new_id
+        obj.client_id = new_id
         obj.__data = None
 
     def bus_id(self, obj):
-        return obj.__reg_id
+        return obj.client_id
 
     def deregister(self, obj):
         """
-        De-register a bus object. Multiple calls are OK.
+        De-register a bus object.
+
+        This should only be called from `obj.deregister`.
         """
         try:
             # Order is important.
             del self.ser2obj[obj.serial]
-            del self.id2obj[obj.__reg_id]
-            del obj.__reg_id
+            del self.id2obj[obj.client_id]
+            del obj.client_id
         except (AttributeError,KeyError):
             pass
-
-    def __aenter__(self):
-        self.__ctx = ctx = self._ctx()
-        return ctx.__aenter__()
-
-    def __aexit__(self, *tb):
-        ctx = self.__ctx
-        del self.__ctx
-        return ctx.__aexit__(*tb)
 
     def __aiter__(self):
         return self
 
     def __anext__(self):
         return self.q_r.__anext__()
+
+    async def sync_in(self, client):
+        """
+        Check if a sync message has arrived on the bus; if so, wait until
+        the change described in it has arrived on the client
+        """
+        pass  # TODO
+
+    async def sync_out(self, client, chain):
+        """
+        Send a "this chain must have arrived at your node to proceed"
+        message to the bus
+        """
+        msg = [chain.node.name, chain.tick]
+        # XXX shorten this? the node should correspond to the other server's ID
+
+        await self.send(src=self.id, dst=-4, code=0, data=packer(msg))
 
     @asynccontextmanager
     async def _ctx(self):
@@ -161,12 +159,157 @@ class Server:
         task_status.started()
         async for msg in self._back:
             print(msg)
+            if msg.code == 0:
+                await self._handle_server(msg)
+            # otherwise dispatch
 
-    async def send(self, src, dest, code, data=b'', prio=0):
+    async def _handle_server(self):
+        if msg.src == -4:  # broadcast
+            if msg.dst > 0:  # client N
+                await self._hs_client_poll_req(msg)
+            else:
+                self.logger.warning("Reserved: %r",msg)
+        elif msg.src < 0:  # server N
+            if msg.dst == -4:  # broadcast
+                await self._hs_sync(msg)
+            elif msg.dst < 0:  # server N
+                self.logger.warning("Reserved: %r",msg)
+            elif msg.dst == 0:  # server N
+                await self._hs_contol_all(msg)
+            else:  # client
+                await self._hs_aa_response(msg)
+        elif msg.src == 0:  # client unknown
+            if msg.dst == -4:  # broadcast
+                await self._hs_aa_request(msg)
+            elif msg.dst < 0:  # server N
+                await self._hs_aa_reject(msg)
+            else:  # anything else
+                self.logger.warning("Reserved: %r",msg)
+        else: # client
+            if msg.dst == -4:  # broadcast
+                await self._hs_client_poll(msg)
+            elif msg.dst < 0:  # server N
+            else:  # client
+                self.logger.warning("Reserved: %r",msg)
+
+                await self._hs_control_one(msg)
+
+    async def _hs_sync(self, msg):
+        """
+        DistKV sync
+        """
+        src = msg.src
+        msg = unpacker(msg.data)
+        self.logger.info("Sync from %d: %r", src, msg)
+        pass  # TODO
+
+    async def _hs_aa_request(self, msg):
+        d = msg.data
+        flags = d[0]>>4
+        polled = False
+
+        ls = d[0]&0xF)+1
+        serial = d[1:ls+1]
+        if len(serial) < ls:
+            self.logger.error("Serial short %r",d)
+            return
+
+        async def accept(code, cid):
+            self.logger.info("Accept x%x for %r", err, serial)
+            d = bytes((code << 4) | len(serial)-1,) + d[1:]
+            await self.send(src=0,dst=cid,code=0,data=d)
+
+        async def reject(err):
+            self.logger.info("Reject x%x for %r", err, serial)
+            d = bytes((err << 4) | len(serial)-1,) + d[1:]
+            await self.send(src=0,dst=self.id,code=0,data=d)
+
+        if flags & 0x1:  # polled client
+            polled = True
+            flags &=~ 0x1
+        if flags:  # incompatible
+            if flags & 0x8:
+                err=3
+            elif flags & 0x4:
+                err=2
+            elif flags & 0x2:
+                err=1
+            else:
+                raise RuntimeError("Cannot happen",flags)
+            await reject(err|0x4)
+            return
+
+        obj = self.with_serial(serial)
+        obj.polled = polled
+        try:
+            obj = get_obj(data)
+            client_id = obj.attach(self)
+        except NoFreeID:
+            await reject(0xA)  # no free address: wait for Poll
+            # TODO start polling to find dead clients
+        else:
+            await accept(0 if isinstance(obj,Obj) else 1, client_id)
+            await obj.new_adr()
+
+    async def _hs_aa_reject(self, msg):
+        """
+        Some other server has rejected a client.
+        """
+        pass
+
+    async def _hs_aa_response(self, msg):
+        """
+        Some other server has accepted a client.
+
+        We should get that information via the network.
+        """
+        pass
+
+    async def _hs_control_all(self, msg):
+        """
+        Some other server has sent a control-all message
+
+        We should get that information via the network.
+        """
+        pass
+
+    async def _hs_control_one(self, msg):
+        """
+        Some other server has sent a control-one message
+
+        We should get that information via the network.
+        """
+        pass
+
+    async def _hs_client_poll(self, msg):
+        try:
+            obj = self.id2obj[msg.src]
+        except KeyError:
+            self.logger.warning("Obj %d sends poll but is not known", msg.src)
+            return
+        if not obj.polled:
+            self.logger.warning("Obj %d/%r sends poll but is not polled", msg.src, obj)
+            obj.polled = True
+        d = msg.data
+        tl = d[0] & 0xF
+        if tl & 0x8:
+            tl = (-1 & ~0x7) | (tl & 0x7)
+        obj.poll_end = time.monotonic() + 2**tl
+        await obj.poll_start(2**tl)
+
+    async def _hs_client_poll_req(self, msg):
+        """
+        Some other server has sent a poll-request message
+
+        We should not be interested.
+        """
+        pass
+
+    async def send(self, src, dst, code, data=b'', prio=0):
         msg = BusMessage()
         msg.start_send()
         msg.src = src
-        msg.dst = dest
+        msg.dst = dst
         msg.code = code
         msg.add_data(data)
 
@@ -211,7 +354,6 @@ class Server:
             rm = bytes(((err<<4) | (mlen-1,))) + m[1:mlen+1]
             await self.reply(data=rm, src=self.id, dest=-4, code=1)  # no known flags yet
 
-
         if len(m)-1 < mlen:
             self.log.error("Too-short addr request %r",msg)
             return
@@ -232,7 +374,7 @@ class Server:
         else:
             rm = bytes(((o.__data is not None) << 4) | (mlen-1,)) + m[1:mlen+1]
             
-            await self.reply(data=rm, dest=o.__reg_id, src=self.id, code=4)  # no known flags yet
+            await self.reply(data=rm, dest=o.client_id, src=self.id, code=4)  # no known flags yet
             if o.__data is None:
                 await self.q_w.put(NewDevice(obj))
             else:
@@ -254,7 +396,7 @@ class Server:
         o = self.with_serial(s, msg.dest)
         if o.__data is None:
             await self.q_w.put(NewDevice(obj))
-        elif o.__reg_id != msg.dest:
+        elif o.client_id != msg.dest:
             await self.q_w.put(OldDevice(obj))
 
 

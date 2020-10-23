@@ -21,12 +21,25 @@ typedef struct _FakeClient {
     char verbose;
 } *FakeClient;
 
+// allocate a client with `n_wires` wires
 FakeClient fc_alloc(u_int8_t n_wires);
+
+// free a client and its resources
 void fc_free(FakeClient fc);
+
+// connect the client to a fake bus at this socket
 char fc_connect(FakeClient fc, const char *sockname);
+
+// process a byte from the socket
 char fc_process(FakeClient fc);
+
+// return the next timeout (ms)
 int fc_timeout(FakeClient fc);
+
+// process a timeout from the socket
 void fc_timer(FakeClient fc);
+
+// queue a message for sending
 void fc_send(FakeClient fc, BusMessage msg, u_int8_t prio);
 
 #endif

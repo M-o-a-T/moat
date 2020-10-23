@@ -2,16 +2,27 @@
 #define MOATBUS_SERIAL
 
 /*
-Serial handler for MoatBus
+Serial handler for MoaTbus
 
-This interface serializes bus frames.
+This interface describes how to serialize bus frames.
 
-Structure:
-0x01 len data CRC16
-0x02 … same for lower-priority messages
+Message Structure:
+prio len data CRC16
 
-Anything else is supposed to be ASCII / UTF-8
-Len is extended to two bytes if bit 7 is set
+prio is x01…x04
+len is 1 byte if <128, else 2 bytes (MSB|0x80 first)
+
+
+Code structure:
+
+Call `sb_send` with each message to be transmitted.
+On empty serial buffer:
+    Call `sb_byte_out`. Send byte if >=0.
+On incoming character:
+    Call `sb_byte_in`.
+    Call `sb_recv` and process if not NULL.
+Call `sb_idle` when nothing happened for 1/10 second or so,
+periodically, until it returns False.
 */
 
 #include <sys/types.h>
@@ -30,6 +41,7 @@ enum SERSTATE {
 };
 
 typedef struct _SerBus {
+    BusMessage m_in_first;
     BusMessage m_in;
     u_int16_t crc_in;
     u_int16_t len_in;
@@ -57,22 +69,19 @@ void sb_free(SerBus sb);
 // Queue this message
 void sb_send(SerBus sb, BusMessage msg, u_int8_t prio);
 
-// Queue sending an ACK
-void sb_send_ack(SerBus sb);
-
 // process an incoming serial character
 void sb_byte_in(SerBus sb, u_int8_t c);
+
+// call from timeout until False
+bool sb_idle(SerBus sb);
 
 // Next char to send? -1 if done
 int16_t sb_byte_out(SerBus sb);
 
-// Received message?
+// Received a message?
 BusMessage sb_recv(SerBus sb, u_int8_t *prio);
 
-// Received some ACKs?
+// Return #acks received (and resets the counter)
 u_int8_t sb_recv_ack(SerBus sb);
-
-// call from timeout until False
-char sb_idle(SerBus sb);
 
 #endif

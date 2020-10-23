@@ -8,6 +8,7 @@ This interface mostly mimics message.py
 */
 
 #include <sys/types.h>
+#include "moatbus/type.h"
 
 enum HDL_RES {
     RES_WORKING = 0,
@@ -17,12 +18,6 @@ enum HDL_RES {
     RES_ERROR,
     RES_FATAL,
 };
-
-#ifndef __cplusplus
-typedef u_int8_t bool;
-#define true 1
-#define false 0
-#endif
 
 struct _BusMessage {
     struct _BusMessage *next; // for chaining buffers

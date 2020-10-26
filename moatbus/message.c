@@ -354,7 +354,7 @@ void msg_add_chunk(BusMessage msg, u_int16_t data, u_int8_t frame_bits)
             break;
         } else {
             frame_bits -= bits;
-            *buf++ = *buf | ((data>>frame_bits) & ((1<<bits)-1));
+            *buf++ |= ((data>>frame_bits) & ((1<<bits)-1));
             bits = 8;
         }
     }

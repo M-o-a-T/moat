@@ -6,8 +6,10 @@ import trio
 from contextlib import asynccontextmanager
 from distkv.codec import packer,unpacker
 
-from .backend import BaseBusHandler
-from .message import BusMessage
+from ..backend import BaseBusHandler
+from ..message import BusMessage
+from .obj import get_obj
+from ..util import byte2mini, CtxObj
 
 # Errors
 
@@ -165,34 +167,86 @@ class Server(CtxObj):
 
     async def _handle_server(self):
         if msg.src == -4:  # broadcast
-            if msg.dst > 0:  # client N
-                await self._hs_client_poll_req(msg)
+            if msg.dst == -4 and msg.code == 0:
+                await self._hs_control_bb(msg)
             else:
                 self.logger.warning("Reserved: %r",msg)
         elif msg.src < 0:  # server N
-            if msg.dst == -4:  # broadcast
-                await self._hs_sync(msg)
+            if msg.dst == -4:  # All-device messages
+                if msg.code == 0:
+                    await self._hs_control_sb(msg)
+                else:
+                    self.logger.warning("Reserved: %r",msg)
             elif msg.dst < 0:  # server N
-                self.logger.warning("Reserved: %r",msg)
-            elif msg.dst == 0:  # server N
-                await self._hs_contol_all(msg)
+                await self._hs_inter_server(msg)
             else:  # client
-                await self._hs_aa_response(msg)
-        elif msg.src == 0:  # client unknown
-            if msg.dst == -4:  # broadcast
-                await self._hs_aa_request(msg)
-            elif msg.dst < 0:  # server N
-                await self._hs_aa_reject(msg)
-            else:  # anything else
-                self.logger.warning("Reserved: %r",msg)
+                if msg.code == 0:
+                    await self._hs_control_sc(msg)
+                else:
+                    self.logger.warning("Not for us: %r",msg)
         else: # client
             if msg.dst == -4:  # broadcast
-                await self._hs_client_poll(msg)
+                if msg.code == 0:
+                    await self._hs_control_cb(msg)
+                elif code <= 7:
+                    self.logger.warning("Reserved: %r",msg)
+                else:
+                    await self._hs_broadcast(msg)
             elif msg.dst < 0:  # server N
-            else:  # client
-                self.logger.warning("Reserved: %r",msg)
+                if msg.code == 0:
+                    await self._hs_control_cs(msg)
+                elif msg.code == 1:
+                    await self._hs_client_alert(msg)
+                elif msg.code == 2:
+                    await self._hs_client_read_reply(msg)
+                elif msg.code == 3:
+                    await self._hs_client_write_reply(msg)
+                else:
+                    self.logger.warning("Reserved: %r",msg)
 
-                await self._hs_control_one(msg)
+            else:  # client
+                await self._hs_direct(msg)
+
+    async def _hs_control_bb(self, msg):
+        """
+        Control broadcast>broadcast
+        AA: request
+        """
+        d = msg.data
+        if not len(d):
+            self.logger.warning("Not implemented: control_bb %r", msg)
+            return
+        fn = d[0]>>5
+        if fn == 0: ## AA
+            await self._hs_aa_request(msg)
+        else:
+            self.logger.warning("Not implemented: control_bb %r", msg)
+
+    async def _hs_control_sc(self, msg):
+        """
+        Control server>client
+        AA: ack
+        """
+        self.logger.warning("Not implemented: control_sc %r", msg)
+
+    async def _hs_control_sb(self, msg):
+        """
+        Control server>broadcast
+        AA: nack
+        """
+        self.logger.warning("Not implemented: control_sb %r", msg)
+
+    async def _hs_control_cb(self, msg):
+        """
+        Control client>broadcast; poll data request
+        """
+        self.logger.warning("Not implemented: control_cb %r", msg)
+
+    async def _hs_control_cs(self, msg):
+        """
+        Control client>server; replies to _SC
+        """
+        self.logger.warning("Not implemented: control_cs %r", msg)
 
     async def _hs_sync(self, msg):
         """
@@ -205,51 +259,46 @@ class Server(CtxObj):
 
     async def _hs_aa_request(self, msg):
         d = msg.data
-        flags = d[0]>>4
-        polled = False
 
-        ls = d[0]&0xF)+1
+        ls = (d[0]&0xF)+1
         serial = d[1:ls+1]
-        if len(serial) < ls:
-            self.logger.error("Serial short %r",d)
+        try:
+            flags = d[ls+1]
+        except IndexError:
+            self.logger.error("Serial short %r",msg)
             return
 
-        async def accept(code, cid):
-            self.logger.info("Accept x%x for %r", err, serial)
-            d = bytes((code << 4) | len(serial)-1,) + d[1:]
-            await self.send(src=0,dst=cid,code=0,data=d)
+        async def accept(cid, code):
+            self.logger.info("Accept x%x for %d:%r", code, cid, serial)
+            d = msg.data[0:ls+1] + bytes((code,))
+            await self.send(src=self.id,dst=cid,code=0,data=d)
 
-        async def reject(err):
+        async def reject(err, dly=0):
             self.logger.info("Reject x%x for %r", err, serial)
-            d = bytes((err << 4) | len(serial)-1,) + d[1:]
-            await self.send(src=0,dst=self.id,code=0,data=d)
-
-        if flags & 0x1:  # polled client
-            polled = True
-            flags &=~ 0x1
-        if flags:  # incompatible
-            if flags & 0x8:
-                err=3
-            elif flags & 0x4:
-                err=2
-            elif flags & 0x2:
-                err=1
-            else:
-                raise RuntimeError("Cannot happen",flags)
-            await reject(err|0x4)
-            return
+            if dly:
+                err |= 0x80
+            d = msg.data[0:ls+1] + (bytes((err,dly)) if dlx else bytes((err,)))
+            await self.send(src=self.id,dst=-4,code=0,data=d)
 
         obj = self.with_serial(serial)
-        obj.polled = polled
+        obj.polled = bool(flags & 0x20)
+        if flags & 0x80:
+            td = d[ls+2]
+            await trio.sleep(byte2mini(td))
+
+        if flags & 0x40: # known
+            if serial in self.ser2obj:
+                await accept(0x40)
         try:
-            obj = get_obj(data)
-            client_id = obj.attach(self)
+            obj = get_obj(serial, create=False if flags&0x40 else None)
         except NoFreeID:
-            await reject(0xA)  # no free address: wait for Poll
+            await reject(0x10)  # no free address: wait for Poll
             # TODO start polling to find dead clients
         else:
-            await accept(0 if isinstance(obj,Obj) else 1, client_id)
-            await obj.new_adr()
+            await accept(obj.client_id)
+            if obj.is_new:
+                obj.is_new = False
+                await obj.new_adr()
 
     async def _hs_aa_reject(self, msg):
         """

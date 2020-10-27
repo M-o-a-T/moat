@@ -16,14 +16,14 @@ u_int16_t powi(u_int8_t x, u_int8_t y);
 // minifloat timers
 typedef struct _minifloat {
     u_int8_t m; // the actual float
-    u_int8_t vl; // low byte
-    u_int16_t vh; // high bytes
+    u_int8_t vl; // counter, low byte
+    u_int16_t vh; // counter, high bytes
 } minifloat;
 
 // get the current value
 u_int8_t mf_get(minifloat *m);
 
-// set the current value
+// set the current value. Note that a value of zero never triggers.
 void mf_set(minifloat *m, u_int8_t f);
 
 // reset the current value to the stored value

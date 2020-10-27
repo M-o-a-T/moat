@@ -36,6 +36,54 @@ Microcontroller interface
 
 TODO
 
+--------
+C macros
+--------
+
+* MOAT_USE_REF
+
+  Define this if you have more than one bus and thus your code needs a
+  callback.
+
+* MOAT_WIRES
+
+  Use the n-wire interface. Define as the number of wires. Between 2 and 4 inclusive.
+
+* MOAT_WIRE_1
+
+  Port of the first wire.
+
+* MOAT_WIRE_2
+
+  Port of the second wire. [and so on]
+
+* MOAT_DEBUG_WIRES
+
+  Emit a serial notification whenever the wire state changes.
+
+  Possibly slow!
+
+* MOAT_SERIAL
+
+  Use the serial packet interface.
+
+* MOAT_REPEATER
+
+  Transfer all messages received on A to B and vice versa. Define as the
+  (positive) server address SA (1..3).
+
+  A Bus ACK is sent if the message addressed to -SA or -4 (server broadcast).
+  Otherwise this is transparent, i.e. *all* messages are forwarded.
+
+* MOAT_GATEWAY
+
+  Transfer messages received on A to B and vice versa.
+
+  This implements an addressed gateway.
+  
+  Not yet implemented.
+
+
 ++++++++++
 Simulation
 ++++++++++

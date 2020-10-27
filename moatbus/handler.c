@@ -32,9 +32,19 @@ enum _W {
     W_FINAL = 4,// next: CRC   # writing the last word, >= 2^N
 };
 
+#ifdef MOAT_USE_REF
+#define AREF h->ref,
+#define AREF1 h->ref
+#else
+#define AREF
+#define AREF1
+#endif
+
 typedef struct _Handler {
     struct BusCallbacks *cb;
+#ifdef MOAT_USE_REF
     void *ref;
+#endif
 
     u_int8_t WIRES;
     u_int16_t MAX;
@@ -119,10 +129,12 @@ static BusMessage h_clear_sending(Handler h);
 static const char *h_state_name(Handler h);
 
 // Allocate a bus
-BusHandler hdl_alloc(void *ref, u_int8_t n_wires, struct BusCallbacks *cb)
+BusHandler hdl_alloc(REF u_int8_t n_wires, struct BusCallbacks *cb)
 {
     Handler h = calloc(sizeof(struct _Handler), 1);
+#ifdef MOAT_USE_REF
     h->ref = ref;
+#endif
     h->cb = cb;
 
     h->WIRES = n_wires;
@@ -134,7 +146,7 @@ BusHandler hdl_alloc(void *ref, u_int8_t n_wires, struct BusCallbacks *cb)
     h->VAL_MAX = 1<<h->BITS;
     h->LEN_CRC = (n_wires == 3) ? h->LEN-1 : h->LEN;
 
-    h->last = h->current = cb->get_wire(ref);
+    h->last = h->current = cb->get_wire(AREF1);
     h->last_zero = h->current ? h->current+1 : 0;
     h->settle = FALSE;
     h->backoff = T_BACKOFF;
@@ -282,7 +294,7 @@ static void h_set_timeout(Handler h, u_int8_t val)
     if(!val)
         h_debug(h,"Off\n");
     if(val <= T_BREAK) {
-        h->cb->set_timeout(h->ref, val);
+        h->cb->set_timeout(AREF val);
         return;
     }
     if((val == T_ZERO) && h->last_zero) {
@@ -293,41 +305,41 @@ static void h_set_timeout(Handler h, u_int8_t val)
     }
     if(h->last_zero && (h->last_zero-1 < T_ZERO))
         h->last_zero += val;
-    h->cb->set_timeout(h->ref, val);
+    h->cb->set_timeout(AREF val);
 }
 
 static void h_set_wire(Handler h, u_int8_t bits)
 {
-    h->cb->set_wire(h->ref, bits);
+    h->cb->set_wire(AREF bits);
 }
 
 static u_int8_t h_get_wire(Handler h)
 {
-    return h->cb->get_wire(h->ref);
+    return h->cb->get_wire(AREF1);
 }
 
 static char h_process(Handler h, BusMessage msg)
 {
     msg_read_header(msg);
-    return h->cb->process(h->ref, msg);
+    return h->cb->process(AREF msg);
 }
 
 static void h_debug(Handler h, const char *text, ...)
 {
     va_list arg;
     va_start(arg, text);
-    h->cb->debug(h->ref, text, arg);
+    h->cb->debug(AREF text, arg);
     va_end(arg);
 }
 
 static void h_report_error(Handler h, enum HDL_ERR err)
 {
-    h->cb->report_error(h->ref, err);
+    h->cb->report_error(AREF err);
 }
 
 static void h_transmitted(Handler h, BusMessage msg, enum HDL_RES res)
 {
-    h->cb->transmitted(h->ref, msg, res);
+    h->cb->transmitted(AREF msg, res);
     h->tries = 0;
     h->backoff = (h->backoff > T_BACKOFF*2) ? h->backoff/2 : T_BACKOFF;
 }

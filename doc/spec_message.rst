@@ -106,96 +106,163 @@ Message Types
 
 This table is to be interpreted top-down; the first match wins.
 
+Reminder: the command is 2 bits wide for server-to-server messages, 8 bits
+for client-to-client, and 5 bits otherwise.
+
 ========  ===========  =======  ===========================
 Source    Destination  Command  Type
 ========  ===========  =======  ===========================
-Server 0  Server 0     1        Address assignment request
-Server 0  any          any      reserved
-Server X  Client       4        positive address assignment response
-Server X  Server 0     0        All-device messages, esp. bus reset
-Server X  Server 0     1        negative address assignment response
-Client    Server 0     4        awake – poll requested
-Client    Server 0     0…7      reserved
-Client    Server 0     any      broadcast message
-any       any          0…3      data dictionary
-any       any          4…7      reserved
+Broadcast Broadcast    0        Control 0; Address assignment request
+Broadcast any          any      reserved
+Server    Broadcast    0        Control 2; negative address assignment response
+Server    Server       any      inter-server sync
+Server    Client       0        Control 1; positive address assignment response
+Server    Client       1        data directory lookup
+Server    Client       2        data directory read
+Server    Client       3        data directory write
+Client    Broadcast    0        Control 3; e.g. data request, console message
+Client    Server       0        Control 4; replies (e.g. poll)
+Client    Server       1        alert (by data dictionary path)
+Client    Server       2        read reply
+Client    Server       3        write reply
+any       any          0…7      reserved
+Client    Broadcast    any      broadcast message
 any       any          any      direct message
 ========  ===========  =======  ===========================
 
 Address assignment
 ==================
 
-The payload for all address assignment messages starts with four flag bits
-(reserved), four length bits, and that number of bytes +1 of device-specific
-serial number, MAC, or other device-specific identifier. A serial number
-longer than 16 bytes is not allowed. Serial numbers shorter than 4 bytes
-are strongly discouraged.
+Address assignment messages are special control messages: the type is zero
+and the function code is reinterpreted as flag bit and four bits for the
+length of the client's serial number / MAC / EUID, minus one.
 
-The result message uses a four-bit status code field. The rest of the data
-shall be identical to the sender's so that the receiver may easily identify
-its reply.
+Serial numbers longer than 16 bytes are not allowed. Serial numbers shorter
+than 4 bytes are strongly discouraged.
 
+If the flag bit is set, the request contains an additional flag byte after
+the serial.
 
-Positive status codes:
+The reply shall be identical to the sender's so that the receiver may
+easily identify its reply.
 
-* 0
-  New address assigned.
+The flag byte states:
 
-* 1
-  Existing address found.
+* bit 7: wait. The next byte contains a timer minifloat.
 
-* 2…15
-  reserved
+  Request: I need this time before I can accept a reply.
 
+  ACK: Wait this long before proceeding.
 
-Negative status codes:
+  NACK: Wait this long before trying again.
 
-* 0…3
-  reserved
+* bit 6: address is already known.
 
-* 4…7
-  Flag incompatiblity, bit x-4
+  Request: do not allocate a new address, just confirm me.
 
-* 8
-  No free address.
+  ACK: I already know you.
 
-* 9, 10
-  Server-internal communication error / not ready, try again later / much
-  later.
+  NACK: if request had bit 6 clear: No more free addresses. Try again after an address reset.
+  NACK: if request had bit 6 set: No, I don't know you.
 
-* 11
-  Power down, you are not needed.
+* bit 5: client is/shall be polled. (Request only)
 
-* 12…15
-  reserved
+* bit 4: address is random.
+  
+  Request: this client just invented a new serial.
 
-There currently are no flag bits defined.
+  ACK: Reserved.
 
-The server will clear any flags which it doesn't understand.
+  NACK: Collision. Sent by a client which saw its own serial in a request
+  from somebody else. (The server sets bit 6 instead.)
 
-All-Device messages
-===================
+The other bits are reserved.
+
+A device with an empty serial number shall randomly invent one, primed by
+observed bus timing if possible, and then send a request with bit 4
+set. The server shall be extra cautious before assigning a new address to
+this client.
+
+Clients may monitor AA requests for their own serial. If the see a request
+for it, they must NACK it with bit 4 set.
+
+Control messages
+================
 
 For debugging or testing purposes it might make sense to reboot everything,
 switch to an alternate medium like WiFi, poll which devices exist, or
 otherwise reconfigure things.
 
-Message types are carried in the first three bits. If applicable, the next
-five bits contain the function code to send replies to.
+Message types are carried in the first three bits of the message's first
+byte. If applicable, the next five bits contain the destination code to send
+replies to.
 
 The following messages are defined:
 
 * 0
+  Address Asignment; see above.
+
+* 1
   Poll
   The second byte contains a timer minifloat.
-  Each device shall sleep some random time between zero and that timer's
+
+  Server>client, Server>broadcast:
+  Each receiver shall sleep some random time between zero and that timer's
   value, then send its serial number (same format as an Address Assignment
   request) to the requesting server. Devices that don't yet have a client
   address shall also wait that random time, then acquire one, then send
   their reply.
 
-* 1…5
-  Reserved
+  Client>server:
+  You should use a non-zero destination code, not zero.
+
+  Client>broadcast:
+  This message tells the servers to send any data waiting for the client.
+  It hints how long the client is going to be available before sleeping again.
+
+* 2
+  Console / serial port
+  Client>server and server>client
+
+  The second byte contains two nibbles: the last seen message# from the
+  other side, plus a send counter.
+  
+  The third byte carries two flag bits and a length-1, followed by UTF-8
+  text. Glyphs should not be split between messages; UTF-8 characters must
+  not be split.
+
+  If bit 7 is set the length instead contains the message# offset of the
+  first missing packet (should be sent with high priority).
+  If bit 6 is set the transmitted message# has been overflowing and the
+  sender cannot wait for transmission to be fixed.
+
+  If Bit 7 is set, bits 5 indicates that the channel shall be reset,
+  communication buffers shall be cleared, and counters shall be set to
+  zero. Bit 4 acknowledges a reset. If 7+5+4 are all set, the channel shall
+  be considered dead; further messages will either be ignored or replied to
+  with another message that has bits 7+5+4 set.
+
+  Clients may have multiple independent ports, addressed by the lower 4
+  bits of the function code in the first byte. Port 0 is reserved for
+  commands and replies (think "serial console"). Port 1 is used for errors.
+  Others may be e.g. a serial port connected to the client or messages
+  carried by a radio protocol.
+
+  Bit 4 of the function code, when set, indicates that the contents are
+  incomplete and should be combined with the next message before being
+  processed. Clients may not support this.
+
+  A server should log messages on channel 1. It may not reject them.
+
+  Counters are initially zero; they're incremented before sending, thus the
+  first message a side sends to the other has a counter of 1. Clients must
+  store at least one message for repetition and should wait until the
+  earliest message is acknowledged instead of reporting an overflow.
+  Servers must do so.
+
+* 5
+  Firmware
+  See separate document.
 
 * 6
   Bus test
@@ -204,7 +271,8 @@ The following messages are defined:
   three bits of the first byte, some device will perform tests for bus
   timing or similar. Clients must ignore the bus during that time.
   Only one test can be pending. A timer of zero (or a bus reset) cancels a
-  scheduled test.
+  scheduled test; this obviously only works when the test time has not yet
+  arrived.
 
 * 7
   Reset
@@ -413,7 +481,7 @@ These bits, or rather nibbles, mean::
    1   write 01 (out)
    -   end of data, we're done.
 
-There's no way to go up a directory, as that is seldom useful.
+There's no way to walk back up.
 
 
 Unprovoked messages
@@ -492,6 +560,8 @@ data in the actual request. Bit 5 is reserved.
 
 The server is required to read all shortcut entries. It must use the
 shortcut with the longest possible prefix when accessing a client.
+This ensures that a space-limited client may publish a regular data
+dictionary but doesn't need to implement actual directory path walking.
 
 Shortcuts are used only when a server sends a message to a client; they're
 otherwise treated exactly like ordinary "read" or "write" messages.

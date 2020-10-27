@@ -10,6 +10,10 @@ This interface mostly mimics message.py
 #include <sys/types.h>
 #include "moatbus/type.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum HDL_RES {
     RES_WORKING = 0,
     RES_FREE,
@@ -23,7 +27,7 @@ struct _BusMessage {
     struct _BusMessage *next; // for chaining buffers
 
     // if all three are zero the data is in the message
-    // // otherwise the header is authoritative, write to the message
+    // otherwise the header is authoritative, write to the message
     int8_t src; // -4…127
     int8_t dst; // -4…127
     u_int8_t code; // 0…3/31/255
@@ -114,5 +118,9 @@ void msg_align(BusMessage msg);
 // deprecated, only present for fakebus/test_handler_crc.c
 // add zero filler plus 1-bit "added more than 8 bits" flag + CRC
 void msg_fill_crc(BusMessage msg, u_int8_t frame_bits, u_int16_t crc, u_int8_t crc_bits);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -57,6 +57,8 @@ class SerBus:
         self.ack_out = 0  # counter, to send ACKs
         self.alloc_in()
 
+        self.log_buf = b""
+
     def report_error(self, typ, **kw):
         """
         OVERRIDE: There's been a comm problem.
@@ -111,7 +113,16 @@ class SerBus:
                 self.process_ack()
             elif ci > 0 and ci <= 0x04:
                 self.s_in = S.LEN
-            else:
+            elif ci != 12:  # LF
+                self.log_buf += bytes((ci,))
+            elif self.log_buf:
+                try:
+                    b = self.log_buf.decode("utf-8")
+                except Exception:
+                    b = self.log_buf.decode("latin1")
+                logger.debug("R: %s", b);
+                self.log_buf = b""
+                self.logbuf
                 self.report_error(ERR.SPURIOUS)
 
         elif self.s_in == S.LEN:

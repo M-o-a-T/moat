@@ -34,6 +34,21 @@ class _Bus(SerBus):
         self.stream()._process_ack()
 
 
+class Anyio2TrioStream:
+    """
+    Wrapping an anyio stream so that it behaves like a Trio stream.
+    """
+    def __init__(self, stream):
+        self._stream = stream
+    async def receive_some(self, max_bytes=None):
+        if max_bytes is None:
+            max_bytes=65535
+        return await self._stream.receive(max_bytes=max_bytes)
+    async def send_all(self, data):
+        await self._stream.send(data)
+    async def aclose(self):
+        await self._stream.aclose()
+
 class StreamBusHandler(BaseBusHandler, CtxObj):
     """
     This class defines the interface for exchanging MoaT messages on any

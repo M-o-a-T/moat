@@ -36,22 +36,24 @@ def mini2byte(f):
     """
 
     f = int(f/MINI_F+0.5)
-    if f <= 32:
+    if f <= 32:  # or 16, doesn't matter
         return f
     exp = 1
     while f >= 32: # not an error because of normalization
         f >>= 1
         exp += 1
+    if exp > 15:
+        return 0xFF
     return (exp<<4) | (f&0xf)
 
 def byte2mini(m):
     """
     Convert a byte-sized minifloat back to a number.
     """
-    if m <= 32:
-        return m/4
+    if m <= 32:  # or 16, doesn't matter
+        return m*MINI_F
     exp = (m>>4)-1
-    m = 16+(m&0xf)
+    m = 16+(m&0xf)  # normalization
     return (1<<exp)*m*MINI_F
 
 
@@ -59,4 +61,3 @@ if __name__ == "__main__":
     for x in range(256):
         print(x,byte2mini(x),mini2byte(byte2mini(x)))
 
-    

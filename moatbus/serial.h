@@ -29,6 +29,10 @@ periodically, until it returns False.
 
 #include "moatbus/message.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum SERSTATE {
     S_IDLE = 0,
     S_INIT,
@@ -83,5 +87,9 @@ BusMessage sb_recv(SerBus sb, u_int8_t *prio);
 
 // Return #acks received (and resets the counter)
 u_int8_t sb_recv_ack(SerBus sb);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

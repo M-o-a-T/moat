@@ -1,0 +1,8 @@
+#!/usr/bin/python3
+
+import sys
+import os
+sys.path[0:0] = [os.path.curdir]
+
+from moatbus.server._main import _main
+_main()

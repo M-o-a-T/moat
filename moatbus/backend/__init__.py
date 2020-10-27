@@ -6,7 +6,7 @@ Base class for sending MoaT messages on a Trio system
 from contextlib import asynccontextmanager
 
 from ..message import BusMessage
-form ..util import CtxObj
+from ..util import CtxObj
 
 class BaseBusHandler(CtxObj):
     """

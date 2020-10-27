@@ -3,6 +3,7 @@
 
 from weakref import ref
 import outcome
+import trio
 
 class NoServerError(RuntimeError):
     """
@@ -40,14 +41,21 @@ class BaseObj:
     """
     server = None
     client_id = None
+    serial = None
+    is_new = True
     polled: bool = False # poll bit (in address request) is set
 
-    def __init__(self, serial):
+    def __init__(self, serial, create=None):
+        if self.serial is not None:
+            return # already done
+
         if not isinstance(serial,bytes):
             l = serial.bit_length()
             l = (l+7)/8
             serial = serial.to_bytes(l,"big")
+
         self.serial = serial
+        self.is_ready = trio.Event()
 
     def __repr__(self):
         r=""
@@ -114,12 +122,12 @@ class BaseObj:
         Called from the server when the device has been assigned an
         address.
 
-        This method should not delay too long; it also cannot
-        wait for any messages from the device.
+        This method should not delay too long; it must be idempotent and
+        cannot communicate with the device.
 
-        Override this.
+        Override this, call when done.
         """
-        pass
+        self.is_ready.set()
 
     async def poll_start(self, duration):
         """
@@ -146,14 +154,20 @@ class Obj(BaseObj):
 
     The `__new__` method will return the existing object, if any.
     """
-    def __new__(cls, serial):
+    def __new__(cls, serial, create=None):
         if not isinstance(serial,bytes):
             l = serial.bit_length()
             l = (l+7)/8
             serial = serial.to_bytes(l,"big")
         try:
-            return _obj_reg[serial]
+            obj = _obj_reg[serial]
         except KeyError:
+            if create is False:
+                raise
             return super().__new__(serial)
+        else:
+            if create:
+                raise KeyError(serial)
+            return obj
 
 get_obj=Obj

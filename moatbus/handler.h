@@ -12,6 +12,10 @@ This interface mostly mimics handler.py
 
 #include "moatbus/message.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum HDL_ERR {
     ERR_NOTHING = 1, // bus zero?
     ERR_COLLISION = -2, // will retry
@@ -34,27 +38,38 @@ enum HDL_ERR {
 // anything greater is (n-T_BREAK)*timer A
 
 /// Callbacks ///
+#ifdef MOAT_USE_REF
+#define REF void *ref,
+#define REF1 void *ref
+#define REFN NULL,
+#define REFN1 NULL
+#else
+#define REF 
+#define REF1
+#define REFN
+#define REFN1
+#endif
 
 // set the timeout
-typedef void (cb_set_timeout)(void *ref, u_int16_t delay);
+typedef void (cb_set_timeout)(REF u_int16_t delay);
 
 // set the wire state
-typedef void (cb_set_wire)(void *ref, u_int8_t bits);
+typedef void (cb_set_wire)(REF u_int8_t bits);
 
 // get the wire state
-typedef u_int8_t (cb_get_wire)(void *ref);
+typedef u_int8_t (cb_get_wire)(REF1);
 
 // process an incoming message
-typedef char (cb_process)(void *ref, BusMessage msg);
+typedef char (cb_process)(REF BusMessage msg);
 
 // signal that a message has been transmitted (or not)
-typedef void (cb_transmitted)(void *ref, BusMessage msg, enum HDL_RES result);
+typedef void (cb_transmitted)(REF BusMessage msg, enum HDL_RES result);
 
 // print a debug message
-typedef void (cb_debug)(void *ref, const char *text, va_list arg);
+typedef void (cb_debug)(REF const char *text, va_list arg);
 
 // has a failure
-typedef void (cb_report_error)(void *ref, enum HDL_ERR err);
+typedef void (cb_report_error)(REF enum HDL_ERR err);
 
 // the actual struct holding the callbacks
 struct BusCallbacks {
@@ -71,7 +86,7 @@ struct _BusHandler;
 typedef struct _BusHandler *BusHandler;
 
 // Allocate a new bus handler
-BusHandler hdl_alloc(void *ref, u_int8_t n_wires, struct BusCallbacks *cb);
+BusHandler hdl_alloc(REF u_int8_t n_wires, struct BusCallbacks *cb);
 
 // Free a bus handler
 void hdl_free(BusHandler hdl);
@@ -84,5 +99,9 @@ void hdl_wire(BusHandler hdl, u_int8_t bits);
 
 // The timeout has triggered
 void hdl_timer(BusHandler hdl);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

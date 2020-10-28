@@ -48,6 +48,9 @@ class Anyio2TrioStream:
         await self._stream.send(data)
     async def aclose(self):
         await self._stream.aclose()
+    def __aiter__(self):
+        return self._stream.__aiter__()
+
 
 class StreamBusHandler(BaseBusHandler, CtxObj):
     """

@@ -4,12 +4,23 @@ This module implements the basics for a bus server.
 
 import trio
 from contextlib import asynccontextmanager
-from distkv.codec import packer,unpacker
 
 from ..backend import BaseBusHandler
 from ..message import BusMessage
 from .obj import get_obj
 from ..util import byte2mini, CtxObj
+
+import msgpack
+from functools import partial
+
+packer = msgpack.Packer(strict_types=False, use_bin_type=True, #default=_encode
+        ).pack
+unpacker = partial(
+    msgpack.unpackb, raw=False, use_list=False, # object_pairs_hook=attrdict, ext_hook=_decode
+)
+
+import logging
+logger = logging.getLogger(__name__)
 
 # Errors
 

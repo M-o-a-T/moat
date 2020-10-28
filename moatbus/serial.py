@@ -6,6 +6,10 @@ from typing import Optional
 from .message import BusMessage
 from .crc import CRC16
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 class S(IntEnum):
     IDLE = 0
     INIT = 1
@@ -101,6 +105,15 @@ class SerBus:
         """
         self.data_out(b'\x06')
 
+    def dump_log_buf(self):
+        if not self.log_buf:
+            return
+        try:
+            b = self.log_buf.decode("utf-8")
+        except Exception:
+            b = self.log_buf.decode("latin1")
+        logger.debug("R: %s", b);
+        self.log_buf = b""
 
     def char_in(self, ci:int):
         """
@@ -115,15 +128,9 @@ class SerBus:
                 self.s_in = S.LEN
             elif ci != 12:  # LF
                 self.log_buf += bytes((ci,))
-            elif self.log_buf:
-                try:
-                    b = self.log_buf.decode("utf-8")
-                except Exception:
-                    b = self.log_buf.decode("latin1")
-                logger.debug("R: %s", b);
-                self.log_buf = b""
-                self.logbuf
-                self.report_error(ERR.SPURIOUS)
+                self.log_buf_t = trio.current_time()
+                return
+            self.dump_log_buf()
 
         elif self.s_in == S.LEN:
             self.set_timeout(True)
@@ -228,4 +235,6 @@ class SerBus:
                 self.set_timeout(False)
         else:
             self.idle = 0
+            if self.log_buf and self.log_buf_t+0.2 < trio.current_time():
+                self.dump_log_buf()
 

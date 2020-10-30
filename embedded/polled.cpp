@@ -14,7 +14,7 @@ static uint16_t utimeout;
 // set the timeout
 static void moat_set_timeout(REF u_int16_t delay)
 {
-    logger("SetTimeout %d",delay);
+    logger("SetTimeout %d @%d",delay,micros());
     if (delay == T_OFF)
         utimeout = 0;
     else {
@@ -184,6 +184,7 @@ void loop_polled()
     if (utimeout) {
         if (utimeout <= d) {
             utimeout = 0;
+            logger("Timeout! @%d",micros());
             hdl_timer(BH);
         } else
             utimeout -= d;

@@ -174,7 +174,7 @@ void hdl_free(BusHandler hdl)
 #define POLY 0x571
 static inline void h_crc(Handler h, u_int8_t bits)
 {
-    h->crc = h->crc_table[bits ^ h->crc];
+    h->crc = (h->crc >> h->WIRES) ^ h->crc_table[(bits ^ h->crc) & h->MAX];
     h_debug(h, "CRC add %x => %x\n",bits,h->crc);
 }
 
@@ -191,8 +191,10 @@ static u_int16_t _bytecrc_r(u_int16_t crc, u_int16_t poly, u_int8_t depth)
 
 static void h_gen_crc(Handler h)
 {
-    h->crc_table = malloc(h->VAL_MAX * sizeof(u_int16_t));
-    for (u_int16_t b = 0; b < h->VAL_MAX; b++)
+    u_int8_t max = h->MAX;
+    h->crc_table = malloc(max * sizeof(u_int16_t));
+
+    for (u_int16_t b = 0; b <= max; b++)
         h->crc_table[b] = _bytecrc_r(b,POLY,h->WIRES);
 }
 

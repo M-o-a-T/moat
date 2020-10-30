@@ -125,5 +125,6 @@ if __name__ == "__main__":
     else:
         #print(CRC6._table)
         #print(CRC8._table)
-        print(CRC16(8)._table)
+        #print(CRC16(8)._table)
+        print(CRC11(3)._table)
         #print(CRC16._table)

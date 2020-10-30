@@ -4,8 +4,12 @@
 
 static uint16_t last_micros;
 static uint16_t utimeout;
+#ifndef MOAT_T_A
 #define MOAT_T_A 5000
-#define MOAT_T_B 1000
+#endif
+#ifndef MOAT_T_B
+#define MOAT_T_B (MOAT_T_A/5)
+#endif
 
 // set the timeout
 static void moat_set_timeout(REF u_int16_t delay)

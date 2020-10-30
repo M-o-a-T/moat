@@ -48,7 +48,7 @@ setup(
     keywords=["IoT", "bus", "anyio"],
     license="MIT",
     packages=["moatbus"],
-    install_requires=["bitstring","distmqtt"],
+    install_requires=["bitstring","distmqtt","asyncclick","trio"],
     extras_require={":python_version < '3.7'": ["async_generator", "async_exit_stack"]},
     tests_require=["pytest >= 2.5.2", "pytest-cov >= 2.3", "trio >= 0.11"],
     cmdclass={"test": PyTest},

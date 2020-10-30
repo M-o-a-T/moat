@@ -28,17 +28,19 @@ void setup_serial()
 void loop_serial()
 {
 #ifdef MOAT_SERIAL
-    while(Serial.available()) {
-        Serial.println("C1"); Serial.flush();
-        uint8_t ch = Serial.read();
-        sb_byte_in(SB, ch);
-        Serial.println("C2"); Serial.flush();
-    }
-    {
+    if(Serial.available()) {
+        last_m = millis();
+        while (true) {
+            uint8_t ch = Serial.read();
+            sb_byte_in(SB, ch);
+            if(!Serial.available())
+                break;
+        }
+    } else {
         uint16_t m = millis();
-        if (m-last_m > 100) {
+        if (last_m && ((m-last_m)&0xFFFF) > 100) {
             sb_idle(SB);
-            last_m=m;
+            last_m=0;
         }
     }
     {

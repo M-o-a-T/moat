@@ -16,9 +16,9 @@ void setup_serial()
     Serial.print("INIT\n");
     Serial.flush();
 
-    SB = sb_alloc();
     log_wp = 0;
 #ifdef MOAT_SERIAL
+    SB = sb_alloc();
     last_m = millis();
 #endif
 }

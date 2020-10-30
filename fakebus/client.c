@@ -32,6 +32,7 @@ struct BusCallbacks bcb = {
 FakeClient fc_alloc(u_int8_t n_wires)
 {
     FakeClient fc = calloc(sizeof(struct _FakeClient),1);
+    fc->verbose = 1;
     fc->bus = hdl_alloc(fc, n_wires, &bcb);
     fc->socket_fd = -1;
     return fc;
@@ -161,7 +162,8 @@ static void fcb_debug(void *ref, const char *text, va_list arg)
     if (!fc->verbose)
         return;
     fprintf(stderr,"DEBUG ");
-    vprintf(text, arg);
+    vfprintf(stderr, text, arg);
+    putc('\n',stderr);
 }
 
 static void fcb_report_error(void *ref, enum HDL_ERR err)

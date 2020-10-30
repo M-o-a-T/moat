@@ -9,6 +9,7 @@ all:
 
 # need to use python3 sphinx-build
 PATH := /usr/share/sphinx/scripts/python3:${PATH}
+CFLAGS := -DMOAT_USE_REF -g -O0 -W -I.
 
 PACKAGE = moatbus
 PYTHON ?= python3
@@ -33,12 +34,15 @@ AUTOSPHINXOPTS := -i *~ -i *.sw* -i Makefile*
 SPHINXBUILDDIR ?= $(BUILD_DIR)/sphinx/html
 ALLSPHINXOPTS ?= -d $(BUILD_DIR)/sphinx/doctrees $(SPHINXOPTS) docs
 
-code:	bin/test_handler_crc bin/test_crc bin/test_handler_crc_bus bin/fake_spam bin/fake_send bin/fake_recv bin/fake_serialbus
+#code:	bin/test_handler_crc bin/test_crc bin/test_handler_crc_bus
+code:	bin/fake_spam bin/fake_send bin/fake_recv bin/fake_serialbus
+pio:
+	platformio run
 
-#bin/test_handler_crc_bus:	obj/test_handler_crc_bus.o obj/libmessage.a
-#	gcc -o $@ $^
-#bin/test_handler_crc:	obj/test_handler_crc.o obj/libmessage.a
-#	gcc -o $@ $^
+bin/test_handler_crc_bus:	obj/test_handler_crc_bus.o obj/libmessage.a
+	gcc -o $@ $^
+bin/test_handler_crc:	obj/test_handler_crc.o obj/libmessage.a
+	gcc -o $@ $^
 bin/test_crc:	obj/test_crc.o obj/libmessage.a
 	gcc -o $@ $^
 bin/fake_recv:	obj/fake_recv.o obj/fake_client.o obj/libmessage.a
@@ -53,37 +57,37 @@ bin/test_minifloat:	obj/test_minifloat.o obj/util.o
 	gcc -o $@ $^
 
 
-obj/libmessage.a: obj/message.o obj/crc.o obj/handler.o obj/serial.o
+obj/libmessage.a: obj/message.o obj/crc.o obj/handler.o obj/serial.o obj/util.o
 	ar r $@ $^
 
 obj/crc.o:	moatbus/crc.c
-	gcc -g -O0 -W -c -I. -o $@ $^
+	gcc ${CFLAGS} -c -o $@ $^
 obj/handler.o:	moatbus/handler.c
-	gcc -g -O0 -W -c -I. -o $@ $^
+	gcc ${CFLAGS} -c -o $@ $^
 obj/message.o:	moatbus/message.c
-	gcc -g -O0 -W -c -I. -o $@ $^
+	gcc ${CFLAGS} -c -o $@ $^
 obj/serial.o:	moatbus/serial.c
-	gcc -g -O0 -W -c -I. -o $@ $^
+	gcc ${CFLAGS} -c -o $@ $^
 obj/util.o:	moatbus/util.c
-	gcc -g -O0 -W -c -I. -o $@ $^
+	gcc ${CFLAGS} -c -o $@ $^
 obj/test_minifloat.o:	tests/test_minifloat.c
-	gcc -g -O0 -W -c -I. -o $@ $^
+	gcc ${CFLAGS} -c -o $@ $^
 obj/test_handler_crc_bus.o:	fakebus/test_handler_crc_bus.c
-	gcc -g -O0 -W -c -I. -o $@ $^
+	gcc ${CFLAGS} -c -o $@ $^
 obj/test_handler_crc.o:	fakebus/test_handler_crc.c
-	gcc -g -O0 -W -c -I. -o $@ $^
+	gcc ${CFLAGS} -c -o $@ $^
 obj/test_crc.o:	fakebus/test_crc.c
-	gcc -g -O0 -W -c -I. -o $@ $^
+	gcc ${CFLAGS} -c -o $@ $^
 obj/fake_spam.o:	fakebus/spam.c
-	gcc -g -O0 -W -c -I. -o $@ $^
+	gcc ${CFLAGS} -c -o $@ $^
 obj/fake_send.o:	fakebus/send.c
-	gcc -g -O0 -W -c -I. -o $@ $^
+	gcc ${CFLAGS} -c -o $@ $^
 obj/fake_recv.o:	fakebus/recv.c
-	gcc -g -O0 -W -c -I. -o $@ $^
+	gcc ${CFLAGS} -c -o $@ $^
 obj/fake_client.o:	fakebus/client.c
-	gcc -g -O0 -W -c -I. -o $@ $^
+	gcc ${CFLAGS} -c -o $@ $^
 obj/fake_serialbus.o:	fakebus/serialbus.c
-	gcc -g -O0 -W -c -I. -o $@ $^
+	gcc ${CFLAGS} -c -o $@ $^
 
 doc:
 	sphinx3-build -a $(INPUT_DIR) $(BUILD_DIR)

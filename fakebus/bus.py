@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 import time
 import os
 from random import random
+from functools import partial
 
 _seq = 0
 
@@ -69,8 +70,8 @@ class Main:
                     continue
                 c.last_b = b
                 try:
-                    await c.send_all(b)
-                except (BrokenPipeError,EnvironmentError):
+                    await c.send(b)
+                except (BrokenPipeError,EnvironmentError,anyio.ClosedResourceError):
                     await self.remove(c)
 
             last = val
@@ -85,7 +86,7 @@ async def mainloop(tg,**kw):
     await tg.spawn(mc.run)
     yield mc
 
-async def serve(client, loop):
+async def serve(loop, client):
     global _seq
     _seq += 1
     n = _seq
@@ -97,8 +98,8 @@ async def serve(client, loop):
         async with client:
             while True:
                 try:
-                    data = await client.receive_some(1)
-                except ConnectionResetError:
+                    data = await client.receive(1)
+                except (ConnectionResetError,anyio.EndOfStream):
                     data = None
                 if not data:
                     return
@@ -120,11 +121,10 @@ async def main(socket, **kw):
     except EnvironmentError:
         pass
     async with anyio.create_task_group() as tg, \
-            await anyio.create_unix_server(socket) as server, \
+            await anyio.create_unix_listener(socket) as server, \
             mainloop(tg, **kw) as loop:
         evt = anyio.create_event()
-        async for client in server.accept_connections():
-            await tg.spawn(serve, client, loop)
+        await server.serve(partial(serve, loop))
 
 if __name__ == "__main__":
     main()

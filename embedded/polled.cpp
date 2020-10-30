@@ -4,12 +4,17 @@
 
 static uint16_t last_micros;
 static uint16_t utimeout;
+#ifndef MOAT_T_A
 #define MOAT_T_A 5000
-#define MOAT_T_B 1000
+#endif
+#ifndef MOAT_T_B
+#define MOAT_T_B (MOAT_T_A/5)
+#endif
 
 // set the timeout
 static void moat_set_timeout(REF u_int16_t delay)
 {
+    logger("SetTimeout %d",delay);
     if (delay == T_OFF)
         utimeout = 0;
     else {
@@ -177,6 +182,7 @@ void loop_polled()
 
     if (utimeout) {
         if (utimeout <= d) {
+            utimeout = 0;
             hdl_timer(BH);
         } else
             utimeout -= d;
@@ -184,11 +190,11 @@ void loop_polled()
 
     uint8_t bits = moat_get_wire(REFN1);
     if (last_reported != bits) {
-        hdl_wire(BH, bits);
+        //hdl_wire(BH, bits);
         last_reported = bits;
 
 #ifdef MOAT_DEBUG_WIRES
-        logger("WIRE x%x",bits);
+        logger("WIRE x%01x",bits);
 #endif
     }
 }

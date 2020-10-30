@@ -649,6 +649,8 @@ class BaseHandler:
         self.set_state(S.READ_CRC)
 
     def error(self, typ):
+        if self.state == S.ERROR:
+            return
         if typ == ERR.HOLDTIME and not self.current:
             if self.state < S.IDLE:
                 self.set_state(S.IDLE)

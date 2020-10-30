@@ -2,6 +2,8 @@
 
 from enum import IntEnum
 from typing import Optional
+import trio
+import sys
 
 from .message import BusMessage
 from .crc import CRC16
@@ -45,6 +47,9 @@ class SerBus:
     * char_in (bits)     -- received this character from serial/pipe
     * timeout()          -- when the timer triggers
     """
+
+    spinner = ["/","-","\\","|"]
+    spin_pos = 0
 
     def __init__(self):
         # incoming
@@ -112,7 +117,12 @@ class SerBus:
             b = self.log_buf.decode("utf-8")
         except Exception:
             b = self.log_buf.decode("latin1")
-        logger.debug("R: %s", b);
+        if b in {"L1","L2","L3"}:
+            print(self.spinner[self.spin_pos],end="\r")
+            sys.stdout.flush()
+            self.spin_pos = (self.spin_pos+1) % len(self.spinner)
+        else:
+            logger.debug("R: %s", b);
         self.log_buf = b""
 
     def char_in(self, ci:int):
@@ -126,11 +136,12 @@ class SerBus:
                 self.process_ack()
             elif ci > 0 and ci <= 0x04:
                 self.s_in = S.LEN
-            elif ci != 12:  # LF
+            elif ci not in (10,13):  # CR/LF
                 self.log_buf += bytes((ci,))
                 self.log_buf_t = trio.current_time()
                 return
-            self.dump_log_buf()
+            elif self.log_buf:
+                self.dump_log_buf()
 
         elif self.s_in == S.LEN:
             self.set_timeout(True)

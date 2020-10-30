@@ -54,6 +54,10 @@ async def run(uri='mqtt://localhost/', topic_in="test/moat/in", topic_out="test/
 @click.option("-d","--debug", is_flag=True, help="Debug?")
 async def _main(debug, **kw):
     logging.basicConfig(level=logging.DEBUG if debug else logging.WARNING)
+    l = logging.getLogger("distmqtt.mqtt.protocol.handler")
+    l.setLevel(logging.INFO)
+    l = logging.getLogger("transitions.core")
+    l.setLevel(logging.INFO)
     await run(**kw)
 
 if __name__ == "__main__":

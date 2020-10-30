@@ -2,6 +2,8 @@
 
 from enum import IntEnum
 from typing import Optional
+import trio
+import sys
 
 from .message import BusMessage
 from .crc import CRC16

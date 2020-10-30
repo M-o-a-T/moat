@@ -204,18 +204,20 @@ void hdl_send(BusHandler hdl, BusMessage msg, char prio)
     Handler h = (Handler)hdl;
 
     if(prio) {
-        if(h->q_prio_last)
+        if(h->q_prio_last != NULL)
             h->q_prio_last->next = msg;
         else
             h->q_prio_first = msg;
         h->q_prio_last = msg;
     } else {
-        if((h->q_last))
+        if(h->q_last != NULL)
             h->q_last->next = msg;
         else
             h->q_first = msg;
         h->q_last = msg;
     }
+    msg->next = NULL;
+
     h_send_next(h);
 }
 

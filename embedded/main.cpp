@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <cstdlib>
 
+#include "Arduino.h"
 #include "stm32f1xx_hal_rcc.h"
 
 #include "embedded/main.h"
@@ -28,20 +29,37 @@ void check_boot_count()
     ++boot_count;
 }
 
+static uint16_t mm;
+
 void setup()
 {
+    setup_serial();
     logbuf = NULL;
     logger("Startup.");
 
     check_boot_count();
-    setup_serial();
     setup_polled();
+    mm=0;
 }
 
 void loop()
 {
+    bool p = false;
+    if(mm==0) {
+        Serial.println("Z"); Serial.flush();
+        mm=millis();
+        p=true;
+    }
+    uint16_t m = millis();
+    if(m-mm >= 1000) {
+        Serial.println("L1"); Serial.flush();
+        mm=m;
+        p = true;
+    }
     loop_serial();
+    if(p) { Serial.println("L2"); Serial.flush(); }
     loop_polled();
+    if(p) { Serial.println("L3"); Serial.flush(); }
 }
 
 void process_serial_msg(BusMessage msg, uint8_t prio)
@@ -71,8 +89,8 @@ void vlogger(const char * format, va_list arg)
     while(*hdr)
        hdr = &((*hdr)->next);
     uint8_t len = vsnprintf(NULL,0, format,arg);
-    LOG buf = (LOG) malloc(sizeof(*logbuf)+len+1);
-    vsnprintf(buf->buf, len, format, arg);
+    LOG buf = (LOG) malloc(sizeof(*logbuf)+len+2);
+    vsnprintf(buf->buf, len+1, format, arg);
     buf->next = NULL;
     *hdr = buf;
 }

@@ -13,6 +13,10 @@ static uint8_t log_wp;  // logbuf write pos
 void setup_serial()
 {
     Serial.begin(57600);
+    Serial.print("INIT\n");
+    Serial.flush();
+
+    SB = sb_alloc();
     log_wp = 0;
 #ifdef MOAT_SERIAL
     last_m = millis();
@@ -23,8 +27,10 @@ void loop_serial()
 {
 #ifdef MOAT_SERIAL
     while(Serial.available()) {
+        Serial.println("C1"); Serial.flush();
         uint8_t ch = Serial.read();
         sb_byte_in(SB, ch);
+        Serial.println("C2"); Serial.flush();
     }
     {
         uint16_t m = millis();
@@ -36,34 +42,44 @@ void loop_serial()
     {
         uint8_t p = 0;
         BusMessage m = sb_recv(SB, &p);
-        if(m)
+        if(m) {
+            Serial.println("C6"); Serial.flush();
             process_serial_msg(m, p);
+            Serial.println("C7"); Serial.flush();
+        }
     }
 #endif
 
     while (Serial.availableForWrite()) {
 #ifdef MOAT_SERIAL
         if (SB->s_out != S_IDLE && SB->s_out != S_INIT) {
+            Serial.println("C9"); Serial.flush();
             // prio to debug output. Drop clause 2 if you want prio to MoaT bus.
             int16_t ch = sb_byte_out(SB);
             if (ch >= 0) {
                 Serial.write(ch);
                 continue;
             }
+            Serial.println("C10"); Serial.flush();
         }
 #endif
-        if (!logbuf)
+        if (!logbuf) {
             break;
+        }
 
         uint8_t ch = logbuf->buf[log_wp++];
-        if (ch) {
+        while (ch) {
             Serial.write(ch);
-        } else {
-            LOG lp = logbuf;
-            logbuf = lp->next;
-            free(lp);
-            log_wp = 0;
+            // break;
+            ch = logbuf->buf[log_wp++];
         }
+        if (ch)
+            continue;
+        Serial.write('\n'); Serial.flush();
+        LOG lp = logbuf;
+        logbuf = lp->next;
+        free(lp);
+        log_wp = 0;
     }
 }
 

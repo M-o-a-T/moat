@@ -233,10 +233,10 @@ void hdl_wire(BusHandler hdl, u_int8_t bits)
             }
         }
         if(h->settle) {
-            h_debug(h, "Change (Settle) %s\n",h_state_name(h));
+            h_debug(h, "Change (Settle) %s",h_state_name(h));
             h_wire_settle(h, bits);
         } else {
-            h_debug(h, "Change (Delay) %s\n",h_state_name(h));
+            h_debug(h, "Change (Delay) %s",h_state_name(h));
             h_next_step(h, FALSE);
         }
 
@@ -269,7 +269,7 @@ static void h_wire_settle(Handler h, u_int8_t bits)
     }
     else if(h->state == S_WRITE_ACQUIRE) {
         if(bits &~ (h->want_prio | (h->want_prio-1))) {
-            h_debug(h, "PRIO FAIL %02x %02x\n",bits,h->want_prio);
+            h_debug(h, "PRIO FAIL %02x %02x",bits,h->want_prio);
             h_start_reader(h, TRUE);
         }
     }
@@ -292,7 +292,7 @@ static void h_set_timeout(Handler h, u_int8_t val)
     about WAIT_IDLE.
     */
     if(!val)
-        h_debug(h,"Off\n");
+        h_debug(h,"Off");
     if(val <= T_BREAK) {
         h->cb->set_timeout(AREF val);
         return;
@@ -357,7 +357,7 @@ void hdl_timer(BusHandler hdl)
     */
     if(h->settle) {
         h->settle = FALSE;
-        h_debug(h, "Change Done timer %s\n",h_state_name(h));
+        h_debug(h, "Change Done timer %s",h_state_name(h));
         h_timeout_settle(h);
         h->last = h->current;
         if(h->state >= S_WRITE)
@@ -366,7 +366,7 @@ void hdl_timer(BusHandler hdl)
             h_set_timeout(h, T_ZERO);
     }
     else {
-        h_debug(h, "Delay Timer %s\n",h_state_name(h));
+        h_debug(h, "Delay Timer %s",h_state_name(h));
         h_next_step(h, TRUE);
         if(h->state > S_IDLE) {
             h->settle = TRUE;
@@ -394,7 +394,7 @@ static void h_timeout_settle(Handler h)
         if(bits == h->want_prio) {
             h->current_prio = bits;
             h->crc = 0;
-            h_debug(h, "Init CRC %x\n", h->current_prio);
+            h_debug(h, "Init CRC %x", h->current_prio);
             h_set_state(h, S_WRITE);
         } else
             h_error(h, ERR_ACQUIRE_FATAL);
@@ -403,7 +403,7 @@ static void h_timeout_settle(Handler h)
         if(bits && !(bits&(bits-1))) {
             h->current_prio = bits;
             h->crc = 0;
-            h_debug(h, "Init CRC %x\n", h->current_prio);
+            h_debug(h, "Init CRC %x", h->current_prio);
             h_set_state(h, S_READ);
         } else if(!bits)
             h_error(h, ERR_NOTHING);
@@ -460,7 +460,7 @@ static void h_timeout_settle(Handler h)
 
 static void h_retry(Handler h, BusMessage msg, enum HDL_RES res)
 {
-    h_debug(h, "Retry:%d %s\n", res, msg_info(msg));
+    h_debug(h, "Retry:%d %s", res, msg_info(msg));
     u_int8_t r;
     if(res == RES_MISSING)
         r = 2;
@@ -602,7 +602,7 @@ static char h_gen_chunk(Handler h)
     else if((h->write_state == W_END) || (h->write_state == W_FINAL)) {
         // End marker done, send CRC
         val = h->crc;
-        h_debug(h, "CRC is %x\n",h->crc);
+        h_debug(h, "CRC is %x",h->crc);
         h->write_state = W_CRC;
         h_set_state(h, S_WRITE_CRC);
     }
@@ -669,7 +669,7 @@ static void h_write_collision(Handler h, u_int8_t bits, char settled)
     while(n-- > h->cur_pos+1) {
         h->val = h->val * h->MAX + h->cur_chunk[n]-1;
         h->nval += 1;
-        h_debug(h, "Replay %x\n",h->cur_chunk[n]-1);
+        h_debug(h, "Replay %x",h->cur_chunk[n]-1);
         // not added to CRC: it already is in there
     }
 
@@ -742,7 +742,7 @@ static void h_set_ack_mask(Handler h)
     h->ack_mask = (bits == 1) ? 2 : 1;
     h->nack_mask = (h->WIRES == 2) ? (bits ? 0 : 2) : ((bits == 3) || (bits == 1)) ? 4 : 2;
     h->ack_masks = h->ack_mask | h->nack_mask;
-    h_debug(h, "AckBits %02x / %02x due to %02x/%d\n", h->ack_mask,h->nack_mask,bits,h->settle);
+    h_debug(h, "AckBits %02x / %02x due to %02x/%d", h->ack_mask,h->nack_mask,bits,h->settle);
 }
 
 static void h_read_next(Handler h, u_int8_t bits)
@@ -762,7 +762,7 @@ static void h_read_next(Handler h, u_int8_t bits)
     h->nval += 1;
     if(h->state == S_READ_CRC) {
         if(h->nval == h->LEN_CRC) {
-            h_debug(h, "CRC: local %x vs. remote %x\n", h->crc, h->val);
+            h_debug(h, "CRC: local %x vs. remote %x", h->crc, h->val);
             h_read_done(h, h->val == h->crc);
         }
     }
@@ -773,11 +773,11 @@ static void h_read_next(Handler h, u_int8_t bits)
             if(h->val >= h->VAL_MAX + (1<<(h->BITS-8))) {
                 h_error(h, ERR_CRC); // eventually. We hope.
             } else if(h->val >= h->VAL_MAX) {
-                h_debug(h, "Add Residual x%x\n", h->val-h->VAL_MAX);
+                h_debug(h, "Add Residual x%x", h->val-h->VAL_MAX);
                 msg_add_chunk(h->msg_in, h->val-h->VAL_MAX, h->BITS-8);
                 h_read_crc(h);
             } else {
-                h_debug(h, "Add Chunk x%x\n",h->val);
+                h_debug(h, "Add Chunk x%x",h->val);
                 msg_add_chunk(h->msg_in, h->val, h->BITS);
                 h->nval = 0;
                 h->val = 0;
@@ -812,7 +812,7 @@ static void h_error(Handler h, enum HDL_ERR typ)
         else
             h->backoff *= 1.2;
     }
-    h_debug(h, "Error %d %f\n",typ,h->backoff);
+    h_debug(h, "Error %d %f",typ,h->backoff);
 
     h_report_error(h, typ);
     h_reset(h);
@@ -849,7 +849,7 @@ static void h_set_state(Handler h, enum _S state)
     if(state == h->state)
         return;
 
-    h_debug(h, "SetState %s\n",h_state_name(h));
+    h_debug(h, "SetState %s",h_state_name(h));
 
     if((state < S_WRITE) && (h->state >= S_WRITE)) {
         // Drop off writing == do not set any wires

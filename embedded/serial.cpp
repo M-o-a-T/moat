@@ -88,7 +88,7 @@ void loop_serial()
             ch = logbuf->buf[log_wp++];
         }
         if (ch)
-            continue;
+            break;
 
         Serial.write('\n');
         if (low_mem)

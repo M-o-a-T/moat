@@ -169,7 +169,10 @@ int16_t sb_byte_out(SerBus sb)
         return sb->crc_out >> 8;
     case S_CRC2:
         c = sb->crc_out & 0xFF;
-        sb->m_out = sb->m_out->next;
+
+        BusMessage msg = sb->m_out;
+        sb->m_out = msg->next;
+        msg_free(msg);
         if (sb->m_out == NULL)
             sb->s_out = S_IDLE;
         else

@@ -109,6 +109,7 @@ static char moat_process(REF BusMessage msg)
 static void moat_transmitted(REF BusMessage msg, enum HDL_RES result)
 {
     logger("X:%d",result);
+    msg_free(msg);
 }
 
 // print a debug message

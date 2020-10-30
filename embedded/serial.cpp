@@ -45,9 +45,7 @@ void loop_serial()
         uint8_t p = 0;
         BusMessage m = sb_recv(SB, &p);
         if(m) {
-            Serial.println("C6"); Serial.flush();
             process_serial_msg(m, p);
-            Serial.println("C7"); Serial.flush();
         }
     }
 #endif
@@ -55,14 +53,12 @@ void loop_serial()
     while (Serial.availableForWrite()) {
 #ifdef MOAT_SERIAL
         if (SB->s_out != S_IDLE && SB->s_out != S_INIT) {
-            Serial.println("C9"); Serial.flush();
             // prio to debug output. Drop clause 2 if you want prio to MoaT bus.
             int16_t ch = sb_byte_out(SB);
             if (ch >= 0) {
                 Serial.write(ch);
                 continue;
             }
-            Serial.println("C10"); Serial.flush();
         }
 #endif
         // The idea behind this code: if we're low on memory we write the

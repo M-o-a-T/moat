@@ -201,6 +201,7 @@ void loop_polled()
 
 void send_bus_msg(BusMessage msg, uint8_t prio) 
 {
+    logger("BusSend %s", msg_info(msg));
     hdl_send(BH, msg, prio);
 }
 

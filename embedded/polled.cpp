@@ -10,6 +10,7 @@ static uint16_t utimeout;
 // set the timeout
 static void moat_set_timeout(REF u_int16_t delay)
 {
+    logger("SetTimeout %d",delay);
     if (delay == T_OFF)
         utimeout = 0;
     else {

@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <cstdlib>
+#include <malloc.h>
 
 #include "Arduino.h"
 #include "stm32f1xx_hal_rcc.h"
@@ -42,6 +43,24 @@ void setup()
     mm=0;
 }
 
+extern "C" char *sbrk(int i);
+void meminfo()
+{
+    struct mallinfo mi = mallinfo();
+    extern char _Min_Stack_Size;
+    //extern char _end;
+    extern char _sdata;
+    extern char _estack;
+
+    //static char *ramstart = &_sdata;
+    static char *ramend = &_estack;
+    static char *minSP = (char*)(ramend - &_Min_Stack_Size);
+
+    char *heapend = (char*)sbrk(0);
+    char * stack_ptr = (char*)__get_MSP();
+    Serial.println(((stack_ptr < minSP) ? stack_ptr : minSP) - heapend + mi.fordblks);
+}
+
 void loop()
 {
     bool p = false;
@@ -59,7 +78,7 @@ void loop()
     loop_serial();
     if(p) { Serial.println("L2"); Serial.flush(); }
     loop_polled();
-    if(p) { Serial.println("L3"); Serial.flush(); }
+    if(p) { Serial.println("L3"); Serial.flush(); meminfo(); }
 }
 
 void process_serial_msg(BusMessage msg, uint8_t prio)

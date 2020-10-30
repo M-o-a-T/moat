@@ -34,7 +34,7 @@ class BusMessage:
             if adr < 0:
                 # 3 bit source
                 buf.append('0b1')
-                buf.append(BitArray(uint=-adr-1, length=2))
+                buf.append(BitArray(uint=adr+4, length=2))
             else:
                 buf.append('0b0')
                 buf.append(BitArray(uint=adr, length=7))
@@ -202,13 +202,13 @@ class BusMessage:
         off = 0
 
         if b[off]:
-            self.dst = -b[off+1:off+3].uint-1
+            self.dst = b[off+1:off+3].uint-4
             off += 3
         else:
             self.dst = b[off+1:off+8].uint
             off += 8
         if b[off]:
-            self.src = -b[off+1:off+3].uint-1
+            self.src = b[off+1:off+3].uint-4
             off += 3
         else:
             self.src = b[off+1:off+8].uint

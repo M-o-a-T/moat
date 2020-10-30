@@ -806,17 +806,17 @@ static void h_error(Handler h, enum HDL_ERR typ)
         return;
     }
 
-    h_debug(h, "Error %d\n",typ);
     if(typ < 0) {
         if(h->backoff < 3*T_BACKOFF)
             h->backoff *= 1.5+random();
         else
             h->backoff *= 1.2;
     }
+    h_debug(h, "Error %d %f\n",typ,h->backoff);
 
     h_report_error(h, typ);
     h_reset(h);
-    if((typ <= ERR_FATAL) && h->sending ) {
+    if((typ <= ERR_FATAL) && h->sending) {
         BusMessage msg = h_clear_sending(h);
         h_transmitted(h, msg,RES_FATAL);
         h_set_state(h, S_WAIT_IDLE);

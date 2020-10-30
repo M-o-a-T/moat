@@ -48,6 +48,9 @@ class SerBus:
     * timeout()          -- when the timer triggers
     """
 
+    spinner = ["/","-","\\","|"]
+    spin_pos = 0
+
     def __init__(self):
         # incoming
         self.m_in = None # bus message
@@ -114,7 +117,12 @@ class SerBus:
             b = self.log_buf.decode("utf-8")
         except Exception:
             b = self.log_buf.decode("latin1")
-        logger.debug("R: %s", b);
+        if b in {"L1","L2","L3"}:
+            print(self.spinner[self.spin_pos],end="\r")
+            sys.stdout.flush()
+            self.spin_pos = (self.spin_pos+1) % len(self.spinner)
+        else:
+            logger.debug("R: %s", b);
         self.log_buf = b""
 
     def char_in(self, ci:int):

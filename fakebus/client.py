@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 
 import anyio
 import trio
@@ -6,6 +7,7 @@ from contextlib import asynccontextmanager
 import time
 import sys
 import errno
+from distmqtt.utils import Queue
 
 class Client(BaseHandler):
     def __init__(self, wires, timeout=0.01, timeout2=0.005, socket="/tmp/moatbus", verbose=False, dest=None):
@@ -35,7 +37,7 @@ class Client(BaseHandler):
                 await self.__q.put(m)
             if self.__wire_out is not None:
                 b,self.__wire_out = self.__wire_out,None
-                await self.__sock.send_all(bytes((b,)))
+                await self.__sock.send(bytes((b,)))
             if self.__done:
                 d,self.__done = self.__done,[]
                 for ev in d:
@@ -46,12 +48,12 @@ class Client(BaseHandler):
                 if self.__t is None:
                     with trio.CancelScope() as c:
                         self.__kick = c
-                        b = await self.__sock.receive_some(1)
+                        b = await self.__sock.receive(1)
                 else:
                     with trio.fail_after(max(self.__t/1000,0)) as c:
                         self.__kick = c
-                        b = await self.__sock.receive_some(1)
-            except anyio.exceptions.ClosedResourceError:
+                        b = await self.__sock.receive(1)
+            except anyio.ClosedResourceError:
                 return
             except (trio.TooSlowError,TimeoutError):
                 self.__c = None
@@ -150,12 +152,12 @@ class Client(BaseHandler):
                 await anyio.connect_unix(self.__socket) as sock:
             self.__tg = tg
             self.__sock = sock
-            self.__q = anyio.create_queue(100)
+            self.__q = Queue(100)
 
             await tg.start(self.main)
             try:
                 yield self
-            except anyio.exceptions.ClosedResourceError:
+            except anyio.ClosedResourceError:
                 pass
             except EnvironmentError as e:
                 if e.errno != errno.EBADF:

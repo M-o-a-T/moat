@@ -175,7 +175,7 @@ void hdl_free(BusHandler hdl)
 static inline void h_crc(Handler h, u_int8_t bits)
 {
     h->crc = (h->crc >> h->WIRES) ^ h->crc_table[(bits ^ h->crc ^ h->current_prio) & h->MAX];
-    h_debug(h, "CRC add %x => %x\n",bits,h->crc);
+    // h_debug(h, "CRC add %x => %x\n",bits,h->crc);
 }
 
 static u_int16_t _bytecrc_r(u_int16_t crc, u_int16_t poly, u_int8_t depth)

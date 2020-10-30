@@ -592,8 +592,12 @@ static char h_gen_chunk(Handler h)
                 h->cur_chunk[n++] = h->MAX;
         } else {
             val = msg_extract_chunk(h->sending, h->BITS);
-            if(val >= h->VAL_MAX)
+            if(val >= h->VAL_MAX) {
+                h_debug(h, "Send Residual:x%x",val-h->VAL_MAX);
                 h->write_state = W_FINAL;
+            } else {
+                h_debug(h, "Send Chunk:x%x",val);
+            }
         }
         // else continue in W_MORE
     }

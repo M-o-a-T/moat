@@ -174,7 +174,7 @@ void hdl_free(BusHandler hdl)
 #define POLY 0x571
 static inline void h_crc(Handler h, u_int8_t bits)
 {
-    h->crc = (h->crc >> h->WIRES) ^ h->crc_table[(bits ^ h->crc) & h->MAX];
+    h->crc = (h->crc >> h->WIRES) ^ h->crc_table[(bits ^ h->crc ^ h->current_prio) & h->MAX];
     h_debug(h, "CRC add %x => %x\n",bits,h->crc);
 }
 
@@ -413,7 +413,7 @@ static void h_timeout_settle(Handler h)
             h_error(h, ERR_ACQUIRE_FATAL);
     }
     else if(h->state == S_READ) {
-        h_crc(h, bits ^ h->current_prio);
+        h_crc(h, bits);
         h_read_next(h, bits);
     }
     else if(h->state == S_READ_CRC) {
@@ -438,7 +438,7 @@ static void h_timeout_settle(Handler h)
         if(bits != h->intended)
             h_write_collision(h, bits &~ h->intended, TRUE);
         else
-            h_crc(h, bits ^ h->current_prio);
+            h_crc(h, bits);
     }
     else if(h->state == S_WRITE_CRC) {
         if(bits != h->intended)
@@ -678,7 +678,7 @@ static void h_write_collision(Handler h, u_int8_t bits, char settled)
     bits = h->current;
     h_set_state(h, S_READ);
     if(settled) {
-        h_crc(h, bits ^ h->current_prio);
+        h_crc(h, bits);
         h_read_next(h, bits);
     }
     h->no_backoff = TRUE;

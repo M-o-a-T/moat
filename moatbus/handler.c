@@ -798,6 +798,9 @@ static void h_read_crc(Handler h)
 
 static void h_error(Handler h, enum HDL_ERR typ)
 {
+    if (h->state == S_ERROR)
+        return;
+
     if((typ == ERR_HOLDTIME) && !h->current) {
         if(h->state < S_IDLE)
             h_set_state(h, S_IDLE);

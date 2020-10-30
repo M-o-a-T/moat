@@ -47,7 +47,7 @@ typedef struct _Handler {
 #endif
 
     u_int8_t WIRES;
-    u_int16_t MAX;
+    u_int8_t MAX;
     u_int8_t BITS;
     u_int8_t LEN;
     u_int8_t LEN_CRC;

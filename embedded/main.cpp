@@ -44,12 +44,12 @@ void setup()
 }
 
 extern "C" char *sbrk(int i);
-void meminfo()
+unsigned int memspace()
 {
     struct mallinfo mi = mallinfo();
     extern char _Min_Stack_Size;
     //extern char _end;
-    extern char _sdata;
+    //extern char _sdata;
     extern char _estack;
 
     //static char *ramstart = &_sdata;
@@ -58,27 +58,20 @@ void meminfo()
 
     char *heapend = (char*)sbrk(0);
     char * stack_ptr = (char*)__get_MSP();
-    Serial.println(((stack_ptr < minSP) ? stack_ptr : minSP) - heapend + mi.fordblks);
+    return ((stack_ptr < minSP) ? stack_ptr : minSP) - heapend + mi.fordblks;
 }
 
 void loop()
 {
-    bool p = false;
-    if(mm==0) {
-        Serial.println("Z"); Serial.flush();
-        mm=millis();
-        p=true;
-    }
     uint16_t m = millis();
-    if(m-mm >= 1000) {
-        Serial.println("L1"); Serial.flush();
-        mm=m;
-        p = true;
+    if(mm==0 || ((m-mm)&0xFFFF) >= 10000) {
+        logger("* free: %d", memspace());
+        mm=millis();
+        if(!mm)
+            mm = 1;
     }
     loop_serial();
-    if(p) { Serial.println("L2"); Serial.flush(); }
     loop_polled();
-    if(p) { Serial.println("L3"); Serial.flush(); meminfo(); }
 }
 
 void process_serial_msg(BusMessage msg, uint8_t prio)

@@ -9,6 +9,7 @@ static  uint16_t last_m;
 #endif
 
 static uint8_t log_wp;  // logbuf write pos
+static uint16_t g_low_mem;
 
 void setup_serial()
 {
@@ -21,6 +22,7 @@ void setup_serial()
     SB = sb_alloc();
     last_m = millis();
 #endif
+    g_low_mem = 0;
 }
 
 void loop_serial()
@@ -63,6 +65,19 @@ void loop_serial()
             Serial.println("C10"); Serial.flush();
         }
 #endif
+        // The idea behind this code: if we're low on memory we write the
+        // whole buffer synchronously so that the log buffer gets freed
+        bool low_mem = (memspace() < 1000);
+
+        if(g_low_mem && !low_mem && ((millis()-g_low_mem)&0xFFFF) > 1000) {
+            g_low_mem = 0;
+            logger("\n* Memory OK *");
+        } else if(low_mem && g_low_mem == 0) {
+            g_low_mem = millis();
+            if (!g_low_mem)
+            g_low_mem = 1;
+            Serial.println("\n* Memory full *");
+        }
         if (!logbuf) {
             break;
         }
@@ -70,12 +85,16 @@ void loop_serial()
         uint8_t ch = logbuf->buf[log_wp++];
         while (ch) {
             Serial.write(ch);
-            // break;
+            if(!low_mem)
+                break;
             ch = logbuf->buf[log_wp++];
         }
         if (ch)
             continue;
-        Serial.write('\n'); Serial.flush();
+
+        Serial.write('\n');
+        if (low_mem)
+            Serial.flush();
         LOG lp = logbuf;
         logbuf = lp->next;
         free(lp);

@@ -27,4 +27,6 @@ bool serial_is_idle();
 void logger(const char *format, ...);
 void vlogger(const char * format, va_list arg);
 
+unsigned int memspace();
+
 #endif

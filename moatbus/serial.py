@@ -136,11 +136,12 @@ class SerBus:
                 self.process_ack()
             elif ci > 0 and ci <= 0x04:
                 self.s_in = S.LEN
-            elif ci != 12:  # LF
+            elif ci not in (10,13):  # CR/LF
                 self.log_buf += bytes((ci,))
                 self.log_buf_t = trio.current_time()
                 return
-            self.dump_log_buf()
+            elif self.log_buf:
+                self.dump_log_buf()
 
         elif self.s_in == S.LEN:
             self.set_timeout(True)

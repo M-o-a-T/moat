@@ -177,6 +177,7 @@ void loop_polled()
 
     if (utimeout) {
         if (utimeout <= d) {
+            utimeout = 0;
             hdl_timer(BH);
         } else
             utimeout -= d;

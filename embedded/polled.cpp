@@ -190,7 +190,7 @@ void loop_polled()
 
     uint8_t bits = moat_get_wire(REFN1);
     if (last_reported != bits) {
-        //hdl_wire(BH, bits);
+        hdl_wire(BH, bits);
         last_reported = bits;
 
 #ifdef MOAT_DEBUG_WIRES

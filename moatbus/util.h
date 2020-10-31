@@ -1,17 +1,19 @@
 #ifndef MOATBUS_UTIL
 #define MOATBUS_UTIL
 
+#include "moatbus/common.h"
+
 // TODO debugging
 #define ASSERT(x) do {} while(0)
-
-// ticks per second for timer-based minifloats
-#define MINI_F 4
 
 #include <sys/types.h>
 #include "moatbus/type.h"
 
 // fast small-integer powers
-u_int16_t powi(u_int8_t x, u_int8_t y);
+IN_C u_int16_t powi(u_int8_t x, u_int8_t y);
+
+// ticks per second for timer-based minifloats
+#define MINI_F 4
 
 // minifloat timers
 typedef struct _minifloat {
@@ -21,16 +23,16 @@ typedef struct _minifloat {
 } minifloat;
 
 // get the current value
-u_int8_t mf_get(minifloat *m);
+IN_C u_int8_t mf_get(minifloat *m);
 
 // set the current value. Note that a value of zero never triggers.
-void mf_set(minifloat *m, u_int8_t f);
+IN_C void mf_set(minifloat *m, u_int8_t f);
 
 // reset the current value to the stored value
-void mf_reset(minifloat *m);
+IN_C void mf_reset(minifloat *m);
 
 // decrement the current value; if zero, reset and return True, else return False
-bool mf_tick(minifloat *m);
+IN_C bool mf_tick(minifloat *m);
 
 // test if this minifloat ever triggers
 static inline bool mf_is_zero(minifloat *m) { return m->m == 0; }

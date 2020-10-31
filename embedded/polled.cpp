@@ -1,9 +1,11 @@
 #include "Arduino.h"
+#include "moatbus/common.h"
 #include "moatbus/handler.h"
 #include "embedded/main.h"
+#include "embedded/timer.h"
 
 static uint16_t last_micros;
-static uint16_t utimeout;
+static uint16_t max_d;
 #ifndef MOAT_T_A
 #define MOAT_T_A 5000
 #endif
@@ -11,21 +13,20 @@ static uint16_t utimeout;
 #define MOAT_T_B (MOAT_T_A/5)
 #endif
 
+struct mtimer tm;
+
 // set the timeout
 static void moat_set_timeout(REF u_int16_t delay)
 {
-    logger("SetTimeout %d @%d",delay,micros());
+    if(DEBUG_WIRE)
+        logger("SetTimeout %d %d",delay,micros());
+    mtimer_cancel(&tm);
     if (delay == T_OFF)
-        utimeout = 0;
-    else {
-        if (delay == T_BREAK)
-            utimeout = MOAT_T_B;
-        else
-            utimeout = MOAT_T_A * (delay-T_BREAK);
-        utimeout += micros();
-        if (!utimeout)
-            utimeout = 1;
-    }
+        {}
+    else if (delay == T_BREAK)
+        mtimer_schedule(&tm, MT_USEC(MOAT_T_B));
+    else
+        mtimer_schedule(&tm, MT_USEC(MOAT_T_A) * (delay-T_BREAK));
 }
 
 static uint8_t last_bits;
@@ -136,6 +137,10 @@ static struct BusCallbacks CB {
 };
 static BusHandler BH;
 
+static void run_timer() {
+    hdl_timer(BH);
+}
+
 void setup_polled()
 {
 #if !defined(MOAT_WIRES) || MOAT_WIRES<2 || MOAT_WIRES>4
@@ -167,10 +172,11 @@ void setup_polled()
 #endif
 
     last_micros = micros();
-    utimeout = 0;
+    max_d = 0;
     last_bits = 0;
 
     BH = hdl_alloc(REFN MOAT_WIRES, &CB);
+    mtimer_init(&tm,run_timer);
 }
 
 uint8_t last_reported = ~0;
@@ -180,14 +186,9 @@ void loop_polled()
     uint16_t m = micros();
     uint16_t d = m - last_micros;
     last_micros = m;
-
-    if (utimeout) {
-        if (utimeout <= d) {
-            utimeout = 0;
-            logger("Timeout! @%d",micros());
-            hdl_timer(BH);
-        } else
-            utimeout -= d;
+    if (max_d < d) {
+        max_d = d;
+        logger("DT %d",max_d);
     }
 
     uint8_t bits = moat_get_wire(REFN1);
@@ -195,9 +196,8 @@ void loop_polled()
         hdl_wire(BH, bits);
         last_reported = bits;
 
-#ifdef MOAT_DEBUG_WIRES
-        logger("WIRE x%01x",bits);
-#endif
+        if(DEBUG_WIRE)
+            logger("WIRE x%01x",bits);
     }
 }
 

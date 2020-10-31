@@ -10,6 +10,7 @@ This interface mostly mimics handler.py
 #include <sys/types.h>
 #include <stdarg.h>
 
+#include "moatbus/common.h"
 #include "moatbus/message.h"
 
 #ifdef __cplusplus

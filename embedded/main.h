@@ -29,4 +29,9 @@ void vlogger(const char * format, va_list arg);
 
 unsigned int memspace();
 
+
+#define cpu_serial_len (3*4)
+void cpu_serial(u_int8_t *buffer);
+u_int16_t cpu_random(u_int16_t max);
+
 #endif

@@ -7,20 +7,21 @@
 
 #include "Arduino.h"
 #include "stm32f1xx_hal_rcc.h"
+#include "usbd_desc_template.h"
 
 #include "embedded/main.h"
+#include "embedded/timer.h"
 #include "moatbus/message.h"
 #include "moatbus/serial.h"
 #include "moatbus/handler.h"
 
+IN_C void setup();
+IN_C void loop();
+
 LOG logbuf;
 
-uint16_t boot_count __attribute__((__section__(".noinit")));
-
-extern "C" {
-    void setup();
-    void loop();
-}
+uint16_t boot_count NO_INIT;
+uint32_t cpu_random_seed NO_INIT;
 
 void check_boot_count()
 {
@@ -30,20 +31,34 @@ void check_boot_count()
     ++boot_count;
 }
 
-static uint16_t mm;
+struct mtick ten_seconds;
+
+void ten_log()
+{
+    logger("* free: %d", memspace());
+}
+
+#define U_ID1 0x1FFFF7E8
+#define U_ID2 0x1FFFF7EC
+#define U_ID3 0x1FFFF7F0
 
 void setup()
 {
+    check_boot_count();
+    cpu_random_seed = *(uint32_t *)U_ID1 ^ *(uint32_t *)U_ID2 ^ *(uint32_t *)U_ID3;
+    setup_timer();
     setup_serial();
     logbuf = NULL;
-    logger("Startup.");
+    logger("Startup, reboot#%d", boot_count);
+    mtick_init(&ten_seconds, ten_log);
+    mf_set(&ten_seconds.mf, 36); // ten seconds
 
-    check_boot_count();
     setup_polled();
-    mm=0;
+    logger("Startup: free: %d", memspace());
 }
 
-extern "C" char *sbrk(int i);
+IN_C char *sbrk(int i);
+
 unsigned int memspace()
 {
     struct mallinfo mi = mallinfo();
@@ -63,23 +78,18 @@ unsigned int memspace()
 
 void loop()
 {
-    uint16_t m = millis();
-    if(mm==0 || ((m-mm)&0xFFFF) >= 10000) {
-        logger("* free: %d", memspace());
-        mm=millis();
-        if(!mm)
-            mm = 1;
-    }
+    mt_delay_t m = MT_READ();
+    loop_timer(m);
     loop_serial();
     loop_polled();
 }
 
+#ifdef MOAT_REPEATER
 void process_serial_msg(BusMessage msg, uint8_t prio)
 {
-#ifdef MOAT_REPEATER
     send_bus_msg(msg, prio);
-#endif
 }
+#endif
 
 char process_bus_msg(BusMessage msg)
 {
@@ -87,10 +97,13 @@ char process_bus_msg(BusMessage msg)
 
     // XX TODO process this thing
 #ifdef MOAT_REPEATER
-    if(msg->dst == -4 || msg->dst == MOAT_REPEATER-4)
+    if(msg->dst == -4 || msg->dst == -MOAT_REPEATER)
         res = 1;
     send_serial_msg(msg, 0);
     logger("Forward to serial: %s", msg_info(msg));
+    res = TRUE;
+#else
+    msg_free(msg);
 #endif
     return res;
 }
@@ -115,3 +128,17 @@ void logger(const char *format, ...)
     vlogger(format, args);
     va_end(args);
 }
+
+void cpu_serial(u_int8_t *buffer)
+{
+    uint32_t *buf = (uint32_t *)buffer;
+    *buf++ = *(uint32_t *)U_ID1;
+    *buf++ = *(uint32_t *)U_ID2;
+    *buf++ = *(uint32_t *)U_ID3;
+}
+
+u_int16_t cpu_random(u_int16_t max)
+{
+    return cpu_random_seed % max;
+}
+

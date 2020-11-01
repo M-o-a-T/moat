@@ -133,15 +133,15 @@ any       any          any      direct message
 Address assignment
 ==================
 
-Address assignment messages are special control messages: the type is zero
-and the function code is reinterpreted as flag bit and four bits for the
-length of the client's serial number / MAC / EUID, minus one.
+Address assignment messages are special control messages (see below): the
+type is zero and the function code is reinterpreted as flag bit and four
+bits for the length of the client's serial number / MAC / EUID, minus one.
 
 Serial numbers longer than 16 bytes are not allowed. Serial numbers shorter
 than 4 bytes are strongly discouraged.
 
 If the flag bit is set, the request contains an additional flag byte after
-the serial.
+the serial. Otherwise the flag byte is assumed to be zero.
 
 The reply shall be identical to the sender's so that the receiver may
 easily identify its reply.
@@ -502,12 +502,6 @@ describe the period for checking the value; if it exceeds min or max the
 destination shall be updated even if the broadcast / directcast timer has
 not been reached. (The timer shall *not* auto-restart when that happens.)
 
-Timeouts are interpreted as an 8-bit unsigned minifloat with 4 exponent
-bits, 4 mantissa bits, and no infinity/NaN interpretation, scaled so that
-0x04 corresponds to one second. This affords a max timeout of 35 hours
-and an accurracy of +/- one minute on a one-hour timeout, which should be
-more than sufficient.
-
 Clients are free to treat timeouts as very approximate guidelines; when the
 server reads a timer, a client should reply with the value that best
 approximates the timeout it actually uses.
@@ -520,6 +514,22 @@ code. The data dictionary must be used to document this.
 
 Directcast messages are always sent to another client. Their destination
 must not be hard-coded or remembered across cold starts.
+
+Minifloats
+----------
+
+MoaT wants to work with timers ranging from some large fraction of a second
+(1/4th) to a day. That won't fit in 16 bits. Also, timeouts >1hr won't have
+sub-second accurracy anyway.
+
+Thus MoaT specifies timeouts unsing a minifloat, which is an 8-bit floating
+point number (4 bits exponent, 4 bits mantissa, no sign – negative timeouts
+don't exist). This number is scaled so that 1 equals to 1/4th of a second.
+
+A minifloat can't accurately hit most full minutes, but if you need that
+you can always undershoot your target and send a second smaller delay.
+Since microcontroller sleep times tend to be rather inaccurate unless you
+attach a real-time clock to them, that's a required strategy anyway.
 
 
 Shortcuts

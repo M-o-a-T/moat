@@ -34,8 +34,11 @@ IN_C void mf_reset(minifloat *m);
 // decrement the current value; if zero, reset and return True, else return False
 IN_C bool mf_tick(minifloat *m);
 
+// decrement the current value; if zero, reset and return True, else return False
+static inline void mf_stop(minifloat *m) { m->m == 0; }
+
 // test if this minifloat ever triggers
-static inline bool mf_is_zero(minifloat *m) { return m->m == 0; }
+static inline bool mf_is_stopped(minifloat *m) { return m->m == 0; }
 
 // random value, equally distributed
 IN_C u_int8_t mf_random(uint16_t lo, u_int16_t hi);

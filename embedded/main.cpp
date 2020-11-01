@@ -19,7 +19,6 @@
 IN_C void setup();
 IN_C void loop();
 
-LOG logbuf;
 
 uint16_t boot_count NO_INIT;
 uint32_t cpu_random_seed NO_INIT;

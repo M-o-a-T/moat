@@ -23,6 +23,9 @@ enum HDL_RES {
     RES_FATAL,
 };
 
+// one byte for now
+typedef u_int8_t msglen_t;
+
 struct _BusMessage {
     struct _BusMessage *next; // for chaining buffers
 
@@ -33,12 +36,12 @@ struct _BusMessage {
     u_int8_t code; // 0…3/31/255
 
     u_int8_t *data;
-    u_int16_t data_max; // buffer length, bytes. Zero: external allocation
-    u_int16_t data_off; // Offset for content (header is before this)
+    msglen_t data_max; // buffer length, bytes. Zero: external allocation
+    msglen_t data_off; // Offset for content (header is before this)
 
-    u_int16_t data_pos; // current read position: byte offset
+    msglen_t data_pos; // current read position: byte offset
     u_int8_t data_pos_off; // current read position: non-filled bits
-    u_int16_t data_end; // current write position: byte offset
+    msglen_t data_end; // current write position: byte offset
     u_int8_t data_end_off; // current write position: non-filled bits
     u_int8_t hdr_len; // Length of header. 0: need to call add_header / read_header
 
@@ -50,16 +53,16 @@ struct _BusMessage {
 typedef struct _BusMessage *BusMessage;
 
 // Allocate an empty message
-BusMessage msg_alloc(u_int16_t maxlen);
+BusMessage msg_alloc(msglen_t maxlen);
 // init a message allocated elsewhere. Requires MSG_MAXHDR free bytes in front!
-void msg_init(BusMessage msg, u_int8_t *data, u_int16_t len);
+void msg_init(BusMessage msg, u_int8_t *data, msglen_t len);
 // copy an existing message (but not the data!)
 BusMessage msg_copy(BusMessage orig);
 
 // Free a message
 void msg_free(BusMessage msg);
 // Increase max buffer size
-void msg_resize(BusMessage msg, u_int16_t maxlen);
+void msg_resize(BusMessage msg, msglen_t maxlen);
 // dump message
 const char* msg_info(BusMessage msg);
 
@@ -71,7 +74,7 @@ void msg_read_header(BusMessage msg);
 // Start address of the message (data only)
 u_int8_t *msg_start(BusMessage msg);
 // Length of the message, excluding header (bytes)
-u_int16_t msg_length(BusMessage msg);
+msglen_t msg_length(BusMessage msg);
 // Length of the complete message (bits)
 u_int16_t msg_bits(BusMessage msg);
 // Length of already-processed/transmitted message (bits)
@@ -85,7 +88,7 @@ BusMessage msg_copy_bits(BusMessage msg, u_int8_t off);
 // prepare a buffer to add content to be transmitted
 void msg_start_send(BusMessage msg);
 // add bytes
-void msg_add_data(BusMessage msg, const u_int8_t *data, u_int16_t len);
+void msg_add_data(BusMessage msg, const u_int8_t *data, msglen_t len);
 // add single byte
 static inline void msg_add_char(BusMessage msg, const u_int8_t ch) {
     u_int8_t c = (ch);

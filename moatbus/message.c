@@ -10,7 +10,7 @@ Message structure for MoatBus
 
 #include "message.h"
 
-BusMessage msg_alloc(u_int16_t maxlen)
+BusMessage msg_alloc(msglen_t maxlen)
 {
     BusMessage msg;
     maxlen += 8; // header, additional frame, whatever
@@ -36,7 +36,7 @@ BusMessage msg_copy(BusMessage orig)
     return msg;
 }
 
-void msg_init(BusMessage msg, u_int8_t *data, u_int16_t len)
+void msg_init(BusMessage msg, u_int8_t *data, msglen_t len)
 {
     memset(msg,0,sizeof(*msg));
     msg->data = data-MSG_MAXHDR;
@@ -55,7 +55,7 @@ void msg_free(BusMessage msg)
     free(msg);
 }
 
-void msg_resize(BusMessage msg, u_int16_t maxlen)
+void msg_resize(BusMessage msg, msglen_t maxlen)
 {
     u_int8_t *data;
     if(msg->data_max == 0)
@@ -79,7 +79,7 @@ const char* msg_info(BusMessage msg)
 {
     if(msg_info_buf)
         free(msg_info_buf);
-    u_int16_t ml = msg_length(msg);
+    msglen_t ml = msg_length(msg);
     asprintf(&msg_info_buf, "Msg< src:%d dst:%d cmd:x%x %d:%*s >", msg->src,msg->dst,msg->code,
             ml,ml,msg_start(msg));
     return msg_info_buf;
@@ -92,7 +92,7 @@ u_int8_t *msg_start(BusMessage msg)
 }
 
 // Length of the message, excluding header and incomplete bits
-u_int16_t msg_length(BusMessage msg)
+msglen_t msg_length(BusMessage msg)
 {
     return msg->data_end-msg->data_off;
 }
@@ -388,7 +388,7 @@ void msg_start_send(BusMessage msg)
     msg->data_end_off = 8;
 }
 
-void msg_add_data(BusMessage msg, const u_int8_t *data, u_int16_t len) // bytes
+void msg_add_data(BusMessage msg, const u_int8_t *data, msglen_t len) // bytes
 {
     if (msg->data_end_off != 8) {
         msg->data_end += 1;

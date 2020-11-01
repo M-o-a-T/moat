@@ -70,3 +70,12 @@ bool mf_tick(minifloat *m)
     }
 }
 
+u_int8_t mf_random(uint16_t lo, u_int16_t hi)
+{
+    minifloat x;
+    u_int16_t v = lo+cpu_random(hi-lo);
+    x->vl = v&0xFF;
+    x->vh = v>>8;
+    return mf_get(&x);
+}
+

@@ -36,5 +36,9 @@ IN_C bool mf_tick(minifloat *m);
 
 // test if this minifloat ever triggers
 static inline bool mf_is_zero(minifloat *m) { return m->m == 0; }
+
+// random value, equally distributed
+IN_C u_int8_t mf_random(uint16_t lo, u_int16_t hi);
+
 #endif
 

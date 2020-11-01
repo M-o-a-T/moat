@@ -80,8 +80,17 @@ const char* msg_info(BusMessage msg)
     if(msg_info_buf)
         free(msg_info_buf);
     msglen_t ml = msg_length(msg);
-    asprintf(&msg_info_buf, "Msg< src:%d dst:%d cmd:x%x %d:%*s >", msg->src,msg->dst,msg->code,
-            ml,ml,msg_start(msg));
+    asprintf(&msg_info_buf, "Msg< src:%d dst:%d cmd:x%x %d:%*s", msg->src,msg->dst,msg->code,
+            ml,3*ml+3,"");
+    char* mp = strlen(msg_info_buf)-3*ml;
+    char* m = msg_start(msg);
+    while(ml) {
+        *mp++ = nibble[*m >> 4];
+        *mp++ = nibble[*m &0xF];
+        *mp++ = ' ';
+    }
+    *mp++ = '>';
+    *mp++ = 0;
     return msg_info_buf;
 }
 

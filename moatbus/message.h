@@ -44,7 +44,7 @@ struct _BusMessage {
 
     enum HDL_RES result;
 };
-#define MSG_MAXHDR 3
+#define MSG_MAXHDR 4
 #define MSG_MINBUF 30
 
 typedef struct _BusMessage *BusMessage;

@@ -19,6 +19,7 @@ BusMessage msg_alloc(u_int16_t maxlen)
 
     msg = calloc(sizeof (*msg), 1);
     msg->data = data;
+    *msg->data = 1;
     msg->data_max = maxlen;
     msg->data_off = msg->data_end = MSG_MAXHDR;
     msg->result = RES_FREE;
@@ -31,6 +32,7 @@ BusMessage msg_copy(BusMessage orig)
     BusMessage msg = malloc(sizeof(BusMessage *));
     memcpy(msg, orig, sizeof(BusMessage *));
     msg->next = NULL;
+    *msg->data += 1;
     return msg;
 }
 
@@ -38,6 +40,7 @@ void msg_init(BusMessage msg, u_int8_t *data, u_int16_t len)
 {
     memset(msg,0,sizeof(*msg));
     msg->data = data-MSG_MAXHDR;
+    *msg->data = 0x80;
     msg->data_off = MSG_MAXHDR;
     msg->data_end = msg->data_off+len;
     msg->result = RES_FREE;
@@ -45,8 +48,10 @@ void msg_init(BusMessage msg, u_int8_t *data, u_int16_t len)
 
 void msg_free(BusMessage msg)
 {
-    if(msg->data_max)
-        free(msg->data);
+    if(msg->data_max) {
+        if (!--*msg->data)
+            free(msg->data);
+    }
     free(msg);
 }
 

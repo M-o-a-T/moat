@@ -3,6 +3,7 @@
 #include "moatbus/handler.h"
 #include "embedded/main.h"
 #include "embedded/timer.h"
+#include "embedded/logger.h"
 
 static uint16_t last_micros;
 static uint16_t max_d;

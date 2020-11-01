@@ -11,6 +11,7 @@
 
 #include "embedded/main.h"
 #include "embedded/timer.h"
+#include "embedded/logger.h"
 #include "moatbus/message.h"
 #include "moatbus/serial.h"
 #include "moatbus/handler.h"
@@ -46,6 +47,7 @@ void setup()
 {
     check_boot_count();
     cpu_random_seed = *(uint32_t *)U_ID1 ^ *(uint32_t *)U_ID2 ^ *(uint32_t *)U_ID3;
+    setup_logger();
     setup_timer();
     setup_serial();
     logbuf = NULL;
@@ -106,27 +108,6 @@ char process_bus_msg(BusMessage msg)
     msg_free(msg);
 #endif
     return res;
-}
-
-void vlogger(const char * format, va_list arg)
-{
-    LOG *hdr = &logbuf;
-    while(*hdr)
-       hdr = &((*hdr)->next);
-    uint8_t len = vsnprintf(NULL,0, format,arg);
-    LOG buf = (LOG) malloc(sizeof(*logbuf)+len+2);
-    vsnprintf(buf->buf, len+1, format, arg);
-    buf->next = NULL;
-    *hdr = buf;
-}
-
-void logger(const char *format, ...)
-{
-    va_list args;
-
-    va_start(args, format);
-    vlogger(format, args);
-    va_end(args);
 }
 
 void cpu_serial(u_int8_t *buffer)

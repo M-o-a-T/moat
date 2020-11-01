@@ -1,5 +1,6 @@
 #include "moatbus/serial.h"
 #include "embedded/main.h"
+#include "embedded/logger.h"
 
 #include "Arduino.h"
 
@@ -8,7 +9,7 @@ static SerBus SB;
 static  uint16_t last_m;
 #endif
 
-static uint8_t log_wp;  // logbuf write pos
+static char* log_wp;  // logbuf write pos
 static uint16_t g_low_mem;
 
 void setup_serial()
@@ -17,7 +18,7 @@ void setup_serial()
     Serial.print("INIT\n");
     Serial.flush();
 
-    log_wp = 0;
+    log_wp = NULL;
 #ifdef MOAT_SERIAL
     SB = sb_alloc();
     last_m = millis();
@@ -76,16 +77,18 @@ void loop_serial()
             g_low_mem = 1;
             Serial.println("\n* Memory full *");
         }
-        if (!logbuf) {
-            break;
+        if (log_wp == NULL) {
+            log_wp = get_log_line();
+            if(log_wp == NULL)
+                break;
         }
 
-        uint8_t ch = logbuf->buf[log_wp++];
+        uint8_t ch = *log_wp++;
         while (ch) {
             Serial.write(ch);
             if(!low_mem)
                 break;
-            ch = logbuf->buf[log_wp++];
+            ch = *log_wp++;
         }
         if (ch)
             break;
@@ -93,10 +96,8 @@ void loop_serial()
         Serial.write('\n');
         if (low_mem)
             Serial.flush();
-        LOG lp = logbuf;
-        logbuf = lp->next;
-        free(lp);
-        log_wp = 0;
+        drop_log_line();
+        log_wp = NULL;
     }
 }
 

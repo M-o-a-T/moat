@@ -5,6 +5,7 @@
 
 if test $# -lt 2 ; then
     echo Usage: $0 unixpipe cmd args…
+    exit 1
 fi
 
 PN="$1"
@@ -14,13 +15,13 @@ PID=
 rm -f "$PN"
 mkfifo "$PN"
 while read a ; do
-    if "$a" == "T" ; then : test
-    elif "$a" == "R" ; then
+    if test "$a" == "T" ; then : test
+    elif test "$a" == "R" ; then
         test -n "$PID" && kill "$PID"
         wait
         "$@" &
         PID=$!
-    elif "$a" == "K" ; then
+    elif test "$a" == "K" ; then
         test -n "$PID" && kill "$PID"
         wait
         PID=

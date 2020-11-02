@@ -1,5 +1,8 @@
 #include "moatbus/util.h"
 
+// for cpu_random
+#include "embedded/main.h"
+
 // fast small-integer powers
 u_int16_t powi(u_int8_t x, u_int8_t y)
 {
@@ -70,12 +73,12 @@ bool mf_tick(minifloat *m)
     }
 }
 
-u_int8_t mf_random(uint16_t lo, u_int16_t hi)
+u_int8_t mf_random(u_int16_t lo, u_int16_t hi)
 {
     minifloat x;
     u_int16_t v = lo+cpu_random(hi-lo);
-    x->vl = v&0xFF;
-    x->vh = v>>8;
+    x.vl = v&0xFF;
+    x.vh = v>>8;
     return mf_get(&x);
 }
 

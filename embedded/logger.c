@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#include <memory.h>
+#include <stdlib.h>
 
 typedef struct _log {
     struct _log *next;
@@ -40,7 +40,7 @@ IN_C char* get_log_line()
 {
     if(!logbuf)
         return NULL;
-    return &logbuf->buf;
+    return logbuf->buf;
 }
 
 IN_C void drop_log_line()

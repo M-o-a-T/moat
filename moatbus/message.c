@@ -74,6 +74,7 @@ void msg_resize(BusMessage msg, msglen_t maxlen)
     }
 }
 
+static char nibble[] = "0123456789abcdef";
 static char *msg_info_buf = NULL;
 const char* msg_info(BusMessage msg)
 {
@@ -81,13 +82,17 @@ const char* msg_info(BusMessage msg)
         free(msg_info_buf);
     msglen_t ml = msg_length(msg);
     asprintf(&msg_info_buf, "Msg< src:%d dst:%d cmd:x%x %d:%*s", msg->src,msg->dst,msg->code,
-            ml,3*ml+3,"");
-    char* mp = strlen(msg_info_buf)-3*ml;
-    char* m = msg_start(msg);
+            ml,4*ml+3,"");
+    char* mp = msg_info_buf+strlen(msg_info_buf)-4*ml;
+    char* m = (char *)msg_start(msg);
     while(ml) {
+        if(*m>0x20 && *m<0x7F) {
+            *mp++ = *m;
+        }
         *mp++ = nibble[*m >> 4];
         *mp++ = nibble[*m &0xF];
         *mp++ = ' ';
+        ml--; m++;
     }
     *mp++ = '>';
     *mp++ = 0;

@@ -172,3 +172,7 @@ static void fcb_report_error(void *ref, enum HDL_ERR err)
     fprintf(stderr,"ERROR %d\n",err);
 }
 
+u_int16_t cpu_random(u_int16_t x)
+{
+    return x>>4;
+}

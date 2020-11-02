@@ -57,7 +57,6 @@ void setup()
     setup_addr();
     setup_timer();
     setup_serial();
-    logbuf = NULL;
     logger("Startup, reboot#%d", boot_count);
     mtick_init(&ten_seconds, ten_log);
     mf_set(&ten_seconds.mf, 36); // that's ten seconds. Cf moatbus.util.py
@@ -101,7 +100,7 @@ void process_serial_msg(BusMessage msg, uint8_t prio)
 }
 #endif
 
-void send_msg(BusMessage msg)
+void send_msg(BusMessage msg, char prio)
 {
 #ifdef MOAT_REPEATER
     if(msg->dst == -MOAT_REPEATER) {
@@ -134,7 +133,7 @@ char process_bus_msg(BusMessage msg)
 
 u_int8_t* cpu_serial()
 {
-    return *(u_int8_t *)U_ID1;
+    return (u_int8_t *)U_ID1;
 }
 
 u_int16_t cpu_random(u_int16_t max)

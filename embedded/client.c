@@ -1,6 +1,7 @@
 #include "embedded/client.h"
 #include "embedded/timer.h"
 #include "embedded/main.h"
+#include "embedded/logger.h"
 #include "moatbus/util.h"
 #include <memory.h>
 
@@ -28,7 +29,9 @@ void get_addr()
         // more random delay
         adr_state += 1;
 #ifndef DEBUG_ADR
-        mf_set(&adr_poll.mf, mf_random(1*MINI_F, 5*MINI_F));
+        u_int8_t mf;
+        mf_set(&adr_poll.mf, mf = mf_random(1*MINI_F, 5*MINI_F));
+        logger("ADR jn %d",mf);
         return;
 #endif
     }
@@ -71,7 +74,9 @@ IN_C void setup_get_addr()
 #if DEBUG_ADR
     mf_set(&adr_poll.mf, MINI_F); // 1 sec
 #else
-    mf_set(&adr_poll.mf, mf_random(2*MINI_F, 15*MINI_F));
+    u_int8_t mf;
+    mf_set(&adr_poll.mf, (mf = mf_random(2*MINI_F, 15*MINI_F)));
+    logger("ADR in %d",mf);
 #endif
 }
 
@@ -81,7 +86,7 @@ static char process_control_addr_assign(BusMessage msg, u_int8_t *data, msglen_t
         logger_adr("short1 %d",len);
         return 0;
     }
-    if(*data & 0x0F != cpu_serial_len-1) {
+    if((*data & 0x0F) != cpu_serial_len-1) {
         logger_adr("len %d %d",*data & 0x0F, cpu_serial_len-1);
         return 0;
     }
@@ -101,7 +106,7 @@ static char process_control_addr_assign(BusMessage msg, u_int8_t *data, msglen_t
         data += cpu_serial_len+1;
         flag = *data++;
         if (flag & 0x80) {
-            if(len < len < cpu_serial_len+3)
+            if(len < cpu_serial_len+3)
                 return 0;
             timer = *data++;
         }
@@ -168,6 +173,7 @@ static char process_control_addr_assign(BusMessage msg, u_int8_t *data, msglen_t
     if (!timer)
         timer = mf_random(adr_state*30*MINI_F, adr_state*120*MINI_F);
     mf_set(&adr_poll.mf, timer);
+    return 1;
 }
 
 static char process_control(BusMessage msg)

@@ -2,6 +2,7 @@
 #define EMB_LOGGER_H
 
 #include "moatbus/common.h"
+#include <stdarg.h>
 
 // Logging.
 IN_C void setup_logger();

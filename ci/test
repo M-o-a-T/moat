@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 CFG="${CFG:-./cfg}"
 . "$CFG/common"
 PILLS="${PILLS:-a b c}"
@@ -13,6 +13,7 @@ for t in $PILLS ; do
 	fi
 done
 
+set -x
 for t in $PILLS ; do
 	echo K >/run/moat-test/test_$t
 done

@@ -42,7 +42,7 @@ class SerBus:
     * data_out (bytes)   -- send these data
 
     External code may call these methods:
-    * send (msg, prio?)  -- send a message with priority (or not).
+    * send (msg)         -- send a message with priority (or not).
     * send_ack ()        -- ack a message
     * char_in (bits)     -- received this character from serial/pipe
     * timeout()          -- when the timer triggers

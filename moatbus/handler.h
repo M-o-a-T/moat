@@ -93,7 +93,7 @@ BusHandler hdl_alloc(REF u_int8_t n_wires, struct BusCallbacks *cb);
 void hdl_free(BusHandler hdl);
 
 // Queue+send a message
-void hdl_send(BusHandler hdl, BusMessage msg, char prio);
+void hdl_send(BusHandler hdl, BusMessage msg);
 
 // Alert about current wire state
 void hdl_wire(BusHandler hdl, u_int8_t bits);

@@ -7,10 +7,10 @@
 #include "moatbus/message.h"
 
 // Send message to serial or bus, depending on address
-IN_C void send_msg(BusMessage msg, char prio);
+IN_C void send_msg(BusMessage msg);
 
 #ifdef MOAT_REPEATER
-void process_serial_msg(BusMessage msg, uint8_t prio);
+void process_serial_msg(BusMessage msg);
 #endif
 char process_bus_msg(BusMessage msg);
 

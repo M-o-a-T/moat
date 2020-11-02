@@ -22,7 +22,7 @@ BusMessage msg_alloc(msglen_t maxlen)
     *msg->data = 1;
     msg->data_max = maxlen;
     msg->data_off = msg->data_end = MSG_MAXHDR;
-    msg->result = RES_FREE;
+    msg->prio = 1;
 
     return msg;
 }
@@ -43,7 +43,6 @@ void msg_init(BusMessage msg, u_int8_t *data, msglen_t len)
     *msg->data = 0x80;
     msg->data_off = MSG_MAXHDR;
     msg->data_end = msg->data_off+len;
-    msg->result = RES_FREE;
 }
 
 void msg_free(BusMessage msg)
@@ -75,16 +74,16 @@ void msg_resize(BusMessage msg, msglen_t maxlen)
 }
 
 static char nibble[] = "0123456789abcdef";
-static char *msg_info_buf = NULL;
-const char* msg_info(BusMessage msg)
+static unsigned char *msg_info_buf = NULL;
+const unsigned char* msg_info(BusMessage msg)
 {
     if(msg_info_buf)
         free(msg_info_buf);
-    msglen_t ml = msg_length(msg);
-    asprintf(&msg_info_buf, "Msg< src:%d dst:%d cmd:x%x %d:%*s", msg->src,msg->dst,msg->code,
+    msglen_t ml = msg_length(msg)-msg->hdr_len;
+    asprintf((char**)&msg_info_buf, "Msg< src:%d dst:%d pri:%d cmd:x%x %d:%*s", msg->src,msg->dst,msg->prio,msg->code,
             ml,4*ml+3,"");
-    char* mp = msg_info_buf+strlen(msg_info_buf)-4*ml;
-    char* m = (char *)msg_start(msg);
+    unsigned char* mp = msg_info_buf+strlen((char*)msg_info_buf)-4*ml-3;
+    unsigned char* m = msg_start(msg);
     while(ml) {
         if(*m>0x20 && *m<0x7F) {
             *mp++ = *m;
@@ -99,7 +98,7 @@ const char* msg_info(BusMessage msg)
     return msg_info_buf;
 }
 
-// Start address of the message (data onlyy)
+// Start address of the message (data only)
 u_int8_t *msg_start(BusMessage msg)
 {
     return msg->data+msg->data_off;

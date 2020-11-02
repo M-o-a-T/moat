@@ -27,7 +27,7 @@ class BaseBusHandler(CtxObj):
     async def _ctx(self):
         yield self
 
-    async def send(self, msg:BusMessage, prio:int=0):
+    async def send(self, msg:BusMessage):
         raise RuntimeError("Override @send!")
 
     def __aiter__(self):

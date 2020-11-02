@@ -72,12 +72,12 @@ class Client(BaseHandler):
                     self.__t = None
                     self.timeout()
 
-    async def send(self, prio, msg):
+    async def send(self, msg):
         mi = id(msg)
         if mi in self.__evt:
             raise RuntimeError("Already sending")
         self.__evt[mi] = ev = trio.Event()
-        super().send(msg,prio)
+        super().send(msg)
         await ev.wait()
         return self.__evt.pop(mi)
 

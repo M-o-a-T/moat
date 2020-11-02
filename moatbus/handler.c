@@ -197,11 +197,11 @@ static void h_gen_crc(Handler h)
 }
 
 // Queue+send a message
-void hdl_send(BusHandler hdl, BusMessage msg, char prio)
+void hdl_send(BusHandler hdl, BusMessage msg)
 {
     Handler h = (Handler)hdl;
 
-    if(prio) {
+    if(!msg->prio) {
         if(h->q_prio_last != NULL)
             h->q_prio_last->next = msg;
         else

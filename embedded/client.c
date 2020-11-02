@@ -40,10 +40,11 @@ void get_addr()
         m->src = -4;
         m->dst = -4;
         m->code = 0;
+        m->prio = MOAT_WIRES-1;
         msg_add_char(m, cpu_serial_len-1);
         msg_add_data(m, cpu_serial(),cpu_serial_len);
         // no flag byte 
-        send_msg(m,0);
+        send_msg(m);
 
         // schedule retry
 #ifdef DEBUG_ADR

@@ -34,18 +34,17 @@ struct _BusMessage {
     int8_t src; // -4…127
     int8_t dst; // -4…127
     u_int8_t code; // 0…3/31/255
+    u_int8_t prio; // 0…WIRES-1
 
     u_int8_t *data;
     msglen_t data_max; // buffer length, bytes. Zero: external allocation
     msglen_t data_off; // Offset for content (header is before this)
 
     msglen_t data_pos; // current read position: byte offset
-    u_int8_t data_pos_off; // current read position: non-filled bits
     msglen_t data_end; // current write position: byte offset
+    u_int8_t data_pos_off; // current read position: non-filled bits
     u_int8_t data_end_off; // current write position: non-filled bits
     u_int8_t hdr_len; // Length of header. 0: need to call add_header / read_header
-
-    enum HDL_RES result;
 };
 #define MSG_MAXHDR 4
 #define MSG_MINBUF 30
@@ -64,7 +63,7 @@ void msg_free(BusMessage msg);
 // Increase max buffer size
 void msg_resize(BusMessage msg, msglen_t maxlen);
 // dump message
-const char* msg_info(BusMessage msg);
+const unsigned char* msg_info(BusMessage msg);
 
 // Add header bytes to the message
 void msg_add_header(BusMessage msg);

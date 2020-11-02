@@ -22,9 +22,9 @@ IN_C void loop();
 
 // external
 #ifdef MOAT_REPEATER
-void send_serial_msg(BusMessage msg, uint8_t prio);
+void send_serial_msg(BusMessage msg);
 #endif
-void send_bus_msg(BusMessage msg, uint8_t prio);
+void send_bus_msg(BusMessage msg);
 
 uint16_t boot_count NO_INIT;
 uint32_t cpu_random_seed NO_INIT;
@@ -94,23 +94,23 @@ void loop()
 }
 
 #ifdef MOAT_REPEATER
-void process_serial_msg(BusMessage msg, uint8_t prio)
+void process_serial_msg(BusMessage msg)
 {
-    send_bus_msg(msg, prio);
+    send_bus_msg(msg);
 }
 #endif
 
-void send_msg(BusMessage msg, char prio)
+void send_msg(BusMessage msg)
 {
 #ifdef MOAT_REPEATER
     if(msg->dst == -MOAT_REPEATER) {
-        send_serial_msg(msg, 0);
+        send_serial_msg(msg);
         return;
     }
     if(msg->dst == -4)
-        send_serial_msg(msg_copy(msg), 0);
+        send_serial_msg(msg_copy(msg));
 #endif
-    send_bus_msg(msg, prio);
+    send_bus_msg(msg);
 }
 
 char process_bus_msg(BusMessage msg)
@@ -121,7 +121,7 @@ char process_bus_msg(BusMessage msg)
 #ifdef MOAT_REPEATER
     if(msg->dst == -4 || msg->dst == -MOAT_REPEATER)
         res = 1;
-    send_serial_msg(msg, 0);
+    send_serial_msg(msg);
     logger("Forward to serial: %s", msg_info(msg));
     res = TRUE;
 #else

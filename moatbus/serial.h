@@ -42,6 +42,7 @@ enum SERSTATE {
     S_CRC1,
     S_CRC2,
     S_DONE,
+    S_ACK,
 };
 
 typedef struct _SerBus {
@@ -71,7 +72,7 @@ SerBus sb_alloc(void);
 void sb_free(SerBus sb);
 
 // Queue this message
-void sb_send(SerBus sb, BusMessage msg, u_int8_t prio);
+void sb_send(SerBus sb, BusMessage msg);
 
 // process an incoming serial character
 void sb_byte_in(SerBus sb, u_int8_t c);
@@ -83,7 +84,7 @@ bool sb_idle(SerBus sb);
 int16_t sb_byte_out(SerBus sb);
 
 // Received a message?
-BusMessage sb_recv(SerBus sb, u_int8_t *prio);
+BusMessage sb_recv(SerBus sb);
 
 // Return #acks received (and resets the counter)
 u_int8_t sb_recv_ack(SerBus sb);

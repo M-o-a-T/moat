@@ -45,9 +45,9 @@ void fc_free(FakeClient fc)
     free(fc);
 }
 
-void fc_send(FakeClient fc, BusMessage msg, u_int8_t prio)
+void fc_send(FakeClient fc, BusMessage msg)
 {
-    hdl_send(fc->bus, msg, prio);
+    hdl_send(fc->bus, msg);
 }
 
 char fc_connect(FakeClient fc, const char *sockname)

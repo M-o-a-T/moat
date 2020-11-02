@@ -45,11 +45,9 @@ void loop_serial()
         }
     }
     {
-        uint8_t p = 0;
-        BusMessage m = sb_recv(SB, &p);
-        if(m) {
-            process_serial_msg(m, p);
-        }
+        BusMessage m = sb_recv(SB);
+        if(m)
+            process_serial_msg(m);
     }
 #endif
 
@@ -102,8 +100,8 @@ void loop_serial()
 }
 
 #ifdef MOAT_SERIAL
-void send_serial_msg(BusMessage msg, uint8_t prio)
+void send_serial_msg(BusMessage msg)
 {
-    sb_send(SB, msg, prio);
+    sb_send(SB, msg);
 }
 #endif

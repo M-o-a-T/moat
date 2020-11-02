@@ -9,4 +9,4 @@ PILL="$1"
 shift
 
 . "$CFG/common"
-. "$CFG/pill_$1"
+. "$CFG/pill_$PILL"

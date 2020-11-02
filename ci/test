@@ -3,7 +3,7 @@
 set -ex
 PILLS="${PILLS:-a b c}"
 
-D="$(basename "$0")"
+D="$(dirname "$0")"
 for t in $PILLS ; do
 	if ! test -p /run/moat-test/test_$t ; then
 		echo "'test $t' is not running. Exiting."
@@ -11,7 +11,7 @@ for t in $PILLS ; do
 	fi
 done
 
-for t in PILLS ; do
+for t in $PILLS ; do
 	echo K >/run/moat-test/test_$t
 done
 sleep 1

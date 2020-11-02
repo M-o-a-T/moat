@@ -1,0 +1,6 @@
+DEV=/dev/pill_a
+RESET=24
+BOOT=21
+SWCLK=18
+SWDIO=23
+CODE=gate

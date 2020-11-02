@@ -29,8 +29,8 @@ BusMessage msg_alloc(msglen_t maxlen)
 
 BusMessage msg_copy(BusMessage orig)
 {
-    BusMessage msg = malloc(sizeof(BusMessage *));
-    memcpy(msg, orig, sizeof(BusMessage *));
+    BusMessage msg = malloc(sizeof(*orig));
+    memcpy(msg, orig, sizeof(*orig));
     msg->next = NULL;
     *msg->data += 1;
     return msg;

@@ -2,11 +2,13 @@
 
 . "$(dirname "$0")/config.sh"
 
-F="stm32flash -i -$RESET,$BOOT,$RESET:-$RESET,-$BOOT -R"
+F="stm32flash -i -$RESET,$BOOT,$RESET:-$RESET,-$BOOT"
 if [ $# -gt 0 ] ; then
 	exec $F -s 0 -v -w "$1" -v $DEV
-elif [ -s "$BUILD$PILL.bin" ] ; then
-	exec $F -s 0 -v -w "$BOOT$PILL.bin" -v $DEV
+elif [ -s "${BUILD}pill_$PILL.bin" ] ; then
+	exec $F -s 0 -v -w "${BUILD}pill_$PILL.bin" -v $DEV
+elif [ -s "${BUILD}$CODE.bin" ] ; then
+	exec $F -s 0 -v -w "${BUILD}$CODE.bin" -v $DEV
 else
 	exec $F $DEV
 fi

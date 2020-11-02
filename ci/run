@@ -17,4 +17,4 @@ else
 	P="miniterm $DEV 57600"
 fi
 
-bash -x moat-bus/utils/runner /run/moat-test/test_$PILL env PYTHONPATH=moat-bus $P
+bash -x ./utils/runner /run/moat-test/test_$PILL env PYTHONPATH=moat-bus $P

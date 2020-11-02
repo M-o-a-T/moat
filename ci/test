@@ -1,6 +1,8 @@
 #!/bin/bash
 
 set -ex
+CFG="${CFG:-./cfg}"
+. "$CFG/common"
 PILLS="${PILLS:-a b c}"
 
 D="$(dirname "$0")"
@@ -18,10 +20,9 @@ sleep 1
 
 # XXX do this in parallel. Need to protect against failures.
 for t in $PILLS ; do
-	"$D/prog" $t ||
-	"$D/prog" $t ||
-	"$D/prog" $t ||
-	{ echo "Programming Pill $t failed. Exiting." >&2; exit 1 }
+	if "$D/prog" $t || "$D/prog" $t || "$D/prog" $t ; then : ; else
+		echo "Programming Pill $t failed. Exiting." >&2; exit 1
+	fi
 done
 #wait
 

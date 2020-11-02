@@ -14,7 +14,7 @@ PID=
 
 rm -f "$PN"
 mkfifo "$PN"
-( while test -p "$PN" ; do sleep 999 >"$PN" ; done ) &
+sleep 999999 >"$PN" &
 R=$!
 trap 'rm -f "$PN"; kill $R $PID 2>/dev/null; stty sane' 0 1 INT TERM
 

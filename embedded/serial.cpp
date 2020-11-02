@@ -55,7 +55,7 @@ void loop_serial()
 
     while (Serial.availableForWrite()) {
 #ifdef MOAT_SERIAL
-        if (SB->s_out != S_IDLE && SB->s_out != S_INIT) {
+        if (SB->s_out != S_IDLE) {
             // prio to debug output. Drop clause 2 if you want prio to MoaT bus.
             int16_t ch = sb_byte_out(SB);
             if (ch >= 0) {

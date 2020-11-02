@@ -1,0 +1,5 @@
+# prefix for build artefacts
+BUILD=/tmp/
+
+# default pills
+#PILLS="a b c"

@@ -1,0 +1,16 @@
+#!/bin/sh
+
+. "$(dirname "$0")/config.sh"
+
+F=/tmp/pill_$PILL.cfg
+cat >$F <<END
+interface sysfsgpio
+sysfsgpio_swd_nums $SWCLK $SWDIO
+transport select swd
+
+set WORKAREASIZE 0x2000
+source [find target/stm32f1x.cfg]
+reset_config srst_only srst_push_pull
+END
+
+openocd -f $F "$@"

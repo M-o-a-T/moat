@@ -1,0 +1,35 @@
+#!/bin/bash
+
+set -ex
+PILLS="${PILLS:-a b c}"
+
+D="$(basename "$0")"
+for t in $PILLS ; do
+	if ! test -p /run/moat-test/test_$t ; then
+		echo "'test $t' is not running. Exiting."
+		exit 1
+	fi
+done
+
+for t in PILLS ; do
+	echo K >/run/moat-test/test_$t
+done
+sleep 1
+
+# XXX do this in parallel. Need to protect against failures.
+for t in $PILLS ; do
+	"$D/prog" $t ||
+	"$D/prog" $t ||
+	"$D/prog" $t ||
+	{ echo "Programming Pill $t failed. Exiting." >&2; exit 1 }
+done
+#wait
+
+for t in $PILLS ; do
+	echo R >/run/moat-test/test_$t
+done
+
+sleep 1
+for t in $PILLS ; do
+	"$D/reset" $t
+done

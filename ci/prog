@@ -1,0 +1,13 @@
+#!/bin/sh
+
+. "$(dirname "$0")/config.sh"
+
+F="stm32flash -i -$RESET,$BOOT,$RESET:-$RESET,-$BOOT -R"
+if [ $# -gt 0 ] ; then
+	exec $F -s 0 -v -w "$1" -v $DEV
+elif [ -s "$BUILD$PILL.bin" ] ; then
+	exec $F -s 0 -v -w "$BOOT$PILL.bin" -v $DEV
+else
+	exec $F $DEV
+fi
+

@@ -1,0 +1,6 @@
+DEV=/dev/pill_c
+RESET=17
+BOOT=16
+SWCLK=13
+SWDIO=12
+CODE=node

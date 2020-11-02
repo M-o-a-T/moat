@@ -1,0 +1,20 @@
+#!/bin/bash
+
+mkdir -p /run/moat-test
+. "$(dirname "$0")/config.sh"
+
+# Terminal? set window title
+case "$TERM" in
+	xterm*|rxvt*)
+		echo -en "\e]0;Test $PILL\a"
+		;;
+esac
+
+cd "$(dirname "$0")/.."
+if [ "$CODE" = "gate" ] ; then
+	P="bin/serve -u mqtt://pi-c4:51883 -p $DEV -d"
+else
+	P="miniterm $DEV 57600"
+fi
+
+bash -x moat-bus/utils/runner /run/moat-test/test_$PILL env PYTHONPATH=moat-bus $P

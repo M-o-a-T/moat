@@ -120,7 +120,7 @@ Server    Client       0        Control 1; positive address assignment response
 Server    Client       1        data directory lookup
 Server    Client       2        data directory read
 Server    Client       3        data directory write
-Client    Broadcast    0        Control 3; e.g. data request, console message
+Client    Broadcast    0        Control 3; e.g. data request, console message, AA nack by clients
 Client    Server       0        Control 4; replies (e.g. poll)
 Client    Server       1        alert (by data dictionary path)
 Client    Server       2        read reply
@@ -129,6 +129,9 @@ any       any          0…7      reserved
 Client    Broadcast    any      broadcast message
 any       any          any      direct message
 ========  ===========  =======  ===========================
+
+Clients must not send with any source address other than their own.
+Address Assignment request broadcasts (Control 0) are the *only* exception.
 
 Address assignment
 ==================

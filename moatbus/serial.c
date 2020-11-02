@@ -130,17 +130,14 @@ int16_t sb_byte_out(SerBus sb)
     switch(sb->s_out) {
     case S_IDLE:
         assert(sb->m_out == NULL);
-        if (sb->ack_out) {
-            --sb->ack_out;
-            return 0x06;
-        }
         return -1;
+    case S_ACK:
+        assert (sb->ack_out);
+        if(!--sb->ack_out)
+            sb->s_out = sb->m_out ? S_INIT : S_IDLE;
+        return 0x06;
     case S_INIT:
         assert (sb->m_out != NULL);
-        if (sb->ack_out) {
-            --sb->ack_out;
-            return 0x06;
-        }
         msg_start_extract(sb->m_out);
         sb->s_out = S_LEN;
         sb->crc_out = 0;
@@ -173,7 +170,9 @@ int16_t sb_byte_out(SerBus sb)
         BusMessage msg = sb->m_out;
         sb->m_out = msg->next;
         msg_free(msg);
-        if (sb->m_out == NULL)
+        if (sb->ack_out)
+            sb->s_out = S_ACK;
+        else if (sb->m_out == NULL)
             sb->s_out = S_IDLE;
         else
             sb->s_out = S_INIT;
@@ -194,6 +193,8 @@ BusMessage sb_recv(SerBus sb, u_int8_t *prio)
     BusMessage msg = sb->m_in_first;
     sb->m_in_first = msg->next;
     sb->ack_out ++;
+    if (sb->s_out == S_IDLE)
+        sb->s_out = S_ACK;
     
     msg_read_header(msg);
     return msg;

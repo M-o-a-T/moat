@@ -63,7 +63,6 @@ class SerBus:
         self.s_in = S.IDLE
 
         self.idle = 0  # counter, to drop partial messages
-        self.ack_out = 0  # counter, to send ACKs
         self.alloc_in()
 
         self.log_buf = b""
@@ -179,6 +178,7 @@ class SerBus:
             else:
                 self.s_in = S.DONE
                 self.process(self.m_in)
+                self.send_ack()
             self.alloc_in()
             self.s_in = S.IDLE
 

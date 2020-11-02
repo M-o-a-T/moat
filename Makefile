@@ -9,7 +9,7 @@ all:
 
 # need to use python3 sphinx-build
 PATH := /usr/share/sphinx/scripts/python3:${PATH}
-CFLAGS := -DMOAT_USE_REF -g -O0 -W -I.
+CFLAGS := -DMOAT_USE_REF -g -O3 -W -I.
 
 PACKAGE = moatbus
 PYTHON ?= python3

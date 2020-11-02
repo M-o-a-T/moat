@@ -169,7 +169,7 @@ void hdl_free(BusHandler hdl)
 // CRC calculation. We do that here because we need a fixed-width table
 // with as little overhead as possible.
 
-#define POLY 0x571
+#define POLY 0x583
 static inline void h_crc(Handler h, u_int8_t bits)
 {
     h->crc = (h->crc >> h->WIRES) ^ h->crc_table[(bits ^ h->crc ^ h->current_prio) & h->MAX];

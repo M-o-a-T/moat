@@ -98,7 +98,7 @@ class CRC8(_CRC):
     _width = 8
 
 class CRC11(_CRC):
-    _poly = 0x571 # 0x64d # 0x583
+    _poly = 0x583 # 0x64d # 0x571
     _width = 11
 
 class CRC16(_CRC):
@@ -126,5 +126,5 @@ if __name__ == "__main__":
         #print(CRC6._table)
         #print(CRC8._table)
         #print(CRC16(8)._table)
-        print(CRC11(3)._table)
+        print(CRC11(8)._table)
         #print(CRC16._table)

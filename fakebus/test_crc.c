@@ -57,22 +57,29 @@ void _mktable()
 }
 
 
-void run(u_int datalen, u_int n_faults)
+void run(u_int datalen, u_int n_faults, char big)
 {
-    u_int8_t *data = alloca(datalen/DATA_SIZE+3);
     u_int *faults = alloca(n_faults*sizeof(u_int));
 
+    if (big && !bad[n_faults])
+        n_faults -= 1;
     if (bad[n_faults] && bad[n_faults] <= datalen)
         datalen = bad[n_faults]-1;
     if (datalen < n_faults+2)
         goto out;
+
+    u_int8_t *data = alloca(datalen/DATA_SIZE+3);
+
 #define ALL(_i)    for(u_int _i=0; _i < datalen/DATA_SIZE+1; _i++)
-    ALL(i) data[i] = random()&DATA_MASK;
+    // a CRC is all about XOR, thus it doesn't depend on the actual data
+    // so we leave the content random
+    //ALL(i) data[i] = random()&DATA_MASK;
+    //memset(data,0,datalen/DATA_SIZE+1);
 
     crc_t crc=0;
     ALL(i) crc = CRC_ADD(crc,data[i]);
 
-    // inject faults
+    // generate and inject faults
     for(u_int f = 0; f < n_faults; f++) {
         int again;
         u_int pos;
@@ -80,8 +87,10 @@ void run(u_int datalen, u_int n_faults)
             again=0;
             pos = ((unsigned long int)random())%datalen;
             for(u_int fx=0;fx<f;fx++) {
-                if (faults[fx] == pos)
+                if (faults[fx] == pos) {
                     again=1;
+                    break;
+                }
             }
         } while(again);
 
@@ -92,55 +101,14 @@ void run(u_int datalen, u_int n_faults)
     crc_t crc2=0;
     ALL(i) crc2 = CRC_ADD(crc2,data[i]);
 
-    if (n_faults == 0) {
-        assert(crc == crc2);
-    } else if(crc == crc2) {
-
-        //printf("\r bad on faults=%d, len=%d___________\n",n_faults,datalen);
+    if(crc == crc2) {
         u_int16_t dmin=0xffff,dmax=0;
         for(u_int f = 0; f < n_faults; f++) {
             u_int c=faults[f];
             if(dmin>c) dmin=c;
             if(dmax<c) dmax=c;
         }
-
         bad[n_faults] = dmax-dmin+1;
-//      for(u_int n=n_faults+1; n<sizeof(bad)/sizeof(bad[0]) ;n++)
-//          if (!bad[n] || bad[n] > datalen)
-//              bad[n] = datalen;
-#if 0
-        // Owch
-        void mpr() {
-            crc_t cr = 0;
-            ALL(i)
-                printf(" %02x",data[i]);
-            printf("\n");
-            ALL(i) {
-                cr=CRC_ADD(cr,data[i]);
-                printf("  %02x %*x", data[i],CRC_N,cr);
-                if(!((i+1)%8))
-                    printf("\n");
-            }
-            printf("\n");
-        }
-        if(n_faults == 4) {
-            printf("\nFail vector for %d:", datalen);
-            for(u_int f = 0; f < n_faults; f++) {
-                u_int pos = faults[f];
-                printf(" %d/%d", pos/DATA_SIZE, pos%DATA_SIZE);
-            }
-            printf("\n");
-            mpr();
-            u_int16_t k=faults[n_faults-1];
-            for(u_int f = 0; f < n_faults; f++) {
-                u_int pos = faults[f];
-                assert (k == faults[n_faults-1]);
-                data[pos/DATA_SIZE] ^= 1<<(pos%DATA_SIZE);
-                assert (k == faults[n_faults-1]);
-            }
-            mpr();
-        }
-#endif
     }
 out:;
     //free(data);
@@ -170,6 +138,7 @@ int main(int argc, const char *argv[]) {
         exit(2);
     }
     _mktable();
+    char big = 0;
     memset(bad,0,sizeof(bad));
     unsigned long long x = 0;
     for(int j=0;j<CRC_SIZE;j++)
@@ -177,7 +146,7 @@ int main(int argc, const char *argv[]) {
     irand();
     while(1) {
         x += 1;
-        run((random()&0xffff)+2, ((random()%(CRC_SIZE-2)))+2);
+        run((random()&0xffff)+2, ((random()%(CRC_SIZE-2)))+2, big);
         if (!(x % 100000)) {
             printf("    %llu ", x);
             for(u_int i=2; i<sizeof(bad)/sizeof(bad[0]);i++)
@@ -185,6 +154,8 @@ int main(int argc, const char *argv[]) {
             printf("  %x             \r",poly);
             fflush(stdout);
             irand();
+            if (x>1000000)
+                big = 1;
         }
     }
 }

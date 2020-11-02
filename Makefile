@@ -40,14 +40,14 @@ SPHINXBUILDDIR ?= $(BUILD_DIR)/sphinx/html
 ALLSPHINXOPTS ?= -d $(BUILD_DIR)/sphinx/doctrees $(SPHINXOPTS) docs
 
 ci: code pio copy run
-#code:	bin/test_handler_crc bin/test_crc bin/test_handler_crc_bus
+code:	bin/test_handler_crc bin/test_crc # bin/test_handler_crc_bus
 code:	bin/fake_spam bin/fake_send bin/fake_recv bin/fake_serialbus
 pio:
 	platformio run
 
 bin/test_handler_crc_bus:	obj/test_handler_crc_bus.o obj/libmessage.a
 	gcc -o $@ $^
-bin/test_handler_crc:	obj/test_handler_crc.o obj/libmessage.a
+bin/test_handler_crc:	obj/test_handler_crc.o obj/crc11.o obj/libmessage.a
 	gcc -o $@ $^
 bin/test_crc:	obj/test_crc.o obj/libmessage.a
 	gcc -o $@ $^
@@ -93,6 +93,8 @@ obj/fake_recv.o:	fakebus/recv.c
 obj/fake_client.o:	fakebus/client.c
 	gcc ${CFLAGS} -c -o $@ $^
 obj/fake_serialbus.o:	fakebus/serialbus.c
+	gcc ${CFLAGS} -c -o $@ $^
+obj/crc11.o:	fakebus/crc11.c
 	gcc ${CFLAGS} -c -o $@ $^
 
 doc:

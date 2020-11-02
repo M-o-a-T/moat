@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <string.h> // memcmp
 #include "moatbus/crc.h"
+#include "fakebus/crc11.h"
 
 //
 // Test program for high-level CRC checks
@@ -56,6 +57,7 @@ void run1(int N, int x, int nf) {
     msg->code = 2;
     msg_add_header(msg);
 
+#if 0
     u_int8_t msg_crc6(BusMessage m) {
         u_int8_t *data = msg_start(m);
         u_int8_t *data_end = data + msg_length(m);
@@ -64,20 +66,22 @@ void run1(int N, int x, int nf) {
             c6 = crc6_update(c6, *data,8);
         return c6;
     }
+#endif
 
     u_int16_t msg_crc11(BusMessage m) {
         u_int8_t *data = msg_start(m);
         u_int8_t *data_end = data + msg_length(m);
         u_int16_t c11 = 0;
         for(; data < data_end; data++)
-            c11 = crc11_update(c11, *data,8);
+            c11 = crc11_update(c11, *data);
         return c11;
     }
 
-    if (0) // msg_bits(msg) <= 48) // without CRC
+#if 0
         msg_fill_crc(msg, C, msg_crc6(msg), 6);
-    else
+#else
         msg_fill_crc(msg, C, msg_crc11(msg), 11);
+#endif
 
     u_int16_t n = 0;
     msg_start_extract(msg);
@@ -145,15 +149,15 @@ void run1(int N, int x, int nf) {
     char crc_ok;
     u_int16_t c_x;
     u_int16_t crc;
-    if (0) { // msg_bits(mm) <= 58) {
+#if 0
         crc = msg_drop(mm, 6);
-        msg_align(mm, msg_drop(mm, 1));
+        msg_align(mm);
         crc_ok = (crc == (c_x = msg_crc6(mm)));
-    } else {
+#else
         crc = msg_drop(mm, 11);
-        msg_align(mm, msg_drop(mm, 1));
+        msg_align(mm);
         crc_ok = (crc == (c_x = msg_crc11(mm)));
-    }
+#endif
     if (!nf) {
         assert(crc_ok);
         msg_read_header(mm);
@@ -168,6 +172,12 @@ void run1(int N, int x, int nf) {
         int onf = bad[N][nf];
         if ((onf == 0) || (onf > x)) {
             printf("\r bad on N=%d/faults=%d, len=%d___________\n",N,nf,x);
+            if(nf < 3) {
+                printf("M: %s;",msg_info(msg));
+                for(int f = 0; f < nf; f++)
+                    printf(" x%x",faults[f]);
+                printf("\n");
+            }
             bad[N][nf] = x;
         }
 
@@ -201,7 +211,7 @@ int main() {
     irand();
     while(1) {
         x += 1;
-        run1(random()%4+2,random()*32ULL/RAND_MAX + 2, random()%10+1);
+        run1(random()%2+2,random()*32ULL/RAND_MAX + 2, random()%3+1);
 //        run1(random()%4+2,random()*32ULL/RAND_MAX + 2, random()%3+1);
         if (!(x % 1000000)) {
             printf("\r %llu %llu %llu %llu", x,skip0,skip1,skip2);

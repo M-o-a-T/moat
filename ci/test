@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 PILLS="${PILLS:-a b c}"
 
 D="$(basename "$0")"
@@ -11,6 +11,7 @@ for t in $PILLS ; do
 	fi
 done
 
+set -x
 for t in PILLS ; do
 	echo K >/run/moat-test/test_$t
 done

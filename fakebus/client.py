@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-import anyio
 import trio
 from moatbus.handler import BaseHandler, ERR
 from contextlib import asynccontextmanager
@@ -20,7 +19,6 @@ class Client(BaseHandler):
         self.__wire_in = 0
         self.__wire_out = None
         self.__evt = {}
-        self.__done = []
         self.__c = None
         self.__t = None
         self.__v = verbose
@@ -38,10 +36,6 @@ class Client(BaseHandler):
             if self.__wire_out is not None:
                 b,self.__wire_out = self.__wire_out,None
                 await self.__sock.send(bytes((b,)))
-            if self.__done:
-                d,self.__done = self.__done,[]
-                for ev in d:
-                    await ev.set()
 
             try:
                 b = None
@@ -53,7 +47,7 @@ class Client(BaseHandler):
                     with trio.fail_after(max(self.__t/1000,0)) as c:
                         self.__kick = c
                         b = await self.__sock.receive(1)
-            except anyio.ClosedResourceError:
+            except trio.BrokenResourceError:
                 return
             except (trio.TooSlowError,TimeoutError):
                 self.__c = None
@@ -82,7 +76,7 @@ class Client(BaseHandler):
         mi = id(msg)
         if mi in self.__evt:
             raise RuntimeError("Already sending")
-        self.__evt[mi] = ev = anyio.create_event()
+        self.__evt[mi] = ev = trio.Event()
         super().send(msg,prio)
         await ev.wait()
         return self.__evt.pop(mi)
@@ -102,7 +96,7 @@ class Client(BaseHandler):
         mi = id(msg)
         ev = self.__evt.pop(mi)
         self.__evt[mi] = res
-        self.__done.append(ev)
+        ev.set()
 
     def process(self, msg):
         self.debug("RCVD %r",msg)
@@ -148,20 +142,21 @@ class Client(BaseHandler):
 
     @asynccontextmanager
     async def run(self):
-        async with trio.open_nursery() as tg, \
-                await anyio.connect_unix(self.__socket) as sock:
-            self.__tg = tg
-            self.__sock = sock
-            self.__q = Queue(100)
+        async with trio.open_nursery() as tg:
+            with trio.socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+                await sock.connect(self.__socket)
+                self.__tg = tg
+                self.__sock = sock
+                self.__q = Queue(100)
 
-            await tg.start(self.main)
-            try:
-                yield self
-            except anyio.ClosedResourceError:
-                pass
-            except EnvironmentError as e:
-                if e.errno != errno.EBADF:
-                    raise
+                await tg.start(self.main)
+                try:
+                    yield self
+                except trio.BrokenResourceError:
+                    pass
+                except EnvironmentError as e:
+                    if e.errno != errno.EBADF:
+                        raise
 
     def __aiter__(self):
         return self

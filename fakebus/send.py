@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-import anyio
 import asyncclick as click
 from fakebus.client import Client
 from moatbus.message import BusMessage

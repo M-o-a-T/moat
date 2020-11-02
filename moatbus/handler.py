@@ -317,7 +317,7 @@ class BaseHandler:
 
         elif self.state == S.READ:
             self.crc.update(bits ^ self.current_prio)
-            // self.debug("CRC add %x => %x",bits,self.crc.crc)
+            # self.debug("CRC add %x => %x",bits,self.crc.crc)
             self.read_next(bits)
 
         elif self.state == S.READ_CRC:
@@ -343,7 +343,7 @@ class BaseHandler:
                 self.write_collision(bits &~ self.intended, True)
             else:
                 self.crc.update(bits ^ self.current_prio)
-                // self.debug("CRC add %x => %x",bits,self.crc.crc)
+                # self.debug("CRC add %x => %x",bits,self.crc.crc)
 
         elif self.state == S.WRITE_CRC:
             if bits != self.intended:

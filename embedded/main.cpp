@@ -138,7 +138,7 @@ u_int8_t* cpu_serial()
 
 u_int16_t cpu_random(u_int16_t max)
 {
-    return cpu_random_seed % max;
+    return (cpu_random_seed ^ micros()) % max;
 }
 
 void setup_addr_done()

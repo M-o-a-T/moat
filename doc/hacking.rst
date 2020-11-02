@@ -83,6 +83,11 @@ C macros
   
   Not yet implemented.
 
+* DEBUG_ADR
+
+  If set, use its value as a minifloat delay for address requests.
+  Otherwise uses a random value based on cpu serial and timer.
+
 ++++++++++
 Simulation
 ++++++++++

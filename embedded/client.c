@@ -46,7 +46,7 @@ void get_addr()
         send_msg(m,0);
 
         // schedule retry
-#if DEBUG_ADR
+#ifdef DEBUG_ADR
         mf_set(&adr_poll.mf, 36); // 10 seconds
 #else
         mf_set(&adr_poll.mf, mf_random(adr_state*30*MINI_F, adr_state*120*MINI_F));
@@ -71,7 +71,7 @@ IN_C void setup_get_addr()
 {
     adr_state = AS_GET_START;
     mtick_init(&adr_poll, get_addr);
-#if DEBUG_ADR
+#ifdef DEBUG_ADR
     mf_set(&adr_poll.mf, MINI_F); // 1 sec
 #else
     u_int8_t mf;

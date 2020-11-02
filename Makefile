@@ -13,6 +13,10 @@ CFLAGS := -DMOAT_USE_REF -g -O0 -W -I.
 
 PACKAGE = moatbus
 PYTHON ?= python3
+
+## host to run the tests on
+TESTER ?= root@pi-e2
+
 export PYTHONPATH=$(shell pwd)
 
 PYTEST ?= $(shell which pytest)
@@ -34,6 +38,7 @@ AUTOSPHINXOPTS := -i *~ -i *.sw* -i Makefile*
 SPHINXBUILDDIR ?= $(BUILD_DIR)/sphinx/html
 ALLSPHINXOPTS ?= -d $(BUILD_DIR)/sphinx/doctrees $(SPHINXOPTS) docs
 
+all: code pio copy run
 #code:	bin/test_handler_crc bin/test_crc bin/test_handler_crc_bus
 code:	bin/fake_spam bin/fake_send bin/fake_recv bin/fake_serialbus
 pio:
@@ -112,3 +117,7 @@ upload: pypi
 update:
 	pip install -r ci/test-requirements.txt
 
+copy:
+	for f in gate node ; do for e in bin elf ; do scp ./.pio/build/moat_$$f//firmware.$$e ${TESTER}:/tmp/$$f.$$e; done; done
+run:
+	ssh -n ${TESTER} moat-bin/ci/test

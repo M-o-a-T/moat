@@ -3,4 +3,5 @@
 . "$(dirname "$0")/config.sh"
 
 echo -n 1 >/sys/class/gpio/gpio$RESET/value 
+echo -n 0 >/sys/class/gpio/gpio$BOOT/value
 echo -n 0 >/sys/class/gpio/gpio$RESET/value 

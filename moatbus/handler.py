@@ -226,7 +226,7 @@ class BaseHandler:
                 self.start_reader(True)
 
         elif self.state == S.WRITE_ACQUIRE:
-            if bits &~ (self.want_prio | (self.want_prio-1)):
+            if bits & (self.want_prio-1):
                 self.debug("PRIO FAIL %02x %02x",bits,self.want_prio)
                 self.start_reader(True)
 
@@ -563,16 +563,22 @@ class BaseHandler:
         self.no_backoff = True
 
     def send_next(self):
-        prio = False
         if self.sending is None:
             if self._prio_q:
                 self.sending = self._prio_q.popleft()
-                prio = True
             elif self._q:
                 self.sending = self._q.popleft()
         if self.sending is None:
             return
         if self.want_prio is None:
+            prio = self.sending.prio
+            if prio >= self.WIRES:
+                prio -= self.WIRES
+                if self.no_backoff:
+                    self.no_backoff = False
+                    self.backoff = T_BACKOFF+2;
+                if prio >= self.WIRES:
+                    prio = self.WIRES-1
             self.want_prio = 1<<prio
         if self.state == S.IDLE and not self.settle:
             self.start_writer()

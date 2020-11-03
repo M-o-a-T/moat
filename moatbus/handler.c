@@ -273,7 +273,7 @@ static void h_wire_settle(Handler h, u_int8_t bits)
             h_start_reader(h, TRUE);
     }
     else if(h->state == S_WRITE_ACQUIRE) {
-        if(bits &~ (h->want_prio | (h->want_prio-1))) {
+        if(bits & (h->want_prio-1)) {
             h_debug(h, "PRIO FAIL %02x %02x",bits,h->want_prio);
             h_start_reader(h, TRUE);
         }
@@ -697,14 +697,12 @@ static void h_write_collision(Handler h, u_int8_t bits, char settled)
 
 static void h_send_next(Handler h)
 {
-    char prio = FALSE;
     if(h->sending == NULL) {
         if(h->q_prio_first) {
             h->sending = h->q_prio_first;
             h->q_prio_first = h->sending->next;
             if (!h->q_prio_first)
                 h->q_prio_last = NULL;
-            prio = TRUE;
         } else if(h->q_first) {
             h->sending = h->q_first;
             h->q_first = h->sending->next;
@@ -714,8 +712,19 @@ static void h_send_next(Handler h)
     }
     if(h->sending == NULL)
         return;
-    if(! h->want_prio)
+    if(! h->want_prio) {
+        char prio = h->sending->prio;
+        if (prio >= h->WIRES) {
+            prio -= h->WIRES;
+            if(h->no_backoff) {
+                h->no_backoff = FALSE;
+                h->backoff = T_BACKOFF+2;
+            }
+            if (prio >= h->WIRES)
+                prio = h->WIRES-1;
+        }
         h->want_prio = 1<<prio;
+    }
     if((h->state == S_IDLE) && !h->settle)
         h_start_writer(h);
 }

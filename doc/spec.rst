@@ -93,10 +93,10 @@ log2(2^n-1) bits of information.
 ..
    Requiring a transition on every second time slot would add lots of
    complexity and doesn't buy us that much: 12 instead of 11 bits on the
-   2-wire bus. Every third slot would reduce the 11-bit time to 6 slots but
-   requiress a more accurate clock. There's no effect on a bus with more
-   than two wires. Thus the (considerable) effort to implement this isn't
-   warranted.
+   2-wire bus. A mandatory transition every third slot would reduce the
+   11-bit time to 6 slots but requires a more accurate clock. There's no
+   effect on a bus with more than two wires. Thus the effort to implement
+   this isn't warranted.
 
 We still need to transmit binary data. The optimal block size on a
 two-wire system ends up as 7 transitions which carry 11.094 bits of
@@ -129,7 +129,7 @@ Thus we keep the header as short as possible:
 The width of the message type is chosen to pad the header to the next byte
 boundary. Fortunately this turns out to be sufficient.
 
-The details are described in `doc/spec_link`.
+The details are described in `doc/spec_message`.
 
 Message format
 ==============

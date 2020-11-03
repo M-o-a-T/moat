@@ -59,7 +59,7 @@ The message header has space for three servers and 126 clients.
 
 Client addresses 0 and 127 are reserved for future expansion.
 
-The server address 0 is used for multicast-ish messages, i.e. periodic
+The server address -4 is used for multicast-ish messages, i.e. periodic
 measurements (temperature, power, voltage, humidity) and events (motion,
 door contacts), as well as address assignment.
 

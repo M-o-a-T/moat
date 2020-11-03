@@ -183,6 +183,8 @@ its signal and try again later.
 The bus is idle when it is de-asserted for 3A. A sender waiting for a
 slot will back off exponentially before trying to transmit.
 
+The highest priority is zero, corresponding to wire 1 being set.
+
 
 Collision detection
 +++++++++++++++++++
@@ -253,11 +255,11 @@ depend on the message's priority (which might change due to a collision)
 and thus can be pre-calculated if necessary.
 
 
-Rejecton of per-message CRC check
----------------------------------
+No message-level CRC check
+--------------------------
 
 A more straightforward implementation would be to simply run a CRC over the
-bytes of the message instead of the encoded frames' wire states. The only
+bytes of the message instead of the encoded frames' wire states. The
 problem is that this does not work as expected.
 
 Due to the way messages are encoded on the bus, a single inverted bit on
@@ -265,13 +267,14 @@ the wire will always affect 3 … 16 bits of the message's resulting content.
 A CRC is not designed to handle this. To verify this, a test program
 `fakebus/test_handler_crc.c` creates random messages, encodes them, injects
 a number of random errors, decodes the result, and checks whether the CRC
-is correct. It demonstrates after a few seconds that yes, a single bit
+is correct. This program demonstrates after a few seconds that a single bit
 error in a three-byte message can result in a valid CRC.
 
-The test also demonstrates that if there are *any* errors, the resulting
-CRC would essentially be random, thus even a CRC-16 would admit a ~1/10⁶
-probability of accepting a broken message. The odds for a faulty CRC-8,
-which would otherwise be adequate for smaller messages, are even higher.
+The test code also demonstrates that if there are *any* errors, the
+resulting CRC would essentially be random, thus even a CRC-16 would admit a
+~1/10⁶ probability of accepting a broken message. The odds for a faulty
+CRC-8, which would otherwise be adequate for smaller messages, are even
+higher.
 
 These odds are uncomfortable enough to choose a different algorithm.
 
@@ -284,7 +287,13 @@ Our CRC polynomial selection is based on Table 3 (page 6) in
 
 Real-world CRCs frequently use non-zero start values to protect against
 errors in initial runs of almost-zero data. Our protocol does not have
-this problem because every wire change affects at least one bit.
+this problem because every wire change affects at least one bit. Thus we
+keep things simple: our start value is zero.
+
+Real-world CRCs have the property that appending the CRC to the message
+results in a zero CRC. We cannot do that on the MoaT bus because the result
+might contain a sequence of repeated bus states. Instead, we interpret the
+CRC as an 11-bit integer and send it as usual.
 
 
 Message Acknowledgment
@@ -298,14 +307,16 @@ change by the sender and assert wire 0. If that is not possible because
 wire 0 currently is the only asserted wire, wire 1 is asserted instead.
 
 To negative-ack a message, the receiver will assert wire 1, except when
-either wire 1 is claimed by Ack – or when wire 1 and 2 are the only
-asserted signals, in which case it will use wire 3. This results in no NACK
-being sendable if there is no third wire.
+wire 1 is claimed by Ack *or* when wire 1 and 2 are the only asserted
+signals, in which case it will use wire 3. This prevents explicit NACKs
+from being transmitted on a 2-wire bus.
+
 
 Algorithm
 +++++++++
 
-Thus, the complete algorithms are:
+Sender
+------
 
 * calculate header+data checksum, append to packet buffer
 * repeat while the packet is not exhausted:
@@ -334,7 +345,8 @@ Thus, the complete algorithms are:
 * Clear bus state
 * Wait for Ack bit
 
-Each receiver will:
+Receiver
+--------
 
 * wait for bus idle (unless expecting an Ack frame)
 * wait until at least one wire is asserted

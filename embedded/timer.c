@@ -1,10 +1,11 @@
 #include "embedded/timer.h"
 #include <memory.h>
 
-static MTIMER root;
-mt_delay_t last_ts, d_res;
-static MTICK mt_root;
-static MTICK mt_next;
+static MTIMER root NO_INIT;
+mt_delay_t last_ts NO_INIT;
+mt_delay_t d_res NO_INIT;
+static MTICK mt_root NO_INIT;
+static MTICK mt_next NO_INIT;
 
 IN_C void mtick_init(MTICK mt, mtimer_proc proc)
 {

@@ -46,7 +46,7 @@ struct _BusMessage {
     u_int8_t data_end_off; // current write position: non-filled bits
     u_int8_t hdr_len; // Length of header. 0: need to call add_header / read_header
 };
-#define MSG_MAXHDR 4
+#define MSG_MAXHDR (3+1)  // first byte is a shared-buffer counter
 #define MSG_MINBUF 30
 
 typedef struct _BusMessage *BusMessage;

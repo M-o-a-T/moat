@@ -41,6 +41,8 @@ void get_addr()
         m->dst = -4;
         m->code = 0;
         m->prio = MOAT_WIRES-1;
+
+        msg_start_add(m);
         msg_add_char(m, cpu_serial_len-1);
         msg_add_data(m, cpu_serial(),cpu_serial_len);
         // no flag byte 

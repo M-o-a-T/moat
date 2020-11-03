@@ -51,11 +51,13 @@ void ten_log()
 
 void setup()
 {
+    setup_logger();
+    setup_timer();
+
     check_boot_count();
     cpu_random_seed = *(uint32_t *)U_ID1 ^ *(uint32_t *)U_ID2 ^ *(uint32_t *)U_ID3;
-    setup_logger();
+
     setup_addr();
-    setup_timer();
     setup_serial();
     logger("Startup, reboot#%d", boot_count);
     mtick_init(&ten_seconds, ten_log);

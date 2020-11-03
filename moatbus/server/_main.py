@@ -57,7 +57,7 @@ async def _main(debug, **kw):
     l = logging.getLogger("distmqtt.mqtt.protocol.handler")
     l.setLevel(logging.INFO)
     l = logging.getLogger("transitions.core")
-    l.setLevel(logging.INFO)
+    l.setLevel(logging.WARNING)
     await run(**kw)
 
 if __name__ == "__main__":

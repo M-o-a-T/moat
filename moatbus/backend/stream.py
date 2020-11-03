@@ -111,8 +111,8 @@ class StreamBusHandler(BaseBusHandler, CtxObj):
             await self._stream.send_all(data)
 
 
-    async def send(self, msg, prio=0):
-        self._bus.send(msg, prio)
+    async def send(self, msg):
+        self._bus.send(msg)
 
     def __aiter__(self):
         return self

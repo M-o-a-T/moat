@@ -116,7 +116,7 @@ int main(int argc, char* const* argv)
             fprintf(stderr,"GotMsg\n");
             BusMessage m = fc->in_msg;
             fc->in_msg = NULL;
-            sb_send(sb,m,0);
+            sb_send(sb,m);
         }
         if(fc->out_msg) {
             fprintf(stderr,"SentMsg %d\n",fc->out_result);
@@ -126,13 +126,9 @@ int main(int argc, char* const* argv)
         if(sb_out == -1)
             sb_out = sb_byte_out(sb);
 
-        {
-            u_int8_t prio = 0;
-            BusMessage m = sb_recv(sb, &prio);
-            if (m != NULL)
-                fc_send(fc, m, prio);
-        }
-        if(sb_recv_ack(sb)) {} // ignore
+        BusMessage m = sb_recv(sb);
+        if (m != NULL)
+            fc_send(fc, m);
     }
     errs(sb);
     fc_free(fc);

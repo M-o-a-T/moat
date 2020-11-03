@@ -9,7 +9,7 @@ all:
 
 # need to use python3 sphinx-build
 PATH := /usr/share/sphinx/scripts/python3:${PATH}
-CFLAGS := -DMOAT_USE_REF -g -O0 -W -I.
+CFLAGS := -DMOAT_USE_REF -g -O3 -W -I.
 
 PACKAGE = moatbus
 PYTHON ?= python3
@@ -40,26 +40,26 @@ SPHINXBUILDDIR ?= $(BUILD_DIR)/sphinx/html
 ALLSPHINXOPTS ?= -d $(BUILD_DIR)/sphinx/doctrees $(SPHINXOPTS) docs
 
 ci: code pio copy run
-#code:	bin/test_handler_crc bin/test_crc bin/test_handler_crc_bus
+code:	bin/test_handler_crc bin/test_crc # bin/test_handler_crc_bus
 code:	bin/fake_spam bin/fake_send bin/fake_recv bin/fake_serialbus
 pio:
 	platformio run
 
 bin/test_handler_crc_bus:	obj/test_handler_crc_bus.o obj/libmessage.a
 	gcc -o $@ $^
-bin/test_handler_crc:	obj/test_handler_crc.o obj/libmessage.a
+bin/test_handler_crc:	obj/test_handler_crc.o obj/crc11.o obj/libmessage.a
 	gcc -o $@ $^
 bin/test_crc:	obj/test_crc.o obj/libmessage.a
 	gcc -o $@ $^
-bin/fake_recv:	obj/fake_recv.o obj/fake_client.o obj/libmessage.a
+bin/fake_recv:	obj/fake_recv.o obj/fake_client.o obj/fakeutil.o obj/libmessage.a
 	gcc -o $@ $^
-bin/fake_send:	obj/fake_send.o obj/fake_client.o obj/libmessage.a
+bin/fake_send:	obj/fake_send.o obj/fake_client.o obj/fakeutil.o obj/libmessage.a
 	gcc -o $@ $^
 bin/fake_spam:	obj/fake_spam.o
 	gcc -o $@ $^
-bin/fake_serialbus:	obj/fake_serialbus.o obj/fake_client.o obj/libmessage.a
+bin/fake_serialbus:	obj/fake_serialbus.o obj/fake_client.o obj/fakeutil.o obj/libmessage.a
 	gcc -o $@ $^
-bin/test_minifloat:	obj/test_minifloat.o obj/util.o
+bin/test_minifloat:	obj/test_minifloat.o obj/util.o obj/fakeutil.o
 	gcc -o $@ $^
 
 
@@ -73,6 +73,8 @@ obj/handler.o:	moatbus/handler.c
 obj/message.o:	moatbus/message.c
 	gcc ${CFLAGS} -c -o $@ $^
 obj/serial.o:	moatbus/serial.c
+	gcc ${CFLAGS} -c -o $@ $^
+obj/fakeutil.o:	fakebus/util.c
 	gcc ${CFLAGS} -c -o $@ $^
 obj/util.o:	moatbus/util.c
 	gcc ${CFLAGS} -c -o $@ $^
@@ -93,6 +95,8 @@ obj/fake_recv.o:	fakebus/recv.c
 obj/fake_client.o:	fakebus/client.c
 	gcc ${CFLAGS} -c -o $@ $^
 obj/fake_serialbus.o:	fakebus/serialbus.c
+	gcc ${CFLAGS} -c -o $@ $^
+obj/crc11.o:	fakebus/crc11.c
 	gcc ${CFLAGS} -c -o $@ $^
 
 doc:

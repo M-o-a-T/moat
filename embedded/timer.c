@@ -1,64 +1,65 @@
 #include "embedded/timer.h"
 #include <memory.h>
 
-static MTIMER root;
-mt_delay_t last_ts, d_res;
-static MTICK mt_root;
-static MTICK mt_next;
+static MTIMER timer_root NO_INIT;
+static mtimer_delay_t last_timer NO_INIT;
+static mtimer_delay_t d_res NO_INIT;
+static MTICK tick_root NO_INIT;
+static MTICK tick_next NO_INIT;
 
 IN_C void mtick_init(MTICK mt, mtimer_proc proc)
 {
     mt->proc = proc;
     mf_set(&mt->mf, 0);
-    mt->next = mt_root;
-    mt_root = mt;
+    mt->next = tick_root;
+    tick_root = mt;
 }
 
 IN_C static void run_ticks();
 static void run_ticks() {
-    if (mt_next == NULL) {
-        if (mt_root == NULL)
+    if (tick_next == NULL) {
+        if (tick_root == NULL)
             return;
-        mt_next = mt_root;
+        tick_next = tick_root;
     }
 
-    MTICK mt = mt_next;
-    mt_next = mt->next;
-    if (mf_tick(&mt->mf))
-        (*mt->proc)();
+    MTICK tick = tick_next;
+    tick_next = tick->next;
+    if (mf_tick(&tick->mf))
+        (*tick->proc)();
 }
 
 IN_C void setup_timer()
 {
-    root = NULL;
-    last_ts = 0;
+    timer_root = NULL;
+    last_timer = 0;
     d_res = 0;
 
-    mt_root = NULL;
-    mt_next = NULL;
+    tick_root = NULL;
+    tick_next = NULL;
 }
 
-IN_C void loop_timer(mt_delay_t ts)
+IN_C void loop_timer(mtimer_delay_t timer)
 {
-    mt_delay_t d = ts-last_ts + d_res;
-    if (mt_next || ts < last_ts)
+    mtimer_delay_t d = timer-last_timer + d_res;
+    if (tick_next || timer < last_timer)
         run_ticks();
-    last_ts=ts;
+    last_timer=timer;
 
-    if(!root) {
+    if(!timer_root) {
         d_res = 0;
         return;
     }
-    if (root->delay > d) {
-        root->delay -= d;
+    if (timer_root->delay > d) {
+        timer_root->delay -= d;
         d_res = 0;
         return;
     }
-    MTIMER mt = root;
+    MTIMER mt = timer_root;
     d -= mt->delay;
-    root = mt->next;
-    if (root)
-        root->prev = NULL;
+    timer_root = mt->next;
+    if (timer_root)
+        timer_root->prev = NULL;
     mt->delay = ~0;
     d_res = d;
     (*mt->proc)();
@@ -70,10 +71,10 @@ IN_C void mtimer_init(MTIMER mt, mtimer_proc proc)
     mt->proc = proc;
 }
 
-IN_C void mtimer_schedule(MTIMER mt, mt_delay_t delay)
+IN_C void mtimer_schedule(MTIMER mt, mtimer_delay_t delay)
 {
-    if (root) {
-        MTIMER pt = root;
+    if (timer_root) {
+        MTIMER pt = timer_root;
         while(pt->next && delay > pt->delay) {
             delay -= pt->delay;
             pt = pt->next;
@@ -83,7 +84,7 @@ IN_C void mtimer_schedule(MTIMER mt, mt_delay_t delay)
             if(pt->prev)
                 pt->prev->next = mt;
             else
-                root = mt;
+                timer_root = mt;
             mt->prev = pt->prev;
 
             pt->prev = mt;
@@ -97,7 +98,7 @@ IN_C void mtimer_schedule(MTIMER mt, mt_delay_t delay)
     } else {
         mt->next = NULL;
         mt->prev = NULL;
-        root = mt;
+        timer_root = mt;
     }
     mt->delay = delay;
 }
@@ -113,7 +114,7 @@ IN_C void mtimer_cancel(MTIMER mt)
     if (mt->prev) {
         mt->prev->next = mt->next;
     } else {
-        root = mt->next;
+        timer_root = mt->next;
     }
     mt->delay = ~0;
 }

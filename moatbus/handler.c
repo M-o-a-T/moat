@@ -169,7 +169,7 @@ void hdl_free(BusHandler hdl)
 // CRC calculation. We do that here because we need a fixed-width table
 // with as little overhead as possible.
 
-#define POLY 0x571
+#define POLY 0x583
 static inline void h_crc(Handler h, u_int8_t bits)
 {
     h->crc = (h->crc >> h->WIRES) ^ h->crc_table[(bits ^ h->crc ^ h->current_prio) & h->MAX];
@@ -197,11 +197,11 @@ static void h_gen_crc(Handler h)
 }
 
 // Queue+send a message
-void hdl_send(BusHandler hdl, BusMessage msg, char prio)
+void hdl_send(BusHandler hdl, BusMessage msg)
 {
     Handler h = (Handler)hdl;
 
-    if(prio) {
+    if(!msg->prio) {
         if(h->q_prio_last != NULL)
             h->q_prio_last->next = msg;
         else
@@ -588,7 +588,7 @@ static char h_gen_chunk(Handler h)
     assert(h->cur_pos == 0);
 
     u_int8_t n = 0;
-    u_int16_t val;
+    u_int16_t val = 0; // not required, gcc warning fix
 
     if(h->write_state == W_MORE) {
         if(! msg_extract_more(h->sending)) {

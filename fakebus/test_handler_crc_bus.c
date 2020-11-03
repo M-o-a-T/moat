@@ -1,4 +1,5 @@
 #include "moatbus/crc.h"
+#include "fakebus/crc11.h"
 #include "moatbus/message.h"
 #include <stdio.h>
 #include <fcntl.h>
@@ -59,7 +60,6 @@ char run1(u_int N, u_int datalen, u_int n_faults) {
 
     for(int rep=0;rep<2;rep++) {
     u_int16_t n = 0, n_p = 0;
-    u_int8_t crc6 = 0;
     u_int16_t crc11 = 0;
     u_int16_t v_p = 0, cb = m_out[0];
 
@@ -79,16 +79,12 @@ char run1(u_int N, u_int datalen, u_int n_faults) {
         }
         for (u_int i=0; i<X; i++) {
             cb ^= b[i];
-            crc6 = crc6_update(crc6, cb ^ m_out[0],N);
             crc11 = crc11_update(crc11, cb ^ m_out[0],N);
             m_out[++n] = cb;
         }
     }
     // replace last block with "real" CRC
-    if(C6 && (msg_bits(msg) <= 56)) // includes CRC
-        v_p |= crc6;
-    else
-        v_p |= crc11;
+    v_p |= crc11;
     n = n_p;
     {
         u_int16_t x = v_p;
@@ -160,7 +156,6 @@ char run1(u_int N, u_int datalen, u_int n_faults) {
         }
         v = v*NN+xc-1;
         c = m_out[nn];  // or: c ^= xc
-        cn6 = crc6_update(cn6, c ^ m_out[0],N);
         cn11 = crc11_update(cn11, c ^ m_out[0],N);
 
         if(++xx == X) {
@@ -195,7 +190,6 @@ char run1(u_int N, u_int datalen, u_int n_faults) {
         }
         for (u_int i=0;i<X;i++) {
             c ^= b[i];
-            cn6_p = crc6_update(cn6_p, c ^ m_out[0],N);
             cn11_p = crc11_update(cn11_p, c ^ m_out[0],N);
         }
     }

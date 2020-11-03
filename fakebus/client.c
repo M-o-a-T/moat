@@ -45,9 +45,9 @@ void fc_free(FakeClient fc)
     free(fc);
 }
 
-void fc_send(FakeClient fc, BusMessage msg, u_int8_t prio)
+void fc_send(FakeClient fc, BusMessage msg)
 {
-    hdl_send(fc->bus, msg, prio);
+    hdl_send(fc->bus, msg);
 }
 
 char fc_connect(FakeClient fc, const char *sockname)
@@ -170,9 +170,4 @@ static void fcb_report_error(void *ref, enum HDL_ERR err)
 {
     FakeClient fc = (FakeClient)ref;
     fprintf(stderr,"ERROR %d\n",err);
-}
-
-u_int16_t cpu_random(u_int16_t x)
-{
-    return x>>4;
 }

@@ -22,7 +22,7 @@ void main() {
     if(!mf_tick(&mf)) die("h");
     if(mf_tick(&mf)) die("f");
     if(mf_get(&mf) != 2) die("h");
-    if(mf_is_zero(&mf)) die("i");
+    if(mf_is_stopped(&mf)) die("i");
     mf_reset(&mf);
     if(mf_get(&mf) != 3) die("j");
     mf_set(&mf,0xF0);

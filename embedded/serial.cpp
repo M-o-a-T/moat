@@ -45,17 +45,15 @@ void loop_serial()
         }
     }
     {
-        uint8_t p = 0;
-        BusMessage m = sb_recv(SB, &p);
-        if(m) {
-            process_serial_msg(m, p);
-        }
+        BusMessage m = sb_recv(SB);
+        if(m)
+            process_serial_msg(m);
     }
 #endif
 
     while (Serial.availableForWrite()) {
 #ifdef MOAT_SERIAL
-        if (SB->s_out != S_IDLE && SB->s_out != S_INIT) {
+        if (SB->s_out != S_IDLE) {
             // prio to debug output. Drop clause 2 if you want prio to MoaT bus.
             int16_t ch = sb_byte_out(SB);
             if (ch >= 0) {
@@ -102,8 +100,8 @@ void loop_serial()
 }
 
 #ifdef MOAT_SERIAL
-void send_serial_msg(BusMessage msg, uint8_t prio)
+void send_serial_msg(BusMessage msg)
 {
-    sb_send(SB, msg, prio);
+    sb_send(SB, msg);
 }
 #endif

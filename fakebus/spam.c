@@ -24,8 +24,8 @@ int main(int argc, char * const* argv)
     int  socket_fd, nbytes;
     const char *sockname = "/tmp/moatbus";
     int opt;
-    int timer;
-    u_int8_t n_wires;
+    int timer = 100;
+    u_int8_t n_wires = 3;
     char verbose;
 
     while((opt = getopt(argc, argv, "b:s:t:v")) != -1) {

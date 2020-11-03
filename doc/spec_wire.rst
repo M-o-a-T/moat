@@ -8,7 +8,7 @@ Principle of operation
 Rationale
 +++++++++
 
-A bus with N wires can assume 2^n states. The timing requirement enforces
+A bus with N wires can assume 2^n states. "Sloppy" timing requires
 *some* transiton between states, thus each time slot can transmit
 log2(2^n-1) bits of information:
 
@@ -22,24 +22,28 @@ Wires  States  Bits
   6      63    5.97
 =====  ======  ====
 
-That's somewhat wasteful, but we can do better by combining multiple
-transitions until the fraction is as small as possible. Two transitions on
-a 2-wire system can have 9 states, or 3.16 bits. The next-best value is at
-seven transitions: 3^7 = 2187 states or 11.09 bits.
+This table shows that transmitting an integer number of bits is wasteful
+(we lose the fraction): we'd essentially reserve one wire for clock or odd
+parity. 
+
+However, we can do better by combining multiple transitions until the
+fraction is as small as possible. Two transitions on a 2-wire system can
+have 9 states, or 3.16 bits. The next-best value is at seven transitions:
+3^7 = 2187 states or 11.09 bits.
 
 With three wires, two transitions have 49 states or 5.61 bits. That's
-still wasteful; the next "good" value is at 5 transitions: 14.04 bits.
+still wasteful; a "good" value is at 5 transitions: 14.04 bits.
 
-The same calculation with four or even five wires ends up at 11.23 or 14.86
-bits, with three transitions each. This is no longer an obvious "best" size
-because the fractions decrease until 15^10 (39.07 bits) or even 31^21
-(104.04 bits).
+Using four or even five wires ends up at 11.23 or 14.86 bits, with three
+transitions each (or six wires, two trnsitions, 11.95 bits). This is no
+longer an obvious "best" size because the fractions decrease until 15^10
+(39.07 bits), 31^21 (104.04 bits) or 63^44 (263.0003 bits).
 
-However, there is a reason why we'd like to stay below 32 bits: If we want
-to be able to implement this bus on an ATMega8 or a similar small (but
-low-power) 8-bit CPUs, we need to keep the math simple.
+However, there is a reason why we'd like to stay below 32 or even 16 bits:
+We might want to be able to implement this bus on an ATMega8 or a similar
+8-bit CPUs, thus we need to keep the math fast and simple.
 
-You might think that another reason to keep the frames small is that
+One might think that another reason to keep the frames small is that
 otherwise there'd be wasted space at the end of the last frame, but in
 practice that problem doesn't exist; see below.
 
@@ -56,8 +60,9 @@ Wires  States  Bits  Transitions  cum.Bits
 =====  ======  ====  ===========  ========
 
 Since a message can contain excess bits, we can use an "illegal" sequence
-to terminate the message. Our messages thus don't need a length byte and
-can be generated on the fly if necessary.
+to terminate the message. Our messages thus don't need a length byte:
+they can be generated on the fly if necessary, though the current
+implementation doesn't take advantage of this.
 
 Basics
 ++++++
@@ -65,25 +70,26 @@ Basics
 The message is split into 11- or 14-bit frames, depending on bus width.
 These frames are interpreted as big-endian unsigned integers.
 
-An incomplete last frame is extended to the right with 0-bits if that
-extension is shorter than 8 bits. Otherwise, bit 11 / 14 is set. This
-results in a 12- or 15-bit number, but its value is still lower than
-3^7 or 7^5.
+The last frame is likely to be incomplete. If less than 8 bits are missing,
+the frame is extended with zero-valued bits and transmitted normally.
+Otherwise, the remaining bits are interpreted as an integer and bit 12 /
+bit 15 is set. Its value is still lower than 3^7 or 7^5 or 31^3, thus it
+can be transmitted normally.
 
-This value is repeatedly divided by 3/7/…, or 2^n-1, n being the number of
-bus wires. The remainders of these divisions are collected in a list of
-7/5/… integers with a value between 0 and 3/7/….
+Each frame's value is repeatedly divided by 3/7/15/…, or 2^n-1, n being the
+number of bus wires. The remainders of these divisions are collected in a
+list of 7/5/3/… integers with a value between 0 and 2/6/14/… inclusive.
 
 The list of remainders of this operation is reversed, i.e. the higher
 powers are transmitted first. We'll see later why this is important.
 
 Each value on this list is incremented by 1. The result is interpreted as a
-bit mask. When sending a bit, the mask is XOR'd with the current bus state.
+bit mask. When sending a bit, this mask is XOR'd with the current bus state.
 
-To reverse this, the receiver will read the bus state, XOR it with the previous
-state, subtract one, and add the result to the current frame's value (after
-multiplying the previous value by 3/7/…), thus recovering the frame's
-content.
+To reverse this process, the receiver will read the bus state, XOR it with
+the previous state, subtract one, and add the result to the current frame's
+value (after multiplying the previous value by 3/7/15/…, which is equivalent
+to a shift-and-subtract), thus recovering the frame's content.
 
 Big-endianness and message termination
 --------------------------------------
@@ -94,9 +100,12 @@ power, contributing 3^6, 3^5 and 3^4) cannot all be 2, as 2*(3^6+3^5+3^4)
 is greater than 2^11+2^3. Similarly, the last two on a three-wire system
 can't all be 6 and the last remainder on a four-wire system can't be 14.
 
-The MoaTbus uses this fact to signal the end of a message if the excess bit
-was clear; if it was set, that's already unambiguous.
-We can save even more: setting the excess bit on the last message signals
+Thus, the sender either sends the last frame with an excess value, which
+signals that the frame is completed; otherwise it terminates transmission
+by inverting the bus 3/2/1/… times.
+
+The message termination indication is followed by a CRC frame and an ACK
+bit. See below.
 
 Error recovery
 --------------
@@ -167,9 +176,9 @@ Bus arbitration
 Initially the bus is idle: all lines are de-asserted.
 
 A MoaT bus transition starts with a sender asserting one wire, according
-to the packet's priority (which starts Timer A). higher-priority wire is
-also asserted during that time, the sender must immediately de-assert its
-signal and try again later.
+to the packet's priority (which starts Timer A). If a higher-priority wire
+is also asserted during that time, the sender must immediately de-assert
+its signal and try again later.
 
 The bus is idle when it is de-asserted for 3A. A sender waiting for a
 slot will back off exponentially before trying to transmit.
@@ -186,8 +195,16 @@ their signal, the next state is "no wire is set", which is *still*
 indistinguishable from "sender B releases both wires" in the second case.
 
 The MoaT bus works around this problem: in the first case both A and B
-immediately drop their signal and set a fast-retry flag. In the second case
+immediately drop their signal and set their fast-retry flag. In the second case
 transmission continues, A will retry normally.
+
+A fast retry works by temporarily changing the message's priority.
+Specifically, each sender uses the wire which in its opinion was "wrong" as
+the message's new priority, thus ensuring that a fast retry will not
+collide again.
+
+Senders which detect a collision must treat the incomplete message as
+incoming data and switch to receive mode.
 
 
 CRC check
@@ -197,12 +214,13 @@ All messages are protected by a CRC. The CRC is a 11-bit checksum
 (generator 0x583, reversed). This polynomial has a Hamming distance of 4
 (i.e. it can always recognize three errors) for messages up to 1023 bits.
 On a 2-wire bus that's 73 frames or 100 bytes of "real" data, which should
-be sufficient. (119 on 3-wire, 116 on 4-wire.)
+be sufficient. (119 on 3-wire, 116 on 4-wire.) Thus a firmware upload is
+split into (a lot of) 64-byte messages.
 
 The CRC is calculated over the actual bus wire states, XOR'd with the
 initial bus arbitration state, so that a complete message's CRC can be
-pre-calculated. The bus flips that indicate end-of-message are included in
-the CRC.
+pre-calculated if necessary. The bus flips that may indicate end-of-message
+are included in the CRC.
 
 The CRC is transmitted directly after the end-of-message marker.
 
@@ -213,16 +231,15 @@ CRC selection was constrained by these parameters:
 
 * The CRC should not be larger than one frame.
 
-* It should be possible to pre-calculate the CRC, and indeed the whole
-  message.
+* It should be possible to pre-calculate the CRC.
 
 * It should be possible to not pre-calculate anything, and stream a message
   onto the bus as it is generated.
 
-* CRCs are usually calculated using the message's "real", content, i.e.
+* Traditionally, CRCs are calculated using the message's "real", content, i.e.
   before encoding to a wire format. This is not possible here. See below.
 
-* Bus errors are likely to affect mutiple bits. Protecting against a single
+* Bus errors are likely to affect multiple bits. Protecting against a single
   error is not sufficient, i.e. a Hamming distance of 3 is required.
 
 Embedding the CRC into a frame that also contains other data is a
@@ -243,23 +260,26 @@ A more straightforward implementation would be to simply run a CRC over the
 bytes of the message instead of the encoded frames' wire states. The only
 problem is that this does not work as expected.
 
-Due to the way messages are encoded on the bus, a single changed bit on the
-wire will always affect 3 … 16 bits of the message's resulting content. A
-CRC is not designed to handle this. The test program
-`fakebus/test_handler_crc.c` demonstrates that a single bit error in a
-short message can result in a valid CRC.
+Due to the way messages are encoded on the bus, a single inverted bit on
+the wire will always affect 3 … 16 bits of the message's resulting content.
+A CRC is not designed to handle this. To verify this, a test program
+`fakebus/test_handler_crc.c` creates random messages, encodes them, injects
+a number of random errors, decodes the result, and checks whether the CRC
+is correct. It demonstrates after a few seconds that yes, a single bit
+error in a three-byte message can result in a valid CRC.
 
 The test also demonstrates that if there are *any* errors, the resulting
-CRC would essentially be random, thus a CRC-16 would admit a ~1/10⁶
+CRC would essentially be random, thus even a CRC-16 would admit a ~1/10⁶
 probability of accepting a broken message. The odds for a faulty CRC-8,
 which would otherwise be adequate for smaller messages, are even higher.
 
-The author is not quite comfortable with these odds.
+These odds are uncomfortable enough to choose a different algorithm.
+
 
 Choice of CRC parameters
 ------------------------
 
-CRC width polynomial selection is based on Table 3 (page 6) in
+Our CRC polynomial selection is based on Table 3 (page 6) in
 <http://users.ece.cmu.edu/~koopman/roses/dsn04/koopman04_crc_poly_embedded.pdf>.
 
 Real-world CRCs frequently use non-zero start values to protect against
@@ -373,7 +393,7 @@ NACK (no retry) are set, or any other wires are held (collision).
 A short example message
 +++++++++++++++++++++++
 
-We want to send the single byte "0xbf" (binary 101-110-11, i.e. server 1
+We want to send the single byte "0xbb" (binary 101-110-11, i.e. server 1
 sends a zero-byte message of type 3 to server 2).
 
 Let's assume a 4-wire bus – the example is shortest that way.
@@ -401,10 +421,10 @@ Wires  State                                              CRC
 
 You can calculate the CRC value with this command::
 
-   python3 moatbus/crc.py 4 1 6 c 0 f
+   python3 moatbus/crc.py 4 1  6 c 0 f
 
 The first argument is the number of wires, the second the initial bus
-state.
+state, the others the actual bus values.
 
 
 

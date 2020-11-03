@@ -72,7 +72,7 @@ class BaseHandler:
     * transmitted(msg, res) -- this message has been sent with that result (RES.*)
 
     External code will call these methods:
-    * send (msg, prio?) -- send a message with priority (or not).
+    * send (msg)        -- send a message with priority (or not).
     * wire (bits)       -- update wire state. May be triggered immediately,
                            or sometime later, by .set_wire().
     * timeout()         -- when the timeout runs out
@@ -172,11 +172,11 @@ class BaseHandler:
     
     ########################################
 
-    def send(self, msg, prio=0):
+    def send(self, msg):
         """
         Queue this message for sending.
         """
-        q = self._prio_q if prio else self._q
+        q = self._prio_q if msg.prio == 0 else self._q
         q.append(msg)
 
         self.send_next()

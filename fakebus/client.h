@@ -40,6 +40,6 @@ int fc_timeout(FakeClient fc);
 void fc_timer(FakeClient fc);
 
 // queue a message for sending
-void fc_send(FakeClient fc, BusMessage msg, u_int8_t prio);
+void fc_send(FakeClient fc, BusMessage msg);
 
 #endif

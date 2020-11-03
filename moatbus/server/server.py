@@ -393,9 +393,10 @@ class Server(CtxObj):
         msg.src = src
         msg.dst = dst
         msg.code = code
+        msg.prio = prio
         msg.add_data(data)
 
-        await self._back.send(msg, prio)
+        await self._back.send(msg)
 
     async def reply(self, msg, src=None,dest=None,code=None, data=b'', prio=0):
         if src is None:

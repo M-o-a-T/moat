@@ -116,7 +116,7 @@ static char process_control_addr_assign(BusMessage msg, u_int8_t *data, msglen_t
     }
 
     if (msg->src == -4) {
-        if (msg->dst == -4) {
+        if (my_adr > 0 && msg->dst == -4) {
             logger_adr("Address lookup collision??");
             BusMessage m = msg_alloc(cpu_serial_len+2);
             msg_start_send(m);

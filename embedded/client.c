@@ -100,7 +100,7 @@ static char process_control_addr_assign(BusMessage msg, u_int8_t *data, msglen_t
     }
 
     // OK, it's for us. Now check extension
-    u_int8_t flag;
+    u_int8_t flag = 0;
     u_int8_t timer = 0;
 
     if(*data & 0x10) {
@@ -113,8 +113,6 @@ static char process_control_addr_assign(BusMessage msg, u_int8_t *data, msglen_t
                 return 0;
             timer = *data++;
         }
-    } else {
-        flag = 0;
     }
 
     if (msg->src == -4) {

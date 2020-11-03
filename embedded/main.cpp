@@ -89,7 +89,7 @@ unsigned int memspace()
 
 void loop()
 {
-    mt_delay_t m = MT_READ();
+    mtimer_delay_t m = MTIMER_READ();
     loop_timer(m);
     loop_serial();
     loop_polled();

@@ -25,9 +25,9 @@ static void moat_set_timeout(REF u_int16_t delay)
     if (delay == T_OFF)
         {}
     else if (delay == T_BREAK)
-        mtimer_schedule(&tm, MT_USEC(MOAT_T_B));
+        mtimer_schedule(&tm, MTIMER_USEC(MOAT_T_B));
     else
-        mtimer_schedule(&tm, MT_USEC(MOAT_T_A) * (delay-T_BREAK));
+        mtimer_schedule(&tm, MTIMER_USEC(MOAT_T_A) * (delay-T_BREAK));
 }
 
 static uint8_t last_bits;

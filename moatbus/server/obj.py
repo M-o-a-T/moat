@@ -164,7 +164,7 @@ class Obj(BaseObj):
         except KeyError:
             if create is False:
                 raise
-            return super().__new__(serial)
+            return super().__new__(cls)
         else:
             if create:
                 raise KeyError(serial)

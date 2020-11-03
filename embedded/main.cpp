@@ -105,11 +105,7 @@ void process_serial_msg(BusMessage msg)
 void send_msg(BusMessage msg)
 {
 #ifdef MOAT_REPEATER
-    if(msg->dst == -MOAT_REPEATER) {
-        send_serial_msg(msg);
-        return;
-    }
-    if(msg->dst == -4)
+    if(msg->dst < 0)
         send_serial_msg(msg_copy(msg));
 #endif
     send_bus_msg(msg);
@@ -121,13 +117,9 @@ char process_bus_msg(BusMessage msg)
 
     // XX TODO process this thing
 #ifdef MOAT_REPEATER
-    if(msg->dst == -4 || msg->dst == -MOAT_REPEATER)
+    if(msg->dst < 0)
         res = 1;
-    send_serial_msg(msg);
-    logger("Forward to serial: %s", msg_info(msg));
-    res = TRUE;
-#else
-    msg_free(msg);
+    send_serial_msg(msg_copy(msg));
 #endif
     process_msg_in(msg);
     return res;

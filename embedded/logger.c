@@ -36,14 +36,14 @@ void logger(const char *format, ...)
     va_end(args);
 }
 
-IN_C char* get_log_line()
+char* get_log_line()
 {
     if(!logbuf)
         return NULL;
     return logbuf->buf;
 }
 
-IN_C void drop_log_line()
+void drop_log_line()
 {
     if(!logbuf)
         return;

@@ -588,7 +588,7 @@ static char h_gen_chunk(Handler h)
     assert(h->cur_pos == 0);
 
     u_int8_t n = 0;
-    u_int16_t val;
+    u_int16_t val = 0; // not required, gcc warning fix
 
     if(h->write_state == W_MORE) {
         if(! msg_extract_more(h->sending)) {

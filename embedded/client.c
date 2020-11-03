@@ -120,14 +120,16 @@ static char process_control_addr_assign(BusMessage msg, u_int8_t *data, msglen_t
     if (msg->src == -4) {
         if (msg->dst == -4) {
             logger_adr("Address lookup collision??");
-            BusMessage m = msg_copy(msg);
+            BusMessage m = msg_alloc(cpu_serial_len+2);
+            msg_start_send(m);
+            msg_add_char(m, 0x10 | (cpu_serial_len-1));
+            msg_add_data(m, msg_start(msg), msg_length(msg));
+            msg_add_char(m, 0x10);
             m->src = my_addr;
             m->dst = -4;
-            data = msg_start(m);
-            *data |= 0x80;
-            data += cpu_serial_len+1;
-            *data = 0x10; // known
-            return 1;
+            m->code = 0;
+            m->prio = 0;
+            send_msg(m);
         }
         logger_adr("NoLookup1 %d",msg->dst);
         return 0;
@@ -194,6 +196,7 @@ IN_C char process_msg_in(BusMessage msg)
 {
     if (msg->code == 0)
         return process_control(msg);
+    msg_free(msg);
     return 0;
 }
 

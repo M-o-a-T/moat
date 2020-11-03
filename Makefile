@@ -51,15 +51,15 @@ bin/test_handler_crc:	obj/test_handler_crc.o obj/crc11.o obj/libmessage.a
 	gcc -o $@ $^
 bin/test_crc:	obj/test_crc.o obj/libmessage.a
 	gcc -o $@ $^
-bin/fake_recv:	obj/fake_recv.o obj/fake_client.o obj/libmessage.a
+bin/fake_recv:	obj/fake_recv.o obj/fake_client.o obj/fakeutil.o obj/libmessage.a
 	gcc -o $@ $^
-bin/fake_send:	obj/fake_send.o obj/fake_client.o obj/libmessage.a
+bin/fake_send:	obj/fake_send.o obj/fake_client.o obj/fakeutil.o obj/libmessage.a
 	gcc -o $@ $^
 bin/fake_spam:	obj/fake_spam.o
 	gcc -o $@ $^
-bin/fake_serialbus:	obj/fake_serialbus.o obj/fake_client.o obj/libmessage.a
+bin/fake_serialbus:	obj/fake_serialbus.o obj/fake_client.o obj/fakeutil.o obj/libmessage.a
 	gcc -o $@ $^
-bin/test_minifloat:	obj/test_minifloat.o obj/util.o
+bin/test_minifloat:	obj/test_minifloat.o obj/util.o obj/fakeutil.o
 	gcc -o $@ $^
 
 
@@ -73,6 +73,8 @@ obj/handler.o:	moatbus/handler.c
 obj/message.o:	moatbus/message.c
 	gcc ${CFLAGS} -c -o $@ $^
 obj/serial.o:	moatbus/serial.c
+	gcc ${CFLAGS} -c -o $@ $^
+obj/fakeutil.o:	fakebus/util.c
 	gcc ${CFLAGS} -c -o $@ $^
 obj/util.o:	moatbus/util.c
 	gcc ${CFLAGS} -c -o $@ $^

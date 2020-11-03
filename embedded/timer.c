@@ -15,7 +15,6 @@ IN_C void mtick_init(MTICK mt, mtimer_proc proc)
     tick_root = mt;
 }
 
-IN_C static void run_ticks();
 static void run_ticks() {
     if (tick_next == NULL) {
         if (tick_root == NULL)

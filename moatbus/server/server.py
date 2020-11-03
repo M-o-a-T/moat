@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 from ..backend import BaseBusHandler
 from ..message import BusMessage
-from .obj import get_obj
+from .obj import get_obj, Obj
 from ..util import byte2mini, CtxObj
 
 import msgpack
@@ -100,6 +100,23 @@ class Server(CtxObj):
             if nid == self._next_id:
                 raise NoFreeID(self)
 
+    def with_serial(self, serial, bus_id=None):
+        try:
+            obj = self.ser2obj[serial]
+        except KeyError:
+            obj = Obj(serial)
+            if bus_id is not None:
+                obj.__reg_id = bus_id
+            obj.attach(self)
+        else:
+            self.logger.warn("Server sync problem? %r: %d vs. %d", obj, obj.__reg_id, bus_id)
+            if obj.__reg_id > bus_id:
+                obj.detach()
+                obj.__reg_id = bus_id
+                obj.attach(self)
+        return obj
+
+
     def register(self, obj):
         """
         Register a bus object.
@@ -176,7 +193,7 @@ class Server(CtxObj):
                 await self._handle_server(msg)
             # otherwise dispatch
 
-    async def _handle_server(self):
+    async def _handle_server(self, msg):
         if msg.src == -4:  # broadcast
             if msg.dst == -4 and msg.code == 0:
                 await self._hs_control_bb(msg)
@@ -279,9 +296,14 @@ class Server(CtxObj):
             self.logger.error("Serial short %r",msg)
             return
 
-        async def accept(cid, code):
+        async def accept(cid, code=0, timer=0):
             self.logger.info("Accept x%x for %d:%r", code, cid, serial)
-            d = msg.data[0:ls+1] + bytes((code,))
+            if timer:
+                timer=byte((timer,))
+                code |= 0x80
+            else:
+                timer = b''
+            d = bytes(((0x10 if code else 0x00)+len(serial)-1,)) + serial + (bytes((code,)) if code else b'') + timer
             await self.send(src=self.id,dst=cid,code=0,data=d)
 
         async def reject(err, dly=0):
@@ -306,7 +328,7 @@ class Server(CtxObj):
             await reject(0x10)  # no free address: wait for Poll
             # TODO start polling to find dead clients
         else:
-            await accept(obj.client_id)
+            await accept(obj.client_id,0)
             if obj.is_new:
                 obj.is_new = False
                 await obj.new_adr()

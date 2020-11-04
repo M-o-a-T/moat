@@ -27,7 +27,7 @@ class MqttServer(Server):
             logger.debug("Reader started")
             async for msg in b:
                 logger.debug("IN: %r", msg)
-                await self.mqtt.publish(topic=self.topic, payload=dict(
+                await self.mqtt.publish(topic=self.topic, message=dict(
                     src=msg.src, dst=msg.dst, code=msg.code, data=msg.data,
                     ))
 

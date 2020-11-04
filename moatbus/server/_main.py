@@ -28,7 +28,7 @@ class MqttServer(Server):
             async for msg in b:
                 logger.debug("IN: %r", msg)
                 await self.mqtt.publish(topic=self.topic, payload=dict(
-                    src=msg.src, dst=msg.dst, code=msg.code, data=msg.data.bytes,
+                    src=msg.src, dst=msg.dst, code=msg.code, data=msg.data,
                     ))
 
 async def run(uri='mqtt://localhost/', topic_in="test/moat/in", topic_out="test/moat/out", server_id=1, port="/dev/ttyUSB0", baud=57600):

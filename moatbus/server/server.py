@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 from ..backend import BaseBusHandler
 from ..message import BusMessage
-from .obj import get_obj
+from .obj import get_obj, Obj
 from ..util import byte2mini, CtxObj
 
 import msgpack
@@ -76,7 +76,7 @@ class Server(CtxObj):
     def __init__(self, backend:BaseBusHandler, id=1):
         if id<1 or id>3:
             raise RuntimeError("My ID must be within 1…3")
-        self.log = logging.getLogger("%s.%s" % (__name__, backend.name))
+        self.logger = logging.getLogger("%s.%s" % (__name__, backend.name))
         self._back = backend
         self.id2obj = dict()
         self.ser2obj = dict()
@@ -99,6 +99,27 @@ class Server(CtxObj):
                 return cid
             if nid == self._next_id:
                 raise NoFreeID(self)
+
+    def with_serial(self, serial, bus_id=None, create=None):
+        try:
+            obj = self.ser2obj[serial]
+        except KeyError:
+            if create is False:
+                raise
+            obj = Obj(serial)
+            if bus_id is not None:
+                obj.__reg_id = bus_id
+        else:
+            if create is True:
+                raise KeyError
+            if bus_id:
+                self.logger.warn("Server sync problem? %r: %d vs. %d", obj, obj.__reg_id, bus_id)
+                if obj.__reg_id > bus_id:
+                    obj.detach()
+                    obj.__reg_id = bus_id
+        obj.attach(self)
+        return obj
+
 
     def register(self, obj):
         """
@@ -176,7 +197,7 @@ class Server(CtxObj):
                 await self._handle_server(msg)
             # otherwise dispatch
 
-    async def _handle_server(self):
+    async def _handle_server(self, msg):
         if msg.src == -4:  # broadcast
             if msg.dst == -4 and msg.code == 0:
                 await self._hs_control_bb(msg)
@@ -273,15 +294,25 @@ class Server(CtxObj):
 
         ls = (d[0]&0xF)+1
         serial = d[1:ls+1]
-        try:
-            flags = d[ls+1]
-        except IndexError:
-            self.logger.error("Serial short %r",msg)
-            return
+        flags = 0
+        timer = 0
+        if d[0] & 0x10:
+            try:
+                flags = d[ls+1]
+                if flags & 0x80:
+                    timer = d[ls+2]
+            except IndexError:
+                self.logger.error("Serial short %r",msg)
+                return
 
-        async def accept(cid, code):
+        async def accept(cid, code=0, timer=0):
             self.logger.info("Accept x%x for %d:%r", code, cid, serial)
-            d = msg.data[0:ls+1] + bytes((code,))
+            if timer:
+                timer=byte((timer,))
+                code |= 0x80
+            else:
+                timer = b''
+            d = bytes(((0x10 if code else 0x00)+len(serial)-1,)) + serial + (bytes((code,)) if code else b'') + timer
             await self.send(src=self.id,dst=cid,code=0,data=d)
 
         async def reject(err, dly=0):
@@ -291,25 +322,22 @@ class Server(CtxObj):
             d = msg.data[0:ls+1] + (bytes((err,dly)) if dlx else bytes((err,)))
             await self.send(src=self.id,dst=-4,code=0,data=d)
 
-        obj = self.with_serial(serial)
+        obj = self.with_serial(serial, create=False if flags & 0x40 else None)
         obj.polled = bool(flags & 0x20)
-        if flags & 0x80:
-            td = d[ls+2]
-            await trio.sleep(byte2mini(td))
 
-        if flags & 0x40: # known
-            if serial in self.ser2obj:
-                await accept(0x40)
-        try:
-            obj = get_obj(serial, create=False if flags&0x40 else None)
-        except NoFreeID:
-            await reject(0x10)  # no free address: wait for Poll
-            # TODO start polling to find dead clients
-        else:
-            await accept(obj.client_id)
-            if obj.is_new:
-                obj.is_new = False
-                await obj.new_adr()
+        if obj.working:
+            return
+        if timer:
+            obj.working = True
+            try:
+                await trio.sleep(byte2mini(timer))
+            finally:
+                obj.working = False
+
+        await accept(obj.client_id,0)
+        if obj.is_new:
+            obj.is_new = False
+            await obj.new_adr()
 
     async def _hs_aa_reject(self, msg):
         """
@@ -389,12 +417,12 @@ class Server(CtxObj):
         if msg.src == -4:
             if msg_dest == -4 and msg.code == 1: ## address assignment
                 return await self._handle_assign(msg)
-            return self.log.warning("Reserved 1: %r", msg)
+            return self.logger.warning("Reserved 1: %r", msg)
         if msg.src < 0:
             if msg.dest >= 0 and msg.code == 4:
                 return await self._handle_assign_reply(msg)
             if msg.dest == -4:
-                return self.log.warning("Reserved 3: %r", msg)
+                return self.logger.warning("Reserved 3: %r", msg)
         if msg.src >= 0 and msg.dest == -4:
             return await self._handle_broadcast(msg)
         if msg.command < 3:
@@ -402,7 +430,7 @@ class Server(CtxObj):
         if msg.command == 3:
             return await self._handle_reply(msg)
         if msg.command <= 7:
-            return self.log.warning("Reserved 4: %r", msg)
+            return self.logger.warning("Reserved 4: %r", msg)
         return await self._handle_direct(msg)
 
     async def _handle_assign(self, msg: BusMessage):
@@ -416,11 +444,11 @@ class Server(CtxObj):
             await self.reply(data=rm, src=self.id, dest=-4, code=1)  # no known flags yet
 
         if len(m)-1 < mlen:
-            self.log.error("Too-short addr request %r",msg)
+            self.logger.error("Too-short addr request %r",msg)
             return
         s = m[1:mlen+1]
         if flags:
-            self.log.warning("Unknown addr req flags %r",msg)
+            self.logger.warning("Unknown addr req flags %r",msg)
             for n in range(4):
                 if flags & (1<<n):
                     return await reject(4+n)
@@ -452,7 +480,7 @@ class Server(CtxObj):
         mlen = (m[0] & 0xF) +1
         flags = m[0] >> 4
         if len(m)-1 < mlen:
-            self.log.error("Short addr reply %r",msg)
+            self.logger.error("Short addr reply %r",msg)
             return
         o = self.with_serial(s, msg.dest)
         if o.__data is None:
@@ -483,10 +511,10 @@ class Server(CtxObj):
     async def handle_event(self, evt):
         if isinstance(evt, NewDevice):
             obj = evt.obj
-            self.log.info("New device: %r", obj)
+            self.logger.info("New device: %r", obj)
         elif isinstance(evt, NewDevice):
             obj = evt.obj
-            self.log.info("Known device: %r", obj)
+            self.logger.info("Known device: %r", obj)
         else:
             raise RuntimeError("Not implemented", evt)
 

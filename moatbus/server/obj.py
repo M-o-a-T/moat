@@ -20,7 +20,8 @@ _obj_reg = {}  # id > obj
 
 def register_obj(obj):
     """
-    Register this object It must already have a serial#.
+    Register this object.
+    It must already have a serial#.
     """
     assert obj.serial is not None
     try:
@@ -43,6 +44,7 @@ class BaseObj:
     client_id = None
     serial = None
     is_new = True
+    working = False
     polled: bool = False # poll bit (in address request) is set
 
     def __init__(self, serial, create=None):
@@ -164,7 +166,7 @@ class Obj(BaseObj):
         except KeyError:
             if create is False:
                 raise
-            return super().__new__(serial)
+            return super().__new__(cls)
         else:
             if create:
                 raise KeyError(serial)

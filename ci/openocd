@@ -4,7 +4,7 @@
 
 F=/tmp/pill_$PILL.cfg
 cat >$F <<END
-interface sysfsgpio
+adapter driver sysfsgpio
 sysfsgpio_swd_nums $SWCLK $SWDIO
 transport select swd
 

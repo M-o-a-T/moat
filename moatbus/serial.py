@@ -97,11 +97,11 @@ class SerBus:
         self.crc_in = CRC16()
         self.m_in.start_add()
 
-    def send(self, msg, prio):
+    def send(self, msg):
         """
         Queue a message
         """
-        self.data_out(self.send_data(msg, prio))
+        self.data_out(self.send_data(msg))
 
     def send_ack(self):
         """
@@ -187,14 +187,14 @@ class SerBus:
             self.report_error(ERR.OVERFLOW)
 
 
-    def send_data(self, msg, prio) -> bytes:
+    def send_data(self, msg) -> bytes:
         """
         Generate chunk of bytes to send for this message.
         """
         prio_data = b"\x01\x02\x03\x04"
 
         res = bytearray()
-        res.append(prio_data[prio])
+        res.append(prio_data[msg.prio])
         n_b = len(msg.data) + msg.header_len
         if n_b >= 0x80:
             res.append(0x80 | (n_b>>8))

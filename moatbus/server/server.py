@@ -100,20 +100,24 @@ class Server(CtxObj):
             if nid == self._next_id:
                 raise NoFreeID(self)
 
-    def with_serial(self, serial, bus_id=None):
+    def with_serial(self, serial, bus_id=None, create=None):
         try:
             obj = self.ser2obj[serial]
         except KeyError:
+            if create is False:
+                raise
             obj = Obj(serial)
             if bus_id is not None:
                 obj.__reg_id = bus_id
-            obj.attach(self)
         else:
-            self.logger.warn("Server sync problem? %r: %d vs. %d", obj, obj.__reg_id, bus_id)
-            if obj.__reg_id > bus_id:
-                obj.detach()
-                obj.__reg_id = bus_id
-                obj.attach(self)
+            if create is True:
+                raise KeyError
+            if bus_id:
+                self.logger.warn("Server sync problem? %r: %d vs. %d", obj, obj.__reg_id, bus_id)
+                if obj.__reg_id > bus_id:
+                    obj.detach()
+                    obj.__reg_id = bus_id
+        obj.attach(self)
         return obj
 
 
@@ -290,11 +294,16 @@ class Server(CtxObj):
 
         ls = (d[0]&0xF)+1
         serial = d[1:ls+1]
-        try:
-            flags = d[ls+1]
-        except IndexError:
-            self.logger.error("Serial short %r",msg)
-            return
+        flags = 0
+        timer = 0
+        if d[0] & 0x10:
+            try:
+                flags = d[ls+1]
+                if flags & 0x80:
+                    timer = d[ls+2]
+            except IndexError:
+                self.logger.error("Serial short %r",msg)
+                return
 
         async def accept(cid, code=0, timer=0):
             self.logger.info("Accept x%x for %d:%r", code, cid, serial)
@@ -313,25 +322,22 @@ class Server(CtxObj):
             d = msg.data[0:ls+1] + (bytes((err,dly)) if dlx else bytes((err,)))
             await self.send(src=self.id,dst=-4,code=0,data=d)
 
-        obj = self.with_serial(serial)
+        obj = self.with_serial(serial, create=False if flags & 0x40 else None)
         obj.polled = bool(flags & 0x20)
-        if flags & 0x80:
-            td = d[ls+2]
-            await trio.sleep(byte2mini(td))
 
-        if flags & 0x40: # known
-            if serial in self.ser2obj:
-                await accept(0x40)
-        try:
-            obj = get_obj(serial, create=False if flags&0x40 else None)
-        except NoFreeID:
-            await reject(0x10)  # no free address: wait for Poll
-            # TODO start polling to find dead clients
-        else:
-            await accept(obj.client_id,0)
-            if obj.is_new:
-                obj.is_new = False
-                await obj.new_adr()
+        if obj.working:
+            return
+        if timer:
+            obj.working = True
+            try:
+                await trio.sleep(byte2mini(timer))
+            finally:
+                obj.working = False
+
+        await accept(obj.client_id,0)
+        if obj.is_new:
+            obj.is_new = False
+            await obj.new_adr()
 
     async def _hs_aa_reject(self, msg):
         """

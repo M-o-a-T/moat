@@ -11,6 +11,7 @@ class BusMessage:
     src:int = None
 
     code:int = None
+    prio:int = None
 
     data:BitArray = None
 
@@ -19,6 +20,7 @@ class BusMessage:
         Set up an empty buffer.
         """
         self._data = BitArray()
+        self.prio = 1
 
     def __repr__(self):
         return "<%s: %s>" % (self.__class__.__name__, " ".join("%s=%s"%(k,v) for k,v

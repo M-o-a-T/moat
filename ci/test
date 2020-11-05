@@ -3,10 +3,10 @@
 set -e
 CFG="${CFG:-./cfg}"
 . "$CFG/common"
-PILLS="${PILLS:-a b c}"
+DEST="${DEST:-${PILLS:-a b c}}"
 
 D="$(dirname "$0")"
-for t in $PILLS ; do
+for t in $DEST ; do
 	if ! test -p /run/moat-test/test_$t ; then
 		echo "'test $t' is not running. Exiting."
 		exit 1
@@ -14,24 +14,24 @@ for t in $PILLS ; do
 done
 
 set -x
-for t in $PILLS ; do
+for t in $DEST ; do
 	echo K >/run/moat-test/test_$t
 done
 sleep 1
 
 # XXX do this in parallel. Need to protect against failures.
-for t in $PILLS ; do
-	if "$D/prog" $t || "$D/prog" $t || "$D/prog" $t ; then : ; else
+for t in $DEST ; do
+	if sh -x "$D/prog" $t || sh -x "$D/prog" $t || sh -x "$D/prog" $t ; then : ; else
 		echo "Programming Pill $t failed. Exiting." >&2; exit 1
 	fi
 done
 #wait
 
-for t in $PILLS ; do
+for t in $DEST ; do
 	echo R >/run/moat-test/test_$t
 done
 
-sleep 3
-for t in $PILLS ; do
+sleep 5
+for t in $DEST ; do
 	"$D/reset" $t
 done

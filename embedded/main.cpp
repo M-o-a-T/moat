@@ -61,7 +61,7 @@ void setup()
     setup_serial();
     logger("Reboot#%d", boot_count);
     mtick_init(&ten_seconds, ten_log);
-    mf_set(&ten_seconds.mf, 1); run immediately
+    mf_set(&ten_seconds.mf, 1); // run immediately
     ten_seconds.mf.m = 36; // that's ten seconds. Cf moatbus.util.py
 
     setup_polled();

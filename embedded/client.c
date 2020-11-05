@@ -192,10 +192,11 @@ static char process_control(BusMessage msg)
 
 IN_C char process_msg_in(BusMessage msg)
 {
+    char res = 0;
     if (msg->code == 0)
-        return process_control(msg);
+        res = process_control(msg);
     msg_free(msg);
-    return 0;
+    return res;
 }
 
 

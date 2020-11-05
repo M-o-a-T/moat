@@ -688,7 +688,7 @@ static void h_write_collision(Handler h, u_int8_t bits, char settled)
     while(n-- > h->cur_pos+1) {
         h->val = h->val * h->MAX + h->cur_chunk[n]-1;
         h->nval += 1;
-        h_debug(h, "Replay %x",h->cur_chunk[n]-1);
+        // h_debug(h, "Replay %x",h->cur_chunk[n]-1);
         // not added to CRC: it already is in there
     }
 

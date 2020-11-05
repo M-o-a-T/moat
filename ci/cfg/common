@@ -1,5 +1,8 @@
 # prefix for build artefacts
 BUILD=/tmp/
 
+# MQTT server (plus optional :port)
+MQTT=pi-c4:51883
+
 # default pills
 #PILLS="a b c"

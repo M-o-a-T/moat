@@ -13,6 +13,7 @@ class MqttBusHandler(BaseBusHandler):
     _mqtt = None
 
     def __init__(self, id:str=None, uri:str = "mqtt://localhost/", topic="test/moat/bus"):
+        super().__init__()
         if id is None:
             id = "".join(random.choices("abcdefghjkmnopqrstuvwxyz23456789", k=9))
         self.id = id
@@ -28,28 +29,29 @@ class MqttBusHandler(BaseBusHandler):
                 yield self
 
     def __aiter__(self):
-        self._mqtt_it = ch.__aiter__()
+        self._mqtt_it = self._mqtt.__aiter__()
         return self
 
     async def __anext__(self):
         while True:
             msg = await self._mqtt_it.__anext__()
             try:
-                msg = msg.payload
+                msg = msg.data
             except AttributeError:
-                import pdb;pdb.set_trace()
                 continue
             try:
                 id = msg.pop('_id')
             except KeyError:
                 continue
             else:
-                if id == self._id:
+                if id == self.id:
                     continue
                 msg = BusMessage(**msg)
                 msg._mqtt_id = id
                 return msg
 
     async def send_msg(self, msg):
-        await self._mqtt.publish(_id=self.id, **{k:getattr(msg,k) for k in msg._attrs})
+        data={k:getattr(msg,k) for k in msg._attrs}
+        data['_id'] = getattr(msg,'_mqtt_id',self.id)
+        await self._mqtt.publish(topic=None, message=data)
 

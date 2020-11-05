@@ -2,13 +2,13 @@
 import asyncclick as click
 import logging
 import random
+import sys
 
 @click.group()
 @click.option("-v", "--verbose", count=True, help="Enable debugging. Use twice for more verbosity.")
 @click.option("-q", "--quiet", count=True, help="Disable debugging. Opposite of '--verbose'.")
-@click.option("-D", "--debug", is_flag=True, help="Enable debug speed-ups (smaller keys etc).")
 @click.pass_context
-async def main(ctx, verbose, quiet, debug):
+async def main(ctx, verbose, quiet):
     """
     This is the MoaTbus command interpreter. You need to add a subcommand
     for it to do anything.
@@ -37,7 +37,7 @@ async def pdb(args):  # safe
 
 @main.command(short_help="Serial>MQTT gateway")
 @click.option("-u","--uri", default='mqtt://localhost/', help="URI of MQTT server")
-@click.option("-t","--topic", default='test/moat/in', help="Topic to send incoming messages to")
+@click.option("-t","--topic", default='test/moat/bus', help="Topic to send incoming messages to")
 @click.option("-i","--ident", help="Identifier for this gateway. Must be unique.")
 @click.option("-P","--prefix", default='ser_', help="ID prefix. Used to prevent loops.")
 @click.option("-p","--port", default='/dev/ttyUSB0', help="Serial port to access")
@@ -51,12 +51,14 @@ async def gateway(obj, uri,topic,ident,prefix,port,baud):
     from anyio_serial import Serial
     from moatbus.backend.stream import Anyio2TrioStream, StreamBusHandler
     from moatbus.backend.mqtt import MqttBusHandler
+    from moatbus.server.gateway import Gateway
 
     async with MqttBusHandler(id=ident, uri=uri, topic=topic) as M:
         async with Serial(port=port, baudrate=baud) as S:
             S=Anyio2TrioStream(S)
-            gw = Gateway(S, M, prefix)
-            await gw.run()
+            async with StreamBusHandler(S) as SB:
+                gw = Gateway(SB, M, prefix)
+                await gw.run()
 
 def cmd():
     """

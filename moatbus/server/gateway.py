@@ -31,20 +31,21 @@ class Gateway:
         self.mqtt = mqtt
         self.prefix = prefix
 
-    def run(self):
-        async with trio.open_nursery() as n:
-            n.start_soon(self.serial2mqtt)
-            n.start_soon(self.mqtt2serial)
+    async def run(self):
+        try:
+            async with trio.open_nursery() as n:
+                n.start_soon(self.serial2mqtt)
+                n.start_soon(self.mqtt2serial)
+        except BaseException as exc:
+            raise
 
     async def serial2mqtt(self):
-        async with self.serial as si:
-            async for msg in si:
-                await self.mqtt.send_msg(msg)
+        async for msg in self.serial:
+            await self.mqtt.send_msg(msg)
 
     async def mqtt2serial(self):
-        async with self.mqtt as mi:
-            async for msg in mi:
-                if msg._id.startswith(self.prefix):
-                    continue
-                await self.mqtt.send_msg(msg)
+        async for msg in self.mqtt:
+            if msg._id.startswith(self.prefix):
+                continue
+            await self.mqtt.send_msg(msg)
 

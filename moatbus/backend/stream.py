@@ -9,7 +9,6 @@ from contextlib import asynccontextmanager
 
 from . import BaseBusHandler
 from ..serial import SerBus
-from ..util import CtxObj
 from weakref import ref
 
 
@@ -52,7 +51,7 @@ class Anyio2TrioStream:
         return self._stream.__aiter__()
 
 
-class StreamBusHandler(BaseBusHandler, CtxObj):
+class StreamBusHandler(BaseBusHandler):
     """
     This class defines the interface for exchanging MoaT messages on any
     Trio stream.
@@ -66,8 +65,8 @@ class StreamBusHandler(BaseBusHandler, CtxObj):
 
 
 
-    def __init__(self, stream:Stream, name=None, tick:float = 0.1):
-        super().__init__(name)
+    def __init__(self, stream:Stream, tick:float = 0.1):
+        super().__init__()
         self._bus = _Bus(self)
         self._stream = stream
         self._wq_w,self._wq_r = trio.open_memory_channel(150)

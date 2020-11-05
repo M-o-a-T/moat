@@ -20,8 +20,8 @@ class BaseBusHandler(CtxObj):
                 await process(msg)
     """
 
-    def __init__(self, name=None):
-        self.name = name
+    def __init__(self):
+        pass
 
     @asynccontextmanager
     async def _ctx(self):

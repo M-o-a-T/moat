@@ -12,7 +12,7 @@ esac
 
 cd "$(dirname "$0")/.."
 if [ "$CODE" = "gate" ] ; then
-	P="bin/serve -u mqtt://pi-c4:51883 -p $DEV -d"
+	P="./mb -vv gateway -u mqtt://$MQTT -p $DEV"
 else
 	P="miniterm $DEV 57600"
 fi

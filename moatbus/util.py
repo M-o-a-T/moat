@@ -20,12 +20,17 @@ class CtxObj:
         async with Foo() as self_or_whatever:
             pass
     """
-    async def __aenter__(self):
+    __ctx = None
+    def __aenter__(self):
+        if self.__ctx is not None:
+            breakpoint()
+            raise RuntimeError("Double context")
         self.__ctx = ctx = self._ctx()
-        return await ctx.__aenter__()
+        return ctx.__aenter__()
 
     def __aexit__(self, *tb):
-        return self.__ctx.__aexit__(*tb)
+        ctx,self.__ctx = self.__ctx,None
+        return ctx.__aexit__(*tb)
 
 # minifloat granularity
 MINI_F = 1/4

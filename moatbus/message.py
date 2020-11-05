@@ -17,12 +17,15 @@ class BusMessage:
 
     _attrs = tuple("src dst code data".split())
 
-    def __init__(self):
+    def __init__(self, src:int=None,dst:int=None,code:int=None,data:bytes=None,prio:int=1):
         """
         Set up an empty buffer.
         """
-        self._data = BitArray()
-        self.prio = 1
+        self.src=src
+        self.dst=dst
+        self.code=code
+        self.prio=prio
+        self._data = BitArray(data)
 
     def __eq__(self, other):
         for a in self._attrs:

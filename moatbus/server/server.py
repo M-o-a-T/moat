@@ -70,6 +70,7 @@ class Server(CtxObj):
         async with Server(backend, id) as server:
             async for evt in server:
                 await handle_event(evt)
+                await server.send_msg(some_message)
     """
     _check_task = None
 
@@ -401,7 +402,9 @@ class Server(CtxObj):
         msg.code = code
         msg.prio = prio
         msg.add_data(data)
+        await self.send_msg(msg)
 
+    async def send_msg(self, msg):
         await self._back.send(msg)
 
     async def reply(self, msg, src=None,dest=None,code=None, data=b'', prio=0):

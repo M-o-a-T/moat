@@ -671,9 +671,15 @@ static void h_write_collision(Handler h, u_int8_t bits, char settled)
     // thus we separate our prio from the other sender's
     h_report_error(h, ERR_COLLISION);
 
-    BusMessage msg = msg_alloc((msg_sent_bits(h->sending) >> 3) + 8);
-    h->msg_in = msg;
-    msg_start_add(msg);
+    BusMessage msg;
+    if (h->msg_in) {
+        msg = h->msg_in;
+        msg_resize(msg, (msg_sent_bits(h->sending) >> 3) + 8);
+    } else {
+        msg = msg_alloc((msg_sent_bits(h->sending) >> 3) + 8);
+        h->msg_in = msg;
+        msg_start_add(msg);
+    }
     u_int16_t off = msg_sent_bits(h->sending) - h->BITS;
     msg_add_in(msg,h->sending, off);
     h->val = 0;

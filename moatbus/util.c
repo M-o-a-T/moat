@@ -3,6 +3,8 @@
 // for cpu_random
 #include "embedded/main.h"
 
+#include "embedded/logger.h"
+
 // fast small-integer powers
 u_int16_t powi(u_int8_t x, u_int8_t y)
 {

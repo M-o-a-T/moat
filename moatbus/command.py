@@ -17,6 +17,11 @@ async def main(ctx, verbose, quiet, debug):
     ctx.obj['debug'] = dbg = max(verbose - quiet + 1, 0)
     logging.basicConfig(level=[logging.ERROR,logging.WARNING,logging.DEBUG][min(2,dbg)])
 
+    l = logging.getLogger("distmqtt.mqtt.protocol.handler")
+    l.setLevel(logging.INFO)
+    l = logging.getLogger("transitions.core")
+    l.setLevel(logging.WARNING)
+
 
 @main.command(
     short_help="Import the debugger", help="Imports PDB and then continues processing."

@@ -40,6 +40,8 @@ SPHINXBUILDDIR ?= $(BUILD_DIR)/sphinx/html
 ALLSPHINXOPTS ?= -d $(BUILD_DIR)/sphinx/doctrees $(SPHINXOPTS) docs
 
 ci: code pio copy run
+ci_a: code pio copy run_a
+ci_b: code pio copy run_b
 code:	bin/test_handler_crc bin/test_crc # bin/test_handler_crc_bus
 code:	bin/fake_spam bin/fake_send bin/fake_recv bin/fake_serialbus
 pio:
@@ -126,3 +128,7 @@ copy:
 	for f in gate node ; do for e in bin elf ; do scp ./.pio/build/moat_$$f//firmware.$$e ${TESTER}:/tmp/$$f.$$e; done; done
 run:
 	ssh -n ${TESTER} ${TESTRUN}
+run_a:
+	ssh -n ${TESTER} env DEST=a ${TESTRUN}
+run_b:
+	ssh -n ${TESTER} env DEST=b ${TESTRUN}

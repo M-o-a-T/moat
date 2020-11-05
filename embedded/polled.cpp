@@ -110,7 +110,6 @@ static char moat_process(REF BusMessage msg)
 // signal that a message has been transmitted (or not)
 static void moat_transmitted(REF BusMessage msg, enum HDL_RES result)
 {
-    logger("X:%d",result);
     msg_free(msg);
 }
 

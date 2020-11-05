@@ -610,7 +610,7 @@ class BaseHandler:
         self.ack_mask = 2 if bits == 1 else 1
         self.nack_mask = (0 if bits else 2) if self.WIRES == 2 else 4 if bits == 3 or bits == 1 else 2
         self.ack_masks = self.ack_mask | self.nack_mask
-        self.debug("AckBits %02x / %02x due to %02x/%d", self.ack_mask,self.nack_mask,bits,self.settle)
+        // self.debug("AckBits %02x / %02x due to %02x/%d", self.ack_mask,self.nack_mask,bits,self.settle)
 
     def read_next(self, bits):
         lb=self.last

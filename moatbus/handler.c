@@ -764,7 +764,7 @@ static void h_set_ack_mask(Handler h)
     h->ack_mask = (bits == 1) ? 2 : 1;
     h->nack_mask = (h->WIRES == 2) ? (bits ? 0 : 2) : ((bits == 3) || (bits == 1)) ? 4 : 2;
     h->ack_masks = h->ack_mask | h->nack_mask;
-    h_debug(h, "AckBits %02x / %02x due to %02x/%d", h->ack_mask,h->nack_mask,bits,h->settle);
+    // h_debug(h, "AckBits %02x / %02x due to %02x/%d", h->ack_mask,h->nack_mask,bits,h->settle);
 }
 
 static void h_read_next(Handler h, u_int8_t bits)

@@ -42,6 +42,7 @@ ALLSPHINXOPTS ?= -d $(BUILD_DIR)/sphinx/doctrees $(SPHINXOPTS) docs
 ci: code pio copy run
 ci_a: code pio copy run_a
 ci_b: code pio copy run_b
+ci_c: code pio copy run_c
 code:	bin/test_handler_crc bin/test_crc # bin/test_handler_crc_bus
 code:	bin/fake_spam bin/fake_send bin/fake_recv bin/fake_serialbus
 pio:
@@ -132,3 +133,5 @@ run_a:
 	ssh -n ${TESTER} env DEST=a ${TESTRUN}
 run_b:
 	ssh -n ${TESTER} env DEST=b ${TESTRUN}
+run_c:
+	ssh -n ${TESTER} env DEST=c ${TESTRUN}

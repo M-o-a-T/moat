@@ -223,12 +223,12 @@ class BaseHandler:
             if self.no_backoff and self.sending:
                 self.start_writer()
             else:
-                self.start_reader(True)
+                self.start_reader()
 
         elif self.state == S.WRITE_ACQUIRE:
             if bits & (self.want_prio-1):
                 self.debug("PRIO FAIL %02x %02x",bits,self.want_prio)
-                self.start_reader(True)
+                self.start_reader()
 
         elif self.state == S.WRITE_ACK:
             if bits & ~(self.ack_masks | self.last):
@@ -404,7 +404,7 @@ class BaseHandler:
             if self.sending:
                 self.start_writer()
             elif bits:
-                self.start_reader(True)
+                self.start_reader()
             else:
                 self._set_timeout(-1)
 
@@ -447,13 +447,11 @@ class BaseHandler:
         self.want_prio = None
         return msg
 
-    def start_reader(self, need_acquire:bool):
+    def start_reader(self):
         """
         Start reading.
-
-        If @settled is False we need to time out.
         """
-        self.set_state(S.READ_ACQUIRE if need_acquire else S.READ)
+        self.set_state(S.READ_ACQUIRE)
 
     def start_writer(self):
         self.cur_chunk = ()

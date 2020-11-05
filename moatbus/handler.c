@@ -745,12 +745,12 @@ static void h_read_done(Handler h, char crc_ok)
         msg_free(msg_in);
         h_report_error(h, ERR_CRC);
         h_set_ack_mask(h);
-        if(!h->nack_mask) {
+        if(h->nack_mask) {
+            h->ack_mask = h->nack_mask; // oh well;
+            h_set_state(h, S_WRITE_ACK);
+        } else {
             h_set_state(h, S_WAIT_IDLE);
-            return;
         }
-        h->ack_mask = h->nack_mask; // oh well;
-        h_set_state(h, S_WRITE_ACK);
     } else {
         msg_align(msg_in);
         if(h_process(h, msg_in))

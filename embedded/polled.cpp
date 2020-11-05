@@ -81,6 +81,8 @@ static void moat_set_wire(REF u_int8_t bits)
     last_bits = bits;
 }
 
+static BusMessage in_q NO_INIT;
+
 // get the wire state
 static u_int8_t moat_get_wire(REF1)
 {
@@ -98,13 +100,6 @@ static u_int8_t moat_get_wire(REF1)
         ws |= 8;
 #endif
     return ws;
-}
-
-// process an incoming message. Return 1 if for us.
-static char moat_process(REF BusMessage msg)
-{
-    logger("Got %s", msg_info(msg));
-    return process_bus_msg(msg);
 }
 
 // signal that a message has been transmitted (or not)
@@ -125,8 +120,15 @@ static void moat_report_error(REF enum HDL_ERR err)
     logger("E:%d",err);
 }
 
+// process an incoming message. Return 1 if for us.
+static char moat_process(REF BusMessage msg)
+{
+    msg->next = in_q;
+    in_q = msg;
+    return (msg->code == 0 || msg->dst == my_addr);
+}
 
-static struct BusCallbacks CB {
+const static struct BusCallbacks CB {
     set_timeout: moat_set_timeout,
     set_wire: moat_set_wire,
     get_wire: moat_get_wire,
@@ -135,7 +137,7 @@ static struct BusCallbacks CB {
     debug: moat_debug,
     report_error: moat_report_error,
 };
-static BusHandler BH;
+static BusHandler BH NO_INIT;
 
 static void run_timer() {
     hdl_timer(BH);
@@ -143,6 +145,7 @@ static void run_timer() {
 
 void setup_polled()
 {
+    in_q = NULL;
 #if !defined(MOAT_WIRES) || MOAT_WIRES<2 || MOAT_WIRES>4
 #error "MOAT_WIRES must be 2..4"
 #endif 
@@ -199,6 +202,12 @@ void loop_polled()
         if(DEBUG_WIRE)
             logger("WIRE x%01x",bits);
     }
+    if(in_q) {
+        BusMessage msg = in_q;
+        in_q = msg->next;
+        logger("Got %s", msg_info(msg));
+        process_bus_msg(msg);
+    }
 }
 
 void send_bus_msg(BusMessage msg)
@@ -206,4 +215,5 @@ void send_bus_msg(BusMessage msg)
     logger("BusSend %s", msg_info(msg));
     hdl_send(BH, msg);
 }
+
 

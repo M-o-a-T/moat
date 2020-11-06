@@ -534,6 +534,8 @@ class BaseHandler:
         self.want_prio = bits & ~(bits-1)
         # this leaves the lowest-numbered bit turned on
         # thus we separate our prio from the other sender's
+
+        # the C code doesn't report this any more
         self.report_error(ERR.COLLISION, src=self.sending.src, dst=self.sending.dst,prio=self.want_prio,off=self.sending.chunk_offset,pos=self.cur_pos,backoff=int(self.backoff*100)/100, settled=settled)
 
         self.msg_in = msg = BusMessage()

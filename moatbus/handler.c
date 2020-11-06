@@ -667,7 +667,9 @@ static void h_write_collision(Handler h, u_int8_t bits, char settled)
     h->want_prio = bits & ~(bits-1);
     // this leaves the lowest-numbered bit turned on
     // thus we separate our prio from the other sender's
-    h_report_error(h, ERR_COLLISION);
+    
+    // don't, serves no purpose
+    // h_report_error(h, ERR_COLLISION);
 
     BusMessage msg;
     if (h->msg_in) {

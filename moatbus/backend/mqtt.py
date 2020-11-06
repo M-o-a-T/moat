@@ -50,7 +50,7 @@ class MqttBusHandler(BaseBusHandler):
                 msg._mqtt_id = id
                 return msg
 
-    async def send_msg(self, msg):
+    async def send(self, msg):
         data={k:getattr(msg,k) for k in msg._attrs}
         data['_id'] = getattr(msg,'_mqtt_id',self.id)
         await self._mqtt.publish(topic=None, message=data)

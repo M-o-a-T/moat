@@ -77,7 +77,7 @@ class Server(CtxObj):
     def __init__(self, backend:BaseBusHandler, id=1):
         if id<1 or id>3:
             raise RuntimeError("My ID must be within 1…3")
-        self.logger = logging.getLogger("%s.%s" % (__name__, backend.name))
+        self.logger = logging.getLogger("%s.%s" % (__name__, backend.id))
         self._back = backend
         self.id2obj = dict()
         self.ser2obj = dict()

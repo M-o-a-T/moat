@@ -41,11 +41,11 @@ class Gateway:
 
     async def serial2mqtt(self):
         async for msg in self.serial:
-            await self.mqtt.send_msg(msg)
+            await self.mqtt.send(msg)
 
     async def mqtt2serial(self):
         async for msg in self.mqtt:
-            if msg._id.startswith(self.prefix):
+            if msg._mqtt_id.startswith(self.prefix):
                 continue
-            await self.mqtt.send_msg(msg)
+            await self.serial.send(msg)
 

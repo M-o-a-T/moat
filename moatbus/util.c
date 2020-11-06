@@ -47,7 +47,7 @@ u_int16_t mf_as16(u_int8_t mm)
     return v;
 }
 
-u_int8_t mf_set_randfract(minifloat *m, u_int8_t mm, u_int8_t lower)
+void mf_set_randfract(minifloat *m, u_int8_t mm, u_int8_t lower)
 {
     u_int16_t f = mf_as16(mm);
     mf_set(m, mf_random((f>>3)*lower, f));
@@ -77,19 +77,19 @@ void mf_reset(minifloat *m)
 bool mf_tick(minifloat *m)
 {
     if (!m->m)
-        return false;
+        return FALSE;
     ASSERT(m->vl || m->vh);
     if (m->vl) {
         m->vl -= 1;
         if (!m->vl && !m->vh) {
             mf_reset(m);
-            return true;
+            return TRUE;
         }
-        return false;
+        return FALSE;
     } else {
         m->vh -= 1;
         m->vl = ~0;
-        return false;
+        return FALSE;
     }
 }
 

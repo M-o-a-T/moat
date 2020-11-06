@@ -9,7 +9,7 @@
 #define ASSERT(x) do {} while(0)
 
 #define container_of(ptr, type, member) ({\
-    void *__mptr = (void *)(ptr); \
+    char *__mptr = (char *)(ptr); \
     ((type *)(__mptr - offsetof(type, member))); })
 
 // fast small-integer powers

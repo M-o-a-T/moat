@@ -216,10 +216,10 @@ bool sb_idle(SerBus sb) {
             sb->crc_in = 0;
             msg_start_add(sb->m_in);
         }
-        return true;
+        return TRUE;
     } else {
         sb->idle = 0;
-        return false;
+        return FALSE;
     }
 }
 

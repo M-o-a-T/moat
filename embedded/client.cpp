@@ -51,7 +51,7 @@ bool get_addr(MTICK _)
         return TRUE;
     if(addr_state == AS_GET_START) {
         // more random delay
-        addr_state += 1;
+        addr_state = (enum _AS)((u_int8_t)addr_state+1);
 #ifndef DEBUG_ADDR
         u_int8_t mf;
         mf_set(&addr_poll.mf, mf = mf_random(1*MINI_F, 5*MINI_F));
@@ -68,11 +68,14 @@ bool get_addr(MTICK _)
         mf_set(&addr_poll.mf, mf_random((addr_state-AS_GET_START)*10*MINI_F, (addr_state-AS_GET_START)*30*MINI_F));
 #endif
         if (addr_state < AS_GET_END)
-            addr_state += 1;
+            addr_state = (enum _AS)((u_int8_t)addr_state+1);
+        else
+            mf_stop(&addr_poll.mf);
         return TRUE;
     }
     if (addr_state == AS_GET_DELAY) {
         addr_state = AS_GET_OK;
+        mf_stop(&addr_poll.mf);
         setup_addr_done();
         return TRUE;
     }
@@ -164,6 +167,7 @@ static char process_control_addr_assign(BusMessage msg, u_int8_t *data, msglen_t
                 mf_set(&addr_poll.mf, timer);
             } else {
                 addr_state = AS_GET_OK;
+                mf_stop(&addr_poll.mf);
                 setup_addr_done();
             }
             return TRUE;
@@ -181,7 +185,7 @@ static char process_control_addr_assign(BusMessage msg, u_int8_t *data, msglen_t
 
     // negative. TODO eval flags
     if (addr_state < AS_GET_END)
-        addr_state++;
+        addr_state = (enum _AS)((u_int8_t)addr_state+1);
     if (!timer)
         timer = mf_random(addr_state*30*MINI_F, addr_state*120*MINI_F);
     mf_set(&addr_poll.mf, timer);
@@ -196,9 +200,9 @@ struct poll_reply {
 
 static bool poll_reply_proc(MTICK _mt)
 {
-    struct poll_reply *pr = container_of(_mt, struct poll_reply, tick);
+    poll_reply *pr = container_of(_mt, struct poll_reply, mt);
     send_serial(pr->dst,pr->code,0,0);
-    free(pr);
+    delete pr;
     return FALSE;
 }
 
@@ -226,7 +230,7 @@ static bool process_control_poll(BusMessage msg, u_int8_t *data, msglen_t len)
         return FALSE;  // should not happen
     }
     
-    struct poll_reply *mx = malloc(sizeof(struct poll_reply));
+    struct poll_reply *mx = new poll_reply;
     mtick_init(&mx->mt, poll_reply_proc);
     mf_set_randfract(&mx->mt.mf, data[1], 0);
     mx->dst = msg->src;

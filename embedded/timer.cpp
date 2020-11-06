@@ -1,6 +1,8 @@
 #include "embedded/timer.h"
 #include <memory.h>
 
+#include "Arduino.h"
+
 static MTIMER timer_root NO_INIT;
 static mtimer_delay_t last_timer NO_INIT;
 static mtimer_delay_t d_res NO_INIT;

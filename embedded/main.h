@@ -29,8 +29,9 @@ IN_C void setup_addr_done();
 IN_C unsigned int memspace();
 
 
+#define cpu_serial ((u_int8_t *)U_ID1)
 #define cpu_serial_len (3*4)
-IN_C u_int8_t *cpu_serial();
+
 IN_C u_int16_t cpu_random(u_int16_t max);
 
 #endif

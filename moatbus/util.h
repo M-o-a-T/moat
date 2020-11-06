@@ -1,13 +1,16 @@
 #ifndef MOATBUS_UTIL
 #define MOATBUS_UTIL
 
+#include <sys/types.h>
+
 #include "moatbus/common.h"
 
 // TODO debugging
 #define ASSERT(x) do {} while(0)
 
-#include <sys/types.h>
-#include "moatbus/type.h"
+#define container_of(ptr, type, member) ({\
+    void *__mptr = (void *)(ptr); \
+    ((type *)(__mptr - offsetof(type, member))); })
 
 // fast small-integer powers
 IN_C u_int16_t powi(u_int8_t x, u_int8_t y);
@@ -24,6 +27,12 @@ typedef struct _minifloat {
 
 // get the current value
 IN_C u_int8_t mf_get(minifloat *m);
+
+// expand the minifloat to an at-most-16bit value
+IN_C u_int16_t mf_as16(u_int8_t mm)  ;
+
+// Set to a MF representing a random pos between mm*lower/8 and mm
+IN_C void mf_set_randfract(minifloat *m, u_int8_t mm, u_int8_t lower);
 
 // set the current value. Note that a value of zero never triggers.
 IN_C void mf_set(minifloat *m, u_int8_t f);

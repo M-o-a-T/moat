@@ -87,7 +87,7 @@ struct _BusHandler;
 typedef struct _BusHandler *BusHandler;
 
 // Allocate a new bus handler
-BusHandler hdl_alloc(REF u_int8_t n_wires, struct BusCallbacks *cb);
+BusHandler hdl_alloc(REF u_int8_t n_wires, const struct BusCallbacks *cb);
 
 // Free a bus handler
 void hdl_free(BusHandler hdl);

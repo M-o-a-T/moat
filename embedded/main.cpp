@@ -12,6 +12,7 @@
 #include "embedded/main.h"
 #include "embedded/timer.h"
 #include "embedded/logger.h"
+#include "embedded/machine.h"
 #include "moatbus/message.h"
 #include "moatbus/serial.h"
 #include "moatbus/handler.h"
@@ -39,15 +40,11 @@ void check_boot_count()
 
 struct mtick ten_seconds NO_INIT;
 
-void ten_log()
+bool ten_log(MTICK _)
 {
     logger("* free: %d", memspace());
+    return TRUE;
 }
-
-// STM32 only
-#define U_ID1 0x1FFFF7E8
-#define U_ID2 0x1FFFF7EC
-#define U_ID3 0x1FFFF7F0
 
 void setup()
 {
@@ -89,8 +86,7 @@ unsigned int memspace()
 
 void loop()
 {
-    mtimer_delay_t m = MTIMER_READ();
-    loop_timer(m);
+    loop_timer();
     loop_serial();
     loop_polled();
 }
@@ -123,11 +119,6 @@ char process_bus_msg(BusMessage msg)
 #endif
     process_msg_in(msg);
     return res;
-}
-
-u_int8_t* cpu_serial()
-{
-    return (u_int8_t *)U_ID1;
 }
 
 u_int16_t cpu_random(u_int16_t max)

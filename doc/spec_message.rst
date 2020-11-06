@@ -203,25 +203,25 @@ replies to.
 The following messages are defined:
 
 * 0
-  Address Asignment; see above.
+  Address Assignment; see above.
 
 * 1
   Poll
   The second byte contains a timer minifloat.
 
   Server>client, Server>broadcast:
-  Each receiver shall sleep some random time between zero and that timer's
+  The/each client shall sleep some random time between zero and that timer's
   value, then send its serial number (same format as an Address Assignment
-  request) to the requesting server. Devices that don't yet have a client
-  address shall also wait that random time, then acquire one, then send
-  their reply.
+  request) to the requesting server. Client devices that don't yet have an
+  address shall use the timer's value to restart their address acquisition
+  if it is not still running.
 
-  Client>server:
-  You should use a non-zero destination code, not zero.
+  A timer of zero means "immediately" and should not be used with a
+  broadcast destination.
 
   Client>broadcast:
-  This message tells the servers to send any data waiting for the client.
-  It hints how long the client is going to be available before sleeping again.
+  Tell the servers to send any data waiting for the client.
+  The timer states how long the client is going to be available.
 
 * 2
   Console / serial port

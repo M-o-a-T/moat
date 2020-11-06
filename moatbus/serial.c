@@ -8,7 +8,7 @@ Serial handler for MoatBus
 #include <stdlib.h>
 #include <assert.h>
 
-#include "moatbus/type.h"
+#include "moatbus/common.h"
 #include "moatbus/serial.h"
 #include "moatbus/crc.h"
 

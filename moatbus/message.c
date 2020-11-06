@@ -237,10 +237,10 @@ void msg_start_extract(BusMessage msg)
 bool msg_extract_more(BusMessage msg)
 {
     if (msg->data_pos < msg->data_end)
-        return true;
+        return TRUE;
     if (msg->data_pos_off > msg->data_end_off)
-        return true;
-    return false;
+        return TRUE;
+    return FALSE;
 }
 
 u_int16_t msg_extract_chunk(BusMessage msg, u_int8_t frame_bits)

@@ -4,6 +4,7 @@
 #include "embedded/main.h"
 #include "embedded/timer.h"
 #include "embedded/logger.h"
+#include "embedded/client.h"
 
 static uint16_t last_micros;
 static uint16_t max_d;
@@ -139,7 +140,7 @@ const static struct BusCallbacks CB {
 };
 static BusHandler BH NO_INIT;
 
-static void run_timer() {
+static void run_timer(MTIMER m) {
     hdl_timer(BH);
 }
 

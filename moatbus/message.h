@@ -8,7 +8,7 @@ This interface mostly mimics message.py
 */
 
 #include <sys/types.h>
-#include "moatbus/type.h"
+#include "moatbus/common.h"
 
 #ifdef __cplusplus
 extern "C" {

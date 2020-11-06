@@ -42,7 +42,7 @@ enum _W {
 #endif
 
 typedef struct _Handler {
-    struct BusCallbacks *cb;
+    const struct BusCallbacks *cb;
 #ifdef MOAT_USE_REF
     void *ref;
 #endif
@@ -127,7 +127,7 @@ static BusMessage h_clear_sending(Handler h);
 static const char *h_state_name(Handler h);
 
 // Allocate a bus
-BusHandler hdl_alloc(REF u_int8_t n_wires, struct BusCallbacks *cb)
+BusHandler hdl_alloc(REF u_int8_t n_wires, const struct BusCallbacks *cb)
 {
     Handler h = calloc(sizeof(struct _Handler), 1);
 #ifdef MOAT_USE_REF

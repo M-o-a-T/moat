@@ -35,6 +35,24 @@ u_int8_t mf_get(minifloat *m)
     return (exp<<4) | (f&0xf);
 }
 
+u_int16_t mf_as16(u_int8_t mm)
+{
+    if(mm < 32)
+        return mm;
+    if (mm >= 208) // 65536
+        return 0xFFFF;
+    u_int8_t exp = (mm>>4) -1;
+    mm = 0x10 | (mm&0xf);
+    u_int16_t v = (1<<exp) * mm;
+    return v;
+}
+
+u_int8_t mf_set_randfract(minifloat *m, u_int8_t mm, u_int8_t lower)
+{
+    u_int16_t f = mf_as16(mm);
+    mf_set(m, mf_random((f>>3)*lower, f));
+}
+
 void mf_set(minifloat *m, u_int8_t f)
 {
     m->m = f;

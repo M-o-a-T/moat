@@ -118,7 +118,7 @@ static void h_write_collision(Handler h, u_int8_t bits, char settled);
 static char h_write_next(Handler h);
 static char h_gen_chunk(Handler h);
 static void h_start_writer(Handler h);
-static void h_start_reader(Handler h, char need_acquire);
+static void h_start_reader(Handler h);
 static void h_next_step(Handler h, char timeout);
 static void h_retry(Handler h, BusMessage msg, enum HDL_RES res);
 static void h_timeout_settle(Handler h);
@@ -270,12 +270,12 @@ static void h_wire_settle(Handler h, u_int8_t bits)
         if(h->no_backoff && h->sending)
             h_start_writer(h);
         else
-            h_start_reader(h, TRUE);
+            h_start_reader(h);
     }
     else if(h->state == S_WRITE_ACQUIRE) {
         if(bits & (h->want_prio-1)) {
             h_debug(h, "PRIO FAIL %02x %02x",bits,h->want_prio);
-            h_start_reader(h, TRUE);
+            h_start_reader(h);
         }
     }
     else if(h->state == S_WRITE_ACK) {
@@ -513,7 +513,7 @@ static void h_next_step(Handler h, char timeout)
         if(h->sending)
             h_start_writer(h);
         else if(bits)
-            h_start_reader(h, TRUE);
+            h_start_reader(h);
     }
     else if(h->state < S_WRITE) {
         if(timeout)
@@ -558,14 +558,12 @@ static BusMessage h_clear_sending(Handler h)
     return msg;
 }
 
-static void h_start_reader(Handler h, char need_acquire)
+static void h_start_reader(Handler h)
 {
     /*
     Start reading.
-
-    if @settled is FALSE we need to time out.
     */
-    h_set_state(h, need_acquire ? S_READ_ACQUIRE : S_READ);
+    h_set_state(h, S_READ_ACQUIRE);
 }
 
 static void h_start_writer(Handler h)

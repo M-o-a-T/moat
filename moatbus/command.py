@@ -63,14 +63,12 @@ async def gateway(obj, uri,topic,ident,prefix,port,baud):
 @main.command(short_help="Address assignment processor")
 @click.option("-u","--uri", default='mqtt://localhost/', help="URI of MQTT server")
 @click.option("-t","--topic", default='test/moat/bus', help="Topic to send incoming messages to")
-@click.option("-P","--prefix", default='ser_', help="ID prefix. Used to prevent loops.")
 @click.option("-i","--ident", help="Identifier for this process. Must be unique.")
 @click.option("-n","--node","id", type=int, default=1, help="Server number (1…3)")
 @click.pass_obj
-async def addr(obj, uri,topic,prefix,ident,id):
+async def addr(obj, uri,topic,ident,id):
     if ident is None:
         ident = "".join(random.choices("abcdefghjkmnopqrstuvwxyz23456789", k=9))
-    ident = prefix+ident
 
     from moatbus.backend.mqtt import MqttBusHandler
     from moatbus.server.server import Server

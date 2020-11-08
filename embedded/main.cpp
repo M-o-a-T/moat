@@ -94,7 +94,8 @@ void loop()
 #ifdef MOAT_REPEATER
 void process_serial_msg(BusMessage msg)
 {
-    send_bus_msg(msg);
+    send_bus_msg(msg_copy(msg));
+    process_msg_in(msg);
 }
 #endif
 

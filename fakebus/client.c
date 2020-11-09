@@ -145,6 +145,7 @@ static char fcb_process(void *ref, BusMessage msg)
     if(fc->verbose)
         fprintf(stderr,"RCVD %d > %d (%d): %*s\n",msg->src,msg->dst,msg->code,msg_length(msg),msg_start(msg));
     fc->in_msg = msg;
+    return fc->send_ack;
 }
 
 static void fcb_transmitted(void *ref, BusMessage msg, enum HDL_RES result)

@@ -19,6 +19,7 @@ typedef struct _FakeClient {
     enum HDL_RES out_result; // result of sending out_msg
     u_int8_t wire_in;
     char verbose;
+    char send_ack;
 } *FakeClient;
 
 // allocate a client with `n_wires` wires

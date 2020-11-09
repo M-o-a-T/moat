@@ -15,6 +15,7 @@ static struct option long_options[] = {
     {"timerB", required_argument,  0, 'T'},
     {"dest",   required_argument,  0, 'D'},
     {"wires",  required_argument,  0, 'b'},
+    {"ack",    no_argument,        0, 'a'},
     {"verbose",no_argument,        0, 'v'},
     {0,         0,                 0,  0 }
 };
@@ -34,14 +35,18 @@ int main(int argc, char* const* argv)
     int src = 1;
     int dest = 2;
     int cmd = 0;
+    char ack = 0;
     char verbose = 0;
     int n_wires = 3;
 
     FakeClient fc;
     int opt;
 
-    while((opt = getopt(argc, argv, "b:C:D:s:S:t:T:v")) != -1) {
+    while((opt = getopt(argc, argv, "ab:C:D:s:S:t:T:v")) != -1) {
         switch (opt) {
+        case 'a':
+            ack = !ack;
+            break;
         case 's':
             sockname = optarg;
             break;
@@ -77,6 +82,7 @@ int main(int argc, char* const* argv)
     fc->timeout1 = timerA;
     fc->timeout2 = timerB;
     fc->verbose = verbose;
+    fc->send_ack = ack;
     
     if(!fc_connect(fc, sockname))
         return 1;

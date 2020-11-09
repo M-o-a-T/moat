@@ -48,11 +48,11 @@ bool ten_log(MTICK _)
 
 void setup()
 {
-    setup_logger();
-    setup_timer();
-
     check_boot_count();
     cpu_random_seed = *(uint32_t *)U_ID1 ^ *(uint32_t *)U_ID2 ^ *(uint32_t *)U_ID3;
+
+    setup_timer();
+    setup_logger();
 
     setup_addr();
     setup_serial();

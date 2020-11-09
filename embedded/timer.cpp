@@ -1,5 +1,6 @@
 #include "embedded/timer.h"
 #include "embedded/main.h"
+#include "embedded/logger.h"
 #include <memory.h>
 
 #include "Arduino.h"
@@ -94,31 +95,32 @@ IN_C void loop_timer()
     }
     MTIMER mt = timer_root;
     d -= mt->delay;
+    mt->delay = 0;
     timer_root = mt->next;
     if (timer_root)
         timer_root->prev = NULL;
-    mt->delay = ~0;
     d_res = d;
     (*mt->proc)(mt);
 }
 
 IN_C void mtimer_init(MTIMER mt, mtimer_proc proc)
 {
-    mt->delay = ~0;
+    mt->delay = 0;
     mt->proc = proc;
 }
 
 IN_C void mtimer_schedule(MTIMER mt, mtimer_delay_t delay)
 {
-    mt->delay = delay;
+    delay = std::max(delay,(mtimer_delay_t)1);
     if (timer_root) {
         MTIMER pt = timer_root;
-        while(pt->next && delay > pt->delay) {
-            delay -= pt->delay;
+        // if delays are identical, go to the end. Keep the delay at
+        // least 1. This ensures that delay==0 means "not enqueued".
+        while(pt->next && delay >= pt->delay) {
+            delay = std::max(delay - pt->delay, 1);
             pt = pt->next;
         }
-        if (delay <= pt->delay) { // insert before this
-            pt->delay -= delay;
+        if (delay < pt->delay) { // insert before this
             if(pt->prev)
                 pt->prev->next = mt;
             else
@@ -128,7 +130,8 @@ IN_C void mtimer_schedule(MTIMER mt, mtimer_delay_t delay)
             pt->prev = mt;
             mt->next = pt;
         } else { // insert at end
-            delay -= pt->delay;
+            ASSERT(pt->next == NULL);
+            delay = std::max(delay - pt->delay, 1);
             mt->prev = pt;
             pt->next = mt;
             mt->next = NULL;
@@ -136,13 +139,14 @@ IN_C void mtimer_schedule(MTIMER mt, mtimer_delay_t delay)
     } else {
         mt->next = NULL;
         mt->prev = NULL;
+        mt->delay = delay;
         timer_root = mt;
     }
 }
 
 IN_C void mtimer_cancel(MTIMER mt)
 {
-    if(mt->delay == ~0)
+    if(mt->delay == 0)
         return;
     if (mt->next) {
         mt->next->delay += mt->delay;
@@ -150,9 +154,11 @@ IN_C void mtimer_cancel(MTIMER mt)
     }
     if (mt->prev) {
         mt->prev->next = mt->next;
-    } else {
+    } else if(timer_root == mt) {
         timer_root = mt->next;
+    } else {
+        logger("BadCancel timer x%x",mt);
     }
-    mt->delay = ~0;
+    mt->delay = 0;
 }
 

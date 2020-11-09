@@ -845,7 +845,7 @@ static void h_error(Handler h, enum HDL_ERR typ)
         else
             h->backoff *= 1.2;
     }
-    h_debug(h, "Error %d %f",typ,h->backoff);
+    h_debug(h, "Error %s %d %d", h_state_name(h), typ, h->backoff);
 
     h_report_error(h, typ);
     h_reset(h);

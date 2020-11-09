@@ -354,9 +354,8 @@ void msg_align(BusMessage msg)
 // prepare a buffer for receiving
 void msg_start_add(BusMessage msg)
 {
-    msg->data_off = MSG_MAXHDR;
+    msg->data_off = msg->data_end = MSG_MAXHDR;
     msg->hdr_len = 0;
-    msg->data_end = msg->data_off;
     msg->data_end_off = 8;
 }
 

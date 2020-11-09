@@ -872,8 +872,8 @@ static void h_reset(Handler h)
     h->ack_mask = 0;
     if (h->msg_in == NULL) {
         h->msg_in = msg_alloc(6);
-        msg_start_add(h->msg_in);
     }
+    msg_start_add(h->msg_in);
     h->val = 0;
     h->nval = 0;
     h->settle = FALSE;

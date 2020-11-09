@@ -36,7 +36,7 @@ struct _BusMessage {
     u_int8_t code; // 0…3/31/255
     u_int8_t prio; // 0…WIRES-1
 
-    u_int8_t *data;
+    u_int8_t *data;  // buffer. Byte zero: usage counter, if data_max>0.
     msglen_t data_max; // buffer length, bytes. Zero: external allocation
     msglen_t data_off; // Offset for content (header is before this)
 

@@ -84,15 +84,28 @@ const unsigned char* msg_info(BusMessage msg)
             ml,4*ml+3,"");
     unsigned char* mp = msg_info_buf+strlen((char*)msg_info_buf)-4*ml-3;
     unsigned char* m = msg_start(msg);
-    while(ml) {
-        if(*m>0x20 && *m<0x7F) {
-            *mp++ = *m;
+    bool asc = 1;
+    for (int off=0;off<ml; off++) {
+        if(m[off]<0x20 || m[off]>=0x7F) {
+            asc = 0;
+            break;
         }
-        *mp++ = nibble[*m >> 4];
-        *mp++ = nibble[*m &0xF];
-        *mp++ = ' ';
+    }
+    while(ml) {
+        if (asc)
+            *mp++ = *m;
+        else {
+            if(*m>0x20 && *m<0x7F) {
+                *mp++ = *m;
+            }
+            *mp++ = nibble[*m >> 4];
+            *mp++ = nibble[*m &0xF];
+            *mp++ = ' ';
+        }
         ml--; m++;
     }
+    if (asc)
+        *mp++ = ' ';
     *mp++ = '>';
     *mp++ = 0;
     return msg_info_buf;

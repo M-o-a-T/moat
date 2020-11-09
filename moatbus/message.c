@@ -388,7 +388,7 @@ void msg_add_in(BusMessage msg, BusMessage orig, u_int16_t bits)
     u_int8_t bb = bits & 7;
     bits >>= 3;
     msg_resize(msg, bits+3);
-    memcpy(msg->data+msg->data_off, orig->data+orig->data_off, bits+(bb != 0));
+    memcpy(msg->data+msg->data_off, orig->data+orig->data_off-orig->hdr_len, bits+(bb != 0));
 
     msg->data_end = msg->data_off + bits;
     msg->data_end_off = 8-bb;

@@ -66,7 +66,7 @@ int main(int argc, char* const* argv)
             timerB = atoi(optarg);
             break;
         case 'v':
-            verbose = 1;
+            verbose++;
             break;
         default: /* '?' */
             fprintf(stderr, "Usage: %s\n        [-C # -D # -S # -s /path/to/socket -t timeA -T timeB -v ] data\n",

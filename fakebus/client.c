@@ -86,7 +86,7 @@ char fc_process(FakeClient fc)
         fc->socket_fd = -1;
         return 0;
     case 1:
-        if(fc->verbose) {
+        if(fc->verbose > 1) {
             fprintf(stderr,"WireIn %x: ",c);
             fflush(stdout);
         }
@@ -129,7 +129,7 @@ static void fcb_set_wire(void *ref, u_int8_t bits)
         close(fc->socket_fd);                           
         fc->socket_fd = -1;
     }
-    if(fc->verbose)
+    if(fc->verbose > 1)
         fprintf(stderr,"WireOut %x\n",bits);
 }
 

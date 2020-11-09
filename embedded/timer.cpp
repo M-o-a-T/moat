@@ -121,6 +121,8 @@ IN_C void mtimer_schedule(MTIMER mt, mtimer_delay_t delay)
             pt = pt->next;
         }
         if (delay < pt->delay) { // insert before this
+            mt->delay = delay;
+            pt->delay -= delay;
             if(pt->prev)
                 pt->prev->next = mt;
             else
@@ -131,7 +133,7 @@ IN_C void mtimer_schedule(MTIMER mt, mtimer_delay_t delay)
             mt->next = pt;
         } else { // insert at end
             ASSERT(pt->next == NULL);
-            delay = std::max(delay - pt->delay, 1);
+            mt->delay = std::max(delay - pt->delay, 1);
             mt->prev = pt;
             pt->next = mt;
             mt->next = NULL;

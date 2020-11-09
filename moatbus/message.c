@@ -80,7 +80,7 @@ const unsigned char* msg_info(BusMessage msg)
     if(msg_info_buf)
         free(msg_info_buf);
     msglen_t ml = msg_length(msg);
-    asprintf((char**)&msg_info_buf, "Msg< src:%d dst:%d pri:%d cmd:x%x %d:%*s", msg->src,msg->dst,msg->prio,msg->code,
+    asprintf((char**)&msg_info_buf, "Msg< src:%d dst:%d pri:%d cmd:x%x f:%d %d:%*s", msg->src,msg->dst,msg->prio,msg->code,msg->frames,
             ml,4*ml+3,"");
     unsigned char* mp = msg_info_buf+strlen((char*)msg_info_buf)-4*ml-3;
     unsigned char* m = msg_start(msg);
@@ -378,6 +378,7 @@ void msg_add_chunk(BusMessage msg, u_int16_t data, u_int8_t frame_bits)
     }
     msg->data_end = buf - msg->data;
     msg->data_end_off = bits;
+    msg->frames += 1;
 }
 
 void msg_add_in(BusMessage msg, BusMessage orig, u_int16_t bits)

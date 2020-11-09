@@ -709,7 +709,7 @@ class BaseHandler:
         self.debug("State %s @%d %d %d",state,f.f_back.f_lineno,f.f_back.f_back.f_lineno,f.f_back.f_back.f_back.f_lineno)
 
         if state < S.WRITE and self.state >= S.WRITE:
-            # Drop off writing == do not set any wires
+            # stop writing == do not set any wires
             self.set_wire(0)
 
         if state in (S.READ_ACK, S.WRITE_ACK):

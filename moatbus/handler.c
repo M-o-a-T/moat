@@ -125,7 +125,7 @@ static void h_retry(Handler h, BusMessage msg, enum HDL_RES res);
 static void h_timeout_settle(Handler h);
 static void h_wire_settle(Handler h, u_int8_t bits);
 static BusMessage h_clear_sending(Handler h);
-static const char *h_state_name(Handler h);
+static const char *h_state_name(enum _S state);
 
 // Allocate a bus
 BusHandler hdl_alloc(REF u_int8_t n_wires, const struct BusCallbacks *cb)
@@ -237,11 +237,11 @@ void hdl_wire(BusHandler hdl, u_int8_t bits)
         }
         if(h->settle) {
             if(DEBUG_WIRE)
-                h_debug(h, "Change (Settle) %s",h_state_name(h));
+                h_debug(h, "Change (Settle) %s",h_state_name(h->state));
             h_wire_settle(h, bits);
         } else {
             if(DEBUG_WIRE)
-                h_debug(h, "Change (Delay) %s",h_state_name(h));
+                h_debug(h, "Change (Delay) %s",h_state_name(h->state));
             h_next_step(h, FALSE);
         }
 
@@ -364,7 +364,7 @@ void hdl_timer(BusHandler hdl)
     if(h->settle) {
         h->settle = FALSE;
         if(DEBUG_WIRE)
-            h_debug(h, "Change Done timer %s",h_state_name(h));
+            h_debug(h, "Change Done timer %s",h_state_name(h->state));
         h_timeout_settle(h);
         h->last = h->current;
         if(h->state >= S_WRITE)
@@ -374,7 +374,7 @@ void hdl_timer(BusHandler hdl)
     }
     else {
         if(DEBUG_WIRE)
-            h_debug(h, "Delay Timer %s",h_state_name(h));
+            h_debug(h, "Delay Timer %s",h_state_name(h->state));
         h_next_step(h, TRUE);
         if(h->state > S_IDLE) {
             h->settle = TRUE;
@@ -669,8 +669,9 @@ static void h_write_collision(Handler h, u_int8_t bits, char settled)
     // this leaves the lowest-numbered bit turned on
     // thus we separate our prio from the other sender's
     
-    // don't, serves no purpose
+    // serves no purpose except for logging
     // h_report_error(h, ERR_COLLISION);
+    h_debug(h,"WColl x%x %c",bits, settled?'y':'n');
 
     BusMessage msg;
     if (h->msg_in) {
@@ -846,7 +847,7 @@ static void h_error(Handler h, enum HDL_ERR typ)
         else
             h->backoff *= 1.2;
     }
-    h_debug(h, "Error %s %d %d", h_state_name(h), typ, h->backoff);
+    h_debug(h, "Error %s %d %d", h_state_name(h->state), typ, h->backoff);
 
     h_report_error(h, typ);
     h_reset(h);
@@ -883,11 +884,14 @@ static void h_set_state(Handler h, enum _S state)
     if(state == h->state)
         return;
 
-    if(DEBUG_WIRE)
-        h_debug(h, "SetState %s",h_state_name(h));
+    if(DEBUG_WIRE ||
+        ((state >= S_READ) != (h->state >= S_READ)) ||
+        ((state >= S_WRITE) != (h->state >= S_WRITE)) )
+        h_debug(h, "SetState %s",h_state_name(state));
+
 
     if((state < S_WRITE) && (h->state >= S_WRITE)) {
-        // Drop off writing == do not set any wires
+        // stop writing == do not set any wires
         h_set_wire(h, 0);
     }
 
@@ -920,19 +924,19 @@ static void h_set_state(Handler h, enum _S state)
         h->state = state;
 }
 
-static const char *h_state_name(Handler h)
+static const char *h_state_name(enum _S state)
 {
-    if(h->state == S_ERROR) return "ERROR";
-    if(h->state == S_WAIT_IDLE) return "WAIT_IDLE";
-    if(h->state == S_IDLE) return "IDLE";
-    if(h->state == S_READ) return "READ";
-    if(h->state == S_READ_ACK) return "READ_ACK";
-    if(h->state == S_READ_ACQUIRE) return "READ_ACQUIRE";
-    if(h->state == S_READ_CRC) return "READ_CRC";
-    if(h->state == S_WRITE) return "WRITE";
-    if(h->state == S_WRITE_ACQUIRE) return "WRITE_ACQUIRE";
-    if(h->state == S_WRITE_ACK) return "WRITE_ACK";
-    if(h->state == S_WRITE_END) return "WRITE_END";
-    if(h->state == S_WRITE_CRC) return "WRITE_CRC";
+    if(state == S_ERROR) return "ERROR";
+    if(state == S_WAIT_IDLE) return "WAIT_IDLE";
+    if(state == S_IDLE) return "IDLE";
+    if(state == S_READ) return "READ";
+    if(state == S_READ_ACK) return "READ_ACK";
+    if(state == S_READ_ACQUIRE) return "READ_ACQUIRE";
+    if(state == S_READ_CRC) return "READ_CRC";
+    if(state == S_WRITE) return "WRITE";
+    if(state == S_WRITE_ACQUIRE) return "WRITE_ACQUIRE";
+    if(state == S_WRITE_ACK) return "WRITE_ACK";
+    if(state == S_WRITE_END) return "WRITE_END";
+    if(state == S_WRITE_CRC) return "WRITE_CRC";
     return "???";
 }

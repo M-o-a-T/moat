@@ -11,15 +11,16 @@ N_END = [None,None, 3,2,1,1,1] # flips at end
 
 class S(IntEnum): # states
     # These wait for the bus to go idle. "settle" is ignored.
-    ERROR = -1
-    WAIT_IDLE = 0
+    ERROR = 0
+    WAIT_IDLE = 1
 
     # Bus is idle.
-    IDLE = 1 # "Settle" means that the back-off timer is running
-    READ = 2
-    READ_ACK = 3
-    READ_ACQUIRE = 4
-    READ_CRC = 5
+    IDLE = 2 # "Settle" means that the back-off timer is running
+    READ = 3
+    READ_ACK = 4
+    READ_ACQUIRE = 5
+    READ_CRC = 6
+
     WRITE = 10
     WRITE_ACQUIRE = 11
     WRITE_ACK = 12 # entered after READ sees the last bit

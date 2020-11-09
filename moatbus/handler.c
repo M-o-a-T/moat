@@ -9,15 +9,16 @@
 
 enum _S {
     // These wait for the bus to go idle. "settle" is ignored.
-    S_ERROR = -1,
-    S_WAIT_IDLE = 0,
+    S_ERROR = 0,
+    S_WAIT_IDLE = 1,
 
     // Bus is idle.
-    S_IDLE = 1, // "Settle" means that the back-off timer is running
-    S_READ = 2,
-    S_READ_ACK = 3,
-    S_READ_ACQUIRE = 4,
-    S_READ_CRC = 5,
+    S_IDLE = 2, // "Settle" means that the back-off timer is running
+    S_READ = 3,
+    S_READ_ACK = 4,
+    S_READ_ACQUIRE = 5,
+    S_READ_CRC = 6,
+
     S_WRITE = 10,
     S_WRITE_ACQUIRE = 11,
     S_WRITE_ACK = 12, // entered after READ sees the last bit

@@ -116,8 +116,8 @@ static char process_control_addr_assign(BusMessage msg, u_int8_t *data, msglen_t
         u_int8_t i;
         for(i=0;i<cpu_serial_len;i++)
             logger_addr("@%d x%x x%x",i,cpu_serial()[i],data[i+1]);
-        return 0;
 #endif
+        return 0;
     }
 
     // OK, it's for us. Now check extension

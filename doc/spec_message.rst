@@ -115,6 +115,7 @@ Source    Destination  Command  Type
 Broadcast Broadcast    0        Control 0; Address assignment request
 Broadcast any          any      reserved
 Server    Broadcast    0        Control 2; negative address assignment response
+Server    Server       0        reserved (Control?)
 Server    Server       any      inter-server sync
 Server    Client       0        Control 1; positive address assignment response
 Server    Client       1        data directory lookup
@@ -122,10 +123,10 @@ Server    Client       2        data directory read
 Server    Client       3        data directory write
 Client    Broadcast    0        Control 3; e.g. data request, console message, AA nack by clients
 Client    Server       0        Control 4; replies (e.g. poll)
-Client    Server       1        alert (by data dictionary path)
+Client    Broadcast    1        alert (by data dictionary path)
 Client    Server       2        read reply
 Client    Server       3        write reply
-any       any          0…7      reserved
+any       any          0        reserved
 Client    Broadcast    any      broadcast message
 any       any          any      direct message
 ========  ===========  =======  ===========================
@@ -151,7 +152,7 @@ easily identify its reply.
 
 The flag byte states:
 
-* bit 7: wait. The next byte contains a timer minifloat.
+* bit 0: wait. The next byte contains a timer minifloat.
 
   Request: I need this time before I can accept a reply.
 
@@ -159,7 +160,7 @@ The flag byte states:
 
   NACK: Wait this long before trying again.
 
-* bit 6: address is already known.
+* bit 1: address is already known.
 
   Request: do not allocate a new address, just confirm me.
 
@@ -168,9 +169,14 @@ The flag byte states:
   NACK: if request had bit 6 clear: No more free addresses. Try again after an address reset.
   NACK: if request had bit 6 set: No, I don't know you.
 
-* bit 5: client is/shall be polled. (Request only)
+* bit 2: client is/shall be polled.
+  This bit is set if/when the client wants to go to deep sleep, i.e. it will
+  not listen to the bus. It should however wake up periodically, e.g. to
+  read a sensor, and/or react on an external interrupt. 
 
-* bit 4: address is random.
+  Do not set this just because you're answering a Poll request.
+
+* bit 3: address is random.
   
   Request: this client just invented a new serial.
 
@@ -207,21 +213,64 @@ The following messages are defined:
 
 * 1
   Poll
-  The second byte contains a timer minifloat.
+
+  If bit 0 is set, the next byte contains a timer minifloat that states how
+  long the client should wait until it does address assignment / reporting.
+  This is equivalent to the timer minifloat used in Address Assignment.
+
+  Bit 1 and 2 have different meaning depending on whether bit 0 is on.
+
+  If bit 0 is on:
+
+  Bit 1 controls whether devices that already have an address should
+  answer.
+
+  Bit 2 is reserved.
+
+  If bit 0 is off:
+
+  If bit 1 is set, the next byte contains a timer minifloat that states how
+  long the client declares itself to be / is supposed to be listening
+  before shutting down.
+
+  If bit 2 is set, the next byte contains a timer minifloat that states
+  how long the client sleeps / may sleep before re-polling.
+
+  Bit 3 and 4 are reserved.
+
+  A client that's intermittently online typically sends one poll message
+  when it has acquired its address / wakes up.
 
   Server>client, Server>broadcast:
-  The/each client shall sleep some random time between zero and that timer's
-  value, then send its serial number (same format as an Address Assignment
-  request) to the requesting server. Client devices that don't yet have an
-  address shall use the timer's value to restart their address acquisition
-  if it is not still running.
+  Address check if flag bit 0 is set.
 
-  A timer of zero means "immediately" and should not be used with a
+  The/each client shall sleep some random time between zero and that timer's
+  value, then send its serial number (with Poll flag set) to the requesting
+  server. Client devices that don't yet have an address shall use the
+  timer's value to restart their address acquisition if it is not still
+  running.
+
+  An empty address timer means "immediately" and should not be used with a
   broadcast destination.
+
+  If flag bit 1 is set, the timer represents the minimum(!) time a polled
+  device must be awake.
+
+  If flag bit 2 is set, the timer represents the maximum(!) time a polled
+  device may sleep.
+
+  If the request is directed to a specific client and none of the flag bits
+  are set, the client shall reply immediately.
 
   Client>broadcast:
   Tell the servers to send any data waiting for the client.
-  The timer states how long the client is going to be available.
+  Timer values 1 and 2 should be used to tell servers the actual time this
+  client will be awake / sleeping. Sending a timer should be skipped if
+  it's unchanged since the last wakeup.
+  Timer 0 is reserved.
+
+  Client>server:
+  Reply to a server>client poll request.
 
 * 2
   Console / serial port
@@ -253,7 +302,7 @@ The following messages are defined:
 
   Bit 4 of the function code, when set, indicates that the contents are
   incomplete and should be combined with the next message before being
-  processed. Clients may not support this.
+  processed. Clients may, servers must support this.
 
   A server should log messages on channel 1. It may not reject them.
 
@@ -284,7 +333,7 @@ The following messages are defined:
   X is a fraction of that timer, as defined by the lowest three bits of the
   first byte. Then the device shall reset itself.
 
-  Bits 3 is reserved.
+  Bit 3 is reserved.
   If bit 4 is set the devices shall deep-sleep, i.e. use as little power as
   possible and not react to further bus messages. Otherwise they shall
   operate normally until "their" reset time arrives.
@@ -313,8 +362,8 @@ Direct messages
 ===============
 
 Client devices may also be configured to send directed messages to other
-devices. Direct messages must not be configured statically because the
-address of the destination may change.
+clients or servers. Direct messages must not be configured statically
+because the address of the destination may change.
 
 The details are described in the Data Dictionary specification, below.
 

@@ -72,11 +72,15 @@ async def addr(obj, uri,topic,ident,id):
 
     from moatbus.backend.mqtt import MqttBusHandler
     from moatbus.server.server import Server
+    from moatbus.server.control import ControlHandler
+    from moatbus.server.control.addr import AddrControl
 
     async with MqttBusHandler(id=ident, uri=uri, topic=topic) as M:
         async with Server(M, id=id) as S:
-            async for upd in S:
-                print(upd)
+            async with ControlHandler(S) as C:
+                async with AddrControl(C) as A:
+                    async for upd in A:
+                        print(upd)
 
 def cmd():
     """

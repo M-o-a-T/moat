@@ -18,22 +18,6 @@ class NoClientError(RuntimeError):
 _obj_reg = {}  # id > obj
 
 
-def register_obj(obj):
-    """
-    Register this object.
-    It must already have a serial#.
-    """
-    assert obj.serial is not None
-    try:
-        oobj = _obj_reg[obj.serial] = obj
-    except KeyError:
-        pass
-    else:
-        assert isinstance(oobj, Obj)
-        assert not isinstance(obj, Obj)
-    _obj_reg[obj.serial] = obj
-
-
 class BaseObj:
     """
     Encapsulates one bus participant.
@@ -43,8 +27,7 @@ class BaseObj:
     server = None
     client_id = None
     serial = None
-    is_new = True
-    working = False
+    working_until = None
     polled: bool = False # poll bit (in address request) is set
 
     def __init__(self, serial, create=None):
@@ -61,36 +44,38 @@ class BaseObj:
 
     def __repr__(self):
         r=""
-        if self.server:
-            try:
-                dev = self.server.bus_id(self)
-            except AttributeError:
-                dev = "-"
-            return f"<{self.__class__.__name__}: {self.serial} {dev}@{self.server}>"
+        if self.client_id:
+            return f"<{self.__class__.__name__}: {self.serial} @{self.client_id}>"
         else:
             return f"<{self.__class__.__name__}: {self.serial}>"
 
-    def attach(self, server):
+    @property
+    def working(self):
+        if self.working_until is None:
+            return True
+        else:
+            return self.working_until > trio.current_time()
+
+    @property
+    def server(self):
+        return self._server()
+
+    async def attach(self, server):
         """
         Attach me to this server.
         """
-        self.detach()
+        await self.detach()
+        self._server = ref(server)
 
-        self.server = ref(server)
-        server.register(self)
-        assert self.client_id is not None
-        return self.client_id
-
-    def detach(self, server=None):
+    async def detach(self, server=None):
         """
         Detach me from my server.
 
-        This device is no longer on this (or indeed any) bus
+        This device is no longer connected to this server.
+
+        If you override this: MUST be idempotent, MUST call superclass.
         """
-        if self.server is not None:
-            m, self.server = self.server(), None
-            if m is not None and (server is None or m != server):
-                m.deregister(self)
+        self._server = None
 
     async def msg_in(self, cmd:int, broadcast:bool, data:bytes):
         """
@@ -119,7 +104,7 @@ class BaseObj:
             dst = self.client_id
         await m.send(src=src, dst=dst, code=code, data=data)
 
-    async def new_adr(self):
+    async def new_addr(self):
         """
         Called from the server when the device has been assigned an
         address.
@@ -153,23 +138,5 @@ class BaseObj:
 class Obj(BaseObj):
     """
     This type is used when the system sees a device it doesn't know.
-
-    The `__new__` method will return the existing object, if any.
     """
-    def __new__(cls, serial, create=None):
-        if not isinstance(serial,bytes):
-            l = serial.bit_length()
-            l = (l+7)/8
-            serial = serial.to_bytes(l,"big")
-        try:
-            obj = _obj_reg[serial]
-        except KeyError:
-            if create is False:
-                raise
-            return super().__new__(cls)
-        else:
-            if create:
-                raise KeyError(serial)
-            return obj
-
-get_obj=Obj
+    pass

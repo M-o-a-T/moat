@@ -23,11 +23,23 @@ enum _AS {
 #define logger_addr(s, ...) do {} while(0)
 #endif
 
+static void send_poll(int8_t dst) {
+    BusMessage m = msg_alloc(1);
+
+    msg_start_send(m);
+    msg_add_char(m, 1<<5);
+    m->code = 1<<5;
+    m->src = my_addr;
+    m->dst = dst;
+    m->code = 0;
+    send_msg(m);
+}
+
 static void send_serial(int8_t dst, u_int8_t code, u_int8_t flag, u_int8_t timer) {
     u_int8_t len = cpu_serial_len-1;
     ASSERT(len<0x10);
     if (timer)
-        flag |= 0x80;
+        flag |= 0x01;
     if (flag)
         len |= 0x10;
     BusMessage m = msg_alloc(cpu_serial_len+3);
@@ -47,6 +59,7 @@ static void send_serial(int8_t dst, u_int8_t code, u_int8_t flag, u_int8_t timer
 
 bool get_addr(MTICK _)
 {
+    logger("A %d", addr_state);
     if(addr_state == AS_GET_OK)
         return TRUE;
     if(addr_state == AS_GET_START) {
@@ -129,7 +142,7 @@ static char process_control_addr_assign(BusMessage msg, u_int8_t *data, msglen_t
             return 0;
         data += cpu_serial_len+1;
         flag = *data++;
-        if (flag & 0x80) {
+        if (flag & 0x01) {
             if(len < cpu_serial_len+3)
                 return 0;
             timer = *data++;
@@ -141,21 +154,19 @@ static char process_control_addr_assign(BusMessage msg, u_int8_t *data, msglen_t
             logger_addr("Address lookup collision??");
             send_serial(-1, 0, 0x10,0);
         }
-        logger_addr("NoLookup1 %d",msg->dst);
         return 0;
     }
     if (msg->src >= 0) {
         if (msg->dst == -4) {
             // neg reply? by a client
             logger_addr("Addr NACK by %d: x%x",msg->src,flag);
-            if(flag & 0x10) {
+            if(flag & 0x02) { // known
                 // TODO invent a random address?
             } else {
                 // ???
             }
             return 1;
         }
-        logger_addr("NoLookup2 %d",msg->src);
         return 0;
     }
     if (msg->dst > 0) {
@@ -179,7 +190,6 @@ static char process_control_addr_assign(BusMessage msg, u_int8_t *data, msglen_t
         return 1;
     }
     if (msg->dst != -4) {
-        logger_addr("NoLookup2 %d",msg->dst);
         return 0;
     }
 
@@ -195,23 +205,26 @@ static char process_control_addr_assign(BusMessage msg, u_int8_t *data, msglen_t
 struct poll_reply {
     struct mtick mt;
     int8_t dst;
-    u_int8_t code;
 };
 
 static bool poll_reply_proc(MTICK _mt)
 {
     poll_reply *pr = container_of(_mt, struct poll_reply, mt);
-    send_serial(pr->dst,pr->code,0,0);
+    logger("PollReply");
+    send_serial(pr->dst,0,0,0);
     delete pr;
     return FALSE;
 }
 
 static bool process_control_poll(BusMessage msg, u_int8_t *data, msglen_t len)
 {
-    if(len < 1)
-        return FALSE;
     if(msg->dst != -4 && msg->dst != my_addr)
         return FALSE;
+
+    bool sent = false;
+    u_int8_t flag = *data & 0x1F;
+    logger("Poll %x %d>%d %d", flag, msg->src,msg->dst, *data);
+    data++; len--;
 
     if (addr_state == AS_GET_END) {
         // timed out requesting an address: restart
@@ -223,18 +236,32 @@ static bool process_control_poll(BusMessage msg, u_int8_t *data, msglen_t len)
         // already requesting an address
         return TRUE;
     }
+    if(flag & 0x01) {
+        if(!len)
+            return FALSE;
+        if ((my_addr != 0xFF) && !(flag & 0x02))
+            return FALSE;
+        if(*data) {
+            struct poll_reply *mx = new poll_reply;
+            mtick_init(&mx->mt, poll_reply_proc);
 
-    if(my_addr != 0xFF) {
-        // already have an address
-        logger("Addr Err s=%d adr=%d", addr_state, my_addr);
-        return FALSE;  // should not happen
+            mf_set_randfract(&mx->mt.mf, *data, 0);
+            mx->dst = msg->src;
+            logger("PR %d", mx->mt.mf.m);
+        } else if(msg->dst >= 0) {
+            send_serial(msg->src,0,0,0);
+            sent = true;
+        } else {
+            logger("PA Ign");
+        }
+        data++; len--;
     }
-    
-    struct poll_reply *mx = new poll_reply;
-    mtick_init(&mx->mt, poll_reply_proc);
-    mf_set_randfract(&mx->mt.mf, data[1], 0);
-    mx->dst = msg->src;
-    mx->code = *data & 0x1F;
+
+    // TODO bit 1 and 2
+
+    if (msg->dst >= 0 && !sent) {
+        send_poll(msg->src);
+    }
     return TRUE;
 }
 
@@ -257,7 +284,7 @@ static char process_control(BusMessage msg)
 IN_C char process_msg_in(BusMessage msg)
 {
     char res = 0;
-    switch(msg->code == 0) {
+    switch(msg->code) {
     case 0:
         res = process_control(msg);
         break;

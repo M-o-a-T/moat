@@ -80,7 +80,7 @@ const unsigned char* msg_info(BusMessage msg)
     if(msg_info_buf)
         free(msg_info_buf);
     msglen_t ml = msg_length(msg);
-    asprintf((char**)&msg_info_buf, "Msg< src:%d dst:%d pri:%d cmd:x%x f:%d %d:%*s", msg->src,msg->dst,msg->prio,msg->code,msg->frames,
+    asprintf((char**)&msg_info_buf, "Msg< %d>%d %02x %d:%*s", msg->src,msg->dst,msg->code,
             ml,4*ml+3,"");
     unsigned char* mp = msg_info_buf+strlen((char*)msg_info_buf)-4*ml-3;
     unsigned char* m = msg_start(msg);

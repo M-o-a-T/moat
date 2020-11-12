@@ -40,6 +40,9 @@ class BusMessage:
         return "<%s: %s>" % (self.__class__.__name__, " ".join("%s=%s"%(k,v) for k,v
             in vars(self).items()))
 
+    def __len__(self):
+        return len(self.data) >> 3
+
     @property
     def header(self) -> BitArray:
         """

@@ -65,6 +65,7 @@ void msg_free(BusMessage msg);
 void msg_resize(BusMessage msg, msglen_t maxlen);
 // dump message
 const unsigned char* msg_info(BusMessage msg);
+const unsigned char* msg_info_long(BusMessage msg);
 
 // Add header bytes to the message
 void msg_add_header(BusMessage msg);

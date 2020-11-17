@@ -4,14 +4,14 @@ This module implements a basic MoatBus address controller.
 
 import trio
 from contextlib import asynccontextmanager
+import msgpack
+from functools import partial
 
 from ...backend import BaseBusHandler
 from ...message import BusMessage
 from ..obj import Obj
 from ...util import byte2mini, Processor
-
-import msgpack
-from functools import partial
+from ..server import NoFreeID, IDcollisionError
 
 packer = msgpack.Packer(strict_types=False, use_bin_type=True, #default=_encode
         ).pack
@@ -21,43 +21,6 @@ unpacker = partial(
 
 import logging
 logger = logging.getLogger(__name__)
-
-# Errors
-
-class NoFreeID(RuntimeError):
-    pass
-class IDcollisionError(RuntimeError):
-    pass
-
-# Events
-
-class ServerEvent:
-    pass
-
-class _DeviceEvent(ServerEvent):
-    def __init__(self, obj):
-        self.obj = obj
-    def __repr__(self):
-        return '<%s:%r>' % (self.__class__.__name, self.obj)
-
-class NewDeviceEvent(_DeviceEvent):
-    """
-    A device has obtained a client address. Get data dictionary and stuff.
-    """
-    pass
-
-class OldDeviceEvent(_DeviceEvent):
-    """
-    An existing device has re-fetched its address; we might presume that
-    it's been rebooted.
-    """
-    pass
-
-class BroadcastMsg(ServerEvent):
-    pass
-
-class CommandHandler:
-    pass
 
 def build_aa_data(serial, flags=0, timer=0):
     ls = len(serial)-1
@@ -88,25 +51,16 @@ class AddrControl(Processor):
         self.server = server
         super().__init__(server, code)
 
-    def get_free_id(self):
-        """
-        Returns a free client ID.
-        """
-        nid = self._next_id
-        while True:
-            cid = nid
-            if nid > 126:
-                nid = 0
-            nid += 1
-            if cid not in self.id2obj:
-                self._next_id = nid
-                return cid
-            if nid == self._next_id:
-                raise NoFreeID(self)
-
     async def setup(self):
         await super().setup()
         await self.spawn(self._poller)
+        await self.spawn(self._fwd)
+
+    async def _fwd(self, *, task_status=trio.TASK_STATUS_IGNORED):
+        task_status.started()
+        with self.objs.watch() as w:
+            async for evt in w:
+                await self.put(evt)
 
     async def process(self, msg):
         """Code zero"""
@@ -295,8 +249,4 @@ class AddrControl(Processor):
             self.logger.error("Short addr reply %r",msg)
             return
         o = self.get_serial(s, msg.dest)
-        if o.__data is None:
-            await self.q_w.put(NewDevice(obj))
-        elif o.client_id != msg.dest:
-            await self.q_w.put(OldDevice(obj))
 

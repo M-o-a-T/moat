@@ -59,6 +59,22 @@ void mf_set(minifloat *m, u_int8_t f)
     mf_reset(m);
 }
 
+void mf_set_shift(minifloat *m, u_int8_t f, u_int8_t shift)
+{
+    u_int32_t v;
+    if(f <= 32)
+        v = f;
+    else {
+        u_int8_t exp = (f>>4) -1;
+        f = 0x10 | (f&0xf);
+        v = (1<<exp) * f;
+    }
+    v = (v*shift) >> 3;
+    m->vl = v&0xFF;
+    m->vh = v>>8;
+    m->m = mf_get(m);
+}
+
 void mf_reset(minifloat *m)
 {
     if (m->m <= 32) {
@@ -96,6 +112,9 @@ bool mf_tick(minifloat *m)
 u_int8_t mf_random(u_int16_t lo, u_int16_t hi)
 {
     minifloat x;
+    if(lo == 0)
+        lo = 1;
+
     u_int16_t v = lo+cpu_random(hi-lo);
     x.vl = v&0xFF;
     x.vh = v>>8;

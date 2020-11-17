@@ -107,7 +107,6 @@ IN_C void setup_get_addr()
 #ifdef DEBUG_ADDR
     mf_set(&addr_poll.mf, MINI_F); // 1 sec
 #else
-    u_int8_t mf;
     mf_set(&addr_poll.mf, mf_random(2*MINI_F, 15*MINI_F));
 #endif
 }
@@ -210,8 +209,9 @@ struct poll_reply {
 static bool poll_reply_proc(MTICK _mt)
 {
     poll_reply *pr = container_of(_mt, struct poll_reply, mt);
-    logger("PollReply");
+    //logger("PollReply");
     send_serial(pr->dst,0,0,0);
+    logger("PF %x",((int)pr)&0xFFFF);
     delete pr;
     return FALSE;
 }
@@ -247,7 +247,7 @@ static bool process_control_poll(BusMessage msg, u_int8_t *data, msglen_t len)
 
             mf_set_randfract(&mx->mt.mf, *data, 0);
             mx->dst = msg->src;
-            logger("PR %d", mx->mt.mf.m);
+            logger("PR %x %d", ((int)mx)&0xFFFF, mx->mt.mf.m);
         } else if(msg->dst >= 0) {
             send_serial(msg->src,0,0,0);
             sent = true;

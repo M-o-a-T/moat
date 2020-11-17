@@ -1,6 +1,10 @@
 #ifndef MOATBUS_COMMON
 #define MOATBUS_COMMON
 
+#ifndef LOG_BUSMEM
+#define LOG_BUSMEM 0
+#endif
+
 #ifndef DEBUG_WIRE
 #define DEBUG_WIRE 0
 #endif
@@ -8,7 +12,7 @@
 #ifdef __cplusplus
 #define IN_C extern "C"
 #define TRUE true
-#define FALSE true
+#define FALSE false
 
 #else
 #define IN_C

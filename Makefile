@@ -50,7 +50,7 @@ pio:
 
 bin/test_handler_crc_bus:	obj/test_handler_crc_bus.o obj/libmessage.a
 	gcc -o $@ $^
-bin/test_handler_crc:	obj/test_handler_crc.o obj/crc11.o obj/libmessage.a
+bin/test_handler_crc:	obj/test_handler_crc.o obj/crc11.o obj/fakeutil.o obj/libmessage.a
 	gcc -o $@ $^
 bin/test_crc:	obj/test_crc.o obj/libmessage.a
 	gcc -o $@ $^

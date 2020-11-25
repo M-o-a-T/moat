@@ -45,7 +45,10 @@ class Gateway:
 
     async def mqtt2serial(self):
         async for msg in self.mqtt:
-            if msg._mqtt_id.startswith(self.prefix):
+            if self.prefix and msg._mqtt_id.startswith(self.prefix):
                 continue
-            await self.serial.send(msg)
+            try:
+                await self.serial.send(msg)
+            except TypeError:
+                logger.exception("Owch: %r", msg)
 

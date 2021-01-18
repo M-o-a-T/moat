@@ -104,7 +104,15 @@ class CRC11(_CRC):
 class CRC16(_CRC):
     _poly = 0xAC9A # 0xBAAD
     _width = 16
+    _depth = 4
+
+class CRC32(_CRC):
+    _poly = 0xEDB88320
+    _width = 32
     _depth = 8
+
+class CRC32n(CRC32):
+    _depth = 4
 
 if __name__ == "__main__":
     import sys
@@ -125,6 +133,7 @@ if __name__ == "__main__":
     else:
         #print(CRC6._table)
         #print(CRC8._table)
-        #print(CRC16(8)._table)
-        print(CRC11(8)._table)
+        #print(CRC16()._table)
+        #print(CRC11(8)._table)
+        print(CRC32n()._table)
         #print(CRC16._table)

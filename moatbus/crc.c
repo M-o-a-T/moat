@@ -1,4 +1,4 @@
-#include "crc.h"
+#include "moatbus/crc.h"
 #include <stdio.h>
 
 /*
@@ -20,4 +20,14 @@ u_int16_t crc16_update(u_int16_t crc, u_int8_t byte)
     crc = table16[(byte ^ crc) & 0xFF] ^ (crc>>8);
     return crc;
 }
+
+static const u_int32_t crc32_data[] __attribute__((section(".rodata_crc32"))) = {0, 498536548, 997073096, 651767980, 1994146192, 1802195444, 1303535960, 1342533948, 3988292384, 4027552580, 3604390888, 3412177804, 2607071920, 2262029012, 2685067896, 3183342108} ;
+
+u_int32_t crc32_update(u_int32_t crc, u_int8_t byte) __attribute__((section(".text_crc32")));
+u_int32_t crc32_update(u_int32_t crc, u_int8_t byte)
+{
+    crc = crc32_data[((byte>>4) ^ crc) & 0xF] ^ (crc>>4);
+    crc = crc32_data[(byte ^ crc) & 0xF] ^ (crc>>4);
+    return crc;
+}                                                             
 

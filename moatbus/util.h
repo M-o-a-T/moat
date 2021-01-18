@@ -18,6 +18,20 @@ IN_C u_int16_t powi(u_int8_t x, u_int8_t y);
 // ticks per second for timer-based minifloats
 #define MINI_F 4
 
+#define get_16(data) ({ \
+    u_int16_t x = (*(data)++) << 8; \
+    x |= *(data)++; \
+    x; \
+    })
+
+#define get_32(data) ({ \
+    u_int32_t x = (*(data)++) << 24; \
+    x |= (*(data)++) << 16; \
+    x |= (*(data)++) << 8; \
+    x |= *(data)++; \
+    x; \
+    })
+
 // minifloat timers
 typedef struct _minifloat {
     u_int8_t m; // the actual float

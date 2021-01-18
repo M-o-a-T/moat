@@ -91,8 +91,26 @@ void msg_start_send(BusMessage msg);
 // add bytes
 void msg_add_data(BusMessage msg, const u_int8_t *data, msglen_t len);
 // add single byte
-static inline void msg_add_char(BusMessage msg, const u_int8_t ch) {
+static inline void msg_add_byte(BusMessage msg, const u_int8_t ch) {
     u_int8_t c = (ch);
+    msg_add_data(msg,&c,1);
+}
+static inline void msg_add_16(BusMessage msg, const u_int16_t ch) {
+    u_int8_t c;
+    c = ch >> 8;
+    msg_add_data(msg,&c,1);
+    c = ch;
+    msg_add_data(msg,&c,1);
+}
+static inline void msg_add_32(BusMessage msg, const u_int32_t ch) {
+    u_int8_t c;
+    c = ch >> 24;
+    msg_add_data(msg,&c,1);
+    c = ch >> 16;
+    msg_add_data(msg,&c,1);
+    c = ch >> 8;
+    msg_add_data(msg,&c,1);
+    c = ch;
     msg_add_data(msg,&c,1);
 }
 

@@ -62,7 +62,7 @@ async def gateway(obj, uri,topic,ident,prefix,port,baud):
 
 @main.command(short_help="Address assignment processor")
 @click.option("-u","--uri", default='mqtt://localhost/', help="URI of MQTT server")
-@click.option("-t","--topic", default='test/moat/bus', help="Topic to send incoming messages to")
+@click.option("-t","--topic", default='test/moat/bus', help="Topic on MQTT")
 @click.option("-i","--ident", help="Identifier for this process. Must be unique.")
 @click.option("-n","--node","id", type=int, default=1, help="Server number (1…3)")
 @click.pass_obj
@@ -81,6 +81,28 @@ async def addr(obj, uri,topic,ident,id):
                 async with AddrControl(C) as A:
                     async for upd in A:
                         print(upd)
+
+@main.command(short_help="Flash update")
+@click.option("-u","--uri", default='mqtt://localhost/', help="URI of MQTT server")
+@click.option("-t","--topic", default='test/moat/bus', help="Topic on MQTT")
+@click.option("-i","--ident", help="Identifier for this process. Must be unique.")
+@click.option("-n","--node","id", type=int, default=1, help="Server number (1…3)")
+@click.option("-d","--dest", type=int, help="Client node (1…126)")
+@click.argument("path", nargs=1)
+@click.pass_obj
+async def flash(obj, uri,topic,ident,id,dest):
+    if ident is None:
+        ident = "".join(random.choices("abcdefghjkmnopqrstuvwxyz23456789", k=9))
+
+    from moatbus.backend.mqtt import MqttBusHandler
+    from moatbus.server.server import Server
+    from moatbus.server.control import ControlHandler
+    from moatbus.server.control.flash import FlashControl
+
+    async with MqttBusHandler(id=ident, uri=uri, topic=topic) as M:
+        async with Server(M, id=id) as S:
+            async with ControlHandler(S) as C:
+                await FlashControl(C).flash(dest, path)
 
 def cmd():
     """

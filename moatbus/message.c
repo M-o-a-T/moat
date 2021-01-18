@@ -10,6 +10,8 @@ Message structure for MoatBus
 
 #include "message.h"
 
+IN_C void logger(const char* format, ...);
+
 BusMessage msg_alloc(msglen_t maxlen)
 {
     BusMessage msg;

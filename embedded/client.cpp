@@ -3,9 +3,14 @@
 #include "embedded/main.h"
 #include "embedded/logger.h"
 #include "embedded/machine.h"
+#include "embedded/flash.h"
 #include "moatbus/util.h"
 #include <memory.h>
 #include <stdlib.h>
+
+#ifdef MOAT_FLASH
+#include "embedded/flash.h"
+#endif
 
 static struct mtick addr_poll NO_INIT;
 u_int8_t my_addr;
@@ -27,7 +32,7 @@ static void send_poll(int8_t dst) {
     BusMessage m = msg_alloc(1);
 
     msg_start_send(m);
-    msg_add_char(m, 1<<5);
+    msg_add_byte(m, 1<<5);
     m->code = 1<<5;
     m->src = my_addr;
     m->dst = dst;
@@ -45,12 +50,12 @@ static void send_serial(int8_t dst, u_int8_t code, u_int8_t flag, u_int8_t timer
     BusMessage m = msg_alloc(cpu_serial_len+3);
 
     msg_start_send(m);
-    msg_add_char(m, len);
+    msg_add_byte(m, len);
     msg_add_data(m, cpu_serial, cpu_serial_len);
     if (flag)
-        msg_add_char(m, flag);
+        msg_add_byte(m, flag);
     if (timer) 
-        msg_add_char(m, timer);
+        msg_add_byte(m, timer);
     m->src = (my_addr == 0xff) ? -4 : my_addr;
     m->dst = dst;
     m->code = code;
@@ -107,7 +112,6 @@ IN_C void setup_get_addr()
 #ifdef DEBUG_ADDR
     mf_set(&addr_poll.mf, MINI_F); // 1 sec
 #else
-    u_int8_t mf;
     mf_set(&addr_poll.mf, mf_random(2*MINI_F, 15*MINI_F));
 #endif
 }
@@ -210,8 +214,9 @@ struct poll_reply {
 static bool poll_reply_proc(MTICK _mt)
 {
     poll_reply *pr = container_of(_mt, struct poll_reply, mt);
-    logger("PollReply");
+    //logger("PollReply");
     send_serial(pr->dst,0,0,0);
+    logger("PF %x",((int)pr)&0xFFFF);
     delete pr;
     return FALSE;
 }
@@ -247,7 +252,7 @@ static bool process_control_poll(BusMessage msg, u_int8_t *data, msglen_t len)
 
             mf_set_randfract(&mx->mt.mf, *data, 0);
             mx->dst = msg->src;
-            logger("PR %d", mx->mt.mf.m);
+            logger("PR %x %d", ((int)mx)&0xFFFF, mx->mt.mf.m);
         } else if(msg->dst >= 0) {
             send_serial(msg->src,0,0,0);
             sent = true;
@@ -276,6 +281,10 @@ static char process_control(BusMessage msg)
         return process_control_addr_assign(msg, data,len);
     case 1:
         return process_control_poll(msg, data,len);
+#ifdef MOAT_FLASH
+    case 5:
+        return process_control_flash(msg, data,len);
+#endif
     default:
         return 0;
     }
@@ -284,14 +293,10 @@ static char process_control(BusMessage msg)
 IN_C char process_msg_in(BusMessage msg)
 {
     char res = 0;
-    switch(msg->code) {
-    case 0:
+    if(msg->code)
+        res = process_app_msg(msg);
+    else
         res = process_control(msg);
-        break;
-    default:
-        /* TODO */
-        break;
-    }
     msg_free(msg);
     return res;
 }

@@ -29,8 +29,9 @@ most UARTs are not equipped to handle. Your MCU might only have one serial
 port which you'd rather use for uploads or debugging.
 
 Next problem: long wires have somewhat high impedance, which limit your
-transmission speed. You could use something like I2C but a software client
-is annyoing to program and a hardware client is too susceptible to noise;
+transmission speed. You could use something like I²C, but many hardware
+clients are too susceptible to noise – in fact on many embedded CPUs they
+can freeze up until a hard reset. If we're bit-banging anyway,
 also, you need 16 bus transitions per byte. This is rather slow.
 
 The MoaT bus offers a solution to all of this. It requires four wires:
@@ -42,19 +43,18 @@ It is multi-master and does not require particularly accurate timers.
 Principle of operation
 ----------------------
 
-
-A bus with N wires can assume 2^n states. The self-timing requirement
-enforces *some* transiton between states, thus each time slot can transmit
+A bus with N wires can assume 2^n states. Our self-timing requirement
+enforces *some* transiton between states. Thus each time slot can transmit
 log2(2^n-1) bits of information.
 
 We still need to transmit binary data. The optimal message size on a
 two-wire system ends up as 7 transitions which carry 11 bits of information
-(log2(3^7)). Using three wires, we can send 14 bits with 5 transitions.
-More than three wires are possible.
+(log2(3^7)). Using three wires, we can send 14 bits using 5 transitions;
+four wires, 11 bits using 3 transitions.
 
-Since a message can contain excess bits, we can use an "illegal" sequence
-to terminate the message. Bus messages thus don't need a length byte and
-can be generated on the fly if necessary.
+Since a message can contain excess bits (3^7 > 2^11), we can use an
+"illegal" sequence to terminate the message. Bus messages thus don't need a
+length byte and can be generated on the fly if necessary.
 
 A small header carries addressing and a few bits of message type
 information. All messages are terminated with a CRC. Every message must be
@@ -68,18 +68,21 @@ Addressing
 ----------
 
 More than 100 devices on a single bus are not realistic, esp. when the bus
-needs to supply power to all of them. Device addresses on the MoatBus thus
-are 7 bits wide. More devices are possible with gateways.
+supplies power to all of them. Device addresses on the MoatBus thus are 7
+bits wide. More devices are possible with gateways.
 
-Lots of communication flows between small dumb devices and some central
-system. On the MoatBus there may be more than one of the latter, so the
-server addresses get 2 bits. Server address 0 is reserved for
-broadcast messages. Three "real" servers is sufficient for redundancy.
+Lots of communication flows between small dumb devices ("clients") and some
+central system ("server"). On the MoatBus there may be more than one server,
+so the server addresses get 2 bits. Server address 0 is reserved for
+broadcast messages. Three "real" servers is deemed to be sufficient for
+redundancy.
 
 Short addresses are nice, but so is the ability to plug a new device into
-the bus and have that device Just Work. Thus every device needs a MAC or
-similar unique address; the client initially uses its MAC to request a bus
-address from the master.
+the bus and have that device Just Work. Thus every device needs a MAC,
+CPU serial number, or some other unique address; fortunately most embedded
+CPU support either a hardware serial number or an EEPROM area we can use.
+The client initially uses its hardware address to request a bus address
+from the master.
 
 
 Message content
@@ -96,3 +99,18 @@ shorten bus messages and simplify firmware code.
 The details are documented in ``doc/spec_message.rst``.
 
 
+--------------
+Infrastructure
+--------------
+
+One bus client runs gateway firmware which implements a transparent
+bidirectional link from the MoaT bus to its serial port. An embedded
+computer (Raspberry Pi, ESP32, …) then relays to MQTT.
+
+This allows the daemons which do address assignment, message relaying, and
+data collection to operate independently. In particular, each part can be
+debugged or restarted without affecting the other components of the MoaT
+bus system.
+
+
+The details are documented in ``doc/spec_infra.rst``.

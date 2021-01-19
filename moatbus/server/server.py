@@ -3,7 +3,7 @@ This module implements the basics for a bus server.
 """
 
 import trio
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from weakref import ref
 
 from ..backend import BaseBusHandler
@@ -35,32 +35,31 @@ class IDcollisionError(RuntimeError):
 class ServerEvent:
     pass
 
-class NewDeviceEvent(ServerEvent):
+class _ObjEvent(ServerEvent):
+    def __init__(self, obj):
+        self.obj = obj
+    def __repr__(self):
+        return "<%s %s>" % (self.__class__.__name__.replace("Event",""), self.obj)
+
+class NewObjEvent(_ObjEvent):
     """
     A device has obtained a client address. Get data dictionary and stuff.
     """
-    def __init__(self, obj):
-        self.obj = obj
+    pass
 
-class OldDeviceEvent(ServerEvent):
+class OldObjEvent(_ObjEvent):
     """
     An existing device has re-fetched its address; we might presume that
     it's been rebooted.
     """
-    def __init__(self, obj):
-        self.obj = obj
-
-class BroadcastMsg(ServerEvent):
-    def __init__(self, msg):
-        self.msg = msg
-
-class DirectMsg(ServerEvent):
-    def __init__(self, msg):
-        self.msg = msg
-
-
-class CommandHandler:
     pass
+
+class DropObjEvent(_ObjEvent):
+    """
+    A device has been removed.
+    """
+    pass
+
 
 class ObjStore:
     def __init__(self, server):
@@ -68,6 +67,7 @@ class ObjStore:
         self._id2obj = dict()
         self._ser2obj = dict()
         self._next_id = 1 # last valid ID
+        self._reporter = set()
         super().__init__()
 
     @property
@@ -128,6 +128,9 @@ class ObjStore:
             self._id2obj[obj.client_id] = obj
             if new_id is None:
                 await obj.attach(self.server)
+                await self.report(NewObjEvent(obj))
+            else:
+                await self.report(OldObjEvent(obj))
         except BaseException:
             with trio.move_on_after(1) as sc:
                 sc.shield = True
@@ -138,6 +141,8 @@ class ObjStore:
         """
         De-register a bus object.
         """
+        if obj.serial in self._ser2obj:
+            await self.report(DropObjEvent(obj))
         await obj.detach(self.server)
         try:
             # Order is important.
@@ -147,6 +152,18 @@ class ObjStore:
         except (AttributeError,KeyError):
             pass
 
+    @contextmanager
+    def watch(self):
+        q_w,q_r = trio.open_memory_channel(10)
+        self._reporter.add(q_w.send)
+        try:
+            yield q_r
+        finally:
+            self._reporter.remove(q_w.send)
+
+    async def report(self, evt):
+        for q in self._reporter:
+            await q(evt)
 
 class Server(CtxObj, Dispatcher):
     """

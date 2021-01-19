@@ -312,8 +312,11 @@ The following messages are defined:
   earliest message is acknowledged instead of reporting an overflow.
   Servers must do so.
 
+* 3,4
+  Reserved.
+
 * 5
-  Firmware
+  Firmware update
   See separate document.
 
 * 6
@@ -325,6 +328,8 @@ The following messages are defined:
   Only one test can be pending. A timer of zero (or a bus reset) cancels a
   scheduled test; this obviously only works when the test time has not yet
   arrived.
+
+  Bit 3 and 4 are reserved.
 
 * 7
   Reset

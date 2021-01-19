@@ -10,6 +10,8 @@ Message structure for MoatBus
 
 #include "message.h"
 
+IN_C void logger(const char* format, ...);
+
 BusMessage msg_alloc(msglen_t maxlen)
 {
     BusMessage msg;
@@ -24,6 +26,8 @@ BusMessage msg_alloc(msglen_t maxlen)
     msg->data_off = msg->data_end = MSG_MAXHDR;
     msg->prio = 1;
 
+    if(LOG_BUSMEM)
+        logger("A %x %x",((int)msg)&0xFFFF, ((int)msg->data)&0xFFFF);
     return msg;
 }
 
@@ -33,6 +37,8 @@ BusMessage msg_copy(BusMessage orig)
     memcpy(msg, orig, sizeof(*orig));
     msg->next = NULL;
     *msg->data += 1;
+    if(LOG_BUSMEM)
+        logger("C %x %x", ((int)orig)&0xFFFF,((int)msg)&0xFFFF);
     return msg;
 }
 
@@ -48,9 +54,17 @@ void msg_init(BusMessage msg, u_int8_t *data, msglen_t len)
 void msg_free(BusMessage msg)
 {
     if(msg->data_max) {
-        if (!--*msg->data)
+        if (!--*msg->data) {
+            if(LOG_BUSMEM)
+                logger("FD %x",((int)msg->data)&0xFFFF);
             free(msg->data);
+        } else {
+            if(LOG_BUSMEM)
+                logger("NFD %x %d",((int)msg->data)&0xFFFF, *msg->data);
+        }
     }
+    if(LOG_BUSMEM)
+        logger("F %x",((int)msg)&0xFFFF);
     free(msg);
 }
 
@@ -62,6 +76,8 @@ void msg_resize(BusMessage msg, msglen_t maxlen)
     if(msg->data_max >= maxlen)
         return;
     data = realloc(msg->data, maxlen);
+    if(LOG_BUSMEM)
+        logger("R %x %x", ((int)msg->data)&0xFFFF, ((int)data)&0xFFFF);
     if (data) {
         memset(data+msg->data_max, 0,maxlen-msg->data_max);
         msg->data = data;
@@ -76,6 +92,16 @@ void msg_resize(BusMessage msg, msglen_t maxlen)
 static char nibble[] = "0123456789abcdef";
 static unsigned char *msg_info_buf = NULL;
 const unsigned char* msg_info(BusMessage msg)
+{
+    if(msg_info_buf)
+        free(msg_info_buf);
+    msglen_t ml = msg_length(msg);
+    unsigned char* m = msg_start(msg);
+    asprintf((char**)&msg_info_buf, "M:%d:%d %02x %d:%02x", msg->src,msg->dst,msg->code, ml,*m);
+    return msg_info_buf;
+}
+
+const unsigned char* msg_info_long(BusMessage msg)
 {
     if(msg_info_buf)
         free(msg_info_buf);

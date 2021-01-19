@@ -18,6 +18,20 @@ IN_C u_int16_t powi(u_int8_t x, u_int8_t y);
 // ticks per second for timer-based minifloats
 #define MINI_F 4
 
+#define get_16(data) ({ \
+    u_int16_t x = (*(data)++) << 8; \
+    x |= *(data)++; \
+    x; \
+    })
+
+#define get_32(data) ({ \
+    u_int32_t x = (*(data)++) << 24; \
+    x |= (*(data)++) << 16; \
+    x |= (*(data)++) << 8; \
+    x |= *(data)++; \
+    x; \
+    })
+
 // minifloat timers
 typedef struct _minifloat {
     u_int8_t m; // the actual float
@@ -36,6 +50,10 @@ IN_C void mf_set_randfract(minifloat *m, u_int8_t mm, u_int8_t lower);
 
 // set the current value. Note that a value of zero never triggers.
 IN_C void mf_set(minifloat *m, u_int8_t f);
+
+// set the current value, divided by 8 and multiplied by "shift".
+// The actual float is set as an approximation of the result.
+IN_C void mf_set_shift(minifloat *m, u_int8_t f, u_int8_t shift);
 
 // reset the current value to the stored value
 IN_C void mf_reset(minifloat *m);

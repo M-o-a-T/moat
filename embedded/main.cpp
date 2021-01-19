@@ -18,6 +18,10 @@
 #include "moatbus/handler.h"
 #include "embedded/client.h"
 
+#ifdef MOAT_FLASH
+#include "embedded/flash.h"
+#endif
+
 IN_C void setup();
 IN_C void loop();
 
@@ -51,8 +55,9 @@ void setup()
     check_boot_count();
     cpu_random_seed = *(uint32_t *)U_ID1 ^ *(uint32_t *)U_ID2 ^ *(uint32_t *)U_ID3;
 
-    setup_timer();
     setup_logger();
+    setup_flash();
+    setup_timer();
 
     setup_addr();
     setup_serial();

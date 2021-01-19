@@ -1,5 +1,5 @@
 """
-This module implements a basic MoatBus address controller.
+This module implements flashing new firmware via MoatBus.
 """
 
 import trio
@@ -11,7 +11,6 @@ from ...backend import BaseBusHandler
 from ...message import BusMessage
 from ..obj import Obj
 from ...util import byte2mini, Processor
-from ..server import NoFreeID, IDcollisionError
 
 packer = msgpack.Packer(strict_types=False, use_bin_type=True, #default=_encode
         ).pack
@@ -22,27 +21,16 @@ unpacker = partial(
 import logging
 logger = logging.getLogger(__name__)
 
-def build_aa_data(serial, flags=0, timer=0):
-    ls = len(serial)-1
-    if ls >= 0x10:
-        raise RuntimeError("Serial too long: %r" %(serial,))
-    if timer:
-        flags |= 0x01
-    if flags:
-        ls |= 0x10
-    return bytes((ls,)) + serial + (bytes((flags,)) if flags else b'') + (bytes((timer,)) if timer else b'')
-
-
-class AddrControl(Processor):
+class FlashControl(Processor):
     """
-    Address controller.
+    Firmware flasher.
 
     Basic usage::
 
-        async with AddrControl(Controller) as server:
-            async for evt in server:
-                await handle_event(evt)
-                await server.send_msg(some_message)
+        FlashControl(Controller).flash(dest, path)
+
+    `dest` is the destination IC's client ID.
+    `path` is the ELF file with the new firmware.
     """
     CODE=0
 

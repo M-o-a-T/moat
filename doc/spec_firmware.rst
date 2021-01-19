@@ -19,8 +19,8 @@ and bus usage). They are transmitted consecutively and they are secured by
 an overall 32-bit CRC. Also, individual chunks are secured by a 16-bit
 checksum.
 
-Messages consist of a 4-bit type and 4-bit flags in the first byte, plus
-whatever content is required.
+Messages contain a 4-bit type in the flag part of the control message (bit
+4 is reserved) plus whatever content is required.
 
 A checksum of zero indicates that the client is unable to read its own ROM
 and thus can't sum up its firmware. A checksum of all-one states that there
@@ -30,6 +30,18 @@ these values, the lowest bit shall be inverted.
 If a client is not in boot mode, message 0 must be answered. All others
 may be rejected.
 
+Reply messages are addressed to the server that sent the request. Bit 4 of
+the first byte is reserved (server>client) or an error (client>server).
+
+Error messages echo the server's first byte except that bit 4 is set.
+The second byte contains a max-64-byte length-1.
+Its bit 7 is set if the error is fatal and the device is potentially no
+longer useable. Bit 6 is set if the error cannot be recovered by simply
+retrying, i.e. need to power cycle and/or connect to a hardware programmer.
+The data after this are `length` bytes of error data, human readable.
+
+All numbers are big-endian.
+
 * 0
   Firmware checksum + version
 
@@ -37,61 +49,54 @@ may be rejected.
 
   The client shall respond with the 32-bit checksum plus a firmware-defined
   version number or string (bytes, length variable but nonzero).
-  If there is no current firmware the CRC must be all-1; if the client
-  knows its firmware is valid and can't be bothered to checksum it, it may
-  reply with a version string and an all-zero CRC.
+  If there is no current firmware or it could not be verified the CRC must
+  be all-1.
   
 * 1
-  Bootloader checksum + version
-  As 0 but for the boot loader.
+  Bootloader version
+  Return the boot loader magic and CRC (two 32-bit integers).
 
-* 2
+* 2, 3
   reserved
-  was serial# update, but that should be done via the dictionary
-
-* 3
-  Error
-  Sent by the client. Followed by some diagnostic data, preferably
-  human-readable.
-  The first byte contains a max-64-byte length-1.
-  Its bit 7 is set if the error is fatal and the device is potentially no
-  longer useable. Bit 6 is set if the error cannot be recovered by simply
-  retrying, i.e. need to power cycle and/or connect to a hardware programmer.
 
 * 4
   Clear
-  Sent by the server, requests the client to clear its firmware, preoaring
-  for uploading a new image. The message contains the number of 64-byte
-  blocks to be written (16bit, big-endian).
+  Sent by the server, requests the client to clear its firmware, preparing
+  for uploading a new image. The message contains the boot loader CRC,
+  application start address (in 64-byte blocks relative to the start of
+  Flash memory) and the number of 64-byte blocks to be written.
 
-  The client will mirror this request after it has erased the ROM which the
-  firmware shall be written to.
+  The client will check that there's room and that the start address is
+  correct, erase the ROM which the firmware shall be written to, then reply
+  with an otherwise-empty OK message.
 
 * 5
   Clear Boot
   Clear space for a new bootloader upload. This typically destroys the
-  existing non-boot firmware. Same parameters as in 4.
+  existing non-boot firmware. Same parameters as in 4 except that the boot
+  loaded CRC is missing.
 
 * 6
   Send Block
-  The server sends the 16-bit block number, a 64-byte block of data, and a
-  16-bit checksum of the whole message.
+  The server sends the 16-bit block number, a 16-bit checksum of
+  ``src,dst,block#,data`` and the 64-byte block of data.
 
-  The client writes the block to firmware and replies with the same
-  message, except for the actual data. A write error shall be indicated by
-  a type-3 message.
+  The client writes the block to firmware and replies with an empty OK
+  message.
 
-  Blocks must be transmitted consecutively. They must be repeated if the ack
-  got lost.
+  Blocks should be transmitted consecutively. They must be repeated if the ack
+  is lost. There is no attempt at a windowed protocol because a CPU that's
+  in the process of self-flashing is typically unresponsive.
+
+  Block numbers start with zero, corresponding to the Flash header.
 
 * 7
   Finish
   The server sends a 32-bit CRC of the firmware image. The client
-  shall verify that CRC, then reply with the same message, then reboot into
-  the new firmware. A CRC of all-zero is ignored.
+  shall verify that this CRC corresponds to the one in the Flash header and
+  that the application's CRC matches.
 
-  If the boot loader has been replaced, the reboot may involve copying it to
-  its final destination before rebooting.
+  The byte after the CRC contains a minifloat (reboot timer).
 
 * 8-11
   Read
@@ -107,3 +112,14 @@ may be rejected.
   Checksum Range
   As 'Read' but the reply contains just the checksum. TODO.
 
+Updating the boot loader
+========================
+
+Boot loader updating is performed by a special application that, when
+jumped to as part of finalization, copies itself to the beginning of
+Flash memory and then reboots.
+
+The new boot loader is stored directly behind the Flash header, followed by
+the copy-to-start code.
+
+Commands 4 and 5 are currently identical.

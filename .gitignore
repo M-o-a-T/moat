@@ -3,3 +3,4 @@ fakebus/raw_bus
 /obj/
 /bin/
 /.pio/
+/lib/

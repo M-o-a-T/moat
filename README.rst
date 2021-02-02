@@ -1,6 +1,6 @@
-=============
-M:U Utilities
-=============
+====================
+Utilities for Python
+====================
 
 This is a Python "util" submodule with code that I habitually use in so
 many projects that I decided to split it off into its own git archive.

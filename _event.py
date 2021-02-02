@@ -49,7 +49,7 @@ class ValueEvent:
         """
         return self.value is not None
 
-    async def cancel(self, exception=):
+    async def cancel(self):
         """Send a cancelation to the recipient.
 
         TODO: Trio can't do that cleanly.

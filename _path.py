@@ -5,6 +5,7 @@ import os
 import re
 
 import collections.abc
+import ast
 
 from typing import Union, Dict
 from functools import total_ordering
@@ -256,12 +257,6 @@ class PathNode(yaml.nodes.ScalarNode):
     pass
 
 
-def _path_repr(dumper, data):
-    return dumper.represent_scalar("!P", str(data))
-    # return ScalarNode(tag, value, style=style)
-    # return yaml.events.ScalarEvent(anchor=None, tag='!P', implicit=(True, True), value=str(data))
-
-
 class PathShortener:
     """This class shortens path entries so that the initial components that
     are equal to the last-used path (or the original base) are skipped.
@@ -361,7 +356,7 @@ class PathLongener:
 # expressions in paths. While it can be used for math, its primary function
 # is to process tuples.
 _eval = simpleeval.SimpleEval(functions={})
-_eval.nodes[_ast.Tuple] = lambda node: tuple(_eval._eval(x) for x in node.elts)
+_eval.nodes[ast.Tuple] = lambda node: tuple(_eval._eval(x) for x in node.elts)
 path_eval = _eval.eval
 
 

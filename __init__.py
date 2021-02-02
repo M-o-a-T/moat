@@ -4,46 +4,46 @@
 from ._impl import *
 
 try:
-    from _dict.py import *
+    from ._dict import *
 except ImportError:
     pass
 
 try:
-    from _event.py import *
+    from ._event import *
 except ImportError:
     pass
 
 try:
-    from _module.py import *
+    from ._module import *
 except ImportError:
     pass
 
 try:
-    from _msg.py import *
+    from ._msg import *
 except ImportError:
     pass
 
 try:
-    from _path.py import *
+    from ._path import *
 except ImportError:
     pass
 
 try:
-    from _server.py import *
+    from ._server import *
 except ImportError:
     pass
 
 try:
-    from _spawn.py import *
+    from ._spawn import *
 except ImportError:
     pass
 
 try:
-    from _systemd.py import *
+    from ._systemd import *
 except ImportError:
     pass
 
 try:
-    from _yaml.py import *
+    from ._yaml import *
 except ImportError:
     pass

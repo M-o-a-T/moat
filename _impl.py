@@ -10,7 +10,7 @@ from math import log10
 
 import logging
 
-__all__ = ["NoneType","singleton","TimeOnlyFormatter","NotGiven","count","acount","Cache","NoLock","digits"]
+__all__ = ["NoneType","singleton","TimeOnlyFormatter","NotGiven","count","acount","Cache","NoLock","digits","num2byte","byte2num","split_arg"]
 
 NoneType = type(None)
 
@@ -128,4 +128,38 @@ def digits(n, digits=6):  # pylint: disable=redefined-outer-name
     return round(n, int(digits - 1 - log10(abs(n))))
 
 
+
+def num2byte(num: int, length=None):
+    if length is None:
+        length = (num.bit_length() + 7) // 8
+    return num.to_bytes(length=length, byteorder="big")
+
+
+def byte2num(data: bytes):
+    return int.from_bytes(data, byteorder="big")
+
+def split_arg(p, kw):
+    """
+    Split argument 'p' and add to dict 'kw'.
+
+    'p' may be of the form x=y (y is added, possibly as an integer),
+    x? (call getpass(x? )), x?=y (call getpass(y: )).
+    """
+    try:
+        k, v = p.split("=", 1)
+    except ValueError:
+        if p[-1] == "?":
+            k = p[:-1]
+            v = getpass(k + "? ")
+        else:
+            raise
+    else:
+        if k[-1] == "?":
+            k = k[:-1]
+            v = getpass(v + ": ")
+        try:
+            v = int(v)
+        except ValueError:
+            pass
+    kw[k] = v
 

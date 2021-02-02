@@ -1,6 +1,7 @@
 """
 This module contains various helper functions and classes.
 """
+import sys
 import os
 import re
 
@@ -30,6 +31,12 @@ def str_presenter(dumper, data):
 
 
 SafeRepresenter.add_representer(str, str_presenter)
+
+
+def _path_repr(dumper, data):
+    return dumper.represent_scalar("!P", str(data))
+    # return ScalarNode(tag, value, style=style)
+    # return yaml.events.ScalarEvent(anchor=None, tag='!P', implicit=(True, True), value=str(data))
 
 
 SafeRepresenter.add_representer(Path, _path_repr)

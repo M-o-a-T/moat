@@ -1,3 +1,4 @@
 /dist/
-/disthass.egg*
+/*.egg-info/
+/.eggs/
 __pycache__

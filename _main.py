@@ -259,7 +259,7 @@ def call_main(main=None, *, name=None, ext=None, sub=None, cfg=None, CFG=None, a
     name: command name, defaults to {main}'s toplevel module name.
     ext: extension stub package, default to "{name}_ext"
     sub: load *.cli() from this package, default=caller if True
-    cfg: configuration file, default: various locations based on {name}
+    cfg: configuration file, default: various locations based on {name}, False=don't load
     CFG: default configuration (dir or file), relative to caller
     """
 
@@ -303,7 +303,7 @@ def call_main(main=None, *, name=None, ext=None, sub=None, cfg=None, CFG=None, a
             except PermissionError:
                 pass
 
-    if name is not None:
+    if name is not None and cfg is not False:
         _cfg(os.path.expanduser(f"~/config/{name}.cfg"))
         _cfg(os.path.expanduser(f"~/.config/{name}.cfg"))
         _cfg(os.path.expanduser(f"~/.{name}.cfg"))

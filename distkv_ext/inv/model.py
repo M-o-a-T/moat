@@ -627,20 +627,20 @@ class HostPort(Cleaner):
         if self in seen:
             return
         seen.add(self)
-        if self.attrs.get('vlan',None):
+        if self.attrs.get("vlan", None):
             # If the port's vlan is hardcoded, use that
             yield self.attrs.vlan
-            n = self.attrs.vlan+'-'
-            for pn,p in self.host._ports.items():
-                if pn.startswith(n) and 'vlan' in p.attrs:
+            n = self.attrs.vlan + "-"
+            for pn, p in self.host._ports.items():
+                if pn.startswith(n) and "vlan" in p.attrs:
                     yield p.attrs.vlan
             return
 
         if self.network and self.network.vlan:
             yield self.network.vlan
         h = self.other_end
-        h = getattr(h,"host",h)
-        if not isinstance(h,Host):
+        h = getattr(h, "host", h)
+        if not isinstance(h, Host):
             return
         if h in seen:
             return
@@ -665,7 +665,6 @@ class HostPort(Cleaner):
                 continue
             vseen.add(n)
         return vseen
-
 
     async def rename(self, name):
         h = self.host
@@ -693,10 +692,6 @@ class HostPort(Cleaner):
     @vlan.deleter
     def vlan(self):
         self.attrs.pop("vlan", None)
-
-    @property
-    def cable(self):
-        return self.host.root.cable.cable_for(self)
 
     @property
     def link_to(self):
@@ -1087,8 +1082,8 @@ class CableRoot(ClientEntry):
 
     async def _add_cable(self, cable):
         """
-            Add this link to the cache
-            """
+        Add this link to the cache
+        """
 
         def aa(dest):
             h, p = self._hp(dest)
@@ -1113,8 +1108,8 @@ class CableRoot(ClientEntry):
 
     def _del__cable(self, cable, dest):
         """
-            Drop this link from the cache
-            """
+        Drop this link from the cache
+        """
         dest = dest()
         if dest is None:
             return

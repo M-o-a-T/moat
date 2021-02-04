@@ -6,7 +6,6 @@ import asyncclick as click
 from collections import deque
 from netaddr import IPNetwork, EUI, IPAddress, AddrFormatError
 from operator import attrgetter
-from pprint import pprint
 
 from distkv.util import P, attrdict
 from distkv.data import data_get
@@ -212,8 +211,7 @@ def inv_sub(*a, **kw):
 @click.argument("path", nargs=1)
 @click.pass_obj
 async def dump(obj, path):
-    """Emit the current state as a YAML file.
-    """
+    """Emit the current state as a YAML file."""
     path = P(path)
     await data_get(obj, obj.cfg.inv.prefix + path)
 
@@ -222,7 +220,8 @@ inv_sub(
     "vlan",
     "id",
     int,
-    aux=(click.option("-d", "--desc", type=str, default=None, help="Description"),
+    aux=(
+        click.option("-d", "--desc", type=str, default=None, help="Description"),
         click.option("-w", "--wlan", type=str, default=None, help="WLAN SSID"),
         click.option("-p", "--passwd", type=str, default=None, help="WLAN pasword"),
     ),
@@ -392,7 +391,10 @@ async def host_template(obj, template):
         Load a template, for generating a host configuration file.
         """
     import jinja2
-    e = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(template)), autoescape=False)
+
+    e = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(os.path.dirname(template)), autoescape=False
+    )
     t = e.get_template(os.path.basename(template))
     h = obj.inv.host.by_name(obj.thing_name)
 
@@ -409,17 +411,20 @@ async def host_template(obj, template):
         nport[vl] = 0
 
     for p in h._ports.values():
-        ports[p.name] = pn = attrdict(port=p, untagged=None, tagged=set(), blocked=set(nport.keys()), single=set())
+        ports[p.name] = pn = attrdict(
+            port=p, untagged=None, tagged=set(), blocked=set(nport.keys()), single=set()
+        )
         if pn.port.network is None:
             continue
 
-        a3 = (pn.port.network.net.value>>8)&0xFF
-        a4 = pn.port.network.net.value&0xFF
+        a3 = (pn.port.network.net.value >> 8) & 0xFF
+        a4 = pn.port.network.net.value & 0xFF
         nv = pn.port.netaddr.value & ~pn.port.netaddr.netmask.value
 
-        pn.net6 = IPNetwork("2001:780:107:{net3:02x}{net4:02x}::1/64".format(net3=a3,net4=a4))
-        pn.ip6 = IPNetwork("2001:780:107:{net3:02x}{net4:02x}::{adr:x}/64".format(net3=a3,net4=a4,adr=nv))
-
+        pn.net6 = IPNetwork("2001:780:107:{net3:02x}{net4:02x}::1/64".format(net3=a3, net4=a4))
+        pn.ip6 = IPNetwork(
+            "2001:780:107:{net3:02x}{net4:02x}::{adr:x}/64".format(net3=a3, net4=a4, adr=nv)
+        )
 
     for d in ports.values():
         va = d.port.vlan
@@ -443,8 +448,8 @@ async def host_template(obj, template):
             d.untagged = none
             d.blocked.discard(none)
 
-    vl_one = set(k for k,v in nport.items() if v <= 1)
-    
+    vl_one = set(k for k, v in nport.items() if v <= 1)
+
     for d in ports.values():
         if len(d.tagged) == 1 and not d.untagged:
             d.untagged = d.tagged.pop()
@@ -457,6 +462,7 @@ async def host_template(obj, template):
             d.blocked |= vl_one
     data = dict(host=h, vlans=nport, ports=list(ports.values()))
     print(t.render(**data))
+
 
 # @host.command(name="find", short_help="Show the path to another host")  # added later
 @click.argument("dest", type=str, nargs=1)
@@ -505,7 +511,7 @@ async def host_find(obj, dest):
                 hx = hp.host
             if hx.name != dest:
                 continue
-            
+
             pr = []
             px = None
             # For routes through hosts, we print both host+port names.

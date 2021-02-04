@@ -5,6 +5,8 @@ import anyio
 import os
 import re
 
+from ._msgpack import stream_unpacker, packer
+
 __all__ = ["MsgReader","MsgWriter"]
 
 class _MsgRW:
@@ -60,8 +62,6 @@ class MsgReader(_MsgRW):
         super().__init__(*a, **kw)
         self.buflen = buflen
 
-        from .codec import stream_unpacker
-
         self.unpack = stream_unpacker()
 
     def __aiter__(self):
@@ -80,9 +80,6 @@ class MsgReader(_MsgRW):
             if d == b"":
                 raise StopAsyncIteration
             self.unpack.feed(d)
-
-
-packer = None
 
 
 class MsgWriter(_MsgRW):
@@ -114,10 +111,6 @@ class MsgWriter(_MsgRW):
         self.curlen = 0
         self.excess = 0
 
-        global packer  # pylint: disable=global-statement
-        if packer is None:
-            from .codec import packer  # pylint: disable=redefined-outer-name
-
     async def __aexit__(self, *tb):
         async with anyio.fail_after(2, shield=True):
             if self.buf:
@@ -128,7 +121,7 @@ class MsgWriter(_MsgRW):
         """Write a message (bytes) to the buffer.
 
         Flushing writes a multiple of ``buflen`` bytes."""
-        msg = packer(msg)  # pylint: disable=not-callable
+        msg = packer(msg)
         self.buf.append(msg)
         self.curlen += len(msg)
         if self.curlen + self.excess >= self.buflen:

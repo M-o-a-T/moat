@@ -258,17 +258,17 @@ def logger_for(path: Path):
     """
     this = __name__.split('.',1)[0]
     if not len(path):
-        p = "{this}.root"
+        p = f"{this}.root"
     elif path[0] is None:
-        p = "{this}.meta"
+        p = f"{this}.meta"
     elif path[0] == f".{this}":
-        p = "{this}.sub"
+        p = f"{this}.sub"
     elif path[0] == this:
         p = this
     else:
-        p = "{this}.at.{path[0]}"
+        p = f"{this}.at.{path[0]}"
     if len(path) > 1:
-        p += "." + ".".join(path[1:])
+        p += "." + ".".join(str(x) for x in path[1:])
     return logging.getLogger(p)
 
 

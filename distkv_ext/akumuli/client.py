@@ -69,7 +69,7 @@ async def set_(obj, path, source, mode, attr, series, tags):
         try:
             k, v = x.split("=", 2)
         except ValueError:
-            raise click.UsageError("Tags must be key=value")
+            raise click.UsageError("Tags must be key=value") from None
         tagged[k] = v
 
     val = dict(source=source, series=series, tags=tagged, mode=mode.name)

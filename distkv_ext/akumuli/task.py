@@ -20,7 +20,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-async def task(client, cfg, server: AkumuliServer, evt=None):
+async def task(client, cfg, server: AkumuliServer, evt=None):  # pylint: disable=unused-argument
     cfg = combine_dict(
         server.value_or({}, Mapping).get("server", {}),
         server.parent.value_or({}, Mapping).get("server", {}),

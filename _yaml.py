@@ -5,9 +5,6 @@ import sys
 import os
 import re
 
-import simpleeval
-import ast as _ast
-
 import ruamel.yaml as yaml
 
 from ._dict import attrdict

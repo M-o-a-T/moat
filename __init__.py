@@ -3,10 +3,7 @@
 
 from ._impl import *
 
-try:
-    from ._dict import *
-except ImportError:
-    pass
+from ._dict import *
 
 try:
     from ._event import *
@@ -47,3 +44,5 @@ try:
     from ._yaml import *
 except ImportError:
     pass
+
+from ._main import *

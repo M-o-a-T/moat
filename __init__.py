@@ -11,6 +11,11 @@ except ImportError:
     pass
 
 try:
+    from ._msgpack import *
+except ImportError:
+    pass
+
+try:
     from ._module import *
 except ImportError:
     pass

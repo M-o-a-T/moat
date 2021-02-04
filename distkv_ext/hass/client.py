@@ -10,7 +10,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-@main.group(short_help="Manage Home Assistant.")  # pylint: disable=undefined-variable
+@click.group(short_help="Manage Home Assistant.")
 @click.option("-t", "--test", is_flag=True, help="Use test data.")
 @click.pass_obj
 async def cli(obj, test):

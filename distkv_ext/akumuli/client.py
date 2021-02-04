@@ -3,15 +3,15 @@
 import asyncclick as click
 from asyncakumuli import DS
 
-from distkv.command import node_attr
-from distkv.util import yprint, attrdict, NotGiven, as_service, P, data_get
+from distkv.data import node_attr, data_get
+from distkv.util import yprint, attrdict, NotGiven, as_service, P
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-@main.group(short_help="Manage Akumuli storage.")  # pylint: disable=undefined-variable
+@click.group(short_help="Manage Akumuli storage.")
 async def cli():
     """
     List Akumuli storage, modify data handling …

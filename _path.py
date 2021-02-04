@@ -21,9 +21,10 @@ _PartRE = re.compile("[^:._]+|_|:|\\.")
 @total_ordering
 class Path(collections.abc.Sequence):
     """
-    This object represents the path to a DistKV node.
+    This object represents the path to some node or other.
 
-    It is an immutable list with special representation.
+    It is an immutable list with special representation, esp. in YAML,
+    and distinctive encoding in msgpack.
     """
 
     def __init__(self, *a):
@@ -238,15 +239,32 @@ P = Path.from_str
 def logger_for(path: Path):
     """
     Create a logger for this ``path``.
+
+    The logger always starts with your main module name. Thus if you import
+    this code as "foo.util", if you use a path of … you get a logger for …:
+
+        :         foo.root
+        :n        foo.meta
+        :n.x.y    foo.meta.x.y
+        :.foo     foo.sub
+        :.foo.x   foo.sub.z
+        foo       foo
+        foo.a.b   foo.a.b
+        bar       foo.at.bar
+        bar.c.d   foo.at.bar.c.d
+
     """
+    this = __name__.split('.',1)[0]
     if not len(path):
-        p = "distkv.root"
+        p = "{this}.root"
     elif path[0] is None:
-        p = "distkv.meta"
-    elif path[0] == ".distkv":
-        p = "distkv.sub"
+        p = "{this}.meta"
+    elif path[0] == f".{this}":
+        p = "{this}.sub"
+    elif path[0] == this:
+        p = this
     else:
-        p = "distkv.at"
+        p = "{this}.at.{path[0]}"
     if len(path) > 1:
         p += "." + ".".join(path[1:])
     return logging.getLogger(p)

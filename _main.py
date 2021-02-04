@@ -112,7 +112,7 @@ def load_ext(ext_name, name, func, endpoint=None, **kw):
 
     Any additional keywords are added to the module dictionary.
 
-    TODO: This is not zip safe. It also doesn't return a proper module.
+    TODO: This doesn't yet return a proper module.
     Don't use this with modules that are also loaded the regular way.
     """
 

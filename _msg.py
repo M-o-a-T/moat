@@ -101,7 +101,7 @@ class MsgWriter(_MsgRW):
 
     Exactly one of ``path`` and ``stream`` must be used.
 
-    The stream is buffered. Call :meth:`distkv.util.MsgWriter.flush` to flush the buffer.
+    The stream is buffered. Call :meth:`flush` to flush the buffer.
     """
 
     _mode = "wb"

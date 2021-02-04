@@ -4,15 +4,15 @@ import anyio
 import asyncclick as click
 from collections.abc import Mapping
 
-from distkv.util import yprint, attrdict
-from distkv.util import res_delete, res_get, res_update, as_service, P
+from distkv.util import yprint, attrdict, as_service, P
+from distkv.data import res_delete, res_get, res_update
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-@main.group(short_help="Manage GPIO controllers.")  # pylint: disable=undefined-variable
+@click.group(short_help="Manage GPIO controllers.")
 async def cli():
     """
     List GPIO controllers, modify device handling …

@@ -530,13 +530,14 @@ class NetRoot(NamedMixin, ClientEntry):
 
 
 class HostPort(Cleaner):
-    ATTRS = ("desc", "mac")
+    ATTRS = ("desc", "mac", "force_vlan")
     ATTRS2 = ("net", "num")
     AUX_ATTRS = ("netaddr", "vlan", "link_to")
     desc = None
     net = None
     num = None
     mac = None
+    force_vlan = False
 
     def __init__(self, host, name, kv):
         self.host = host

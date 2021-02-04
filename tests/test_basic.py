@@ -6,21 +6,21 @@ from distkv.mock.mqtt import stdtest
 
 from asyncakumuli.mock import Tester, TCP_PORT
 
-akumuli_task = load_ext("akumuli", "task")
-task = akumuli_task["task"]
+akumuli_task = load_ext("distkv_ext.akumuli", "task")
+task = akumuli_task.task
 
-akumuli_model = load_ext("akumuli", "model")
-AkumuliRoot = akumuli_model["AkumuliRoot"]
+akumuli_model = load_ext("distkv_ext.akumuli", "model")
+AkumuliRoot = akumuli_model.AkumuliRoot
 
 
 def _hook(e):
     e.ns_time = int(time() * 1000000000)
 
 
-akumuli_model["_test_hook"] = _hook
+akumuli_model._test_hook = _hook
 
 
-async def test_basic():
+async def test_basic():  # no autojump
     async with stdtest(test_0={"init": 125}, n=1, tocks=200) as st, st.client(
         0
     ) as client, Tester().run() as t:

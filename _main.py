@@ -19,33 +19,11 @@ __all__ = ["main","call_main","Loader","load_subgroup","list_ext","load_ext"]
 
 this_load = ContextVar("this_load", default=None)
 
-def load_one(path, name, endpoint=None, **ns):
-    mod = importlib.import_module(path)
-    try:
-        paths = mod.__path__
-    except AttributeError:
-        paths = [mod.__file__]
-
-    for p in paths:
-        p = Path(p)
-        fn = p / (name+".py")
-        if not fn.is_file():
-            fn = p / name / "__init__.py"
-            if not fn.is_file():
-                continue
-        with open(fn) as f:
-            ns["__file__"] = fn
-
-            code = compile(f.read(), fn, "exec")
-            try:
-                eval(code, ns, ns)  # pylint: disable=eval-used
-            except ImportError as exc:
-                raise ImportError(fn) from exc
-        if endpoint is not None:
-            ns = ns[endpoint]
-        return ns
-
-    raise ModuleNotFoundError(f"{path}.{name}")
+def load_one(path, name, endpoint=None):
+    mod = importlib.import_module(f"{path}.{name}")
+    if endpoint is not None:
+        mod = getattr(mod,endpoint)
+    return mod
 
 
 def _namespaces(name):
@@ -94,7 +72,7 @@ def list_ext(name, func=None):
         yield (x, f)
 
 
-def load_ext(ext_name, name, func=None, endpoint=None, **kw):
+def load_ext(ext_name, name, func=None, endpoint=None):
     """
     Load an external module.
 
@@ -115,9 +93,9 @@ def load_ext(ext_name, name, func=None, endpoint=None, **kw):
     past = this_load.set(n)
     try:
         if endpoint is None:
-            return load_one(ext_name, name, endpoint=func, **kw)
+            return load_one(ext_name, name, endpoint=func)
         else:
-            return load_one(n, func, endpoint=endpoint, **kw)
+            return load_one(n, func, endpoint=endpoint)
     finally:
         this_load.reset(past)
 
@@ -191,13 +169,17 @@ class Loader(click.Group):
             try:
                 plugins = ctx.obj._ext_name
 
-                command = load_one(f"{plugins}.{name}", self._util_plugin, "cli", main=self)
+                command = load_one(f"{plugins}.{name}", self._util_plugin, "cli")
             except (ModuleNotFoundError,FileNotFoundError):
                 pass
 
         if command is None:
+            if not hasattr(ctx.obj,"_sub_name"):
+                import pdb;pdb.set_trace()
             subdir = getattr(self,"_util_subdir", None) or ctx.obj._sub_name
-            command = load_ext(subdir, name, "cli", main=self)
+            if subdir is None:
+                import pdb;pdb.set_trace()
+            command = load_ext(subdir, name, "cli")
 
         command.__name__ = name
         return command
@@ -218,8 +200,11 @@ class Loader(click.Group):
     multiple=True,
     help="Override a config entry. Example: '-C server.bind_default.port=57586'",
 )
+@click.option("-D", "--debug", count=True, help="Enable debug speed-ups (smaller keys etc).")
+
+
 @click.pass_context
-async def main(ctx, verbose, quiet, log, cfg, conf):
+async def main(ctx, verbose, quiet, log, cfg, conf, debug):
     """
     This is the main command. (You might want to override this text.)
 
@@ -251,6 +236,7 @@ async def main(ctx, verbose, quiet, log, cfg, conf):
             c[s] = v
 
     ctx.obj.debug = max(verbose - quiet + 1, 0)
+    ctx.obj.DEBUG = debug
 
     # Configure logging. This is a somewhat arcane art.
     lcfg = ctx.obj.cfg.setdefault("logging", dict())
@@ -265,7 +251,7 @@ async def main(ctx, verbose, quiet, log, cfg, conf):
     logging.captureWarnings(verbose > 0)
 
 
-def call_main(main=None, *, name=None, ext=None, sub=None, cfg=None, CFG=None):
+def call_main(main=None, *, name=None, ext=None, sub=None, cfg=None, CFG=None, args=None, wrap=False):
     """
     The main command entry point, as declared in ``setup.py``.
 
@@ -286,11 +272,14 @@ def call_main(main=None, *, name=None, ext=None, sub=None, cfg=None, CFG=None):
     if sub is True:
         import inspect
         sub = inspect.currentframe().f_back.f_globals['__package__']
+    elif sub is None:
+        sub = __name__.split('.',1)[0]+".command"
 
     main.context_settings["obj"] = obj = attrdict()
     obj._ext_name = ext
     obj._sub_name = sub
 
+    merge_cfg = True
     if isinstance(CFG,str):
         p = Path(CFG)
         if not p.is_absolute():
@@ -299,6 +288,8 @@ def call_main(main=None, *, name=None, ext=None, sub=None, cfg=None, CFG=None):
             CFG = yload(cfgf)
     elif CFG is None:
         CFG = {}
+    else:
+        merge_cfg = False
 
     obj.stdout = CFG.get("_stdout", sys.stdout)  # used for testing
 
@@ -319,11 +310,12 @@ def call_main(main=None, *, name=None, ext=None, sub=None, cfg=None, CFG=None):
         _cfg(f"/etc/{name}/{name}.cfg")
         _cfg(f"/etc/{name}.cfg")
 
-    for n, _ in list_ext(ext):  # pragma: no cover
-        try:
-            CFG[n] = combine_dict(load_ext(ext, n, "config", "CFG"), CFG.get(n, {}), cls=attrdict)
-        except ModuleNotFoundError:
-            pass
+    if merge_cfg:
+        for n, _ in list_ext(ext):  # pragma: no cover
+            try:
+                CFG[n] = combine_dict(load_ext(ext, n, "config", "CFG"), CFG.get(n, {}), cls=attrdict)
+            except ModuleNotFoundError:
+                pass
     obj.CFG = CFG
 
     if cfg:
@@ -339,7 +331,9 @@ def call_main(main=None, *, name=None, ext=None, sub=None, cfg=None, CFG=None):
         obj.cfg = CFG
     try:
         # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
-        return main(standalone_mode=False, obj=obj)
+        if wrap:
+            main=main.main
+        return main(args=args, standalone_mode=False, obj=obj)
 
     except click.exceptions.MissingParameter as exc:
         print(f"You need to provide an argument { exc.param.name.upper() !r}.\n", file=sys.stderr)

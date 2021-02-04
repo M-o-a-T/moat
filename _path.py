@@ -13,6 +13,8 @@ from functools import total_ordering
 import simpleeval
 import ruamel.yaml as yaml
 
+import logging
+
 __all__ = ["Path","P","logger_for","PathNode","PathShortener","PathLongener","path_eval"]
 
 _PartRE = re.compile("[^:._]+|_|:|\\.")

@@ -23,8 +23,7 @@ async def cli():
 @click.argument("path", nargs=1)
 @click.pass_obj
 async def list_(obj, path):
-    """Emit the state as a YAML file.
-    """
+    """Emit the state as a YAML file."""
     path = P(path)
     await data_get(obj, obj.cfg.akumuli.prefix + path)
 
@@ -156,8 +155,7 @@ async def server_(obj, name, host, port, delete):
 @click.argument("name", nargs=1)
 @click.pass_obj
 async def monitor(obj, name):
-    """Stand-alone task to monitor a single Akumuli tree
-    """
+    """Stand-alone task to monitor a single Akumuli tree"""
     from distkv_ext.akumuli.task import task
     from distkv_ext.akumuli.model import AkumuliRoot
 

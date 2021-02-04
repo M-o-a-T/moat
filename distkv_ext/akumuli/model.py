@@ -76,7 +76,7 @@ class AkumuliNode(_AkumuliBase):
                                 "akumuli",
                                 self.subpath,
                                 message="Missing value: {msg}",
-                                data={"path": self.subpath,"msg":msg},
+                                data={"path": self.subpath, "msg": msg},
                             )
                         continue
 

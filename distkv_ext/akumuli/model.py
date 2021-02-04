@@ -75,8 +75,8 @@ class AkumuliNode(_AkumuliBase):
                             await self.root.err.record_error(
                                 "akumuli",
                                 self.subpath,
-                                message="Missing value: %r" % (msg,),
-                                data={"path": self.subpath},
+                                message="Missing value: {msg}",
+                                data={"path": self.subpath,"msg":msg},
                             )
                         continue
 

@@ -661,7 +661,7 @@ class HostPort(Cleaner):
         async for v in self._connected_vlans(seen):
             n = self.host.root.vlan.by_name(v)
             if n is None:
-                logger.error(f"VLAN {v} does not exist, {self}")
+                logger.error("VLAN %s does not exist, %s", v, self)
                 continue
             vseen.add(n)
         return vseen
@@ -710,7 +710,7 @@ class HostPort(Cleaner):
             res["mac"] = res["mac"].packed
         return res
 
-    def set_value(self, _):  # pylint: disable=signature-differs
+    async def set_value(self, _):  # pylint: disable=signature-differs
         raise RuntimeError("This does not work.")
 
     def __repr__(self):
@@ -1245,7 +1245,7 @@ class Cable(Cleaner, AttrClientEntry):
 
         return val
 
-    async def __contains__(self, dest):
+    def __contains__(self, dest):
         if self.dest_a is dest:
             return True
         if self.dest_b is dest:

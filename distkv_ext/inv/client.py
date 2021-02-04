@@ -1,6 +1,7 @@
 # command line interface
 
 import os
+import sys
 
 import asyncclick as click
 from collections import deque
@@ -105,7 +106,9 @@ def inv_sub(*a, **kw):
                 if v is not None:
                     if isinstance(v, dict):
                         v = v.items()
-                    if isinstance(v, type({}.items())):
+                    if isinstance(
+                        v, type({}.items())
+                    ):  # pylint: disable=isinstance-second-argument-not-valid-type
                         for kk, vv in sorted(v):
                             if isinstance(vv, (tuple, list)):
                                 if vv:
@@ -195,7 +198,7 @@ def inv_sub(*a, **kw):
                     setattr(obj, k, v)
                 except AttributeError:
                     if k != "name":
-                        raise AttributeError(k, v)
+                        raise AttributeError(k, v) from None
         await obj.save()
 
     for t, kv in tinv.ext:
@@ -253,7 +256,7 @@ def host_post(ctx, values):
             try:
                 na = IPAddress(net)
             except AddrFormatError:
-                raise click.exceptions.UsageError("no such network: " + repr(net))
+                raise click.exceptions.UsageError("malformed network: " + repr(net)) from None
             n = ctx.inv.net.enclosing(na)
             if n is None:
                 raise RuntimeError("Network unknown", net)
@@ -678,7 +681,7 @@ async def _hp_mod(obj, p, **kw):
             try:
                 na = IPAddress(net)
             except AddrFormatError:
-                raise click.exceptions.UsageError("no such network: " + repr(net))
+                raise click.exceptions.UsageError("malformed network: " + repr(net)) from None
             n = p.host.root.net.enclosing(na)
             if n is None:
                 raise RuntimeError("Network unknown", net)

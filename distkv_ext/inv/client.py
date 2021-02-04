@@ -6,8 +6,10 @@ import asyncclick as click
 from collections import deque
 from netaddr import IPNetwork, EUI, IPAddress, AddrFormatError
 from operator import attrgetter
+from pprint import pprint
 
-from distkv.util import data_get, P, attrdict
+from distkv.util import P, attrdict
+from distkv.data import data_get
 from distkv_ext.inv.model import InventoryRoot, Host, Wire
 
 import logging
@@ -15,7 +17,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-@main.group(short_help="Manage computer inventory.")  # pylint: disable=undefined-variable
+@click.group(short_help="Manage computer inventory.")
 @click.pass_obj
 async def cli(obj):
     """

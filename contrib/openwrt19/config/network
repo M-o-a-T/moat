@@ -1,0 +1,99 @@
+
+config interface 'loopback'
+	option ifname 'lo'
+	option proto 'static'
+	option ipaddr '127.0.0.1'
+	option netmask '255.0.0.0'
+
+config globals 'globals'
+	option ula_prefix 'fd43:9f71:3a92::/48'
+
+config switch
+	option name 'switch0'
+	option reset '1'
+	option enable_vlan '1'
+
+config switch_vlan
+	option device 'switch0'
+	option vlan '1'
+	option ports '0t 2 3'
+	option vid '10'
+
+config switch_vlan
+	option device 'switch0'
+	option vlan '2'
+	option ports '0t 2t'
+	option vid '43'
+
+config interface 'infra_wire'
+	option ifname 'eth0.10'
+	option proto 'static'
+	option ipaddr '10.107.3.33'
+	list ip6addr '2001:780:107:300::21/64'
+	option gateway '10.107.3.1'
+	option ip6gw '2001:780:107:300::1'
+	option netmask '255.255.255.128'
+	list dns '10.107.8.130'
+	option type 'bridge'
+	option delegate '0'
+
+config switch_vlan
+	option device 'switch0'
+	option vlan '3'
+	option ports '0t 2t'
+	option vid '12'
+
+config switch_vlan
+	option device 'switch0'
+	option vlan '4'
+	option ports '0t 2t'
+	option vid '666'
+
+config switch_vlan
+	option device 'switch0'
+	option vlan '5'
+	option ports '0t 2t'
+	option vid '11'
+
+config switch_vlan
+	option device 'switch0'
+	option vlan '6'
+	option ports '0t 2t'
+	option vid '19'
+
+config interface 'guest_air'
+	option proto 'none'
+	option ifname 'eth0.666'
+	option type 'bridge'
+	option delegate '0'
+
+config interface 'secure_air'
+	option proto 'none'
+	option ifname 'eth0.43'
+	option type 'bridge'
+	option delegate '0'
+
+config switch_vlan
+	option device 'switch0'
+	option vlan '7'
+	option ports '0t 2t'
+	option vid '20'
+
+config interface 'std_air'
+	option proto 'none'
+	option ifname 'eth0.12'
+	option type 'bridge'
+	option delegate '0'
+
+config interface 'infra_air'
+	option proto 'none'
+	option ifname 'eth0.20'
+	option type 'bridge'
+	option delegate '0'
+
+config interface 'lock_air'
+	option proto 'none'
+	option ifname 'eth0.19'
+	option type 'bridge'
+	option delegate '0'
+

@@ -42,11 +42,7 @@ def load_one(path, name, endpoint=None, **ns):
             except ImportError as exc:
                 raise ImportError(fn) from exc
         if endpoint is not None:
-            try:
-                ns = ns[endpoint]
-            except KeyError:
-                breakpoint()
-                ns
+            ns = ns[endpoint]
         return ns
 
     raise ModuleNotFoundError(f"{path}.{name}")
@@ -55,11 +51,7 @@ def load_one(path, name, endpoint=None, **ns):
 def _namespaces(name):
     import pkgutil
 
-    try:
-        ext = importlib.import_module(name)
-    except ModuleNotFoundError:
-        import pdb;pdb.set_trace()
-        raise
+    ext = importlib.import_module(name)
     return pkgutil.iter_modules(ext.__path__, ext.__name__ + ".")
 
 
@@ -354,7 +346,6 @@ def call_main(main=None, *, name=None, ext=None, sub=None, cfg=None, CFG=None):
         print(exc.cmd.get_help(exc.ctx), file=sys.stderr)
         sys.exit(2)
     except click.exceptions.UsageError as exc:
-        breakpoint()
         try:
             s = str(exc)
         except TypeError:

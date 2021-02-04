@@ -1,8 +1,7 @@
 import anyio
 from time import time
 
-from distkv.ext import load_ext
-from distkv.util import P
+from distkv.util import P, load_ext
 from distkv.mock.mqtt import stdtest
 
 from asyncakumuli.mock import Tester, TCP_PORT

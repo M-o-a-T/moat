@@ -102,7 +102,7 @@ def list_ext(name, func=None):
         yield (x, f)
 
 
-def load_ext(ext_name, name, func, endpoint=None, **kw):
+def load_ext(ext_name, name, func=None, endpoint=None, **kw):
     """
     Load an external module.
 

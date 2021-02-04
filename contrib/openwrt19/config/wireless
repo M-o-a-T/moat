@@ -6,15 +6,6 @@ config wifi-device 'radio5'
 	option htmode 'VHT80'
 	option channel 'auto'
 
-config wifi-iface 'guest_5'
-	option device 'radio5'
-	option mode 'ap'
-	option encryption 'none'
-	option network 'guest_air'
-	option isolate '1'
-	option ssid 'Schleiermacher neu'
-	option ifname 'guest_5'
-
 config wifi-device 'radio2'
 	option type 'mac80211'
 	option hwmode '11g'
@@ -22,66 +13,39 @@ config wifi-device 'radio2'
 	option htmode 'HT40'
 	option channel 'auto'
 
-config wifi-iface 'guest_2'
-	option device 'radio2'
-	option mode 'ap'
-	option encryption 'none'
-	option network 'guest_air'
-	option isolate '1'
-	option ssid 'Schleiermacher'
-	option ifname 'guest_2'
+{%- for v in vlans %}
+{%- if v.wlan %}
+{%- set n=v.name.replace("_air","") %}
 
-config wifi-iface 'std_5'
-	option ssid 'Schleiermacher 12 neu'
-	option encryption 'psk2'
+config wifi-iface '{{n}}_5'
 	option device 'radio5'
+	option ifname '{{n}}_5'
 	option mode 'ap'
-	option network 'std_air'
-	option key 'Ich will ins Netz!'
-	option ifname 'std_5'
-
-config wifi-iface 'std_2'
-	option ifname 'std_2'
-	option ssid 'Schleiermacher 12'
+	option network '{{v.name}} neu'
+	option ssid '{{v.wlan}}'
+	{%- if v.passwd %}
 	option encryption 'none'
+	option isolate '1'
+	{%- else %}
+	option encryption 'psk2'
+	option key '{{ v.passwd }}'
+	option isolate '0'
+	{%- endif %}
+
+config wifi-iface '{{n}}_2'
 	option device 'radio2'
+	option ifname '{{n}}_2'
 	option mode 'ap'
-	option network 'std_air'
+	option network '{{v.name}}'
+	option ssid '{{v.wlan}}
+	{%- if v.passwd %}
+	option encryption 'none'
+	option isolate '1'
+	{%- else %}
+	option encryption 'psk2'
+	option isolate '0'
+	option key '{{ v.passwd }}'
+	{%- endif %}
 
-config wifi-iface 'secure_5'
-        option device 'radio5'
-        option mode 'ap'
-        option ssid 'Smurf neu'
-        option encryption 'psk2'
-        option key 'Das ist geheim!'
-        option network 'secure_air'
-	option ifname 'secure_5'
-
-config wifi-iface 'secure_2'
-        option device 'radio2'
-        option mode 'ap'
-        option ssid 'Smurf'
-        option encryption 'psk2'
-        option key 'Das ist geheim!'
-        option network 'secure_air'
-	option ifname 'secure_2'
-
-config wifi-iface 'infra_2'
-        option device 'radio2'
-        option mode 'ap'
-        option ssid 'Infra'
-        option network 'infra_air'
-        option encryption 'psk2'
-        option key 'Du mich aucH'
-	option ifname 'infra_2'
-
-config wifi-iface 'lock_2'
-        option device 'radio2'
-        option mode 'ap'
-        option ssid 'Lock'
-        option isolate '1'
-        option encryption 'psk2'
-        option key 'VerSchlosseN'
-        option network 'lock_air'
-	option ifname 'lock_2'
-
+{%- endif %}
+{%- endfor %}

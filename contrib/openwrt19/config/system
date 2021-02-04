@@ -7,7 +7,7 @@ config system
 	option zonename 'UTC'
 	option conloglevel '8'
 	option cronloglevel '5'
-	option hostname 'sw-u1'
+	option hostname '{{ host.name }}'
 
 config timeserver 'ntp'
 	list server 'ntp1.noris.net'

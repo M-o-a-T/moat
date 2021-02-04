@@ -409,7 +409,17 @@ async def host_template(obj, template):
         nport[vl] = 0
 
     for p in h._ports.values():
-        ports[p.name] = attrdict(port=p, untagged=None, tagged=set(), blocked=set(nport.keys()), single=set())
+        ports[p.name] = pn = attrdict(port=p, untagged=None, tagged=set(), blocked=set(nport.keys()), single=set())
+        if pn.port.network is None:
+            continue
+
+        a3 = (pn.port.network.net.value>>8)&0xFF
+        a4 = pn.port.network.net.value&0xFF
+        nv = pn.port.netaddr.value & ~pn.port.netaddr.netmask.value
+
+        pn.net6 = IPNetwork("2001:780:107:{net3:02x}{net4:02x}::1/64".format(net3=a3,net4=a4))
+        pn.ip6 = IPNetwork("2001:780:107:{net3:02x}{net4:02x}::{adr:x}/64".format(net3=a3,net4=a4,adr=nv))
+
 
     for d in ports.values():
         va = d.port.vlan

@@ -3,10 +3,10 @@ from setuptools import setup, find_packages
 LONG_DESC = open("README.rst").read()
 
 setup(
-    name="disthass",
+    name="distkv_hass",
     use_scm_version={"version_scheme": "guess-next-dev", "local_scheme": "dirty-tag"},
     description="Inventory management for DistKV",
-    url="https://github.com/smurfix/disthass",
+    url="https://github.com/M-o-a-T/disthass",
     long_description=LONG_DESC,
     author="Matthias Urlichs",
     author_email="matthias@urlichs.de",
@@ -26,6 +26,7 @@ setup(
         "Framework :: Trio",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: Implementation :: CPython",
         "Topic :: Database",
         "Topic :: Home Automation",

@@ -45,4 +45,7 @@ try:
 except ImportError:
     pass
 
-from ._main import *
+try:
+    from ._main import *
+except ImportError:
+    pass

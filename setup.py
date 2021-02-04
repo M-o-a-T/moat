@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 LONG_DESC = open("README.rst").read()
 
 setup(
-    name="distinv",
+    name="distkv_inv",
     use_scm_version={"version_scheme": "guess-next-dev", "local_scheme": "dirty-tag"},
     description="Inventory management for DistKV",
     url="https://github.com/smurfix/distinv",

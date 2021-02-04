@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 
 PACKAGE=distkv_ext
-PYPI=distgpio
+PYPI=distkv_gpio
 
 ifneq ($(wildcard /usr/share/sourcemgr/make/py),)
 include /usr/share/sourcemgr/make/py

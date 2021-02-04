@@ -1242,8 +1242,8 @@ class Cable(Cleaner, AttrClientEntry):
 
         def wr(dest):
             if hasattr(dest, "subpath"):
-                return (dest.subpath,)
-            return (dest.host.subpath, dest.name)
+                return (Path.build(dest.subpath),)
+            return (Path.build(dest.host.subpath), dest.name)
 
         val["a"] = wr(self.dest_a)
         val["b"] = wr(self.dest_b)

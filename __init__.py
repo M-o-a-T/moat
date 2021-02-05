@@ -2,11 +2,15 @@
 # TODO split this up
 
 from ._impl import *
-
 from ._dict import *
 
 try:
     from ._event import *
+except ImportError:
+    pass
+
+try:
+    from ._queue import *
 except ImportError:
     pass
 

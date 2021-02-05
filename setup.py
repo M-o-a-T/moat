@@ -14,7 +14,7 @@ setup(
     packages=["distkv_ext.knx"],
     setup_requires=["setuptools_scm", "pytest-runner", "trustme >= 0.5"],
     install_requires=["distkv >= 0.30.1", "xknx"],
-    tests_require=["trustme >= 0.5", "pytest", "flake8 >= 3.7"],
+    tests_require=["trustme >= 0.5", "pytest", "flake8 >= 3.7", "xknx"],
     keywords=["async", "key-values", "distributed"],
     python_requires=">=3.7",
     classifiers=[

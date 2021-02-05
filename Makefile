@@ -3,6 +3,7 @@
 .PHONY: install
 
 PACKAGE=distkv_ext
+PYPI=distkv_knx
 
 ifneq ($(wildcard /usr/share/sourcemgr/make/py),)
 include /usr/share/sourcemgr/make/py

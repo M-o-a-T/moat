@@ -1,4 +1,4 @@
-Source: distknx
+Source: distkv-knx
 Maintainer: Matthias Urlichs <matthias@urlichs.de>
 Section: python
 Priority: optional

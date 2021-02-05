@@ -1,25 +1,24 @@
 import anyio
 from functools import partial
 
-from distkv.ext import load_ext
-from distkv.util import attrdict, data_get, Path, P, as_service
+from distkv.util import P, load_ext
 from distkv.mock.mqtt import stdtest
 
-knx_mock = load_ext("knx", "mock")
-Tester = knx_mock["Tester"]
+knx_mock = load_ext("distkv_ext.knx", "mock")
+Tester = knx_mock.Tester
 
-knx_task = load_ext("knx", "task")
-task = knx_task["task"]
+knx_task = load_ext("distkv_ext.knx", "task")
+task = knx_task.task
 
-knx_model = load_ext("knx", "model")
-KNXroot = knx_model["KNXroot"]
+knx_model = load_ext("distkv_ext.knx", "model")
+KNXroot = knx_model.KNXroot
 
 
 async def test_basic():
     async with stdtest(test_0={"init": 125}, n=1, tocks=200) as st, st.client(
         0
     ) as client, Tester().run() as t:
-        await st.run(f"knx server test localhost -h 127.0.0.1 -p {knx_mock['TCP_PORT']}")
+        await st.run(f"knx server test localhost -h 127.0.0.1 -p {knx_mock.TCP_PORT}")
         await st.run("knx addr -t in -m power test 1/2/3 -a dest test.some.power")
         await st.run("knx addr -t in -m binary test 1/2/4 -a dest test.some.switch")
         await st.run("knx addr -t in -m percentU8 test 1/2/5 -a dest test.some.percent")
@@ -30,7 +29,6 @@ async def test_basic():
 
         await st.run("data get -rd_ :", do_stdout=False)
 
-        cfg = attrdict()
         evt = anyio.create_event()
         await st.tg.spawn(
             partial(task, client, client._cfg.knx, knx["test"]["localhost"], evt=evt)

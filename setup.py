@@ -3,7 +3,7 @@ from setuptools import setup
 LONG_DESC = open("README.rst").read()
 
 setup(
-    name="distknx",
+    name="distkv-knx",
     use_scm_version={"version_scheme": "guess-next-dev", "local_scheme": "dirty-tag"},
     description="A distributed no-master key-value store",
     url="https://github.com/smurfix/distknx",
@@ -14,7 +14,7 @@ setup(
     packages=["distkv_ext.knx"],
     setup_requires=["setuptools_scm", "pytest-runner", "trustme >= 0.5"],
     install_requires=["distkv >= 0.30.1", "xknx"],
-    tests_require=["trustme >= 0.5", "pytest", "flake8 >= 3.7"],
+    tests_require=["trustme >= 0.5", "pytest", "flake8 >= 3.7", "xknx"],
     keywords=["async", "key-values", "distributed"],
     python_requires=">=3.7",
     classifiers=[

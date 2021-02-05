@@ -21,7 +21,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-async def task(client, cfg, server: KNXserver, evt=None, local_ip=None, initial=False):
+async def task(
+    client, cfg, server: KNXserver, evt=None, local_ip=None, initial=False
+):  # pylint: disable=unused-argument
     cfg = combine_dict(server.value_or({}, Mapping), cfg["server_default"])
     add = {}
     if local_ip is not None:

@@ -3,8 +3,8 @@
 import asyncclick as click
 from collections.abc import Mapping
 
-from distkv.util import yprint, attrdict, NotGiven
-from distkv.util import res_delete, res_get, res_update, as_service, P, Path
+from distkv.data import res_delete, res_get, res_update
+from distkv.util import yprint, attrdict, NotGiven, as_service, P, Path, path_eval
 
 from xknx.remote_value import RemoteValueSensor
 
@@ -13,9 +13,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-@main.group(short_help="Manage KNX controllers.")  # pylint: disable=undefined-variable
-@click.pass_obj
-async def cli(obj):
+@click.group(short_help="Manage KNX controllers.")
+async def cli():
     """
     List KNX controllers, modify device handling …
     """
@@ -26,8 +25,7 @@ async def cli(obj):
 @click.argument("path", nargs=1)
 @click.pass_obj
 async def dump(obj, path):
-    """Emit the current state as a YAML file.
-    """
+    """Emit the current state as a YAML file."""
     res = {}
     path = P(path)
     if len(path) > 4:
@@ -49,8 +47,7 @@ async def dump(obj, path):
 @click.argument("path", nargs=1)
 @click.pass_obj
 async def list_(obj, path):
-    """List the next stage.
-    """
+    """List the next stage."""
     path = P(path)
     if len(path) > 4:
         raise click.UsageError("Only up to four path elements allowed")
@@ -126,8 +123,7 @@ Known modes: {" ".join(RemoteValueSensor.DPTMAP.keys())}
 @click.argument("group", nargs=1)
 @click.pass_obj
 async def addr(obj, bus, group, typ, mode, attr):
-    """Set/get/delete device settings. This is a shortcut for the "attr" command.
-    """
+    """Set/get/delete device settings. This is a shortcut for the "attr" command."""
     group = (int(x) for x in group.split("/"))
     path = Path(bus, *group)
     if len(path) != 4:
@@ -161,7 +157,7 @@ async def addr(obj, bus, group, typ, mode, attr):
     await _attr(obj, (), val, path, False, res)
 
 
-async def _attr(obj, attr, value, path, eval_, res=None, server=False):
+async def _attr(obj, attr, value, path, eval_, res=None):
     # Sub-attr setter.
     # Special: if eval_ is True, an empty value deletes. A mapping replaces instead of updating.
     if res is None:
@@ -174,7 +170,7 @@ async def _attr(obj, attr, value, path, eval_, res=None, server=False):
         if value is None:
             value = res_delete(res, attr)
         else:
-            value = eval(value)
+            value = path_eval(value)
             if isinstance(value, Mapping):
                 # replace
                 value = res_delete(res, attr)
@@ -205,7 +201,7 @@ async def _attr(obj, attr, value, path, eval_, res=None, server=False):
 @click.argument("bus", nargs=1)
 @click.argument("name", nargs=-1)
 @click.pass_obj
-async def server(obj, bus, name, host, port, delete):
+async def server_(obj, bus, name, host, port, delete):
     """
     Configure a server for a bus.
     """
@@ -237,7 +233,7 @@ async def server(obj, bus, name, host, port, delete):
         return
     else:
         value = None
-    await _attr(obj, (), value, (bus, name), False, server=True)
+    await _attr(obj, (), value, (bus, name), False)
 
 
 @cli.command()
@@ -247,8 +243,7 @@ async def server(obj, bus, name, host, port, delete):
 @click.argument("server", nargs=-1)
 @click.pass_obj
 async def monitor(obj, bus, server, local_ip, initial):
-    """Stand-alone task to talk to a single server.
-    """
+    """Stand-alone task to talk to a single server."""
     from distkv_ext.knx.task import task
     from distkv_ext.knx.model import KNXroot
 

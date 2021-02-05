@@ -5,7 +5,7 @@ might have running).
 
 This code is here for support of testing. It does not talk to distkv.
 See ``tests/test_basic.py`` for code that does.
-    
+
 """
 import os
 import trio
@@ -14,9 +14,7 @@ from contextlib import asynccontextmanager
 
 import xknx
 from xknx.io import ConnectionConfig, ConnectionType
-from xknx.telegram import GroupAddress
 from xknx.devices import Sensor, BinarySensor, Switch, ExposeSensor
-from xknx.remote_value import RemoteValueSensor
 
 TCP_PORT = (os.getpid() + 25) % 10000 + 40000
 

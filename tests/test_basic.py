@@ -1,8 +1,7 @@
 import anyio
 from functools import partial
 
-from distkv.util import attrdict, Path, P, as_service, load_ext
-from distkv.data import data_get
+from distkv.util import P, load_ext
 from distkv.mock.mqtt import stdtest
 
 knx_mock = load_ext("distkv_ext.knx", "mock")
@@ -30,7 +29,6 @@ async def test_basic():
 
         await st.run("data get -rd_ :", do_stdout=False)
 
-        cfg = attrdict()
         evt = anyio.create_event()
         await st.tg.spawn(
             partial(task, client, client._cfg.knx, knx["test"]["localhost"], evt=evt)

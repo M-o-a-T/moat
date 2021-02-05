@@ -30,8 +30,8 @@ class _KNXbase(ClientEntry):
             self._server = self.parent.server
         return self._server
 
-    async def set_value(self, val):
-        await super().set_value(val)
+    async def set_value(self, value):
+        await super().set_value(value)
         if self.server is not None:
             await self._update_server()
 
@@ -287,8 +287,8 @@ class KNXbus(_KNXbaseNUM):
             return KNXserver
         return super().child_type(name)
 
-    async def set_value(self, val):
-        await super().set_value(val)
+    async def set_value(self, value):
+        await super().set_value(value)
         await self.update_server()
 
     @property
@@ -310,7 +310,7 @@ class KNXroot(_KNXbase, ClientRoot):
     def server(self):
         return None
 
-    async def run_starting(self, server=None):
+    async def run_starting(self, server=None):  # pylint: disable=arguments-differ
         self._server = server
         if self.err is None:
             self.err = await ErrorRoot.as_handler(self.client)

@@ -4,7 +4,7 @@ import asyncclick as click
 from collections.abc import Mapping
 
 from distkv.data import res_delete, res_get, res_update
-from distkv.util import yprint, attrdict, NotGiven, as_service, P, Path
+from distkv.util import yprint, attrdict, NotGiven, as_service, P, Path, path_eval
 
 from xknx.remote_value import RemoteValueSensor
 
@@ -14,8 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 @click.group(short_help="Manage KNX controllers.")
-@click.pass_obj
-async def cli(obj):
+async def cli():
     """
     List KNX controllers, modify device handling …
     """
@@ -158,7 +157,7 @@ async def addr(obj, bus, group, typ, mode, attr):
     await _attr(obj, (), val, path, False, res)
 
 
-async def _attr(obj, attr, value, path, eval_, res=None, server=False):
+async def _attr(obj, attr, value, path, eval_, res=None):
     # Sub-attr setter.
     # Special: if eval_ is True, an empty value deletes. A mapping replaces instead of updating.
     if res is None:
@@ -171,7 +170,7 @@ async def _attr(obj, attr, value, path, eval_, res=None, server=False):
         if value is None:
             value = res_delete(res, attr)
         else:
-            value = eval(value)
+            value = path_eval(value)
             if isinstance(value, Mapping):
                 # replace
                 value = res_delete(res, attr)
@@ -202,7 +201,7 @@ async def _attr(obj, attr, value, path, eval_, res=None, server=False):
 @click.argument("bus", nargs=1)
 @click.argument("name", nargs=-1)
 @click.pass_obj
-async def server(obj, bus, name, host, port, delete):
+async def server_(obj, bus, name, host, port, delete):
     """
     Configure a server for a bus.
     """
@@ -234,7 +233,7 @@ async def server(obj, bus, name, host, port, delete):
         return
     else:
         value = None
-    await _attr(obj, (), value, (bus, name), False, server=True)
+    await _attr(obj, (), value, (bus, name), False)
 
 
 @cli.command()

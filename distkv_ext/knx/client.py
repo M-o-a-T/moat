@@ -3,8 +3,8 @@
 import asyncclick as click
 from collections.abc import Mapping
 
-from distkv.util import yprint, attrdict, NotGiven
-from distkv.util import res_delete, res_get, res_update, as_service, P, Path
+from distkv.data import res_delete, res_get, res_update
+from distkv.util import yprint, attrdict, NotGiven, as_service, P, Path
 
 from xknx.remote_value import RemoteValueSensor
 
@@ -13,7 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-@main.group(short_help="Manage KNX controllers.")  # pylint: disable=undefined-variable
+@click.group(short_help="Manage KNX controllers.")
 @click.pass_obj
 async def cli(obj):
     """

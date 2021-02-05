@@ -2,13 +2,12 @@
 This module contains various helper functions and classes.
 """
 import sys
-import os
-import re
 
 from types import ModuleType
 from functools import partial
 
-__all__ = ["make_proc","Module","make_module"]
+__all__ = ["make_proc", "Module", "make_module"]
+
 
 def _call_proc(code, variables, *a, **kw):
     v = variables[len(a) :]
@@ -68,5 +67,3 @@ def make_module(code, path):
     eval(code, m.__dict__)  # pylint: disable=eval-used
     sys.modules[name] = m
     return m
-
-

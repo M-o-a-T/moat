@@ -2,8 +2,6 @@
 This module contains various helper functions and classes.
 """
 import sys
-import os
-import re
 
 import ruamel.yaml as yaml
 
@@ -11,7 +9,7 @@ from ._dict import attrdict
 from ._path import Path
 
 
-__all__ = ["yload","yprint","yformat"]
+__all__ = ["yload", "yprint", "yformat"]
 
 SafeRepresenter = yaml.representer.SafeRepresenter
 SafeConstructor = yaml.constructor.SafeConstructor
@@ -60,9 +58,11 @@ SafeConstructor.add_constructor("!bin", _bin_from_ascii)
 
 _expect_node = Emitter.expect_node
 
+
 def expect_node(self, *a, **kw):
     _expect_node(self, *a, **kw)
     self.root_context = False
+
 
 Emitter.expect_node = _expect_node
 
@@ -111,5 +111,3 @@ def yformat(data, compact=None):
     s = StringIO()
     yprint(data, compact=compact, stream=s)
     return s.getvalue()
-
-

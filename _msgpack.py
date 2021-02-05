@@ -38,7 +38,9 @@ def packer(data):
     if _packers:
         pack = _packers.pop()
     else:
-        pack = msgpack.Packer(strict_types=False, strict_map_key=False, use_bin_type=True, default=_encode).pack
+        pack = msgpack.Packer(
+            strict_types=False, strict_map_key=False, use_bin_type=True, default=_encode
+        ).pack
     try:
         return pack(data)
     finally:
@@ -47,10 +49,20 @@ def packer(data):
 
 # single message unpacker
 unpacker = partial(
-    msgpack.unpackb, object_pairs_hook=attrdict, strict_map_key=False, raw=False, use_list=False, ext_hook=_decode
+    msgpack.unpackb,
+    object_pairs_hook=attrdict,
+    strict_map_key=False,
+    raw=False,
+    use_list=False,
+    ext_hook=_decode,
 )
 
 # stream unpacker factory
 stream_unpacker = partial(
-    msgpack.Unpacker, object_pairs_hook=attrdict, strict_map_key=False, raw=False, use_list=False, ext_hook=_decode
+    msgpack.Unpacker,
+    object_pairs_hook=attrdict,
+    strict_map_key=False,
+    raw=False,
+    use_list=False,
+    ext_hook=_decode,
 )

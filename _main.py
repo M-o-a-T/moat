@@ -8,21 +8,24 @@ import importlib
 from contextvars import ContextVar
 
 from ._dict import attrdict, combine_dict
+from ._impl import NotGiven
 from ._path import path_eval
 from ._yaml import yload
 
 import logging
 from logging.config import dictConfig
+
 logger = logging.getLogger(__name__)
 
-__all__ = ["main","call_main","Loader","load_subgroup","list_ext","load_ext"]
+__all__ = ["main", "call_main", "Loader", "load_subgroup", "list_ext", "load_ext"]
 
 this_load = ContextVar("this_load", default=None)
+
 
 def load_one(path, name, endpoint=None):
     mod = importlib.import_module(f"{path}.{name}")
     if endpoint is not None:
-        mod = getattr(mod,endpoint)
+        mod = getattr(mod, endpoint)
     return mod
 
 
@@ -104,15 +107,17 @@ def load_subgroup(_fn=None, plugin=None, **kw):
     """
     as click.group, but enables loading of subcommands
     """
+
     def _ext(fn, **kw):
         return click.command(**kw)(fn)
 
-    kw['cls'] = partial(Loader, _subdir=this_load.get(), _plugin=plugin)
+    kw["cls"] = partial(Loader, _subdir=this_load.get(), _plugin=plugin)
 
     if _fn is None:
         return partial(_ext, **kw)
     else:
         return _ext(_fn, **kw)
+
 
 class Loader(click.Group):
     """
@@ -145,7 +150,7 @@ class Loader(click.Group):
     def list_commands(self, ctx):
         rv = super().list_commands(ctx)
 
-        subdir = getattr(self,"_util_subdir", None) or ctx.obj._sub_name
+        subdir = getattr(self, "_util_subdir", None) or ctx.obj._sub_name
 
         if subdir:
             path = Path(importlib.import_module(subdir).__path__[0])
@@ -170,22 +175,26 @@ class Loader(click.Group):
                 plugins = ctx.obj._ext_name
 
                 command = load_one(f"{plugins}.{name}", self._util_plugin, "cli")
-            except (ModuleNotFoundError,FileNotFoundError):
+            except (ModuleNotFoundError, FileNotFoundError):
                 pass
 
         if command is None:
-            if not hasattr(ctx.obj,"_sub_name"):
-                import pdb;pdb.set_trace()
-            subdir = getattr(self,"_util_subdir", None) or ctx.obj._sub_name
+            if not hasattr(ctx.obj, "_sub_name"):
+                import pdb
+
+                pdb.set_trace()
+            subdir = getattr(self, "_util_subdir", None) or ctx.obj._sub_name
             if subdir is None:
-                import pdb;pdb.set_trace()
+                import pdb
+
+                pdb.set_trace()
             command = load_ext(subdir, name, "cli")
 
         command.__name__ = name
         return command
 
 
-@click.command(cls=Loader)#, __file__, "command"))
+@click.command(cls=Loader)  # , __file__, "command"))
 @click.option(
     "-v", "--verbose", count=True, help="Enable debugging. Use twice for more verbosity."
 )
@@ -201,8 +210,6 @@ class Loader(click.Group):
     help="Override a config entry. Example: '-C server.bind_default.port=57586'",
 )
 @click.option("-D", "--debug", count=True, help="Enable debug speed-ups (smaller keys etc).")
-
-
 @click.pass_context
 async def main(ctx, verbose, quiet, log, cfg, conf, debug):
     """
@@ -251,7 +258,9 @@ async def main(ctx, verbose, quiet, log, cfg, conf, debug):
     logging.captureWarnings(verbose > 0)
 
 
-def call_main(main=None, *, name=None, ext=None, sub=None, cfg=None, CFG=None, args=None, wrap=False):
+def call_main(
+    main=None, *, name=None, ext=None, sub=None, cfg=None, CFG=None, args=None, wrap=False
+):
     """
     The main command entry point, as declared in ``setup.py``.
 
@@ -266,21 +275,22 @@ def call_main(main=None, *, name=None, ext=None, sub=None, cfg=None, CFG=None, a
     if main is None:
         main = globals()["main"]
     if name is None:
-        name = main.__module__.split(".",1)[0]
+        name = main.__module__.split(".", 1)[0]
     if ext is None:
         ext = f"{name}_ext"
     if sub is True:
         import inspect
-        sub = inspect.currentframe().f_back.f_globals['__package__']
+
+        sub = inspect.currentframe().f_back.f_globals["__package__"]
     elif sub is None:
-        sub = __name__.split('.',1)[0]+".command"
+        sub = __name__.split(".", 1)[0] + ".command"
 
     main.context_settings["obj"] = obj = attrdict()
     obj._ext_name = ext
     obj._sub_name = sub
 
     merge_cfg = True
-    if isinstance(CFG,str):
+    if isinstance(CFG, str):
         p = Path(CFG)
         if not p.is_absolute():
             p = Path(main.__file__).parent / p
@@ -313,7 +323,9 @@ def call_main(main=None, *, name=None, ext=None, sub=None, cfg=None, CFG=None, a
     if merge_cfg:
         for n, _ in list_ext(ext):  # pragma: no cover
             try:
-                CFG[n] = combine_dict(load_ext(ext, n, "config", "CFG"), CFG.get(n, {}), cls=attrdict)
+                CFG[n] = combine_dict(
+                    load_ext(ext, n, "config", "CFG"), CFG.get(n, {}), cls=attrdict
+                )
             except ModuleNotFoundError:
                 pass
     obj.CFG = CFG
@@ -332,7 +344,7 @@ def call_main(main=None, *, name=None, ext=None, sub=None, cfg=None, CFG=None, a
     try:
         # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
         if wrap:
-            main=main.main
+            main = main.main
         return main(args=args, standalone_mode=False, obj=obj)
 
     except click.exceptions.MissingParameter as exc:
@@ -352,4 +364,3 @@ def call_main(main=None, *, name=None, ext=None, sub=None, cfg=None, CFG=None, a
         pass
     except EnvironmentError:  # pylint: disable=try-except-raise
         raise
-

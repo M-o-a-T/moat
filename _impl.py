@@ -1,18 +1,29 @@
 """
 This module contains various helper functions and classes.
 """
-import sys
-import os
-import re
-
 from collections import deque
 from math import log10
+from getpass import getpass
 
 import logging
 
-__all__ = ["NoneType","singleton","TimeOnlyFormatter","NotGiven","count","acount","Cache","NoLock","digits","num2byte","byte2num","split_arg"]
+__all__ = [
+    "NoneType",
+    "singleton",
+    "TimeOnlyFormatter",
+    "NotGiven",
+    "count",
+    "acount",
+    "Cache",
+    "NoLock",
+    "digits",
+    "num2byte",
+    "byte2num",
+    "split_arg",
+]
 
 NoneType = type(None)
+
 
 def singleton(cls):
     return cls()
@@ -83,8 +94,7 @@ class Cache:
             self._tail += 1
 
     def resize(self, size):
-        """Change the size of this cache.
-        """
+        """Change the size of this cache."""
         self._size = size
         self._flush()
 
@@ -128,7 +138,6 @@ def digits(n, digits=6):  # pylint: disable=redefined-outer-name
     return round(n, int(digits - 1 - log10(abs(n))))
 
 
-
 def num2byte(num: int, length=None):
     if length is None:
         length = (num.bit_length() + 7) // 8
@@ -137,6 +146,7 @@ def num2byte(num: int, length=None):
 
 def byte2num(data: bytes):
     return int.from_bytes(data, byteorder="big")
+
 
 def split_arg(p, kw):
     """
@@ -162,4 +172,3 @@ def split_arg(p, kw):
         except ValueError:
             pass
     kw[k] = v
-

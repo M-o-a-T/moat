@@ -2,12 +2,11 @@
 This module contains various helper functions and classes.
 """
 import anyio
-import os
-import re
 
 from ._msgpack import stream_unpacker, packer
 
-__all__ = ["MsgReader","MsgWriter"]
+__all__ = ["MsgReader", "MsgWriter"]
+
 
 class _MsgRW:
     """

@@ -2,8 +2,6 @@
 This module contains various helper functions and classes.
 """
 import anyio
-import os
-import re
 
 import attr
 import outcome
@@ -33,20 +31,17 @@ class ValueEvent:
     scope = attr.ib(default=None, init=True)
 
     async def set(self, value):
-        """Set the result to return this value, and wake any waiting task.
-        """
+        """Set the result to return this value, and wake any waiting task."""
         self.value = outcome.Value(value)
         await self.event.set()
 
     async def set_error(self, exc):
-        """Set the result to raise this exceptio, and wake any waiting task.
-        """
+        """Set the result to raise this exceptio, and wake any waiting task."""
         self.value = outcome.Error(exc)
         await self.event.set()
 
     def is_set(self):
-        """Check whether the event has occurred.
-        """
+        """Check whether the event has occurred."""
         return self.value is not None
 
     async def cancel(self):
@@ -67,5 +62,3 @@ class ValueEvent:
         """
         await self.event.wait()
         return self.value.unwrap()
-
-

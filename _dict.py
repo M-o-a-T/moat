@@ -1,14 +1,12 @@
 """
 This module contains various helper functions and classes.
 """
-import attr
-
 from collections.abc import Mapping
 from copy import deepcopy
 from . import NotGiven
 
 
-__all__ = ["combine_dict","drop_dict","attrdict"]
+__all__ = ["combine_dict", "drop_dict", "attrdict"]
 
 
 def combine_dict(*d, cls=dict, deep=False) -> dict:

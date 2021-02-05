@@ -1,13 +1,12 @@
 """
 This module contains various helper functions and classes.
 """
-import os
 import re
 
 import collections.abc
 import ast
 
-from typing import Union, Dict
+from typing import Union
 from functools import total_ordering
 
 import simpleeval
@@ -15,7 +14,7 @@ import ruamel.yaml as yaml
 
 import logging
 
-__all__ = ["Path","P","logger_for","PathNode","PathShortener","PathLongener","path_eval"]
+__all__ = ["Path", "P", "logger_for", "PathNode", "PathShortener", "PathLongener", "path_eval"]
 
 _PartRE = re.compile("[^:._]+|_|:|\\.")
 
@@ -256,7 +255,7 @@ def logger_for(path: Path):
         bar.c.d   foo.at.bar.c.d
 
     """
-    this = __name__.split('.',1)[0]
+    this = __name__.split(".", 1)[0]
     if not len(path):
         p = f"{this}.root"
     elif path[0] is None:
@@ -270,7 +269,6 @@ def logger_for(path: Path):
     if len(path) > 1:
         p += "." + ".".join(str(x) for x in path[1:])
     return logging.getLogger(p)
-
 
 
 class PathNode(yaml.nodes.ScalarNode):
@@ -378,5 +376,3 @@ class PathLongener:
 _eval = simpleeval.SimpleEval(functions={})
 _eval.nodes[ast.Tuple] = lambda node: tuple(_eval._eval(x) for x in node.elts)
 path_eval = _eval.eval
-
-

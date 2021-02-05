@@ -3,15 +3,14 @@ This module contains various helper functions and classes.
 """
 import trio
 import anyio
-import os
-import re
 
 from typing import Union, Dict, Optional
 from ssl import SSLContext
 from sniffio import current_async_library
 from contextlib import asynccontextmanager
 
-__all__ = ["create_tcp_server","gen_ssl"]
+__all__ = ["create_tcp_server", "gen_ssl"]
+
 
 class _Server:
     _servers = None
@@ -101,5 +100,3 @@ def gen_ssl(
     if "key" in ctx:
         ctx_.load_cert_chain(ctx["cert"], ctx["key"])
     return ctx_
-
-

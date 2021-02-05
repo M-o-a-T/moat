@@ -3,11 +3,11 @@ This module contains various helper functions and classes.
 """
 import anyio
 import os
-import re
 
 from contextlib import asynccontextmanager
 
 __all__ = ["as_service"]
+
 
 @asynccontextmanager
 async def as_service(obj=None):
@@ -54,5 +54,3 @@ async def as_service(obj=None):
         finally:
             async with anyio.fail_after(2, shield=True):
                 await tg.cancel_scope.cancel()
-
-

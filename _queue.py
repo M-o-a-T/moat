@@ -2,6 +2,7 @@ from anyio import create_memory_object_stream as _cmos
 
 __all__ = ["Queue", "create_queue"]
 
+
 class Queue:
     def __init__(self, length=0):
         self._s, self._r = _cmos(length)
@@ -30,6 +31,6 @@ class Queue:
     def close_receiver(self):
         return self._r.aclose()
 
+
 def create_queue(length=0):
     return Queue(length)
-

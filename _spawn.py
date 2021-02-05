@@ -2,10 +2,9 @@
 This module contains various helper functions and classes.
 """
 import anyio
-import os
-import re
 
 __all__ = ["spawn"]
+
 
 async def spawn(taskgroup, proc, *args, **kw):
     """
@@ -31,4 +30,3 @@ async def spawn(taskgroup, proc, *args, **kw):
     await taskgroup.spawn(_run, proc, args, kw, evt)
     await evt.wait()
     return scope
-

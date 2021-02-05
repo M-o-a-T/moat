@@ -1,15 +1,15 @@
 # command line interface
 
 import asyncclick as click
-from distkv.util import yprint, attrdict, NotGiven, P, Path, as_service, data_get
-from distkv.command import node_attr
+from distkv.data import data_get, node_attr
+from distkv.util import yprint, attrdict, NotGiven, P, Path, as_service
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-@main.group(short_help="Manage 1wire devices.")  # pylint: disable=undefined-variable
+@click.group(short_help="Manage 1wire devices.")
 async def cli():
     """
     List Onewire devices, modify device handling …

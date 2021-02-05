@@ -26,8 +26,7 @@ async def cli(obj):
 @click.argument("path", nargs=1)
 @click.pass_obj
 async def dump(obj, path):
-    """Emit the current state as a YAML file.
-    """
+    """Emit the current state as a YAML file."""
     res = {}
     path = P(path)
     if len(path) > 4:
@@ -49,8 +48,7 @@ async def dump(obj, path):
 @click.argument("path", nargs=1)
 @click.pass_obj
 async def list_(obj, path):
-    """List the next stage.
-    """
+    """List the next stage."""
     path = P(path)
     if len(path) > 4:
         raise click.UsageError("Only up to four path elements allowed")
@@ -126,8 +124,7 @@ Known modes: {" ".join(RemoteValueSensor.DPTMAP.keys())}
 @click.argument("group", nargs=1)
 @click.pass_obj
 async def addr(obj, bus, group, typ, mode, attr):
-    """Set/get/delete device settings. This is a shortcut for the "attr" command.
-    """
+    """Set/get/delete device settings. This is a shortcut for the "attr" command."""
     group = (int(x) for x in group.split("/"))
     path = Path(bus, *group)
     if len(path) != 4:
@@ -247,8 +244,7 @@ async def server(obj, bus, name, host, port, delete):
 @click.argument("server", nargs=-1)
 @click.pass_obj
 async def monitor(obj, bus, server, local_ip, initial):
-    """Stand-alone task to talk to a single server.
-    """
+    """Stand-alone task to talk to a single server."""
     from distkv_ext.knx.task import task
     from distkv_ext.knx.model import KNXroot
 

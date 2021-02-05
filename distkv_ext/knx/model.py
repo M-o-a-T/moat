@@ -101,8 +101,7 @@ class _KNXnode(_KNXbase):
 
 
 class KNXnode(_KNXnode):
-    """Describes one port, i.e. incoming value to be read.
-    """
+    """Describes one port, i.e. incoming value to be read."""
 
     async def _task_in(self, evt, dest):
         try:

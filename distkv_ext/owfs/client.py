@@ -22,8 +22,7 @@ async def cli():
 @click.option("-f", "--family", help="Device family to modify.")
 @click.pass_obj
 async def list_(obj, device, family):
-    """Emit the current state as a YAML file.
-    """
+    """Emit the current state as a YAML file."""
     if device is not None and family is not None:
         raise click.UsageError("Family and device code can't both be used")
     if family:
@@ -208,8 +207,7 @@ async def server_(obj, name, host, port, delete):
 @click.pass_obj
 @click.argument("server", nargs=-1)
 async def monitor(obj, server):
-    """Stand-alone task to monitor one or more OWFS servers.
-    """
+    """Stand-alone task to monitor one or more OWFS servers."""
     from distkv_ext.owfs.task import task
 
     async with as_service(obj) as srv:

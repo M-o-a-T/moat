@@ -39,7 +39,7 @@ def packer(data):
         pack = _packers.pop()
     else:
         pack = msgpack.Packer(
-            strict_types=False, strict_map_key=False, use_bin_type=True, default=_encode
+            strict_types=False, use_bin_type=True, default=_encode
         ).pack
     try:
         return pack(data)

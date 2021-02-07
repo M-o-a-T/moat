@@ -6,6 +6,7 @@ from pathlib import Path
 from functools import partial
 import importlib
 from contextvars import ContextVar
+from contextlib import asynccontextmanager
 from typing import Awaitable
 
 from ._dict import attrdict, combine_dict
@@ -18,7 +19,7 @@ from logging.config import dictConfig
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["main_", "call_main", "Loader", "load_subgroup", "list_ext", "load_ext"]
+__all__ = ["main_", "wrap_main", "Loader", "load_subgroup", "list_ext", "load_ext"]
 
 this_load = ContextVar("this_load", default=None)
 
@@ -194,7 +195,15 @@ class Loader(click.Group):
         command.__name__ = name
         return command
 
-
+class MainLoader(Loader):
+    """
+    A special loader that runs the main setup code even if there's a
+    subcommand with "--help".
+    """
+    async def invoke(self,ctx):
+        if ctx.obj is None:
+            await ctx.invoke(self.callback, **ctx.params)
+        return await super().invoke(ctx)
 #
 # The following part is annoying.
 #
@@ -208,7 +217,7 @@ class Loader(click.Group):
 #     `call_main` acts as an async function.
 
 
-@click.command(cls=Loader)  # , __file__, "command"))
+@click.command(cls=MainLoader, add_help_option=False, invoke_without_command=True)  # , __file__, "command"))
 @click.option(
     "-v", "--verbose", count=True, help="Enable debugging. Use twice for more verbosity."
 )
@@ -217,6 +226,7 @@ class Loader(click.Group):
 )
 @click.option("-q", "--quiet", count=True, help="Disable debugging. Opposite of '--verbose'.")
 @click.option("-c", "--cfg", type=click.File("r"), default=None, help="Configuration file (YAML).")
+@click.option("-h", "-?", "--help", is_flag=True, help="Show help. Subcommands only understand '--help'.")
 @click.option(
     "-C",
     "--conf",
@@ -225,19 +235,23 @@ class Loader(click.Group):
 )
 @click.option("-D", "--debug", count=True, help="Enable debug speed-ups (smaller keys etc).")
 @click.pass_context
-async def main_(ctx, verbose, quiet, log, cfg, conf, debug):
+async def main_(ctx, verbose, quiet, help=False, **kv):
     """
     This is the main command. (You might want to override this text.)
 
     You need to add a subcommand for this to do anything.
     """
 
-    # You cannot call this directly because `list_commands` depends on
-    # `call_main` having run.
-    pass
+    # The above `MainLoader.invoke` call causes this code to be called
+    # twice instead of never.
+    if ctx.obj is not None:
+        return
+    wrap_main(ctx=ctx, verbose=verbose-quiet, **kv)
+    if help or ctx.invoked_subcommand is None and not ctx.protected_args:
+        print(ctx.get_help())
+        ctx.exit()
 
-
-def call_main(
+def wrap_main(
     main=main_,
     *,
     name=None,
@@ -280,11 +294,12 @@ def call_main(
     elif sub is None:
         sub = __name__.split(".", 1)[0] + ".command"
 
-    obj = attrdict()
+    obj = getattr(ctx,'obj',None)
+    if obj is None:
+        obj = attrdict()
     if main is None:
         if help is not None:
             raise RuntimeError("You can't set the help text this way")
-        ctx.obj = obj
     else:
         main.context_settings["obj"] = obj
         if help is not None:
@@ -393,7 +408,9 @@ def call_main(
     try:
         # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
         # NOTE this return an awaitable
-        if main is not None:
+        if ctx is not None:
+            ctx.obj = obj
+        elif main is not None:
             if wrap:
                 main = main.main
             return main(args=args, standalone_mode=False, obj=obj)

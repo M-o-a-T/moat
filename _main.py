@@ -6,6 +6,7 @@ from pathlib import Path
 from functools import partial
 import importlib
 from contextvars import ContextVar
+from typing import Awaitable
 
 from ._dict import attrdict, combine_dict
 from ._impl import NotGiven
@@ -17,7 +18,7 @@ from logging.config import dictConfig
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["main", "call_main", "Loader", "load_subgroup", "list_ext", "load_ext"]
+__all__ = ["main_", "call_main", "Loader", "load_subgroup", "list_ext", "load_ext"]
 
 this_load = ContextVar("this_load", default=None)
 
@@ -194,6 +195,19 @@ class Loader(click.Group):
         return command
 
 
+#
+# The following part is annoying.
+# 
+# There are two ways this can start up.
+# (a) `main_` is the "real" main function. It sets up the Click environment and then
+#     starts anyio and runs the function body, which calls "call_main"
+#     synchronously to set up our object.
+# 
+# (b) `call_main` is used as a wrapper, used mainly for testing. It sets up the context
+#     and then returns "main_.main()", which is an awaitable, thus
+#     `call_main` acts as an async function.
+
+
 @click.command(cls=Loader)  # , __file__, "command"))
 @click.option(
     "-v", "--verbose", count=True, help="Enable debugging. Use twice for more verbosity."
@@ -211,71 +225,39 @@ class Loader(click.Group):
 )
 @click.option("-D", "--debug", count=True, help="Enable debug speed-ups (smaller keys etc).")
 @click.pass_context
-async def main(ctx, verbose, quiet, log, cfg, conf, debug):
+async def main_(ctx, verbose, quiet, log, cfg, conf, debug):
     """
     This is the main command. (You might want to override this text.)
 
     You need to add a subcommand for this to do anything.
     """
 
-    # Hack the configuration using command line arguments.
-    for k in conf:
-        try:
-            k, v = k.split("=", 1)
-        except ValueError:
-            v = NotGiven
-        else:
-            try:
-                v = path_eval(v)  # pylint: disable=eval-used
-            except Exception:  # pylint: disable=broad-except
-                pass
-        c = ctx.obj.cfg
-        *sl, s = k.split(".")
-        for kk in sl:
-            try:
-                c = c[kk]
-            except KeyError:
-                c[kk] = attrdict()
-                c = c[kk]
-        if v is NotGiven:
-            del c[s]
-        else:
-            c[s] = v
+    # You cannot call this directly because `list_commands` depends on
+    # `call_main` having run.
+    pass
 
-    ctx.obj.debug = max(verbose - quiet + 1, 0)
-    ctx.obj.DEBUG = debug
-
-    # Configure logging. This is a somewhat arcane art.
-    lcfg = ctx.obj.cfg.setdefault("logging", dict())
-    lcfg.setdefault("version", 1)
-    lcfg.setdefault("root", dict())["level"] = (
-        "DEBUG" if verbose > 2 else "INFO" if verbose > 1 else "WARNING" if verbose else "ERROR"
-    )
-    for k in log:
-        k, v = k.split("=")
-        lcfg["loggers"].setdefault(k, {})["level"] = v
-    dictConfig(lcfg)
-    logging.captureWarnings(verbose > 0)
 
 
 def call_main(
-    main=None, *, name=None, ext=None, sub=None, cfg=None, CFG=None, args=None, wrap=False
-):
+    main=main_, *, name=None, ext=None, sub=None, conf=(), cfg=None, CFG=None, args=None, wrap=False, verbose=1, debug=0, log=(), ctx=None, help=None
+) -> Awaitable:
     """
     The main command entry point, as declared in ``setup.py``.
 
-    main: special main function, defaults to util.main
+    main: special main function, defaults to .util.main_
     name: command name, defaults to {main}'s toplevel module name.
     ext: extension stub package, default to "{name}_ext"
     sub: load *.cli() from this package, default=caller if True
+    conf: a list of additional config changes
     cfg: configuration file, default: various locations based on {name}, False=don't load
     CFG: default configuration (dir or file), relative to caller
+    wrap: this is a subcommand. Don't set up logging, return the awaitable.
+    args: Argument list if called from a test, `None` otherwise.
+    help: Main help text of your code.
     """
 
-    if main is None:
-        main = globals()["main"]
     if name is None:
-        name = main.__module__.split(".", 1)[0]
+        name = (main or main_).__module__.split(".", 1)[0]
     if ext is None:
         ext = f"{name}_ext"
     if sub is True:
@@ -285,7 +267,15 @@ def call_main(
     elif sub is None:
         sub = __name__.split(".", 1)[0] + ".command"
 
-    main.context_settings["obj"] = obj = attrdict()
+    obj = attrdict()
+    if main is None:
+        if help is not None:
+            raise RuntimeError("You can't set the help text this way")
+        ctx.obj = obj
+    else:
+        main.context_settings["obj"] = obj
+        if help is not None:
+            main.help = help
     obj._ext_name = ext
     obj._sub_name = sub
 
@@ -293,7 +283,7 @@ def call_main(
     if isinstance(CFG, str):
         p = Path(CFG)
         if not p.is_absolute():
-            p = Path(main.__file__).parent / p
+            p = Path((main or main_).__file__).parent / p
         with open(p, "r") as cfgf:
             CFG = yload(cfgf)
     elif CFG is None:
@@ -341,11 +331,53 @@ def call_main(
         cfg.close()
     else:
         obj.cfg = CFG
+
+    obj.debug = verbose
+    obj.DEBUG = debug
+
+    for k in conf:
+        try:
+            k, v = k.split("=", 1)
+        except ValueError:
+            v = NotGiven
+        else:
+            try:
+                v = path_eval(v)  # pylint: disable=eval-used
+            except Exception:  # pylint: disable=broad-except
+                pass
+        c = obj.cfg
+        *sl, s = k.split(".")
+        for kk in sl:
+            try:
+                c = c[kk]
+            except KeyError:
+                c[kk] = attrdict()
+                c = c[kk]
+        if v is NotGiven:
+            del c[s]
+        else:
+            c[s] = v
+
+    if wrap:
+        # Configure logging. This is a somewhat arcane art.
+        lcfg = obj.cfg.setdefault("logging", dict())
+        lcfg.setdefault("version", 1)
+        lcfg.setdefault("root", dict())["level"] = (
+            "DEBUG" if verbose > 2 else "INFO" if verbose > 1 else "WARNING" if verbose else "ERROR"
+        )
+        for k in log:
+            k, v = k.split("=")
+            lcfg["loggers"].setdefault(k, {})["level"] = v
+        dictConfig(lcfg)
+        logging.captureWarnings(verbose > 0)
+
     try:
         # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
-        if wrap:
-            main = main.main
-        return main(args=args, standalone_mode=False, obj=obj)
+        # NOTE this return an awaitable
+        if main is not None:
+            if wrap:
+                main = main.main
+            return main(args=args, standalone_mode=False, obj=obj)
 
     except click.exceptions.MissingParameter as exc:
         print(f"You need to provide an argument { exc.param.name.upper() !r}.\n", file=sys.stderr)

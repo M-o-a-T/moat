@@ -197,12 +197,12 @@ class Loader(click.Group):
 
 #
 # The following part is annoying.
-# 
+#
 # There are two ways this can start up.
 # (a) `main_` is the "real" main function. It sets up the Click environment and then
 #     starts anyio and runs the function body, which calls "call_main"
 #     synchronously to set up our object.
-# 
+#
 # (b) `call_main` is used as a wrapper, used mainly for testing. It sets up the context
 #     and then returns "main_.main()", which is an awaitable, thus
 #     `call_main` acts as an async function.
@@ -237,9 +237,22 @@ async def main_(ctx, verbose, quiet, log, cfg, conf, debug):
     pass
 
 
-
 def call_main(
-    main=main_, *, name=None, ext=None, sub=None, conf=(), cfg=None, CFG=None, args=None, wrap=False, verbose=1, debug=0, log=(), ctx=None, help=None
+    main=main_,
+    *,
+    name=None,
+    ext=None,
+    sub=None,
+    conf=(),
+    cfg=None,
+    CFG=None,
+    args=None,
+    wrap=False,
+    verbose=1,
+    debug=0,
+    log=(),
+    ctx=None,
+    help=None,
 ) -> Awaitable:
     """
     The main command entry point, as declared in ``setup.py``.
@@ -363,7 +376,13 @@ def call_main(
         lcfg = obj.cfg.setdefault("logging", dict())
         lcfg.setdefault("version", 1)
         lcfg.setdefault("root", dict())["level"] = (
-            "DEBUG" if verbose > 2 else "INFO" if verbose > 1 else "WARNING" if verbose else "ERROR"
+            "DEBUG"
+            if verbose > 2
+            else "INFO"
+            if verbose > 1
+            else "WARNING"
+            if verbose
+            else "ERROR"
         )
         for k in log:
             k, v = k.split("=")

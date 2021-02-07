@@ -2,16 +2,15 @@
 
 import asyncclick as click
 
-from distkv.command import node_attr
-from distkv.util import yprint, attrdict, NotGiven
-from distkv.util import as_service, P
+from distkv.data import node_attr
+from distkv.util import yprint, attrdict, NotGiven, as_service, P
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-@main.group(short_help="Manage Wago controllers.")  # pylint: disable=undefined-variable
+@click.group(short_help="Manage Wago controllers.")
 async def cli():
     """
     List Wago controllers, modify device handling …

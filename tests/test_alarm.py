@@ -9,10 +9,10 @@ from functools import partial
 from asyncowfs.mock import structs
 from distkv.mock.mqtt import stdtest
 
-from distkv.ext import load_ext
-from distkv.util import attrdict, data_get, Path, P
+from distkv.data import data_get
+from distkv.util import attrdict, Path, P, load_ext
 
-owfs_mock = load_ext("owfs", "mock")
+owfs_mock = load_ext("distkv_ext.owfs", "mock")
 
 import logging
 
@@ -45,7 +45,7 @@ async def test_alarm(mock_clock):
     async with stdtest(test_0={"init": 125}, n=1, tocks=200) as st, st.client(0) as client:
         evt = anyio.create_event()
         obj = attrdict(client=client, meta=0, stdout=sys.stdout)
-        await st.tg.spawn(partial(owfs_mock["server"], client, tree=my_tree, evt=evt))
+        await st.tg.spawn(partial(owfs_mock.server, client, tree=my_tree, evt=evt))
         await evt.wait()
         assert dt["foo"]["bar"] == 123
         await st.run("owfs attr -d 10.345678.90 -i 5 temperature test.foo.temp")

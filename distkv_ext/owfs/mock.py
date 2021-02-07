@@ -1,17 +1,28 @@
-import trio
+import os
+import anyio
 from functools import partial
 from asyncowfs.mock import some_server
 
 from distkv_ext.owfs.task import task
 
+PORT = ((os.getpid() + 101) % 9999) + 40000
+
 
 async def server(client, tree={}, options={}, evt=None):  # pylint: disable=dangerous-default-value
 
-    async with trio.open_nursery() as n:
-        s = await n.start(
-            partial(trio.serve_tcp, host="127.0.0.1"), partial(some_server, tree, options), 0
+    async with anyio.create_task_group() as tg:
+        listener = await anyio.create_tcp_listener(
+            local_host="127.0.0.1", local_port=PORT, reuse_port=True
         )
-        addr = s[0].socket.getsockname()
+
+        async def may_close():
+            try:
+                await listener.serve(partial(some_server, tree, options))
+            except (anyio.ClosedResourceError, anyio.BrokenResourceError):
+                pass
+
+        addr = listener.extra(anyio.abc.SocketAttribute.raw_socket).getsockname()
+        await tg.spawn(may_close)
 
         await client.set(
             client._cfg.owfs.prefix + ("server", "127.0.0.1"),

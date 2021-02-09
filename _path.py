@@ -10,11 +10,14 @@ from typing import Union
 from functools import total_ordering
 
 import simpleeval
-import ruamel.yaml as yaml
+try:
+    import ruamel.yaml as yaml
+except ImportError:
+    yaml = None
 
 import logging
 
-__all__ = ["Path", "P", "logger_for", "PathNode", "PathShortener", "PathLongener", "path_eval"]
+__all__ = ["Path", "P", "logger_for", "PathShortener", "PathLongener", "path_eval"]
 
 _PartRE = re.compile("[^:._]+|_|:|\\.")
 
@@ -269,10 +272,6 @@ def logger_for(path: Path):
     if len(path) > 1:
         p += "." + ".".join(str(x) for x in path[1:])
     return logging.getLogger(p)
-
-
-class PathNode(yaml.nodes.ScalarNode):
-    pass
 
 
 class PathShortener:

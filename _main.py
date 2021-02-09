@@ -209,12 +209,12 @@ class MainLoader(Loader):
 #
 # There are two ways this can start up.
 # (a) `main_` is the "real" main function. It sets up the Click environment and then
-#     starts anyio and runs the function body, which calls "call_main"
+#     starts anyio and runs the function body, which calls `wrap_main`
 #     synchronously to set up our object.
 #
-# (b) `call_main` is used as a wrapper, used mainly for testing. It sets up the context
+# (b) `wrap_main` is used as a wrapper, used mainly for testing. It sets up the context
 #     and then returns "main_.main()", which is an awaitable, thus
-#     `call_main` acts as an async function.
+#     `wrap_main` acts as an async function.
 
 
 @click.command(cls=MainLoader, add_help_option=False, invoke_without_command=True)  # , __file__, "command"))

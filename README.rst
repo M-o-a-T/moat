@@ -29,11 +29,21 @@ Please contribute any enhancements.
 Dependencies
 ============
 
-A few. Read the code.
+A few. Notable:
+
+* anyio. Required for `ValueEvent`, `spawn` (obviously) and `as_service`.
+
+* ruyaml. This is a fork of ruamel.yaml which is a fork of pyyaml.
+  Fixes some bugs and has a more reasonable API. Required for
+  `yload`/`yprint`/`yformat`.
+
+* msgpack, obviously required for `pack`/`unpack` and `MsgReader`/`MsgWriter`.
+
+* asyncclick, required for `main_`/`wrap_main`.
 
 Features
 ========
 
-A few. Read the code.
+A few. Read the code, I didn't get around to documenting all of that yet.
 
 

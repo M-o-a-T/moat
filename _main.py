@@ -181,15 +181,7 @@ class Loader(click.Group):
                 pass
 
         if command is None:
-            if not hasattr(ctx.obj, "_sub_name"):
-                import pdb
-
-                pdb.set_trace()
             subdir = getattr(self, "_util_subdir", None) or ctx.obj._sub_name
-            if subdir is None:
-                import pdb
-
-                pdb.set_trace()
             command = load_ext(subdir, name, "cli")
 
         command.__name__ = name

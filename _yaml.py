@@ -3,7 +3,7 @@ This module contains various helper functions and classes.
 """
 import sys
 
-import ruamel.yaml as yaml
+import ruyaml as yaml
 
 from ._dict import attrdict
 from ._path import Path

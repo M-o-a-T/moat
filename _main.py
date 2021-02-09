@@ -270,6 +270,7 @@ def wrap_main(
     conf: a list of additional config changes
     cfg: configuration file, default: various locations based on {name}, False=don't load
     CFG: default configuration (dir or file), relative to caller
+         Default: try to load from name.default
     wrap: this is a subcommand. Don't set up logging, return the awaitable.
     args: Argument list if called from a test, `None` otherwise.
     help: Main help text of your code.
@@ -307,7 +308,10 @@ def wrap_main(
         with open(p, "r") as cfgf:
             CFG = yload(cfgf)
     elif CFG is None:
-        CFG = {}
+        try:
+            CFG = importlib.import_module(f"{name}.default").CFG
+        except (ImportError, AttributeError):
+            CFG = {}
     else:
         merge_cfg = False
 

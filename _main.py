@@ -186,15 +186,19 @@ class Loader(click.Group):
         command.__name__ = name
         return command
 
+
 class MainLoader(Loader):
     """
     A special loader that runs the main setup code even if there's a
     subcommand with "--help".
     """
-    async def invoke(self,ctx):
+
+    async def invoke(self, ctx):
         if ctx.obj is None:
             await ctx.invoke(self.callback, **ctx.params)
         return await super().invoke(ctx)
+
+
 #
 # The following part is annoying.
 #
@@ -208,7 +212,9 @@ class MainLoader(Loader):
 #     `wrap_main` acts as an async function.
 
 
-@click.command(cls=MainLoader, add_help_option=False, invoke_without_command=True)  # , __file__, "command"))
+@click.command(
+    cls=MainLoader, add_help_option=False, invoke_without_command=True
+)  # , __file__, "command"))
 @click.option(
     "-v", "--verbose", count=True, help="Enable debugging. Use twice for more verbosity."
 )
@@ -217,7 +223,9 @@ class MainLoader(Loader):
 )
 @click.option("-q", "--quiet", count=True, help="Disable debugging. Opposite of '--verbose'.")
 @click.option("-c", "--cfg", type=click.File("r"), default=None, help="Configuration file (YAML).")
-@click.option("-h", "-?", "--help", is_flag=True, help="Show help. Subcommands only understand '--help'.")
+@click.option(
+    "-h", "-?", "--help", is_flag=True, help="Show help. Subcommands only understand '--help'."
+)
 @click.option(
     "-C",
     "--conf",
@@ -226,7 +234,7 @@ class MainLoader(Loader):
 )
 @click.option("-D", "--debug", count=True, help="Enable debug speed-ups (smaller keys etc).")
 @click.pass_context
-async def main_(ctx, verbose, quiet, help=False, **kv):
+async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redefined-builtin
     """
     This is the main command. (You might want to override this text.)
 
@@ -237,12 +245,13 @@ async def main_(ctx, verbose, quiet, help=False, **kv):
     # twice instead of never.
     if ctx.obj is not None:
         return
-    wrap_main(ctx=ctx, verbose=verbose-quiet, **kv)
+    wrap_main(ctx=ctx, verbose=verbose - quiet, **kv)
     if help or ctx.invoked_subcommand is None and not ctx.protected_args:
         print(ctx.get_help())
         ctx.exit()
 
-def wrap_main(
+
+def wrap_main(  # pylint: disable=redefined-builtin
     main=main_,
     *,
     name=None,
@@ -286,7 +295,7 @@ def wrap_main(
     elif sub is None:
         sub = __name__.split(".", 1)[0] + ".command"
 
-    obj = getattr(ctx,'obj',None)
+    obj = getattr(ctx, "obj", None)
     if obj is None:
         obj = attrdict()
     if main is None:

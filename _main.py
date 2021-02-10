@@ -6,7 +6,6 @@ from pathlib import Path
 from functools import partial
 import importlib
 from contextvars import ContextVar
-from contextlib import asynccontextmanager
 from typing import Awaitable
 
 from ._dict import attrdict, combine_dict

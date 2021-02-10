@@ -10,12 +10,8 @@ from typing import Union
 from functools import total_ordering
 
 import simpleeval
-try:
-    import ruamel.yaml as yaml
-except ImportError:
-    yaml = None
-
 import logging
+
 
 __all__ = ["Path", "P", "logger_for", "PathShortener", "PathLongener", "path_eval"]
 

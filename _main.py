@@ -433,6 +433,3 @@ def wrap_main(  # pylint: disable=redefined-builtin
         sys.exit(2)
     except click.exceptions.Abort:
         print("Aborted.", file=sys.stderr)
-        pass
-    except EnvironmentError:  # pylint: disable=try-except-raise
-        raise

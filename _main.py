@@ -390,7 +390,7 @@ def wrap_main(  # pylint: disable=redefined-builtin
         else:
             c[s] = v
 
-    if wrap:
+    if not wrap:
         # Configure logging. This is a somewhat arcane art.
         lcfg = obj.cfg.setdefault("logging", dict())
         lcfg.setdefault("version", 1)

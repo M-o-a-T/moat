@@ -409,6 +409,8 @@ def wrap_main(  # pylint: disable=redefined-builtin
         dictConfig(lcfg)
         logging.captureWarnings(verbose > 0)
 
+    obj.logger = logging.getLogger(name)
+
     try:
         # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
         # NOTE this return an awaitable

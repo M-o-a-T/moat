@@ -63,7 +63,10 @@ def list_ext(name, func=None):
     TODO: This is not zip safe.
     """
     if name not in _ext_cache:
-        _cache_ext(name)
+        try:
+            _cache_ext(name)
+        except ModuleNotFoundError:
+            pass
     if func is None:
         yield from iter(_ext_cache[name].items())
         return

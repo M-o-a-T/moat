@@ -4,6 +4,9 @@ import sys
 sys.path[0:0] = (".",)
 
 import trio
+import asyncclick as click
+click.anyio_backend="trio"
+
 from moatbus.command import cmd
 cmd()
 

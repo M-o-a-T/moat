@@ -16,6 +16,13 @@ def skip_fake(node):
         return None
     mode = env.GetProjectOption("mode")
 
+    import pdb;pdb.set_trace()
+    n = node
+    while n.get_dir().name != "src" and n.get_dir().get_dir().name != ".pio":
+        n = n.get_dir()
+    if n.name in {"picolibc"}:
+        return None
+
     if mode == "app":
         if node.get_dir().name in {"app"}:
             return node
@@ -32,9 +39,14 @@ def run_pre():
         base = env.GetProjectOption("base")
         # We need to insert the gate addresses after the actual objects
         # so that we won't override them.
-        env.Replace(LINKCOM=[env['LINKCOM'].replace(' $_LIBDIRFLAGS', '$LDAUXFLAGS $_LIBDIRFLAGS')])
+        env.Replace(LINKCOM=[env['LINKCOM'].replace(' $_LIBDIRFLAGS ', ' $LDAUXFLAGS $_LIBDIRFLAGS ')])
         f = os.path.join(".pio","build",base,"firmware.elf")
         env.Replace(LDAUXFLAGS=["-Wl,-R,"+ f])
+
+        ff = os.path.join(".pio","build",env['PIOENV'],"firmware.elf")
+        env.Depends(ff,f)
+        ff = os.path.join(".pio","build",env['PIOENV'],"src","app","base.cpp.o")
+        env.Depends(ff,f)
         with open(f,"rb") as stream:
             elffile = ELFFile(stream)
 
@@ -73,7 +85,7 @@ def run_pre():
             "-Wl,--defsym=APP_DATA_START=0x%x"%ram_end,
             "-Wl,--defsym=APP_FLASH_START=0x%x"%flash_start,
                 ])
-            env.Append(CPPFLAGS=["-g2", "-D BOOT_CRC=0x%x"%crc.finish()])
+            env.Append(CPPFLAGS=["-D BOOT_CRC=0x%x"%crc.finish()])
 
 
 def run_post():

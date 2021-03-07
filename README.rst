@@ -6,38 +6,62 @@ The MoaT bus
 Why a new bus?
 --------------
 
-Given that RJ45, PoE, several VDSL options and multiple wireless options
-exist, you might wonder why a new wired protocol might be useful.
+Given that RJ45, PoE, VDSL, and multiple wireless options exist, you might
+wonder why a new wired protocol might be useful.
 
 The answer is that there is a rather large niche which doesn't have a good
 solution. Assume, for the moment, that you want to deploy 100 sensors,
 using cheap low-power microcontrollers and little or no bus attachment
-hardware, on a possibly-unshielded random-topology cable, possibly with
-walls that eat your WLAN for breakfast.
+hardware, on a possibly-unshielded random-topology cable, in an old house
+with thick walls (or an office with concrete-and-steel walls) that eat your
+WLAN for breakfast.
 
-WLAN has problems: requires more power and doesn't go through the walls.
 Also, radio is susceptible to random connectivity problems, dynamic mesh
 radio is easy to get wrong and requires always-on nodes which again
-requires too much power. Also, radio needs hardware.
+requires too much power. Also², radio needs nontrivial hardware; for some
+reason *g* most MCUs don't have a built-in mesh-capable radio.
 
-A three-wire bus (1wire) is too fiddly to write clients for. (Several
-people have tried.) Also, 1wire doesn't have multi-master and you don't
-want to poll the bus all the time: 100 sensors eat too much power.
+A three-wire bus like 1wire is too fiddly to write bit-banging clients for.
+(Several people have tried.) Also, 1wire doesn't have multi-master and you
+don't want to poll the bus all the time.
+
+CAN is difficult to get right without dedicated hardware. You need accurate
+timing (<5%); also, the protocol overhead is rather high because the frame
+size is limited to 8 bytes. That's OK for a car (high-speed bus with
+differential signalling) but not if your bus extends over a building,
+your MCU has no CAN hardware, your wiring isn't twisted-pair, and you want
+to do firmware updates over the wire.
 
 You could use half-duplex serial but there's the collision problem which
-most UARTs are not equipped to handle. Your MCU might only have one serial
-port which you'd rather use for uploads or debugging.
+many UARTs are not equipped to handle. Also, your MCU might not have many
+serial ports, and those might better required for firmware update,
+debugging, or talking to peripherals.
 
 Next problem: long wires have somewhat high impedance, which limit your
-transmission speed. You could use something like I²C, but many hardware
-clients are too susceptible to noise – in fact on many embedded CPUs they
-can freeze up until a hard reset. If we're bit-banging anyway,
-also, you need 16 bus transitions per byte. This is rather slow.
+transmission speed. You could use I²C, but many hardware clients are too
+susceptible to noise – in fact on many embedded CPUs the I²C interface can
+freeze up. Also, you need 16 bus transitions per byte. This is rather slow.
 
 The MoaT bus offers a solution to all of this. It requires four wires:
 ground, power, and two data lines. It adapts easily to more than two wires.
-It is multi-master and does not require particularly accurate timers.
+It is multi-master and does not require particularly accurate timers:
+timers for serial ports must be accurate within at most ~4% of the
+bit rate, while MoaT work well with ~20% accuracy.
 
+Downsides
+---------
+
+There are always compromises. With MoaT, the main problem is that it's a
+bit-banging interface (well, until somebody writes an FPGA implementation,
+which is unlikely as of 2021) which requires reasonably-fast interrupts.
+While the current proof of concept implementattion runs in the Arduino main
+loop, that's far too slow and doesn't allow the MCU to sleep.
+
+While MoaT is designed for small(ish) MCUs, packet assembly and disassembly
+is somewhat expensive in terms of both CPU speed and memory: the boot
+loader for Cortex-M CPUs barely fits in 32k, thus online firmware upgrades
+or non-trivial applications requires 64k of flash storage. The situation
+on ATmega CPUs is likely to be worse.
 
 ----------------------
 Principle of operation
@@ -114,3 +138,10 @@ bus system.
 
 
 The details are documented in ``doc/spec_infra.rst``.
+
+
+---------------------
+Building the firmware
+---------------------
+
+Run `make.sh`.

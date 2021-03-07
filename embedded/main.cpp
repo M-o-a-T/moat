@@ -74,7 +74,7 @@ IN_C char *sbrk(int i);
 
 unsigned int memspace()
 {
-    struct mallinfo mi = mallinfo();
+    //struct mallinfo mi = mallinfo();
     extern char _Min_Stack_Size;
     //extern char _end;
     //extern char _sdata;
@@ -86,7 +86,7 @@ unsigned int memspace()
 
     char *heapend = (char*)sbrk(0);
     char * stack_ptr = (char*)__get_MSP();
-    return ((stack_ptr < minSP) ? stack_ptr : minSP) - heapend + mi.fordblks;
+    return ((stack_ptr < minSP) ? stack_ptr : minSP) - heapend; //  + mi.fordblks;
 }
 
 void loop()

@@ -35,6 +35,7 @@ async def pdb(args):  # safe
         return
     return await main.main(args)
 
+
 @main.command(short_help="Serial>MQTT gateway")
 @click.option("-u","--uri", default='mqtt://localhost/', help="URI of MQTT server")
 @click.option("-t","--topic", default='test/moat/bus', help="Topic to send incoming messages to")
@@ -44,6 +45,10 @@ async def pdb(args):  # safe
 @click.option("-b","--baud", type=int, default=57600, help="Serial port baud rate")
 @click.pass_obj
 async def gateway(obj, uri,topic,ident,prefix,port,baud):
+    """
+    The gateway transfers MoaT messages from MQTT to the serial MoaT bus,
+    and vice versa.
+    """
     if ident is None:
         ident = "".join(random.choices("abcdefghjkmnopqrstuvwxyz23456789", k=9))
     ident = prefix+ident
@@ -67,6 +72,10 @@ async def gateway(obj, uri,topic,ident,prefix,port,baud):
 @click.option("-n","--node","id", type=int, default=1, help="Server number (1…3)")
 @click.pass_obj
 async def addr(obj, uri,topic,ident,id):
+    """
+    The address assignment processor manages the association between MoaT
+    client IDs and their unique serial#.
+    """
     if ident is None:
         ident = "".join(random.choices("abcdefghjkmnopqrstuvwxyz23456789", k=9))
 
@@ -91,6 +100,9 @@ async def addr(obj, uri,topic,ident,id):
 @click.argument("path", nargs=1)
 @click.pass_obj
 async def flash(obj, uri,topic,ident,id,dest):
+    """
+    Update the flash memory on a MoaT client.
+    """
     if ident is None:
         ident = "".join(random.choices("abcdefghjkmnopqrstuvwxyz23456789", k=9))
 

@@ -7,13 +7,27 @@ The default test setup requires
 * four 10k pull-up resistors
 * several wires connecting these
 
-The test run (incomplete) flashes each device multiple times and thus
-should not run indiscriminately, as Flash storage has a limited number
-of write cycles (~10000) before it breaks down.
+The test runs several flash updates on each device. Thus it should not run
+indiscriminately, as Flash storage has a limited number of write cycles
+(~10000) before it breaks down.
+
+Usage:
+
+First, prepare the test system:
+
+* copy the `ci/cfg` subdirectory someplace, change as appropriate
+* export CFG=/path/to/cfg
+* ci/run a
+* ci/run b  # in a new terminal
+* ci/run c  # in another new terminal
+
+Actual Testing (run this on your build system):
+* make pio  # the first build pass may fail. This is currently unavoidable.
+* make pio copy run
 
 Files:
 * 71-serial.rules: udev rules file to auto-create links to the pills' serial ports
-* cfg: subdirectory for onfig files (GPIO ports etc)
+* cfg: subdirectory for config files (GPIO ports etc)
 * config.sh: loader for configuration, not useable directly
 * openocd: start a debugger on one of the pills
 * prog: code to flash a Pill. RESET will be left asserted.
@@ -27,7 +41,8 @@ Files:
 To debug code on a board:
 * start "ci/openocd a" (or b or c)
 * in another terminal, start "gdb /path/to/firmware.elf"
-* enter "target extended-remote localhost:3333"
+* enter "target extended-remote localhost:3333" (this command is also displayed
+  right above your GDB prompt)
 * use common GDB commands
 
 The main Makefile's "ci" target compiles code for basic "node" and "gate" roles,

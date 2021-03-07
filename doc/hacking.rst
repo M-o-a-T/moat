@@ -139,7 +139,7 @@ Simulating a bus is nice but there's something to be said for using actual
 hardware.
 
 Our canonical test setup requires a Raspberry Pi 2 (or better). You need
-three Blue Pill boards, two **3.3V TTL** serial bus adapters (two if you
+three Blue Pill boards, three **3.3V TTL** serial bus adapters (two if you
 use the Pi's built-in serial for the third), four 10k resistors (for bus
 pull-up) and two standard-sized breadboards if you don't want to have the
 Pills float around your desk.
@@ -148,8 +148,9 @@ If you don't have a Pi: anything that runs Linux and can handle three TTL
 serial ports and twelve 3.3V digital ports will work. You'll need to
 translate GPIO pin numbers, of course.
 
-Install stm32flash. If you want to debug on the Pill with gdb, also install
-openocd (from Bullseye or better; the version from Buster doesn't work).
+Install ``stm32flash``. If you want to debug on the Pill with gdb, also
+install ``openocd`` (from Bullseye or better; the version from Buster
+doesn't work).
 
 NB: If you even thought of using those RS232 adapters you still have in
 your grab bag, you probably deserve frying your hardware. Then again, maybe
@@ -224,19 +225,30 @@ and A10 to them if you do **not** have a third serial-TTL adapter.
 Testing
 -------
 
-The test consists of a serial bus gateway (pill A) and two slaves (B and C).
-The gateway talks to a Python program that sends the incoming messages to 
-MQTT and vice versa. (This helps with debugging because it's easy to record
-and replay messages.)
+The standard test consists of a serial bus gateway (pill A) and two slaves
+(B and C). The gateway talks to a Python program that sends the incoming
+messages to MQTT and vice versa. (This helps with debugging because it's
+easy to record and replay messages.)
+
+If you need to modify the test configuration, it's best to copy the ``ci/cfg``
+someplace. Then do ``export CFG=/home/moatbus-test/cfg`` after starting
+each terminal in the samples below.
+
+Running the test
+----------------
+
+Start an MQTT server if it doesn't run anyway.
 
 On the Pi, start three terminals. Run ``ci/run a``, ``ci/run b`` and ``ci/run c``
 in each, respectively.
 
 The Makefile should copy ``prog.bin`` and ``gate.bin`` to the Pi.
-Start ``test``, which programs the three pills and then tells the
+Start ``ci/test``, which programs the three pills and then tells the
 ``test_X`` scripts to run a serial terminal (except for ``test_a``, which
 runs the serial/MQTT gateway).
 
-You should now see some periodic messages as the three pills try to acquire
+You should now see some messages as the three pills try to acquire
 a MoaT bus address.
+
+Start 
 

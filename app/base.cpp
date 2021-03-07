@@ -59,9 +59,6 @@ void _stop() {
     fini_array();
 }
 
-// fake entry point
-IN_C void Reset_Handler() {}
-
 //IN_C bool _default_start() { return true; }
 IN_C void _default_stop() { }
 IN_C void _default_loop() { }

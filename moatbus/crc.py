@@ -104,7 +104,7 @@ class CRC11(_CRC):
 class CRC16(_CRC):
     _poly = 0xAC9A # 0xBAAD
     _width = 16
-    _depth = 4
+    _depth = 8
 
 class CRC32(_CRC):
     _poly = 0xEDB88320

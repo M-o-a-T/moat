@@ -1,3 +1,4 @@
+from .util import mini2byte
 
 import asyncclick as click
 import logging
@@ -36,7 +37,7 @@ async def pdb(args):  # safe
     return await main.main(args)
 
 
-@main.command(short_help="Serial>MQTT gateway")
+@main.command(short_help="Serial<>MQTT gateway")
 @click.option("-u","--uri", default='mqtt://localhost/', help="URI of MQTT server")
 @click.option("-t","--topic", default='test/moat/bus', help="Topic to send incoming messages to")
 @click.option("-i","--ident", help="Identifier for this gateway. Must be unique.")
@@ -70,8 +71,9 @@ async def gateway(obj, uri,topic,ident,prefix,port,baud):
 @click.option("-t","--topic", default='test/moat/bus', help="Topic on MQTT")
 @click.option("-i","--ident", help="Identifier for this process. Must be unique.")
 @click.option("-n","--node","id", type=int, default=1, help="Server number (1…3)")
+@click.option("-T","--timeout", type=float, help="Startup timer", default=10)
 @click.pass_obj
-async def addr(obj, uri,topic,ident,id):
+async def addr(obj, uri,topic,ident,id,timeout):
     """
     The address assignment processor manages the association between MoaT
     client IDs and their unique serial#.
@@ -88,6 +90,9 @@ async def addr(obj, uri,topic,ident,id):
         async with Server(M, id=id) as S:
             async with ControlHandler(S) as C:
                 async with AddrControl(C) as A:
+                    # trigger query
+                    await S.send(src=C.my_id, dst=-4, code=1, data=bytes((0x03, mini2byte(timeout),)))
+
                     async for upd in A:
                         print(upd)
 
@@ -115,6 +120,21 @@ async def flash(obj, uri,topic,ident,id,dest):
         async with Server(M, id=id) as S:
             async with ControlHandler(S) as C:
                 await FlashControl(C).flash(dest, path)
+
+@main.command(short_help="MQTT monitor")
+@click.option("-u","--uri", default='mqtt://localhost/', help="URI of MQTT server")
+@click.option("-t","--topic", default='test/moat/bus', help="Topic on MQTT")
+@click.pass_obj
+async def monitor(obj, uri,topic):
+    """
+    Monitor our MQTT bus.
+    """
+    from moatbus.backend.mqtt import MqttBusHandler
+
+    async with MqttBusHandler(uri=uri, topic=topic) as M:
+        async for msg in M:
+            print(msg)
+
 
 def cmd():
     """

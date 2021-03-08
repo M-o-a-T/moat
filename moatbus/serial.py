@@ -92,6 +92,12 @@ class SerBus:
         """
         raise RuntimeError("Override me")
 
+    def data_out(self, data: bytes):
+        """
+        OVERRIDE: Send these serial data    
+        """
+        raise RuntimeError("Override me")
+
     def alloc_in(self):
         self.m_in = BusMessage()
         self.crc_in = CRC16()
@@ -124,6 +130,10 @@ class SerBus:
             logger.debug("R: %s", b);
         self.log_buf = b""
 
+    @staticmethod
+    def now():
+        return trio.current_time()
+
     def char_in(self, ci:int):
         """
         process an incoming serial character
@@ -137,7 +147,7 @@ class SerBus:
                 self.s_in = S.LEN
             elif ci not in (10,13):  # CR/LF
                 self.log_buf += bytes((ci,))
-                self.log_buf_t = trio.current_time()
+                self.log_buf_t = self.now()
                 return
             elif self.log_buf:
                 self.dump_log_buf()
@@ -173,7 +183,7 @@ class SerBus:
             self.set_timeout(False)
 
             if self.crc_in:
-                self.report_error(ERR.CRC)
+                self.report_error(ERR.CRC, msg=self.m_in)
                 self.s_in = S.IDLE
             else:
                 self.s_in = S.DONE
@@ -246,6 +256,46 @@ class SerBus:
                 self.set_timeout(False)
         else:
             self.idle = 0
-            if self.log_buf and self.log_buf_t+0.2 < trio.current_time():
+            if self.log_buf and self.log_buf_t+0.2 < self.now():
                 self.dump_log_buf()
+
+class SerBusDump(SerBus):
+    """
+    A SerBus version useable for debugging
+    """
+    _n = 0
+
+    def report_error(self, typ, **kw):
+        print("ERROR",typ,kw)
+
+    def set_timeout(self, flag):
+        pass
+    
+    def process(self, msg):
+        print("MSG IN",msg)
+
+    def process_ack(self):
+        print("ACK")
+
+    def data_out(self, data: bytes):
+        print("SEND",repr(data))
+
+    def now(self):
+        self._n += 1
+        return self._n
+
+    def dump_log_buf(self):
+        if not self.log_buf:
+            return
+        try:
+            b = self.log_buf.decode("utf-8")
+        except Exception:
+            b = self.log_buf.decode("latin1")
+        if b in {"L1","L2","L3"}:
+            print(self.spinner[self.spin_pos],end="\r")
+            sys.stdout.flush()
+            self.spin_pos = (self.spin_pos+1) % len(self.spinner)
+        else:
+            print("LOG", b);
+        self.log_buf = b""
 

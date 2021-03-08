@@ -120,7 +120,7 @@ class StreamBusHandler(BaseBusHandler):
         return self._rq_r.receive()
 
     def _report_error(self, typ, **kw):
-        print("Err",repr(typ))
+        print("Err",repr(typ),kw)
         self.errors[typ] = 1+self.errors.get(typ,0)
 
     def _set_timeout(self, flag):

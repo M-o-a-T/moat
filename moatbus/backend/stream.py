@@ -18,7 +18,7 @@ class _Bus(SerBus):
         super().__init__()
 
     def report_error(self, typ, **kw):
-        self.stream()._report_error(typ)
+        self.stream()._report_error(typ, **kw)
 
     def set_timeout(self, flag):
         self.stream()._set_timeout(flag)

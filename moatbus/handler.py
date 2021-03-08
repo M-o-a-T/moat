@@ -588,7 +588,7 @@ class BaseHandler:
         self.no_backoff = False
         msg_in,self.msg_in = self.msg_in,None
         if not crc_ok:
-            self.report_error(ERR.CRC)
+            self.report_error(ERR.CRC, msg=msg_in)
             self.set_ack_mask()
             if not self.nack_mask:
                 self.set_state(S.WAIT_IDLE)
@@ -638,7 +638,7 @@ class BaseHandler:
                 self.read_crc()
             elif self.nval == self.LEN:
                 if self.val >= self.VAL_MAX + (1<<(self.BITS-8)):
-                    self.error(ERR.CRC) # eventually. We hope.
+                    self.error(ERR.CRC, msg=self.msg_in) # eventually. We hope.
                 elif self.val >= self.VAL_MAX:
                     self.debug("Add Residual x%x", self.val-self.VAL_MAX)
                     self.msg_in.add_chunk(self.val-self.VAL_MAX, self.BITS-8)

@@ -25,10 +25,40 @@ class Path(collections.abc.Sequence):
 
     It is an immutable list with special representation, esp. in YAML,
     and distinctive encoding in msgpack.
+
+    Paths are represented as dot-separated strings. The colon is special.
+    Inline (within an element):
+
+        :.  escapes a dot
+        ::  escapes a colon
+        :_  escapes a space
+
+    As separator (starts a new element):
+
+        :t   True
+        :f   False
+        :e   empty string
+        :n   None
+        :xAB Hex integer
+        :b01 Binary integer
+        :vXY Bytestring, inline
+        :yAB Bytestring, hex encoding
+
+        :XYZ otherwise: evaluate XYZ (may not start with a letter)
+
+    The empty path is denoted by a single colon. A path starting with a dot
+    is illegal.
+
+    Joining two paths requires a dot iff the second part doesn't start with
+    a separator-colon, but you shouldn't ever want to do that: paths are
+    best stored in Path objects, not strings.
+
+    Paths are immutable and behave like lists with a human-readable string
+    representation (if they consist of simple elements).
     """
 
     def __init__(self, *a):
-        self._data = a
+        self._data: list = a
 
     @classmethod
     def build(cls, data):
@@ -56,6 +86,11 @@ class Path(collections.abc.Sequence):
                 if res:
                     res.append(".")
                 res.append(_escol(x))
+            elif isinstance(x, (bytes, bytearray)):
+                if all(32 <= b < 127 for b in x):
+                    res.append(":v" + _escol(x.decode("ascii"), True))
+                else:
+                    res.append(":y" + x.hex())
             elif isinstance(x, (Path, tuple)) and len(x):
                 x = ",".join(repr(y) for y in x)
                 res.append(":" + _escol(x))
@@ -162,12 +197,16 @@ class Path(collections.abc.Sequence):
             if isinstance(part, str):
                 if eval_:
                     try:
-                        if eval_ == 2:
-                            part = int(part, 16)
+                        if eval_ == -1:
+                            part = bytes.fromhex(part)
+                        elif eval_ == -2:
+                            part = part.encode("ascii")
+                        elif eval_ > 1:
+                            part = int(part, eval_)
                         else:
                             part = path_eval(part)
-                    except Exception:
-                        raise SyntaxError(f"Cannot eval {part!r} at {pos}")
+                    except Exception as exc:
+                        raise SyntaxError(f"Cannot eval {part!r} at {pos}") from exc
                     eval_ = False
                 res.append(part)
             part = new_part
@@ -196,10 +235,22 @@ class Path(collections.abc.Sequence):
                     new(None, True)
                 elif e == "_":
                     add(" ")
-                elif e[0] == "x":
+                elif e[0] == "b":
                     done(None)
                     part = e[1:]
                     eval_ = 2
+                elif e[0] == "x":
+                    done(None)
+                    part = e[1:]
+                    eval_ = 16
+                elif e[0] == "y":
+                    done(None)
+                    part = e[1:]
+                    eval_ = -1
+                elif e[0] == "v":
+                    done(None)
+                    part = e[1:]
+                    eval_ = -2
                 else:
                     if part is None:
                         raise SyntaxError(f"Cannot parse {path!r} at {pos}")
@@ -208,7 +259,7 @@ class Path(collections.abc.Sequence):
                     eval_ = True
             else:
                 if e == ".":
-                    if not part:
+                    if part is None or part is False:
                         raise SyntaxError(f"Cannot parse {path!r} at {pos}")
                     done(None)
                     pos += 1
@@ -240,18 +291,24 @@ def logger_for(path: Path):
     """
     Create a logger for this ``path``.
 
-    The logger always starts with your main module name. Thus if you import
-    this code as "foo.util", if you use a path of … you get a logger for …:
+    The logger always starts with your main module name, with special
+    treatment for paths starting with null or your-module-with-leading-dot.
+    Thus if you import this code as "foo.util"::
 
+        this path returns a logger for
+        ========= ====================
         :         foo.root
         :n        foo.meta
         :n.x.y    foo.meta.x.y
         :.foo     foo.sub
-        :.foo.x   foo.sub.z
+        :.foo.z   foo.sub.z
         foo       foo
         foo.a.b   foo.a.b
         bar       foo.at.bar
         bar.c.d   foo.at.bar.c.d
+
+    All elements in the path should be strings with no leading or trailing
+    dot, though the first element may start with a dot or be None.
 
     """
     this = __name__.split(".", 1)[0]

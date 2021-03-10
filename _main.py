@@ -63,7 +63,10 @@ def list_ext(name, func=None):
     TODO: This is not zip safe.
     """
     if name not in _ext_cache:
-        _cache_ext(name)
+        try:
+            _cache_ext(name)
+        except ModuleNotFoundError:
+            pass
     if func is None:
         yield from iter(_ext_cache[name].items())
         return
@@ -216,23 +219,23 @@ class MainLoader(Loader):
     cls=MainLoader, add_help_option=False, invoke_without_command=True
 )  # , __file__, "command"))
 @click.option(
-    "-v", "--verbose", count=True, help="Enable debugging. Use twice for more verbosity."
+    "-v", "--verbose", count=True, help="Be more verbose. Can be used multiple times."
 )
+@click.option("-q", "--quiet", count=True, help="Be less verbose. Opposite of '--verbose'.")
+@click.option("-D", "--debug", count=True, help="Enable debug speed-ups (smaller keys etc).")
 @click.option(
     "-l", "--log", multiple=True, help="Adjust log level. Example: '--log asyncactor=DEBUG'."
 )
-@click.option("-q", "--quiet", count=True, help="Disable debugging. Opposite of '--verbose'.")
 @click.option("-c", "--cfg", type=click.File("r"), default=None, help="Configuration file (YAML).")
-@click.option(
-    "-h", "-?", "--help", is_flag=True, help="Show help. Subcommands only understand '--help'."
-)
 @click.option(
     "-C",
     "--conf",
     multiple=True,
     help="Override a config entry. Example: '-C server.bind_default.port=57586'",
 )
-@click.option("-D", "--debug", count=True, help="Enable debug speed-ups (smaller keys etc).")
+@click.option(
+    "-h", "-?", "--help", is_flag=True, help="Show help. Subcommands only understand '--help'."
+)
 @click.pass_context
 async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redefined-builtin
     """

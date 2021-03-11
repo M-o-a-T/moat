@@ -115,7 +115,7 @@ def load_subgroup(_fn=None, plugin=None, **kw):
     def _ext(fn, **kw):
         return click.command(**kw)(fn)
 
-    kw["cls"] = partial(Loader, _subdir=this_load.get(), _plugin=plugin)
+    kw["cls"] = partial(kw.get("cls",Loader), _subdir=this_load.get(), _plugin=plugin)
 
     if _fn is None:
         return partial(_ext, **kw)

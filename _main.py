@@ -215,12 +215,10 @@ class MainLoader(Loader):
 #     `wrap_main` acts as an async function.
 
 
-@click.command(
-    cls=MainLoader, add_help_option=False, invoke_without_command=True
+@load_subgroup(
+    plugin="main", cls=MainLoader, add_help_option=False, invoke_without_command=True
 )  # , __file__, "command"))
-@click.option(
-    "-v", "--verbose", count=True, help="Be more verbose. Can be used multiple times."
-)
+@click.option("-v", "--verbose", count=True, help="Be more verbose. Can be used multiple times.")
 @click.option("-q", "--quiet", count=True, help="Be less verbose. Opposite of '--verbose'.")
 @click.option("-D", "--debug", count=True, help="Enable debug speed-ups (smaller keys etc).")
 @click.option(

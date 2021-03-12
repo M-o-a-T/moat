@@ -321,6 +321,16 @@ def wrap_main(  # pylint: disable=redefined-builtin
             CFG = importlib.import_module(f"{name}.default").CFG
         except (ImportError, AttributeError):
             CFG = {}
+    CFG = attrdict(**CFG)  # shallow copy
+
+    for n, _ in list_ext(ext):
+        try:
+            CFG[n] = combine_dict(
+                load_ext(ext, n, "config", "CFG"), CFG.get(n, {}), cls=attrdict
+            )
+        except ModuleNotFoundError:
+            pass
+
     else:
         merge_cfg = False
 

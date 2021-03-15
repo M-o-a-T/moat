@@ -53,7 +53,7 @@ async def list_(obj, path):
         raise click.UsageError("Only up to four path elements allowed")
 
     async for r in obj.client.get_tree(
-        obj.cfg.knx.prefix + path, nchain=obj.meta, min_depth=1, max_depth=1, add_empty=True
+        obj.cfg.knx.prefix + path, nchain=obj.meta, min_depth=1, max_depth=1, empty=True
     ):
         if not isinstance(r.path[-1], int):
             continue

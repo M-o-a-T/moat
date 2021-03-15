@@ -1,3 +1,9 @@
+distkv-knx (0.9.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 15 Mar 2021 14:30:52 +0100
+
 distkv-knx (0.9.1-2) unstable; urgency=medium
 
   * Fix packaging

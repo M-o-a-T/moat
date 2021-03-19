@@ -9,7 +9,7 @@ from ._dict import attrdict
 from ._path import Path
 
 
-__all__ = ["yload", "yprint", "yformat"]
+__all__ = ["yload", "yprint", "yformat", "yaml_named"]
 
 SafeRepresenter = yaml.representer.SafeRepresenter
 SafeConstructor = yaml.constructor.SafeConstructor
@@ -23,6 +23,14 @@ def str_presenter(dumper, data):
     if "\n" in data:  # check for multiline string
         return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
     return dumper.represent_scalar("tag:yaml.org,2002:str", data)
+
+def yaml_named(name: str, use_repr:bool = False):
+    def register(cls):
+        def str_me(dumper, data):
+            return dumper.represent_scalar("!"+name, repr(data) if use_repr else str(data))
+        SafeRepresenter.add_representer(cls, str_me)
+        return cls
+    return register
 
 
 SafeRepresenter.add_representer(str, str_presenter)

@@ -50,18 +50,27 @@ def _bin_from_ascii(loader, node):
     value = loader.construct_scalar(node)
     return value.encode("ascii")
 
+def _bin_from_hex(loader, node):
+    value = loader.construct_scalar(node)
+    return bytearray.fromhex(value.replace(":",""))
+
 
 def _bin_to_ascii(dumper, data):
     try:
         data = data.decode("ascii")
     except UnicodeError:
-        return dumper.represent_binary(data)
+        if len(data) < 33:
+            return dumper.represent_scalar("!hex", data.hex(":"))
+        else:
+            return dumper.represent_binary(data)
     else:
         return dumper.represent_scalar("!bin", data)
 
 
 SafeRepresenter.add_representer(bytes, _bin_to_ascii)
+
 SafeConstructor.add_constructor("!bin", _bin_from_ascii)
+SafeConstructor.add_constructor("!hex", _bin_from_hex)
 
 
 _expect_node = Emitter.expect_node

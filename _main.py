@@ -10,7 +10,7 @@ from typing import Awaitable
 
 from ._dict import attrdict, combine_dict
 from ._impl import NotGiven
-from ._path import path_eval
+from ._path import path_eval, _eval
 from ._yaml import yload
 
 import logging
@@ -18,9 +18,57 @@ from logging.config import dictConfig
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["main_", "wrap_main", "Loader", "load_subgroup", "list_ext", "load_ext"]
+__all__ = ["main_", "wrap_main", "Loader", "load_subgroup", "list_ext", "load_ext",
+        "attr_args", "process_args"]
 
 this_load = ContextVar("this_load", default=None)
+
+
+def attr_args(proc):
+    """
+    Allow vars_/eval_/path_ args
+    """
+    proc = click.option("-v", "--var", "vars_", nargs=2, multiple=True, help="Parameter (name value)")(proc)
+    proc = click.option("-e", "--eval", "eval_", nargs=2, multiple=True, help="Parameter (name value), evaluated")(proc)
+    proc = click.option("-p", "--path", "path_", nargs=2, multiple=True, help="Parameter (name value), as path")(proc)
+    return proc
+
+
+def process_args(vars_, eval_, path_, vd, vs=None):
+    """
+    process vars_+eval_+path_ args.
+
+    Arguments:
+        vars_, eval_, path_: from the function's arguments
+        vd: dict to modify
+        vs: if given: set of vars
+    Returns:
+        number of arguments modified
+    """
+    n = 0
+    for k, v in vars_:
+        if vs is not None:
+            vs.add(k)
+        vd[k] = v
+        n += 1
+    for k, v in eval_:
+        if vs is not None:
+            vs.add(k)
+        if v == "-":
+            vd.pop(k, None)
+        elif v == "/":
+            vd.pop(k, None)
+            if vs is not None:
+                vs.discard(k)
+        else:
+            vd[k] = _eval(v)
+        n += 1
+    for k, v in path_:
+        if vs is not None:
+            vs.add(k)
+        vd[k] = P(v)
+        n += 1
+    return n
 
 
 def load_one(path, name, endpoint=None):

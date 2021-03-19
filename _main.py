@@ -186,7 +186,7 @@ class Loader(click.Group):
             subdir = getattr(self, "_util_subdir", None) or ctx.obj._sub_name
             command = load_ext(subdir, name, "cli")
 
-        command.__name__ = name
+        command.__name__ = command.name = name
         return command
 
 

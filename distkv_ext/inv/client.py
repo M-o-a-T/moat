@@ -227,12 +227,20 @@ async def host_port(ctx, name):
         pass  # click invokes the subcommand for us.
 
 
-@cmd_host.command(name="template", short_help="Create config file using this template")
+@cmd_host.command(name="template", short_help="Create config file using a template")
 @click.argument("template", type=click.Path("r"), nargs=1)
 @click.pass_obj
 async def host_template(obj, template):
     """\
         Load a template, for generating a host configuration file.
+
+        The template is interpreted with jinja2.
+
+        \b
+        Variables:
+            host   this host
+            ports  a list of the host's ports
+            vlans  the VLANs attached to this host
         """
     import jinja2
 

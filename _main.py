@@ -2,6 +2,7 @@ import os
 import sys
 import asyncclick as click
 from collections import defaultdict
+from collections.abc import Mapping
 from pathlib import Path
 from functools import partial
 import importlib
@@ -10,7 +11,7 @@ from typing import Awaitable
 
 from ._dict import attrdict, combine_dict
 from ._impl import NotGiven
-from ._path import path_eval, _eval
+from ._path import path_eval, _eval, P
 from ._yaml import yload
 
 import logging
@@ -23,52 +24,71 @@ __all__ = ["main_", "wrap_main", "Loader", "load_subgroup", "list_ext", "load_ex
 
 this_load = ContextVar("this_load", default=None)
 
+NoneType = type(None)
 
 def attr_args(proc):
     """
     Allow vars_/eval_/path_ args
     """
-    proc = click.option("-v", "--var", "vars_", nargs=2, multiple=True, help="Parameter (name value)")(proc)
-    proc = click.option("-e", "--eval", "eval_", nargs=2, multiple=True, help="Parameter (name value), evaluated")(proc)
-    proc = click.option("-p", "--path", "path_", nargs=2, multiple=True, help="Parameter (name value), as path")(proc)
+    proc = click.option("-v", "--var", "vars_", nargs=2, type=(P,str), multiple=True, help="Parameter (name value)")(proc)
+    proc = click.option("-e", "--eval", "eval_", nargs=2, type=(P,str), multiple=True, help="Parameter (name value), evaluated")(proc)
+    proc = click.option("-p", "--path", "path_", nargs=2, type=(P,P), multiple=True, help="Parameter (name value), as path")(proc)
     return proc
 
 
-def process_args(vars_, eval_, path_, vd, vs=None):
+def process_args(val, vars_, eval_, path_, vs=None):
     """
     process vars_+eval_+path_ args.
 
     Arguments:
-        vars_, eval_, path_: from the function's arguments
         vd: dict to modify
+        vars_, eval_, path_: from the function's arguments
         vs: if given: set of vars
     Returns:
-        number of arguments modified
+        the new value.
     """
     n = 0
-    for k, v in vars_:
-        if vs is not None:
-            vs.add(k)
-        vd[k] = v
-        n += 1
-    for k, v in eval_:
-        if vs is not None:
-            vs.add(k)
-        if v == "-":
-            vd.pop(k, None)
-        elif v == "/":
-            vd.pop(k, None)
+    def data():
+        for k,v in vars_:
+            yield k,v
+        for k,v in eval_:
+            if v == "-":
+                v = NotGiven
+            elif v == "/":
+                if vs is None:
+                    raise RuntimeError("A slash value doesn't work here.")
+                v = NoneType
+            else:
+                v = _eval(v)
+            yield k,v
+        for k,v in path_:
+            v = P(v)
+            yield k,v
+
+    for k, v in data():
+        if not k:
             if vs is not None:
-                vs.discard(k)
+                raise RuntimeError("You can't use empty paths here.")
+            if n:
+                raise RuntimeError("Setting a single value conflicts.")
+            val = v
+            n = -1
+        elif n < 0:
+            raise RuntimeError("Setting a single value conflicts.")
         else:
-            vd[k] = _eval(v)
-        n += 1
-    for k, v in path_:
-        if vs is not None:
-            vs.add(k)
-        vd[k] = P(v)
-        n += 1
-    return n
+            if not isinstance(val,Mapping):
+                val = attrdict()
+            if vs is not None:
+                vs.add(k)
+            if v is NotGiven:
+                val = attrdict._delete(val,k)
+            elif v is NoneType:
+                val = attrdict._delete(val,k)
+                vs.discard(k)
+            else:
+                val = attrdict._update(val,k,v)
+            n += 1
+    return val
 
 
 def load_one(path, name, endpoint=None):

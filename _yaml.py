@@ -24,12 +24,15 @@ def str_presenter(dumper, data):
         return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
     return dumper.represent_scalar("tag:yaml.org,2002:str", data)
 
-def yaml_named(name: str, use_repr:bool = False):
+
+def yaml_named(name: str, use_repr: bool = False):
     def register(cls):
         def str_me(dumper, data):
-            return dumper.represent_scalar("!"+name, repr(data) if use_repr else str(data))
+            return dumper.represent_scalar("!" + name, repr(data) if use_repr else str(data))
+
         SafeRepresenter.add_representer(cls, str_me)
         return cls
+
     return register
 
 
@@ -50,9 +53,10 @@ def _bin_from_ascii(loader, node):
     value = loader.construct_scalar(node)
     return value.encode("ascii")
 
+
 def _bin_from_hex(loader, node):
     value = loader.construct_scalar(node)
-    return bytearray.fromhex(value.replace(":",""))
+    return bytearray.fromhex(value.replace(":", ""))
 
 
 def _bin_to_ascii(dumper, data):

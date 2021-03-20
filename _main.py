@@ -11,7 +11,7 @@ from typing import Awaitable
 
 from ._dict import attrdict, combine_dict
 from ._impl import NotGiven
-from ._path import path_eval, _eval, P
+from ._path import path_eval, P
 from ._yaml import yload
 
 import logging
@@ -19,20 +19,53 @@ from logging.config import dictConfig
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["main_", "wrap_main", "Loader", "load_subgroup", "list_ext", "load_ext",
-        "attr_args", "process_args"]
+__all__ = [
+    "main_",
+    "wrap_main",
+    "Loader",
+    "load_subgroup",
+    "list_ext",
+    "load_ext",
+    "attr_args",
+    "process_args",
+]
 
 this_load = ContextVar("this_load", default=None)
 
 NoneType = type(None)
 
+
 def attr_args(proc):
     """
     Allow vars_/eval_/path_ args
     """
-    proc = click.option("-v", "--var", "vars_", nargs=2, type=(P,str), multiple=True, help="Parameter (name value)")(proc)
-    proc = click.option("-e", "--eval", "eval_", nargs=2, type=(P,str), multiple=True, help="Parameter (name value), evaluated")(proc)
-    proc = click.option("-p", "--path", "path_", nargs=2, type=(P,P), multiple=True, help="Parameter (name value), as path")(proc)
+    proc = click.option(
+        "-v",
+        "--var",
+        "vars_",
+        nargs=2,
+        type=(P, str),
+        multiple=True,
+        help="Parameter (name value)",
+    )(proc)
+    proc = click.option(
+        "-e",
+        "--eval",
+        "eval_",
+        nargs=2,
+        type=(P, str),
+        multiple=True,
+        help="Parameter (name value), evaluated",
+    )(proc)
+    proc = click.option(
+        "-p",
+        "--path",
+        "path_",
+        nargs=2,
+        type=(P, P),
+        multiple=True,
+        help="Parameter (name value), as path",
+    )(proc)
     return proc
 
 
@@ -48,22 +81,23 @@ def process_args(val, vars_, eval_, path_, vs=None):
         the new value.
     """
     n = 0
+
     def data():
-        for k,v in vars_:
-            yield k,v
-        for k,v in eval_:
+        for k, v in vars_:
+            yield k, v
+        for k, v in eval_:
             if v == "-":
                 v = NotGiven
-            elif v == "/":
+            elif v == "/":  # pylint: disable=W0631
                 if vs is None:
                     raise RuntimeError("A slash value doesn't work here.")
                 v = NoneType
             else:
-                v = _eval(v)
-            yield k,v
-        for k,v in path_:
+                v = path_eval(v)  # pylint: disable=W0631
+            yield k, v
+        for k, v in path_:
             v = P(v)
-            yield k,v
+            yield k, v
 
     for k, v in data():
         if not k:
@@ -76,17 +110,17 @@ def process_args(val, vars_, eval_, path_, vs=None):
         elif n < 0:
             raise RuntimeError("Setting a single value conflicts.")
         else:
-            if not isinstance(val,Mapping):
+            if not isinstance(val, Mapping):
                 val = attrdict()
             if vs is not None:
                 vs.add(k)
             if v is NotGiven:
-                val = attrdict._delete(val,k)
+                val = attrdict._delete(val, k)
             elif v is NoneType:
-                val = attrdict._delete(val,k)
+                val = attrdict._delete(val, k)
                 vs.discard(k)
             else:
-                val = attrdict._update(val,k,v)
+                val = attrdict._update(val, k, v)
             n += 1
     return val
 
@@ -183,7 +217,7 @@ def load_subgroup(_fn=None, plugin=None, **kw):
     def _ext(fn, **kw):
         return click.command(**kw)(fn)
 
-    kw["cls"] = partial(kw.get("cls",Loader), _subdir=this_load.get(), _plugin=plugin)
+    kw["cls"] = partial(kw.get("cls", Loader), _subdir=this_load.get(), _plugin=plugin)
 
     if _fn is None:
         return partial(_ext, **kw)
@@ -377,7 +411,6 @@ def wrap_main(  # pylint: disable=redefined-builtin
     obj._ext_name = ext
     obj._sub_name = sub
 
-    merge_cfg = True
     if isinstance(CFG, str):
         p = Path(CFG)
         if not p.is_absolute():
@@ -393,14 +426,9 @@ def wrap_main(  # pylint: disable=redefined-builtin
 
     for n, _ in list_ext(ext):
         try:
-            CFG[n] = combine_dict(
-                load_ext(ext, n, "config", "CFG"), CFG.get(n, {}), cls=attrdict
-            )
+            CFG[n] = combine_dict(load_ext(ext, n, "config", "CFG"), CFG.get(n, {}), cls=attrdict)
         except ModuleNotFoundError:
             pass
-
-    else:
-        merge_cfg = False
 
     obj.stdout = CFG.get("_stdout", sys.stdout)  # used for testing
 
@@ -421,14 +449,6 @@ def wrap_main(  # pylint: disable=redefined-builtin
         _cfg(f"/etc/{name}/{name}.cfg")
         _cfg(f"/etc/{name}.cfg")
 
-    if merge_cfg:
-        for n, _ in list_ext(ext):  # pragma: no cover
-            try:
-                CFG[n] = combine_dict(
-                    load_ext(ext, n, "config", "CFG"), CFG.get(n, {}), cls=attrdict
-                )
-            except ModuleNotFoundError:
-                pass
     obj.CFG = CFG
 
     if cfg:
@@ -453,7 +473,7 @@ def wrap_main(  # pylint: disable=redefined-builtin
             v = NotGiven
         else:
             try:
-                v = path_eval(v)  # pylint: disable=eval-used
+                v = path_eval(v)
             except Exception:  # pylint: disable=broad-except
                 pass
         c = obj.cfg

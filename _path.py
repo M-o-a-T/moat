@@ -284,7 +284,9 @@ class Path(collections.abc.Sequence):
         return cls.from_str(value)
 
 
-P = Path.from_str
+class P(Path):
+    def __new__(cls, path):
+        return Path.from_str(path)
 
 
 def logger_for(path: Path):

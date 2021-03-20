@@ -53,7 +53,7 @@ inv_sub(
 def rev_name(ctx, param, value, *, delim=".", rev=True):  # pylint: disable=unused-argument
     value = value.split(delim)
     if len(value) < 3:
-        raise click.BadParameter("need nore than two labels")
+        raise click.BadParameter("need more than two labels")
     if any(not v for v in value):
         raise click.BadParameter("no empty labels")
     if rev:

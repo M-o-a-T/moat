@@ -6,7 +6,7 @@ This is a simulated MoaT bus. It offers a Unix socket.
 *** This bus simulation is active high ***
 
 """
-import trio
+import anyio
 import socket
 import asyncclick as click
 from contextlib import asynccontextmanager
@@ -20,7 +20,7 @@ _seq = 0
 class Main:
     def __init__(self, **kw):
         self.clients = set()
-        self.trigger = trio.Event()
+        self.trigger = anyio.create_event()
         for k,v in kw.items():
             setattr(self,k,v)
         self.t = None
@@ -58,11 +58,11 @@ class Main:
         val = 0
         while True:
             if last != val:
-                await trio.sleep((random()*self.max_delay+self.delay)/1000)
+                await anyio.sleep((random()*self.max_delay+self.delay)/1000)
             else:
                 await self.trigger.wait()
             if self.trigger.is_set():
-                self.trigger = trio.Event()
+                self.trigger = anyio.create_event()
 
             self.report(0,val)
             b = bytes((val,))
@@ -71,8 +71,8 @@ class Main:
                     continue
                 c.last_b = b
                 try:
-                    await c.send_all(b)
-                except (BrokenPipeError,EnvironmentError,trio.BrokenResourceError):
+                    await c.send(b)
+                except (BrokenPipeError,EnvironmentError,anyio.BrokenResourceError):
                     await self.remove(c)
 
             last = val
@@ -81,35 +81,36 @@ class Main:
                 if c.data is not None:
                     val |= c.data
 
+    async def serve(self, client):
+        global _seq
+        _seq += 1
+        n = _seq
+
+        client.data = None
+        await self.add(client)
+        await self.trigger_update()
+        try:
+            async with client:
+                while True:
+                    try:
+                        data = await client.receive(1)
+                    except (ConnectionResetError,anyio.BrokenResourceError,anyio.ClosedResourceError):
+                        data = None
+                    if not data:
+                        return
+                    client.data = data[0]
+                    if self.verbose:
+                        self.report(n,client.data)
+                    await self.trigger_update()
+        finally:
+            await self.remove(client)
+
+
 @asynccontextmanager
 async def mainloop(tg,**kw):
     mc = Main(**kw)
-    tg.start_soon(mc.run)
+    await tg.spawn(mc.run)
     yield mc
-
-async def serve(loop, client):
-    global _seq
-    _seq += 1
-    n = _seq
-
-    client.data = None
-    await loop.add(client)
-    await loop.trigger_update()
-    try:
-        async with client:
-            while True:
-                try:
-                    data = await client.receive_some(1)
-                except (ConnectionResetError,trio.BrokenResourceError):
-                    data = None
-                if not data:
-                    return
-                client.data = data[0]
-                if loop.verbose:
-                    loop.report(n,client.data)
-                await loop.trigger_update()
-    finally:
-        await loop.remove(client)
 
 @click.command()
 @click.option("-s","--socket","sockname", help="Socket to use",default="/tmp/moatbus")
@@ -121,13 +122,13 @@ async def main(sockname, **kw):
         os.unlink(sockname)
     except EnvironmentError:
         pass
-    with trio.socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
-        await sock.bind(sockname)
-        sock.listen(10)
-        async with trio.open_nursery() as tg, \
+
+    listener = await anyio.create_unix_listener(sockname)
+    async with listener, anyio.create_task_group() as tg, \
                 mainloop(tg, **kw) as loop:
-            await trio.serve_listeners(partial(serve, loop), [trio.SocketListener(sock)])
+        await listener.serve(loop.serve)
 
 if __name__ == "__main__":
+    click.anyio_backend="trio"
     main()
 

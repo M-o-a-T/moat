@@ -8,7 +8,7 @@ Frame format
 ++++++++++++
 
 After bus decoding, the message consists of one to three header bytes plus
-any number of content bytes. Excess bits ("padding") are ignored.
+any number of content bytes.
 
 Header
 ------
@@ -44,36 +44,45 @@ End of message
 Messages do not carry a length indicator; bus framing is used to declare
 end-of-message.
 
+All messages should have a well-defined length, or carry their own length
+indication if required. Violating this condition risks a higher probability
+of wrongly-correct CRCs.
+
+
 Addressing
 ++++++++++
 
 The MoatBus is intended for devices which have a hardware ID (MAC, UUID,
-manufacturer serial). Address assignment uses special recipient addresses.
+manufacturer serial).
+
 A newly-connected participant must request a bus address. Waking up from
-deep sleep might be considered "newly-connected".
+deep sleep may or may not be considered "newly-connected", as the address
+server(s) are expected to store known addresses permanently.
+
+Bus-based address assignment is only used for clients. Servers are expected
+to know their own address and to have other ways of communication.
 
 Reserved addresses
 ------------------
 
 The message header has space for three servers and 126 clients.
 
-Client addresses 0 and 127 are reserved for future expansion.
+Client addresses 0 and 127 are reserved.
 
-The server address -4 is used for multicast-ish messages, i.e. periodic
-measurements (temperature, power, voltage, humidity) and events (motion,
-door contacts), as well as address assignment.
+The server address -4 is used for broadcast and multicast messages,
+i.e. periodic measurements and events if they're of interest to multiple
+clients, client polling, address assignment, etc..
 
-Bus address assignment is only used for clients. Server systems are expected
-to know their address.
+In MoaT code server addresses are identified using negative integers
+-1…-3, for addresses 3…1 (i.e. just add or subtract 4). The broadcast
+address is written as -4.
 
-In MoaT code, server addresses are identified using negative integers
--1…-4, for addresses 3…0 (i.e. add or subtract 4).
 
 Message priorities
 ++++++++++++++++++
 
-A MoaT bus with N wires may have up to N priority levels when
-arbitrating the bus.
+A MoaT bus with N wires has up to N priority levels when arbitrating the
+bus.
 
 High-priority status should be given to
 
@@ -97,7 +106,7 @@ specification. We recommend to use high-priority messages wisely.
 
 NB: Messages lose their priority as soon as they're involved in a
 collision. While this mechanism may delay high-priority messages somewhat,
-it is essential for quickly resolving conflicts.
+it is essential for quickly resolving bus conflicts.
 
 
 +++++++++++++
@@ -106,253 +115,40 @@ Message Types
 
 This table is to be interpreted top-down; the first match wins.
 
-Reminder: the command is 2 bits wide for server-to-server messages, 8 bits
-for client-to-client, and 5 bits otherwise.
-
 ========  ===========  =======  ===========================
 Source    Destination  Command  Type
 ========  ===========  =======  ===========================
-Broadcast Broadcast    0        Control 0; Address assignment request
-Broadcast any          any      reserved
-Server    Broadcast    0        Control 2; negative address assignment response
-Server    Server       0        reserved (Control?)
-Server    Server       any      inter-server sync
-Server    Client       0        Control 1; positive address assignment response
-Server    Client       1        data directory lookup
-Server    Client       2        data directory read
-Server    Client       3        data directory write
-Client    Broadcast    0        Control 3; e.g. data request, console message, AA nack by clients
-Client    Server       0        Control 4; replies (e.g. poll)
-Client    Broadcast    1        alert (by data dictionary path)
-Client    Server       2        read reply
-Client    Server       3        write reply
+Broadcast Broadcast    0        Mode 1; AA: request
+Server    Client       0        Mode 2; AA: ACK
+Server    Broadcast    0        Mode 3; AA: NACK
+Client    Broadcast    0        Mode 4; AA: collision
+Client    Server       0        Mode 5
 any       any          0        reserved
+Server    Client       1        data directory lookup
+Client    Server       1        lookup reply
+Client    Broadcast    1        alert (by data dictionary path)
+Server    Client       2        data directory read                                              
+Client    Server       2        read reply
+Server    Client       3        data directory write
+Client    Server       3        write reply
+any       any          0…3      reserved
+Broadcast any          any      reserved
 Client    Broadcast    any      broadcast message
 any       any          any      direct message
 ========  ===========  =======  ===========================
+Server    Server       0        inter-server sync
+Broadcast Server       0        Serial flow control
+========  ===========  =======  ===========================
 
-Clients must not send with any source address other than their own.
-Address Assignment request broadcasts (Control 0) are the *only* exception.
+Clients *must not* send with a source address that's not their assigned address.
+Address Assignment request broadcasts (Mode 1) are the *only* exception.
 
-Address assignment
-==================
+Clients may not send command-zero broadcasts. Again, address collision
+notifications are the sole exception.
 
-Address assignment messages are special control messages (see below): the
-type is zero and the function code is reinterpreted as flag bit and four
-bits for the length of the client's serial number / MAC / EUID, minus one.
+Clients may receive broadcast messages from other clients, if so
+configured, but they may only transmit delayed low-priority messages in reply.
 
-Serial numbers longer than 16 bytes are not allowed. Serial numbers shorter
-than 4 bytes are strongly discouraged.
-
-If the flag bit is set, the request contains an additional flag byte after
-the serial. Otherwise the flag byte is assumed to be zero.
-
-The reply shall be identical to the sender's so that the receiver may
-easily identify its reply.
-
-The flag byte states:
-
-* bit 0: wait. The next byte contains a timer minifloat.
-
-  Request: I need this time before I can accept a reply.
-
-  ACK: Wait this long before proceeding.
-
-  NACK: Wait this long before trying again.
-
-* bit 1: address is already known.
-
-  Request: do not allocate a new address, just confirm me.
-
-  ACK: I already know you.
-
-  NACK: if request had bit 6 clear: No more free addresses. Try again after an address reset.
-  NACK: if request had bit 6 set: No, I don't know you.
-
-* bit 2: client is/shall be polled.
-  This bit is set if/when the client wants to go to deep sleep, i.e. it will
-  not listen to the bus. It should however wake up periodically, e.g. to
-  read a sensor, and/or react on an external interrupt. 
-
-  Do not set this just because you're answering a Poll request.
-
-* bit 3: address is random.
-  
-  Request: this client just invented a new serial.
-
-  ACK: Reserved.
-
-  NACK: Collision. Sent by a client which saw its own serial in a request
-  from somebody else. (The server sets bit 6 instead.)
-
-The other bits are reserved.
-
-A device with an empty serial number shall randomly invent one, primed by
-observed bus timing if possible, and then send a request with bit 4
-set. The server shall be extra cautious before assigning a new address to
-this client.
-
-Clients may monitor AA requests for their own serial. If the see a request
-for it, they must NACK it with bit 4 set.
-
-Control messages
-================
-
-For debugging or testing purposes it might make sense to reboot everything,
-switch to an alternate medium like WiFi, poll which devices exist, or
-otherwise reconfigure things.
-
-Message types are carried in the first three bits of the message's first
-byte. If applicable, the next five bits contain the destination code to send
-replies to.
-
-The following messages are defined:
-
-* 0
-  Address Assignment; see above.
-
-* 1
-  Poll
-
-  If bit 0 is set, the next byte contains a timer minifloat that states how
-  long the client should wait until it does address assignment / reporting.
-  This is equivalent to the timer minifloat used in Address Assignment.
-
-  Bit 1 and 2 have different meaning depending on whether bit 0 is on.
-
-  If bit 0 is on:
-
-  Bit 1 controls whether devices that already have an address should
-  answer.
-
-  Bit 2 is reserved.
-
-  If bit 0 is off:
-
-  If bit 1 is set, the next byte contains a timer minifloat that states how
-  long the client declares itself to be / is supposed to be listening
-  before shutting down.
-
-  If bit 2 is set, the next byte contains a timer minifloat that states
-  how long the client sleeps / may sleep before re-polling.
-
-  Bit 3 and 4 are reserved.
-
-  A client that's intermittently online typically sends one poll message
-  when it has acquired its address / wakes up.
-
-  Server>client, Server>broadcast:
-  Address check if flag bit 0 is set.
-
-  The/each client shall sleep some random time between zero and that timer's
-  value, then send its serial number (with Poll flag set) to the requesting
-  server. Client devices that don't yet have an address shall use the
-  timer's value to restart their address acquisition if it is not still
-  running.
-
-  An empty address timer means "immediately" and should not be used with a
-  broadcast destination.
-
-  If flag bit 1 is set, the timer represents the minimum(!) time a polled
-  device must be awake.
-
-  If flag bit 2 is set, the timer represents the maximum(!) time a polled
-  device may sleep.
-
-  If the request is directed to a specific client and none of the flag bits
-  are set, the client shall reply immediately.
-
-  Client>broadcast:
-  Tell the servers to send any data waiting for the client.
-  Timer values 1 and 2 should be used to tell servers the actual time this
-  client will be awake / sleeping. Sending a timer should be skipped if
-  it's unchanged since the last wakeup.
-  Timer 0 is reserved.
-
-  Client>server:
-  Reply to a server>client poll request.
-
-* 2
-  Console / serial port
-  Client>server and server>client
-
-  The second byte contains two nibbles: the last seen message# from the
-  other side, plus a send counter.
-  
-  The third byte carries two flag bits and a length-1, followed by UTF-8
-  text. Glyphs should not be split between messages; UTF-8 characters must
-  not be split.
-
-  If bit 7 is set the length instead contains the message# offset of the
-  first missing packet (should be sent with high priority).
-  If bit 6 is set the transmitted message# has been overflowing and the
-  sender cannot wait for transmission to be fixed.
-
-  If Bit 7 is set, bits 5 indicates that the channel shall be reset,
-  communication buffers shall be cleared, and counters shall be set to
-  zero. Bit 4 acknowledges a reset. If 7+5+4 are all set, the channel shall
-  be considered dead; further messages will either be ignored or replied to
-  with another message that has bits 7+5+4 set.
-
-  Clients may have multiple independent ports, addressed by the lower 4
-  bits of the function code in the first byte. Port 0 is reserved for
-  commands and replies (think "serial console"). Port 1 is used for errors.
-  Others may be e.g. a serial port connected to the client or messages
-  carried by a radio protocol.
-
-  Bit 4 of the function code, when set, indicates that the contents are
-  incomplete and should be combined with the next message before being
-  processed. Clients may, servers must support this.
-
-  A server should log messages on channel 1. It may not reject them.
-
-  Counters are initially zero; they're incremented before sending, thus the
-  first message a side sends to the other has a counter of 1. Clients must
-  store at least one message for repetition and should wait until the
-  earliest message is acknowledged instead of reporting an overflow.
-  Servers must do so.
-
-* 3,4
-  Reserved.
-
-* 5
-  Firmware update
-  See separate document.
-
-* 6
-  Bus test
-  The second byte contains a timer minifloat.
-  Between X*timer and timer, where X is a fraction as defined by the lowest
-  three bits of the first byte, some device will perform tests for bus
-  timing or similar. Clients must ignore the bus during that time.
-  Only one test can be pending. A timer of zero (or a bus reset) cancels a
-  scheduled test; this obviously only works when the test time has not yet
-  arrived.
-
-  Bit 3 and 4 are reserved.
-
-* 7
-  Reset
-  The second byte contains a timer minifloat.
-  Each device shall sleep some random time between X*timer and timer, where
-  X is a fraction of that timer, as defined by the lowest three bits of the
-  first byte. Then the device shall reset itself.
-
-  Bit 3 is reserved.
-  If bit 4 is set the devices shall deep-sleep, i.e. use as little power as
-  possible and not react to further bus messages. Otherwise they shall
-  operate normally until "their" reset time arrives.
-
-
-Poll request
-============
-
-Some clients may not always be online. In this case a client shall send a
-one-byte "poll request" message whenever it does listen to the bus. The
-byte contains four flag bits (reserved) and a signed exponent n; the client
-will listen for any messages during the following 2^n seconds, though it
-should extend that time until the bus is idle sufficiently long for any
-remaining messages to have been transmitted.
 
 Broadcast messages
 ==================
@@ -377,44 +173,63 @@ Data dictionary
 ===============
 
 MoatBus devices are (supposed to be) configurable, yet flexible; at the
-same time they have few resources and messages are required to be as short
-as possible. This calls for a novel approach.
+same time they may have few resources and messages are required to be as
+short as possible. This calls for a novel approach.
 
 Device configuration and access looks like a very simple file system with
 directories. The entries in each directory are numbered 0 to N-1; lookups
 are done with these numbers, not names. Directory paths are nibbles,
 i.e. four bits.
 
-Lookups result in one descriptive byte, four type bits, and a
+Lookups result in two bytes: one descriptive byte, four type bits, and a
 length-minus-one-prefixed name (UTF-8, but usually ASCII), restricted to 16
 bytes.
+
+Directories cannot have zero or one entry. If required, a dummy "." entry
+can be added.
 
 ===  ======================================================================
 Bit  Use
 ===  ======================================================================
-  7  readable flag.
-  6  writable flag.
-Directories (r,w are both zero)
-  5  Enumeration flag
-  4  reserved, zero
-3…0  Number of entries -2
-Files (r and/or w are set)
-5…3  Type code
-2…0  Length, encoded
+  7  readable?
+  6  writable?
+  5  numbered?
+  4  Control
+===  ======================================================================
+     Directories (r,w are both zero)
+3…0  Number of entries -2; 0xF is reserved
+===  ======================================================================
+     Files (r and/or w are set)
+3…0  Type code
 ===  ======================================================================
 
-If bits 6+7 are clear, the entry is a directory. Bits 4…0 encode the number
-of sub-entries minus one; on the root directory, bits 3…0 are used for this
-purpose while bit 4 encodes whether multiple requests are supported.
+File entries continue with a length nibble. See below.
+
+If ``numbered`` is set, this directory consists of a number of "essentially
+identical" entries or subdirectories, e.g. one describing I/O pins:
+An additional nibble (or two, see below) with the number of instances
+follows. That nibble may be zero if the feature is available but needs to
+be dynamically configured.
+
+For file names, the ``control`` bit states that the entry should be in
+the control subdirectory. The default is data, or state+data for r/w
+entries. On directories the flag instead states that its the entries should
+be part of a data structure instead of being stored separately.
+
+``numbered`` and ``control`` being both set is reserved.
+
+The next nibble contains the length of the entry's name -1. It is followed
+by padding to the next byte (if necessary) and an UTF-8 name.
+
+If bits 6+7 are clear, the entry is a directory. Bits 3…0 encode the number
+of sub-entries minus two. se while bit 4 encodes whether multiple requests are supported.
+
+Directories don't get to have zero or one entries because you can just skip
+the directory in that case. (Yes, this means that files can't be enumerated
+on their own, but that's sufficiently uncommon.)
 
 If bits 6 or 7 are set, the entry is a file. Bits 4…0 encode the number of
 bytes readable or writeable, according to the table below.
-
-The Enumeration flag states that this directory consists of a number of
-"essentially identical" subdirectories, e.g. one describing I/O pins. An
-additional nibble/byte with the number of instances follows. That nibble
-may be zero if the feature is available but needs to be dynamically
-configured.
 
 Read/write requests to enumerated directories consume an additional nibble
 or byte for accessing the specific member.
@@ -426,9 +241,9 @@ All path elements are encoded in one nibble. Enumerations may contain up to
 128 entries (though they usually don't) by treating the high bit as an
 extension marker:
 
-=========  ===========
+=========  =============
 Nibble(s)  Length
-=========  ===========
+=========  =============
         0  1
         1  2
         …  …
@@ -441,56 +256,93 @@ Nibble(s)  Length
       F 7  128
       F 8  reserved
         …  …
-      F F  reserved
-=========  ===========
+      F E  reserved
+      F F  zero (so far)
+=========  =============
 
-Directories must have 1…16 entries. The top level is restricted to at most
-eight entries: if the high bit is set, the remaining three bits encode the
-number of requests in this message, minus two. The client indicates support
-for this feature by setting bit 3 of the number of entries of the top-level
-directory.
+There are no zero-length enumerations.
 
-Data types are encoded with three flag bits and three length bits. A length
-of zero means either a length prefix or a nibble. A length of 5…7 is
-interpreted as 6…10 because odd-byte data lengths are sufficiently rare.
-Data >10 bytes must be variable-length.
+Directories must have 1…16 entries.
 
-======   ========  ======  =================================
-  Type     Length  actual  Content
-======   ========  ======  =================================
-   000          0     var  UTF-8
-   010          0     var  binary
-   100          0     var  shortcut
-   110          0     var  broadcast dest+fn+timer+prefix
-   001          0     1/2  bool (1 is True, others >0 reserved)
-   011          0     1/2  nibble (unsigned)
-   101          0     1/2  nibble (bits)
-   111          0     1/2  nibble (reserved)
-   000      1,2,4   1,2,4  signed integer (MSB first)
-   001      1,2,4   1,2,4  unsigned integer (MSB first)
-     *          4       4  -
-     *          5       6  -
-     *          6       8  -
-     *          7      10  -
-   010        1,2     1,2  signed decimal (8+8)
-   011        1,2     1,2  unsigned decimal (8+8)
-   101          2       2  broadcast fn+timer
-   101          3       3  directcast dest+fn+timer
-   100          3       3  RGBL (5,6,5,8)
-   111          3       3  RGB (or anything else that wants three bytes)
-   010          4       4  32-bit float
-   011          4       4  32-bit decimal (16+16)
-   101          6       8  geo coords (90-180/N1, 180-360/N2)
-   111          *       *  list of bytes
-   101          *       *  list of bits
-     *          *       *  best effort
+Data types are encoded with a four-bit typecode and a length nibble.
+
+====== ============
+Length Meaning
+====== ============
+   0   present
+  ≤6   1…6 bytes
+   7   8
+   8   10
+   9   12
+  10   16
+  11   20
+  12   24
+  13   32
+  14   bit/nibble
+  15   variable
+====== ============
+
+Variable-length data requires a length code nibble or two, as above.
+"present" means that merely reading and/or writing the item is sufficient
+to trigger an action (e.g. resetting a device, or polling the current
+state).
+
+The name of the root directory indicates the device type; if a device name
+can be stored on it, the canonical location for that is ``sys.name``. A
+directory length of 0xF indicates that this (sub)directory is not stored on
+the client and should instead be retrieved from DistKV.
+
+Typecodes with the high bit set generally indicate some control function.
+
+======   ========  =================================
+  Type     Length  Content
+======   ========  =================================
+  0000        var  UTF-8 (generic)
+  0001        var  UTF-8 (concatenated)
+  0100        var  binary (generic)
+  0101        var  binary (concatenated)
+  0110        var  binary (bits)
+  1000        var  shortcut
+  1010        var  broadcast dest+fn+timer+prefix
+  1011        var  broadcast dest+fn+timer+prefix (missing last nibble)
+  0000          0  dead entry (dummy, feature not present)
+  0001          0  generic trigger
+  0000     nibble  bool (1 is True, others >0 reserved)
+  0001     nibble  bits
+  0010     nibble  two bits
+  0011     nibble  three bits
+  0100     nibble  four bits, unsigned
+  0101     nibble  signed -7…7 (0x8 is reserved)
+======   ========  =================================
+  0000      1,2,4  signed integer (MSB first)
+  0001      1,2,4  unsigned integer (MSB first)
+     *          4  -
+     *          6  -
+     *          8  -
+     *         10  -
+  0010        1,2  signed decimal (8+8)
+  0011        1,2  unsigned decimal (8+8)
+  1000          2  broadcast fn+timer
+  1001          3  directcast dest+fn+timer
+  0100          3  RGBL (5,6,5,8)
+  0101          3  RGB
+  0010          4  32-bit float
+  0011          4  32-bit decimal (16+16)
+  0100          4  RGBL (8,8,8,8)
+  0101          8  geo coords (90-180/N1, 180-360/N2)
+  0111          *  fixed-length bytes
+  0101          *  fixed-length bits
+     *          *  best effort
 ======  =========  ======  =================================
-
-The type code on directories must be zero; all other values are reserved.
 
 This type code system is designed to pass data unmolested. It's not really
 comprehensive and doesn't try to describe all possible interpretations of a
 value, but it tries to cover the most common interpretations.
+
+"Concatenated" means that reading or writing multiple times appends data
+instead of overwriting them (single entries; e.g. a serial console) or that
+the data is too long and must be read iteratively (numbered; e.g. a file on
+the device).
 
 All values extend over the whole range. For instance, a percentage should
 be encoded as an unsigned byte with 50%=0x80, 100%=0xFF, instead of

@@ -1,10 +1,10 @@
 #
 """
-Send bus messages to a Trio stream
+Send bus messages to an AnyIO stream
 """
 
-import trio
-from trio.abc import Stream
+import anyio
+from anyio.abc.streams import AnyByteStream
 from contextlib import asynccontextmanager
 
 from . import BaseBusHandler
@@ -33,28 +33,10 @@ class _Bus(SerBus):
         self.stream()._process_ack()
 
 
-class Anyio2TrioStream:
-    """
-    Wrapping an anyio stream so that it behaves like a Trio stream.
-    """
-    def __init__(self, stream):
-        self._stream = stream
-    async def receive_some(self, max_bytes=None):
-        if max_bytes is None:
-            max_bytes=65535
-        return await self._stream.receive(max_bytes=max_bytes)
-    async def send_all(self, data):
-        await self._stream.send(data)
-    async def aclose(self):
-        await self._stream.aclose()
-    def __aiter__(self):
-        return self._stream.__aiter__()
-
-
-class StreamBusHandler(BaseBusHandler):
+class StreamHandler(BaseBusHandler):
     """
     This class defines the interface for exchanging MoaT messages on any
-    Trio stream.
+    AnyIO stream.
 
     Usage::
         
@@ -63,49 +45,47 @@ class StreamBusHandler(BaseBusHandler):
                 await bus.send(another_msg)
     """
 
+    def __init__(self, stream:AnyByteStream, tick:float = 0.1):
+        # Subclasses may pass `None` as Stream, and set `._stream` before
+        # calling `_ctx`.
 
-
-    def __init__(self, stream:Stream, tick:float = 0.1):
         super().__init__()
         self._bus = _Bus(self)
         self._stream = stream
-        self._wq_w,self._wq_r = trio.open_memory_channel(150)
-        self._rq_w,self._rq_r = trio.open_memory_channel(1500)
+        self._wq_w,self._wq_r = anyio.create_memory_object_stream(150)
+        self._rq_w,self._rq_r = anyio.create_memory_object_stream(1500)
         self.errors = dict()
-        self._timeout_evt = trio.Event()
+        self._timeout_evt = anyio.create_event()
         self._timeout_tick = tick
 
     @asynccontextmanager
     async def _ctx(self):
-        async with trio.open_nursery() as n:
-            await n.start(self._read, n)
-            await n.start(self._write)
-            await n.start(self._timeout)
+        async with anyio.create_task_scope() as n:
+            await n.spawn(self._read, n)
+            await n.spawn(self._write)
+            await n.spawn(self._timeout)
             try:
                 yield self
             finally:
                 n.cancel_scope.cancel()
 
 
-    async def _timeout(self, task_status=trio.TASK_STATUS_IGNORED):
-        task_status.started()
+    async def _timeout(self):
         while True:
             await self._timeout_evt.wait()
-            await trio.sleep(self._timeout_tick)
+            await anyio.sleep(self._timeout_tick)
             if self._timeout_evt.is_set():
                 self._bus.timeout()
 
 
-    async def _read(self, n, task_status=trio.TASK_STATUS_IGNORED):
-        task_status.started()
+    async def _read(self, n):
         async for m in self._stream:
             for b in m:
                 self._bus.char_in(b)
         n.cancel_scope.cancel()
 
 
-    async def _write(self, task_status=trio.TASK_STATUS_IGNORED):
-        task_status.started()
+    async def _write(self):
         async for data in self._wq_r:
             await self._stream.send_all(data)
 
@@ -126,7 +106,7 @@ class StreamBusHandler(BaseBusHandler):
     def _set_timeout(self, flag):
         if self._timeout_evt.is_set():
             if not flag:
-                self._timeout_evt = trio.Event()
+                self._timeout_evt = anyio.create_event()
         else:
             if flag:
                 self._timeout_evt.set()

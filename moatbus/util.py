@@ -209,10 +209,13 @@ def mini2byte(f):
 
     The byte-sized minifloat accepted by `mini2byte` and returned by
     `byte2mini` has no sign bit, 4 bit exponent, 4 bit mantissa, no NaN or
-    overrun/infinity signalling.
+    overrun/infinity signalling (while 0xFF can be used as such if
+    desired, that's not covered by this code).
 
-    It can thus accept values from 0…32 in steps of 0.25, 0.5 to 48, 1 to 64,
-    and so on, until steps of 4096 from 65536 to 126976.
+    It can thus accept values from 0…8 in steps of 0.25, 0.5 to 16, 1 to 32,
+    and so on, until steps of 4096 from 65536 to 126976 / 122880, which is
+    more than a day. It is thus suited well for timeouts with variable
+    granularity that don't take up much space.
     """
 
     f = int(f/MINI_F+0.5)

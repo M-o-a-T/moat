@@ -6,31 +6,50 @@ import trio
 from contextlib import asynccontextmanager
 import msgpack
 from functools import partial
+from dataclasses import dataclass
 
 from ...backend import BaseBusHandler
 from ...message import BusMessage
 from ..obj import Obj
-from ...util import byte2mini, Processor
+from ...util import byte2mini, mini2byte, Processor
 from ..server import NoFreeID, IDcollisionError
-
-packer = msgpack.Packer(strict_types=False, use_bin_type=True, #default=_encode
-        ).pack
-unpacker = partial(
-    msgpack.unpackb, raw=False, use_list=False, # object_pairs_hook=attrdict, ext_hook=_decode
-)
 
 import logging
 logger = logging.getLogger(__name__)
 
-def build_aa_data(serial, flags=0, timer=0):
-    ls = len(serial)-1
-    if ls >= 0x10:
-        raise RuntimeError("Serial too long: %r" %(serial,))
-    if timer:
-        flags |= 0x01
-    if flags:
-        ls |= 0x10
-    return bytes((ls,)) + serial + (bytes((flags,)) if flags else b'') + (bytes((timer,)) if timer else b'')
+@dataclass
+class aa_record:
+    serial: bytes = None
+    flags:int = 0
+    t_continue:int = 0
+    t_live:int = 0
+    t_sleep:int = 0
+
+
+    @property
+    def packet(self):
+        ls = len(self.serial)-1
+        if not 0 <= ls <= 0x0F:
+            raise RuntimeError("Serial too long: %r" %(serial,))
+        ls <<= 4
+        more = []
+        flags = self.flags
+
+        if self.t_continue:
+            flags |= 0x01
+        if self.t_live or self.t_sleep:
+            flags |= 0x08
+        if flags & 0x01:
+            more.append(self.t_continue)
+        if flags & 0x08:
+            more.append(self.t_live)
+            more.append(self.t_sleep)
+
+        if flags:
+            ls |= 0x08
+            more.insert(0,flags)
+
+        return bytes((ls,)) + self.serial + bytes(more)
 
 
 class AddrControl(Processor):
@@ -43,13 +62,20 @@ class AddrControl(Processor):
             async for evt in server:
                 await handle_event(evt)
                 await server.send_msg(some_message)
+
+    Arguments:
+      timeout: sent to the client for arbitrary reply delay, default 5 seconds.
+      interval: poll interval, default 100 seconds.
+
     """
     CODE=0
 
-    def __init__(self, server, code=0):
+    def __init__(self, server, dkv, timeout=5.0, interval=100):
         self.logger = logging.getLogger("%s.%s" % (__name__, server.my_id))
         self.server = server
-        super().__init__(server, code)
+        self.timeout = timeout
+        self.interval = interval
+        super().__init__(server, 0)
 
     async def setup(self):
         await super().setup()
@@ -214,7 +240,7 @@ class AddrControl(Processor):
         await trio.sleep(1)
         while True:
             await self._send_poll()
-            await trio.sleep(100)
+            await trio.sleep(self.interval)
 
     async def _send_poll(self):
         """
@@ -222,7 +248,7 @@ class AddrControl(Processor):
 
         The interval is currently hardcoded to 5 seconds.
         """
-        await self.send(self.my_id, -4, 0, b'\x23\x14');
+        await self.send(self.my_id, -4, 1, bytes((0x23, mini2byte(self.timeout))))
 
     async def send_msg(self, msg):
         await self._back.send(msg)

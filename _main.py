@@ -348,7 +348,7 @@ async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redef
     # twice instead of never.
     if ctx.obj is not None:
         return
-    wrap_main(ctx=ctx, verbose=verbose - quiet, **kv)
+    wrap_main(ctx=ctx, verbose=1 + verbose - quiet, **kv)
     if help or ctx.invoked_subcommand is None and not ctx.protected_args:
         print(ctx.get_help())
         ctx.exit()

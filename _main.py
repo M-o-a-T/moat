@@ -90,7 +90,7 @@ def process_args(val, vars_, eval_, path_, vs=None):
                 v = NotGiven
             elif v == "/":  # pylint: disable=W0631
                 if vs is None:
-                    raise RuntimeError("A slash value doesn't work here.")
+                    raise click.BadOptionUsage("A slash value doesn't work here.")
                 v = NoneType
             else:
                 v = path_eval(v)  # pylint: disable=W0631
@@ -102,13 +102,13 @@ def process_args(val, vars_, eval_, path_, vs=None):
     for k, v in data():
         if not k:
             if vs is not None:
-                raise RuntimeError("You can't use empty paths here.")
+                raise click.BadOptionUsage("You can't use empty paths here.")
             if n:
-                raise RuntimeError("Setting a single value conflicts.")
+                raise click.BadOptionUsage("Setting a single value conflicts.")
             val = v
             n = -1
         elif n < 0:
-            raise RuntimeError("Setting a single value conflicts.")
+            raise click.BadOptionUsage("Setting a single value conflicts.")
         else:
             if not isinstance(val, Mapping):
                 val = attrdict()

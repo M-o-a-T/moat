@@ -37,7 +37,8 @@ NoneType = type(None)
 
 def attr_args(proc):
     """
-    Allow vars_/eval_/path_ args
+    Attach the standard ``-v``/``-e``/``-p`` arguments to a ``click.command``.
+    Passes ``vars_``/``eval_``/``path_`` args.
     """
     proc = click.option(
         "-v",
@@ -71,11 +72,11 @@ def attr_args(proc):
 
 def process_args(val, vars_, eval_, path_, vs=None):
     """
-    process vars_+eval_+path_ args.
+    process ``vars_``/``eval_``/``path_`` args.
 
     Arguments:
         vd: dict to modify
-        vars_, eval_, path_: from the function's arguments
+        vars_, eval_, path_: via `attr_args`
         vs: if given: set of vars
     Returns:
         the new value.

@@ -65,8 +65,7 @@ def rev_wire(ctx, param, value):
     return rev_name(ctx, param, value, delim="-", rev=False)
 
 
-def host_post(obj, values):
-    h = obj.host
+def host_post(obj, h, values):
     net = values.get("net", None)
     if net not in (None, "-"):
         n = obj.data.net.by_name(net)
@@ -326,7 +325,7 @@ async def host_find(obj, dest):
         A destination of '-' lists all unreachable hosts.
         """
     seen = set()
-    h = obj.data.host.by_name(obj.thing_name)
+    h = obj.host
     todo = deque()
     todo.append((h, ()))
 

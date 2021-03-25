@@ -285,7 +285,15 @@ class Path(collections.abc.Sequence):
 
 
 class P(Path):
+    """
+    A Path subclass that delegates to `Path.from_str`.
+
+    For idempotency (required by ``click``) it transparently accepts `Path`
+    objects.
+    """
     def __new__(cls, path):
+        if isinstance(path, Path):
+            return path
         return Path.from_str(path)
 
 

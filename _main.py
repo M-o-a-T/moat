@@ -37,7 +37,8 @@ NoneType = type(None)
 
 def attr_args(proc):
     """
-    Allow vars_/eval_/path_ args
+    Attach the standard ``-v``/``-e``/``-p`` arguments to a ``click.command``.
+    Passes ``vars_``/``eval_``/``path_`` args.
     """
     proc = click.option(
         "-v",
@@ -71,11 +72,11 @@ def attr_args(proc):
 
 def process_args(val, vars_, eval_, path_, vs=None):
     """
-    process vars_+eval_+path_ args.
+    process ``vars_``/``eval_``/``path_`` args.
 
     Arguments:
         vd: dict to modify
-        vars_, eval_, path_: from the function's arguments
+        vars_, eval_, path_: via `attr_args`
         vs: if given: set of vars
     Returns:
         the new value.
@@ -90,7 +91,7 @@ def process_args(val, vars_, eval_, path_, vs=None):
                 v = NotGiven
             elif v == "/":  # pylint: disable=W0631
                 if vs is None:
-                    raise RuntimeError("A slash value doesn't work here.")
+                    raise click.BadOptionUsage("A slash value doesn't work here.")
                 v = NoneType
             else:
                 v = path_eval(v)  # pylint: disable=W0631
@@ -102,13 +103,13 @@ def process_args(val, vars_, eval_, path_, vs=None):
     for k, v in data():
         if not k:
             if vs is not None:
-                raise RuntimeError("You can't use empty paths here.")
+                raise click.BadOptionUsage("You can't use empty paths here.")
             if n:
-                raise RuntimeError("Setting a single value conflicts.")
+                raise click.BadOptionUsage("Setting a single value conflicts.")
             val = v
             n = -1
         elif n < 0:
-            raise RuntimeError("Setting a single value conflicts.")
+            raise click.BadOptionUsage("Setting a single value conflicts.")
         else:
             if not isinstance(val, Mapping):
                 val = attrdict()
@@ -348,7 +349,7 @@ async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redef
     # twice instead of never.
     if ctx.obj is not None:
         return
-    wrap_main(ctx=ctx, verbose=verbose - quiet, **kv)
+    wrap_main(ctx=ctx, verbose=max(0, 1 + verbose - quiet), **kv)
     if help or ctx.invoked_subcommand is None and not ctx.protected_args:
         print(ctx.get_help())
         ctx.exit()

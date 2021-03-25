@@ -291,6 +291,7 @@ class P(Path):
     For idempotency (required by ``click``) it transparently accepts `Path`
     objects.
     """
+
     def __new__(cls, path):
         if isinstance(path, Path):
             return path

@@ -325,7 +325,10 @@ class MainLoader(Loader):
 
 
 @load_subgroup(
-    plugin="main", cls=MainLoader, add_help_option=False, invoke_without_command=True
+    plugin="main",
+    cls=MainLoader,
+    add_help_option=False,
+    invoke_without_command=True,
 )  # , __file__, "command"))
 @click.option("-v", "--verbose", count=True, help="Be more verbose. Can be used multiple times.")
 @click.option("-q", "--quiet", count=True, help="Be less verbose. Opposite of '--verbose'.")
@@ -350,6 +353,7 @@ async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redef
 
     You need to add a subcommand for this to do anything.
     """
+    ctx.allow_interspersed_args = True
 
     # The above `MainLoader.invoke` call causes this code to be called
     # twice instead of never.
@@ -413,6 +417,7 @@ def wrap_main(  # pylint: disable=redefined-builtin
             raise RuntimeError("You can't set the help text this way")
     else:
         main.context_settings["obj"] = obj
+        main.context_settings["allow_interspersed_args"] = True
         if help is not None:
             main.help = help
     obj._ext_name = ext

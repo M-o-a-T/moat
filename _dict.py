@@ -180,7 +180,7 @@ class attrdict(dict):
         vc.append(v)
         while path:
             v = vc.pop()
-            del v[path.pop()]
+            v.pop(path.pop(), None)
             if v:
                 break
         return val

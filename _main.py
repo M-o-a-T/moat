@@ -41,13 +41,13 @@ def attr_args(proc):
     Passes ``vars_``/``eval_``/``path_`` args.
     """
     proc = click.option(
-        "-v",
-        "--var",
-        "vars_",
+        "-p",
+        "--path",
+        "path_",
         nargs=2,
-        type=(P, str),
+        type=(P, P),
         multiple=True,
-        help="Parameter (name value)",
+        help="Parameter (name value), as path",
     )(proc)
     proc = click.option(
         "-e",
@@ -59,13 +59,13 @@ def attr_args(proc):
         help="Parameter (name value), evaluated",
     )(proc)
     proc = click.option(
-        "-p",
-        "--path",
-        "path_",
+        "-v",
+        "--var",
+        "vars_",
         nargs=2,
-        type=(P, P),
+        type=(P, str),
         multiple=True,
-        help="Parameter (name value), as path",
+        help="Parameter (name value)",
     )(proc)
     return proc
 

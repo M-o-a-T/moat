@@ -79,7 +79,7 @@ class DelayedWrite:
             self._n_sent += 1
             res = self._n_sent
             if self._delay is None and self._n_sent - self._n_ack >= self.len:
-                logger.note("%s: wait: %d/%d", self._info, self._n_sent, self._n_ack)
+                logger.debug("%s: wait: %d/%d", self._info, self._n_sent, self._n_ack)
                 self._delay = anyio.create_event()
             if self._delay is not None:
                 await self._delay.wait()
@@ -91,7 +91,7 @@ class DelayedWrite:
         """
         self._n_ack = max(self._n_ack, msg_nr)
         if self._delay is not None and self._n_sent - self._n_ack < self.len:
-            logger.note("%s: go: %d/%d", self._info, self._n_sent, self._n_ack)
+            logger.debug("%s: go: %d/%d", self._info, self._n_sent, self._n_ack)
             await self._delay.set()
             self._delay = None
 

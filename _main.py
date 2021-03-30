@@ -120,12 +120,12 @@ def process_args(val, vars_, eval_, path_, vs=None):
             if not isinstance(val, Mapping):
                 val = attrdict()
             if vs is not None:
-                vs.add(k)
+                vs.add(str(k))
             if v is NotGiven:
                 val = attrdict._delete(val, k)
             elif v is NoneType:
                 val = attrdict._delete(val, k)
-                vs.discard(k)
+                vs.discard(str(k))
             else:
                 val = attrdict._update(val, k, v)
             n += 1

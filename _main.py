@@ -417,7 +417,6 @@ def wrap_main(  # pylint: disable=redefined-builtin
             raise RuntimeError("You can't set the help text this way")
     else:
         main.context_settings["obj"] = obj
-        main.context_settings["allow_interspersed_args"] = True
         if help is not None:
             main.help = help
     obj._ext_name = ext

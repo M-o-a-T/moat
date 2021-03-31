@@ -14,19 +14,12 @@ async def spawn(taskgroup, proc, *args, **kw):
         a cancel scope you can use to stop the task.
     """
 
-    scope = None
-
-    async def _run(proc, args, kw, evt):
+    async def _run(proc, args, kw, *, task_status):
         """
         Helper for starting a task within a cancel scope.
         """
-        nonlocal scope
-        async with anyio.open_cancel_scope() as sc:
-            scope = sc
-            await evt.set()
+        with anyio.CancelScope() as sc:
+            task_status.started(sc)
             await proc(*args, **kw)
 
-    evt = anyio.create_event()
-    await taskgroup.spawn(_run, proc, args, kw, evt)
-    await evt.wait()
-    return scope
+    return await taskgroup.start(_run, proc, args, kw)

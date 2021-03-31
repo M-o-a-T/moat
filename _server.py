@@ -1,79 +1,47 @@
 """
 This module contains various helper functions and classes.
 """
-import trio
 import anyio
 
 from typing import Union, Dict, Optional
 from ssl import SSLContext
-from sniffio import current_async_library
-from contextlib import asynccontextmanager
 
-__all__ = ["create_tcp_server", "gen_ssl"]
+__all__ = ["run_tcp_server", "gen_ssl"]
 
 
 class _Server:
-    _servers = None
-    recv_q = None
+    server = None
 
-    def __init__(self, tg, port=0, ssl=None, **kw):
+    def __init__(self, tg, handler, _rdy=None, port=0, ssl=None, **kw):
         self.tg = tg
-        self.port = port
-        self.ports = None
         self._kw = kw
         self.ssl = ssl
+        self._rdy = _rdy
+        self.handler = handler
+        self.port = port
 
-    async def _accept(self, server, q):
-        self.ports.append(server.socket.getsockname())
-        try:
-            while True:
-                conn = await server.accept()
-                if self.ssl:
-                    conn = trio.SSLStream(conn, self.ssl, server_side=True)
-                await q.send(conn)
-        finally:
-            async with anyio.fail_after(2, shield=True):
-                await q.aclose()
-                await server.aclose()
+    async def _accept(self, conn):
+        if self.ssl:
+            conn = await anyio.streams.tls.TLSStream.wrap(conn, server_side=True, ssl_context=self.ssl)
+        await self.handler(conn)
 
-    async def __aenter__(self):
-        if current_async_library() != "trio":
-            raise RuntimeError("This only works with Trio right now.Sorry.")
-        send_q, self.recv_q = trio.open_memory_channel(1)
-        try:
-            servers = await trio.open_tcp_listeners(self.port, **self._kw)
-        except EnvironmentError as exc:
-            err = OSError(f"Port {self.port} in use")
-            err.errno = exc.errno
-            raise err from exc
-
-        self.ports = []
-        async with send_q:
-            for s in servers:
-                await self.tg.spawn(self._accept, s, send_q.clone())
-        return self
-
-    async def __aexit__(self, *tb):
-        await self.tg.cancel_scope.cancel()
-        async with anyio.fail_after(2, shield=True):
-            await self.recv_q.aclose()
-
-    def __aiter__(self):
-        return self
-
-    async def __anext__(self):
-        try:
-            return await self.recv_q.receive()
-        except trio.EndOfChannel:
-            raise StopAsyncIteration
+    async def run(self):
+        listener = await anyio.create_tcp_listener(local_port=self.port)
+        if self._rdy is not None:
+            self._rdy(listener)
+        async with listener:
+            await listener.serve(self._accept)
 
 
-@asynccontextmanager
-async def create_tcp_server(**args) -> _Server:
-    async with anyio.create_task_group() as tg:
-        server = _Server(tg, **args)
-        async with server:
-            yield server
+async def run_tcp_server(*a, **kv) -> _Server:
+    tg = kv.pop("tg", None)
+    if tg is not None:
+        server = _Server(tg, *a, **kv)
+        await server.run()
+    else:
+        async with anyio.create_task_group() as tg:
+            server = _Server(tg, *a, **kv)
+            await server.run()
 
 
 def gen_ssl(

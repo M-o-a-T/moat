@@ -23,19 +23,13 @@ class _MsgRW:
 
     async def __aenter__(self):
         if self.path is not None:
-            try:
-                self.stream = await anyio.aopen(self.path, self._mode)
-            except AttributeError:
-                self.stream = await anyio.open_file(self.path, self._mode)
+            self.stream = await anyio.open_file(self.path, self._mode)
         return self
 
     async def __aexit__(self, *tb):
         if self.path is not None:
-            async with anyio.open_cancel_scope(shield=True):
-                try:
-                    await self.stream.aclose()
-                except AttributeError:
-                    await self.stream.close()
+            with anyio.CancelScope(shield=True):
+                await self.stream.aclose()
 
 
 class MsgReader(_MsgRW):
@@ -111,7 +105,7 @@ class MsgWriter(_MsgRW):
         self.excess = 0
 
     async def __aexit__(self, *tb):
-        async with anyio.fail_after(2, shield=True):
+        with anyio.fail_after(2, shield=True):
             if self.buf:
                 await self.stream.write(b"".join(self.buf))
             await super().__aexit__(*tb)

@@ -33,6 +33,8 @@ def combine_dict(*d, cls=dict, deep=False) -> dict:
             return d[0]
 
     for kv in d:
+        if kv is None:
+            continue
         for k, v in kv.items():
             if k not in keys:
                 keys[k] = []

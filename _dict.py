@@ -141,7 +141,10 @@ class attrdict(dict):
                 w = type(v)()
             else:
                 # copy
-                w = type(w)(w)
+                if w is None:
+                    w = attrdict()
+                else:
+                    w = type(w)(w)
             v[p] = w
             v = w
         px = path[-1]

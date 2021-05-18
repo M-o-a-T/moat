@@ -21,15 +21,14 @@ async def cli():
 
 
 @cli.command()
-@click.argument("path", nargs=1)
+@click.argument("path", nargs=1, type=P)
 @click.pass_obj
 async def dump(obj, path):
     """Emit the current state as a YAML file.
     """
     res = {}
-    path = P(path)
-    if len(path) > 4:
-        raise click.UsageError("Only up to four path elements allowed")
+    if len(path) > 3:
+        raise click.UsageError("Only up to three path elements (host.controller:pin) allowed")
 
     async for r in obj.client.get_tree(
         obj.cfg.gpio.prefix + path, nchain=obj.meta, max_depth=4 - len(path)
@@ -44,15 +43,14 @@ async def dump(obj, path):
 
 
 @cli.command("list")
-@click.argument("path", nargs=1)
+@click.argument("path", nargs=1, type=P)
 @click.pass_obj
 async def list_(obj, path):
     """List the next stage.
     """
     res = {}
-    path = P(path)
-    if len(path) > 4:
-        raise click.UsageError("Only up to four path elements allowed")
+    if len(path) > 3:
+        raise click.UsageError("Only up to three path elements (host.controller:pin) allowed")
 
     res = await obj.client._request(
         action="enumerate", path=obj.cfg.gpio.prefix + path, empty=True
@@ -66,14 +64,15 @@ async def list_(obj, path):
 @click.option("-v", "--value", help="New value of the attribute.")
 @click.option("-e", "--eval", "eval_", is_flag=True, help="The value shall be evaluated.")
 @click.option("-p", "--path", "path_", is_flag=True, help="The value is a path.")
-@click.argument("path", nargs=1)
+@click.argument("path", nargs=1, type=P)
 @click.pass_obj
 async def attr_(obj, attr, value, path, eval_, path_):
     """Set/get/delete an attribute on a given GPIO element.
 
     `--eval` without a value deletes the attribute.
     """
-    path = P(path)
+    if len(path) != 3:
+        raise click.UsageError("Three path elements (host.controller:pin) required")
     if path_ and eval_:
         raise click.UsageError("split and eval don't work together.")
     if value and not attr:
@@ -93,7 +92,7 @@ async def attr_(obj, attr, value, path, eval_, path_):
     multiple=True,
     help="One attribute to set (NAME VALUE). May be used multiple times.",
 )
-@click.argument("path", nargs=1)
+@click.argument("path", nargs=1, type=P)
 @click.pass_obj
 async def port(obj, path, typ, mode, attr):
     """Set/get/delete port settings. This is a shortcut for the "attr" command.
@@ -117,9 +116,8 @@ async def port(obj, path, typ, mode, attr):
     "low" is the state of the wire when the input is False.
     Floats may be paths, in which case they're read from there when starting.
     """
-    path = P(path)
     if len(path) != 3:
-        raise click.UsageError("Path must be 3 elements: host gpioname linenr")
+        raise click.UsageError("Three path elements (host.controller:pin) required")
     res = await obj.client.get(obj.cfg.gpio.prefix + path, nchain=obj.meta or 1)
     val = res.get("value", attrdict())
 

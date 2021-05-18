@@ -5,7 +5,7 @@ import asyncclick as click
 from collections.abc import Mapping
 
 from distkv.util import yprint, attrdict, as_service, P
-from distkv.data import res_delete, res_get, res_update
+from distkv.data import res_get, res_update
 
 import logging
 
@@ -60,26 +60,31 @@ async def list_(obj, path):
 
 
 @cli.command("attr")
-@click.option("-a", "--attr", multiple=True, help="Attribute to list or modify.")
-@click.option("-v", "--value", help="New value of the attribute.")
-@click.option("-e", "--eval", "eval_", is_flag=True, help="The value shall be evaluated.")
-@click.option("-p", "--path", "path_", is_flag=True, help="The value is a path.")
+@attr_args
 @click.argument("path", nargs=1, type=P)
 @click.pass_obj
-async def attr_(obj, attr, value, path, eval_, path_):
-    """Set/get/delete an attribute on a given GPIO element.
+async def attr_(obj, attr, path, vars_, eval_, path_):
+    """Set/get/delete attributes of a given GPIO element.
 
     `--eval` without a value deletes the attribute.
     """
     if len(path) != 3:
         raise click.UsageError("Three path elements (host.controller:pin) required")
-    if path_ and eval_:
-        raise click.UsageError("split and eval don't work together.")
-    if value and not attr:
-        raise click.UsageError("Values must have locations ('-a ATTR').")
-    if path_:
-        value = P(value)
-    await _attr(obj, attr, value, path, eval_)
+    await node_attr(obj, path, vars_, eval_, path_)
+
+
+@cli.command()
+@click.argument("path", nargs=1, type=P)
+@click.pass_obj
+async def delete(obj, path):
+    """
+    Delete a port.
+    """
+    if len(path) != 3:
+        raise click.UsageError("Three path elements (host.controller:pin) required")
+    res = await obj.client.delete(obj.cfg.gpio.prefix + path)
+    if obj.meta:
+        yprint(res, stream=obj.stdout)
 
 
 @cli.command()
@@ -95,7 +100,7 @@ async def attr_(obj, attr, value, path, eval_, path_):
 @click.argument("path", nargs=1, type=P)
 @click.pass_obj
 async def port(obj, path, typ, mode, attr):
-    """Set/get/delete port settings. This is a shortcut for the "attr" command.
+    """Set/get port settings. This is a shortcut for the "attr" command.
 
     \b
     Known attributes for types+modes:
@@ -169,12 +174,12 @@ async def _attr(obj, attr, value, path, eval_, res=None):
         res.chain = None
     if eval_:
         if value is None:
-            value = res_delete(res, attr)
+            pass # value = res_delete(res, attr)
         else:
             value = eval(value)  # pylint: disable=eval-used
             if isinstance(value, Mapping):
                 # replace
-                value = res_delete(res, attr)
+                pass # value = res_delete(res, attr)
                 value = value._update(attr, value=value)
             else:
                 value = res_update(res, attr, value=value)

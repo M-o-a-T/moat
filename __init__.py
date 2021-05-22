@@ -5,7 +5,11 @@ from ._dict import *  # noqa: F401,F403
 
 try:
     from ._event import *  # noqa: F401,F403
+except ImportError:
+    pass
 
+try:
+    from ._ctx import *  # noqa: F401,F403
 except ImportError:
     pass
 

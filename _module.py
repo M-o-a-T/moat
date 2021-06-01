@@ -2,9 +2,8 @@
 This module contains various helper functions and classes.
 """
 import sys
-
-from types import ModuleType
 from functools import partial
+from types import ModuleType
 
 __all__ = ["make_proc", "Module", "make_module"]
 

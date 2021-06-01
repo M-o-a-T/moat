@@ -1,12 +1,11 @@
 """
 This module contains various helper functions and classes.
 """
-import anyio
+from concurrent.futures import CancelledError
 
+import anyio
 import attr
 import outcome
-
-from concurrent.futures import CancelledError
 
 __all__ = ["ValueEvent"]
 

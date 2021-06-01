@@ -19,7 +19,9 @@ class _Server:
 
     async def _accept(self, conn):
         if self.ssl:
-            conn = await anyio.streams.tls.TLSStream.wrap(conn, server_side=True, ssl_context=self.ssl)
+            conn = await anyio.streams.tls.TLSStream.wrap(
+                conn, server_side=True, ssl_context=self.ssl
+            )
         await self.handler(conn)
 
     async def run(self):

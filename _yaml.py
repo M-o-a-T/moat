@@ -8,7 +8,6 @@ import ruyaml as yaml
 from ._dict import attrdict
 from ._path import Path
 
-
 __all__ = ["yload", "yprint", "yformat", "yaml_named"]
 
 SafeRepresenter = yaml.representer.SafeRepresenter

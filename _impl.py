@@ -1,11 +1,10 @@
 """
 This module contains various helper functions and classes.
 """
-from collections import deque
-from math import log10
-from getpass import getpass
-
 import logging
+from collections import deque
+from getpass import getpass
+from math import log10
 
 __all__ = [
     "NoneType",

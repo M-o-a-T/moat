@@ -1,8 +1,8 @@
+import logging
+
 import anyio
 from anyio import create_memory_object_stream as _cmos
-
-import logging
-from outcome import Value, Error
+from outcome import Error, Value
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class Queue:
         return self
 
     async def __anext__(self):
-        res = await self._r.__anext__()
+        res = await self._r.__anext__()  # pylint: disable=E1101
         return res.unwrap()
 
     def close_sender(self):

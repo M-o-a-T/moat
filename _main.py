@@ -1,21 +1,21 @@
+import importlib
+import logging
 import os
 import sys
-import asyncclick as click
 from collections import defaultdict
 from collections.abc import Mapping
-from pathlib import Path
-from functools import partial
-import importlib
 from contextvars import ContextVar
+from functools import partial
+from logging.config import dictConfig
+from pathlib import Path
 from typing import Awaitable
+
+import asyncclick as click
 
 from ._dict import attrdict, combine_dict
 from ._impl import NotGiven
-from ._path import path_eval, P
+from ._path import P, path_eval
 from ._yaml import yload
-
-import logging
-from logging.config import dictConfig
 
 logger = logging.getLogger(__name__)
 

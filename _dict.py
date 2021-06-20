@@ -3,8 +3,8 @@ This module contains various helper functions and classes.
 """
 from collections.abc import Mapping
 from copy import deepcopy
-from . import NotGiven
 
+from . import NotGiven
 
 __all__ = ["combine_dict", "drop_dict", "attrdict"]
 

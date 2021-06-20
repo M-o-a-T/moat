@@ -3,10 +3,7 @@ This module contains various helper functions and classes.
 """
 import anyio
 
-from typing import Union, Dict, Optional
-from ssl import SSLContext
-
-__all__ = ["run_tcp_server", "gen_ssl"]
+__all__ = ["run_tcp_server"]
 
 
 class _Server:
@@ -22,7 +19,9 @@ class _Server:
 
     async def _accept(self, conn):
         if self.ssl:
-            conn = await anyio.streams.tls.TLSStream.wrap(conn, server_side=True, ssl_context=self.ssl)
+            conn = await anyio.streams.tls.TLSStream.wrap(
+                conn, server_side=True, ssl_context=self.ssl
+            )
         await self.handler(conn)
 
     async def run(self):
@@ -42,29 +41,3 @@ async def run_tcp_server(*a, **kv) -> _Server:
         async with anyio.create_task_group() as tg:
             server = _Server(tg, *a, **kv)
             await server.run()
-
-
-def gen_ssl(
-    ctx: Union[bool, SSLContext, Dict[str, str]] = False, server: bool = True
-) -> Optional[SSLContext]:
-    """
-    Generate a SSL config from the given context.
-
-    Args:
-      ctx: either a Bool (ssl yes/no) or a dict with "key" and "cert" entries.
-      server: a flag whether to behave as a server.
-    """
-    if not ctx:
-        return None
-    if ctx is True:
-        ctx = dict()
-    if not isinstance(ctx, dict):
-        return ctx
-
-    # pylint: disable=no-member
-    ctx_ = trio.ssl.create_default_context(
-        purpose=trio.ssl.Purpose.CLIENT_AUTH if server else trio.ssl.Purpose.SERVER_AUTH
-    )
-    if "key" in ctx:
-        ctx_.load_cert_chain(ctx["cert"], ctx["key"])
-    return ctx_

@@ -3,8 +3,9 @@ This module contains helper functions for packing+unpacking of single messages,
 plus an unpacker factory for streams.
 """
 
-import msgpack
 from functools import partial
+
+import msgpack
 
 from ._dict import attrdict
 from ._path import Path

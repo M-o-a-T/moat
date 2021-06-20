@@ -1,17 +1,14 @@
 """
 This module contains various helper functions and classes.
 """
-import re
-
-import collections.abc
 import ast
-
-from typing import Union
+import collections.abc
+import logging
+import re
 from functools import total_ordering
+from typing import Union
 
 import simpleeval
-import logging
-
 
 __all__ = ["Path", "P", "logger_for", "PathShortener", "PathLongener", "path_eval"]
 

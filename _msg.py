@@ -23,7 +23,13 @@ class _MsgRW:
 
     async def __aenter__(self):
         if self.path is not None:
-            self.stream = await anyio.open_file(self.path, self._mode)
+            p = self.path
+            if p == "-":
+                if self._mode[0] == "r":
+                    p = "/dev/stdin"
+                else:
+                    p = "/dev/stdout"
+            self.stream = await anyio.open_file(p, self._mode)
         return self
 
     async def __aexit__(self, *tb):

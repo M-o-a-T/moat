@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "main_",
+    "read_cfg",
     "wrap_main",
     "Loader",
     "load_subgroup",

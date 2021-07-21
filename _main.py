@@ -132,6 +132,32 @@ def process_args(val, vars_, eval_, path_, vs=None):
     return val
 
 
+def read_cfg(name, path):
+    cfg = None
+
+    def _cfg(path):
+        nonlocal cfg
+        if cfg is not None:
+            return
+        if os.path.exists(path):
+            try:
+                with open(path, "r") as cf:
+                    cfg = yload(cf)
+            except PermissionError:
+                pass
+
+    if name is not None and cfg is not False:
+        if path is not None:
+            _cfg(path)
+        else:
+            _cfg(os.path.expanduser(f"~/config/{name}.cfg"))
+            _cfg(os.path.expanduser(f"~/.config/{name}.cfg"))
+            _cfg(os.path.expanduser(f"~/.{name}.cfg"))
+            _cfg(f"/etc/{name}/{name}.cfg")
+            _cfg(f"/etc/{name}.cfg")
+        return cfg
+
+
 def load_one(path, name, endpoint=None):
     mod = importlib.import_module(f"{path}.{name}")
     if endpoint is not None:
@@ -442,35 +468,14 @@ def wrap_main(  # pylint: disable=redefined-builtin
             pass
 
     obj.stdout = CFG.get("_stdout", sys.stdout)  # used for testing
-
-    def _cfg(path):
-        nonlocal cfg
-        if cfg is not None:
-            return
-        if os.path.exists(path):
-            try:
-                cfg = open(path, "r")
-            except PermissionError:
-                pass
-
-    if name is not None and cfg is not False:
-        _cfg(os.path.expanduser(f"~/config/{name}.cfg"))
-        _cfg(os.path.expanduser(f"~/.config/{name}.cfg"))
-        _cfg(os.path.expanduser(f"~/.{name}.cfg"))
-        _cfg(f"/etc/{name}/{name}.cfg")
-        _cfg(f"/etc/{name}.cfg")
-
     obj.CFG = CFG
+
+    cfg = read_cfg(name, cfg)
 
     if cfg:
         logger.debug("Loading %s", cfg)
 
-        cd = yload(cfg)
-        if cd is None:
-            obj.cfg = CFG
-        else:
-            obj.cfg = combine_dict(cd, CFG, cls=attrdict)
-        cfg.close()
+        obj.cfg = combine_dict(cfg, CFG, cls=attrdict)
     else:
         obj.cfg = CFG
 

@@ -363,7 +363,7 @@ class MainLoader(Loader):
 @click.option(
     "-l", "--log", multiple=True, help="Adjust log level. Example: '--log asyncactor=DEBUG'."
 )
-@click.option("-c", "--cfg", type=click.File("r"), default=None, help="Configuration file (YAML).")
+@click.option("-c", "--cfg", type=click.Path("r"), default=None, help="Configuration file (YAML).")
 @click.option(
     "-C",
     "--conf",

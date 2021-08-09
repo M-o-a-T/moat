@@ -72,28 +72,30 @@ Client
 A client that finishes registration or wakes up shall send a Mode 4 (client
 broadcast) message.
 
-The second byte contains a timer minifloat that specifies how long the
-client will be online. 0xFF means "indefinite": the client will not
-disconnect unless told to do so.
+If bit 3 is set, the second byte contains a timer minifloat that states how
+long the client will be online right now. A missing timer means
+"indefinite": the client will not disconnect unless told to do so.
 
-If bit 3 is set, the next byte contains a timer minifloat that states how
+If bit 4 is set, the next byte contains a timer minifloat that states how
 long the client intends to be online. Zero tells the server that the client
 is going off-line immediately; it should be sent (if possible) when a
 client is disconnected by a third party, e.g. because of imminent loss of
-power. 0xFF means "undetermined" and is equivalent to not setting bit 3,
-except that a client which doesn't set this bit doesn't expect to ever
-disconnect in the first place.
+power. 0xFF means "undetermined" and is equivalent to not setting bit 4,
+except that such a client doesn't expect to ever disconnect in the first
+place.
 
-If bit 4 is set, the next byte contains a timer minifloat that states
+If bit 5 is set, the next byte contains a timer minifloat that states
 how long the client is likely to sleep before re-polling. Zero means
 "indeterminate" (e.g. whenever somebody next opens a door) and is
 equivalent to not setting this bit. 0xFF means "forever" and requires human
 interaction (e.g. manually resetting the device) to revive the client.
 
-Bit 5…7 are reserved.
+Bit 6…7 are reserved.
 
-Replies to a server scan or ping are sent as Mode 5 directed messages and have the
-same format.
+Replies to a server scan or ping are sent as Mode 5 (client-to-server)
+messages and have the same format.
+
+TODO: Not all flag bits / timer combinations make sense.
 
 Server scan
 -----------
@@ -102,7 +104,7 @@ A server scanning for clients sends a Mode 3 message.
 
 If bit 3 is set, the next byte contains a timer minifloat that states how
 long the client should wait (maximally) until it does address assignment /
-reporting.
+reporting. Otherwise clients shall wait until the bus is reasonably free.
 
 Bits 4…6 select which clients should *not* answer. They are mutually
 exclusive; bits 4…6 all being set is reserved.
@@ -113,8 +115,8 @@ Bit 4: clients that have a useable address (i.e. they did broadcast a
 Bit 5: clients that don't have an address (i.e. they did not yet receive an
 ACK).
 
-Bit 6: Clients that did receive an ACK but did not yet send the "finished"
-message.
+Bit 6: Clients that did receive an ACK but did not yet send a "finished"
+poll message.
 
 Bit 7: Another flag byte (bits 8…15) follows. If this is not set the other
 flags are assumed to be zero.
@@ -141,7 +143,7 @@ long the client should listen before shutting down.
 If bit 4 is set, the next byte contains a timer minifloat that states
 how long the client sleeps / may sleep before re-polling.
 
-If bit 5 is set, the client shall not send a reply even if it is online.
+If bit 5 is set, the client shall not send a reply. Otherwise 
 
 Bit 6…7 are reserved.
 
@@ -151,11 +153,11 @@ Semantics
 A client that's intermittently online typically sends a poll message
 when it has acquired its address / wakes up.
 
-The/each client shall sleep some random time between zero and that timer's
-value, then send its serial number (with Poll flag set) to the requesting
-server. Client devices that don't yet have an address shall use the
-timer's value to restart their address acquisition if it is not still
-running.
+Polled clients shall sleep some linearly-random time between zero and the
+poll timer's value, then send their serial number (with Poll flag set) to
+the requesting server. Client devices that don't yet have an address shall
+use the timer's value to restart their address acquisition if it is not
+still running.
 
 A zero timer means "immediately" and should not be used with a
 broadcast destination except when testing bus congestion handling.
@@ -171,10 +173,6 @@ This message type is used for debugging, error messages, and other text
 data. It establishes a reliable bidirectional stream of possibly-packetized
 bytes.
 
-The packet loss recovery mechanism described here may be re-used by other
-reliable channels (serial, I²C, etc.), though the process of establishing
-the channel is necessarily different.
-
 Until a connection is established, clients broadcast their console messages
 (mode 4); the first byte contains a length byte-1, bit 7 is reserved, bit 6
 is an incomplete-line indicator.
@@ -185,8 +183,9 @@ otherwise illegal at the start of a message boundary. Bits 0…2 are used to
 indicate the error level (0:unknown 1:trace 2:debug 3:info 4:warn 5:error
 6:fatal 7:panic) in the lower three bits. Bits 5…3 are reserved.
 
-A server which wants to establish a console connection sends a Mode 2
-message to the client. Flag bits:
+
+A server that wants to establish a reliable console connection sends a Mode
+2 message to the client. Flag bits:
 
 * 3: take over
 
@@ -194,6 +193,8 @@ message to the client. Flag bits:
   it will reply with an error.
 
 * 4: reliable transmission
+
+  If this bit is clear, messages are not protected. A client may 
 
 * 5: cancel
 
@@ -206,15 +207,16 @@ The combination "reliable+cancel" indicates the passive end
 of a reliable connection: the client shall wait for a message from the
 other end before proceeding.
 
+
 All messages are followed by two or three bytes.
 
-* Destination. If bit 7 is set, the remaining bits are a client address,
+* Destination. If bit 7 is clear, the remaining bits are a client address,
   followed by a byte with the client command code (8 bits wide for
   client-to-client).
 
-  If bit 7 is clear, bits 5+6 contain the destination server's address.
+  If bit 7 is set, bits 5+6 contain the destination server's address.
   (Both being clear is reserved.) Bits 0…4 are the destination command code.
-  (0…3 is forbidden).
+  A value <4 is forbidden.
 
 * the command which the client shall listen to, for incoming messages to
   this connection. If talking to a server the top three bits are reserved.
@@ -255,35 +257,38 @@ Message Format
 
 The first byte carries two flag bits.
 
-If bit 7 is clear, bit 6 indicates whether the message is incomplete;
-the other bits are interpreted as length-1, followed by message data.
+If bit 7 is clear, the message contains data and the send number is
+incremented. Bit 6 indicates whether the message is incomplete; the other
+bits are interpreted as length-1, followed by message data.
 
 If the contents are UTF-8 text, glyphs *should not* be split between
 messages; UTF-8 characters *must not* be split. Lines *should* be transmitted
 without terminating carriage return or line feed (use bit 6 instead) if
 possible – it might not be, as zero-length packets are not allowed.
 
-Otherwise, this is a control packet.
+Otherwise (i.e. bit 7 is set), this is a control packet with the following
+semantics.
 
-If bit 6 is set, this is an Ack or Probe packet.
-
-Bit 5 is set if the sender requests an Ack in return because it wants to
+Bit 6 is set if the sender requests an Ack: because it wants to
 send more messages and/or its buffer is close to its limit.
 
+Bit 5 is set if this message reacts on an Ack request.
+
 If bit 4 is clear, bits 0…3 count the number of messages the Ack's sender
-didn't receive and which should be retransmitted. I.e., if it received
-message 3 and then message 6, it'd send an ack for two outstanding
-messages.
+didn't receive and which should be retransmitted. An example: if it receives
+message 3 and then message 6 to 9, it'd send an ack for message 3,
+indicating two outstanding messages. After getting 4 and 5 it'd then send
+an Ack for message 9.
 
 Otherwise (Bit 4 is set) the sender has run into an overflow condition,
 i.e. there is data loss. Bits 0…3 count the number of messages lost, with
 15=indeterminate. The sender should increment its sent-packet number before
-sending this message. Transmission is halted; it will resume when the
-other side sends a similar ack with bits 0…3 set to zero. Any such Ack
-*must* use the sender's packet number.
+sending this message. Transmission is halted. The remote side is expected
+to acknowledge this message, echoing echos bits 0…3.
 
 The second byte contains two nibbles: the last received message# from the
-receiver in the top bits, and a send counter below.
+receiver in the top bits, plus a send counter. The send counter is
+incremented when bit 7 is clear *or* bits 7 and 4 are both set.
 
 Connection establishment
 ------------------------
@@ -314,4 +319,8 @@ first message each side sends to the other has a counter of 1. Clients must
 store at least one message for repetition and *should* wait until the
 earliest message is acknowledged instead of reporting an overflow.
 Servers *must* wait.
+
+The packet loss recovery mechanism described here may be re-used by other
+reliable channels (serial, I²C, etc.), though the process of establishing
+the channel is necessarily different.
 

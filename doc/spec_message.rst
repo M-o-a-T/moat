@@ -122,7 +122,7 @@ Broadcast Broadcast    0        Mode 1; AA: request
 Server    Client       0        Mode 2; AA: ACK
 Server    Broadcast    0        Mode 3; AA: NACK
 Client    Broadcast    0        Mode 4; AA: collision
-Client    Server       0        Mode 5
+Client    Server       0        Mode 5; AA: Poll Reply
 any       any          0        reserved
 Server    Client       1        data directory lookup
 Client    Server       1        lookup reply

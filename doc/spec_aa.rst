@@ -5,7 +5,7 @@ Address assignment messages are control messages with type zero.
 They are special because clients must listen (and possibly react) to them
 even if they're not addressed to them directly.
 
-Every message's first byte contains four flag bits and four bits for the
+Every message's first byte contains a flag bit and four bits for the
 length of the client's serial number / MAC / EUID, minus one. Serial
 numbers longer than 16 bytes are not allowed. Serial numbers shorter than 4
 bytes are strongly discouraged.
@@ -53,10 +53,8 @@ Flags
 -----
 
 Flag bits, if present, are located directly after the MAC/serial.
-
-Bit 3 of the first byte states whether a flag byte exists. Bits 4…7 contain
-the MAC's length -1. The bottom three bits are zero for AA. A nonexisting
-flag byte is equivalent to zero.
+Bit 3 of the first byte states whether a flag byte exists.
+A nonexisting flag byte is equivalent to zero.
 
 * bit 0: wait. The next byte contains a timer minifloat. Its meaning varies
   depending on the mode:

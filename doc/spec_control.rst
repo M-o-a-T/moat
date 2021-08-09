@@ -193,6 +193,13 @@ This message type is used for debugging, error messages, and other text
 data. It establishes a reliable bidirectional stream of possibly-packetized
 bytes.
 
+The packet loss recovery / flow control mechanism described here may be
+re-used by other reliable channels (serial, I²C, etc.), though the process
+of establishing the channel is necessarily different.
+
+A client *should not* go to sleep while it carries channels with
+non-acknowledged data.
+
 
 Broadcast Mode
 --------------
@@ -210,12 +217,20 @@ A server that wants to establish a reliable console connection sends a Mode
 
 * 3: take over
 
-  If this bit is clear and the client already has a console connection,
-  it will reply with an error.
+  If this bit is clear and there already is an established connection on
+  this endpoint, the client will reply with an error.
 
 * 4: reliable transmission
 
-  If this bit is clear, messages are not protected. A client may 
+  If this bit is clear, messages are not protected.
+
+  Unprotected channels do not transmit or receive Message Flow data.
+
+  Channel setup APIs *must* use a tri-state flag to explicitly allow
+  unprotected messages (yes / no / on-client-request). The default must be
+  *no*. Clients and servers, on the other hand, must not unilaterally
+  reject unprotected channels unless doing so would compromise real-world
+  safety.
 
 * 5: cancel
 
@@ -224,12 +239,13 @@ A server that wants to establish a reliable console connection sends a Mode
 
 * 6…7: reserved
 
-The combination "reliable+cancel" indicates the passive end
-of a reliable connection: the client shall wait for a message from the
-other end before proceeding.
+
+The combination "reliable+cancel" indicates the passive end of a reliable
+connection: the client shall acknowledge the connection and accept a
+Connection Control message from the other end before proceeding.
 
 
-The following two or three bytes contain data to set up the channel.
+The following two or three bytes contain data to identify and set up the channel.
 
 One byte describes the command code on the client; the data dictionary
 tells the server which command codes connect to which client subsystem.
@@ -244,6 +260,10 @@ byte containing the remote end's command code (8 bits wide for client-to-client)
 If bit 7 is set, bits 5+6 contain a server's address. (Both
 being clear is reserved.) Bits 0…4 are the remote end's command code. A
 value <4 is forbidden.
+
+A "large" multi-function client may re-use the same command code for
+multiple endpoints on different clients and/or servers. This ability
+carries over to connection handling.
 
 
 The client replies with a Mode 5 message if there is an error, *or* after
@@ -368,7 +388,9 @@ contains the limits the rejecter is prepared to accept.
 
 Otherwise (i.e. bit 5 is clear) this is a connection set-up message. Bit 3
 is reserved; bits 2…0 +1 encode the maximum incoming message length in
-8-byte units -1, thus n=0 is 8 bytes and n=7 is 64 bytes.
+8-byte units -1, thus n=0 is 8 bytes and n=7 is 64 bytes. A following byte
+contains two nibbles: the receive windo ẃ in bits 7…4 and the send window
+in bits 3…0.
 
 During setup, the active end sends a message with its parameters. The
 passive end replies likewise. Send and receive window sizes are the smaller
@@ -379,8 +401,4 @@ first message each side sends to the other has a counter of 1. Clients must
 store at least one message for repetition and *should* wait until the
 earliest message is acknowledged instead of directly reporting an overflow.
 Servers *must* wait.
-
-The packet loss recovery / flow control mechanism described here may be
-re-used by other reliable channels (serial, I²C, etc.), though the process
-of establishing the channel is necessarily different.
 

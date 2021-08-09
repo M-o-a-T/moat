@@ -3,8 +3,9 @@ Infrastructure
 --------------
 
 One bus client runs gateway firmware which implements a transparent
-bidirectional link from the MoaT bus to its serial port. An embedded
-computer (Raspberry Pi, ESP32, …) then relays to MQTT.
+bidirectional link from the MoaT bus to a serial port. An embedded
+computer (Raspberry Pi, ESP32, …) then (un)packetizes the messages
+and relays to MQTT.
 
 This allows the daemons which do address assignment, message relaying, and
 data collection to operate independently. In particular, each part can be

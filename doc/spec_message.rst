@@ -46,7 +46,7 @@ end-of-message.
 
 All messages should have a well-defined length, or carry their own length
 indication if required. Violating this condition risks a higher probability
-of wrongly-correct CRCs.
+of falsely correct CRCs.
 
 
 Addressing
@@ -60,7 +60,8 @@ deep sleep may or may not be considered "newly-connected", as the address
 server(s) are expected to store known addresses permanently.
 
 Bus-based address assignment is only used for clients. Servers are expected
-to know their own address and to have other ways of communication.
+to know their own address and to have other ways of communication among
+themselves.
 
 Reserved addresses
 ------------------

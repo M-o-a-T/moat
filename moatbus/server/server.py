@@ -35,33 +35,33 @@ class IDcollisionError(RuntimeError):
 class ServerEvent:
     pass
 
-class _ObjEvent(ServerEvent):
+class _ClientEvent(ServerEvent):
     def __init__(self, obj):
         self.obj = obj
     def __repr__(self):
         return "<%s %s>" % (self.__class__.__name__.replace("Event",""), self.obj)
 
-class NewObjEvent(_ObjEvent):
+class NewClientEvent(_ClientEvent):
     """
     A device has obtained a client address. Get data dictionary and stuff.
     """
     pass
 
-class OldObjEvent(_ObjEvent):
+class OldClientEvent(_ClientEvent):
     """
     An existing device has re-fetched its address; we might presume that
     it's been rebooted.
     """
     pass
 
-class DropObjEvent(_ObjEvent):
+class DropClientEvent(_ClientEvent):
     """
     A device has been removed.
     """
     pass
 
 
-class ObjStore:
+class ClientStore:
     def __init__(self, server):
         self._server = ref(server)
         self._id2obj = dict()
@@ -128,9 +128,9 @@ class ObjStore:
             self._id2obj[obj.client_id] = obj
             if new_id is None:
                 await obj.attach(self.server)
-                await self.report(NewObjEvent(obj))
+                await self.report(NewClientEvent(obj))
             else:
-                await self.report(OldObjEvent(obj))
+                await self.report(OldClientEvent(obj))
         except BaseException:
             with trio.move_on_after(1) as sc:
                 sc.shield = True
@@ -142,7 +142,7 @@ class ObjStore:
         De-register a bus object.
         """
         if obj.serial in self._ser2obj:
-            await self.report(DropObjEvent(obj))
+            await self.report(DropClientEvent(obj))
         await obj.detach(self.server)
         try:
             # Order is important.
@@ -184,7 +184,7 @@ class Server(CtxObj, Dispatcher):
         self.logger = logging.getLogger("%s.%s" % (__name__, backend.id))
         self._back = backend
         self.__id = id-4  # my server ID
-        self.objs = ObjStore(self)
+        self.objs = ClientStore(self)
 
         super().__init__()
 

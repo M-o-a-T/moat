@@ -7,6 +7,7 @@ Message structure for MoatBus
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <stdint.h>
 
 #include "message.h"
 
@@ -27,7 +28,7 @@ BusMessage msg_alloc(msglen_t maxlen)
     msg->prio = 1;
 
     if(LOG_BUSMEM)
-        logger("A %x %x",((int)msg)&0xFFFF, ((int)msg->data)&0xFFFF);
+        logger("A %x %x",((intptr_t)msg)&0xFFFF, ((intptr_t)msg->data)&0xFFFF);
     return msg;
 }
 
@@ -38,7 +39,7 @@ BusMessage msg_copy(BusMessage orig)
     msg->next = NULL;
     *msg->data += 1;
     if(LOG_BUSMEM)
-        logger("C %x %x", ((int)orig)&0xFFFF,((int)msg)&0xFFFF);
+        logger("C %x %x", ((intptr_t)orig)&0xFFFF,((intptr_t)msg)&0xFFFF);
     return msg;
 }
 
@@ -56,15 +57,15 @@ void msg_free(BusMessage msg)
     if(msg->data_max) {
         if (!--*msg->data) {
             if(LOG_BUSMEM)
-                logger("FD %x",((int)msg->data)&0xFFFF);
+                logger("FD %x",((intptr_t)msg->data)&0xFFFF);
             free(msg->data);
         } else {
             if(LOG_BUSMEM)
-                logger("NFD %x %d",((int)msg->data)&0xFFFF, *msg->data);
+                logger("NFD %x %d",((intptr_t)msg->data)&0xFFFF, *msg->data);
         }
     }
     if(LOG_BUSMEM)
-        logger("F %x",((int)msg)&0xFFFF);
+        logger("F %x",((intptr_t)msg)&0xFFFF);
     free(msg);
 }
 
@@ -77,7 +78,7 @@ void msg_resize(BusMessage msg, msglen_t maxlen)
         return;
     data = realloc(msg->data, maxlen);
     if(LOG_BUSMEM)
-        logger("R %x %x", ((int)msg->data)&0xFFFF, ((int)data)&0xFFFF);
+        logger("R %x %x", ((intptr_t)msg->data)&0xFFFF, ((intptr_t)data)&0xFFFF);
     if (data) {
         memset(data+msg->data_max, 0,maxlen-msg->data_max);
         msg->data = data;

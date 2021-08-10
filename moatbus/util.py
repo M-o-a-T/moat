@@ -79,7 +79,7 @@ class Dispatcher:
         in parallel, waiting `timeout` seconds for a free slot before
         starting another worker task.
 
-        This is an async context manager.
+        Worker tasks don't terminate when fewer would (again) suffice.
         """
         q_w,q_r = trio.open_memory_channel(0)
         self.register(code,put)
@@ -95,11 +95,14 @@ class Dispatcher:
                 with self.with_code(code) as mq:
                     async for msg in mq:
                         if not n:
+                            # All slots occupied. Block.
                             await q_w.send(msg)
                             continue
                         with trio.move_on_after(timeout):
+                            # Wait for processing.
                             await q_w.send(msg)
                             continue
+                        # Wait was unsuccessful. Start another slot.
                         tg.start_soon(runner)
                         n -= 1
                         await q_w.send(msg)
@@ -108,10 +111,14 @@ class Dispatcher:
 
 
 class _SubServer:
+    """
+    a subordinate server.
+    """
     CODE=None
 
     def __init__(self, server, code=None):
         self._server = server
+        self._back = server._back
 
         self._code = code if code is not None else self.CODE
         if self._code is None:
@@ -125,6 +132,9 @@ class _SubServer:
         self.objs = server.objs
 
         super().__init__()
+
+     async def send_msg(self, msg):
+         await self._back.send(msg)
 
 
 class SubDispatcher(_SubServer, CtxObj, Dispatcher):

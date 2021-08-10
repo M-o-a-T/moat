@@ -9,7 +9,7 @@ from functools import partial
 from dataclasses import dataclass
 
 from ...backend import BaseBusHandler
-from ...message import BusMessage
+from ...message import BusMessage, LongMessageError
 from ..obj import Obj
 from ...util import byte2mini, mini2byte, Processor
 from ..server import NoFreeID, IDcollisionError
@@ -24,6 +24,41 @@ class aa_record:
     t_continue:int = 0
     t_live:int = 0
     t_sleep:int = 0
+
+    @classmethod
+    def unpack(cls, msg, logger):
+        self = cls()
+
+        d = msg.data
+        ls = (d[0] >> 4) + 1
+        serial = d[1:ls+1]
+        if len(serial) < ls:
+            logger.error("Serial short %r",msg)
+            return None
+        flags = 0
+        pos = ls+1
+        try:
+            if d[0] & 0x08:
+                flags = d[pos]
+                pos += 1
+
+                if flags & 0x01:
+                    self.t_continue = d[pos]
+                    pos += 1
+                if flags & 0x08:
+                    self.t_live = d[pos]
+                    self.t_sleep = d[pos+1]
+                    pos += 2
+            if len(d) != pos:
+                raise LongMessageError(d)
+        except IndexError:
+            logger.error("Serial short %r",msg)
+            return None
+        except LongMessageError:
+            logger.error("Serial long %r",msg)
+            return None
+        return self
+
 
 
     @property
@@ -46,7 +81,7 @@ class aa_record:
             more.append(self.t_sleep)
 
         if flags:
-            ls |= 0x08
+            ls |= 0x04
             more.insert(0,flags)
 
         return bytes((ls,)) + self.serial + bytes(more)
@@ -65,21 +100,17 @@ class AddrControl(Processor):
 
     Arguments:
       timeout: sent to the client for arbitrary reply delay, default 5 seconds.
-      interval: poll interval, default 100 seconds.
 
     """
     CODE=0
 
-    def __init__(self, server, dkv, timeout=5.0, interval=100):
+    def __init__(self, server, dkv, timeout=5.0):
         self.logger = logging.getLogger("%s.%s" % (__name__, server.my_id))
-        self.server = server
         self.timeout = timeout
-        self.interval = interval
         super().__init__(server, 0)
 
     async def setup(self):
         await super().setup()
-        await self.spawn(self._poller)
         await self.spawn(self._fwd)
 
     async def _fwd(self, *, task_status=trio.TASK_STATUS_IGNORED):
@@ -91,26 +122,13 @@ class AddrControl(Processor):
     async def process(self, msg):
         """Code zero"""
         # All Code-0 messages must include a serial
-        d = msg.data
-        ls = (d[0]&0xF)+1
-        serial = d[1:ls+1]
-        if len(serial) < ls:
-            self.logger.error("Serial short %r",msg)
+        aa = aa_record.unpack(msg, logger=self.logger)
+        if aa is None:
             return
-        flags = 0
-        timer = 0
-        if d[0] & 0x10:
-            try:
-                flags = d[ls+1]
-                if flags & 0x80:
-                    timer = d[ls+2]
-            except IndexError:
-                self.logger.error("Serial short %r",msg)
-                return
 
         if msg.src == -4:  # broadcast
             if msg.dst == -4 and msg.code == 0:
-                await self._process_request(serial, flags, timer)
+                await self._process_request(aa)
             else:
                 self.logger.warning("Reserved: %r",msg)
         elif msg.src == self.my_id:
@@ -126,7 +144,7 @@ class AddrControl(Processor):
             if msg.dst == -4:  # broadcast
                 await self._process_client_nack(msg)
             elif msg.dst == self.my_id:  # server N
-                await self._process_client_reply(msg.src, serial, flags, timer)
+                await self._process_client_reply(msg.src, aa)
             elif msg.dst < 0:  # server N
                 await self._process_client_reply_mon(msg)
             else:  # client
@@ -151,11 +169,13 @@ class AddrControl(Processor):
             await self.q_w.put(OldDevice(obj))
 
 
-    async def _process_request(self, serial, flags, timer):
+    async def _process_request(self, aa):
         """
         Control broadcast>broadcast
         AA: request
         """
+        serial, flags, timer = aa.serial, aa.flags, aa.t_continue
+
         async def accept(cid, code=0, timer=0):
             self.logger.info("Accept x%x for %d:%r", code, cid, serial)
             await self.send(src=self.my_id,dst=cid,code=0,data=build_aa_data(serial,code,timer))
@@ -197,10 +217,12 @@ class AddrControl(Processor):
         """
         self.logger.warning("Not implemented: control_cb %r", msg)
 
-    async def _process_client_reply(self, client, serial, flags, timer):
+    async def _process_client_reply(self, client, aa):
         """
         Client>server
         """
+        serial, flags, timer = aa.serial,aa.flags,aa.t_continue
+
         objs = self.objs
         obj2 = None
         try:
@@ -235,32 +257,6 @@ class AddrControl(Processor):
         """
         self.logger.warning("Not implemented: client_direct %r", msg)
 
-    async def _poller(self, *, task_status=trio.TASK_STATUS_IGNORED):
-        task_status.started()
-        await trio.sleep(1)
-        while True:
-            await self._send_poll()
-            await trio.sleep(self.interval)
-
-    async def _send_poll(self):
-        """
-        Send a poll request
-
-        The interval is currently hardcoded to 5 seconds.
-        """
-        await self.send(self.my_id, -4, 1, bytes((0x23, mini2byte(self.timeout))))
-
-    async def send_msg(self, msg):
-        await self._back.send(msg)
-
-    async def reply(self, msg, src=None,dest=None,code=None, data=b'', prio=0):
-        if src is None:
-            src=msg.dst
-        if dest is None:
-            dest = msg.src
-        if code is None:
-            code = 3  # standard reply
-        await self.send(src,dest,code,data=data,prio=prio)
 
     async def _handle_assign_reply(self, msg: BusMessage):
         """

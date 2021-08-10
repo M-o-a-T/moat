@@ -6,6 +6,12 @@ from typing import Union
 from bitstring import BitArray
 from enum import Enum
 
+class LongMessageError:
+    """
+    Message is too long.
+    """
+    pass
+
 class BusMessage:
     dst:int = None
     src:int = None

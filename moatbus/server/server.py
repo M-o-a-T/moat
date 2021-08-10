@@ -98,11 +98,12 @@ class ClientStore:
     @property
     def free_client_id(self):
         """
-        Returns a free client ID.
+        Property: Returns a free client ID.
         """
         nid = self._next_id
         while True:
             cid = nid
+            # skip 127 and 0
             if nid > 126:
                 nid = 0  
             nid += 1     

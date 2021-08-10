@@ -1,43 +1,103 @@
 """
-This module implements flashing new firmware via MoatBus.
+This module implements a basic MoatBus address controller.
 """
 
 import trio
 from contextlib import asynccontextmanager
 import msgpack
 from functools import partial
+from dataclasses import dataclass
 
 from ...backend import BaseBusHandler
-from ...message import BusMessage
+from ...message import BusMessage, LongMessageError
 from ..obj import Obj
-from ...util import byte2mini, Processor
-
-packer = msgpack.Packer(strict_types=False, use_bin_type=True, #default=_encode
-        ).pack
-unpacker = partial(
-    msgpack.unpackb, raw=False, use_list=False, # object_pairs_hook=attrdict, ext_hook=_decode
-)
+from ...util import byte2mini, mini2byte, Processor
+from ..server import NoFreeID, IDcollisionError
 
 import logging
 logger = logging.getLogger(__name__)
 
-class FlashControl(Processor):
+@dataclass
+class poll_cp_record:
     """
-    Firmware flasher.
+    client ping
+    """
+    flags:int = 0
+    t_live:int = 0
+    t_sleep:int = 0
+
+    @classmethod
+    def unpack(cls, msg, logger):
+        self = cls()
+
+        d = msg.data
+        pos = 1
+        try:
+            if d[0] & 0x08:
+                self.t_live = d[pos]
+                pos += 1
+            if d[0] & 0x10:
+                self.t_sleep = d[pos+1]
+            if len(d) != pos:
+                raise LongMessageError(d)
+        except IndexError:
+            logger.error("Serial short %r",msg)
+            return None
+        except LongMessageError:
+            logger.error("Serial long %r",msg)
+            return None
+        return self
+
+
+    @property
+    def packet(self):
+        ls = len(self.serial)-1
+        if not 0 <= ls <= 0x0F:
+            raise RuntimeError("Serial too long: %r" %(serial,))
+        ls <<= 4
+        more = []
+        flags = self.flags
+
+        if self.t_continue:
+            flags |= 0x01
+        if self.t_live or self.t_sleep:
+            flags |= 0x08
+        if flags & 0x01:
+            more.append(self.t_continue)
+        if flags & 0x08:
+            more.append(self.t_live)
+            more.append(self.t_sleep)
+
+        if flags:
+            ls |= 0x04
+            more.insert(0,flags)
+
+        return bytes((ls,)) + self.serial + bytes(more)
+
+
+class PollControl(Processor):
+    """
+    Address controller.
 
     Basic usage::
 
-        FlashControl(Controller).flash(dest, path)
+        async with PollControl(Controller) as server:
+            async for evt in server:
+                await handle_event(evt)
+                await server.send_msg(some_message)
 
-    `dest` is the destination IC's client ID.
-    `path` is the ELF file with the new firmware.
+    Arguments:
+      interval: poll interval, default 100 seconds.
+      timeout: poll reply timeout, default 5 seconds.
+
     """
-    CODE=0
+    CODE=1
 
-    def __init__(self, server, code=0):
+    def __init__(self, server, dkv, interval=100, timeout=5):
         self.logger = logging.getLogger("%s.%s" % (__name__, server.my_id))
-        self.server = server
-        super().__init__(server, code)
+        self.interval = interval
+        self.timeout = timeout
+        super().__init__(server, 0)
 
     async def setup(self):
         await super().setup()
@@ -53,26 +113,13 @@ class FlashControl(Processor):
     async def process(self, msg):
         """Code zero"""
         # All Code-0 messages must include a serial
-        d = msg.data
-        ls = (d[0]&0xF)+1
-        serial = d[1:ls+1]
-        if len(serial) < ls:
-            self.logger.error("Serial short %r",msg)
+        aa = aa_record.unpack(msg, logger=self.logger)
+        if aa is None:
             return
-        flags = 0
-        timer = 0
-        if d[0] & 0x10:
-            try:
-                flags = d[ls+1]
-                if flags & 0x80:
-                    timer = d[ls+2]
-            except IndexError:
-                self.logger.error("Serial short %r",msg)
-                return
 
         if msg.src == -4:  # broadcast
             if msg.dst == -4 and msg.code == 0:
-                await self._process_request(serial, flags, timer)
+                await self._process_request(aa)
             else:
                 self.logger.warning("Reserved: %r",msg)
         elif msg.src == self.my_id:
@@ -113,11 +160,13 @@ class FlashControl(Processor):
             await self.q_w.put(OldDevice(obj))
 
 
-    async def _process_request(self, serial, flags, timer):
+    async def _process_request(self, aa):
         """
         Control broadcast>broadcast
         AA: request
         """
+        serial, flags, timer = aa.serial, aa.flags, aa.t_continue
+
         async def accept(cid, code=0, timer=0):
             self.logger.info("Accept x%x for %d:%r", code, cid, serial)
             await self.send(src=self.my_id,dst=cid,code=0,data=build_aa_data(serial,code,timer))
@@ -202,7 +251,7 @@ class FlashControl(Processor):
         await trio.sleep(1)
         while True:
             await self._send_poll()
-            await trio.sleep(100)
+            await trio.sleep(self.interval)
 
     async def _send_poll(self):
         """
@@ -210,16 +259,7 @@ class FlashControl(Processor):
 
         The interval is currently hardcoded to 5 seconds.
         """
-        await self.send(self.my_id, -4, 0, b'\x23\x14');
-
-    async def reply(self, msg, src=None,dest=None,code=None, data=b'', prio=0):
-        if src is None:
-            src=msg.dst
-        if dest is None:
-            dest = msg.src
-        if code is None:
-            code = 3  # standard reply
-        await self.send(src,dest,code,data=data,prio=prio)
+        await self.send(self.my_id, -4, 0, bytes((0x09, mini2byte(self.timeout))))
 
     async def _handle_assign_reply(self, msg: BusMessage):
         """

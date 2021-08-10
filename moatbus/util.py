@@ -17,7 +17,6 @@ class CtxObj:
     __ctx = None
     def __aenter__(self):
         if self.__ctx is not None:
-            breakpoint()
             raise RuntimeError("Double context")
         self.__ctx = ctx = self._ctx()
         return ctx.__aenter__()

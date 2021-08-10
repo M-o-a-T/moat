@@ -4,7 +4,7 @@ Send bus messages to an AnyIO stream
 """
 
 import anyio
-from anyio.abc.streams import AnyByteStream
+from anyio.abc import AnyByteStream
 from contextlib import asynccontextmanager
 
 from . import BaseBusHandler
@@ -45,11 +45,11 @@ class StreamHandler(BaseBusHandler):
                 await bus.send(another_msg)
     """
 
-    def __init__(self, stream:AnyByteStream, tick:float = 0.1):
+    def __init__(self, client, stream:AnyByteStream, tick:float = 0.1):
         # Subclasses may pass `None` as Stream, and set `._stream` before
         # calling `_ctx`.
 
-        super().__init__()
+        super().__init__(client)
         self._bus = _Bus(self)
         self._stream = stream
         self._wq_w,self._wq_r = anyio.create_memory_object_stream(150)
@@ -60,14 +60,14 @@ class StreamHandler(BaseBusHandler):
 
     @asynccontextmanager
     async def _ctx(self):
-        async with anyio.create_task_scope() as n:
+        async with anyio.create_task_group() as n:
             await n.spawn(self._read, n)
             await n.spawn(self._write)
             await n.spawn(self._timeout)
             try:
                 yield self
             finally:
-                n.cancel_scope.cancel()
+                await n.cancel_scope.cancel()
 
 
     async def _timeout(self):
@@ -87,7 +87,7 @@ class StreamHandler(BaseBusHandler):
 
     async def _write(self):
         async for data in self._wq_r:
-            await self._stream.send_all(data)
+            await self._stream.send(data)
 
 
     async def send(self, msg):

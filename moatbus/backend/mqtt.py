@@ -19,7 +19,7 @@ class Handler(BaseBusHandler):
 
     _mqtt = None
 
-    def __init__(self, id:str, uri:str = "mqtt://localhost/", topic="test/moat/bus"):
+    def __init__(self, client, id:str, uri:str = "mqtt://localhost/", topic="test/moat/bus"):
         super().__init__()
         self.id = id
         self.uri = uri

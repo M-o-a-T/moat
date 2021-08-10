@@ -61,7 +61,7 @@ class BaseBusHandler(CtxObj):
             if n not in cfg:
                 cfg[n] = d
 
-    def __init__(self):
+    def __init__(self, client):
         pass
 
     @asynccontextmanager

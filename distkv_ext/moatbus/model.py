@@ -160,8 +160,7 @@ class MOATconn(_MOATbase, AttrClientEntry):
         """
         return conn_backend(self.typ)
 
-    @property
-    async def backend(self):
+    def backend(self):
         """
         The backend's context manager. Usage::
 

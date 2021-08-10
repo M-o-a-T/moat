@@ -5,11 +5,14 @@ import asyncclick as click
 from collections.abc import Mapping
 import importlib
 import pkgutil
+import time
+import datetime
 
 from distkv.util import yprint, attrdict, NotGiven, as_service, P, Path, path_eval, attr_args, process_args
-from distkv.obj.command import inv_sub
+from distkv.obj.command import std_command
 
 from .model import MOATroot
+from moatbus.message import BusMessage
 
 import logging
 
@@ -46,7 +49,7 @@ async def dump(obj, path):
     yprint(res, stream=obj.stdout)
 
 
-cmd_bus = inv_sub(
+cmd_bus = std_command(
     cli,
     "bus",
     aux=(
@@ -57,7 +60,7 @@ cmd_bus = inv_sub(
     short_help="Manage MoaT buses"
 )
 
-@cmd_bus.command("type", short_help="list connection types/params")
+@cli.command("type", short_help="list connection types/params")
 @click.argument("type_", nargs=-1)
 @click.pass_obj
 def typ_(obj, type_):
@@ -92,6 +95,27 @@ def typ_(obj, type_):
     elif obj.verbose:
         print("No buses known.", file=sys.stderr)
 
+@cmd_bus.command()
+@click.pass_obj
+async def monitor(obj):
+    """Watch bus messages."""
+    if obj.bus is None:
+        raise click.BadParameterError(f"Bus {obj.n_bus !r} doesn't exist")
+    async with obj.client.msg_monitor(obj.bus.topic) as mon:
+        print("---", file=obj.stdout)
+        async for msg in mon:
+            msg["time"] = time.time()
+            msg["_time"] = datetime.datetime.now().isoformat(sep=" ", timespec="milliseconds")
+            mid = msg.data.pop("_id",None)
+            if mid is not None:
+                msg["_id"] = mid
+
+            m = BusMessage(**msg.data)
+            msg["_data"] = m.decode()
+
+            yprint(msg, stream=obj.stdout)
+            print("---", file=obj.stdout)
+            obj.stdout.flush()
 
 def set_conn(obj, kw):
     type_ = kw.pop("type_")
@@ -106,7 +130,7 @@ def set_conn(obj, kw):
     obj.typ = type_
     obj.params = params
 
-cmd_conn = inv_sub(
+cmd_conn = std_command(
     cmd_bus,
     "conn",
     long_name="bus connection",
@@ -131,6 +155,5 @@ async def run(obj, force):
 
     if not force and obj.conn.host is not None and obj.client.client_name != obj.conn.host:
         raise RuntimeError(f"Runs on {obj.conn.host} but this is {obj.client.client_name}")
-    breakpoint()
     await gateway(obj.conn)
 

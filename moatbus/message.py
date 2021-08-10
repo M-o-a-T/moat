@@ -5,6 +5,7 @@ Message structure for MoatBus
 from typing import Union
 from bitstring import BitArray
 from enum import Enum
+from distkv.util import attrdict
 
 class LongMessageError:
     """
@@ -32,6 +33,51 @@ class BusMessage:
         self.code=code
         self.prio=prio
         self._data = BitArray(data)
+
+    def decode(self, spec=None):
+        res = attrdict()
+        if self.src == -4:
+            res.src="B"
+        elif self.src < 0:
+            res.src = f"S{self.src+4}"
+        else:
+            res.src = self.src
+        if self.dst == -4:
+            res.dst="B"
+        elif self.dst < 0:
+            res.dst = f"S{self.dst+4}"
+        else:
+            res.dst = self.dst
+        res.prio=self.prio
+        res.code=self.code
+
+        if self.code == 0:
+            cmd = self._data[0] & 0x7
+            if cmd == 0: ## AA
+                res.cmd = "Address"
+            elif cmd == 1: ## Poll
+                res.cmd = "poll"
+            elif cmd == 2: ## Console
+                res.cmd = "console"
+            elif cmd == 5: ## Firmware
+                res.cmd = "update"
+            elif cmd == 6: ## test
+                res.cmd = "test"
+            elif cmd == 7: ## reset
+                res.cmd = "Reset"
+            else:
+                res.cmd = f"Cmd ?{cmd}"
+
+        elif self.code == 1 and self.src < 0 and self.dst >= 0:  # dir
+            res.cmd="dir"
+        elif self.code == 2 and self.src < 0 and self.dst >= 0:  # read
+            res.cmd="read"
+        elif self.code == 3 and self.src < 0 and self.dst >= 0:  # write
+            res.cmd="write"
+        else:
+            res.cmd=f"?{self.code}"
+        return res
+
 
     def __eq__(self, other):
         for a in self._attrs:

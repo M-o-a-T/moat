@@ -204,7 +204,7 @@ class SerBus:
         prio_data = b"\x01\x02\x03\x04"
 
         res = bytearray()
-        res.append(prio_data[msg.prio])
+        res.append(prio_data[msg.get('prio',1)])
         n_b = len(msg.data) + msg.header_len
         if n_b >= 0x80:
             res.append(0x80 | (n_b>>8))

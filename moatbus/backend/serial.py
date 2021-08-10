@@ -29,8 +29,8 @@ class Handler(StreamHandler):
         "tick":(float,"frame timeout", lambda x:0<x<1, 0.1,"must be between 0 and 1 second"),
     }
 
-    def __init__(self, port:str, baudrate:int, tick:float=0.1):
-        super().__init__(None,tick)
+    def __init__(self, client, port:str, baudrate:int, tick:float=0.1):
+        super().__init__(client, None,tick)
         self.port = port
         self.baudrate = baudrate
 

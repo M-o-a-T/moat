@@ -2,6 +2,7 @@
 
 mkdir -p /run/moat-test
 . "$(dirname "$0")/config.sh"
+BUS="${BUS:-./test}"
 
 # Terminal? set window title
 case "$TERM" in
@@ -12,7 +13,7 @@ esac
 
 cd "$(dirname "$0")/.."
 if [ "$CODE" = "gate" ] ; then
-	P="./mb -vv gateway -u mqtt://$MQTT -p $DEV"
+	P="distkv -vv client moatbus bus $BUS run -s"
 else
 	P="miniterm $DEV 57600"
 fi

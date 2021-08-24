@@ -55,7 +55,7 @@ async def list_(obj, path):
     async for r in obj.client.get_tree(
         obj.cfg.knx.prefix + path, nchain=obj.meta, min_depth=1, max_depth=1, add_empty=True
     ):
-        if not isinstance(r.path[-1], int):
+        if len(path) and not isinstance(r.path[-1], int):
             continue
         print(r.path[-1], file=obj.stdout)
 

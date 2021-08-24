@@ -3,8 +3,8 @@
 import asyncclick as click
 from collections.abc import Mapping
 
-from distkv.data import res_delete, res_get, res_update
-from distkv.util import yprint, attrdict, NotGiven, as_service, P, Path, path_eval
+from distkv.data import res_get, res_update, node_attr
+from distkv.util import yprint, attrdict, NotGiven, as_service, P, Path, path_eval, attr_args
 
 from xknx.remote_value import RemoteValueSensor
 
@@ -55,21 +55,17 @@ async def list_(obj, path):
     async for r in obj.client.get_tree(
         obj.cfg.knx.prefix + path, nchain=obj.meta, min_depth=1, max_depth=1, empty=True
     ):
-        if not isinstance(r.path[-1], int):
+        if len(path) and not isinstance(r.path[-1], int):
             continue
         print(r.path[-1], file=obj.stdout)
 
 
 @cli.command("attr")
-@click.option("-a", "--attr", multiple=True, help="Attribute to list or modify.")
-@click.option("-v", "--value", help="New value of the attribute.")
-@click.option("-e", "--eval", "eval_", is_flag=True, help="The value shall be evaluated.")
-@click.option("-s", "--split", is_flag=True, help="The value shall be word-split.")
-@click.option("-p", "--path", "path_", is_flag=True, help="The value shall be path-split.")
+@attr_args
 @click.argument("bus", nargs=1)
 @click.argument("group", nargs=1)
 @click.pass_obj
-async def attr_(obj, attr, value, bus, group, eval_, path_, split):
+async def attr_(obj, bus, group, vars_, eval_, path_):
     """Set/get/delete an attribute on a given KNX element.
 
     `--eval` without a value deletes the attribute.
@@ -78,17 +74,17 @@ async def attr_(obj, attr, value, bus, group, eval_, path_, split):
     path = Path(bus, *group)
     if len(path) != 4:
         raise click.UsageError("Group address must be 3 /-separated elements.")
+ 
+    res = await obj.client.get(obj.cfg.knx.prefix + path, nchain=obj.meta or 1)
 
-    if (split + eval_ + path_) > 1:
-        raise click.UsageError("split and eval don't work together.")
-    if value and not attr:
-        raise click.UsageError("Values must have locations ('-a ATTR').")
-    if split:
-        value = value.split()
-    elif path_:
-        value = P(value)
-    await _attr(obj, attr, value, path, eval_)
-
+    if vars_ or eval_ or path_:
+        res = await node_attr(obj, obj.cfg.knx.prefix + path, vars_,eval_,path_, res=res)
+        if obj.meta:
+            yprint(res, stream=obj.stdout)
+    else:
+        if not obj.meta:
+            res = res.value
+        yprint(res, stream=obj.stdout)
 
 @cli.command(
     "addr",
@@ -168,12 +164,12 @@ async def _attr(obj, attr, value, path, eval_, res=None):
         res.chain = None
     if eval_:
         if value is None:
-            value = res_delete(res, attr)
+            pass ## value = res_delete(res, attr)
         else:
             value = path_eval(value)
             if isinstance(value, Mapping):
                 # replace
-                value = res_delete(res, attr)
+                pass ## value = res_delete(res, attr)
                 value = value._update(attr, value=value)
             else:
                 value = res_update(res, attr, value=value)

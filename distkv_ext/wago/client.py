@@ -168,7 +168,7 @@ async def server_(obj, name, host, port, delete):
     if not name:
         if host or port or delete:
             raise click.UsageError("Use a server name to set parameters")
-        async for r in obj.client.get_tree(*obj.cfg.wago.prefix, min_depth=1, max_depth=1):
+        async for r in obj.client.get_tree(obj.cfg.wago.prefix, min_depth=1, max_depth=1):
             print(r.path[-1], file=obj.stdout)
         return
     elif len(name) > 1:

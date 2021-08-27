@@ -116,6 +116,7 @@ class KNXnode(_KNXnode):
                 xknx=self.server,
                 group_address_state=self.group,
                 name=mode + "." + ".".join(str(x) for x in self.subpath),
+                skip_same_payload=False,
             )
             if mode == "binary":
                 device = BinarySensor(**args)

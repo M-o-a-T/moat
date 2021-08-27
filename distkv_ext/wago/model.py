@@ -331,12 +331,12 @@ class WAGOoutput(_WAGOnode):
         state = self.find_cfg("state", default=None)
 
         if mode == "write":
-            await self.tg.spawn(self.with_output, src, self._set_value, state, rest)
+            await self.tg.start(self.with_output, src, self._set_value, state, rest)
         elif mode == "oneshot":
             if t_on is None:
                 logger.info("t_on not set in %s", self.subpath)
                 return
-            await self.tg.spawn(self.with_output, src, self._oneshot_value, state, rest, t_on)
+            await self.tg.start(self.with_output, src, self._oneshot_value, state, rest, t_on)
         elif mode == "pulse":
             if t_on is None:
                 logger.info("t_on not set in %s", self.subpath)
@@ -344,7 +344,7 @@ class WAGOoutput(_WAGOnode):
             if t_off is None:
                 logger.info("t_off not set in %s", self.subpath)
                 return
-            await self.tg.spawn(
+            await self.tg.start(
                 self.with_output, src, self._pulse_value, state, rest, t_on, t_off
             )
         else:

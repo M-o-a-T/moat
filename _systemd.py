@@ -40,7 +40,8 @@ async def as_service(obj=None):
         def __init__(self, obj):
             self.obj = obj
 
-        async def set(self):
+        def set(self):
+            # TODO: this should be async (set flag and separate thread)
             notify("READY=1")
             if self.obj is not None and self.obj.debug:
                 print("Running.")

@@ -73,7 +73,7 @@ async def task(client, cfg, server: WAGOserver, evt=None):
             await merge_types(server, r)
             await server.set_server(srv)
             if evt is not None:
-                await evt.set()
+                evt.set()
 
             while True:
                 await anyio.sleep(99999)

@@ -140,6 +140,8 @@ def read_cfg(name, path):
         nonlocal cfg
         if cfg is not None:
             return
+        if path is False:
+            return
         if os.path.exists(path):
             try:
                 with open(path, "r") as cf:

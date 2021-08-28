@@ -39,7 +39,7 @@ async def task(
         async with xknx.XKNX().run(connection_config=ccfg) as srv:
             await server.set_server(srv, initial=initial)
             if evt is not None:
-                await evt.set()
+                evt.set()
 
             while True:
                 await anyio.sleep(99999)

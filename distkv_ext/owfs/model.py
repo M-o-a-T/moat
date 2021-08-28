@@ -294,7 +294,22 @@ class OWFSroot(ClientRoot):
             kls.cls[name] = FamilyX
             return FamilyX
 
+class BrokenDict:
+    def __getattr__(self, k, v=None):
+        import pdb;pdb.set_trace()
+        return object.__getattribute__(self,k,v)
+    pass
 
 @OWFSroot.register(0x10)
 class TempNode(OWFSnode):
-    CFG = {"temperature": 30}
+    CFG = BrokenDict() # {"temperature": 30}
+
+    @classmethod
+    def child_type(cls, name):
+        if name == "temperature":
+            return OWFSattrTemp
+        return OWFSattr
+
+
+class OWFSattrTemp(OWFSattr):
+    pass

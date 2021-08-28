@@ -47,7 +47,6 @@ async def mon(ow, hd):
                 await node.with_device(None)
 
             elif isinstance(msg, DeviceException):
-                # TODO log an error
                 attr = msg.attribute
                 if isinstance(msg.attribute, str):
                     attr = (attr,)
@@ -82,6 +81,6 @@ async def task(client, cfg, server=None, evt=None):
             s = combine_dict(s.server, {"port": port})
             await ow.add_server(name=sname, **s)
         if evt is not None:
-            await evt.set()
+            evt.set()
         while True:
             await anyio.sleep(99999)

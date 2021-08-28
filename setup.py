@@ -13,7 +13,7 @@ setup(
     license="MIT -or- Apache License 2.0",
     packages=["distkv_ext.owfs"],
     setup_requires=["setuptools_scm", "pytest-runner", "trustme >= 0.5"],
-    install_requires=["distkv >= 0.30.6", "asyncowfs >= 0.14.3"],
+    install_requires=["distkv >= 0.58.9", "asyncowfs >= 0.14.3"],
     tests_require=["trustme >= 0.5", "pytest", "flake8 >= 3.7", "pytest-trio"],
     keywords=["async", "key-values", "distributed"],
     python_requires=">=3.7",

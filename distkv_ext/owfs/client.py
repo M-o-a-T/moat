@@ -197,8 +197,7 @@ async def server_(obj, name, host, port, delete):
     else:
         value = None
     res = await node_attr(
-        obj, obj.cfg.owfs.prefix | "server" | name, P("server"), value, eval_=False
-    )
+        obj, obj.cfg.owfs.prefix | "server" | name, ((P("server"), value),),(),())
     if res and obj.meta:
         yprint(res, stream=obj.stdout)
 

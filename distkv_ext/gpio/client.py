@@ -5,7 +5,7 @@ import asyncclick as click
 from collections.abc import Mapping
 
 from distkv.util import yprint, attrdict, as_service, P, attr_args
-from distkv.data import res_get, res_update
+from distkv.data import res_get, res_update, node_attr
 
 import logging
 
@@ -63,7 +63,7 @@ async def list_(obj, path):
 @attr_args
 @click.argument("path", nargs=1, type=P)
 @click.pass_obj
-async def attr_(obj, attr, path, vars_, eval_, path_):
+async def attr_(obj, path, vars_, eval_, path_):
     """Set/get/delete attributes of a given GPIO element.
 
     `--eval` without a value deletes the attribute.

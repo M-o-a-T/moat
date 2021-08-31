@@ -225,4 +225,4 @@ async def monitor(obj, name, controller):
                 e.append(evt)
             for evt in e:
                 await evt.wait()
-            await s.set()
+            s.set()

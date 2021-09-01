@@ -132,8 +132,8 @@ class _SubServer:
 
         super().__init__()
 
-     async def send_msg(self, msg):
-         await self._back.send(msg)
+    async def send_msg(self, msg):
+        await self._back.send(msg)
 
 
 class SubDispatcher(_SubServer, CtxObj, Dispatcher):

@@ -2,30 +2,23 @@
 import os
 import sys
 
-try:
-    from setuptools import setup
-    from setuptools.command.test import test as TestCommand
+from setuptools import setup
+from setuptools.command.test import test as TestCommand
 
-    class PyTest(TestCommand):
-        def finalize_options(self):
-            TestCommand.finalize_options(self)
-            self.test_args = []
-            self.test_suite = True  # pylint: disable=attribute-defined-outside-init
+class PyTest(TestCommand):
+    def finalize_options(self):
+        TestCommand.finalize_options(self)
+        self.test_args = []
+        self.test_suite = True  # pylint: disable=attribute-defined-outside-init
 
-        def run_tests(self):
-            import pytest
+    def run_tests(self):
+        import pytest
 
-            errno = pytest.main(self.test_args)
-            sys.exit(errno)
+        errno = pytest.main(self.test_args)
+        sys.exit(errno)
 
 
-except ImportError:
-    from distutils.core import setup
-
-    PyTest = lambda x: x
-
-except OSError:
-    long_description = """\
+long_description = """\
 The MoaT bus is designed to be a simple-to-implement, mostly-self-timing,
 collision-resistant, error-resistant, open-collector, multi master bus
 system.

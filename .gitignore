@@ -4,3 +4,5 @@ fakebus/raw_bus
 /bin/
 /.pio/
 /lib/
+/build/
+/*.egg-info/

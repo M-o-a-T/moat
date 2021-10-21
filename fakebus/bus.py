@@ -94,7 +94,7 @@ class Main:
                 while True:
                     try:
                         data = await client.receive(1)
-                    except (ConnectionResetError,anyio.BrokenResourceError,anyio.ClosedResourceError):
+                    except (anyio.EndOfStream,ConnectionResetError,anyio.BrokenResourceError,anyio.ClosedResourceError):
                         data = None
                     if not data:
                         return

@@ -3,9 +3,9 @@
 .PHONY: doc test update all tag pypi upload code
 
 all:
-		@echo "Please use 'python setup.py'."
-		@echo "Also 'make code'."
-		@exit 1
+	@echo "Please use 'python setup.py'."
+	@echo "Also 'make code'."
+	@exit 1
 
 # need to use python3 sphinx-build
 PATH := /usr/share/sphinx/scripts/python3:${PATH}
@@ -43,8 +43,12 @@ ci: code pio copy run
 ci_a: code pio copy run_a
 ci_b: code pio copy run_b
 ci_c: code pio copy run_c
-code:	bin/test_handler_crc bin/test_crc # bin/test_handler_crc_bus
-code:	bin/fake_spam bin/fake_send bin/fake_recv bin/fake_serialbus
+code::	obj
+code::	bin/test_handler_crc bin/test_crc # bin/test_handler_crc_bus
+code::	bin/fake_spam bin/fake_send bin/fake_recv bin/fake_serialbus
+obj:
+	mkdir -p obj
+
 pio:
 	platformio run
 

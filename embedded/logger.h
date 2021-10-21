@@ -8,8 +8,8 @@
 IN_C void setup_logger();
 
 // log something. Does not block.
-IN_C char* logger(const char* format, ...);
-IN_C char* vlogger(const char* format, va_list arg);
+IN_C void logger(const char* format, ...);
+IN_C void vlogger(const char* format, va_list arg);
 
 // get the first line in the log buffer
 IN_C char* get_log_line();

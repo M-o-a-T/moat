@@ -15,7 +15,7 @@ void setup_logger() {
     logbuf = NULL;
 }
 
-char* vlogger(const char * format, va_list arg)
+void vlogger(const char * format, va_list arg)
 {
     LOG* hdr = &logbuf;
     while(*hdr)
@@ -25,10 +25,9 @@ char* vlogger(const char * format, va_list arg)
     vsnprintf(buf->buf, len+1, format, arg);
     buf->next = NULL;
     *hdr = buf;
-    return buf->buf;
 }
 
-char* logger(const char *format, ...)
+void logger(const char *format, ...)
 {
     va_list args;
     char* res;
@@ -36,7 +35,6 @@ char* logger(const char *format, ...)
     va_start(args, format);
     res = vlogger(format, args);
     va_end(args);
-    return res;
 }
 
 char* get_log_line()

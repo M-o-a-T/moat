@@ -4,9 +4,7 @@ CRC fun.
 
 We use the reversed algorithm because that requires fewer bit shifts.
 
-We do not reverse the actual input. A "real" CRC check requires that the
-CRC sum over data plus CRC is zero (or -1). but we can't do that anyway,
-so we don't bother.
+We do not reverse the actual input.
 
 """
 
@@ -83,7 +81,8 @@ class _CRC(metaclass=_CRCmeta):
         assert data == (data & ((1<<d)-1))
         crc ^= data;
         while bits:
-            crc = ((crc >> 1) ^ POLY) if crc&1 else (crc >> 1);
+            crc = ((crc >> 1) ^ self._poly) if crc&1 else (crc >> 1);
+            bits -= 1
         self.crc = t[((data ^ crc) & ((1<<bits)-1))] ^ (crc>>bits)
 
     def finish(self):
@@ -115,25 +114,123 @@ class CRC32n(CRC32):
     _depth = 4
 
 if __name__ == "__main__":
-    import sys
-    if len(sys.argv) > 2:
-        _,w,*x = sys.argv
-        x=[int(v,16) for v in x]
-        w=int(w)
-        c=CRC11(w)
-        for i,v in enumerate(x):
-            if i == 0:
-                p = v
-                continue
-            v^=p
-            c.update(v)
-            print(("%2d %02x %03x" if w>4 else "%2d %01x %03x") % (i,v, c.crc), end=("  " if i%8 else "\n"))
-        print("")
 
-    else:
-        #print(CRC6._table)
-        #print(CRC8._table)
-        #print(CRC16()._table)
-        #print(CRC11(8)._table)
-        print(CRC32n()._table)
-        #print(CRC16._table)
+    import re
+    import sys
+    import click
+
+    def h_int(x):
+        return int(x,16)
+
+    @click.command(help="""\
+CRC table calculator.
+
+If your polynomial value has the high bit set (i.e. bit 2^depth)
+we reverse it for you.
+
+""")
+    @click.option("-b","--bits",type=int,help="width of the polynomial")
+    @click.option("-d","--depth",type=int,help="bits to calculate at once (table size)")
+    @click.option("-p","--polynomial","poly",type=h_int,help="CRC polynomial to use (hex)")
+    @click.option("-c","--c-table","t_c",is_flag=True,help="print a table for C code")
+    @click.option("-f","--forth-table","t_f",is_flag=True,help="print Forth table+code")
+    @click.option("-p","--python-table","t_p",is_flag=True,help="print Python table")
+    @click.option("-h","--hexsample",is_flag=True,help="sample is hex bytes")
+    @click.option("-F","--forth-merge","m_f",help="merge to halfwords")
+    @click.option("-S","--standard","std",type=int,help="set parameters to MoaT standard for CRC8/11/16")
+    @click.argument("sample",nargs=-1)
+
+    def main(bits,depth,poly,t_c,t_f,t_p,m_f,sample,hexsample,std):
+        def pbd(p,b,d):
+            nonlocal poly,bits,depth
+            poly = poly or p
+            bits = bits or b
+            depth =depth or d
+        if std:
+            if std == 11:
+                pbd(0x583,11,4)
+            elif std == 8:
+                pbd(0xa6,8,8)
+            elif std == 16:
+                pbd(0xAC9A,16,8)
+            elif std == 32:
+                pbd(0xEDB88320,32,8)
+            else:
+                raise click.UsageError(f"I only know std=8/11/16") 
+
+        if not poly or not bits:
+            raise click.UsageError("Need poly+bits")
+        if not depth:
+            depth = min(8,bits)
+
+        if poly&(1<<bits): # reverse it
+            pp = 0
+            for _ in range(bits):
+                pp = (pp<<1) | (poly&1)
+                poly >>= 1
+            poly = pp
+
+        b=1<<((bits-1).bit_length()+1)
+        if b not in (8,16,32):
+            raise RuntimeError(f"I cannot do {bits} bits ({b})")
+
+        class _C(_CRC):
+            _poly=poly
+            _width=bits
+            _depth=depth
+        C=_C()
+
+        loglen = min(1<<((depth+1)//2), 256//b)
+        lx = (bits+3)//4
+
+        if t_p:
+            print(f"uint{b}_t crc{bits}_{poly:0{lx}x}_{depth} = [")
+            for i,v in enumerate(C._table):
+                print(f"0x{v:0{lx}x},",end=" " if (i+1)%loglen else "\n")
+            print("];")
+
+        if t_c:
+            print(f"uint{b}_t crc{bits}_{poly:0{lx}x}_{depth}[] = {{")
+            for i,v in enumerate(C._table):
+                print(f"0x{v:0{lx}x},",end=" " if (i+1)%loglen else "\n")
+            print("};")
+
+        if t_f:
+            if m_f:
+                def two():
+                    ti = iter(C._table)
+                    while True:
+                        try:
+                            x1 = next(ti)
+                            x2 = next(ti)
+                            yield (x1<<b) | x2
+                        except StopIteration:
+                            return
+                ti = two()
+                comma = "h,"
+            else:
+                ti = iter(C._table)
+                comma = "c," if b == 8 else "h," if b == 16 else ","
+            print(f"create crc{bits}_{poly:0{lx}x}_{depth}")
+            for i,v in enumerate(ti):
+                print(f"${v:0{lx}x} {comma}", end=("  " if (i+1)%loglen else "\n"))
+
+        if sample:
+            C.reset()
+            for samp in sample:
+                if hexsample:
+                    hb=int(samp,16)
+                    if hb.bit_length() <= depth:
+                        C.update(hb)
+                    else:
+                        for c in re.split("(..)",samp):
+                            if c == '':
+                                continue
+                            c = int(c,16)
+                            C.update_n(c,8)
+                else:
+                    for c in samp.encode("utf-8"):
+                        C.update_n(c, 8)
+            print(C.finish())
+
+    main()

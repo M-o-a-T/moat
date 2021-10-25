@@ -201,13 +201,8 @@ we reverse it for you.
             else:
                 comma = "c," if b == 8 else "h," if b == 16 else ","
 
-            cre = f"_t{b}" if p_f else "create"
-            print(f"{cre} crc{bits}_{poly:0{lx}x}_{depth}")
-            if p_f:
-                if b == 8: # m_f:
-                    print(f"${poly:0{lx}x} {depth} 8 lshift or h,")
-                else:
-                    print(f"${poly:0{lx}x} {comma} {depth} h,")
+            cre = f"{depth} ${poly:0{lx}x} _t{b}:" if p_f else "create"
+            print(f"{cre} _t{bits}_{poly:0{lx}x}_{depth}")
             for i,v in enumerate(C._table):
                 if b == 8:
                     if i&1:
@@ -217,6 +212,13 @@ we reverse it for you.
                 else:
                     cma = comma
                 print(f"${v:0{lx}x} {cma}", end=("  " if (i+1)%loglen else "\n"))
+            if p_f:
+                print(f"""
+: crc{bits}_{poly:0{lx}x}_{depth} ( crc byte -- byte )
+  _t{bits}_{poly:0{lx}x}_{depth} _crc-{b}.d
+  2-foldable
+;
+""")
 
         if sample:
             C.reset()

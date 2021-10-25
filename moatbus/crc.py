@@ -136,11 +136,11 @@ we reverse it for you.
     @click.option("-f","--forth-table","t_f",is_flag=True,help="print Forth table+code")
     @click.option("-p","--python-table","t_p",is_flag=True,help="print Python table")
     @click.option("-h","--hexsample",is_flag=True,help="sample is hex bytes")
-    @click.option("-F","--forth-merge","m_f",help="merge to halfwords")
+    @click.option("-F","--forth-prefix","p_f",is_flag=True,help="prefix Forth table with constants")
     @click.option("-S","--standard","std",type=int,help="set parameters to MoaT standard for CRC8/11/16")
     @click.argument("sample",nargs=-1)
 
-    def main(bits,depth,poly,t_c,t_f,t_p,m_f,sample,hexsample,std):
+    def main(bits,depth,poly,t_c,t_f,t_p,p_f,sample,hexsample,std):
         def pbd(p,b,d):
             nonlocal poly,bits,depth
             poly = poly or p
@@ -170,7 +170,7 @@ we reverse it for you.
                 poly >>= 1
             poly = pp
 
-        b=1<<((bits-1).bit_length()+1)
+        b = 1<<((bits-1).bit_length())
         if b not in (8,16,32):
             raise RuntimeError(f"I cannot do {bits} bits ({b})")
 
@@ -196,24 +196,27 @@ we reverse it for you.
             print("};")
 
         if t_f:
-            if m_f:
-                def two():
-                    ti = iter(C._table)
-                    while True:
-                        try:
-                            x1 = next(ti)
-                            x2 = next(ti)
-                            yield (x1<<b) | x2
-                        except StopIteration:
-                            return
-                ti = two()
+            if b==8: # was: m_f
                 comma = "h,"
             else:
-                ti = iter(C._table)
                 comma = "c," if b == 8 else "h," if b == 16 else ","
-            print(f"create crc{bits}_{poly:0{lx}x}_{depth}")
-            for i,v in enumerate(ti):
-                print(f"${v:0{lx}x} {comma}", end=("  " if (i+1)%loglen else "\n"))
+
+            cre = f"_t{b}" if p_f else "create"
+            print(f"{cre} crc{bits}_{poly:0{lx}x}_{depth}")
+            if p_f:
+                if b == 8: # m_f:
+                    print(f"${poly:0{lx}x} {depth} 8 lshift or h,")
+                else:
+                    print(f"${poly:0{lx}x} {comma} {depth} h,")
+            for i,v in enumerate(C._table):
+                if b == 8:
+                    if i&1:
+                        cma = f"or {comma}"
+                    else:
+                        cma = "8 lshift"
+                else:
+                    cma = comma
+                print(f"${v:0{lx}x} {cma}", end=("  " if (i+1)%loglen else "\n"))
 
         if sample:
             C.reset()

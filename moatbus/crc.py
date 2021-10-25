@@ -133,14 +133,12 @@ we reverse it for you.
     @click.option("-d","--depth",type=int,help="bits to calculate at once (table size)")
     @click.option("-p","--polynomial","poly",type=h_int,help="CRC polynomial to use (hex)")
     @click.option("-c","--c-table","t_c",is_flag=True,help="print a table for C code")
-    @click.option("-f","--forth-table","t_f",is_flag=True,help="print Forth table+code")
     @click.option("-p","--python-table","t_p",is_flag=True,help="print Python table")
     @click.option("-h","--hexsample",is_flag=True,help="sample is hex bytes")
-    @click.option("-F","--forth-prefix","p_f",is_flag=True,help="prefix Forth table with constants")
     @click.option("-S","--standard","std",type=int,help="set parameters to MoaT standard for CRC8/11/16")
     @click.argument("sample",nargs=-1)
 
-    def main(bits,depth,poly,t_c,t_f,t_p,p_f,sample,hexsample,std):
+    def main(bits,depth,poly,t_c,t_p,sample,hexsample,std):
         def pbd(p,b,d):
             nonlocal poly,bits,depth
             poly = poly or p
@@ -194,31 +192,6 @@ we reverse it for you.
             for i,v in enumerate(C._table):
                 print(f"0x{v:0{lx}x},",end=" " if (i+1)%loglen else "\n")
             print("};")
-
-        if t_f:
-            if b==8: # was: m_f
-                comma = "h,"
-            else:
-                comma = "c," if b == 8 else "h," if b == 16 else ","
-
-            cre = f"{depth} ${poly:0{lx}x} _t{b}:" if p_f else "create"
-            print(f"{cre} _t{bits}_{poly:0{lx}x}_{depth}")
-            for i,v in enumerate(C._table):
-                if b == 8:
-                    if i&1:
-                        cma = f"or {comma}"
-                    else:
-                        cma = "8 lshift"
-                else:
-                    cma = comma
-                print(f"${v:0{lx}x} {cma}", end=("  " if (i+1)%loglen else "\n"))
-            if p_f:
-                print(f"""
-: crc{bits}_{poly:0{lx}x}_{depth} ( crc byte -- byte )
-  _t{bits}_{poly:0{lx}x}_{depth} _crc-{b}.d
-  2-foldable
-;
-""")
 
         if sample:
             C.reset()

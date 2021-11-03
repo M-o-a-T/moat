@@ -65,9 +65,10 @@ alloc pool object: mem
 
 class: %msg
 __data
-    var> cint field: prio
-    var> cint field: len   \ bytes in this message
+    var> int  field: done  \ XT ( status msg -- )
     var> hint field: pos   \ offset, in bits
+    var> cint field: prio  \ transmit priority
+    var> cint field: len   \ bytes in this message
     aligned
     here: data
 __seal
@@ -492,6 +493,21 @@ __seal
 : free ( msg -- )
 \ free this message
   moat bus mem free 
+;
+
+: (free)  ( status msg -- )
+\ XT for "done" to simply free the message
+  __ free
+  drop
+;
+
+: wake ( status msg -- )
+\ if there's a done callback associated with the message, run it
+  dup __ done @ .. ?dup if
+    execute
+  else
+    2drop
+  then
 ;
 
 ;class

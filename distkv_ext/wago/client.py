@@ -3,7 +3,7 @@
 import asyncclick as click
 
 from distkv.data import node_attr
-from distkv.util import yprint, attrdict, NotGiven, as_service, P
+from distkv.util import yprint, attrdict, NotGiven, as_service, P, attr_args
 
 import logging
 
@@ -57,25 +57,16 @@ async def list_(obj, path):
 
 
 @cli.command("attr")
-@click.option("-a", "--attr", multiple=True, help="Attribute to list or modify.")
-@click.option("-v", "--value", help="New value of the attribute.")
-@click.option("-e", "--eval", "eval_", is_flag=True, help="The value shall be evaluated.")
-@click.option("-p", "--path", is_flag=True, help="The value is a path.")
-@click.argument("path_", nargs=1)
+@attr_args
+@click.argument("path", nargs=1)
 @click.pass_obj
-async def attr_(obj, attr, value, path_, eval_, path):
+async def attr_(obj, path, vars_, eval_, path_):
     """Set/get/delete an attribute on a given Wago element.
 
     `--eval` without a value deletes the attribute.
     """
-    path_ = P(path_)
-    if split and eval_:
-        raise click.UsageError("split and eval don't work together.")
-    if value and not attr:
-        raise click.UsageError("Values must have locations ('-a ATTR').")
-    if path:
-        value = P(value)
-    res = await node_attr(obj, obj.cfg.wago.prefix + path_, attr, value, eval_=eval_)
+    path = P(path)
+    res = await node_attr(obj, obj.cfg.wago.prefix + path, vars_,eval_,path_)
 
     if obj.meta:
         yprint(res, stream=obj.stdout)
@@ -115,6 +106,7 @@ async def port_(obj, path, mode, attr):
         raise click.UsageError("Path must be 4 elements: server+type+card+port.")
     res = await obj.client.get(obj.cfg.wago.prefix + path, nchain=obj.meta or 1)
     val = res.get("value", attrdict())
+    val_p = attrdict()
 
     if mode:
         attr = (("mode", mode),) + attr
@@ -135,8 +127,9 @@ async def port_(obj, path, mode, attr):
                 v = False
             else:
                 raise click.UsageError("'rest' wants one of + -")
-        elif k in {"src", "dest"} or " " in v:
-            v = P(v)
+        elif k in {"src", "dest", "state"} or "." in v or ":" in v:
+            val_p[k] = v
+            continue
         else:
             try:
                 v = int(v)
@@ -147,7 +140,7 @@ async def port_(obj, path, mode, attr):
                     pass
         val[k] = v
 
-    res = await node_attr(obj, obj.cfg.wago.prefix + path, (), val, eval_=False, res=res)
+    res = await node_attr(obj, obj.cfg.wago.prefix + path, val, {}, val_p, res=res)
 
     if obj.meta:
         yprint(res, stream=obj.stdout)

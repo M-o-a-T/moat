@@ -67,9 +67,9 @@ alloc pool object: mem
 
 class: %msg
 __data
-    var> int  field: done  \ XT ( status msg -- )
+    var> int  field: callback  \ XT ( status msg -- )
     var> hint field: pos   \ offset, in bits
-    var> cint field: prio  \ transmit priority
+    var> cint field: prio  \ priority / transmit status
     var> cint field: len   \ bytes in this message
     var> int field: data   \ message data
 __seal
@@ -130,9 +130,9 @@ __seal
 ;
 
 
-: @b ( bits msg -- data )
+: @b ( fb msg -- data )
 \ extract `frame_bits` bits from the message
-  dup >r __ pos @  ( bits pos )
+  dup >r __ pos @  ( fb pos )
   2dup +
 #if-flag debug
   dup r@ __ bit_len > abort" beyond end"
@@ -142,7 +142,8 @@ __seal
   r> __ data @ + ( fb bpos adr )
   @ x-end -rot ( val fb bpos )
   over swap + ( val fb fb-bpos )
-  32 swap - rot swap rshift
+  32 swap - ( val fb sft ) 
+  rot swap rshift ( vb val> )
   swap _mask and ( val' )
 ;
 
@@ -192,7 +193,7 @@ __seal
 \ 
 \ read
 \
-: >recv
+: >recv ( msg -- )
 \ prepare header for receiving
   dup __ max_len over __ len !
   0 swap __ pos !

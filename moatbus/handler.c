@@ -887,8 +887,9 @@ static void h_set_state(Handler h, enum _S state)
 
     if(DEBUG_WIRE ||
         ((state >= S_READ) != (h->state >= S_READ)) ||
-        ((state >= S_WRITE) != (h->state >= S_WRITE)) )
+        ((state >= S_WRITE) != (h->state >= S_WRITE)) ) {
         // h_debug(h, "SetState %s",h_state_name(state));
+    }
 
 
     if((state < S_WRITE) && (h->state >= S_WRITE)) {

@@ -71,15 +71,14 @@ __data
     var> hint field: pos   \ offset, in bits
     var> cint field: prio  \ transmit priority
     var> cint field: len   \ bytes in this message
-    aligned
-    here: data
+    var> int field: data   \ message data
 __seal
 
 
 
 : max_len ( msg -- len )
 \ max possible message length
-  >alloc msize  0 __ data -
+  __ data @ >alloc msize
 ;
 
 #if-flag debug
@@ -90,7 +89,7 @@ __seal
 #endif
 
 : hdr_len ( msg -- hdr_len )
-  __ data dup c@ $80 and if \ dst is server
+  __ data @ dup c@ $80 and if \ dst is server
     nip $10 and if 1 else 2 then
   else
     1+ c@ $80 and if 2 else 3 then
@@ -108,7 +107,7 @@ __seal
 #if-flag debug
   2dup _mask bic abort" ignored bits"
 #endif
-  r@ __ data r@ __ pos @ tuck 3 rshift +  ( val bits len adr )
+  r@ __ data @ r@ __ pos @ tuck 3 rshift +  ( val bits len adr )
   dup >r @ x-end ( val bits len oval |R: msg adr )
   swap dup >r $7 and ( val bits oval blen |R: msg adr len )
   32 swap - dup >r ( val bits oval boff |R: msg adr len boff )
@@ -138,8 +137,9 @@ __seal
 #if-flag debug
   dup r@ __ bit_len > abort" beyond end"
 #endif
-  r@ pos !
-  dup $7 and swap 3 rshift r> __ data + ( fb bpos adr )
+  r@ __ pos !
+  dup $7 and swap 3 rshift ( fb bpos apos )
+  r> __ data @ + ( fb bpos adr )
   @ x-end -rot ( val fb bpos )
   over swap + ( val fb fb-bpos )
   32 swap - rot swap rshift
@@ -164,7 +164,7 @@ __seal
   then ( fb xbit |R: fb msg )
   swap r@ __ pos @  ( xbit fb pos )
   2dup + r@ pos !
-  dup $7 and swap 3 rshift r> __ data + ( xbit fb bpos adr |R: framebits )
+  dup $7 and swap 3 rshift r> __ data @ + ( xbit fb bpos adr |R: framebits )
   @ x-end -rot ( xbit val fb bpos )
   over swap + ( xbit val fb fb-bpos )
   32 swap - rot swap rshift
@@ -230,7 +230,7 @@ __seal
       then
     then
   repeat
-  r> r@ __ data - r@ __ len !
+  r> r@ __ data @ - r@ __ len !
     r> __ pos !
     2drop
 ;
@@ -243,7 +243,7 @@ __seal
 \ for CRC tests
 \ transcribed from C code, untested
   dup >r __ bpos @ ( bits pos |R: msg )
-  r@ __ data r@ __ end @ + >r ( bits pos |R: msg data_end )
+  r@ __ data @ r@ __ end @ + >r ( bits pos |R: msg data_end )
   dup 8 < if
     2dup 8 swap - < if
       r> c@ swap rshift swap dup _mask and \ XXX wrong
@@ -270,7 +270,7 @@ __seal
   else
     drop
   then ( res )
-  drop r> r@ __ data - r> __ len !
+  drop r> r@ __ data @ - r> __ len !
 ;
 #endif
 
@@ -284,7 +284,7 @@ __seal
 : @ ( msg -- char )
 \ get the next character
 \ skips to the next byte boundary
-  dup >r __ data r@ __ pos @
+  dup >r __ data @  r@ __ pos @
   7 + -8 and
   dup 8 + r@ __ pos !
   3 rshift
@@ -306,12 +306,14 @@ __seal
 ;
 
 
-: reduce ( msg -- msg' )
-\ after receiving, realloc the message so that it requires less space
+: reduce ( msg -- )
+\ after receiving, realloc the message's data so that it requires less space
   dup __ len @ over __ max_len - 7 > if  \ or whatever
-    dup __ len @  0 __ data +  dup >r  moat bus mem alloc  ( old new )
-    2dup r> move
-    swap moat bus mem free
+    dup __ len @  dup >r moat msg mem alloc  ( msg new )
+    over __ data @ ( msg new old )
+    2dup swap r> move ( msg new old )
+    moat msg mem free
+    swap __ data !
   then
 ;
 
@@ -384,14 +386,14 @@ __seal
   dup r@ __ len_chk
 #endif
   3 lshift r@ __ pos !
-  r> __ data + swap
+  r> __ data @ + swap
   move
 ;
 
 : s@ ( msg -- adr len )
 \ return the current read/write pointer
   dup align
-  dup >r __ data r@ __ pos @ 3 rshift ( adr pos )
+  dup >r __ data @  r@ __ pos @ 3 rshift ( adr pos )
   r> __ len @ over - ( adr pos rest )
   -rot + swap 
 ;
@@ -412,7 +414,7 @@ __seal
   dup 1+ r@ __ len_chk
 #endif
   ( byte pos )
-  tuck r@ __ data + c!
+  tuck r@ __ data @ + c!
   1+ 3 lshift r> __ pos !
 ;
 
@@ -434,7 +436,7 @@ __seal
   else
   then ( fb xbit )
   r@ __ bpos @ swap
-  r@ swap >r dup __ data swap __ pos @ + >r ( fb bits |R: frame_bits msg xbit data )
+  r@ swap >r dup __ data @ swap __ pos @ + >r ( fb bits |R: frame_bits msg xbit data )
   0 -rot ( res fb bits )
   begin over while
     dup 8 = if
@@ -468,7 +470,7 @@ __seal
     then
   repeat
   nip ( res bits )
-  r> r> swap r@ __ data - r@ __ pos !
+  r> r> swap r@ __ data @ - r@ __ pos !
   ( res bits xbits )
   swap r> __ bpos !
   ( res xbits )
@@ -493,31 +495,50 @@ __seal
 \
 
 : free ( msg -- )
-\ free this message
-  moat bus mem free 
+\ free data of this message
+#if-flag debug
+  dup
+#endif
+  __ data @ moat msg mem free
+#if-flag debug
+  0 swap __ data !
+#endif
 ;
 
 : (free)  ( status msg -- )
-\ XT for "done" to simply free the message
-  __ free
+\ XT for "done" to free the message data and its control block
+  dup __ free
+  moat msg mem free
   drop
 ;
 
-: wake ( status msg -- )
+: done ( status msg -- )
 \ if there's a done callback associated with the message, run it
-  dup __ done @ .. ?dup if
-    execute
-  else
-    2drop
-  then
+  dup __ callback @ execute
+;
+
+
+: alloc ( maxsize msg -- )
+\ allocate data for this control block
+\ does NOT touch the callback
+#if-flag debug
+  dup __ data @ abort" msg with data"
+#endif
+  swap moat msg mem alloc
+  swap __ data !
 ;
 
 ;class
 
 : alloc ( maxsize -- msg )
-  0 %msg data +
-  moat bus mem alloc
+\ allocate a control block plus data
+\ auto-freed after sending / processing
+  %msg [mem-sz]  moat msg mem alloc
+  tuck
+  %msg alloc
+  %msg ['] free  over %msg callback !
 ;
+
 
 #if-flag debug
 #include ../moat-bus/utils/message.fs

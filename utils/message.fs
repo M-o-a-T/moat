@@ -13,7 +13,7 @@ moat msg also
   space
   dup __ len @ ." Len:" .
   dup __ max_len ." Max:" .
-  dup __ data swap __ max_len dump8
+  dup __ data @ swap __ max_len dump8
 ;
 
 forth definitions only

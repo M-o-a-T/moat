@@ -23,9 +23,11 @@ voc: msg
 moat ignore
 
 #if moat msg defined mem
+moat ignore
 moat msg ignore
 #end
 #endif
+moat ignore
 
 : _mask ( bits -- n-1-bits )
   1 swap lshift 1-

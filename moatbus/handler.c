@@ -503,7 +503,7 @@ static void h_next_step(Handler h, char timeout)
     if(h->state < S_IDLE) {
         if(timeout)
             h_error(h, ERR_HOLDTIME);
-        else if(h->current)
+        else if(bits)
             h_set_timeout(h, T_OFF);
         else
             h_set_timeout(h, T_ZERO);

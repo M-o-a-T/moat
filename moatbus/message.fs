@@ -15,15 +15,15 @@ moat also
 voc: moat
 #endif
 
-#if defined bus
-bus also
+#if defined msg
+msg also
 #else
-voc: bus
+voc: msg
 #endif
 moat ignore
 
-#if moat bus defined mem
-bus ignore
+#if moat msg defined mem
+moat msg ignore
 #end
 #endif
 

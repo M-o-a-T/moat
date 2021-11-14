@@ -4,7 +4,7 @@ forth only definitions
 : u.0 ( u -- ) 0 <# #S #> type ;
 #endif
 
-moat bus also
+moat msg also
 %msg definitions
 : ? ( msg -- )
   dup __ prio @ ?dup if ." Prio:" . then

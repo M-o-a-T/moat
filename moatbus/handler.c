@@ -27,11 +27,10 @@ enum _S {
 };
 
 enum _W {
-    W_MORE = 0, // next: MORE/LAST/FINAL
-    W_CRC = 1,  // next: READ  # writing the CRC
-    W_END = 2,  // next: CRC   # writing the end marker
-    W_LAST = 3, // next: END   # writing the last word, < 2^N  # unused
-    W_FINAL = 4,// next: CRC   # writing the last word, >= 2^N
+    W_MORE = 0, // next: MORE/END/FINAL
+    W_CRC = 1,  // next: READ_ACK  # writing the CRC
+    W_END = 2,  // next: CRC       # writing the end marker
+    W_FINAL = 3,// next: CRC       # writing the last word, >= 2^N
 };
 
 #ifdef MOAT_USE_REF
@@ -611,15 +610,13 @@ static char h_gen_chunk(Handler h)
         // Done.
         return FALSE;
     }
-    else if((h->write_state == W_END) || (h->write_state == W_FINAL)) {
+    else // if((h->write_state == W_END) || (h->write_state == W_FINAL)) {
         // End marker done, send CRC
         val = h->crc;
         // h_debug(h, "CRC is %x",h->crc);
         h->write_state = W_CRC;
         h_set_state(h, S_WRITE_CRC);
     }
-    else if(h->write_state == W_LAST)
-        h_error(h, ERR_UNUSED);
 
     if(n == 0) {
         h->cur_pos = (h->write_state == W_CRC) ? h->LEN_CRC : h->LEN;

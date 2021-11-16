@@ -535,12 +535,13 @@ __seal
 \ allocate a control block plus data
 \ auto-freed after sending / processing
   %msg [mem-sz]  moat msg mem alloc
+  dup %msg >setup
   tuck
 #if-flag debug
   0 over %msg data !
 #endif
   %msg alloc
-  %msg ['] free  over %msg callback !
+  %msg ['] (free)  over %msg callback !
 ;
 
 

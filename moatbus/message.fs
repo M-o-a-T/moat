@@ -308,9 +308,9 @@ __seal
 
 
 : reduce ( msg -- )
-\ after receiving, realloc the message's data so that it requires less space
-  dup __ len @ over __ max_len - 7 > if  \ or whatever
-    dup __ len @  dup >r moat msg mem alloc  ( msg new )
+\ realloc the message's data so that it requires less space
+  dup __ max_len over __ len @ - 7 > if  \ or whatever
+    dup __ len @  dup >r  moat msg mem alloc  ( msg new |R: len )
     over __ data @ ( msg new old )
     2dup swap r> move ( msg new old )
     moat msg mem free

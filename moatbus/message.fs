@@ -506,14 +506,13 @@ __seal
 #endif
 ;
 
-: (free)  ( status msg -- )
+: (free)  ( msg -- )
 \ XT for "done" to free the message data and its control block
   dup __ free
   moat msg mem free
-  drop
 ;
 
-: done ( status msg -- )
+: done ( msg -- )
 \ if there's a done callback associated with the message, run it
   dup __ callback @ execute
 ;

@@ -2,6 +2,7 @@
 \ Forth version of a bus handler
 
 #require alloc lib/alloc.fs
+#require time lib/timeout.fs
 #require class: lib/class.fs
 #require var> lib/vars.fs
 #require crc lib/crc.fs
@@ -121,6 +122,17 @@ voc: ~w
 1 constant crc
 2 constant end
 3 constant final
+#if-flag debug_wire
+: .name ( state -- )
+  case
+    more of ." more" endof
+    crc of ." crc" endof
+    end of ." end" endof
+    final of ." final" endof
+    ." ??:" dup .
+  endcase
+;
+#endif
 ;voc
 
 voc: ~t
@@ -138,14 +150,12 @@ __data
   ri8 field: readq
   ri8 field: sentq
 
+  time %timer field: timer
+
   var> int field: \get_wire
   var> int field: \set_wire
   var> int field: \set_state
   var> int field: \set_timeout
-
-  task %var field: t_timeout
-  task %var field: t_reader
-  task %var field: t_written
 
   var> int field: sending
   var> int field: msg_in
@@ -177,6 +187,7 @@ __data
   var> cint field: tries
   var> cint field: last_zero
   var> cint field: flapping
+  var> cint field: \timer
 
   var> cint field: state
   var> cint field: write_state
@@ -191,6 +202,19 @@ __data
   8 +
 __seal
 
+: ? ( hdl -- )
+  ." Hdl:" dup hex. 
+  dup __ state @ ~s .name space
+  dup __ state @ ~s write >= if
+    ." WS:" dup __ write_state @ ~w .name space
+    ." P:" dup __ cur_pos @ . ." / " dup __ cur_len @ .
+  then cr
+  dup __ writeq empty? 0= if ." WriteQ " dup __ writeq ? then
+  dup __ readq empty? 0= if ." ReadQ " dup __ readq ? then
+  dup __ sentq empty? 0= if ." SentQ " dup __ sentq ? then
+  dup __ sending @ if ." Send:" dup __ sending @ %msg ? then
+  drop
+;
 
 : transmitted ( msg res hdl -- )
   >r
@@ -210,8 +234,11 @@ __seal
 \ set the timeout
   >r
   dup ~t break <= if
-    r> __ t_timeout @ stop
-    drop exit
+    r@ __ \timer @ if
+      r@ __ timer remove
+      false r@ __ \timer !
+    then
+    rdrop drop exit
   then
   dup ~t zero = r> __ last_zero @ and if
     drop r> __ last_zero @ ~t zero >= if
@@ -231,7 +258,7 @@ __seal
   else
     r@ __ \timer_b @
   then
-  r> __ t_timeout @ sleep
+  r> __ timer add
 ;
 
 : add_crc ( val hdl -- )
@@ -344,10 +371,10 @@ dup ." SW Y " .word .s
 
 : set_state ( state hdr -- )
   >r
-  dup r@ __ state @ = if rdrop exit then
-." ST A " r@ __ state @ ~s .name space dup ~s .name space .s
+  dup r@ __ state @ = if drop rdrop exit then
+." STATE " r@ __ state @ ~s .name space dup ~s .name space .s
 
-#if-flag debug_wire
+#if-flag xxx_debug_wire
   dup r@ __ state @
   2dup ~s read >= swap ~s read >= <>
   -rot ~s write >= swap ~s write >= <> or if
@@ -355,23 +382,14 @@ dup ." SW Y " .word .s
   then
 #endif
   dup ~s write < r@ __ state @ ~s write >= and if
-." ST D " r@ __ state @ ~s .name space .s
     0 r@ dup __ \set_wire @ execute
   then
 
-  dup ~s read_ack = over ~s write_ack = or if
-." ST E " .s
-    r@ __ set_ack_mask
-  then
-
   dup ~s read_acquire = over ~s write_acquire = or if
-." ST F " .s
     false r@ __ no_backoff !
   then
 
-." ST F2 " .s
   dup ~s idle = if
-." ST G " .s
 #if-flag debug_wire
     r@ __ current @ if
       ." ?? state current" cr
@@ -385,7 +403,6 @@ dup ." SW Y " .word .s
     r@ dup __ \set_timeout @ execute
 
   else dup ~s idle < r@ __ state @ ~s idle > and if
-." ST H " r@ __ state @ ~s .name space dup ~s .name space .s
     r@ __ state !
     r@ __ reset
     r@ __ send_next
@@ -399,28 +416,37 @@ dup ." SW Y " .word .s
     r@ dup __ \set_timeout @ execute
     
   else
-." ST I " .s
     r@ __ state !
   then then
 ." ST K " .s
   rdrop
 ;
 
-: read_done ( hdl crc_ok? -- )
-  swap >r
+: read_done ( crc_ok? hdl -- )
+  >r
+." RDN A " .s
   false r@ __ no_backoff !
+  r@ __ set_ack_mask
   r@ __ msg_in @
   0 r@ __ msg_in !  ( crc_ok? msg )
   r@ __ readq full? if  \ owch
-  swap
 #if-flag debug_wire
-  ." ReadQ full!" cr
+    ." ReadQ full!" cr
 #endif
-    drop 0
-  then
+    nip 0
+  else
+    swap
+  then ( msg ok? )
   if
-    %msg reduce
-    r@ __ readq !
+    dup %msg >read
+    dup %msg reduce
+    1 if \ XXX TODO: check if the message is for us, WAIT_IDLE if not
+      r@ __ readq !
+      ~s write_ack
+    else
+      %msg done
+      ~s wait_idle
+    then
   else
     %msg done
     \ ~err crc r@ __ report_error
@@ -431,8 +457,8 @@ dup ." SW Y " .word .s
     else
       ~s wait_idle
     then
-    r@ __ set_state
   then
+  r@ __ set_state
   rdrop 
 ;
 
@@ -519,9 +545,12 @@ dup ." SW Y " .word .s
 
 : read_next ( bits hdl -- )
   >r
-  r@ last @ xor
-  ?dup if
+." RNX A " .s
+  r@ __ last @ xor
+  ?dup 0= if
+." ENA " .s
     ~err nothing r> __ error
+    drop
     exit
   then
   false r@ __ no_backoff !
@@ -546,6 +575,7 @@ dup ." SW Y " .word .s
 
   then
   rdrop
+." RNX Z " .s
 ;
 
 : start_reader ( hdl -- )
@@ -555,9 +585,8 @@ dup ." SW Y " .word .s
 : \gc >r
       drop
       ~w final r@ __ write_state !
-      r@ dup __ n_end @ tuck 0 do ( len hdr )
-        0 over __ cur_chunk i + c!
-      loop drop
+      r@ __ cur_chunk  r@ __ n_end @ tuck  r@ __ max @  fill
+      ( len )
   rdrop ;
 
 : gen_chunk ( hdl -- )
@@ -621,8 +650,12 @@ dup ." SW Y " .word .s
 
 : write_next ( hdr -- )
   >r
-  r@ __ cur_pos @ 0= if
+  r@ __ cur_pos @
+." WN A " .s
+  0= if
     r@ __ gen_chunk 0= if
+." WN END " cr
+      r@ __ set_ack_mask
       ~s read_ack r@ __ set_state
       rdrop false exit
     then
@@ -638,42 +671,69 @@ dup ." SW Y " .word .s
   true
 ;
 
+: \wrc >r ( settled? old )
+    r@ __ msg_in @ ?dup 0= if
+      130 moat msg alloc
+      dup r@ __ msg_in !
+    then
+." WRK D " .s
+    dup %msg >recv
+." WRK E " .s
+    ( settled old new )
+    over %msg data @ ( … old new odata )
+    over %msg data @ ( … old new odata ndata )
+    3 pick %msg pos @ 7 + 3 rshift  move ( … old new )
+    swap %msg pos @ swap %msg pos ! ( settled )
+." WRK H " .s
+    0
+    r@ __ cur_len @
+    dup r@ __ nval !
+    begin ( settled val len )
+." WRK S " .s
+      dup r@ __ cur_pos @ 1+ >
+    while
+      1-
+      swap r@ __ max @ *  r@ __ cur_chunk ( settled len val* adr )
+      rot tuck + ( settled val* len adr+len )
+      c@ rot + 1- swap
+    repeat
+    drop
+    r@ __ val !
+    ( settled )
+
+    r@ __ current @
+    ~s read r@ __ set_state
+." WRK X " .s
+    swap if
+      dup r@ __ add_crc
+      r@ __ read_next
+    else
+      drop
+    then ( - )
+  rdrop ;
+
 : write_collision ( bits settled hdr -- )
   >r
-  swap dup -1 not and r@ __ want_prio !
+." WRK A " .s
+  swap dup 1- not and r@ __ want_prio !
+  ( settled )
 #if-flag debug_wire   
   ." WColl " over h.1 dup . cr
 #endif
-  r@ __ msg_in @ ?dup if %msg done then
+." WRK B " .s
+." WRK D " .s
   r@ __ sending @
-  130 %msg alloc  dup %msg >recv  dup r@ __ msg_in !
-  ( settled old new )
-  over %msg data @ ( … old new odata )
-  over %msg data @ ( … old new odata ndata )
-  3 pick %msg pos @ 7 + 3 rshift  move ( … old new )
-  swap %msg pos @ swap %msg pos !
-  0 r@ __ nval !
-  0
-  r@ __ cur_len @
-  begin ( settled val len )
-    dup r@ __ cur_pos @ 1+ > while
-    1-
-    swap r@ __ max @ * r@ __ cur_chunk 2 pick + c@ + 1- swap
-    1 r@ __ nval +!
-  repeat
-  drop
-  r@ __ val !
-  ( settled )
-
-  r@ __ current @
-  ~s read r@ __ set_state
-  swap if
-    dup r@ __ add_crc
-    r@ __ read_next
+  ?dup if
+    r@ \wrc
+." WRK E " .s
   else
+." WRK X " .s
     drop
+    ~s wait_idle r@ __ set_state
+." WRK Y " .s
   then
   true r> __ no_backoff !
+." WRK Z " .s
 ;
 
 : retry ( msg res hdl -- )
@@ -688,24 +748,20 @@ dup ." SW Y " .word .s
   else
     6
   then then ( msg res xtries )
-." RTA " .s
   r@ __ tries @ 0= if
     r@ __ tries !
   else
     drop
   then ( msg res )
-." RTB " .s
   r@ __ tries @ 1 = if
-." RTC " .s
     r@ __ transmitted
+    drop
   else
-    \ re-queue, but drop on the floor if q is full.
-." RTD " .s
+    \ re-queue
     drop ( msg )
     -1 r@ __ tries +!
     r@ __ sending !
   then
-." RTE " .s
   rdrop
 ;
 
@@ -738,35 +794,27 @@ rdrop ;
 \ process a timeout
   >r
 ." TS A " .s
-  0 r@ flapping !
+  0 r@ __ flapping !
   r@ __ current @
 ." CUR=" dup .
   r@ __ state @
 ." STATE=" dup ~S .name space .s
   case ( bits -- )
   ~s idle of
-." TS SI " .s
     r@ __ sending @ if
       true r@ __ settle !
       r@ __ start_writer
     then
     drop
-." TS B " .s
     endof
   ~s write_acquire of
-." TS C " .s
     r@ __ want_prio @ over = if
-." TS D " .s
       r@ __ current_prio !
-." TS D1 " .s
       0 r@ __ crc !
-." TS E " .s
       ~s write r@ __ set_state
     else
-." TS F " .s
       drop ~err acquire_fatal r@ __ error
     then
-." TS G " .s
     endof
   ~s read_acquire of
     ?dup if
@@ -778,6 +826,7 @@ rdrop ;
         ~s read r@ __ set_state
       then
     else
+." ENB " .s
       drop ~err nothing r@ __ error
     then
     endof
@@ -807,7 +856,7 @@ rdrop ;
   ~s write_ack of
     r@ __ ack_masks @ not over and if
       ~err bad_collision r@ __ error drop
-    else r@ __ ack_mask @ not over <> if
+    else r@ __ ack_mask @ over <> if
       ~err bad_collision r@ __ error
       r@ __ ack_masks @ not and  true  r@ __ write_collision
     else
@@ -828,12 +877,14 @@ rdrop ;
 : wire_settle ( bits hdl -- )
 \ The wire state has changed: now these bits are pulled low.
   >r
+." WSE A " .s
 #if-flag debug_wire
   ." Wire Settle:" dup h.1
 #endif
   r@ __ state @ ~s idle < abort" State?"
 
   r@ __ state @
+." WSE B " .s
   dup ~s idle = if drop
     if \ any bit set?
       r@ __ no_backoff @  r@ __ sending @  and if
@@ -843,9 +894,9 @@ rdrop ;
       then
     then
   else dup ~s write_acquire = if drop
-    r@ want_prio @ 1- and if
+    r@ __ want_prio @ 1- and if
 #if-flag debug_wire
-      ." PRIO FAIL " dup h.1 r@ want_prio @ h.1 cr
+      ." PRIO FAIL " dup h.1 r@ __ want_prio @ h.1 cr
 #endif
       drop
       r@ __ start_reader
@@ -855,41 +906,39 @@ rdrop ;
       ~err bad_collision r@ __ error
     then
   else ~s write >= if
+." WSE K " .s
     r@ __ intended @ r@ __ last @ or not and ?dup if
       false r@ __ write_collision
     then
   else
     drop
   then then then then ( - )
+." WSE Z " .s
 
   rdrop
 ;
 
 : next_step ( timeout hdl -- )
   dup >r __ current @ ( timeout bits )
-." NS A " .s
   r@ __ state @
+." NS A " dup ~s .name space .s
   dup ~s idle < if drop
-." NS B " .s
     over if
       ~err holdtime r@ __ error 
     else 
       dup if ~t off else ~t zero then r@ dup __ \set_timeout @ execute
     then
   else dup ~s idle = if drop
-." NS C " .s
     r@ __ sending @ if
       r@ __ start_writer
     else dup if
         r@ __ start_reader
     then then
   else dup ~s write < if drop
-." NS D " .s
     over if
       ~err holdtime r@ __ error
     then
   else dup ~s write_acquire = if drop
-." NS E " .s
     dup r@ __ want_prio @ = if
       r@ __ start_writer
       ~s write r@ __ set_state
@@ -897,7 +946,6 @@ rdrop ;
       ~err acquire_fatal r@ __ error
     then
   else dup ~s write = over ~s write_crc = or if drop
-." NS F " .s
     r@ __ write_next if
       dup r@ __ last @ r@ __ intended @ or bic if
         dup r@ __ intended @ bic false r@ __ write_collision
@@ -906,18 +954,15 @@ rdrop ;
       then
     then
   else dup ~s write_ack = if drop
-." NS G " .s
     dup r@ __ last @ r@ __ ack_masks @ or bic if
       ~err bad_collision r@ __ error
     else
       r@ __ ack_mask @ r@ dup __ \set_wire @ execute
     then
   else dup ~s write_end = if drop
-." NS H " .s
     ~s wait_idle r@ __ set_state
   else
     drop
-." NS I " .s
     ~err unhandled r@ __ error
   then then then then then then then
   2drop rdrop
@@ -926,80 +971,50 @@ rdrop ;
 
 : \mt >r
 ." TD " .s
-      r@ %hdl timeout_settle
-\ ." TE " .s
-      r@ %hdl current @ r@ %hdl last !
-\ ." TF " .s
-      r@ %hdl state @ dup ~s write >= if drop
-\ ." TG " .s
-        ~t break r@ dup %hdl \set_timeout @ execute
+      r@ __ timeout_settle
+." TE " .s
+      r@ __ current @ r@ __ last !
+." TF " .s
+      r@ __ state @ dup ~s write_ack = if drop
+." TG " .s
+        ~t zero r@ dup __ \set_timeout @ execute
+      else dup ~s write >= if drop
+." TG " .s
+        ~t break r@ dup __ \set_timeout @ execute
       else ~s idle > if
-\ ." TH " .s
-        ~t zero r@ dup %hdl \set_timeout @ execute
-      then then
+." TH " .s
+        ~t zero r@ dup __ \set_timeout @ execute
+      then then then
 ." TI " .s
   rdrop ;
 
-task subtask class: _t_timeout
-\ task for handling timeouts
-: \main
-  task this checkarg @ >r
-  begin
-." TTA " .s
-    task stop
+
+: timeout ( hdl -- )
+\ handle timeout
+." TT! " .s
+  0 __ timer .. - >r \ subtract offset
+." TTA " r@ .s drop
+  r@ __ settle @ if
+    false r@ __ settle !
 #if-flag debug_wire
-    ." TimerS " .s
+    ." Settled " r@ __ state @ ~s .name cr
 #endif
-    r@ %hdl settle @ if
-      false r@ %hdl settle !
+    r@ \mt
+  else
 #if-flag debug_wire
-      ." Change Done timer " r@ %hdl state @ ~s .name cr
-#endif
-      r@ \mt
-    else
-#if-flag debug_wire
-      ." Delay timer " r@ %hdl state @ ~s .name cr
+    ." Timer " r@ __ state @ ~s .name cr
 #endif
 ." TTK " .s
-      true r@ %hdl next_step
-      r@ %hdl state @ ~s idle > if
+    true r@ __ next_step
+    r@ __ state @ ~s idle > if
 ." TTN " .s
-        true r@ %hdl settle !
-        ~t break 1+ r@ dup %hdl \set_timeout @ execute
-      then
+      true r@ __ settle !
+      ~t break 1+ r@ dup __ \set_timeout @ execute
     then
+  then
 ." TTZ " .s
-  again
+  rdrop
 ;
-;class
-
-task subtask class: _t_reader
-: \main
-  task this checkarg @ >r
-  begin
-." TRA " .s
-    r@ %hdl readq @
-." IN:" dup %msg ?
-    \ TODO do something with the thing
-    %msg done
-  again
-;
-;class
-
-task subtask class: _t_written
-\ task for finalizing sent messages
-: \main
-  task this checkarg @ >r
-  begin
-." TWA " .s
-    r@ %hdl sentq @
-." DONE: " dup %msg ?
-    r@ %hdl sentq .. $30 dump
-    %msg done
-  again
-;
-;class
-
 
 
 : setup ( hdl -- )
@@ -1008,10 +1023,12 @@ task subtask class: _t_written
   r@ __ writeq >setup
   r@ __ readq >setup
   r@ __ sentq >setup
+  r@ __ timer >setup
+  __ ['] timeout r@ __ timer code !
 
   s" nbits" voc-eval  ( nbits )
   dup r@ __ wires !
-  dup _mask r@ max !
+  dup _mask r@ __ max !
   dup _len r@ __ len !
   dup _bits r@ __ bits !
   dup _n_end r@ __ n_end !
@@ -1026,25 +1043,7 @@ task subtask class: _t_written
   s" set_timeout" voc-xt  r@ __ \set_timeout !
   s" timer_a" voc-eval r@ __ \timer_a !
   s" timer_b" voc-eval r@ __ \timer_b !
-  8000 500 alloc mem add-if
-
-  _t_timeout [mem-sz] mem alloc
-  dup _t_timeout >setup
-  r@ over _t_timeout checkarg !
-  dup _t_timeout start
-  r@ __ t_timeout !
-
-  _t_written [mem-sz] mem alloc
-  dup _t_written >setup
-  r@ over _t_written checkarg !
-  dup _t_written start
-  r@ __ t_written !
-
-  _t_reader [mem-sz] mem alloc
-  dup _t_reader >setup
-  r@ over _t_reader checkarg !
-  dup _t_reader start
-  r@ __ t_reader !
+  15000 500 mem add-if
 
   ~s wait_idle r@ __ state !
   r@ __ reset

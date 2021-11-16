@@ -13,6 +13,7 @@ moat msg also
   space
   dup __ len @ ." Len:" .
   dup __ max_len ." Max:" .
+  dup __ callback @ ." CB:" ?dup if .word else ." -" then
   dup __ data @ swap __ max_len dump8
 ;
 

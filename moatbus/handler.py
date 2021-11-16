@@ -516,6 +516,7 @@ class BaseHandler:
         """
         if not self.cur_pos and not self.gen_chunk():
             # switch to reading
+            self.set_ack_mask()
             self.set_state(S.READ_ACK)
             return False
 
@@ -589,9 +590,9 @@ class BaseHandler:
     def read_done(self, crc_ok: bool):
         self.no_backoff = False
         msg_in,self.msg_in = self.msg_in,None
+        self.set_ack_mask()
         if not crc_ok:
             self.report_error(ERR.CRC, msg=msg_in)
-            self.set_ack_mask()
             if not self.nack_mask:
                 self.set_state(S.WAIT_IDLE)
                 return
@@ -713,9 +714,6 @@ class BaseHandler:
         if state < S.WRITE and self.state >= S.WRITE:
             # stop writing == do not set any wires
             self.set_wire(0)
-
-        if state in (S.READ_ACK, S.WRITE_ACK):
-            self.set_ack_mask()
 
         if state in (S.READ_ACQUIRE, S.WRITE_ACQUIRE):
             self.no_backoff = False

@@ -643,6 +643,7 @@ static char h_write_next(Handler h)
     */
     if(!h->cur_pos && !h_gen_chunk(h)) {
         // switch to reading
+        h_set_ack_mask(h);
         h_set_state(h, S_READ_ACK);
         return FALSE;
     }
@@ -741,11 +742,11 @@ static void h_read_done(Handler h, char crc_ok)
     h->no_backoff = FALSE;
     BusMessage msg_in = h->msg_in;
     h->msg_in = NULL;
+    h_set_ack_mask(h);
 
     if(!crc_ok) {
         msg_free(msg_in);
         h_report_error(h, ERR_CRC);
-        h_set_ack_mask(h);
         if(h->nack_mask) {
             h->ack_mask = h->nack_mask; // oh well;
             h_set_state(h, S_WRITE_ACK);
@@ -895,9 +896,6 @@ static void h_set_state(Handler h, enum _S state)
         // stop writing == do not set any wires
         h_set_wire(h, 0);
     }
-
-    if((state == S_READ_ACK) || (state == S_WRITE_ACK))
-        h_set_ack_mask(h);
 
     if((state == S_READ_ACQUIRE) || (state == S_WRITE_ACQUIRE))
         h->no_backoff = FALSE;

@@ -366,7 +366,9 @@ void hdl_timer(BusHandler hdl)
             h_debug(h, "Change Done timer %s",h_state_name(h->state));
         h_timeout_settle(h);
         h->last = h->current;
-        if(h->state >= S_WRITE)
+        if(h->state == S_WRITE_ACK)
+            h_set_timeout(h, T_ZERO);
+        else if(h->state >= S_WRITE)
             h_set_timeout(h, T_BREAK);
         else if(h->state > S_IDLE)
             h_set_timeout(h, T_ZERO);

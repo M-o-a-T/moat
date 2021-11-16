@@ -272,8 +272,10 @@ class BaseHandler:
             self.debug("Change Done timer %s",self.state)
             self.timeout_settle()
             self.last = self.current
-            if self.state >= S.WRITE:
-                self._set_timeout(0)
+            if self.state == S.WRITE_ACK:
+                self._set_timeout(T_ZERO)
+            elif self.state >= S.WRITE:
+                self._set_timeout(T_BREAK)
             elif self.state > S.IDLE:
                 self._set_timeout(T_ZERO)
         else:

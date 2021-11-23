@@ -6,9 +6,9 @@ Hacking the MoaT bus
 Code structure
 ++++++++++++++
 
-References to code that do not have an extension apply to both Python
-(``.py``) and a C implementations (``.c``/``.h``). Care must be taken to
-keep those interoperable, though usage details necesarily differ.
+References to code that do not have an extension apply to Python (``.py``)
+C (``.c``/``.h``), and Forth (``.fs``) implementations. Care must be taken
+to keep those interoperable, though usage details necesarily differ.
 
 ----------------------
 Physical bus interface

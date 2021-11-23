@@ -69,18 +69,34 @@ void sb_send(SerBus sb, BusMessage msg)
 }
 
 // process an incoming serial character
-void sb_byte_in(SerBus sb, u_int8_t c)
+bool sb_byte_in(SerBus sb, u_int8_t c)
 {
     sb->idle = 0;
     switch(sb->s_in) {
     case S_IDLE:
-        if (c == 0x06)
+        if (c == 0x06) {
             sb->ack_in++;
-        else if (c > 0 && c <= 0x04)
+        } else if (c == 0x01 || c == 0x02 || c == 0x81 || c == 0x82) {
             sb->s_in = S_LEN;
-        else
-            sb->err_spurious++;
-        break;
+            c -= 1;
+            sb->prio = c|(c>>7)
+        } else if !(0xC0 & ~c) {
+            // UTF-8 lead-in character found. Skip 0x10xxxxxx bytes so
+            // they're not misrecognized as high-prio frame starts.
+            sb->s_in = S_UTF8;
+            c ^= 0xff;
+            int n = 0;
+            while(c) {
+                n += 1;
+                c >>= 1;
+            }
+            sb->len_in = 6-n;
+        }
+        return false;
+    case S_UTF8:
+        if (!--sb->len_in)
+            sb->s_in = S_IDLE;
+        return false;
     case S_INIT:
         sb->s_in = S_LEN;
         break;
@@ -120,6 +136,7 @@ void sb_byte_in(SerBus sb, u_int8_t c)
     case S_ACK: // should not happen
         break;
     }
+    return true;
 }
 
 // Send char?

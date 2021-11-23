@@ -21,6 +21,7 @@ class S(IntEnum):
     CRC1 = 5
     CRC2 = 6
     DONE = 7
+    UTF8 = 8
 
 class ERR(IntEnum):
     OVERFLOW = 1
@@ -48,6 +49,7 @@ class SerBus:
     * timeout()          -- when the timer triggers
     """
 
+    prio_data = b"\x01\x02\x81\x82"
     spinner = ["/","-","\\","|"]
     spin_pos = 0
 
@@ -56,6 +58,7 @@ class SerBus:
         self.m_in = None # bus message
         self.crc_in = 0
         self.len_in = 0
+        self.prio_in = 0
 
         # outgoing
         self.crc_out = 0
@@ -143,14 +146,27 @@ class SerBus:
         if self.s_in == S.IDLE:
             if ci == 6:
                 self.process_ack()
-            elif ci > 0 and ci <= 0x04:
+            elif (prio := self.prio_data.find(ci)) > -1:
+                self.prio_in = prio
                 self.s_in = S.LEN
+            elif not (~ci & 0xC0):
+                self.s_in = S.UTF8
+                self.len_in = 7 - (ci ^ 0xFF).bit_length()
             elif ci not in (10,13):  # CR/LF
                 self.log_buf += bytes((ci,))
                 self.log_buf_t = self.now()
                 return
             elif self.log_buf:
                 self.dump_log_buf()
+
+        elif self.s_in == S.UTF8:
+            if ci & 0xC0 == 0x80:
+                self.len_in -= 1
+                if self.len_in:
+                    return
+            else
+                self.len_in = 0
+            self.s_in = S.IDLE
 
         elif self.s_in == S.LEN:
             self.set_timeout(True)
@@ -201,8 +217,6 @@ class SerBus:
         """
         Generate chunk of bytes to send for this message.
         """
-        prio_data = b"\x01\x02\x03\x04"
-
         res = bytearray()
         res.append(prio_data[msg.get('prio',1)])
         n_b = len(msg.data) + msg.header_len
@@ -237,6 +251,7 @@ class SerBus:
             return None
 
         msg = self.m_in
+        msg.prio = self.prio_in
         self.alloc_in()
         return msg
         

@@ -35,6 +35,7 @@ extern "C" {
 
 enum SERSTATE {
     S_IDLE = 0,
+    S_UTF8,
     S_INIT,
     S_LEN,
     S_LEN2,
@@ -60,11 +61,11 @@ typedef struct _SerBus {
 
     u_int16_t err_overflow; // count dropped messages because of business
     u_int16_t err_lost; // incomplete frame
-    u_int16_t err_spurious; // char not start of frame
     u_int16_t err_crc; // count dropped messages because of bad CRC
     u_int8_t idle; // counter, to drop partial messages
     u_int8_t ack_out; // counter, to send ACKs
     u_int8_t ack_in; // counter, to process received ACKs
+    u_int8_t prio; // of incoming message
 } *SerBus;
 
 // Set up the buffer
@@ -75,7 +76,8 @@ void sb_free(SerBus sb);
 void sb_send(SerBus sb, BusMessage msg);
 
 // process an incoming serial character
-void sb_byte_in(SerBus sb, u_int8_t c);
+// True if the char was consumed
+bool sb_byte_in(SerBus sb, u_int8_t c);
 
 // call from timeout until False
 bool sb_idle(SerBus sb);

@@ -18,9 +18,11 @@ forth only definitions
 : h.1 base @ hex swap . base ! ;
 #endif
 
+#if undefined ri8
 ring-int class: ri8
 8 constant elems
 ;class
+#endif
 
 #if undefined moat
 #include ../moat-bus/moatbus/message.fs
@@ -32,7 +34,7 @@ ring-int class: ri8
 
 moat also
 #if defined handler
-handler also
+handler also definitions
 #else
 moat definitions
 voc: handler

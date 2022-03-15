@@ -349,6 +349,7 @@ __seal
 ;
 
 : !adr ( adr msg -- )
+\ write an address to the message
   swap dup 0< if \ server
     $4 or $7 and 3 rot __ !b
   else \ client
@@ -541,6 +542,18 @@ __seal
 #endif
   %msg alloc
   %msg ['] (free)  over %msg callback !
+;
+
+%msg definitions
+: reply ( size msg -- msg' )
+\ generate a reply message. Size=0 uses the source message's size.
+  swap ?dup 0= if dup __ len @ then ( msg len )
+  moat msg alloc \ we need a new hdr
+  ( msg msg' )
+  >r hdr@ ( src dst code )
+  >r swap r> \ swap src and dst
+  r@ __ hdr!
+  r>
 ;
 
 

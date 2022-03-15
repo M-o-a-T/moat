@@ -115,7 +115,7 @@ bool sb_byte_in(SerBus sb, u_int8_t c)
         break;
     case S_DATA:
         msg_add_chunk(sb->m_in,c,8);
-        sb->crc_in = crc16_update(sb->crc_in,c);
+        sb->crc_in = mcrc16_update(sb->crc_in,c);
         if(!--sb->len_in)
             sb->s_in = S_CRC1;
         break;
@@ -174,7 +174,7 @@ int16_t sb_byte_out(SerBus sb)
         return len & 0xFF;
     case S_DATA:
         c = msg_extract_chunk(sb->m_out,8);
-        sb->crc_out = crc16_update(sb->crc_out, c);
+        sb->crc_out = mcrc16_update(sb->crc_out, c);
         if (!msg_extract_more(sb->m_out))
             sb->s_out = S_CRC1;
         return c;

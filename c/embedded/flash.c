@@ -106,7 +106,7 @@ static inline u_int32_t crc32_for(void *data, u_int32_t len)
     u_int32_t crc = 0;
     u_int8_t *d = (u_int8_t *)data;
     for(; len > 0; len--)
-        crc = crc32_update(crc,*d++);
+        crc = mcrc32_update(crc,*d++);
     if(crc == 0 || crc == ~0U)
         crc ^= 1;
     return crc;
@@ -229,12 +229,12 @@ char process_control_flash(BusMessage msg, u_int8_t *data, msglen_t len)
             u_int16_t nr = get_16(data);
             u_int16_t crc_wanted = get_16(data);
             u_int16_t crc = 0;
-            crc = crc16_update(crc, msg->src & 0xFF);
-            crc = crc16_update(crc, msg->dst);
-            crc = crc16_update(crc, nr >> 8);
-            crc = crc16_update(crc, nr & 0xFF);
+            crc = mcrc16_update(crc, msg->src & 0xFF);
+            crc = mcrc16_update(crc, msg->dst);
+            crc = mcrc16_update(crc, nr >> 8);
+            crc = mcrc16_update(crc, nr & 0xFF);
             for(int n = 0;n < len; n++)
-                crc = crc16_update(crc, data[n]);
+                crc = mcrc16_update(crc, data[n]);
             if(crc != crc_wanted) {
                 estr = logger("CRC fail x%x x%x",crc_wanted,crc);
                 goto err;

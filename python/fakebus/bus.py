@@ -25,21 +25,27 @@ class Main:
             setattr(self,k,v)
         self.t = None
 
-    async def trigger_update(self):
+    def trigger_update(self):
         self.trigger.set()
 
-    async def add(self, client):
+    def add(self, client):
         client.last_b = b''
         self.clients.add(client)
-        await self.trigger_update()
+        if self.verbose:
+            print("+++")
 
-    async def remove(self, client):
+        self.trigger_update()
+
+    def remove(self, client):
         try:
             self.clients.remove(client)
         except KeyError:
             pass
         else:
-            await self.trigger_update()
+            if self.verbose:
+                print("---")
+
+            self.trigger_update()
             if not self.clients:
                 self.t = None
 
@@ -64,6 +70,11 @@ class Main:
             if self.trigger.is_set():
                 self.trigger = anyio.create_event()
 
+            val = 0
+            for c in self.clients:
+                if c.data is not None:
+                    val |= c.data
+
             self.report(0,val)
             b = bytes((val,))
             for c in list(self.clients):
@@ -73,13 +84,9 @@ class Main:
                 try:
                     await c.send(b)
                 except (BrokenPipeError,EnvironmentError,anyio.BrokenResourceError):
-                    await self.remove(c)
+                    self.remove(c)
 
             last = val
-            val = 0
-            for c in self.clients:
-                if c.data is not None:
-                    val |= c.data
 
     async def serve(self, client):
         global _seq
@@ -87,8 +94,7 @@ class Main:
         n = _seq
 
         client.data = None
-        await self.add(client)
-        await self.trigger_update()
+        self.add(client)
         try:
             async with client:
                 while True:
@@ -101,9 +107,9 @@ class Main:
                     client.data = data[0]
                     if self.verbose:
                         self.report(n,client.data)
-                    await self.trigger_update()
+                    self.trigger_update()
         finally:
-            await self.remove(client)
+            self.remove(client)
 
 
 @asynccontextmanager
@@ -129,6 +135,5 @@ async def main(sockname, **kw):
         await listener.serve(loop.serve)
 
 if __name__ == "__main__":
-    click.anyio_backend="trio"
-    main()
+    main(_anyio_backend="trio")
 

@@ -39,7 +39,7 @@ int main(int argc, char* const* argv)
     int src = 1;
     int dest = 2;
     int cmd = 0;
-    int n_msg = 1;
+    int n_msg = 0;
     int n_delay = 5;
     char has_fc_timer = 0;
     char verbose = 0;
@@ -97,7 +97,9 @@ int main(int argc, char* const* argv)
 
     const char *arg = argv[optind];
     if (arg == NULL)
-        arg = "!";
+        arg = "";
+    else if(!n_msg)
+        n_msg = 1;
 
     void msg_send() {
         BusMessage msg = msg_alloc(strlen(arg));
@@ -112,9 +114,15 @@ int main(int argc, char* const* argv)
     time_t t1 = time(NULL)-n_delay;
 
     int timeout() {
-        int t = time(NULL)-t1;
         int f = fc_timeout(fc);
         has_fc_timer=(f>0);
+        if (!n_msg) {
+            if (f == 0)
+                f = -1;
+            return f;
+        }
+
+        int t = time(NULL)-t1;
         if (t>n_delay)
             return 0;
         t = (n_delay-t)*1000;
@@ -132,7 +140,7 @@ int main(int argc, char* const* argv)
             fc_free(fc);
             return 1;
         case 0:
-            if(time(NULL)-t1 > n_delay) {
+            if(n_msg && (time(NULL)-t1 > n_delay)) {
                 t1=time(NULL);
                 msg_send();
             }

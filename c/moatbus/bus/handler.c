@@ -683,22 +683,27 @@ static void h_write_collision(Handler h, u_int8_t bits, char settled)
         msg_start_add(msg);
     }
     u_int16_t off = msg_sent_bits(h->sending) - h->BITS;
-    msg_add_in(msg,h->sending, off);
-    h->val = 0;
-    u_int8_t n = h->cur_len;
-    h->nval = 0;
-    while(n-- > h->cur_pos+1) {
-        h->val = h->val * h->MAX + h->cur_chunk[n]-1;
-        h->nval += 1;
-        // h_debug(h, "Replay %x",h->cur_chunk[n]-1);
-        // not added to CRC: it already is in there
-    }
+    if(!msg_add_in(msg,h->sending, off)) {
+        // cannot allocate memory?
+        msg_free(msg);
+        h_error(ERR_COLLISION);
+    } else {
+        h->val = 0;
+        u_int8_t n = h->cur_len;
+        h->nval = 0;
+        while(n-- > h->cur_pos+1) {
+            h->val = h->val * h->MAX + h->cur_chunk[n]-1;
+            h->nval += 1;
+            // h_debug(h, "Replay %x",h->cur_chunk[n]-1);
+            // not added to CRC: it already is in there
+        }
 
-    bits = h->current;
-    h_set_state(h, S_READ);
-    if(settled) {
-        h_crc(h, bits);
-        h_read_next(h, bits);
+        bits = h->current;
+        h_set_state(h, S_READ);
+        if(settled) {
+            h_crc(h, bits);
+            h_read_next(h, bits);
+        }
     }
     h->no_backoff = TRUE;
 }

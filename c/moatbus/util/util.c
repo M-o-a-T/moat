@@ -85,7 +85,7 @@ void mf_reset(minifloat *m)
     u_int8_t mm = m->m;
     u_int8_t exp = (mm>>4) -1;
     mm = 0x10 | (mm&0xf);
-    u_int32_t v = (1<<exp) * mm;
+    u_int32_t v = (((u_int32_t)1) << exp) * mm;
     m->vl = v&0xFF;
     m->vh = v>>8;
 }

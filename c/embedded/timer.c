@@ -88,7 +88,7 @@ IN_C void loop_timer()
         return;
     }
     if (timer_root->delay > d) {
-        // next timeout is simewhere in the future
+        // next timeout is somewhere in the future
         timer_root->delay -= d;
         d_res = 0;
         return;
@@ -114,7 +114,7 @@ IN_C void mtimer_schedule(MTIMER mt, mtimer_delay_t delay)
     delay = std::max(delay,(mtimer_delay_t)1);
     if (timer_root) {
         MTIMER pt = timer_root;
-        // if delays are identical, go to the end. Keep the delay at
+        // if delays are identical, add to the end. Keep the delay at
         // least 1. This ensures that delay==0 means "not enqueued".
         while(pt->next && delay >= pt->delay) {
             delay = std::max(delay - pt->delay, 1);

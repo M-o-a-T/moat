@@ -2,8 +2,8 @@
 #define EMB_TIMER_H
 
 #include <stdarg.h>
-#include "moatbus/common.h"
-#include "moatbus/util.h"
+#include "moat/common.h"
+#include "moat/util.h"
 
 // The usual: setup and loop
 IN_C void setup_timer();
@@ -54,6 +54,7 @@ IN_C void mtimer_cancel(MTIMER mt);
  *
  * If your procedure returns False, the entry will be unlinked.
  * Otherwise the timer will be restarted.
+ *
  *****/
 
 typedef struct mtick *MTICK;

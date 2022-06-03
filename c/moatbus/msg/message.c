@@ -18,6 +18,8 @@ BusMessage msg_alloc(msglen_t maxlen)
     BusMessage msg;
     maxlen += 8; // header, additional frame, whatever
     u_int8_t *data = malloc(maxlen);
+    if(data == nullptr)
+        return nullptr;
     memset(data,0,maxlen);
 
     msg = calloc(sizeof (*msg), 1);
@@ -35,6 +37,8 @@ BusMessage msg_alloc(msglen_t maxlen)
 BusMessage msg_copy(BusMessage orig)
 {
     BusMessage msg = malloc(sizeof(*orig));
+    if(msg == nullptr)
+        return nullptr;
     memcpy(msg, orig, sizeof(*orig));
     msg->next = NULL;
     *msg->data += 1;
@@ -69,13 +73,13 @@ void msg_free(BusMessage msg)
     free(msg);
 }
 
-void msg_resize(BusMessage msg, msglen_t maxlen)
+bool msg_resize(BusMessage msg, msglen_t maxlen)
 {
     u_int8_t *data;
     if(msg->data_max == 0)
-        return; // TODO assertion error?
+        return false; // TODO assertion error?
     if(msg->data_max >= maxlen)
-        return;
+        return false;
     data = realloc(msg->data, maxlen);
     if(LOG_BUSMEM)
         logger("R %x %x", ((intptr_t)msg->data)&0xFFFF, ((intptr_t)data)&0xFFFF);
@@ -83,10 +87,9 @@ void msg_resize(BusMessage msg, msglen_t maxlen)
         memset(data+msg->data_max, 0,maxlen-msg->data_max);
         msg->data = data;
         msg->data_max = maxlen;
+        return true;
     } else {
-        free(msg->data);
-        msg->data = NULL;
-        msg->data_max = 0;
+        return false;
     }
 }
 
@@ -251,12 +254,14 @@ BusMessage msg_copy_bits(BusMessage msg, u_int8_t off)
     off >>= 3;
 
     nm = msg_alloc(off < (MSG_MINBUF*2/3) ? MSG_MINBUF : off*2);
+    if(nm == nullptr)
+        return nullptr;
     if (!off_bits) {
         if (off)
             memcpy(nm->data, msg->data, off+msg->data_off);
     } else {
         if (off)
-            memcpy(nm->data, msg->data, off-1);
+            memcpy(nm->data, msg->data, off+msg->data_off-1);
         nm->data[off] = msg->data[off] & ~((1<<(8-off))-1);
     }
     nm->data_off = msg->data_off;
@@ -386,9 +391,10 @@ void msg_start_add(BusMessage msg)
     msg->data_end_off = 8;
 }
 
-void msg_add_chunk(BusMessage msg, u_int16_t data, u_int8_t frame_bits)
+bool msg_add_chunk(BusMessage msg, u_int16_t data, u_int8_t frame_bits)
 {
-    msg_resize(msg, msg->data_end+3);
+    if(!msg_resize(msg, msg->data_end+3))
+        return false;
 
     u_int8_t *buf = msg->data+msg->data_end;
     u_int8_t bits = msg->data_end_off;
@@ -418,19 +424,24 @@ void msg_add_chunk(BusMessage msg, u_int16_t data, u_int8_t frame_bits)
     msg->data_end = buf - msg->data;
     msg->data_end_off = bits;
     msg->frames += 1;
+    return true;
 }
 
-void msg_add_in(BusMessage msg, BusMessage orig, u_int16_t bits)
+// copy bits from one message to another.
+// Used when we see a write collision.
+bool msg_add_in(BusMessage msg, BusMessage orig, u_int16_t bits)
 {
     if(!bits)
-        return;
+        return true;
     u_int8_t bb = bits & 7;
     bits >>= 3;
-    msg_resize(msg, bits+3);
+    if(!msg_resize(msg, bits+3))
+        return false;
     memcpy(msg->data+msg->data_off, orig->data+orig->data_off-orig->hdr_len, bits+(bb != 0));
 
     msg->data_end = msg->data_off + bits;
     msg->data_end_off = 8-bb;
+    return true;
 }
 
 // prepare a buffer to add content to be transmitted

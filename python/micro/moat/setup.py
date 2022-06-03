@@ -6,6 +6,9 @@
 # This does not work on rp2 at the moment because
 # natively neither uart nor usb use dupterm
 
+from micropython import alloc_emergency_exception_buf
+alloc_emergency_exception_buf(300)
+
 try:
     import rp2
 except ImportError:
@@ -39,5 +42,3 @@ except ImportError:
 else:
     pass
 
-def run():
-    pass

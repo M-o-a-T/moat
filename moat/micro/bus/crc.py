@@ -133,7 +133,7 @@ we reverse it for you.
     @click.option("-d","--depth",type=int,help="bits to calculate at once (table size)")
     @click.option("-p","--polynomial","poly",type=h_int,help="CRC polynomial to use (hex)")
     @click.option("-c","--c-table","t_c",is_flag=True,help="print a table for C code")
-    @click.option("-p","--python-table","t_p",is_flag=True,help="print Python table")
+    @click.option("-P","--python-table","t_p",is_flag=True,help="print Python table")
     @click.option("-h","--hexsample",is_flag=True,help="sample is hex bytes")
     @click.option("-S","--standard","std",type=int,help="set parameters to MoaT standard for CRC8/11/16")
     @click.argument("sample",nargs=-1)

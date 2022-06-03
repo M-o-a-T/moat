@@ -1,4 +1,4 @@
-from .compat import Event,sleep,ticks_ms,ticks_diff,wait_for_ms,print_exc,spawn,print_exc
+from .compat import Event,sleep,ticks_ms,ticks_add,ticks_diff,wait_for_ms,print_exc,spawn,print_exc
 
 from serialpacker import SerialPacker
 from msgpack import packb,unpackb
@@ -48,17 +48,21 @@ class Base(_Stacked):
     # Request/response handler (server side)
     # 
     # This is usually attached as a child to the Request object,
-    # or stacked.
+    # or stacked. Specific command handlers are attached to this
+    # object, by assignment or subclassing or whatever.
     #
     # Incoming requests call `cmd_*` with `*` being the action. If the
-    # action is a string, try the complete string first, otherwise use
-    # the first character.
+    # action is a string, the complete string is tried first, then
+    # the first character. Otherwise (action is a list) the first
+    # element is used as-is.
     #
     # If the action is empty, call the `cmd` method instead. Otherwise if
     # no method is found fall back to the child.
     # 
     # Attach a sub-base directly to their parents by setting their
     # `cmd_XX` property to it.
+    #
+    # The `send` method simply forwards to its parent, for convenience.
 
     async def dispatch(self, action, msg):
         if not action:
@@ -102,6 +106,7 @@ class Request(_Stacked):
     # 
     # Call "send" with an action (a string or list) to select
     # the function of the recipient. The response is returned / raised.
+    # The second argument is expanded by the recipient if it is a dict
     # 
     # The transport must be reliable.
 
@@ -224,8 +229,6 @@ class Reliable(_Stacked):
         if max_open < 4:
             raise RuntimeError(f"max_open must be >=4, not {max_open}")
         self.max_open = max_open
-        self.m_send = {}
-        self.m_recv = {}
         self.ack_evt = None
         self.reset()
         self.in_reset = None
@@ -241,39 +244,82 @@ class Reliable(_Stacked):
         self.s_recv_head = 0 # next expected message. Messages before this are out of sequence
         self.m_send = {}
         self.m_recv = {}
+        self.t_recv = None
         self.blocked_send = []
-        if did_recv is not None:
-            self.in_reset = not did_recv
+        self.in_reset = ticks_ms()
         if self._idle_task is None:
             self._idle_task = spawn(None, self._idle)
+
+    async def send_msg(self, k=None,m=None):
+        if k is not None:
+            self.m_send[k] = (m,ticks_add(ticks_ms(),self.timeout))
+            msg = {'s':k, 'd':m}
+        else:
+            msg = {'s':self.s_send_head}
+        msg['r'] = r = self.s_recv_tail
+        x = []
+        while r != self.s_recv_head:
+            if r in self.self.m_recv:
+                x.append(r)
+            r = (r+1) % self.max_open
+        if x:
+            msg['x'] = x
+        # TODO set 
+        await self.send(msg)
+
+        if k is not None and k in self.m_send:
+            self.m_send[k] = (m,ticks_add(ticks_ms(),self.timeout))
+
+    async def _idle_work(self, t):
+        # check for possible retransmit requirement
+
+        # calculate time to next action
+        ntx = self.t_recv
+        nm = None
+        nk = None
+        for k,mtx in self.m_send.values():
+            m,tx = mtx
+            txd = ticks_sub(tx,t)
+            if ntx is None or ntx > txd:
+                ntx = txd
+                nm = m
+                nk = k
+
+        if ntx is None:
+            await self._trigger.wait()
+        elif ntx > 0:
+            try:
+                await wait_for_ms(ntx,self._trigger.wait)
+            except TimeoutError:
+                pass
+
+        if self._trigger.is_set():
+            self._trigger = Event()
+
+        if ntx <= 0: # work
+            if nm is None: # just send an ack
+                await self.send_msg()
+            else: # retransmit message K
+                self.m_send[k] = (m,ticks_add(ticks_ms(),self.timeout))
+                await self.send_msg(k,m)
+                if k in self.m_send:
+                    # might have been acked during send
+                    self.m_send[k] = (m,ticks_add(ticks_ms(),self.timeout))
+
 
     async def _idle(self):
         try:
             while not self.closing:
-                if self.s_send_head == self.s_send_tail and self.s_recv_tail == self.s_recv_head:
-                    print("*** IDLE WAIT0")
-                    await self._trigger.wait()
+                t = ticks_ms()
+                if self.in_reset is None:
+                    await self._idle_work(t)
                 else:
-                    print("*** IDLE WAIT1")
-                    try:
-                        await wait_for_ms(self.timeout,self._trigger.wait)
-                    except TimeoutError:
-                        pass
-                print("*** IDLE WAIT DONE")
-                if self.closing:
-                    print("*** IDLE WAIT EX")
-                    break
-                if self._trigger.is_set():
-                    self._trigger = Event()
-                
-                if self.s_send_head != self.s_send_tail:
-                    # send a packet
-                    msg = {'s':self.s_send_tail,'d':self.m_send[self.s_send_tail][1],'r':self.s_recv_tail}
-                elif self.s_recv_tail != self.s_recv_head:
-                    msg = {'r':self.s_recv_tail}
-                else:
-                    continue
-                await self.send(msg)
+                    td = ticks_diff(t,self.in_reset)
+                    if td > 0:
+                        await sleep(td)
+                    else:
+                        await self.send_reset()
+
         except Exception as exc:
             await self.error(exc)
         finally:
@@ -291,7 +337,8 @@ class Reliable(_Stacked):
         msg = {'s':-1,'r':-1,'c':{'t':self.timeout,'m':self.max_open}}
         if self.ack_evt is None:
             self.ack_evt = Event()
-        self.in_reset = True
+        self.in_reset = ticks_add(ticks_ms(),self.timeout)
+        self._trigger.set()
         await self.parent.send(msg)
 
     async def _wait(self):
@@ -322,41 +369,31 @@ class Reliable(_Stacked):
                 raise RuntimeError("major owch")
         self.s_send_head = nseq
 
-        msg = {'s':seq,'d':msg,'r':self.s_recv_tail}
-        self.m_send[seq] = (msg,ticks_ms())
-        if self.m_recv:
-            known = set(self.m_recv.keys())
-            msg['R'] = rs = []
-
-            # Generate a list of messages that are missing
-            rr = self.s_recv_tail
-            while rr != self.s_recv_head:
-                if rr not in self.m_recv:
-                    rs.append(rr)
-                rr = (rr+1) % self.max_open
+        await self.send_msg(seq,msg)
+        self._trigger.set()
 
         await self.parent.send(msg)
 
     async def dispatch(self, msg):
         r = msg.get('s',-1)
         s = msg.get('r',-1)
+        x = msg.get('x',())
 
         if s < 0 and r < 0: # reset
             c = msg.get('c',{})
             self.timeout = max(self.timeout,c.get('t',0))
             self.max_open = max(4,min(self.max_open,c.get('m',self.max_open)))
             self.reset(None)
-            if not self.in_reset:
+            if self.in_reset is None:
                 await self.send_reset()
-            self.in_reset = True
             await self.parent.send({'s':0,'r':0,'c':{'t':self.timeout,'m':self.max_open}})
             return
-        elif self.in_reset and s == 0 and r == 0:
+        elif self.in_reset is not None and s == 0 and r == 0:
             c = msg.get('c',{})
             self.timeout = max(self.timeout,c.get('t',0))
             self.max_open = max(4,min(self.max_open,c.get('m',self.max_open)))
 
-            self.in_reset = False
+            self.in_reset = None
             self.ack_evt.set()
             return
         print(f"run {r} {s}")
@@ -364,6 +401,7 @@ class Reliable(_Stacked):
         d = msg.get('d', _NotGiven)
         if d is not _NotGiven:
             self.m_recv[r] = d
+            self.t_recv = ticks_add(ticks_ms(),self.timeout)
         do_ack = None # tristate
 
         if r >= 0 and self.between(self.s_recv_tail,self.s_recv_head,r):
@@ -376,7 +414,6 @@ class Reliable(_Stacked):
             while rr != s:
                 if rr == self.s_send_head:
                     # XXX
-                    raise RuntimeError(f"Got ack for not-sent message {self.s_send_tail} {rr} {s}")
                     break
                 try:
                     del self.m_send[rr]
@@ -388,6 +425,12 @@ class Reliable(_Stacked):
                 if self.blocked_send:
                     self.blocked_send.pop(0).set()
             self.s_send_tail = rr
+
+        for rr in x:
+            try:
+                del self.m_send[rr]
+            except KeyError:
+                pass
 
         # process incoming messages
         rr = self.s_recv_tail
@@ -402,10 +445,14 @@ class Reliable(_Stacked):
                 await self.child.dispatch(d)
         self.s_recv_tail = rr
 
+        if self.s_revc_head== self.s_recv_head:
+            self.t_recv = None
+        else:
+            self._trigger.set()
+
         if do_ack:
-            msg = {'s':self.s_send_head,'r':rr}
-            await self.parent.send(msg)
-            
+            await self.send_msg()
+
         if do_ack is not None and self.ack_evt is not None:
             self.ack_evt.set()
 
@@ -415,12 +462,15 @@ class Reliable(_Stacked):
         return d1 <= d2
 
 class SerialPackHandler(_Stacked):
-    # reads commands from a stream
-    def __init__(self, stream, evt=None):
+    # interfaces a message stream packetized by SerialPacker
+    # may require a reliable on top if the serial line is lossy
+    # it is probably lossless when using USB
+    #
+    def __init__(self, stream, evt=None, **kw):
         super().__init__(None)
 
         self.s = stream
-        self.p = SerialPacker()
+        self.p = SerialPacker(**kw)
         self.evt = evt
         self.buf = bytearray()
 

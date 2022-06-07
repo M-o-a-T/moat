@@ -92,7 +92,12 @@ def process_args(val, vars_, eval_, path_, vs=None):
         the new value.
     """
     n = 0
-
+    if isinstance(vars_,Mapping):
+        vars_ = vars_.items()
+    if isinstance(eval_,Mapping):
+        eval_ = eval_.items()
+    if isinstance(path_,Mapping):
+        path_ = path_.items()
     def data():
         for k, v in vars_:
             yield k, v
@@ -127,6 +132,8 @@ def process_args(val, vars_, eval_, path_, vs=None):
         elif n < 0:
             raise click.BadOptionUsage(option_name=k, message="Setting a single value conflicts.")
         else:
+            if isinstance(k,str):
+                k=P(k)
             if not isinstance(val, Mapping):
                 val = attrdict()
             if vs is not None:

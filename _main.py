@@ -36,39 +36,48 @@ this_load = ContextVar("this_load", default=None)
 NoneType = type(None)
 
 
-def attr_args(proc):
+def attr_args(proc=None, with_path=True, with_eval=True):
     """
     Attach the standard ``-v``/``-e``/``-p`` arguments to a ``click.command``.
     Passes ``vars_``/``eval_``/``path_`` args.
+
+    Use `attr_args(with_path=False)` to skip path arguments. Ditto for
+    `with_eval`.
     """
-    proc = click.option(
-        "-p",
-        "--path",
-        "path_",
-        nargs=2,
-        type=(P, P),
-        multiple=True,
-        help="Parameter (name value), as path",
-    )(proc)
-    proc = click.option(
-        "-e",
-        "--eval",
-        "eval_",
-        nargs=2,
-        type=(P, str),
-        multiple=True,
-        help="Parameter (name value), evaluated",
-    )(proc)
-    proc = click.option(
-        "-v",
-        "--var",
-        "vars_",
-        nargs=2,
-        type=(P, str),
-        multiple=True,
-        help="Parameter (name value)",
-    )(proc)
-    return proc
+    def _proc(proc):
+        proc = click.option(
+            *(("-p", "--path",) if with_path else ("--hidden_path"),),
+            "path_",
+            nargs=2,
+            type=(P, P),
+            multiple=True,
+            help="Parameter (name value), as path",
+            hidden=not with_path,
+        )(proc)
+        proc = click.option(
+            *(("-e", "--eval",) if with_eval else ("--hidden_eval"),),
+            "eval_",
+            nargs=2,
+            type=(P, str),
+            multiple=True,
+            help="Parameter (name value), evaluated",
+            hidden=not with_eval,
+        )(proc)
+        proc = click.option(
+            "-v",
+            "--var",
+            "vars_",
+            nargs=2,
+            type=(P, str),
+            multiple=True,
+            help="Parameter (name value)",
+        )(proc)
+        return proc
+
+    if proc is None:
+        return _proc
+    else:
+        return _proc(proc)
 
 
 def process_args(val, vars_, eval_, path_, vs=None):

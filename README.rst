@@ -22,6 +22,14 @@ Features
 
 A few. Read the code, I didn't get around to documenting all of that yet.
 
+times
++++++
+
+This code implements calculating an offset to an under-specified future
+time. Like "how long until next Wednesday 8 am"?
+
+The code also supports the inverse question, as in "how long until it's no
+longer Wednesday 8 am".
 
 
 License

@@ -25,6 +25,9 @@ def str_presenter(dumper, data):
 
 
 def yaml_named(name: str, use_repr: bool = False):
+    """
+    A class decorator that allows representing an object in YAML
+    """
     def register(cls):
         def str_me(dumper, data):
             return dumper.represent_scalar("!" + name, repr(data) if use_repr else str(data))

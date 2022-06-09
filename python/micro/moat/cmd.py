@@ -240,9 +240,9 @@ class Reliable(_Stacked):
     # have been received out of order.
     # 
     # Both sender and receiver limit the difference from tail to head to
-    # max_open/2. The sender blocks until there is queue space while the
-    # receiver discards messages outside this window. However, in practice
-    # `max_open/2` SHOULD be sufficiently large to never block the sender.
+    # window/2. The sender blocks until there is queue space while the
+    # receiver discards messages outside this window. In order not to block
+    # its clients, the sender also maintains a queue of waiting packets.
     #
     # All messages contain send_head `s`, recv_tail `r`, recv_done `x`,
     # and data `d`. "recv_done" is the list of messages that have been
@@ -255,14 +255,11 @@ class Reliable(_Stacked):
     # before regular message exchange can take place. This exchange must
     # happen in both directions. Other messages received during a reset
     # are discarded.
-    # 
-    # Messages that try to advance a head beyond tail+max_open/2 are
-    # discarded. If they persist, the connection is reset.
 
-    def _init(self, max_open=8, timeout=1000):
-        if max_open < 4:
-            raise RuntimeError(f"max_open must be >=4, not {max_open}")
-        self.max_open = max_open
+    def _init(self, window=8, timeout=1000):
+        if window < 4:
+            raise RuntimeError(f"window must be >=4, not {window}")
+        self.window = window
         self.reset_evt = None
         self.in_reset = None
         self.closed = True
@@ -323,7 +320,7 @@ class Reliable(_Stacked):
         while r != self.s_recv_head:
             if r in self.m_recv:
                 x.append(r)
-            r = (r+1) % self.max_open
+            r = (r+1) % self.window
         if x:
             msg['x'] = x
         self.pend_ack = False
@@ -354,7 +351,7 @@ class Reliable(_Stacked):
                 nm = m
                 nk = k
 
-        if self.s_q and (self.s_send_head - self.s_send_tail) % self.max_open < self.max_open//2:
+        if self.s_q and (self.s_send_head - self.s_send_tail) % self.window < self.window//2:
             pass
             #print(f"R {self.parent.txt}: tx")
         elif ntx is None:
@@ -378,10 +375,10 @@ class Reliable(_Stacked):
             return
 
         # process pending-send queue
-        if self.s_q and (self.s_send_head - self.s_send_tail) % self.max_open < self.max_open//2:
+        if self.s_q and (self.s_send_head - self.s_send_tail) % self.window < self.window//2:
             seq = self.s_send_head
             msg = self.s_q.pop(0)
-            nseq = (seq+1)%self.max_open
+            nseq = (seq+1)%self.window
             #print("SH1",self.parent.txt,self.s_send_tail,self.s_send_head,nseq)
             self.s_send_head = nseq
             await self.send_msg(seq,msg)
@@ -426,7 +423,7 @@ class Reliable(_Stacked):
     async def send_reset(self, level=0, err=None):
         if level:
             self.reset_level = level
-        msg = {'a':'r', 'n':self.reset_level}
+        msg = {'a':'r', 'n':self.reset_level,'c':self._get_config()}
         if err is not None:
             msg['e'] = err
             await self.child.error(err)
@@ -454,11 +451,11 @@ class Reliable(_Stacked):
         self._trigger.set()
 
     def _get_config(self):
-        return {'t':self.timeout,'m':self.max_open}
+        return {'t':self.timeout,'m':self.window}
 
     def _update_config(self, c):
         self.timeout = max(self.timeout,c.get('t',0))
-        self.max_open = max(4,min(self.max_open,c.get('m',self.max_open)))
+        self.window = max(4,min(self.window,c.get('m',self.window)))
 
     def _reset_done(self):
         if self.in_reset:
@@ -486,11 +483,13 @@ class Reliable(_Stacked):
                 await self.send_reset()
                 return
             elif n == 2: # incoming ack
+                self._update_config(c)
                 await self.send_reset(3)
                 self._reset_done()
                 return
             elif n == 3: # incoming ack2
                 if not self.in_reset or self.reset_level > 1:
+                    self._update_config(c)
                     self._reset_done()
                 else:
                     await self.error(RuntimeError("ext reset ack2"))
@@ -504,7 +503,7 @@ class Reliable(_Stacked):
             return ## unknown
 
         if self.in_reset:
-            if self.reset_lejjvel < 2:
+            if self.reset_level < 2:
                 await self.send_reset()
                 return
             self._reset_done()
@@ -515,7 +514,7 @@ class Reliable(_Stacked):
 
         if r is None or s is None:
             return
-        if not (0<=r<self.max_open) or not (0<=s<self.max_open):
+        if not (0<=r<self.window) or not (0<=s<self.window):
             self.reset(1)
             await self.send_reset(err="R/S out of bounds")
             return
@@ -525,10 +524,10 @@ class Reliable(_Stacked):
             # data. R is the message's sequence number.
             self.pend_ack = True
             if self.between(self.s_recv_tail,self.s_recv_head,r):
-                if (r-self.s_recv_tail)%self.max_open < self.max_open//2:
+                if (r-self.s_recv_tail)%self.window < self.window//2:
                     #print("RH1",self.parent.txt,self.s_recv_tail,self.s_recv_head,r,r+1)
                     self.m_recv[r] = d
-                    self.s_recv_head = (r+1) % self.max_open
+                    self.s_recv_head = (r+1) % self.window
                 else:
                     pass
                     #print("RH1-",self.parent.txt,self.s_recv_tail,self.s_recv_head,r,r+1)
@@ -537,7 +536,7 @@ class Reliable(_Stacked):
 
         elif self.between(self.s_recv_tail,self.s_recv_head,r):
             # no data. R is the next-expected sequence number.
-            if (r-self.s_recv_tail)%self.max_open <= self.max_open//2:
+            if (r-self.s_recv_tail)%self.window <= self.window//2:
                 self.s_recv_head = r
                 #print("RH2",self.parent.txt,self.s_recv_tail,self.s_recv_head,r,r+1)
             else:
@@ -557,7 +556,7 @@ class Reliable(_Stacked):
                     pass
                 else:
                     self.pend_ack = True
-                rr = (rr+1) % self.max_open
+                rr = (rr+1) % self.window
                 self._trigger.set()
 
             #print("ST1",self.parent.txt,self.s_send_tail,self.s_send_head,rr)
@@ -577,7 +576,7 @@ class Reliable(_Stacked):
             except KeyError:
                 break
             else:
-                rr = (rr+1) % self.max_open
+                rr = (rr+1) % self.window
                 self.s_recv_tail = rr
                 #print("RT1",self.parent.txt,self.s_recv_tail,self.s_recv_head,r,r+1)
                 self.pend_ack = True
@@ -594,8 +593,8 @@ class Reliable(_Stacked):
             await self.send_msg()
 
     def between(self, a,b,c):
-        d1 = (b-a)%self.max_open
-        d2 = (c-a)%self.max_open
+        d1 = (b-a)%self.window
+        d2 = (c-a)%self.window
         return d1 <= d2
 
 class SerialPackHandler(_Stacked):

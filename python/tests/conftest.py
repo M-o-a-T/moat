@@ -10,3 +10,7 @@ import moat.compat
 #    async with anyio.create_task_group() as tg:
 #        moat.compat._tg = tg
 #        yield tg
+
+@pytest.fixture
+def anyio_backend():
+    return 'trio'

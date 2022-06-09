@@ -40,7 +40,7 @@ def go_moat(no_exit=False):
 
         t = t.stack(Request)
         t = t.stack(Base)
-        spawn(h.run)
+        await spawn(h.run)
         return t
 
 

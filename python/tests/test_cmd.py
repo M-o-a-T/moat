@@ -94,7 +94,7 @@ class Router(_Stacked):
             await self.child.close()
 
 
-async def _test_basic(erange,fail,delay1,delay2,tx):
+async def _test_basic(erange,fail,delay1,delay2,tx,window):
     evt1 = anyio.Event()
     evt2 = anyio.Event()
 
@@ -109,8 +109,8 @@ async def _test_basic(erange,fail,delay1,delay2,tx):
             l1=d1
             l2=d2
 
-        r1 = l1.stack(Reliable,timeout=50+tx)
-        r2 = l2.stack(Reliable,timeout=50)
+        r1 = l1.stack(Reliable,timeout=50+tx,window=window)
+        r2 = l2.stack(Reliable,timeout=50,window=window*2)
 
         if LOG:
             L1 = r1.stack(Logger,"M1")
@@ -145,10 +145,11 @@ async def _test_basic(erange,fail,delay1,delay2,tx):
     assert p1.seen
     assert p2.seen == p1.seen
 
-@pytest.mark.parametrize("erange",(2,20))
+@pytest.mark.parametrize("erange",(2,10))
 @pytest.mark.parametrize("fail",(0,0.2,0.6))
 @pytest.mark.parametrize("delay1",(0,10))
 @pytest.mark.parametrize("delay2",(0,20))
-@pytest.mark.parametrize("tx",(0,-10,10))
-def test_basic(erange,fail,delay1,delay2,tx):
-    run(_test_basic, erange=erange,fail=fail,delay1=delay1,delay2=delay2,tx=tx)
+@pytest.mark.parametrize("tx",(0,10))
+@pytest.mark.parametrize("window",(4,8,128))
+def test_basic(erange,fail,delay1,delay2,tx,window, autojump_clock):
+    run(_test_basic, erange=erange,fail=fail,delay1=delay1,delay2=delay2,tx=tx,window=window)

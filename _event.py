@@ -33,13 +33,11 @@ class ValueEvent:
         """Set the result to return this value, and wake any waiting task."""
         self.value = outcome.Value(value)
         self.event.set()
-        return anyio.DeprecatedAwaitable(self.set)
 
     def set_error(self, exc):
         """Set the result to raise this exceptio, and wake any waiting task."""
         self.value = outcome.Error(exc)
         self.event.set()
-        return anyio.DeprecatedAwaitable(self.set_error)
 
     def is_set(self):
         """Check whether the event has occurred."""
@@ -53,7 +51,6 @@ class ValueEvent:
         if self.scope is not None:
             self.scope.cancel()
         self.set_error(CancelledError())
-        return anyio.DeprecatedAwaitable(self.cancel)
 
     async def get(self):
         """Block until the value is set.

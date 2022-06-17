@@ -149,6 +149,23 @@ class Path(collections.abc.Sequence):
             return self
         return Path(*self._data, *other)
 
+    def __iadd__(self, other):
+        if isinstance(other, Path):
+            other = other._data
+        if not len(other):
+            return self
+        self._data.extend(other)
+
+    def __div__(self, other):
+        if isinstance(other, Path):
+            raise RuntimeError("You want + not /")
+        return Path(*self._data, other)
+
+    def __idiv__(self, other):
+        if isinstance(other, Path):
+            raise RuntimeError("You want + not /")
+        self._data.append(other)
+
     # TODO add alternate output with hex integers
 
     def __repr__(self):

@@ -156,12 +156,12 @@ class Path(collections.abc.Sequence):
             return self
         self._data.extend(other)
 
-    def __div__(self, other):
+    def __truediv__(self, other):
         if isinstance(other, Path):
             raise RuntimeError("You want + not /")
         return Path(*self._data, other)
 
-    def __idiv__(self, other):
+    def __itruediv__(self, other):
         if isinstance(other, Path):
             raise RuntimeError("You want + not /")
         self._data.append(other)

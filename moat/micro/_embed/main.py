@@ -1,55 +1,71 @@
 cfg = {}
 
-def go_moat(no_exit=False):
 
-    async def setup(evt):
+def go_moat():
+    from moat.compat import TaskGroup, print_exc
+    from moat.cmd import MsgpackConsHandler,MsgpackHandler,Reliable,Request,Base
+
+    from uasyncio import taskgroup as _tgm
+    _tgm.DEBUG=True
+    del _tgm
+
+    async def setup(tg):
         import sys
-        import micropython
-        from moat.compat import spawn
-        from uasyncio.stream import Stream
-        from moat.cmd import Handler,Reliable,Request,Base
-        nonlocal no_exit
 
-        import msgpack
-        global cfg
-        try:
-            with open("moat.cfg") as f:
-                cfg.update(msgpack.unpack(f))
-        except OSError:
-            pass
-        else:
-            no_exit = cfg.get("console",{}).get("no_exit",no_exit)
+#       nonlocal no_exit
 
-        h = None
+#       import msgpack
+#       global cfg
+#       try:
+#           with open("moat.cfg") as f:
+#               cfg.update(msgpack.unpack(f))
+#       except OSError:
+#           pass
+#       else:
+#           no_exit = cfg.get("console",{}).get("no_exit",no_exit)
 
-        ## Runtime for RPy2: use the console
-        try:
-            import rp2
-        except Exception:
-            pass
-        else:
+        if sys.platform == "rp2":
+            # use the console. USB, so no data loss.
+            from moat.stacks import console_stack
+            import micropython
             micropython.kbd_intr(-1)
-            h = Handler(Stream(sys.stdin.buffer), None if no_exit else evt)
-            t = h.stack(Reliable)
+            t,b = console_stack(reliable=True)
+            t = t.stack(Base)
+            return await tg.spawn(b.run)
 
-        ## TODO on an ESP32, use a TCP connection or an MQTT channel or …
+        if sys.plaform == "linux":
+            mp = uos.getenv("MOATPORT")
+            if mp:
+                mp = int(mp)
+                # Use networking. On Linux we can accept multiple parallel connections.
+                async def run():
+                    from moat.stacks import network_stack_iter
+                    async with TaskGroup() as tg:
+                        async for t,b in network_stack_iter(multiple=True, port=mp):
+                            t = t.stack(Base)
+                            return await tg.spawn(b.run)
+                return await tg.spawn(run)
 
-        if h is None:
-            evt.set()
-            raise RuntimeError("Which system does this run on?")
+            else:
+                # Console test
+                from moat.stacks import console_stack
+                import micropython
+                micropython.kbd_intr(-1)
+                t,b = console_stack(reliable=True)
+                t = t.stack(Base)
+                return await tg.spawn(b.run)
 
-        t = t.stack(Request)
-        t = t.stack(Base)
-        await spawn(h.run)
-        return t
-
+        raise RuntimeError("Which system does this run on?")
 
     async def main():
-        from moat.compat import Event
-        evt = Event
-        cmd = await setup(evt)
+        async with TaskGroup() as tg:
+            await tg.spawn(setup,tg)
 
-        await evt.wait()
+            # add whatever else needs adding
+
 
     from moat.compat import run
     run(main)
+
+if __name__ == "__main__":
+    go_moat()

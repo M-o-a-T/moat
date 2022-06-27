@@ -1,6 +1,17 @@
-from sys import print_exception as print_exc
-from uasyncio import Event,sleep,TimeoutError, run as _run, create_task as _create_task, CancelledError
+from usys import print_exception as print_exc
+import uasyncio
+from uasyncio import Event,sleep,sleep_ms,TimeoutError, run as _run, TaskGroup as _tg, CancelledError
 from utime import ticks_ms, ticks_add, ticks_diff
+
+async def idle():
+    while True:
+        await sleep(60*60*12)  # half a day
+
+async def wait_for(timeout,p,*a,**k):
+    """
+        uasyncio.wait_for() but with sane calling convention
+    """
+    return await uasyncio.wait_for(p(*a,**k),timeout)
 
 async def wait_for_ms(timeout,p,*a,**k):
     """
@@ -8,21 +19,13 @@ async def wait_for_ms(timeout,p,*a,**k):
     """
     return await uasyncio.wait_for_ms(p(*a,**k),timeout)
 
-async def spawn(evt,p,*a,**k):
-    async def catch():
-        try:
-            return await p(*a,**k)
-        except CancelledError:
-            raise
-        except Exception as exc:
-            print_exc(exc)
-            raise
-        finally:
-            if evt is not None:
-                evt.set()
-
-    return _create_task(catch())
+class TaskGroup(_tg):
+    async def spawn(self, p, *a, **k):
+        return self.create_task(p(*a,**k))
 
 def run(p,*a,**k):
     return _run(p(*a,**k))
 
+async def run_server(*a, **kw):
+    from uasyncio import run_server as rs
+    return await rs(*a,**kw)

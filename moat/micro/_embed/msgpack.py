@@ -1,10 +1,15 @@
 # coding: utf-8
 # cloned from https://github.com/msgpack/msgpack-python
 from collections import namedtuple
-import uos as os
-import usys as sys
+try:
+    import uos as os
+    import usys as sys
+    from uio import BytesIO
+except ImportError:
+    import os as os
+    import sys as sys
+    from io import BytesIO
 import struct
-from uio import BytesIO
 
 #
 # This is a micropython-asyncio-compatible MsgPack implementation.
@@ -188,12 +193,12 @@ class Unpacker(object):
     def _get_extradata(self):
         return self._buffer[self._buff_i :]
 
-    def read_bytes(self, n):
-        ret = self._read(n, raise_outofdata=False)
-        self._consume()
-        return ret
+#   async def read_bytes(self, n):
+#       ret = await self._read(n, raise_outofdata=False)
+#       self._consume()
+#       return ret
 
-    def _read(self, n, raise_outofdata=True):
+    async def _read(self, n, raise_outofdata=True):
         # (int) -> bytearray
         await self._reserve(n, raise_outofdata=raise_outofdata)
         i = self._buff_i
@@ -226,7 +231,6 @@ class Unpacker(object):
             read_data = await self._stream.read(to_read_bytes)
             if not read_data:
                 break
-            assert isinstance(read_data, bytes)
             self._buffer += read_data
             remain_bytes -= len(read_data)
 
@@ -250,7 +254,7 @@ class Unpacker(object):
             typ = TYPE_RAW
             if n > self._max_str_len:
                 raise ValueError("%s exceeds max_str_len(%s)" % (n, self._max_str_len))
-            obj = self._read(n)
+            obj = await self._read(n)
         elif b & 0b11110000 == 0b10010000:  # x90-x9F
             n = b & 0b00001111
             typ = TYPE_ARRAY
@@ -281,7 +285,7 @@ class Unpacker(object):
             self._buff_i += size
             if n > self._max_bin_len:
                 raise ValueError("%s exceeds max_bin_len(%s)" % (n, self._max_bin_len))
-            obj = self._read(n)
+            obj = await self._read(n)
         elif b <= 0xC9:
             size, fmt, typ = _MSGPACK_HEADERS[b]
             await self._reserve(size)
@@ -289,7 +293,7 @@ class Unpacker(object):
             self._buff_i += size
             if L > self._max_ext_len:
                 raise ValueError("%s exceeds max_ext_len(%s)" % (L, self._max_ext_len))
-            obj = self._read(L)
+            obj = await self._read(L)
         elif b <= 0xD3:
             size, fmt = _MSGPACK_HEADERS[b]
             await self._reserve(size)
@@ -317,7 +321,7 @@ class Unpacker(object):
             self._buff_i += size
             if n > self._max_str_len:
                 raise ValueError("%s exceeds max_str_len(%s)" % (n, self._max_str_len))
-            obj = self._read(n)
+            obj = await self._read(n)
         elif b <= 0xDD:
             size, fmt, typ = _MSGPACK_HEADERS[b]
             await self._reserve(size)
@@ -359,14 +363,17 @@ class Unpacker(object):
                 ret[key] = await self.unpack()
             if self._object_hook is not None:
                 ret = self._object_hook(ret)
+            return ret
         if typ == TYPE_RAW:
             return obj.decode("utf_8", self._unicode_errors)
         if typ == TYPE_BIN:
-            if self.min_memview_len<0 and len(obj) < self.min_memview_len:
+            if self._min_memview_len<0 and len(obj) < self._min_memview_len:
                 obj = bytearray(obj)
             return obj
         if typ == TYPE_EXT:
             return self._ext_hook(n, obj)
+        if typ != TYPE_IMMEDIATE:
+            print("T:",repr(typ))
         assert typ == TYPE_IMMEDIATE
         return obj
 

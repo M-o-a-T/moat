@@ -1,5 +1,14 @@
 # This is an async version of mpy_repl.repl_connection.MpyPath
 
+import io
+import os
+import pathlib
+import binascii
+import hashlib
+
+import logging
+logger = logging.getLogger(__name__)
+
 class MoatDevPath(pathlib.PurePosixPath):  # pathlib.PosixPath
     """
     The path object represents a file or directory (existing or not) on the
@@ -156,7 +165,8 @@ class MoatDevPath(pathlib.PurePosixPath):  # pathlib.PosixPath
             blocks = await self._repl.evaluate(f'_b({n_blocks})')
             if not blocks:
                 break
-            yield from [binascii.a2b_base64(block) for block in blocks]
+            for block in blocks:
+                yield binascii.a2b_base64(block)
         await self._repl.exec('_f.close(); del _f, _b')
 
     async def read_bytes(self) -> bytes:
@@ -291,14 +301,24 @@ async def sha256(p):
         return await p.sha256()
     except AttributeError:
         _h = hashlib.sha256()
-        async for block in p.read_as_stream():
-            _h.update(block)
+        if hasattr(p,"read_as_stream"):
+            async for block in p.read_as_stream():
+                _h.update(block)
+        else:
+            async with await p.open("rb") as _f:
+                _h.update(await _f.read())
+
         return _h.digest()
 
 
 async def _nullcheck(p):
     """Null check function, always True"""
-    return True
+    if await p.is_dir():
+        return p.name != "__pycache__"
+    if p.suffix in (".py",".mpy"):
+        return True
+    logger.info("Ignored: %s", p)
+    return False
 
 
 async def copytree(src,dst,check=_nullcheck):
@@ -308,6 +328,8 @@ async def copytree(src,dst,check=_nullcheck):
     (@src is never checked.)
 
     Files are copied if their size or content hash differs.
+
+    Returns the number of modified files.
     """
     if await src.is_file():
         s1 = (await src.stat()).st_size
@@ -322,14 +344,22 @@ async def copytree(src,dst,check=_nullcheck):
                 s2 = -1
         if s1 != s2:
             await dst.write_bytes(await src.read_bytes())
+            logger.info("Copy: updated %s > %s", src,dst)
+            return 1
+        else:
+            logger.debug("Copy: unchanged %s > %s", src,dst)
+            return 0
     else:
         if not await src.is_dir():
-            continue  # duh
+            return 0  # duh
+        logger.info("Copy: dir %s > %s", src,dst)
+        n = 0
+        if not await dst.exists():
+            await dst.mkdir()
         async for s in src.iterdir():
             if not await check(s):
                 continue
             d = dst/s.name
-            if not await d.exists():
-                await d.mkdir()
-            await copytree(s,d,check)
+            n += await copytree(s,d,check)
+        return n
 

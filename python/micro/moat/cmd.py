@@ -1,15 +1,12 @@
 from .compat import Event,ticks_ms,ticks_add,ticks_diff,wait_for_ms,print_exc,CancelledError,TaskGroup, idle
-from .proto import _Stacked
+from .proto import _Stacked, RemoteError
 from contextlib import asynccontextmanager
 
 from serialpacker import SerialPacker
 from msgpack import Packer,Unpacker, OutOfData
 from pprint import pformat
 
-import uasyncio
-from uasyncio import core
-from uasyncio import Lock
-from uasyncio.stream import Stream
+import sys
 
 import logging
 logger = logging.getLogger(__name__)
@@ -66,30 +63,32 @@ class BaseCmd(_Stacked):
         await idle()
 
     async def dispatch(self, action, msg):
-        p = None
+        async def c(p):
+            if isinstance(msg,dict):
+                return await p(**msg)
+            else:
+                return await p(msg)
+
         if isinstance(action,str) and len(action) > 1:
             try:
                 p = getattr(self,"cmd_"+action)
             except AttributeError:
-                # retry with single character
                 pass
             else:
-                action=""
-        if p is None:
-            if not action:
-                p = self.cmd
-            else:
-                # may raise AttributeError
-                p = getattr(self,"cmd_"+action[0])
-                action = action[1:]
+                return await c(p)
 
-        if p is None:
-            raise AttributeError(action)
+        if not action:
+            return await c(self.cmd)
+            # if there's no "self.cmd", the resulting AttributeError is our reply
 
-        if isinstance(msg,dict):
-            return await p(action, **msg)
+        if len(action) > 1:
+            return await getattr(self,"dis_"+action[0])(action[1:], msg)
         else:
-            return await p(action, msg)
+            return await c(getattr(self,"cmd_"+action[0]))
+
+    @property
+    def request(self):
+        return self.parent.request
 
 
 class Request(_Stacked):
@@ -102,34 +101,40 @@ class Request(_Stacked):
     # 
     # The transport must be reliable.
 
-    async def _init(self):
-        await super()._init()
+    def __init__(self, *a, **k):
+        super().__init__(*a,**k)
         self.reply = {}
         self.seq = 0
 
-    async def _run(self):
+    @property
+    def request(self):
+        return self
+
+    def terminate(self):
+        self._tg.cancel()
+
+    async def run(self):
         try:
             async with TaskGroup() as tg:
                 self._tg = tg
                 while True:
                     msg = await self.parent.recv()
-                    await self.dispactch(msg)
+                    await self.dispatch(msg)
         finally:
             for k,e in self.reply.items():
                 if isinstance(e,Event):
                     self.reply[k] = CancelledError()
                     e.set()
 
-
-    async def _handle_request(a,i,d,msg):
+    async def _handle_request(self, a,i,d,msg):
         try:
             res = await self.child.dispatch(a,d)
-        except Exception as exc:
+        except BaseException as exc:
             print("ERROR handling",a,i,d,msg, file=sys.stderr)
             print_exc(exc)
             if i is None:
                 return
-            res = {'e':str(exc),'i':i}
+            res = {'e':repr(exc),'i':i}
         else:
             if i is None:
                 return
@@ -169,10 +174,14 @@ class Request(_Stacked):
             else: # duh. Recorded error? put it back
                 self.reply[i] = evt
 
-    async def send(self, action, msg):
+    async def send(self, action, msg=None, **kw):
         # queue a request
         self.seq += 1
         seq = self.seq
+        if msg is None:
+            msg = kw
+        elif kw:
+            raise TypeError("cannot use both msg data and keywords")
         msg = {"a":action,"d":msg,"i":seq}
 
         e = Event()
@@ -193,12 +202,4 @@ class Request(_Stacked):
         msg = {"a":action,"d":msg}
         await self.parent.send(msg)
 
-    async def run(self):
-        try:
-            await self.child.run()
-        finally:
-            for k,e in self.reply.items():
-                if isinstance(e,Event):
-                    self.reply[k] = CancelledError()
-                    e.set()
 

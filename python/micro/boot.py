@@ -1,2 +1,3 @@
-from moat import setup
-setup.run()
+#from moat import setup
+#setup.run()
+print("BOOT")

@@ -1,29 +1,58 @@
-from .cmd import MsgpackConsHandler,MsgpackHandler,Logger,Request,SerialPackerHandler
+import sys
 
 # All Stacks builders return a (top,bot) tuple.
 # The top is the Request object. You're expected to attach your Base
 # (or a subclass) to it, then call `bot.run()`.
 
+import logging
+logger = logging.getLogger(__name__)
 
-async def console_stack(stream=sys.stdin.buffer, reliable=False, log=False, log_bottom=False):
-    # TODO
+async def console_stack(stream=sys.stdin.buffer, s2=None, reliable=False, log=False, log_bottom=False, console=False, force_write=False):
+    # Set s2 for a separate write stream.
+    #
+    # Set force_write if select-for-write doesn't work on your stream.
     # 
     # set @reliable if your console already guarantees lossless
     # transmission (e.g. via USB).
-    from .proto.stream import MsgpackConsHandler,SerialPackerHandler
-    if reliable:
-        b = MsgpackConsHandler(AsyncStream(stream))
-    else:
-        b = SerialPackerHandler(AsyncStream(stream))
+    from .cmd import Request
 
-    t = b
-    if not reliable:
+    if log or log_bottom:
+        from .proto import Logger
+    if hasattr(stream,"aclose"):
+        assert s2 is None
+        assert not force_write
+        s = stream
+    else:
+        from .proto.stream import AsyncStream
+        s = AsyncStream(stream, s2, force_write)
+
+    cons_h = None
+    if console:
+        c_b = bytearray()
+        def cons_h(b):
+            nonlocal c_b
+            if b == 10:
+                logger.info("C:%s", c_b.decode("ascii"))
+                c_b = bytearray()
+            elif b != 13:
+                c_b.append(b)
+
+    if reliable:
+        from .proto.stream import MsgpackStream
+        t = b = MsgpackStream(s, console=cons_h)
+    else:
+        from .proto.stream import MsgpackHandler, SerialPackerStream
+
+        t = b = SerialPackerStream(s, console=cons_h)
+        t = t.stack(MsgpackHandler)
+
         if log_bottom:
-            t = await t.stack(Logger)
-        t = await t.stack(Reliable)
+            t = t.stack(Logger, txt="Rel")
+        from .proto.reliable import Reliable
+        t = t.stack(Reliable)
     if log:
-        t = await t.stack(Logger)
-    t = await t.stack(Request)
+        t = t.stack(Logger, txt="Msg")
+    t = t.stack(Request)
     return t,b
 
 
@@ -40,6 +69,9 @@ async def network_stack_iter(log=False, multiple=False, host="0.0.0.0", port=271
 
     from moat.compat import run_server, Event
     from .proto.stream import MsgpackHandler
+    from .cmd import Request
+    if log:
+        from .proto import Logger
 
     async def runner(h,e,s,rs):
         assert s is rs
@@ -61,17 +93,13 @@ async def network_stack_iter(log=False, multiple=False, host="0.0.0.0", port=271
 
                 t = h[0]
                 if log:
-                    t = t.stack(Logger)
-                t = await t.stack(Request)
+                    t = t.stack(Logger, txt="Msg")
+                t = t.stack(Request)
                 yield t,h[0]
 
     except BaseException as exc:
         print_exc(exc)
         if srv is not None:
             srv.cancel()
-
-
-
-async def network_stack(log=False, host="0.0.0.0", port=17388):
 
 

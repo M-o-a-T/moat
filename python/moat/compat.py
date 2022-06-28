@@ -6,6 +6,8 @@ import time as _time
 import traceback as _traceback
 import outcome as _outcome
 
+TimeoutError=TimeoutError # compat
+
 from concurrent.futures import CancelledError
 
 def print_exc(exc):
@@ -14,9 +16,17 @@ def print_exc(exc):
 def ticks_ms():
     return _time.monotonic_ns() // 1000000
 
+async def wait_for(timeout,p,*a,**k):
+    with _anyio.fail_after(timeout):
+        return await p(*a,**k)
+
 async def wait_for_ms(timeout,p,*a,**k):
     with _anyio.fail_after(timeout/1000):
         return await p(*a,**k)
+
+async def idle():
+    while True:
+        await anyio.sleep(60*60*12)  # half a day
 
 def ticks_add(a,b):
     return a+b
@@ -102,22 +112,58 @@ async def _run(p,a,k):
 def run(p,*a,**k):
     return _anyio.run(_run,p,a,k)
 
-async def spawn(evt, p,*a,**k):
-    """\
-        Like anyio.start(), except
-        * sets the event if the task ends, if given
-        * returns something you can cancel
-    """
-    async def catch(p,a,k, *, task_status):
-        with _anyio.CancelScope() as s:
-            task_status.started(s)
-            try:
-                await p(*a,**k)
-            except CancelledError: # error from concurrent.futures
-                pass
-            finally:
-                if evt is not None:
-                    evt.set()
 
-    return await _tg.start(catch,p,a,k)
+_tg = None
+def TaskGroup():
+    global _tg
+    if _tg is None:
+        class TaskGroup(_anyio.lowlevel.get_asynclib().TaskGroup):
 
+            async def spawn(self, p,*a,**k):
+                """\
+                    Like start(), but returns something you can cancel
+                """
+                async def catch(p,a,k, *, task_status):
+                    with _anyio.CancelScope() as s:
+                        task_status.started(s)
+                        try:
+                            await p(*a,**k)
+                        except CancelledError: # error from concurrent.futures
+                            pass
+
+                return await super().start(catch,p,a,k)
+
+            def cancel(self):
+                self.cancel_scope.cancel()
+        _tg=TaskGroup
+    return _tg()
+
+
+async def run_server(cb,host,port, backlog=5, taskgroup=None, reuse_port=True):
+    listener = await anyio.create_tcp_listener(local_host=host, local_port=port, backlog=backlog, reuse_port=reuse_port)
+
+    async def cbc(sock):
+        await cb(sock,sock);
+
+    await listener.serve(cbc, task_group=taskgroup)
+
+class UAStream:
+    # adapt an anyio stream to something that behaves like an uasyncio
+    # stream, more or less
+    def __init__(self, stream):
+        self.s = stream
+
+    async def read(self, n):
+        return await self.s.receive(n)
+
+    async def readinto(self, buf):
+        res = self.s.receive(n)
+        buf[:] = res
+        return res
+
+    async def write(self, data):
+        return await self.s.send(data)
+
+    async def aclose(self):
+        await self.s.close()
+        return await self.s.wait_closed()

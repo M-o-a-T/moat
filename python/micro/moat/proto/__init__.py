@@ -1,10 +1,4 @@
-from .compat import Event,ticks_ms,ticks_add,ticks_diff,wait_for_ms,print_exc,CancelledError,TaskGroup, idle
-from contextlib import asynccontextmanager
-
-import uasyncio
-from uasyncio import core
-from uasyncio import Lock
-from uasyncio.stream import Stream
+from ..compat import TaskGroup
 
 import logging
 logger = logging.getLogger(__name__)
@@ -53,16 +47,16 @@ class NotImpl:
         raise RuntimeError()
 
     async def run(self):
+        print("RUN of",self.__class__.__name__)
         pass
 
 
 class _Stacked:
     def __init__(self, parent, *a,**k):
         self.parent = parent
-        self._init(*a,**k)
         self.child = NotImpl(self)
 
-    async def stack(self, cls, *a, **k):
+    def stack(self, cls, *a, **k):
         sup = cls(self, *a,**k)
         self.child = sup
         return sup
@@ -72,17 +66,17 @@ class _Stacked:
 
     async def run(self):
         r = getattr(self, "_run", None)
-        if t is None:
+        if r is None:
             return await self.child.run()
         async with TaskGroup() as tg:
-            runner = await tg.spawn(r, tg)
+            runner = await tg.spawn(r)
             await self.child.run()
             runner.cancel()
 
 
 class Logger(_Stacked):
-    async def _init(self, txt):
-        await super()._init()
+    def __init__(self, parent, txt="S", **k):
+        super().__init__(parent, **k)
         self.txt = txt
         from pprint import pformat
         self._pformat = pformat
@@ -120,6 +114,10 @@ class Logger(_Stacked):
 
     async def recv(self):
         msg = await self.parent.recv()
-        print(f"R:{self.txt} {msg}")
+        if isinstance(msg,dict):
+            mm=" ".join(f"{k}={repr(v)}" for k,v in msg.items())
+        else:
+            mm=msg
+        print(f"R:{self.txt} {mm}")
         return msg
 

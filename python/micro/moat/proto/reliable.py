@@ -1,14 +1,4 @@
-from .compat import Event,ticks_ms,ticks_add,ticks_diff,wait_for_ms,print_exc,CancelledError,TaskGroup, idle
-from contextlib import asynccontextmanager
-
-from serialpacker import SerialPacker
-from msgpack import Packer,Unpacker, OutOfData
-from pprint import pformat
-
-import uasyncio
-from uasyncio import core
-from uasyncio import Lock
-from uasyncio.stream import Stream
+from ..compat import Event,ticks_ms,ticks_add,ticks_diff,wait_for_ms,TaskGroup
 
 import logging
 logger = logging.getLogger(__name__)
@@ -17,7 +7,6 @@ from . import _Stacked
 
 class Reliable(_Stacked):
     # Message ordering and retry.
-    _idle_task = None
 
     # Both sender and receiver carry two message counter: head and tail.
     #
@@ -48,8 +37,9 @@ class Reliable(_Stacked):
     # happen in both directions. Other messages received during a reset
     # are discarded.
 
-    async def _init(self, window=8, timeout=1000):
-        await super()._init()
+    async def __init__(self, parent, window=8, timeout=1000, **k):
+        await super().__init__(parent, **k)
+
         if window < 4:
             raise RuntimeError(f"window must be >=4, not {window}")
         self.window = window

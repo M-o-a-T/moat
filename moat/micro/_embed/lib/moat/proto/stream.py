@@ -18,22 +18,37 @@ class MsgpackStream(_Base):
     #
     # Use this if your stream is reliable (TCP, USB, …)
 
-    def __init__(self, stream, console=None, **kw):
+    def __init__(self, stream, console=None, console_handler=None, **kw):
         super().__init__(stream)
+        if isinstance(console,int) and not isinstance(console,bool):
+            kw["read_size"]=1
         self.unpacker = Unpacker(stream, **kw)
         self.pack = Packer().packb
         self.console = console
+        self.console_handler = console_handler
 
     async def send(self, msg):
-        await self.s.write(self.pack(msg))
+        msg = self.pack(msg)
+        if isinstance(self.console,int) and not isinstance(self.console, bool):
+            msg = bytes((self.console,)) + msg
+        await self.s.write(msg)
 
     async def recv(self):
-        while True:
-            r = await self.unpacker.unpack()
-            if self.console is not None and isinstance(r,int):
-                self.console(r)
-            else:
-                return r
+        if isinstance(self.console, int) and not isinstance(self.console, bool):
+            while True:
+                b = (await self.s.read(1))[0]
+                if b == self.console:
+                    res = await self.unpacker.unpack()
+                    return res
+                self.console_handler(b)
+
+        else:
+            while True:
+                r = await self.unpacker.unpack()
+                if self.console is not None and isinstance(r,int):
+                    self.console_handler(r)
+                else:
+                    return r
 
 
 class MsgpackHandler(_Stacked):
@@ -58,7 +73,7 @@ class SerialPackerStream(_Base):
     # Use this (and a MsgpackHandler and a Reliable) if your stream
     # is unreliable (TTL serial).
 
-    def __init__(self, stream, console=None, **kw):
+    def __init__(self, stream, console=None, console_handler=None, **kw):
         super().__init__(None)
 
         from serialpacker import SerialPacker
@@ -69,6 +84,7 @@ class SerialPackerStream(_Base):
         self.i = 0
         self.n = 0
         self.console = console
+        self.console_handler = console_handler
 
     async def recv(self):
         while True:
@@ -77,7 +93,7 @@ class SerialPackerStream(_Base):
                 self.i += 1
                 if isinstance(msg,int):
                     if self.console is not None:
-                        self.console(msg)
+                        self.console_handler(msg)
                 elif msg is not None:
                     return msg
 

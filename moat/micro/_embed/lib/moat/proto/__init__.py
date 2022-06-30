@@ -1,5 +1,16 @@
 from ..compat import TaskGroup
 
+try:
+    import anyio
+except ImportError:
+    class EndOfStream(Exception):
+        pass
+    class BrokenResourceError(Exception):
+        pass
+else:
+    EndOfStream = anyio.EndOfStream
+    BrokenResourceError = anyio.BrokenResourceError
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -81,6 +92,21 @@ class Logger(_Stacked):
         from pprint import pformat
         self._pformat = pformat
 
+    async def run(self):
+        print(f"X:{self.txt} start")
+        try:
+            await super().run()
+        except EndOfStream:
+            print(f"X:{self.txt} stop EOF")
+            raise
+        except BrokenResourceError:
+            print(f"X:{self.txt} stop DIED")
+            raise
+        except Exception as exc:
+            print(f"X:{self.txt} stop {repr(exc)}")
+            raise
+        else:
+            print(f"X:{self.txt} stop")
 
     async def send(self,a,m=None):
         if m is None:

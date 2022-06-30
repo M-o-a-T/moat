@@ -16,14 +16,15 @@ logger = logging.getLogger(__name__)
 # possibly-reordering, and/or stream-based transport
 #
 # We have a stack of classes, linked by parent/child pointers.
-# At the bottom there's some Stream thing, at the top we have the command
+# At the bottom there's some Stream adapter. At the top we have the command
 # handling, implemented by the classes Request (send a command, wait for
-# reply) and Base (receive a command, generate a reply).
+# reply) and Base (receive a command, generate a reply). Base classes form
+# a tree.
 #
 # Everything is fully asynchronous. Each class has a "run" method which is
 # required to call its child's "run", as well as do internal housekeeping
 # if required. A "run" method may expect its parent to be operational;
-# it gets cancelled if/when that is no longer true. When a child "run"
+# it gets cancelled if/when that is no longer true. When a child's "run"
 # terminates, the parent's "run" needs to return.
 #
 # Incoming messages are handled by the child's "dispatch" method. They
@@ -55,8 +56,9 @@ class BaseCmd(_Stacked):
     # The `send` method simply forwards to its parent, for convenience.
     #
     # This is the toplevel entry point. You build a request stack by piling
-    # modules on top of each other; the first is the final two are a
-    # Request and a Base.
+    # modules on top of each other; the final one is a Request. On top of
+    # that Request you stack Base subclasses according to the functions you
+    # need.
     #
 
     async def run(self):
@@ -65,9 +67,16 @@ class BaseCmd(_Stacked):
     async def dispatch(self, action, msg):
         async def c(p):
             if isinstance(msg,dict):
-                return await p(**msg)
+                r = p(**msg)
             else:
-                return await p(msg)
+                r = p(msg)
+            if hasattr(r,"throw"):  # generator
+                r = await r
+            return r
+
+        if not action:
+            return await c(self.cmd)
+            # if there's no "self.cmd", the resulting AttributeError is our reply
 
         if isinstance(action,str) and len(action) > 1:
             try:
@@ -77,18 +86,39 @@ class BaseCmd(_Stacked):
             else:
                 return await c(p)
 
-        if not action:
-            return await c(self.cmd)
-            # if there's no "self.cmd", the resulting AttributeError is our reply
-
         if len(action) > 1:
-            return await getattr(self,"dis_"+action[0])(action[1:], msg)
+            try:
+                dis = getattr(self,"dis_"+action[0])
+            except AttributeError:
+                raise AttributeError(action)
+            else:
+                return await dis(action[1:], msg)
         else:
             return await c(getattr(self,"cmd_"+action[0]))
+
+    __call__ = dispatch
+
+    def cmd__dir(self):
+        # rudimentary introspection
+        d=[]
+        c=[]
+        res = dict(c=c, d=d)
+        for k in dir(self):
+            if k.startswith("cmd_") and k[4] != '_':
+                c.append(k[4:])
+            elif k.startswith("dis_") and k[4] != '_':
+                d.append(k[4:])
+            elif k == "cmd":
+                res['j'] = True
+        return res
 
     @property
     def request(self):
         return self.parent.request
+
+    @property
+    def base(self):
+        return self.parent.base
 
 
 class Request(_Stacked):
@@ -110,6 +140,10 @@ class Request(_Stacked):
     def request(self):
         return self
 
+    @property
+    def base(self):
+        return self.child
+
     def terminate(self):
         self._tg.cancel()
 
@@ -129,17 +163,24 @@ class Request(_Stacked):
     async def _handle_request(self, a,i,d,msg):
         try:
             res = await self.child.dispatch(a,d)
-        except BaseException as exc:
+        except Exception as exc:
             print("ERROR handling",a,i,d,msg, file=sys.stderr)
             print_exc(exc)
             if i is None:
                 return
-            res = {'e':repr(exc),'i':i}
+            res = {'e':exc.args[0] if isinstance(exc, RemoteError) else repr(exc),'i':i}
         else:
             if i is None:
                 return
             res = {'d':res,'i':i}
-        await self.parent.send(res)
+        try:
+            await self.parent.send(res)
+        except TypeError as exc:
+            print("ERROR returning",res, file=sys.stderr)
+            print_exc(exc)
+            res = {'e':repr(exc),'i':i}
+            await self.parent.send(res)
+
 
 
     async def dispatch(self, msg):
@@ -175,7 +216,7 @@ class Request(_Stacked):
                 self.reply[i] = evt
 
     async def send(self, action, msg=None, **kw):
-        # queue a request
+        # send a request, return the response
         self.seq += 1
         seq = self.seq
         if msg is None:
@@ -198,7 +239,7 @@ class Request(_Stacked):
         return res
 
     async def send_nr(self, action, msg):
-        # queue a message, doesn't expect a reply
+        # send a message, no reply
         msg = {"a":action,"d":msg}
         await self.parent.send(msg)
 

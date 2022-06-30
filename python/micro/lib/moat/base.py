@@ -9,31 +9,28 @@ import gc
 
 class SysCmd(BaseCmd):
     # system and other low level stuff
-    async def later(self, delay, p,*a,**k):
-        async def _later(d,p,a,k):
-            await sleep_ms(d)
-            try:
-                await p(*a,**k)
-            except Exception:
-                print(getattr(p,'__name__',p), a,k)
-                raise
-        await self.request._tg.spawn(_later,delay,p,a,k)
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.repeats = {}
+
+    async def cmd_is_up(self):
+        await self.request.send_nr("link",True)
 
     async def cmd_state(self, state=None):
         # set/return the MoaT state file contents
-        if state is None:
-            try:
-                f=open("moat.status","r")
-            except OSError:
-                return "skip"
-            else:
-                res = f.read()
-                f.close()
-                return res
-        else:
+        if state is not None:
             f=open("moat.status","w")
             f.write(state)
             f.close()
+        else:
+            try:
+                f=open("moat.status","r")
+            except OSError:
+                state=None
+            else:
+                state = f.read()
+                f.close()
+        return dict(n=state, c=self.base.moat_state, fb=self.base.is_fallback)
 
     async def cmd_test(self):
         # return a simple test string
@@ -69,34 +66,28 @@ class SysCmd(BaseCmd):
         t2 = ticks_ms()
         return dict(t=ticks_diff(t2,t1), f=f2, c=f2-f1)
 
+
     async def cmd_boot(self, code):
         if code != "SysBooT":
             raise RuntimeError("wrong")
 
         async def _boot():
+            await sleep_ms(100)
+            await self.request.send_nr("link",False)
+            await sleep_ms(100)
             machine.soft_reset()
-        await self.later(100,_boot)
-        return True
-
-    async def cmd_repl(self, code):
-        # boots to REPL
-        if code != "SysRepL":
-            raise RuntimeError("wrong")
-
-        f = open("/moat_skip","w")
-        f.close()
-
-        async def _boot():
-            machine.soft_reset()
-        await self.later(100,_boot)
+        await self.request._tg.spawn(_boot)
         return True
 
     async def cmd_reset(self, code):
         if code != "SysRsT":
             raise RuntimeError("wrong")
         async def _boot():
+            await sleep_ms(100)
+            await self.request.send_nr("link",False)
+            await sleep_ms(100)
             machine.reset()
-        await self.later(100,_boot)
+        await self.request._tg.spawn(_boot)
         return True
 
     async def cmd_stop(self, code):
@@ -104,9 +95,13 @@ class SysCmd(BaseCmd):
         if code != "SysStoP":
             raise RuntimeError("wrong")
         async def _boot():
+            await sleep_ms(100)
+            await self.request.send_nr("link",False)
+            await sleep_ms(100)
             raise SystemExit
-        await self.later(100,_boot)
+        await self.request._tg.spawn(_boot)
         return True
+
 
     async def cmd_machid(self):
         # return the machine's unique ID
@@ -322,10 +317,11 @@ class FsCmd(BaseCmd):
 class StdBase(BaseCmd):
     #Standard toplevel base implementation
 
-    def __init__(self, parent, fallback=None, **k):
+    def __init__(self, parent, fallback=None, state=None, **k):
         super().__init__(parent, **k)
 
         self.is_fallback=fallback
+        self.moat_state=state
 
         self.dis_sys = SysCmd(self)
         self.dis_f = FsCmd(self)

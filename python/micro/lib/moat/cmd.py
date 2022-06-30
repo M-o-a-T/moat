@@ -62,7 +62,19 @@ class BaseCmd(_Stacked):
     #
 
     async def run(self):
-        await idle()
+        pass
+
+    async def start_sub(self,tg):
+        # start my (and my children's) "run" task
+        await tg.spawn(self.run)
+
+        for k in dir(self):
+            if not k.startswith('dis_'):
+                continue
+            v = getattr(self,k)
+            if isinstance(v, BaseCmd):
+                await v.start_sub(tg)
+
 
     async def dispatch(self, action, msg):
         async def c(p):
@@ -121,6 +133,23 @@ class BaseCmd(_Stacked):
         return self.parent.base
 
 
+class ClientBaseCmd(BaseCmd):
+    # a BaseCmd subclass that adds link state tracking
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.started = Event()
+
+    def cmd_link(self, s=None):
+        self.started.set()
+
+    async def wait_start(self):
+        await self.started.wait()
+
+    async def run(self):
+        await self.request.send_nr(["sys","is_up"])
+        await super().run()
+
+
 class Request(_Stacked):
     # Request/Response handler (client side)
     # 
@@ -151,14 +180,19 @@ class Request(_Stacked):
         try:
             async with TaskGroup() as tg:
                 self._tg = tg
+                await self.child.start_sub(tg)
+
                 while True:
                     msg = await self.parent.recv()
                     await self.dispatch(msg)
         finally:
-            for k,e in self.reply.items():
-                if isinstance(e,Event):
-                    self.reply[k] = CancelledError()
-                    e.set()
+            self._cleanup_open_commands()
+
+    def _cleanup_open_commands(self):
+        for k,e in self.reply.items():
+            if isinstance(e,Event):
+                self.reply[k] = CancelledError()
+                e.set()
 
     async def _handle_request(self, a,i,d,msg):
         try:
@@ -238,9 +272,12 @@ class Request(_Stacked):
             raise res
         return res
 
-    async def send_nr(self, action, msg):
+    async def send_nr(self, action, msg=None, **kw):
         # send a message, no reply
+        if msg is None:
+            msg = kw
+        elif kw:
+            raise TypeError("cannot use both msg data and keywords")
         msg = {"a":action,"d":msg}
         await self.parent.send(msg)
-
 

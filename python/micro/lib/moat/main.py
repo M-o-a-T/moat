@@ -18,7 +18,7 @@ def main(state=None, fake_end=True, log=False, fallback=False):
     del _tgm
 
 
-    async def setup(tg):
+    async def setup(tg, state=None):
         import sys
 
 #       nonlocal no_exit
@@ -39,7 +39,7 @@ def main(state=None, fake_end=True, log=False, fallback=False):
             import micropython
             micropython.kbd_intr(-1)
             t,b = await console_stack(reliable=True, log=log, s2=sys.stdout.buffer, force_write=True, console=0xc1)
-            t = t.stack(StdBase, fallback=fallback)
+            t = t.stack(StdBase, fallback=fallback, state=state)
             return await tg.spawn(b.run)
 
         if sys.plaform == "linux":
@@ -51,7 +51,7 @@ def main(state=None, fake_end=True, log=False, fallback=False):
                     from moat.stacks import network_stack_iter
                     async with TaskGroup() as tg:
                         async for t,b in network_stack_iter(multiple=True, port=mp):
-                            t = t.stack(StdBase, fallback=fallback)
+                            t = t.stack(StdBase, fallback=fallback, state=state)
                             return await tg.spawn(b.run)
                 return await tg.spawn(run)
 
@@ -61,16 +61,16 @@ def main(state=None, fake_end=True, log=False, fallback=False):
                 import micropython
                 micropython.kbd_intr(-1)
                 t,b = console_stack(reliable=True, log=log)
-                t = t.stack(StdBase, fallback=fallback)
+                t = t.stack(StdBase, fallback=fallback, state=state)
                 return await tg.spawn(b.run)
 
         raise RuntimeError("Which system does this run on?")
 
-    async def _main():
+    async def _main(state=None):
         import sys
 
         async with TaskGroup() as tg:
-            await tg.spawn(setup,tg)
+            await tg.spawn(setup,tg, state)
 
             # start whatever else needs adding here
 
@@ -81,5 +81,5 @@ def main(state=None, fake_end=True, log=False, fallback=False):
 
 
     from moat.compat import run
-    run(_main)
+    run(_main, state)
 

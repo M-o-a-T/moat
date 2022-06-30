@@ -61,6 +61,8 @@ class NotImpl:
         print("RUN of",self.__class__.__name__)
         pass
 
+    async def start_sub(self, tg):
+        pass
 
 class _Stacked:
     def __init__(self, parent, *a,**k):

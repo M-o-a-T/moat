@@ -19,10 +19,10 @@ from moat.compat import TaskGroup, UAStream
 from moat.util import attrdict, as_service, P, attr_args, process_args, yprint
 from moat.proto.multiplex import Multiplexer
 from moat.proto import RemoteError
-from moat.cmd import BaseCmd
+from moat.cmd import ClientBaseCmd
 
 def add_client_hooks(req):
-    bc = req.stack(BaseCmd)
+    bc = req.stack(ClientBaseCmd)
     bc.cmd_link = lambda _:0
 
 async def copy_over(src, dst):
@@ -215,10 +215,10 @@ async def sync(obj, source):
             
 @main.command(short_help='Reboot MoaT node')
 @click.pass_obj
-#@click.option("-n","--no-run", is_flag=True, help="Don't reboot / run MoaT after updating")
+@click.option("-s","--state", help="State for the next run")
 async def boot(obj):
     """
-    Reset a MoaT node
+    Restart a MoaT node
 
     """
     if not obj.port:
@@ -227,8 +227,11 @@ async def boot(obj):
     async with get_link(obj) as req:
         add_client_hooks(req)
 
+        if state:
+            await req.send(["sys","state"],state=state)
+
         # reboot via the multiplexer
-        logger.info("Files updated. Rebooting target.")
+        logger.info("Rebooting target.")
         await req.send(["mplex","boot"])
 
         #await t.send(["sys","boot"], code="SysBooT")

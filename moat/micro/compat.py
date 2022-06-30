@@ -1,7 +1,6 @@
 import anyio as _anyio
 Event = _anyio.Event
 sleep = _anyio.sleep
-
 import time as _time
 import traceback as _traceback
 import outcome as _outcome
@@ -15,6 +14,9 @@ def print_exc(exc):
 
 def ticks_ms():
     return _time.monotonic_ns() // 1000000
+
+async def sleep_ms(ms):
+    await sleep(ms/1000)
 
 async def wait_for(timeout,p,*a,**k):
     with _anyio.fail_after(timeout):

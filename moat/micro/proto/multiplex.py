@@ -16,7 +16,7 @@ import anyio
 from . import RemoteError
 from ..stacks.unix import unix_stack_iter
 from ..compat import TaskGroup, Event, print_exc
-from ..cmd import Request, BaseCmd
+from ..cmd import Request, BaseCmd, ClientBaseCmd
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +49,9 @@ class CommandClient(Request):
                     e.set()
 
     async def _report_link(self):
+        # forward link state changes to the multiplex client.
         while True:
-            await self.mplex.running.wait()
+            await self.mplex.run_flag.wait()
             await self.send_nr("link",True)
             await self.mplex.stopped.wait()
             await self.send_nr("link",False)
@@ -87,10 +88,32 @@ class CommandClient(Request):
             res = {'d':res,'i':i}
         await self.parent.send(res)
 
+#
+# We need a somewhat-reliable link, with assorted link state.
+# 
 
 class MultiplexCommand(BaseCmd):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        dis_mplex = _MplexCommand(self)
+
+    def cmd_link(self, s):
+        self.request._process_link(s)
+
+
+class _MplexCommand(BaseCmd):
     async def cmd_boot(self):
-        await self.send(["sys","boot"], code="SysBooT")
+        async with self.base.sys_lock:
+            await self.send(["sys","boot"], code="SysBooT")
+            await self.sys_up.wait()
+
+class _StatCommand(BaseCmd):
+    async def cmd_stat(self):
+        pass
+
+class Command(BaseCmd):
+    pass
 
 class Multiplexer(Request):
     """
@@ -136,7 +159,19 @@ class Multiplexer(Request):
         self.quitting = False
         self.last_exc = None
 
+        # use this to coordinate client shutdown
+        self.sys_lock = anyio.Lock()
+        self.run_flag = anyio.Event()
+
+        # finally we need our command handler
         self.stack(MultiplexCommand)
+
+    def _process_link(self, s):
+        if s:
+            self.run_flag.set()
+        elif self.run_flag.is_set():
+            self.run_flag = anyio.Event()
+        self._cleanup_open_commands()
 
     def _gen_req(self, parent):
         self.parent = parent
@@ -157,6 +192,7 @@ class Multiplexer(Request):
                         await anyio.sleep(1)
                         logger.info("Running OK")
                         self.running.set()
+                        await self.send_nr(["sys","is_up"])
                         await anyio.sleep(60)
                         backoff = 1
                         await self.do_stop.wait()
@@ -261,7 +297,7 @@ class Multiplexer(Request):
 
     async def client_cmd(self, a,d):
         if a[0] == "mplex":
-            return await self.child.dispatch(a[1:],d)
+            return await self.child.dispatch(a,d)
         else:
             return await self.send(a,d)
 

@@ -120,12 +120,14 @@ async def main(ctx, socket,port,baudrate,verbose,quiet,reliable,guarded):
 
 @main.command(short_help='Copy MoaT to MicroPython')
 @click.pass_obj
-@click.option("-n","--no-run", is_flag=True, help="Don't reboot / run MoaT after updating")
-@click.option("-s","--source", type=click.Path(dir_okay=True,file_okay=False,path_type=anyio.Path), required=True, help="Files to sync")
+@click.option("-n","--no-run", is_flag=True, help="Don't run MoaT after updating")
+@click.option("-N","--no-reset", is_flag=True, help="Don't reboot after updating")
+@click.option("-s","--source", type=click.Path(dir_okay=True,file_okay=False,path_type=anyio.Path), help="Files to sync")
+@click.option("-S","--state", type=str, help="State to enter")
 @click.option("-f","--force-exit", is_flag=True, help="Halt via an error packet")
 @click.option("-e","--exit", is_flag=True, help="Halt using an exit message")
 @click.option("-v","--verbose", is_flag=True, help="Use verbose mode on the target")
-async def setup(obj, source, no_run, force_exit, exit, verbose):
+async def setup(obj, source, no_run, no_reset, force_exit, exit, verbose, state):
     """
     Initial sync of MoaT code to a MicroPython device.
 
@@ -164,11 +166,17 @@ async def setup(obj, source, no_run, force_exit, exit, verbose):
 
         async with DirectREPL(ser) as repl:
             dst = MoatDevPath("/").connect_repl(repl)
-            await copy_over(source, dst)
+            if source:
+                await copy_over(source, dst)
+            if state:
+                await repl.exec(f"f=open('moat.state','w'); f.write({state!r}); f.close()")
+            if no_reset:
+                return
 
+            await repl.soft_reset(run_main=False)
             if no_run:
                 return
-            await repl.soft_reset(run_main=False)
+
             o,e = await repl.exec_raw(f"import main; main.go_moat(log={verbose !r})", timeout=30)
             if o:
                 print(o)
@@ -190,8 +198,7 @@ async def setup(obj, source, no_run, force_exit, exit, verbose):
 @main.command(short_help='Sync MoaT code')
 @click.pass_obj
 @click.option("-s","--source", type=click.Path(dir_okay=True,file_okay=False,path_type=anyio.Path), required=True, help="Files to sync")
-@click.option("-n","--no-run", is_flag=True, help="Don't reboot / run MoaT after updating")
-async def sync(obj, source, no_run):
+async def sync(obj, source):
     """
     Sync of MoaT code on a running MicroPython device.
 
@@ -203,26 +210,37 @@ async def sync(obj, source, no_run):
         add_client_hooks(req)
 
         dst = MoatFSPath("/").connect_repl(req)
-        if not await copy_over(source, dst):
-            return
-        if no_run:
-            return
+        await copy_over(source, dst)
+
+            
+@main.command(short_help='Reboot MoaT node')
+@click.pass_obj
+#@click.option("-n","--no-run", is_flag=True, help="Don't reboot / run MoaT after updating")
+async def boot(obj):
+    """
+    Reset a MoaT node
+
+    """
+    if not obj.port:
+        raise click.UsageError("You need to specify a port")
+
+    async with get_link(obj) as req:
+        add_client_hooks(req)
 
         # reboot via the multiplexer
         logger.info("Files updated. Rebooting target.")
-        await t.send(["mplex","boot"])
+        await req.send(["mplex","boot"])
 
         #await t.send(["sys","boot"], code="SysBooT")
         await anyio.sleep(2)
 
-        res = await t.request.send(["sys","test"])
+        res = await req.request.send(["sys","test"])
         assert res == b"a\x0db\x0ac", res
 
-        res = await t.request.send("ping","pong")
+        res = await req.request.send("ping","pong")
         if res != "R:pong":
             raise RuntimeError("wrong reply")
         print("Success:", res)
-        await task.cancel()
 
             
 @main.command(short_help='Send a MoaT command')

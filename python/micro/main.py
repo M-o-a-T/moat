@@ -1,106 +1,67 @@
 cfg = {}
 
+import machine
 
-def go_moat(fake_end=True, log=False, fallback=None):
-    import uos
-    try:
-        uos.stat("moat_skip")
-    except OSError:
-        pass
-    else:
-        uos.unlink("moat_skip")
-        return
+##
+# State:
+# skip -- do nothing, go to prompt
+# fallback -- use fallback. NO RECOVERY except with boot command
+# fbskip -- use fallback. Skip if there's a crash
+# fbonce -- use fallback, skip next
+# test -- work normally now, always use fallback next time
+# std -- work normally now, use fallback if there's a crash
+# once -- work normally now, skip next
+# main -- always work normally
 
-    if fallback is None:
+def go_moat(state=None, fake_end=True, log=False):
+    import uos, utime
+
+    uncond = {
+            "test":"fallback",
+            "fbonce":"fallback",
+            "once":"skip",
+    }
+    crash = {
+            "std":"fallback",
+            "fbskip":"skip",
+    }
+    if state is None:
         try:
-            uos.stat("moat_fallback")
+            f=open("moat.state","r")
         except OSError:
-            fallback=False
+            print("No 'moat.state' found")
+            return
         else:
-            fallback=True
-
-    if fallback:
+            state=f.read()
+            f.close()
+    if state=="skip":
+        print("Skip.")
+        return
+    if state in ("fallback","fbskip","fbonce"):
         import usys
         usys.path.insert(0,"/fallback")
+    if state in uncond:
+        f=open("moat.state","w")
+        f.write(uncond[state])
+        f.close()
 
-    from moat.compat import TaskGroup, print_exc
-    from moat.base import StdBase
+    print("Start MoaT:",state)
+    from moat.compat import print_exc
+    from moat.main import main
 
-    from uasyncio import taskgroup as _tgm, sleep_ms
-
-    _tgm.DEBUG=True
-    del _tgm
-
-
-    async def setup(tg):
-        import sys
-
-#       nonlocal no_exit
-
-#       import msgpack
-#       global cfg
-#       try:
-#           with open("moat.cfg") as f:
-#               cfg.update(msgpack.unpack(f))
-#       except OSError:
-#           pass
-#       else:
-#           no_exit = cfg.get("console",{}).get("no_exit",no_exit)
-
-        if sys.platform == "rp2":
-            # use the console. USB, so no data loss.
-            from moat.stacks import console_stack
-            import micropython
-            micropython.kbd_intr(-1)
-            t,b = await console_stack(reliable=True, log=log, s2=sys.stdout.buffer, force_write=True, console=0xc1)
-            t = t.stack(StdBase, fallback=fallback)
-            return await tg.spawn(b.run)
-
-        if sys.plaform == "linux":
-            mp = uos.getenv("MOATPORT")
-            if mp:
-                mp = int(mp)
-                # Use networking. On Linux we can accept multiple parallel connections.
-                async def run():
-                    from moat.stacks import network_stack_iter
-                    async with TaskGroup() as tg:
-                        async for t,b in network_stack_iter(multiple=True, port=mp):
-                            t = t.stack(StdBase, fallback=fallback)
-                            return await tg.spawn(b.run)
-                return await tg.spawn(run)
-
-            else:
-                # Console test
-                from moat.stacks import console_stack
-                import micropython
-                micropython.kbd_intr(-1)
-                t,b = console_stack(reliable=True, log=log)
-                t = t.stack(StdBase, fallback=fallback)
-                return await tg.spawn(b.run)
-
-        raise RuntimeError("Which system does this run on?")
-
-    async def main():
-        import sys
-
-        async with TaskGroup() as tg:
-            await tg.spawn(setup,tg)
-
-            # start whatever else needs adding here
-
-            # if started from the command line, fake being done
-            await sleep_ms(1500)
-            if fake_end:
-                sys.stdout.write("OK\x04\x04>")
-
-
-    from moat.compat import run
-    run(main)
+    try:
+        main(state=state, fake_end=fake_end, log=log)
+    except Exception as exc:
+        if state in crash:
+            f=open("moat.state","w")
+            f.write(crash[state])
+            f.close()
+        print_exc(exc)
+        utime.sleep_ms(500)
+        machine.soft_reset()
+    else:
+        print("MoaT Ended.")
 
 if __name__ == "__main__":
-    try:
-        go_moat(fake_end=False)
-    except SystemExit:
-        pass
-    except Exception:
-        go_moat(fake_end=False, fallback=True)
+    go_moat(fake_end=False)
+

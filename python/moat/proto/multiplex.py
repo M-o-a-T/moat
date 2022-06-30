@@ -16,7 +16,7 @@ import anyio
 from . import RemoteError
 from ..stacks.unix import unix_stack_iter
 from ..compat import TaskGroup, Event, print_exc
-from ..cmd import Request
+from ..cmd import Request, BaseCmd
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +88,10 @@ class CommandClient(Request):
         await self.parent.send(res)
 
 
+class MultiplexCommand(BaseCmd):
+    async def cmd_boot(self):
+        await self.send(["sys","boot"], code="SysBooT")
+
 class Multiplexer(Request):
     """
     This is the multiplexer object. It connects to the embedded system via
@@ -131,6 +135,8 @@ class Multiplexer(Request):
         self.do_stop = anyio.Event()
         self.quitting = False
         self.last_exc = None
+
+        self.stack(MultiplexCommand)
 
     def _gen_req(self, parent):
         self.parent = parent
@@ -254,7 +260,10 @@ class Multiplexer(Request):
 #                   pass
 
     async def client_cmd(self, a,d):
-        return await self.send(a,d)
+        if a[0] == "mplex":
+            return await self.child.dispatch(a[1:],d)
+        else:
+            return await self.send(a,d)
 
     async def run(self):
         """

@@ -84,6 +84,15 @@ class _Stacked:
             await self.child.run()
             runner.cancel()
 
+    async def send(self, *a, **k):
+        return await self.parent.send(*a, **k)
+
+    async def recv(self, *a, **k):
+        return await self.parent.recv(*a, **k)
+
+    async def dispatch(self, *a, **k):
+        return await self.child.dispatch(*a, **k)
+
 
 class Logger(_Stacked):
     def __init__(self, parent, txt="S", **k):

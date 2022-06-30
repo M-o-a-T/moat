@@ -12,8 +12,28 @@ class SysCmd(BaseCmd):
     async def later(self, delay, p,*a,**k):
         async def _later(d,p,a,k):
             await sleep_ms(d)
-            await p(*a,**k)
+            try:
+                await p(*a,**k)
+            except Exception:
+                print(getattr(p,'__name__',p), a,k)
+                raise
         await self.request._tg.spawn(_later,delay,p,a,k)
+
+    async def cmd_state(self, state=None):
+        # set/return the MoaT state file contents
+        if state is None:
+            try:
+                f=open("moat.status","r")
+            except OSError:
+                return "skip"
+            else:
+                res = f.read()
+                f.close()
+                return res
+        else:
+            f=open("moat.status","w")
+            f.write(state)
+            f.close()
 
     async def cmd_test(self):
         # return a simple test string
@@ -53,7 +73,7 @@ class SysCmd(BaseCmd):
         if code != "SysBooT":
             raise RuntimeError("wrong")
 
-        async def _boot(self):
+        async def _boot():
             machine.soft_reset()
         await self.later(100,_boot)
         return True
@@ -66,7 +86,7 @@ class SysCmd(BaseCmd):
         f = open("/moat_skip","w")
         f.close()
 
-        async def _boot(self):
+        async def _boot():
             machine.soft_reset()
         await self.later(100,_boot)
         return True
@@ -74,7 +94,7 @@ class SysCmd(BaseCmd):
     async def cmd_reset(self, code):
         if code != "SysRsT":
             raise RuntimeError("wrong")
-        async def _boot(self):
+        async def _boot():
             machine.reset()
         await self.later(100,_boot)
         return True
@@ -83,7 +103,7 @@ class SysCmd(BaseCmd):
         # terminate the MoaT stack w/o rebooting
         if code != "SysStoP":
             raise RuntimeError("wrong")
-        async def _boot(self):
+        async def _boot():
             raise SystemExit
         await self.later(100,_boot)
         return True
@@ -94,9 +114,9 @@ class SysCmd(BaseCmd):
 
     async def cmd_rtc(self, d=None):
         if d is None:
-            machine.RTC((d[0],d[1],d[2],0, d[3],d[4],d[5],0))
-        else:
             return machine.RTC.now()
+        else:
+            machine.RTC((d[0],d[1],d[2],0, d[3],d[4],d[5],0))
 
     async def cmd_pin(self, n, v=None, **kw):
         p=machine.Pin(n, **kw)

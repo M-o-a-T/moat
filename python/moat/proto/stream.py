@@ -1,0 +1,1 @@
+../../micro/lib/moat/proto/stream.py

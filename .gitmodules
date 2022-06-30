@@ -6,4 +6,10 @@
 	url = https://github.com/M-o-a-T/SerialPacker.git
 [submodule "python/moat/util"]
 	path = python/moat/util
-	url = git@github.com:smurfix/util-py.git
+	url = https://github.com/smurfix/util-py.git
+[submodule "python/lib/micropython"]
+	path = python/lib/micropython
+	url = https://github.com/smurfix/micropython.git
+[submodule "python/lib/micropython-lib"]
+	path = python/lib/micropython-lib
+	url = https://github.com/smurfix/micropython-lib.git

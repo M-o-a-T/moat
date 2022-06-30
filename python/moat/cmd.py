@@ -1,1 +1,1 @@
-../micro/moat/cmd.py
+../micro/lib/moat/cmd.py

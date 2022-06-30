@@ -125,7 +125,7 @@ class Unpacker(object):
     def __init__(
         self,
         stream=None,
-        read_size=0,
+        read_size=64,
         use_list=True,
         object_hook=None,
         list_hook=None,
@@ -343,6 +343,13 @@ class Unpacker(object):
         return typ, n, obj
 
     async def unpack(self):
+        res = await self._unpack()
+        # Buffer management: chop off the part we've read
+        self._buffer = self._buffer[self._buff_i:]
+        self._buff_i = 0
+        return res
+
+    async def _unpack(self):
         typ, n, obj = await self._read_header()
 
         # TODO should we eliminate the recursion?

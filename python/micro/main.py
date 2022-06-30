@@ -1,7 +1,7 @@
 cfg = {}
 
 
-def go_moat(fake_end=True, log=False):
+def go_moat(fake_end=True, log=False, fallback=None):
     import uos
     try:
         uos.stat("moat_skip")
@@ -10,6 +10,18 @@ def go_moat(fake_end=True, log=False):
     else:
         uos.unlink("moat_skip")
         return
+
+    if fallback is None:
+        try:
+            uos.stat("moat_fallback")
+        except OSError:
+            fallback=False
+        else:
+            fallback=True
+
+    if fallback:
+        import usys
+        usys.path.insert(0,"/fallback")
 
     from moat.compat import TaskGroup, print_exc
     from moat.base import StdBase
@@ -40,8 +52,8 @@ def go_moat(fake_end=True, log=False):
             from moat.stacks import console_stack
             import micropython
             micropython.kbd_intr(-1)
-            t,b = await console_stack(reliable=True, log=log, s2=sys.stdout, force_write=True)
-            t = t.stack(StdBase)
+            t,b = await console_stack(reliable=True, log=log, s2=sys.stdout.buffer, force_write=True, console=0xc1)
+            t = t.stack(StdBase, fallback=fallback)
             return await tg.spawn(b.run)
 
         if sys.plaform == "linux":
@@ -53,7 +65,7 @@ def go_moat(fake_end=True, log=False):
                     from moat.stacks import network_stack_iter
                     async with TaskGroup() as tg:
                         async for t,b in network_stack_iter(multiple=True, port=mp):
-                            t = t.stack(StdBase)
+                            t = t.stack(StdBase, fallback=fallback)
                             return await tg.spawn(b.run)
                 return await tg.spawn(run)
 
@@ -63,7 +75,7 @@ def go_moat(fake_end=True, log=False):
                 import micropython
                 micropython.kbd_intr(-1)
                 t,b = console_stack(reliable=True, log=log)
-                t = t.stack(StdBase)
+                t = t.stack(StdBase, fallback=fallback)
                 return await tg.spawn(b.run)
 
         raise RuntimeError("Which system does this run on?")
@@ -86,4 +98,9 @@ def go_moat(fake_end=True, log=False):
     run(main)
 
 if __name__ == "__main__":
-    go_moat(fake_end=False)
+    try:
+        go_moat(fake_end=False)
+    except SystemExit:
+        pass
+    except Exception:
+        go_moat(fake_end=False, fallback=True)

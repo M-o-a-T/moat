@@ -18,7 +18,11 @@ def main(state=None, fake_end=True, log=False, fallback=False):
     del _tgm
 
 
-    async def setup(tg, state=None):
+    def cfg_setup(t, apps):
+        from app.bms import BattCmd
+        t.dis_batt = BattCmd(t, apps["batt"])
+
+    async def setup(tg, state, apps):
         import sys
 
 #       nonlocal no_exit
@@ -40,6 +44,7 @@ def main(state=None, fake_end=True, log=False, fallback=False):
             micropython.kbd_intr(-1)
             t,b = await console_stack(reliable=True, log=log, s2=sys.stdout.buffer, force_write=True, console=0xc1)
             t = t.stack(StdBase, fallback=fallback, state=state)
+            cfg_setup(t, apps)
             return await tg.spawn(b.run)
 
         if sys.plaform == "linux":
@@ -52,6 +57,7 @@ def main(state=None, fake_end=True, log=False, fallback=False):
                     async with TaskGroup() as tg:
                         async for t,b in network_stack_iter(multiple=True, port=mp):
                             t = t.stack(StdBase, fallback=fallback, state=state)
+                            cfg_setup(t, apps)
                             return await tg.spawn(b.run)
                 return await tg.spawn(run)
 
@@ -62,6 +68,7 @@ def main(state=None, fake_end=True, log=False, fallback=False):
                 micropython.kbd_intr(-1)
                 t,b = console_stack(reliable=True, log=log)
                 t = t.stack(StdBase, fallback=fallback, state=state)
+                cfg_setup(t, apps)
                 return await tg.spawn(b.run)
 
         raise RuntimeError("Which system does this run on?")
@@ -69,12 +76,20 @@ def main(state=None, fake_end=True, log=False, fallback=False):
     async def _main(state=None):
         import sys
 
+        # config: load apps
+
+        from app.bms import Batt
+        batt=Batt()
+        apps=dict(batt=batt)
+
         async with TaskGroup() as tg:
-            await tg.spawn(setup,tg, state)
+            # start comms (and load app frontends)
+            await tg.spawn(setup,tg, state, apps)
 
-            # start whatever else needs adding here
+            # start apps
+            await tg.spawn(batt.run)
 
-            # if started from the command line, fake being done
+            # If started from the ("raw") REPL, fake being done
             await sleep_ms(1500)
             if fake_end:
                 sys.stdout.write("OK\x04\x04>")

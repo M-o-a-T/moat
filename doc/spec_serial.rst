@@ -23,7 +23,12 @@ continuously, i.e. transmission may not pause during a packet.
 Frame format
 ============
 
-1 byte: \x01 to \x04 depending on priority. Lower is better.
+Bus messages
+++++++++++++
+
+These messages are forwarded to the bus connected to this peripheral.
+
+1 byte: \x01, \x02, \x81, \x82 depending on priority. Lower is better.
 
 1/2 bytes: length. If the first byte's bit 8 is set, it is the MSB of a
            2-byte length.
@@ -32,9 +37,8 @@ n bytes: header and data; see `doc/spec_message.rst` for details.
 
 2 bytes: CRC-16, MSB first. Polynomial 0xAC9A, reversed.
 
-
 ACKs
-====
+++++
 
 1 byte: \x06 acknowledges sending one message.
 
@@ -47,5 +51,6 @@ Debugging
 
 Any message beginning with a byte >= 0x20 is a console message. It must not
 contain any bytes between \x00 and \x06 and should end with a line feed
-(``\n``, 0x0A).
+(``\n``, 0x0A). Any content must be valid UTF-8 and should be limited to
+ASCII.
 

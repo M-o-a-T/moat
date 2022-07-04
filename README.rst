@@ -140,8 +140,47 @@ bus system.
 The details are documented in ``doc/spec_infra.rst``.
 
 
----------------------
-Building the firmware
----------------------
+------------
+MoatBus code
+------------
 
-Run `make.sh`.
+The MoaT bus is implemented in three programming languages: C, Forth, and Python.
+
+C
+====
+
+The MoatBus C code runs on top of the `RIOT`_ embedded operating system
+because it's too complex to not use multiple threads.
+
+The code is split into "boot" and "app" parts; the intent is for the
+application to be update-able over the wire. Same for the boot code, if it
+can be squeezed into the app area.
+
+The Moat Bus does not use server-side C code.
+
+.. _RIOT: https://www.riot-os.org/
+
+Building the client
+-------------------
+
+Run ``make`` in the ``c/boot`` subdirectory.
+
+Python
+======
+
+Python is used extensively for the host system: read and dispatch serial
+bus messages, allocate addresses, interface with a message bus (MQTT),
+and whatnot.
+
+A MicroPython port for the client side is possible but has not been started
+yet.
+
+Forth
+=====
+
+Forth is an interesting alternative for clients that are too small to run
+MicroPython but complex enough that running an interactive interpreter on
+them makes sense.
+
+Some work to support a Mecrisp Stellaris-based client has been done.
+

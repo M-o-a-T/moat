@@ -133,6 +133,7 @@ Client    Server       2        read reply
 Server    Client       3        data directory write
 Client    Server       3        write reply
 any       any          0…3      reserved
+Broadcast Broadcast    1        Point-to-Point
 Broadcast any          any      reserved
 Client    Broadcast    any      broadcast message
 any       any          any      direct message
@@ -148,7 +149,7 @@ Clients may not send command-zero broadcasts. Again, address collision
 notifications are the sole exception.
 
 Clients may receive broadcast messages from other clients, if so
-configured, but they may only transmit delayed low-priority messages in reply.
+configured, but any reply *must* be a randomly-delayed low-priority message.
 
 
 Broadcast messages
@@ -169,6 +170,12 @@ because the address of the destination may change.
 
 The details are described in the Data Dictionary specification, below.
 
+Point-to-Point links
+====================
+
+MoaT messages can be transmitted on point-to-point links, e.g. a TTL serial
+connection to a microcontroller. These links typically are somewhat
+unreliable. 
 
 Data dictionary
 ===============

@@ -1,5 +1,5 @@
 [submodule "picolibc"]
-	path = picolibc
+	path = c/picolibc
 	url = https://github.com/M-o-a-T/picolibc.git
 [submodule "python/lib/serialpacker"]
 	path = python/lib/serialpacker

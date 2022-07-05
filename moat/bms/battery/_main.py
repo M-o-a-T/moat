@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import sys
 import errno
@@ -393,14 +393,14 @@ async def mplex(obj):
 		async with as_service(obj):
 
 			apps = []
-			for v in getattr(obj.cfg, "apps", {}):
+			for name,v in getattr(obj.cfg, "apps", {}).items():
 				cfg = getattr(v,"cfg",attrdict())
 				try:
 					app = v.app
 				except AttributeError:
 					app = None
 				else:
-					app = imp(app)(cfg, obj.cfg, v.name)
+					app = imp(app)(cfg, obj.cfg, name)
 					await tg.start(app.run)
 				try:
 					cmd = v.cmd
@@ -408,7 +408,7 @@ async def mplex(obj):
 					pass
 				else:
 					cmd = imp(cmd)
-					apps.append((v.name,cmd,app))
+					apps.append((name,cmd,app))
 
 			mplex = Multiplexer(stream_factory, obj.socket)
 			for name,cmd,app in apps:

@@ -18,12 +18,7 @@ def imp(name):
 
 async def gen_apps(cfg, tg, print_exc):
     apps = []
-    for v in cfg.get("apps",()):
-        try:
-            name = v["name"]
-        except KeyError:
-            print("Unnamed app!", v)
-            continue
+    for name,v in cfg.get("apps",{}).items():
         try:
             cmd = v["cmd"]
         except KeyError:

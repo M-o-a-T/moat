@@ -19,40 +19,18 @@ import machine as M
 # rel: PIN  # relay
 # 
 class Batt:
-	def __init__(self):
-		self.cfg = dict(
-			u=dict(
-				pin=26,
-				min=0,
-				max=65535,
-			),
-			i=dict(
-				pin=27,
-				ref=28,
-				min=-32000,
-				max=32000,
-			),
-			poll=dict(
-				t=500,
-				d=200,
-			),
-			rel=dict(
-				pin=2,
-				t=10000,
-				t1=1000,
-			),
-			xmit=dict(
-				a=["bat","info"],
-				n=10,
-			),
-		)
+	def __init__(self, cfg, gcfg):
+		self.cfg = cfg
 		self.xmit_evt = Event()
 
 	def _check(self):
 		c = self.cfg
 		d = c["poll"]["d"]
-		self.val_u = (self.val_u*(1000-d) + self.adc_u.read_u16()*d) / 1000
-		self.val_i = (self.val_i*(1000-d) + (self.adc_i.read_u16()-self.adc_ir.read_u16())*d) / 1000
+
+		u = self.adc_u.read_u16() * self.cfg["u"]["scale"] + self.cfg["u"]["offset"]
+		i = (self.adc_i.read_u16()-self.adc_ir.read_u16()) * self.cfg["i"]["scale"] + self.cfg["i"]["offset"]
+		self.val_u = (self.val_u*(1000-d) + u*d) / 1000
+		self.val_i = (self.val_i*(1000-d) + i*d) / 1000
 
 		self.sum_w += self.val_u*self.val_i
 		self.n_w += 1
@@ -77,7 +55,15 @@ class Batt:
 		)
 		return res
 
+	def set_relay_force(self, st):
+		self.relay_force = st
+		if st is not None:
+			self.relay.value(st)
+		else:
+			self.sw_ok = False
+
 	def update_cfg(self, cfg):
+		ocfg = self.cfg
 		self.cfg = cfg
 		res = dict(
 			w=self.sum_w,
@@ -85,6 +71,8 @@ class Batt:
 		)
 		self.sum_w = 0
 		self.n_w = 0
+		self.val_u = (self.val_u-ocfg['u']['offset'])/ocfg['u']['scale']*cfg['u']['scale']+cfg['u']['offset']
+		self.val_i = (self.val_i-ocfg['i']['offset'])/ocfg['i']['scale']*cfg['i']['scale']+cfg['i']['offset']
 		return res
 
 	async def run(self):
@@ -94,14 +82,15 @@ class Batt:
 		self.relay = M.Pin(self.cfg["rel"]["pin"], M.Pin.OUT)
 		self.sum_w = 0
 		self.n_w = 0
+		self.relay_force = None
 
 		def sa(a,n=10):
 			s=0
 			for _ in range(n):
 				s += a.read_u16()
 			return s/n
-		self.val_u = sa(self.adc_u)
-		self.val_i = sa(self.adc_i)-sa(self.adc_ir)
+		self.val_u = sa(self.adc_u) * self.cfg["u"]["scale"] + self.cfg["u"]["offset"]
+		self.val_i = (sa(self.adc_i)-sa(self.adc_ir)) * self.cfg["i"]["scale"] + self.cfg["i"]["offset"]
 
 		self.sw_ok = False
 
@@ -118,11 +107,11 @@ class Batt:
 					xmit_n=0
 
 			if self._check():
-				if self.sw_ok and not self.relay.value():
+				if self.sw_ok and self.relay_force is None and not self.relay.value():
 					self.relay.on()
 					xmit_n=0
 
-			elif self.relay.value():
+			elif self.relay_force is None and self.relay.value():
 				self.relay.off()
 				self.t_sw = ticks_add(self.t, self.cfg["rel"]["t"])
 				self.sw_ok = False
@@ -132,30 +121,34 @@ class Batt:
 			if xmit_n <= 0:
 				self.xmit_evt.set()
 				self.xmit_evt = Event()
-				xmit_n = self.cfg["xmit"]["n"]
+				xmit_n = self.cfg["poll"]["n"]
 
 			t = ticks_ms()
 			td = ticks_diff(self.t, t)
-			print("Sleep",td)
 			if td > 0:
 				await sleep_ms(td)
 
 
 class BattCmd(BaseCmd):
-	def __init__(self, parent, batt):
+	def __init__(self, parent, batt, name):
 		super().__init__(parent)
 		self.batt = batt
+		self.name = name
 
 	def run(self):
 		while True:
 			await self.batt.xmit_evt.wait()
-			if "xmit" in self.batt.cfg:
-				await self.request.send_nr(self.batt.cfg["xmit"]["a"], self.batt.stat())
+			await self.request.send_nr([self.name,"info"], self.batt.stat())
 	
+	def cmd_rly(self, st):
+		self.batt.set_relay_force(st)
+
 	def cmd_s(self):
 		return self.batt.stat()
 
 	def cmd_cfg(self, cfg=None):
 		if cfg is None:
 			return self.batt.cfg
-		return self.batt.update_cfg(cfg)
+		res = self.batt.update_cfg(cfg)
+		await self.request.send_nr([self.name,"cfg"], cfg=self.batt.cfg)
+		return res

@@ -2,12 +2,59 @@ cfg = {}
 
 import machine
 
-def main(state=None, fake_end=True, log=False, fallback=False):
-    import uos
+from builtins import __import__ as _imp
 
-    if fallback:
-        import usys
-        usys.path.insert(0,"/fallback")
+
+def imp(name):
+    m,n = name.rsplit(".",1)
+    try:
+        m = _imp(m)
+        for a in name.split(".")[1:]:
+            m = getattr(m,a)
+        return m
+    except AttributeError:
+        raise AttributeError(name)
+
+
+async def gen_apps(cfg, tg, print_exc):
+    apps = []
+    for v in cfg.get("apps",()):
+        try:
+            name = v["name"]
+        except KeyError:
+            print("Unnamed app!", v)
+            continue
+        try:
+            cmd = v["cmd"]
+        except KeyError:
+            cmd = None
+        else:
+            try:
+                cmd = imp(cmd)
+            except Exception as exc:
+                print("Could not load",cmd,repr(exc))
+                print_exc(exc)
+                continue
+        try:
+            app = v["app"]
+        except KeyError:
+            app = None
+        else:
+            try:
+                app = imp(app)(v.get("cfg",{}), cfg)
+            except Exception as exc:
+                print("Could not start",name,app,repr(exc))
+                print_exc(exc)
+                continue
+            await tg.spawn(app.run)
+
+        a = (name,app,cmd,v.get("cfg", {}))
+        apps.append(a)
+    return apps
+
+
+def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
+    import uos
 
     from moat.compat import TaskGroup, print_exc
     from moat.base import StdBase
@@ -19,8 +66,13 @@ def main(state=None, fake_end=True, log=False, fallback=False):
 
 
     def cfg_setup(t, apps):
-        from app.bms import BattCmd
-        t.dis_batt = BattCmd(t, apps["batt"])
+        # start apps
+        for name,app,cmd,lcfg in apps:
+            if cmd is None:
+                continue
+            cmd = cmd(t, app if app is not None else lcfg, name)
+            setattr(t, "dis_"+name, cmd)
+
 
     async def setup(tg, state, apps):
         import sys
@@ -43,7 +95,7 @@ def main(state=None, fake_end=True, log=False, fallback=False):
             import micropython
             micropython.kbd_intr(-1)
             t,b = await console_stack(reliable=True, log=log, s2=sys.stdout.buffer, force_write=True, console=0xc1)
-            t = t.stack(StdBase, fallback=fallback, state=state)
+            t = t.stack(StdBase, fallback=fallback, state=state, cfg=cfg)
             cfg_setup(t, apps)
             return await tg.spawn(b.run)
 
@@ -56,7 +108,7 @@ def main(state=None, fake_end=True, log=False, fallback=False):
                     from moat.stacks import network_stack_iter
                     async with TaskGroup() as tg:
                         async for t,b in network_stack_iter(multiple=True, port=mp):
-                            t = t.stack(StdBase, fallback=fallback, state=state)
+                            t = t.stack(StdBase, fallback=fallback, state=state, cfg=cfg)
                             cfg_setup(t, apps)
                             return await tg.spawn(b.run)
                 return await tg.spawn(run)
@@ -67,34 +119,28 @@ def main(state=None, fake_end=True, log=False, fallback=False):
                 import micropython
                 micropython.kbd_intr(-1)
                 t,b = console_stack(reliable=True, log=log)
-                t = t.stack(StdBase, fallback=fallback, state=state)
+                t = t.stack(StdBase, fallback=fallback, state=state, cfg=cfg)
                 cfg_setup(t, apps)
                 return await tg.spawn(b.run)
 
         raise RuntimeError("Which system does this run on?")
 
-    async def _main(state=None):
+    async def _main():
         import sys
 
         # config: load apps
 
-        from app.bms import Batt
-        batt=Batt()
-        apps=dict(batt=batt)
-
         async with TaskGroup() as tg:
+            apps = await gen_apps(cfg, tg, print_exc)
+
             # start comms (and load app frontends)
             await tg.spawn(setup,tg, state, apps)
-
-            # start apps
-            await tg.spawn(batt.run)
 
             # If started from the ("raw") REPL, fake being done
             await sleep_ms(1500)
             if fake_end:
                 sys.stdout.write("OK\x04\x04>")
 
-
     from moat.compat import run
-    run(_main, state)
+    run(_main)
 

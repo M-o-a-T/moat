@@ -96,7 +96,7 @@ class MultiplexCommand(BaseCmd):
     def __init__(self, parent):
         super().__init__(parent)
 
-        dis_mplex = _MplexCommand(self)
+        self.dis_mplex = _MplexCommand(self)
 
     def cmd_link(self, s):
         self.request._process_link(s)
@@ -104,9 +104,11 @@ class MultiplexCommand(BaseCmd):
 
 class _MplexCommand(BaseCmd):
     async def cmd_boot(self):
-        async with self.base.sys_lock:
+        async with self.request.sys_lock:
+            e = self.request.stopped
             await self.send(["sys","boot"], code="SysBooT")
-            await self.sys_up.wait()
+            await e.wait()
+            await self.request.run_flag.wait()
 
 class _StatCommand(BaseCmd):
     async def cmd_stat(self):

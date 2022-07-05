@@ -216,7 +216,6 @@ class Request(_Stacked):
             await self.parent.send(res)
 
 
-
     async def dispatch(self, msg):
         if not isinstance(msg,dict):
             print("?",msg)

@@ -6,7 +6,7 @@ from copy import deepcopy
 
 from . import NotGiven
 
-__all__ = ["combine_dict", "drop_dict", "attrdict"]
+__all__ = ["combine_dict", "drop_dict", "attrdict", "to_attrdict"]
 
 
 def combine_dict(*d, cls=dict, deep=False) -> dict:
@@ -189,3 +189,14 @@ class attrdict(dict):
             if v:
                 break
         return val
+
+def to_attrdict(d) -> attrdict:
+    """
+    Return a hierarchy with all dicts converted to attrdicts.
+    """
+    if isinstance(d,dict):
+        return attrdict((k,to_attrdict(v)) for k,v in d.items())
+    if isinstance(d,(tuple,list)):
+        return [attrdict(v) for v in d]
+    return d
+

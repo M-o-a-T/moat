@@ -1,6 +1,7 @@
 cfg = {}
 
 import machine
+import msgpack
 
 ##
 # State:
@@ -15,6 +16,7 @@ import machine
 
 def go_moat(state=None, fake_end=True, log=False):
     import uos, utime
+    fallback=False
 
     uncond = {
             "test":"fallback",
@@ -25,6 +27,7 @@ def go_moat(state=None, fake_end=True, log=False):
             "std":"fallback",
             "fbskip":"skip",
     }
+
     if state is None:
         try:
             f=open("moat.state","r")
@@ -40,6 +43,8 @@ def go_moat(state=None, fake_end=True, log=False):
     if state in ("fallback","fbskip","fbonce"):
         import usys
         usys.path.insert(0,"/fallback")
+        fallback = True
+
     if state in uncond:
         f=open("moat.state","w")
         f.write(uncond[state])
@@ -50,7 +55,16 @@ def go_moat(state=None, fake_end=True, log=False):
     from moat.main import main
 
     try:
-        main(state=state, fake_end=fake_end, log=log)
+        f=open("moat_fb.cfg" if fallback else "moat.cfg", "rb")
+    except OSError:
+        cfg = {}
+    else:
+        cfg = f.read()
+        f.close()
+        cfg = msgpack.unpackb(cfg)
+
+    try:
+        main(state=state, fake_end=fake_end, log=log, cfg=cfg, fallback=fallback)
     except Exception as exc:
         if state in crash:
             f=open("moat.state","w")

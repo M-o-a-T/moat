@@ -6,6 +6,7 @@ import pathlib
 import binascii
 import hashlib
 import stat
+from .proto import RemoteError
 
 import logging
 logger = logging.getLogger(__name__)
@@ -484,7 +485,7 @@ async def _nullcheck(p):
     """Null check function, always True"""
     if await p.is_dir():
         return p.name != "__pycache__"
-    if p.suffix in (".py",".mpy"):
+    if p.suffix in (".py",".mpy", ".state"):
         return True
     logger.info("Ignored: %s", p)
     return False
@@ -506,6 +507,10 @@ async def copytree(src,dst,check=_nullcheck):
             s2 = (await dst.stat()).st_size
         except FileNotFoundError:
             s2 = -1
+        except RemoteError as err:
+            if err.args[0] != "fn":
+                raise
+            s2 = -1
         if s1 == s2:
             h1 = await sha256(src)
             h2 = await sha256(dst)
@@ -519,8 +524,11 @@ async def copytree(src,dst,check=_nullcheck):
             logger.debug("Copy: unchanged %s > %s", src,dst)
             return 0
     else:
-        if not await src.is_dir():
-            return 0  # duh
+        try:
+            s = await dst.stat()
+        except (OSError,RemoteError):
+            await dst.mkdir()
+
         logger.info("Copy: dir %s > %s", src,dst)
         n = 0
         if not await dst.exists():

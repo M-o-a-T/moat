@@ -372,6 +372,8 @@ class Unpacker(object):
                 ret = self._object_hook(ret)
             return ret
         if typ == TYPE_RAW:
+            if isinstance(obj, memoryview):  # sigh
+                obj = bytearray(obj)
             return obj.decode("utf_8", self._unicode_errors)
         if typ == TYPE_BIN:
             if self._min_memview_len<0 and len(obj) < self._min_memview_len:

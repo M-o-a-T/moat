@@ -37,8 +37,8 @@ class Batt:
 		async with self._srv as l:
 			await l.set(self.vlo, float(cfg.u.ext.min))
 			await l.set(self.vhi, float(cfg.u.ext.max))
-			await l.set(self.ich, float(cfg.u.ext.min))
-			await l.set(self.idis, float(cfg.u.ext.max))
+			await l.set(self.ich, float(cfg.i.ext.min))
+			await l.set(self.idis, float(cfg.i.ext.max))
 
 	async def _cfg_xmit(self):
 		await anyio.sleep(1)

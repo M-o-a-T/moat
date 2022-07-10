@@ -1,5 +1,8 @@
 # coding: utf-8
 # cloned from https://github.com/msgpack/msgpack-python
+
+# Parts of this have been modified to be compatble with micropython.
+
 from collections import namedtuple
 try:
     import uos as os
@@ -63,7 +66,7 @@ class ExtType(namedtuple("ExtType", "code data")):
     def __new__(cls, code, data):
         if not isinstance(code, int):
             raise TypeError("code must be int")
-        if not isinstance(data, bytes):
+        if not isinstance(data, (bytes,memoryview)):
             raise TypeError("data must be bytes")
         if not 0 <= code <= 127:
             raise ValueError("code must be 0~127")
@@ -162,8 +165,7 @@ class Unpacker(object):
             max_ext_len = max_buffer_size
 
         self._max_buffer_size = max_buffer_size
-        if read_size > self._max_buffer_size:
-            raise ValueError("read_size must be smaller than max_buffer_size")
+        read_size = min(read_size, self._max_buffer_size)
         self._read_size = read_size or min(self._max_buffer_size, 16 * 1024)
         self._unicode_errors = unicode_errors
         self._use_list = use_list

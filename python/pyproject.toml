@@ -3,6 +3,8 @@ requires = [
   "setuptools >= 42",
   "setuptools_scm[toml] >= 3.5.0",
   "setuptools_scm_git_archive >= 1.1",
+  "msgpack",
+  "serialpacker",
 ]
 build-backend = "setuptools.build_meta"
 

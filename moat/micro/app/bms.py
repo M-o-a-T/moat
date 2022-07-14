@@ -74,6 +74,8 @@ class Batt:
 			self.idis = await srv.add_path("/Info/MaxDischargeCurrent", None,
 					   gettextcallback=lambda p, v: "{:0.2f}A".format(v))
 
+			sta = await srv.add_path("/State",1)
+			err = await srv.add_path("/Error",0)
 			ncell = await srv.add_path("/System/NrOfCellsPerBattery",8)
 			non = await srv.add_path("/System/NrOfModulesOnline",1)
 			noff = await srv.add_path("/System/NrOfModulesOffline",0)
@@ -143,7 +145,10 @@ class Batt:
 					u=msg["u"]
 					i=msg["i"]
 					w=msg["w"]
+					ok=msg["ok"]
 					async with srv as l:
+						await l.set(sta, 9 if ok else 10)
+						await l.set(err, 0 if ok else 12)
 						await l.set(v0, u)
 						await l.set(c0, i)
 						await l.set(p0, u*i)

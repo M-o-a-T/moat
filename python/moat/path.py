@@ -216,7 +216,7 @@ class MoatDevPath(_MoatPath):
         Write contents (expected to be bytes) to a file on the target.
         """
         self._stat_cache = None
-        if not isinstance(data, (bytes, bytearray)):
+        if not isinstance(data, (bytes, bytearray,memoryview)):
             raise TypeError(f'contents must be bytes/bytearray, got {type(data)} instead')
         await self._repl.exec(f'from ubinascii import a2b_base64 as a2b; _f = open({self.as_posix()!r}, "wb")')
         # write in chunks

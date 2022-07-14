@@ -47,7 +47,11 @@ class Batt:
 			await anyio.sleep(100)
 
 	async def run(self, *, task_status=None):
-		async with Dbus() as bus, bus.service("com.victronenergy.battery."+self.name) as srv:
+		try:
+			name = self.cfg.dbus
+		except AttributeError:
+			name = "com.victronenergy.battery."+self.name
+		async with Dbus() as bus, bus.service(name) as srv:
 			print("Setting up")
 			self._srv = srv
 			await srv.add_mandatory_paths(

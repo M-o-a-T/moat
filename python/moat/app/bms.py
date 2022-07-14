@@ -6,6 +6,9 @@ import sys
 import anyio
 from victron.dbus import Dbus
 
+import logging
+logger = logging.getLogger(__name__)
+
 # cfg:
 # u:
 #   pin: PIN  # measure U
@@ -173,15 +176,15 @@ class BattCmd(BaseCmd):
 
 	async def cmd_info(self, **kw):
 		from pprint import pformat
-		print("DATA",pformat(kw))
+		logger.info("DATA %s",pformat(kw))
 		await self.batt.q.put(kw)
 
 	async def cmd_relay(self, **kw):
 		from pprint import pformat
-		print("RELAY %s",pformat(kw))
+		logger.info("RELAY %s",pformat(kw))
 
 	async def cmd_cfg(self, cfg):
 		from pprint import pformat
-		print("NCFG",pformat(cfg))
+		logger.info("NCFG %s",pformat(cfg))
 		await self.batt.set_cfg(cfg)
 

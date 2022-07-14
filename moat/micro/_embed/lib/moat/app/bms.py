@@ -22,6 +22,7 @@ class Batt:
 	def __init__(self, cfg, gcfg):
 		self.cfg = cfg
 		self.xmit_evt = Event()
+		self.cmd = None
 
 	def _check(self):
 		c = self.cfg
@@ -133,7 +134,8 @@ class Batt:
 				await sleep_ms(td)
 
 	async def send_rly_state(self):
-		await self.request.send_nr([self.name,"relay"],
+		if self.cmd is not None:
+			await self.cmd.request.send_nr([self.cmd.name,"relay"],
 				{"state": self.relay.value(), "force": self.relay_force})
 
 
@@ -141,6 +143,7 @@ class BattCmd(BaseCmd):
 	def __init__(self, parent, batt, name):
 		super().__init__(parent)
 		self.batt = batt
+		batt.cmd = self
 		self.name = name
 
 	def run(self):

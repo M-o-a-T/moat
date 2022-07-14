@@ -28,6 +28,7 @@ async def unix_stack_iter(path="upy-moat", log=False, *, request_factory=Request
         async for sock in q:
             n += 1
             t = b = MsgpackStream(UAStream(sock))
+            await b.init()
             if log:
                 t = t.stack(Logger, txt="U%d" % n)
             t = t.stack(request_factory)

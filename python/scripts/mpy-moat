@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
+import io
 import sys
 import errno
 import logging
 import msgpack
+import hashlib
 import importlib
 
 import anyio
@@ -22,6 +24,43 @@ from moat.proto.multiplex import Multiplexer
 from moat.proto import RemoteError
 from moat.cmd import ClientBaseCmd
 
+
+class ABytes(io.BytesIO):
+	def __init__(self, name, data):
+		super().__init__()
+		self.name = name
+		self.write(data)
+
+	def __str__(self):
+		return self.name
+
+	async def open(self, mode):
+		self.seek(0,0)
+		return self
+	
+	async def read_bytes(self):
+		return self.getbuffer()
+
+	async def sha256(self):
+		_h = hashlib.sha256()
+		_h.update(self.getbuffer())    
+		return _h.digest()  
+
+	def close(self):
+		pass
+
+	async def is_dir(self):
+		return False
+
+	async def is_file(self):
+		return True
+
+	async def stat(self):
+		res = attrdict()
+		res.st_size = len(self.getbuffer())
+		return res
+
+
 class NoPort(RuntimeError):
 	pass
 
@@ -31,6 +70,9 @@ def add_client_hooks(req):
 
 async def copy_over(src, dst):
 	tn = 0
+	if await src.is_file():
+		if await dst.is_dir():
+			dst /= src.name
 	while (n := await copytree(src,dst)):
 		tn += n
 		if n == 1:
@@ -174,13 +216,14 @@ async def main(ctx, socket,port,baudrate,verbose,quiet,reliable,guarded, config)
 @click.pass_obj
 @click.option("-n","--no-run", is_flag=True, help="Don't run MoaT after updating")
 @click.option("-N","--no-reset", is_flag=True, help="Don't reboot after updating")
-@click.option("-s","--source", type=click.Path(dir_okay=True,file_okay=False,path_type=anyio.Path), help="Files to sync")
+@click.option("-s","--source", type=click.Path(dir_okay=True,file_okay=True,path_type=anyio.Path), help="Files to sync")
 @click.option("-d","--dest", type=str, required=True, default="", help="Destination path")
 @click.option("-S","--state", type=str, help="State to enter")
 @click.option("-f","--force-exit", is_flag=True, help="Halt via an error packet")
 @click.option("-e","--exit", is_flag=True, help="Halt using an exit message")
+@click.option("-c","--config", type=click.File("rb"), help="Config file to copy over")
 @click.option("-v","--verbose", is_flag=True, help="Use verbose mode on the target")
-async def setup(obj, source, dest, no_run, no_reset, force_exit, exit, verbose, state):
+async def setup(obj, source, dest, no_run, no_reset, force_exit, exit, verbose, state, config):
 	"""
 	Initial sync of MoaT code to a MicroPython device.
 
@@ -223,6 +266,11 @@ async def setup(obj, source, dest, no_run, no_reset, force_exit, exit, verbose, 
 				await copy_over(source, dst)
 			if state:
 				await repl.exec(f"f=open('moat.state','w'); f.write({state!r}); f.close()")
+			if config:
+				cfg = msgpack.Packer().packb(yload(config))
+				f = ABytes("moat.cfg",cfg)
+				await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl))
+
 			if no_reset:
 				return
 
@@ -316,7 +364,7 @@ async def cmd(obj, path, vars_,eval_,path_):
 		else:
 			yprint(res)
 
-@main.command(short_help='Update the configuration')
+@main.command(short_help='Get / Update the configuration')
 @click.pass_obj
 @click.option("-r","--replace", is_flag=True, help="Send our config data")
 @click.option("-f","--fallback", is_flag=True, help="Change fallback config data")

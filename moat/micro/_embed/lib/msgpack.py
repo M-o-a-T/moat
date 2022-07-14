@@ -400,7 +400,7 @@ class Unpacker(object):
             ret = next(self.unpack())
         except StopIteration as s:
             if self._got_extradata():
-                raise ExtraData(ret, unpacker._get_extradata())
+                raise ExtraData(s.value, bytes(self._get_extradata()))
             return s.value
         except OutOfData:
             raise ValueError("Unpack failed: incomplete input")

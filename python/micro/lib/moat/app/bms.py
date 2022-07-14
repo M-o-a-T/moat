@@ -55,10 +55,11 @@ class Batt:
 		)
 		return res
 
-	def set_relay_force(self, st):
+	async def set_relay_force(self, st):
 		self.relay_force = st
 		if st is not None:
 			self.relay.value(st)
+			await self.send_rly_state()
 		else:
 			self.sw_ok = False
 
@@ -109,10 +110,13 @@ class Batt:
 			if self._check():
 				if self.sw_ok and self.relay_force is None and not self.relay.value():
 					self.relay.on()
+					await self.send_rly_state()
+
 					xmit_n=0
 
 			elif self.relay_force is None and self.relay.value():
 				self.relay.off()
+				await self.send_rly_state()
 				self.t_sw = ticks_add(self.t, self.cfg["rel"]["t"])
 				self.sw_ok = False
 				xmit_n=0
@@ -128,6 +132,10 @@ class Batt:
 			if td > 0:
 				await sleep_ms(td)
 
+	async def send_rly_state(self):
+		await self.request.send_nr([self.name,"relay"],
+				{"state": self.relay.value(), "force": self.relay_force})
+
 
 class BattCmd(BaseCmd):
 	def __init__(self, parent, batt, name):
@@ -140,8 +148,8 @@ class BattCmd(BaseCmd):
 			await self.batt.xmit_evt.wait()
 			await self.request.send_nr([self.name,"info"], self.batt.stat())
 	
-	def cmd_rly(self, st):
-		self.batt.set_relay_force(st)
+	async def cmd_rly(self, st):
+		await self.batt.set_relay_force(st)
 
 	def cmd_s(self):
 		return self.batt.stat()

@@ -176,6 +176,10 @@ class BattCmd(BaseCmd):
 		print("DATA",pformat(kw))
 		await self.batt.q.put(kw)
 
+	async def cmd_relay(self, **kw):
+		from pprint import pformat
+		print("RELAY %s",pformat(kw))
+
 	async def cmd_cfg(self, cfg):
 		from pprint import pformat
 		print("NCFG",pformat(cfg))

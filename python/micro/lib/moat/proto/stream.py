@@ -1,5 +1,10 @@
 from ..compat import wait_for_ms, TimeoutError
 
+import sys
+try:
+    import greenback
+except ImportError:
+    greenback = None
 from msgpack import Packer,Unpacker, OutOfData
 
 import logging
@@ -7,6 +12,13 @@ logger = logging.getLogger(__name__)
 
 from . import _Stacked
 
+if greenback is not None:
+    class SyncReadStream:
+        def __init__(self, stream):
+            self.s = stream
+
+        def read(self, n):
+            return greenback.await_(self.s.read(n))
 
 class _Base(_Stacked):
     def __init__(self, stream):
@@ -22,10 +34,24 @@ class MsgpackStream(_Base):
         super().__init__(stream)
         if isinstance(console,int) and not isinstance(console,bool):
             kw["read_size"]=1
-        self.unpacker = Unpacker(stream, **kw)
-        self.pack = Packer().packb
+
+        if sys.implementation.name == "micropython":
+            # we use a hacked version of msgpack that does async reading
+            self.pack = Packer().packb
+            self.unpack = Unpacker(stream, **kw).unpack
+        else:
+            # regular Python: msgpack uses a sync read call, so use greenback to async-ize it
+            self.pack = Packer().pack
+            self.unpacker = Unpacker(SyncReadStream(stream), **kw)
+            async def unpack():
+                return self.unpacker.unpack()
+            self.unpack = unpack
         self.console = console
         self.console_handler = console_handler
+
+    async def init(self):
+        if greenback is not None:
+            await greenback.ensure_portal()
 
     async def send(self, msg):
         msg = self.pack(msg)
@@ -38,13 +64,13 @@ class MsgpackStream(_Base):
             while True:
                 b = (await self.s.read(1))[0]
                 if b == self.console:
-                    res = await self.unpacker.unpack()
+                    res = await self.unpack()
                     return res
                 self.console_handler(b)
 
         else:
             while True:
-                r = await self.unpacker.unpack()
+                r = await self.unpack()
                 if self.console is not None and isinstance(r,int):
                     self.console_handler(r)
                 else:

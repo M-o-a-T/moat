@@ -4,6 +4,7 @@ sleep = _anyio.sleep
 import time as _time
 import traceback as _traceback
 import outcome as _outcome
+import greenback
 
 TimeoutError=TimeoutError # compat
 
@@ -128,6 +129,7 @@ def TaskGroup():
                 async def catch(p,a,k, *, task_status):
                     with _anyio.CancelScope() as s:
                         task_status.started(s)
+                        await greenback.ensure_portal()
                         try:
                             await p(*a,**k)
                         except CancelledError: # error from concurrent.futures

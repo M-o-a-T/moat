@@ -44,6 +44,7 @@ async def console_stack(stream=sys.stdin.buffer, s2=None, reliable=False, log=Fa
     if reliable:
         from ..proto.stream import MsgpackStream
         t = b = MsgpackStream(s, console=console, console_handler=cons_h)
+        await b.init()
     else:
         from ..proto.stream import MsgpackHandler, SerialPackerStream
 

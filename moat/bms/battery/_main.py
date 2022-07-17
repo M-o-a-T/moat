@@ -345,7 +345,7 @@ async def boot(obj, state):
 @main.command(short_help='Send a MoaT command')
 @click.pass_obj
 @click.argument("path", nargs=1, type=P)
-@attr_args
+@attr_args(with_path=False)
 async def cmd(obj, path, vars_,eval_,path_):
 	"""
 	Send a MoaT command.
@@ -353,6 +353,8 @@ async def cmd(obj, path, vars_,eval_,path_):
 	"""
 	val = {}
 	val = process_args(val, vars_,eval_,path_)
+	if len(path) == 0:
+		raise click.UsageError("Path cannot be empty")
 
 	async with get_link(obj) as req:
 		add_client_hooks(req)

@@ -1,6 +1,6 @@
 from usys import print_exception as print_exc
 import uasyncio
-from uasyncio import Event,sleep,sleep_ms,TimeoutError, run as _run, TaskGroup as _tg, CancelledError
+from uasyncio import Event,Lock,Queue,sleep,sleep_ms,TimeoutError, run as _run, TaskGroup as _tg, CancelledError
 from utime import ticks_ms, ticks_add, ticks_diff
 
 async def idle():

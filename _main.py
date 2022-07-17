@@ -45,7 +45,7 @@ def attr_args(proc=None, with_path=True, with_eval=True):
     `with_eval`.
     """
     def _proc(proc):
-        args = ("-p", "--path",) if with_path else ("--hidden_path")
+        args = ("-p", "--path",) if with_path else ("--hidden_path",)
         proc = click.option(
             *args,
             "path_",
@@ -56,7 +56,7 @@ def attr_args(proc=None, with_path=True, with_eval=True):
             hidden=not with_path,
         )(proc)
 
-        args = ("-e", "--eval",) if with_path else ("--hidden_eval")
+        args = ("-e", "--eval",) if with_eval else ("--hidden_eval",)
         proc = click.option(
             *args,
             "eval_",

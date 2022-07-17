@@ -93,16 +93,22 @@ class CommandClient(Request):
 # 
 
 class MultiplexCommand(BaseCmd):
+    # main command handler
     def __init__(self, parent):
         super().__init__(parent)
 
         self.dis_mplex = _MplexCommand(self)
+        self.dis_local = _LocalCommand(self)
 
     def cmd_link(self, s):
         self.request._process_link(s)
 
 
 class _MplexCommand(BaseCmd):
+    # "mplex" child command handler.
+    #
+    # ["mplex","foo","bar"] calls the "loc_bar" method of the "foo" module.
+
     async def cmd_boot(self):
         async with self.request.sys_lock:
             e = self.request.stopped
@@ -110,6 +116,27 @@ class _MplexCommand(BaseCmd):
             await e.wait()
             await self.request.run_flag.wait()
 
+class _LocalCommand(BaseCmd):
+
+    async def dispatch(self, action, msg):
+        if isinstance(action,(tuple,list)) and len(action) > 1:
+            p = self.parent
+            for a in action[:-1]:
+                p = getattr(p,"dis_"+a)
+            p = getattr(p,"loc_"+action[-1])
+
+            if isinstance(msg,dict):
+                r = p(**msg)
+            else:
+                r = p(msg)
+            if hasattr(r,"throw"):  # coroutine
+                r = await r
+            return r
+
+        else:
+            raise RuntimeError("local/* calls require a list as path")
+
+    
 class _StatCommand(BaseCmd):
     async def cmd_stat(self):
         pass
@@ -298,7 +325,7 @@ class Multiplexer(Request):
 #                   pass
 
     async def client_cmd(self, a,d):
-        if a[0] == "mplex":
+        if a[0] in {"mplex", "local"}:
             return await self.child.dispatch(a,d)
         else:
             return await self.send(a,d)

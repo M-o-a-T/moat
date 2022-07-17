@@ -82,7 +82,7 @@ class BaseCmd(_Stacked):
                 r = p(**msg)
             else:
                 r = p(msg)
-            if hasattr(r,"throw"):  # generator
+            if hasattr(r,"throw"):  # coroutine
                 r = await r
             return r
 

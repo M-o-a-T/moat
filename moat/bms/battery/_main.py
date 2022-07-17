@@ -451,7 +451,8 @@ async def mplex(obj):
 					app = None
 				else:
 					app = imp(app)(cfg, obj.cfg, name)
-					await tg.start(app.run)
+					if hasattr(app,"run"):
+						await tg.start(app.run)
 				try:
 					cmd = v.cmd
 				except AttributeError:

@@ -108,7 +108,8 @@ class BaseCmd(_Stacked):
         else:
             return await c(getattr(self,"cmd_"+action[0]))
 
-    __call__ = dispatch
+    async def __call__(self, *a, **k):
+        return await self.dispatch(*a, **k)
 
     def cmd__dir(self):
         # rudimentary introspection

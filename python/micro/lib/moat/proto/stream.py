@@ -44,7 +44,11 @@ class MsgpackStream(_Base):
             self.pack = Packer().pack
             self.unpacker = Unpacker(SyncReadStream(stream), **kw)
             async def unpack():
-                return self.unpacker.unpack()
+                import anyio
+                try:
+                    return self.unpacker.unpack()
+                except OutOfData:
+                    raise anyio.EndOfStream
             self.unpack = unpack
         self.console = console
         self.console_handler = console_handler

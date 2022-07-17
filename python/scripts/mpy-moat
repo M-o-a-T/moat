@@ -140,7 +140,7 @@ async def get_link(obj, **kw):
 			await sock.aclose()
 
 
-@click.group()
+@click.group(chain=True)
 @click.pass_context
 @click.option("-c","--config", help="Configuration file (YAML)", type=click.Path(dir_okay=False,readable=True))
 @click.option("-s","--socket", help="Socket to use / listen to when multiplexing (cfg.port.socket)", type=click.Path(dir_okay=False,writable=True,readable=True))

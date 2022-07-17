@@ -132,8 +132,8 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
             await tg.spawn(setup,tg, state, apps)
 
             # If started from the ("raw") REPL, fake being done
-            await sleep_ms(1500)
             if fake_end:
+                await sleep_ms(1000)
                 sys.stdout.write("OK\x04\x04>")
 
     from moat.compat import run

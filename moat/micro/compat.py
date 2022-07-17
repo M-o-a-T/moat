@@ -160,7 +160,10 @@ class UAStream:
         self.s = stream
 
     async def read(self, n):
-        return await self.s.receive(n)
+        try:
+            return await self.s.receive(n)
+        except _anyio.EndOfStream:
+            return ""
 
     async def readinto(self, buf):
         res = self.s.receive(n)

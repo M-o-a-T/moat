@@ -51,6 +51,8 @@ async def network_stack_iter(log=False, multiple=False, host="0.0.0.0", port=271
                 await q.put((t,b))
                 yield t,b
 
+    except SystemExit:
+        raise
     except BaseException as exc:
         print_exc(exc)
         if srv is not None:

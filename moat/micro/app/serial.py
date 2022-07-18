@@ -25,8 +25,8 @@ class Serial:
 		self.cfg = cfg
 		self.gcfg = gcfg
 		self.name = name
-		self.qr = Queue(10)
-		self.qp = Queue(10)
+		self.qr = Queue(99)
+		self.qp = Queue(99)
 
 class SerialCmd(BaseCmd):
 	def __init__(self, parent, ser, name):

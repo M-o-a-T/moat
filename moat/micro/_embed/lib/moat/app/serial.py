@@ -29,16 +29,16 @@ class Serial:
         self.ser = AsyncStream(M.UART(cfg.get("uart",0),tx=M.Pin(cfg.get("tx",0)),rx=M.Pin(cfg.get("rx",1)),baudrate=cfg.get("baud",9600)))
         sp = {}
         try:
-            sp["max_idle"] = self.max_idle = cfg.max.idle
-        except AttributeError:
+            sp["max_idle"] = self.max_idle = cfg["max"]["idle"]
+        except KeyError:
             sp["max_idle"] = self.max_idle
         try:
-            sp["max_packet"] = cfg.max.len
-        except AttributeError:
+            sp["max_packet"] = cfg["max"]["len"]
+        except KeyError:
             pass
         try:
-            sp["frame_start"] = cfg.start
-        except AttributeError:
+            sp["frame_start"] = cfg["start"]
+        except KeyError:
             pass
         self.pack = SerialPacker(**sp)
 

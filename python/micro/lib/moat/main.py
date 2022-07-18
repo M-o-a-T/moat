@@ -51,19 +51,13 @@ async def gen_apps(cfg, tg, print_exc):
 def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
     import uos
 
-    from moat.compat import TaskGroup, print_exc
+    from moat.compat import TaskGroup, print_exc, sleep_ms
     from moat.base import StdBase
-
-    from uasyncio import taskgroup as _tgm, sleep_ms
 
     if isinstance(cfg,str):
         import msgpack
         with open(cfg,"rb") as f:
             cfg = msgpack.unpackb(f.read())
-
-    _tgm.DEBUG=True
-    del _tgm
-
 
     def cfg_setup(t, apps):
         # start apps

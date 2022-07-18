@@ -16,7 +16,6 @@ def skip_fake(node):
         return None
     mode = env.GetProjectOption("mode")
 
-    import pdb;pdb.set_trace()
     n = node
     while n.get_dir().name != "src" and n.get_dir().get_dir().name != ".pio":
         n = n.get_dir()

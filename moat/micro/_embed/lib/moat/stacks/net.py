@@ -4,7 +4,7 @@ import sys
 # The top is the Request object. You're expected to attach your Base
 # (or a subclass) to it, then call `bot.run()`.
 
-from ..compat import run_server, Event
+from ..compat import run_server, Event, print_exc
 from ..cmd import Request
 from ..proto.stream import MsgpackHandler
 

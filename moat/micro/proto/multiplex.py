@@ -16,7 +16,7 @@ import anyio
 from . import RemoteError
 from ..stacks.unix import unix_stack_iter
 from ..compat import TaskGroup, Event, print_exc
-from ..cmd import Request, BaseCmd, ClientBaseCmd
+from ..cmd import Request, BaseCmd
 
 logger = logging.getLogger(__name__)
 

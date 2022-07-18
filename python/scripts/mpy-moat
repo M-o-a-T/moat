@@ -267,7 +267,7 @@ async def setup(obj, source, dest, no_run, no_reset, force_exit, exit, verbose, 
 			if state:
 				await repl.exec(f"f=open('moat.state','w'); f.write({state!r}); f.close()")
 			if config:
-				cfg = msgpack.Packer().packb(yload(config))
+				cfg = msgpack.Packer().pack(yload(config))
 				f = ABytes("moat.cfg",cfg)
 				await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl))
 

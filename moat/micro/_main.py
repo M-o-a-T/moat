@@ -278,7 +278,7 @@ async def setup(obj, source, dest, no_run, no_reset, force_exit, exit, verbose, 
 			if no_run:
 				return
 
-			o,e = await repl.exec_raw(f"import main; main.go_moat(log={verbose !r})", timeout=30)
+			o,e = await repl.exec_raw(f"import main; main.go_moat(state='once',log={verbose !r})", timeout=30)
 			if o:
 				print(o)
 			if e:

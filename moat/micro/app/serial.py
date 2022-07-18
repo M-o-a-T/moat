@@ -40,17 +40,13 @@ class SerialCmd(BaseCmd):
 	async def cmd_raw(self, data):
 		await self.send([self.name, "raw"], data)
 
-	async def cmd_pkt(self, data):
+	async def cmd_in_pkt(self, data):
 		logger.info("DATA %s", data)
 		self.ser.qp.put_nowait(data)
 
 	async def cmd_in_raw(self, data):
 		logger.info("CONS %s", data)
 		self.ser.qr.put_nowait(data)
-
-	async def cmd_in_pkt(self, data):
-		logger.info("DATA %s", data)
-		self.ser.qp.put_nowait(data)
 
 	async def loc_pkt(self):
 		# retrieve the next packet

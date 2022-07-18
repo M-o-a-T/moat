@@ -11,9 +11,6 @@ else:
     EndOfStream = anyio.EndOfStream
     BrokenResourceError = anyio.BrokenResourceError
 
-import logging
-logger = logging.getLogger(__name__)
-
 #
 # Basic infrastructure to run an RPC system via an unreliable,
 # possibly-reordering, and/or stream-based transport

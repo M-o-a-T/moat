@@ -7,9 +7,6 @@ except ImportError:
     greenback = None
 from msgpack import Packer,Unpacker, OutOfData
 
-import logging
-logger = logging.getLogger(__name__)
-
 from . import _Stacked
 
 if greenback is not None:

@@ -8,9 +8,6 @@ from pprint import pformat
 
 import sys
 
-import logging
-logger = logging.getLogger(__name__)
-
 #
 # Basic infrastructure to run an RPC system via an unreliable,
 # possibly-reordering, and/or stream-based transport
@@ -238,7 +235,7 @@ class Request(_Stacked):
                 print("?",i,msg)
                 return # errored?
             if evt.is_set():
-                logger.warning("Duplicate reply? %s %s %s %r",a,i,d,msg)
+                print("Duplicate reply?",a,i,d,msg)
                 return  # duplicate??
             if e is None:
                 evt.set(d)

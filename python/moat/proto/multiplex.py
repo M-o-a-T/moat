@@ -196,10 +196,15 @@ class Multiplexer(Request):
         self.stack(MultiplexCommand)
 
     def _process_link(self, s):
+        if not s:
+            self.stopped.set()
+        elif self.stopped.is_set():
+            self.stopped = Event()
         if s:
+            self.stopped = Event()
             self.run_flag.set()
         elif self.run_flag.is_set():
-            self.run_flag = anyio.Event()
+            self.run_flag = Event()
         self._cleanup_open_commands()
 
     def _gen_req(self, parent):

@@ -1,4 +1,4 @@
-from .compat import Event,ticks_ms,ticks_add,ticks_diff,wait_for_ms,print_exc,CancelledError,TaskGroup, idle
+from .compat import Event,ticks_ms,ticks_add,ticks_diff,wait_for_ms,print_exc,CancelledError,TaskGroup, idle, ValueEvent
 from .proto import _Stacked, RemoteError
 from contextlib import asynccontextmanager
 
@@ -190,10 +190,8 @@ class Request(_Stacked):
             self._cleanup_open_commands()
 
     def _cleanup_open_commands(self):
-        for k,e in self.reply.items():
-            if isinstance(e,Event):
-                self.reply[k] = CancelledError()
-                e.set()
+        for e in self.reply.values():
+            e.set_error(CancelledError())
 
     async def _handle_request(self, a,i,d,msg):
         try:
@@ -239,15 +237,17 @@ class Request(_Stacked):
 
             e = msg.pop("e",None) if d is None else None
             try:
-                evt = self.reply.pop(i)
+                evt = self.reply[i]
             except KeyError:
                 print("?",i,msg)
                 return # errored?
-            if isinstance(evt,Event):
-                self.reply[i] = d if e is None else RemoteError(e)
-                evt.set()
-            else: # duh. Recorded error? put it back
-                self.reply[i] = evt
+            if evt.is_set():
+                logger.warning("Duplicate reply? %s %s %s %r",a,i,d,msg)
+                return  # duplicate??
+            if e is None:
+                evt.set(d)
+            else:
+                evt.set_error(RemoteError(e))
 
     async def send(self, action, msg=None, **kw):
         # send a request, return the response
@@ -259,18 +259,13 @@ class Request(_Stacked):
             raise TypeError("cannot use both msg data and keywords")
         msg = {"a":action,"d":msg,"i":seq}
 
-        e = Event()
+        e = ValueEvent()
         self.reply[seq] = e
         try:
             await self.parent.send(msg)
-            await e.wait()
-            res = self.reply[seq]
+            return await e.get()
         finally:
             del self.reply[seq]
-
-        if isinstance(res,Exception):
-            raise res
-        return res
 
     async def send_nr(self, action, msg=None, **kw):
         # send a message, no reply

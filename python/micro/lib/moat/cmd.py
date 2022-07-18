@@ -146,10 +146,6 @@ class ClientBaseCmd(BaseCmd):
     async def wait_start(self):
         await self.started.wait()
 
-    async def run(self):
-        await self.request.send_nr(["sys","is_up"])
-        await super().run()
-
 
 class Request(_Stacked):
     # Request/Response handler (client side)

@@ -54,15 +54,7 @@ def go_moat(state=None, fake_end=True, log=False):
     from moat.compat import print_exc
     from moat.main import main
 
-    try:
-        f=open("moat_fb.cfg" if fallback else "moat.cfg", "rb")
-    except OSError:
-        cfg = {}
-    else:
-        cfg = f.read()
-        f.close()
-        cfg = msgpack.unpackb(cfg)
-
+    cfg = "moat_fb.cfg" if fallback else "moat.cfg"
     try:
         main(state=state, fake_end=fake_end, log=log, cfg=cfg, fallback=fallback)
     except Exception as exc:

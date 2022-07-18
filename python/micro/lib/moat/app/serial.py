@@ -40,6 +40,10 @@ class Serial:
             sp["frame_start"] = cfg["start"]
         except KeyError:
             pass
+        try:
+            sp["mark"] = cfg["mark"]
+        except KeyError:
+            pass
         self.pack = SerialPacker(**sp)
 
         buf = bytearray(32)
@@ -74,7 +78,7 @@ class Serial:
                     await self.cmd.send_pkt(p)
 
     async def send(self, data):
-        h,t = self.pack.frame(data)
+        h,data,t = self.pack.frame(data)
         async with self.w_lock:
             await self.ser.write(h)
             await self.ser.write(data)

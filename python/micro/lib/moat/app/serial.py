@@ -26,7 +26,7 @@ class Serial:
 
     async def run(self):
         cfg = self.cfg
-        self.ser = AsyncStream(M.UART(cfg.get("uart",0),tx=M.Pin(cfg.get("tx",0)),rx=M.Pin(cfg.get("rx",1)),baudrate=cfg.get("rate",9600)))
+        self.ser = AsyncStream(M.UART(cfg.get("uart",0),tx=M.Pin(cfg.get("tx",0)),rx=M.Pin(cfg.get("rx",1)),baudrate=cfg.get("baud",9600)))
         sp = {}
         try:
             sp["max_idle"] = self.max_idle = cfg.max.idle

@@ -59,9 +59,9 @@ class Queue:
         return f'<{type(self).__name__} {self._format()}>'
 
     def _format(self):
-        result = f'maxsize={self._maxsize!r}'
+        result = f'maxsize={repr(self._maxsize)}'
         if getattr(self, '_queue', None):
-            result += f' _queue={list(self._queue)!r}'
+            result += f' _queue={repr(list(self._queue))}'
         if self._getters:
             result += f' _get[{len(self._getters)}]'
         if self._putters:

@@ -115,6 +115,7 @@ class SerialPackerStream(_Base):
         self.n = 0
         self.console = console
         self.console_handler = console_handler
+        self.w_lock = Lock()
 
     async def recv(self):
         while True:
@@ -135,8 +136,9 @@ class SerialPackerStream(_Base):
 
 
     async def send(self, msg):
-        h,t = self.p.frame(msg)
-        await self.s.write(h+msg+t)
+        h,msg,t = self.p.frame(msg)
+        async with self.w_lock:
+            await self.s.write(h+msg+t)
 
 
 try:

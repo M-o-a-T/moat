@@ -33,7 +33,8 @@ logger = logging.getLogger(__name__)
 @click.option("-c","--config", type=click.File("rb"), help="Config file to copy over")
 @click.option("-v","--verbose", is_flag=True, help="Use verbose mode on the target")
 @click.option("-m","--mplex","--multiplex", is_flag=True, help="Run the multiplexer after syncing")
-async def setup(obj, source, dest, no_run, no_reset, force_exit, exit, verbose, state, config, mplex):
+@click.option("-C","--cross",help="path to mpy-cross")
+async def setup(obj, source, dest, no_run, no_reset, force_exit, exit, verbose, state, config, mplex, cross):
 	"""
 	Initial sync of MoaT code to a MicroPython device.
 
@@ -73,13 +74,13 @@ async def setup(obj, source, dest, no_run, no_reset, force_exit, exit, verbose, 
 		async with DirectREPL(ser) as repl:
 			dst = MoatDevPath("/"+dest).connect_repl(repl)
 			if source:
-				await copy_over(source, dst)
+				await copy_over(source, dst, cross=cross)
 			if state:
 				await repl.exec(f"f=open('moat.state','w'); f.write({state!r}); f.close()")
 			if config:
 				cfg = msgpack.Packer().pack(yload(config))
 				f = ABytes("moat.cfg",cfg)
-				await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl))
+				await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl), cross=cross)
 
 			if no_reset:
 				return
@@ -112,9 +113,10 @@ async def setup(obj, source, dest, no_run, no_reset, force_exit, exit, verbose, 
 			
 @main.command(short_help='Sync MoaT code')
 @click.pass_obj
-@click.option("-s","--source", type=click.Path(dir_okay=True,file_okay=False,path_type=anyio.Path), required=True, help="Files to sync")
+@click.option("-s","--source", type=click.Path(dir_okay=True,file_okay=True,path_type=anyio.Path), required=True, help="Files to sync")
 @click.option("-d","--dest", type=str, required=True, default="", help="Destination path")
-async def sync(obj, source, dest):
+@click.option("-c","--cross",help="path to mpy-cross")
+async def sync(obj, source, dest, cross):
 	"""
 	Sync of MoaT code on a running MicroPython device.
 
@@ -123,7 +125,7 @@ async def sync(obj, source, dest):
 		add_client_hooks(req)
 
 		dst = MoatFSPath("/"+dest).connect_repl(req)
-		await copy_over(source, dst)
+		await copy_over(source, dst, cross=cross)
 
 			
 @main.command(short_help='Reboot MoaT node')

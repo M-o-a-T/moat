@@ -22,6 +22,8 @@ def go_moat(state=None, fake_end=True, log=False):
             "test":"fallback",
             "fbonce":"fallback",
             "once":"skip",
+            "skiponce":"std",
+            "skipfb":"fallback",
     }
     crash = {
             "std":"fallback",
@@ -37,13 +39,6 @@ def go_moat(state=None, fake_end=True, log=False):
         else:
             state=f.read()
             f.close()
-    if state=="skip":
-        print("Skip.")
-        return
-    if state in ("fallback","fbskip","fbonce"):
-        import usys
-        usys.path.insert(0,"/fallback")
-        fallback = True
 
     try:
         new_state = uncond[state]
@@ -53,6 +48,15 @@ def go_moat(state=None, fake_end=True, log=False):
         f=open("moat.state","w")
         f.write(new_state)
         f.close()
+
+    if state[0:4] == "skip":
+        print(state)
+        return
+
+    if state in ("fallback","fbskip","fbonce"):
+        import usys
+        usys.path.insert(0,"/fallback")
+        fallback = True
 
     print("Start MoaT:",state)
     from moat.compat import print_exc

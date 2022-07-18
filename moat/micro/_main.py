@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 @click.option("-c","--config", type=click.File("rb"), help="Config file to copy over")
 @click.option("-v","--verbose", is_flag=True, help="Use verbose mode on the target")
 @click.option("-m","--mplex","--multiplex", is_flag=True, help="Run the multiplexer after syncing")
+@click.option("-M","--mark", type=int, help="Serial marker", hidden=True)
 @click.option("-C","--cross",help="path to mpy-cross")
 async def setup(obj, source, dest, no_run, no_reset, force_exit, exit, verbose, state, config, mplex, cross):
 	"""
@@ -57,8 +58,8 @@ async def setup(obj, source, dest, no_run, no_reset, force_exit, exit, verbose, 
 
 			if obj.reliable:
 				from serialpacker import SerialPacker
-				sp=SerialPacker()
-				h,t = sp.frame(pk)
+				sp=SerialPacker(**({"mark":mark} if mark is not None else {}))
+				h,pk,t = sp.frame(pk)
 				pk = h+pk+t
 
 			await ser.send(pk)

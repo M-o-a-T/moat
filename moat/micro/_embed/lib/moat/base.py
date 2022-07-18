@@ -142,6 +142,8 @@ class SysCmd(BaseCmd):
         p=machine.ADC(n)
         return p.read_u16()  # XXX this is probably doing a sync wait
 
+    async def run(self):
+        await self.request.send_nr("link",True)
 
 class StdBase(BaseCmd):
     #Standard toplevel base implementation

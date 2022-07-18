@@ -6,9 +6,6 @@ import sys
 
 from ..cmd import Request
 
-import logging
-logger = logging.getLogger(__name__)
-
 async def console_stack(stream=sys.stdin.buffer, s2=None, reliable=False, log=False, log_bottom=False, console=False, force_write=False, request_factory=Request):
     # Set s2 for a separate write stream.
     #
@@ -33,7 +30,7 @@ async def console_stack(stream=sys.stdin.buffer, s2=None, reliable=False, log=Fa
         def cons_h(b):
             nonlocal c_b
             if b == 10:
-                logger.info("C:%s", c_b.decode("utf-8","backslashreplace"))
+                print("C:", c_b.decode("utf-8","backslashreplace"))
                 c_b = bytearray()
             elif b != 13:
                 if 0 <= b <= 255:

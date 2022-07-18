@@ -22,6 +22,8 @@ def go_moat(state=None, fake_end=True, log=False):
             "test":"fallback",
             "fbonce":"fallback",
             "once":"skip",
+            "skiponce":"std",
+            "skipfb":"fallback",
     }
     crash = {
             "std":"fallback",
@@ -37,39 +39,52 @@ def go_moat(state=None, fake_end=True, log=False):
         else:
             state=f.read()
             f.close()
-    if state=="skip":
-        print("Skip.")
+
+    try:
+        new_state = uncond[state]
+    except KeyError:
+        new_state = state
+    else:
+        f=open("moat.state","w")
+        f.write(new_state)
+        f.close()
+
+    if state[0:4] == "skip":
+        print(state)
         return
+
     if state in ("fallback","fbskip","fbonce"):
         import usys
         usys.path.insert(0,"/fallback")
         fallback = True
 
-    if state in uncond:
-        f=open("moat.state","w")
-        f.write(uncond[state])
-        f.close()
-
     print("Start MoaT:",state)
     from moat.compat import print_exc
     from moat.main import main
 
-    try:
-        f=open("moat_fb.cfg" if fallback else "moat.cfg", "rb")
-    except OSError:
-        cfg = {}
-    else:
-        cfg = f.read()
-        f.close()
-        cfg = msgpack.unpackb(cfg)
-
+    cfg = "moat_fb.cfg" if fallback else "moat.cfg"
     try:
         main(state=state, fake_end=fake_end, log=log, cfg=cfg, fallback=fallback)
-    except Exception as exc:
-        if state in crash:
+
+    except SystemExit:
+        f=open("moat.state","r")
+        new_state = f.read()
+        f.close()
+        print("REBOOT to", new_state)
+        utime.sleep_ms(100)
+        machine.soft_reset()
+
+    except BaseException as exc:
+        try:
+            new_state = crash[state]
+        except KeyError:
+            new_state = state
+        else:
             f=open("moat.state","w")
-            f.write(crash[state])
+            f.write(new_state)
             f.close()
+
+        print("CRASH! REBOOT to", new_state)
         print_exc(exc)
         utime.sleep_ms(500)
         machine.soft_reset()

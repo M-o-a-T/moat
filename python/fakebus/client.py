@@ -113,7 +113,6 @@ class Client(BaseHandler):
             self.debug("ERROR %s",typ)
         if typ == ERR.COLLISION:
             print("COLL",kw)
-        #import pdb;pdb.set_trace()
         pass # ERROR
 
     def debug(self, msg, *a, v=False):

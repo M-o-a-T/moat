@@ -14,11 +14,6 @@ from distkv.obj.command import std_command
 from .model import MOATroot
 from moatbus.message import BusMessage
 
-import logging
-
-logger = logging.getLogger(__name__)
-
-
 @click.group(short_help="Manage MOAT devices.")
 @click.pass_obj
 async def cli(obj):

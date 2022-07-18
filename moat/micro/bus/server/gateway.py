@@ -32,12 +32,9 @@ class Gateway:
         self.prefix = prefix
 
     async def run(self):
-        try:
-            async with trio.open_nursery() as n:
-                n.start_soon(self.serial2mqtt)
-                n.start_soon(self.mqtt2serial)
-        except BaseException as exc:
-            raise
+        async with trio.open_nursery() as n:
+            n.start_soon(self.serial2mqtt)
+            n.start_soon(self.mqtt2serial)
 
     async def serial2mqtt(self):
         async for msg in self.serial:

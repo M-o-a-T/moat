@@ -6,7 +6,9 @@ import pathlib
 import binascii
 import hashlib
 import stat
+import anyio
 from .proto import RemoteError
+from subprocess import CalledProcessError
 
 import logging
 logger = logging.getLogger(__name__)
@@ -491,7 +493,7 @@ async def _nullcheck(p):
     return False
 
 
-async def copytree(src,dst,check=_nullcheck):
+async def copytree(src,dst,check=_nullcheck, cross=None):
     """
     Copy a file tree from @src to @dst.
     Skip files/subtrees for which "await check(src)" is False.
@@ -501,7 +503,22 @@ async def copytree(src,dst,check=_nullcheck):
 
     Returns the number of modified files.
     """
+    from .main import ABytes
     if await src.is_file():
+        if cross and src.suffix == ".py":
+            try:
+                data = await anyio.run_process([cross, str(src), "-o", "/dev/stdout"])
+            except CalledProcessError as exc:
+                breakpoint()
+                pass
+            else:
+                src = ABytes(src.with_suffix(".mpy"),data.stdout)
+                try:
+                    await dst.unlink()
+                except (OSError,RemoteError):
+                    pass
+                dst = dst.with_suffix(".mpy")
+
         s1 = (await src.stat()).st_size
         try:
             s2 = (await dst.stat()).st_size
@@ -537,6 +554,6 @@ async def copytree(src,dst,check=_nullcheck):
             if not await check(s):
                 continue
             d = dst/s.name
-            n += await copytree(s,d,check)
+            n += await copytree(s,d, check=check, cross=cross)
         return n
 

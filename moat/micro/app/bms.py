@@ -28,12 +28,14 @@ logger = logging.getLogger(__name__)
 class Batt:
 	cell_okch = None
 	cell_okdis = None
+	data = None
 
 	def __init__(self, cfg, gcfg, name):
 		self.cfg = cfg
 		self.gcfg = gcfg
 		self.q = Queue(2)
 		self.started = Event()
+		self.updated = Event()
 		self.name = name
 
 	async def set_cfg(self, cfg):
@@ -168,6 +170,11 @@ class Batt:
 						await l.set(self.bus.okch, self.cell_okch and u < self.cfg.u.ext.max*0.98)
 						await l.set(self.bus.okdis, self.cell_okdis and u > self.cfg.u.ext.min*1.02)
 
+					# internal forwarding
+					self.data = msg
+					self.updated.set()
+					self.updated = Event()
+
 
 	async def add_energy(self, data, final=False):
 		from pprint import pformat
@@ -196,6 +203,11 @@ class BattCmd(BaseCmd):
 	async def loc_cell(self, okch, okdis):
 		# Cell voltages in range?
 		await self.batt.set_cell_ok(okch,okdis)
+
+	async def loc_data(self):
+		# return "global" BMS data
+		await self.batt.updated.wait()
+		return self.batt.data
 
 	async def run(self):
 		if self.batt.cfg:

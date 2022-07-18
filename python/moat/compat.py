@@ -1,10 +1,12 @@
 import anyio as _anyio
 Event = _anyio.Event
+Lock = _anyio.Lock
 sleep = _anyio.sleep
 import time as _time
 import traceback as _traceback
 import outcome as _outcome
 import greenback
+from moat.util import Queue, ValueEvent
 
 TimeoutError=TimeoutError # compat
 
@@ -158,7 +160,10 @@ class UAStream:
         self.s = stream
 
     async def read(self, n):
-        return await self.s.receive(n)
+        try:
+            return await self.s.receive(n)
+        except _anyio.EndOfStream:
+            return ""
 
     async def readinto(self, buf):
         res = self.s.receive(n)

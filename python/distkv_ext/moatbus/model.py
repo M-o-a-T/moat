@@ -9,11 +9,6 @@ from distkv.obj import ClientEntry, ClientRoot, AttrClientEntry
 from distkv.util import NotGiven, Path
 from distkv.errors import ErrorRoot
 
-import logging
-
-logger = logging.getLogger(__name__)
-
-
 class _MOATbase(ClientEntry):
     """
     Forward ``_update_server`` calls to child entries.

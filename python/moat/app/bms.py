@@ -26,11 +26,16 @@ logger = logging.getLogger(__name__)
 # 
 
 class Batt:
+	cell_okch = None
+	cell_okdis = None
+	data = None
+
 	def __init__(self, cfg, gcfg, name):
 		self.cfg = cfg
 		self.gcfg = gcfg
 		self.q = Queue(2)
 		self.started = Event()
+		self.updated = Event()
 		self.name = name
 
 	async def set_cfg(self, cfg):
@@ -42,6 +47,10 @@ class Batt:
 			await l.set(self.vhi, float(cfg.u.ext.max))
 			await l.set(self.ich, float(cfg.i.ext.min))
 			await l.set(self.idis, float(cfg.i.ext.max))
+
+	@property
+	def srv(self):
+		return self._srv
 
 	async def _cfg_xmit(self):
 		await anyio.sleep(1)
@@ -56,6 +65,8 @@ class Batt:
 			name = "com.victronenergy.battery."+self.name
 		async with Dbus() as bus, bus.service(name) as srv:
 			print("Setting up")
+			self.bus = attrdict()
+
 			self._srv = srv
 			await srv.add_mandatory_paths(
 				processname=__file__,
@@ -69,70 +80,70 @@ class Batt:
 				connected=1,
 			)
 
-			self.vlo = await srv.add_path("/Info/BatteryLowVoltage", None,
+			self.bus.vlo = await srv.add_path("/Info/BatteryLowVoltage", None,
 					   gettextcallback=lambda p, v: "{:0.2f}V".format(v))
-			self.vhi = await srv.add_path("/Info/MaxChargeVoltage", None,
+			self.bus.vhi = await srv.add_path("/Info/MaxChargeVoltage", None,
 					   gettextcallback=lambda p, v: "{:0.2f}V".format(v))
-			self.ich = await srv.add_path("/Info/MaxChargeCurrent", None,
+			self.bus.ich = await srv.add_path("/Info/MaxChargeCurrent", None,
 					   gettextcallback=lambda p, v: "{:0.2f}A".format(v))
-			self.idis = await srv.add_path("/Info/MaxDischargeCurrent", None,
+			self.bus.idis = await srv.add_path("/Info/MaxDischargeCurrent", None,
 					   gettextcallback=lambda p, v: "{:0.2f}A".format(v))
 
-			sta = await srv.add_path("/State",1)
-			err = await srv.add_path("/Error",0)
-			ncell = await srv.add_path("/System/NrOfCellsPerBattery",8)
-			non = await srv.add_path("/System/NrOfModulesOnline",1)
-			noff = await srv.add_path("/System/NrOfModulesOffline",0)
-			nbc = await srv.add_path("/System/NrOfModulesBlockingCharge",None)
-			nbd = await srv.add_path("/System/NrOfModulesBlockingDischarge",None)
-			cap = await srv.add_path("/Capacity", 4.0)
-			cap = await srv.add_path("/InstalledCapacity", 5.0)
-			cap = await srv.add_path("/ConsumedAmphours", 12.3)
+			self.bus.sta = await srv.add_path("/State",1)
+			self.bus.err = await srv.add_path("/Error",0)
+			self.bus.ncell = await srv.add_path("/System/NrOfCellsPerBattery",8)
+			self.bus.non = await srv.add_path("/System/NrOfModulesOnline",1)
+			self.bus.noff = await srv.add_path("/System/NrOfModulesOffline",0)
+			self.bus.nbc = await srv.add_path("/System/NrOfModulesBlockingCharge",None)
+			self.bus.nbd = await srv.add_path("/System/NrOfModulesBlockingDischarge",None)
+			self.bus.cap = await srv.add_path("/Capacity", 4.0)
+			self.bus.capi = await srv.add_path("/InstalledCapacity", 5.0)
+			self.bus.cons = await srv.add_path("/ConsumedAmphours", 12.3)
 
-			soc = await srv.add_path('/Soc', 30)
-			soh = await srv.add_path('/Soh', 90)
-			v0 = await srv.add_path('/Dc/0/Voltage', None,
+			self.bus.soc = await srv.add_path('/Soc', 30)
+			self.bus.soh = await srv.add_path('/Soh', 90)
+			self.bus.v0 = await srv.add_path('/Dc/0/Voltage', None,
 						gettextcallback=lambda p, v: "{:2.2f}V".format(v))
-			c0 = await srv.add_path('/Dc/0/Current', None,
+			self.bus.c0 = await srv.add_path('/Dc/0/Current', None,
 						gettextcallback=lambda p, v: "{:2.2f}A".format(v))
-			p0 = await srv.add_path('/Dc/0/Power', None,
+			self.bus.p0 = await srv.add_path('/Dc/0/Power', None,
 						gettextcallback=lambda p, v: "{:0.0f}W".format(v))
-			t0 = await srv.add_path('/Dc/0/Temperature', 21.0)
-			mv0 = await srv.add_path('/Dc/0/MidVoltage', None,
+			self.bus.t0 = await srv.add_path('/Dc/0/Temperature', 21.0)
+			self.bus.mv0 = await srv.add_path('/Dc/0/MidVoltage', None,
 					   gettextcallback=lambda p, v: "{:0.2f}V".format(v))
-			mvd0 = await srv.add_path('/Dc/0/MidVoltageDeviation', None,
+			self.bus.mvd0 = await srv.add_path('/Dc/0/MidVoltageDeviation', None,
 					   gettextcallback=lambda p, v: "{:0.1f}%".format(v))
 
 			# battery extras
-			minct = await srv.add_path('/System/MinCellTemperature', None)
-			maxct = await srv.add_path('/System/MaxCellTemperature', None)
-			maxcv = await srv.add_path('/System/MaxCellVoltage', None,
+			self.bus.minct = await srv.add_path('/System/MinCellTemperature', None)
+			self.bus.maxct = await srv.add_path('/System/MaxCellTemperature', None)
+			self.bus.maxcv = await srv.add_path('/System/MaxCellVoltage', None,
 					   gettextcallback=lambda p, v: "{:0.3f}V".format(v))
-			maxcvi = await srv.add_path('/System/MaxVoltageCellId', None)
-			mincv = await srv.add_path('/System/MinCellVoltage', None,
+			self.bus.maxcvi = await srv.add_path('/System/MaxVoltageCellId', None)
+			self.bus.mincv = await srv.add_path('/System/MinCellVoltage', None,
 					   gettextcallback=lambda p, v: "{:0.3f}V".format(v))
-			mincvi = await srv.add_path('/System/MinVoltageCellId', None)
-			hcycles = await srv.add_path('/History/ChargeCycles', None)
-			htotalah = await srv.add_path('/History/TotalAhDrawn', None)
-			bal = await srv.add_path('/Balancing', None)
-			okch = await srv.add_path('/Io/AllowToCharge', 0)
-			okdis = await srv.add_path('/Io/AllowToDischarge', 0)
+			self.bus.mincvi = await srv.add_path('/System/MinVoltageCellId', None)
+			self.bus.hcycles = await srv.add_path('/History/ChargeCycles', None)
+			self.bus.htotalah = await srv.add_path('/History/TotalAhDrawn', None)
+			self.bus.bal = await srv.add_path('/Balancing', None)
+			self.bus.okch = await srv.add_path('/Io/AllowToCharge', 0)
+			self.bus.okdis = await srv.add_path('/Io/AllowToDischarge', 0)
 			# xx = await srv.add_path('/SystemSwitch',1)
 
 			# alarms
-			allv = await srv.add_path('/Alarms/LowVoltage', None)
-			alhv = await srv.add_path('/Alarms/HighVoltage', None)
-			allc = await srv.add_path('/Alarms/LowCellVoltage', None)
-			alhc = await srv.add_path('/Alarms/HighCellVoltage', None)
-			allow = await srv.add_path('/Alarms/LowSoc', None)
-			alhch = await srv.add_path('/Alarms/HighChargeCurrent', None)
-			alhdis = await srv.add_path('/Alarms/HighDischargeCurrent', None)
-			albal = await srv.add_path('/Alarms/CellImbalance', None)
-			alfail = await srv.add_path('/Alarms/InternalFailure', None)
-			alhct = await srv.add_path('/Alarms/HighChargeTemperature', None)
-			allct = await srv.add_path('/Alarms/LowChargeTemperature', None)
-			alht = await srv.add_path('/Alarms/HighTemperature', None)
-			allt = await srv.add_path('/Alarms/LowTemperature', None)
+			self.bus.allv = await srv.add_path('/Alarms/LowVoltage', None)
+			self.bus.alhv = await srv.add_path('/Alarms/HighVoltage', None)
+			self.bus.allc = await srv.add_path('/Alarms/LowCellVoltage', None)
+			self.bus.alhc = await srv.add_path('/Alarms/HighCellVoltage', None)
+			self.bus.allow = await srv.add_path('/Alarms/LowSoc', None)
+			self.bus.alhch = await srv.add_path('/Alarms/HighChargeCurrent', None)
+			self.bus.alhdis = await srv.add_path('/Alarms/HighDischargeCurrent', None)
+			self.bus.albal = await srv.add_path('/Alarms/CellImbalance', None)
+			self.bus.alfail = await srv.add_path('/Alarms/InternalFailure', None)
+			self.bus.alhct = await srv.add_path('/Alarms/HighChargeTemperature', None)
+			self.bus.allct = await srv.add_path('/Alarms/LowChargeTemperature', None)
+			self.bus.alht = await srv.add_path('/Alarms/HighTemperature', None)
+			self.bus.allt = await srv.add_path('/Alarms/LowTemperature', None)
 
 			# This is not true strictly speaking but we need the command to proceed
 			if task_status is not None:
@@ -151,15 +162,18 @@ class Batt:
 					w=msg["w"]
 					ok=msg["ok"]
 					async with srv as l:
-						await l.set(sta, 9 if ok else 10)
-						await l.set(err, 0 if ok else 12)
-						await l.set(v0, u)
-						await l.set(c0, i)
-						await l.set(p0, u*i)
-						await l.set(okch, u < self.cfg.u.ext.max*0.99)
-						await l.set(okdis, u > self.cfg.u.ext.min*1.01)
-						# TODO
-						# calculate SoC from self.total_w+w
+						await l.set(self.bus.sta, 9 if ok else 10)
+						await l.set(self.bus.err, 0 if ok else 12)
+						await l.set(self.bus.v0, u)
+						await l.set(self.bus.c0, i)
+						await l.set(self.bus.p0, u*i)
+						await l.set(self.bus.okch, self.cell_okch and u < self.cfg.u.ext.max*0.98)
+						await l.set(self.bus.okdis, self.cell_okdis and u > self.cfg.u.ext.min*1.02)
+
+					# internal forwarding
+					self.data = msg
+					self.updated.set()
+					self.updated = Event()
 
 
 	async def add_energy(self, data, final=False):
@@ -167,11 +181,33 @@ class Batt:
 		print("AE",final,pformat(data))
 		pass
 
+	async def set_cell_ok(self, okch,okdis):
+		async with self._srv as l:
+			self.cell_okch = okch
+			self.cell_okdis = okdis
+			await l.set(self.bus.okch, self.cell_okch and u < self.cfg.u.ext.max*0.99)
+			await l.set(self.bus.okdis, self.cell_okdis and u > self.cfg.u.ext.min*1.01)
+
 class BattCmd(BaseCmd):
 	def __init__(self, parent, batt, name):
 		super().__init__(parent)
 		self.batt = batt
 		self.name = name
+
+	async def loc_set(self, **kw):
+		# additional data to send to the bus
+		async with self.batt.srv as l:
+			for k,v in kw.items():
+				await l.set(self.bus[k], v)
+
+	async def loc_cell(self, okch, okdis):
+		# Cell voltages in range?
+		await self.batt.set_cell_ok(okch,okdis)
+
+	async def loc_data(self):
+		# return "global" BMS data
+		await self.batt.updated.wait()
+		return self.batt.data
 
 	async def run(self):
 		if self.batt.cfg:

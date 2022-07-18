@@ -1,4 +1,4 @@
-from .compat import Event,ticks_ms,ticks_add,ticks_diff,wait_for_ms,print_exc,CancelledError,TaskGroup, idle
+from .compat import Event,ticks_ms,ticks_add,ticks_diff,wait_for_ms,print_exc,CancelledError,TaskGroup, idle, ValueEvent
 from .proto import _Stacked, RemoteError
 from contextlib import asynccontextmanager
 
@@ -7,9 +7,6 @@ from msgpack import Packer,Unpacker, OutOfData
 from pprint import pformat
 
 import sys
-
-import logging
-logger = logging.getLogger(__name__)
 
 #
 # Basic infrastructure to run an RPC system via an unreliable,
@@ -82,7 +79,7 @@ class BaseCmd(_Stacked):
                 r = p(**msg)
             else:
                 r = p(msg)
-            if hasattr(r,"throw"):  # generator
+            if hasattr(r,"throw"):  # coroutine
                 r = await r
             return r
 
@@ -108,7 +105,8 @@ class BaseCmd(_Stacked):
         else:
             return await c(getattr(self,"cmd_"+action[0]))
 
-    __call__ = dispatch
+    async def __call__(self, *a, **k):
+        return await self.dispatch(*a, **k)
 
     def cmd__dir(self):
         # rudimentary introspection
@@ -144,10 +142,6 @@ class ClientBaseCmd(BaseCmd):
 
     async def wait_start(self):
         await self.started.wait()
-
-    async def run(self):
-        await self.request.send_nr(["sys","is_up"])
-        await super().run()
 
 
 class Request(_Stacked):
@@ -189,10 +183,8 @@ class Request(_Stacked):
             self._cleanup_open_commands()
 
     def _cleanup_open_commands(self):
-        for k,e in self.reply.items():
-            if isinstance(e,Event):
-                self.reply[k] = CancelledError()
-                e.set()
+        for e in self.reply.values():
+            e.set_error(CancelledError())
 
     async def _handle_request(self, a,i,d,msg):
         try:
@@ -238,18 +230,22 @@ class Request(_Stacked):
 
             e = msg.pop("e",None) if d is None else None
             try:
-                evt = self.reply.pop(i)
+                evt = self.reply[i]
             except KeyError:
                 print("?",i,msg)
                 return # errored?
-            if isinstance(evt,Event):
-                self.reply[i] = d if e is None else RemoteError(e)
-                evt.set()
-            else: # duh. Recorded error? put it back
-                self.reply[i] = evt
+            if evt.is_set():
+                print("Duplicate reply?",a,i,d,msg)
+                return  # duplicate??
+            if e is None:
+                evt.set(d)
+            else:
+                evt.set_error(RemoteError(e))
 
     async def send(self, action, msg=None, **kw):
         # send a request, return the response
+        if self.seq > 100 and not self.reply:
+            self.seq = 9
         self.seq += 1
         seq = self.seq
         if msg is None:
@@ -258,18 +254,13 @@ class Request(_Stacked):
             raise TypeError("cannot use both msg data and keywords")
         msg = {"a":action,"d":msg,"i":seq}
 
-        e = Event()
+        e = ValueEvent()
         self.reply[seq] = e
         try:
             await self.parent.send(msg)
-            await e.wait()
-            res = self.reply[seq]
+            return await e.get()
         finally:
             del self.reply[seq]
-
-        if isinstance(res,Exception):
-            raise res
-        return res
 
     async def send_nr(self, action, msg=None, **kw):
         # send a message, no reply

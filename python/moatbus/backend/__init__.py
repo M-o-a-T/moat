@@ -55,7 +55,6 @@ class BaseBusHandler(CtxObj):
                 continue
             t,i,c,d,m = x
             if d is None:
-                import pdb;pdb.set_trace()
                 tn = "Path" if t is P else t.__name__
                 raise click.MissingParameter(param_hint="", param_type=f"{tn} parameter: {n}")
             if n not in cfg:

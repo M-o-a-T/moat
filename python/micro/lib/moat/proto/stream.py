@@ -1,4 +1,4 @@
-from ..compat import wait_for_ms, TimeoutError
+from ..compat import wait_for_ms, TimeoutError, Lock
 
 import sys
 try:
@@ -6,9 +6,6 @@ try:
 except ImportError:
     greenback = None
 from msgpack import Packer,Unpacker, OutOfData
-
-import logging
-logger = logging.getLogger(__name__)
 
 from . import _Stacked
 
@@ -32,6 +29,8 @@ class MsgpackStream(_Base):
 
     def __init__(self, stream, console=None, console_handler=None, **kw):
         super().__init__(stream)
+        self.w_lock = Lock()
+
         if isinstance(console,int) and not isinstance(console,bool):
             kw["read_size"]=1
 
@@ -44,7 +43,11 @@ class MsgpackStream(_Base):
             self.pack = Packer().pack
             self.unpacker = Unpacker(SyncReadStream(stream), **kw)
             async def unpack():
-                return self.unpacker.unpack()
+                import anyio
+                try:
+                    return self.unpacker.unpack()
+                except OutOfData:
+                    raise anyio.EndOfStream
             self.unpack = unpack
         self.console = console
         self.console_handler = console_handler
@@ -57,7 +60,8 @@ class MsgpackStream(_Base):
         msg = self.pack(msg)
         if isinstance(self.console,int) and not isinstance(self.console, bool):
             msg = bytes((self.console,)) + msg
-        await self.s.write(msg)
+        async with self.w_lock:
+            await self.s.write(msg)
 
     async def recv(self):
         if isinstance(self.console, int) and not isinstance(self.console, bool):

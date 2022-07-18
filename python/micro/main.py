@@ -45,9 +45,13 @@ def go_moat(state=None, fake_end=True, log=False):
         usys.path.insert(0,"/fallback")
         fallback = True
 
-    if state in uncond:
+    try:
+        new_state = uncond[state]
+    except KeyError:
+        new_state = state
+    else:
         f=open("moat.state","w")
-        f.write(uncond[state])
+        f.write(new_state)
         f.close()
 
     print("Start MoaT:",state)
@@ -57,11 +61,26 @@ def go_moat(state=None, fake_end=True, log=False):
     cfg = "moat_fb.cfg" if fallback else "moat.cfg"
     try:
         main(state=state, fake_end=fake_end, log=log, cfg=cfg, fallback=fallback)
-    except Exception as exc:
-        if state in crash:
+
+    except SystemExit:
+        f=open("moat.state","r")
+        new_state = f.read()
+        f.close()
+        print("REBOOT to", new_state)
+        utime.sleep_ms(100)
+        machine.soft_reset()
+
+    except BaseException as exc:
+        try:
+            new_state = crash[state]
+        except KeyError:
+            new_state = state
+        else:
             f=open("moat.state","w")
-            f.write(crash[state])
+            f.write(new_state)
             f.close()
+
+        print("CRASH! REBOOT to", new_state)
         print_exc(exc)
         utime.sleep_ms(500)
         machine.soft_reset()

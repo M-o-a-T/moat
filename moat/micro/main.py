@@ -1,4 +1,5 @@
 import io
+import os
 import msgpack
 import hashlib
 
@@ -194,6 +195,8 @@ async def main(ctx, socket,port,baudrate,verbose,quiet,reliable,guarded, config)
 	obj.verbose = verbose+1-quiet
 	logging.basicConfig(level=logging.DEBUG if obj.verbose>2 else logging.INFO if obj.verbose>1 else logging.WARNING if obj.verbose>0 else logging.ERROR)
 
+	if not os.path.isabs(socket):
+		socket = os.path.join(os.environ.get("XDG_RUNTIME_DIR","tmp"), socket)
 	obj.socket=socket
 	obj.port=port
 	if baudrate:

@@ -1,8 +1,5 @@
 from ..compat import Event,ticks_ms,ticks_add,ticks_diff,wait_for_ms,TaskGroup
 
-import logging
-logger = logging.getLogger(__name__)
-
 from . import _Stacked
 
 class Reliable(_Stacked):

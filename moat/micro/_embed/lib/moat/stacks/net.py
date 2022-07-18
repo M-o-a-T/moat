@@ -8,9 +8,6 @@ from ..compat import run_server, Event, print_exc
 from ..cmd import Request
 from ..proto.stream import MsgpackHandler
 
-import logging
-logger = logging.getLogger(__name__)
-
 async def network_stack_iter(log=False, multiple=False, host="0.0.0.0", port=27176):
     # an iterator for network connections / their stacks. Yields one t,b
     # pair for each successful connection.

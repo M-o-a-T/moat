@@ -8,20 +8,16 @@ import anyio
 import logging
 logger = logging.getLogger(__name__)
 
+# Serial packet forwarder
 # cfg:
-# u:
-#   pin: PIN  # measure U
-#   min: VAL
-#   max: VAL
-# i:
-#   pin: PIN  # measure I
-#   ref: PIN  # I reference, subtract from measurement
-#   min: VAL
-#   max: VAL
-# poll:
-#   t: MSEC
-#   d: FACTOR # decay, for averaging, 1000/th
-# rel: PIN  # relay
+# uart: N
+# tx: PIN
+# rx: PIN
+# baud: 9600
+# max:
+#   len: N
+#   idle: MSEC
+# start: NUM
 # 
 
 class Serial:

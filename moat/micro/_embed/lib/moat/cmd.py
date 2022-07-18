@@ -251,6 +251,8 @@ class Request(_Stacked):
 
     async def send(self, action, msg=None, **kw):
         # send a request, return the response
+        if self.seq > 100 and not self.reply:
+            self.seq = 9
         self.seq += 1
         seq = self.seq
         if msg is None:

@@ -25,7 +25,7 @@ class ABytes(io.BytesIO):
 		self.write(data)
 
 	def __str__(self):
-		return self.name
+		return str(self.name)
 
 	async def open(self, mode):
 		self.seek(0,0)
@@ -61,12 +61,12 @@ def add_client_hooks(req):
 	bc = req.stack(ClientBaseCmd)
 	bc.cmd_link = lambda _:0
 
-async def copy_over(src, dst):
+async def copy_over(src, dst, cross=None):
 	tn = 0
 	if await src.is_file():
 		if await dst.is_dir():
 			dst /= src.name
-	while (n := await copytree(src,dst)):
+	while (n := await copytree(src,dst, cross=cross)):
 		tn += n
 		if n == 1:
 			logger.info("One file changed. Verifying.")

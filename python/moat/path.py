@@ -505,7 +505,7 @@ async def copytree(src,dst,check=_nullcheck, cross=None):
     """
     from .main import ABytes
     if await src.is_file():
-        if cross and src.suffix == ".py":
+        if cross and src.suffix == ".py" and str(dst) not in ("/boot.py","boot.py","/main.py","main.py"):
             try:
                 data = await anyio.run_process([cross, str(src), "-o", "/dev/stdout"])
             except CalledProcessError as exc:

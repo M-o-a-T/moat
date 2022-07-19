@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 @click.option("-m","--mplex","--multiplex", is_flag=True, help="Run the multiplexer after syncing")
 @click.option("-M","--mark", type=int, help="Serial marker", hidden=True)
 @click.option("-C","--cross",help="path to mpy-cross")
-async def setup(obj, source, dest, no_run, no_reset, force_exit, exit, verbose, state, config, mplex, cross):
+async def setup(obj, source, dest, no_run, no_reset, force_exit, exit, verbose, state, config, mplex, cross, mark):
 	"""
 	Initial sync of MoaT code to a MicroPython device.
 

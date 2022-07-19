@@ -43,10 +43,10 @@ class Batt:
 		self.cfg = cfg = to_attrdict(cfg)
 
 		async with self._srv as l:
-			await l.set(self.vlo, float(cfg.u.ext.min))
-			await l.set(self.vhi, float(cfg.u.ext.max))
-			await l.set(self.ich, float(cfg.i.ext.min))
-			await l.set(self.idis, float(cfg.i.ext.max))
+			await l.set(self.bus.vlo, float(cfg.u.ext.min))
+			await l.set(self.bus.vhi, float(cfg.u.ext.max))
+			await l.set(self.bus.ich, float(cfg.i.ext.min))
+			await l.set(self.bus.idis, float(cfg.i.ext.max))
 
 	@property
 	def srv(self):

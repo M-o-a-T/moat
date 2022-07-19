@@ -429,8 +429,8 @@ class MoatFSPath(_MoatPath):
         Write contents (expected to be bytes) to a file on the target.
         """
         self._stat_cache = None
-        if not isinstance(data, (bytes, bytearray)):
-            raise TypeError(f'contents must be bytes/bytearray, got {type(data)} instead')
+        if not isinstance(data, (bytes, bytearray, memoryview)):
+            raise TypeError(f'contents must be a buffer, got {type(data)} instead')
         fd = await self._req("open", p=self.as_posix(), m="w")
         try:
             off=0

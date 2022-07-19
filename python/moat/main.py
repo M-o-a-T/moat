@@ -108,7 +108,7 @@ async def get_link_serial(obj, ser, **kw):
 
 
 @asynccontextmanager
-async def get_link(obj, **kw):
+async def get_link(obj, use_port=False, **kw):
 	"""\
 		Link to the target: the socket, if that can be connected to,
 		or the serial port.
@@ -119,6 +119,8 @@ async def get_link(obj, **kw):
 		else:
 			raise AttributeError("socket")
 	except (AttributeError,OSError):
+		if not use_port:
+			raise
 		async with get_serial(obj) as ser:
 			async with get_link_serial(obj,ser, **kw) as link:
 				yield link

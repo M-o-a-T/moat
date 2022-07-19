@@ -6,6 +6,7 @@ from ..proto import RemoteError
 
 import uos
 import usys
+import errno
 
 class FsCmd(BaseCmd):
     _fd_last = 0

@@ -1,7 +1,7 @@
 
 from moat.cmd import BaseCmd
 from moat.compat import ticks_ms, ticks_diff, sleep_ms, ticks_add, Event, TaskGroup
-from moat.util import Queue, to_attrdict
+from moat.util import Queue, to_attrdict, attrdict
 import sys
 import anyio
 from victron.dbus import Dbus

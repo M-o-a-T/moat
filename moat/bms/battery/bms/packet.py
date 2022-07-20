@@ -84,12 +84,14 @@ class FloatUint:
         self = cls()
         self.f = val
         self.u = unpack("<I",pack("f", val))
+        return self
 
     @classmethod
     def U(cls, val):
         self = cls()
         self.u = val
         self.f = unpack("f",pack("<I", val))
+        return self
 
 class NullStruct:
     size = 0

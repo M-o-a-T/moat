@@ -43,7 +43,7 @@ class SysCmd(BaseCmd):
             if fallback is None:
                 return self.base.cfg
             else:
-                f=open("/moat_fb.cfg" if fallback else "/moat.cfg","wb")
+                f=open("/moat_fb.cfg" if fallback else "/moat.cfg","rb")
                 cfg = msgpack.unpackb(f.read())
                 f.close()
                 return cfg

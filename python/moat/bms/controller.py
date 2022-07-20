@@ -177,7 +177,8 @@ class Controller(dbus.ServiceInterface):
                 set_err(hdr, SpuriousData(msg))
                 continue
             n,self.waiting[hdr.sequence] = self.waiting[hdr.sequence],None
-            n.set((hdr,pkt))
+            if n is not None:
+                n.set((hdr,pkt))
 
 
 

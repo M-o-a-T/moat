@@ -1,40 +1,13 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, division, unicode_literals
-
-##
-##  This file is part of MoaT, the Master of all Things.
-##
-##  MoaT is Copyright © 2007-2016 by Matthias Urlichs <matthias@urlichs.de>,
-##  it is licensed under the GPLv3. See the file `README.rst` for details,
-##  including optimistic statements by the author.
-##
-##  This program is free software: you can redistribute it and/or modify
-##  it under the terms of the GNU General Public License as published by
-##  the Free Software Foundation, either version 3 of the License, or
-##  (at your option) any later version.
-##
-##  This program is distributed in the hope that it will be useful,
-##  but WITHOUT ANY WARRANTY; without even the implied warranty of
-##  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-##  GNU General Public License (included; see the file LICENSE)
-##  for more details.
-##
-##  This header is auto-generated and may self-destruct at any time,
-##  courtesy of "make update". The original is in ‘scripts/_boilerplate.py’.
-##  Thus, do not remove the next line, or insert any blank lines above.
-##BP
-
-from __future__ import division, absolute_import
 
 """\
-This code does some standard time handling.
+This code does some time handling.
 
 """
 
 import datetime as dt
-from time import time, mktime
 from calendar import monthrange
-from distkv.util import attrdict
+from . import attrdict
 
 startup = dt.datetime.now()
 _log = None
@@ -123,10 +96,10 @@ def simple_time_delta(w):
             m = 60 * 60 * 24 * 7
             w.pop(1)
         elif w[1] in ("m", "mo", "month", "months"):
-            m = 60 * 60 * 24 * 30  ## inexact!
+            m = 60 * 60 * 24 * 30  # inexact!
             w.pop(1)
         elif w[1] in ("y", "yr", "year", "years"):
-            m = 60 * 60 * 24 * 365  ## inexact!
+            m = 60 * 60 * 24 * 365  # inexact!
             w.pop(1)
         elif w[1] in ("+", "-"):
             pass
@@ -148,12 +121,12 @@ def simple_time_delta(w):
 
 def collect_words(cur, w):
     """\
-		Build a data structure representing time offset from a specific
-		start.
+        Build a data structure representing time offset from a specific
+        start.
 
-		@cur: start time, may be None.
-		@w: words describing the time offset.
-		"""
+        @cur: start time, may be None.
+        @w: words describing the time offset.
+        """
     p = attrdict()
     p.h = None
     p.m = None  # absolute hour/minute/second
@@ -301,9 +274,9 @@ def collect_words(cur, w):
 
 def time_until(args, t_now=None, invert=False):
     """\
-		Find the next time which is in the future and matches the arguments.
-		If "invert" is True, find the next time which does *not*.
-		"""
+        Find the next time which is in the future and matches the arguments.
+        If "invert" is True, find the next time which does *not*.
+        """
     p = collect_words(t_now, args)
 
     p.res = p.now

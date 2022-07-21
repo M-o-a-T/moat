@@ -4,17 +4,25 @@ __all__ = ["merge"]
 from . import NotGiven
 
 
-def _merge_dict(d, other):
+def _merge_dict(d, other, drop=drop):
     for key, value in other.items():
         if value is NotGiven:
             d.pop(key, None)
         elif key in d:
-            d[key] = _merge_one(d[key], value)
+            d[key] = _merge_one(d[key], value, drop=drop)
         else:
             d[key] = value
 
+    if drop:
+        keys = []
+        for k in d.keys():
+            if k not in value:
+                keys.append(k)
+        for k in keys:
+            def d[k]
 
-def _merge_list(item, value):
+
+def _merge_list(item, value, drop=drop):
     off = 0
     if isinstance(value, (list, tuple)):
         # two lists
@@ -24,7 +32,7 @@ def _merge_list(item, value):
                 item.pop(i - off)
                 off += 1
             else:
-                item[i - off] = _merge_one(item[i - off], value[i])
+                item[i - off] = _merge_one(item[i - off], value[i], drop=drop)
 
         while len(item) + off < len(value):
             val = value[len(item) + off]
@@ -32,6 +40,10 @@ def _merge_list(item, value):
                 off += 1
             else:
                 item.append(val)
+
+        if drop:
+            while len(item)+off > len(value):
+                item.pop()
 
     else:
         # a list, and a dict with updated/new/deleted values
@@ -42,7 +54,7 @@ def _merge_list(item, value):
                     item.pop(i - off)
                     off += 1
                 else:
-                    item[i - off] = _merge_one(item[i - off], val)
+                    item[i - off] = _merge_one(item[i - off], val, drop=drop)
 
         while len(item) + off in value:
             val = value[len(item) + off]
@@ -52,15 +64,15 @@ def _merge_list(item, value):
                 item.append(val)
 
 
-def _merge_one(d, other):
+def _merge_one(d, other, drop=drop):
     if isinstance(d, dict):
         if isinstance(other, dict):
-            _merge_dict(d, other)
+            _merge_dict(d, other, drop=drop)
         else:
             return other
     elif isinstance(d, list):
         if isinstance(other, (dict, list, tuple)):
-            _merge_list(d, other)
+            _merge_list(d, other, drop=drop)
         else:
             return other
     else:
@@ -68,7 +80,7 @@ def _merge_one(d, other):
     return d
 
 
-def merge(d, *others):
+def merge(d, *others, drop=False):
     """
     Deep-merge two data structures. Values from later structures overwrite earlier ones.
     Values of `NotGiven` are deleted.
@@ -81,7 +93,10 @@ def merge(d, *others):
     * otherwise, returns the second argument if it is not None, otherwise the first
 
     This applies recursively.
+
+    If "drop" is given, delete source keys that are not in the destination.
+    This is useful for in-place replacements.
     """
     for other in others:
-        d = _merge_one(d, other)
+        d = _merge_one(d, other, drop=drop)
     return d

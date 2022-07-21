@@ -19,7 +19,10 @@ async def serial(obj, name):
         add_client_hooks(req)
         while True:
             r = await req.send(["local",name,"raw"])
-            r = utf.decode(r)
+            try:
+                r = utf.decode(r)
+            except UnicodeDecodeError:
+                pass
             logger.info("C:%s: %s",name,r)
 
 

@@ -45,7 +45,7 @@ class Batt:
 		async with self._srv as l:
 			await l.set(self.bus.vlo, float(cfg.u.ext.min))
 			await l.set(self.bus.vhi, float(cfg.u.ext.max))
-			await l.set(self.bus.ich, float(cfg.i.ext.min))
+			await l.set(self.bus.ich, -float(cfg.i.ext.min))
 			await l.set(self.bus.idis, float(cfg.i.ext.max))
 
 	@property

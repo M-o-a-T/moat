@@ -2,6 +2,7 @@
 
 import io
 import os
+import sys
 import pathlib
 import binascii
 import hashlib
@@ -509,8 +510,8 @@ async def copytree(src,dst,check=_nullcheck, cross=None):
             try:
                 data = await anyio.run_process([cross, str(src), "-o", "/dev/stdout"])
             except CalledProcessError as exc:
-                breakpoint()
-                pass
+                print(exc.stderr.decode("utf-8"), file=sys.stderr)
+                raise
             else:
                 src = ABytes(src.with_suffix(".mpy"),data.stdout)
                 try:

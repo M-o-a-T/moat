@@ -84,7 +84,7 @@ class Controller(dbus.ServiceInterface):
         for n in range(5):
             try:
                 return await self._send(*a,**k)
-            except TimeoutError as e:
+            except (TimeoutError,MessageLost) as e:
                 if err is None:
                     err = e
         raise err from None
@@ -130,8 +130,10 @@ class Controller(dbus.ServiceInterface):
             self.seq = (self.seq + 1) % 8
             evt = self.waiting[seq]
             if evt is not None:
-                # kill prev request
-                evt.set_error(TimeoutError)
+                # wait for prev request to complete
+                logger.error("WAIT %d",seq)
+                await evt.wait()
+            logger.error("SEND %d",seq)
             self.waiting[seq] = evt = ValueEvent()
 
             # We need to delay by whatever the affected cells add to the
@@ -143,24 +145,30 @@ class Controller(dbus.ServiceInterface):
             self.t = t + 10*mlen/self.baud
             await self.req.send([self.cfg.serial, "send"], data=msg)
 
-        return await wait_for_ms(5000, evt.get)
+        res = await wait_for_ms(5000, evt.get)
+        return res
 
     async def _read(self):
 
-        def set_err(hdr, err):
-            n,self.waiting[hdr.sequence] = self.waiting[hdr.sequence],None
-            n.set_error(err)
+        def set_err(seq, err):
+            n,self.waiting[seq] = self.waiting[seq],None
+            if n is not None:
+                n.set_error(err)
 
         req = self._req
 
+        xseq = 0
         while True:
             msg = await req.send(["local",self.cfg.serial,"pkt"])
             # TODO set up a subscription mechanism
 
             off = PacketHeader.S.size
             hdr = PacketHeader.from_bytes(msg[0:off])
+            while xseq != hdr.sequence:
+                set_err(xseq, MessageLost())
+                xseq = (xseq+1) & 0x07
             if not hdr.seen:
-                set_err(hdr, NoSuchCell(hdr.start))
+                set_err(hdr.sequence, NoSuchCell(hdr.start))
                 continue
             RC = replyClass[hdr.command]
             RCL = RC.S.size
@@ -176,11 +184,12 @@ class Controller(dbus.ServiceInterface):
                     pkt.append(RC.from_bytes(msg[off:off+RCL]))
                     off += RCL
             if off != len(msg):
-                set_err(hdr, SpuriousData(msg))
+                set_err(hdr.sequence, SpuriousData(msg))
                 continue
+
             evt, self.waiting[hdr.sequence] = self.waiting[hdr.sequence], None
             if evt is not None:
-            evt.set((hdr,pkt))
+                evt.set((hdr,pkt))
 
     @dbus.method
     async def GetNBatteries(self) -> 'y':

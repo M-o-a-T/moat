@@ -3,8 +3,6 @@ import uasyncio
 from uasyncio import Event,Lock,sleep,sleep_ms,TimeoutError, run as _run, TaskGroup as _tg, CancelledError
 from asyncio.queues import Queue
 from utime import ticks_ms, ticks_add, ticks_diff
-import attr
-import outcome
 
 
 async def idle():
@@ -35,54 +33,63 @@ async def run_server(*a, **kw):
     return await rs(*a,**kw)
 
 
-@attr.s
+# minimal Outcome clone
+
+class _Outcome:
+    def __init__(self, val):
+        self.val = val
+
+class _Value(_Outcome):
+    def unwrap(self):
+        try:
+            return self.val
+        finally:
+            del self.val
+
+class _Error(_Outcome):
+    def unwrap(self):
+        try:
+            raise self.val
+        finally:
+            del self.val
+
+
 class ValueEvent:
-    """A waitable value useful for inter-task synchronization,
-    inspired by :class:`threading.Event`.
+    # A waitable value useful for inter-task synchronization,
+    # inspired by :class:`threading.Event`.
 
-    An event object manages an internal value, which is initially
-    unset, and a task can wait for it to become True.
+    # An event object manages an internal value, which is initially
+    # unset, and a task can wait for it to become True.
 
-    Args:
-      ``scope``:  A cancelation scope that will be cancelled if/when
-                  this ValueEvent is. Used for clean cancel propagation.
+    # Note that the value can only be read once.
 
-    Note that the value can only be read once.
-    """
-
-    event = attr.ib(factory=Event, init=False)
-    value = attr.ib(default=None, init=False)
-    scope = attr.ib(default=None, init=True)
+    def __init__(self):
+        self.event = Event()
+        self.value = None
 
     def set(self, value):
-        """Set the result to return this value, and wake any waiting task."""
-        self.value = outcome.Value(value)
+        # Set the result to return this value, and wake any waiting task.
+        self.value = _Value(value)
         self.event.set()
 
     def set_error(self, exc):
-        """Set the result to raise this exceptio, and wake any waiting task."""
-        self.value = outcome.Error(exc)
+        # Set the result to raise this exception, and wake any waiting task.
+        self.value = _Error(exc)
         self.event.set()
 
     def is_set(self):
-        """Check whether the event has occurred."""
+        # Check whether the event has occurred.
         return self.value is not None
 
     def cancel(self):
-        """Send a cancelation to the recipient.
-
-        TODO: Trio can't do that cleanly.
-        """
-        if self.scope is not None:
-            self.scope.cancel()
+        # Send a cancelation to the recipient.
         self.set_error(CancelledError())
 
     async def get(self):
-        """Block until the value is set.
+        # Block until the value is set.
 
-        If it's already set, then this method returns immediately.
+        # If it's already set, then this method returns immediately.
 
-        The value can only be read once.
-        """
+        # The value can only be read once.
         await self.event.wait()
         return self.value.unwrap()

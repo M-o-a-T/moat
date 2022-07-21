@@ -52,6 +52,15 @@ class ValueEvent:
             self.scope.cancel()
         self.set_error(CancelledError())
 
+    async def wait(self):
+        """Block until the value is set.
+
+        If it's already set, then this method returns immediately.
+
+        The value is not (yet) read; if it's an error, it will not be raised from here.
+        """
+        await self.event.wait()
+
     async def get(self):
         """Block until the value is set.
 

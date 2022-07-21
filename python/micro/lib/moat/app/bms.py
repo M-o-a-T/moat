@@ -1,6 +1,6 @@
 
 from moat.cmd import BaseCmd
-from moat.compat import ticks_ms, ticks_diff, sleep_ms, ticks_add, Event
+from moat.compat import ticks_ms, ticks_diff, sleep_ms, wait_for_ms, ticks_add, Event, TimeoutError
 import machine as M
 
 # cfg:
@@ -28,8 +28,8 @@ class Batt:
 		c = self.cfg
 		d = c["poll"]["d"]
 
-		u = self.adc_u.read_u16() * self.cfg["u"]["scale"] + self.cfg["u"]["offset"]
-		i = (self.adc_i.read_u16()-self.adc_ir.read_u16()) * self.cfg["i"]["scale"] + self.cfg["i"]["offset"]
+		u = self.adc_u.read_u16() * self.adc_u_scale + self.adc_u_offset
+		i = (self.adc_i.read_u16()-self.adc_ir.read_u16()) * self.adc_i_scale + self.adc_i_offset
 		self.val_u = (self.val_u*(1000-d) + u*d) / 1000
 		self.val_i = (self.val_i*(1000-d) + i*d) / 1000
 
@@ -64,18 +64,46 @@ class Batt:
 		else:
 			self.sw_ok = False
 
-	def update_cfg(self, cfg):
-		ocfg = self.cfg
-		self.cfg = cfg
+	def live_state(self, live:bool):
+		if self.live == live:
+			return
+		self.live = live
+		if not live:
+			self.relay.off()
+
+	def set_live(self):
+		self.live_flag.set()
+	
+	async def live_task(self):
+		while True:
+			try:
+				await wait_for_ms(self.cfg.poll.k, self.live_flag.wait)
+			except TimeoutError:
+				self.live_state(False)
+			else:
+				self.live_flag = Event()
+				self.live_state(True)
+
+	def config_updated(self):
+		old_u_scale, old_u_offset = self.adc_u_scale, self.adc_u_offset
+		old_i_scale, old_i_offset = self.adc_i_scale, self.adc_i_offset
+		self._set_scales()
+		self.val_u = (self.val_u-old_u_offset)/old_u_scale*self.adc_u_scale+self.adc_u_offset
+		self.val_i = (self.val_i-old_i_offset)/old_i_scale*self.adc_i_scale+self.adc_i_offset
+
 		res = dict(
 			w=self.sum_w,
 			n=self.n_w,
 		)
 		self.sum_w = 0
 		self.n_w = 0
-		self.val_u = (self.val_u-ocfg['u']['offset'])/ocfg['u']['scale']*cfg['u']['scale']+cfg['u']['offset']
-		self.val_i = (self.val_i-ocfg['i']['offset'])/ocfg['i']['scale']*cfg['i']['scale']+cfg['i']['offset']
 		return res
+
+	def _set_scales(self):
+		self.adc_u_scale = self.cfg["u"]["scale"]
+		self.adc_u_offset = self.cfg["u"]["offset"]
+		self.adc_i_scale = self.cfg["i"]["scale"]
+		self.adc_i_offset = self.cfg["i"]["offset"]
 
 	async def run(self):
 		self.adc_u = M.ADC(M.Pin(self.cfg["u"]["pin"]))
@@ -85,14 +113,20 @@ class Batt:
 		self.sum_w = 0
 		self.n_w = 0
 		self.relay_force = None
+		self.live = self.relay.value()
+		self.live_flag = Event()
+		# we start off with the current relay state
+		# so a soft reboot won't toggle the relay
+
+		self._set_scales()
 
 		def sa(a,n=10):
 			s=0
 			for _ in range(n):
 				s += a.read_u16()
 			return s/n
-		self.val_u = sa(self.adc_u) * self.cfg["u"]["scale"] + self.cfg["u"]["offset"]
-		self.val_i = (sa(self.adc_i)-sa(self.adc_ir)) * self.cfg["i"]["scale"] + self.cfg["i"]["offset"]
+		self.val_u = sa(self.adc_u) * self.adc_u_scale + self.adc_u_offset
+		self.val_i = (sa(self.adc_i)-sa(self.adc_ir)) * self.adc_i_scale + self.adc_i_offset
 
 		self.sw_ok = False
 
@@ -109,13 +143,13 @@ class Batt:
 					xmit_n=0
 
 			if self._check():
-				if self.sw_ok and self.relay_force is None and not self.relay.value():
+				if self.sw_ok and self.live and self.relay_force is None and not self.relay.value():
 					self.relay.on()
 					await self.send_rly_state()
 
 					xmit_n=0
 
-			elif self.relay_force is None and self.relay.value():
+			elif self.live and self.relay_force is None and self.relay.value():
 				self.relay.off()
 				await self.send_rly_state()
 				self.t_sw = ticks_add(self.t, self.cfg["rel"]["t"])
@@ -136,7 +170,7 @@ class Batt:
 	async def send_rly_state(self):
 		if self.cmd is not None:
 			await self.cmd.request.send_nr([self.cmd.name,"relay"],
-				{"state": self.relay.value(), "force": self.relay_force})
+				{"state": self.relay.value(), "force": self.relay_force, "live": self.live})
 
 
 class BattCmd(BaseCmd):
@@ -151,15 +185,20 @@ class BattCmd(BaseCmd):
 			await self.batt.xmit_evt.wait()
 			await self.request.send_nr([self.name,"info"], self.batt.stat())
 	
+	async def config_updated(self):
+		await super().config_updated()
+		res = self.batt.config_updated()
+		await self.request.send_nr([self.name,"work"], work=res, final=True)
+
 	async def cmd_rly(self, st):
+		"""
+		Called manually, but also irreversibly when there's a "hard" cell over/undervoltage
+		"""
 		await self.batt.set_relay_force(st)
 
-	def cmd_s(self):
+	def cmd_stat(self):
 		return self.batt.stat()
 
-	def cmd_cfg(self, cfg=None):
-		if cfg is None:
-			return self.batt.cfg
-		res = self.batt.update_cfg(cfg)
-		await self.request.send_nr([self.name,"cfg"], cfg=self.batt.cfg)
-		return res
+	def cmd_live(self):
+		self.batt.set_live()
+

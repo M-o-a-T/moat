@@ -16,6 +16,7 @@ class Queue:
 
     This Queue class simply re-implements queues on top of memory object streams.
     """
+
     def __init__(self, length=0):
         self._s, self._r = _cmos(length)
 

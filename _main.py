@@ -44,8 +44,16 @@ def attr_args(proc=None, with_path=True, with_eval=True):
     Use `attr_args(with_path=False)` to skip path arguments. Ditto for
     `with_eval`.
     """
+
     def _proc(proc):
-        args = ("-p", "--path",) if with_path else ("--hidden_path",)
+        args = (
+            (
+                "-p",
+                "--path",
+            )
+            if with_path
+            else ("--hidden_path",)
+        )
         proc = click.option(
             *args,
             "path_",
@@ -56,7 +64,14 @@ def attr_args(proc=None, with_path=True, with_eval=True):
             hidden=not with_path,
         )(proc)
 
-        args = ("-e", "--eval",) if with_eval else ("--hidden_eval",)
+        args = (
+            (
+                "-e",
+                "--eval",
+            )
+            if with_eval
+            else ("--hidden_eval",)
+        )
         proc = click.option(
             *args,
             "eval_",
@@ -96,12 +111,13 @@ def process_args(val, vars_, eval_, path_, vs=None):
         the new value.
     """
     n = 0
-    if isinstance(vars_,Mapping):
+    if isinstance(vars_, Mapping):
         vars_ = vars_.items()
-    if isinstance(eval_,Mapping):
+    if isinstance(eval_, Mapping):
         eval_ = eval_.items()
-    if isinstance(path_,Mapping):
+    if isinstance(path_, Mapping):
         path_ = path_.items()
+
     def data():
         for k, v in vars_:
             yield k, v
@@ -136,8 +152,8 @@ def process_args(val, vars_, eval_, path_, vs=None):
         elif n < 0:
             raise click.BadOptionUsage(option_name=k, message="Setting a single value conflicts.")
         else:
-            if isinstance(k,str):
-                k=P(k)
+            if isinstance(k, str):
+                k = P(k)
             if not isinstance(val, Mapping):
                 val = attrdict()
             if vs is not None:

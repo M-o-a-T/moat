@@ -15,19 +15,19 @@ def _merge_dict(d, other):
 
 
 def _merge_list(item, value):
-    off=0
-    if isinstance(value,(list,tuple)):
+    off = 0
+    if isinstance(value, (list, tuple)):
         # two lists
         lim = len(item)
-        for i in range(min(lim,len(value))):
+        for i in range(min(lim, len(value))):
             if value[i] is NotGiven:
-                item.pop(i-off)
+                item.pop(i - off)
                 off += 1
             else:
-                item[i-off] = _merge_one(item[i-off], value[i])
+                item[i - off] = _merge_one(item[i - off], value[i])
 
-        while len(item)+off < len(value):
-            val = value[len(item)+off]
+        while len(item) + off < len(value):
+            val = value[len(item) + off]
             if val is NotGiven:
                 off += 1
             else:
@@ -39,13 +39,13 @@ def _merge_list(item, value):
             if i in value:
                 val = value[i]
                 if val is NotGiven:
-                    item.pop(i-off)
+                    item.pop(i - off)
                     off += 1
                 else:
-                    item[i-off] = _merge_one(item[i-off], val)
+                    item[i - off] = _merge_one(item[i - off], val)
 
-        while len(item)+off in value:
-            val = value[len(item)+off]
+        while len(item) + off in value:
+            val = value[len(item) + off]
             if val is NotGiven:
                 off += 1
             else:
@@ -59,7 +59,7 @@ def _merge_one(d, other):
         else:
             return other
     elif isinstance(d, list):
-        if isinstance(other, (dict,list,tuple)):
+        if isinstance(other, (dict, list, tuple)):
             _merge_list(d, other)
         else:
             return other
@@ -83,6 +83,5 @@ def merge(d, *others):
     This applies recursively.
     """
     for other in others:
-        d = _merge_one(d,other)
+        d = _merge_one(d, other)
     return d
-

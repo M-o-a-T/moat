@@ -13,6 +13,7 @@ try:
 except ImportError:
     notify = None
 
+
 @asynccontextmanager
 async def as_service(obj=None):
     """

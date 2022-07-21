@@ -196,13 +196,13 @@ class attrdict(dict):
                 break
         return val
 
+
 def to_attrdict(d) -> attrdict:
     """
     Return a hierarchy with all dicts converted to attrdicts.
     """
-    if isinstance(d,dict):
-        return attrdict((k,to_attrdict(v)) for k,v in d.items())
-    if isinstance(d,(tuple,list)):
+    if isinstance(d, dict):
+        return attrdict((k, to_attrdict(v)) for k, v in d.items())
+    if isinstance(d, (tuple, list)):
         return [attrdict(v) for v in d]
     return d
-

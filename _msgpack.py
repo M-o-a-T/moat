@@ -19,11 +19,14 @@ from ._path import Path
 
 __all__ = ["packer", "unpacker", "stream_unpacker", "Proxy"]
 
+
 class Proxy:
     def __init__(self, name):
         self.name = name
+
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name !r})"
+
 
 def _encode(data):
     if isinstance(data, int) and data >= 1 << 64:

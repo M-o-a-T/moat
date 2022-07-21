@@ -131,7 +131,7 @@ class RequestConfig:
     @classmethod
     def from_cell(self, cell):
         self.voltageCalibration = FloatUint.F(cell.v_calibration)
-        self.bypassTempRaw = cell.bypass_temp_raw
+        self.bypassTempRaw = cell.internal_temp_raw
         self.bypassVoltRaw = cell.balance_config_threshold_raw
 
     def to_bytes(self):
@@ -155,12 +155,12 @@ class ReplyVoltages(_Reply):
     def to_cell(self, cell):
         chg = False
 
-        if cell.in_bypass != bool(self.voltRaw & 0x8000):
+        if cell.in_balance != bool(self.voltRaw & 0x8000):
             chg = True
-            cell.in_bypass = not cell.in_bypass
-        if cell.bypass_over_temp != bool(self.voltRaw & 0x4000):
+            cell.in_balance = not cell.in_balance
+        if cell.balance_over_temp != bool(self.voltRaw & 0x4000):
             chg = True
-            cell.bypass_over_temp = not cell.bypass_over_temp
+            cell.balance_over_temp = not cell.balance_over_temp
         vRaw = self.voltRaw & 0x1FFF
         if vRaw:
             v = cell._raw2volt(vRaw)
@@ -265,13 +265,13 @@ class ReplySettings(_Reply):
         cell.code_version = self.gitVersion
         cell.board_version = self.boardVersion
         cell.v_per_ADC = self.mvPerADC/1000
-        cell.voltage_calibration = self.voltageCalibration.f
+        cell.v_calibration = self.voltageCalibration.f
         cell.bypass_temp_raw = self.bypassTempRaw
         cell.balance_config_threshold_raw = self.bypassVoltRaw
         cell.internal_B = self.BCoeffInternal
         cell.external_B = self.BCoeffExternal
-        cell.voltageSamples = self.numSamples
-        cell.load_resistance = self.loadResRaw / 16
+        cell.n_samples = self.numSamples
+        cell.load_resistance_raw = self.loadResRaw / 16
 
 @_dc
 class RequestTiming:

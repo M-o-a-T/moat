@@ -17,26 +17,24 @@ class Cell(dbus.ServiceInterface):
     voltage_min:float = None
     voltage_max:float = None
     # value from module
-    _v_calibration:float = None
 
-    internal_temp:float = None
-    external_temp:float = None
+    load_temp:float = None
+    batt_temp:float = None
 
-    voltageSamples:int = None
     v_per_ADC:float = None
+    n_samples:int = None
 
-    in_bypass:bool = False
-    bypass_pwm:float = None
-    bypass_over_temp:bool = False
-    bypass_max_temp:float = None
-    bypass_current_threshold:float = None
-    bypass_config_threshold:float = None
+    in_balance:bool = False
+    balance_pwm:float = None  # percentage of time the balancer is on
+    balance_over_temp:bool = False
 
-    load_resistance:float = None
     board_version:int = None
     code_version:int = None
 
+    # current counter
     balance_Ah:float = None
+
+    # packet counter
     packets_in:int = None
     packets_bad:int = None
 
@@ -44,12 +42,11 @@ class Cell(dbus.ServiceInterface):
         self.batt = batt
         self.path = path
         self.nr = nr
-        self.cfg = cfg
         self.bcfg = bcfg
         self.gcfg = gcfg
 
         super().__init__("org.m-o-a-t.bms")
-        self.cfg = combine_dict(self.cfg, self.bcfg.default)
+        self.cfg = combine_dict(cfg, bcfg.default, cls=attrdict)
 
     def __repr__(self):
         return f"‹Cell {self.path} u={self.voltage}›"
@@ -101,10 +98,10 @@ class Cell(dbus.ServiceInterface):
 
     @property
     def v_calibration(self):
-        return self._v_calibration or self.cfg.v_calibration
+        return self.cfg.u.scale
     @v_calibration.setter
     def v_calibration(self, val):
-        self._v_calibration = val
+        self.cfg.u.scale = val
 
     @property
     def _config(self):
@@ -115,17 +112,17 @@ class Cell(dbus.ServiceInterface):
         res = attrdict()
         if self.voltage:
             res.v = self.voltage
-        if self.internal_temp is not None:
-            res.t_int = self.internal_temp
-        if self.internal_temp is not None:
-            res.t_ext = self.external_temp
+        if self.load_temp is not None:
+            res.t_int = self.load_temp
+        if self.batt_temp is not None:
+            res.t_ext = self.batt_temp
         if self.balance_Ah is not None:
             res.bal_ah = self.balance_Ah
-        if self.in_bypass:
-            res.balancing = self.bypass_pwm if self.bypass_pwm else 0.001
+        if self.in_balance:
+            res.balancing = self.balance_pwm if self.balance_pwm else 0.001
         else:
             res.balancing = 0
-        res.balance_to = self.bypass_current_threshold or self.bypass_config_threshold
+        res.balance_to = self.cfg.u.balance
         return res
 
     @property
@@ -136,77 +133,67 @@ class Cell(dbus.ServiceInterface):
     def voltage(self, val):
         if val > 0:
             self._voltage = val
-            self.voltage_min = min(self.voltage_min or 9999, val)
-            self.voltage_max = min(self.voltage_max or 0, val)
+            self.voltage_min = val if self.voltage_min is None else min(self.voltage_min or 9999, val)
+            self.voltage_max = max(self.voltage_max or 0, val)
             self.valid = True
     
     @property
     def internal_temp_raw(self) -> int:
-        return celsius2thermistor(self.cfg.b_int, self.internal_temp)
+        if self.cfg.load.b is None:
+            return None
+        return celsius2thermistor(self.cfg.load.b, self.load_temp)
 
     @internal_temp_raw.setter
     def internal_temp_raw(self, val):
-        if self.cfg.b_int is None:
-            return
-        self.internal_temp = thermistor2celsius(self.cfg.b_int, val)
+        if self.cfg.load.b is None:
+            return None
+        self.load_temp = thermistor2celsius(self.cfg.load.b, val)
 
 
     @property
-    def bypass_temp_raw(self) -> int:
-        if self.bypass_B is None:
+    def external_temp_raw(self) -> int:
+        if self.cfg.batt.b is None:
             return None
-        return celsius2thermistor(self.bypass_B, self.bypass_temp)
+        return celsius2thermistor(self.cfg.batt.b, self.batt_temp)
 
-    @bypass_temp_raw.setter
-    def bypass_temp_raw(self, val):
-        if self.bypass_B is None:
-            return
-        self.bypass_temp = thermistor2celsius(self.bypass_B, val)
-
-
-    @property
-    def externalTemp_raw(self) -> int:
-        if self.cfg.b_ext is None:
+    @external_temp_raw.setter
+    def external_temp_raw(self, val):
+        if self.cfg.batt.b is None:
             return None
-        return celsius2thermistor(self.cfg.b_ext, self.externalTemp)
+        self.batt_temp = thermistor2celsius(self.cfg.batt.b, val)
 
-    @externalTemp_raw.setter
-    def externalTemp_raw(self, val):
-        if self.cfg.b_ext is None:
-            return
-        self.externalTemp = thermistor2celsius(self.cfg.b_ext, val)
 
     def _volt2raw(self, val):
-        if val is None or self.voltageSamples is None:
+        if val is None or self.n_samples is None:
             return None
-        return val / self.VPerADC * self.voltageSamples / self.cfg.v_calibration
+        return (val - self.cfg.u.offset) / self.v_per_ADC * self.n_samples / self.v_calibration
 
     def _raw2volt(self, val):
-        if val is None or self.voltageSamples is None:
+        if val is None or self.cfg.u.samples is None:
             return None
-        return val * self.VPerADC / self.voltageSamples * self.cfg.v_calibration
+        return val * self.v_per_ADC / self.cfg.u.samples * self.v_calibration + self.cfg.u.offset
 
     @property
-    def balance_current_threshold_raw(self):
-        return self._volt2raw(self.balance_current_threshold)
+    def balance_threshold_raw(self):
+        return self._volt2raw(self.balance_threshold)
 
-    @balance_current_threshold_raw.setter
-    def balance_current_threshold_raw(self, val):
+    @balance_threshold_raw.setter
+    def balance_threshold_raw(self, val):
         val = self._raw2volt(val)
         if val is None:
             return
-        self.balance_current_threshold = val
+        self.balance_threshold = val
 
     @property
     def balance_config_threshold_raw(self):
-        return self._volt2raw(self.balance_config_threshold)
+        return self._volt2raw(self.cfg.u.balance)
 
     @balance_config_threshold_raw.setter
     def balance_config_threshold_raw(self, val):
         val = self._raw2volt(val)
         if val is None:
             return
-        self.balance_config_threshold = val
+        self.cfg.u.balance = val
 
     @property
     def voltage_raw(self):
@@ -221,16 +208,23 @@ class Cell(dbus.ServiceInterface):
 
     @property
     def balance_current_count(self):
-        if not self.load_resistance:
+        if not self.cfg.load.r:
             return None
         # not needed, but the reverse of the setter
-        return self._volt2raw(self.balance_Ah*self.load_resistance*3600000.0)
+        return self._volt2raw(self.balance_Ah*self.cfg.load.r*3600000.0)
 
     @balance_current_count.setter
     def balance_current_count(self, val):
-        if not self.load_resistance:
+        if not self.cfg.load.r:
             return
         # the raw value is the cell voltage ADC * voltageSamples, added up once per millisecond.
         # Thus here we divide by resistance and 1000*3600 (msec in an hour) to get Ah.
-        self.balance_Ah = self._raw2volt(val)/self.load_resistance/3600000.0
+        self.balance_Ah = self._raw2volt(val)/self.cfg.load.r/3600000.0
 
+    @property
+    def load_resistence_raw(self):
+        return int(self.cfg.load.r * 64 + 0.5)
+
+    @load_resistence_raw.setter
+    def load_resistence_raw(self, value):
+        self.cfg.load.r = value/64

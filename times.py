@@ -14,7 +14,7 @@ _log = None
 TRACE = None
 
 
-def now(force=False):
+def now(force=False):  # pylint: disable=unused-argument
     return dt.datetime.now()
 
 
@@ -241,9 +241,9 @@ def collect_words(cur, w):
             if p.yr is not None:
                 raise SyntaxError("You already specified the year")
             if val > 0 and val < 100:
-                val += now.year
+                val += p.now.year
             else:
-                if val < now.year or val >= now.year + 100:
+                if val < p.now.year or val >= p.now.year + 100:
                     raise SyntaxError(
                         "WHICH year? Sorry, the time machine module is not available."
                     )
@@ -389,7 +389,7 @@ def time_until(args, t_now=None, invert=False):
             return p.now
 
         if p.wk is not None:  # week of the year
-            yr, wk, dow = p.now.isocalendar()
+            _yr, wk, dow = p.now.isocalendar()
             if p.wk != wk:
                 return p.now
             p.res = p.now
@@ -398,7 +398,7 @@ def time_until(args, t_now=None, invert=False):
             if p.delta is None or p.delta > d:
                 p.delta = d
         if p.dow is not None:
-            yr, wk, dow = p.now.isocalendar()
+            _yr, wk, dow = p.now.isocalendar()
             dow -= 1  # 1…7 ⇒ 0…6
             if p.dow != dow:
                 return p.now
@@ -441,10 +441,10 @@ def time_until(args, t_now=None, invert=False):
             return -1 - ((lim30() - p.res.day) // 7)
 
     if p.wk:  # week of the year
-        yr, wk, dow = p.res.isocalendar()
+        _yr, wk, dow = p.res.isocalendar()
         if p.wk < wk:
             check_year(True)
-            yr, wk, dow = p.res.isocalendar()
+            _yr, wk, dow = p.res.isocalendar()
         upd(7 * (p.wk - wk))
         if p.mn is None and p.dy is None:
             # No month/day specified, so assume that we can go back a bit.
@@ -455,7 +455,7 @@ def time_until(args, t_now=None, invert=False):
                 p.res = p.now
 
     if p.dow is not None:
-        yr, wk, dow = p.res.isocalendar()
+        _yr, wk, dow = p.res.isocalendar()
         dow -= 1  # 1…7 ⇒ 0…6
         if p.dow < dow:
             dow -= 7  # next week

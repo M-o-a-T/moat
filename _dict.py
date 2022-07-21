@@ -14,7 +14,12 @@ def combine_dict(*d, cls=dict, deep=False) -> dict:
     Returns a dict with all keys+values of all dict arguments.
     The first found value wins.
 
-    This recurses if values are dicts.
+    This operation is recursive and non-destructive. If `deep` is set, the
+    result always is a deep copy.
+
+    A value of `NotGiven` causes an entry to be skipped.
+
+    TODO: arrays are not merged.
 
     Args:
       cls (type): a class to instantiate the result with. Default: dict.
@@ -42,7 +47,7 @@ def combine_dict(*d, cls=dict, deep=False) -> dict:
 
     for k, v in keys.items():
         if v[0] is NotGiven:
-            res.pop(k, None)
+            pass
         elif len(v) == 1 and not deep:
             res[k] = v[0]
         elif not isinstance(v[0], Mapping):
@@ -71,7 +76,8 @@ def drop_dict(data: dict, drop: tuple) -> dict:
 
 
 class attrdict(dict):
-    """A dictionary which can be accessed via attributes, for convenience.
+    """
+    A dictionary which can be accessed via attributes, for convenience.
 
     This also supports updating path accessors.
     """

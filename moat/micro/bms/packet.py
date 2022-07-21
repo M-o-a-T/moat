@@ -83,14 +83,14 @@ class FloatUint:
     def F(cls, val):
         self = cls()
         self.f = val
-        self.u = unpack("<I",pack("f", val))
+        self.u = unpack("<I",pack("f", val))[0]
         return self
 
     @classmethod
     def U(cls, val):
         self = cls()
         self.u = val
-        self.f = unpack("f",pack("<I", val))
+        self.f = unpack("f",pack("<I", val))[0]
         return self
 
 class NullStruct:

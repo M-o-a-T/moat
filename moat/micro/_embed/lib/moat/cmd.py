@@ -108,6 +108,12 @@ class BaseCmd(_Stacked):
     async def __call__(self, *a, **k):
         return await self.dispatch(*a, **k)
 
+    async def config_updated(self):
+        for k in dir(self):
+            if k.startswith("dis_"):
+                v = getattr(self,k)
+                await v.config_updated()
+
     def cmd__dir(self):
         # rudimentary introspection
         d=[]

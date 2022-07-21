@@ -188,34 +188,37 @@ async def cmd(obj, path, vars_,eval_,path_):
 @click.option("-r","--replace", is_flag=True, help="Send our config data")
 @click.option("-f","--fallback", is_flag=True, help="Change fallback config data")
 @click.option("-c","--current", is_flag=True, help="Read current config data")
-@attr_args
-async def cfg(obj, vars_,eval_,path_, replace, fallback, current):
+@attr_args(with_proxy=True)
+async def cfg(obj, replace, fallback, current, **attrs):
 	"""
 	Update a remote configuration.
 
-	Use sys.cfg if you want it to be persistent.
+    Writing to the remote config is persistent.
+
+	The selected config is printed if no modifiers are used.
 	"""
 	from copy import deepcopy
+	has_attrs = any(a for a in attrs.values())
 
 	if not fallback:
 		fallback = None if current else False
 	elif current:
 		raise click.UsageError("Can't use both 'fallback' and 'current'")
-	if current and replace:
-		raise click.UsageError("Can't update the current config")
 
 	async with get_link(obj) as req:
 		add_client_hooks(req)
 
 		if replace:
 			val = deepcopy(obj.cfg)
-		else:
+		elif current or not has_attrs:
 			val = await req.send(["sys","cfg"], fallback=fallback)
+		else:
+			val = {}
 
-		if current:
+		if not replace and not has_attrs:
 			yprint(val)
 		else:
-			val = process_args(val, vars_,eval_,path_)
+			val = process_args(val, **attrs)
 			try:
 				res = await req.send(["sys","cfg"], cfg=val, fallback=fallback)
 			except RemoteError as err:

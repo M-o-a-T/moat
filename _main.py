@@ -95,7 +95,8 @@ def attr_args(proc=None, with_path=True, with_eval=True, with_proxy=False):
 
         if with_proxy:
             proc = click.option(
-                "-P", "--proxy"
+                "-P",
+                "--proxy",
                 "proxy_",
                 nargs=2,
                 type=(P, str),

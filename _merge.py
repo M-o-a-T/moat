@@ -4,7 +4,7 @@ __all__ = ["merge"]
 from . import NotGiven
 
 
-def _merge_dict(d, other, drop=drop):
+def _merge_dict(d, other, drop=False):
     for key, value in other.items():
         if value is NotGiven:
             d.pop(key, None)
@@ -16,13 +16,13 @@ def _merge_dict(d, other, drop=drop):
     if drop:
         keys = []
         for k in d.keys():
-            if k not in value:
+            if k not in other:
                 keys.append(k)
         for k in keys:
-            def d[k]
+            del d[k]
 
 
-def _merge_list(item, value, drop=drop):
+def _merge_list(item, value, drop=False):
     off = 0
     if isinstance(value, (list, tuple)):
         # two lists
@@ -64,7 +64,7 @@ def _merge_list(item, value, drop=drop):
                 item.append(val)
 
 
-def _merge_one(d, other, drop=drop):
+def _merge_one(d, other, drop=False):
     if isinstance(d, dict):
         if isinstance(other, dict):
             _merge_dict(d, other, drop=drop)

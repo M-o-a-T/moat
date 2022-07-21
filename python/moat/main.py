@@ -2,6 +2,7 @@ import io
 import os
 import msgpack
 import hashlib
+from pathlib import Path
 
 import anyio
 from anyio_serial import Serial
@@ -23,6 +24,7 @@ class ABytes(io.BytesIO):
 		super().__init__()
 		self.name = name
 		self.write(data)
+		self.suffix = Path(name).suffix
 
 	def __str__(self):
 		return str(self.name)

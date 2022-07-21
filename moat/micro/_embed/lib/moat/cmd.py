@@ -3,7 +3,6 @@ from .proto import _Stacked, RemoteError
 from contextlib import asynccontextmanager
 
 from serialpacker import SerialPacker
-from msgpack import Packer,Unpacker, OutOfData
 from pprint import pformat
 
 import sys

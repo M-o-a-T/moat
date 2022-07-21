@@ -93,6 +93,9 @@ class FloatUint:
         self.f = unpack("f",pack("<I", val))[0]
         return self
 
+    def __repr__(self):
+        return f"‹FU {self.f}›"
+
 class NullStruct:
     size = 0
 

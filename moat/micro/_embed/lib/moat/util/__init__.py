@@ -10,14 +10,5 @@ class NotGiven:
     def __str__(self):
         return "NotGiven"
 
-
-class Proxy:
-    def __init__(self, name):
-        self.name = name
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({repr(self.name)})"
-
-
 from ._merge import merge
 

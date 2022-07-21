@@ -84,12 +84,14 @@ class FloatUint:
         self = cls()
         self.f = val
         self.u = unpack("<I",pack("f", val))
+        return self
 
     @classmethod
     def U(cls, val):
         self = cls()
         self.u = val
         self.f = unpack("f",pack("<I", val))
+        return self
 
 class NullStruct:
     size = 0
@@ -115,7 +117,7 @@ class _Reply(NullData):
         return self
 
     def to_cell(self, cell):
-        pass
+        return False
 
 @_dc
 class RequestConfig:
@@ -151,13 +153,22 @@ class ReplyVoltages(_Reply):
         self.voltRaw, self.bypassRaw = self.S.unpack(data)
 
     def to_cell(self, cell):
-        cell.in_bypass = bool(self.voltRaw & 0x8000)
-        cell.bypass_over_temp = bool(self.voltRaw & 0x4000)
+        chg = False
+
+        if cell.in_bypass != bool(self.voltRaw & 0x8000):
+            chg = True
+            cell.in_bypass = not cell.in_bypass
+        if cell.bypass_over_temp != bool(self.voltRaw & 0x4000):
+            chg = True
+            cell.bypass_over_temp = not cell.bypass_over_temp
         vRaw = self.voltRaw & 0x1FFF
         if vRaw:
-            cell.voltage = cell._raw2volt(vRaw)
+            v = cell._raw2volt(vRaw)
+            if cell.voltage != v:
+                chg = True
+                cell.voltage = v
             cell.valid = True
-        return self
+        return chg
 
     def to_bytes(self):
         return self.S.pack(self.voltRaw, self.bypassRaw)
@@ -179,8 +190,14 @@ class ReplyTemperature(_Reply):
         return self
 
     def to_cell(self, cell):
-        cell.internal_temp_raw = self.intRaw
-        cell.external_temp_raw = self.extRaw
+        chg = False
+        if cell.internal_temp_raw != self.intRaw:
+            chg = True
+            cell.internal_temp_raw = self.intRaw
+        if cell.external_temp_raw != self.extRaw:
+            chg = True
+            cell.external_temp_raw = self.extRaw
+        return chg
     
 @_dc
 class ReplyCounters(_Reply):
@@ -197,8 +214,14 @@ class ReplyCounters(_Reply):
         return self
 
     def to_cell(self, cell):
-        cell.packets_in = self.received
-        cell.packets_bad = self.bad
+        chg = False
+        if cell.packets_in != self.received:
+            chg = True
+            cell.packets_in = self.received
+        if cell.packets_bad != self.bad:
+            chg = True
+            cell.packets_bad = self.bad
+        return chg
 
 @_dc
 class ReplySettings(_Reply):
@@ -282,7 +305,11 @@ class ReplyBalanceCurrentCounter(_Reply):
         return self
 
     def to_cell(self, cell):
-        cell.balance_current_count = self.counter
+        chg = False
+        if cell.balance_current_count != self.counter:
+            chg = True
+            cell.balance_current_count = self.counter
+        return chg
 
 
 @_dc
@@ -316,7 +343,12 @@ class ReplyBalancePower(_Reply):
         return self
 
     def to_cell(self, cell):
-        cell.bypass_pwm = self.pwm/255
+        chg = False
+        pwm = self.pwm/255
+        if cell.bypass_pwm != pwm:
+            chg = True
+            cell.bypass_pwm = pwm
+        return chg
 
 class RequestGetSettings(_Request):
     T = PacketType.ReadSettings

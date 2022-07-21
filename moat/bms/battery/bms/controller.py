@@ -7,6 +7,8 @@ from moat.util import ValueEvent, combine_dict, attrdict
 from .cell import Cell
 from .packet import *
 
+import logging
+logger = logging.getLogger("__name__")
 
 class NoSuchCell(RuntimeError):
     pass
@@ -37,8 +39,8 @@ class Controller(dbus.ServiceInterface):
         self.waiting = [None]*8
 
         n = 0
-        for b in cfg.batteries:
-            batt = Battery(self, b, gcfg, n)
+        for i,b in enumerate(cfg.batteries):
+            batt = Battery(self, b, gcfg, n,i)
             self.batt.append(batt)
             n += b.n
 
@@ -125,11 +127,11 @@ class Controller(dbus.ServiceInterface):
                 await sleep_ms(td)
 
             h.sequence = seq = self.seq
-            self.seq += 1
-            e = self.waiting[seq]
-            if e is not None:
+            self.seq = (self.seq + 1) % 8
+            evt = self.waiting[seq]
+            if evt is not None:
                 # kill prev request
-                e.set_error(TimeoutError)
+                evt.set_error(TimeoutError)
             self.waiting[seq] = evt = ValueEvent()
 
             # We need to delay by whatever the affected cells add to the
@@ -176,11 +178,16 @@ class Controller(dbus.ServiceInterface):
             if off != len(msg):
                 set_err(hdr, SpuriousData(msg))
                 continue
-            n,self.waiting[hdr.sequence] = self.waiting[hdr.sequence],None
-            if n is not None:
-                n.set((hdr,pkt))
+            evt, self.waiting[hdr.sequence] = self.waiting[hdr.sequence], None
+            if evt is not None:
+            evt.set((hdr,pkt))
 
-
+    @dbus.method
+    async def GetNBatteries(self) -> 'y':
+        """
+        Number of batteries on this controller
+        """
+        return len(self.batt)
 
 
 class Battery(dbus.ServiceInterface):
@@ -190,14 +197,17 @@ class Battery(dbus.ServiceInterface):
     w:float = None
     n_w:float = 0
 
-
     w_past:float = 0
     nw_past:float = 0
 
-    def __init__(self, ctrl, cfg, gcfg, start):
+    chg_set:bool = None
+    dis_set:bool = None
+
+    def __init__(self, ctrl, cfg, gcfg, start, num):
         super().__init__("org.m-o-a-t.bms")
 
         self.name = cfg.name
+        self.num = num
         self.ctrl = ctrl
         try:
             self.bms = gcfg.apps[cfg.bms]
@@ -224,7 +234,7 @@ class Battery(dbus.ServiceInterface):
     async def run(self):
         dbus = self.ctrl.dbus
 
-        await dbus.export(f'/bms/{self.cfg.name}',self)
+        await dbus.export(f'/bms/{self.num}',self)
         for c in self.cells:
             await c.export(self.ctrl.dbus)
 
@@ -239,11 +249,107 @@ class Battery(dbus.ServiceInterface):
         async with TaskGroup() as tg:
             await tg.spawn(self._read_update)
 
-            res = await self.send(RequestIdentifyModule())
             res = await self.send(RequestGetSettings())
-            from pprint import pprint
-            pprint(res)
-            raise SystemExit(0)
+            if len(res) != len(self.cells):
+                raise RuntimeError(f"Battery {self.begin}:{self.end}: found {len(res)} modules, not {len(self.cells)}")
+
+            for c,r in zip(self.cells,res):
+                r.to_cell(c)
+
+            await tg.spawn(self.task_keepalive)
+            await tg.spawn(self.task_voltage)
+            await tg.spawn(self.task_temperature)
+
+
+    async def task_keepalive(self):
+        try:
+            t = self.bms.poll.k / 2.1
+        except AttributeError:
+            return
+        while True:
+            self.ctrl.req.send([self.cfg.bms,"live"])
+            await sleep_ms(t)
+
+
+    async def task_voltage(self):
+        """
+        Periodically check the cell voltages
+        """
+        while True:
+            hdr,res = await self.send(RequestVoltages())
+            chg = False
+            for c,r in zip(self.cells,res):
+                chg = r.to_cell(c) or chg
+            if chg:
+                await self.check_limits()
+                await self.VoltageChanged()
+
+            await anyio.sleep(cfg.t.voltage)
+
+
+    async def check_limits(self):
+        """
+        Verify that the battery voltages are within spec.
+        """
+        chg_ok = True
+        dis_ok = True
+
+        vsum = sum(c.voltage for c in self.cells)
+        if abs(vsum-self.u) > vsum/0.02:
+            logger.warning(f"Voltage doesn't match: reported {self.u}, sum {vsum}")
+
+        if self.bms:
+            if self.u >= self.bms.cfg.u.ext.max:
+                chg_ok = False
+
+            if self.u >= self.bms.cfg.u.max:
+                self.ctrl.req.send([self.cfg.bms,"rly", st=False])
+                logger.error(f"Battery {self} overvoltage, turned off")
+
+            if self.u <= self.bms.cfg.u.ext.min:
+                dis_ok = False
+
+            if self.u <= self.bms.cfg.u.min:
+                self.ctrl.req.send([self.cfg.bms,"rly", st=False])
+                logger.error(f"Battery {self} undervoltage, turned off")
+
+        for c in cells:
+            if c.voltage >= c.cfg.ext.max:
+                chg_ok = False
+
+            if c.voltage >= c.cfg.min:
+                self.ctrl.req.send([self.cfg.bms,"rly", st=False])
+                logger.error(f"Cell {c} overvoltage, turned off")
+
+            if c.voltage <= c.cfg.ext.max:
+                dis_ok = False
+
+            if c.voltage <= c.cfg.min:
+                self.ctrl.req.send([self.cfg.bms,"rly", st=False])
+                logger.error(f"Cell {c} undervoltage, turned off")
+
+        if self.chg_set != chg_ok or self.dis_set != dis_ok:
+            # send limits to BMS in mplex
+            await self.ctrl.req.send(["local",self.cfg.bms,"cell"], okch=chg_ok, okdis=dis_ok)
+            self.chg_set = chg_ok
+            self.dis_set = dis_ok
+
+
+
+
+    async def task_temperature(self):
+        """
+        Periodically check the cell temperatures
+        """
+        while True:
+            hdr,res = await self.send(RequestCellTemperature())
+            chg = False
+            for c,r in zip(self.cells,res):
+                chg = r.to_cell(c) or chg
+            if chg:
+                await self.TemperatureChanged()
+
+            await anyio.sleep(cfg.t.temperature)
 
 
     async def send(self, pkt, start=None, end=None, **kw):
@@ -264,7 +370,7 @@ class Battery(dbus.ServiceInterface):
         while True:
             msg = await self.ctrl.req.send(["local",self.cfg.bms,"data"])
             await self.update_global(**msg)
-            
+
 
     async def update_global(self, u=None,i=None,n=None,w=None,**kw):
         if u is not None:
@@ -280,4 +386,31 @@ class Battery(dbus.ServiceInterface):
             self.w = w
             self.n_w = n
 
+    @dbus.signal()
+    async def VoltageChanged(self) -> 'a(db)':
+        """
+        Return voltage plus in-bypass flag
+        """
+        return [(c.voltage,c.in_bypass) for c in self.cells]
+
+    @dbus.signal()
+    async def TemperatureChanged(self) -> 'a(dd)':
+        """
+        Return current temperatures (int,ext)
+        """
+        return [(c.internal_temp,c.external_temp) for c in self.cells]
+
+    @dbus.method
+    async def GetNCells(self) -> 'y':
+        """
+        Number of cells in this battery
+        """
+        return len(self.cells)
+
+    @dbus.method
+    async def GetName(self) -> 's':
+        """
+        Number of cells in this battery
+        """
+        return self.name
 

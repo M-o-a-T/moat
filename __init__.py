@@ -2,6 +2,7 @@
 
 from ._impl import *  # noqa: F401,F403  # isort:skip
 from ._dict import *  # noqa: F401,F403  # isort:skip
+from ._merge import *  # noqa: F401,F403  # isort:skip
 
 try:
     from ._event import *  # noqa: F401,F403

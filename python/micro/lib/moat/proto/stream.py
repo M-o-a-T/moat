@@ -1,11 +1,12 @@
 from ..compat import wait_for_ms, TimeoutError, Lock
+from ..util import NotGiven, Proxy
 
 import sys
 try:
     import greenback
 except ImportError:
     greenback = None
-from msgpack import Packer,Unpacker, OutOfData
+from msgpack import Packer,Unpacker, OutOfData, ExtType
 
 from . import _Stacked
 
@@ -22,6 +23,38 @@ class _Base(_Stacked):
         super().__init__(None)
         self.s = stream
 
+_Proxy = {'-': NotGiven}
+_RProxy = {id(NotGiven): '-'}
+
+def drop_proxy(p):
+    r = _Proxy.pop(p)
+    del _RProxy[id(r)]
+
+def ext_proxy(code, data):
+    if code == 4:
+        n = data.decode("utf-8")
+        try:
+            return _Proxy[n]
+        except KeyError:
+            return Proxy(n)
+    return ExtType(code, data)
+
+_pkey = 1
+def default_handler(obj):
+    if isinstance(obj,Proxy):
+        return ExtType(4, obj.name.encode("utf-8"))
+
+    try:
+        k = _RProxy[id(obj)]
+    except KeyError:
+        global _pkey
+        k = "p_"+str(_pkey)
+        _pkey += 1
+        _Proxy[k] = obj
+        _RProxy[id(obj)] = k
+    return ExtType(4, k.encode("utf-8"))
+
+
 class MsgpackStream(_Base):
     # structured messages > MsgPack bytestream
     #
@@ -30,17 +63,18 @@ class MsgpackStream(_Base):
     def __init__(self, stream, console=None, console_handler=None, **kw):
         super().__init__(stream)
         self.w_lock = Lock()
+        kw['ext_hook'] = ext_proxy
 
         if isinstance(console,int) and not isinstance(console,bool):
             kw["read_size"]=1
 
         if sys.implementation.name == "micropython":
             # we use a hacked version of msgpack that does async reading
-            self.pack = Packer().packb
+            self.pack = Packer(default=default_handler).packb
             self.unpack = Unpacker(stream, **kw).unpack
         else:
             # regular Python: msgpack uses a sync read call, so use greenback to async-ize it
-            self.pack = Packer().pack
+            self.pack = Packer(default=default_handler).pack
             self.unpacker = Unpacker(SyncReadStream(stream), **kw)
             async def unpack():
                 import anyio
@@ -86,8 +120,8 @@ class MsgpackHandler(_Stacked):
 
     def __init__(self, stream, **kw):
         super().__init__(stream)
-        self.unpacker = Unpacker(stream, **kw).unpackb
-        self.pack = Packer().packb
+        self.unpacker = Unpacker(stream, ext_hook=ext_proxy, **kw).unpackb
+        self.pack = Packer(default=default_handler).packb
 
     async def send(self, msg):
         await super().send(self.pack(msg))

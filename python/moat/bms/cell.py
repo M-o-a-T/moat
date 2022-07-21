@@ -63,6 +63,9 @@ class Cell(dbus.ServiceInterface):
     async def send(self, pkt):
         await self.ctrl.send(pkt,start=self.nr)
 
+    async def send_update(self):
+        msg = RequestConfig.from_cell(self)
+        await self.send(msg)
 
     @dbus.method()
     async def GetData(self) -> 'a{sv}':
@@ -77,13 +80,20 @@ class Cell(dbus.ServiceInterface):
         return self.cfg
 
     @dbus.method()
+    async def GetVoltage(self) -> 'd':
+        return self.voltage
+
+    @dbus.method()
+    async def GetCalibration(self) -> 'd':
+        return self.v_calibration
+
+    @dbus.method()
     async def SetCalibration(self, data: 'd') -> 'i':
         od, self.cfg.v_calibration = self.cfg.v_calibration, d
-        if abs(d-od) > d/10000:
-            await self.send(RequestConfig.from_cell(self))
         self._voltage = self._voltage * d/od
         self.voltage_min = self.voltage_min * d/od
         self.voltage_max = self.voltage_max * d/od
+        await self.send_update()
         return 0
 
     @property

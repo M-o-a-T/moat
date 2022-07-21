@@ -6,7 +6,7 @@ import anyio
 import asyncclick as click
 
 from distkv.obj import ClientEntry, ClientRoot, AttrClientEntry
-from distkv.util import NotGiven, Path
+from distkv.util import Path
 from distkv.errors import ErrorRoot
 
 class _MOATbase(ClientEntry):

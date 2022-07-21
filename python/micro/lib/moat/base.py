@@ -3,6 +3,8 @@ import machine
 from .cmd import BaseCmd
 from .compat import TaskGroup, sleep_ms, ticks_ms, ticks_diff
 from .proto import RemoteError
+from .proto.stream import drop_proxy
+from .util import merge
 
 import uos
 import usys
@@ -44,20 +46,30 @@ class SysCmd(BaseCmd):
                 return self.base.cfg
             else:
                 f=open("/moat_fb.cfg" if fallback else "/moat.cfg","rb")
-                cfg = msgpack.unpackb(f.read())
-                f.close()
+                with f:
+                    cfg = msgpack.unpackb(f.read())
                 return cfg
 
-        cfg = msgpack.packb(cfg)
-        f=open("/moat_fb.cfg" if fallback else "/moat.cfg","wb")
-        f.write(cfg)
-        f.close()
-        # cfg is re-read on restart; TODO maybe interactive update
-        # await self.base.cfg_updated()
+        # Assume that if "port" is set (useless on the client!) it's a global replace
+        merge(self.base.cfg, cfg, drop=("port" in cfg))
+
+        if fallback is not None:
+            cfg = msgpack.packb(self.base.cfg)
+            f=open("/moat_fb.cfg" if fallback else "/moat.cfg","wb")
+            with f:
+                f.write(cfg)
+        await self.base.config_updated()
 
     async def cmd_eval(self, x):
         # evaluates the string
         return eval(x,dict(s=self.parent))
+
+    async def cmd_unproxy(self, p):
+        # tell the client to forget about a proxy
+        # NOTE pass the proxy's name, not the proxy object!
+        if p == "" or p == "-" or p[0] == "_":
+            raise RuntimeError("cannot be deleted")
+        drop_proxy(p)
 
     async def cmd_dump(self, x):
         # evaluates the string

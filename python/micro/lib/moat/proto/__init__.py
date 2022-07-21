@@ -41,9 +41,6 @@ class RemoteError(RuntimeError):
 class ChannelClosed(RuntimeError):
     pass
 
-class _NotGiven:
-    pass
-
 class NotImpl:
     def __init__(self, parent):
         self.parent = parent

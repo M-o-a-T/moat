@@ -72,6 +72,7 @@ class ExtType(namedtuple("ExtType", "code data")):
             raise ValueError("code must be 0~127")
         return super(ExtType, cls).__new__(cls, code, data)
 
+
 newlist_hint = lambda size: []
 
 TYPE_IMMEDIATE = 0
@@ -412,10 +413,12 @@ class Packer(object):
         self,
         use_single_float=False,
         unicode_errors=None,
+        default=None,
     ):
         self._use_float = use_single_float
         self._buffer = BytesIO()
         self._unicode_errors = unicode_errors or "strict"
+        self._default = default
 
     def _pack(
         self,
@@ -423,8 +426,11 @@ class Packer(object):
         nest_limit=DEFAULT_RECURSE_LIMIT,
         check=isinstance,
         check_type_strict=_check_type_strict,
+        _default=None
     ):
         list_types = (list, tuple)
+        if _default is None:
+            _default = self._default
 
         # shorter bytecode
         def wp(*x):
@@ -461,6 +467,10 @@ class Packer(object):
                     return wp(">Bi", 0xD2, obj)
                 if -0x8000000000000000 <= obj:
                     return wp(">Bq", 0xD3, obj)
+            if _default:
+                res = _default(obj)
+                if res is not None:
+                    return res
             raise OverflowError("Integer value out of range")
         if check(obj, (bytes, bytearray)):
             n = len(obj)
@@ -520,7 +530,16 @@ class Packer(object):
             return self._pack_map_pairs(
                 len(obj), obj.items(), nest_limit - 1
             )
-
+        if _default:
+            res = _default(obj)
+            if res is not None:
+                return self._pack(
+                    obj,
+                    nest_limit=nest_limit,
+                    check=check,
+                    check_type_strict=check_type_strict,
+                    _default=False,
+                )
         raise TypeError("Cannot serialize %r" % (obj,))
 
     def packb(self, obj):

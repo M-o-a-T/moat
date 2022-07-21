@@ -8,6 +8,10 @@ import anyio
 
 __all__ = ["as_service"]
 
+try:
+    from systemd.daemon import notify  # pylint: disable=no-name-in-module
+except ImportError:
+    notify = None
 
 @asynccontextmanager
 async def as_service(obj=None):
@@ -21,13 +25,13 @@ async def as_service(obj=None):
     The CM yields a (duck-typed) event whose async ``set`` method will
     trigger a ``READY=1`` mesage to systemd.
     """
-    from systemd.daemon import notify  # pylint: disable=no-name-in-module
 
     async def run_keepalive(usec):
         usec /= 1_500_000  # 2/3rd of usec ⇒ sec
         pid = os.getpid()
         while os.getpid() == pid:
-            notify("WATCHDOG=1")
+            if notify is not None:
+                notify("WATCHDOG=1")
             await anyio.sleep(usec)
 
     def need_keepalive():
@@ -42,7 +46,8 @@ async def as_service(obj=None):
 
         def set(self):
             # TODO: this should be async (set flag and separate thread)
-            notify("READY=1")
+            if notify is not None:
+                notify("READY=1")
             if self.obj is not None and self.obj.debug:
                 print("Running.")
 

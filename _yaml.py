@@ -16,6 +16,7 @@ Emitter = yaml.emitter.Emitter
 
 
 SafeRepresenter.add_representer(attrdict, SafeRepresenter.represent_dict)
+SafeConstructor.yaml_base_dict_type = attrdict
 
 
 def str_presenter(dumper, data):
@@ -90,11 +91,18 @@ def expect_node(self, *a, **kw):
 Emitter.expect_node = _expect_node
 
 
-def yload(stream, multi=False):
+def yload(stream, multi=False, attr=False):
     """
     Load one or more YAML objects from a file.
     """
     y = yaml.YAML(typ="safe")
+    if attr:
+        class AttrConstructor(SafeConstructor):
+            def __init__(self,*a,**k):
+                super().__init__(*a,**k)
+                self.yaml_base_dict_type = attrdict
+
+        y.Constructor = AttrConstructor
     if multi:
         return y.load_all(stream)
     else:

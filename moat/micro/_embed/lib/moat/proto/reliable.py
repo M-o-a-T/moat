@@ -1,4 +1,5 @@
 from ..compat import Event,ticks_ms,ticks_add,ticks_diff,wait_for_ms,TaskGroup
+from ..util import NotGiven
 
 from . import _Stacked
 
@@ -303,8 +304,8 @@ class Reliable(_Stacked):
             await self.send_reset(err="R/S out of bounds")
             return
 
-        d = msg.get('d', _NotGiven)
-        if d is not _NotGiven:
+        d = msg.get('d', NotGiven)
+        if d is not NotGiven:
             # data. R is the message's sequence number.
             self.pend_ack = True
             if self.between(self.s_recv_tail,self.s_recv_head,r):

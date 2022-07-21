@@ -94,8 +94,6 @@ class Logger(_Stacked):
     def __init__(self, parent, txt="S", **k):
         super().__init__(parent, **k)
         self.txt = txt
-        from pprint import pformat
-        self._pformat = pformat
 
     async def run(self):
         print(f"X:{self.txt} start")
@@ -141,7 +139,7 @@ class Logger(_Stacked):
         else:
             print(f"D:{self.txt} {a} {mm}")
             await self.child.dispatch(a,m)
-        print(f"{self.txt}:\n{self._pformat(vars(self.child))}")
+        print(f"{self.txt}:\n{repr(vars(self.child))}")
 
     async def recv(self):
         msg = await self.parent.recv()

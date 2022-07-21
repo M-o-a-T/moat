@@ -16,6 +16,9 @@ class NoSuchCell(RuntimeError):
 class SpuriousData(RuntimeError):
     pass
 
+class MessageLost(RuntimeError):
+    pass
+
 
 class Controller(dbus.ServiceInterface):
     """

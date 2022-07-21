@@ -2,7 +2,7 @@ from uasyncio.stream import Stream
 from uasyncio import core as _core
 
 async def _write(self, buf):
-    # monkeypatch the strem write code
+    # monkeypatch the stream write code
     mv = memoryview(buf)
     off = 0
     while off < len(mv):

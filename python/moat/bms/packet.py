@@ -189,8 +189,8 @@ class ReplyTemperature(_Reply):
     def from_bytes(cls, data):
         self = cls()
         b1,b2,b3 = self.S.unpack(data)
-        self.intRaw = (b1 << 4) | (b2 >> 4);
-        self.extRaw = ((b1 & 0x0F) << 8) | b2 >> 4;
+        self.intRaw = b1 | ((b2 & 0x0F) << 8)
+        self.extRaw = (b2 >> 4) | (b3 << 4)
         return self
 
     def to_cell(self, cell):

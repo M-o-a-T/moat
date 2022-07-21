@@ -4,6 +4,7 @@ import os
 import sys
 
 if os.path.exists("micro/lib"):
+	sys.path.insert(0,"../..")
 	sys.path.insert(0,".")
 
 import msgpack

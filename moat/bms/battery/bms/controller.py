@@ -179,6 +179,7 @@ class Controller(dbus.ServiceInterface):
                 set_err(hdr, SpuriousData(msg))
                 continue
             evt, self.waiting[hdr.sequence] = self.waiting[hdr.sequence], None
+            if evt is not None:
             evt.set((hdr,pkt))
 
     @dbus.method
@@ -187,8 +188,6 @@ class Controller(dbus.ServiceInterface):
         Number of batteries on this controller
         """
         return len(self.batt)
-
-
 
 
 class Battery(dbus.ServiceInterface):

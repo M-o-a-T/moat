@@ -56,8 +56,9 @@ class Cell(dbus.ServiceInterface):
         await bus.export(self.path, self)
 
     async def unexport(self):
-        await self._bus.unexport(self.path, self)
-        self._bus = None
+        if self._bus is not None:
+            await self._bus.unexport(self.path, self)
+            self._bus = None
 
     async def send(self, pkt):
         await self.ctrl.send(pkt,start=self.nr)

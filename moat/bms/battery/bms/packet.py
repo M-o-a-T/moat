@@ -154,6 +154,7 @@ class ReplyVoltages(_Reply):
     def from_bytes(cls, data):
         self = cls()
         self.voltRaw, self.bypassRaw = self.S.unpack(data)
+        return self
 
     def to_cell(self, cell):
         chg = False

@@ -243,6 +243,9 @@ class Battery(dbus.ServiceInterface):
             self.ctrl.add_cell(cell)
             self.cells.append(cell)
 
+    def __repr__(self):
+        return f"‹Batt {self.path} u={self.u} i={self.i}›"
+
     async def run(self):
         dbus = self.ctrl.dbus
 

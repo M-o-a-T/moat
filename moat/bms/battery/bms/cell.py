@@ -51,6 +51,9 @@ class Cell(dbus.ServiceInterface):
         super().__init__("org.m-o-a-t.bms")
         self.cfg = combine_dict(self.cfg, self.bcfg.default)
 
+    def __repr__(self):
+        return f"‹Cell {self.path} u={self.voltage}›"
+
     async def export(self, bus):
         self._bus = bus
         await bus.export(self.path, self)

@@ -1,5 +1,9 @@
 from ..compat import wait_for_ms, TimeoutError, Lock
-from ..util import NotGiven, Proxy
+from ..util import NotGiven
+try:
+    from ..util import Proxy
+except ImportError:
+    Proxy = None
 
 import sys
 try:
@@ -36,6 +40,8 @@ def ext_proxy(code, data):
         try:
             return _Proxy[n]
         except KeyError:
+            if Proxy is None:
+                raise
             return Proxy(n)
     return ExtType(code, data)
 

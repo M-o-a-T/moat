@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 
+import os
 import sys
+
+if os.path.exists("micro/lib"):
+	sys.path.insert(0,".")
+
 import msgpack
 import importlib
 

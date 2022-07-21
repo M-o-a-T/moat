@@ -14,9 +14,9 @@ import asyncclick as click
 
 from ._dict import attrdict, combine_dict
 from ._impl import NotGiven
+from ._msgpack import Proxy
 from ._path import P, path_eval
 from ._yaml import yload
-from ._msgpack import Proxy
 
 logger = logging.getLogger(__name__)
 

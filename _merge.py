@@ -42,7 +42,7 @@ def _merge_list(item, value, drop=False):
                 item.append(val)
 
         if drop:
-            while len(item)+off > len(value):
+            while len(item) + off > len(value):
                 item.pop()
 
     else:

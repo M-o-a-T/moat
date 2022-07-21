@@ -268,7 +268,7 @@ class ReplySettings(_Reply):
     def to_cell(self, cell):
         cell.code_version = self.gitVersion
         cell.board_version = self.boardVersion
-        cell.v_per_ADC = self.mvPerADC/1000
+        cell.v_per_ADC = self.mvPerADC/1000/64
         cell.v_calibration = self.voltageCalibration.f
         cell.bypass_temp_raw = self.bypassTempRaw
         cell.balance_config_threshold_raw = self.bypassVoltRaw

@@ -506,19 +506,25 @@ async def copytree(src,dst,check=_nullcheck, cross=None):
     """
     from .main import ABytes
     if await src.is_file():
-        if cross and src.suffix == ".py" and str(dst) not in ("/boot.py","boot.py","/main.py","main.py"):
-            try:
-                data = await anyio.run_process([cross, str(src), "-o", "/dev/stdout"])
-            except CalledProcessError as exc:
-                print(exc.stderr.decode("utf-8"), file=sys.stderr)
-                raise
-            else:
-                src = ABytes(src.with_suffix(".mpy"),data.stdout)
+        if src.suffix == ".py" and str(dst) not in ("/boot.py","boot.py","/main.py","main.py"):
+            if cross:
                 try:
-                    await dst.unlink()
+                    data = await anyio.run_process([cross, str(src), "-o", "/dev/stdout"])
+                except CalledProcessError as exc:
+                    print(exc.stderr.decode("utf-8"), file=sys.stderr)
+                    pass
+                else:
+                    src = ABytes(src.with_suffix(".mpy"),data.stdout)
+                    try:
+                        await dst.unlink()
+                    except (OSError,RemoteError):
+                        pass
+                    dst = dst.with_suffix(".mpy")
+            else:
+                try:
+                    await dst.with_suffix(".mpy").unlink()
                 except (OSError,RemoteError):
                     pass
-                dst = dst.with_suffix(".mpy")
 
         s1 = (await src.stat()).st_size
         try:

@@ -27,7 +27,7 @@ class Controller(dbus.ServiceInterface):
     TODO really support more than one battery
     """
     def __init__(self, name, cfg, gcfg):
-        super().__init__("org.m-o-a-t.bms")
+        super().__init__("org.m_o_a_t.bms")
         self.name = name
         self.cfg = cfg
         self.gcfg = gcfg
@@ -216,7 +216,7 @@ class Battery(dbus.ServiceInterface):
     dis_set:bool = None
 
     def __init__(self, ctrl, cfg, gcfg, start, num):
-        super().__init__("org.m-o-a-t.bms")
+        super().__init__("org.m_o_a_t.bms")
 
         self.name = cfg.name
         self.num = num

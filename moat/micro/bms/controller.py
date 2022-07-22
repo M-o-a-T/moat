@@ -1,5 +1,7 @@
 #
-import asyncdbus.service as dbus
+import asyncdbus.service as _dbus
+from asyncdbus.signature import Variant
+from asyncdbus.constants import NameFlag
 
 from moat.compat import CancelledError, sleep_ms, wait_for_ms, ticks_ms, ticks_diff, ticks_add, TimeoutError, Lock, TaskGroup
 from moat.util import ValueEvent, combine_dict, attrdict
@@ -20,7 +22,7 @@ class MessageLost(RuntimeError):
     pass
 
 
-class Controller(dbus.ServiceInterface):
+class Controller(_dbus.ServiceInterface):
     """
     Main controller for our BMS.
 
@@ -28,18 +30,20 @@ class Controller(dbus.ServiceInterface):
     """
     def __init__(self, name, cfg, gcfg):
         super().__init__("org.m_o_a_t.bms")
-        self.name = name
+        self.__name = name
         self.cfg = cfg
         self.gcfg = gcfg
         self.batt = []
         self.cells = []
 
-        # talk to the cell modules
+        # data to talk to the cell modules
         self.seq = 0
         self.t = ticks_ms()
         self.w_lock = Lock()
         self.baud = gcfg.apps[cfg.serial].cfg.baud
         self.waiting = [None]*8
+
+        self.__service = "org.m_o_a_t.bms"
 
         n = 0
         for i,b in enumerate(cfg.batteries):
@@ -53,12 +57,15 @@ class Controller(dbus.ServiceInterface):
     async def run(self, req, dbus):
         self._req = req
         self._dbus = dbus
+        await dbus.request_name(self.__service, NameFlag.DO_NOT_QUEUE)
 
         try:
             await dbus.export('/bms',self)
             await self._run()
         finally:
             await dbus.unexport('/bms')
+            await dbus.release_name(self.__service)
+
 
     @property
     def dbus(self):
@@ -189,12 +196,13 @@ class Controller(dbus.ServiceInterface):
             if off != len(msg):
                 set_err(hdr.sequence, SpuriousData(msg))
                 continue
+            logger.error("DONE %d",hdr.sequence)
 
             evt, self.waiting[hdr.sequence] = self.waiting[hdr.sequence], None
             if evt is not None:
                 evt.set((hdr,pkt))
 
-    @dbus.method
+    @_dbus.method()
     async def GetNBatteries(self) -> 'y':
         """
         Number of batteries on this controller
@@ -202,7 +210,7 @@ class Controller(dbus.ServiceInterface):
         return len(self.batt)
 
 
-class Battery(dbus.ServiceInterface):
+class Battery(_dbus.ServiceInterface):
     # global battery state, reported via MOAT callback
     u:float = None
     i:float = None
@@ -218,9 +226,11 @@ class Battery(dbus.ServiceInterface):
     def __init__(self, ctrl, cfg, gcfg, start, num):
         super().__init__("org.m_o_a_t.bms")
 
-        self.name = cfg.name
+        self.__name = cfg.name
         self.num = num
         self.ctrl = ctrl
+        self.path = f"/bms/{self.num}"
+
         try:
             self.bms = gcfg.apps[cfg.bms]
         except AttributeError:
@@ -239,7 +249,7 @@ class Battery(dbus.ServiceInterface):
             except IndexError:
                 ccfg = {}
             ccfg = combine_dict(ccfg, cfg.default, cls=attrdict)
-            cell = Cell(self, nr=self.start+c, path=f"/bms/{self.name}/{c}", cfg=ccfg, bcfg=self.cfg, gcfg=gcfg)
+            cell = Cell(self, nr=self.start+c, path=f"/bms/{self.num}/{c}", cfg=ccfg, bcfg=self.cfg, gcfg=gcfg)
             self.ctrl.add_cell(cell)
             self.cells.append(cell)
 
@@ -258,7 +268,7 @@ class Battery(dbus.ServiceInterface):
         finally:
             for v in self.cells:
                 await c.unexport()
-            await dbus.unexport(f'/bms/{self.cfg.name}')
+            await dbus.unexport(f'/bms/{self.num}')
 
     async def _run(self):
         async with TaskGroup() as tg:
@@ -401,31 +411,35 @@ class Battery(dbus.ServiceInterface):
             self.w = w
             self.n_w = n
 
-    @dbus.signal()
+    @_dbus.signal()
     async def VoltageChanged(self) -> 'a(db)':
         """
         Return voltage plus in-bypass flag
         """
-        return [(c.voltage,c.in_bypass) for c in self.cells]
+        return [(c.voltage,c.in_balance) for c in self.cells]
 
-    @dbus.signal()
-    async def TemperatureChanged(self) -> 'a(dd)':
+    @_dbus.signal()
+    async def TemperatureChanged(self) -> 'a(vv)':
         """
-        Return current temperatures (int,ext)
-        """
-        return [(c.internal_temp,c.external_temp) for c in self.cells]
+        Return current temperatures (load, battery)
 
-    @dbus.method
+        False if there is no value
+        """
+        F = lambda x: Variant('b', False) if x is None else Variant('d', x)
+
+        return [(F(c.load_temp),F(c.batt_temp)) for c in self.cells]
+
+    @_dbus.method()
     async def GetNCells(self) -> 'y':
         """
         Number of cells in this battery
         """
         return len(self.cells)
 
-    @dbus.method
+    @_dbus.method()
     async def GetName(self) -> 's':
         """
         Number of cells in this battery
         """
-        return self.name
+        return self.__name
 

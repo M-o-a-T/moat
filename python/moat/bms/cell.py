@@ -2,6 +2,7 @@ import asyncdbus.service as dbus
 from dataclasses import dataclass
 from ..conv.steinhart import thermistor2celsius, celsius2thermistor
 from moat.util import attrdict, combine_dict
+from victron.dbus.utils import wrap_dbus_value, wrap_dbus_dict
 
 class Cell(dbus.ServiceInterface):
     batt:"Battery"
@@ -69,15 +70,15 @@ class Cell(dbus.ServiceInterface):
 
     @dbus.method()
     async def GetData(self) -> 'a{sv}':
-        return self._data
+        return wrap_dbus_dict(self._data)
 
     @dbus.signal()
     def DataChanged(self) -> 'a{sv}':
-        return self._data
+        return wrap_dbus_dict(self._data)
 
     @dbus.method()
     async def GetConfig(self) -> 'a{sv}':
-        return self.cfg
+        return wrap_dbus_dict(self.cfg)
 
     @dbus.method()
     async def GetVoltage(self) -> 'd':

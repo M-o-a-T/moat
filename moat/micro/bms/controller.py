@@ -275,9 +275,9 @@ class Battery(_dbus.ServiceInterface):
         async with TaskGroup() as tg:
             await tg.spawn(self._read_update)
 
-            res = await self.send(RequestGetSettings())
+            h,res = await self.send(RequestGetSettings())
             if len(res) != len(self.cells):
-                raise RuntimeError(f"Battery {self.begin}:{self.end}: found {len(res)} modules, not {len(self.cells)}")
+                raise RuntimeError(f"Battery {self.start}:{self.end}: found {len(res)} modules, not {len(self.cells)}")
 
             for c,r in zip(self.cells,res):
                 r.to_cell(c)
@@ -311,7 +311,7 @@ class Battery(_dbus.ServiceInterface):
         """
         n = 0
         while True:
-            hdr,res = await self.send(RequestVoltages())
+            hdr,res = await self.send(RequestCellVoltage())
             chg = False
             for c,r in zip(self.cells,res):
                 chg = r.to_cell(c) or chg

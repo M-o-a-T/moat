@@ -247,7 +247,7 @@ class Battery(_dbus.ServiceInterface):
             try:
                 ccfg = cfg.cells[c]
             except IndexError:
-                ccfg = {}
+                ccfg = attrdict()
             ccfg = combine_dict(ccfg, cfg.default, cls=attrdict)
             cell = Cell(self, nr=self.start+c, path=f"/bms/{self.num}/{c}", cfg=ccfg, bcfg=self.cfg, gcfg=gcfg)
             self.ctrl.add_cell(cell)

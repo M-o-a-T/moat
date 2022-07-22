@@ -6,3 +6,4 @@ fakebus/raw_bus
 /lib/
 /build/
 /*.egg-info/
+*.swp

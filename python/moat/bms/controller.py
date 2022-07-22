@@ -3,7 +3,7 @@ import asyncdbus.service as _dbus
 from asyncdbus.signature import Variant
 from asyncdbus.constants import NameFlag
 
-from moat.compat import CancelledError, sleep_ms, wait_for_ms, ticks_ms, ticks_diff, ticks_add, TimeoutError, Lock, TaskGroup
+from moat.compat import CancelledError, sleep, sleep_ms, wait_for_ms, ticks_ms, ticks_diff, ticks_add, TimeoutError, Lock, TaskGroup
 from moat.util import ValueEvent, combine_dict, attrdict
 
 from .cell import Cell
@@ -152,7 +152,7 @@ class Controller(_dbus.ServiceInterface):
             n_cells = end-start+1
             mlen = len(msg) + n_cells*(replyClass[h.command].S.size+h.S.size+4)
 
-            self.t = t + 10*mlen/self.baud
+            self.t = t + 10000*mlen/self.baud
             await self.req.send([self.cfg.serial, "send"], data=msg)
 
         res = await wait_for_ms(5000, evt.get)
@@ -309,7 +309,7 @@ class Battery(_dbus.ServiceInterface):
                 await self.check_limits()
                 await self.VoltageChanged()
 
-            await anyio.sleep(cfg.t.voltage)
+            await sleep(self.cfg.t.voltage)
 
 
     async def check_limits(self):
@@ -374,7 +374,7 @@ class Battery(_dbus.ServiceInterface):
             if chg:
                 await self.TemperatureChanged()
 
-            await anyio.sleep(cfg.t.temperature)
+            await sleep(self.cfg.t.temperature)
 
 
     async def send(self, pkt, start=None, end=None, **kw):

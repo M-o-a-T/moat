@@ -193,7 +193,7 @@ class Request(_Stacked):
     async def _handle_request(self, a,i,d,msg):
         res={'i':i}
         try:
-            res = await self.child.dispatch(a,d)
+            r = await self.child.dispatch(a,d)
         except FSError as exc:
             res["e"] = exc.args[0]
         except Exception as exc:
@@ -205,7 +205,7 @@ class Request(_Stacked):
         else:
             if i is None:
                 return
-            res["d"] = res
+            res["d"] = r
         try:
             await self.parent.send(res)
         except TypeError as exc:

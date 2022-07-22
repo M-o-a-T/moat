@@ -2,7 +2,7 @@ import machine
 
 from ..cmd import BaseCmd
 from ..compat import TaskGroup, sleep_ms, ticks_ms, ticks_diff
-from ..proto import RemoteError
+from ..proto import SilentRemoteError as FSError
 
 import uos
 import usys
@@ -29,7 +29,7 @@ class FsCmd(BaseCmd):
         if p == "":
             p = "/"
 #       elif p == ".." or p.startswith("../") or "/../" in p: or p.endswith("/..")
-#           raise RemoteError("nf")
+#           raise FSError("nf")
         return p
 
     def _fd(self, fd, drop=False):
@@ -68,7 +68,7 @@ class FsCmd(BaseCmd):
             f=open(p,m+'b')
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise RemoteError("fn")
+                raise FSError("fn")
             raise
         else:
             return self._add_f(f)
@@ -131,7 +131,7 @@ class FsCmd(BaseCmd):
             s = uos.stat(p)
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise RemoteError("fn")
+                raise FSError("fn")
             raise
         if s[0] & 0x8000: # file
             return dict(m="f",s=s[6], t=s[7], d=s)
@@ -153,7 +153,7 @@ class FsCmd(BaseCmd):
                 if err.errno != errno.ENOENT:
                     raise
             else:
-                raise RemoteError("fx")
+                raise FSError("fx")
         if x is None:
             uos.rename(p,q)
         else:
@@ -165,7 +165,7 @@ class FsCmd(BaseCmd):
                 if err.errno != errno.ENOENT:
                     raise
             else:
-                raise RemoteError("fx")
+                raise FSError("fx")
             uos.rename(p,r)
             uos.rename(q,p)
             uos.rename(r,q)
@@ -176,7 +176,7 @@ class FsCmd(BaseCmd):
             uos.remove(p)
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise RemoteError("fn")
+                raise FSError("fn")
             raise
 
     def cmd_rmdir(self, p):
@@ -185,7 +185,7 @@ class FsCmd(BaseCmd):
             uos.rmdir(p)
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise RemoteError("fn")
+                raise FSError("fn")
             raise
 
     def cmd_new(self, p):

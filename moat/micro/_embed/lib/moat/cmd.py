@@ -1,5 +1,5 @@
 from .compat import Event,ticks_ms,ticks_add,ticks_diff,wait_for_ms,print_exc,CancelledError,TaskGroup, idle, ValueEvent
-from .proto import _Stacked, RemoteError
+from .proto import _Stacked, RemoteError, SilentRemoteError as FSError
 from contextlib import asynccontextmanager
 
 from serialpacker import SerialPacker
@@ -191,18 +191,21 @@ class Request(_Stacked):
             e.set_error(CancelledError())
 
     async def _handle_request(self, a,i,d,msg):
+        res={'i':i}
         try:
             res = await self.child.dispatch(a,d)
+        except FSError as exc:
+            res["e"] = exc.args[0]
         except Exception as exc:
             print("ERROR handling",a,i,d,msg, file=sys.stderr)
             print_exc(exc)
             if i is None:
                 return
-            res = {'e':exc.args[0] if isinstance(exc, RemoteError) else repr(exc),'i':i}
+            res["e"] = exc.args[0] if isinstance(exc, RemoteError) else repr(exc)
         else:
             if i is None:
                 return
-            res = {'d':res,'i':i}
+            res["d"] = res
         try:
             await self.parent.send(res)
         except TypeError as exc:

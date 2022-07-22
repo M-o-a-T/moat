@@ -217,7 +217,8 @@ class BattCmd(BaseCmd):
 	async def run(self):
 		if self.batt.cfg:
 			# send to remote
-			res = await self.send([self.name,"cfg"], cfg=self.batt.cfg)
+			res = await self.send(["sys","cfg"])
+			res = res["apps"][self.name]
 			await self.batt.add_energy(res, True)
 		else:
 			# load from remote
@@ -233,8 +234,7 @@ class BattCmd(BaseCmd):
 		from pprint import pformat
 		logger.info("RELAY %s",pformat(kw))
 
-	async def cmd_cfg(self, cfg):
+	async def cmd_work(self, res):
 		from pprint import pformat
-		logger.info("NCFG %s",pformat(cfg))
-		await self.batt.set_cfg(cfg)
+		logger.info("WORK %s",pformat(res))
 

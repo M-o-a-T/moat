@@ -230,6 +230,7 @@ class Battery(_dbus.ServiceInterface):
         self.num = num
         self.ctrl = ctrl
         self.path = f"/bms/{self.num}"
+        self.ready = 0
 
         try:
             self.bms = gcfg.apps[cfg.bms]
@@ -287,19 +288,28 @@ class Battery(_dbus.ServiceInterface):
 
 
     async def task_keepalive(self):
+        n = 0
         try:
             t = self.bms.poll.k / 2.1
         except AttributeError:
             return
         while True:
             self.ctrl.req.send([self.cfg.bms,"live"])
+            n += 1
+            if n == 1:
+                self.ready |= 0x01
+
             await sleep_ms(t)
 
+    @property
+    def is_ready(self):
+        return self.ready == 0x07
 
     async def task_voltage(self):
         """
         Periodically check the cell voltages
         """
+        n = 0
         while True:
             hdr,res = await self.send(RequestVoltages())
             chg = False
@@ -308,6 +318,9 @@ class Battery(_dbus.ServiceInterface):
             if chg:
                 await self.check_limits()
                 await self.VoltageChanged()
+            n += 1
+            if n == 3:
+                self.ready |= 0x02
 
             await sleep(self.cfg.t.voltage)
 
@@ -366,6 +379,7 @@ class Battery(_dbus.ServiceInterface):
         """
         Periodically check the cell temperatures
         """
+        n = 0
         while True:
             hdr,res = await self.send(RequestCellTemperature())
             chg = False
@@ -373,6 +387,9 @@ class Battery(_dbus.ServiceInterface):
                 chg = r.to_cell(c) or chg
             if chg:
                 await self.TemperatureChanged()
+            n += 1
+            if n == 3:
+                self.ready |= 0x04
 
             await sleep(self.cfg.t.temperature)
 

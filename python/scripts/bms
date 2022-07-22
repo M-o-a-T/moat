@@ -26,8 +26,6 @@ from asyncdbus.constants import NameFlag
 import logging
 logger = logging.getLogger(__name__)
 
-bus = "org.m-o-a-t.bms"
-
 @main.command()
 @click.pass_obj
 @click.option("-n","--name",type=str, default="main", help="Name of BMS config")

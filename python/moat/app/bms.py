@@ -29,6 +29,8 @@ class Batt:
 	cell_okch = None
 	cell_okdis = None
 	data = None
+	u=None
+	i=None
 
 	def __init__(self, cfg, gcfg, name):
 		self.cfg = cfg
@@ -161,6 +163,9 @@ class Batt:
 					i=msg["i"]
 					w=msg["w"]
 					ok=msg["ok"]
+
+					self.u = u
+					self.i = i
 					async with srv as l:
 						await l.set(self.bus.sta, 9 if ok else 10)
 						await l.set(self.bus.err, 0 if ok else 12)
@@ -185,8 +190,8 @@ class Batt:
 		async with self._srv as l:
 			self.cell_okch = okch
 			self.cell_okdis = okdis
-			await l.set(self.bus.okch, self.cell_okch and u < self.cfg.u.ext.max*0.99)
-			await l.set(self.bus.okdis, self.cell_okdis and u > self.cfg.u.ext.min*1.01)
+			await l.set(self.bus.okch, self.cell_okch and self.u is not None and self.u < self.cfg.u.ext.max*0.99 and self.i > self.cfg.i.ext.min*0.98)
+			await l.set(self.bus.okdis, self.cell_okdis and self.u is not None and self.u > self.cfg.u.ext.min*1.01 and self.i < self.cfg.i.ext.max*0.98)
 
 class BattCmd(BaseCmd):
 	def __init__(self, parent, batt, name):

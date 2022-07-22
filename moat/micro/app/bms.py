@@ -1,4 +1,4 @@
-
+import asyncdbus.service as _dbus
 from moat.cmd import BaseCmd
 from moat.compat import ticks_ms, ticks_diff, sleep_ms, ticks_add, Event, TaskGroup
 from moat.util import Queue, to_attrdict, attrdict
@@ -25,20 +25,22 @@ logger = logging.getLogger(__name__)
 # rel: PIN  # relay
 # 
 
-class Batt:
+class Batt(_dbus.ServiceInterface):
 	cell_okch = None
 	cell_okdis = None
 	data = None
 	u=None
 	i=None
+	ctrl = None
 
 	def __init__(self, cfg, gcfg, name):
+		super().__init__("org.m_o_a_t.bms")
 		self.cfg = cfg
 		self.gcfg = gcfg
 		self.q = Queue(2)
 		self.started = Event()
 		self.updated = Event()
-		self.name = name
+		self.__name = name
 
 	async def set_cfg(self, cfg):
 		# convert to attrdict
@@ -64,12 +66,26 @@ class Batt:
 		try:
 			name = self.cfg.dbus
 		except AttributeError:
-			name = "com.victronenergy.battery."+self.name
+			name = "com.victronenergy.battery."+self.__name
 		async with Dbus() as bus, bus.service(name) as srv:
 			print("Setting up")
+			self._bus = bus
 			self.bus = attrdict()
-
 			self._srv = srv
+
+			try:
+				await bus.bus.export("/BMS", self)
+				await self._run(task_status)
+			finally:
+				if bus.bus is not None:
+					await bus.bus.unexport("/BMS", self)
+
+
+	async def _run(self, task_status):
+		if True: # TODO indent mask
+			bus = self._bus
+			srv = self._srv
+
 			await srv.add_mandatory_paths(
 				processname=__file__,
 				processversion="0.1",
@@ -180,6 +196,17 @@ class Batt:
 					self.updated.set()
 					self.updated = Event()
 
+	@_dbus.method()
+	async def SetVoltage(self, data: 'd') -> 'b':
+		# update the scale appropriately
+		adj = (data - self.cfg.u.offset) / (self.u - self.cfg.u.offset)
+		self.cfg.u.scale *= adj
+		await self.ctrl.send(["sys","cfg"], cfg=attrdict()._update(("app",self.__name,"cfg","u"), {"scale":self.cfg.u.scale})) 
+
+		# TODO move this to a config update handler
+		self.u = data
+		return True
+
 
 	async def add_energy(self, data, final=False):
 		from pprint import pformat
@@ -198,6 +225,7 @@ class BattCmd(BaseCmd):
 		super().__init__(parent)
 		self.batt = batt
 		self.name = name
+		batt.ctrl = self
 
 	async def loc_set(self, **kw):
 		# additional data to send to the bus

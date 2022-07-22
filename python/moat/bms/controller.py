@@ -331,40 +331,48 @@ class Battery(_dbus.ServiceInterface):
         """
         chg_ok = True
         dis_ok = True
+        off = False
 
         vsum = sum(c.voltage for c in self.cells)
-        if abs(vsum-self.u) > vsum/0.02:
+        if abs(vsum-self.u) > vsum*0.02:
             logger.warning(f"Voltage doesn't match: reported {self.u}, sum {vsum}")
 
         if self.bms:
             if self.u >= self.bms.cfg.u.ext.max:
+                logger.warning(f"{self} voltage high, no charging")
                 chg_ok = False
 
             if self.u >= self.bms.cfg.u.max:
-                self.ctrl.req.send([self.cfg.bms,"rly", st=False])
-                logger.error(f"Battery {self} overvoltage, turned off")
+                off = True
+                logger.error(f"{self} overvoltage, turned off")
 
             if self.u <= self.bms.cfg.u.ext.min:
+                logger.warning(f"{self} voltage low, no discharging")
                 dis_ok = False
 
             if self.u <= self.bms.cfg.u.min:
-                self.ctrl.req.send([self.cfg.bms,"rly", st=False])
-                logger.error(f"Battery {self} undervoltage, turned off")
+                off = True
+                logger.error(f"{self} undervoltage, turned off")
 
-        for c in cells:
-            if c.voltage >= c.cfg.ext.max:
+        for c in self.cells:
+            if c.voltage >= c.cfg.u.ext.max:
                 chg_ok = False
+                logger.warning(f"{c} voltage high, no charging")
 
-            if c.voltage >= c.cfg.min:
-                self.ctrl.req.send([self.cfg.bms,"rly", st=False])
-                logger.error(f"Cell {c} overvoltage, turned off")
+            if c.voltage >= c.cfg.u.max:
+                breakpoint()
+                logger.error(f"{c} overvoltage, turned off")
 
-            if c.voltage <= c.cfg.ext.max:
+            if c.voltage <= c.cfg.u.ext.min:
                 dis_ok = False
+                logger.warning(f"{c} voltage low, no discharging")
 
-            if c.voltage <= c.cfg.min:
-                self.ctrl.req.send([self.cfg.bms,"rly", st=False])
-                logger.error(f"Cell {c} undervoltage, turned off")
+            if c.voltage <= c.cfg.u.min:
+                off = True
+                logger.error(f"{c} undervoltage, turned off")
+
+        if off and self.is_ready:
+            await self.ctrl.req.send([self.cfg.bms,"rly"], st=False)
 
         if self.chg_set != chg_ok or self.dis_set != dis_ok:
             # send limits to BMS in mplex

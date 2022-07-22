@@ -45,7 +45,7 @@ class Cell(dbus.ServiceInterface):
         self.bcfg = bcfg
         self.gcfg = gcfg
 
-        super().__init__("org.m-o-a-t.bms")
+        super().__init__("org.m_o_a_t.bms")
         self.cfg = combine_dict(cfg, bcfg.default, cls=attrdict)
 
     def __repr__(self):

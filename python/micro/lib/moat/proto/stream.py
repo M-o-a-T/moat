@@ -47,7 +47,7 @@ def ext_proxy(code, data):
 
 _pkey = 1
 def default_handler(obj):
-    if isinstance(obj,Proxy):
+    if Proxy is not None and isinstance(obj,Proxy):
         return ExtType(4, obj.name.encode("utf-8"))
 
     try:

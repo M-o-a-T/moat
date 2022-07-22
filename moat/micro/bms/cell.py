@@ -89,6 +89,11 @@ class Cell(dbus.ServiceInterface):
 		return self.v_calibration
 
 	@dbus.method()
+    async def Identify(self) -> 'b'
+        h,_res = await self.send(RequestIdentifyModule())
+        return h.seen
+    
+	@dbus.method()
 	async def SetCalibration(self, data: 'd') -> 'i':
 		od, self.cfg.v_calibration = self.cfg.v_calibration, d
 		self._voltage = self._voltage * d/od

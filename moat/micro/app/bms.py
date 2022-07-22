@@ -234,7 +234,7 @@ class BattCmd(BaseCmd):
 		from pprint import pformat
 		logger.info("RELAY %s",pformat(kw))
 
-	async def cmd_work(self, res):
+	async def cmd_work(self, **kw):
 		from pprint import pformat
-		logger.info("WORK %s",pformat(res))
+		logger.info("WORK %s",pformat(kw))
 

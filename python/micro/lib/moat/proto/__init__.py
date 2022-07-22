@@ -38,6 +38,9 @@ else:
 class RemoteError(RuntimeError):
     pass
 
+class SilentRemoteError(RemoteError):
+    pass
+
 class ChannelClosed(RuntimeError):
     pass
 

@@ -60,9 +60,16 @@ class SysCmd(BaseCmd):
                 f.write(cfg)
         await self.base.config_updated()
 
-    async def cmd_eval(self, x):
-        # evaluates the string
-        return eval(x,dict(s=self.parent))
+    async def cmd_eval(self, val, attrs=()):
+        # possibly evaluates the string
+        if isinstance(val,str):
+            val = eval(val,dict(s=self.parent))
+        for vv in attrs:
+            try:
+                val = getattr(v,vv)
+            except AttributeError:
+                val = val[vv]
+        return (val,repr(val))  # may send a proxy
 
     async def cmd_unproxy(self, p):
         # tell the client to forget about a proxy
@@ -73,6 +80,7 @@ class SysCmd(BaseCmd):
 
     async def cmd_dump(self, x):
         # evaluates the string
+        # warning: needs a heap of memory
         res = eval(x,dict(s=self.parent))
         d = {}
         for k in dir(res):

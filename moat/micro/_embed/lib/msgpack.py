@@ -3,15 +3,12 @@
 
 # Parts of this have been modified to be compatble with micropython.
 
-try:
-    import uos as os
-    import usys as sys
-    from uio import BytesIO
-except ImportError:
-    import os as os
-    import sys as sys
-    from io import BytesIO
+import uos as os
+import usys as sys
+from uio import BytesIO
 import struct
+
+from micropython import const
 
 #
 # This is a micropython-asyncio-compatible MsgPack implementation.
@@ -66,34 +63,26 @@ class ExtType:
         self.code = code
         self.data = data
 
-
 newlist_hint = lambda size: []
 
-TYPE_IMMEDIATE = 0
-TYPE_ARRAY = 1
-TYPE_MAP = 2
-TYPE_RAW = 3
-TYPE_BIN = 4
-TYPE_EXT = 5
+_TYPE_IMMEDIATE = const(0)
+_TYPE_ARRAY = const(1)
+_TYPE_MAP = const(2)
+_TYPE_RAW = const(3)
+_TYPE_BIN = const(4)
+_TYPE_EXT = const(5)
 
-DEFAULT_RECURSE_LIMIT = 30
-
-
-def _check_type_strict(obj, t, type=type, tuple=tuple):
-    if type(t) is tuple:
-        return type(obj) in t
-    else:
-        return type(obj) is t
+DEFAULT_RECURSE_LIMIT = 20
 
 
 _NO_FORMAT_USED = ""
 _MSGPACK_HEADERS = {
-    0xC4: (1, _NO_FORMAT_USED, TYPE_BIN),
-    0xC5: (2, ">H", TYPE_BIN),
-    0xC6: (4, ">I", TYPE_BIN),
-    0xC7: (2, "Bb", TYPE_EXT),
-    0xC8: (3, ">Hb", TYPE_EXT),
-    0xC9: (5, ">Ib", TYPE_EXT),
+    0xC4: (1, _NO_FORMAT_USED, _TYPE_BIN),
+    0xC5: (2, ">H", _TYPE_BIN),
+    0xC6: (4, ">I", _TYPE_BIN),
+    0xC7: (2, "Bb", _TYPE_EXT),
+    0xC8: (3, ">Hb", _TYPE_EXT),
+    0xC9: (5, ">Ib", _TYPE_EXT),
     0xCA: (4, ">f"),
     0xCB: (8, ">d"),
     0xCC: (1, _NO_FORMAT_USED),
@@ -104,20 +93,19 @@ _MSGPACK_HEADERS = {
     0xD1: (2, ">h"),
     0xD2: (4, ">i"),
     0xD3: (8, ">q"),
-    0xD4: (1, "b1s", TYPE_EXT),
-    0xD5: (2, "b2s", TYPE_EXT),
-    0xD6: (4, "b4s", TYPE_EXT),
-    0xD7: (8, "b8s", TYPE_EXT),
-    0xD8: (16, "b16s", TYPE_EXT),
-    0xD9: (1, _NO_FORMAT_USED, TYPE_RAW),
-    0xDA: (2, ">H", TYPE_RAW),
-    0xDB: (4, ">I", TYPE_RAW),
-    0xDC: (2, ">H", TYPE_ARRAY),
-    0xDD: (4, ">I", TYPE_ARRAY),
-    0xDE: (2, ">H", TYPE_MAP),
-    0xDF: (4, ">I", TYPE_MAP),
+    0xD4: (1, "b1s", _TYPE_EXT),
+    0xD5: (2, "b2s", _TYPE_EXT),
+    0xD6: (4, "b4s", _TYPE_EXT),
+    0xD7: (8, "b8s", _TYPE_EXT),
+    0xD8: (16, "b16s", _TYPE_EXT),
+    0xD9: (1, _NO_FORMAT_USED, _TYPE_RAW),
+    0xDA: (2, ">H", _TYPE_RAW),
+    0xDB: (4, ">I", _TYPE_RAW),
+    0xDC: (2, ">H", _TYPE_ARRAY),
+    0xDD: (4, ">I", _TYPE_ARRAY),
+    0xDE: (2, ">H", _TYPE_MAP),
+    0xDF: (4, ">I", _TYPE_MAP),
 }
-
 
 class Unpacker(object):
     def __init__(
@@ -210,7 +198,7 @@ class Unpacker(object):
             raise OutOfData
 
     async def _read_header(self):
-        typ = TYPE_IMMEDIATE
+        typ = _TYPE_IMMEDIATE
         n = 0
         obj = None
         await self._reserve(1)
@@ -222,14 +210,14 @@ class Unpacker(object):
             obj = -1 - (b ^ 0xFF)
         elif b & 0b11100000 == 0b10100000:  # xA0-xBF
             n = b & 0b00011111
-            typ = TYPE_RAW
+            typ = _TYPE_RAW
             obj = await self._read(n)
         elif b & 0b11110000 == 0b10010000:  # x90-x9F
             n = b & 0b00001111
-            typ = TYPE_ARRAY
+            typ = _TYPE_ARRAY
         elif b & 0b11110000 == 0b10000000:  # x80-x8F
             n = b & 0b00001111
-            typ = TYPE_MAP
+            typ = _TYPE_MAP
         elif b == 0xC0:
             obj = None
         elif b == 0xC1:
@@ -280,13 +268,13 @@ class Unpacker(object):
             await self._reserve(size)
             (n,) = struct.unpack_from(fmt, self._buffer, self._buff_i)
             self._buff_i += size
-        elif b <= 0xDF:
+        else: # if b <= 0xDF:  # can't be anything else
             size, fmt, typ = _MSGPACK_HEADERS[b]
             await self._reserve(size)
             (n,) = struct.unpack_from(fmt, self._buffer, self._buff_i)
             self._buff_i += size
-        else:
-            raise FormatError("Unknown header: 0x%x" % b)
+#       else:
+#           raise FormatError("Unknown header: 0x%x" % b)
         return typ, n, obj
 
     async def unpack(self):
@@ -299,8 +287,7 @@ class Unpacker(object):
     async def _unpack(self):
         typ, n, obj = await self._read_header()
 
-        # TODO should we eliminate the recursion?
-        if typ == TYPE_ARRAY:
+        if typ == _TYPE_ARRAY:
             ret = newlist_hint(n)
             for i in range(n):
                 ret.append(await self.unpack())
@@ -308,7 +295,7 @@ class Unpacker(object):
 #               ret = self._list_hook(ret)
             # TODO is the interaction between `list_hook` and `use_list` ok?
             return ret  # if self._use_list else tuple(ret)
-        if typ == TYPE_MAP:
+        if typ == _TYPE_MAP:
             ret = {}
             for _ in range(n):
                 key = await self.unpack()
@@ -318,19 +305,17 @@ class Unpacker(object):
 #           if self._object_hook is not None:
 #               ret = self._object_hook(ret)
             return ret
-        if typ == TYPE_RAW:
+        if typ == _TYPE_RAW:
             if isinstance(obj, memoryview):  # sigh
                 obj = bytearray(obj)
             return obj.decode("utf_8")  # , self._unicode_errors)
-        if typ == TYPE_BIN:
+        if typ == _TYPE_BIN:
             if self._min_memview_len<0 and len(obj) < self._min_memview_len:
                 obj = bytearray(obj)
             return obj
-        if typ == TYPE_EXT:
+        if typ == _TYPE_EXT:
             return self._ext_hook(n, obj)
-        if typ != TYPE_IMMEDIATE:
-            print("T:",repr(typ))
-        assert typ == TYPE_IMMEDIATE
+#       assert typ == _TYPE_IMMEDIATE
         return obj
 
     def __aiter__(self):
@@ -348,18 +333,16 @@ class Unpacker(object):
                 raise ExtraData(s.value, bytes(self._get_extradata()))
             return s.value
         except OutOfData:
-            raise ValueError("Unpack failed: incomplete input")
-        raise RuntimeError("Should not get here")
+            raise ValueError("incomplete")
+        raise RuntimeError("No way")
 
 
 class Packer(object):
     def __init__(
         self,
-        use_single_float=False,
 #       unicode_errors=None,
         default=None,
     ):
-        self._use_float = use_single_float
         self._buffer = BytesIO()
 #       self._unicode_errors = unicode_errors or "strict"
         self._default = default
@@ -367,118 +350,151 @@ class Packer(object):
     def _pack(
         self,
         obj,
-        nest_limit=DEFAULT_RECURSE_LIMIT,
-        check=isinstance,
-        check_type_strict=_check_type_strict,
-        _default=None
+        default=None
     ):
+        # Warning, does not deal with recursive data structures
+        # (except by running out of memory)
         list_types = (list, tuple)
-        if _default is None:
-            _default = self._default
+        if default is None:
+            default = self._default
+
+        todo = [obj]
 
         # shorter bytecode
         def wp(*x):
             return self._buffer.write(struct.pack(*x))
         wb = self._buffer.write
-        if nest_limit < 0:
-            raise ValueError("recursion limit exceeded")
-        if obj is None:
-            return wb(b"\xc0")
-        if check(obj, bool):
-            if obj:
-                return wb(b"\xc3")
-            return wb(b"\xc2")
-        if check(obj, int):
-            if obj >= 0:
-                if obj < 0x80:
-                    return wp("B", obj)
-                if obj <= 0xFF:
-                    return wp("BB", 0xCC, obj)
-                if obj <= 0xFFFF:
-                    return wp(">BH", 0xCD, obj)
-                if obj <= 0xFFFFFFFF:
-                    return wp(">BI", 0xCE, obj)
-                if 0xFFFFFFFF < obj <= 0xFFFFFFFFFFFFFFFF:
-                    return wp(">BQ", 0xCF, obj)
-            else:
-                if -0x20 <= obj:
-                    return wp("b", obj)
-                if -0x80 <= obj:
-                    return wp(">Bb", 0xD0, obj)
-                if -0x8000 <= obj:
-                    return wp(">Bh", 0xD1, obj)
-                if -0x80000000 <= obj:
-                    return wp(">Bi", 0xD2, obj)
-                if -0x8000000000000000 <= obj:
-                    return wp(">Bq", 0xD3, obj)
+        is_ = isinstance
+
+        _ndefault = default
+        while todo:
+            _default,_ndefault = _ndefault,default
+            obj = todo.pop()
+            if obj is None:
+                wb(b"\xc0")
+                continue
+            if isinstance(obj, bool):
+                wb(b"\xc3" if obj else b"\xc2")
+                continue
+            if isinstance(obj, int):
+                if obj >= 0:
+                    if obj < 0x80:
+                        wp("B", obj)
+                        continue
+                    if obj <= 0xFF:
+                        wp("BB", 0xCC, obj)
+                        continue
+                    if obj <= 0xFFFF:
+                        wp(">BH", 0xCD, obj)
+                        continue
+                    if obj <= 0xFFFFFFFF:
+                        wp(">BI", 0xCE, obj)
+                        continue
+                    if obj <= 0xFFFFFFFFFFFFFFFF:
+                        wp(">BQ", 0xCF, obj)
+                        continue
+                else:
+                    if -0x20 <= obj:
+                        wp("b", obj)
+                        continue
+                    if -0x80 <= obj:
+                        wp(">Bb", 0xD0, obj)
+                        continue
+                    if -0x8000 <= obj:
+                        wp(">Bh", 0xD1, obj)
+                        continue
+                    if -0x80000000 <= obj:
+                        wp(">Bi", 0xD2, obj)
+                        continue
+                    if -0x8000000000000000 <= obj:
+                        wp(">Bq", 0xD3, obj)
+                        continue
+                if _default:
+                    res = _default(obj)
+                    if res is not None:
+                        todo.append(res)
+                        _ndefault = False
+                        continue
+                raise OverflowError("Integer value out of range")
+            if is_(obj, (bytes, bytearray, memoryview)):
+                # XXX we have a problem if memoryview.itemsize != 1
+                n = len(obj)
+                self._pack_bin_header(n)
+                wb(obj)
+                continue
+            if is_(obj, str):
+                obj = obj.encode("utf-8")  # , self._unicode_errors)
+                n = len(obj)
+                if n <= 0x1F:
+                    wb(struct.pack("B", 0xA0 + n))
+                elif n <= 0xFF:
+                    wb(struct.pack(">BB", 0xD9, n))
+                elif n <= 0xFFFF:
+                    wb(struct.pack(">BH", 0xDA, n))
+                else:
+                    wb(struct.pack(">BI", 0xDB, n))
+                wb(obj)
+                continue
+            if is_(obj, float):
+#               if self._use_float:
+                wp(">Bf", 0xCA, obj)
+#               else:
+#                   wp(">Bd", 0xCB, obj)
+                continue
+            if is_(obj, ExtType):
+                code = obj.code
+                data = obj.data
+                L = len(data)
+                if L == 1:
+                    wb(b"\xd4")
+                elif L == 2:
+                    wb(b"\xd5")
+                elif L == 4:
+                    wb(b"\xd6")
+                elif L == 8:
+                    wb(b"\xd7")
+                elif L == 16:
+                    wb(b"\xd8")
+                elif L <= 0xFF:
+                    wp(">BB", 0xC7, L)
+                elif L <= 0xFFFF:
+                    wp(">BH", 0xC8, L)
+                else:
+                    wp(">BI", 0xC9, L)
+                wp("b", code)
+                wb(data)
+                continue
+            if is_(obj, list_types):
+                n = len(obj)
+                if n <= 0x0F:
+                    wb(struct.pack("B", 0x90 + n))
+                elif n <= 0xFFFF:
+                    wb(struct.pack(">BH", 0xDC, n))
+                else:
+                    wb(struct.pack(">BI", 0xDD, n))
+                while n > 0:
+                    n -= 1
+                    todo.append(obj[n])
+                continue
+            if is_(obj, dict):
+                n = len(obj)
+                if n <= 0x0F:
+                    wb(struct.pack("B", 0x80 + n))
+                elif n <= 0xFFFF:
+                    wb(struct.pack(">BH", 0xDE, n))
+                else:
+                    wb(struct.pack(">BI", 0xDF, n))
+                for k, v in obj.items():
+                    todo.append(v)
+                    todo.append(k)
+                continue
             if _default:
                 res = _default(obj)
                 if res is not None:
-                    return res
-            raise OverflowError("Integer value out of range")
-        if check(obj, (bytes, bytearray)):
-            n = len(obj)
-            self._pack_bin_header(n)
-            return wb(obj)
-        if check(obj, str):
-            obj = obj.encode("utf-8")  # , self._unicode_errors)
-            n = len(obj)
-            self._pack_raw_header(n)
-            return wb(obj)
-        if check(obj, memoryview):
-            n = len(obj) * obj.itemsize
-            self._pack_bin_header(n)
-            return wb(obj)
-        if check(obj, float):
-            if self._use_float:
-                return wp(">Bf", 0xCA, obj)
-            return wp(">Bd", 0xCB, obj)
-        if check(obj, ExtType):
-            code = obj.code
-            data = obj.data
-            assert isinstance(code, int)
-            assert isinstance(data, bytes)
-            L = len(data)
-            if L == 1:
-                wb(b"\xd4")
-            elif L == 2:
-                wb(b"\xd5")
-            elif L == 4:
-                wb(b"\xd6")
-            elif L == 8:
-                wb(b"\xd7")
-            elif L == 16:
-                wb(b"\xd8")
-            elif L <= 0xFF:
-                wp(">BB", 0xC7, L)
-            elif L <= 0xFFFF:
-                wp(">BH", 0xC8, L)
-            else:
-                wp(">BI", 0xC9, L)
-            wp("b", code)
-            wb(data)
-            return
-        if check(obj, list_types):
-            n = len(obj)
-            self._pack_array_header(n)
-            for i in range(n):
-                self._pack(obj[i], nest_limit - 1)
-            return
-        if check(obj, dict):
-            return self._pack_map_pairs(
-                len(obj), obj.items(), nest_limit - 1
-            )
-        if _default:
-            res = _default(obj)
-            if res is not None:
-                return self._pack(
-                    obj,
-                    nest_limit=nest_limit,
-                    check=check,
-                    check_type_strict=check_type_strict,
-                    _default=False,
-                )
-        raise TypeError("Cannot serialize %r" % (obj,))
+                    _ndefault = False
+                    todo.append(res)
+                    continue
+            raise TypeError("Cannot serialize %r" % (obj,))
 
     def packb(self, obj):
         try:
@@ -486,38 +502,6 @@ class Packer(object):
             return self._buffer.getvalue()
         finally:
             self._buffer = BytesIO()  # always reset
-
-    def _pack_array_header(self, n):
-        wb = self._buffer.write
-        if n <= 0x0F:
-            return wb(struct.pack("B", 0x90 + n))
-        if n <= 0xFFFF:
-            return wb(struct.pack(">BH", 0xDC, n))
-        return wb(struct.pack(">BI", 0xDD, n))
-
-    def _pack_map_header(self, n):
-        wb = self._buffer.write
-        if n <= 0x0F:
-            return wb(struct.pack("B", 0x80 + n))
-        if n <= 0xFFFF:
-            return wb(struct.pack(">BH", 0xDE, n))
-        return wb(struct.pack(">BI", 0xDF, n))
-
-    def _pack_map_pairs(self, n, pairs, nest_limit=DEFAULT_RECURSE_LIMIT):
-        self._pack_map_header(n)
-        for (k, v) in pairs:
-            self._pack(k, nest_limit - 1)
-            self._pack(v, nest_limit - 1)
-
-    def _pack_raw_header(self, n):
-        wb = self._buffer.write
-        if n <= 0x1F:
-            return wb(struct.pack("B", 0xA0 + n))
-        if n <= 0xFF:
-            return wb(struct.pack(">BB", 0xD9, n))
-        if n <= 0xFFFF:
-            return wb(struct.pack(">BH", 0xDA, n))
-        return wb(struct.pack(">BI", 0xDB, n))
 
     def _pack_bin_header(self, n):
         wb = self._buffer.write
@@ -528,14 +512,14 @@ class Packer(object):
         return wb(struct.pack(">BI", 0xC6, n))
 
 
-def pack(o, stream, **kwargs):
-    """
-    Pack object `o` and write it to `stream`
-
-    See :class:`Packer` for options.
-    """
-    packer = Packer(**kwargs)
-    stream.write(packer.packb(o))
+#def pack(o, stream, **kwargs):
+#    """
+#    Pack object `o` and write it to `stream`
+#
+#    See :class:`Packer` for options.
+#    """
+#    packer = Packer(**kwargs)
+#    stream.write(packer.packb(o))
 
 
 def packb(o, **kwargs):
@@ -547,15 +531,15 @@ def packb(o, **kwargs):
     return Packer(**kwargs).packb(o)
 
 
-def unpack(stream, **kwargs):
-    """
-    Unpack an object from `stream`.
-
-    Raises `ExtraData` when `stream` contains extra bytes.
-    See :class:`Unpacker` for options.
-    """
-    data = stream.read()
-    return unpackb(data, **kwargs)
+#def unpack(stream, **kwargs):
+#    """
+#    Unpack an object from `stream`.
+#
+#    Raises `ExtraData` when `stream` contains extra bytes.
+#    See :class:`Unpacker` for options.
+#    """
+#    data = stream.read()
+#    return unpackb(data, **kwargs)
 
 
 def unpackb(packed, **kwargs):

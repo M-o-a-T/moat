@@ -33,7 +33,7 @@ async def run(obj, name):
 
     async with MessageBus().connect() as bus, get_link(obj) as req:
         add_client_hooks(req)
-        ctrl = Controller(name, obj.cfg.bms[name], obj.cfg)
+        ctrl = Controller(name, obj.cfg.bms[name], obj.cfg, req)
         await ctrl.run(req, bus)
 
             

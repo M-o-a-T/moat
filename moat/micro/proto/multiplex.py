@@ -16,6 +16,7 @@ import anyio
 from . import RemoteError
 from ..stacks.unix import unix_stack_iter
 from ..compat import TaskGroup, Event, print_exc
+from ..util import merge
 from ..cmd import Request, BaseCmd
 
 logger = logging.getLogger(__name__)
@@ -116,6 +117,11 @@ class _MplexCommand(BaseCmd):
 			await e.wait()
 			await self.request.run_flag.wait()
 
+	async def cmd_cfg(self, cfg):
+		merge(self.cfg, cfg, drop=("port" in cfg))
+		await self.request.config_updated()
+
+
 class _LocalCommand(BaseCmd):
 
 	async def dispatch(self, action, msg):
@@ -158,7 +164,7 @@ class Multiplexer(Request):
 	_cancel = None
 	_tg = None
 
-	def __init__(self, stream_factory, socket, watchdog=0):
+	def __init__(self, stream_factory, socket, cfg, watchdog=0):
 		"""
 		Set up a MicroPython multiplexer.
 
@@ -168,6 +174,7 @@ class Multiplexer(Request):
 		super().__init__(None)
 		self.stream_factory = stream_factory
 		self.socket = socket
+		self.cfg = cfg
 
 		#self.mqtt_cfg = mqtt
 		#self.mqtt_sub = {}
@@ -211,6 +218,37 @@ class Multiplexer(Request):
 		self.parent = parent
 		return self
 
+	async def _setup_apps(self, tg):
+		apps = getattr(self.cfg, "apps", {})
+		for name in list(self.apps.keys()):
+			if name not in apps:
+				app = self.apps.pop(name)
+				delattr(self.base,"dis_"+name)
+				app.scope.cancel()
+
+		for name,v in apps:
+			if name in self.apps:
+				# await self.apps[name].app.config_updated()
+				# -- done by `self.base.config_updated`, below
+				continue
+
+			try:
+				cmd = v.cmd
+			except AttributeError:
+				pass
+			else:
+				cfg = getattr(v,"cfg",attrdict())
+				cmd = imp(cmd)(self, name, cfg, self.cfg)
+				scope = await tg.spawn(cmd.run)
+				apps[name] = attrdict(scope=scope, app=cmd)
+				setattr(mplex.base, "dis_"+name, cmd)
+
+
+	async def config_updated(self):
+		await self.base.config_updated()
+		await self._setup_apps(self._tg)
+
+
 	async def _run_stack(self):
 		"""Run (and re-run) a multiplexed link."""
 		backoff = 1
@@ -222,15 +260,23 @@ class Multiplexer(Request):
 
 				try:
 					async with self.stream_factory(self._gen_req):
-						logger.info("Startup done")
-						await anyio.sleep(1)
-						logger.info("Running OK")
-						self.running.set()
-						await self.send_nr(["sys","is_up"])
-						await anyio.sleep(60)
-						backoff = 1
-						await self.do_stop.wait()
-						await self._cancel()
+						logger.info("Retrieving config")
+						with anyio.fail_after(3):
+							cfg = await self.send(["sys","cfg"], mode=1)
+						merge(self.cfg, cfg, drop=("port" in cfg))
+						logger.info("Starting up")
+						# if "port" is there the stored config is not trimmed
+						async with TaskGroup() as tg:
+							self._tg = tg
+							self.apps = {}
+							await self._setup_apps(tg)
+
+							self.running.set()
+							await self.send_nr(["sys","is_up"])
+							await anyio.sleep(60)
+							backoff = 1
+							await self.do_stop.wait()
+							await self._cancel()  # stop all
 				finally:
 					self.parent = None
 					if self.running.is_set():

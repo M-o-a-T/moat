@@ -3,26 +3,15 @@ from moat.cmd import BaseCmd
 from moat.compat import ticks_ms, ticks_diff, sleep_ms, wait_for_ms, ticks_add, Event, TimeoutError
 import machine as M
 
-# cfg:
-# u:
-#   pin: PIN  # measure U
-#   min: VAL
-#   max: VAL
-# i:
-#   pin: PIN  # measure I
-#   ref: PIN  # I reference, subtract from measurement
-#   min: VAL
-#   max: VAL
-# poll:
-#   t: MSEC
-#   d: FACTOR # decay, for averaging, 1000/th
-# rel: PIN  # relay
+# see 
 # 
 class Batt:
+	cmd = None
+
 	def __init__(self, cfg, gcfg):
 		self.cfg = cfg
 		self.xmit_evt = Event()
-		self.cmd = None
+		self.gen = 0  # generation, incremented every time a new value is read
 
 	def _check(self):
 		c = self.cfg
@@ -48,11 +37,11 @@ class Batt:
 
 	def stat(self):
 		res = dict(
-			ok=self.relay.value(),
 			u=self.val_u,
 			i=self.val_i,
-			w=self.sum_w,
-			n=self.n_w,
+			w=dict(s=self.sum_w, n=self.n_w),
+			r=dict(s= self.relay.value(), f= self.relay_force, l= self.live),
+            gen=self.gen,
 		)
 		return res
 
@@ -77,14 +66,14 @@ class Batt:
 	async def live_task(self):
 		while True:
 			try:
-				await wait_for_ms(self.cfg.poll.k, self.live_flag.wait)
+				await wait_for_ms(self.cfg["poll"]["k"], self.live_flag.wait)
 			except TimeoutError:
 				self.live_state(False)
 			else:
 				self.live_flag = Event()
 				self.live_state(True)
 
-	def config_updated(self):
+	async def config_updated(self):
 		old_u_scale, old_u_offset = self.adc_u_scale, self.adc_u_offset
 		old_i_scale, old_i_offset = self.adc_i_scale, self.adc_i_offset
 		self._set_scales()
@@ -94,22 +83,29 @@ class Batt:
 		res = dict(
 			w=self.sum_w,
 			n=self.n_w,
+
 		)
 		self.sum_w = 0
 		self.n_w = 0
+		if self.cmd:
+			await self.cmd.request.send_nr([self.cmd.name,"work"], **res)
+
 		return res
 
 	def _set_scales(self):
-		self.adc_u_scale = self.cfg["u"]["scale"]
-		self.adc_u_offset = self.cfg["u"]["offset"]
-		self.adc_i_scale = self.cfg["i"]["scale"]
-		self.adc_i_offset = self.cfg["i"]["offset"]
+		c = self.cfg["batt"]
+		self.adc_u_scale = c["u"]["scale"]
+		self.adc_u_offset = c["u"]["offset"]
+		self.adc_i_scale = c["i"]["scale"]
+		self.adc_i_offset = c["i"]["offset"]
 
-	async def run(self):
-		self.adc_u = M.ADC(M.Pin(self.cfg["u"]["pin"]))
-		self.adc_i = M.ADC(M.Pin(self.cfg["i"]["pin"]))
-		self.adc_ir = M.ADC(M.Pin(self.cfg["i"]["ref"]))
-		self.relay = M.Pin(self.cfg["rel"]["pin"], M.Pin.OUT)
+	async def run(self, cmd):
+		c = self.cfg["batt"]
+		self.cmd = cmd
+		self.adc_u = M.ADC(M.Pin(c["u"]["pin"]))
+		self.adc_i = M.ADC(M.Pin(c["i"]["pin"]))
+		self.adc_ir = M.ADC(M.Pin(c["i"]["ref"]))
+		self.relay = M.Pin(self.cfg["relay"]["pin"], M.Pin.OUT)
 		self.sum_w = 0
 		self.n_w = 0
 		self.relay_force = None
@@ -131,7 +127,7 @@ class Batt:
 		self.sw_ok = False
 
 		self.t = ticks_ms()
-		self.t_sw = ticks_add(ticks_ms(), self.cfg["rel"]["t1"])
+		self.t_sw = ticks_add(ticks_ms(), self.cfg["relay"]["t1"])
 		xmit_n = 0
 
 		while True:
@@ -152,12 +148,16 @@ class Batt:
 			elif self.live and self.relay_force is None and self.relay.value():
 				self.relay.off()
 				await self.send_rly_state()
-				self.t_sw = ticks_add(self.t, self.cfg["rel"]["t"])
+				self.t_sw = ticks_add(self.t, self.cfg["relay"]["t"])
 				self.sw_ok = False
 				xmit_n=0
 
 			xmit_n -= 1
-			if xmit_n <= 0:
+			if xmit_n <= 0 or self.xmit_evt.is_set:
+                if self.gen >= 99:
+                    self.gen = 10
+                else:
+                    self.gen += 1
 				self.xmit_evt.set()
 				self.xmit_evt = Event()
 				xmit_n = self.cfg["poll"]["n"]
@@ -168,27 +168,24 @@ class Batt:
 				await sleep_ms(td)
 
 	async def send_rly_state(self):
-		if self.cmd is not None:
-			await self.cmd.request.send_nr([self.cmd.name,"relay"],
-				{"state": self.relay.value(), "force": self.relay_force, "live": self.live})
+		self.xmit_evt.set()
 
 
 class BattCmd(BaseCmd):
-	def __init__(self, parent, batt, name):
+	def __init__(self, parent, name, cfg, gcfg):
 		super().__init__(parent)
-		self.batt = batt
-		batt.cmd = self
+		self.batt = Batt(cfg, gcfg)
 		self.name = name
 
 	def run(self):
-		while True:
-			await self.batt.xmit_evt.wait()
-			await self.request.send_nr([self.name,"info"], self.batt.stat())
+		try:
+			await self.batt.run(self)
+		finally:
+			self.batt = None
 	
 	async def config_updated(self):
 		await super().config_updated()
-		res = self.batt.config_updated()
-		await self.request.send_nr([self.name,"work"], work=res, final=True)
+		await self.batt.config_updated()
 
 	async def cmd_rly(self, st):
 		"""
@@ -196,8 +193,10 @@ class BattCmd(BaseCmd):
 		"""
 		await self.batt.set_relay_force(st)
 
-	def cmd_stat(self):
-		return self.batt.stat()
+    async def cmd_info(self, gen=-1):
+        if self.batt.gen == gen:
+			await self.batt.xmit_evt.wait()
+        return self.batt.stat()
 
 	def cmd_live(self):
 		self.batt.set_live()

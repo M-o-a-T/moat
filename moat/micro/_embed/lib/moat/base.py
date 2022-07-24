@@ -39,31 +39,46 @@ class SysCmd(BaseCmd):
         # return a simple test string
         return b"a\x0db\x0ac"
 
-    async def cmd_cfg(self, cfg=None, fallback=None):
+    async def cmd_cfg(self, cfg=None, mode=0):
+        # mode 0: update current config
+        # mode 1: update current config, write moat.cfg
+        # mode 2: update moat.cfg
+        # mode 3: update moat_fb.cfg
+        #
+        # If cfg is None, return current/stored/fallback config (mode=1/2/3),
+        # else if cfg.port exists, replace config,
+        # else merge config.
+
         import msgpack
-        if cfg is None:
-            if fallback is None:
-                return self.base.cfg
-            else:
-                f=open("/moat_fb.cfg" if fallback else "/moat.cfg","rb")
-                with f:
-                    cfg = msgpack.unpackb(f.read())
-                return cfg
-
-        # Assume that if "port" is set (useless on the client!) it's a global replace
-        merge(self.base.cfg, cfg, drop=("port" in cfg))
-
-        if fallback is not None:
-            cfg = msgpack.packb(self.base.cfg)
-            f=open("/moat_fb.cfg" if fallback else "/moat.cfg","wb")
+        if mode > 1:
+            f=open("/moat_fb.cfg" if mode == 3 else "/moat.cfg","rb")
             with f:
-                f.write(cfg)
-        await self.base.config_updated()
+                cur = msgpack.unpackb(f.read())
+        else:
+            cur = self.base.cfg
+
+        if cfg is None:
+            return cur
+
+        if mode > 1 and "port" in cfg:
+            cur = cfg  # just to avoid redundant work
+        else:
+            merge(cur, cfg, drop=("port" in cfg))
+
+        if mode > 0:
+            cur = msgpack.packb(cur)
+            f=open("/moat_fb.cfg" if mode == 3 else "/moat.cfg","wb")
+            with f:
+                f.write(cur)
+        if mode < 2:
+            await self.base.config_updated()
+            await self.send_nr(["mplex","cfg", cfg=cfg)
 
     async def cmd_eval(self, val, attrs=()):
         # possibly evaluates the string
         if isinstance(val,str):
             val = eval(val,dict(s=self.parent))
+        # otherwise it's probably a proxy
         for vv in attrs:
             try:
                 val = getattr(v,vv)
@@ -80,7 +95,7 @@ class SysCmd(BaseCmd):
 
     async def cmd_dump(self, x):
         # evaluates the string
-        # warning: needs a heap of memory
+        # warning: may need a heap of memory
         res = eval(x,dict(s=self.parent))
         d = {}
         for k in dir(res):

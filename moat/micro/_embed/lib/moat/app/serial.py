@@ -19,7 +19,8 @@ from moat.proto.stream import AsyncStream
 class Serial:
     max_idle = 100
 
-    def __init__(self, cfg, gcfg):
+    def __init__(self, cmd, cfg, gcfg):
+        self.cmd = cmd
         self.cfg = cfg
         self.xmit_evt = Event()
         self.w_lock = Lock()
@@ -100,11 +101,16 @@ class Serial:
 
 
 class SerialCmd(BaseCmd):
-    def __init__(self, parent, ser, name):
+    def __init__(self, parent, name, cfg, gcfg):
         super().__init__(parent)
-        self.ser = ser
+        self.ser = Serial(self, cfg, gcfg)
         self.name = name
-        ser.cmd = self
+
+    async def run(self):
+        try:
+            await self.ser.run()
+        finally:
+            del self.ser
 
     async def cmd_errcount(self):
         return self.ser.err_count()

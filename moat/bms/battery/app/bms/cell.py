@@ -1,8 +1,10 @@
 import asyncdbus.service as dbus
 from dataclasses import dataclass
 from ..conv.steinhart import thermistor2celsius, celsius2thermistor
-from moat.util import attrdict, combine_dict
+from moat.util import attrdict, combine_dict, Path
 from victron.dbus.utils import wrap_dbus_value, wrap_dbus_dict
+from functools import cached_property
+from .packet import *
 
 class Cell(dbus.ServiceInterface):
 	batt:"Battery"
@@ -52,6 +54,10 @@ class Cell(dbus.ServiceInterface):
 	def __repr__(self):
 		return f"‹Cell {self.path} u={self.voltage}›"
 
+	@property
+	def req(self):
+		return self.batt.ctrl._req
+
 	async def export(self, bus):
 		self._bus = bus
 		await bus.export(self.path, self)
@@ -62,9 +68,9 @@ class Cell(dbus.ServiceInterface):
 			self._bus = None
 
 	async def send(self, pkt):
-		await self.ctrl.send(pkt,start=self.nr)
+		await self.batt.ctrl.send(pkt,start=self.nr)
 
-	async def send_update(self):
+	async def update_cell_config(self):
 		msg = RequestConfig.from_cell(self)
 		await self.send(msg)
 
@@ -85,22 +91,40 @@ class Cell(dbus.ServiceInterface):
 		return self.voltage
 
 	@dbus.method()
-	async def GetCalibration(self) -> 'd':
-		return self.v_calibration
+	async def Identify(self) -> 'b':
+		h,_res = await self.send(RequestIdentifyModule())
+		return h.seen
+	
+	@dbus.method()
+	async def SetVoltage(self, data: 'd') -> 'i':
+		# update the scale appropriately
+		adj = (data - self.cfg.u.offset) / (self.voltage - self.cfg.u.offset)
+		self.cfg.u.scale *= adj
+		await self.update_cell_config()
+
+		# TODO move this to a config update handler
+		self._voltage = data
+		self.voltage_min = (self.voltage_min - self.cfg.u.offset) * adj + self.cfg.u.offset
+		self.voltage_max = (self.voltage_max - self.cfg.u.offset) * adj + self.cfg.u.offset
+		return 0
+
+	@cached_property
+	def cfg_path(self):
+		return self.batt.cfg_path | "cells" | self.nr
 
 	@dbus.method()
-    async def Identify(self) -> 'b'
-        h,_res = await self.send(RequestIdentifyModule())
-        return h.seen
-    
-	@dbus.method()
-	async def SetCalibration(self, data: 'd') -> 'i':
-		od, self.cfg.v_calibration = self.cfg.v_calibration, d
-		self._voltage = self._voltage * d/od
-		self.voltage_min = self.voltage_min * d/od
-		self.voltage_max = self.voltage_max * d/od
-		await self.send_update()
-		return 0
+	async def SetVoltageOffset(self, data: 'd') -> 'i':
+		# update the scale appropriately
+		# XXX TODO not stored on the module yet
+		adj = data - self.cfg.u.offset
+		cfg = attrdict()
+		await self.req.send(["sys","cfg"], attrdict()._update(self.cfgpath | "u", {"offset": data}))
+
+		# TODO move this to a config update handler
+		self.voltage += adj
+		self.voltage_min += adj
+		self.voltage_max += adj
+
 
 	@property
 	def v_calibration(self):

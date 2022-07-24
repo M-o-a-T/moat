@@ -27,6 +27,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def clean_cfg(cfg):
+	# cfg = attrdict(apps=cfg["apps"])  # drop all the other stuff
+	return cfg
+
 @main.command(short_help='Copy MoaT to MicroPython')
 @click.pass_obj
 @click.option("-n","--no-run", is_flag=True, help="Don't run MoaT after updating")
@@ -85,7 +89,9 @@ async def setup(obj, source, dest, no_run, no_reset, force_exit, exit, verbose, 
 			if state:
 				await repl.exec(f"f=open('moat.state','w'); f.write({state!r}); f.close()")
 			if config:
-				cfg = msgpack.Packer().pack(yload(config))
+				cfg = yload(config)
+				cfg = clean_cfg(cfg)
+				cfg = msgpack.Packer().pack(cfg)
 				f = ABytes("moat.cfg",cfg)
 				await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl), cross=cross)
 
@@ -199,7 +205,7 @@ async def cfg(obj, replace, fallback, current, **attrs):
 	"""
 	Update a remote configuration.
 
-    Writing to the remote config is persistent.
+	Writing to the remote config is persistent.
 
 	The selected config is printed if no modifiers are used.
 	"""
@@ -215,7 +221,7 @@ async def cfg(obj, replace, fallback, current, **attrs):
 		add_client_hooks(req)
 
 		if replace:
-			val = deepcopy(obj.cfg)
+			val = deepcopy(clean_cfg(obj.cfg))
 		elif current or not has_attrs:
 			val = await req.send(["sys","cfg"], fallback=fallback)
 		else:
@@ -270,31 +276,7 @@ async def _mplex(obj):
 		await tg.spawn(sig_handler, tg)
 		obj.debug = False  # for as_service
 		async with as_service(obj):
-
-			apps = []
-			for name,v in getattr(obj.cfg, "apps", {}).items():
-				cfg = getattr(v,"cfg",attrdict())
-				try:
-					app = v.app
-				except AttributeError:
-					app = None
-				else:
-					app = imp(app)(cfg, obj.cfg, name)
-					if hasattr(app,"run"):
-						await tg.start(app.run)
-				try:
-					cmd = v.cmd
-				except AttributeError:
-					pass
-				else:
-					cmd = imp(cmd)
-					apps.append((name,cmd,app))
-
-			mplex = Multiplexer(stream_factory, obj.socket)
-			for name,cmd,app in apps:
-				cmd = cmd(mplex, app, name)
-				setattr(mplex.base, "dis_"+name, cmd)
-
+			mplex = Multiplexer(stream_factory, obj.socket, cfg)
 			await mplex.serve()
 
 

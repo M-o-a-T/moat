@@ -30,20 +30,8 @@ async def gen_apps(cfg, tg, print_exc):
                 print("Could not load",cmd,repr(exc))
                 print_exc(exc)
                 continue
-        try:
-            app = v["app"]
-        except KeyError:
-            app = None
-        else:
-            try:
-                app = imp(app)(v.get("cfg",{}), cfg)
-            except Exception as exc:
-                print("Could not start",name,app,repr(exc))
-                print_exc(exc)
-                continue
-            await tg.spawn(app.run)
 
-        a = (name,app,cmd,v.get("cfg", {}))
+        a = (name,cmd,v.get("cfg", {}))
         apps.append(a)
     return apps
 
@@ -61,10 +49,14 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
 
     def cfg_setup(t, apps):
         # start apps
-        for name,app,cmd,lcfg in apps:
+        for name,cmd,lcfg in apps:
             if cmd is None:
                 continue
-            cmd = cmd(t, app if app is not None else lcfg, name)
+            try:
+                cmd = cmd(t, name, lcfg, cfg)
+            except TypeError:
+                print(cmd,t,name,type(lcfg),type(cfg))
+                raise
             setattr(t, "dis_"+name, cmd)
 
 

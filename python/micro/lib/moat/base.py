@@ -45,7 +45,8 @@ class SysCmd(BaseCmd):
         # mode 2: update moat.cfg
         # mode 3: update moat_fb.cfg
         #
-        # If cfg is None, return current/stored/fallback config (mode=1/2/3),
+        # If cfg is None, return current/stored/fallback config (mode=0/2/3),
+        # else if cfg is None and mode is 1, write running config to storage,
         # else if cfg.port exists, replace config,
         # else merge config.
 
@@ -57,12 +58,12 @@ class SysCmd(BaseCmd):
         else:
             cur = self.base.cfg
 
-        if cfg is None:
+        if cfg is None and mode != 1:
             return cur
 
         if mode > 1 and "port" in cfg:
             cur = cfg  # just to avoid redundant work
-        else:
+        elif cfg:
             merge(cur, cfg, drop=("port" in cfg))
 
         if mode > 0:
@@ -70,9 +71,9 @@ class SysCmd(BaseCmd):
             f=open("/moat_fb.cfg" if mode == 3 else "/moat.cfg","wb")
             with f:
                 f.write(cur)
-        if mode < 2:
+        if mode < 2 and cfg is not None:
             await self.base.config_updated()
-            await self.send_nr(["mplex","cfg", cfg=cfg)
+            await self.request.send_nr(["mplex","cfg"], cfg=cfg)
 
     async def cmd_eval(self, val, attrs=()):
         # possibly evaluates the string

@@ -62,7 +62,7 @@ class NotImpl:
         pass
 
 class _Stacked:
-    def __init__(self, parent, *a,**k):
+    def __init__(self, parent):
         self.parent = parent
         self.child = NotImpl(self)
 

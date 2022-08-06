@@ -1,11 +1,11 @@
 
 from moat.cmd import BaseCmd
-from moat.compat import ticks_ms, ticks_diff, sleep_ms, wait_for_ms, ticks_add, Event, TimeoutError
+from moat.compat import ticks_ms, ticks_diff, sleep_ms, wait_for_ms, ticks_add, Event, TimeoutError, TaskGroup
 import machine as M
 
 # see 
 # 
-class Batt:
+class BMS:
 	cmd = None
 
 	def __init__(self, cfg, gcfg):
@@ -15,6 +15,7 @@ class Batt:
 
 	def _check(self):
 		c = self.cfg
+		cc = c["batt"]
 		d = c["poll"]["d"]
 
 		u = self.adc_u.read_u16() * self.adc_u_scale + self.adc_u_offset
@@ -25,13 +26,13 @@ class Batt:
 		self.sum_w += self.val_u*self.val_i
 		self.n_w += 1
 
-		if self.val_u < c["u"]["min"]:
+		if self.val_u < cc["u"]["min"]:
 			return False
-		if self.val_u > c["u"]["max"]:
+		if self.val_u > cc["u"]["max"]:
 			return False
-		if self.val_i < c["i"]["min"]:
+		if self.val_i < cc["i"]["min"]:
 			return False
-		if self.val_i > c["i"]["max"]:
+		if self.val_i > cc["i"]["max"]:
 			return False
 		return True
 
@@ -41,7 +42,7 @@ class Batt:
 			i=self.val_i,
 			w=dict(s=self.sum_w, n=self.n_w),
 			r=dict(s= self.relay.value(), f= self.relay_force, l= self.live),
-            gen=self.gen,
+			gen=self.gen,
 		)
 		return res
 
@@ -128,8 +129,13 @@ class Batt:
 
 		self.t = ticks_ms()
 		self.t_sw = ticks_add(ticks_ms(), self.cfg["relay"]["t1"])
-		xmit_n = 0
 
+		async with TaskGroup() as tg:
+			await tg.spawn(self.live_task)
+			await self._run()
+
+	async def _run(self):
+		xmit_n = 0
 		while True:
 			self.t = ticks_add(self.t, self.cfg["poll"]["t"])
 
@@ -154,10 +160,10 @@ class Batt:
 
 			xmit_n -= 1
 			if xmit_n <= 0 or self.xmit_evt.is_set:
-                if self.gen >= 99:
-                    self.gen = 10
-                else:
-                    self.gen += 1
+				if self.gen >= 99:
+					self.gen = 10
+				else:
+					self.gen += 1
 				self.xmit_evt.set()
 				self.xmit_evt = Event()
 				xmit_n = self.cfg["poll"]["n"]
@@ -165,39 +171,44 @@ class Batt:
 			t = ticks_ms()
 			td = ticks_diff(self.t, t)
 			if td > 0:
+				print("TS",td)
 				await sleep_ms(td)
+			else: 
+				print("TT")
+				self.t = t
 
 	async def send_rly_state(self):
 		self.xmit_evt.set()
+		print("RELAY",)
 
 
-class BattCmd(BaseCmd):
+class BMSCmd(BaseCmd):
 	def __init__(self, parent, name, cfg, gcfg):
 		super().__init__(parent)
-		self.batt = Batt(cfg, gcfg)
+		self.bms = BMS(cfg, gcfg)
 		self.name = name
 
-	def run(self):
+	async def run(self):
 		try:
-			await self.batt.run(self)
+			await self.bms.run(self)
 		finally:
-			self.batt = None
-	
+			self.bms = None
+
 	async def config_updated(self):
 		await super().config_updated()
-		await self.batt.config_updated()
+		await self.bms.config_updated()
 
 	async def cmd_rly(self, st):
 		"""
 		Called manually, but also irreversibly when there's a "hard" cell over/undervoltage
 		"""
-		await self.batt.set_relay_force(st)
+		await self.bms.set_relay_force(st)
 
-    async def cmd_info(self, gen=-1):
-        if self.batt.gen == gen:
-			await self.batt.xmit_evt.wait()
-        return self.batt.stat()
+	async def cmd_info(self, gen=-1):
+		if self.bms.gen == gen:
+			await self.bms.xmit_evt.wait()
+		return self.bms.stat()
 
 	def cmd_live(self):
-		self.batt.set_live()
+		self.bms.set_live()
 

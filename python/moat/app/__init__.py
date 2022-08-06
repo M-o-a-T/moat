@@ -1,3 +1,8 @@
+from ..cmd import BaseCmd
+
+class ConfigError(RuntimeError):
+    pass
+
 class BaseApp:
     def __init__(self, name, cfg, gcfg):
         self.cfg = cfg
@@ -6,3 +11,11 @@ class BaseApp:
 
     async def config_updated(self):
         pass
+
+class BaseAppCmd(BaseCmd):
+    def __init__(self, parent, name, cfg, gcfg):
+        super().__init__(parent)
+        self.name = name
+        self.cfg = cfg
+        self.gcfg = gcfg
+

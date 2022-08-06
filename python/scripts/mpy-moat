@@ -197,11 +197,12 @@ async def cmd(obj, path, **attrs):
 
 @main.command(short_help='Get / Update the configuration')
 @click.pass_obj
+@click.option("-C","--write-current", is_flag=True, help="Write current config to flash")
 @click.option("-r","--replace", is_flag=True, help="Send our config data")
 @click.option("-f","--fallback", is_flag=True, help="Change fallback config data")
 @click.option("-c","--current", is_flag=True, help="Read current config data")
 @attr_args(with_proxy=True)
-async def cfg(obj, replace, fallback, current, **attrs):
+async def cfg(obj, replace, fallback, current, write_current, **attrs):
 	"""
 	Update a remote configuration.
 
@@ -212,18 +213,24 @@ async def cfg(obj, replace, fallback, current, **attrs):
 	from copy import deepcopy
 	has_attrs = any(a for a in attrs.values())
 
-	if not fallback:
-		fallback = None if current else False
+	if write_current:
+		if has_attrs or fallback or replace or current:
+			raise click.UsageError("Can't use 'write-current' with anything else")
+		mode = 1
+	elif not fallback:
+		mode = 0 if current else 2
 	elif current:
 		raise click.UsageError("Can't use both 'fallback' and 'current'")
+	else:
+		mode = 3
 
 	async with get_link(obj) as req:
 		add_client_hooks(req)
 
 		if replace:
 			val = deepcopy(clean_cfg(obj.cfg))
-		elif current or not has_attrs:
-			val = await req.send(["sys","cfg"], fallback=fallback)
+		elif write_current or current or not has_attrs:
+			val = await req.send(["sys","cfg"], mode=mode)
 		else:
 			val = {}
 
@@ -232,24 +239,22 @@ async def cfg(obj, replace, fallback, current, **attrs):
 		else:
 			val = process_args(val, **attrs)
 			try:
-				res = await req.send(["sys","cfg"], cfg=val, fallback=fallback)
+				res = await req.send(["sys","cfg"], cfg=val, mode=mode)
 			except RemoteError as err:
 				yprint(dict(e=str(err.args[0])))
 				sys.exit(1)
 			else:
 				yprint(res)
 
-def imp(name):
-	m,n = name.rsplit(".",1)
-	return getattr(importlib.import_module(m), n)
-
 			
 @main.command(short_help='Run the multiplexer')
+@click.option("-n","--no-config", is_flag=True, help="don't fetch the config from the client")
+@click.option("-d","--debug", is_flag=True, help="don't retry on (some) errors")
 @click.pass_obj
-async def mplex(obj):
-	await _mplex(obj)
+async def mplex(obj, no_config, debug):
+	await _mplex(obj, no_config=no_config, debug=debug)
 
-async def _mplex(obj):
+async def _mplex(obj, no_config=False, debug=None):
 	"""
 	Sync of MoaT code on a running MicroPython device.
 
@@ -276,8 +281,8 @@ async def _mplex(obj):
 		await tg.spawn(sig_handler, tg)
 		obj.debug = False  # for as_service
 		async with as_service(obj):
-			mplex = Multiplexer(stream_factory, obj.socket, cfg)
-			await mplex.serve()
+			mplex = Multiplexer(stream_factory, obj.socket, obj.cfg, fatal=debug)
+			await mplex.serve(load_cfg=not no_config)
 
 
 if __name__ == "__main__":

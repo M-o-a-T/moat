@@ -14,6 +14,7 @@ import asyncclick as click
 
 from ._dict import attrdict, combine_dict
 from ._impl import NotGiven
+from ._msgpack import Proxy
 from ._path import P, path_eval
 from ._yaml import yload
 
@@ -36,7 +37,7 @@ this_load = ContextVar("this_load", default=None)
 NoneType = type(None)
 
 
-def attr_args(proc=None, with_path=True, with_eval=True):
+def attr_args(proc=None, with_path=True, with_eval=True, with_proxy=False):
     """
     Attach the standard ``-v``/``-e``/``-p`` arguments to a ``click.command``.
     Passes ``vars_``/``eval_``/``path_`` args.
@@ -44,8 +45,16 @@ def attr_args(proc=None, with_path=True, with_eval=True):
     Use `attr_args(with_path=False)` to skip path arguments. Ditto for
     `with_eval`.
     """
+
     def _proc(proc):
-        args = ("-p", "--path",) if with_path else ("--hidden_path")
+        args = (
+            (
+                "-p",
+                "--path",
+            )
+            if with_path
+            else ("--hidden_path",)
+        )
         proc = click.option(
             *args,
             "path_",
@@ -56,7 +65,14 @@ def attr_args(proc=None, with_path=True, with_eval=True):
             hidden=not with_path,
         )(proc)
 
-        args = ("-e", "--eval",) if with_path else ("--hidden_eval")
+        args = (
+            (
+                "-e",
+                "--eval",
+            )
+            if with_eval
+            else ("--hidden_eval",)
+        )
         proc = click.option(
             *args,
             "eval_",
@@ -76,6 +92,18 @@ def attr_args(proc=None, with_path=True, with_eval=True):
             multiple=True,
             help="Parameter (name value)",
         )(proc)
+
+        if with_proxy:
+            proc = click.option(
+                "-P",
+                "--proxy",
+                "proxy_",
+                nargs=2,
+                type=(P, str),
+                multiple=True,
+                help="Remote proxy (name value)",
+            )(proc)
+
         return proc
 
     if proc is None:
@@ -84,24 +112,28 @@ def attr_args(proc=None, with_path=True, with_eval=True):
         return _proc(proc)
 
 
-def process_args(val, vars_, eval_, path_, vs=None):
+def process_args(val, vars_, eval_, path_, proxy_=(), vs=None):
     """
-    process ``vars_``/``eval_``/``path_`` args.
+    process ``vars_``/``eval_``/``path_``/``proxy_`` args.
 
     Arguments:
         vd: dict to modify
-        vars_, eval_, path_: via `attr_args`
+        vars_, eval_, path_, proxy_: via `attr_args`
         vs: if given: set of vars
     Returns:
         the new value.
     """
     n = 0
-    if isinstance(vars_,Mapping):
+    # otherwise these are assumes to be empty tuples.
+    if isinstance(vars_, Mapping):
         vars_ = vars_.items()
-    if isinstance(eval_,Mapping):
+    if isinstance(eval_, Mapping):
         eval_ = eval_.items()
-    if isinstance(path_,Mapping):
+    if isinstance(path_, Mapping):
         path_ = path_.items()
+    if isinstance(proxy_, Mapping):
+        proxy_ = proxy_.items()
+
     def data():
         for k, v in vars_:
             yield k, v
@@ -120,6 +152,9 @@ def process_args(val, vars_, eval_, path_, vs=None):
         for k, v in path_:
             v = P(v)
             yield k, v
+        for k, v in proxy_:
+            v = Proxy(v)
+            yield k, v
 
     for k, v in data():
         if not k:
@@ -136,8 +171,8 @@ def process_args(val, vars_, eval_, path_, vs=None):
         elif n < 0:
             raise click.BadOptionUsage(option_name=k, message="Setting a single value conflicts.")
         else:
-            if isinstance(k,str):
-                k=P(k)
+            if isinstance(k, str):
+                k = P(k)
             if not isinstance(val, Mapping):
                 val = attrdict()
             if vs is not None:

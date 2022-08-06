@@ -10,17 +10,31 @@ __all__ = ["Queue", "create_queue", "DelayedWrite", "DelayedRead"]
 
 
 class Queue:
+    """
+    Queues have been replaced in trio/anyio by memory object streams, but
+    those are more complicated to use.
+
+    This Queue class simply re-implements queues on top of memory object streams.
+    """
+
     def __init__(self, length=0):
         self._s, self._r = _cmos(length)
 
     async def put(self, x):
         await self._s.send(Value(x))
 
+    def put_nowait(self, x):
+        self._s.send_nowait(Value(x))
+
     async def put_error(self, x):
         await self._s.send(Error(x))
 
     async def get(self):
         res = await self._r.receive()
+        return res.unwrap()
+
+    def get_nowait(self):
+        res = self._r.receive_nowait()
         return res.unwrap()
 
     def qsize(self):
@@ -49,7 +63,7 @@ def create_queue(length=0):
 
 class DelayedWrite:
     """
-    A queue that limits the number of outstanding outgoing messages by
+    A module that limits the number of outstanding outgoing messages by
     receiving flow-control messages from a `DelayedRead` instance on the
     other side.
     """

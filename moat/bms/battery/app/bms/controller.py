@@ -99,7 +99,7 @@ class Controller:
 				self._intf = intf
 
 				evt = Event()
-				await tg.spawn(self.victron.run, evt)
+				await tg.spawn(self.victron.run, dbus, evt)
 				await evt.wait()
 				await self._run()
 

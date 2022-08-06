@@ -132,10 +132,12 @@ class RequestConfig:
     T:ClassVar = PacketType.WriteSettings
 
     @classmethod
-    def from_cell(self, cell):
+    def from_cell(cls, cell):
+        self = cls()
         self.voltageCalibration = FloatUint.F(cell.v_calibration)
         self.bypassTempRaw = cell.internal_temp_raw
         self.bypassVoltRaw = cell.balance_config_threshold_raw
+        return self
 
     def to_bytes(self):
         vc = self.voltageCalibration.u

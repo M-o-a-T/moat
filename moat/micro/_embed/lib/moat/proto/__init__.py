@@ -1,3 +1,7 @@
+#
+# this file should be synced with moat/proto/__init__.py
+# except for using print() instead of logging.
+
 from ..compat import TaskGroup
 
 try:

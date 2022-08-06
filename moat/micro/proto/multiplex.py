@@ -4,7 +4,6 @@
 # This is tne multiplexer, which affords a socket so that clients may
 # connect to the embedded system to get their commands forwarded.
 
-import logging
 import os
 import sys
 import importlib
@@ -16,11 +15,12 @@ import anyio
 
 from . import RemoteError
 from ..stacks.unix import unix_stack_iter
-from ..compat import TaskGroup, Event, print_exc
+from ..compat import TaskGroup, Event
 from ..util import attrdict, merge, to_attrdict
 from ..cmd import Request, BaseCmd
 from ..app import ConfigError
 
+import logging
 logger = logging.getLogger(__name__)
 
 
@@ -65,12 +65,12 @@ class CommandClient(Request):
 
 	async def dispatch(self, msg):
 		if not isinstance(msg,dict):
-			print("?1",msg)
+			logger.warning("?1 %s",msg)
 			return
 
 		if 'a' not in msg:
 			# A reply. However, nobody sends requests to command clients.
-			print("?2",msg)
+			logger.warning("?2 %s",msg)
 			return
 
 		await self._tg.spawn(self._handle_request, msg)
@@ -84,8 +84,7 @@ class CommandClient(Request):
 		try:
 			res = await self.mplex.send(a,d)
 		except Exception as exc:
-			print("ERROR handling",a,i,d,msg, file=sys.stderr)
-			print_exc(exc)
+			logger.exception("handling %s %s %s %s",a,i,d,msg)
 			if i is None:
 				return
 			res = {'e':exc.args[0] if isinstance(exc,RemoteError) else repr(exc),'i':i}
@@ -316,7 +315,7 @@ class Multiplexer(Request):
 				if self.fatal:
 					raise
 				self.last_exc = exc
-				print_exc(exc)
+				logger.exception("Restart due to error: %r", exc)
 
 				await anyio.sleep(backoff)
 				if backoff<20:
@@ -362,7 +361,7 @@ class Multiplexer(Request):
 
 			if self.watchdog:
 				await tg.spawn(self._watchdog)
-				print(f"Watchdog: {self.watchdog} seconds")
+				logger.debug("Watchdog: %s seconds", self.watchdog)
 			await super().run()
 
 	async def _watchdog(self):
@@ -387,8 +386,7 @@ class Multiplexer(Request):
 		except anyio.BrokenResourceError:
 			pass
 		except Exception as exc:
-			print("ERROR on Client Conn", b)
-			print_exc(exc)
+			logger.exception("ERROR on Client Conn %s: %r", b, exc)
 
 	@contextmanager
 	def _attached(self, stream):

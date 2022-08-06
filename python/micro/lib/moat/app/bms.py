@@ -1,6 +1,7 @@
 
 from moat.cmd import BaseCmd
 from moat.compat import ticks_ms, ticks_diff, sleep_ms, wait_for_ms, ticks_add, Event, TimeoutError, TaskGroup
+from moat.util import NotGiven
 import machine as M
 
 # see 
@@ -198,10 +199,12 @@ class BMSCmd(BaseCmd):
 		await super().config_updated()
 		await self.bms.config_updated()
 
-	async def cmd_rly(self, st):
+	async def cmd_rly(self, st=NotGiven):
 		"""
 		Called manually, but also irreversibly when there's a "hard" cell over/undervoltage
 		"""
+                if st is NotGiven:
+                    return self.bms.relay.value(),self.bms.relay_force
 		await self.bms.set_relay_force(st)
 
 	async def cmd_info(self, gen=-1):

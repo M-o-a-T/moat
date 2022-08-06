@@ -3,11 +3,11 @@ from asyncdbus.message_bus import MessageBus, BusType
 
 from moat.cmd import BaseCmd
 from moat.compat import ticks_ms, ticks_diff, sleep_ms, ticks_add, Event, TaskGroup
-from moat.util import Queue, to_attrdict, attrdict
+from moat.util import Queue, attrdict
 import sys
 import anyio
 from victron.dbus import Dbus
-from .. import BaseApp
+from .. import BaseAppCmd
 
 import logging
 logger = logging.getLogger(__name__)
@@ -30,20 +30,25 @@ logger = logging.getLogger(__name__)
 # 
 
 class NoSuchCell(RuntimeError):
-    pass
+	pass
 
 class SpuriousData(RuntimeError):
-    pass
+	pass
 
 class MessageLost(RuntimeError):
-    pass
+	pass
 
 
-class BattCmd(BaseCmd):
-    def __init__(self, *a):
+class BMSCmd(BaseAppCmd):
+	def __init__(self, *a, **k):
 		# name cfg gcfg
-        super().__init__(*a)
+		super().__init__(*a, **k)
+
+		from .controller import Controller
 		self.ctrl = Controller(self, self.name, self.cfg, self.gcfg)
+
+	async def cmd_work(self, **data):
+		logger.info("WORK",data)
 
 
 #	async def loc_data(self):
@@ -51,14 +56,12 @@ class BattCmd(BaseCmd):
 #		await self.batt.updated.wait()
 #		return self.batt.data
 
+	async def config_updated(self):
+		await self.ctrl.config_updated()
+
 	async def run(self):
-		async with MessageBus(Bustype.SYSTEM).connect() as bus:
+		async with MessageBus(bus_type=BusType.SYSTEM).connect() as bus:
 #			async with TaskGroup() as tg:
 #				await tg.spawn(self.ctrl.run, bus)
 			await self.ctrl.run(bus)
-
-
-
-		self.batt.started.set()
-
 

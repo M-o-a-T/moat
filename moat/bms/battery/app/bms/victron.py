@@ -110,7 +110,7 @@ class BatteryState:
 	async def run(self, evt=None):
 		name = "com.victronenergy.battery."+self.name
 		async with Dbus() as bus, bus.service(name) as srv:
-			print("Setting up")
+			logger.debug("Setting up")
 			self._bus = bus
 			self.bus = attrdict()
 			self._srv = srv

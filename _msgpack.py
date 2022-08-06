@@ -47,19 +47,12 @@ def _decode(code, data):
 
 
 # single message packer
-_packers = []
-
-
-def packer(data):
-    if _packers:
-        pack = _packers.pop()
-    else:
-        pack = msgpack.Packer(strict_types=False, use_bin_type=True, default=_encode).pack
-    try:
-        return pack(data)
-    finally:
-        _packers.append(pack)
-
+packer = partial(
+    msgpack.packb,
+    strict_types=False,
+    use_bin_type=True,
+    default=_encode
+)
 
 # single message unpacker
 unpacker = partial(

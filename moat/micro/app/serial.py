@@ -1,7 +1,7 @@
 
-from moat.cmd import BaseCmd
+from . import BaseAppCmd
 from moat.compat import ticks_ms, ticks_diff, sleep_ms, ticks_add, Event, TaskGroup, Queue
-from moat.util import Queue, to_attrdict
+from moat.util import Queue
 import sys
 import anyio
 
@@ -20,11 +20,9 @@ logger = logging.getLogger(__name__)
 # start: NUM
 # 
 
-class SerialCmd(BaseCmd):
-	def __init__(self, parent, cfg, name):
-		super().__init__(parent)
-		self.ser = ser
-		self.name = name
+class SerialCmd(BaseAppCmd):
+	def __init__(self, *a, **k):
+		super().__init__(*a, **k)
 		self.qr = Queue(99)
 		self.qp = Queue(99)
 

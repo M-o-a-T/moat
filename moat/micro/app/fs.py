@@ -1,7 +1,7 @@
 # dummy fs module on the multiplexer
 
-from moat.cmd import BaseCmd
+from . import BaseAppCmd
 
-class FsCmd(BaseCmd):
+class FsCmd(BaseAppCmd):
     pass
 

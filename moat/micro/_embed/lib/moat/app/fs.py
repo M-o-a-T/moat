@@ -12,7 +12,7 @@ class FsCmd(BaseCmd):
     _fd_last = 0
     _fd_cache = None
 
-    def __init__(self, parent, cfg, name):
+    def __init__(self, parent, name, cfg, gcfg):
         super().__init__(parent)
         self._fd_cache = dict()
         self.cfg = cfg

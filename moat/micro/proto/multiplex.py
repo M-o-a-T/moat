@@ -7,6 +7,7 @@
 import logging
 import os
 import sys
+import importlib
 from concurrent.futures import CancelledError
 from contextlib import asynccontextmanager, contextmanager
 
@@ -16,14 +17,19 @@ import anyio
 from . import RemoteError
 from ..stacks.unix import unix_stack_iter
 from ..compat import TaskGroup, Event, print_exc
-from ..util import merge
+from ..util import attrdict, merge, to_attrdict
 from ..cmd import Request, BaseCmd
+from ..app import ConfigError
 
 logger = logging.getLogger(__name__)
 
 
 class IsHandled:
 	pass
+
+def imp(name):
+	m,n = name.rsplit(".",1)
+	return getattr(importlib.import_module(m), n)
 
 
 class CommandClient(Request):
@@ -59,12 +65,12 @@ class CommandClient(Request):
 
 	async def dispatch(self, msg):
 		if not isinstance(msg,dict):
-			print("?",msg)
+			print("?1",msg)
 			return
 
 		if 'a' not in msg:
 			# A reply. However, nobody sends requests to command clients.
-			print("?",msg)
+			print("?2",msg)
 			return
 
 		await self._tg.spawn(self._handle_request, msg)
@@ -76,7 +82,7 @@ class CommandClient(Request):
 		d = msg.pop("d", None)
 
 		try:
-			res = await self.mplex.client_cmd(a,d)
+			res = await self.mplex.send(a,d)
 		except Exception as exc:
 			print("ERROR handling",a,i,d,msg, file=sys.stderr)
 			print_exc(exc)
@@ -103,6 +109,9 @@ class MultiplexCommand(BaseCmd):
 
 	def cmd_link(self, s):
 		self.request._process_link(s)
+	
+	async def start_sub(self, tg):
+		pass # we do that ourselves
 
 
 class _MplexCommand(BaseCmd):
@@ -118,7 +127,8 @@ class _MplexCommand(BaseCmd):
 			await self.request.run_flag.wait()
 
 	async def cmd_cfg(self, cfg):
-		merge(self.cfg, cfg, drop=("port" in cfg))
+		cfg = to_attrdict(cfg)
+		merge(self.request.cfg, cfg, drop=("port" in cfg))
 		await self.request.config_updated()
 
 
@@ -163,8 +173,9 @@ class Multiplexer(Request):
 	sock = None
 	_cancel = None
 	_tg = None
+	fatal = False
 
-	def __init__(self, stream_factory, socket, cfg, watchdog=0):
+	def __init__(self, stream_factory, socket, cfg, watchdog=0, fatal=None):
 		"""
 		Set up a MicroPython multiplexer.
 
@@ -175,6 +186,8 @@ class Multiplexer(Request):
 		self.stream_factory = stream_factory
 		self.socket = socket
 		self.cfg = cfg
+		if fatal is not None:
+			self.fatal = fatal
 
 		#self.mqtt_cfg = mqtt
 		#self.mqtt_sub = {}
@@ -212,7 +225,6 @@ class Multiplexer(Request):
 			self.run_flag.set()
 		elif self.run_flag.is_set():
 			self.run_flag = Event()
-		self._cleanup_open_commands()
 
 	def _gen_req(self, parent):
 		self.parent = parent
@@ -226,7 +238,7 @@ class Multiplexer(Request):
 				delattr(self.base,"dis_"+name)
 				app.scope.cancel()
 
-		for name,v in apps:
+		for name,v in apps.items():
 			if name in self.apps:
 				# await self.apps[name].app.config_updated()
 				# -- done by `self.base.config_updated`, below
@@ -235,13 +247,22 @@ class Multiplexer(Request):
 			try:
 				cmd = v.cmd
 			except AttributeError:
-				pass
+				logger.warning("Config: apps.%s: no command given", name)
 			else:
 				cfg = getattr(v,"cfg",attrdict())
-				cmd = imp(cmd)(self, name, cfg, self.cfg)
-				scope = await tg.spawn(cmd.run)
-				apps[name] = attrdict(scope=scope, app=cmd)
-				setattr(mplex.base, "dis_"+name, cmd)
+				try:
+					cmd = imp(cmd)(self, name, cfg, self.cfg)
+					self.apps[name] = attrdict(app=cmd)
+					setattr(self.base, "dis_"+name, cmd)
+				except Exception:
+					logger.error("Setup %s", v.cmd)
+					self.fatal = True
+					raise
+
+		for name,app in self.apps.items():
+			if "scope" in app:
+				continue
+			self.apps[name].scope = await tg.spawn(app.app.run)
 
 
 	async def config_updated(self):
@@ -253,6 +274,7 @@ class Multiplexer(Request):
 		"""Run (and re-run) a multiplexed link."""
 		backoff = 1
 		while not self.quitting:
+			self._cleanup_open_commands()
 			try:
 				if self.stopped.is_set():
 					self.stopped = Event()
@@ -261,17 +283,19 @@ class Multiplexer(Request):
 				try:
 					async with self.stream_factory(self._gen_req):
 						logger.info("Retrieving config")
-						with anyio.fail_after(3):
-							cfg = await self.send(["sys","cfg"], mode=1)
-						merge(self.cfg, cfg, drop=("port" in cfg))
-						logger.info("Starting up")
-						# if "port" is there the stored config is not trimmed
+						if self.load_cfg:
+							with anyio.fail_after(3):
+								cfg = await self.send(["sys","cfg"], mode=0)
+							merge(self.cfg, cfg, drop=("port" in cfg))
+							# if "port" is there, the stored config is not trimmed
+							self.cfg = to_attrdict(self.cfg)
 						async with TaskGroup() as tg:
 							self._tg = tg
 							self.apps = {}
 							await self._setup_apps(tg)
 
 							self.running.set()
+							logger.info("Startup complete")
 							await self.send_nr(["sys","is_up"])
 							await anyio.sleep(60)
 							backoff = 1
@@ -285,7 +309,12 @@ class Multiplexer(Request):
 						self.do_stop = Event()
 					self.stopped.set()
 
+			except ConfigError:
+				raise
+
 			except Exception as exc:
+				if self.fatal:
+					raise
 				self.last_exc = exc
 				print_exc(exc)
 
@@ -302,7 +331,9 @@ class Multiplexer(Request):
 					await anyio.sleep(1)
 
 
-	async def serve(self):
+	async def serve(self, load_cfg=True):
+		self.load_cfg = load_cfg
+
 		async with TaskGroup() as tg:
 			self.tg = tg
 			await tg.spawn(self._run_stack)
@@ -376,10 +407,15 @@ class Multiplexer(Request):
 #				   pass
 
 	async def client_cmd(self, a,d):
-		if a[0] in {"mplex", "local"}:
-			return await self.child.dispatch(a,d)
+		return await self.send(a,d)
+
+	async def send(self, action, msg=None, **kw):
+		if action[0] in {"mplex", "local"}:
+			if msg is None:
+				msg = kw
+			return await self.child.dispatch(action, msg)
 		else:
-			return await self.send(a,d)
+			return await super().send(action, msg, **kw)
 
 	async def run(self):
 		"""

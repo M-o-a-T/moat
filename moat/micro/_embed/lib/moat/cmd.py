@@ -217,7 +217,7 @@ class Request(_Stacked):
 
     async def dispatch(self, msg):
         if not isinstance(msg,dict):
-            print("?",msg)
+            print("?3",msg)
             return
         a = msg.pop("a",None)
         i = msg.pop("i",None)
@@ -232,14 +232,14 @@ class Request(_Stacked):
         else: # reply
             if i is None:
                 # No seq#. Dunno what to do about these.
-                print("?",d,msg)
+                print("?4",d,msg)
                 return
 
             e = msg.pop("e",None) if d is None else None
             try:
                 evt = self.reply[i]
             except KeyError:
-                print("?",i,msg)
+                print("?5",i,msg)
                 return # errored?
             if evt.is_set():
                 print("Duplicate reply?",a,i,d,msg)

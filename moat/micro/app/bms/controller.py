@@ -6,25 +6,28 @@ from pprint import pformat
 from functools import cached_property
 from contextlib import asynccontextmanager
 
-from moat.compat import CancelledError, sleep, sleep_ms, wait_for_ms, ticks_ms, ticks_diff, ticks_add, TimeoutError, Lock, TaskGroup
-from moat.util import ValueEvent, combine_dict, attrdict, Ctx
-from moat.dbus import DbusInterface
+from moat.compat import CancelledError, sleep, sleep_ms, wait_for_ms, ticks_ms, ticks_diff, ticks_add, TimeoutError, Lock, TaskGroup, Event
+from moat.util import ValueEvent, combine_dict, attrdict
+from moat.dbus import DbusInterface, DbusName
+import anyio
 
-from .cell import Cell
+from . import MessageLost
 from .packet import *
+from .battery import Battery
+from .victron import BatteryState
 
 import logging
 logger = logging.getLogger(__name__)
 
 
 class ControllerInterface(DbusInterface):
-    def __init__(self, ctrl, dbus):
-        self.ctrl = ctrl
-        super().__init__(dbus, "/BMS", "bms")
+	def __init__(self, ctrl, dbus):
+		self.ctrl = ctrl
+		super().__init__(dbus, "/bms", "bms")
 
-    def done(self):
-        del self.ctrl
-        super().done()
+	def done(self):
+		del self.ctrl
+		super().done()
 
 	@_dbus.method()
 	async def GetNBatteries(self) -> 'y':
@@ -40,7 +43,9 @@ class Controller:
 
 	TODO support more than one battery
 	"""
-	def __init__(self, name, cmd, cfg, gcfg):
+	victron = None
+
+	def __init__(self, cmd, name, cfg, gcfg):
 		self.name = name
 		self.cmd = cmd
 		self.cfg = cfg
@@ -57,15 +62,29 @@ class Controller:
 		self.waiting = [None]*8
 
 		n = 0
-		for i,b in enumerate(cfg.batteries):
-			batt = Battery(self, b, gcfg, n,i)
+		if "batteries" in cfg:
+			for i,b in enumerate(cfg.batteries):
+				batt = Battery(self, b, gcfg, n,i)
+				self.batt.append(batt)
+				n += b.n
+		else:
+			batt = Battery(self, cfg.batt, gcfg, n,None)
 			self.batt.append(batt)
-			n += b.n
+			n += cfg.batt.n
+
+		self.victron = BatteryState(self)
+
+	async def config_updated(self):
+		await self.victron.config_updated()
 
 	def add_cell(self, cell):
 		self.cells.append(cell)
 
 	def cfg_name(self):
+		return self.name
+
+	@property
+	def busname(self):
 		return self.name
 
 	@cached_property
@@ -74,15 +93,25 @@ class Controller:
 
 	async def run(self, dbus):
 		self._dbus = dbus
-        try:
-            async with DbusName(dbus, f"+bms.{self.name}"), ControllerInterface(self, dbus) as intf:
-                self._intf = intf
-                await self._run()
-        finally:
-			intf.done()
-            del self.cmd
-            del self._dbus
-            del self._intf
+
+		try:
+			async with DbusName(dbus, f"com.victronenergy.battery.{self.busname}"), ControllerInterface(self, dbus) as intf, TaskGroup() as tg:
+				self._intf = intf
+
+				evt = Event()
+				await tg.spawn(self.victron.run, evt)
+				await evt.wait()
+				await self._run()
+
+		finally:
+			try:
+				del self._dbus
+			except AttributeError:
+				pass
+			try:
+				del self._intf
+			except AttributeError:
+				pass
 
 	@property
 	def dbus(self):
@@ -90,7 +119,7 @@ class Controller:
 
 	@property
 	def req(self):
-		return self._req
+		return self.cmd.request
 
 	@property
 	def intf(self):
@@ -101,7 +130,7 @@ class Controller:
 		async with TaskGroup() as tg:
 			await tg.spawn(self._read)
 			for b in self.batt:
-				await tg.spawn(b.run, self._req, self._dbus)
+				await tg.spawn(b.run)
 
 
 	async def send(self, *a,**k):
@@ -115,7 +144,8 @@ class Controller:
 		err = None
 		for n in range(5):
 			try:
-				return await self._send(*a,**k)
+				with anyio.fail_after(len(self.cells)/3 if self.cells else 10):
+					return await self._send(*a,**k)
 			except (TimeoutError,MessageLost) as e:
 				if err is None:
 					err = e
@@ -159,11 +189,20 @@ class Controller:
 				await sleep_ms(td)
 
 			h.sequence = seq = self.seq
-			self.seq = (self.seq + 1) % 8
 			evt = self.waiting[seq]
 			if evt is not None:
 				# wait for prev request to complete
-				await evt.wait()
+				logger.warning("Wait for slot %d", seq)
+				try:
+					await wait_for_ms(5000,evt.wait)
+				except TimeoutError:
+					# ugh, everything dead?
+					self.waiting[seq] = None
+					raise
+
+			# update self.seq only when the slot is empty
+			self.seq = (self.seq + 1) % 8
+			logger.debug("REQ %r slot %d", pkt, seq)
 			self.waiting[seq] = evt = ValueEvent()
 
 			# We need to delay by whatever the affected cells add to the
@@ -173,10 +212,9 @@ class Controller:
 			mlen = len(msg) + n_cells*(replyClass[h.command].S.size+h.S.size+4)
 
 			self.t = t + 10000*mlen/self.baud
-			await self.req.send([self.cfg.serial, "send"], data=msg)
+			await self.cmd.send([self.cfg.serial, "send"], data=msg)
 
 		res = await wait_for_ms(5000, evt.get)
-		logger.debug("REQ %s",pkt)
 		logger.debug("RES %s",pformat(res))
 		return res
 
@@ -219,5 +257,8 @@ class Controller:
 
 			evt, self.waiting[hdr.sequence] = self.waiting[hdr.sequence], None
 			if evt is not None:
+				logger.debug("IN %r", hdr)
 				evt.set((hdr,pkt))
+			else:
+				logger.warning("IN? %r", hdr)
 

@@ -95,13 +95,22 @@ class Controller:
 		self._dbus = dbus
 
 		try:
-			async with DbusName(dbus, f"com.victronenergy.battery.{self.busname}"), ControllerInterface(self, dbus) as intf, TaskGroup() as tg:
+			async with ControllerInterface(self, dbus) as intf, TaskGroup() as tg:
 				self._intf = intf
 
 				evt = Event()
 				await tg.spawn(self.victron.run, dbus, evt)
 				await evt.wait()
-				await self._run()
+
+				evt = Event()
+				await tg.spawn(self._run, evt)
+				await evt.wait()
+
+				# Everything is up and running.
+				# *Now* register the name.
+				async with DbusName(dbus, f"com.victronenergy.battery.{self.busname}"):
+					while True:
+						await anyio.sleep(99999)
 
 		finally:
 			try:
@@ -126,11 +135,20 @@ class Controller:
 		return self._intf
 
 
-	async def _run(self):
+	async def _run(self, evt):
 		async with TaskGroup() as tg:
 			await tg.spawn(self._read)
+
+			evts = []
 			for b in self.batt:
-				await tg.spawn(b.run)
+				e = Event()
+				await tg.spawn(b.run, e)
+				evts.append(e)
+			for e in evts:
+				await e.wait()
+
+			evt.set()
+			del evts
 
 
 	async def send(self, *a,**k):

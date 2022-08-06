@@ -5,7 +5,7 @@ from asyncdbus.constants import NameFlag
 from pprint import pformat
 from functools import cached_property
 
-from moat.compat import CancelledError, sleep, sleep_ms, wait_for_ms, ticks_ms, ticks_diff, ticks_add, TimeoutError, Lock, TaskGroup
+from moat.compat import CancelledError, sleep, sleep_ms, wait_for_ms, ticks_ms, ticks_diff, ticks_add, TimeoutError, Lock, TaskGroup, Event
 from moat.util import ValueEvent, combine_dict, attrdict
 from moat.dbus import DbusInterface
 
@@ -139,6 +139,8 @@ class Battery:
 		self.start = start
 		self.end = start+self.cfg.n-1
 
+		self.ready_evt = Event()
+
 		self.cells = []
 		for c in range(self.cfg.n):
 			try:
@@ -169,17 +171,17 @@ class Battery:
 	def cfg_path(self):
 		return self.ctrl.cfgpath | "batteries" | self.batt.num
 
-	async def run(self):
+	async def run(self, evt):
 		dbus = self.ctrl.dbus
 		try:
 			async with BatteryInterface(self, dbus) as intf:
 				self._intf = intf
 
-				await self._run()
+				await self._run(evt)
 		finally:
 			self._intf = None
 
-	async def _run(self):
+	async def _run(self, evt):
 		async with TaskGroup() as tg:
 			await tg.spawn(self._read_update)
 
@@ -198,6 +200,9 @@ class Battery:
 			await tg.spawn(self.task_cellvoltage)
 			await tg.spawn(self.task_celltemperature)
 
+			await self.ready_evt.wait()
+			evt.set()
+
 
 	async def task_keepalive(self):
 		n = 0
@@ -209,13 +214,20 @@ class Battery:
 			await self.ctrl.req.send([self.ctrl.name,"live"])
 			n += 1
 			if n == 1:
-				self.ready |= 0x01
+				self.is_ready(0x01)
 
 			await sleep_ms(t)
 
-	@property
-	def is_ready(self):
-		return self.ready == 0x0F
+	def is_ready(self, val=None):
+		if self.ready is None:
+			return True
+		if val is not None:
+			self.ready |= val
+		if self.ready == 0x0F:
+			self.ready_evt.set()
+			self.ready = None
+			return True
+		return False
 
 
 	async def task_voltage(self):
@@ -230,7 +242,7 @@ class Battery:
 			self.update_global(**res)
 			n += 1
 			if n == 4:
-				self.ready |= 0x08
+				self.is_ready(0x08)
 			await self.check_limits()
 			await self._intf.VoltageChanged()
 			await self.victron.update_voltage()
@@ -253,7 +265,7 @@ class Battery:
 				await self._intf.CellVoltageChanged()
 			n += 1
 			if n == 3:
-				self.ready |= 0x02
+				self.is_ready(0x02)
 
 			await self.victron.update_cells()
 
@@ -343,7 +355,7 @@ class Battery:
 					off = True
 					logger.error(f"{c} undervoltage, turned off")
 
-		if off and self.is_ready:
+		if off and self.is_ready():
 			await self.ctrl.req.send([self.ctrl.name,"rly"], st=False)
 
 		if self.chg_set != chg_ok or self.dis_set != dis_ok:
@@ -367,7 +379,7 @@ class Battery:
 				await self._intf.CellTemperatureChanged()
 			n += 1
 			if n == 3:
-				self.ready |= 0x04
+				self.is_ready(0x04)
 
 			await sleep(self.ctrl.cfg.t.celltemperature)
 

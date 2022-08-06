@@ -7,6 +7,7 @@ import ruyaml as yaml
 
 from ._dict import attrdict
 from ._path import Path
+from ._msgpack import Proxy
 
 __all__ = ["yload", "yprint", "yformat", "yaml_named"]
 
@@ -48,10 +49,16 @@ def _path_repr(dumper, data):
     # return ScalarNode(tag, value, style=style)
     # return yaml.events.ScalarEvent(anchor=None, tag='!P', implicit=(True, True), value=str(data))
 
+def _proxy_repr(dumper, data):
+    return dumper.represent_scalar("!R", data.name)
+    # return ScalarNode(tag, value, style=style)
+    # return yaml.events.ScalarEvent(anchor=None, tag='!P', implicit=(True, True), value=str(data))
+
 
 SafeRepresenter.add_representer(Path, _path_repr)
 SafeConstructor.add_constructor("!P", Path._make)
 
+SafeRepresenter.add_representer(Proxy, _proxy_repr)
 
 def _bin_from_ascii(loader, node):
     value = loader.construct_scalar(node)

@@ -385,6 +385,7 @@ class Battery:
 				chg = r.to_cell(c) or chg
 			if chg:
 				await self._intf.CellTemperatureChanged()
+				await self.victron.update_temperature()
 			n += 1
 			if n == 3:
 				self.is_ready(0x04)

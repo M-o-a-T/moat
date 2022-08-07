@@ -109,6 +109,9 @@ class Controller:
 				# Everything is up and running.
 				# *Now* register the name.
 				async with DbusName(dbus, f"com.victronenergy.battery.{self.busname}"):
+					await anyio.sleep(10)
+					await self.victron.update_boot()
+
 					while True:
 						await anyio.sleep(99999)
 

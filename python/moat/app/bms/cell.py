@@ -9,9 +9,9 @@ from functools import cached_property
 from .packet import *
 
 def _t(x):
-    if x is None:
-        return -1000
-    return x
+	if x is None:
+		return -1000
+	return x
 
 class CellInterface(DbusInterface):
 	def __init__(self, cell, dbus):

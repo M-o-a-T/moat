@@ -1,6 +1,7 @@
 import anyio as _anyio
 Event = _anyio.Event
 Lock = _anyio.Lock
+WouldBlock = _anyio.WouldBlock
 sleep = _anyio.sleep
 import time as _time
 import traceback as _traceback

@@ -1,4 +1,4 @@
-from .compat import Event,ticks_ms,ticks_add,ticks_diff,wait_for_ms,print_exc,CancelledError,TaskGroup, idle, ValueEvent
+from .compat import Event,ticks_ms,ticks_add,ticks_diff,wait_for_ms,print_exc,CancelledError,TaskGroup, idle, ValueEvent, WouldBlock
 from .proto import _Stacked, RemoteError, SilentRemoteError as FSError
 from contextlib import asynccontextmanager
 
@@ -196,6 +196,8 @@ class Request(_Stacked):
             r = await self.child.dispatch(a,d)
         except FSError as exc:
             res["e"] = exc.args[0]
+        except WouldBlock:
+            raise
         except Exception as exc:
             print("ERROR handling",a,i,d,msg, file=sys.stderr)
             print_exc(exc)

@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 # 
 
 class SerialCmd(BaseAppCmd):
+	cons_warn = False
 	def __init__(self, *a, **k):
 		super().__init__(*a, **k)
 		self.qr = Queue(99)
@@ -33,10 +34,21 @@ class SerialCmd(BaseAppCmd):
 		await self.send([self.name, "raw"], data)
 
 	async def cmd_in_pkt(self, data):
-		self.qp.put_nowait(data)
+		try:
+			self.qp.put_nowait(data)
+		except anyio.WouldBlock:
+			logger.error("Serial packet %s: too many unprocessed packets", self.name)
+			raise
 
 	async def cmd_in_raw(self, data):
-		self.qr.put_nowait(data)
+		try:
+			self.qr.put_nowait(data)
+		except anyio.WouldBlock:
+			if not self.cons_warn:
+				self.cons_warn = True
+				logger.warning("Serial raw %s: console data overflow", self.name)
+		else:
+			self.cons_warn = False
 
 	async def loc_pkt(self):
 		# retrieve the next packet

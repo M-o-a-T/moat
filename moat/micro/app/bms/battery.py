@@ -114,6 +114,8 @@ class Battery:
 	w_past:float = 0
 	nw_past:float = 0
 
+	vsum_warn:bool = False
+
 	chg_set:bool = None
 	dis_set:bool = None
 
@@ -299,34 +301,47 @@ class Battery:
 		"""
 		Verify that the battery voltages are within spec.
 		"""
-		chg_ok = True
-		dis_ok = True
+		chg_ok = self.chg_set
+		dis_ok = self.dis_set
 		off = False
 
-		try:
-			vsum = sum(c.voltage for c in self.cells)
-		except TypeError:
-			vsum = None
-		if self.voltage is not None:
-			if vsum is not None and abs(vsum-self.voltage) > vsum*0.02:
-				logger.warning(f"Voltage doesn't match: reported {self.voltage}, sum {vsum}")
 
 		if self.voltage is not None:
-			if self.voltage >= self.cfg.u.ext.max:
-				logger.warning(f"{self} voltage high, no charging")
+			try:
+				vsum = sum(c.voltage for c in self.cells)
+			except TypeError:
+				pass
+			else:
+				if not self.vsum_warn and abs(vsum-self.voltage) > vsum*0.02:
+					logger.warning("Voltage doesn't match: reported %.2f, sum %.2f", self.voltage, vsum)
+					self.vsum_warn = True
+				elif self.vsum_warn and abs(vsum-self.voltage) < vsum*0.015:
+					logger.warning("Voltage matches again: reported %.2f, sum %.2f", self.voltage, vsum)
+					self.vsum_warn = False
+
+			if chg_ok and self.voltage >= self.cfg.u.ext.max:
+				logger.warning("Voltage %.2f high, no charging", self.voltage)
 				chg_ok = False
+			elif not chg_ok and self.voltage < self.cfg.u.ext.max-0.05:
+				if chg_ok is not None:
+					logger.warning("Voltage %.2f no longer high, charging", self.voltage)
+				chg_ok = True
 
 			if self.voltage >= self.cfg.u.max:
 				off = True
-				logger.error(f"{self} overvoltage, turned off")
+				logger.error("Overvoltage %.2f, turned off", self.voltage)
 
-			if self.voltage <= self.cfg.u.ext.min:
-				logger.warning(f"{self} voltage low, no discharging")
+			if dis_ok and self.voltage <= self.cfg.u.ext.min:
+				logger.warning("Voltage %.2f low, no discharging", self.voltage)
 				dis_ok = False
+			elif not dis_ok and self.voltage > self.cfg.u.ext.min+0.05:
+				if dis_ok is not None:
+					logger.warning("Voltage %.2f no longer low, discharging", self.voltage)
+				dis_ok = True
 
 			if self.voltage <= self.cfg.u.min:
 				off = True
-				logger.error(f"{self} undervoltage, turned off")
+				logger.error("Undervoltage %.2f, turned off", self.voltage)
 
 		if self.current is not None:
 			pass  # XXX TODO check current limits here also

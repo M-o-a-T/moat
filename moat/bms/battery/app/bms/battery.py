@@ -284,7 +284,7 @@ class Battery:
 		mp = len(v)//2
 		v_l = sum(v[:mp])
 		v_h = sum(v[mp:])
-		if len(v) % 1:
+		if len(v) % 2:
 			v_l += v[mp]/2
 			v_h -= v[mp]/2
 		return v_l, (1 - v_l/v_h)*100

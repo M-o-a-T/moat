@@ -71,13 +71,6 @@ class BatteryInterface(DbusInterface):
 		return [(c.voltage,c.in_balance) for c in self.batt.cells]
 
 	@dbus.signal()
-	async def CellTemperatureChanged(self) -> 'a(dd)':
-		"""
-		Send cell temperatures
-		"""
-		return [(_t(c.load_temp), _t(c.batt_temp)) for c in self.batt.cells]
-
-	@dbus.signal()
 	async def VoltageChanged(self) -> 'ddbb':
 		"""
 		Send pack voltage

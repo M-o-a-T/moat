@@ -72,16 +72,62 @@ class BatteryState:
 		dis_ok = all(b.dis_set for b in self.ctrl.batt)
 
 		async with self._srv as l:
-			await l.set(self.bus.okchg, chg_ok)
-			await l.set(self.bus.okdis, dis_ok)
+			await l.set(self.bus.okchg, int(chg_ok))
+			await l.set(self.bus.okdis, int(dis_ok))
 
 
 	async def update_cells(self):
+		ch = None
+		cl = None
+		nbc = 0
+		nbd = 0
+
+		for c in self.ctrl.cells:
+			if c.voltage is None:
+				continue
+			if cl is None or cl.voltage > c.voltage:
+				cl = c
+			if ch is None or ch.voltage < c.voltage:
+				ch = c
+			if c.voltage < c.cfg.u.ext.min:
+				nbd += 100
+			if c.voltage > c.cfg.u.ext.max:
+				nbc += 100
+		
+		for b in self.ctrl.batt:
+			if b.voltage < b.cfg.u.ext.min:
+				nbd += 1
+			if b.voltage > b.cfg.u.ext.max:
+				nbc += 1
+
+		bal = any(c.in_balance for c in self.ctrl.cells)
 		async with self.srv as l:
 			mv,mvd = self.ctrl.batt[0].get_cell_midvoltage()
 			await l.set(self.bus.mv0, mv)
 			await l.set(self.bus.mvd0, mvd)
+
+			await l.set(self.bus.mincv, cl.voltage)
+			await l.set(self.bus.mincvi, str(cl.nr))
+			await l.set(self.bus.maxcv, ch.voltage)
+			await l.set(self.bus.maxcvi, str(ch.nr))
+
+			await l.set(self.bus.nbc, nbc)
+			await l.set(self.bus.nbd, nbd)
+
+			await l.set(self.bus.bal, int(bal))
+
 		
+	async def update_boot(self):
+		async with self.srv as l:
+			await l.set(self.bus.cap, 10)
+			await l.set(self.bus.capi, 11)
+			await l.set(self.bus.ncell, len(self.ctrl.cells)//len(self.ctrl.batt))
+
+		await self.update_cells()
+		await self.update_dc()
+		await self.update_voltage()
+		await self.update_temperature()
+
 
 	async def update_voltage(self):
 		ok = False
@@ -98,6 +144,29 @@ class BatteryState:
 			await l.set(self.bus.v0, u)
 			await l.set(self.bus.c0, i)
 			await l.set(self.bus.p0, u*i if u is not None else None)
+
+	async def update_temperature(self):
+		ch = None
+		cl = None
+		t = 0
+		tn = 0
+		for c in self.ctrl.cells:
+			if c.batt_temp is None:
+				continue
+			if cl is None or cl.batt_temp > c.batt_temp:
+				cl = c
+			if ch is None or ch.batt_temp < c.batt_temp:
+				ch = c
+			t += c.batt_temp
+			tn += 1
+
+		if tn:
+			async with self.srv as l:
+				await l.set(self.bus.t0, t/tn)
+				await l.set(self.bus.minct, cl.batt_temp)
+				await l.set(self.bus.mincti, str(cl.nr))
+				await l.set(self.bus.maxct, ch.batt_temp)
+				await l.set(self.bus.maxcti, str(ch.nr))
 
 	@property
 	def name(self):
@@ -137,7 +206,7 @@ class BatteryState:
 
 			self.bus.sta = await srv.add_path("/State",1)
 			self.bus.err = await srv.add_path("/Error",0)
-			self.bus.ncell = await srv.add_path("/System/NrOfCellsPerBattery",8)
+			self.bus.ncell = await srv.add_path("/System/NrOfCellsPerBattery",None)
 			self.bus.non = await srv.add_path("/System/NrOfModulesOnline",1)
 			self.bus.noff = await srv.add_path("/System/NrOfModulesOffline",0)
 			self.bus.nbc = await srv.add_path("/System/NrOfModulesBlockingCharge",None)
@@ -169,6 +238,8 @@ class BatteryState:
 			self.bus.mincv = await srv.add_path('/System/MinCellVoltage', None,
 						gettextcallback=lambda p, v: "{:0.3f}V".format(v))
 			self.bus.mincvi = await srv.add_path('/System/MinVoltageCellId', None)
+			self.bus.mincti = await srv.add_path('/System/MinTemperatureCellId', None)
+			self.bus.maxcti = await srv.add_path('/System/MaxTemperatureCellId', None)
 			self.bus.hcycles = await srv.add_path('/History/ChargeCycles', None)
 			self.bus.htotalah = await srv.add_path('/History/TotalAhDrawn', None)
 			self.bus.bal = await srv.add_path('/Balancing', None)

@@ -135,7 +135,7 @@ class RequestConfig:
     def from_cell(cls, cell):
         self = cls()
         self.voltageCalibration = FloatUint.F(cell.v_calibration)
-        self.bypassTempRaw = cell.internal_temp_raw
+        self.bypassTempRaw = cell.load_maxtemp_raw
         self.bypassVoltRaw = cell.balance_config_threshold_raw
         return self
 
@@ -272,7 +272,7 @@ class ReplySettings(_Reply):
         cell.board_version = self.boardVersion
         cell.v_per_ADC = self.mvPerADC/1000/64
         cell.v_calibration = self.voltageCalibration.f
-        cell.bypass_temp_raw = self.bypassTempRaw
+        cell.load_maxtemp_raw = self.bypassTempRaw
         cell.balance_config_threshold_raw = self.bypassVoltRaw
         cell.internal_B = self.BCoeffInternal
         cell.external_B = self.BCoeffExternal

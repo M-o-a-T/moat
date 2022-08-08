@@ -41,6 +41,8 @@ class PacketType(IntEnum):
     ReadBalanceCurrentCounter=9
     ResetBalanceCurrentCounter=10
     WriteBalanceLevel=11
+    WritePIDconfig=12
+    ReadPIDconfig=13
 
 
 @_dc
@@ -142,6 +144,26 @@ class RequestConfig:
     def to_bytes(self):
         vc = self.voltageCalibration.u
         return self.S.pack(vc, self.bypassTempRaw, self.bypassVoltRaw)
+
+@_dc
+class RequestWritePIDconfig:
+    kp: int = None
+    ki: int = None
+    kd: int = None
+
+    S:ClassVar = Struct("<III")
+    T:ClassVar = PacketType.WritePIDconfig
+
+    @classmethod
+    def from_cell(cls, cell):
+        self = cls()
+        self.kp = cell.pid_kp
+        self.ki = cell.pid_ki
+        self.kd = cell.pid_kd
+        return self
+
+    def to_bytes(self):
+        return self.S.pack(self.kp,self.ki,self.kd)
 
 @_dc
 class ReplyVoltages(_Reply):
@@ -317,6 +339,30 @@ class ReplyBalanceCurrentCounter(_Reply):
             cell.balance_current_count = self.counter
         return chg
 
+@_dc
+class ReplyReadPIDconfig(_Reply):
+    kp: int = None
+    ki: int = None
+    kd: int = None
+
+    S:ClassVar = Struct("<III")
+    T:ClassVar = PacketType.ReadPIDconfig
+
+    @classmethod
+    def from_bytes(cls, data):
+        self = cls()
+        self.kp,self.ki,self.kd = self.S.unpack(data)
+        return self
+
+    def to_cell(self, cell):
+        chg = False
+        if (cell.pid_kp,cell.pid_ki,cell.pid_kd) != (self.kp,self.ki,self.kd):
+            chg = True
+            cell.pid_kp = self.kp
+            cell.pid_ki = self.ki
+            cell.pid_kd = self.kd
+        return chg
+
 
 @_dc
 class RequestBalanceLevel:
@@ -383,6 +429,9 @@ class RequestCellVoltage(_Request):
 class RequestIdentifyModule(_Request):
     T = PacketType.Identify
 
+class RequestReadPIDconfig(_Request):
+    T = PacketType.ReadPIDconfig
+
 class ReplyConfig(_Reply):
     T = PacketType.WriteSettings
 
@@ -398,6 +447,9 @@ class ReplyBalanceLevel(_Reply):
 class ReplyIdentify(_Reply):
     T = PacketType.Identify
 
+class ReplyWritePIDconfig(_Reply):
+    T = PacketType.WritePIDconfig
+
 
 requestClass = [
     RequestResetPacketCounters,  # ResetPacketCounters=0
@@ -412,8 +464,8 @@ requestClass = [
     RequestBalanceCurrentCounter,  # ReadBalanceCurrentCounter=9
     RequestResetBalanceCurrentCounter,  # ResetBalanceCurrentCounter=10
     RequestBalanceLevel,  # WriteBalanceLevel=11
-    NullData,  # 12
-    NullData,  # 13
+    RequestWritePIDconfig,  # 12
+    RequestReadPIDconfig,  # 13
     NullData,  # 14
     NullData,  # 15
 ]
@@ -431,8 +483,8 @@ replyClass = [
     ReplyBalanceCurrentCounter,  # ReadBalanceCurrentCounter=9
     ReplyResetBalanceCurrentCounter,  # ResetBalanceCurrentCounter=10
     ReplyBalanceLevel,  # WriteBalanceLevel=11
-    NullData,  # 12
-    NullData,  # 13
+    ReplyWritePIDconfig,  # 12
+    ReplyReadPIDconfig,  # 13
     NullData,  # 14
     NullData,  # 15
 ]

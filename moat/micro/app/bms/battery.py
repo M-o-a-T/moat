@@ -200,16 +200,13 @@ class Battery:
 
 
 	async def task_keepalive(self):
-		n = 0
 		try:
 			t = self.ctrl.cfg.poll.k / 2.1
 		except AttributeError:
 			return
 		while True:
 			await self.ctrl.req.send([self.ctrl.name,"live"])
-			n += 1
-			if n == 1:
-				self.is_ready(0x01)
+			self.is_ready(0x01)
 
 			await sleep_ms(t)
 
@@ -229,18 +226,15 @@ class Battery:
 		"""
 		Periodically check the battery voltages
 		"""
-		n = 0
 		gen = 0
 		while True:
 			res = await self.req.send([self.ctrl.name,"info"], gen=gen)
 			gen = res.pop("gen", 0)
 			self.update_global(**res)
-			n += 1
-			if n == 4:
-				self.is_ready(0x08)
 			await self.check_limits()
 			await self._intf.VoltageChanged()
 			await self.victron.update_voltage()
+			self.is_ready(0x08)
 
 			await sleep(self.ctrl.cfg.t.voltage)
 
@@ -249,7 +243,6 @@ class Battery:
 		"""
 		Periodically check the cell voltages
 		"""
-		n = 0
 		while True:
 			hdr,res = await self.send(RequestCellVoltage())
 			chg = False
@@ -258,9 +251,7 @@ class Battery:
 			if chg:
 				await self.check_limits()
 				await self._intf.CellVoltageChanged()
-			n += 1
-			if n == 3:
-				self.is_ready(0x02)
+			self.is_ready(0x02)
 
 			await self.victron.update_cells()
 
@@ -377,7 +368,6 @@ class Battery:
 		"""
 		Periodically check the cell temperatures
 		"""
-		n = 0
 		while True:
 			hdr,res = await self.send(RequestCellTemperature())
 			chg = False
@@ -386,9 +376,7 @@ class Battery:
 			if chg:
 				await self._intf.CellTemperatureChanged()
 				await self.victron.update_temperature()
-			n += 1
-			if n == 3:
-				self.is_ready(0x04)
+			self.is_ready(0x04)
 
 			await sleep(self.ctrl.cfg.t.celltemperature)
 

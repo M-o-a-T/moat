@@ -143,7 +143,7 @@ class RequestConfig:
 
     def to_bytes(self):
         vc = self.voltageCalibration.u
-        return self.S.pack(vc, self.bypassTempRaw, self.bypassVoltRaw)
+        return self.S.pack(vc, self.bypassTempRaw or 0, self.bypassVoltRaw or 0)
 
 @_dc
 class RequestWritePIDconfig:
@@ -397,9 +397,9 @@ class ReplyBalancePower(_Reply):
     def to_cell(self, cell):
         chg = False
         pwm = self.pwm/255
-        if cell.bypass_pwm != pwm:
+        if cell.balance_pwm != pwm:
             chg = True
-            cell.bypass_pwm = pwm
+            cell.balance_pwm = pwm
         return chg
 
 class RequestGetSettings(_Request):

@@ -63,6 +63,14 @@ class CellInterface(DbusInterface):
 		return await self.cell.set_pid(kp,ki,kd)
 
 	@dbus.method()
+	def GetTemperatureLimit(self) -> 'd':
+		return _t(self.cell.load_maxtemp)
+
+	@dbus.method()
+	async def SetTemperatureLimit(self, data: 'd') -> 'b':
+		return await self.cell.set_loadtemp_limit(data)
+
+	@dbus.method()
 	async def Identify(self) -> 'b':
 		h,_res = await self.cell.send(RequestIdentifyModule())
 		return h.seen
@@ -116,8 +124,9 @@ class Cell:
 	voltage_max:float = None
 	# value from module
 
-	load_temp:float = None
-	batt_temp:float = None
+	load_temp:float = None  # current, on balancer
+	batt_temp:float = None  # current, on battery
+	load_maxtemp:float = None  # limit
 
 	v_per_ADC:float = None
 	n_samples:int = None
@@ -135,6 +144,14 @@ class Cell:
 	# packet counter
 	packets_in:int = None
 	packets_bad:int = None
+
+	async def set_loadtemp_limit(self, val):
+		self.load_maxtemp = val
+
+		pkt = RequestConfig()
+		pkt.bypassTempRaw = self.load_maxtemp_raw
+		h,_res = await self.send(pkt)
+		return h.seen
 
 	async def get_pid(self):
 		h,res = await self.send(RequestReadPIDconfig())
@@ -242,6 +259,19 @@ class Cell:
 		if self.cfg.load.b is None:
 			return None
 		self.load_temp = thermistor2celsius(self.cfg.load.b, val)
+
+
+	@property
+	def load_maxtemp_raw(self) -> int:
+		if self.cfg.load.b is None:
+			return None
+		return celsius2thermistor(self.cfg.load.b, self.load_maxtemp)
+
+	@load_maxtemp_raw.setter
+	def load_maxtemp_raw(self, val):
+		if self.cfg.load.b is None:
+			return None
+		self.load_maxtemp = thermistor2celsius(self.cfg.load.b, val)
 
 
 	@property

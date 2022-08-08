@@ -15,6 +15,9 @@ from struct import Struct, pack, unpack
 from typing import ClassVar
 from enum import IntEnum
 
+import logging
+logger = logging.getLogger(__name__)
+
 __all__ = [
         "PacketType", "PacketHeader", "requestClass", "replyClass",
         "MAXCELLS",
@@ -372,13 +375,13 @@ class RequestBalanceLevel:
     T:ClassVar = PacketType.WriteBalanceLevel
 
     @classmethod
-    def from_bytes(cls, data):
+    def from_cell(cls, cell):
         self = cls()
-        self.levelRaw, = self.S.unpack(data)
+        self.levelRaw = cell.balance_threshold_raw
         return self
 
     def to_bytes(self):
-        return self.S.pack(self.levelRaw)
+        return self.S.pack(self.levelRaw or 0)
 
 
 @_dc

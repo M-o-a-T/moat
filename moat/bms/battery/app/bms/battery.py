@@ -4,6 +4,7 @@ from asyncdbus.signature import Variant
 from asyncdbus.constants import NameFlag
 from pprint import pformat
 from functools import cached_property
+import anyio
 
 from moat.compat import CancelledError, sleep, sleep_ms, wait_for_ms, ticks_ms, ticks_diff, ticks_add, TimeoutError, Lock, TaskGroup, Event
 from moat.util import ValueEvent, combine_dict, attrdict
@@ -40,8 +41,12 @@ class BatteryInterface(DbusInterface):
 		return h.seen
 	
 	@dbus.method()
-	def GetVoltages(self) -> 'a(db)':
-		return [(c.voltage,c.in_balance) for c in self.batt.cells]
+	def GetVoltages(self) -> 'ad':
+		return [c.voltage for c in self.batt.cells]
+
+	@dbus.method()
+	def GetBalancing(self) -> 'a(bdb)':
+		return [(c.in_balance,-1 if c.balance_pwm is None else c.balance_pwm, c.balance_forced) for c in self.batt.cells]
 
 	@dbus.method()
 	def GetTemperatures(self) -> 'a(dd)':
@@ -76,7 +81,7 @@ class BatteryInterface(DbusInterface):
 		Send pack voltage
 		"""
 		batt = self.batt
-		return (batt.voltage,batt.current, batt.chg_set, batt.dis_set)
+		return (batt.voltage,batt.current, batt.chg_set or False, batt.dis_set or False)
 
 	@dbus.signal()
 	async def CellTemperatureChanged(self) -> 'a(vv)':
@@ -135,6 +140,7 @@ class Battery:
 		self.end = start+self.cfg.n-1
 
 		self.ready_evt = Event()
+		self.balance_evt = Event()
 
 		self.cells = []
 		for c in range(self.cfg.n):
@@ -183,7 +189,10 @@ class Battery:
 			h,res = await self.send(RequestGetSettings())
 			if len(res) != len(self.cells):
 				raise ConfigError(f"Battery {self.start}:{self.end}: found {len(res)} modules, not {len(self.cells)}")
+			for c,r in zip(self.cells,res):
+				r.to_cell(c)
 
+			h,res = await self.send(RequestReadPIDconfig())
 			for c,r in zip(self.cells,res):
 				r.to_cell(c)
 
@@ -197,6 +206,112 @@ class Battery:
 
 			await self.ready_evt.wait()
 			evt.set()
+			logger.info("Ready: %s",self)
+
+			while True:
+				fast = await self.check_balancing()
+				await sleep(5)
+				if not fast:
+					with anyio.move_on_after(200):
+						await self.balance_evt.wait()
+						self.balance_evt = Event()
+
+	def trigger_balancing(self):
+		self.balance_evt.set()
+
+#        balance:
+#          # no balance if the cell voltage is below this value
+#          min: 3.3
+#          # balancer goal is lowest cell plus this value
+#          d: 0.05
+#          # max this number of cells may balance, 0=any
+#          n: 3
+#          # start balancing if cellV is higher than lowV+(maxV-lowV)*r
+#          r: 0
+
+	async def check_balancing(self):
+		cfg = self.cfg.balance
+		minv = self.get_cell_min_voltage()
+		maxv = self.get_cell_min_voltage()
+		if maxv-minv < 2*cfg.d:
+			# all OK. Don't do any (more) work.
+			for c in self.cells:
+				if c.balance_forced:
+					continue
+				if c.balance_threshold is not None:
+					logger.info("Unbalance0 %s", c)
+					await c.clear_balancing()
+			return False
+
+		thrv1 = minv + cfg.d + cfg.r * (self.cfg.u.ext.max - minv)
+		thrv2 = minv + 0.8*(thrv1-minv)  # hysteresis
+		cc = self.cells[:]
+		cc.sort(key=lambda x:x.voltage, reverse=True)
+		ret = False
+
+		logger.info("Bal %.2f %.2f %.2f %s %s", minv,thrv1,thrv2,cc[0],cc[-1])
+
+		want = 0
+		cur = 0
+		# Step 1, count what we currently have+need (and do some cleanup)
+		for c in self.cells:
+			if c.balance_forced:
+				cur += 1
+				continue
+
+			if c.balance_threshold is not None:
+				if c.in_balance:
+					cur += 1
+					if c.balance_threshold < minv+cfg.d:
+						# don't balance below the minimum
+						logger.info("Balance1 %s", c)
+						await c.set_balancing(minv+cfg.d)
+				else:
+					logger.info("Unbalance1 %s", c)
+					await c.clear_balancing()
+
+			elif c.voltage >= thrv1:
+				want += 1
+
+		if cur:
+			# update balancer power levels
+			h,res = await self.send(RequestBalancePower())
+			for c,r in zip(self.cells,res):
+				r.to_cell(c)
+
+		if cur or want:
+			ret = True
+
+		# Step 1, if there are too many active cells, reduce the load
+		if cfg.n > 0 and want+cur > cfg.n:
+			for c in cc[::-1]:
+				if c.balance_forced:
+					continue
+				if c.in_balance:
+					cur -= 1
+					logger.info("Unbalance2 %s", c)
+					await c.clear_balancing()
+				if want+cur <= cfg.n:
+					# done
+					break
+			
+		# Step 2, turn on balancing on cells that need it
+		for c in cc:
+			if c.balance_forced:
+				continue
+			if c.balance_threshold is not None:
+				continue
+			if cfg.n > 0 and cur > cfg.n:
+				break
+			if c.voltage >= thrv1:
+				logger.info("Balance2 %s", c)
+				await c.set_balancing(minv+cfg.d)
+				cur += 1
+				ret = True
+				continue
+			break
+
+		return ret
 
 
 	async def task_keepalive(self):

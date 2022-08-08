@@ -163,7 +163,7 @@ class Controller:
 		"""
 
 		err = None
-		for n in range(5):
+		for n in range(10):
 			try:
 				with anyio.fail_after(len(self.cells)/3 if self.cells else 10):
 					return await self._send(*a,**k)

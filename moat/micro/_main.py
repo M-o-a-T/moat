@@ -229,12 +229,12 @@ async def cfg(obj, replace, fallback, current, write_current, **attrs):
 
 		if replace:
 			val = deepcopy(clean_cfg(obj.cfg))
-		elif write_current or current or not has_attrs:
+		elif not has_attrs and not write_current:
 			val = await req.send(["sys","cfg"], mode=mode)
 		else:
 			val = {}
 
-		if not replace and not has_attrs:
+		if not replace and not has_attrs and not write_current:
 			yprint(val)
 		else:
 			val = process_args(val, **attrs)

@@ -76,6 +76,20 @@ class CellInterface(DbusInterface):
 		return h.seen
 	
 	@dbus.method()
+	async def SetBalanceVoltage(self, data: 'd') -> 'b':
+		if data < 0.1:
+			await self.cell.set_force_balancing(None)
+			return True
+		if self.cell.voltage < data:
+			return False
+		await self.cell.set_force_balancing(data)
+		return True
+
+	@dbus.method()
+	def GetBalanceVoltage(self) -> 'd':
+		return self.cell.balance_threshold or 0
+
+	@dbus.method()
 	async def SetVoltage(self, data: 'd') -> 'b':
 		# update the scale appropriately
 		c = self.cell
@@ -134,6 +148,8 @@ class Cell:
 	in_balance:bool = False
 	balance_pwm:float = None  # percentage of time the balancer is on
 	balance_over_temp:bool = False
+	balance_threshold:float = None
+	balance_forced:bool = False
 
 	board_version:int = None
 	code_version:int = None
@@ -153,6 +169,19 @@ class Cell:
 		h,_res = await self.send(pkt)
 		return h.seen
 
+	async def set_force_balancing(self, val):
+		if val is None:
+			self.balance_forced = False
+			self.balance_threshold = 0
+			# will be repaired during the next pass
+		else:
+			self.balance_forced = True
+			self.balance_threshold = val
+
+		h,_res = await self.send(RequestBalanceLevel.from_cell(self))
+		self.batt.trigger_balancing()
+		return h.seen
+
 	async def get_pid(self):
 		h,res = await self.send(RequestReadPIDconfig())
 		r = res[0]
@@ -161,6 +190,19 @@ class Cell:
 	async def set_pid(self, kp,ki,kd):
 		h,_res = await self.send(RequestWritePIDconfig(kp,ki,kd))
 		return h.seen
+
+	async def set_balancing(self, val):
+		if self.balance_forced:
+			return False
+		self.balance_threshold = val
+		h,_res = await self.send(RequestBalanceLevel.from_cell(self))
+		return h.seen
+
+	async def clear_balancing(self):
+		self.balance_threshold = None
+		h,_res = await self.send(RequestBalanceLevel.from_cell(self))
+		return h.seen
+
 
 	def __init__(self, batt, path, nr, cfg, bcfg, gcfg):
 		self.batt = batt
@@ -318,6 +360,17 @@ class Cell:
 		if val is None:
 			return
 		self.cfg.u.balance = val
+
+	@property
+	def balance_threshold_raw(self):
+		return self._volt2raw(self.balance_threshold)
+
+	@balance_threshold_raw.setter
+	def balance_threshold_raw(self, val):
+		val = self._raw2volt(val)
+		if val is None:
+			return
+		self.balance_threshold = val
 
 	@property
 	def voltage_raw(self):

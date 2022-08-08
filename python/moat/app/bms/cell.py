@@ -31,11 +31,19 @@ class CellInterface(DbusInterface):
 		return wrap_dbus_dict(self.cell.cfg)
 
 	@dbus.method()
-	def GetVoltage(self) -> 'd':
+	async def GetVoltage(self) -> 'd':
+		h,res = await self.cell.send(RequestCellVoltage())
+		if not h.seen:
+			return 0
+		res[0].to_cell(self.cell)
 		return self.cell.voltage
 
 	@dbus.method()
-	def GetTemperature(self) -> 'dd':
+	async def GetTemperature(self) -> 'dd':
+		h,res = await self.cell.send(RequestCellTemperature())
+		if not h.seen:
+			return (-1000,-1000)
+		res[0].to_cell(self.cell)
 		return (_t(self.cell.load_temp), _t(self.cell.batt_temp))
 
 	@dbus.method()

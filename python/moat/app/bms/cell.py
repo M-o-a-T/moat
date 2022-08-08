@@ -39,6 +39,22 @@ class CellInterface(DbusInterface):
 		return (_t(self.cell.load_temp), _t(self.cell.batt_temp))
 
 	@dbus.method()
+	async def GetPIDparams(self) -> 'uuu':
+		return await self.cell.get_pid()
+
+	@dbus.method()
+	async def GetPIDpwm(self) -> 'd':
+		h,res = await self.cell.send(RequestBalancePower())
+		if not h.seen:
+			return -1
+		res[0].to_cell(self.cell)
+		return self.cell.balance_pwm
+
+	@dbus.method()
+	async def SetPIDparams(self, kp:'u', ki:'u', kd:'u') -> 'b':
+		return await self.cell.set_pid(kp,ki,kd)
+
+	@dbus.method()
 	async def Identify(self) -> 'b':
 		h,_res = await self.cell.send(RequestIdentifyModule())
 		return h.seen
@@ -81,6 +97,10 @@ class Cell:
 	bcfg:dict
 	gcfg:dict
 
+	pid_kp:int = None
+	pid_ki:int = None
+	pid_kd:int = None
+
 	settingsCached:bool = False
 	valid:bool = False
 	_voltage:float = None
@@ -107,6 +127,15 @@ class Cell:
 	# packet counter
 	packets_in:int = None
 	packets_bad:int = None
+
+	async def get_pid(self):
+		h,res = await self.send(RequestReadPIDconfig())
+		r = res[0]
+		return r.kp,r.ki,r.kd
+
+	async def set_pid(self, kp,ki,kd):
+		h,_res = await self.send(RequestWritePIDconfig(kp,ki,kd))
+		return h.seen
 
 	def __init__(self, batt, path, nr, cfg, bcfg, gcfg):
 		self.batt = batt

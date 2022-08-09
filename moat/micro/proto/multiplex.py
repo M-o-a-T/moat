@@ -9,6 +9,7 @@ import sys
 import importlib
 from concurrent.futures import CancelledError
 from contextlib import asynccontextmanager, contextmanager
+from pprint import pformat
 
 import anyio
 #from distmqtt.client import open_mqttclient
@@ -288,6 +289,7 @@ class Multiplexer(Request):
 							merge(self.cfg, cfg, drop=("port" in cfg))
 							# if "port" is there, the stored config is not trimmed
 							self.cfg = to_attrdict(self.cfg)
+							logger.info("Config:\n%s",pformat(self.cfg))
 						async with TaskGroup() as tg:
 							self._tg = tg
 							self.apps = {}

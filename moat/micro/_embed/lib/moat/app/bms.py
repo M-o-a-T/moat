@@ -202,8 +202,8 @@ class BMSCmd(BaseCmd):
 		"""
 		Called manually, but also irreversibly when there's a "hard" cell over/undervoltage
 		"""
-                if st is NotGiven:
-                    return self.bms.relay.value(),self.bms.relay_force
+		if st is NotGiven:
+			return self.bms.relay.value(),self.bms.relay_force
 		await self.bms.set_relay_force(st)
 
 	async def cmd_info(self, gen=-1):

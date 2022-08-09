@@ -128,7 +128,7 @@ async def setup(obj, source, dest, no_run, no_reset, force_exit, exit, verbose, 
 @click.pass_obj
 @click.option("-s","--source", type=click.Path(dir_okay=True,file_okay=True,path_type=anyio.Path), required=True, help="Files to sync")
 @click.option("-d","--dest", type=str, required=True, default="", help="Destination path")
-@click.option("-c","--cross",help="path to mpy-cross")
+@click.option("-C","--cross",help="path to mpy-cross")
 async def sync(obj, source, dest, cross):
 	"""
 	Sync of MoaT code on a running MicroPython device.
@@ -143,7 +143,7 @@ async def sync(obj, source, dest, cross):
 			
 @main.command(short_help='Reboot MoaT node')
 @click.pass_obj
-@click.option("-s","--state", help="State for the next run")
+@click.option("-S","--state", help="State after reboot")
 async def boot(obj, state):
 	"""
 	Restart a MoaT node

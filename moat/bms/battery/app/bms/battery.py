@@ -235,6 +235,7 @@ class Battery:
 		maxv = self.get_cell_max_voltage()
 		if maxv-minv < 2*cfg.d:
 			# all OK. Don't do any (more) work.
+			logger.info("Bal- %.2f %.2f %s", minv,maxv,self)
 			for c in self.cells:
 				if c.balance_forced:
 					continue
@@ -249,7 +250,7 @@ class Battery:
 		cc.sort(key=lambda x:x.voltage, reverse=True)
 		ret = False
 
-		logger.info("Bal %.2f %.2f %.2f %s %s", minv,thrv1,thrv2,cc[0],cc[-1])
+		logger.info("Bal %.2f %.2f %s %s", thrv1,thrv2,cc[0],cc[-1])
 
 		want = 0
 		cur = 0

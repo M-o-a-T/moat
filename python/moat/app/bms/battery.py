@@ -232,7 +232,7 @@ class Battery:
 	async def check_balancing(self):
 		cfg = self.cfg.balance
 		minv = self.get_cell_min_voltage()
-		maxv = self.get_cell_min_voltage()
+		maxv = self.get_cell_max_voltage()
 		if maxv-minv < 2*cfg.d:
 			# all OK. Don't do any (more) work.
 			for c in self.cells:

@@ -48,7 +48,7 @@ class BMSCmd(BaseAppCmd):
 		self.ctrl = Controller(self, self.name, self.cfg, self.gcfg)
 
 	async def cmd_work(self, **data):
-		logger.info("WORK",data)
+		logger.info("WORK %s",data)
 
 
 #	async def loc_data(self):

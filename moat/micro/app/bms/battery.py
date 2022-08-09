@@ -224,8 +224,8 @@ class Battery:
 		self.balance_evt.set()
 
 #        balance:
-#          # no balance if the cell voltage is below this value
-#          min: 3.3
+#          # minimum balancer goal
+#          min: 3.45
 #          # balancer goal is lowest cell plus this value
 #          d: 0.05
 #          # max this number of cells may balance, 0=any
@@ -233,11 +233,23 @@ class Battery:
 #          # start balancing if cellV is higher than lowV+(maxV-lowV)*r
 #          r: 0
 
+# The cells have a certain spread of voltage levels. As the system voltage
+# increases, the allowed spread decreases because when the system charge
+# level tops off, all cells must be at the same level.
+#
+# Thus we calculate the allowed spread as a percentage of the range between
+# top voltage and the cell with lowest charge. Cells above that value get
+# balanced if they're above the minimum balance level.
+# 
+# We balance the N top cells (to limit total heat release). However we
+# don't want to spam the system with balance requests if more than N cells
+# are close to each other, thus the additional secodn threshold.
+
 	async def check_balancing(self):
 		cfg = self.cfg.balance
 		minv = self.get_cell_min_voltage()
 		maxv = self.get_cell_max_voltage()
-		if maxv-minv < 2*cfg.d:
+		if maxv-minv < 2*cfg.d or maxv < cfg.min:
 			# all OK. Don't do any (more) work.
 			logger.info("Bal- %.2f %.2f %s", minv,maxv,self)
 			for c in self.cells:
@@ -248,7 +260,9 @@ class Battery:
 					await c.clear_balancing()
 			return False
 
-		thrv1 = minv + cfg.d + cfg.r * (self.cfg.u.ext.max - minv)
+		thrv1 = minv + cfg.d + cfg.r * (self.cfg.cell.default.u.ext.max - minv)
+		thrv1 = max(thrv1,cfg.min)
+		minv = max(minv,cfg.min)
 		thrv2 = minv + 0.8*(thrv1-minv)  # hysteresis
 		cc = self.cells[:]
 		cc.sort(key=lambda x:x.voltage, reverse=True)
@@ -267,15 +281,17 @@ class Battery:
 			if c.balance_threshold is not None:
 				if c.in_balance:
 					cur += 1
-					if c.balance_threshold < minv+cfg.d:
+					if c.balance_threshold < minv:
 						# don't balance below the minimum
 						logger.info("Balance1 %s", c)
-						await c.set_balancing(minv+cfg.d)
+						await c.set_balancing(minv+2*cfg.d)
+						# don't spam the system when the min level changes
 				else:
+					# goal reached.
 					logger.info("Unbalance1 %s", c)
 					await c.clear_balancing()
 
-			elif c.voltage >= thrv1:
+			elif c.voltage >= thrv1+cfg.d:
 				want += 1
 
 		if cur:
@@ -288,18 +304,17 @@ class Battery:
 			ret = True
 
 		# Step 1, if there are too many active cells, reduce the load
-		if cfg.n > 0 and want+cur > cfg.n:
-			for c in cc[::-1]:
-				if c.balance_forced:
-					continue
-				if c.in_balance:
-					cur -= 1
-					logger.info("Unbalance2 %s", c)
-					await c.clear_balancing()
-				if want+cur <= cfg.n:
-					# done
-					break
-			
+		for c in cc[::-1]:
+			if want+cur <= cfg.n:
+				# done
+				break
+			if c.balance_forced:
+				continue
+			if c.in_balance and c.voltage < thrv2:
+				logger.info("Unbalance2 %s", c)
+				await c.clear_balancing()
+				cur -= 1
+
 		# Step 2, turn on balancing on cells that need it
 		for c in cc:
 			if c.balance_forced:
@@ -308,9 +323,9 @@ class Battery:
 				continue
 			if cfg.n > 0 and cur > cfg.n:
 				break
-			if c.voltage >= thrv1:
+			if c.voltage >= thrv1+cfg.d:
 				logger.info("Balance2 %s", c)
-				await c.set_balancing(minv+cfg.d)
+				await c.set_balancing(minv)
 				cur += 1
 				ret = True
 				continue

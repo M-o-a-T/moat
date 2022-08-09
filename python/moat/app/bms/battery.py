@@ -119,7 +119,11 @@ class Battery:
 	w_past:float = 0
 	nw_past:float = 0
 
-	vsum_warn:bool = False
+	msg_hi:bool = False
+	msg_vhi:bool = False
+	msg_lo:bool = False 
+	msg_vlo:bool = False
+	msg_vsum:bool = False
 
 	chg_set:bool = None
 	dis_set:bool = None
@@ -408,8 +412,8 @@ class Battery:
 		"""
 		Verify that the battery voltages are within spec.
 		"""
-		chg_ok = self.chg_set
-		dis_ok = self.dis_set
+		chg_ok = True
+		dis_ok = True
 		off = False
 
 
@@ -419,36 +423,48 @@ class Battery:
 			except TypeError:
 				pass
 			else:
-				if not self.vsum_warn and abs(vsum-self.voltage) > vsum*0.02:
+				if not self.msg_vsum and abs(vsum-self.voltage) > vsum*0.02:
 					logger.warning("Voltage doesn't match: reported %.2f, sum %.2f", self.voltage, vsum)
-					self.vsum_warn = True
-				elif self.vsum_warn and abs(vsum-self.voltage) < vsum*0.015:
+					self.msg_vsum = True
+				elif self.msg_vsum and abs(vsum-self.voltage) < vsum*0.015:
 					logger.warning("Voltage matches again: reported %.2f, sum %.2f", self.voltage, vsum)
-					self.vsum_warn = False
+					self.msg_vsum = False
 
-			if chg_ok and self.voltage >= self.cfg.u.ext.max:
-				logger.warning("Voltage %.2f high, no charging", self.voltage)
+			if self.voltage >= self.cfg.u.ext.max:
+				if not self.msg_hi:
+					logger.warning("Voltage %.2f high, no charging", self.voltage)
+					self.msg_hi = True
 				chg_ok = False
-			elif not chg_ok and self.voltage < self.cfg.u.ext.max-0.05:
-				if chg_ok is not None:
-					logger.warning("Voltage %.2f no longer high, charging", self.voltage)
-				chg_ok = True
+			elif self.msg_hi and self.voltage < self.cfg.u.ext.max-0.05:
+				logger.warning("Voltage %.2f no longer high, charging OK", self.voltage)
+				self.msg_hi = False
 
 			if self.voltage >= self.cfg.u.max:
 				off = True
-				logger.error("Overvoltage %.2f, turned off", self.voltage)
+				if not self.msg_vhi:
+					logger.error("Overvoltage %.2f, turned off", self.voltage)
+					self.msg_vhi = True
+			elif self.msg_vhi:
+				logger.error("Overvoltage %.2f fixed", self.voltage)
+				self.msg_vhi = False
 
-			if dis_ok and self.voltage <= self.cfg.u.ext.min:
-				logger.warning("Voltage %.2f low, no discharging", self.voltage)
+			if self.voltage <= self.cfg.u.ext.min:
+				if not self.msg_lo:
+					logger.warning("Voltage %.2f low, no discharging", self.voltage)
+					self.msg_lo = True
 				dis_ok = False
-			elif not dis_ok and self.voltage > self.cfg.u.ext.min+0.05:
-				if dis_ok is not None:
-					logger.warning("Voltage %.2f no longer low, discharging", self.voltage)
-				dis_ok = True
+			elif self.msg_lo and self.voltage > self.cfg.u.ext.min+0.05:
+				logger.warning("Voltage %.2f no longer low, discharging OK", self.voltage)
+				self.msg_lo = False
 
 			if self.voltage <= self.cfg.u.min:
 				off = True
-				logger.error("Undervoltage %.2f, turned off", self.voltage)
+				if not self.msg_vlo:
+					logger.error("Undervoltage %.2f, turned off", self.voltage)
+					self.msg_vlo = True
+			elif self.msg_vlo:
+				logger.error("Undervoltage %.2f fixed", self.voltage)
+				self.msg_vlo = False
 
 		if self.current is not None:
 			pass  # XXX TODO check current limits here also
@@ -457,21 +473,45 @@ class Battery:
 			if c.voltage is not None:
 				if c.voltage >= c.cfg.u.ext.max:
 					chg_ok = False
-					logger.warning(f"{c} voltage high, no charging")
+					if not c.msg_hi:
+						logger.warning(f"{c} voltage high, no charging")
+						c.msg_hi = True
+				elif c.msg_hi:
+					logger.warning(f"{c} voltage no longer high")
+					c.msg_hi = False
 
 				if c.voltage >= c.cfg.u.max:
-					logger.error(f"{c} overvoltage, turned off")
+					if not c.msg_vhi:
+						logger.error(f"{c} overvoltage, turned off")
+						c.msg_vhi = True
+					off = True
+				elif c.msg_vhi:
+					logger.error(f"{c} overvoltage fixed")
+					c.msg_vhi = False
 
 				if c.voltage <= c.cfg.u.ext.min:
 					dis_ok = False
-					logger.warning(f"{c} voltage low, no discharging")
+					if not c.msg_lo:
+						logger.warning(f"{c} voltage low, no discharging")
+						c.msg_lo = True
+				elif c.msg_lo:
+					logger.warning(f"{c} voltage no longer low")
+					c.msg_lo = False
 
 				if c.voltage <= c.cfg.u.min:
 					off = True
-					logger.error(f"{c} undervoltage, turned off")
+					if not c.msg_vlo:
+						logger.error(f"{c} undervoltage, turned off")
+						c.msg_vlo = True
+				elif c.msg_vlo:
+					logger.error(f"{c} undervoltage fixed")
+					c.msg_vlo = False
 
-		if off and self.is_ready():
-			await self.ctrl.req.send([self.ctrl.name,"rly"], st=False)
+		if off:
+			if self.is_ready():
+				await self.ctrl.req.send([self.ctrl.name,"rly"], st=False)
+			else:
+				logger.fatal("DANGER not ready, relay not turning off DANGER")
 
 		if self.chg_set != chg_ok or self.dis_set != dis_ok:
 			# send limits to BMS in mplex

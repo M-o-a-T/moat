@@ -51,7 +51,7 @@ class BMS:
 		self.relay_force = st
 		if st is not None:
 			self.relay.value(st)
-			await self.send_rly_state()
+			await self.send_rly_state("forced")
 		else:
 			self.sw_ok = False
 
@@ -61,6 +61,7 @@ class BMS:
 		self.live = live
 		if not live:
 			self.relay.off()
+			await self.send_rly_state("Live")
 
 	def set_live(self):
 		self.live_flag.set()
@@ -148,13 +149,13 @@ class BMS:
 			if self._check():
 				if self.sw_ok and self.live and self.relay_force is None and not self.relay.value():
 					self.relay.on()
-					await self.send_rly_state()
+					await self.send_rly_state("Check")
 
 					xmit_n=0
 
 			elif self.live and self.relay_force is None and self.relay.value():
 				self.relay.off()
-				await self.send_rly_state()
+				await self.send_rly_state("Check Fail")
 				self.t_sw = ticks_add(self.t, self.cfg["relay"]["t"])
 				self.sw_ok = False
 				xmit_n=0
@@ -176,9 +177,9 @@ class BMS:
 			else: 
 				self.t = t
 
-	async def send_rly_state(self):
+	async def send_rly_state(self, txt):
 		self.xmit_evt.set()
-		print("RELAY",)
+		print("RELAY",self.relay.value(), txt)
 
 
 class BMSCmd(BaseCmd):

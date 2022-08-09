@@ -18,9 +18,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 def _t(x):
-    if x is None:
-        return -1000
-    return x
+	if x is None:
+		return -1000
+	return x
 
 class BatteryInterface(DbusInterface):
 	def __init__(self, batt, dbus):

@@ -138,6 +138,11 @@ class Cell:
 	voltage_max:float = None
 	# value from module
 
+	msg_hi:bool = False
+	msg_vhi:bool = False
+	msg_lo:bool = False
+	msg_vlo:bool = False
+
 	load_temp:float = None  # current, on balancer
 	batt_temp:float = None  # current, on battery
 	load_maxtemp:float = None  # limit

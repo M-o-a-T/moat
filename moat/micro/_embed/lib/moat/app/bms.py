@@ -172,10 +172,8 @@ class BMS:
 			t = ticks_ms()
 			td = ticks_diff(self.t, t)
 			if td > 0:
-				print("TS",td)
 				await sleep_ms(td)
 			else: 
-				print("TT")
 				self.t = t
 
 	async def send_rly_state(self):

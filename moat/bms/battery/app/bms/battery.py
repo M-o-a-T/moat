@@ -158,7 +158,7 @@ class Battery:
 			self.cells.append(cell)
 
 	def __repr__(self):
-		return f"‹Batt {self.path} u={'?' if self.voltage is None else self.voltage} i={'?' if self.current is None else self.current}›"
+		return f"‹Batt {self.path} u={0 if self.voltage is None else self.voltage :.2f} i={0 if self.current is None else self.current :.1f}›"
 
 	@property
 	def req(self):

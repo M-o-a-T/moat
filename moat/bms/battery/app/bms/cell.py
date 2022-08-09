@@ -218,7 +218,7 @@ class Cell:
 		self.gcfg = gcfg
 
 	def __repr__(self):
-		return f"‹Cell {self.path} u={'?' if self.voltage is None else self.voltage}›"
+		return f"‹Cell {self.path} u={0 if self.voltage is None else self.voltage :.3f}›"
 
 	@property
 	def req(self):

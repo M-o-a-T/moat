@@ -53,7 +53,11 @@ class BMS:
 			self.relay.value(st)
 			await self.send_rly_state("forced")
 		else:
-			self.sw_ok = False
+			await self.send_rly_state("auto")
+			if not self.relay.value():
+				self.sw_ok = False
+				self.t_sw = ticks_add(self.t, self.cfg["relay"]["t"])
+				print("DLY", self.cfg["relay"]["t"])
 
 	def live_state(self, live:bool):
 		if self.live == live:
@@ -61,7 +65,7 @@ class BMS:
 		self.live = live
 		if not live:
 			self.relay.off()
-			await self.send_rly_state("Live")
+			await self.send_rly_state("Live Fail")
 
 	def set_live(self):
 		self.live_flag.set()
@@ -149,8 +153,7 @@ class BMS:
 			if self._check():
 				if self.sw_ok and self.live and self.relay_force is None and not self.relay.value():
 					self.relay.on()
-					await self.send_rly_state("Check")
-
+					await self.send_rly_state("Check OK")
 					xmit_n=0
 
 			elif self.live and self.relay_force is None and self.relay.value():

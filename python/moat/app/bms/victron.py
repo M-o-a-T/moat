@@ -47,6 +47,8 @@ class BatteryState:
 		u_max = cfg.u.ext.max
 		i_min = cfg.i.ext.min
 		i_max = cfg.i.ext.max
+		c_min = self.ctrl.batt[0].get_pct_discharge()
+		c_max = self.ctrl.batt[0].get_pct_charge()
 
 		for b in self.ctrl.batt[1:]:
 			c = b.cfg
@@ -54,16 +56,19 @@ class BatteryState:
 			u_max = min(u_max,c.u.ext.max)
 			i_min += c.i.ext.min
 			i_max += c.i.ext.max
-			# This blithedly assumes that the internal resistances of all
-			# batteries are identical, which most probably is wrong.
-			# TODO measure current spread at suitable power points, reduce
+			c_min = min(c_min, b.get_pct_discharge())
+			c_max = min(c_max, b.get_pct_charge())
+			# This blithedly assumes that the batteries are "mostly" identical,
+			# which might be wrong.
+			# For reasonable results, measure current spread at suitable power points
+			# and reduce
 			# the result accordingly.
 
 		async with self._srv as l:
 			await l.set(self.bus.vlo, float(u_min))
 			await l.set(self.bus.vhi, float(u_max))
-			await l.set(self.bus.ich, -float(i_min))
-			await l.set(self.bus.idis, float(i_max))
+			await l.set(self.bus.ich, -float(i_min)*c_min)
+			await l.set(self.bus.idis, float(i_max)*c_max)
 
 
 	async def update_dc(self):
@@ -94,11 +99,13 @@ class BatteryState:
 			if c.voltage > c.cfg.u.ext.max:
 				nbc += 100
 		
+		soc = 0
 		for b in self.ctrl.batt:
 			if b.voltage < b.cfg.u.ext.min:
 				nbd += 1
 			if b.voltage > b.cfg.u.ext.max:
 				nbc += 1
+			soc += b.get_soc()
 
 		bal = any(c.in_balance for c in self.ctrl.cells)
 		async with self.srv as l:
@@ -115,6 +122,7 @@ class BatteryState:
 			await l.set(self.bus.nbd, nbd)
 
 			await l.set(self.bus.bal, int(bal))
+			await l.set(self.bus.soc, soc/len(self.ctrl.batt)*100)
 
 		
 	async def update_boot(self):

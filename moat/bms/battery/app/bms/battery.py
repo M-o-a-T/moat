@@ -49,6 +49,21 @@ class BatteryInterface(DbusInterface):
 		return [(c.in_balance,-1 if c.balance_pwm is None else c.balance_pwm, c.balance_forced) for c in self.batt.cells]
 
 	@dbus.method()
+	async def ForceRelay(self, on: 'b') -> 'b':
+		await self.batt.ctrl.req.send([self.batt.ctrl.name,"rly"], st=on)
+		return True
+
+	@dbus.method()
+	async def GetRelayState(self) -> 'bb':
+		res = await self.batt.ctrl.req.send([self.batt.ctrl.name,"rly"])
+		return bool(res[0]),bool(res[1])
+
+	@dbus.method()
+	async def ReleaseRelay(self) -> 'b':
+		res = await self.batt.ctrl.req.send([self.batt.ctrl.name,"rly"], st=None)
+		return True
+
+	@dbus.method()
 	def GetTemperatures(self) -> 'a(dd)':
 		return [(_t(c.load_temp), _t(c.batt_temp)) for c in self.batt.cells]
 

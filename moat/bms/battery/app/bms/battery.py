@@ -409,11 +409,18 @@ class Battery:
 
 
 	def get_soc(self):
-		# this is the naïve way which doesn't work at all,
+		# this is the naïve way which doesn't work at all well,
 		# but there's no better way until we do an initial
 		# charge-balance-discharge-charge cycle
-		r = self.cfg.u.ext.max - self.cfg.u.ext.min
-		return (self.voltage-self.cfg.u.ext.min)/r
+		mi = self.get_cell_min_voltage()
+		spr = self.get_cell_max_voltage() - mi
+		r = self.cfg.cell.default.u.ext.max - self.cfg.cell.default.u.ext.min
+		try:
+			res = (mi-self.cfg.cell.default.u.ext.min) / (r-spr)
+		except ValueError:
+			return 0
+		else:
+			return max(0,min(1,res))
 
 
 	def get_cell_midvoltage(self):
@@ -437,6 +444,32 @@ class Battery:
 
 	def get_cell_max_voltage(self):
 		return max(c.voltage for c in self.cells)
+
+	def get_pct_charge(self):
+		cfg = self.cfg.cell.default
+
+		v = self.get_cell_max_voltage()
+		if v >= cfg.u.ext.max:
+			return 0
+		try:
+			if v > cfg.u.lim.max and cfg.u.ext.max > cfg.u.lim.max:
+				return (v-cfg.u.lim.max)/(cfg.u.ext.max-cfg.u.lim.max)
+		except (ValueError,AttributeError):
+			pass
+		return 1
+
+	def get_pct_discharge(self):
+		cfg = self.cfg.cell.default
+
+		v = self.get_cell_min_voltage()
+		if v <= cfg.u.ext.min:
+			return 0
+		try:
+			if v < cfg.u.lim.min and cfg.u.ext.min < cfg.u.lim.min:
+				return (v-cfg.u.lim.max)/(cfg.u.lim.min-cfg.u.ext.min)
+		except (ValueError,AttributeError):
+			pass
+		return 1
 
 	async def check_limits(self):
 		"""

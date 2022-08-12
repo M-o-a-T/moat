@@ -42,10 +42,16 @@ def _decode(code, data):
     if code == 2:
         return int.from_bytes(data, "big")
     elif code == 3:
-        s = unpacker(data)
+        try:
+            s = unpacker(data)
+        except Exception as exc:
+            return Path(False,type(exc).__name__,data)
         return Path(*s)
     elif code == 4:
-        return Proxy(data.decode("utf-8"))
+        try:
+            return Proxy(data.decode("utf-8"))
+        except UnicodeDecodeError:
+            return Proxy(str(data))
     return msgpack.ExtType(code, data)
 
 

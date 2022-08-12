@@ -4,10 +4,8 @@ plus an unpacker factory for streams.
 
 Extension types defined here:
 2: contains raw bytes, interpreted as unsigned bignum
-3: contains a msgpack'd array, returned as Path
-   TODO: replace with Ext 5, using a stream of packed objects
+3: Path, as a msgpack object stream of its elements
 4: contains raw bytes, interpreted as UTF-8, returned as (named) Proxy object
-5: reserved: Path as msgpack object stream
 """
 
 from functools import partial

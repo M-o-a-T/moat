@@ -42,10 +42,8 @@ def _decode(code, data):
     if code == 2:
         return int.from_bytes(data, "big")
     elif code == 3:
-        try:
-            s = unpacker(data)
-        except Exception as exc:
-            return Path(False,type(exc).__name__,data)
+        s = stream_unpacker()
+        s.feed(data)
         return Path(*s)
     elif code == 4:
         try:

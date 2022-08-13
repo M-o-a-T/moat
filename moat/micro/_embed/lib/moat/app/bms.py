@@ -14,15 +14,26 @@ class BMS:
 		self.xmit_evt = Event()
 		self.gen = 0  # generation, incremented every time a new value is read
 
-	def _check(self):
+	async def _check(self):
 		c = self.cfg
 		cc = c["batt"]
 		d = c["poll"]["d"]
 
-		u = self.adc_u.read_u16() * self.adc_u_scale + self.adc_u_offset
-		i = (self.adc_i.read_u16()-self.adc_ir.read_u16()) * self.adc_i_scale + self.adc_i_offset
-		self.val_u = (self.val_u*(1000-d) + u*d) / 1000
-		self.val_i = (self.val_i*(1000-d) + i*d) / 1000
+		u = 0
+		i = 0
+		ir = 0
+		N=2*self.cfg["poll"]["n"]
+		for _ in range(N):
+			u += self.adc_u.read_u16()
+			await sleep_ms(1)
+			i += self.adc_i.read_u16()
+			await sleep_ms(1)
+			ir += self.adc_ir.read_u16()
+			await sleep_ms(1)
+		u = u/N * self.adc_u_scale + self.adc_u_offset
+		i = (i-ir)/N * self.adc_i_scale + self.adc_i_offset
+		self.val_u = u
+		self.val_i = i
 
 		self.sum_w += self.val_u*self.val_i
 		self.n_w += 1
@@ -150,7 +161,7 @@ class BMS:
 					self.sw_ok = True
 					xmit_n=0
 
-			if self._check():
+			if await self._check():
 				if self.sw_ok and self.live and self.relay_force is None and not self.relay.value():
 					self.relay.on()
 					await self.send_rly_state("Check OK")

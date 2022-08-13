@@ -203,7 +203,11 @@ class Battery:
 
 	async def _run(self, evt):
 		async with TaskGroup() as tg:
+			h,res = await self.send(RequestIdentifyModule())
+			if not h.seen:
+				raise ConfigError(f"Battery {self.start}:{self.end}: ident found no cells")
 
+			await self.send(RequestBalanceLevel(), broadcast=True)
 			h,res = await self.send(RequestGetSettings())
 			if len(res) != len(self.cells):
 				raise ConfigError(f"Battery {self.start}:{self.end}: found {len(res)} modules, not {len(self.cells)}")

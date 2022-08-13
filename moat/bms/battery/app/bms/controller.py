@@ -58,7 +58,7 @@ class Controller:
 		self.seq = 0
 		self.t = ticks_ms()
 		self.w_lock = Lock()
-		self.baud = gcfg.apps[cfg.serial].cfg.baud
+		self.baud = gcfg[cfg.serial].baud
 		self.waiting = [None]*8
 
 		n = 0

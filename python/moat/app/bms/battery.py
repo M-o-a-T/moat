@@ -45,8 +45,8 @@ class BatteryInterface(DbusInterface):
 		return [c.voltage for c in self.batt.cells]
 
 	@dbus.method()
-	def GetBalancing(self) -> 'a(bdb)':
-		return [(c.in_balance,-1 if c.balance_pwm is None else c.balance_pwm, c.balance_forced) for c in self.batt.cells]
+	def GetBalancing(self) -> 'a(dbdb)':
+		return [(c.balance_threshold or 0, c.in_balance,-1 if c.balance_pwm is None else c.balance_pwm, c.balance_forced) for c in self.batt.cells]
 
 	@dbus.method()
 	async def ForceRelay(self, on: 'b') -> 'b':

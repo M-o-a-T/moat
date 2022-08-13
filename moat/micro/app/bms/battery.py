@@ -167,7 +167,7 @@ class Battery:
 				ccfg = cfg.cell.cells[c]
 			except (AttributeError, IndexError):
 				ccfg = attrdict()
-			ccfg = combine_dict(ccfg, cfg.cell.default, cls=attrdict)
+			ccfg = combine_dict(ccfg, cfg.cell, cls=attrdict)
 			cell = Cell(self, nr=self.start+c, path=f"/bms/{num}/{c}", cfg=ccfg, bcfg=self.cfg, gcfg=gcfg)
 			self.ctrl.add_cell(cell)
 			self.cells.append(cell)
@@ -261,7 +261,7 @@ class Battery:
 # are close to each other, thus the additional secodn threshold.
 
 	async def check_balancing(self):
-		cfg = self.cfg.balance
+		cfg = self.cfg.cell.balance
 		minv = self.get_cell_min_voltage()
 		maxv = self.get_cell_max_voltage()
 		if maxv-minv < 2*cfg.d or maxv < cfg.min:
@@ -275,7 +275,7 @@ class Battery:
 					await c.clear_balancing()
 			return False
 
-		thrv1 = minv + cfg.d + cfg.r * (self.cfg.cell.default.u.ext.max - minv)
+		thrv1 = minv + cfg.d + cfg.r * (self.cfg.cell.u.ext.max - minv)
 		thrv1 = max(thrv1,cfg.min)
 		minv = max(minv,cfg.min)
 		thrv2 = minv + 0.8*(thrv1-minv)  # hysteresis
@@ -414,9 +414,9 @@ class Battery:
 		# charge-balance-discharge-charge cycle
 		mi = self.get_cell_min_voltage()
 		spr = self.get_cell_max_voltage() - mi
-		r = self.cfg.cell.default.u.ext.max - self.cfg.cell.default.u.ext.min
+		r = self.cfg.cell.u.ext.max - self.cfg.cell.u.ext.min
 		try:
-			res = (mi-self.cfg.cell.default.u.ext.min) / (r-spr)
+			res = (mi-self.cfg.cell.u.ext.min) / (r-spr)
 		except ValueError:
 			return 0
 		else:
@@ -446,7 +446,7 @@ class Battery:
 		return max(c.voltage for c in self.cells)
 
 	def get_pct_charge(self):
-		cfg = self.cfg.cell.default
+		cfg = self.cfg.cell
 
 		v = self.get_cell_max_voltage()
 		if v >= cfg.u.ext.max:
@@ -459,7 +459,7 @@ class Battery:
 		return 1
 
 	def get_pct_discharge(self):
-		cfg = self.cfg.cell.default
+		cfg = self.cfg.cell
 
 		v = self.get_cell_min_voltage()
 		if v <= cfg.u.ext.min:
@@ -642,10 +642,10 @@ class Battery:
 		self.cfg.u.scale *= adj
 		if self.num is None:
 			await self.ctrl.cmd.send(["sys","cfg"],
-				cfg=attrdict()._update(("apps",self.ctrl.name,"cfg","batt","u"), {"scale":self.cfg.u.scale}))
+				cfg=attrdict()._update((self.ctrl.name,"batt","u"), {"scale":self.cfg.u.scale}))
 		else:
 			await self.ctrl.cmd.send(["sys","cfg"],
-				cfg=attrdict()._update(("apps",self.ctrl.name,"cfg","batt",self.num,"u"), {"scale":self.cfg.u.scale}))
+				cfg=attrdict()._update((self.ctrl.name,"batt",self.num,"u"), {"scale":self.cfg.u.scale}))
 
 		self.voltage = val
 		return True
@@ -656,10 +656,10 @@ class Battery:
 		self.cfg.i.scale *= adj
 		if self.num is None:
 			await self.ctrl.cmd.send(["sys","cfg"],
-				cfg=attrdict()._update(("apps",self.ctrl.name,"cfg","batt","i"), {"scale":self.cfg.i.scale}))
+				cfg=attrdict()._update((self.ctrl.name,"batt","i"), {"scale":self.cfg.i.scale}))
 		else:
 			await self.ctrl.cmd.send(["sys","cfg"],
-				cfg=attrdict()._update(("apps",self.ctrl.name,"cfg","batt",self.num,"i"), {"scale":self.cfg.i.scale}))
+				cfg=attrdict()._update((self.ctrl.name,"batt",self.num,"i"), {"scale":self.cfg.i.scale}))
 
 		self.current = val
 		return True

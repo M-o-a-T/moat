@@ -126,9 +126,11 @@ class BatteryState:
 
 		
 	async def update_boot(self):
+		cfg = self.ctrl.batt[0].cfg
+
 		async with self.srv as l:
-			await l.set(self.bus.cap, 10)
-			await l.set(self.bus.capi, 11)
+			await l.set(self.bus.cap, cfg.cap.a)
+			await l.set(self.bus.capi, cfg.cap.n)
 			await l.set(self.bus.ncell, len(self.ctrl.cells)//len(self.ctrl.batt))
 
 		await self.update_cells()

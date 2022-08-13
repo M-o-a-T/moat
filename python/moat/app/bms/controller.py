@@ -265,7 +265,7 @@ class Controller:
 			if hdr.broadcast:
 				# The request header has not been deleted,
 				# so we need to skip it
-				off += RC.S.size
+				off += requestClass[hdr.command].S.size
 			if RCL:
 				while off < len(msg):
 					if off+RCL > len(msg):

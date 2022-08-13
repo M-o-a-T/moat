@@ -203,7 +203,6 @@ class Battery:
 
 	async def _run(self, evt):
 		async with TaskGroup() as tg:
-			await tg.spawn(self._read_update)
 
 			h,res = await self.send(RequestGetSettings())
 			if len(res) != len(self.cells):
@@ -609,16 +608,6 @@ class Battery:
 		if end is None:
 			end = self.end
 		return await self.ctrl.send(pkt,start=start, end=end, **kw)
-
-	async def _read_update(self):
-		try:
-			bms = self.cfg.bms
-		except AttributeError:
-			return  # no global BMS today
-		while True:
-			msg = await self.ctrl.req.send(["local",self.cfg.bms,"data"])
-			await self.voltage(**msg)
-
 
 	def update_global(self, u=None,i=None,w=None,**kw):
 		if u is not None:

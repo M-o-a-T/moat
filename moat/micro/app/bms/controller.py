@@ -11,7 +11,7 @@ from moat.util import ValueEvent, combine_dict, attrdict
 from moat.dbus import DbusInterface, DbusName
 import anyio
 
-from . import MessageLost
+from . import MessageLost, SpuriousData
 from .packet import *
 from .battery import Battery
 from .victron import BatteryState

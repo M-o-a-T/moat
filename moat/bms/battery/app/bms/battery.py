@@ -571,11 +571,15 @@ class Battery:
 			else:
 				logger.fatal("DANGER not ready, relay not turning off DANGER")
 
-		if self.chg_set != chg_ok or self.dis_set != dis_ok:
-			# send limits to BMS in mplex
-			self.chg_set = chg_ok
-			self.dis_set = dis_ok
+		# send limits to BMS in mplex
+		self.chg_set = chg_ok
+		self.dis_set = dis_ok
+		try:
 			await self.victron.update_dc()
+		except (TypeError,ValueError):
+			if self.is_ready():
+				raise
+
 
 
 	async def task_celltemperature(self):

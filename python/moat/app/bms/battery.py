@@ -452,27 +452,19 @@ class Battery:
 		cfg = self.cfg.cell
 
 		v = self.get_cell_max_voltage()
-		if v >= cfg.u.ext.max:
-			return 0
 		try:
-			if v > cfg.u.lim.max and cfg.u.ext.max > cfg.u.lim.max:
-				return (v-cfg.u.lim.max)/(cfg.u.ext.max-cfg.u.lim.max)
+			return max(0,min(1,(cfg.u.ext.max-v)/(cfg.u.ext.max-cfg.u.lim.max)))
 		except (ValueError,AttributeError):
-			pass
-		return 1
+			return 1
 
 	def get_pct_discharge(self):
 		cfg = self.cfg.cell
 
 		v = self.get_cell_min_voltage()
-		if v <= cfg.u.ext.min:
-			return 0
 		try:
-			if v < cfg.u.lim.min and cfg.u.ext.min < cfg.u.lim.min:
-				return (v-cfg.u.lim.max)/(cfg.u.lim.min-cfg.u.ext.min)
+			return max(0,min(1,(v-cfg.u.ext.min)/(cfg.u.lim.min-cfg.u.ext.min)))
 		except (ValueError,AttributeError):
-			pass
-		return 1
+			return 1
 
 	async def check_limits(self):
 		"""

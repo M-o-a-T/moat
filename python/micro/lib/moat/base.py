@@ -52,9 +52,13 @@ class SysCmd(BaseCmd):
 
         import msgpack
         if mode > 1:
-            f=open("/moat_fb.cfg" if mode == 3 else "/moat.cfg","rb")
-            with f:
-                cur = msgpack.unpackb(f.read())
+            try:
+                f=open("/moat_fb.cfg" if mode == 3 else "/moat.cfg","rb")
+            except FileNotFoundError:
+                cur = {}
+            else:
+                with f:
+                    cur = msgpack.unpackb(f.read())
         else:
             cur = self.base.cfg
 

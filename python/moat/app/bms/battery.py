@@ -234,7 +234,7 @@ class Battery:
 				fast = await self.check_balancing()
 				await sleep(5)
 				if not fast:
-					with anyio.move_on_after(200):
+					with anyio.move_on_after(20):
 						await self.balance_evt.wait()
 						self.balance_evt = Event()
 

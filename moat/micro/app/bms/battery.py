@@ -238,6 +238,11 @@ class Battery:
 						await self.balance_evt.wait()
 						self.balance_evt = Event()
 
+	async def config_updated(self):
+		self.balance_evt.set()
+		for c in self.cells:
+			await c.config_updated()
+
 	def trigger_balancing(self):
 		self.balance_evt.set()
 

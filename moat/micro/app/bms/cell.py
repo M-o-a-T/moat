@@ -220,6 +220,9 @@ class Cell:
 	def __repr__(self):
 		return f"‹Cell {self.path} u={0 if self.voltage is None else self.voltage :.3f}›"
 
+	async def config_updated(self):
+		pass
+
 	@property
 	def req(self):
 		return self.batt.ctrl._req

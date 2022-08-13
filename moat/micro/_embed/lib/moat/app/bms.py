@@ -39,12 +39,20 @@ class BMS:
 		self.n_w += 1
 
 		if self.val_u < cc["u"]["min"]:
+			if self.relay.value():
+				print("UL",self.val_u)
 			return False
 		if self.val_u > cc["u"]["max"]:
+			if self.relay.value():
+				print("UH",self.val_u)
 			return False
 		if self.val_i < cc["i"]["min"]:
+			if self.relay.value():
+				print("IL",self.val_i)
 			return False
 		if self.val_i > cc["i"]["max"]:
+			if self.relay.value():
+				print("IH",self.val_i)
 			return False
 		return True
 

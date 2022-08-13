@@ -173,7 +173,7 @@ class Battery:
 			self.cells.append(cell)
 
 	def __repr__(self):
-		return f"‹Batt {self.path} u={0 if self.voltage is None else self.voltage :.2f} i={0 if self.current is None else self.current :.1f}›"
+		return f"‹Batt {self.path} u={0 if self.voltage is None else self.voltage :.3f} i={0 if self.current is None else self.current :.1f}›"
 
 	@property
 	def req(self):
@@ -203,6 +203,7 @@ class Battery:
 
 	async def _run(self, evt):
 		async with TaskGroup() as tg:
+			logger.info("Talking to %s", self)
 			h,res = await self.send(RequestIdentifyModule())
 			if not h.seen:
 				raise ConfigError(f"Battery {self.start}:{self.end}: ident found no cells")
@@ -210,7 +211,7 @@ class Battery:
 			await self.send(RequestBalanceLevel(), broadcast=True)
 			h,res = await self.send(RequestGetSettings())
 			if len(res) != len(self.cells):
-				raise ConfigError(f"Battery {self.start}:{self.end}: found {len(res)} modules, not {len(self.cells)}")
+				raise ConfigError(f"Battery {self.start}:{self.end}: config found {len(res)} modules, not {len(self.cells)}")
 			for c,r in zip(self.cells,res):
 				r.to_cell(c)
 
@@ -274,7 +275,7 @@ class Battery:
 		maxv = self.get_cell_max_voltage()
 		if maxv-minv < 2*cfg.d or maxv < cfg.min:
 			# all OK. Don't do any (more) work.
-			logger.info("Bal- %.2f %.2f %s", minv,maxv,self)
+			logger.info("Bal- %.3f %.3f %.3f %.3f", minv,maxv,cfg.d,cfg.min)
 			for c in self.cells:
 				if c.balance_forced:
 					continue
@@ -286,12 +287,12 @@ class Battery:
 		thrv1 = minv + cfg.d + cfg.r * (self.cfg.cell.u.ext.max - minv)
 		thrv1 = max(thrv1,cfg.min)
 		minv = max(minv,cfg.min)
-		thrv2 = minv + 0.8*(thrv1-minv)  # hysteresis
+		thrv2 = minv + 0.8*(thrv1-minv)  # small hysteresis
 		cc = self.cells[:]
 		cc.sort(key=lambda x:x.voltage, reverse=True)
 		ret = False
 
-		logger.info("Bal %.2f %.2f %s %s", thrv1,thrv2,cc[0],cc[-1])
+		logger.info("Bal %.3f %.3f %s %s", thrv1,thrv2,cc[0],cc[-1])
 
 		want = 0
 		cur = 0

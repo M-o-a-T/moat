@@ -42,6 +42,9 @@ class BatteryState:
 		self.updated = Event()
 
 	async def config_updated(self):
+		pass
+
+	async def update_dc(self):
 		cfg = self.ctrl.batt[0].cfg
 		u_min = cfg.u.ext.min
 		u_max = cfg.u.ext.max
@@ -64,19 +67,16 @@ class BatteryState:
 			# and reduce
 			# the result accordingly.
 
-		async with self._srv as l:
-			await l.set(self.bus.vlo, float(u_min))
-			await l.set(self.bus.vhi, float(u_max))
-			await l.set(self.bus.ich, -float(i_min)*c_min)
-			await l.set(self.bus.idis, float(i_max)*c_max)
-
-
-	async def update_dc(self):
 		# update charge and discharge flags
 		chg_ok = all(b.chg_set for b in self.ctrl.batt)
 		dis_ok = all(b.dis_set for b in self.ctrl.batt)
 
 		async with self._srv as l:
+			await l.set(self.bus.vlo, float(u_min))
+			await l.set(self.bus.vhi, float(u_max))
+			await l.set(self.bus.idis, -float(i_min)*c_min)
+			await l.set(self.bus.ich, float(i_max)*c_max)
+
 			await l.set(self.bus.okchg, int(chg_ok))
 			await l.set(self.bus.okdis, int(dis_ok))
 

@@ -76,6 +76,8 @@ class Controller:
 
 	async def config_updated(self):
 		await self.victron.config_updated()
+		for b in self.batt:
+			await b.config_updated()
 
 	def add_cell(self, cell):
 		self.cells.append(cell)

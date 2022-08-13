@@ -14,7 +14,7 @@ from pprint import pformat
 import anyio
 #from distmqtt.client import open_mqttclient
 
-from . import RemoteError
+from . import RemoteError, SilentRemoteError
 from ..stacks.unix import unix_stack_iter
 from ..compat import TaskGroup, Event
 from ..util import attrdict, merge, to_attrdict
@@ -85,7 +85,10 @@ class CommandClient(Request):
 		try:
 			res = await self.mplex.send(a,d)
 		except Exception as exc:
-			logger.exception("handling %s %s %s %s",a,i,d,msg)
+			if isinstance(exc,SilentRemoteError) or (isinstance(exc,RemoteError) and exc.args and len(exc.args[0]) < 3):
+				pass
+			else:
+				logger.exception("handling %s %s %s %s",a,i,d,msg)
 			if i is None:
 				return
 			res = {'e':exc.args[0] if isinstance(exc,RemoteError) else repr(exc),'i':i}
@@ -238,6 +241,7 @@ class Multiplexer(Request):
 				delattr(self.base,"dis_"+name)
 				app.scope.cancel()
 
+		# First setup the app data structures
 		for name,v in apps.items():
 			if name in self.apps:
 				# await self.apps[name].app.config_updated()
@@ -254,16 +258,18 @@ class Multiplexer(Request):
 				self.fatal = True
 				raise
 
+		# then run them all.
 		for name,app in self.apps.items():
 			if "scope" in app:
 				continue
 			self.apps[name].scope = await tg.spawn(app.app.run)
 
+		# if app A can depend on app B, then B must queue async calls
+		# that arrive before it's up and running
 
 	async def config_updated(self):
 		await self.base.config_updated()
 		await self._setup_apps(self._tg)
-
 
 	async def _run_stack(self):
 		"""Run (and re-run) a multiplexed link."""

@@ -336,11 +336,11 @@ class Cell:
 
 	def _volt2raw(self, val):
 		if val is None or self.n_samples is None:
-			return None
+			return 0
 		return int((val - self.cfg.u.offset) / self.v_per_ADC * self.n_samples / self.v_calibration)
 
 	def _raw2volt(self, val):
-		if val is None or self.cfg.u.samples is None:
+		if val is None or self.cfg.u.samples is None or val == 0:
 			return None
 		return val * self.v_per_ADC / self.cfg.u.samples * self.v_calibration + self.cfg.u.offset
 

@@ -20,18 +20,13 @@ async def gen_apps(cfg, tg, print_exc):
     apps = []
     for name,v in cfg.get("apps",{}).items():
         try:
-            cmd = v["cmd"]
-        except KeyError:
-            cmd = None
-        else:
-            try:
-                cmd = imp(cmd)
-            except Exception as exc:
-                print("Could not load",cmd,repr(exc))
-                print_exc(exc)
-                continue
+            cmd = imp(v)
+        except Exception as exc:
+            print("Could not load",name,repr(exc))
+            print_exc(exc)
+            continue
 
-        a = (name,cmd,v.get("cfg", {}))
+        a = (name,cmd,cfg.get(name, {}))
         apps.append(a)
     return apps
 

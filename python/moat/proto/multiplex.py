@@ -244,20 +244,15 @@ class Multiplexer(Request):
 				# -- done by `self.base.config_updated`, below
 				continue
 
+			cfg = getattr(self.cfg, name, attrdict())
 			try:
-				cmd = v.cmd
-			except AttributeError:
-				logger.warning("Config: apps.%s: no command given", name)
-			else:
-				cfg = getattr(v,"cfg",attrdict())
-				try:
-					cmd = imp(cmd)(self, name, cfg, self.cfg)
-					self.apps[name] = attrdict(app=cmd)
-					setattr(self.base, "dis_"+name, cmd)
-				except Exception:
-					logger.error("Setup %s", v.cmd)
-					self.fatal = True
-					raise
+				cmd = imp(v)(self, name, cfg, self.cfg)
+				self.apps[name] = attrdict(app=cmd)
+				setattr(self.base, "dis_"+name, cmd)
+			except Exception:
+				logger.error("Setup %s", v)
+				self.fatal = True
+				raise
 
 		for name,app in self.apps.items():
 			if "scope" in app:

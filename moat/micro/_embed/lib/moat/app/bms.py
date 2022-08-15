@@ -106,17 +106,18 @@ class BMS:
 		self.val_u = (self.val_u-old_u_offset)/old_u_scale*self.adc_u_scale+self.adc_u_offset
 		self.val_i = (self.val_i-old_i_offset)/old_i_scale*self.adc_i_scale+self.adc_i_offset
 
+		await self.send_work()
+	
+	async def send_work(self):
+		if not self.cmd:
+			return
 		res = dict(
 			w=self.sum_w,
 			n=self.n_w,
-
 		)
 		self.sum_w = 0
 		self.n_w = 0
-		if self.cmd:
-			await self.cmd.request.send_nr([self.cmd.name,"work"], **res)
-
-		return res
+		await self.cmd.request.send_nr([self.cmd.name,"work"], **res)
 
 	def _set_scales(self):
 		c = self.cfg["batt"]
@@ -195,6 +196,8 @@ class BMS:
 			t = ticks_ms()
 			td = ticks_diff(self.t, t)
 			if td > 0:
+				if self.n_w >= 1000:
+					await self.send_work()
 				await sleep_ms(td)
 			else: 
 				self.t = t

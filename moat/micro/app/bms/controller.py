@@ -64,11 +64,11 @@ class Controller:
 		n = 0
 		if "batteries" in cfg:
 			for i,b in enumerate(cfg.batteries):
-				batt = Battery(self, b, gcfg, n,i)
+				batt = Battery(self, b.batt, cfg.cell, gcfg, n,i)
 				self.batt.append(batt)
 				n += b.n
 		else:
-			batt = Battery(self, cfg.batt, gcfg, n,None)
+			batt = Battery(self, cfg.batt, cfg.cell, gcfg, n,None)
 			self.batt.append(batt)
 			n += cfg.batt.n
 

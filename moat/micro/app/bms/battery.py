@@ -143,7 +143,7 @@ class Battery:
 	chg_set:bool = None
 	dis_set:bool = None
 
-	def __init__(self, ctrl, cfg, gcfg, start, num):
+	def __init__(self, ctrl, cfg, ccfg, gcfg, start, num):
 		self.name = cfg.name if "name" in cfg else "battery1"
 		self.num = num
 		if num is None:
@@ -153,6 +153,7 @@ class Battery:
 		self.ready = 0
 
 		self.cfg = cfg
+		self.ccfg = ccfg
 		self.gcfg = gcfg
 
 		self.start = start
@@ -164,10 +165,10 @@ class Battery:
 		self.cells = []
 		for c in range(self.cfg.n):
 			try:
-				ccfg = cfg.cell.cells[c]
+				cf = cfg.cell.cells[c]
 			except (AttributeError, IndexError):
-				ccfg = attrdict()
-			ccfg = combine_dict(ccfg, cfg.cell, cls=attrdict)
+				cf = attrdict()
+			ccfg = combine_dict(cf, ccfg, cls=attrdict)
 			cell = Cell(self, nr=self.start+c, path=f"/bms/{num}/{c}", cfg=ccfg, bcfg=self.cfg, gcfg=gcfg)
 			self.ctrl.add_cell(cell)
 			self.cells.append(cell)
@@ -270,7 +271,7 @@ class Battery:
 # are close to each other, thus the additional secodn threshold.
 
 	async def check_balancing(self):
-		cfg = self.cfg.cell.balance
+		cfg = self.ccfg.balance
 		minv = self.get_cell_min_voltage()
 		maxv = self.get_cell_max_voltage()
 		if maxv-minv < 2*cfg.d or maxv < cfg.min:
@@ -284,7 +285,7 @@ class Battery:
 					await c.clear_balancing()
 			return False
 
-		thrv1 = minv + cfg.d + cfg.r * (self.cfg.cell.u.ext.max - minv)
+		thrv1 = minv + cfg.d + cfg.r * (self.ccfg.u.ext.max - minv)
 		thrv1 = max(thrv1,cfg.min)
 		minv = max(minv,cfg.min)
 		thrv2 = minv + 0.8*(thrv1-minv)  # small hysteresis
@@ -423,9 +424,9 @@ class Battery:
 		# charge-balance-discharge-charge cycle
 		mi = self.get_cell_min_voltage()
 		spr = self.get_cell_max_voltage() - mi
-		r = self.cfg.cell.u.ext.max - self.cfg.cell.u.ext.min
+		r = self.ccfg.u.ext.max - self.ccfg.u.ext.min
 		try:
-			res = (mi-self.cfg.cell.u.ext.min) / (r-spr)
+			res = (mi-self.ccfg.u.ext.min) / (r-spr)
 		except ValueError:
 			return 0
 		else:

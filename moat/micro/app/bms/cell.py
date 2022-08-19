@@ -90,6 +90,10 @@ class CellInterface(DbusInterface):
 		return self.cell.balance_threshold or 0
 
 	@dbus.method()
+	def GetConfig(self) -> 'v':
+		return wrap_dbus_value(self.cell.cfg)
+
+	@dbus.method()
 	async def SetVoltage(self, data: 'd') -> 'b':
 		# update the scale appropriately
 		c = self.cell

@@ -45,27 +45,25 @@ class BatteryState:
 		pass
 
 	async def update_dc(self):
-		cfg = self.ctrl.batt[0].cfg
-		u_min = cfg.u.ext.min
-		u_max = cfg.u.ext.max
-		i_min = cfg.i.ext.min
-		i_max = cfg.i.ext.max
-		c_min = self.ctrl.batt[0].get_pct_discharge()
-		c_max = self.ctrl.batt[0].get_pct_charge()
+		b = self.ctrl.batt[0]
+		u_min = b.min_voltage * b.ccfg.u.corr
+		u_max = b.max_voltage * b.ccfg.u.corr
+		i_min = b.cfg.i.ext.min
+		i_max = b.cfg.i.ext.max
+		c_min = b.get_pct_discharge()
+		#c_max = b.get_pct_charge()
+		c_max = 1
 
 		for b in self.ctrl.batt[1:]:
 			c = b.cfg
-			u_min = max(u_min,c.u.ext.min)
-			u_max = min(u_max,c.u.ext.max)
+			u_min = max(u_min,b.min_voltage * b.ccfg.u.corr)
+			u_max = min(u_max,b.max_voltage * b.ccfg.u.corr)
 			i_min += c.i.ext.min
 			i_max += c.i.ext.max
 			c_min = min(c_min, b.get_pct_discharge())
-			c_max = min(c_max, b.get_pct_charge())
-			# This blithedly assumes that the batteries are "mostly" identical,
+			#c_max = min(c_max, b.get_pct_charge())
+			# All of this assumes that the batteries are "mostly" identical,
 			# which might be wrong.
-			# For reasonable results, measure current spread at suitable power points
-			# and reduce
-			# the result accordingly.
 
 		# update charge and discharge flags
 		chg_ok = all(b.chg_set for b in self.ctrl.batt)

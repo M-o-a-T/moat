@@ -197,7 +197,7 @@ class BatteryState:
 				connection='MoaT '+self.ctrl.gcfg.port.dev,
 				deviceinstance="1",
 				serial="123456",
-				productid="1",
+				productid=123210,
 				productname="MoaT BMS",
 				firmwareversion="0.1",
 				hardwareversion=None,

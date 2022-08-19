@@ -41,6 +41,10 @@ class BatteryInterface(DbusInterface):
 		return self.batt.voltage,self.batt.sum_voltage
 
 	@dbus.method()
+	def GetVoltageLimits(self) -> 'dd':
+		return self.batt.min_voltage, self.batt.max_voltage
+
+	@dbus.method()
 	async def Identify(self) -> 'b':
 		h,_res = await self.batt.send(RequestIdentifyModule())
 		return h.seen

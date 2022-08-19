@@ -157,6 +157,9 @@ class Battery:
 	chg_set:bool = None
 	dis_set:bool = None
 
+	umax:float = None
+	umin:float = None
+
 	def __init__(self, ctrl, cfg, ccfg, gcfg, start, num):
 		self.name = cfg.name if "name" in cfg else "battery1"
 		self.num = num
@@ -286,8 +289,8 @@ class Battery:
 
 	async def check_balancing(self):
 		cfg = self.ccfg.balance
-		minv = self.get_cell_min_voltage()
-		maxv = self.get_cell_max_voltage()
+		minv = self.cell_min_voltage
+		maxv = self.cell_max_voltage
 		if maxv-minv < 2*cfg.d or maxv < cfg.min:
 			# all OK. Don't do any (more) work.
 			logger.info("Bal- %.3f %.3f %.3f %.3f", minv,maxv,cfg.d,cfg.min)
@@ -436,8 +439,9 @@ class Battery:
 		# this is the naïve way which doesn't work at all well,
 		# but there's no better way until we do an initial
 		# charge-balance-discharge-charge cycle
-		mi = self.get_cell_min_voltage()
-		spr = self.get_cell_max_voltage() - mi
+		mi = self.cell_min_voltage
+		# spr = self.cell_max_voltage - mi
+                spr = 0
 		r = self.ccfg.u.ext.max - self.ccfg.u.ext.min
 		try:
 			res = (mi-self.ccfg.u.ext.min) / (r-spr)
@@ -463,29 +467,123 @@ class Battery:
 			v_h -= v[mp]/2
 		return v_l, (1 - v_l/v_h)*100
 
-	def get_cell_min_voltage(self):
+	@property
+	def cell_min_voltage(self):
 		return min(c.voltage for c in self.cells)
 
-	def get_cell_max_voltage(self):
+	@property
+	def cell_max_voltage(self):
 		return max(c.voltage for c in self.cells)
 
 	def get_pct_charge(self):
-		cfg = self.cfg.cell
+		cfg = self.ccfg
 
-		v = self.get_cell_max_voltage()
+		v = self.cell_max_voltage
 		try:
 			return max(0,min(1,(cfg.u.ext.max-v)/(cfg.u.ext.max-cfg.u.lim.max)))
 		except (ValueError,AttributeError):
 			return 1
 
 	def get_pct_discharge(self):
-		cfg = self.cfg.cell
+		cfg = self.ccfg
 
-		v = self.get_cell_min_voltage()
+		v = self.cell_min_voltage
 		try:
 			return max(0,min(1,(v-cfg.u.ext.min)/(cfg.u.lim.min-cfg.u.ext.min)))
 		except (ValueError,AttributeError):
 			return 1
+
+	#
+	# We define min and max absolute voltage as the current cell voltage plus
+	# the difference between the highest-charged cell and its max value.
+    #
+	# That being said maxvoltage will happily increase if warranted, but only decrease slowly.
+	# Same in reverse for minvoltage.
+	#
+	@property
+	def sum_voltage(self):
+		return sum(c.voltage for c in self.cells)
+
+	@property
+	def max_voltage(self):
+		u = 0
+		umax = self.cell_max_voltage
+		ud = self.ccfg.u.ext.max - umax
+
+		if ud < 0:
+			# owch
+			return sum(min(c.cfg.u.ext.max, c.voltage) for c in self.cells)
+
+		# ud is the voltage offset of the highest-voltage cell. 
+		# If this cell is close to 100% we risk overcharging when
+		# setting the limit higher than the current voltage plus `ud`.
+		# However if other cells are close to that (how close is controlled
+		# by `cfg.u.range`, as a factor of `ud`) we'll assume that the other
+		# cell voltages will rise also.
+
+		# vlow is the voltage below which we don't consider a cell because
+		# it's too far from the highest-voltage one.
+		vrange = self.ccfg.u.range*ud
+		vlow = umax - vrange
+		# thus vrange == umax-vlow
+		dplus = 0
+
+		for c in self.cells:
+			d = c.cfg.u.ext.max - c.voltage
+			if c.voltage > vlow:
+				# thus this scale factor is 1 for the highest-voltage cell
+				# and between 0 and 1 otherwise
+				dp = ud * (c.voltage - vlow) / vrange
+				dplus += dp
+
+		u = self.sum_voltage + dplus
+
+		# If we found a new maximum charge voltage we'll use that.
+		# Otherwise the old maximum will decay (very) slowly, so if the battery
+		# becomes less-than-perfectly-balanced after a discharge
+		# we don't use the old value.
+		if self.umax is None or self.umax < u:
+			self.umax = u
+		else:
+			self.umax += 0.001*(u-self.umax)
+		return self.umax
+
+	@property
+	def min_voltage(self):
+		# mirror of `max_voltage`
+		u = 0
+		umin = self.cell_min_voltage
+		ud = umin - self.ccfg.u.ext.min
+
+		if ud < 0:
+			# owch
+			return sum(max(c.cfg.u.ext.min, c.voltage) for c in self.cells)
+
+		vrange = self.ccfg.u.range*ud
+		vhigh = vrange + umin
+		# thus vrange == vhigh-umin
+		dplus = 0
+
+		for c in self.cells:
+			d = c.voltage - c.cfg.u.ext.min
+			if c.voltage < vhigh:
+				# thus this scale factor is 1 for the highest-voltage cell
+				# and between 0 and 1 otherwise
+				dp = ud * (vhigh - c.voltage) / vrange
+				dplus += dp
+
+		u = self.sum_voltage - dplus
+
+		# If we found a new minimum charge voltage we'll use that.
+		# Otherwise the old minimum will decay (very) slowly, so if the battery
+		# becomes less-than-perfectly-balanced after a discharge
+		# we don't use the old value.
+		if self.umin is None or self.umin > u:
+			self.umin = u
+		else:
+			self.umin += 0.001*(u-self.umin)
+		return self.umin
+
 
 	async def check_limits(self):
 		"""
@@ -495,8 +593,14 @@ class Battery:
 		dis_ok = True
 		off = False
 
+		try:
+			self.voltage + 0
+			umax = self.max_voltage
+			umin = self.min_voltage
+		except TypeError:
+			pass
+		else:
 
-		if self.voltage is not None:
 			try:
 				vsum = sum(c.voltage for c in self.cells)
 			except TypeError:
@@ -509,12 +613,12 @@ class Battery:
 					logger.warning("Voltage matches again: reported %.2f, sum %.2f", self.voltage, vsum)
 					self.msg_vsum = False
 
-			if self.voltage >= self.cfg.u.ext.max:
+			if self.voltage >= umax:
 				if not self.msg_hi:
 					logger.warning("Voltage %.2f high, no charging", self.voltage)
 					self.msg_hi = True
 				chg_ok = False
-			elif self.msg_hi and self.voltage < self.cfg.u.ext.max-0.05:
+			elif self.msg_hi and self.voltage < umax-0.05:
 				logger.warning("Voltage %.2f no longer high, charging OK", self.voltage)
 				self.msg_hi = False
 
@@ -527,12 +631,12 @@ class Battery:
 				logger.error("Overvoltage %.2f fixed", self.voltage)
 				self.msg_vhi = False
 
-			if self.voltage <= self.cfg.u.ext.min:
+			if self.voltage <= umin:
 				if not self.msg_lo:
 					logger.warning("Voltage %.2f low, no discharging", self.voltage)
 					self.msg_lo = True
 				dis_ok = False
-			elif self.msg_lo and self.voltage > self.cfg.u.ext.min+0.05:
+			elif self.msg_lo and self.voltage > umin+0.05:
 				logger.warning("Voltage %.2f no longer low, discharging OK", self.voltage)
 				self.msg_lo = False
 

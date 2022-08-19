@@ -32,8 +32,13 @@ class BatteryInterface(DbusInterface):
 		super().done()
 
 	@dbus.method()
-	def GetVoltage(self) -> 'd':
-		return self.batt.voltage
+	def GetVoltage(self) -> 'dd':
+		"""
+		Return the current voltage as measured
+		(1) at the system level
+		(2) as the sum of current cell levels
+		"""
+		return self.batt.voltage,self.batt.sum_voltage
 
 	@dbus.method()
 	async def Identify(self) -> 'b':

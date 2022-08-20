@@ -33,17 +33,16 @@ class BatteryInterface(DbusInterface):
 		super().done()
 
 	@dbus.method()
-	def GetVoltage(self) -> 'dd':
-		"""
-		Return the current voltage as measured
-		(1) at the system level
-		(2) as the sum of current cell levels
-		"""
-		return self.batt.voltage,self.batt.sum_voltage
-
-	@dbus.method()
-	def GetVoltageLimits(self) -> 'dd':
-		return self.batt.min_voltage, self.batt.max_voltage
+	def GetVoltages(self) -> 'a{sd}':
+		return dict(
+			min=self.batt.min_voltage,
+			max=self.batt.max_voltage,
+			bms=self.batt.voltage,
+			cells=self.batt.sum_voltage,
+			min_cell=self.batt.cell_min_voltage,
+			max_cell=self.batt.cell_max_voltage,
+			adj_cells=self.batt.ccfg.u.corr,
+		)
 
 	@dbus.method()
 	async def Identify(self) -> 'b':
@@ -51,7 +50,7 @@ class BatteryInterface(DbusInterface):
 		return h.seen
 	
 	@dbus.method()
-	def GetVoltages(self) -> 'ad':
+	def GetCellVoltages(self) -> 'ad':
 		return [c.voltage for c in self.batt.cells]
 
 	@dbus.method()

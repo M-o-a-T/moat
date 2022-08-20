@@ -44,15 +44,15 @@ class BatteryState:
 	async def config_updated(self):
 		pass
 
-	async def update_dc(self):
+	async def update_dc(self, init=True):
 		b = self.ctrl.batt[0]
 		u_min = b.min_voltage * b.ccfg.u.corr
 		u_max = b.max_voltage * b.ccfg.u.corr
 		i_min = b.cfg.i.ext.min
 		i_max = b.cfg.i.ext.max
 		c_min = b.get_pct_discharge()
-		#c_max = b.get_pct_charge()
-		c_max = 1
+		c_max = b.get_pct_charge()
+		fudge = 0.1 if init else 0
 
 		for b in self.ctrl.batt[1:]:
 			c = b.cfg
@@ -70,10 +70,10 @@ class BatteryState:
 		dis_ok = all(b.dis_set for b in self.ctrl.batt)
 
 		async with self._srv as l:
-			await l.set(self.bus.vlo, float(u_min))
-			await l.set(self.bus.vhi, float(u_max))
-			await l.set(self.bus.idis, -float(i_min)*c_min)
-			await l.set(self.bus.ich, float(i_max)*c_max)
+			await l.set(self.bus.vlo, float(u_min+fudge))
+			await l.set(self.bus.vhi, float(u_max+fudge))
+			await l.set(self.bus.idis, -float(i_min)*c_min+fudge)
+			await l.set(self.bus.ich, float(i_max)*c_max-fudge)
 
 			await l.set(self.bus.okchg, int(chg_ok))
 			await l.set(self.bus.okdis, int(dis_ok))
@@ -132,7 +132,7 @@ class BatteryState:
 			await l.set(self.bus.ncell, len(self.ctrl.cells)//len(self.ctrl.batt))
 
 		await self.update_cells()
-		await self.update_dc()
+		await self.update_dc(True)
 		await self.update_voltage()
 		await self.update_temperature()
 

@@ -407,7 +407,7 @@ class Battery:
 			res = await self.req.send([self.ctrl.name,"info"], gen=gen)
 			gen = res.pop("gen", 0)
 			self.update_global(**res)
-			await self.check_limits()
+			await self.check_limits(not self.is_ready())
 			await self._intf.VoltageChanged()
 			await self.victron.update_voltage()
 			self.is_ready(0x08)
@@ -425,7 +425,7 @@ class Battery:
 			for c,r in zip(self.cells,res):
 				chg = r.to_cell(c) or chg
 			if chg:
-				await self.check_limits()
+				await self.check_limits(not self.is_ready())
 				await self._intf.CellVoltageChanged()
 			self.is_ready(0x02)
 
@@ -440,7 +440,7 @@ class Battery:
 		# charge-balance-discharge-charge cycle
 		mi = self.cell_min_voltage
 		# spr = self.cell_max_voltage - mi
-                spr = 0
+		spr = 0
 		r = self.ccfg.u.ext.max - self.ccfg.u.ext.min
 		try:
 			res = (mi-self.ccfg.u.ext.min) / (r-spr)
@@ -495,7 +495,7 @@ class Battery:
 	#
 	# We define min and max absolute voltage as the current cell voltage plus
 	# the difference between the highest-charged cell and its max value.
-    #
+	#
 	# That being said maxvoltage will happily increase if warranted, but only decrease slowly.
 	# Same in reverse for minvoltage.
 	#
@@ -584,7 +584,7 @@ class Battery:
 		return self.umin
 
 
-	async def check_limits(self):
+	async def check_limits(self, init=False):
 		"""
 		Verify that the battery voltages are within spec.
 		"""
@@ -699,7 +699,7 @@ class Battery:
 		self.chg_set = chg_ok
 		self.dis_set = dis_ok
 		try:
-			await self.victron.update_dc()
+			await self.victron.update_dc(init)
 		except (TypeError,ValueError):
 			if self.is_ready():
 				raise

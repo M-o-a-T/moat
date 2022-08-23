@@ -56,7 +56,7 @@ class BMS:
 			return False
 		return True
 
-	def stat(self):
+	def stat(self, r=False):
 		res = dict(
 			u=self.val_u,
 			i=self.val_i,
@@ -64,6 +64,9 @@ class BMS:
 			r=dict(s= self.relay.value(), f= self.relay_force, l= self.live),
 			gen=self.gen,
 		)
+		if r:
+			self.sum_w = 0
+			self.n_w = 0
 		return res
 
 	async def set_relay_force(self, st):
@@ -231,10 +234,10 @@ class BMSCmd(BaseCmd):
 			return self.bms.relay.value(),self.bms.relay_force
 		await self.bms.set_relay_force(st)
 
-	async def cmd_info(self, gen=-1):
+	async def cmd_info(self, gen=-1, r=False):
 		if self.bms.gen == gen:
 			await self.bms.xmit_evt.wait()
-		return self.bms.stat()
+		return self.bms.stat(r)
 
 	def cmd_live(self):
 		self.bms.set_live()

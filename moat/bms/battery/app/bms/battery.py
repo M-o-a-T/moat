@@ -397,6 +397,11 @@ class Battery:
 			return True
 		return False
 
+	async def update_work(self):
+		res = await self.req.send([self.ctrl.name,"info"], r=True)
+		data = res["w"]
+		t = 1000/self.ctrl.cfg.poll.t
+		self.ctrl.add_work(data["s"] / t, data["n"] / t)
 
 	async def task_voltage(self):
 		"""

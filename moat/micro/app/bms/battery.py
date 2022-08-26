@@ -63,6 +63,8 @@ class BatteryInterface(DbusInterface):
 
 	@dbus.method()
 	async def ForceRelay(self, on: 'b') -> 'b':
+		self.batt.force_off = not on
+		await self.batt.victron.update_dc(False)
 		await self.batt.ctrl.req.send([self.batt.ctrl.name,"rly"], st=on)
 		return True
 
@@ -155,6 +157,7 @@ class Battery:
 
 	chg_set:bool = None
 	dis_set:bool = None
+	force_off:bool = False
 
 	umax:float = None
 	umin:float = None
@@ -738,7 +741,10 @@ class Battery:
 			end = self.end
 		return await self.ctrl.send(pkt,start=start, end=end, **kw)
 
-	def update_global(self, u=None,i=None,w=None,**kw):
+	def update_global(self, u=None,i=None,w=None,r=None,**kw):
+		if r is not None:
+			self.force_off = not r["s"]
+
 		if u is not None:
 			self.voltage = u
 

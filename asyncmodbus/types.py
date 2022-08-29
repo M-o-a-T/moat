@@ -23,9 +23,50 @@ class BaseValue:
     """
 
     len = 0
+    value = None
 
-    def __call__(self):
-        raise RuntimeError("This value doesn't.")
+    def _decode(self, regs):
+        raise NotImplementedError
+
+    def _encode(self, value):
+        raise NotImplementedError
+
+    def decode(self, regs):
+        self.value = self._decode(regs)
+
+    def encode(self):
+        return self._encode(self.value)
+
+    def __str__(self):
+        return f'‹{self.value}›'
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__}:{self.value}>'
+
+
+class _Signed:
+    """A mix-in for signed integers."""
+    def _decode(self, regs):
+        res = super()._decode(regs)
+        if res & 1<<(self.len*16-1):
+            res -= 1<<(self.len*16)
+        return res
+
+    def _encode(self, value):
+        if value < 0:
+            value += 1<<(self.len*16)
+        return super()._encode(value)
+
+class _Swapped:
+    """A mix-in to byteswap the Modbus data."""
+    def _decode(self, regs):
+        regs.reverse()
+        return super()._decode(regs)
+
+    def _encode(self, value):
+        regs = super()._encode(value)
+        regs.reverse()
+        return regs
 
 
 class InaccessibleValue(BaseValue):  # duck-types but does NOT interit BaseValue
@@ -41,46 +82,38 @@ class InaccessibleValue(BaseValue):  # duck-types but does NOT interit BaseValue
         self.len = len
 
 
-@singleton
 class IntValue(BaseValue):
     """Simplest-possible value, one register.
-
-    This is a BaseValue instance.
     """
 
     len = 1
 
-    def __call__(self, regs):
+    def _decode(self, regs):
         return regs[0]
 
+    def _encode(self, value):
+        return (value,)
 
-@singleton
+
 class LongValue(BaseValue):
     """32-bit integer, two registers, standard (big-endian) word order.
-
-    This is a BaseValue instance.
     """
 
     len = 2
 
-    def __call__(self, regs):
+    def _decode(self, regs):
         return regs[0] * 65536 + regs[1]
 
+    def _encode(self, value):
+        return (value & 0xFFFF, value >> 16)
 
-@singleton
-class SwappedLongValue(BaseValue):
+class SwappedLongValue(_Swapped, LongValue):
     """32-bit integer, two registers, little-endian word order.
 
     This is a BaseValue instance.
     """
+    pass
 
-    len = 2
-
-    def __call__(self, regs):
-        return regs[1] * 65536 + regs[0]
-
-
-@singleton
 class QuadValue(BaseValue):
     """64-bit integer, four registers, standard (big-endian) word order.
 
@@ -89,163 +122,93 @@ class QuadValue(BaseValue):
 
     len = 4
 
-    def __call__(self, regs):
-        return ((regs[0] * 65536 + regs[1]) * 65536 + regs[2]) * 65536 + regs[3]
+    def _decode(self, regs):
+        return (((((regs[0] << 16) + regs[1]) << 16) + regs[2]) << 16) + regs[3]
+
+    def _encode(self, value):
+        return (
+            value & 0xFFFF,
+            (value >> 16) & 0xFFFF,
+            (value >> 32) & 0xFFFF,
+            (value >> 48) & 0xFFFF,
+        )
 
 
-@singleton
-class SwappedQuadValue(BaseValue):
+class SwappedQuadValue(_Swapped, QuadValue):
     """64-bit integer, four registers, little-endian word order.
-
-    This is a BaseValue instance.
     """
-
-    len = 4
-
-    def __call__(self, regs):
-        return ((regs[3] * 65536 + regs[2]) * 65536 + regs[1]) * 65536 + regs[0]
+    pass
 
 
-@singleton
-class SignedIntValue(BaseValue):
+class SignedIntValue(_Signed, IntValue):
     """one register, signed.
-
-    This is a BaseValue instance.
     """
+    pass
 
-    len = 1
-
-    def __call__(self, regs):
-        res = regs[0]
-        if res >= 1 << 15:
-            res -= 1 << 16
-        return res
-
-
-@singleton
-class SignedLongValue(BaseValue):
+class SignedLongValue(_Signed, LongValue):
     """two registers, signed.
-
-    This is a BaseValue instance.
     """
-
-    len = 2
-
-    def __call__(self, regs):
-        res = regs[0] * 65536 + regs[1]
-        if res >= 1 << 31:
-            res -= 1 << 32
-        return res
+    pass
 
 
-@singleton
-class SwappedSignedLongValue(BaseValue):
+class SwappedSignedLongValue(_Signed, _Swapped, BaseValue):
     """two registers, signed, swapped.
-
-    This is a BaseValue instance.
     """
-
-    len = 2
-
-    def __call__(self, regs):
-        res = regs[1] * 65536 + regs[0]
-        if res >= 1 << 31:
-            res -= 1 << 32
-        return res
-
+    pass
 
 SignedSwappedLongValue = SwappedSignedLongValue
 
 
-@singleton
-class SignedQuadValue(BaseValue):
+class SignedQuadValue(_Signed, QuadValue):
     """four registers, signed.
-
-    This is a BaseValue instance.
     """
-
-    len = 4
-
-    def __call__(self, regs):
-        res = ((regs[0] * 65536 + regs[1]) * 65536 + regs[2]) * 65536 + regs[3]
-        if res >= 1 << 63:
-            res -= 1 << 64
-        return res
+    pass
 
 
-@singleton
-class SwappedSignedQuadValue(BaseValue):
+class SwappedSignedQuadValue(_Signed, _Swapped, QuadValue):
     """four registers, signed, swapped.
-
-    This is a BaseValue instance.
     """
-
-    len = 4
-
-    def __call__(self, regs):
-        res = ((regs[3] * 65536 + regs[2]) * 65536 + regs[1]) * 65536 + regs[0]
-        if res >= 1 << 63:
-            res -= 1 << 64
-        return res
-
+    pass
 
 SignedSwappedQuadValue = SwappedSignedQuadValue
 
 
-@singleton
 class FloatValue(BaseValue):
     """network-ordered floating point.
-
-    This is a BaseValue instance.
     """
 
     len = 2
 
-    def __call__(self, regs):
-        return struct.unpack(">f", struct.pack(">2H", *regs))
+    def _decode(self, regs):
+        return struct.unpack(">f", struct.pack(">2H", *regs))[0]
+
+    def _encode(self, value):
+        return struct.pack(">f", value)
 
 
-@singleton
-class SwappedFloatValue(BaseValue):
+class SwappedFloatValue(_Swapped, FloatValue):
     """network-ordered floating point.
-
-    This is a BaseValue instance.
     """
-
-    len = 2
-
-    def __call__(self, regs):
-        return struct.unpack(">f", struct.pack(">2H", regs[1], regs[0]))
+    pass
 
 
-@singleton
 class DoubleValue(BaseValue):
     """network-ordered accurate floating point.
-
-    This is a BaseValue instance.
     """
 
     len = 4
 
-    def __call__(self, regs):
-        return struct.unpack(
-            ">d", struct.pack(">4H", regs[0], regs[1], regs[2], regs[3])
-        )
+    def _decode(self, regs):
+        return struct.unpack(">d", struct.pack(">4H", *regs))[0]
+
+    def _encode(self, value):
+        return struct.pack(">d", value)
 
 
-@singleton
-class SwappedDoubleValue(BaseValue):
+class SwappedDoubleValue(_Swapped, DoubleValue):
     """network-ordered accurate floating point.
-
-    This is a BaseValue instance.
     """
-
-    len = 4
-
-    def __call__(self, regs):
-        return struct.unpack(
-            ">d", struct.pack(">4H", regs[3], regs[2], regs[1], regs[0])
-        )
+    pass
 
 
 class TypeCodec:

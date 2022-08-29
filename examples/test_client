@@ -87,6 +87,7 @@ async def run(host, port, unit, kind, start, num, type, debug):
         except Exception as exc:
             log.exception(f"Problem:{repr(exc)}")
         else:
+            breakpoint()
             print(res)
 
 

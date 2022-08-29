@@ -303,16 +303,20 @@ class Unit:
 
 
 class Slot:
-    """This is a single "atomic" access to Modbus. The system will try to
-    fetch the values in this slot using as few+small requests as possible.
-
-    Add values to this slot with `register`. Execute the slot with `run`.
+    """This class represents a single "atomic" access to Modbus. The system
+    will try to fetch all values in this slot, using as few+small requests
+    as possible.
 
     Slots are always linked to a unit. Use
 
         >>> slot = unit.slot("20seconds")
 
     to access/create a slot.
+
+    The intended usecase is that some values should be retrieved at
+    different intervals than others. Thus the user creates several slots,
+    adds the required fields to them, and then calls their `run` method
+    when required.
     """
 
     _run_scope = None
@@ -335,7 +339,7 @@ class Slot:
     def add(self, typ:TypeCodec, offset:int, val:BaseValue):
         """Add a field to be requested.
 
-        :param typ: The TypeCodec instance to use.
+        :param typ: The `TypeCodec` instance to use.
         :param offset: The value's numeric offset, zero-based.
         :param val: The data type (baseValue instance)
 
@@ -345,13 +349,13 @@ class Slot:
             k = self.modes[typ]
         except KeyError:
             self.modes[typ] = k = ValueList(self, typ)
-        return k.add(offset, val)
+        return k.add(offset, val())
 
-    def delete(self, typ:TypeCodec, offset:int):
-        """Delete a field to be requested.
+    def remove(self, typ:TypeCodec, offset:int):
+        """Remove a field to be requested.
 
         :param typ: the `TypeCodec` to use
-        :param offset: the offset where the value has been added
+        :param offset: the offset where the value is located
         """
         try:
             k = self.modes[typ]
@@ -489,7 +493,8 @@ class ValueList:
                 off = 1
             else:
                 off = val.len
-                res[start] = val(r[:off])
+                val.decode(r[:off])
+                res[start] = val
             start += off
             r = r[off:]
 

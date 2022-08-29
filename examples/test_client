@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""
+Pymodbus Synchronous Client Examples
+--------------------------------------------------------------------------
+
+The following is an example of how to use the synchronous modbus client
+implementation from pymodbus.
+
+It should be noted that the client can also be used with
+the guard construct that is available in python 2.5 and up::
+
+    with ModbusClient('127.0.0.1') as client:
+        result = client.read_coils(1,10)
+        print result
+"""
+import asyncclick as click
+import struct
+import anyio
+from pymodbus.client.sync import ModbusTcpClient as ModbusClient
+from pymodbus.pdu import ExceptionResponse
+
+from asyncmodbus.client import ModbusClient
+from asyncmodbus.types import Coils,DiscreteInputs,HoldingRegisters,InputRegisters
+from asyncmodbus.types import IntValue,LongValue,SwappedLongValue,SignedIntValue,SignedLongValue,SwappedSignedLongValue,FloatValue,SwappedFloatValue,DoubleValue,SwappedDoubleValue,SignedQuadValue,QuadValue,SwappedQuadValue,SwappedSignedQuadValue
+map_kind = {'c':Coils,'d':DiscreteInputs,'h':HoldingRegisters,'i':InputRegisters}
+map_type = {
+        'raw': IntValue,
+        'u1': IntValue,
+        'U1': IntValue,
+        'u2': LongValue,
+        'U2': SwappedLongValue,
+        'u4': QuadValue,
+        'U4': SwappedQuadValue,
+        's1': SignedIntValue,
+        'S1': SignedIntValue,
+        's2': SignedLongValue,
+        'S2': SwappedSignedLongValue,
+        's4': SignedQuadValue,
+        'S4': SwappedSignedQuadValue,
+        'f2': FloatValue,
+        'F2': SwappedFloatValue,
+        'f4': DoubleValue,
+        'F4': SwappedDoubleValue,
+        }
+
+import logging
+FORMAT = ('%(asctime)-15s %(threadName)-15s '
+          '%(levelname)-8s %(module)-15s:%(lineno)-8s %(message)s')
+logging.basicConfig(format=FORMAT)
+log = logging.getLogger()
+log.setLevel(logging.WARN)
+
+UNIT = 0x1
+
+def get_len(typ):
+    if typ in {"r","raw"}:
+        return 1
+    return int(typ[1:])
+
+@click.command(context_settings=dict(show_default=True))
+@click.option('--host','-h', default="localhost", help="destination host")
+@click.option('--port','-p', type=int, default=502, help="destination port")
+@click.option('--unit','-u', type=int, default=1, help="unit to query")
+@click.option('--kind','-k', default="i", help="query type: input, discrete, hold, coil")
+@click.option('--start','-s', default=0, help="starting register")
+@click.option('--num','-n', type=int, default=1, help="number of values")
+@click.option('--type','-t', default="raw", help="value type: s1,s2,s4,u1,u2,u4,f2,f4,raw; Sx/Fx=swapped")
+@click.option('--debug','-d', is_flag=True, help="Log debug messages")
+async def run(host, port, unit, kind, start, num, type, debug):
+    if debug:
+        log.setLevel(logging.DEBUG)
+
+    async with ModbusClient() as g:
+        h = g.host(host,port)
+        u = h.unit(unit)
+        s = u.slot("default")
+
+        k = map_kind[kind[0]]
+        t = map_type[type]
+        while num > 0:
+            s.add(k,start,t)
+            start += t.len
+            num -= 1
+
+        try:
+            res = await s.run()
+        except Exception as exc:
+            log.exception(f"Problem:{repr(exc)}")
+        else:
+            print(res)
+
+
+if __name__ == "__main__":
+    run()

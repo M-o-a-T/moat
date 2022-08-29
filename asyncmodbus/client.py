@@ -4,57 +4,28 @@ modbus access
 import anyio
 import socket
 import struct
-from anyio.exceptions import IncompleteRead, ClosedResourceError
-from async_generator import async_generator, yield_, asynccontextmanager
-from contextlib import suppress
+from anyio import IncompleteRead, ClosedResourceError
+from anyio.abc import SocketAttribute
+from contextlib import asynccontextmanager
 from functools import partial
+from distkv.util import CtxObj, Queue, ValueEvent
+from typing import Dict, Any
+
+from .types import TypeCodec, BaseValue, InaccessibleValue
 
 from pymodbus.compat import byte2int
 from pymodbus.exceptions import ModbusIOException
 from pymodbus.factory import ClientDecoder
 from pymodbus.transaction import ModbusSocketFramer
-from pymodbus.client.common import (
-    ReadDiscreteInputsRequest,
-    ReadDiscreteInputsResponse,
-    ReadCoilsRequest,
-    ReadCoilsResponse,
-    ReadHoldingRegistersRequest,
-    ReadHoldingRegistersResponse,
-    ReadInputRegistersRequest,
-    ReadInputRegistersResponse,
-)
 
-from ..config.prometheus_metrics import increment_shared_metric
-from .util import ValueEvent
 
 import logging
 
 _logger = logging.getLogger(__name__)
 
 __all__ = [
-    "ColGate",
-    "new_colgate",
+    "ModbusClient",
     "ModbusError",
-    "Coils",
-    "DiscreteInputs",
-    "HoldingRegisters",
-    "InputRegisters",
-    "InaccessibleValue",
-    "IntValue",
-    "LongValue",
-    "SwappedLongValue",
-    "SignedIntValue",
-    "SignedLongValue",
-    "SwappedSignedLongValue",
-    "SignedSwappedLongValue",
-    "FloatValue",
-    "SwappedFloatValue",
-    "DoubleValue",
-    "SwappedDoubleValue",
-    "QuadValue",
-    "SwappedQuadValue",
-    "SignedQuadValue",
-    "SwappedSignedQuadValue",
 ]
 
 # seconds to wait when disconnecting/reconnecting TCP for different unitID
@@ -63,62 +34,37 @@ RECONNECT_TIMEOUT = 10
 CHECK_STREAM_TIMEOUT = 0.001
 
 
-class ColGate:
-    """The main Gate object. Do not instantiate directly; use
-    `async with new_colgate() as gate:`.
+class ModbusClient(CtxObj):
+    """The main bus handler. Use as
+    `async with ModbusClient() as bus:`.
     """
 
-    def __init__(self, tg):
-        self.taskgroup = tg
+    _tg = None
+
+    def __init__(self):
         self.hosts = {}
 
-    def get_host(self, addr, port=502):
-        """Return a host object for to this address+port.
+    @asynccontextmanager
+    async def _ctx(self):
+        async with anyio.create_task_group() as self._tg:
+            try:
+                yield self
+            finally:
+                tg,self._tg = self._tg,None
+                h,self.hosts = self.hosts,{}
+                tg.cancel_scope.cancel()
+
+    def host(self, addr, port=502):
+        """Return a host object for connections to this address+port.
         The host will be created if it has not been seen before.
         """
         try:
             return self.hosts[(addr, port)]
         except KeyError:
-            host = Host(self, addr, port)
-            self.hosts[(addr, port)] = host
-            return host
+            return Host(self, addr, port)
 
     def _del_host(self, host):
-        if self.hosts is None:
-            return
         del self.hosts[(host.addr, host.port)]
-
-    async def aclose(self):
-        """Close and remove all hosts.
-        """
-        if self.hosts is None:
-            return
-        h, self.hosts = self.hosts, None
-        async with anyio.open_cancel_scope(shield=True):
-            for host in h.values():
-                await host.aclose()
-        await self.taskgroup.cancel_scope.cancel()
-
-
-@asynccontextmanager
-@async_generator
-async def new_colgate():
-    """Create a new ColGate client.
-
-    Usage:
-
-        >>> async with new_colgate() as gate:
-        ...     host = gate.add_host("foo.example")
-        ...     pass  # etc.
-    """
-    async with anyio.create_task_group() as tg:
-        gate = ColGate(tg)
-        try:
-            await yield_(gate)
-        finally:
-            async with anyio.open_cancel_scope(shield=True):
-                await tg.cancel_scope.cancel()
-                await gate.aclose()
 
 
 class ModbusError(RuntimeError):
@@ -129,15 +75,18 @@ class ModbusError(RuntimeError):
 
 
 class Host:
-    """This is a single host which ColGate talks to.
+    """This is a single host which asyncmodbus talks to.
     It has a number of modbus units (attribute 'units'.
     Simply indexing a host will return a unit object
     (existing or new); use the unit number as index.
 
     Do not instantiate directly; instead, use
 
-        >>> host = gate["foo.example"]
+        >>> host = client.host("foo.example")
     """
+    _scope = None
+
+    max_req_len = 50  # max number of registers to fetch w/ one request
 
     def __init__(self, gate, addr, port):
         self.gate = gate
@@ -146,154 +95,93 @@ class Host:
         self.units = {}
         self.framer = ModbusSocketFramer(ClientDecoder())
 
-        self._connect_lock = anyio.create_lock()
-        self._wqueue = anyio.create_queue(100)
+        self._connect_lock = anyio.Lock()
+        self._wqueue = Queue(100)
         self.stream = None
-        self.transactions = {}
+        self._transactions = {}
         self._tid = 0
+        self._tg = None
         self._read_scope = None
-        self._write_scope = None
 
         self.timeout = 10
+        self._connected = anyio.Event()
 
-    def __getitem__(self, unit):
+        gate._tg.start_soon(self._reader)
+
+    def unit(self, unit):
         try:
             return self.units[unit]
         except KeyError:
-            if unit < 1 or unit > 255:
-                raise ValueError(f"Bus units must be in range 1…255, not {unit}")
-            u = Unit(self, unit)
-            self.units[unit] = u
-            return u
+            if unit < 1 or unit > 247:
+                raise ValueError(f"Bus units must be in range 1…247, not {unit}")
+            return Unit(self, unit)
+
+    def _add_unit(self, unit):
+        self.units[unit.unit] = unit
 
     def _del_unit(self, unit):
         if self.units is None:
             return
         del self.units[unit.unit]
 
-    # read/write tasks #
 
-    async def _reader(self, val, transaction_id):
-        async with anyio.open_cancel_scope() as scope:
-            await val.set(scope)
-            try:
-                async with anyio.fail_after(self.timeout):
-                    data = await self.stream.receive_some(4096)
-                if data == b"":
-                    raise ClosedResourceError
-            except (
-                StopAsyncIteration,
-                TimeoutError,
-                IncompleteRead,
-                ConnectionRefusedError,
-                ConnectionResetError,
-                ClosedResourceError,
-            ) as exc:
-                # add error message and set the value of request to the exception object
-                request = self.transactions.pop(transaction_id)
-                exc.message = "Modbus read error response in _reader"
-                await request.__value.set(exc)
+    # reader task #
 
-                # disconnect in case of any error
-                await self.disconnect()
+    async def _reader(self):
+        async with anyio.create_task_group() as self._tg:
+            self._read_scope = self._tg.cancel_scope
+            while True:
+                if self.stream is None:
+                    self.stream = await anyio.connect_tcp(self.addr, self.port)
+                    # set so_linger to force sending RST instead of FIN
+                    self.stream.extra(SocketAttribute.raw_socket).setsockopt(
+                        socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0)
+                    )
+                    self._connected.set()
 
-            else:
-                _logger.debug("recv: " + " ".join([hex(byte2int(x)) for x in data]))
-                # unit = self.framer.decode_data(data).get("uid", 0)
-                replies = []
-
-                def addReply(r):
-                    if r is not None:
-                        replies.append(r)
-
-                # check for decoding errors
                 try:
+                    data = await self.stream.receive(4096)
+
+                    _logger.debug("recv: " + " ".join([hex(byte2int(x)) for x in data]))
+
+                    # unit = self.framer.decode_data(data).get("uid", 0)
+                    replies = []
+
+                    def addReply(r):
+                        if r is not None:
+                            replies.append(r)
+
+                    # check for decoding errors
                     self.framer.processIncomingPacket(
                         data, addReply, unit=0, single=True
                     )  # bah
-                except ModbusIOException as exc:
-                    request = self.transactions.pop(transaction_id)
-                    exc.message = "Error in IncomingPacket's decoding"
-                    await request.__value.set(exc)
 
-                    await self.disconnect()
+                except (
+                    IncompleteRead,
+                    ConnectionRefusedError,
+                    ConnectionResetError,
+                    ClosedResourceError,
+                    ModbusIOException,
+                ) as exc:
+                    if self._connected.is_set():
+                        self._connected = anyio.Event()
+                    _logger.exception("Read from %s:%d", self.host,self.port)
 
-                for reply in replies:
-                    tid = reply.transaction_id
-                    try:
-                        request = self.transactions.pop(tid)
-                    except KeyError:
-                        _logger.info(f"Unrequested message: {reply}")
-                    else:
-                        await request.__value.set(reply)
+                    t,self._transactions = self._transactions,None
+                    for req in t.values():
+                        req.__value.set(exc)
 
-    async def start(self):
-        """Start talking to this host. Returns when the connection is
-        established, raises an error if not possible.
-
-        TODO: if the connection subsequently drops, it's re-established
-        transparently.
-
-        This is called automatically as soon as the first request is
-        started.
-        """
-        if self._write_scope is not None:
-            return
-
-        v_w = ValueEvent()
-        await self.gate.taskgroup.spawn(self._writer, v_w)
-        self._write_scope = await v_w.get()
-
-    async def _writer(self, val):
-        async with anyio.open_cancel_scope() as scope:
-            await val.set(scope)
-            while True:
-                request = await self._wqueue.get()
-                packet = self.framer.buildPacket(request)
-                self.transactions[request.transaction_id] = request
-
-                # check if stream was closed by remote host
-                if self.stream:
-                    try:
-                        # stream is working if TimeoutError is raised
-                        with suppress(TimeoutError):
-                            async with anyio.fail_after(CHECK_STREAM_TIMEOUT):
-                                data = await self.stream.receive_some(4096)
-                                if data == b"":
-                                    raise ClosedResourceError
-                    except Exception as exc:
-                        await self.stream.close()  # trigger reconnecting if stream was closed by remote host
-                        self.stream = None
-                        _logger.debug(
-                            f"{repr(exc)}: Stream was closed by remote host {self.addr}:{self.port}"
-                        )
-
-                try:
-                    if self.stream == None:
-                        self.stream = await anyio.connect_tcp(self.addr, self.port)
-                        # set so_linger to force sending RST instead of FIN
-                        self.stream.setsockopt(
-                            socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0)
-                        )
-
-                    await self.stream.send_all(packet)
-
-                except OSError as exc:
-                    # add error message and set the value of request to the exception object
-                    request = self.transactions.pop(request.transaction_id)
-                    exc.message = "TCP error in _writer"
-                    await request.__value.set(exc)
-
-                    # disconnect in case of error
                     await self.disconnect()
 
                 else:
-                    # start _reader task
-                    v_r = ValueEvent()
-                    await self.gate.taskgroup.spawn(
-                        self._reader, v_r, request.transaction_id
-                    )
-                    self._read_scope = await v_r.get()
+                    for reply in replies:
+                        tid = reply.transaction_id
+                        try:
+                            request = self._transactions.pop(tid)
+                        except KeyError:
+                            _logger.info(f"Unrequested message: {reply}")
+                        else:
+                            request.__value.set(reply)
 
     async def aclose(self):
         """Stop talking and remove from ColGate.
@@ -302,27 +190,20 @@ class Host:
         """
         if self.gate is None:
             return
+        self.gate._del_host(self)
+        self.gate = None
+
         u, self.units = self.units, None
         for unit in u.values():
             await unit.aclose()
 
-        self.gate._del_host(self)
-        self.gate = None
-
-        if self.stream is None:
-            return
-
-        if self._write_scope is not None:
-            await self._write_scope.cancel()
-            self._write_scope = None
         if self._read_scope is not None:
-            await self._read_scope.cancel()
+            self._read_scope.cancel()
             self._read_scope = None
 
-        try:
-            await self.stream.close()
-        finally:
-            self.stream = None
+        s,self.stream = self.stream,None
+        if s:
+            await s.close()
 
     # main entry point #
 
@@ -332,20 +213,14 @@ class Host:
 
     async def disconnect(self):
         """Close the TCP connection and set `self.stream = None`."""
-        if self._write_scope:
-            await self._write_scope.cancel()
-            self._write_scope = None
-        if self._read_scope:
-            await self._read_scope.cancel()
-            self._read_scope = None
-        if self.stream:
-            await self.stream.close()
-            self.stream = None
+        s,self.stream = self.stream,None
+        if s:
+            await s.close()
 
         # delay to give the device the chance to reinitialize
         await anyio.sleep(DISCONNECT_DELAY)
 
-    async def execute(self, request, **kwargs):
+    async def execute(self, request):
         """
         Send a pymodbus request and wait for / return the reply.
         """
@@ -355,22 +230,22 @@ class Host:
             packet_info = " ".join([hex(byte2int(x)) for x in packet])
             _logger.debug(f"Gateway {self.addr}:{self.port} received: {packet_info}")
 
-        async with self._connect_lock:
-            await self.start()  # will create the tasks or return immediately if already created
+        # make the modbus request
+        request.__value = ValueEvent()
+        self._transactions[request.transaction_id] = request
 
-            # make the modbus request
-            request.__value = ValueEvent()
-            await self._wqueue.put(request)
-            increment_shared_metric("modbus_requests")
+        try:
+            await self._connected.wait()
+            packet = self.framer.buildPacket(request)
+            await self.stream.send(packet)
+            res = await request.__value.get()
+        except BaseException as exc:
+            _logger.error(
+                f"Gateway {self.addr}:{self.port} not replied: {repr(exc)}"
+            )
 
-            try:
-                res = await request.__value.get()
-            except BaseException as exc:
-                _logger.error(
-                    f"Gateway {self.addr}:{self.port} not replied: {repr(exc)}"
-                )
-                increment_shared_metric("modbus_failed_responses")
-                raise
+            raise
+        else:
             if hasattr(res, "registers"):
                 registers_info = " ".join([hex(byte2int(x)) for x in res.registers])
                 _logger.debug(
@@ -378,14 +253,22 @@ class Host:
                 )
             else:
                 _logger.debug(f"Gateway {self.addr}:{self.port} replied: {res}")
-
             return res
+
+        finally:
+            self._transactions.pop(request.transaction_id, None)
 
 
 class Unit:
     """This is a single modbus unit. It has any number of time slots
     (attribute 'slots'). Simply indexing a unit will return a timeslot
-    object (existing or new). You can use any hashable as index.
+    object (existing or new). You can use anything hashable as the index.
+
+    Units are always linked to a host. Use
+
+        >>> unit = host.unit(1)
+
+    to access/create a unit.
     """
 
     def __init__(self, host, unit):
@@ -393,7 +276,7 @@ class Unit:
         self.unit = unit
         self.slots = {}
 
-    def __getitem__(self, slot):
+    def slot(self, slot):
         try:
             return self.slots[slot]
         except KeyError:
@@ -402,8 +285,6 @@ class Unit:
             return s
 
     def _del_slot(self, slot):
-        if self.slots is None:
-            return
         del self.slots[slot.slot]
 
     async def aclose(self):
@@ -422,14 +303,16 @@ class Unit:
 
 
 class Slot:
-    """This is a single "atomic" access to Modbus. ColGate will try to
+    """This is a single "atomic" access to Modbus. The system will try to
     fetch the values in this slot using as few+small requests as possible.
 
     Add values to this slot with `register`. Execute the slot with `run`.
 
-    Do not instantiate this class direct,y; instead, use
+    Slots are always linked to a unit. Use
 
-    >>> slot = unit["20seconds"]
+        >>> slot = unit.slot("20seconds")
+
+    to access/create a slot.
     """
 
     _run_scope = None
@@ -449,12 +332,13 @@ class Slot:
                 return False
         return True
 
-    def add(self, typ, offset, val):
+    def add(self, typ:TypeCodec, offset:int, val:BaseValue):
         """Add a field to be requested.
 
         :param typ: The TypeCodec instance to use.
-        :param offset: The value's numeric offset
+        :param offset: The value's numeric offset, zero-based.
         :param val: The data type (baseValue instance)
+
         `val` is the decoder (subclass of `BaseValue`).
         """
         try:
@@ -463,7 +347,7 @@ class Slot:
             self.modes[typ] = k = ValueList(self, typ)
         return k.add(offset, val)
 
-    def delete(self, typ, offset):
+    def delete(self, typ:TypeCodec, offset:int):
         """Delete a field to be requested.
 
         :param typ: the `TypeCodec` to use
@@ -498,7 +382,7 @@ class Slot:
         for vl in m.values():
             vl.close()
 
-    async def run(self):
+    async def run(self) -> Dict[TypeCodec, Dict[int, Any]]:
         """
         Send a message reading these values to the bus.
         Returns a (type,(offset,value)) dict-of-dicts.
@@ -516,7 +400,7 @@ class Slot:
                 for typ, vl in self.modes.items():
                     res[typ] = r = {}
                     try:
-                        await tg.spawn(partial(vl.run, res=r))
+                        tg.start_soon(partial(vl.run, res=r))
                     except ModbusError as r:
                         res[typ] = r.result
             if self.unit is None:
@@ -531,7 +415,8 @@ class ValueList:
 
     Do not instantiate directly; used implicitly by
 
-    >>> slot.add(InputRegisters, 2, IntValue)
+        >>> slot.add(InputRegisters, 2, IntValue)
+
     """
 
     def __init__(self, slot, kind):
@@ -559,16 +444,13 @@ class ValueList:
             elif start is None:
                 start = offset
                 cur = start + val.len
-            elif cur == offset and (cur + val.len - start) <= 125:
+            elif cur == offset and (cur + val.len - start) <= self.slot.unit.host.max_req_len:
                 cur += val.len
             else:
                 yield (start, cur - start)
                 start = offset
                 cur = start + val.len
-            # TODO cache the result
-            # TODO reduce code duplication
-            # TODO split when a length is >120
-            # TODO don't open a new range when there's a gap (and enough space)
+
         if cur is not None:
             yield (start, cur - start)
 
@@ -582,7 +464,7 @@ class ValueList:
             res = {}
         async with anyio.create_task_group() as tg:
             for start, length in self.ranges():
-                await tg.spawn(partial(self.run_one, start, length, res=res))
+                tg.start_soon(partial(self.run_one, start, length, res=res))
         return res
 
     async def run_one(self, start, length, *, res=None):
@@ -590,7 +472,7 @@ class ValueList:
         if res is None:
             res = {}
         u = self.slot.unit
-        msg = self.kind.coder(address=start, count=length, unit=u.unit)
+        msg = self.kind.encoder(address=start, count=length, unit=u.unit)
 
         # handle according to reply type
         r = await u.host.execute(msg)
@@ -617,301 +499,3 @@ class ValueList:
         self.slot = None
         self.values = None
 
-
-def singleton(x):
-    x = x()
-    return x
-
-
-class BaseValue:
-    """Base class for reading a single value.
-
-    Do not instantiate.
-    """
-
-    len = 0
-
-    def __call__(self):
-        raise RuntimeError("This value doesn't.")
-
-
-class InaccessibleValue(BaseValue):  # duck-types but does NOT interit BaseValue
-    """This register range must not be accessed.
-
-    Use an instance of this type (with appropriate length)
-    to force splitting a request into multiple parts.
-
-    :param len: The length of the block that may not be accessed.
-    """
-
-    def __init__(self, len):
-        self.len = len
-
-
-@singleton
-class IntValue(BaseValue):
-    """Simplest-possible value, one register.
-
-    This is a BaseValue instance.
-    """
-
-    len = 1
-
-    def __call__(self, regs):
-        return regs[0]
-
-
-@singleton
-class LongValue(BaseValue):
-    """32-bit integer, two registers, standard (big-endian) word order.
-
-    This is a BaseValue instance.
-    """
-
-    len = 2
-
-    def __call__(self, regs):
-        return regs[0] * 65536 + regs[1]
-
-
-@singleton
-class SwappedLongValue(BaseValue):
-    """32-bit integer, two registers, little-endian word order.
-
-    This is a BaseValue instance.
-    """
-
-    len = 2
-
-    def __call__(self, regs):
-        return regs[1] * 65536 + regs[0]
-
-
-@singleton
-class QuadValue(BaseValue):
-    """64-bit integer, four registers, standard (big-endian) word order.
-
-    This is a BaseValue instance.
-    """
-
-    len = 4
-
-    def __call__(self, regs):
-        return ((regs[0] * 65536 + regs[1]) * 65536 + regs[2]) * 65536 + regs[3]
-
-
-@singleton
-class SwappedQuadValue(BaseValue):
-    """64-bit integer, four registers, little-endian word order.
-
-    This is a BaseValue instance.
-    """
-
-    len = 4
-
-    def __call__(self, regs):
-        return ((regs[3] * 65536 + regs[2]) * 65536 + regs[1]) * 65536 + regs[0]
-
-
-@singleton
-class SignedIntValue(BaseValue):
-    """one register, signed.
-
-    This is a BaseValue instance.
-    """
-
-    len = 1
-
-    def __call__(self, regs):
-        res = regs[0]
-        if res >= 1 << 15:
-            res -= 1 << 16
-        return res
-
-
-@singleton
-class SignedLongValue(BaseValue):
-    """two registers, signed.
-
-    This is a BaseValue instance.
-    """
-
-    len = 2
-
-    def __call__(self, regs):
-        res = regs[0] * 65536 + regs[1]
-        if res >= 1 << 31:
-            res -= 1 << 32
-        return res
-
-
-@singleton
-class SwappedSignedLongValue(BaseValue):
-    """two registers, signed, swapped.
-
-    This is a BaseValue instance.
-    """
-
-    len = 2
-
-    def __call__(self, regs):
-        res = regs[1] * 65536 + regs[0]
-        if res >= 1 << 31:
-            res -= 1 << 32
-        return res
-
-
-SignedSwappedLongValue = SwappedSignedLongValue
-
-
-@singleton
-class SignedQuadValue(BaseValue):
-    """four registers, signed.
-
-    This is a BaseValue instance.
-    """
-
-    len = 4
-
-    def __call__(self, regs):
-        res = ((regs[0] * 65536 + regs[1]) * 65536 + regs[2]) * 65536 + regs[3]
-        if res >= 1 << 63:
-            res -= 1 << 64
-        return res
-
-
-@singleton
-class SwappedSignedQuadValue(BaseValue):
-    """four registers, signed, swapped.
-
-    This is a BaseValue instance.
-    """
-
-    len = 4
-
-    def __call__(self, regs):
-        res = ((regs[3] * 65536 + regs[2]) * 65536 + regs[1]) * 65536 + regs[0]
-        if res >= 1 << 63:
-            res -= 1 << 64
-        return res
-
-
-SignedSwappedQuadValue = SwappedSignedQuadValue
-
-
-@singleton
-class FloatValue(BaseValue):
-    """network-ordered floating point.
-
-    This is a BaseValue instance.
-    """
-
-    len = 2
-
-    def __call__(self, regs):
-        return struct.unpack(">f", struct.pack(">2H", *regs))
-
-
-@singleton
-class SwappedFloatValue(BaseValue):
-    """network-ordered floating point.
-
-    This is a BaseValue instance.
-    """
-
-    len = 2
-
-    def __call__(self, regs):
-        return struct.unpack(">f", struct.pack(">2H", regs[1], regs[0]))
-
-
-@singleton
-class DoubleValue(BaseValue):
-    """network-ordered accurate floating point.
-
-    This is a BaseValue instance.
-    """
-
-    len = 4
-
-    def __call__(self, regs):
-        return struct.unpack(
-            ">d", struct.pack(">4H", regs[0], regs[1], regs[2], regs[3])
-        )
-
-
-@singleton
-class SwappedDoubleValue(BaseValue):
-    """network-ordered accurate floating point.
-
-    This is a BaseValue instance.
-    """
-
-    len = 4
-
-    def __call__(self, regs):
-        return struct.unpack(
-            ">d", struct.pack(">4H", regs[3], regs[2], regs[1], regs[0])
-        )
-
-
-class TypeCodec:
-    """Base class for access types. Do not instantiate."""
-
-    typ = None
-    acc = None
-
-    def __repr__(self):
-        return self.__class__.__name__
-
-    def __eq__(self, typ):
-        if isinstance(typ, TypeCodec):
-            typ = typ.typ
-        return self.typ == typ
-
-    def __hash__(self):
-        return self.typ
-
-
-@singleton
-class Coils(TypeCodec):
-    """Modbus 'coils' data.
-    This is a TypeCodec.
-    """
-
-    typ = 0
-    coder = ReadCoilsRequest
-    decoder = ReadCoilsResponse
-
-
-@singleton
-class DiscreteInputs(TypeCodec):
-    """Modbus 'discrete input' data.
-    This is a TypeCodec.
-    """
-
-    typ = 1
-    coder = ReadDiscreteInputsRequest
-    decoder = ReadDiscreteInputsResponse
-
-
-@singleton
-class HoldingRegisters(TypeCodec):
-    """Modbus 'holding register' data.
-    This is a TypeCodec.
-    """
-
-    typ = 2
-    coder = ReadHoldingRegistersRequest
-    decoder = ReadHoldingRegistersResponse
-
-
-@singleton
-class InputRegisters(TypeCodec):
-    """Modbus 'input register' data.
-    This is a TypeCodec.
-    """
-
-    typ = 3
-    coder = ReadInputRegistersRequest
-    decoder = ReadInputRegistersResponse

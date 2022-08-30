@@ -36,6 +36,16 @@ class ControllerInterface(DbusInterface):
 		"""
 		return len(self.ctrl.batt)
 
+	@_dbus.method()
+	async def GetWork(self, clear: 'b') -> 'a{sd}':
+		"""
+		Return work done
+		"""
+		for b in self.ctrl.batt:
+			await b.update_work()
+		w = self.ctrl.get_work(clear)
+		return w
+
 
 class Controller:
 	"""
@@ -61,6 +71,8 @@ class Controller:
 		self.baud = gcfg[cfg.serial].baud
 		self.waiting = [None]*8
 
+		self.clear_work()
+
 		n = 0
 		if "batteries" in cfg:
 			for i,b in enumerate(cfg.batteries):
@@ -73,6 +85,25 @@ class Controller:
 			n += cfg.batt.n
 
 		self.victron = BatteryState(self)
+
+	def clear_work(self):
+		self.work = attrdict()
+		self.work.t = 0
+		self.work.chg = 0
+		self.work.dis = 0
+
+	def get_work(self, clear:bool = False):
+		res = self.work
+		if clear:
+			self.clear_work()
+		return res
+
+	def add_work(self, w,n):
+		if w > 0:
+			self.work.chg += w
+		else:
+			self.work.dis -= w
+		self.work.t += n
 
 	async def config_updated(self):
 		await self.victron.config_updated()

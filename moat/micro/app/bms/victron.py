@@ -68,12 +68,16 @@ class BatteryState:
 		# update charge and discharge flags
 		chg_ok = all(b.chg_set for b in self.ctrl.batt)
 		dis_ok = all(b.dis_set for b in self.ctrl.batt)
+		force_off = any(b.force_off for b in self.ctrl.batt)
+		if force_off:
+			chg_ok = False
+			dis_ok = False
 
 		async with self._srv as l:
 			await l.set(self.bus.vlo, float(u_min+fudge))
 			await l.set(self.bus.vhi, float(u_max+fudge))
-			await l.set(self.bus.idis, -float(i_min)*c_min+fudge)
-			await l.set(self.bus.ich, float(i_max)*c_max-fudge)
+			await l.set(self.bus.idis, -float(i_min)*c_min+fudge if dis_ok else 0)
+			await l.set(self.bus.ich, float(i_max)*c_max-fudge if chg_ok else 0)
 
 			await l.set(self.bus.okchg, int(chg_ok))
 			await l.set(self.bus.okdis, int(dis_ok))

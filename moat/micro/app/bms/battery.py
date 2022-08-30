@@ -87,6 +87,12 @@ class BatteryInterface(DbusInterface):
 		return True
 
 	@dbus.method()
+	async def SetExternalVoltage(self, data: 'd') -> 'b':
+		# update correction factor
+		await self.batt.set_ext_voltage(data)
+		return True
+
+	@dbus.method()
 	def GetCurrent(self) -> 'd':
 		return self.batt.current
 
@@ -759,6 +765,19 @@ class Battery:
 		else:
 			await self.ctrl.cmd.send(["sys","cfg"],
 				cfg=attrdict()._update((self.ctrl.name,"batt",self.num,"u"), {"scale":self.cfg.u.scale}))
+
+		self.voltage = val
+		return True
+
+	async def set_ext_voltage(self, val):
+		# TODO move this to a config update handler
+		adj = val/self.sum_voltage
+		if self.num is None:
+			await self.ctrl.cmd.send(["sys","cfg"],
+				cfg=attrdict()._update((self.ctrl.name,"batt","u"), {"corr":adj}))
+		else:
+			await self.ctrl.cmd.send(["sys","cfg"],
+				cfg=attrdict()._update((self.ctrl.name,"batt",self.num,"u"), {"corr":adj}))
 
 		self.voltage = val
 		return True

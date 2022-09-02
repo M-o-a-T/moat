@@ -49,7 +49,8 @@ class BMSCmd(BaseAppCmd):
 
 	async def cmd_work(self, **data):
 		logger.info("WORK %s",data)
-		self.ctrl.add_work(data["w"] / (1000/self.cfg.poll.t), data["n"] / (1000/self.cfg.poll.t))
+		self.ctrl.batt[0].add_work(data["w"] / (1000/self.cfg.poll.t), data["n"] / (1000/self.cfg.poll.t))
+                # XXX which battery?
 
 
 #	async def loc_data(self):

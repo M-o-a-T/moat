@@ -9,7 +9,7 @@ import anyio
 from moat.compat import CancelledError, sleep, sleep_ms, wait_for_ms, ticks_ms, ticks_diff, ticks_add, TimeoutError, Lock, TaskGroup, Event
 from moat.util import ValueEvent, combine_dict, attrdict
 from moat.dbus import DbusInterface
-from victron.dbus.utils import wrap_dbus_value
+from victron.dbus.utils import wrap_dbus_dict
 
 from .cell import Cell
 from .packet import *
@@ -34,15 +34,7 @@ class BatteryInterface(DbusInterface):
 
 	@dbus.method()
 	def GetVoltages(self) -> 'a{sd}':
-		return dict(
-			min=self.batt.min_voltage,
-			max=self.batt.max_voltage,
-			bms=self.batt.voltage,
-			cells=self.batt.sum_voltage,
-			min_cell=self.batt.cell_min_voltage,
-			max_cell=self.batt.cell_max_voltage,
-			adj_cells=self.batt.ccfg.u.corr,
-		)
+		return self.batt.get_voltages()
 
 	@dbus.method()
 	async def Identify(self) -> 'b':
@@ -58,8 +50,16 @@ class BatteryInterface(DbusInterface):
 		return [(c.balance_threshold or 0, c.in_balance,-1 if c.balance_pwm is None else c.balance_pwm, c.balance_forced) for c in self.batt.cells]
 
 	@dbus.method()
-	def GetConfig(self) -> 'vv':
-		return wrap_dbus_value(self.batt.cfg), wrap_dbus_value(self.batt.ccfg)
+	def GetConfig(self) -> 'a{sv}a{sv}':
+		return wrap_dbus_dict(self.batt.cfg), wrap_dbus_dict(self.batt.ccfg)
+
+	@dbus.method()
+	async def SetCapacity(self, cap: 'd', loss: 'd', top: 'b') -> 'b':
+		"""
+		The battery capacity is @cap. The battery is currently
+		charged (@top is true) or not (@top is False).
+		"""
+		return await self.batt.set_capacity(cap, loss, top)
 
 	@dbus.method()
 	async def ForceRelay(self, on: 'b') -> 'b':
@@ -67,6 +67,10 @@ class BatteryInterface(DbusInterface):
 		await self.batt.victron.update_dc(False)
 		await self.batt.ctrl.req.send([self.batt.ctrl.name,"rly"], st=on)
 		return True
+
+	@dbus.method()
+	def GetSoC(self) -> 'd':
+		return self.batt.get_soc()
 
 	@dbus.method()
 	async def GetRelayState(self) -> 'bb':
@@ -102,6 +106,15 @@ class BatteryInterface(DbusInterface):
 	async def SetCurrent(self, data: 'd') -> 'b':
 		# update the scale appropriately
 		await self.batt.set_current(data)
+		return True
+
+	@dbus.method()
+	def GetCurrentOffset(self) -> 'd':
+		return self.batt.cfg.i.offset
+
+	@dbus.method()
+	async def SetCurrentOffset(self, data: 'd') -> 'b':
+		await self.batt.set_current_offset(data)
 		return True
 
 	@dbus.signal()
@@ -144,6 +157,16 @@ class BatteryInterface(DbusInterface):
 		"""
 		return self.batt.name
 
+	@dbus.method()
+	async def GetWork(self, poll: 'b', clear: 'b') -> 'a{sd}':
+		"""
+		Return work done by this battery
+		"""
+		if poll:
+			await self.batt.update_work()
+		w = self.batt.get_work(clear)
+		return w
+
 
 class Battery:
 	# global battery state, reported via MOAT callback
@@ -161,6 +184,7 @@ class Battery:
 	msg_vlo:bool = False
 	msg_vsum:bool = False
 
+	_charge = 0
 	chg_set:bool = None
 	dis_set:bool = None
 	force_off:bool = False
@@ -197,6 +221,7 @@ class Battery:
 			cell = Cell(self, nr=self.start+c, path=f"/bms/{num}/{c}", cfg=ccfg, bcfg=self.cfg, gcfg=gcfg)
 			self.ctrl.add_cell(cell)
 			self.cells.append(cell)
+		self.clear_work()
 
 	def __repr__(self):
 		return f"‹Batt {self.path} u={0 if self.voltage is None else self.voltage :.3f} i={0 if self.current is None else self.current :.1f}›"
@@ -406,11 +431,45 @@ class Battery:
 			return True
 		return False
 
+	def clear_work(self):
+		self.work = attrdict()
+		self.work.t = 0
+		self.work.chg = 0
+		self.work.dis = 0
+		self.work.sum = 0
+
+	def add_work(self, w,n):
+		if w > 0:
+			self.work.chg += w
+			w *= 1-self.cfg.cap.loss
+		else:
+			self.work.dis -= w
+		self.work.t += n
+		self.work.sum += w
+
+	def get_work(self, clear:bool = False, poll:bool=False):
+		res = self.work
+		if clear:
+			self.clear_work()
+		return res
+
+	def get_voltages(self):
+		return dict(
+			min=self.min_voltage,
+			max=self.max_voltage,
+			bms=self.voltage,
+			cells=self.sum_voltage,
+			min_cell=self.cell_min_voltage,
+			max_cell=self.cell_max_voltage,
+			adj_cells=self.ccfg.u.corr,
+		)
+
 	async def update_work(self):
 		res = await self.req.send([self.ctrl.name,"info"], r=True)
 		data = res["w"]
 		t = 1000/self.ctrl.cfg.poll.t
-		self.ctrl.add_work(data["s"] / t, data["n"] / t)
+		self.add_work(data["s"] / t, data["n"] / t)
+		# watt seconds, seconds
 
 	async def task_voltage(self):
 		"""
@@ -449,19 +508,18 @@ class Battery:
 
 
 	def get_soc(self):
-		# this is the naïve way which doesn't work at all well,
-		# but there's no better way until we do an initial
-		# charge-balance-discharge-charge cycle
+		cu = self.ccfg.u
 		mi = self.cell_min_voltage
-		# spr = self.cell_max_voltage - mi
-		spr = 0
-		r = self.ccfg.u.ext.max - self.ccfg.u.ext.min
-		try:
-			res = (mi-self.ccfg.u.ext.min) / (r-spr)
-		except ValueError:
-			return 0
-		else:
-			return max(0,min(1,res))
+
+		# outside "standard" limits
+		if mi < cu.lim.min:
+			return 0.05*max(0,(mi-cu.ext.min)/(cu.lim.min-cu.ext.min))
+		ma = self.cell_max_voltage
+		if ma > cu.lim.max:
+			return 1 - 0.05*max(0,(ma-cu.ext.max-ma)/(cu.ext.max-cu.lim.max))
+
+		# OK, do the hopefully-somewhat-accurate charge level thing
+		return 0.05+0.9*min(1,max(0,self.work.sum/self.cfg.cap.cur))
 
 
 	def get_cell_midvoltage(self):
@@ -515,7 +573,10 @@ class Battery:
 	#
 	@property
 	def sum_voltage(self):
-		return sum(c.voltage for c in self.cells)
+		try:
+			return sum(c.voltage for c in self.cells)
+		except TypeError:
+			return self.voltage
 
 	@property
 	def max_voltage(self):
@@ -542,12 +603,10 @@ class Battery:
 		dplus = 0
 
 		for c in self.cells:
-			d = c.cfg.u.ext.max - c.voltage
 			if c.voltage > vlow:
 				# thus this scale factor is 1 for the highest-voltage cell
 				# and between 0 and 1 otherwise
-				dp = ud * (c.voltage - vlow) / vrange
-				dplus += dp
+				dplus += ud * (c.voltage - vlow) / vrange
 
 		u = self.sum_voltage + dplus
 
@@ -573,17 +632,15 @@ class Battery:
 			return sum(max(c.cfg.u.ext.min, c.voltage) for c in self.cells)
 
 		vrange = self.ccfg.u.range*ud
-		vhigh = vrange + umin
+		vhigh = umin + vrange
 		# thus vrange == vhigh-umin
 		dplus = 0
 
 		for c in self.cells:
-			d = c.voltage - c.cfg.u.ext.min
 			if c.voltage < vhigh:
 				# thus this scale factor is 1 for the highest-voltage cell
 				# and between 0 and 1 otherwise
-				dp = ud * (vhigh - c.voltage) / vrange
-				dplus += dp
+				dplus += ud * (vhigh - c.voltage) / vrange
 
 		u = self.sum_voltage - dplus
 
@@ -608,8 +665,8 @@ class Battery:
 
 		try:
 			self.voltage + 0
-			umax = self.max_voltage
-			umin = self.min_voltage
+			umax = (self.max_voltage+self.cfg.u.max)/2
+			umin = (self.min_voltage+self.cfg.u.min)/2
 		except TypeError:
 			pass
 		else:
@@ -646,6 +703,8 @@ class Battery:
 
 			if self.voltage <= umin:
 				if not self.msg_lo:
+					breakpoint()
+					self.min_voltage  # step thru
 					logger.warning("Voltage %.2f low, no discharging", self.voltage)
 					self.msg_lo = True
 				dis_ok = False
@@ -666,15 +725,21 @@ class Battery:
 			pass  # XXX TODO check current limits here also
 
 		for c in self.cells:
+			ucmax = (c.cfg.u.max+c.cfg.u.ext.max)/2
+			ucmax2 = (c.cfg.u.max+2*c.cfg.u.ext.max)/3
+			ucmin = (c.cfg.u.min+c.cfg.u.ext.min)/2
+			ucmin2 = (c.cfg.u.min+2*c.cfg.u.ext.min)/3
+
 			if c.voltage is not None:
-				if c.voltage >= c.cfg.u.ext.max:
-					chg_ok = False
+				if c.voltage >= ucmax:
 					if not c.msg_hi:
 						logger.warning(f"{c} voltage high, no charging")
 						c.msg_hi = True
-				elif c.msg_hi:
+				elif c.msg_hi and c.voltage < ucmax2:
 					logger.warning(f"{c} voltage no longer high")
 					c.msg_hi = False
+				if c.msg_hi:
+					chg_ok = False
 
 				if c.voltage >= c.cfg.u.max:
 					if not c.msg_vhi:
@@ -685,14 +750,15 @@ class Battery:
 					logger.error(f"{c} overvoltage fixed")
 					c.msg_vhi = False
 
-				if c.voltage <= c.cfg.u.ext.min:
-					dis_ok = False
+				if c.voltage <= ucmin:
 					if not c.msg_lo:
 						logger.warning(f"{c} voltage low, no discharging")
 						c.msg_lo = True
-				elif c.msg_lo:
+				elif c.msg_lo and c.voltage > ucmin2:
 					logger.warning(f"{c} voltage no longer low")
 					c.msg_lo = False
+				if c.msg_lo:
+					dis_ok = False
 
 				if c.voltage <= c.cfg.u.min:
 					off = True
@@ -770,26 +836,14 @@ class Battery:
 		# TODO move this to a config update handler
 		adj = (val - self.cfg.u.offset) / (self.voltage - self.cfg.u.offset)
 		self.cfg.u.scale *= adj
-		if self.num is None:
-			await self.ctrl.cmd.send(["sys","cfg"],
-				cfg=attrdict()._update((self.ctrl.name,"batt","u"), {"scale":self.cfg.u.scale}))
-		else:
-			await self.ctrl.cmd.send(["sys","cfg"],
-				cfg=attrdict()._update((self.ctrl.name,"batt",self.num,"u"), {"scale":self.cfg.u.scale}))
-
+		await self._send_cfg("u", scale=self.cfg.u.scale)
 		self.voltage = val
 		return True
 
 	async def set_ext_voltage(self, val):
 		# TODO move this to a config update handler
 		adj = val/self.sum_voltage
-		if self.num is None:
-			await self.ctrl.cmd.send(["sys","cfg"],
-				cfg=attrdict()._update((self.ctrl.name,"batt","u"), {"corr":adj}))
-		else:
-			await self.ctrl.cmd.send(["sys","cfg"],
-				cfg=attrdict()._update((self.ctrl.name,"batt",self.num,"u"), {"corr":adj}))
-
+		await self._send_cfg("u", corr=adj)
 		self.voltage = val
 		return True
 
@@ -797,13 +851,29 @@ class Battery:
 		# TODO move this to a config update handler
 		adj = (val - self.cfg.i.offset) / (self.current - self.cfg.i.offset)
 		self.cfg.i.scale *= adj
+		await self._send_cfg("i", scale=self.cfg.i.scale)
+		self.current = val
+	
+	async def set_current_offset(self, val):
+		# TODO move this to a config update handler
+		self.cfg.i.offset = val
+		await self._send_cfg("i", offset=self.cfg.i.offset)
+	
+	async def _send_cfg(self, *a, **kv):
 		if self.num is None:
 			await self.ctrl.cmd.send(["sys","cfg"],
-				cfg=attrdict()._update((self.ctrl.name,"batt","i"), {"scale":self.cfg.i.scale}))
+				cfg=attrdict()._update((self.ctrl.name,"batt",*a), kv))
 		else:
 			await self.ctrl.cmd.send(["sys","cfg"],
-				cfg=attrdict()._update((self.ctrl.name,"batt",self.num,"i"), {"scale":self.cfg.i.scale}))
-
-		self.current = val
+				cfg=attrdict()._update((self.ctrl.name,"batt",self.num,*a), kv))
 		return True
 
+	async def set_capacity(self, cap, loss, top):
+		if loss < 0 or loss >= 1:
+			return False
+		await self._send_cfg("cap", cur=cap, loss=loss)
+		if top:
+			self.work.sum = cap
+		else:
+			self.work.sum = 0
+		return True

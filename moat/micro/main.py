@@ -92,6 +92,15 @@ async def get_serial(obj):
 		pass
 	ser = Serial(obj.port, **_h)
 	async with ser:
+		# flush old messages
+		try:
+			while True:
+				with anyio.fail_after(0.2):
+					b = await ser.receive(1)
+		except TimeoutError:
+			# more might arrive later, but we'll ignore them
+			# because our sequence# returns to 10, not zero
+			pass
 		yield ser
 
 

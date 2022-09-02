@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from moat.compat import CancelledError, sleep, sleep_ms, wait_for_ms, ticks_ms, ticks_diff, ticks_add, TimeoutError, Lock, TaskGroup, Event
 from moat.util import ValueEvent, combine_dict, attrdict
 from moat.dbus import DbusInterface, DbusName
+from victron.dbus.utils import wrap_dbus_dict
 import anyio
 
 from . import MessageLost, SpuriousData
@@ -37,13 +38,37 @@ class ControllerInterface(DbusInterface):
 		return len(self.ctrl.batt)
 
 	@_dbus.method()
-	async def GetWork(self, clear: 'b') -> 'a{sd}':
+	async def GetVoltages(self) -> 'aa{sd}':
+		"""
+		Voltage data for all batteries
+		"""
+		return [ b.get_voltages() for b in self.ctrl.batt ]
+
+	@_dbus.method()
+	async def GetCurrents(self) -> 'ad':
+		"""
+		Voltage data for all batteries
+		"""
+		return [ b.current for b in self.ctrl.batt ]
+
+	@_dbus.method()
+	async def GetConfig(self) -> 'a{sv}':
+		"""
+		Configuration data
+		"""
+		# return [ [ wrap_dbus_value(b.cfg), wrap_dbus_value(b.ccfg) ]  for b in self.ctrl.batt ]
+		return wrap_dbus_dict(self.ctrl.cfg)
+
+
+	@_dbus.method()
+	async def GetWork(self, poll: 'b', clear: 'b') -> 'aa{sd}':
 		"""
 		Return work done
 		"""
-		for b in self.ctrl.batt:
-			await b.update_work()
-		w = self.ctrl.get_work(clear)
+		if poll:
+			for b in self.ctrl.batt:
+				await b.update_work()
+		w = await self.ctrl.get_work(clear)
 		return w
 
 
@@ -51,7 +76,7 @@ class Controller:
 	"""
 	Main controller for our BMS.
 
-	TODO support more than one battery
+	TODO *really* support more than one battery
 	"""
 	victron = None
 
@@ -71,8 +96,6 @@ class Controller:
 		self.baud = gcfg[cfg.serial].baud
 		self.waiting = [None]*8
 
-		self.clear_work()
-
 		n = 0
 		if "batteries" in cfg:
 			for i,b in enumerate(cfg.batteries):
@@ -87,23 +110,16 @@ class Controller:
 		self.victron = BatteryState(self)
 
 	def clear_work(self):
-		self.work = attrdict()
-		self.work.t = 0
-		self.work.chg = 0
-		self.work.dis = 0
+		for b in self.batt:
+			b.clear_work()
 
-	def get_work(self, clear:bool = False):
-		res = self.work
-		if clear:
-			self.clear_work()
+	async def get_work(self, clear:bool = False):
+		res = []
+		for b in self.batt:
+			res.append(b.work)
+			if clear:
+				b.clear_work()
 		return res
-
-	def add_work(self, w,n):
-		if w > 0:
-			self.work.chg += w
-		else:
-			self.work.dis -= w
-		self.work.t += n
 
 	async def config_updated(self):
 		await self.victron.config_updated()

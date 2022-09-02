@@ -103,9 +103,10 @@ class BatteryState:
 		
 		soc = 0
 		for b in self.ctrl.batt:
-			if b.voltage < b.cfg.u.ext.min:
+			ub = b.sum_voltage
+			if ub < b.cfg.u.ext.min:
 				nbd += 1
-			if b.voltage > b.cfg.u.ext.max:
+			if ub > b.cfg.u.ext.max:
 				nbc += 1
 			soc += b.get_soc()
 
@@ -131,8 +132,14 @@ class BatteryState:
 		cfg = self.ctrl.batt[0].cfg
 
 		async with self.srv as l:
-			await l.set(self.bus.cap, cfg.cap.a)
-			await l.set(self.bus.capi, cfg.cap.n)
+			try:
+				await l.set(self.bus.cap, cfg.cap.ah)
+			except AttributeError:
+				pass
+			try:
+				await l.set(self.bus.capi, cfg.cap.cur/3600/cfg.n/cfg.u.nom)
+			except AttributeError:
+				pass
 			await l.set(self.bus.ncell, len(self.ctrl.cells)//len(self.ctrl.batt))
 
 		await self.update_cells()
@@ -144,7 +151,7 @@ class BatteryState:
 	async def update_voltage(self):
 		ok = False
 		try:
-			u = sum(b.voltage for b in self.ctrl.batt) / len(self.ctrl.batt)
+			u = sum(b.sum_voltage for b in self.ctrl.batt) / len(self.ctrl.batt)
 			i = sum(b.current for b in self.ctrl.batt)
 			ok = True
 		except ValueError:

@@ -9,11 +9,10 @@ from anyio.abc import SocketAttribute
 from contextlib import asynccontextmanager
 from functools import partial
 from distkv.util import CtxObj, Queue, ValueEvent
-from typing import Dict, Any
+from typing import Dict, Any, Type
 
-from .types import TypeCodec, BaseValue, InaccessibleValue
+from .types import TypeCodec, BaseValue, InaccessibleValue, DataBlock
 
-from pymodbus.compat import byte2int
 from pymodbus.exceptions import ModbusIOException
 from pymodbus.factory import ClientDecoder
 from pymodbus.transaction import ModbusSocketFramer
@@ -142,7 +141,7 @@ class Host:
                 try:
                     data = await self.stream.receive(4096)
 
-                    _logger.debug("recv: " + " ".join([hex(byte2int(x)) for x in data]))
+                    _logger.debug("recv: " + " ".join([hex(x) for x in data]))
 
                     # unit = self.framer.decode_data(data).get("uid", 0)
                     replies = []
@@ -227,8 +226,8 @@ class Host:
         request.transaction_id = self._nextTID()
         packet = self.framer.buildPacket(request)
         if _logger.isEnabledFor(logging.DEBUG):
-            packet_info = " ".join([hex(byte2int(x)) for x in packet])
-            _logger.debug(f"Gateway {self.addr}:{self.port} received: {packet_info}")
+            packet_info = " ".join([hex(x) for x in packet])
+            _logger.debug(f"Gateway {self.addr}:{self.port} xmit: {packet_info}")
 
         # make the modbus request
         request.__value = ValueEvent()
@@ -247,7 +246,7 @@ class Host:
             raise
         else:
             if hasattr(res, "registers"):
-                registers_info = " ".join([hex(byte2int(x)) for x in res.registers])
+                registers_info = " ".join([hex(x) for x in res.registers])
                 _logger.debug(
                     f"Gateway {self.addr}:{self.port} replied: {registers_info}"
                 )
@@ -336,20 +335,23 @@ class Slot:
                 return False
         return True
 
-    def add(self, typ:TypeCodec, offset:int, val:BaseValue):
+    def add(self, typ:TypeCodec, offset:int, cls:Type[BaseValue]) -> BaseValue:
         """Add a field to be requested.
 
         :param typ: The `TypeCodec` instance to use.
         :param offset: The value's numeric offset, zero-based.
         :param val: The data type (baseValue instance)
 
-        `val` is the decoder (subclass of `BaseValue`).
+        `cls` is either the decoder (subclass of `BaseValue`),
+        or an existing `BaseValue` instance.
         """
         try:
             k = self.modes[typ]
         except KeyError:
             self.modes[typ] = k = ValueList(self, typ)
-        return k.add(offset, val())
+        val = cls()
+        k.add(offset, val)
+        return val
 
     def remove(self, typ:TypeCodec, offset:int):
         """Remove a field to be requested.
@@ -386,7 +388,7 @@ class Slot:
         for vl in m.values():
             vl.close()
 
-    async def run(self) -> Dict[TypeCodec, Dict[int, Any]]:
+    async def getValues(self) -> Dict[TypeCodec, Dict[int, Any]]:
         """
         Send a message reading these values to the bus.
         Returns a (type,(offset,value)) dict-of-dicts.
@@ -396,6 +398,10 @@ class Slot:
         """
         try:
             res = {}
+            async def _assign(getter, rr):
+                r = await getter()
+                rr.update(r)
+
             async with anyio.create_task_group() as tg:
                 if self._run_scope is not None:
                     raise RuntimeError("already running")
@@ -404,7 +410,7 @@ class Slot:
                 for typ, vl in self.modes.items():
                     res[typ] = r = {}
                     try:
-                        tg.start_soon(partial(vl.run, res=r))
+                        tg.start_soon(partial(_assign, vl.readValues, r))
                     except ModbusError as r:
                         res[typ] = r.result
             if self.unit is None:
@@ -414,64 +420,63 @@ class Slot:
             self._run_scope = None
 
 
-class ValueList:
+    async def setValues(self):
+        """
+        Send a message writing the values in this block to the bus.
+        """
+        try:
+            async with anyio.create_task_group() as tg:
+                if self._run_scope is not None:
+                    raise RuntimeError("already running")
+                self._run_scope = tg.cancel_scope
+
+                for typ, vl in self.modes.items():
+                    try:
+                        tg.start_soon(vl.writeValues)
+                    except ModbusError as r:
+                        res[typ] = r.result
+            if self.unit is None:
+                raise ClosedResourceError("dropped while running")
+        finally:
+            self._run_scope = None
+
+
+class ValueList(DataBlock):
     """This class holds a list of to-be-accessed values.
 
-    Do not instantiate directly; used implicitly by
+    Do not instantiate directly; constructed and returned by
 
         >>> slot.add(InputRegisters, 2, IntValue)
 
     """
 
     def __init__(self, slot, kind):
+        super().__init__(max_len=slot.unit.host.max_req_len)
         self.slot = slot
         self.kind = kind
-        self.values = {}
 
-    def add(self, offset, val):
-        for i in range(offset, offset + val.len):
-            if i in self.values:
-                raise ValueError("Already known", i)
-        self.values[offset] = val
-
-    def delete(self, offset):
-        self.values.pop(offset, None)
-
-    def ranges(self):
-        """Iterate over the to-be-retrieved range(s)."""
-        start, cur = None, None
-        for offset, val in sorted(self.values.items()):
-            if isinstance(val, InaccessibleValue):
-                if start is not None:
-                    yield (start, cur - start)
-                    start = None
-            elif start is None:
-                start = offset
-                cur = start + val.len
-            elif cur == offset and (cur + val.len - start) <= self.slot.unit.host.max_req_len:
-                cur += val.len
-            else:
-                yield (start, cur - start)
-                start = offset
-                cur = start + val.len
-
-        if cur is not None:
-            yield (start, cur - start)
-
-    async def run(self, *, res=None):
+    async def readValues(self, *, res=None):
         """
         Send messages reading these values to the bus.
 
-        Returns a (type,(offset,value)) dict-of-dicts.
+        Returns a (offset,value) dict.
         """
         if res is None:
             res = {}
         async with anyio.create_task_group() as tg:
             for start, length in self.ranges():
-                tg.start_soon(partial(self.run_one, start, length, res=res))
+                tg.start_soon(partial(self.readBlock, start, length, res=res))
         return res
 
-    async def run_one(self, start, length, *, res=None):
+    async def writeValues(self):
+        """
+        Send messages writing our values to the bus.
+        """
+        async with anyio.create_task_group() as tg:
+            for start, length in self.ranges():
+                tg.start_soon(partial(self.writeBlock, start, length))
+
+    async def readBlock(self, start, length, *, res=None):
         """Send one message, decode the reply"""
         if res is None:
             res = {}
@@ -486,9 +491,10 @@ class ValueList:
             raise ModbusError(r)
 
         r = r.registers
+
         while r:
             try:
-                val = self.values[start]
+                val = self[start]
             except KeyError:
                 off = 1
             else:
@@ -497,6 +503,29 @@ class ValueList:
                 res[start] = val
             start += off
             r = r[off:]
+
+    async def writeBlock(self, start, length):
+        """encode one message and send it"""
+        u = self.slot.unit
+        values = []
+        off = start
+        res = length
+        while res > 0:
+            val = self[off]
+            values.extend(val.encode())
+            off += val.len
+            res -= val.len
+        if len(values) == 1:
+            msg = self.kind.encoder_s(address=start, unit=u.unit, value=values[0])
+        else:
+            msg = self.kind.encoder_m(address=start, count=length, unit=u.unit, values=values)
+
+        # handle according to reply type
+        r = await u.host.execute(msg)
+        if isinstance(r, Exception):
+            raise r
+        elif r.isError():
+            raise ModbusError(r)
 
     def close(self):
         if self.slot is None:

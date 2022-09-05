@@ -1,29 +1,74 @@
 import struct
+from typing import List
+import anyio
 
-from pymodbus.client.common import (
-    ReadDiscreteInputsRequest,
-    ReadDiscreteInputsResponse,
-    ReadCoilsRequest,
-    ReadCoilsResponse,
-    ReadHoldingRegistersRequest,
-    ReadHoldingRegistersResponse,
-    ReadInputRegistersRequest,
-    ReadInputRegistersResponse,
-)
+try:
+    from pymodbus.client.common import (
+        ReadDiscreteInputsRequest,
+        ReadDiscreteInputsResponse,
+        ReadCoilsRequest,
+        ReadCoilsResponse,
+        ReadHoldingRegistersRequest,
+        ReadHoldingRegistersResponse,
+        ReadInputRegistersRequest,
+        ReadInputRegistersResponse,
+        WriteSingleCoilRequest,
+        WriteSingleCoilResponse,
+        WriteMultipleCoilsRequest,
+        WriteMultipleCoilsResponse,
+        WriteSingleRegisterRequest,
+        WriteSingleRegisterResponse,
+        WriteMultipleRegistersRequest,
+        WriteMultipleRegistersResponse,
+    )
+except ImportError:
+    from pymodbus.factory import (
+        ReadDiscreteInputsRequest,
+        ReadDiscreteInputsResponse,
+        ReadCoilsRequest,
+        ReadCoilsResponse,
+        ReadHoldingRegistersRequest,
+        ReadHoldingRegistersResponse,
+        ReadInputRegistersRequest,
+        ReadInputRegistersResponse,
+        WriteSingleCoilRequest,
+        WriteSingleCoilResponse,
+        WriteMultipleCoilsRequest,
+        WriteMultipleCoilsResponse,
+        WriteSingleRegisterRequest,
+        WriteSingleRegisterResponse,
+        WriteMultipleRegistersRequest,
+        WriteMultipleRegistersResponse,
+    )
+from pymodbus.datastore.store import BaseModbusDataBlock
 
-def singleton(x):
+
+def _singleton(x):
     x = x()
     return x
 
 
 class BaseValue:
-    """Base class for reading a single value.
+    """Base class for a single value.
 
-    Do not instantiate.
+    Do not instantiate directly.
+
+    Set @idem if setting the item shall trigger iterators even if it
+    doesn't change.
     """
 
     len = 0
     value = None
+    gen = 0
+
+    def __init__(self, value=None, idem=False):
+        self.changed = anyio.Event()
+        self.value = value
+        self.idem = idem
+
+        if value is not None:
+            self.gen = 1
+            self.changed = anyio.Event()
 
     def _decode(self, regs):
         raise NotImplementedError
@@ -32,7 +77,18 @@ class BaseValue:
         raise NotImplementedError
 
     def decode(self, regs):
+        val = self._decode(regs)
+        if not self.idem and val == self.value:
+            return
         self.value = self._decode(regs)
+        self.changed.set()
+        self.changed = anyio.Event()
+        self.gen += 1
+
+    def clear(self):
+        self.value = None
+        self.changed.set()
+        self.changed = anyio.Event()
 
     def encode(self):
         return self._encode(self.value)
@@ -42,6 +98,9 @@ class BaseValue:
 
     def __repr__(self):
         return f'<{self.__class__.__name__}:{self.value}>'
+
+    def __aiter__(self):
+        return ValueIterator(self)
 
 
 class _Signed:
@@ -85,7 +144,6 @@ class InaccessibleValue(BaseValue):  # duck-types but does NOT interit BaseValue
 class IntValue(BaseValue):
     """Simplest-possible value, one register.
     """
-
     len = 1
 
     def _decode(self, regs):
@@ -98,7 +156,6 @@ class IntValue(BaseValue):
 class LongValue(BaseValue):
     """32-bit integer, two registers, standard (big-endian) word order.
     """
-
     len = 2
 
     def _decode(self, regs):
@@ -107,19 +164,11 @@ class LongValue(BaseValue):
     def _encode(self, value):
         return (value & 0xFFFF, value >> 16)
 
-class SwappedLongValue(_Swapped, LongValue):
-    """32-bit integer, two registers, little-endian word order.
-
-    This is a BaseValue instance.
-    """
-    pass
-
 class QuadValue(BaseValue):
     """64-bit integer, four registers, standard (big-endian) word order.
 
     This is a BaseValue instance.
     """
-
     len = 4
 
     def _decode(self, regs):
@@ -133,6 +182,34 @@ class QuadValue(BaseValue):
             (value >> 48) & 0xFFFF,
         )
 
+
+class FloatValue(BaseValue):
+    """network-ordered floating point.
+    """
+    len = 2
+
+    def _decode(self, regs):
+        return struct.unpack(">f", struct.pack(">2H", *regs))[0]
+
+    def _encode(self, value):
+        return struct.unpack(">2H", struct.pack(">f", value))
+
+class DoubleValue(BaseValue):
+    """network-ordered accurate floating point.
+    """
+    len = 4
+
+    def _decode(self, regs):
+        return struct.unpack(">d", struct.pack(">4H", *regs))[0]
+
+    def _encode(self, value):
+        return struct.unpack(">4H", struct.pack(">d", value))
+
+
+class SwappedLongValue(_Swapped, LongValue):
+    """32-bit integer, two registers, little-endian word order.
+    """
+    pass
 
 class SwappedQuadValue(_Swapped, QuadValue):
     """64-bit integer, four registers, little-endian word order.
@@ -149,7 +226,6 @@ class SignedLongValue(_Signed, LongValue):
     """two registers, signed.
     """
     pass
-
 
 class SwappedSignedLongValue(_Signed, _Swapped, BaseValue):
     """two registers, signed, swapped.
@@ -173,40 +249,14 @@ class SwappedSignedQuadValue(_Signed, _Swapped, QuadValue):
 SignedSwappedQuadValue = SwappedSignedQuadValue
 
 
-class FloatValue(BaseValue):
-    """network-ordered floating point.
-    """
-
-    len = 2
-
-    def _decode(self, regs):
-        return struct.unpack(">f", struct.pack(">2H", *regs))[0]
-
-    def _encode(self, value):
-        return struct.pack(">f", value)
-
-
 class SwappedFloatValue(_Swapped, FloatValue):
-    """network-ordered floating point.
+    """broken-ordered floating point.
     """
     pass
 
 
-class DoubleValue(BaseValue):
-    """network-ordered accurate floating point.
-    """
-
-    len = 4
-
-    def _decode(self, regs):
-        return struct.unpack(">d", struct.pack(">4H", *regs))[0]
-
-    def _encode(self, value):
-        return struct.pack(">d", value)
-
-
 class SwappedDoubleValue(_Swapped, DoubleValue):
-    """network-ordered accurate floating point.
+    """broken-ordered accurate floating point.
     """
     pass
 
@@ -229,45 +279,203 @@ class TypeCodec:
         return self.typ
 
 
-@singleton
+@_singleton
 class Coils(TypeCodec):
     """Modbus 'coils' data.
     This is a TypeCodec.
     """
 
     typ = 0
+    key = 'c'
     encoder = ReadCoilsRequest
     decoder = ReadCoilsResponse
+    encoder_s = WriteSingleCoilRequest
+    decoder_s = WriteSingleCoilResponse
+    encoder_m = WriteMultipleCoilsRequest
+    decoder_m = WriteMultipleCoilsResponse
 
 
-@singleton
+@_singleton
 class DiscreteInputs(TypeCodec):
     """Modbus 'discrete input' data.
     This is a TypeCodec.
     """
 
     typ = 1
+    key = 'd'
     encoder = ReadDiscreteInputsRequest
     decoder = ReadDiscreteInputsResponse
 
 
-@singleton
+@_singleton
 class HoldingRegisters(TypeCodec):
     """Modbus 'holding register' data.
     This is a TypeCodec.
     """
 
     typ = 2
+    key = 'h'
     encoder = ReadHoldingRegistersRequest
     decoder = ReadHoldingRegistersResponse
+    encoder_s = WriteSingleRegisterRequest
+    decoder_s = WriteSingleRegisterResponse
+    encoder_m = WriteMultipleRegistersRequest
+    decoder_m = WriteMultipleRegistersResponse
 
 
-@singleton
+@_singleton
 class InputRegisters(TypeCodec):
     """Modbus 'input register' data.
     This is a TypeCodec.
     """
 
     typ = 3
+    key = 'i'
     encoder = ReadInputRegistersRequest
     decoder = ReadInputRegistersResponse
+
+
+class DataBlock(dict, BaseModbusDataBlock):
+    """Your basic sparse data block.
+
+    The @changed attribute is an event that triggers when a write request
+    succeeds.
+    """
+
+    def __init__(self, max_len=30):
+        super().__init__()
+        self.max_len = max_len
+        self.changed = anyio.Event()
+
+    def default(self, count, value=False):
+        raise NotImplementedError
+
+    def reset(self):
+        for val in self.values():
+            val.value = None
+
+    def add(self, offset:int, val: BaseValue): 
+        if offset in self:
+            raise ValueError("Already known", i)
+        for n in range(1,8):
+            try:
+                if self[offset-n].len > n:
+                    raise ValueError(f"Overlap with {self[offset-n]} @{offset-n}")
+                break
+            except KeyError:
+                pass
+        for n in range(1,val.len):
+            try:
+                if offset+n in self:
+                    raise ValueError(f"Overlap with {self[offset+n]} @{offset+n}")
+                break
+            except KeyError:
+                pass
+        self[offset] = val
+
+    def validate(self, address:int, count:int = 1):
+        if not count:
+            return False
+        while count:
+            try:
+                val = self[address]
+                if val.len <= 0:
+                    raise RuntimeError("invalid")
+            except (KeyError,RuntimeError):
+                return False
+            address += val.len
+            count -= val.len
+        return True
+
+    def ranges(self):
+        """Iterate over to-be-retrieved range(s)."""
+        start, cur = None, None
+        for offset, val in sorted(self.items()):
+            if isinstance(val, InaccessibleValue):
+                if start is not None:
+                    yield (start, cur - start)
+                    start = None
+            elif start is None: 
+                start = offset  
+                cur = start + val.len
+            elif cur == offset and (cur + val.len - start) <= self.max_len:
+                cur += val.len
+            else:
+                yield (start, cur - start)
+                start = offset
+                cur = start + val.len
+                
+        if cur is not None:
+            yield (start, cur - start)
+
+    def getValues(self, address:int, count=1):
+        """Get the array of Modbus values for the @address:+@count range"""
+        res = []
+        while count > 0:
+            try:
+                val = self[address]
+            except KeyError:
+                res.append(0)
+                address += 1
+                count -= 1
+            else:
+                res.extend(val.encode())
+                address += val.len
+                count -= val.len
+        if count < 0:
+            # well, this shouldn't happen but …
+            res = res[:count]
+        return res
+
+    def setValues(self, address:int, values:List[int]):
+        """Set the variables starting at @address to @values"""
+        while values:
+            try:
+                val = self[address]
+            except KeyError:
+                address += 1
+                values.pop(0)
+            else:
+                val.decode(values[:val.len])
+                address += val.len
+                values = values[val.len:]
+
+        self.changed.set()
+        self.changed = anyio.Event()
+
+    def delete(self, address, count=1):
+        while count:
+            self.pop(address, None)
+            address += 1
+            count -= 1
+
+
+class ValueIterator:
+    """
+    Helper class for iterating over `BaseValue` changes.
+
+    Posts a notification when values get skipped.
+    """
+    def __init__(self, val):
+        self.val = val
+        self.gen = max(0, val.gen-1)
+
+    async def __anext__(self):
+        """
+        Iterate over values / value changes.
+        
+        If the value is initially unknown, wait.
+        if it's been cleared, raises `StopAsyncIteration`.
+        """
+        if val.gen > 0 and val.value is None:
+            raise StopAsyncIteration
+        if self.gen == val.gen:
+            await self.changed.wait()
+        if self.value is None:
+            raise StopAsyncIteration
+        if self.gen+1 != val.gen:
+            logger.notice("%r: skipped %d",val.gen-self.gen-1)
+        self.gen = val.gen
+        return self.value
+
+

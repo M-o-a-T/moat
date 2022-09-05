@@ -1,23 +1,14 @@
 #!/usr/bin/env python3
 """
-Pymodbus Synchronous Client Examples
+AsyncModbus Client Examples
 --------------------------------------------------------------------------
 
-The following is an example of how to use the synchronous modbus client
-implementation from pymodbus.
-
-It should be noted that the client can also be used with
-the guard construct that is available in python 2.5 and up::
-
-    with ModbusClient('127.0.0.1') as client:
-        result = client.read_coils(1,10)
-        print result
+The following is an example of how to use the async modbus client
+implementation from asyncmodbus.
 """
 import asyncclick as click
 import struct
 import anyio
-from pymodbus.client.sync import ModbusTcpClient as ModbusClient
-from pymodbus.pdu import ExceptionResponse
 
 from asyncmodbus.client import ModbusClient
 from asyncmodbus.types import Coils,DiscreteInputs,HoldingRegisters,InputRegisters
@@ -57,6 +48,12 @@ def get_len(typ):
         return 1
     return int(typ[1:])
 
+def flint(v):
+    try:
+        return int(v)
+    except ValueError:
+        return float(v)
+
 @click.command(context_settings=dict(show_default=True))
 @click.option('--host','-h', default="localhost", help="destination host")
 @click.option('--port','-p', type=int, default=502, help="destination port")
@@ -66,7 +63,8 @@ def get_len(typ):
 @click.option('--num','-n', type=int, default=1, help="number of values")
 @click.option('--type','-t', default="raw", help="value type: s1,s2,s4,u1,u2,u4,f2,f4,raw; Sx/Fx=swapped")
 @click.option('--debug','-d', is_flag=True, help="Log debug messages")
-async def run(host, port, unit, kind, start, num, type, debug):
+@click.argument('values', nargs=-1)
+async def run(host, port, unit, kind, start, num, type, values, debug):
     if debug:
         log.setLevel(logging.DEBUG)
 
@@ -77,19 +75,27 @@ async def run(host, port, unit, kind, start, num, type, debug):
 
         k = map_kind[kind[0]]
         t = map_type[type]
-        while num > 0:
-            s.add(k,start,t)
+        if values:
+            if len(values) == 1:
+                values = values*num
+            elif len(values) != num:
+                raise click.UsageError("One or N values!")
+        for i in range(num):
+            v = s.add(k,start,t)
+            if values:
+                v.value = flint(values[i])
             start += t.len
             num -= 1
 
         try:
-            res = await s.run()
+            if values:
+                await s.setValues()
+            else:
+                res = await s.getValues()
+                print(res)
         except Exception as exc:
             log.exception(f"Problem:{repr(exc)}")
-        else:
-            breakpoint()
-            print(res)
 
 
 if __name__ == "__main__":
-    run()
+    run(_anyio_backend="trio")

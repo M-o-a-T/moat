@@ -322,7 +322,7 @@ class Loader(click.Group):
 
     Caller:
 
-        from distkv.command import Loader
+        from moat.util import Loader
         from functools import partial
 
         @click.command(cls=partial(Loader,_plugin='command'))
@@ -331,7 +331,7 @@ class Loader(click.Group):
 
     Sub-Command Usage (``main`` is defined for you), e.g. in ``command/subcmd.py``::
 
-        from distkv.command import Loader
+        from moat.util import Loader
         from functools import partial
 
         @main.command / group()

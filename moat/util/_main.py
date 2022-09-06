@@ -390,13 +390,11 @@ class MainLoader(Loader):
     """
 
     async def invoke(self, ctx):
-        if ctx.obj is None:
+        if not getattr(ctx, "_moat_invoked", False):
             await ctx.invoke(self.callback, **ctx.params)
         return await super().invoke(ctx)
 
 
-#
-# The following part is annoying.
 #
 # There are two ways this can start up.
 # (a) `main_` is the "real" main function. It sets up the Click environment and then
@@ -441,8 +439,9 @@ async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redef
 
     # The above `MainLoader.invoke` call causes this code to be called
     # twice instead of never.
-    if ctx.obj is not None:
+    if hasattr(ctx, '_moat_invoked'):
         return
+    ctx._moat_invoked = True
     wrap_main(ctx=ctx, verbose=max(0, 1 + verbose - quiet), **kv)
     if help or ctx.invoked_subcommand is None and not ctx.protected_args:
         print(ctx.get_help())

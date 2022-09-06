@@ -74,7 +74,7 @@ class ModbusError(RuntimeError):
 
 
 class Host:
-    """This is a single host which asyncmodbus talks to.
+    """This is a single host which moat-modbus talks to.
     It has a number of modbus units (attribute 'units'.
     Simply indexing a host will return a unit object
     (existing or new); use the unit number as index.

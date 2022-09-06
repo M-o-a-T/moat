@@ -1,5 +1,5 @@
 ###########
-asyncmodbus
+moat-modbus
 ###########
 
 This is an anyio-enabled async frontend for pymodbus.
@@ -16,7 +16,7 @@ Documentation patches gladly accepted.
 Background
 ++++++++++
 
-`asyncmodbus` diverges from `pymodbus` in that it does not expose a data
+`moat-modbus` diverges from `pymodbus` in that it does not expose a data
 store, context to the user. Instead, every bus value is a separate object,
 with arbitrary length and encapsulating its encoding and decoding rules.
 

@@ -15,7 +15,7 @@ from pymodbus.factory import ServerDecoder
 from pymodbus.pdu import ModbusExceptions as merror
 from pymodbus.utilities import hexlify_packets
 
-from asyncmodbus.types import DataBlock
+from moat.modbus.types import DataBlock
 
 from binascii import b2a_hex
 import traceback
@@ -41,8 +41,8 @@ class BaseModbusServer:
             identity.VendorName = "Matthias Urlichs"
             identity.ProductCode = "MoaT.modbus"
             identity.VendorUrl = "http://M-o-a-T.org/"
-            identity.ProductName = "AsyncModbus Test"
-            identity.ModelName = "AsyncModbus Test"
+            identity.ProductName = "MoaT-Modbus Test"
+            identity.ModelName = "MoaT-Modbus Test"
             identity.MajorMinorRevision = "1.0"
         self.identity = identity
 

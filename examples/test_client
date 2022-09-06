@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-AsyncModbus Client Examples
+Noat-Modbus Client Examples
 --------------------------------------------------------------------------
 
 The following is an example of how to use the async modbus client
-implementation from asyncmodbus.
+implementation from moat-modbus.
 """
 import asyncclick as click
 import struct
 import anyio
 
-from asyncmodbus.client import ModbusClient
-from asyncmodbus.types import Coils,DiscreteInputs,HoldingRegisters,InputRegisters
-from asyncmodbus.types import IntValue,LongValue,SwappedLongValue,SignedIntValue,SignedLongValue,SwappedSignedLongValue,FloatValue,SwappedFloatValue,DoubleValue,SwappedDoubleValue,SignedQuadValue,QuadValue,SwappedQuadValue,SwappedSignedQuadValue
+from moat.modbus.client import ModbusClient
+from moat.modbus.types import Coils,DiscreteInputs,HoldingRegisters,InputRegisters
+from moat.modbus.types import IntValue,LongValue,SwappedLongValue,SignedIntValue,SignedLongValue,SwappedSignedLongValue,FloatValue,SwappedFloatValue,DoubleValue,SwappedDoubleValue,SignedQuadValue,QuadValue,SwappedQuadValue,SwappedSignedQuadValue
 map_kind = {'c':Coils,'d':DiscreteInputs,'h':HoldingRegisters,'i':InputRegisters}
 map_type = {
         'raw': IntValue,

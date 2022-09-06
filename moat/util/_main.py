@@ -226,7 +226,10 @@ def load_one(path, name, endpoint=None):
 def _namespaces(name):
     import pkgutil
 
-    ext = importlib.import_module(name)
+    try:
+        ext = importlib.import_module(name)
+    except ModuleNotFoundError:
+        return ()
     return pkgutil.iter_modules(ext.__path__, ext.__name__ + ".")
 
 
@@ -381,8 +384,8 @@ class Loader(click.Group):
                 plugins = ctx.obj._ext_name
 
                 command = load_one(f"{plugins}.{name}", self._util_plugin, "cli")
-            except (ModuleNotFoundError, FileNotFoundError):
-                pass
+            except (ModuleNotFoundError, FileNotFoundError) as exc:
+                logger.debug("Module Load", exc_info=exc)
 
         if command is None:
             subdir = getattr(self, "_util_subdir", None) or ctx.obj._sub_name

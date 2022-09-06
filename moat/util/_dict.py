@@ -204,5 +204,5 @@ def to_attrdict(d) -> attrdict:
     if isinstance(d, dict):
         return attrdict((k, to_attrdict(v)) for k, v in d.items())
     if isinstance(d, (tuple, list)):
-        return [attrdict(v) for v in d]
+        return [to_attrdict(v) for v in d]
     return d

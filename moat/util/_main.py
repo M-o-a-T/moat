@@ -482,7 +482,7 @@ def wrap_main(  # pylint: disable=redefined-builtin
     conf: a list of additional config changes
     cfg: configuration file, default: various locations based on {name}, False=don't load
     CFG: default configuration (dir or file), relative to caller
-         Default: try to load from name.default
+         Default: try to load from name._config
     wrap: this is a subcommand. Don't set up logging, return the awaitable.
     args: Argument list if called from a test, `None` otherwise.
     help: Main help text of your code.
@@ -520,14 +520,14 @@ def wrap_main(  # pylint: disable=redefined-builtin
             CFG = yload(cfgf)
     elif CFG is None:
         try:
-            CFG = importlib.import_module(f"{name}.default").CFG
+            CFG = importlib.import_module(f"{name}._config").CFG
         except (ImportError, AttributeError):
             CFG = {}
     CFG = to_attrdict(CFG)  # attrdict-ized copy
 
     for n, _ in list_ext(ext):
         try:
-            CFG[n] = combine_dict(load_ext(ext, n, "config", "CFG"), CFG.get(n, {}), cls=attrdict)
+            CFG[n] = combine_dict(load_ext(ext, n, "_config", "CFG"), CFG.get(n, {}), cls=attrdict)
         except ModuleNotFoundError:
             pass
 

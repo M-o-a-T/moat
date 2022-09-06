@@ -8,6 +8,6 @@ include /usr/share/sourcemgr/make/py
 
 else
 %:
-		@echo "Please use 'python setup.py'."
-		@exit 1
+	@echo "Please use 'python setup.py'."
+	@exit 1
 endif

@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-PACKAGE=moat.modbus
+PACKAGE=moat-modbus
 
 ifneq ($(wildcard /usr/share/sourcemgr/make/py),)
 include /usr/share/sourcemgr/make/py

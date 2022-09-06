@@ -9,7 +9,7 @@ if sys.version_info[0:2] < (3, 6):
 setup(
     name="moat-modbus",
     use_scm_version={"version_scheme": "guess-next-dev", "local_scheme": "dirty-tag"},
-    packages=find_namespace_packages(include=['moat.*'])
+    packages=find_namespace_packages(include=['moat.*']),
     url="https://github.com/M-o-a-T/moat.modbus",
     license="MIT",
     author="Matthias Urlichs",

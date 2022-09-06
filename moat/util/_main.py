@@ -537,7 +537,9 @@ def wrap_main(  # pylint: disable=redefined-builtin
         try:
             CFG[n] = combine_dict(load_ext(ext, d, "_config", "CFG"), CFG.get(n, {}), cls=attrdict)
         except ModuleNotFoundError:
-            pass
+            fn = d / "_config.yaml"
+            if fn.is_file():
+                CFG[n] = yload(fn)
 
     obj.stdout = CFG.get("_stdout", sys.stdout)  # used for testing
     obj.CFG = CFG

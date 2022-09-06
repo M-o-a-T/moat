@@ -308,7 +308,7 @@ def load_ext(ext_name, name, func=None, endpoint=None):
 
 def load_subgroup(_fn=None, plugin=None, **kw):
     """
-    as click.group, but enables loading of subcommands
+    A decorator like click.group, but enables loading of subcommands
     """
 
     def _ext(fn, **kw):

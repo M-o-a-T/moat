@@ -413,9 +413,8 @@ class MainLoader(Loader):
 #     and then returns "main_.main()", which is an awaitable, thus
 #     `wrap_main` acts as an async function.
 
-
 @load_subgroup(
-    plugin="main",
+    plugin="_main",
     cls=MainLoader,
     add_help_option=False,
     invoke_without_command=True,

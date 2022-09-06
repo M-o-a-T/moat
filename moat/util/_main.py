@@ -244,7 +244,7 @@ def _cache_ext(ext_name):
         if not ispkg:
             continue
         x = name.rsplit(".", 1)[-1]
-        f = os.path.join(finder.path, x)
+        f = Path(finder.path) / x
         _ext_cache[ext_name][x] = f
 
 
@@ -264,12 +264,13 @@ def list_ext(name, func=None):
         yield from iter(_ext_cache[name].items())
         return
     for x, f in _ext_cache[name].items():
-        if os.path.exists(os.path.join(f, "._no_load")):
+        if (f / ".no_load").is_file():
             continue
-        fn = os.path.join(f, func) + ".py"
-        if not os.path.exists(fn):
-            fn = os.path.join(f, func, "__init__.py")
-            if not os.path.exists(fn):
+        fn = f / (func + ".py")
+        if not fn.is_file():
+            fn = f / func / "__init__.py"
+            if not fn.is_file():
+                # XXX this might be a namespace
                 continue
         yield (x, f)
 
@@ -532,9 +533,9 @@ def wrap_main(  # pylint: disable=redefined-builtin
             CFG = {}
     CFG = to_attrdict(CFG)  # attrdict-ized copy
 
-    for n, _ in list_ext(ext):
+    for n, d in list_ext(ext):
         try:
-            CFG[n] = combine_dict(load_ext(ext, n, "_config", "CFG"), CFG.get(n, {}), cls=attrdict)
+            CFG[n] = combine_dict(load_ext(ext, d, "_config", "CFG"), CFG.get(n, {}), cls=attrdict)
         except ModuleNotFoundError:
             pass
 

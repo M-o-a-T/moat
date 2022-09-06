@@ -473,11 +473,11 @@ def wrap_main(  # pylint: disable=redefined-builtin
     help=None,
 ) -> Awaitable:
     """
-    The main command entry point, as declared in ``setup.py``.
+    The main command entry point.
 
-    main: special main function, defaults to .util.main_
+    main: special main function, defaults to moat.util.main_
     name: command name, defaults to {main}'s toplevel module name.
-    ext: extension stub package, default to "{name}_ext"
+    ext: extensions' namespace package, default to "{name}.ext"
     sub: load *.cli() from this package, default=caller if True
     conf: a list of additional config changes
     cfg: configuration file, default: various locations based on {name}, False=don't load
@@ -488,20 +488,27 @@ def wrap_main(  # pylint: disable=redefined-builtin
     help: Main help text of your code.
     """
 
+    obj = getattr(ctx, "obj", None)
+    if obj is None:
+        obj = attrdict()
+
     if name is None:
         name = (main or main_).__module__.split(".", 1)[0]
+
+    opts = obj.get(name, attrdict())
+
     if ext is None:
-        ext = f"{name}_ext"
+        ext = opts.get("ext", f"{name}.ext")
     if sub is True:
         import inspect
 
         sub = inspect.currentframe().f_back.f_globals["__package__"]
     elif sub is None:
-        sub = __name__.split(".", 1)[0] + ".command"
+        if "sub" in opts:
+            sub = opts["sub"]
+        else:
+            sub = __name__.split(".", 1)[0] + "._main"
 
-    obj = getattr(ctx, "obj", None)
-    if obj is None:
-        obj = attrdict()
     if main is None:
         if help is not None:
             raise RuntimeError("You can't set the help text this way")

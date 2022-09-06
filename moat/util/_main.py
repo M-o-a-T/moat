@@ -264,6 +264,8 @@ def list_ext(name, func=None):
         yield from iter(_ext_cache[name].items())
         return
     for x, f in _ext_cache[name].items():
+        if os.path.exists(os.path.join(f, "._no_load")):
+            continue
         fn = os.path.join(f, func) + ".py"
         if not os.path.exists(fn):
             fn = os.path.join(f, func, "__init__.py")
@@ -350,14 +352,20 @@ class Loader(click.Group):
         subdir = getattr(self, "_util_subdir", None) or ctx.obj._sub_name
 
         if subdir:
-            path = Path(importlib.import_module(subdir).__path__[0])
-            for filename in os.listdir(path):
-                if filename[0] in "._":
-                    continue
-                if filename.endswith(".py"):
-                    rv.append(filename[:-3])
-                elif (path / filename / "__init__.py").is_file():
-                    rv.append(filename)
+            try:
+                paths = importlib.import_module(subdir).__path__
+            except ModuleNotFoundError:
+                pass
+            else:
+                for path in paths:
+                    path = Path(path)
+                    for fn in path.iterdir():
+                        if fn.name[0] in "._":
+                            continue
+                        if fn.suffix == ".py":
+                            rv.append(fn.name[:-3])
+                        elif (fn / "__init__.py").is_file():
+                            rv.append(fn.name)
 
         if self._util_plugin:
             for n, _ in list_ext(ctx.obj._ext_name, self._util_plugin):

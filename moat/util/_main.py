@@ -12,7 +12,7 @@ from typing import Awaitable
 
 import asyncclick as click
 
-from ._dict import attrdict, combine_dict
+from ._dict import attrdict, combine_dict, to_attrdict
 from ._impl import NotGiven
 from ._msgpack import Proxy
 from ._path import P, path_eval
@@ -523,7 +523,7 @@ def wrap_main(  # pylint: disable=redefined-builtin
             CFG = importlib.import_module(f"{name}.default").CFG
         except (ImportError, AttributeError):
             CFG = {}
-    CFG = attrdict(**CFG)  # shallow copy
+    CFG = to_attrdict(CFG)  # attrdict-ized copy
 
     for n, _ in list_ext(ext):
         try:

@@ -2,8 +2,6 @@ from .compat import Event,ticks_ms,ticks_add,ticks_diff,wait_for_ms,print_exc,Ca
 from .proto import _Stacked, RemoteError, SilentRemoteError as FSError
 from contextlib import asynccontextmanager
 
-from serialpacker import SerialPacker
-
 import sys
 
 #

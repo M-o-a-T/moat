@@ -1,0 +1,80 @@
+[project]
+name = "moat-util"
+dynamic = ["version"]
+description = "Utility code for the rest of MoaT"
+readme = "README.rst"
+requires-python = ">=3.8"
+license = {file = "LICENSE.txt"}
+keywords = [ "MoaT", ]
+authors = [
+  { name = "Matthias Urlichs", email = "matthias@urlichs.de" },
+]
+classifiers = [
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Framework :: AsyncIO",
+  "Framework :: Trio",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved",
+  "Development Status :: 4 - Beta",
+]
+dependencies = [
+  "anyio >= 3.0",
+]
+
+[project.optional-dependencies]
+event = [
+    "attr",
+    "outcome",
+]
+main = [
+  "asyncclick",
+  "getpass",
+]
+msg = [
+  "msgpack",
+]
+path = [
+  "simpleeval",
+]
+queue= [
+  "outcome",
+]
+systemd= [
+  "systemd.daemon",
+]
+yaml = [
+  "ruyaml",
+]
+time = [
+  "calendar",
+]
+### END SPECIFIC
+
+dev = [
+  "flake8",
+# "flake8-pyproject",
+  "isort",
+]
+
+[project.urls]
+homepage = "https://m-o-a-t.org"
+# documentation = "https://readthedocs.org"
+repository = "https://github.com/M-o-a-T/moat-util"
+
+[build-system]
+requires = ["setuptools", "wheel", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = [ "moat.util" ]
+
+[tool.flake8]
+max-line-length=99
+
+[tool.isort]
+line_length=88
+multi_line_output=3
+trailing_comma=1
+
+[tool.setuptools_scm]

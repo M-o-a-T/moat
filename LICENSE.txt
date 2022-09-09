@@ -1,0 +1,4 @@
+The code in this repository is part of the MoaT project.
+
+The licensing information in the moat-main repository at
+https://github.com/M-o-a-T/moat-main is applicable.

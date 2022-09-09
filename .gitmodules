@@ -7,3 +7,6 @@
 [submodule "util"]
 	path = util
 	url = https://git.smurf.noris.de/moat-util.git
+[submodule "mqtt"]
+	path = mqtt
+	url = https://git.smurf.noris.de/moat-mqtt

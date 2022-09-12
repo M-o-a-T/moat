@@ -4,9 +4,9 @@ DistKV client data model for Akumuli
 import anyio
 from collections.abc import Mapping
 
-from distkv.obj import ClientEntry, ClientRoot
+from distkv.obj import ClientEntry, ClientRoot, AttrClientEntry
 from distkv.errors import ErrorRoot
-from distkv.util import NotGiven
+from distkv.util import NotGiven, attrdict, Path
 from asyncakumuli import Entry, DS
 
 import logging
@@ -48,16 +48,26 @@ class _AkumuliBase(ClientEntry):
         pass
 
 
-class AkumuliNode(_AkumuliBase):
+class AkumuliNode(_AkumuliBase, AttrClientEntry):
     """
     Base class for a node with data (possibly).
     """
+    attr = None
+    mode = None
+    source = None
+    series = None
+    tags = None
+    ATTRS = ('source', 'attr', 'mode', 'series', 'tags')
 
     _work = None
+    _t_last = None
 
     @property
     def tg(self):
         return self.parent.tg
+
+    def __str__(self):
+        return f"N {Path(*self.subpath[1:])} {Path(*self.source)} {Path(*self.attr)} {self.series} {' '.join('%s=%s' % (k,v) for k,v in self.tags.items())}"
 
     async def with_output(self, evt, src, attr, series, tags, mode):
         """
@@ -130,8 +140,21 @@ class AkumuliNode(_AkumuliBase):
         await evt.wait()
 
 
-class AkumuliServer(_AkumuliBase):
+class AkumuliServer(_AkumuliBase, AttrClientEntry):
     _server = None
+    host:str = None
+    port:int = None
+
+    topic:str = None
+
+    ATTRS=("topic",)
+    AUX_ATTRS=("host","port")
+
+    def __str__(self):
+        res = f"{self._name}: {self.host}:{self.port}"
+        if self.topic:
+            res += " Topic:"+str(self.topic)
+        return res
 
     @classmethod
     def child_type(cls, name):
@@ -144,6 +167,23 @@ class AkumuliServer(_AkumuliBase):
     @property
     def tg(self):
         return self._server._distkv__tg
+
+    async def set_value(self, val):
+        if val is NotGiven:
+            return
+        self.host = val.get("server",{}).get("host",None)
+        self.port = val.get("server",{}).get("port",None)
+        self.topic = val.get("topic",None)
+
+    def get_value(self, **kw):
+        res = super().get_value(**kw)
+        try:
+            s = res["server"]
+        except KeyError:
+            res["server"] = s = {}
+        s['host'] = self.host
+        s['port'] = self.port
+        return res
 
     async def set_server(self, server):
         self._server = server

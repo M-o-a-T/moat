@@ -57,7 +57,8 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
     source = None
     series = None
     tags = None
-    ATTRS = ('source', 'attr', 'mode', 'series', 'tags')
+    t_min = None
+    ATTRS = ('source', 'attr', 'mode', 'series', 'tags', 't_min')
 
     _work = None
     _t_last = None
@@ -89,6 +90,11 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
                                 data={"path": self.subpath, "msg": msg},
                             )
                         continue
+                    if self.t_min is not None:
+                        t = anyio.current_time()
+                        if self._t_last is not None and self._t_last+self.t_min < t:
+                            continue
+                        self._t_last = t
 
                     oval = val
                     for k in attr:

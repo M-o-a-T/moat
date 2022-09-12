@@ -448,9 +448,14 @@ class Battery:
 		self.work.t = 0
 		self.work.chg = 0
 		self.work.dis = 0
-		self.work.sum = 0
+		self.work.over_chg = 0
+		self.work.over_dis = 0
+		return True
 
 	def add_work(self, w,n):
+		cu = self.ccfg.u
+		mi = self.cell_min_voltage
+
 		if w > 0:
 			self.work.chg += w
 			w *= 1-self.cfg.cap.loss
@@ -458,6 +463,23 @@ class Battery:
 			self.work.dis -= w
 		self.work.t += n
 		self.work.sum += w
+
+		# outside "standard" limits
+		if mi < cu.lim.min:
+			if self.work.sum > 0:
+				self.work.over_dis -= self.work.sum
+			self.work.sum = 0
+		elif self.work.sum < 0:
+			self.work.over_dis += -self.work.sum
+			self.work.sum = 0
+
+		if mi > cu.lim.max:
+			if self.work.sum < self.cfg.cap.cur:
+				self.work.over_chg -= self.cfg.cap.cur-self.work.sum
+			self.work.sum = self.cfg.cap.cur
+		elif self.work.sum > self.cfg.cap.cur:
+			self.work.over_chg += self.work.sum-self.cfg.cap.cur
+			self.work.sum = self.cfg.cap.cur
 
 	def get_work(self, clear:bool = False, poll:bool=False):
 		res = self.work

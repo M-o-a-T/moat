@@ -13,6 +13,7 @@ import simpleeval
 __all__ = ["Path", "P", "logger_for", "PathShortener", "PathLongener", "path_eval"]
 
 _PartRE = re.compile("[^:._]+|_|:|\\.")
+_RTagRE = re.compile("^:m[^:._]+:$")
 
 
 @total_ordering
@@ -41,6 +42,7 @@ class Path(collections.abc.Sequence):
         :vXY Bytestring, inline
         :yAB Bytestring, hex encoding
 
+        :mXX This path is marked with XX
         :XYZ otherwise: evaluate XYZ (may not start with a letter)
 
     The empty path is denoted by a single colon. A path starting with a dot
@@ -54,11 +56,12 @@ class Path(collections.abc.Sequence):
     representation (if they consist of simple elements).
     """
 
-    def __init__(self, *a):
+    def __init__(self, *a, mark=''):
         self._data: list = a
+        self.mark = mark
 
     @classmethod
-    def build(cls, data):
+    def build(cls, data, *, mark=''):
         """Optimized shortcut to generate a path from an existing tuple"""
         if isinstance(data, Path):
             return data
@@ -66,6 +69,7 @@ class Path(collections.abc.Sequence):
             return cls(*data)
         p = object.__new__(cls)
         p._data = data
+        p.mark = mark
         return p
 
     def __str__(self):
@@ -76,8 +80,10 @@ class Path(collections.abc.Sequence):
             return x
 
         res = []
+        if self.mark:
+            res.append(":m"+self.mark)
         if not self._data:
-            return ":"
+            res.append(":")
         for x in self._data:
             if isinstance(x, str) and len(x):
                 if res:
@@ -122,6 +128,8 @@ class Path(collections.abc.Sequence):
 
     def __eq__(self, other):
         if isinstance(other, Path):
+            if self.mark and other.mark and self.mark != other.mark:
+                return False
             other = other._data
         return self._data == other
 
@@ -140,26 +148,42 @@ class Path(collections.abc.Sequence):
         return x in self._data
 
     def __or__(self, other):
-        return Path(*self._data, other)
+        return Path(*self._data, other, mark=self.mark)
+
+    def _tag_add(self, other):
+        if not isinstance(other, Path):
+            return self.mark
+        if not other.mark:
+            return self.mark
+        if not self.mark:
+            return other.mark
+        if self.mark != other.mark:
+            raise RuntimeError(f"Can't concat paths with different tags: {mark} and {other.mark}")
+        return self.mark
 
     def __add__(self, other):
+        mark = self._tag_add(other)
         if isinstance(other, Path):
             other = other._data
         if not len(other):
+            if self.mark != mark:
+                return Path(*self._data, mark=mark)
             return self
-        return Path(*self._data, *other)
+        return Path(*self._data, *other, mark=mark)
 
     def __iadd__(self, other):
+        mark = self._tag_add(self, other)
         if isinstance(other, Path):
             other = other._data
         if not len(other):
             return self
+        self.mark = mark
         self._data.extend(other)
 
     def __truediv__(self, other):
         if isinstance(other, Path):
             raise RuntimeError("You want + not /")
-        return Path(*self._data, other)
+        return Path(*self._data, other, mark=self.mark)
 
     def __itruediv__(self, other):
         if isinstance(other, Path):
@@ -172,7 +196,7 @@ class Path(collections.abc.Sequence):
         return "P(%r)" % (str(self),)
 
     @classmethod
-    def from_str(cls, path):
+    def from_str(cls, path, *, mark=''):
         """
         Constructor to build a Path from its string representation.
         """
@@ -192,9 +216,17 @@ class Path(collections.abc.Sequence):
 
         pos = 0
         if isinstance(path, (tuple, list)):
-            return cls.build(path)
+            return cls.build(path, mark=mark)
         if path == ":":
-            return cls()
+            return cls(mark=mark)
+
+        mp = _RTagRE.match(path)
+        if mp:
+            if not mark:
+                mark = e[2:-1]
+            elif mark != e[2:-1]:
+                raise SyntaxError(f"Conflicting tags: {mark} vs. {e[2:-1]} at {pos}")
+            return cls(mark=mark)
 
         def add(x):
             nonlocal part
@@ -245,6 +277,13 @@ class Path(collections.abc.Sequence):
                     new(True, True)
                 elif e == "f":
                     new(False, True)
+                elif e[0] == "m" and len(e) > 1:
+                    done(None)
+                    if not mark:
+                        mark = e[1:]
+                    elif mark != e[1:]:
+                        raise SyntaxError(f"Conflicting tags: {mark} vs. {e[1:]} at {pos}")
+                    part=True
                 elif e == "n":
                     new(None, True)
                 elif e == "_":
@@ -290,7 +329,7 @@ class Path(collections.abc.Sequence):
         if esc or part is None:
             raise SyntaxError(f"Cannot parse {path!r} at {pos}")
         done(None)
-        return cls(*res)
+        return cls(*res, mark=mark)
 
     @classmethod
     def _make(cls, loader, node):
@@ -306,10 +345,12 @@ class P(Path):
     objects.
     """
 
-    def __new__(cls, path):
+    def __new__(cls, path, *, mark=''):
         if isinstance(path, Path):
+            if path.mark != mark:
+                path = Path(*path, mark=mark)
             return path
-        return Path.from_str(path)
+        return Path.from_str(path, mark=mark)
 
 
 def logger_for(path: Path):

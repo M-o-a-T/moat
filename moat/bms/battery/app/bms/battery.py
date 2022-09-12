@@ -326,7 +326,7 @@ class Battery:
 		maxv = self.cell_max_voltage
 		if maxv-minv < 2*cfg.d or maxv < cfg.min:
 			# all OK. Don't do any (more) work.
-			logger.info("Bal- %.3f %.3f %.3f %.3f", minv,maxv,cfg.d,cfg.min)
+			logger.debug("Bal- %.3f %.3f %.3f %.3f", minv,maxv,cfg.d,cfg.min)
 			for c in self.cells:
 				if c.balance_forced:
 					continue

@@ -156,7 +156,7 @@ async def attr_(obj, vars_, eval_, path_):
     if not vars_ and not eval_ and not path_:
         return
 
-    res = await node_attr(obj, obj.cfg.akumuli.prefix + obj.subpath, vars_, eval_, path_)
+    res = await node_attr(obj, obj.server._path + obj.subpath, vars_, eval_, path_)
     if obj.meta:
         yprint(res, stream=obj.stdout)
 

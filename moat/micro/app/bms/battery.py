@@ -547,10 +547,15 @@ class Battery:
 
 		# outside "standard" limits
 		if mi < cu.lim.min:
+			if self.work.sum > 0:
+				self.work.over_dis -= self.work.sum
+				self.work.sum = 0
 			return 0.05*max(0,(mi-cu.ext.min)/(cu.lim.min-cu.ext.min))
-		ma = self.cell_max_voltage
-		if ma > cu.lim.max:
-			return 1 - 0.05*max(0,(ma-cu.ext.max-ma)/(cu.ext.max-cu.lim.max))
+		if mi > cu.lim.max:
+			if self.work.sum < self.cfg.cap.cur:
+				self.work.over_chg -= self.cfg.cap.cur-self.work.sum
+				self.work.sum = self.cfg.cap.cur
+			return 1 - 0.05*max(0,(cu.ext.max-mi)/(cu.ext.max-cu.lim.max))
 
 		# OK, do the hopefully-somewhat-accurate charge level thing
 		return 0.05+0.9*min(1,max(0,self.work.sum/self.cfg.cap.cur))

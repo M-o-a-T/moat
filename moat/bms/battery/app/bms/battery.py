@@ -167,6 +167,13 @@ class BatteryInterface(DbusInterface):
 		w = self.batt.get_work(clear)
 		return w
 
+	@dbus.method()
+	async def SetWork(self, work: 'd') -> 'b':
+		"""
+		Restore work done by this battery
+		"""
+		return self.batt.clear_work(work=work)
+
 
 class Battery:
 	# global battery state, reported via MOAT callback
@@ -431,8 +438,13 @@ class Battery:
 			return True
 		return False
 
-	def clear_work(self):
+	def clear_work(self, work=None):
+		if work is None:
+			pass
+		elif work < 0 or work > self.cfg.cap.cur:
+			return False
 		self.work = attrdict()
+		self.work.sum = work or 0
 		self.work.t = 0
 		self.work.chg = 0
 		self.work.dis = 0

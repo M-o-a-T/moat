@@ -3,3 +3,4 @@ __pycache__/
 /debian/
 /dist/
 /*.egg-info/
+/build/

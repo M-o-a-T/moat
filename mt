@@ -1,8 +1,11 @@
 #!/usr/bin/python3
 
 import sys
+import os
 
-sys.path[0:0] = ("/src/moat/main","/src/moat/util","/src/moat/mqtt")
+# assume that sys.path[0] is the main …/moat directory
+_p0 = sys.path[0]
+sys.path[0:1] = (os.path.join(_p0, x) for x in os.listdir(_p0) if x[0] not in "._" and os.path.isdir(os.path.join(_p0,x)))
 # "/src/trio", "/src/distknx", "/src/xknx", "/src/distowfs", "/src/distwago", "/src/wago","/src/distmqtt", "/src/distgpio", "/src/asyncgpio", "/src/asyncactor","/src/distinv","/src/disthass", "/src/asyncowfs", "/src/distakumuli", "/src/asyncakumuli", "/src/disthass", "/src/asyncscope", "/src/anyio/src")
 
 import trio

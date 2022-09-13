@@ -538,7 +538,7 @@ def wrap_main(  # pylint: disable=redefined-builtin
 
     for n, d in list_ext(ext):
         try:
-            CFG[n] = combine_dict(load_ext(ext, d, "_config", "CFG"), CFG.get(n, {}), cls=attrdict)
+            CFG[n] = combine_dict(load_ext(ext, n, "_config", "CFG"), CFG.get(n, {}), cls=attrdict)
         except ModuleNotFoundError:
             fn = d / "_config.yaml"
             if fn.is_file():

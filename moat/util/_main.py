@@ -497,11 +497,10 @@ def wrap_main(  # pylint: disable=redefined-builtin
     if obj is None:
         obj = attrdict()
 
+    opts = obj.get("moat", attrdict())
+
     if name is None:
-        name = (main or main_).__module__.split(".", 1)[0]
-
-    opts = obj.get(name, attrdict())
-
+        name = opts["name"]
     if ext is None:
         ext = opts.get("ext", f"{name}.ext")
     if sub is True:
@@ -509,10 +508,8 @@ def wrap_main(  # pylint: disable=redefined-builtin
 
         sub = inspect.currentframe().f_back.f_globals["__package__"]
     elif sub is None:
-        if "sub" in opts:
-            sub = opts["sub"]
-        else:
-            sub = __name__.split(".", 1)[0] + "._main"
+        sub = opts.get("sub", name)
+        # __name__.split(".", 1)[0] + "._main"
 
     if main is None:
         if help is not None:

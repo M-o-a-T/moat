@@ -385,11 +385,13 @@ class Loader(click.Group):
 
                 command = load_one(f"{plugins}.{name}", self._util_plugin, "cli")
             except (ModuleNotFoundError, FileNotFoundError) as exc:
-                if exc.name != f"{plugins}.{name}":
+                if exc.name != f"{plugins}.{name}" and not exc.name.startswith(f"{plugins}.{name}._"):
                     raise
 
         if command is None:
             subdir = getattr(self, "_util_subdir", None) or ctx.obj._sub_name
+            if subdir is None:
+                return None
             command = load_ext(subdir, name, "cli")
 
         command.__name__ = command.name = name
@@ -510,6 +512,8 @@ def wrap_main(  # pylint: disable=redefined-builtin
     elif sub is None:
         sub = opts.get("sub", name)
         # __name__.split(".", 1)[0] + "._main"
+        if sub is False:
+            sub = None
 
     if main is None:
         if help is not None:

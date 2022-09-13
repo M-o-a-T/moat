@@ -385,7 +385,8 @@ class Loader(click.Group):
 
                 command = load_one(f"{plugins}.{name}", self._util_plugin, "cli")
             except (ModuleNotFoundError, FileNotFoundError) as exc:
-                logger.debug("Module Load", exc_info=exc)
+                if exc.name != f"{plugins}.{name}":
+                    raise
 
         if command is None:
             subdir = getattr(self, "_util_subdir", None) or ctx.obj._sub_name

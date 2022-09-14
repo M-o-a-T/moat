@@ -1,12 +1,15 @@
 [submodule "modbus"]
 	path = modbus
-	url = https://git.smurf.noris.de/moat-modbus.git
+	url = git://git.smurf.noris.de/moat-modbus.git
 [submodule "gpio"]
 	path = gpio
-	url = https://git.smurf.noris.de/moat-gpio.git
+	url = git://git.smurf.noris.de/moat-gpio.git
 [submodule "util"]
 	path = util
-	url = https://git.smurf.noris.de/moat-util.git
+	url = git://git.smurf.noris.de/moat-util.git
 [submodule "mqtt"]
 	path = mqtt
-	url = https://git.smurf.noris.de/moat-mqtt
+	url = git://git.smurf.noris.de/moat-mqtt.git
+[submodule "main"]
+	path = main
+	url = git://git.smurf.noris.de/moat-main.git

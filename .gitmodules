@@ -13,3 +13,6 @@
 [submodule "main"]
 	path = main
 	url = git://git.smurf.noris.de/moat-main.git
+[submodule "src"]
+	path = src
+	url = git://git.smurf.noris.de/moat-src.git

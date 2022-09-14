@@ -366,6 +366,12 @@ def time_until(args, t_now=None, invert=False):
     check_min = step("m", "minute", 0, lim60, check_hour, {"second": 0})
     check_sec = step("s", "second", 0, lim60, check_min, {})
 
+    def nth():
+        if p.nth > 0:
+            return 1 + ((p.res.day - 1) // 7)
+        else:
+            return -1 - ((lim30() - p.res.day) // 7)
+
     # Intermission: figure out how long until the condition is False
     if invert:
         p.delta = None
@@ -441,12 +447,6 @@ def time_until(args, t_now=None, invert=False):
             p.res = p.res.replace(hour=0, minute=0, second=0)
         if p.res < p.now:
             p.res = p.now
-
-    def nth():
-        if p.nth > 0:
-            return 1 + ((p.res.day - 1) // 7)
-        else:
-            return -1 - ((lim30() - p.res.day) // 7)
 
     if p.wk:  # week of the year
         _yr, wk, dow = p.res.isocalendar()

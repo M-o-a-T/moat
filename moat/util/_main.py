@@ -169,7 +169,9 @@ def process_args(val, vars_, eval_, path_, proxy_=(), vs=None):
             val = v
             n = -1
         elif n < 0:
-            raise click.BadOptionUsage(option_name=k, message="Setting a single value conflicts.")
+            raise click.BadOptionUsage(
+                option_name=k, message="Setting a single value conflicts."
+            )
         else:
             if isinstance(k, str):
                 k = P(k)
@@ -385,7 +387,9 @@ class Loader(click.Group):
 
                 command = load_one(f"{plugins}.{name}", self._util_plugin, "cli")
             except (ModuleNotFoundError, FileNotFoundError) as exc:
-                if exc.name != f"{plugins}.{name}" and not exc.name.startswith(f"{plugins}.{name}._"):
+                if exc.name != f"{plugins}.{name}" and not exc.name.startswith(
+                    f"{plugins}.{name}._"
+                ):
                     raise
 
         if command is None:
@@ -420,19 +424,31 @@ class MainLoader(Loader):
 #     and then returns "main_.main()", which is an awaitable, thus
 #     `wrap_main` acts as an async function.
 
+
 @load_subgroup(
     plugin="_main",
     cls=MainLoader,
     add_help_option=False,
     invoke_without_command=True,
 )  # , __file__, "command"))
-@click.option("-v", "--verbose", count=True, help="Be more verbose. Can be used multiple times.")
-@click.option("-q", "--quiet", count=True, help="Be less verbose. Opposite of '--verbose'.")
-@click.option("-D", "--debug", count=True, help="Enable debug speed-ups (smaller keys etc).")
 @click.option(
-    "-l", "--log", multiple=True, help="Adjust log level. Example: '--log asyncactor=DEBUG'."
+    "-v", "--verbose", count=True, help="Be more verbose. Can be used multiple times."
 )
-@click.option("-c", "--cfg", type=click.Path("r"), default=None, help="Configuration file (YAML).")
+@click.option(
+    "-q", "--quiet", count=True, help="Be less verbose. Opposite of '--verbose'."
+)
+@click.option(
+    "-D", "--debug", count=True, help="Enable debug speed-ups (smaller keys etc)."
+)
+@click.option(
+    "-l",
+    "--log",
+    multiple=True,
+    help="Adjust log level. Example: '--log asyncactor=DEBUG'.",
+)
+@click.option(
+    "-c", "--cfg", type=click.Path("r"), default=None, help="Configuration file (YAML)."
+)
 @click.option(
     "-C",
     "--conf",
@@ -440,10 +456,16 @@ class MainLoader(Loader):
     help="Override a config entry. Example: '-C server.bind_default.port=57586'",
 )
 @click.option(
-    "-h", "-?", "--help", is_flag=True, help="Show help. Subcommands only understand '--help'."
+    "-h",
+    "-?",
+    "--help",
+    is_flag=True,
+    help="Show help. Subcommands only understand '--help'.",
 )
 @click.pass_context
-async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redefined-builtin
+async def main_(
+    ctx, verbose, quiet, help=False, **kv
+):  # pylint: disable=redefined-builtin
     """
     This is the main command. (You might want to override this text.)
 
@@ -453,7 +475,7 @@ async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redef
 
     # The above `MainLoader.invoke` call causes this code to be called
     # twice instead of never.
-    if hasattr(ctx, '_moat_invoked'):
+    if hasattr(ctx, "_moat_invoked"):
         return
     ctx._moat_invoked = True
     wrap_main(ctx=ctx, verbose=max(0, 1 + verbose - quiet), **kv)
@@ -539,7 +561,9 @@ def wrap_main(  # pylint: disable=redefined-builtin
 
     for n, d in list_ext(ext):
         try:
-            CFG[n] = combine_dict(load_ext(ext, n, "_config", "CFG"), CFG.get(n, {}), cls=attrdict)
+            CFG[n] = combine_dict(
+                load_ext(ext, n, "_config", "CFG"), CFG.get(n, {}), cls=attrdict
+            )
         except ModuleNotFoundError:
             fn = d / "_config.yaml"
             if fn.is_file():
@@ -614,7 +638,10 @@ def wrap_main(  # pylint: disable=redefined-builtin
             return main(args=args, standalone_mode=False, obj=obj)
 
     except click.exceptions.MissingParameter as exc:
-        print(f"You need to provide an argument { exc.param.name.upper() !r}.\n", file=sys.stderr)
+        print(
+            f"You need to provide an argument { exc.param.name.upper() !r}.\n",
+            file=sys.stderr,
+        )
         print(exc.cmd.get_help(exc.ctx), file=sys.stderr)
         sys.exit(2)
     except click.exceptions.UsageError as exc:

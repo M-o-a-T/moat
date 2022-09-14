@@ -1,4 +1,4 @@
-  """
+"""
 This module contains various helper functions and classes.
 """
 import ast
@@ -56,12 +56,12 @@ class Path(collections.abc.Sequence):
     representation (if they consist of simple elements).
     """
 
-    def __init__(self, *a, mark=''):
+    def __init__(self, *a, mark=""):
         self._data: list = a
         self.mark = mark
 
     @classmethod
-    def build(cls, data, *, mark=''):
+    def build(cls, data, *, mark=""):
         """Optimized shortcut to generate a path from an existing tuple"""
         if isinstance(data, Path):
             return data
@@ -81,7 +81,7 @@ class Path(collections.abc.Sequence):
 
         res = []
         if self.mark:
-            res.append(":m"+self.mark)
+            res.append(":m" + self.mark)
         if not self._data:
             res.append(":")
         for x in self._data:
@@ -158,7 +158,9 @@ class Path(collections.abc.Sequence):
         if not self.mark:
             return other.mark
         if self.mark != other.mark:
-            raise RuntimeError(f"Can't concat paths with different tags: {self.mark} and {other.mark}")
+            raise RuntimeError(
+                f"Can't concat paths with different tags: {self.mark} and {other.mark}"
+            )
         return self.mark
 
     def __add__(self, other):
@@ -196,7 +198,7 @@ class Path(collections.abc.Sequence):
         return "P(%r)" % (str(self),)
 
     @classmethod
-    def from_str(cls, path, *, mark=''):
+    def from_str(cls, path, *, mark=""):
         """
         Constructor to build a Path from its string representation.
         """
@@ -282,7 +284,9 @@ class Path(collections.abc.Sequence):
                     if not mark:
                         mark = e[1:]
                     elif mark != e[1:]:
-                        raise SyntaxError(f"Conflicting tags: {mark} vs. {e[1:]} at {pos}")
+                        raise SyntaxError(
+                            f"Conflicting tags: {mark} vs. {e[1:]} at {pos}"
+                        )
                     part = True
                 elif e == "n":
                     new(None, True)
@@ -345,7 +349,7 @@ class P(Path):
     objects.
     """
 
-    def __new__(cls, path, *, mark=''):
+    def __new__(cls, path, *, mark=""):
         if isinstance(path, Path):
             if path.mark != mark:
                 path = Path(*path, mark=mark)

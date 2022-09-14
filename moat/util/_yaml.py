@@ -33,7 +33,9 @@ def yaml_named(name: str, use_repr: bool = False):
 
     def register(cls):
         def str_me(dumper, data):
-            return dumper.represent_scalar("!" + name, repr(data) if use_repr else str(data))
+            return dumper.represent_scalar(
+                "!" + name, repr(data) if use_repr else str(data)
+            )
 
         SafeRepresenter.add_representer(cls, str_me)
         return cls
@@ -49,6 +51,7 @@ def _path_repr(dumper, data):
     # return ScalarNode(tag, value, style=style)
     # return yaml.events.ScalarEvent(anchor=None, tag='!P', implicit=(True, True), value=str(data))
 
+
 def _proxy_repr(dumper, data):
     return dumper.represent_scalar("!R", data.name)
     # return ScalarNode(tag, value, style=style)
@@ -59,6 +62,7 @@ SafeRepresenter.add_representer(Path, _path_repr)
 SafeConstructor.add_constructor("!P", Path._make)
 
 SafeRepresenter.add_representer(Proxy, _proxy_repr)
+
 
 def _bin_from_ascii(loader, node):
     value = loader.construct_scalar(node)

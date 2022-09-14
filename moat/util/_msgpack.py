@@ -52,12 +52,7 @@ def _decode(code, data):
 
 
 # single message packer
-packer = partial(
-    msgpack.packb,
-    strict_types=False,
-    use_bin_type=True,
-    default=_encode
-)
+packer = partial(msgpack.packb, strict_types=False, use_bin_type=True, default=_encode)
 
 # single message unpacker
 unpacker = partial(

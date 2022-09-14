@@ -77,7 +77,7 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
         async with anyio.open_cancel_scope() as sc:
             self._work = sc
             async with self.client.watch(src, min_depth=0, max_depth=0, fetch=True) as wp:
-                await evt.set()
+                evt.set()
                 async for msg in wp:
                     try:
                         val = msg.value
@@ -141,7 +141,7 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
         if isinstance(mode, str):
             mode = getattr(DS, mode, None)
 
-        evt = anyio.create_event()
+        evt = anyio.Event()
         await self.tg.spawn(self.with_output, evt, src, attr, series, tags, mode)
         await evt.wait()
 

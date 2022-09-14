@@ -34,10 +34,13 @@ A good Pythonic introduction is [here](https://vorpus.org/blog/notes-on-structur
 
 ## Repository Structure
 
-This repository contains one directory "main", which contains the
-command-line front-end of the MoaT. Any MoaT code that can reasonably be
-controlled by a command line hooks into it, by way of a `_main` module
-with a `cli` object, which should be an `asyncclick` command.
+This repository contains a lot of submodules, corresponding to separate `moat-XXX`
+packages..
+
+The submodule "main" contains the command-line front-end of the MoaT. Any
+MoaT code that can reasonably be controlled by a command line hooks into
+it, by way of a `_main` module with a `cli` object, which should be an
+`asyncclick` command.
 
 All other parts are submodules, so you can ignore the parts you don't want.
 

@@ -3,8 +3,8 @@
 import asyncclick as click
 from asyncakumuli import DS
 
+from moat.util import yprint, attrdict, NotGiven, as_service, P, attr_args
 from distkv.data import node_attr, data_get
-from distkv.util import yprint, attrdict, NotGiven, as_service, P, attr_args
 from distkv.obj.command import std_command
 
 from .model import AkumuliRoot

@@ -4,9 +4,9 @@ DistKV client data model for Akumuli
 import anyio
 from collections.abc import Mapping
 
+from moat.util import NotGiven, attrdict, Path
 from distkv.obj import ClientEntry, ClientRoot, AttrClientEntry
 from distkv.errors import ErrorRoot
-from distkv.util import NotGiven, attrdict, Path
 from asyncakumuli import Entry, DS
 
 import logging

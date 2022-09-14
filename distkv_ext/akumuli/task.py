@@ -12,7 +12,7 @@ try:
 except ImportError:
     from collections import Mapping
 
-from distkv.util import combine_dict
+from moat.util import combine_dict
 from distkv.exceptions import ClientConnectionError
 from distkv_ext.akumuli.model import AkumuliServer
 

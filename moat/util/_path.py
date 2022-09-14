@@ -1,4 +1,4 @@
-"""
+  """
 This module contains various helper functions and classes.
 """
 import ast
@@ -158,7 +158,7 @@ class Path(collections.abc.Sequence):
         if not self.mark:
             return other.mark
         if self.mark != other.mark:
-            raise RuntimeError(f"Can't concat paths with different tags: {mark} and {other.mark}")
+            raise RuntimeError(f"Can't concat paths with different tags: {self.mark} and {other.mark}")
         return self.mark
 
     def __add__(self, other):
@@ -223,9 +223,9 @@ class Path(collections.abc.Sequence):
         mp = _RTagRE.match(path)
         if mp:
             if not mark:
-                mark = e[2:-1]
-            elif mark != e[2:-1]:
-                raise SyntaxError(f"Conflicting tags: {mark} vs. {e[2:-1]} at {pos}")
+                mark = mp[2:-1]
+            elif mark != mp[2:-1]:
+                raise SyntaxError(f"Conflicting tags: {mark} vs. {mp[2:-1]}")
             return cls(mark=mark)
 
         def add(x):
@@ -283,7 +283,7 @@ class Path(collections.abc.Sequence):
                         mark = e[1:]
                     elif mark != e[1:]:
                         raise SyntaxError(f"Conflicting tags: {mark} vs. {e[1:]} at {pos}")
-                    part=True
+                    part = True
                 elif e == "n":
                     new(None, True)
                 elif e == "_":

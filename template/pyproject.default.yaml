@@ -1,0 +1,48 @@
+project:
+  authors:
+  - email: matthias@urlichs.de
+    name: Matthias Urlichs
+  classifiers:
+  - 'Intended Audience :: Developers'
+  - 'Programming Language :: Python :: 3'
+  - 'Framework :: AsyncIO'
+  - 'Framework :: Trio'
+  - 'Framework :: Trio'
+  - 'Intended Audience :: Developers'
+  - 'License :: OSI Approved'
+  - 'Development Status :: 4 - Beta'
+  dependencies:
+  - anyio >= 3.0
+  description: REPLACE ME
+  dynamic:
+  - version
+  keywords:
+  - MoaT
+  license:
+    file: LICENSE.txt
+  name: moat_SUBNAME
+  readme: README.rst
+  requires-python: '>=3.8'
+  urls:
+    homepage: https://m-o-a-t.org
+    repository: https://github.com/M-o-a-T/moat-SUBNAME
+tool:
+  flake8:
+    max-line-length: 99
+  isort:
+    line_length: 88
+    multi_line_output: 3
+    trailing_comma: 1
+  setuptools:
+    packages:
+    - moat.SUBNAME
+  setuptools_scm: {}
+  tox:
+    tox:
+      envlist: "check"
+    "testenv:check":
+      commands:
+      - flake8 moat.SUBNAME tests
+      deps:
+      - flake8
+

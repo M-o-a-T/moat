@@ -58,7 +58,7 @@ async def task(client, cfg, server: AkumuliServer, evt=None):  # pylint: disable
                 srv._distkv__tg = tg
                 await server.set_server(srv)
                 if evt is not None:
-                    await evt.set()
+                    evt.set()
 
                 if server.topic is not None:
                     await tg.start(process_raw)

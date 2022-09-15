@@ -16,7 +16,7 @@ import asyncclick as click
 import git
 import requirements
 import tomlkit
-from moat.util import make_proc, to_attrdict, yload, yprint
+from moat.util import P, make_proc, to_attrdict, yload, yprint
 from packaging.requirements import Requirement
 
 logger = logging.getLogger(__name__)
@@ -209,10 +209,35 @@ def is_clean(repo, skip=True):
     return True
 
 
+def _mangle(proj, path, mangler):
+    try:
+        for k in path[:-1]:
+            proj = proj[k]
+        k = path[-1]
+        v = proj[k]
+    except KeyError:
+        return
+    v = mangler(v)
+    proj[k] = v
+
+
+def decomma(proj, path):
+    _mangle(proj, path, lambda x: x.split(","))
+
+
+def encomma(proj, path):
+    _mangle(proj, path, lambda x: ",".join(x))
+
+
 def apply_templates(repo):
     """
     Apply templates to this repo.
     """
+    commas = (
+        P("tool.tox.tox.envlist"),
+        P("tool.pylint.messages_control.enable"),
+        P("tool.pylint.messages_control.disable"),
+    )
 
     repl = Replace(
         SUBNAME=Path(repo.working_dir).name,
@@ -226,27 +251,30 @@ def apply_templates(repo):
     try:
         with pr("pyproject.toml").open("r") as f:
             proj = tomlkit.load(f)
-            try:
-                tx = proj["tool"]["tox"]["legacy_tox_ini"]
-            except KeyError:
-                pass
-            else:
-                txp = RawConfigParser()
-                txp.read_string(tx)
-                proj["tool"]["tox"] = td = {}
-                for k, v in txp.items():
-                    td[k] = ttd = dict()
-                    for kk, vv in v.items():
-                        if isinstance(vv, str) and vv[0] == "\n":
-                            vv = [x.strip() for x in vv.strip().split("\n")]
-                        ttd[kk] = vv
+        try:
+            tx = proj["tool"]["tox"]["legacy_tox_ini"]
+        except KeyError:
+            pass
+        else:
+            txp = RawConfigParser()
+            txp.read_string(tx)
+            proj["tool"]["tox"] = td = {}
+            for k, v in txp.items():
+                td[k] = ttd = dict()
+                for kk, vv in v.items():
+                    if isinstance(vv, str) and vv[0] == "\n":
+                        vv = [x.strip() for x in vv.strip().split("\n")]
+                    ttd[kk] = vv
 
-            try:
-                envs = proj["tool"]["tox"]["tox"]["envlist"]
-            except KeyError:
-                pass
-            else:
-                proj["tool"]["tox"]["tox"]["envlist"] = envs.split(",")
+        for p in commas:
+            decomma(proj, p)
+
+        try:
+            envs = proj["tool"]["tox"]["tox"]["envlist"]
+        except KeyError:
+            pass
+        else:
+            proj["tool"]["tox"]["tox"]["envlist"] = envs.split(",")
 
     except FileNotFoundError:
         proj = tomlkit.TOMLDocument()
@@ -262,12 +290,8 @@ def apply_templates(repo):
         s2 = proj.as_string()
         mod |= s1 != s2
     if mod:
-        try:
-            envs = proj["tool"]["tox"]["tox"]["envlist"]
-        except KeyError:
-            pass
-        else:
-            proj["tool"]["tox"]["tox"]["envlist"] = ",".join(envs)
+        for p in commas:
+            encomma(proj, p)
 
         try:
             tx = proj["tool"]["tox"]

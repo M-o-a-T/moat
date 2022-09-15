@@ -6,8 +6,8 @@ import sys
 import ruyaml as yaml
 
 from ._dict import attrdict
-from ._path import Path
 from ._msgpack import Proxy
+from ._path import Path
 
 __all__ = ["yload", "yprint", "yformat", "yaml_named"]
 
@@ -33,9 +33,7 @@ def yaml_named(name: str, use_repr: bool = False):
 
     def register(cls):
         def str_me(dumper, data):
-            return dumper.represent_scalar(
-                "!" + name, repr(data) if use_repr else str(data)
-            )
+            return dumper.represent_scalar("!" + name, repr(data) if use_repr else str(data))
 
         SafeRepresenter.add_representer(cls, str_me)
         return cls

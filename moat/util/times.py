@@ -359,9 +359,7 @@ def time_until(args, t_now=None, invert=False):
         check_year,
         {"second": 0, "minute": 0, "hour": 0, "day": 1},
     )
-    check_day = step(
-        "dy", "day", 1, lim30, check_month, {"second": 0, "minute": 0, "hour": 0}
-    )
+    check_day = step("dy", "day", 1, lim30, check_month, {"second": 0, "minute": 0, "hour": 0})
     check_hour = step("h", "hour", 0, lim24, check_day, {"second": 0, "minute": 0})
     check_min = step("m", "minute", 0, lim60, check_hour, {"second": 0})
     check_sec = step("s", "second", 0, lim60, check_min, {})

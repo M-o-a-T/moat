@@ -169,9 +169,7 @@ def process_args(val, vars_, eval_, path_, proxy_=(), vs=None):
             val = v
             n = -1
         elif n < 0:
-            raise click.BadOptionUsage(
-                option_name=k, message="Setting a single value conflicts."
-            )
+            raise click.BadOptionUsage(option_name=k, message="Setting a single value conflicts.")
         else:
             if isinstance(k, str):
                 k = P(k)
@@ -431,24 +429,16 @@ class MainLoader(Loader):
     add_help_option=False,
     invoke_without_command=True,
 )  # , __file__, "command"))
-@click.option(
-    "-v", "--verbose", count=True, help="Be more verbose. Can be used multiple times."
-)
-@click.option(
-    "-q", "--quiet", count=True, help="Be less verbose. Opposite of '--verbose'."
-)
-@click.option(
-    "-D", "--debug", count=True, help="Enable debug speed-ups (smaller keys etc)."
-)
+@click.option("-v", "--verbose", count=True, help="Be more verbose. Can be used multiple times.")
+@click.option("-q", "--quiet", count=True, help="Be less verbose. Opposite of '--verbose'.")
+@click.option("-D", "--debug", count=True, help="Enable debug speed-ups (smaller keys etc).")
 @click.option(
     "-l",
     "--log",
     multiple=True,
     help="Adjust log level. Example: '--log asyncactor=DEBUG'.",
 )
-@click.option(
-    "-c", "--cfg", type=click.Path("r"), default=None, help="Configuration file (YAML)."
-)
+@click.option("-c", "--cfg", type=click.Path("r"), default=None, help="Configuration file (YAML).")
 @click.option(
     "-C",
     "--conf",
@@ -463,9 +453,7 @@ class MainLoader(Loader):
     help="Show help. Subcommands only understand '--help'.",
 )
 @click.pass_context
-async def main_(
-    ctx, verbose, quiet, help=False, **kv
-):  # pylint: disable=redefined-builtin
+async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redefined-builtin
     """
     This is the main command. (You might want to override this text.)
 
@@ -561,9 +549,7 @@ def wrap_main(  # pylint: disable=redefined-builtin
 
     for n, d in list_ext(ext):
         try:
-            CFG[n] = combine_dict(
-                load_ext(ext, n, "_config", "CFG"), CFG.get(n, {}), cls=attrdict
-            )
+            CFG[n] = combine_dict(load_ext(ext, n, "_config", "CFG"), CFG.get(n, {}), cls=attrdict)
         except ModuleNotFoundError:
             fn = d / "_config.yaml"
             if fn.is_file():

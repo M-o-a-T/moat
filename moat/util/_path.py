@@ -284,9 +284,7 @@ class Path(collections.abc.Sequence):
                     if not mark:
                         mark = e[1:]
                     elif mark != e[1:]:
-                        raise SyntaxError(
-                            f"Conflicting tags: {mark} vs. {e[1:]} at {pos}"
-                        )
+                        raise SyntaxError(f"Conflicting tags: {mark} vs. {e[1:]} at {pos}")
                     part = True
                 elif e == "n":
                     new(None, True)

@@ -1,3 +1,9 @@
+"""
+This module contains a heap of somewhat-random helper functions
+and classes which are used throughout MoaT (and beyond)
+but don't get their own package because they're too small,
+or too interrelated … or the author was too lazy.
+"""
 # TODO split this up
 
 # pylint: disable=cyclic-import,wrong-import-position

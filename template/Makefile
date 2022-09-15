@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-PACKAGE=moat-main
+PACKAGE=moat-SUBNAME
 
 ifneq ($(wildcard /usr/share/sourcemgr/make/py),)
 include /usr/share/sourcemgr/make/py

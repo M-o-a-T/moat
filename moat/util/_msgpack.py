@@ -19,6 +19,9 @@ __all__ = ["packer", "unpacker", "stream_unpacker", "Proxy"]
 
 
 class Proxy:
+    """
+    A proxy object, i.e. a placeholder for things that cannot pass through MsgPack.
+    """
     def __init__(self, name):
         self.name = name
 

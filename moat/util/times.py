@@ -15,7 +15,7 @@ _log = None
 TRACE = None
 
 
-def now(force=False):  # pylint: disable=unused-argument
+def now(force=False):  # pylint: disable=unused-argument,missing-function-docstring
     return dt.datetime.now()
 
 
@@ -29,7 +29,10 @@ units = (
 )  # seconds are handled explicitly, below
 
 
-def humandelta(delta):
+def humandelta(delta: dt.timedelta) -> str:
+    """
+    Convert a timedelta into a human-readable string.
+    """
     res = []
     res1 = ""
     if isinstance(delta, dt.timedelta):
@@ -57,6 +60,11 @@ def humandelta(delta):
 
 
 def unixtime(tm):
+    """
+    Returns the Unix timestamp of a datetime object.
+
+    Deprecated: these days there's the `datetime.timestamp` method.
+    """
     return tm.timestamp()
 
 

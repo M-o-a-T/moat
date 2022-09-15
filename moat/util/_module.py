@@ -44,6 +44,10 @@ def _proc({ ",".join(variables) }):
 
 
 class Module(ModuleType):
+    """A dynamically-loaded module.
+
+    TODO.
+    """
     def __repr__(self):
         return f"<Module {self.__class__.__name__}%s>"
 

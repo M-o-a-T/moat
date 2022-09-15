@@ -43,10 +43,11 @@ async def as_service(obj=None):
         return 0
 
     class RunMsg:
+        """A fake event that signals readiness"""
         def __init__(self, obj):
             self.obj = obj
 
-        def set(self):
+        def set(self):  # pylint:disable=missing-function-docstring
             if notify is not None:
                 notify("READY=1")
             if self.obj is not None and self.obj.debug:

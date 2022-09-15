@@ -25,10 +25,12 @@ NoneType = type(None)
 
 
 def singleton(cls):
+    """Basic singleton decorator"""
     return cls()
 
 
 class TimeOnlyFormatter(logging.Formatter):
+    """A log formatter that doesn't show dates"""
     default_time_format = "%H:%M:%S"
     default_msec_format = "%s.%03d"
 
@@ -50,6 +52,7 @@ class NotGiven:
 
 
 def count(it):
+    """iter count"""
     n = 0
     for _ in it:
         n += 1
@@ -57,6 +60,7 @@ def count(it):
 
 
 async def acount(it):
+    """async iter count"""
     n = 0
     async for _ in it:  # noqa: F841
         n += 1
@@ -80,6 +84,7 @@ class Cache:
         self._q = deque()
 
     def keep(self, entry):
+        """Store an entry in the cache"""
         if getattr(entry, self._attr, -1) > self._tail + self._size / 3:
             return
         self._head += 1
@@ -98,6 +103,7 @@ class Cache:
         self._flush()
 
     def clear(self):
+        """Clear the cache"""
         while self._head > self._tail:
             self._q.popleft()
             self._tail += 1
@@ -138,12 +144,18 @@ def digits(n, digits=6):  # pylint: disable=redefined-outer-name
 
 
 def num2byte(num: int, length=None):
+    """
+    convert an unsigned integer to a bytestring
+    """
     if length is None:
         length = (num.bit_length() + 7) // 8
     return num.to_bytes(length=length, byteorder="big")
 
 
 def byte2num(data: bytes):
+    """
+    convert a bytestring to an unsigned integer
+    """
     return int.from_bytes(data, byteorder="big")
 
 

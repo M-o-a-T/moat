@@ -21,9 +21,13 @@ SafeConstructor.yaml_base_dict_type = attrdict
 
 
 def str_presenter(dumper, data):
-    if "\n" in data:  # check for multiline string
+    """
+    Always show multi-line strings with |-style quoting
+    """
+    if "\n" in data:  # multiline string?
         return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
-    return dumper.represent_scalar("tag:yaml.org,2002:str", data)
+    else:
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data)
 
 
 def yaml_named(name: str, use_repr: bool = False):
@@ -94,11 +98,16 @@ _expect_node = Emitter.expect_node
 
 
 def expect_node(self, *a, **kw):
+    """
+    YAML stream mangler.
+
+    TODO rationale?
+    """
     _expect_node(self, *a, **kw)
     self.root_context = False
 
 
-Emitter.expect_node = _expect_node
+Emitter.expect_node = expect_node
 
 
 def yload(stream, multi=False, attr=False):
@@ -108,7 +117,7 @@ def yload(stream, multi=False, attr=False):
     y = yaml.YAML(typ="safe")
     if attr:
 
-        class AttrConstructor(SafeConstructor):
+        class AttrConstructor(SafeConstructor):  # pylint: disable=missing-class-docstring
             def __init__(self, *a, **k):
                 super().__init__(*a, **k)
                 self.yaml_base_dict_type = attrdict

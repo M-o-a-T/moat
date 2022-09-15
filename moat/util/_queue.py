@@ -21,26 +21,35 @@ class Queue:
         self._s, self._r = _cmos(length)
 
     async def put(self, x):
+        """Send a value, blocking"""
         await self._s.send(Value(x))
 
     def put_nowait(self, x):
+        """Send a value, nonblocking"""
         self._s.send_nowait(Value(x))
 
     async def put_error(self, x):
+        """Send an error value, blocking"""
         await self._s.send(Error(x))
 
     async def get(self):
+        """Get the next value, blocking.
+        May raise an exception if one was sent."""
         res = await self._r.receive()
         return res.unwrap()
 
     def get_nowait(self):
+        """Get the next value, nonblocking.
+        May raise an exception if one was sent."""
         res = self._r.receive_nowait()
         return res.unwrap()
 
     def qsize(self):
+        """Return the number of elements in the queue"""
         return self._s.statistics().current_buffer_used
 
     def empty(self):
+        """Check whether the queue is empty"""
         return self._s.statistics().current_buffer_used == 0
 
     def __aiter__(self):
@@ -51,13 +60,18 @@ class Queue:
         return res.unwrap()
 
     def close_sender(self):
+        """No more messages will be received"""
         return self._s.aclose()
 
     def close_receiver(self):
+        """No more messages may be sent"""
         return self._r.aclose()
 
 
 def create_queue(length=0):
+    """Create a queue. Compatibility method.
+
+    Deprecated; instantiate `Queue` directly."""
     return Queue(length)
 
 
@@ -87,7 +101,7 @@ class DelayedWrite:
         """
         Returns the next seq num for sending.
 
-        May need to delay until an ack is received.
+        May delay until an ack is received.
         """
         async with self._send_lock:
             self._n_sent += 1
@@ -134,10 +148,12 @@ class DelayedRead(Queue):
             self.send_ack = send_ack
 
     @staticmethod
-    def get_seq(msg):  # pylint: disable=method-hidden
+    def get_seq(msg) -> int:  # pylint: disable=method-hidden
+        """msgnum extractor. Static method. Override me!"""
         raise NotImplementedError("Override get_seq")
 
-    async def send_ack(self, seq):  # pylint: disable=method-hidden
+    async def send_ack(self, seq:int):  # pylint: disable=method-hidden
+        """Ack sender for a specific seqnum. Override me!"""
         raise NotImplementedError("Override send_flow")
 
     async def _did_read(self, res):
@@ -152,9 +168,7 @@ class DelayedRead(Queue):
         return res
 
     async def get(self):
+        """Receive the next message, send an Ack to the other side."""
         res = await super().get()
         await self._did_read(res)
         return res
-
-    async def recv_flow(self, n):
-        self._n_ack = n

@@ -46,6 +46,10 @@ tool:
   tox:
     tox:
       isolated_build: True
+      envlist:
+      - check
+      - py39
+      - py310
 
     testenv:
       setenv:

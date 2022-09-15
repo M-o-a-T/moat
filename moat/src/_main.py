@@ -207,10 +207,24 @@ def apply_templates(repo):
 							vv = [ x.strip() for x in vv.strip().split("\n") ]
 						ttd[kk] = vv
 
+			try:
+				envs = proj["tool"]["tox"]["tox"]["envlist"]
+			except KeyError:
+				pass
+			else:
+				proj["tool"]["tox"]["tox"]["envlist"] = envs.split(",")
+
 	except FileNotFoundError:
 		proj = {}
 	p = default_dict(t1,proj,t2, repl=repl)
 	if p != proj:
+		try:
+			envs = proj["tool"]["tox"]["tox"]["envlist"]
+		except KeyError:
+			pass
+		else:
+			proj["tool"]["tox"]["tox"]["envlist"] = ",".join(envs)
+
 		try:
 			tx = p["tool"]["tox"]
 		except KeyError:

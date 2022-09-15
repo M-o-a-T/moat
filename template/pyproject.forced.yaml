@@ -46,6 +46,10 @@ tool:
   tox:
     tox:
       isolated_build: True
+
+    testenv:
+      setenv:
+      - "PYTHONPATH = {env:PYTHONPATH}{:}{toxinidir}"
     "testenv:check":
       commands:
       - black --check moat/SUBNAME tests

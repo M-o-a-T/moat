@@ -64,7 +64,7 @@ def gen_ssl(
         return ctx
 
     # pylint: disable=no-member
-    import ssl
+    import ssl  # pylint: disable=import-outside-toplevel
 
     ctx_ = ssl.create_default_context(
         purpose=ssl.Purpose.CLIENT_AUTH if server else ssl.Purpose.SERVER_AUTH

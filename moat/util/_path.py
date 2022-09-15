@@ -107,7 +107,7 @@ class Path(collections.abc.Sequence):
                 res.append(":e")
             else:
                 if isinstance(x, (Path, tuple)):  # no spaces
-                    assert not len(x)
+                    assert len(x) == 0
                     x = "()"
                 else:
                     x = repr(x)
@@ -167,7 +167,7 @@ class Path(collections.abc.Sequence):
         mark = self._tag_add(other)
         if isinstance(other, Path):
             other = other._data
-        if not len(other):
+        if len(other) == 0:
             if self.mark != mark:
                 return Path(*self._data, mark=mark)
             return self
@@ -177,10 +177,10 @@ class Path(collections.abc.Sequence):
         mark = self._tag_add(other)
         if isinstance(other, Path):
             other = other._data
-        if not len(other):
-            return self
-        self.mark = mark
-        self._data.extend(other)
+        if len(other) > 0:
+            self.mark = mark
+            self._data.extend(other)
+        return self
 
     def __truediv__(self, other):
         if isinstance(other, Path):
@@ -195,7 +195,7 @@ class Path(collections.abc.Sequence):
     # TODO add alternate output with hex integers
 
     def __repr__(self):
-        return "P(%r)" % (str(self),)
+        return f"P({str(self) !r})"
 
     @classmethod
     def from_str(cls, path, *, mark=""):
@@ -382,7 +382,7 @@ def logger_for(path: Path):
 
     """
     this = __name__.split(".", 1)[0]
-    if not len(path):
+    if len(path) == 0:
         p = f"{this}.root"
     elif path[0] is None:
         p = f"{this}.meta"

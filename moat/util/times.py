@@ -45,10 +45,10 @@ def humandelta(delta):
         res1 = "-"
     for lim, name in units:
         if delta > lim:
-            res.append("%d %s" % (delta // lim, name))
+            res.append(f"{delta // lim} {name}")
             delta %= lim
-    if delta > 0.1:
-        res.append("%3.1f sec" % delta)
+    if delta >= 0.1:
+        res.append(f"{delta :%3.1f} sec")
 
     if len(res) < 1:
         return "now"
@@ -241,7 +241,7 @@ def collect_words(cur, w):
         elif unit in ("y", "yr", "year", "years"):
             if p.yr is not None:
                 raise SyntaxError("You already specified the year")
-            if val > 0 and val < 100:
+            if 0 < val < 100:
                 val += p.now.year
             else:
                 if val < p.now.year or val >= p.now.year + 100:

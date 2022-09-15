@@ -28,7 +28,7 @@ def combine_dict(*d, cls=dict, deep=False) -> dict:
     """
     res = cls()
     keys = {}
-    if not len(d):
+    if not d:
         return res
 
     if len(d) == 1 and deep and not isinstance(d[0], Mapping):
@@ -92,7 +92,7 @@ class attrdict(dict):
 
     def __setattr__(self, a, b):
         if a.startswith("_"):
-            super(attrdict, self).__setattr__(a, b)
+            super().__setattr__(a, b)
         else:
             self[a] = b
 

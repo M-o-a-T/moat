@@ -213,7 +213,8 @@ def read_cfg(name, path):
             _cfg(os.path.expanduser(f"~/.{name}.cfg"))
             _cfg(f"/etc/{name}/{name}.cfg")
             _cfg(f"/etc/{name}.cfg")
-        return cfg
+
+    return cfg
 
 
 def load_one(path, name, endpoint=None):
@@ -224,7 +225,7 @@ def load_one(path, name, endpoint=None):
 
 
 def _namespaces(name):
-    import pkgutil
+    import pkgutil  # pylint: disable=import-outside-toplevel
 
     try:
         ext = importlib.import_module(name)
@@ -483,7 +484,7 @@ async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redef
         ctx.exit()
 
 
-def wrap_main(  # pylint: disable=redefined-builtin
+def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statements
     main=main_,
     *,
     name=None,
@@ -527,7 +528,7 @@ def wrap_main(  # pylint: disable=redefined-builtin
     if ext is None:
         ext = opts.get("ext", f"{name}.ext")
     if sub is True:
-        import inspect
+        import inspect  # pylint: disable=import-outside-toplevel
 
         sub = inspect.currentframe().f_back.f_globals["__package__"]
     elif sub is None:

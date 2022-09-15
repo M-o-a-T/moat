@@ -148,7 +148,7 @@ def yformat(data, compact=None):
     :param stream: the file to write to, defaults to stdout.
     :param compact: Write single lines if possible, default False.
     """
-    from io import StringIO
+    from io import StringIO  # pylint: disable=import-outside-toplevel
 
     s = StringIO()
     yprint(data, compact=compact, stream=s)

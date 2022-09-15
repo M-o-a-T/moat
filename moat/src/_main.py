@@ -112,14 +112,17 @@ def run_tests(repo):
 	else:
 		return True
 
+
 class Replace:
 	def __init__(self, **kw):
 		self.changes = kw
+
 	def __call__(self, s):
 		if isinstance(s,str):
 			for k,v in self.changes.items():
 				s = s.replace(k,v)
 		return s
+
 
 _l_t = (list,tuple)
 
@@ -176,7 +179,7 @@ def default_dict(a,b,c, cls=dict, repl=lambda x:x) -> dict:
 						vb.insert(0,v)
 						mod = True
 		else:
-			v = va or vb or vc
+			v = repl(va) or vb or repl(vc)
 			if vb != v:
 				b[k] = v
 				mod = True
@@ -306,6 +309,7 @@ def apply_templates(repo):
 	
 
 @cli.command()
+@click.option("-A","--amend",is_flag=True,help="Fixup previous commit (DANGER)")
 @click.option("-D","--no-dirty",is_flag=True,help="don't check for dirtiness (DANGER)")
 @click.option("-C","--no-commit",is_flag=True,help="don't commit")
 @click.option("-s","--skip",type=str, multiple=True, help="skip this repo")
@@ -313,7 +317,7 @@ def apply_templates(repo):
 		default="Update from MoaT template")
 @click.option("-o","--only",type=str,multiple=True,help="affect only this repo")
 @click.pass_obj
-async def setup(obj, no_dirty, no_commit, skip, only, message):
+async def setup(obj, no_dirty, no_commit, skip, only, message, amend):
 	"""
 	Set up projects using templates.
 	"""
@@ -334,7 +338,11 @@ async def setup(obj, no_dirty, no_commit, skip, only, message):
 		if no_commit:
 			continue
 		if r.is_dirty(index=True, working_tree=False, untracked_files=False, submodules=False):
-			r.index.commit(message)
+			if amend:
+				p = r.head.commit.parents
+			else:
+				p = (r.head.commit,)
+			r.index.commit(message, parent_commits=p)
 
 
 

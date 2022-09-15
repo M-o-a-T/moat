@@ -153,10 +153,18 @@ def default_dict(a,b,c, cls=dict, repl=lambda x:x) -> dict:
 		vb = b.get(k,None)
 		vc = c.get(k,None)
 		if isinstance(va,str) and va == "DELETE":
-			b[k] = vc
-			if vb != vc:
-				mod = True
-			vb = b[k]
+			if vc is None:
+				try:
+					del b[k]
+				except KeyError:
+					pass
+				else:
+					mod = True
+				continue
+			else:
+				b[k] = {} if isinstance(vc,dict) else [] if isinstance(vc,_l_t) else 0
+				vb = b[k]
+			va = None
 		if isinstance(va, dict) or isinstance(vb, dict) or isinstance(vc,dict):
 			if vb is None:
 				b[k] = {}

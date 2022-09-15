@@ -45,7 +45,7 @@ dev = [ "flake8", "isort",]
 
 [tool.flake8]
 max-line-length = 99
-ignore = [ "W503", "E231", "E203", "F401"]
+ignore = [ "E731", "E502", "E402", "E127", "E123", "W503", "E231", "E203", "F401"]
 
 [tool.isort]
 line_length = 99
@@ -56,7 +56,7 @@ profile = "black"
 packages = [ "moat.util",]
 
 [tool.pylint.messages_control]
-disable="missing-module-docstring,no-else-continue,too-many-instance-attributes,too-many-statements,too-many-return-statements,superfluous-parens,too-few-public-methods,use-dict-literal,too-many-locals,no-else-return,too-many-arguments,too-many-branches,invalid-name,fixme,unspecified-encoding"
+disable="unspecified-encoding,missing-module-docstring,no-else-continue,too-many-instance-attributes,too-many-statements,too-many-return-statements,superfluous-parens,too-few-public-methods,use-dict-literal,too-many-locals,no-else-return,too-many-arguments,too-many-branches,invalid-name,fixme"
 
 [tool.setuptools_scm]
 
@@ -72,9 +72,11 @@ setenv =
 
 [testenv:check]
 commands = 
+    pylint moat/util tests
     flake8p moat/util tests
     black --check moat/util tests
 deps = 
+    pylint
     black
     flake8-pyproject
     flake8

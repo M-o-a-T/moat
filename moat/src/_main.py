@@ -76,7 +76,9 @@ class Repo(git.Repo):
 			n -= 1
 			yield res[n]
 
-	def tagged(self, c):
+	def tagged(self, c=None):
+		if c is None:
+			c = self.head.commit
 		if c not in self._commit_tags:
 			return None
 		tt = self._commit_tags[c]
@@ -310,6 +312,7 @@ def apply_templates(repo):
 
 @cli.command()
 @click.option("-A","--amend",is_flag=True,help="Fixup previous commit (DANGER)")
+@click.option("-N","--no-amend",is_flag=True,help="Don't fixup even if same text")
 @click.option("-D","--no-dirty",is_flag=True,help="don't check for dirtiness (DANGER)")
 @click.option("-C","--no-commit",is_flag=True,help="don't commit")
 @click.option("-s","--skip",type=str, multiple=True, help="skip this repo")
@@ -317,9 +320,11 @@ def apply_templates(repo):
 		default="Update from MoaT template")
 @click.option("-o","--only",type=str,multiple=True,help="affect only this repo")
 @click.pass_obj
-async def setup(obj, no_dirty, no_commit, skip, only, message, amend):
+async def setup(obj, no_dirty, no_commit, skip, only, message, amend, no_amend):
 	"""
 	Set up projects using templates.
+
+	Default: amend if the text is identical and the prev head isn't tagged.
 	"""
 	repo = Repo()
 	skip = set(skip)
@@ -338,7 +343,14 @@ async def setup(obj, no_dirty, no_commit, skip, only, message, amend):
 		if no_commit:
 			continue
 		if r.is_dirty(index=True, working_tree=False, untracked_files=False, submodules=False):
-			if amend:
+			if no_amend or r.tagged():
+				a = False
+			elif amend:
+				a = True
+			else:
+				a = r.head.commit.message == message
+
+			if a:
 				p = r.head.commit.parents
 			else:
 				p = (r.head.commit,)

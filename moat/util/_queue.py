@@ -38,10 +38,10 @@ class Queue:
         return res.unwrap()
 
     def qsize(self):
-        return len(self._s._state.buffer)  # ugh
+        return self._s.statistics().current_buffer_used
 
     def empty(self):
-        return not len(self._s._state.buffer)  # ugh
+        return self._s.statistics().current_buffer_used == 0
 
     def __aiter__(self):
         return self

@@ -55,6 +55,9 @@ profile = "black"
 [tool.setuptools]
 packages = [ "moat.util",]
 
+[tool.pylint.messages_control]
+disable="C,R,fixme,unspecified-encoding"
+
 [tool.setuptools_scm]
 
 [tool.tox]

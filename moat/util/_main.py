@@ -178,12 +178,12 @@ def process_args(val, vars_, eval_, path_, proxy_=(), vs=None):
             if vs is not None:
                 vs.add(str(k))
             if v is NotGiven:
-                val = attrdict._delete(val, k)
+                val = attrdict._delete(val, k)  # pylint: disable=protected-access
             elif v is NoneType:
-                val = attrdict._delete(val, k)
+                val = attrdict._delete(val, k)  # pylint: disable=protected-access
                 vs.discard(str(k))
             else:
-                val = attrdict._update(val, k, v)
+                val = attrdict._update(val, k, v)  # pylint: disable=protected-access
             n += 1
     return val
 
@@ -353,7 +353,10 @@ class Loader(click.Group):
     def list_commands(self, ctx):
         rv = super().list_commands(ctx)
 
-        subdir = getattr(self, "_util_subdir", None) or ctx.obj._sub_name
+        subdir = (
+            getattr(self, "_util_subdir", None)
+            or ctx.obj._sub_name  # pylint: disable=protected-access
+        )
 
         if subdir:
             try:
@@ -372,31 +375,39 @@ class Loader(click.Group):
                             rv.append(fn.name)
 
         if self._util_plugin:
-            for n, _ in list_ext(ctx.obj._ext_name, self._util_plugin):
+            for n, _ in list_ext(
+                ctx.obj._ext_name, self._util_plugin  # pylint: disable=protected-access
+            ):
                 rv.append(n)
         rv.sort()
         return rv
 
-    def get_command(self, ctx, name):  # pylint: disable=arguments-differ
-        command = super().get_command(ctx, name)
+    def get_command(self, ctx, cmd_name):
+        command = super().get_command(ctx, cmd_name)
         if command is None and self._util_plugin is not None:
             try:
-                plugins = ctx.obj._ext_name
+                plugins = ctx.obj._ext_name  # pylint: disable=protected-access
 
-                command = load_one(f"{plugins}.{name}", self._util_plugin, "cli")
+                command = load_one(f"{plugins}.{cmd_name}", self._util_plugin, "cli")
             except (ModuleNotFoundError, FileNotFoundError) as exc:
-                if exc.name != f"{plugins}.{name}" and not exc.name.startswith(
-                    f"{plugins}.{name}._"
+                if (
+                    exc.name != f"{plugins}.{cmd_name}"
+                    and not exc.name.startswith(  # pylint: disable=no-member ## duh?
+                        f"{plugins}.{cmd_name}._"
+                    )
                 ):
                     raise
 
         if command is None:
-            subdir = getattr(self, "_util_subdir", None) or ctx.obj._sub_name
+            subdir = (
+                getattr(self, "_util_subdir", None)
+                or ctx.obj._sub_name  # pylint: disable=protected-access
+            )
             if subdir is None:
                 return None
-            command = load_ext(subdir, name, "cli")
+            command = load_ext(subdir, cmd_name, "cli")
 
-        command.__name__ = command.name = name
+        command.__name__ = command.name = cmd_name
         return command
 
 
@@ -465,7 +476,7 @@ async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redef
     # twice instead of never.
     if hasattr(ctx, "_moat_invoked"):
         return
-    ctx._moat_invoked = True
+    ctx._moat_invoked = True  # pylint: disable=protected-access
     wrap_main(ctx=ctx, verbose=max(0, 1 + verbose - quiet), **kv)
     if help or ctx.invoked_subcommand is None and not ctx.protected_args:
         print(ctx.get_help())
@@ -532,8 +543,8 @@ def wrap_main(  # pylint: disable=redefined-builtin
         main.context_settings["obj"] = obj
         if help is not None:
             main.help = help
-    obj._ext_name = ext
-    obj._sub_name = sub
+    obj._ext_name = ext  # pylint: disable=protected-access
+    obj._sub_name = sub  # pylint: disable=protected-access
 
     if isinstance(CFG, str):
         p = Path(CFG)

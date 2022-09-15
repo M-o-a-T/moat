@@ -13,7 +13,7 @@ class _MsgRW:
     Common base class for :class:`MsgReader` and :class:`MsgWriter`.
     """
 
-    _mode = None
+    _mode: str = None
 
     def __init__(self, path=None, stream=None):
         if (path is None) == (stream is None):
@@ -25,7 +25,7 @@ class _MsgRW:
         if self.path is not None:
             p = self.path
             if p == "-":
-                if self._mode[0] == "r":
+                if self._mode[0] == "r":  # pylint: disable=unsubscriptable-object
                     p = "/dev/stdin"
                 else:
                     p = "/dev/stdout"

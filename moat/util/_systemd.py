@@ -40,13 +40,13 @@ async def as_service(obj=None):
         epid = int(os.environ.get("WATCHDOG_PID", pid))
         if pid == epid:
             return int(os.environ.get("WATCHDOG_USEC", 0))
+        return 0
 
     class RunMsg:
         def __init__(self, obj):
             self.obj = obj
 
         def set(self):
-            # TODO: this should be async (set flag and separate thread)
             if notify is not None:
                 notify("READY=1")
             if self.obj is not None and self.obj.debug:

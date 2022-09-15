@@ -174,7 +174,7 @@ class Path(collections.abc.Sequence):
         return Path(*self._data, *other, mark=mark)
 
     def __iadd__(self, other):
-        mark = self._tag_add(self, other)
+        mark = self._tag_add(other)
         if isinstance(other, Path):
             other = other._data
         if not len(other):
@@ -237,7 +237,9 @@ class Path(collections.abc.Sequence):
             try:
                 part += x
             except TypeError:
-                raise SyntaxError(f"Cannot add {x!r} at {pos}")
+                raise SyntaxError(  # pylint: disable=raise-missing-from
+                    f"Cannot add {x!r} at {pos}"
+                )
 
         def done(new_part):
             nonlocal part
@@ -494,5 +496,7 @@ class PathLongener:
 # expressions in paths. While it can be used for math, its primary function
 # is to process tuples.
 _eval = simpleeval.SimpleEval(functions={})
-_eval.nodes[ast.Tuple] = lambda node: tuple(_eval._eval(x) for x in node.elts)
+_eval.nodes[ast.Tuple] = lambda node: tuple(
+    _eval._eval(x) for x in node.elts  # pylint: disable=protected-access
+)
 path_eval = _eval.eval

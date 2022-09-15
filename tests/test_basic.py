@@ -2,7 +2,7 @@
 Empty test file
 """
 
-import moat.modbus
+import moat.modbus  # pylint: disable=unused-import
 
 def test_nothing():
     """

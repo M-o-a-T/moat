@@ -2,7 +2,7 @@
 Empty test file
 """
 
-import moat.src
+import moat.src  # pylint: disable=unused-import
 
 def test_nothing():
     """

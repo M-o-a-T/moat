@@ -35,9 +35,9 @@ tool:
     - E203
 
   isort:
-    line_length: 88
+    line_length: 99
     multi_line_output: 3
-    trailing_comma: 1
+    trailing_comma: DELETE
   setuptools:
     packages:
     - moat.SUBNAME

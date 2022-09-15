@@ -12,7 +12,7 @@ project:
   - 'License :: OSI Approved'
   - 'Development Status :: 4 - Beta'
   dependencies:
-  - anyio >= 3.0
+  - anyio ~= 3.0
   description: REPLACE ME
   dynamic:
   - version
@@ -32,7 +32,6 @@ tool:
   isort:
     line_length: 88
     multi_line_output: 3
-    trailing_comma: 1
   setuptools:
     packages:
     - moat.SUBNAME
@@ -40,5 +39,6 @@ tool:
   tox:
     tox:
       isolated_build: True
-      envlist: "check"
+      envlist:
+      - check
 

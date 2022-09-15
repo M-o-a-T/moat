@@ -1,24 +1,22 @@
 """
 modbus access
 """
-import anyio
+import logging
 import socket
 import struct
-from anyio import IncompleteRead, ClosedResourceError
-from anyio.abc import SocketAttribute
 from contextlib import asynccontextmanager
 from functools import partial
+from typing import Any, Dict, Type
+
+import anyio
+from anyio import ClosedResourceError, IncompleteRead
+from anyio.abc import SocketAttribute
 from distkv.util import CtxObj, Queue, ValueEvent
-from typing import Dict, Any, Type
-
-from .types import TypeCodec, BaseValue, InaccessibleValue, DataBlock
-
 from pymodbus.exceptions import ModbusIOException
 from pymodbus.factory import ClientDecoder
 from pymodbus.transaction import ModbusSocketFramer
 
-
-import logging
+from .types import BaseValue, DataBlock, InaccessibleValue, TypeCodec
 
 _logger = logging.getLogger(__name__)
 
@@ -49,8 +47,8 @@ class ModbusClient(CtxObj):
             try:
                 yield self
             finally:
-                tg,self._tg = self._tg,None
-                h,self.hosts = self.hosts,{}
+                tg, self._tg = self._tg, None
+                h, self.hosts = self.hosts, {}
                 tg.cancel_scope.cancel()
 
     def host(self, addr, port=502):
@@ -83,6 +81,7 @@ class Host:
 
         >>> host = client.host("foo.example")
     """
+
     _scope = None
 
     max_req_len = 50  # max number of registers to fetch w/ one request
@@ -123,7 +122,6 @@ class Host:
             return
         del self.units[unit.unit]
 
-
     # reader task #
 
     async def _reader(self):
@@ -151,9 +149,7 @@ class Host:
                             replies.append(r)
 
                     # check for decoding errors
-                    self.framer.processIncomingPacket(
-                        data, addReply, unit=0, single=True
-                    )  # bah
+                    self.framer.processIncomingPacket(data, addReply, unit=0, single=True)  # bah
 
                 except (
                     IncompleteRead,
@@ -164,9 +160,9 @@ class Host:
                 ) as exc:
                     if self._connected.is_set():
                         self._connected = anyio.Event()
-                    _logger.exception("Read from %s:%d", self.host,self.port)
+                    _logger.exception("Read from %s:%d", self.host, self.port)
 
-                    t,self._transactions = self._transactions,None
+                    t, self._transactions = self._transactions, None
                     for req in t.values():
                         req.__value.set(exc)
 
@@ -200,7 +196,7 @@ class Host:
             self._read_scope.cancel()
             self._read_scope = None
 
-        s,self.stream = self.stream,None
+        s, self.stream = self.stream, None
         if s:
             await s.close()
 
@@ -212,7 +208,7 @@ class Host:
 
     async def disconnect(self):
         """Close the TCP connection and set `self.stream = None`."""
-        s,self.stream = self.stream,None
+        s, self.stream = self.stream, None
         if s:
             await s.close()
 
@@ -239,17 +235,13 @@ class Host:
             await self.stream.send(packet)
             res = await request.__value.get()
         except BaseException as exc:
-            _logger.error(
-                f"Gateway {self.addr}:{self.port} not replied: {repr(exc)}"
-            )
+            _logger.error(f"Gateway {self.addr}:{self.port} not replied: {repr(exc)}")
 
             raise
         else:
             if hasattr(res, "registers"):
                 registers_info = " ".join([hex(x) for x in res.registers])
-                _logger.debug(
-                    f"Gateway {self.addr}:{self.port} replied: {registers_info}"
-                )
+                _logger.debug(f"Gateway {self.addr}:{self.port} replied: {registers_info}")
             else:
                 _logger.debug(f"Gateway {self.addr}:{self.port} replied: {res}")
             return res
@@ -335,7 +327,7 @@ class Slot:
                 return False
         return True
 
-    def add(self, typ:TypeCodec, offset:int, cls:Type[BaseValue]) -> BaseValue:
+    def add(self, typ: TypeCodec, offset: int, cls: Type[BaseValue]) -> BaseValue:
         """Add a field to be requested.
 
         :param typ: The `TypeCodec` instance to use.
@@ -353,7 +345,7 @@ class Slot:
         k.add(offset, val)
         return val
 
-    def remove(self, typ:TypeCodec, offset:int):
+    def remove(self, typ: TypeCodec, offset: int):
         """Remove a field to be requested.
 
         :param typ: the `TypeCodec` to use
@@ -398,6 +390,7 @@ class Slot:
         """
         try:
             res = {}
+
             async def _assign(getter, rr):
                 r = await getter()
                 rr.update(r)
@@ -418,7 +411,6 @@ class Slot:
             return res
         finally:
             self._run_scope = None
-
 
     async def setValues(self):
         """
@@ -532,4 +524,3 @@ class ValueList(DataBlock):
             return
         self.slot = None
         self.values = None
-

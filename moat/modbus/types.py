@@ -1,25 +1,26 @@
 import struct
 from typing import List
+
 import anyio
 
 try:
     from pymodbus.client.common import (
-        ReadDiscreteInputsRequest,
-        ReadDiscreteInputsResponse,
         ReadCoilsRequest,
         ReadCoilsResponse,
+        ReadDiscreteInputsRequest,
+        ReadDiscreteInputsResponse,
         ReadHoldingRegistersRequest,
         ReadHoldingRegistersResponse,
         ReadInputRegistersRequest,
         ReadInputRegistersResponse,
-        WriteSingleCoilRequest,
-        WriteSingleCoilResponse,
         WriteMultipleCoilsRequest,
         WriteMultipleCoilsResponse,
-        WriteSingleRegisterRequest,
-        WriteSingleRegisterResponse,
         WriteMultipleRegistersRequest,
         WriteMultipleRegistersResponse,
+        WriteSingleCoilRequest,
+        WriteSingleCoilResponse,
+        WriteSingleRegisterRequest,
+        WriteSingleRegisterResponse,
     )
 except ImportError:
     from pymodbus.factory import (
@@ -40,6 +41,7 @@ except ImportError:
         WriteMultipleRegistersRequest,
         WriteMultipleRegistersResponse,
     )
+
 from pymodbus.datastore.store import BaseModbusDataBlock
 
 
@@ -94,10 +96,10 @@ class BaseValue:
         return self._encode(self.value)
 
     def __str__(self):
-        return f'‹{self.value}›'
+        return f"‹{self.value}›"
 
     def __repr__(self):
-        return f'<{self.__class__.__name__}:{self.value}>'
+        return f"<{self.__class__.__name__}:{self.value}>"
 
     def __aiter__(self):
         return ValueIterator(self)
@@ -105,19 +107,22 @@ class BaseValue:
 
 class _Signed:
     """A mix-in for signed integers."""
+
     def _decode(self, regs):
         res = super()._decode(regs)
-        if res & 1<<(self.len*16-1):
-            res -= 1<<(self.len*16)
+        if res & 1 << (self.len * 16 - 1):
+            res -= 1 << (self.len * 16)
         return res
 
     def _encode(self, value):
         if value < 0:
-            value += 1<<(self.len*16)
+            value += 1 << (self.len * 16)
         return super()._encode(value)
+
 
 class _Swapped:
     """A mix-in to byteswap the Modbus data."""
+
     def _decode(self, regs):
         regs.reverse()
         return super()._decode(regs)
@@ -142,8 +147,8 @@ class InaccessibleValue(BaseValue):  # duck-types but does NOT interit BaseValue
 
 
 class IntValue(BaseValue):
-    """Simplest-possible value, one register.
-    """
+    """Simplest-possible value, one register."""
+
     len = 1
 
     def _decode(self, regs):
@@ -154,8 +159,8 @@ class IntValue(BaseValue):
 
 
 class LongValue(BaseValue):
-    """32-bit integer, two registers, standard (big-endian) word order.
-    """
+    """32-bit integer, two registers, standard (big-endian) word order."""
+
     len = 2
 
     def _decode(self, regs):
@@ -164,11 +169,13 @@ class LongValue(BaseValue):
     def _encode(self, value):
         return (value & 0xFFFF, value >> 16)
 
+
 class QuadValue(BaseValue):
     """64-bit integer, four registers, standard (big-endian) word order.
 
     This is a BaseValue instance.
     """
+
     len = 4
 
     def _decode(self, regs):
@@ -184,8 +191,8 @@ class QuadValue(BaseValue):
 
 
 class FloatValue(BaseValue):
-    """network-ordered floating point.
-    """
+    """network-ordered floating point."""
+
     len = 2
 
     def _decode(self, regs):
@@ -194,9 +201,10 @@ class FloatValue(BaseValue):
     def _encode(self, value):
         return struct.unpack(">2H", struct.pack(">f", value))
 
+
 class DoubleValue(BaseValue):
-    """network-ordered accurate floating point.
-    """
+    """network-ordered accurate floating point."""
+
     len = 4
 
     def _decode(self, regs):
@@ -207,57 +215,62 @@ class DoubleValue(BaseValue):
 
 
 class SwappedLongValue(_Swapped, LongValue):
-    """32-bit integer, two registers, little-endian word order.
-    """
+    """32-bit integer, two registers, little-endian word order."""
+
     pass
 
+
 class SwappedQuadValue(_Swapped, QuadValue):
-    """64-bit integer, four registers, little-endian word order.
-    """
+    """64-bit integer, four registers, little-endian word order."""
+
     pass
 
 
 class SignedIntValue(_Signed, IntValue):
-    """one register, signed.
-    """
+    """one register, signed."""
+
     pass
+
 
 class SignedLongValue(_Signed, LongValue):
-    """two registers, signed.
-    """
+    """two registers, signed."""
+
     pass
 
+
 class SwappedSignedLongValue(_Signed, _Swapped, BaseValue):
-    """two registers, signed, swapped.
-    """
+    """two registers, signed, swapped."""
+
     pass
+
 
 SignedSwappedLongValue = SwappedSignedLongValue
 
 
 class SignedQuadValue(_Signed, QuadValue):
-    """four registers, signed.
-    """
+    """four registers, signed."""
+
     pass
 
 
 class SwappedSignedQuadValue(_Signed, _Swapped, QuadValue):
-    """four registers, signed, swapped.
-    """
+    """four registers, signed, swapped."""
+
     pass
+
 
 SignedSwappedQuadValue = SwappedSignedQuadValue
 
 
 class SwappedFloatValue(_Swapped, FloatValue):
-    """broken-ordered floating point.
-    """
+    """broken-ordered floating point."""
+
     pass
 
 
 class SwappedDoubleValue(_Swapped, DoubleValue):
-    """broken-ordered accurate floating point.
-    """
+    """broken-ordered accurate floating point."""
+
     pass
 
 
@@ -286,7 +299,7 @@ class Coils(TypeCodec):
     """
 
     typ = 0
-    key = 'c'
+    key = "c"
     encoder = ReadCoilsRequest
     decoder = ReadCoilsResponse
     encoder_s = WriteSingleCoilRequest
@@ -302,7 +315,7 @@ class DiscreteInputs(TypeCodec):
     """
 
     typ = 1
-    key = 'd'
+    key = "d"
     encoder = ReadDiscreteInputsRequest
     decoder = ReadDiscreteInputsResponse
 
@@ -314,7 +327,7 @@ class HoldingRegisters(TypeCodec):
     """
 
     typ = 2
-    key = 'h'
+    key = "h"
     encoder = ReadHoldingRegistersRequest
     decoder = ReadHoldingRegistersResponse
     encoder_s = WriteSingleRegisterRequest
@@ -330,7 +343,7 @@ class InputRegisters(TypeCodec):
     """
 
     typ = 3
-    key = 'i'
+    key = "i"
     encoder = ReadInputRegistersRequest
     decoder = ReadInputRegistersResponse
 
@@ -354,26 +367,26 @@ class DataBlock(dict, BaseModbusDataBlock):
         for val in self.values():
             val.value = None
 
-    def add(self, offset:int, val: BaseValue): 
+    def add(self, offset: int, val: BaseValue):
         if offset in self:
             raise ValueError("Already known", i)
-        for n in range(1,8):
+        for n in range(1, 8):
             try:
-                if self[offset-n].len > n:
+                if self[offset - n].len > n:
                     raise ValueError(f"Overlap with {self[offset-n]} @{offset-n}")
                 break
             except KeyError:
                 pass
-        for n in range(1,val.len):
+        for n in range(1, val.len):
             try:
-                if offset+n in self:
+                if offset + n in self:
                     raise ValueError(f"Overlap with {self[offset+n]} @{offset+n}")
                 break
             except KeyError:
                 pass
         self[offset] = val
 
-    def validate(self, address:int, count:int = 1):
+    def validate(self, address: int, count: int = 1):
         if not count:
             return False
         while count:
@@ -381,7 +394,7 @@ class DataBlock(dict, BaseModbusDataBlock):
                 val = self[address]
                 if val.len <= 0:
                     raise RuntimeError("invalid")
-            except (KeyError,RuntimeError):
+            except (KeyError, RuntimeError):
                 return False
             address += val.len
             count -= val.len
@@ -395,8 +408,8 @@ class DataBlock(dict, BaseModbusDataBlock):
                 if start is not None:
                     yield (start, cur - start)
                     start = None
-            elif start is None: 
-                start = offset  
+            elif start is None:
+                start = offset
                 cur = start + val.len
             elif cur == offset and (cur + val.len - start) <= self.max_len:
                 cur += val.len
@@ -404,11 +417,11 @@ class DataBlock(dict, BaseModbusDataBlock):
                 yield (start, cur - start)
                 start = offset
                 cur = start + val.len
-                
+
         if cur is not None:
             yield (start, cur - start)
 
-    def getValues(self, address:int, count=1):
+    def getValues(self, address: int, count=1):
         """Get the array of Modbus values for the @address:+@count range"""
         res = []
         while count > 0:
@@ -427,7 +440,7 @@ class DataBlock(dict, BaseModbusDataBlock):
             res = res[:count]
         return res
 
-    def setValues(self, address:int, values:List[int]):
+    def setValues(self, address: int, values: List[int]):
         """Set the variables starting at @address to @values"""
         while values:
             try:
@@ -436,9 +449,9 @@ class DataBlock(dict, BaseModbusDataBlock):
                 address += 1
                 values.pop(0)
             else:
-                val.decode(values[:val.len])
+                val.decode(values[: val.len])
                 address += val.len
-                values = values[val.len:]
+                values = values[val.len :]
 
         self.changed.set()
         self.changed = anyio.Event()
@@ -456,14 +469,15 @@ class ValueIterator:
 
     Posts a notification when values get skipped.
     """
+
     def __init__(self, val):
         self.val = val
-        self.gen = max(0, val.gen-1)
+        self.gen = max(0, val.gen - 1)
 
     async def __anext__(self):
         """
         Iterate over values / value changes.
-        
+
         If the value is initially unknown, wait.
         if it's been cleared, raises `StopAsyncIteration`.
         """
@@ -473,9 +487,7 @@ class ValueIterator:
             await self.changed.wait()
         if self.value is None:
             raise StopAsyncIteration
-        if self.gen+1 != val.gen:
-            logger.notice("%r: skipped %d",val.gen-self.gen-1)
+        if self.gen + 1 != val.gen:
+            logger.notice("%r: skipped %d", val.gen - self.gen - 1)
         self.gen = val.gen
         return self.value
-
-

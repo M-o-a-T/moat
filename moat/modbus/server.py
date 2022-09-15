@@ -1,26 +1,23 @@
 #!/usr/bin/python3
 
-import anyio
+import logging
 import socket
-from collections.abc import Mapping, Iterable
+import traceback
+from binascii import b2a_hex
+from collections.abc import Iterable, Mapping
 from typing import Dict
 
+import anyio
 from pymodbus.constants import Defaults
-from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
+from pymodbus.datastore import ModbusServerContext, ModbusSlaveContext
 from pymodbus.datastore.store import BaseModbusDataBlock
-from pymodbus.device import ModbusControlBlock
-from pymodbus.device import ModbusDeviceIdentification
+from pymodbus.device import ModbusControlBlock, ModbusDeviceIdentification
 from pymodbus.exceptions import NoSuchSlaveException
 from pymodbus.factory import ServerDecoder
 from pymodbus.pdu import ModbusExceptions as merror
 from pymodbus.utilities import hexlify_packets
 
 from moat.modbus.types import DataBlock
-
-from binascii import b2a_hex
-import traceback
-
-import logging
 
 _logger = logging.getLogger(__name__)
 
@@ -50,10 +47,10 @@ class BaseModbusServer:
         if unit in self.units:
             raise RuntimeError(f"Unit {unit} already exists")
         self.units[unit] = s = ModbusSlaveContext(
-            di = DataBlock(),
-            co = DataBlock(),
-            ir = DataBlock(),
-            hr = DataBlock(),
+            di=DataBlock(),
+            co=DataBlock(),
+            ir=DataBlock(),
+            hr=DataBlock(),
             zero_mode=True,
         )
         return s
@@ -65,7 +62,6 @@ class BaseModbusServer:
         context = self.context[request.unit_id]
         response = request.execute(context)
         return response
-
 
 
 class SerialModbusServer(BaseModbusServer):
@@ -114,9 +110,7 @@ class SerialModbusServer(BaseModbusServer):
                 return  # the client will simply timeout waiting for a response
             response = request.doException(merror.GatewayNoResponse)
         except Exception as exc:  # pylint: disable=broad-except
-            txt = (
-                f"Datastore unable to fulfill request: {exc}; {traceback.format_exc()}"
-            )
+            txt = f"Datastore unable to fulfill request: {exc}; {traceback.format_exc()}"
             _logger.error(txt)
             response = request.doException(merror.SlaveFailure)
         # no response when broadcasting
@@ -157,7 +151,8 @@ class ModbusServer(BaseModbusServer):
             async with anyio.create_task_group() as tg:
                 self.taskgroup = tg
                 async with await anyio.create_tcp_listener(
-                    local_port=self.port, local_host=self.address,
+                    local_port=self.port,
+                    local_host=self.address,
                     reuse_port=True,
                 ) as server:
                     if self.port == 0:
@@ -184,15 +179,15 @@ class ModbusServer(BaseModbusServer):
 
                 reqs = []
                 # TODO fix pymodbus
-                framer.processIncomingPacket(data, lambda req: reqs.append(req), list(self.units.keys()), single=False)
+                framer.processIncomingPacket(
+                    data, lambda req: reqs.append(req), list(self.units.keys()), single=False
+                )
 
                 for request in reqs:
                     try:
                         response = await self.process_request(request)
                     except NoSuchSlaveException as ex:
-                        _logger.debug(
-                            f"requested slave does not exist: {request.unit_id}"
-                        )
+                        _logger.debug(f"requested slave does not exist: {request.unit_id}")
                         response = request.doException(merror.GatewayNoResponse)
                     except Exception as ex:
                         _logger.debug(
@@ -228,6 +223,7 @@ class ModbusServer(BaseModbusServer):
 
 class MockAioModbusServer(ModbusServer):
     """A test modbus server with static data"""
+
     pass
 
 
@@ -237,7 +233,7 @@ class ForwardingAioModbusServer:
     def add_unit(self, unit):
         raise RuntimeError("Use 'set_forward' with a forwarding server")
 
-    def set_forward(self, id, unit:ModbusSlaveContext = None):
+    def set_forward(self, id, unit: ModbusSlaveContext = None):
         """Arrange for requests to the given ID to be forwarded
         to this client.
 

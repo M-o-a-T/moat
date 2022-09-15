@@ -1,3 +1,9 @@
+"""
+Testing util.Path
+"""
+
+# pylint: disable=missing-function-docstring
+
 import pytest
 
 from moat.util import P, Path, packer, unpacker, yformat, yload

@@ -161,19 +161,24 @@ def default_dict(*d, cls=dict, repl=lambda x:x) -> dict:
 	return res
 
 
+def is_clean(repo, skip=True):
+	skips=" Skipping." if skip else ""
+	if repo.head.is_detached:
+		print(f"{repo.working_dir}: detached.{skips}")
+		return False
+	if repo.head.ref.name != "main":
+		print(f"{repo.working_dir}: on branch [repo.head.ref.name].{skips}")
+		return False
+	elif repo.is_dirty(index=True, working_tree=True, untracked_files=False, submodules=False):
+		print(f"{repo.working_dir}: Dirty.{skips}")
+		return False
+	return True
+
+
 def apply_templates(repo):
 	"""
 	Apply templates to this repo.
 	"""
-	if repo.head.is_detached:
-		print(f"{repo.working_dir}: detached. Skipping.")
-		return
-	if repo.head.ref.name != "main":
-		print(f"{repo.working_dir}: on branch [repo.head.ref.name]. Skipping.")
-		return
-	elif repo.is_dirty(index=True, working_tree=True, untracked_files=False, submodules=False):
-		print(f"{repo.working_dir}: Dirty. Skipping.")
-		return
 
 	repl = Replace(
 		SUBNAME=Path(repo.working_dir).name,
@@ -253,21 +258,36 @@ def apply_templates(repo):
 		repo.index.add(pr(".gitignore"))
 	
 
-	if repo.is_dirty(index=True, working_tree=False, untracked_files=False, submodules=False):
-		repo.index.commit("Update from MoaT template")
-
-
-
-
 @cli.command()
+@click.option("-D","--no-dirty",is_flag=True,help="don't check for dirtiness (DANGER)")
+@click.option("-C","--no-commit",is_flag=True,help="don't commit")
+@click.option("-s","--skip",type=str, multiple=True, help="skip this repo")
+@click.option("-m","--message",type=str, help="commit message if changed",
+		default="Update from MoaT template")
 @click.pass_obj
-async def setup(obj):
+async def setup(obj, no_dirty, no_commit, skip, message):
 	"""
 	Set up projects using templates.
 	"""
 	repo = Repo()
+	skip = set(skip)
+
 	for r in repo.subrepos():
+		n = Path(r.working_tree_dir).name
+		if n in skip:
+			continue
+			pass
+		if not is_clean(r, not no_dirty):
+			if not no_dirty:
+				continue
+
 		apply_templates(r)
+
+		if no_commit:
+			continue
+		if r.is_dirty(index=True, working_tree=False, untracked_files=False, submodules=False):
+			r.index.commit(message)
+
 
 
 @cli.command()

@@ -144,6 +144,8 @@ def default_dict(*d, cls=dict, repl=lambda x:x) -> dict:
 			keys[k].append(v)
 
 	for k, v in keys.items():
+		if isinstance(v[0],str) and v[0] == "DELETE":
+			v = [v[-1]]
 		if isinstance(v[0], dict):
 			res[k] = default_dict(*v, cls=cls, repl=repl)
 		elif isinstance(v[0], (list,tuple)):

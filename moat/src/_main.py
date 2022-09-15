@@ -149,7 +149,7 @@ def default_dict(a,b,c, cls=dict, repl=lambda x:x) -> dict:
 	for k, v in keys.items():
 		va = a.get(k,None)
 		vb = b.get(k,None)
-		vc = b.get(k,None)
+		vc = c.get(k,None)
 		if isinstance(va,str) and va == "DELETE":
 			b[k] = vc
 			if vb != vc:

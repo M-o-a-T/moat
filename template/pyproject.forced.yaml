@@ -15,7 +15,7 @@ project:
   - 'License :: OSI Approved'
   - 'Development Status :: 4 - Beta'
   dependencies:
-  - anyio >= 3.0
+  - anyio ~= 3.0
   dynamic:
   - version
   keywords:

@@ -8,11 +8,11 @@ import anyio
 import json
 import socket
 
-from moat.util import yload, yprint, to_attrdict
+from moat.util import yload, yprint, to_attrdict, make_proc
 
 import asyncclick as click
 import git
-import toml
+import tomlkit
 import requirements
 import subprocess
 from pathlib import Path
@@ -121,7 +121,9 @@ class Replace:
 				s = s.replace(k,v)
 		return s
 
-def default_dict(*d, cls=dict, repl=lambda x:x) -> dict:
+_l_t = (list,tuple)
+
+def default_dict(a,b,c, cls=dict, repl=lambda x:x) -> dict:
 	"""
 	Returns a dict with all keys+values of all dict arguments.
 	The first found value wins.
@@ -132,33 +134,53 @@ def default_dict(*d, cls=dict, repl=lambda x:x) -> dict:
 	cls (type): a class to instantiate the result with. Default: dict.
 		Often used: :class:`attrdict`.
 	"""
-	res = cls()
 	keys = defaultdict(list)
-	if not len(d):
-		return res
+	mod = False
 
-	for kv in d:
+	for kv in a,b,c:
 		if kv is None:
 			continue
 		for k, v in kv.items():
 			keys[k].append(v)
 
 	for k, v in keys.items():
-		if isinstance(v[0],str) and v[0] == "DELETE":
-			v = [v[-1]]
-		if isinstance(v[0], dict):
-			res[k] = default_dict(*v, cls=cls, repl=repl)
-		elif isinstance(v[0], (list,tuple)):
-			res[k] = x = []
-			for xx in v:
-				for yy in xx:
-					yy = repl(yy)
-					if yy not in x:
-						x.append(yy)
+		va = a.get(k,None)
+		vb = b.get(k,None)
+		vc = b.get(k,None)
+		if isinstance(va,str) and va == "DELETE":
+			b[k] = vc
+			if vb != vc:
+				mod = True
+			vb = b[k]
+		if isinstance(va, dict) or isinstance(vb, dict) or isinstance(vc,dict):
+			if vb is None:
+				b[k] = {}
+				vb = b[k]
+				mod = True
+			mod = default_dict(va or {}, vb, vc or {}, cls=cls, repl=repl) or mod
+		elif isinstance(va, _l_t) or isinstance(vb, _l_t) or isinstance(vc,_l_t):
+			if vb is None:
+				b[k] = []
+				vb = b[k]
+				mod = True
+			if va:
+				for v in va:
+					v = repl(v)
+					if v not in vb:
+						vb.insert(0,v)
+						mod = True
+			if vc:
+				for v in vc:
+					v = repl(v)
+					if v not in vb:
+						vb.insert(0,v)
+						mod = True
 		else:
-			res[k] = repl(v[0])
-
-	return res
+			v = va or vb or vc
+			if vb != v:
+				b[k] = v
+				mod = True
+	return mod
 
 
 def is_clean(repo, skip=True):
@@ -191,7 +213,7 @@ def apply_templates(repo):
 		t2 = yload(f)
 	try:
 		with pr("pyproject.toml").open("r") as f:
-			proj = toml.decoder.load(f)
+			proj = tomlkit.load(f)
 			try:
 				tx = proj["tool"]["tox"]["legacy_tox_ini"]
 			except KeyError:
@@ -215,9 +237,19 @@ def apply_templates(repo):
 				proj["tool"]["tox"]["tox"]["envlist"] = envs.split(",")
 
 	except FileNotFoundError:
-		proj = {}
-	p = default_dict(t1,proj,t2, repl=repl)
-	if p != proj:
+		proj = tomlkit.TOMLDocument()
+	mod = default_dict(t1,proj,t2, repl=repl, cls=tomlkit.items.Table)
+	try:
+		proc = proj["tool"]["moat"]["fixup"]
+	except KeyError:
+		p = proj
+	else:
+		proc = make_proc(proc, ("toml",), f"{pr('pyproject.toml')}:tool.moat.fixup")
+		s1 = proj.as_string()
+		proc(proj)
+		s2 = proj.as_string()
+		mod |= (s1 != s2)
+	if mod:
 		try:
 			envs = proj["tool"]["tox"]["tox"]["envlist"]
 		except KeyError:
@@ -226,7 +258,7 @@ def apply_templates(repo):
 			proj["tool"]["tox"]["tox"]["envlist"] = ",".join(envs)
 
 		try:
-			tx = p["tool"]["tox"]
+			tx = proj["tool"]["tox"]
 		except KeyError:
 			pass
 		else:
@@ -240,10 +272,11 @@ def apply_templates(repo):
 						vv = "\n   "+"\n   ".join(str(x) for x in vv)
 					txp.set(k,kk,vv)
 			txp.write(txi)
-			p["tool"]["tox"] = dict(legacy_tox_ini=txi.getvalue())
+			txi = txi.getvalue()
+			txi = "\n"+txi.replace("\n\t","\n ")
+			proj["tool"]["tox"] = dict(legacy_tox_ini=tomlkit.items.String.from_raw(txi, type_=tomlkit.items.StringType.MLB))
 
-		with (Path(repo.working_dir)/"pyproject.toml").open("w") as f:
-			toml.encoder.dump(p,f)
+		(Path(repo.working_dir)/"pyproject.toml").write_text(proj.as_string())
 		repo.index.add(Path(repo.working_dir)/"pyproject.toml")
 	
 	mkt = repl(pt("Makefile").read_text())
@@ -278,19 +311,20 @@ def apply_templates(repo):
 @click.option("-s","--skip",type=str, multiple=True, help="skip this repo")
 @click.option("-m","--message",type=str, help="commit message if changed",
 		default="Update from MoaT template")
+@click.option("-o","--only",type=str,multiple=True,help="affect only this repo")
 @click.pass_obj
-async def setup(obj, no_dirty, no_commit, skip, message):
+async def setup(obj, no_dirty, no_commit, skip, only, message):
 	"""
 	Set up projects using templates.
 	"""
 	repo = Repo()
 	skip = set(skip)
+	if only:
+		repos = (Repo(x) for x in only)
+	else:
+		repos = (x for x in repo.subrepos() if Path(x.working_tree_dir).name not in skip)
 
-	for r in repo.subrepos():
-		n = Path(r.working_tree_dir).name
-		if n in skip:
-			continue
-			pass
+	for r in repos:
 		if not is_clean(r, not no_dirty):
 			if not no_dirty:
 				continue

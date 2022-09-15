@@ -3,17 +3,32 @@ build-backend = "setuptools.build_meta"
 requires = [ "setuptools", "wheel", "setuptools-scm",]
 
 [project]
-classifiers = [ "Intended Audience :: Developers", "Programming Language :: Python :: 3", "Framework :: AsyncIO", "Framework :: Trio", "Framework :: AnyIO", "License :: OSI Approved", "Development Status :: 4 - Beta",]
-dependencies = [ "anyio >= 3.0",]
+classifiers = [
+	"Intended Audience :: Developers",
+	"Programming Language :: Python :: 3",
+	"Framework :: AsyncIO",
+	"Framework :: Trio",
+	"Framework :: AnyIO",
+	"License :: OSI Approved",
+	"Development Status :: 4 - Beta",
+	]
+dependencies = [
+	"anyio ~= 3.0",
+	"tomlkit ~= 0.11",
+	]
 dynamic = [ "version",]
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-src"
 description = "Tools for managing the MoaT sources"
 readme = "README.rst"
+
 [[project.authors]]
 email = "matthias@urlichs.de"
 name = "Matthias Urlichs"
+
+[foo]
+bar = "baz"
 
 [project.license]
 file = "LICENSE.txt"
@@ -37,4 +52,27 @@ packages = [ "moat.src",]
 [tool.setuptools_scm]
 
 [tool.tox]
-legacy_tox_ini = "[tox]\nisolated_build = True\ncommands = \n\t   black --check moat/src tests\n\t   flake8p moat/src tests\n\t   black\nenvlist = check\n\n[testenv:check]\ncommands = \n\t   black --check moat/src tests\n\t   flake8p moat/src tests\n\t   flake8 moat/src tests\ndeps = \n\t   flake8\n\t   flake8-pyproject\n\t   black\n\n"
+legacy_tox_ini = """
+[tox]
+isolated_build = True
+envlist = py310,py39,check
+
+[testenv]
+setenv = 
+    PYTHONPATH = {env:PYTHONPATH}{:}{toxinidir}
+
+[testenv:check]
+commands = 
+    flake8p moat/src tests
+    black --check moat/src tests
+deps = 
+    black
+    flake8-pyproject
+    flake8
+
+"""
+
+[tool.moat]
+fixup = """
+toml["foo"]=dict(bar="baz")
+"""

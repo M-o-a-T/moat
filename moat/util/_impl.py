@@ -31,6 +31,7 @@ def singleton(cls):
 
 class TimeOnlyFormatter(logging.Formatter):
     """A log formatter that doesn't show dates"""
+
     default_time_format = "%H:%M:%S"
     default_msec_format = "%s.%03d"
 

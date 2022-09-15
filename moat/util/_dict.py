@@ -2,7 +2,7 @@
 This module contains various helper functions and classes.
 """
 from copy import deepcopy
-from typing import Tuple, Union, Mapping
+from typing import Mapping, Tuple, Union
 
 from . import NotGiven
 
@@ -63,7 +63,7 @@ def combine_dict(*d, cls=dict, deep=False) -> dict:
     return res
 
 
-def drop_dict(data: Mapping, drop: Tuple[Union[str,Tuple[str]]]) -> Mapping:
+def drop_dict(data: Mapping, drop: Tuple[Union[str, Tuple[str]]]) -> Mapping:
     """
     Helper to remove some entries from a mapping hierarchy
 
@@ -72,7 +72,7 @@ def drop_dict(data: Mapping, drop: Tuple[Union[str,Tuple[str]]]) -> Mapping:
     data = data.copy()
     for d in drop:
         vv = data
-        if isinstance(d, (tuple,list)):
+        if isinstance(d, (tuple, list)):
             for dd in d[:-1]:
                 vv = vv[dd] = vv[dd].copy()
             d = d[-1]

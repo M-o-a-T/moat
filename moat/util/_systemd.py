@@ -44,6 +44,7 @@ async def as_service(obj=None):
 
     class RunMsg:
         """A fake event that signals readiness"""
+
         def __init__(self, obj):
             self.obj = obj
 

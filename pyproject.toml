@@ -45,7 +45,7 @@ dev = [ "flake8", "isort",]
 
 [tool.flake8]
 max-line-length = 99
-ignore = [ "W503", "E231", "E203",]
+ignore = [ "W503", "E231", "E203", "F401"]
 
 [tool.isort]
 line_length = 99

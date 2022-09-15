@@ -152,7 +152,7 @@ class DelayedRead(Queue):
         """msgnum extractor. Static method. Override me!"""
         raise NotImplementedError("Override get_seq")
 
-    async def send_ack(self, seq:int):  # pylint: disable=method-hidden
+    async def send_ack(self, seq: int):  # pylint: disable=method-hidden
         """Ack sender for a specific seqnum. Override me!"""
         raise NotImplementedError("Override send_flow")
 

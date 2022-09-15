@@ -21,16 +21,16 @@ from ._yaml import yload
 logger = logging.getLogger(__name__)
 
 __all__ = [
-        "main_",
-        "read_cfg",
-        "wrap_main",
-        "Loader",
-        "load_subgroup",
-        "list_ext",
-        "load_ext",
-        "attr_args",
-        "process_args",
-        ]
+    "main_",
+    "read_cfg",
+    "wrap_main",
+    "Loader",
+    "load_subgroup",
+    "list_ext",
+    "load_ext",
+    "attr_args",
+    "process_args",
+]
 
 this_load = ContextVar("this_load", default=None)
 
@@ -48,61 +48,61 @@ def attr_args(proc=None, with_path=True, with_eval=True, with_proxy=False):
 
     def _proc(proc):
         args = (
-                (
-                    "-p",
-                    "--path",
-                    )
-                if with_path
-                else ("--hidden_path",)
-                )
+            (
+                "-p",
+                "--path",
+            )
+            if with_path
+            else ("--hidden_path",)
+        )
         proc = click.option(
-                *args,
-                "path_",
-                nargs=2,
-                type=(P, P),
-                multiple=True,
-                help="Parameter (name value), as path",
-                hidden=not with_path,
-                )(proc)
+            *args,
+            "path_",
+            nargs=2,
+            type=(P, P),
+            multiple=True,
+            help="Parameter (name value), as path",
+            hidden=not with_path,
+        )(proc)
 
         args = (
-                (
-                    "-e",
-                    "--eval",
-                    )
-                if with_eval
-                else ("--hidden_eval",)
-                )
+            (
+                "-e",
+                "--eval",
+            )
+            if with_eval
+            else ("--hidden_eval",)
+        )
         proc = click.option(
-                *args,
-                "eval_",
-                nargs=2,
-                type=(P, str),
-                multiple=True,
-                help="Parameter (name value), evaluated",
-                hidden=not with_eval,
-                )(proc)
+            *args,
+            "eval_",
+            nargs=2,
+            type=(P, str),
+            multiple=True,
+            help="Parameter (name value), evaluated",
+            hidden=not with_eval,
+        )(proc)
 
         proc = click.option(
-                "-v",
-                "--var",
-                "vars_",
-                nargs=2,
-                type=(P, str),
-                multiple=True,
-                help="Parameter (name value)",
-                )(proc)
+            "-v",
+            "--var",
+            "vars_",
+            nargs=2,
+            type=(P, str),
+            multiple=True,
+            help="Parameter (name value)",
+        )(proc)
 
         if with_proxy:
             proc = click.option(
-                    "-P",
-                    "--proxy",
-                    "proxy_",
-                    nargs=2,
-                    type=(P, str),
-                    multiple=True,
-                    help="Remote proxy (name value)",
-                    )(proc)
+                "-P",
+                "--proxy",
+                "proxy_",
+                nargs=2,
+                type=(P, str),
+                multiple=True,
+                help="Remote proxy (name value)",
+            )(proc)
 
         return proc
 
@@ -143,8 +143,8 @@ def process_args(val, vars_, eval_, path_, proxy_=(), vs=None):
             elif v == "/":  # pylint: disable=W0631
                 if vs is None:
                     raise click.BadOptionUsage(
-                            option_name=k, message="A slash value doesn't work here."
-                            )
+                        option_name=k, message="A slash value doesn't work here."
+                    )
                 v = NoneType
             else:
                 v = path_eval(v)  # pylint: disable=W0631
@@ -160,12 +160,12 @@ def process_args(val, vars_, eval_, path_, proxy_=(), vs=None):
         if not k:
             if vs is not None:
                 raise click.BadOptionUsage(
-                        option_name=k, message="You can't use empty paths here."
-                        )
+                    option_name=k, message="You can't use empty paths here."
+                )
             if n:
                 raise click.BadOptionUsage(
-                        option_name=k, message="Setting a single value conflicts."
-                        )
+                    option_name=k, message="Setting a single value conflicts."
+                )
             val = v
             n = -1
         elif n < 0:

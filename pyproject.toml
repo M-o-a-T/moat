@@ -56,7 +56,7 @@ profile = "black"
 packages = [ "moat.util",]
 
 [tool.pylint.messages_control]
-disable="no-else-continue,too-many-instance-attributes,too-many-statements,too-many-return-statements,superfluous-parens,too-few-public-methods,use-dict-literal,too-many-locals,no-else-return,too-many-arguments,too-many-branches,invalid-name,fixme,unspecified-encoding"
+disable="missing-module-docstring,no-else-continue,too-many-instance-attributes,too-many-statements,too-many-return-statements,superfluous-parens,too-few-public-methods,use-dict-literal,too-many-locals,no-else-return,too-many-arguments,too-many-branches,invalid-name,fixme,unspecified-encoding"
 
 [tool.setuptools_scm]
 

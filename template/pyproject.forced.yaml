@@ -29,6 +29,11 @@ project:
 tool:
   flake8:
     max-line-length: 99
+    ignore:
+    - W503
+    - E231
+    - E203
+
   isort:
     line_length: 88
     multi_line_output: 3
@@ -37,4 +42,16 @@ tool:
     packages:
     - moat.SUBNAME
   setuptools_scm: {}
+
+  tox:
+    tox:
+      isolated_build: True
+    "testenv:check":
+      commands:
+      - black --check moat/SUBNAME tests
+      - flake8p moat/SUBNAME tests
+      deps:
+      - flake8
+      - flake8-pyproject
+      - black
 

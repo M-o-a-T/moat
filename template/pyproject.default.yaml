@@ -39,10 +39,6 @@ tool:
   setuptools_scm: {}
   tox:
     tox:
+      isolated_build: True
       envlist: "check"
-    "testenv:check":
-      commands:
-      - flake8 moat.SUBNAME tests
-      deps:
-      - flake8
 

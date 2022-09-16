@@ -258,6 +258,9 @@ class Host:
 
             raise
         else:
+            if res.isError():
+                raise ModbusError(res)
+
             if hasattr(res, "registers"):
                 registers_info = " ".join([hex(x) for x in res.registers])
                 _logger.debug(f"Gateway {self.addr}:{self.port} replied: {registers_info}")
@@ -496,10 +499,6 @@ class ValueList(DataBlock):
 
         # handle according to reply type
         r = await u.host.execute(msg)
-        if isinstance(r, Exception):
-            raise r
-        elif r.isError():
-            raise ModbusError(r)
 
         r = r.registers
 
@@ -533,12 +532,9 @@ class ValueList(DataBlock):
 
         # handle according to reply type
         r = await u.host.execute(msg)
-        if isinstance(r, Exception):
-            raise r
-        elif r.isError():
-            raise ModbusError(r)
 
     def close(self):
+        """disable further accesses"""
         if self.slot is None:
             return
         self.slot = None

@@ -51,7 +51,7 @@ dev = [ "flake8", "isort",]
 
 [tool.flake8]
 max-line-length = 99
-ignore = [ "E731", "E502", "E402", "E127", "E123", "W503", "E231", "E203", "F401"]
+ignore = [ "F841", "E731", "E502", "E402", "E127", "E123", "W503", "E231", "E203", "F401"]
 
 [tool.isort]
 line_length = 99
@@ -62,7 +62,7 @@ profile = "black"
 packages = [ "moat.util",]
 
 [tool.pylint.messages_control]
-disable="unspecified-encoding,missing-module-docstring,no-else-continue,too-many-instance-attributes,too-many-statements,too-many-return-statements,superfluous-parens,too-few-public-methods,use-dict-literal,too-many-locals,no-else-return,too-many-arguments,too-many-branches,invalid-name,fixme"
+disable="wrong-import-order,ungrouped-imports,too-many-nested-blocks,unspecified-encoding,missing-module-docstring,no-else-continue,too-many-instance-attributes,too-many-statements,too-many-return-statements,superfluous-parens,too-few-public-methods,use-dict-literal,too-many-locals,no-else-return,too-many-arguments,too-many-branches,invalid-name,fixme"
 
 [tool.setuptools_scm]
 
@@ -75,6 +75,11 @@ envlist = py310,py39,check
 [testenv]
 setenv = 
     PYTHONPATH = {env:PYTHONPATH}{:}{toxinidir}
+deps = 
+    trio
+    pytest
+commands = 
+    python3 -mpytest tests/
 
 [testenv:check]
 commands = 
@@ -82,9 +87,14 @@ commands =
     flake8p moat/util tests
     black --check moat/util tests
 deps = 
+    pytest
     pylint
     black
     flake8-pyproject
     flake8
 
 """
+
+
+[tool.black]
+line-length = 99

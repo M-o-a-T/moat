@@ -173,6 +173,7 @@ class Host:
                     ConnectionResetError,
                     ClosedResourceError,
                     ModbusIOException,
+                    anyio.BrokenResourceError,
                 ) as exc:
                     if self._connected.is_set():
                         self._connected = anyio.Event()

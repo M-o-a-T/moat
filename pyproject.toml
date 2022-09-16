@@ -9,15 +9,17 @@ dynamic = ["version"]
 keywords = ["MoaT"]
 requires-python = ">=3.8"
 name = "moat-lib-diffiehellman"
-authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
-description = "REPLACE ME"
+authors = [{email = "chris@chrisvoncsefalvay.com",name = "Chris von Csefalvay"}]
+maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
+description='A Pythonic implementation of the Diffie-Hellman key exchange protocol'
 readme = "README.rst"
+license='MIT'
 
 [project.license]
 file = "LICENSE.txt"
 
 [project.urls]
-homepage = "https://m-o-a-t.org"
+homepage = 'https://github.com/chrisvoncsefalvay/diffiehellman/'
 repository = "https://github.com/M-o-a-T/moat-diffiehellman"
 
 [tool]

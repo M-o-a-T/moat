@@ -21,9 +21,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-
-
-
 """
 diffiehellmann declares the main key exchange class.
 """
@@ -37,8 +34,8 @@ from .primes import PRIMES
 try:
     from ssl import RAND_bytes
     rng = RAND_bytes
-except(AttributeError, ImportError):
-    raise RNGError
+except (AttributeError, ImportError):
+    raise RNGError  # pylint: disable=raise-missing-from
 
 
 class DiffieHellman:
@@ -46,6 +43,11 @@ class DiffieHellman:
     Implements the Diffie-Hellman key exchange protocol.
 
     """
+
+    shared_secret = None
+    shared_key = None
+    public_key = None
+    __private_key = None
 
     def __init__(self,
                  group=18,
@@ -63,16 +65,13 @@ class DiffieHellman:
         :rtype: void
         """
         key_length = self.key_length // 8 + 8
-        key = 0
 
-        try:
-            key = int.from_bytes(rng(key_length), byteorder='big')
-        except:
-            key = int(hex(rng(key_length)), base=16)
-
-        self.__private_key = key
+        self.__private_key = int.from_bytes(rng(key_length), byteorder='big')
 
     def verify_public_key(self, other_public_key):
+        """
+        Some basic key verification
+        """
         return self.prime - 1 > other_public_key > 2 and pow(other_public_key, (self.prime - 1) // 2, self.prime) == 1
 
     @requires_private_key
@@ -88,7 +87,7 @@ class DiffieHellman:
                               self.prime)
 
     @requires_private_key
-    def generate_shared_secret(self, other_public_key, echo_return_key=False):
+    def generate_shared_secret(self, other_public_key):
         """
         Generates shared secret from the other party's public key.
 
@@ -113,5 +112,4 @@ class DiffieHellman:
 
         self.shared_key = _h.hexdigest()
 
-        if echo_return_key is True:
-            return self.shared_key
+        return self.shared_key

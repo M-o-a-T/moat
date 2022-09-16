@@ -24,7 +24,7 @@ repository = "https://github.com/M-o-a-T/moat-diffiehellman"
 [tool]
 [tool.flake8]
 max-line-length = 99
-ignore = ["F841","F401","E731","E502","E402","E127","E123","E203","E231","W503"]
+ignore = ["F841","F401","E731","E502","E402","E127","E123","E203","E231","W503","E501"]
 
 [tool.isort]
 line_length = 99
@@ -70,4 +70,4 @@ packages = ["moat.lib.diffiehellman"]
 
 [tool.pylint]
 [tool.pylint.messages_control]
-disable = "wrong-import-order,use-dict-literal,unspecified-encoding,ungrouped-imports,too-many-statements,too-many-return-statements,too-many-nested-blocks,too-many-locals,too-many-instance-attributes,too-many-branches,too-many-arguments,too-few-public-methods,superfluous-parens,no-else-return,no-else-continue,invalid-name,fixme"
+disable = "wrong-import-order,use-dict-literal,unspecified-encoding,ungrouped-imports,too-many-statements,too-many-return-statements,too-many-nested-blocks,too-many-locals,too-many-instance-attributes,too-many-branches,too-many-arguments,too-few-public-methods,superfluous-parens,no-else-return,no-else-continue,invalid-name,fixme,line-too-long"

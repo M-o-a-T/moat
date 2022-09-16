@@ -7,13 +7,11 @@
 test_diffieHellman tests the DiffieHellman class.
 """
 
-import os
-import sys
-
-sys.path.append(os.path.join("..", "diffiehellman"))
 import unittest
 
 from moat.lib.diffiehellman import DiffieHellman
+
+# pylint: disable=missing-function-docstring,missing-class-docstring
 
 
 class TestDiffieHellman(unittest.TestCase):

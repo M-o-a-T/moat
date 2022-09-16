@@ -170,10 +170,10 @@ class LongValue(BaseValue):
     len = 2
 
     def _decode(self, regs):
-        return regs[0] * 65536 + regs[1]
+        return (regs[0] << 16) | regs[1]
 
     def _encode(self, value):
-        return (value & 0xFFFF, value >> 16)
+        return (value >> 16, value & 0xFFFF)
 
 
 class QuadValue(BaseValue):
@@ -189,10 +189,10 @@ class QuadValue(BaseValue):
 
     def _encode(self, value):
         return (
-            value & 0xFFFF,
-            (value >> 16) & 0xFFFF,
-            (value >> 32) & 0xFFFF,
             (value >> 48) & 0xFFFF,
+            (value >> 32) & 0xFFFF,
+            (value >> 16) & 0xFFFF,
+            value & 0xFFFF,
         )
 
 

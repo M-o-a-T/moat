@@ -16,7 +16,7 @@ from pymodbus.exceptions import ModbusIOException
 from pymodbus.factory import ClientDecoder
 from pymodbus.transaction import ModbusSocketFramer
 
-from .types import BaseValue, DataBlock, InaccessibleValue, TypeCodec
+from .types import BaseValue, DataBlock, TypeCodec
 
 _logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class ModbusClient(CtxObj):
                 yield self
             finally:
                 tg, self._tg = self._tg, None
-                h, self.hosts = self.hosts, {}
+                self.hosts = {}
                 tg.cancel_scope.cancel()
 
     def host(self, addr, port=502):
@@ -68,14 +68,13 @@ class ModbusError(RuntimeError):
     """Error entry in returned datasets"""
 
     def __init__(self, result):
+        super().__init__()
         self.result = result
 
 
 class Host:
     """This is a single host which moat-modbus talks to.
     It has a number of modbus units (attribute 'units'.
-    Simply indexing a host will return a unit object
-    (existing or new); use the unit number as index.
 
     Do not instantiate directly; instead, use
 
@@ -108,11 +107,18 @@ class Host:
         gate._tg.start_soon(self._reader)
 
     def unit(self, unit):
+        """
+        Returns the `Unit` object registered to nr. @unit.
+
+        A new unit is allocated if it doesn't yet exist.
+        """
         try:
             return self.units[unit]
         except KeyError:
             if unit < 1 or unit > 247:
-                raise ValueError(f"Bus units must be in range 1…247, not {unit}")
+                raise ValueError(  # pylint: disable=raise-missing-from
+                    f"Bus units must be in range 1…247, not {unit}"
+                )
             return Unit(self, unit)
 
     def _add_unit(self, unit):
@@ -136,7 +142,7 @@ class Host:
                     packet = self.framer.buildPacket(request)
                     async with self._send_lock:
                         await self.stream.send(packet)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _logger.exception("Re-Write to %s:%d", self.addr, self.port)
 
         async with anyio.create_task_group() as self._tg:
@@ -155,17 +161,17 @@ class Host:
                 try:
                     data = await self.stream.receive(4096)
 
-                    _logger.debug("recv: " + " ".join([hex(x) for x in data]))
+                    if _logger.isEnabledFor(logging.DEBUG):
+                        # pylint: disable=logging-not-lazy
+                        _logger.debug("recv: " + " ".join([hex(x) for x in data]))
 
                     # unit = self.framer.decode_data(data).get("uid", 0)
                     replies = []
 
-                    def addReply(r):
-                        if r is not None:
-                            replies.append(r)
-
                     # check for decoding errors
-                    self.framer.processIncomingPacket(data, addReply, unit=0, single=True)  # bah
+                    self.framer.processIncomingPacket(
+                        data, replies.append, unit=0, single=True
+                    )  # bah
 
                 except (
                     IncompleteRead,
@@ -177,7 +183,7 @@ class Host:
                 ) as exc:
                     if self._connected.is_set():
                         self._connected = anyio.Event()
-                    _logger.exception("Read from %s:%d", self.host, self.port)
+                    _logger.exception("Read from %s:%d", self.addr, self.port)
 
                     t, self._transactions = self._transactions, None
                     for req in t.values():
@@ -191,18 +197,15 @@ class Host:
                         try:
                             request = self._transactions.pop(tid)
                         except KeyError:
-                            _logger.info(f"Unrequested message: {reply}")
+                            _logger.info("Unrequested message: %s", reply)
                         else:
                             request._response_value.set(reply)
 
     async def aclose(self):
-        """Stop talking and remove from ColGate.
-
-        This is a coroutine.
-        """
+        """Stop talking."""
         if self.gate is None:
             return
-        self.gate._del_host(self)
+        self.gate._del_host(self)  # pylint: disable=protected-access
         self.gate = None
 
         u, self.units = self.units, None
@@ -236,6 +239,8 @@ class Host:
         """
         Send a pymodbus request and wait for / return the reply.
         """
+        # pylint: disable=logging-fstring-interpolation,protected-access
+
         request.transaction_id = self._nextTID()
         packet = self.framer.buildPacket(request)
         if _logger.isEnabledFor(logging.DEBUG):
@@ -290,6 +295,11 @@ class Unit:
         self.slots = {}
 
     def slot(self, slot):
+        """
+        Returns the `Slot` object registered to @slot.
+
+        A new slot is allocated if it doesn't yet exist.
+        """
         try:
             return self.slots[slot]
         except KeyError:
@@ -307,7 +317,7 @@ class Unit:
         """
         if self.host is None:
             return
-        self.host._del_unit(self)
+        self.host._del_unit(self)  # pylint: disable=protected-access
         self.host = None
 
         s, self.slots = self.slots, None
@@ -372,15 +382,17 @@ class Slot:
 
         :param typ: the `TypeCodec` to use
         :param offset: the offset where the value is located
+
+        Returns the field in question, or none if it doesn't exist.
         """
         try:
             k = self.modes[typ]
         except KeyError:
-            return
+            return None
         return k.delete(offset)
 
     def __repr__(self):
-        return f"<self.__class__.__name__>"
+        return f"<{self.__class__.__name__}>"
 
     async def _stop_run(self):
         if self._run_scope is not None:
@@ -389,14 +401,12 @@ class Slot:
     async def aclose(self):
         """
         Close this slot.
-
-        This is a coroutine.
         """
         if self.unit is None:
             return
         m, self.modes = self.modes, None
         await self._stop_run()
-        self.unit._del_slot(self)
+        self.unit._del_slot(self)  # pylint: disable=protected-access
         self.unit = None
 
         for vl in m.values():
@@ -444,11 +454,8 @@ class Slot:
                     raise RuntimeError("already running")
                 self._run_scope = tg.cancel_scope
 
-                for typ, vl in self.modes.items():
-                    try:
-                        tg.start_soon(vl.writeValues)
-                    except ModbusError as r:
-                        res[typ] = r.result
+                for vl in self.modes.values():
+                    tg.start_soon(vl.writeValues)
             if self.unit is None:
                 raise ClosedResourceError("dropped while running")
         finally:
@@ -530,7 +537,7 @@ class ValueList(DataBlock):
         else:
             msg = self.kind.encoder_m(address=start, count=length, unit=u.unit, values=values)
 
-        r = await u.host.execute(msg)
+        r = await u.host.execute(msg)  # pylint: disable=unused-variable
         # TODO check R for correct type?
 
     def close(self):

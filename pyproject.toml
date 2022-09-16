@@ -34,7 +34,7 @@ repository = "https://github.com/M-o-a-T/moat-modbus"
 
 [tool.flake8]
 max-line-length = 99
-ignore = [ "F401", "E731", "E502", "E402", "E127", "E123", "W503", "E231", "E203",]
+ignore = [ "F401", "E731", "E502", "E402", "E127", "E123", "W503", "E231", "E203", "F841"]
 
 [tool.isort]
 line_length = 99
@@ -72,4 +72,4 @@ deps =
 
 [tool.pylint]
 [tool.pylint.messages_control]
-disable = "use-dict-literal,unspecified-encoding,too-many-statements,too-many-return-statements,too-many-locals,too-many-instance-attributes,too-many-branches,too-many-arguments,too-few-public-methods,superfluous-parens,no-else-return,no-else-continue,invalid-name,fixme"
+disable = "use-dict-literal,unspecified-encoding,too-many-statements,too-many-return-statements,too-many-locals,too-many-instance-attributes,too-many-branches,too-many-arguments,too-few-public-methods,superfluous-parens,no-else-return,no-else-continue,invalid-name,fixme,too-many-nested-blocks,wrong-import-order,ungrouped-imports"

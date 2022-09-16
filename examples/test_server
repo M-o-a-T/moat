@@ -119,9 +119,8 @@ async def run(host, port, debug, args):
                 v=float(v)
             if unit is None:
                 unit = s.add_unit(int(1))
-            b = unit.store[kind.key]
             for _ in range(num):
-                b.add(reg, typ(v))
+                unit.add(kind,reg,typ(v))
                 reg += typ.len
             pend=False
         else:

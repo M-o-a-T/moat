@@ -1,3 +1,6 @@
+"""
+Various types
+"""
 import struct
 from typing import List
 
@@ -42,7 +45,11 @@ except ImportError:
         WriteMultipleRegistersResponse,
     )
 
+import logging
+
 from pymodbus.datastore.store import BaseModbusDataBlock
+
+logger = logging.getLogger(__name__)
 
 
 def _singleton(x):
@@ -78,7 +85,11 @@ class BaseValue:
     def _encode(self, value):
         raise NotImplementedError
 
-    def decode(self, regs):
+    def decode(self, regs: list[int]) -> None:
+        """
+        Decode the passed-in register value(s) into this variable.
+        Triggers iterators.
+        """
         val = self._decode(regs)
         if not self.idem and val == self.value:
             return
@@ -98,7 +109,10 @@ class BaseValue:
         self.changed.set()
         self.changed = anyio.Event()
 
-    def encode(self):
+    def encode(self) -> list[int]:
+        """
+        Encode the current value. Returns a list of registers.
+        """
         return self._encode(self.value)
 
     def __str__(self):
@@ -114,6 +128,8 @@ class BaseValue:
 class _Signed:
     """A mix-in for signed integers."""
 
+    # pylint: disable=no-member,abstract-method
+
     def _decode(self, regs):
         res = super()._decode(regs)
         if res & 1 << (self.len * 16 - 1):
@@ -128,6 +144,8 @@ class _Signed:
 
 class _Swapped:
     """A mix-in to byteswap the Modbus data."""
+
+    # pylint: disable=no-member,abstract-method
 
     def _decode(self, regs):
         regs.reverse()
@@ -148,8 +166,11 @@ class InaccessibleValue(BaseValue):  # duck-types but does NOT interit BaseValue
     :param len: The length of the block that may not be accessed.
     """
 
-    def __init__(self, len):
-        self.len = len
+    # pylint: disable=abstract-method
+
+    def __init__(self, length):
+        # pylint: disable=super-init-not-called
+        self.len = length
 
 
 class IntValue(BaseValue):
@@ -223,31 +244,31 @@ class DoubleValue(BaseValue):
 class SwappedLongValue(_Swapped, LongValue):
     """32-bit integer, two registers, little-endian word order."""
 
-    pass
+    pass  # pylint: disable=unnecessary-pass
 
 
 class SwappedQuadValue(_Swapped, QuadValue):
     """64-bit integer, four registers, little-endian word order."""
 
-    pass
+    pass  # pylint: disable=unnecessary-pass
 
 
 class SignedIntValue(_Signed, IntValue):
     """one register, signed."""
 
-    pass
+    pass  # pylint: disable=unnecessary-pass
 
 
 class SignedLongValue(_Signed, LongValue):
     """two registers, signed."""
 
-    pass
+    pass  # pylint: disable=unnecessary-pass
 
 
 class SwappedSignedLongValue(_Signed, _Swapped, BaseValue):
     """two registers, signed, swapped."""
 
-    pass
+    pass  # pylint: disable=unnecessary-pass
 
 
 SignedSwappedLongValue = SwappedSignedLongValue
@@ -256,13 +277,13 @@ SignedSwappedLongValue = SwappedSignedLongValue
 class SignedQuadValue(_Signed, QuadValue):
     """four registers, signed."""
 
-    pass
+    pass  # pylint: disable=unnecessary-pass
 
 
 class SwappedSignedQuadValue(_Signed, _Swapped, QuadValue):
     """four registers, signed, swapped."""
 
-    pass
+    pass  # pylint: disable=unnecessary-pass
 
 
 SignedSwappedQuadValue = SwappedSignedQuadValue
@@ -271,13 +292,13 @@ SignedSwappedQuadValue = SwappedSignedQuadValue
 class SwappedFloatValue(_Swapped, FloatValue):
     """broken-ordered floating point."""
 
-    pass
+    pass  # pylint: disable=unnecessary-pass
 
 
 class SwappedDoubleValue(_Swapped, DoubleValue):
     """broken-ordered accurate floating point."""
 
-    pass
+    pass  # pylint: disable=unnecessary-pass
 
 
 class TypeCodec:
@@ -294,7 +315,7 @@ class TypeCodec:
             typ = typ.typ
         return self.typ == typ
 
-    def __hash__(self):
+    def __hash__(self):  # pylint: disable=invalid-hash-returned
         return self.typ
 
 
@@ -366,16 +387,17 @@ class DataBlock(dict, BaseModbusDataBlock):
         self.max_len = max_len
         self.changed = anyio.Event()
 
-    def default(self, count, value=False):
-        raise NotImplementedError
-
     def reset(self):
+        """
+        Clear all values in this block
+        """
         for val in self.values():
             val.value = None
 
     def add(self, offset: int, val: BaseValue):
+        """Add a value to the block."""
         if offset in self:
-            raise ValueError("Already known", i)
+            raise ValueError("Already known", offset)
         for n in range(1, 8):
             try:
                 if self[offset - n].len > n:
@@ -393,6 +415,7 @@ class DataBlock(dict, BaseModbusDataBlock):
         self[offset] = val
 
     def validate(self, address: int, count: int = 1):
+        """Test whether @count elements exist at @address."""
         if not count:
             return False
         while count:
@@ -463,9 +486,12 @@ class DataBlock(dict, BaseModbusDataBlock):
         self.changed = anyio.Event()
 
     def delete(self, address, count=1):
+        """
+        Remove @count values at @address
+        """
         while count:
-            self.pop(address, None)
-            address += 1
+            val = self.pop(address, None)
+            address += val.len
             count -= 1
 
 

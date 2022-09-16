@@ -7,10 +7,12 @@
 test_diffieHellman tests the DiffieHellman class.
 """
 
-import sys
 import os
-sys.path.append(os.path.join('..', 'diffiehellman'))
+import sys
+
+sys.path.append(os.path.join("..", "diffiehellman"))
 import unittest
+
 from moat.lib.diffiehellman import DiffieHellman
 
 
@@ -26,8 +28,11 @@ class TestDiffieHellman(unittest.TestCase):
         alices_shared_key = self.alice.generate_shared_secret(self.bob.public_key)
         bobs_shared_key = self.bob.generate_shared_secret(self.alice.public_key)
 
-        self.assertEqual(alices_shared_key, bobs_shared_key,
-                         "There is a mismatch between two shared secrets. Both shared secrets should be the same. This is bad.")
+        self.assertEqual(
+            alices_shared_key,
+            bobs_shared_key,
+            "There is a mismatch between two shared secrets. Both shared secrets should be the same. This is bad.",
+        )
 
     def test_decorators_private_key(self):
         self.alice.generate_public_key()
@@ -49,5 +54,5 @@ class TestDiffieHellman(unittest.TestCase):
         self.assertFalse(self.alice.verify_public_key(self.alice.prime - 1))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

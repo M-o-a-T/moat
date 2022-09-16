@@ -103,6 +103,7 @@ class Host:
 
         self.timeout = 10
         self._connected = anyio.Event()
+        self._send_lock = anyio.Lock()
 
         gate._tg.start_soon(self._reader)
 
@@ -125,6 +126,19 @@ class Host:
     # reader task #
 
     async def _reader(self):
+        # pylint: disable=protected-access
+
+        async def _send_trans(task_status):
+            tr = list(self._transactions.values())
+            task_status.started()
+            try:
+                for request in tr:
+                    packet = self.framer.buildPacket(request)
+                    async with self._send_lock:
+                        await self.stream.send(packet)
+            except Exception:
+                _logger.exception("Re-Write to %s:%d", self.addr, self.port)
+
         async with anyio.create_task_group() as self._tg:
             self._read_scope = self._tg.cancel_scope
             while True:
@@ -134,6 +148,8 @@ class Host:
                     self.stream.extra(SocketAttribute.raw_socket).setsockopt(
                         socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0)
                     )
+                    # re-send open requests
+                    await self._tg.start(_send_trans)
                     self._connected.set()
 
                 try:
@@ -227,12 +243,14 @@ class Host:
 
         # make the modbus request
         request.__value = ValueEvent()
-        self._transactions[request.transaction_id] = request
+
+        await self._connected.wait()
 
         try:
-            await self._connected.wait()
+            self._transactions[request.transaction_id] = request
             packet = self.framer.buildPacket(request)
-            await self.stream.send(packet)
+            async with self._send_lock:
+                await self.stream.send(packet)
             res = await request.__value.get()
         except BaseException as exc:
             _logger.error(f"Gateway {self.addr}:{self.port} not replied: {repr(exc)}")

@@ -497,8 +497,8 @@ class ValueList(DataBlock):
         u = self.slot.unit
         msg = self.kind.encoder(address=start, count=length, unit=u.unit)
 
-        # handle according to reply type
         r = await u.host.execute(msg)
+        # TODO check R for correct type?
 
         r = r.registers
 
@@ -530,8 +530,8 @@ class ValueList(DataBlock):
         else:
             msg = self.kind.encoder_m(address=start, count=length, unit=u.unit, values=values)
 
-        # handle according to reply type
         r = await u.host.execute(msg)
+        # TODO check R for correct type?
 
     def close(self):
         """disable further accesses"""

@@ -39,9 +39,6 @@ tool:
     multi_line_output: 3
     trailing_comma: DELETE
     profile: black
-  setuptools:
-    packages:
-    - moat.SUBNAME
   setuptools_scm: {}
 
   tox:
@@ -59,8 +56,10 @@ tool:
       commands:
       - black --check moat/SUBNAME tests
       - flake8p moat/SUBNAME tests
+      - pylint moat/SUBNAME tests
       deps:
       - flake8
       - flake8-pyproject
       - black
+      - pylint
 

@@ -27,11 +27,21 @@ project:
     homepage: https://m-o-a-t.org
     repository: https://github.com/M-o-a-T/moat-SUBNAME
 tool:
+  black:
+    line-length: 99
   flake8:
     max-line-length: 99
-  isort:
-    line_length: 88
-    multi_line_output: 3
+    ignore:
+    - E123
+    - E127
+    - E203
+    - E231
+    - E402
+    - E502
+    - E731
+    - F401  # covered by pylint
+    - F841  # covered by pylint
+    - W503
   setuptools:
     packages:
     - moat.SUBNAME
@@ -49,10 +59,13 @@ tool:
       - too-many-branches
       - too-many-instance-attributes
       - too-many-locals
+      - too-many-nested-blocks
       - too-many-return-statements
       - too-many-statements
-      - unspecified-enoding
+      - ungrouped-imports
+      - unspecified-encoding
       - use-dict-literal
+      - wrong-import-order
   tox:
     tox:
       isolated_build: True

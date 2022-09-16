@@ -1,20 +1,15 @@
 # command line interface
+# pylint: disable=missing-module-docstring
 
 import io
-import json
 import logging
-import os
-import socket
 import subprocess
-import sys
 from collections import defaultdict
 from configparser import RawConfigParser
 from pathlib import Path
 
-import anyio
 import asyncclick as click
 import git
-import requirements
 import tomlkit
 from moat.util import P, make_proc, to_attrdict, yload, yprint
 from packaging.requirements import Requirement
@@ -23,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 class Repo(git.Repo):
+    """Amend git.Repo with submodule and tag caching"""
+
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self._subrepo_cache = {}
@@ -73,7 +70,11 @@ class Repo(git.Repo):
             n -= 1
             yield res[n]
 
-    def tagged(self, c=None):
+    def tagged(self, c=None) -> str:
+        """Return a commit's tag.
+        Defaults to the head commit.
+        Returns None if no tag, raises ValueError if more than one is found.
+        """
         if c is None:
             c = self.head.commit
         if c not in self._commit_tags:
@@ -85,28 +86,29 @@ class Repo(git.Repo):
 
 
 @click.group(short_help="Manage MoaT itself")
-@click.pass_obj
-async def cli(obj):
+async def cli():
     """
     This collection of commands is useful for managing and building MoaT itself.
     """
-    pass
+    pass  # pylint: disable=unnecessary-pass
 
 
-def fix_deps(deps, tags):
+def fix_deps(deps: list[str], tags: dict[str, str]) -> bool:
+    """Adjust dependencies"""
     work = False
     for i, dep in enumerate(deps):
         r = Requirement(dep)
-        if r.name.startswith("moat-"):
-            n = r.name[5:]
-            deps[i] = f"{r.name}~={deps[n]}"
+        if r.name in tags:
+            deps[i] = f"{r.name}~={tags[r.name]}"
             work = True
     return work
 
 
-def run_tests(repo):
+def run_tests(repo: Repo) -> bool:
+    """Run tests (i.e., 'tox') in this repository."""
     try:
-        subprocess.run(["python3", "-mtox"], cwd=repo.working_dir)
+        print("\n*** Testing:", repo.working_dir)
+        subprocess.run(["python3", "-mtox"], cwd=repo.working_dir, check=True)
     except subprocess.CalledProcessError:
         return False
     else:
@@ -114,6 +116,8 @@ def run_tests(repo):
 
 
 class Replace:
+    """Encapsulates a series of string replacements."""
+
     def __init__(self, **kw):
         self.changes = kw
 
@@ -195,7 +199,8 @@ def default_dict(a, b, c, cls=dict, repl=lambda x: x) -> dict:
     return mod
 
 
-def is_clean(repo, skip=True):
+def is_clean(repo: Repo, skip: bool = True) -> bool:
+    """Check if this repository is clean."""
     skips = " Skipping." if skip else ""
     if repo.head.is_detached:
         print(f"{repo.working_dir}: detached.{skips}")
@@ -203,7 +208,9 @@ def is_clean(repo, skip=True):
     if repo.head.ref.name != "main":
         print(f"{repo.working_dir}: on branch [repo.head.ref.name].{skips}")
         return False
-    elif repo.is_dirty(index=True, working_tree=True, untracked_files=False, submodules=False):
+    elif repo.is_dirty(
+        index=True, working_tree=True, untracked_files=False, submodules=False
+    ):
         print(f"{repo.working_dir}: Dirty.{skips}")
         return False
     return True
@@ -222,11 +229,13 @@ def _mangle(proj, path, mangler):
 
 
 def decomma(proj, path):
+    """comma-delimited string > list"""
     _mangle(proj, path, lambda x: x.split(","))
 
 
 def encomma(proj, path):
-    _mangle(proj, path, lambda x: ",".join(x))
+    """list > comma-delimited string"""
+    _mangle(proj, path, lambda x: ",".join(x))  # pylint: disable=unnecessary-lambda
 
 
 def apply_templates(repo):
@@ -360,7 +369,9 @@ def apply_templates(repo):
 @cli.command()
 @click.option("-A", "--amend", is_flag=True, help="Fixup previous commit (DANGER)")
 @click.option("-N", "--no-amend", is_flag=True, help="Don't fixup even if same text")
-@click.option("-D", "--no-dirty", is_flag=True, help="don't check for dirtiness (DANGER)")
+@click.option(
+    "-D", "--no-dirty", is_flag=True, help="don't check for dirtiness (DANGER)"
+)
 @click.option("-C", "--no-commit", is_flag=True, help="don't commit")
 @click.option("-s", "--skip", type=str, multiple=True, help="skip this repo")
 @click.option(
@@ -371,8 +382,7 @@ def apply_templates(repo):
     default="Update from MoaT template",
 )
 @click.option("-o", "--only", type=str, multiple=True, help="affect only this repo")
-@click.pass_obj
-async def setup(obj, no_dirty, no_commit, skip, only, message, amend, no_amend):
+async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
     """
     Set up projects using templates.
 
@@ -383,7 +393,9 @@ async def setup(obj, no_dirty, no_commit, skip, only, message, amend, no_amend):
     if only:
         repos = (Repo(x) for x in only)
     else:
-        repos = (x for x in repo.subrepos() if Path(x.working_tree_dir).name not in skip)
+        repos = (
+            x for x in repo.subrepos() if Path(x.working_tree_dir).name not in skip
+        )
 
     for r in repos:
         if not is_clean(r, not no_dirty):
@@ -394,7 +406,9 @@ async def setup(obj, no_dirty, no_commit, skip, only, message, amend, no_amend):
 
         if no_commit:
             continue
-        if r.is_dirty(index=True, working_tree=False, untracked_files=False, submodules=False):
+        if r.is_dirty(
+            index=True, working_tree=False, untracked_files=False, submodules=False
+        ):
             if no_amend or r.tagged():
                 a = False
             elif amend:
@@ -411,17 +425,34 @@ async def setup(obj, no_dirty, no_commit, skip, only, message, amend, no_amend):
 
 @cli.command()
 @click.option("-T", "--no-test", is_flag=True, help="Skip testing")
-@click.pass_obj
-async def build(obj, no_test):
+@click.option(
+    "-v",
+    "--version",
+    type=(str, str),
+    multiple=True,
+    help="Update external dep version",
+)
+@click.option("-C", "--no-commit", is_flag=True, help="don't commit")
+@click.option(
+    "-D", "--no-dirty", is_flag=True, help="don't check for dirtiness (DANGER)"
+)
+async def build(version, no_test, no_commit, no_dirty):
     """
     Rebuild all modified packages.
     """
     bad = False
     repo = Repo()
-    tags = {}
+    tags = dict(version)
+    skip = set()
+
     for r in repo.subrepos():
+        if not is_clean(r, not no_dirty):
+            if not no_dirty:
+                skip.add(r)
+                continue
+
         if not no_test and not run_tests(r):
-            print("FAIL", t, Path(r.working_dir).name)
+            print("FAIL", Path(r.working_dir).name)
             return  # abort immediately
 
         if r.is_dirty():
@@ -442,10 +473,11 @@ async def build(obj, no_test):
             # do not create the tag yet
         else:
             print("TAG", t, Path(r.working_dir).name)
-        tags[r.working_dir] = t
+        tags[f"moat-{Path(r.working_dir).name}"] = t
     if bad:
         print("No work done. Fix and try again.")
         return
+    print("All tests passed. Yay!")
 
     dirty = set()
 
@@ -455,13 +487,15 @@ async def build(obj, no_test):
 
         # Next: fix versioned dependencies
         for r in repo.subrepos():
+            if r in skip:
+                continue
             p = Path(r.working_dir) / "pyproject.toml"
             if not p.is_file():
                 # bad=True
                 print("Skip:", r.working_dir)
                 continue
             with p.open("r") as f:
-                pr = toml.decoder.load(f)
+                pr = tomlkit.load(f)
 
             print("***", r.working_dir)
             yprint(to_attrdict(pr))
@@ -481,8 +515,7 @@ async def build(obj, no_test):
                 for v in deps.values():
                     work = fix_deps(v, tags) | work
             if work:
-                with p.open("w") as f:
-                    toml.encoder.dump(pr, f)
+                p.write_text(pr.as_string())
                 r.index.add(p)
                 dirty.add(r)
                 t = tags[r.working_dir]
@@ -496,9 +529,10 @@ async def build(obj, no_test):
         print("Partial work done. Fix and try again.")
         return
 
-    for r in dirty:
-        r.index.commit("Update MoaT requirements")
-    for r in repo.subrepos():
-        t = tags[r.working_dir]
-        if isinstance(t, str):
-            r.create_tag(t)
+    if not no_commit:
+        for r in dirty:
+            r.index.commit("Update MoaT requirements")
+        for r in repo.subrepos():
+            t = tags[r.working_dir]
+            if isinstance(t, str):
+                r.create_tag(t)

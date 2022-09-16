@@ -11,7 +11,7 @@ import sys
 import os
 sys.path.append(os.path.join('..', 'diffiehellman'))
 import unittest
-from diffiehellman.diffiehellman import DiffieHellman
+from moat.lib.diffiehellman import DiffieHellman
 
 
 class TestDiffieHellman(unittest.TestCase):

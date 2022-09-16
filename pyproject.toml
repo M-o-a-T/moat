@@ -13,7 +13,6 @@ authors = [{email = "chris@chrisvoncsefalvay.com",name = "Chris von Csefalvay"}]
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='A Pythonic implementation of the Diffie-Hellman key exchange protocol'
 readme = "README.rst"
-license='MIT'
 
 [project.license]
 file = "LICENSE.txt"
@@ -67,7 +66,7 @@ deps =
 line-length = 99
 
 [tool.setuptools]
-packages = ["moat.lib.diffiehellman","moat.lib-diffiehellman","moat.diffiehellman"]
+packages = ["moat.lib.diffiehellman"]
 
 [tool.pylint]
 [tool.pylint.messages_control]

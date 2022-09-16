@@ -251,7 +251,7 @@ def apply_templates(repo):
     repl = Replace(
         SUBNAME=Path(repo.working_dir).name,
     )
-    pt = (Path(__file__).parent.parent.parent / "template").joinpath
+    pt = (Path(__file__).parent / "template").joinpath
     pr = Path(repo.working_dir).joinpath
     with pt("pyproject.forced.yaml").open("r") as f:
         t1 = yload(f)
@@ -344,7 +344,7 @@ def apply_templates(repo):
         if n.name.startswith("test_"):
             break
     else:
-        tp = pt("test_basic.py").read_text()
+        tp = pt("test_basic_py").read_text()
         tb = pr("tests") / "test_basic.py"
         tb.write_text(repl(tp))
         repo.index.add(tb)

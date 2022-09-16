@@ -12,7 +12,7 @@ name = "moat-lib-diffiehellman"
 authors = [{email = "chris@chrisvoncsefalvay.com",name = "Chris von Csefalvay"}]
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='A Pythonic implementation of the Diffie-Hellman key exchange protocol'
-readme = "README.rst"
+readme = "README.md"
 
 [project.license]
 file = "LICENSE.txt"

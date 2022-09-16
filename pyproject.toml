@@ -15,6 +15,9 @@ classifiers = [
 dependencies = [
 	"anyio ~= 3.0",
 	"tomlkit ~= 0.11",
+	"asyncclick",
+	"gitpython",
+	"packaging",
 	]
 dynamic = [ "version",]
 keywords = [ "MoaT",]

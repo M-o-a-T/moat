@@ -87,8 +87,14 @@ class BaseValue:
         self.changed = anyio.Event()
         self.gen += 1
 
-    def clear(self):
+    def clear(self) -> None:
+        """
+        Clears the value.
+        """
+        if self.value is None:
+            return
         self.value = None
+        self.gen += 1
         self.changed.set()
         self.changed = anyio.Event()
 
@@ -481,13 +487,14 @@ class ValueIterator:
         If the value is initially unknown, wait.
         if it's been cleared, raises `StopAsyncIteration`.
         """
+        val = self.val
         if val.gen > 0 and val.value is None:
             raise StopAsyncIteration
         if self.gen == val.gen:
-            await self.changed.wait()
-        if self.value is None:
+            await val.changed.wait()
+        if val.value is None:
             raise StopAsyncIteration
         if self.gen + 1 != val.gen:
             logger.notice("%r: skipped %d", val.gen - self.gen - 1)
         self.gen = val.gen
-        return self.value
+        return val.value

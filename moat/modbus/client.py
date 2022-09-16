@@ -11,7 +11,7 @@ from typing import Any, Dict, Type
 import anyio
 from anyio import ClosedResourceError, IncompleteRead
 from anyio.abc import SocketAttribute
-from distkv.util import CtxObj, Queue, ValueEvent
+from moat.util import CtxObj, Queue, ValueEvent
 from pymodbus.exceptions import ModbusIOException
 from pymodbus.factory import ClientDecoder
 from pymodbus.transaction import ModbusSocketFramer

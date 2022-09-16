@@ -28,8 +28,6 @@
 diffiehellmann declares the main key exchange class.
 """
 
-__version__ = '0.13.3'
-
 from hashlib import sha256
 
 from .decorators import requires_private_key

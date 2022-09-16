@@ -52,6 +52,12 @@ tool:
     testenv:
       setenv:
       - "PYTHONPATH = {env:PYTHONPATH}{:}{toxinidir}"
+      deps:
+      - pytest
+      - trio
+      commands:
+      - python3 -mpytest tests/
+
     "testenv:check":
       commands:
       - black --check moat/SUBNAME tests
@@ -62,4 +68,5 @@ tool:
       - flake8-pyproject
       - black
       - pylint
+      - pytest
 

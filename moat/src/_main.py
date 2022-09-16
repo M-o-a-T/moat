@@ -180,16 +180,16 @@ def default_dict(a, b, c, cls=dict, repl=lambda x: x) -> dict:
                 vb = b[k]
                 mod = True
             if va:
-                for v in va:
-                    v = repl(v)
-                    if v not in vb:
-                        vb.insert(0, v)
+                for vv in va:
+                    vv = repl(vv)
+                    if vv not in vb:
+                        vb.insert(0, vv)
                         mod = True
             if vc:
-                for v in vc:
-                    v = repl(v)
-                    if v not in vb:
-                        vb.insert(0, v)
+                for vv in vc:
+                    vv = repl(vv)
+                    if vv not in vb:
+                        vb.insert(0, vv)
                         mod = True
         else:
             v = repl(va) or vb or repl(vc)
@@ -208,9 +208,7 @@ def is_clean(repo: Repo, skip: bool = True) -> bool:
     if repo.head.ref.name != "main":
         print(f"{repo.working_dir}: on branch [repo.head.ref.name].{skips}")
         return False
-    elif repo.is_dirty(
-        index=True, working_tree=True, untracked_files=False, submodules=False
-    ):
+    elif repo.is_dirty(index=True, working_tree=True, untracked_files=False, submodules=False):
         print(f"{repo.working_dir}: Dirty.{skips}")
         return False
     return True
@@ -369,9 +367,7 @@ def apply_templates(repo):
 @cli.command()
 @click.option("-A", "--amend", is_flag=True, help="Fixup previous commit (DANGER)")
 @click.option("-N", "--no-amend", is_flag=True, help="Don't fixup even if same text")
-@click.option(
-    "-D", "--no-dirty", is_flag=True, help="don't check for dirtiness (DANGER)"
-)
+@click.option("-D", "--no-dirty", is_flag=True, help="don't check for dirtiness (DANGER)")
 @click.option("-C", "--no-commit", is_flag=True, help="don't commit")
 @click.option("-s", "--skip", type=str, multiple=True, help="skip this repo")
 @click.option(
@@ -393,9 +389,7 @@ async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
     if only:
         repos = (Repo(x) for x in only)
     else:
-        repos = (
-            x for x in repo.subrepos() if Path(x.working_tree_dir).name not in skip
-        )
+        repos = (x for x in repo.subrepos() if Path(x.working_tree_dir).name not in skip)
 
     for r in repos:
         if not is_clean(r, not no_dirty):
@@ -406,9 +400,7 @@ async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
 
         if no_commit:
             continue
-        if r.is_dirty(
-            index=True, working_tree=False, untracked_files=False, submodules=False
-        ):
+        if r.is_dirty(index=True, working_tree=False, untracked_files=False, submodules=False):
             if no_amend or r.tagged():
                 a = False
             elif amend:
@@ -433,9 +425,7 @@ async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
     help="Update external dep version",
 )
 @click.option("-C", "--no-commit", is_flag=True, help="don't commit")
-@click.option(
-    "-D", "--no-dirty", is_flag=True, help="don't check for dirtiness (DANGER)"
-)
+@click.option("-D", "--no-dirty", is_flag=True, help="don't check for dirtiness (DANGER)")
 async def build(version, no_test, no_commit, no_dirty):
     """
     Rebuild all modified packages.

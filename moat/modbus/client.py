@@ -181,7 +181,7 @@ class Host:
 
                     t, self._transactions = self._transactions, None
                     for req in t.values():
-                        req.__value.set(exc)
+                        req._response_value.set(exc)
 
                     await self.disconnect()
 
@@ -193,7 +193,7 @@ class Host:
                         except KeyError:
                             _logger.info(f"Unrequested message: {reply}")
                         else:
-                            request.__value.set(reply)
+                            request._response_value.set(reply)
 
     async def aclose(self):
         """Stop talking and remove from ColGate.
@@ -243,7 +243,7 @@ class Host:
             _logger.debug(f"Gateway {self.addr}:{self.port} xmit: {packet_info}")
 
         # make the modbus request
-        request.__value = ValueEvent()
+        request._response_value = ValueEvent()
 
         await self._connected.wait()
 
@@ -252,7 +252,7 @@ class Host:
             packet = self.framer.buildPacket(request)
             async with self._send_lock:
                 await self.stream.send(packet)
-            res = await request.__value.get()
+            res = await request._response_value.get()
         except BaseException as exc:
             _logger.error(f"Gateway {self.addr}:{self.port} not replied: {repr(exc)}")
 

@@ -109,7 +109,7 @@ class BaseModbusServer(CtxObj):
     def _add_unit(self, unit):
         self.units[unit.unit] = unit
 
-    async def serve(self, opened=None):  # pylint: disable=no-self-use
+    async def serve(self, opened=None):
         """The actual server. Override me."""
         raise RuntimeError("You need to override .serve")
 
@@ -325,7 +325,7 @@ class ForwardingAioModbusServer:
     def __init__(self):
         self._units = {}
 
-    def add_unit(self, unit):  # pylint: disable=no-self-use,missing-function-docstring
+    def add_unit(self, unit):  # pylint: disable=missing-function-docstring
         raise RuntimeError("Use 'set_forward' with a forwarding server")
 
     def set_forward(

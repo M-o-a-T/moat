@@ -14,6 +14,9 @@ classifiers = [
 	]
 dependencies = [
 	"anyio ~= 3.0",
+	"pymodbus",
+	"anyio-serial",
+	"moat-util",
 	]
 dynamic = [ "version",]
 keywords = [ "MoaT",]
@@ -46,6 +49,9 @@ packages = [ "moat.modbus",]
 
 [tool.setuptools_scm]
 
+[tool.black]
+line-length = 99
+
 [tool.tox]
 legacy_tox_ini = """
 [tox]
@@ -55,6 +61,11 @@ envlist = py310,py39,check
 [testenv]
 setenv = 
     PYTHONPATH = {env:PYTHONPATH}{:}{toxinidir}
+deps =
+	pytest
+	trio
+commands = 
+	python3 -mpytest tests
 
 [testenv:check]
 commands = 
@@ -62,11 +73,11 @@ commands =
     flake8p moat/modbus tests
     black --check moat/modbus tests
 deps = 
-    pylint
     black
-    flake8-pyproject
     flake8
-
+    flake8-pyproject
+    pylint
+	pytest
 """
 
 

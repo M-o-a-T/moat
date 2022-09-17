@@ -205,8 +205,8 @@ def is_clean(repo: Repo, skip: bool = True) -> bool:
     if repo.head.is_detached:
         print(f"{repo.working_dir}: detached.{skips}")
         return False
-    if repo.head.ref.name != "main":
-        print(f"{repo.working_dir}: on branch [repo.head.ref.name].{skips}")
+    if repo.head.ref.name not in {"main","moat"}:
+        print(f"{repo.working_dir}: on branch {repo.head.ref.name}.{skips}")
         return False
     elif repo.is_dirty(index=True, working_tree=True, untracked_files=False, submodules=False):
         print(f"{repo.working_dir}: Dirty.{skips}")
@@ -246,10 +246,21 @@ def apply_templates(repo):
         P("tool.pylint.messages_control.disable"),
     )
 
+    rpath = Path(repo.working_dir)
+    if rpath.parent.name == "lib":
+        rname = f"{rpath.parent.name}-{rpath.name}"
+        rdot = f"{rpath.parent.name}.{rpath.name}"
+        rpath = f"{rpath.parent.name}/{rpath.name}"
+    else:
+        rname = str(rpath.name)
+        rdot = str(rpath.name)
+        rpath = str(rpath.name)
     repl = Replace(
-        SUBNAME=Path(repo.working_dir).name,
+        SUBNAME=rname,
+        SUBDOT=rdot,
+        SUBPATH=rpath,
     )
-    pt = (Path(__file__).parent / "template").joinpath
+    pt = (Path(__file__).parent / "_templates").joinpath
     pr = Path(repo.working_dir).joinpath
     with pt("pyproject.forced.yaml").open("r") as f:
         t1 = yload(f)

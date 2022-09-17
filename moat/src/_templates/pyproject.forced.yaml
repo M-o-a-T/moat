@@ -60,9 +60,9 @@ tool:
 
     "testenv:check":
       commands:
-      - black --check moat/SUBNAME tests
-      - flake8p moat/SUBNAME tests
-      - pylint moat/SUBNAME tests
+      - black --check moat tests
+      - flake8p moat tests
+      - pylint moat tests
       deps:
       - flake8
       - flake8-pyproject

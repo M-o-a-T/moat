@@ -44,7 +44,7 @@ tool:
     - W503
   setuptools:
     packages:
-    - moat.SUBNAME
+    - moat.SUBDOT
   setuptools_scm: {}
   pylint:
     messages_control:

@@ -395,11 +395,11 @@ class Loader(click.Group):
         if command is None and self._util_plugin is not None:
             try:
                 plugins = ctx.obj._ext_name  # pylint: disable=protected-access
-
                 command = load_one(f"{plugins}.{cmd_name}", self._util_plugin, "cli")
             except (ModuleNotFoundError, FileNotFoundError) as exc:
                 if (
-                    exc.name != f"{plugins}.{cmd_name}"
+                    exc.name != plugins
+                    and exc.name != f"{plugins}.{cmd_name}"
                     and not exc.name.startswith(  # pylint: disable=no-member ## duh?
                         f"{plugins}.{cmd_name}._"
                     )
@@ -528,12 +528,18 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     if obj is None:
         obj = attrdict()
 
-    opts = obj.get("moat", attrdict())
+    opts = obj.get("moat", None)
+    if opts is None:
+        obj.moat = opts = attrdict()
 
     if name is None:
-        name = opts["name"]
+        name = opts.get("name", "moat")
+    else:
+        opts["name"] = name
     if ext is None:
         ext = opts.get("ext", f"{name}.ext")
+    else:
+        opts["ext"] = ext
     if sub is True:
         import inspect  # pylint: disable=import-outside-toplevel
 
@@ -543,6 +549,8 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         # __name__.split(".", 1)[0] + "._main"
         if sub is False:
             sub = None
+    else:
+        opts["sub"] = sub
 
     if main is None:
         if help is not None:
@@ -561,10 +569,12 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         with open(p, "r") as cfgf:
             CFG = yload(cfgf)
     elif CFG is None:
-        try:
-            CFG = importlib.import_module(f"{name}._config").CFG
-        except (ImportError, AttributeError):
-            CFG = {}
+        CFG = obj.get("CFG", None)
+        if CFG is None:
+            try:
+                CFG = importlib.import_module(f"{name}._config").CFG
+            except (ImportError, AttributeError):
+                CFG = {}
 
     for n, d in list_ext(ext):
         try:

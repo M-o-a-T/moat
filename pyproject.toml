@@ -15,7 +15,7 @@ classifiers = [
 dependencies = [
 	"anyio ~= 3.0",
 	"asyncclick",
-	"attr",
+	"attrs",
 	"msgpack",
 	"outcome",
 	"ruyaml",

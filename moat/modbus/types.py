@@ -148,13 +148,14 @@ class _Swapped:
     # pylint: disable=no-member,abstract-method
 
     def _decode(self, regs):
+        regs = list(regs)
         regs.reverse()
         return super()._decode(regs)
 
     def _encode(self, value):
-        regs = super()._encode(value)
+        regs = list(super()._encode(value))
         regs.reverse()
-        return regs
+        return tuple(regs)
 
 
 class InaccessibleValue(BaseValue):  # duck-types but does NOT interit BaseValue

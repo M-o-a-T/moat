@@ -99,7 +99,7 @@ class BaseValue:
     def _encode(self, value):
         raise NotImplementedError
 
-    def decode(self, regs: list[int]) -> None:
+    def decode(self, regs: List[int]) -> None:
         """
         Decode the passed-in register value(s) into this variable.
         Triggers iterators.
@@ -123,7 +123,7 @@ class BaseValue:
         self.changed.set()
         self.changed = anyio.Event()
 
-    def encode(self) -> list[int]:
+    def encode(self) -> List[int]:
         """
         Encode the current value. Returns a list of registers.
         """

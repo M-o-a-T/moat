@@ -450,6 +450,7 @@ class Battery:
 		self.work.dis = 0
 		self.work.over_chg = 0
 		self.work.over_dis = 0
+		self.work.cfg = self.cfg.cap.cur
 		return True
 
 	def add_work(self, w,n):

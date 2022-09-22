@@ -67,17 +67,28 @@ class BaseValue:
     """
 
     len = 0
-    value = None
+    _value = None
     gen = 0
 
     def __init__(self, value=None, idem=False):
         self.changed = anyio.Event()
-        self.value = value
+        self._value = value
         self.idem = idem
 
         if value is not None:
             self.gen = 1
             self.changed = anyio.Event()
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, val):
+        self._value = self._constrain(val)
+
+    def _constrain(self, val):
+        return val
 
     def _decode(self, regs):
         raise NotImplementedError
@@ -179,6 +190,11 @@ class IntValue(BaseValue):
 
     len = 1
 
+    def _constrain(self, val):
+        if val is None:
+            return val
+        return int(val)
+
     def _decode(self, regs):
         return regs[0]
 
@@ -186,7 +202,7 @@ class IntValue(BaseValue):
         return (value,)
 
 
-class LongValue(BaseValue):
+class LongValue(IntValue):
     """32-bit integer, two registers, standard (big-endian) word order."""
 
     len = 2
@@ -198,7 +214,7 @@ class LongValue(BaseValue):
         return (value >> 16, value & 0xFFFF)
 
 
-class QuadValue(BaseValue):
+class QuadValue(IntValue):
     """64-bit integer, four registers, standard (big-endian) word order.
 
     This is a BaseValue instance.

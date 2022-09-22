@@ -81,13 +81,16 @@ class BaseValue:
 
     @property
     def value(self):
+        # pylint: disable=missing-function-docstring
         return self._value
 
     @value.setter
     def value(self, val):
+        # pylint: disable=missing-function-docstring
         self._value = self._constrain(val)
 
     def _constrain(self, val):
+        # pylint: disable=no-self-use
         return val
 
     def _decode(self, regs):

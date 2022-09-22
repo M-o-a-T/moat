@@ -218,3 +218,7 @@ async def client(host, port, unit, kind, start, num, type_, values, debug):
                 print(res)
         except Exception as exc:  # pylint: disable=broad-except
             log.exception("Problem: %r", exc)
+
+
+if __name__ == "__main__":
+    main(_anyio_backend="trio")  # pylint: disable=unexpected-keyword-arg

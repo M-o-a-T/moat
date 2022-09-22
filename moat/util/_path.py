@@ -393,7 +393,7 @@ def logger_for(path: Path):
     else:
         p = f"{this}.at.{path[0]}"
     if len(path) > 1:
-        p += "." + ".".join(str(x) for x in path[1:])
+        p += "." + ".".join(str(x) or "-" for x in path[1:])
     return logging.getLogger(p)
 
 

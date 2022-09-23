@@ -70,7 +70,7 @@ async def attr_(obj, path, vars_, eval_, path_):
     """
     if len(path) != 3:
         raise click.UsageError("Three path elements (host.controller:pin) required")
-    await node_attr(obj, path, vars_, eval_, path_)
+    await node_attr(obj, obj.cfg.gpio.prefix + path, vars_, eval_, path_)
 
 
 @cli.command()

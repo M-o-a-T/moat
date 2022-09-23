@@ -1,4 +1,4 @@
-from distkv.util import attrdict, Path
+from moat.util import attrdict, Path
 
 CFG = attrdict(
     prefix=Path(".distkv", "gpio"),

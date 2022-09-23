@@ -4,7 +4,7 @@ import anyio
 import asyncclick as click
 from collections.abc import Mapping
 
-from distkv.util import yprint, attrdict, as_service, P, attr_args
+from moat.util import yprint, attrdict, as_service, P, attr_args
 from distkv.data import res_get, res_update, node_attr
 
 import logging

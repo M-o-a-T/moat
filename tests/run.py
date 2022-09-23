@@ -6,10 +6,10 @@ import trio.testing
 from distmqtt.test import test_client
 from asyncgpio.test import GpioWatcher, Pin
 
+from moat.util import Path
 from distkv_ext.gpio.task import task as GPIOtask
 from distkv_ext.gpio.model import GPIOroot
 from distkv_ext.gpio.config import CFG
-from distkv.util import Path
 
 import logging
 

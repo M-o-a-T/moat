@@ -7,8 +7,8 @@ try:
 except ImportError:
     from anyio.exceptions import ClosedResourceError
 
+from moat.util import PathLongener, NotGiven
 from distkv.obj import ClientEntry, ClientRoot
-from distkv.util import PathLongener, NotGiven
 from distkv.errors import ErrorRoot
 from distkv.exceptions import ServerError
 import asyncgpio as gpio

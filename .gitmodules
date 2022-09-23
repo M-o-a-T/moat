@@ -4,9 +4,6 @@
 [submodule "python/lib/serialpacker"]
 	path = python/lib/serialpacker
 	url = https://github.com/M-o-a-T/SerialPacker.git
-[submodule "python/moat/util"]
-	path = python/moat/util
-	url = https://github.com/M-o-a-T/moat-util.git
 [submodule "python/lib/micropython"]
 	path = python/lib/micropython
 	url = https://github.com/smurfix/micropython.git

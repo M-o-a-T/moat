@@ -169,6 +169,8 @@ class GPIOline(_GPIOnode):
                     if change is None or value == change:
                         await self.client.set(dest, value=value)
 
+                await set_value(old_value)
+
                 await evt.set()
                 mon_iter = mon.__aiter__()
                 while True:

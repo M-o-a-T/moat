@@ -562,6 +562,9 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     obj._ext_name = ext  # pylint: disable=protected-access
     obj._sub_name = sub  # pylint: disable=protected-access
 
+    if CFG is None:
+        CFG = opts.get("CFG")
+
     if isinstance(CFG, str):
         p = Path(CFG)
         if not p.is_absolute():

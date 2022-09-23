@@ -1,7 +1,8 @@
 [Unit]
 Description=DistKV GPIO server
 After=distkv.service
-Requires=distkv.service
+# Requires=distkv.service
+# only if distkv runs on the same host
 
 ConditionFileNotEmpty=/etc/distkv.cfg
 

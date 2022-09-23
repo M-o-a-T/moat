@@ -100,7 +100,7 @@ async def delete(obj, path):
 @click.argument("path", nargs=1, type=P)
 @click.pass_obj
 async def port(obj, path, typ, mode, attr):
-    """Set/get port settings. This is a shortcut for the "attr" command.
+    """Add/modify a port. This is a shortcut for the "attr" command.
 
     \b
     Known attributes for types+modes:
@@ -148,8 +148,8 @@ async def port(obj, path, typ, mode, attr):
                 v = False
             else:
                 raise click.UsageError("'%s' wants one of + -" % (k,))
-        elif k in {"src", "dest"} or (v is not None and " " in v):
-            v = v.split()
+        elif k in {"src", "dest"}:
+            v = P(v)
         else:
             try:
                 v = int(v)

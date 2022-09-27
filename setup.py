@@ -17,8 +17,7 @@ setup(
     tests_require=["trustme >= 0.5", "pytest", "flake8 >= 3.7"],
     keywords=["async", "key-values", "distributed"],
     python_requires=">=3.7",
-    package_data={"distkv_ext.akumuli": ["*.yaml"]}
-
+    package_data={"distkv_ext.akumuli": ["*.yaml"]},
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Information Technology",

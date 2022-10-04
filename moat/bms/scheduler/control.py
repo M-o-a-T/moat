@@ -1,6 +1,7 @@
 
-from ortools.linear_solver import pywraplp
 from dataclasses import dataclass
+from ortools.linear_solver import pywraplp
+from moat.util import attrdict
  
 @dataclass
 class FutureData:
@@ -57,6 +58,12 @@ class Model:
         self.constr_init = solver.Constraint(0, 0)
         self.constr_init.SetCoefficient(self.cap_init, 1)
 
+        self.constraints = c = attrdict()
+        c.battery = []
+        c.dc = []
+        c.ac = []
+        c.price = []
+
         for i in range(steps):
             # input constraints
             dt = data[i]
@@ -95,6 +102,7 @@ class Model:
 
             # Battery. old + charge - discharge == new, so … - new == 0.
             _bt = solver.Constraint(0, 0)
+            c.battery.append(_bt)
             _bt.SetCoefficient(cap_prev, 1)
             _bt.SetCoefficient(b_chg, hardware.batt_eff_chg)
             _bt.SetCoefficient(b_dis, -1)
@@ -102,6 +110,7 @@ class Model:
 
             # DC power bar. power_in - power_out == zero.
             _dc = solver.Constraint(0, 0)
+            c.dc.append(_dc)
             # Power in
             _dc.SetCoefficient(s_in, 1)
             _dc.SetCoefficient(b_dis, hardware.batt_eff_dis)
@@ -112,6 +121,7 @@ class Model:
 
             # AC power bar. power_in - power_out == zero.
             _ac = solver.Constraint(0, 0)
+            c.ac.append(_ac)
             # Power in
             _ac.SetCoefficient(g_in, 1)
             _ac.SetCoefficient(i_dis, hardware.inv_eff_dis)
@@ -122,6 +132,7 @@ class Model:
 
             # Money earned: grid_out*price_sell - grid_in*price_buy == money, so … - money = zero.
             _pr = solver.Constraint(0, 0)
+            c.price.append(_pr)
             _pr.SetCoefficient(g_out, dt.price_sell)
             _pr.SetCoefficient(g_in, -dt.price_buy)
             _pr.SetCoefficient(money, -1)

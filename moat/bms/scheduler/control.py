@@ -2,6 +2,7 @@
 from ortools.linear_solver import pywraplp
 from dataclasses import dataclass
  
+@dataclass
 class FutureData:
     """
     Collects projected data at some point in time.

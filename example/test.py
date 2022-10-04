@@ -5,12 +5,7 @@
 from moat.bms.scheduler import Hardware,FutureData,Model
 
 def F(price, load, pv):
-    f = FutureData()
-    f.price_buy=(price+.2)*1.2
-    f.price_sell=price
-    f.load=load*1000
-    f.pv=pv*1000
-    return f
+    return FutureData(price_buy=(price+.2)*1.2, price_sell=price, load=load*1000, pv=pv*1000)
 
 data = [
     F(0.20, 1.0, 0.0), # 0

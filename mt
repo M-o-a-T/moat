@@ -8,7 +8,8 @@ import git
 
 def _get_sub(r):
     r = os.path.abspath(r)
-    yield r
+    rs = os.path.join(r,"src")
+    yield rs if os.path.isdir(rs) else r
     rp = git.Repo(r)
     for rr in rp.submodules:
         yield from _get_sub(os.path.join(r,rr.path))

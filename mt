@@ -3,10 +3,19 @@
 import sys
 import os
 
+import git
 # assume that sys.path[0] is the main …/moat directory
-_p0 = os.path.abspath(sys.path[0])
-_pp = [os.path.join(_p0, x) for x in os.listdir(_p0) if x[0] not in "._" and os.path.isdir(os.path.join(_p0,x))]
+
+def _get_sub(r):
+    r = os.path.abspath(r)
+    yield r
+    rp = git.Repo(r)
+    for rr in rp.submodules:
+        yield from _get_sub(os.path.join(r,rr.path))
+
+_pp = list(_get_sub(sys.path[0]))
 sys.path[0:1] = _pp
+
 os.environ["PYTHONPATH"] = os.pathsep.join(_pp)
 
 import trio

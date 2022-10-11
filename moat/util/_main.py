@@ -17,6 +17,7 @@ from ._impl import NotGiven
 from ._msgpack import Proxy
 from ._path import P, path_eval
 from ._yaml import yload
+from ._merge import merge
 
 logger = logging.getLogger(__name__)
 
@@ -204,7 +205,7 @@ def read_cfg(name, path):
         if os.path.exists(path):
             try:
                 with open(path, "r") as cf:
-                    cfg = yload(cf)
+                    cfg = yload(cf, attr=True)
             except PermissionError:
                 pass
 
@@ -228,6 +229,7 @@ def load_ext(name, *attr, err=False):
     path = name.split(".")
     path.extend(attr[:-1])
     dp = ".".join(path)
+    dpe = ".".join(path[:-1])
     try:
         mod = importlib.import_module(dp)
         mod = getattr(mod, attr[-1])
@@ -240,6 +242,7 @@ def load_ext(name, *attr, err=False):
             raise
         if (
             exc.name != dp
+            and exc.name != dpe
             and not exc.name.startswith(  # pylint: disable=no-member ## duh?
                 f"{dp}._"
             )
@@ -249,6 +252,24 @@ def load_ext(name, *attr, err=False):
     else:
         return mod
 
+
+def load_cfg(name):
+    """
+    Load a module's configuration
+    """
+    cf = {}
+    try:
+        try:
+            cf = load_ext(name, "_config", "CFG", err=True)
+        except ModuleNotFoundError:
+            cf = load_ext(name, "config", "CFG", err=True)
+    except ModuleNotFoundError:
+        m = sys.modules[name]
+        for d in m.__path__:
+            fn = Path(d) / "_config.yaml"
+            if fn.is_file():
+                merge(cf, yload(fn))
+    return cf
 
 def _namespaces(name):
     import pkgutil  # pylint: disable=import-outside-toplevel
@@ -405,8 +426,6 @@ class Loader(click.Group):
         rv = super().list_commands(ctx)
         sub_pre,sub_post,ext_pre,ext_post = self.get_sub_ext(ctx)
 
-        breakpoint()
-
         if sub_pre:
             for finder, name, ispkg in _namespaces(sub_pre):
                 name = name.rsplit(".",1)[1]
@@ -426,12 +445,21 @@ class Loader(click.Group):
 
         if command is None and ext_pre is not None:
             command = load_ext(ext_pre, cmd_name, *ext_post)
+            if command is not None:
+                cf = load_cfg(f"{ext_pre}.{cmd_name}")
+                merge(ctx.obj.cfg, cf, replace=False)
+
 
         if command is None:
             if sub_pre is None:
                 return None
             command = load_ext(sub_pre, cmd_name, *sub_post)
+            if command is not None:
+                cf = load_cfg(f"{sub_pre}.{cmd_name}")
+                merge(ctx.obj.cfg, cf, replace=False)
 
+        if command is None:
+            raise click.UsageError(f"No such subcommand: {cmd_name}")
         command.__name__ = command.name = cmd_name
         return command
 
@@ -537,7 +565,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     conf: a list of additional config changes
     cfg: configuration file, default: various locations based on {name}, False=don't load
     CFG: default configuration (dir or file), relative to caller
-         Default: try to load from name._config
+         Default: load from name._config
 
     wrap: Flag: this is a subcommand. Don't set up logging, return the awaitable.
     args: Argument list if called from a test, `None` otherwise.
@@ -612,49 +640,18 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         if not p.is_absolute():
             p = Path((main or main_).__file__).parent / p
         with open(p, "r") as cfgf:
-            CFG = yload(cfgf)
+            CFG = yload(cfgf, attr=True)
     elif CFG is None:
         CFG = obj.get("CFG", None)
         if CFG is None:
-            try:
-                CFG = importlib.import_module(f"{name}._config").CFG
-            except (ImportError, AttributeError):
-                CFG = {}
-
-    if sub_pre is not None:
-        for finder, name, ispkg in _namespaces(sub_pre):
-            name = name.rsplit(".",1)[1]
-            cf = {}
-            try:
-                cf = combine_dict(load_ext(sub_pre, name, "_config", "CFG", err=True), CFG.get(name, {}), cls=attrdict)
-            except ModuleNotFoundError:
-                fn = Path(finder.path) / name / "_config.yaml"
-                if fn.is_file():
-                    cf = yload(fn)
-
-            CFG[name] = combine_dict(cf, CFG.get(name, {}), cls=attrdict)
-
-    if ext_pre is not None:
-        for n, d in list_ext(ext_pre):
-            cf = {}
-            try:
-                try:
-                    cf = load_ext(ext_pre, n, "_config", "CFG", err=True)
-                except ModuleNotFoundError:
-                    cf = load_ext(ext_pre, n, "config", "CFG", err=True)
-            except ModuleNotFoundError:
-                fn = d / "_config.yaml"
-                if fn.is_file():
-                    cf = yload(fn)
-
-            CFG[n] = combine_dict(cf, CFG.get(n, {}), cls=attrdict)
+            CFG = load_cfg(name)
 
     obj.stdout = CFG.get("_stdout", sys.stdout)  # used for testing
-    obj.CFG = to_attrdict(CFG)
+    obj.CFG = CFG
 
     cfg = to_attrdict(read_cfg(name, cfg))
     if cfg:
-        cfg = combine_dict(cfg, CFG, cls=attrdict)
+        merge(cfg, obj.CFG)
     else:
         cfg = CFG
     obj.cfg = cfg = to_attrdict(cfg)
@@ -672,18 +669,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
                 v = path_eval(v)
             except Exception:  # pylint: disable=broad-except
                 pass
-        c = obj.cfg
-        *sl, s = k.split(".")
-        for kk in sl:
-            try:
-                c = c[kk]
-            except KeyError:
-                c[kk] = attrdict()
-                c = c[kk]
-        if v is NotGiven:
-            del c[s]
-        else:
-            c[s] = v
+        obj.cfg._update(P(k), v)
 
     if not wrap:
         # Configure logging. This is a somewhat arcane art.

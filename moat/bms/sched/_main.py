@@ -13,10 +13,10 @@ log = logging.getLogger()
 
 
 @click.group()
-async def main():
+async def cli():
     """Battery Manager: Scheduling"""
     pass  # pylint: disable=unnecessary-pass
 
-@main.command()
+@cli.command()
 def analyze():
     print("YES")

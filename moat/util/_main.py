@@ -232,11 +232,6 @@ def load_ext(name, *attr, err=False):
     dpe = ".".join(path[:-1])
     try:
         mod = importlib.import_module(dp)
-        mod = getattr(mod, attr[-1])
-    except AttributeError:
-        if err:
-            raise
-        return None
     except (ModuleNotFoundError, FileNotFoundError) as exc:
         if err:
             raise
@@ -250,6 +245,12 @@ def load_ext(name, *attr, err=False):
             raise
         return None
     else:
+        try:
+            mod = getattr(mod, attr[-1])
+        except AttributeError:
+            if err:
+                raise
+            return None
         return mod
 
 

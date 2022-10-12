@@ -343,7 +343,7 @@ def apply_templates(repo):
     except FileNotFoundError:
         mk = ""
     if mkt != mk:
-        pr("Makefile").write_text(mk)
+        pr("Makefile").write_text(mkt)
         repo.index.add(pr("Makefile"))
 
     tst = pr("tests")

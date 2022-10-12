@@ -273,7 +273,7 @@ def load_cfg(name):
         for d in p:
             fn = Path(d) / "_config.yaml"
             if fn.is_file():
-                merge(cf, yload(fn))
+                merge(cf, yload(fn, attr=True))
     return cf
 
 def _namespaces(name):

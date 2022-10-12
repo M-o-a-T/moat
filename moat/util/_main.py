@@ -340,12 +340,8 @@ def load_subgroup(_fn=None, sub_pre=None, sub_post=None, ext_pre=None, ext_post=
     """
     A decorator like click.group, enabling loading of subcommands
 
-    ext: extensions' namespaces, default to "{name}.ext"
-    plugin: submodule to load CLI from.
-    sub: load *.cli() from this package, default=caller if True
-
-    Internal extensions are loaded as ``{sub}.*.cli``.
-    External extensions are loaded as ``{ext}.*.{plugin}.cli``.
+    Internal extensions are loaded as ``{sub_pre}.*.{sub_post}``.
+    External extensions are loaded as ``{ext_pre}.*.{ext_post}``.
 
     All other arguments are forwarded to `click.command`.
     """
@@ -369,8 +365,8 @@ class Loader(click.Group):
         This works with namespace packages.
         E.g. "distkv.command" loads "distkv.command.*.cli".
 
-    Extensions: set _util_ext to the extension basename.
-        Set _util_plugin to the name of the extension.
+    Extensions: set _util_ext_pre to the extension basename.
+        Set _util_ext_post to the name of the extension.
 
         E.g. "distkv_ext"+"client" loads "distkv_ext.*.client.cli".
 
@@ -381,7 +377,7 @@ class Loader(click.Group):
         from moat.util import Loader
         from functools import partial
 
-        @click.command(cls=partial(Loader,_util_plugin='command'))
+        @click.command(cls=partial(Loader,_util_sub_post='command'))
         async def cmd()
             print("I am the main program")
 
@@ -468,7 +464,8 @@ class Loader(click.Group):
                 merge(ctx.obj.cfg, cf, replace=False)
 
         if command is None:
-            raise click.UsageError(f"No such subcommand: {cmd_name}")
+            # raise click.UsageError(f"No such subcommand: {cmd_name}")
+            return None
         command.__name__ = command.name = cmd_name
         return command
 
@@ -497,7 +494,6 @@ class MainLoader(Loader):
 
 
 @load_subgroup(
-    sub_post="_main.cli",
     cls=MainLoader,
     add_help_option=False,
     invoke_without_command=True,
@@ -580,10 +576,10 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     args: Argument list if called from a test, `None` otherwise.
     help: Help text of your code.
 
-    Internal extensions are loaded as ``{sub}.*.cli``.
-    External extensions are loaded as ``{ext}.*.{plugin}.cli``.
+    Internal extensions are loaded as ``{sub_pre}.*.{sub_post}``.
+    External extensions are loaded as ``{ext_pre}.*.{ext_post}``.
 
-    cfg.moat may contain values for name/ext/plugin.
+    cfg.moat may contain values for {sub,ext}_{pre,post}.
     """
 
     obj = getattr(ctx, "obj", None)
@@ -595,22 +591,22 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         obj.moat = opts = attrdict()
 
     if sub_pre is None:
-        plugin = opts.get("sub_pre", None)
+        sub_pre = opts.get("sub_pre", None)
     else:
         opts["sub_pre"] = sub_pre
 
     if sub_post is None:
-        plugin = opts.get("sub_post", None)
+        sub_post = opts.get("sub_post", None)
     else:
         opts["sub_post"] = sub_post
 
     if ext_pre is None:
-        plugin = opts.get("ext_pre", None)
+        ext_pre = opts.get("ext_pre", None)
     else:
         opts["ext_pre"] = ext_pre
 
     if ext_post is None:
-        plugin = opts.get("ext_post", None)
+        ext_post = opts.get("ext_post", None)
     else:
         opts["ext_post"] = ext_post
 

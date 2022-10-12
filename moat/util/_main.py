@@ -265,8 +265,12 @@ def load_cfg(name):
         except ModuleNotFoundError:
             cf = load_ext(name, "config", "CFG", err=True)
     except ModuleNotFoundError:
-        m = sys.modules[name]
-        for d in m.__path__:
+        ext = sys.modules[name]
+        try:
+            p = ext.__path__
+        except AttributeError:
+            p = (str(Path(ext.__file__).parent),)
+        for d in p:
             fn = Path(d) / "_config.yaml"
             if fn.is_file():
                 merge(cf, yload(fn))
@@ -279,7 +283,11 @@ def _namespaces(name):
         ext = importlib.import_module(name)
     except ModuleNotFoundError:
         return ()
-    return pkgutil.iter_modules(ext.__path__, ext.__name__ + ".")
+    try:
+        p = ext.__path__
+    except AttributeError:
+        p = (str(Path(ext.__file__).parent),)
+    return pkgutil.iter_modules(p, ext.__name__ + ".")
 
 
 _ext_cache = defaultdict(dict)

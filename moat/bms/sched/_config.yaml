@@ -1,0 +1,28 @@
+bms:
+  sched:
+    pricing:
+      # prices are per kWh
+      in: 1   
+      out: 1   
+      factor: 1.2 
+      surcharge: 0   
+    capacity: 0  # must update
+    battery:
+      # on_ac: false  # TODO
+      max:
+        charge: 5   
+        discharge: 8   
+      efficiency:
+        charge: 0.95
+        discharge: 0.95
+    inverter:
+      max:
+        charge: 10   
+        discharge: 10   
+      efficiency:
+        charge: 0.9
+        discharge: 0.9
+    grid:
+      max:
+        in: 99999
+        out: 99999

@@ -58,7 +58,7 @@ line-length = 99
 legacy_tox_ini = """
 [tox]
 isolated_build = True
-envlist = py310,py39,check
+envlist = py310,check
 
 [testenv]
 setenv = 
@@ -86,3 +86,5 @@ deps =
 [tool.pylint]
 [tool.pylint.messages_control]
 disable = "use-dict-literal,unspecified-encoding,too-many-statements,too-many-return-statements,too-many-locals,too-many-instance-attributes,too-many-branches,too-many-arguments,too-few-public-methods,superfluous-parens,no-else-return,no-else-continue,invalid-name,fixme,too-many-nested-blocks,wrong-import-order,ungrouped-imports"
+
+[tool.moat]

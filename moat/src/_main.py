@@ -205,7 +205,7 @@ def is_clean(repo: Repo, skip: bool = True) -> bool:
     if repo.head.is_detached:
         print(f"{repo.working_dir}: detached.{skips}")
         return False
-    if repo.head.ref.name not in {"main","moat"}:
+    if repo.head.ref.name not in {"main", "moat"}:
         print(f"{repo.working_dir}: on branch {repo.head.ref.name}.{skips}")
         return False
     elif repo.is_dirty(index=True, working_tree=True, untracked_files=False, submodules=False):
@@ -276,23 +276,17 @@ def apply_templates(repo):
         else:
             txp = RawConfigParser()
             txp.read_string(tx)
-            proj["tool"]["tox"] = td = {}
+            td = {}
             for k, v in txp.items():
                 td[k] = ttd = dict()
                 for kk, vv in v.items():
                     if isinstance(vv, str) and vv[0] == "\n":
                         vv = [x.strip() for x in vv.strip().split("\n")]
                     ttd[kk] = vv
+            proj["tool"]["tox"] = td
 
         for p in commas:
             decomma(proj, p)
-
-        try:
-            envs = proj["tool"]["tox"]["tox"]["envlist"]
-        except KeyError:
-            pass
-        else:
-            proj["tool"]["tox"]["tox"]["envlist"] = envs.split(",")
 
     except FileNotFoundError:
         proj = tomlkit.TOMLDocument()
@@ -307,6 +301,7 @@ def apply_templates(repo):
         proc(proj)
         s2 = proj.as_string()
         mod |= s1 != s2
+
     if mod:
         for p in commas:
             encomma(proj, p)

@@ -9,7 +9,7 @@ dynamic = ["version"]
 keywords = ["MoaT"]
 requires-python = ">=3.8"
 name = "moat-lib-diffiehellman"
-authors = [{email = "chris@chrisvoncsefalvay.com",name = "Chris von Csefalvay"}]
+authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"},{email = "chris@chrisvoncsefalvay.com",name = "Chris von Csefalvay"}]
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='A Pythonic implementation of the Diffie-Hellman key exchange protocol'
 readme = "README.md"
@@ -18,7 +18,7 @@ readme = "README.md"
 file = "LICENSE.txt"
 
 [project.urls]
-homepage = 'https://github.com/chrisvoncsefalvay/diffiehellman/'
+homepage = "https://m-o-a-t.org"
 repository = "https://github.com/M-o-a-T/moat-diffiehellman"
 
 [tool]
@@ -37,7 +37,7 @@ profile = "black"
 legacy_tox_ini = """
 [tox]
 isolated_build = True
-envlist = py310,py39,check
+envlist = py310,check
 
 [testenv]
 setenv = 
@@ -67,7 +67,11 @@ line-length = 99
 
 [tool.setuptools]
 packages = ["moat.lib.diffiehellman"]
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]
 
 [tool.pylint]
 [tool.pylint.messages_control]
 disable = "wrong-import-order,use-dict-literal,unspecified-encoding,ungrouped-imports,too-many-statements,too-many-return-statements,too-many-nested-blocks,too-many-locals,too-many-instance-attributes,too-many-branches,too-many-arguments,too-few-public-methods,superfluous-parens,no-else-return,no-else-continue,invalid-name,fixme,line-too-long"
+
+[tool.moat]

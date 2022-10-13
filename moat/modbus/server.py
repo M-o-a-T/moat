@@ -111,7 +111,6 @@ class BaseModbusServer(CtxObj):
 
     async def serve(self, opened=None):
         """The actual server. Override me."""
-        # pylint: disable=no-self-use
         raise RuntimeError("You need to override .serve")
 
     async def process_request(self, request):
@@ -229,7 +228,9 @@ class ModbusServer(BaseModbusServer):
         self.decoder = ServerDecoder()
         self.framer = ModbusSocketFramer
         self.address = address or "localhost"
-        self.port = port if port is not None else Defaults.Port
+        self.port = (
+            port if port is not None else Defaults.Port
+        )  # pylint: disable=no-member  # YES IT DOES
 
     async def serve(self, opened=None):
         """Run this server.
@@ -328,7 +329,6 @@ class ForwardingAioModbusServer:
 
     def add_unit(self, unit):  # pylint: disable=missing-function-docstring
         """Use 'set_forward' with a forwarding server instead of this method."""
-        # pylint: disable=no-self-use
         raise RuntimeError("Use 'set_forward' with a forwarding server")
 
     def set_forward(

@@ -90,7 +90,6 @@ class BaseValue:
         self._value = self._constrain(val)
 
     def _constrain(self, val):
-        # pylint: disable=no-self-use
         return val
 
     def _decode(self, regs):

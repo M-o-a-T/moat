@@ -51,6 +51,8 @@ profile = "black"
 
 [tool.setuptools]
 packages = [ "moat.src",]
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]
 
 [tool.setuptools_scm]
 
@@ -71,9 +73,9 @@ commands =
 
 [testenv:check]
 commands = 
-    pylint moat/src tests
-    flake8p moat/src tests
-    black --check moat/src tests
+    pylint moat tests
+    flake8p moat tests
+    black --check moat tests
 deps = 
     pytest
     pylint

@@ -229,8 +229,8 @@ class ModbusServer(BaseModbusServer):
         self.framer = ModbusSocketFramer
         self.address = address or "localhost"
         self.port = (
-            port if port is not None else Defaults.Port
-        )  # pylint: disable=no-member  # YES IT DOES
+            port if port is not None else Defaults.Port  # pylint: disable=no-member  # YES IT DOES
+        )
 
     async def serve(self, opened=None):
         """Run this server.

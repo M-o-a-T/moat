@@ -60,6 +60,8 @@ profile = "black"
 
 [tool.setuptools]
 packages = [ "moat.util",]
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]
 
 [tool.pylint.messages_control]
 disable="wrong-import-order,ungrouped-imports,too-many-nested-blocks,unspecified-encoding,missing-module-docstring,no-else-continue,too-many-instance-attributes,too-many-statements,too-many-return-statements,superfluous-parens,too-few-public-methods,use-dict-literal,too-many-locals,no-else-return,too-many-arguments,too-many-branches,invalid-name,fixme"
@@ -70,7 +72,7 @@ disable="wrong-import-order,ungrouped-imports,too-many-nested-blocks,unspecified
 legacy_tox_ini = """
 [tox]
 isolated_build = True
-envlist = py310,py39,check
+envlist = py310,check
 
 [testenv]
 setenv = 
@@ -83,9 +85,9 @@ commands =
 
 [testenv:check]
 commands = 
-    pylint moat/util tests
-    flake8p moat/util tests
-    black --check moat/util tests
+    pylint moat tests
+    flake8p moat tests
+    black --check moat tests
 deps = 
     pytest
     pylint
@@ -95,6 +97,7 @@ deps =
 
 """
 
-
 [tool.black]
 line-length = 99
+
+[tool.moat]

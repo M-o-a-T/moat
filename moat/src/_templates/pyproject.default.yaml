@@ -45,6 +45,8 @@ tool:
   setuptools:
     packages:
     - moat.SUBDOT
+    package-data:
+      "*": [ "*.yaml" ]
   setuptools_scm: {}
   pylint:
     messages_control:

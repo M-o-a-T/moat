@@ -46,6 +46,8 @@ profile = "black"
 
 [tool.setuptools]
 packages = [ "moat.modbus",]
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]
 
 [tool.setuptools_scm]
 
@@ -61,25 +63,25 @@ envlist = py310,py39,check
 [testenv]
 setenv = 
     PYTHONPATH = {env:PYTHONPATH}{:}{toxinidir}
-deps =
-	pytest
-	trio
+deps = 
+    trio
+    pytest
 commands = 
-	python3 -mpytest tests
+    python3 -mpytest tests/
 
 [testenv:check]
 commands = 
-    pylint moat/modbus tests
-    flake8p moat/modbus tests
-    black --check moat/modbus tests
+    pylint moat tests
+    flake8p moat tests
+    black --check moat tests
 deps = 
-    black
-    flake8
-    flake8-pyproject
+    pytest
     pylint
-	pytest
-"""
+    black
+    flake8-pyproject
+    flake8
 
+"""
 
 [tool.pylint]
 [tool.pylint.messages_control]

@@ -12,12 +12,12 @@ from typing import Awaitable
 
 import asyncclick as click
 
-from ._dict import attrdict, combine_dict, to_attrdict
+from ._dict import attrdict, to_attrdict
 from ._impl import NotGiven
+from ._merge import merge
 from ._msgpack import Proxy
 from ._path import P, path_eval
 from ._yaml import yload
-from ._merge import merge
 
 logger = logging.getLogger(__name__)
 
@@ -238,9 +238,7 @@ def load_ext(name, *attr, err=False):
         if (
             exc.name != dp
             and exc.name != dpe
-            and not exc.name.startswith(  # pylint: disable=no-member ## duh?
-                f"{dp}._"
-            )
+            and not exc.name.startswith(f"{dp}._")  # pylint: disable=no-member ## duh?
         ):
             raise
         return None
@@ -275,6 +273,7 @@ def load_cfg(name):
             if fn.is_file():
                 merge(cf, yload(fn, attr=True))
     return cf
+
 
 def _namespaces(name):
     import pkgutil  # pylint: disable=import-outside-toplevel
@@ -349,7 +348,13 @@ def load_subgroup(_fn=None, sub_pre=None, sub_post=None, ext_pre=None, ext_post=
     def _ext(fn, **kw):
         return click.command(**kw)(fn)
 
-    kw["cls"] = partial(kw.get("cls", Loader), _util_sub_pre=sub_pre or this_load.get(), _util_sub_post=sub_post, _util_ext_pre=ext_pre, _util_ext_post=ext_post)
+    kw["cls"] = partial(
+        kw.get("cls", Loader),
+        _util_sub_pre=sub_pre or this_load.get(),
+        _util_sub_post=sub_post,
+        _util_ext_pre=ext_pre,
+        _util_ext_post=ext_post,
+    )
 
     if _fn is None:
         return partial(_ext, **kw)
@@ -391,8 +396,18 @@ class Loader(click.Group):
             print("I am", self.name)  # prints "subcmd"
     """
 
-    def __init__(self, *, _util_sub_pre=None, _util_sub_post=None, _util_ext_pre=None, _util_ext_post=None, **kw):
-        logger.debug("Load %s.*.%s / %s.*.%s",_util_sub_pre, _util_sub_post, _util_ext_pre, _util_ext_post)
+    def __init__(
+        self,
+        *,
+        _util_sub_pre=None,
+        _util_sub_post=None,
+        _util_ext_pre=None,
+        _util_ext_post=None,
+        **kw,
+    ):
+        logger.debug(
+            "Load %s.*.%s / %s.*.%s", _util_sub_pre, _util_sub_post, _util_ext_pre, _util_ext_post
+        )
         if _util_sub_pre is not None:
             self._util_sub_pre = _util_sub_pre
         if _util_sub_post is not None:
@@ -404,36 +419,57 @@ class Loader(click.Group):
         super().__init__(**kw)
 
     def get_sub_ext(self, ctx):
-        sub_pre = getattr(self, "_util_sub_pre", ctx.obj._util_sub_pre)  # pylint: disable=protected-access
-        sub_post = getattr(self, "_util_sub_post", ctx.obj._util_sub_post)  # pylint: disable=protected-access
-        ext_pre = getattr(self, "_util_ext_pre", ctx.obj._util_ext_pre)  # pylint: disable=protected-access
-        ext_post = getattr(self, "_util_ext_post", ctx.obj._util_ext_post)  # pylint: disable=protected-access
+        """Fetch extension variables"""
+        sub_pre = getattr(
+            # pylint: disable=protected-access
+            self,
+            "_util_sub_pre",
+            ctx.obj._util_sub_pre,
+        )
+        sub_post = getattr(
+            # pylint: disable=protected-access
+            self,
+            "_util_sub_post",
+            ctx.obj._util_sub_post,
+        )
+        ext_pre = getattr(
+            # pylint: disable=protected-access
+            self,
+            "_util_ext_pre",
+            ctx.obj._util_ext_pre,
+        )
+        ext_post = getattr(
+            # pylint: disable=protected-access
+            self,
+            "_util_ext_post",
+            ctx.obj._util_ext_post,
+        )
 
         if sub_pre is None:
             sub_post = None
         elif sub_post is None:
             sub_pre = ("cli",)
-        elif isinstance(sub_post,str):
+        elif isinstance(sub_post, str):
             sub_post = sub_post.split(".")
 
         if ext_pre is None:
             ext_post = None
         elif ext_post is None:
             ext_pre = None
-        elif isinstance(ext_post,str):
+        elif isinstance(ext_post, str):
             ext_post = ext_post.split(".")
             if len(ext_post) == 1:
                 ext_post.append("cli")
 
-        return sub_pre,sub_post,ext_pre,ext_post
+        return sub_pre, sub_post, ext_pre, ext_post
 
     def list_commands(self, ctx):
         rv = super().list_commands(ctx)
-        sub_pre,sub_post,ext_pre,ext_post = self.get_sub_ext(ctx)
+        sub_pre, sub_post, ext_pre, _ext_post = self.get_sub_ext(ctx)
 
         if sub_pre:
-            for finder, name, ispkg in _namespaces(sub_pre):
-                name = name.rsplit(".",1)[1]
+            for _finder, name, _ispkg in _namespaces(sub_pre):
+                name = name.rsplit(".", 1)[1]
                 if load_ext(sub_pre, name, *sub_post):
                     rv.append(name)
 
@@ -446,14 +482,13 @@ class Loader(click.Group):
     def get_command(self, ctx, cmd_name):
         command = super().get_command(ctx, cmd_name)
 
-        sub_pre,sub_post,ext_pre,ext_post = self.get_sub_ext(ctx)
+        sub_pre, sub_post, ext_pre, ext_post = self.get_sub_ext(ctx)
 
         if command is None and ext_pre is not None:
             command = load_ext(ext_pre, cmd_name, *ext_post)
             if command is not None:
                 cf = load_cfg(f"{ext_pre}.{cmd_name}")
                 merge(ctx.obj.cfg, cf, replace=False)
-
 
         if command is None:
             if sub_pre is None:
@@ -674,7 +709,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
                 v = path_eval(v)
             except Exception:  # pylint: disable=broad-except
                 pass
-        obj.cfg._update(P(k), v)
+        obj.cfg._update(P(k), v)  # pylint: disable=protected-access
 
     if not wrap:
         # Configure logging. This is a somewhat arcane art.

@@ -77,9 +77,9 @@ def _merge_one(d, other, drop=False, replace=True):
             return other if replace else d
     else:
         if replace:
-            return other if d is None else d
-        else:
             return d if other is None else other
+        else:
+            return other if d is None else d
     return d
 
 

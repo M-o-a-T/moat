@@ -11,7 +11,7 @@ from pathlib import Path
 import asyncclick as click
 import git
 import tomlkit
-from moat.util import P, make_proc, to_attrdict, yload, yprint
+from moat.util import P, make_proc, to_attrdict, yload, yprint, add_repr
 from packaging.requirements import Requirement
 
 logger = logging.getLogger(__name__)
@@ -532,3 +532,9 @@ async def build(version, no_test, no_commit, no_dirty):
             t = tags[r.working_dir]
             if isinstance(t, str):
                 r.create_tag(t)
+
+add_repr(tomlkit.items.String)
+add_repr(tomlkit.items.Integer)
+add_repr(tomlkit.items.Bool, bool)
+add_repr(tomlkit.items.MutableMapping)
+add_repr(tomlkit.items.MutableSequence)

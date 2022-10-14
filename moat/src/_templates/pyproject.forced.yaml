@@ -27,6 +27,12 @@ project:
     homepage: https://m-o-a-t.org
   name: moat-SUBNAME
 tool:
+  moat:
+    fixup: |
+        try:
+            toml["tool"]["tox"]["tox"]["envlist"].remove("py39")
+        except(KeyError,ValueError):
+            pass
   flake8:
     max-line-length: 99
     ignore:
@@ -46,7 +52,6 @@ tool:
       isolated_build: True
       envlist:
       - check
-      - py39
       - py310
 
     testenv:

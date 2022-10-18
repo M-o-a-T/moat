@@ -11,7 +11,7 @@ from pathlib import Path
 import asyncclick as click
 import git
 import tomlkit
-from moat.util import P, make_proc, attrdict, to_attrdict, yload, yprint, add_repr
+from moat.util import P, make_proc, attrdict, yload, yprint, add_repr
 from packaging.requirements import Requirement
 
 logger = logging.getLogger(__name__)

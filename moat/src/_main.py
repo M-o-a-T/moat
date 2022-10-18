@@ -296,6 +296,7 @@ def apply_templates(repo):
     except KeyError:
         p = proj
     else:
+        del proj["tool"]["moat"]["fixup"]
         proc = make_proc(proc, ("toml",), f"{pr('pyproject.toml')}:tool.moat.fixup")
         s1 = proj.as_string()
         proc(proj)

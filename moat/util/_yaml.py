@@ -164,21 +164,27 @@ def yformat(data, compact=None):
     yprint(data, compact=compact, stream=s)
     return s.getvalue()
 
+
 def add_repr(typ, repr=None):
+    """
+    Add a way to add representations for subtypes.
+
+    This is useful for subclassed dict/int/str/… objects.
+    """
+    # pylint: disable=redefined-builtin
     if repr is None:
         repr = typ
-    if issubclass(repr,str):
+    if issubclass(repr, str):
         SafeRepresenter.add_representer(typ, SafeRepresenter.represent_str)
-    elif issubclass(repr,float):
+    elif issubclass(repr, float):
         SafeRepresenter.add_representer(typ, SafeRepresenter.represent_float)
-    elif issubclass(repr,bool):
+    elif issubclass(repr, bool):
         SafeRepresenter.add_representer(typ, SafeRepresenter.represent_bool)
-    elif issubclass(repr,int):
+    elif issubclass(repr, int):
         SafeRepresenter.add_representer(typ, SafeRepresenter.represent_int)
-    elif issubclass(repr,Mapping):
+    elif issubclass(repr, Mapping):
         SafeRepresenter.add_representer(typ, SafeRepresenter.represent_dict)
-    elif issubclass(repr,Sequence):
+    elif issubclass(repr, Sequence):
         SafeRepresenter.add_representer(typ, SafeRepresenter.represent_list)
     else:
         raise RuntimeError(f"Don't know what to do with {typ}")
-

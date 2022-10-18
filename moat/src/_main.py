@@ -11,7 +11,7 @@ from pathlib import Path
 import asyncclick as click
 import git
 import tomlkit
-from moat.util import P, make_proc, attrdict, yload, yprint, add_repr
+from moat.util import P, add_repr, attrdict, make_proc, yload, yprint
 from packaging.requirements import Requirement
 
 logger = logging.getLogger(__name__)
@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class Repo(git.Repo):
     """Amend git.Repo with submodule and tag caching"""
+
     moat_tag = None
 
     def __init__(self, root, *a, **k):
@@ -33,7 +34,9 @@ class Repo(git.Repo):
         if root is None:
             self.moat_name = "moat"
         else:
-            self.moat_name = "moat-"+self.working_dir[len(root.working_dir)+1:].replace("/","-")
+            self.moat_name = "moat-" + self.working_dir[len(root.working_dir) + 1 :].replace(
+                "/", "-"
+            )
 
     def subrepos(self, root=None):
         """List subrepositories (and cache them)."""
@@ -381,9 +384,11 @@ def apply_templates(repo):
         repo.index.add(pr(".gitignore"))
 
 
-@cli.command(epilog="""\
+@cli.command(
+    epilog="""\
 By default, changes amend the HEAD commit if the text didn't change.
-""")
+"""
+)
 @click.option("-A", "--amend", is_flag=True, help="Fix previous commit (DANGER)")
 @click.option("-N", "--no-amend", is_flag=True, help="Don't fix prev commit even if same text")
 @click.option("-D", "--no-dirty", is_flag=True, help="don't check for dirtiness (DANGER)")
@@ -468,7 +473,7 @@ async def build(version, no_test, no_commit, no_dirty, cache):
                 skip.add(r)
                 continue
 
-        if not no_test and heads.get(r.moat_name,"") != r.commit().hexsha and not run_tests(r):
+        if not no_test and heads.get(r.moat_name, "") != r.commit().hexsha and not run_tests(r):
             print("FAIL", r.moat_name)
             bad = True
             break
@@ -488,7 +493,7 @@ async def build(version, no_test, no_commit, no_dirty, cache):
                     break
             else:
                 print("NOTAG", t, r.moat_name)
-                bad=True
+                bad = True
                 continue
             print("UNTAGGED", t, r.moat_name)
             xt, t = t.name.rsplit(".", 1)
@@ -560,6 +565,7 @@ async def build(version, no_test, no_commit, no_dirty, cache):
             t = tags[r.moat_name]
             if isinstance(t, str):
                 r.create_tag(t)
+
 
 add_repr(tomlkit.items.String)
 add_repr(tomlkit.items.Integer)

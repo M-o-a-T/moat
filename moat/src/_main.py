@@ -11,7 +11,7 @@ from pathlib import Path
 import asyncclick as click
 import git
 import tomlkit
-from moat.util import P, make_proc, to_attrdict, yload, yprint, add_repr
+from moat.util import P, make_proc, attrdict, to_attrdict, yload, yprint, add_repr
 from packaging.requirements import Requirement
 
 logger = logging.getLogger(__name__)
@@ -19,8 +19,9 @@ logger = logging.getLogger(__name__)
 
 class Repo(git.Repo):
     """Amend git.Repo with submodule and tag caching"""
+    moat_tag = None
 
-    def __init__(self, *a, **k):
+    def __init__(self, root, *a, **k):
         super().__init__(*a, **k)
         self._subrepo_cache = {}
         self._commit_tags = defaultdict(list)
@@ -29,13 +30,22 @@ class Repo(git.Repo):
         for t in self.tags:
             self._commit_tags[t.commit].append(t)
 
-    def subrepos(self):
+        if root is None:
+            self.moat_name = "moat"
+        else:
+            self.moat_name = "moat-"+self.working_dir[len(root.working_dir)+1:].replace("/","-")
+
+    def subrepos(self, root=None):
         """List subrepositories (and cache them)."""
+
+        if root is None:
+            root = self
+
         for r in self.submodules:
             try:
                 yield self._subrepo_cache[r.path]
             except KeyError:
-                self._subrepo_cache[r.path] = res = Repo(r.path)
+                self._subrepo_cache[r.path] = res = Repo(root, r.path)
                 yield res
 
     def commits(self, ref=None):
@@ -393,10 +403,10 @@ async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
 
     Default: amend if the text is identical and the prev head isn't tagged.
     """
-    repo = Repo()
+    repo = Repo(None)
     skip = set(skip)
     if only:
-        repos = (Repo(x) for x in only)
+        repos = (Repo(repo, x) for x in only)
     else:
         repos = (x for x in repo.subrepos() if Path(x.working_tree_dir).name not in skip)
 
@@ -435,14 +445,22 @@ async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
 )
 @click.option("-C", "--no-commit", is_flag=True, help="don't commit")
 @click.option("-D", "--no-dirty", is_flag=True, help="don't check for dirtiness (DANGER)")
-async def build(version, no_test, no_commit, no_dirty):
+@click.option("-c", "--cache", is_flag=True, help="don't re-test if unchanged")
+async def build(version, no_test, no_commit, no_dirty, cache):
     """
     Rebuild all modified packages.
     """
     bad = False
-    repo = Repo()
+    repo = Repo(None)
     tags = dict(version)
     skip = set()
+    heads = attrdict()
+    if cache:
+        cache = Path(".tested.yaml")
+        try:
+            heads = yload(cache, attr=True)
+        except FileNotFoundError:
+            pass
 
     for r in repo.subrepos():
         if not is_clean(r, not no_dirty):
@@ -450,29 +468,39 @@ async def build(version, no_test, no_commit, no_dirty):
                 skip.add(r)
                 continue
 
-        if not no_test and not run_tests(r):
-            print("FAIL", Path(r.working_dir).name)
-            return  # abort immediately
+        if not no_test and heads.get(r.moat_name,"") != r.commit().hexsha and not run_tests(r):
+            print("FAIL", r.moat_name)
+            bad = True
+            break
 
         if r.is_dirty():
-            print("DIRTY", Path(r.working_dir).name)
-            if Path(r.working_dir).name != "src":
+            print("DIRTY", r.moat_name)
+            if r.moat_name != "src":
                 bad = True
             continue
+
+        heads[r.moat_name] = r.commit().hexsha
         t = r.tagged(r.head.commit)
         if t is None:
             for c in r.commits():
                 t = r.tagged(c)
                 if t is not None:
                     break
-            print("UNTAGGED", t, Path(r.working_dir).name)
+            else:
+                print("NOTAG", t, r.moat_name)
+                bad=True
+                continue
+            print("UNTAGGED", t, r.moat_name)
             xt, t = t.name.rsplit(".", 1)
             t = f"{xt}.{str(int(t)+1)}"
             # t = r.create_tag(t)
             # do not create the tag yet
         else:
-            print("TAG", t, Path(r.working_dir).name)
-        tags[f"moat-{Path(r.working_dir).name}"] = t
+            print("TAG", t, r.moat_name)
+        tags[r.moat_name] = t
+    if cache:
+        with cache.open("w") as f:
+            yprint(heads, stream=f)
     if bad:
         print("No work done. Fix and try again.")
         return
@@ -496,9 +524,6 @@ async def build(version, no_test, no_commit, no_dirty):
             with p.open("r") as f:
                 pr = tomlkit.load(f)
 
-            print("***", r.working_dir)
-            yprint(to_attrdict(pr))
-
             work = False
             try:
                 deps = pr["project"]["dependencies"]
@@ -517,11 +542,11 @@ async def build(version, no_test, no_commit, no_dirty):
                 p.write_text(pr.as_string())
                 r.index.add(p)
                 dirty.add(r)
-                t = tags[r.working_dir]
+                t = tags[r.moat_name]
                 if not isinstance(t, str):
                     xt, t = t.name.rsplit(".", 1)
                     t = f"{xt}.{str(int(t)+1)}"
-                    tags[r.working_dir] = t
+                    tags[r.moat_name] = t
                 check = True
 
     if bad:
@@ -532,7 +557,7 @@ async def build(version, no_test, no_commit, no_dirty):
         for r in dirty:
             r.index.commit("Update MoaT requirements")
         for r in repo.subrepos():
-            t = tags[r.working_dir]
+            t = tags[r.moat_name]
             if isinstance(t, str):
                 r.create_tag(t)
 

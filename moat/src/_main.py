@@ -371,9 +371,11 @@ def apply_templates(repo):
         repo.index.add(pr(".gitignore"))
 
 
-@cli.command()
-@click.option("-A", "--amend", is_flag=True, help="Fixup previous commit (DANGER)")
-@click.option("-N", "--no-amend", is_flag=True, help="Don't fixup even if same text")
+@cli.command(epilog="""\
+By default, changes amend the HEAD commit if the text didn't change.
+""")
+@click.option("-A", "--amend", is_flag=True, help="Fix previous commit (DANGER)")
+@click.option("-N", "--no-amend", is_flag=True, help="Don't fix prev commit even if same text")
 @click.option("-D", "--no-dirty", is_flag=True, help="don't check for dirtiness (DANGER)")
 @click.option("-C", "--no-commit", is_flag=True, help="don't commit")
 @click.option("-s", "--skip", type=str, multiple=True, help="skip this repo")

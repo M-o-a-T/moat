@@ -2,6 +2,7 @@
 This module contains various helper functions and classes.
 """
 import sys
+from collections.abc import Mapping, Sequence
 
 import ruyaml as yaml
 
@@ -9,7 +10,7 @@ from ._dict import attrdict
 from ._msgpack import Proxy
 from ._path import Path
 
-__all__ = ["yload", "yprint", "yformat", "yaml_named"]
+__all__ = ["yload", "yprint", "yformat", "yaml_named", "add_repr"]
 
 SafeRepresenter = yaml.representer.SafeRepresenter
 SafeConstructor = yaml.constructor.SafeConstructor
@@ -162,3 +163,22 @@ def yformat(data, compact=None):
     s = StringIO()
     yprint(data, compact=compact, stream=s)
     return s.getvalue()
+
+def add_repr(typ, repr=None):
+    if repr is None:
+        repr = typ
+    if issubclass(repr,str):
+        SafeRepresenter.add_representer(typ, SafeRepresenter.represent_str)
+    elif issubclass(repr,float):
+        SafeRepresenter.add_representer(typ, SafeRepresenter.represent_float)
+    elif issubclass(repr,bool):
+        SafeRepresenter.add_representer(typ, SafeRepresenter.represent_bool)
+    elif issubclass(repr,int):
+        SafeRepresenter.add_representer(typ, SafeRepresenter.represent_int)
+    elif issubclass(repr,Mapping):
+        SafeRepresenter.add_representer(typ, SafeRepresenter.represent_dict)
+    elif issubclass(repr,Sequence):
+        SafeRepresenter.add_representer(typ, SafeRepresenter.represent_list)
+    else:
+        raise RuntimeError(f"Don't know what to do with {typ}")
+

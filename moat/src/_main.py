@@ -519,7 +519,7 @@ async def build(version, no_test, no_commit, no_dirty, cache):
 
     dirty = set()
 
-    check = True
+    check = check1 = True
 
     while check:
         check = False
@@ -551,11 +551,9 @@ async def build(version, no_test, no_commit, no_dirty, cache):
                 for v in deps.values():
                     work = fix_deps(v, tags) | work
 
-            breakpoint()  # pylint: disable=forgotten-debug-statement
-            if r.is_dirty(index=False, working_tree=False, untracked_files=False, submodules=True):
-                breakpoint()  # pylint: disable=forgotten-debug-statement
+            if r.is_dirty(index=check1, working_tree=True, untracked_files=False, submodules=True):
                 for rr in r.subrepos(recurse=False):
-                    r.index.add(rr.path)
+                    r.git.add(rr.working_dir)
                 work = True
 
             if work:
@@ -568,6 +566,8 @@ async def build(version, no_test, no_commit, no_dirty, cache):
                     t = f"{xt}.{str(int(t)+1)}"
                     tags[r.moat_name] = t
                 check = True
+
+        check1 = False
 
     if bad:
         print("Partial work done. Fix and try again.")

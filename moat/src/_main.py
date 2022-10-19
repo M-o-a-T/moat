@@ -484,7 +484,7 @@ async def build(version, no_test, no_commit, no_dirty, cache):
             bad = True
             break
 
-        if r.is_dirty():
+        if r.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=False):
             print("DIRTY", r.moat_name)
             if r.moat_name != "src":
                 bad = True

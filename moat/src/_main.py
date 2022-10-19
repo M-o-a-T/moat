@@ -466,6 +466,11 @@ async def build(version, no_test, no_commit, no_dirty, cache):
     tags = dict(version)
     skip = set()
     heads = attrdict()
+
+    if repo.is_dirty(index=True, working_tree=True, untracked_files=False, submodules=False):
+        print("Please commit top-level changes and try again.")
+        return
+
     if cache:
         cache = Path(".tested.yaml")
         try:
@@ -576,11 +581,14 @@ async def build(version, no_test, no_commit, no_dirty, cache):
         return
 
     if not no_commit:
-        if not dirty:
-            print("No changes.")
-            return
         for r in dirty:
             r.index.commit("Update MoaT requirements")
+
+        if not repo.is_dirty(
+            index=True, working_tree=True, untracked_files=False, submodules=True
+        ):
+            print("No changes.")
+            return
 
         for r in repo.subrepos():
             t = tags[r.moat_name]

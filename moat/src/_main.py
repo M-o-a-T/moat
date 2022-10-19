@@ -121,7 +121,8 @@ def run_tests(repo: Repo) -> bool:
     """Run tests (i.e., 'tox') in this repository."""
     try:
         print("\n*** Testing:", repo.working_dir)
-        subprocess.run(["python3", "-mtox"], cwd=repo.working_dir, check=True)
+        # subprocess.run(["python3", "-mtox"], cwd=repo.working_dir, check=True)
+        subprocess.run(["make", "test"], cwd=repo.working_dir, check=True)
     except subprocess.CalledProcessError:
         return False
     else:

@@ -3,11 +3,9 @@
 Basic tool support
 
 """
-from getopt import getopt
+import logging  # pylint: disable=wrong-import-position
 
 import asyncclick as click
-
-import logging  # pylint: disable=wrong-import-position
 
 log = logging.getLogger()
 
@@ -17,6 +15,8 @@ async def cli():
     """Battery Manager: Scheduling"""
     pass  # pylint: disable=unnecessary-pass
 
+
 @cli.command()
 def analyze():
+    """TODO"""
     print("YES")

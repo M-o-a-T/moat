@@ -1,13 +1,18 @@
-
+"""
+Charge/discharge optimizer.
+"""
 from dataclasses import dataclass
-from ortools.linear_solver import pywraplp
+
 from moat.util import attrdict
- 
+from ortools.linear_solver import pywraplp
+
+
 @dataclass
 class FutureData:
     """
     Collects projected data at some point in time.
     """
+
     price_buy: float = 0.0
     price_sell: float = 0.0
     load: float = 0.0
@@ -35,14 +40,14 @@ class Model:
     the start of the next period.
     """
 
-    def __init__(self, hardware, data, per_hour = 1):
+    def __init__(self, hardware, data, per_hour=1):
         self.hardware = hardware
         self.data = data
         self.per_hour = per_hour
 
-        self.setup()
+        self._setup()
 
-    def setup(self):
+    def _setup(self):
         hardware = self.hardware
         data = self.data
         per_hour = self.per_hour
@@ -54,7 +59,9 @@ class Model:
         self.objective = solver.Objective()
 
         # Starting battery charge
-        self.cap_init = cap_prev = solver.NumVar(hardware.capacity*0.05, hardware.capacity*.95, "b_init")
+        self.cap_init = cap_prev = solver.NumVar(
+            hardware.capacity * 0.05, hardware.capacity * 0.95, "b_init"
+        )
         self.constr_init = solver.Constraint(0, 0)
         self.constr_init.SetCoefficient(self.cap_init, 1)
 
@@ -75,7 +82,7 @@ class Model:
             # ### Variables to consider
 
             # future battery charge
-            cap = solver.NumVar(hardware.capacity*0.05, hardware.capacity*.95, f"b{i}")
+            cap = solver.NumVar(hardware.capacity * 0.05, hardware.capacity * 0.95, f"b{i}")
 
             # battery charge/discharge
             b_chg = solver.NumVar(0, hardware.batt_max_chg / per_hour, f"bc{i}")
@@ -140,17 +147,27 @@ class Model:
             self.objective.SetCoefficient(money, 1)
             cap_prev = cap
             if not i:
-                self.g_in,self.g_out = g_in,g_out
+                self.g_in, self.g_out = g_in, g_out
                 self.cap = cap
                 self.money = money
 
         self.objective.SetMaximization()
 
     def propose(self, charge):
+        """
+        Assuming that the current SoC is @charge, return
+        - how much power to take from / -feed to the grid [W]
+        - the SoC at the end of the current period [0…1]
+        - this period's earnings / -cost [$$]
+
+        """
         charge *= self.hardware.capacity
         self.constr_init.SetLb(charge)
         self.constr_init.SetUb(charge)
 
         self.solver.Solve()
-        return self.g_in.solution_value() - self.g_out.solution_value(), self.cap.solution_value()/self.hardware.capacity, self.money.solution_value()/1000
-
+        return (
+            (self.g_in.solution_value() - self.g_out.solution_value()) * self.per_hour,
+            self.cap.solution_value() / self.hardware.capacity,
+            self.money.solution_value(),
+        )

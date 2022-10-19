@@ -1,7 +1,10 @@
+# pylint: disable=missing-module-docstring
+
 from dataclasses import dataclass
 
+
 @dataclass
-class Hardware(object):
+class Hardware:
     """Stores information about the hardware used.
 
     capacity: useable battery capacity in Wh
@@ -16,6 +19,7 @@ class Hardware(object):
     grid_max_in: max grid input
     grid_max_out: max grid output
     """
+
     capacity: float = 0.0
     batt_max_chg: float = 1
     batt_max_dis: float = 1
@@ -27,4 +31,3 @@ class Hardware(object):
     inv_eff_dis: float = 0.9
     grid_max_in: float = 99999
     grid_max_out: float = 99999
-

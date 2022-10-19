@@ -515,7 +515,6 @@ async def build(version, no_test, no_commit, no_dirty, cache):
     if bad:
         print("No work done. Fix and try again.")
         return
-    print("All tests passed. Yay!")
 
     dirty = set()
 
@@ -551,10 +550,13 @@ async def build(version, no_test, no_commit, no_dirty, cache):
                 for v in deps.values():
                     work = fix_deps(v, tags) | work
 
-            if r.is_dirty(index=check1, working_tree=True, untracked_files=False, submodules=True):
-                for rr in r.subrepos(recurse=False):
-                    r.git.add(rr.working_dir)
-                work = True
+            if check1:
+                if r.is_dirty(
+                    index=True, working_tree=True, untracked_files=False, submodules=True
+                ):
+                    for rr in r.subrepos(recurse=False):
+                        r.git.add(rr.working_dir)
+                    work = True
 
             if work:
                 p.write_text(pr.as_string())
@@ -574,12 +576,34 @@ async def build(version, no_test, no_commit, no_dirty, cache):
         return
 
     if not no_commit:
+        if not dirty:
+            print("No changes.")
+            return
         for r in dirty:
             r.index.commit("Update MoaT requirements")
+
         for r in repo.subrepos():
             t = tags[r.moat_name]
             if isinstance(t, str):
                 r.create_tag(t)
+
+        for r in repo.subrepos(recurse=False):
+            repo.git.add(r.working_dir)
+        repo.index.commit("Update")
+
+        for c in repo.commits():
+            t = repo.tagged(c)
+            if t is not None:
+                break
+        else:
+            print("NO TAG", repo.moat_name)
+            return
+
+        xt, t = t.name.rsplit(".", 1)
+        t = f"{xt}.{int(t)+1}"
+
+        print("New:", t)
+        repo.create_tag(t)
 
 
 add_repr(tomlkit.items.String)

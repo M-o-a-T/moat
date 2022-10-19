@@ -503,7 +503,7 @@ async def build(version, no_test, no_commit, no_dirty, cache):
                 continue
             print("UNTAGGED", t, r.moat_name)
             xt, t = t.name.rsplit(".", 1)
-            t = f"{xt}.{str(int(t)+1)}"
+            t = f"{xt}.{int(t)+1}"
             # t = r.create_tag(t)
             # do not create the tag yet
         else:
@@ -563,7 +563,7 @@ async def build(version, no_test, no_commit, no_dirty, cache):
                 t = tags[r.moat_name]
                 if not isinstance(t, str):
                     xt, t = t.name.rsplit(".", 1)
-                    t = f"{xt}.{str(int(t)+1)}"
+                    t = f"{xt}.{int(t)+1}"
                     tags[r.moat_name] = t
                 check = True
 

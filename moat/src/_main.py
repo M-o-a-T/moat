@@ -46,10 +46,11 @@ class Repo(git.Repo):
 
         for r in self.submodules:
             try:
-                yield self._subrepo_cache[r.path]
+                res = self._subrepo_cache[r.path]
             except KeyError:
                 self._subrepo_cache[r.path] = res = Repo(root, r.path)
-                yield res
+            yield res
+            yield from res.subrepos(root)
 
     def commits(self, ref=None):
         """Iterate over topo sort of commits following @ref, or HEAD"""

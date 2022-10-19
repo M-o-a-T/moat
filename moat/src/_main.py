@@ -38,7 +38,7 @@ class Repo(git.Repo):
                 "/", "-"
             )
 
-    def subrepos(self, root=None):
+    def subrepos(self, root=None, recurse=True):
         """List subrepositories (and cache them)."""
 
         if root is None:
@@ -48,9 +48,11 @@ class Repo(git.Repo):
             try:
                 res = self._subrepo_cache[r.path]
             except KeyError:
-                self._subrepo_cache[r.path] = res = Repo(root, r.path)
+                p = Path(self.working_dir) / r.path
+                self._subrepo_cache[r.path] = res = Repo(root, p)
+            if recurse:
+                yield from res.subrepos(root)
             yield res
-            yield from res.subrepos(root)
 
     def commits(self, ref=None):
         """Iterate over topo sort of commits following @ref, or HEAD"""
@@ -547,6 +549,13 @@ async def build(version, no_test, no_commit, no_dirty, cache):
             else:
                 for v in deps.values():
                     work = fix_deps(v, tags) | work
+
+            if r.is_dirty(index=False, working_tree=False, untracked_files=False, submodules=True):
+                breakpoint()  # pylint: disable=forgotten-debug-statement
+                for rr in r.subrepos(recurse=False):
+                    r.index.add(rr.path)
+                work = True
+
             if work:
                 p.write_text(pr.as_string())
                 r.index.add(p)

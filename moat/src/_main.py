@@ -514,9 +514,10 @@ async def build(version, no_test, no_commit, no_dirty, cache):
         else:
             print("TAG", t, r.moat_name)
         tags[r.moat_name] = t
-    if cache:
-        with cache.open("w") as f:
-            yprint(heads, stream=f)
+
+    with cache.open("w") as f:
+        # always write cache file
+        yprint(heads, stream=f)
     if bad:
         print("No work done. Fix and try again.")
         return

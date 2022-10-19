@@ -520,6 +520,7 @@ async def build(version, no_test, no_commit, no_dirty, cache):
     dirty = set()
 
     check = True
+
     while check:
         check = False
 
@@ -550,6 +551,7 @@ async def build(version, no_test, no_commit, no_dirty, cache):
                 for v in deps.values():
                     work = fix_deps(v, tags) | work
 
+            breakpoint()  # pylint: disable=forgotten-debug-statement
             if r.is_dirty(index=False, working_tree=False, untracked_files=False, submodules=True):
                 breakpoint()  # pylint: disable=forgotten-debug-statement
                 for rr in r.subrepos(recurse=False):

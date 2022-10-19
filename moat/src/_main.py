@@ -112,8 +112,10 @@ def fix_deps(deps: list[str], tags: dict[str, str]) -> bool:
     for i, dep in enumerate(deps):
         r = Requirement(dep)
         if r.name in tags:
-            deps[i] = f"{r.name}~={tags[r.name]}"
-            work = True
+            dep = f"{r.name} ~= {tags[r.name]}"
+            if deps[i] != dep:
+                deps[i] = dep
+                work = True
     return work
 
 

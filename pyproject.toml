@@ -16,7 +16,7 @@ dependencies = [
 	"anyio ~= 3.0",
 	"pymodbus",
 	"anyio-serial",
-	"moat-util~=0.25.4",
+	"moat-util ~= 0.25.4",
 	]
 dynamic = [ "version",]
 keywords = [ "MoaT",]

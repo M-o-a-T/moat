@@ -12,10 +12,10 @@ except ImportError:
 	yaml = ruyaml.YAML()
 	yload = yaml.load
 
-from victron.dbus import Dbus
-from victron.dbus.monitor import DbusMonitor
-from victron.inv import InvControl
-from victron.dbus.utils import DbusInterface  # XXX move
+from moat.lib.victron.dbus import Dbus
+from moat.lib.victron.dbus.monitor import DbusMonitor
+from moat.bms.inv import InvControl
+from moat.lib.victron.dbus.utils import DbusInterface  # XXX move
 from asyncdbus.message_bus import MessageBus, BusType
 
 import logging
@@ -44,7 +44,7 @@ for _i,_c in InvControl.MODES.items():
 @click.option("--mode", "-m", help="Inverter mode")
 @click.option("--param", "-p", "param", nargs=2, type=(str,str), multiple=True, help="Parameter (evaluated)")
 @click.option("--config","--cfg", "-c", "config", type=click.File("r"), help="Configuration file (YAML)")
-async def main(debug, mode, no_op, param, config):
+async def cli(debug, mode, no_op, param, config):
 	"""
 	This program controls a Victron Energy inverter.
 	"""

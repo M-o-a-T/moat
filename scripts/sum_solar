@@ -5,9 +5,9 @@ import os
 import anyio
 import asyncclick as click
 
-from victron.dbus import Dbus
-from victron.dbus.monitor import DbusMonitor
-from victron.dbus.utils import DbusInterface  # XXX move
+from moat.lib.victron.dbus import Dbus
+from moat.lib.victron.dbus.monitor import DbusMonitor
+from moat.lib.victron.dbus.utils import DbusInterface  # XXX move
 from asyncdbus.service import method
 
 import logging

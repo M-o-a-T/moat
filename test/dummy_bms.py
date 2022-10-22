@@ -2,7 +2,7 @@
 
 import sys
 import anyio
-from victron.dbus import Dbus
+from moat.lib.victron.dbus import Dbus
 import random
 
 def mon(*a):

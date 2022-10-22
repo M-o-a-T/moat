@@ -7,7 +7,7 @@ from deframed import App,Worker
 from deframed.default import CFG
 from deframed.util import attrdict, yload, combine_dict
 from pathlib import Path
-from victron.dbus import Dbus
+from moat.lib.victron.dbus import Dbus
 from functools import partial
 from pprint import pprint
 

@@ -1,3 +1,6 @@
 [submodule "sched"]
 	path = sched
 	url = git://git.smurf.noris.de/moat-bms-sched.git
+[submodule "inv"]
+	path = inv
+	url = git://git.smurf.noris.de/moat-bms-inv.git

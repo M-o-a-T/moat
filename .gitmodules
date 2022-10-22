@@ -22,3 +22,6 @@
 [submodule "bms"]
 	path = bms
 	url = git://git.smurf.noris.de/moat-bms.git
+[submodule "lib/victron"]
+	path = lib/victron
+	url = git://git.smurf.noris.de/moat-lib-victron.git

@@ -19,7 +19,7 @@ file = "LICENSE.txt"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"
-repository = "https://github.com/M-o-a-T/moat-diffiehellman"
+repository = "https://github.com/M-o-a-T/moat-lib-diffiehellman"
 
 [tool]
 [tool.flake8]

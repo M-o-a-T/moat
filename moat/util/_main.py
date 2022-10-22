@@ -19,7 +19,7 @@ from ._msgpack import Proxy
 from ._path import P, path_eval
 from ._yaml import yload
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("_loader")
 
 __all__ = [
     "main_",
@@ -233,6 +233,7 @@ def load_ext(name, *attr, err=False):
     try:
         mod = importlib.import_module(dp)
     except (ModuleNotFoundError, FileNotFoundError) as exc:
+        logger.debug("Err %s: %r", dp, exc)
         if err:
             raise
         if (
@@ -248,6 +249,8 @@ def load_ext(name, *attr, err=False):
         except AttributeError:
             if err:
                 raise
+
+            logger.debug("Err %s.%s", dp, attr[-1])
             return None
         return mod
 
@@ -314,24 +317,30 @@ def list_ext(name, func=None):
 
     TODO: This is not zip safe.
     """
+    logger.debug("List Ext %s (%s)", name, func)
     if name not in _ext_cache:
         try:
             _cache_ext(name)
         except ModuleNotFoundError:
             pass
     if func is None:
-        yield from iter(_ext_cache[name].items())
+        for a,b in _ext_cache[name].items():
+            logger.debug("Found %s %s",a,b)
+            yield a,b
         return
 
     for x, f in _ext_cache[name].items():
         if (f / ".no_load").is_file():
+            logger.debug("Skip %s", f)
             continue
         fn = f / (func + ".py")
         if not fn.is_file():
             fn = f / func / "__init__.py"
             if not fn.is_file():
                 # XXX this might be a namespace
+                logger.debug("No file: %s/%s", f,func)
                 continue
+        logger.debug("Found2 %s %s", x,f)
         yield (x, f)
 
 
@@ -406,7 +415,7 @@ class Loader(click.Group):
         **kw,
     ):
         logger.debug(
-            "Load %s.*.%s / %s.*.%s", _util_sub_pre, _util_sub_post, _util_ext_pre, _util_ext_post
+            "* Load: %s.*.%s / %s.*.%s", _util_sub_pre, _util_sub_post, _util_ext_pre, _util_ext_post
         )
         if _util_sub_pre is not None:
             self._util_sub_pre = _util_sub_pre
@@ -465,18 +474,22 @@ class Loader(click.Group):
 
     def list_commands(self, ctx):
         rv = super().list_commands(ctx)
-        sub_pre, sub_post, ext_pre, _ext_post = self.get_sub_ext(ctx)
+        sub_pre, sub_post, ext_pre, ext_post = self.get_sub_ext(ctx)
+        logger.debug("* List: %s.*.%s / %s.*.%s", sub_pre, sub_post, ext_pre, ext_post)
 
         if sub_pre:
             for _finder, name, _ispkg in _namespaces(sub_pre):
+                logger.debug("Sub %s", name)
                 name = name.rsplit(".", 1)[1]
                 if load_ext(sub_pre, name, *sub_post):
                     rv.append(name)
 
         if ext_pre:
             for n, _ in list_ext(ext_pre):
+                logger.debug("Ext %s", n)
                 rv.append(n)
         rv.sort()
+        logger.debug("List: %r", rv)
         return rv
 
     def get_command(self, ctx, cmd_name):
@@ -534,6 +547,7 @@ class MainLoader(Loader):
     invoke_without_command=True,
 )  # , __file__, "command"))
 @click.option("-v", "--verbose", count=True, help="Be more verbose. Can be used multiple times.")
+@click.option("-L", "--debug-loader", is_flag=True, help="Debug submodule loading.")
 @click.option("-q", "--quiet", count=True, help="Be less verbose. Opposite of '--verbose'.")
 @click.option("-D", "--debug", count=True, help="Enable debug speed-ups (smaller keys etc).")
 @click.option(
@@ -591,6 +605,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     wrap=False,
     verbose=1,
     debug=0,
+    debug_loader=False,
     log=(),
     ctx=None,
     help=None,
@@ -730,6 +745,8 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         dictConfig(lcfg)
         logging.captureWarnings(verbose > 0)
         logger.disabled = False
+        if debug_loader:
+            logger.level = logging.DEBUG
 
     obj.logger = logging.getLogger(name)
 

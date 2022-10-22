@@ -419,7 +419,7 @@ async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
     if only:
         repos = (Repo(repo, x) for x in only)
     else:
-        repos = (x for x in repo.subrepos() if Path(x.working_tree_dir).name not in skip)
+        repos = (x for x in repo.subrepos() if x.moat_name[5:] not in skip)
 
     for r in repos:
         if not is_clean(r, not no_dirty):

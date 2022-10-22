@@ -324,9 +324,9 @@ def list_ext(name, func=None):
         except ModuleNotFoundError:
             pass
     if func is None:
-        for a,b in _ext_cache[name].items():
-            logger.debug("Found %s %s",a,b)
-            yield a,b
+        for a, b in _ext_cache[name].items():
+            logger.debug("Found %s %s", a, b)
+            yield a, b
         return
 
     for x, f in _ext_cache[name].items():
@@ -338,9 +338,9 @@ def list_ext(name, func=None):
             fn = f / func / "__init__.py"
             if not fn.is_file():
                 # XXX this might be a namespace
-                logger.debug("No file: %s/%s", f,func)
+                logger.debug("No file: %s/%s", f, func)
                 continue
-        logger.debug("Found2 %s %s", x,f)
+        logger.debug("Found2 %s %s", x, f)
         yield (x, f)
 
 
@@ -415,7 +415,11 @@ class Loader(click.Group):
         **kw,
     ):
         logger.debug(
-            "* Load: %s.*.%s / %s.*.%s", _util_sub_pre, _util_sub_post, _util_ext_pre, _util_ext_post
+            "* Load: %s.*.%s / %s.*.%s",
+            _util_sub_pre,
+            _util_sub_post,
+            _util_ext_pre,
+            _util_ext_post,
         )
         if _util_sub_pre is not None:
             self._util_sub_pre = _util_sub_pre

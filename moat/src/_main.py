@@ -444,6 +444,36 @@ async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
                 p = (r.head.commit,)
             r.index.commit(message, parent_commits=p)
 
+@cli.command()
+@click.option("-P", "--no-pypi", is_flag=True, help="don't push to PyPi")
+@click.option("-D", "--no-deb", is_flag=True, help="don't debianize")
+@click.option("-d", "--deb", type=str, help="Debian archive to push to (from dput.cfg)")
+@click.option("-o", "--only", type=str, multiple=True, help="affect only this repo")
+@click.option("-s", "--skip", type=str, multiple=True, help="skip this repo")
+async def publish(no_pypi, no_deb, skip, only, deb):
+    """
+    Publish modules to PyPi and/or Debian.
+    """
+    repo = Repo(None)
+    skip = set(skip)
+    if only:
+        repos = (Repo(repo, x) for x in only)
+    else:
+        repos = (x for x in repo.subrepos() if x.moat_name[5:] not in skip)
+
+    for r in repos:
+        if not no_deb:
+            print(r.working_dir)
+            subprocess.run(["merge-to-deb"], cwd=r.working_dir, check=True)
+
+    for r in repos:
+        if not no_pypi:
+            print(r.working_dir)
+            subprocess.run(["make", "pypi"], cwd=r.working_dir, check=True)
+
+
+
+
 
 @cli.command()
 @click.option("-T", "--no-test", is_flag=True, help="Skip testing")

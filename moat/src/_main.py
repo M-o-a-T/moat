@@ -465,7 +465,8 @@ async def publish(no_pypi, no_deb, skip, only, deb):
     for r in repos:
         if not no_deb:
             print(r.working_dir)
-            subprocess.run(["merge-to-deb"], cwd=r.working_dir, check=True)
+            args = ["-d", deb] if deb else []
+            subprocess.run(["merge-to-deb"] + args, cwd=r.working_dir, check=True)
 
     for r in repos:
         if not no_pypi:

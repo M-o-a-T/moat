@@ -444,6 +444,7 @@ async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
                 p = (r.head.commit,)
             r.index.commit(message, parent_commits=p)
 
+
 @cli.command()
 @click.option("-P", "--no-pypi", is_flag=True, help="don't push to PyPi")
 @click.option("-D", "--no-deb", is_flag=True, help="don't debianize")
@@ -470,9 +471,6 @@ async def publish(no_pypi, no_deb, skip, only, deb):
         if not no_pypi:
             print(r.working_dir)
             subprocess.run(["make", "pypi"], cwd=r.working_dir, check=True)
-
-
-
 
 
 @cli.command()

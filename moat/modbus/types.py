@@ -320,6 +320,54 @@ class SwappedDoubleValue(_Swapped, DoubleValue):
     pass  # pylint: disable=unnecessary-pass
 
 
+class ByteValue(BaseValue):
+    """Bytestring. @length is in bytes"""
+
+    endian = ">"
+    len = -1
+
+    def __init__(self, length, *a, **kw):
+        self.len = (length + 1) // 2
+        self.pack = f"{self.endian}{self.len}H"
+
+        super().__init__(*a, **kw)
+
+    def _encode(self, value):
+        ln = self.len * 2
+        value += b"\0" * (ln - len(value))
+
+        return struct.unpack(self.pack, value)
+
+    def _decode(self, regs):
+        return struct.pack(self.pack, *regs)
+
+
+class SwappedByteValue(ByteValue):
+    """Bytes, null-terminated, little-endian words. @length is in bytes"""
+
+    endian = "<"
+
+
+class StringValue(ByteValue):
+    """Text, null-terminated.
+    @length is in bytes, NOT UTF-8 characters"""
+
+    def _encode(self, value):
+        ln = self.len * 2
+        value = value.encode("utf-8")
+        return super()._encode(value)
+
+    def _decode(self, regs):
+        return super()._decode(regs).rstrip(b"\0").decode("utf-8")
+
+
+class SwappedStringValue(StringValue):
+    """Text, null-terminated, little-endian words.
+    @length is in bytes, NOT UTF-8 characters"""
+
+    endian = "<"
+
+
 class TypeCodec:
     """Base class for access types. Do not instantiate."""
 

@@ -4,50 +4,10 @@ Basic tool support
 
 """
 from getopt import getopt
+from functools import partial
+from .typemap import get_type, get_kind
 
 import asyncclick as click
-
-from moat.modbus.types import (
-    Coils,
-    DiscreteInputs,
-    DoubleValue,
-    FloatValue,
-    HoldingRegisters,
-    InputRegisters,
-    IntValue,
-    LongValue,
-    QuadValue,
-    SignedIntValue,
-    SignedLongValue,
-    SignedQuadValue,
-    SwappedDoubleValue,
-    SwappedFloatValue,
-    SwappedLongValue,
-    SwappedQuadValue,
-    SwappedSignedLongValue,
-    SwappedSignedQuadValue,
-)
-
-map_kind = {"c": Coils, "d": DiscreteInputs, "h": HoldingRegisters, "i": InputRegisters}
-map_type = {
-    "raw": IntValue,
-    "u1": IntValue,
-    "U1": IntValue,
-    "u2": LongValue,
-    "U2": SwappedLongValue,
-    "u4": QuadValue,
-    "U4": SwappedQuadValue,
-    "s1": SignedIntValue,
-    "S1": SignedIntValue,
-    "s2": SignedLongValue,
-    "S2": SwappedSignedLongValue,
-    "s4": SignedQuadValue,
-    "S4": SwappedSignedQuadValue,
-    "f2": FloatValue,
-    "F2": SwappedFloatValue,
-    "f4": DoubleValue,
-    "F4": SwappedDoubleValue,
-}
 
 import logging  # pylint: disable=wrong-import-position
 
@@ -134,7 +94,7 @@ async def server(host, port, debug, args):
         elif k in ("-k", "--kind"):
             kind = map_kind[v[0]]
         elif k in ("-t", "--type"):
-            typ = map_type[v[0]]
+            typ = get_type(v[0])
         elif k in ("-r", "--reg", "--register"):
             reg = int(v)
         elif k in ("-n", "--num"):
@@ -197,7 +157,7 @@ async def client(host, port, unit, kind, start, num, type_, values, debug):
         s = u.slot("default")
 
         k = map_kind[kind[0]]
-        t = map_type[type_]
+        t = get_type(type_)
         if values:
             if len(values) == 1:
                 values = values * num

@@ -121,7 +121,7 @@ def yload(stream, multi=False, attr=False):
         class AttrConstructor(SafeConstructor):  # pylint: disable=missing-class-docstring
             def __init__(self, *a, **k):
                 super().__init__(*a, **k)
-                self.yaml_base_dict_type = attrdict
+                self.yaml_base_dict_type = attrdict if attr is True else attr
 
         y.Constructor = AttrConstructor
     if multi:

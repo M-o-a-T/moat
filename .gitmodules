@@ -1,3 +1,0 @@
-[submodule "dev"]
-	path = dev
-	url = git://git.smurf.noris.de/moat-modbus-dev.git

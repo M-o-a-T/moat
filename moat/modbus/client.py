@@ -360,20 +360,19 @@ class Slot:
         return True
 
     def add(self, typ: TypeCodec, offset: int, cls: Type[BaseValue]) -> BaseValue:
-        """Add a field to be requested.
+        """Add a field to this slot.
 
         :param typ: The `TypeCodec` instance to use.
         :param offset: The value's numeric offset, zero-based.
         :param val: The data type (baseValue instance)
 
-        `cls` is either the decoder (subclass of `BaseValue`),
-        or an existing `BaseValue` instance.
+        `cls` is the decoder (subclass of `BaseValue`).
         """
         try:
             k = self.modes[typ]
         except KeyError:
             self.modes[typ] = k = ValueList(self, typ)
-        val = cls()
+        val = cls() if isinstance(cls, type) else cls
         k.add(offset, val)
         return val
 
@@ -414,11 +413,11 @@ class Slot:
 
     async def getValues(self) -> Dict[TypeCodec, Dict[int, Any]]:
         """
-        Send a message reading these values to the bus.
+        Send messages reading this slot's values from the bus.
         Returns a (type,(offset,value)) dict-of-dicts.
         On error, stores the error object instead of a dict.
 
-        This code may return a partial result.
+        This method may return a partial result.
         """
         try:
             res = {}

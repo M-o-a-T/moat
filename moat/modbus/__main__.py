@@ -5,7 +5,7 @@ Basic tool support
 """
 from getopt import getopt
 from functools import partial
-from .typemap import get_type, get_kind
+from .typemap import get_type, get_kind, map_kind, map_type
 
 import asyncclick as click
 

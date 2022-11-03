@@ -1,0 +1,3 @@
+[submodule "moat/modbus/dev/_data"]
+	path = moat/modbus/dev/_data
+	url = git://git.smurf.noris.de/modbus-data.git

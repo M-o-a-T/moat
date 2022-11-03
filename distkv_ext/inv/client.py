@@ -453,9 +453,10 @@ async def cable(ctx):
     """
     List cables
     """
+    obj = ctx.obj
     if ctx.invoked_subcommand is not None:
         return
-    for c in ctx.obj.data.cable.all_children:
+    for c in obj.data.cable.all_children:
         print(c, file=obj.stdout)
 
 

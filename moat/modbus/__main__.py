@@ -53,19 +53,7 @@ Types:
 """
 
 
-@main.command(
-    context_settings=dict(
-        show_default=True,
-        ignore_unknown_options=True,
-        help_option_names=["-?", "--help"],
-    ),
-    epilog=_args_help,
-)
-@click.option("--host", "-s", default="localhost", help="host to bind to")
-@click.option("--port", "-p", type=int, default=502, help="port to bind to")
-@click.option("--debug", "-d", is_flag=True, help="Log debug messages")
-@click.argument("args", nargs=-1, type=click.UNPROCESSED)
-async def server(host, port, debug, args):
+async def _server(host, port, debug, args):
     """
     Basic Modbus server, for static tests.
     """
@@ -118,6 +106,25 @@ async def server(host, port, debug, args):
 
     await s.serve()
 
+def mk_server(m):
+    s = _server
+    s = click.argument("args", nargs=-1, type=click.UNPROCESSED)(s)
+    s = click.option("--debug", "-d", is_flag=True, help="Log debug messages")(s)
+    s = click.option("--port", "-p", type=int, default=502, help="port to bind to")(s)
+    s = click.option("--host", "-s", default="localhost", help="host to bind to")(s)
+    s = m.command(
+        "server",
+        context_settings=dict(
+            show_default=True,
+            ignore_unknown_options=True,
+            help_option_names=["-?", "--help"],
+        ),
+        epilog=_args_help,
+    )(s)
+    return s
+
+server = mk_server(main)
+
 
 def flint(v):
     """float-or-int"""
@@ -127,23 +134,7 @@ def flint(v):
         return float(v)
 
 
-@main.command(context_settings=dict(show_default=True))
-@click.option("--host", "-h", default="localhost", help="destination host")
-@click.option("--port", "-p", type=int, default=502, help="destination port")
-@click.option("--unit", "-u", type=int, default=1, help="unit to query")
-@click.option("--kind", "-k", default="i", help="query type: input, discrete, hold, coil")
-@click.option("--start", "-s", default=0, help="starting register")
-@click.option("--num", "-n", type=int, default=1, help="number of values")
-@click.option(
-    "--type",
-    "-t",
-    "type_",
-    default="raw",
-    help="value type: s1,s2,s4,u1,u2,u4,f2,f4,raw; Sx/Fx=swapped",
-)
-@click.option("--debug", "-d", is_flag=True, help="Log debug messages")
-@click.argument("values", nargs=-1)
-async def client(host, port, unit, kind, start, num, type_, values, debug):
+async def _client(host, port, unit, kind, start, num, type_, values, debug):
     """
     Basic Modbus-TCP client.
     """
@@ -179,6 +170,22 @@ async def client(host, port, unit, kind, start, num, type_, values, debug):
                 print(res)
         except Exception as exc:  # pylint: disable=broad-except
             log.exception("Problem: %r", exc)
+
+def mk_client(m):
+    c = _client
+    c = click.argument("values", nargs=-1)(c)
+    c = click.option("--debug", "-d", is_flag=True, help="Log debug messages")(c)
+    c = click.option( "--type", "-t", "type_", default="raw", help="value type: s1,s2,s4,u1,u2,u4,f2,f4,raw; Sx/Fx=swapped",)(c)
+    c = click.option("--num", "-n", type=int, default=1, help="number of values")(c)
+    c = click.option("--start", "-s", default=0, help="starting register")(c)
+    c = click.option("--kind", "-k", default="i", help="query type: input, discrete, hold, coil")(c)
+    c = click.option("--unit", "-u", type=int, default=1, help="unit to query")(c)
+    c = click.option("--port", "-p", type=int, default=502, help="destination port")(c)
+    c = click.option("--host", "-h", default="localhost", help="destination host")(c)
+    c = m.command("client", context_settings=dict(show_default=True))(c)
+    return c
+
+client = mk_client(main)
 
 
 if __name__ == "__main__":

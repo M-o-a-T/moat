@@ -51,10 +51,12 @@ class ModbusClient(CtxObj):
                 self.hosts = {}
                 tg.cancel_scope.cancel()
 
-    def host(self, addr, port=502):
+    def host(self, addr, port=None):
         """Return a host object for connections to this address+port.
         The host will be created if it has not been seen before.
         """
+        if not port:
+            port = 502
         try:
             return self.hosts[(addr, port)]
         except KeyError:

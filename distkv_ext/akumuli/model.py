@@ -56,9 +56,11 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
     mode = None
     source = None
     series = None
+    factor = 1
+    offset = 0
     tags = None
     t_min = None
-    ATTRS = ('source', 'attr', 'mode', 'series', 'tags', 't_min')
+    ATTRS = ('source', 'attr', 'mode', 'series', 'tags', 't_min', 'factor', 'offset')
 
     _work = None
     _t_last = None
@@ -114,6 +116,7 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
                             )
                             continue
 
+                    val = val*self.factor+self.offset
                     e = Entry(series=series, mode=mode, value=val, tags=tags)
                     _test_hook(e)
                     await self.server.put(e)

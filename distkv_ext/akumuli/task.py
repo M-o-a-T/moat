@@ -23,7 +23,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-async def task(client, cfg, server: AkumuliServer, evt=None):  # pylint: disable=unused-argument
+async def task(client, cfg, server: AkumuliServer, paths=(), evt=None):  # pylint: disable=unused-argument
     cfg = combine_dict(
         server.value_or({}, Mapping).get("server", {}),
         server.parent.value_or({}, Mapping).get("server", {}),
@@ -56,6 +56,7 @@ async def task(client, cfg, server: AkumuliServer, evt=None):  # pylint: disable
         async with anyio.create_task_group() as tg:
             async with akumuli.connect(**cfg) as srv:
                 srv._distkv__tg = tg
+                server.set_paths(paths)
                 await server.set_server(srv)
                 if evt is not None:
                     evt.set()

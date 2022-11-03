@@ -62,6 +62,7 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
 
     _work = None
     _t_last = None
+    disabled = False
 
     @property
     def tg(self):
@@ -69,6 +70,11 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
 
     def __str__(self):
         return f"N {Path(*self.subpath[1:])} {Path(*self.source)} {Path(*self.attr)} {self.series} {' '.join('%s=%s' % (k,v) for k,v in self.tags.items())}"
+
+    def _update_disable(self, off):
+        self.disabled = off
+        for k in self:
+            k._update_disable(off)
 
     async def with_output(self, evt, src, attr, series, tags, mode):
         """
@@ -138,6 +144,9 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
             )
             return
 
+        if self.disabled:
+            return
+
         if isinstance(mode, str):
             mode = getattr(DS, mode, None)
 
@@ -194,6 +203,20 @@ class AkumuliServer(_AkumuliBase, AttrClientEntry):
     async def set_server(self, server):
         self._server = server
         await self._update_server()
+
+    def set_paths(self, paths):
+        """set enabled paths. Empty: all are on"""
+        for v in self:
+            v._update_disable(bool(paths))
+        for p in paths:
+            v = self
+            for k in p:
+                try:
+                    v = v[k]
+                except KeyError:
+                    break
+            else:
+                v.disabled = False
 
     async def flush(self):
         await self.server.flush()

@@ -163,7 +163,8 @@ async def attr_(obj, vars_, eval_, path_):
 
 @cli.command()
 @click.pass_obj
-async def monitor(obj):
+@click.argument("paths", nargs=-1, type=P)
+async def monitor(obj, paths):
     """Stand-alone task to monitor a single Akumuli tree"""
     from distkv_ext.akumuli.task import task
     from distkv_ext.akumuli.model import AkumuliRoot
@@ -172,4 +173,4 @@ async def monitor(obj):
     await server.wait_loaded()
 
     async with as_service(obj) as srv:
-        await task(obj.client, obj.cfg.akumuli, server[obj.server._name], srv)
+        await task(obj.client, obj.cfg.akumuli, server[obj.server._name], evt=srv, paths=paths)

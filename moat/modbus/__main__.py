@@ -10,16 +10,17 @@ from .typemap import get_type, get_kind, map_kind, map_type
 import asyncclick as click
 
 import logging  # pylint: disable=wrong-import-position
-
-FORMAT = "%(asctime)-15s %(threadName)-15s %(levelname)-8s %(module)-15s:%(lineno)-8s %(message)s"
-logging.basicConfig(format=FORMAT)
 log = logging.getLogger()
-log.setLevel(logging.WARN)
 
 
 @click.group()
 async def main():
     """Modbus client / server"""
+
+    FORMAT = "%(asctime)-15s %(threadName)-15s %(levelname)-8s %(module)-15s:%(lineno)-8s %(message)s"
+    logging.basicConfig(format=FORMAT)
+    log.setLevel(logging.WARN)
+
     pass  # pylint: disable=unnecessary-pass
 
 

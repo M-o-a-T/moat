@@ -1,0 +1,7 @@
+regs:
+  energy:
+    sum3:
+      active:
+        register: 3328
+        type: float
+        unit: Wh

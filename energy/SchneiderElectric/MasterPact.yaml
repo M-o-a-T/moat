@@ -1,0 +1,45 @@
+regs:
+  L1:
+    _:
+      register: 12029
+      type: uint
+  L2:
+    _:
+      register: 12030
+      type: uint
+  L3:
+    _:
+      register: 12031
+      type: uint
+  current:
+    L1:
+      register: 12015
+      type: uint
+      unit: A
+    L2:
+      register: 12016
+      type: uint
+      unit: A
+    L3:
+      register: 12017
+      type: uint
+      unit: A
+  energy:
+    sum3:
+      active:
+        register: 12053
+        scale: 3
+        type: uint32
+        unit: Wh
+  power:
+    sum3:
+      active:
+        register: 12040
+        scale: 2
+        type: uint
+        unit: W
+      apparent:
+        register: 12048
+        scale: 2
+        type: uint
+        unit: VA

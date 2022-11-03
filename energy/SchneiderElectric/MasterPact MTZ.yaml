@@ -1,0 +1,55 @@
+regs:
+  current:
+    L1:
+      register: 32027
+      type: float
+      unit: A
+    L2:
+      register: 32029
+      type: float
+      unit: A
+    L3:
+      register: 32031
+      type: float
+      unit: A
+  energy:
+    sum3:
+      active:
+        register: 32095
+        type: uint64
+        unit: Wh
+  power:
+    sum3:
+      active:
+        register: 32077
+        type: float
+        unit: W
+      apparent:
+        register: 32093
+        type: float
+        unit: VA
+  voltage:
+    L1:
+      register: 32061
+      type: float
+      unit: V
+    L1-L2:
+      register: 32055
+      type: float
+      unit: V
+    L2:
+      register: 32063
+      type: float
+      unit: V
+    L2-L3:
+      register: 32057
+      type: float
+      unit: V
+    L3:
+      register: 32065
+      type: float
+      unit: V
+    L3-L1:
+      register: 32059
+      type: float
+      unit: V

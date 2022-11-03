@@ -1,0 +1,447 @@
+dev:
+  product: SDM 630
+  label: Eastron
+
+  regs:
+    demand:
+      time:
+        register: 0
+        reg_type: h 
+        type: float
+        unit: min
+      period:
+        register: 2
+        type: float
+        reg_type: h 
+        unit: min
+        names:
+          0: now
+          5: 5_min
+          8: 8_min
+          10: 10_min
+          20: 20_min
+          30: 30_min
+          60: 60_min
+    sys:
+      voltage:
+        register: 6
+        reg_type: h 
+        unit: V
+        type: float
+      current:
+        register: 8
+        reg_type: h 
+        unit: A
+        type: float
+      type:
+        register: 10
+        reg_type: h 
+        type: float
+        names:
+          1: 1p2w
+          2: 3p3w
+          3: 3p4w
+    relay:
+      1:
+        pulse_width:
+    serial: 
+      register: 42
+      reg_type: h
+      type: uint
+      len: 2
+      
+
+  limit:
+    regs: 40
+regs:
+  current:
+    demand:
+      now:
+        N:
+          register: 104
+          type: float
+          unit: A
+        L1:
+          register: 258
+          type: float
+          unit: A
+        L2:
+          register: 260
+          type: float
+          unit: A
+        L3:
+          register: 262
+          type: float
+          unit: A
+      max:
+        N:
+          register: 106
+          type: float
+          unit: A
+        L1:
+          register: 264
+          type: float
+          unit: A
+        L2:
+          register: 266
+          type: float
+          unit: A
+        L3:
+          register: 268
+          type: float
+          unit: A
+    N:
+      register: 224
+      type: float
+      unit: A
+    L1:
+      register: 6
+      type: float
+      unit: A
+    L2:
+      register: 8
+      type: float
+      unit: A
+    L3:
+      register: 10
+      type: float
+      unit: A
+    avg:
+      register: 46
+      type: float
+      unit: A
+    sum:
+      register: 48
+      type: float
+      unit: A
+  amp_h:
+    reset:
+      sum:
+        register: 82
+        type: float
+        unit: Ah
+  energy:
+    reset:
+      import:
+        active:
+          register: 72
+          scale: 3
+          type: float
+          unit: Wh
+        apparent:
+          register: 76
+          scale: 3
+          type: float
+          unit: Wh
+      export:
+        active:
+          register: 74
+          scale: 3
+          type: float
+          unit: Wh
+        apparent:
+          register: 78
+          scale: 3
+          type: float
+          unit: Wh
+    total:
+      import:
+        active:
+          L1:
+            register: 346
+            scale: 3
+            type: float
+            unit: Wh
+          L2:
+            register: 348
+            scale: 3
+            type: float
+            unit: Wh
+          L3:
+            register: 350
+            scale: 3
+            type: float
+            unit: Wh
+        reactive:
+          L1:
+            register: 364
+            scale: 3
+            type: float
+            unit: VArh
+          L2:
+            register: 366
+            scale: 3
+            type: float
+            unit: VArh
+          L3:
+            register: 368
+            scale: 3
+            type: float
+            unit: VArh
+      export:
+        active:
+          L1:
+            register: 352
+            scale: 3
+            type: float
+            unit: Wh
+          L2:
+            register: 354
+            scale: 3
+            type: float
+            unit: Wh
+          L3:
+            register: 356
+            scale: 3
+            type: float
+            unit: Wh
+        reactive:
+          L1:
+            register: 370
+            scale: 3
+            type: float
+            unit: VArh
+          L2:
+            register: 372
+            scale: 3
+            type: float
+            unit: VArh
+          L3:
+            register: 374
+            scale: 3
+            type: float
+            unit: VArh
+      active:
+        sum:
+          register: 342
+          scale: 3
+          type: float
+          unit: Wh
+        L1:
+          register: 358
+          scale: 3
+          type: float
+          unit: Wh
+        L2:
+          register: 360
+          scale: 3
+          type: float
+          unit: Wh
+        L3:
+          register: 362
+          scale: 3
+          type: float
+          unit: Wh
+      reactive:
+        sum:
+          register: 344
+          scale: 3
+          type: float
+          unit: VArh
+        L1:
+          register: 376
+          scale: 3
+          type: float
+          unit: VArh
+        L2:
+          register: 378
+          scale: 3
+          type: float
+          unit: VArh
+        L3:
+          register: 380
+          scale: 3
+          type: float
+          unit: VArh
+  voltage:
+    delta:
+      avg:
+        register: 206
+        type: float
+        unit: V
+      L1L2:
+        register: 200
+        type: float
+        unit: V
+      L2L3:
+        register: 202
+        type: float
+        unit: V
+      L3L1:
+        register: 204
+        type: float
+        unit: V
+    L1:
+      register: 0
+      type: float
+      unit: V
+    L2:
+      register: 2
+      type: float
+      unit: V
+    L3:
+      register: 6
+      type: float
+      unit: W
+    avg:
+      register: 42
+      type: float
+      unit: V
+  angle:
+    L1:
+      register: 36
+      type: float
+      unit: deg
+    L2:
+      register: 38
+      type: float
+      unit: deg
+    L3:
+      register: 40
+      type: float
+      unit: deg
+    sum:
+      register: 66
+      type: float
+      unit: deg
+  thd:
+    current:
+      avg:
+        register: 250
+        type: float
+        scale: 2
+      L1:
+        register: 240
+        type: float
+        scale: 2
+      L2:
+        register: 242
+        type: float
+        scale: 2
+      L3:
+        register: 244
+        type: float
+        scale: 2
+    voltage:
+      avg:
+        register: 248
+        type: float
+        scale: 2
+      L1:
+        register: 234
+        type: float
+        scale: 2
+      L2:
+        register: 236
+        type: float
+        scale: 2
+      L3:
+        register: 238
+        type: float
+        scale: 2
+      delta:
+        avg:
+          register: 340
+          type: float
+          scale: 2
+        L1L2:
+          register: 334
+          type: float
+          scale: 2
+        L2L3:
+          register: 336
+          type: float
+          scale: 2
+        L3L1:
+          register: 338
+          type: float
+          scale: 2
+  factor:
+    sum:
+      register: 62
+      type: float
+    L1:
+      register: 30
+      type: float
+    L2:
+      register: 32
+      type: float
+    L3:
+      register: 34
+      type: float
+  power:
+    demand:
+      active:
+        now:
+          register: 84
+          type: float
+          unit: W
+        max:
+          register: 86
+          type: float
+          unit: W
+      apparent:
+        now:
+          register: 100
+          type: float
+          unit: W
+        max:
+          register: 102
+          type: float
+          unit: W
+    L1:
+      active:
+        register: 12
+        type: float
+        unit: W
+      apparent:
+        register: 18
+        type: float
+        unit: VA
+      reactive:
+        register: 24
+        type: float
+        unit: VAr
+    L2:
+      active:
+        register: 14
+        type: float
+        unit: W
+      apparent:
+        register: 20
+        type: float
+        unit: VA
+      reactive:
+        register: 26
+        type: float
+        unit: VAr
+    L3:
+      active:
+        register: 16
+        type: float
+        unit: W
+      apparent:
+        register: 22
+        type: float
+        unit: VA
+      reactive:
+        register: 28
+        type: float
+        unit: VAr
+    sum:
+      active:
+        register: 52
+        type: float
+        unit: W
+      apparent:
+        register: 56
+        type: float
+        unit: VA
+      reactive:
+        register: 60
+        type: float
+        unit: VAr
+  frequency:
+    register: 70
+    type: float
+    unit: Hz

@@ -13,7 +13,12 @@ setup(
     license="MIT -or- Apache License 2.0",
     packages=["distkv_ext.akumuli"],
     setup_requires=["setuptools_scm", "pytest-runner", "trustme >= 0.5"],
-    install_requires=["distkv >= 0.50", "asyncakumuli >= 0.4.3", "asks", "anyio >= 2"],
+    install_requires=[
+        "distkv >= 0.50",
+        "asyncakumuli >= 0.4.3",
+        "anyio >= 3",
+        "moat-util >= 0.26.2",
+    ],
     tests_require=["trustme >= 0.5", "pytest", "flake8 >= 3.7"],
     keywords=["async", "key-values", "distributed"],
     python_requires=">=3.7",

@@ -710,7 +710,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
 
     cfg = to_attrdict(read_cfg(name, cfg))
     if cfg:
-        merge(cfg, obj.CFG)
+        merge(cfg, obj.CFG, replace=False)
     else:
         cfg = CFG
     obj.cfg = cfg = to_attrdict(cfg)

@@ -82,7 +82,7 @@ def get_type2(s,l):
     if s[0] == 's' and s != "str":
         s = s[1:]
         swapped = True
-    if s[1] == 'u':
+    if s[0] == 'u':
         s = s[1:]
         unsigned = True
     if s == "int":

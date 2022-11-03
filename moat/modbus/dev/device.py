@@ -175,14 +175,23 @@ class Device:
 
     def add_registers(self):
         def a_r(d,path=Path()):
+            seen = False
             for k,v in d.items():
-                if isinstance(v,dict):
+                if not isinstance(v,dict):
+                    continue
+                if a_r(v, path/k):
+                    seen = True
                     if "register" in v:
-                        d[k] = self.factory(v, path/k, self.unit)
-                    else:
-                        if "slot" in v:
-                            logger.warning(f"{path/k} is not a register")
-                        a_r(v, path/k)
+                        logger.warning(f"{path/k} has a sub-register: ignored")
+                        continue
+                    continue
+
+                if "register" in v:
+                    d[k] = self.factory(v, path/k, self.unit)
+                    seen = True
+                elif "slot" in v:
+                    logger.warning(f"{path/k} is not a register")
+            return seen
         a_r(self.data)
 
     def get(self, path:Path):

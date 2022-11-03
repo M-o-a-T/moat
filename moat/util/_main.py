@@ -244,14 +244,15 @@ def load_ext(name, *attr, err=False):
             raise
         return None
     else:
-        try:
-            mod = getattr(mod, attr[-1])
-        except AttributeError:
-            if err:
-                raise
+        if attr:
+            try:
+                mod = getattr(mod, attr[-1])
+            except AttributeError:
+                if err:
+                    raise
 
-            logger.debug("Err %s.%s", dp, attr[-1])
-            return None
+                logger.debug("Err %s.%s", dp, attr[-1])
+                return None
         return mod
 
 

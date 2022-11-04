@@ -17,7 +17,7 @@ def cli():
 @click.argument("path", type=click.File("r"))
 def dump(path):
     """Dump a postprocessed file"""
-    d = yload(path)
+    d = yload(path, attr=True)
     d = fixup(d)
     yprint(d)
 

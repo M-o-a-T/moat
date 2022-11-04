@@ -9,8 +9,8 @@ from functools import partial
 from asyncowfs.mock import structs
 from distkv.mock.mqtt import stdtest
 
+from moat.util import attrdict, Path, P, load_ext
 from distkv.data import data_get
-from distkv.util import attrdict, Path, P, load_ext
 
 owfs_mock = load_ext("distkv_ext.owfs", "mock")
 

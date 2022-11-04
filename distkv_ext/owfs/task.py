@@ -13,7 +13,7 @@ from asyncowfs.event import (
 )
 from collections.abc import Mapping
 
-from distkv.util import combine_dict, NotGiven, Path
+from moat.util import combine_dict, NotGiven, Path
 from distkv_ext.owfs.model import OWFSroot
 
 import logging

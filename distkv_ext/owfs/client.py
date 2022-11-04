@@ -1,8 +1,8 @@
 # command line interface
 
 import asyncclick as click
+from moat.util import yprint, attrdict, NotGiven, P, Path, as_service
 from distkv.data import data_get, node_attr
-from distkv.util import yprint, attrdict, NotGiven, P, Path, as_service
 
 import logging
 

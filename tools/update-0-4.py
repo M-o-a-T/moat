@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 
 import anyio
+from moat.util import P
 from distkv.client import open_client
-from distkv.util import P
 
 async def mod_owfs():
     async with open_client() as c:

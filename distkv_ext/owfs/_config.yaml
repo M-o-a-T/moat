@@ -1,0 +1,3 @@
+owfs:
+  prefix: !P :.distkv.onewire
+  port: 4304,

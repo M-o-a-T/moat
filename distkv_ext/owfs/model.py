@@ -3,8 +3,8 @@ DistKV client data model for 1wire
 """
 import anyio
 
+from moat.util import combine_dict, attrdict
 from distkv.obj import ClientEntry, ClientRoot, AttrClientEntry
-from distkv.util import combine_dict, attrdict
 from distkv.errors import ErrorRoot
 from distkv.exceptions import ClientChainError
 from collections.abc import Mapping

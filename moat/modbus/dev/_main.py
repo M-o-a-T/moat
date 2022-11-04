@@ -32,7 +32,7 @@ def dump(path):
 @click.argument("slot", nargs=-1)
 @click.pass_context
 async def poll1(ctx, host, port, unit, path, slot):
-    """Poll a Modbus device and forward"""
+    """Poll a single Modbus device"""
     obj = ctx.obj
 
     d = yload(path, attr=True)
@@ -63,7 +63,7 @@ async def poll1(ctx, host, port, unit, path, slot):
 @click.argument("path", type=click.File("r"))
 @click.pass_context
 async def poll(ctx, path):
-    """Poll Modbus devices and forward. Hosts/Units/."""
+    """Poll Modbus devices as directed via YAML."""
     obj = ctx.obj
 
     d = yload(path, attr=True)

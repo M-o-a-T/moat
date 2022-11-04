@@ -87,7 +87,7 @@ class Host:
 
     max_req_len = 50  # max number of registers to fetch w/ one request
 
-    def __init__(self, gate, addr, port):
+    def __init__(self, gate, addr, port, debug=False):
         self.gate = gate
         self.addr = addr
         self.port = port
@@ -107,6 +107,9 @@ class Host:
         self._send_lock = anyio.Lock()
 
         gate._tg.start_soon(self._reader)
+
+        log = logging.getLogger(f"modbus.{self.addr}")
+        self._trace = log.debug if debug else log.info
 
     def unit(self, unit):
         """
@@ -163,9 +166,7 @@ class Host:
                 try:
                     data = await self.stream.receive(4096)
 
-                    if _logger.isEnabledFor(logging.DEBUG):
-                        # pylint: disable=logging-not-lazy
-                        _logger.debug("recv: " + " ".join([hex(x) for x in data]))
+                    self._trace("recv: " + " ".join([hex(x) for x in data]))  # pylint: disable=logging-not-lazy
 
                     # unit = self.framer.decode_data(data).get("uid", 0)
                     replies = []
@@ -245,9 +246,9 @@ class Host:
 
         request.transaction_id = self._nextTID()
         packet = self.framer.buildPacket(request)
-        if _logger.isEnabledFor(logging.DEBUG):
-            packet_info = " ".join([hex(x) for x in packet])
-            _logger.debug(f"Gateway {self.addr}:{self.port} xmit: {packet_info}")
+
+        packet_info = " ".join([hex(x) for x in packet])
+        self._trace(f"Gateway {self.addr}:{self.port} xmit: {packet_info}")
 
         # make the modbus request
         request._response_value = ValueEvent()
@@ -270,9 +271,9 @@ class Host:
 
             if hasattr(res, "registers"):
                 registers_info = " ".join([hex(x) for x in res.registers])
-                _logger.debug(f"Gateway {self.addr}:{self.port} replied: {registers_info}")
+                self._trace(f"Gateway {self.addr}:{self.port} replied: {registers_info}")
             else:
-                _logger.debug(f"Gateway {self.addr}:{self.port} replied: {res}")
+                self._trace(f"Gateway {self.addr}:{self.port} replied: {res}")
             return res
 
         finally:

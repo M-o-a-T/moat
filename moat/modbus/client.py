@@ -112,6 +112,9 @@ class Host:
 
         self.timeout = timeout
 
+    def __repr__(self):
+        return f"<ModbusHost:{self.addr}:{self.port}>"
+
     def unit(self, unit):
         """
         Returns the `Unit` object registered to nr. @unit.
@@ -302,6 +305,12 @@ class Unit:
         self.unit = unit
         self.slots = {}
 
+    def __str__(self):
+        return f"{self.host.addr}:{self.host.port}:{self.unit}"
+
+    def __repr__(self):
+        return f"<Unit:{self.host.addr}:{self.host.port}:{self.unit}>"
+
     def slot(self, slot):
         """
         Returns the `Slot` object registered to @slot.
@@ -356,6 +365,12 @@ class Slot:
         self.unit = unit
         self.slot = slot
         self.modes = {}
+
+    def __str__(self):
+        return f"{self.unit}:{self.slot}"
+
+    def __repr__(self):
+        return f"<Unit:{self.unit}:{self.slot}>"
 
     @property
     def is_empty(self):

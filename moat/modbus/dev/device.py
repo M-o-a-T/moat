@@ -234,12 +234,16 @@ class Device:
                 await anyio.sleep(r)
         nt = time.monotonic()
 
+        backoff = s.time/10
         while True:
             logger.debug(f"{self.host} {slot}: updating {sl}")
             try:
                 await self.update(sl)
-            except ModbusError as err:
-                logger.error(f"{self.host} {slot}: {err !r}")
+            except Exception as err:
+                logger.error(f"{sl}: {err !r}")
+                await anyio.sleep(backoff)
+                backoff = min(max(s.time*2,60), backoff*1.2)
+                continue
 
             t=time.monotonic()
             if nt>t:
@@ -248,6 +252,7 @@ class Device:
                 logger.warn(f"{self.host} {slot}: late by {t-nt :.1f}s")
                 nt = time.monotonic()
             nt += s.time
+            backoff = s.time/10
 
 
     async def poll(self, slots:set=None):

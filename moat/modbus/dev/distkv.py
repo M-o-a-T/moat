@@ -7,9 +7,16 @@ class Register(BaseRegister):
     def __init__(self, *a, dkv=None, tg=None, **kw):
         super().__init__(*a,**kw)
         if "dest" not in self.data:
-            logger.warning(f"{self.path}: no destination")
+            if "slot" in self.data:
+                logger.warning(f"{self.unit}:{self.path}: no destination")
+            return
+
+        if "slot" not in self.data:
+            logger.warning(f"{self.unit}:{self.path}: no slot")
             return
         
+        logger.info(f"{self.slot}:{self.path}: Polling")
+
         if self.data.dest.mark == "r":
             tg.start_soon(self.poll_dkv_raw, dkv)
             if self.data.get("write"):

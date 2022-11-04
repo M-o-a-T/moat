@@ -227,14 +227,12 @@ class Device:
         s = self.data.slots[slot]
         sl = self.unit.slot(slot)
         al = s.get("align", None)
-        if al is None:
-            nt = time.monotonic()+s.time
-        else:
+        if al is not None:
             t = time.time()
             r = (-t)%s.time
             if al:
                 await anyio.sleep(r)
-            nt = time.monotonic()+r+s.time
+        nt = time.monotonic()
 
         while True:
             logger.debug(f"{self.host} {slot}: updating {sl}")

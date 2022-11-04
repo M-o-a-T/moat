@@ -13,34 +13,48 @@ include. Later values supersede earlier ones.
 
 The "regs" key contains a hierarchy of register descriptions. 
 
-## Data Types
+The "dev" key describes the device.
 
+## Register Hierarchy
+
+## Data Types
 
 Terminal objects use the following keys:
 
 * register
 
-  The register to access.
+  The register to access. Zero-based. Use `regtype` instead of a leading
+  digit.
 
 * regtype
 
-  The register type. The default is `i` for Input. Use `h` for a Holding
-  register.
+  The register's type. The default is `i` for (numeric) Input. Use `h` for
+  a Holding register, `c` for Coils (i.e. binary output), and `d` for
+  Discrete (binary) inputs.
 
 * type
 
-  The value type. Known values are `int`, `uint` and `float`. You may
-  prefix these with
+  The type of the value in this register. Numbers use `int` or `float`. You
+  may prefix these with
 
-  * s (word-swapped, low word first)
+  * s (word-swapped: low word first)
 
-  * u (unsigned, not for `float`)
+  * u (unsigned; not used for `float`)
 
-  and postfix them with
+  (in this order), and/or append
 
-  * 2 or 32 (two words)
+  * 1 or 16 (one word: 16 bits; the default for `int`)
 
-  * 4 or 64 (four words)
+  * 2 or 32 (two words: 32 bits; the default for `float`)
+
+  * 4 or 64 (four words: 64 bits)
+
+  The types `str` and `bin` require a length. Strings can be
+  zero-terminated. For these types, the initial `s` designates
+  byte-swapping.
+
+  Binary registers don't have a type, but you can use `i` for inverting the
+  value. Use `u` if you need to un-invert a register.
 
 * unit
 
@@ -72,7 +86,7 @@ Terminal objects use the following keys:
   Dynamic scaling (i.e. the scale is configured / auto-adjusted, available in a
   different register). Read this register and add it to "scale".
 
-  The default is fixed scaling.
+  The default is fixed scaling, designated by `-1`.
 
 * scale\_regtype
 
@@ -82,3 +96,10 @@ Terminal objects use the following keys:
 
   `l` for logarithmic, `f` for a factor.
 
+* value
+
+  For objects used to identify device types, the register's value is
+  contained in this entry. This can be either an integer or a list.
+
+
+Objects may not overlap.

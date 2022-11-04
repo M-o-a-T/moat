@@ -87,7 +87,7 @@ class Host:
 
     max_req_len = 50  # max number of registers to fetch w/ one request
 
-    def __init__(self, gate, addr, port, debug=False):
+    def __init__(self, gate, addr, port, timeout=10, debug=False):
         self.gate = gate
         self.addr = addr
         self.port = port
@@ -102,7 +102,6 @@ class Host:
         self._tg = None
         self._read_scope = None
 
-        self.timeout = 10
         self._connected = anyio.Event()
         self._send_lock = anyio.Lock()
 
@@ -110,6 +109,8 @@ class Host:
 
         log = logging.getLogger(f"modbus.{self.addr}")
         self._trace = log.debug if debug else log.info
+
+        self.timeout = timeout
 
     def unit(self, unit):
         """
@@ -260,10 +261,13 @@ class Host:
             packet = self.framer.buildPacket(request)
             async with self._send_lock:
                 await self.stream.send(packet)
-            res = await request._response_value.get()
-        except BaseException as exc:
+            with anyio.fail_after(self.timeout):
+                res = await request._response_value.get()
+        except TimeoutError:
+            await self.stream.aclose()
+            raise
+        except Exception as exc:
             _logger.error(f"Gateway {self.addr}:{self.port} not replied: {repr(exc)}")
-
             raise
         else:
             if res.isError():

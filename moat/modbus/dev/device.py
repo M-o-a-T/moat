@@ -236,7 +236,6 @@ class Device:
 
         backoff = s.time/10
         while True:
-            logger.debug(f"{self.host} {slot}: updating {sl}")
             try:
                 await self.update(sl)
             except Exception as err:
@@ -249,8 +248,13 @@ class Device:
             if nt>t:
                 await anyio.sleep(nt-t)
             else:
-                logger.warn(f"{self.host} {slot}: late by {t-nt :.1f}s")
-                nt = time.monotonic()
+                if al:
+                    nnt = nt + s.time*int(t-nt)  # +1 added below
+                else:
+                    nnt = time.monotonic()
+                if s.time>= 5 and t-nt > s.time/10:
+                    logger.warn(f"{sl}: late by {t-nt :.1f}s: now {nnt}")
+                nt = nnt
             nt += s.time
             backoff = s.time/10
 

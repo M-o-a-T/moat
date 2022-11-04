@@ -6,6 +6,7 @@ Basic tool support
 from getopt import getopt
 from functools import partial
 from .typemap import get_type, get_kind, map_kind, map_type
+from pprint import pprint
 
 import asyncclick as click
 
@@ -167,7 +168,7 @@ async def _client(host, port, unit, kind, start, num, type_, values, debug):
                 await s.setValues()
             else:
                 res = await s.getValues()
-                print(res)
+                pprint(res)
         except Exception as exc:  # pylint: disable=broad-except
             log.exception("Problem: %r", exc)
 

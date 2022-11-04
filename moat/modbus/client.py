@@ -191,7 +191,7 @@ class Host:
                 ) as exc:
                     if self._connected.is_set():
                         self._connected = anyio.Event()
-                    _logger.exception("Read from %s:%d", self.addr, self.port)
+                    _logger.error("Read from %s:%d: %r", self.addr, self.port, exc)
 
                     t, self._transactions = self._transactions, {}
                     for req in t.values():

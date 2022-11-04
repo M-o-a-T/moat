@@ -142,6 +142,7 @@ class Host:
 
         async def _send_trans(task_status):
             tr = list(self._transactions.values())
+            self._transactions = {}
             task_status.started()
             try:
                 for request in tr:
@@ -189,7 +190,7 @@ class Host:
                         self._connected = anyio.Event()
                     _logger.exception("Read from %s:%d", self.addr, self.port)
 
-                    t, self._transactions = self._transactions, None
+                    t, self._transactions = self._transactions, {}
                     for req in t.values():
                         req._response_value.set(exc)
 

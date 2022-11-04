@@ -169,7 +169,7 @@ class Device:
             d = merge(d,data)
         self.data = fixup(d,d,Path())
 
-        self.host = self.client.host(self.data.src.host, self.data.src.port)
+        self.host = self.client.host(self.data.src.host, self.data.src.get('port'))
         self.unit = self.host.unit(self.data.src.unit)
         self.add_registers()
 

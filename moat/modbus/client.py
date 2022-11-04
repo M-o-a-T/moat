@@ -196,7 +196,7 @@ class Host:
 
                     t, self._transactions = self._transactions, {}
                     for req in t.values():
-                        req._response_value.set(exc)
+                        req._response_value.set_error(exc)
 
                     await self.disconnect()
 

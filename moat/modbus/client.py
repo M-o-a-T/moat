@@ -87,7 +87,7 @@ class Host:
 
     max_req_len = 50  # max number of registers to fetch w/ one request
 
-    def __init__(self, gate, addr, port, timeout=10, debug=False):
+    def __init__(self, gate, addr, port, timeout=10, cap=1, debug=False):
         self.gate = gate
         self.addr = addr
         self.port = port
@@ -110,6 +110,7 @@ class Host:
         log = logging.getLogger(f"modbus.{self.addr}")
         self._trace = log.debug if debug else log.info
 
+        self.cap = anyio.Semaphore(cap)
         self.timeout = timeout
 
     def __repr__(self):
@@ -197,6 +198,7 @@ class Host:
                     t, self._transactions = self._transactions, {}
                     for req in t.values():
                         req._response_value.set_error(exc)
+                        self.cap.release()
 
                     await self.disconnect()
 
@@ -208,6 +210,7 @@ class Host:
                         except KeyError:
                             _logger.info("Unrequested message: %s", reply)
                         else:
+                            self.cap.release()
                             request._response_value.set(reply)
 
     async def aclose(self):
@@ -257,6 +260,7 @@ class Host:
         self._trace(f"Gateway {self.addr}:{self.port} xmit: {packet_info}")
 
         # make the modbus request
+        await self.cap.acquire()
         request._response_value = ValueEvent()
 
         await self._connected.wait()

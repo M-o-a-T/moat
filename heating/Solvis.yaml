@@ -1,0 +1,285 @@
+dev:
+  regs:
+    date:
+      register: 32768
+      reg_type: i
+      len: 2
+      type: suint
+    version:
+      sc3:
+        register: 32770
+        type: uint
+      nbg:
+        register: 32771
+        type: uint
+
+  errors:
+    n:
+      register: 33792
+      type: uint
+      len: 1
+    1:
+      code:
+        register: 33793
+        type: uint
+        len: 1
+      time:
+        register: 33794
+        type: suint
+        len: 2
+      par:
+        1:
+          register: 33796
+          type: uint
+          len: 1
+        2:
+          register: 33797
+          type: uint
+          len: 1
+
+
+  limit:
+    regs: 40
+
+regs:
+  water:
+    mode:
+      register: 2304
+      reg_type: h
+      type: uint
+    dest:
+      register: 2305
+      reg_type: h
+      type: int
+      unit: dC
+  heat:
+    1:
+      ww_pref:
+        register: 2817
+        type: uint
+      mode:
+        register: 2818
+        type: uint
+      fix_day:
+        register: 2820
+        type: uint
+      fix_night:
+        register: 2821
+        type: uint
+      curve:
+        day:
+          1:
+            register: 2822
+            type: uint
+          2:
+            register: 2823
+            type: uint
+          3:
+            register: 2824
+            type: uint
+        night:
+          register: 2825
+          type: uint
+        slope:
+          register: 2932
+          type: uint
+          scale: -1
+      holiday:
+        home:
+          temp:
+            register: 2870
+            type: int
+            unit: dC
+          days:
+            register: 2871
+            type: uint
+          start:
+            register: 2872
+            unit: h
+            type: uint
+            factor: 0.25
+          stop:
+            register: 2873
+            unit: h
+            type: uint
+            factor: 0.25
+        away:
+          temp:
+            register: 2880
+            unit: dC
+            type: int
+          day:
+            register: 2881
+            type: uint
+          month:
+            register: 2882
+            type: uint
+          year:
+            register: 2883
+            type: uint
+
+  plan:
+    # heating area, 1…3
+    default:
+      reg_type: h
+      unit: h
+      factor: 0.25
+      type: uint
+    repeat:
+      n: 3
+      start: 1
+      offset: 42
+      data:
+        repeat:
+          n: 7
+          start: 1
+          offset: 6
+          data:
+            repeat:
+              n: 3
+              start: 0
+              offset: 2
+              data:
+                start:
+                  register: 34048
+                stop:
+                  register: 34049
+    water:
+      # day, 1…7 Mon-Sun
+      repeat:
+        n: 7
+        start: 1
+        offset: 6
+        data:
+          repeat:
+            n: 3
+            start: 0
+            offset: 2
+            data:
+              start:
+                register: 34174
+              stop:
+                register: 34175
+
+    circ:
+      repeat:
+        n: 7
+        start: 1
+        offset: 6
+        data:
+          repeat:
+            n: 3
+            start: 0
+            offset: 2
+            data:
+              start:
+                register: 34216
+              stop:
+                register: 34217
+
+    eco:
+      repeat:
+        n: 7
+        start: 1
+        offset: 6
+        data:
+          repeat:
+            n: 3
+            start: 0
+            offset: 2
+            data:
+              start:
+                register: 34258
+              stop:
+                register: 34259
+
+  power:
+    heat:
+      register: 33539
+      type: uint
+      unit: W
+      len: 1
+
+  temperature:
+    ext: # external sensors
+      repeat:
+        n: 3
+        start: 1
+        offset: 1
+        data:
+          register: 34304
+          type: int
+          reg_type: h
+          unit: dC
+          scale: -1
+    int:
+      repeat:
+        n: 16
+        start: 1
+        offset: 1
+        _doc:
+          1: Speicher oben Warmwasser
+          2: Warmwasser
+          3: Speicher unten
+          4: Speicher oben Heizung
+          5: solar VL 2
+          6: solar RL 2
+          7: solar VL 1
+          8: Kollektor
+          9: Speicher Mitte
+          10: Temp außen
+          11: Zirkulation Warmwasser
+          12: Vorlauf HK1
+          13: Vorlauf HK2
+          14: Umschaltventil
+          15: Kaltwasser
+          16: xxx
+        data:
+          register: 33024
+          len: 1
+          type: int
+          unit: dC
+          scale: -1
+
+  volume:
+    int:
+      repeat:
+        n: 2
+        start: 1
+        offset: 1
+        _doc:
+          1: Vol Solar
+          2: Vol Warmwasser
+        data:
+          register: 33040
+          len: 1
+          type: uint
+          unit: l/min
+          scale: -1
+
+  analog:
+    in:
+      repeat:
+        n: 2
+        start: 1
+        offset: 1
+        data:
+          register: 33042
+          len: 1
+          type: uint
+          scale: -1
+          unit: V
+
+    out:
+      repeat:
+        n: 6
+        start: 1
+        offset: 1
+        _doc:
+          4: Pumpe WP
+        data:
+          register: 33042
+          len: 1
+          type: uint
+          scale: -1
+          unit: V

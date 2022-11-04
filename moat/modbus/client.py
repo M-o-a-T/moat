@@ -108,7 +108,7 @@ class Host:
         gate._tg.start_soon(self._reader)
 
         log = logging.getLogger(f"modbus.{self.addr}")
-        self._trace = log.debug if debug else log.info
+        self._trace = log.info if debug else log.debug
 
         self.cap = anyio.Semaphore(cap)
         self.timeout = timeout

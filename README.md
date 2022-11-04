@@ -41,20 +41,18 @@ Terminal objects use the following keys:
 
   * u (unsigned; not used for `float`)
 
-  (in this order), and/or append
-
-  * 1 or 16 (one word: 16 bits; the default for `int`)
-
-  * 2 or 32 (two words: 32 bits; the default for `float`)
-
-  * 4 or 64 (four words: 64 bits)
+  (in this order).
 
   The types `str` and `bin` require a length. Strings can be
   zero-terminated. For these types, the initial `s` designates
   byte-swapping.
 
-  Binary registers don't have a type, but you can use `i` for inverting the
+  TODO: Binary registers don't have a type, but you can use `i` for inverting the
   value. Use `u` if you need to un-invert a register.
+
+* len
+
+  Number of words. The default is 2 for `float` and 1 for `int`.
 
 * unit
 
@@ -83,7 +81,7 @@ Terminal objects use the following keys:
 
 * scale\_reg
 
-  Dynamic scaling (i.e. the scale is configured / auto-adjusted, available in a
+  TODO: Dynamic scaling (i.e. the scale is configured / auto-adjusted, available in a
   different register). Read this register and add it to "scale".
 
   The default is fixed scaling, designated by `-1`.

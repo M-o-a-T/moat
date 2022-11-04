@@ -8,7 +8,7 @@ from pathlib import Path as FSPath
 
 import anyio
 
-from moat.util import attrdict, yload, Path, combine_dict, merge
+from moat.util import attrdict, yload, Path, combine_dict, merge, P
 from ..client import Unit, Host, Slot, ModbusError
 from ..typemap import get_type2, get_kind
 from ..types import InputRegisters
@@ -23,9 +23,12 @@ class NotARegisterError(ValueError):
     pass
 
 
-def fixup(d,root=None,path=Path(), post=None):
+def fixup(d,root=None,path=Path(), post=None, default=None, offset=0):
     if root is None:
         root = d
+    if default is None:
+        default = attrdict()
+
     try:
         inc = d.pop("include")
     except KeyError:
@@ -38,24 +41,58 @@ def fixup(d,root=None,path=Path(), post=None):
         for i,dd in enumerate(inc):
             with (data/dd).open("r") as df:
                 dd = yload(df, attr=True)
-            inc[i] = fixup(dd,dd,Path())
+            inc[i] = fixup(dd,dd,Path(), default=default, offset=offset)
         inc.reverse()
         d = combine_dict(d, *inc, cls=attrdict)
+
+    try:
+        defs = d.pop("default")
+    except KeyError:
+        pass
+    else:
+        default = combine_dict(defs,default, cls=attrdict)
 
     try:
         refs = d.pop("ref")
     except KeyError:
         pass
     else:
+        if isinstance(refs,str):
+            refs = [P(refs)]
         for i,p in enumerate(refs):
             refs[i] = root._get(p)
 
         refs.reverse()
         d = combine_dict(d, *refs, cls=attrdict)
     
+    try:
+        rep = d.pop("repeat")
+    except KeyError:
+        rep = None
+
+    if "register" in d:
+        d.register += offset
+        merge(d, default, replace=False)
+
+    # Offset is modified here
+    reps = set()
+    if rep:
+        k = rep.get("start",0)
+        n = rep.n
+        off = offset
+        while n>0:
+            v = combine_dict(d.get(k,attrdict()), rep.data, cls=attrdict)
+            d[k] = fixup(v,root,path/k, default=default if k in d else attrdict(), offset=off)
+            n -= 1
+            k += 1
+            off += rep.offset
+            reps.add(k)
+
     for k,v in d.items():
+        if k in reps:
+            continue
         if isinstance(v,Mapping):
-            d[k] = fixup(v,root,path/k)
+            d[k] = fixup(v,root,path/k, default=default, offset=offset)
 
     if post is not None:
         d = post(d,path)
@@ -96,6 +133,8 @@ class Register:
         if "slot" in d:
             slot = unit.slot(d.slot)
             slot.add(self.reg_type, offset=self.register, cls=self.reg)
+            self.slot = slot
+        self.unit = unit
         self.data = d
         self.factor = 10 ** self.data.get("scale",0) * self.data.get("factor",1)
         self.offset = self.data.get("offset", 0)

@@ -239,7 +239,7 @@ class Host:
         """Close the TCP connection and set `self.stream = None`."""
         s, self.stream = self.stream, None
         if s:
-            await s.close()
+            await s.aclose()
 
         # delay to give the device the chance to reinitialize
         await anyio.sleep(DISCONNECT_DELAY)

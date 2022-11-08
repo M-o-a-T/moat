@@ -2,13 +2,11 @@
 pysignalclijsonrpc.api
 """
 
-from base64 import b64decode
+from base64 import b64encode
 from io import BytesIO
-from mimetypes import guess_extension
-from tempfile import mkstemp
 from uuid import uuid4
 
-from magic import from_buffer
+from magic import from_buffer, from_file
 from requests import Session
 
 
@@ -110,20 +108,28 @@ class SignalCliRestApi:
         """
         attachments = []
         if filenames is not None:
-            attachments.extend(filenames)
+            for filename in filenames:
+                try:
+                    mime = from_file(filename, mime=True)
+                    with open(filename, "rb") as f_h:
+                        base64 = b64encode(f_h.read())
+                    attachments.append(
+                        f"data:{mime};base64,{base64}"
+                    )
+                except Exception as err:  # pylint: disable=broad-except
+                    error = getattr(err, "message", repr(err))
+                    raise SignalCliRestApiError(
+                        f"signal-cli JSON RPC request failed: {error}"
+                    ) from err
         if attachments_as_bytes is not None:
             for attachment in attachments_as_bytes:
                 try:
-                    uuid = str(uuid4())
                     attachment_io_bytes = BytesIO()
-                    attachment_io_bytes.write(b64decode(attachment))
-                    extension = guess_extension(
-                        from_buffer(attachment_io_bytes.getvalue(), mime=True)
+                    attachment_io_bytes.write(bytes(attachment))
+                    mime = from_buffer(attachment_io_bytes.getvalue(), mime=True)
+                    attachments.append(
+                        f"data:{mime};base64,{b64encode(bytes(attachment)).decode()}"
                     )
-                    _, filename = mkstemp(prefix=f"{uuid}_", suffix=f".{extension}")
-                    with open(filename, "wb") as f_h:
-                        f_h.write(attachment)
-                    attachments.append(filename)
                 except Exception as err:  # pylint: disable=broad-except
                     error = getattr(err, "message", repr(err))
                     raise SignalCliRestApiError(

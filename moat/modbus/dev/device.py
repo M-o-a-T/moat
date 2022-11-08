@@ -9,7 +9,7 @@ from pathlib import Path as FSPath
 import anyio
 
 from moat.util import attrdict, yload, Path, combine_dict, merge, P
-from ..client import Unit, Host, Slot, ModbusError
+from ..client import Unit, Host, Slot
 from ..typemap import get_type2, get_kind
 from ..types import InputRegisters
 

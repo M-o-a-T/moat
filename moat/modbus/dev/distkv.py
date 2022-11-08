@@ -19,11 +19,13 @@ class Register(BaseRegister):
 
         if self.data.dest.mark == "r":
             tg.start_soon(self.poll_dkv_raw, dkv)
-            if self.data.get("write"):
-                tg.start_soon(self.send_dkv_raw, dkv)
         else:
             tg.start_soon(self.poll_dkv, dkv)
-            if self.data.get("write"):
+
+        if self.data.get("src"):
+            if self.data.dest.mark == "r":
+                tg.start_soon(self.send_dkv_raw, dkv)
+            else:
                 tg.start_soon(self.send_dkv, dkv)
 
     async def poll_dkv(self, dkv):

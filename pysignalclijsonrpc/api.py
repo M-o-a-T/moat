@@ -33,6 +33,7 @@ class SignalCliRestApi:
         request_id = str(uuid4())
         if not params:
             params = {}
+        params.update({"account": self._account})
         data = {
             "jsonrpc": "2.0",
             "id": request_id,
@@ -42,12 +43,13 @@ class SignalCliRestApi:
         try:
             res = self._session.post(
                 url=f"{self._endpoint}", json=data, verify=self._verify_ssl
-            ).json()
+            )
             res.raise_for_status()
-            if res.get("id") == request_id:
-                if res.get("error"):
-                    raise SignalCliRestApiError(res.get("error").get("message"))
-            return res.get("result")
+            ret = res.json()
+            if ret.get("id") == request_id:
+                if ret.get("error"):
+                    raise SignalCliRestApiError(ret.get("error").get("message"))
+            return ret.get("result")
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
             raise SignalCliRestApiError(

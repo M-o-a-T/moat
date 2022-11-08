@@ -1,0 +1,32 @@
+---
+stages:
+  - test
+  - release
+
+pre-commit:
+  stage: test
+  image: alpine:latest
+  variables:
+    SANIC_NO_UVLOOP: "true"
+    SANIC_NO_UJSON: "true"
+    PRE_COMMIT_HOME: ${CI_PROJECT_DIR}/.cache/pre-commit
+    VENV: ${CI_PROJECT_DIR}/.venv
+  cache:
+    key: pre-commit
+    paths:
+      - ${PRE_COMMIT_HOME}
+      - ${VENV}
+    policy: pull-push
+  script:
+    - .gitlab-ci/pre-commit.sh
+
+release-pypi:
+  stage: release
+  image: alpine:latest
+  cache: []
+  script:
+    - apk --no-cache add bash
+    - .gitlab-ci/release-pypi.sh
+  only:
+    refs:
+      - tags

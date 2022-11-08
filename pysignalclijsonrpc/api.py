@@ -1,5 +1,5 @@
 """
-pysignalclijsonrpc
+pysignalclijsonrpc.api
 """
 
 from uuid import uuid4
@@ -14,6 +14,10 @@ class SignalCliRestApiError(Exception):
 
 
 class SignalCliRestApi:
+    """
+    SignalCliRestApi
+    """
+
     def __init__(self, endpoint: str, account: str, verify_ssl: bool = True):
         """
         SignalCliRestApi
@@ -48,7 +52,8 @@ class SignalCliRestApi:
             ret = res.json()
             if ret.get("id") == request_id:
                 if ret.get("error"):
-                    raise SignalCliRestApiError(ret.get("error").get("message"))
+                    error = ret.get("error").get("message")
+                    raise SignalCliRestApiError(error)
             return ret.get("result")
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))

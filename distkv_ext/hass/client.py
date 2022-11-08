@@ -3,7 +3,7 @@
 import os
 import asyncclick as click
 
-from distkv.util import yprint, attrdict, combine_dict, NotGiven, P, Path, yload
+from moat.util import yprint, attrdict, combine_dict, NotGiven, P, Path, yload
 
 import logging
 
@@ -50,7 +50,7 @@ async def setup_conv(obj, user):
             await obj.client._request(action="set_internal", path=["codec"] + k, value=v)
             n += 1
 
-    ppa = ("conv", user) + path
+    ppa = Path("conv", user) + obj.hass_name
     for k, v in cfg["conv"].items():
         for kk, vv in v.items():
             vv = dict(codec=vv)

@@ -110,7 +110,7 @@ class Host:
         log = logging.getLogger(f"modbus.{self.addr}")
         self._trace = log.info if debug else log.debug
 
-        self.cap = anyio.Semaphore(cap)
+        self.cap = anyio.CapacityLimiter(cap)
         self.timeout = timeout
 
     def __repr__(self):
@@ -144,34 +144,37 @@ class Host:
     async def _reader(self):
         # pylint: disable=protected-access
 
-        async def _send_trans(task_status):
+        async def _send_trans():
             tr = list(self._transactions.values())
             self._transactions = {}
-            task_status.started()
+            if tr:
+                _logger.warning("Resend %d packets", len(tr))
             try:
                 for request in tr:
                     packet = self.framer.buildPacket(request)
                     async with self._send_lock:
                         await self.stream.send(packet)
+                if tr:
+                    _logger.warning("Resend done")
             except Exception:  # pylint: disable=broad-except
                 _logger.exception("Re-Write to %s:%d", self.addr, self.port)
 
         async with anyio.create_task_group() as self._tg:
             self._read_scope = self._tg.cancel_scope
             while True:
-                if self.stream is None:
-                    self.stream = await anyio.connect_tcp(self.addr, self.port)
-                    # set so_linger to force sending RST instead of FIN
-                    self.stream.extra(SocketAttribute.raw_socket).setsockopt(
-                        socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0)
-                    )
-                    # re-send open requests
-                    await self._tg.start(_send_trans)
-                    self._connected.set()
-
                 try:
-                    data = await self.stream.receive(4096)
+                    if self.stream is None:
+                        with anyio.fail_after(self.timeout):
+                            self.stream = await anyio.connect_tcp(self.addr, self.port)
+                            # set so_linger to force sending RST instead of FIN
+                            self.stream.extra(SocketAttribute.raw_socket).setsockopt(
+                                socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0)
+                            )
+                            # re-send open requests
+                            await _send_trans()
+                            self._connected.set()
 
+                    data = await self.stream.receive(4096)
                     self._trace("recv: " + " ".join([hex(x) for x in data]))  # pylint: disable=logging-not-lazy
 
                     # unit = self.framer.decode_data(data).get("uid", 0)
@@ -193,14 +196,20 @@ class Host:
                 ) as exc:
                     if self._connected.is_set():
                         self._connected = anyio.Event()
-                    _logger.error("Read from %s:%d: %r", self.addr, self.port, exc)
+                    _logger.error("Read from %s:%d: %r (%d)", self.addr, self.port, exc, len(self._transactions))
 
                     t, self._transactions = self._transactions, {}
                     for req in t.values():
                         req._response_value.set_error(exc)
-                        self.cap.release()
-
                     await self.disconnect()
+
+                except BaseException as exc:
+                    _logger.exception("Error: %r", exc)
+
+                    t, self._transactions = self._transactions, {}
+                    for req in t.values():
+                        req._response_value.set_error(exc)
+                    raise
 
                 else:
                     for reply in replies:
@@ -210,7 +219,6 @@ class Host:
                         except KeyError:
                             _logger.info("Unrequested message: %s", reply)
                         else:
-                            self.cap.release()
                             request._response_value.set(reply)
 
     async def aclose(self):
@@ -260,37 +268,37 @@ class Host:
         self._trace(f"Gateway {self.addr}:{self.port} xmit: {packet_info}")
 
         # make the modbus request
-        await self.cap.acquire()
-        request._response_value = ValueEvent()
+        async with self.cap:
+            request._response_value = ValueEvent()
 
-        await self._connected.wait()
+            await self._connected.wait()
 
-        try:
-            self._transactions[request.transaction_id] = request
-            packet = self.framer.buildPacket(request)
-            async with self._send_lock:
-                await self.stream.send(packet)
-            with anyio.fail_after(self.timeout):
-                res = await request._response_value.get()
-        except TimeoutError:
-            await self.stream.aclose()
-            raise
-        except Exception as exc:
-            _logger.error(f"Gateway {self.addr}:{self.port} not replied: {repr(exc)}")
-            raise
-        else:
-            if res.isError():
-                raise ModbusError(res)
-
-            if hasattr(res, "registers"):
-                registers_info = " ".join([hex(x) for x in res.registers])
-                self._trace(f"Gateway {self.addr}:{self.port} replied: {registers_info}")
+            try:
+                self._transactions[request.transaction_id] = request
+                packet = self.framer.buildPacket(request)
+                async with self._send_lock:
+                    await self.stream.send(packet)
+                with anyio.fail_after(self.timeout):
+                    res = await request._response_value.get()
+            except TimeoutError:
+                await self.stream.aclose()
+                raise
+            except Exception as exc:
+                _logger.error(f"Gateway {self.addr}:{self.port} not replied: {repr(exc)}")
+                raise
             else:
-                self._trace(f"Gateway {self.addr}:{self.port} replied: {res}")
-            return res
+                if res.isError():
+                    raise ModbusError(res)
 
-        finally:
-            self._transactions.pop(request.transaction_id, None)
+                if hasattr(res, "registers"):
+                    registers_info = " ".join([hex(x) for x in res.registers])
+                    self._trace(f"Gateway {self.addr}:{self.port} replied: {registers_info}")
+                else:
+                    self._trace(f"Gateway {self.addr}:{self.port} replied: {res}")
+                return res
+
+            finally:
+                self._transactions.pop(request.transaction_id, None)
 
 
 class Unit:
@@ -465,6 +473,7 @@ class Slot:
                         tg.start_soon(partial(_assign, vl.readValues, r))
                     except ModbusError as r:
                         res[typ] = r.result
+
             if self.unit is None:
                 raise ClosedResourceError("dropped while running")
             return res

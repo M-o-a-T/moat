@@ -112,7 +112,7 @@ class SignalCliRestApi:
                 try:
                     mime = from_file(filename, mime=True)
                     with open(filename, "rb") as f_h:
-                        base64 = b64encode(f_h.read())
+                        base64 = b64encode(f_h.read()).decode()
                     attachments.append(
                         f"data:{mime};base64,{base64}"
                     )
@@ -141,5 +141,6 @@ class SignalCliRestApi:
                 "account": self._account,
                 "recipient": recipients,
                 "message": message,
+                "attachment": attachments,
             },
         ).get("timestamp")

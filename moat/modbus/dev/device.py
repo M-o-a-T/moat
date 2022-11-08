@@ -278,10 +278,12 @@ class Device:
             try:
                 await self.update(sl)
             except Exception as err:
-                logger.error(f"{sl}: {err !r}")
+                logger.warning(f"{sl}: {err !r}: wait {backoff}")
                 await anyio.sleep(backoff)
                 backoff = min(max(s.time*2,60), backoff*1.2)
                 continue
+            else:
+                backoff = s.time/10
 
             t=time.monotonic()
             if nt>t:
@@ -292,10 +294,9 @@ class Device:
                 else:
                     nnt = time.monotonic()
                 if s.time>= 5 and t-nt > s.time/10:
-                    logger.warn(f"{sl}: late by {t-nt :.1f}s: now {nnt}")
+                    logger.warning(f"{sl}: late by {t-nt :.1f}s: now {nnt}")
                 nt = nnt
             nt += s.time
-            backoff = s.time/10
 
 
     async def poll(self, slots:set=None):

@@ -4,7 +4,7 @@ pysignalclijsonrpc
 
 from uuid import uuid4
 
-from requests import post
+from requests import Session
 
 
 class SignalCliRestApiError(Exception):
@@ -14,12 +14,19 @@ class SignalCliRestApiError(Exception):
 
 
 class SignalCliRestApi:
-    """
-    SignalCliRestApi
-    """
+    def __init__(self, endpoint: str, account: str, verify_ssl: bool = True):
+        """
+        SignalCliRestApi
 
-    def __init__(self, endpoint: str, verify_ssl: bool = True):
+        Args:
+            endpoint (str): signal-cli JSON-RPC endpoint.
+            account (str): signal-cli account to use.
+            verify_ssl (bool): SSL verfification for https endpoints
+                (defaults to True).
+        """
+        self._session = Session()
         self._endpoint = endpoint
+        self._account = account
         self._verify_ssl = verify_ssl
 
     def _jsonrpc(self, method: str, params: object = None):
@@ -33,7 +40,10 @@ class SignalCliRestApi:
             "params": params,
         }
         try:
-            res = post(url=f"{self._endpoint}", json=data).json()
+            res = self._session.post(
+                url=f"{self._endpoint}", json=data, verify=self._verify_ssl
+            ).json()
+            res.raise_for_status()
             if res.get("id") == request_id:
                 if res.get("error"):
                     raise SignalCliRestApiError(res.get("error").get("message"))
@@ -44,8 +54,38 @@ class SignalCliRestApi:
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
+    @property
     def version(self):
         """
-        fetch version
+        Fetch version.
+
+        Returns:
+            version (str): Version of signal-cli
+
+        Raises:
+            :exception:`pysignalclijsonrpc.api.SignalCliRestApiError`
         """
         return self._jsonrpc(method="version").get("version")
+
+    def send_message(self, message: str, recipients: list):
+        """
+        Send message.
+
+        Args:
+            message (str): Message to be sent.
+            recipients (list): List of recipients.
+
+        Returns:
+            timestamp (int): The message timestamp.
+
+        Raises:
+            :exception:`pysignalclijsonrpc.api.SignalCliRestApiError`
+        """
+        return self._jsonrpc(
+            method="send",
+            params={
+                "account": self._account,
+                "recipient": recipients,
+                "message": message,
+            },
+        ).get("timestamp")

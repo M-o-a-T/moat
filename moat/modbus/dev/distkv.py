@@ -39,12 +39,12 @@ class Register(BaseRegister):
             await dkv.msg_send(list(self.data.dest), self.value)
 
     async def send_dkv(self, dkv):
-        async for val in dkv.monitor(self.data.dest):
+        async for val in dkv.monitor(self.data.src):
             logger.debug(f"{self.path} W {val.value !r}")
             self.value = val.value
 
     async def send_dkv_raw(self, dkv):
-        async for val in dkv.msg_monitor(self.data.dest):
+        async for val in dkv.msg_monitor(self.data.src):
             logger.debug(f"{self.path} w {val.value !r}")
             self.value = val.value
 

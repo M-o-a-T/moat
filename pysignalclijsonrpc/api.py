@@ -91,7 +91,8 @@ class SignalCliJSONRPCApi:
         recipients: list,
         filenames: list = None,
         attachments_as_bytes: list = None,
-    ):
+        cleanup_filenames: bool = False,
+    ):  # pylint: disable=too-many-arguments
         """
         Send message.
 
@@ -100,6 +101,8 @@ class SignalCliJSONRPCApi:
             recipients (list): List of recipients.
             filenames (list): List of `str` w/ filenames to send as attachment(s).
             attachments_as_bytes (list): List of `bytearray` to send as attachment(s).
+            cleanup_filenames (bool): Wether to remove files in `filenames`
+                after message(s) has been sent. Defaults to False.
 
         Returns:
             timestamp (int): The message timestamp.
@@ -150,5 +153,6 @@ class SignalCliJSONRPCApi:
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
         finally:
-            for attachment in attachments:
-                os_remove(attachment)
+            if cleanup_filenames:
+                for filename in filenames:
+                    os_remove(filename)

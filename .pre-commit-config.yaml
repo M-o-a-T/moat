@@ -27,3 +27,4 @@ repos:
         additional_dependencies:
           - uuid
           - requests
+          - python-magic

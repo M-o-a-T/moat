@@ -10,22 +10,22 @@ from magic import from_buffer, from_file
 from requests import Session
 
 
-class SignalCliRestApiError(Exception):
+class SignalCliJSONRPCError(Exception):
     """
-    SignalCliRestApiError
+    SignalCliJSONRPCError
     """
 
 
-class SignalCliRestApi:
+class SignalCliJSONRPCApi:
     """
-    SignalCliRestApi
+    SignalCliJSONRPCApi
     """
 
     def __init__(
         self, endpoint: str, account: str, auth: tuple = (), verify_ssl: bool = True
     ):
         """
-        SignalCliRestApi
+        SignalCliJSONRPCApi
 
         Args:
             endpoint (str): signal-cli JSON-RPC endpoint.
@@ -63,11 +63,11 @@ class SignalCliRestApi:
             if ret.get("id") == request_id:
                 if ret.get("error"):
                     error = ret.get("error").get("message")
-                    raise SignalCliRestApiError(error)
+                    raise SignalCliJSONRPCError(error)
             return ret.get("result")
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
-            raise SignalCliRestApiError(
+            raise SignalCliJSONRPCError(
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
@@ -80,7 +80,7 @@ class SignalCliRestApi:
             version (str): Version of signal-cli
 
         Raises:
-            :exception:`pysignalclijsonrpc.api.SignalCliRestApiError`
+            :exception:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
         """
         return self._jsonrpc(method="version").get("version")
 
@@ -104,7 +104,7 @@ class SignalCliRestApi:
             timestamp (int): The message timestamp.
 
         Raises:
-            :exception:`pysignalclijsonrpc.api.SignalCliRestApiError`
+            :exception:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
         """
         attachments = []
         if filenames is not None:
@@ -113,12 +113,10 @@ class SignalCliRestApi:
                     mime = from_file(filename, mime=True)
                     with open(filename, "rb") as f_h:
                         base64 = b64encode(f_h.read()).decode()
-                    attachments.append(
-                        f"data:{mime};base64,{base64}"
-                    )
+                    attachments.append(f"data:{mime};base64,{base64}")
                 except Exception as err:  # pylint: disable=broad-except
                     error = getattr(err, "message", repr(err))
-                    raise SignalCliRestApiError(
+                    raise SignalCliJSONRPCError(
                         f"signal-cli JSON RPC request failed: {error}"
                     ) from err
         if attachments_as_bytes is not None:
@@ -132,7 +130,7 @@ class SignalCliRestApi:
                     )
                 except Exception as err:  # pylint: disable=broad-except
                     error = getattr(err, "message", repr(err))
-                    raise SignalCliRestApiError(
+                    raise SignalCliJSONRPCError(
                         f"signal-cli JSON RPC request failed: {error}"
                     ) from err
         return self._jsonrpc(

@@ -25,6 +25,5 @@ repos:
     hooks:
       - id: pylint
         additional_dependencies:
-          - uuid
           - requests
           - python-magic

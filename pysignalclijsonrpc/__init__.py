@@ -2,9 +2,9 @@
 pysignalclijsonrpc
 """
 
-from pysignalclijsonrpc.api import SignalCliRestApi, SignalCliRestApiError
+from pysignalclijsonrpc.api import SignalCliJSONRPCApi, SignalCliJSONRPCError
 
 __all__ = (
-    "SignalCliRestApi",
-    "SignalCliRestApiError",
+    "SignalCliJSONRPCApi",
+    "SignalCliJSONRPCError",
 )

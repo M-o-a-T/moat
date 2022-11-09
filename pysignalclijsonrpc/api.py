@@ -4,6 +4,7 @@ pysignalclijsonrpc.api
 
 from base64 import b64encode
 from io import BytesIO
+from os import remove as os_remove
 from uuid import uuid4
 
 from magic import from_buffer, from_file
@@ -133,12 +134,21 @@ class SignalCliJSONRPCApi:
                     raise SignalCliJSONRPCError(
                         f"signal-cli JSON RPC request failed: {error}"
                     ) from err
-        return self._jsonrpc(
-            method="send",
-            params={
-                "account": self._account,
-                "recipient": recipients,
-                "message": message,
-                "attachment": attachments,
-            },
-        ).get("timestamp")
+        try:
+            return self._jsonrpc(
+                method="send",
+                params={
+                    "account": self._account,
+                    "recipient": recipients,
+                    "message": message,
+                    "attachment": attachments,
+                },
+            ).get("timestamp")
+        except Exception as err:  # pylint: disable=broad-except
+            error = getattr(err, "message", repr(err))
+            raise SignalCliJSONRPCError(
+                f"signal-cli JSON RPC request failed: {error}"
+            ) from err
+        finally:
+            for attachment in attachments:
+                os_remove(attachment)

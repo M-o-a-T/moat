@@ -12,14 +12,15 @@ repos:
     rev: '1.7.4'
     hooks:
       - id: bandit
+        args:
+          - "-c"
+          - "pyproject.toml"
+        additional_dependencies:
+          - "bandit[toml]"
   - repo: https://github.com/pycqa/flake8
     rev: '5.0.4'
     hooks:
       - id: flake8
-  - repo: https://github.com/hadolint/hadolint
-    rev: 'v2.10.0'
-    hooks:
-      - id: hadolint-docker
   - repo: https://github.com/pycqa/pylint
     rev: 'v2.15.5'
     hooks:
@@ -27,3 +28,16 @@ repos:
         additional_dependencies:
           - requests
           - python-magic
+          - pook
+          - pytest
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        stages:
+          - commit
+        types:
+          - python
+        entry: pytest -W ignore::DeprecationWarning
+        language: system
+        pass_filenames: false

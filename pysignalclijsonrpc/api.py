@@ -41,8 +41,8 @@ class SignalCliJSONRPCApi:
         self._auth = auth
         self._verify_ssl = verify_ssl
 
-    def _jsonrpc(self, method: str, params: object = None):
-        request_id = str(uuid4())
+    def _jsonrpc(self, method: str, params: object = None, **kwargs):
+        request_id = kwargs.get("request_id") or str(uuid4())
         if not params:
             params = {}
         params.update({"account": self._account})
@@ -92,7 +92,8 @@ class SignalCliJSONRPCApi:
         filenames: list = None,
         attachments_as_bytes: list = None,
         cleanup_filenames: bool = False,
-    ):  # pylint: disable=too-many-arguments
+        **kwargs,
+    ):  # pylint: disable=too-many-arguments,too-many-locals
         """
         Send message.
 
@@ -103,6 +104,8 @@ class SignalCliJSONRPCApi:
             attachments_as_bytes (list): List of `bytearray` to send as attachment(s).
             cleanup_filenames (bool): Wether to remove files in `filenames`
                 after message(s) has been sent. Defaults to False.
+            **kwargs: Arbitrary keyword arguments passed to
+                :function:`pysignalclijsonrpc.api.SignalCliJSONRPCApi._jsonrpc`.
 
         Returns:
             timestamp (int): The message timestamp.
@@ -110,34 +113,22 @@ class SignalCliJSONRPCApi:
         Raises:
             :exception:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
         """
-        attachments = []
-        if filenames is not None:
-            for filename in filenames:
-                try:
+        try:
+            attachments = []
+            if filenames is not None:
+                for filename in filenames:
                     mime = from_file(filename, mime=True)
                     with open(filename, "rb") as f_h:
                         base64 = b64encode(f_h.read()).decode()
                     attachments.append(f"data:{mime};base64,{base64}")
-                except Exception as err:  # pylint: disable=broad-except
-                    error = getattr(err, "message", repr(err))
-                    raise SignalCliJSONRPCError(
-                        f"signal-cli JSON RPC request failed: {error}"
-                    ) from err
-        if attachments_as_bytes is not None:
-            for attachment in attachments_as_bytes:
-                try:
+            if attachments_as_bytes is not None:
+                for attachment in attachments_as_bytes:
                     attachment_io_bytes = BytesIO()
                     attachment_io_bytes.write(bytes(attachment))
                     mime = from_buffer(attachment_io_bytes.getvalue(), mime=True)
                     attachments.append(
                         f"data:{mime};base64,{b64encode(bytes(attachment)).decode()}"
                     )
-                except Exception as err:  # pylint: disable=broad-except
-                    error = getattr(err, "message", repr(err))
-                    raise SignalCliJSONRPCError(
-                        f"signal-cli JSON RPC request failed: {error}"
-                    ) from err
-        try:
             return self._jsonrpc(
                 method="send",
                 params={
@@ -146,6 +137,7 @@ class SignalCliJSONRPCApi:
                     "message": message,
                     "attachment": attachments,
                 },
+                **kwargs,
             ).get("timestamp")
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))

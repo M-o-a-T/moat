@@ -15,6 +15,9 @@ python-magic = "^0.4.27"
 profile = "black"
 src_paths = ["pysignalclijsonrpc"]
 
+[tool.bandit.assert_used]
+skips = ["tests/test_*.py"]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

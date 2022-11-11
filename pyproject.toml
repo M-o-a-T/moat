@@ -13,6 +13,7 @@ python-magic = "^0.4.27"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.0"
+pook = "^1.0.2"
 
 [tool.isort]
 profile = "black"

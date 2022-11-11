@@ -17,7 +17,7 @@ SIGNAL_CLI = SignalCliJSONRPCApi(
     endpoint="http://mock.pook/api/v1/rpc",
     account="42",
 )
-#  pylint: disable=line-too-long
+# pylint: disable=line-too-long
 IMAGE = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+P+/HgAFhAJ/wlseKgAAAABJRU5ErkJggg=="
 IMAGE_BYTEARRAY = bytearray(b64decode(IMAGE))
 
@@ -25,14 +25,15 @@ IMAGE_BYTEARRAY = bytearray(b64decode(IMAGE))
 @pook.activate
 def _send_message_ok(
     message: str = "",
+    mention: str = "",
     filenames: list = None,
     attachments_as_bytes: list = None,
     cleanup_filenames: bool = False,
-):
+):  # pylint: disable=unused-argument
     """
     Test successful SignalCliJSONRPCApi.send_message with params.
     """
-    #  pylint: disable=protected-access
+    # pylint: disable=protected-access
     pook.post(
         SIGNAL_CLI._endpoint,
         reply="200",
@@ -66,11 +67,12 @@ def _send_message_ok(
 @pook.activate
 def _send_message_error(
     message: str = "",
+    mention: str = "",
     filenames: list = None,
     attachments_as_bytes: list = None,
     cleanup_filenames: bool = False,
     **kwargs,
-):
+):  # pylint: disable=unused-argument
     """
     Test unsuccessful SignalCliJSONRPCApi.send_message with params.
     """
@@ -82,18 +84,8 @@ def _send_message_error(
             "jsonrpc": "2.0",
             "error": {
                 "code": -1,
-                "message": "Failed to send message",
-                "data": {
-                    "response": {
-                        "timestamp": 1,
-                        "results": [
-                            {
-                                "recipientAddress": {"uuid": None, "number": "+491337"},
-                                "type": "UNREGISTERED_FAILURE",
-                            }
-                        ],
-                    }
-                },
+                "message": kwargs.get("exception", "Failed to send message"),
+                "data": None,
             },
             "id": "test_send_message_error",
         },
@@ -123,6 +115,24 @@ def test_send_message_error_text():
     Test unsuccessful SignalCliJSONRPCApi.send_message with plain text message.
     """
     _send_message_error(message="Test")
+
+
+def test_send_message_ok_text_mention():
+    """
+    Test successful SignalCliJSONRPCApi.send_message with plain text message and mention.
+    """
+    _send_message_ok(message="Test", mention="0:0:+491337")
+
+
+def test_send_message_error_text_mention():
+    """
+    Test unsuccessful SignalCliJSONRPCApi.send_message with plain text message and mention.
+    """
+    _send_message_error(
+        message="Test",
+        mention="0:0:+491337",
+        exception="Invalid mention syntax",
+    )
 
 
 def _send_message_ok_filenames(**kwargs):

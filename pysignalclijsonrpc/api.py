@@ -89,6 +89,7 @@ class SignalCliJSONRPCApi:
         self,
         message: str,
         recipients: list,
+        mention: str = "",
         filenames: list = None,
         attachments_as_bytes: list = None,
         cleanup_filenames: bool = False,
@@ -100,9 +101,10 @@ class SignalCliJSONRPCApi:
         Args:
             message (str): Message to be sent.
             recipients (list): List of recipients.
-            filenames (list): List of `str` w/ filenames to send as attachment(s).
-            attachments_as_bytes (list): List of `bytearray` to send as attachment(s).
-            cleanup_filenames (bool): Wether to remove files in `filenames`
+            mention (str, optional): Mention string (`start:end:recipientNumber`).
+            filenames (list, optional): List of `str` w/ filenames to send as attachment(s).
+            attachments_as_bytes (list, optional): List of `bytearray` to send as attachment(s).
+            cleanup_filenames (bool, optional): Wether to remove files in `filenames`
                 after message(s) has been sent. Defaults to False.
             **kwargs: Arbitrary keyword arguments passed to
                 :function:`pysignalclijsonrpc.api.SignalCliJSONRPCApi._jsonrpc`.
@@ -129,14 +131,17 @@ class SignalCliJSONRPCApi:
                     attachments.append(
                         f"data:{mime};base64,{b64encode(bytes(attachment)).decode()}"
                     )
+            params = {
+                "account": self._account,
+                "recipient": recipients,
+                "message": message,
+                "attachment": attachments,
+            }
+            if mention:
+                params.update({"mention": mention})
             return self._jsonrpc(
                 method="send",
-                params={
-                    "account": self._account,
-                    "recipient": recipients,
-                    "message": message,
-                    "attachment": attachments,
-                },
+                params=params,
                 **kwargs,
             ).get("timestamp")
         except Exception as err:  # pylint: disable=broad-except

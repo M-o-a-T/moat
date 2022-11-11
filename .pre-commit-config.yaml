@@ -38,6 +38,6 @@ repos:
           - commit
         types:
           - python
-        entry: pytest -W ignore::DeprecationWarning
+        entry: pytest tests -v -W ignore::DeprecationWarning
         language: system
         pass_filenames: false

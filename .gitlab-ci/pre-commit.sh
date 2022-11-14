@@ -5,11 +5,17 @@ set -e
 apk --no-cache --quiet --no-progress add \
     py3-pip \
     py3-virtualenv \
+    py3-magic \
     git
-virtualenv "${VENV}"
+virtualenv --system-site-packages "${VENV}"
 export PATH="${VENV}"/bin:"${PATH}"
 pip3 install \
     pre-commit \
-    pytest
+    pytest-cov \
+    pook \
+    jmespath
+pip3 install .
 git fetch origin
 pre-commit run --from-ref origin/"${CI_DEFAULT_BRANCH}" --to-ref HEAD
+coverage report
+coverage xml

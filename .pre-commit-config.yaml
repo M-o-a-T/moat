@@ -30,6 +30,7 @@ repos:
           - python-magic
           - pook
           - pytest
+          - jmespath
   - repo: local
     hooks:
       - id: pytest
@@ -38,6 +39,6 @@ repos:
           - commit
         types:
           - python
-        entry: pytest tests -v -W ignore::DeprecationWarning
+        entry: pytest
         language: system
         pass_filenames: false

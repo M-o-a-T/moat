@@ -19,6 +19,15 @@ pre-commit:
     policy: pull-push
   script:
     - .gitlab-ci/pre-commit.sh
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+  artifacts:
+    paths:
+      - coverage.xml
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+      junit: pytest.xml
 
 release-pypi:
   stage: release

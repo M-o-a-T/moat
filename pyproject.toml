@@ -10,18 +10,31 @@ repository = "https://gitlab.com/morph027/pysignalclijsonrpc"
 python = "^3.8"
 requests = "^2.28.1"
 python-magic = "^0.4.27"
+jmespath = "^1.0.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.0"
 pook = "^1.0.2"
+pytest-cov = "^4.0.0"
 
 [tool.isort]
 profile = "black"
 src_paths = ["pysignalclijsonrpc"]
 
+[tool.pytest.ini_options]
+addopts = "--junitxml=pytest.xml --cov=pysignalclijsonrpc --cov-report=term-missing -v -W ignore::DeprecationWarning"
+testpaths = [
+  "tests",
+]
+pythonpath = [
+  ".",
+]
+
 [tool.bandit.assert_used]
 skips = ["tests/test_*.py"]
 
 [build-system]
-requires = ["poetry-core"]
+requires = [
+  "poetry-core",
+]
 build-backend = "poetry.core.masonry.api"

@@ -26,9 +26,9 @@ IMAGE_BYTEARRAY = bytearray(b64decode(IMAGE))
 def _send_message_ok(
     message: str = "",
     mention: str = "",
-    filenames: list = None,
+    attachments_as_files: list = None,
     attachments_as_bytes: list = None,
-    cleanup_filenames: bool = False,
+    cleanup_attachments: bool = False,
 ):  # pylint: disable=unused-argument
     """
     Test successful SignalCliJSONRPCApi.send_message with params.
@@ -55,9 +55,9 @@ def _send_message_ok(
         SIGNAL_CLI.send_message(
             message=message,
             recipients="+491337",
-            filenames=filenames,
+            attachments_as_files=attachments_as_files,
             attachments_as_bytes=attachments_as_bytes,
-            cleanup_filenames=cleanup_filenames,
+            cleanup_attachments=cleanup_attachments,
         )
         == 1
     )
@@ -68,9 +68,9 @@ def _send_message_ok(
 def _send_message_error(
     message: str = "",
     mention: str = "",
-    filenames: list = None,
+    attachments_as_files: list = None,
     attachments_as_bytes: list = None,
-    cleanup_filenames: bool = False,
+    cleanup_attachments: bool = False,
     **kwargs,
 ):  # pylint: disable=unused-argument
     """
@@ -94,9 +94,9 @@ def _send_message_error(
         SIGNAL_CLI.send_message(
             message=message,
             recipients="+491337",
-            filenames=filenames,
+            attachments_as_files=attachments_as_files,
             attachments_as_bytes=attachments_as_bytes,
-            cleanup_filenames=cleanup_filenames,
+            cleanup_attachments=cleanup_attachments,
             request_id="test_send_message_error",
         )
     assert kwargs.get("exception", "Failed to send message") in str(exc_info.value)
@@ -135,38 +135,40 @@ def test_send_message_error_text_mention():
     )
 
 
-def _send_message_ok_filenames(**kwargs):
+def _send_message_ok_attachments_as_files(**kwargs):
     """
-    Test successful SignalCliJSONRPCApi.send_message with filenames and params.
+    Test successful SignalCliJSONRPCApi.send_message with attachments_as_files and params.
     """
     _, filename = mkstemp(suffix="png")
     with open(filename, "wb") as f_h:
         f_h.write(b64decode(IMAGE))
-    _send_message_ok(filenames=[filename], **kwargs)
+    _send_message_ok(attachments_as_files=[filename], **kwargs)
     return filename
 
 
-def test_send_message_ok_filenames_keep():
+def test_send_message_ok_attachments_as_files_keep():
     """
-    Test successful SignalCliJSONRPCApi.send_message with filenames and keep files.
+    Test successful SignalCliJSONRPCApi.send_message with attachments_as_files and keep files.
     """
-    filename = _send_message_ok_filenames()
+    filename = _send_message_ok_attachments_as_files()
     assert os.path.exists(filename)
 
 
-def test_send_message_ok_filenames_cleanup():
+def test_send_message_ok_attachments_as_files_cleanup():
     """
-    Test successful SignalCliJSONRPCApi.send_message with filenames and cleanup files.
+    Test successful SignalCliJSONRPCApi.send_message with attachments_as_files and cleanup files.
     """
-    filename = _send_message_ok_filenames(cleanup_filenames=True)
+    filename = _send_message_ok_attachments_as_files(cleanup_attachments=True)
     assert not os.path.exists(filename)
 
 
-def test_send_message_error_filenames():
+def test_send_message_error_attachments_as_files():
     """
-    Test unsuccessful SignalCliJSONRPCApi.send_message with filenames.
+    Test unsuccessful SignalCliJSONRPCApi.send_message with attachments_as_files.
     """
-    _send_message_error(filenames=["/foo/bar.gif"], exception="FileNotFoundError")
+    _send_message_error(
+        attachments_as_files=["/foo/bar.gif"], exception="FileNotFoundError"
+    )
 
 
 def test_send_message_ok_attachments_as_bytes():

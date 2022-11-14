@@ -16,6 +16,6 @@ pip3 install \
     jmespath
 pip3 install .
 git fetch origin
-pre-commit run --from-ref origin/"${CI_DEFAULT_BRANCH}" --to-ref HEAD
+pre-commit run -a
 coverage report
 coverage xml

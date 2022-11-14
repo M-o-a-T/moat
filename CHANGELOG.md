@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
-## 22.11.9 - 2022-11-
+## 22.11.9 - 2022-11-14
 ### Changes
 - add `list_groups`
 - add `get_group`

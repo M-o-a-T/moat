@@ -29,6 +29,19 @@ pre-commit:
         path: coverage.xml
       junit: pytest.xml
 
+sphinx-build:
+  stage: test
+  image: python:3.10-alpine
+  variables:
+    VENV: ${CI_PROJECT_DIR}/.venv
+  cache:
+    key: pre-commit
+    paths:
+      - ${VENV}
+    policy: pull-push
+  script:
+    - .gitlab-ci/sphinx-build.sh
+
 release-pypi:
   stage: release
   image: alpine:latest

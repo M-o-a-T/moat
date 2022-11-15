@@ -5,6 +5,7 @@ description = "Python API client for signal-cli JSON-RPC"
 authors = ["Stefan Heitmüller <stefan.heitmueller@gmx.com>"]
 readme = "README.md"
 repository = "https://gitlab.com/morph027/pysignalclijsonrpc"
+documentation = "https://pysignalclijsonrpc.readthedocs.io/"
 
 [tool.poetry.dependencies]
 python = "^3.8"

@@ -60,3 +60,7 @@ signal_cli_rest_api.send_message("Test")
 ```python
 signal_cli_rest_api.send_message("Test", filenames=["/tmp/some-image.png"])
 ```
+
+## Support
+
+If you like what i'm doing, you can support me via [Paypal](https://paypal.me/morph027), [Ko-Fi](https://ko-fi.com/morph027) or [Patreon](https://www.patreon.com/morph027).

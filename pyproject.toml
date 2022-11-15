@@ -17,6 +17,13 @@ pytest = "^7.2.0"
 pook = "^1.0.2"
 pytest-cov = "^4.0.0"
 
+
+[tool.poetry.group.docs.dependencies]
+furo = "^2022.9.29"
+sphinx-autobuild = "^2021.3.14"
+sphinx-copybutton = "^0.5.0"
+sphinx-inline-tabs = "^2022.1.2b11"
+
 [tool.isort]
 profile = "black"
 src_paths = ["pysignalclijsonrpc"]

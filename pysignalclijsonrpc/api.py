@@ -44,6 +44,18 @@ class SignalCliJSONRPCApi:
         self._verify_ssl = verify_ssl
 
     def _jsonrpc(self, method: str, params: object = None, **kwargs):
+        """
+        Args:
+            method (str): JSON-RPC method. Equals signal-cli command.
+            params (dict): Method parameters.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            result (dict): The JSON-RPC result.
+
+        Raises:
+            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+        """
         request_id = kwargs.get("request_id") or str(uuid4())
         if not params:
             params = {}
@@ -83,7 +95,7 @@ class SignalCliJSONRPCApi:
             version (str): Version of signal-cli
 
         Raises:
-            :exception:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
         """
         return self._jsonrpc(method="version").get("version")
 
@@ -109,13 +121,13 @@ class SignalCliJSONRPCApi:
             cleanup_attachments (bool, optional): Wether to remove files in `attachments_as_files`
                 after message(s) has been sent. Defaults to False.
             **kwargs: Arbitrary keyword arguments passed to
-                :function:`pysignalclijsonrpc.api.SignalCliJSONRPCApi._jsonrpc`.
+                :meth:`._jsonrpc`.
 
         Returns:
             timestamp (int): The message timestamp.
 
         Raises:
-            :exception:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
         """
         try:
             attachments = []
@@ -187,13 +199,13 @@ class SignalCliJSONRPCApi:
             message_expiration_timer (int, optional): Message expiration timer in seconds.
                 Defaults to 0 (disabled).
             **kwargs: Arbitrary keyword arguments passed to
-                :function:`pysignalclijsonrpc.api.SignalCliJSONRPCApi._jsonrpc`.
+                :meth:`._jsonrpc`.
 
         Returns:
             group_id (str): The group id.
 
         Raises:
-            :exception:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
         """
         try:
             params = {
@@ -228,13 +240,13 @@ class SignalCliJSONRPCApi:
             delete (bool, optional): Also delete group.
                 Defaults to `False`.
             **kwargs: Arbitrary keyword arguments passed to
-                :function:`pysignalclijsonrpc.api.SignalCliJSONRPCApi._jsonrpc`.
+                :meth:`._jsonrpc`.
 
         Returns:
             result (dict)
 
         Raises:
-            :exception:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
         """
         try:
             params = {
@@ -257,13 +269,13 @@ class SignalCliJSONRPCApi:
 
         Args:
              **kwargs: Arbitrary keyword arguments passed to
-                 :function:`pysignalclijsonrpc.api.SignalCliJSONRPCApi._jsonrpc`.
+                 :meth:`._jsonrpc`.
 
          Returns:
              result (list)
 
          Raises:
-             :exception:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+             :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
         """
         try:
             res = self._jsonrpc(
@@ -288,7 +300,7 @@ class SignalCliJSONRPCApi:
             result (dict)
 
         Raises:
-            :exception:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
         """
         try:
             groups = self.list_groups()
@@ -310,10 +322,10 @@ class SignalCliJSONRPCApi:
         Args:
             uri (str): Group invite link like https://signal.group/#...
             **kwargs: Arbitrary keyword arguments passed to
-                :function:`pysignalclijsonrpc.api.SignalCliJSONRPCApi._jsonrpc`.
+                :meth:`._jsonrpc`.
 
         Raises:
-            :exception:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
         """
         try:
             params = {
@@ -341,7 +353,7 @@ class SignalCliJSONRPCApi:
             result (bool): True for success.
 
         Raises:
-            :exception:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
         """
         try:
             params = {}
@@ -382,16 +394,16 @@ class SignalCliJSONRPCApi:
                 Defaults to `False`.
             groupid (str, optional): Specify the recipient group ID.
             **kwargs: Arbitrary keyword arguments passed to
-                :function:`pysignalclijsonrpc.api.SignalCliJSONRPCApi._jsonrpc`.
+                :meth:`._jsonrpc`.
 
         Returns:
             timestamp (int): Timestamp of reaction.
 
         Raises:
-            :exception:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
 
         Raises:
-            :exception:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
         """
         try:
             params = {
@@ -418,13 +430,13 @@ class SignalCliJSONRPCApi:
         Args:
             recipients (list): List of `str` where each item is a phone number.
             **kwargs: Arbitrary keyword arguments passed to
-                :function:`pysignalclijsonrpc.api.SignalCliJSONRPCApi._jsonrpc`.
+                :meth:`._jsonrpc`.
 
         Returns:
             result (dict): The network result.
 
         Raises:
-            :exception:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
         """
         try:
             recipients[:] = [re_sub("^([1-9])[0-9]+$", r"+\1", s) for s in recipients]
@@ -451,13 +463,13 @@ class SignalCliJSONRPCApi:
             voice (bool): The verification should be done over voice, not SMS.
                 Defaults to `False`.
             **kwargs: Arbitrary keyword arguments passed to
-                :function:`pysignalclijsonrpc.api.SignalCliJSONRPCApi._jsonrpc`.
+                :meth:`._jsonrpc`.
 
         Returns:
             result: The network result. `{}` if successful.
 
         Raises:
-            :exception:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
         """
         try:
             params = {}
@@ -480,13 +492,13 @@ class SignalCliJSONRPCApi:
             verification_code (str): The verification code you received via sms or voice call.
             pin (str, optional): The registration lock PIN, that was set by the user.
             **kwargs: Arbitrary keyword arguments passed to
-                :function:`pysignalclijsonrpc.api.SignalCliJSONRPCApi._jsonrpc`.
+                :meth:`pysignalclijsonrpc.SignalCliJSONRPCApi._jsonrpc`.
 
         Returns:
             result: The network result. `{}` if successful.
 
         Raises:
-            :exception:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
         """
         try:
             params = {

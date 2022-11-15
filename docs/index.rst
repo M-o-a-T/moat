@@ -14,6 +14,7 @@ Welcome to pysignalclijsonrpc documentation!
     :hidden:
     :caption: Usage
 
+    installation/index
     usage/index
     autodoc/index
 

@@ -1,3 +1,8 @@
 Usage
 =====
 
+.. toctree::
+    :titlesonly:
+    :glob:
+
+    *

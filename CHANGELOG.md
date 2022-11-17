@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+## 22.11.11 - 2022-11-17
+### Added
+- added `avatar` via RFC 2397 data url scheme to `update_group` and `update_profile`
+
 ## 22.11.10 - 2022-11-15
 ### Added
 - docs on https://pysignalclijsonrpc.readthedocs.io/

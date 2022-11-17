@@ -52,10 +52,8 @@ class Model:
 
     def _setup(self):
         hardware = self.hardware
-        data = self.data
+        data = iter(self.data)
         per_hour = self.per_hour
-
-        steps = len(data)
 
         # ORtools
         self.solver = solver = pywraplp.Solver("B", pywraplp.Solver.GLOP_LINEAR_PROGRAMMING)
@@ -74,9 +72,15 @@ class Model:
         c.ac = []
         c.price = []
 
-        for i in range(steps):
+        i = -1
+        while True:
+            i += 1
+
             # input constraints
-            dt = data[i]
+            try:
+                dt = next(data)
+            except StopIteration:
+                break
             if dt.price_buy == dt.price_sell:
                 dt.price_buy *= 1.001
             elif dt.price_buy < dt.price_sell:

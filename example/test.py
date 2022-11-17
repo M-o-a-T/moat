@@ -5,7 +5,7 @@
 from moat.bms.sched import Hardware,FutureData,Model
 
 def F(price, load, pv):
-    return FutureData(price_buy=(price+.2)*1.2, price_sell=price, load=load*1000, pv=pv*1000)
+    return FutureData(price_buy=(price+.2)*1.2, price_sell=price, load=load, pv=pv)
 
 data = [
     F(0.20, 1.0, 0.0), # 0
@@ -34,8 +34,8 @@ data = [
     F(0.25, 1.0, 0.0), # 23
 ]
 
-b = Hardware(capacity=14000, batt_max_chg=5000, batt_max_dis=8000,
-        inv_max_dis=10000, inv_max_chg=10000)
+b = Hardware(capacity=14, batt_max_chg=5, batt_max_dis=8,
+        inv_max_dis=10, inv_max_chg=10)
 soc = 0.3
 msum = 0
 for n in range(100):

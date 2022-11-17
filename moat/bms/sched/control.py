@@ -74,7 +74,11 @@ class Model:
         c.battery = []
         c.dc = []
         c.ac = []
+        self.g_ins = []
+        self.g_outs = []
+        self.caps = []
         c.price = []
+        self.moneys = []
 
         i = -1
         _pr = None
@@ -98,6 +102,7 @@ class Model:
 
             # future battery charge
             cap = solver.NumVar(hardware.capacity * hardware.batt_min_soc, hardware.capacity * hardware.batt_max_soc, f"b{i}")
+            self.caps.append(cap)
 
             # battery charge/discharge
             b_chg = solver.NumVar(0, hardware.batt_max_chg / per_hour, f"bc{i}")
@@ -116,9 +121,12 @@ class Model:
             # grid
             g_in = solver.NumVar(0, hardware.grid_max_in / per_hour, f"gi{i}")
             g_out = solver.NumVar(0, hardware.grid_max_out / per_hour, f"go{i}")
+            self.g_ins.append(g_in)
+            self.g_outs.append(g_out)
 
             # income to maximize
             money = solver.NumVar(-solver.infinity(), solver.infinity(), f"pr{i}")
+            self.moneys.append(money)
 
             # ### Constraints (actually Relationships, as they're all equalities)
 
@@ -189,4 +197,21 @@ class Model:
             (self.g_in.solution_value() - self.g_out.solution_value()) * self.per_hour,
             self.cap.solution_value() / self.hardware.capacity,
             self.money.solution_value(),
+        )
+
+    def proposed(self, charge):
+        """
+        As "propose" but iterates over results
+        """
+        charge *= self.hardware.capacity
+        self.constr_init.SetLb(charge)
+        self.constr_init.SetUb(charge)
+
+        self.solver.Solve()
+
+        for g_in,g_out,cap,money in zip(self.g_ins,self.g_outs,self.caps,self.moneys):
+            yield (
+                (g_in.solution_value() - g_out.solution_value()) * self.per_hour,
+                cap.solution_value() / self.hardware.capacity,
+                money.solution_value(),
         )

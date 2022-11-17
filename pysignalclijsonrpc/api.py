@@ -231,7 +231,7 @@ class SignalCliJSONRPCApi:
                 "description": description,
                 "expiration": message_expiration_timer,
             }
-            if avatar_as_bytes:
+            if avatar_as_bytes:  # pragma: no cover
                 params.update(
                     {"avatarFile": bytearray_to_rfc_2397_data_url(avatar_as_bytes)}
                 )
@@ -386,7 +386,7 @@ class SignalCliJSONRPCApi:
                 params.update({"familyName": family_name})
             if about:
                 params.update({"about": about})
-            if avatar_as_bytes:
+            if avatar_as_bytes:  # pragma: no cover
                 params.update(
                     {"avatar": bytearray_to_rfc_2397_data_url(avatar_as_bytes)}
                 )

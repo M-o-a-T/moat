@@ -2,7 +2,7 @@
 
 # Invent a typical day
 
-from moat.bms.scheduler import Hardware,FutureData,Model
+from moat.bms.sched import Hardware,FutureData,Model
 
 def F(price, load, pv):
     return FutureData(price_buy=(price+.2)*1.2, price_sell=price, load=load*1000, pv=pv*1000)

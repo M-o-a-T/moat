@@ -1,0 +1,7 @@
+capacity: 14
+batt_max_chg: 5
+batt_max_dis: 8
+inv_max_dis: 10
+inv_max_chg: 10
+buy_factor: 1.2
+buy_const: 0.24

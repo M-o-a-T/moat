@@ -27,10 +27,10 @@ class Hardware:
     batt_min_soc: float = 0.25
     batt_max_chg: float = 1
     batt_max_dis: float = 1
-    batt_eff_chg: float = 0.95
-    batt_eff_dis: float = 0.95
-    inv_max_chg: float = 10000
-    inv_max_dis: float = 10000
+    batt_eff_chg: float = 0.98
+    batt_eff_dis: float = 0.98
+    inv_max_chg: float = 100
+    inv_max_dis: float = 100
     inv_eff_chg: float = 0.9
     inv_eff_dis: float = 0.9
     grid_max_in: float = 99999

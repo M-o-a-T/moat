@@ -34,7 +34,8 @@ data = [
     F(0.25, 1.0, 0.0), # 23
 ]
 
-b = Hardware(capacity=14000, batt_max_chg=5000, batt_max_dis=8000)
+b = Hardware(capacity=14000, batt_max_chg=5000, batt_max_dis=8000,
+        inv_max_dis=10000, inv_max_chg=10000)
 soc = 0.3
 msum = 0
 for n in range(100):

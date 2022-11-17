@@ -26,8 +26,11 @@ class Model:
 
     Initial input:
     * hardware model
-    * future data points
-    * periods per hour
+    * future data points: list of FutureData items
+    * periods per hour (default 1)
+    plus
+    * assumed cost of low battery (ongoing, default 0.0)
+    * assumed cost of low battery (final, default 0.0)
 
     Solver input:
     * current charge level (SoC)
@@ -82,7 +85,7 @@ class Model:
             # ### Variables to consider
 
             # future battery charge
-            cap = solver.NumVar(hardware.capacity * 0.05, hardware.capacity * 0.95, f"b{i}")
+            cap = solver.NumVar(hardware.capacity * hardware.batt_min_soc, hardware.capacity * hardware.batt_max_soc, f"b{i}")
 
             # battery charge/discharge
             b_chg = solver.NumVar(0, hardware.batt_max_chg / per_hour, f"bc{i}")

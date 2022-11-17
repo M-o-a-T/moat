@@ -8,6 +8,8 @@ class Hardware:
     """Stores information about the hardware used.
 
     capacity: useable battery capacity in Wh
+    batt_max_soc: max battery SoC, default 0.95
+    batt_min_soc: min battery SoC, default 0.25
     batt_max_chg: max battery charge power in W
     batt_max_dis: max battery discharge power in W
     batt_eff_chg: charger efficienty (0…1)
@@ -21,6 +23,8 @@ class Hardware:
     """
 
     capacity: float = 0.0
+    batt_max_soc: float = 0.95
+    batt_min_soc: float = 0.25
     batt_max_chg: float = 1
     batt_max_dis: float = 1
     batt_eff_chg: float = 0.95

@@ -7,9 +7,11 @@ from io import BytesIO
 from os import remove as os_remove
 from re import sub as re_sub
 from uuid import uuid4
+from warnings import warn
 
 from jmespath import search as j_search
 from magic import from_buffer, from_file
+from packaging.version import parse as version_parse
 from requests import Session
 
 
@@ -211,6 +213,7 @@ class SignalCliJSONRPCApi:
             message_expiration_timer (int, optional): Message expiration timer in seconds.
                 Defaults to 0 (disabled).
             avatar_as_bytes (bytearray, optional): `bytearray` containing image to set as avatar.
+                Supported since signal-cli 0.11.6.
             **kwargs: Arbitrary keyword arguments passed to
                 :meth:`._jsonrpc`.
 
@@ -232,9 +235,12 @@ class SignalCliJSONRPCApi:
                 "expiration": message_expiration_timer,
             }
             if avatar_as_bytes:  # pragma: no cover
-                params.update(
-                    {"avatarFile": bytearray_to_rfc_2397_data_url(avatar_as_bytes)}
-                )
+                if version_parse(self.version) < version_parse("0.11.6"):
+                    warn("'avatar_as_bytes' not supported (>= 0.11.6), skipping.")
+                else:
+                    params.update(
+                        {"avatarFile": bytearray_to_rfc_2397_data_url(avatar_as_bytes)}
+                    )
             ret = self._jsonrpc(method="updateGroup", params=params, **kwargs)
             return ret.get("groupId")
         except Exception as err:  # pylint: disable=broad-except
@@ -371,6 +377,7 @@ class SignalCliJSONRPCApi:
             family_name (str, optional): Family name.
             about (str, optional): About information.
             avatar_as_bytes (bytearray, optional): `bytearray` containing image to set as avatar.
+                Supported since signal-cli 0.11.6.
 
         Returns:
             result (bool): True for success.
@@ -387,9 +394,12 @@ class SignalCliJSONRPCApi:
             if about:
                 params.update({"about": about})
             if avatar_as_bytes:  # pragma: no cover
-                params.update(
-                    {"avatar": bytearray_to_rfc_2397_data_url(avatar_as_bytes)}
-                )
+                if version_parse(self.version) < version_parse("0.11.6"):
+                    warn("'avatar_as_bytes' not supported (>= 0.11.6), skipping.")
+                else:
+                    params.update(
+                        {"avatar": bytearray_to_rfc_2397_data_url(avatar_as_bytes)}
+                    )
             if params:
                 self._jsonrpc(method="updateProfile", params=params, **kwargs)
             return True

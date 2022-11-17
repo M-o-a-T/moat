@@ -20,7 +20,7 @@ You can set/update a group avatar using `avatar` parameter.
    .. code-block:: python
 
       with open("image-from-disk.png", "rb") as f:
-          avatar = f.read()
+          avatar = bytearray(f.read())
 
 If you want to use an remote image file, you can leverage `requests`:
 

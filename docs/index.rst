@@ -18,9 +18,11 @@ Welcome to pysignalclijsonrpc documentation!
     usage/index
     autodoc/index
 
+
+``pysignalclijsonrpc`` is a Python package providing access to `signal-cli JSON-RPC service <https://github.com/AsamK/signal-cli/wiki/JSON-RPC-service>`_.
+
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`

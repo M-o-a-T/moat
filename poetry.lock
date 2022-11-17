@@ -262,7 +262,7 @@ six = ">=1.8.0"
 name = "packaging"
 version = "21.3"
 description = "Core utilities for Python packages"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 
@@ -317,7 +317,7 @@ plugins = ["importlib-metadata"]
 name = "pyparsing"
 version = "3.0.9"
 description = "pyparsing module - Classes and methods to define and execute parsing grammars"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6.8"
 
@@ -640,7 +640,7 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "a713560cd92ef3f559327816730d6dd4d50876b8c408f5192ee2d58c022cf7cc"
+content-hash = "c0a2f23ac10b3dbae1cbef037138a70fed217ae2b65ba484d07ca347e3acedf8"
 
 [metadata.files]
 alabaster = [

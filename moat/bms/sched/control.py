@@ -11,6 +11,8 @@ from ortools.linear_solver import pywraplp
 class FutureData:
     """
     Collects projected data at some point in time.
+
+    Prices are per Wh.
     """
 
     price_buy: float = 0.0
@@ -120,7 +122,7 @@ class Model:
 
             # ### Constraints (actually Relationships, as they're all equalities)
 
-            # Battery. old + charge - discharge == new, so … - new == 0.
+            # Battery charge. old + charge - discharge == new, so … - new == 0.
             _bt = solver.Constraint(0, 0)
             c.battery.append(_bt)
             _bt.SetCoefficient(cap_prev, 1)

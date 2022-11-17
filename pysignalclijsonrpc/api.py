@@ -13,6 +13,22 @@ from magic import from_buffer, from_file
 from requests import Session
 
 
+def bytearray_to_rfc_2397_data_url(byte_array: bytearray):
+    """
+    Convert bytearray to RFC 2397 data url.
+
+    Args:
+        byte_array (bytearray)
+
+    Returns:
+        result (str): RFC 2397 data url
+    """
+    attachment_io_bytes = BytesIO()
+    attachment_io_bytes.write(bytes(byte_array))
+    mime = from_buffer(attachment_io_bytes.getvalue(), mime=True)
+    return f"data:{mime};base64,{b64encode(bytes(byte_array)).decode()}"
+
+
 class SignalCliJSONRPCError(Exception):
     """
     SignalCliJSONRPCError
@@ -139,12 +155,7 @@ class SignalCliJSONRPCApi:
                     attachments.append(f"data:{mime};base64,{base64}")
             if attachments_as_bytes is not None:
                 for attachment in attachments_as_bytes:
-                    attachment_io_bytes = BytesIO()
-                    attachment_io_bytes.write(bytes(attachment))
-                    mime = from_buffer(attachment_io_bytes.getvalue(), mime=True)
-                    attachments.append(
-                        f"data:{mime};base64,{b64encode(bytes(attachment)).decode()}"
-                    )
+                    attachments.append(bytearray_to_rfc_2397_data_url(attachment))
             params = {
                 "account": self._account,
                 "recipient": recipients,
@@ -180,6 +191,7 @@ class SignalCliJSONRPCApi:
         admins: list = None,
         description: str = "",
         message_expiration_timer: int = 0,
+        avatar_as_bytes: bytearray = bytearray(),
         **kwargs,
     ):  # pylint: disable=too-many-arguments
         """
@@ -198,6 +210,7 @@ class SignalCliJSONRPCApi:
             description (str, optional): Group description.
             message_expiration_timer (int, optional): Message expiration timer in seconds.
                 Defaults to 0 (disabled).
+            avatar_as_bytes (bytearray, optional): `bytearray` containing image to set as avatar.
             **kwargs: Arbitrary keyword arguments passed to
                 :meth:`._jsonrpc`.
 
@@ -218,6 +231,10 @@ class SignalCliJSONRPCApi:
                 "description": description,
                 "expiration": message_expiration_timer,
             }
+            if avatar_as_bytes:
+                params.update(
+                    {"avatarFile": bytearray_to_rfc_2397_data_url(avatar_as_bytes)}
+                )
             ret = self._jsonrpc(method="updateGroup", params=params, **kwargs)
             return ret.get("groupId")
         except Exception as err:  # pylint: disable=broad-except
@@ -339,7 +356,12 @@ class SignalCliJSONRPCApi:
             ) from err
 
     def update_profile(
-        self, given_name: str = "", family_name: str = "", about: str = "", **kwargs
+        self,
+        given_name: str = "",
+        family_name: str = "",
+        about: str = "",
+        avatar_as_bytes: bytearray = bytearray(),
+        **kwargs,
     ):
         """
         Update profile.
@@ -348,6 +370,7 @@ class SignalCliJSONRPCApi:
             given_name (str, optional): Given name.
             family_name (str, optional): Family name.
             about (str, optional): About information.
+            avatar_as_bytes (bytearray, optional): `bytearray` containing image to set as avatar.
 
         Returns:
             result (bool): True for success.
@@ -363,6 +386,10 @@ class SignalCliJSONRPCApi:
                 params.update({"familyName": family_name})
             if about:
                 params.update({"about": about})
+            if avatar_as_bytes:
+                params.update(
+                    {"avatar": bytearray_to_rfc_2397_data_url(avatar_as_bytes)}
+                )
             if params:
                 self._jsonrpc(method="updateProfile", params=params, **kwargs)
             return True

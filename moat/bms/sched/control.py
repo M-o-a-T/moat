@@ -43,10 +43,12 @@ class Model:
     the start of the next period.
     """
 
-    def __init__(self, hardware, data, per_hour=1):
+    def __init__(self, hardware, data, per_hour=1, chg_inter=0, chg_last=0):
         self.hardware = hardware
         self.data = data
         self.per_hour = per_hour
+        self.chg_inter = chg_inter
+        self.chg_last = chg_last
 
         self._setup()
 
@@ -73,8 +75,12 @@ class Model:
         c.price = []
 
         i = -1
+        _pr = None
         while True:
             i += 1
+            if i:
+                # Attribute a fake monetary value of keeping the battery charged
+                _pr.SetCoefficient(cap, self.chg_inter / hardware.capacity)
 
             # input constraints
             try:
@@ -157,6 +163,10 @@ class Model:
                 self.g_in, self.g_out = g_in, g_out
                 self.cap = cap
                 self.money = money
+
+        if _pr is not None:
+            # Attribute a fake monetary value of ending with a charged battery
+            _pr.SetCoefficient(cap, self.chg_last / hardware.capacity)
 
         self.objective.SetMaximization()
 

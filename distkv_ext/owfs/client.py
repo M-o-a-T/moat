@@ -1,7 +1,7 @@
 # command line interface
 
 import asyncclick as click
-from moat.util import yprint, attrdict, NotGiven, P, Path, as_service
+from moat.util import yprint, attrdict, NotGiven, P, Path, as_service, attr_args
 from distkv.data import data_get, node_attr
 
 import logging
@@ -115,42 +115,26 @@ async def attr__(obj, device, family, write, attr, interval, path, attr_):
 @cli.command("set")
 @click.option("-d", "--device", help="Device to modify.")
 @click.option("-f", "--family", help="Device family to modify.")
-@click.option("-v", "--value", help="The attribute to set or delete")
-@click.option("-e", "--eval", "eval_", is_flag=True, help="Whether to eval the value")
-@click.option("-s", "--split", is_flag=True, help="Split the value into words")
-@click.option("-a", "--attr", "attr_", help="The attribute to modify")
-@click.argument("name", nargs=1, default=":")
+@attr_args
+@click.argument("subpath", nargs=1, type=P, default=P(":"))
 @click.pass_obj
-async def set_(obj, device, family, value, eval_, name, split, attr_):
+async def set_(obj, device, family, subpath, vars_, eval_, path_):
     """Set or delete some random attribute.
 
-    For deletion, use '-ev-'.
+    For deletion, use '-e ATTR -'.
     """
-    name = P(name)
-    if not attr_:
-        raise click.UsageError("You need to name the attribute")
-    attr_ = P(attr_)
     if (device is not None) + (family is not None) != 1:
         raise click.UsageError("Either family or device code must be given")
-    if not len(name):
-        raise click.UsageError("You need to name the attribute")
-    if eval_ and split:
-        raise click.UsageError("Split and eval can't be used together")
 
     if family:
         fd = (int(family, 16),)
-        if len(name):
+        if len(subpath):
             raise click.UsageError("You can't use a subpath here.")
     else:
         f, d = device.split(".", 2)[0:2]
         fd = (int(f, 16), int(d, 16))
 
-    if eval_ and value == "-":
-        value = NotGiven
-
-    res = await node_attr(
-        obj, obj.cfg.owfs.prefix + fd + name, attr_, value=value, eval_=eval_, split_=split
-    )
+    res = await node_attr(obj, obj.cfg.owfs.prefix + fd + subpath, vars_, eval_, path_)
     if res and obj.meta:
         yprint(res, stream=obj.stdout)
 

@@ -1,0 +1,168 @@
+ValueTable	Value	Translation
+ak_externe_vorgabe_t	0	Off
+ak_externe_vorgabe_t	1	Temp.
+ak_externe_vorgabe_t	2	Power
+ak_externe_vorgabe_t	3	Modbus
+ak_externe_vorgabe_t	4	Modbus
+ak_anf_bl_ursache_t	1	Normal operation
+ak_anf_bl_ursache_t	2	Measuring
+ak_anf_bl_ursache_t	3	Chimney sweep
+ak_anf_bl_ursache_t	4	External
+ak_anf_bl_ursache_t	5	External overheated
+ak_anf_bl_ursache_t	6	Clear stoker
+ak_anf_bl_ursache_t	7	Min. for cleaning
+ak_anf_bl_ursache_t	8	Stoker, overheating
+ak_anf_bl_ursache_t	9	Cycle operation
+ak_anf_bl_ursache_t	10	Buffer management
+ak_anf_bl_ursache_t	11	BuMgmt overheated
+ak_anf_bl_ursache_t	12	Modbus
+ak_kesselprogramm_t	0	request
+ak_kesselprogramm_t	1	Time program
+ak_kesselprogramm_t	2	Continuous operation
+ak_kesselprogramm_t	3	Modbus temperature
+ak_kesselprogramm_t	4	Modbus output+temperature
+system_sensor_status_t	0	Faulty
+system_sensor_status_t	1	Missing
+system_sensor_status_t	2	OK
+cf2_betriebsmodus_t	0	None
+cf2_betriebsmodus_t	1	Log wood
+cf2_betriebsmodus_t	2	Pellets
+cf2_betriebsmodus_t	3	Log wood (PM afterrun)
+cf2_betriebsmodus_t	4	Relay test
+ksm_kesselstatus_anzeige_t	0	Off
+ksm_kesselstatus_anzeige_t	1	Measuring mode
+ksm_kesselstatus_anzeige_t	2	Operation (Cleaning):
+ksm_kesselstatus_anzeige_t	3	Measuring
+ksm_kesselstatus_anzeige_t	4	operation
+ksm_kesselstatus_anzeige_t	5	Afterrun
+ksm_kesselstatus_anzeige_t	6	Restart
+ksm_kesselstatus_anzeige_t	7	Fault afterrun
+ksm_kesselstatus_anzeige_t	8	Fault Off
+ksm_kesselstatus_anzeige_t	9	Maintenance
+ksm_kesselstatus_anzeige_t	10	Ready (-IgnStart)
+ksm_kesselstatus_anzeige_t	11	Ignite start suction
+ksm_kesselstatus_anzeige_t	12	Ignition fill fuel supply
+ksm_kesselstatus_anzeige_t	13	Ignition feeding 1
+ksm_kesselstatus_anzeige_t	14	Ignition feeding 3
+ksm_kesselstatus_anzeige_t	15	Ignition heating
+ksm_kesselstatus_anzeige_t	16	Heating - complete ignition
+ksm_kesselstatus_anzeige_t	17	Ignition feeding 2
+ksm_kesselstatus_anzeige_t	18	Ignition wait
+ksm_kesselstatus_anzeige_t	19	Complete ignition
+ksm_kesselstatus_anzeige_t	20	1. IB operation
+ksm_kesselstatus_anzeige_t	21	Ready (-Ext1)
+ksm_kesselstatus_anzeige_t	22	Ready (-SecondBoiler)
+ksm_kesselstatus_anzeige_t	23	Ready (-CS)
+ksm_kesselstatus_anzeige_t	24	Ready (-Cleaning)
+ksm_kesselstatus_anzeige_t	25	Ready (+Stop)
+ksm_kesselstatus_anzeige_t	26	Ready (-Ext3)
+ksm_kesselstatus_anzeige_t	27	Ready (-lambda probe)
+ksm_kesselstatus_anzeige_t	30	Ready (-Requ)
+ksm_kesselstatus_anzeige_t	31	Ready (+Wait time)
+ksm_kesselstatus_anzeige_t	32	Ready (+Requ)
+ksm_kesselstatus_anzeige_t	34	Empty out operation
+ksm_kesselstatus_anzeige_t	35	Off
+ksm_kesselstatus_anzeige_t	36	Heating-up
+ksm_kesselstatus_anzeige_t	37	Wait ignition requ.
+ksm_kesselstatus_anzeige_t	38	Wait ignition rel.
+ksm_kesselstatus_anzeige_t	39	Start ignition
+ksm_kesselstatus_anzeige_t	40	Ignition
+ksm_kesselstatus_anzeige_t	41	Heating
+ksm_kesselstatus_anzeige_t	42	Fire maintenance
+ksm_kesselstatus_anzeige_t	43	Fire off
+ksm_kesselstatus_anzeige_t	44	Fault fire out
+ksm_kesselstatus_anzeige_t	45	Door open
+ksm_kesselstatus_anzeige_t	46	Overheating
+ksm_kesselstatus_anzeige_t	47	Fault, fire maintenance
+ksm_kesselstatus_anzeige_t	49	Sh off, PM released
+ksm_kesselstatus_anzeige_t	50	Start pellet module
+ksm_kesselstatus_anzeige_t	51	Pellet module locked
+ksm_kesselstatus_anzeige_t	52	Maintenance
+cf2_max_befuellgrad_anzeige_t	0	None
+cf2_max_befuellgrad_anzeige_t	1	One third
+cf2_max_befuellgrad_anzeige_t	2	Two thirds
+cf2_max_befuellgrad_anzeige_t	3	Full
+cf2_automatische_zuendung_t	0	Off
+cf2_automatische_zuendung_t	1	Selection
+cf2_automatische_zuendung_t	2	Request
+cf2_automatische_zuendung_t	3	immediately
+hk_programm_t	0	Automatic
+hk_programm_t	1	Frost protection
+hk_programm_t	2	Off
+hk_programm_t	3	Comfort
+hk_programm_t	4	Reduct
+hk_status_t	0	Reduct
+hk_status_t	1	Comfort
+hk_status_t	2	Frost protection
+hk_status_t	3	Holiday
+hk_status_t	4	Off
+hk_status_t	5	Screed
+hk_status_t	6	Max. heat reduction
+hk_status_t	7	Max. heat reduction
+hk_status_t	8	Modbus
+ksm_verbraucher_anforderung_t	0	Off
+ksm_verbraucher_anforderung_t	1	Heat.circ
+ksm_verbraucher_anforderung_t	2	DHWC
+ksm_verbraucher_anforderung_t	3	Buffer
+puffer_programm_t	0	Time
+puffer_programm_t	1	Temperature
+puffer_programm_t	2	Off
+puffer_programm_t	3	Time+
+puffer_programm_t	4	Summer
+puffer_o_umschaltventil_t	0	Not available
+puffer_o_umschaltventil_t	1	Top
+puffer_o_umschaltventil_t	2	Bottom
+boiler_programm_t	0	Time
+boiler_programm_t	1	Temp.
+boiler_programm_t	2	Off
+boiler_status_t	0	Fault
+boiler_status_t	1	Off
+boiler_status_t	2	Legionella protection
+boiler_status_t	3	Holiday
+boiler_status_t	4	One-time charge
+boiler_status_t	5	Outside of charging time
+boiler_status_t	6	Charge to target temp.
+boiler_status_t	7	Temp. sufficient
+boiler_status_t	8	Blocking protection
+boiler_status_t	9	Waiting, pump release
+boiler_status_t	10	Boiler overheating
+boiler_status_t	11	SHS, overheating
+boiler_status_t	12	max. heat reduction
+boiler_status_t	13	Afterrun
+boiler_status_t	14	Afterrun (waiting release)
+zirk_programm_t	0	Off
+zirk_programm_t	1	Automatic
+zirk_programm_t	2	Continuous operation
+solar_status_t	0	Off
+solar_status_t	1	Manual mode
+solar_status_t	2	Charge storage tank 1
+solar_status_t	3	Charge storage tank 2
+solar_status_t	4	Fault
+solar_status_t	5	Solar protection
+solar_status_t	6	Back cooling 1
+solar_status_t	7	Back cooling 2
+solar_status_ursache_t	0	Program Off
+solar_status_ursache_t	1	Manual mode
+solar_status_ursache_t	2	Collector tem. sufficient
+solar_status_ursache_t	3	Tem.Diff.Coll/stor.tank 1 ins.
+solar_status_ursache_t	4	Max. tem. storage tank 1 exc.
+solar_status_ursache_t	5	Max.tem. storage tank 2 ex.
+solar_status_ursache_t	6	Absolute priority (collector temperature too low)
+solar_status_ursache_t	7	Blocking protection
+solar_status_ursache_t	8	Collector tem.too high
+solar_status_ursache_t	9	Alarm active in solar circuit
+solar_status_ursache_t	10	Max.tem.Stor.tank 1+2 exce.
+solar_status_ursache_t	11	Coll.min.temp.undershot
+solar_status_ursache_t	13	Interval function
+solar_status_ursache_t	14	Back cooling
+kfs_profile_t	0	Winter
+kfs_profile_t	1	Summer
+kfs_angeforderte_kessel_t	0	0
+kfs_angeforderte_kessel_t	1	1
+kfs_angeforderte_kessel_t	2	2
+kfs_angeforderte_kessel_t	3	3
+kfs_angeforderte_kessel_t	4	4
+kfs_angeforderte_kessel_t	5	5
+kfs_angeforderte_kessel_t	6	6
+kfs_angeforderte_kessel_t	7	7
+kfs_angeforderte_kessel_t	8	8

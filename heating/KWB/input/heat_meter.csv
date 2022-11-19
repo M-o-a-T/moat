@@ -1,0 +1,217 @@
+s	NumberOfRegisters	Functions	Type	Parameter	ID	Name	Index	Unit/ValueTable	Values	Min	Max	UserLevel	ExpertLevel
+9517	2	04	s32	MBUS.leistung	2170	Power	HQM 0	1/1000kW				read	read
+9519	2	04	s32	MBUS.leistung	2170	Power	HQM 1	1/1000kW				read	read
+9521	2	04	s32	MBUS.leistung	2170	Power	HQM 2	1/1000kW				read	read
+9523	2	04	s32	MBUS.leistung	2170	Power	HQM 3	1/1000kW				read	read
+9525	2	04	s32	MBUS.leistung	2170	Power	HQM 4	1/1000kW				read	read
+9527	2	04	s32	MBUS.leistung	2170	Power	HQM 5	1/1000kW				read	read
+9529	2	04	s32	MBUS.leistung	2170	Power	HQM 6	1/1000kW				read	read
+9531	2	04	s32	MBUS.leistung	2170	Power	HQM 7	1/1000kW				read	read
+9533	2	04	s32	MBUS.leistung	2170	Power	HQM 8	1/1000kW				read	read
+9535	2	04	s32	MBUS.leistung	2170	Power	HQM 9	1/1000kW				read	read
+9537	2	04	s32	MBUS.leistung	2170	Power	HQM 10	1/1000kW				read	read
+9539	2	04	s32	MBUS.leistung	2170	Power	HQM 11	1/1000kW				read	read
+9541	2	04	s32	MBUS.leistung	2170	Power	HQM 12	1/1000kW				read	read
+9543	2	04	s32	MBUS.leistung	2170	Power	HQM 13	1/1000kW				read	read
+9545	2	04	s32	MBUS.leistung	2170	Power	HQM 14	1/1000kW				read	read
+9547	2	04	s32	MBUS.leistung	2170	Power	HQM 15	1/1000kW				read	read
+9549	2	04	s32	MBUS.leistung	2170	Power	HQM 16	1/1000kW				read	read
+9551	2	04	s32	MBUS.leistung	2170	Power	HQM 17	1/1000kW				read	read
+9553	2	04	s32	MBUS.leistung	2170	Power	HQM 18	1/1000kW				read	read
+9555	2	04	s32	MBUS.leistung	2170	Power	HQM 19	1/1000kW				read	read
+9557	2	04	s32	MBUS.leistung	2170	Power	HQM 20	1/1000kW				read	read
+9559	2	04	s32	MBUS.leistung	2170	Power	HQM 21	1/1000kW				read	read
+9561	2	04	s32	MBUS.leistung	2170	Power	HQM 22	1/1000kW				read	read
+9563	2	04	s32	MBUS.leistung	2170	Power	HQM 23	1/1000kW				read	read
+9565	2	04	s32	MBUS.leistung	2170	Power	HQM 24	1/1000kW				read	read
+9567	2	04	s32	MBUS.leistung	2170	Power	HQM 25	1/1000kW				read	read
+9569	2	04	s32	MBUS.leistung	2170	Power	HQM 26	1/1000kW				read	read
+9571	2	04	s32	MBUS.leistung	2170	Power	HQM 27	1/1000kW				read	read
+9573	2	04	s32	MBUS.leistung	2170	Power	HQM 28	1/1000kW				read	read
+9575	2	04	s32	MBUS.leistung	2170	Power	HQM 29	1/1000kW				read	read
+9577	2	04	s32	MBUS.leistung	2170	Power	HQM 30	1/1000kW				read	read
+9579	2	04	s32	MBUS.leistung	2170	Power	HQM 31	1/1000kW				read	read
+9581	2	04	s32	MBUS.leistung	2170	Power	HQM 32	1/1000kW				read	read
+9583	2	04	s32	MBUS.leistung	2170	Power	HQM 33	1/1000kW				read	read
+9585	2	04	s32	MBUS.leistung	2170	Power	HQM 34	1/1000kW				read	read
+9587	2	04	s32	MBUS.leistung	2170	Power	HQM 35	1/1000kW				read	read
+9589	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 0	1/10°C				read	read
+9590	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 1	1/10°C				read	read
+9591	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 2	1/10°C				read	read
+9592	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 3	1/10°C				read	read
+9593	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 4	1/10°C				read	read
+9594	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 5	1/10°C				read	read
+9595	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 6	1/10°C				read	read
+9596	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 7	1/10°C				read	read
+9597	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 8	1/10°C				read	read
+9598	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 9	1/10°C				read	read
+9599	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 10	1/10°C				read	read
+9600	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 11	1/10°C				read	read
+9601	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 12	1/10°C				read	read
+9602	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 13	1/10°C				read	read
+9603	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 14	1/10°C				read	read
+9604	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 15	1/10°C				read	read
+9605	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 16	1/10°C				read	read
+9606	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 17	1/10°C				read	read
+9607	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 18	1/10°C				read	read
+9608	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 19	1/10°C				read	read
+9609	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 20	1/10°C				read	read
+9610	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 21	1/10°C				read	read
+9611	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 22	1/10°C				read	read
+9612	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 23	1/10°C				read	read
+9613	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 24	1/10°C				read	read
+9614	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 25	1/10°C				read	read
+9615	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 26	1/10°C				read	read
+9616	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 27	1/10°C				read	read
+9617	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 28	1/10°C				read	read
+9618	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 29	1/10°C				read	read
+9619	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 30	1/10°C				read	read
+9620	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 31	1/10°C				read	read
+9621	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 32	1/10°C				read	read
+9622	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 33	1/10°C				read	read
+9623	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 34	1/10°C				read	read
+9624	1	04	s16	MBUS.vorlauftemp	2167	Forward flow	HQM 35	1/10°C				read	read
+9625	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 0	1/10°C				read	read
+9626	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 1	1/10°C				read	read
+9627	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 2	1/10°C				read	read
+9628	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 3	1/10°C				read	read
+9629	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 4	1/10°C				read	read
+9630	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 5	1/10°C				read	read
+9631	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 6	1/10°C				read	read
+9632	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 7	1/10°C				read	read
+9633	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 8	1/10°C				read	read
+9634	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 9	1/10°C				read	read
+9635	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 10	1/10°C				read	read
+9636	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 11	1/10°C				read	read
+9637	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 12	1/10°C				read	read
+9638	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 13	1/10°C				read	read
+9639	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 14	1/10°C				read	read
+9640	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 15	1/10°C				read	read
+9641	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 16	1/10°C				read	read
+9642	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 17	1/10°C				read	read
+9643	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 18	1/10°C				read	read
+9644	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 19	1/10°C				read	read
+9645	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 20	1/10°C				read	read
+9646	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 21	1/10°C				read	read
+9647	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 22	1/10°C				read	read
+9648	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 23	1/10°C				read	read
+9649	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 24	1/10°C				read	read
+9650	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 25	1/10°C				read	read
+9651	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 26	1/10°C				read	read
+9652	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 27	1/10°C				read	read
+9653	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 28	1/10°C				read	read
+9654	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 29	1/10°C				read	read
+9655	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 30	1/10°C				read	read
+9656	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 31	1/10°C				read	read
+9657	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 32	1/10°C				read	read
+9658	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 33	1/10°C				read	read
+9659	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 34	1/10°C				read	read
+9660	1	04	s16	MBUS.ruecklauftemp	2168	Return flow	HQM 35	1/10°C				read	read
+9661	2	04	u32	MBUS.energie	2169	Energy	HQM 0	kWh				read	read
+9663	2	04	u32	MBUS.energie	2169	Energy	HQM 1	kWh				read	read
+9665	2	04	u32	MBUS.energie	2169	Energy	HQM 2	kWh				read	read
+9667	2	04	u32	MBUS.energie	2169	Energy	HQM 3	kWh				read	read
+9669	2	04	u32	MBUS.energie	2169	Energy	HQM 4	kWh				read	read
+9671	2	04	u32	MBUS.energie	2169	Energy	HQM 5	kWh				read	read
+9673	2	04	u32	MBUS.energie	2169	Energy	HQM 6	kWh				read	read
+9675	2	04	u32	MBUS.energie	2169	Energy	HQM 7	kWh				read	read
+9677	2	04	u32	MBUS.energie	2169	Energy	HQM 8	kWh				read	read
+9679	2	04	u32	MBUS.energie	2169	Energy	HQM 9	kWh				read	read
+9681	2	04	u32	MBUS.energie	2169	Energy	HQM 10	kWh				read	read
+9683	2	04	u32	MBUS.energie	2169	Energy	HQM 11	kWh				read	read
+9685	2	04	u32	MBUS.energie	2169	Energy	HQM 12	kWh				read	read
+9687	2	04	u32	MBUS.energie	2169	Energy	HQM 13	kWh				read	read
+9689	2	04	u32	MBUS.energie	2169	Energy	HQM 14	kWh				read	read
+9691	2	04	u32	MBUS.energie	2169	Energy	HQM 15	kWh				read	read
+9693	2	04	u32	MBUS.energie	2169	Energy	HQM 16	kWh				read	read
+9695	2	04	u32	MBUS.energie	2169	Energy	HQM 17	kWh				read	read
+9697	2	04	u32	MBUS.energie	2169	Energy	HQM 18	kWh				read	read
+9699	2	04	u32	MBUS.energie	2169	Energy	HQM 19	kWh				read	read
+9701	2	04	u32	MBUS.energie	2169	Energy	HQM 20	kWh				read	read
+9703	2	04	u32	MBUS.energie	2169	Energy	HQM 21	kWh				read	read
+9705	2	04	u32	MBUS.energie	2169	Energy	HQM 22	kWh				read	read
+9707	2	04	u32	MBUS.energie	2169	Energy	HQM 23	kWh				read	read
+9709	2	04	u32	MBUS.energie	2169	Energy	HQM 24	kWh				read	read
+9711	2	04	u32	MBUS.energie	2169	Energy	HQM 25	kWh				read	read
+9713	2	04	u32	MBUS.energie	2169	Energy	HQM 26	kWh				read	read
+9715	2	04	u32	MBUS.energie	2169	Energy	HQM 27	kWh				read	read
+9717	2	04	u32	MBUS.energie	2169	Energy	HQM 28	kWh				read	read
+9719	2	04	u32	MBUS.energie	2169	Energy	HQM 29	kWh				read	read
+9721	2	04	u32	MBUS.energie	2169	Energy	HQM 30	kWh				read	read
+9723	2	04	u32	MBUS.energie	2169	Energy	HQM 31	kWh				read	read
+9725	2	04	u32	MBUS.energie	2169	Energy	HQM 32	kWh				read	read
+9727	2	04	u32	MBUS.energie	2169	Energy	HQM 33	kWh				read	read
+9729	2	04	u32	MBUS.energie	2169	Energy	HQM 34	kWh				read	read
+9731	2	04	u32	MBUS.energie	2169	Energy	HQM 35	kWh				read	read
+9733	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 0	l/h				read	read
+9735	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 1	l/h				read	read
+9737	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 2	l/h				read	read
+9739	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 3	l/h				read	read
+9741	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 4	l/h				read	read
+9743	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 5	l/h				read	read
+9745	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 6	l/h				read	read
+9747	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 7	l/h				read	read
+9749	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 8	l/h				read	read
+9751	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 9	l/h				read	read
+9753	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 10	l/h				read	read
+9755	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 11	l/h				read	read
+9757	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 12	l/h				read	read
+9759	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 13	l/h				read	read
+9761	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 14	l/h				read	read
+9763	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 15	l/h				read	read
+9765	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 16	l/h				read	read
+9767	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 17	l/h				read	read
+9769	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 18	l/h				read	read
+9771	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 19	l/h				read	read
+9773	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 20	l/h				read	read
+9775	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 21	l/h				read	read
+9777	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 22	l/h				read	read
+9779	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 23	l/h				read	read
+9781	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 24	l/h				read	read
+9783	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 25	l/h				read	read
+9785	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 26	l/h				read	read
+9787	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 27	l/h				read	read
+9789	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 28	l/h				read	read
+9791	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 29	l/h				read	read
+9793	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 30	l/h				read	read
+9795	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 31	l/h				read	read
+9797	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 32	l/h				read	read
+9799	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 33	l/h				read	read
+9801	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 34	l/h				read	read
+9803	2	04	s32	MBUS.vol_akt	2299	Volume act.	HQM 35	l/h				read	read
+9805	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 0	1/1000m³				read	read
+9807	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 1	1/1000m³				read	read
+9809	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 2	1/1000m³				read	read
+9811	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 3	1/1000m³				read	read
+9813	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 4	1/1000m³				read	read
+9815	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 5	1/1000m³				read	read
+9817	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 6	1/1000m³				read	read
+9819	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 7	1/1000m³				read	read
+9821	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 8	1/1000m³				read	read
+9823	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 9	1/1000m³				read	read
+9825	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 10	1/1000m³				read	read
+9827	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 11	1/1000m³				read	read
+9829	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 12	1/1000m³				read	read
+9831	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 13	1/1000m³				read	read
+9833	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 14	1/1000m³				read	read
+9835	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 15	1/1000m³				read	read
+9837	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 16	1/1000m³				read	read
+9839	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 17	1/1000m³				read	read
+9841	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 18	1/1000m³				read	read
+9843	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 19	1/1000m³				read	read
+9845	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 20	1/1000m³				read	read
+9847	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 21	1/1000m³				read	read
+9849	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 22	1/1000m³				read	read
+9851	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 23	1/1000m³				read	read
+9853	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 24	1/1000m³				read	read
+9855	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 25	1/1000m³				read	read
+9857	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 26	1/1000m³				read	read
+9859	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 27	1/1000m³				read	read
+9861	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 28	1/1000m³				read	read
+9863	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 29	1/1000m³				read	read
+9865	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 30	1/1000m³				read	read
+9867	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 31	1/1000m³				read	read
+9869	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 32	1/1000m³				read	read
+9871	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 33	1/1000m³				read	read
+9873	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 34	1/1000m³				read	read
+9875	2	04	s32	MBUS.vol_ges	2300	Volume total	HQM 35	1/1000m³				read	read

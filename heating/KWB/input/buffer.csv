@@ -1,0 +1,256 @@
+StartingAddress	NumberOfRegisters	Functions	Type	Parameter	ID	Name	Index	Unit/ValueTable	Values	Min	Max	UserLevel	ExpertLevel
+8708	1	04	s16	PUF.i_ist_temperatur_1.value	442	Temperature 1 (value)	BUF 0	1/10°C				read	read
+8709	1	04	s16	PUF.i_ist_temperatur_1.status	442	Temperature 1 (status)	BUF 0	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8710	1	04	s16	PUF.i_ist_temperatur_1.value	442	Temperature 1 (value)	BUF 1	1/10°C				read	read
+8711	1	04	s16	PUF.i_ist_temperatur_1.status	442	Temperature 1 (status)	BUF 1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8712	1	04	s16	PUF.i_ist_temperatur_1.value	442	Temperature 1 (value)	BUF 2	1/10°C				read	read
+8713	1	04	s16	PUF.i_ist_temperatur_1.status	442	Temperature 1 (status)	BUF 2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8714	1	04	s16	PUF.i_ist_temperatur_1.value	442	Temperature 1 (value)	BUF 3	1/10°C				read	read
+8715	1	04	s16	PUF.i_ist_temperatur_1.status	442	Temperature 1 (status)	BUF 3	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8716	1	04	s16	PUF.i_ist_temperatur_1.value	442	Temperature 1 (value)	BUF 4	1/10°C				read	read
+8717	1	04	s16	PUF.i_ist_temperatur_1.status	442	Temperature 1 (status)	BUF 4	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8718	1	04	s16	PUF.i_ist_temperatur_1.value	442	Temperature 1 (value)	BUF 5	1/10°C				read	read
+8719	1	04	s16	PUF.i_ist_temperatur_1.status	442	Temperature 1 (status)	BUF 5	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8720	1	04	s16	PUF.i_ist_temperatur_1.value	442	Temperature 1 (value)	BUF 6	1/10°C				read	read
+8721	1	04	s16	PUF.i_ist_temperatur_1.status	442	Temperature 1 (status)	BUF 6	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8722	1	04	s16	PUF.i_ist_temperatur_1.value	442	Temperature 1 (value)	BUF 7	1/10°C				read	read
+8723	1	04	s16	PUF.i_ist_temperatur_1.status	442	Temperature 1 (status)	BUF 7	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8724	1	04	s16	PUF.i_ist_temperatur_1.value	442	Temperature 1 (value)	BUF 8	1/10°C				read	read
+8725	1	04	s16	PUF.i_ist_temperatur_1.status	442	Temperature 1 (status)	BUF 8	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8726	1	04	s16	PUF.i_ist_temperatur_1.value	442	Temperature 1 (value)	BUF 9	1/10°C				read	read
+8727	1	04	s16	PUF.i_ist_temperatur_1.status	442	Temperature 1 (status)	BUF 9	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8728	1	04	s16	PUF.i_ist_temperatur_1.value	442	Temperature 1 (value)	BUF 10	1/10°C				read	read
+8729	1	04	s16	PUF.i_ist_temperatur_1.status	442	Temperature 1 (status)	BUF 10	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8730	1	04	s16	PUF.i_ist_temperatur_1.value	442	Temperature 1 (value)	BUF 11	1/10°C				read	read
+8731	1	04	s16	PUF.i_ist_temperatur_1.status	442	Temperature 1 (status)	BUF 11	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8732	1	04	s16	PUF.i_ist_temperatur_1.value	442	Temperature 1 (value)	BUF 12	1/10°C				read	read
+8733	1	04	s16	PUF.i_ist_temperatur_1.status	442	Temperature 1 (status)	BUF 12	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8734	1	04	s16	PUF.i_ist_temperatur_1.value	442	Temperature 1 (value)	BUF 13	1/10°C				read	read
+8735	1	04	s16	PUF.i_ist_temperatur_1.status	442	Temperature 1 (status)	BUF 13	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8736	1	04	s16	PUF.i_ist_temperatur_1.value	442	Temperature 1 (value)	BUF 14	1/10°C				read	read
+8737	1	04	s16	PUF.i_ist_temperatur_1.status	442	Temperature 1 (status)	BUF 14	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8742	1	04	s16	PUF.i_ist_temperatur_2.value	443	Temperature 2 (value)	BUF 0	1/10°C				read	read
+8743	1	04	s16	PUF.i_ist_temperatur_2.status	443	Temperature 2 (status)	BUF 0	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8744	1	04	s16	PUF.i_ist_temperatur_2.value	443	Temperature 2 (value)	BUF 1	1/10°C				read	read
+8745	1	04	s16	PUF.i_ist_temperatur_2.status	443	Temperature 2 (status)	BUF 1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8746	1	04	s16	PUF.i_ist_temperatur_2.value	443	Temperature 2 (value)	BUF 2	1/10°C				read	read
+8747	1	04	s16	PUF.i_ist_temperatur_2.status	443	Temperature 2 (status)	BUF 2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8748	1	04	s16	PUF.i_ist_temperatur_2.value	443	Temperature 2 (value)	BUF 3	1/10°C				read	read
+8749	1	04	s16	PUF.i_ist_temperatur_2.status	443	Temperature 2 (status)	BUF 3	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8750	1	04	s16	PUF.i_ist_temperatur_2.value	443	Temperature 2 (value)	BUF 4	1/10°C				read	read
+8751	1	04	s16	PUF.i_ist_temperatur_2.status	443	Temperature 2 (status)	BUF 4	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8752	1	04	s16	PUF.i_ist_temperatur_2.value	443	Temperature 2 (value)	BUF 5	1/10°C				read	read
+8753	1	04	s16	PUF.i_ist_temperatur_2.status	443	Temperature 2 (status)	BUF 5	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8754	1	04	s16	PUF.i_ist_temperatur_2.value	443	Temperature 2 (value)	BUF 6	1/10°C				read	read
+8755	1	04	s16	PUF.i_ist_temperatur_2.status	443	Temperature 2 (status)	BUF 6	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8756	1	04	s16	PUF.i_ist_temperatur_2.value	443	Temperature 2 (value)	BUF 7	1/10°C				read	read
+8757	1	04	s16	PUF.i_ist_temperatur_2.status	443	Temperature 2 (status)	BUF 7	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8758	1	04	s16	PUF.i_ist_temperatur_2.value	443	Temperature 2 (value)	BUF 8	1/10°C				read	read
+8759	1	04	s16	PUF.i_ist_temperatur_2.status	443	Temperature 2 (status)	BUF 8	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8760	1	04	s16	PUF.i_ist_temperatur_2.value	443	Temperature 2 (value)	BUF 9	1/10°C				read	read
+8761	1	04	s16	PUF.i_ist_temperatur_2.status	443	Temperature 2 (status)	BUF 9	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8762	1	04	s16	PUF.i_ist_temperatur_2.value	443	Temperature 2 (value)	BUF 10	1/10°C				read	read
+8763	1	04	s16	PUF.i_ist_temperatur_2.status	443	Temperature 2 (status)	BUF 10	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8764	1	04	s16	PUF.i_ist_temperatur_2.value	443	Temperature 2 (value)	BUF 11	1/10°C				read	read
+8765	1	04	s16	PUF.i_ist_temperatur_2.status	443	Temperature 2 (status)	BUF 11	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8766	1	04	s16	PUF.i_ist_temperatur_2.value	443	Temperature 2 (value)	BUF 12	1/10°C				read	read
+8767	1	04	s16	PUF.i_ist_temperatur_2.status	443	Temperature 2 (status)	BUF 12	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8768	1	04	s16	PUF.i_ist_temperatur_2.value	443	Temperature 2 (value)	BUF 13	1/10°C				read	read
+8769	1	04	s16	PUF.i_ist_temperatur_2.status	443	Temperature 2 (status)	BUF 13	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8770	1	04	s16	PUF.i_ist_temperatur_2.value	443	Temperature 2 (value)	BUF 14	1/10°C				read	read
+8771	1	04	s16	PUF.i_ist_temperatur_2.status	443	Temperature 2 (status)	BUF 14	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8776	1	04	s16	PUF.i_ist_temperatur_3.value	444	Temperature 3 (value)	BUF 0	1/10°C				read	read
+8777	1	04	s16	PUF.i_ist_temperatur_3.status	444	Temperature 3 (status)	BUF 0	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8778	1	04	s16	PUF.i_ist_temperatur_3.value	444	Temperature 3 (value)	BUF 1	1/10°C				read	read
+8779	1	04	s16	PUF.i_ist_temperatur_3.status	444	Temperature 3 (status)	BUF 1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8780	1	04	s16	PUF.i_ist_temperatur_3.value	444	Temperature 3 (value)	BUF 2	1/10°C				read	read
+8781	1	04	s16	PUF.i_ist_temperatur_3.status	444	Temperature 3 (status)	BUF 2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8782	1	04	s16	PUF.i_ist_temperatur_3.value	444	Temperature 3 (value)	BUF 3	1/10°C				read	read
+8783	1	04	s16	PUF.i_ist_temperatur_3.status	444	Temperature 3 (status)	BUF 3	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8784	1	04	s16	PUF.i_ist_temperatur_3.value	444	Temperature 3 (value)	BUF 4	1/10°C				read	read
+8785	1	04	s16	PUF.i_ist_temperatur_3.status	444	Temperature 3 (status)	BUF 4	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8786	1	04	s16	PUF.i_ist_temperatur_3.value	444	Temperature 3 (value)	BUF 5	1/10°C				read	read
+8787	1	04	s16	PUF.i_ist_temperatur_3.status	444	Temperature 3 (status)	BUF 5	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8788	1	04	s16	PUF.i_ist_temperatur_3.value	444	Temperature 3 (value)	BUF 6	1/10°C				read	read
+8789	1	04	s16	PUF.i_ist_temperatur_3.status	444	Temperature 3 (status)	BUF 6	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8790	1	04	s16	PUF.i_ist_temperatur_3.value	444	Temperature 3 (value)	BUF 7	1/10°C				read	read
+8791	1	04	s16	PUF.i_ist_temperatur_3.status	444	Temperature 3 (status)	BUF 7	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8792	1	04	s16	PUF.i_ist_temperatur_3.value	444	Temperature 3 (value)	BUF 8	1/10°C				read	read
+8793	1	04	s16	PUF.i_ist_temperatur_3.status	444	Temperature 3 (status)	BUF 8	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8794	1	04	s16	PUF.i_ist_temperatur_3.value	444	Temperature 3 (value)	BUF 9	1/10°C				read	read
+8795	1	04	s16	PUF.i_ist_temperatur_3.status	444	Temperature 3 (status)	BUF 9	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8796	1	04	s16	PUF.i_ist_temperatur_3.value	444	Temperature 3 (value)	BUF 10	1/10°C				read	read
+8797	1	04	s16	PUF.i_ist_temperatur_3.status	444	Temperature 3 (status)	BUF 10	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8798	1	04	s16	PUF.i_ist_temperatur_3.value	444	Temperature 3 (value)	BUF 11	1/10°C				read	read
+8799	1	04	s16	PUF.i_ist_temperatur_3.status	444	Temperature 3 (status)	BUF 11	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8800	1	04	s16	PUF.i_ist_temperatur_3.value	444	Temperature 3 (value)	BUF 12	1/10°C				read	read
+8801	1	04	s16	PUF.i_ist_temperatur_3.status	444	Temperature 3 (status)	BUF 12	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8802	1	04	s16	PUF.i_ist_temperatur_3.value	444	Temperature 3 (value)	BUF 13	1/10°C				read	read
+8803	1	04	s16	PUF.i_ist_temperatur_3.status	444	Temperature 3 (status)	BUF 13	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8804	1	04	s16	PUF.i_ist_temperatur_3.value	444	Temperature 3 (value)	BUF 14	1/10°C				read	read
+8805	1	04	s16	PUF.i_ist_temperatur_3.status	444	Temperature 3 (status)	BUF 14	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8810	1	04	s16	PUF.i_ist_temperatur_4.value	445	Temperature 4 (value)	BUF 0	1/10°C				read	read
+8811	1	04	s16	PUF.i_ist_temperatur_4.status	445	Temperature 4 (status)	BUF 0	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8812	1	04	s16	PUF.i_ist_temperatur_4.value	445	Temperature 4 (value)	BUF 1	1/10°C				read	read
+8813	1	04	s16	PUF.i_ist_temperatur_4.status	445	Temperature 4 (status)	BUF 1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8814	1	04	s16	PUF.i_ist_temperatur_4.value	445	Temperature 4 (value)	BUF 2	1/10°C				read	read
+8815	1	04	s16	PUF.i_ist_temperatur_4.status	445	Temperature 4 (status)	BUF 2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8816	1	04	s16	PUF.i_ist_temperatur_4.value	445	Temperature 4 (value)	BUF 3	1/10°C				read	read
+8817	1	04	s16	PUF.i_ist_temperatur_4.status	445	Temperature 4 (status)	BUF 3	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8818	1	04	s16	PUF.i_ist_temperatur_4.value	445	Temperature 4 (value)	BUF 4	1/10°C				read	read
+8819	1	04	s16	PUF.i_ist_temperatur_4.status	445	Temperature 4 (status)	BUF 4	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8820	1	04	s16	PUF.i_ist_temperatur_4.value	445	Temperature 4 (value)	BUF 5	1/10°C				read	read
+8821	1	04	s16	PUF.i_ist_temperatur_4.status	445	Temperature 4 (status)	BUF 5	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8822	1	04	s16	PUF.i_ist_temperatur_4.value	445	Temperature 4 (value)	BUF 6	1/10°C				read	read
+8823	1	04	s16	PUF.i_ist_temperatur_4.status	445	Temperature 4 (status)	BUF 6	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8824	1	04	s16	PUF.i_ist_temperatur_4.value	445	Temperature 4 (value)	BUF 7	1/10°C				read	read
+8825	1	04	s16	PUF.i_ist_temperatur_4.status	445	Temperature 4 (status)	BUF 7	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8826	1	04	s16	PUF.i_ist_temperatur_4.value	445	Temperature 4 (value)	BUF 8	1/10°C				read	read
+8827	1	04	s16	PUF.i_ist_temperatur_4.status	445	Temperature 4 (status)	BUF 8	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8828	1	04	s16	PUF.i_ist_temperatur_4.value	445	Temperature 4 (value)	BUF 9	1/10°C				read	read
+8829	1	04	s16	PUF.i_ist_temperatur_4.status	445	Temperature 4 (status)	BUF 9	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8830	1	04	s16	PUF.i_ist_temperatur_4.value	445	Temperature 4 (value)	BUF 10	1/10°C				read	read
+8831	1	04	s16	PUF.i_ist_temperatur_4.status	445	Temperature 4 (status)	BUF 10	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8832	1	04	s16	PUF.i_ist_temperatur_4.value	445	Temperature 4 (value)	BUF 11	1/10°C				read	read
+8833	1	04	s16	PUF.i_ist_temperatur_4.status	445	Temperature 4 (status)	BUF 11	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8834	1	04	s16	PUF.i_ist_temperatur_4.value	445	Temperature 4 (value)	BUF 12	1/10°C				read	read
+8835	1	04	s16	PUF.i_ist_temperatur_4.status	445	Temperature 4 (status)	BUF 12	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8836	1	04	s16	PUF.i_ist_temperatur_4.value	445	Temperature 4 (value)	BUF 13	1/10°C				read	read
+8837	1	04	s16	PUF.i_ist_temperatur_4.status	445	Temperature 4 (status)	BUF 13	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8838	1	04	s16	PUF.i_ist_temperatur_4.value	445	Temperature 4 (value)	BUF 14	1/10°C				read	read
+8839	1	04	s16	PUF.i_ist_temperatur_4.status	445	Temperature 4 (status)	BUF 14	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8844	1	04	s16	PUF.i_ist_temperatur_5.value	446	Temperature 5 (value)	BUF 0	1/10°C				read	read
+8845	1	04	s16	PUF.i_ist_temperatur_5.status	446	Temperature 5 (status)	BUF 0	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8846	1	04	s16	PUF.i_ist_temperatur_5.value	446	Temperature 5 (value)	BUF 1	1/10°C				read	read
+8847	1	04	s16	PUF.i_ist_temperatur_5.status	446	Temperature 5 (status)	BUF 1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8848	1	04	s16	PUF.i_ist_temperatur_5.value	446	Temperature 5 (value)	BUF 2	1/10°C				read	read
+8849	1	04	s16	PUF.i_ist_temperatur_5.status	446	Temperature 5 (status)	BUF 2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8850	1	04	s16	PUF.i_ist_temperatur_5.value	446	Temperature 5 (value)	BUF 3	1/10°C				read	read
+8851	1	04	s16	PUF.i_ist_temperatur_5.status	446	Temperature 5 (status)	BUF 3	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8852	1	04	s16	PUF.i_ist_temperatur_5.value	446	Temperature 5 (value)	BUF 4	1/10°C				read	read
+8853	1	04	s16	PUF.i_ist_temperatur_5.status	446	Temperature 5 (status)	BUF 4	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8854	1	04	s16	PUF.i_ist_temperatur_5.value	446	Temperature 5 (value)	BUF 5	1/10°C				read	read
+8855	1	04	s16	PUF.i_ist_temperatur_5.status	446	Temperature 5 (status)	BUF 5	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8856	1	04	s16	PUF.i_ist_temperatur_5.value	446	Temperature 5 (value)	BUF 6	1/10°C				read	read
+8857	1	04	s16	PUF.i_ist_temperatur_5.status	446	Temperature 5 (status)	BUF 6	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8858	1	04	s16	PUF.i_ist_temperatur_5.value	446	Temperature 5 (value)	BUF 7	1/10°C				read	read
+8859	1	04	s16	PUF.i_ist_temperatur_5.status	446	Temperature 5 (status)	BUF 7	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8860	1	04	s16	PUF.i_ist_temperatur_5.value	446	Temperature 5 (value)	BUF 8	1/10°C				read	read
+8861	1	04	s16	PUF.i_ist_temperatur_5.status	446	Temperature 5 (status)	BUF 8	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8862	1	04	s16	PUF.i_ist_temperatur_5.value	446	Temperature 5 (value)	BUF 9	1/10°C				read	read
+8863	1	04	s16	PUF.i_ist_temperatur_5.status	446	Temperature 5 (status)	BUF 9	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8864	1	04	s16	PUF.i_ist_temperatur_5.value	446	Temperature 5 (value)	BUF 10	1/10°C				read	read
+8865	1	04	s16	PUF.i_ist_temperatur_5.status	446	Temperature 5 (status)	BUF 10	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8866	1	04	s16	PUF.i_ist_temperatur_5.value	446	Temperature 5 (value)	BUF 11	1/10°C				read	read
+8867	1	04	s16	PUF.i_ist_temperatur_5.status	446	Temperature 5 (status)	BUF 11	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8868	1	04	s16	PUF.i_ist_temperatur_5.value	446	Temperature 5 (value)	BUF 12	1/10°C				read	read
+8869	1	04	s16	PUF.i_ist_temperatur_5.status	446	Temperature 5 (status)	BUF 12	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8870	1	04	s16	PUF.i_ist_temperatur_5.value	446	Temperature 5 (value)	BUF 13	1/10°C				read	read
+8871	1	04	s16	PUF.i_ist_temperatur_5.status	446	Temperature 5 (status)	BUF 13	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8872	1	04	s16	PUF.i_ist_temperatur_5.value	446	Temperature 5 (value)	BUF 14	1/10°C				read	read
+8873	1	04	s16	PUF.i_ist_temperatur_5.status	446	Temperature 5 (status)	BUF 14	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8878	1	04	s16	PUF.o_pumpe	450	Pump	BUF 0	system_ein_aus_t	0-Off, 1-On			read	read
+8879	1	04	s16	PUF.o_pumpe	450	Pump	BUF 1	system_ein_aus_t	0-Off, 1-On			read	read
+8880	1	04	s16	PUF.o_pumpe	450	Pump	BUF 2	system_ein_aus_t	0-Off, 1-On			read	read
+8881	1	04	s16	PUF.o_pumpe	450	Pump	BUF 3	system_ein_aus_t	0-Off, 1-On			read	read
+8882	1	04	s16	PUF.o_pumpe	450	Pump	BUF 4	system_ein_aus_t	0-Off, 1-On			read	read
+8883	1	04	s16	PUF.o_pumpe	450	Pump	BUF 5	system_ein_aus_t	0-Off, 1-On			read	read
+8884	1	04	s16	PUF.o_pumpe	450	Pump	BUF 6	system_ein_aus_t	0-Off, 1-On			read	read
+8885	1	04	s16	PUF.o_pumpe	450	Pump	BUF 7	system_ein_aus_t	0-Off, 1-On			read	read
+8886	1	04	s16	PUF.o_pumpe	450	Pump	BUF 8	system_ein_aus_t	0-Off, 1-On			read	read
+8887	1	04	s16	PUF.o_pumpe	450	Pump	BUF 9	system_ein_aus_t	0-Off, 1-On			read	read
+8888	1	04	s16	PUF.o_pumpe	450	Pump	BUF 10	system_ein_aus_t	0-Off, 1-On			read	read
+8889	1	04	s16	PUF.o_pumpe	450	Pump	BUF 11	system_ein_aus_t	0-Off, 1-On			read	read
+8890	1	04	s16	PUF.o_pumpe	450	Pump	BUF 12	system_ein_aus_t	0-Off, 1-On			read	read
+8891	1	04	s16	PUF.o_pumpe	450	Pump	BUF 13	system_ein_aus_t	0-Off, 1-On			read	read
+8892	1	04	s16	PUF.o_pumpe	450	Pump	BUF 14	system_ein_aus_t	0-Off, 1-On			read	read
+8895	1	04	s16	PUF.anforderung	440	Request	BUF 0	system_ein_aus_t	0-Off, 1-On			read	read
+8896	1	04	s16	PUF.anforderung	440	Request	BUF 1	system_ein_aus_t	0-Off, 1-On			read	read
+8897	1	04	s16	PUF.anforderung	440	Request	BUF 2	system_ein_aus_t	0-Off, 1-On			read	read
+8898	1	04	s16	PUF.anforderung	440	Request	BUF 3	system_ein_aus_t	0-Off, 1-On			read	read
+8899	1	04	s16	PUF.anforderung	440	Request	BUF 4	system_ein_aus_t	0-Off, 1-On			read	read
+8900	1	04	s16	PUF.anforderung	440	Request	BUF 5	system_ein_aus_t	0-Off, 1-On			read	read
+8901	1	04	s16	PUF.anforderung	440	Request	BUF 6	system_ein_aus_t	0-Off, 1-On			read	read
+8902	1	04	s16	PUF.anforderung	440	Request	BUF 7	system_ein_aus_t	0-Off, 1-On			read	read
+8903	1	04	s16	PUF.anforderung	440	Request	BUF 8	system_ein_aus_t	0-Off, 1-On			read	read
+8904	1	04	s16	PUF.anforderung	440	Request	BUF 9	system_ein_aus_t	0-Off, 1-On			read	read
+8905	1	04	s16	PUF.anforderung	440	Request	BUF 10	system_ein_aus_t	0-Off, 1-On			read	read
+8906	1	04	s16	PUF.anforderung	440	Request	BUF 11	system_ein_aus_t	0-Off, 1-On			read	read
+8907	1	04	s16	PUF.anforderung	440	Request	BUF 12	system_ein_aus_t	0-Off, 1-On			read	read
+8908	1	04	s16	PUF.anforderung	440	Request	BUF 13	system_ein_aus_t	0-Off, 1-On			read	read
+8909	1	04	s16	PUF.anforderung	440	Request	BUF 14	system_ein_aus_t	0-Off, 1-On			read	read
+8912	1	04	s16	PUF.o_umschaltventil	468	Reversing valve	BUF 0	puffer_o_umschaltventil_t	0-Not available, 1-Top, 2-Bottom			read	read
+8913	1	04	s16	PUF.o_umschaltventil	468	Reversing valve	BUF 1	puffer_o_umschaltventil_t	0-Not available, 1-Top, 2-Bottom			read	read
+8914	1	04	s16	PUF.o_umschaltventil	468	Reversing valve	BUF 2	puffer_o_umschaltventil_t	0-Not available, 1-Top, 2-Bottom			read	read
+8915	1	04	s16	PUF.o_umschaltventil	468	Reversing valve	BUF 3	puffer_o_umschaltventil_t	0-Not available, 1-Top, 2-Bottom			read	read
+8916	1	04	s16	PUF.o_umschaltventil	468	Reversing valve	BUF 4	puffer_o_umschaltventil_t	0-Not available, 1-Top, 2-Bottom			read	read
+8917	1	04	s16	PUF.o_umschaltventil	468	Reversing valve	BUF 5	puffer_o_umschaltventil_t	0-Not available, 1-Top, 2-Bottom			read	read
+8918	1	04	s16	PUF.o_umschaltventil	468	Reversing valve	BUF 6	puffer_o_umschaltventil_t	0-Not available, 1-Top, 2-Bottom			read	read
+8919	1	04	s16	PUF.o_umschaltventil	468	Reversing valve	BUF 7	puffer_o_umschaltventil_t	0-Not available, 1-Top, 2-Bottom			read	read
+8920	1	04	s16	PUF.o_umschaltventil	468	Reversing valve	BUF 8	puffer_o_umschaltventil_t	0-Not available, 1-Top, 2-Bottom			read	read
+8921	1	04	s16	PUF.o_umschaltventil	468	Reversing valve	BUF 9	puffer_o_umschaltventil_t	0-Not available, 1-Top, 2-Bottom			read	read
+8922	1	04	s16	PUF.o_umschaltventil	468	Reversing valve	BUF 10	puffer_o_umschaltventil_t	0-Not available, 1-Top, 2-Bottom			read	read
+8923	1	04	s16	PUF.o_umschaltventil	468	Reversing valve	BUF 11	puffer_o_umschaltventil_t	0-Not available, 1-Top, 2-Bottom			read	read
+8924	1	04	s16	PUF.o_umschaltventil	468	Reversing valve	BUF 12	puffer_o_umschaltventil_t	0-Not available, 1-Top, 2-Bottom			read	read
+8925	1	04	s16	PUF.o_umschaltventil	468	Reversing valve	BUF 13	puffer_o_umschaltventil_t	0-Not available, 1-Top, 2-Bottom			read	read
+8926	1	04	s16	PUF.o_umschaltventil	468	Reversing valve	BUF 14	puffer_o_umschaltventil_t	0-Not available, 1-Top, 2-Bottom			read	read
+24760	1	03, 06, 16	s16	PUF.programm	451	Select program	BUF 0	puffer_programm_t	0-Time, 1-Temperature, ... (+3)			readwrite	readwrite
+24761	1	03, 06, 16	s16	PUF.programm	451	Select program	BUF 1	puffer_programm_t	0-Time, 1-Temperature, ... (+3)			readwrite	readwrite
+24762	1	03, 06, 16	s16	PUF.programm	451	Select program	BUF 2	puffer_programm_t	0-Time, 1-Temperature, ... (+3)			readwrite	readwrite
+24763	1	03, 06, 16	s16	PUF.programm	451	Select program	BUF 3	puffer_programm_t	0-Time, 1-Temperature, ... (+3)			readwrite	readwrite
+24764	1	03, 06, 16	s16	PUF.programm	451	Select program	BUF 4	puffer_programm_t	0-Time, 1-Temperature, ... (+3)			readwrite	readwrite
+24765	1	03, 06, 16	s16	PUF.programm	451	Select program	BUF 5	puffer_programm_t	0-Time, 1-Temperature, ... (+3)			readwrite	readwrite
+24766	1	03, 06, 16	s16	PUF.programm	451	Select program	BUF 6	puffer_programm_t	0-Time, 1-Temperature, ... (+3)			readwrite	readwrite
+24767	1	03, 06, 16	s16	PUF.programm	451	Select program	BUF 7	puffer_programm_t	0-Time, 1-Temperature, ... (+3)			readwrite	readwrite
+24768	1	03, 06, 16	s16	PUF.programm	451	Select program	BUF 8	puffer_programm_t	0-Time, 1-Temperature, ... (+3)			readwrite	readwrite
+24769	1	03, 06, 16	s16	PUF.programm	451	Select program	BUF 9	puffer_programm_t	0-Time, 1-Temperature, ... (+3)			readwrite	readwrite
+24770	1	03, 06, 16	s16	PUF.programm	451	Select program	BUF 10	puffer_programm_t	0-Time, 1-Temperature, ... (+3)			readwrite	readwrite
+24771	1	03, 06, 16	s16	PUF.programm	451	Select program	BUF 11	puffer_programm_t	0-Time, 1-Temperature, ... (+3)			readwrite	readwrite
+24772	1	03, 06, 16	s16	PUF.programm	451	Select program	BUF 12	puffer_programm_t	0-Time, 1-Temperature, ... (+3)			readwrite	readwrite
+24773	1	03, 06, 16	s16	PUF.programm	451	Select program	BUF 13	puffer_programm_t	0-Time, 1-Temperature, ... (+3)			readwrite	readwrite
+24774	1	03, 06, 16	s16	PUF.programm	451	Select program	BUF 14	puffer_programm_t	0-Time, 1-Temperature, ... (+3)			readwrite	readwrite
+24777	1	03, 06, 16	s16	PUF.temperatur_grenzen.min	982	Temp. min/max (min)	BUF 0	1/10°C		0	800	readwrite	readwrite
+24778	1	03, 06, 16	s16	PUF.temperatur_grenzen.max	982	Temp. min/max (max)	BUF 0	1/10°C		0	800	readwrite	readwrite
+24779	1	03, 06, 16	s16	PUF.temperatur_grenzen.min	982	Temp. min/max (min)	BUF 1	1/10°C		0	800	readwrite	readwrite
+24780	1	03, 06, 16	s16	PUF.temperatur_grenzen.max	982	Temp. min/max (max)	BUF 1	1/10°C		0	800	readwrite	readwrite
+24781	1	03, 06, 16	s16	PUF.temperatur_grenzen.min	982	Temp. min/max (min)	BUF 2	1/10°C		0	800	readwrite	readwrite
+24782	1	03, 06, 16	s16	PUF.temperatur_grenzen.max	982	Temp. min/max (max)	BUF 2	1/10°C		0	800	readwrite	readwrite
+24783	1	03, 06, 16	s16	PUF.temperatur_grenzen.min	982	Temp. min/max (min)	BUF 3	1/10°C		0	800	readwrite	readwrite
+24784	1	03, 06, 16	s16	PUF.temperatur_grenzen.max	982	Temp. min/max (max)	BUF 3	1/10°C		0	800	readwrite	readwrite
+24785	1	03, 06, 16	s16	PUF.temperatur_grenzen.min	982	Temp. min/max (min)	BUF 4	1/10°C		0	800	readwrite	readwrite
+24786	1	03, 06, 16	s16	PUF.temperatur_grenzen.max	982	Temp. min/max (max)	BUF 4	1/10°C		0	800	readwrite	readwrite
+24787	1	03, 06, 16	s16	PUF.temperatur_grenzen.min	982	Temp. min/max (min)	BUF 5	1/10°C		0	800	readwrite	readwrite
+24788	1	03, 06, 16	s16	PUF.temperatur_grenzen.max	982	Temp. min/max (max)	BUF 5	1/10°C		0	800	readwrite	readwrite
+24789	1	03, 06, 16	s16	PUF.temperatur_grenzen.min	982	Temp. min/max (min)	BUF 6	1/10°C		0	800	readwrite	readwrite
+24790	1	03, 06, 16	s16	PUF.temperatur_grenzen.max	982	Temp. min/max (max)	BUF 6	1/10°C		0	800	readwrite	readwrite
+24791	1	03, 06, 16	s16	PUF.temperatur_grenzen.min	982	Temp. min/max (min)	BUF 7	1/10°C		0	800	readwrite	readwrite
+24792	1	03, 06, 16	s16	PUF.temperatur_grenzen.max	982	Temp. min/max (max)	BUF 7	1/10°C		0	800	readwrite	readwrite
+24793	1	03, 06, 16	s16	PUF.temperatur_grenzen.min	982	Temp. min/max (min)	BUF 8	1/10°C		0	800	readwrite	readwrite
+24794	1	03, 06, 16	s16	PUF.temperatur_grenzen.max	982	Temp. min/max (max)	BUF 8	1/10°C		0	800	readwrite	readwrite
+24795	1	03, 06, 16	s16	PUF.temperatur_grenzen.min	982	Temp. min/max (min)	BUF 9	1/10°C		0	800	readwrite	readwrite
+24796	1	03, 06, 16	s16	PUF.temperatur_grenzen.max	982	Temp. min/max (max)	BUF 9	1/10°C		0	800	readwrite	readwrite
+24797	1	03, 06, 16	s16	PUF.temperatur_grenzen.min	982	Temp. min/max (min)	BUF 10	1/10°C		0	800	readwrite	readwrite
+24798	1	03, 06, 16	s16	PUF.temperatur_grenzen.max	982	Temp. min/max (max)	BUF 10	1/10°C		0	800	readwrite	readwrite
+24799	1	03, 06, 16	s16	PUF.temperatur_grenzen.min	982	Temp. min/max (min)	BUF 11	1/10°C		0	800	readwrite	readwrite
+24800	1	03, 06, 16	s16	PUF.temperatur_grenzen.max	982	Temp. min/max (max)	BUF 11	1/10°C		0	800	readwrite	readwrite
+24801	1	03, 06, 16	s16	PUF.temperatur_grenzen.min	982	Temp. min/max (min)	BUF 12	1/10°C		0	800	readwrite	readwrite
+24802	1	03, 06, 16	s16	PUF.temperatur_grenzen.max	982	Temp. min/max (max)	BUF 12	1/10°C		0	800	readwrite	readwrite
+24803	1	03, 06, 16	s16	PUF.temperatur_grenzen.min	982	Temp. min/max (min)	BUF 13	1/10°C		0	800	readwrite	readwrite
+24804	1	03, 06, 16	s16	PUF.temperatur_grenzen.max	982	Temp. min/max (max)	BUF 13	1/10°C		0	800	readwrite	readwrite
+24805	1	03, 06, 16	s16	PUF.temperatur_grenzen.min	982	Temp. min/max (min)	BUF 14	1/10°C		0	800	readwrite	readwrite
+24806	1	03, 06, 16	s16	PUF.temperatur_grenzen.max	982	Temp. min/max (max)	BUF 14	1/10°C		0	800	readwrite	readwrite
+24811	1	03, 06, 16	s16	PUF.brauchwassertemp_min	479	DHW temp. min.	BUF 0	1/10°C		0	700	readwrite	readwrite
+24812	1	03, 06, 16	s16	PUF.brauchwassertemp_min	479	DHW temp. min.	BUF 1	1/10°C		0	700	readwrite	readwrite
+24813	1	03, 06, 16	s16	PUF.brauchwassertemp_min	479	DHW temp. min.	BUF 2	1/10°C		0	700	readwrite	readwrite
+24814	1	03, 06, 16	s16	PUF.brauchwassertemp_min	479	DHW temp. min.	BUF 3	1/10°C		0	700	readwrite	readwrite
+24815	1	03, 06, 16	s16	PUF.brauchwassertemp_min	479	DHW temp. min.	BUF 4	1/10°C		0	700	readwrite	readwrite
+24816	1	03, 06, 16	s16	PUF.brauchwassertemp_min	479	DHW temp. min.	BUF 5	1/10°C		0	700	readwrite	readwrite
+24817	1	03, 06, 16	s16	PUF.brauchwassertemp_min	479	DHW temp. min.	BUF 6	1/10°C		0	700	readwrite	readwrite
+24818	1	03, 06, 16	s16	PUF.brauchwassertemp_min	479	DHW temp. min.	BUF 7	1/10°C		0	700	readwrite	readwrite
+24819	1	03, 06, 16	s16	PUF.brauchwassertemp_min	479	DHW temp. min.	BUF 8	1/10°C		0	700	readwrite	readwrite
+24820	1	03, 06, 16	s16	PUF.brauchwassertemp_min	479	DHW temp. min.	BUF 9	1/10°C		0	700	readwrite	readwrite
+24821	1	03, 06, 16	s16	PUF.brauchwassertemp_min	479	DHW temp. min.	BUF 10	1/10°C		0	700	readwrite	readwrite
+24822	1	03, 06, 16	s16	PUF.brauchwassertemp_min	479	DHW temp. min.	BUF 11	1/10°C		0	700	readwrite	readwrite
+24823	1	03, 06, 16	s16	PUF.brauchwassertemp_min	479	DHW temp. min.	BUF 12	1/10°C		0	700	readwrite	readwrite
+24824	1	03, 06, 16	s16	PUF.brauchwassertemp_min	479	DHW temp. min.	BUF 13	1/10°C		0	700	readwrite	readwrite
+24825	1	03, 06, 16	s16	PUF.brauchwassertemp_min	479	DHW temp. min.	BUF 14	1/10°C		0	700	readwrite	readwrite

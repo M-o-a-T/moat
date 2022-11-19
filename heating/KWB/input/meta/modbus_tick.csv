@@ -1,0 +1,3 @@
+StartingAddress	NumberOfRegisters	Functions	Type	Parameter	ID	Name	Index	Unit/ValueTable	Values	Min	Max	UserLevel	ExpertLevel
+24849	1	03, 06, 16	u16	KSM.modbus_lifetick	2069	Modbus Lifetick						read	readwrite
+24850	1	03	u16	KSM.modbus_commit_lifetick	2070	Modbus Commit Lifetick						read	read

@@ -1,0 +1,122 @@
+alarms:
+  ref:
+  - !P info.alarm
+info:
+  include:
+  - inc/enum.yaml
+  - inc/alarm.yaml
+ref: !P info.universal
+regs:
+  puf:
+    anforderung:
+      repeat:
+        n: 15
+        offset: 1
+        start: 0
+        data:
+          _doc: Request
+          len: 1
+          reg_type: i
+          register: 8895
+          type: int
+          unit: system_ein_aus_t
+          values:
+            ref: !P info.enum.system_ein_aus_t
+    brauchwassertemp_min:
+      _doc: DHW temp. min.
+      len: 1
+      reg_type: h
+      register: 24825
+      scale: -1
+      type: int
+      unit: °C
+
+    temperatur:
+      repeat:
+        n: 15
+        start: 1
+        offset: 34
+        data:
+          ist:
+            repeat:
+              n: 15
+              start: 0
+              offset: 2
+              data:
+                status:
+                  len: 1
+                  reg_type: i
+                  register: 8709
+                  type: int
+                  values:
+                    ref: !P info.enum.system_sensor_status_t
+                value:
+                  _doc: Temperature 1 (value)
+                  len: 1
+                  reg_type: i
+                  register: 8708
+                  scale: -1
+                  type: int
+                  unit: °C
+    pumpe:
+      repeat:
+        n: 15
+        start: 1
+        offset: 1
+        data:
+          _doc: Pump
+          len: 1
+          reg_type: i
+          register: 8878
+          type: int
+          unit: system_ein_aus_t
+          values:
+            ref: !P info.enum.system_ein_aus_t
+    umschaltventil:
+      repeat:
+        n: 15
+        offset: 1
+        start: 0
+        data:
+          _doc: Reversing valve
+          len: 1
+          reg_type: i
+          register: 8912
+          type: int
+          values:
+            ref: !P info.enum.puffer_o_umschaltventil_t
+    programm:
+      repeat:
+        n: 15
+        offset: 1
+        start: 0
+        data:
+          _doc: Select program
+          len: 1
+          reg_type: h
+          register: 24774
+          type: int
+          values:
+            ref: !P info.enum.puffer_programm_t
+    temperatur_grenzen:
+      repeat:
+        n: 15
+        offset: 2
+        start: 0
+        data:
+          max:
+            _doc: Temp. min/max (max)
+            len: 1
+            reg_type: h
+            register: 24806
+            scale: -1
+            type: int
+            unit: °C
+          min:
+            _doc: Temp. min/max (min)
+            len: 1
+            reg_type: h
+            register: 24805
+            scale: -1
+            type: int
+            unit: °C

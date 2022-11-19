@@ -249,13 +249,24 @@ regs:
         offset: 1
         _doc:
           1: Vol Solar
-          2: Vol Warmwasser
+          2: Vol Hot Water
         data:
           register: 33040
           len: 1
           type: uint
           unit: l/min
           scale: -1
+
+  output:
+    repeat:
+      n: 14
+      start: 1
+      offset: 1
+      data:
+        register: 33280
+        len: 1
+        type: uint
+        factor: 25600
 
   analog:
     in:
@@ -276,9 +287,10 @@ regs:
         start: 1
         offset: 1
         _doc:
-          4: Pumpe WP
+          4: Pump Heat In
+          5: Pump Hot Water
         data:
-          register: 33042
+          register: 33294
           len: 1
           type: uint
           scale: -1

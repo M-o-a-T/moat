@@ -45,7 +45,7 @@ def main(info):
         u = r[8]
         s = 0
         if u in enums:
-            e["values"] = {"ref":Path("info","enum") / r[8]}
+            e["values"] = {"ref": Path("info","enum") / u}
         else:
             if u.startswith("1/1000"):
                 s = -3
@@ -66,8 +66,6 @@ def main(info):
                 e.unit = u
             if s:
                 e.scale = s
-        if r[8]:
-            e["values"] = {"ref":Path("info","enum") / r[8]}
         if info:
             pp = P(info)
         else:

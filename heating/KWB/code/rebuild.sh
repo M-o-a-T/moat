@@ -13,7 +13,7 @@ $P code/data.py -i universal <input/meta/universal.csv >inc/universal.yaml
 
 for f in input/*.csv; do
     n=$(basename $f .csv)
-    if [ "$n"= "buffer" ] ; then continue; fi
+    if [ "$n" = "buffer" ] ; then continue; fi
 
     $P code/data.py <$f >$n.yaml
 done

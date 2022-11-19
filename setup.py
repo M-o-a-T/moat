@@ -17,6 +17,7 @@ setup(
     tests_require=["trustme >= 0.5", "pytest", "flake8 >= 3.7", "pytest-trio"],
     keywords=["async", "key-values", "distributed"],
     python_requires=">=3.7",
+    package_data={"distkv_ext.owfs": ["*.yaml"]},
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Information Technology",

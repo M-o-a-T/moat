@@ -93,6 +93,8 @@ class OWFSattr(ClientEntry):
         """
         Called by the task to update a polled value
         """
+        if self.watch_dest is None:
+            return
         try:
             if self.watch_dest_attr:
                 retried = False

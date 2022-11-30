@@ -20,6 +20,7 @@ class OWFSattr(ClientEntry):
     watch_src_scope = None
     watch_dest = None
     watch_dest_attr = None
+    watch_dest_idem = True
     watch_dest_interval = None
     watch_dest_value = None
     watch_dest_chain = None
@@ -73,8 +74,11 @@ class OWFSattr(ClientEntry):
 
         # poll OWFS
         intv = val.get("interval", 0)
+        idem = val.get("idem", True)
         dest = val.get("dest")
         dest_attr = val.get("dest_attr")
+
+        self.watch_dest_idem = idem
         if force or dest != self.watch_dest or intv != self.watch_dest_interval:
             await dev.set_polling_interval(self.attr, 0)
             if intv > 0 and dest is not None:
@@ -109,14 +113,14 @@ class OWFSattr(ClientEntry):
                         nval = attrdict()
                     nval = nval._update(self.watch_dest_attr, val)
                     try:
-                        await self.client.set(self.watch_dest, nval, idem=True)
+                        await self.client.set(self.watch_dest, nval, idem=self.watch_dest_idem)
                     except ClientChainError:
                         if retried:
                             raise
                         retried = True
                     break
             else:
-                await self.client.set(self.watch_dest, val, idem=True)
+                await self.client.set(self.watch_dest, val, idem=self.watch_dest_idem)
 
         except Exception as exc:
             await self.root.err.record_error("owfs", self.subpath + ("read",), exc=exc)

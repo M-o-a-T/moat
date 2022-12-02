@@ -426,7 +426,12 @@ async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
             if not no_dirty:
                 continue
 
-        apply_templates(r)
+        tst = Path(r.working_dir).joinpath("pyproject.toml")
+        if tst.is_file():
+            apply_templates(r)
+        else:
+            logger.info("%s: no pyproject.toml file. Skipping.")
+            continue
 
         if no_commit:
             continue

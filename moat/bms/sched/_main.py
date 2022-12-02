@@ -23,7 +23,6 @@ async def cli():
     pass  # pylint: disable=unnecessary-pass
 
 def fd_gen(loads, prices, solar, buy_factor, buy_const):
-
     loads = iter(loads)
     prices = iter(prices)
     solar = iter(solar)
@@ -39,7 +38,7 @@ def fd_gen(loads, prices, solar, buy_factor, buy_const):
 
 
 @cli.command(help="""
-Calculate proposed SoC per assumed future usage and weather / solar input.
+Calculate proposed SoC by analyzing files with assumed future usage and weather / solar input.
 Goal: minimize cost.
 """)
 @click.option("-p","--params", type=click.File("r"), help="System parameters")
@@ -52,7 +51,7 @@ Goal: minimize cost.
 @click.option("-n","--steps", type=int, help="steps per hour, default 1", default=1)
 @click.option("-a","--all", "all_", is_flag=True, help="emit all outputs (default: first interval)")
 def analyze(params, cost_final, cost_interim, loads, prices, solar, soc, steps, all_):
-    params = yload(params, attr=True)
+    params = yload(params, attr=True).system
     data = fd_gen(loads, prices, solar, params.buy_factor, params.buy_const)
     hw = Hardware()
     for k in dir(hw):

@@ -57,7 +57,7 @@ async def as_service(obj=None):
     async with anyio.create_task_group() as tg:
         usec = need_keepalive()
         if usec:
-            tg.spawn(run_keepalive, usec)
+            tg.start_soon(run_keepalive, usec)
         try:
             yield RunMsg(obj)
         finally:

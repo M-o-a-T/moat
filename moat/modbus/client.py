@@ -492,7 +492,7 @@ class Slot:
         finally:
             self._run_scope = None
 
-    async def setValues(self):
+    async def setValues(self, changed=False):
         """
         Send a message writing the values in this block to the bus.
         """
@@ -503,7 +503,7 @@ class Slot:
                 self._run_scope = tg.cancel_scope
 
                 for vl in self.modes.values():
-                    tg.start_soon(vl.writeValues)
+                    tg.start_soon(vl.writeValues, changed)
             if self.unit is None:
                 raise ClosedResourceError("dropped while running")
         finally:
@@ -537,12 +537,12 @@ class ValueList(DataBlock):
                 tg.start_soon(partial(self.readBlock, start, length, res=res))
         return res
 
-    async def writeValues(self):
+    async def writeValues(self, changed=False):
         """
         Send messages writing our values to the bus.
         """
         async with anyio.create_task_group() as tg:
-            for start, length in self.ranges():
+            for start, length in self.ranges(changed):
                 tg.start_soon(partial(self.writeBlock, start, length))
 
     async def readBlock(self, start, length, *, res=None):
@@ -586,7 +586,9 @@ class ValueList(DataBlock):
             msg = self.kind.encoder_m(address=start, count=length, unit=u.unit, values=values)
 
         r = await u.host.execute(msg)  # pylint: disable=unused-variable
-        # TODO check R for correct type?
+        # raises an error if failed
+
+        self.markSent(start, length)
 
     def close(self):
         """disable further accesses"""

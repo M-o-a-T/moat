@@ -76,7 +76,7 @@ class BaseValue:
         self.idem = idem
 
         if value is not None:
-            self.gen = 1
+            self.gen = self.w_gen = 1
             self.changed = anyio.Event()
 
     @property
@@ -496,14 +496,19 @@ class DataBlock(dict, BaseModbusDataBlock):
             count -= val.len
         return True
 
-    def ranges(self):
-        """Iterate over to-be-retrieved range(s)."""
+    def ranges(self, changed=False):
+        """Iterate over to-be-retrieved/sent range(s).
+
+        If @changed is set, skip unmodified items.
+        """
         start, cur = None, None
         for offset, val in sorted(self.items()):
             if isinstance(val, InaccessibleValue):
                 if start is not None:
                     yield (start, cur - start)
                     start = None
+            elif changed and val.gen == val.w_gen:
+                continue
             elif start is None:
                 start = offset
                 cur = start + val.len
@@ -535,6 +540,19 @@ class DataBlock(dict, BaseModbusDataBlock):
             # well, this shouldn't happen but …
             res = res[:count]
         return res
+
+    def markSent(self, address: int, count=1):
+        """Mark this range as sent: remember gen counter"""
+        while count > 0:
+            try:
+                val = self[address]
+            except KeyError:
+                address += 1
+                count -= 1
+            else:
+                val.w_gen = val.gen
+                address += val.len
+                count -= val.len
 
     def setValues(self, address: int, values: List[int]):
         """Set the variables starting at @address to @values"""

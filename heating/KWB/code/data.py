@@ -13,16 +13,17 @@ import click
 def main(info):
     d = attrdict()
     if not info:
-        d.info = {"include": [
+        d.include = [
             "inc/enum.yaml",
             "inc/alarm.yaml",
+            "inc/universal.yaml",
             # "inc/modbus.yaml",
-        ]}
+        ]
         d.alarms = {"ref": [
-            P("info.alarm"),
+            P("alarm"),
             # P("info.modbus"),
         ]}
-        d.ref = P("info.universal")
+        d.ref = P("universal")
 
     r = csv.reader(sys.stdin, dialect=csv.excel_tab)
     next(r) # heading
@@ -41,11 +42,19 @@ def main(info):
         else:
             raise ValueError(f"Unknown type: {r[3] !r}")
 
+        def _int(x):
+            try:
+                return int(x)
+            except ValueError:
+                return x
+        p = [_int(x) for x in p]
+        p = Path(*p)
+
         e = attrdict(register=int(r[0]), len=int(r[1]), type=tt, reg_type="i" if r[2] == "04" else "h", _doc=r[6])
         u = r[8]
         s = 0
         if u in enums:
-            e["values"] = {"ref": Path("info","enum") / u}
+            e["values"] = {"ref": P("enum") / u}
         else:
             if u.startswith("1/1000"):
                 s = -3

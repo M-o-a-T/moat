@@ -1,11 +1,5 @@
-alarms:
-  ref:
-  - !P info.alarm
-info:
-  include:
-  - inc/enum.yaml
-  - inc/alarm.yaml
-ref: !P info.universal
+include:
+- inc/enum.yaml
 regs:
   puf:
     anforderung:
@@ -21,7 +15,7 @@ regs:
           type: int
           unit: system_ein_aus_t
           values:
-            ref: !P info.enum.system_ein_aus_t
+            ref: !P enum.system_ein_aus_t
     brauchwassertemp_min:
       _doc: DHW temp. min.
       len: 1
@@ -49,7 +43,7 @@ regs:
                   register: 8709
                   type: int
                   values:
-                    ref: !P info.enum.system_sensor_status_t
+                    ref: !P enum.system_sensor_status_t
                 value:
                   _doc: Temperature 1 (value)
                   len: 1
@@ -71,7 +65,7 @@ regs:
           type: int
           unit: system_ein_aus_t
           values:
-            ref: !P info.enum.system_ein_aus_t
+            ref: !P enum.system_ein_aus_t
     umschaltventil:
       repeat:
         n: 15
@@ -84,7 +78,7 @@ regs:
           register: 8912
           type: int
           values:
-            ref: !P info.enum.puffer_o_umschaltventil_t
+            ref: !P enum.puffer_o_umschaltventil_t
     programm:
       repeat:
         n: 15
@@ -97,7 +91,7 @@ regs:
           register: 24774
           type: int
           values:
-            ref: !P info.enum.puffer_programm_t
+            ref: !P enum.puffer_programm_t
     temperatur_grenzen:
       repeat:
         n: 15

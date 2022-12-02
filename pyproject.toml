@@ -44,6 +44,8 @@ profile = "black"
 
 [tool.setuptools]
 packages = [ "moat.bms.sched",]
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]
 
 [tool.setuptools_scm]
 
@@ -51,7 +53,7 @@ packages = [ "moat.bms.sched",]
 legacy_tox_ini = """
 [tox]
 isolated_build = True
-envlist = py310,py39,check
+envlist = py310,check
 
 [testenv]
 setenv = 
@@ -82,3 +84,5 @@ disable = "wrong-import-order,ungrouped-imports,too-many-nested-blocks,use-dict-
 
 [tool.black]
 line-length = 99
+
+[tool.moat]

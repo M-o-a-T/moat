@@ -1,0 +1,91 @@
+inc:
+  kwb:
+    include: heating/KWB/easyfire.yaml
+slots:
+  1sec:
+    time: 1
+    align: false
+  1min:
+    time: 60
+    align: true
+  5min:
+    time: 300
+    align: true
+  30min:
+    time: 1800
+  15sec:
+    time: 15
+    align: null
+server:
+  - port: 50202
+hosts:
+  wp.hz.smurf.noris.de:
+    1:
+      server: 3
+      ref: !P inc.kwb
+      regs:
+        ak:
+          anlage:
+            ein:
+              src: !P home.ass.dyn.switch.heizung.pellets.cmd
+              dest: !P home.ass.dyn.switch.heizung.pellets.state
+              mirror: true
+        ksm:
+          aschefuellstand:
+            dest: !P home.ass.dyn.sensor.pct.heating_ash.state
+            slot: 5min
+
+          i:
+            kesseltemp:
+              ist:
+                value:
+                  dest: !P heat.s.pellets.temp.top
+                  slot: 15sec
+            ruecklauftemp:
+              ist:
+                value:
+                  dest: !P heat.s.pellets.temp.bottom
+                  slot: 15sec
+            flammtemp:
+              ist:
+                value:
+                  dest: !P heat.s.pellets.temp.flame
+                  slot: 15sec
+          serviceintervallreststunden:
+            dest: !P heat.s.pellets.service.h_until
+            slot: 30min
+          brennerleistung:
+            dest: !P heat.s.pellets.load
+            slot: 1min
+          kesselstatus_anzeige:
+            dest: !P heat.s.pellets.state
+            slot: 15sec
+          kesselpumpe_steuerstufe:
+            dest: !P heat.s.pellets.pump
+            slot: 1min
+          restmenge_brennstofflager:
+            dest: !P home.ass.dyn.sensor.usage.pellets.state
+            slot: 5min
+          waermemenge_gesamt:
+            dest: !P heat.s.pellets.energy
+            slot: 5min
+          modbus:
+            lifetick: 
+              src: !P :mr.temp.heat.s.pellets.tick.out
+            commit_lifetick: 
+              dest: !P :mr.temp.heat.s.pellets.tick.in
+              slot: 15sec
+            kesselanforderung:
+              dest: !P heat.s.pellets.power
+              write: true
+            ruecklauftempmin:
+              dest: !P heat.s.pellets.temperature.min
+              src: !P heat.s.pellets.temperature.min.cmd
+            kesseltemp_vorgabe:
+              dest: !P heat.s.pellets.temperature.goal
+              src: !P heat.s.pellets.temperature.goal.cmd
+        fs:
+          pelletsverbrauch:
+            dest: !P heat.s.pellets.used
+            slot: 5min
+

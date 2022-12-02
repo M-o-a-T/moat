@@ -1,0 +1,31 @@
+include: energy/Eastron/SDM720.yaml
+slots:
+  1sec:
+    time: 1
+    align: false
+  1min:
+    time: 60
+    align: true
+src:
+  host: i.pi.smurf.noris.de
+  unit: 2
+regs:
+  power:
+    L1:
+      active:
+        slot: 1sec
+        dest: !P :mr.grid.s.main.l1
+    L2:
+      active:
+        slot: 1sec
+        dest: !P :mr.grid.s.main.l2
+    L3:
+      active:
+        slot: 1sec
+        dest: !P :mr.grid.s.main.l3
+  energy:
+    total:
+      import:
+        active:
+          slot: 1min
+          dest: !P grid.s.main.meter

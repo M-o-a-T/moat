@@ -1,0 +1,159 @@
+inc:
+  sdm630:
+    include: energy/Eastron/SDM630.yaml
+  sdm720:
+    include: energy/Eastron/SDM720.yaml
+  wp:
+    include: heating/Solvis.yaml
+slots:
+  1sec:
+    time: 1
+    align: false
+  1min:
+    time: 60
+    align: true
+  15sec:
+    time: 15
+    align: null
+hosts:
+  wp.hz.smurf.noris.de:
+    1:
+      ref: inc.wp
+      regs:
+        temperature:
+          default:
+            slot: 15sec
+            idem: false
+          int:
+            1:
+              dest: !P home.ass.dyn.sensor.temp.warmwasser_kessel.state
+            2:
+              dest: !P home.ass.dyn.sensor.temp.warmwasser_vorlauf.state
+            4:
+              dest: !P home.ass.dyn.sensor.temp.heizung_kessel_oben.state
+            11:
+              dest: !P home.ass.dyn.sensor.temp.warmwasser_ruecklauf.state
+            9:
+              dest: !P home.ass.dyn.sensor.temp.heizung_kessel.state
+            12:
+              dest: !P home.ass.dyn.sensor.temp.heizung_vorlauf.state
+            3:
+              dest: !P home.ass.dyn.sensor.temp.heizung_ruecklauf.state
+            10:
+              dest: !P home.ass.dyn.sensor.temp.aussen_hinten.state
+
+  i.pi.smurf.noris.de:
+    1:
+      ref: inc.sdm630
+      regs:
+        power:
+          sum:
+            active:
+              slot: 1sec
+              dest: !P :mr.grid.s.power.car
+          L1:
+            active:
+              slot: 1sec
+              dest: !P :mr.grid.s.power.car.l1
+          L2:
+            active:
+              slot: 1sec
+              dest: !P :mr.grid.s.power.car.l2
+          L3:
+            active:
+              slot: 1sec
+              dest: !P :mr.grid.s.power.car.l3
+        energy:
+          total:
+            active:
+              sum:
+                slot: 1min
+                dest: !P grid.s.energy.car
+    2:
+      ref: inc.sdm720
+      regs:
+        power:
+          L1:
+            active:
+              slot: 1sec
+              dest: !P :mr.grid.s.power.main.l1
+          L2:
+            active:
+              slot: 1sec
+              dest: !P :mr.grid.s.power.main.l2
+          L3:
+            active:
+              slot: 1sec
+              dest: !P :mr.grid.s.power.main.l3
+        energy:
+          total:
+            abs:
+              active:
+                slot: 1min
+                dest: !P grid.s.energy.main
+            import:
+              active:
+                slot: 1min
+                dest: !P grid.s.energy.main.in
+            export:
+              active:
+                slot: 1min
+                dest: !P grid.s.energy.main.out
+  l.pi.smurf.noris.de:
+    11:
+      ref: inc.sdm720
+      regs:
+        power:
+          L1:
+            active:
+              slot: 1sec
+              dest: !P :mr.grid.s.power.multi.l1
+          L2:
+            active:
+              slot: 1sec
+              dest: !P :mr.grid.s.power.multi.l2
+          L3:
+            active:
+              slot: 1sec
+              dest: !P :mr.grid.s.power.multi.l3
+        energy:
+          total:
+            abs:
+              active:
+                slot: 1min
+                dest: !P grid.s.energy.multi
+            import:
+              active:
+                slot: 1min
+                dest: !P grid.s.energy.multi.in
+            export:
+              active:
+                slot: 1min
+                dest: !P grid.s.energy.multi.out
+  e.pi.smurf.noris.de:
+    11:
+      ref: inc.sdm720
+      regs:
+        power:
+          sum:
+            active:
+              slot: 15sec
+              dest: !P :mr.grid.s.power.wp
+          L1:
+            active:
+              slot: 1sec
+              dest: !P :mr.grid.s.power.wp.l1
+          L2:
+            active:
+              slot: 1sec
+              dest: !P :mr.grid.s.power.wp.l2
+          L3:
+            active:
+              slot: 1sec
+              dest: !P :mr.grid.s.power.wp.l3
+        energy:
+          total:
+            abs:
+              active:
+                slot: 1min
+                dest: !P grid.s.energy.wp

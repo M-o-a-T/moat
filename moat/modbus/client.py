@@ -204,6 +204,9 @@ class Host:
                         req._response_value.set_error(exc)
                     await self.disconnect()
 
+                except anyio.get_cancelled_exc_class():
+                    raise
+
                 except BaseException as exc:
                     _logger.exception("Error: %r", exc)
 

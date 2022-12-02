@@ -6,11 +6,12 @@ import logging
 import time
 from collections.abc import Mapping
 from pathlib import Path as FSPath
+from typing import List
 
 import anyio
 from moat.util import P, Path, attrdict, combine_dict, merge, yload
 
-from ..client import Host, Slot, Unit
+from ..client import Host, ModbusClient, Slot, Unit
 from ..typemap import get_kind, get_type2
 from ..types import InputRegisters
 
@@ -18,16 +19,23 @@ logger = logging.getLogger(__name__)
 
 
 class BadRegisterError(ValueError):
+    """Broken register description"""
+
     pass
 
 
 class NotARegisterError(ValueError):
+    """Not a register at this location"""
+
     pass
 
 
 def fixup(
     d, root=None, path=Path(), post=None, default=None, offset=0, do_refs=True, this_file=None
 ):
+    """
+    Run processing instructions: include, ref, default, repeat
+    """
     if root is None:
         root = d
         set_root = True
@@ -47,7 +55,7 @@ def fixup(
             inc = [inc]
         for i, dd in enumerate(inc):
             try:
-                f = data / dd
+                f = _data / dd
                 df = f.open("r")
             except FileNotFoundError:
                 f = this_file.parent / dd
@@ -80,7 +88,7 @@ def fixup(
             if isinstance(refs, Path):
                 refs = [refs]
             for i, p in enumerate(refs):
-                refs[i] = root._get(p)
+                refs[i] = root._get(p)  # pylint: disable=protected-access
 
             refs.reverse()
             d = combine_dict(d, *refs, cls=attrdict)
@@ -156,7 +164,7 @@ class Register:
             elif s == "float":
                 l = 2
             else:
-                raise BadRegisterError("no length")
+                raise BadRegisterError("no length") from None
 
         self.reg = get_type2(s, l)()
 
@@ -181,30 +189,37 @@ class Register:
 
     @property
     def value(self):
+        """Return the factor+offset-adjusted value"""
         if self.reg.value is None:
             return None
         return self.reg.value * self.factor + self.offset
 
     @value.setter
     def value(self, val):
-        self.reg.value = (val - offset) / self.factor
+        """Set the value, reverse factor+offset-adjustment"""
+        self.reg.value = (val - self.offset) / self.factor
 
     @property
     def len(self):
+        """number of Modbus registers occupied by this value"""
         return self.reg.len
 
     def encode(self):
+        """Encode myself"""
         return self.reg.encode()
 
-    def decode(self, regs):
+    def decode(self, regs: List[int]):
+        """Encode registers into self"""
         self.reg.decode(regs)
 
     @property
     def changed(self):
+        """Flag whether this register needs to be updated"""
         return self.reg.changed
 
     @property
     def gen(self):
+        """Generation number for the current value"""
         return self.reg.gen
 
     def __repr__(self):
@@ -213,7 +228,7 @@ class Register:
     __str__ = __repr__
 
 
-data = FSPath(__file__).parent / "_data"
+_data = FSPath(__file__).parent / "_data"
 
 
 class Device:
@@ -228,9 +243,16 @@ class Device:
     processor)`. The system will fetch the data, call a given postprocessor
     for each item (which might forward the value to MQTT), and return
     the list of registers.
+
+    @factory is used to create bus registers. Used to augment basic
+    registers, e.g. with different storage backends.
     """
 
-    def __init__(self, client, factory=Register):
+    host: Host = None
+    data: attrdict = None
+    unit: Unit = None
+
+    def __init__(self, client: ModbusClient, factory=Register):
         self.client = client
         self.factory = factory
 
@@ -239,7 +261,7 @@ class Device:
         if path is None:
             d = attrdict()
         else:
-            path = data / path
+            path = _data / path
             d = yload(path, attr=True)
         if data is not None:
             d = merge(d, data)
@@ -250,6 +272,8 @@ class Device:
         self.add_registers()
 
     def add_registers(self):
+        """Replace entries w/ register/slot members with Register instances"""
+
         def a_r(d, path=Path()):
             seen = False
             for k, v in d.items():
@@ -258,7 +282,7 @@ class Device:
                 if a_r(v, path / k):
                     seen = True
                     if "register" in v:
-                        logger.warning(f"{path/k} has a sub-register: ignored")
+                        logger.warning("%s has a sub-register: ignored", path / k)
                         continue
                     continue
 
@@ -266,13 +290,17 @@ class Device:
                     d[k] = self.factory(v, path / k, self.unit)
                     seen = True
                 elif "slot" in v:
-                    logger.warning(f"{path/k} is not a register")
+                    logger.warning("%s is not a register", path / k)
             return seen
 
         a_r(self.data)
 
     def get(self, path: Path):
-        dev = self.data._get(path)
+        """Fetch the register at a subpath.
+
+        Raises an error if there's no register there.
+        """
+        dev = self.data._get(path)  # pylint: disable=protected-access
         if not isinstance(dev, Register):
             raise NotARegisterError(path)
         return dev
@@ -298,9 +326,10 @@ class Device:
         #  1sec:
         #    time: 1
         #    align: false
-        ## align=True: wait for the next multiple
-        ## align=False: fetch now, *then* wait for the next multiple
-        ## align=None: fetch now, wait for the timespan
+        #
+        # align=True: wait for the next multiple
+        # align=False: fetch now, *then* wait for the next multiple
+        # align=None: fetch now, wait for the timespan
         s = self.data.slots[slot]
         sl = self.unit.slot(slot)
         al = s.get("align", None)
@@ -315,8 +344,8 @@ class Device:
         while True:
             try:
                 await self.update(sl)
-            except Exception as err:
-                logger.warning(f"{sl}: {err !r}: wait {backoff}")
+            except Exception as err:  # pylint: disable=broad-except
+                logger.exception("%s: %r: wait %s", sl, err, backoff)
                 await anyio.sleep(backoff)
                 backoff = min(max(s.time * 2, 60), backoff * 1.2)
                 continue
@@ -332,11 +361,12 @@ class Device:
                 else:
                     nnt = time.monotonic()
                 if s.time >= 5 and t - nt > s.time / 10:
-                    logger.warning(f"{sl}: late by {t-nt :.1f}s: now {nnt}")
+                    logger.warning("%s: late by %1fs: now %s", sl, t - nt, nnt)
                 nt = nnt
             nt += s.time
 
     async def poll(self, slots: set = None):
+        """Periodically poll all slots"""
         if not slots:
             slots = self.data.slots.keys()
         async with anyio.create_task_group() as tg:

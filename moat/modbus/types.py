@@ -263,31 +263,31 @@ class DoubleValue(BaseValue):
 class SwappedLongValue(_Swapped, LongValue):
     """32-bit integer, two registers, little-endian word order."""
 
-    pass  # pylint: disable=unnecessary-pass
+    pass
 
 
 class SwappedQuadValue(_Swapped, QuadValue):
     """64-bit integer, four registers, little-endian word order."""
 
-    pass  # pylint: disable=unnecessary-pass
+    pass
 
 
 class SignedIntValue(_Signed, IntValue):
     """one register, signed."""
 
-    pass  # pylint: disable=unnecessary-pass
+    pass
 
 
 class SignedLongValue(_Signed, LongValue):
     """two registers, signed."""
 
-    pass  # pylint: disable=unnecessary-pass
+    pass
 
 
 class SwappedSignedLongValue(_Signed, _Swapped, BaseValue):
     """two registers, signed, swapped."""
 
-    pass  # pylint: disable=unnecessary-pass
+    pass
 
 
 SignedSwappedLongValue = SwappedSignedLongValue
@@ -296,13 +296,13 @@ SignedSwappedLongValue = SwappedSignedLongValue
 class SignedQuadValue(_Signed, QuadValue):
     """four registers, signed."""
 
-    pass  # pylint: disable=unnecessary-pass
+    pass
 
 
 class SwappedSignedQuadValue(_Signed, _Swapped, QuadValue):
     """four registers, signed, swapped."""
 
-    pass  # pylint: disable=unnecessary-pass
+    pass
 
 
 SignedSwappedQuadValue = SwappedSignedQuadValue
@@ -311,13 +311,13 @@ SignedSwappedQuadValue = SwappedSignedQuadValue
 class SwappedFloatValue(_Swapped, FloatValue):
     """broken-ordered floating point."""
 
-    pass  # pylint: disable=unnecessary-pass
+    pass
 
 
 class SwappedDoubleValue(_Swapped, DoubleValue):
     """broken-ordered accurate floating point."""
 
-    pass  # pylint: disable=unnecessary-pass
+    pass
 
 
 class ByteValue(BaseValue):
@@ -353,7 +353,6 @@ class StringValue(ByteValue):
     @length is in bytes, NOT UTF-8 characters"""
 
     def _encode(self, value):
-        ln = self.len * 2
         value = value.encode("utf-8")
         return super()._encode(value)
 

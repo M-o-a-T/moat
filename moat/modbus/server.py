@@ -318,7 +318,7 @@ class ModbusServer(BaseModbusServer):
 class MockAioModbusServer(ModbusServer):
     """A test modbus server with static data"""
 
-    pass  # pylint: disable=unnecessary-pass
+    pass
 
 
 class ForwardingAioModbusServer:

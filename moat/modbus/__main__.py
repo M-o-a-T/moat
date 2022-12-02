@@ -4,13 +4,13 @@ Basic tool support
 
 """
 import logging  # pylint: disable=wrong-import-position
-from functools import partial
 from getopt import getopt
 from pprint import pprint
 
 import asyncclick as click
 
-from .typemap import get_kind, get_type, map_kind, map_type
+from .typemap import get_type, map_kind, map_type
+from .types import InputRegisters, IntValue
 
 log = logging.getLogger()
 
@@ -24,8 +24,6 @@ async def main():
     )
     logging.basicConfig(format=FORMAT)
     log.setLevel(logging.WARN)
-
-    pass  # pylint: disable=unnecessary-pass
 
 
 UNIT = 0x1
@@ -112,6 +110,7 @@ async def _server(host, port, debug, args):
 
 
 def mk_server(m):
+    """Helper to create a server"""
     s = _server
     s = click.argument("args", nargs=-1, type=click.UNPROCESSED)(s)
     s = click.option("--debug", "-d", is_flag=True, help="Log debug messages")(s)
@@ -179,6 +178,7 @@ async def _client(host, port, unit, kind, start, num, type_, values, debug):
 
 
 def mk_client(m):
+    """helper to create a client"""
     c = _client
     c = click.argument("values", nargs=-1)(c)
     c = click.option("--debug", "-d", is_flag=True, help="Log debug messages")(c)

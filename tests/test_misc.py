@@ -1,8 +1,6 @@
 """
 Basic client/server tests
 """
-from functools import partial
-
 import pytest
 
 from moat.modbus.client import ModbusClient
@@ -23,9 +21,9 @@ async def test_rw():
             clh = cli.host("127.0.0.1", srv.port)
             clu = clh.unit(12)
             cls = clu.slot("x")
-            clv1 = cls.add(HoldingRegisters, 34, LongValue)
-            clv2 = cls.add(HoldingRegisters, 36, FloatValue)
-            clv3 = cls.add(HoldingRegisters, 38, partial(StringValue, 10))
+            clv1 = cls.add(HoldingRegisters, 34, LongValue())
+            clv2 = cls.add(HoldingRegisters, 36, FloatValue())
+            clv3 = cls.add(HoldingRegisters, 38, StringValue(10))
 
             await cls.getValues()
             assert clv1.value == 123456

@@ -1,5 +1,8 @@
+"""
+Device file handling and serving
+"""
+
 import logging
-from contextlib import AsyncExitStack
 from functools import partial
 from pathlib import Path as FSPath
 
@@ -9,9 +12,7 @@ from moat.util import attrdict, merge, to_attrdict, yload, yprint
 
 from ..client import ModbusClient
 from .device import Device, fixup
-
-# from .server import Server
-from .poll import poll
+from .server import Server
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +55,8 @@ async def poll1(ctx, host, port, unit, path, slot):
     s.setdefault("port", port)
     s.setdefault("unit", unit)
 
+    # pylint: disable=import-outside-toplevel
     if "distkv" in obj.cfg:
-        from functools import partial
-
         from distkv.client import open_client
 
         from .distkv import Register
@@ -66,6 +66,7 @@ async def poll1(ctx, host, port, unit, path, slot):
         Reg = partial(Register, dkv=dkv, tg=tg)
     else:
         from .device import Register as Reg
+
     cl = await ctx.with_async_resource(ModbusClient())
 
     dev = Device(client=cl, factory=Reg)
@@ -87,23 +88,23 @@ async def poll(ctx, path):
     s = d.setdefault("src", attrdict())
     sl = d.setdefault("slots", attrdict())
 
+    # pylint: disable=import-outside-toplevel
     if "distkv" in obj.cfg:
-        from functools import partial
-
         from distkv.client import open_client
 
         from .distkv import Register
 
         dkv = await ctx.with_async_resource(open_client(**obj.cfg.distkv))
-        # tg = await ctx.with_async_resource(anyio.create_task_group())
-        # Reg = partial(Register, dkv=dkv, tg=tg)
+        # "Reg" is created in the taskgroup
     else:
         from .device import Register as Reg
+
+        dkv = None
 
     async with ModbusClient() as cl, anyio.create_task_group() as tg:
         nd = 0
 
-        def make_dev(v, **kw):
+        def make_dev(v, Reg, **kw):
             kw = to_attrdict(kw)
             vs = v.setdefault("src", attrdict())
             merge(vs, kw, s, replace=False)
@@ -116,14 +117,16 @@ async def poll(ctx, path):
             return dev
 
         async with anyio.create_task_group() as tg:
+            if dkv is not None:
+                # The DistKV client must live longer than the taskgroup
+                Reg = partial(Register, dkv=dkv, tg=tg)  # noqa: F811
             servers = []
             for s in d.get("server", ()):
                 servers.append(Server(*s))
 
             for h, hv in d.get("hosts", {}).items():
                 for u, v in hv.items():
-                    Reg = partial(Register, dkv=dkv, tg=tg)
-                    dev = make_dev(v, host=h, unit=u)
+                    dev = make_dev(v, Reg, host=h, unit=u)
                     nd += 1
                     tg.start_soon(dev.poll)
 
@@ -138,7 +141,7 @@ async def poll(ctx, path):
                     if not isinstance(p, int):
                         continue
                     for u, v in pv.items():
-                        dev = make_dev(v, host=h, port=p, unit=u)
+                        dev = make_dev(v, Reg, host=h, port=p, unit=u)
                         tg.start_soon(dev.poll)
                         nd += 1
 

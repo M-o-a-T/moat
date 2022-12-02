@@ -2,6 +2,8 @@
 Map strings+kinds to modbuys types
 """
 
+from functools import partial
+
 from moat.modbus.types import (
     ByteValue,
     Coils,

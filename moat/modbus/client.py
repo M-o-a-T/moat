@@ -175,9 +175,8 @@ class Host:
                             self._connected.set()
 
                     data = await self.stream.receive(4096)
-                    self._trace(
-                        "recv: " + " ".join([hex(x) for x in data])
-                    )  # pylint: disable=logging-not-lazy
+                    # pylint: disable=logging-not-lazy
+                    self._trace("recv: " + " ".join([hex(x) for x in data]))
 
                     # unit = self.framer.decode_data(data).get("uid", 0)
                     replies = []
@@ -437,9 +436,6 @@ class Slot:
         except KeyError:
             return None
         return k.delete(offset)
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__}>"
 
     async def _stop_run(self):
         if self._run_scope is not None:

@@ -1,3 +1,7 @@
+"""
+Modbus support
+"""
+
 from moat.util import load_subgroup
 
 from .__main__ import mk_client, mk_server

@@ -86,9 +86,6 @@ deps =
 """
 
 [tool.moat]
-fixup = """
-toml["foo"]=dict(bar="baz")
-"""
 
 [tool.pylint]
 [tool.pylint.messages_control]

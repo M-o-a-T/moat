@@ -3,10 +3,12 @@ import asyncclick as click
 from moat.util import yload, yprint, attrdict, merge, to_attrdict
 import anyio
 from .device import fixup,Device
+#from .server import Server
 from .poll import poll
 from ..client import ModbusClient
 from contextlib import AsyncExitStack
 from functools import partial
+from pathlib import Path as FSPath
 
 import logging
 logger = logging.getLogger(__name__)
@@ -17,11 +19,16 @@ def cli():
     pass
 
 @cli.command()
-@click.argument("path", type=click.File("r"))
-def dump(path):
+@click.option("-r", "--raw", is_flag=True, help="don't postprocess")
+@click.option("-R", "--no-refs", is_flag=True, help="don't process references")
+@click.argument("path", type=click.Path("r"))
+def dump(path, raw, no_refs):
     """Dump a postprocessed file"""
-    d = yload(path, attr=True)
-    d = fixup(d)
+    path = FSPath(path)
+    with path.open("r") as f:
+        d = yload(f, attr=True)
+    if not raw:
+        d = fixup(d, do_refs=not no_refs, this_file=path)
     yprint(d)
 
 @cli.command()
@@ -84,7 +91,7 @@ async def poll(ctx, path):
 
     async with ModbusClient() as cl, anyio.create_task_group() as tg:
         nd = 0
-        async def poll(v, **kw):
+        def make_dev(v, **kw):
             kw = to_attrdict(kw)
             vs = v.setdefault("src", attrdict())
             merge(vs,kw,s, replace=False)
@@ -94,22 +101,43 @@ async def poll(ctx, path):
             logger.info("Starting %r", vs)
             dev = Device(client=cl, factory=Reg)
             dev.load(data=v)
-            await dev.poll()
+            return dev
 
         async with anyio.create_task_group() as tg:
+            servers = []
+            for s in d.get("server",()):
+                servers.append(Server(*s))
+
             for h,hv in d.get("hosts",{}).items():
                 for u,v in hv.items():
                     Reg = partial(Register, dkv=dkv, tg=tg)
-                    tg.start_soon(partial(poll, v, host=h, unit=u))
+                    dev = make_dev(v, host=h, unit=u)
                     nd += 1
+                    tg.start_soon(dev.poll)
+
+                    us = v.get("server",None)
+                    if us is not None:
+                        srv = servers[us // 1000]
+                        us %= 1000
+                        srv.attach(us, dev)
         
             for h,hv in d.get("hostports",{}).items():
                 for p,pv in hv.items():
                     if not isinstance(p,int):
                         continue
                     for u,v in pv.items():
-                        tg.start_soon(partial(poll(v, host=h, port=p, unit=u)))
+                        dev = make_dev(v, host=h, port=p, unit=u)
+                        tg.start_soon(dev.poll)
                         nd += 1
+
+                        us = v.get("server",None)
+                        if us is not None:
+                            srv = servers[us // 1000]
+                            us %= 1000
+                            srv.attach(us, dev)
+
+            for s in servers:
+                tg.start_soon(s.run)
 
         if not nd:
             logger.error("No devices to poll found.")

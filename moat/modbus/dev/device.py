@@ -23,9 +23,12 @@ class NotARegisterError(ValueError):
     pass
 
 
-def fixup(d,root=None,path=Path(), post=None, default=None, offset=0):
+def fixup(d,root=None,path=Path(), post=None, default=None, offset=0, do_refs=True, this_file=None):
     if root is None:
         root = d
+        set_root = True
+    else:
+        set_root = (root is d)
     if default is None:
         default = attrdict()
 
@@ -39,11 +42,19 @@ def fixup(d,root=None,path=Path(), post=None, default=None, offset=0):
         elif not isinstance(inc,list):
             inc = [inc]
         for i,dd in enumerate(inc):
-            with (data/dd).open("r") as df:
+            try:
+                f = data/dd
+                df = f.open("r")
+            except FileNotFoundError:
+                f = this_file.parent/dd
+                df = f.open("r")
+            with df:
                 dd = yload(df, attr=True)
-            inc[i] = fixup(dd,dd,Path(), default=default, offset=offset)
+            inc[i] = fixup(dd,None, Path(), default=default, offset=offset, do_refs=do_refs, this_file=f)
         inc.reverse()
         d = combine_dict(d, *inc, cls=attrdict)
+        if set_root:
+            root = d
 
     try:
         defs = d.pop("default")
@@ -52,18 +63,21 @@ def fixup(d,root=None,path=Path(), post=None, default=None, offset=0):
     else:
         default = combine_dict(defs,default, cls=attrdict)
 
-    try:
-        refs = d.pop("ref")
-    except KeyError:
-        pass
-    else:
-        if isinstance(refs,str):
-            refs = [P(refs)]
-        for i,p in enumerate(refs):
-            refs[i] = root._get(p)
+    if do_refs:
+        try:
+            refs = d.pop("ref")
+        except KeyError:
+            pass
+        else:
+            if isinstance(refs,str):
+                refs = P(refs)
+            if isinstance(refs, Path):
+                refs = [refs]
+            for i,p in enumerate(refs):
+                refs[i] = root._get(p)
 
-        refs.reverse()
-        d = combine_dict(d, *refs, cls=attrdict)
+            refs.reverse()
+            d = combine_dict(d, *refs, cls=attrdict)
     
     try:
         rep = d.pop("repeat")
@@ -82,7 +96,7 @@ def fixup(d,root=None,path=Path(), post=None, default=None, offset=0):
         off = offset
         while n>0:
             v = combine_dict(d.get(k,attrdict()), rep.data, cls=attrdict)
-            d[k] = fixup(v,root,path/k, default=default if k in d else attrdict(), offset=off)
+            d[k] = fixup(v,root,path/k, default=default if k in d else attrdict(), offset=off, do_refs=do_refs, this_file=this_file)
             n -= 1
             k += 1
             off += rep.offset
@@ -92,7 +106,7 @@ def fixup(d,root=None,path=Path(), post=None, default=None, offset=0):
         if k in reps:
             continue
         if isinstance(v,Mapping):
-            d[k] = fixup(v,root,path/k, default=default, offset=offset)
+            d[k] = fixup(v,root,path/k, default=default, offset=offset, do_refs=do_refs, this_file=this_file)
 
     if post is not None:
         d = post(d,path)
@@ -206,7 +220,7 @@ class Device:
             d = yload(path, attr=True)
         if data is not None:
             d = merge(d,data)
-        self.data = fixup(d,d,Path())
+        self.data = fixup(d,d,Path(), this_file=path)
 
         self.host = self.client.host(self.data.src.host, self.data.src.get('port'))
         self.unit = self.host.unit(self.data.src.unit)

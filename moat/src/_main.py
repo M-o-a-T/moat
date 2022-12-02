@@ -266,7 +266,7 @@ def apply_templates(repo):
     )
 
     rpath = Path(repo.working_dir)
-    if rpath.parent.name == "lib":
+    if rpath.parent.name == "lib" or rpath.parent.parent.name == "moat":
         rname = f"{rpath.parent.name}-{rpath.name}"
         rdot = f"{rpath.parent.name}.{rpath.name}"
         rpath = f"{rpath.parent.name}/{rpath.name}"

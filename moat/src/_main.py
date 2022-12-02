@@ -124,6 +124,11 @@ def fix_deps(deps: list[str], tags: dict[str, str]) -> bool:
 
 def run_tests(repo: Repo) -> bool:
     """Run tests (i.e., 'tox') in this repository."""
+
+    tst = Path(repo.working_dir).joinpath("Makefile")
+    if not tst.is_file():
+        # No Makefile. Assume it's OK.
+        return True
     try:
         print("\n*** Testing:", repo.working_dir)
         # subprocess.run(["python3", "-mtox"], cwd=repo.working_dir, check=True)

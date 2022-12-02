@@ -1,22 +1,26 @@
-import asyncclick as click
-
-from moat.util import yload, yprint, attrdict, merge, to_attrdict
-import anyio
-from .device import fixup,Device
-#from .server import Server
-from .poll import poll
-from ..client import ModbusClient
+import logging
 from contextlib import AsyncExitStack
 from functools import partial
 from pathlib import Path as FSPath
 
-import logging
+import anyio
+import asyncclick as click
+from moat.util import attrdict, merge, to_attrdict, yload, yprint
+
+from ..client import ModbusClient
+from .device import Device, fixup
+
+# from .server import Server
+from .poll import poll
+
 logger = logging.getLogger(__name__)
+
 
 @click.group()
 def cli():
     """Modbus device polling"""
     pass
+
 
 @cli.command()
 @click.option("-r", "--raw", is_flag=True, help="don't postprocess")
@@ -30,6 +34,7 @@ def dump(path, raw, no_refs):
     if not raw:
         d = fixup(d, do_refs=not no_refs, this_file=path)
     yprint(d)
+
 
 @cli.command()
 @click.option("--host", "-h", help="host to bind to")
@@ -45,14 +50,17 @@ async def poll1(ctx, host, port, unit, path, slot):
     d = yload(path, attr=True)
     d = fixup(d)
     s = d.setdefault("src", attrdict())
-    s.setdefault("host",host)
-    s.setdefault("port",port)
-    s.setdefault("unit",unit)
+    s.setdefault("host", host)
+    s.setdefault("port", port)
+    s.setdefault("unit", unit)
 
     if "distkv" in obj.cfg:
-        from distkv.client import open_client
-        from .distkv import Register
         from functools import partial
+
+        from distkv.client import open_client
+
+        from .distkv import Register
+
         dkv = await ctx.with_async_resource(open_client(**obj.cfg.distkv))
         tg = await ctx.with_async_resource(anyio.create_task_group())
         Reg = partial(Register, dkv=dkv, tg=tg)
@@ -65,7 +73,7 @@ async def poll1(ctx, host, port, unit, path, slot):
 
     await dev.poll(set(slot))
 
-    
+
 @cli.command()
 @click.argument("path", type=click.File("r"))
 @click.pass_context
@@ -80,23 +88,27 @@ async def poll(ctx, path):
     sl = d.setdefault("slots", attrdict())
 
     if "distkv" in obj.cfg:
-        from distkv.client import open_client
-        from .distkv import Register
         from functools import partial
+
+        from distkv.client import open_client
+
+        from .distkv import Register
+
         dkv = await ctx.with_async_resource(open_client(**obj.cfg.distkv))
-        #tg = await ctx.with_async_resource(anyio.create_task_group())
-        #Reg = partial(Register, dkv=dkv, tg=tg)
+        # tg = await ctx.with_async_resource(anyio.create_task_group())
+        # Reg = partial(Register, dkv=dkv, tg=tg)
     else:
         from .device import Register as Reg
 
     async with ModbusClient() as cl, anyio.create_task_group() as tg:
         nd = 0
+
         def make_dev(v, **kw):
             kw = to_attrdict(kw)
             vs = v.setdefault("src", attrdict())
-            merge(vs,kw,s, replace=False)
+            merge(vs, kw, s, replace=False)
             vsl = v.setdefault("slots", attrdict())
-            merge(vsl,sl, replace=False)
+            merge(vsl, sl, replace=False)
 
             logger.info("Starting %r", vs)
             dev = Device(client=cl, factory=Reg)
@@ -105,32 +117,32 @@ async def poll(ctx, path):
 
         async with anyio.create_task_group() as tg:
             servers = []
-            for s in d.get("server",()):
+            for s in d.get("server", ()):
                 servers.append(Server(*s))
 
-            for h,hv in d.get("hosts",{}).items():
-                for u,v in hv.items():
+            for h, hv in d.get("hosts", {}).items():
+                for u, v in hv.items():
                     Reg = partial(Register, dkv=dkv, tg=tg)
                     dev = make_dev(v, host=h, unit=u)
                     nd += 1
                     tg.start_soon(dev.poll)
 
-                    us = v.get("server",None)
+                    us = v.get("server", None)
                     if us is not None:
                         srv = servers[us // 1000]
                         us %= 1000
                         srv.attach(us, dev)
-        
-            for h,hv in d.get("hostports",{}).items():
-                for p,pv in hv.items():
-                    if not isinstance(p,int):
+
+            for h, hv in d.get("hostports", {}).items():
+                for p, pv in hv.items():
+                    if not isinstance(p, int):
                         continue
-                    for u,v in pv.items():
+                    for u, v in pv.items():
                         dev = make_dev(v, host=h, port=p, unit=u)
                         tg.start_soon(dev.poll)
                         nd += 1
 
-                        us = v.get("server",None)
+                        us = v.get("server", None)
                         if us is not None:
                             srv = servers[us // 1000]
                             us %= 1000
@@ -141,7 +153,3 @@ async def poll(ctx, path):
 
         if not nd:
             logger.error("No devices to poll found.")
-
-        
-
-

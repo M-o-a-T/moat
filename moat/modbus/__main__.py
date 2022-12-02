@@ -3,14 +3,15 @@
 Basic tool support
 
 """
-from getopt import getopt
+import logging  # pylint: disable=wrong-import-position
 from functools import partial
-from .typemap import get_type, get_kind, map_kind, map_type
+from getopt import getopt
 from pprint import pprint
 
 import asyncclick as click
 
-import logging  # pylint: disable=wrong-import-position
+from .typemap import get_kind, get_type, map_kind, map_type
+
 log = logging.getLogger()
 
 
@@ -18,7 +19,9 @@ log = logging.getLogger()
 async def main():
     """Modbus client / server"""
 
-    FORMAT = "%(asctime)-15s %(threadName)-15s %(levelname)-8s %(module)-15s:%(lineno)-8s %(message)s"
+    FORMAT = (
+        "%(asctime)-15s %(threadName)-15s %(levelname)-8s %(module)-15s:%(lineno)-8s %(message)s"
+    )
     logging.basicConfig(format=FORMAT)
     log.setLevel(logging.WARN)
 
@@ -107,6 +110,7 @@ async def _server(host, port, debug, args):
 
     await s.serve()
 
+
 def mk_server(m):
     s = _server
     s = click.argument("args", nargs=-1, type=click.UNPROCESSED)(s)
@@ -123,6 +127,7 @@ def mk_server(m):
         epilog=_args_help,
     )(s)
     return s
+
 
 server = mk_server(main)
 
@@ -172,19 +177,29 @@ async def _client(host, port, unit, kind, start, num, type_, values, debug):
         except Exception as exc:  # pylint: disable=broad-except
             log.exception("Problem: %r", exc)
 
+
 def mk_client(m):
     c = _client
     c = click.argument("values", nargs=-1)(c)
     c = click.option("--debug", "-d", is_flag=True, help="Log debug messages")(c)
-    c = click.option( "--type", "-t", "type_", default="raw", help="value type: s1,s2,s4,u1,u2,u4,f2,f4,raw; Sx/Fx=swapped",)(c)
+    c = click.option(
+        "--type",
+        "-t",
+        "type_",
+        default="raw",
+        help="value type: s1,s2,s4,u1,u2,u4,f2,f4,raw; Sx/Fx=swapped",
+    )(c)
     c = click.option("--num", "-n", type=int, default=1, help="number of values")(c)
     c = click.option("--start", "-s", default=0, help="starting register")(c)
-    c = click.option("--kind", "-k", default="i", help="query type: input, discrete, hold, coil")(c)
+    c = click.option("--kind", "-k", default="i", help="query type: input, discrete, hold, coil")(
+        c
+    )
     c = click.option("--unit", "-u", type=int, default=1, help="unit to query")(c)
     c = click.option("--port", "-p", type=int, default=502, help="destination port")(c)
     c = click.option("--host", "-h", default="localhost", help="destination host")(c)
     c = m.command("client", context_settings=dict(show_default=True))(c)
     return c
+
 
 client = mk_client(main)
 

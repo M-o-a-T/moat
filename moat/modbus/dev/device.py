@@ -2,33 +2,37 @@
 Types that describe a modbus device, as read from file
 """
 
+import logging
 import time
 from collections.abc import Mapping
 from pathlib import Path as FSPath
 
 import anyio
+from moat.util import P, Path, attrdict, combine_dict, merge, yload
 
-from moat.util import attrdict, yload, Path, combine_dict, merge, P
-from ..client import Unit, Host, Slot
-from ..typemap import get_type2, get_kind
+from ..client import Host, Slot, Unit
+from ..typemap import get_kind, get_type2
 from ..types import InputRegisters
 
-import logging
 logger = logging.getLogger(__name__)
+
 
 class BadRegisterError(ValueError):
     pass
+
 
 class NotARegisterError(ValueError):
     pass
 
 
-def fixup(d,root=None,path=Path(), post=None, default=None, offset=0, do_refs=True, this_file=None):
+def fixup(
+    d, root=None, path=Path(), post=None, default=None, offset=0, do_refs=True, this_file=None
+):
     if root is None:
         root = d
         set_root = True
     else:
-        set_root = (root is d)
+        set_root = root is d
     if default is None:
         default = attrdict()
 
@@ -39,18 +43,20 @@ def fixup(d,root=None,path=Path(), post=None, default=None, offset=0, do_refs=Tr
     else:
         if isinstance(inc, tuple):
             inc = list(inc)
-        elif not isinstance(inc,list):
+        elif not isinstance(inc, list):
             inc = [inc]
-        for i,dd in enumerate(inc):
+        for i, dd in enumerate(inc):
             try:
-                f = data/dd
+                f = data / dd
                 df = f.open("r")
             except FileNotFoundError:
-                f = this_file.parent/dd
+                f = this_file.parent / dd
                 df = f.open("r")
             with df:
                 dd = yload(df, attr=True)
-            inc[i] = fixup(dd,None, Path(), default=default, offset=offset, do_refs=do_refs, this_file=f)
+            inc[i] = fixup(
+                dd, None, Path(), default=default, offset=offset, do_refs=do_refs, this_file=f
+            )
         inc.reverse()
         d = combine_dict(d, *inc, cls=attrdict)
         if set_root:
@@ -61,7 +67,7 @@ def fixup(d,root=None,path=Path(), post=None, default=None, offset=0, do_refs=Tr
     except KeyError:
         pass
     else:
-        default = combine_dict(defs,default, cls=attrdict)
+        default = combine_dict(defs, default, cls=attrdict)
 
     if do_refs:
         try:
@@ -69,16 +75,16 @@ def fixup(d,root=None,path=Path(), post=None, default=None, offset=0, do_refs=Tr
         except KeyError:
             pass
         else:
-            if isinstance(refs,str):
+            if isinstance(refs, str):
                 refs = P(refs)
             if isinstance(refs, Path):
                 refs = [refs]
-            for i,p in enumerate(refs):
+            for i, p in enumerate(refs):
                 refs[i] = root._get(p)
 
             refs.reverse()
             d = combine_dict(d, *refs, cls=attrdict)
-    
+
     try:
         rep = d.pop("repeat")
     except KeyError:
@@ -91,25 +97,41 @@ def fixup(d,root=None,path=Path(), post=None, default=None, offset=0, do_refs=Tr
     # Offset is modified here
     reps = set()
     if rep:
-        k = rep.get("start",0)
+        k = rep.get("start", 0)
         n = rep.n
         off = offset
-        while n>0:
-            v = combine_dict(d.get(k,attrdict()), rep.data, cls=attrdict)
-            d[k] = fixup(v,root,path/k, default=default if k in d else attrdict(), offset=off, do_refs=do_refs, this_file=this_file)
+        while n > 0:
+            v = combine_dict(d.get(k, attrdict()), rep.data, cls=attrdict)
+            d[k] = fixup(
+                v,
+                root,
+                path / k,
+                default=default if k in d else attrdict(),
+                offset=off,
+                do_refs=do_refs,
+                this_file=this_file,
+            )
             n -= 1
             k += 1
             off += rep.offset
             reps.add(k)
 
-    for k,v in d.items():
+    for k, v in d.items():
         if k in reps:
             continue
-        if isinstance(v,Mapping):
-            d[k] = fixup(v,root,path/k, default=default, offset=offset, do_refs=do_refs, this_file=this_file)
+        if isinstance(v, Mapping):
+            d[k] = fixup(
+                v,
+                root,
+                path / k,
+                default=default,
+                offset=offset,
+                do_refs=do_refs,
+                this_file=this_file,
+            )
 
     if post is not None:
-        d = post(d,path)
+        d = post(d, path)
 
     return d
 
@@ -129,7 +151,7 @@ class Register:
         try:
             l = d.len
         except AttributeError:
-            if s in {"int","uint"}:
+            if s in {"int", "uint"}:
                 l = 1
             elif s == "float":
                 l = 2
@@ -150,7 +172,7 @@ class Register:
             self.slot = slot
         self.unit = unit
         self.data = d
-        self.factor = 10 ** self.data.get("scale",0) * self.data.get("factor",1)
+        self.factor = 10 ** self.data.get("scale", 0) * self.data.get("factor", 1)
         self.offset = self.data.get("offset", 0)
         self.path = path
 
@@ -165,7 +187,7 @@ class Register:
 
     @value.setter
     def value(self, val):
-        self.reg.value = (val-offset)/self.factor
+        self.reg.value = (val - offset) / self.factor
 
     @property
     def len(self):
@@ -193,6 +215,7 @@ class Register:
 
 data = FSPath(__file__).parent / "_data"
 
+
 class Device:
     """A modbus device.
 
@@ -211,7 +234,7 @@ class Device:
         self.client = client
         self.factory = factory
 
-    def load(self, path:str=None, data:dict=None):
+    def load(self, path: str = None, data: dict = None):
         """Load a device description from @path, augmented by @data"""
         if path is None:
             d = attrdict()
@@ -219,20 +242,20 @@ class Device:
             path = data / path
             d = yload(path, attr=True)
         if data is not None:
-            d = merge(d,data)
-        self.data = fixup(d,d,Path(), this_file=path)
+            d = merge(d, data)
+        self.data = fixup(d, d, Path(), this_file=path)
 
-        self.host = self.client.host(self.data.src.host, self.data.src.get('port'))
+        self.host = self.client.host(self.data.src.host, self.data.src.get("port"))
         self.unit = self.host.unit(self.data.src.unit)
         self.add_registers()
 
     def add_registers(self):
-        def a_r(d,path=Path()):
+        def a_r(d, path=Path()):
             seen = False
-            for k,v in d.items():
-                if not isinstance(v,dict):
+            for k, v in d.items():
+                if not isinstance(v, dict):
                     continue
-                if a_r(v, path/k):
+                if a_r(v, path / k):
                     seen = True
                     if "register" in v:
                         logger.warning(f"{path/k} has a sub-register: ignored")
@@ -240,14 +263,15 @@ class Device:
                     continue
 
                 if "register" in v:
-                    d[k] = self.factory(v, path/k, self.unit)
+                    d[k] = self.factory(v, path / k, self.unit)
                     seen = True
                 elif "slot" in v:
                     logger.warning(f"{path/k} is not a register")
             return seen
+
         a_r(self.data)
 
-    def get(self, path:Path):
+    def get(self, path: Path):
         dev = self.data._get(path)
         if not isinstance(dev, Register):
             raise NotARegisterError(path)
@@ -258,7 +282,7 @@ class Device:
         """The slots of this unit"""
         return self.unit.slots
 
-    async def update(self, slot:Slot, proc=None):
+    async def update(self, slot: Slot, proc=None):
         """Update a slot. Calls @proc with each register (in parallel)."""
         vals = await slot.getValues()
         if proc is not None:
@@ -270,50 +294,49 @@ class Device:
 
     async def poll_slot(self, slot: str):
         """Periodically poll this slot"""
-#slots:
-#  1sec:
-#    time: 1
-#    align: false
-## align=True: wait for the next multiple
-## align=False: fetch now, *then* wait for the next multiple
-## align=None: fetch now, wait for the timespan
+        # slots:
+        #  1sec:
+        #    time: 1
+        #    align: false
+        ## align=True: wait for the next multiple
+        ## align=False: fetch now, *then* wait for the next multiple
+        ## align=None: fetch now, wait for the timespan
         s = self.data.slots[slot]
         sl = self.unit.slot(slot)
         al = s.get("align", None)
         if al is not None:
             t = time.time()
-            r = (-t)%s.time
+            r = (-t) % s.time
             if al:
                 await anyio.sleep(r)
         nt = time.monotonic()
 
-        backoff = s.time/10
+        backoff = s.time / 10
         while True:
             try:
                 await self.update(sl)
             except Exception as err:
                 logger.warning(f"{sl}: {err !r}: wait {backoff}")
                 await anyio.sleep(backoff)
-                backoff = min(max(s.time*2,60), backoff*1.2)
+                backoff = min(max(s.time * 2, 60), backoff * 1.2)
                 continue
             else:
-                backoff = s.time/10
+                backoff = s.time / 10
 
-            t=time.monotonic()
-            if nt>t:
-                await anyio.sleep(nt-t)
+            t = time.monotonic()
+            if nt > t:
+                await anyio.sleep(nt - t)
             else:
                 if al:
-                    nnt = nt + s.time*int(t-nt)  # +1 added below
+                    nnt = nt + s.time * int(t - nt)  # +1 added below
                 else:
                     nnt = time.monotonic()
-                if s.time>= 5 and t-nt > s.time/10:
+                if s.time >= 5 and t - nt > s.time / 10:
                     logger.warning(f"{sl}: late by {t-nt :.1f}s: now {nnt}")
                 nt = nnt
             nt += s.time
 
-
-    async def poll(self, slots:set=None):
+    async def poll(self, slots: set = None):
         if not slots:
             slots = self.data.slots.keys()
         async with anyio.create_task_group() as tg:

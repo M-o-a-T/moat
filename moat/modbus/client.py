@@ -175,7 +175,9 @@ class Host:
                             self._connected.set()
 
                     data = await self.stream.receive(4096)
-                    self._trace("recv: " + " ".join([hex(x) for x in data]))  # pylint: disable=logging-not-lazy
+                    self._trace(
+                        "recv: " + " ".join([hex(x) for x in data])
+                    )  # pylint: disable=logging-not-lazy
 
                     # unit = self.framer.decode_data(data).get("uid", 0)
                     replies = []
@@ -197,7 +199,13 @@ class Host:
                 ) as exc:
                     if self._connected.is_set():
                         self._connected = anyio.Event()
-                    _logger.error("Read from %s:%d: %r (%d)", self.addr, self.port, exc, len(self._transactions))
+                    _logger.error(
+                        "Read from %s:%d: %r (%d)",
+                        self.addr,
+                        self.port,
+                        exc,
+                        len(self._transactions),
+                    )
 
                     t, self._transactions = self._transactions, {}
                     for req in t.values():

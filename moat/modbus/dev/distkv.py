@@ -1,11 +1,13 @@
+import logging
+
 from .device import Register as BaseRegister
 
-import logging
 logger = logging.getLogger(__name__)
+
 
 class Register(BaseRegister):
     def __init__(self, *a, dkv=None, tg=None, **kw):
-        super().__init__(*a,**kw)
+        super().__init__(*a, **kw)
         if "dest" not in self.data and "src" not in self.data:
             if "slot" in self.data:
                 logger.warning(f"{self.unit}:{self.path}: no source/destination")
@@ -14,7 +16,7 @@ class Register(BaseRegister):
         if "dest" in self.data and "slot" not in self.data:
             logger.warning(f"{self.unit}:{self.path}: no slot")
             return
-        
+
         logger.info(f"{self.slot}:{self.path}: Polling")
 
         if self.data.get("dest"):
@@ -43,8 +45,6 @@ class Register(BaseRegister):
         async for val in dkv.monitor(self.data.src):
             logger.debug(f"{self.path} W {val.value !r}")
             await self._set(val.value)
-
-
 
     async def send_dkv_raw(self, dkv):
         async for val in dkv.msg_monitor(self.data.src):

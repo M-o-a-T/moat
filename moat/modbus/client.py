@@ -193,6 +193,7 @@ class Host:
                     ModbusIOException,
                     anyio.BrokenResourceError,
                     anyio.EndOfStream,
+                    TimeoutError,
                 ) as exc:
                     if self._connected.is_set():
                         self._connected = anyio.Event()

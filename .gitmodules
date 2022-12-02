@@ -25,3 +25,6 @@
 [submodule "lib/victron"]
 	path = lib/victron
 	url = git://git.smurf.noris.de/moat-lib-victron.git
+[submodule "heat"]
+	path = heat
+	url = git://git.smurf.noris.de/moat-heat.git

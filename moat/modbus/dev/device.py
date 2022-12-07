@@ -185,7 +185,14 @@ class Register:
         self.path = path
 
     def __aiter__(self):
-        return self.reg.__aiter__()
+        return self._iter().__aiter__()
+
+    async def _iter(self):
+        async for val in self.reg:
+            if val is None:
+                yield val
+            else:
+                yield val * self.factor + self.offset
 
     @property
     def value(self):

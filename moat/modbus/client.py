@@ -6,15 +6,18 @@ import socket
 import struct
 from contextlib import asynccontextmanager
 from functools import partial
+from pathlib import Path
 from typing import Any, Dict, Type
 
 import anyio
 from anyio import ClosedResourceError, IncompleteRead
 from anyio.abc import SocketAttribute
+from anyio_serial import Serial
 from moat.util import CtxObj, Queue, ValueEvent
 from pymodbus.exceptions import ModbusIOException
 from pymodbus.factory import ClientDecoder
-from pymodbus.transaction import ModbusSocketFramer
+from pymodbus.framer.rtu_framer import ModbusRtuFramer
+from pymodbus.framer.socket_framer import ModbusSocketFramer
 
 from .types import BaseValue, DataBlock, TypeCodec
 
@@ -44,13 +47,14 @@ class ModbusClient(CtxObj):
 
     @asynccontextmanager
     async def _ctx(self):
-        async with anyio.create_task_group() as self._tg:
+        async with anyio.create_task_group() as tg:
+            self._tg = tg
             try:
                 yield self
             finally:
-                tg, self._tg = self._tg, None
-                self.hosts = {}
                 tg.cancel_scope.cancel()
+                self._tg = None
+                self.hosts = {}
 
     def host(self, addr, port=None):
         """Return a host object for connections to this address+port.
@@ -61,10 +65,21 @@ class ModbusClient(CtxObj):
         try:
             return self.hosts[(addr, port)]
         except KeyError:
-            return Host(self, addr, port)
+            h = Host(self, addr, port)
+            self.hosts[(addr, port)] = h
+            return h
+
+    def serial(self, /, port, **ser):
+        """Return a host object for connections to this serial port."""
+        try:
+            return self.hosts[port]
+        except KeyError:
+            h = SerialHost(self, port=port, **ser)
+            self.hosts[port] = h
+            return h
 
     def _del_host(self, host):
-        del self.hosts[(host.addr, host.port)]
+        del self.hosts[host.ser["port"]]
 
 
 class ModbusError(RuntimeError):
@@ -75,53 +90,25 @@ class ModbusError(RuntimeError):
         self.result = result
 
 
-class Host(CtxObj):
-    """This is a single host which moat-modbus talks to.
-    It has a number of modbus units (attribute 'units').
+class _HostCommon:
+    stream = None
+    framer = None  # overridden
+    _trace = lambda *x: None  # pylint:disable=unnecessary-lambda-assignment  #  overridden
 
-    Do not instantiate directly; instead, use
-
-        >>> async with client.host("foo.example" [, port=20502] ) as host:
-            ...
-    """
-
-    _tg = None
-
-    max_req_len = 50  # max number of registers to fetch w/ one request
-
-    def __init__(self, gate, addr, port, timeout=10, cap=1, debug=False):
+    def __init__(self, gate, timeout, cap):
         self.gate = gate
-        self.addr = addr
-        self.port = port
         self.units = {}
-        self.framer = ModbusSocketFramer(ClientDecoder())
-
-        self._connect_lock = anyio.Lock()
         self._wqueue = Queue(100)
-        self.stream = None
         self._transactions = {}
         self._tid = 0
         self._tg = None
         self._read_scope = None
-
         self._connected = anyio.Event()
+
         self._send_lock = anyio.Lock()
-
-        gate._tg.start_soon(self._reader)
-
-        log = logging.getLogger(f"modbus.{self.addr}")
-        self._trace = log.info if debug else log.debug
 
         self.cap = anyio.CapacityLimiter(cap)
         self.timeout = timeout
-
-    def __repr__(self):
-        return f"<ModbusHost:{self.addr}:{self.port}>"
-
-    @asynccontextmanager
-    async def _ctx(self):
-        # might be used to manage the connection
-        yield self
 
     def unit(self, unit):
         """
@@ -146,6 +133,243 @@ class Host(CtxObj):
             return
         del self.units[unit.unit]
 
+    def _nextTID(self):
+        self._tid = (self._tid + 1) % 0xFFFF
+        return self._tid
+
+    async def execute(self, request):
+        """
+        Send a pymodbus request and wait for / return the reply.
+        """
+        # pylint: disable=logging-fstring-interpolation,protected-access
+
+        request.transaction_id = self._nextTID()
+        packet = self.framer.buildPacket(request)
+
+        packet_info = " ".join([hex(x) for x in packet])
+        self._trace("Gateway xmit: %s", packet_info)
+
+        # make the modbus request
+        async with self.cap:
+            request._response_value = ValueEvent()
+
+            await self._connected.wait()
+
+            try:
+                self._transactions[request.transaction_id] = request
+                packet = self.framer.buildPacket(request)
+                async with self._send_lock:
+                    await self.stream.send(packet)
+                with anyio.fail_after(self.timeout):
+                    res = await request._response_value.get()
+            except TimeoutError:
+                await self.stream.aclose()
+                raise
+            except Exception as exc:
+                _logger.error("Gateway not replied: %r", exc)
+                raise
+            else:
+                if res.isError():
+                    raise ModbusError(res)
+
+                if hasattr(res, "registers"):
+                    registers_info = " ".join([hex(x) for x in res.registers])
+                    self._trace("Gateway replied: %s", registers_info)
+                else:
+                    self._trace("Gateway replied: %s", res)
+                return res
+
+            finally:
+                self._transactions.pop(request.transaction_id, None)
+
+
+class Host(CtxObj, _HostCommon):
+    """This is a single host which moat-modbus talks to.
+    It has a number of modbus units (attribute 'units').
+
+    Do not instantiate directly; instead, use
+
+        >>> async with client.host("foo.example" [, port=20502] ) as host:
+            ...
+    """
+
+    _tg = None
+
+    max_req_len = 50  # max number of registers to fetch w/ one request
+
+    def __init__(self, gate, addr, port, timeout=10, cap=1, debug=False):
+        self.addr = addr
+        self.port = port
+
+        log = logging.getLogger(f"modbus.{addr}")
+        self._trace = log.info if debug else log.debug
+
+        self.framer = ModbusSocketFramer(ClientDecoder())
+
+        super().__init__(gate, timeout, cap)
+
+    def __repr__(self):
+        return f"<ModbusHost:{self.addr}:{self.port}>"
+
+    @asynccontextmanager
+    async def _ctx(self):
+        # might be used to manage the connection
+        async with anyio.create_task_group() as tg:
+            self._tg = tg
+            self._read_scope = tg.cancel_scope
+            await tg.start(self._reader)
+
+            yield self
+            tg.cancel_scope.cancel()
+
+    # reader task #
+
+    async def _reader(self, task_status):
+        # pylint: disable=protected-access
+
+        async def _send_trans():
+            tr = list(self._transactions.values())
+            self._transactions = {}
+            if tr:
+                _logger.warning("Resend %d packets", len(tr))
+            try:
+                for request in tr:
+                    packet = self.framer.buildPacket(request)
+                    async with self._send_lock:
+                        await self.stream.send(packet)
+                if tr:
+                    _logger.warning("Resend done")
+            except Exception:  # pylint: disable=broad-except
+                _logger.exception("Re-Write")
+
+        while True:
+            try:
+                if self.stream is None:
+                    with anyio.fail_after(self.timeout):
+                        self.stream = await anyio.connect_tcp(self.addr, self.port)
+                        # set so_linger to force sending RST instead of FIN
+                        self.stream.extra(SocketAttribute.raw_socket).setsockopt(
+                            socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0)
+                        )
+                        # re-send open requests
+                        await _send_trans()
+                        self._connected.set()
+                        task_status.started()
+
+                data = await self.stream.receive(4096)
+                # pylint: disable=logging-not-lazy
+                self._trace("recv: " + " ".join([hex(x) for x in data]))
+
+                # unit = self.framer.decode_data(data).get("uid", 0)
+                replies = []
+
+                # check for decoding errors
+                self.framer.processIncomingPacket(data, replies.append, unit=0, single=True)  # bah
+
+            except (
+                IncompleteRead,
+                ConnectionRefusedError,
+                ConnectionResetError,
+                ClosedResourceError,
+                ModbusIOException,
+                anyio.BrokenResourceError,
+                anyio.EndOfStream,
+                TimeoutError,
+            ) as exc:
+                if self._connected.is_set():
+                    self._connected = anyio.Event()
+                _logger.error(
+                    "Read from %s:%d: %r (%d)",
+                    self.addr,
+                    self.port,
+                    exc,
+                    len(self._transactions),
+                )
+
+                t, self._transactions = self._transactions, {}
+                for req in t.values():
+                    req._response_value.set_error(exc)
+                s, self.stream = self.stream, None
+                if s:
+                    await s.aclose()
+
+                # delay somewhat, to give the device the chance to reinitialize
+                await anyio.sleep(DISCONNECT_DELAY)
+
+            except anyio.get_cancelled_exc_class():
+                raise
+
+            except BaseException as exc:
+                _logger.exception("Error: %r", exc)
+
+                t, self._transactions = self._transactions, {}
+                for req in t.values():
+                    req._response_value.set_error(exc)
+                raise
+
+            else:
+                for reply in replies:
+                    tid = reply.transaction_id
+                    try:
+                        request = self._transactions.pop(tid)
+                    except KeyError:
+                        _logger.info("Unrequested message: %s", reply)
+                    else:
+                        request._response_value.set(reply)
+
+    async def aclose(self):
+        """Stop talking."""
+        if self.gate is None:
+            return
+        self.gate._del_host(self)  # pylint: disable=protected-access
+        self.gate = None
+
+        u, self.units = self.units, None
+        for unit in u.values():
+            await unit.aclose()
+
+        if self._read_scope is not None:
+            self._read_scope.cancel()
+            self._read_scope = None
+
+        s, self.stream = self.stream, None
+        if s:
+            await s.close()
+
+
+class SerialHost(CtxObj, _HostCommon):
+    """This is a "host" that's actually a serial interface.
+
+    Do not instantiate directly; instead, use
+
+        >>> async with client.serial("/dev/ttyUSB0",
+                baudrate=9600, parity="E", stopbits=1) as host:
+            ...
+    """
+
+    _tg = None
+
+    max_req_len = 50  # max number of registers to fetch w/ one request
+
+    def __init__(self, gate, /, port, timeout=10, cap=1, debug=False, **ser):
+        self.ser = ser
+        self.framer = ModbusRtuFramer(ClientDecoder(), self)
+
+        log = logging.getLogger(f"modbus.{Path(port).name}")
+        self._trace = log.info if debug else log.debug
+
+        super().__init__(gate, timeout, cap)
+
+    def __repr__(self):
+        return f"<ModbusHost:{self.ser['port']}:{self.ser.get('baudrate',0)}>"
+
+    @asynccontextmanager
+    async def _ctx(self):
+        # might be used to manage the connection
+        async with Serial(**self.ser) as self.stream:
+            self._connected.set()
+            yield self
+
     # reader task #
 
     async def _reader(self):
@@ -164,23 +388,16 @@ class Host(CtxObj):
                 if tr:
                     _logger.warning("Resend done")
             except Exception:  # pylint: disable=broad-except
-                _logger.exception("Re-Write to %s:%d", self.addr, self.port)
+                _logger.exception("Re-Write")
 
         async with anyio.create_task_group() as self._tg:
             self._read_scope = self._tg.cancel_scope
-            while True:
-                try:
-                    if self.stream is None:
-                        with anyio.fail_after(self.timeout):
-                            self.stream = await anyio.connect_tcp(self.addr, self.port)
-                            # set so_linger to force sending RST instead of FIN
-                            self.stream.extra(SocketAttribute.raw_socket).setsockopt(
-                                socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0)
-                            )
-                            # re-send open requests
-                            await _send_trans()
-                            self._connected.set()
+            await _send_trans()
+            self._connected.set()
 
+            while True:
+
+                try:
                     data = await self.stream.receive(4096)
                     # pylint: disable=logging-not-lazy
                     self._trace("recv: " + " ".join([hex(x) for x in data]))
@@ -205,18 +422,11 @@ class Host(CtxObj):
                 ) as exc:
                     if self._connected.is_set():
                         self._connected = anyio.Event()
-                    _logger.error(
-                        "Read from %s:%d: %r (%d)",
-                        self.addr,
-                        self.port,
-                        exc,
-                        len(self._transactions),
-                    )
+                    _logger.error("Read: %r (%d)", exc, len(self._transactions))
 
                     t, self._transactions = self._transactions, {}
                     for req in t.values():
                         req._response_value.set_error(exc)
-                    await self.disconnect()
 
                 except anyio.get_cancelled_exc_class():
                     raise
@@ -256,67 +466,7 @@ class Host(CtxObj):
 
         s, self.stream = self.stream, None
         if s:
-            await s.close()
-
-    # main entry point #
-
-    def _nextTID(self):
-        self._tid = (self._tid + 1) % 0xFFFF
-        return self._tid
-
-    async def disconnect(self):
-        """Close the TCP connection and set `self.stream = None`."""
-        s, self.stream = self.stream, None
-        if s:
             await s.aclose()
-
-        # delay to give the device the chance to reinitialize
-        await anyio.sleep(DISCONNECT_DELAY)
-
-    async def execute(self, request):
-        """
-        Send a pymodbus request and wait for / return the reply.
-        """
-        # pylint: disable=logging-fstring-interpolation,protected-access
-
-        request.transaction_id = self._nextTID()
-        packet = self.framer.buildPacket(request)
-
-        packet_info = " ".join([hex(x) for x in packet])
-        self._trace(f"Gateway {self.addr}:{self.port} xmit: {packet_info}")
-
-        # make the modbus request
-        async with self.cap:
-            request._response_value = ValueEvent()
-
-            await self._connected.wait()
-
-            try:
-                self._transactions[request.transaction_id] = request
-                packet = self.framer.buildPacket(request)
-                async with self._send_lock:
-                    await self.stream.send(packet)
-                with anyio.fail_after(self.timeout):
-                    res = await request._response_value.get()
-            except TimeoutError:
-                await self.stream.aclose()
-                raise
-            except Exception as exc:
-                _logger.error(f"Gateway {self.addr}:{self.port} not replied: {repr(exc)}")
-                raise
-            else:
-                if res.isError():
-                    raise ModbusError(res)
-
-                if hasattr(res, "registers"):
-                    registers_info = " ".join([hex(x) for x in res.registers])
-                    self._trace(f"Gateway {self.addr}:{self.port} replied: {registers_info}")
-                else:
-                    self._trace(f"Gateway {self.addr}:{self.port} replied: {res}")
-                return res
-
-            finally:
-                self._transactions.pop(request.transaction_id, None)
 
 
 class Unit(CtxObj):
@@ -440,10 +590,8 @@ class Slot(CtxObj):
                 tg.start_soon(self.write_task)
             if self.read_delay is not None:
                 tg.start_soon(self.read_task)
-            try:
-                yield self
-            finally:
-                tg.cancel_scope.cancel()
+            yield self
+            tg.cancel_scope.cancel()
 
     def trigger_send(self):
         """Start writing after at most `.write_delay` seconds."""

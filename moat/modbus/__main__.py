@@ -148,10 +148,9 @@ async def _client(host, port, unit, kind, start, num, type_, values, debug):
 
     from moat.modbus.client import ModbusClient  # pylint: disable=import-outside-toplevel
 
-    async with ModbusClient() as g:
-        h = g.host(host, port)
-        u = h.unit(unit)
-        s = u.slot("default")
+    async with ModbusClient() as g, g.host(host, port) as h, h.unit(unit) as u, u.slot(
+        "default"
+    ) as s:
 
         k = map_kind[kind[0]]
         t = get_type(type_)

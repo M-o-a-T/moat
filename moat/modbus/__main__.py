@@ -169,9 +169,9 @@ async def _client(host, port, unit, kind, start, num, type_, values, debug):
 
         try:
             if values:
-                await s.setValues()
+                await s._setValues()  # pylint:disable=protected-access  ## TODO
             else:
-                res = await s.getValues()
+                res = await s._getValues()  # pylint:disable=protected-access  ## TODO
                 pprint(res)
         except Exception as exc:  # pylint: disable=broad-except
             log.exception("Problem: %r", exc)

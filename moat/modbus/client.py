@@ -455,7 +455,7 @@ class Slot:
         for vl in m.values():
             vl.close()
 
-    async def getValues(self) -> Dict[TypeCodec, Dict[int, Any]]:
+    async def _getValues(self) -> Dict[TypeCodec, Dict[int, Any]]:
         """
         Send messages reading this slot's values from the bus.
         Returns a (type,(offset,value)) dict-of-dicts.
@@ -488,7 +488,7 @@ class Slot:
         finally:
             self._run_scope = None
 
-    async def setValues(self, changed=False):
+    async def _setValues(self, changed=False):
         """
         Send a message writing the values in this block to the bus.
         """

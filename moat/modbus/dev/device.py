@@ -355,7 +355,12 @@ class Device:
             try:
                 await self.update(sl)
             except Exception as err:  # pylint: disable=broad-except
-                logger.exception("%s: %r: wait %s", sl, err, backoff)
+                e = (
+                    logger.error
+                    if isinstance(err, (ModbusError, anyio.EndOfStream))
+                    else logger.exception
+                )
+                e("%s: %r: wait %s", sl, err, backoff)
                 await anyio.sleep(backoff)
                 backoff = min(max(s.time * 2, 60), backoff * 1.2)
                 continue

@@ -44,14 +44,14 @@ class Register(BaseRegister):
     async def poll_dkv(self, dkv):
         """Copy a Modbus value to DistKV"""
         async for val in self:
-            logger.debug("%s R %r", self.path, val.value)
-            await dkv.set(self.data.dest, value=val.value, idem=self.data.get("idem", True))
+            logger.debug("%s R %r", self.path, val)
+            await dkv.set(self.data.dest, value=val, idem=self.data.get("idem", True))
 
     async def poll_dkv_raw(self, dkv):
         """Copy a Modbus value to MQTT"""
         async for val in self:
-            logger.debug("%s r %r", self.path, val.value)
-            await dkv.msg_send(list(self.data.dest), val.value)
+            logger.debug("%s r %r", self.path, val)
+            await dkv.msg_send(list(self.data.dest), val)
 
     async def send_dkv(self, dkv):
         """Copy a DistKV value to Modbus"""

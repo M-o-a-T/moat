@@ -197,14 +197,17 @@ class Register:
     @property
     def value(self):
         """Return the factor+offset-adjusted value"""
-        if self.reg.value is None:
-            return None
-        return self.reg.value * self.factor + self.offset
+        val = self.reg.value
+        if val is not None:
+            val = val * self.factor + self.offset
+        return val
 
     @value.setter
     def value(self, val):
         """Set the value, reverse factor+offset-adjustment"""
-        self.reg.value = (val - self.offset) / self.factor
+        if val is not None:
+            val = (val - self.offset) / self.factor
+        self.reg.value = val
 
     @property
     def len(self):

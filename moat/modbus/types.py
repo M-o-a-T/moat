@@ -69,6 +69,8 @@ class BaseValue:
     len = 0
     _value = None
     gen = 0
+    block: "DataBlock" = None
+    to_write: int = None
 
     def __init__(self, value=None, idem=False):
         self.changed = anyio.Event()
@@ -76,7 +78,7 @@ class BaseValue:
         self.idem = idem
 
         if value is not None:
-            self.gen = self.w_gen = 1
+            self.gen = 1
             self.changed = anyio.Event()
 
     @property
@@ -88,6 +90,17 @@ class BaseValue:
     def value(self, val):
         # pylint: disable=missing-function-docstring
         self._value = self._constrain(val)
+
+    def set(self, val, idem: bool = True):
+        """Set the value. Triggers a write if changed (or @idem is False)."""
+        # pylint: disable=missing-function-docstring
+        val = self._constrain(val)
+        if not idem or (val is None) != (self._value is None) or self._value != val:
+            self._value = val
+            self.gen += 1
+            self.to_write = self.gen
+            if self.block is not None:
+                self.block.trigger_send()
 
     def _constrain(self, val):
         return val
@@ -460,6 +473,13 @@ class DataBlock(dict, BaseModbusDataBlock):
         for val in self.values():
             val.value = None
 
+    def trigger_send(self):
+        """Called by a value when it's been changed.
+
+        Currently a no-op in this class.
+        """
+        pass
+
     def add(self, offset: int, val: BaseValue):
         """Add a value to the block."""
         if offset in self:
@@ -479,6 +499,7 @@ class DataBlock(dict, BaseModbusDataBlock):
             except KeyError:
                 pass
         self[offset] = val
+        val.block = self
 
     def validate(self, address: int, count: int = 1):
         """Test whether @count elements exist at @address."""
@@ -506,7 +527,7 @@ class DataBlock(dict, BaseModbusDataBlock):
                 if start is not None:
                     yield (start, cur - start)
                     start = None
-            elif changed and val.gen == val.w_gen:
+            elif changed and val.to_write is None:
                 continue
             elif start is None:
                 start = offset
@@ -521,8 +542,11 @@ class DataBlock(dict, BaseModbusDataBlock):
         if cur is not None:
             yield (start, cur - start)
 
-    def getValues(self, address: int, count=1):
-        """Get the array of Modbus values for the @address:+@count range"""
+    def getValues(self, address: int, count=1) -> List[int]:
+        """Returns the array of Modbus values for the @address:+@count range
+
+        Called when preparing a Send request.
+        """
         res = []
         while count > 0:
             try:
@@ -549,12 +573,21 @@ class DataBlock(dict, BaseModbusDataBlock):
                 address += 1
                 count -= 1
             else:
-                val.w_gen = val.gen
+                if val.to_write is not None:
+                    if val.to_write == val.gen:
+                        val.to_write = None
+                    else:
+                        val.to_write = val.gen
+                        self.trigger_send()
+
                 address += val.len
                 count -= val.len
 
     def setValues(self, address: int, values: List[int]):
-        """Set the variables starting at @address to @values"""
+        """Set the variables starting at @address to @values.
+
+        Called with the reply of a Read request.
+        """
         while values:
             try:
                 val = self[address]
@@ -575,6 +608,8 @@ class DataBlock(dict, BaseModbusDataBlock):
         """
         while count:
             val = self.pop(address, None)
+            if val is not None:
+                val.block = None
             address += val.len
             count -= 1
 
@@ -598,6 +633,7 @@ class ValueIterator:
         if it's been cleared, raises `StopAsyncIteration`.
         """
         val = self.val
+
         if val.gen > 0 and val.value is None:
             raise StopAsyncIteration
         if self.gen == val.gen:

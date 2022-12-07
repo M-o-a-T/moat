@@ -77,7 +77,7 @@ class ModbusError(RuntimeError):
 
 class Host(CtxObj):
     """This is a single host which moat-modbus talks to.
-    It has a number of modbus units (attribute 'units'.
+    It has a number of modbus units (attribute 'units').
 
     Do not instantiate directly; instead, use
 
@@ -85,7 +85,7 @@ class Host(CtxObj):
             ...
     """
 
-    _scope = None
+    _tg = None
 
     max_req_len = 50  # max number of registers to fetch w/ one request
 
@@ -381,8 +381,8 @@ class Unit(CtxObj):
 
 class Slot(CtxObj):
     """This class represents a single "atomic" access to Modbus. The system
-    will try to fetch all values in this slot, using as few+small requests
-    as possible.
+    will periodically try to fetch all values in this slot, using as
+    few+small requests as possible.
 
     Slots are always linked to a unit. Use
 
@@ -392,16 +392,39 @@ class Slot(CtxObj):
     to access/create a slot.
 
     The intended usecase is that some values should be retrieved at
-    different intervals than others. Thus the user creates several slots,
-    adds the required fields to them, and then calls their `run` method
-    when required.
+    different intervals than others. Thus the user creates several slots
+    and adds the required fields to them.
+
+    Slots will periodically read registers,
+
+    Slots will write updated holding registers, delaying for @write_delay
+    for possible collation.
     """
 
     _run_scope = None
+    delay: float = None
+    t_read = None
 
-    def __init__(self, unit, slot):
+    def __init__(
+        self,
+        unit,
+        slot,
+        read_delay: float = None,
+        read_align: bool = False,
+        write_delay: float = None,
+    ):
         self.unit = unit
         self.slot = slot
+
+        self.write_delay = write_delay
+        self.write_lock = anyio.Lock()
+        self.write_trigger = anyio.Event()
+
+        self.read_delay = read_delay
+        self.read_align = read_align
+        self.read_lock = anyio.Lock()
+        self.read_trigger = anyio.Event()
+
         self.modes = {}
 
     def __str__(self):
@@ -422,10 +445,14 @@ class Slot(CtxObj):
             finally:
                 tg.cancel_scope.cancel()
 
+    def trigger_send(self):
+        """Start writing after at most `.write_delay` seconds."""
+        self.write_trigger.set()
+
     @property
     def is_empty(self):
         """
-        Check whether the slot has no registered measurements.
+        Check whether the slot does not contain any registers.
         """
         for offsets in self.modes.values():
             if offsets.values:
@@ -531,6 +558,70 @@ class Slot(CtxObj):
         finally:
             self._run_scope = None
 
+    async def read(self):
+        """Read this slot's data."""
+        async with self.read_lock:
+            self.t_read = anyio.current_time()
+            await self._getValues()
+
+    async def read_task(self):
+        """A background task for reading Modbus register values.
+        We read every .`read_delay` seconds.
+        """
+
+        await self.read()
+        tn = self.t_read + self.read_delay
+        if self.read_align:
+            tn -= tn % self.read_delay
+
+        while True:
+            t = anyio.current_time()
+            tr = self.t_read
+            if t < tn:
+                await anyio.sleep(tn - t)
+
+            async with self.read_lock:
+                if self.t_read != tr:
+                    # somebody else has read while we waited for the lock
+                    tn = self.t_read + self.read_delay
+                    if self.read_align:
+                        tn -= tn % self.read_delay
+                    continue
+                if t < tn:
+                    # We slept, above, thus update the current time
+                    self.t_read = tn
+                    tn += self.read_delay
+                else:
+                    # We didn't sleep: the last read took too long. reset the timer
+                    _logger.notice(
+                        "Delay for %s: %.1f > %.1f",
+                        self,
+                        t - tn + self.read_delay,
+                        self.read_delay,
+                    )
+
+                    self.t_read = t = anyio.current_time()
+                    tn = t + self.read_delay
+                    if self.read_align:
+                        tn -= tn % self.read_delay
+                await self._getValues()
+
+    async def write(self, changed: bool = True):
+        """Write this slot's data.
+
+        If @changed is set, only write changed data.
+        """
+        async with self.write_lock:
+            await self._setValues(changed=changed)
+
+    async def write_task(self):
+        """A background task for updating changed Modbus register values"""
+        while True:
+            await self.write_trigger.wait()
+            await anyio.sleep(self.write_delay)
+            self.write_trigger = anyio.Event()
+            await self.write(changed=True)
+
 
 class ValueList(DataBlock):
     """This class holds a list of to-be-accessed values.
@@ -545,6 +636,10 @@ class ValueList(DataBlock):
         super().__init__(max_len=slot.unit.host.max_req_len)
         self.slot = slot
         self.kind = kind
+        self.do_write = anyio.Event()
+
+    def trigger_send(self):
+        self.slot.trigger_send()
 
     async def readValues(self, *, res=None):
         """

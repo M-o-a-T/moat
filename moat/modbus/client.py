@@ -33,7 +33,8 @@ CHECK_STREAM_TIMEOUT = 0.001
 
 class ModbusClient(CtxObj):
     """The main bus handler. Use as
-    `async with ModbusClient() as bus:`.
+    >>> async with ModbusClient() as bus:
+        ...
     """
 
     _tg = None
@@ -74,13 +75,14 @@ class ModbusError(RuntimeError):
         self.result = result
 
 
-class Host:
+class Host(CtxObj):
     """This is a single host which moat-modbus talks to.
     It has a number of modbus units (attribute 'units'.
 
     Do not instantiate directly; instead, use
 
-        >>> host = client.host("foo.example")
+        >>> async with client.host("foo.example" [, port=20502] ) as host:
+            ...
     """
 
     _scope = None
@@ -115,6 +117,11 @@ class Host:
 
     def __repr__(self):
         return f"<ModbusHost:{self.addr}:{self.port}>"
+
+    @asynccontextmanager
+    async def _ctx(self):
+        # might be used to manage the connection
+        yield self
 
     def unit(self, unit):
         """
@@ -312,14 +319,15 @@ class Host:
                 self._transactions.pop(request.transaction_id, None)
 
 
-class Unit:
+class Unit(CtxObj):
     """This is a single modbus unit. It has any number of time slots
     (attribute 'slots'). Simply indexing a unit will return a timeslot
     object (existing or new). You can use anything hashable as the index.
 
     Units are always linked to a host. Use
 
-        >>> unit = host.unit(1)
+        >>> async with host.unit(1) as u:
+            ...
 
     to access/create a unit.
     """
@@ -334,6 +342,11 @@ class Unit:
 
     def __repr__(self):
         return f"<Unit:{self.host.addr}:{self.host.port}:{self.unit}>"
+
+    @asynccontextmanager
+    async def _ctx(self):
+        # might be used to manage whatever
+        yield self
 
     def slot(self, slot):
         """
@@ -366,14 +379,15 @@ class Unit:
             await slot.aclose()
 
 
-class Slot:
+class Slot(CtxObj):
     """This class represents a single "atomic" access to Modbus. The system
     will try to fetch all values in this slot, using as few+small requests
     as possible.
 
     Slots are always linked to a unit. Use
 
-        >>> slot = unit.slot("20seconds")
+        >>> async with unit.slot("20seconds") as slot:
+            ...
 
     to access/create a slot.
 
@@ -395,6 +409,18 @@ class Slot:
 
     def __repr__(self):
         return f"<Unit:{self.unit}:{self.slot}>"
+
+    @asynccontextmanager
+    async def _ctx(self):
+        async with anyio.create_task_group() as tg:
+            if self.write_delay is not None:
+                tg.start_soon(self.write_task)
+            if self.read_delay is not None:
+                tg.start_soon(self.read_task)
+            try:
+                yield self
+            finally:
+                tg.cancel_scope.cancel()
 
     @property
     def is_empty(self):

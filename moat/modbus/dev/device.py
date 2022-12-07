@@ -11,7 +11,7 @@ from typing import List
 import anyio
 from moat.util import P, Path, attrdict, combine_dict, merge, yload
 
-from ..client import Host, ModbusClient, Slot, Unit
+from ..client import Host, ModbusClient, ModbusError, Slot, Unit
 from ..typemap import get_kind, get_type2
 from ..types import InputRegisters
 

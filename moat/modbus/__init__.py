@@ -16,4 +16,4 @@ Modbus-TCP and Modbus-RTU (serial) are supported.
 from .client import *  # noqa: 403
 from .server import *  # noqa: 403
 
-__path__ = __import__('pkgutil').extend_path(__path__, __name__)
+__path__ = __import__("pkgutil").extend_path(__path__, __name__)  # noqa:F405

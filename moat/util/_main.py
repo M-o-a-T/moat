@@ -345,7 +345,9 @@ def list_ext(name, func=None):
         yield (x, f)
 
 
-def load_subgroup(_fn=None, prefix=None, sub_pre=None, sub_post=None, ext_pre=None, ext_post=None, **kw):
+def load_subgroup(
+    _fn=None, prefix=None, sub_pre=None, sub_post=None, ext_pre=None, ext_post=None, **kw
+):
     """
     A decorator like click.group, enabling loading of subcommands
 

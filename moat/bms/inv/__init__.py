@@ -22,6 +22,8 @@ from ._util import balance
 
 _dummy = {'code': None, 'whenToLog': 'configChange', 'accessLevel': None}
 
+__path__ = __import__('pkgutil').extend_path(__path__, __name__)
+
 class BusVars(CtxObj):
 	"""
 	A wrapper that creates attributes as per the class's VARS and VARS_RO arrays.

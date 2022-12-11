@@ -345,7 +345,7 @@ def list_ext(name, func=None):
         yield (x, f)
 
 
-def load_subgroup(_fn=None, sub_pre=None, sub_post=None, ext_pre=None, ext_post=None, **kw):
+def load_subgroup(_fn=None, prefix=None, sub_pre=None, sub_post=None, ext_pre=None, ext_post=None, **kw):
     """
     A decorator like click.group, enabling loading of subcommands
 
@@ -360,10 +360,10 @@ def load_subgroup(_fn=None, sub_pre=None, sub_post=None, ext_pre=None, ext_post=
 
     kw["cls"] = partial(
         kw.get("cls", Loader),
-        _util_sub_pre=sub_pre or this_load.get(),
-        _util_sub_post=sub_post,
-        _util_ext_pre=ext_pre,
-        _util_ext_post=ext_post,
+        _util_sub_pre=sub_pre or this_load.get() or prefix,
+        _util_sub_post=sub_post or (None if prefix is None else "cli"),
+        _util_ext_pre=ext_pre or prefix,
+        _util_ext_post=ext_post or (None if prefix is None else "_main.cli"),
     )
 
     if _fn is None:

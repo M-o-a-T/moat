@@ -1,0 +1,3 @@
+[submodule "heat"]
+	path = heat
+	url = git://git.smurf.noris.de/moat-dev-heat.git

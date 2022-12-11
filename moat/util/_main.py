@@ -486,6 +486,8 @@ class Loader(click.Group):
             for _finder, name, _ispkg in _namespaces(sub_pre):
                 logger.debug("Sub %s", name)
                 name = name.rsplit(".", 1)[1]
+                if name[0] == "_":
+                    continue
                 if load_ext(sub_pre, name, *sub_post):
                     rv.append(name)
 

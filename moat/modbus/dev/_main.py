@@ -8,11 +8,11 @@ from pathlib import Path as FSPath
 
 import anyio
 import asyncclick as click
-from moat.util import attrdict, merge, to_attrdict, yload, yprint
+from moat.util import attrdict, yload, yprint
 
 from ..client import ModbusClient
 from .device import Device, fixup
-from .server import Server
+from .poll import dev_poll
 
 logger = logging.getLogger(__name__)
 
@@ -82,77 +82,15 @@ async def poll(ctx, path):
     """Poll Modbus devices as directed via YAML."""
     obj = ctx.obj
 
-    d = yload(path, attr=True)
-    d = fixup(d)
+    cfg = yload(path, attr=True)
+    cfg = fixup(cfg)
 
-    s = d.setdefault("src", attrdict())
-    sl = d.setdefault("slots", attrdict())
-
-    # pylint: disable=import-outside-toplevel
     if "distkv" in obj.cfg:
+        # pylint: disable=import-outside-toplevel
         from distkv.client import open_client
 
-        from .distkv import Register
-
         dkv = await ctx.with_async_resource(open_client(**obj.cfg.distkv))
-        # "Reg" is created in the taskgroup
     else:
-        from .device import Register as Reg
-
         dkv = None
 
-    async with ModbusClient() as cl, anyio.create_task_group() as tg:
-        nd = 0
-
-        def make_dev(v, Reg, **kw):
-            kw = to_attrdict(kw)
-            vs = v.setdefault("src", attrdict())
-            merge(vs, kw, s, replace=False)
-            vsl = v.setdefault("slots", attrdict())
-            merge(vsl, sl, replace=False)
-
-            logger.info("Starting %r", vs)
-            dev = Device(client=cl, factory=Reg)
-            dev.load(data=v)
-            return dev
-
-        async with anyio.create_task_group() as tg:
-            if dkv is not None:
-                # The DistKV client must live longer than the taskgroup
-                Reg = partial(Register, dkv=dkv, tg=tg)  # noqa: F811
-            servers = []
-            for s in d.get("server", ()):
-                servers.append(Server(*s))
-
-            for h, hv in d.get("hosts", {}).items():
-                for u, v in hv.items():
-                    dev = make_dev(v, Reg, host=h, unit=u)
-                    nd += 1
-                    tg.start_soon(dev.poll)
-
-                    us = v.get("server", None)
-                    if us is not None:
-                        srv = servers[us // 1000]
-                        us %= 1000
-                        srv.attach(us, dev)
-
-            for h, hv in d.get("hostports", {}).items():
-                for p, pv in hv.items():
-                    if not isinstance(p, int):
-                        continue
-                    for u, v in pv.items():
-                        dev = make_dev(v, Reg, host=h, port=p, unit=u)
-                        tg.start_soon(dev.poll)
-                        nd += 1
-
-                        us = v.get("server", None)
-                        if us is not None:
-                            srv = servers[us // 1000]
-                            us %= 1000
-                            srv.attach(us, dev)
-
-            for s in servers:
-                tg.start_soon(s.run)
-
-        if not nd:
-            logger.error("No devices to poll found.")
+    await dev_poll(cfg, dkv)

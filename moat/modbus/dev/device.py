@@ -218,7 +218,7 @@ class Register:
         """Set the value, reverse factor+offset-adjustment"""
         if val is not None:
             val = (val - self.offset) / self.factor
-        self.reg.value = val
+        self.reg.set(val)
 
     @property
     def len(self):

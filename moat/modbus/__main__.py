@@ -148,10 +148,9 @@ async def _client(host, port, unit, kind, start, num, type_, values, debug):
 
     from moat.modbus.client import ModbusClient  # pylint: disable=import-outside-toplevel
 
-    async with ModbusClient() as g:
-        h = g.host(host, port)
-        u = h.unit(unit)
-        s = u.slot("default")
+    async with ModbusClient() as g, g.host(host, port) as h, h.unit(unit) as u, u.slot(
+        "default"
+    ) as s:
 
         k = map_kind[kind[0]]
         t = get_type(type_)
@@ -202,6 +201,74 @@ def mk_client(m):
 
 
 client = mk_client(main)
+
+
+async def _serclient(
+    port, baudrate, stopbits, parity, unit, kind, start, num, type_, values, debug
+):
+    """
+    Basic Modbus-RTU client.
+    """
+    if debug:
+        log.setLevel(logging.DEBUG)
+
+    from moat.modbus.client import ModbusClient  # pylint: disable=import-outside-toplevel
+
+    async with ModbusClient() as g, g.serial(
+        port=port, baudrate=baudrate, stopbits=stopbits, parity=parity
+    ) as h, h.unit(unit) as u, u.slot("default") as s:
+
+        k = map_kind[kind[0]]
+        t = get_type(type_)
+        if values:
+            if len(values) == 1:
+                values = values * num
+            elif len(values) != num:
+                raise click.UsageError("One or N values!")
+        for i in range(num):
+            v = s.add(k, start, t)
+            if values:
+                v.value = flint(values[i])
+            start += t.len
+            num -= 1
+
+        try:
+            if values:
+                await s._setValues()  # pylint:disable=protected-access  ## TODO
+            else:
+                res = await s._getValues()  # pylint:disable=protected-access  ## TODO
+                pprint(res)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.exception("Problem: %r", exc)
+
+
+def mk_serial_client(m):
+    """helper to create a sserial client"""
+    c = _serclient
+    c = click.argument("values", nargs=-1)(c)
+    c = click.option("--debug", "-d", is_flag=True, help="Log debug messages")(c)
+    c = click.option(
+        "--type",
+        "-t",
+        "type_",
+        default="raw",
+        help="value type: s1,s2,s4,u1,u2,u4,f2,f4,raw; Sx/Fx=swapped",
+    )(c)
+    c = click.option("--num", "-n", type=int, default=1, help="number of values")(c)
+    c = click.option("--start", "-s", default=0, help="starting register")(c)
+    c = click.option("--kind", "-k", default="i", help="query type: input, discrete, hold, coil")(
+        c
+    )
+    c = click.option("--unit", "-u", type=int, default=1, help="unit to query")(c)
+    c = click.option("--port", "-p", type=str, help="destination port (/dev/ttyXXX)")(c)
+    c = click.option("--baudrate", "-b", type=int, default=9600, help="Baud rate (9600)")(c)
+    c = click.option("--parity", "-P", type=str, default="N", help="Parity (NEO), default N")(c)
+    c = click.option("--stopbits", "-S", type=int, default=1, help="Stopbits (12), default 1")(c)
+    c = m.command("serial", context_settings=dict(show_default=True))(c)
+    return c
+
+
+serialclient = mk_serial_client(main)
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ from moat.util import load_subgroup
 log = logging.getLogger()
 
 
-@load_subgroup(sub_pre="moat.dev")
+@load_subgroup(prefix="moat.dev")
 @click.pass_obj
 async def cli(obj):
     """Device Manager"""

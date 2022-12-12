@@ -27,22 +27,22 @@ try:
     )
 except ImportError:
     from pymodbus.factory import (
-        ReadDiscreteInputsRequest,
-        ReadDiscreteInputsResponse,
         ReadCoilsRequest,
         ReadCoilsResponse,
+        ReadDiscreteInputsRequest,
+        ReadDiscreteInputsResponse,
         ReadHoldingRegistersRequest,
         ReadHoldingRegistersResponse,
         ReadInputRegistersRequest,
         ReadInputRegistersResponse,
-        WriteSingleCoilRequest,
-        WriteSingleCoilResponse,
         WriteMultipleCoilsRequest,
         WriteMultipleCoilsResponse,
-        WriteSingleRegisterRequest,
-        WriteSingleRegisterResponse,
         WriteMultipleRegistersRequest,
         WriteMultipleRegistersResponse,
+        WriteSingleCoilRequest,
+        WriteSingleCoilResponse,
+        WriteSingleRegisterRequest,
+        WriteSingleRegisterResponse,
     )
 
 import logging

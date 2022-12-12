@@ -70,10 +70,10 @@ hosts:
             dest: !P heat.s.pellets.energy
             slot: 5min
           modbus:
-            lifetick: 
-              src: !P :mr.temp.heat.s.pellets.tick.out
+#           lifetick: 
+#             src: !P :mr.temp.heat.s.pellets.tick.out
             commit_lifetick: 
-              dest: !P :mr.temp.heat.s.pellets.tick.in
+#             dest: !P :mr.temp.heat.s.pellets.tick.in
               slot: 15sec
             kesselanforderung:
               dest: !P heat.s.pellets.power

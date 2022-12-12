@@ -322,7 +322,7 @@ class Device:
 
     async def update(self, slot: Slot, proc=None):
         """Update a slot. Calls @proc with each register (in parallel)."""
-        vals = await slot.getValues()
+        vals = await slot._getValues()
         if proc is not None:
             async with anyio.create_task_group() as tg:
                 for d in vals.values():

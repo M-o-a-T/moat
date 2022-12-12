@@ -19,7 +19,7 @@ slots:
 server:
   - port: 50202
 hosts:
-  wp.hz.smurf.noris.de:
+  pellet.hz.smurf.noris.de:
     1:
       server: 3
       ref: !P inc.kwb

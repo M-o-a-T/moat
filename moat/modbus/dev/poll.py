@@ -86,7 +86,7 @@ async def dev_poll(cfg, dkv, *, task_status=None):
                 tg.start_soon(s.run)
 
             if task_status is not None:
-                task_status.started()
+                task_status.started(cfg)
 
         if not nd:
             logger.error("No devices to poll found.")

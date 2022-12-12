@@ -11,7 +11,7 @@ from moat.util import load_subgroup
 log = logging.getLogger()
 
 
-@load_subgroup(sub_pre="moat.dev.heat")
+@load_subgroup(prefix="moat.dev.heat")
 @click.pass_obj
 async def cli(obj):
     """Device Manager for heaters"""

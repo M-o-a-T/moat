@@ -19,3 +19,5 @@ eatmydata apt install \
 	# end
 
 
+git config --global fetch.recurseSubmodules true
+git config --global pull.rebase false

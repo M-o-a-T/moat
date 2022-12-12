@@ -83,7 +83,6 @@ async def poll(ctx, path):
     obj = ctx.obj
 
     cfg = yload(path, attr=True)
-    cfg = fixup(cfg)
 
     if "distkv" in obj.cfg:
         # pylint: disable=import-outside-toplevel

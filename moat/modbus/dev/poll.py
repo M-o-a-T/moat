@@ -9,7 +9,7 @@ import anyio
 from moat.util import attrdict, merge, to_attrdict
 
 from ..client import ModbusClient
-from .device import Device
+from .device import Device, fixup
 from .server import Server
 
 logger = logging.getLogger(__name__)
@@ -19,8 +19,11 @@ async def dev_poll(cfg, dkv, *, task_status=None):
     """
     Run a device task on this set of devices, as configured by the config.
 
-    The config must have been processed by `moat.modbus.dev.device.fixup`.
+    The config will be preprocessed by `moat.modbus.dev.device.fixup`; the
+    result will be returned via @task_status after setup is complete.
     """
+    cfg = fixup(cfg)
+
     s = cfg.setdefault("src", attrdict())
     sl = cfg.setdefault("slots", attrdict())
 
@@ -47,6 +50,7 @@ async def dev_poll(cfg, dkv, *, task_status=None):
                 from .distkv import Register  # pylint: disable=import-outside-toplevel
 
                 Reg = partial(Register, dkv=dkv, tg=tg)  # noqa: F811
+
             servers = []
             for s in cfg.get("server", ()):
                 servers.append(Server(*s))

@@ -172,7 +172,11 @@ class Host(CtxObj):
                 try:
                     if self.stream is None:
                         with anyio.fail_after(self.timeout):
-                            self.stream = await anyio.connect_tcp(self.addr, self.port)
+                            try:
+                                self.stream = await anyio.connect_tcp(self.addr, self.port)
+                            except OSError:
+                                _logger.error(f"Host: {self.addr}:{self.port}")
+                                raise 
                             # set so_linger to force sending RST instead of FIN
                             self.stream.extra(SocketAttribute.raw_socket).setsockopt(
                                 socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0)

@@ -12,6 +12,7 @@ from moat.modbus.types import (
     FloatValue,
     HoldingRegisters,
     InputRegisters,
+    BitValue,
     IntValue,
     LongValue,
     QuadValue,
@@ -31,6 +32,7 @@ from moat.modbus.types import (
 
 map_type = {
     "raw": IntValue,
+    "b": BitValue,
     "u1": IntValue,
     "U1": IntValue,
     "u2": LongValue,
@@ -114,6 +116,8 @@ def get_type2(s, l):
         return IntMap[swapped][unsigned][l]
 
     if not unsigned:
+        if s == "bit" and l == 1:
+            return BitValue
         if s == "float":
             return FloatMap[swapped][l]
         if s == "byte":

@@ -13,7 +13,7 @@ from moat.util import P, Path, attrdict, combine_dict, merge, yload
 
 from ..client import Host, ModbusClient, ModbusError, Slot, Unit
 from ..typemap import get_kind, get_type2
-from ..types import InputRegisters
+from ..types import InputRegisters, BitValue, DiscreteInputs, Coils
 
 logger = logging.getLogger(__name__)
 
@@ -153,13 +153,28 @@ class Register:
 
     def __init__(self, d, path, unit):
         try:
+            self.reg_type = get_kind(d.reg_type)
+        except AttributeError:
+            self.reg_type = InputRegisters
+
+        try:
             s = d.type
         except AttributeError:
-            raise AttributeError(f"No type in {path}") from None
+            if self.reg_type is DiscreteInputs or self.reg_type is Coils:
+                s = "bit"
+            else:
+                raise AttributeError(f"No type in {path}") from None
+        else:
+            if s == "bit":
+                if not (self.reg_type is DiscreteInputs or self.reg_type is Coils):
+                    raise RuntimeError(f"Only Coils/Discretes can be BitValue, at {path}")
+            elif self.reg_type is DiscreteInputs or self.reg_type is Coils:
+                raise RuntimeError(f"Coils/Discretes must be BitValue, at {path}")
+
         try:
             l = d.len
         except AttributeError:
-            if s in {"int", "uint"}:
+            if s in {"bit", "int", "uint"}:
                 l = 1
             elif s == "float":
                 l = 2
@@ -169,10 +184,6 @@ class Register:
         self.reg = get_type2(s, l)()
 
         self.register = d.register
-        try:
-            self.reg_type = get_kind(d.reg_type)
-        except AttributeError:
-            self.reg_type = InputRegisters
 
         if "slot" in d:
             slot = unit.slot(d.slot)

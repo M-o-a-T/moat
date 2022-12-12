@@ -249,6 +249,18 @@ class QuadValue(IntValue):
         )
 
 
+class BitValue(BaseValue):
+    """Bits, for "coil"s."""
+
+    len = 1
+
+    def _decode(self, regs):
+        return bool(regs[0])
+
+    def _encode(self, value):
+        return value
+
+
 class FloatValue(BaseValue):
     """network-ordered floating point."""
 

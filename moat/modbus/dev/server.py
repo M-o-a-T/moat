@@ -105,7 +105,7 @@ class Server:
     A forwarding Modbus server.
     """
 
-    def __init__(self, host, port):
+    def __init__(self, host=None, port=502):
         self.host = host
         self.port = port
         self.units = {}
@@ -121,5 +121,5 @@ class Server:
             fwd = Forwarder(self, client)
             await fwd.run()
 
-        listener = await anyio.create_tcp_listener(local_port=self.port)
+        listener = await anyio.create_tcp_listener(local_host=self.host, local_port=self.port)
         await listener.serve(proc)

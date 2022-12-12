@@ -1,0 +1,3 @@
+[submodule "serial/twe-meter"]
+	path = serial/twe-meter
+	url = https://github.com/M-o-a-T/victron-twe-meter-library

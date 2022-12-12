@@ -33,7 +33,7 @@ async def dev_poll(cfg, dkv, *, task_status=None):
         def make_dev(v, Reg, **kw):
             kw = to_attrdict(kw)
             vs = v.setdefault("src", attrdict())
-            merge(vs, kw, s, replace=False)
+            merge(vs, kw, replace=False)
             vsl = v.setdefault("slots", attrdict())
             merge(vsl, sl, replace=False)
 
@@ -53,7 +53,7 @@ async def dev_poll(cfg, dkv, *, task_status=None):
 
             servers = []
             for s in cfg.get("server", ()):
-                servers.append(Server(*s))
+                servers.append(Server(**s))
 
             for h, hv in cfg.get("hosts", {}).items():
                 for u, v in hv.items():

@@ -19,5 +19,20 @@ eatmydata apt install \
 	# end
 
 
-git config --global fetch.recurseSubmodules true
+git config --global fetch.recurseSubmodules on-demand
+git config --global push.recurseSubmodules on-demand
 git config --global pull.rebase false
+
+T=$(mktemp)
+trap 'rm -f $T' EXIT INT
+
+cat <<'__END' >$T
+#!/bin/sh
+
+if git config remote.origin.url | fgrep -qs 'git://git.smurf.noris.de/moat' ; then
+	git config remote.origin.url $(git config remote.origin.url | sed -e 's#git://git.smurf.noris.de/#git@git.smurf.noris.de:#')
+fi
+
+__END
+
+git submodule foreach --recursive /bin/sh $T

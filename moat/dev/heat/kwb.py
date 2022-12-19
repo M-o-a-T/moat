@@ -1,17 +1,19 @@
-# command line interface
+"""
+command line interface thing for KWB pellet burner
+"""
 
 import logging
 
 import anyio
 import asyncclick as click
-from distkv.server import Server
 from moat.modbus.dev.poll import dev_poll
 from moat.util import yload
 
 logger = logging.getLogger()
 
 
-async def lifeticker(dest, cfg):
+async def lifeticker(dest):
+    "Task to periodically update the lifeticker modbus var"
     t_out = dest.regs.ksm.modbus.lifetick
     t_in = dest.regs.ksm.modbus.commit_lifetick
 
@@ -19,7 +21,6 @@ async def lifeticker(dest, cfg):
     v_old = t_in.value
     n_old = 0
 
-    breakpoint()
     while True:
         for n in range(1, 65535):
             t_out.value = n
@@ -75,11 +76,10 @@ async def cli(ctx, cfg, host, port, unit):
 
         def proc(dest):
             try:
-                breakpoint()
-                dest.regs.ksm.modbus.lifetick
+                dest.regs.ksm.modbus.lifetick  # pylint: disable=pointless-statement
             except AttributeError:
                 return
-            tg.start_soon(lifeticker, dest, cfg)
+            tg.start_soon(lifeticker, dest)
 
             nonlocal n
             n += 1

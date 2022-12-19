@@ -14,7 +14,7 @@ classifiers = [
 	]
 dependencies = [
 	"anyio ~= 3.0",
-	"moat-util ~= 0.25.4",
+	"moat-util ~= 0.26.4",
 	]
 dynamic = [ "version",]
 keywords = [ "MoaT",]

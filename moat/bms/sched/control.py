@@ -84,9 +84,6 @@ class Model:
         _pr = None
         while True:
             i += 1
-            if i:
-                # Attribute a fake monetary value of keeping the battery charged
-                _pr.SetCoefficient(cap, self.chg_inter / hardware.capacity)
 
             # input constraints
             try:
@@ -101,7 +98,16 @@ class Model:
             # ### Variables to consider
 
             # future battery charge
-            cap = solver.NumVar(hardware.capacity * hardware.batt_min_soc, hardware.capacity * hardware.batt_max_soc, f"b{i}")
+            cap = solver.NumVar(
+                hardware.capacity * hardware.batt_min_soc,
+                hardware.capacity * hardware.batt_max_soc,
+                f"b{i}",
+            )
+
+            if i:
+                # Attribute a fake monetary value of keeping the battery charged
+                _pr.SetCoefficient(cap, self.chg_inter / hardware.capacity)
+
             self.caps.append(cap)
 
             # battery charge/discharge
@@ -209,9 +215,9 @@ class Model:
 
         self.solver.Solve()
 
-        for g_in,g_out,cap,money in zip(self.g_ins,self.g_outs,self.caps,self.moneys):
+        for g_in, g_out, cap, money in zip(self.g_ins, self.g_outs, self.caps, self.moneys):
             yield (
                 (g_in.solution_value() - g_out.solution_value()) * self.per_hour,
                 cap.solution_value() / self.hardware.capacity,
                 money.solution_value(),
-        )
+            )

@@ -27,7 +27,7 @@ async def test_basic():  # no autojump
         await st.run(f"akumuli server test -h 127.0.0.1 -p {TCP_PORT}")
         await st.run("akumuli set test.foo.bar test.one.two whatever foo=bar")
         aki = await AkumuliRoot.as_handler(client)
-        await st.tg.spawn(task, client, client._cfg.akumuli, aki["test"])
+        st.tg.start_soon(task, client, client._cfg.akumuli, aki["test"])
         await anyio.sleep(0.5)
         await client.set(P("test.one.two"), value=42)
         await anyio.sleep(0.5)

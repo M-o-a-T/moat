@@ -154,7 +154,7 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
             mode = getattr(DS, mode, None)
 
         evt = anyio.Event()
-        await self.tg.spawn(self.with_output, evt, src, attr, series, tags, mode)
+        self.tg.start_soon(self.with_output, evt, src, attr, series, tags, mode)
         await evt.wait()
 
 

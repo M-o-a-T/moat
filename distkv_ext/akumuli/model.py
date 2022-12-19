@@ -82,7 +82,7 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
         """
         Task that monitors one entry and writes its value to Akumuli.
         """
-        async with anyio.CancelScope() as sc:
+        with anyio.CancelScope() as sc:
             self._work = sc
             async with self.client.watch(src, min_depth=0, max_depth=0, fetch=True) as wp:
                 evt.set()

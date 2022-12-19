@@ -13,7 +13,7 @@ from moat.util import P, Path, attrdict, combine_dict, merge, yload
 
 from ..client import Host, ModbusClient, ModbusError, Slot, Unit
 from ..typemap import get_kind, get_type2
-from ..types import InputRegisters, BitValue, DiscreteInputs, Coils
+from ..types import BitValue, Coils, DiscreteInputs, InputRegisters
 
 logger = logging.getLogger(__name__)
 

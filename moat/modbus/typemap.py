@@ -5,6 +5,7 @@ Map strings+kinds to modbuys types
 from functools import partial
 
 from moat.modbus.types import (
+    BitValue,
     ByteValue,
     Coils,
     DiscreteInputs,
@@ -12,7 +13,6 @@ from moat.modbus.types import (
     FloatValue,
     HoldingRegisters,
     InputRegisters,
-    BitValue,
     IntValue,
     LongValue,
     QuadValue,

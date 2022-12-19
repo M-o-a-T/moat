@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Basic tool support
+Basic "modbus" tool: network client and server, serial client
 
 """
 import logging  # pylint: disable=wrong-import-position

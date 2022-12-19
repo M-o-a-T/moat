@@ -103,7 +103,8 @@ def get_type2(s, l):
             4: SwappedDoubleValue,
         },
     ]
-    swapped = unsigned = False
+    swapped = False
+    signed = True
 
     os = s
     if s[0] == "s" and s != "str":
@@ -111,9 +112,9 @@ def get_type2(s, l):
         swapped = True
     if s[0] == "u":
         s = s[1:]
-        unsigned = True
+        signed = False
     if s == "int":
-        return IntMap[swapped][unsigned][l]
+        return IntMap[swapped][signed][l]
 
     if not unsigned:
         if s == "bit" and l == 1:

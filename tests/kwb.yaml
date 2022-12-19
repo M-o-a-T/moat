@@ -2,6 +2,8 @@ inc:
   kwb:
     include: heating/KWB/easyfire.yaml
 slots:
+  default:
+    write_delay: 1
   1sec:
     time: 1
     align: false
@@ -16,6 +18,9 @@ slots:
   15sec:
     time: 15
     align: null
+  write: 
+    write_delay: 0.1
+
 server:
   - port: 50202
 hosts:

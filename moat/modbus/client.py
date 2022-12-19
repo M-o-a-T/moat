@@ -1,6 +1,7 @@
 """
-modbus access
+The MoaT Modbus client and its sub-objects (excluding individual bus values).
 """
+
 import logging
 import socket
 import struct
@@ -13,6 +14,7 @@ import anyio
 from anyio import ClosedResourceError, IncompleteRead
 from anyio.abc import SocketAttribute
 from anyio_serial import Serial
+from asyncscope import scope
 from moat.util import CtxObj, Queue, ValueEvent
 from pymodbus.exceptions import ModbusIOException
 from pymodbus.factory import ClientDecoder
@@ -58,28 +60,46 @@ class ModbusClient(CtxObj):
 
     def host(self, addr, port=None):
         """Return a host object for connections to this address+port.
-        The host will be created if it has not been seen before.
+
+        You cannot create two host objects for the same destination.
         """
         if not port:
             port = 502
-        try:
-            return self.hosts[(addr, port)]
-        except KeyError:
-            h = Host(self, addr, port)
-            self.hosts[(addr, port)] = h
-            return h
+        if (addr, port) in self.hosts:
+            raise KeyError(f"Host {addr}:{port} already exists")
+
+        h = Host(self, addr, port)
+        return h
+
+    async def _host(self, addr, port=None):
+        async with self.serial(port, **ser) as srv:
+            await scope.register(srv)
+            await scope.no_more_dependents()
+
+    async def host_service(self, addr, port):
+        """Run a TCP client in an AsyncScope."""
+        if not port:
+            port = 502
+        return await service(f"MC:{id(self)}:{addr}:{port}", self._host, addr, port)
+
 
     def serial(self, /, port, **ser):
         """Return a host object for connections to this serial port."""
-        try:
-            return self.hosts[port]
-        except KeyError:
-            h = SerialHost(self, port=port, **ser)
-            self.hosts[port] = h
-            return h
+        if port in self.hosts:
+            raise KeyError(f"Host {port} already exists")
 
-    def _del_host(self, host):
-        del self.hosts[host.ser["port"]]
+        h = SerialHost(self, port=port, **ser)
+        self.hosts[port] = h
+        return h
+
+    async def _serial(self, /, port, **ser):
+        async with self.serial(port, **ser) as srv:
+            await scope.register(srv)
+            await scope.no_more_dependents()
+
+    async def serial_service(self, port, **ser):
+        """Run a serial client in an AsyncScope."""
+        return await service(f"MC:{id(self)}:{port}", self._serial, port)
 
 
 class ModbusError(RuntimeError):
@@ -116,22 +136,16 @@ class _HostCommon:
 
         A new unit is allocated if it doesn't yet exist.
         """
-        try:
-            return self.units[unit]
-        except KeyError:
-            if unit < 1 or unit > 247:
-                raise ValueError(  # pylint: disable=raise-missing-from
-                    f"Bus units must be in range 1…247, not {unit}"
-                )
-            return Unit(self, unit)
+        return Unit(self, unit)
 
-    def _add_unit(self, unit):
-        self.units[unit.unit] = unit
+    async def _unit(self, unit):
+        async with self.unit(unit) as srv:
+            await scope.register(srv)
+            await scope.no_more_dependents()
 
-    def _del_unit(self, unit):
-        if self.units is None:
-            return
-        del self.units[unit.unit]
+    async def unit_scope(self, unit):
+        """Run a unit in an `AsyncScope`"""
+        return await service(f"MH:{id(self)}:{unit}", self._unit, unit)
 
     def _nextTID(self):
         self._tid = (self._tid + 1) % 0xFFFF
@@ -214,13 +228,22 @@ class Host(CtxObj, _HostCommon):
     @asynccontextmanager
     async def _ctx(self):
         # might be used to manage the connection
-        async with anyio.create_task_group() as tg:
-            self._tg = tg
-            self._read_scope = tg.cancel_scope
-            await tg.start(self._reader)
+        key = (self.addr, self.port)
+        if key in self.gate.hosts:
+            raise RuntimeError(f"Host {key} already exists")
+        self.gate.hosts[key] = self
 
-            yield self
-            tg.cancel_scope.cancel()
+        try:
+            async with anyio.create_task_group() as tg:
+                self._tg = tg
+                self._read_scope = tg.cancel_scope
+                await tg.start(self._reader)
+
+                yield self
+                tg.cancel_scope.cancel()
+        finally:
+            if self.gate.hosts[key] is self:
+                del self.gate.hosts[key]
 
     # reader task #
 
@@ -352,6 +375,7 @@ class SerialHost(CtxObj, _HostCommon):
     max_req_len = 50  # max number of registers to fetch w/ one request
 
     def __init__(self, gate, /, port, timeout=10, cap=1, debug=False, **ser):
+        self.port = port
         self.ser = ser
         self.framer = ModbusRtuFramer(ClientDecoder(), self)
 
@@ -366,9 +390,18 @@ class SerialHost(CtxObj, _HostCommon):
     @asynccontextmanager
     async def _ctx(self):
         # might be used to manage the connection
-        async with Serial(**self.ser) as self.stream:
-            self._connected.set()
-            yield self
+        key = self.port
+        if key in self.gate.hosts:
+            raise RuntimeError(f"Host {key} already exists")
+
+        try:
+            async with Serial(**self.ser) as self.stream:
+                self._connected.set()
+                yield self
+        finally:
+            if self.gate.hosts[key] is self:
+                del self.gate.hosts[key]
+        
 
     # reader task #
 
@@ -504,15 +537,15 @@ class Unit(CtxObj):
 
         A new slot is allocated if it doesn't yet exist.
         """
-        try:
-            return self.slots[slot]
-        except KeyError:
-            s = Slot(self, slot)
-            self.slots[slot] = s
-            return s
+        return Slot(self, slot)
 
-    def _del_slot(self, slot):
-        del self.slots[slot.slot]
+    async def _slot(self, slot):
+        async with self.slot(slot) as srv:
+            await scope.register(srv)
+            await scope.no_more_dependents()
+
+    async def slot_service(self, slot):
+        return await service(f"MS:{id(self)}:{slot}", self._slot, slot)
 
     async def aclose(self):
         """Stop talking and delete yourself.
@@ -554,6 +587,7 @@ class Slot(CtxObj):
     _run_scope = None
     delay: float = None
     t_read = None
+    _scope = None
 
     def __init__(
         self,
@@ -585,13 +619,21 @@ class Slot(CtxObj):
 
     @asynccontextmanager
     async def _ctx(self):
-        async with anyio.create_task_group() as tg:
-            if self.write_delay is not None:
-                tg.start_soon(self.write_task)
-            if self.read_delay is not None:
-                tg.start_soon(self.read_task)
-            yield self
-            tg.cancel_scope.cancel()
+        if self.slot in self.unit.slots:
+            raise RuntimeError(f"Slot {self.slot} already exists")
+        self.unit.slots[self.slot] = self
+        try:
+            async with anyio.create_task_group() as tg:
+                self._scope = tg.cancel_scope
+                if self.write_delay is not None:
+                    tg.start_soon(self.write_task)
+                if self.read_delay is not None:
+                    tg.start_soon(self.read_task)
+                yield self
+                tg.cancel_scope.cancel()
+        finally:
+            if self.unit.slots[self.slot] is self:
+                del self.unit.slots[self.slot]
 
     def trigger_send(self):
         """Start writing after at most `.write_delay` seconds."""
@@ -642,19 +684,13 @@ class Slot(CtxObj):
         if self._run_scope is not None:
             await self._run_scope.cancel()
 
-    async def aclose(self):
+    def close(self):
         """
         Close this slot.
         """
-        if self.unit is None:
+        if self._scope is None:
             return
-        m, self.modes = self.modes, None
-        await self._stop_run()
-        self.unit._del_slot(self)  # pylint: disable=protected-access
-        self.unit = None
-
-        for vl in m.values():
-            vl.close()
+        self._scope.cancel()
 
     async def _getValues(self) -> Dict[TypeCodec, Dict[int, Any]]:
         """

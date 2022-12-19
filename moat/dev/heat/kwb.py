@@ -1,14 +1,13 @@
 # command line interface
 
-import asyncclick as click
-import anyio
-
-from distkv.server import Server
-
-from moat.util import yload
-from moat.modbus.dev.poll import dev_poll
-
 import logging
+
+import anyio
+import asyncclick as click
+from distkv.server import Server
+from moat.modbus.dev.poll import dev_poll
+from moat.util import yload
+
 logger = logging.getLogger()
 
 
@@ -22,7 +21,7 @@ async def lifeticker(dest, cfg):
 
     breakpoint()
     while True:
-        for n in range(1,65535):
+        for n in range(1, 65535):
             t_out.value = n
             await anyio.sleep(45)
 
@@ -34,11 +33,12 @@ async def lifeticker(dest, cfg):
             else:
                 n_old += 1
 
+
 @click.command(short_help="Access the KWB modbus.")  # pylint: disable=undefined-variable
-@click.option("-c","--cfg", type=click.File("r"), help="Moat-Modbus configuration", required=True)
-@click.option("-h","--host", help="Host to access")
-@click.option("-p","--port", type=int, help="Port to access")
-@click.option("-u","--unit", type=int, help="Unit to access")
+@click.option("-c", "--cfg", type=click.File("r"), help="Moat-Modbus configuration", required=True)
+@click.option("-h", "--host", help="Host to access")
+@click.option("-p", "--port", type=int, help="Port to access")
+@click.option("-u", "--unit", type=int, help="Unit to access")
 @click.pass_context
 async def cli(ctx, cfg, host, port, unit):
     """
@@ -64,14 +64,14 @@ async def cli(ctx, cfg, host, port, unit):
 
     n = 0
 
-    def get_one(d,h):
+    def get_one(d, h):
         if h is None:
             yield from d.values()
         elif h in d:
             yield d[h]
 
     async with anyio.create_task_group() as tg:
-        cfg = await tg.start(dev_poll,cfg, dkv)
+        cfg = await tg.start(dev_poll, cfg, dkv)
 
         def proc(dest):
             try:
@@ -84,13 +84,13 @@ async def cli(ctx, cfg, host, port, unit):
             nonlocal n
             n += 1
 
-        for h in get_one(cfg.get("hostports",{}), host):
+        for h in get_one(cfg.get("hostports", {}), host):
             for p in get_one(h, port):
                 for dest in get_one(p, unit):
                     proc(dest)
 
         if port is None or port == 502:
-            for h in get_one(cfg.get("hosts",{}), host):
+            for h in get_one(cfg.get("hosts", {}), host):
                 for dest in get_one(h, unit):
                     proc(dest)
 

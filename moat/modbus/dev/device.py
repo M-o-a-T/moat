@@ -13,7 +13,7 @@ from moat.util import P, Path, attrdict, combine_dict, merge, yload
 
 from ..client import Host, ModbusClient, ModbusError, Slot, Unit
 from ..typemap import get_kind, get_type2
-from ..types import BitValue, Coils, DiscreteInputs, InputRegisters
+from ..types import Coils, DiscreteInputs, InputRegisters
 
 logger = logging.getLogger(__name__)
 
@@ -333,7 +333,7 @@ class Device:
 
     async def update(self, slot: Slot, proc=None):
         """Update a slot. Calls @proc with each register (in parallel)."""
-        vals = await slot._getValues()
+        vals = await slot.read()
         if proc is not None:
             async with anyio.create_task_group() as tg:
                 for d in vals.values():

@@ -25,7 +25,7 @@ repository = "https://github.com/M-o-a-T/moat-bms-inv"
 
 [tool.flake8]
 max-line-length = 99
-ignore = ["F841","F401","E731","E502","E402","E127","E123","E203","E231","W503"]
+ignore = ["F841","F401","E731","E502","E402","E127","E123","E203","E231","W503","F722","F821","E501"]
 
 [tool.isort]
 line_length = 99

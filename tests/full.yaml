@@ -7,14 +7,16 @@ inc:
     include: heating/Solvis.yaml
 slots:
   1sec:
-    time: 1
-    align: false
+    read_delay: 1
+    read_align: false
   1min:
-    time: 60
-    align: true
+    read_delay: 60
+    read_align: true
   15sec:
-    time: 15
-    align: null
+    read_delay: 15
+    read_align: null
+  default:
+    write_delay: 0.1
 hosts:
   wp.hz.smurf.noris.de:
     1:

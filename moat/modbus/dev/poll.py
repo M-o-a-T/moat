@@ -60,7 +60,7 @@ async def dev_poll(cfg, dkv, *, task_status=None):
 
             for h, hv in cfg.get("hosts", {}).items():
                 for u, v in hv.items():
-                    dev = make_dev(v, Reg, host=h, unit=u)
+                    dev = await make_dev(v, Reg, host=h, unit=u)
                     nd += 1
                     tg.start_soon(dev.poll)
 
@@ -75,7 +75,7 @@ async def dev_poll(cfg, dkv, *, task_status=None):
                     if not isinstance(p, int):
                         continue
                     for u, v in pv.items():
-                        dev = make_dev(v, Reg, host=h, port=p, unit=u)
+                        dev = await make_dev(v, Reg, host=h, port=p, unit=u)
                         tg.start_soon(dev.poll)
                         nd += 1
 

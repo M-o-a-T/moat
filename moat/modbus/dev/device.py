@@ -339,11 +339,8 @@ class Device(CtxObj):
                     continue
 
                 if "register" in v:
+                    v.setdefault("slot","write")
                     d[k] = reg = self.factory(v, path / k, self.unit)
-                    s = v.get("slot", "write")
-                    sl = self.slots.get(s, None)
-                    if sl is not None:
-                        reg.block = sl
                     seen = True
                 elif "slot" in v:
                     logger.warning("%s is not a register", path / k)

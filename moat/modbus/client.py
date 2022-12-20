@@ -796,7 +796,7 @@ class Slot(CtxObj):
                     tn += self.read_delay
                 else:
                     # We didn't sleep: the last read took too long. reset the timer
-                    _logger.notice(
+                    _logger.info(
                         "Delay for %s: %.1f > %.1f",
                         self,
                         t - tn + self.read_delay,

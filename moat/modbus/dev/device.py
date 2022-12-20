@@ -7,6 +7,7 @@ import time
 from collections.abc import Mapping
 from pathlib import Path as FSPath
 from typing import List
+from copy import deepcopy
 
 import anyio
 from asyncscope import scope
@@ -110,20 +111,21 @@ def fixup(
         n = rep.n
         off = offset
         while n > 0:
-            v = combine_dict(d.get(k, attrdict()), rep.data, cls=attrdict)
+            v = combine_dict(d.get(k, attrdict()), deepcopy(rep.data), cls=attrdict)
             d[k] = fixup(
                 v,
                 root,
                 path / k,
-                default=default if k in d else attrdict(),
+                default=default,
                 offset=off,
                 do_refs=do_refs,
                 this_file=this_file,
             )
+            reps.add(k)
+
             n -= 1
             k += 1
             off += rep.offset
-            reps.add(k)
 
     for k, v in d.items():
         if k in reps:

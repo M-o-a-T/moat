@@ -299,17 +299,19 @@ class Host(CtxObj, _HostCommon):
             ) as exc:
                 if self._connected.is_set():
                     self._connected = anyio.Event()
-                _logger.error(
-                    "Read from %s:%d: %r (%d)",
-                    self.addr,
-                    self.port,
-                    exc,
-                    len(self._transactions),
+                t, self._transactions = self._transactions, {}
+                if t:
+                    for req in t.values():
+                        req._response_value.set_error(exc)
+                else:
+                    _logger.error(
+                        "Read from %s:%d: %r (%d)",
+                        self.addr,
+                        self.port,
+                        exc,
+                        len(self._transactions),
                 )
 
-                t, self._transactions = self._transactions, {}
-                for req in t.values():
-                    req._response_value.set_error(exc)
                 s, self.stream = self.stream, None
                 if s:
                     await s.aclose()

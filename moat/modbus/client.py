@@ -873,7 +873,13 @@ class ValueList(DataBlock):
         u = self.slot.unit
         msg = self.kind.encoder(address=start, count=length, unit=u.unit)
 
-        r = await u.host.execute(msg)
+        try:
+            r = await u.host.execute(msg)
+        except (ModbusError,anyio.EndOfStream) as exc:
+            _logger.warning(f"Error %s: %r: %r", self.slot, msg, exc)
+            return
+
+
         # TODO check R for correct type?
 
         r = r.registers

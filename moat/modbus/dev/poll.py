@@ -4,6 +4,7 @@ Poll code
 
 import logging
 from functools import partial
+from asyncscope import scope
 
 import anyio
 from moat.util import attrdict, merge, to_attrdict
@@ -42,7 +43,7 @@ async def dev_poll(cfg, dkv, *, task_status=None):
             dev = Device(client=cl, factory=Reg)
             dev.load(data=v)
 
-            return scope.spawn_service(dev.as_scope)
+            return await scope.spawn_service(dev.as_scope)
 
         async with anyio.create_task_group() as tg:
             if dkv is None:

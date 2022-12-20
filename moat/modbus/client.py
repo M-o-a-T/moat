@@ -601,6 +601,7 @@ class Slot(CtxObj):
         read_delay: float = None,
         read_align: bool = False,
         write_delay: float = None,
+        **kw,
     ):
         self.unit = unit
         self.slot = slot
@@ -617,6 +618,8 @@ class Slot(CtxObj):
         self.run_lock: anyio.Event = None
 
         self.modes = {}
+        if kw:
+            logger.warning("%s:%s: extra arguments: %r", unit,slot,kw)
 
     def __str__(self):
         return f"{self.unit}:{self.slot}"

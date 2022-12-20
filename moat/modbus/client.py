@@ -635,7 +635,7 @@ class Slot(CtxObj):
         try:
             async with anyio.create_task_group() as tg:
                 self._scope = tg.cancel_scope
-                self.run_lock = anyio.Event
+                self.run_lock = anyio.Event()
                 if self.write_delay is not None:
                     tg.start_soon(self.write_task)
                 if self.read_delay is not None:

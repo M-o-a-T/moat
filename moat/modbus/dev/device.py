@@ -192,7 +192,10 @@ class Register:
 
         if "slot" in d:
             slot = unit.slot(d.slot)
-            slot.add(self.reg_type, offset=self.register, cls=self.reg)
+            try:
+                slot.add(self.reg_type, offset=self.register, cls=self.reg)
+            except ValueError:
+                raise ValueError("Already known",slot,self.reg_type,self.register) from None
             self.slot = slot
         self.unit = unit
         self.data = d

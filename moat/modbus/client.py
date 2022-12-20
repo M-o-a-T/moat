@@ -73,7 +73,7 @@ class ModbusClient(CtxObj):
 
     async def _host(self, addr, port=None):
         async with self.host(addr, port) as srv:
-            await scope.register(srv)
+            scope.register(srv)
             await scope.no_more_dependents()
 
     async def host_service(self, addr, port):
@@ -93,7 +93,7 @@ class ModbusClient(CtxObj):
 
     async def _serial(self, /, port, **ser):
         async with self.serial(port, **ser) as srv:
-            await scope.register(srv)
+            scope.register(srv)
             await scope.no_more_dependents()
 
     async def serial_service(self, port, **ser):
@@ -139,7 +139,7 @@ class _HostCommon:
 
     async def _unit(self, unit):
         async with self.unit(unit) as srv:
-            await scope.register(srv)
+            scope.register(srv)
             await scope.no_more_dependents()
 
     async def unit_scope(self, unit):
@@ -539,7 +539,7 @@ class Unit(CtxObj):
 
     async def _slot(self, slot):
         async with self.slot(slot) as srv:
-            await scope.register(srv)
+            scope.register(srv)
             await scope.no_more_dependents()
 
     async def slot_service(self, slot):

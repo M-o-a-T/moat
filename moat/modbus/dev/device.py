@@ -7,6 +7,7 @@ import time
 from collections.abc import Mapping
 from pathlib import Path as FSPath
 from typing import List
+from contextlib import asynccontextmanager
 from copy import deepcopy
 
 import anyio
@@ -298,6 +299,7 @@ class Device(CtxObj):
         self.cfg_path = path
 
 
+    @asynccontextmanager
     async def _ctx(self):
         if "host" in self.data.src:
             host = await self.client.host_service(self.data.src.host, self.data.src.get("port"))

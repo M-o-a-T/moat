@@ -238,7 +238,7 @@ class Host(CtxObj, _HostCommon):
                 yield self
                 tg.cancel_scope.cancel()
         finally:
-            if self.gate.hosts[key] is self:
+            if self.gate.hosts.get(key, None) is self:
                 del self.gate.hosts[key]
 
     # reader task #

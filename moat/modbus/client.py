@@ -178,9 +178,6 @@ class _HostCommon:
             except TimeoutError:
                 await self.stream.aclose()
                 raise
-            except Exception as exc:
-                _logger.error("Gateway not replied: %r", exc)
-                raise
             else:
                 if res.isError():
                     raise ModbusError(res)

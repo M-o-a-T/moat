@@ -276,7 +276,6 @@ class Device(CtxObj):
     registers, e.g. with different storage backends.
     """
 
-    host: Host = None
     data: attrdict = None
     unit: Unit = None
     cfg: attrdict = None

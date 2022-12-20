@@ -280,7 +280,7 @@ regs:
       type: float
       unit: V
     L3:
-      register: 6
+      register: 4
       type: float
       unit: W
     avg:

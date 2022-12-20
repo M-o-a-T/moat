@@ -536,7 +536,11 @@ class Unit(CtxObj):
 
         A new slot is allocated if it doesn't yet exist.
         """
-        return Slot(self, slot, **kw)
+        try:
+            return self.slots[slot]
+        except KeyError:
+            self.slots[slot] = sl = Slot(self, slot, **kw)
+            return sl
 
     async def _slot(self, slot, **kw):
         async with self.slot(slot, **kw) as srv:
@@ -588,6 +592,7 @@ class Slot(CtxObj):
     delay: float = None
     t_read = None
     _scope = None
+    _running = False
 
     def __init__(
         self,
@@ -621,9 +626,9 @@ class Slot(CtxObj):
 
     @asynccontextmanager
     async def _ctx(self):
-        if self.slot in self.unit.slots:
-            raise RuntimeError(f"Slot {self.slot} already exists")
-        self.unit.slots[self.slot] = self
+        if self._running:
+            raise RuntimeError(f"Slot {self.slot} already active")
+        self._running = True
         try:
             async with anyio.create_task_group() as tg:
                 self._scope = tg.cancel_scope
@@ -636,8 +641,7 @@ class Slot(CtxObj):
                 tg.cancel_scope.cancel()
         finally:
             self.run_lock = None
-            if self.unit.slots[self.slot] is self:
-                del self.unit.slots[self.slot]
+            self._running = False
 
     def start(self):
         """

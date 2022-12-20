@@ -1,5 +1,5 @@
 """
-Modbus support
+Basic "moat modbus" tool: network client and server, serial client
 """
 
 from moat.util import load_subgroup

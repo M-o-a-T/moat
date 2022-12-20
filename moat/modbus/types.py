@@ -158,7 +158,7 @@ class _Signed:
 
     def _decode(self, regs):
         res = super()._decode(regs)
-        if res & 1 << (self.len * 16 - 1):
+        if res & (1 << (self.len * 16 - 1)):
             res -= 1 << (self.len * 16)
         return res
 

@@ -1,5 +1,5 @@
 """
-Device file handling and serving
+Device file handling, with a basic multi-device client
 """
 
 import logging

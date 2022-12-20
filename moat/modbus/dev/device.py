@@ -10,6 +10,7 @@ from typing import List
 
 import anyio
 from moat.util import P, Path, attrdict, combine_dict, merge, yload
+from asyncscope import scope
 
 from ..client import Host, ModbusClient, ModbusError, Slot, Unit
 from ..typemap import get_kind, get_type2
@@ -215,7 +216,7 @@ class Register:
 
     @value.setter
     def value(self, val):
-        """Set the value, reverse factor+offset-adjustment"""
+        """Set the value, reverse factor+offset-adjustment. May trigger an update."""
         if val is not None:
             val = (val - self.offset) / self.factor
         self.reg.set(val)
@@ -252,7 +253,7 @@ class Register:
 _data = FSPath(__file__).parent / "_data"
 
 
-class Device:
+class Device(CtxObj):
     """A modbus device.
 
     The idea is to use the device description file as a template.
@@ -272,6 +273,8 @@ class Device:
     host: Host = None
     data: attrdict = None
     unit: Unit = None
+    cfg: attrdict = None
+    cfg_path: FSPath = None
 
     def __init__(self, client: ModbusClient, factory=Register):
         self.client = client
@@ -279,6 +282,9 @@ class Device:
 
     def load(self, path: str = None, data: dict = None):
         """Load a device description from @path, augmented by @data"""
+        if self.cfg is not None:
+            raise RuntimeError("already called")
+
         if path is None:
             d = attrdict()
         else:
@@ -286,11 +292,24 @@ class Device:
             d = yload(path, attr=True)
         if data is not None:
             d = merge(d, data)
-        self.data = fixup(d, d, Path(), this_file=path)
+        self.cfg = d
+        self.cfg_path = path
 
-        self.host = self.client.host(self.data.src.host, self.data.src.get("port"))
-        self.unit = self.host.unit(self.data.src.unit)
-        self.add_registers()
+    async def as_service(self, *a,**kw):
+        self.load(*a,**kw)
+        if "host" in self.data.src:
+            host = await self.client.host_service(self.data.src.host, self.data.src.get("port"))
+        else:
+            host = await self.client.serial_service(self.data.src.port, **self.data.src.get("serial,",{}))
+        unit = await host.unit_service(self.data.src.unit)
+        self.data = fixup(self.cfg, self.cfg, Path(), this_file=self.cfg_path)
+
+        yield self
+
+    async def add_slots(self, keys):
+        for k in keys:
+            v = self.data.slots[k]
+            self.slots[k] = await service(f"MDS:{id(self)}:{k}", **v)
 
     def add_registers(self):
         """Replace entries w/ register/slot members with Register instances"""
@@ -304,11 +323,14 @@ class Device:
                     seen = True
                     if "register" in v:
                         logger.warning("%s has a sub-register: ignored", path / k)
-                        continue
                     continue
 
                 if "register" in v:
-                    d[k] = self.factory(v, path / k, self.unit)
+                    d[k] = reg = self.factory(v, path / k, self.unit)
+                    s = v.get("slot", "write")
+                    sl = self.slots.get(s, None)
+                    if sl is not None:
+                        reg.block = sl
                     seen = True
                 elif "slot" in v:
                     logger.warning("%s is not a register", path / k)
@@ -341,8 +363,8 @@ class Device:
                         tg.start_soon(proc, v)
         return vals
 
-    async def poll_slot(self, slot: str):
-        """Periodically poll this slot"""
+    async def poll_slot(self, slot: str, *, task_status=None):
+        """Register and periodically poll this slot"""
         # slots:
         #  1sec:
         #    time: 1
@@ -352,49 +374,23 @@ class Device:
         # align=False: fetch now, *then* wait for the next multiple
         # align=None: fetch now, wait for the timespan
         s = self.data.slots[slot]
-        sl = self.unit.slot(slot)
-        al = s.get("align", None)
-        if al is not None:
-            t = time.time()
-            r = (-t) % s.time
-            if al:
-                await anyio.sleep(r)
-        nt = time.monotonic()
 
-        backoff = s.time / 10
-        while True:
-            try:
-                await self.update(sl)
-            except Exception as err:  # pylint: disable=broad-except
-                e = (
-                    logger.error
-                    if isinstance(err, (ModbusError, anyio.EndOfStream))
-                    else logger.exception
-                )
-                e("%s: %r: wait %s", sl, err, backoff)
-                await anyio.sleep(backoff)
-                backoff = min(max(s.time * 2, 60), backoff * 1.2)
-                continue
-            else:
-                backoff = s.time / 10
+        async with self.unit.slot(slot) as sl:
+            if task_status is not None:
+                task_status.started()
 
-            t = time.monotonic()
-            if nt > t:
-                await anyio.sleep(nt - t)
-            else:
-                if al:
-                    nnt = nt + s.time * int(t - nt)  # +1 added below
-                else:
-                    nnt = time.monotonic()
-                if s.time >= 5 and t - nt > s.time / 10:
-                    logger.warning("%s: late by %1fs: now %s", sl, t - nt, nnt)
-                nt = nnt
-            nt += s.time
+            while True:
+                await anyio.sleep(99999)
 
-    async def poll(self, slots: set = None):
+
+    async def poll(self, slots: set = None, *, task_status=None):
         """Periodically poll all slots"""
         if not slots:
             slots = self.data.slots.keys()
         async with anyio.create_task_group() as tg:
-            for k in slots:
-                tg.start_soon(self.poll_slot, k)
+            await self.add_slots(slots)
+
+            self.add_registers()
+            if task_status is not None:
+                task_status.started()
+

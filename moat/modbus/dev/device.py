@@ -9,8 +9,8 @@ from pathlib import Path as FSPath
 from typing import List
 
 import anyio
-from moat.util import P, Path, attrdict, combine_dict, merge, yload
 from asyncscope import scope
+from moat.util import CtxObj, P, Path, attrdict, combine_dict, merge, yload
 
 from ..client import Host, ModbusClient, ModbusError, Slot, Unit
 from ..typemap import get_kind, get_type2
@@ -151,6 +151,7 @@ class Register:
     This class duck-types as a moat.modbus.types.BaseValue."""
 
     last_gen = -1
+    block = None
 
     def __init__(self, d, path, unit):
         try:
@@ -261,10 +262,9 @@ class Device(CtxObj):
     You augment that file with "slot" data, i.e. named intervals,
     plus processing instructions. The instructions may contain slot names.
 
-    For each slot, you periodically call `await dev.update(slotname,
-    processor)`. The system will fetch the data, call a given postprocessor
-    for each item (which might forward the value to MQTT), and return
-    the list of registers.
+    For each slot, the system will periodically fetch the data and call a
+    given postprocessor for each item, which can e.g. forward the value to
+    MQTT.
 
     @factory is used to create bus registers. Used to augment basic
     registers, e.g. with different storage backends.
@@ -295,21 +295,28 @@ class Device(CtxObj):
         self.cfg = d
         self.cfg_path = path
 
-    async def as_service(self, *a,**kw):
-        self.load(*a,**kw)
+
+    async def _ctx(self):
         if "host" in self.data.src:
             host = await self.client.host_service(self.data.src.host, self.data.src.get("port"))
         else:
-            host = await self.client.serial_service(self.data.src.port, **self.data.src.get("serial,",{}))
-        unit = await host.unit_service(self.data.src.unit)
+            host = await self.client.serial_service(
+                self.data.src.port, **self.data.src.get("serial,", {})
+            )
+        self.unit = await host.unit_service(self.data.src.unit)
         self.data = fixup(self.cfg, self.cfg, Path(), this_file=self.cfg_path)
-
+        await self.add_slots()
+        self.add_registers()
         yield self
 
+    async def as_scope(self):
+        async with self:
+            scope.register(self)
+            await scope.no_more_dependents()
+
     async def add_slots(self, keys):
-        for k in keys:
-            v = self.data.slots[k]
-            self.slots[k] = await service(f"MDS:{id(self)}:{k}", **v)
+        for k,v in elf.data.slots.items():
+            self.slots[k] = await scope.service(f"MDS:{id(self)}:{k}", self.unit.slot_service, **v)
 
     def add_registers(self):
         """Replace entries w/ register/slot members with Register instances"""
@@ -364,7 +371,7 @@ class Device(CtxObj):
         return vals
 
     async def poll_slot(self, slot: str, *, task_status=None):
-        """Register and periodically poll this slot"""
+        """Task to register and periodically poll a given slot"""
         # slots:
         #  1sec:
         #    time: 1
@@ -373,24 +380,24 @@ class Device(CtxObj):
         # align=True: wait for the next multiple
         # align=False: fetch now, *then* wait for the next multiple
         # align=None: fetch now, wait for the timespan
-        s = self.data.slots[slot]
 
-        async with self.unit.slot(slot) as sl:
-            if task_status is not None:
-                task_status.started()
+        if task_status is not None:
+            task_status.started()
 
-            while True:
-                await anyio.sleep(99999)
-
+        sl = self.unit.slots[slot]
+        sl.start()
+        
+        while True:
+            await anyio.sleep(99999)
 
     async def poll(self, slots: set = None, *, task_status=None):
-        """Periodically poll all slots"""
-        if not slots:
+        """Task to periodically poll all slots"""
+        if slots is None:
             slots = self.data.slots.keys()
-        async with anyio.create_task_group() as tg:
-            await self.add_slots(slots)
+        for slot in slots:
+            self.unit.slots[slot].start()
+        if task_status is not None:
+            task_status.started()
 
-            self.add_registers()
-            if task_status is not None:
-                task_status.started()
-
+        while True:
+            await anyio.sleep(99999)

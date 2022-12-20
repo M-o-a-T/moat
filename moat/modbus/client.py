@@ -400,7 +400,6 @@ class SerialHost(CtxObj, _HostCommon):
         finally:
             if self.gate.hosts[key] is self:
                 del self.gate.hosts[key]
-        
 
     # reader task #
 
@@ -609,6 +608,8 @@ class Slot(CtxObj):
         self.read_lock = anyio.Lock()
         self.read_trigger = anyio.Event()
 
+        self.run_lock: anyio.Event = None
+
         self.modes = {}
 
     def __str__(self):
@@ -625,6 +626,7 @@ class Slot(CtxObj):
         try:
             async with anyio.create_task_group() as tg:
                 self._scope = tg.cancel_scope
+                self.run_lock = anyio.Event
                 if self.write_delay is not None:
                     tg.start_soon(self.write_task)
                 if self.read_delay is not None:
@@ -632,8 +634,15 @@ class Slot(CtxObj):
                 yield self
                 tg.cancel_scope.cancel()
         finally:
+            self.run_lock = None
             if self.unit.slots[self.slot] is self:
                 del self.unit.slots[self.slot]
+
+    def start(self):
+        """
+        Start running this slot.
+        """
+        self.run_lock.set()
 
     def trigger_send(self):
         """Start writing after at most `.write_delay` seconds."""
@@ -753,6 +762,8 @@ class Slot(CtxObj):
         We read every .`read_delay` seconds.
         """
 
+        await self.run_lock.wait()
+
         await self.read()
         tn = self.t_read + self.read_delay
         if self.read_align:
@@ -800,6 +811,7 @@ class Slot(CtxObj):
 
     async def write_task(self):
         """A background task for updating changed Modbus register values"""
+        await self.run_lock.wait()
         while True:
             await self.write_trigger.wait()
             await anyio.sleep(self.write_delay)

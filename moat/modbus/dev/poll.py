@@ -30,7 +30,7 @@ async def dev_poll(cfg, dkv, *, task_status=None):
     async with ModbusClient() as cl, anyio.create_task_group() as tg:
         nd = 0
 
-        def make_dev(v, Reg, **kw):
+        async def make_dev(v, Reg, **kw):
             kw = to_attrdict(kw)
             vs = v.setdefault("src", attrdict())
             merge(vs, kw, replace=False)
@@ -38,9 +38,11 @@ async def dev_poll(cfg, dkv, *, task_status=None):
             merge(vsl, sl, replace=False)
 
             logger.info("Starting %r", vs)
+
             dev = Device(client=cl, factory=Reg)
             dev.load(data=v)
-            return dev
+
+            return scope.spawn_service(dev.as_scope)
 
         async with anyio.create_task_group() as tg:
             if dkv is None:

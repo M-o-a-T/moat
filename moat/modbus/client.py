@@ -273,7 +273,9 @@ class Host(CtxObj, _HostCommon):
                         # re-send open requests
                         await _send_trans()
                         self._connected.set()
-                        task_status.started()
+                        if task_status is not None:
+                            task_status.started()
+                            task_status = None
 
                 data = await self.stream.receive(4096)
                 # pylint: disable=logging-not-lazy

@@ -530,22 +530,22 @@ class Unit(CtxObj):
         # might be used to manage whatever
         yield self
 
-    def slot(self, slot):
+    def slot(self, slot, **kw):
         """
         Returns the `Slot` object registered to @slot.
 
         A new slot is allocated if it doesn't yet exist.
         """
-        return Slot(self, slot)
+        return Slot(self, slot, **kw)
 
-    async def _slot(self, slot):
-        async with self.slot(slot) as srv:
+    async def _slot(self, slot, **kw):
+        async with self.slot(slot, **kw) as srv:
             scope.register(srv)
             await scope.no_more_dependents()
 
-    async def slot_service(self, slot):
+    async def slot_service(self, slot, **kw):
         """Run the slot handler in an AsyncScope."""
-        return await scope.service(f"MS:{id(self)}:{slot}", self._slot, slot)
+        return await scope.service(f"MS:{id(self)}:{slot}", self._slot, slot, **kw)
 
     async def aclose(self):
         """Stop talking and delete yourself.

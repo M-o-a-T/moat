@@ -70,26 +70,26 @@ def get_type2(s, l):
     IntMap = [
         [
             {
-                1: IntValue,
-                2: LongValue,
-                4: QuadValue,
-            },
-            {
                 1: SignedIntValue,
                 2: SignedLongValue,
                 4: SignedQuadValue,
             },
-        ],
-        [
             {
                 1: IntValue,
-                2: SwappedLongValue,
-                4: SwappedQuadValue,
+                2: LongValue,
+                4: QuadValue,
             },
+        ],
+        [
             {
                 1: SignedIntValue,
                 2: SwappedSignedLongValue,
                 4: SwappedSignedQuadValue,
+            },
+            {
+                1: IntValue,
+                2: SwappedLongValue,
+                4: SwappedQuadValue,
             },
         ],
     ]
@@ -104,7 +104,7 @@ def get_type2(s, l):
         },
     ]
     swapped = False
-    signed = True
+    unsigned = False
 
     os = s
     if s[0] == "s" and s != "str":
@@ -112,19 +112,20 @@ def get_type2(s, l):
         swapped = True
     if s[0] == "u":
         s = s[1:]
-        signed = False
+        unsigned = True
     if s == "int":
-        return IntMap[swapped][signed][l]
+        return IntMap[swapped][unsigned][l]
 
     if not unsigned:
-        if s == "bit" and l == 1:
-            return BitValue
         if s == "float":
             return FloatMap[swapped][l]
         if s == "byte":
             return partial([ByteValue, SwappedByteValue][swapped], length=l)
         if s == "str":
             return partial([ByteValue, SwappedByteValue][swapped], length=l)
+        if not swapped:
+            if s == "bit" and l == 1:
+                return BitValue
     raise KeyError(f"Unknown: {os}:{l}")
 
 

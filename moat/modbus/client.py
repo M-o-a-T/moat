@@ -72,7 +72,7 @@ class ModbusClient(CtxObj):
         return h
 
     async def _host(self, addr, port=None):
-        async with self.serial(port, **ser) as srv:
+        async with self.host(addr, port) as srv:
             await scope.register(srv)
             await scope.no_more_dependents()
 
@@ -80,8 +80,7 @@ class ModbusClient(CtxObj):
         """Run a TCP client in an AsyncScope."""
         if not port:
             port = 502
-        return await service(f"MC:{id(self)}:{addr}:{port}", self._host, addr, port)
-
+        return await scope.service(f"MC:{id(self)}:{addr}:{port}", self._host, addr, port)
 
     def serial(self, /, port, **ser):
         """Return a host object for connections to this serial port."""
@@ -99,7 +98,7 @@ class ModbusClient(CtxObj):
 
     async def serial_service(self, port, **ser):
         """Run a serial client in an AsyncScope."""
-        return await service(f"MC:{id(self)}:{port}", self._serial, port)
+        return await scope.service(f"MC:{id(self)}:{port}", self._serial, port, **ser)
 
 
 class ModbusError(RuntimeError):
@@ -145,7 +144,7 @@ class _HostCommon:
 
     async def unit_scope(self, unit):
         """Run a unit in an `AsyncScope`"""
-        return await service(f"MH:{id(self)}:{unit}", self._unit, unit)
+        return await scope.service(f"MH:{id(self)}:{unit}", self._unit, unit)
 
     def _nextTID(self):
         self._tid = (self._tid + 1) % 0xFFFF
@@ -545,7 +544,8 @@ class Unit(CtxObj):
             await scope.no_more_dependents()
 
     async def slot_service(self, slot):
-        return await service(f"MS:{id(self)}:{slot}", self._slot, slot)
+        """Run the slot handler in an AsyncScope."""
+        return await scope.service(f"MS:{id(self)}:{slot}", self._slot, slot)
 
     async def aclose(self):
         """Stop talking and delete yourself.

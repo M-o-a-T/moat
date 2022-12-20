@@ -309,7 +309,7 @@ class Device(CtxObj):
             host = await self.client.serial_service(
                 self.cfg.src.port, **self.cfg.src.get("serial,", {})
             )
-        self.unit = await host.unit_service(self.cfg.src.unit)
+        self.unit = await host.unit_scope(self.cfg.src.unit)
         self.data = fixup(self.cfg, self.cfg, Path(), this_file=self.cfg_path)
         await self.add_slots()
         self.add_registers()
@@ -322,7 +322,7 @@ class Device(CtxObj):
 
     async def add_slots(self):
         for k,v in self.data.slots.items():
-            self.slots[k] = await self.unit.slot_service(k, **v)
+            self.slots[k] = await self.unit.slot_scope(k, **v)
 
     def add_registers(self):
         """Replace entries w/ register/slot members with Register instances"""

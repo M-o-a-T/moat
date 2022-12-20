@@ -547,7 +547,7 @@ class Unit(CtxObj):
             scope.register(srv)
             await scope.no_more_dependents()
 
-    async def slot_service(self, slot, **kw):
+    async def slot_scope(self, slot, **kw):
         """Run the slot handler in an AsyncScope."""
         return await scope.service(f"MS:{id(self)}:{slot}", self._slot, slot, **kw)
 

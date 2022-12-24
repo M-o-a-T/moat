@@ -777,11 +777,13 @@ class Slot(CtxObj):
         if self.read_align:
             tn -= tn % self.read_delay
 
+        backoff = 0
+
         while True:
             t = anyio.current_time()
             tr = self.t_read
-            if t < tn:
-                await anyio.sleep(tn - t)
+            if t < tn+backoff:
+                await anyio.sleep(tn+backoff - t)
 
             async with self.read_lock:
                 if self.t_read != tr:
@@ -807,7 +809,15 @@ class Slot(CtxObj):
                     tn = t + self.read_delay
                     if self.read_align:
                         tn -= tn % self.read_delay
-                await self._getValues()
+
+                try:
+                    await self._getValues()
+                except Exception as exc:
+                    _logger.warning(f"Error %s: %r", self, exc)
+                    backoff = 1 + backoff * 1.2
+                    # TODO re-raise if persistent?
+                else:
+                    backoff = 0
 
     async def write(self, changed: bool = True):
         """Write this slot's data.
@@ -873,12 +883,7 @@ class ValueList(DataBlock):
         u = self.slot.unit
         msg = self.kind.encoder(address=start, count=length, unit=u.unit)
 
-        try:
-            r = await u.host.execute(msg)
-        except (ModbusError,anyio.EndOfStream) as exc:
-            _logger.warning(f"Error %s: %r: %r", self.slot, msg, exc)
-            return
-
+        r = await u.host.execute(msg)
 
         # TODO check R for correct type?
 

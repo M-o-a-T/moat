@@ -4,9 +4,11 @@
 import io
 import logging
 import subprocess
+import sys
 from collections import defaultdict
 from configparser import RawConfigParser
 from pathlib import Path
+from anyio import run_process
 
 import asyncclick as click
 import git
@@ -482,6 +484,52 @@ async def publish(no_pypi, no_deb, skip, only, deb):
         if not no_pypi:
             print(r.working_dir)
             subprocess.run(["make", "pypi"], cwd=r.working_dir, check=True)
+
+
+@cli.command()
+@click.option("-r", "--remote", type=str, help="Remote. Default: all.", default="--all")
+async def push(remote):
+    """Push the current state"""
+    try:
+        cmd = "git push".split()
+        if not obj.debug:
+            cmd.append("-q")
+        elif obj.debug > 1:
+            cmd.append("-v")
+        cmd.append(remote)
+        await run_process(cmd)
+
+    except subprocess.CalledProcessError as exc:
+        sys.exit(exc.returncode)
+
+
+@cli.command()
+@click.option("-r", "--remote", type=str, help="Remote. Default: probably 'origin'.")
+@click.option("-b", "--branch", type=str, help="Branch. Default: probably 'main'.")
+@click.pass_obj
+async def pull(obj, remote, branch):
+    """Fetch updates"""
+    try:
+        cmd = "git pull".split()
+        if not obj.debug:
+            cmd.append("-q")
+        elif obj.debug > 1:
+            cmd.append("-v")
+        if remote is not None:
+            cmd.append(remote)
+        await run_process(cmd)
+
+        cmd = "git submodule foreach --recursive git merge --ff".split()
+        if not obj.debug:
+            cmd.append("-q")
+        elif obj.debug > 1:
+            cmd.append("-v")
+        if remote is not None:
+            cmd.append(remote if branch is None else f"{remote}/{branch}")
+        await run_process(cmd)
+
+    except subprocess.CalledProcessError as exc:
+        sys.exit(exc.returncode)
 
 
 @cli.command()

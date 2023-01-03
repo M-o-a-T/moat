@@ -519,6 +519,7 @@ async def build(version, no_test, no_commit, no_dirty, cache):
 
     for r in repo.subrepos():
         if not is_clean(r, not no_dirty):
+            bad = True
             if not no_dirty:
                 skip.add(r)
                 continue

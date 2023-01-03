@@ -520,10 +520,16 @@ class Unit(CtxObj):
         self.slots = {}
 
     def __str__(self):
-        return f"{self.host.addr}:{self.host.port}:{self.unit}"
+        try:
+            return f"{self.host.addr}:{self.host.port}:{self.unit}"
+        except AttributeError:
+            return f"{self.host.port}:{self.unit}"
 
     def __repr__(self):
-        return f"<Unit:{self.host.addr}:{self.host.port}:{self.unit}>"
+        try:
+            return f"<Unit:{self.host.addr}:{self.host.port}:{self.unit}>"
+        except AttributeError:
+            return f"<Unit:{self.host.port}:{self.unit}>"
 
     @asynccontextmanager
     async def _ctx(self):

@@ -88,7 +88,6 @@ class ModbusClient(CtxObj):
             raise KeyError(f"Host {port} already exists")
 
         h = SerialHost(self, port=port, **ser)
-        self.hosts[port] = h
         return h
 
     async def _serial(self, /, port, **ser):
@@ -395,16 +394,20 @@ class SerialHost(CtxObj, _HostCommon):
             raise RuntimeError(f"Host {key} already exists")
 
         try:
-            async with Serial(**self.ser) as self.stream:
+            async with Serial(port=self.port, **self.ser) as self.stream, \
+                    anyio.create_task_group() as self._tg:
+                self._read_scope = self._tg.cancel_scope
+                await self._tg.start(self._reader)
                 self._connected.set()
                 yield self
+                self._read_scope.cancel()
         finally:
-            if self.gate.hosts[key] is self:
+            if self.gate.hosts.get(key) is self:
                 del self.gate.hosts[key]
 
     # reader task #
 
-    async def _reader(self):
+    async def _reader(self, *, task_status):
         # pylint: disable=protected-access
 
         async def _send_trans():
@@ -422,64 +425,63 @@ class SerialHost(CtxObj, _HostCommon):
             except Exception:  # pylint: disable=broad-except
                 _logger.exception("Re-Write")
 
-        async with anyio.create_task_group() as self._tg:
-            self._read_scope = self._tg.cancel_scope
-            await _send_trans()
-            self._connected.set()
+        await _send_trans()
+        self._connected.set()
+        task_status.started()
+        self._trace("recv START")
 
-            while True:
+        while True:
+            try:
+                data = await self.stream.receive(4096)
+                # pylint: disable=logging-not-lazy
+                self._trace("recv: " + " ".join([hex(x) for x in data]))
 
-                try:
-                    data = await self.stream.receive(4096)
-                    # pylint: disable=logging-not-lazy
-                    self._trace("recv: " + " ".join([hex(x) for x in data]))
+                # unit = self.framer.decode_data(data).get("uid", 0)
+                replies = []
 
-                    # unit = self.framer.decode_data(data).get("uid", 0)
-                    replies = []
+                # check for decoding errors
+                self.framer.processIncomingPacket(
+                    data, replies.append, unit=0, single=True
+                )  # bah
 
-                    # check for decoding errors
-                    self.framer.processIncomingPacket(
-                        data, replies.append, unit=0, single=True
-                    )  # bah
+            except (
+                IncompleteRead,
+                ConnectionRefusedError,
+                ConnectionResetError,
+                ClosedResourceError,
+                ModbusIOException,
+                anyio.BrokenResourceError,
+                anyio.EndOfStream,
+                TimeoutError,
+            ) as exc:
+                if self._connected.is_set():
+                    self._connected = anyio.Event()
+                _logger.error("Read: %r (%d)", exc, len(self._transactions))
 
-                except (
-                    IncompleteRead,
-                    ConnectionRefusedError,
-                    ConnectionResetError,
-                    ClosedResourceError,
-                    ModbusIOException,
-                    anyio.BrokenResourceError,
-                    anyio.EndOfStream,
-                    TimeoutError,
-                ) as exc:
-                    if self._connected.is_set():
-                        self._connected = anyio.Event()
-                    _logger.error("Read: %r (%d)", exc, len(self._transactions))
+                t, self._transactions = self._transactions, {}
+                for req in t.values():
+                    req._response_value.set_error(exc)
 
-                    t, self._transactions = self._transactions, {}
-                    for req in t.values():
-                        req._response_value.set_error(exc)
+            except anyio.get_cancelled_exc_class():
+                raise
 
-                except anyio.get_cancelled_exc_class():
-                    raise
+            except BaseException as exc:
+                _logger.exception("Error: %r", exc)
 
-                except BaseException as exc:
-                    _logger.exception("Error: %r", exc)
+                t, self._transactions = self._transactions, {}
+                for req in t.values():
+                    req._response_value.set_error(exc)
+                raise
 
-                    t, self._transactions = self._transactions, {}
-                    for req in t.values():
-                        req._response_value.set_error(exc)
-                    raise
-
-                else:
-                    for reply in replies:
-                        tid = reply.transaction_id
-                        try:
-                            request = self._transactions.pop(tid)
-                        except KeyError:
-                            _logger.info("Unrequested message: %s", reply)
-                        else:
-                            request._response_value.set(reply)
+            else:
+                for reply in replies:
+                    tid = reply.transaction_id
+                    try:
+                        request = self._transactions.pop(tid)
+                    except KeyError:
+                        _logger.info("Unrequested message: %s", reply)
+                    else:
+                        request._response_value.set(reply)
 
     async def aclose(self):
         """Stop talking."""

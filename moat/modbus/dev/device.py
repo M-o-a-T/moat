@@ -310,9 +310,10 @@ class Device(CtxObj):
             host = await self.client.host_service(self.cfg.src.host, self.cfg.src.get("port"))
         else:
             host = await self.client.serial_service(
-                self.cfg.src.port, **self.cfg.src.get("serial,", {})
+                port=self.cfg.src.port, **self.cfg.src.get("serial", {})
             )
         self.unit = await host.unit_scope(self.cfg.src.unit)
+
         self.data = fixup(self.cfg, self.cfg, Path(), this_file=self.cfg_path)
         await self.add_slots()
         self.add_registers()

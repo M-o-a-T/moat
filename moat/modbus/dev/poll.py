@@ -61,6 +61,23 @@ async def dev_poll(cfg, dkv, *, task_status=None):
             for s in cfg.get("server", ()):
                 servers.append(Server(**s))
 
+            for h, hv in cfg.get("ports", {}).items():
+                try:
+                    sp = hv["serial"]
+                except KeyError:
+                    logger.error("No serial params for port %r", h)
+                    continue
+                for u, v in hv.items():
+                    dev = await make_dev(v, Reg, port=h, serial=sp, unit=u)
+                    nd += 1
+                    tg.start_soon(dev.poll)
+
+                    us = v.get("server", None)
+                    if us is not None:
+                        srv = servers[us // 1000]
+                        us %= 1000
+                        srv.attach(us, dev.unit)
+
             for h, hv in cfg.get("hosts", {}).items():
                 for u, v in hv.items():
                     dev = await make_dev(v, Reg, host=h, unit=u)

@@ -19,6 +19,7 @@ __all__ = [
     "num2byte",
     "byte2num",
     "split_arg",
+    "id36",
 ]
 
 NoneType = type(None)
@@ -184,3 +185,29 @@ def split_arg(p, kw):
         except ValueError:
             pass
     kw[k] = v
+
+
+_alphabet = '0123456789abcdefghijklmnopqrstuvwxyz'
+
+def id36(number):
+    """
+    Encode a number / object ID in base36.
+    """
+    if not isinstance(number, int):
+        if isinstance(number, (float, complex, str, bytes, bytearray)):
+            raise TypeError('number must be an object or integer')
+        number = id(number)
+    is_negative = number < 0
+    number = abs(number)
+    res = []
+
+    while number:
+        number, i = divmod(number, 36)
+        res.append(_alphabet[i])
+    if is_negative:
+        res.append('-')
+    elif not res:
+        return _alphabet[0]
+    res.reverse()
+
+    return ''.join(res)

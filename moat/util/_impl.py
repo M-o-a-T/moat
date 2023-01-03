@@ -187,7 +187,8 @@ def split_arg(p, kw):
     kw[k] = v
 
 
-_alphabet = '0123456789abcdefghijklmnopqrstuvwxyz'
+_alphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
+
 
 def id36(number):
     """
@@ -195,7 +196,7 @@ def id36(number):
     """
     if not isinstance(number, int):
         if isinstance(number, (float, complex, str, bytes, bytearray)):
-            raise TypeError('number must be an object or integer')
+            raise TypeError("number must be an object or integer")
         number = id(number)
     is_negative = number < 0
     number = abs(number)
@@ -205,9 +206,9 @@ def id36(number):
         number, i = divmod(number, 36)
         res.append(_alphabet[i])
     if is_negative:
-        res.append('-')
+        res.append("-")
     elif not res:
         return _alphabet[0]
     res.reverse()
 
-    return ''.join(res)
+    return "".join(res)

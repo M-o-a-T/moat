@@ -71,7 +71,7 @@ async def dev_poll(cfg, dkv, *, task_status=None):
                     if us is not None:
                         srv = servers[us // 1000]
                         us %= 1000
-                        srv.attach(us, dev)
+                        srv.attach(us, dev.unit)
 
             for h, hv in cfg.get("hostports", {}).items():
                 for p, pv in hv.items():
@@ -86,7 +86,7 @@ async def dev_poll(cfg, dkv, *, task_status=None):
                         if us is not None:
                             srv = servers[us // 1000]
                             us %= 1000
-                            srv.attach(us, dev)
+                            srv.attach(us, dev.unit)
 
             for s in servers:
                 tg.start_soon(s.run)

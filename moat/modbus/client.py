@@ -777,7 +777,6 @@ class Slot(CtxObj):
         """A background task for reading Modbus register values.
         We read every .`read_delay` seconds.
         """
-
         await self.run_lock.wait()
 
         await self.read()
@@ -819,7 +818,7 @@ class Slot(CtxObj):
                         tn -= tn % self.read_delay
 
                 try:
-                    await self._getValues()
+                    await self._getValues() # already locked
                 except Exception as exc:
                     _logger.warning(f"Error %s: %r", self, exc)
                     backoff = 1 + backoff * 1.2

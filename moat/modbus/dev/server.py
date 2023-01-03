@@ -35,7 +35,7 @@ class Forwarder:
         transaction_id = request.transaction_id
         try:
             try:
-                unit = self.server.unit[unit_id]
+                unit = self.server.units[unit_id]
             except KeyError:
                 response = request.doException(merror.SlaveFailure)
             else:

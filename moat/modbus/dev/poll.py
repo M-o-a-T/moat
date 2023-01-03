@@ -23,10 +23,13 @@ async def dev_poll(cfg, dkv, *, task_status=None):
     The config will be preprocessed by `moat.modbus.dev.device.fixup`; the
     result will be returned via @task_status after setup is complete.
     """
+    sl = cfg.setdefault("slots", attrdict())
+    sl.setdefault("write", attrdict())
+    sl._apply_default = True
     cfg = fixup(cfg)
 
     s = cfg.setdefault("src", attrdict())
-    sl = cfg.setdefault("slots", attrdict())
+    sl = cfg.slots
 
     async with ModbusClient() as cl, anyio.create_task_group() as tg:
         nd = 0

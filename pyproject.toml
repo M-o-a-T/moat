@@ -16,7 +16,7 @@ dependencies = [
 	"anyio ~= 3.0",
 	"pymodbus",
 	"anyio-serial",
-	"moat-util ~= 0.26.4",
+	"moat-util ~= 0.26.5",
 	"asyncscope ~= 0.8.3",
 	]
 dynamic = [ "version",]

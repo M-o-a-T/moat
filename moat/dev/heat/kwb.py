@@ -57,9 +57,9 @@ async def cli(ctx, cfg, host, port, unit):
     obj = ctx.obj
     if "distkv" in obj.cfg:
         # pylint: disable=import-outside-toplevel
-        from distkv.client import open_client
+        from distkv.client import client_scope
 
-        dkv = await ctx.with_async_resource(open_client(**obj.cfg.distkv))
+        dkv = await client_scope(**obj.cfg.distkv)
     else:
         dkv = None
 

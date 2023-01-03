@@ -325,7 +325,12 @@ class Device(CtxObj):
             await scope.no_more_dependents()
 
     async def add_slots(self):
+        if "slots" not in self.data:
+            logger.warning("No slots in %r", self)
+            return
         for k,v in self.data.slots.items():
+            if v is None:
+                v = {}
             self.slots[k] = await self.unit.slot_scope(k, **v)
 
     def add_registers(self):
@@ -340,6 +345,8 @@ class Device(CtxObj):
                     seen = True
                     if "register" in v:
                         logger.warning("%s has a sub-register: ignored", path / k)
+                    elif "slot" in v:
+                        logger.warning("%s is not a register", path / k)
                     continue
 
                 if "register" in v:

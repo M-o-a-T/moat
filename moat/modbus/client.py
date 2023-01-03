@@ -15,7 +15,7 @@ from anyio import ClosedResourceError, IncompleteRead
 from anyio.abc import SocketAttribute
 from anyio_serial import Serial
 from asyncscope import scope
-from moat.util import CtxObj, Queue, ValueEvent
+from moat.util import CtxObj, Queue, ValueEvent, id36
 from pymodbus.exceptions import ModbusIOException
 from pymodbus.factory import ClientDecoder
 from pymodbus.framer.rtu_framer import ModbusRtuFramer
@@ -80,7 +80,7 @@ class ModbusClient(CtxObj):
         """Run a TCP client in an AsyncScope."""
         if not port:
             port = 502
-        return await scope.service(f"MC:{id(self)}:{addr}:{port}", self._host, addr, port)
+        return await scope.service(f"MC_{id36(self)}:{addr}:{port}", self._host, addr, port)
 
     def serial(self, /, port, **ser):
         """Return a host object for connections to this serial port."""
@@ -98,7 +98,7 @@ class ModbusClient(CtxObj):
 
     async def serial_service(self, port, **ser):
         """Run a serial client in an AsyncScope."""
-        return await scope.service(f"MC:{id(self)}:{port}", self._serial, port, **ser)
+        return await scope.service(f"MC_{id36(self)}:{port}", self._serial, port, **ser)
 
 
 class ModbusError(RuntimeError):
@@ -144,7 +144,7 @@ class _HostCommon:
 
     async def unit_scope(self, unit):
         """Run a unit in an `AsyncScope`"""
-        return await scope.service(f"MH:{id(self)}:{unit}", self._unit, unit)
+        return await scope.service(f"MH_{id36(self)}:{unit}", self._unit, unit)
 
     def _nextTID(self):
         self._tid = (self._tid + 1) % 0xFFFF
@@ -385,7 +385,7 @@ class SerialHost(CtxObj, _HostCommon):
         super().__init__(gate, timeout, cap)
 
     def __repr__(self):
-        return f"<ModbusHost:{self.ser['port']}:{self.ser.get('baudrate',0)}>"
+        return f"<ModbusHost:{self.port}:{self.ser.get('baudrate',0)}>"
 
     @asynccontextmanager
     async def _ctx(self):
@@ -549,7 +549,7 @@ class Unit(CtxObj):
 
     async def slot_scope(self, slot, **kw):
         """Run the slot handler in an AsyncScope."""
-        return await scope.service(f"MS:{id(self)}:{slot}", self._slot, slot, **kw)
+        return await scope.service(f"MS_{id36(self)}:{slot}", self._slot, slot, **kw)
 
     async def aclose(self):
         """Stop talking and delete yourself.

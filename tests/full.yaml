@@ -22,6 +22,14 @@ hosts:
     1:
       ref: inc.wp
       regs:
+        volume:
+          int:
+            2:
+              dest: !P home.ass.dyn.sensor.flow.heatpump.state
+        power:
+          heat:
+            dest: !P home.ass.dyn.sensor.power.heatpump.state
+
         temperature:
           default:
             slot: 15sec

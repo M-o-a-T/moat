@@ -1020,7 +1020,7 @@ class InvControl(BusVars):
 
         # This part ensures that we don't take too-huge steps towards
         # the new value, which would cause instabilities.
-        if self.f_delta <= self.batt_soc <= 1-self.f_delta or self.small_p_step(self.last_p, p):
+        if self.f_delta <= self.batt_soc <= 1 - self.f_delta or self.small_p_step(self.last_p, p):
             # Small(ish) change from last target, or far enough away from SoC bounds not to care.
             # Implement directly.
             np = p

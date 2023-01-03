@@ -34,7 +34,7 @@ class NotARegisterError(ValueError):
 
 
 def fixup(
-    d, root=None, path=Path(), post=None, default=None, offset=0, do_refs=True, this_file=None
+    d, root=None, path=Path(), post=None, default=None, offset=0, do_refs=True, this_file=None, apply_default=False
 ):
     """
     Run processing instructions: include, ref, default, repeat
@@ -101,8 +101,9 @@ def fixup(
     except KeyError:
         rep = None
 
-    if "register" in d:
-        d.register += offset
+    if "register" in d or apply_default:
+        if "register" in d:
+            d.register += offset
         merge(d, default, replace=False)
 
     # Offset is modified here
@@ -121,6 +122,7 @@ def fixup(
                 offset=off,
                 do_refs=do_refs,
                 this_file=this_file,
+                apply_default=getattr(d,"_apply_default",False),
             )
             reps.add(k)
 
@@ -140,6 +142,7 @@ def fixup(
                 offset=offset,
                 do_refs=do_refs,
                 this_file=this_file,
+                apply_default=getattr(d,"_apply_default",False),
             )
 
     if post is not None:

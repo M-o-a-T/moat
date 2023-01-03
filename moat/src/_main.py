@@ -504,7 +504,7 @@ async def push(obj, remote):
         elif obj.debug > 1:
             cmd.append("-v")
         cmd.append(remote)
-        await run_process(cmd)
+        await run_process(cmd, input=None, stdout=sys.stdout, stderr=sys.stderr)
 
     except subprocess.CalledProcessError as exc:
         sys.exit(exc.returncode)
@@ -524,7 +524,7 @@ async def pull(obj, remote, branch):
             cmd.append("-v")
         if remote is not None:
             cmd.append(remote)
-        await run_process(cmd)
+        await run_process(cmd, input=None, stdout=sys.stdout, stderr=sys.stderr)
 
         cmd = "git submodule foreach --recursive git merge --ff".split()
         if not obj.debug:
@@ -533,7 +533,7 @@ async def pull(obj, remote, branch):
             cmd.append("-v")
         if remote is not None:
             cmd.append(remote if branch is None else f"{remote}/{branch}")
-        await run_process(cmd)
+        await run_process(cmd, input=None, stdout=sys.stdout, stderr=sys.stderr)
 
     except subprocess.CalledProcessError as exc:
         sys.exit(exc.returncode)

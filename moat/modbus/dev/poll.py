@@ -68,6 +68,8 @@ async def dev_poll(cfg, dkv, *, task_status=None):
                     logger.error("No serial params for port %r", h)
                     continue
                 for u, v in hv.items():
+                    if not isinstance(u,int):
+                        continue
                     dev = await make_dev(v, Reg, port=h, serial=sp, unit=u)
                     nd += 1
                     tg.start_soon(dev.poll)
@@ -80,6 +82,8 @@ async def dev_poll(cfg, dkv, *, task_status=None):
 
             for h, hv in cfg.get("hosts", {}).items():
                 for u, v in hv.items():
+                    if not isinstance(u,int):
+                        continue
                     dev = await make_dev(v, Reg, host=h, unit=u)
                     nd += 1
                     tg.start_soon(dev.poll)

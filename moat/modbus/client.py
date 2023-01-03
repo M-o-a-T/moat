@@ -309,7 +309,7 @@ class Host(CtxObj, _HostCommon):
                         self.port,
                         exc,
                         len(self._transactions),
-                )
+                    )
 
                 s, self.stream = self.stream, None
                 if s:
@@ -394,8 +394,9 @@ class SerialHost(CtxObj, _HostCommon):
             raise RuntimeError(f"Host {key} already exists")
 
         try:
-            async with Serial(port=self.port, **self.ser) as self.stream, \
-                    anyio.create_task_group() as self._tg:
+            async with Serial(
+                port=self.port, **self.ser
+            ) as self.stream, anyio.create_task_group() as self._tg:
                 self._read_scope = self._tg.cancel_scope
                 await self._tg.start(self._reader)
                 self._connected.set()
@@ -440,9 +441,7 @@ class SerialHost(CtxObj, _HostCommon):
                 replies = []
 
                 # check for decoding errors
-                self.framer.processIncomingPacket(
-                    data, replies.append, unit=0, single=True
-                )  # bah
+                self.framer.processIncomingPacket(data, replies.append, unit=0, single=True)  # bah
 
             except (
                 IncompleteRead,
@@ -627,7 +626,7 @@ class Slot(CtxObj):
 
         self.modes = {}
         if kw:
-            logger.warning("%s:%s: extra arguments: %r", unit,slot,kw)
+            _logger.warning("%s:%s: extra arguments: %r", unit, slot, kw)
 
     def __str__(self):
         return f"{self.unit}:{self.slot}"
@@ -789,8 +788,8 @@ class Slot(CtxObj):
         while True:
             t = anyio.current_time()
             tr = self.t_read
-            if t < tn+backoff:
-                await anyio.sleep(tn+backoff - t)
+            if t < tn + backoff:
+                await anyio.sleep(tn + backoff - t)
 
             async with self.read_lock:
                 if self.t_read != tr:
@@ -818,9 +817,9 @@ class Slot(CtxObj):
                         tn -= tn % self.read_delay
 
                 try:
-                    await self._getValues() # already locked
-                except Exception as exc:
-                    _logger.warning(f"Error %s: %r", self, exc)
+                    await self._getValues()  # already locked
+                except Exception as exc:  # pylint:disable=broad-except
+                    _logger.warning("Error %s: %r", self, exc)
                     backoff = 1 + backoff * 1.2
                     # TODO re-raise if persistent?
                 else:

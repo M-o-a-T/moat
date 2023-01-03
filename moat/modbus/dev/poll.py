@@ -4,9 +4,9 @@ Poll code
 
 import logging
 from functools import partial
-from asyncscope import scope
 
 import anyio
+from asyncscope import scope
 from moat.util import attrdict, merge, to_attrdict
 
 from ..client import ModbusClient
@@ -25,7 +25,7 @@ async def dev_poll(cfg, dkv, *, task_status=None):
     """
     sl = cfg.setdefault("slots", attrdict())
     sl.setdefault("write", attrdict())
-    sl._apply_default = True
+    sl._apply_default = True  # pylint:disable=protected-access
     cfg = fixup(cfg)
 
     s = cfg.setdefault("src", attrdict())
@@ -68,7 +68,7 @@ async def dev_poll(cfg, dkv, *, task_status=None):
                     logger.error("No serial params for port %r", h)
                     continue
                 for u, v in hv.items():
-                    if not isinstance(u,int):
+                    if not isinstance(u, int):
                         continue
                     dev = await make_dev(v, Reg, port=h, serial=sp, unit=u)
                     nd += 1
@@ -82,7 +82,7 @@ async def dev_poll(cfg, dkv, *, task_status=None):
 
             for h, hv in cfg.get("hosts", {}).items():
                 for u, v in hv.items():
-                    if not isinstance(u,int):
+                    if not isinstance(u, int):
                         continue
                     dev = await make_dev(v, Reg, host=h, unit=u)
                     nd += 1

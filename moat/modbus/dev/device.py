@@ -3,18 +3,17 @@ Types that describe a modbus device, as read from file
 """
 
 import logging
-import time
 from collections.abc import Mapping
-from pathlib import Path as FSPath
-from typing import List
 from contextlib import asynccontextmanager
 from copy import deepcopy
+from pathlib import Path as FSPath
+from typing import List
 
 import anyio
 from asyncscope import scope
 from moat.util import CtxObj, P, Path, attrdict, combine_dict, merge, yload
 
-from ..client import Host, ModbusClient, ModbusError, Slot, Unit
+from ..client import ModbusClient, Slot, Unit
 from ..typemap import get_kind, get_type2
 from ..types import Coils, DiscreteInputs, InputRegisters
 
@@ -34,7 +33,15 @@ class NotARegisterError(ValueError):
 
 
 def fixup(
-    d, root=None, path=Path(), post=None, default=None, offset=0, do_refs=True, this_file=None, apply_default=False
+    d,
+    root=None,
+    path=Path(),
+    post=None,
+    default=None,
+    offset=0,
+    do_refs=True,
+    this_file=None,
+    apply_default=False,
 ):
     """
     Run processing instructions: include, ref, default, repeat
@@ -122,7 +129,7 @@ def fixup(
                 offset=off,
                 do_refs=do_refs,
                 this_file=this_file,
-                apply_default=getattr(d,"_apply_default",False),
+                apply_default=getattr(d, "_apply_default", False),
             )
             reps.add(k)
 
@@ -142,7 +149,7 @@ def fixup(
                 offset=offset,
                 do_refs=do_refs,
                 this_file=this_file,
-                apply_default=getattr(d,"_apply_default",False),
+                apply_default=getattr(d, "_apply_default", False),
             )
 
     if post is not None:
@@ -198,7 +205,7 @@ class Register:
             try:
                 slot.add(self.reg_type, offset=self.register, cls=self.reg)
             except ValueError:
-                raise ValueError("Already known",slot,self.reg_type,self.register) from None
+                raise ValueError("Already known", slot, self.reg_type, self.register) from None
             self.slot = slot
         self.unit = unit
         self.data = d
@@ -303,7 +310,6 @@ class Device(CtxObj):
         self.cfg = d
         self.cfg_path = path
 
-
     @asynccontextmanager
     async def _ctx(self):
         if "host" in self.cfg.src:
@@ -320,15 +326,17 @@ class Device(CtxObj):
         yield self
 
     async def as_scope(self):
+        "Basic scope generator"
         async with self:
             scope.register(self)
             await scope.no_more_dependents()
 
     async def add_slots(self):
+        """Add configured slots to this instance"""
         if "slots" not in self.data:
             logger.warning("No slots in %r", self)
             return
-        for k,v in self.data.slots.items():
+        for k, v in self.data.slots.items():
             if v is None:
                 v = {}
             self.slots[k] = await self.unit.slot_scope(k, **v)
@@ -350,8 +358,8 @@ class Device(CtxObj):
                     continue
 
                 if "register" in v:
-                    v.setdefault("slot","write")
-                    d[k] = reg = self.factory(v, path / k, self.unit)
+                    v.setdefault("slot", "write")
+                    d[k] = self.factory(v, path / k, self.unit)
                     seen = True
                 elif "slot" in v:
                     logger.warning("%s is not a register", path / k)
@@ -400,7 +408,7 @@ class Device(CtxObj):
 
         sl = self.unit.slots[slot]
         sl.start()
-        
+
         while True:
             await anyio.sleep(99999)
 

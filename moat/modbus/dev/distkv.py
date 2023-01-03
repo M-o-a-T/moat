@@ -19,14 +19,14 @@ class Register(BaseRegister):
         self.dkv = dkv
 
         if "dest" not in self.data and "src" not in self.data:
-            if self.data.get("slot","write") != "write":
+            if self.data.get("slot", "write") != "write":
                 logger.warning("%s:%s: no source/destination", self.unit, self.path)
             return
 
         logger.info("%s:%s: Polling", self.unit, self.path)
 
         if self.data.get("dest"):
-            if self.data.get("slot","write") == "write":
+            if self.data.get("slot", "write") == "write":
                 logger.warning("%s:%s: no read slot", self.unit, self.path)
 
             elif self.data.dest.mark == "r":

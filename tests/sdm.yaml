@@ -1,31 +1,50 @@
-include: energy/Eastron/SDM720.yaml
+inc:
+  sdm630:
+    include: energy/Eastron/SDM630.yaml
+  sdm720:
+    include: energy/Eastron/SDM720.yaml
+  wp:
+    include: heating/Solvis.yaml
 slots:
   1sec:
-    time: 1
-    align: false
+    read_delay: 1
+    read_align: false
   1min:
-    time: 60
-    align: true
-src:
-  host: i.pi.smurf.noris.de
-  unit: 2
-regs:
-  power:
-    L1:
-      active:
-        slot: 1sec
-        dest: !P :mr.grid.s.main.l1
-    L2:
-      active:
-        slot: 1sec
-        dest: !P :mr.grid.s.main.l2
-    L3:
-      active:
-        slot: 1sec
-        dest: !P :mr.grid.s.main.l3
-  energy:
-    total:
-      import:
-        active:
-          slot: 1min
-          dest: !P grid.s.main.meter
+    read_delay: 60
+    read_align: true
+  15sec:
+    read_delay: 15
+    read_align: null
+  default:
+    write_delay: 0.1
+server:
+  - host: localhost
+    port: 502
+ports:
+  "/dev/serial/by-path/platform-3f980000.usb-usb-0:1.5:1.0-port0":
+    serial:
+      baudrate: 9600
+      parity: "E"
+    1:
+      server: 2
+      ref: inc.sdm630
+      regs:
+        power:
+          L1:
+            active:
+              slot: 1sec
+              dest: !P :mr.grid.s.heat.l1
+          L2:
+            active:
+              slot: 1sec
+              dest: !P :mr.grid.s.heat.l2
+          L3:
+            active:
+              slot: 1sec
+              dest: !P :mr.grid.s.heat.l3
+        energy:
+          reset:
+            import:
+              active:
+                slot: 1min
+                dest: !P grid.s.heat.meter

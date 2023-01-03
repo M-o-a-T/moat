@@ -46,7 +46,7 @@ multi_line_output = 3
 profile = "black"
 
 [tool.setuptools]
-packages = [ "moat.modbus",]
+packages = [ "moat.modbus","moat.modbus.dev" ]
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 

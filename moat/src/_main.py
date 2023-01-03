@@ -472,14 +472,20 @@ async def publish(no_pypi, no_deb, skip, only, deb):
     else:
         repos = (x for x in repo.subrepos() if x.moat_name[5:] not in skip)
 
-    for r in repos:
-        if not no_deb:
+    if not no_deb:
+        for r in repos:
+            p = Path(r.working_dir) / "pyproject.toml"
+            if not p.is_file():
+                continue
             print(r.working_dir)
             args = ["-d", deb] if deb else []
             subprocess.run(["merge-to-deb"] + args, cwd=r.working_dir, check=True)
 
-    for r in repos:
-        if not no_pypi:
+    if not no_pypi:
+        for r in repos:
+            p = Path(r.working_dir) / "pyproject.toml"
+            if not p.is_file():
+                continue
             print(r.working_dir)
             subprocess.run(["make", "pypi"], cwd=r.working_dir, check=True)
 

@@ -94,4 +94,12 @@ async def cli(ctx, cfg, host, port, unit):
                 for dest in get_one(h, unit):
                     proc(dest)
 
+        if n:
+            # found a KWB system. Possibly do some work here.
+            pass  # will sleep here, because dev_poll and lifeticker continue to run
+
+        else:
+            # did not find a KWB system. Stop.
+            tg.cancel_scope.cancel()
+
     raise RuntimeError("No matching servers found")

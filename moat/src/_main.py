@@ -8,11 +8,11 @@ import sys
 from collections import defaultdict
 from configparser import RawConfigParser
 from pathlib import Path
-from anyio import run_process
 
 import asyncclick as click
 import git
 import tomlkit
+from anyio import run_process
 from moat.util import P, add_repr, attrdict, make_proc, yload, yprint
 from packaging.requirements import Requirement
 
@@ -494,7 +494,8 @@ async def publish(no_pypi, no_deb, skip, only, deb):
 
 @cli.command()
 @click.option("-r", "--remote", type=str, help="Remote. Default: all.", default="--all")
-async def push(remote):
+@click.pass_obj
+async def push(obj, remote):
     """Push the current state"""
     try:
         cmd = "git push".split()

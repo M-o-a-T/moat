@@ -1,11 +1,11 @@
 repos:
   - repo: https://github.com/psf/black
-    rev: '22.10.0'
+    rev: '22.12.0'
     hooks:
       - id: black
         language_version: python3
   - repo: https://github.com/pycqa/isort
-    rev: '5.10.1'
+    rev: '5.11.4'
     hooks:
       - id: isort
   - repo: https://github.com/pycqa/bandit
@@ -18,11 +18,11 @@ repos:
         additional_dependencies:
           - "bandit[toml]"
   - repo: https://github.com/pycqa/flake8
-    rev: '5.0.4'
+    rev: '6.0.0'
     hooks:
       - id: flake8
   - repo: https://github.com/pycqa/pylint
-    rev: 'v2.15.5'
+    rev: 'v2.15.9'
     hooks:
       - id: pylint
         additional_dependencies:
@@ -31,6 +31,7 @@ repos:
           - pook
           - pytest
           - jmespath
+          - typing-extensions
   - repo: local
     hooks:
       - id: pytest

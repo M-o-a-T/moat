@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pysignalclijsonrpc"
-version = "22.11.11"
+version = "23.1.1"
 description = "Python API client for signal-cli JSON-RPC"
 authors = ["Stefan Heitmüller <stefan.heitmueller@gmx.com>"]
 readme = "README.md"

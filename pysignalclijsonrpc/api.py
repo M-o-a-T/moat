@@ -5,6 +5,7 @@ pysignalclijsonrpc.api
 from base64 import b64encode
 from io import BytesIO
 from os import remove as os_remove
+from re import search as re_search
 from re import sub as re_sub
 from uuid import uuid4
 from warnings import warn
@@ -29,6 +30,63 @@ def bytearray_to_rfc_2397_data_url(byte_array: bytearray):
     attachment_io_bytes.write(bytes(byte_array))
     mime = from_buffer(attachment_io_bytes.getvalue(), mime=True)
     return f"data:{mime};base64,{b64encode(bytes(byte_array)).decode()}"
+
+
+def get_attachments(attachments_as_files, attachments_as_bytes):
+    """
+    Get attachments from either files and/or bytes.
+
+    Args:
+        attachments_as_files: (list, optional): List of `str` w/ files to send as attachment(s).
+        attachments_as_bytes (list, optional): List of `bytearray` to send as attachment(s).
+
+    Returns:
+        attachments (list): List of attachments to send.
+    """
+    attachments = []
+    if attachments_as_files is not None:
+        for filename in attachments_as_files:
+            mime = from_file(filename, mime=True)
+            with open(filename, "rb") as f_h:
+                base64 = b64encode(f_h.read()).decode()
+            attachments.append(f"data:{mime};base64,{base64}")
+    if attachments_as_bytes is not None:
+        for attachment in attachments_as_bytes:
+            attachments.append(bytearray_to_rfc_2397_data_url(attachment))
+    return attachments
+
+
+def get_recipients(client: object, recipients: list):
+    """
+    Get recipients. Could be either a valid recipient
+    registered with the network or a group.
+
+    Args:
+        client (object): SignalCliJSONRPCApi
+        recipients (list): List of recipients
+
+    Returns:
+        result (tuple): Tuple of `(unknown, contacts, groups)`
+    """
+    unknown = []
+    contacts = []
+    groups = []
+    check_registered = []
+    for recipient in recipients:
+        if j_search(f"[?id==`{recipient}`]", client.list_groups()):  # pragma: no cover
+            groups.append(recipient)
+            continue
+        if re_search("[a-zA-Z/=]", recipient):  # pragma: no cover
+            unknown.append(recipient)
+            continue
+        check_registered.append(recipient)
+    registered = client.get_user_status(recipients=check_registered)
+    for recipient in check_registered:
+        if j_search(f"[?number==`{recipient}`]", registered):
+            contacts.append(recipient)
+            continue
+        unknown.append(recipient)  # pragma: no cover
+    return (unknown, contacts, groups)
 
 
 class SignalCliJSONRPCError(Exception):
@@ -142,37 +200,71 @@ class SignalCliJSONRPCApi:
                 :meth:`._jsonrpc`.
 
         Returns:
-            timestamp (int): The message timestamp.
+            result (dict): Dictionary of timestamps and related recipients.
+                Example: `{'timestamps': {timestamp: {'recipients': ['...']}}}`
 
         Raises:
             :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
         """
+        response_method_mapping = {
+            "recipient": "recipientAddress.number",
+        }
+        timestamps = {}
+        unknown = []  # pylint: disable=unused-variable
+        contacts = []
+        groups = []
+        attachments = []
         try:
-            attachments = []
-            if attachments_as_files is not None:
-                for filename in attachments_as_files:
-                    mime = from_file(filename, mime=True)
-                    with open(filename, "rb") as f_h:
-                        base64 = b64encode(f_h.read()).decode()
-                    attachments.append(f"data:{mime};base64,{base64}")
-            if attachments_as_bytes is not None:
-                for attachment in attachments_as_bytes:
-                    attachments.append(bytearray_to_rfc_2397_data_url(attachment))
+            attachments = get_attachments(
+                attachments_as_files,
+                attachments_as_bytes,
+            )
+        except Exception as err:  # pylint: disable=broad-except
+            error = getattr(err, "message", repr(err))
+            raise SignalCliJSONRPCError(
+                f"Error while parsing attachments: {error}"
+            ) from err
+        try:
+            unknown, contacts, groups = get_recipients(self, recipients)
+        except Exception as err:  # pylint: disable=broad-except  # pragma: no cover
+            error = getattr(err, "message", repr(err))
+            raise SignalCliJSONRPCError(f"Error preparing recipients: {error}") from err
+        try:
             params = {
                 "account": self._account,
-                "recipient": recipients,
                 "message": message,
                 "attachment": attachments,
             }
             if mention:  # pragma: no cover
                 # covered in tests/test_quit_group.py
                 params.update({"mention": mention})
-            ret = self._jsonrpc(
-                method="send",
-                params=params,
-                **kwargs,
-            )
-            return ret.get("timestamp")
+            for key, value in {"recipient": contacts, "groupId": groups}.items():
+                if value:
+                    t_params = params.copy()
+                    t_params.update({key: value})
+                    t_res = self._jsonrpc(
+                        method="send",
+                        params=t_params,
+                        **kwargs,
+                    )
+                    t_timestamp = t_res.get("timestamp")
+                    if t_timestamp:
+                        search_for = f"[*].{response_method_mapping.get(key, key)}"
+                        timestamps.update(
+                            {
+                                t_timestamp: {
+                                    "recipients": list(
+                                        set(
+                                            j_search(
+                                                search_for,
+                                                t_res.get("results"),
+                                            )
+                                        )
+                                    )
+                                }
+                            }
+                        )
+            return {"timestamps": timestamps}
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
             raise SignalCliJSONRPCError(

@@ -6,9 +6,9 @@ from collections.abc import Mapping, Sequence
 
 import ruyaml as yaml
 
-from ._dict import attrdict
-from ._msgpack import Proxy
-from ._path import Path
+from .dict import attrdict
+from .msgpack import Proxy
+from .path import Path
 
 __all__ = ["yload", "yprint", "yformat", "yaml_named", "add_repr"]
 

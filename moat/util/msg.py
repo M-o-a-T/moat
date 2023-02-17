@@ -3,7 +3,7 @@ This module contains various helper functions and classes.
 """
 import anyio
 
-from ._msgpack import packer, stream_unpacker
+from .msgpack import packer, stream_unpacker
 
 __all__ = ["MsgReader", "MsgWriter"]
 

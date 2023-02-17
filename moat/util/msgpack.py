@@ -12,8 +12,8 @@ from functools import partial
 
 import msgpack
 
-from ._dict import attrdict
-from ._path import Path
+from .dict import attrdict
+from .path import Path
 
 __all__ = ["packer", "unpacker", "stream_unpacker", "Proxy"]
 

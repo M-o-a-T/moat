@@ -12,12 +12,12 @@ from typing import Awaitable
 
 import asyncclick as click
 
-from ._dict import attrdict, to_attrdict
-from ._impl import NotGiven
-from ._merge import merge
-from ._msgpack import Proxy
-from ._path import P, path_eval
-from ._yaml import yload
+from .dict import attrdict, to_attrdict
+from .impl import NotGiven
+from .merge import merge
+from .msgpack import Proxy
+from .path import P, path_eval
+from .yaml import yload
 
 logger = logging.getLogger("_loader")
 

@@ -51,7 +51,7 @@ def humandelta(delta: dt.timedelta) -> str:
             res.append(f"{delta // lim} {name}")
             delta %= lim
     if delta >= 0.1:
-        res.append(f"{delta :%3.1f} sec")
+        res.append(f"{delta :3.1f} sec")
 
     if len(res) < 1:
         return "now"

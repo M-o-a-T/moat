@@ -1,0 +1,9 @@
+[submodule "lib/serialpacker"]
+	path = lib/serialpacker
+	url = git://git.smurf.noris.de/SerialPacker.git
+[submodule "lib/micropython"]
+	path = lib/micropython
+	url = git@github.com:smurfix/micropython.git
+[submodule "lib/micropython-lib"]
+	path = lib/micropython-lib
+	url = git@github.com:smurfix/micropython-lib.git

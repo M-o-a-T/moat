@@ -21,7 +21,7 @@ elif test -x /usr/bin/apt; then
 	    python3-anyio \
 	    python3-anyio-serial \
 	    python3-cffi \
-	    python3-gitpython \
+	    python3-git \
 	    python3-packaging \
 	    python3-pymodbus \
 	    python3-tomlkit \

@@ -16,12 +16,12 @@ The MoaT code comprises a lot of somewhat-opinionated code to control
 various IoT devices. Among those are photovoltaics, irrigation, door
 intercoms, and whatnot.
 
-The core of MoaT is written in anyio-compatible asynchronous Python3 code
+The core of MoaT is written in anyio-compatible asynchronous Python3,
 written with Structured Concurrency principles in mind.
 
-Satellite microcontrollers want to run MicroPython, again heavily using
-structured async code (MicroPython supports taskgroups if you patch it
-lightly).
+Satellite microcontrollers typically run MicroPython, again heavily using
+structured async code: MicroPython supports taskgroups if you patch it
+lightly.
 
 ### Structured what?
 

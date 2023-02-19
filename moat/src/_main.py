@@ -395,6 +395,12 @@ def apply_templates(repo):
         repo.index.add(pr(".gitignore"))
 
 
+@cli.command()
+def path():
+    "Path to source templates"
+    print(Path(__file__).parent / "_templates")
+
+
 @cli.command(
     epilog="""\
 By default, changes amend the HEAD commit if the text didn't change.

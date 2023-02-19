@@ -62,6 +62,7 @@ class Model:
         # ORtools
         self.solver = solver = pywraplp.Solver("B", pywraplp.Solver.GLOP_LINEAR_PROGRAMMING)
         self.objective = solver.Objective()
+        inf = solver.infinity()
 
         # Starting battery charge
         self.cap_init = cap_prev = solver.NumVar(
@@ -70,21 +71,15 @@ class Model:
         self.constr_init = solver.Constraint(0, 0)
         self.constr_init.SetCoefficient(self.cap_init, 1)
 
-        self.constraints = c = attrdict()
-        c.battery = []
-        c.dc = []
-        c.ac = []
+        # collect vars for reporting
         self.g_ins = []
         self.g_outs = []
         self.caps = []
-        c.price = []
         self.moneys = []
 
-        i = -1
+        i = 0
         _pr = None
         while True:
-            i += 1
-
             # input constraints
             try:
                 dt = next(data)
@@ -94,6 +89,7 @@ class Model:
                 dt.price_buy *= 1.001
             elif dt.price_buy < dt.price_sell:
                 raise ValueError(f"At {i}: buy {dt.price_buy} < sell {dt.price_sell} ??")
+                # TODO
 
             # ### Variables to consider
 
@@ -103,10 +99,6 @@ class Model:
                 hardware.capacity * hardware.batt_max_soc,
                 f"b{i}",
             )
-
-            if i:
-                # Attribute a fake monetary value of keeping the battery charged
-                _pr.SetCoefficient(cap, self.chg_inter / hardware.capacity)
 
             self.caps.append(cap)
 
@@ -131,47 +123,25 @@ class Model:
             self.g_outs.append(g_out)
 
             # income to maximize
-            money = solver.NumVar(-solver.infinity(), solver.infinity(), f"pr{i}")
+            money = solver.NumVar(-inf, inf, f"pr{i}")
             self.moneys.append(money)
 
             # ### Constraints (actually Relationships, as they're all equalities)
 
             # Battery charge. old + charge - discharge == new, so … - new == 0.
-            _bt = solver.Constraint(0, 0)
-            c.battery.append(_bt)
-            _bt.SetCoefficient(cap_prev, 1)
-            _bt.SetCoefficient(b_chg, hardware.batt_eff_chg)
-            _bt.SetCoefficient(b_dis, -1)
-            _bt.SetCoefficient(cap, -1)
+            solver.Add(cap_prev + hardware.batt_eff_chg * b_chg - b_dis == cap)
 
-            # DC power bar. power_in - power_out == zero.
-            _dc = solver.Constraint(0, 0)
-            c.dc.append(_dc)
-            # Power in
-            _dc.SetCoefficient(s_in, 1)
-            _dc.SetCoefficient(b_dis, hardware.batt_eff_dis)
-            _dc.SetCoefficient(i_chg, hardware.inv_eff_chg)
-            # Power out
-            _dc.SetCoefficient(b_chg, -1)
-            _dc.SetCoefficient(i_dis, -1)
+            # DC power bar. power_in == power_out
+            solver.Add(s_in + hardware.batt_eff_dis*b_dis + hardware.inv_eff_chg*i_chg == b_chg + i_dis)
 
-            # AC power bar. power_in - power_out == zero.
-            _ac = solver.Constraint(0, 0)
-            c.ac.append(_ac)
-            # Power in
-            _ac.SetCoefficient(g_in, 1)
-            _ac.SetCoefficient(i_dis, hardware.inv_eff_dis)
-            # Power out
-            _ac.SetCoefficient(g_out, -1)
-            _ac.SetCoefficient(l_out, -1)
-            _ac.SetCoefficient(i_chg, -1)
+            # AC power bar. power_in == power_out
+            solver.Add(g_in + hardware.inv_eff_dis*i_dis == g_out + l_out + i_chg)
 
-            # Money earned: grid_out*price_sell - grid_in*price_buy == money, so … - money = zero.
-            _pr = solver.Constraint(0, 0)
-            c.price.append(_pr)
-            _pr.SetCoefficient(g_out, dt.price_sell)
-            _pr.SetCoefficient(g_in, -dt.price_buy)
-            _pr.SetCoefficient(money, -1)
+            # Money earned: grid_out*price_sell - grid_in*price_buy
+            solver.Add(dt.price_sell*g_out
+                     - dt.price_buy*g_in
+                     + cap * self.chg_inter / hardware.capacity  # bias for keeping the battery charged
+                     == money)
 
             self.objective.SetCoefficient(money, 1)
             cap_prev = cap
@@ -179,10 +149,10 @@ class Model:
                 self.g_in, self.g_out = g_in, g_out
                 self.cap = cap
                 self.money = money
+            i += 1
 
-        if _pr is not None:
-            # Attribute a fake monetary value of ending with a charged battery
-            _pr.SetCoefficient(cap, self.chg_last / hardware.capacity)
+        # Attribute a fake monetary value of ending up with a charged battery
+        self.objective.SetCoefficient(cap, self.chg_last / hardware.capacity)
 
         self.objective.SetMaximization()
 

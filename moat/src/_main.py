@@ -4,6 +4,7 @@
 import io
 import logging
 import subprocess
+import sys
 from collections import defaultdict
 from configparser import RawConfigParser
 from pathlib import Path
@@ -11,6 +12,7 @@ from pathlib import Path
 import asyncclick as click
 import git
 import tomlkit
+from anyio import run_process
 from moat.util import P, add_repr, attrdict, make_proc, yload, yprint
 from packaging.requirements import Requirement
 
@@ -478,16 +480,69 @@ async def publish(no_pypi, no_deb, skip, only, deb):
     else:
         repos = (x for x in repo.subrepos() if x.moat_name[5:] not in skip)
 
-    for r in repos:
-        if not no_deb:
+    if not no_deb:
+        for r in repos:
+            p = Path(r.working_dir) / "pyproject.toml"
+            if not p.is_file():
+                continue
             print(r.working_dir)
             args = ["-d", deb] if deb else []
             subprocess.run(["merge-to-deb"] + args, cwd=r.working_dir, check=True)
 
-    for r in repos:
-        if not no_pypi:
+    if not no_pypi:
+        for r in repos:
+            p = Path(r.working_dir) / "pyproject.toml"
+            if not p.is_file():
+                continue
             print(r.working_dir)
             subprocess.run(["make", "pypi"], cwd=r.working_dir, check=True)
+
+
+@cli.command()
+@click.option("-r", "--remote", type=str, help="Remote. Default: all.", default="--all")
+@click.pass_obj
+async def push(obj, remote):
+    """Push the current state"""
+    try:
+        cmd = "git push".split()
+        if not obj.debug:
+            cmd.append("-q")
+        elif obj.debug > 1:
+            cmd.append("-v")
+        cmd.append(remote)
+        await run_process(cmd, input=None, stdout=sys.stdout, stderr=sys.stderr)
+
+    except subprocess.CalledProcessError as exc:
+        sys.exit(exc.returncode)
+
+
+@cli.command()
+@click.option("-r", "--remote", type=str, help="Remote. Default: probably 'origin'.")
+@click.option("-b", "--branch", type=str, help="Branch. Default: probably 'main'.")
+@click.pass_obj
+async def pull(obj, remote, branch):
+    """Fetch updates"""
+    try:
+        cmd = "git pull".split()
+        if not obj.debug:
+            cmd.append("-q")
+        elif obj.debug > 1:
+            cmd.append("-v")
+        if remote is not None:
+            cmd.append(remote)
+        await run_process(cmd, input=None, stdout=sys.stdout, stderr=sys.stderr)
+
+        cmd = "git submodule foreach --recursive git merge --ff".split()
+        if not obj.debug:
+            cmd.append("-q")
+        elif obj.debug > 1:
+            cmd.append("-v")
+        if remote is not None:
+            cmd.append(remote if branch is None else f"{remote}/{branch}")
+        await run_process(cmd, input=None, stdout=sys.stdout, stderr=sys.stderr)
+
+    except subprocess.CalledProcessError as exc:
+        sys.exit(exc.returncode)
 
 
 @cli.command()

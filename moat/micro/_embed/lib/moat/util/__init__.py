@@ -10,5 +10,5 @@ class NotGiven:
     def __str__(self):
         return "NotGiven"
 
-from ._merge import merge
+from .merge import merge
 

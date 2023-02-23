@@ -1,1 +1,1 @@
-../../micro/lib/moat/stacks/__init__.py
+../_embed/lib/moat/micro/stacks/__init__.py

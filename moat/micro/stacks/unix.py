@@ -5,9 +5,10 @@ import anyio
 # The top is the Request object. You're expected to attach your Base
 # (or a subclass) to it, then call `bot.run()`.
 
+from moat.util.queue import Queue
+
 from ..cmd import Request
-from ..compat import TaskGroup, UAStream
-from ..util import Queue
+from ..compat import TaskGroup, AnyioMoatStream
 from ..proto.stream import MsgpackStream
 from ..proto import Logger
 
@@ -27,7 +28,7 @@ async def unix_stack_iter(path="upy-moat", log=False, *, request_factory=Request
         n = 0
         async for sock in q:
             n += 1
-            t = b = MsgpackStream(UAStream(sock))
+            t = b = MsgpackStream(AnyioMoatStream(sock))
             await b.init()
             if log:
                 t = t.stack(Logger, txt="U%d" % n)

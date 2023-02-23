@@ -1,6 +1,6 @@
 
-from moat.cmd import BaseCmd
-from moat.compat import ticks_ms, ticks_diff, sleep_ms, wait_for_ms, ticks_add, Event, TimeoutError, TaskGroup
+from moat.micro.cmd import BaseCmd
+from moat.micro.compat import ticks_ms, ticks_diff, sleep_ms, wait_for_ms, ticks_add, Event, TimeoutError, TaskGroup
 from moat.util import NotGiven
 import machine as M
 

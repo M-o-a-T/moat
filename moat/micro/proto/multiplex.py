@@ -14,10 +14,11 @@ from pprint import pformat
 import anyio
 #from distmqtt.client import open_mqttclient
 
+from moat.util import attrdict, merge, to_attrdict
+
 from . import RemoteError, SilentRemoteError
 from ..stacks.unix import unix_stack_iter
 from ..compat import TaskGroup, Event
-from ..util import attrdict, merge, to_attrdict
 from ..cmd import Request, BaseCmd
 from ..app import ConfigError
 
@@ -30,7 +31,7 @@ class IsHandled:
 
 def imp(name):
 	m,n = name.rsplit(".",1)
-	return getattr(importlib.import_module(m), n)
+	return getattr(importlib.import_module("moat.micro.app."+m), n)
 
 
 class CommandClient(Request):
@@ -285,7 +286,7 @@ class Multiplexer(Request):
 					async with self.stream_factory(self._gen_req):
 						logger.info("Retrieving config")
 						if self.load_cfg:
-							with anyio.fail_after(3):
+							with anyio.fail_after(10):
 								cfg = await self.send(["sys","cfg"], mode=0)
 							merge(self.cfg, cfg, drop=("port" in cfg))
 							# if "port" is there, the stored config is not trimmed
@@ -384,7 +385,7 @@ class Multiplexer(Request):
 	async def _run_client(self, b):
 		try:
 			return await b.run()
-		except anyio.EndOfStream:
+		except (EOFError, anyio.EndOfStream):
 			pass
 		except anyio.BrokenResourceError:
 			pass

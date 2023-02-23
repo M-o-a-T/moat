@@ -1,7 +1,15 @@
 from usys import print_exception as print_exc
 import uasyncio
-from uasyncio import Event,Lock,sleep,sleep_ms,TimeoutError, run as _run, TaskGroup as _tg, CancelledError
-from asyncio.queues import Queue, QueueFull,QueueEmpty
+Event = uasyncio.Event
+Lock = uasyncio.Lock
+sleep = uasyncio.sleep
+sleep_ms = uasyncio.sleep_ms
+TimeoutError = uasyncio.TimeoutError
+_run = uasyncio.run
+_tg = uasyncio.TaskGroup
+CancelledError = uasyncio.CancelledError
+#from uasyncio import Event,Lock,sleep,sleep_ms,TimeoutError, run as _run, TaskGroup as _tg, CancelledError
+from uasyncio.queues import Queue, QueueFull,QueueEmpty
 from utime import ticks_ms, ticks_add, ticks_diff
 
 WouldBlock = (QueueFull,QueueEmpty)

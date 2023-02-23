@@ -62,8 +62,10 @@ class DirectREPL:
     async def flush_in(self, timeout=0.1):
         while True:
             with anyio.move_on_after(timeout):
-                await self.serial.receive(200)
-                break
+                res = await self.serial.receive(200)
+                logger.debug("Flush: IN %r", res)
+                continue
+            break
         self.srbuf._buffer = bytearray()
 
 

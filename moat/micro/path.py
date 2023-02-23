@@ -164,6 +164,12 @@ class MoatDevPath(_MoatPath):
                 pass
             else:
                 raise
+        except FileNotFoundError:
+            if parents:
+                await self.parent.mkdir()
+                await self.mkdir()
+            else:
+                raise
 
     async def rmdir(self):
         """
@@ -509,7 +515,12 @@ async def copytree(src,dst,check=_nullcheck, cross=None):
         if src.suffix == ".py" and str(dst) not in ("/boot.py","boot.py","/main.py","main.py"):
             if cross:
                 try:
-                    data = await anyio.run_process([cross, str(src), "-o", "/dev/stdout"])
+                    p = str(src)
+                    if (pi := p.find("/_embed/")) > 0:
+                        p = p[pi+8:]
+                    if p.startswith("lib/moat/"):
+                        p = p[9:]
+                    data = await anyio.run_process([cross, str(src), "-s", p, "-o", "/dev/stdout"])
                 except CalledProcessError as exc:
                     print(exc.stderr.decode("utf-8"), file=sys.stderr)
                     pass
@@ -531,6 +542,7 @@ async def copytree(src,dst,check=_nullcheck, cross=None):
             s2 = (await dst.stat()).st_size
         except FileNotFoundError:
             s2 = -1
+            await dst.parent.mkdir(parents=True, exist_ok=True)
         except RemoteError as err:
             if err.args[0] != "fn":
                 raise
@@ -551,7 +563,7 @@ async def copytree(src,dst,check=_nullcheck, cross=None):
         try:
             s = await dst.stat()
         except (OSError,RemoteError):
-            await dst.mkdir()
+            await dst.mkdir(parents=True)
 
         logger.info("Copy: dir %s > %s", src,dst)
         n = 0

@@ -6,7 +6,7 @@ from pprint import pformat
 from functools import cached_property
 import anyio
 
-from moat.compat import CancelledError, sleep, sleep_ms, wait_for_ms, ticks_ms, ticks_diff, ticks_add, TimeoutError, Lock, TaskGroup, Event
+from moat.micro.compat import CancelledError, sleep, sleep_ms, wait_for_ms, ticks_ms, ticks_diff, ticks_add, TimeoutError, Lock, TaskGroup, Event
 from moat.util import ValueEvent, combine_dict, attrdict
 from moat.dbus import DbusInterface
 from victron.dbus.utils import wrap_dbus_dict

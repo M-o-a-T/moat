@@ -123,7 +123,10 @@ _tg = None
 def TaskGroup():
     global _tg
     if _tg is None:
-        class TaskGroup(_anyio.lowlevel.get_asynclib().TaskGroup):
+        _tgt = type(_anyio.create_task_group())
+        class TaskGroup(_tgt):
+            """An augmented taskgroup
+            """
 
             async def spawn(self, p,*a,**k):
                 """\
@@ -154,26 +157,24 @@ async def run_server(cb,host,port, backlog=5, taskgroup=None, reuse_port=True):
 
     await listener.serve(cbc, task_group=taskgroup)
 
-class UAStream:
-    # adapt an anyio stream to something that behaves like an uasyncio
-    # stream, more or less
+class AnyioMoatStream:
+    # adapt an anyio stream to our scheme.
     def __init__(self, stream):
         self.s = stream
+        self.aclose = stream.aclose
 
-    async def read(self, n):
+    async def recv(self, n=128):
         try:
-            return await self.s.receive(n)
+            res = await self.s.receive(n)
+            return res
         except _anyio.EndOfStream:
-            return ""
+            raise EOFError from None
 
-    async def readinto(self, buf):
-        res = self.s.receive(n)
+    async def send(self, buf):
+        return await self.s.send(buf)
+
+    async def recvi(self, buf):
+        res = self.s.receive(len(buf))
         buf[:] = res
         return res
 
-    async def write(self, data):
-        return await self.s.send(data)
-
-    async def aclose(self):
-        await self.s.close()
-        return await self.s.wait_closed()

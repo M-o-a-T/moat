@@ -1,1 +1,1 @@
-../../micro/lib/moat/proto/reliable.py
+../_embed/lib/moat/micro/proto/reliable.py

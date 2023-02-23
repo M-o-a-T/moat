@@ -1,5 +1,5 @@
 from ..compat import wait_for_ms, TimeoutError, Lock
-from ..util import NotGiven
+from moat.util import NotGiven
 try:
     from ..util import Proxy
 except ImportError:
@@ -20,12 +20,17 @@ if greenback is not None:
             self.s = stream
 
         def read(self, n):
-            return greenback.await_(self.s.read(n))
+            return greenback.await_(self.s.recv(n))
 
 class _Base(_Stacked):
     def __init__(self, stream):
         super().__init__(None)
+        if isinstance(stream,AIOStream):
+            raise RuntimeError("ugh")
         self.s = stream
+
+    async def aclose(self):
+        self.s.close()
 
 _Proxy = {'-': NotGiven}
 _RProxy = {id(NotGiven): '-'}
@@ -61,21 +66,25 @@ def default_handler(obj):
     return ExtType(4, k.encode("utf-8"))
 
 
-class MsgpackStream(_Base):
+class MsgpackStream(_Stacked):
     # structured messages > MsgPack bytestream
     #
     # Use this if your stream is reliable (TCP, USB, …)
 
-    def __init__(self, stream, console=None, console_handler=None, **kw):
+    def __init__(self, stream, msg_prefix=None, console_handler=None, **kw):
+        # 
+        # console_handler: called with console bytes
+        # msg_prefix: int: code for start-of-packet
+        #
         super().__init__(stream)
         self.w_lock = Lock()
         kw['ext_hook'] = ext_proxy
 
-        if isinstance(console,int) and not isinstance(console,bool):
+        if console_handler is not None or msg_prefix is not None:
             kw["read_size"]=1
 
         if sys.implementation.name == "micropython":
-            # we use a hacked version of msgpack that does async reading
+            # we use a hacked version of msgpack with a stream-y async unpacker
             self.pack = Packer(default=default_handler).packb
             self.unpack = Unpacker(stream, **kw).unpack
         else:
@@ -89,7 +98,7 @@ class MsgpackStream(_Base):
                 except OutOfData:
                     raise anyio.EndOfStream
             self.unpack = unpack
-        self.console = console
+        self.msg_prefix = msg_prefix
         self.console_handler = console_handler
 
     async def init(self):
@@ -98,24 +107,28 @@ class MsgpackStream(_Base):
 
     async def send(self, msg):
         msg = self.pack(msg)
-        if isinstance(self.console,int) and not isinstance(self.console, bool):
-            msg = bytes((self.console,)) + msg
         async with self.w_lock:
-            await self.s.write(msg)
+            if self.msg_prefix is not None:
+                await super().send(bytes((self.msg_prefix,)))
+            await super().send(msg)
 
     async def recv(self):
-        if isinstance(self.console, int) and not isinstance(self.console, bool):
+        if self.msg_prefix is not None:
             while True:
-                b = (await self.s.read(1))[0]
-                if b == self.console:
+                b = (await super().read(1))[0]
+                if b == self.msg_prefix:
                     res = await self.unpack()
                     return res
-                self.console_handler(b)
+                if self.console_handler is not None:
+                    self.console_handler(b)
 
         else:
             while True:
-                r = await self.unpack()
-                if self.console is not None and isinstance(r,int):
+                try:
+                    r = await self.unpack()
+                except OutOfData:
+                    raise EOFError
+                if self.console_handler is not None and isinstance(r,int):
                     self.console_handler(r)
                 else:
                     return r
@@ -123,24 +136,25 @@ class MsgpackStream(_Base):
 
 class MsgpackHandler(_Stacked):
     # structured messages > chunked bytestrings
+    # use this for one packet per message
 
     def __init__(self, stream, **kw):
         super().__init__(stream)
-        self.unpacker = Unpacker(stream, ext_hook=ext_proxy, **kw).unpackb
+        self.unpacker = Unpacker(None, ext_hook=ext_proxy, **kw).unpackb
         self.pack = Packer(default=default_handler).packb
 
     async def send(self, msg):
         await super().send(self.pack(msg))
 
     async def recv(self):
-        m = await self.parent.recv()
+        m = await super().recv()
         return self.unpacker(m)
 
 
 class SerialPackerStream(_Base):
     # chunked bytestrings > SerialPacker messages
     #
-    # Use this (and a MsgpackHandler and a Reliable) if your stream
+    # Use this (and a MsgpackHandler and a Reliable) if your AIO stream
     # is unreliable (TTL serial).
 
     def __init__(self, stream, console=None, console_handler=None, **kw):
@@ -180,6 +194,8 @@ class SerialPackerStream(_Base):
         async with self.w_lock:
             await self.s.write(h+msg+t)
 
+    async def aclose(self):
+        self.s.close()
 
 try:
     from uasyncio import core
@@ -188,28 +204,27 @@ try:
 except ImportError:
     pass
 else:
-    async def _rdq(s):
+    def _rdq(s):  # async 
         yield core._io_queue.queue_read(s)
-    async def _wrq(s):
+    def _wrq(s):  # async 
         yield core._io_queue.queue_write(s)
 
-
-    class AsyncStream(Stream):
-        # convert a sync stream to an async one
+    class AsyncStream(_Base):
+        # adapt a sync stream
         # reads a byte at a time if no any()
         # does timed-out short reads
 
-        def __init__(self, s, sw=None, force_write=False, **kw):
-            super().__init__(s, **kw)
+        _buf = None
 
-            def one():
-                return 1
-            self._any = getattr(s, "any", one)
+        def __init__(self, s, sw=None, force_write=False):
+            super().__init__(s)
+
+            self._any = getattr(s, "any", lambda: 1)
             self._wlock = Lock()
-            self.sw = sw or s
+            self.sw = sw or s  # write stream
             self.force_write = force_write
 
-        async def readinto(self, buf, timeout=100):
+        async def recvi(self, buf, timeout=100):
             i = 0
             m = memoryview(buf)
             while i < len(buf):
@@ -224,19 +239,14 @@ else:
                 i += d
             return i
 
-        async def read(self, n, timeout=100):
+        async def recv(self, n=128, timeout=100):
             buf = bytearray(n)
             i = await self.readinto(buf, timeout)
             if i < n:
                 return buf[0:i]
             return buf
 
-        async def readexactly(self, n):
-            buf = bytearray(n)
-            return await self.readinto(buf,timeout=-1)
-
-        async def write(self, buf):
-            # no we do not use a sync "write" plus an async "drain".
+        async def send(self, buf):
             async with self._wlock:
                 m = memoryview(buf)
                 i = 0
@@ -246,5 +256,48 @@ else:
                     n = self.sw.write(m[i:])
                     if n:
                         i += n
+                self._buf = None
                 return i
+
+
+    class AIOStream(_Base):
+        # adapts an asyncio stream to ours
+        def __init__(self, stream):
+            self.s = stream.s
+            self.aclose = stream.aclose
+
+        async def recv(self, n=128):
+            s = self.s
+            buf = bytearray(n)
+            await _rdq(s)
+            res = s.readinto(buf)
+            if not res:
+                raise EOFError
+            if res == n:
+                return buf
+            else:
+                m = memoryview(buf)
+                return m[:res]
+
+        async def recvi(self, buf):
+            s = self.s
+            await _rdq(s)
+            res = s.readinto(buf)
+            if not res:
+                raise EOFError
+            return res
+
+        async def send(self, data):
+            s = self.s
+            from time import sleep
+            mv = memoryview(data)
+            off = 0
+            while off < len(mv):
+                await _wrq(s)
+                ret = s.write(mv[off:])
+                if ret:
+                    off += ret
+                else:
+                    raise EOFError
+
 

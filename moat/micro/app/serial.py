@@ -1,6 +1,6 @@
 
 from . import BaseAppCmd
-from moat.compat import ticks_ms, ticks_diff, sleep_ms, ticks_add, Event, TaskGroup, Queue
+from moat.micro.compat import ticks_ms, ticks_diff, sleep_ms, ticks_add, Event, TaskGroup, Queue
 from moat.util import Queue
 import sys
 import anyio

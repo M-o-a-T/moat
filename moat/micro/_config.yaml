@@ -1,0 +1,7 @@
+micro:
+  port:
+    dev: "/dev/ttyUSB0"
+    socket: "moat.test"
+    guarded: true
+  apps:
+    f: moat.micro.app.fs.FsCmd

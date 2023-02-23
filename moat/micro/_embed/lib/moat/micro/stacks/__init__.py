@@ -6,9 +6,7 @@ import sys
 
 from ..cmd import Request
 
-async def console_stack(stream=sys.stdin.buffer, s2=None, reliable=False, log=False, log_bottom=False, console=False, force_write=False, request_factory=Request):
-    # Set s2 for a separate write stream.
-    #
+async def console_stack(stream, reliable=False, log=False, log_bottom=False, msg_prefix=None, force_write=False, request_factory=Request):
     # Set force_write if select-for-write doesn't work on your stream.
     # 
     # set @reliable if your console already guarantees lossless
@@ -16,16 +14,11 @@ async def console_stack(stream=sys.stdin.buffer, s2=None, reliable=False, log=Fa
 
     if log or log_bottom:
         from ..proto import Logger
-    if hasattr(stream,"aclose"):
-        assert s2 is None
-        assert not force_write
-        s = stream
-    else:
-        from ..proto.stream import AsyncStream
-        s = AsyncStream(stream, s2, force_write)
+    assert hasattr(stream,"recv")
+    assert hasattr(stream,"aclose")
 
     cons_h = None
-    if console:
+    if msg_prefix:
         c_b = bytearray()
         def cons_h(b):
             nonlocal c_b
@@ -40,12 +33,12 @@ async def console_stack(stream=sys.stdin.buffer, s2=None, reliable=False, log=Fa
 
     if reliable:
         from ..proto.stream import MsgpackStream
-        t = b = MsgpackStream(s, console=console, console_handler=cons_h)
+        t = b = MsgpackStream(stream, msg_prefix=msg_prefix, console_handler=cons_h)
         await b.init()
     else:
         from ..proto.stream import MsgpackHandler, SerialPackerStream
 
-        t = b = SerialPackerStream(s, console=console, console_handler=cons_h)
+        t = b = SerialPackerStream(stream, msg_prefix=msg_prefix, console_handler=cons_h)
         t = t.stack(MsgpackHandler)
 
         if log_bottom:

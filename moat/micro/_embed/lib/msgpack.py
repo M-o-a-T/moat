@@ -187,7 +187,7 @@ class Unpacker(object):
         remain_bytes = -remain_bytes
         while remain_bytes > 0:
             to_read_bytes = max(self._read_size, remain_bytes)
-            read_data = await self._stream.read(to_read_bytes)
+            read_data = await self._stream.recv(to_read_bytes)
             if not read_data:
                 break
             self._buffer += read_data

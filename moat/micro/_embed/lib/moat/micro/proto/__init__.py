@@ -59,7 +59,7 @@ class NotImpl:
         raise RuntimeError()
 
     async def run(self):
-        print("RUN of",self.__class__.__name__)
+        print("RUN of", self.__class__.__name__)
         pass
 
     async def start_sub(self, tg):
@@ -92,6 +92,9 @@ class _Stacked:
 
     async def recv(self, *a, **k):
         return await self.parent.recv(*a, **k)
+
+    async def aclose(self):
+        return await self.parent.aclose()
 
     async def dispatch(self, *a, **k):
         return await self.child.dispatch(*a, **k)

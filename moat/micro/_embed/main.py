@@ -1,7 +1,6 @@
 cfg = {}
 
 import machine
-import msgpack
 
 ##
 # State:
@@ -15,7 +14,7 @@ import msgpack
 # main -- always work normally
 
 def go_moat(state=None, fake_end=True, log=False):
-    import uos, utime
+    import uos, utime, usys
     fallback=False
 
     uncond = {
@@ -53,18 +52,33 @@ def go_moat(state=None, fake_end=True, log=False):
         print(state)
         return
 
+    # no empty path
+    try:
+        usys.path.remove("")
+    except ValueError:
+        pass
+    # /lib to the front
+    try:
+        usys.path.remove("/lib")
+    except ValueError:
+        pass
+    usys.path.insert(0,"/lib")
+
     if state in ("fallback","fbskip","fbonce"):
         import usys
         usys.path.insert(0,"/fallback")
         fallback = True
 
     print("Start MoaT:",state)
-    from moat.compat import print_exc
-    from moat.main import main
+    from moat.micro.compat import print_exc
+    from moat.micro.main import main
 
     cfg = "moat_fb.cfg" if fallback else "moat.cfg"
     try:
         main(state=state, fake_end=fake_end, log=log, cfg=cfg, fallback=fallback)
+
+    except KeyboardInterrupt:
+        print("MoaT stopped.")
 
     except SystemExit:
         f=open("moat.state","r")
@@ -90,6 +104,9 @@ def go_moat(state=None, fake_end=True, log=False):
         machine.soft_reset()
     else:
         print("MoaT Ended.")
+
+def g():
+    go_moat("once")
 
 if __name__ == "__main__":
     go_moat(fake_end=False)

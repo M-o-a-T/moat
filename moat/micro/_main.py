@@ -386,3 +386,43 @@ async def _mplex(obj, no_config=False, debug=None, remote=False):
 			mplex = Multiplexer(net_factory if remote else stream_factory, obj.socket, obj.cfg.micro, fatal=debug)
 			await mplex.serve(load_cfg=not no_config)
 
+
+@cli.command()
+@click.option("-b", "--blocksize", type=int, help="Max read/write message size", default=256)
+@click.argument("path", type=click.Path(file_okay=False, dir_okay=True), nargs=1)
+@click.pass_obj
+async def mount(obj, path, blocksize):
+	"""Mount a controller's file system on the host"""
+	async with get_link(obj) as req:
+		add_client_hooks(req)
+
+		import pyfuse3
+
+		from moat.micro.fuse import Operations
+
+		operations = Operations(req)
+		if blocksize:
+			operations.max_read = blocksize
+			operations.max_write = blocksize
+
+		logger.debug('Mounting...')
+		fuse_options = set(pyfuse3.default_options)  # pylint: disable=I1101
+		fuse_options.add('fsname=microfs')
+#	   fuse_options.add(f'max_read={operations.max_read}')
+		if obj.debug > 1:
+			fuse_options.add('debug')
+		pyfuse3.init(operations, str(path), fuse_options)  # pylint: disable=I1101
+
+		logger.debug('Entering main loop..')
+		async with anyio.create_task_group() as tg:
+			try:
+				tg.start_soon(pyfuse3.main)  # pylint: disable=I1101
+				while True:
+					await anyio.sleep(99999)
+
+			finally:
+				pyfuse3.close(  # pylint: disable=I1101  # was False but we don't continue
+					unmount=True
+				)
+				tg.cancel_scope.cancel()
+

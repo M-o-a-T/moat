@@ -73,7 +73,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
             n += 1
             time.sleep(0.1)
             print(".", end="")
-        print(" –", wlan.ifconfig()[0])
+        print(" -", wlan.ifconfig()[0])
 
     if "net" in cfg:
         cfg_network(cfg["net"])

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from moat.conv.steinhart import thermistor2celsius, celsius2thermistor
 from moat.util import attrdict, combine_dict, Path
 from moat.dbus import DbusInterface
-from moat.compat import sleep
+from moat.micro.compat import sleep
 from victron.dbus.utils import wrap_dbus_value, wrap_dbus_dict
 from functools import cached_property
 from .packet import *

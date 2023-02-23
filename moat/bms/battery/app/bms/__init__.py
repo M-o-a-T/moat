@@ -2,7 +2,7 @@ import asyncdbus.service as _dbus
 from asyncdbus.message_bus import MessageBus, BusType
 
 from moat.cmd import BaseCmd
-from moat.compat import ticks_ms, ticks_diff, sleep_ms, ticks_add, Event, TaskGroup
+from moat.micro.compat import ticks_ms, ticks_diff, sleep_ms, ticks_add, Event, TaskGroup
 from moat.util import Queue, attrdict
 import sys
 import anyio

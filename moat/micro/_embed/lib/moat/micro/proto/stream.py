@@ -1,5 +1,5 @@
 from ..compat import wait_for_ms, TimeoutError, Lock
-from moat.util import NotGiven
+from moat.util import NotGiven, NoProxyError
 try:
     from moat.util import Proxy
 except ImportError:
@@ -46,7 +46,7 @@ def ext_proxy(code, data):
             return _Proxy[n]
         except KeyError:
             if Proxy is None:
-                raise
+                raise NoProxyError(n)
             return Proxy(n)
     return ExtType(code, data)
 

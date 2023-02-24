@@ -4,10 +4,14 @@ import machine
 
 from builtins import __import__ as _imp
 
-def imp(name):
+def imp(name, drop=False):
     m,n = name.rsplit(".",1)
     try:
-        m = _imp("app."+m)
+        m = "app."+m
+        if drop:
+            sys.modules.pop(m,None)
+        m = _imp(m)
+        # 'm' is the "app" module
         for a in name.split("."):
             m = getattr(m,a)
         return m

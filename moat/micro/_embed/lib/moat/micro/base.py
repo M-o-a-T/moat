@@ -161,6 +161,14 @@ class SysCmd(BaseCmd):
         await self.request._tg.spawn(_boot)
         return True
 
+    async def cmd_load(self, n, m, r=False):
+        # (re)load dispatcher dis_@n to point to @m.
+        # Set @r if you want to reload it if it already exists.
+        if hasattr(self.parent,"dis_"+n) and not r:
+            return
+        from .main import imp
+        cmd = imp(m, drop=True)
+        setattr(self.parent,"dis_"+n, m(self.parent))
 
     async def cmd_machid(self):
         # return the machine's unique ID

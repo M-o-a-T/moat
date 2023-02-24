@@ -18,7 +18,7 @@ def import_app(name, drop=False):
     return m
 
 
-async def gen_apps(cfg, tg, print_exc):
+def gen_apps(cfg, tg, print_exc):
     apps = []
     for name,v in cfg.get("apps",{}).items():
         try:
@@ -145,7 +145,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
         # config: load apps
 
         async with TaskGroup() as tg:
-            apps = await gen_apps(cfg, tg, print_exc)
+            apps = gen_apps(cfg, tg, print_exc)
 
             # start comms (and load app frontends)
             await tg.spawn(setup,tg, state, apps)

@@ -164,7 +164,7 @@ class SysCmd(BaseCmd):
 
     async def cmd_machid(self):
         # return the machine's unique ID
-        return machine.unique_id
+        return machine.unique_id()
 
     async def cmd_rtc(self, d=None):
         if d is None:

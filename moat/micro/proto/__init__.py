@@ -102,6 +102,9 @@ class _Stacked:
     async def dispatch(self, *a, **k):
         return await self.child.dispatch(*a, **k)
 
+    async def aclose(self):
+        pass
+
 
 class Logger(_Stacked):
     def __init__(self, parent, txt="S", **k):

@@ -96,11 +96,11 @@ class _Stacked:
     async def recv(self, *a, **k):
         return await self.parent.recv(*a, **k)
 
-    async def aclose(self):
-        return await self.parent.aclose()
-
     async def dispatch(self, *a, **k):
         return await self.child.dispatch(*a, **k)
+
+    async def aclose(self):
+        return await self.parent.aclose()
 
 
 class Logger(_Stacked):

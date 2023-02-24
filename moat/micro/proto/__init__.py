@@ -1,5 +1,8 @@
+# *********************************
+# * WARNING *  READ AFTER EDITING *
+# *********************************
 #
-# this file should be synced with micro/lib/moat/proto/__init__.py
+# This file should be synced with micro/lib/moat/proto/__init__.py
 # except for using logging instead of print().
 
 from ..compat import TaskGroup

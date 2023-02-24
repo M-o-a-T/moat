@@ -1,29 +1,28 @@
 cfg = {}
 
 import machine
+import sys
 
 from builtins import __import__ as _imp
 
-def imp(name, drop=False):
+def import_app(name, drop=False):
     m,n = name.rsplit(".",1)
-    try:
-        m = "app."+m
-        if drop:
-            sys.modules.pop(m,None)
-        m = _imp(m)
-        # 'm' is the "app" module
-        for a in name.split("."):
-            m = getattr(m,a)
-        return m
-    except AttributeError:
-        raise AttributeError(name)
+    a=None
+    m = "app."+m
+    if drop:
+        sys.modules.pop(m,None)
+    m = _imp(m)
+    # 'm' is the "app" module
+    for a in name.split("."):
+        m = getattr(m,a)
+    return m
 
 
 async def gen_apps(cfg, tg, print_exc):
     apps = []
     for name,v in cfg.get("apps",{}).items():
         try:
-            cmd = imp(v)
+            cmd = import_app(v)
         except Exception as exc:
             print("Could not load",name,repr(exc))
             print_exc(exc)

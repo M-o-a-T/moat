@@ -172,9 +172,9 @@ class SysCmd(BaseCmd):
             await om.aclose()
             del om  # free memory
 
-        from .main import imp
-        cmd = imp(m, drop=True)
-        m = m(self.parent, **kw)
+        from .main import import_app
+        m = import_app(m, drop=True)
+        m = m(self.parent, n, kw, self.base.cfg)
         setattr(self.parent,"dis_"+n, m)
         await self.parent._tg.spawn(m.run_sub)
 

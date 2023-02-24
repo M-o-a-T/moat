@@ -264,40 +264,20 @@ else:
         # adapts an asyncio stream to ours
         def __init__(self, stream):
             self.s = stream.s
+            self.send = stream.awrite
+            self.recvi = stream.readinto
             self.aclose = stream.aclose
 
         async def recv(self, n=128):
             s = self.s
             buf = bytearray(n)
-            await _rdq(s)
-            res = s.readinto(buf)
+            res = await self.recvi(buf)
             if not res:
                 raise EOFError
             if res == n:
                 return buf
+            elif res <= n/4:
+                return buf[:res]
             else:
-                m = memoryview(buf)
-                return m[:res]
-
-        async def recvi(self, buf):
-            s = self.s
-            await _rdq(s)
-            res = s.readinto(buf)
-            if not res:
-                raise EOFError
-            return res
-
-        async def send(self, data):
-            s = self.s
-            from time import sleep
-            mv = memoryview(data)
-            off = 0
-            while off < len(mv):
-                await _wrq(s)
-                ret = s.write(mv[off:])
-                if ret:
-                    off += ret
-                else:
-                    raise EOFError
-
+                return memoryview(buf)[:res]
 

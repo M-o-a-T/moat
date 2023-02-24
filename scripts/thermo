@@ -1,0 +1,57 @@
+#!/usr/bin/python3
+
+import asyncclick as click
+from moat.micro.main import get_link, add_client_hooks
+from moat.util import attrdict, P, yload, Path
+from distkv.client import open_client
+
+import anyio
+
+@click.command
+@click.option("-s","--socket",help="MoaT multiplexer socket", required=True)
+async def main(socket):
+    """Read temperatures"""
+    obj = attrdict()
+    obj.socket = socket
+    obj.debug=1
+    with open("/etc/distkv.cfg") as cff:
+        cfg = yload(cff)
+    async with get_link(obj) as m, open_client(**cfg) as dkv:
+        add_client_hooks(m)
+        await m.send(["sys","load"], n="i",m="i2c.Cmd")
+        cd = await m.send(["i","open"], c=5,d=4)
+        thl = await m.send(["i","scan"], cd=cd)
+        tw={}
+
+        t_low=43
+        t_high=45
+        d = await dkv.get(P("home.ass.dyn.switch.esp_s3.relay.state"))
+        t_on=d.value
+
+        while True:
+            for a in thl:
+                t = await m.send(["i","wrrd"], cd=cd, i=a, buf=bytearray((5,)), n=2)
+                t = int.from_bytes(t,byteorder="big")
+                s = t & 0x1000
+                t = (t &0xFFF)/16
+                if s:
+                    t = -t
+                tw[a] = t
+                print(a,t, end="  ")
+            print()
+            t=tw[30]
+            if t_on:
+                if t > t_high:
+                    t_on = False
+            else:
+                if t < t_low:
+                    t_on = True
+            await dkv.set(P("home.ass.dyn.switch.esp_s3.relay.cmd"), value=t_on)
+
+
+
+            await anyio.sleep(10)
+
+
+click._anyio_backed="trio"
+main()

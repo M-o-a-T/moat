@@ -1,7 +1,7 @@
 from ..compat import wait_for_ms, TimeoutError, Lock
 from moat.util import NotGiven
 try:
-    from ..util import Proxy
+    from moat.util import Proxy
 except ImportError:
     Proxy = None
 

@@ -56,17 +56,22 @@ class BaseCmd(_Stacked):
     async def run(self):
         pass
 
-    async def start_sub(self,tg):
+    async def run_sub(self):
         # start my (and my children's) "run" task
-        await tg.spawn(self.run)
+        async with TaskGroup() as tg:
+            self._tg = tg
+            await tg.spawn(self.run)
 
-        for k in dir(self):
-            if not k.startswith('dis_'):
-                continue
-            v = getattr(self,k)
-            if isinstance(v, BaseCmd):
-                await v.start_sub(tg)
+            for k in dir(self):
+                if not k.startswith('dis_'):
+                    continue
+                v = getattr(self,k)
+                if isinstance(v, BaseCmd):
+                    await tg.spawn(v.run_sub)
 
+    async def aclose(self):
+        self._tg.cancel()
+        await super().aclose()
 
     async def dispatch(self, action, msg):
         async def c(p):
@@ -175,7 +180,7 @@ class Request(_Stacked):
         try:
             async with TaskGroup() as tg:
                 self._tg = tg
-                await self.child.start_sub(tg)
+                await tg.spawn(self.child.run_sub)
 
                 while True:
                     msg = await self.parent.recv()
@@ -184,6 +189,7 @@ class Request(_Stacked):
             print_exc(exc)
         finally:
             self._cleanup_open_commands()
+            await self.aclose()
 
     def _cleanup_open_commands(self):
         for e in self.reply.values():

@@ -161,14 +161,22 @@ class SysCmd(BaseCmd):
         await self.request._tg.spawn(_boot)
         return True
 
-    async def cmd_load(self, n, m, r=False):
+    async def cmd_load(self, n, m, r=False, kw={}):
         # (re)load dispatcher dis_@n to point to @m.
         # Set @r if you want to reload it if it already exists.
-        if hasattr(self.parent,"dis_"+n) and not r:
-            return
+        # @kw may contain additional params for the module.
+        om = getattr(self.parent,"dis_"+n, None)
+        if om is not None:
+            if not r:
+                return
+            await om.aclose()
+            del om  # free memory
+
         from .main import imp
         cmd = imp(m, drop=True)
-        setattr(self.parent,"dis_"+n, m(self.parent))
+        m = m(self.parent, **kw)
+        setattr(self.parent,"dis_"+n, m)
+        await self.parent._tg.spawn(m.run_sub)
 
     async def cmd_machid(self):
         # return the machine's unique ID

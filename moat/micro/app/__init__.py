@@ -1,4 +1,4 @@
-from ..cmd import BaseCmd
+from moat.micro.cmd import BaseCmd
 
 class ConfigError(RuntimeError):
     pass

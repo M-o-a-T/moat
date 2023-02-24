@@ -180,6 +180,8 @@ class Request(_Stacked):
                 while True:
                     msg = await self.parent.recv()
                     await self.dispatch(msg)
+        except Exception as exc:
+            print_exc(exc)
         finally:
             self._cleanup_open_commands()
 

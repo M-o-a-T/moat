@@ -24,12 +24,6 @@ class Cmd(BaseCmd):
         else:
             return self._bus_cache[cd]
 
-    def _add_cd(self, cd, bus):
-        # busobj > busnr
-        c,d = cd; cd = (c,d)
-        assert cd not in self._bus_cache
-        self._bus_cache[cd] = bus
-
     def _del_cd(self,cd):
         bus = self._bus(cd, True)
         # bus.close()
@@ -46,8 +40,8 @@ class Cmd(BaseCmd):
             pass # close it
         c = machine.Pin(c, **cx)
         d = machine.Pin(d, **cx)
-        bus = (machine.SoftI2C if soft else machine.I2C)(scl=c,sda=d,freq=f,timeout=t)
-        _add_cd(cd,bus)
+        bus = (machine.SoftI2C if s else machine.I2C)(scl=c,sda=d,freq=f,timeout=t)
+        self._bus_cache[cd] = bus
         return cd
 
     def cmd_rd(self, cd, i, n=16):

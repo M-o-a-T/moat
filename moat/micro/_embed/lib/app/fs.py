@@ -140,12 +140,12 @@ class FsCmd(BaseCmd):
         else:
             return dict(m="?", d=s)
 
-    def cmd_mv(self, s,d, x=None):
+    def cmd_mv(self, s,d, x=None, n=False):
         # move file
         p = self._fsp(s)
         q = self._fsp(d)
         uos.stat(p)  # must exist
-        if msg.get("n", False):
+        if n:
             # dest must not exist
             try:
                 uos.stat(q)

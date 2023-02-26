@@ -3,6 +3,7 @@
 Basic tool support
 
 """
+import sys
 import logging  # pylint: disable=wrong-import-position
 from datetime import datetime
 from time import time
@@ -12,6 +13,8 @@ import asyncclick as click
 
 from .main import load_subgroup
 from .times import humandelta, time_until
+from .yaml import yload,yprint
+from .msgpack import packer,stream_unpacker
 
 log = logging.getLogger()
 
@@ -77,3 +80,28 @@ async def to_(args, sleep, human, now, inv):
         await anyio.sleep(t)
     elif not human:
         print(t)
+
+@cli.command
+@click.option("-d","--decode",is_flag=True,help="decode (default: encode)")
+@click.argument("path",type=click.Path(file_okay=True,dir_okay=False))
+async def msgpack(decode,path):
+    """encode/decode msgpack from/to YAML
+
+    moat util msgpack data.yaml > data.mp    # encode
+    moat util msgpack -d data.mp > data.yaml # decode
+    """
+    if decode:
+        with (sys.stdin.buffer if path == "-" else open(path,"rb")) as f:
+            n = 0
+            for obj in stream_unpacker(f):
+                if n:
+                    print("---")
+                n += 1
+                yprint(obj)
+    else:
+        with (sys.stdin if path == "-" else open(path,"r")) as f:
+            for obj in yload(f, multi=True):
+                sys.stdout.buffer.write(packer(obj))
+
+
+

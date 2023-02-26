@@ -343,20 +343,25 @@ async def cfg(obj, replace, fallback, current, write_current, **attrs):
 @cli.command(short_help='Run the multiplexer')
 @click.option("-n","--no-config", is_flag=True, help="don't fetch the config from the client")
 @click.option("-d","--debug", is_flag=True, help="don't retry on (some) errors")
-@click.option("-r","--remote", type=str, help="talk to this system")
+@click.option("-r","--remote", is_flag=True, help="talk via TCP")
+@click.option("-S","--server", help="talk to this system")
 @click.pass_obj
 async def mplex(obj, **kw):
 	await _mplex(obj, **kw)
 
-async def _mplex(obj, no_config=False, debug=None, remote=False):
+async def _mplex(obj, no_config=False, debug=None, remote=False, server=None):
 	"""
 	Sync of MoaT code on a running MicroPython device.
 
 	"""
-	if not obj.port:
+	if not remote and not obj.port:
 		raise click.UsageError("You need to specify a port")
 	if not obj.socket:
 		raise click.UsageError("You need to specify a socket")
+	if server:
+		remote = True
+	elif remote:
+		server = obj.cfg.micro.net.addr
 
 	@asynccontextmanager
 	async def stream_factory(req):
@@ -368,7 +373,7 @@ async def _mplex(obj, no_config=False, debug=None, remote=False):
 	@asynccontextmanager
 	async def net_factory(req):
 		# build a network connection link
-		async with get_remote(obj, remote, port=27587, request_factory=req) as link:
+		async with get_remote(obj, server, port=27587, request_factory=req) as link:
 			yield link
 
 	async def sig_handler(tg):

@@ -2,26 +2,43 @@ cfg = {}
 
 import machine
 
-##
-# State:
-# skip -- do nothing, go to prompt
-# fallback -- use fallback. NO RECOVERY except with boot command
-# fbskip -- use fallback. Skip if there's a crash
-# fbonce -- use fallback, skip next
-# test -- work normally now, always use fallback next time
-# std -- work normally now, use fallback if there's a crash
-# once -- work normally now, skip next
-# main -- always work normally
-
 def go_moat(state=None, fake_end=True, log=False):
+    """
+    Start MoaT.
+
+    The interpreter state is read from Flash and updated as appropriate.
+
+    * skip
+      Do nothing, exit to MicroPython prompt.
+    
+    * std
+      Work normally. Enter Fallback mode if there's a problem.
+      (Warning: Switching to fallback doesn't always work, esp. when you
+      run out of memory or otherwise hard-crash the system.)
+
+    * safe
+      Work normally. Enter Fallback mode next time.
+
+    * fallback
+      Use the `moat_fb.cfg` config file and the `/fallback` library.
+
+    * fbskip
+      Use fallback mode once, then "skip".
+
+    * once
+      Work normally once, then "skip".
+    
+    * main
+      Always work normally.
+    """
+
     import uos, utime, usys
     fallback=False
 
     uncond = {
-            "test":"fallback",
-            "fbonce":"fallback",
             "once":"skip",
             "skiponce":"std",
+            "safe":"fallback",
             "skipfb":"fallback",
     }
     crash = {
@@ -64,7 +81,7 @@ def go_moat(state=None, fake_end=True, log=False):
         pass
     usys.path.insert(0,"/lib")
 
-    if state in ("fallback","fbskip","fbonce"):
+    if state in ("fallback","fbskip"):
         import usys
         usys.path.insert(0,"/fallback")
         fallback = True

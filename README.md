@@ -2,6 +2,12 @@
 
 This module contains code to talk to MoaT satellites running MicroPython.
 
+## Operation
+
+After installation, the MicroPython node runs a script that loads a config
+file, set up networking if possible, and then accepts structured commands
+across TCP or a serial link.
+
 ## Supported devices
 
 Basically, anything that can run MicroPython and has barely enough RAM.
@@ -9,9 +15,112 @@ Basically, anything that can run MicroPython and has barely enough RAM.
 This does include the ESP8266, though you need to compile the MoaT support
 code directly into Flash.
 
+## Installation
+
+### MicroPython
+
+`moat.micro` comes with its own MicroPython fork, for two reasons.
+
+One is that async code on MicroPython is not yet supported natively, as of
+2023-02-26.
+
+The other is that most µPy systems don't have enough RAM to load the MoaT
+code. It hasn't been size-optimized (much). While that too will change,
+some devices (in particular, the ESP8266) just don't have enough RAM.
+
+For these reasons, you need to build and flash a MicroPython image that
+includes a "frozen" copy of the embedded MoaT modules. (You can still
+upload your own enhancements.)
+
+Go to `lib/micropython/ports/esp32` (or whichever microcontroller you have).
+Add this line to `boards/manifest.py`:
+
+	include("../../../../../moat/micro/_embed/lib")
+
+You might have to modify the number of `../` prefixes based on the build
+system of the port in question.
+
+Run `make` and flash your board as appropriate. Connect to it, and verify
+that you get a MicroPython prompt.
+
+#### Serial link
+
+Copy `configs/fallback_serial.cfg` to `whatever.cfg` and edit as appropriate.
+
+Run this command:
+
+	moat micro -c whatever.cfg setup \
+		-C micro/lib/micropython/mpy-cross/build/mpy-cross \
+		-c whatever.cfg -s micro/moat/micro/_embed/main.py \
+		-S std -m
+
+initally, or
+
+	moat micro -c whatever.cfg mplex
+
+afterwards.
+
+
+#### Networking
+
+Copy `configs/fallback_net.cfg` to `whatever.cfg` and edit as appropriate.
+
+Run these commands:
+
+	moat micro -c whatever.cfg setup \
+		-C micro/lib/micropython/mpy-cross/build/mpy-cross \
+		-c whatever.cfg -s micro/moat/micro/_embed/main.py \
+		-S std
+
+once, then
+
+	moat micro -c whatever.cfg mplex -r
+
+to talk to the satellite.
+
+## Commands
+
+There's a basic directory function:
+
+	moat micro -c whatever.cfg
+
 ## Message structure
 
-Messages are encoded using MsgPack dicionaries.
+Messages are encoded using MsgPack dictionaries. Short keywords are used to
+conserve client memory.
+
+* a
+
+  Command Action. May be either a string or a list of strings.
+
+  If this field is missing, the message is a reply.
+
+* d
+
+  Data. Commands use a dict: keyword args to the command in question.
+  Replies use whatever data the command returns.
+
+* i
+
+  Sequence number. An action with a sequence number *must* be replied to,
+  eventually. Actions without sequence numbers are unsolicited typed status
+  messages. Replies without sequence numbers are illegal.
+
+* e
+
+  Error. The content is a string (error type), data must be an array
+  (arguments).
+
+### Proxy objects
+
+Objects which cannot be encoded to MsgPack are sent as Proxy objects (MsgPack
+extension 4, content: proxy name). The name is opaque. Proxies are cached
+on the side which generates them; the recipient is responsible for
+calling `sys.unproxy(proxy_obj)` to release them.
+
+`Proxy('-')` is a special "no data" object, used e.g. for deleting config
+options.
+
 
 ## Supported links
 
@@ -60,6 +169,10 @@ the controller isn't suited, application modules can also run on the muktiplexer
 
 ### File system access
 
-The LittteFS file system on the client can be mounted on the server via
-FUSE.
+The LittteFS file system on the client is accessible across the link when
+the `fs` module is loaded. It can also be mounted on the server.
+
+If you write to the client, be aware that some programs do not buffer their
+data; writing in single bytes does take a long(ish) time. Most notably, this
+applies to `mpy-cross`.
 

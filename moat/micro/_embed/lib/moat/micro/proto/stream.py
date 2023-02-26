@@ -36,6 +36,8 @@ _Proxy = {'-': NotGiven}
 _RProxy = {id(NotGiven): '-'}
 
 def drop_proxy(p):
+    if not isinstance(p,str):
+        p = _RProxy[id(p)]
     r = _Proxy.pop(p)
     del _RProxy[id(r)]
 

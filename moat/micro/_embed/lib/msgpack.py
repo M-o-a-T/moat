@@ -107,6 +107,17 @@ _MSGPACK_HEADERS = {
     0xDF: (4, ">I", _TYPE_MAP),
 }
 
+class SFile:
+    # fake-async file object
+    def __init__(self, fn):
+        self.f = f
+
+    async def recv(self, n=64):
+        return self.f.read(n)
+
+    async def aclose(f):
+        self.f.close()
+
 class Unpacker(object):
     def __init__(
         self,

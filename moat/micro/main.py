@@ -178,3 +178,19 @@ async def get_remote(obj, host, port=27587, **kw):
 		finally:
 			await sock.aclose()
 
+async def get_cfg(req):
+	"""\
+		Collect the client's configuration data.
+		"""
+	async def _get_cfg(p):
+		d = await req.send(("sys","cfg"),p=p)
+		if isinstance(d,(list,tuple)):
+			d,s = d
+			for k in s:
+				d[k] = await _get_cfg(p+(k,))
+		return d
+
+	return await _get_cfg(())
+
+# There is no "set_cfg" because you do this by uploading the msgpack'd
+# config file, then calling sys.cfg_r on it. Or by sending config snippets.

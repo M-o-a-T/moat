@@ -320,6 +320,15 @@ class Request(_Stacked):
             msg = kw
         elif kw:
             raise TypeError("cannot use both msg data and keywords")
+
+        # Find a small-ish but unique seqnum
+        if self.seq > 10*(len(self.reply)+5):
+            self.seq = 9
+        while True:
+            self.seq += 1
+            seq = self.seq
+            if seq not in self.reply:
+                break
         msg = {"a":action,"d":msg,"i":seq}
 
         e = ValueEvent()

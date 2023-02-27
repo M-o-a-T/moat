@@ -307,7 +307,7 @@ class Request(_Stacked):
             if e is None:
                 evt.set(d)
             else:
-                evt.set_error(RemoteError(e))
+                evt.set_error(RemoteError(e, d))
 
     async def send(self, action, msg=None, /, **kw):
         """

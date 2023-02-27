@@ -268,9 +268,37 @@ class Multiplexer(Request):
 		# if app A can depend on app B, then B must queue async calls
 		# that arrive before it's up and running
 
+		# don't forget the watchdog
+		await self._tg.spawn(self._run_wdt)
+
 	async def config_updated(self):
 		await self.base.config_updated()
 		await self._setup_apps(self._tg)
+		await self._tg.spawn(self._run_wdt)
+
+	_wdt_scope = None
+	_wdt_t = 0
+	async def _run_wdt(self):
+		wdt = self.cfg.get("wdt", {})
+
+		if self._wdt_scope is not None:
+			self._wdt_scope.cancel()
+			self._wdt_scope = None
+		t = .get("t", self._wdt_t)
+		if not t:
+			return
+		if self._wdt_t == 0 or self._wdt_t > t:
+			self._wdt_t = t
+		else:
+			t = self._wdt_t
+
+		with anyio.CancelScope() as sc:
+			_wdt_scope = sc
+			await self.send("wdt", t=t)
+			while True:
+				await anyio.sleep(t)
+				await self.send("wdt")
+
 
 	async def _run_stack(self):
 		"""Run (and re-run) a multiplexed link."""

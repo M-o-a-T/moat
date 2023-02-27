@@ -14,8 +14,7 @@ import anyio
 import asyncclick as click
 from contextlib import asynccontextmanager
 
-from moat.main import main, add_client_hooks
-from moat.main import ABytes, NoPort, copy_over, add_client_hooks
+from moat.main import ABytes, NoPort, copy_over
 from moat.main import get_serial, get_link, get_link_serial
 from moat.bms.controller import Controller
 
@@ -31,8 +30,7 @@ logger = logging.getLogger(__name__)
 @click.option("-n","--name",type=str, default="main", help="Name of BMS config")
 async def run(obj, name):
 
-    async with MessageBus().connect() as bus, get_link(obj) as req:
-        add_client_hooks(req)
+    async with MessageBus().connect() as bus, get_link(obj, ignore=True) as req:
         ctrl = Controller(name, obj.cfg.bms[name], obj.cfg, req)
         await ctrl.run(req, bus)
 

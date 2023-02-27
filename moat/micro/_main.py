@@ -15,7 +15,7 @@ from .path import MoatDevPath, MoatFSPath
 from .compat import TaskGroup
 from .proto.multiplex import Multiplexer
 from .proto import RemoteError
-from .main import ABytes, NoPort, copy_over, add_client_hooks
+from .main import ABytes, NoPort, copy_over
 from .main import get_serial, get_link, get_link_serial, get_remote
 
 from moat.util.main import load_subgroup
@@ -227,9 +227,7 @@ async def sync(obj, source, dest, cross):
 	Sync of MoaT code on a running MicroPython device.
 
 	"""
-	async with get_link(obj) as req:
-		add_client_hooks(req)
-
+	async with get_link(obj, ignore=True) as req:
 		dst = MoatFSPath("/"+dest).connect_repl(req)
 		await copy_over(source, dst, cross=cross)
 
@@ -242,9 +240,7 @@ async def boot(obj, state):
 	Restart a MoaT node
 
 	"""
-	async with get_link(obj) as req:
-		add_client_hooks(req)
-
+	async with get_link(obj, ignore=True) as req:
 		if state:
 			await req.send(["sys","state"],state=state)
 
@@ -278,9 +274,7 @@ async def cmd(obj, path, **attrs):
 	if len(path) == 0:
 		raise click.UsageError("Path cannot be empty")
 
-	async with get_link(obj) as req:
-		add_client_hooks(req)
-
+	async with get_link(obj, ignore=True) as req:
 		try:
 			res = await req.send(list(path), val)
 		except RemoteError as err:
@@ -317,9 +311,7 @@ async def cfg(obj, replace, fallback, current, write_current, **attrs):
 	else:
 		mode = 3
 
-	async with get_link(obj) as req:
-		add_client_hooks(req)
-
+	async with get_link(obj, ignore=True) as req:
 		if replace:
 			val = deepcopy(clean_cfg(obj.cfg))
 		elif not has_attrs and not write_current:
@@ -398,9 +390,7 @@ async def _mplex(obj, no_config=False, debug=None, remote=False, server=None):
 @click.pass_obj
 async def mount(obj, path, blocksize):
 	"""Mount a controller's file system on the host"""
-	async with get_link(obj) as req:
-		add_client_hooks(req)
-
+	async with get_link(obj, ignore=True) as req:
 		import pyfuse3
 
 		from moat.micro.fuse import Operations

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import asyncclick as click
-from moat.micro.main import get_link, add_client_hooks
+from moat.micro.main import get_link
 from moat.util import attrdict, P, yload, Path
 from distkv.client import open_client
 
@@ -16,8 +16,7 @@ async def main(socket):
     obj.debug=1
     with open("/etc/distkv.cfg") as cff:
         cfg = yload(cff)
-    async with get_link(obj) as m, open_client(**cfg) as dkv:
-        add_client_hooks(m)
+    async with get_link(obj, ignore=True) as m, open_client(**cfg) as dkv:
         await m.send(["sys","load"], n="i",m="i2c.Cmd")
         cd = await m.send(["i","open"], c=5,d=4)
         thl = await m.send(["i","scan"], cd=cd)

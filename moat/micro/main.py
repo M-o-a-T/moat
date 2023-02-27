@@ -61,10 +61,6 @@ class ABytes(io.BytesIO):
 class NoPort(RuntimeError):
 	pass
 
-def add_client_hooks(req):
-	bc = req.stack(ClientBaseCmd)
-	bc.cmd_link = lambda _:0
-
 async def copy_over(src, dst, cross=None):
 	tn = 0
 	if await src.is_file():
@@ -115,7 +111,7 @@ async def get_serial(obj):
 
 
 @asynccontextmanager
-async def get_link_serial(obj, ser, **kw):
+async def get_link_serial(obj, ser, ignore=False, **kw):
 	"""\
 		Context: Link to the target using the serial port @ser and a
 		console-ish stack.
@@ -123,6 +119,9 @@ async def get_link_serial(obj, ser, **kw):
 		Returns the top stream.
 		"""
 	t,b = await console_stack(AnyioMoatStream(ser), log=obj.debug>2, reliable=not obj.reliable, console=0xc1 if obj.guarded else False, **kw)
+	if ignore:
+		t.ignore_hooks()
+
 	async with TaskGroup() as tg:
 		task = await tg.spawn(b.run)
 		try:
@@ -132,7 +131,7 @@ async def get_link_serial(obj, ser, **kw):
 
 
 @asynccontextmanager
-async def get_link(obj, use_port=False, **kw):
+async def get_link(obj, ignore=False, use_port=False, reset=False, **kw):
 	"""\
 		Context: Link to the target: the Unix-domain socket, if that can be
 		connected to, or the serial port.
@@ -147,12 +146,14 @@ async def get_link(obj, use_port=False, **kw):
 	except (AttributeError,OSError):
 		if not use_port:
 			raise
-		async with get_serial(obj) as ser:
-			async with get_link_serial(obj,ser, **kw) as link:
+		async with get_serial(obj, reset=reset, flush=True) as ser:
+			async with get_link_serial(obj,ser, ignore=ignore, **kw) as link:
 				yield link
 	else:
 		try:
 			t,b = await console_stack(AnyioMoatStream(sock), log=obj.debug>2, reliable=True, **kw)
+			if ignore:
+				t.ignore_hooks()
 			async with TaskGroup() as tg:
 				task = await tg.spawn(b.run)
 				yield t

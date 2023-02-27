@@ -309,7 +309,7 @@ class Request(_Stacked):
             else:
                 evt.set_error(RemoteError(e))
 
-    async def send(self, action, msg=None, **kw):
+    async def send(self, action, msg=None, /, **kw):
         """
         Send a request, return the response.
 

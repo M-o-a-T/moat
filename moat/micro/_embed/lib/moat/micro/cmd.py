@@ -3,61 +3,70 @@ from moat.micro.proto import _Stacked, RemoteError, SilentRemoteError as FSError
 
 import sys
 
-#
-# Basic infrastructure to run an RPC system via an unreliable,
-# possibly-reordering, and/or stream-based transport
-#
-# We have a stack of classes, linked by parent/child pointers.
-# At the bottom there's some Stream adapter. At the top we have the command
-# handling, implemented by the classes Request (send a command, wait for
-# reply) and Base (receive a command, generate a reply). Base classes form
-# a tree.
-#
-# Everything is fully asynchronous. Each class has a "run" method which is
-# required to call its child's "run", as well as do internal housekeeping
-# if required. A "run" method may expect its parent to be operational;
-# it gets cancelled if/when that is no longer true. When a child's "run"
-# terminates, the parent's "run" needs to return.
-#
-# Incoming messages are handled by the child's "dispatch" method. They
-# are expected to be fully asynchronous, i.e. a "run" method that calls
-# "dispatch" must use a separate task to do so.
-#
-# Outgoing messages are handled by the parent's "send" method. Send calls
-# return when the data has been sent, implying that sending on an
-# unreliable transport will wait for the message to be confirmed. Sending
-# may fail.
+"""
+Basic infrastructure to run an RPC system via an unreliable,
+possibly-reordering, and/or stream-based transport
+
+We have a stack of classes, linked by parent/child pointers.
+At the bottom there's some Stream adapter. At the top we have the command
+handling, implemented by the classes Request (send a command, wait for
+reply) and Base (receive a command, generate a reply). Base classes form
+a tree.
+
+Everything is fully asynchronous. Each class has a "run" method which is
+required to call its child's "run", as well as do internal housekeeping
+if required. A "run" method may expect its parent to be operational;
+it gets cancelled if/when that is no longer true. When a child's "run"
+terminates, the parent's "run" needs to return.
+
+Incoming messages are handled by the child's "dispatch" method. They
+are expected to be fully asynchronous, i.e. a "run" method that calls
+"dispatch" must use a separate task to do so.
+
+Outgoing messages are handled by the parent's "send" method. Send calls
+return when the data has been sent, implying that sending on an
+unreliable transport will wait for the message to be confirmed. Sending
+may fail.
+"""
 
 
 class BaseCmd(_Stacked):
-    # Request/response handler (server side)
-    # 
-    # This is attached as a child to the Request object.
-    #
-    # Incoming requests call `cmd_*` with `*` being the action. If the
-    # action is a string, the complete string is tried first, then
-    # the first character. Otherwise (action is a list) the first
-    # element is used as-is.
-    #
-    # If the action is empty, call the `cmd` method instead. Otherwise if
-    # no method is found return an error.
-    # 
-    # Attach a sub-base directly to their parents by setting their
-    # `cmd_XX` property to it.
-    #
-    # The `send` method simply forwards to its parent, for convenience.
-    #
-    # This is the toplevel entry point. You build a request stack by piling
-    # modules on top of each other; the final one is a Request. On top of
-    # that Request you stack Base subclasses according to the functions you
-    # need.
-    #
+    """
+    Request/response handler (server side)
+
+    This is attached as a child to the Request object.
+
+    Incoming requests call `cmd_*` with `*` being the action. If the
+    action is a string, the complete string is tried first, then
+    the first character. Otherwise (action is a list) the first
+    element is used as-is.
+
+    If the action is empty, call the `cmd` method instead. Otherwise if
+    no method is found return an error.
+
+    Attach a sub-base directly to their parents by setting their
+    `cmd_XX` property to it.
+
+    The `send` method simply forwards to its parent, for convenience.
+
+    This is the toplevel entry point. You build a request stack by piling
+    modules on top of each other; the final one is a Request. On top of
+    that Request you stack Base subclasses according to the functions you
+    need.
+    """
 
     async def run(self):
+        """
+        Main loop for this part.
+
+        By default, does nothing.
+        """
         pass
 
     async def run_sub(self):
-        # start my (and my children's) "run" task
+        """
+        Runs my (and my children's) "run" methods.
+        """
         async with TaskGroup() as tg:
             self._tg = tg
             await tg.spawn(self.run)
@@ -70,10 +79,27 @@ class BaseCmd(_Stacked):
                     await tg.spawn(v.run_sub)
 
     async def aclose(self):
+        """
+        Stop my (and my children's) "run" methods.
+        """
         self._tg.cancel()
         await super().aclose()
 
-    async def dispatch(self, action, msg):
+    async def dispatch(self, action:str|list[str], msg:dict|Any):
+        """
+        Process one incoming message.
+
+        @msg is either a dict (keyword+value for the destination handler)
+        or not (single direct argument).
+
+        @action may be a string or an array. The first element of
+        the array is used to look up a submodule. Same for the first char
+        of a string, if there's no command with that name. An empty-string
+        action calls the ``cmd`` method.
+
+        Returns whatever the called command returns/raises, or raises
+        AttributeError if no command is found.
+        """
         async def c(p):
             if isinstance(msg,dict):
                 r = p(**msg)
@@ -106,16 +132,28 @@ class BaseCmd(_Stacked):
             return await c(getattr(self,"cmd_"+action[0]))
 
     async def __call__(self, *a, **k):
+        """
+        Alias for the dispatcher
+        """
         return await self.dispatch(*a, **k)
 
     async def config_updated(self):
+        """
+        Trigger: when the config has been updated, tell this module to
+        update itself.
+
+        May be overridden, but do call ``super()``.
+        """
         for k in dir(self):
             if k.startswith("dis_"):
                 v = getattr(self,k)
                 await v.config_updated()
 
     def cmd__dir(self):
-        # rudimentary introspection
+        """
+        Rudimentary introspection. Returns a list of available commands @c and
+        submodules @d
+        """
         d=[]
         c=[]
         res = dict(c=c, d=d)
@@ -138,7 +176,9 @@ class BaseCmd(_Stacked):
 
 
 class ClientBaseCmd(BaseCmd):
-    # a BaseCmd subclass that adds link state tracking
+    """
+    a BaseCmd subclass that adds link state tracking
+    """
     def __init__(self, parent):
         super().__init__(parent)
         self.started = Event()
@@ -151,14 +191,18 @@ class ClientBaseCmd(BaseCmd):
 
 
 class Request(_Stacked):
-    # Request/Response handler (client side)
-    # 
-    # Call "send" with an action (a string or list) to select
-    # the function of the recipient. The response is returned / raised.
-    # The second argument is expanded by the recipient if it is a dict.
-    # Requests are cancelled when the lower layer terminates.
-    # 
-    # The transport must be reliable.
+    """
+    Request/Response handler (client side)
+
+    Call "send" with an action (a string or list) to select
+    the function of the recipient. The response is returned / raised.
+    The second argument is expanded by the recipient if it is a dict.
+    Requests are cancelled when the lower layer terminates.
+
+    The transport may re-order messages, but it must not lose them.
+
+    This is the "top" module of a connection's stack.
+    """
 
     def __init__(self, *a, **k):
         super().__init__(*a,**k)
@@ -173,10 +217,11 @@ class Request(_Stacked):
     def base(self):
         return self.child
 
-    def terminate(self):
-        self._tg.cancel()
-
     async def run(self):
+        """
+        Main loop for this stack. Starts child modules' mainloops and
+        reads+dispatches incoming reuqests.
+        """
         try:
             async with TaskGroup() as tg:
                 self._tg = tg
@@ -194,6 +239,11 @@ class Request(_Stacked):
             e.set_error(CancelledError())
 
     async def _handle_request(self, a,i,d,msg):
+        """
+        Handler for a single request.
+
+        `dispatch` starts this in a new task.
+        """
         res={'i':i}
         try:
             r = await self.child.dispatch(a,d)
@@ -202,6 +252,7 @@ class Request(_Stacked):
         except WouldBlock:
             raise
         except Exception as exc:
+            # TODO only when debugging
             print("ERROR handling",a,i,d,msg, file=sys.stderr)
             print_exc(exc)
             if i is None:
@@ -221,6 +272,9 @@ class Request(_Stacked):
 
 
     async def dispatch(self, msg):
+        """
+        Main handler for incoming messages
+        """
         if not isinstance(msg,dict):
             print("?3",msg)
             return
@@ -234,7 +288,8 @@ class Request(_Stacked):
             # TODO create a task pool
             await self._tg.spawn(self._handle_request,a,i,d,msg)
 
-        else: # reply
+        else:
+            # reply
             if i is None:
                 # No seq#. Dunno what to do about these.
                 print("?4",d,msg)
@@ -255,11 +310,12 @@ class Request(_Stacked):
                 evt.set_error(RemoteError(e))
 
     async def send(self, action, msg=None, **kw):
-        # send a request, return the response
-        if self.seq > 100 and not self.reply:
-            self.seq = 9
-        self.seq += 1
-        seq = self.seq
+        """
+        Send a request, return the response.
+
+        The message is either the second parameter, or any number of
+        keywords.
+        """
         if msg is None:
             msg = kw
         elif kw:
@@ -275,11 +331,14 @@ class Request(_Stacked):
             del self.reply[seq]
 
     async def send_nr(self, action, msg=None, **kw):
-        # send a message, no reply
+        """
+        Send an unsolicited message (no seqnum == no reply)
+        """
         if msg is None:
             msg = kw
         elif kw:
             raise TypeError("cannot use both msg data and keywords")
+
         msg = {"a":action,"d":msg}
         await self.parent.send(msg)
 

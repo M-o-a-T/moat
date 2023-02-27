@@ -82,7 +82,30 @@ to talk to the satellite.
 
 There's a basic directory function:
 
-	moat micro -c whatever.cfg
+	moat micro -c whatever.cfg cmd _dir
+
+* c
+
+  A list of commands you can call directly.
+
+* d
+
+  A list of submodules. You can enumerate them, too:
+
+	moat micro -c whatever.cfg cmd sys._dir
+
+Online docstrings for these are on the TODO list.
+
+### Built-in commands
+
+#### ping
+
+Your basic "are you still there?" message. Echoes its `m` argument. Not for
+machine comsumption.
+
+#### sys.is_up
+
+Triggers sending a "link" message.
 
 ## Message structure
 
@@ -110,6 +133,17 @@ conserve client memory.
 
   Error. The content is a string (error type), data must be an array
   (arguments).
+
+### Built-in unsolicited messages
+
+#### link
+
+Send when a link is established (data: ``True``) or taken down (data:
+``False``).
+
+Obviously you cannot depend on any of these to happen automatically. Use
+`sys.is_up` to trigger this message if you don't get it after connecting;
+use .
 
 ### Proxy objects
 
@@ -152,6 +186,40 @@ controller memory.)
 
 In order to support multiple parallel usages, a simple multiplexing
 protocol allows clients to connect using a Unix-domain socket.
+
+## Configuration
+
+Configuration data for a module is stored on the module. You can read and
+update it online, though reading of larger config files is best done via
+the file system.
+
+### wdt
+
+Watchdog timer configuration.
+
+* t
+
+  Timeout. You need to send a ``sys.wdt`` message every this-many seconds.
+  The default is 10 seconds.
+
+* s
+
+  Start. 0: manually, 1: immediately, 2: after network config, 3:
+  before task start, 4: before mainloop start. The default is zero.
+
+  Note that each of these phases might take multiple seconds.
+
+* n
+
+  If you autostart the watchdog, the first ``n`` watchdog periods are covered by
+  the controller. After that, you need to have established a connection and
+  started sending periodic ``sys.wdt`` messages.
+
+  n=-1: no "free" watchdog messages. The default is ``3``, but at least one
+  minute.
+
+  The first ``sys.wdt`` message terminates the effect of this parameter.
+
 
 ## Modular applications
 

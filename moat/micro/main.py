@@ -19,6 +19,9 @@ logger = logging.getLogger(__name__)
 
 
 class ABytes(io.BytesIO):
+	"""
+	An async-IO-mimicing version of `io.BytesIO`.
+	"""
 	def __init__(self, name, data):
 		super().__init__()
 		self.name = name

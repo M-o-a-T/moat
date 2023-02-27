@@ -3,7 +3,6 @@
 import os
 import sys
 
-import msgpack
 import importlib
 
 import anyio
@@ -19,7 +18,7 @@ from .main import ABytes, NoPort, copy_over
 from .main import get_serial, get_link, get_link_serial, get_remote
 
 from moat.util.main import load_subgroup
-from moat.util import attrdict, as_service, P, attr_args, process_args, yprint, yload
+from moat.util import attrdict, as_service, P, attr_args, process_args, yprint, yload, packer, unpacker
 
 import logging
 logger = logging.getLogger(__name__)
@@ -148,7 +147,7 @@ async def setup(obj, source, root, dest, no_run, no_reset, force_exit, exit, ver
 			if force_exit:
 				pk = b"\xc1\xc1"
 			else:
-				pk = msgpack.Packer().packb(dict(a=["sys","stop"],code="SysStoP"))
+				pk = packer(dict(a=["sys","stop"],code="SysStoP"))
 				pk = pk+b"\xc1"+pk
 
 			if obj.reliable:
@@ -184,7 +183,7 @@ async def setup(obj, source, root, dest, no_run, no_reset, force_exit, exit, ver
 			if config:
 				cfg = yload(config)
 				cfg = clean_cfg(cfg)
-				cfg = msgpack.Packer().pack(cfg)
+				cfg = packer(cfg)
 				f = ABytes("moat.cfg",cfg)
 				await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl), cross=cross)
 
@@ -284,54 +283,53 @@ async def cmd(obj, path, **attrs):
 
 @cli.command(short_help='Get / Update the configuration')
 @click.pass_obj
-@click.option("-C","--write-current", is_flag=True, help="Write current config to flash")
-@click.option("-r","--replace", is_flag=True, help="Send our config data")
-@click.option("-f","--fallback", is_flag=True, help="Change fallback config data")
-@click.option("-c","--current", is_flag=True, help="Read current config data")
+@click.option("-r","--read", help="Read to-be-updated config from flash")
+@click.option("-w","--write", is_flag=True, help="Write current config to flash")
+@click.option("-n","--name", help="File to write to. Default 'moat.cfg' if no fallback runs.")
 @attr_args(with_proxy=True)
-async def cfg(obj, replace, fallback, current, write_current, **attrs):
+async def cfg(obj, stdin, read, write, name, **attrs):
 	"""
 	Update a remote configuration.
 
-	Writing to the remote config is persistent.
+	The remote config is updated online if you only use "-v -e -P"
+	arguments. No output is printed in this case.
 
-	The selected config is printed if no modifiers are used.
+	Otherwise, the configuration is read as YAML from stdin (``-r -``),
+	as msgpack from Flash (``-r xx.cfg``), or from the client's memory.
+	It is then modified according to the "-v -e -P" arguments (if any) and
+	written to Flash (``-w xx.cfg``) or stdout (``-w -``).
 	"""
 	from copy import deepcopy
 	has_attrs = any(a for a in attrs.values())
 
-	if write_current:
-		if has_attrs or fallback or replace or current:
-			raise click.UsageError("Can't use 'write-current' with anything else")
-		mode = 1
-	elif not fallback:
-		mode = 0 if current else 2
-	elif current:
-		raise click.UsageError("Can't use both 'fallback' and 'current'")
-	else:
-		mode = 3
+	if read and stdin:
+		raise click.UsageError("Can't use both stdin and a Flash file")
+
+	val = {}
+	val = process_args(val, **attrs)
 
 	async with get_link(obj, ignore=True) as req:
-		if replace:
-			val = deepcopy(clean_cfg(obj.cfg))
-		elif not has_attrs and not write_current:
-			val = await req.send(["sys","cfg"], mode=mode)
-		else:
-			val = {}
+		if read == "-":
+			cfg = yload(sys.stdin)
+		elif read:
+			p = MoatFSPath(read).connect_repl(req)
+			d = await p.read_bytes(chunk=64)
+			cfg = unpacker(d)
+		elif write or not val:
+			cfg = await req.get_cfg()
+		else: 
+			await req.set_cfg(val)
+			return
 
-		if not replace and not has_attrs and not write_current:
-			yprint(val)
+		cfg = merge(cfg,val)
+		if write and write != "-":
+			p = MoatFSPath(write).connect_repl(req)
+			d = packer(cfg)
+			await p.write_bytes(d, chunk=64)
 		else:
-			val = process_args(val, **attrs)
-			try:
-				res = await req.send(["sys","cfg"], cfg=val, mode=mode)
-			except RemoteError as err:
-				yprint(dict(e=str(err.args[0])))
-				sys.exit(1)
-			else:
-				yprint(res)
+			yprint(cfg)
 
-			
+
 @cli.command(short_help='Run the multiplexer')
 @click.option("-n","--no-config", is_flag=True, help="don't fetch the config from the client")
 @click.option("-d","--debug", is_flag=True, help="don't retry on (some) errors")

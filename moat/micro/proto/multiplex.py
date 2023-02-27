@@ -132,8 +132,8 @@ class _MplexCommand(BaseCmd):
 
 	async def cmd_cfg(self, cfg):
 		cfg = to_attrdict(cfg)
-		merge(self.request.cfg, cfg, drop=("port" in cfg))
-		await self.request.config_updated()
+		self.request.cfg = merge(self.request.cfg, cfg, drop=("port" in cfg))
+		await self.request.config_updated(cfg)
 
 
 class _LocalCommand(BaseCmd):

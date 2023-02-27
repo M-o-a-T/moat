@@ -141,7 +141,7 @@ class SysCmd(BaseCmd):
         if not p:
             if d is not None:
                 raise ValueError("no override root")
-            await self.base.config_updated()
+            await self.base.config_updated(cfg)
             await self.request.send_nr(["mplex","cfg"])
             return
         for pp in p[:-1]:

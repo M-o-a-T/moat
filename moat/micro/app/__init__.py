@@ -9,7 +9,7 @@ class BaseApp:
         self.gcfg = gcfg
         self.name = name
 
-    async def config_updated(self):
+    async def config_updated(self, cfg):
         pass
 
 class BaseAppCmd(BaseCmd):

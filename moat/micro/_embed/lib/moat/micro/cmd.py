@@ -137,7 +137,7 @@ class BaseCmd(_Stacked):
         """
         return await self.dispatch(*a, **k)
 
-    async def config_updated(self):
+    async def config_updated(self, cfg):
         """
         Trigger: when the config has been updated, tell this module to
         update itself.
@@ -147,7 +147,7 @@ class BaseCmd(_Stacked):
         for k in dir(self):
             if k.startswith("dis_"):
                 v = getattr(self,k)
-                await v.config_updated()
+                await v.config_updated(cfg.get(k[4:],{}))
 
     def cmd__dir(self):
         """

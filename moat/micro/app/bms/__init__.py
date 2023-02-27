@@ -58,7 +58,7 @@ class BMSCmd(BaseAppCmd):
 #		await self.batt.updated.wait()
 #		return self.batt.data
 
-	async def config_updated(self):
+	async def config_updated(self, cfg):
 		await self.ctrl.config_updated()
 
 	async def run(self):

@@ -102,7 +102,7 @@ class BMS:
 				self.live_flag = Event()
 				self.live_state(True)
 
-	async def config_updated(self):
+	async def config_updated(self, cfg):
 		old_u_scale, old_u_offset = self.adc_u_scale, self.adc_u_offset
 		old_i_scale, old_i_offset = self.adc_i_scale, self.adc_i_offset
 		self._set_scales()
@@ -222,9 +222,9 @@ class BMSCmd(BaseCmd):
 		finally:
 			self.bms = None
 
-	async def config_updated(self):
-		await super().config_updated()
-		await self.bms.config_updated()
+	async def config_updated(self, cfg):
+		await super().config_updated(cfg)
+		await self.bms.config_updated(cfg)
 
 	async def cmd_rly(self, st=NotGiven):
 		"""

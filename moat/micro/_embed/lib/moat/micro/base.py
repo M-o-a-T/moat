@@ -4,7 +4,6 @@ from .cmd import BaseCmd
 from .compat import TaskGroup, sleep_ms, ticks_ms, ticks_diff
 from .proto import RemoteError
 from .proto.stream import drop_proxy
-from ..util import merge
 
 import uos
 import usys

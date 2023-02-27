@@ -13,5 +13,3 @@ class NotGiven:
 class NoProxyError(ValueError):
     pass
 
-from .merge import merge
-

@@ -331,8 +331,7 @@ class Request(_Stacked):
                 break
         msg = {"a":action,"d":msg,"i":seq}
 
-        e = ValueEvent()
-        self.reply[seq] = e
+        self.reply[seq] = e = ValueEvent()
         try:
             await self.parent.send(msg)
             return await e.get()

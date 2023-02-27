@@ -5,9 +5,13 @@ from .compat import TaskGroup, sleep_ms, ticks_ms, ticks_diff
 from .proto import RemoteError
 from .proto.stream import drop_proxy
 
+import machine
 import uos
 import usys
 import gc
+
+class NoArg:
+    pass
 
 class SysCmd(BaseCmd):
     # system and other low level stuff
@@ -52,6 +56,21 @@ class SysCmd(BaseCmd):
         Use this to verify that nothing mangles anything.
         """
         return b"r\x0dn\x0a-\x00x\x0ce\x1b!"
+
+    async def cmd_wdt(self, t=None):
+        """
+        Starts the watchdog (@t > 0) or restarts it.
+        """
+        from .main import wdt
+        w = wdt()
+        if w:
+            w.feed()  # XXX ignores T, might error instead
+        elif t:
+            wdt(machine.WDT(t))
+        else:
+            # no watchdog running
+            return False
+        return True
 
     async def cmd_cfg_r(self, fn:str=None):
         """

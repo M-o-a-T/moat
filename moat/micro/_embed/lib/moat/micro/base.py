@@ -13,6 +13,12 @@ import gc
 class NoArg:
     pass
 
+def _complex(v):
+    if not isinstance(v,(dict,list,tuple)):
+        return False
+    # TODO check length of packed object without actually packing it
+    return True
+
 class SysCmd(BaseCmd):
     # system and other low level stuff
     def __init__(self, parent):

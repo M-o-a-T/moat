@@ -121,7 +121,10 @@ async def get_link_serial(obj, ser, ignore=False, **kw):
 
 		Returns the top stream.
 		"""
-	t,b = await console_stack(AnyioMoatStream(ser), log=obj.debug>2, reliable=not obj.reliable, console=0xc1 if obj.guarded else False, **kw)
+	kw.setdefault("log", obj.debug>2)
+	kw.setdefault("reliable", not obj.reliable)
+
+	t,b = await console_stack(AnyioMoatStream(ser), msg_prefix=0xc1 if obj.guarded else None, **kw)
 	if ignore:
 		t.ignore_hooks()
 
@@ -141,6 +144,9 @@ async def get_link(obj, ignore=False, use_port=False, reset=False, **kw):
 
 		Returns the top MoaT stream.
 		"""
+	kw.setdefault("log", obj.debug>2)
+	kw.setdefault("reliable", True)
+
 	try:
 		if obj.socket:
 			sock = await anyio.connect_unix(obj.socket)
@@ -154,7 +160,7 @@ async def get_link(obj, ignore=False, use_port=False, reset=False, **kw):
 				yield link
 	else:
 		try:
-			t,b = await console_stack(AnyioMoatStream(sock), log=obj.debug>2, reliable=True, **kw)
+			t,b = await console_stack(AnyioMoatStream(sock), **kw)
 			if ignore:
 				t.ignore_hooks()
 			async with TaskGroup() as tg:

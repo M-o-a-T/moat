@@ -18,7 +18,7 @@ from .main import ABytes, NoPort, copy_over
 from .main import get_serial, get_link, get_link_serial, get_remote
 
 from moat.util.main import load_subgroup
-from moat.util import attrdict, as_service, P, attr_args, process_args, yprint, yload, packer, unpacker
+from moat.util import attrdict, as_service, P, attr_args, process_args, yprint, yload, packer, unpacker, merge
 
 import logging
 logger = logging.getLogger(__name__)
@@ -41,6 +41,10 @@ async def cli(obj, socket,port,baudrate,reliable,guarded, config):
 	"""MicroPython satellites"""
 	cfg = obj.cfg.micro
 
+	if config:
+		with open(config,"r") as f:
+			cc = yload(f)
+			merge(cfg, cc)
 	try:
 		cfg.port
 	except AttributeError:

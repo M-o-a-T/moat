@@ -218,7 +218,7 @@ class MoatDevPath(_MoatPath):
             res.append(r)
         return b''.join(res)
 
-    async def write_bytes(self, data) -> int:
+    async def write_bytes(self, data, chunk=512) -> int:
         """
         :param bytes contents: Data
 
@@ -231,7 +231,7 @@ class MoatDevPath(_MoatPath):
         # write in chunks
         with io.BytesIO(data) as local_file:
             while True:
-                block = local_file.read(512)
+                block = local_file.read(chunk)
                 if not block:
                     break
                 await self._repl.exec(f'_f.write(a2b({binascii.b2a_base64(block).rstrip()!r}))')
@@ -398,7 +398,7 @@ class MoatFSPath(_MoatPath):
         return await self._req("rmdir", p=self.as_posix())
         self._stat_cache = None
 
-    async def read_as_stream(self, chunk=512):
+    async def read_as_stream(self, chunk=128):
         """
         :returns: async Iterator
         :rtype: Iterator of bytes
@@ -417,7 +417,7 @@ class MoatFSPath(_MoatPath):
         finally:
             await self._req("cl", fd=fd)
 
-    async def read_bytes(self, chunk=512) -> bytes:
+    async def read_bytes(self, chunk=128) -> bytes:
         """
         :returns: file contents
         :rtype: bytes
@@ -429,7 +429,7 @@ class MoatFSPath(_MoatPath):
             res.append(r)
         return b''.join(res)
 
-    async def write_bytes(self, data, chunk=512) -> int:
+    async def write_bytes(self, data, chunk=128) -> int:
         """
         :param bytes contents: Data
 

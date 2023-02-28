@@ -6,6 +6,7 @@ import sys
 import anyio
 from contextlib import asynccontextmanager
 
+from moat.micro.compat import TaskGroup
 from moat.util import attrdict
 from moat.micro.main import get_link_serial
 from moat.micro.proto.multiplex import Multiplexer
@@ -33,8 +34,14 @@ async def _test(tp):
                 yield link
 
     mplex = Multiplexer(factory, tp / "moat" ,{}, fatal=True)
-    with anyio.move_on_after(3):
-        await mplex.serve(load_cfg=True)
+    async with TaskGroup() as tg:
+        srv = await tg.spawn(mplex.serve, load_cfg=True)
+        with anyio.fail_after(3):
+            await mplex.wait()
+        # TODO test stuff
+        print("TEST")
+        await anyio.sleep(1)
+        srv.cancel()
 
 
 def test_micro(tmp_path):

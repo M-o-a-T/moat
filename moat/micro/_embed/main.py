@@ -106,6 +106,14 @@ def go_moat(state=None, fake_end=True, log=False):
         machine.soft_reset()
 
     except BaseException as exc:
+        if usys.platform == "linux":
+            if isinstance(exc,EOFError) and usys.platform == "linux":
+                print("MoaT stopped: EOF", file=usys.stderr)
+                usys.exit(0)
+            print("CRASH! Exiting!", file=usys.stderr)
+            print_exc(exc)
+            usys.exit(1)
+
         try:
             new_state = crash[state]
         except KeyError:
@@ -115,19 +123,14 @@ def go_moat(state=None, fake_end=True, log=False):
             f.write(new_state)
             f.close()
 
-        try:
-            r = machine.soft_reset
-        except AttributeError:
-            print("CRASH! Exiting!", file=usys.stderr)
-            print_exc(exc)
-            usys.exit(1)
-        else:
-            print("CRASH! REBOOT to", new_state, file=usys.stderr)
-            print_exc(exc)
-            utime.sleep_ms(500)
-            r()
+        print("CRASH! REBOOT to", new_state, file=usys.stderr)
+        print_exc(exc)
+        utime.sleep_ms(500)
+        machine.soft_reset()
+
     else:
         print("MoaT Ended.", file=usys.stderr)
+        usys.exit(0)
 
 def g():
     go_moat("once")

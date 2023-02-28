@@ -382,6 +382,8 @@ class Multiplexer(Request):
 			await self.running.wait()
 			await self._serve_stream(self.socket)
 
+	async def wait(self):
+		await self.running.wait()
 
 	async def client_cmd(self, a,d):
 		return await self.send(a,d)

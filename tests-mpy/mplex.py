@@ -3,7 +3,7 @@
 import usys
 import uos
 
-dd="/tmp/test-upy"
+dd= usys.argv[1] if usys.argv else "/tmp/test-upy"
 try:
     uos.mkdir(dd)
 except OSError:

@@ -316,7 +316,7 @@ class Multiplexer(Request):
 						logger.info("Retrieving config")
 						if self.load_cfg:
 							with anyio.fail_after(10):
-								cfg = await self.send(["sys","cfg"], mode=0)
+								cfg = await self.get_cfg()
 							merge(self.cfg, cfg, drop=("port" in cfg))
 							# if "port" is there, the stored config is not trimmed
 							self.cfg = to_attrdict(self.cfg)

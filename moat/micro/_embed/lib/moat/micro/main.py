@@ -157,10 +157,17 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
         # Console/serial
         async def run_console(force_write=False, **kw):
             from moat.micro.stacks import console_stack
-            from moat.micro.proto.stream import AsyncStream
             import micropython
             micropython.kbd_intr(-1)
-            t,b = console_stack(AsyncStream(sys.stdin.buffer, sys.stdout.buffer, force_write=force_write), **kw)
+            try:
+                in_b = sys.stdin.buffer
+                out_b = sys.stdout.buffer
+                from moat.micro.proto.stream import AsyncStream
+                s = AsyncStream(in_b, out_b, force_write=force_write)
+            except AttributeError:  # on Unix
+                from moat.micro.proto.fd import AsyncFD
+                s = AsyncFD(sys.stdin, sys.stdout)
+            t,b = await console_stack(s, **kw)
             t = t.stack(StdBase, fallback=fallback, state=state, cfg=cfg)
             cfg_setup(t, apps)
             await tg.spawn(b.run)
@@ -175,7 +182,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
             if port:
                 await tg.spawn(run_network, int(port))
             else:
-                await tg.spawn(reliable=True, log=log)
+                await run_console(reliable=True, log=log, msg_prefix=None)
 
         elif sys.platform in ("esp32","esp8266"):
             port = cfg["link"]["port"]

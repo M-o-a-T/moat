@@ -50,7 +50,7 @@ def go_moat(state=None, fake_end=True, log=False):
         try:
             f=open("moat.state","r")
         except OSError:
-            print("No 'moat.state' found")
+            print("No 'moat.state' found", file=usys.stderr)
             return
         else:
             state=f.read()
@@ -66,7 +66,7 @@ def go_moat(state=None, fake_end=True, log=False):
         f.close()
 
     if state[0:4] == "skip":
-        print(state)
+        print(state, file=usys.stderr)
         return
 
     # no empty path
@@ -86,7 +86,7 @@ def go_moat(state=None, fake_end=True, log=False):
         usys.path.insert(0,"/fallback")
         fallback = True
 
-    print("Start MoaT:",state)
+    print("Start MoaT:",state, file=usys.stderr)
     from moat.micro.compat import print_exc
     from moat.micro.main import main
 
@@ -95,13 +95,13 @@ def go_moat(state=None, fake_end=True, log=False):
         main(state=state, fake_end=fake_end, log=log, cfg=cfg, fallback=fallback)
 
     except KeyboardInterrupt:
-        print("MoaT stopped.")
+        print("MoaT stopped.", file=usys.stderr)
 
     except SystemExit:
         f=open("moat.state","r")
         new_state = f.read()
         f.close()
-        print("REBOOT to", new_state)
+        print("REBOOT to", new_state, file=usys.stderr)
         utime.sleep_ms(100)
         machine.soft_reset()
 
@@ -115,12 +115,19 @@ def go_moat(state=None, fake_end=True, log=False):
             f.write(new_state)
             f.close()
 
-        print("CRASH! REBOOT to", new_state)
-        print_exc(exc)
-        utime.sleep_ms(500)
-        machine.soft_reset()
+        try:
+            r = machine.soft_reset
+        except AttributeError:
+            print("CRASH! Exiting!", file=usys.stderr)
+            print_exc(exc)
+            usys.exit(1)
+        else:
+            print("CRASH! REBOOT to", new_state, file=usys.stderr)
+            print_exc(exc)
+            utime.sleep_ms(500)
+            r()
     else:
-        print("MoaT Ended.")
+        print("MoaT Ended.", file=usys.stderr)
 
 def g():
     go_moat("once")

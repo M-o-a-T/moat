@@ -1,4 +1,4 @@
-from usys import print_exception as print_exc
+import usys
 import uasyncio
 Event = uasyncio.Event
 Lock = uasyncio.Lock
@@ -13,6 +13,9 @@ from uasyncio.queues import Queue, QueueFull,QueueEmpty
 from utime import ticks_ms, ticks_add, ticks_diff
 
 WouldBlock = (QueueFull,QueueEmpty)
+
+def print_exc(a, b=usys.stderr):
+    usys.print_exception(a,b)
 
 async def idle():
     while True:

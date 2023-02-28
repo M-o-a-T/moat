@@ -345,6 +345,6 @@ class StdBase(BaseCmd):
 
         This is for humans. Don't use it for automated keepalive.
         """
-        print("PLING",m)
+        print("PING",m, file=usys.stderr)
         return "R:"+str(m)
 

@@ -24,7 +24,7 @@ def gen_apps(cfg, tg, print_exc):
         try:
             cmd = import_app(v)
         except Exception as exc:
-            print("Could not load",name,repr(exc))
+            print("Could not load",name,repr(exc), file=sys.stderr)
             print_exc(exc)
             continue
 
@@ -72,7 +72,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
             try:
                 cmd = cmd(t, name, lcfg, cfg)
             except TypeError:
-                print(cmd,t,name,type(lcfg),type(cfg))
+                print(cmd,t,name,type(lcfg),type(cfg), file=sys.stderr)
                 raise
             setattr(t, "dis_"+name, cmd)
 
@@ -88,15 +88,15 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
         n = 0
         if wlan.isconnected():
             return
-        print("WLAN", end="")
+        print("WLAN", end="", file=sys.stderr)
         while not wlan.isconnected():
             if n > 300:
-                print(" - no connection")
+                print(" - no connection", file=sys.stderr)
                 raise RuntimeError("no network link")
             n += 1
             time.sleep(0.1)
-            print(".", end="")
-        print(" -", wlan.ifconfig()[0])
+            print(".", end="", file=sys.stderr)
+        print(" -", wlan.ifconfig()[0], file=sys.stderr)
 
     _wdt = None
     wdt_t = 0

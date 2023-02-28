@@ -276,7 +276,7 @@ class Request(_Stacked):
         Main handler for incoming messages
         """
         if not isinstance(msg,dict):
-            print("?3",msg)
+            print("?3",msg, file=sys.stderr)
             return
         a = msg.pop("a",None)
         i = msg.pop("i",None)
@@ -292,17 +292,17 @@ class Request(_Stacked):
             # reply
             if i is None:
                 # No seq#. Dunno what to do about these.
-                print("?4",d,msg)
+                print("?4",d,msg, file=sys.stderr)
                 return
 
             e = msg.pop("e",None) if d is None else None
             try:
                 evt = self.reply[i]
             except KeyError:
-                print("?5",i,msg)
+                print("?5",i,msg, file=sys.stderr)
                 return # errored?
             if evt.is_set():
-                print("Duplicate reply?",a,i,d,msg)
+                print("Duplicate reply?",a,i,d,msg, file=sys.stderr)
                 return  # duplicate??
             if e is None:
                 evt.set(d)

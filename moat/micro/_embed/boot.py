@@ -1,3 +1,4 @@
 #from moat import setup
 #setup.run()
-print("BOOT")
+import usys
+print("BOOT", file=usys.stderr)

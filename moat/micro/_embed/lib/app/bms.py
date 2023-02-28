@@ -3,6 +3,7 @@ from moat.micro.cmd import BaseCmd
 from moat.micro.compat import ticks_ms, ticks_diff, sleep_ms, wait_for_ms, ticks_add, Event, TimeoutError, TaskGroup
 from moat.util import NotGiven
 import machine as M
+import sys
 
 # see 
 # 
@@ -40,19 +41,19 @@ class BMS:
 
 		if self.val_u < cc["u"]["min"]:
 			if self.relay.value():
-				print("UL",self.val_u)
+				print("UL",self.val_u, file=sys.stderr)
 			return False
 		if self.val_u > cc["u"]["max"]:
 			if self.relay.value():
-				print("UH",self.val_u)
+				print("UH",self.val_u, file=sys.stderr)
 			return False
 		if self.val_i < cc["i"]["min"]:
 			if self.relay.value():
-				print("IL",self.val_i)
+				print("IL",self.val_i, file=sys.stderr)
 			return False
 		if self.val_i > cc["i"]["max"]:
 			if self.relay.value():
-				print("IH",self.val_i)
+				print("IH",self.val_i, file=sys.stderr)
 			return False
 		return True
 
@@ -79,7 +80,7 @@ class BMS:
 			if not self.relay.value():
 				self.sw_ok = False
 				self.t_sw = ticks_add(self.t, self.cfg["relay"]["t"])
-				print("DLY", self.cfg["relay"]["t"])
+				print("DLY", self.cfg["relay"]["t"], file=sys.stderr)
 
 	def live_state(self, live:bool):
 		if self.live == live:
@@ -207,7 +208,7 @@ class BMS:
 
 	async def send_rly_state(self, txt):
 		self.xmit_evt.set()
-		print("RELAY",self.relay.value(), txt)
+		print("RELAY",self.relay.value(), txt, file=sys.stderr)
 
 
 class BMSCmd(BaseCmd):

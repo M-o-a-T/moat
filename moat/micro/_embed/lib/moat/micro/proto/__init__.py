@@ -62,7 +62,7 @@ class NotImpl:
         raise RuntimeError()
 
     async def run(self):
-        print("RUN of", self.__class__.__name__)
+        print("RUN of", self.__class__.__name__, file=usys.stderr)
         pass
 
     async def run_sub(self):
@@ -109,7 +109,7 @@ class Logger(_Stacked):
         self.txt = txt
 
     async def run(self):
-        print(f"X:{self.txt} start")
+        print(f"X:{self.txt} start", file=usys.stderr)
         try:
             await super().run()
         except EndOfStream:
@@ -119,10 +119,10 @@ class Logger(_Stacked):
             print(f"X:{self.txt} stop DIED")
             raise
         except Exception as exc:
-            print(f"X:{self.txt} stop {repr(exc)}")
+            print(f"X:{self.txt} stop {repr(exc)}", file=usys.stderr)
             raise
         else:
-            print(f"X:{self.txt} stop")
+            print(f"X:{self.txt} stop", file=usys.stderr)
 
     async def send(self,a,m=None):
         if m is None:
@@ -134,10 +134,10 @@ class Logger(_Stacked):
         else:
             mm=repr(m)
         if a is None:
-            print(f"S:{self.txt} {mm}")
+            print(f"S:{self.txt} {mm}", file=usys.stderr)
             await self.parent.send(m)
         else:
-            print(f"S:{self.txt} {a} {mm}")
+            print(f"S:{self.txt} {a} {mm}", file=usys.stderr)
             await self.parent.send(a,m)
 
     async def dispatch(self,a,m=None):
@@ -147,12 +147,12 @@ class Logger(_Stacked):
 
         mm=" ".join(f"{k}={repr(v)}" for k,v in m.items())
         if a is None:
-            print(f"D:{self.txt} {mm}")
+            print(f"D:{self.txt} {mm}", file=usys.stderr)
             await self.child.dispatch(m)
         else:
-            print(f"D:{self.txt} {a} {mm}")
+            print(f"D:{self.txt} {a} {mm}", file=usys.stderr)
             await self.child.dispatch(a,m)
-        print(f"{self.txt}:\n{repr(vars(self.child))}")
+        print(f"{self.txt}:\n{repr(vars(self.child))}", file=usys.stderr)
 
     async def recv(self):
         msg = await self.parent.recv()
@@ -160,6 +160,6 @@ class Logger(_Stacked):
             mm=" ".join(f"{k}={repr(v)}" for k,v in msg.items())
         else:
             mm=msg
-        print(f"R:{self.txt} {mm}")
+        print(f"R:{self.txt} {mm}", file=usys.stderr)
         return msg
 

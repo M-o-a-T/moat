@@ -199,6 +199,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
 
     async def _main():
         import sys
+        global _wdt
 
         # config: load apps
 
@@ -214,14 +215,14 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
                 sys.stdout.write("OK\x04\x04>")
 
             if wdt_s == 4:
-                wdt = machine.WDT(timeout=wdt_t*1.5)
+                _wdt = machine.WDT(timeout=wdt_t*1.5)
 
-            if wdt and wdt_t:
+            if _wdt is not None and wdt_t:
                 n = cfg["wdt"].get("n", 1+60000//wdt_t if wdt_t<20000 else 3)
                 if n:
                     wdt_chk = False
                     while not wdt_chk:
-                        wdt.feed()
+                        _wdt.feed()
                         await sleep_ms(wdt_t)
                         if n > 0:
                             n -= 1

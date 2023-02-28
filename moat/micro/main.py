@@ -77,13 +77,11 @@ async def copy_over(src, dst, cross=None):
 
 
 @asynccontextmanager
-async def get_serial(obj):
+async def get_serial(obj, reset:bool = False, flush:bool = True):
 	"""\
-		Context: the specified serial port.
+		Context: the specified serial port, as an an AnyIO stream.
 
-		Returns an anyio stream.
-
-		NB this cycles RTS and flushes data.
+		This code clears RTS and DTR.
 		"""
 	if not obj.port:
 		raise NoPort("No port given")
@@ -92,21 +90,26 @@ async def get_serial(obj):
 		_h['baudrate'] = obj.baudrate
 	except AttributeError:
 		pass
+	if not reset:
+		_h["rts"] = False
+		_h["dtr"] = False
 	ser = Serial(obj.port, **_h)
 	async with ser:
 		# clear DTR+RTS. May reset the target.
-		ser.rts = True
-		ser.dtr = False
-		await anyio.sleep(0.1)
-		ser.rts = False
+		if reset:
+			ser.rts = True
+			ser.dtr = False
+			await anyio.sleep(0.1)
+			ser.rts = False
 
 		# flush messages
-		while True:
-			with anyio.move_on_after(0.2):
-				res = await ser.receive(200)
-				logger.debug("Flush: %r", res)
-				continue
-			break
+		if flush:
+			while True:
+				with anyio.move_on_after(0.2):
+					res = await ser.receive(200)
+					logger.debug("Flush: %r", res)
+					continue
+				break
 		yield ser
 
 

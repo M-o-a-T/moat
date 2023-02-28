@@ -350,6 +350,16 @@ class Multiplexer(Request):
 				self.last_exc = exc
 				logger.exception("Restart due to error: %r", exc)
 
+				try:
+					retry = self.cfg.port.retry
+				except AttributeError:
+					pass
+				else:
+					if not retry:
+						raise
+					if backoff < retry:
+						backoff = retry
+
 				await anyio.sleep(backoff)
 				if backoff<20:
 					backoff *= 1.4

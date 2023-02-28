@@ -3,22 +3,12 @@
 # *********************************
 # 
 # This file should be synced with moat/proto/__init__.py
-# except for using print() instead of logging.
+# except for using print() instead of logging
+# and not understanding anyio exceptions.
 
+import usys
 from ..compat import TaskGroup
 
-try:
-    import anyio
-except ImportError:
-    class EndOfStream(Exception):
-        pass
-    class BrokenResourceError(Exception):
-        pass
-else:
-    EndOfStream = anyio.EndOfStream
-    BrokenResourceError = anyio.BrokenResourceError
-
-#
 # Basic infrastructure to run an RPC system via an unreliable,
 # possibly-reordering, and/or stream-based transport
 #
@@ -112,12 +102,6 @@ class Logger(_Stacked):
         print(f"X:{self.txt} start", file=usys.stderr)
         try:
             await super().run()
-        except EndOfStream:
-            print(f"X:{self.txt} stop EOF")
-            raise
-        except BrokenResourceError:
-            print(f"X:{self.txt} stop DIED")
-            raise
         except Exception as exc:
             print(f"X:{self.txt} stop {repr(exc)}", file=usys.stderr)
             raise

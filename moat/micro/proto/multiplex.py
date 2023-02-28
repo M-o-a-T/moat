@@ -285,7 +285,7 @@ class Multiplexer(Request):
 		if self._wdt_scope is not None:
 			self._wdt_scope.cancel()
 			self._wdt_scope = None
-		t = .get("t", self._wdt_t)
+		t = wdt.get("t", self._wdt_t)
 		if not t:
 			return
 		if self._wdt_t == 0 or self._wdt_t > t:
@@ -295,10 +295,10 @@ class Multiplexer(Request):
 
 		with anyio.CancelScope() as sc:
 			_wdt_scope = sc
-			await self.send("wdt", t=t)
+			await self.send(["sys","wdt"], t=t)
 			while True:
 				await anyio.sleep(t)
-				await self.send("wdt")
+				await self.send(["sys","wdt"])
 
 
 	async def _run_stack(self):

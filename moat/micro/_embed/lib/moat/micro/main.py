@@ -129,6 +129,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
     async def setup(tg, state, apps):
         import sys
 
+        global _wdt
 #       nonlocal no_exit
 
 #       import msgpack

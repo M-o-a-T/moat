@@ -90,9 +90,9 @@ async def get_serial(obj, reset:bool = False, flush:bool = True):
 		_h['baudrate'] = obj.baudrate
 	except AttributeError:
 		pass
-	if not reset:
-		_h["rts"] = False
-		_h["dtr"] = False
+#	if not reset:
+#		_h["rts"] = False
+#		_h["dtr"] = False
 	ser = Serial(obj.port, **_h)
 	async with ser:
 		# clear DTR+RTS. May reset the target.

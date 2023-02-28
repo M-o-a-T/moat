@@ -85,7 +85,7 @@ class BaseCmd(_Stacked):
         self._tg.cancel()
         await super().aclose()
 
-    async def dispatch(self, action:str|list[str], msg:dict|Any):
+    async def dispatch(self, action:str|list[str], msg:dict):
         """
         Process one incoming message.
 
@@ -309,15 +309,15 @@ class Request(_Stacked):
             else:
                 evt.set_error(RemoteError(e, d))
 
-    async def send(self, action, msg=None, /, **kw):
+    async def send(self, action, _msg=None, **kw):
         """
         Send a request, return the response.
 
         The message is either the second parameter, or any number of
         keywords.
         """
-        if msg is None:
-            msg = kw
+        if _msg is None:
+            _msg = kw
         elif kw:
             raise TypeError("cannot use both msg data and keywords")
 
@@ -329,7 +329,7 @@ class Request(_Stacked):
             seq = self.seq
             if seq not in self.reply:
                 break
-        msg = {"a":action,"d":msg,"i":seq}
+        msg = {"a":action,"d":_msg,"i":seq}
 
         self.reply[seq] = e = ValueEvent()
         try:

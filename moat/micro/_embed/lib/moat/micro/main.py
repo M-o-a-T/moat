@@ -32,6 +32,16 @@ def gen_apps(cfg, tg, print_exc):
         apps.append(a)
     return apps
 
+try:
+    WDT = machine.WDT
+except AttributeError:  # Unix
+    # TODO: fork a background process
+    class WDT:
+        def __init__(self, t):
+            self.t = t
+        def feed(self):
+            pass
+
 _wdt = None
 _wdt_chk = None
 def wdt(t=None):
@@ -44,7 +54,7 @@ def wdt(t=None):
     if t:
         if _wdt is not None:
             raise RuntimeError("WDT exists")
-        _wdt = machine.WDT(t*1000)
+        _wdt = WDT(t*1000)
         _wdt_chk = False
     elif _wdt is None:
         raise RuntimeError("No WDT")

@@ -339,14 +339,17 @@ async def cfg(obj, stdin, read, write, name, **attrs):
 @click.option("-d","--debug", is_flag=True, help="don't retry on (some) errors")
 @click.option("-r","--remote", is_flag=True, help="talk via TCP")
 @click.option("-S","--server", help="talk to this system")
+@click.argument("pipe", nargs=-1)
 @click.pass_obj
 async def mplex(obj, **kw):
 	await _mplex(obj, **kw)
 
-async def _mplex(obj, no_config=False, debug=None, remote=False, server=None):
+async def _mplex(obj, no_config=False, debug=None, remote=False, server=None, pipe=None):
 	"""
-	Sync of MoaT code on a running MicroPython device.
+	Run a multiplex channel to MoaT code on a running MicroPython device.
 
+	If arguments are given, interpret as command to run as pipe to the
+	device.
 	"""
 	if not remote and not obj.port:
 		raise click.UsageError("You need to specify a port")
@@ -357,12 +360,23 @@ async def _mplex(obj, no_config=False, debug=None, remote=False, server=None):
 	elif remote:
 		server = obj.cfg.micro.net.addr
 
+	cfg_p = obj.cfg.micro.port
+	if pipe:
+		cfg_p.dev = pipe
+
 	@asynccontextmanager
 	async def stream_factory(req):
 		# build a serial stream link
-		async with get_serial(obj) as ser:
-			async with get_link_serial(obj, ser, request_factory=req) as link:
-				yield link
+		if isinstance(cfg_p.get("dev", None), (list,tuple)):
+			# array = program behind a pipe
+			async with await anyio.open_process(cfg_p.dev, stderr=sys.stderr) as proc:
+				ser = anyio.streams.stapled.StapledByteStream(proc.stdin, proc.stdout)
+				async with get_link_serial(obj, ser, request_factory=req, log=obj.debug>3, reliable=True) as link:
+					yield link
+		else:
+			async with get_serial(obj) as ser:
+				async with get_link_serial(obj, ser, request_factory=req, log=obj.debug>3) as link:
+					yield link
 
 	@asynccontextmanager
 	async def net_factory(req):

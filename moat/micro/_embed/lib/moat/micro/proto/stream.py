@@ -117,7 +117,7 @@ class MsgpackStream(_Stacked):
     async def recv(self):
         if self.msg_prefix is not None:
             while True:
-                b = (await super().read(1))[0]
+                b = (await super().recv(1))[0]
                 if b == self.msg_prefix:
                     res = await self.unpack()
                     return res

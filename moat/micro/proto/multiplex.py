@@ -19,7 +19,8 @@ from moat.util import attrdict, merge, to_attrdict
 from . import RemoteError, SilentRemoteError
 from ..stacks.unix import unix_stack_iter
 from ..compat import TaskGroup, Event
-from ..cmd import Request, BaseCmd
+from ..cmd import BaseCmd
+from ..main import Request
 from ..app import ConfigError
 
 import logging

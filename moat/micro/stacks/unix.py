@@ -7,7 +7,7 @@ import anyio
 
 from moat.util.queue import Queue
 
-from ..cmd import Request
+from ..main import Request
 from ..compat import TaskGroup, AnyioMoatStream
 from ..proto.stream import MsgpackStream
 from ..proto import Logger

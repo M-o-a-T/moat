@@ -11,8 +11,8 @@ from contextlib import asynccontextmanager
 from moat.micro.path import copytree
 from moat.micro.stacks import console_stack
 from moat.micro.compat import TaskGroup, AnyioMoatStream
-from moat.util import attrdict, yload
-from moat.micro.cmd import ClientBaseCmd
+from moat.util import attrdict, yload, packer
+from moat.micro.cmd import ClientBaseCmd, Request as BaseRequest
 
 import logging
 logger = logging.getLogger(__name__)
@@ -179,19 +179,39 @@ async def get_remote(obj, host, port=27587, **kw):
 		finally:
 			await sock.aclose()
 
-async def get_cfg(req):
-	"""\
-		Collect the client's configuration data.
+class Request(BaseRequest):
+	async def get_cfg(self):
+		"""\
+			Collect the client's configuration data.
+			"""
+		async def _get_cfg(p):
+			d = await self.send(("sys","cfg"),p=p)
+			if isinstance(d,(list,tuple)):
+				d,s = d
+				for k in s:
+					d[k] = await _get_cfg(p+(k,))
+			return d
+
+		return await _get_cfg(())
+
+	async def set_cfg(self, cfg):
+		"""\
+			Update the client's configuration data.
+			"""
+		async def _set_cfg(p,c):
+            if isinstance(c,dict):
+                for k,v in c.items():
+                    await _set_cfg(p+(k,),v)
+            else:
+			    await self.send(("sys","cfg"),p=p,d=c)
+
+		await _set_cfg((),cfg)
+        await self.send(("sys","cfg"),p=None,d=None)  # runs
+
+	def ignore_hooks(self):
 		"""
-	async def _get_cfg(p):
-		d = await req.send(("sys","cfg"),p=p)
-		if isinstance(d,(list,tuple)):
-			d,s = d
-			for k in s:
-				d[k] = await _get_cfg(p+(k,))
-		return d
+		Ignore link-on message
+		"""
+		bc = req.stack(ClientBaseCmd)
+		bc.cmd_link = lambda _:0
 
-	return await _get_cfg(())
-
-# There is no "set_cfg" because you do this by uploading the msgpack'd
-# config file, then calling sys.cfg_r on it. Or by sending config snippets.

@@ -80,7 +80,8 @@ def get_recipients(client: object, recipients: list):
             unknown.append(recipient)
             continue
         check_registered.append(recipient)
-    registered = client.get_user_status(recipients=check_registered)
+    if check_registered:
+        registered = client.get_user_status(recipients=check_registered)
     for recipient in check_registered:
         if j_search(f"[?number==`{recipient}`]", registered):
             contacts.append(recipient)

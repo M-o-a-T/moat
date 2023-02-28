@@ -40,7 +40,7 @@ class ABytes(io.BytesIO):
 
 	async def sha256(self):
 		_h = hashlib.sha256()
-		_h.update(self.getbuffer())    
+		_h.update(self.getbuffer())
 		return _h.digest()  
 
 	def close(self):
@@ -202,14 +202,14 @@ class Request(BaseRequest):
 			Update the client's configuration data.
 			"""
 		async def _set_cfg(p,c):
-            if isinstance(c,dict):
-                for k,v in c.items():
-                    await _set_cfg(p+(k,),v)
-            else:
-			    await self.send(("sys","cfg"),p=p,d=c)
+			if isinstance(c,dict):
+				for k,v in c.items():
+					await _set_cfg(p+(k,),v)
+			else:
+				await self.send(("sys","cfg"),p=p,d=c)
 
 		await _set_cfg((),cfg)
-        await self.send(("sys","cfg"),p=None,d=None)  # runs
+		await self.send(("sys","cfg"),p=None,d=None)  # runs
 
 	def ignore_hooks(self):
 		"""

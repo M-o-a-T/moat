@@ -68,7 +68,7 @@ class SysCmd(BaseCmd):
         Starts the watchdog (@t > 0) or restarts it.
         """
         from .main import wdt
-        w = wdt()
+        w = wdt(t=t)
         if w:
             w.feed()  # XXX ignores T, might error instead
         elif t:

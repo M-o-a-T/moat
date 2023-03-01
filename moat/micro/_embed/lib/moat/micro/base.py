@@ -82,8 +82,9 @@ class SysCmd(BaseCmd):
         """
         Read the current configuration from this file.
         """
+        b = self.base
         if fn is None:
-            fb = self.base.is_fallback
+            fb = b.is_fallback
             fn = "moat_fb.cfg" if fb else "moat.cfg"
 
         f = SFile(open(fn,"rb"))
@@ -92,8 +93,8 @@ class SysCmd(BaseCmd):
         finally:
             await f.aclose()
 
-        self.base.cfg = cfg
-        await self.base.config_updated()
+        b.cfg = cfg
+        await b.config_updated()
         await self.request.send_nr(["mplex","cfg"])
 
 

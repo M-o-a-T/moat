@@ -3,9 +3,12 @@
 import usys
 import uos
 
-dd= usys.argv[1] if usys.argv else "/tmp/test-upy"
+dd = usys.argv[1] if usys.argv else "/tmp/test-upy"
+mode = usys.argv[2] if len(usys.argv)>2 else "once"
+root=dd+"/root"
 try:
     uos.mkdir(dd)
+    uos.mkdir(root)
 except OSError:
     pass
 d=uos.getcwd()
@@ -18,11 +21,11 @@ else:
 uos.chdir(dd)
 
 usys.path.insert(0,d+"/moat/micro/_embed/")
-usys.path.insert(0,dd)
+usys.path.insert(0,".")
 usys.path.insert(0,d+"/moat/micro/_embed/lib")
 usys.path.insert(0,d+"/lib/micropython/extmod")
 
-# TODO the uasyncio lazy importer is *very* annoying
+# TODO uasyncio's lazy importer doesn't yet mesh well with our micropython path hack
 import uasyncio
 import uasyncio.event
 import uasyncio.lock
@@ -31,11 +34,6 @@ import uasyncio.stream
 usys.path.insert(0,d+"/lib/micropython-lib/uasyncio.queues/")
 import uasyncio.queues
 
-with open(d+"/configs/fallback_pipe.msgpack","rb") as f:
-    c=f.read()
-with open(dd+"/moat.cfg","wb") as f:
-    f.write(c)
-
 import main
-main.go_moat("once", fake_end=False, log=True)
+main.go_moat("mode", fake_end=False, log=True)
 

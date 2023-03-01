@@ -37,8 +37,8 @@ try:
 except AttributeError:  # Unix
     # TODO: fork a background process
     class WDT:
-        def __init__(self, t):
-            self.t = t
+        def __init__(self, timeout):
+            self.t = timeout
         def feed(self):
             pass
 
@@ -116,13 +116,13 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
         if wdt_t:
             wdt_s = cfg["wdt"].get("s",0)
             if wdt_s == 1:
-                _wdt = machine.WDT(timeout=wdt_t*1.5)
+                _wdt = WDT(timeout=wdt_t*1.5)
 
     if "net" in cfg:
         cfg_network(cfg["net"])
 
     if wdt_s == 2:
-        _wdt = machine.WDT(timeout=wdt_t*1.5)
+        _wdt = WDT(timeout=wdt_t*1.5)
     elif _wdt:
         _wdt.feed()
 
@@ -193,7 +193,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
             raise RuntimeError("No idea what to do on %r!" % (sys.platform,))
 
         if wdt_s == 3:
-            _wdt = machine.WDT(timeout=wdt_t*1.5)
+            _wdt = WDT(timeout=wdt_t*1.5)
         elif _wdt:
             _wdt.feed()
 
@@ -215,7 +215,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
                 sys.stdout.write("OK\x04\x04>")
 
             if wdt_s == 4:
-                _wdt = machine.WDT(timeout=wdt_t*1.5)
+                _wdt = WDT(timeout=wdt_t*1.5)
 
             if _wdt is not None and wdt_t:
                 n = cfg["wdt"].get("n", 1+60000//wdt_t if wdt_t<20000 else 3)

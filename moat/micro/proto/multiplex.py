@@ -269,6 +269,13 @@ class Multiplexer(Request):
 		# that arrive before it's up and running
 
 		# don't forget the watchdog
+		try:
+			wd = self.cfg.wdt
+		except AttributeError:
+			pass
+		else:
+			if wd.t > 0 and wd.get("s",0) > 0:
+				self._wdt_t = wd.t
 		await self._tg.spawn(self._run_wdt, _name="mp_wdt1")
 
 	async def config_updated(self):
@@ -280,21 +287,28 @@ class Multiplexer(Request):
 	_wdt_t = 0
 	async def _run_wdt(self):
 		wdt = self.cfg.get("wdt", {})
+		wt = self._wdt_t
 
+		running = wt > 0
 		if self._wdt_scope is not None:
 			self._wdt_scope.cancel()
 			self._wdt_scope = None
+
 		t = wdt.get("t", self._wdt_t)
 		if not t:
 			return
-		if self._wdt_t == 0 or self._wdt_t > t:
-			self._wdt_t = t
+		if wt == 0 or wt > t:
+			wt = t
 		else:
-			t = self._wdt_t
+			t = wt
 
 		with anyio.CancelScope() as sc:
 			_wdt_scope = sc
-			await self.send(["sys","wdt"], t=t)
+			if running:
+				await self.send(["sys","wdt"])
+			else:
+				await self.send(["sys","wdt"], t=t)
+				self._wdt_t = wt
 			while True:
 				await anyio.sleep(t)
 				await self.send(["sys","wdt"])

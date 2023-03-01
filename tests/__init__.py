@@ -58,6 +58,7 @@ async def mpy_server(temp:Path, debug=True,reliable=False,guarded=False, req=Req
         srv = await tg.spawn(mplex.serve, load_cfg=True)
         with anyio.fail_after(3):
             await mplex.wait()
+        obj.server = mplex
         yield obj
         srv.cancel()
 

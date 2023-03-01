@@ -131,10 +131,11 @@ class _MplexCommand(BaseCmd):
 			await e.wait()
 			await self.request.run_flag.wait()
 
-	async def cmd_cfg(self, cfg):
-		cfg = to_attrdict(cfg)
-		self.request.cfg = merge(self.request.cfg, cfg, drop=("port" in cfg))
-		await self.request.config_updated(cfg)
+	async def cmd_cfg(self):
+		r = self.request
+		cfg = to_attrdict(await r.get_cfg())
+		r.cfg = merge(r.cfg, cfg, drop=("port" in cfg))
+		await r.config_updated()
 
 
 class _LocalCommand(BaseCmd):
@@ -271,7 +272,7 @@ class Multiplexer(Request):
 		await self._tg.spawn(self._run_wdt, _name="mp_wdt1")
 
 	async def config_updated(self):
-		await self.base.config_updated()
+		await self.base.config_updated(self.cfg)
 		await self._setup_apps(self._tg)
 		await self._tg.spawn(self._run_wdt, _name="mp_wdt2")
 

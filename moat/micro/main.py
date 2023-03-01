@@ -209,6 +209,8 @@ class Request(BaseRequest):
 			"""
 		async def _set_cfg(p,c):
 			if isinstance(c,dict):
+				if p:
+					await self.send(("sys","cfg"),p=p,d={})
 				for k,v in c.items():
 					await _set_cfg(p+(k,),v)
 			else:

@@ -114,7 +114,7 @@ async def get_serial(obj, reset:bool = False, flush:bool = True):
 
 
 @asynccontextmanager
-async def get_link_serial(obj, ser, ignore=False, **kw):
+async def get_link_serial(obj, ser, **kw):
 	"""\
 		Context: Link to the target using the serial port @ser and a
 		console-ish stack.
@@ -125,8 +125,6 @@ async def get_link_serial(obj, ser, ignore=False, **kw):
 	kw.setdefault("reliable", not obj.reliable)
 
 	t,b = await console_stack(AnyioMoatStream(ser), msg_prefix=0xc1 if obj.guarded else None, **kw)
-	if ignore:
-		t.ignore_hooks()
 
 	async with TaskGroup() as tg:
 		task = await tg.spawn(b.run)
@@ -137,7 +135,7 @@ async def get_link_serial(obj, ser, ignore=False, **kw):
 
 
 @asynccontextmanager
-async def get_link(obj, ignore=False, use_port=False, reset=False, **kw):
+async def get_link(obj, use_port=False, reset=False, **kw):
 	"""\
 		Context: Link to the target: the Unix-domain socket, if that can be
 		connected to, or the serial port.
@@ -156,13 +154,11 @@ async def get_link(obj, ignore=False, use_port=False, reset=False, **kw):
 		if not use_port:
 			raise
 		async with get_serial(obj, reset=reset, flush=True) as ser:
-			async with get_link_serial(obj,ser, ignore=ignore, **kw) as link:
+			async with get_link_serial(obj,ser, **kw) as link:
 				yield link
 	else:
 		try:
 			t,b = await console_stack(AnyioMoatStream(sock), **kw)
-			if ignore:
-				t.ignore_hooks()
 			async with TaskGroup() as tg:
 				task = await tg.spawn(b.run)
 				yield t
@@ -189,6 +185,10 @@ async def get_remote(obj, host, port=27587, **kw):
 			await sock.aclose()
 
 class Request(BaseRequest):
+	def __init__(self, *a, cmd_cls = ClientBaseCmd, **k):
+		super().__init__(*a,**k)
+		self.stack(cmd_cls)
+
 	async def get_cfg(self):
 		"""\
 			Collect the client's configuration data.
@@ -216,11 +216,4 @@ class Request(BaseRequest):
 
 		await _set_cfg((),cfg)
 		await self.send(("sys","cfg"),p=None,d=None)  # runs
-
-	def ignore_hooks(self):
-		"""
-		Ignore link-on message
-		"""
-		bc = req.stack(ClientBaseCmd)
-		bc.cmd_link = lambda _:0
 

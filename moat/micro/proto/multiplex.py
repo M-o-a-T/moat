@@ -187,7 +187,7 @@ class Multiplexer(Request):
 		"StreamFactory" must be an async context manager that installs its
 		argument as the Request handler.
 		"""
-		super().__init__(None)
+		super().__init__(None, cmd_cls=MultiplexCommand)
 		self.stream_factory = stream_factory
 		self.socket = socket
 		self.cfg = cfg
@@ -216,9 +216,6 @@ class Multiplexer(Request):
 		# use this to coordinate client shutdown
 		self.sys_lock = anyio.Lock()
 		self.run_flag = anyio.Event()
-
-		# finally we need our command handler
-		self.stack(MultiplexCommand)
 
 	def _process_link(self, s):
 		if not s:

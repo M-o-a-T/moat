@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 @click.option("-n","--name",type=str, default="main", help="Name of BMS config")
 async def run(obj, name):
 
-    async with MessageBus().connect() as bus, get_link(obj, ignore=True) as req:
+    async with MessageBus().connect() as bus, get_link(obj) as req:
         ctrl = Controller(name, obj.cfg.bms[name], obj.cfg, req)
         await ctrl.run(req, bus)
 

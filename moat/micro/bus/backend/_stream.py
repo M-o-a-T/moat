@@ -61,9 +61,9 @@ class StreamHandler(BaseBusHandler):
     @asynccontextmanager
     async def _ctx(self):
         async with anyio.create_task_group() as n:
-            await n.spawn(self._read, n)
-            await n.spawn(self._write)
-            await n.spawn(self._timeout)
+            await n.spawn(self._read, n, _name="s_rd")
+            await n.spawn(self._write, _name="s_wr")
+            await n.spawn(self._timeout, _name="s_to")
             try:
                 yield self
             finally:

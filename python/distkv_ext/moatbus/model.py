@@ -93,7 +93,7 @@ class MOATnode(_MOATbase):
             await self._task_done.wait()
             self._task = None
 
-    async def spawn(self, p, *a, **k):
+    async def spawn(self, p, *a, _name=None, **k):
         evt = anyio.create_event()
 
         async def _spawn(evt, p, a, k):
@@ -108,7 +108,7 @@ class MOATnode(_MOATbase):
                     async with anyio.open_cancel_scope(shield=True):
                         await self._task_done.set()
 
-        await self.tg.spawn(_spawn, evt, p, a, k)
+        await self.tg.spawn(_spawn, evt, p, a, k, name=_name)
         await evt.wait()
 
 def conn_backend(name):

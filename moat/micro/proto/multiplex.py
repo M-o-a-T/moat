@@ -48,7 +48,7 @@ class CommandClient(Request):
 		try:
 			async with TaskGroup() as tg:
 				self._tg = tg
-				await tg.spawn(self._report_link)
+				await tg.spawn(self._report_link, _name="mp_rep_link")
 				while True:
 					msg = await self.parent.recv()
 					await self.dispatch(msg)
@@ -76,7 +76,7 @@ class CommandClient(Request):
 			logger.warning("?2 %s",msg)
 			return
 
-		await self._tg.spawn(self._handle_request, msg)
+		await self._tg.spawn(self._handle_request, msg, _name="mp_req_"+repr(msg["a"]))
 
 
 	async def _handle_request(self, msg):
@@ -262,18 +262,18 @@ class Multiplexer(Request):
 		for name,app in self.apps.items():
 			if "scope" in app:
 				continue
-			self.apps[name].scope = await tg.spawn(app.app.run)
+			self.apps[name].scope = await tg.spawn(app.app.run, _name="mp_app_"+name)
 
 		# if app A can depend on app B, then B must queue async calls
 		# that arrive before it's up and running
 
 		# don't forget the watchdog
-		await self._tg.spawn(self._run_wdt)
+		await self._tg.spawn(self._run_wdt, _name="mp_wdt1")
 
 	async def config_updated(self):
 		await self.base.config_updated()
 		await self._setup_apps(self._tg)
-		await self._tg.spawn(self._run_wdt)
+		await self._tg.spawn(self._run_wdt, _name="mp_wdt2")
 
 	_wdt_scope = None
 	_wdt_t = 0
@@ -376,7 +376,7 @@ class Multiplexer(Request):
 
 		async with TaskGroup() as tg:
 			self.tg = tg
-			await tg.spawn(self._run_stack)
+			await tg.spawn(self._run_stack, _name="mp_serve")
 			await self.running.wait()
 			await self._serve_stream(self.socket)
 
@@ -403,7 +403,7 @@ class Multiplexer(Request):
 			self._cancel = tg.cancel_scope
 
 			if self.watchdog:
-				await tg.spawn(self._watchdog)
+				await tg.spawn(self._watchdog, _name="mp_wdt0")
 				logger.debug("Watchdog: %s seconds", self.watchdog)
 			await super().run()
 
@@ -419,7 +419,7 @@ class Multiplexer(Request):
 		logger.info("Listen for commands on %r", self.socket)
 		async for t,b in unix_stack_iter(self.socket, evt=self.serving, log="Client", request_factory=CommandClient):
 			t.mplex = self
-			await self._tg.spawn(self._run_client, b)
+			await self._tg.spawn(self._run_client, b, _name="mp_client")
 
 	async def _run_client(self, b):
 		try:

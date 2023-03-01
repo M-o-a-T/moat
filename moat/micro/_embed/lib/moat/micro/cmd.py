@@ -69,14 +69,14 @@ class BaseCmd(_Stacked):
         """
         async with TaskGroup() as tg:
             self._tg = tg
-            await tg.spawn(self.run)
+            await tg.spawn(self.run, _name="run")
 
             for k in dir(self):
                 if not k.startswith('dis_'):
                     continue
                 v = getattr(self,k)
                 if isinstance(v, BaseCmd):
-                    await tg.spawn(v.run_sub)
+                    await tg.spawn(v.run_sub, _name="sub:"+k)
 
     async def aclose(self):
         """
@@ -225,7 +225,7 @@ class Request(_Stacked):
         try:
             async with TaskGroup() as tg:
                 self._tg = tg
-                await tg.spawn(self.child.run_sub)
+                await tg.spawn(self.child.run_sub, _name="rsub")
 
                 while True:
                     msg = await self.parent.recv()
@@ -286,7 +286,7 @@ class Request(_Stacked):
             # request from the other side
             # runs in a separate task
             # TODO create a task pool
-            await self._tg.spawn(self._handle_request,a,i,d,msg)
+            await self._tg.spawn(self._handle_request,a,i,d,msg, _name="hdl:"+str(a))
 
         else:
             # reply

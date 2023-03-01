@@ -26,7 +26,7 @@ async def unix_stack_iter(path="upy-moat", log=False, *, evt=None, request_facto
         if evt is not None:
             evt.set()
 
-        await tg.spawn(listener.serve, q.put)
+        await tg.spawn(listener.serve, q.put, _name="s_unix")
         n = 0
         async for sock in q:
             n += 1

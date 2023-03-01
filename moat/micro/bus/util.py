@@ -196,7 +196,7 @@ class Processor(_SubServer, CtxObj):
     async def put(self, data):
         await self._q_w.send(data)
 
-    async def spawn(self, p,*a,**k):
+    async def spawn(self, p,*a, _name=None, **k):
         """
         Start a background task on this processor's nursery.
         Returns a cancel scope which you can use to kill the task.

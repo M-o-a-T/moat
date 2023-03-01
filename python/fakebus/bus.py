@@ -115,7 +115,7 @@ class Main:
 @asynccontextmanager
 async def mainloop(tg,**kw):
     mc = Main(**kw)
-    await tg.spawn(mc.run)
+    await tg.spawn(mc.run, _name="mc_run")
     yield mc
 
 @click.command()

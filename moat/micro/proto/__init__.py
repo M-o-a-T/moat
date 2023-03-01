@@ -89,7 +89,7 @@ class _Stacked:
         if r is None:
             return await self.child.run()
         async with TaskGroup() as tg:
-            runner = await tg.spawn(r)
+            runner = await tg.spawn(r, _name="run:"+repr(self))
             await self.child.run()
             runner.cancel()
 

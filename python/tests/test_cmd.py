@@ -83,7 +83,7 @@ class Router(_Stacked):
     async def send(self,msg):
         await self.qw.send(msg)
 
-    def spawn(self, p,*a,**k):
+    def spawn(self, p,*a,_name=None,**k):
         self.tg.start_soon(partial(lg,p,*a,**k))
 
     @asynccontextmanager

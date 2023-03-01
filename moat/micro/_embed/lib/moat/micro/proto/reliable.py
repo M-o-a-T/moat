@@ -96,7 +96,7 @@ class Reliable(_Stacked):
 
     async def _run(self, tg):
         self.tg = tg
-        await tg.spawn(self._read)
+        await tg.spawn(self._read,name="rel_read")
 
         while not self._closed:
             t = ticks_ms()
@@ -168,7 +168,7 @@ class Reliable(_Stacked):
                     await self.send_reset()
 
             async with TaskGroup() as tg:
-                runner = await tg.spawn(self._run, tg)
+                runner = await tg.spawn(self._run, tg, _name="rel_run")
                 await self.client.run()
                 runner.cancel()
                 self.tg = None
@@ -370,7 +370,7 @@ class Reliable(_Stacked):
                 self.s_recv_tail = rr
                 #print("RT1",self.parent.txt,self.s_recv_tail,self.s_recv_head,r,r+1, file=sys.stderr)
                 self.pend_ack = True
-                await self.tg.spawn(self.child.dispatch, d)
+                await self.tg.spawn(self.child.dispatch, d, _name="rel_recv")
 
         if self.s_recv_tail == self.s_recv_head:
             self.t_recv = None

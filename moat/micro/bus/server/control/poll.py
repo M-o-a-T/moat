@@ -101,8 +101,8 @@ class PollControl(Processor):
 
     async def setup(self):
         await super().setup()
-        await self.spawn(self._poller)
-        await self.spawn(self._fwd)
+        await self.spawn(self._poller, _name="c_poll")
+        await self.spawn(self._fwd, _name="c_fwd")
 
     async def _fwd(self, *, task_status=trio.TASK_STATUS_IGNORED):
         task_status.started()
@@ -184,7 +184,7 @@ class PollControl(Processor):
             async def do_dly(obj):
                 await trio.sleep(byte2mini(timer))
                 await accept(obj.client_id,0)
-            await self.spawn(do_dly,obj)
+            await self.spawn(do_dly,obj, _name="c_dly")
         else:
             await accept(obj.client_id,0)
 

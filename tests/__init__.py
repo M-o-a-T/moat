@@ -55,7 +55,7 @@ async def mpy_server(temp:Path, debug=True,reliable=False,guarded=False, req=Req
 
     mplex = Multiplexer(_factory, obj.socket, {}, fatal=True)
     async with TaskGroup() as tg:
-        srv = await tg.spawn(mplex.serve, load_cfg=True)
+        srv = await tg.spawn(mplex.serve, load_cfg=True, _name="serve")
         with anyio.fail_after(3):
             await mplex.wait()
         obj.server = mplex

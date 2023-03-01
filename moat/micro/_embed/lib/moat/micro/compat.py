@@ -34,8 +34,8 @@ async def wait_for_ms(timeout,p,*a,**k):
     return await uasyncio.wait_for_ms(p(*a,**k),timeout)
 
 class TaskGroup(_tg):
-    async def spawn(self, p, *a, **k):
-        return self.create_task(p(*a,**k))
+    async def spawn(self, p, *a, _name=None, **k):
+        return self.create_task(p(*a,**k)) #, name=_name)
 
 def run(p,*a,**k):
     return _run(p(*a,**k))

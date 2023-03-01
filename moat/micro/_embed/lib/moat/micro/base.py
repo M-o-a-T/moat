@@ -239,7 +239,7 @@ class SysCmd(BaseCmd):
             await self.request.send_nr("link",False)
             await sleep_ms(100)
             machine.soft_reset()
-        await self.request._tg.spawn(_boot)
+        await self.request._tg.spawn(_boot, _name="base.boot1")
         return True
 
     async def cmd_reset(self, code):
@@ -255,7 +255,7 @@ class SysCmd(BaseCmd):
             await self.request.send_nr("link",False)
             await sleep_ms(100)
             machine.reset()
-        await self.request._tg.spawn(_boot)
+        await self.request._tg.spawn(_boot, _name="base.boot2")
         return True
 
     async def cmd_stop(self, code):
@@ -272,7 +272,7 @@ class SysCmd(BaseCmd):
             await self.request.send_nr("link",False)
             await sleep_ms(100)
             raise SystemExit
-        await self.request._tg.spawn(_boot)
+        await self.request._tg.spawn(_boot, _name="base.boot3")
         return True
 
     async def cmd_load(self, n, m, r=False, kw={}):
@@ -296,7 +296,7 @@ class SysCmd(BaseCmd):
         m = import_app(m, drop=True)
         m = m(self.parent, n, kw, self.base.cfg)
         setattr(self.parent,"dis_"+n, m)
-        await self.parent._tg.spawn(m.run_sub)
+        await self.parent._tg.spawn(m.run_sub, _name="base.load")
 
     async def cmd_machid(self):
         """

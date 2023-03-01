@@ -148,11 +148,11 @@ class Controller:
 				self._intf = intf
 
 				evt = Event()
-				await tg.spawn(self.victron.run, dbus, evt)
+				await tg.spawn(self.victron.run, dbus, evt, _name="bms_vrun")
 				await evt.wait()
 
 				evt = Event()
-				await tg.spawn(self._run, evt)
+				await tg.spawn(self._run, evt, _name="bms_crun")
 				await evt.wait()
 
 				# Everything is up and running.
@@ -189,12 +189,12 @@ class Controller:
 
 	async def _run(self, evt):
 		async with TaskGroup() as tg:
-			await tg.spawn(self._read)
+			await tg.spawn(self._read, _name="bms_cread")
 
 			evts = []
 			for b in self.batt:
 				e = Event()
-				await tg.spawn(b.run, e)
+				await tg.spawn(b.run, e, _name="bms_batt")
 				evts.append(e)
 			for e in evts:
 				await e.wait()

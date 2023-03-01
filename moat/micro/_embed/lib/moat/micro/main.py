@@ -170,7 +170,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
             t,b = await console_stack(s, **kw)
             t = t.stack(StdBase, fallback=fallback, state=state, cfg=cfg)
             cfg_setup(t, apps)
-            await tg.spawn(b.run)
+            await tg.spawn(b.run,_name="runcons")
 
         if sys.platform == "rp2":
             # use the console. USB, so no data loss; use msgpack's "illegal
@@ -180,14 +180,14 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
         elif sys.platform == "linux":
             port = uos.getenv("MOATPORT")
             if port:
-                await tg.spawn(run_network, int(port))
+                await tg.spawn(run_network, int(port), _name="run_net")
             else:
                 await run_console(reliable=True, log=log, msg_prefix=None)
 
         elif sys.platform in ("esp32","esp8266"):
             port = cfg["link"]["port"]
             # Use networking. On Linux we can accept multiple parallel connections.
-            await tg.spawn(run_network, port)
+            await tg.spawn(run_network, port, _name="run_port")
 
         else:
             raise RuntimeError("No idea what to do on %r!" % (sys.platform,))
@@ -207,7 +207,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
             apps = gen_apps(cfg, tg, print_exc)
 
             # start comms (and load app frontends)
-            await tg.spawn(setup,tg, state, apps)
+            await tg.spawn(setup,tg, state, apps, _name="apps")
 
             # If started from the ("raw") REPL, fake being done
             if fake_end:

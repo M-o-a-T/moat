@@ -49,7 +49,7 @@ async def gateway(conn: MOATconn, prefix="abc123"):
 
     async with conn.backend() as port:
         async with anyio.create_task_group() as n:
-            await n.spawn(serial2mqtt)
-            await n.spawn(mqtt2serial)
+            await n.spawn(serial2mqtt, _name="s2m")
+            await n.spawn(mqtt2serial, _name="m2s")
 
 

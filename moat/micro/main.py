@@ -127,7 +127,7 @@ async def get_link_serial(obj, ser, **kw):
 	t,b = await console_stack(AnyioMoatStream(ser), msg_prefix=0xc1 if obj.guarded else None, **kw)
 
 	async with TaskGroup() as tg:
-		task = await tg.spawn(b.run)
+		task = await tg.spawn(b.run, _name="ser")
 		try:
 			yield t
 		finally:
@@ -160,7 +160,7 @@ async def get_link(obj, use_port=False, reset=False, **kw):
 		try:
 			t,b = await console_stack(AnyioMoatStream(sock), **kw)
 			async with TaskGroup() as tg:
-				task = await tg.spawn(b.run)
+				task = await tg.spawn(b.run, _name="link")
 				yield t
 				task.cancel()
 		finally:
@@ -178,7 +178,7 @@ async def get_remote(obj, host, port=27587, **kw):
 		try:
 			t,b = await console_stack(AnyioMoatStream(sock), log=obj.debug>2, reliable=True, **kw)
 			async with TaskGroup() as tg:
-				task = await tg.spawn(b.run)
+				task = await tg.spawn(b.run, _name="rem")
 				yield t
 				task.cancel()
 		finally:

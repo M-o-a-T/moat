@@ -128,7 +128,7 @@ def TaskGroup():
             """An augmented taskgroup
             """
 
-            async def spawn(self, p,*a,**k):
+            async def spawn(self, p,*a, _name=None, **k):
                 """\
                     Like start(), but returns something you can cancel
                 """
@@ -141,7 +141,7 @@ def TaskGroup():
                         except CancelledError: # error from concurrent.futures
                             pass
 
-                return await super().start(catch,p,a,k)
+                return await super().start(catch,p,a,k, name=_name)
 
             def cancel(self):
                 self.cancel_scope.cancel()

@@ -31,7 +31,7 @@ async def network_stack(callback, log=False, multiple=False, host="0.0.0.0", por
     srv = None
     n = 0
     async with TaskGroup() as tg:
-        await tg.spawn(run_server, make_stack, host,port, taskgroup=tg)
+        await tg.spawn(run_server, make_stack, host,port, taskgroup=tg, _name="run_server")
         while True:
             s = await q.get()
             n += 1
@@ -42,5 +42,5 @@ async def network_stack(callback, log=False, multiple=False, host="0.0.0.0", por
             if log:
                 t = t.stack(Logger, txt="N%d" % n)
             t = t.stack(request_factory)
-            srv = await tg.spawn(callback,t,b)
+            srv = await tg.spawn(callback,t,b, _name="ns_cb")
 

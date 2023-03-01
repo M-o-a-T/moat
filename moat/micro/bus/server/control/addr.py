@@ -111,7 +111,7 @@ class AddrControl(Processor):
 
     async def setup(self):
         await super().setup()
-        await self.spawn(self._fwd)
+        await self.spawn(self._fwd, _name="a_fwd")
 
     async def _fwd(self, *, task_status=trio.TASK_STATUS_IGNORED):
         task_status.started()
@@ -193,7 +193,7 @@ class AddrControl(Processor):
             async def do_dly(obj):
                 await trio.sleep(byte2mini(timer))
                 await accept(obj.client_id,0)
-            await self.spawn(do_dly,obj)
+            await self.spawn(do_dly,obj, _name="a_dly")
         else:
             await accept(obj.client_id,0)
 

@@ -15,7 +15,7 @@ from ..proto import Logger
 import logging
 logger = logging.getLogger(__name__)
 
-async def unix_stack_iter(path="upy-moat", log=False, *, request_factory=Request):
+async def unix_stack_iter(path="upy-moat", log=False, *, evt=None, request_factory=Request):
     # an iterator for Unix-domain connections / their stacks. Yields one t,b
     # pair for each successful connection.
 
@@ -23,6 +23,8 @@ async def unix_stack_iter(path="upy-moat", log=False, *, request_factory=Request
 
     async with TaskGroup() as tg:
         listener = await anyio.create_unix_listener(path)
+        if evt is not None:
+            evt.set()
 
         await tg.spawn(listener.serve, q.put)
         n = 0

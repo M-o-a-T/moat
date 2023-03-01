@@ -203,8 +203,9 @@ class Multiplexer(Request):
 		self.next_sub = 0
 		self.subs = {}  # nr > topic,codec,cs
 
-		# wait on this to sync with the link state
+		# wait on some of these to sync with the link state
 		self.running = anyio.Event()
+		self.serving = anyio.Event()
 		self.stopped = anyio.Event()
 		self.stopped.set()
 
@@ -380,7 +381,7 @@ class Multiplexer(Request):
 			await self._serve_stream(self.socket)
 
 	async def wait(self):
-		await self.running.wait()
+		await self.serving.wait()
 
 	async def client_cmd(self, a,d):
 		return await self.send(a,d)
@@ -416,7 +417,7 @@ class Multiplexer(Request):
 
 	async def _serve_stream(self, path, *, task_status=None):
 		logger.info("Listen for commands on %r", self.socket)
-		async for t,b in unix_stack_iter(self.socket, log="Client", request_factory=CommandClient):
+		async for t,b in unix_stack_iter(self.socket, evt=self.serving, log="Client", request_factory=CommandClient):
 			t.mplex = self
 			await self._tg.spawn(self._run_client, b)
 

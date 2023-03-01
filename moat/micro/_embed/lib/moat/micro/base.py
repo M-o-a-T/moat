@@ -149,15 +149,29 @@ class SysCmd(BaseCmd):
         if not p:
             if d is not None:
                 raise ValueError("no override root")
-            await self.base.config_updated(cfg)
+            await self.base.config_updated(self.base.cfg)
             await self.request.send_nr(["mplex","cfg"])
             return
         for pp in p[:-1]:
-            cur = cur[pp]
+            try:
+                cur = cur[pp]
+            except KeyError:
+                cur[pp] = []
+                cur = cur[pp]
+            except IndexError as exc:
+                if len(cur) != pp:
+                    raise exc
+                cur.append({})
+                cur = cur[pp]
         if d is NotGiven:
             del cur[p[-1]]
         else:
-            cur[p[-1]] = d
+            try:
+                cur[p[-1]] = d
+            except IndexError:
+                if len(cur) != p[-1]:
+                    raise exc
+                cur.append(d)
 
 
     async def cmd_eval(self, val, attrs=()):

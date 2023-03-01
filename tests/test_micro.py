@@ -31,7 +31,7 @@ async def test_cfg(tmp_path):
             assert cfg.tt.a == "b"
             assert cfg.tt.c[1] == 2
 
-            await req.set_cfg({"a":"d","e":{"f":42}})
+            await req.set_cfg({"tt":{"a":"d","e":{"f":42}}})
 
         async with mpy_client(obj) as req:
             cfg = to_attrdict(await req.get_cfg())

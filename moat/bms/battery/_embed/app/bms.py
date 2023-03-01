@@ -161,7 +161,7 @@ class BMS:
 		self.t_sw = ticks_add(ticks_ms(), self.cfg["relay"]["t1"])
 
 		async with TaskGroup() as tg:
-			await tg.spawn(self.live_task)
+			await tg.spawn(self.live_task, _name="bms.live")
 			await self._run()
 
 	async def _run(self):

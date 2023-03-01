@@ -392,7 +392,7 @@ async def _mplex(obj, no_config=False, debug=None, remote=False, server=None, pi
 				break  # default handler on next
 
 	async with TaskGroup() as tg:
-		await tg.spawn(sig_handler, tg)
+		await tg.spawn(sig_handler, tg, _name="sig")
 		obj.debug = False  # for as_service
 
 		async with as_service(obj):

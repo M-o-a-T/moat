@@ -278,12 +278,12 @@ class Battery:
 				r.to_cell(c)
 
 			for c in self.cells:
-				await tg.spawn(c.run)
+				await tg.spawn(c.run, _name="bms_c")
 
-			await tg.spawn(self.task_keepalive)
-			await tg.spawn(self.task_voltage)
-			await tg.spawn(self.task_cellvoltage)
-			await tg.spawn(self.task_celltemperature)
+			await tg.spawn(self.task_keepalive, _name="bms_alive")
+			await tg.spawn(self.task_voltage, _name="bms_v")
+			await tg.spawn(self.task_cellvoltage, _name="bms_cv")
+			await tg.spawn(self.task_celltemperature, _name="bms_ct")
 
 			await self.ready_evt.wait()
 			evt.set()

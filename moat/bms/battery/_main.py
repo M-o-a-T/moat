@@ -28,7 +28,7 @@ def clean_cfg(cfg):
 	# cfg = attrdict(apps=cfg["apps"])  # drop all the other stuff
 	return cfg
 
-@load_subgroup(prefix="moat.util")
+@load_subgroup(prefix="moat.micro")
 @click.pass_obj
 @click.option("-c","--config", help="Configuration file (YAML)", type=click.Path(dir_okay=False,readable
 =True))

@@ -24,9 +24,13 @@ async def main(socket):
 
         t_low=43
         t_high=45
+        tx_low=23
+        tx_high=25
         d = await dkv.get(P("home.ass.dyn.switch.esp_s3.relay.state"))
         t_on=d.value
+        tx_on=True
 
+        n=0
         while True:
             for a in thl:
                 t = await m.send(["i","wrrd"], cd=cd, i=a, buf=bytearray((5,)), n=2)
@@ -36,8 +40,20 @@ async def main(socket):
                 if s:
                     t = -t
                 tw[a] = t
-                print(a,t, end="  ")
-            print()
+                if not n%5:
+                    print(f"{a:2d} {t:7.4f}", end="   ")
+            if not n%5:
+                print()
+                await dkv.set(P("home.ass.dyn.sensor.temp.bad_wall.state"), value=tw[25], idem=True)
+                await dkv.set(P("home.ass.dyn.sensor.temp.bad_wall_heat.state"), value=tw[30], idem=True)
+                await dkv.set(P("home.ass.dyn.sensor.temp.bad_room.state"), value=tw[24], idem=True)
+            tx=max(tw[24],tw[25])
+            if tx_on:
+                if tx > tx_high:
+                    tx_on = False
+            else:
+                if tx < tx_low:
+                    tx_on = True
             t=tw[30]
             if t_on:
                 if t > t_high:
@@ -45,11 +61,9 @@ async def main(socket):
             else:
                 if t < t_low:
                     t_on = True
-            await dkv.set(P("home.ass.dyn.switch.esp_s3.relay.cmd"), value=t_on)
-
-
-
-            await anyio.sleep(10)
+            await dkv.set(P("home.ass.dyn.switch.esp_s3.relay.cmd"), value=(t_on and tx_on))
+            await anyio.sleep(5)
+            n += 1
 
 
 click._anyio_backed="trio"

@@ -296,7 +296,7 @@ def _namespaces(name):
 _ext_cache = defaultdict(dict)
 
 
-def _cache_ext(ext_name):
+def _cache_ext(ext_name, pkg_only):
     """List external modules
 
     Yields (name,path) tuples.
@@ -304,14 +304,14 @@ def _cache_ext(ext_name):
     TODO: This is not zip safe.
     """
     for finder, name, ispkg in _namespaces(ext_name):
-        if not ispkg:
+        if pkg_only and not ispkg:
             continue
         x = name.rsplit(".", 1)[-1]
         f = Path(finder.path) / x
         _ext_cache[ext_name][x] = f
 
 
-def list_ext(name, func=None):
+def list_ext(name, func=None, pkg_only=True):
     """List external modules
 
     Yields (name,path) tuples.
@@ -321,7 +321,7 @@ def list_ext(name, func=None):
     logger.debug("List Ext %s (%s)", name, func)
     if name not in _ext_cache:
         try:
-            _cache_ext(name)
+            _cache_ext(name, pkg_only)
         except ModuleNotFoundError:
             pass
     if func is None:

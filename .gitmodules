@@ -30,4 +30,4 @@
 	url = git://git.smurf.noris.de/moat-dev.git
 [submodule "micro"]
 	path = micro
-	url = git://git.smurf.noris.de:moat-micro.git
+	url = git://git.smurf.noris.de/moat-micro.git

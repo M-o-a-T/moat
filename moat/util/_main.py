@@ -32,37 +32,44 @@ async def cli():
 @click.option("--inv", "-i", is_flag=True, help="Time until no match")
 @click.argument("args", nargs=-1)
 async def to_(args, sleep, human, now, inv):
-    """
-        Calculate the time until the start of the next given interval.
+    """\
+Calculate the time until the start of the next given interval according to
+the wall clock.
 
-        For instance, "9 h": show in how many seconds it's 9 o'clock (possibly
-        on the next day). Arbitrarily many units can be used.
+For instance, "moat util to 9 h": shows in how many seconds it's 9 o'clock
+(possibly on the next day). Arbitrarily many units can be combined.
 
-        Negative numbers count from the end, i.e. "-2 hr" == 10 pm. Don't
-        forget to use "--" if the time specification starts with a negative
-        number.
+Negative numbers count from the end, i.e. "-2 hr" == 10 pm. Don't
+forget to use the "--" option-to-argument separator if the time
+specification starts with a negative number.
 
-        "--human" prints a human-understandable version of the given
-        time. "--sleep" then delays until the specified moment arrives. If none
-        of these options is given, the number of seconds is printed.
+"--human" prints a human-understandable version of the given interval;
+"--sleep" waits until the specified moment arrives. If neither of these
+options is used, the number of seconds is printed.
 
-        By default, if the given interval matches the current time, the
-        duration to the *next* moment the interval matches is calculated. Use
-        "--now" to print 0 / "now" / not sleep instead.
+By default, if the given interval matches the current time, the
+duration to the *next* moment the interval matches is calculated. Use
+"--now" to print 0 / "now" / not sleep instead.
 
-        "--inv" inverts the given interval, i.e. "9 h" prints the time until
-        the next moment it is not / no longer 9:** o'clock, depending on
-        whether "--now" is used / not used.
+"--inv" inverts the given interval, i.e. "9 h" prints the time until
+the next moment it is not / no longer 9:** o'clock, depending on
+whether "--now" is used / not used.
 
-    \b
-        Known units:
-        s, sec (0…59)
-        m, min (0…59)
-        h, hr  (0…23)
-        d, dy  (1…7)
-        w, wk  (0…53)
-        m, mo  Month (1…12)
-        y, yr  Year (2023–)
+Limitations:
+
+This tool does not understand relative time. It may or may not get confused
+when the interval crosses a DST boundary. If your computer is suspended
+during "--sleep", the delay will be too long.
+
+\b
+Known units:
+s, sec (0…59)
+m, min (0…59)
+h, hr  (0…23)
+d, dy  (1…7)
+w, wk  (0…53)
+m, mo  Month (1…12)
+y, yr  Year (2023–)
     """
     if not args:
         raise click.UsageError("Up to when please?")

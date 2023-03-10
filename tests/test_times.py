@@ -15,12 +15,12 @@ err = False
 now = None
 
 
-def chk(iso, a, invert=False):
+def chk(iso, a, invert=False, back=False):
     if a == "":
         a = ()
     else:
         a = a.split(" ")
-    res = time_until(a, t_now=now, invert=invert)
+    res = time_until(a, t_now=now, invert=invert, back=back)
     if res is None:
         if iso == "-":
             return
@@ -35,10 +35,10 @@ def chk(iso, a, invert=False):
         lnp = now
         print("@", now, "::")
     err += 1
-    print("?", iso, "≠", res, "@", a)
+    print("?", iso, "≠", res, "@", a, "I" if invert else "", "B" if back else "")
 
 
-def test_all():
+def test_fore():
     global now
     now = datetime.datetime(2003, 4, 5, 6, 7, 8)
 
@@ -68,6 +68,11 @@ def test_all():
     # 20 21 22 23 24 25 26  18 19 20 21 22 23 24
     # 27 28 29 30           25 26 27 28 29 30 31
 
+    chk("2003-04-05 06:07:08", "sat")
+    chk("2003-04-06 00:00:00", "sun")
+    chk("2003-04-08 00:00:00", "tue")
+    chk("2003-04-07 00:00:00", "mon")
+
     chk("2003-04-05 06:07:08", "1 sat")
     chk("2003-04-08 00:00:00", "2 tue")
     chk("2003-04-16 00:00:00", "3 wed")
@@ -86,6 +91,57 @@ def test_all():
     chk("2003-04-05 06:07:08", "14 wk mon", True)
     chk("2003-04-06 00:00:00", "14 wk sat", True)
     chk("2003-04-05 06:07:08", "15 wk", True)
+
+    if err:
+        sys.exit(1)
+
+
+def test_back():
+    global now
+    now = datetime.datetime(2003, 4, 5, 6, 7, 8)
+
+    chk("2003-04-05 06:07:08", "6 h 4 month 8 sec", back=True)
+    chk("2003-04-05 06:07:05", "5 sec", back=True)
+    chk("2003-04-05 06:06:10", "10 sec", back=True)
+    chk("2003-04-05 06:06:50", "- 10 sec", back=True)
+    chk("2003-04-05 06:03:02", "3 min 2 sec", back=True)
+    chk("2003-04-05 05:59:50", "05 h - 10 sec", back=True)
+    chk("2003-04-04 23:05:50", "- 1 h 5 min - 10 sec", back=True)
+
+    chk("2003-01-05 23:59:59", "1 wk", back=True)
+    chk("2003-01-02 23:59:12", "1 wk thu 12 sec", back=True)
+    chk("2002-12-31 23:59:12", "1 wk tue 12 sec", back=True)
+    chk("2003-01-12 23:59:59", "2 wk", back=True)
+
+    chk("2003-04-05 03:59:50", "03 h - 10 sec", back=True)
+    chk("2003-04-05 03:45:50", "03 h - 15 min - 10 sec", back=True)
+    chk("2003-03-30 23:59:59", "13 wk", back=True)
+    chk("2003-04-05 06:07:08", "14 wk", back=True)
+    chk("2002-04-14 23:59:59", "15 wk", back=True)
+
+    chk("2003-04-05 06:07:08", "sat", back=True)
+    chk("2003-03-30 23:59:59", "sun", back=True)
+    chk("2003-04-01 23:59:59", "tue", back=True)
+    chk("2003-03-31 23:59:59", "mon", back=True)
+
+    chk("2003-04-05 06:07:08", "1 sat", back=True)
+    chk("2003-03-11 23:59:59", "2 tue", back=True)
+    chk("2003-03-19 23:59:59", "3 wed", back=True)
+    chk("2003-03-12 23:59:59", "-3 wed", back=True)
+    chk("2003-03-27 23:59:59", "-1 thu", back=True)
+    chk("2003-03-31 23:59:59", "-1 mon", back=True)
+    chk("2003-04-03 23:59:59", "1 thu", back=True)
+    chk("2003-03-02 23:59:59", "1 sun", back=True)
+
+    chk("2003-04-05 06:07:07", "8 sec", True, back=True)
+    chk("2003-04-05 06:07:08", "7 sec", True, back=True)
+    chk("2003-04-05 06:07:07", "7 min 8 sec", True, back=True)
+    chk("2003-04-05 06:07:08", "7 min 20 sec", True, back=True)
+
+    chk("2003-03-30 23:59:59", "14 wk", True, back=True)
+    chk("2003-04-04 23:59:59", "14 wk sat", True, back=True)
+    chk("2003-04-05 06:07:08", "14 wk mon", True, back=True)
+    chk("2003-04-05 06:07:08", "15 wk", True, back=True)
 
     if err:
         sys.exit(1)

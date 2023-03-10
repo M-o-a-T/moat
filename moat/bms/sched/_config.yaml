@@ -1,18 +1,47 @@
 bms:
   sched:
-    pricing:
-      # prices are per kWh
-      in: 1   
-      out: 1   
-      factor: 1.2 
-      surcharge: 0   
-    capacity: 0  # must update
+    data:
+      file:
+        price_buy: "example/price_buy.data"
+        price_sell: "example/price_sell.data"
+        solar: "example/solar.data"
+        load: "example/load.data"
+        result: "/dev/stdout"
+        results: "/dev/stdout"
+      file2:
+        const: 0.
+        factor: 1.
+      format:
+        result: yaml
+        results: yaml
+    mode:
+      price_buy: "file"
+      price_sell: "file"
+      soc: null
+      solar: "file"
+      load: "file"
+      result: "stdout"
+      results: "stdout"
+
+    start:
+      soc: -1  # must set
+
+    steps: 1  # per hour
     battery:
       # on_ac: false  # TODO
+      capacity: 1  # kWh
+      soc:
+        min: 0.25
+        max: 0.9
+        value:
+          # opportunistic cost of an empty battery
+          current: 0
+          end: 0.1
       max:
-        charge: 5   
-        discharge: 8   
+        charge: 5  # Amp
+        discharge: 8  # Amp
       efficiency:
+        # factor (1=perfect)
         charge: 0.95
         discharge: 0.95
     inverter:
@@ -22,7 +51,17 @@ bms:
       efficiency:
         charge: 0.9
         discharge: 0.9
+    solar:
+      lat: 45.6
+      long: 12.3
+      array:
+      - kWp: 10
+        # 0=north 90=east
+        compass: 180
+        # 0=horizontal 90=vertical
+        tilt: 30
+
     grid:
       max:
-        in: 99999
-        out: 99999
+        buy: 99999
+        sell: 99999

@@ -1,24 +1,33 @@
 """
 Charge/discharge optimizer.
 """
-from dataclasses import dataclass
-
+from contextlib import nullcontext
 from moat.util import attrdict
 from ortools.linear_solver import pywraplp
+import anyio
+from .mode import Loader
 
+import logging
+logger = logging.getLogger(__name__)
 
-@dataclass
-class FutureData:
+async def generate_data(cfg):
+    # loads, prices, solar, buy_factor, buy_const):
     """
-    Collects projected data at some point in time.
-
-    Prices are per Wh.
+    Generate data chunks from iterators
     """
-
-    price_buy: float = 0.0
-    price_sell: float = 0.0
-    load: float = 0.0
-    pv: float = 0.0
+    iters = {}
+    for k in "price_buy,price_sell,solar,load".split(","):
+        iters[k] = aiter(Loader(cfg.mode[k],k)(cfg))
+    while True:
+        val = attrdict()
+        try:
+            for k,v in iters.items():
+                val[k] = await anext(v)
+        except StopAsyncIteration:
+            logger.info("END: %s", k)
+            return
+        logger.debug("DATA: %r", val)
+        yield val
 
 
 class Model:
@@ -27,12 +36,8 @@ class Model:
     minimizing cost / maximizing income.
 
     Initial input:
-    * hardware model
-    * future data points: list of FutureData items
-    * periods per hour (default 1)
-    plus
-    * assumed cost of low battery (ongoing, default 0.0)
-    * assumed cost of low battery (final, default 0.0)
+    * configuration data
+    * async iterator for values
 
     Solver input:
     * current charge level (SoC)
@@ -41,23 +46,17 @@ class Model:
     * grid input (negative: send energy)
     * battery SoC at end of first period
 
-    No other output is provided. Re-run the model with the actual SoC at
-    the start of the next period.
+    You should re-run the model at the start of the next period, using
+    the SoC at that time.
     """
 
-    def __init__(self, hardware, data, per_hour=1, chg_inter=0, chg_last=0):
-        self.hardware = hardware
-        self.data = data
-        self.per_hour = per_hour
-        self.chg_inter = chg_inter
-        self.chg_last = chg_last
+    def __init__(self, cfg:dict):
+        self.cfg = cfg
 
-        self._setup()
-
-    def _setup(self):
-        hardware = self.hardware
-        data = iter(self.data)
-        per_hour = self.per_hour
+    async def _setup(self):
+        cfg = self.cfg
+        data = generate_data(cfg)
+        per_hour = self.cfg.steps
 
         # ORtools
         self.solver = solver = pywraplp.Solver("B", pywraplp.Solver.GLOP_LINEAR_PROGRAMMING)
@@ -66,14 +65,16 @@ class Model:
 
         # Starting battery charge
         self.cap_init = cap_prev = solver.NumVar(
-            hardware.capacity * 0.05, hardware.capacity * 0.95, "b_init"
+            cfg.battery.capacity * 0.05, cfg.battery.capacity * 0.95, "b_init"
         )
         self.constr_init = solver.Constraint(0, 0)
         self.constr_init.SetCoefficient(self.cap_init, 1)
 
         # collect vars for reporting
-        self.g_ins = []
-        self.g_outs = []
+        self.g_buys = []
+        self.g_sells = []
+        self.b_chgs = []
+        self.b_diss = []
         self.caps = []
         self.moneys = []
 
@@ -82,8 +83,8 @@ class Model:
         while True:
             # input constraints
             try:
-                dt = next(data)
-            except StopIteration:
+                dt = await anext(data)
+            except StopAsyncIteration:
                 break
             if dt.price_buy == dt.price_sell:
                 dt.price_buy *= 1.001
@@ -95,32 +96,34 @@ class Model:
 
             # future battery charge
             cap = solver.NumVar(
-                hardware.capacity * hardware.batt_min_soc,
-                hardware.capacity * hardware.batt_max_soc,
+                cfg.battery.capacity * cfg.battery.soc.min,
+                cfg.battery.capacity * cfg.battery.soc.max,
                 f"b{i}",
             )
 
             self.caps.append(cap)
 
             # battery charge/discharge
-            b_chg = solver.NumVar(0, hardware.batt_max_chg / per_hour, f"bc{i}")
-            b_dis = solver.NumVar(0, hardware.batt_max_dis / per_hour, f"bd{i}")
+            b_chg = solver.NumVar(0, cfg.battery.max.charge / per_hour, f"bc{i}")
+            b_dis = solver.NumVar(0, cfg.battery.max.discharge / per_hour, f"bd{i}")
+            self.b_chgs.append(b_chg)
+            self.b_diss.append(b_dis)
 
             # solar power input. We may not be able to take all
-            s_in = solver.NumVar(0, dt.pv / per_hour, f"pv{i}")
+            s_in = solver.NumVar(0, dt.solar / per_hour, f"pv{i}")
 
             # inverter charge/discharge
-            i_chg = solver.NumVar(0, hardware.inv_max_chg / per_hour, f"ic{i}")
-            i_dis = solver.NumVar(0, hardware.inv_max_dis / per_hour, f"id{i}")
+            i_chg = solver.NumVar(0, cfg.inverter.max.charge / per_hour, f"ic{i}")
+            i_dis = solver.NumVar(0, cfg.inverter.max.discharge / per_hour, f"id{i}")
 
             # local load
-            l_out = solver.NumVar(dt.load, dt.load / per_hour, f"ld{i}")
+            l_out = solver.NumVar(dt.load / per_hour, dt.load / per_hour, f"ld{i}")
 
             # grid
-            g_in = solver.NumVar(0, hardware.grid_max_in / per_hour, f"gi{i}")
-            g_out = solver.NumVar(0, hardware.grid_max_out / per_hour, f"go{i}")
-            self.g_ins.append(g_in)
-            self.g_outs.append(g_out)
+            g_buy = solver.NumVar(0, cfg.grid.max.buy / per_hour, f"gi{i}")
+            g_sell = solver.NumVar(0, cfg.grid.max.sell / per_hour, f"go{i}")
+            self.g_buys.append(g_buy)
+            self.g_sells.append(g_sell)
 
             # income to maximize
             money = solver.NumVar(-inf, inf, f"pr{i}")
@@ -129,34 +132,34 @@ class Model:
             # ### Constraints (actually Relationships, as they're all equalities)
 
             # Battery charge. old + charge - discharge == new, so … - new == 0.
-            solver.Add(cap_prev + hardware.batt_eff_chg * b_chg - b_dis == cap)
+            solver.Add(cap_prev + cfg.battery.efficiency.charge * b_chg - b_dis == cap)
 
             # DC power bar. power_in == power_out
-            solver.Add(s_in + hardware.batt_eff_dis*b_dis + hardware.inv_eff_chg*i_chg == b_chg + i_dis)
+            solver.Add(s_in + cfg.battery.efficiency.discharge * b_dis + cfg.inverter.efficiency.charge*i_chg == b_chg + i_dis)
 
             # AC power bar. power_in == power_out
-            solver.Add(g_in + hardware.inv_eff_dis*i_dis == g_out + l_out + i_chg)
+            solver.Add(g_buy + cfg.inverter.efficiency.discharge*i_dis == g_sell + l_out + i_chg)
 
             # Money earned: grid_out*price_sell - grid_in*price_buy
-            solver.Add(dt.price_sell*g_out
-                     - dt.price_buy*g_in
-                     + cap * self.chg_inter / hardware.capacity  # bias for keeping the battery charged
+            solver.Add(dt.price_sell*g_sell
+                     - dt.price_buy*g_buy
+                     + cap * cfg.battery.soc.value.current / cfg.battery.capacity  # bias for keeping the battery charged
                      == money)
 
             self.objective.SetCoefficient(money, 1)
             cap_prev = cap
             if not i:
-                self.g_in, self.g_out = g_in, g_out
+                self.g_buy, self.g_sell = g_buy, g_sell
                 self.cap = cap
                 self.money = money
             i += 1
 
         # Attribute a fake monetary value of ending up with a charged battery
-        self.objective.SetCoefficient(cap, self.chg_last / hardware.capacity)
+        self.objective.SetCoefficient(cap, cfg.battery.soc.value.end / cfg.battery.capacity)
 
         self.objective.SetMaximization()
 
-    def propose(self, charge):
+    async def propose(self, charge):
         """
         Assuming that the current SoC is @charge, return
         - how much power to take from / -feed to the grid [W]
@@ -164,30 +167,40 @@ class Model:
         - this period's earnings / -cost [$$]
 
         """
-        charge *= self.hardware.capacity
-        self.constr_init.SetLb(charge)
-        self.constr_init.SetUb(charge)
+        await self._setup()
+        cfg = self.cfg
 
-        self.solver.Solve()
-        return (
-            (self.g_in.solution_value() - self.g_out.solution_value()) * self.per_hour,
-            self.cap.solution_value() / self.hardware.capacity,
-            self.money.solution_value(),
-        )
-
-    def proposed(self, charge):
-        """
-        As "propose" but iterates over results
-        """
-        charge *= self.hardware.capacity
+        charge *= cfg.battery.capacity
         self.constr_init.SetLb(charge)
         self.constr_init.SetUb(charge)
 
         self.solver.Solve()
 
-        for g_in, g_out, cap, money in zip(self.g_ins, self.g_outs, self.caps, self.moneys):
-            yield (
-                (g_in.solution_value() - g_out.solution_value()) * self.per_hour,
-                cap.solution_value() / self.hardware.capacity,
-                money.solution_value(),
-            )
+        async with anyio.create_task_group() as tg:
+            res = cfg.mode.result
+            if res is not None:
+                res = Loader(res).result
+
+            res2 = cfg.mode.results
+            if res2 is not None:
+                sch,rch = anyio.create_memory_object_stream(1)
+                tg.start_soon(Loader(res2).results, cfg, rch)
+                res2 = sch
+
+            async with res2 if res2 is not None else nullcontext():
+                for g_buy, g_sell, b_chg, b_dis, cap, money in zip(self.g_buys, self.g_sells, self.b_chgs, self.b_diss, self.caps, self.moneys):
+                    val = dict(
+                        grid=(g_buy.solution_value() - g_sell.solution_value()) * cfg.steps,
+                        soc=cap.solution_value() / cfg.battery.capacity,
+                        batt=b_chg.solution_value() - b_dis.solution_value(),
+                        money=money.solution_value(),
+                    )
+
+                    if res is not None:
+                        tg.start_soon(res, cfg, val)
+                        res = None
+                        if res2 is None:
+                            break
+
+                    if res2 is not None:
+                        await res2.send(val)

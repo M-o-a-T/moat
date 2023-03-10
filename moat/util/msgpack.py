@@ -15,7 +15,7 @@ import msgpack
 from .dict import attrdict
 from .path import Path
 
-__all__ = ["packer", "unpacker", "stream_unpacker", "Proxy"]
+__all__ = ["packer", "unpacker", "stream_unpacker", "Proxy", "NoProxyError"]
 
 
 class Proxy:
@@ -29,6 +29,8 @@ class Proxy:
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name !r})"
 
+class NoProxyError(ValueError):
+    pass
 
 def _encode(data):
     if isinstance(data, int) and data >= 1 << 64:

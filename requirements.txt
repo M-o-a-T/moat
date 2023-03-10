@@ -1,8 +1,8 @@
-gitpython
-tomlkit
-packaging
 anyio
 anyio_serial
-trio
-pymodbus
 cffi
+gitpython
+packaging
+pymodbus
+tomlkit
+trio

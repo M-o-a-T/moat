@@ -18,6 +18,8 @@ def _get_sub(r):
     try:
         rp = git.Repo(r)
     except Exception as exc:
+        if "/lib/" in r:
+            return
         raise RuntimeError(r) from exc
     for rr in rp.submodules:
         yield from _get_sub(os.path.join(r,rr.path))

@@ -351,7 +351,7 @@ def time_until(args, t_now=None, invert=False, back=False):
                 rgoal += s_one  # (b) and (d)
 
             if (
-                (real < rgoal or rgoal < 0) if back else (real > rgoal or rgoal > lim())
+                (real < rgoal or rgoal < beg) if back else (real > rgoal or rgoal > lim())
             ):  # needs increasing: (b), maybe (c)/(d)
                 h = {ln: lim() if back else beg}
                 h.update(clear_fields)

@@ -281,7 +281,7 @@ def collect_words(cur, w):
     return p
 
 
-def time_until(args, t_now=None, invert=False):
+def time_until(args, t_now=None, invert=False, back=False):
     """\
         Find the next time which is in the future and matches the arguments.
         If "invert" is True, find the next time which does *not*.
@@ -289,6 +289,8 @@ def time_until(args, t_now=None, invert=False):
     p = collect_words(t_now, args)
 
     p.res = p.now
+
+    s_one = -1 if back else 1
 
     # Theory of operation:
     # For each step, there are four cases:
@@ -319,16 +321,23 @@ def time_until(args, t_now=None, invert=False):
         return 59
 
     def check_year(force=False):
-        clear_fields = {"second": 0, "minute": 0, "hour": 0, "day": 1, "month": 1}
+        clear_fields = (
+            {"second": 59, "minute": 59, "hour": 23, "day": 31, "month": 12}
+            if back
+            else {"second": 0, "minute": 0, "hour": 0, "day": 1, "month": 1}
+        )
         # This is simpler, as there's nothing a year is owerflowing into.
         # (I do hope that this won't change any time soon …)
         if p.yr is None:
             if force:
-                p.res = p.res.replace(year=p.res.year + 1, **clear_fields)
+                p.res = p.res.replace(year=p.res.year + s_one, **clear_fields)
         else:
             p.res = p.res.replace(year=p.yr, **clear_fields)
 
-    def step(sn, ln, beg, lim, nextfn, clear_fields):  # shortname, longname, limit
+    def step(sn, ln, beg, lim, nextfn, clear_fields, cf2):  # shortname, longname, limit
+        if back:
+            clear_fields = cf2
+
         def next_whatever(force=False):
             goal = getattr(p, sn)
             real = getattr(p.res, ln)
@@ -339,21 +348,31 @@ def time_until(args, t_now=None, invert=False):
             else:
                 rgoal = goal
             if force:
-                rgoal += 1  # (b) and (d)
+                rgoal += s_one  # (b) and (d)
 
-            if real > rgoal or rgoal > lim():  # needs increasing: (b), maybe (c)/(d)
-                h = {ln: beg}
+            if (
+                (real < rgoal or rgoal < beg) if back else (real > rgoal or rgoal > lim())
+            ):  # needs increasing: (b), maybe (c)/(d)
+                h = {ln: lim() if back else beg}
                 h.update(clear_fields)
                 p.res = p.res.replace(**h)
                 nextfn(True)
                 force = False
-                if rgoal > lim():
-                    rgoal = beg
+                if back:
+                    if rgoal < beg:
+                        rgoal = lim()
+                else:
+                    if rgoal > lim():
+                        rgoal = beg
             if force or goal is not None:
                 if real != rgoal:  # otherwise we clear fields for no reason
                     h = {ln: rgoal}
                     h.update(clear_fields)
-                    p.res = p.res.replace(**h)
+                    try:
+                        p.res = p.res.replace(**h)
+                    except ValueError:
+                        print(h)
+                        raise
             # … and if the goal is None, this is either (a),
             # or 'our' value has been set to the beginning value, above
 
@@ -366,11 +385,28 @@ def time_until(args, t_now=None, invert=False):
         lim12,
         check_year,
         {"second": 0, "minute": 0, "hour": 0, "day": 1},
+        {"second": 59, "minute": 59, "hour": 23, "day": 31},
     )
-    check_day = step("dy", "day", 1, lim30, check_month, {"second": 0, "minute": 0, "hour": 0})
-    check_hour = step("h", "hour", 0, lim24, check_day, {"second": 0, "minute": 0})
-    check_min = step("m", "minute", 0, lim60, check_hour, {"second": 0})
-    check_sec = step("s", "second", 0, lim60, check_min, {})
+    check_day = step(
+        "dy",
+        "day",
+        1,
+        lim30,
+        check_month,
+        {"second": 0, "minute": 0, "hour": 0},
+        {"second": 59, "minute": 59, "hour": 23},
+    )
+    check_hour = step(
+        "h",
+        "hour",
+        0,
+        lim24,
+        check_day,
+        {"second": 0, "minute": 0},
+        {"second": 59, "minute": 59},
+    )
+    check_min = step("m", "minute", 0, lim60, check_hour, {"second": 0}, {"second": 59})
+    check_sec = step("s", "second", 0, lim60, check_min, {}, {})
 
     def nth():
         if p.nth > 0:
@@ -393,7 +429,7 @@ def time_until(args, t_now=None, invert=False):
             p.res = p.now
             fn(True)
             d = p.res
-            if p.delta is None or p.delta > d:
+            if p.delta is None or s_one * p.delta.timestamp() > s_one * d.timestamp():
                 p.delta = d
 
         get_delta(check_year, "yr", "year")
@@ -414,8 +450,11 @@ def time_until(args, t_now=None, invert=False):
                 return p.now
             p.res = p.now
             check_day(True)
-            d = p.res + dt.timedelta(7 - dow)  # until end-of-week
-            if p.delta is None or p.delta > d:
+            if back:
+                d = p.res - dt.timedelta(dow - 1)  # until end-of-week
+            else:
+                d = p.res + dt.timedelta(7 - dow)  # until end-of-week
+            if p.delta is None or s_one * p.delta > s_one * d:
                 p.delta = d
         if p.dow is not None:
             _yr, wk, dow = p.now.isocalendar()
@@ -424,7 +463,7 @@ def time_until(args, t_now=None, invert=False):
                 return p.now
             p.res = p.now
             check_day(True)
-            if p.delta is None or p.delta > p.res:
+            if p.delta is None or s_one * p.delta.timestamp() > s_one * p.res.timestamp():
                 p.delta = p.res
         if p.nth:  # may be zero
             p.res = p.now
@@ -448,42 +487,58 @@ def time_until(args, t_now=None, invert=False):
     def upd(delta):
         if not delta:
             return
-        p.res = p.res + dt.timedelta(delta)
-        if p.res > p.now:
-            p.res = p.res.replace(hour=0, minute=0, second=0)
-        if p.res < p.now:
+        p.res = p.res + dt.timedelta(s_one * delta)
+        if s_one * p.res.timestamp() > s_one * p.now.timestamp():
+            if back:
+                p.res = p.res.replace(hour=23, minute=59, second=59)
+            else:
+                p.res = p.res.replace(hour=0, minute=0, second=0)
+        if s_one * p.res.timestamp() < s_one * p.now.timestamp():
             p.res = p.now
 
     if p.wk:  # week of the year
         _yr, wk, dow = p.res.isocalendar()
-        if p.wk < wk:
+        if s_one * p.wk < s_one * wk:
             check_year(True)
             _yr, wk, dow = p.res.isocalendar()
-        upd(7 * (p.wk - wk))
+            if back and _yr != p.res.year:
+                _yr, wk, dow = p.res.replace(day=p.res.day - 7).isocalendar()
+                wk += 1
+        if p.wk != wk:
+            upd(s_one * 7 * (p.wk - wk))
+
         if p.mn is None and p.dy is None:
             # No month/day specified, so assume that we can go back a bit.
             # (iso day 1 of week 1 of year X may be in December X-1.)
             # … but not into the past, please!
-            upd(1 - dow)
-            if p.res < p.now:
+            if back:
+                upd(dow - 7)
+            else:
+                upd(1 - dow)
+            if s_one * p.res.timestamp() < s_one * p.now.timestamp():
                 p.res = p.now
 
     if p.dow is not None:
         _yr, wk, dow = p.res.isocalendar()
-        dow -= 1  # 1…7 ⇒ 0…6
-        if p.dow < dow:
-            dow -= 7  # next week
-        upd(p.dow - dow)
+        dow -= 1  # 1…7 ⇒ 0…6 (mon…sun)
+        if back:
+            if p.dow > dow:
+                dow += 7  # prev week
+            upd(dow - p.dow)
+        else:
+            if p.dow < dow:
+                dow -= 7  # next week
+            upd(p.dow - dow)
 
-    if p.nth:  # may be zero
-        if p.nth < nth():
-            upd(7 * (4 + p.nth - nth()))
+    if p.nth:  # may be zero or None
+        if s_one * p.nth < s_one * nth():
+            upd(7 * (4 + s_one * (p.nth - nth())))
             # That will take me to the first.
-            if p.nth < nth():  # five weekdays in this month!
+            if s_one * p.nth < s_one * nth():  # five weekdays in this month!
                 upd(7)
                 # … except when it doesn't.
-        if p.nth > nth():
-            upd(7 * (p.nth - nth()))
+        if s_one * p.nth > s_one * nth():
+            upd(7 * s_one * (p.nth - nth()))
             # Either way, as if by magic, we now get the correct date.
 
     check_hour(False)

@@ -29,8 +29,10 @@ class Proxy:
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name !r})"
 
+
 class NoProxyError(ValueError):
     pass
+
 
 def _encode(data):
     if isinstance(data, int) and data >= 1 << 64:

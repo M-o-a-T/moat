@@ -1,11 +1,22 @@
 bms:
   sched:
+    # This section contains settings for input/output modules
     data:
+
+      # forcast.solar
+      fore_solar:
+        url: "https://api.forecast.solar"
+        api: ""
+        factor: 0.001  # we want kW, not W
+
+      # awattar.de pricing API
       awattar:
         url: "https://api.awattar.at/v1/marketdata"
-        factor: 0.001
-        offset: 0
-        extend: 2
+        factor: 0.001  # they send €/MWh, we want kWh
+        offset: 0  # price per kWh in addition to the spot price (usually negative)
+        extend: 2  # simple linear continuation by this many days
+
+      # file-based sources and sinks
       file:
         price_buy: "example/price_buy.data"
         price_sell: "example/price_sell.data"
@@ -13,12 +24,18 @@ bms:
         load: "example/load.data"
         result: "/dev/stdout"
         results: "/dev/stdout"
+
+      # calculates price-buy from price-sell.
       file2:
         factor: 1.
-        offset: 0.
+        offset: 0.02
+
+      # output formats
       format:
         result: yaml
         results: yaml
+
+    # Specify which sources / sinks to use
     mode:
       price_buy: "file"
       price_sell: "file"
@@ -28,45 +45,75 @@ bms:
       result: "file"
       results: null
 
+    # if .mode.soc is null, this value is used
     start:
       soc: -1  # must set
 
-    steps: 1  # per hour
+    # optimizer runs per hour
+    steps: 1
+
+    # details about your battery
     battery:
       # on_ac: false  # TODO
       capacity: 1  # kWh
+
+      # state-of-charge handling
       soc:
+        # the optimizer will not go beyond these limits
+        # (it'll also crash if your battery can't get back to the
+        # limit within the first period!)
         min: 0.25
         max: 0.9
+
+        # opportunistic cost of an empty battery
         value:
-          # opportunistic cost of an empty battery
           current: 0
           end: 0.1
+
+      # charge/discharge limit, in A
       max:
-        charge: 5  # Amp
-        discharge: 8  # Amp
+        charge: 5
+        discharge: 8
+
       efficiency:
-        # factor (1=perfect)
-        charge: 0.95
-        discharge: 0.95
+        # of charging / discharging the battery.
+        # Values are factors (0…1, 1=perfect). Don't set both to 1.
+        charge: 0.97
+        discharge: 0.97
+
+    # details about your inverter
     inverter:
+      # charge/discharge limit, in A
       max:
         charge: 10   
         discharge: 10   
+
       efficiency:
+        # of converting to DC / to AC at average load.
+        # Values are factors (0…1, 1=perfect). Don't set both to 1.
         charge: 0.9
         discharge: 0.9
+
+    # Data about your solar array(s)
     solar:
+      # location
       lat: 45.6
       long: 12.3
+
+      # how much to discount mornings and evenings
+      damping: 0.5
+
+      # You can have more than one array, though not all PV sources understand more than one.
+      # Thus add the largest array first.
       array:
-      - kWp: 10
+      - peak: 10  # kW
         # 0=north 90=east
         compass: 180
         # 0=horizontal 90=vertical
         tilt: 30
 
+    # Data about your grid connection
     grid:
-      max:
-        buy: 99999
-        sell: 99999
+      max: # maximum load, in kW
+        buy: 999
+        sell: 999

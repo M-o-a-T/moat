@@ -28,7 +28,7 @@ class Loader(BaseLoader):
             r = await s.get(cfg.data.awattar.url,params=dict(start=start*1000, end=end*1000))
             dd = r.json()["data"]
             for d in dd[24:]:
-                val = d["marketprice"] / factor + offset
+                val = d["marketprice"] * factor + offset
                 for _ in range(cfg.steps):
                     yield val
 
@@ -36,7 +36,7 @@ class Loader(BaseLoader):
         s = len(dd)-24
         dv = dd[-25]["marketplace"] - dd[-1]["marketplace"]
         for i in range(24):
-            val = (dd[-24+i]["marketplace"] - dv*(25-i)/25) / factor + offset
+            val = (dd[-24+i]["marketplace"] - dv*(25-i)/25) * factor + offset
             for _ in range(cfg.steps):
                 yield val
 

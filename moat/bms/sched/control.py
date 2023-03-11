@@ -1,23 +1,27 @@
 """
 Charge/discharge optimizer.
 """
+import time
+import datetime
 from contextlib import nullcontext
-from moat.util import attrdict
 from ortools.linear_solver import pywraplp
 import anyio
+
+from moat.util import attrdict
+from moat.util.times import attrdict, humandelta
 from .mode import Loader
 
 import logging
 logger = logging.getLogger(__name__)
 
-async def generate_data(cfg):
+async def generate_data(cfg, t):
     # loads, prices, solar, buy_factor, buy_const):
     """
     Generate data chunks from iterators
     """
     iters = {}
     for k in "price_buy,price_sell,solar,load".split(","):
-        iters[k] = aiter(Loader(cfg.mode[k],k)(cfg))
+        iters[k] = aiter(Loader(cfg.mode[k],k)(cfg, t))
     while True:
         val = attrdict()
         try:
@@ -50,12 +54,23 @@ class Model:
     the SoC at that time.
     """
 
-    def __init__(self, cfg:dict):
+    def __init__(self, cfg:dict, t=None):
+        if t is None:
+            t_slot = 3600/cfg.steps
+            t_now = time.time()
+            t = t_now + t_slot/2
+            t -= t%t_slot
+            if abs(t_now-t) > t_slot/10:
+                raise ValueError(f"You're {humandelta(abs(t_now-t))} away from {datetime.datetime.fromtimestamp(t).isoformat(sep=' ')}")
+
+        elif t % (3600 / cfg.steps):
+            raise ValueError(f"Time {t} not a multiple of 3600/{cfg.steps}")
         self.cfg = cfg
+        self.t = t
 
     async def _setup(self):
         cfg = self.cfg
-        data = generate_data(cfg)
+        data = generate_data(cfg, self.t)
         per_hour = self.cfg.steps
 
         # ORtools

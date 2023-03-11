@@ -6,7 +6,7 @@ class BaseLoader:
     """
 
     @staticmethod
-    async def price_buy(cfg):
+    async def price_buy(cfg, t):
         """
         Future prices for incoming energy, in $$$/kWh.
         """
@@ -14,7 +14,7 @@ class BaseLoader:
         yield None
 
     @staticmethod
-    async def price_sell(cfg):
+    async def price_sell(cfg, t):
         """
         Future prices for sold energy, in $$$/kWh.
         """
@@ -22,7 +22,7 @@ class BaseLoader:
         yield None
 
     @staticmethod
-    async def solar(cfg):
+    async def solar(cfg, t):
         """
         Projected solar power, in kW.
         """
@@ -30,7 +30,7 @@ class BaseLoader:
         yield None
 
     @staticmethod
-    async def load(cfg):
+    async def load(cfg, t):
         """
         Projected local consumption, in kW.
         """

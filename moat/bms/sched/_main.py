@@ -3,7 +3,8 @@
 Basic tool support
 
 """
-import logging  # pylint: disable=wrong-import-position
+import time
+import logging
 
 import asyncclick as click
 from textwrap import dedent as _dedent
@@ -114,12 +115,22 @@ Goal: minimize cost.
 @click.option(
     "-a", "--all", "all_", is_flag=True, help="emit all outputs (default: first interval)"
 )
-async def analyze(obj, all_):
+@click.option(
+    "-f", "--force", is_flag=True, help="Run even if we're not close to the timeslot"
+)
+async def analyze(obj, all_, force):
     """
     Analyze future data.
     """
     cfg = obj.cfg.bms.sched
-    m = Model(cfg)
+
+    t = None
+    if force:
+        t_slot = 3600/cfg.steps
+        t = time.time() + t_slot/2
+        t -= t%t_slot
+
+    m = Model(cfg, t)
 
     soc_cur = cfg.start.soc
     if soc_cur < 0:

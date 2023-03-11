@@ -10,7 +10,7 @@ class Loader(BaseLoader):
     """
 
     @staticmethod
-    async def price_buy(cfg):
+    async def price_buy(cfg, t):
         """
         Read future prices for incoming energy, in $$$/kWh.
         File format: one float per line.
@@ -22,5 +22,5 @@ class Loader(BaseLoader):
         factor = cfg.data.file2.factor
         offset = cfg.data.file2.offset
 
-        async for x in _Loader(cfg.mode.price_sell).price_sell(cfg):
+        async for x in _Loader(cfg.mode.price_sell).price_sell(cfg, t):
             yield float(x)*factor+offset

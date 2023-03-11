@@ -13,7 +13,7 @@ class Loader(BaseLoader):
                 yield float(line.strip())
 
     @staticmethod
-    async def price_buy(cfg):
+    async def price_buy(cfg, t):
         """
         Read future prices for incoming energy, in $$$/kWh.
         File format: one float per line.
@@ -26,7 +26,7 @@ class Loader(BaseLoader):
         
 
     @staticmethod
-    async def price_sell(cfg):
+    async def price_sell(cfg, t):
         """
         Read future prices for sold energy, in $$$/kWh.
         File format: one float per line.
@@ -39,7 +39,7 @@ class Loader(BaseLoader):
         
 
     @staticmethod
-    async def solar(cfg):
+    async def solar(cfg, t):
         """
         Projected solar power, in kW.
         File format: one float per line.
@@ -52,7 +52,7 @@ class Loader(BaseLoader):
 
 
     @staticmethod
-    async def load(cfg):
+    async def load(cfg, t):
         """
         Projected local consumption, in kW.
         File format: one float per line.

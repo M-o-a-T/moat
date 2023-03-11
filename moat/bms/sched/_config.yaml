@@ -13,8 +13,8 @@ bms:
         result: "/dev/stdout"
         results: "/dev/stdout"
       file2:
-        const: 0.
         factor: 1.
+        offset: 0.
       format:
         result: yaml
         results: yaml

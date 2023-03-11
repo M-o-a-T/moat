@@ -19,8 +19,8 @@ class Loader(BaseLoader):
             data.file2.const (float): additional fixed price per kWh.
             data.file2.factor (float): Multiplicator for the values read from the file.
         """
-        fc = cfg.data.file2.const
-        ff = cfg.data.file2.factor
+        factor = cfg.data.file2.factor
+        offset = cfg.data.file2.offset
 
         async for x in _Loader(cfg.mode.price_sell).price_sell(cfg):
-            yield float(x)*ff+fc
+            yield float(x)*factor+offset

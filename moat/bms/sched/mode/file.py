@@ -60,7 +60,7 @@ class Loader(BaseLoader):
         Config:
             data.file.load: path to the data file.
         """
-        async for x in Loader._file(cfg, "solar"):
+        async for x in Loader._file(cfg, "load"):
             yield float(x)
 
     @staticmethod

@@ -33,12 +33,13 @@ class Loader(BaseLoader):
                     yield val
 
         # Somewhat primitive linear interpolation from past data
-        s = len(dd)-24
-        dv = dd[-25]["marketplace"] - dd[-1]["marketplace"]
-        for i in range(24):
-            val = (dd[-24+i]["marketplace"] - dv*(25-i)/25) * factor + offset
-            for _ in range(cfg.steps):
-                yield val
+        for _ in range(cfg.data.awattar.extend):
+            s = len(dd)-24
+            dv = dd[-25]["marketplace"] - dd[-1]["marketplace"]
+            for i in range(24):
+                val = (dd[-24+i]["marketplace"] - dv*(25-i)/25) * factor + offset
+                for _ in range(cfg.steps):
+                    yield val
 
-        
-        
+            
+            

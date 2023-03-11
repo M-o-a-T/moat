@@ -5,6 +5,7 @@ bms:
         url: "https://api.awattar.at/v1/marketdata"
         factor: 0.001
         offset: 0
+        extend: 2
       file:
         price_buy: "example/price_buy.data"
         price_sell: "example/price_sell.data"

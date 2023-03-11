@@ -9,7 +9,7 @@ import logging
 import asyncclick as click
 from textwrap import dedent as _dedent
 
-from moat.util import yload, attr_args, process_args, list_ext, load_subgroup, load_ext, yprint, attrdict
+from moat.util import yload, attr_args, process_args, list_ext, load_subgroup, load_ext, yprint, attrdict, merge
 
 from .control import Model
 from .mode import BaseLoader, Loader

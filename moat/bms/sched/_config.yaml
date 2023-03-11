@@ -24,8 +24,8 @@ bms:
       soc: null
       solar: "file"
       load: "file"
-      result: "stdout"
-      results: "stdout"
+      result: "file"
+      results: null
 
     start:
       soc: -1  # must set

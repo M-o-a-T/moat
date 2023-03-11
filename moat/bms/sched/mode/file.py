@@ -83,7 +83,7 @@ class Loader(BaseLoader):
         Send the result data to a file.
 
         Config:
-            data.stdout.format: yaml, json, or msgpack
+            data.result.format: yaml, json, or msgpack
         """
         f = cfg.data.format.result
         if f == "yaml":
@@ -109,7 +109,7 @@ class Loader(BaseLoader):
         Print the resulting data, as a YAML array.
 
         Config:
-            data.stdout.format: yaml, json, or msgpack
+            data.results.format: yaml, json, or msgpack
         """
         f = cfg.data.format.results
         if f == "yaml":

@@ -4,7 +4,6 @@ from . import BaseLoader
 
 from datetime import datetime,timedelta,timezone
 import asks
-from pprint import pprint
 
 class Loader(BaseLoader):
     """

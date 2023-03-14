@@ -103,10 +103,6 @@ class MsgpackStream(_Stacked):
         self.msg_prefix = msg_prefix
         self.console_handler = console_handler
 
-    async def init(self):
-        if greenback is not None:
-            await greenback.ensure_portal()
-
     async def send(self, msg):
         msg = self.pack(msg)
         async with self.w_lock:

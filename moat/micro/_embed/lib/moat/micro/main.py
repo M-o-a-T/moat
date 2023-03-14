@@ -71,7 +71,11 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
 
     if isinstance(cfg,str):
         import msgpack
-        with open(cfg,"rb") as f:
+        try:
+            f = open(cfg,"rb")
+        except OSError as err:
+            raise OSError(cfg)
+        with f:
             cfg = msgpack.unpackb(f.read())
 
     def cfg_setup(t, apps):

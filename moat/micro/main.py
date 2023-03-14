@@ -9,7 +9,7 @@ from anyio_serial import Serial
 from contextlib import asynccontextmanager
 
 from moat.micro.path import copytree
-from moat.micro.stacks import console_stack
+from moat.micro.stacks.console import console_stack
 from moat.micro.compat import TaskGroup, AnyioMoatStream
 from moat.util import attrdict, yload, packer
 from moat.micro.cmd import ClientBaseCmd, Request as BaseRequest

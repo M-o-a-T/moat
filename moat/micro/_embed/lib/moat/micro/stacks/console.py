@@ -13,7 +13,7 @@ async def console_stack(stream, reliable=False, log=False, log_bottom=False, msg
     # transmission (e.g. via USB).
 
     if log or log_bottom:
-        from ..proto import Logger
+        from ..proto.stack import Logger
     assert hasattr(stream,"recv")
     assert hasattr(stream,"aclose")
 

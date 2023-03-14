@@ -10,7 +10,7 @@ from moat.util.queue import Queue
 from ..main import Request
 from ..compat import TaskGroup, AnyioMoatStream
 from ..proto.stream import MsgpackStream
-from ..proto import Logger
+from ..proto.stack import Logger
 
 import logging
 logger = logging.getLogger(__name__)

@@ -21,7 +21,7 @@ async def network_stack(callback, log=False, multiple=False, host="0.0.0.0", por
     # (PEP 525's async iterators have not been fully implemented in MicroPython.)
 
     if log:
-        from .proto import Logger
+        from .proto.stack import Logger
     q = Queue(0)
 
     async def make_stack(s,rs):

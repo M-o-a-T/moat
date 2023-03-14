@@ -3,7 +3,7 @@ import sys
 from ..compat import Event,ticks_ms,ticks_add,ticks_diff,wait_for_ms,TaskGroup
 from ..util import NotGiven
 
-from .proto import _Stacked
+from .proto.stack import _Stacked
 
 class Reliable(_Stacked):
     # Message ordering and retry.

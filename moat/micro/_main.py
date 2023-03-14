@@ -13,7 +13,7 @@ from .direct import DirectREPL
 from .path import MoatDevPath, MoatFSPath
 from .compat import TaskGroup
 from .proto.multiplex import Multiplexer
-from .proto import RemoteError
+from .proto.stack import RemoteError
 from .main import ABytes, NoPort, copy_over
 from .main import get_serial, get_link, get_link_serial, get_remote
 

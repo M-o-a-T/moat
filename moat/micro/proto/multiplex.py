@@ -16,7 +16,7 @@ import anyio
 
 from moat.util import attrdict, merge, to_attrdict
 
-from . import RemoteError, SilentRemoteError
+from .stack import RemoteError, SilentRemoteError
 from ..stacks.unix import unix_stack_iter
 from ..compat import TaskGroup, Event
 from ..cmd import BaseCmd

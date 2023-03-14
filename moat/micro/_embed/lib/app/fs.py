@@ -2,7 +2,7 @@ import machine
 
 from moat.micro.cmd import BaseCmd
 from moat.micro.compat import TaskGroup, sleep_ms, ticks_ms, ticks_diff
-from moat.micro.proto import SilentRemoteError as FSError
+from moat.micro.proto.stack import SilentRemoteError as FSError
 
 import uos
 import usys

@@ -8,7 +8,7 @@ import binascii
 import hashlib
 import stat
 import anyio
-from .proto import RemoteError
+from .proto.stack import RemoteError
 from subprocess import CalledProcessError
 
 import logging

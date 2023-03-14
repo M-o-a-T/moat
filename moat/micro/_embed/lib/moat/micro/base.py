@@ -3,7 +3,7 @@ import machine
 from .cmd import BaseCmd
 from .compat import TaskGroup, sleep_ms, ticks_ms, ticks_diff
 from moat.util import NotGiven
-from .proto import RemoteError
+from .proto.stack import RemoteError
 from .proto.stream import drop_proxy
 
 import machine

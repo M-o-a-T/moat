@@ -230,8 +230,9 @@ class Multiplexer(Request):
 		elif self.run_flag.is_set():
 			self.run_flag = Event()
 
-	def _gen_req(self, parent):
+	def _gen_req(self, parent, ready=None):
 		self.parent = parent
+		# "ready" is only used on the client side
 		return self
 
 	async def _setup_apps(self, tg):

@@ -6,7 +6,7 @@ import sys
 
 from ..cmd import Request
 
-async def console_stack(stream, reliable=False, log=False, log_bottom=False, msg_prefix=None, request_factory=Request):
+async def console_stack(stream, reliable=False, log=False, log_bottom=False, msg_prefix=None, request_factory=Request, ready=None):
     # set @reliable if your console already guarantees lossless
     # transmission (e.g. via USB).
 
@@ -48,7 +48,7 @@ async def console_stack(stream, reliable=False, log=False, log_bottom=False, msg
         t = t.stack(Reliable)
     if log:
         t = t.stack(Logger, txt="Msg" if log is True else log)
-    t = t.stack(request_factory)
+    t = t.stack(request_factory, ready=ready)
     return t,b
 
 

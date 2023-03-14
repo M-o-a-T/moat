@@ -66,7 +66,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
     import uos
     global _wdt
 
-    from .compat import TaskGroup, print_exc, sleep_ms
+    from .compat import TaskGroup, print_exc, sleep_ms, Event
     from .base import StdBase
 
     if isinstance(cfg,str):
@@ -130,7 +130,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
     elif _wdt:
         _wdt.feed()
 
-    async def setup(tg, state, apps):
+    async def setup(tg, state, apps, ready=None):
         import sys
 
         global _wdt
@@ -204,6 +204,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
     async def _main():
         import sys
         global _wdt
+        ready = Event()
 
         # config: load apps
 
@@ -211,7 +212,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
             apps = gen_apps(cfg, tg, print_exc)
 
             # start comms (and load app frontends)
-            await tg.spawn(setup,tg, state, apps, _name="apps")
+            await tg.spawn(setup,tg, state, apps, _name="apps", ready=ready)
 
             # If started from the ("raw") REPL, fake being done
             if fake_end:
@@ -220,6 +221,8 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
 
             if wdt_s == 4:
                 _wdt = WDT(timeout=wdt_t*1.5)
+
+            ready.set()
 
             if _wdt is not None and wdt_t:
                 n = cfg["wdt"].get("n", 1+60000//wdt_t if wdt_t<20000 else 3)

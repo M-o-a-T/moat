@@ -204,10 +204,11 @@ class Request(_Stacked):
     This is the "top" module of a connection's stack.
     """
 
-    def __init__(self, *a, **k):
+    def __init__(self, *a, ready=None, **k):
         super().__init__(*a,**k)
         self.reply = {}
         self.seq = 0
+        self._ready=ready
 
     @property
     def request(self):
@@ -216,6 +217,10 @@ class Request(_Stacked):
     @property
     def base(self):
         return self.child
+
+    async def wait_ready(self):
+        if self._ready is not None:
+            await self._ready.wait()
 
     async def run(self):
         """

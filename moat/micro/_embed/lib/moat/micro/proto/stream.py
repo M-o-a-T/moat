@@ -130,7 +130,7 @@ class MsgpackStream(_Stacked):
                     r = await self.unpack()
                 except OutOfData:
                     raise EOFError
-                if self.console_handler is not None and isinstance(r,int):
+                if self.console_handler is not None and isinstance(r,int) and 0 <= r < 128:
                     self.console_handler(r)
                 else:
                     return r

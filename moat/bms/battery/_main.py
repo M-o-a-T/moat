@@ -35,9 +35,7 @@ def clean_cfg(cfg):
 @click.option("-s","--socket", help="Socket to use / listen to when multiplexing (cfg.port.socket)", type=click.Path(dir_okay=False,writable=True,readable=True))
 @click.option("-p","--port", help="Port your µPy device is connected to (cfg.port.dev)", type=click.Path(dir_okay=False,writable=True,readable=True,exists=True))
 @click.option("-b","--baudrate", type=int, default=115200, help="Baud rate to use (cfg.port.rate)")
-@click.option("-R","--reliable", is_flag=True, help="Use Reliable mode, wrap messages in SerialPacker frame (cfg.port.reliable)")
-@click.option("-g","--guarded", is_flag=True, help="Use Guard mode (prefix msgpack with 0xc1 byte, cfg.port.guard)")
-async def cli(obj, socket,port,baudrate,reliable,guarded, config):
+async def cli(obj, socket,port,baudrate,config):
 	"""MicroPython satellites"""
 	cfg = obj.cfg.micro
 
@@ -89,20 +87,6 @@ async def cli(obj, socket,port,baudrate,reliable,guarded, config):
 			baudrate = cfg.port.rate
 	except AttributeError:
 		pass
-	try:
-		if reliable:
-			cfg.port.reliable = reliable
-		else:
-			reliable = cfg.port.reliable
-	except AttributeError:
-		pass
-	try:
-		if guarded:
-			cfg.port.guarded = guarded
-		else:
-			guarded = cfg.port.guarded
-	except AttributeError:
-		pass
 
 	if not os.path.isabs(socket):
 		socket = os.path.join(os.environ.get("XDG_RUNTIME_DIR","/tmp"), socket)
@@ -110,10 +94,8 @@ async def cli(obj, socket,port,baudrate,reliable,guarded, config):
 	obj.port=port
 	if baudrate:
 		obj.baudrate=baudrate
-	if reliable and guarded:
-		raise click.UsageError("Reliable and Guarded mode don't like each other")
-	obj.reliable=reliable
-	obj.guarded=guarded
+	obj.lossy=cfg.port.lossy
+	obj.guarded=cfg.port.guarded
 
 
 @cli.command(short_help='Copy MoaT to MicroPython')
@@ -154,7 +136,7 @@ async def setup(obj, source, root, dest, no_run, no_reset, force_exit, exit, ver
 				pk = packer(dict(a=["sys","stop"],code="SysStoP"))
 				pk = pk+b"\xc1"+pk
 
-			if obj.reliable:
+			if obj.lossy:
 				from serialpacker import SerialPacker
 				sp=SerialPacker(**({"mark":mark} if mark is not None else {}))
 				h,pk,t = sp.frame(pk)
@@ -371,7 +353,7 @@ async def _mplex(obj, no_config=False, debug=None, remote=False, server=None, pi
 			# array = program behind a pipe
 			async with await anyio.open_process(cfg_p.dev, stderr=sys.stderr) as proc:
 				ser = anyio.streams.stapled.StapledByteStream(proc.stdin, proc.stdout)
-				async with get_link_serial(obj, ser, request_factory=req, log=obj.debug>3, reliable=True) as link:
+				async with get_link_serial(obj, ser, request_factory=req, log=obj.debug>3, lossy=False) as link:
 					yield link
 		else:
 			async with get_serial(obj) as ser:

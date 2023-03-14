@@ -6,8 +6,8 @@ import sys
 
 from ..cmd import Request
 
-async def console_stack(stream, reliable=False, log=False, log_bottom=False, msg_prefix=None, request_factory=Request, ready=None):
-    # set @reliable if your console already guarantees lossless
+async def console_stack(stream, lossy=False, log=False, log_bottom=False, msg_prefix=None, request_factory=Request, ready=None, use_console=True):
+    # set @lossy if you're using a "naked" serial link
     # transmission (e.g. via USB).
 
     if log or log_bottom:
@@ -16,7 +16,7 @@ async def console_stack(stream, reliable=False, log=False, log_bottom=False, msg
     assert hasattr(stream,"aclose")
 
     cons_h = None
-    if msg_prefix:
+    if use_console:
         c_b = bytearray()
         def cons_h(b):
             nonlocal c_b
@@ -32,12 +32,10 @@ async def console_stack(stream, reliable=False, log=False, log_bottom=False, msg
                 else:
                     print("CS:",b, file=sys.stderr)
 
-    if reliable:
-        from ..proto.stream import MsgpackStream
-        t = b = MsgpackStream(stream, msg_prefix=msg_prefix, console_handler=cons_h)
-        await b.init()
-    else:
+    if lossy:
         from ..proto.stream import MsgpackHandler, SerialPackerStream
+        if use_console and msg_prefix is None:
+            raise RuntimeError("Lossy + console requires a prefix byte")
 
         t = b = SerialPackerStream(stream, msg_prefix=msg_prefix, console_handler=cons_h)
         t = t.stack(MsgpackHandler)
@@ -46,6 +44,10 @@ async def console_stack(stream, reliable=False, log=False, log_bottom=False, msg
             t = t.stack(Logger, txt="Rel")
         from ..proto.reliable import Reliable
         t = t.stack(Reliable)
+    else:
+        from ..proto.stream import MsgpackStream
+        t = b = MsgpackStream(stream, msg_prefix=msg_prefix, console_handler=cons_h)
+
     if log:
         t = t.stack(Logger, txt="Msg" if log is True else log)
     t = t.stack(request_factory, ready=ready)

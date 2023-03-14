@@ -159,7 +159,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
             await network_stack(cb, port=port)
 
         # Console/serial
-        async def run_console(force_write=False, **kw):
+        async def run_console(force_write=False):
             from moat.micro.stacks.console import console_stack
             import micropython
             micropython.kbd_intr(-1)
@@ -171,22 +171,22 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
             except AttributeError:  # on Unix
                 from moat.micro.proto.fd import AsyncFD
                 s = AsyncFD(sys.stdin, sys.stdout)
-            t,b = await console_stack(s, **kw)
+            t,b = await console_stack(s, ready=ready, lossy=cfg.port.lossy, log=log,
+                    msg_prefix=0xc1 if cfg.port.guarded else None)
             t = t.stack(StdBase, fallback=fallback, state=state, cfg=cfg)
             cfg_setup(t, apps)
             await tg.spawn(b.run,_name="runcons")
 
         if sys.platform == "rp2":
-            # use the console. USB, so no data loss; use msgpack's "illegal
-            # data" byte for additional safety.
-            await run_console(force_write=True, reliable=True, log=log, msg_prefix=0xc1)
+            # uses the USB console -- XXX slightly buggy.
+            await run_console(force_write=True)
 
         elif sys.platform == "linux":
             port = uos.getenv("MOATPORT")
             if port:
                 await tg.spawn(run_network, int(port), _name="run_net")
             else:
-                await run_console(reliable=True, log=log, msg_prefix=None)
+                await run_console()
 
         elif sys.platform in ("esp32","esp8266"):
             port = cfg["link"]["port"]

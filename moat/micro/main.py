@@ -122,7 +122,7 @@ async def get_link_serial(obj, ser, **kw):
 		Returns the top stream.
 		"""
 	kw.setdefault("log", obj.debug>2)
-	kw.setdefault("reliable", not obj.reliable)
+	kw.setdefault("lossy", obj.lossy)
 
 	t,b = await console_stack(AnyioMoatStream(ser), msg_prefix=0xc1 if obj.guarded else None, **kw)
 
@@ -143,7 +143,7 @@ async def get_link(obj, use_port=False, reset=False, **kw):
 		Returns the top MoaT stream.
 		"""
 	kw.setdefault("log", obj.debug>2)
-	kw.setdefault("reliable", True)
+	kw.setdefault("lossy", False)
 
 	try:
 		if obj.socket:
@@ -176,7 +176,7 @@ async def get_remote(obj, host, port=27587, **kw):
 		"""
 	async with await anyio.connect_tcp(host, port) as sock:
 		try:
-			t,b = await console_stack(AnyioMoatStream(sock), log=obj.debug>2, reliable=True, **kw)
+			t,b = await console_stack(AnyioMoatStream(sock), log=obj.debug>2, lossy=False, **kw)
 			async with TaskGroup() as tg:
 				task = await tg.spawn(b.run, _name="rem")
 				yield t

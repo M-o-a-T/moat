@@ -3,6 +3,7 @@ micro:
     dev: "/dev/ttyUSB0"
     socket: "moat.test"
     guarded: false
+    lossy: false
     retry: 1
   apps:
     f: moat.micro.app.fs.FsCmd

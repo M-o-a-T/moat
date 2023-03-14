@@ -6,9 +6,7 @@ import sys
 
 from ..cmd import Request
 
-async def console_stack(stream, reliable=False, log=False, log_bottom=False, msg_prefix=None, force_write=False, request_factory=Request):
-    # Set force_write if select-for-write doesn't work on your stream.
-    # 
+async def console_stack(stream, reliable=False, log=False, log_bottom=False, msg_prefix=None, request_factory=Request):
     # set @reliable if your console already guarantees lossless
     # transmission (e.g. via USB).
 

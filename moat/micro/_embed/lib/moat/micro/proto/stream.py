@@ -12,7 +12,7 @@ except ImportError:
     greenback = None
 from msgpack import Packer,Unpacker, OutOfData, ExtType
 
-from . import _Stacked
+from .proto import _Stacked
 
 if greenback is not None:
     class SyncReadStream:

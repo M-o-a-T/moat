@@ -1,1 +1,1 @@
-from .util import Queue
+from moat.util import Queue

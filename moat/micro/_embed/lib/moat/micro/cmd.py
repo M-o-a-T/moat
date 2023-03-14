@@ -1,5 +1,5 @@
 from moat.micro.compat import Event,ticks_ms,ticks_add,ticks_diff,wait_for_ms,print_exc,CancelledError,TaskGroup, idle, ValueEvent, WouldBlock
-from moat.micro.proto import _Stacked, RemoteError, SilentRemoteError as FSError
+from moat.micro.proto.stack import _Stacked, RemoteError, SilentRemoteError as FSError
 
 import sys
 

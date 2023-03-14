@@ -156,7 +156,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
 
         # Console/serial
         async def run_console(force_write=False, **kw):
-            from moat.micro.stacks import console_stack
+            from moat.micro.stacks.console import console_stack
             import micropython
             micropython.kbd_intr(-1)
             try:

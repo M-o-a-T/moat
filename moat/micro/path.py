@@ -166,7 +166,7 @@ class MoatDevPath(_MoatPath):
                 raise
         except FileNotFoundError:
             if parents:
-                await self.parent.mkdir()
+                await self.parent.mkdir(parents=True)
                 await self.mkdir()
             else:
                 raise

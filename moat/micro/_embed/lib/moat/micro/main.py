@@ -179,7 +179,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
         if sys.platform == "rp2":
             # use the console. USB, so no data loss; use msgpack's "illegal
             # data" byte for additional safety.
-            await run_console(reliable=True, log=log, msg_prefix=0xc1)
+            await run_console(force_write=True, reliable=True, log=log, msg_prefix=0xc1)
 
         elif sys.platform == "linux":
             port = uos.getenv("MOATPORT")

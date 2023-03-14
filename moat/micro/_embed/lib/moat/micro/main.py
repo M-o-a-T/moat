@@ -218,6 +218,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
             if fake_end:
                 await sleep_ms(1000)
                 sys.stdout.write("OK\x04\x04>")
+                await sleep_ms(100)
 
             if wdt_s == 4:
                 _wdt = WDT(timeout=wdt_t*1.5)

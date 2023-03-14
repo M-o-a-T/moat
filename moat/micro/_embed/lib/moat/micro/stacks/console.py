@@ -21,13 +21,16 @@ async def console_stack(stream, reliable=False, log=False, log_bottom=False, msg
         def cons_h(b):
             nonlocal c_b
             if b == 10:
-                print("C:", c_b.decode("utf-8","backslashreplace"), file=sys.stderr)
+                try:
+                    print("C:", c_b.decode("utf-8","backslashreplace"), file=sys.stderr)
+                except UnicodeError:
+                    print("C:", c_b, file=sys.stderr)
                 c_b = bytearray()
             elif b != 13:
-                if 0 <= b <= 255:
+                if 0 <= b < 128:
                     c_b.append(b)
                 else:
-                    print("Spurious:",b, file=sys.stderr)
+                    print("CS:",b, file=sys.stderr)
 
     if reliable:
         from ..proto.stream import MsgpackStream

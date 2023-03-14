@@ -159,6 +159,7 @@ async def get_link(obj, use_port=False, reset=False, **kw):
 	else:
 		try:
 			t,b = await console_stack(AnyioMoatStream(sock), **kw)
+			t = t.stack(ClientBaseCmd)
 			async with TaskGroup() as tg:
 				task = await tg.spawn(b.run, _name="link")
 				yield t

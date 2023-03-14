@@ -243,7 +243,7 @@ else:
 
         async def recv(self, n=128, timeout=100):
             buf = bytearray(n)
-            i = await self.readinto(buf, timeout)
+            i = await self.recvi(buf, timeout)
             if i < n:
                 return buf[0:i]
             return buf

@@ -6,7 +6,7 @@ import os
 import stat
 from collections import defaultdict
 from pathlib import PosixPath as Path
-from .proto import RemoteError
+from .proto.stack import RemoteError
 
 import pyfuse3
 from pyfuse3 import (  # pylint: disable=E0611

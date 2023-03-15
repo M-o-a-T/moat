@@ -327,14 +327,14 @@ class Multiplexer(Request):
 
 				try:
 					async with self.stream_factory(self._gen_req):
-						logger.info("Retrieving config")
+						logger.debug("Retrieving config")
 						if self.load_cfg:
 							with anyio.fail_after(10):
 								cfg = await self.get_cfg()
 							merge(self.cfg, cfg, drop=("port" in cfg))
 							# if "port" is there, the stored config is not trimmed
 							self.cfg = to_attrdict(self.cfg)
-							logger.info("Config:\n%s",pformat(self.cfg))
+							logger.debug("Config:\n%s",pformat(self.cfg))
 						async with TaskGroup() as tg:
 							self._tg = tg
 							self.apps = {}

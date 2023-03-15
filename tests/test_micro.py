@@ -21,6 +21,18 @@ async def test_ping(tmp_path):
             res = await req.send("ping", "hello")
             assert res == "R:hello"
 
+@pytest.mark.parametrize("cfg", [
+    {},
+    {"guarded":True},
+    {"lossy":True},
+    {"lossy":True, "guarded":True},
+    ])
+async def test_modes(tmp_path, cfg):
+    async with mpy_server(tmp_path, cfg={"port":cfg}) as obj:
+        async with mpy_client(obj) as req:
+            res = await req.send("ping", "hello")
+            assert res == "R:hello"
+
 async def test_cfg(tmp_path):
     async with mpy_server(tmp_path) as obj:
         assert obj.server.cfg.tt.a == "b"

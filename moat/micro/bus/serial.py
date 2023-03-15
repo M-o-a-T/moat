@@ -164,7 +164,7 @@ class SerBus:
                 self.len_in -= 1
                 if self.len_in:
                     return
-            else
+            else:
                 self.len_in = 0
             self.s_in = S.IDLE
 

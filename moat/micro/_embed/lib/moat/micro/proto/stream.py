@@ -14,7 +14,7 @@ try:
     import greenback
 except ImportError:
     greenback = None
-from msgpack import ExtType, OutOfData, Packer, Unpacker
+from msgpack import ExtType, OutOfData, Packer, Unpacker, unpackb, packb
 
 from .stack import _Stacked
 

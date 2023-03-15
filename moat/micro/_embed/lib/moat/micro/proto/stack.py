@@ -70,8 +70,7 @@ class _Stacked:
         self.child = NotImpl(self)
 
     def stack(self, cls, *a, **k):
-        sup = cls(self, *a, **k)
-        self.child = sup
+        self.child = sup = cls(self, *a, **k)
         return sup
 
     async def error(self, exc):

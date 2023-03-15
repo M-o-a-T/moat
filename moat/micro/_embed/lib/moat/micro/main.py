@@ -191,9 +191,9 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
             t, b = await console_stack(
                 s,
                 ready=ready,
-                lossy=cfg.port.lossy,
+                lossy=cfg["port"]["lossy"],
                 log=log,
-                msg_prefix=0xC1 if cfg.port.guarded else None,
+                msg_prefix=0xC1 if cfg["port"]["guarded"] else None,
             )
             t = t.stack(StdBase, fallback=fallback, state=state, cfg=cfg)
             cfg_setup(t, apps)

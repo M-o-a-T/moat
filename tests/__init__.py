@@ -15,14 +15,16 @@ from moat.micro.compat import TaskGroup
 from moat.micro.main import Request, get_link, get_link_serial
 from moat.micro.proto.multiplex import Multiplexer
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 @asynccontextmanager
 async def mpy_server(
-    temp: Path, debug=True, reliable=False, guarded=False, req=Request, cff="test", cfg={}
+    temp: Path, debug=True, lossy=False, guarded=False, req=Request, cff="test", cfg={}
 ):
     obj = attrdict()
     obj.debug = debug
-    obj.reliable = reliable
+    obj.lossy = lossy
     obj.guarded = guarded
     obj.socket = temp / "moat.sock"
 
@@ -45,6 +47,8 @@ async def mpy_server(
         with open(cff, "r") as f:
             cf = yload(f)
         cf = merge(cf, cfg)
+        cf["port"]["guarded"] = guarded
+        cf["port"]["lossy"] = lossy
         with (root / "moat.cfg").open("wb") as f:
             f.write(packer(cf))
 

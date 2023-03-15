@@ -16,7 +16,7 @@ async def console_stack(
     msg_prefix=None,
     request_factory=Request,
     ready=None,
-    use_console=True,
+    use_console=False,
 ):
     # set @lossy if you're using a "naked" serial link
     # transmission (e.g. via USB).

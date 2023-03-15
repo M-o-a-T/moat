@@ -207,7 +207,7 @@ class SerialPackerStream(_Base):
                 elif msg is not None:
                     return msg
 
-            n = await self.s.readinto(buf)
+            n = await self.s.readinto(self.buf)
             if not n:
                 raise EOFError
             self.i = 0

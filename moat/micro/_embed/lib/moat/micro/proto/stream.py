@@ -209,7 +209,9 @@ class SerialPackerStream(_Base):
     async def send(self, msg):
         h, msg, t = self.p.frame(msg)
         async with self.w_lock:
-            await self.s.write(h + msg + t)
+            await self.s.send(h)
+            await self.s.send(msg)
+            await self.s.send(t)
 
     async def aclose(self):
         self.s.close()

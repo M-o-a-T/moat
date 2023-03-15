@@ -167,6 +167,7 @@ class Logger(_Stacked):
         logger.debug("%s:\n%r", self.txt, vars(self.child))
 
     async def recv(self):
+        logger.debug("R:%s …", self.txt)
         msg = await self.parent.recv()
         if isinstance(msg, dict):
             mm = " ".join(f"{k}={repr(v)}" for k, v in msg.items())

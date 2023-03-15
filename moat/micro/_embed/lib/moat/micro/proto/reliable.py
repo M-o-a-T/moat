@@ -1,13 +1,20 @@
 import sys
 
-from ..compat import Event, TaskGroup, ticks_add, ticks_diff, ticks_ms, wait_for_ms
-from ..util import NotGiven
-from .proto.stack import _Stacked
+from ..compat import Event, TaskGroup, ticks_add, ticks_diff, ticks_ms, wait_for_ms, print_exc, TimeoutError, Queue
+from ...util import NotGiven
+from .stack import _Stacked
 
 
 class Reliable(_Stacked):
-    # Message ordering and retry.
+    """
+    Message retry.
 
+    This module handles retransmitting missing messages.
+
+    Messages are wrapped in a dict with retransmit data.
+    """
+
+    # Operation:
     # Both sender and receiver carry two message counter: head and tail.
     #
     # Sending, "head" is the next message to be sent, "tail" points to the
@@ -37,8 +44,10 @@ class Reliable(_Stacked):
     # happen in both directions. Other messages received during a reset
     # are discarded.
 
-    async def __init__(self, parent, window=8, timeout=1000, **k):
-        await super().__init__(parent, **k)
+    rq = None
+
+    def __init__(self, parent, window=8, timeout=1000, **k):
+        super().__init__(parent, **k)
 
         if window < 4:
             raise RuntimeError(f"window must be >=4, not {window}")
@@ -63,6 +72,8 @@ class Reliable(_Stacked):
         self.reset_level = level
         self.pend_ack = True
         self.closed = False
+        if self.rq is None:
+            self.rq = Queue(self.window)
 
     async def send_msg(self, k=None):
         self.progressed = True
@@ -87,31 +98,28 @@ class Reliable(_Stacked):
         try:
             await self.parent.send(msg)
         except RuntimeError:
-            print("NOSEND RESET", self.reset_level, file=sys.stderr)
+            # print("NOSEND RESET", self.reset_level, file=sys.stderr)
             pass
 
         if k is not None and self.m_send.get(k, None) is mte:
             mte[1] = ticks_add(ticks_ms(), self.timeout)
 
-    async def _run(self, tg):
-        self.tg = tg
-        await tg.spawn(self._read, name="rel_read")
-
-        while not self._closed:
+    async def _run(self):
+        while not self.closed:
             t = ticks_ms()
             # calculate time to next action
             ntx = None if self.t_recv is None else ticks_diff(self.t_recv, t)
             nk = None
             for k, mte in self.m_send.items():
-                m, tx, e = mtx
+                m, tx, e = mte
                 txd = ticks_diff(tx, t)
                 if ntx is None or ntx > txd:
                     ntx = txd
                     nk = k
 
             if self.s_q and (self.s_send_head - self.s_send_tail) % self.window < self.window // 2:
-                pass
                 # print(f"R {self.parent.txt}: tx", file=sys.stderr)
+                pass
             elif ntx is None:
                 # print(f"R {self.parent.txt}: inf", file=sys.stderr)
                 await self._trigger.wait()
@@ -125,10 +133,8 @@ class Reliable(_Stacked):
                 else:
                     self._trigger = Event()
             else:
-                pass
                 # print(f"R {self.parent.txt}: now {ticks_ms()}", file=sys.stderr)
-            if self.in_reset or self.closed:
-                return
+                pass
 
             # process pending-send queue
             if self.s_q and (self.s_send_head - self.s_send_tail) % self.window < self.window // 2:
@@ -152,36 +158,40 @@ class Reliable(_Stacked):
     async def run(self):
         self.reset()
         try:
-            while self.in_reset:
-                t = ticks_ms()
-                td = ticks_diff(self.in_reset, t)
-                # print(f"R {self.parent.txt}: reset {td} {t} {self.in_reset}", file=sys.stderr)
-                if td > 0:
-                    try:
-                        await wait_for_ms(td, self._trigger.wait)
-                    except TimeoutError:
-                        pass
-                    else:
-                        self._trigger = Event()
-                else:
-                    await self.send_reset()
-
             async with TaskGroup() as tg:
-                runner = await tg.spawn(self._run, tg, _name="rel_run")
-                await self.client.run()
-                runner.cancel()
-                self.tg = None
+                self._tg = tg
+                reader = await tg.spawn(self._read, _name="rel_read")
+                runner = await tg.spawn(self._run, _name="rel_run")
+                while self.in_reset:
+                    t = ticks_ms()
+                    td = ticks_diff(self.in_reset, t)
+                    if td > 0:
+                        try:
+                            await wait_for_ms(td, self._trigger.wait)
+                        except TimeoutError:
+                            pass
+                        # DO NOT replace self._trigger here. _run() already does that.
+                    else:
+                        await self.send_reset()
 
-        except Exception as exc:
+                if self.closed:
+                    raise EOFError(self)
+                # print(f"X {self.parent.txt}: running", file=sys.stderr)
+                await self.child.run()
+                self._tg.cancel()
+
+        except BaseException as exc:
             err = str(exc)
+            print_exc(exc)
             raise
         else:
             err = None
         finally:
-            self._closed = True
+            self.closed = True
             for _m, _t, e in self.m_send.values():
                 e.set()
-            for _m, e in self.s_q.pop():
+            while self.s_q:
+                _m, e = self.s_q.pop()
                 e.set()
             msg = {'a': 'r', 'n': 0}
             if err is not None:
@@ -209,6 +219,7 @@ class Reliable(_Stacked):
 
     async def send(self, msg):
         evt = Event()
+        # print(f"T {self.parent.txt}: SQ {msg} {id(self._trigger)}", file=sys.stderr)
         self.s_q.append((msg, evt))
         self._trigger.set()
         await evt.wait()
@@ -228,6 +239,9 @@ class Reliable(_Stacked):
             self.in_reset = False
             self._trigger.set()
             self.reset_evt.set()
+
+    async def recv(self):
+        return await self.rq.get()
 
     async def _read(self):
         while True:
@@ -369,7 +383,7 @@ class Reliable(_Stacked):
                 self.s_recv_tail = rr
                 # print("RT1",self.parent.txt,self.s_recv_tail,self.s_recv_head,r,r+1, file=sys.stderr)
                 self.pend_ack = True
-                await self.tg.spawn(self.child.dispatch, d, _name="rel_recv")
+                await self.rq.put(d)
 
         if self.s_recv_tail == self.s_recv_head:
             self.t_recv = None

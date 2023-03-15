@@ -3,13 +3,14 @@
 Send bus messages to an AnyIO stream
 """
 
+from contextlib import asynccontextmanager
+from weakref import ref
+
 import anyio
 from anyio.abc import AnyByteStream
-from contextlib import asynccontextmanager
 
-from . import BaseBusHandler
 from ..serial import SerBus
-from weakref import ref
+from . import BaseBusHandler
 
 
 class _Bus(SerBus):
@@ -22,10 +23,10 @@ class _Bus(SerBus):
 
     def set_timeout(self, flag):
         self.stream()._set_timeout(flag)
-    
+
     def data_out(self, bits):
         self.stream()._data_out(bits)
-    
+
     def process(self, msg):
         self.stream()._process(msg)
 
@@ -39,21 +40,21 @@ class StreamHandler(BaseBusHandler):
     AnyIO stream.
 
     Usage::
-        
+
         async with StreamBusHandler(stream,0.05) as bus:
             async for msg in bus:
                 await bus.send(another_msg)
     """
 
-    def __init__(self, client, stream:AnyByteStream, tick:float = 0.1):
+    def __init__(self, client, stream: AnyByteStream, tick: float = 0.1):
         # Subclasses may pass `None` as Stream, and set `._stream` before
         # calling `_ctx`.
 
         super().__init__(client)
         self._bus = _Bus(self)
         self._stream = stream
-        self._wq_w,self._wq_r = anyio.create_memory_object_stream(150)
-        self._rq_w,self._rq_r = anyio.create_memory_object_stream(1500)
+        self._wq_w, self._wq_r = anyio.create_memory_object_stream(150)
+        self._rq_w, self._rq_r = anyio.create_memory_object_stream(1500)
         self.errors = dict()
         self._timeout_evt = anyio.create_event()
         self._timeout_tick = tick
@@ -69,7 +70,6 @@ class StreamHandler(BaseBusHandler):
             finally:
                 await n.cancel_scope.cancel()
 
-
     async def _timeout(self):
         while True:
             await self._timeout_evt.wait()
@@ -77,18 +77,15 @@ class StreamHandler(BaseBusHandler):
             if self._timeout_evt.is_set():
                 self._bus.timeout()
 
-
     async def _read(self, n):
         async for m in self._stream:
             for b in m:
                 self._bus.char_in(b)
         n.cancel_scope.cancel()
 
-
     async def _write(self):
         async for data in self._wq_r:
             await self._stream.send(data)
-
 
     async def send(self, msg):
         self._bus.send(msg)
@@ -100,8 +97,8 @@ class StreamHandler(BaseBusHandler):
         return self._rq_r.receive()
 
     def _report_error(self, typ, **kw):
-        print("Err",repr(typ),kw)
-        self.errors[typ] = 1+self.errors.get(typ,0)
+        print("Err", repr(typ), kw)
+        self.errors[typ] = 1 + self.errors.get(typ, 0)
 
     def _set_timeout(self, flag):
         if self._timeout_evt.is_set():
@@ -110,7 +107,7 @@ class StreamHandler(BaseBusHandler):
         else:
             if flag:
                 self._timeout_evt.set()
-    
+
     def _process(self, msg):
         self._rq_w.send_nowait(msg)
 
@@ -119,4 +116,3 @@ class StreamHandler(BaseBusHandler):
 
     def _process_ack(self):
         pass
-

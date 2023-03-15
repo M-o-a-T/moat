@@ -10,6 +10,6 @@ class NotGiven:
     def __str__(self):
         return "NotGiven"
 
+
 class NoProxyError(ValueError):
     pass
-

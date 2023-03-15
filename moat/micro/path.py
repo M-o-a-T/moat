@@ -1,18 +1,21 @@
 # This is an async version of mpy_repl.repl_connection.MpyPath
 
-import io
-import os
-import sys
-import pathlib
 import binascii
 import hashlib
+import io
+import logging
+import os
+import pathlib
 import stat
-import anyio
-from .proto.stack import RemoteError
+import sys
 from subprocess import CalledProcessError
 
-import logging
+import anyio
+
+from .proto.stack import RemoteError
+
 logger = logging.getLogger(__name__)
+
 
 class _MoatPath(pathlib.PurePosixPath):  # pathlib.PosixPath
     __slots__ = ('_repl', '_stat_cache')
@@ -58,7 +61,7 @@ class _MoatPath(pathlib.PurePosixPath):  # pathlib.PosixPath
         Pattern match files on remote.
         """
         if pattern.startswith('/'):
-            pattern = pattern[1:]   # XXX
+            pattern = pattern[1:]  # XXX
         parts = pattern.split('/')
         # print('glob', self, pattern, parts)
         if not parts:
@@ -71,13 +74,15 @@ class _MoatPath(pathlib.PurePosixPath):  # pathlib.PosixPath
             remaining_parts = '/'.join(parts[1:])
             if parts[0] == '**':
                 raise NotImplementedError
-                #for dirpath, dirnames, filenames in walk(self):
-                #    for path in filenames:
-                #        if path.match(remaining_parts):
-                #            yield path
+                # for dirpath, dirnames, filenames in walk(self):
+                # for path in filenames:
+                # if path.match(remaining_parts):
+                # yield path
             else:
                 for path in self.iterdir():
-                    if (await path.is_dir()) and path.relative_to(path.parent).match(parts[0]):  # XXX ?
+                    if (await path.is_dir()) and path.relative_to(path.parent).match(
+                        parts[0]
+                    ):  # XXX ?
                         async for r in path.glob(remaining_parts):
                             yield r
 
@@ -91,6 +96,7 @@ class MoatDevPath(_MoatPath):
     To actually modify the target, `connect_repl()` must have
     been called.
     """
+
     # methods that access files
 
     async def stat(self) -> os.stat_result:
@@ -146,7 +152,9 @@ class MoatDevPath(_MoatPath):
         filesystem.
         """
         self._stat_cache = None
-        await self._repl.evaluate(f'import os; print(os.rename({self.as_posix()!r}, {path_to.as_posix()!r}))')
+        await self._repl.evaluate(
+            f'import os; print(os.rename({self.as_posix()!r}, {path_to.as_posix()!r}))'
+        )
         return self.with_name(path_to)  # XXX, moves across dirs
 
     async def mkdir(self, parents=False, exist_ok=False):
@@ -197,7 +205,8 @@ class MoatDevPath(_MoatPath):
             '    n = _f.readinto(_mem)\n'
             '    if not n: break\n'
             '    print(ubinascii.b2a_base64(_mem[:n]), ",")\n'
-            '  print("]")')
+            '  print("]")'
+        )
         while True:
             blocks = await self._repl.evaluate(f'_b({n_blocks})')
             if not blocks:
@@ -225,9 +234,11 @@ class MoatDevPath(_MoatPath):
         Write contents (expected to be bytes) to a file on the target.
         """
         self._stat_cache = None
-        if not isinstance(data, (bytes, bytearray,memoryview)):
+        if not isinstance(data, (bytes, bytearray, memoryview)):
             raise TypeError(f'contents must be bytes/bytearray, got {type(data)} instead')
-        await self._repl.exec(f'from ubinascii import a2b_base64 as a2b; _f = open({self.as_posix()!r}, "wb")')
+        await self._repl.exec(
+            f'from ubinascii import a2b_base64 as a2b; _f = open({self.as_posix()!r}, "wb")'
+        )
         # write in chunks
         with io.BytesIO(data) as local_file:
             while True:
@@ -256,7 +267,8 @@ class MoatDevPath(_MoatPath):
         remote_paths_stat = await self._repl.evaluate(
             'import os; print("[")\n'
             f'for n in os.listdir({self.as_posix()!r}): print("[", repr(n), ",", os.stat({posix_path_slash!r} + n), "],")\n'
-            'print("]")')
+            'print("]")'
+        )
         for p, st in remote_paths_stat:
             yield (self / p)._with_stat(st)
 
@@ -276,7 +288,8 @@ class MoatDevPath(_MoatPath):
                 '    n = _f.readinto(_mem)\n'
                 '    if not n: break\n'
                 '    _h.update(_mem[:n])\n'
-                'del n, _f, _mem\n')
+                'del n, _f, _mem\n'
+            )
         except ImportError:
             # fallback if no hashlib is available: download and hash here.
             try:
@@ -302,13 +315,14 @@ class MoatFSPath(_MoatPath):
     To actually modify the target, `connect_repl()` must have
     been called.
     """
+
     # methods that access files
 
     async def _req(self, cmd, **kw):
-        return await self._repl.send("f"+cmd, **kw)
+        return await self._repl.send("f" + cmd, **kw)
 
-#>>> os.stat_result((1,2,3,4,5,6,7,8,9,10))
-#os.stat_result(st_mode=1, st_ino=2, st_dev=3, st_nlink=4, st_uid=5, st_gid=6, st_size=7, st_atime=8, st_mtime=9, st_ctime=10)
+    # >>> os.stat_result((1,2,3,4,5,6,7,8,9,10))
+    # os.stat_result(st_mode=1, st_ino=2, st_dev=3, st_nlink=4, st_uid=5, st_gid=6, st_size=7, st_atime=8, st_mtime=9, st_ctime=10)
 
     async def stat(self) -> os.stat_result:
         """
@@ -407,9 +421,9 @@ class MoatFSPath(_MoatPath):
         """
         fd = await self._req("open", p=self.as_posix(), m="r")
         try:
-            off=0
+            off = 0
             while True:
-                d = await self._req("rd", fd=fd,off=off, n=chunk)
+                d = await self._req("rd", fd=fd, off=off, n=chunk)
                 if not d:
                     break
                 off += len(d)
@@ -440,9 +454,9 @@ class MoatFSPath(_MoatPath):
             raise TypeError(f'contents must be a buffer, got {type(data)} instead')
         fd = await self._req("open", p=self.as_posix(), m="w")
         try:
-            off=0
+            off = 0
             while off < len(data):
-                n = await self._req("wr", fd=fd, off=off, data=data[off:off+chunk])
+                n = await self._req("wr", fd=fd, off=off, data=data[off : off + chunk])
                 if not n:
                     raise EOFError
                 off += n
@@ -460,7 +474,7 @@ class MoatFSPath(_MoatPath):
             raise ValueError(f'only absolute paths are supported (beginning with "/"): {self!r}')
         d = await self._req("dir", p=self.as_posix())
         for n in d:
-            yield self/n
+            yield self / n
             # TODO add stat
 
     async def sha256(self) -> bytes:
@@ -469,7 +483,7 @@ class MoatFSPath(_MoatPath):
 
         Calculate a SHA256 over the file contents and return the digest.
         """
-        return await self._req("hash",p=self.as_posix())
+        return await self._req("hash", p=self.as_posix())
 
 
 async def sha256(p):
@@ -480,7 +494,7 @@ async def sha256(p):
         return await p.sha256()
     except AttributeError:
         _h = hashlib.sha256()
-        if hasattr(p,"read_as_stream"):
+        if hasattr(p, "read_as_stream"):
             async for block in p.read_as_stream():
                 _h.update(block)
         else:
@@ -494,13 +508,13 @@ async def _nullcheck(p):
     """Null check function, always True"""
     if await p.is_dir():
         return p.name != "__pycache__"
-    if p.suffix in (".py",".mpy", ".state"):
+    if p.suffix in (".py", ".mpy", ".state"):
         return True
     logger.info("Ignored: %s", p)
     return False
 
 
-async def copytree(src,dst,check=_nullcheck, cross=None):
+async def copytree(src, dst, check=_nullcheck, cross=None):
     """
     Copy a file tree from @src to @dst.
     Skip files/subtrees for which "await check(src)" is False.
@@ -511,13 +525,14 @@ async def copytree(src,dst,check=_nullcheck, cross=None):
     Returns the number of modified files.
     """
     from .main import ABytes
+
     if await src.is_file():
-        if src.suffix == ".py" and str(dst) not in ("/boot.py","boot.py","/main.py","main.py"):
+        if src.suffix == ".py" and str(dst) not in ("/boot.py", "boot.py", "/main.py", "main.py"):
             if cross:
                 try:
                     p = str(src)
                     if (pi := p.find("/_embed/")) > 0:
-                        p = p[pi+8:]
+                        p = p[pi + 8 :]
                     if p.startswith("lib/moat/"):
                         p = p[9:]
                     data = await anyio.run_process([cross, str(src), "-s", p, "-o", "/dev/stdout"])
@@ -525,16 +540,16 @@ async def copytree(src,dst,check=_nullcheck, cross=None):
                     print(exc.stderr.decode("utf-8"), file=sys.stderr)
                     pass
                 else:
-                    src = ABytes(src.with_suffix(".mpy"),data.stdout)
+                    src = ABytes(src.with_suffix(".mpy"), data.stdout)
                     try:
                         await dst.unlink()
-                    except (OSError,RemoteError):
+                    except (OSError, RemoteError):
                         pass
                     dst = dst.with_suffix(".mpy")
             else:
                 try:
                     await dst.with_suffix(".mpy").unlink()
-                except (OSError,RemoteError):
+                except (OSError, RemoteError):
                     pass
 
         s1 = (await src.stat()).st_size
@@ -554,25 +569,24 @@ async def copytree(src,dst,check=_nullcheck, cross=None):
                 s2 = -1
         if s1 != s2:
             await dst.write_bytes(await src.read_bytes())
-            logger.info("Copy: updated %s > %s", src,dst)
+            logger.info("Copy: updated %s > %s", src, dst)
             return 1
         else:
-            logger.debug("Copy: unchanged %s > %s", src,dst)
+            logger.debug("Copy: unchanged %s > %s", src, dst)
             return 0
     else:
         try:
             s = await dst.stat()
-        except (OSError,RemoteError):
+        except (OSError, RemoteError):
             await dst.mkdir(parents=True)
 
-        logger.info("Copy: dir %s > %s", src,dst)
+        logger.info("Copy: dir %s > %s", src, dst)
         n = 0
         if not await dst.exists():
             await dst.mkdir()
         async for s in src.iterdir():
             if not await check(s):
                 continue
-            d = dst/s.name
-            n += await copytree(s,d, check=check, cross=cross)
+            d = dst / s.name
+            n += await copytree(s, d, check=check, cross=cross)
         return n
-

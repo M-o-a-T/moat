@@ -1,24 +1,26 @@
-import machine
-
-from .cmd import BaseCmd
-from .compat import TaskGroup, sleep_ms, ticks_ms, ticks_diff
-from moat.util import NotGiven
-from .proto.stack import RemoteError
-from .proto.stream import drop_proxy
+import gc
 
 import machine
 import uos
 import usys
-import gc
+from moat.util import NotGiven
+
+from .cmd import BaseCmd
+from .compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms
+from .proto.stack import RemoteError
+from .proto.stream import drop_proxy
+
 
 class NoArg:
     pass
 
+
 def _complex(v):
-    if not isinstance(v,(dict,list,tuple)):
+    if not isinstance(v, (dict, list, tuple)):
         return False
     # TODO check length of packed object without actually packing it
     return True
+
 
 class SysCmd(BaseCmd):
     # system and other low level stuff
@@ -31,7 +33,7 @@ class SysCmd(BaseCmd):
         Trigger an unsolicited ``link`` message. The data will be ``True``
         obviously.
         """
-        await self.request.send_nr("link",True)
+        await self.request.send_nr("link", True)
 
     async def cmd_state(self, state=None):
         """
@@ -43,14 +45,14 @@ class SysCmd(BaseCmd):
         * fb: flag whether the current state is a fall-back state
         """
         if state is not None:
-            f=open("moat.state","w")
+            f = open("moat.state", "w")
             f.write(state)
             f.close()
         else:
             try:
-                f=open("moat.state","r")
+                f = open("moat.state", "r")
             except OSError:
-                state=None
+                state = None
             else:
                 state = f.read()
                 f.close()
@@ -69,6 +71,7 @@ class SysCmd(BaseCmd):
         Starts the watchdog (@t > 0) or restarts it.
         """
         from .main import wdt
+
         w = wdt(t=t)
         if w:
             w.feed()  # XXX ignores T, might error instead
@@ -79,7 +82,7 @@ class SysCmd(BaseCmd):
             return False
         return True
 
-    async def cmd_cfg_r(self, fn:str=None):
+    async def cmd_cfg_r(self, fn: str = None):
         """
         Read the current configuration from this file.
         """
@@ -88,7 +91,7 @@ class SysCmd(BaseCmd):
             fb = b.is_fallback
             fn = "moat_fb.cfg" if fb else "moat.cfg"
 
-        f = SFile(open(fn,"rb"))
+        f = SFile(open(fn, "rb"))
         try:
             cfg = await Unpacker(f).unpack()
         finally:
@@ -96,8 +99,7 @@ class SysCmd(BaseCmd):
 
         b.cfg = cfg
         await b.config_updated()
-        await self.request.send_nr(["mplex","cfg"])
-
+        await self.request.send_nr(["mplex", "cfg"])
 
     async def cmd_cfg(self, p=(), d=NoArg):
         """
@@ -124,25 +126,25 @@ class SysCmd(BaseCmd):
         if d is NoArg:
             for pp in p:
                 cur = cur[pp]
-            if isinstance(cur,dict):
+            if isinstance(cur, dict):
                 c = {}
                 s = []
-                for k,v in cur.items():
+                for k, v in cur.items():
                     if _complex(v):
                         s.append(k)
                     else:
                         c[k] = v
-                return c,s
-            elif isinstance(cur,(list,tuple)):
+                return c, s
+            elif isinstance(cur, (list, tuple)):
                 c = []
                 s = []
-                for k,v in enumerate(cur):
+                for k, v in enumerate(cur):
                     if _complex(v):
                         c.append(None)
                         s.append(k)
                     else:
                         c.append(v)
-                return c,s
+                return c, s
             else:
                 return cur
                 # guaranteed not to be a tuple
@@ -150,7 +152,7 @@ class SysCmd(BaseCmd):
             if d is not None:
                 raise ValueError("no override root")
             await self.base.config_updated(self.base.cfg)
-            await self.request.send_nr(["mplex","cfg"])
+            await self.request.send_nr(["mplex", "cfg"])
             return
         for pp in p[:-1]:
             try:
@@ -173,7 +175,6 @@ class SysCmd(BaseCmd):
                     raise exc
                 cur.append(d)
 
-
     async def cmd_eval(self, val, attrs=()):
         """
         Evaluates ``val`` if it's a string, accesses ``attrs``,
@@ -182,15 +183,15 @@ class SysCmd(BaseCmd):
         If you get a `Proxy` object as the result, you need to call
         ``sys.unproxy`` to clear it from the cache.
         """
-        if isinstance(val,str):
-            val = eval(val,dict(s=self.parent))
+        if isinstance(val, str):
+            val = eval(val, dict(s=self.parent))
         # otherwise it's probably a proxy
         for vv in attrs:
             try:
-                val = getattr(v,vv)
+                val = getattr(v, vv)
             except AttributeError:
                 val = val[vv]
-        return (val,repr(val))  # may send a proxy
+        return (val, repr(val))  # may send a proxy
 
     async def cmd_unproxy(self, p):
         """
@@ -208,11 +209,11 @@ class SysCmd(BaseCmd):
 
         Warning: this may need a heap of memory.
         """
-        if isinstance(x,str):
-            x = eval(x,dict(s=self.parent))
+        if isinstance(x, str):
+            x = eval(x, dict(s=self.parent))
         d = {}
         for k in dir(x):
-            d[k] = repr(getattr(res,k))
+            d[k] = repr(getattr(res, k))
         return d
 
     async def cmd_info(self):
@@ -239,7 +240,7 @@ class SysCmd(BaseCmd):
         gc.collect()
         f2 = gc.mem_free()
         t2 = ticks_ms()
-        return dict(t=ticks_diff(t2,t1), f=f2, c=f2-f1)
+        return dict(t=ticks_diff(t2, t1), f=f2, c=f2 - f1)
 
     async def cmd_boot(self, code):
         """
@@ -252,9 +253,10 @@ class SysCmd(BaseCmd):
 
         async def _boot():
             await sleep_ms(100)
-            await self.request.send_nr("link",False)
+            await self.request.send_nr("link", False)
             await sleep_ms(100)
             machine.soft_reset()
+
         await self.request._tg.spawn(_boot, _name="base.boot1")
         return True
 
@@ -266,11 +268,13 @@ class SysCmd(BaseCmd):
         """
         if code != "SysRsT":
             raise RuntimeError("wrong")
+
         async def _boot():
             await sleep_ms(100)
-            await self.request.send_nr("link",False)
+            await self.request.send_nr("link", False)
             await sleep_ms(100)
             machine.reset()
+
         await self.request._tg.spawn(_boot, _name="base.boot2")
         return True
 
@@ -283,11 +287,13 @@ class SysCmd(BaseCmd):
         # terminate the MoaT stack w/o rebooting
         if code != "SysStoP":
             raise RuntimeError("wrong")
+
         async def _boot():
             await sleep_ms(100)
-            await self.request.send_nr("link",False)
+            await self.request.send_nr("link", False)
             await sleep_ms(100)
             raise SystemExit
+
         await self.request._tg.spawn(_boot, _name="base.boot3")
         return True
 
@@ -301,7 +307,7 @@ class SysCmd(BaseCmd):
         For example, ``most micro cmd sys.load -v n f -v m fs.FsCmd``
         loads the file system module if it isn't loaded already.
         """
-        om = getattr(self.parent,"dis_"+n, None)
+        om = getattr(self.parent, "dis_" + n, None)
         if om is not None:
             if not r:
                 return
@@ -309,9 +315,10 @@ class SysCmd(BaseCmd):
             del om  # free memory
 
         from .main import import_app
+
         m = import_app(m, drop=True)
         m = m(self.parent, n, kw, self.base.cfg)
-        setattr(self.parent,"dis_"+n, m)
+        setattr(self.parent, "dis_" + n, m)
         await self.parent._tg.spawn(m.run_sub, _name="base.load")
 
     async def cmd_machid(self):
@@ -328,36 +335,37 @@ class SysCmd(BaseCmd):
         if d is None:
             return machine.RTC.now()
         else:
-            machine.RTC((d[0],d[1],d[2],0, d[3],d[4],d[5],0))
+            machine.RTC((d[0], d[1], d[2], 0, d[3], d[4], d[5], 0))
 
     async def cmd_pin(self, n, v=None, **kw):
         """
         Set or read a digital pin.
         """
-        p=machine.Pin(n, **kw)
+        p = machine.Pin(n, **kw)
         if v is not None:
             p.value(v)
         return p.value()
-        
+
     async def cmd_adc(self, n):
         """
         Read an analog pin.
         """
-        p=machine.ADC(n)
+        p = machine.ADC(n)
         return p.read_u16()  # XXX this is probably doing a sync wait
 
     async def run(self):
         await self.request.wait_ready()
-        await self.request.send_nr("link",True)
+        await self.request.send_nr("link", True)
+
 
 class StdBase(BaseCmd):
-    #Standard toplevel base implementation
+    # Standard toplevel base implementation
 
     def __init__(self, parent, fallback=None, state=None, cfg={}, **k):
         super().__init__(parent, **k)
 
-        self.is_fallback=fallback
-        self.moat_state=state
+        self.is_fallback = fallback
+        self.moat_state = state
         self.cfg = cfg
 
         self.dis_sys = SysCmd(self)
@@ -368,6 +376,5 @@ class StdBase(BaseCmd):
 
         This is for humans. Don't use it for automated keepalive.
         """
-        print("PING",m, file=usys.stderr)
-        return "R:"+str(m)
-
+        print("PING", m, file=usys.stderr)
+        return "R:" + str(m)

@@ -1,9 +1,10 @@
-
-from moat.micro.cmd import BaseCmd
-from moat.micro.compat import wait_for_ms, Event, TimeoutError, Lock
 import machine as M
 from serialpacker import SerialPacker
+
+from moat.micro.cmd import BaseCmd
+from moat.micro.compat import Event, Lock, TimeoutError, wait_for_ms
 from moat.micro.proto.stream import AsyncStream
+
 
 # Serial packet forwarder
 # cfg:
@@ -15,7 +16,7 @@ from moat.micro.proto.stream import AsyncStream
 #   len: N
 #   idle: MSEC
 # start: NUM
-# 
+#
 class Serial:
     max_idle = 100
 
@@ -27,7 +28,14 @@ class Serial:
 
     async def run(self):
         cfg = self.cfg
-        self.ser = AsyncStream(M.UART(cfg.get("uart",0),tx=M.Pin(cfg.get("tx",0)),rx=M.Pin(cfg.get("rx",1)),baudrate=cfg.get("baud",9600)))
+        self.ser = AsyncStream(
+            M.UART(
+                cfg.get("uart", 0),
+                tx=M.Pin(cfg.get("tx", 0)),
+                rx=M.Pin(cfg.get("rx", 1)),
+                baudrate=cfg.get("baud", 9600),
+            )
+        )
         sp = {}
         try:
             sp["max_idle"] = self.max_idle = cfg["max"]["idle"]
@@ -70,7 +78,7 @@ class Serial:
                 p = self.pack.feed(buf[i])
                 if p is None:
                     continue
-                if isinstance(p,int):  # console byte
+                if isinstance(p, int):  # console byte
                     cons.append(p)
                     if len(cons) > 127 or p == 10:  # linefeed
                         await self.cmd.send_raw(cons)
@@ -79,7 +87,7 @@ class Serial:
                     await self.cmd.send_pkt(p)
 
     async def send(self, data):
-        h,data,t = self.pack.frame(data)
+        h, data, t = self.pack.frame(data)
         async with self.w_lock:
             await self.ser.write(h)
             await self.ser.write(data)
@@ -92,8 +100,8 @@ class Serial:
     async def err_count(self):
         try:
             return {
-                "crc":self.pack.err_crc,
-                "frame":self.pack.err_frame,
+                "crc": self.pack.err_crc,
+                "frame": self.pack.err_frame,
             }
         finally:
             self.pack.err_crc = 0
@@ -126,4 +134,3 @@ class SerialCmd(BaseCmd):
 
     async def send_pkt(self, data):
         await self.request.send_nr([self.name, "in_pkt"], data)
-

@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import random
+import typing
 from contextlib import asynccontextmanager
 
+from distkv.util import P, Path
 from distmqtt.codecs import MsgPackCodec
 
-import typing
-from distkv.util import Path, P
 if typing.TYPE_CHECKING:
     from distkv.client import Client
 
-from . import BaseBusHandler, UnknownParamError
 from ..message import BusMessage
+from . import BaseBusHandler, UnknownParamError
 
 
 class Handler(BaseBusHandler):
@@ -19,7 +19,8 @@ class Handler(BaseBusHandler):
     This handler tunnels through DistKV. In contrast, the MQTT handler
     connects directly.
     """
-    short_help="tunnel through DistKV"
+
+    short_help = "tunnel through DistKV"
 
     def __init__(self, client: Client, topic: Path):
         super().__init__()
@@ -29,16 +30,22 @@ class Handler(BaseBusHandler):
         self.topic = topic
 
     PARAMS = {
-        'topic': (P, "Topic for messages", lambda x:len(x)>1, None, "must be at least two elements"),
+        'topic': (
+            P,
+            "Topic for messages",
+            lambda x: len(x) > 1,
+            None,
+            "must be at least two elements",
+        ),
     }
-    
+
     @staticmethod
     def check_config(cfg: dict):
-        for k,v in cfg.items():
+        for k, v in cfg.items():
             if k != "topic":
                 raise UnknownParamError(k)
-            if not isinstance(v,Path):
-                raise RuntimeError(k,v)
+            if not isinstance(v, Path):
+                raise RuntimeError(k, v)
 
     @asynccontextmanager
     async def _ctx(self):
@@ -69,7 +76,6 @@ class Handler(BaseBusHandler):
                 return msg
 
     async def send(self, msg):
-        data={k:getattr(msg,k) for k in msg._attrs}
-        data['_id'] = getattr(msg,'_mqtt_id',self.id)
+        data = {k: getattr(msg, k) for k in msg._attrs}
+        data['_id'] = getattr(msg, '_mqtt_id', self.id)
         await self._mqtt.msg_send(topic=self.topic, data=data)
-

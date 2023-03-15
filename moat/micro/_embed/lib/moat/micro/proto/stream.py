@@ -1,20 +1,24 @@
-from ..compat import wait_for_ms, TimeoutError, Lock
-from moat.util import NotGiven, NoProxyError
+from moat.util import NoProxyError, NotGiven
+
+from ..compat import Lock, TimeoutError, wait_for_ms
+
 try:
     from moat.util import Proxy
 except ImportError:
     Proxy = None
 
 import sys
+
 try:
     import greenback
 except ImportError:
     greenback = None
-from msgpack import Packer,Unpacker, OutOfData, ExtType
+from msgpack import ExtType, OutOfData, Packer, Unpacker
 
 from .stack import _Stacked
 
 if greenback is not None:
+
     class SyncReadStream:
         def __init__(self, stream):
             self.s = stream
@@ -22,24 +26,28 @@ if greenback is not None:
         def read(self, n):
             return greenback.await_(self.s.recv(n))
 
+
 class _Base(_Stacked):
     def __init__(self, stream):
         super().__init__(None)
-        if isinstance(stream,AIOStream):
+        if isinstance(stream, AIOStream):
             raise RuntimeError("ugh")
         self.s = stream
 
     async def aclose(self):
         self.s.close()
 
+
 _Proxy = {'-': NotGiven}
 _RProxy = {id(NotGiven): '-'}
 
+
 def drop_proxy(p):
-    if not isinstance(p,str):
+    if not isinstance(p, str):
         p = _RProxy[id(p)]
     r = _Proxy.pop(p)
     del _RProxy[id(r)]
+
 
 def ext_proxy(code, data):
     if code == 4:
@@ -52,16 +60,19 @@ def ext_proxy(code, data):
             return Proxy(n)
     return ExtType(code, data)
 
+
 _pkey = 1
+
+
 def default_handler(obj):
-    if Proxy is not None and isinstance(obj,Proxy):
+    if Proxy is not None and isinstance(obj, Proxy):
         return ExtType(4, obj.name.encode("utf-8"))
 
     try:
         k = _RProxy[id(obj)]
     except KeyError:
         global _pkey
-        k = "p_"+str(_pkey)
+        k = "p_" + str(_pkey)
         _pkey += 1
         _Proxy[k] = obj
         _RProxy[id(obj)] = k
@@ -74,7 +85,7 @@ class MsgpackStream(_Stacked):
     # Use this if your stream is reliable (TCP, USB, …)
 
     def __init__(self, stream, msg_prefix=None, console_handler=None, **kw):
-        # 
+        #
         # console_handler: called with console bytes
         # msg_prefix: int: code for start-of-packet
         #
@@ -83,7 +94,7 @@ class MsgpackStream(_Stacked):
         kw['ext_hook'] = ext_proxy
 
         if console_handler is not None or msg_prefix is not None:
-            kw["read_size"]=1
+            kw["read_size"] = 1
 
         if sys.implementation.name == "micropython":
             # we use a hacked version of msgpack with a stream-y async unpacker
@@ -93,12 +104,15 @@ class MsgpackStream(_Stacked):
             # regular Python: msgpack uses a sync read call, so use greenback to async-ize it
             self.pack = Packer(default=default_handler).pack
             self.unpacker = Unpacker(SyncReadStream(stream), **kw)
+
             async def unpack():
                 import anyio
+
                 try:
                     return self.unpacker.unpack()
                 except OutOfData:
                     raise anyio.EndOfStream
+
             self.unpack = unpack
         self.msg_prefix = msg_prefix
         self.console_handler = console_handler
@@ -126,7 +140,7 @@ class MsgpackStream(_Stacked):
                     r = await self.unpack()
                 except OutOfData:
                     raise EOFError
-                if self.console_handler is not None and isinstance(r,int) and 0 <= r < 128:
+                if self.console_handler is not None and isinstance(r, int) and 0 <= r < 128:
                     self.console_handler(r)
                 else:
                     return r
@@ -174,7 +188,7 @@ class SerialPackerStream(_Base):
             while self.i < self.n:
                 msg = self.p.feed(c[self.i])
                 self.i += 1
-                if isinstance(msg,int):
+                if isinstance(msg, int):
                     if self.console is not None:
                         self.console_handler(msg)
                 elif msg is not None:
@@ -186,25 +200,26 @@ class SerialPackerStream(_Base):
             self.i = 0
             self.n = n
 
-
     async def send(self, msg):
-        h,msg,t = self.p.frame(msg)
+        h, msg, t = self.p.frame(msg)
         async with self.w_lock:
-            await self.s.write(h+msg+t)
+            await self.s.write(h + msg + t)
 
     async def aclose(self):
         self.s.close()
 
+
 try:
-    from uasyncio import core
+    from uasyncio import Lock, core
     from uasyncio.stream import Stream
-    from uasyncio import Lock
 except ImportError:
     pass
 else:
-    def _rdq(s):  # async 
+
+    def _rdq(s):  # async
         yield core._io_queue.queue_read(s)
-    def _wrq(s):  # async 
+
+    def _wrq(s):  # async
         yield core._io_queue.queue_write(s)
 
     class AsyncStream(_Base):
@@ -226,14 +241,14 @@ else:
             i = 0
             m = memoryview(buf)
             while i < len(buf):
-                if i==0 or timeout<0:
+                if i == 0 or timeout < 0:
                     await _rdq(self.s)
                 else:
                     try:
                         await wait_for_ms(timeout, _rdq, self.s)
                     except TimeoutError:
                         break
-                d = self.s.readinto(m[i:i+min(self._any(), len(buf)-i)])
+                d = self.s.readinto(m[i : i + min(self._any(), len(buf) - i)])
                 i += d
             return i
 
@@ -257,7 +272,6 @@ else:
                 self._buf = None
                 return i
 
-
     class AIOStream(_Base):
         # adapts an asyncio stream to ours
         def __init__(self, stream):
@@ -274,8 +288,7 @@ else:
                 raise EOFError
             if res == n:
                 return buf
-            elif res <= n/4:
+            elif res <= n / 4:
                 return buf[:res]
             else:
                 return memoryview(buf)[:res]
-

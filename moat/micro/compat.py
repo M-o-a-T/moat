@@ -1,44 +1,55 @@
 import anyio as _anyio
+
 Event = _anyio.Event
 Lock = _anyio.Lock
 WouldBlock = _anyio.WouldBlock
 sleep = _anyio.sleep
 import time as _time
 import traceback as _traceback
-import outcome as _outcome
+
 import greenback
+import outcome as _outcome
 from moat.util import Queue, ValueEvent
 
-TimeoutError=TimeoutError # compat
+TimeoutError = TimeoutError  # compat
 
 from concurrent.futures import CancelledError
 
+
 def print_exc(exc):
-    _traceback.print_exception(type(exc),exc,exc.__traceback__)
+    _traceback.print_exception(type(exc), exc, exc.__traceback__)
+
 
 def ticks_ms():
     return _time.monotonic_ns() // 1000000
 
+
 async def sleep_ms(ms):
-    await sleep(ms/1000)
+    await sleep(ms / 1000)
 
-async def wait_for(timeout,p,*a,**k):
+
+async def wait_for(timeout, p, *a, **k):
     with _anyio.fail_after(timeout):
-        return await p(*a,**k)
+        return await p(*a, **k)
 
-async def wait_for_ms(timeout,p,*a,**k):
-    with _anyio.fail_after(timeout/1000):
-        return await p(*a,**k)
+
+async def wait_for_ms(timeout, p, *a, **k):
+    with _anyio.fail_after(timeout / 1000):
+        return await p(*a, **k)
+
 
 async def idle():
     while True:
-        await anyio.sleep(60*60*12)  # half a day
+        await anyio.sleep(60 * 60 * 12)  # half a day
 
-def ticks_add(a,b):
-    return a+b
 
-def ticks_diff(a,b):
-    return a-b
+def ticks_add(a, b):
+    return a + b
+
+
+def ticks_diff(a, b):
+    return a - b
+
 
 from concurrent.futures import CancelledError as _Cancelled
 
@@ -46,8 +57,9 @@ import attr as _attr
 
 try:
     _d_a = _anyio.DeprecatedAwaitable
-except AttributeError: # no back compat
+except AttributeError:  # no back compat
     _d_a = lambda _: None
+
 
 @_attr.s
 class ValueEvent:
@@ -104,58 +116,68 @@ class ValueEvent:
         await self.event.wait()
         return self.value.unwrap()
 
+
 _tg = None
 
-async def _run(p,a,k):
+
+async def _run(p, a, k):
     global _tg
     async with _anyio.create_task_group() as _tg:
         try:
-            return await p(*a,**k)
+            return await p(*a, **k)
         finally:
             _tg.cancel_scope.cancel()
             _tg = None
 
-def run(p,*a,**k):
-    return _anyio.run(_run,p,a,k)
+
+def run(p, *a, **k):
+    return _anyio.run(_run, p, a, k)
 
 
 _tg = None
+
+
 def TaskGroup():
     global _tg
     if _tg is None:
         _tgt = type(_anyio.create_task_group())
-        class TaskGroup(_tgt):
-            """An augmented taskgroup
-            """
 
-            async def spawn(self, p,*a, _name=None, **k):
+        class TaskGroup(_tgt):
+            """An augmented taskgroup"""
+
+            async def spawn(self, p, *a, _name=None, **k):
                 """\
                     Like start(), but returns something you can cancel
                 """
-                async def catch(p,a,k, *, task_status):
+
+                async def catch(p, a, k, *, task_status):
                     with _anyio.CancelScope() as s:
                         task_status.started(s)
                         await greenback.ensure_portal()
                         try:
-                            await p(*a,**k)
-                        except CancelledError: # error from concurrent.futures
+                            await p(*a, **k)
+                        except CancelledError:  # error from concurrent.futures
                             pass
 
-                return await super().start(catch,p,a,k, name=_name)
+                return await super().start(catch, p, a, k, name=_name)
 
             def cancel(self):
                 self.cancel_scope.cancel()
-        _tg=TaskGroup
+
+        _tg = TaskGroup
     return _tg()
 
 
-async def run_server(cb,host,port, backlog=5, taskgroup=None, reuse_port=True):
-    listener = await anyio.create_tcp_listener(local_host=host, local_port=port, backlog=backlog, reuse_port=reuse_port)
+async def run_server(cb, host, port, backlog=5, taskgroup=None, reuse_port=True):
+    listener = await anyio.create_tcp_listener(
+        local_host=host, local_port=port, backlog=backlog, reuse_port=reuse_port
+    )
 
     async def cbc(sock):
-        await cb(sock,sock);
+        await cb(sock, sock)
 
     await listener.serve(cbc, task_group=taskgroup)
+
 
 class AnyioMoatStream:
     # adapt an anyio stream to our scheme.
@@ -177,4 +199,3 @@ class AnyioMoatStream:
         res = self.s.receive(len(buf))
         buf[:] = res
         return res
-

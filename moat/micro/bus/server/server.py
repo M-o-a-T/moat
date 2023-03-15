@@ -2,62 +2,80 @@
 This module implements the basics for a bus server.
 """
 
-import trio
 from contextlib import asynccontextmanager, contextmanager
+from functools import partial
 from weakref import ref
+
+import msgpack
+import trio
 
 from ..backend import BaseBusHandler
 from ..message import BusMessage
+from ..util import CtxObj, Dispatcher, byte2mini
 from .obj import Obj
-from ..util import byte2mini, CtxObj, Dispatcher
 
-import msgpack
-from functools import partial
-
-packer = msgpack.Packer(strict_types=False, use_bin_type=True, #default=_encode
-        ).pack
+packer = msgpack.Packer(
+    strict_types=False,
+    use_bin_type=True,  # default=_encode
+).pack
 unpacker = partial(
-    msgpack.unpackb, raw=False, use_list=False, # object_pairs_hook=attrdict, ext_hook=_decode
+    msgpack.unpackb,
+    raw=False,
+    use_list=False,  # object_pairs_hook=attrdict, ext_hook=_decode
 )
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 # Errors
 
+
 class NoFreeID(RuntimeError):
     pass
+
+
 class IDcollisionError(RuntimeError):
     pass
 
+
 # Events
+
 
 class ServerEvent:
     pass
 
+
 class _ClientEvent(ServerEvent):
     def __init__(self, obj):
         self.obj = obj
+
     def __repr__(self):
-        return "<%s %s>" % (self.__class__.__name__.replace("Event",""), self.obj)
+        return "<%s %s>" % (self.__class__.__name__.replace("Event", ""), self.obj)
+
 
 class NewClientEvent(_ClientEvent):
     """
     A device has obtained a client address. Get data dictionary and stuff.
     """
+
     pass
+
 
 class OldClientEvent(_ClientEvent):
     """
     An existing device has re-fetched its address; we might presume that
     it's been rebooted.
     """
+
     pass
+
 
 class DropClientEvent(_ClientEvent):
     """
     A device has been removed.
     """
+
     pass
 
 
@@ -66,7 +84,7 @@ class ClientStore:
         self._server = ref(server)
         self._id2obj = dict()
         self._ser2obj = dict()
-        self._next_id = 1 # last valid ID
+        self._next_id = 1  # last valid ID
         self._reporter = set()
         super().__init__()
 
@@ -89,7 +107,7 @@ class ClientStore:
                 raise KeyError
         return obj
 
-    def obj_client(self, client:int):
+    def obj_client(self, client: int):
         """
         Get object by current client ID
         """
@@ -105,14 +123,14 @@ class ClientStore:
             cid = nid
             # skip 127 and 0
             if nid > 126:
-                nid = 0  
-            nid += 1     
+                nid = 0
+            nid += 1
             if cid not in self._id2obj:
-                self._next_id = nid   
-                return cid            
+                self._next_id = nid
+                return cid
             if nid == self._next_id:
                 raise NoFreeID(self)
-                
+
     async def register(self, obj):
         """
         Register a bus object.
@@ -150,12 +168,12 @@ class ClientStore:
             del self._ser2obj[obj.serial]
             del self._id2obj[obj.client_id]
             del obj.client_id
-        except (AttributeError,KeyError):
+        except (AttributeError, KeyError):
             pass
 
     @contextmanager
     def watch(self):
-        q_w,q_r = trio.open_memory_channel(10)
+        q_w, q_r = trio.open_memory_channel(10)
         self._reporter.add(q_w.send)
         try:
             yield q_r
@@ -165,6 +183,7 @@ class ClientStore:
     async def report(self, evt):
         for q in self._reporter:
             await q(evt)
+
 
 class Server(CtxObj, Dispatcher):
     """
@@ -177,14 +196,15 @@ class Server(CtxObj, Dispatcher):
                 await handle_event(evt)
                 await server.send_msg(some_message)
     """
+
     _check_task = None
 
-    def __init__(self, backend:BaseBusHandler, id=1):
-        if id<1 or id>3:
+    def __init__(self, backend: BaseBusHandler, id=1):
+        if id < 1 or id > 3:
             raise RuntimeError("My ID must be within 1…3")
         self.logger = logging.getLogger("%s.%s" % (__name__, backend.id))
         self._back = backend
-        self.__id = id-4  # my server ID
+        self.__id = id - 4  # my server ID
         self.objs = ClientStore(self)
 
         super().__init__()
@@ -243,12 +263,11 @@ class Server(CtxObj, Dispatcher):
     async def send_msg(self, msg):
         await self._back.send(msg)
 
-    async def reply(self, msg, src=None,dest=None,code=None, data=b'', prio=0):
+    async def reply(self, msg, src=None, dest=None, code=None, data=b'', prio=0):
         if src is None:
             src = msg.dst
         if dest is None:
             dest = msg.src
         if code is None:
             code = 3  # standard reply
-        await self.send(src,dest,code,data=data,prio=prio)
-
+        await self.send(src, dest, code, data=data, prio=prio)

@@ -1,12 +1,16 @@
 import sys
+
 from uasyncio import run_server
 from uasyncio.queues import Queue
 
-from ..compat import run_server, Event, print_exc, TaskGroup
 from ..cmd import Request
-from ..proto.stream import MsgpackStream, AIOStream
+from ..compat import Event, TaskGroup, print_exc, run_server
+from ..proto.stream import AIOStream, MsgpackStream
 
-async def network_stack(callback, log=False, multiple=False, host="0.0.0.0", port=0, request_factory=Request):
+
+async def network_stack(
+    callback, log=False, multiple=False, host="0.0.0.0", port=0, request_factory=Request
+):
     # an iterator for network connections / their stacks. Yields one t,b
     # pair for each successful connection.
     #
@@ -24,14 +28,14 @@ async def network_stack(callback, log=False, multiple=False, host="0.0.0.0", por
         from .proto.stack import Logger
     q = Queue(0)
 
-    async def make_stack(s,rs):
+    async def make_stack(s, rs):
         assert s is rs
         await q.put(s)
 
     srv = None
     n = 0
     async with TaskGroup() as tg:
-        await tg.spawn(run_server, make_stack, host,port, taskgroup=tg, _name="run_server")
+        await tg.spawn(run_server, make_stack, host, port, taskgroup=tg, _name="run_server")
         while True:
             s = await q.get()
             n += 1
@@ -42,5 +46,4 @@ async def network_stack(callback, log=False, multiple=False, host="0.0.0.0", por
             if log:
                 t = t.stack(Logger, txt="N%d" % n)
             t = t.stack(request_factory)
-            srv = await tg.spawn(callback,t,b, _name="ns_cb")
-
+            srv = await tg.spawn(callback, t, b, _name="ns_cb")

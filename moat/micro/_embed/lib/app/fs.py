@@ -1,12 +1,13 @@
+import errno
+
 import machine
-
-from moat.micro.cmd import BaseCmd
-from moat.micro.compat import TaskGroup, sleep_ms, ticks_ms, ticks_diff
-from moat.micro.proto.stack import SilentRemoteError as FSError
-
 import uos
 import usys
-import errno
+
+from moat.micro.cmd import BaseCmd
+from moat.micro.compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms
+from moat.micro.proto.stack import SilentRemoteError as FSError
+
 
 class FsCmd(BaseCmd):
     _fd_last = 0
@@ -25,11 +26,11 @@ class FsCmd(BaseCmd):
 
     def _fsp(self, p):
         if self._pre:
-            p=self._pre+p
+            p = self._pre + p
         if p == "":
             p = "/"
-#       elif p == ".." or p.startswith("../") or "/../" in p: or p.endswith("/..")
-#           raise FSError("nf")
+        # elif p == ".." or p.startswith("../") or "/../" in p: or p.endswith("/..")
+        # raise FSError("nf")
         return p
 
     def _fd(self, fd, drop=False):
@@ -46,7 +47,7 @@ class FsCmd(BaseCmd):
         self._fd_cache[fd] = f
         return fd
 
-    def _del_f(self,fd):
+    def _del_f(self, fd):
         f = self._fd_cache.pop(fd)
         f.close()
 
@@ -61,11 +62,11 @@ class FsCmd(BaseCmd):
         elif p[0] == "/":
             self._fs_prefix = p
         else:
-            self._fs_prefix += "/"+p
+            self._fs_prefix += "/" + p
 
     def cmd_open(self, p, m="r"):
         try:
-            f=open(p,m+'b')
+            f = open(p, m + 'b')
         except OSError as e:
             if e.errno == errno.ENOENT:
                 raise FSError("fn")
@@ -85,7 +86,6 @@ class FsCmd(BaseCmd):
         f.seek(off)
         return f.write(data)
 
-
     def cmd_cl(self, fd):
         # close
         self._del_f(fd)
@@ -95,24 +95,24 @@ class FsCmd(BaseCmd):
         p = self._fsp(p)
         if x:
             try:
-                 uos.listdir(p)
+                uos.listdir(p)
             except AttributeError:
-                return [ dict(n=x[0],t=x[1],s=x[3]) for x in uos.ilistdir(p) ]
+                return [dict(n=x[0], t=x[1], s=x[3]) for x in uos.ilistdir(p)]
         else:
             try:
                 return uos.listdir(p)
             except AttributeError:
-                return [ x[0] for x in uos.ilistdir(p) ]
+                return [x[0] for x in uos.ilistdir(p)]
 
     def cmd_mkdir(self, p):
         # new dir
         p = self._fsp(p)
         uos.mkdir(p)
 
-
     def cmd_hash(self, p):
         # Hash the contents of a file
         import uhashlib
+
         _h = uhashlib.sha256()
         _mem = memoryview(bytearray(512))
 
@@ -120,10 +120,10 @@ class FsCmd(BaseCmd):
         with open(p, "rb") as _f:
             while True:
                 n = _f.readinto(_mem)
-                if not n: break
+                if not n:
+                    break
                 _h.update(_mem[:n])
         return _h.digest()
-        
 
     def cmd_stat(self, p):
         p = self._fsp(p)
@@ -133,14 +133,14 @@ class FsCmd(BaseCmd):
             if e.errno == errno.ENOENT:
                 raise FSError("fn")
             raise
-        if s[0] & 0x8000: # file
-            return dict(m="f",s=s[6], t=s[7], d=s)
-        elif s[0] & 0x4000: # file
+        if s[0] & 0x8000:  # file
+            return dict(m="f", s=s[6], t=s[7], d=s)
+        elif s[0] & 0x4000:  # file
             return dict(m="d", t=s[7], d=s)
         else:
             return dict(m="?", d=s)
 
-    def cmd_mv(self, s,d, x=None, n=False):
+    def cmd_mv(self, s, d, x=None, n=False):
         # move file
         p = self._fsp(s)
         q = self._fsp(d)
@@ -155,7 +155,7 @@ class FsCmd(BaseCmd):
             else:
                 raise FSError("fx")
         if x is None:
-            uos.rename(p,q)
+            uos.rename(p, q)
         else:
             r = self._fsp(x)
             # exchange contents, via third file
@@ -166,9 +166,9 @@ class FsCmd(BaseCmd):
                     raise
             else:
                 raise FSError("fx")
-            uos.rename(p,r)
-            uos.rename(q,p)
-            uos.rename(r,q)
+            uos.rename(p, r)
+            uos.rename(q, p)
+            uos.rename(r, q)
 
     def cmd_rm(self, p):
         # unlink
@@ -190,6 +190,5 @@ class FsCmd(BaseCmd):
 
     def cmd_new(self, p):
         # new file
-        f = open(p,"wb")
+        f = open(p, "wb")
         f.close()
-

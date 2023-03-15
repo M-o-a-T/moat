@@ -1,19 +1,22 @@
-
 # encapsulates one bus participant
 
 from weakref import ref
+
 import outcome
 import trio
+
 
 class NoServerError(RuntimeError):
     """
     This object doesn't have a server
     """
 
+
 class NoClientError(RuntimeError):
     """
     This client hasn't been seen
     """
+
 
 _obj_reg = {}  # id > obj
 
@@ -24,26 +27,27 @@ class BaseObj:
 
     Override this.
     """
+
     server = None
     client_id = None
     serial = None
     working_until = None
-    polled: bool = False # poll bit (in address request) is set
+    polled: bool = False  # poll bit (in address request) is set
 
     def __init__(self, serial, create=None):
         if self.serial is not None:
-            return # already done
+            return  # already done
 
-        if not isinstance(serial,bytes):
+        if not isinstance(serial, bytes):
             l = serial.bit_length()
-            l = (l+7)/8
-            serial = serial.to_bytes(l,"big")
+            l = (l + 7) / 8
+            serial = serial.to_bytes(l, "big")
 
         self.serial = serial
         self.is_ready = trio.Event()
 
     def __repr__(self):
-        r=""
+        r = ""
         if self.client_id:
             return f"<{self.__class__.__name__}: {self.serial} @{self.client_id}>"
         else:
@@ -77,7 +81,7 @@ class BaseObj:
         """
         self._server = None
 
-    async def msg_in(self, cmd:int, broadcast:bool, data:bytes):
+    async def msg_in(self, cmd: int, broadcast: bool, data: bytes):
         """
         Process a message from this device.
 
@@ -85,7 +89,7 @@ class BaseObj:
         """
         pass
 
-    async def msg_out(self, code:int, data:bytes, *, src:int=None, dst:int=None):
+    async def msg_out(self, code: int, data: bytes, *, src: int = None, dst: int = None):
         """
         Send a message to the device.
         """
@@ -133,10 +137,11 @@ class BaseObj:
         Flag whether this obj is on some bus
         """
         return self.bus_id is not None
-        
+
 
 class Obj(BaseObj):
     """
     This type is used when the system sees a device it doesn't know.
     """
+
     pass

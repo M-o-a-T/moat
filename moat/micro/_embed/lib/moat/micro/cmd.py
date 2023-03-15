@@ -1,7 +1,21 @@
-from moat.micro.compat import Event,ticks_ms,ticks_add,ticks_diff,wait_for_ms,print_exc,CancelledError,TaskGroup, idle, ValueEvent, WouldBlock
-from moat.micro.proto.stack import _Stacked, RemoteError, SilentRemoteError as FSError
-
 import sys
+
+from moat.micro.compat import (
+    CancelledError,
+    Event,
+    TaskGroup,
+    ValueEvent,
+    WouldBlock,
+    idle,
+    print_exc,
+    ticks_add,
+    ticks_diff,
+    ticks_ms,
+    wait_for_ms,
+)
+from moat.micro.proto.stack import RemoteError
+from moat.micro.proto.stack import SilentRemoteError as FSError
+from moat.micro.proto.stack import _Stacked
 
 """
 Basic infrastructure to run an RPC system via an unreliable,
@@ -74,9 +88,9 @@ class BaseCmd(_Stacked):
             for k in dir(self):
                 if not k.startswith('dis_'):
                     continue
-                v = getattr(self,k)
+                v = getattr(self, k)
                 if isinstance(v, BaseCmd):
-                    await tg.spawn(v.run_sub, _name="sub:"+k)
+                    await tg.spawn(v.run_sub, _name="sub:" + k)
 
     async def aclose(self):
         """
@@ -85,7 +99,7 @@ class BaseCmd(_Stacked):
         self._tg.cancel()
         await super().aclose()
 
-    async def dispatch(self, action:str|list[str], msg:dict):
+    async def dispatch(self, action: str | list[str], msg: dict):
         """
         Process one incoming message.
 
@@ -100,12 +114,13 @@ class BaseCmd(_Stacked):
         Returns whatever the called command returns/raises, or raises
         AttributeError if no command is found.
         """
+
         async def c(p):
-            if isinstance(msg,dict):
+            if isinstance(msg, dict):
                 r = p(**msg)
             else:
                 r = p(msg)
-            if hasattr(r,"throw"):  # coroutine
+            if hasattr(r, "throw"):  # coroutine
                 r = await r
             return r
 
@@ -113,9 +128,9 @@ class BaseCmd(_Stacked):
             return await c(self.cmd)
             # if there's no "self.cmd", the resulting AttributeError is our reply
 
-        if isinstance(action,str) and len(action) > 1:
+        if isinstance(action, str) and len(action) > 1:
             try:
-                p = getattr(self,"cmd_"+action)
+                p = getattr(self, "cmd_" + action)
             except AttributeError:
                 pass
             else:
@@ -123,13 +138,13 @@ class BaseCmd(_Stacked):
 
         if len(action) > 1:
             try:
-                dis = getattr(self,"dis_"+action[0])
+                dis = getattr(self, "dis_" + action[0])
             except AttributeError:
                 raise AttributeError(action)
             else:
                 return await dis(action[1:], msg)
         else:
-            return await c(getattr(self,"cmd_"+action[0]))
+            return await c(getattr(self, "cmd_" + action[0]))
 
     async def __call__(self, *a, **k):
         """
@@ -146,16 +161,16 @@ class BaseCmd(_Stacked):
         """
         for k in dir(self):
             if k.startswith("dis_"):
-                v = getattr(self,k)
-                await v.config_updated(cfg.get(k[4:],{}))
+                v = getattr(self, k)
+                await v.config_updated(cfg.get(k[4:], {}))
 
     def cmd__dir(self):
         """
         Rudimentary introspection. Returns a list of available commands @c and
         submodules @d
         """
-        d=[]
-        c=[]
+        d = []
+        c = []
         res = dict(c=c, d=d)
         for k in dir(self):
             if k.startswith("cmd_") and k[4] != '_':
@@ -179,6 +194,7 @@ class ClientBaseCmd(BaseCmd):
     """
     a BaseCmd subclass that adds link state tracking
     """
+
     def __init__(self, parent):
         super().__init__(parent)
         self.started = Event()
@@ -205,10 +221,10 @@ class Request(_Stacked):
     """
 
     def __init__(self, *a, ready=None, **k):
-        super().__init__(*a,**k)
+        super().__init__(*a, **k)
         self.reply = {}
         self.seq = 0
-        self._ready=ready
+        self._ready = ready
 
     @property
     def request(self):
@@ -243,22 +259,22 @@ class Request(_Stacked):
         for e in self.reply.values():
             e.set_error(CancelledError())
 
-    async def _handle_request(self, a,i,d,msg):
+    async def _handle_request(self, a, i, d, msg):
         """
         Handler for a single request.
 
         `dispatch` starts this in a new task.
         """
-        res={'i':i}
+        res = {'i': i}
         try:
-            r = await self.child.dispatch(a,d)
+            r = await self.child.dispatch(a, d)
         except FSError as exc:
             res["e"] = exc.args[0]
         except WouldBlock:
             raise
         except Exception as exc:
             # TODO only when debugging
-            print("ERROR handling",a,i,d,msg, file=sys.stderr)
+            print("ERROR handling", a, i, d, msg, file=sys.stderr)
             print_exc(exc)
             if i is None:
                 return
@@ -270,44 +286,43 @@ class Request(_Stacked):
         try:
             await self.parent.send(res)
         except TypeError as exc:
-            print("ERROR returning",res, file=sys.stderr)
+            print("ERROR returning", res, file=sys.stderr)
             print_exc(exc)
-            res = {'e':repr(exc),'i':i}
+            res = {'e': repr(exc), 'i': i}
             await self.parent.send(res)
-
 
     async def dispatch(self, msg):
         """
         Main handler for incoming messages
         """
-        if not isinstance(msg,dict):
-            print("?3",msg, file=sys.stderr)
+        if not isinstance(msg, dict):
+            print("?3", msg, file=sys.stderr)
             return
-        a = msg.pop("a",None)
-        i = msg.pop("i",None)
-        d = msg.pop("d",None)
+        a = msg.pop("a", None)
+        i = msg.pop("i", None)
+        d = msg.pop("d", None)
 
         if a is not None:
             # request from the other side
             # runs in a separate task
             # TODO create a task pool
-            await self._tg.spawn(self._handle_request,a,i,d,msg, _name="hdl:"+str(a))
+            await self._tg.spawn(self._handle_request, a, i, d, msg, _name="hdl:" + str(a))
 
         else:
             # reply
             if i is None:
                 # No seq#. Dunno what to do about these.
-                print("?4",d,msg, file=sys.stderr)
+                print("?4", d, msg, file=sys.stderr)
                 return
 
-            e = msg.pop("e",None) if d is None else None
+            e = msg.pop("e", None) if d is None else None
             try:
                 evt = self.reply[i]
             except KeyError:
-                print("?5",i,msg, file=sys.stderr)
-                return # errored?
+                print("?5", i, msg, file=sys.stderr)
+                return  # errored?
             if evt.is_set():
-                print("Duplicate reply?",a,i,d,msg, file=sys.stderr)
+                print("Duplicate reply?", a, i, d, msg, file=sys.stderr)
                 return  # duplicate??
             if e is None:
                 evt.set(d)
@@ -327,14 +342,14 @@ class Request(_Stacked):
             raise TypeError("cannot use both msg data and keywords")
 
         # Find a small-ish but unique seqnum
-        if self.seq > 10*(len(self.reply)+5):
+        if self.seq > 10 * (len(self.reply) + 5):
             self.seq = 9
         while True:
             self.seq += 1
             seq = self.seq
             if seq not in self.reply:
                 break
-        msg = {"a":action,"d":_msg,"i":seq}
+        msg = {"a": action, "d": _msg, "i": seq}
 
         self.reply[seq] = e = ValueEvent()
         try:
@@ -352,6 +367,5 @@ class Request(_Stacked):
         elif kw:
             raise TypeError("cannot use both msg data and keywords")
 
-        msg = {"a":action,"d":msg}
+        msg = {"a": action, "d": msg}
         await self.parent.send(msg)
-

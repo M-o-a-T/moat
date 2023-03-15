@@ -3,24 +3,27 @@ Test runner
 """
 from __future__ import annotations
 
-import os, sys
+import os
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 import anyio
+from moat.util import attrdict, merge, packer, yload
 
 from moat.micro.compat import TaskGroup
-from moat.util import attrdict, yload, packer, merge
-from moat.micro.main import get_link_serial, get_link, Request
+from moat.micro.main import Request, get_link, get_link_serial
 from moat.micro.proto.multiplex import Multiplexer
 
+
 @asynccontextmanager
-async def mpy_server(temp:Path, debug=True,reliable=False,guarded=False, req=Request,
-        cff="test", cfg={}):
+async def mpy_server(
+    temp: Path, debug=True, reliable=False, guarded=False, req=Request, cff="test", cfg={}
+):
     obj = attrdict()
-    obj.debug=debug
-    obj.reliable=reliable
-    obj.guarded=guarded
+    obj.debug = debug
+    obj.reliable = reliable
+    obj.guarded = guarded
     obj.socket = temp / "moat.sock"
 
     cff = Path(__file__).parent / f"{cff}.cfg"
@@ -30,23 +33,26 @@ async def mpy_server(temp:Path, debug=True,reliable=False,guarded=False, req=Req
         try:
             os.stat("micro/lib")
         except OSError:
-            pre=""
+            pre = ""
         else:
-            pre="micro/"
+            pre = "micro/"
 
         root = temp / "root"
         try:
             root.mkdir()
         except EnvironmentError:
             pass
-        with open(cff,"r") as f:
+        with open(cff, "r") as f:
             cf = yload(f)
-        cf = merge(cf,cfg)
-        with (root/"moat.cfg").open("wb") as f:
+        cf = merge(cf, cfg)
+        with (root / "moat.cfg").open("wb") as f:
             f.write(packer(cf))
 
-        argv=[pre+"lib/micropython/ports/unix/build-standard/micropython",
-              pre+"tests-mpy/mplex.py", str(root)]
+        argv = [
+            pre + "lib/micropython/ports/unix/build-standard/micropython",
+            pre + "tests-mpy/mplex.py",
+            str(root),
+        ]
 
         async with await anyio.open_process(argv, stderr=sys.stderr) as proc:
             ser = anyio.streams.stapled.StapledByteStream(proc.stdin, proc.stdout)
@@ -65,7 +71,7 @@ async def mpy_server(temp:Path, debug=True,reliable=False,guarded=False, req=Req
 
 @asynccontextmanager
 async def mpy_client(obj, **kw):
-    kw.setdefault("request_factory",Request)
+    kw.setdefault("request_factory", Request)
 
     async with get_link(obj, **kw) as link:
         yield link

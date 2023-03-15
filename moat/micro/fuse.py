@@ -6,7 +6,6 @@ import os
 import stat
 from collections import defaultdict
 from pathlib import PosixPath as Path
-from .proto.stack import RemoteError
 
 import pyfuse3
 from pyfuse3 import (  # pylint: disable=E0611
@@ -16,6 +15,8 @@ from pyfuse3 import (  # pylint: disable=E0611
     FileInfo,
     FUSEError,
 )
+
+from .proto.stack import RemoteError
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             del self._path_inode_map[p]
 
     def raise_error(self, err, inode=None):
-        if isinstance(err,RemoteError):
+        if isinstance(err, RemoteError):
             if err.args[0] == "fn":
                 if inode is not None:
                     self.i_del(inode)
@@ -486,7 +487,10 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         sent = 0
         while sent < len(buf):
             sn = await self._link.send(
-                "fwr", fd=fh, data=buf[sent : sent + self.max_write], off=off + sent,
+                "fwr",
+                fd=fh,
+                data=buf[sent : sent + self.max_write],
+                off=off + sent,
             )
             sent += sn
             if sn < self.max_write:

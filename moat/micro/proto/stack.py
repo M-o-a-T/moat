@@ -5,18 +5,22 @@
 # This file should be synced with micro/lib/moat/proto/__init__.py
 # except for using logging instead of print().
 
+import logging
+
 from ..compat import TaskGroup
 
-import logging
 logger = logging.getLogger(__name__)
 
 try:
     import anyio
 except ImportError:
+
     class EndOfStream(Exception):
         pass
+
     class BrokenResourceError(Exception):
         pass
+
 else:
     EndOfStream = anyio.EndOfStream
     BrokenResourceError = anyio.BrokenResourceError
@@ -45,31 +49,36 @@ else:
 # unreliable transport will wait for the message to be confirmed. Sending
 # may fail.
 
+
 class RemoteError(RuntimeError):
     pass
+
 
 class SilentRemoteError(RemoteError):
     pass
 
+
 class ChannelClosed(RuntimeError):
     pass
+
 
 class NotImpl:
     def __init__(self, parent):
         self.parent = parent
 
-    async def dispatch(self,*a):
+    async def dispatch(self, *a):
         raise NotImplementedError(f"{self.parent} {repr(a)}")
 
     async def error(self, exc):
         raise RuntimeError()
 
     async def run(self):
-        logger.debug("RUN of %s",self.__class__.__name__)
+        logger.debug("RUN of %s", self.__class__.__name__)
         pass
 
     async def run_sub(self):
         pass
+
 
 class _Stacked:
     def __init__(self, parent):
@@ -77,7 +86,7 @@ class _Stacked:
         self.child = NotImpl(self)
 
     def stack(self, cls, *a, **k):
-        sup = cls(self, *a,**k)
+        sup = cls(self, *a, **k)
         self.child = sup
         return sup
 
@@ -89,7 +98,7 @@ class _Stacked:
         if r is None:
             return await self.child.run()
         async with TaskGroup() as tg:
-            runner = await tg.spawn(r, _name="run:"+repr(self))
+            runner = await tg.spawn(r, _name="run:" + repr(self))
             await self.child.run()
             runner.cancel()
 
@@ -127,42 +136,41 @@ class Logger(_Stacked):
         else:
             logger.debug("X:%s stop", self.txt)
 
-    async def send(self,a,m=None):
+    async def send(self, a, m=None):
         if m is None:
-            m=a
-            a=None
+            m = a
+            a = None
 
-        if isinstance(m,dict):
-            mm=" ".join(f"{k}={repr(v)}" for k,v in m.items())
+        if isinstance(m, dict):
+            mm = " ".join(f"{k}={repr(v)}" for k, v in m.items())
         else:
-            mm=repr(m)
+            mm = repr(m)
         if a is None:
             logger.debug("S:%s %s", self.txt, mm)
             await self.parent.send(m)
         else:
-            logger.debug("S:%s %s %s", self.txt,a,mm)
-            await self.parent.send(a,m)
+            logger.debug("S:%s %s %s", self.txt, a, mm)
+            await self.parent.send(a, m)
 
-    async def dispatch(self,a,m=None):
+    async def dispatch(self, a, m=None):
         if m is None:
-            m=a
-            a=None
+            m = a
+            a = None
 
-        mm=" ".join(f"{k}={repr(v)}" for k,v in m.items())
+        mm = " ".join(f"{k}={repr(v)}" for k, v in m.items())
         if a is None:
             logger.debug("D:%s %s", self.txt, mm)
             await self.child.dispatch(m)
         else:
             logger.debug("D:%s %s %s", self.txt, a, mm)
-            await self.child.dispatch(a,m)
-        logger.debug("%s:\n%r", self.txt,vars(self.child))
+            await self.child.dispatch(a, m)
+        logger.debug("%s:\n%r", self.txt, vars(self.child))
 
     async def recv(self):
         msg = await self.parent.recv()
-        if isinstance(msg,dict):
-            mm=" ".join(f"{k}={repr(v)}" for k,v in msg.items())
+        if isinstance(msg, dict):
+            mm = " ".join(f"{k}={repr(v)}" for k, v in msg.items())
         else:
-            mm=msg
-        logger.debug("R:%s %s", self.txt,mm)
+            mm = msg
+        logger.debug("R:%s %s", self.txt, mm)
         return msg
-

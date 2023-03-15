@@ -1,28 +1,31 @@
 # implements the direct connection to a micropython board
 # so we can sync the initial files, and get things running
 
-from contextlib import asynccontextmanager
 import ast
+import re
+from contextlib import asynccontextmanager
 
 import anyio
 from anyio.streams.buffered import BufferedByteReceiveStream
 
-import re
 re_oserror = re.compile(r'OSError: (\[Errno )?(\d+)(\] )?')
 re_exceptions = re.compile(r'(ValueError|KeyError|ImportError): (.*)')
 
+import logging
+
 from .os_error_list import os_error_mapping
 
-import logging
 logger = logging.getLogger(__name__)
 
 
 async def _noop_hook(ser):
     pass
 
+
 @asynccontextmanager
 async def direct_repl(port, baudrate=115200, hook=_noop_hook):
     from anyio_serial import Serial
+
     ser = Serial(port=port, baudrate=baudrate)
     async with ser:
         await hook(ser)
@@ -40,7 +43,7 @@ class DirectREPL:
         await self.serial.send(b'\x02\x03')  # exit raw repl, CTRL+C
         await self.flush_in(0.2)
         await self.serial.send(b'\x03\x01')  # CTRL+C, enter raw repl
-        
+
         # Rather than wait for a timeout we try sending a command.
         # Most likely the first time will go splat because the response
         # doesn't start with "OK", but that's fine, just try again.
@@ -68,7 +71,6 @@ class DirectREPL:
             break
         self.srbuf._buffer = bytearray()
 
-
     def _parse_error(self, text):
         """Read the error message and convert exceptions"""
         lines = text.splitlines()
@@ -85,16 +87,14 @@ class DirectREPL:
                 elif err_num == 19:
                     raise OSError(err_num, 'No Such Device Error')
                 elif err_num:
-                    raise OSError(
-                        err_num,
-                        os_error_mapping.get(err_num, (None, 'OSError'))[1])
+                    raise OSError(err_num, os_error_mapping.get(err_num, (None, 'OSError'))[1])
             m = re_exceptions.match(lines[-1])
             if m:
                 raise getattr(builtins, m.group(1))(m.group(2))
 
     async def exec_raw(self, cmd, timeout=5):
         """Exec code, returning (stdout, stderr)"""
-        logger.debug("Exec: %r",cmd)
+        logger.debug("Exec: %r", cmd)
         await self.serial.send(cmd.encode('utf-8'))
         await self.serial.send(b'\x04')
 
@@ -120,11 +120,10 @@ class DirectREPL:
         out = out[2:].decode('utf-8')
         err = err.decode('utf-8')
         if out:
-            logger.debug("OUT %r",out)
+            logger.debug("OUT %r", out)
         if err:
-            logger.debug("ERR %r",err)
-        return out,err
-
+            logger.debug("ERR %r", err)
+        return out, err
 
     async def exec(self, cmd, timeout=3):
         if not cmd.endswith('\n'):
@@ -134,7 +133,6 @@ class DirectREPL:
             self._parse_error(err)
             raise IOError(f'execution failed: {out}: {err}')
         return out
-
 
     async def evaluate(self, cmd):
         """
@@ -146,7 +144,6 @@ class DirectREPL:
         can be handled as Python objects.
         """
         return ast.literal_eval(await self.exec(cmd))
-
 
     async def soft_reset(self, run_main=True):
         """
@@ -173,7 +170,6 @@ class DirectREPL:
                     await anyio.sleep(0.2)
                     await self.exec("1")
 
-
     async def statvfs(self, path):
         """
         :param str path: Absolute path on target.
@@ -184,8 +180,7 @@ class DirectREPL:
         """
         st = await self.evaluate(f'import os; print(os.statvfs({str(path)!r}))')
         return os.statvfs_result(st)
-        #~ f_bsize, f_frsize, f_blocks, f_bfree, f_bavail, f_files, f_ffree, f_favail, f_flag, f_namemax
-
+        # ~ f_bsize, f_frsize, f_blocks, f_bfree, f_bavail, f_files, f_ffree, f_favail, f_flag, f_namemax
 
     async def truncate(self, path, length):
         # MicroPython 1.9.3 has no file.truncate(), but open(...,"ab"); write(b"") seems to work.
@@ -193,8 +188,5 @@ class DirectREPL:
             f'_f = open({str(path)!r}, "ab")\n'
             f'print(_f.seek({int(length)}))\n'
             '_f.write(b"")\n'
-            '_f.close(); del _f')
-
-
-
-
+            '_f.close(); del _f'
+        )

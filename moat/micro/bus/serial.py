@@ -1,14 +1,15 @@
 ## Code to (de)serialize bus messages
 
+import logging
+import sys
 from enum import IntEnum
 from typing import Optional
+
 import trio
-import sys
 
-from .message import BusMessage
 from .crc import CRC16
+from .message import BusMessage
 
-import logging
 logger = logging.getLogger(__name__)
 
 
@@ -23,11 +24,13 @@ class S(IntEnum):
     DONE = 7
     UTF8 = 8
 
+
 class ERR(IntEnum):
     OVERFLOW = 1
     LOST = 2
     SPURIOUS = 3
     CRC = 4
+
 
 class SerBus:
     """
@@ -50,12 +53,12 @@ class SerBus:
     """
 
     prio_data = b"\x01\x02\x81\x82"
-    spinner = ["/","-","\\","|"]
+    spinner = ["/", "-", "\\", "|"]
     spin_pos = 0
 
     def __init__(self):
         # incoming
-        self.m_in = None # bus message
+        self.m_in = None  # bus message
         self.crc_in = 0
         self.len_in = 0
         self.prio_in = 0
@@ -82,7 +85,7 @@ class SerBus:
         depending on whether @fag is True, or not.
         """
         raise RuntimeError("Override me")
-    
+
     def process(self, msg):
         """
         OVERRIDE: Process this message.
@@ -97,7 +100,7 @@ class SerBus:
 
     def data_out(self, data: bytes):
         """
-        OVERRIDE: Send these serial data    
+        OVERRIDE: Send these serial data
         """
         raise RuntimeError("Override me")
 
@@ -125,19 +128,19 @@ class SerBus:
             b = self.log_buf.decode("utf-8")
         except Exception:
             b = self.log_buf.decode("latin1")
-        if b in {"L1","L2","L3"}:
-            print(self.spinner[self.spin_pos],end="\r")
+        if b in {"L1", "L2", "L3"}:
+            print(self.spinner[self.spin_pos], end="\r")
             sys.stdout.flush()
-            self.spin_pos = (self.spin_pos+1) % len(self.spinner)
+            self.spin_pos = (self.spin_pos + 1) % len(self.spinner)
         else:
-            logger.debug("R: %s", b);
+            logger.debug("R: %s", b)
         self.log_buf = b""
 
     @staticmethod
     def now():
         return trio.current_time()
 
-    def char_in(self, ci:int):
+    def char_in(self, ci: int):
         """
         process an incoming serial character
         """
@@ -152,7 +155,7 @@ class SerBus:
             elif not (~ci & 0xC0):
                 self.s_in = S.UTF8
                 self.len_in = 7 - (ci ^ 0xFF).bit_length()
-            elif ci not in (10,13):  # CR/LF
+            elif ci not in (10, 13):  # CR/LF
                 self.log_buf += bytes((ci,))
                 self.log_buf_t = self.now()
                 return
@@ -183,7 +186,7 @@ class SerBus:
             self.s_in = S.DATA
 
         elif self.s_in == S.DATA:
-            self.m_in.add_chunk(ci,8)
+            self.m_in.add_chunk(ci, 8)
             self.crc_in.update(ci)
             self.len_in -= 1
             if self.len_in == 0:
@@ -191,7 +194,7 @@ class SerBus:
                 self.crc_in = self.crc_in.finish()
 
         elif self.s_in == S.CRC1:
-            self.crc_in ^= ci<<8
+            self.crc_in ^= ci << 8
             self.s_in = S.CRC2
 
         elif self.s_in == S.CRC2:
@@ -212,16 +215,15 @@ class SerBus:
             # ugh, overflow?
             self.report_error(ERR.OVERFLOW)
 
-
     def send_data(self, msg) -> bytes:
         """
         Generate chunk of bytes to send for this message.
         """
         res = bytearray()
-        res.append(prio_data[msg.get('prio',1)])
+        res.append(prio_data[msg.get('prio', 1)])
         n_b = len(msg.data) + msg.header_len
         if n_b >= 0x80:
-            res.append(0x80 | (n_b>>8))
+            res.append(0x80 | (n_b >> 8))
             res.append(n_b & 0xFF)
         else:
             res.append(n_b)
@@ -238,10 +240,9 @@ class SerBus:
             res.append(b)
 
         crc = crc.finish()
-        res.append(crc>>8)
-        res.append(crc&0xFF)
+        res.append(crc >> 8)
+        res.append(crc & 0xFF)
         return res
-
 
     def recv(self, prio=0):
         """
@@ -254,7 +255,7 @@ class SerBus:
         msg.prio = self.prio_in
         self.alloc_in()
         return msg
-        
+
     def timeout(self):
         """
         Call this periodically (e.g. every 10ms on 9600 baud) whenever
@@ -271,29 +272,31 @@ class SerBus:
                 self.set_timeout(False)
         else:
             self.idle = 0
-            if self.log_buf and self.log_buf_t+0.2 < self.now():
+            if self.log_buf and self.log_buf_t + 0.2 < self.now():
                 self.dump_log_buf()
+
 
 class SerBusDump(SerBus):
     """
     A SerBus version useable for debugging
     """
+
     _n = 0
 
     def report_error(self, typ, **kw):
-        print("ERROR",typ,kw)
+        print("ERROR", typ, kw)
 
     def set_timeout(self, flag):
         pass
-    
+
     def process(self, msg):
-        print("MSG IN",msg)
+        print("MSG IN", msg)
 
     def process_ack(self):
         print("ACK")
 
     def data_out(self, data: bytes):
-        print("SEND",repr(data))
+        print("SEND", repr(data))
 
     def now(self):
         self._n += 1
@@ -306,11 +309,10 @@ class SerBusDump(SerBus):
             b = self.log_buf.decode("utf-8")
         except Exception:
             b = self.log_buf.decode("latin1")
-        if b in {"L1","L2","L3"}:
-            print(self.spinner[self.spin_pos],end="\r")
+        if b in {"L1", "L2", "L3"}:
+            print(self.spinner[self.spin_pos], end="\r")
             sys.stdout.flush()
-            self.spin_pos = (self.spin_pos+1) % len(self.spinner)
+            self.spin_pos = (self.spin_pos + 1) % len(self.spinner)
         else:
-            print("LOG", b);
+            print("LOG", b)
         self.log_buf = b""
-

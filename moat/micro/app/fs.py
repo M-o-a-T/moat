@@ -2,6 +2,6 @@
 
 from . import BaseAppCmd
 
+
 class FsCmd(BaseAppCmd):
     pass
-

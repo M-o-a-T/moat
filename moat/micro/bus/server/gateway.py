@@ -1,18 +1,20 @@
 # -*- encoding: utf-8 -*-
 
+import logging
+from contextlib import asynccontextmanager
+
 import asyncclick as click
 import trio
 from anyio_serial import Serial
-from contextlib import asynccontextmanager
 from distmqtt.client import open_mqttclient
 from distmqtt.codecs import MsgPackCodec
 
-from .server import Server
-from ..message import BusMessage
 from ..backend.stream import Anyio2TrioStream, StreamBusHandler
+from ..message import BusMessage
+from .server import Server
 
-import logging
 logger = logging.getLogger(__name__)
+
 
 class Gateway:
     """
@@ -24,6 +26,7 @@ class Gateway:
         prefix: if the message ID starts with this it's not forwarded.
                 Required to prevent loops.
     """
+
     def __init__(self, serial, mqtt, prefix):
         if not mqtt.id.startswith(prefix):
             raise RuntimeError("My MQTT ID must start with %r" % (prefix,))
@@ -48,4 +51,3 @@ class Gateway:
                 await self.serial.send(msg)
             except TypeError:
                 logger.exception("Owch: %r", msg)
-

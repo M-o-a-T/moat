@@ -3,12 +3,12 @@
 
 # Parts of this have been modified to be compatble with micropython.
 
-import uos as os
-import usys as sys
-from uio import BytesIO
 import struct
 
+import uos as os
+import usys as sys
 from micropython import const
+from uio import BytesIO
 
 #
 # This is a micropython-asyncio-compatible MsgPack implementation.
@@ -25,7 +25,8 @@ from micropython import const
 # The decoder returns binary data as memoryviews if they're larger
 # than the threshold (default -1: always copy). Extension objects always
 # get a memoryview and must decode or copy it.
-# 
+#
+
 
 class UnpackException(Exception):
     pass
@@ -62,6 +63,7 @@ class ExtType:
     def __init__(self, code, data):
         self.code = code
         self.data = data
+
 
 newlist_hint = lambda size: []
 
@@ -107,6 +109,7 @@ _MSGPACK_HEADERS = {
     0xDF: (4, ">I", _TYPE_MAP),
 }
 
+
 class SFile:
     # fake-async file object
     def __init__(self, fn):
@@ -118,15 +121,16 @@ class SFile:
     async def aclose(f):
         self.f.close()
 
+
 class Unpacker(object):
     def __init__(
         self,
         stream=None,
         read_size=64,
-#       use_list=True,
-#       object_hook=None,
-#       list_hook=None,
-#       unicode_errors="strict",
+        # use_list=True,
+        # object_hook=None,
+        # list_hook=None,
+        # unicode_errors="strict",
         ext_hook=ExtType,
         min_memview_len=-1,
     ):
@@ -140,10 +144,10 @@ class Unpacker(object):
         self._buf_checkpoint = 0
 
         self._read_size = read_size
-#       self._unicode_errors = unicode_errors
-#       self._use_list = use_list
-#       self._list_hook = list_hook
-#       self._object_hook = object_hook
+        # self._unicode_errors = unicode_errors
+        # self._use_list = use_list
+        # self._list_hook = list_hook
+        # self._object_hook = object_hook
         self._ext_hook = ext_hook
         self._min_memview_len = min_memview_len
 
@@ -154,7 +158,7 @@ class Unpacker(object):
         self._buf_checkpoint = 0
 
     def _consume(self):
-        """ Gets rid of the used parts of the buffer. """
+        """Gets rid of the used parts of the buffer."""
         self._buf_checkpoint = self._buff_i
 
     def _got_extradata(self):
@@ -163,10 +167,10 @@ class Unpacker(object):
     def _get_extradata(self):
         return self._buffer[self._buff_i :]
 
-#   async def read_bytes(self, n):
-#       ret = await self._read(n, raise_outofdata=False)
-#       self._consume()
-#       return ret
+    # async def read_bytes(self, n):
+    # ret = await self._read(n, raise_outofdata=False)
+    # self._consume()
+    # return ret
 
     async def _read(self, n, raise_outofdata=True):
         # (int) -> bytearray
@@ -232,7 +236,7 @@ class Unpacker(object):
         elif b == 0xC0:
             obj = None
         elif b == 0xC1:
-             raise RuntimeError("unused code")
+            raise RuntimeError("unused code")
         elif b == 0xC2:
             obj = False
         elif b == 0xC3:
@@ -279,19 +283,19 @@ class Unpacker(object):
             await self._reserve(size)
             (n,) = struct.unpack_from(fmt, self._buffer, self._buff_i)
             self._buff_i += size
-        else: # if b <= 0xDF:  # can't be anything else
+        else:  # if b <= 0xDF:  # can't be anything else
             size, fmt, typ = _MSGPACK_HEADERS[b]
             await self._reserve(size)
             (n,) = struct.unpack_from(fmt, self._buffer, self._buff_i)
             self._buff_i += size
-#       else:
-#           raise FormatError("Unknown header: 0x%x" % b)
+        # else:
+        # raise FormatError("Unknown header: 0x%x" % b)
         return typ, n, obj
 
     async def unpack(self):
         res = await self._unpack()
         # Buffer management: chop off the part we've read
-        self._buffer = self._buffer[self._buff_i:]
+        self._buffer = self._buffer[self._buff_i :]
         self._buff_i = 0
         return res
 
@@ -302,31 +306,31 @@ class Unpacker(object):
             ret = newlist_hint(n)
             for i in range(n):
                 ret.append(await self.unpack())
-#           if self._list_hook is not None:
-#               ret = self._list_hook(ret)
+            # if self._list_hook is not None:
+            # ret = self._list_hook(ret)
             # TODO is the interaction between `list_hook` and `use_list` ok?
             return ret  # if self._use_list else tuple(ret)
         if typ == _TYPE_MAP:
             ret = {}
             for _ in range(n):
                 key = await self.unpack()
-                if type(key) is str and hasattr(sys,'intern'):
+                if type(key) is str and hasattr(sys, 'intern'):
                     key = sys.intern(key)
                 ret[key] = await self.unpack()
-#           if self._object_hook is not None:
-#               ret = self._object_hook(ret)
+            # if self._object_hook is not None:
+            # ret = self._object_hook(ret)
             return ret
         if typ == _TYPE_RAW:
             if isinstance(obj, memoryview):  # sigh
                 obj = bytearray(obj)
             return obj.decode("utf_8")  # , self._unicode_errors)
         if typ == _TYPE_BIN:
-            if self._min_memview_len<0 and len(obj) < self._min_memview_len:
+            if self._min_memview_len < 0 and len(obj) < self._min_memview_len:
                 obj = bytearray(obj)
             return obj
         if typ == _TYPE_EXT:
             return self._ext_hook(n, obj)
-#       assert typ == _TYPE_IMMEDIATE
+        # assert typ == _TYPE_IMMEDIATE
         return obj
 
     def __aiter__(self):
@@ -351,18 +355,14 @@ class Unpacker(object):
 class Packer(object):
     def __init__(
         self,
-#       unicode_errors=None,
+        # unicode_errors=None,
         default=None,
     ):
         self._buffer = BytesIO()
-#       self._unicode_errors = unicode_errors or "strict"
+        # self._unicode_errors = unicode_errors or "strict"
         self._default = default
 
-    def _pack(
-        self,
-        obj,
-        default=None
-    ):
+    def _pack(self, obj, default=None):
         # Warning, does not deal with recursive data structures
         # (except by running out of memory)
         list_types = (list, tuple)
@@ -374,12 +374,13 @@ class Packer(object):
         # shorter bytecode
         def wp(*x):
             return self._buffer.write(struct.pack(*x))
+
         wb = self._buffer.write
         is_ = isinstance
 
         _ndefault = default
         while todo:
-            _default,_ndefault = _ndefault,default
+            _default, _ndefault = _ndefault, default
             obj = todo.pop()
             if obj is None:
                 wb(b"\xc0")
@@ -447,10 +448,10 @@ class Packer(object):
                 wb(obj)
                 continue
             if is_(obj, float):
-#               if self._use_float:
+                # if self._use_float:
                 wp(">Bf", 0xCA, obj)
-#               else:
-#                   wp(">Bd", 0xCB, obj)
+                # else:
+                # wp(">Bd", 0xCB, obj)
                 continue
             if is_(obj, ExtType):
                 code = obj.code
@@ -523,7 +524,7 @@ class Packer(object):
         return wb(struct.pack(">BI", 0xC6, n))
 
 
-#def pack(o, stream, **kwargs):
+# def pack(o, stream, **kwargs):
 #    """
 #    Pack object `o` and write it to `stream`
 #
@@ -542,7 +543,7 @@ def packb(o, **kwargs):
     return Packer(**kwargs).packb(o)
 
 
-#def unpack(stream, **kwargs):
+# def unpack(stream, **kwargs):
 #    """
 #    Unpack an object from `stream`.
 #
@@ -567,5 +568,3 @@ def unpackb(packed, **kwargs):
     """
     unpacker = Unpacker(None, **kwargs)
     return unpacker.unpackb(packed)
-
-

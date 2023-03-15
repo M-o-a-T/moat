@@ -7,16 +7,20 @@
 # natively neither uart nor usb use dupterm
 
 from micropython import alloc_emergency_exception_buf
+
 alloc_emergency_exception_buf(300)
 
 try:
     import rp2
 except ImportError:
     import sys
-    import uos
+
     import uio
-    from uasyncio import core as _core, run_until_complete as _wc
+    import uos
+    from uasyncio import core as _core
+    from uasyncio import run_until_complete as _wc
     from uasyncio.stream import Stream as _str
+
     _w_read = _core._io_queue.queue_read
     _w_write = _core._io_queue.queue_write
 
@@ -24,7 +28,7 @@ except ImportError:
         # public methods
         def __init__(self, s):
             # %s is a normal or async stream
-            if not isinstance(s,_str):
+            if not isinstance(s, _str):
                 stream = _str(s)
             self.s = stream
 
@@ -41,4 +45,3 @@ except ImportError:
     uos.dupterm(cons)
 else:
     pass
-

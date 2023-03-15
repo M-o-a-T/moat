@@ -1,12 +1,13 @@
 # *********************************
 # * WARNING *  READ AFTER EDITING *
 # *********************************
-# 
+#
 # This file should be synced with moat/proto/__init__.py
 # except for using print() instead of logging
 # and not understanding anyio exceptions.
 
 import usys
+
 from ..compat import TaskGroup
 
 # Basic infrastructure to run an RPC system via an unreliable,
@@ -32,20 +33,24 @@ from ..compat import TaskGroup
 # unreliable transport will wait for the message to be confirmed. Sending
 # may fail.
 
+
 class RemoteError(RuntimeError):
     pass
+
 
 class SilentRemoteError(RemoteError):
     pass
 
+
 class ChannelClosed(RuntimeError):
     pass
+
 
 class NotImpl:
     def __init__(self, parent):
         self.parent = parent
 
-    async def dispatch(self,*a):
+    async def dispatch(self, *a):
         raise NotImplementedError(f"{self.parent} {repr(a)}")
 
     async def error(self, exc):
@@ -58,13 +63,14 @@ class NotImpl:
     async def run_sub(self):
         pass
 
+
 class _Stacked:
     def __init__(self, parent):
         self.parent = parent
         self.child = NotImpl(self)
 
     def stack(self, cls, *a, **k):
-        sup = cls(self, *a,**k)
+        sup = cls(self, *a, **k)
         self.child = sup
         return sup
 
@@ -108,42 +114,41 @@ class Logger(_Stacked):
         else:
             print(f"X:{self.txt} stop", file=usys.stderr)
 
-    async def send(self,a,m=None):
+    async def send(self, a, m=None):
         if m is None:
-            m=a
-            a=None
+            m = a
+            a = None
 
-        if isinstance(m,dict):
-            mm=" ".join(f"{k}={repr(v)}" for k,v in m.items())
+        if isinstance(m, dict):
+            mm = " ".join(f"{k}={repr(v)}" for k, v in m.items())
         else:
-            mm=repr(m)
+            mm = repr(m)
         if a is None:
             print(f"S:{self.txt} {mm}", file=usys.stderr)
             await self.parent.send(m)
         else:
             print(f"S:{self.txt} {a} {mm}", file=usys.stderr)
-            await self.parent.send(a,m)
+            await self.parent.send(a, m)
 
-    async def dispatch(self,a,m=None):
+    async def dispatch(self, a, m=None):
         if m is None:
-            m=a
-            a=None
+            m = a
+            a = None
 
-        mm=" ".join(f"{k}={repr(v)}" for k,v in m.items())
+        mm = " ".join(f"{k}={repr(v)}" for k, v in m.items())
         if a is None:
             print(f"D:{self.txt} {mm}", file=usys.stderr)
             await self.child.dispatch(m)
         else:
             print(f"D:{self.txt} {a} {mm}", file=usys.stderr)
-            await self.child.dispatch(a,m)
+            await self.child.dispatch(a, m)
         print(f"{self.txt}:\n{repr(vars(self.child))}", file=usys.stderr)
 
     async def recv(self):
         msg = await self.parent.recv()
-        if isinstance(msg,dict):
-            mm=" ".join(f"{k}={repr(v)}" for k,v in msg.items())
+        if isinstance(msg, dict):
+            mm = " ".join(f"{k}={repr(v)}" for k, v in msg.items())
         else:
-            mm=msg
+            mm = msg
         print(f"R:{self.txt} {mm}", file=usys.stderr)
         return msg
-

@@ -1,5 +1,7 @@
+from contextlib import asynccontextmanager, contextmanager
+
 import trio
-from contextlib import contextmanager, asynccontextmanager
+
 
 class CtxObj:
     """
@@ -14,7 +16,9 @@ class CtxObj:
         async with Foo() as self_or_whatever:
             pass
     """
+
     __ctx = None
+
     def __aenter__(self):
         if self.__ctx is not None:
             raise RuntimeError("Double context")
@@ -22,13 +26,15 @@ class CtxObj:
         return ctx.__aenter__()
 
     def __aexit__(self, *tb):
-        ctx,self.__ctx = self.__ctx,None
+        ctx, self.__ctx = self.__ctx, None
         return ctx.__aexit__(*tb)
+
 
 class Dispatcher:
     """
     Adds a registry and a dispatcher to an object.
     """
+
     def __init__(self):
         self.__dispatch = {}
         super().__init__()
@@ -39,10 +45,10 @@ class Dispatcher:
         try:
             d = self.__dispatch[k]
         except KeyError:
-            logger.debug("No dispatcher for %r in %s",msg,self)
+            logger.debug("No dispatcher for %r in %s", msg, self)
             return
         await d(msg)
-    
+
     def get_code(self, msg):
         """Get dispatch code for this message"""
         raise NotImplementedError("I have no idea how to dispatch anything")
@@ -65,7 +71,7 @@ class Dispatcher:
 
         This is a (non-async) context manager.
         """
-        q_w,q_r = trio.open_memory_channel(100)
+        q_w, q_r = trio.open_memory_channel(100)
         self.register(code, q_w.send)
         try:
             yield q_r
@@ -80,8 +86,8 @@ class Dispatcher:
 
         Worker tasks don't terminate when fewer would (again) suffice.
         """
-        q_w,q_r = trio.open_memory_channel(0)
-        self.register(code,put)
+        q_w, q_r = trio.open_memory_channel(0)
+        self.register(code, put)
 
         async def runner(q):
             async for msg in q_r:
@@ -113,7 +119,8 @@ class _SubServer:
     """
     a subordinate server.
     """
-    CODE=None
+
+    CODE = None
 
     def __init__(self, server, code=None):
         self._server = server
@@ -150,7 +157,6 @@ class SubDispatcher(_SubServer, CtxObj, Dispatcher):
             yield self
 
     async def _dispatch_loop(self, *, task_status=trio.TASK_STATUS_IGNORED):
-
         with self._server.with_code(self.CODE) as q:
             task_status.started()
             async for msg in q:
@@ -196,21 +202,23 @@ class Processor(_SubServer, CtxObj):
     async def put(self, data):
         await self._q_w.send(data)
 
-    async def spawn(self, p,*a, _name=None, **k):
+    async def spawn(self, p, *a, _name=None, **k):
         """
         Start a background task on this processor's nursery.
         Returns a cancel scope which you can use to kill the task.
         """
-        async def job(p,a,k,*,task_status=trio.TASK_STATUS_IGNORED):
+
+        async def job(p, a, k, *, task_status=trio.TASK_STATUS_IGNORED):
             with trio.CancelScope() as sc:
                 task_status.started(sc)
-                await p(*a,**k)
+                await p(*a, **k)
 
-        return await self.__nursery.start(job, p,a,k)
+        return await self.__nursery.start(job, p, a, k)
 
 
 # minifloat granularity
-MINI_F = 1/4
+MINI_F = 1 / 4
+
 
 def mini2byte(f):
     """
@@ -227,31 +235,31 @@ def mini2byte(f):
     granularity that don't take up much space.
     """
 
-    f = int(f/MINI_F+0.5)
+    f = int(f / MINI_F + 0.5)
     if f <= 0x20:  # < 0x10: in theory, but the result is the same
         return f  # exponent=0 is denormalized
     exp = 1
-    while f > 0x1F: # the top bit is set because of normalization
+    while f > 0x1F:  # the top bit is set because of normalization
         f >>= 1
         exp += 1
     if exp > 0x0F:
         return 0xFF
-    return (exp<<4) | (f&0x0F)
+    return (exp << 4) | (f & 0x0F)
     # The mantissa is normalized, i.e. the top bit is always 1, thus it is
     # discarded and not included in the result.
+
 
 def byte2mini(m):
     """
     Convert a byte-sized minifloat back to a number.
     """
     if m <= 32:  # or 16, doesn't matter
-        return m*MINI_F
-    exp = (m>>4)-1
-    m = 0x10+(m&0xf)  # normalization
-    return (1<<exp)*m*MINI_F
+        return m * MINI_F
+    exp = (m >> 4) - 1
+    m = 0x10 + (m & 0xF)  # normalization
+    return (1 << exp) * m * MINI_F
 
 
 if __name__ == "__main__":
     for x in range(256):
-        print(x,byte2mini(x),mini2byte(byte2mini(x)))
-
+        print(x, byte2mini(x), mini2byte(byte2mini(x)))

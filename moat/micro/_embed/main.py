@@ -2,6 +2,7 @@ cfg = {}
 
 import machine
 
+
 def go_moat(state=None, fake_end=True, log=False):
     """
     Start MoaT.
@@ -10,7 +11,7 @@ def go_moat(state=None, fake_end=True, log=False):
 
     * skip
       Do nothing, exit to MicroPython prompt.
-    
+
     * std
       Work normally. Enter Fallback mode if there's a problem.
       (Warning: Switching to fallback doesn't always work, esp. when you
@@ -27,33 +28,36 @@ def go_moat(state=None, fake_end=True, log=False):
 
     * once
       Work normally once, then "skip".
-    
+
     * main
       Always work normally.
     """
 
-    import uos, utime, usys
-    fallback=False
+    import uos
+    import usys
+    import utime
+
+    fallback = False
 
     uncond = {
-            "once":"skip",
-            "skiponce":"std",
-            "safe":"fallback",
-            "skipfb":"fallback",
+        "once": "skip",
+        "skiponce": "std",
+        "safe": "fallback",
+        "skipfb": "fallback",
     }
     crash = {
-            "std":"fallback",
-            "fbskip":"skip",
+        "std": "fallback",
+        "fbskip": "skip",
     }
 
     if state is None:
         try:
-            f=open("moat.state","r")
+            f = open("moat.state", "r")
         except OSError:
             print("No 'moat.state' found", file=usys.stderr)
             return
         else:
-            state=f.read()
+            state = f.read()
             f.close()
 
     try:
@@ -61,7 +65,7 @@ def go_moat(state=None, fake_end=True, log=False):
     except KeyError:
         new_state = state
     else:
-        f=open("moat.state","w")
+        f = open("moat.state", "w")
         f.write(new_state)
         f.close()
 
@@ -79,14 +83,15 @@ def go_moat(state=None, fake_end=True, log=False):
         usys.path.remove("/lib")
     except ValueError:
         pass
-    usys.path.insert(0,"/lib")
+    usys.path.insert(0, "/lib")
 
-    if state in ("fallback","fbskip"):
+    if state in ("fallback", "fbskip"):
         import usys
-        usys.path.insert(0,"/fallback")
+
+        usys.path.insert(0, "/fallback")
         fallback = True
 
-    print("Start MoaT:",state, file=usys.stderr)
+    print("Start MoaT:", state, file=usys.stderr)
     from moat.micro.compat import print_exc
     from moat.micro.main import main
 
@@ -98,7 +103,7 @@ def go_moat(state=None, fake_end=True, log=False):
         print("MoaT stopped.", file=usys.stderr)
 
     except SystemExit:
-        f=open("moat.state","r")
+        f = open("moat.state", "r")
         new_state = f.read()
         f.close()
         print("REBOOT to", new_state, file=usys.stderr)
@@ -107,7 +112,7 @@ def go_moat(state=None, fake_end=True, log=False):
 
     except BaseException as exc:
         if usys.platform == "linux":
-            if isinstance(exc,EOFError) and usys.platform == "linux":
+            if isinstance(exc, EOFError) and usys.platform == "linux":
                 print("MoaT stopped: EOF", file=usys.stderr)
                 usys.exit(0)
             print("CRASH! Exiting!", file=usys.stderr)
@@ -119,7 +124,7 @@ def go_moat(state=None, fake_end=True, log=False):
         except KeyError:
             new_state = state
         else:
-            f=open("moat.state","w")
+            f = open("moat.state", "w")
             f.write(new_state)
             f.close()
 
@@ -132,9 +137,10 @@ def go_moat(state=None, fake_end=True, log=False):
         print("MoaT Ended.", file=usys.stderr)
         usys.exit(0)
 
+
 def g():
     go_moat("once")
 
+
 if __name__ == "__main__":
     go_moat(fake_end=False)
-

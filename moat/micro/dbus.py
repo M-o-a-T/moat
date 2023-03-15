@@ -2,13 +2,15 @@
 # dbus helpers
 
 from contextlib import asynccontextmanager
+
+import anyio
 import asyncdbus.service as dbus
 from asyncdbus.constants import NameFlag
 from moat.util import CtxObj
-import anyio
 
 INTF = "org.m_o_a_t"
 NAME = "org.m_o_a_t"
+
 
 def reg_name(base, name):
     if name is None:
@@ -18,6 +20,7 @@ def reg_name(base, name):
     elif '.' not in name:
         name = f"{base}.{name}"
     return name
+
 
 @asynccontextmanager
 async def DbusName(dbus, name=None):
@@ -43,4 +46,3 @@ class DbusInterface(dbus.ServiceInterface, CtxObj):
         finally:
             with anyio.move_on_after(2, shield=True):
                 await self.dbus.unexport(self.path, self)
-

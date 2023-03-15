@@ -17,6 +17,7 @@ except ImportError:
 from msgpack import ExtType, OutOfData, Packer, Unpacker, unpackb, packb
 
 from .stack import _Stacked
+from serialpacker import SerialPacker, FRAME_START
 
 if greenback is not None:
 
@@ -175,13 +176,11 @@ class SerialPackerStream(_Base):
     # Use this (and a MsgpackHandler and a Reliable) if your AIO stream
     # is unreliable (TTL serial).
 
-    def __init__(self, stream, console=None, console_handler=None, **kw):
+    def __init__(self, stream, console=None, console_handler=None, msg_prefix=FRAME_START, **kw):
         super().__init__(None)
 
-        from serialpacker import SerialPacker
-
         self.s = stream
-        self.p = SerialPacker(**kw)
+        self.p = SerialPacker(frame_start=msg_prefix, **kw)
         self.buf = bytearray(16)
         self.i = 0
         self.n = 0

@@ -19,9 +19,17 @@ from msgpack import ExtType, OutOfData, Packer, Unpacker, unpackb, packb
 from .stack import _Stacked
 from serialpacker import SerialPacker, FRAME_START
 
-if greenback is not None:
+
+if sys.implementation.name != "micropython":
 
     class SyncReadStream:
+        """
+        Convert an async stream to sync, via greenback. Use case: msgpack
+        is not sans-IO and on regular Python we don't want to mangle
+        msgpack to async-ize it.
+
+        Writing is not implemented.
+        """
         def __init__(self, stream):
             self.s = stream
 
@@ -32,7 +40,7 @@ if greenback is not None:
 class _Base(_Stacked):
     def __init__(self, stream):
         super().__init__(None)
-        if isinstance(stream, AIOStream):
+        if sys.implementation.name == "micropython" and isinstance(stream, AIOStream):
             raise RuntimeError("ugh")
         self.s = stream
 

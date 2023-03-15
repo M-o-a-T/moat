@@ -23,13 +23,13 @@ def errno():
     # XXX how to figure that out?
     global _end
     if _end is None:
-        if uctypes.UINT32.from_bytes(_err, "little") == 0:
+        if ctypes.UINT32.from_bytes(_err, "little") == 0:
             return 0
-        if uctypes.UINT32.from_bytes(_err, "little") < uctypes.UINT32.from_bytes(_err, "big"):
+        if ctypes.UINT32.from_bytes(_err, "little") < ctypes.UINT32.from_bytes(_err, "big"):
             _end = "little"
         else:
             _end = "big"
-    return uctypes.UINT32.from_bytes(_err, _end)
+    return ctypes.UINT32.from_bytes(_err, _end)
 
 
 class AsyncFD:

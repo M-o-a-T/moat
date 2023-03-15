@@ -191,7 +191,7 @@ class Multiplexer(Request):
 
     def __init__(self, stream_factory, socket, cfg, watchdog=0, fatal=None):
         """
-        Set up a MicroPython multiplexer.
+        Set up a multiplexer to a MicroPython client.
 
         "StreamFactory" must be an async context manager that installs its
         argument as the Request handler.

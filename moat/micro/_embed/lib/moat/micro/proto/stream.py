@@ -1,3 +1,4 @@
+from functools import partial
 from moat.util import NoProxyError, NotGiven
 
 from ..compat import Lock, TimeoutError, wait_for_ms
@@ -152,8 +153,13 @@ class MsgpackHandler(_Stacked):
 
     def __init__(self, stream, **kw):
         super().__init__(stream)
-        self.unpacker = Unpacker(None, ext_hook=ext_proxy, **kw).unpackb
-        self.pack = Packer(default=default_handler).packb
+        try:
+            self.unpacker = Unpacker(None, ext_hook=ext_proxy, **kw).unpackb
+            self.pack = Packer(default=default_handler).packb
+        except AttributeError:
+            # SIGH
+            self.unpacker = partial(unpackb, ext_hook=ext_proxy, **kw)
+            self.pack = partial(packb, default=default_handler)
 
     async def send(self, msg):
         await super().send(self.pack(msg))

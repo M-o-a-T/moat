@@ -58,6 +58,8 @@ class AsyncFD:
         l = _read(self.fd_i.fileno(), b, n)
         if l < 0:
             raise OSError(errno())
+        if l == 0:
+            raise EOFError()
         if l <= n / 4:
             if self.log:
                 print("R:", b[:l], file=usys.stderr)

@@ -113,7 +113,7 @@ class Reliable(_Stacked):
             for k, mte in self.m_send.items():
                 m, tx, e = mte
                 txd = ticks_diff(tx, t)
-                if ntx is None or ntx > txd:
+                if (ntx is None or ntx > txd) and not e.is_set():
                     ntx = txd
                     nk = k
 

@@ -189,7 +189,7 @@ class AnyioMoatStream:
         try:
             res = await self.s.receive(n)
             return res
-        except _anyio.EndOfStream:
+        except (_anyio.EndOfStream,_anyio.ClosedResourceError):
             raise EOFError from None
 
     async def send(self, buf):

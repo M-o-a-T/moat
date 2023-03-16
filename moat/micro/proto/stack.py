@@ -125,12 +125,15 @@ class Logger(_Stacked):
         try:
             await super().run()
         except EndOfStream:
-            logger.debug("X:%s stop EOF", self.txt)
+            logger.debug("X:%s stop aEOF", self.txt)
             raise
         except BrokenResourceError:
             logger.debug("X:%s stop DIED", self.txt)
             raise
-        except Exception as exc:
+        except EOFError:
+            logger.debug("X:%s stop EOF", self.txt)
+            raise
+        except BaseException as exc:
             logger.debug("X:%s stop %r", self.txt, exc)
             raise
         else:

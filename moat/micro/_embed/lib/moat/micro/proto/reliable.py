@@ -1,8 +1,8 @@
 import sys
 
-from ..compat import Event, TaskGroup, ticks_add, ticks_diff, ticks_ms, wait_for_ms, print_exc, TimeoutError, Queue
-from ...util import NotGiven
-from .stack import _Stacked
+from ..compat import Event, TaskGroup, ticks_add, ticks_diff, ticks_ms, wait_for_ms, print_exc, TimeoutError, Queue, sleep
+from ...util import NotGiven, ValueEvent
+from .stack import _Stacked, ChannelClosed
 
 
 class Reliable(_Stacked):
@@ -12,6 +12,11 @@ class Reliable(_Stacked):
     This module handles retransmitting missing messages.
 
     Messages are wrapped in a dict with retransmit data.
+
+    If @persist is set, the protocol stack above this module is persistent,
+    i.e. detached from the taskgroup the connection is running in.
+    In this mode you *must* call `run_p()`.
+
     """
 
     # Operation:
@@ -45,18 +50,20 @@ class Reliable(_Stacked):
     # are discarded.
 
     rq = None
+    __tg = None
 
-    def __init__(self, parent, window=8, timeout=1000, **k):
+    def __init__(self, parent, window=8, timeout=1000, persist=False, **k):
         super().__init__(parent, **k)
 
         if window < 4:
             raise RuntimeError(f"window must be >=4, not {window}")
         self.window = window
-        self.reset_evt = None
         self.in_reset = None
         self.timeout = timeout
         self._trigger = Event()
+        self._is_up = Event()
         self.closed = True
+        self.persist = persist
 
     def reset(self, level=1):
         self.s_send_head = 0  # next to be transmitted
@@ -104,7 +111,7 @@ class Reliable(_Stacked):
         if k is not None and self.m_send.get(k, None) is mte:
             mte[1] = ticks_add(ticks_ms(), self.timeout)
 
-    async def _run(self):
+    async def _run_bg(self):
         while not self.closed:
             t = ticks_ms()
             # calculate time to next action
@@ -155,13 +162,36 @@ class Reliable(_Stacked):
                 if nk is None:
                     self.t_recv = ticks_add(ticks_ms(), self.timeout)
 
+    async def run_p(self, immediate=False):
+        """
+        Run Persistent.
+
+        If @immediate is set, the upper stack is started even if the lower
+        half is not yet ready.
+        """
+        if not self.persist:
+            return
+        if not immediate:
+            await self.wait()
+        await self.child.run()
+
+    async def wait(self):
+        """
+        Wait until the lower side is (again) ready to be used.
+
+        There is no guarantee that this is still so when you call
+        send/recv next.
+        """
+        while self.closed:
+            await self._is_up.wait()
+
     async def run(self):
         self.reset()
         try:
             async with TaskGroup() as tg:
-                self._tg = tg
+                self.__tg = tg
                 reader = await tg.spawn(self._read, _name="rel_read")
-                runner = await tg.spawn(self._run, _name="rel_run")
+                runner = await tg.spawn(self._run_bg, _name="rel_run")
                 while self.in_reset:
                     t = ticks_ms()
                     td = ticks_diff(self.in_reset, t)
@@ -170,15 +200,22 @@ class Reliable(_Stacked):
                             await wait_for_ms(td, self._trigger.wait)
                         except TimeoutError:
                             pass
-                        # DO NOT replace self._trigger here. _run() already does that.
+                        # DO NOT replace self._trigger here. _run_bg() already does that.
                     else:
                         await self.send_reset()
 
                 if self.closed:
                     raise EOFError(self)
+
+                # At this point the module above us can talk, so run it
                 # print(f"X {self.parent.txt}: running", file=sys.stderr)
-                await self.child.run()
-                self._tg.cancel()
+                if self.persist:
+                    while True:
+                        await sleep(9999)
+                else:
+                    await self.child.run()
+                # print(f"X {self.parent.txt}: ending", file=sys.stderr)
+                tg.cancel()
 
         except BaseException as exc:
             err = str(exc)
@@ -187,16 +224,23 @@ class Reliable(_Stacked):
         else:
             err = None
         finally:
-            self.closed = True
+            self.__tg = None
+            cl,self.closed = self.closed,True
             for _m, _t, e in self.m_send.values():
-                e.set()
+                e.set_error(ChannelClosed())
             while self.s_q:
                 _m, e = self.s_q.pop()
-                e.set()
-            msg = {'a': 'r', 'n': 0}
-            if err is not None:
-                msg['err'] = err
-            await self.send(msg)
+                e.set_error(ChannelClosed())
+            if self._is_up.is_set():
+                self._is_up = Event()
+            if not cl:
+                msg = {'a': 'r', 'n': 0}
+                if err is not None:
+                    msg['err'] = err
+                try:
+                    await self.parent.send(msg)
+                except EOFError:
+                    pass
 
     async def send_reset(self, level=0, err=None):
         if self.closed:
@@ -211,21 +255,18 @@ class Reliable(_Stacked):
         if err is not None:
             msg['e'] = err
         if self.reset_level < 3:
-            if self.reset_evt is None or self.reset_evt.is_set():
-                self.reset_evt = Event()
             self.in_reset = ticks_add(ticks_ms(), self.timeout)
         self._trigger.set()
         await self.parent.send(msg)
 
     async def send(self, msg):
-        evt = Event()
+        if self.closed:
+            raise ChannelClosed()
+        evt = ValueEvent()
         # print(f"T {self.parent.txt}: SQ {msg} {id(self._trigger)}", file=sys.stderr)
         self.s_q.append((msg, evt))
         self._trigger.set()
-        await evt.wait()
-        if self.closed:
-            raise ChannelClosed()
-            # always an error.
+        return await evt.wait()
 
     def _get_config(self):
         return {'t': self.timeout, 'm': self.window}
@@ -238,14 +279,19 @@ class Reliable(_Stacked):
         if self.in_reset:
             self.in_reset = False
             self._trigger.set()
-            self.reset_evt.set()
+            self._is_up.set()
 
     async def recv(self):
         return await self.rq.get()
 
     async def _read(self):
         while True:
-            msg = await self.parent.recv()
+            try:
+                msg = await self.parent.recv()
+            except EOFError:
+                if self.__tg is not None:
+                    self.__tg.cancel()
+                return
             await self.dispatch(msg)
 
     async def dispatch(self, msg):
@@ -259,6 +305,8 @@ class Reliable(_Stacked):
             e = msg.get('e', None)
             if n == 0:  # closed
                 self.closed = True
+                if self._is_up.is_set():
+                    self._is_up = Event()
                 self._trigger.set()
             elif self.closed:
                 await self.send_reset()
@@ -296,7 +344,10 @@ class Reliable(_Stacked):
         if self.closed:
             # if we're down, reply with a reset, but not every time
             if self.reset_level > 2:
-                await self.send_reset()
+                try:
+                    await self.send_reset()
+                except EOFError:
+                    pass
                 self.reset_level = 0
             else:
                 self.reset_level += 1
@@ -356,7 +407,7 @@ class Reliable(_Stacked):
                     pass
                 else:
                     self.pend_ack = True
-                    e.set()
+                    e.set(None)
                 rr = (rr + 1) % self.window
                 self._trigger.set()
 
@@ -369,7 +420,7 @@ class Reliable(_Stacked):
             except KeyError:
                 pass
             else:
-                e.set()
+                e.set(None)
 
         # Forward incoming messages if s_recv[recv_tail] has arrived
         rr = self.s_recv_tail
@@ -393,7 +444,10 @@ class Reliable(_Stacked):
 
         if self.pend_ack:
             # TODO delay ACK somewhat
-            await self.send_msg()
+            try:
+                await self.send_msg()
+            except EOFError:
+                pass
 
     def between(self, a, b, c):
         d1 = (b - a) % self.window

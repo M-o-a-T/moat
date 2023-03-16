@@ -10,6 +10,7 @@ pytestmark = pytest.mark.anyio
 from moat.micro.proto.stack import _Stacked, Logger
 from moat.micro.proto.reliable import Reliable
 from .loopback import Loop
+from moat.micro.compat import TaskGroup
 
 done = [None]*4
 
@@ -24,9 +25,10 @@ class Xmit(Head):
         global done
         pos = self.pos
         done[pos] = 0
-        for n in range(10):
-            await self.send(dict(n=n,msg="Hey"))
-            done[pos] += 1
+        async with TaskGroup() as tg:
+            for n in range(10):
+                await tg.spawn(self.send,dict(n=n,msg="Hey"))
+                done[pos] += 1
         self.done.set()
 
 class Recv(Head):
@@ -42,25 +44,28 @@ class Recv(Head):
         self.done.set()
 
 # Zero on both sides can deadlock
-@pytest.mark.parametrize("qlen1",[0,1,2,10])
-@pytest.mark.parametrize("qlen2",[1,2,10])
-async def test_basic(qlen1,qlen2):
+@pytest.mark.parametrize("qlen1",[2,20])
+@pytest.mark.parametrize("qlen2",[2,20])
+@pytest.mark.parametrize("window",[4,8,20])
+@pytest.mark.parametrize("loss",[0,0.1,0.7])
+async def test_basic(qlen1,qlen2,window,loss):
     done1 = anyio.Event()
     done2 = anyio.Event()
-    l1 = u1 = Loop(qlen=qlen1)
-    l2 = u2 = Loop(qlen=qlen2)
+    l1 = u1 = Loop(qlen=qlen1, loss=loss)
+    l2 = u2 = Loop(qlen=qlen2, loss=loss)
     l1.link(l2)
     l2.link(l1)
     u1 = u1.stack(Logger, txt="L1")
     u2 = u2.stack(Logger, txt="L2")
-    u1 = u1.stack(Reliable)
-    u2 = u2.stack(Reliable)
-    u1 = u1.stack(Logger, txt="U1")
-    u2 = u2.stack(Logger, txt="U2")
+    r1 = u1.stack(Reliable, window=window, timeout=100, persist=True)
+    r2 = u2.stack(Reliable, timeout=100)
+    u1 = r1.stack(Logger, txt="U1")
+    u2 = r2.stack(Logger, txt="U2")
     u1 = u1.stack(Xmit, 0, done1)
     u2 = u2.stack(Recv, 1, done2)
 
-    async with anyio.create_task_group() as tg:
+    async with TaskGroup() as tg:
+        x1 = await tg.spawn(r1.run_p)
         tg.start_soon(l1.run)
         tg.start_soon(l2.run)
 
@@ -68,6 +73,7 @@ async def test_basic(qlen1,qlen2):
         await done2.wait()
         await l1.aclose()
         await l2.aclose()
+        x1.cancel()
     assert done[0] == 10
     assert done[1] == 10
 

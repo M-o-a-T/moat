@@ -90,9 +90,12 @@ def default_handler(obj):
 
 
 class MsgpackStream(_Stacked):
-    # structured messages > MsgPack bytestream
-    #
-    # Use this if your stream is reliable (TCP, USB, …)
+    """
+    structured messages > MsgPack bytestream
+
+    Use this if your stream is reliable (TCP, USB, …) but doesn't support
+    message boundaries.
+    """
 
     def __init__(self, stream, msg_prefix=None, console_handler=None, **kw):
         #
@@ -116,6 +119,8 @@ class MsgpackStream(_Stacked):
             self.unpacker = Unpacker(SyncReadStream(stream), **kw)
 
             async def unpack():
+                # This calls the unpacker synchronously, but reads from the
+                # async stream via greenback
                 import anyio
 
                 try:
@@ -157,8 +162,12 @@ class MsgpackStream(_Stacked):
 
 
 class MsgpackHandler(_Stacked):
-    # structured messages > chunked bytestrings
-    # use this for one packet per message
+    """
+    structured messages > chunked bytestrings
+
+    Use this if the layer below supports byte boundaries
+    (one bytestring-ized message per call).
+    """
 
     def __init__(self, stream, **kw):
         super().__init__(stream)
@@ -180,7 +189,7 @@ class MsgpackHandler(_Stacked):
 
 class SerialPackerStream(_Base):
     """
-    Translate chunked bytestrings to SerialPacker-ized stream
+    chunked bytestrings > SerialPacker-ized stream
    
     Use this (and a MsgpackHandler and a Reliable) if your AIO stream
     is unreliable (TTL serial).
@@ -240,9 +249,11 @@ else:
 
     class AsyncStream(_Base):
         """
-        adapt a sync MicroPython stream
-        reads a byte at a time if no any()
-        does timed-out short reads
+        adapt a sync MicroPython stream to MoaT
+
+        reads a byte at a time if the stream doesn't have an "any()" method
+
+        times out short reads if no more data arrives
         """
 
         _buf = None

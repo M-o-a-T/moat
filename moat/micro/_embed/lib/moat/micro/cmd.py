@@ -225,7 +225,7 @@ class Request(_Stacked):
     async def run(self):
         """
         Main loop for this stack. Starts child modules' mainloops and
-        reads+dispatches incoming reuqests.
+        reads+dispatches incoming requests.
         """
         try:
             async with TaskGroup() as tg:
@@ -317,8 +317,8 @@ class Request(_Stacked):
         """
         Send a request, return the response.
 
-        The message is either the second parameter, or any number of
-        keywords.
+        The message is either the second parameter, or a dict (use any
+        number of keywords).
         """
         if _msg is None:
             _msg = kw

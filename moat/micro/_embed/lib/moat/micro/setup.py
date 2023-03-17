@@ -3,20 +3,15 @@
 # We hook our own reader into the micropython REPL
 # which uses uasyncio to fetch the actual data.
 
-# This does not work on rp2 at the moment because
-# natively neither uart nor usb use dupterm
-
 from micropython import alloc_emergency_exception_buf
 
 alloc_emergency_exception_buf(300)
 
-try:
-    import rp2
-except ImportError:
+import uos
+if hasattr(uos, "dupterm"):
     import sys
 
     import uio
-    import uos
     from uasyncio import core as _core
     from uasyncio import run_until_complete as _wc
     from uasyncio.stream import Stream as _str

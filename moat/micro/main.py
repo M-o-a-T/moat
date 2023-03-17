@@ -10,13 +10,29 @@ import msgpack
 from anyio_serial import Serial
 from moat.util import attrdict, packer, yload
 
-from moat.micro.cmd import ClientBaseCmd
+from moat.micro.cmd import BaseCmd
 from moat.micro.cmd import Request as BaseRequest
 from moat.micro.compat import AnyioMoatStream, TaskGroup
 from moat.micro.path import copytree
 from moat.micro.stacks.console import console_stack
 
 logger = logging.getLogger(__name__)
+
+
+class ClientBaseCmd(BaseCmd):
+    """
+    a BaseCmd subclass that adds link state tracking
+    """
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.started = Event()
+
+    def cmd_link(self, s=None):
+        self.started.set()
+
+    async def wait_start(self):
+        await self.started.wait()
 
 
 class ABytes(io.BytesIO):

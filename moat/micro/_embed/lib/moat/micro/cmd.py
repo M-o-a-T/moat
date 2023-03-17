@@ -190,22 +190,6 @@ class BaseCmd(_Stacked):
         return self.parent.base
 
 
-class ClientBaseCmd(BaseCmd):
-    """
-    a BaseCmd subclass that adds link state tracking
-    """
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.started = Event()
-
-    def cmd_link(self, s=None):
-        self.started.set()
-
-    async def wait_start(self):
-        await self.started.wait()
-
-
 class Request(_Stacked):
     """
     Request/Response handler (client side)

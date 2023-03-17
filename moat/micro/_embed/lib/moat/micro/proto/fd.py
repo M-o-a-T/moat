@@ -45,7 +45,7 @@ class AsyncFD:
         self.fd_o = fd_o if fd_o is not None else fd_i
         self.log = log
 
-    async def recv(self, n=512):
+    async def recvi(self, buf):
         if self.log:
             try:
                 await wait_for_ms(_rdq(self.fd_i), 100)
@@ -54,20 +54,24 @@ class AsyncFD:
                 await _rdq(self.fd_i)
         else:
             await _rdq(self.fd_i)
-        b = bytes(n)
-        l = _read(self.fd_i.fileno(), b, n)
+        l = _read(self.fd_i.fileno(), buf, len(buf))
         if l < 0:
             raise OSError(errno())
         if l == 0:
             raise EOFError()
-        if l <= n / 4:
-            if self.log:
-                print("R:", b[:l], file=usys.stderr)
+
+        m = memoryview(buf)
+        if self.log:
+            print("R:", bytes(m[:l]), file=usys.stderr)
+        return l
+
+    async def recv(self, n=512):
+        buf = bytearray(n)
+        l = await self.recvi(buf)
+        if l <= len(buf) / 4:
             return b[:l]
         else:
-            m = memoryview(b)
-            if self.log:
-                print("R:", bytes(m[:l]), file=usys.stderr)
+            m = memoryview(buf)
             return m[:l]
 
     async def send(self, buf):

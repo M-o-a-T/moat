@@ -186,7 +186,7 @@ class SerialPackerStream(_Base):
     is unreliable (TTL serial).
     """
 
-    def __init__(self, stream, console=None, console_handler=None, msg_prefix=FRAME_START, **kw):
+    def __init__(self, stream, console_handler=None, msg_prefix=FRAME_START, **kw):
         super().__init__(None)
 
         self.s = stream
@@ -194,7 +194,6 @@ class SerialPackerStream(_Base):
         self.buf = bytearray(16)
         self.i = 0
         self.n = 0
-        self.console = console
         self.console_handler = console_handler
         self.w_lock = Lock()
 
@@ -204,7 +203,7 @@ class SerialPackerStream(_Base):
                 msg = self.p.feed(c[self.i])
                 self.i += 1
                 if isinstance(msg, int):
-                    if self.console is not None:
+                    if self.console_handler is not None:
                         self.console_handler(msg)
                 elif msg is not None:
                     return msg

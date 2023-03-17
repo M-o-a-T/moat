@@ -195,9 +195,17 @@ class AnyioMoatStream:
             raise EOFError from None
 
     async def send(self, buf):
-        return await self.s.send(buf)
+        try:
+            return await self.s.send(buf)
+        except (_anyio.EndOfStream,_anyio.ClosedResourceError):
+            raise EOFError from None
 
     async def recvi(self, buf):
-        res = self.s.receive(len(buf))
-        buf[:] = res
-        return res
+        try:
+            res = await self.s.receive(len(buf))
+        except (_anyio.EndOfStream,_anyio.ClosedResourceError):
+            raise EOFError from None
+        else:
+            buf[:len(res)] = res
+            return len(res)
+

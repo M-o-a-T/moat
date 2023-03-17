@@ -10,6 +10,7 @@ _read = C.func("i", "read", "ipi")
 _write = C.func("i", "write", "iPi")
 _end = None
 
+from moat.micro.compat import Lock
 
 def _rdq(s):  # async
     yield core._io_queue.queue_read(s)
@@ -44,6 +45,7 @@ class AsyncFD:
         self.fd_i = fd_i
         self.fd_o = fd_o if fd_o is not None else fd_i
         self.log = log
+        self._wlock = Lock()
 
     async def recvi(self, buf):
         if self.log:
@@ -77,34 +79,35 @@ class AsyncFD:
     async def send(self, buf, full=True):
         b = buf
         ll = 0
-        while True:
-            if self.log:
-                try:
-                    await wait_for_ms(_wrq(self.fd_o), 100)
-                except TimeoutError:
-                    print("W?", len(buf), file=usys.stderr)
-                    await _wrq(self.fd_o)
-            else:
-                await _wrq(self.fd_o)
-
-            l = _write(self.fd_o.fileno(), b, len(b))
-            if self.log:
-                if l == len(b):
-                    print("w:", bytes(b), file=usys.stderr)
-                elif l == -1:
-                    print("w:", bytes(b), "=E", errno(), file=usys.stderr)
+        async with self._wlock:
+            while True:
+                if self.log:
+                    try:
+                        await wait_for_ms(_wrq(self.fd_o), 100)
+                    except TimeoutError:
+                        print("W?", len(buf), file=usys.stderr)
+                        await _wrq(self.fd_o)
                 else:
-                    print("w:", bytes(b), "=", l, file=usys.stderr)
+                    await _wrq(self.fd_o)
 
-            if l < 0:
-                raise OSError(errno())
-            if l == 0:
-                raise EOFError()
-            ll += l
-            if ll == len(buf) or not full:
-                return ll
-            b = memoryview(b)[l:]
-        return ll
+                l = _write(self.fd_o.fileno(), b, len(b))
+                if self.log:
+                    if l == len(b):
+                        print("w:", bytes(b), file=usys.stderr)
+                    elif l == -1:
+                        print("w:", bytes(b), "=E", errno(), file=usys.stderr)
+                    else:
+                        print("w:", bytes(b), "=", l, file=usys.stderr)
+
+                if l < 0:
+                    raise OSError(errno())
+                if l == 0:
+                    raise EOFError()
+                ll += l
+                if ll == len(buf) or not full:
+                    return ll
+                b = memoryview(b)[l:]
+            return ll
 
     async def aclose(self):
         pass

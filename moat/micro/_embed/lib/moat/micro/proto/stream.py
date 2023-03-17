@@ -200,7 +200,7 @@ class SerialPackerStream(_Base):
     async def recv(self):
         while True:
             while self.i < self.n:
-                msg = self.p.feed(c[self.i])
+                msg = self.p.feed(self.buf[self.i])
                 self.i += 1
                 if isinstance(msg, int):
                     if self.console_handler is not None:
@@ -208,7 +208,7 @@ class SerialPackerStream(_Base):
                 elif msg is not None:
                     return msg
 
-            n = await self.s.readinto(self.buf)
+            n = await self.s.recvi(self.buf)
             if not n:
                 raise EOFError
             self.i = 0
@@ -222,7 +222,7 @@ class SerialPackerStream(_Base):
             await self.s.send(t)
 
     async def aclose(self):
-        self.s.close()
+        await self.s.aclose()
 
 
 try:

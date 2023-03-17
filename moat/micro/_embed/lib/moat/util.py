@@ -1,3 +1,5 @@
+from moat.micro.compat import Event
+
 class NotGiven:
     """Placeholder value for 'no data' or 'deleted'."""
 

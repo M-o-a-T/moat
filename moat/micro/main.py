@@ -167,7 +167,7 @@ async def get_link(obj, use_port=False, reset=False, **kw):
             t = t.stack(ClientBaseCmd)
             async with TaskGroup() as tg:
                 task = await tg.spawn(b.run, _name="link")
-                yield t
+                yield t.request
                 task.cancel()
         finally:
             await sock.aclose()

@@ -213,9 +213,9 @@ class Request(BaseRequest):
         self.stack(cmd_cls)
 
     async def get_cfg(self):
-        """\
-			Collect the client's configuration data.
-			"""
+        """
+        Collect the client's configuration data.
+        """
 
         async def _get_cfg(p):
             d = await self.send(("sys", "cfg"), p=p)
@@ -228,18 +228,28 @@ class Request(BaseRequest):
         return await _get_cfg(())
 
     async def set_cfg(self, cfg):
-        """\
-			Update the client's configuration data.
-			"""
+        """
+        Update the client's configuration data.
+        """
 
         async def _set_cfg(p, c):
-            if isinstance(c, dict):
-                if p:
-                    await self.send(("sys", "cfg"), p=p, d={})
-                for k, v in c.items():
+            if p:
+                await self.send(("sys", "cfg"), p=p, d={})
+            # current client cfg
+            ocd, ocl = await self.send(("sys", "cfg"), p=p)
+            for k, v in c.items():
+                if isinstance(v, dict):
                     await _set_cfg(p + (k,), v)
-            else:
-                await self.send(("sys", "cfg"), p=p, d=c)
+                elif ocd.get(k,NotGiven) != v:
+                    await self.send(("sys", "cfg"), p=p, d=v)
+
+            # drop those client cfg snippets that are not on the server
+            for k, v in ocd.items():
+                if k not in c:
+                    await self.send(("sys", "cfg"), p=p + (k,), NotGiven)
+            for k in ocl:
+                if k not in c:
+                    await self.send(("sys", "cfg"), p=p + (k,), NotGiven)
 
         await _set_cfg((), cfg)
         await self.send(("sys", "cfg"), p=None, d=None)  # runs

@@ -179,10 +179,12 @@ class MsgpackHandler(_Stacked):
 
 
 class SerialPackerStream(_Base):
-    # chunked bytestrings > SerialPacker messages
-    #
-    # Use this (and a MsgpackHandler and a Reliable) if your AIO stream
-    # is unreliable (TTL serial).
+    """
+    Translate chunked bytestrings to SerialPacker-ized stream
+   
+    Use this (and a MsgpackHandler and a Reliable) if your AIO stream
+    is unreliable (TTL serial).
+    """
 
     def __init__(self, stream, console=None, console_handler=None, msg_prefix=FRAME_START, **kw):
         super().__init__(None)
@@ -238,9 +240,11 @@ else:
         yield core._io_queue.queue_write(s)
 
     class AsyncStream(_Base):
-        # adapt a sync stream
-        # reads a byte at a time if no any()
-        # does timed-out short reads
+        """
+        adapt a sync MicroPython stream
+        reads a byte at a time if no any()
+        does timed-out short reads
+        """
 
         _buf = None
 

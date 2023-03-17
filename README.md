@@ -101,9 +101,9 @@ Online docstrings for these are on the TODO list.
 #### ping
 
 Your basic "are you still there?" message. Echoes its `m` argument. Not for
-machine comsumption.
+machine consumption.
 
-#### sys.is_up
+#### sys.is\_up
 
 Triggers sending a "link" message.
 

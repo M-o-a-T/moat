@@ -180,7 +180,9 @@ async def run_server(cb, host, port, backlog=5, taskgroup=None, reuse_port=True)
 
 
 class AnyioMoatStream:
-    # adapt an anyio stream to our scheme.
+    """
+    Adapts an anyio stream to MoaT
+    """
     def __init__(self, stream):
         self.s = stream
         self.aclose = stream.aclose

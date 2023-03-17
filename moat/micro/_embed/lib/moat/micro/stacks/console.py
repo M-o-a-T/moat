@@ -18,8 +18,13 @@ async def console_stack(
     ready=None,
     use_console=False,
 ):
-    # set @lossy if you're using a "naked" serial link
-    # transmission (e.g. via USB).
+    """
+    Build a message stack on top of this (asyncio) stream.
+
+    Set @lossy if the stream is not 100% reliable.
+    Set @use_console if incoming ASCII should be reported.
+    Set @msg_prefix to whatever serial or msgpack lead-in character.
+    """
 
     if log or log_bottom:
         from ..proto.stack import Logger

@@ -35,7 +35,7 @@ def errno():
 
 class AsyncFD:
     """
-    Access streams directly.
+    Access buffers backed by Unix file descriptors.
 
     This is a workaround for MicroPython's stdio on Unix, which
     doesn't have a binary mode via 'sys.stdin/out.buffer'. *Sigh*.

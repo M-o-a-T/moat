@@ -74,27 +74,37 @@ class AsyncFD:
             m = memoryview(buf)
             return m[:l]
 
-    async def send(self, buf):
-        if self.log:
-            try:
-                await wait_for_ms(_wrq(self.fd_o), 100)
-            except TimeoutError:
-                print("W?", len(buf), file=usys.stderr)
-                await _wrq(self.fd_o)
-        else:
-            await _wrq(self.fd_o)
-        l = _write(self.fd_o.fileno(), buf, len(buf))
-        if self.log:
-            if l == len(buf):
-                print("w:", bytes(buf), file=usys.stderr)
-            elif l == -1:
-                print("w:", bytes(buf), "=E", errno(), file=usys.stderr)
+    async def send(self, buf, full=True):
+        b = buf
+        ll = 0
+        while True:
+            if self.log:
+                try:
+                    await wait_for_ms(_wrq(self.fd_o), 100)
+                except TimeoutError:
+                    print("W?", len(buf), file=usys.stderr)
+                    await _wrq(self.fd_o)
             else:
-                print("w:", bytes(buf), "=", l, file=usys.stderr)
+                await _wrq(self.fd_o)
 
-        if l < 0:
-            raise OSError(errno())
-        return l
+            l = _write(self.fd_o.fileno(), b, len(b))
+            if self.log:
+                if l == len(b):
+                    print("w:", bytes(b), file=usys.stderr)
+                elif l == -1:
+                    print("w:", bytes(b), "=E", errno(), file=usys.stderr)
+                else:
+                    print("w:", bytes(b), "=", l, file=usys.stderr)
+
+            if l < 0:
+                raise OSError(errno())
+            if l == 0:
+                raise EOFError()
+            ll += l
+            if ll == len(buf) or not full:
+                return ll
+            b = memoryview(b)[l:]
+        return ll
 
     async def aclose(self):
         pass

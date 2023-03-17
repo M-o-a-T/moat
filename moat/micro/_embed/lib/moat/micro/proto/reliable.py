@@ -219,7 +219,6 @@ class Reliable(_Stacked):
 
         except BaseException as exc:
             err = str(exc)
-            print_exc(exc)
             raise
         else:
             err = None

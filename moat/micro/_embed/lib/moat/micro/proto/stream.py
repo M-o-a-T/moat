@@ -267,19 +267,22 @@ else:
             self.force_write = force_write
 
         async def recvi(self, buf, timeout=100):
-            i = 0
+            n = 0
             m = memoryview(buf)
-            while i < len(buf):
-                if i == 0 or timeout < 0:
+            while len(m):
+                if n == 0 or timeout < 0:
                     await _rdq(self.s)
                 else:
                     try:
                         await wait_for_ms(timeout, _rdq, self.s)
                     except TimeoutError:
                         break
-                d = self.s.readinto(m[i : i + min(self._any(), len(buf) - i)])
-                i += d
-            return i
+                d = self.s.readinto(m[: min(self._any(), len(m))])
+                if not d:
+                    break
+                m = m[d:]
+                n += d
+            return n
 
         async def recv(self, n=128, timeout=100):
             buf = bytearray(n)

@@ -71,7 +71,7 @@ class AsyncFD:
         buf = bytearray(n)
         l = await self.recvi(buf)
         if l <= len(buf) / 4:
-            return b[:l]
+            return buf[:l]
         else:
             m = memoryview(buf)
             return m[:l]

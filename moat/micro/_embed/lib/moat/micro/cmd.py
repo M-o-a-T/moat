@@ -13,6 +13,7 @@ from moat.micro.compat import (
     ticks_ms,
     wait_for_ms,
 )
+from moat.util import attrdict
 from moat.micro.proto.stack import RemoteError
 from moat.micro.proto.stack import SilentRemoteError as FSError
 from moat.micro.proto.stack import _Stacked
@@ -42,7 +43,6 @@ return when the data has been sent, implying that sending on an
 unreliable transport will wait for the message to be confirmed. Sending
 may fail.
 """
-
 
 class BaseCmd(_Stacked):
     """
@@ -202,13 +202,20 @@ class Request(_Stacked):
     The transport may re-order messages, but it must not lose them.
 
     This is the "top" module of a connection's stack.
+
+    @ready is an Enevt that'll be set when the system is up.
     """
+    APP="app"
 
     def __init__(self, *a, ready=None, **k):
+        if sys.implementation.name != "micropython" and self.APP == "app":
+            breakpoint()
+            raise ValueError("OWCHI")
         super().__init__(*a, **k)
         self.reply = {}
         self.seq = 0
         self._ready = ready
+        self.apps = {}
 
     @property
     def request(self):
@@ -222,6 +229,59 @@ class Request(_Stacked):
         if self._ready is not None:
             await self._ready.wait()
 
+    async def update_config(self):
+        if self.APP is not None:
+            await self._setup_apps()
+
+    async def _setup_apps(self):
+        # TODO send errors back
+        if self.APP is None:
+            return
+        gcfg = self.base.cfg
+        apps = gcfg.get("apps", {})
+        tg = self._tg
+
+        def imp(name):
+            n = f"{self.APP}.{name}".split(".")
+            mn = ".".join(n[:-1])
+            try:
+                res = __import__(mn)
+                for nn in n[1:]:
+                    res = getattr(res,nn)
+            except Exception as exc:
+                sys.modules.pop(mn, None)
+                raise exc
+            return res
+
+        for name in list(self.apps.keys()):
+            if name not in apps:
+                app = self.apps.pop(name)
+                delattr(self.base, "dis_" + name)
+                app._req_scope.cancel()
+                sys.modules.pop(app.__module__, None)
+
+        # First setup the app data structures
+        for name, v in apps.items():
+            if name in self.apps:
+                continue
+
+            cfg = getattr(gcfg, name, {})
+            cmd = imp(v)(self, name, cfg, gcfg)
+            self.apps[name] = cmd
+            setattr(self.base, "dis_" + name, cmd)
+
+        # then run them all.
+        # For existing apps, tell it to update its configuration.
+        for name, app in self.apps.items():
+            if hasattr(app, "_req_scope"):
+                cfg = getattr(gcfg, name, attrdict())
+                await app.config_updated(cfg)
+            else:
+                self.apps[name]._req_scope = await tg.spawn(app.run, _name="mp_app_" + name)
+
+        if self._ready is not None:
+            self._ready.set()
+
     async def run(self):
         """
         Main loop for this stack. Starts child modules' mainloops and
@@ -230,7 +290,7 @@ class Request(_Stacked):
         try:
             async with TaskGroup() as tg:
                 self._tg = tg
-                await tg.spawn(self.child.run_sub, _name="rsub")
+                await tg.spawn(self._setup_apps)
 
                 while True:
                     msg = await self.parent.recv()

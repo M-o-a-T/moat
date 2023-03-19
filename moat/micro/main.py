@@ -8,12 +8,13 @@ from pathlib import Path
 import anyio
 import msgpack
 from anyio_serial import Serial
-from moat.util import attrdict, packer, yload
+from moat.util import attrdict, packer, yload, NotGiven
 
 from moat.micro.cmd import BaseCmd
 from moat.micro.cmd import Request as BaseRequest
-from moat.micro.compat import AnyioMoatStream, TaskGroup
+from moat.micro.compat import AnyioMoatStream, TaskGroup, Event
 from moat.micro.path import copytree
+from moat.micro.proto.stack import RemoteError
 from moat.micro.stacks.console import console_stack
 
 logger = logging.getLogger(__name__)
@@ -24,8 +25,9 @@ class ClientBaseCmd(BaseCmd):
     a BaseCmd subclass that adds link state tracking
     """
 
-    def __init__(self, parent):
+    def __init__(self, parent, *, cfg=None):
         super().__init__(parent)
+        self.cfg = cfg
         self.started = Event()
 
     def cmd_link(self, s=None):
@@ -142,6 +144,7 @@ async def get_link_serial(obj, ser, **kw):
 		"""
     kw.setdefault("log", obj.debug > 2)
     kw.setdefault("lossy", obj.lossy)
+    kw.setdefault("request_factory", Request)
 
     t, b = await console_stack(
         AnyioMoatStream(ser), msg_prefix=0xC1 if obj.guarded else None, **kw
@@ -156,7 +159,7 @@ async def get_link_serial(obj, ser, **kw):
 
 
 @asynccontextmanager
-async def get_link(obj, use_port=False, reset=False, **kw):
+async def get_link(obj, *, use_port=False, reset=False, cfg=None, **kw):
     """\
 		Context: Link to the target: the Unix-domain socket, if that can be
 		connected to, or the serial port.
@@ -165,6 +168,7 @@ async def get_link(obj, use_port=False, reset=False, **kw):
 		"""
     kw.setdefault("log", obj.debug > 2)
     kw.setdefault("lossy", False)
+    kw.setdefault("request_factory", Request)
 
     try:
         if obj.socket:
@@ -180,7 +184,7 @@ async def get_link(obj, use_port=False, reset=False, **kw):
     else:
         try:
             t, b = await console_stack(AnyioMoatStream(sock), **kw)
-            t = t.stack(ClientBaseCmd)
+            t = t.stack(ClientBaseCmd, cfg=cfg)
             async with TaskGroup() as tg:
                 task = await tg.spawn(b.run, _name="link")
                 yield t.request
@@ -198,7 +202,7 @@ async def get_remote(obj, host, port=27587, **kw):
 		"""
     async with await anyio.connect_tcp(host, port) as sock:
         try:
-            t, b = await console_stack(AnyioMoatStream(sock), log=obj.debug > 2, lossy=False, **kw)
+            t, b = await console_stack(AnyioMoatStream(sock), request_factory=Request, log=obj.debug > 2, lossy=False, **kw)
             async with TaskGroup() as tg:
                 task = await tg.spawn(b.run, _name="rem")
                 yield t
@@ -208,9 +212,13 @@ async def get_remote(obj, host, port=27587, **kw):
 
 
 class Request(BaseRequest):
-    def __init__(self, *a, cmd_cls=ClientBaseCmd, **k):
-        super().__init__(*a, **k)
-        self.stack(cmd_cls)
+#   def __init__(self, *a, cmd_cls=ClientBaseCmd, cfg=None, **k):
+#       super().__init__(*a, **k)
+#       if cfg is None:
+#           raise TypeError("cfg")
+#       self.stack(cmd_cls, cfg=cfg)
+
+    APP = None
 
     async def get_cfg(self):
         """
@@ -225,31 +233,47 @@ class Request(BaseRequest):
                     d[k] = await _get_cfg(p + (k,))
             return d
 
-        return await _get_cfg(())
+        cfg = await _get_cfg(())
+        self.base.cfg = cfg
+        return cfg
 
-    async def set_cfg(self, cfg):
+    async def set_cfg(self, cfg, replace=False, sync=False):
         """
         Update the client's configuration data.
+
+        If @replace is set, the config file is complete and any other items
+        will be deleted from the client.
+
+        If @sync is set, the client will reload apps etc. after updating
+        the config.
         """
 
         async def _set_cfg(p, c):
-            if p:
-                await self.send(("sys", "cfg"), p=p, d={})
             # current client cfg
-            ocd, ocl = await self.send(("sys", "cfg"), p=p)
+            try:
+                ocd, ocl = await self.send(("sys", "cfg"), p=p)
+            except RemoteError as exc:
+                if "KeyError" not in str(exc):
+                    raise
+                ocd = {}
+                ocl = []
+                await self.send(("sys", "cfg"), p=p, d={})
             for k, v in c.items():
                 if isinstance(v, dict):
                     await _set_cfg(p + (k,), v)
                 elif ocd.get(k,NotGiven) != v:
-                    await self.send(("sys", "cfg"), p=p, d=v)
+                    await self.send(("sys", "cfg"), p=p+(k,), d=v)
 
+            if not replace:
+                return
             # drop those client cfg snippets that are not on the server
             for k, v in ocd.items():
                 if k not in c:
-                    await self.send(("sys", "cfg"), p=p + (k,), NotGiven)
+                    await self.send(("sys", "cfg"), p=p + (k,), d=NotGiven)
             for k in ocl:
                 if k not in c:
-                    await self.send(("sys", "cfg"), p=p + (k,), NotGiven)
+                    await self.send(("sys", "cfg"), p=p + (k,), d=NotGiven)
 
         await _set_cfg((), cfg)
-        await self.send(("sys", "cfg"), p=None, d=None)  # runs
+        if sync:
+            await self.send(("sys", "cfg"), p=None, d=None)  # runs

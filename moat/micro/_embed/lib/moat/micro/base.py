@@ -66,41 +66,6 @@ class SysCmd(BaseCmd):
         """
         return b"r\x0dn\x0a-\x00x\x0ce\x1b!"
 
-    async def cmd_wdt(self, t=None):
-        """
-        Starts the watchdog (@t > 0) or restarts it.
-        """
-        from .main import wdt
-
-        w = wdt(t=t)
-        if w:
-            w.feed()  # XXX ignores T, might error instead
-        elif t:
-            wdt(machine.WDT(t))
-        else:
-            # no watchdog running
-            return False
-        return True
-
-    async def cmd_cfg_r(self, fn: str = None):
-        """
-        Read the current configuration from this file.
-        """
-        b = self.base
-        if fn is None:
-            fb = b.is_fallback
-            fn = "moat_fb.cfg" if fb else "moat.cfg"
-
-        f = SFile(open(fn, "rb"))
-        try:
-            cfg = await Unpacker(f).unpack()
-        finally:
-            await f.aclose()
-
-        b.cfg = cfg
-        await b.config_updated()
-        await self.request.send_nr(["mplex", "cfg"])
-
     async def cmd_cfg(self, p=(), d=NoArg):
         """
         Online configuration mangling.
@@ -120,7 +85,8 @@ class SysCmd(BaseCmd):
         depends on the subsystem.
 
         There is no way to write the current config to the file system.
-        Do this from the server.
+        Do that from the server, either using app.fs or by configuring a
+        skeleton setup and updating it online after booting.
         """
         cur = self.base.cfg
         if d is NoArg:
@@ -151,7 +117,7 @@ class SysCmd(BaseCmd):
         if not p:
             if d is not None:
                 raise ValueError("no override root")
-            await self.base.config_updated(self.base.cfg)
+            await self.request.update_config()
             await self.request.send_nr(["mplex", "cfg"])
             return
         for pp in p[:-1]:
@@ -361,7 +327,7 @@ class SysCmd(BaseCmd):
 class StdBase(BaseCmd):
     # Standard toplevel base implementation
 
-    def __init__(self, parent, fallback=None, state=None, cfg={}, **k):
+    def __init__(self, parent, *, cfg, fallback=None, state=None, **k):
         super().__init__(parent, **k)
 
         self.is_fallback = fallback
@@ -376,5 +342,4 @@ class StdBase(BaseCmd):
 
         This is for humans. Don't use it for automated keepalive.
         """
-        print("PING", m, file=usys.stderr)
         return "R:" + str(m)

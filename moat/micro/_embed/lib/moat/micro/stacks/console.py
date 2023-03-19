@@ -17,6 +17,7 @@ async def console_stack(
     request_factory=Request,
     ready=None,
     use_console=False,
+    cfg=None,
 ):
     """
     Build a message stack on top of this (asyncio) stream.

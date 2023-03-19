@@ -119,8 +119,8 @@ async def cli(obj, socket, port, baudrate, config):
     obj.port = port
     if baudrate:
         obj.baudrate = baudrate
-    obj.lossy = cfg.port.lossy
-    obj.guarded = cfg.port.guarded
+    obj.lossy = cfg.link.lossy
+    obj.guarded = cfg.link.guarded
 
 
 @cli.command(short_help='Copy MoaT to MicroPython')
@@ -324,52 +324,83 @@ async def cmd(obj, path, **attrs):
 
 @cli.command(short_help='Get / Update the configuration')
 @click.pass_obj
-@click.option("-r", "--read", help="Read to-be-updated config from flash")
-@click.option("-w", "--write", is_flag=True, help="Write current config to flash")
-@click.option("-n", "--name", help="File to write to. Default 'moat.cfg' if no fallback runs.")
+@click.option("-r", "--read", type=click.File("r"), help="Read config from this file")
+@click.option("-R", "--read-client", help="Read config file from the client")
+@click.option("-w", "--write", type=click.File("w"), help="Write config to this file")
+@click.option("-W", "--write-client", help="Write config file to the client")
+@click.option("-s", "--sync", is_flag=True, help="Sync the client after writing")
+@click.option("-c", "--client", is_flag=True, help="The client's data win if both -r and -R are used")
+@click.option("-u", "--update", is_flag=True, help="Don't replace the client config")
 @attr_args(with_proxy=True)
-async def cfg(obj, stdin, read, write, name, **attrs):
+async def cfg(obj, read, read_client, write, write_client, sync, client, **attrs):
     """
     Update a remote configuration.
 
     The remote config is updated online if you only use "-v -e -P"
-    arguments. No output is printed in this case.
+    arguments. No output is printed in this case, and the config is not
+    read from the client.
 
-    Otherwise, the configuration is read as YAML from stdin (``-r -``),
-    as msgpack from Flash (``-r xx.cfg``), or from the client's memory.
+    Otherwise, the configuration is read as YAML from stdin (``-r -``) or a
+    file (``-r PATH``), as msgpack from Flash (``-R xx.cfg``), or from the
+    client's memory (``-R -``, default if neither ``-r`` nor ``-R`` are
+    used).
+
     It is then modified according to the "-v -e -P" arguments (if any) and
-    written to Flash (``-w xx.cfg``) or stdout (``-w -``).
+    written to Flash (``-W xx.cfg``), a file(``-w PATH``), stdout (``-w -``),
+    or the client (no ``-w``/``-W`` argument).
+
+    The client will not be updated if a ``-w``/``-W`` argument is present.
+    If you want to update the client *and* write the config data, just do
+    it in two steps.
     """
-    from copy import deepcopy
+    if sync and (write or write_client):
+        raise click.UsageError("You're not changing the running config!")
 
-    has_attrs = any(a for a in attrs.values())
+    if read and write and not (read_client or write_client):
+        # local file update: don't talk to the client
+        if client or sync:
+            raise click.UsageError("You're not talking to the client!")
 
-    if read and stdin:
-        raise click.UsageError("Can't use both stdin and a Flash file")
-
-    val = {}
-    val = process_args(val, **attrs)
+        cfg = yload(read)
+        cfg = process_args(cfg, **attrs)
+        yprint(cfg, stream=write)
+        return
 
     async with get_link(obj) as req:
-        if read == "-":
-            cfg = yload(sys.stdin)
-        elif read:
-            p = MoatFSPath(read).connect_repl(req)
-            d = await p.read_bytes(chunk=64)
-            cfg = unpacker(d)
-        elif write or not val:
-            cfg = await req.get_cfg()
-        else:
-            await req.set_cfg(val)
+        has_attrs = any(a for a in attrs.values())
+
+        if has_attrs and (read or read_client or write or write_client):
+            # No file access at all. Just update the client's RAM.
+            val = merge(*val.values())
+            await req.set_cfg(val, sync=sync)
             return
 
-        cfg = merge(cfg, val)
-        if write and write != "-":
-            p = MoatFSPath(write).connect_repl(req)
+        if read:
+            cfg = yload(read)
+        if read_client:
+            p = MoatFSPath(read_client).connect_repl(req)
+            d = await p.read_bytes(chunk=64)
+            if not read:
+                cfg = unpacker(d)
+            elif client:
+                cfg = merge(cfg, unpacker(d), replace=True)
+            else:
+                cfg = merge(cfg, unpacker(d), replace=False)
+        if not read and not read_client:
+            cfg = await req.get_cfg()
+
+        cfg = process_args(cfg, **attrs)
+        if not (write or write_client):
+            if not update and not ("link" in cfg and "apps" in cfg):
+                raise click.UsageError("No 'link' or 'apps' section. Use '--update'.")
+            await req.set_cfg(cfg, sync=sync, replace=not update)
+
+        if write_client:
+            p = MoatFSPath(write_client).connect_repl(req)
             d = packer(cfg)
             await p.write_bytes(d, chunk=64)
-        else:
-            yprint(cfg)
+        if write:
+            yprint(cfg, stream=write)
 
 
 @cli.command(short_help='Run the multiplexer')
@@ -441,9 +472,9 @@ async def _mplex(obj, no_config=False, debug=None, remote=False, server=None, pi
 
         async with as_service(obj):
             mplex = Multiplexer(
-                net_factory if remote else stream_factory, obj.socket, obj.cfg.micro, fatal=debug
+                net_factory if remote else stream_factory, obj.socket, obj.cfg.micro, load_cfg=not no_config
             )
-            await mplex.serve(load_cfg=not no_config)
+            await mplex.serve()
 
 
 @cli.command()

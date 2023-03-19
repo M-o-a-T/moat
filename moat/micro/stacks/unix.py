@@ -19,7 +19,7 @@ from ..proto.stream import MsgpackStream
 logger = logging.getLogger(__name__)
 
 
-async def unix_stack_iter(path="upy-moat", log=False, *, evt=None, request_factory=Request):
+async def unix_stack_iter(path="upy-moat", log=False, *, evt=None, request_factory=Request, cfg=None):
     # an iterator for Unix-domain connections / their stacks. Yields one t,b
     # pair for each successful connection.
 
@@ -37,5 +37,5 @@ async def unix_stack_iter(path="upy-moat", log=False, *, evt=None, request_facto
             t = b = MsgpackStream(AnyioMoatStream(sock))
             if log:
                 t = t.stack(Logger, txt="U%d" % n)
-            t = t.stack(request_factory)
+            t = t.stack(request_factory, cfg=cfg)
             yield t, b

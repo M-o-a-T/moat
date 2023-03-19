@@ -15,6 +15,8 @@ TimeoutError = TimeoutError  # compat
 
 from concurrent.futures import CancelledError
 
+import logging
+logger = logging.getLogger(__name__)
 
 def print_exc(exc):
     _traceback.print_exception(type(exc), exc, exc.__traceback__)
@@ -149,6 +151,7 @@ def TaskGroup():
                 """\
                     Like start(), but returns something you can cancel
                 """
+                # logger.info("Launch %s %s %s %s",_name, p,a,k)
 
                 async def catch(p, a, k, *, task_status):
                     with _anyio.CancelScope() as s:

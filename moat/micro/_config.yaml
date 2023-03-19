@@ -2,8 +2,12 @@ micro:
   port:
     dev: "/dev/ttyUSB0"
     socket: "moat.test"
+  link:
     guarded: false
     lossy: false
-    retry: 1
   apps:
     f: moat.micro.app.fs.FsCmd
+#   wdt: app.wdt.WDTCmd
+# wdt:
+#   t: 2000
+#   ext: True

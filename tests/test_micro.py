@@ -50,3 +50,4 @@ async def test_cfg(tmp_path):
             cfg = to_attrdict(await req.get_cfg())
             assert cfg.tt.a == "d"
             assert cfg.tt.e.f == 42
+            assert cfg.tt.x == "y"

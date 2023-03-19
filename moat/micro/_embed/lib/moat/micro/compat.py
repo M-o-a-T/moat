@@ -25,18 +25,18 @@ async def idle():
         await sleep(60 * 60 * 12)  # half a day
 
 
-async def wait_for(timeout, p, *a, **k):
+def wait_for(timeout, p, *a, **k):
     """
     uasyncio.wait_for() but with sane calling convention
     """
-    return await uasyncio.wait_for(p(*a, **k), timeout)
+    return uasyncio.wait_for(p(*a, **k), timeout)
 
 
-async def wait_for_ms(timeout, p, *a, **k):
+def wait_for_ms(timeout, p, *a, **k):
     """
     uasyncio.wait_for_ms() but with sane calling convention
     """
-    return await uasyncio.wait_for_ms(p(*a, **k), timeout)
+    return uasyncio.wait_for_ms(p(*a, **k), timeout)
 
 
 class TaskGroup(_tg):

@@ -89,3 +89,21 @@ class ValueEvent:
         if isinstance(self.value, Exception):
             raise self.value
         return self.value
+
+class attrdict(dict):
+    def __getattr__(self, k, d=NotGiven):
+        try:
+            return self[k]
+        except KeyError:
+            if d is NotGiven:
+                raise AttributeError(k)
+            return d
+
+    def __setattr__(self, k, v):
+        self[k] = v
+
+    def __delattr__(self, k):
+        try:
+            del self[k]
+        except KeyError:
+            return AttributeError(k)

@@ -10,6 +10,8 @@ import usys as sys
 from micropython import const
 from uio import BytesIO
 
+from moat.util import attrdict
+
 #
 # This is a micropython-asyncio-compatible MsgPack implementation.
 # It does not support
@@ -311,7 +313,7 @@ class Unpacker(object):
             # TODO is the interaction between `list_hook` and `use_list` ok?
             return ret  # if self._use_list else tuple(ret)
         if typ == _TYPE_MAP:
-            ret = {}
+            ret = attrdict()
             for _ in range(n):
                 key = await self.unpack()
                 if type(key) is str and hasattr(sys, 'intern'):

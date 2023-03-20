@@ -1,6 +1,7 @@
 """
 This module contains various helper functions and classes.
 """
+import sys
 import logging
 from collections import deque
 from getpass import getpass
@@ -20,9 +21,29 @@ __all__ = [
     "byte2num",
     "split_arg",
     "id36",
+    "import_",
 ]
 
 NoneType = type(None)
+
+
+def import_(name, off=0):
+    """
+    Import a module and access an object in it.
+
+    `import_("a.b.c.d.e", 2)` imports "a.b.c" and returns the e attribute
+    of object d from it.
+    """
+    n = name.split(".")
+    mn = ".".join(n[:-off if off else 99])
+    try:
+        res = __import__(mn)
+        for nn in n[1:]:
+            res = getattr(res,nn)
+    except Exception as exc:
+        sys.modules.pop(mn, None)
+        raise exc
+    return res
 
 
 def singleton(cls):

@@ -18,6 +18,7 @@ from concurrent.futures import CancelledError
 import logging
 logger = logging.getLogger(__name__)
 
+
 def print_exc(exc):
     _traceback.print_exception(type(exc), exc, exc.__traceback__)
 

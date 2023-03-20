@@ -9,6 +9,8 @@ requires = [
   "msgpack",
   "serialpacker",
   "pyfuse3",
+  "moat-util >= 0.29",
+  "moat-main",
 ]
 build-backend = "setuptools.build_meta"
 

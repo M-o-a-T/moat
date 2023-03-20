@@ -13,7 +13,7 @@ from moat.micro.compat import (
     ticks_ms,
     wait_for_ms,
 )
-from moat.util import attrdict
+from moat.util import attrdict, import_
 from moat.micro.proto.stack import RemoteError
 from moat.micro.proto.stack import SilentRemoteError as FSError
 from moat.micro.proto.stack import _Stacked
@@ -242,16 +242,7 @@ class Request(_Stacked):
         tg = self._tg
 
         def imp(name):
-            n = f"{self.APP}.{name}".split(".")
-            mn = ".".join(n[:-1])
-            try:
-                res = __import__(mn)
-                for nn in n[1:]:
-                    res = getattr(res,nn)
-            except Exception as exc:
-                sys.modules.pop(mn, None)
-                raise exc
-            return res
+            return import_(f"{self.APP}.{name}", 1)
 
         for name in list(self.apps.keys()):
             if name not in apps:

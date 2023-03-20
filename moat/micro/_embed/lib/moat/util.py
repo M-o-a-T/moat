@@ -107,3 +107,16 @@ class attrdict(dict):
             del self[k]
         except KeyError:
             return AttributeError(k)
+
+
+def import_(name, off=0):
+    n = name.split(".")
+    mn = ".".join(n[:-off if off else 99])
+    try:
+        res = __import__(mn)
+        for nn in n[1:]:
+            res = getattr(res,nn)
+    except Exception as exc:   
+        sys.modules.pop(mn, None)
+        raise exc
+    return res

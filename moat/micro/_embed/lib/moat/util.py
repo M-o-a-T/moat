@@ -91,6 +91,11 @@ class ValueEvent:
         return self.value
 
 class attrdict(dict):
+    """
+    A dict that can be accessed via attribute syntax.
+
+    This is a very minimal implementation.
+    """
     def __getattr__(self, k, d=NotGiven):
         try:
             return self[k]
@@ -110,6 +115,12 @@ class attrdict(dict):
 
 
 def import_(name, off=0):
+    """
+    Import a module and access an object in it.
+
+    `import_("a.b.c.d.e", 2)` imports "a.b.c" and returns the e attribute
+    of object d from it.
+    """
     n = name.split(".")
     mn = ".".join(n[:-off if off else 99])
     try:

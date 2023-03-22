@@ -131,3 +131,14 @@ def import_(name, off=0):
         sys.modules.pop(mn, None)
         raise exc
     return res
+
+def load_from_cfg(cfg, *a, **k):
+    """   
+    A simple frontend to load a module, access a class/object from it, 
+    and call that with the config (and whichever other arguments you want to  
+    use).
+       
+    The module+object name is the "client" attribute.
+    """ 
+    m = import_(cfg.client)
+    return m(cfg, *a, **k)

@@ -22,6 +22,7 @@ __all__ = [
     "split_arg",
     "id36",
     "import_",
+    "load_from_cfg",
 ]
 
 NoneType = type(None)
@@ -44,6 +45,27 @@ def import_(name, off=0):
         sys.modules.pop(mn, None)
         raise exc
     return res
+
+
+def load_from_cfg(cfg, *a, _attr="server", **k):  
+    """
+    A simple frontend to load a module, access a class/object from it,
+    and call that with the config (and whchever other arguments you want to
+    use).
+
+    The module+object name is the "server" attribute (or @_attr).
+    """
+    try:
+        name = cfg[_attr]
+    except KeyError:
+        return None
+    if isinstance(name, (list, tuple)):
+        name,off = name
+    else:
+        off = 1
+    m = import_(name, off=off)
+    return m(cfg, *a, **k)
+
 
 
 def singleton(cls):

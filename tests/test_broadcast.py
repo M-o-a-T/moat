@@ -7,7 +7,7 @@ Some rudimentary tests for queues and broadcasting
 import anyio
 import pytest
 
-from moat.util import Broadcaster, LostData, NotGiven, combine_dict, merge
+from moat.util import Broadcaster, LostData
 
 
 @pytest.mark.anyio
@@ -23,7 +23,6 @@ async def test_basic():
             except StopAsyncIteration:
                 break
             except LostData as exc:
-                breakpoint()
                 seen[n] |= exc.n << 4
             else:
                 seen[n] |= x

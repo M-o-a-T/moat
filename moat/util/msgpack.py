@@ -31,7 +31,8 @@ class Proxy:
 
 
 class NoProxyError(ValueError):
-    pass
+    "Error for nonexistent proxy values"
+    pass  # pylint:disable=unnecessary-pass
 
 
 def _encode(data):

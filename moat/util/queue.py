@@ -2,7 +2,6 @@ import logging
 from weakref import WeakSet
 
 import anyio
-from anyio import ClosedResourceError, Event
 from anyio import create_memory_object_stream as _cmos
 from outcome import Error, Value
 
@@ -245,8 +244,8 @@ class BroadcastReader:
 
     def close(self):
         "close this reader, detaching it from its parent"
-        self._close()  # pylint: disable=protected-access
-        self.parent._closed_reader(self)
+        self._close()
+        self.parent._closed_reader(self)  # pylint: disable=protected-access
 
     def _close(self):
         self._w.close()
@@ -330,14 +329,15 @@ class Broadcaster:
         """Create a reader with an explicit queue length"""
         r = BroadcastReader(self, length)
         self.__reader.add(r)
-        return r.__aiter__()
+        return aiter(r)
 
     def __call__(self, value):
         for r in self.__reader:
             r(value)
 
     def close(self):
+        "Close the broadcaster. No more writing."
         if self.__reader is not None:
             for r in self.__reader:
-                r._close()
+                r._close()  # pylint: disable=protected-access
             self.__reader = None

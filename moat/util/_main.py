@@ -22,7 +22,7 @@ log = logging.getLogger()
 @load_subgroup(prefix="moat.util")
 async def cli():
     """Various utilities"""
-    pass
+    pass  # pylint:disable=unnecessary-pass
 
 
 @cli.command(name="to")
@@ -85,15 +85,15 @@ y, yr   Year (2023–)
     t = time_until(args, t, invert=inv, back=back)
 
     t = t.timestamp()
-    t = int(t - time() + 0.9)
+    tt = int(t - time() + 0.9)
     if back:
-        t = -t
+        tt = -tt
     if human:
-        print(humandelta(t))
+        print(humandelta(tt))
     if sleep:
-        await anyio.sleep(t)
+        await anyio.sleep(tt)
     elif not human:
-        print(t)
+        print(tt)
 
 
 @cli.command

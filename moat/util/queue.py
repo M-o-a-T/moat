@@ -1,12 +1,12 @@
 import logging
 
 import anyio
-from anyio import create_memory_object_stream as _cmos
+from anyio import create_memory_object_stream as _cmos, Event
 from outcome import Error, Value
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["Queue", "create_queue", "DelayedWrite", "DelayedRead"]
+__all__ = ["Queue", "create_queue", "DelayedWrite", "DelayedRead", "Broadcaster"]
 
 
 class Queue:
@@ -172,3 +172,74 @@ class DelayedRead(Queue):
         res = await super().get()
         await self._did_read(res)
         return res
+
+class BroadcastReader:
+    """
+    The read side of a broadcaster.
+
+    Simply iterate over it.
+    """
+    value = None
+
+    def __init__(self, parent):
+        self.parent = parent
+        self.event = Event()
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        await self.event.wait()
+        val, self.value = self.value, None
+        self.event = Event()
+        if val is None:
+            raise StopAsyncIteration
+        return val
+
+    def _send(self, value):
+        self.value = value
+        self.event.set()
+
+    def close(self):
+        self.value = None
+        self.event.set()
+        self.parent._closed(self)
+
+
+class Broadcaster:
+    """
+    A simple n-to-many broadcast class.
+    """
+    def __init__(self):
+        from weakref import WeakSet
+
+        self.reader = WeakSet()
+
+    def __enter__(self):
+        if self.reader is None:
+            self.reader = WeakSet()
+        return self
+
+    async def __aenter__(self):
+        return self.__enter__()
+
+    def __exit__(self, *tb):
+        for r in list(self.reader):
+            r.close()
+        self.reader = None
+
+    async def __aexit__(self, *tb):
+        return self.__exit__(*tb)
+
+    def _closed(self, reader):
+        self.reader.remove(reader)
+
+    def __aiter__(self):
+        r = BroadcastReader(self)
+        self.reader.add(r)
+        return r.__aiter__()
+
+    def send(self, value):
+        for r in self.reader:
+            r._send(value)
+

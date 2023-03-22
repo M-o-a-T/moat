@@ -1,4 +1,5 @@
 import logging
+from weakref import WeakSet
 
 import anyio
 from anyio import create_memory_object_stream as _cmos, Event
@@ -190,56 +191,70 @@ class BroadcastReader:
 
     async def __anext__(self):
         await self.event.wait()
+        if self.event is None:
+            raise StopAsyncIteration
         val, self.value = self.value, None
         self.event = Event()
-        if val is None:
-            raise StopAsyncIteration
         return val
 
-    def _send(self, value):
+    def __call__(self, value):
+        if self.event is None:
+            raise ClosedResourceError
         self.value = value
         self.event.set()
 
     def close(self):
-        self.value = None
-        self.event.set()
+        "close this reader, detaching it from its parent"
+        self._close()
         self.parent._closed(self)
+
+    def _close(self):
+        self.event.set()
+        self.event = None
+
+    async def aclose(self):
+        self.close()
 
 
 class Broadcaster:
     """
-    A simple n-to-many broadcast class.
-    """
-    def __init__(self):
-        from weakref import WeakSet
+    A simple n-to-many broadcaster.
 
-        self.reader = WeakSet()
+    To write, open a context manager (sync or async) and call with a value.
+
+    To read, async-iterate.
+    """
+
+    __reader = None
+
+    def __init__(self):
+        pass
 
     def __enter__(self):
-        if self.reader is None:
-            self.reader = WeakSet()
+        if self.__reader is not None:
+            raise RuntimeError("already entered")
+        self.__reader = WeakSet()
         return self
 
     async def __aenter__(self):
         return self.__enter__()
 
     def __exit__(self, *tb):
-        for r in list(self.reader):
-            r.close()
-        self.reader = None
+        for r in self.__reader:
+            r._close()
+        self.__reader = None
 
     async def __aexit__(self, *tb):
         return self.__exit__(*tb)
 
     def _closed(self, reader):
-        self.reader.remove(reader)
+        self.__reader.remove(reader)
 
     def __aiter__(self):
         r = BroadcastReader(self)
-        self.reader.add(r)
+        self.__reader.add(r)
         return r.__aiter__()
 
-    def send(self, value):
-        for r in self.reader:
-            r._send(value)
-
+    def __call__(self, value):
+        for r in self.__reader:
+            r(value)

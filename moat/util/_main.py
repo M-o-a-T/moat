@@ -106,7 +106,7 @@ async def msgpack(decode, path):
     moat util msgpack -d data.mp > data.yaml # decode
     """
     if decode:
-        with (sys.stdin.buffer if path == "-" else open(path, "rb")) as f:
+        with sys.stdin.buffer if path == "-" else open(path, "rb") as f:
             n = 0
             for obj in stream_unpacker(f):
                 if n:
@@ -114,6 +114,6 @@ async def msgpack(decode, path):
                 n += 1
                 yprint(obj)
     else:
-        with (sys.stdin if path == "-" else open(path, "r")) as f:
+        with sys.stdin if path == "-" else open(path, "r") as f:
             for obj in yload(f, multi=True):
                 sys.stdout.buffer.write(packer(obj))

@@ -1,8 +1,8 @@
 """
 This module contains various helper functions and classes.
 """
-import sys
 import logging
+import sys
 from collections import deque
 from getpass import getpass
 from math import log10
@@ -36,18 +36,18 @@ def import_(name, off=0):
     of object d from it.
     """
     n = name.split(".")
-    mn = ".".join(n[:-off if off else 99])
+    mn = ".".join(n[: -off if off else 99])
     try:
         res = __import__(mn)
         for nn in n[1:]:
-            res = getattr(res,nn)
+            res = getattr(res, nn)
     except Exception as exc:
         sys.modules.pop(mn, None)
         raise exc
     return res
 
 
-def load_from_cfg(cfg, *a, _attr="server", **k):  
+def load_from_cfg(cfg, *a, _attr="server", **k):
     """
     A simple frontend to load a module, access a class/object from it,
     and call that with the config (and whchever other arguments you want to
@@ -60,12 +60,11 @@ def load_from_cfg(cfg, *a, _attr="server", **k):
     except KeyError:
         return None
     if isinstance(name, (list, tuple)):
-        name,off = name
+        name, off = name
     else:
         off = 1
     m = import_(name, off=off)
     return m(cfg, *a, **k)
-
 
 
 def singleton(cls):

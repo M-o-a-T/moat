@@ -2,7 +2,7 @@ import logging
 from weakref import WeakSet
 
 import anyio
-from anyio import Event, ClosedResourceError
+from anyio import ClosedResourceError, Event
 from anyio import create_memory_object_stream as _cmos
 from outcome import Error, Value
 
@@ -10,7 +10,15 @@ from .impl import NotGiven
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["Queue", "create_queue", "DelayedWrite", "DelayedRead", "Broadcaster"]
+__all__ = [
+    "Queue",
+    "create_queue",
+    "DelayedWrite",
+    "DelayedRead",
+    "Broadcaster",
+    "BroadcastReader",
+    "LostData",
+]
 
 
 class Queue:
@@ -178,21 +186,38 @@ class DelayedRead(Queue):
         return res
 
 
+class LostData(Exception):
+    """
+    Indicator of data loss.
+
+    Attribute ``n`` contains the number of dropped messages.
+    """
+
+    def __init__(self, n):
+        self.n = n
+
+
 class BroadcastReader:
     """
     The read side of a broadcaster.
 
     Simply iterate over it.
 
-    Readers may be called to inject values, but keep in mind that if there
-    is a buffered value it'll be overwritten.
+    Warning: The iterator may return ``LostData`` instances in addition to
+    actual data. These contain the number of messages that have been
+    dropped due to the reader being too slow.
+
+    Readers may be called to inject values.
     """
 
     value = NotGiven
+    loss = 0
 
-    def __init__(self, parent):
+    def __init__(self, parent, length):
         self.parent = parent
-        self.event = Event()
+        if length <= 0:
+            raise RuntimeError("Length must be at least one")
+        self._w, self._r = _cmos(length)
 
     def __aiter__(self):
         return self
@@ -200,40 +225,45 @@ class BroadcastReader:
     async def __anext__(self):
         # The dance below assures that a last value that's been set
         # before closing is delivered.
-        if self.event is not None:
-            await self.event.wait()
-        if self.event is None:
-            if self.value is NotGiven:
-                raise StopAsyncIteration
-        else:
-            self.event = Event()
-        val, self.value = self.value, NotGiven
-        return val
+        if self.loss > 0:
+            n, self.loss = self.loss, 0
+            raise LostData(n)
+
+        try:
+            return await self._r.receive()
+        except anyio.EndOfStream:
+            raise StopAsyncIteration from None
 
     def __call__(self, value):
-        if self.event is None:
-            raise ClosedResourceError
-        self.value = value
-        self.event.set()
+        try:
+            self._w.send_nowait(value)
+        except anyio.WouldBlock:
+            x = self._r.receive_nowait()
+            logger.debug("Dropped: %r", x)
+            self._w.send_nowait(value)
+            self.loss += 1
 
     def close(self):
         "close this reader, detaching it from its parent"
-        self._close()
+        self._close()  # pylint: disable=protected-access
         self.parent._closed_reader(self)
 
     def _close(self):
-        self.event.set()
-        self.event = None
+        self._w.close()
+        self._w = None
 
     async def aclose(self):
+        "close this reader, detaching it from its parent"
         self.close()
 
 
 class Broadcaster:
     """
-    A simple, lossy n-to-many broadcaster. Messages will be sent to all
-    readers, but may be overwritten by newer messages if the readers are
-    not fast enough.
+    A simple broadcaster. Messages will be sent to all readers.
+
+    If a queue is full, the oldest message will be discarded. Readers will
+    then get a LostData exception that contains the number of dropped
+    messages.
 
     To write, open a context manager (sync or async) and call with a value.
 
@@ -252,13 +282,26 @@ class Broadcaster:
             bc(42)
             # bc.close()  # may be used explicitly
 
-    The last value set before closing is guaranteed to be delivered.
+    To safely re-sync, do something like this:
+
+        while True:
+            with anyio.move_on_after(0.01):
+                await anext(bcr)
+                continue
+            break
+        x = await fetch_consistent_state()
+        bcr(x)  # if this fails, you've got a problem
+        while True:
+            y = await anext(bcr)
+            if x is y:
+                break
+
     """
 
     __reader = None
 
-    def __init__(self):
-        pass
+    def __init__(self, length=1):
+        self.length = length
 
     def __enter__(self):
         if self.__reader is not None:
@@ -279,7 +322,13 @@ class Broadcaster:
         self.__reader.remove(reader)
 
     def __aiter__(self):
-        r = BroadcastReader(self)
+        r = BroadcastReader(self, self.length)
+        self.__reader.add(r)
+        return r.__aiter__()
+
+    def reader(self, length):
+        """Create a reader with an explicit queue length"""
+        r = BroadcastReader(self, length)
         self.__reader.add(r)
         return r.__aiter__()
 

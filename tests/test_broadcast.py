@@ -31,5 +31,5 @@ async def test_basic():
         tg.start_soon(a, bq, 2)
         await anyio.sleep(0.05)
         bq(4)
-        await anyio.sleep(0.05)
+        # no delay here
     assert seen == [7, 6, 4]

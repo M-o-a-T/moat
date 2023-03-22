@@ -2,8 +2,11 @@ import logging
 from weakref import WeakSet
 
 import anyio
-from anyio import create_memory_object_stream as _cmos, Event
+from anyio import Event, ClosedResourceError
+from anyio import create_memory_object_stream as _cmos
 from outcome import Error, Value
+
+from .impl import NotGiven
 
 logger = logging.getLogger(__name__)
 
@@ -174,13 +177,18 @@ class DelayedRead(Queue):
         await self._did_read(res)
         return res
 
+
 class BroadcastReader:
     """
     The read side of a broadcaster.
 
     Simply iterate over it.
+
+    Readers may be called to inject values, but keep in mind that if there
+    is a buffered value it'll be overwritten.
     """
-    value = None
+
+    value = NotGiven
 
     def __init__(self, parent):
         self.parent = parent
@@ -190,11 +198,16 @@ class BroadcastReader:
         return self
 
     async def __anext__(self):
-        await self.event.wait()
+        # The dance below assures that a last value that's been set
+        # before closing is delivered.
+        if self.event is not None:
+            await self.event.wait()
         if self.event is None:
-            raise StopAsyncIteration
-        val, self.value = self.value, None
-        self.event = Event()
+            if self.value is NotGiven:
+                raise StopAsyncIteration
+        else:
+            self.event = Event()
+        val, self.value = self.value, NotGiven
         return val
 
     def __call__(self, value):
@@ -206,7 +219,7 @@ class BroadcastReader:
     def close(self):
         "close this reader, detaching it from its parent"
         self._close()
-        self.parent._closed(self)
+        self.parent._closed_reader(self)
 
     def _close(self):
         self.event.set()
@@ -218,11 +231,28 @@ class BroadcastReader:
 
 class Broadcaster:
     """
-    A simple n-to-many broadcaster.
+    A simple, lossy n-to-many broadcaster. Messages will be sent to all
+    readers, but may be overwritten by newer messages if the readers are
+    not fast enough.
 
     To write, open a context manager (sync or async) and call with a value.
 
     To read, async-iterate.
+
+        async def rdr(bcr):
+            async for msg in bcr:
+                print(msg)
+                # bcr.close()  # stops just this reader
+
+        async with anyio.create_task_group() as tg, Broadcaster() as bc:
+            tg.spawn(rdr, bc)  # or aiter(bc)
+            for x in range(5):
+                bc(x)
+                anyio.sleep(0.01)
+            bc(42)
+            # bc.close()  # may be used explicitly
+
+    The last value set before closing is guaranteed to be delivered.
     """
 
     __reader = None
@@ -240,14 +270,12 @@ class Broadcaster:
         return self.__enter__()
 
     def __exit__(self, *tb):
-        for r in self.__reader:
-            r._close()
-        self.__reader = None
+        self.close()
 
     async def __aexit__(self, *tb):
-        return self.__exit__(*tb)
+        self.close()
 
-    def _closed(self, reader):
+    def _closed_reader(self, reader):
         self.__reader.remove(reader)
 
     def __aiter__(self):
@@ -258,3 +286,9 @@ class Broadcaster:
     def __call__(self, value):
         for r in self.__reader:
             r(value)
+
+    def close(self):
+        if self.__reader is not None:
+            for r in self.__reader:
+                r._close()
+            self.__reader = None

@@ -27,11 +27,11 @@ class Pin(M.Pin):
     def _irq(self):
         self.flag.set()
 
-    def __enter__(self):
+    async def __aenter__(self):
         self.irq(self._irq, M.Pin.FALLING|M.Pin.RISING)
         self.flag.set()
 
-    def __exit__(self, *err):
+    async def __aexit__(self, *err):
         self.irq(None)
 
     def __aiter_(self):
@@ -43,5 +43,18 @@ class Pin(M.Pin):
         return self.pin.value()
 
     async def run(self):
-        pass
+        async with self:
+            while True:
+                await uasyncio.sleep(9999)
 
+    async def get(self):
+        return super().value()
+
+    async def set(self, value):
+        super().value(value)
+
+    async def on(self):
+        super().on()
+
+    async def off(self):
+        super().off()

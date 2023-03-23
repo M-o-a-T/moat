@@ -2,9 +2,10 @@
 Module for pins
 """
 import machine as M
-import uasyncio
 
-class Pin(M.Pin):
+from moat.compat import sleep_ms
+
+class ADC(M.ADC):
     """
     A config-enabled pin that you can async-iterate for changes.
 
@@ -19,29 +20,22 @@ class Pin(M.Pin):
     def __new__(cls, cfg, **kw):
         kw["id"] = cfg.pin
         self = super().__new__(**kw)
-        self.flag = uasyncio.ThreadSafeFlag()
 
     def __init__(self, cfg, **kw):
-        pass
+        self.n = cfg.get("n",1)
+        self.nn = cfg.get("nn",1)
+        self.dly = cfg.get("delay",1)
+        self.factor = cfg.get("factor", 1) / self.n / self.nn
+        self.offset = cfg.get("offset", 0)
 
-    def _irq(self):
-        self.flag.set()
-
-    def __enter__(self):
-        self.irq(self._irq, M.Pin.FALLING|M.Pin.RISING)
-        self.flag.set()
-
-    def __exit__(self, *err):
-        self.irq(None)
-
-    def __aiter_(self):
-        return self
-
-    async def __anext__(self):
-        await self.flag.wait()
-        self.flag.clear()
-        return self.pin.value()
+    async def read(self):
+        c = 0
+        for a in range(self.nn):
+            if a:
+                await sleep_ms(self.dly)
+            for b in range(self.n):
+                c += self.read_u16()
+        return c * self.factor + self.offset
 
     async def run(self):
         pass
-

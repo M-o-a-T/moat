@@ -23,7 +23,7 @@ class Relay:
         self.force = force
         self.set()
 
-    def set(self, value=None, force=NotGiven):
+    async def set(self, value=None, force=NotGiven):
         """
         Change relay state.
 
@@ -40,15 +40,15 @@ class Relay:
                 return
             if value is not None:
                 self.value = value
-                self.pin.value(value)
+                await self.pin.set(value)
         else:
             self.force = force
             if force is None:
-                self.pin.value(force)
+                await self.pin.set(force)
             else:
-                self.pin.value(self.value)
+                await self.pin.set(self.value)
 
-    def get(self):
+    async def get(self):
         """
         Return the current intended state.
         """
@@ -56,5 +56,5 @@ class Relay:
             return self.force
         return self.value
 
-    def state(self):
+    async def state(self):
         return dict(s=self.value, f=self.force)

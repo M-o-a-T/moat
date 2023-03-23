@@ -15,6 +15,7 @@ _log = _logging.getLogger(__name__)
 from .impl import *  # noqa: F401,F403,E402  # isort:skip
 from .dict import *  # noqa: F401,F403,E402  # isort:skip
 from .merge import *  # noqa: F401,F403,E402  # isort:skip
+from .alert import *  # noqa: F401,F403,E402  # isort:skip
 
 try:
     from .event import *  # noqa: F401,F403

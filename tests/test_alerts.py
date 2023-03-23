@@ -12,24 +12,15 @@ from moat.util import AlertCollector
 
 @pytest.mark.anyio
 async def test_collect():
-
-    class foo:
-        def __init__(self):
-            self.evt = evt
-
-        async def wait(self):
-            await self.evt.wait()
-
-        def set(self):
-            self.evt.set()
-
     r = AlertCollector()
     async with r, anyio.create_task_group() as tg:
         busy = False
+
         async def chk(b):
             nonlocal busy
             await anyio.sleep(0.02)
             assert busy == b
+            assert r.is_busy() == b
 
         async def runner():
             nonlocal busy
@@ -64,4 +55,3 @@ async def test_collect():
         c.set()
         await chk(False)
         tg.cancel_scope.cancel()
-

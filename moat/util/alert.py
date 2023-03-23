@@ -11,16 +11,12 @@ alerts.
 """
 
 import logging
-from weakref import WeakSet
-
-import anyio
-from anyio import create_memory_object_stream as _cmos
-from outcome import Error, Value
-
 from contextlib import asynccontextmanager
 
-from .queue import BroadcastReader
+import anyio
+
 from .ctx import CtxObj
+from .queue import Broadcaster, BroadcastReader
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +29,12 @@ __all__ = [
     "AlertCollector",
 ]
 
+
 class BaseAlert(Exception):
-    pass
+    """Alert, initial OR repeat wrapper"""
+
+    pass  # pylint:disable=unnecessary-pass
+
 
 class Alert(BaseAlert):
     """
@@ -46,8 +46,8 @@ class Alert(BaseAlert):
     Intended use: subclass this, distribute using an AlarmHandler mix-in.
     """
 
-    state:list = None
-    evt:anyio.Event = None
+    state: list = None
+    evt: anyio.Event = None
 
     def __init__(self, *data):
         super().__init__(*data)
@@ -82,19 +82,25 @@ class Alert(BaseAlert):
         await self.evt.wait()
 
     def __del__(self):
-        self.q.__exit__(None,None,None)
+        self.q.__exit__(None, None, None)
+
 
 class RepeatAlert(BaseAlert):
     """
     If an existing alert is re-raised, it is wrapped in a RepeatAlert so as
     to not break the existing alert's traceback and related data.
     """
+
     def __init__(self, err):
         self.error = err
 
+
 class AlertHandler:
     """
-    This is a mix-in class / add-on object that adds alarm handling.
+    Collect open alerts.
+
+    This helper class keeps track of open alerts and lets multiple clients
+    receive them.
     """
 
     def __init__(self):
@@ -115,7 +121,17 @@ class AlertHandler:
     def __exit__(self, *tb):
         self.__q.__exit__(*tb)
 
-    def alarm_(self, cls, *msg) -> Alert:
+    def reader(self, length=3):
+        """
+        Returns an async iterator for new alerts.
+        """
+        return self.__q.reader(length=length)
+
+    def alerts(self):
+        """List open alerts"""
+        return self.__alarms.values()
+
+    def alert_(self, cls, *msg) -> Alert:
         """
         Alarm trigger.
 
@@ -144,7 +160,7 @@ class AlertHandler:
 
         An updated exception will be wrapped in a RepeatAlert.
         """
-        # This is a mangled copy of `alarm_`.
+        # This is a mangled copy of `alert_`.
         if cls in self.__alarms:
             if msg:
                 err = self.__alarms[cls]
@@ -174,47 +190,42 @@ class AlertMixin:
 
     The `AlertHandler` is stored in the ``_alerts`` attribute.
     """
+
     def __init__(self, *a, **kw):
         self._alerts = AlertHandler()
-        super().__init__(*a,**kw)
+        super().__init__(*a, **kw)
 
-    def alerts(self, lenght=3):     
-        """                                           
-        Return an async iterator for new alerts.
-           
-        Pass @lenght to change the maximal queue length (default 3)
+    def alerts(self, length=3):
         """
-        return self._alerts.q.reader(length)
-    
-    def current_alerts():
+        Return an async iterator for new alerts.
+
+        Pass @length to change the maximal queue length (default 3)
+        """
+        return self._alerts.reader(length)
+
+    def current_alerts(self):
         """
         Return a list of currently-active alerts.
 
         The result is an iterator. Don't switch tasks while it is active.
         """
-        return self.alerts.values()
+        return self._alerts.alerts()
 
-    def alert(self, cls, *msg):
+    def set_alert(self, cls, *msg):
         """
-        Alert trigger.
-                
-        Alerts are static: you can update an alert with new data.
-                
+        Alert trigger/updater.
+
         To clear an alert, pass in no data.
-        """          
-        if cls in self.alerts:
-            if msg:      
-                err = self.alerts[cls]
-                err(*msg)
-            else:  
-                err = self.alerts.pop(cls)
-                err.close()
-            return
-        elif not msg:
-            return
-        err = cls(*msg)
-        alerts[cls] = err
-        self.q(err)
+        """
+        self._alerts.alert_(cls, *msg)
+
+    def raise_alert(self, cls, *msg):
+        """
+        Raising alert trigger/updater.
+
+        To clear an alert, pass in no data.
+        """
+        self._alerts.raise_(cls, *msg)
 
 
 class AlertCollector(CtxObj):
@@ -234,7 +245,7 @@ class AlertCollector(CtxObj):
     _tg = None
     _working = None
 
-    def __init__(self, access = lambda x: x.wait()):
+    def __init__(self, access=lambda x: x.wait()):
         self.objs = set()
         self.access = access
 
@@ -254,12 +265,13 @@ class AlertCollector(CtxObj):
 
     def __repr__(self):
         if self.objs or self._working:
-            evts = " ".join(self.objs) + " "+str(self._working)
+            evts = " ".join(self.objs) + " " + str(self._working)
             return f"<{self.__class__.__name__}: {evts}>"
         else:
             return f"<{self.__class__.__name__}: empty>"
 
     async def wait(self):
+        "Wait until all alerts have ben resolved."
         await self.evt.wait()
 
     def __await__(self):
@@ -271,7 +283,7 @@ class AlertCollector(CtxObj):
                 self._working = w = self.objs.pop()
                 try:
                     await self.access(w)
-                except BaseException as exc:
+                except BaseException:
                     self.objs.add(w)
                     raise
                 finally:
@@ -285,11 +297,20 @@ class AlertCollector(CtxObj):
 
     async def wait_busy(self):
         """
-        wait until there's somethign to be waited for in here.
+        wait until an alert has been raised.
         """
         if self.non_empty is None:
             return
         await self.non_empty.wait()
+
+    def is_busy(self):
+        """
+        Check if this collector contains unresolved alerts.
+
+        May be spuriously positive if the internal task is slow, or not
+        running.
+        """
+        return self.non_empty is None
 
     @asynccontextmanager
     async def _ctx(self):
@@ -304,5 +325,3 @@ class AlertCollector(CtxObj):
             self.evt = anyio.Event()
             self.non_empty.set()
         self.objs.add(thing)
-
-

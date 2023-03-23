@@ -252,6 +252,13 @@ class AlertCollector(CtxObj):
     # The transition from empty to non-empty is the job of ``.add()``
     # (which doesn't depend on the context to be active).
 
+    def __repr__(self):
+        if self.objs or self._working:
+            evts = " ".join(self.objs) + " "+str(self._working)
+            return f"<{self.__class__.__name__}: {evts}>"
+        else:
+            return f"<{self.__class__.__name__}: empty>"
+
     async def wait(self):
         await self.evt.wait()
 

@@ -231,7 +231,8 @@ class AlertMixin:
 class AlertCollector(CtxObj):
     """
     This context manager stores a variety of alerts, or in fact any other
-    object that can be ``await``ed.
+    object that can be ``await``ed. It is basically the read-side
+    counterpart of an `AlertHandler`.
 
     Awaiting it will delay until all alerts that have been fed to it are
     resolved.

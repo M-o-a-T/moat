@@ -13,6 +13,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
 
     from .base import StdBase
     from .compat import Event, TaskGroup, print_exc, sleep_ms
+    from ..util import import_
 
     if isinstance(cfg, str):
         import msgpack
@@ -133,6 +134,10 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
 
         async with TaskGroup() as tg:
             # start comms (and load app frontends)
+            for s in cfg.get("setup",[]):
+                r = import_(s)
+                await tg.spawn(r.run)
+
             await tg.spawn(setup, tg, state, _name="setup", ready=ready)
 
             # If started from the ("raw") REPL, fake being done

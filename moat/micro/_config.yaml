@@ -5,6 +5,7 @@ micro:
   link:
     guarded: false
     lossy: false
+  setup: []
   apps:
     f: moat.micro.app.fs.FsCmd
 #   wdt: app.wdt.WDTCmd

@@ -10,7 +10,8 @@ import sys
 from contextlib import asynccontextmanager
 
 import anyio
-from moat.util import to_attrdict
+from moat.micro.proto.stream import as_proxy
+from moat.util import packer,unpacker, to_attrdict, attrdict
 
 from moat.micro.compat import TaskGroup
 from moat.micro.main import get_link
@@ -51,3 +52,39 @@ async def test_cfg(tmp_path):
             assert cfg.tt.a == "d"
             assert cfg.tt.e.f == 42
             assert cfg.tt.x == "y"
+
+
+class Bar:
+    def __init__(self, x):
+        self.x = x
+    def __eq__(self, other):
+        return self.x == other.x
+
+@as_proxy("fu")
+class Foo(Bar):
+    pass
+
+_val = [
+        Foo(42),
+        attrdict(x=1,y=2),
+    ]
+
+async def test_msgpack(tmp_path):
+    async with mpy_server(tmp_path) as obj:
+        async with mpy_client(obj) as req:
+            f = Foo(42)
+            b = Bar(95)
+            as_proxy("b",b)
+
+            r = await req.send(["sys","eval"],val=f)
+            assert r[0] == f
+            assert r[1] == "Foo.x=42"
+            r = await req.send(["sys","eval"],val=f,attrs=("x",))
+            assert r[0] == 42, r
+
+            r = await req.send(["sys","eval"],val=b)
+            assert r[0] == b
+            assert r[1] == "Bar.x=95"
+            r = await req.send(["sys","eval"],val=b,attrs=("x",))
+            assert r[0] == 95, r
+

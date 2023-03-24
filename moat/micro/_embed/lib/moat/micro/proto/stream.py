@@ -48,45 +48,116 @@ class _Base(_Stacked):
         self.s.close()
 
 
-_Proxy = {'-': NotGiven}
-_RProxy = {id(NotGiven): '-'}
-
-
-def drop_proxy(p):
-    if not isinstance(p, str):
-        p = _RProxy[id(p)]
-    r = _Proxy.pop(p)
-    del _RProxy[id(r)]
-
-
-def ext_proxy(code, data):
-    if code == 4:
-        n = data.decode("utf-8")
-        try:
-            return _Proxy[n]
-        except KeyError:
-            if Proxy is None:
-                raise NoProxyError(n)
-            return Proxy(n)
-    return ExtType(code, data)
-
-
 _pkey = 1
+_CProxy = {}
+_RProxy = {}
 
+def _builder(typ, data):
+    obj = object.__new__(typ)
+    for k,v in data.items():
+        setattr(obj,k,v)
+    return obj
 
-def default_handler(obj):
-    if Proxy is not None and isinstance(obj, Proxy):
-        return ExtType(4, obj.name.encode("utf-8"))
-
+def get_proxy(obj):
     try:
-        k = _RProxy[id(obj)]
+        return _RProxy[id(obj)]
     except KeyError:
         global _pkey
         k = "p_" + str(_pkey)
         _pkey += 1
-        _Proxy[k] = obj
+        _CProxy[k] = obj
         _RProxy[id(obj)] = k
-    return ExtType(4, k.encode("utf-8"))
+        return k
+
+def _getstate(self):
+    return self.__dict__
+
+def as_proxy(name, obj=NotGiven):
+    """
+    Export an object as a named proxy.
+    Usage:
+
+        @as_proxy("foo")
+        class Foo():
+            def __
+        """
+    def _proxy(obj):
+        "Export @obj as a proxy."
+        _CProxy[name] = obj
+        _RProxy[id(obj)] = name
+#       if isinstance(obj,type) and not hasattr(obj,"__getstate__"):
+#           obj.__getstate__ = _getstate
+        return obj
+
+    if obj is NotGiven:
+        return _proxy
+    else:
+        _proxy(obj)
+        return obj
+
+
+def drop_proxy(p):
+    """
+    After sending a proxy we keep it in memory in case the remote returns
+    it, or an expression with it.
+
+    If that won't happen, the remote needs to tell us to clean it up.
+    """
+    if not isinstance(p, str):
+        p = _RProxy[id(p)]
+    r = _CProxy.pop(p)
+    del _RProxy[id(r)]
+
+
+def _decode(code, data):
+    if code == 4:
+        n = data.decode("utf-8")
+        try:
+            return _CProxy[n]
+        except KeyError:
+            if Proxy is None:
+                raise NoProxyError(n)
+            return Proxy(n)
+    elif code == 5:
+        s = Unpacker(None)
+        s.feed(data)
+#       s = iter(s)
+#       return _CProxy[next(s)](*s)
+        s,d = list(s)
+        print("GEN",s,d, file=sys.stderr)
+        p = object.__new__(_CProxy[s])
+        for k,v in d.items():
+            setattr(p,k,v)
+        return p
+
+    return ExtType(code, data)
+
+
+def _encode(obj):
+    if Proxy is not None and isinstance(obj, Proxy):
+        return ExtType(4, obj.name.encode("utf-8"))
+
+    k = _RProxy.get(id(obj))
+    if k is not None:
+        return ExtType(4, k.encode("utf-8"))
+    try:
+        k = _RProxy[id(type(obj))]
+    except KeyError:
+        k = get_proxy(obj)
+        return ExtType(4, k.encode("utf-8"))
+    else:
+        try:
+            p = obj.__getstate__
+        except AttributeError:
+            p = (obj.__dict__,)
+        else:
+            p = p()
+            if not isinstance(p,(list,tuple)):
+                p = (p,)
+        return ExtType(5, packb(k) + b"".join(packb(x) for x in p))
+
+
+as_proxy("-")(NotGiven)
 
 
 class MsgpackStream(_Stacked):
@@ -104,18 +175,18 @@ class MsgpackStream(_Stacked):
         #
         super().__init__(stream)
         self.w_lock = Lock()
-        kw['ext_hook'] = ext_proxy
+        kw['ext_hook'] = _decode
 
         if console_handler is not None or msg_prefix is not None:
             kw["read_size"] = 1
 
         if sys.implementation.name == "micropython":
             # we use a hacked version of msgpack with a stream-y async unpacker
-            self.pack = Packer(default=default_handler).packb
+            self.pack = Packer(default=_encode).packb
             self.unpack = Unpacker(stream, **kw).unpack
         else:
             # regular Python: msgpack uses a sync read call, so use greenback to async-ize it
-            self.pack = Packer(default=default_handler).pack
+            self.pack = Packer(default=_encode).pack
             self.unpacker = Unpacker(SyncReadStream(stream), **kw)
 
             async def unpack():
@@ -172,12 +243,12 @@ class MsgpackHandler(_Stacked):
     def __init__(self, stream, **kw):
         super().__init__(stream)
         try:
-            self.unpacker = Unpacker(None, ext_hook=ext_proxy, **kw).unpackb
-            self.pack = Packer(default=default_handler).packb
+            self.unpacker = Unpacker(None, ext_hook=_decode, **kw).unpackb
+            self.pack = Packer(default=_encode).packb
         except AttributeError:
             # SIGH
-            self.unpacker = partial(unpackb, ext_hook=ext_proxy, **kw)
-            self.pack = partial(packb, default=default_handler)
+            self.unpacker = partial(unpackb, ext_hook=_decode, **kw)
+            self.pack = partial(packb, default=_encode)
 
     async def send(self, msg):
         await super().send(self.pack(msg))

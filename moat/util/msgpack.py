@@ -41,7 +41,7 @@ class ProxyObj:
         self.data = data
 
     def __repr__(self):
-        return f"RemoteObj('{self.name}',"+",".join(repr(x) for x in data)+")"
+        return f"RemoteObj({repr(self.name)},"+",".join(repr(x) for x in data)+")"
 
 # _pkey = 1
 _CProxy:dict[str,object] = {}

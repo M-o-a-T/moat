@@ -154,7 +154,7 @@ class SysCmd(BaseCmd):
         # otherwise it's probably a proxy
         for vv in attrs:
             try:
-                val = getattr(v, vv)
+                val = getattr(val, vv)
             except AttributeError:
                 val = val[vv]
         return (val, repr(val))  # may send a proxy

@@ -16,7 +16,7 @@ from .dict import attrdict
 from .path import Path
 from .impl import NotGiven
 
-__all__ = ["packer", "unpacker", "stream_unpacker", "Proxy", "NoProxyError", "as_proxy"]
+__all__ = ["packer", "unpacker", "stream_unpacker", "Proxy", "NoProxyError", "as_proxy", "_CProxy", "_RProxy"]
 
 
 class Proxy:

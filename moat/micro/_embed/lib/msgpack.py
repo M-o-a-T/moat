@@ -153,7 +153,7 @@ class Unpacker(object):
         self._ext_hook = ext_hook
         self._min_memview_len = min_memview_len
 
-    def set_buffer(self, data):
+    def feed(self, data):
         assert self._stream is None
         self._buffer = memoryview(data)
         self._buff_i = 0
@@ -342,7 +342,7 @@ class Unpacker(object):
         return self.unpack()
 
     def unpackb(self, packed):
-        self.set_buffer(packed)
+        self.feed(packed)
         try:
             ret = next(self.unpack())
         except StopIteration as s:

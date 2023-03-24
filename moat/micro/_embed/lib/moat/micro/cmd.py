@@ -209,8 +209,7 @@ class Request(_Stacked):
 
     def __init__(self, *a, ready=None, **k):
         if sys.implementation.name != "micropython" and self.APP == "app":
-            breakpoint()
-            raise ValueError("OWCHI")
+            raise ValueError("Cannot work")
         super().__init__(*a, **k)
         self.reply = {}
         self.seq = 0

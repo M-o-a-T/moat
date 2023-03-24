@@ -1,3 +1,5 @@
+import usys
+
 from moat.micro.compat import Event
 
 class NotGiven:
@@ -128,7 +130,7 @@ def import_(name, off=0):
         for nn in n[1:]:
             res = getattr(res,nn)
     except Exception as exc:   
-        sys.modules.pop(mn, None)
+        usys.modules.pop(mn, None)
         raise exc
     return res
 

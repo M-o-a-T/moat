@@ -341,6 +341,22 @@ class Unpacker(object):
     def __anext__(self):
         return self.unpack()
 
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        g = self.unpack()
+        try:
+            g.send(None)
+        except StopIteration as exc:
+            return exc.value
+        except OutOfData:
+            raise StopIteration
+        except BaseException as err:
+            raise RuntimeError(err)
+        else:
+            raise RuntimeError("Needs async")
+
     def unpackb(self, packed):
         self.feed(packed)
         try:

@@ -1,5 +1,5 @@
 #
-from moat.micro.proto.stream import as_proxy
+from moat.util import as_proxy
 
 class Bar:
     def __init__(self, x):

@@ -3,12 +3,11 @@ import gc
 import machine
 import uos
 import usys
-from moat.util import NotGiven
+from moat.util import NotGiven, drop_proxy
 
 from .cmd import BaseCmd
 from .compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms
 from .proto.stack import RemoteError
-from .proto.stream import drop_proxy
 
 
 class NoArg:

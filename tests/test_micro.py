@@ -10,8 +10,7 @@ import sys
 from contextlib import asynccontextmanager
 
 import anyio
-from moat.micro.proto.stream import as_proxy
-from moat.util import packer,unpacker, to_attrdict, attrdict
+from moat.util import packer,unpacker, to_attrdict, attrdict, as_proxy
 
 from moat.micro.compat import TaskGroup
 from moat.micro.main import get_link

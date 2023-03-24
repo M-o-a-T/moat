@@ -1,5 +1,5 @@
 from functools import partial
-from moat.util import NoProxyError, NotGiven
+from moat.util import NoProxyError, NotGiven, _CProxy, _RProxy
 
 from ..compat import Lock, TimeoutError, wait_for_ms
 
@@ -47,67 +47,7 @@ class _Base(_Stacked):
     async def aclose(self):
         self.s.close()
 
-
-_pkey = 1
-_CProxy = {}
-_RProxy = {}
-
-def _builder(typ, data):
-    obj = object.__new__(typ)
-    for k,v in data.items():
-        setattr(obj,k,v)
-    return obj
-
-def get_proxy(obj):
-    try:
-        return _RProxy[id(obj)]
-    except KeyError:
-        global _pkey
-        k = "p_" + str(_pkey)
-        _pkey += 1
-        _CProxy[k] = obj
-        _RProxy[id(obj)] = k
-        return k
-
-def _getstate(self):
-    return self.__dict__
-
-def as_proxy(name, obj=NotGiven):
-    """
-    Export an object as a named proxy.
-    Usage:
-
-        @as_proxy("foo")
-        class Foo():
-            def __
-        """
-    def _proxy(obj):
-        "Export @obj as a proxy."
-        _CProxy[name] = obj
-        _RProxy[id(obj)] = name
-#       if isinstance(obj,type) and not hasattr(obj,"__getstate__"):
-#           obj.__getstate__ = _getstate
-        return obj
-
-    if obj is NotGiven:
-        return _proxy
-    else:
-        _proxy(obj)
-        return obj
-
-
-def drop_proxy(p):
-    """
-    After sending a proxy we keep it in memory in case the remote returns
-    it, or an expression with it.
-
-    If that won't happen, the remote needs to tell us to clean it up.
-    """
-    if not isinstance(p, str):
-        p = _RProxy[id(p)]
-    r = _CProxy.pop(p)
-    del _RProxy[id(r)]
-
+## msgpack encode/decode
 
 def _decode(code, data):
     if code == 4:
@@ -155,9 +95,6 @@ def _encode(obj):
             if not isinstance(p,(list,tuple)):
                 p = (p,)
         return ExtType(5, packb(k) + b"".join(packb(x) for x in p))
-
-
-as_proxy("-")(NotGiven)
 
 
 class MsgpackStream(_Stacked):

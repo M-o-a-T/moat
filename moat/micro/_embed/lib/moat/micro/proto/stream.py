@@ -1,5 +1,5 @@
 from functools import partial
-from moat.util import NoProxyError, NotGiven, _CProxy, _RProxy
+from moat.util import NoProxyError, NotGiven, name2obj, obj2name
 
 from ..compat import Lock, TimeoutError, wait_for_ms
 
@@ -53,7 +53,7 @@ def _decode(code, data):
     if code == 4:
         n = data.decode("utf-8")
         try:
-            return _CProxy[n]
+            return name2obj(n)
         except KeyError:
             if Proxy is None:
                 raise NoProxyError(n)
@@ -62,10 +62,10 @@ def _decode(code, data):
         s = Unpacker(None)
         s.feed(data)
 #       s = iter(s)
-#       return _CProxy[next(s)](*s)
+#       return name2obj(next(s))(*s)
         s,d = list(s)
         print("GEN",s,d, file=sys.stderr)
-        p = object.__new__(_CProxy[s])
+        p = object.__new__(name2obj(s))
         for k,v in d.items():
             setattr(p,k,v)
         return p
@@ -77,11 +77,13 @@ def _encode(obj):
     if Proxy is not None and isinstance(obj, Proxy):
         return ExtType(4, obj.name.encode("utf-8"))
 
-    k = _RProxy.get(id(obj))
-    if k is not None:
-        return ExtType(4, k.encode("utf-8"))
     try:
-        k = _RProxy[id(type(obj))]
+        k = obj2name(obj)
+        return ExtType(4, k.encode("utf-8"))
+    except KeyError:
+        pass
+    try:
+        k = obj2name(type(obj))
     except KeyError:
         k = get_proxy(obj)
         return ExtType(4, k.encode("utf-8"))

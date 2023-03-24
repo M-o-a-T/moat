@@ -152,6 +152,18 @@ _pkey = 1
 _CProxy = {}
 _RProxy = {}
 
+def name2obj(name, obj=NotGiven):
+    if obj is NotGiven and _CProxy:
+        return _CProxy[name]
+    _CProxy[name] = obj
+    return None
+
+def obj2name(obj, name=NotGiven):
+    if name is NotGiven:
+        return _RProxy[id(obj)]
+    _RProxy[id(obj)] = name
+    return None
+
 def _builder(typ, data):
     obj = object.__new__(typ)
     for k,v in data.items():

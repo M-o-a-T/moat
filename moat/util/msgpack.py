@@ -47,7 +47,7 @@ class ProxyObj:
 _CProxy:dict[str,object] = {}
 _RProxy:dict[int,str] = {}
 
-def as_proxy(name):
+def as_proxy(name, obj=NotGiven):
     """
     Export an object or class as a named proxy.
     """
@@ -55,7 +55,11 @@ def as_proxy(name):
         _CProxy[name] = obj
         _RProxy[id(obj)] = name
         return obj
-    return _proxy
+    if obj is NotGiven:
+        return _proxy
+    else:
+        _proxy(obj)
+        return obj
 
 as_proxy("-")(NotGiven)
 

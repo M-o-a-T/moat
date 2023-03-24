@@ -15,7 +15,7 @@ import msgpack
 from .dict import attrdict
 from .path import Path
 from .impl import NotGiven
-from .proxy import Proxy, NoProxyError, as_proxy, _CProxy, _RProxy
+from .proxy import Proxy, NoProxyError, as_proxy, name2obj, obj2name
 
 __all__ = ["packer", "unpacker", "stream_unpacker"]
 
@@ -24,24 +24,31 @@ def _encode(data):
     if isinstance(data, int) and data >= 1 << 64:
         # bignum
         return msgpack.ExtType(2, data.to_bytes((data.bit_length() + 7) // 8, "big"))
-    elif isinstance(data, Path):
+    if isinstance(data, Path):
         # Path
         return msgpack.ExtType(3, b"".join(packer(x) for x in data))
-    elif isinstance(data, Proxy):
+    if isinstance(data, Proxy):
         # Proxy object
         return msgpack.ExtType(4, data.name.encode("utf-8"))
-    elif isinstance(data, ProxyObj):
+    if isinstance(data, ProxyObj):
         # proxy class
         return msgpack.ExtType(5, packb(data.name) + b"".join(packb(x) for x in data.data))
-    elif id(data) in _RProxy:
-        # already-proxied object
-        return msgpack.ExtType(4, _RProxy[id(data)].encode("utf-8"))
-    elif id(type(data)) in _RProxy:
-        # to-be-proxied object
+    try:
+        name = obj2name(data)
+    except KeyError:
+        pass
+    else:
+        return msgpack.ExtType(4, name.encode("utf-8"))
+
+    try:
+        name = obj2name(type(data))
+    except KeyError:
+        pass
+    else:
         p = data.__getstate__()
         if not isinstance(p,(list,tuple)):
             p = (p,)
-        return msgpack.ExtType(5, packer(_RProxy[id(type(data))]) + b"".join(packer(x) for x in p))
+        return msgpack.ExtType(5, packer(name) + b"".join(packer(x) for x in p))
 
     # XXX we crash instead of sending an unnamed proxy
     # TODO sending a proxied object a second time will build a new one

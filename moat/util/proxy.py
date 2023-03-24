@@ -10,7 +10,7 @@ from .dict import attrdict
 from .path import Path
 from .impl import NotGiven
 
-__all__ = ["Proxy", "NoProxyError", "as_proxy", "_CProxy", "_RProxy"]
+__all__ = ["Proxy", "NoProxyError", "as_proxy", "name2obj", "obj2name"]
 
 
 class Proxy:
@@ -41,13 +41,25 @@ class ProxyObj:
 _CProxy:dict[str,object] = {}
 _RProxy:dict[int,str] = {}
 
+def name2obj(name, obj=NotGiven):
+    if obj is NotGiven and _CProxy:
+        return _CProxy[name]
+    _CProxy[name] = obj
+    return None
+
+def obj2name(obj, name=NotGiven):
+    if name is NotGiven:
+        return _RProxy[id(obj)]
+    _RProxy[id(obj)] = name
+    return None
+
 def as_proxy(name, obj=NotGiven):
     """
     Export an object or class as a named proxy.
     """
     def _proxy(obj):
-        _CProxy[name] = obj
-        _RProxy[id(obj)] = name
+        name2obj(name, obj)
+        obj2name(obj, name)
         return obj
     if obj is NotGiven:
         return _proxy

@@ -195,6 +195,8 @@ def as_proxy(name, obj=NotGiven):
         """
     def _proxy(obj):
         "Export @obj as a proxy."
+        if name in _CProxy and _CProxy[name] is not obj:
+            raise ValueError("Proxy: "+repr(name)+" already exists")
         _CProxy[name] = obj
         _RProxy[id(obj)] = name
 #       if isinstance(obj,type) and not hasattr(obj,"__getstate__"):

@@ -21,6 +21,9 @@ class ADC:
 
     def __init__(self, cmd, cfg, **kw):
         cmd  # unused
+        self.scale = cfg.scale if "scale" in cfg else 1
+        self.offset = cfg.offset if "offset" in cfg else 0
+
         self.min = cfg.min if "min" in cfg else 0
         self.max = cfg.max if "max" in cfg else 1
         self.border = cfg.border if "border" in cfg else 2
@@ -44,5 +47,5 @@ class ADC:
         self.bias = b
 
         # tanh is steeper
-        return self.min+(self.max-self.min)*(0.5+.5*tanh(v))
+        return self.min+(self.max-self.min)*(0.5+.5*tanh(v)) * self.scale + self.offset
         #return self.min+(self.max-self.min)/(1+exp(v))

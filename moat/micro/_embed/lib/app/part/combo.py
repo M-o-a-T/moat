@@ -21,7 +21,7 @@ class Array:
     - parts: array with separate config for paths
       typically includes pin numbers
     """
-    def __init__(self, cmd, cfg, **kw):
+    def __init__(self, cfg, **kw):
         self.parts = []
 
         std = cfg.get("default",{})
@@ -31,7 +31,7 @@ class Array:
             for k,v in std.items():
                 p.setdefault(k,v)
 
-            self.parts.append(load_from_cfg(p, cmd, **kw))
+            self.parts.append(load_from_cfg(p, **kw))
 
 
     async def run(self, cmd):
@@ -61,7 +61,7 @@ class RelADC:
 
     Specialized versions might use a delta instead.
     """
-    def __init__(self, cmd, cfg, **kw):
+    def __init__(self, cfg, **kw):
         pin = cfg.pin
         ref = cfg.ref
         if not isinstance(ref,dict):
@@ -70,8 +70,8 @@ class RelADC:
         for k,v in pin.items():
             ref.setdefault(k,v)
 
-        self.pos = load_from_cfg(pin, cmd, **kw)
-        self.neg = load_from_cfg(ref, cmd, **kw)
+        self.pos = load_from_cfg(pin, **kw)
+        self.neg = load_from_cfg(ref, **kw)
     
     async def run(self, cmd):
         async with TaskGroup() as tg:

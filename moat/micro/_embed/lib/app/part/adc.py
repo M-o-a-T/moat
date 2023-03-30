@@ -17,8 +17,7 @@ class ADC(M.ADC):
     All other import arguments are taken from keywords.
     """
 
-    def __new__(cls, cmd, cfg, **kw):
-        cmd  # unused
+    def __new__(cls, cfg, **kw):
         kw["id"] = cfg.pin
         self = super().__new__(**kw)
 

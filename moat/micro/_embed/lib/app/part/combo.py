@@ -16,8 +16,9 @@ class RelADC:
             pin = attrdict(pin=pin)
         if not isinstance(ref,dict):
             ref = attrdict(pin=ref)
+
         for k,v in cfg.items():
-            if k in (pin,ref):
+            if k in ("pin","ref"):
                 continue
             pin.setdefault(k,v)
             ref.setdefault(k,v)

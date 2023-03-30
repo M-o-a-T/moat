@@ -4,6 +4,60 @@ fake sensors
 
 import random
 from math import tanh,exp
+from moat.micro.compat import Event
+
+PINS = {}
+
+class PIN:
+    """
+    This is a fake Pin.
+    """
+    def __init__(self, cfg, **kw):
+        PINS[cfg.pin] = self
+        self.flag = Event()
+        self._value = False
+
+    def in_value(self, val):
+        self.flag.set()
+        self._value = val
+
+    @property
+    def value(self):
+        return self._value
+
+    async def __aenter__(self):
+        self.flag.set()
+        self.flag = Event()
+
+    async def __aexit__(self, *err):
+        pass
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        await self.flag.wait()
+        return self._value
+
+    async def run(self, cmd):
+        pass
+
+    async def get(self):
+        return self._value
+
+    async def set(self, value):
+        if self._value != value:
+            self.flag.set()
+            self.flag = Event()
+            self._value = value
+
+    async def on(self):
+        self._value = True
+
+    async def off(self):
+        self._value = False
+
+
 
 class ADC:
     """

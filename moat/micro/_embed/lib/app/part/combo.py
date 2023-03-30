@@ -22,10 +22,6 @@ class RelADC:
                 continue
             pin.setdefault(k,v)
             ref.setdefault(k,v)
-        pin.setdefault("scale",1)
-        ref.setdefault("scale",1)
-        pin.setdefault("offset",0)
-        ref.setdefault("offset",0)
 
         self.pos = load_from_cfg(pin, **kw)
         self.neg = load_from_cfg(ref, **kw)

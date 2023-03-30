@@ -35,7 +35,7 @@ class Pin(M.Pin):
     async def __aexit__(self, *err):
         self.irq(None)
 
-    def __aiter_(self):
+    def __aiter__(self):
         return self
 
     async def __anext__(self):

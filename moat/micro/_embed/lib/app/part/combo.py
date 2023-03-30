@@ -3,6 +3,44 @@
 from moat.compat import TaskGroup
 from moat.util import attrdict
 
+class Array:
+    """
+    A generic reader that builds a list of values
+    """
+    def __init__(self, cmd, cfg, **kw):
+        self.parts = []
+
+        std = cfg.get("default",{})
+        for p in cfg.parts:
+            if not isinstance(p,dict):
+                p = attrdict(pin=p)
+            for k,v in std.items():
+                p.setdefault(k,v)
+
+            self.parts.append(load_from_cfg(p, cmd, **kw))
+
+
+    async def run(self):
+        "Start the parts' background tasks"
+        async with TaskGroup() as tg:
+            for p in self.parts:
+                await tg.spawn(p.run)
+
+
+    async def read(self):
+        """
+        Return all values as an array
+        """
+        res = [None]*len(self.parts)
+        async def proc(n):
+            r = await self.parts[n]
+            res[n] = r
+        async with TaskGroup() as tg:
+            for i in range(len(self.parts)):
+                tg.start_soon(proc, i)
+        return res
+
+
 class RelADC: 
     """
     A generic ADC that returns one value relative to another.

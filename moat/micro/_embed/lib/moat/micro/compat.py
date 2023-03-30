@@ -12,12 +12,17 @@ CancelledError = uasyncio.CancelledError
 # from uasyncio import Event,Lock,sleep,sleep_ms,TimeoutError, run as _run, TaskGroup as _tg, CancelledError
 from uasyncio.queues import Queue, QueueEmpty, QueueFull
 from utime import ticks_add, ticks_diff, ticks_ms
-from machine import Pin
+try:
+    from machine import Pin
+except ImportError:  # µPy on Linux
+    Pin_IN = "IN"
+    Pin_OUT = "OUT"
+else:
+    Pin_IN = Pin.IN
+    Pin_OUT = Pin.OUT
 
 WouldBlock = (QueueFull, QueueEmpty)
 
-Pin_IN = Pin.IN
-Pin_OUT = Pin.OUT
 
 def print_exc(a, b=usys.stderr):
     usys.print_exception(a, b)

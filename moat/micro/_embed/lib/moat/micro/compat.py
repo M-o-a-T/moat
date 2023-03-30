@@ -39,6 +39,37 @@ def wait_for_ms(timeout, p, *a, **k):
     return uasyncio.wait_for_ms(p(*a, **k), timeout)
 
 
+class _MsecIter:
+    tt = None
+
+    def __init__(self, t,p,a,k):
+        self.t = t
+        self.p, self.a, self.k = p,a,k
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        if self.tt is None:
+            self.tt = ticks_add(ticks_ms(), self.t)
+        else:
+            tn = ticks_ms()
+            if (td := ticks_diff(self.tt, tn)) > 0:
+                await sleep_ms(td)
+                self.tt = ticks_add(self.tt, self.t)
+            else:
+                # owch, delay too long
+                self.tt = ticks_add(tn, self.t)
+        return await self.p(*self.a, **self.k)
+
+
+def every_ms(t, p, *a, **k):
+    return _MsecIter(t,p,a,k)
+
+def every(t, p, *a, **k):
+    return every_ms(t*1000, p, *a, **k)
+
+
 class TaskGroup(_tg):
     async def spawn(self, p, *a, _name=None, **k):
         return self.create_task(p(*a, **k))  # , name=_name)

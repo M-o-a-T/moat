@@ -26,7 +26,6 @@ def print_exc(exc):
 def ticks_ms():
     return _time.monotonic_ns() // 1000000
 
-
 async def sleep_ms(ms):
     await sleep(ms / 1000)
 
@@ -35,10 +34,29 @@ async def wait_for(timeout, p, *a, **k):
     with _anyio.fail_after(timeout):
         return await p(*a, **k)
 
-
 async def wait_for_ms(timeout, p, *a, **k):
     with _anyio.fail_after(timeout / 1000):
         return await p(*a, **k)
+
+
+async def every_ms(t, p, *a, **k):
+    tt = ticks_add(ticks_ms(), t)
+    while True:
+        try:
+            yield await p(*a,**k)
+        except StopAsyncIteration:
+            return
+        tn = ticks_ms()
+        td = ticks_diff(tt, tn)
+        if td > 0:
+            await sleep_ms(td)
+            tt += t
+        else:
+            # owch, delay too long
+            tt = ticks_add(tn, t)
+
+def every(t, p, *a, **k):
+    return every_ms(t*1000, p, *a, **k)
 
 
 async def idle():

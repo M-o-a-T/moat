@@ -1,8 +1,4 @@
-"""
-Misc client/server support parts
-"""
-
-from ._common import _Remote
+from .._common import _Remote
 
 class Client(_Remote):
     """

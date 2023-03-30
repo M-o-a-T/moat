@@ -14,6 +14,12 @@ class Server(_Remote):
 class Array:
     """
     A generic reader that builds a list of values
+
+    Configuration:
+    - default: common parameter for all parts
+      typically includes "client" or "server" tags
+    - parts: array with separate config for paths
+      typically includes pin numbers
     """
     def __init__(self, cmd, cfg, **kw):
         self.parts = []

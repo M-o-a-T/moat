@@ -1,7 +1,5 @@
 # special combo parts
 
-import uasyncio
-
 from moat.compat import TaskGroup
 from moat.util import attrdict
 

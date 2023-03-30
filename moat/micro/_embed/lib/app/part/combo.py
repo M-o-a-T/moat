@@ -1,7 +1,7 @@
 # special combo parts
 
 from moat.compat import TaskGroup
-from moat.util import attrdict
+from moat.util import attrdict, load_from_cfg
 from moat.micro._common import _Remote
 
 class Server(_Remote):

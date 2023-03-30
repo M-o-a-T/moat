@@ -2,6 +2,14 @@
 
 from moat.compat import TaskGroup
 from moat.util import attrdict
+from moat.micro._common import _Remote
+
+class Server(_Remote):
+    """
+    A generic reader that fetches a value from the server
+    """
+    pass
+
 
 class Array:
     """
@@ -47,7 +55,7 @@ class RelADC:
 
     Specialized versions might use a delta instead.
     """
-    def __init__(self, cfg, **kw):
+    def __init__(self, cmd, cfg, **kw):
         pin = cfg.pin
         ref = cfg.ref
         if not isinstance(ref,dict):
@@ -56,8 +64,8 @@ class RelADC:
         for k,v in pin.items():
             ref.setdefault(k,v)
 
-        self.pos = load_from_cfg(pin, **kw)
-        self.neg = load_from_cfg(ref, **kw)
+        self.pos = load_from_cfg(pin, cmd, **kw)
+        self.neg = load_from_cfg(ref, cmd, **kw)
     
     async def run(self):
         async with TaskGroup() as tg:

@@ -10,12 +10,13 @@ class Relay:
     """
     A relay is an output pin with an overriding "force" state.
     """
-    def __init__(self, cfg, value=None, force=None, **kw):
+    def __init__(self, cmd, cfg, value=None, force=None, **kw):
+        cmd  # unused
         pin = cfg.pin
         if isinstance(pin,int):
             cfg.pin = attrdict(client="app.part.pin.Pin", pin=pin)
         kw.setdefault(mode, M.Pin.OUT)
-        self.pin = load_from_cfg(cfg.pin, **kw)
+        self.pin = load_from_cfg(cfg.pin, cmd, **kw)
 
         if value is None:
             value = self.pin.value()

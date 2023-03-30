@@ -16,7 +16,8 @@ class Pin(M.Pin):
     All other import arguments are taken from keywords.
     """
 
-    def __new__(cls, cfg, **kw):
+    def __new__(cls, cmd, cfg, **kw):
+        cmd  # unused
         kw["id"] = cfg.pin
         self = super().__new__(**kw)
         self.flag = uasyncio.ThreadSafeFlag()

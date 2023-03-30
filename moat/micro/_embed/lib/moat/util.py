@@ -134,7 +134,7 @@ def import_(name, off=0):
         raise exc
     return res
 
-def load_from_cfg(cfg, *a, **k):
+def load_from_cfg(cfg, cmd, *a, **k):
     """   
     A simple frontend to load a module, access a class/object from it, 
     and call that with the config (and whichever other arguments you want to  

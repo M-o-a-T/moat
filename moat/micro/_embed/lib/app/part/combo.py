@@ -43,20 +43,17 @@ class Array:
 
 class RelADC: 
     """
-    A generic ADC that returns one value relative to another.
+    A generic ADC that returns a relative value.
+
+    Specialized versions might use a delta instead.
     """
     def __init__(self, cfg, **kw):
         pin = cfg.pin
         ref = cfg.ref
-        if not isinstance(pin,dict):
-            pin = attrdict(pin=pin)
         if not isinstance(ref,dict):
             ref = attrdict(pin=ref)
 
-        for k,v in cfg.items():
-            if k in ("pin","ref"):
-                continue
-            pin.setdefault(k,v)
+        for k,v in pin.items():
             ref.setdefault(k,v)
 
         self.pos = load_from_cfg(pin, **kw)

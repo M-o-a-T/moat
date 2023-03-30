@@ -42,7 +42,7 @@ class WDTCmd(BaseCmd):
             self.wdt = WDT(cfg)
 
     async def run(self):
-        await self.wdt.run()
+        await self.wdt.run(self)
 
     async def config_updated(self, cfg):
         await super().config_updated(cfg)

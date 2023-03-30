@@ -34,11 +34,11 @@ class Array:
             self.parts.append(load_from_cfg(p, cmd, **kw))
 
 
-    async def run(self):
+    async def run(self, cmd):
         "Start the parts' background tasks"
         async with TaskGroup() as tg:
             for p in self.parts:
-                await tg.spawn(p.run)
+                await tg.spawn(p.run, cmd)
 
 
     async def read(self):
@@ -73,10 +73,10 @@ class RelADC:
         self.pos = load_from_cfg(pin, cmd, **kw)
         self.neg = load_from_cfg(ref, cmd, **kw)
     
-    async def run(self):
+    async def run(self, cmd):
         async with TaskGroup() as tg:
-            await tg.spawn(self.pos.run)
-            await tg.spawn(self.neg.run)
+            await tg.spawn(self.pos.run, cmd)
+            await tg.spawn(self.neg.run, cmd)
 
     async def read(self):
         p = n = None

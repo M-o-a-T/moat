@@ -26,7 +26,7 @@ class Serial:
         self.xmit_evt = Event()
         self.w_lock = Lock()
 
-    async def run(self):
+    async def run(self, cmd):
         cfg = self.cfg
         self.ser = AsyncStream(
             M.UART(
@@ -116,7 +116,7 @@ class SerialCmd(BaseCmd):
 
     async def run(self):
         try:
-            await self.ser.run()
+            await self.ser.run(self)
         finally:
             del self.ser
 

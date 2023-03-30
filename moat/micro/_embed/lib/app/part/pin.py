@@ -43,7 +43,7 @@ class Pin(M.Pin):
         self.flag.clear()
         return self.pin.value()
 
-    async def run(self):
+    async def run(self, cmd):
         async with self:
             while True:
                 await uasyncio.sleep(9999)

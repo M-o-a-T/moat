@@ -38,5 +38,5 @@ class ADC(M.ADC):
                 c += self.read_u16()
         return c * self.factor + self.offset
 
-    async def run(self):
+    async def run(self, cmd):
         pass

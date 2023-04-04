@@ -149,6 +149,11 @@ class _HostCommon:
         self._tid = (self._tid + 1) % 0xFFFF
         return self._tid
 
+    async def send(self, msg):
+        packet = self.framer.buildPacket(msg)
+        async with self._send_lock:
+            await self.stream.send(packet)
+
     async def execute(self, request):
         """
         Send a pymodbus request and wait for / return the reply.
@@ -169,9 +174,7 @@ class _HostCommon:
 
             try:
                 self._transactions[request.transaction_id] = request
-                packet = self.framer.buildPacket(request)
-                async with self._send_lock:
-                    await self.stream.send(packet)
+                await self.send(request)
                 with anyio.fail_after(self.timeout):
                     res = await request._response_value.get()
             except TimeoutError:

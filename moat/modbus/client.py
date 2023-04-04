@@ -376,13 +376,14 @@ class SerialHost(CtxObj, _HostCommon):
 
     max_req_len = 50  # max number of registers to fetch w/ one request
 
-    def __init__(self, gate, /, port, timeout=10, cap=1, debug=False, **ser):
+    def __init__(self, gate, /, port, timeout=10, cap=1, debug=False, monitor=None, **ser):
         self.port = port
         self.ser = ser
         self.framer = ModbusRtuFramer(ClientDecoder(), self)
 
         log = logging.getLogger(f"modbus.{Path(port).name}")
         self._trace = log.info if debug else log.debug
+        self._monitor = monitor
 
         super().__init__(gate, timeout, cap)
 
@@ -434,6 +435,7 @@ class SerialHost(CtxObj, _HostCommon):
         task_status.started()
         self._trace("recv START")
 
+        mon = self._monitor
         while True:
             try:
                 data = await self.stream.receive(4096)
@@ -476,14 +478,18 @@ class SerialHost(CtxObj, _HostCommon):
                 raise
 
             else:
-                for reply in replies:
-                    tid = reply.transaction_id
-                    try:
-                        request = self._transactions.pop(tid)
-                    except KeyError:
-                        _logger.info("Unrequested message: %s", reply)
-                    else:
-                        request._response_value.set(reply)
+                if mon:
+                    for reply in replies:
+                        await mon(reply)
+                else:
+                    for reply in replies:
+                        tid = reply.transaction_id
+                        try:
+                            request = self._transactions.pop(tid)
+                        except KeyError:
+                            _logger.info("Unrequested message: %s", reply)
+                        else:
+                            request._response_value.set(reply)
 
     async def aclose(self):
         """Stop talking."""

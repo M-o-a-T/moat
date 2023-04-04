@@ -242,6 +242,13 @@ async def _serclient(
             log.exception("Problem: %r", exc)
 
 
+def add_serial_cfg(c):
+    c = click.option("--port", "-p", required=True, type=str, help="destination port (/dev/ttyXXX)")(c)
+    c = click.option("--baudrate", "-b", type=int, default=9600, help="Baud rate (9600)")(c)
+    c = click.option("--parity", "-P", type=str, default="N", help="Parity (NEO), default N")(c)
+    c = click.option("--stopbits", "-S", type=int, default=1, help="Stopbits (12), default 1")(c)
+    return c
+
 def mk_serial_client(m):
     """helper to create a sserial client"""
     c = _serclient
@@ -259,11 +266,8 @@ def mk_serial_client(m):
     c = click.option("--kind", "-k", default="i", help="query type: input, discrete, hold, coil")(
         c
     )
+    c = add_serial_cfg(c)
     c = click.option("--unit", "-u", type=int, default=1, help="unit to query")(c)
-    c = click.option("--port", "-p", type=str, help="destination port (/dev/ttyXXX)")(c)
-    c = click.option("--baudrate", "-b", type=int, default=9600, help="Baud rate (9600)")(c)
-    c = click.option("--parity", "-P", type=str, default="N", help="Parity (NEO), default N")(c)
-    c = click.option("--stopbits", "-S", type=int, default=1, help="Stopbits (12), default 1")(c)
     c = m.command("serial", context_settings=dict(show_default=True))(c)
     return c
 

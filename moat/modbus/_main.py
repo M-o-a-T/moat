@@ -26,9 +26,11 @@ server = mk_server(cli)
 @cli.group(invoke_without_command=True)
 @add_serial_cfg
 @click.pass_context
-async def relay(ctx, **params):
+async def monitor(ctx, **params):
     """
-    A basic Modbus RTU monitoe.
+    A basic Modbus RTU monitor.
+
+    This command simply shows the messages on a Modbus RTU line.
     """
     obj = ctx.obj
 
@@ -45,15 +47,15 @@ async def relay(ctx, **params):
         while True:
             await anyio.sleep(99999)
 
-@relay.command
+@monitor.command
 @add_serial_cfg
 @click.option("-r","--retry", type=int, help="Delay between restarts in case of errors")
 @click.pass_obj
 async def to(obj, retry, **params):
     """
-    Modbus relaying between two RTU devices.
+    Tells the monitor to relay between two RTU devices.
 
-    Useful for monitoring, reverse engineering, speed translation, debugging …
+    Useful for reverse engineering, serial speed/format translation, debugging …
     """
     A = None
     B = None

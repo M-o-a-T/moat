@@ -51,7 +51,7 @@ directions (command/state).
 TODO
 ++++
 
-* plain MQTT
 * configurable codecs
 * get/set attributes
 * pack multiple values into a message
+* read-after-write if no slot

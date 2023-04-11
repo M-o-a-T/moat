@@ -1,17 +1,12 @@
-# special combo parts
+"""
+Readers that aggregate multiple results
+"""
 
 from moat.compat import TaskGroup
 from moat.util import attrdict, load_from_cfg
-from moat.micro._common import _Remote
+from moat.micro.link import Reader
 
-class Server(_Remote):
-    """
-    A generic reader that fetches a value from the server
-    """
-    pass
-
-
-class Array:
+class Array(Reader):
     """
     A generic reader that builds a list of values
 
@@ -22,6 +17,8 @@ class Array:
       typically includes pin numbers
     """
     def __init__(self, cfg, **kw):
+        super().__init__(cfg, **kw)
+
         self.parts = []
 
         std = cfg.get("default",{})
@@ -55,11 +52,9 @@ class Array:
         return res
 
 
-class RelADC: 
+class Subtract(Reader):
     """
-    A generic ADC that returns a relative value.
-
-    Specialized versions might use a delta instead.
+    A generic reader that returns a relative value.
     """
     def __init__(self, cfg, **kw):
         pin = cfg.pin
@@ -78,7 +73,7 @@ class RelADC:
             await tg.spawn(self.pos.run, cmd)
             await tg.spawn(self.neg.run, cmd)
 
-    async def read(self):
+    async def read_(self):
         p = n = None
         async def get_rel():
             nonlocal n
@@ -88,3 +83,32 @@ class RelADC:
 
         return p - n
 
+
+class Multiply(Reader):
+    """
+    Measure/aggregate data by multiplying two readouts.
+
+    Useful e.g. for power (separate channels for U and I).
+
+    Returns a dict with u,i,p.
+    """
+    def __init__(self, cfg, **kw):
+        super().__init__(cfg, **kw)
+        self.rdr_u = load_from_cfg(cfg.u)
+        self.rdr_i = load_from_cfg(cfg.u)
+
+    async def read_(self):
+        now_u = None
+        now_i = None
+
+        async with TaskGroup() as tg:
+            async def rd_u():
+                nonlocal now_u
+                now_u = await self.rdr_u.read()
+            async def rd_i():
+                nonlocal now_i
+                now_i = await self.rdr_i.read()
+            tg.start_soon(rd_u)
+            tg.start_soon(rd_i)
+
+        return dict(u=now_u, i=now_i, p=now_u*now_i)

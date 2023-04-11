@@ -46,7 +46,7 @@ may fail.
 
 class BaseCmd(_Stacked):
     """
-    Request/response handler (server side)
+    Request/response handler
 
     This is attached as a child to the Request object.
 

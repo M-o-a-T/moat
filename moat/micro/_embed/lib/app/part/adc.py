@@ -4,6 +4,8 @@ Module for pins
 import machine as M
 
 from moat.compat import sleep_ms
+from .link import Reader
+
 
 class ADC(M.ADC):
     """
@@ -15,11 +17,15 @@ class ADC(M.ADC):
                 print("Pin",p,"is now",val)
 
     All other import arguments are taken from keywords.
+
+    This class pseudo-multiple-inherits from Reader.
     """
 
     def __new__(cls, cfg, **kw):
         kw["id"] = cfg.pin
         self = super().__new__(**kw)
+        self.cfg = cfg
+        return self
 
     def __init__(self, cfg, **kw):
         self.n = cfg.get("n",1)
@@ -27,6 +33,10 @@ class ADC(M.ADC):
         self.dly = cfg.get("delay",1)
         self.factor = cfg.get("factor", 1) / self.n / self.nn
         self.offset = cfg.get("offset", 0)
+        Reader.__init__(self, cfg)
+
+    async def run(self, cmd):
+        await Reader.run(cmd)
 
     async def read(self):
         c = 0
@@ -35,12 +45,15 @@ class ADC(M.ADC):
                 await sleep_ms(self.dly)
             for b in range(self.n):
                 c += self.read_u16()
-        return c * self.factor + self.offset
+        res = c * self.factor + self.offset
+        await self.send(res)
+        return res
 
-    async def run(self, cmd):
+    async def send(self, **msg):
+        await Reader.send(**msg)
 
  
-class Multiply:
+class Multiply(Reader):
     """
     Measure/aggregate data by multiplying two readouts.
 
@@ -49,11 +62,9 @@ class Multiply:
     Returns a dict with u,i,p.
     """
     def __init__(self, cfg, **kw):
+        super().__init__(cfg, **kw)
         self.rdr_u = load_from_cfg(cfg.u)
         self.rdr_i = load_from_cfg(cfg.u)
-
-    async def run(self, *a):
-        pass
 
     async def read(self):
         now_u = None
@@ -69,4 +80,6 @@ class Multiply:
             tg.start_soon(rd_u)
             tg.start_soon(rd_i)
 
-        return dict(u=now_u, i=now_i, p=now_u*now_i)
+        res = dict(u=now_u, i=now_i, p=now_u*now_i)
+        await self.send(res)
+        return res

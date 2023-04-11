@@ -38,6 +38,8 @@ class Relay:
     """
     _delay = None
     t_last = 0
+    value = None
+    force = None
 
     def __init__(self, cfg, value=None, force=None, **kw):
         pin = cfg.pin
@@ -47,9 +49,6 @@ class Relay:
         self.pin = load_from_cfg(cfg.pin, **kw)
         self.t = [cfg.get("t_off",0), cfg.get("t_on",0)]
         self.note = cfg.get("note",None)
-
-        self.value = value
-        self.force = force
 
     async def set(self, value=None, force=NotGiven):
         """
@@ -100,13 +99,20 @@ class Relay:
         await self._set()
 
 
-    async def get(self):
+    def get_sync(self):
         """
         Return the current intended state.
         """
         if self.force is not None:
             return self.force
         return self.value
+
+    async def get(self):
+        return self.get_sync()
+
+    @property
+    def delayed(self):
+        return self._delay is not None
 
     async def state(self):
         return dict(

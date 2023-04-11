@@ -38,4 +38,35 @@ class ADC(M.ADC):
         return c * self.factor + self.offset
 
     async def run(self, cmd):
+
+ 
+class Multiply:
+    """
+    Measure/aggregate data by multiplying two readouts.
+
+    Useful e.g. for power (separate channels for U and I).
+
+    Returns a dict with u,i,p.
+    """
+    def __init__(self, cfg, **kw):
+        self.rdr_u = load_from_cfg(cfg.u)
+        self.rdr_i = load_from_cfg(cfg.u)
+
+    async def run(self, *a):
         pass
+
+    async def read(self):
+        now_u = None
+        now_i = None
+
+        async with TaskGroup() as tg:
+            async def rd_u():
+                nonlocal now_u
+                now_u = await self.rdr_u.read()
+            async def rd_i():
+                nonlocal now_i
+                now_i = await self.rdr_i.read()
+            tg.start_soon(rd_u)
+            tg.start_soon(rd_i)
+
+        return dict(u=now_u, i=now_i, p=now_u*now_i)

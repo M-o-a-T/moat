@@ -4,8 +4,10 @@ import errno
 import logging
 import os
 import stat
+import anyio
 from collections import defaultdict
 from pathlib import PosixPath as Path
+from contextlib import asynccontextmanager
 
 import pyfuse3
 from pyfuse3 import (  # pylint: disable=E0611
@@ -761,3 +763,34 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             h = await self.open(i, flags, ctx)
             a = await self.getattr(i, ctx, _res=r)
             return (h, a)
+
+
+@asynccontextmanager
+async def wrap(link, path, blocksize=0, debug=1):
+    import pyfuse3
+
+    operations = Operations(link)
+    if blocksize:
+        operations.max_read = blocksize
+        operations.max_write = blocksize
+
+    logger.debug('Mounting...')
+    fuse_options = set(pyfuse3.default_options)  # pylint: disable=I1101
+    fuse_options.add('fsname=microfs')
+    # fuse_options.add(f'max_read={operations.max_read}')
+    if debug > 1:
+        fuse_options.add('debug')
+    pyfuse3.init(operations, str(path), fuse_options)  # pylint: disable=I1101
+
+    logger.debug('Entering main loop..')
+    async with anyio.create_task_group() as tg:
+        try:
+            tg.start_soon(pyfuse3.main)  # pylint: disable=I1101
+            yield None
+
+        finally:
+            pyfuse3.close(  # pylint: disable=I1101  # was False but we don't continue
+                unmount=True
+            )
+            tg.cancel_scope.cancel()
+

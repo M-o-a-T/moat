@@ -1,12 +1,12 @@
 import pytest
 
 from moat.util import attrdict
-from .fake import ADC
+from  moat.micro.part.fake import ADC
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("seed",range(10))
 async def test_fake(seed):
-    d = ADC(None, attrdict(min=0,max=100,step=10,seed=seed))
+    d = ADC(attrdict(min=0,max=100,step=10,seed=seed))
     md = 0
     mdi = 0
     v = None

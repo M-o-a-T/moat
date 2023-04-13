@@ -9,7 +9,7 @@ pytestmark = pytest.mark.anyio
 
 from moat.micro.proto.stack import _Stacked, Logger
 from moat.micro.proto.reliable import Reliable
-from .loopback import Loop
+from moat.micro._test import Loop
 from moat.micro.compat import TaskGroup
 
 done = [None]*4

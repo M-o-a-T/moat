@@ -5,6 +5,7 @@ fake sensors
 import random
 from math import tanh,exp
 from moat.micro.compat import Event
+from moat.micro.link import Reader
 
 PINS = {}
 
@@ -51,15 +52,8 @@ class PIN:
             self.flag = Event()
             self._value = value
 
-    async def on(self):
-        self._value = True
 
-    async def off(self):
-        self._value = False
-
-
-
-class ADC:
+class ADC(Reader):
     """
     This is a "fake" ADC that walks between a given min and max value.
 
@@ -73,11 +67,7 @@ class ADC:
     - seed: used to reproduce the random sequence.
     """
 
-    def __init__(self, cmd, cfg, **kw):
-        cmd  # unused
-        self.scale = cfg.scale if "scale" in cfg else 1
-        self.offset = cfg.offset if "offset" in cfg else 0
-
+    def __init__(self, cfg, **kw):
         self.min = cfg.min if "min" in cfg else 0
         self.max = cfg.max if "max" in cfg else 1
         self.border = cfg.border if "border" in cfg else 2
@@ -89,7 +79,7 @@ class ADC:
         self.bias = 0
         self.rand = random.Random(cfg.seed if "seed" in cfg else None)
 
-    async def read(self):
+    async def read_(self):
         b = self.bias + (self.rand.random()-0.5)*self.step
         v = self.val + b
         if v > self.border and b > 0:
@@ -101,5 +91,5 @@ class ADC:
         self.bias = b
 
         # tanh is steeper
-        return self.min+(self.max-self.min)*(0.5+.5*tanh(v)) * self.scale + self.offset
-        #return self.min+(self.max-self.min)/(1+exp(v))
+        return self.min + (self.max-self.min) * (0.5+.5*tanh(v))
+        #return self.min + (self.max-self.min) / (1+exp(v))

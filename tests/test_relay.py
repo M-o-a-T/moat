@@ -4,7 +4,7 @@ Test the relay implementation
 import time
 from moat.micro.compat import every_ms, sleep_ms, TaskGroup
 from moat.micro.part.relay import Relay
-from .fake import PINS
+from moat.micro.part.fake import PINS
 from moat.util import attrdict
 
 import pytest
@@ -13,7 +13,7 @@ import pytest
 async def test_rly():
     cfg = attrdict(
             pin=attrdict(
-                server="tests.fake.PIN",
+                server="moat.micro.part.fake.PIN",
                 pin="X"
             ),
             t_on=50,

@@ -15,10 +15,8 @@ from moat.micro.compat import (
     Broadcaster,
     Queue,
 )
-from moat.util import attrdict, import_
-from moat.micro.proto.stack import RemoteError
-from moat.micro.proto.stack import SilentRemoteError as FSError
-from moat.micro.proto.stack import _Stacked
+from moat.util import attrdict, import_, obj2name
+from moat.micro.proto.stack import RemoteError, SilentRemoteError, _Stacked
 
 """
 Basic infrastructure to run an RPC system via an unreliable,
@@ -304,8 +302,10 @@ class Request(_Stacked):
         res = {'i': i}
         try:
             r = await self.child.dispatch(a, d)
-        except FSError as exc:
-            res["e"] = exc.args[0]
+        except SilentRemoteError as exc:
+            if i is None:
+                return
+            res["e"] = exc
         except WouldBlock:
             raise
         except Exception as exc:
@@ -314,7 +314,12 @@ class Request(_Stacked):
             print_exc(exc)
             if i is None:
                 return
-            res["e"] = exc.args[0] if isinstance(exc, RemoteError) else repr(exc)
+            try:
+                obj2name(type(exc))
+            except KeyError:
+                res["e"] = repr(exc)
+            else:
+                res["e"] = exc
         else:
             if i is None:
                 return

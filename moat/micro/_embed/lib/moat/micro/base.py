@@ -7,8 +7,6 @@ from moat.util import NotGiven, drop_proxy
 
 from .cmd import RootCmd, BaseCmd
 from .compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms
-from .proto.stack import RemoteError
-
 
 
 def _complex(v):

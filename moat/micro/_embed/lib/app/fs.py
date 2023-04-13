@@ -6,7 +6,12 @@ import usys
 
 from moat.micro.cmd import BaseCmd
 from moat.micro.compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms
-from moat.micro.proto.stack import SilentRemoteError as FSError
+from moat.util import as_proxy
+from moat.micro.proto.stack import SilentRemoteError
+
+@as_proxy("_FsErr")
+class FSError(SilentRemoteError):
+    pass
 
 
 class FsCmd(BaseCmd):

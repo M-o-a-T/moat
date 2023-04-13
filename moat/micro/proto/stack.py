@@ -7,7 +7,8 @@
 
 import logging
 
-from ..compat import TaskGroup
+from moat.micro.compat import TaskGroup
+from moat.util import as_proxy
 
 logger = logging.getLogger(__name__)
 
@@ -50,10 +51,12 @@ else:
 # may fail.
 
 
+@as_proxy("_rErr")
 class RemoteError(RuntimeError):
     pass
 
 
+@as_proxy("_rErrS")
 class SilentRemoteError(RemoteError):
     pass
 

@@ -664,8 +664,8 @@ class Battery:
 
         u = self.sum_voltage + dplus
 
-        # If we found a new maximum charge voltage we'll use that.
-        # Otherwise the old maximum will decay (very) slowly, so if the battery
+        # If we found a higher maximum charge voltage we'll use that.
+        # Otherwise the old maximum will decay slowly. if the battery
         # becomes less-than-perfectly-balanced after a discharge
         # we don't use the old value.
         if self.umax is None or self.umax < u:

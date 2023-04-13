@@ -148,8 +148,6 @@ class SysCmd(BaseCmd):
         """
         Activate the new config.
         """
-        if d is not None:
-            raise ValueError("no override root")
         await self.request.update_config()
         await self.request.send_nr(["mplex", "cfg"])
         return

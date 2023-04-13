@@ -70,6 +70,7 @@ class FsCmd(BaseCmd):
             self._fs_prefix += "/" + p
 
     def cmd_open(self, p, m="r"):
+        p = self._fsp(p)
         try:
             f = open(p, m + 'b')
         except OSError as e:
@@ -177,6 +178,7 @@ class FsCmd(BaseCmd):
 
     def cmd_rm(self, p):
         # unlink
+        p = self._fsp(p)
         try:
             uos.remove(p)
         except OSError as e:
@@ -186,6 +188,7 @@ class FsCmd(BaseCmd):
 
     def cmd_rmdir(self, p):
         # unlink dir
+        p = self._fsp(p)
         try:
             uos.rmdir(p)
         except OSError as e:
@@ -195,5 +198,6 @@ class FsCmd(BaseCmd):
 
     def cmd_new(self, p):
         # new file
+        p = self._fsp(p)
         f = open(p, "wb")
         f.close()

@@ -12,6 +12,8 @@ from moat.micro.compat import (
     ticks_diff,
     ticks_ms,
     wait_for_ms,
+    Broadcaster,
+    Queue,
 )
 from moat.util import attrdict, import_
 from moat.micro.proto.stack import RemoteError
@@ -403,3 +405,89 @@ class Request(_Stacked):
 
         msg = {"a": action, "d": msg}
         await self.parent.send(msg)
+
+
+class RootCmd(BaseCmd):
+    # Standard toplevel base implementation
+
+    _cfg = None
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self._s = {}
+        self._q = Queue(20)
+
+#   @property
+#   def cfg(self):
+#       return self._cfg
+#   @cfg.setter
+#   def cfg(self, val):
+#       if not isinstance(val, attrdict):
+#           breakpoint()
+#       self._cfg = val
+
+    async def cmd_s(self, o, d):
+        """
+        State update.
+        """
+        b = self._get_br(o)
+        b(d)
+
+    async def cmd_sq(self, o):
+        """
+        State query.
+        """
+        b = self._get_br(o)
+        return await b.read()
+
+    async def run(self):
+        try:
+            while True:
+                await sleep(9999)
+        finally:
+            def _cls(s):
+                for v in s.values():
+                    if isinstance(v,dict):
+                        _cls(v)
+                    else:
+                        v.close()
+            _cls(self._s)
+
+    def _get_br(self, o):
+        s = self._s
+        for x in o[:-1]:
+            try:
+                s = s[x]
+            except KeyError:
+                s = s[x] = {}
+        x = o[-1]
+        try:
+            b = s[x]
+        except KeyError:
+            b = s[x] = RemBroadcaster()
+            Broadcaster.__enter__(b)
+        return b
+
+    def watch(self, *o):
+        b = self._get_br(o)
+        return b.reader(1)
+
+    def register(self, obj, *o):
+        b = self._get_br(o)
+        if b.obj is not None:
+            raise RuntimeError(f"{b.obj} already registered on {o}")
+        b.obj = obj
+        return b
+
+
+class RemBroadcaster(Broadcaster):
+    obj = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *tb):
+        self.obj = None
+
+    async def read(self):
+        return await self.obj.read_()

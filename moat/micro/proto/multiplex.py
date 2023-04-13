@@ -15,8 +15,8 @@ from pprint import pformat
 import anyio
 from moat.util import attrdict, merge, to_attrdict
 
-from ..app import ConfigError
-from ..cmd import BaseCmd
+from ..app._base import ConfigError
+from ..cmd import BaseCmd, RootCmd
 from ..compat import Event, TaskGroup
 from ..main import Request, ClientBaseCmd
 from ..stacks.unix import unix_stack_iter
@@ -101,7 +101,7 @@ class CommandClient(Request):
 #
 
 
-class MultiplexCommand(BaseCmd):
+class MultiplexCommand(RootCmd):
     """
     Server-side main command handler.
     """

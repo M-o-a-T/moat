@@ -5,7 +5,7 @@ import uos
 import usys
 from moat.util import NotGiven, drop_proxy
 
-from .cmd import BaseCmd
+from .cmd import RootCmd, BaseCmd
 from .compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms
 from .proto.stack import RemoteError
 
@@ -323,7 +323,7 @@ class SysCmd(BaseCmd):
         await self.request.send_nr("link", True)
 
 
-class StdBase(BaseCmd):
+class StdBase(RootCmd):
     # Standard toplevel base implementation
 
     def __init__(self, parent, *, cfg, fallback=None, state=None, **k):
@@ -342,3 +342,4 @@ class StdBase(BaseCmd):
         This is for humans. Don't use it for automated keepalive.
         """
         return "R:" + str(m)
+

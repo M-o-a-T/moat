@@ -18,8 +18,9 @@ class Pin(M.Pin):
 
     def __new__(cls, cfg, **kw):
         kw["id"] = cfg.pin
-        self = super().__new__(**kw)
+        self = super().__new__(cls, **kw)
         self.flag = uasyncio.ThreadSafeFlag()
+        return self
 
     def __init__(self, cfg, **kw):
         pass

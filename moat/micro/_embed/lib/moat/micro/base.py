@@ -10,9 +10,6 @@ from .compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms
 from .proto.stack import RemoteError
 
 
-class NoArg:
-    pass
-
 
 def _complex(v):
     if not isinstance(v, (dict, list, tuple)):

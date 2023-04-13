@@ -229,6 +229,8 @@ class Request(BaseRequest):
             d = await self.send(("sys", "cfg"), p=p)
             if isinstance(d, (list, tuple)):
                 d, s = d
+                if isinstance(d, dict):
+                    d = attrdict(d)
                 for k in s:
                     d[k] = await _get_cfg(p + (k,))
             return d

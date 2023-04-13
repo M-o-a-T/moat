@@ -23,6 +23,19 @@ else:
 
 WouldBlock = (QueueFull, QueueEmpty)
 
+class OptCtx:
+    def __init__(self, obj=None):
+        self.obj = obj
+
+    def __enter__(self):
+        if self.obj is not None:
+            return self.obj.__enter__()
+        return self
+
+    def __exit__(self, *tb):
+        if self.obj is not None:
+            return self.obj.__exit__(*tb)
+
 
 def print_exc(a, b=usys.stderr):
     usys.print_exception(a, b)

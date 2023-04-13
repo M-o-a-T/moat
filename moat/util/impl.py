@@ -47,7 +47,7 @@ def import_(name, off=0):
     return res
 
 
-def load_from_cfg(cfg, *a, _attr="server", **k):
+def load_from_cfg(cfg, *a, _attr="server", _raise=False, **k):
     """
     A simple frontend to load a module, access a class/object from it,
     and call that with the config (and whchever other arguments you want to
@@ -58,6 +58,8 @@ def load_from_cfg(cfg, *a, _attr="server", **k):
     try:
         name = cfg[_attr]
     except KeyError:
+        if _raise:
+            raise
         return None
     if isinstance(name, (list, tuple)):
         name, off = name

@@ -94,7 +94,7 @@ class CommandClient(Request):
             try:
                 obj2name(type(exc))
             except KeyError:
-                res["e"] = repr(exc)
+                res["e"] = "F:"+repr(exc)
             else:
                 res["e"] = exc
         else:

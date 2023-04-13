@@ -317,7 +317,7 @@ class Request(_Stacked):
             try:
                 obj2name(type(exc))
             except KeyError:
-                res["e"] = repr(exc)
+                res["e"] = "E:"+repr(exc)
             else:
                 res["e"] = exc
         else:
@@ -329,7 +329,7 @@ class Request(_Stacked):
         except TypeError as exc:
             print("ERROR returning", res, file=sys.stderr)
             print_exc(exc)
-            res = {'e': repr(exc), 'i': i}
+            res = {'e': "T:"+repr(exc), 'i': i}
             await self.parent.send(res)
 
     async def dispatch(self, msg):

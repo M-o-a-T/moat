@@ -227,7 +227,7 @@ class Request(BaseRequest):
         """
 
         async def _get_cfg(p):
-            d = await self.send(("sys", "cfg"), p=p)
+            d = await self.send(("sys", "cfg_r"), p=p)
             if isinstance(d, (list, tuple)):
                 d, s = d
                 if isinstance(d, dict):
@@ -254,7 +254,7 @@ class Request(BaseRequest):
         async def _set_cfg(p, c):
             # current client cfg
             try:
-                ocd, ocl = await self.send(("sys", "cfg"), p=p)
+                ocd, ocl = await self.send(("sys", "cfg_r"), p=p)
             except RemoteError as exc:
                 if "KeyError" not in str(exc):
                     raise
@@ -276,4 +276,4 @@ class Request(BaseRequest):
 
         await _set_cfg((), cfg)
         if sync:
-            await self.send(("sys", "cfg"), p=None, d=None)  # runs
+            await self.send(("sys", "cfg_x"))  # runs

@@ -95,6 +95,8 @@ def every(t, p, *a, **k):
 class TaskGroup(_tg):
     async def spawn(self, p, *a, _name=None, **k):
         return self.create_task(p(*a, **k))  # , name=_name)
+    def start_soon(self, p, *a, _name=None, **k):
+        self.create_task(p(*a, **k))
 
 
 def run(p, *a, **k):

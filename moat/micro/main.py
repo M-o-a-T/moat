@@ -9,7 +9,7 @@ from pathlib import Path
 import anyio
 import msgpack
 from anyio_serial import Serial
-from moat.util import attrdict, packer, yload, NotGiven
+from moat.util import attrdict, NotGiven
 
 from moat.micro.cmd import BaseCmd
 from moat.micro.cmd import Request as BaseRequest

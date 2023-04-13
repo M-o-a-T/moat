@@ -2,6 +2,7 @@ import hashlib
 import io
 import logging
 import os
+from itertools import chain
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -269,10 +270,7 @@ class Request(BaseRequest):
             if not replace:
                 return
             # drop those client cfg snippets that are not on the server
-            for k, v in ocd.items():
-                if k not in c:
-                    await self.send(("sys", "cfg"), p=p + (k,), d=NotGiven)
-            for k in ocl:
+            for k in chain(ocd.keys(), ocl):
                 if k not in c:
                     await self.send(("sys", "cfg"), p=p + (k,), d=NotGiven)
 

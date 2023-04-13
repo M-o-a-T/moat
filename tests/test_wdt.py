@@ -10,7 +10,7 @@ import sys
 
 import anyio
 
-from . import mpy_client, mpy_server
+from moat.micro._test import mpy_client, mpy_server
 from moat.micro.compat import sleep_ms
 from moat.util import NotGiven
 

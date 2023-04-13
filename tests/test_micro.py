@@ -15,7 +15,7 @@ from moat.util import packer,unpacker, to_attrdict, attrdict, as_proxy
 from moat.micro.compat import TaskGroup
 from moat.micro.main import get_link
 
-from . import mpy_client, mpy_server
+from moat.micro._test import mpy_client, mpy_server
 
 
 async def test_ping(tmp_path):

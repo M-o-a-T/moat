@@ -11,18 +11,38 @@ try:
     uos.mkdir(root)
 except OSError:
     pass
-d=uos.getcwd()
+
+
+h = uos.getcwd()
+d = uos.sep.join(usys.argv[0].split(uos.sep)[:-2])  # /wherever/moat[/micro]
 try:
-    uos.stat(d+"/micro")
+    uos.stat(d+uos.sep+"micro")
 except OSError:
     pass
 else:
-    d+="/micro"
+    d+=uos.sep+"micro"
 uos.chdir(dd)
 
-usys.path.insert(0,d+"/moat/micro/_embed/")
+for p in uos.getenv("PYTHONPATH").split(":"):
+    if p == ".":
+        p = h
+    elif p.startswith("."):
+        p = h+"/"+p
+    ep = p+"/moat/micro/_embed"
+    try:
+        uos.stat(ep)
+    except OSError:
+        print("NO",ep,file=usys.stderr)
+        pass
+    else:
+        usys.path.insert(0,ep)
+        try:
+            uos.stat(ep+"/lib")
+        except OSError:
+            pass
+        else:
+            usys.path.insert(0,ep+"/lib")
 usys.path.insert(0,".")
-usys.path.insert(0,d+"/moat/micro/_embed/lib")
 usys.path.insert(0,d+"/lib/micropython/extmod")
 
 # TODO uasyncio's lazy importer doesn't yet mesh well with our micropython path hack

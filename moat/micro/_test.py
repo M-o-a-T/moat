@@ -28,7 +28,7 @@ async def mpy_server(
     obj.guarded = guarded
     obj.socket = temp / "moat.sock"
 
-    cff = Path(__file__).parent / f"{cff}.cfg"
+    cff = Path(f"tests/{cff}.cfg")
     with open(cff, "r") as f:
         cf = yload(f, attr=True)
     cfg = merge(cf, cfg)
@@ -40,13 +40,14 @@ async def mpy_server(
         try:
             os.stat("micro/lib")
         except OSError:
-            pre = ""
+            pre = Path(__file__).parents[2]
         else:
             pre = "micro/"
 
         root = temp / "root"
         try:
             root.mkdir()
+            (root/"tests").symlink_to(Path("tests").absolute())
         except EnvironmentError:
             pass
         with (root / "moat.cfg").open("wb") as f:
@@ -54,9 +55,10 @@ async def mpy_server(
 
         argv = [
             # "strace","-s300","-o/tmp/bla",
-            pre + "lib/micropython/ports/unix/build-standard/micropython",
-            pre + "tests-mpy/mplex.py",
+            pre / "lib/micropython/ports/unix/build-standard/micropython",
+            pre / "tests-mpy/mplex.py",
             str(root),
+            str(pre),
         ]
 
         async with await anyio.open_process(argv, stderr=sys.stderr) as proc:

@@ -1,6 +1,6 @@
 # dummy fs module on the multiplexer
 
-from . import BaseAppCmd
+from ._base import BaseAppCmd
 
 
 class FsCmd(BaseAppCmd):

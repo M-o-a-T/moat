@@ -40,6 +40,7 @@ class OptCtx:
 def print_exc(a, b=usys.stderr):
     usys.print_exception(a, b)
 
+from moat.util import NotGiven
 
 async def idle():
     while True:

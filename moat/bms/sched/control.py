@@ -34,6 +34,44 @@ async def generate_data(cfg, t):
         yield val
 
 
+def add_piecewise(solver,x,y, points:list[int,int], name):
+    """
+    Add a piecewise-linear constraint on y=a*x+b.
+
+    @points is a list of x/y pairs to interpolate between.
+    """
+
+    # Source:
+    # https://or.stackexchange.com/questions/6674/how-to-linearize-specific-range-constraints#answer-6675
+
+    # untested
+
+    n = len(points)-1  # number of segments
+    l = []  # lambda values to interpolate within a segment
+
+    rx = []
+    ry = []
+    for i,xyi in enumerate(points):
+        xi,yi = xyi
+        li = solver.NumVar(0,1,f"l_{name}_{i}"))
+
+        l.append(li)
+        rx.append(xi*li)
+        ry.append(yi*li)
+
+    b = [ solver.BoolVar(f"b_{name}_{i}") for i in range(n) ]
+    solver.Add(sum(l) == 1)  # 1: lambda values sum to 1
+    solver.Add(sum(b) == 1)  # 3: we're in exactly one segment
+    solver.Add(x == sum(rx))  # 2: interpolated X value
+    solver.Add(y == sum(ry))  # Objective: interpolated Y value
+    for i in range(n):
+        solver.Add(b[i] <= l[i]+l[i+1])
+        # 4-7: when x is in segment i, the sum of the lambdas on
+        # the upper and lower boundary of this segment is forced to be at
+        # least 1. Because of (1) and the fact that lambda is constrained
+        # to [0,1], this sum must be exactly 1 and all other lambda values
+        # are thus zero.
+
 class Model:
     """
     Calculate optimum charge/discharge behavior based on

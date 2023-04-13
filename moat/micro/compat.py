@@ -9,7 +9,6 @@ import traceback as _traceback
 
 import greenback
 import outcome as _outcome
-from moat.util import Queue, ValueEvent
 from moat.util import Queue, ValueEvent, Alert, AlertMixin, Broadcaster, BaseAlert, RepeatAlert, AlertHandler, OptCtx
 
 TimeoutError = TimeoutError  # compat

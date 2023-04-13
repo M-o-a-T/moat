@@ -2,6 +2,7 @@ import ctypes
 
 import ffi
 import usys
+import errno as E
 from uasyncio import TimeoutError, core, wait_for_ms
 
 C = ffi.open(None)
@@ -91,6 +92,7 @@ class AsyncFD:
                     await _wrq(self.fd_o)
 
                 l = _write(self.fd_o.fileno(), b, len(b))
+                err = errno()
                 if self.log:
                     if l == len(b):
                         print("w:", bytes(b), file=usys.stderr)
@@ -100,7 +102,9 @@ class AsyncFD:
                         print("w:", bytes(b), "=", l, file=usys.stderr)
 
                 if l < 0:
-                    raise OSError(errno())
+                    if err == E.ENOENT:
+                        return
+                    raise OSError(err)
                 if l == 0:
                     raise EOFError()
                 ll += l

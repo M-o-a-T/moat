@@ -297,15 +297,15 @@ class Broadcaster:
 
     """
 
-    __reader = None
+    _rdr = None
 
     def __init__(self, length=1):
         self.length = length
 
     def __enter__(self):
-        if self.__reader is not None:
+        if self._rdr is not None:
             raise RuntimeError("already entered")
-        self.__reader = WeakSet()
+        self._rdr = WeakSet()
         return self
 
     async def __aenter__(self):
@@ -318,26 +318,26 @@ class Broadcaster:
         self.close()
 
     def _closed_reader(self, reader):
-        self.__reader.remove(reader)
+        self._rdr.remove(reader)
 
     def __aiter__(self):
         r = BroadcastReader(self, self.length)
-        self.__reader.add(r)
+        self._rdr.add(r)
         return r.__aiter__()
 
     def reader(self, length):
         """Create a reader with an explicit queue length"""
         r = BroadcastReader(self, length)
-        self.__reader.add(r)
+        self._rdr.add(r)
         return aiter(r)
 
     def __call__(self, value):
-        for r in self.__reader:
+        for r in self._rdr:
             r(value)
 
     def close(self):
         "Close the broadcaster. No more writing."
-        if self.__reader is not None:
-            for r in self.__reader:
+        if self._rdr is not None:
+            for r in self._rdr:
                 r._close()  # pylint: disable=protected-access
-            self.__reader = None
+            self._rdr = None

@@ -1,3 +1,15 @@
+"""
+This module implements a bare-bones battery monitor client.
+
+It monitors voltage and current, and can switch a relay.
+
+Voltage metering is done via a voltage divider.
+Current metering uses a Hall sensor (with reference voltage).
+
+Cells are monitored serially, from the server.
+(This will change.)
+
+"""
 import sys
 
 import machine as M
@@ -15,16 +27,17 @@ from moat.micro.compat import (
     wait_for_ms,
 )
 
+from ._impl import BaseBMS
+from ._relay import PinRelay
 
-# see
-#
-class BMS:
+class BMS(BaseBMS):
+    """
+    The battery side of our BMS.
+    """
     cmd = None
 
     def __init__(self, cfg, gcfg):
-        self.cfg = cfg
-        self.xmit_evt = Event()
-        self.gen = 0  # generation, incremented every time a new value is read
+        super().__init__(cfg, gcfg)
 
     async def _check(self):
         c = self.cfg
@@ -51,19 +64,19 @@ class BMS:
         self.n_w += 1
 
         if self.val_u < cc["u"]["min"]:
-            if self.relay.value():
+            if self.relay.get():
                 print("UL", self.val_u, file=sys.stderr)
             return False
         if self.val_u > cc["u"]["max"]:
-            if self.relay.value():
+            if self.relay.get():
                 print("UH", self.val_u, file=sys.stderr)
             return False
         if self.val_i < cc["i"]["min"]:
-            if self.relay.value():
+            if self.relay.get():
                 print("IL", self.val_i, file=sys.stderr)
             return False
         if self.val_i > cc["i"]["max"]:
-            if self.relay.value():
+            if self.relay.get():
                 print("IH", self.val_i, file=sys.stderr)
             return False
         return True
@@ -73,7 +86,7 @@ class BMS:
             u=self.val_u,
             i=self.val_i,
             w=dict(s=self.sum_w, n=self.n_w),
-            r=dict(s=self.relay.value(), f=self.relay_force, l=self.live),
+            r=dict(r=self.relay.state(), l=self.live),
             gen=self.gen,
         )
         if r:
@@ -82,13 +95,12 @@ class BMS:
         return res
 
     async def set_relay_force(self, st):
-        self.relay_force = st
+        self.relay.set(force=st)
         if st is not None:
-            self.relay.value(st)
             await self.send_rly_state("forced")
         else:
             await self.send_rly_state("auto")
-            if not self.relay.value():
+            if not self.relay.get():
                 self.sw_ok = False
                 self.t_sw = ticks_add(self.t, self.cfg["relay"]["t"])
                 print("DLY", self.cfg["relay"]["t"], file=sys.stderr)
@@ -98,7 +110,7 @@ class BMS:
             return
         self.live = live
         if not live:
-            self.relay.off()
+            self.relay.set(False)
             await self.send_rly_state("Live Fail")
 
     def set_live(self):
@@ -151,11 +163,11 @@ class BMS:
         self.adc_u = M.ADC(M.Pin(c["u"]["pin"]))
         self.adc_i = M.ADC(M.Pin(c["i"]["pin"]))
         self.adc_ir = M.ADC(M.Pin(c["i"]["ref"]))
-        self.relay = M.Pin(self.cfg["relay"]["pin"], M.Pin.OUT)
+        self.relay = PinRelay(self.cfg["relay"]["pin"])
         self.sum_w = 0
         self.n_w = 0
-        self.relay_force = None
-        self.live = self.relay.value()
+        self.relay.set(force=None)
+        self.live = self.relay.get()
         self.live_flag = Event()
         # we start off with the current relay state
         # so a soft reboot won't toggle the relay
@@ -194,15 +206,15 @@ class BMS:
                 if (
                     self.sw_ok
                     and self.live
-                    and self.relay_force is None
-                    and not self.relay.value()
+                    and self.relay.force is None
+                    and not self.relay.get()
                 ):
-                    self.relay.on()
+                    self.relay.set(True)
                     await self.send_rly_state("Check OK")
                     xmit_n = 0
 
-            elif self.live and self.relay_force is None and self.relay.value():
-                self.relay.off()
+            elif self.live and self.relay.force is None and self.relay.get():
+                self.relay.set(False)
                 await self.send_rly_state("Check Fail")
                 self.t_sw = ticks_add(self.t, self.cfg["relay"]["t"])
                 self.sw_ok = False
@@ -229,7 +241,7 @@ class BMS:
 
     async def send_rly_state(self, txt):
         self.xmit_evt.set()
-        print("RELAY", self.relay.value(), txt, file=sys.stderr)
+        print("RELAY", self.relay.get(), txt, file=sys.stderr)
 
 
 class BMSCmd(BaseCmd):

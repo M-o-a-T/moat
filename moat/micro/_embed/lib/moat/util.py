@@ -129,12 +129,11 @@ def import_(name, off=0):
         res = __import__(mn)
         for nn in n[1:]:
             res = getattr(res,nn)
-    except Exception as exc:   
-        usys.modules.pop(mn, None)
-        raise exc
+    except AttributeError as exc:
+        raise AttributeError(name) from None
     return res
 
-def load_from_cfg(cfg, cmd, *a, **k):
+def load_from_cfg(cfg, *a, _raise=False, **k):
     """   
     A simple frontend to load a module, access a class/object from it, 
     and call that with the config (and whichever other arguments you want to  
@@ -142,7 +141,11 @@ def load_from_cfg(cfg, cmd, *a, **k):
        
     The module+object name is the "client" attribute.
     """ 
-    m = import_(cfg.client)
+    if "client" not in cfg:
+        if _raise:
+            raise ValueError("must be configured")
+        return None
+    m = import_(cfg.client, off=1)
     return m(cfg, *a, **k)
 
 

@@ -2,7 +2,7 @@
 Readers that aggregate multiple results
 """
 
-from moat.compat import TaskGroup
+from moat.micro.compat import TaskGroup
 from moat.util import attrdict, load_from_cfg
 from moat.micro.link import Reader
 

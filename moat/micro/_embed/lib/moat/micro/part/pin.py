@@ -4,7 +4,23 @@ Module for pins
 import machine as M
 import uasyncio
 
-class Pin(M.Pin):
+try:
+    sup = M.Pin
+except AttributeError:
+    class XPin:
+        __val = False
+        def __new__(cls, **kw):
+            return object.__new__(cls)
+        def __init__(self, **kw):
+            pass
+        def value(self, n=None):
+            if n is None:
+                return self.__val
+            else:
+                self.__val = None
+    sup = XPin
+
+class Pin(sup):
     """
     A config-enabled pin that you can async-iterate for changes.
 

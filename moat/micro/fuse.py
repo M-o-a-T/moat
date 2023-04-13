@@ -19,8 +19,12 @@ from pyfuse3 import (  # pylint: disable=E0611
 )
 
 from .proto.stack import RemoteError
+from moat.util import as_proxy
 
 logger = logging.getLogger(__name__)
+
+as_proxy("_FnErr", FileNotFoundError)
+as_proxy("_FxErr", FileExistsError)
 
 
 class Operations(pyfuse3.Operations):  # pylint: disable=I1101
@@ -82,13 +86,12 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             del self._path_inode_map[p]
 
     def raise_error(self, err, inode=None):
-        if isinstance(err, RemoteError):
-            if err.args[0] == "fn":
-                if inode is not None:
-                    self.i_del(inode)
-                raise FUSEError(errno.ENOENT)
-            if err.args[0] == "fx":
-                raise FUSEError(errno.EEXIST)
+        if isinstance(err, FileNotFoundError):
+            if inode is not None:
+                self.i_del(inode)
+            raise FUSEError(errno.ENOENT)
+        if isinstance(err, FileExistsError):
+            raise FUSEError(errno.EEXIST)
         raise FUSEError(errno.EIO)
 
     async def lookup(self, parent_inode, name, ctx):

@@ -9,10 +9,16 @@ from moat.micro.compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms
 from moat.util import as_proxy
 from moat.micro.proto.stack import SilentRemoteError
 
-@as_proxy("_FsErr")
-class FSError(SilentRemoteError):
-    pass
+class FileNotFoundError(SilentRemoteError):
+    def __getstate__(self):
+        return (2,"not here",self.args[0])
 
+class FileExistsError(SilentRemoteError):
+    def __getstate__(self):
+        return (17,"exists",self.args[0])
+
+as_proxy("_FnErr", FileNotFoundError)
+as_proxy("_FxErr", FileExistsError)
 
 class FsCmd(BaseCmd):
     _fd_last = 0
@@ -75,7 +81,7 @@ class FsCmd(BaseCmd):
             f = open(p, m + 'b')
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise FSError("fn")
+                raise FileNotFoundError(p)
             raise
         else:
             return self._add_f(f)
@@ -137,7 +143,7 @@ class FsCmd(BaseCmd):
             s = uos.stat(p)
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise FSError("fn")
+                raise FileNotFoundError(p)
             raise
         if s[0] & 0x8000:  # file
             return dict(m="f", s=s[6], t=s[7], d=s)
@@ -159,7 +165,7 @@ class FsCmd(BaseCmd):
                 if err.errno != errno.ENOENT:
                     raise
             else:
-                raise FSError("fx")
+                raise FileExistsError(q)
         if x is None:
             uos.rename(p, q)
         else:
@@ -171,7 +177,7 @@ class FsCmd(BaseCmd):
                 if err.errno != errno.ENOENT:
                     raise
             else:
-                raise FSError("fx")
+                raise FileExistsError(r)
             uos.rename(p, r)
             uos.rename(q, p)
             uos.rename(r, q)
@@ -183,7 +189,7 @@ class FsCmd(BaseCmd):
             uos.remove(p)
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise FSError("fn")
+                raise FileNotFoundError(p)
             raise
 
     def cmd_rmdir(self, p):
@@ -193,11 +199,16 @@ class FsCmd(BaseCmd):
             uos.rmdir(p)
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise FSError("fn")
+                raise FileNotFoundError(p)
             raise
 
     def cmd_new(self, p):
         # new file
         p = self._fsp(p)
-        f = open(p, "wb")
+        try:
+            f = open(p, "wb")
+        except OSError as e:
+            if e.errno == errno.ENOENT:
+                raise FileNotFoundError(p)
+            raise
         f.close()

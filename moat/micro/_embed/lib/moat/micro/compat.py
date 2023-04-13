@@ -94,8 +94,12 @@ def every(t, p, *a, **k):
 
 class TaskGroup(_tg):
     async def spawn(self, p, *a, _name=None, **k):
+        # returns something you can cancel
+
+        # print("RUN",_name,p,a,k, file=usys.stderr)
         return self.create_task(p(*a, **k))  # , name=_name)
     def start_soon(self, p, *a, _name=None, **k):
+        # print("RUN",_name,p,a,k, file=usys.stderr)
         self.create_task(p(*a, **k))
 
 

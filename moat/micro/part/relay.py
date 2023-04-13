@@ -1,1 +1,1 @@
-from .._common import Relay
+../_embed/lib/moat/micro/part/relay.py

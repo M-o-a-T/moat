@@ -2,15 +2,15 @@
 More common code
 """
 from moat.util import NotGiven, load_from_cfg, attrdict
-from moat.micro.compat import TaskGroup, sleep, sleep_ms, Event, ticks_ms, ticks_diff, Pin_OUT
+from ..compat import TaskGroup, sleep, sleep_ms, Event, ticks_ms, ticks_diff, Pin_OUT
+from ..link import Reader
 
 
-
-class Relay:
+class Relay(Reader):
     """
     A relay is an output pin with an overriding "force" state.
 
-    - pin: how to talk to the thing
+    - pin: how to talk to the actual hardware output
     - t_on, t_off, minimum non-forced on/off time
     - note: send a message when changed
     """
@@ -20,11 +20,14 @@ class Relay:
     force = None
 
     def __init__(self, cfg, value=None, force=None, **kw):
+        super().__init__(cfg)
         pin = cfg.pin
         if isinstance(pin,int):
-            cfg.pin = attrdict(client="app.part.pin.Pin", pin=pin)
+            cfg.pin = attrdict(client="moat.micro.part.pin.Pin", pin=pin)
         kw.setdefault("mode", Pin_OUT)
         self.pin = load_from_cfg(cfg.pin, **kw)
+        if self.pin is None:
+            raise ImportError(cfg.pin)
         self.t = [cfg.get("t_off",0), cfg.get("t_on",0)]
         self.note = cfg.get("note",None)
 
@@ -92,7 +95,7 @@ class Relay:
     def delayed(self):
         return self._delay is not None
 
-    async def state(self):
+    async def read_(self):
         return dict(
                 s=self.value,
                 f=self.force,
@@ -102,6 +105,8 @@ class Relay:
     async def run(self, cmd):
         async with TaskGroup() as self.__tg:
             await self.set()
+            await self.read()
+            self.__tg.start_soon(super().run, cmd)
             while True:
                 await sleep(9999)
 

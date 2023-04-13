@@ -33,7 +33,7 @@ class Array(Reader):
             for k,v in std.items():
                 p.setdefault(k,v)
 
-            self.parts.append(load_from_cfg(p, **kw))
+            self.parts.append(load_from_cfg(p, _raise=True, **kw))
 
 
     async def run(self, cmd):

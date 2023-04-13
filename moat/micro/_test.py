@@ -30,7 +30,7 @@ async def mpy_server(
 
     cff = Path(__file__).parent / f"{cff}.cfg"
     with open(cff, "r") as f:
-        cf = yload(f)
+        cf = yload(f, attr=True)
     cfg = merge(cf, cfg)
     cfg["link"]["guarded"] = guarded
     cfg["link"]["lossy"] = lossy

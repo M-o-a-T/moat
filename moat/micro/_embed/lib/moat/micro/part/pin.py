@@ -39,7 +39,7 @@ class Pin(sup):
         return self
 
     def __init__(self, cfg, **kw):
-        pass
+        super().__init__(**kw)
 
     def _irq(self):
         self.flag.set()

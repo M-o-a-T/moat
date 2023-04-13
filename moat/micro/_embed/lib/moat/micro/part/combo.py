@@ -16,15 +16,20 @@ class Array(Reader):
     - parts: array with separate config for paths
       typically includes pin numbers
     """
+    PARTS = "parts"
+    ATTR = None  # if the part isn't a dict
+
     def __init__(self, cfg, **kw):
         super().__init__(cfg, **kw)
 
         self.parts = []
 
         std = cfg.get("default",{})
-        for p in cfg.parts:
+        for p in cfg[self.PARTS]:
             if not isinstance(p,dict):
-                p = attrdict(pin=p)
+                if self.ATTR is None:
+                    raise ValueError(p)
+                p = attrdict(**{self.ATTR: p})
             for k,v in std.items():
                 p.setdefault(k,v)
 

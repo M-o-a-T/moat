@@ -1,7 +1,11 @@
+"""
+Basic BMS classes
+"""
+
 import sys
 
-import machine as M
-from moat.util import NotGiven
+import time
+from moat.util import NotGiven, load_from_cfg, as_proxy, attrdict
 
 from moat.micro.cmd import BaseCmd
 from moat.micro.compat import (
@@ -13,70 +17,229 @@ from moat.micro.compat import (
     ticks_diff,
     ticks_ms,
     wait_for_ms,
+    Alert,
+    AlertMixin,
+    Broadcaster,
+    sleep,
 )
 
-class BaseBMS:
+class BatteryAlert(Alert):
     """
-    This is the skeleton of a battery monitor.
+    For a given battery there will at most be one open alert of each type.
+    """
+
+@as_proxy("bms_SH")
+class HighSOC(BatteryAlert):
+    "Charge exceeds limit"
+
+@as_proxy("bms_SL")
+class LowSOC(BatteryAlert):
+    "Charge below limit"
+
+@as_proxy("bms_UH")
+class HighVoltage(BatteryAlert):
+    "Total voltage exceeds limit"
+
+@as_proxy("bms_UL")
+class LowVoltage(BatteryAlert):
+    "Total voltage below limit"
+
+@as_proxy("bms_CH")
+class HighCellVoltage(BatteryAlert):
+    "Cell voltage exceeds limit"
+
+@as_proxy("bms_CL")
+class LowCellVoltage(BatteryAlert):
+    "Cell voltage below limit"
+
+@as_proxy("bms_CI")
+class CellImbalance(BatteryAlert):
+    "Excessive cell imbalance"
+
+@as_proxy("bms_IH")
+class HighChargeCurrent(BatteryAlert):
+    "Charge current exceeds limit"
+
+@as_proxy("bms_IL")
+class HighDischargeCurrent(BatteryAlert):
+    "Discharge current exceeds limit"
+
+@as_proxy("bms_TH")
+class HighTemperature(BatteryAlert):
+    "Temperature exceeds limit"
+
+@as_proxy("bms_TL")
+class LowTemperature(BatteryAlert):
+    "Temperature below operational limit"
+
+@as_proxy("bms_NBD")
+class NoBatteryData(BatteryAlert):
+    "no battery data seen"
+
+@as_proxy("bms_NCD")
+class NoCellData(BatteryAlert):
+    "no cell data seen"
+
+@as_proxy("bms_VM")
+class VoltageDelta(BatteryAlert):
+    "Battery and sum-of-cell voltages don't match"
+
+
+class BaseCells:
+    """
+    Skeleton of a cell array.
+    """
+    n_cells = None
+
+    def __init__(self, cfg):
+        self.cfg = cfg
+
+    async def read_u(self):
+        """fetch all cells' voltages
+        """
+        raise NotImplementedError("no idea how")
+
+    async def read_t(self):
+        """fetch all cells' temperatures
+        """
+        raise NotImplementedError("no idea how")
+
+    async def run(self, cmd, batt):
+        pass
+
+
+class BaseBalancer:
+    """
+    Skeleton of a balancing controller
+    """
+    def __init__(self, cells:BaseCells, cfg:attrdict):
+        self.cells = cells
+        self.cfg = cfg
+
+    async def run(self, cmd, cells):
+        pass # TODO
+
+
+class BaseBattery(AlertMixin):
+    """
+    This is the skeleton of a battery monitor client.
+
+    Alerts and updates are monitored.   
     """
     cmd = None
 
-    def __init__(self, cfg, gcfg):
+    ext_u:float = None  # last external voltage measurement
+    ext_i:float = None  # last external current measurement
+    ext_r:float = None  # wire resistance, to calculate ext/batt voltage delta
+
+    val_u:float = None  # voltage
+    val_i:float = None  # current
+    val_p:float = None  # momentary power
+    val_t:list[float] = None  # other temperatures
+    int_r:float = None  # internal resistance, whole battery
+
+    # required modules
+    cells:BaseCells = None
+    balancer:BaseBalancer = None
+    relay = None
+    power = None  # reader for voltage and current
+
+    sum_w:float = 0  # sum of u*i
+    sum_c:float = 0  # sum of i
+
+    _live_task = None
+    live:int = None  # required msec between pings
+    _main_task = None
+
+    def __init__(self, cfg):
         self.cfg = cfg
         self.xmit_evt = Event()
         self.gen = 0  # generation, incremented every time a new value is read
+        self._q = Broadcaster()
 
-    async def _check(self):
+        super().__init__()
+
+    async def run(self, cmd):
         """
-        Periodic task that verifies battery parameters
-
-        It polls / sums values, sends alarms, and may trip the relay.
-
-        Returns True if values are OK.
+        Main loop. Runs the cell and balancer main code.
         """
+        self.t_last = ticks_ms()
 
-        c = self.cfg
-        cc = c["batt"]
-        d = c["poll"]["d"]
+        self.cmd = cmd
+        self.sum_w = 0
+        self.sum_c = 0
+        self.n_w = 0
+        self.live_flag = Event()
 
-        u = await self.read_voltage()
-        i = await self.read_current()
+        async with TaskGroup() as tg:
+            self.__tg = tg
+            self._main_task = await tg.spawn(self._run)
+            while True:
+                await sleep(9999)
+
+    async def update_power(self, u:float, i:float, p:float=None, w:float=None, c:float=None):
         self.val_u = u
         self.val_i = i
+        self.val_p = u*i if p is None else p
+        if w is None or c is None:
+            t = ticks_ms()
+            td = ticks_diff(t,self.t_last)
+            self.t_last = t
 
-        self.sum_w += u * i
-        self.sum_c += i
-        self.n_w += 1
+            if w is None:
+                self.val_w += td*self.val_p
+            else:
+                self.val_w = w
 
-        if u < cc.u.min:
-            if self.relay.value():
-                print("UL", u, file=sys.stderr)
-            return False
-        if u > cc.u.max:
-            if self.relay.value():
-                print("UH", u, file=sys.stderr)
-            return False
-        if i < cc.i.min:
-            if self.relay.value():
-                print("IL", i, file=sys.stderr)
-            return False
-        if i > cc.i.max:
-            if self.relay.value():
-                print("IH", i, file=sys.stderr)
-            return False
-        return True
+            if c is None:
+                self.val_c += td*self.val_i
+            else:
+                self.val_c = c
+        await self.send_update("u_i")
+
+    async def _live(self):
+        while True:
+            await timeout_ms(self.live, self._live_evt.wait)
+            self._live_evt = Event()
+
+    async def set_live(self, t):
+        self.live = t
+        if not t:
+            if self._live_task is not None:
+                self._live_task.cancel()
+                self._live_task = None
+                self._live_evt = None
+        elif self._live_task is not None:
+            self._live_evt.set()
+        else:
+            self._live_evt = Event()
+            self._live_task = await self._tg.spawn(self._live)
+
+    async def live_ping(self):
+        if self._live_task is not None:
+            self._live_evt.set()
 
     def stat(self, clear=False):
         """
         return current state + sums, optionally clear the sums
         """
+        if self.relay is not None:
+            rs = self.relay.state()
+        else:
+            rs = {}
+
+        if self.live is not None:
+            rs["l"] = self.live
+
         res = dict(
-            u=self.val_u,
-            i=self.val_i,
+            u=self.last_u,
+            i=self.last_i,
             s=dict(w=self.sum_w, c=self.sum_c, n=self.n_w),
-            r=dict(s=self.relay.value(), f=self.relay_force, l=self.live),
             gen=self.gen,
         )
+        if rs:
+            res["r"]=rs
+
         if clear:
             self.sum_w = 0
             self.sum_c = 0
@@ -88,17 +251,10 @@ class BaseBMS:
         manually change the relay's state
         """
         self.relay_force = st
-        if st is not None:
-            self.relay.value(st)
-            await self.send_rly_state("forced")
-        else:
-            await self.send_rly_state("auto")
-            if not self.relay.value():
-                self.sw_ok = False
-                self.t_sw = ticks_add(self.t, self.cfg["relay"]["t"])
-                print("DLY", self.cfg["relay"]["t"], file=sys.stderr)
+        await self.relay.set(force=st)
+        await self.send_rly_state("forced")
 
-    def live_state(self, live: bool):
+    async def live_state(self, live: bool):
         """
         is the system OK?
         """
@@ -106,7 +262,7 @@ class BaseBMS:
             return
         self.live = live
         if not live:
-            self.relay.off()
+            await self.relay.set(False)
             await self.send_rly_state("Live Fail")
 
     def set_live(self):
@@ -115,124 +271,106 @@ class BaseBMS:
     async def live_task(self):
         while True:
             try:
-                await wait_for_ms(self.cfg.poll.k, self.live_flag.wait)
+                await wait_for_ms(self.cfg.poll.t.live, self.live_flag.wait)
             except TimeoutError:
-                self.live_state(False)
+                await self.live_state(False)
             else:
                 self.live_flag = Event()
-                self.live_state(True)
+                await self.live_state(True)
 
     async def config_updated(self, cfg):
-        old_u_scale, old_u_offset = self.adc_u_scale, self.adc_u_offset
-        old_i_scale, old_i_offset = self.adc_i_scale, self.adc_i_offset
-        self._set_scales()
-        self.val_u = (
-            self.val_u - old_u_offset
-        ) / old_u_scale * self.adc_u_scale + self.adc_u_offset
-        self.val_i = (
-            self.val_i - old_i_offset
-        ) / old_i_scale * self.adc_i_scale + self.adc_i_offset
+        """
+        Kill it all off and restart.
 
-        await self.send_work()
+        TODO: try to be somewhat less intrusive.
+        """
+        if self._main_task is None:
+            self.cfg = cfg
+            return
+        self._main_task.cancel()
+        await sleep_ms(100)
+        self.cfg = cfg
+        self._main_task = await self.__tg.spawn(self._run)
 
-    async def send_work(self):
+    async def send_work(self, flush:bool = False):
         if not self.cmd:
             return
         res = dict(
             w=self.sum_w,
             c=self.sum_c,
             n=self.n_w,
+            f=flush,
         )
-        self.sum_w = 0
-        self.sum_c = 0
-        self.n_w = 0
+        if flush:
+            self.sum_w = 0
+            self.sum_c = 0
+            self.n_w = 0
         await self.cmd.request.send_nr([self.cmd.name, "work"], **res)
 
-    def _set_scales(self):
-        c = self.cfg.batt
-        self.adc_u_scale = c.u.scale
-        self.adc_u_offset = c.u.offset
-        self.adc_i_scale = c.i.scale
-        self.adc_i_offset = c.i.offset
+    async def _run(self):
+        async with TaskGroup() as tg:
+            cfg = self.cfg
+            try:
+                self.cells = load_from_cfg(cfg.cells, bms=self)
+            except AttributeError:
+                breakpoint()
+                raise
+            self.balancer = load_from_cfg(cfg.balancer, cells=self.cells)
+            self.relay = load_from_cfg(cfg.relay, bms=self, _raise=True)
+            self.power = load_from_cfg(cfg.power, bms=self)
 
-    async def run(self, cmd):
-        c = self.cfg.batt
-        self.cmd = cmd
-        self.adc_u = M.ADC(M.Pin(c["u"]["pin"]))
-        self.adc_i = M.ADC(M.Pin(c["i"]["pin"]))
-        self.adc_ir = M.ADC(M.Pin(c["i"]["ref"]))
-        self.relay = M.Pin(self.cfg["relay"]["pin"], M.Pin.OUT)
-        self.sum_w = 0
-        self.sum_c = 0
-        self.n_w = 0
-        self.relay_force = None
-        self.live = self.relay.value()
-        self.live_flag = Event()
+            if self.relay is not None:
+                tg.start_soon(self.relay.run, self.cmd)
+            if self.cells is not None:
+                tg.start_soon(self.cells.run, self.cmd)
+            if self.balancer is not None:
+                tg.start_soon(self.balancer.run, self.cmd)
+            if self.power is not None:
+                tg.start_soon(self.power.run, self.cmd)
+
+            await tg.spawn(self.live_task, _name="bms.live")
+            await self._run_()
+
+    async def _run_(self):
+        xmit_n = 0
+        self.live = (await self.relay.read())["s"]
         # we start off with the current relay state
         # so a soft reboot won't toggle the relay
 
-        self._set_scales()
-
-        def sa(a, n=10):
-            s = 0
-            for _ in range(n):
-                s += a.read_u16()
-            return s / n
-
-        self.val_u = sa(self.adc_u) * self.adc_u_scale + self.adc_u_offset
-        self.val_i = (sa(self.adc_i) - sa(self.adc_ir)) * self.adc_i_scale + self.adc_i_offset
-
-        self.sw_ok = False
-
         self.t = ticks_ms()
-        self.t_sw = ticks_add(ticks_ms(), self.cfg["relay"]["t1"])
 
-        async with TaskGroup() as tg:
-            await tg.spawn(self.live_task, _name="bms.live")
-            await self._run()
-
-    async def _run(self):
-        xmit_n = 0
         while True:
-            self.t = ticks_add(self.t, self.cfg["poll"]["t"])
+            self.t = ticks_add(self.t, self.cfg.poll.t.voltage)
 
-            if not self.sw_ok:
-                if ticks_diff(self.t, self.t_sw) > 0:
-                    self.sw_ok = True
+            if self.live:
+                rs = self.relay.get_sync()
+
+                if await self._check():
+                    await self.relay.set(True)
+                else:
+                    await self.relay.set(False)
+
+                if rs != self.relay.get_sync():
+                    if rs:
+                        await self.send_rly_state("Check OK")
+                    else:
+                        await self.send_rly_state("Check Fail")
                     xmit_n = 0
-
-            if await self._check():
-                if (
-                    self.sw_ok
-                    and self.live
-                    and self.relay_force is None
-                    and not self.relay.value()
-                ):
-                    self.relay.on()
-                    await self.send_rly_state("Check OK")
-                    xmit_n = 0
-
-            elif self.live and self.relay_force is None and self.relay.value():
-                self.relay.off()
-                await self.send_rly_state("Check Fail")
-                self.t_sw = ticks_add(self.t, self.cfg["relay"]["t"])
-                self.sw_ok = False
-                xmit_n = 0
 
             xmit_n -= 1
-            if xmit_n <= 0 or self.xmit_evt.is_set:
+            if xmit_n <= 0 or self.xmit_evt.is_set():
                 if self.gen >= 99:
                     self.gen = 10
                 else:
                     self.gen += 1
                 self.xmit_evt.set()
                 self.xmit_evt = Event()
-                xmit_n = self.cfg["poll"]["n"]
+                xmit_n = self.cfg.poll.n.voltage
 
             t = ticks_ms()
             td = ticks_diff(self.t, t)
             if td > 0:
-                if self.n_w >= 1000:
+                if self.n_w >= 10000:
                     await self.send_work()
                 await sleep_ms(td)
             else:
@@ -240,14 +378,18 @@ class BaseBMS:
 
     async def send_rly_state(self, txt):
         self.xmit_evt.set()
-        print("RELAY", self.relay.value(), txt, file=sys.stderr)
+        print("RELAY", (await self.relay.read()), txt, file=sys.stderr)
 
 
-class BMSCmd(BaseCmd):
-    def __init__(self, parent, name, cfg, gcfg):
+
+class BaseBMSCmd(BaseCmd):
+    def __init__(self, parent:BaseCmd, name:str, cfg:attrdict, gcfg:attrdict):
         super().__init__(parent)
-        self.bms = BMS(cfg, gcfg)
         self.name = name
+        self.batt = None
+        self.bms = load_from_cfg(cfg)
+        if self.bms is None:
+            raise ImportError(cfg)
 
     async def run(self):
         try:
@@ -263,14 +405,25 @@ class BMSCmd(BaseCmd):
         """
         Called manually, but also irreversibly when there's a "hard" cell over/undervoltage
         """
+        rly = self.batt.relay
+        if rly is None:
+            raise RuntimeError("no relay")
         if st is NotGiven:
-            return self.bms.relay.value(), self.bms.relay_force
-        await self.bms.set_relay_force(st)
+            return rly.state()
+        await rly.set(force=st)
 
     async def cmd_info(self, gen=-1, r=False):
-        if self.bms.gen == gen:
-            await self.bms.xmit_evt.wait()
-        return self.bms.stat(r)
+        if self.batt.gen == gen:
+            await self.batt.xmit_evt.wait()
+        return self.batt.stat(r)
 
-    def cmd_live(self):
-        self.bms.set_live()
+    async def cmd_live(self, t=None):
+        """
+        Keepalive. Set t=x to require a call every t seconds.
+        t=0 disables. No t is the ping.
+        """
+        if t is None:
+            self.batt.ping()
+        else:
+            await self.batt.set_live(t)
+

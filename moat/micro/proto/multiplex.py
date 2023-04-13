@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager, contextmanager
 from pprint import pformat
 
 import anyio
-from moat.util import attrdict, merge, to_attrdict
+from moat.util import attrdict, merge, to_attrdict, obj2name
 
 from ..app._base import ConfigError
 from ..cmd import BaseCmd, RootCmd
@@ -80,15 +80,23 @@ class CommandClient(Request):
         try:
             res = await self.mplex.send(a, d)
         except Exception as exc:
+            if i is None:
+                return
+
             if isinstance(exc, SilentRemoteError) or (
                 isinstance(exc, RemoteError) and exc.args and len(exc.args[0]) < 3
             ):
                 pass
             else:
                 logger.exception("handling %s %s %s %s", a, i, d, msg)
-            if i is None:
-                return
-            res = {'e': exc.args[0] if isinstance(exc, RemoteError) else repr(exc), 'i': i}
+
+            res = {'i': i}
+            try:
+                obj2name(type(exc))
+            except KeyError:
+                res["e"] = repr(exc)
+            else:
+                res["e"] = exc
         else:
             if i is None:
                 return

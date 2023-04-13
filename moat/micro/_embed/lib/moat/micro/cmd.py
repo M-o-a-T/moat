@@ -367,6 +367,8 @@ class Request(_Stacked):
                 return  # duplicate??
             if e is None:
                 evt.set(d)
+            elif isinstance(e,Exception):
+                evt.set_error(e)
             else:
                 evt.set_error(RemoteError(e, d))
 

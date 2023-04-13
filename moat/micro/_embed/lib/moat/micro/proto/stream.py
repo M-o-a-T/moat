@@ -63,11 +63,9 @@ def _decode(code, data):
         s.feed(data)
 #       s = iter(s)
 #       return name2obj(next(s))(*s)
-        s,d = list(s)
-        print("GEN",s,d, file=sys.stderr)
-        p = object.__new__(name2obj(s))
-        for k,v in d.items():
-            setattr(p,k,v)
+        s, *d = list(s)
+        p = name2obj(s)
+        p = p.__new__(p, *d)
         return p
 
     return ExtType(code, data)

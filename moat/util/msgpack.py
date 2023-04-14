@@ -15,7 +15,7 @@ import msgpack
 from .dict import attrdict
 from .path import Path
 from .impl import NotGiven
-from .proxy import Proxy, NoProxyError, as_proxy, name2obj, obj2name
+from .proxy import Proxy, NoProxyError, as_proxy, name2obj, obj2name, ProxyObj
 
 __all__ = ["packer", "unpacker", "stream_unpacker"]
 

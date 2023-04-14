@@ -67,5 +67,5 @@ def as_proxy(name, obj=NotGiven):
         _proxy(obj)
         return obj
 
-as_proxy("-")(NotGiven)
+as_proxy("-", NotGiven)
 

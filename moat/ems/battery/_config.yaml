@@ -16,8 +16,8 @@
 bat1:
   serial: ser
   batt:
-    client: app.bms.rpy1.BMS
-    server: moat.bms.battery.rpy1.BMS
+    client: app.ems.rpy1.BMS
+    server: moat.ems.battery.rpy1.BMS
 
     poll:
       t:

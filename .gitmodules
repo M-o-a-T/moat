@@ -20,7 +20,7 @@
 	path = lib/diffiehellman
 	url = git://git.smurf.noris.de/moat-lib-dh.git
 [submodule "bms"]
-	path = bms
+	path = ems
 	url = git://git.smurf.noris.de/moat-bms.git
 [submodule "lib/victron"]
 	path = lib/victron

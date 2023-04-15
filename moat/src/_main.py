@@ -46,6 +46,8 @@ class Repo(git.Repo):
         if root is None:
             root = self
 
+        if "/lib/" in self.working_dir:
+            return
         for r in self.submodules:
             try:
                 res = self._subrepo_cache[r.path]

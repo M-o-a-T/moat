@@ -499,6 +499,46 @@ async def publish(no_pypi, no_deb, skip, only, deb):
             print(r.working_dir)
             subprocess.run(["make", "pypi"], cwd=r.working_dir, check=True)
 
+async def fix_main(repo):
+    """
+    Set "main" references to the current HEAD.
+
+    Repos with a non-detached head are skipped.
+    Reports an error if HEAD is not a direct descendant.
+    """
+    async def _fix(r):
+        if not r.head.is_detached:
+            if r.head.ref.name != "main":
+                print(f"{r.working_dir}: Head is {r.head.ref.name !r}", file=sys.stderr)
+            return
+        m = r.refs["main"]
+        if m.commit == r.head.commit:
+            return
+        buf=io.StringIO()
+        ch = await run_process(["git","-C",r.working_dir, "merge-base",m.commit.hexsha,r.head.commit.hexsha], input=None, stderr=sys.stderr)
+        ref = ch.stdout.decode().strip()
+        if ref != m.commit.hexsha:
+            print(f"{r.working_dir}: need merge", file=sys.stderr)
+            return
+        m.set_reference(ref=r.head.commit, logmsg="fix_main")
+
+    await _fix(repo)
+    for r in repo.subrepos():
+        await _fix(r)
+
+@cli.command()
+async def fixref():
+    """
+    Reset 'main' ref to HEAD
+
+    Submodules frequently have detached HEADs. This command resets "main"
+    to them, but only if that is a fast-forward operation.
+
+    An error message is printed if the head doesn't point to "main", or if
+    the merge wouldn't be a fast-forward operation.
+    """
+    repo = Repo(None)
+    await fix_main(repo)
 
 @cli.command()
 @click.option("-r", "--remote", type=str, help="Remote. Default: all.", default="--all")
@@ -506,7 +546,7 @@ async def publish(no_pypi, no_deb, skip, only, deb):
 async def push(obj, remote):
     """Push the current state"""
     try:
-        cmd = "git push".split()
+        cmd = "git push --recurse-submodules=on-demand".split()
         if not obj.debug:
             cmd.append("-q")
         elif obj.debug > 1:

@@ -35,14 +35,12 @@ A good Pythonic introduction is [here](https://vorpus.org/blog/notes-on-structur
 ## Repository Structure
 
 This repository contains a lot of submodules, corresponding to separate `moat-XXX`
-packages..
+packages.
 
-The submodule "main" contains the command-line front-end of the MoaT. Any
+The submodule "main" contains the command-line front-end of MoaT. Any
 MoaT code that can reasonably be controlled by a command line hooks into
 it, by way of a `_main` module with a `cli` object, which should be an
-`asyncclick` command.
-
-All other parts are submodules, so you can ignore the parts you don't want.
+`asyncclick` group (or command).
 
 One mandatory submodule is "util". It contains a heap of semi-structured helper code
 which the rest of the MoaT infrastructure depends on.
@@ -72,9 +70,13 @@ These can be used standalone.
 
 * kv: distributed masterless eventually-consistent key-value storage.
 
-* pv: photovoltaics.
+* ems: Battery management, photovoltaics, …
+
+* src: MoaT source code management
 
 ### MoaT-KV components
+
+"moat.kv" is currently named "distkv".
 
 * kv-akumuli: Data storage to [Akumuli](https://docs.akumuli.org/), an
   efficient light-weight time series database
@@ -91,8 +93,12 @@ These can be used standalone.
 
 * kv-wago: A rudimentary interface for WAGO 330 controllers
 
-### MoaT-PV components
+### MoaT-EMS components
 
-* pv-bms: Battery management
+* ems-battery: Battery management
+
+* ems-inv: Inverter management
+
+* ems-sched: Energy storage scheduling
 
 More will follow.

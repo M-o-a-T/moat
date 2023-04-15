@@ -1,9 +1,9 @@
 [submodule "lib/serialpacker"]
 	path = lib/serialpacker
-	url = git://git.smurf.noris.de/SerialPacker.git
+	url = git://github.com/M-o-a-T/moat-lib-serialpacker.git
 [submodule "lib/micropython"]
 	path = lib/micropython
-	url = git@github.com:smurfix/micropython.git
+	url = git://github.com/M-o-a-T/micropython.git
 [submodule "lib/micropython-lib"]
 	path = lib/micropython-lib
-	url = git@github.com:smurfix/micropython-lib.git
+	url = git://github.com/M-o-a-T/micropython-lib.git

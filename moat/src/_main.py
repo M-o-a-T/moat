@@ -512,15 +512,15 @@ async def fix_main(repo):
                 print(f"{r.working_dir}: Head is {r.head.ref.name !r}", file=sys.stderr)
             return
         m = r.refs["main"]
-        if m.commit == r.head.commit:
-            return
-        buf=io.StringIO()
-        ch = await run_process(["git","-C",r.working_dir, "merge-base",m.commit.hexsha,r.head.commit.hexsha], input=None, stderr=sys.stderr)
-        ref = ch.stdout.decode().strip()
-        if ref != m.commit.hexsha:
-            print(f"{r.working_dir}: need merge", file=sys.stderr)
-            return
-        m.set_reference(ref=r.head.commit, logmsg="fix_main")
+        if m.commit != r.head.commit:
+            buf=io.StringIO()
+            ch = await run_process(["git","-C",r.working_dir, "merge-base",m.commit.hexsha,r.head.commit.hexsha], input=None, stderr=sys.stderr)
+            ref = ch.stdout.decode().strip()
+            if ref != m.commit.hexsha:
+                print(f"{r.working_dir}: need merge", file=sys.stderr)
+                return
+            m.set_reference(ref=r.head.commit, logmsg="fix_main")
+        r.head.set_reference(ref=m, logmsg="fix_main 2")
 
     await _fix(repo)
     for r in repo.subrepos():

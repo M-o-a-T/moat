@@ -60,9 +60,8 @@ deps =
 
 """
 
-
 [tool.setuptools]
-packages = ["moat.micro"]
+packages = ["moat.ems.battery","moat.micro"]
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
@@ -76,7 +75,7 @@ dependencies = ["anyio ~= 3.0"]
 dynamic = ["version"]
 keywords = ["MoaT"]
 requires-python = ">=3.8"
-name = "moat-micro"
+name = "moat-ems-battery"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"

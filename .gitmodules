@@ -15,7 +15,7 @@
 	url = git://git.smurf.noris.de/moat-src.git
 [submodule "lib/diffiehellman"]
 	path = lib/diffiehellman
-	url = git://git.smurf.noris.de/moat-lib-dh.git
+	url = git://git.smurf.noris.de/moat-lib-diffiehellman.git
 [submodule "ems"]
 	path = ems
 	url = git://git.smurf.noris.de/moat-ems.git

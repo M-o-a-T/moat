@@ -19,7 +19,7 @@ dependencies = [
 dynamic = [ "version",]
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
-name = "moat-bms"
+name = "moat-ems"
 description = "A battery management system for MoaT"
 readme = "README.md"
 [[project.authors]]
@@ -43,7 +43,7 @@ multi_line_output = 3
 profile = "black"
 
 [tool.setuptools]
-packages = [ "moat.bms",]
+packages = [ "moat.ems", "moat.bms",]
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 

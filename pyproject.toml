@@ -19,7 +19,7 @@ dependencies = [
 dynamic = [ "version",]
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
-name = "moat-bms-sched"
+name = "moat-ems-sched"
 description = "A battery scheduler"
 readme = "README.md"
 [[project.authors]]
@@ -31,7 +31,7 @@ file = "LICENSE.txt"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"
-repository = "https://github.com/M-o-a-T/moat-bms-sched"
+repository = "https://github.com/M-o-a-T/moat-ems-sched"
 
 [tool.flake8]
 max-line-length = 99
@@ -43,7 +43,7 @@ multi_line_output = 3
 profile = "black"
 
 [tool.setuptools]
-packages = [ "moat.bms.sched",]
+packages = [ "moat.ems.sched",]
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 

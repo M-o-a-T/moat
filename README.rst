@@ -10,14 +10,14 @@ buy/sell prices for grid power.
 Operation
 +++++++++
 
-The standalone program is started with the command `moat bms sched analyze`.
+The standalone program is started with the command `moat ems sched analyze`.
 Use `--help` for usages.
 
 ++++++++
 Channels
 ++++++++
 
-`moat bms sched analyze` reads the data it needs from a variety of possible
+`moat ems sched analyze` reads the data it needs from a variety of possible
 channels. Likewise, it sends its output to them.
 
 Data per interval
@@ -102,18 +102,18 @@ Configuration
 
 MoaT uses a YAML-based configuration.
 
-`moat bms sched dump` prints the config data. You can modify it in three
+`moat ems sched dump` prints the config data. You can modify it in three
 ways:
 
 * add your config data to your global MoaT configuration::
 
-    bms:
+    ems:
         sched:
             solar:
                 lat: 50.2
                 long: 11.8
 
-* load a config file with `moat bms sched -c ‹path›`::
+* load a config file with `moat ems sched -c ‹path›`::
 
     solar:
         lat: 50.2
@@ -121,7 +121,7 @@ ways:
 
 * modify the configuration from the command line::
 
-    moat bms sched -e solar.lat 50.2 -e solar.long 11.8
+    moat ems sched -e solar.lat 50.2 -e solar.long 11.8
 
 There's an `-e` and a `-v` option. The former is evaluated, i.e.
 used for numerical values, while the latter is not (text, file paths).
@@ -134,7 +134,7 @@ Sources
 This section concerns both sources (i.e. ways to get data into the
 scheduler) and sinks (ways to get them back out).
 
-You can use `moat bms sched modes` to list the scheduler's supported inputs
+You can use `moat ems sched modes` to list the scheduler's supported inputs
 and outputs. Each mode supports a subset of data sources.
 
 You configure which input/output to use with the `mode.‹channel›`
@@ -148,7 +148,7 @@ configuration. Thus, to load the read the SoC from a file you'd use::
             soc: "/path/to/whereever.cvs"
 
 or, equivalently,
-`moat bms sched -v mode.soc file -v data.file.soc /path/to/whereever.cvs analyze`.
+`moat ems sched -v mode.soc file -v data.file.soc /path/to/whereever.cvs analyze`.
 
 file
 ----

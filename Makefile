@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-PACKAGE=moat-bms-sched
+PACKAGE=moat-ems-sched
 
 ifneq ($(wildcard /usr/share/sourcemgr/make/py),)
 include /usr/share/sourcemgr/make/py

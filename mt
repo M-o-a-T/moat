@@ -1,5 +1,9 @@
 #!/usr/bin/python3
 
+"""
+This is a command line for MoaT that works in the main repository.
+"""
+
 import sys
 import os
 
@@ -13,19 +17,18 @@ except ImportError:
 
 def _get_sub(r):
     r = os.path.abspath(r)
+    if "/lib/" in r:
+        return
     rs = os.path.join(r,"src")
     yield rs if os.path.isdir(rs) else r
     try:
         rp = git.Repo(r)
     except Exception as exc:
-        if "/lib/" in r:
-            return
         raise RuntimeError(r) from exc
     for rr in rp.submodules:
         yield from _get_sub(os.path.join(r,rr.path))
 
 _pp = list(_get_sub(sys.path[0]))
-_pp.append("/src/distkv")
 sys.path[0:1] = _pp
 #print(_pp)
 #from moat.modbus.dev._main import cli as xx

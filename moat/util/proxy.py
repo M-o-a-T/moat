@@ -73,9 +73,16 @@ def obj2name(obj, name=NotGiven, replace=False):
 def as_proxy(name, obj=NotGiven, replace=False):
     """
     Export an object or class as a named proxy.
+
+    @replace can be
+    - False (default): error when the name exists
+    - True: replace the stored name
+    - None: replace the object
     """
 
     def _proxy(obj):
+        if replace is None and name in _CProxy:
+            return _CProxy[name]
         name2obj(name, obj, replace=replace)
         obj2name(obj, name, replace=replace)
         return obj

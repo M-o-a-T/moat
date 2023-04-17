@@ -702,7 +702,6 @@ class InvControl(BusVars):
         async with InvInterface(self) as self._ctrl, self.intf.service(
             name
         ) as self._srv, anyio.create_task_group() as self._tg:
-
             self._tg.start_soon(self._init_intf)
             if not self.acc_vebus.value:
                 logger.warning("VEBUS not known")

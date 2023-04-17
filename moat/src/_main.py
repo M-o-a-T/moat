@@ -359,9 +359,9 @@ def apply_templates(repo):
                 )
             )
 
-        proj = Path(repo.working_dir) / "pyproject.toml"
-        proj.write_text(proj.as_string())
-        repo.index.add(proj)
+        projp = Path(repo.working_dir) / "pyproject.toml"
+        projp.write_text(proj.as_string())
+        repo.index.add(projp)
 
     mkt = repl(pt("Makefile").read_text())
     try:

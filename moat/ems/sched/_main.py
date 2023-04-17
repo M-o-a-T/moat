@@ -10,7 +10,6 @@ from textwrap import dedent as _dedent
 import asyncclick as click
 from moat.util import (
     attr_args,
-    attrdict,
     list_ext,
     load_ext,
     load_subgroup,
@@ -21,16 +20,18 @@ from moat.util import (
 )
 
 from .control import Model
-from .mode import BaseLoader, Loader
+from .mode import BaseLoader
 
 log = logging.getLogger()
 
 
 def dedent(s):
+    "remove indent"
     return _dedent(s).strip()
 
 
 def Loader(name, key=None):
+    """load a named mode"""
     res = load_ext(f"moat.bms.sched.mode.{name}")
     if key is False:
         return res
@@ -79,7 +80,11 @@ List of known inputs+outputs. Use T.‹name› or ‹mode›.‹name› for deta
 """,
     )
     if not name:
-        mn = [m for m, _ in list_ext("moat.bms.sched.mode", pkg_only=False)]
+        mn = [
+            # pylint:disable=unexpected-keyword-arg
+            m
+            for m, _ in list_ext("moat.bms.sched.mode", pkg_only=False)
+        ]
         mn.extend(static.keys())
         ml = max(len(m) for m in mn)
         for m in mn:
@@ -157,7 +162,7 @@ async def analyze(obj, all_, force):
         soc_fn = cfg.mode.soc
         if soc_fn is None:
             raise click.ClickException("I need to know the current SoC")
-        soc_cur = await Loader(sm, "soc")(cfg)
+        soc_cur = await Loader(soc_fn, "soc")(cfg)
 
     if all_:
         cfg.mode.result = None

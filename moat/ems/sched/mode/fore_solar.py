@@ -1,6 +1,9 @@
-from datetime import datetime, timedelta, timezone
+"""
+Get solar data from forecast.solar
+"""
 
-import anyio
+from datetime import datetime
+
 import asks
 
 from . import BaseLoader
@@ -23,14 +26,16 @@ class Loader(BaseLoader):
         """
 
         factor = cfg.data.fore_solar.factor
-        tz = datetime.now(timezone(timedelta(0))).astimezone().tzinfo
         start = datetime.utcfromtimestamp(t - 3600).strftime("%H:%M")
         t_step = int(3600 / cfg.steps)
         cmp = a["compass"]
         if cmp > 180:
             cmp -= 360
 
-        url = f"{cfg.data.fore_solar.url}/{cfg.data.fore_solar.api}/estimate/watts/{cfg.solar.lat}/{cfg.solar.long}/{a['tilt']}/{cmp}/{int(a['peak']*1000)}"
+        url = (
+            f"{cfg.data.fore_solar.url}/{cfg.data.fore_solar.api}/estimate/"
+            + f"watts/{cfg.solar.lat}/{cfg.solar.long}/{a['tilt']}/{cmp}/{int(a['peak']*1000)}"
+        )
         r = await session.get(
             url,
             headers=dict(

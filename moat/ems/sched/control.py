@@ -8,7 +8,7 @@ from contextlib import nullcontext
 
 import anyio
 from moat.util import attrdict
-from moat.util.times import attrdict, humandelta
+from moat.util.times import humandelta
 from ortools.linear_solver import pywraplp
 
 from .mode import Loader
@@ -26,6 +26,7 @@ async def generate_data(cfg, t):
         iters[k] = aiter(Loader(cfg.mode[k], k)(cfg, t))
     while True:
         val = attrdict()
+        k = None
         try:
             for k, v in iters.items():
                 val[k] = await anext(v)
@@ -49,7 +50,7 @@ def add_piecewise(solver, x, y, points: list[int, int], name):
     # untested
 
     n = len(points) - 1  # number of segments
-    l = []  # lambda values to interpolate within a segment
+    l = []  # noqa:E741  # lambda values to interpolate within a segment
 
     rx = []
     ry = []
@@ -95,6 +96,21 @@ class Model:
     the SoC at that time.
     """
 
+    money = None
+    cap = None
+    g_sell = None
+    g_buy = None
+    g_sells = None
+    g_buys = None
+    moneys = None
+    caps = None
+    b_diss = None
+    b_chgs = None
+    cap_init = None
+    constr_init = None
+    objective = None
+    solver = None
+
     def __init__(self, cfg: dict, t=None):
         if t is None:
             t_slot = 3600 / cfg.steps
@@ -103,7 +119,8 @@ class Model:
             t -= t % t_slot
             if abs(t_now - t) > t_slot / 10:
                 raise ValueError(
-                    f"You're {humandelta(abs(t_now-t))} away from {datetime.datetime.fromtimestamp(t).isoformat(sep=' ')}"
+                    f"You're {humandelta(abs(t_now-t))} away "
+                    f"from {datetime.datetime.fromtimestamp(t).isoformat(sep=' ')}"
                 )
 
         elif t % (3600 / cfg.steps):

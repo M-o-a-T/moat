@@ -1,3 +1,7 @@
+"""
+Base object for scheduling
+"""
+
 from moat.util import load_ext
 
 
@@ -12,7 +16,6 @@ class BaseLoader:
         Future prices for incoming energy, in $$$/kWh.
         """
         raise NotImplementedError("You need to add a static 'price_buy' method")
-        yield None
 
     @staticmethod
     async def price_sell(cfg, t):
@@ -20,7 +23,6 @@ class BaseLoader:
         Future prices for sold energy, in $$$/kWh.
         """
         raise NotImplementedError("You need to add a static 'price_sell' method")
-        yield None
 
     @staticmethod
     async def solar(cfg, t):
@@ -28,7 +30,6 @@ class BaseLoader:
         Projected solar power, in kW.
         """
         raise NotImplementedError("You need to add a static 'solar' method")
-        yield None
 
     @staticmethod
     async def load(cfg, t):
@@ -36,7 +37,6 @@ class BaseLoader:
         Projected local consumption, in kW.
         """
         raise NotImplementedError("You need to add a static 'load' method")
-        yield None
 
     @staticmethod
     async def soc(cfg):
@@ -63,7 +63,7 @@ class BaseLoader:
 
         By default this does nothing.
         """
-        pass
+        pass  # pylint:disable=unnecessary-pass
 
 
 def Loader(name, key=None):

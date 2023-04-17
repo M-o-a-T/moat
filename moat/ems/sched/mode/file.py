@@ -1,3 +1,8 @@
+"""
+Read data from a file
+"""
+import sys
+
 import anyio
 
 from . import BaseLoader
@@ -76,7 +81,7 @@ class Loader(BaseLoader):
             return float(x)
 
     @staticmethod
-    async def result(cfg, kw):
+    async def result(cfg, **kw):
         """
         Send the result data to a file.
 

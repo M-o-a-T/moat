@@ -1,10 +1,9 @@
-from datetime import datetime, timedelta, timezone
-
-import anyio
+"""
+Germany: Get next-day prices from awattar.de API
+"""
 import asks
 
 from . import BaseLoader
-from . import Loader as _Loader
 
 
 class Loader(BaseLoader):
@@ -19,7 +18,6 @@ class Loader(BaseLoader):
         """
         Read prices for the German next-day spot market from the Awattar API.
         """
-        tz = datetime.now(timezone(timedelta(0))).astimezone().tzinfo
         start = t - 24 * 3600
         end = start + 7 * 24 * 3600
         factor = cfg.data.awattar.factor

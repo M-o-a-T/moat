@@ -32,7 +32,7 @@ def _encode(data):
         return msgpack.ExtType(4, data.name.encode("utf-8"))
     if isinstance(data, Proxy):
         # proxy class
-        return msgpack.ExtType(5, packb(data.name) + b"".join(packb(x) for x in data.data))
+        return msgpack.ExtType(5, packer(data.name) + b"".join(packer(x) for x in data.data))
     try:
         name = obj2name(data)
     except KeyError:

@@ -284,11 +284,13 @@ def _namespaces(name):
     try:
         ext = importlib.import_module(name)
     except ModuleNotFoundError:
+        logger.debug("No NS: %s", name)
         return ()
     try:
         p = ext.__path__
     except AttributeError:
         p = (str(Path(ext.__file__).parent),)
+    logger.debug("NS: %s %s", name, p)
     return pkgutil.iter_modules(p, ext.__name__ + ".")
 
 

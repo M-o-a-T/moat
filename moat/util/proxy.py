@@ -2,12 +2,6 @@
 This module contains proxy helpers.
 """
 
-from functools import partial
-
-import msgpack
-
-from .dict import attrdict
-from .path import Path
 from .impl import NotGiven
 
 __all__ = ["Proxy", "NoProxyError", "as_proxy", "name2obj", "obj2name"]
@@ -28,7 +22,11 @@ class Proxy:
         self.data = data
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({repr(self.name)},"+",".join(repr(x) for x in data)+")"
+        return (
+            f"{self.__class__.__name__}({repr(self.name)},"
+            + ",".join(repr(x) for x in self.data)
+            + ")"
+        )
 
     def ref(self):
         """Dereferences the proxy"""
@@ -36,10 +34,16 @@ class Proxy:
 
 
 # _pkey = 1
-_CProxy:dict[str,object] = {}
-_RProxy:dict[int,str] = {}
+_CProxy: dict[str, object] = {}
+_RProxy: dict[int, str] = {}
+
 
 def name2obj(name, obj=NotGiven):
+    """
+    Translates Proxy name to referred object
+
+    Raises `KeyError` if not found.
+    """
     if obj is NotGiven and _CProxy:
         return _CProxy[name]
     if _CProxy.get(name, None) is not obj:
@@ -47,7 +51,16 @@ def name2obj(name, obj=NotGiven):
     _CProxy[name] = obj
     return None
 
+
 def obj2name(obj, name=NotGiven):
+    """
+    Translates Proxy object to proxied name
+
+    If a name is given, set it.
+
+    Raises `KeyError` if not found and no name given, or if the oid
+    already has a different name.
+    """
     if name is NotGiven:
         return _RProxy[id(obj)]
     oid = id(obj)
@@ -56,19 +69,22 @@ def obj2name(obj, name=NotGiven):
     _RProxy[oid] = name
     return None
 
+
 def as_proxy(name, obj=NotGiven):
     """
     Export an object or class as a named proxy.
     """
+
     def _proxy(obj):
         name2obj(name, obj)
         obj2name(obj, name)
         return obj
+
     if obj is NotGiven:
         return _proxy
     else:
         _proxy(obj)
         return obj
 
-as_proxy("-", NotGiven)
 
+as_proxy("-", NotGiven)

@@ -6,27 +6,36 @@ Some rudimentary tests for packing
 
 import pytest
 
-from moat.util import packer,unpacker, as_proxy, attrdict
+from moat.util import as_proxy, attrdict, packer, unpacker
+
 
 class Bar:
+    "A proxied object"
+
     def __init__(self, x):
         self.x = x
+
     def __eq__(self, other):
         return self.x == other.x
 
+
 @as_proxy("fu")
 class Foo(Bar):
-    pass
+    "A proxied class"
+    pass  # pylint: disable=unnecessary-pass
+
 
 _val = [
-        Foo(42),
-        attrdict(x=1,y=2),
-    ]
+    Foo(42),
+    attrdict(x=1, y=2),
+]
+
 
 def test_basic():
     for v in _val:
         w = unpacker(packer(v))
-        assert v == w, (v,w)
+        assert v == w, (v, w)
+
 
 def test_bar():
     b = Bar(95)

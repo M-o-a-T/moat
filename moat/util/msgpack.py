@@ -14,8 +14,7 @@ import msgpack
 
 from .dict import attrdict
 from .path import Path
-from .impl import NotGiven
-from .proxy import Proxy, NoProxyError, as_proxy, name2obj, obj2name
+from .proxy import Proxy, _CProxy, obj2name
 
 __all__ = ["packer", "unpacker", "stream_unpacker"]
 
@@ -46,7 +45,7 @@ def _encode(data):
         pass
     else:
         p = data.__getstate__()
-        if not isinstance(p,(list,tuple)):
+        if not isinstance(p, (list, tuple)):
             p = (p,)
         return msgpack.ExtType(5, packer(name) + b"".join(packer(x) for x in p))
 

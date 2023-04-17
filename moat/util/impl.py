@@ -4,9 +4,9 @@ This module contains various helper functions and classes.
 import logging
 import sys
 from collections import deque
+from contextlib import nullcontext
 from getpass import getpass
 from math import log10
-from contextlib import nullcontext
 
 __all__ = [
     "NoneType",
@@ -30,12 +30,15 @@ __all__ = [
 NoneType = type(None)
 
 NoLock = nullcontext()
+
+
 class OptCtx:
     """
     Optional context. Unlike `contextlib.nullcontext` this doesn't return a
     fixed value; instead it delegates to the wrapped context manager – if
     there is one.
     """
+
     def __init__(self, obj=None):
         self.obj = obj
 
@@ -47,6 +50,7 @@ class OptCtx:
     def __exit__(self, *tb):
         if self.obj is not None:
             return self.obj.__exit__(*tb)
+        return None
 
     async def __aenter__(self):
         if self.obj is not None:

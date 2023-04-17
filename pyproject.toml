@@ -62,7 +62,6 @@ deps =
 
 """
 
-
 [tool.setuptools]
 packages = ["moat.micro"]
 

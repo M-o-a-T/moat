@@ -130,8 +130,8 @@ def fix_deps(deps: list[str], tags: dict[str, str]) -> bool:
 def run_tests(repo: Repo) -> bool:
     """Run tests (i.e., 'tox') in this repository."""
 
-    tst = Path(repo.working_dir).joinpath("Makefile")
-    if not tst.is_file():
+    proj = Path(repo.working_dir) / "Makefile"
+    if not proj.is_file():
         # No Makefile. Assume it's OK.
         return True
     try:
@@ -359,8 +359,9 @@ def apply_templates(repo):
                 )
             )
 
-        (Path(repo.working_dir) / "pyproject.toml").write_text(proj.as_string())
-        repo.index.add(Path(repo.working_dir) / "pyproject.toml")
+        proj = Path(repo.working_dir) / "pyproject.toml"
+        proj.write_text(proj.as_string())
+        repo.index.add(proj)
 
     mkt = repl(pt("Makefile").read_text())
     try:
@@ -453,8 +454,8 @@ async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
             if not no_dirty:
                 continue
 
-        tst = Path(r.working_dir).joinpath("pyproject.toml")
-        if tst.is_file():
+        proj = Path(r.working_dir) / "pyproject.toml"
+        if proj.is_file():
             apply_templates(r)
         else:
             logger.info("%s: no pyproject.toml file. Skipping.")

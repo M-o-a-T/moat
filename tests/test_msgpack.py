@@ -19,7 +19,8 @@ class Bar:
         return self.x == other.x
 
 
-@as_proxy("fu")
+# needs "replace" because testing re-imports
+@as_proxy("fu", replace=True)
 class Foo(Bar):
     "A proxied class"
     pass  # pylint: disable=unnecessary-pass
@@ -39,7 +40,7 @@ def test_basic():
 
 def test_bar():
     b = Bar(95)
-    as_proxy("b")(b)
+    as_proxy("b", b, replace=True)
     c = unpacker(packer(b))
     assert b == c
     with pytest.raises(TypeError):

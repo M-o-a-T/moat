@@ -38,7 +38,7 @@ _CProxy: dict[str, object] = {}
 _RProxy: dict[int, str] = {}
 
 
-def name2obj(name, obj=NotGiven):
+def name2obj(name, obj=NotGiven, replace=False):
     """
     Translates Proxy name to referred object
 
@@ -46,13 +46,13 @@ def name2obj(name, obj=NotGiven):
     """
     if obj is NotGiven and _CProxy:
         return _CProxy[name]
-    if _CProxy.get(name, None) is not obj:
+    if not replace and _CProxy.get(name, None) is not obj:
         raise KeyError(name)  # exists
     _CProxy[name] = obj
     return None
 
 
-def obj2name(obj, name=NotGiven):
+def obj2name(obj, name=NotGiven, replace=False):
     """
     Translates Proxy object to proxied name
 
@@ -64,20 +64,20 @@ def obj2name(obj, name=NotGiven):
     if name is NotGiven:
         return _RProxy[id(obj)]
     oid = id(obj)
-    if _RProxy.get(oid, None) != name:
+    if not replace and _RProxy.get(oid, None) != name:
         raise KeyError(name)  # exists
     _RProxy[oid] = name
     return None
 
 
-def as_proxy(name, obj=NotGiven):
+def as_proxy(name, obj=NotGiven, replace=False):
     """
     Export an object or class as a named proxy.
     """
 
     def _proxy(obj):
-        name2obj(name, obj)
-        obj2name(obj, name)
+        name2obj(name, obj, replace=replace)
+        obj2name(obj, name, replace=replace)
         return obj
 
     if obj is NotGiven:

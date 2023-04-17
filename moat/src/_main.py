@@ -45,6 +45,7 @@ class Repo(git.Repo):
 
         if root is None:
             root = self
+            yield self
 
         if "/lib/" in self.working_dir:
             return

@@ -233,9 +233,10 @@ def load_ext(name, *attr, err=False):
     try:
         mod = importlib.import_module(dp)
     except (ModuleNotFoundError, FileNotFoundError) as exc:
-        logger.debug("Err %s: %r", dp, exc)
         if err:
             raise
+        if err is not None:
+            logger.debug("Err %s: %r", dp, exc)
         if (
             exc.name != dp
             and exc.name != dpe
@@ -260,13 +261,11 @@ def load_cfg(name):
     """
     Load a module's configuration
     """
-    cf = {}
-    try:
-        try:
-            cf = load_ext(name, "_config", "CFG", err=True)
-        except ModuleNotFoundError:
-            cf = load_ext(name, "config", "CFG", err=True)
-    except ModuleNotFoundError:
+    cf = load_ext(name, "_config", "CFG", err=None)
+    if cf is None:
+        cf = load_ext(name, "config", "CFG", err=None)
+    if cf is None:
+        cf = {}
         ext = sys.modules[name]
         try:
             p = ext.__path__

@@ -500,6 +500,7 @@ async def publish(no_pypi, no_deb, skip, only, deb):
             print(r.working_dir)
             subprocess.run(["make", "pypi"], cwd=r.working_dir, check=True)
 
+
 async def fix_main(repo):
     """
     Set "main" references to the current HEAD.
@@ -507,6 +508,7 @@ async def fix_main(repo):
     Repos with a non-detached head are skipped.
     Reports an error if HEAD is not a direct descendant.
     """
+
     async def _fix(r):
         if not r.head.is_detached:
             if r.head.ref.name != "main":
@@ -514,8 +516,12 @@ async def fix_main(repo):
             return
         m = r.refs["main"]
         if m.commit != r.head.commit:
-            buf=io.StringIO()
-            ch = await run_process(["git","-C",r.working_dir, "merge-base",m.commit.hexsha,r.head.commit.hexsha], input=None, stderr=sys.stderr)
+            buf = io.StringIO()
+            ch = await run_process(
+                ["git", "-C", r.working_dir, "merge-base", m.commit.hexsha, r.head.commit.hexsha],
+                input=None,
+                stderr=sys.stderr,
+            )
             ref = ch.stdout.decode().strip()
             if ref != m.commit.hexsha:
                 print(f"{r.working_dir}: need merge", file=sys.stderr)
@@ -526,6 +532,7 @@ async def fix_main(repo):
     await _fix(repo)
     for r in repo.subrepos():
         await _fix(r)
+
 
 @cli.command()
 async def fixref():
@@ -540,6 +547,7 @@ async def fixref():
     """
     repo = Repo(None)
     await fix_main(repo)
+
 
 @cli.command()
 @click.option("-r", "--remote", type=str, help="Remote. Default: all.", default="--all")

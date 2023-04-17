@@ -13,29 +13,22 @@ from .impl import NotGiven
 __all__ = ["Proxy", "NoProxyError", "as_proxy", "name2obj", "obj2name"]
 
 
+class NoProxyError(ValueError):
+    "Error for nonexistent proxy values"
+    pass  # pylint:disable=unnecessary-pass
+
+
 class Proxy:
     """
     A proxy object, i.e. a placeholder for things that cannot pass through MsgPack.
     """
 
-    def __init__(self, name):
-        self.name = name
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self.name !r})"
-
-
-class NoProxyError(ValueError):
-    "Error for nonexistent proxy values"
-    pass  # pylint:disable=unnecessary-pass
-
-class ProxyObj:
     def __init__(self, name, *data):
         self.name = name
         self.data = data
 
     def __repr__(self):
-        return f"RemoteObj({repr(self.name)},"+",".join(repr(x) for x in data)+")"
+        return f"{self.__class__.__name__}({repr(self.name)},"+",".join(repr(x) for x in data)+")"
 
 # _pkey = 1
 _CProxy:dict[str,object] = {}

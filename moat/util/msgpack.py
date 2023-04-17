@@ -15,7 +15,7 @@ import msgpack
 from .dict import attrdict
 from .path import Path
 from .impl import NotGiven
-from .proxy import Proxy, NoProxyError, as_proxy, name2obj, obj2name, ProxyObj
+from .proxy import Proxy, NoProxyError, as_proxy, name2obj, obj2name
 
 __all__ = ["packer", "unpacker", "stream_unpacker"]
 
@@ -30,7 +30,7 @@ def _encode(data):
     if isinstance(data, Proxy):
         # Proxy object
         return msgpack.ExtType(4, data.name.encode("utf-8"))
-    if isinstance(data, ProxyObj):
+    if isinstance(data, Proxy):
         # proxy class
         return msgpack.ExtType(5, packb(data.name) + b"".join(packb(x) for x in data.data))
     try:
@@ -79,7 +79,7 @@ def _decode(code, data):
         try:
             pk = _CProxy[pk]
         except KeyError:
-            pk = partial(RemoteObj,pk)
+            pk = partial(Proxy, pk)
         pk = object.__new__(pk)
         try:
             pk.__setstate__(*s)

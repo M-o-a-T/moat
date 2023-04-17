@@ -400,8 +400,8 @@ def apply_templates(repo):
         repo.index.add(pr(".gitignore"))
 
 
-@cli.command()
-def path():
+@cli.command("path")
+def path_():
     "Path to source templates"
     print(Path(__file__).parent / "_templates")
 
@@ -516,7 +516,6 @@ async def fix_main(repo):
             return
         m = r.refs["main"]
         if m.commit != r.head.commit:
-            buf = io.StringIO()
             ch = await run_process(
                 ["git", "-C", r.working_dir, "merge-base", m.commit.hexsha, r.head.commit.hexsha],
                 input=None,

@@ -1,7 +1,7 @@
 __all__ = ["merge"]
 
 
-from . import NotGiven
+from .impl import NotGiven
 
 
 def _merge_dict(d, other, drop=False, replace=True):

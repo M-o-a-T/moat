@@ -4,7 +4,7 @@ This module contains various helper functions and classes.
 from copy import deepcopy
 from typing import Mapping, Tuple, Union
 
-from . import NotGiven
+from .impl import NotGiven
 
 __all__ = ["combine_dict", "drop_dict", "attrdict", "to_attrdict"]
 

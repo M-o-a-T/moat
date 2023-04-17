@@ -62,7 +62,7 @@ async def _server(host, port, debug, args):
     if debug:
         log.setLevel(logging.DEBUG)
     if not args:
-        click.UsageError("You didn't add any values to serve")
+        raise click.UsageError("You didn't add any values to serve")
 
     from moat.modbus.server import ModbusServer  # pylint: disable=import-outside-toplevel
 
@@ -241,6 +241,7 @@ async def _serclient(
 
 
 def add_serial_cfg(c):
+    """Helper for serial port configuration"""
     c = click.option(
         "--port", "-p", required=True, type=str, help="destination port (/dev/ttyXXX)"
     )(c)

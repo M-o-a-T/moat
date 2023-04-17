@@ -26,8 +26,8 @@ client = mk_client(cli)
 server = mk_server(cli)
 
 
-def print_exc(exc):
-    traceback.print_exception(type(exc), exc, exc.__traceback__)
+def print_exc(exc, **kw):  # pylint: disable=missing-function-docstring
+    traceback.print_exception(type(exc), exc, exc.__traceback__, **kw)
 
 
 @cli.group(invoke_without_command=True)
@@ -49,6 +49,7 @@ async def monitor(ctx, **params):
         print(msg)
 
     async with ModbusClient() as g, g.serial(monitor=mon, **params) as h:
+        g, h  # pylint: disable=pointless-statement
         if obj.debug > 1:
             print("Listening.", file=sys.stderr)
         while True:
@@ -93,9 +94,9 @@ async def to(obj, retry, **params):
             ) as A, ModbusClient() as g_b, g_b.serial(monitor=mon_B, **params) as B:
                 while True:
                     await anyio.sleep(99999)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             if not retry or not n_A or not n_B:
                 raise
-            print_exc(file=sys.stderr)
+            print_exc(exc, file=sys.stderr)
             print(f"Retrying in {retry}s", file=sys.stderr)
             await anyio.sleep(retry)

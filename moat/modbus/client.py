@@ -150,6 +150,12 @@ class _HostCommon:
         return self._tid
 
     async def send(self, msg):
+        """
+        Send a packet.
+
+        This is a low-level function. If you are a client, you want to use
+        `execute` instead.
+        """
         packet = self.framer.buildPacket(msg)
         async with self._send_lock:
             await self.stream.send(packet)

@@ -30,6 +30,11 @@ class Proxy:
     def __repr__(self):
         return f"{self.__class__.__name__}({repr(self.name)},"+",".join(repr(x) for x in data)+")"
 
+    def ref(self):
+        """Dereferences the proxy"""
+        return name2obj(self.name)
+
+
 # _pkey = 1
 _CProxy:dict[str,object] = {}
 _RProxy:dict[int,str] = {}
@@ -37,13 +42,18 @@ _RProxy:dict[int,str] = {}
 def name2obj(name, obj=NotGiven):
     if obj is NotGiven and _CProxy:
         return _CProxy[name]
+    if _CProxy.get(name, None) is not obj:
+        raise KeyError(name)  # exists
     _CProxy[name] = obj
     return None
 
 def obj2name(obj, name=NotGiven):
     if name is NotGiven:
         return _RProxy[id(obj)]
-    _RProxy[id(obj)] = name
+    oid = id(obj)
+    if _RProxy.get(oid, None) != name:
+        raise KeyError(name)  # exists
+    _RProxy[oid] = name
     return None
 
 def as_proxy(name, obj=NotGiven):

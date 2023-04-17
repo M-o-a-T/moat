@@ -5,3 +5,4 @@
 /*.upload
 /.tested.yaml
 /local/
+__pycache__/

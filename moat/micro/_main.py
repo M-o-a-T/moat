@@ -24,10 +24,6 @@ from moat.util.main import load_subgroup
 
 from .compat import TaskGroup
 from .direct import DirectREPL
-from .main import ABytes, NoPort, copy_over, get_link, get_link_serial, get_remote, get_serial
-from .path import MoatDevPath, MoatFSPath
-from .proto.multiplex import Multiplexer
-from .proto.stack import RemoteError
 
 logger = logging.getLogger(__name__)
 
@@ -174,6 +170,9 @@ async def setup(
     # 	if not source:
     # 		source = anyio.Path(__file__).parent / "_embed"
 
+    from .main import get_link_serial, get_serial, copy_over, ABytes
+    from .path import MoatDevPath
+
     async with get_serial(obj) as ser:
         if force_exit or exit:
             if force_exit:
@@ -266,6 +265,9 @@ async def sync(obj, source, dest, cross):
     Sync of MoaT code on a running MicroPython device.
 
     """
+    from .main import get_link, copy_over
+    from .path import MoatFSPath
+
     async with get_link(obj) as req:
         dst = MoatFSPath("/" + dest).connect_repl(req)
         await copy_over(source, dst, cross=cross)
@@ -279,6 +281,8 @@ async def boot(obj, state):
     Restart a MoaT node
 
     """
+    from .main import get_link
+
     async with get_link(obj) as req:
         if state:
             await req.send(["sys", "state"], state=state)
@@ -312,6 +316,9 @@ async def cmd(obj, path, **attrs):
     val = process_args(val, **attrs)
     if len(path) == 0:
         raise click.UsageError("Path cannot be empty")
+
+    from .proto.stack import RemoteError
+    from .main import get_link
 
     async with get_link(obj) as req:
         try:
@@ -355,6 +362,9 @@ async def cfg(obj, read, read_client, write, write_client, sync, client, **attrs
     """
     if sync and (write or write_client):
         raise click.UsageError("You're not changing the running config!")
+
+    from .main import get_link
+    from .path import MoatFSPath
 
     if read and write and not (read_client or write_client):
         # local file update: don't talk to the client
@@ -430,6 +440,9 @@ async def _mplex(obj, no_config=False, debug=None, remote=False, server=None, pi
     elif remote:
         server = obj.cfg.micro.net.addr
 
+    from .proto.multiplex import Multiplexer
+    from .main import get_link_serial, get_remote, get_serial
+
     cfg_p = obj.cfg.micro.port
     if pipe:
         cfg_p.dev = pipe
@@ -483,6 +496,8 @@ async def _mplex(obj, no_config=False, debug=None, remote=False, server=None, pi
 @click.pass_obj
 async def mount(obj, path, blocksize):
     """Mount a controller's file system on the host"""
+    from .main import get_link
+
     async with get_link(obj) as req:
         from moat.micro.fuse import wrap
         async with wrap(req, path, blocksize=blocksize, debug=obj.debug):

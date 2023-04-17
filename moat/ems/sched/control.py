@@ -1,18 +1,20 @@
 """
 Charge/discharge optimizer.
 """
-import time
 import datetime
+import logging
+import time
 from contextlib import nullcontext
-from ortools.linear_solver import pywraplp
-import anyio
 
+import anyio
 from moat.util import attrdict
 from moat.util.times import attrdict, humandelta
+from ortools.linear_solver import pywraplp
+
 from .mode import Loader
 
-import logging
 logger = logging.getLogger(__name__)
+
 
 async def generate_data(cfg, t):
     # loads, prices, solar, buy_factor, buy_const):
@@ -21,11 +23,11 @@ async def generate_data(cfg, t):
     """
     iters = {}
     for k in "price_buy,price_sell,solar,load".split(","):
-        iters[k] = aiter(Loader(cfg.mode[k],k)(cfg, t))
+        iters[k] = aiter(Loader(cfg.mode[k], k)(cfg, t))
     while True:
         val = attrdict()
         try:
-            for k,v in iters.items():
+            for k, v in iters.items():
                 val[k] = await anext(v)
         except StopAsyncIteration:
             logger.info("END: %s", k)
@@ -34,7 +36,7 @@ async def generate_data(cfg, t):
         yield val
 
 
-def add_piecewise(solver,x,y, points:list[int,int], name):
+def add_piecewise(solver, x, y, points: list[int, int], name):
     """
     Add a piecewise-linear constraint on y=a*x+b.
 
@@ -46,31 +48,32 @@ def add_piecewise(solver,x,y, points:list[int,int], name):
 
     # untested
 
-    n = len(points)-1  # number of segments
+    n = len(points) - 1  # number of segments
     l = []  # lambda values to interpolate within a segment
 
     rx = []
     ry = []
-    for i,xyi in enumerate(points):
-        xi,yi = xyi
-        li = solver.NumVar(0,1,f"l_{name}_{i}"))
+    for i, xyi in enumerate(points):
+        xi, yi = xyi
+        li = solver.NumVar(0, 1, f"l_{name}_{i}")
 
         l.append(li)
-        rx.append(xi*li)
-        ry.append(yi*li)
+        rx.append(xi * li)
+        ry.append(yi * li)
 
-    b = [ solver.BoolVar(f"b_{name}_{i}") for i in range(n) ]
+    b = [solver.BoolVar(f"b_{name}_{i}") for i in range(n)]
     solver.Add(sum(l) == 1)  # 1: lambda values sum to 1
     solver.Add(sum(b) == 1)  # 3: we're in exactly one segment
     solver.Add(x == sum(rx))  # 2: interpolated X value
     solver.Add(y == sum(ry))  # Objective: interpolated Y value
     for i in range(n):
-        solver.Add(b[i] <= l[i]+l[i+1])
+        solver.Add(b[i] <= l[i] + l[i + 1])
         # 4-7: when x is in segment i, the sum of the lambdas on
         # the upper and lower boundary of this segment is forced to be at
         # least 1. Because of (1) and the fact that lambda is constrained
         # to [0,1], this sum must be exactly 1 and all other lambda values
         # are thus zero.
+
 
 class Model:
     """
@@ -92,14 +95,16 @@ class Model:
     the SoC at that time.
     """
 
-    def __init__(self, cfg:dict, t=None):
+    def __init__(self, cfg: dict, t=None):
         if t is None:
-            t_slot = 3600/cfg.steps
+            t_slot = 3600 / cfg.steps
             t_now = time.time()
-            t = t_now + t_slot/2
-            t -= t%t_slot
-            if abs(t_now-t) > t_slot/10:
-                raise ValueError(f"You're {humandelta(abs(t_now-t))} away from {datetime.datetime.fromtimestamp(t).isoformat(sep=' ')}")
+            t = t_now + t_slot / 2
+            t -= t % t_slot
+            if abs(t_now - t) > t_slot / 10:
+                raise ValueError(
+                    f"You're {humandelta(abs(t_now-t))} away from {datetime.datetime.fromtimestamp(t).isoformat(sep=' ')}"
+                )
 
         elif t % (3600 / cfg.steps):
             raise ValueError(f"Time {t} not a multiple of 3600/{cfg.steps}")
@@ -188,16 +193,25 @@ class Model:
             solver.Add(cap_prev + cfg.battery.efficiency.charge * b_chg - b_dis == cap)
 
             # DC power bar. power_in == power_out
-            solver.Add(s_in + cfg.battery.efficiency.discharge * b_dis + cfg.inverter.efficiency.charge*i_chg == b_chg + i_dis)
+            solver.Add(
+                s_in
+                + cfg.battery.efficiency.discharge * b_dis
+                + cfg.inverter.efficiency.charge * i_chg
+                == b_chg + i_dis
+            )
 
             # AC power bar. power_in == power_out
-            solver.Add(g_buy + cfg.inverter.efficiency.discharge*i_dis == g_sell + l_out + i_chg)
+            solver.Add(g_buy + cfg.inverter.efficiency.discharge * i_dis == g_sell + l_out + i_chg)
 
             # Money earned: grid_out*price_sell - grid_in*price_buy
-            solver.Add(dt.price_sell*g_sell
-                     - dt.price_buy*g_buy
-                     + cap * cfg.battery.soc.value.current / cfg.battery.capacity  # bias for keeping the battery charged
-                     == money)
+            solver.Add(
+                dt.price_sell * g_sell
+                - dt.price_buy * g_buy
+                + cap
+                * cfg.battery.soc.value.current
+                / cfg.battery.capacity  # bias for keeping the battery charged
+                == money
+            )
 
             self.objective.SetCoefficient(money, 1)
             cap_prev = cap
@@ -236,12 +250,14 @@ class Model:
 
             res2 = cfg.mode.results
             if res2 is not None:
-                sch,rch = anyio.create_memory_object_stream(1)
+                sch, rch = anyio.create_memory_object_stream(1)
                 tg.start_soon(Loader(res2).results, cfg, rch)
                 res2 = sch
 
             async with res2 if res2 is not None else nullcontext():
-                for g_buy, g_sell, b_chg, b_dis, cap, money in zip(self.g_buys, self.g_sells, self.b_chgs, self.b_diss, self.caps, self.moneys):
+                for g_buy, g_sell, b_chg, b_dis, cap, money in zip(
+                    self.g_buys, self.g_sells, self.b_chgs, self.b_diss, self.caps, self.moneys
+                ):
                     val = dict(
                         grid=(g_buy.solution_value() - g_sell.solution_value()) * cfg.steps,
                         soc=cap.solution_value() / cfg.battery.capacity,

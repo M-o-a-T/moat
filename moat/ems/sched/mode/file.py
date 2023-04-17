@@ -1,5 +1,7 @@
 import anyio
+
 from . import BaseLoader
+
 
 class Loader(BaseLoader):
     """
@@ -8,7 +10,7 @@ class Loader(BaseLoader):
 
     @staticmethod
     async def _file(cfg, key):
-        async with await anyio.Path(getattr(cfg.data.file,key)).open("r") as f:
+        async with await anyio.Path(getattr(cfg.data.file, key)).open("r") as f:
             async for line in f:
                 yield float(line.strip())
 
@@ -23,7 +25,6 @@ class Loader(BaseLoader):
         """
         async for x in Loader._file(cfg, "price_buy"):
             yield float(x)
-        
 
     @staticmethod
     async def price_sell(cfg, t):
@@ -36,7 +37,6 @@ class Loader(BaseLoader):
         """
         async for x in Loader._file(cfg, "price_sell"):
             yield float(x)
-        
 
     @staticmethod
     async def solar(cfg, t):
@@ -49,7 +49,6 @@ class Loader(BaseLoader):
         """
         async for x in Loader._file(cfg, "solar"):
             yield float(x)
-
 
     @staticmethod
     async def load(cfg, t):
@@ -76,7 +75,6 @@ class Loader(BaseLoader):
         async for x in Loader._file(cfg, "soc"):
             return float(x)
 
-
     @staticmethod
     async def result(cfg, kw):
         """
@@ -88,20 +86,22 @@ class Loader(BaseLoader):
         f = cfg.data.format.result
         if f == "yaml":
             from moat.util import yformat
+
             async with await anyio.Path(cfg.data.file.result).open("w") as f:
                 await f.write(yformat(kw))
         elif f == "msgpack":
             from moat.util import packer
+
             async with await anyio.Path(cfg.data.file.result).open("wb") as f:
                 await f.write(packer(kw))
         elif f == "json":
             import json
+
             async with await anyio.Path(cfg.data.file.result).open("w") as f:
                 await f.write(json.dumps(kw))
         else:
             print(f"Unknown output format {f !r}. Use yaml/msgpack/json.")
             sys.exit(1)
-
 
     @staticmethod
     async def results(cfg, it):
@@ -114,6 +114,7 @@ class Loader(BaseLoader):
         f = cfg.data.format.results
         if f == "yaml":
             from moat.util import yformat
+
             async with await anyio.Path(cfg.data.file.result).open("w") as f:
                 async for kw in it:
                     await f.write(yformat([kw]))
@@ -122,10 +123,12 @@ class Loader(BaseLoader):
             async for kw in it:
                 res.append(kw)
             from moat.util import packer
+
             async with await anyio.Path(cfg.data.file.result).open("wb") as f:
                 await f.write(packer(res))
         elif f == "json":
             import json
+
             async for kw in it:
                 res.append(kw)
             async with await anyio.Path(cfg.data.file.result).open("w") as f:
@@ -133,4 +136,3 @@ class Loader(BaseLoader):
         else:
             print(f"Unknown output format {f !r}. Use yaml/msgpack/json.")
             sys.exit(1)
-

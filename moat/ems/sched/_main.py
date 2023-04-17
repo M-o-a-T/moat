@@ -3,23 +3,34 @@
 Basic tool support
 
 """
-import time
 import logging
-
-import asyncclick as click
+import time
 from textwrap import dedent as _dedent
 
-from moat.util import yload, attr_args, process_args, list_ext, load_subgroup, load_ext, yprint, attrdict, merge
+import asyncclick as click
+from moat.util import (
+    attr_args,
+    attrdict,
+    list_ext,
+    load_ext,
+    load_subgroup,
+    merge,
+    process_args,
+    yload,
+    yprint,
+)
 
 from .control import Model
 from .mode import BaseLoader, Loader
 
 log = logging.getLogger()
 
+
 def dedent(s):
     return _dedent(s).strip()
 
-def Loader(name,key=None):
+
+def Loader(name, key=None):
     res = load_ext(f"moat.bms.sched.mode.{name}")
     if key is False:
         return res
@@ -31,14 +42,19 @@ def Loader(name,key=None):
 
 @load_subgroup(prefix="moat.bms.sched")
 @click.pass_obj
-@click.option("-c","--config", help="Configuration file (YAML)", type=click.Path(dir_okay=False,readable=True))
-@attr_args(with_path=False,with_proxy=False)
+@click.option(
+    "-c",
+    "--config",
+    help="Configuration file (YAML)",
+    type=click.Path(dir_okay=False, readable=True),
+)
+@attr_args(with_path=False, with_proxy=False)
 async def cli(obj, config, **attrs):
     """Battery Manager: Scheduling"""
 
     cfg = obj.cfg.bms.sched
     if config:
-        with open(config,"r") as f:
+        with open(config, "r") as f:
             cc = yload(f)
             merge(cfg, cc)
     obj.cfg.bms.sched = process_args(cfg, **attrs)
@@ -52,6 +68,7 @@ def dump(obj):
     """
     yprint(obj.cfg.bms.sched)
 
+
 @cli.command()
 @click.argument("name", nargs=-1)
 def modes(name):
@@ -60,9 +77,9 @@ def modes(name):
         T="""\
 List of known inputs+outputs. Use T.‹name› or ‹mode›.‹name› for details.
 """,
-        )
+    )
     if not name:
-        mn = [m for m,_ in list_ext("moat.bms.sched.mode", pkg_only=False)]
+        mn = [m for m, _ in list_ext("moat.bms.sched.mode", pkg_only=False)]
         mn.extend(static.keys())
         ml = max(len(m) for m in mn)
         for m in mn:
@@ -74,7 +91,7 @@ List of known inputs+outputs. Use T.‹name› or ‹mode›.‹name› for deta
                 except ImportError as exc:
                     doc = repr(exc)
                 else:
-                    doc = dedent(mm.__doc__).split('\n',1)[0]
+                    doc = dedent(mm.__doc__).split("\n", 1)[0]
             print(f"{m :{ml}s}  {doc}")
         return
     for m in name:
@@ -84,26 +101,31 @@ List of known inputs+outputs. Use T.‹name› or ‹mode›.‹name› for deta
             for m in dir(BaseLoader):
                 if m.startswith("_"):
                     continue
-                doc = dedent(getattr(BaseLoader,m).__doc__).split('\n',1)[0]
+                doc = dedent(getattr(BaseLoader, m).__doc__).split("\n", 1)[0]
                 print(f"{m :{ml}s}  {doc}")
             continue
         if m.startswith("T."):
-            doc = dedent(getattr(BaseLoader,m[2:]).__doc__)
+            doc = dedent(getattr(BaseLoader, m[2:]).__doc__)
         elif "." in m:
-            mn,*a = m.split(".")
+            mn, *a = m.split(".")
             mo = Loader(mn)
             for aa in a:
-                mo = getattr(mo,aa)
+                mo = getattr(mo, aa)
             doc = dedent(mo.__doc__)
         else:
             m = Loader(m)
             doc = dedent(m.__doc__)
-            doc += "\nImplements: "+" ".join(x for x in m.__dict__.keys() if not x.startswith("_"))
+            doc += "\nImplements: " + " ".join(
+                x for x in m.__dict__.keys() if not x.startswith("_")
+            )
 
-        print(f"""\
+        print(
+            f"""\
 {m}:
 {doc}
-""")
+"""
+        )
+
 
 @cli.command(
     help="""
@@ -115,9 +137,7 @@ Goal: minimize cost.
 @click.option(
     "-a", "--all", "all_", is_flag=True, help="emit all outputs (default: first interval)"
 )
-@click.option(
-    "-f", "--force", is_flag=True, help="Run even if we're not close to the timeslot"
-)
+@click.option("-f", "--force", is_flag=True, help="Run even if we're not close to the timeslot")
 async def analyze(obj, all_, force):
     """
     Analyze future data.
@@ -126,9 +146,9 @@ async def analyze(obj, all_, force):
 
     t = None
     if force:
-        t_slot = 3600/cfg.steps
-        t = time.time() + t_slot/2
-        t -= t%t_slot
+        t_slot = 3600 / cfg.steps
+        t = time.time() + t_slot / 2
+        t -= t % t_slot
 
     m = Model(cfg, t)
 
@@ -137,7 +157,7 @@ async def analyze(obj, all_, force):
         soc_fn = cfg.mode.soc
         if soc_fn is None:
             raise click.ClickException("I need to know the current SoC")
-        soc_cur = await Loader(sm,"soc")(cfg)
+        soc_cur = await Loader(sm, "soc")(cfg)
 
     if all_:
         cfg.mode.result = None

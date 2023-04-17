@@ -1,5 +1,6 @@
 from moat.util import load_ext
 
+
 class BaseLoader:
     """
     Describe how to load various scheduling data.
@@ -65,7 +66,7 @@ class BaseLoader:
         pass
 
 
-def Loader(name,key=None):
+def Loader(name, key=None):
     """Fetch a named loader class"""
     res = load_ext(f"moat.bms.sched.mode.{name}")
     if res is None:

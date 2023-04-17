@@ -1,6 +1,8 @@
 import anyio
-from . import Loader as _Loader
+
 from . import BaseLoader
+from . import Loader as _Loader
+
 
 class Loader(BaseLoader):
     """
@@ -23,4 +25,4 @@ class Loader(BaseLoader):
         offset = cfg.data.file2.offset
 
         async for x in _Loader(cfg.mode.price_sell).price_sell(cfg, t):
-            yield float(x)*factor+offset
+            yield float(x) * factor + offset

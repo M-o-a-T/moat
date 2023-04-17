@@ -63,7 +63,6 @@ deps =
 
 """
 
-
 [tool.black]
 line-length = 99
 

@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-PACKAGE = moat
+PACKAGE = moat-dev
 MAKEINCL ?= $(shell python3 -mmoat src path)/make/py
 
 ifneq ($(wildcard $(MAKEINCL)),)

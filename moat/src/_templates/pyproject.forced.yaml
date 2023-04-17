@@ -25,7 +25,7 @@ project:
   requires-python: '>=3.8'
   urls:
     homepage: https://m-o-a-t.org
-  name: moat-SUBNAME
+  name: SUBNAME
 tool:
   moat:
     fixup: |

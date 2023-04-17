@@ -276,18 +276,18 @@ def apply_templates(repo):
     )
 
     rpath = Path(repo.working_dir)
-    if rpath.parent.name == "lib" or rpath.parent.parent.name == "moat":
-        rname = f"{rpath.parent.name}-{rpath.name}"
-        rdot = f"{rpath.parent.name}.{rpath.name}"
-        rpath = f"{rpath.parent.name}/{rpath.name}"
-    else:
-        rname = str(rpath.name)
-        rdot = str(rpath.name)
-        rpath = str(rpath.name)
+    mti = rpath.parts.index("moat")
+    mtp = rpath.parts[mti:]
+
+    rname = "-".join(mtp)
+    rdot = ".".join(mtp)
+    rpath = "/".join(mtp)
+    runder = "_".join(mtp)
     repl = Replace(
         SUBNAME=rname,
         SUBDOT=rdot,
         SUBPATH=rpath,
+        SUBUNDER=runder,
     )
     pt = (Path(__file__).parent / "_templates").joinpath
     pr = Path(repo.working_dir).joinpath

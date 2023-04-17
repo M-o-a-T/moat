@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-PACKAGE=moat-bms-inv
+PACKAGE=moat-ems-inv
 
 ifneq ($(wildcard /usr/share/sourcemgr/make/py),)
 include /usr/share/sourcemgr/make/py

@@ -20,7 +20,7 @@ import logging
 
 from asyncdbus.message_bus import BusType, MessageBus
 
-from moat.bms.inv import InvControl
+from moat.ems.inv import InvControl
 
 logger = logging.getLogger(__name__)
 

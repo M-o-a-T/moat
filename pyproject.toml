@@ -8,7 +8,7 @@ dependencies = ["anyio ~= 3.0"]
 dynamic = ["version"]
 keywords = ["MoaT"]
 requires-python = ">=3.8"
-name = "moat-bms-inv"
+name = "moat-ems-inv"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
@@ -18,7 +18,7 @@ file = "LICENSE.txt"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"
-repository = "https://github.com/M-o-a-T/moat-bms-inv"
+repository = "https://github.com/M-o-a-T/moat-ems-inv"
 
 [tool]
 [tool.moat]
@@ -67,7 +67,7 @@ deps =
 line-length = 99
 
 [tool.setuptools]
-packages = ["moat.bms.inv"]
+packages = ["moat.ems.inv"]
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]

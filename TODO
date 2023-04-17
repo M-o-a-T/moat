@@ -1,5 +1,5 @@
 reorganize moat.* code
-integrate moat.bms.sched
+integrate moat.ems.sched
 implement battery error conditions
 disable if ESS mode != 3
 modularize control (DistKV vs. DBus)

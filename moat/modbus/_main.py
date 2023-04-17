@@ -3,13 +3,15 @@ Basic "moat modbus" tool: network client and server, serial client
 """
 
 import sys
-import asyncclick as click
-import anyio
+import traceback
 
+import anyio
+import asyncclick as click
 from moat.util import load_subgroup
+
 from moat.modbus.client import ModbusClient
 
-from .__main__ import mk_client, mk_serial_client, mk_server, add_serial_cfg
+from .__main__ import add_serial_cfg, mk_client, mk_serial_client, mk_server
 
 
 @load_subgroup(sub_pre="moat.modbus")
@@ -22,6 +24,11 @@ serialclient = mk_serial_client(cli)
 
 client = mk_client(cli)
 server = mk_server(cli)
+
+
+def print_exc(exc):
+    traceback.print_exception(type(exc), exc, exc.__traceback__)
+
 
 @cli.group(invoke_without_command=True)
 @add_serial_cfg
@@ -47,9 +54,10 @@ async def monitor(ctx, **params):
         while True:
             await anyio.sleep(99999)
 
+
 @monitor.command
 @add_serial_cfg
-@click.option("-r","--retry", type=int, help="Delay between restarts in case of errors")
+@click.option("-r", "--retry", type=int, help="Delay between restarts in case of errors")
 @click.pass_obj
 async def to(obj, retry, **params):
     """
@@ -63,14 +71,14 @@ async def to(obj, retry, **params):
     n_B = 0
 
     async def mon_A(msg):
-        print("A:",msg)
+        print("A:", msg)
         await B.send(msg)
 
         nonlocal n_A
         n_A += 1
 
     async def mon_B(msg):
-        print("B:",msg)
+        print("B:", msg)
         await A.send(msg)
 
         nonlocal n_B
@@ -80,8 +88,9 @@ async def to(obj, retry, **params):
         n_A = 0
         n_B = 0
         try:
-            async with ModbusClient() as g_a, g_a.serial(monitor=mon_A,**obj.A) as A, \
-                    ModbusClient() as g_b, g_b.serial(monitor=mon_B,**params) as B:
+            async with ModbusClient() as g_a, g_a.serial(
+                monitor=mon_A, **obj.A
+            ) as A, ModbusClient() as g_b, g_b.serial(monitor=mon_B, **params) as B:
                 while True:
                     await anyio.sleep(99999)
         except Exception as exc:

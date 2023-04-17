@@ -151,7 +151,6 @@ async def _client(host, port, unit, kind, start, num, type_, values, debug):
     async with ModbusClient() as g, g.host(host, port) as h, h.unit(unit) as u, u.slot(
         "default"
     ) as s:
-
         k = map_kind[kind[0]]
         t = get_type(type_)
         if values:
@@ -217,7 +216,6 @@ async def _serclient(
     async with ModbusClient() as g, g.serial(
         port=port, baudrate=baudrate, stopbits=stopbits, parity=parity
     ) as h, h.unit(unit) as u, u.slot("default") as s:
-
         k = map_kind[kind[0]]
         t = get_type(type_)
         if values:
@@ -243,11 +241,14 @@ async def _serclient(
 
 
 def add_serial_cfg(c):
-    c = click.option("--port", "-p", required=True, type=str, help="destination port (/dev/ttyXXX)")(c)
+    c = click.option(
+        "--port", "-p", required=True, type=str, help="destination port (/dev/ttyXXX)"
+    )(c)
     c = click.option("--baudrate", "-b", type=int, default=9600, help="Baud rate (9600)")(c)
     c = click.option("--parity", "-P", type=str, default="N", help="Parity (NEO), default N")(c)
     c = click.option("--stopbits", "-S", type=int, default=1, help="Stopbits (12), default 1")(c)
     return c
+
 
 def mk_serial_client(m):
     """helper to create a sserial client"""

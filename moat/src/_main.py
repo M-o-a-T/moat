@@ -372,16 +372,16 @@ def apply_templates(repo):
         pr("Makefile").write_text(mkt)
         repo.index.add(pr("Makefile"))
 
-    init = repl(pt("moat","__init__.py").read_text())
+    init = repl(pt("moat", "__init__.py").read_text())
     try:
-        mk = pr("moat","__init__.py").read_text()
+        mk = pr("moat", "__init__.py").read_text()
     except FileNotFoundError:
         mk = ""
     if mkt != mk:
         if not pr("moat").is_dir():
             pr("moat").mkdir(mode=0o755)
-        pr("moat","__init__.py").write_text(mkt)
-        repo.index.add(pr("moat","__init__.py"))
+        pr("moat", "__init__.py").write_text(init)
+        repo.index.add(pr("moat", "__init__.py"))
 
     tst = pr("tests")
     if not tst.is_dir():

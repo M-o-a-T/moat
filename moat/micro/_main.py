@@ -336,7 +336,9 @@ async def cmd(obj, path, **attrs):
 @click.option("-w", "--write", type=click.File("w"), help="Write config to this file")
 @click.option("-W", "--write-client", help="Write config file to the client")
 @click.option("-s", "--sync", is_flag=True, help="Sync the client after writing")
-@click.option("-c", "--client", is_flag=True, help="The client's data win if both -r and -R are used")
+@click.option(
+    "-c", "--client", is_flag=True, help="The client's data win if both -r and -R are used"
+)
 @click.option("-u", "--update", is_flag=True, help="Don't replace the client config")
 @attr_args(with_proxy=True)
 async def cfg(obj, read, read_client, write, write_client, sync, client, **attrs):
@@ -349,16 +351,19 @@ async def cfg(obj, read, read_client, write, write_client, sync, client, **attrs
 
     Otherwise, the configuration is read as YAML from stdin (``-r -``) or a
     file (``-r PATH``), as msgpack from Flash (``-R xx.cfg``), or from the
-    client's memory (``-R -``, default if neither ``-r`` nor ``-R`` are
-    used).
+    client's memory (``-R -``; this is the default if neither ``-r`` nor
+    ``-R`` are used).
 
     It is then modified according to the "-v -e -P" arguments (if any) and
     written to Flash (``-W xx.cfg``), a file(``-w PATH``), stdout (``-w -``),
     or the client (no ``-w``/``-W`` argument).
 
     The client will not be updated if a ``-w``/``-W`` argument is present.
-    If you want to update the client *and* write the config data, just do
-    it in two steps.
+    If you want to update the client *and* write the config data to a file,
+    simply do it in two steps.
+    
+    An "apps" section must be present if you write a complete configuration
+    to the client.
     """
     if sync and (write or write_client):
         raise click.UsageError("You're not changing the running config!")
@@ -379,9 +384,9 @@ async def cfg(obj, read, read_client, write, write_client, sync, client, **attrs
     async with get_link(obj) as req:
         has_attrs = any(a for a in attrs.values())
 
-        if has_attrs and (read or read_client or write or write_client):
+        if has_attrs and not (read or read_client or write or write_client):
             # No file access at all. Just update the client's RAM.
-            val = merge(*val.values())
+            val = merge(*attrs.values())
             await req.set_cfg(val, sync=sync)
             return
 
@@ -400,10 +405,11 @@ async def cfg(obj, read, read_client, write, write_client, sync, client, **attrs
             cfg = await req.get_cfg()
 
         cfg = process_args(cfg, **attrs)
-        if not (write or write_client):
-            if not update and not ("link" in cfg and "apps" in cfg):
-                raise click.UsageError("No 'link' or 'apps' section. Use '--update'.")
-            await req.set_cfg(cfg, sync=sync, replace=not update)
+        if not write:
+            if "apps" not in cfg):
+                raise click.UsageError("No 'apps' section.")
+            if not write_client:
+                await req.set_cfg(cfg, sync=sync, replace=True)
 
         if write_client:
             p = MoatFSPath(write_client).connect_repl(req)
@@ -485,7 +491,10 @@ async def _mplex(obj, no_config=False, debug=None, remote=False, server=None, pi
 
         async with as_service(obj):
             mplex = Multiplexer(
-                net_factory if remote else stream_factory, obj.socket, obj.cfg.micro, load_cfg=not no_config
+                net_factory if remote else stream_factory,
+                obj.socket,
+                obj.cfg.micro,
+                load_cfg=not no_config,
             )
             await mplex.serve()
 

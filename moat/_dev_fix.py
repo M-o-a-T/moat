@@ -21,6 +21,7 @@ def _fix():
     md = Path(__file__).absolute().parents[1]
     if (md / ".git").exists():
         import git
+        roots = set()
 
         def _get_sub(r):
             if "lib" in r.parts and not r.is_relative_to(md / "lib"):
@@ -47,12 +48,22 @@ def _fix():
         import moat
 
         # only consider local packages
-        moat.__path__ = [
-            p
-            for p in pkgutil.extend_path([moat.__path__[0]], "moat")
-            if Path(p).is_relative_to(md)
-        ]
+        paths = []
+        for p_ in pkgutil.extend_path([moat.__path__], "moat"):
+            if not isinstance(p_,(list,tuple)):
+                p_ = (p_,)
+            for p in p_:
+                pp = Path(p)
+                if pp.is_relative_to(md):
+                    pu = str(pp.parent)
+                    if pu not in roots:
+                        roots.add(pu)
+                        paths.append(p)
+        moat.__path__ = paths
 
         import os
+        if "_MOAT_ADJ" in os.environ:
+            return
+        os.environ["_MOAT_ADJ"] = "1"
 
-        os.environ["PYTHONPATH"] = os.pathsep.join(str(Path(x).parent) for x in _pp)
+        os.environ["PYTHONPATH"] = os.pathsep.join(roots)+(":"+os.environ["PYTHONPATH"] if "PYTHONPATH" in os.environ else "")

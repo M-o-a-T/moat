@@ -23,6 +23,7 @@ class Repo(git.Repo):
     """Amend git.Repo with submodule and tag caching"""
 
     moat_tag = None
+    submod = None
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
@@ -59,7 +60,6 @@ class Repo(git.Repo):
 
         if recurse and depth:
             yield self
-
 
     def commits(self, ref=None):
         """Iterate over topo sort of commits following @ref, or HEAD"""
@@ -481,11 +481,17 @@ async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
                 if not rr.is_dirty(index=True, working_tree=True, submodules=True):
                     rrp = rr.submod.path
                     rri = rr.head.commit.hexsha
-                    ri = r.index.entries[(rrp,0)].hexsha
+                    ri = r.index.entries[(rrp, 0)].hexsha
 
                     if rri == ri:
                         continue
-                    sn = git.objects.submodule.base.Submodule(r, rr.head.commit.binsha, name=rr.submod.name,path=rr.submod.path,mode=rr.submod.mode)
+                    sn = git.objects.submodule.base.Submodule(
+                        r,
+                        rr.head.commit.binsha,
+                        name=rr.submod.name,
+                        path=rr.submod.path,
+                        mode=rr.submod.mode,
+                    )
                     print("Submodule update:", rrp)
                     r.index.add([sn])  # doesn't work, SIGH
             if a:

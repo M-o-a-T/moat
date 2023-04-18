@@ -24,7 +24,7 @@ class Repo(git.Repo):
 
     moat_tag = None
 
-    def __init__(self, root, *a, **k):
+    def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self._subrepo_cache = {}
         self._commit_tags = defaultdict(list)
@@ -33,18 +33,14 @@ class Repo(git.Repo):
         for t in self.tags:
             self._commit_tags[t.commit].append(t)
 
-        if root is None:
-            self.moat_name = "moat"
-        else:
-            self.moat_name = "moat-" + self.working_dir[len(root.working_dir) + 1 :].replace(
-                "/", "-"
-            )
+        p = Path(self.working_dir)
+        mi = p.parts.index("moat")
+        self.moat_name = "-".join(p.parts[mi:])
 
-    def subrepos(self, root=None, recurse=True):
+    def subrepos(self, recurse=True, depth=True):
         """List subrepositories (and cache them)."""
 
-        if root is None:
-            root = self
+        if recurse and not depth:
             yield self
 
         if "/lib/" in self.working_dir:
@@ -54,10 +50,16 @@ class Repo(git.Repo):
                 res = self._subrepo_cache[r.path]
             except KeyError:
                 p = Path(self.working_dir) / r.path
-                self._subrepo_cache[r.path] = res = Repo(root, p)
+                self._subrepo_cache[r.path] = res = Repo(p)
+                res.submod = r
             if recurse:
-                yield from res.subrepos(root)
-            yield res
+                yield from res.subrepos(depth=depth)
+            else:
+                yield res
+
+        if recurse and depth:
+            yield self
+
 
     def commits(self, ref=None):
         """Iterate over topo sort of commits following @ref, or HEAD"""
@@ -447,7 +449,7 @@ async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
     if only:
         repos = (Repo(repo, x) for x in only)
     else:
-        repos = (x for x in repo.subrepos() if x.moat_name[5:] not in skip)
+        repos = (x for x in repo.subrepos(depth=True) if x.moat_name[5:] not in skip)
 
     for r in repos:
         if not is_clean(r, not no_dirty):
@@ -463,7 +465,8 @@ async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
 
         if no_commit:
             continue
-        if r.is_dirty(index=True, working_tree=False, untracked_files=False, submodules=False):
+
+        if r.is_dirty(index=True, working_tree=True, untracked_files=False, submodules=True):
             if no_amend or r.tagged():
                 a = False
             elif amend:
@@ -471,10 +474,25 @@ async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
             else:
                 a = r.head.commit.message == message
 
+            for rr in r.subrepos(recurse=False):
+                # This part updates the supermodule's SHA entries so they
+                # point to the submodule#s current HEAD, assuming it is
+                # clean
+                if not rr.is_dirty(index=True, working_tree=True, submodules=True):
+                    rrp = rr.submod.path
+                    rri = rr.head.commit.hexsha
+                    ri = r.index.entries[(rrp,0)].hexsha
+
+                    if rri == ri:
+                        continue
+                    sn = git.objects.submodule.base.Submodule(r, rr.head.commit.binsha, name=rr.submod.name,path=rr.submod.path,mode=rr.submod.mode)
+                    print("Submodule update:", rrp)
+                    r.index.add([sn])  # doesn't work, SIGH
             if a:
                 p = r.head.commit.parents
             else:
                 p = (r.head.commit,)
+
             r.index.commit(message, parent_commits=p)
 
 

@@ -9,12 +9,12 @@ import os
 import sys
 
 import anyio
-
 from moat.micro._test import mpy_client, mpy_server
 from moat.micro.compat import sleep_ms
 from moat.util import NotGiven
 
-TT=250  # XXX assume that this is OK
+TT = 250  # XXX assume that this is OK
+
 
 async def test_bms(tmp_path):
     ended = False
@@ -25,4 +25,3 @@ async def test_bms(tmp_path):
             ended = True
 
     assert ended
-

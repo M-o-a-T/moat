@@ -1,8 +1,12 @@
 import sys
 
+from moat.util import attrdict, import_, obj2name
+
 from moat.micro.compat import (
+    Broadcaster,
     CancelledError,
     Event,
+    Queue,
     TaskGroup,
     ValueEvent,
     WouldBlock,
@@ -12,10 +16,7 @@ from moat.micro.compat import (
     ticks_diff,
     ticks_ms,
     wait_for_ms,
-    Broadcaster,
-    Queue,
 )
-from moat.util import attrdict, import_, obj2name
 from moat.micro.proto.stack import RemoteError, SilentRemoteError, _Stacked
 
 """
@@ -43,6 +44,7 @@ return when the data has been sent, implying that sending on an
 unreliable transport will wait for the message to be confirmed. Sending
 may fail.
 """
+
 
 class BaseCmd(_Stacked):
     """
@@ -205,7 +207,8 @@ class Request(_Stacked):
 
     @ready is an Enevt that'll be set when the system is up.
     """
-    APP="app"
+
+    APP = "app"
 
     def __init__(self, *a, ready=None, **k):
         if sys.implementation.name != "micropython" and self.APP == "app":
@@ -317,7 +320,7 @@ class Request(_Stacked):
             try:
                 obj2name(type(exc))
             except KeyError:
-                res["e"] = "E:"+repr(exc)
+                res["e"] = "E:" + repr(exc)
             else:
                 res["e"] = exc
         else:
@@ -329,7 +332,7 @@ class Request(_Stacked):
         except TypeError as exc:
             print("ERROR returning", res, file=sys.stderr)
             print_exc(exc)
-            res = {'e': "T:"+repr(exc), 'i': i}
+            res = {'e': "T:" + repr(exc), 'i': i}
             await self.parent.send(res)
 
     async def dispatch(self, msg):
@@ -367,7 +370,7 @@ class Request(_Stacked):
                 return  # duplicate??
             if e is None:
                 evt.set(d)
-            elif isinstance(e,Exception):
+            elif isinstance(e, Exception):
                 evt.set_error(e)
             else:
                 evt.set_error(RemoteError(e, d))
@@ -424,14 +427,14 @@ class RootCmd(BaseCmd):
         self._s = {}
         self._q = Queue(20)
 
-#   @property
-#   def cfg(self):
-#       return self._cfg
-#   @cfg.setter
-#   def cfg(self, val):
-#       if not isinstance(val, attrdict):
-#           breakpoint()
-#       self._cfg = val
+    #   @property
+    #   def cfg(self):
+    #       return self._cfg
+    #   @cfg.setter
+    #   def cfg(self, val):
+    #       if not isinstance(val, attrdict):
+    #           breakpoint()
+    #       self._cfg = val
 
     async def cmd_s(self, o, d):
         """
@@ -452,12 +455,14 @@ class RootCmd(BaseCmd):
             while True:
                 await sleep(9999)
         finally:
+
             def _cls(s):
                 for v in s.values():
-                    if isinstance(v,dict):
+                    if isinstance(v, dict):
                         _cls(v)
                     else:
                         v.close()
+
             _cls(self._s)
 
     def _get_br(self, o):

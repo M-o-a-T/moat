@@ -170,7 +170,7 @@ async def setup(
     # 	if not source:
     # 		source = anyio.Path(__file__).parent / "_embed"
 
-    from .main import get_link_serial, get_serial, copy_over, ABytes
+    from .main import ABytes, copy_over, get_link_serial, get_serial
     from .path import MoatDevPath
 
     async with get_serial(obj) as ser:
@@ -265,7 +265,7 @@ async def sync(obj, source, dest, cross):
     Sync of MoaT code on a running MicroPython device.
 
     """
-    from .main import get_link, copy_over
+    from .main import copy_over, get_link
     from .path import MoatFSPath
 
     async with get_link(obj) as req:
@@ -317,8 +317,8 @@ async def cmd(obj, path, **attrs):
     if len(path) == 0:
         raise click.UsageError("Path cannot be empty")
 
-    from .proto.stack import RemoteError
     from .main import get_link
+    from .proto.stack import RemoteError
 
     async with get_link(obj) as req:
         try:
@@ -361,7 +361,7 @@ async def cfg(obj, read, read_client, write, write_client, sync, client, **attrs
     The client will not be updated if a ``-w``/``-W`` argument is present.
     If you want to update the client *and* write the config data to a file,
     simply do it in two steps.
-    
+
     An "apps" section must be present if you write a complete configuration
     to the client.
     """
@@ -406,7 +406,7 @@ async def cfg(obj, read, read_client, write, write_client, sync, client, **attrs
 
         cfg = process_args(cfg, **attrs)
         if not write:
-            if "apps" not in cfg):
+            if "apps" not in cfg:
                 raise click.UsageError("No 'apps' section.")
             if not write_client:
                 await req.set_cfg(cfg, sync=sync, replace=True)
@@ -446,8 +446,8 @@ async def _mplex(obj, no_config=False, debug=None, remote=False, server=None, pi
     elif remote:
         server = obj.cfg.micro.net.addr
 
-    from .proto.multiplex import Multiplexer
     from .main import get_link_serial, get_remote, get_serial
+    from .proto.multiplex import Multiplexer
 
     cfg_p = obj.cfg.micro.port
     if pipe:
@@ -509,6 +509,7 @@ async def mount(obj, path, blocksize):
 
     async with get_link(obj) as req:
         from moat.micro.fuse import wrap
+
         async with wrap(req, path, blocksize=blocksize, debug=obj.debug):
             while True:
                 await anyio.sleep(99999)

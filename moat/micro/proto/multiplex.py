@@ -13,12 +13,12 @@ from contextlib import asynccontextmanager, contextmanager
 from pprint import pformat
 
 import anyio
-from moat.util import attrdict, merge, to_attrdict, obj2name
+from moat.util import attrdict, merge, obj2name, to_attrdict
 
 from ..app._base import ConfigError
 from ..cmd import BaseCmd, RootCmd
 from ..compat import Event, TaskGroup
-from ..main import Request, ClientBaseCmd
+from ..main import ClientBaseCmd, Request
 from ..stacks.unix import unix_stack_iter
 from .stack import RemoteError, SilentRemoteError
 
@@ -26,6 +26,7 @@ from .stack import RemoteError, SilentRemoteError
 
 
 logger = logging.getLogger(__name__)
+
 
 class CommandClient(Request):
     """
@@ -94,7 +95,7 @@ class CommandClient(Request):
             try:
                 obj2name(type(exc))
             except KeyError:
-                res["e"] = "F:"+repr(exc)
+                res["e"] = "F:" + repr(exc)
             else:
                 res["e"] = exc
         else:
@@ -113,6 +114,7 @@ class MultiplexCommand(RootCmd):
     """
     Server-side main command handler.
     """
+
     # main command handler
     def __init__(self, parent, *, cfg):
         super().__init__(parent)
@@ -154,6 +156,7 @@ class _LocalCommand(BaseCmd):
 
     ["local","foo","bar"] calls the "loc_bar" method of the "foo" module.
     """
+
     async def dispatch(self, action, msg):
         if not isinstance(action, (tuple, list)) or len(action) <= 1:
             raise RuntimeError("local/* calls require the path to be a list")
@@ -189,7 +192,8 @@ class Multiplexer(Request):
     Unix socket paths are relative to XDG_RUNTIME_DIR if they don't start
     with a slash.
     """
-    APP="moat.micro.app"
+
+    APP = "moat.micro.app"
 
     sock = None
     _cancel = None
@@ -298,7 +302,11 @@ class Multiplexer(Request):
     async def _serve_stream(self, path, *, task_status=None):
         logger.info("Listen for commands on %r", self.socket)
         async for t, b in unix_stack_iter(
-            self.socket, evt=self.serving, log="Client", request_factory=CommandClient, cfg=self.cfg
+            self.socket,
+            evt=self.serving,
+            log="Client",
+            request_factory=CommandClient,
+            cfg=self.cfg,
         ):
             t.mplex = self
             await self.__tg.spawn(self._run_client, b, _name="mp_client")

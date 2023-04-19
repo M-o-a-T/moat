@@ -12,6 +12,7 @@ CancelledError = uasyncio.CancelledError
 # from uasyncio import Event,Lock,sleep,sleep_ms,TimeoutError, run as _run, TaskGroup as _tg, CancelledError
 from uasyncio.queues import Queue, QueueEmpty, QueueFull
 from utime import ticks_add, ticks_diff, ticks_ms
+
 try:
     from machine import Pin
 except ImportError:  # µPy on Linux
@@ -22,6 +23,7 @@ else:
     Pin_OUT = Pin.OUT
 
 WouldBlock = (QueueFull, QueueEmpty)
+
 
 class OptCtx:
     def __init__(self, obj=None):
@@ -40,7 +42,9 @@ class OptCtx:
 def print_exc(a, b=usys.stderr):
     usys.print_exception(a, b)
 
+
 from moat.util import NotGiven
+
 
 async def idle():
     while True:
@@ -64,9 +68,9 @@ def wait_for_ms(timeout, p, *a, **k):
 class _MsecIter:
     tt = None
 
-    def __init__(self, t,p,a,k):
+    def __init__(self, t, p, a, k):
         self.t = t
-        self.p, self.a, self.k = p,a,k
+        self.p, self.a, self.k = p, a, k
 
     def __aiter__(self):
         return self
@@ -86,10 +90,11 @@ class _MsecIter:
 
 
 def every_ms(t, p, *a, **k):
-    return _MsecIter(t,p,a,k)
+    return _MsecIter(t, p, a, k)
+
 
 def every(t, p, *a, **k):
-    return every_ms(t*1000, p, *a, **k)
+    return every_ms(t * 1000, p, *a, **k)
 
 
 class TaskGroup(_tg):
@@ -98,6 +103,7 @@ class TaskGroup(_tg):
 
         # print("RUN",_name,p,a,k, file=usys.stderr)
         return self.create_task(p(*a, **k))  # , name=_name)
+
     def start_soon(self, p, *a, _name=None, **k):
         # print("RUN",_name,p,a,k, file=usys.stderr)
         self.create_task(p(*a, **k))
@@ -180,8 +186,8 @@ class ValueEvent:
 
 # partial copy of moat.util.queue
 
-class BroadcastReader:
 
+class BroadcastReader:
     value = NotGiven
     loss = 0
 
@@ -274,6 +280,7 @@ class Broadcaster:
             for r in self._reader:
                 r._close()  # pylint: disable=protected-access
             self._reader = None
+
 
 class BaseAlert(Exception):
     """Alert, initial OR repeat wrapper"""

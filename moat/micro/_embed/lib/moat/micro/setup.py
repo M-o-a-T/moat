@@ -8,6 +8,7 @@ from micropython import alloc_emergency_exception_buf
 alloc_emergency_exception_buf(300)
 
 import uos
+
 if hasattr(uos, "dupterm"):
     import sys
 

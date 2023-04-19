@@ -7,7 +7,6 @@ from ..cmd import Request
 # (or a subclass) to it, then call `bot.run()`.
 
 
-
 async def console_stack(
     stream,
     lossy=False,

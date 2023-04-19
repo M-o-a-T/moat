@@ -29,9 +29,12 @@ try:
     _reset = machine.reset
 except AttributeError:  # on Linux?
     import ffi
+
     C = ffi.open(None)
+
     def _reset():
-        C.func("i","_exit","i")(11)
+        C.func("i", "_exit", "i")(11)
+
 
 class WDT:
     """
@@ -44,12 +47,13 @@ class WDT:
         ext: flag whether to require external ping from the server
         tt: trigger timeout, defaults to t/2
     """
+
     wdt = None
     timeout = None
     _ping = None
 
     def __init__(self, cfg):
-        if cfg.get("hw",False):
+        if cfg.get("hw", False):
             if M.WDT is not None:
                 raise RuntimeError("one hw watchdog")
             M.WDT = self
@@ -69,13 +73,13 @@ class WDT:
             if self.cfg.get("hw"):
                 self.wdt = machine.WDT(t)
             self.timeout = t
-            self.trigger = self.cfg.get("tt", self.timeout/2)
+            self.trigger = self.cfg.get("tt", self.timeout / 2)
         self._ping.set()
 
     async def run(self, cmd):
-        cmd # not used
+        cmd  # not used
 
-        T = getattr(machine,"Timer",None)
+        T = getattr(machine, "Timer", None)
         t = None
         while True:
             if self.cfg.get("ext", False):
@@ -101,7 +105,7 @@ class WDT:
                     t = T()
                 if t is None:
                     raise RuntimeError("no timer")
-                t.init(period=self.timeout, mode=T.ONE_SHOT, callback=lambda x:_reset)
+                t.init(period=self.timeout, mode=T.ONE_SHOT, callback=lambda x: _reset)
                 try:
                     await self._ping.wait()
                 finally:

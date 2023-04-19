@@ -1,8 +1,8 @@
 import ctypes
+import errno as E
 
 import ffi
 import usys
-import errno as E
 from uasyncio import TimeoutError, core, wait_for_ms
 
 C = ffi.open(None)
@@ -12,6 +12,7 @@ _write = C.func("i", "write", "iPi")
 _end = None
 
 from moat.micro.compat import Lock
+
 
 def _rdq(s):  # async
     yield core._io_queue.queue_read(s)

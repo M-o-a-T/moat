@@ -14,12 +14,12 @@ from ..proto.stream import MsgpackStream
 # (or a subclass) to it, then call `bot.run()`.
 
 
-
-
 logger = logging.getLogger(__name__)
 
 
-async def unix_stack_iter(path="upy-moat", log=False, *, evt=None, request_factory=Request, cfg=None):
+async def unix_stack_iter(
+    path="upy-moat", log=False, *, evt=None, request_factory=Request, cfg=None
+):
     # an iterator for Unix-domain connections / their stacks. Yields one t,b
     # pair for each successful connection.
 

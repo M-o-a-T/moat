@@ -2,18 +2,18 @@ import hashlib
 import io
 import logging
 import os
-from itertools import chain
 from contextlib import asynccontextmanager
+from itertools import chain
 from pathlib import Path
 
 import anyio
 import msgpack
 from anyio_serial import Serial
-from moat.util import attrdict, NotGiven
+from moat.util import NotGiven, attrdict
 
 from moat.micro.cmd import BaseCmd
 from moat.micro.cmd import Request as BaseRequest
-from moat.micro.compat import AnyioMoatStream, TaskGroup, Event
+from moat.micro.compat import AnyioMoatStream, Event, TaskGroup
 from moat.micro.path import copytree
 from moat.micro.proto.stack import RemoteError
 from moat.micro.stacks.console import console_stack
@@ -203,7 +203,13 @@ async def get_remote(obj, host, port=27587, **kw):
 		"""
     async with await anyio.connect_tcp(host, port) as sock:
         try:
-            t, b = await console_stack(AnyioMoatStream(sock), request_factory=Request, log=obj.debug > 2, lossy=False, **kw)
+            t, b = await console_stack(
+                AnyioMoatStream(sock),
+                request_factory=Request,
+                log=obj.debug > 2,
+                lossy=False,
+                **kw,
+            )
             async with TaskGroup() as tg:
                 task = await tg.spawn(b.run, _name="rem")
                 yield t
@@ -213,11 +219,11 @@ async def get_remote(obj, host, port=27587, **kw):
 
 
 class Request(BaseRequest):
-#   def __init__(self, *a, cmd_cls=ClientBaseCmd, cfg=None, **k):
-#       super().__init__(*a, **k)
-#       if cfg is None:
-#           raise TypeError("cfg")
-#       self.stack(cmd_cls, cfg=cfg)
+    #   def __init__(self, *a, cmd_cls=ClientBaseCmd, cfg=None, **k):
+    #       super().__init__(*a, **k)
+    #       if cfg is None:
+    #           raise TypeError("cfg")
+    #       self.stack(cmd_cls, cfg=cfg)
 
     APP = None
 
@@ -264,8 +270,8 @@ class Request(BaseRequest):
             for k, v in c.items():
                 if isinstance(v, dict):
                     await _set_cfg(p + (k,), v)
-                elif ocd.get(k,NotGiven) != v:
-                    await self.send(("sys", "cfg"), p=p+(k,), d=v)
+                elif ocd.get(k, NotGiven) != v:
+                    await self.send(("sys", "cfg"), p=p + (k,), d=v)
 
             if not replace:
                 return

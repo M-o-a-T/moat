@@ -2,6 +2,7 @@ import usys
 
 from moat.micro.compat import Event
 
+
 class NotGiven:
     """Placeholder value for 'no data' or 'deleted'."""
 
@@ -23,7 +24,9 @@ class CancelledError(Exception):
     """
     Not an asyncio-style cancellation
     """
+
     pass
+
 
 class ValueEvent:
     """A waitable value useful for inter-task synchronization,
@@ -92,12 +95,14 @@ class ValueEvent:
             raise self.value
         return self.value
 
+
 class attrdict(dict):
     """
     A dict that can be accessed via attribute syntax.
 
     This is a very minimal implementation.
     """
+
     def __getattr__(self, k, d=NotGiven):
         try:
             return self[k]
@@ -124,23 +129,24 @@ def import_(name, off=0):
     of object d from it.
     """
     n = name.split(".")
-    mn = ".".join(n[:-off if off else 99])
+    mn = ".".join(n[: -off if off else 99])
     try:
         res = __import__(mn)
         for nn in n[1:]:
-            res = getattr(res,nn)
+            res = getattr(res, nn)
     except AttributeError as exc:
         raise AttributeError(name) from None
     return res
 
+
 def load_from_cfg(cfg, *a, _raise=False, **k):
-    """   
-    A simple frontend to load a module, access a class/object from it, 
-    and call that with the config (and whichever other arguments you want to  
+    """
+    A simple frontend to load a module, access a class/object from it,
+    and call that with the config (and whichever other arguments you want to
     use).
-       
+
     The module+object name is the "client" attribute.
-    """ 
+    """
     if "client" not in cfg:
         if _raise:
             raise ValueError("must be configured")
@@ -155,11 +161,13 @@ _pkey = 1
 _CProxy = {}
 _RProxy = {}
 
+
 def name2obj(name, obj=NotGiven):
     if obj is NotGiven and _CProxy:
         return _CProxy[name]
     _CProxy[name] = obj
     return None
+
 
 def obj2name(obj, name=NotGiven):
     if name is NotGiven:
@@ -167,11 +175,13 @@ def obj2name(obj, name=NotGiven):
     _RProxy[id(obj)] = name
     return None
 
+
 def _builder(typ, data):
     obj = object.__new__(typ)
-    for k,v in data.items():
-        setattr(obj,k,v)
+    for k, v in data.items():
+        setattr(obj, k, v)
     return obj
+
 
 def get_proxy(obj):
     try:
@@ -184,8 +194,10 @@ def get_proxy(obj):
         _RProxy[id(obj)] = k
         return k
 
+
 def _getstate(self):
     return self.__dict__
+
 
 def as_proxy(name, obj=NotGiven):
     """
@@ -195,15 +207,16 @@ def as_proxy(name, obj=NotGiven):
         @as_proxy("foo")
         class Foo():
             def __
-        """
+    """
+
     def _proxy(obj):
         "Export @obj as a proxy."
         if name in _CProxy and _CProxy[name] is not obj:
-            raise ValueError("Proxy: "+repr(name)+" already exists")
+            raise ValueError("Proxy: " + repr(name) + " already exists")
         _CProxy[name] = obj
         _RProxy[id(obj)] = name
-#       if isinstance(obj,type) and not hasattr(obj,"__getstate__"):
-#           obj.__getstate__ = _getstate
+        #       if isinstance(obj,type) and not hasattr(obj,"__getstate__"):
+        #           obj.__getstate__ = _getstate
         return obj
 
     if obj is NotGiven:
@@ -225,5 +238,5 @@ def drop_proxy(p):
     r = _CProxy.pop(p)
     del _RProxy[id(r)]
 
-as_proxy("-")(NotGiven)
 
+as_proxy("-")(NotGiven)

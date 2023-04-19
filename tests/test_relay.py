@@ -2,29 +2,28 @@
 Test the relay implementation
 """
 import time
-from moat.micro.compat import every_ms, sleep_ms, TaskGroup
-from moat.micro.part.relay import Relay
-from moat.micro.part.fake import PINS
-from moat.util import attrdict
 
 import pytest
+from moat.util import attrdict
+
+from moat.micro.compat import TaskGroup, every_ms, sleep_ms
+from moat.micro.part.fake import PINS
+from moat.micro.part.relay import Relay
+
 
 @pytest.mark.anyio
 async def test_rly():
     cfg = attrdict(
-            pin=attrdict(
-                server="moat.micro.part.fake.PIN",
-                pin="X"
-            ),
-            t_on=50,
-            t_off=150,
-        )
+        pin=attrdict(server="moat.micro.part.fake.PIN", pin="X"),
+        t_on=50,
+        t_off=150,
+    )
 
-    r=Relay(cfg)
-    p=PINS["X"]
+    r = Relay(cfg)
+    p = PINS["X"]
 
     async with TaskGroup() as tg:
-        await tg.spawn(r.run,None)
+        await tg.spawn(r.run, None)
         await sleep_ms(50)
 
         await p.set(True)
@@ -33,7 +32,7 @@ async def test_rly():
         await r.set(force=False)
         # this starts a timer 150.
         assert False == p.value
-        await r.set(True,force=None)  # X
+        await r.set(True, force=None)  # X
         assert False == p.value
         await sleep_ms(100)
         assert False == p.value
@@ -46,4 +45,3 @@ async def test_rly():
         await sleep_ms(40)
         assert False == p.value
         tg.cancel()
-

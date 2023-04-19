@@ -4,10 +4,10 @@ import sys
 import anyio
 import asyncdbus.service as _dbus
 from asyncdbus.message_bus import BusType, MessageBus
-from moat.micro.app import BaseAppCmd
-from moat.util import Queue, attrdict
 from moat.lib.victron.dbus import Dbus
+from moat.util import Queue, attrdict
 
+from moat.micro.app import BaseAppCmd
 from moat.micro.compat import Event, TaskGroup, sleep_ms, ticks_add, ticks_diff, ticks_ms
 
 from .. import BaseAppCmd

@@ -5,7 +5,7 @@ import uos
 import usys
 from moat.util import NotGiven, drop_proxy
 
-from .cmd import RootCmd, BaseCmd
+from .cmd import BaseCmd, RootCmd
 from .compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms
 
 
@@ -349,4 +349,3 @@ class StdBase(RootCmd):
         This is for humans. Don't use it for automated keepalive.
         """
         return "R:" + str(m)
-

@@ -4,12 +4,13 @@ import errno
 import logging
 import os
 import stat
-import anyio
 from collections import defaultdict
-from pathlib import PosixPath as Path
 from contextlib import asynccontextmanager
+from pathlib import PosixPath as Path
 
+import anyio
 import pyfuse3
+from moat.util import as_proxy
 from pyfuse3 import (  # pylint: disable=E0611
     RENAME_EXCHANGE,
     RENAME_NOREPLACE,
@@ -19,7 +20,6 @@ from pyfuse3 import (  # pylint: disable=E0611
 )
 
 from .proto.stack import RemoteError
-from moat.util import as_proxy
 
 logger = logging.getLogger(__name__)
 
@@ -792,8 +792,5 @@ async def wrap(link, path, blocksize=0, debug=1):
             yield None
 
         finally:
-            pyfuse3.close(  # pylint: disable=I1101  # was False but we don't continue
-                unmount=True
-            )
+            pyfuse3.close(unmount=True)  # pylint: disable=I1101  # was False but we don't continue
             tg.cancel_scope.cancel()
-

@@ -2,7 +2,7 @@
 Helper to hot-wire a command to read data from/to the other side.
 """
 
-from moat.micro.compat import sleep, wait_for_ms, TimeoutError, OptCtx, Event
+from moat.micro.compat import Event, OptCtx, TimeoutError, sleep, wait_for_ms
 
 
 class Reader:
@@ -11,6 +11,7 @@ class Reader:
 
     The "send" method forwards to the other side.
     """
+
     _link = None
     __cmd = None
 
@@ -36,7 +37,7 @@ class Reader:
             return
         if self.__cmd is None:
             return
-        await self.__cmd.send_nr("s",o=(self.__cmd.name, self._link), d=msg)
+        await self.__cmd.send_nr("s", o=(self.__cmd.name, self._link), d=msg)
 
 
 class Listener(Reader):
@@ -45,6 +46,7 @@ class Listener(Reader):
 
     Reading returns the latest/next message.
     """
+
     _cmd = None
     _up = None
     _rd = None
@@ -80,14 +82,12 @@ class Listener(Reader):
             del self._up
 
         try:
-            return await wait_for_ms(t,anext,self._rd)
+            return await wait_for_ms(t, anext, self._rd)
         except TimeoutError:
-            await self._cmd.send("sq",o=(self.__cmd.name, self._link))
+            await self._cmd.send("sq", o=(self.__cmd.name, self._link))
 
     async def send(self, msg):
         """
         don't send: we received it!
         """
         pass
-
-

@@ -8,12 +8,13 @@ import machine
 # global hardware watchdog
 WDT = None
 
+
 def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
     import uos
 
+    from ..util import import_
     from .base import StdBase
     from .compat import Event, TaskGroup, print_exc, sleep_ms
-    from ..util import import_
 
     if isinstance(cfg, str):
         import msgpack
@@ -64,7 +65,6 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
         # pass
         # else:
         # no_exit = cfg.get("console",{}).get("no_exit",no_exit)
-
         # network
         async def run_network(port):
             from moat.micro.stacks.net import network_stack
@@ -134,7 +134,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
 
         async with TaskGroup() as tg:
             # start comms (and load app frontends)
-            for s in cfg.get("setup",[]):
+            for s in cfg.get("setup", []):
                 r = import_(s)
                 await tg.spawn(r.run)
 

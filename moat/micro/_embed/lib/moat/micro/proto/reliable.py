@@ -1,8 +1,19 @@
 import sys
 
-from ..compat import Event, TaskGroup, ticks_add, ticks_diff, ticks_ms, wait_for_ms, print_exc, TimeoutError, Queue, sleep
 from ...util import NotGiven, ValueEvent
-from .stack import _Stacked, ChannelClosed
+from ..compat import (
+    Event,
+    Queue,
+    TaskGroup,
+    TimeoutError,
+    print_exc,
+    sleep,
+    ticks_add,
+    ticks_diff,
+    ticks_ms,
+    wait_for_ms,
+)
+from .stack import ChannelClosed, _Stacked
 
 
 class Reliable(_Stacked):
@@ -224,7 +235,7 @@ class Reliable(_Stacked):
             err = None
         finally:
             self.__tg = None
-            cl,self.closed = self.closed,True
+            cl, self.closed = self.closed, True
             for _m, _t, e in self.m_send.values():
                 e.set_error(ChannelClosed())
             while self.s_q:

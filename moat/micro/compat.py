@@ -9,17 +9,28 @@ import traceback as _traceback
 
 import greenback
 import outcome as _outcome
-from moat.util import Queue, ValueEvent, Alert, AlertMixin, Broadcaster, BaseAlert, RepeatAlert, AlertHandler, OptCtx
+from moat.util import (
+    Alert,
+    AlertHandler,
+    AlertMixin,
+    BaseAlert,
+    Broadcaster,
+    OptCtx,
+    Queue,
+    RepeatAlert,
+    ValueEvent,
+)
 
 TimeoutError = TimeoutError  # compat
 
+import logging
 from concurrent.futures import CancelledError
 
-import logging
 logger = logging.getLogger(__name__)
 
 Pin_IN = 0
 Pin_OUT = 1
+
 
 def print_exc(exc):
     _traceback.print_exception(type(exc), exc, exc.__traceback__)
@@ -28,6 +39,7 @@ def print_exc(exc):
 def ticks_ms():
     return _time.monotonic_ns() // 1000000
 
+
 async def sleep_ms(ms):
     await sleep(ms / 1000)
 
@@ -35,6 +47,7 @@ async def sleep_ms(ms):
 async def wait_for(timeout, p, *a, **k):
     with _anyio.fail_after(timeout):
         return await p(*a, **k)
+
 
 async def wait_for_ms(timeout, p, *a, **k):
     with _anyio.fail_after(timeout / 1000):
@@ -45,7 +58,7 @@ async def every_ms(t, p, *a, **k):
     tt = ticks_add(ticks_ms(), t)
     while True:
         try:
-            yield await p(*a,**k)
+            yield await p(*a, **k)
         except StopAsyncIteration:
             return
         tn = ticks_ms()
@@ -57,8 +70,9 @@ async def every_ms(t, p, *a, **k):
             # owch, delay too long
             tt = ticks_add(tn, t)
 
+
 def every(t, p, *a, **k):
-    return every_ms(t*1000, p, *a, **k)
+    return every_ms(t * 1000, p, *a, **k)
 
 
 async def idle():
@@ -207,6 +221,7 @@ class AnyioMoatStream:
     """
     Adapts an anyio stream to MoaT
     """
+
     def __init__(self, stream):
         self.s = stream
         self.aclose = stream.aclose
@@ -215,21 +230,20 @@ class AnyioMoatStream:
         try:
             res = await self.s.receive(n)
             return res
-        except (_anyio.EndOfStream,_anyio.ClosedResourceError):
+        except (_anyio.EndOfStream, _anyio.ClosedResourceError):
             raise EOFError from None
 
     async def send(self, buf):
         try:
             return await self.s.send(buf)
-        except (_anyio.EndOfStream,_anyio.ClosedResourceError):
+        except (_anyio.EndOfStream, _anyio.ClosedResourceError):
             raise EOFError from None
 
     async def recvi(self, buf):
         try:
             res = await self.s.receive(len(buf))
-        except (_anyio.EndOfStream,_anyio.ClosedResourceError):
+        except (_anyio.EndOfStream, _anyio.ClosedResourceError):
             raise EOFError from None
         else:
-            buf[:len(res)] = res
+            buf[: len(res)] = res
             return len(res)
-

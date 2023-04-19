@@ -1,4 +1,5 @@
 from functools import partial
+
 from moat.util import NoProxyError, NotGiven, name2obj, obj2name
 
 from ..compat import Lock, TimeoutError, wait_for_ms
@@ -14,11 +15,10 @@ try:
     import greenback
 except ImportError:
     greenback = None
-from msgpack import ExtType, OutOfData, Packer, Unpacker, unpackb, packb
+from msgpack import ExtType, OutOfData, Packer, Unpacker, packb, unpackb
+from serialpacker import FRAME_START, SerialPacker
 
 from .stack import _Stacked
-from serialpacker import SerialPacker, FRAME_START
-
 
 if sys.implementation.name != "micropython":
 
@@ -30,6 +30,7 @@ if sys.implementation.name != "micropython":
 
         Writing is not implemented.
         """
+
         def __init__(self, stream):
             self.s = stream
 
@@ -47,7 +48,9 @@ class _Base(_Stacked):
     async def aclose(self):
         self.s.close()
 
+
 ## msgpack encode/decode
+
 
 def _decode(code, data):
     if code == 4:
@@ -61,8 +64,8 @@ def _decode(code, data):
     elif code == 5:
         s = Unpacker(None)
         s.feed(data)
-#       s = iter(s)
-#       return name2obj(next(s))(*s)
+        #       s = iter(s)
+        #       return name2obj(next(s))(*s)
         s, *d = list(s)
         p = name2obj(s)
         p = p.__new__(p, *d)
@@ -92,7 +95,7 @@ def _encode(obj):
             p = (obj.__dict__,)
         else:
             p = p()
-            if not isinstance(p,(list,tuple)):
+            if not isinstance(p, (list, tuple)):
                 p = (p,)
         return ExtType(5, packb(k) + b"".join(packb(x) for x in p))
 
@@ -198,7 +201,7 @@ class MsgpackHandler(_Stacked):
 class SerialPackerStream(_Base):
     """
     chunked bytestrings > SerialPacker-ized stream
-   
+
     Use this (and a MsgpackHandler and a Reliable) if your AIO stream
     is unreliable (TTL serial).
     """

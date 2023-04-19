@@ -3,6 +3,7 @@ Test runner
 """
 from __future__ import annotations
 
+import logging
 import os
 import sys
 from contextlib import asynccontextmanager
@@ -10,15 +11,15 @@ from pathlib import Path
 from random import random
 
 import anyio
-from moat.micro.proto.stack import _Stacked
 from moat.util import attrdict, merge, packer, yload
 
 from moat.micro.compat import TaskGroup
 from moat.micro.main import Request, get_link, get_link_serial
 from moat.micro.proto.multiplex import Multiplexer
+from moat.micro.proto.stack import _Stacked
 
-import logging
 logging.basicConfig(level=logging.DEBUG)
+
 
 @asynccontextmanager
 async def mpy_server(
@@ -49,7 +50,7 @@ async def mpy_server(
         root = temp / "root"
         try:
             root.mkdir()
-            (root/"tests").symlink_to(Path("tests").absolute())
+            (root / "tests").symlink_to(Path("tests").absolute())
         except EnvironmentError:
             pass
         with (root / "moat.cfg").open("wb") as f:
@@ -65,8 +66,9 @@ async def mpy_server(
 
         async with await anyio.open_process(argv, stderr=sys.stderr) as proc:
             ser = anyio.streams.stapled.StapledByteStream(proc.stdin, proc.stdout)
-            async with get_link_serial(obj, ser, request_factory=req,
-                    use_console=not lossy) as link:
+            async with get_link_serial(
+                obj, ser, request_factory=req, use_console=not lossy
+            ) as link:
                 yield link
 
     mplex = Multiplexer(_factory, obj.socket, cfg=cfg, load_cfg=True)
@@ -95,6 +97,7 @@ class Loop(_Stacked):
     The write queue is created locally, the read queue is taken from the
     "other side".
     """
+
     link = None
 
     def __init__(self, qlen=0, loss=0):
@@ -116,7 +119,7 @@ class Loop(_Stacked):
             return
         try:
             await self.q_wr.send(data)
-        except (anyio.ClosedResourceError,anyio.BrokenResourceError,anyio.EndOfStream):
+        except (anyio.ClosedResourceError, anyio.BrokenResourceError, anyio.EndOfStream):
             raise EOFError
 
     async def recv(self):
@@ -124,7 +127,7 @@ class Loop(_Stacked):
             raise anyio.BrokenResourceError(self)
         try:
             return await self.link.q_rd.receive()
-        except (anyio.ClosedResourceError,anyio.BrokenResourceError,anyio.EndOfStream):
+        except (anyio.ClosedResourceError, anyio.BrokenResourceError, anyio.EndOfStream):
             raise EOFError
 
     async def run(self):

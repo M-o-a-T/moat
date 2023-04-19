@@ -8,9 +8,8 @@ import struct
 import uos as os
 import usys as sys
 from micropython import const
-from uio import BytesIO
-
 from moat.util import attrdict
+from uio import BytesIO
 
 #
 # This is a micropython-asyncio-compatible MsgPack implementation.

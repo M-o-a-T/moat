@@ -7,8 +7,9 @@
 
 import logging
 
-from moat.micro.compat import TaskGroup
 from moat.util import as_proxy
+
+from moat.micro.compat import TaskGroup
 
 logger = logging.getLogger(__name__)
 

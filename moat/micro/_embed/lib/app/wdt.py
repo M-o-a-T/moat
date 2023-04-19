@@ -20,15 +20,17 @@ There is one main "wdt" option which
 import sys
 
 import machine
+from moat.micro.wdt import WDT, M
+
 from moat.micro.cmd import BaseCmd
 from moat.micro.compat import Event, TimeoutError, wait_for_ms
-from moat.micro.wdt import WDT, M
 
 
 class WDTCmd(BaseCmd):
     """
     Watchdog Timer control.
     """
+
     wdt = None
     timeout = None
 
@@ -61,4 +63,3 @@ class WDTCmd(BaseCmd):
         if self.wdt is None:
             return None
         return dict(t=self.wdt.timeout, x=self.wdt.cfg["ext"], h=(self.wdt.wdt is not None))
-

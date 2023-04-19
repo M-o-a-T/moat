@@ -2,9 +2,11 @@
 Readers that aggregate multiple results
 """
 
-from moat.micro.compat import TaskGroup
 from moat.util import attrdict, load_from_cfg
+
+from moat.micro.compat import TaskGroup
 from moat.micro.link import Reader
+
 
 class Array(Reader):
     """
@@ -16,6 +18,7 @@ class Array(Reader):
     - parts: array with separate config for paths
       typically includes pin numbers
     """
+
     PARTS = "parts"
     ATTR = None  # if the part isn't a dict
 
@@ -24,17 +27,16 @@ class Array(Reader):
 
         self.parts = []
 
-        std = cfg.get("default",{})
+        std = cfg.get("default", {})
         for p in cfg[self.PARTS]:
-            if not isinstance(p,dict):
+            if not isinstance(p, dict):
                 if self.ATTR is None:
                     raise ValueError(p)
                 p = attrdict(**{self.ATTR: p})
-            for k,v in std.items():
-                p.setdefault(k,v)
+            for k, v in std.items():
+                p.setdefault(k, v)
 
             self.parts.append(load_from_cfg(p, _raise=True, **kw))
-
 
     async def run(self, cmd):
         "Start the parts' background tasks"
@@ -42,15 +44,16 @@ class Array(Reader):
             for p in self.parts:
                 await tg.spawn(p.run, cmd)
 
-
     async def read(self):
         """
         Return all values as an array
         """
-        res = [None]*len(self.parts)
+        res = [None] * len(self.parts)
+
         async def proc(n):
             r = await self.parts[n]
             res[n] = r
+
         async with TaskGroup() as tg:
             for i in range(len(self.parts)):
                 tg.start_soon(proc, i)
@@ -61,18 +64,19 @@ class Subtract(Reader):
     """
     A generic reader that returns a relative value.
     """
+
     def __init__(self, cfg, **kw):
         pin = cfg.pin
         ref = cfg.ref
-        if not isinstance(ref,dict):
+        if not isinstance(ref, dict):
             ref = attrdict(pin=ref)
 
-        for k,v in pin.items():
-            ref.setdefault(k,v)
+        for k, v in pin.items():
+            ref.setdefault(k, v)
 
         self.pos = load_from_cfg(pin, **kw)
         self.neg = load_from_cfg(ref, **kw)
-    
+
     async def run(self, cmd):
         async with TaskGroup() as tg:
             await tg.spawn(self.pos.run, cmd)
@@ -80,9 +84,11 @@ class Subtract(Reader):
 
     async def read_(self):
         p = n = None
+
         async def get_rel():
             nonlocal n
             n = await self.neg.read()
+
         self._tg.start_soon(get_rel)
         p = await self.pos.read()
 
@@ -97,6 +103,7 @@ class Multiply(Reader):
 
     Returns a dict with u,i,p.
     """
+
     def __init__(self, cfg, **kw):
         super().__init__(cfg, **kw)
         self.rdr_u = load_from_cfg(cfg.u)
@@ -107,13 +114,16 @@ class Multiply(Reader):
         now_i = None
 
         async with TaskGroup() as tg:
+
             async def rd_u():
                 nonlocal now_u
                 now_u = await self.rdr_u.read()
+
             async def rd_i():
                 nonlocal now_i
                 now_i = await self.rdr_i.read()
+
             tg.start_soon(rd_u)
             tg.start_soon(rd_i)
 
-        return dict(u=now_u, i=now_i, p=now_u*now_i)
+        return dict(u=now_u, i=now_i, p=now_u * now_i)

@@ -1,8 +1,9 @@
 """
 More common code
 """
-from moat.util import NotGiven, load_from_cfg, attrdict
-from ..compat import TaskGroup, sleep, sleep_ms, Event, ticks_ms, ticks_diff, Pin_OUT
+from moat.util import NotGiven, attrdict, load_from_cfg
+
+from ..compat import Event, Pin_OUT, TaskGroup, sleep, sleep_ms, ticks_diff, ticks_ms
 from ..link import Reader
 
 
@@ -14,6 +15,7 @@ class Relay(Reader):
     - t_on, t_off, minimum non-forced on/off time
     - note: send a message when changed
     """
+
     _delay = None
     t_last = 0
     value = None
@@ -22,14 +24,14 @@ class Relay(Reader):
     def __init__(self, cfg, value=None, force=None, **kw):
         super().__init__(cfg)
         pin = cfg.pin
-        if isinstance(pin,int):
+        if isinstance(pin, int):
             cfg.pin = attrdict(client="moat.micro.part.pin.Pin", pin=pin)
         kw.setdefault("mode", Pin_OUT)
         self.pin = load_from_cfg(cfg.pin, **kw)
         if self.pin is None:
             raise ImportError(cfg.pin)
-        self.t = [cfg.get("t_off",0), cfg.get("t_on",0)]
-        self.note = cfg.get("note",None)
+        self.t = [cfg.get("t_off", 0), cfg.get("t_on", 0)]
+        self.note = cfg.get("note", None)
 
     async def set(self, value=None, force=NotGiven):
         """
@@ -62,7 +64,7 @@ class Relay(Reader):
         p = await self.pin.get()
         if p == val:
             return
-        
+
         if self._delay is not None:
             self._delay.cancel()
             self._delay = None
@@ -72,13 +74,11 @@ class Relay(Reader):
         self._delay = await self.__tg.spawn(self._run_delay, t)
         await self.pin.set(val)
         self.t_last = ticks_ms()
-        
 
     async def _run_delay(self, t):
         await sleep_ms(t)
         self._delay = None
         await self._set()
-
 
     def get_sync(self):
         """
@@ -97,10 +97,10 @@ class Relay(Reader):
 
     async def read_(self):
         return dict(
-                s=self.value,
-                f=self.force,
-                d=None if self._delay is None else ticks_diff(ticks_ms(), self.t_last),
-            )
+            s=self.value,
+            f=self.force,
+            d=None if self._delay is None else ticks_diff(ticks_ms(), self.t_last),
+        )
 
     async def run(self, cmd):
         async with TaskGroup() as self.__tg:
@@ -109,6 +109,3 @@ class Relay(Reader):
             self.__tg.start_soon(super().run, cmd)
             while True:
                 await sleep(9999)
-
-
-

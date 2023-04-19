@@ -18,7 +18,7 @@ async def test_bms(tmp_path):
             assert res == "R:hello"
             ended = True
 
-            s = await req.send(["loc", "bat1", "state"])
+            s = await req.send(["local", "bat1", "state"])
             print(s)
 
     assert ended

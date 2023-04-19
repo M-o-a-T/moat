@@ -77,7 +77,7 @@ def every(t, p, *a, **k):
 
 async def idle():
     while True:
-        await anyio.sleep(60 * 60 * 12)  # half a day
+        await _anyio.sleep(60 * 60 * 12)  # half a day
 
 
 def ticks_add(a, b):
@@ -151,7 +151,7 @@ def TaskGroup():
 
 
 async def run_server(cb, host, port, backlog=5, taskgroup=None, reuse_port=True):
-    listener = await anyio.create_tcp_listener(
+    listener = await _anyio.create_tcp_listener(
         local_host=host, local_port=port, backlog=backlog, reuse_port=reuse_port
     )
 

@@ -59,17 +59,17 @@ class BusMessage:
 
         if self.code == 0:
             cmd = self._data[0] & 0x7
-            if cmd == 0:  ## AA
+            if cmd == 0:  # AA
                 res.cmd = "Address"
-            elif cmd == 1:  ## Poll
+            elif cmd == 1:  # Poll
                 res.cmd = "poll"
-            elif cmd == 2:  ## Console
+            elif cmd == 2:  # Console
                 res.cmd = "console"
-            elif cmd == 5:  ## Firmware
+            elif cmd == 5:  # Firmware
                 res.cmd = "update"
-            elif cmd == 6:  ## test
+            elif cmd == 6:  # test
                 res.cmd = "test"
-            elif cmd == 7:  ## reset
+            elif cmd == 7:  # reset
                 res.cmd = "Reset"
             else:
                 res.cmd = f"Cmd ?{cmd}"
@@ -143,7 +143,7 @@ class BusMessage:
         else:
             return hdr[:off]
 
-    ## sender
+    # sender
 
     def start_send(self):
         """
@@ -218,7 +218,7 @@ class BusMessage:
         self.chunk_offset = offset
         return res
 
-    ## receiver
+    # receiver
 
     def start_add(self):
         assert self._data.length == 0

@@ -38,7 +38,7 @@ class ERR(IntEnum):
     CRC = -13
     BAD_COLLISION = -14
     NO_CHANGE = -16  # bit flapping?
-    FATAL = -20  ## marker
+    FATAL = -20  # marker
     FLAP = -21  # too many changes, too little timeouts
     ACQUIRE_FATAL = -22  # this cannot happen unless the hardware is insane
 
@@ -122,10 +122,12 @@ class BaseHandler:
         self.tries = None
 
         self.last_zero = None if self.current else 0
-        # set this to zero when .current is zeroed, None when .current is set to something else.
-        # If not None, increment by the timer value whenever we set a timer.
-        # When entering Idle, use a defined total time from IDLE_WAIT to IDLE (settle=True).
-        # Writing may start on IDLE(settle=False) which is the time that depends on back-off and whatnot.
+        # set this to zero when .current is zeroed, None when .current is
+        # set to something else. If not None, increment by the timer value
+        # whenever we set a timer. When entering Idle, use a defined total
+        # time from IDLE_WAIT to IDLE (settle=True). Writing may start on
+        # IDLE(settle=False) which is the time that depends on back-off and
+        # whatnot.
         self.flapping = 0
 
         self.state = S.WAIT_IDLE

@@ -101,10 +101,10 @@ async def copy_over(src, dst, cross=None):
 @asynccontextmanager
 async def get_serial(obj, reset: bool = False, flush: bool = True):
     """\
-		Context: the specified serial port, as an an AnyIO stream.
+        Context: the specified serial port, as an an AnyIO stream.
 
-		This code clears RTS and DTR.
-		"""
+        This code clears RTS and DTR.
+        """
     if not obj.port:
         raise NoPort("No port given")
     _h = {}
@@ -112,9 +112,9 @@ async def get_serial(obj, reset: bool = False, flush: bool = True):
         _h['baudrate'] = obj.baudrate
     except AttributeError:
         pass
-    # 	if not reset:
-    # 		_h["rts"] = False
-    # 		_h["dtr"] = False
+    # if not reset:
+    #     _h["rts"] = False
+    #     _h["dtr"] = False
     ser = Serial(obj.port, **_h)
     async with ser:
         # clear DTR+RTS. May reset the target.
@@ -138,11 +138,11 @@ async def get_serial(obj, reset: bool = False, flush: bool = True):
 @asynccontextmanager
 async def get_link_serial(obj, ser, **kw):
     """\
-		Context: Link to the target using the serial port @ser and a
-		console-ish stack.
+        Context: Link to the target using the serial port @ser and a
+        console-ish stack.
 
-		Returns the top stream.
-		"""
+        Returns the top stream.
+        """
     kw.setdefault("log", obj.debug > 2)
     kw.setdefault("lossy", obj.lossy)
     kw.setdefault("request_factory", Request)
@@ -162,11 +162,11 @@ async def get_link_serial(obj, ser, **kw):
 @asynccontextmanager
 async def get_link(obj, *, use_port=False, reset=False, cfg=None, **kw):
     """\
-		Context: Link to the target: the Unix-domain socket, if that can be
-		connected to, or the serial port.
+        Context: Link to the target: the Unix-domain socket, if that can be
+        connected to, or the serial port.
 
-		Returns the top MoaT stream.
-		"""
+        Returns the top MoaT stream.
+        """
     kw.setdefault("log", obj.debug > 2)
     kw.setdefault("lossy", False)
     kw.setdefault("request_factory", Request)
@@ -197,10 +197,10 @@ async def get_link(obj, *, use_port=False, reset=False, cfg=None, **kw):
 @asynccontextmanager
 async def get_remote(obj, host, port=27587, **kw):
     """\
-		Context: Link to a network target: host+port
+        Context: Link to a network target: host+port
 
-		Returns the top MoaT stream.
-		"""
+        Returns the top MoaT stream.
+        """
     async with await anyio.connect_tcp(host, port) as sock:
         try:
             t, b = await console_stack(

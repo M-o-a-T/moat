@@ -198,7 +198,8 @@ class MoatDevPath(_MoatPath):
         # reading (lines * linesize) must not take more than 1sec and 2kB target RAM!
         n_blocks = max(1, self._repl.serial.baudrate // 5120)
         await self._repl.exec(
-            f'import ubinascii; _f = open({self.as_posix()!r}, "rb"); _mem = memoryview(bytearray(512))\n'
+            f'import ubinascii; _f = open({self.as_posix()!r}, "rb"); '
+            '_mem = memoryview(bytearray(512))\n'
             'def _b(blocks=8):\n'
             '  print("[")\n'
             '  for _ in range(blocks):\n'
@@ -266,7 +267,8 @@ class MoatDevPath(_MoatPath):
             posix_path_slash += '/'
         remote_paths_stat = await self._repl.evaluate(
             'import os; print("[")\n'
-            f'for n in os.listdir({self.as_posix()!r}): print("[", repr(n), ",", os.stat({posix_path_slash!r} + n), "],")\n'
+            f'for n in os.listdir({self.as_posix()!r}): '
+            '    print("[", repr(n), ",", os.stat({posix_path_slash!r} + n), "],")\n'
             'print("]")'
         )
         for p, st in remote_paths_stat:
@@ -322,7 +324,8 @@ class MoatFSPath(_MoatPath):
         return await self._repl.send("f" + cmd, **kw)
 
     # >>> os.stat_result((1,2,3,4,5,6,7,8,9,10))
-    # os.stat_result(st_mode=1, st_ino=2, st_dev=3, st_nlink=4, st_uid=5, st_gid=6, st_size=7, st_atime=8, st_mtime=9, st_ctime=10)
+    # os.stat_result(st_mode=1, st_ino=2, st_dev=3, st_nlink=4,
+    #                st_uid=5, st_gid=6, st_size=7, st_atime=8, st_mtime=9, st_ctime=10)
 
     async def stat(self) -> os.stat_result:
         """

@@ -159,7 +159,8 @@ class Reliable(_Stacked):
                 seq = self.s_send_head
                 msg, evt = self.s_q.pop(0)
                 nseq = (seq + 1) % self.window
-                # print("SH1",self.parent.txt,self.s_send_tail,self.s_send_head,nseq, file=sys.stderr)
+                # print("SH1",self.parent.txt,self.s_send_tail,
+                #             self.s_send_head,nseq, file=sys.stderr)
                 self.s_send_head = nseq
                 self.m_send[seq] = [msg, None, evt]
                 await self.send_msg(seq)
@@ -349,7 +350,7 @@ class Reliable(_Stacked):
                 # ignored
                 return
         else:
-            return  ## unknown action
+            return  # unknown action
 
         if self.closed:
             # if we're down, reply with a reset, but not every time
@@ -386,12 +387,14 @@ class Reliable(_Stacked):
             self.pend_ack = True
             if self.between(self.s_recv_tail, self.s_recv_head, r):
                 if (r - self.s_recv_tail) % self.window < self.window // 2:
-                    # print("RH1",self.parent.txt,self.s_recv_tail,self.s_recv_head,r,r+1, file=sys.stderr)
+                    # print("RH1",self.parent.txt,self.s_recv_tail,
+                    #             self.s_recv_head,r,r+1, file=sys.stderr)
                     self.m_recv[r] = d
                     self.s_recv_head = (r + 1) % self.window
                 else:
                     pass
-                    # print("RH1-",self.parent.txt,self.s_recv_tail,self.s_recv_head,r,r+1, file=sys.stderr)
+                    # print("RH1-",self.parent.txt,self.s_recv_tail,
+                    #             self.s_recv_head,r,r+1, file=sys.stderr)
             elif self.between(self.s_recv_tail, r, self.s_recv_head):
                 self.m_recv[r] = d
 
@@ -399,10 +402,12 @@ class Reliable(_Stacked):
             # no data. R is the next-expected sequence number.
             if (r - self.s_recv_tail) % self.window <= self.window // 2:
                 self.s_recv_head = r
-                # print("RH2",self.parent.txt,self.s_recv_tail,self.s_recv_head,r,r+1, file=sys.stderr)
+                # print("RH2",self.parent.txt,self.s_recv_tail,
+                #             self.s_recv_head,r,r+1, file=sys.stderr)
             else:
                 pass
-                # print("RH2-",self.parent.txt,self.s_recv_tail,self.s_recv_head,r,r+1, file=sys.stderr)
+                # print("RH2-",self.parent.txt,self.s_recv_tail,
+                #             self.s_recv_head,r,r+1, file=sys.stderr)
 
         # process ACKs
         if s >= 0:

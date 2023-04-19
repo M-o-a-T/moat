@@ -1,4 +1,6 @@
-## Code to (de)serialize bus messages
+"""
+Code to (de)serialize bus messages
+"""
 
 import logging
 import sys
@@ -14,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class S(IntEnum):
+    "receiver state machine"
     IDLE = 0
     INIT = 1
     LEN = 2
@@ -26,6 +29,7 @@ class S(IntEnum):
 
 
 class ERR(IntEnum):
+    "error codes"
     OVERFLOW = 1
     LOST = 2
     SPURIOUS = 3
@@ -220,7 +224,7 @@ class SerBus:
         Generate chunk of bytes to send for this message.
         """
         res = bytearray()
-        res.append(prio_data[msg.get('prio', 1)])
+        res.append(self.prio_data[msg.get('prio', 1)])
         n_b = len(msg.data) + msg.header_len
         if n_b >= 0x80:
             res.append(0x80 | (n_b >> 8))

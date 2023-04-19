@@ -171,7 +171,7 @@ we reverse it for you.
             elif std == 32:
                 pbd(0xEDB88320, 32, 8)
             else:
-                raise click.UsageError(f"I only know std=8/11/16")
+                raise click.UsageError("I only know std=8/11/16/32")
 
         if not poly or not bits:
             raise click.UsageError("Need poly+bits")

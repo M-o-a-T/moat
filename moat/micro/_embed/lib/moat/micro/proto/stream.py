@@ -5,9 +5,13 @@ from moat.util import NoProxyError, NotGiven, name2obj, obj2name
 from ..compat import Lock, TimeoutError, wait_for_ms
 
 try:
-    from moat.util import Proxy
+    from moat.util import Proxy, get_proxy
 except ImportError:
     Proxy = None
+
+    def get_proxy(x):
+        raise NotImplementedError(f"get_proxy({repr(x)})")
+
 
 import sys
 
@@ -49,7 +53,7 @@ class _Base(_Stacked):
         self.s.close()
 
 
-## msgpack encode/decode
+# msgpack encode/decode
 
 
 def _decode(code, data):
@@ -246,7 +250,7 @@ class SerialPackerStream(_Base):
 
 
 try:
-    from uasyncio import Lock, core
+    from uasyncio import core
     from uasyncio.stream import Stream
 except ImportError:
     pass

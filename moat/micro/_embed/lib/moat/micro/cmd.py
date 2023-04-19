@@ -12,6 +12,7 @@ from moat.micro.compat import (
     WouldBlock,
     idle,
     print_exc,
+    sleep,
     ticks_add,
     ticks_diff,
     ticks_ms,

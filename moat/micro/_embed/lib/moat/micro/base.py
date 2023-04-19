@@ -137,7 +137,7 @@ class SysCmd(BaseCmd):
         else:
             try:
                 cur[p[-1]] = d
-            except IndexError:
+            except IndexError as exc:
                 if len(cur) != p[-1]:
                     raise exc
                 cur.append(d)

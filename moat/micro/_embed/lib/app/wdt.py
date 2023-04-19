@@ -3,7 +3,7 @@ Watchdog timer.
 
 This app works with a hardware watchdog. It falls back to software if necessary.
 
-There is one main "wdt" option which 
+There is one main "wdt" option which
 
 * hw
 

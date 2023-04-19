@@ -52,12 +52,12 @@ else:
 # may fail.
 
 
-@as_proxy("_rErr")
+@as_proxy("_rErr", replace=True)
 class RemoteError(RuntimeError):
     pass
 
 
-@as_proxy("_rErrS")
+@as_proxy("_rErrS", replace=True)
 class SilentRemoteError(RemoteError):
     pass
 

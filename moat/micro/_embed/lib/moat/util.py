@@ -155,7 +155,7 @@ def load_from_cfg(cfg, *a, _raise=False, **k):
     return m(cfg, *a, **k)
 
 
-### packing
+# packing
 
 _pkey = 1
 _CProxy = {}
@@ -199,7 +199,7 @@ def _getstate(self):
     return self.__dict__
 
 
-def as_proxy(name, obj=NotGiven):
+def as_proxy(name, obj=NotGiven, replace=False):
     """
     Export an object as a named proxy.
     Usage:
@@ -211,7 +211,7 @@ def as_proxy(name, obj=NotGiven):
 
     def _proxy(obj):
         "Export @obj as a proxy."
-        if name in _CProxy and _CProxy[name] is not obj:
+        if not replace and name in _CProxy and _CProxy[name] is not obj:
             raise ValueError("Proxy: " + repr(name) + " already exists")
         _CProxy[name] = obj
         _RProxy[id(obj)] = name

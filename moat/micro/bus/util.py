@@ -1,6 +1,9 @@
+import logging
 from contextlib import asynccontextmanager, contextmanager
 
 import trio
+
+loger = logging.getLogger(__name__)
 
 
 class CtxObj:
@@ -87,7 +90,7 @@ class Dispatcher:
         Worker tasks don't terminate when fewer would (again) suffice.
         """
         q_w, q_r = trio.open_memory_channel(0)
-        self.register(code, put)
+        self.register(code, q_w.send)
 
         async def runner(q):
             async for msg in q_r:

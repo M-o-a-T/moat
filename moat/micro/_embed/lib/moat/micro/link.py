@@ -84,7 +84,7 @@ class Listener(Reader):
         try:
             return await wait_for_ms(t, anext, self._rd)
         except TimeoutError:
-            await self._cmd.send("sq", o=(self.__cmd.name, self._link))
+            await self._cmd.send("sq", o=(self._cmd.name, self._link))
 
     async def send(self, msg):
         """

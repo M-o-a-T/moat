@@ -2,6 +2,7 @@
 # so we can sync the initial files, and get things running
 
 import ast
+import os
 import re
 from contextlib import asynccontextmanager
 
@@ -90,7 +91,7 @@ class DirectREPL:
                     raise OSError(err_num, os_error_mapping.get(err_num, (None, 'OSError'))[1])
             m = re_exceptions.match(lines[-1])
             if m:
-                raise getattr(builtins, m.group(1))(m.group(2))
+                raise getattr(__builtins__, m.group(1))(m.group(2))
 
     async def exec_raw(self, cmd, timeout=5):
         """Exec code, returning (stdout, stderr)"""
@@ -158,7 +159,8 @@ class DirectREPL:
         else:
             # if raw REPL is active, then MicroPython will not execute main.py
             await self.serial.send(b'\x03\x03\x04\x01')
-            # execute empty line to get a new prompt and consume all the outputs form the soft reset
+            # execute empty line to get a new prompt
+            # and consume all the outputs form the soft reset
             try:
                 await anyio.sleep(0.1)
                 await self.exec("1")
@@ -180,7 +182,8 @@ class DirectREPL:
         """
         st = await self.evaluate(f'import os; print(os.statvfs({str(path)!r}))')
         return os.statvfs_result(st)
-        # ~ f_bsize, f_frsize, f_blocks, f_bfree, f_bavail, f_files, f_ffree, f_favail, f_flag, f_namemax
+        # ~ f_bsize, f_frsize, f_blocks, f_bfree, f_bavail,
+        #   f_files, f_ffree, f_favail, f_flag, f_namemax
 
     async def truncate(self, path, length):
         # MicroPython 1.9.3 has no file.truncate(), but open(...,"ab"); write(b"") seems to work.

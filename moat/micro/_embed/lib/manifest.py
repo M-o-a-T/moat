@@ -1,3 +1,5 @@
+# noqa:F821
+
 package("moat", opt=0)
 package("collections", opt=0)
 module("serialpacker.py", opt=0)

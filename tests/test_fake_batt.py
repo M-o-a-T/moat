@@ -2,10 +2,9 @@
 Basic test using a MicroPython subtask
 """
 import pytest
+from moat.micro._test import mpy_client, mpy_server  # pylint:disable=E0401,E0611
 
 pytestmark = pytest.mark.anyio
-
-from moat.micro._test import mpy_client, mpy_server
 
 TT = 250  # XXX assume that this is OK
 
@@ -19,7 +18,7 @@ async def test_bms(tmp_path):
             assert res == "R:hello"
             ended = True
 
-            s = await req.send(["loc","bat1","state"])
+            s = await req.send(["loc", "bat1", "state"])
             print(s)
 
     assert ended

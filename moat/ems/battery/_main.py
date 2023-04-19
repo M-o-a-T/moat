@@ -1,40 +1,16 @@
-#!/usr/bin/env python3
+"""
+Battery management main code
+"""
 
-import importlib
 import logging
-import os
-import sys
-from contextlib import asynccontextmanager
 
-import anyio
 import asyncclick as click
-from moat.util import (
-    P,
-    as_service,
-    attr_args,
-    attrdict,
-    merge,
-    packer,
-    process_args,
-    unpacker,
-    yload,
-    yprint,
-)
+from moat.micro.main import get_link  # pylint: disable=E0401,E0611
+from moat.micro.proto.stack import RemoteError  # pylint: disable=E0401,E0611
+from moat.util import merge, yload, yprint
 from moat.util.main import load_subgroup
 
-from .compat import TaskGroup
-from .direct import DirectREPL
-from .main import ABytes, NoPort, copy_over, get_link, get_link_serial, get_remote, get_serial
-from .path import MoatDevPath, MoatFSPath
-from .proto.multiplex import Multiplexer
-from .proto.stack import RemoteError
-
 logger = logging.getLogger(__name__)
-
-
-def clean_cfg(cfg):
-    # cfg = attrdict(apps=cfg["apps"])  # drop all the other stuff
-    return cfg
 
 
 @load_subgroup(prefix="moat.ems.battery")

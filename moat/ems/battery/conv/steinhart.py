@@ -11,8 +11,12 @@ __ALL__ = ["thermistor2celsius", "celsius2thermistor"]
 
 
 def thermistor2celsius(B: int, raw: int, bits: int = ADC_BITS) -> float:
-    # source: https://arduinodiy.wordpress.com/2015/11/10/\
-    #  measuring-temperature-with-ntc-the-steinhart-hart-formula/
+    """
+    Convert thermistor measurement to Celsius.
+
+    Source: https://arduinodiy.wordpress.com/2015/11/10/\
+      measuring-temperature-with-ntc-the-steinhart-hart-formula/
+    """
     if raw == 0:
         return None
 
@@ -24,6 +28,9 @@ def thermistor2celsius(B: int, raw: int, bits: int = ADC_BITS) -> float:
 
 
 def celsius2thermistor(B: int, degC: float, bits: int = ADC_BITS) -> int:
+    """
+    Convert celsius to thermistor measurement.
+    """
     if degC is None:
         return 0
     res = 1 / (degC + 273.15) - 1 / (NOMINAL_TEMPERATURE + 273.15)

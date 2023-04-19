@@ -70,12 +70,15 @@ class SysCmd(BaseCmd):
         @p is the path. An empty path is the root.
 
         If the accessed item is a dict, return data consists of a dict
-        (simple keys and values) and a list (keys for complex
+        (simple keys and their values) and a list (keys for complex
         values).
 
         Same for a list.
         """
-        cur = self.base.cfg
+        return self._cmd_part(self.base.cfg, p)
+
+    @staticmethod
+    def _cmd_part(cur, p):
         for pp in p:
             cur = cur[pp]
         if isinstance(cur, dict):
@@ -175,18 +178,20 @@ class SysCmd(BaseCmd):
             raise RuntimeError("cannot be deleted")
         drop_proxy(p)
 
-    async def cmd_dump(self, x):
+    async def cmd_dump(self, x, p=()):
         """
-        Evaluate an object, returns a repr() of all its attributes.
-
-        Warning: this may need a heap of memory.
+        Evaluate an object @x, returns a partial view of its attributes;
+        the return format is identical to that of `cmd_cfg_r`; set @p
+        to access a sub-object.
         """
         if isinstance(x, str):
             x = eval(x, dict(s=self.parent))
-        d = {}
+
         for k in dir(x):
-            d[k] = repr(getattr(res, k))
-        return d
+            if k.startswith("__"):
+                continue
+            d[k] = getattr(x, k)
+        return _cmd_part(d, p)
 
     async def cmd_info(self):
         """

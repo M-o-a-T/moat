@@ -1,5 +1,11 @@
+"""
+Server side of BaseCmd
+
+extends BaseCmd to also return loc_* functions
+"""
+
 from ._cmd import BaseCmd as _BaseCmd
-from ._cmd import *
+from ._cmd import RemBroadcaster, Request, RootCmd
 
 
 class BaseCmd(_BaseCmd):

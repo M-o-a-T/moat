@@ -2,7 +2,7 @@
 Module for pins
 """
 import machine as M
-from moat.compat import sleep_ms
+from moat.compat import TaskGroup, load_from_cfg, sleep_ms
 
 from .link import Reader
 

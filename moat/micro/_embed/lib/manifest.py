@@ -1,4 +1,4 @@
-# noqa:F821
+# flake8: noqa
 
 package("moat", opt=0)
 package("collections", opt=0)

@@ -2,7 +2,6 @@ import logging
 import sys
 
 import anyio
-from moat.util import Queue
 
 from moat.micro.compat import Event, Queue, TaskGroup, sleep_ms, ticks_add, ticks_diff, ticks_ms
 

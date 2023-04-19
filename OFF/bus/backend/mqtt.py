@@ -6,6 +6,7 @@ from distmqtt.client import open_mqttclient
 from distmqtt.codecs import MsgPackCodec
 from moatbus.backend import BaseBusHandler
 from moatbus.message import BusMessage
+from . import UnknownParamError
 
 
 class Handler(BaseBusHandler):

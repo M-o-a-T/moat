@@ -44,7 +44,7 @@ async def test_fuse(tmp_path):
 
                 n = await anyio.to_thread.run_sync(fx, str(p / "test.txt"))
             st = await (r / "test.txt").stat()
-            assert st.st_size == 6  ## n
+            assert st.st_size == 6  # n
             print("XA", file=sys.stderr)
         print("XB", file=sys.stderr)
     print("XC", file=sys.stderr)

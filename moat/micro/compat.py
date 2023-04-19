@@ -4,6 +4,9 @@ Event = _anyio.Event
 Lock = _anyio.Lock
 WouldBlock = _anyio.WouldBlock
 sleep = _anyio.sleep
+EndOfStream = _anyio.EndOfStream
+BrokenResourceError = _anyio.BrokenResourceError
+
 import time as _time
 import traceback as _traceback
 

@@ -28,20 +28,20 @@ async def test_rly():
 
         await p.set(True)
         await r.set(True)
-        assert True == p.value
+        assert True is p.value
         await r.set(force=False)
         # this starts a timer 150.
-        assert False == p.value
+        assert False is p.value
         await r.set(True, force=None)  # X
-        assert False == p.value
+        assert False is p.value
         await sleep_ms(100)
-        assert False == p.value
+        assert False is p.value
         # the timer runs out after 150 and the (X) starts a new timer 50.
         await sleep_ms(80)
-        assert True == p.value
+        assert True is p.value
         await r.set(False)
         # the new timer now has 20 remaining.
-        assert True == p.value
+        assert True is p.value
         await sleep_ms(40)
-        assert False == p.value
+        assert False is p.value
         tg.cancel()

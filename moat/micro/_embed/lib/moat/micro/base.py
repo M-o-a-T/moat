@@ -187,11 +187,9 @@ class SysCmd(BaseCmd):
         if isinstance(x, str):
             x = eval(x, dict(s=self.parent))
 
-        for k in dir(x):
-            if k.startswith("__"):
-                continue
-            d[k] = getattr(x, k)
-        return _cmd_part(d, p)
+        if not isinstance(x, (int, float, list, tuple, dict)):
+            x = x.__dict__
+        return self._cmd_part(x, p)
 
     async def cmd_info(self):
         """

@@ -1,6 +1,5 @@
 import sys
 
-from uasyncio import run_server
 from uasyncio.queues import Queue
 
 from ..cmd import Request

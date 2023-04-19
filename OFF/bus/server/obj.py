@@ -39,9 +39,9 @@ class BaseObj:
             return  # already done
 
         if not isinstance(serial, bytes):
-            l = serial.bit_length()
-            l = (l + 7) / 8
-            serial = serial.to_bytes(l, "big")
+            ln = serial.bit_length()
+            ln = (ln + 7) / 8
+            serial = serial.to_bytes(ln, "big")
 
         self.serial = serial
         self.is_ready = trio.Event()
@@ -102,9 +102,9 @@ class BaseObj:
         if self.client_id is None:
             raise NoClientError()
 
-        if src is none:
+        if src is None:
             src = m.id
-        if dst is none:
+        if dst is None:
             dst = self.client_id
         await m.send(src=src, dst=dst, code=code, data=data)
 

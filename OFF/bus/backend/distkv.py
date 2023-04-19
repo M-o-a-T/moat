@@ -22,12 +22,13 @@ class Handler(BaseBusHandler):
 
     short_help = "tunnel through DistKV"
 
-    def __init__(self, client: Client, topic: Path):
+    def __init__(self, client: Client, topic: Path, id: str = None):
         super().__init__()
         if id is None:
             id = "".join(random.choices("abcdefghjkmnopqrstuvwxyz23456789", k=9))
         self.client = client
         self.topic = topic
+        self.id = id
 
     PARAMS = {
         'topic': (

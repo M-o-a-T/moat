@@ -54,29 +54,29 @@ class AsyncFD:
             try:
                 await wait_for_ms(_rdq(self.fd_i), 100)
             except TimeoutError:
-                print("R?", n, file=usys.stderr)
+                print("R?", self, file=usys.stderr)
                 await _rdq(self.fd_i)
         else:
             await _rdq(self.fd_i)
-        l = _read(self.fd_i.fileno(), buf, len(buf))
-        if l < 0:
+        ln = _read(self.fd_i.fileno(), buf, len(buf))
+        if ln < 0:
             raise OSError(errno())
-        if l == 0:
+        if ln == 0:
             raise EOFError()
 
         m = memoryview(buf)
         if self.log:
-            print("R:", bytes(m[:l]), file=usys.stderr)
-        return l
+            print("R:", bytes(m[:ln]), file=usys.stderr)
+        return ln
 
     async def recv(self, n=512):
         buf = bytearray(n)
-        l = await self.recvi(buf)
-        if l <= len(buf) / 4:
-            return buf[:l]
+        ln = await self.recvi(buf)
+        if ln <= len(buf) / 4:
+            return buf[:ln]
         else:
             m = memoryview(buf)
-            return m[:l]
+            return m[:ln]
 
     async def send(self, buf, full=True):
         b = buf
@@ -92,26 +92,26 @@ class AsyncFD:
                 else:
                     await _wrq(self.fd_o)
 
-                l = _write(self.fd_o.fileno(), b, len(b))
+                ln = _write(self.fd_o.fileno(), b, len(b))
                 err = errno()
                 if self.log:
-                    if l == len(b):
+                    if ln == len(b):
                         print("w:", bytes(b), file=usys.stderr)
-                    elif l == -1:
+                    elif ln == -1:
                         print("w:", bytes(b), "=E", errno(), file=usys.stderr)
                     else:
-                        print("w:", bytes(b), "=", l, file=usys.stderr)
+                        print("w:", bytes(b), "=", ln, file=usys.stderr)
 
-                if l < 0:
+                if ln < 0:
                     if err == E.ENOENT:
                         return
                     raise OSError(err)
-                if l == 0:
+                if ln == 0:
                     raise EOFError()
-                ll += l
+                ll += ln
                 if ll == len(buf) or not full:
                     return ll
-                b = memoryview(b)[l:]
+                b = memoryview(b)[ln:]
             return ll
 
     async def aclose(self):

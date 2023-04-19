@@ -9,23 +9,9 @@ import logging
 
 from moat.util import as_proxy
 
-from moat.micro.compat import TaskGroup
+from moat.micro.compat import BrokenResourceError, EndOfStream, TaskGroup
 
 logger = logging.getLogger(__name__)
-
-try:
-    import anyio
-except ImportError:
-
-    class EndOfStream(Exception):
-        pass
-
-    class BrokenResourceError(Exception):
-        pass
-
-else:
-    EndOfStream = anyio.EndOfStream
-    BrokenResourceError = anyio.BrokenResourceError
 
 #
 # Basic infrastructure to run an RPC system via an unreliable,

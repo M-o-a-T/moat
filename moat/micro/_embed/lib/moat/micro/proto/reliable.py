@@ -447,7 +447,8 @@ class Reliable(_Stacked):
             else:
                 rr = (rr + 1) % self.window
                 self.s_recv_tail = rr
-                # print("RT1",self.parent.txt,self.s_recv_tail,self.s_recv_head,r,r+1, file=sys.stderr)
+                # print("RT1",self.parent.txt,self.s_recv_tail,
+                #             self.s_recv_head,r,r+1, file=sys.stderr)
                 self.pend_ack = True
                 await self.rq.put(d)
 

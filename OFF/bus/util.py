@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager, contextmanager
 
 import trio
 
-loger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class CtxObj:

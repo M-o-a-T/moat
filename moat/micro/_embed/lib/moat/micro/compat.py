@@ -9,9 +9,17 @@ TimeoutError = uasyncio.TimeoutError
 _run = uasyncio.run
 _tg = uasyncio.TaskGroup
 CancelledError = uasyncio.CancelledError
-# from uasyncio import Event,Lock,sleep,sleep_ms,TimeoutError, run as _run, TaskGroup as _tg, CancelledError
 from uasyncio.queues import Queue, QueueEmpty, QueueFull
 from utime import ticks_add, ticks_diff, ticks_ms
+
+
+class EndOfStream(Exception):
+    pass
+
+
+class BrokenResourceError(Exception):
+    pass
+
 
 try:
     from machine import Pin
@@ -44,6 +52,10 @@ def print_exc(a, b=usys.stderr):
 
 
 from moat.util import NotGiven
+
+
+class LostData(ValueError):
+    pass
 
 
 async def idle():
@@ -217,7 +229,7 @@ class BroadcastReader:
             self._q.put_nowait(value)
         except WouldBlock:
             x = self._q.get_nowait()
-            logger.debug("Dropped: %r", x)
+            print("Dropped:", repr(x), file=usys.stderr)
             self._q.put_nowait(value)
             self.loss += 1
 

@@ -74,10 +74,10 @@ async def run(
 @click.option("-d", "--debug", is_flag=True, help="Debug?")
 async def _main(debug, **kw):
     logging.basicConfig(level=logging.DEBUG if debug else logging.WARNING)
-    l = logging.getLogger("distmqtt.mqtt.protocol.handler")
-    l.setLevel(logging.INFO)
-    l = logging.getLogger("transitions.core")
-    l.setLevel(logging.WARNING)
+    lg = logging.getLogger("distmqtt.mqtt.protocol.handler")
+    lg.setLevel(logging.INFO)
+    lg = logging.getLogger("transitions.core")
+    lg.setLevel(logging.WARNING)
     await run(**kw)
 
 

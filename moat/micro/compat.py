@@ -98,62 +98,6 @@ except AttributeError:  # no back compat
     _d_a = lambda _: None
 
 
-@_attr.s
-class ValueEvent:
-    """A waitable value useful for inter-task synchronization,
-    inspired by :class:`threading.Event`.
-
-    An event object manages an internal value, which is initially
-    unset, and a task can wait for it to become True.
-
-    Args:
-      ``scope``:  A cancelation scope that will be cancelled if/when
-                  this ValueEvent is. Used for clean cancel propagation.
-
-    Note that the value can only be read once.
-    """
-
-    event = _attr.ib(factory=Event, init=False)
-    value = _attr.ib(default=None, init=False)
-    scope = _attr.ib(default=None, init=True)
-
-    def set(self, value):
-        """Set the result to return this value, and wake any waiting task."""
-        self.value = _outcome.Value(value)
-        self.event.set()
-        return _d_a(self.set)
-
-    def set_error(self, exc):
-        """Set the result to raise this exceptio, and wake any waiting task."""
-        self.value = _outcome.Error(exc)
-        self.event.set()
-        return _d_a(self.set_error)
-
-    def is_set(self):
-        """Check whether the event has occurred."""
-        return self.value is not None
-
-    def cancel(self):
-        """Send a cancelation to the recipient.
-
-        TODO: Trio can't do that cleanly.
-        """
-        if self.scope is not None:
-            self.scope.cancel()
-        self.set_error(_Cancelled())
-        return _d_a(self.cancel)
-
-    async def get(self):
-        """Block until the value is set.
-
-        If it's already set, then this method returns immediately.
-
-        The value can only be read once.
-        """
-        await self.event.wait()
-        return self.value.unwrap()
-
-
 _tg = None
 
 

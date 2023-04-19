@@ -31,7 +31,7 @@ file = "LICENSE.txt"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"
-repository = "https://github.com/M-o-a-T/moat-bms"
+repository = "https://github.com/M-o-a-T/moat-ems"
 
 [tool.flake8]
 max-line-length = 99
@@ -43,7 +43,7 @@ multi_line_output = 3
 profile = "black"
 
 [tool.setuptools]
-packages = [ "moat.ems", "moat.bms",]
+packages = [ "moat.ems" ]
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 

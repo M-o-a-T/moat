@@ -333,20 +333,6 @@ class Multiplexer(Request):
         finally:
             del self.streams[sid]
 
-    async def _handle_stream(self, sock):
-        stream = Stream(self, sock)
-        with self._attached(stream):
-            try:
-                await stream.run()
-            except anyio.EndOfStream:
-                pass
-            except Exception as e:
-                logger.exception("Stream Crash")
-                try:
-                    await stream.send(a='e', d=repr(e))
-                except Exception:
-                    pass
-
     async def submit(self, serv, msg, seq):
         self.next_mid += 1
         mid = self.next_mid

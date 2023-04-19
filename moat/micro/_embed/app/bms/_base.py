@@ -28,59 +28,59 @@ class BatteryAlert(Alert):
     For a given battery there will at most be one open alert of each type.
     """
 
-@as_proxy("bms_SH")
+@as_proxy("bms_SH", replace=True)
 class HighSOC(BatteryAlert):
     "Charge exceeds limit"
 
-@as_proxy("bms_SL")
+@as_proxy("bms_SL", replace=True)
 class LowSOC(BatteryAlert):
     "Charge below limit"
 
-@as_proxy("bms_UH")
+@as_proxy("bms_UH", replace=True)
 class HighVoltage(BatteryAlert):
     "Total voltage exceeds limit"
 
-@as_proxy("bms_UL")
+@as_proxy("bms_UL", replace=True)
 class LowVoltage(BatteryAlert):
     "Total voltage below limit"
 
-@as_proxy("bms_CH")
+@as_proxy("bms_CH", replace=True)
 class HighCellVoltage(BatteryAlert):
     "Cell voltage exceeds limit"
 
-@as_proxy("bms_CL")
+@as_proxy("bms_CL", replace=True)
 class LowCellVoltage(BatteryAlert):
     "Cell voltage below limit"
 
-@as_proxy("bms_CI")
+@as_proxy("bms_CI", replace=True)
 class CellImbalance(BatteryAlert):
     "Excessive cell imbalance"
 
-@as_proxy("bms_IH")
+@as_proxy("bms_IH", replace=True)
 class HighChargeCurrent(BatteryAlert):
     "Charge current exceeds limit"
 
-@as_proxy("bms_IL")
+@as_proxy("bms_IL", replace=True)
 class HighDischargeCurrent(BatteryAlert):
     "Discharge current exceeds limit"
 
-@as_proxy("bms_TH")
+@as_proxy("bms_TH", replace=True)
 class HighTemperature(BatteryAlert):
     "Temperature exceeds limit"
 
-@as_proxy("bms_TL")
+@as_proxy("bms_TL", replace=True)
 class LowTemperature(BatteryAlert):
     "Temperature below operational limit"
 
-@as_proxy("bms_NBD")
+@as_proxy("bms_NBD", replace=True)
 class NoBatteryData(BatteryAlert):
     "no battery data seen"
 
-@as_proxy("bms_NCD")
+@as_proxy("bms_NCD", replace=True)
 class NoCellData(BatteryAlert):
     "no cell data seen"
 
-@as_proxy("bms_VM")
+@as_proxy("bms_VM", replace=True)
 class VoltageDelta(BatteryAlert):
     "Battery and sum-of-cell voltages don't match"
 

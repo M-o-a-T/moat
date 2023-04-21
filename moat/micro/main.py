@@ -283,9 +283,7 @@ class Request(BaseRequest):
             # current client cfg
             try:
                 ocd, ocl = await self.send(("sys", "cfg_r"), p=p)
-            except RemoteError as exc:
-                if "KeyError" not in str(exc):
-                    raise
+            except KeyError as exc:
                 ocd = {}
                 ocl = []
                 await self.send(("sys", "cfg"), p=p, d={})

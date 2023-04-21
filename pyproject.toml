@@ -32,6 +32,7 @@ local_scheme = "no-local-version"
 [tool.flake8]
 max-line-length = 99
 ignore = ["F841","F401","E731","E502","E402","E127","E123","E203","E231","W503"]
+exclude = ["moat/micro/_embed"]
 
 [tool.tox]
 legacy_tox_ini = """

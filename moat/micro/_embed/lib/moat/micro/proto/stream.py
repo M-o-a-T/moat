@@ -57,6 +57,8 @@ class _Base(_Stacked):
 
 
 def _decode(code, data):
+    # decode an object, possibly by building a proxy.
+
     if code == 4:
         n = data.decode("utf-8")
         try:
@@ -68,31 +70,29 @@ def _decode(code, data):
     elif code == 5:
         s = Unpacker(None)
         s.feed(data)
-        #       s = iter(s)
-        #       return name2obj(next(s))(*s)
-        s, d = list(s)
+
+        s, *d = list(s)
+        st = d[1] if len(d) > 1 else {}
+        d = d[0]
         p = name2obj(s)
-        try:
-            _n = p.__new__
-        except AttributeError:
-            _n = object.__new__
-        if d is None:
-            d = {}
-        o = None
-        try:
-            o = _n(p, **d)
-            o.__init__(**d)
-        except TypeError:
-            if o is None:
-                o = _n(p)
-            for k, v in d.items():
-                setattr(o, k, v)
+        o = p(*d)
+        if st:
+            try:
+                o.__setstate__(st)
+            except AttributeError:
+                try:
+                    o.__dict__.update(st)
+                except AttributeError:
+                    for k, v in st.items():
+                        setattr(o, k, v)
         return o
 
     return ExtType(code, data)
 
 
 def _encode(obj):
+    # encode an object by building a proxy.
+
     if Proxy is not None and isinstance(obj, Proxy):
         return ExtType(4, obj.name.encode("utf-8"))
 
@@ -108,21 +108,21 @@ def _encode(obj):
         return ExtType(4, k.encode("utf-8"))
     else:
         try:
-            p = obj.__getstate__
+            p = obj.__reduce__
         except AttributeError:
             try:
-                p = (obj.__dict__,)
+                p = obj.__dict__
             except AttributeError:
                 p = {}
                 for n in dir(obj):
                     if n.startswith("_"):
                         continue
                     p[n] = getattr(obj, n)
-                p = (p,)
+            p = ((), p)
         else:
             p = p()
-            if not isinstance(p, (list, tuple)):
-                p = (p,)
+            assert p[0] is type(obj)
+            p = p[1:]
         return ExtType(5, packb(k) + b"".join(packb(x) for x in p))
 
 

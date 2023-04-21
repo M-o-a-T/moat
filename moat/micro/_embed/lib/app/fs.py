@@ -11,13 +11,13 @@ from moat.micro.proto.stack import SilentRemoteError
 
 
 class FileNotFoundError(SilentRemoteError):
-    def __getstate__(self):
-        return (2, "not here", self.args[0])
+    def __reduce__(self):
+        return (FileNotFoundError, (self.args[0],), {})
 
 
 class FileExistsError(SilentRemoteError):
-    def __getstate__(self):
-        return (17, "exists", self.args[0])
+    def __reduce__(self):
+        return (FileExistsError, (self.args[0],), {})
 
 
 as_proxy("_FnErr", FileNotFoundError)

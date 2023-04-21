@@ -2,7 +2,6 @@
 Basic test using a MicroPython subtask
 """
 import pytest
-
 from moat.util import as_proxy, attrdict, to_attrdict  # pylint:disable=no-name-in-module
 
 from moat.micro._test import mpy_client, mpy_server
@@ -50,6 +49,7 @@ async def test_cfg(tmp_path):
 
 class Bar:
     "proxied test object"
+
     def __init__(self, x):
         self.x = x
 

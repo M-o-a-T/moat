@@ -1,7 +1,8 @@
 import usys
+from uasyncio.queues import Queue, QueueEmpty, QueueFull
 
 from moat.micro.compat import Event
-from uasyncio.queues import Queue, QueueEmpty, QueueFull
+
 
 class NotGiven:
     """Placeholder value for 'no data' or 'deleted'."""
@@ -30,6 +31,7 @@ class CancelledError(Exception):
 
 class OptCtx:
     "optional context"
+
     def __init__(self, obj=None):
         self.obj = obj
 
@@ -258,6 +260,7 @@ as_proxy("-")(NotGiven)
 
 
 # partial copy of moat.util.queue
+
 
 class BroadcastReader:
     value = NotGiven

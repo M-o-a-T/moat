@@ -185,7 +185,7 @@ async def setup(
                 pk = pk + b"\xc1" + pk
 
             if obj.lossy:
-                from serialpacker import SerialPacker# pylint:disable=import-error
+                from serialpacker import SerialPacker  # pylint:disable=import-error
 
                 sp = SerialPacker(**({"mark": mark} if mark is not None else {}))
                 h, pk, t = sp.frame(pk)

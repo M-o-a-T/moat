@@ -22,9 +22,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 @asynccontextmanager
-async def mpy_server(
-    temp: Path, debug=True, lossy=False, guarded=False, cff="test", cfg=None
-):
+async def mpy_server(temp: Path, debug=True, lossy=False, guarded=False, cff="test", cfg=None):
     """
     Creates a test multiplexer with a Unix MicroPython process behind it
     """

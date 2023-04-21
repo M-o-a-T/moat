@@ -5,8 +5,8 @@ dbus helpers
 from contextlib import asynccontextmanager
 
 import anyio
-from asyncdbus.service import ServiceInterface
 from asyncdbus.constants import NameFlag
+from asyncdbus.service import ServiceInterface
 from moat.util import CtxObj
 
 INTF = "org.m_o_a_t"
@@ -37,6 +37,7 @@ async def DbusName(dbus, name=None):
 
 class DbusInterface(ServiceInterface, CtxObj):
     "a dbus ServiceInterface with a context manager that auto-exports itself"
+
     def __init__(self, dbus, path, interface=None):
         self.dbus = dbus
         self.path = path

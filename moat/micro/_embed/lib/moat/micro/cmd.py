@@ -27,19 +27,22 @@ may fail.
 
 import sys
 
-from moat.util import attrdict, import_, obj2name, Broadcaster, Queue, ValueEvent, as_proxy  # pylint: disable=no-name-in-module
-
-from moat.micro.compat import (
-    CancelledError,
-    TaskGroup,
-    WouldBlock,
-    idle,
-    print_exc,
+from moat.util import (  # pylint: disable=no-name-in-module
+    Broadcaster,
+    Queue,
+    ValueEvent,
+    as_proxy,
+    attrdict,
+    import_,
+    obj2name,
 )
+
+from moat.micro.compat import CancelledError, TaskGroup, WouldBlock, idle, print_exc
 from moat.micro.proto.stack import RemoteError, SilentRemoteError, _Stacked
 
 as_proxy("_KyErr", KeyError, replace=True)
 as_proxy("_AtErr", AttributeError, replace=True)
+
 
 class BaseCmd(_Stacked):
     """
@@ -65,7 +68,8 @@ class BaseCmd(_Stacked):
     that Request you stack Base subclasses according to the functions you
     need.
     """
-    _tg:TaskGroup = None
+
+    _tg: TaskGroup = None
 
     async def run(self):
         """
@@ -97,7 +101,9 @@ class BaseCmd(_Stacked):
         self._tg.cancel()
         await super().aclose()
 
-    async def dispatch(self, action: str | list[str], msg: dict): # pylint:disable=arguments-differ
+    async def dispatch(
+        self, action: str | list[str], msg: dict
+    ):  # pylint:disable=arguments-differ
         # TODO rename dispatch+send when with actions
         """
         Process one incoming message.
@@ -209,7 +215,7 @@ class Request(_Stacked):
     """
 
     APP = "app"
-    _tg:TaskGroup = None
+    _tg: TaskGroup = None
 
     def __init__(self, *a, ready=None, **k):
         if sys.implementation.name != "micropython" and self.APP == "app":
@@ -275,7 +281,9 @@ class Request(_Stacked):
                 cfg = getattr(gcfg, name, attrdict())
                 await app.config_updated(cfg)
             else:
-                app._req_scope = await tg.spawn(app.run, _name="mp_app_" + name) # pylint: disable=protected-access
+                app._req_scope = await tg.spawn(
+                    app.run, _name="mp_app_" + name
+                )  # pylint: disable=protected-access
 
         if self._ready is not None:
             self._ready.set()

@@ -2,7 +2,6 @@
 Basic test using a MicroPython subtask
 """
 import pytest
-
 from moat.util import NotGiven
 
 from moat.micro._test import mpy_client, mpy_server

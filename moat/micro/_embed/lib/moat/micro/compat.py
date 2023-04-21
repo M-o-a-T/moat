@@ -180,5 +180,3 @@ class ValueEvent:
         # The value can only be read once.
         await self.event.wait()
         return self.value.unwrap()
-
-

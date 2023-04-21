@@ -2,8 +2,14 @@
 Helper to hot-wire a command to read data from/to the other side.
 """
 
-from moat.micro.compat import Event, TimeoutError, wait_for_ms, idle  # pylint: disable=redefined-builtin,no-name-in-module
 from moat.util import OptCtx  # pylint:disable=no-name-in-module
+
+from moat.micro.compat import (  # pylint: disable=redefined-builtin,no-name-in-module
+    Event,
+    TimeoutError,
+    idle,
+    wait_for_ms,
+)
 
 
 class Reader:
@@ -50,6 +56,7 @@ class Listener(Reader):
 
     Reading returns the latest/next message.
     """
+
     # pylint: disable=abstract-method
 
     _cmd = None

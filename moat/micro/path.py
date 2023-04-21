@@ -24,7 +24,7 @@ class _MoatPath(pathlib.PurePosixPath):  # pathlib.PosixPath
     __slots__ = ('_repl', '_stat_cache')
 
     def __init__(self, *a, **kw):
-        super().__init__(*a,**kw)
+        super().__init__(*a, **kw)
         self._stat_cache = None
         self._repl = None
 
@@ -110,6 +110,7 @@ class _MoatPath(pathlib.PurePosixPath):  # pathlib.PosixPath
     async def iterdir(self):
         "list a directory under this path."
         raise NotImplementedError()
+
 
 class MoatDevPath(_MoatPath):
     """

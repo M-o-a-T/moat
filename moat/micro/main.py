@@ -241,6 +241,7 @@ class Request(BaseRequest):
 
     Also handles retrieving/setting the configuration from/to the client.
     """
+
     #   def __init__(self, *a, cmd_cls=ClientBaseCmd, cfg=None, **k):
     #       super().__init__(*a, **k)
     #       if cfg is None:

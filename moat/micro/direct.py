@@ -5,14 +5,13 @@ MoaT uses this to can sync the initial files and get things running.
 """
 
 import ast
+import logging
 import os
 import re
 from contextlib import asynccontextmanager
 
 import anyio
 from anyio.streams.buffered import BufferedByteReceiveStream
-
-import logging
 
 from .os_error_list import os_error_mapping
 
@@ -45,6 +44,7 @@ class DirectREPL:
     """
     Interface to the remote REPL
     """
+
     def __init__(self, serial):
         self.serial = serial
         self.srbuf = BufferedByteReceiveStream(serial)

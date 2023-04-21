@@ -3,7 +3,7 @@ More common code
 """
 from moat.util import NotGiven, attrdict, load_from_cfg
 
-from ..compat import Event, Pin_OUT, TaskGroup, sleep, sleep_ms, ticks_diff, ticks_ms, idle
+from ..compat import Event, Pin_OUT, TaskGroup, idle, sleep, sleep_ms, ticks_diff, ticks_ms
 from ..link import Reader
 
 

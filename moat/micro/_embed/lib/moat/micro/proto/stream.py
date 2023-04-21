@@ -85,8 +85,8 @@ def _decode(code, data):
         except TypeError:
             if o is None:
                 o = _n(p)
-            for k,v in d.items():
-                setattr(o,k,v)
+            for k, v in d.items():
+                setattr(o, k, v)
         return o
 
     return ExtType(code, data)

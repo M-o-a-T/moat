@@ -4,15 +4,13 @@ well as MicroPython/uasyncio.
 
 Well, for the most part.
 """
-import anyio as _anyio
-
+import logging
 import time as _time
 import traceback as _traceback
-
-import greenback
-
-import logging
 from concurrent.futures import CancelledError
+
+import anyio as _anyio
+import greenback
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +24,7 @@ sleep = _anyio.sleep
 EndOfStream = _anyio.EndOfStream
 BrokenResourceError = _anyio.BrokenResourceError
 TimeoutError = TimeoutError  # pylint:disable=redefined-builtin,self-assigning-variable
+
 
 def print_exc(exc):
     "print a stack trace to stderr"
@@ -145,7 +144,7 @@ async def run_server(cb, host, port, backlog=5, taskgroup=None, reuse_port=True)
         local_host=host, local_port=port, backlog=backlog, reuse_port=reuse_port
     )
 
-    await listener.serve(lambda sock: cb(sock,sock), task_group=taskgroup)
+    await listener.serve(lambda sock: cb(sock, sock), task_group=taskgroup)
 
 
 class AnyioMoatStream:

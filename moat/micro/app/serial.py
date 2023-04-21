@@ -17,7 +17,6 @@ Configuration::
 import logging
 
 import anyio
-
 from moat.util import Queue  # pylint:disable=no-name-in-module
 
 from ._base import BaseAppCmd

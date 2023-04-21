@@ -1,9 +1,8 @@
 """
 Basic test using a MicroPython subtask
 """
-import pytest
-
 import anyio
+import pytest
 
 from moat.micro._test import mpy_client, mpy_server
 from moat.micro.fuse import wrap
@@ -11,6 +10,7 @@ from moat.micro.fuse import wrap
 pytestmark = pytest.mark.anyio
 
 # pylint:disable=R0801 # Similar lines in 2 files
+
 
 async def test_fuse(tmp_path):
     "file system test"

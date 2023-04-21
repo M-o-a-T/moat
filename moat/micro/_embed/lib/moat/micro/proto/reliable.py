@@ -1,6 +1,6 @@
 import sys
 
-from ...util import NotGiven, ValueEvent, Queue
+from ...util import NotGiven, Queue, ValueEvent
 from ..compat import (
     Event,
     TaskGroup,

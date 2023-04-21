@@ -17,6 +17,7 @@ done_ = [None] * 4
 
 class Head(_Stacked):
     "sender/receiver test common code"
+
     def __init__(self, parent, pos, done):
         super().__init__(parent)
         self.pos = pos
@@ -25,6 +26,7 @@ class Head(_Stacked):
 
 class Xmit(Head):
     "seniding test class"
+
     async def run(self):
         "main"
         pos = self.pos
@@ -38,6 +40,7 @@ class Xmit(Head):
 
 class Recv(Head):
     "receiving test class"
+
     async def run(self):
         "main"
         pos = self.pos

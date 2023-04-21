@@ -1,30 +1,15 @@
-import anyio as _anyio
+"""
+Compatibility wrappers that allows MoaT code to run on CPython/anyio as
+well as MicroPython/uasyncio.
 
-Event = _anyio.Event
-Lock = _anyio.Lock
-WouldBlock = _anyio.WouldBlock
-sleep = _anyio.sleep
-EndOfStream = _anyio.EndOfStream
-BrokenResourceError = _anyio.BrokenResourceError
+Well, for the most part.
+"""
+import anyio as _anyio
 
 import time as _time
 import traceback as _traceback
 
 import greenback
-import outcome as _outcome
-from moat.util import (
-    Alert,
-    AlertHandler,
-    AlertMixin,
-    BaseAlert,
-    Broadcaster,
-    OptCtx,
-    Queue,
-    RepeatAlert,
-    ValueEvent,
-)
-
-TimeoutError = TimeoutError  # compat
 
 import logging
 from concurrent.futures import CancelledError
@@ -34,30 +19,43 @@ logger = logging.getLogger(__name__)
 Pin_IN = 0
 Pin_OUT = 1
 
+Event = _anyio.Event
+Lock = _anyio.Lock
+WouldBlock = _anyio.WouldBlock
+sleep = _anyio.sleep
+EndOfStream = _anyio.EndOfStream
+BrokenResourceError = _anyio.BrokenResourceError
+
 
 def print_exc(exc):
+    "print a stack trace to stderr"
     _traceback.print_exception(type(exc), exc, exc.__traceback__)
 
 
 def ticks_ms():
+    "return a monotonic timer, in milliseconds"
     return _time.monotonic_ns() // 1000000
 
 
 async def sleep_ms(ms):
+    "sleep for @ms milliseconds"
     await sleep(ms / 1000)
 
 
 async def wait_for(timeout, p, *a, **k):
+    "timeout if the call to p(*a,**k) takes longer than @timeout seconds"
     with _anyio.fail_after(timeout):
         return await p(*a, **k)
 
 
 async def wait_for_ms(timeout, p, *a, **k):
+    "timeout if the call to p(*a,**k) takes longer than @timeout milliseconds"
     with _anyio.fail_after(timeout / 1000):
         return await p(*a, **k)
 
 
 async def every_ms(t, p, *a, **k):
+    "every t milliseconds, call p(*a,**k)"
     tt = ticks_add(ticks_ms(), t)
     while True:
         try:
@@ -75,58 +73,41 @@ async def every_ms(t, p, *a, **k):
 
 
 def every(t, p, *a, **k):
+    "every t seconds, call p(*a,**k)"
     return every_ms(t * 1000, p, *a, **k)
 
 
 async def idle():
+    "sleep forever"
     while True:
         await _anyio.sleep(60 * 60 * 12)  # half a day
 
 
 def ticks_add(a, b):
+    "returns a+b"
     return a + b
 
 
 def ticks_diff(a, b):
+    "returns a-b"
     return a - b
 
 
-from concurrent.futures import CancelledError as _Cancelled
-
-import attr as _attr
-
-try:
-    _d_a = _anyio.DeprecatedAwaitable
-except AttributeError:  # no back compat
-    _d_a = lambda _: None
-
-
-_tg = None
-
-
-async def _run(p, a, k):
-    global _tg
-    async with _anyio.create_task_group() as _tg:
-        try:
-            return await p(*a, **k)
-        finally:
-            _tg.cancel_scope.cancel()
-            _tg = None
-
-
 def run(p, *a, **k):
-    return _anyio.run(_run, p, a, k)
+    "wrapper for anyio.run"
+    return _anyio.run(p, a, k)
 
 
 _tg = None
 
 
 def TaskGroup():
-    global _tg
+    "A TaskGroup subclass (generator) that supports `spawn` and `cancel`"
+    global _tg  # pylint:disable=global-statement
     if _tg is None:
         _tgt = type(_anyio.create_task_group())
 
-        class TaskGroup(_tgt):
+        class TaskGroup_(_tgt):
             """An augmented taskgroup"""
 
             async def spawn(self, p, *a, _name=None, **k):
@@ -147,21 +128,24 @@ def TaskGroup():
                 return await super().start(catch, p, a, k, name=_name)
 
             def cancel(self):
+                "cancel all tasks in this taskgroup"
                 self.cancel_scope.cancel()
 
-        _tg = TaskGroup
+        _tg = TaskGroup_
     return _tg()
 
 
 async def run_server(cb, host, port, backlog=5, taskgroup=None, reuse_port=True):
+    """Listen to and serve a TCP stream.
+
+    This mirrors [u]asyncio, including the fact that the callback gets the
+    socket twice.
+    """
     listener = await _anyio.create_tcp_listener(
         local_host=host, local_port=port, backlog=backlog, reuse_port=reuse_port
     )
 
-    async def cbc(sock):
-        await cb(sock, sock)
-
-    await listener.serve(cbc, task_group=taskgroup)
+    await listener.serve(lambda sock: cb(sock,sock), task_group=taskgroup)
 
 
 class AnyioMoatStream:
@@ -174,6 +158,7 @@ class AnyioMoatStream:
         self.aclose = stream.aclose
 
     async def recv(self, n=128):
+        "basic receive"
         try:
             res = await self.s.receive(n)
             return res
@@ -181,12 +166,14 @@ class AnyioMoatStream:
             raise EOFError from None
 
     async def send(self, buf):
+        "basic send"
         try:
             return await self.s.send(buf)
         except (_anyio.EndOfStream, _anyio.ClosedResourceError):
             raise EOFError from None
 
     async def recvi(self, buf):
+        "basic receive into"
         try:
             res = await self.s.receive(len(buf))
         except (_anyio.EndOfStream, _anyio.ClosedResourceError):

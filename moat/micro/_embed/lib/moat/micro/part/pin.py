@@ -4,6 +4,8 @@ Module for pins
 import machine as M
 import uasyncio
 
+from moat.micro.compat import idle
+
 try:
     sup = M.Pin
 except AttributeError:
@@ -67,8 +69,7 @@ class Pin(sup):
 
     async def run(self, cmd):
         async with self:
-            while True:
-                await uasyncio.sleep(9999)
+            await idle()
 
     async def get(self):
         return super().value()

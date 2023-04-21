@@ -1,25 +1,3 @@
-import sys
-
-from moat.util import attrdict, import_, obj2name
-
-from moat.micro.compat import (
-    Broadcaster,
-    CancelledError,
-    Event,
-    Queue,
-    TaskGroup,
-    ValueEvent,
-    WouldBlock,
-    idle,
-    print_exc,
-    sleep,
-    ticks_add,
-    ticks_diff,
-    ticks_ms,
-    wait_for_ms,
-)
-from moat.micro.proto.stack import RemoteError, SilentRemoteError, _Stacked
-
 """
 Basic infrastructure to run an RPC system via an unreliable,
 possibly-reordering, and/or stream-based transport
@@ -47,6 +25,19 @@ may fail.
 """
 
 
+import sys
+
+from moat.util import attrdict, import_, obj2name, Broadcaster, Queue, ValueEvent  # pylint: disable=no-name-in-module
+
+from moat.micro.compat import (
+    CancelledError,
+    TaskGroup,
+    WouldBlock,
+    idle,
+    print_exc,
+)
+from moat.micro.proto.stack import RemoteError, SilentRemoteError, _Stacked
+
 class BaseCmd(_Stacked):
     """
     Request/response handler
@@ -71,6 +62,7 @@ class BaseCmd(_Stacked):
     that Request you stack Base subclasses according to the functions you
     need.
     """
+    _tg:TaskGroup = None
 
     async def run(self):
         """
@@ -78,7 +70,7 @@ class BaseCmd(_Stacked):
 
         By default, does nothing.
         """
-        pass
+        pass  # pylint: disable=unnecessary-pass
 
     async def run_sub(self):
         """
@@ -102,7 +94,8 @@ class BaseCmd(_Stacked):
         self._tg.cancel()
         await super().aclose()
 
-    async def dispatch(self, action: str | list[str], msg: dict):
+    async def dispatch(self, action: str | list[str], msg: dict): # pylint:disable=arguments-differ
+        # TODO rename dispatch+send when with actions
         """
         Process one incoming message.
 
@@ -128,6 +121,7 @@ class BaseCmd(_Stacked):
             return r
 
         if not action:
+            # pylint: disable=no-member
             return await c(self.cmd)
             # if there's no "self.cmd", the resulting AttributeError is our reply
 
@@ -143,7 +137,7 @@ class BaseCmd(_Stacked):
             try:
                 dis = getattr(self, "dis_" + action[0])
             except AttributeError:
-                raise AttributeError(action)
+                raise AttributeError(action) from None
             else:
                 return await dis(action[1:], msg)
         else:
@@ -186,10 +180,12 @@ class BaseCmd(_Stacked):
 
     @property
     def request(self):
+        "returns the request handler. Just asks the parent."
         return self.parent.request
 
     @property
     def base(self):
+        "returns base command."
         return self.parent.base
 
 
@@ -210,6 +206,7 @@ class Request(_Stacked):
     """
 
     APP = "app"
+    _tg:TaskGroup = None
 
     def __init__(self, *a, ready=None, **k):
         if sys.implementation.name != "micropython" and self.APP == "app":
@@ -222,17 +219,21 @@ class Request(_Stacked):
 
     @property
     def request(self):
+        "return request handler, i.e. self"
         return self
 
     @property
     def base(self):
+        "return base command, i.e. my child"
         return self.child
 
     async def wait_ready(self):
+        "delay until ready"
         if self._ready is not None:
             await self._ready.wait()
 
     async def update_config(self):
+        "called after the config has been updated"
         if self.APP is not None:
             await self._setup_apps()
 
@@ -251,7 +252,7 @@ class Request(_Stacked):
             if name not in apps:
                 app = self.apps.pop(name)
                 delattr(self.base, "dis_" + name)
-                app._req_scope.cancel()
+                app._req_scope.cancel()  # pylint: disable=protected-access
                 sys.modules.pop(app.__module__, None)
 
         # First setup the app data structures
@@ -271,7 +272,7 @@ class Request(_Stacked):
                 cfg = getattr(gcfg, name, attrdict())
                 await app.config_updated(cfg)
             else:
-                self.apps[name]._req_scope = await tg.spawn(app.run, _name="mp_app_" + name)
+                app._req_scope = await tg.spawn(app.run, _name="mp_app_" + name) # pylint: disable=protected-access
 
         if self._ready is not None:
             self._ready.set()
@@ -312,7 +313,7 @@ class Request(_Stacked):
             res["e"] = exc
         except WouldBlock:
             raise
-        except Exception as exc:
+        except Exception as exc:  # pylint:disable=broad-exception-caught
             # TODO only when debugging
             print("ERROR handling", a, i, d, msg, file=sys.stderr)
             print_exc(exc)
@@ -336,7 +337,7 @@ class Request(_Stacked):
             res = {'e': "T:" + repr(exc), 'i': i}
             await self.parent.send(res)
 
-    async def dispatch(self, msg):
+    async def dispatch(self, msg):  # pylint:disable=arguments-differ
         """
         Main handler for incoming messages
         """
@@ -376,7 +377,7 @@ class Request(_Stacked):
             else:
                 evt.set_error(RemoteError(e, d))
 
-    async def send(self, action, _msg=None, **kw):
+    async def send(self, action, _msg=None, **kw):  # pylint:disable=arguments-differ
         """
         Send a request, return the response.
 
@@ -419,7 +420,11 @@ class Request(_Stacked):
 
 
 class RootCmd(BaseCmd):
-    # Standard toplevel base implementation
+    """
+    Standard toplevel base implementation.
+
+    Adds commands to set and query broadcasters.
+    """
 
     _cfg = None
 
@@ -451,10 +456,12 @@ class RootCmd(BaseCmd):
         b = self._get_br(o)
         return await b.read()
 
+    loc_s = cmd_s
+    loc_sq = cmd_sq
+
     async def run(self):
         try:
-            while True:
-                await sleep(9999)
+            await idle()
         finally:
 
             def _cls(s):
@@ -478,14 +485,16 @@ class RootCmd(BaseCmd):
             b = s[x]
         except KeyError:
             b = s[x] = RemBroadcaster()
-            Broadcaster.__enter__(b)
+            Broadcaster.__enter__(b)  # pylint:disable=unnecessary-dunder-call
         return b
 
     def watch(self, *o):
+        "return a context to watch a specific broadcast"
         b = self._get_br(o)
         return b.reader(1)
 
     def register(self, obj, *o):
+        "register a source object for a specific broadcast"
         b = self._get_br(o)
         if b.obj is not None:
             raise RuntimeError(f"{b.obj} already registered on {o}")
@@ -494,6 +503,7 @@ class RootCmd(BaseCmd):
 
 
 class RemBroadcaster(Broadcaster):
+    "A broadcaster that reads from an object"
     obj = None
 
     def __enter__(self):
@@ -503,4 +513,5 @@ class RemBroadcaster(Broadcaster):
         self.obj = None
 
     async def read(self):
+        "read data"
         return await self.obj.read_()

@@ -1,6 +1,9 @@
-#!/usr/bin/env python3
+"""
+Command-line code for moat.micro
+"""
 
-import importlib
+# pylint: disable=import-outside-toplevel
+
 import logging
 import os
 import sys
@@ -22,13 +25,13 @@ from moat.util import (
 )
 from moat.util.main import load_subgroup
 
-from .compat import TaskGroup
+from .compat import TaskGroup, idle
 from .direct import DirectREPL
 
 logger = logging.getLogger(__name__)
 
 
-def clean_cfg(cfg):
+def _clean_cfg(cfg):
     # cfg = attrdict(apps=cfg["apps"])  # drop all the other stuff
     return cfg
 
@@ -133,7 +136,7 @@ async def cli(obj, socket, port, baudrate, config):
 @click.option("-R", "--root", type=str, default="/", help="Destination root")
 @click.option("-S", "--state", type=str, help="State to enter")
 @click.option("-f", "--force-exit", is_flag=True, help="Halt via an error packet")
-@click.option("-e", "--exit", is_flag=True, help="Halt using an exit message")
+@click.option("-e", "--exit", "exit_", is_flag=True, help="Halt using an exit message")
 @click.option("-c", "--config", type=click.File("rb"), help="Config file to copy over")
 @click.option("-v", "--verbose", is_flag=True, help="Use verbose mode on the target")
 @click.option(
@@ -149,7 +152,7 @@ async def setup(
     no_run,
     no_reset,
     force_exit,
-    exit,
+    exit_,
     verbose,
     state,
     config,
@@ -174,7 +177,7 @@ async def setup(
     from .path import MoatDevPath
 
     async with get_serial(obj) as ser:
-        if force_exit or exit:
+        if force_exit or exit_:
             if force_exit:
                 pk = b"\xc1\xc1"
             else:
@@ -182,7 +185,7 @@ async def setup(
                 pk = pk + b"\xc1" + pk
 
             if obj.lossy:
-                from serialpacker import SerialPacker
+                from serialpacker import SerialPacker# pylint:disable=import-error
 
                 sp = SerialPacker(**({"mark": mark} if mark is not None else {}))
                 h, pk, t = sp.frame(pk)
@@ -214,7 +217,7 @@ async def setup(
                 await repl.exec(f"f=open('moat.state','w'); f.write({state!r}); f.close()")
             if config:
                 cfg = yload(config)
-                cfg = clean_cfg(cfg)
+                cfg = _clean_cfg(cfg)
                 cfg = packer(cfg)
                 f = ABytes("moat.cfg", cfg)
                 await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl), cross=cross)
@@ -249,7 +252,7 @@ async def setup(
         await _mplex(obj)
 
 
-@cli.command(short_help='Sync MoaT code')
+@cli.command("sync", short_help='Sync MoaT code')
 @click.pass_obj
 @click.option(
     "-s",
@@ -260,7 +263,7 @@ async def setup(
 )
 @click.option("-d", "--dest", type=str, required=True, default="", help="Destination path")
 @click.option("-C", "--cross", help="path to mpy-cross")
-async def sync(obj, source, dest, cross):
+async def sync_(obj, source, dest, cross):
     """
     Sync of MoaT code on a running MicroPython device.
 
@@ -329,7 +332,7 @@ async def cmd(obj, path, **attrs):
             yprint(res)
 
 
-@cli.command(short_help='Get / Update the configuration')
+@cli.command("cfg", short_help='Get / Update the configuration')
 @click.pass_obj
 @click.option("-r", "--read", type=click.File("r"), help="Read config from this file")
 @click.option("-R", "--read-client", help="Read config file from the client")
@@ -341,7 +344,7 @@ async def cmd(obj, path, **attrs):
 )
 @click.option("-u", "--update", is_flag=True, help="Don't replace the client config")
 @attr_args(with_proxy=True)
-async def cfg(obj, read, read_client, write, write_client, sync, client, **attrs):
+async def cfg_(obj, read, read_client, write, write_client, sync, client, **attrs):
     """
     Update a remote configuration.
 
@@ -386,7 +389,7 @@ async def cfg(obj, read, read_client, write, write_client, sync, client, **attrs
 
         if has_attrs and not (read or read_client or write or write_client):
             # No file access at all. Just update the client's RAM.
-            val = merge(*attrs.values())
+            val = merge(*attrs.values())  # pylint: disable=no-value-for-parameter
             await req.set_cfg(val, sync=sync)
             return
 
@@ -419,18 +422,18 @@ async def cfg(obj, read, read_client, write, write_client, sync, client, **attrs
             yprint(cfg, stream=write)
 
 
-@cli.command(short_help='Run the multiplexer')
+@cli.command("mplex", short_help='Run the multiplexer')
 @click.option("-n", "--no-config", is_flag=True, help="don't fetch the config from the client")
-@click.option("-d", "--debug", is_flag=True, help="don't retry on (some) errors")
 @click.option("-r", "--remote", is_flag=True, help="talk via TCP")
 @click.option("-S", "--server", help="talk to this system")
 @click.argument("pipe", nargs=-1)
 @click.pass_obj
-async def mplex(obj, **kw):
+async def mplex_(obj, **kw):
+    "Multiplexer call"
     await _mplex(obj, **kw)
 
 
-async def _mplex(obj, no_config=False, debug=None, remote=False, server=None, pipe=None):
+async def _mplex(obj, no_config=False, remote=False, server=None, pipe=None):
     """
     Run a multiplex channel to MoaT code on a running MicroPython device.
 
@@ -481,7 +484,7 @@ async def _mplex(obj, no_config=False, debug=None, remote=False, server=None, pi
         import signal
 
         with anyio.open_signal_receiver(signal.SIGINT, signal.SIGTERM, signal.SIGHUP) as signals:
-            async for signum in signals:
+            async for _ in signals:
                 tg.cancel()
                 break  # default handler on next
 
@@ -493,7 +496,7 @@ async def _mplex(obj, no_config=False, debug=None, remote=False, server=None, pi
             mplex = Multiplexer(
                 net_factory if remote else stream_factory,
                 obj.socket,
-                obj.cfg.micro,
+                cfg=obj.cfg.micro,
                 load_cfg=not no_config,
             )
             await mplex.serve()
@@ -511,5 +514,4 @@ async def mount(obj, path, blocksize):
         from moat.micro.fuse import wrap
 
         async with wrap(req, path, blocksize=blocksize, debug=obj.debug):
-            while True:
-                await anyio.sleep(99999)
+            await idle()

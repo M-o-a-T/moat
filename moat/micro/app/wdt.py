@@ -1,7 +1,10 @@
-# dummy fs module on the multiplexer
+"""
+the WDT doesn't need a server-side command handler
+"""
 
 from ._base import BaseAppCmd
 
 
 class WDTCmd(BaseAppCmd):
-    pass
+    "empty"
+    pass  # pylint:disable=unnecessary-pass

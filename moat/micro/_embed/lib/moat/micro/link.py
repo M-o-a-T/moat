@@ -2,7 +2,8 @@
 Helper to hot-wire a command to read data from/to the other side.
 """
 
-from moat.micro.compat import Event, OptCtx, TimeoutError, sleep, wait_for_ms
+from moat.micro.compat import Event, TimeoutError, wait_for_ms, idle  # pylint: disable=redefined-builtin,no-name-in-module
+from moat.util import OptCtx  # pylint:disable=no-name-in-module
 
 
 class Reader:
@@ -15,24 +16,27 @@ class Reader:
     _link = None
     __cmd = None
 
-    def __init__(self, cfg, bms=None, **kw):
+    def __init__(self, cfg, **_kw):
         self._link = cfg.get("link", None)
 
     async def run(self, cmd):
+        "background worker"
         reg = cmd.base.register(self, cmd.name, self._link) if self._link is not None else None
         with OptCtx(reg):
-            while True:
-                await sleep(9999)
+            await idle()
 
     async def read(self):
+        "read-and-send"
         res = await self.read_()
         await self.send(res)
         return res
 
     async def read_(self):
+        "the actual `read()` function` you need to override"
         raise NotImplementedError("Reader")
 
     async def send(self, msg):
+        "send to the remote side; called by `read`"
         if self._link is None:
             return
         if self.__cmd is None:
@@ -46,6 +50,7 @@ class Listener(Reader):
 
     Reading returns the latest/next message.
     """
+    # pylint: disable=abstract-method
 
     _cmd = None
     _up = None
@@ -57,6 +62,7 @@ class Listener(Reader):
         self._up = Event()
 
     async def run(self, cmd):
+        "hook a monitor to the base watcher"
         self._up.set()
         if cmd is None:
             return
@@ -65,8 +71,7 @@ class Listener(Reader):
         self._rd = aiter(cmd.base.watch(cmd.name, self._link))
         self._cmd = cmd
         try:
-            while True:
-                await sleep(9999)
+            await idle()
         finally:
             self._rd.close()
 
@@ -90,4 +95,4 @@ class Listener(Reader):
         """
         don't send: we received it!
         """
-        pass
+        pass  # pylint:disable=unnecessary-pass

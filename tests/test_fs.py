@@ -3,22 +3,17 @@ Basic test using a MicroPython subtask
 """
 import pytest
 
-pytestmark = pytest.mark.anyio
-
-import os
-import sys
-
 import anyio
-from moat.util import NotGiven
 
 from moat.micro._test import mpy_client, mpy_server
-from moat.micro.compat import sleep_ms
 from moat.micro.fuse import wrap
 
-TT = 250  # XXX assume that this is OK
+pytestmark = pytest.mark.anyio
 
+# pylint:disable=R0801 # Similar lines in 2 files
 
 async def test_fuse(tmp_path):
+    "file system test"
     p = anyio.Path(tmp_path) / "fuse"
     r = anyio.Path(tmp_path) / "root"
     async with mpy_server(tmp_path, cfg={"f": {"prefix": str(r)}}) as obj:

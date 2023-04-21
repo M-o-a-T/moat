@@ -1,7 +1,8 @@
-# dummy fs module on the multiplexer
+"dummy fs module on the multiplexer"
 
 from ._base import BaseAppCmd
 
 
 class FsCmd(BaseAppCmd):
-    pass
+    "empty command: not needed on the multiplexer"
+    pass  # pylint:disable=unnecessary-pass

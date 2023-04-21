@@ -23,8 +23,11 @@ logging.basicConfig(level=logging.DEBUG)
 
 @asynccontextmanager
 async def mpy_server(
-    temp: Path, debug=True, lossy=False, guarded=False, req=Request, cff="test", cfg={}
+    temp: Path, debug=True, lossy=False, guarded=False, cff="test", cfg=None
 ):
+    """
+    Creates a test multiplexer with a Unix MicroPython process behind it
+    """
     obj = attrdict()
     obj.debug = debug
     obj.lossy = lossy
@@ -34,7 +37,8 @@ async def mpy_server(
     cff = Path(f"tests/{cff}.cfg")
     with open(cff, "r") as f:
         cf = yload(f, attr=True)
-    cfg = merge(cf, cfg)
+    cfg = merge(cf, cfg) if cfg else cf
+
     cfg["link"]["guarded"] = guarded
     cfg["link"]["lossy"] = lossy
 
@@ -84,6 +88,10 @@ async def mpy_server(
 
 @asynccontextmanager
 async def mpy_client(obj, **kw):
+    """
+    Creates a client that connects to the test server set up by
+    `mpy_server`.
+    """
     kw.setdefault("request_factory", Request)
 
     async with get_link(obj, cfg=obj.cfg, **kw) as link:
@@ -98,7 +106,7 @@ class Loop(_Stacked):
     "other side".
     """
 
-    link = None
+    _link = None
 
     def __init__(self, qlen=0, loss=0):
         assert 0 <= loss < 1
@@ -109,26 +117,26 @@ class Loop(_Stacked):
 
     def link(self, other):
         """Tell this loopback to read from some other loopback."""
-        self.link = other
+        self._link = other
 
-    async def send(self, data):
+    async def send(self, data):  # pylint:disable=arguments-differ
         """Send data."""
-        if self.link is None:
+        if self._link is None:
             raise anyio.BrokenResourceError(self)
         if random() < self.loss:
             return
         try:
             await self.q_wr.send(data)
-        except (anyio.ClosedResourceError, anyio.BrokenResourceError, anyio.EndOfStream):
-            raise EOFError
+        except (anyio.ClosedResourceError, anyio.BrokenResourceError, anyio.EndOfStream) as exc:
+            raise EOFError from exc
 
-    async def recv(self):
-        if self.link is None:
+    async def recv(self):  # pylint:disable=arguments-differ
+        if self._link is None:
             raise anyio.BrokenResourceError(self)
         try:
-            return await self.link.q_rd.receive()
+            return await self._link.q_rd.receive()
         except (anyio.ClosedResourceError, anyio.BrokenResourceError, anyio.EndOfStream):
-            raise EOFError
+            raise EOFError from None
 
     async def run(self):
         try:
@@ -138,5 +146,5 @@ class Loop(_Stacked):
 
     async def aclose(self):
         await self.q_wr.aclose()
-        if self.link is not None:
-            await self.link.q_rd.aclose()
+        if self._link is not None:
+            await self._link.q_rd.aclose()

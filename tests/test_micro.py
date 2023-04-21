@@ -3,21 +3,15 @@ Basic test using a MicroPython subtask
 """
 import pytest
 
-pytestmark = pytest.mark.anyio
-
-import os
-import sys
-from contextlib import asynccontextmanager
-
-import anyio
-from moat.util import as_proxy, attrdict, packer, to_attrdict, unpacker
+from moat.util import as_proxy, attrdict, to_attrdict  # pylint:disable=no-name-in-module
 
 from moat.micro._test import mpy_client, mpy_server
-from moat.micro.compat import TaskGroup
-from moat.micro.main import get_link
+
+pytestmark = pytest.mark.anyio
 
 
 async def test_ping(tmp_path):
+    "basic connectivity test"
     async with mpy_server(tmp_path) as obj:
         async with mpy_client(obj) as req:
             res = await req.send("ping", "hello")
@@ -27,6 +21,7 @@ async def test_ping(tmp_path):
 @pytest.mark.parametrize("lossy", [False, True])
 @pytest.mark.parametrize("guarded", [False, True])
 async def test_modes(tmp_path, lossy, guarded):
+    "test different link modes"
     async with mpy_server(tmp_path, lossy=lossy, guarded=guarded) as obj:
         async with mpy_client(obj) as req:
             res = await req.send("ping", "hello")
@@ -34,6 +29,7 @@ async def test_modes(tmp_path, lossy, guarded):
 
 
 async def test_cfg(tmp_path):
+    "test config updating"
     async with mpy_server(tmp_path) as obj:
         assert obj.server.cfg.tt.a == "b"
         obj.server.cfg.tt.a = "x"
@@ -53,6 +49,7 @@ async def test_cfg(tmp_path):
 
 
 class Bar:
+    "proxied test object"
     def __init__(self, x):
         self.x = x
 
@@ -60,9 +57,10 @@ class Bar:
         return self.x == other.x
 
 
-@as_proxy("fu")
+@as_proxy("fu", replace=True)
 class Foo(Bar):
-    pass
+    "proxied test class"
+    pass  # pylint:disable=unnecessary-pass
 
 
 _val = [
@@ -72,11 +70,12 @@ _val = [
 
 
 async def test_msgpack(tmp_path):
+    "test proxying"
     async with mpy_server(tmp_path) as obj:
         async with mpy_client(obj) as req:
             f = Foo(42)
             b = Bar(95)
-            as_proxy("b", b)
+            as_proxy("b", b, replace=True)
 
             r = await req.send(["sys", "eval"], val=f)
             assert r[0] == f

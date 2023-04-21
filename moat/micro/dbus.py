@@ -1,10 +1,11 @@
-#
-# dbus helpers
+"""
+dbus helpers
+"""
 
 from contextlib import asynccontextmanager
 
 import anyio
-import asyncdbus.service as dbus
+from asyncdbus.service import ServiceInterface
 from asyncdbus.constants import NameFlag
 from moat.util import CtxObj
 
@@ -13,6 +14,7 @@ NAME = "org.m_o_a_t"
 
 
 def reg_name(base, name):
+    "assemble a dbus name"
     if name is None:
         name = NAME
     elif name[0] == "+":
@@ -24,6 +26,7 @@ def reg_name(base, name):
 
 @asynccontextmanager
 async def DbusName(dbus, name=None):
+    "context to register a dbus name"
     await dbus.request_name(reg_name(NAME, name), NameFlag.DO_NOT_QUEUE)
     try:
         yield None
@@ -32,7 +35,8 @@ async def DbusName(dbus, name=None):
             await dbus.release_name(name)
 
 
-class DbusInterface(dbus.ServiceInterface, CtxObj):
+class DbusInterface(ServiceInterface, CtxObj):
+    "a dbus ServiceInterface with a context manager that auto-exports itself"
     def __init__(self, dbus, path, interface=None):
         self.dbus = dbus
         self.path = path

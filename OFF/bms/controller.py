@@ -18,6 +18,7 @@ from moat.micro.compat import (
     Lock,
     TaskGroup,
     TimeoutError,
+    idle,
     sleep,
     sleep_ms,
     ticks_add,
@@ -174,8 +175,7 @@ class Controller:
                     await anyio.sleep(10)
                     await self.victron.update_boot()
 
-                    while True:
-                        await anyio.sleep(99999)
+                    await idle()
 
         finally:
             try:

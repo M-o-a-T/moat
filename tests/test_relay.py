@@ -1,18 +1,17 @@
 """
 Test the relay implementation
 """
-import time
-
 import pytest
 from moat.util import attrdict
 
-from moat.micro.compat import TaskGroup, every_ms, sleep_ms
+from moat.micro.compat import TaskGroup, sleep_ms
 from moat.micro.part.fake import PINS
 from moat.micro.part.relay import Relay
 
 
 @pytest.mark.anyio
 async def test_rly():
+    "relay test"
     cfg = attrdict(
         pin=attrdict(server="moat.micro.part.fake.PIN", pin="X"),
         t_on=50,

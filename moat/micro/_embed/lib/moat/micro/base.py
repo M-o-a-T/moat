@@ -188,8 +188,15 @@ class SysCmd(BaseCmd):
             x = eval(x, dict(s=self.parent))
 
         if not isinstance(x, (int, float, list, tuple, dict)):
-            x = x.__dict__
-        return self._cmd_part(x, p)
+            try:
+                obj2name(x)
+            except KeyError:
+                try:
+                    obj2name(type(x))
+                except KeyError:
+                    x = x.__dict__
+                    return self._cmd_part(x, p)
+        return x
 
     async def cmd_info(self):
         """

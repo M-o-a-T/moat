@@ -3,7 +3,7 @@ More common code
 """
 from moat.util import NotGiven, attrdict, load_from_cfg
 
-from ..compat import Event, Pin_OUT, TaskGroup, sleep, sleep_ms, ticks_diff, ticks_ms
+from ..compat import Event, Pin_OUT, TaskGroup, sleep, sleep_ms, ticks_diff, ticks_ms, idle
 from ..link import Reader
 
 
@@ -107,5 +107,4 @@ class Relay(Reader):
             await self.set()
             await self.read()
             self.__tg.start_soon(super().run, cmd)
-            while True:
-                await sleep(9999)
+            await idle()

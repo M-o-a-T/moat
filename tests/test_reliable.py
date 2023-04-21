@@ -1,21 +1,22 @@
 """
-Test reliable retransmission.
+Test reliable retransmission, using various parameters.
 """
 
 import anyio
 import pytest
-
-pytestmark = pytest.mark.anyio
 
 from moat.micro._test import Loop
 from moat.micro.compat import TaskGroup
 from moat.micro.proto.reliable import Reliable
 from moat.micro.proto.stack import Logger, _Stacked
 
-done = [None] * 4
+pytestmark = pytest.mark.anyio
+
+done_ = [None] * 4
 
 
 class Head(_Stacked):
+    "sender/receiver test common code"
     def __init__(self, parent, pos, done):
         super().__init__(parent)
         self.pos = pos
@@ -23,27 +24,29 @@ class Head(_Stacked):
 
 
 class Xmit(Head):
+    "seniding test class"
     async def run(self):
-        global done
+        "main"
         pos = self.pos
-        done[pos] = 0
+        done_[pos] = 0
         async with TaskGroup() as tg:
             for n in range(10):
                 await tg.spawn(self.send, dict(n=n, msg="Hey"))
-                done[pos] += 1
+                done_[pos] += 1
         self.done.set()
 
 
 class Recv(Head):
+    "receiving test class"
     async def run(self):
-        global done
+        "main"
         pos = self.pos
         got = 0
-        for n in range(10):
+        for _ in range(10):
             msg = await self.recv()
             got |= 1 << msg["n"]
         assert got == (2**10) - 1
-        done[pos] = 10
+        done_[pos] = 10
         self.done.set()
 
 
@@ -53,6 +56,7 @@ class Recv(Head):
 @pytest.mark.parametrize("window", [4, 8, 20])
 @pytest.mark.parametrize("loss", [0, 0.1, 0.7])
 async def test_basic(qlen1, qlen2, window, loss):
+    "basic test for Reliable channel"
     done1 = anyio.Event()
     done2 = anyio.Event()
     l1 = u1 = Loop(qlen=qlen1, loss=loss)
@@ -78,5 +82,5 @@ async def test_basic(qlen1, qlen2, window, loss):
         await l1.aclose()
         await l2.aclose()
         x1.cancel()
-    assert done[0] == 10
-    assert done[1] == 10
+    assert done_[0] == 10
+    assert done_[1] == 10

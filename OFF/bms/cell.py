@@ -7,7 +7,7 @@ from moat.dbus import DbusInterface
 from moat.util import Path, attrdict, combine_dict
 from victron.dbus.utils import wrap_dbus_dict, wrap_dbus_value
 
-from moat.micro.compat import sleep
+from moat.micro.compat import sleep, idle
 
 from .packet import *
 
@@ -252,8 +252,7 @@ class Cell:
             async with CellInterface(self, dbus) as intf:
                 self._intf = intf
 
-                while True:
-                    await sleep(99999)
+                await idle()
 
         finally:
             try:

@@ -3,21 +3,18 @@ Basic test using a MicroPython subtask
 """
 import pytest
 
-pytestmark = pytest.mark.anyio
-
-import os
-import sys
-
-import anyio
 from moat.util import NotGiven
 
 from moat.micro._test import mpy_client, mpy_server
 from moat.micro.compat import sleep_ms
 
+pytestmark = pytest.mark.anyio
+
 TT = 250  # XXX assume that this is OK
 
 
 async def test_wdt(tmp_path):
+    "basic watchdog test"
     ended = False
     with pytest.raises(EOFError):
         async with mpy_server(tmp_path) as obj:

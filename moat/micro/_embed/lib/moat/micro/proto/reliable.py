@@ -6,6 +6,7 @@ from ..compat import (
     Queue,
     TaskGroup,
     TimeoutError,
+    idle,
     print_exc,
     sleep,
     ticks_add,
@@ -222,8 +223,7 @@ class Reliable(_Stacked):
                 # At this point the module above us can talk, so run it
                 # print(f"X {self.parent.txt}: running", file=sys.stderr)
                 if self.persist:
-                    while True:
-                        await sleep(9999)
+                    await idle()
                 else:
                     await self.child.run()
                 # print(f"X {self.parent.txt}: ending", file=sys.stderr)

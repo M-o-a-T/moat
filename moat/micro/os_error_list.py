@@ -1,3 +1,4 @@
+"OS Error map"
 os_error_mapping = {
     1: ('EPERM', 'Operation not permitted'),
     2: ('ENOENT', 'No such file or directory'),

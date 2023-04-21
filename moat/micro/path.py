@@ -1,4 +1,7 @@
-# This is an async version of mpy_repl.repl_connection.MpyPath
+"""
+This module contains an async version of mpy_repl.repl_connection.MpyPath,
+and an equivalent that uses the MoaT file access protocol
+"""
 
 import binascii
 import hashlib
@@ -20,6 +23,11 @@ logger = logging.getLogger(__name__)
 class _MoatPath(pathlib.PurePosixPath):  # pathlib.PosixPath
     __slots__ = ('_repl', '_stat_cache')
 
+    def __init__(self, *a, **kw):
+        super().__init__(*a,**kw)
+        self._stat_cache = None
+        self._repl = None
+
     def connect_repl(self, repl):
         """Connect object to remote connection."""
         self._repl = repl
@@ -32,25 +40,37 @@ class _MoatPath(pathlib.PurePosixPath):  # pathlib.PosixPath
     # methods to override to connect to repl
 
     def with_name(self, name):
+        "set name"
+        # pylint: disable=no-member
         return super().with_name(name).connect_repl(self._repl)
 
     def with_suffix(self, suffix):
+        "set suffix"
+        # pylint: disable=no-member
         return super().with_suffix(suffix).connect_repl(self._repl)
 
     def relative_to(self, *other):
+        "return relative path"
+        # pylint: disable=no-member
         return super().relative_to(*other).connect_repl(self._repl)
 
     def joinpath(self, *args):
+        "join paths"
+        # pylint: disable=no-member
         return super().joinpath(*args).connect_repl(self._repl)
 
     def __truediv__(self, key):
+        # pylint: disable=no-member
         return super().__truediv__(key).connect_repl(self._repl)
 
     def __rtruediv__(self, key):
+        # pylint: disable=no-member
         return super().__rtruediv__(key).connect_repl(self._repl)
 
     @property
     def parent(self):
+        "parent directory"
+        # pylint: disable=no-member
         return super().parent.connect_repl(self._repl)
 
     async def glob(self, pattern: str):
@@ -72,6 +92,7 @@ class _MoatPath(pathlib.PurePosixPath):  # pathlib.PosixPath
                     yield r
         else:
             remaining_parts = '/'.join(parts[1:])
+            # pylint:disable=no-else-raise
             if parts[0] == '**':
                 raise NotImplementedError
                 # for dirpath, dirnames, filenames in walk(self):
@@ -86,6 +107,9 @@ class _MoatPath(pathlib.PurePosixPath):  # pathlib.PosixPath
                         async for r in path.glob(remaining_parts):
                             yield r
 
+    async def iterdir(self):
+        "list a directory under this path."
+        raise NotImplementedError()
 
 class MoatDevPath(_MoatPath):
     """
@@ -104,7 +128,7 @@ class MoatDevPath(_MoatPath):
         Return stat information about path on remote. The information is cached
         to speed up operations.
         """
-        if getattr(self, '_stat_cache', None) is None:
+        if self._stat_cache is None:
             st = await self._repl.evaluate(f'import os; print(os.stat({self.as_posix()!r}))')
             self._stat_cache = os.stat_result(st)
         return self._stat_cache
@@ -167,7 +191,7 @@ class MoatDevPath(_MoatPath):
         """
         try:
             return await self._repl.evaluate(f'import os; print(os.mkdir({self.as_posix()!r}))')
-        except FileExistsError as e:
+        except FileExistsError:
             if exist_ok:
                 pass
             else:
@@ -272,7 +296,7 @@ class MoatDevPath(_MoatPath):
             'print("]")'
         )
         for p, st in remote_paths_stat:
-            yield (self / p)._with_stat(st)
+            yield (self / p)._with_stat(st)  # pylint:disable=protected-access
 
     # custom extension methods
 
@@ -332,7 +356,7 @@ class MoatFSPath(_MoatPath):
         Return stat information about path on remote. The information is cached
         to speed up operations.
         """
-        if getattr(self, '_stat_cache', None) is None:
+        if self._stat_cache is None:
             st = await self._req("stat", p=self.as_posix())
             self._stat_cache = os.stat_result(st["d"])
         return self._stat_cache
@@ -412,8 +436,9 @@ class MoatFSPath(_MoatPath):
 
         Remove (empty) directory
         """
-        return await self._req("rmdir", p=self.as_posix())
+        res = await self._req("rmdir", p=self.as_posix())
         self._stat_cache = None
+        return res
 
     async def read_as_stream(self, chunk=128):
         """
@@ -527,7 +552,7 @@ async def copytree(src, dst, check=_nullcheck, cross=None):
 
     Returns the number of modified files.
     """
-    from .main import ABytes
+    from .main import ABytes  # pylint:disable=import-outside-toplevel,cyclic-import
 
     if await src.is_file():
         if src.suffix == ".py" and str(dst) not in ("/boot.py", "boot.py", "/main.py", "main.py"):
@@ -541,7 +566,7 @@ async def copytree(src, dst, check=_nullcheck, cross=None):
                     data = await anyio.run_process([cross, str(src), "-s", p, "-o", "/dev/stdout"])
                 except CalledProcessError as exc:
                     print(exc.stderr.decode("utf-8"), file=sys.stderr)
-                    pass
+                    # copy this file unmodified
                 else:
                     src = ABytes(src.with_suffix(".mpy"), data.stdout)
                     try:

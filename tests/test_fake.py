@@ -1,3 +1,6 @@
+"""
+Test the random-walk fake ADC
+"""
 import pytest
 from moat.util import attrdict
 
@@ -7,6 +10,7 @@ from moat.micro.part.fake import ADC
 @pytest.mark.anyio
 @pytest.mark.parametrize("seed", range(10))
 async def test_fake(seed):
+    "basic random-walk ADC test"
     d = ADC(attrdict(min=0, max=100, step=10, seed=seed))
     md = 0
     mdi = 0

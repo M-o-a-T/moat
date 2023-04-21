@@ -7,7 +7,7 @@ from moat.cmd import BaseCmd
 from moat.util import Queue, attrdict
 from victron.dbus import Dbus
 
-from moat.micro.compat import Event, TaskGroup, sleep_ms, ticks_add, ticks_diff, ticks_ms
+from moat.micro.compat import Event, TaskGroup, sleep_ms, ticks_add, ticks_diff, ticks_ms, idle
 
 logger = logging.getLogger(__name__)
 
@@ -299,5 +299,4 @@ class BatteryState:
 
             if evt is not None:
                 evt.set()
-            while True:
-                await anyio.sleep(99999)
+            await idle()

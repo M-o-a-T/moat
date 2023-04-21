@@ -1,20 +1,20 @@
+"""
+Code to set up a link to a MicroPython client device
+"""
 import hashlib
 import io
 import logging
-import os
 from contextlib import asynccontextmanager
 from itertools import chain
 from pathlib import Path
 
 import anyio
-import msgpack
 from anyio_serial import Serial
 from moat.util import NotGiven, attrdict
 
 from moat.micro.cmd import BaseCmd
 from moat.micro.cmd import Request as BaseRequest
 from moat.micro.compat import AnyioMoatStream, Event, TaskGroup
-from moat.micro.path import copytree
 from moat.micro.proto.stack import RemoteError
 from moat.micro.stacks.console import console_stack
 
@@ -31,10 +31,12 @@ class ClientBaseCmd(BaseCmd):
         self.cfg = cfg
         self.started = Event()
 
-    def cmd_link(self, s=None):
+    def cmd_link(self, s=None):  # pylint: disable=unused-argument
+        """Link-up command handler, sets `started`"""
         self.started.set()
 
     async def wait_start(self):
+        """Wait until a "link" command arrives"""
         await self.started.wait()
 
 
@@ -52,38 +54,53 @@ class ABytes(io.BytesIO):
     def __str__(self):
         return str(self.name)
 
-    async def open(self, mode):
+    async def open(self, mode):  # pylint: disable=unused-argument
+        "reset the buffer pointer"
         self.seek(0, 0)
         return self
 
     async def read_bytes(self):
+        "return the current buffer"
         return self.getbuffer()
 
     async def sha256(self):
+        "hash the current buffer"
         _h = hashlib.sha256()
         _h.update(self.getbuffer())
         return _h.digest()
 
     def close(self):
-        pass
+        "does nothing"
+        pass  # pylint:disable=unnecessary-pass
 
     async def is_dir(self):
+        "returns False"
         return False
 
     async def is_file(self):
+        "returns True"
         return True
 
     async def stat(self):
+        "returns the size. All other stat fields are empty"
         res = attrdict()
         res.st_size = len(self.getbuffer())
         return res
 
 
 class NoPort(RuntimeError):
-    pass
+    "Config error: no port given"
+    pass  # pylint:disable=unnecessary-pass
 
 
 async def copy_over(src, dst, cross=None):
+    """
+    Transfer a file tree from @src to @dst.
+
+    This procedure verifies that the data arrived OK.
+    """
+    from moat.micro.path import copytree  # pylint:disable=import-outside-toplevel
+
     tn = 0
     if await src.is_file():
         if await dst.is_dir():
@@ -93,7 +110,7 @@ async def copy_over(src, dst, cross=None):
         if n == 1:
             logger.info("One file changed. Verifying.")
         else:
-            logger.info(f"{n} files changed. Verifying.")
+            logger.info("%d files changed. Verifying.", n)
     logger.info("Done. No (more) differences detected.")
     return tn
 
@@ -219,6 +236,11 @@ async def get_remote(obj, host, port=27587, **kw):
 
 
 class Request(BaseRequest):
+    """
+    "Main" Request class.
+
+    Also handles retrieving/setting the configuration from/to the client.
+    """
     #   def __init__(self, *a, cmd_cls=ClientBaseCmd, cfg=None, **k):
     #       super().__init__(*a, **k)
     #       if cfg is None:

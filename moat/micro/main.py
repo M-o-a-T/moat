@@ -15,7 +15,6 @@ from moat.util import NotGiven, attrdict
 from moat.micro.cmd import BaseCmd
 from moat.micro.cmd import Request as BaseRequest
 from moat.micro.compat import AnyioMoatStream, Event, TaskGroup
-from moat.micro.proto.stack import RemoteError
 from moat.micro.stacks.console import console_stack
 
 logger = logging.getLogger(__name__)
@@ -284,7 +283,7 @@ class Request(BaseRequest):
             # current client cfg
             try:
                 ocd, ocl = await self.send(("sys", "cfg_r"), p=p)
-            except KeyError as exc:
+            except KeyError:
                 ocd = {}
                 ocl = []
                 await self.send(("sys", "cfg"), p=p, d={})

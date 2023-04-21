@@ -15,6 +15,7 @@ from moat.micro.compat import (
     wait_for_ms,
 )
 
+
 class BMSCmd(BaseCmd):
     def __init__(self, parent, name, cfg, gcfg):
         super().__init__(parent)
@@ -48,5 +49,3 @@ class BMSCmd(BaseCmd):
 
     def cmd_live(self):
         self.bms.set_live()
-
-

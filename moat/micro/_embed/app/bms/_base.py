@@ -6,6 +6,7 @@ import sys
 
 import time
 from moat.util import NotGiven, load_from_cfg, as_proxy, attrdict
+from moat.util import Alert, AlertMixin, Broadcaster
 
 from moat.micro.cmd import BaseCmd
 from moat.micro.compat import (
@@ -17,68 +18,80 @@ from moat.micro.compat import (
     ticks_diff,
     ticks_ms,
     wait_for_ms,
-    Alert,
-    AlertMixin,
-    Broadcaster,
     sleep,
 )
+
 
 class BatteryAlert(Alert):
     """
     For a given battery there will at most be one open alert of each type.
     """
 
+
 @as_proxy("bms_SH", replace=True)
 class HighSOC(BatteryAlert):
     "Charge exceeds limit"
+
 
 @as_proxy("bms_SL", replace=True)
 class LowSOC(BatteryAlert):
     "Charge below limit"
 
+
 @as_proxy("bms_UH", replace=True)
 class HighVoltage(BatteryAlert):
     "Total voltage exceeds limit"
+
 
 @as_proxy("bms_UL", replace=True)
 class LowVoltage(BatteryAlert):
     "Total voltage below limit"
 
+
 @as_proxy("bms_CH", replace=True)
 class HighCellVoltage(BatteryAlert):
     "Cell voltage exceeds limit"
+
 
 @as_proxy("bms_CL", replace=True)
 class LowCellVoltage(BatteryAlert):
     "Cell voltage below limit"
 
+
 @as_proxy("bms_CI", replace=True)
 class CellImbalance(BatteryAlert):
     "Excessive cell imbalance"
+
 
 @as_proxy("bms_IH", replace=True)
 class HighChargeCurrent(BatteryAlert):
     "Charge current exceeds limit"
 
+
 @as_proxy("bms_IL", replace=True)
 class HighDischargeCurrent(BatteryAlert):
     "Discharge current exceeds limit"
+
 
 @as_proxy("bms_TH", replace=True)
 class HighTemperature(BatteryAlert):
     "Temperature exceeds limit"
 
+
 @as_proxy("bms_TL", replace=True)
 class LowTemperature(BatteryAlert):
     "Temperature below operational limit"
+
 
 @as_proxy("bms_NBD", replace=True)
 class NoBatteryData(BatteryAlert):
     "no battery data seen"
 
+
 @as_proxy("bms_NCD", replace=True)
 class NoCellData(BatteryAlert):
     "no cell data seen"
+
 
 @as_proxy("bms_VM", replace=True)
 class VoltageDelta(BatteryAlert):
@@ -89,19 +102,18 @@ class BaseCells:
     """
     Skeleton of a cell array.
     """
+
     n_cells = None
 
     def __init__(self, cfg):
         self.cfg = cfg
 
     async def read_u(self):
-        """fetch all cells' voltages
-        """
+        """fetch all cells' voltages"""
         raise NotImplementedError("no idea how")
 
     async def read_t(self):
-        """fetch all cells' temperatures
-        """
+        """fetch all cells' temperatures"""
         raise NotImplementedError("no idea how")
 
     async def run(self, cmd, batt):
@@ -112,43 +124,45 @@ class BaseBalancer:
     """
     Skeleton of a balancing controller
     """
-    def __init__(self, cells:BaseCells, cfg:attrdict):
+
+    def __init__(self, cells: BaseCells, cfg: attrdict):
         self.cells = cells
         self.cfg = cfg
 
     async def run(self, cmd, cells):
-        pass # TODO
+        pass  # TODO
 
 
 class BaseBattery(AlertMixin):
     """
     This is the skeleton of a battery monitor client.
 
-    Alerts and updates are monitored.   
+    Alerts and updates are monitored.
     """
+
     cmd = None
 
-    ext_u:float = None  # last external voltage measurement
-    ext_i:float = None  # last external current measurement
-    ext_r:float = None  # wire resistance, to calculate ext/batt voltage delta
+    ext_u: float = None  # last external voltage measurement
+    ext_i: float = None  # last external current measurement
+    ext_r: float = None  # wire resistance, to calculate ext/batt voltage delta
 
-    val_u:float = None  # voltage
-    val_i:float = None  # current
-    val_p:float = None  # momentary power
-    val_t:list[float] = None  # other temperatures
-    int_r:float = None  # internal resistance, whole battery
+    val_u: float = None  # voltage
+    val_i: float = None  # current
+    val_p: float = None  # momentary power
+    val_t: list[float] = None  # other temperatures
+    int_r: float = None  # internal resistance, whole battery
 
     # required modules
-    cells:BaseCells = None
-    balancer:BaseBalancer = None
+    cells: BaseCells = None
+    balancer: BaseBalancer = None
     relay = None
     power = None  # reader for voltage and current
 
-    sum_w:float = 0  # sum of u*i
-    sum_c:float = 0  # sum of i
+    sum_w: float = 0  # sum of u*i
+    sum_c: float = 0  # sum of i
 
     _live_task = None
-    live:int = None  # required msec between pings
+    live: int = None  # required msec between pings
     _main_task = None
 
     def __init__(self, cfg):
@@ -177,22 +191,24 @@ class BaseBattery(AlertMixin):
             while True:
                 await sleep(9999)
 
-    async def update_power(self, u:float, i:float, p:float=None, w:float=None, c:float=None):
+    async def update_power(
+        self, u: float, i: float, p: float = None, w: float = None, c: float = None
+    ):
         self.val_u = u
         self.val_i = i
-        self.val_p = u*i if p is None else p
+        self.val_p = u * i if p is None else p
         if w is None or c is None:
             t = ticks_ms()
-            td = ticks_diff(t,self.t_last)
+            td = ticks_diff(t, self.t_last)
             self.t_last = t
 
             if w is None:
-                self.val_w += td*self.val_p
+                self.val_w += td * self.val_p
             else:
                 self.val_w = w
 
             if c is None:
-                self.val_c += td*self.val_i
+                self.val_c += td * self.val_i
             else:
                 self.val_c = c
         await self.send_update("u_i")
@@ -238,7 +254,7 @@ class BaseBattery(AlertMixin):
             gen=self.gen,
         )
         if rs:
-            res["r"]=rs
+            res["r"] = rs
 
         if clear:
             self.sum_w = 0
@@ -292,7 +308,7 @@ class BaseBattery(AlertMixin):
         self.cfg = cfg
         self._main_task = await self.__tg.spawn(self._run)
 
-    async def send_work(self, flush:bool = False):
+    async def send_work(self, flush: bool = False):
         if not self.cmd:
             return
         res = dict(
@@ -381,9 +397,8 @@ class BaseBattery(AlertMixin):
         print("RELAY", (await self.relay.read()), txt, file=sys.stderr)
 
 
-
 class BaseBMSCmd(BaseCmd):
-    def __init__(self, parent:BaseCmd, name:str, cfg:attrdict, gcfg:attrdict):
+    def __init__(self, parent: BaseCmd, name: str, cfg: attrdict, gcfg: attrdict):
         super().__init__(parent)
         self.name = name
         self.batt = None
@@ -426,4 +441,3 @@ class BaseBMSCmd(BaseCmd):
             self.batt.ping()
         else:
             await self.batt.set_live(t)
-

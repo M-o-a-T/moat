@@ -1,15 +1,18 @@
 from moat.micro.compat import TaskGroup
 from moat.micro.part.combo import Array
 from moat.micro.link import Reader
+
 try:
     # server
     from moat.micro.app.bms._base import BaseBattery, BaseCells
 except ImportError:
     from app.bms._base import BaseBattery, BaseCells
 
+
 class CellArray(Array):
     PARTS = "cells"
     ATTR = None
+
 
 class Cells(BaseCells):
     def __init__(self, cfg, bms=None, **kw):
@@ -19,7 +22,7 @@ class Cells(BaseCells):
         self.bms = bms
 
         Reader.__init__(self, cfg)
-    
+
     async def run(self, cmd):
         await self.cells.run(cmd)
 
@@ -27,7 +30,7 @@ class Cells(BaseCells):
         res = []
         for c in self.cells:
             res.append(await c.read_u())
-        #res = [await c.read_u() for c in self.cells]
+        # res = [await c.read_u() for c in self.cells]
         await Reader.send(self, dict(u=res))
         return res
 
@@ -35,9 +38,10 @@ class Cells(BaseCells):
         res = []
         for c in self.cells:
             res.append(await c.read_t())
-        #res = [await c.read_t() for c in self.cells]
+        # res = [await c.read_t() for c in self.cells]
         await Reader.send(self, dict(t=res))
         return res
+
 
 class Cell:
     def __init__(self, cfg):
@@ -53,6 +57,7 @@ class Cell:
     async def run(self, cmd):
         pass
 
+
 class Static(Reader):
     def __init__(self, cfg, **kw):
         self.val = cfg.value
@@ -63,4 +68,3 @@ class Static(Reader):
 
 class Batt(BaseBattery):
     pass
-        

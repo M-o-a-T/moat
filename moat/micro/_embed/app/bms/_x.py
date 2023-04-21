@@ -18,68 +18,83 @@ from moat.micro.compat import (
 from anyio import create_memory_object_stream as _cmos
 from anyio import Event
 
+
 class BatteryAlert(Alert):
     """
     For a given battery there will at most be one open alert of each type.
     """
 
+
 class HighSOC(BatteryAlert):
     "Charge exceeds limit"
+
 
 class LowSOC(BatteryAlert):
     "Charge below limit"
 
+
 class HighVoltage(BatteryAlert):
     "Total voltage exceeds limit"
+
 
 class LowVoltage(BatteryAlert):
     "Total voltage below limit"
 
+
 class HighCellVoltage(BatteryAlert):
     "Cell voltage exceeds limit"
+
 
 class LowCellVoltage(BatteryAlert):
     "Cell voltage below limit"
 
+
 class CellImbalance(BatteryAlert):
     "Excessive cell imbalance"
+
 
 class HighChargeCurrent(BatteryAlert):
     "Charge current exceeds limit"
 
+
 class HighDischargeCurrent(BatteryAlert):
     "Discharge current exceeds limit"
+
 
 class HighTemperature(BatteryAlert):
     "Temperature exceeds limit"
 
+
 class LowTemperature(BatteryAlert):
     "Temperature below operational limit"
+
 
 class NoBatteryData(BatteryAlert):
     "no battery data seen"
 
+
 class NoCellData(BatteryAlert):
     "no cell data seen"
 
+
 class VoltageDelta(BatteryyAlert):
     "Battery and sum-of-cell voltages don't match"
+
 
 class BaseCells:
     """
     Skeleton of a cell array.
     """
+
     def __init__(self, cfg, gcfg):
         self.cfg = cfg
 
     async def read_u(self):
-        """fetch all cells' voltages
-        """
+        """fetch all cells' voltages"""
         raise NotImplementedError("no idea how")
 
     async def read_t(self):
-        """fetch all cells' temperatures
-        """
+        """fetch all cells' temperatures"""
         raise NotImplementedError("no idea how")
 
     async def run(self, cmd):
@@ -90,47 +105,49 @@ class BaseBalancer:
     """
     Skeleton of a balancing controller
     """
-    def __init__(self, cells:BaseCells, cfg:attrdict):
+
+    def __init__(self, cells: BaseCells, cfg: attrdict):
         self.cells = cells
         self.cfg = cfg
 
     async def run(self, cmd):
-        pass # TODO
+        pass  # TODO
 
 
 class BaseBMS(AlertMixin):
     """
     This is the skeleton of a battery monitor.
     """
+
     cmd = None
 
-    ext_u:float = None  # external voltage
-    ext_i:float = None  # external current
-    ext_r:float = None  # wire resistance, to calculate ext/batt voltage delta
+    ext_u: float = None  # external voltage
+    ext_i: float = None  # external current
+    ext_r: float = None  # wire resistance, to calculate ext/batt voltage delta
 
-    cell_u:list[float] = None  # cell voltages
-    cell_t:list[float] = None  # cell temperatures
+    cell_u: list[float] = None  # cell voltages
+    cell_t: list[float] = None  # cell temperatures
 
-    cell_ms:int = None  # last cell update
+    cell_ms: int = None  # last cell update
 
-    bat_u:float = None  # voltage
-    bat_i:float = None  # current
-    bat_p:float = None  # momentary power
-    bat_t:list[float] = None  # other temperatures
-    bat_r:float = None  # internal resistance, whole battery
+    bat_u: float = None  # voltage
+    bat_i: float = None  # current
+    bat_p: float = None  # momentary power
+    bat_t: list[float] = None  # other temperatures
+    bat_r: float = None  # internal resistance, whole battery
 
-    bat_ms:int = None  # last battery update, msec
+    bat_ms: int = None  # last battery update, msec
 
-    sum_w:float = 0  # sum of u*i
-    sum_c:float = 0  # sum of i
-    sum_ms:int = 0  # timespan for sum_X
+    sum_w: float = 0  # sum of u*i
+    sum_c: float = 0  # sum of i
+    sum_ms: int = 0  # timespan for sum_X
 
     def __init__(self, cfg, gcfg):
         self.cfg = cfg
         self.xmit_evt = Event()
         self.gen = 0  # generation, incremented every time a new value is read
         self._q = Broadcaster()
-        self._qw,self._qr = _cmos(10)
+        self._qw, self._qr = _cmos(10)
         super().__init__()
 
     async def _agg_bat(self):
@@ -182,7 +199,6 @@ class BaseBMS(AlertMixin):
         while True:
             for val in every_ms(cfg.t, rdr.read):
                 self._q(attrdict(bat_i=val))
-
 
     async def run(self):
         """
@@ -296,7 +312,7 @@ class BaseBMS(AlertMixin):
         self.cfg = cfg
         self._setup()
 
-    async def send_work(self, flush:bool = False):
+    async def send_work(self, flush: bool = False):
         if not self.cmd:
             return
         res = dict(
@@ -410,7 +426,6 @@ class BMSCmd(BaseCmd):
     def __init__(self, parent, name, cfg, gcfg):
         super().__init__(parent)
         self.name = name
-        self.batt = 
 
     async def run(self):
         try:
@@ -437,5 +452,3 @@ class BMSCmd(BaseCmd):
 
     def cmd_live(self):
         self.bms.set_live()
-
-

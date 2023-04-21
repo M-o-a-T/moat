@@ -70,10 +70,24 @@ def _decode(code, data):
         s.feed(data)
         #       s = iter(s)
         #       return name2obj(next(s))(*s)
-        s, *d = list(s)
+        s, d = list(s)
         p = name2obj(s)
-        p = p.__new__(p, *d)
-        return p
+        try:
+            _n = p.__new__
+        except AttributeError:
+            _n = object.__new__
+        if d is None:
+            d = {}
+        o = None
+        try:
+            o = _n(p, **d)
+            o.__init__(**d)
+        except TypeError:
+            if o is None:
+                o = _n(p)
+            for k,v in d.items():
+                setattr(o,k,v)
+        return o
 
     return ExtType(code, data)
 
@@ -96,7 +110,15 @@ def _encode(obj):
         try:
             p = obj.__getstate__
         except AttributeError:
-            p = (obj.__dict__,)
+            try:
+                p = (obj.__dict__,)
+            except AttributeError:
+                p = {}
+                for n in dir(obj):
+                    if n.startswith("_"):
+                        continue
+                    p[n] = getattr(obj, n)
+                p = (p,)
         else:
             p = p()
             if not isinstance(p, (list, tuple)):

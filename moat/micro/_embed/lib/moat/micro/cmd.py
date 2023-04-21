@@ -27,7 +27,7 @@ may fail.
 
 import sys
 
-from moat.util import attrdict, import_, obj2name, Broadcaster, Queue, ValueEvent  # pylint: disable=no-name-in-module
+from moat.util import attrdict, import_, obj2name, Broadcaster, Queue, ValueEvent, as_proxy  # pylint: disable=no-name-in-module
 
 from moat.micro.compat import (
     CancelledError,
@@ -37,6 +37,9 @@ from moat.micro.compat import (
     print_exc,
 )
 from moat.micro.proto.stack import RemoteError, SilentRemoteError, _Stacked
+
+as_proxy("_KyErr", KeyError, replace=True)
+as_proxy("_AtErr", AttributeError, replace=True)
 
 class BaseCmd(_Stacked):
     """

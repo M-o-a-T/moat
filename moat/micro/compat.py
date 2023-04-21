@@ -25,7 +25,7 @@ WouldBlock = _anyio.WouldBlock
 sleep = _anyio.sleep
 EndOfStream = _anyio.EndOfStream
 BrokenResourceError = _anyio.BrokenResourceError
-
+TimeoutError = TimeoutError  # pylint:disable=redefined-builtin,self-assigning-variable
 
 def print_exc(exc):
     "print a stack trace to stderr"

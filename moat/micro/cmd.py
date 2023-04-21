@@ -5,7 +5,7 @@ extends BaseCmd to also return loc_* functions
 """
 
 from ._cmd import BaseCmd as _BaseCmd
-from ._cmd import Request  # pylint:disable=unused-import
+from ._cmd import RootCmd, Request  # pylint:disable=unused-import
 
 
 class BaseCmd(_BaseCmd):

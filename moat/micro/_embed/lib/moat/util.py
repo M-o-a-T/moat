@@ -1,7 +1,7 @@
 import usys
 
 from moat.micro.compat import Event
-
+from uasyncio.queues import Queue, QueueEmpty, QueueFull
 
 class NotGiven:
     """Placeholder value for 'no data' or 'deleted'."""

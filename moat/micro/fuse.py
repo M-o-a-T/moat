@@ -23,8 +23,8 @@ from pyfuse3 import (  # pylint: disable=E0611
 
 logger = logging.getLogger(__name__)
 
-as_proxy("_FnErr", FileNotFoundError)
-as_proxy("_FxErr", FileExistsError)
+as_proxy("_FnErr", FileNotFoundError, replace=True)
+as_proxy("_FxErr", FileExistsError, replace=True)
 
 
 class Operations(pyfuse3.Operations):  # pylint: disable=I1101

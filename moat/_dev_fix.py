@@ -24,9 +24,10 @@ def _fix():
         roots = set()
 
         def _get_sub(r):
-            if "lib" in r.parts and not r.is_relative_to(md / "lib"):
-                return
             rs = r / "src"
+            if "lib" in r.parts and not r.is_relative_to(md / "lib"):
+                yield (rs if (rs/"__init__.py").is_file() else r)
+                return
             yield (rs if rs.is_dir() else r)
             try:
                 rp = git.Repo(r)

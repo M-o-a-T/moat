@@ -212,8 +212,8 @@ def get_proxy(obj):
         return k
 
 
-def _getstate(self):
-    return self.__dict__
+# def _getstate(self):
+#     return (type(self), (), self.__dict__)
 
 
 def as_proxy(name, obj=NotGiven, replace=False):

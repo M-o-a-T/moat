@@ -281,9 +281,9 @@ class Request(_Stacked):
                 cfg = getattr(gcfg, name, attrdict())
                 await app.config_updated(cfg)
             else:
-                app._req_scope = await tg.spawn(
+                app._req_scope = await tg.spawn(  # pylint: disable=protected-access
                     app.run, _name="mp_app_" + name
-                )  # pylint: disable=protected-access
+                )
 
         if self._ready is not None:
             self._ready.set()

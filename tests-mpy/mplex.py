@@ -32,7 +32,6 @@ for p in uos.getenv("PYTHONPATH").split(":"):
     try:
         uos.stat(ep)
     except OSError:
-        print("NO",ep,file=usys.stderr)
         pass
     else:
         usys.path.insert(0,ep)

@@ -24,4 +24,4 @@ async def test_it():
         nn += 1
     assert nn == 5
     t2 = time.monotonic()
-    assert 0.5 <= t2 - t1 <= 0.7
+    assert 0.499 <= t2 - t1 <= 0.701

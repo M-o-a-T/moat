@@ -21,12 +21,13 @@ def _fix():
     md = Path(__file__).absolute().parents[1]
     if (md / ".git").exists():
         import git
+
         roots = set()
 
         def _get_sub(r):
             rs = r / "src"
             if "lib" in r.parts and not r.is_relative_to(md / "lib"):
-                yield (rs if (rs/"__init__.py").is_file() else r)
+                yield (rs if (rs / "__init__.py").is_file() else r)
                 return
             yield (rs if rs.is_dir() else r)
             try:
@@ -51,7 +52,7 @@ def _fix():
         # only consider local packages
         paths = []
         for p_ in pkgutil.extend_path([moat.__path__], "moat"):
-            if not isinstance(p_,(list,tuple)):
+            if not isinstance(p_, (list, tuple)):
                 p_ = (p_,)
             for p in p_:
                 pp = Path(p)
@@ -63,8 +64,11 @@ def _fix():
         moat.__path__ = paths
 
         import os
+
         if "_MOAT_ADJ" in os.environ:
             return
         os.environ["_MOAT_ADJ"] = "1"
 
-        os.environ["PYTHONPATH"] = os.pathsep.join(roots)+(":"+os.environ["PYTHONPATH"] if "PYTHONPATH" in os.environ else "")
+        os.environ["PYTHONPATH"] = os.pathsep.join(roots) + (
+            ":" + os.environ["PYTHONPATH"] if "PYTHONPATH" in os.environ else ""
+        )

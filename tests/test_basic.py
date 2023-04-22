@@ -1,8 +1,9 @@
 """
 Empty test file
 """
+# pylint: disable=unused-import,cyclic-import
 
-import moat  # pylint: disable=unused-import
+import moat
 
 
 def test_nothing():

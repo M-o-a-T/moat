@@ -44,7 +44,7 @@ def name2obj(name, obj=NotGiven, replace=False):
 
     Raises `KeyError` if not found.
     """
-    if obj is NotGiven and _CProxy:
+    if obj is NotGiven and not replace:
         return _CProxy[name]
     if not replace and _CProxy.get(name, None) is not obj:
         raise KeyError(name)  # exists
@@ -61,7 +61,7 @@ def obj2name(obj, name=NotGiven, replace=False):
     Raises `KeyError` if not found and no name given, or if the oid
     already has a different name.
     """
-    if name is NotGiven:
+    if name is NotGiven and not replace:
         return _RProxy[id(obj)]
     oid = id(obj)
     if not replace and _RProxy.get(oid, None) != name:
@@ -78,6 +78,9 @@ def as_proxy(name, obj=NotGiven, replace=False):
     - False (default): error when the name exists
     - True: replace the stored name
     - None: replace the object
+
+    @codec is used on MicroPython for built-in classes that need
+    special handling. It is ignored on CPython.
     """
 
     def _proxy(obj):
@@ -92,6 +95,3 @@ def as_proxy(name, obj=NotGiven, replace=False):
     else:
         _proxy(obj)
         return obj
-
-
-as_proxy("-", NotGiven)

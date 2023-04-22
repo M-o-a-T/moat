@@ -104,7 +104,7 @@ class Repo(git.Repo):
             return None
         tt = self._commit_tags[c]
         if len(tt) > 1:
-            raise ValueError(f"multiple tags: {tt}")
+            raise ValueError(f"{self.working_dir}: multiple tags: {tt}")
         return tt[0]
 
 

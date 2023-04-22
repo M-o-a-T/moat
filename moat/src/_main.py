@@ -612,27 +612,31 @@ async def push(obj, remote):
 @click.pass_obj
 async def pull(obj, remote, branch):
     """Fetch updates"""
-    try:
-        cmd = "git submodule foreach --recursive git fetch".split()
-        if not obj.debug:
-            cmd.append("-q")
-        elif obj.debug > 1:
-            cmd.append("-v")
-        if remote is not None:
-            cmd.append(remote)
-        await run_process(cmd, input=None, stdout=sys.stdout, stderr=sys.stderr)
 
-        cmd = "git submodule foreach --recursive git merge --ff".split()
-        if not obj.debug:
-            cmd.append("-q")
-        elif obj.debug > 1:
-            cmd.append("-v")
-        if remote is not None:
-            cmd.append(remote if branch is None else f"{remote}/{branch}")
-        await run_process(cmd, input=None, stdout=sys.stdout, stderr=sys.stderr)
+    repo = Repo(None)
+    for r in repo.subrepos():
+        try:
+            cmd = ["git", "-C", r.working_dir, "fetch"]
+            if not obj.debug:
+                cmd.append("-q")
+            elif obj.debug > 1:
+                cmd.append("-v")
+            if remote is not None:
+                cmd.append(remote)
+            await run_process(cmd, input=None, stdout=sys.stdout, stderr=sys.stderr)
 
-    except subprocess.CalledProcessError as exc:
-        sys.exit(exc.returncode)
+            cmd = ["git", "-C", r.working_dir, "merge", "-ff"]
+            if not obj.debug:
+                cmd.append("-q")
+            elif obj.debug > 1:
+                cmd.append("-v")
+            if remote is not None:
+                cmd.append(remote if branch is None else f"{remote}/{branch}")
+            await run_process(cmd, input=None, stdout=sys.stdout, stderr=sys.stderr)
+
+        except subprocess.CalledProcessError as exc:
+            print("  Error in", r.working_dir, file=sys.stderr)
+            sys.exit(exc.returncode)
 
 
 @cli.command()

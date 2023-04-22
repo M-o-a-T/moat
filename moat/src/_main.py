@@ -589,27 +589,31 @@ async def fixref():
 @click.pass_obj
 async def push(obj, remote):
     """Push the current state"""
-    try:
-        cmd = "git push --recurse-submodules=on-demand".split()
-        if not obj.debug:
-            cmd.append("-q")
-        elif obj.debug > 1:
-            cmd.append("-v")
-        cmd.append(remote)
-        await run_process(cmd, input=None, stdout=sys.stdout, stderr=sys.stderr)
 
-    except subprocess.CalledProcessError as exc:
-        sys.exit(exc.returncode)
+    repo = Repo(None)
+    for r in repo.subrepos():
+        try:
+            cmd = ["git", "-C", r.working_dir, "push"]
+            if not obj.debug:
+                cmd.append("-q")
+            elif obj.debug > 1:
+                cmd.append("-v")
+            cmd.append(remote)
+            await run_process(cmd, input=None, stdout=sys.stdout, stderr=sys.stderr)
+
+        except subprocess.CalledProcessError as exc:
+            print("  Error in", r.working_dir, file=sys.stderr)
+            sys.exit(exc.returncode)
 
 
 @cli.command()
-@click.option("-r", "--remote", type=str, help="Remote. Default: probably 'origin'.")
-@click.option("-b", "--branch", type=str, help="Branch. Default: probably 'main'.")
+@click.option("-r", "--remote", type=str, help="Remote to fetch. Default: probably 'origin'.")
+@click.option("-b", "--branch", type=str, help="Branch to merge. Default: probably 'main'.")
 @click.pass_obj
 async def pull(obj, remote, branch):
     """Fetch updates"""
     try:
-        cmd = "git pull".split()
+        cmd = "git submodule foreach --recursive git fetch".split()
         if not obj.debug:
             cmd.append("-q")
         elif obj.debug > 1:

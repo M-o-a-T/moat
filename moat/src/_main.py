@@ -616,7 +616,7 @@ async def pull(obj, remote, branch):
     repo = Repo(None)
     for r in repo.subrepos():
         try:
-            cmd = ["git", "-C", r.working_dir, "fetch"]
+            cmd = ["git", "-C", r.working_dir, "fetch", "--recurse-submodules=no"]
             if not obj.debug:
                 cmd.append("-q")
             elif obj.debug > 1:
@@ -625,7 +625,7 @@ async def pull(obj, remote, branch):
                 cmd.append(remote)
             await run_process(cmd, input=None, stdout=sys.stdout, stderr=sys.stderr)
 
-            cmd = ["git", "-C", r.working_dir, "merge", "-ff"]
+            cmd = ["git", "-C", r.working_dir, "merge", "--ff"]
             if not obj.debug:
                 cmd.append("-q")
             elif obj.debug > 1:

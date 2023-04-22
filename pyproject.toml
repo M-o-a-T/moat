@@ -6,9 +6,6 @@ requires = [
   "setuptools >= 42",
   "setuptools_scm[toml] >= 3.5.0",
   "setuptools_scm_git_archive >= 1.1",
-  "msgpack",
-  "serialpacker",
-  "pyfuse3",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -71,7 +68,14 @@ disable = "wrong-import-order,use-dict-literal,unspecified-encoding,ungrouped-im
 
 [project]
 classifiers = ["Development Status :: 4 - Beta","License :: OSI Approved","Framework :: AnyIO","Framework :: Trio","Framework :: AsyncIO","Programming Language :: Python :: 3","Intended Audience :: Developers"]
-dependencies = ["anyio ~= 3.0"]
+dependencies = [
+  "anyio ~= 3.0",
+  "msgpack",
+  "serialpacker",
+  "pyfuse3",
+  "moat-util",
+  "moat-micro",
+]
 dynamic = ["version"]
 keywords = ["MoaT"]
 requires-python = ">=3.8"

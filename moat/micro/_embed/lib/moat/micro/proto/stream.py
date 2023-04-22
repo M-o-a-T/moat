@@ -1,8 +1,9 @@
+import sys
 from functools import partial
 
 from moat.util import NoProxyError, NotGiven, name2obj, obj2name
 
-from ..compat import Lock, TimeoutError, wait_for_ms
+from moat.micro.compat import Lock, TimeoutError, wait_for_ms
 
 try:
     from moat.util import Proxy, get_proxy
@@ -12,8 +13,6 @@ except ImportError:
     def get_proxy(x):
         raise NotImplementedError(f"get_proxy({repr(x)})")
 
-
-import sys
 
 try:
     import greenback

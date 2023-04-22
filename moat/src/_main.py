@@ -239,7 +239,7 @@ def is_clean(repo: Repo, skip: bool = True) -> bool:
     if repo.head.ref.name not in {"main", "moat"}:
         print(f"{repo.working_dir}: on branch {repo.head.ref.name}.{skips}")
         return False
-    elif repo.is_dirty(index=True, working_tree=True, untracked_files=False, submodules=False):
+    elif repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=False):
         print(f"{repo.working_dir}: Dirty.{skips}")
         return False
     return True
@@ -777,20 +777,17 @@ async def build(version, no_test, no_commit, no_dirty, cache):
         for r in dirty:
             r.index.commit("Update MoaT requirements")
 
-        if not repo.is_dirty(
-            index=True, working_tree=True, untracked_files=False, submodules=True
-        ):
-            print("No changes.")
-            return
+        if repo.is_dirty(index=True, working_tree=True, untracked_files=False, submodules=True):
+            for r in repo.subrepos():
+                if r is repo:
+                    continue
+                t = tags[r.moat_name]
+                if isinstance(t, str):
+                    r.create_tag(t)
 
-        for r in repo.subrepos():
-            t = tags[r.moat_name]
-            if isinstance(t, str):
-                r.create_tag(t)
-
-        for r in repo.subrepos(recurse=False):
-            repo.git.add(r.working_dir)
-        repo.index.commit("Update")
+            for r in repo.subrepos(recurse=False):
+                repo.git.add(r.working_dir)
+            repo.index.commit("Update")
 
         for c in repo.commits():
             t = repo.tagged(c)

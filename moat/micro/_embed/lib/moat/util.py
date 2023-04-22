@@ -256,9 +256,6 @@ def drop_proxy(p):
     del _RProxy[id(r)]
 
 
-as_proxy("-")(NotGiven)
-
-
 # partial copy of moat.util.queue
 
 

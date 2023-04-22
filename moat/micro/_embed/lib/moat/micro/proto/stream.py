@@ -1,7 +1,7 @@
 import sys
 from functools import partial
 
-from moat.util import NoProxyError, NotGiven, name2obj, obj2name
+from moat.util import NoProxyError, NotGiven, as_proxy, name2obj, obj2name
 
 from moat.micro.compat import Lock, TimeoutError, wait_for_ms
 
@@ -22,6 +22,9 @@ from msgpack import ExtType, OutOfData, Packer, Unpacker, packb, unpackb
 from serialpacker import FRAME_START, SerialPacker
 
 from .stack import _Stacked
+
+as_proxy("-", replace=True)(NotGiven)
+
 
 if sys.implementation.name != "micropython":
 

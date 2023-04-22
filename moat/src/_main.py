@@ -608,7 +608,7 @@ async def push(obj, remote):
 
 @cli.command()
 @click.option("-r", "--remote", type=str, help="Remote to fetch. Default: probably 'origin'.")
-@click.option("-b", "--branch", type=str, help="Branch to merge. Default: probably 'main'.")
+@click.option("-b", "--branch", type=str, default="main", help="Branch to merge.")
 @click.pass_obj
 async def pull(obj, remote, branch):
     """Fetch updates"""

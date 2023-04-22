@@ -4,7 +4,12 @@ requires = ["setuptools-scm","wheel","setuptools"]
 
 [project]
 classifiers = ["Development Status :: 4 - Beta","License :: OSI Approved","Framework :: AnyIO","Framework :: Trio","Framework :: AsyncIO","Programming Language :: Python :: 3","Intended Audience :: Developers"]
-dependencies = ["anyio ~= 3.0"]
+dependencies = [
+  "anyio ~= 3.0",
+  "moat-util",
+  "moat-modbus",
+  "moat-lib-victron",
+]
 dynamic = ["version"]
 keywords = ["MoaT"]
 requires-python = ">=3.8"

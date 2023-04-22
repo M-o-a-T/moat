@@ -56,9 +56,12 @@ bat1:
 
     # … and where to get them.
     power:
-      client: moat.micro.part.adc.Multiply
+      client: moat.micro.part.combo.Multiply
       server: moat.bms.battery.link.Listen
       link: "u_i"
+      sub:
+      - u
+      - i
       u:
         client: moat.micro.part.adc.ADC
         scale: 0.0013

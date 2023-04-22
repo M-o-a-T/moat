@@ -133,6 +133,23 @@ class BaseBalancer:
         pass  # TODO
 
 
+class BasePower(moat.micro.part.combo.MultiplyDict):
+    def __init__(self, cfg, bms):
+        await super().__init__(cfg)
+        self.bms = bms
+        self.cfg = cfg
+        self.n = 0
+
+    async def run(self):
+        await every_ms(cfg.t, self.read)
+
+    async def read_(self):
+        res = await super().read_()
+        p = res["_"]
+        await self.bms.update_power(u=res["u"], i=res["i"], p=p)
+        return p
+
+    
 class BaseBattery(AlertMixin):
     """
     This is the skeleton of a battery monitor client.

@@ -68,25 +68,30 @@ def _decode(code, data):
                 raise NoProxyError(n)
             return Proxy(n)
     elif code == 5:
-        s = Unpacker(None)
-        s.feed(data)
+        try:
+            s = Unpacker(None)
+            s.feed(data)
 
-        s, *d = list(s)
-        st = d[1] if len(d) > 1 else {}
-        d = d[0]
-        p = name2obj(s)
-        o = p(*d)
-        if st:
+            s, *d = list(s)
+            st = d[1] if len(d) > 1 else {}
+            d = d[0]
+            p = name2obj(s)
             try:
-                o.__setstate__(st)
-            except AttributeError:
+                o = p(*d, **st)
+            except TypeError:
+                o = p(*d)
                 try:
-                    o.__dict__.update(st)
+                    o.__setstate__(st)
                 except AttributeError:
-                    for k, v in st.items():
-                        setattr(o, k, v)
-        return o
-
+                    try:
+                        o.__dict__.update(st)
+                    except AttributeError:
+                        for k, v in st.items():
+                            setattr(o, k, v)
+            return o
+        except Exception as exc:
+            print("Cannot unpack", repr(data), file=sys.stderr)
+            # fall thru to ExtType
     return ExtType(code, data)
 
 
@@ -121,7 +126,13 @@ def _encode(obj):
             p = ((), p)
         else:
             p = p()
-            assert p[0] is type(obj)
+            if hasattr(p[0], "__name__"):  # grah
+                if p[0].__name__ == "_reconstructor":
+                    p = (p[1][0], ()) + tuple(p[2:])
+                elif p[0].__name__ == "__newobj__":
+                    p = (p[1][0], p[1][1:]) + tuple(p[2:])
+
+            assert p[0] is type(obj), (obj, p)
             p = p[1:]
         return ExtType(5, packb(k) + b"".join(packb(x) for x in p))
 

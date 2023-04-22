@@ -593,7 +593,7 @@ async def push(obj, remote):
     repo = Repo(None)
     for r in repo.subrepos():
         try:
-            cmd = ["git", "-C", r.working_dir, "push"]
+            cmd = ["git", "-C", r.working_dir, "push", "--tags"]
             if not obj.debug:
                 cmd.append("-q")
             elif obj.debug > 1:
@@ -616,7 +616,7 @@ async def pull(obj, remote, branch):
     repo = Repo(None)
     for r in repo.subrepos():
         try:
-            cmd = ["git", "-C", r.working_dir, "fetch", "--recurse-submodules=no"]
+            cmd = ["git", "-C", r.working_dir, "fetch", "--recurse-submodules=no", "--tags"]
             if not obj.debug:
                 cmd.append("-q")
             elif obj.debug > 1:

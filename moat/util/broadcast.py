@@ -37,9 +37,9 @@ class BroadcastReader:
 
     Simply iterate over it.
 
-    Warning: The iterator may return ``LostData`` instances in addition to
-    actual data. These contain the number of messages that have been
-    dropped due to the reader being too slow.
+    Warning: The iterator may raise ``LostData`` exceptions.
+    These contain the number of messages that have been dropped
+    due to the reader being too slow.
 
     Readers may be called to inject values.
     """
@@ -57,8 +57,6 @@ class BroadcastReader:
         return self
 
     async def __anext__(self):
-        # The dance below assures that a last value that's been set
-        # before closing is delivered.
         if self.loss > 0:
             n, self.loss = self.loss, 0
             raise LostData(n)
@@ -81,6 +79,7 @@ class BroadcastReader:
             return
 
     def __call__(self, value):
+        """enqueue a value, to this reader only"""
         try:
             self._q.put_nowait(value)
         except WouldBlock:
@@ -187,6 +186,7 @@ class Broadcaster:
         return aiter(r)
 
     def __call__(self, value):
+        """Enqueue a value to all readers"""
         for r in self._rdr:
             r(value)
 

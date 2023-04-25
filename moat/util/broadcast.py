@@ -68,6 +68,18 @@ class BroadcastReader:
         except EndOfStream:
             raise StopAsyncIteration from None
 
+    def flush(self):
+        """
+        Clean the queue.
+
+        Useful for re-sync after you get a `LostData` error.
+        """
+        try:
+            while True:
+                self._q.get_nowait()
+        except WouldBlock:
+            return
+
     def __call__(self, value):
         try:
             self._q.put_nowait(value)

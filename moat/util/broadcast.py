@@ -90,14 +90,14 @@ class BroadcastReader:
             self._q.put_nowait(value)
             self.loss += 1
 
+    def _close(self):
+        breakpoint()
+        self._q.close_writer()
+
     def close(self):
         "close this reader, detaching it from its parent"
         self._close()
         self.parent._closed_reader(self)  # pylint: disable=protected-access
-
-    def _close(self):
-        self._q.close_writer()
-        self._q = None
 
     async def aclose(self):
         "close this reader, detaching it from its parent"

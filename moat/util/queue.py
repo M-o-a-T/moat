@@ -1,11 +1,9 @@
 import logging
-from weakref import WeakSet
+from collections.abc import Awaitable
 
 import anyio
 from anyio import create_memory_object_stream as _cmos
 from outcome import Error, Value
-
-from .impl import NotGiven
 
 logger = logging.getLogger(__name__)
 
@@ -14,9 +12,6 @@ __all__ = [
     "create_queue",
     "DelayedWrite",
     "DelayedRead",
-    "Broadcaster",
-    "BroadcastReader",
-    "LostData",
 ]
 
 
@@ -70,13 +65,17 @@ class Queue:
         res = await self._r.__anext__()  # pylint: disable=E1101
         return res.unwrap()
 
-    def close_sender(self):
+    def close_sender(self) -> Awaitable:
         """No more messages will be received"""
-        return self._s.aclose()
+        self._s.close()
 
-    def close_receiver(self):
+    close_writer = close_sender
+
+    def close_receiver(self) -> Awaitable:
         """No more messages may be sent"""
-        return self._r.aclose()
+        self._r.close()
+
+    close_reader = close_receiver
 
 
 def create_queue(length=0):

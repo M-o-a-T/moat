@@ -13,9 +13,9 @@ alerts.
 import logging
 from contextlib import asynccontextmanager
 
+from .broadcast import Broadcaster, BroadcastReader
 from .compat import Event, TaskGroup
 from .ctx import CtxObj
-from .queue import Broadcaster, BroadcastReader
 
 logger = logging.getLogger(__name__)
 

@@ -7,7 +7,7 @@ Some rudimentary tests for queues and broadcasting
 import anyio
 import pytest
 
-from moat.util import Broadcaster, LostData
+from moat.util.broadcast import Broadcaster, LostData
 
 
 @pytest.mark.anyio

@@ -1,9 +1,8 @@
 from weakref import WeakSet
 
-from outcome import Error, Value
-
-from .compat import EndOfStream, Queue, WouldBlock
+from .compat import EndOfStream, WouldBlock
 from .impl import NotGiven
+from .queue import Queue
 
 # TODO build something nicer
 try:
@@ -63,7 +62,7 @@ class BroadcastReader:
 
         try:
             return await self._q.get()
-        except EndOfStream:
+        except (AttributeError, EndOfStream):
             raise StopAsyncIteration from None
 
     def flush(self):
@@ -90,7 +89,6 @@ class BroadcastReader:
             self.loss += 1
 
     def _close(self):
-        breakpoint()
         self._q.close_writer()
 
     def close(self):

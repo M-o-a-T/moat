@@ -12,6 +12,8 @@ from concurrent.futures import CancelledError
 import anyio as _anyio
 import greenback
 
+from .queue import Queue  # pylint:disable=unused-import
+
 logger = logging.getLogger(__name__)
 
 Pin_IN = 0

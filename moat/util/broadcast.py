@@ -131,11 +131,7 @@ class Broadcaster:
 
     To safely re-sync, do something like this::
 
-        while True:
-            with anyio.move_on_after(0.01):
-                await anext(bcr)
-                continue
-            break
+        bcr.flush()
         x = fetch_consistent_state()  # this really should be sync
         bcr(x)  # if this fails, you've got a problem
         while True:

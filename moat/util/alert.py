@@ -13,8 +13,7 @@ alerts.
 import logging
 from contextlib import asynccontextmanager
 
-import anyio
-
+from .compat import Event, TaskGroup
 from .ctx import CtxObj
 from .queue import Broadcaster, BroadcastReader
 
@@ -47,11 +46,11 @@ class Alert(BaseAlert):
     """
 
     state: list = None
-    evt: anyio.Event = None
+    evt: Event = None
 
     def __init__(self, *data):
         super().__init__(*data)
-        self.evt = anyio.Event()
+        self.evt = Event()
         self.q = Broadcaster()
         self.q.__enter__()
         self.set(data)
@@ -250,8 +249,8 @@ class AlertCollector(CtxObj):
         self.objs = set()
         self.access = access
 
-        self.non_empty = anyio.Event()
-        self.evt = anyio.Event()
+        self.non_empty = Event()
+        self.evt = Event()
         self.evt.set()
 
     # if non_empty is not None:
@@ -292,7 +291,7 @@ class AlertCollector(CtxObj):
             else:
                 self.evt.set()
                 if self.non_empty is None:
-                    self.non_empty = anyio.Event()
+                    self.non_empty = Event()
                 await self.non_empty.wait()
                 self.non_empty = None
 
@@ -315,7 +314,7 @@ class AlertCollector(CtxObj):
 
     @asynccontextmanager
     async def _ctx(self):
-        async with anyio.create_task_group() as self._tg:
+        async with TaskGroup() as self._tg:
             self._tg.start_soon(self._runner)
             yield self
             self._tg.cancel_scope.cancel()
@@ -323,6 +322,6 @@ class AlertCollector(CtxObj):
     def add(self, thing):
         """Wait for this event."""
         if self.non_empty is not None:
-            self.evt = anyio.Event()
+            self.evt = Event()
             self.non_empty.set()
         self.objs.add(thing)

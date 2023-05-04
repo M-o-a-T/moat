@@ -736,7 +736,11 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
                 pass
         obj.cfg._update(P(k), v)  # pylint: disable=protected-access
 
-    if not wrap:
+    if wrap:
+        pass
+    elif logging.root.handlers:
+        logging.debug("Logging already set up")
+    else:
         # Configure logging. This is a somewhat arcane art.
         lcfg = obj.cfg.setdefault("logging", dict())
         lcfg.setdefault("version", 1)

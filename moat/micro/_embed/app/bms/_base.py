@@ -135,7 +135,7 @@ class BaseBalancer:
 
 class BasePower(moat.micro.part.combo.MultiplyDict):
     def __init__(self, cfg, bms):
-        await super().__init__(cfg)
+        super().__init__(cfg)
         self.bms = bms
         self.cfg = cfg
         self.n = 0

@@ -20,6 +20,7 @@ from moat.micro.compat import (
     wait_for_ms,
     sleep,
 )
+from moat.micro.link import Listener
 
 
 class BatteryAlert(Alert):
@@ -283,9 +284,12 @@ class BaseBattery(AlertMixin):
         """
         manually change the relay's state
         """
-        self.relay_force = st
-        await self.relay.set(force=st)
-        await self.send_rly_state("forced")
+        if isinstance(self.relay, Listener):
+            await self.cmd.request.send([self.cmd.name, "rly"], st=st)
+        else:
+            self.relay_force = st
+            await self.relay.set(force=st)
+            await self.send_rly_state("forced")
 
     async def live_state(self, live: bool):
         """
@@ -294,7 +298,7 @@ class BaseBattery(AlertMixin):
         if self.live == live:
             return
         self.live = live
-        if not live:
+        if not live and not isinstance(self.relay, Listener):
             await self.relay.set(False)
             await self.send_rly_state("Live Fail")
 

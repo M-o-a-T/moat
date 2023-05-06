@@ -21,6 +21,7 @@ from moat.micro.compat import (
     sleep,
 )
 from moat.micro.link import Listener
+from moat.micro.part.combo import MultiplyDict
 
 
 class BatteryAlert(Alert):
@@ -134,7 +135,7 @@ class BaseBalancer:
         pass  # TODO
 
 
-class BasePower(moat.micro.part.combo.MultiplyDict):
+class BasePower(MultiplyDict):
     def __init__(self, cfg, bms):
         super().__init__(cfg)
         self.bms = bms

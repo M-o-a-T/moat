@@ -16,7 +16,7 @@ from contextlib import asynccontextmanager
 
 from moat.main import ABytes, NoPort, copy_over
 from moat.main import get_serial, get_link, get_link_serial
-from moat.bms.controller import Controller
+from moat.ems.controller import Controller
 
 from asyncdbus.message_bus import MessageBus
 from asyncdbus.errors import DBusError

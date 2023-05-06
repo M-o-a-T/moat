@@ -57,7 +57,7 @@ bat1:
     # … and where to get them.
     power:
       client: moat.micro.part.combo.Multiply
-      server: moat.bms.battery.link.Listen
+      server: moat.ems.battery.link.Listen
       link: "u_i"
       sub:
       - u
@@ -91,7 +91,7 @@ bat1:
       t: 10000  # time until re-engaging relay after an error
       t1: 2000  # as before but first switch
     cell:
-      server: moat.bms.rpy1.SerialCells
+      server: moat.ems.battery.bms.rpy1.SerialCells
       port: 0
       balance:
         min: 3.45

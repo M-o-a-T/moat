@@ -9,9 +9,9 @@ from netaddr import IPNetwork, EUI, IPAddress, AddrFormatError
 from operator import attrgetter
 
 from moat.util import P, attrdict
-from distkv.data import data_get
-from distkv.obj.command import std_command
-from distkv_ext.inv.model import InventoryRoot, Host, Wire
+from moat.kv.data import data_get
+from moat.kv.obj.command import std_command
+from moat.kv.inv.model import InventoryRoot, Host, Wire
 from pprint import pprint
 
 import logging

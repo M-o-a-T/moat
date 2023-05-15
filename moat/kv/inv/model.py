@@ -4,8 +4,8 @@ DistKV client data model for Inventory
 import struct
 
 from moat.util import NotGiven, attrdict, Path, yaml_named
-from distkv.obj import ClientEntry, ClientRoot, AttrClientEntry, NamedRoot
-from distkv.errors import ErrorRoot
+from moat.kv.obj import ClientEntry, ClientRoot, AttrClientEntry, NamedRoot
+from moat.kv.errors import ErrorRoot
 from operator import attrgetter
 from collections import deque
 from weakref import ref, WeakSet, WeakValueDictionary
@@ -15,7 +15,7 @@ from typing import Union
 from netaddr import IPNetwork, EUI, IPAddress, AddrFormatError
 import logging
 
-logger = logging.getLogger("distkv_ext.inv.model")
+logger = logging.getLogger(__name__)
 
 
 class SkipNone:

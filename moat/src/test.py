@@ -1,3 +1,4 @@
+import io
 import shlex
 import socket
 import sys
@@ -13,11 +14,17 @@ try:
 except ImportError:
     from async_generator import asynccontextmanager
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 async def run(*args, expect_exit=0, do_stdout=True):
     args = ("-c", "/dev/null", *args)
+    CFG = {}  # load_cfg("moat")
+
     if do_stdout:
         CFG["_stdout"] = out = io.StringIO()
-    logger.debug(" moat.kv %s", " ".join(shlex.quote(str(x)) for x in args))
+    logger.debug(" moat %s", " ".join(shlex.quote(str(x)) for x in args))
     try:
         res = None
         async with OptCtx(
@@ -28,9 +35,9 @@ async def run(*args, expect_exit=0, do_stdout=True):
                 wrap=True,
                 CFG=CFG,
                 cfg=False,
-                name="moat.kv",
-                sub_pre="moat.kv.command",
-                sub_post="cli",
+                name="moat",
+                sub_pre="moat",
+                sub_post="_main.cli",
             )
         if res is None:
             res = attrdict()

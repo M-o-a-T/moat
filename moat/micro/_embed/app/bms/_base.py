@@ -10,7 +10,7 @@ from moat.util import NotGiven, load_from_cfg, as_proxy, attrdict
 from moat.util import Alert, AlertMixin, Broadcaster
 
 from moat.micro.cmd import BaseCmd
-from moat.micro.compat import (
+from moat.util.compat import (
     Event,
     TaskGroup,
     TimeoutError,

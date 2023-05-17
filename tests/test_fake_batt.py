@@ -3,7 +3,7 @@ Basic test using a MicroPython subtask
 """
 import pytest
 from moat.micro._test import mpy_client, mpy_server  # pylint:disable=E0401,E0611
-from moat.micro.compat import ticks_add, ticks_diff, ticks_ms
+from moat.util.compat import ticks_add, ticks_diff, ticks_ms
 
 pytestmark = pytest.mark.anyio
 

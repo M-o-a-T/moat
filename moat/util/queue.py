@@ -4,6 +4,7 @@ from collections.abc import Awaitable
 import anyio
 from anyio import create_memory_object_stream as _cmos
 from outcome import Error, Value
+from .dict import attrdict
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,14 @@ class Queue:
 
     def __init__(self, length=0):
         self._s, self._r = _cmos(length)
+
+    @property
+    def _moat(self):
+        try:
+            return self.__moat
+        except AttributeError:
+            self.__moat = d = attrdict()
+            return d
 
     async def put(self, x):
         """Send a value, blocking"""

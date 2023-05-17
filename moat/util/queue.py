@@ -4,6 +4,7 @@ from collections.abc import Awaitable
 import anyio
 from anyio import create_memory_object_stream as _cmos
 from outcome import Error, Value
+
 from .dict import attrdict
 
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ class Queue:
         try:
             return self.__moat
         except AttributeError:
-            self.__moat = d = attrdict()
+            self.__moat = d = attrdict()  # pylint: disable=attribute-defined-outside-init
             return d
 
     async def put(self, x):

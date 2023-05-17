@@ -306,9 +306,9 @@ def _cache_ext(ext_name, pkg_only):
     """
     for finder, name, ispkg in _namespaces(ext_name):
         if pkg_only and not ispkg:
-            logger.debug("ExtNoC %s",name)
+            logger.debug("ExtNoC %s", name)
             continue
-        logger.debug("ExtC %s",name)
+        logger.debug("ExtC %s", name)
         x = name.rsplit(".", 1)[-1]
         f = Path(finder.path) / x
         _ext_cache[ext_name][x] = f

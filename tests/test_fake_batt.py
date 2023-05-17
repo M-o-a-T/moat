@@ -3,7 +3,7 @@ Basic test using a MicroPython subtask
 """
 import pytest
 from moat.micro._test import mpy_client, mpy_server  # pylint:disable=E0401,E0611
-from moat.micro.compat import ticks_ms,ticks_diff,ticks_add
+from moat.micro.compat import ticks_add, ticks_diff, ticks_ms
 
 pytestmark = pytest.mark.anyio
 
@@ -22,12 +22,11 @@ async def test_bms(tmp_path):
             s = await req.send(["local", "bat1", "state"])
             print(s)
 
-            t=ticks_add(ticks_ms(),-2000)
+            t = ticks_add(ticks_ms(), -2000)
             for _ in range(3):
-                res = await req.send(("local","sq"), o=("bat1","ui"))
-                tn=ticks_ms()
-                assert 1900 < ticks_diff(tn,t) < 2100, (tn,t)
+                res = await req.send(("local", "sq"), o=("bat1", "ui"))
+                tn = ticks_ms()
+                assert 1900 < ticks_diff(tn, t) < 2100, (tn, t)
                 print(res)
-
 
     assert ended

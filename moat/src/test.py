@@ -1,24 +1,19 @@
+"""
+MoaT test support
+"""
 import io
+import logging
 import shlex
-import socket
 import sys
 
-import attr
 from asyncscope import main_scope, scope
-from moat.util import OptCtx, attrdict, wrap_main
+from moat.util import OptCtx, attrdict, wrap_main  # pylint:disable=no-name-in-module
 
-from moat.kv.client import _scoped_client, client_scope
-
-try:
-    from contextlib import asynccontextmanager
-except ImportError:
-    from async_generator import asynccontextmanager
-
-import logging
 logger = logging.getLogger(__name__)
 
 
 async def run(*args, expect_exit=0, do_stdout=True):
+    """Call a MoaT command handler"""
     args = ("-c", "/dev/null", *args)
     CFG = {}  # load_cfg("moat")
 
@@ -56,4 +51,3 @@ async def run(*args, expect_exit=0, do_stdout=True):
         if do_stdout:
             res.stdout = out.getvalue()
             CFG["_stdout"] = sys.stdout
-

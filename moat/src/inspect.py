@@ -3,22 +3,24 @@ This Trio inspector is geared towards figuring out why the *censored* a
 task is cancelled when no exception shows up.
 
 """
-import sys
-
-import weakref
 import inspect
+import logging
 
-import trio
 from asyncscope import scope as sc
 
-import logging
 logger = logging.getLogger("trio.inspect")
 
+
 def debug(*a):
+    "logging helper"
     s = sc.get()
     (logger if s is None else s.logger).debug(*a)
 
+
 class CancelTracer:
+    """A Trio inspect module that helps tracking cancel scopes"""
+
+    # pylint: disable=missing-function-docstring,protected-access
     def __init__(self):
         pass
 
@@ -31,7 +33,7 @@ class CancelTracer:
 
     def scope_entered(self, scope):
         scope._stack = s = []
-        f=inspect.currentframe().f_back
+        f = inspect.currentframe().f_back
         while f:
             s.append(f)
             f = f.f_back
@@ -49,8 +51,8 @@ class CancelTracer:
     def scope_cancelled(self, scope, reason):
         if self.skip(scope):
             return
-#       if reason.value == 0:
-#           breakpoint()
+        #       if reason.value == 0:
+        #           breakpoint()
         debug("KillCS %r %s", scope, reason.name)
 
     def task_spawned(self, task):
@@ -58,8 +60,3 @@ class CancelTracer:
 
     def task_exited(self, task):
         debug("ExitT %r", task)
-
-    def task_spawned(self, task):
-        debug("SpawnT %r", task)
-
-

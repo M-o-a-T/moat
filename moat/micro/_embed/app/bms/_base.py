@@ -5,6 +5,7 @@ Basic BMS classes
 import sys
 
 import time
+from pprint import pprint
 from moat.util import NotGiven, load_from_cfg, as_proxy, attrdict
 from moat.util import Alert, AlertMixin, Broadcaster
 
@@ -185,6 +186,7 @@ class BaseBattery(AlertMixin):
     _main_task = None
 
     def __init__(self, cfg):
+        pprint(cfg, sys.stderr)
         self.cfg = cfg
         self.xmit_evt = Event()
         self.gen = 0  # generation, incremented every time a new value is read

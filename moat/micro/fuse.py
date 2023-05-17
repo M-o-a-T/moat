@@ -811,7 +811,8 @@ async def wrap(link: SubDispatch, path: Path, blocksize=0, debug=1):
     logger.debug("Mounting...")
     fuse_options = set(pyfuse3.default_options)  # pylint: disable=I1101
     fuse_options.add("fsname=moat_fs")
-    # fuse_options.add(f'max_read={operations.max_read}')
+    fuse_options.add(f'max_read={operations.max_read}')
+    # fuse_options.add(f'max_write={operations.max_write}')
     if debug > 1:
         fuse_options.add("debug")
     pyfuse3.init(operations, str(path), fuse_options)  # pylint: disable=I1101

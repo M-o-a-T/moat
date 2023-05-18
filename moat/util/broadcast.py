@@ -1,4 +1,10 @@
-from weakref import WeakSet
+"""
+Broadcasting support
+"""
+try:
+    from weakref import WeakSet
+except ImportError:
+    WeakSet = set
 
 from .compat import EndOfStream, WouldBlock
 from .impl import NotGiven

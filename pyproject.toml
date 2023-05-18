@@ -73,8 +73,8 @@ dependencies = [
   "msgpack",
   "serialpacker",
   "pyfuse3",
-  "moat-util ~= 0.33.1",
-  "moat-micro ~= 0.11.3",
+  "moat-util ~= 0.35.0",
+  "moat-micro ~= 0.11.4",
 ]
 dynamic = ["version"]
 keywords = ["MoaT"]

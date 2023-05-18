@@ -74,7 +74,7 @@ dependencies = [
   "serialpacker",
   "pyfuse3",
   "moat-util ~= 0.35.0",
-  "moat-micro ~= 0.11.4",
+  "moat-micro ~= 0.11.5",
 ]
 dynamic = ["version"]
 keywords = ["MoaT"]

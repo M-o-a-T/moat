@@ -7,7 +7,8 @@ import sys
 import time
 from pprint import pprint
 from moat.util import NotGiven, load_from_cfg, as_proxy, attrdict
-from moat.util import Alert, AlertMixin, Broadcaster
+from moat.util.alert import Alert, AlertMixin
+from moat.util.broadcast import Broadcaster
 
 from moat.micro.cmd import BaseCmd
 from moat.util.compat import (

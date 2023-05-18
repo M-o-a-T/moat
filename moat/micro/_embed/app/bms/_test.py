@@ -1,4 +1,4 @@
-from moat.micro.compat import TaskGroup
+from moat.util.compat import TaskGroup
 from moat.micro.part.combo import Array
 from moat.micro.link import Reader
 

@@ -38,27 +38,26 @@ class Repo(git.Repo):
         mi = p.parts.index("moat")
         self.moat_name = "-".join(p.parts[mi:])
 
-    def subrepos(self, recurse=True, depth=True):
+    def subrepos(self, recurse=True, depth=True, same=True):
         """List subrepositories (and cache them)."""
 
-        if recurse and not depth:
+        if same and recurse and not depth:
             yield self
 
-        if "/lib/" in self.working_dir:
-            return
-        for r in self.submodules:
-            try:
-                res = self._subrepo_cache[r.path]
-            except KeyError:
-                p = Path(self.working_dir) / r.path
-                self._subrepo_cache[r.path] = res = Repo(p)
-                res.submod = r
-            if recurse:
-                yield from res.subrepos(depth=depth)
-            else:
-                yield res
+        if "/lib/" not in self.working_dir:
+            for r in self.submodules:
+                try:
+                    res = self._subrepo_cache[r.path]
+                except KeyError:
+                    p = Path(self.working_dir) / r.path
+                    self._subrepo_cache[r.path] = res = Repo(p)
+                    res.submod = r
+                if recurse:
+                    yield from res.subrepos(depth=depth)
+                else:
+                    yield res
 
-        if recurse and depth:
+        if same and recurse and depth:
             yield self
 
     def commits(self, ref=None):
@@ -564,7 +563,6 @@ async def fix_main(repo):
             m.set_reference(ref=r.head.commit, logmsg="fix_main")
         r.head.set_reference(ref=m, logmsg="fix_main 2")
 
-    await _fix(repo)
     for r in repo.subrepos():
         await _fix(r)
 
@@ -692,6 +690,10 @@ async def build(version, no_test, no_commit, no_dirty, cache):
 
         heads[r.moat_name] = r.commit().hexsha
         t = r.tagged(r.head.commit)
+        if t is not None:
+            if r.is_dirty(index=False, working_tree=False, untracked_files=False, submodules=True):
+                t = None
+
         if t is None:
             for c in r.commits():
                 t = r.tagged(c)
@@ -720,7 +722,7 @@ async def build(version, no_test, no_commit, no_dirty, cache):
 
     dirty = set()
 
-    check = check1 = True
+    check = True
 
     while check:
         check = False
@@ -752,17 +754,10 @@ async def build(version, no_test, no_commit, no_dirty, cache):
                 for v in deps.values():
                     work = fix_deps(v, tags) | work
 
-            if check1:
-                if r.is_dirty(
-                    index=True, working_tree=True, untracked_files=False, submodules=True
-                ):
-                    for rr in r.subrepos(recurse=False):
-                        r.git.add(rr.working_dir)
-                    work = True
-
             if work:
                 p.write_text(pr.as_string())
                 r.index.add(p)
+            if work or r.is_dirty(index=False, working_tree=False, submodules=True):
                 dirty.add(r)
                 t = tags[r.moat_name]
                 if not isinstance(t, str):
@@ -771,41 +766,27 @@ async def build(version, no_test, no_commit, no_dirty, cache):
                     tags[r.moat_name] = t
                 check = True
 
-        check1 = False
-
     if bad:
         print("Partial work done. Fix and try again.")
         return
 
     if not no_commit:
-        for r in dirty:
-            r.index.commit("Update MoaT requirements")
+        for r in repo.subrepos(depth=True):
+            if not r.is_dirty(
+                index=True, working_tree=True, untracked_files=False, submodules=True
+            ):
+                continue
 
-        if repo.is_dirty(index=True, working_tree=True, untracked_files=False, submodules=True):
-            for r in repo.subrepos():
-                if r is repo:
-                    continue
-                t = tags[r.moat_name]
-                if isinstance(t, str):
-                    r.create_tag(t)
+            if r in dirty:
+                r.index.commit("Update MoaT requirements")
 
-            for r in repo.subrepos(recurse=False):
-                repo.git.add(r.working_dir)
-            repo.index.commit("Update")
+            for rr in r.subrepos(recurse=False):
+                r.git.add(rr.working_dir)
+            r.index.commit("Submodule Update")
 
-        for c in repo.commits():
-            t = repo.tagged(c)
-            if t is not None:
-                break
-        else:
-            print("NO TAG", repo.moat_name)
-            return
-
-        xt, t = t.name.rsplit(".", 1)
-        t = f"{xt}.{int(t)+1}"
-
-        print("New:", t)
-        repo.create_tag(t)
+            t = tags[r.moat_name]
+            if isinstance(t, str):
+                r.create_tag(t)
 
 
 add_repr(tomlkit.items.String)

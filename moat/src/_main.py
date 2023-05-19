@@ -546,10 +546,13 @@ async def fix_main(repo):
 
     async def _fix(r):
         if not r.head.is_detached:
-            if r.head.ref.name != "main":
+            if r.head.ref.name not in {"main", "moat"}:
                 print(f"{r.working_dir}: Head is {r.head.ref.name !r}", file=sys.stderr)
             return
-        m = r.refs["main"]
+        if "moat" in r.refs:
+            m = r.refs["moat"]
+        else:
+            m = r.refs["main"]
         if m.commit != r.head.commit:
             ch = await run_process(
                 ["git", "-C", r.working_dir, "merge-base", m.commit.hexsha, r.head.commit.hexsha],
@@ -606,7 +609,7 @@ async def push(obj, remote):
 
 @cli.command()
 @click.option("-r", "--remote", type=str, help="Remote to fetch. Default: probably 'origin'.")
-@click.option("-b", "--branch", type=str, default="main", help="Branch to merge.")
+@click.option("-b", "--branch", type=str, default=None, help="Branch to merge.")
 @click.pass_obj
 async def pull(obj, remote, branch):
     """Fetch updates"""
@@ -629,7 +632,9 @@ async def pull(obj, remote, branch):
             elif obj.debug > 1:
                 cmd.append("-v")
             if remote is not None:
-                cmd.append(remote if branch is None else f"{remote}/{branch}")
+                if branch is None:
+                    branch = "moat" if "moat" in r.refs else "main"
+                cmd.append(f"{remote}/{branch}")
             await run_process(cmd, input=None, stdout=sys.stdout, stderr=sys.stderr)
 
         except subprocess.CalledProcessError as exc:

@@ -1,6 +1,6 @@
 [submodule "lib/serialpacker"]
 	path = lib/serialpacker
-	url = git://github.com/M-o-a-T/moat-lib-serialpacker.git
+	url = git://github.com/M-o-a-T/serialpacker.git
 [submodule "lib/micropython"]
 	path = lib/micropython
 	url = git://github.com/M-o-a-T/micropython.git

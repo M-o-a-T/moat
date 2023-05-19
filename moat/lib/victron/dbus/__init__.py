@@ -116,6 +116,7 @@ class Dbus(CtxObj):
 
 #   The signature of a variant is 'v'.
 
+
 # Export ourselves as a D-Bus service.
 class DbusService:
     def __init__(self, bus, servicename):
@@ -162,7 +163,6 @@ class DbusService:
         onchangecallback=None,
         gettextcallback=None,
     ):
-
         if onchangecallback is not None:
             self._onchangecallbacks[path] = onchangecallback
 

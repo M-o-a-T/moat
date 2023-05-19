@@ -167,7 +167,7 @@ class DbusMonitor(CtxObj):
                 )
             )
             if reply.message_type == MessageType.ERROR:
-                raise Exception(reply.body[0])
+                raise DBusError(reply.error_name, reply.body[0])
 
             return reply.body[0]
 

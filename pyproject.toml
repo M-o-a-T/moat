@@ -13,7 +13,7 @@ classifiers = [
 	"Topic :: Home Automation",
 ]
 dependencies = [
-	"moat-kv ~= 0.70.1",
+	"moat-kv ~= 0.70.2",
 ]
 dynamic = [ "version",]
 keywords = [ "MoaT",]

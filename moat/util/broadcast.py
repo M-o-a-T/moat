@@ -126,7 +126,7 @@ class Broadcaster:
                 print(msg)
 
         async with anyio.create_task_group() as tg, Broadcaster() as bc:
-            tg.spawn(rdr, aiter(bc))  # "bc" also works
+            tg.start_soon(rdr, aiter(bc))
             for x in range(5):
                 bc(x)
                 await anyio.sleep(0.01)

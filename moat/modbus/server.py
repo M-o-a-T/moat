@@ -158,7 +158,7 @@ class SerialModbusServer(BaseModbusServer):
             self._serial = ser
             self.framer = self.Framer(self.decoder)
             while True:
-                data = await ser.read()
+                data = await ser.receive()
                 msgs = []
                 self.framer.processIncomingPacket(
                     data=data,

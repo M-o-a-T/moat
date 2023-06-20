@@ -62,7 +62,7 @@ async def _server(host, port, debug, args):
     if debug:
         log.setLevel(logging.DEBUG)
     if not args:
-        click.UsageError("You didn't add any values to serve")
+        raise click.UsageError("You didn't add any values to serve")
 
     from moat.modbus.server import ModbusServer  # pylint: disable=import-outside-toplevel
 
@@ -151,7 +151,6 @@ async def _client(host, port, unit, kind, start, num, type_, values, debug):
     async with ModbusClient() as g, g.host(host, port) as h, h.unit(unit) as u, u.slot(
         "default"
     ) as s:
-
         k = map_kind[kind[0]]
         t = get_type(type_)
         if values:
@@ -217,7 +216,6 @@ async def _serclient(
     async with ModbusClient() as g, g.serial(
         port=port, baudrate=baudrate, stopbits=stopbits, parity=parity
     ) as h, h.unit(unit) as u, u.slot("default") as s:
-
         k = map_kind[kind[0]]
         t = get_type(type_)
         if values:
@@ -242,6 +240,17 @@ async def _serclient(
             log.exception("Problem: %r", exc)
 
 
+def add_serial_cfg(c):
+    """Helper for serial port configuration"""
+    c = click.option(
+        "--port", "-p", required=True, type=str, help="destination port (/dev/ttyXXX)"
+    )(c)
+    c = click.option("--baudrate", "-b", type=int, default=9600, help="Baud rate (9600)")(c)
+    c = click.option("--parity", "-P", type=str, default="N", help="Parity (NEO), default N")(c)
+    c = click.option("--stopbits", "-S", type=int, default=1, help="Stopbits (12), default 1")(c)
+    return c
+
+
 def mk_serial_client(m):
     """helper to create a sserial client"""
     c = _serclient
@@ -259,11 +268,8 @@ def mk_serial_client(m):
     c = click.option("--kind", "-k", default="i", help="query type: input, discrete, hold, coil")(
         c
     )
+    c = add_serial_cfg(c)
     c = click.option("--unit", "-u", type=int, default=1, help="unit to query")(c)
-    c = click.option("--port", "-p", type=str, help="destination port (/dev/ttyXXX)")(c)
-    c = click.option("--baudrate", "-b", type=int, default=9600, help="Baud rate (9600)")(c)
-    c = click.option("--parity", "-P", type=str, default="N", help="Parity (NEO), default N")(c)
-    c = click.option("--stopbits", "-S", type=int, default=1, help="Stopbits (12), default 1")(c)
     c = m.command("serial", context_settings=dict(show_default=True))(c)
     return c
 

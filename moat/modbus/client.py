@@ -778,7 +778,10 @@ class Slot(CtxObj):
         """
         await self.run_lock.wait()
 
-        await self.read()
+        try:
+            await self.read()
+        except Exception as exc:  # pylint:disable=broad-except
+            _logger.warning("Error %s: %r", self, exc)
         tn = self.t_read + self.read_delay
         if self.read_align:
             tn -= tn % self.read_delay

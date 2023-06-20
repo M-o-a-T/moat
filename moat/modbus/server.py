@@ -158,6 +158,9 @@ class SerialModbusServer(BaseModbusServer):
         async with Serial(**self.args) as ser:
             self._serial = ser
             self.framer = self.Framer(self.decoder)
+
+            if opened is not None:
+                opened.set()
             while True:
                 data = await ser.receive()
                 msgs = []

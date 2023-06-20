@@ -108,10 +108,10 @@ async def to(obj, retry, **params):
             t = t1
             while True:
                 if t is None:
-                    await self.__evt
+                    await self.__evt.wait()
                 else:
                     with anyio.fail_after(t):
-                        await self.__evt
+                        await self.__evt.wait()
                 t = t2
                 self.__evt = anyio.Event()
 
@@ -120,9 +120,7 @@ async def to(obj, retry, **params):
             async with ModbusClient() as g_a, g_a.serial(**obj.A) as A, Server(
                 client=A, **params
             ) as B, anyio.create_task_group() as tg:
-                if obj.timeout or obj.timeout1:
-                    tg.start_soon(B.watch, obj.timeout, obj.timeout1)
-                await B.serve()
+                await B.watch(obj.timeout, obj.timeout1)
         except Exception as exc:  # pylint: disable=broad-exception-caught
             if not retry or not A or not B:
                 raise

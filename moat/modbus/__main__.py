@@ -96,7 +96,7 @@ async def _server(host, port, debug, args):
             except ValueError:
                 v = float(v)
             if unit is None:
-                unit = s.add_unit(int(1))
+                unit = s.add_unit(1)
             for _ in range(num):
                 unit.add(kind, reg, typ(v))
                 reg += typ.len

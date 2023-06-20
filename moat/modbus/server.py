@@ -210,6 +210,7 @@ class RelayServer:
     """
     A mix-in class for servers that forwards to a client
     """
+
     single = True
 
     def __init__(self, client, *a, **k):
@@ -223,15 +224,16 @@ class RelayServer:
 
         r.transaction_id = tid
         self.mon_response(r)
-        r = self.framer.buildPacket(r)
-        await self._serial.send(r)
+        r = self.framer.buildPacket(r)  # pylint:disable=no-member
+        await self._serial.send(r)  # pylint:disable=no-member
 
     def mon_request(self, request):
+        """Request monitor. Override me."""
         pass
 
     def mon_response(self, response):
+        """Response monitor. Override me."""
         pass
-
 
 
 class ModbusServer(BaseModbusServer):

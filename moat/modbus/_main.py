@@ -10,7 +10,7 @@ import asyncclick as click
 from moat.util import load_subgroup
 
 from moat.modbus.client import ModbusClient
-from moat.modbus.server import SerialModbusServer, RelayServer
+from moat.modbus.server import RelayServer, SerialModbusServer
 
 from .__main__ import add_serial_cfg, mk_client, mk_serial_client, mk_server
 
@@ -33,8 +33,10 @@ def print_exc(exc, **kw):  # pylint: disable=missing-function-docstring
 
 @cli.group(invoke_without_command=True)
 @add_serial_cfg
-@click.option("-t","--timeout",type=float,default=0,help="Error if no more data (seconds)")
-@click.option("-T","--initial-timeout","timeout1", type=float,default=0,help="Error if no data (seconds)")
+@click.option("-t", "--timeout", type=float, default=0, help="Error if no more data (seconds)")
+@click.option(
+    "-T", "--initial-timeout", "timeout1", type=float, default=0, help="Error if no data (seconds)"
+)
 @click.pass_context
 async def monitor(ctx, timeout, timeout1, **params):
     """
@@ -59,6 +61,7 @@ async def monitor(ctx, timeout, timeout1, **params):
         return
 
     raise click.UsageError("Single line monitoring is not implemented yet")
+
 
 #   async def mon(msg):
 #       print(msg)
@@ -85,18 +88,23 @@ async def to(obj, retry, **params):
     B = None
 
     class Server(RelayServer, SerialModbusServer):
+        """A time-out-ing serial Modbus relay"""
+
         def __init__(self, *a, **kw):
             self.__evt = anyio.Event()
             super().__init__(*a, **kw)
 
         def mon_request(self, request):
+            "request monitor"
             print(f"> {request}")
 
         def mon_response(self, response):
+            "response monitor"
             print(f"< {response}")
             self.__evt.set()
 
         async def watch(self, t2, t1):
+            "Timeout manager"
             t = t1
             while True:
                 if t is None:
@@ -109,7 +117,9 @@ async def to(obj, retry, **params):
 
     while True:
         try:
-            async with ModbusClient() as g_a, g_a.serial(**obj.A) as A, Server(client=A, **params) as B, anyio.open_task_group() as tg:
+            async with ModbusClient() as g_a, g_a.serial(**obj.A) as A, Server(
+                client=A, **params
+            ) as B, anyio.create_task_group() as tg:
                 if obj.timeout or obj.timeout1:
                     tg.start_soon(B.watch, obj.timeout, obj.timeout1)
                 await B.serve()

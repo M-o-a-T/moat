@@ -139,6 +139,7 @@ class SerialModbusServer(BaseModbusServer):
     _serial = None
     framer = None
     ignore_missing_slaves = False
+    single = False
 
     def __init__(self, identity=None, **args):
         super().__init__(identity=identity)
@@ -164,7 +165,7 @@ class SerialModbusServer(BaseModbusServer):
                     data=data,
                     callback=msgs.append,
                     unit=self.units,
-                    single=False,
+                    single=self.single,
                 )
                 for msg in msgs:
                     await self._process(msg)
@@ -205,6 +206,34 @@ class SerialModbusServer(BaseModbusServer):
             await self._serial.send(response)
 
 
+class RelayServer:
+    """
+    A mix-in class for servers that forwards to a client
+    """
+    single = True
+
+    def __init__(self, client, *a, **k):
+        self._client = client
+        super().__init__(*a, **k)
+
+    async def _process(self, request):
+        self.mon_request(request)
+        tid = request.transaction_id
+        r = await self._client.execute(request)
+
+        r.transaction_id = tid
+        self.mon_response(r)
+        r = self.framer.buildPacket(r)
+        await self._serial.send(r)
+
+    def mon_request(self, request):
+        pass
+
+    def mon_response(self, response):
+        pass
+
+
+
 class ModbusServer(BaseModbusServer):
     """TCP Modbus server.
 
@@ -217,6 +246,7 @@ class ModbusServer(BaseModbusServer):
     """
 
     taskgroup = None
+    single = False
 
     def __init__(self, identity=None, address=None, port=None):
         super().__init__(identity=identity)
@@ -275,7 +305,7 @@ class ModbusServer(BaseModbusServer):
                 reqs = []
                 # TODO fix pymodbus
                 framer.processIncomingPacket(
-                    data, reqs.append, list(self.units.keys()), single=False
+                    data, reqs.append, list(self.units.keys()), single=self.single
                 )
 
                 for request in reqs:

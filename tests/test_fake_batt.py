@@ -5,8 +5,8 @@ import pytest
 from moat.micro._test import mpy_client, mpy_server  # pylint:disable=E0401,E0611
 from moat.util.compat import ticks_add, ticks_diff, ticks_ms
 
-pytestmark = pytest.mark.skip
-# pytestmark = pytest.mark.anyio
+# pytestmark = pytest.mark.skip
+pytestmark = pytest.mark.anyio
 
 TT = 250  # XXX assume that this is OK
 
@@ -21,13 +21,13 @@ async def test_bms(tmp_path):
             ended = True
 
             s = await req.send(["local", "bat1", "state"])
-            print(s)
+            print("STAT", s)
 
             t = ticks_add(ticks_ms(), -2000)
             for _ in range(3):
-                res = await req.send(("local", "sq"), o=("bat1", "ui"))
+                res = await req.send(("local", "bat1", "pwr"))
                 tn = ticks_ms()
                 assert 1900 < ticks_diff(tn, t) < 2100, (tn, t)
-                print(res)
+                print("PWR", res)
 
     assert ended

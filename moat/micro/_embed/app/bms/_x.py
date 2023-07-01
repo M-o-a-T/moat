@@ -86,7 +86,7 @@ class BaseCells:
     Skeleton of a cell array.
     """
 
-    def __init__(self, cfg, gcfg):
+    def __init__(self, cfg):
         self.cfg = cfg
 
     async def read_u(self):
@@ -97,7 +97,7 @@ class BaseCells:
         """fetch all cells' temperatures"""
         raise NotImplementedError("no idea how")
 
-    async def run(self, cmd):
+    async def run(self):
         pass
 
 
@@ -110,7 +110,7 @@ class BaseBalancer:
         self.cells = cells
         self.cfg = cfg
 
-    async def run(self, cmd):
+    async def run(self):
         pass  # TODO
 
 
@@ -142,7 +142,7 @@ class BaseBMS(AlertMixin):
     sum_c: float = 0  # sum of i
     sum_ms: int = 0  # timespan for sum_X
 
-    def __init__(self, cfg, gcfg):
+    def __init__(self, cfg):
         self.cfg = cfg
         self.xmit_evt = Event()
         self.gen = 0  # generation, incremented every time a new value is read
@@ -313,8 +313,6 @@ class BaseBMS(AlertMixin):
         self._setup()
 
     async def send_work(self, flush: bool = False):
-        if not self.cmd:
-            return
         res = dict(
             w=self.sum_w,
             c=self.sum_c,
@@ -325,7 +323,7 @@ class BaseBMS(AlertMixin):
             self.sum_w = 0
             self.sum_c = 0
             self.n_w = 0
-        await self.cmd.request.send_nr([self.cmd.name, "work"], **res)
+        await self.request.send_nr([self.name, "work"], **res)
 
     def _set_scales(self):
         c = self.cfg.batt
@@ -334,9 +332,8 @@ class BaseBMS(AlertMixin):
         self.adc_i_scale = c.i.scale
         self.adc_i_offset = c.i.offset
 
-    async def run(self, cmd):
+    async def run(self):
         c = self.cfg.batt
-        self.cmd = cmd
         self.adc_u = M.ADC(M.Pin(c["u"]["pin"]))
         self.adc_i = M.ADC(M.Pin(c["i"]["pin"]))
         self.adc_ir = M.ADC(M.Pin(c["i"]["ref"]))
@@ -423,9 +420,8 @@ class BaseBMS(AlertMixin):
 
 
 class BMSCmd(BaseCmd):
-    def __init__(self, parent, name, cfg, gcfg):
-        super().__init__(parent)
-        self.name = name
+    def __init__(self, parent, name, cfg):
+        super().__init__(parent, name)
 
     async def run(self):
         try:

@@ -4,9 +4,9 @@ from moat.micro.link import Reader
 
 try:
     # server
-    from moat.micro.app.bms._base import BaseBattery, BaseCells
+    from moat.micro.app.bms._base import BaseBMS, BaseCells
 except ImportError:
-    from app.bms._base import BaseBattery, BaseCells
+    from app.bms._base import BaseBMS, BaseCells
 
 
 class CellArray(Array):
@@ -15,16 +15,15 @@ class CellArray(Array):
 
 
 class Cells(BaseCells):
-    def __init__(self, cfg, bms=None, **kw):
-        super().__init__(cfg, **kw)
+    def __init__(self, parent, name, cfg, bms=None, **kw):
+        super().__init__(parent, name, cfg, **kw)
         self.n_cells = cfg.n
         self.cells = CellArray(cfg)
-        self.bms = bms
 
         Reader.__init__(self, cfg)
 
-    async def run(self, cmd):
-        await self.cells.run(cmd)
+    async def run(self):
+        await self.cells.run()
 
     async def read_u(self):
         res = []
@@ -54,17 +53,18 @@ class Cell:
     async def read_t(self):
         return self.t
 
-    async def run(self, cmd):
+    async def run(self):
         pass
 
 
 class Static(Reader):
-    def __init__(self, cfg, **kw):
+    def __init__(self, parent, name, cfg, **kw):
+        super().__init__(parent, name, cfg=cfg)
         self.val = cfg.value
 
     async def read_(self):
         return self.val
 
 
-class Batt(BaseBattery):
+class Batt(BaseBMS):
     pass

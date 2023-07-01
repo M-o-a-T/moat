@@ -7,7 +7,7 @@ import sys
 import time
 from pprint import pprint
 from moat.util import NotGiven, load_from_cfg, as_proxy, attrdict
-from moat.util.alert import Alert, AlertMixin
+from moat.util.alert import Alert, AlertHandler
 from moat.util.broadcast import Broadcaster
 
 from moat.micro.cmd import BaseCmd
@@ -120,7 +120,7 @@ class BaseCells:
         """fetch all cells' temperatures"""
         raise NotImplementedError("no idea how")
 
-    async def run(self, cmd, batt):
+    async def run(self, batt):
         pass
 
 
@@ -133,7 +133,7 @@ class BaseBalancer:
         self.cells = cells
         self.cfg = cfg
 
-    async def run(self, cmd, cells):
+    async def run(self, cells):
         pass  # TODO
 
 
@@ -154,7 +154,7 @@ class BasePower(MultiplyDict):
         return p
 
     
-class BaseBattery(AlertMixin):
+class BaseBMS(BaseCmd):
     """
     This is the skeleton of a battery monitor client.
 
@@ -184,34 +184,21 @@ class BaseBattery(AlertMixin):
 
     _live_task = None
     live: int = None  # required msec between pings
-    _main_task = None
 
-    def __init__(self, cfg):
+    def __init__(self, parent, name, cfg):
         pprint(cfg, sys.stderr)
         self.cfg = cfg
         self.xmit_evt = Event()
         self.gen = 0  # generation, incremented every time a new value is read
         self._q = Broadcaster()
 
-        super().__init__()
+        super().__init__(parent, name)
 
-    async def run(self, cmd):
-        """
-        Main loop. Runs the cell and balancer main code.
-        """
-        self.t_last = ticks_ms()
+        self._alert = AlertHandler()
 
-        self.cmd = cmd
-        self.sum_w = 0
-        self.sum_c = 0
-        self.n_w = 0
-        self.live_flag = Event()
-
-        async with TaskGroup() as tg:
-            self.__tg = tg
-            self._main_task = await tg.spawn(self._run)
-            while True:
-                await sleep(9999)
+        self.balancer = load_from_cfg(self, "bal", cfg=cfg.balancer)
+        self.relay = load_from_cfg(self, "rly", cfg=cfg.relay, _raise=True)
+        self.power = load_from_cfg(self, "pwr", cfg=cfg.power)
 
     async def update_power(
         self, u: float, i: float, p: float = None, w: float = None, c: float = None
@@ -289,7 +276,7 @@ class BaseBattery(AlertMixin):
         manually change the relay's state
         """
         if isinstance(self.relay, Listener):
-            await self.cmd.request.send([self.cmd.name, "rly"], st=st)
+            await self.request.send([self.name, "rly"], st=st)
         else:
             self.relay_force = st
             await self.relay.set(force=st)
@@ -325,17 +312,9 @@ class BaseBattery(AlertMixin):
 
         TODO: try to be somewhat less intrusive.
         """
-        if self._main_task is None:
-            self.cfg = cfg
-            return
-        self._main_task.cancel()
-        await sleep_ms(100)
         self.cfg = cfg
-        self._main_task = await self.__tg.spawn(self._run)
 
     async def send_work(self, flush: bool = False):
-        if not self.cmd:
-            return
         res = dict(
             w=self.sum_w,
             c=self.sum_c,
@@ -346,35 +325,31 @@ class BaseBattery(AlertMixin):
             self.sum_w = 0
             self.sum_c = 0
             self.n_w = 0
-        await self.cmd.request.send_nr([self.cmd.name, "work"], **res)
+        await self.request.send_nr([self.name, "work"], **res)
+
+
+    async def run(self):
+        """
+        Main loop. Runs the cell and balancer main code.
+        """
+        self.t_last = ticks_ms()
+
+        self.sum_w = 0
+        self.sum_c = 0
+        self.n_w = 0
+        self.live_flag = Event()
+
+        async with TaskGroup() as tg:
+            await tg.spawn(self.live_task, _name="bms.live")
+            await self._run()
 
     async def _run(self):
-        async with TaskGroup() as tg:
-            cfg = self.cfg
-            try:
-                self.cells = load_from_cfg(cfg.cells, bms=self)
-            except AttributeError:
-                breakpoint()
-                raise
-            self.balancer = load_from_cfg(cfg.balancer, cells=self.cells)
-            self.relay = load_from_cfg(cfg.relay, bms=self, _raise=True)
-            self.power = load_from_cfg(cfg.power, bms=self)
-
-            if self.relay is not None:
-                tg.start_soon(self.relay.run, self.cmd)
-            if self.cells is not None:
-                tg.start_soon(self.cells.run, self.cmd)
-            if self.balancer is not None:
-                tg.start_soon(self.balancer.run, self.cmd)
-            if self.power is not None:
-                tg.start_soon(self.power.run, self.cmd)
-
-            await tg.spawn(self.live_task, _name="bms.live")
-            await self._run_()
-
-    async def _run_(self):
         xmit_n = 0
-        self.live = (await self.relay.read())["s"]
+        r = await self.relay.read()
+        if r is None:
+            breakpoint()
+            await self.relay.read()
+        self.live = r["s"]
         # we start off with the current relay state
         # so a soft reboot won't toggle the relay
 
@@ -387,16 +362,15 @@ class BaseBattery(AlertMixin):
                 rs = self.relay.get_sync()
 
                 if await self._check():
-                    await self.relay.set(True)
-                else:
-                    await self.relay.set(False)
-
-                if rs != self.relay.get_sync():
-                    if rs:
+                    if not rs:
+                        await self.relay.set(True)
                         await self.send_rly_state("Check OK")
-                    else:
+                        xmit_n = 0
+                else:
+                    if rs:
+                        await self.relay.set(False)
                         await self.send_rly_state("Check Fail")
-                    xmit_n = 0
+                        xmit_n = 0
 
             xmit_n -= 1
             if xmit_n <= 0 or self.xmit_evt.is_set():
@@ -422,30 +396,11 @@ class BaseBattery(AlertMixin):
         print("RELAY", (await self.relay.read()), txt, file=sys.stderr)
 
 
-class BaseBMSCmd(BaseCmd):
-    def __init__(self, parent: BaseCmd, name: str, cfg: attrdict, gcfg: attrdict):
-        super().__init__(parent)
-        self.name = name
-        self.batt = None
-        self.bms = load_from_cfg(cfg)
-        if self.bms is None:
-            raise ImportError(cfg)
-
-    async def run(self):
-        try:
-            await self.bms.run(self)
-        finally:
-            self.bms = None
-
-    async def config_updated(self, cfg):
-        await super().config_updated(cfg)
-        await self.bms.config_updated(cfg)
-
     async def cmd_rly(self, st=NotGiven):
         """
         Called manually, but also irreversibly when there's a "hard" cell over/undervoltage
         """
-        rly = self.batt.relay
+        rly = self.relay
         if rly is None:
             raise RuntimeError("no relay")
         if st is NotGiven:
@@ -453,9 +408,9 @@ class BaseBMSCmd(BaseCmd):
         await rly.set(force=st)
 
     async def cmd_info(self, gen=-1, r=False):
-        if self.batt.gen == gen:
-            await self.batt.xmit_evt.wait()
-        return self.batt.stat(r)
+        if self.gen == gen:
+            await self.xmit_evt.wait()
+        return self.stat(r)
 
     async def cmd_live(self, t=None):
         """
@@ -463,6 +418,6 @@ class BaseBMSCmd(BaseCmd):
         t=0 disables. No t is the ping.
         """
         if t is None:
-            self.batt.ping()
+            self.ping()
         else:
-            await self.batt.set_live(t)
+            await self.set_live(t)

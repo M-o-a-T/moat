@@ -17,10 +17,9 @@ from moat.micro.compat import (
 
 
 class BMSCmd(BaseCmd):
-    def __init__(self, parent, name, cfg, gcfg):
-        super().__init__(parent)
-        self.name = name
-        self.batt = load_from_cfg(cfg)
+    def __init__(self, parent, name, cfg):
+        super().__init__(parent, name)
+        self.cfg = cfg
 
     async def run(self):
         try:

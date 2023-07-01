@@ -13,6 +13,7 @@ import anyio as _anyio
 import greenback
 
 from .queue import Queue  # pylint:disable=unused-import
+from .impl import NotGiven
 
 logger = logging.getLogger(__name__)
 

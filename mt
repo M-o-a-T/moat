@@ -6,6 +6,23 @@ import os
 import git
 # assume that sys.path[0] is the main …/moat directory
 
+import logging
+FORMAT = (
+    "%(asctime)-15s %(threadName)-15s %(levelname)-8s %(module)-15s:%(lineno)-8s %(message)s"
+)
+logging.basicConfig(format=FORMAT, level=logging.WARNING)
+#class dbg(logging.Handler):
+#    def emit(self, r):
+#        print(r.getMessage(), file=sys.stderr)
+#        pass
+#logging.root.addHandler(dbg())
+#logging.getLogger("pymodbus.factory").addHandler(dbg())
+#logging.getLogger("moat.modbus.client").addHandler(dbg())
+
+def nbc(*a,**k):
+    logging.warning(f"Logging: another basicConfig call: ignored {a} {k} ")
+logging.basicConfig = nbc
+
 try:
     import pymodbus.constants  # breaks logging setup if imported later
 except ImportError:

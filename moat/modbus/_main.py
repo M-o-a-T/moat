@@ -12,6 +12,8 @@ from moat.util import load_subgroup
 from moat.modbus.client import ModbusClient
 from moat.modbus.server import RelayServer, SerialModbusServer
 
+from pymodbus.register_write_message import WriteSingleRegisterRequest
+
 from .__main__ import add_serial_cfg, mk_client, mk_serial_client, mk_server
 
 
@@ -96,11 +98,14 @@ async def to(obj, retry, **params):
 
         def mon_request(self, request):
             "request monitor"
-            print(f"> {request}")
+            if isinstance(request, WriteSingleRegisterRequest):
+                print(f"> {request}", request.value)
+            else:
+                print(f"> {request}", getattr(request,"registers",""))
 
         def mon_response(self, response):
             "response monitor"
-            print(f"< {response}")
+            print(f"< {response}", getattr(response,"registers",""))
             self.__evt.set()
 
         async def watch(self, t2, t1):

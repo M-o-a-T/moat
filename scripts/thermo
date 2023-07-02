@@ -10,7 +10,13 @@ import anyio
 @click.command
 @click.option("-s","--socket",help="MoaT multiplexer socket", required=True)
 async def main(socket):
-    """Read temperatures"""
+    """Read temperatures, switch heater
+
+    This is a primitive heating controller.
+    It reads temperatures of a room and a heater via MoaT I²C,
+    then controls the heater so that the room is warm and the heater doesn't overheat.
+    """
+    # TODO use a PID controller instead of stupid hysteresis
     obj = attrdict()
     obj.socket = socket
     obj.debug=1
@@ -25,8 +31,8 @@ async def main(socket):
 
         t_low=43
         t_high=45
-        tx_low=23
-        tx_high=25
+        tx_low=22
+        tx_high=24
         d = await dkv.get(P("home.ass.dyn.switch.esp_s3.relay.state"))
         t_on=d.value
         tx_on=True
@@ -47,8 +53,9 @@ async def main(socket):
                 print()
                 await dkv.set(P("home.ass.dyn.sensor.temp.bad_wall.state"), value=tw[25], idem=True)
                 await dkv.set(P("home.ass.dyn.sensor.temp.bad_wall_heat.state"), value=tw[30], idem=True)
-                await dkv.set(P("home.ass.dyn.sensor.temp.bad_room.state"), value=tw[24], idem=True)
-            tx=max(tw[24],tw[25])
+                #await dkv.set(P("home.ass.dyn.sensor.temp.bad_room.state"), value=tw[24], idem=True)
+            #tx=max(tw[24],tw[25])
+            tx=tw[25]
             if tx_on:
                 if tx > tx_high:
                     tx_on = False

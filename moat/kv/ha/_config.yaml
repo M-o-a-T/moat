@@ -1,3 +1,4 @@
-hass:
-  prefix: !P :.hass
-  conv: hassco
+moat:
+  ha:
+    prefix: !P :.hass
+    conv: hassco

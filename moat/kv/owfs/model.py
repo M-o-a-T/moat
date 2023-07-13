@@ -80,17 +80,20 @@ class OWFSattr(ClientEntry):
 
         self.watch_dest_idem = idem
         if force or dest != self.watch_dest or intv != self.watch_dest_interval:
-            await dev.set_polling_interval(self.attr, 0)
-            if intv > 0 and dest is not None:
-                self.watch_dest_interval = intv
-            self.watch_dest = dest
-            self.watch_dest_attr = dest_attr
-            if dest is not None and intv is not None:
-                await dev.set_polling_interval(self.attr, intv)
-            else:
-                await self.root.err.record_working(
-                    "owfs", self.subpath + ("read",), comment="dropped"
-                )
+            try:
+                await dev.set_polling_interval(self.attr, 0)
+                if intv > 0 and dest is not None:
+                    self.watch_dest_interval = intv
+                self.watch_dest = dest
+                self.watch_dest_attr = dest_attr
+                if dest is not None and intv is not None:
+                    await dev.set_polling_interval(self.attr, intv)
+                else:
+                    await self.root.err.record_working(
+                        "owfs", self.subpath + ("read",), comment="dropped"
+                    )
+            except RuntimeError as exc:
+                await self.root.err.record_error("owfs", self.subpath + ("read",), exc=exc)
         self.watch_dest_chain = None
 
     async def dest_value(self, val):

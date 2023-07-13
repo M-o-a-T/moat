@@ -3,6 +3,7 @@
 import asyncclick as click
 from moat.util import yprint, attrdict, NotGiven, P, Path, as_service, attr_args
 from distkv.data import data_get, node_attr
+from moat.kv.owfs.model import OWFSroot
 
 import logging
 
@@ -10,11 +11,12 @@ logger = logging.getLogger(__name__)
 
 
 @click.group(short_help="Manage 1wire devices.")
-async def cli():
+@click.pass_obj
+async def cli(obj):
     """
     List Onewire devices, modify device handling …
     """
-    pass
+    obj.data = await OWFSroot.as_handler(obj.client)
 
 
 @cli.command("list")
@@ -25,6 +27,8 @@ async def list_(obj, device, family):
     """Emit the current state as a YAML file."""
     if device is not None and family is not None:
         raise click.UsageError("Family and device code can't both be used")
+
+    prefix = obj.cfg.kv.owfs.prefix
     if family:
         f = int(family, 16)
         path = Path(f)
@@ -54,7 +58,11 @@ async def list_(obj, device, family):
             else:
                 return Path("%02x.%12x" % (p[0], p[1])) + p[2:]
 
-    await data_get(obj, obj.cfg.owfs.prefix + path, as_dict="_", path_mangle=pm)
+    if obj.meta:
+        def pm(p):
+            return Path(str(prefix + path)) + p
+
+    await data_get(obj, prefix + path, as_dict="_", path_mangle=pm)
 
 
 @cli.command("attr", help="Mirror a device attribute to/from DistKV")
@@ -75,6 +83,7 @@ async def attr__(obj, device, family, write, attr, interval, path, attr_):
     values.
     """
     path = P(path)
+    prefix = obj.cfg.kv.owfs.prefix
     if (device is not None) + (family is not None) != 1:
         raise click.UsageError("Either family or device code must be given")
     if interval and write:
@@ -96,7 +105,7 @@ async def attr__(obj, device, family, write, attr, interval, path, attr_):
     attr = P(attr)
     attr_ = P(attr_)
     if remove:
-        res = await obj.client.delete(obj.cfg.owfs.prefix + fd + attr)
+        res = await obj.client.delete(prefix + fd + attr)
     else:
         val = dict()
         if path:
@@ -106,7 +115,7 @@ async def attr__(obj, device, family, write, attr, interval, path, attr_):
         if len(attr_):
             val["src_attr" if write else "dest_attr"] = attr_
 
-        res = await obj.client.set(obj.cfg.owfs.prefix + fd + attr, value=val)
+        res = await obj.client.set(prefix + fd + attr, value=val)
 
     if res is not None and obj.meta:
         yprint(res, stream=obj.stdout)
@@ -134,7 +143,7 @@ async def set_(obj, device, family, subpath, vars_, eval_, path_):
         f, d = device.split(".", 2)[0:2]
         fd = (int(f, 16), int(d, 16))
 
-    res = await node_attr(obj, obj.cfg.owfs.prefix + fd + subpath, vars_, eval_, path_)
+    res = await node_attr(obj, obj.cfg.kv.owfs.prefix + fd + subpath, vars_, eval_, path_)
     if res and obj.meta:
         yprint(res, stream=obj.stdout)
 
@@ -151,11 +160,12 @@ async def server_(obj, name, host, port, delete):
 
     No arguments: list them.
     """
+    prefix = obj.cfg.kv.owfs.prefix
     if not name:
         if host or port or delete:
             raise click.UsageError("Use a server name to set parameters")
         async for r in obj.client.get_tree(
-            obj.cfg.owfs.prefix | "server", min_depth=1, max_depth=1
+            prefix | "server", min_depth=1, max_depth=1
         ):
             print(r.path[-1], file=obj.stdout)
         return
@@ -174,14 +184,14 @@ async def server_(obj, name, host, port, delete):
             else:
                 value.port = int(port)
     elif delete:
-        res = await obj.client.delete_tree(obj.cfg.owfs.prefix | "server" | name, nchain=obj.meta)
+        res = await obj.client.delete_tree(prefix | "server" | name, nchain=obj.meta)
         if obj.meta:
             yprint(res, stream=obj.stdout)
         return
     else:
         value = None
     res = await node_attr(
-        obj, obj.cfg.owfs.prefix | "server" | name, ((P("server"), value),),(),())
+        obj, prefix | "server" | name, ((P("server"), value),),(),())
     if res and obj.meta:
         yprint(res, stream=obj.stdout)
 

@@ -57,14 +57,5 @@ class Cell:
         pass
 
 
-class Static(Reader):
-    def __init__(self, parent, name, cfg, **kw):
-        super().__init__(parent, name, cfg=cfg)
-        self.val = cfg.value
-
-    async def read_(self):
-        return self.val
-
-
 class Batt(BaseBMS):
     pass

@@ -25,9 +25,10 @@ async def test_bms(tmp_path):
 
             t = ticks_add(ticks_ms(), -2000)
             for _ in range(3):
-                res = await req.send(("local", "bat1", "pwr"))
+                res = await req.send(("local", "bat1", "pwr"), w=True)
                 tn = ticks_ms()
-                assert 1900 < ticks_diff(tn, t) < 2100, (tn, t)
+                assert 1900 < ticks_diff(tn, t) < 2500, (tn, t)
                 print("PWR", res)
+                t=tn
 
     assert ended

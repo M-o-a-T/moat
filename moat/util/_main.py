@@ -15,6 +15,7 @@ from .main import load_subgroup
 from .msgpack import packer, stream_unpacker
 from .times import humandelta, time_until
 from .yaml import yload, yprint
+from .path import P
 
 log = logging.getLogger()
 
@@ -117,3 +118,30 @@ async def msgpack(decode, path):
         with sys.stdin if path == "-" else open(path, "r") as f:
             for obj in yload(f, multi=True):
                 sys.stdout.buffer.write(packer(obj))
+
+@cli.command("cfg")
+@click.argument("path", nargs=1)
+@click.pass_obj
+async def cfg_dump(obj, path):
+    """Emit the current configuration as a YAML file.
+
+    You can limit the output by path elements.
+    E.g., "cfg kv.connect.host" will print "localhost".
+
+    Single values are printed with a trailing line feed.
+
+    Dump the whole config with "moat util cfg :".
+    """
+    cfg = obj.cfg
+    for p in P(path):
+        try:
+            cfg = cfg[p]
+        except KeyError:
+            if obj.debug:
+                print("Unknown:", p, file=sys.stderr)
+            sys.exit(1)
+    if isinstance(cfg, str):
+        print(cfg, file=obj.stdout)
+    else:
+        yprint(cfg, stream=obj.stdout)
+

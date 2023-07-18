@@ -19,7 +19,7 @@ dynamic = [ "version",]
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-kv-inv"
-description = "Inventory management for DistKV"
+description = "Inventory management for MoaT-KV"
 readme = "README.rst"
 [[project.authors]]
 email = "matthias@urlichs.de"

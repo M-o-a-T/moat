@@ -3,7 +3,7 @@ import anyio
 from functools import partial
 from asyncowfs.mock import some_server
 
-from distkv_ext.owfs.task import task
+from .task import task
 
 PORT = ((os.getpid() + 101) % 9999) + 40000
 

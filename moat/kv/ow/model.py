@@ -1,12 +1,12 @@
 """
-DistKV client data model for 1wire
+Moat-KV client data model for 1wire
 """
 import anyio
 
 from moat.util import combine_dict, attrdict
-from distkv.obj import ClientEntry, ClientRoot, AttrClientEntry
-from distkv.errors import ErrorRoot
-from distkv.exceptions import ClientChainError
+from moat.kv.obj import ClientEntry, ClientRoot, AttrClientEntry
+from moat.kv.errors import ErrorRoot
+from moat.kv.exceptions import ClientChainError
 from collections.abc import Mapping
 
 import logging
@@ -266,7 +266,7 @@ class ServerRoot(ClientEntry):
 class OWFSroot(ClientRoot):
     cls = {}
     reg = {}
-    CFG = "owfs"
+    CFG = "ow"
     err = None
 
     async def run_starting(self):

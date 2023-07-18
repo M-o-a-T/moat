@@ -1,5 +1,5 @@
 """
-Test program cloned from asyncowfs, but using DistKV for end-to-semi-end testing.
+Test program cloned from asyncowfs, but using MoaT-KV for end-to-semi-end testing.
 """
 import sys
 import anyio
@@ -7,12 +7,12 @@ from copy import deepcopy
 from functools import partial
 
 from asyncowfs.mock import structs
-from distkv.mock.mqtt import stdtest
+from moat.kv.mock.mqtt import stdtest
 
 from moat.util import attrdict, Path, P, load_ext
-from distkv.data import data_get
+from moat.kv.data import data_get
 
-owfs_mock = load_ext("distkv_ext.owfs", "mock")
+owfs_mock = load_ext("moat.kv.ow", "mock")
 
 import logging
 

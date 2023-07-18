@@ -2,7 +2,7 @@
 
 import anyio
 from moat.util import P
-from distkv.client import open_client
+from moat.kv.client import open_client
 
 async def mod_owfs():
     async with open_client() as c:

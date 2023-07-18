@@ -2,9 +2,9 @@
 Using DistOWFS
 ==============
 
-Run "distkv client owfs monitor" to connect to the server on localhost.
+Run "moat kw ow monitor" to connect to the server on localhost.
 
-See "distkv dump cfg owfs" for configuration options. Specifically, use
+See "moat dump cfg owfs" for configuration options. Specifically, use
 this config snippet to connect to two external servers instead of localhost::
 
    owfs:
@@ -17,12 +17,12 @@ Command line
 ============
 
 
-.. program:: distkv client owfs
+.. program:: moat kw ow
 
 The main entry point for this extension.
 
 
-.. program:: distkv client owfs list
+.. program:: moat kw ow list
 
 Print the current state of your 1wire devices.
 
@@ -40,7 +40,7 @@ solely for displaying the configuration of its interaction with DistKV.
    Use '-' to show the data stored at the family entry.
 
 
-.. program:: distkv client owfs monitor
+.. program:: moat kw ow monitor
 
 This is a stand-alone 1wire monitor. It connects to all configured servers
 and runs polls and monitors.
@@ -48,7 +48,7 @@ and runs polls and monitors.
 No options yet.
 
 
-.. program:: distkv client owfs poll
+.. program:: moat kw ow poll
 
 Configure polling.
 
@@ -72,7 +72,7 @@ this might cause results to be read more often than configured here.
    The interval to poll at. Use ``-`` to disable polling.
 
 
-.. program:: distkv client owfs set
+.. program:: moat kw ow set
 
 You can use this command to add arbitrary values to a device's entry. Use
 this e.g. to add a note where the device is located, or to signal your own

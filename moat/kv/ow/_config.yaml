@@ -1,4 +1,4 @@
 kv:
-  owfs:
+  ow:
     prefix: !P :.distkv.onewire
     port: 4304

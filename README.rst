@@ -1,8 +1,8 @@
-========
-DistOWFS
-========
+==========
+MoaT-KV-OW
+==========
 
-DistOWFS is a link between 1wire and DistKV.
+This is a link between 1wire and MoaT-KV.
 
 It will
 
@@ -10,8 +10,8 @@ It will
 
 * poll these devices as specified
 
-* write values that it reads from 1wire to some DistKV entry
+* write values that it reads from 1wire to some MoaT-KV entry
 
-* monitor a DistKV entry and write any updates to 1wire
+* monitor a MoaT-KV entry and write any updates to 1wire
 
-* work with DistKV's runner system, either centrally or distributed
+* work with MoaT-KV's runner system, either centrally or distributed

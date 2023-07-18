@@ -14,7 +14,7 @@ from asyncowfs.event import (
 from collections.abc import Mapping
 
 from moat.util import combine_dict, NotGiven, Path
-from distkv_ext.owfs.model import OWFSroot
+from .model import OWFSroot
 
 import logging
 
@@ -70,7 +70,7 @@ async def task(client, cfg, server=None, evt=None):
     async with OWFS() as ow:
         hd = await OWFSroot.as_handler(client)
         await ow.add_task(mon, ow, hd)
-        port = cfg.owfs.port
+        port = cfg.kv.ow.port
         if not server:
             si = ((s._name, s) for s in hd.server)
         elif isinstance(server, str):

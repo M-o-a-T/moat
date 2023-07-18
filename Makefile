@@ -1,14 +1,14 @@
 #!/usr/bin/make -f
 
-PACKAGE=distkv_ext
-PYPI=distkv_owfs
+PACKAGE = moat-kv-ow
+MAKEINCL ?= $(shell python3 -mmoat src path)/make/py
 
-ifneq ($(wildcard /usr/share/sourcemgr/make/py),)
-include /usr/share/sourcemgr/make/py
+ifneq ($(wildcard $(MAKEINCL)),)
+include $(MAKEINCL)
 # availabe via http://github.com/smurfix/sourcemgr
 
 else
 %:
-		@echo "Please use 'python setup.py'."
-		@exit 1
+	@echo "Please fix 'python3 -mmoat src path'."
+	@exit 1
 endif

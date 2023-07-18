@@ -2,8 +2,8 @@
 
 import asyncclick as click
 from moat.util import yprint, attrdict, NotGiven, P, Path, as_service, attr_args
-from distkv.data import data_get, node_attr
-from moat.kv.owfs.model import OWFSroot
+from moat.kv.data import data_get, node_attr
+from .model import OWFSroot
 
 import logging
 
@@ -28,7 +28,7 @@ async def list_(obj, device, family):
     if device is not None and family is not None:
         raise click.UsageError("Family and device code can't both be used")
 
-    prefix = obj.cfg.kv.owfs.prefix
+    prefix = obj.cfg.kv.ow.prefix
     if family:
         f = int(family, 16)
         path = Path(f)
@@ -65,7 +65,7 @@ async def list_(obj, device, family):
     await data_get(obj, prefix + path, as_dict="_", path_mangle=pm)
 
 
-@cli.command("attr", help="Mirror a device attribute to/from DistKV")
+@cli.command("attr", help="Mirror a device attribute to/from MoaT-KV")
 @click.option("-d", "--device", help="Device to access.")
 @click.option("-f", "--family", help="Device family to modify.")
 @click.option("-i", "--interval", type=float, help="read value every N seconds")
@@ -83,7 +83,7 @@ async def attr__(obj, device, family, write, attr, interval, path, attr_):
     values.
     """
     path = P(path)
-    prefix = obj.cfg.kv.owfs.prefix
+    prefix = obj.cfg.kv.ow.prefix
     if (device is not None) + (family is not None) != 1:
         raise click.UsageError("Either family or device code must be given")
     if interval and write:
@@ -143,7 +143,7 @@ async def set_(obj, device, family, subpath, vars_, eval_, path_):
         f, d = device.split(".", 2)[0:2]
         fd = (int(f, 16), int(d, 16))
 
-    res = await node_attr(obj, obj.cfg.kv.owfs.prefix + fd + subpath, vars_, eval_, path_)
+    res = await node_attr(obj, obj.cfg.kv.ow.prefix + fd + subpath, vars_, eval_, path_)
     if res and obj.meta:
         yprint(res, stream=obj.stdout)
 
@@ -160,7 +160,7 @@ async def server_(obj, name, host, port, delete):
 
     No arguments: list them.
     """
-    prefix = obj.cfg.kv.owfs.prefix
+    prefix = obj.cfg.kv.ow.prefix
     if not name:
         if host or port or delete:
             raise click.UsageError("Use a server name to set parameters")
@@ -201,7 +201,7 @@ async def server_(obj, name, host, port, delete):
 @click.argument("server", nargs=-1)
 async def monitor(obj, server):
     """Stand-alone task to monitor one or more OWFS servers."""
-    from distkv_ext.owfs.task import task
+    from .task import task
 
     async with as_service(obj) as srv:
         await task(obj.client, obj.cfg, server, srv)

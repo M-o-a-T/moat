@@ -88,7 +88,11 @@ class ADC(BaseCmd):
 
         self.val = atanh(((cfg.init - self.min) / (self.max - self.min) - 0.5) * 2) if "init" in cfg else 0
         self.bias = 0
-        self.rand = random.Random(seed)
+        try:
+            self.rand = random.Random(cfg.seed if "seed" in cfg else None)
+        except AttributeError:
+            from moat.util.random import Random
+            self.rand = Random(cfg.seed if "seed" in cfg else random.getrandbits(32))
 
     async def cmd_r(self):
         "read current value"

@@ -4,8 +4,8 @@ import machine
 import sys
 from moat.util import NotGiven, drop_proxy
 
-from .cmd import BaseCmd, RootCmd
-from .compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms
+from moat.micro.cmd import BaseCmd, RootCmd
+from moat.micro.compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms
 
 
 def _complex(v):

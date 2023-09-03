@@ -13,8 +13,9 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
     import os
 
     from ..util import import_
-    from .base import StdBase
     from .compat import Event, TaskGroup, print_exc, sleep_ms
+
+    from app._sys import StdBase
 
     if isinstance(cfg, str):
         import msgpack

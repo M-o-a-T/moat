@@ -285,8 +285,8 @@ class SerialPackerStream(_Base):
 
 
 try:
-    from uasyncio import core
-    from uasyncio.stream import Stream
+    from asyncio import core
+    from asyncio.stream import Stream
 except ImportError:
     pass
 else:

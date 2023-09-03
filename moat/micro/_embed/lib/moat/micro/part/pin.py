@@ -2,7 +2,7 @@
 Module for pins
 """
 import machine as M
-import uasyncio
+import asyncio
 
 from moat.micro.compat import idle
 
@@ -43,7 +43,7 @@ class Pin(sup):
     def __new__(cls, cfg, **kw):
         kw["id"] = cfg.pin
         self = super().__new__(cls, **kw)
-        self.flag = uasyncio.ThreadSafeFlag()
+        self.flag = asyncio.ThreadSafeFlag()
         return self
 
     def __init__(self, cfg, **kw):

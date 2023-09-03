@@ -1,6 +1,6 @@
 """
 Compatibility wrappers that allows MoaT code to run on CPython/anyio as
-well as MicroPython/uasyncio.
+well as MicroPython/asyncio.
 
 Well, for the most part.
 """

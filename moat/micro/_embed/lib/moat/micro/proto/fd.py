@@ -3,7 +3,7 @@ import errno as E
 
 import ffi
 import sys
-from uasyncio import TimeoutError, core, wait_for_ms
+from asyncio import TimeoutError, core, wait_for_ms
 
 C = ffi.open(None)
 _err = ctypes.bytes_at(C.addr("errno"), 4)

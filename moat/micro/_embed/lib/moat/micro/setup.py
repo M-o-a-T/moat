@@ -1,7 +1,7 @@
 # MoaT Python setup
 
 # We hook our own reader into the micropython REPL
-# which uses uasyncio to fetch the actual data.
+# which uses asyncio to fetch the actual data.
 
 from micropython import alloc_emergency_exception_buf
 
@@ -13,9 +13,9 @@ if hasattr(os, "dupterm"):
     import sys
 
     import io
-    from uasyncio import core as _core
-    from uasyncio import run_until_complete as _wc
-    from uasyncio.stream import Stream as _str
+    from asyncio import core as _core
+    from asyncio import run_until_complete as _wc
+    from asyncio.stream import Stream as _str
 
     _w_read = _core._io_queue.queue_read
     _w_write = _core._io_queue.queue_write

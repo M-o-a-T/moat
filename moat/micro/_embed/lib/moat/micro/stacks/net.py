@@ -1,6 +1,6 @@
 import sys
 
-from uasyncio.queues import Queue
+from asyncio.queues import Queue
 
 from ..cmd import Request
 from ..compat import Event, TaskGroup, print_exc, run_server

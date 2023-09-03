@@ -1,15 +1,15 @@
-import uasyncio
+import asyncio
 import sys
 
-Event = uasyncio.Event
-Lock = uasyncio.Lock
-sleep = uasyncio.sleep
-sleep_ms = uasyncio.sleep_ms
-TimeoutError = uasyncio.TimeoutError
-_run = uasyncio.run
-_tg = uasyncio.TaskGroup
-CancelledError = uasyncio.CancelledError
-from uasyncio.queues import Queue, QueueEmpty, QueueFull
+Event = asyncio.Event
+Lock = asyncio.Lock
+sleep = asyncio.sleep
+sleep_ms = asyncio.sleep_ms
+TimeoutError = asyncio.TimeoutError
+_run = asyncio.run
+_tg = asyncio.TaskGroup
+CancelledError = asyncio.CancelledError
+from asyncio.queues import Queue, QueueEmpty, QueueFull
 from utime import ticks_add, ticks_diff, ticks_ms
 
 
@@ -51,16 +51,16 @@ async def idle():
 
 def wait_for(timeout, p, *a, **k):
     """
-    uasyncio.wait_for() but with sane calling convention
+    asyncio.wait_for() but with sane calling convention
     """
-    return uasyncio.wait_for(p(*a, **k), timeout)
+    return asyncio.wait_for(p(*a, **k), timeout)
 
 
 def wait_for_ms(timeout, p, *a, **k):
     """
-    uasyncio.wait_for_ms() but with sane calling convention
+    asyncio.wait_for_ms() but with sane calling convention
     """
-    return uasyncio.wait_for_ms(p(*a, **k), timeout)
+    return asyncio.wait_for_ms(p(*a, **k), timeout)
 
 
 class _MsecIter:
@@ -112,7 +112,7 @@ def run(p, *a, **k):
 
 
 async def run_server(*a, **kw):
-    from uasyncio import run_server as rs
+    from asyncio import run_server as rs
 
     return await rs(*a, **kw)
 

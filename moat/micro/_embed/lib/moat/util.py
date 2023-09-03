@@ -1,5 +1,5 @@
 import sys
-from uasyncio.queues import Queue, QueueEmpty, QueueFull
+from asyncio.queues import Queue, QueueEmpty, QueueFull
 
 from moat.micro.compat import Event
 

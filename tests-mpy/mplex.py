@@ -44,14 +44,14 @@ for p in os.getenv("PYTHONPATH").split(":"):
 sys.path.insert(0,".")
 sys.path.insert(0,d+"/lib/micropython/extmod")
 
-# TODO uasyncio's lazy importer doesn't yet mesh well with our micropython path hack
-import uasyncio
-import uasyncio.event
-import uasyncio.lock
-import uasyncio.taskgroup
-import uasyncio.stream
-sys.path.insert(0,d+"/lib/micropython-lib/uasyncio.queues/")
-import uasyncio.queues
+# TODO asyncio's lazy importer doesn't yet mesh well with our micropython path hack
+import asyncio
+import asyncio.event
+import asyncio.lock
+import asyncio.taskgroup
+import asyncio.stream
+sys.path.insert(0,d+"/lib/micropython-lib/asyncio.queues/")
+import asyncio.queues
 
 import main
 main.go_moat("mode", fake_end=False, log=True)

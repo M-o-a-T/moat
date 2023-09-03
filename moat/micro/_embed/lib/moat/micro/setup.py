@@ -12,7 +12,7 @@ import os
 if hasattr(os, "dupterm"):
     import sys
 
-    import uio
+    import io
     from uasyncio import core as _core
     from uasyncio import run_until_complete as _wc
     from uasyncio.stream import Stream as _str
@@ -20,7 +20,7 @@ if hasattr(os, "dupterm"):
     _w_read = _core._io_queue.queue_read
     _w_write = _core._io_queue.queue_write
 
-    class MoaTconsole(uio.IOBase):
+    class MoaTconsole(io.IOBase):
         # public methods
         def __init__(self, s):
             # %s is a normal or async stream

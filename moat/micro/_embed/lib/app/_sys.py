@@ -300,7 +300,7 @@ class SysCmd(BaseCmd):
         m = import_app(m, drop=True)
         m = m(self.parent, n, kw, self.base.cfg)
         setattr(self.parent, "dis_" + n, m)
-        await self.parent._tg.spawn(m.run_sub, _name="base.load")
+        await self.parent._tg.spawn(m._run_sub, _name="base.load")
 
     async def cmd_machid(self):
         """

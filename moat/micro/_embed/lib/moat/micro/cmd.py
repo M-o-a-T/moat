@@ -73,13 +73,13 @@ class BaseCmd(_Stacked):
 
     async def run(self):
         """
-        Main loop for this part.
+        Main loop for this part of your code.
 
         By default, does nothing.
         """
         pass  # pylint: disable=unnecessary-pass
 
-    async def run_sub(self):
+    async def _run_sub(self):
         """
         Runs my (and my children's) "run" methods.
         """
@@ -92,7 +92,7 @@ class BaseCmd(_Stacked):
                     continue
                 v = getattr(self, k)
                 if isinstance(v, BaseCmd):
-                    await tg.spawn(v.run_sub, _name="sub:" + k)
+                    await tg.spawn(v._run_sub, _name="sub:" + k)
 
     async def aclose(self):
         """

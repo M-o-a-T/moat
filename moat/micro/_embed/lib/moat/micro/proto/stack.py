@@ -60,7 +60,7 @@ class NotImpl:
         print("RUN of", self.__class__.__name__, file=sys.stderr)
         pass
 
-    async def run_sub(self):
+    async def _run_sub(self):
         pass
 
 

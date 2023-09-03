@@ -10,7 +10,7 @@ WDT = None
 
 
 def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
-    import uos
+    import os
 
     from ..util import import_
     from .base import StdBase
@@ -111,7 +111,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
             await run_console(force_write=True)
 
         elif sys.platform == "linux":
-            port = uos.getenv("MOATPORT")
+            port = os.getenv("MOATPORT")
             if port:
                 await tg.spawn(run_network, int(port), _name="run_net")
             else:

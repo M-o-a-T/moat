@@ -1,7 +1,6 @@
 import gc
 
 import machine
-import uos
 import sys
 from moat.util import NotGiven, drop_proxy
 

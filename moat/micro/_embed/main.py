@@ -33,7 +33,6 @@ def go_moat(state=None, fake_end=True, log=False):
       Always work normally.
     """
 
-    import uos
     import sys
     import utime
 

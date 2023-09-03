@@ -5,7 +5,7 @@
 
 import struct
 
-import uos as os
+import os
 import sys
 from micropython import const
 from moat.util import attrdict

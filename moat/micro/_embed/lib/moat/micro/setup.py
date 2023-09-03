@@ -7,9 +7,9 @@ from micropython import alloc_emergency_exception_buf
 
 alloc_emergency_exception_buf(300)
 
-import uos
+import os
 
-if hasattr(uos, "dupterm"):
+if hasattr(os, "dupterm"):
     import sys
 
     import uio
@@ -35,9 +35,9 @@ if hasattr(uos, "dupterm"):
         def readinto(self, buf):
             return _wc(self.s.readinto(buf))
 
-    cons = uos.dupterm(None)
+    cons = os.dupterm(None)
     if cons is None:
         cons = MoaTconsole(sys.stdin.buffer)
-    uos.dupterm(cons)
+    os.dupterm(cons)
 else:
     pass

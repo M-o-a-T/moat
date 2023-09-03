@@ -1,7 +1,7 @@
 import errno
 
 import machine
-import uos
+import os
 from moat.util import as_proxy
 
 from moat.micro.cmd import BaseCmd
@@ -110,19 +110,19 @@ class FsCmd(BaseCmd):
         p = self._fsp(p)
         if x:
             try:
-                uos.listdir(p)
+                os.listdir(p)
             except AttributeError:
-                return [dict(n=x[0], t=x[1], s=x[3]) for x in uos.ilistdir(p)]
+                return [dict(n=x[0], t=x[1], s=x[3]) for x in os.ilistdir(p)]
         else:
             try:
-                return uos.listdir(p)
+                return os.listdir(p)
             except AttributeError:
-                return [x[0] for x in uos.ilistdir(p)]
+                return [x[0] for x in os.ilistdir(p)]
 
     def cmd_mkdir(self, p):
         # new dir
         p = self._fsp(p)
-        uos.mkdir(p)
+        os.mkdir(p)
 
     def cmd_hash(self, p):
         # Hash the contents of a file
@@ -143,7 +143,7 @@ class FsCmd(BaseCmd):
     def cmd_stat(self, p):
         p = self._fsp(p)
         try:
-            s = uos.stat(p)
+            s = os.stat(p)
         except OSError as e:
             if e.errno == errno.ENOENT:
                 raise FileNotFoundError(p)
@@ -159,37 +159,37 @@ class FsCmd(BaseCmd):
         # move file
         p = self._fsp(s)
         q = self._fsp(d)
-        uos.stat(p)  # must exist
+        os.stat(p)  # must exist
         if n:
             # dest must not exist
             try:
-                uos.stat(q)
+                os.stat(q)
             except OSError as err:
                 if err.errno != errno.ENOENT:
                     raise
             else:
                 raise FileExistsError(q)
         if x is None:
-            uos.rename(p, q)
+            os.rename(p, q)
         else:
             r = self._fsp(x)
             # exchange contents, via third file
             try:
-                uos.stat(r)
+                os.stat(r)
             except OSError as err:
                 if err.errno != errno.ENOENT:
                     raise
             else:
                 raise FileExistsError(r)
-            uos.rename(p, r)
-            uos.rename(q, p)
-            uos.rename(r, q)
+            os.rename(p, r)
+            os.rename(q, p)
+            os.rename(r, q)
 
     def cmd_rm(self, p):
         # unlink
         p = self._fsp(p)
         try:
-            uos.remove(p)
+            os.remove(p)
         except OSError as e:
             if e.errno == errno.ENOENT:
                 raise FileNotFoundError(p)
@@ -199,7 +199,7 @@ class FsCmd(BaseCmd):
         # unlink dir
         p = self._fsp(p)
         try:
-            uos.rmdir(p)
+            os.rmdir(p)
         except OSError as e:
             if e.errno == errno.ENOENT:
                 raise FileNotFoundError(p)

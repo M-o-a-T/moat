@@ -1,42 +1,42 @@
 # micropython
 
 import sys
-import uos
+import os
 
 dd = sys.argv[1] if sys.argv else "/tmp/test-upy"
 mode = sys.argv[2] if len(sys.argv)>2 else "once"
 root=dd+"/root"
 try:
-    uos.mkdir(dd)
-    uos.mkdir(root)
+    os.mkdir(dd)
+    os.mkdir(root)
 except OSError:
     pass
 
 
-h = uos.getcwd()
-d = uos.sep.join(sys.argv[0].split(uos.sep)[:-2])  # /wherever/moat[/micro]
+h = os.getcwd()
+d = os.sep.join(sys.argv[0].split(os.sep)[:-2])  # /wherever/moat[/micro]
 try:
-    uos.stat(d+uos.sep+"micro")
+    os.stat(d+os.sep+"micro")
 except OSError:
     pass
 else:
-    d+=uos.sep+"micro"
-uos.chdir(dd)
+    d+=os.sep+"micro"
+os.chdir(dd)
 
-for p in uos.getenv("PYTHONPATH").split(":"):
+for p in os.getenv("PYTHONPATH").split(":"):
     if p == ".":
         p = h
     elif p.startswith("."):
         p = h+"/"+p
     ep = p+"/moat/micro/_embed"
     try:
-        uos.stat(ep)
+        os.stat(ep)
     except OSError:
         pass
     else:
         sys.path.insert(0,ep)
         try:
-            uos.stat(ep+"/lib")
+            os.stat(ep+"/lib")
         except OSError:
             pass
         else:

@@ -6,7 +6,7 @@
 import struct
 
 import uos as os
-import usys as sys
+import sys
 from micropython import const
 from moat.util import attrdict
 from uio import BytesIO

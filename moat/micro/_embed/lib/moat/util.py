@@ -1,4 +1,4 @@
-import usys
+import sys
 from uasyncio.queues import Queue, QueueEmpty, QueueFull
 
 from moat.micro.compat import Event
@@ -289,7 +289,7 @@ class BroadcastReader:
             self._q.put_nowait(value)
         except WouldBlock:
             x = self._q.get_nowait()
-            print("Dropped:", repr(x), file=usys.stderr)
+            print("Dropped:", repr(x), file=sys.stderr)
             self._q.put_nowait(value)
             self.loss += 1
 

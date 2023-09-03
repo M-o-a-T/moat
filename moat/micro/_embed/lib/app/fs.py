@@ -2,7 +2,6 @@ import errno
 
 import machine
 import uos
-import usys
 from moat.util import as_proxy
 
 from moat.micro.cmd import BaseCmd

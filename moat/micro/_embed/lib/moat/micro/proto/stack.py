@@ -6,7 +6,7 @@
 # except for using print() instead of logging
 # and not understanding anyio exceptions.
 
-import usys
+import sys
 
 from ..compat import TaskGroup
 
@@ -57,7 +57,7 @@ class NotImpl:
         raise RuntimeError()
 
     async def run(self):
-        print("RUN of", self.__class__.__name__, file=usys.stderr)
+        print("RUN of", self.__class__.__name__, file=sys.stderr)
         pass
 
     async def run_sub(self):
@@ -104,14 +104,14 @@ class Logger(_Stacked):
         self.txt = txt
 
     async def run(self):
-        print(f"X:{self.txt} start", file=usys.stderr)
+        print(f"X:{self.txt} start", file=sys.stderr)
         try:
             await super().run()
         except Exception as exc:
-            print(f"X:{self.txt} stop {repr(exc)}", file=usys.stderr)
+            print(f"X:{self.txt} stop {repr(exc)}", file=sys.stderr)
             raise
         else:
-            print(f"X:{self.txt} stop", file=usys.stderr)
+            print(f"X:{self.txt} stop", file=sys.stderr)
 
     async def send(self, a, m=None):
         if m is None:
@@ -123,10 +123,10 @@ class Logger(_Stacked):
         else:
             mm = repr(m)
         if a is None:
-            print(f"S:{self.txt} {mm}", file=usys.stderr)
+            print(f"S:{self.txt} {mm}", file=sys.stderr)
             await self.parent.send(m)
         else:
-            print(f"S:{self.txt} {a} {mm}", file=usys.stderr)
+            print(f"S:{self.txt} {a} {mm}", file=sys.stderr)
             await self.parent.send(a, m)
 
     async def dispatch(self, a, m=None):
@@ -136,12 +136,12 @@ class Logger(_Stacked):
 
         mm = " ".join(f"{k}={repr(v)}" for k, v in m.items())
         if a is None:
-            print(f"D:{self.txt} {mm}", file=usys.stderr)
+            print(f"D:{self.txt} {mm}", file=sys.stderr)
             await self.child.dispatch(m)
         else:
-            print(f"D:{self.txt} {a} {mm}", file=usys.stderr)
+            print(f"D:{self.txt} {a} {mm}", file=sys.stderr)
             await self.child.dispatch(a, m)
-        print(f"{self.txt}:\n{repr(vars(self.child))}", file=usys.stderr)
+        print(f"{self.txt}:\n{repr(vars(self.child))}", file=sys.stderr)
 
     async def recv(self):
         msg = await self.parent.recv()
@@ -149,5 +149,5 @@ class Logger(_Stacked):
             mm = " ".join(f"{k}={repr(v)}" for k, v in msg.items())
         else:
             mm = msg
-        print(f"R:{self.txt} {mm}", file=usys.stderr)
+        print(f"R:{self.txt} {mm}", file=sys.stderr)
         return msg

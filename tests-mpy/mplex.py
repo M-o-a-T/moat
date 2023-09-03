@@ -1,10 +1,10 @@
 # micropython
 
-import usys
+import sys
 import uos
 
-dd = usys.argv[1] if usys.argv else "/tmp/test-upy"
-mode = usys.argv[2] if len(usys.argv)>2 else "once"
+dd = sys.argv[1] if sys.argv else "/tmp/test-upy"
+mode = sys.argv[2] if len(sys.argv)>2 else "once"
 root=dd+"/root"
 try:
     uos.mkdir(dd)
@@ -14,7 +14,7 @@ except OSError:
 
 
 h = uos.getcwd()
-d = uos.sep.join(usys.argv[0].split(uos.sep)[:-2])  # /wherever/moat[/micro]
+d = uos.sep.join(sys.argv[0].split(uos.sep)[:-2])  # /wherever/moat[/micro]
 try:
     uos.stat(d+uos.sep+"micro")
 except OSError:
@@ -34,15 +34,15 @@ for p in uos.getenv("PYTHONPATH").split(":"):
     except OSError:
         pass
     else:
-        usys.path.insert(0,ep)
+        sys.path.insert(0,ep)
         try:
             uos.stat(ep+"/lib")
         except OSError:
             pass
         else:
-            usys.path.insert(0,ep+"/lib")
-usys.path.insert(0,".")
-usys.path.insert(0,d+"/lib/micropython/extmod")
+            sys.path.insert(0,ep+"/lib")
+sys.path.insert(0,".")
+sys.path.insert(0,d+"/lib/micropython/extmod")
 
 # TODO uasyncio's lazy importer doesn't yet mesh well with our micropython path hack
 import uasyncio
@@ -50,7 +50,7 @@ import uasyncio.event
 import uasyncio.lock
 import uasyncio.taskgroup
 import uasyncio.stream
-usys.path.insert(0,d+"/lib/micropython-lib/uasyncio.queues/")
+sys.path.insert(0,d+"/lib/micropython-lib/uasyncio.queues/")
 import uasyncio.queues
 
 import main

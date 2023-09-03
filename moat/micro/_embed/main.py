@@ -34,7 +34,7 @@ def go_moat(state=None, fake_end=True, log=False):
     """
 
     import uos
-    import usys
+    import sys
     import utime
 
     fallback = False
@@ -54,7 +54,7 @@ def go_moat(state=None, fake_end=True, log=False):
         try:
             f = open("moat.state", "r")
         except OSError:
-            print("No 'moat.state' found", file=usys.stderr)
+            print("No 'moat.state' found", file=sys.stderr)
             return
         else:
             state = f.read()
@@ -70,28 +70,28 @@ def go_moat(state=None, fake_end=True, log=False):
         f.close()
 
     if state[0:4] == "skip":
-        print(state, file=usys.stderr)
+        print(state, file=sys.stderr)
         return
 
     # no empty path
     try:
-        usys.path.remove("")
+        sys.path.remove("")
     except ValueError:
         pass
     # /lib to the front
     try:
-        usys.path.remove("/lib")
+        sys.path.remove("/lib")
     except ValueError:
         pass
-    usys.path.insert(0, "/lib")
+    sys.path.insert(0, "/lib")
 
     if state in ("fallback", "fbskip"):
-        import usys
+        import sys
 
-        usys.path.insert(0, "/fallback")
+        sys.path.insert(0, "/fallback")
         fallback = True
 
-    print("Start MoaT:", state, file=usys.stderr)
+    print("Start MoaT:", state, file=sys.stderr)
     from moat.micro.compat import print_exc
     from moat.micro.main import main
 
@@ -100,24 +100,24 @@ def go_moat(state=None, fake_end=True, log=False):
         main(state=state, fake_end=fake_end, log=log, cfg=cfg, fallback=fallback)
 
     except KeyboardInterrupt:
-        print("MoaT stopped.", file=usys.stderr)
+        print("MoaT stopped.", file=sys.stderr)
 
     except SystemExit:
         f = open("moat.state", "r")
         new_state = f.read()
         f.close()
-        print("REBOOT to", new_state, file=usys.stderr)
+        print("REBOOT to", new_state, file=sys.stderr)
         utime.sleep_ms(100)
         machine.soft_reset()
 
     except BaseException as exc:
-        if usys.platform == "linux":
-            if isinstance(exc, EOFError) and usys.platform == "linux":
-                print("MoaT stopped: EOF", file=usys.stderr)
-                usys.exit(0)
-            print("CRASH! Exiting!", file=usys.stderr)
+        if sys.platform == "linux":
+            if isinstance(exc, EOFError) and sys.platform == "linux":
+                print("MoaT stopped: EOF", file=sys.stderr)
+                sys.exit(0)
+            print("CRASH! Exiting!", file=sys.stderr)
             print_exc(exc)
-            usys.exit(1)
+            sys.exit(1)
 
         try:
             new_state = crash[state]
@@ -128,14 +128,14 @@ def go_moat(state=None, fake_end=True, log=False):
             f.write(new_state)
             f.close()
 
-        print("CRASH! REBOOT to", new_state, file=usys.stderr)
+        print("CRASH! REBOOT to", new_state, file=sys.stderr)
         print_exc(exc)
         utime.sleep_ms(500)
         machine.soft_reset()
 
     else:
-        print("MoaT Ended.", file=usys.stderr)
-        usys.exit(0)
+        print("MoaT Ended.", file=sys.stderr)
+        sys.exit(0)
 
 
 def g():

@@ -2,7 +2,7 @@ import ctypes
 import errno as E
 
 import ffi
-import usys
+import sys
 from uasyncio import TimeoutError, core, wait_for_ms
 
 C = ffi.open(None)
@@ -54,7 +54,7 @@ class AsyncFD:
             try:
                 await wait_for_ms(_rdq(self.fd_i), 100)
             except TimeoutError:
-                print("R?", self, file=usys.stderr)
+                print("R?", self, file=sys.stderr)
                 await _rdq(self.fd_i)
         else:
             await _rdq(self.fd_i)
@@ -66,7 +66,7 @@ class AsyncFD:
 
         m = memoryview(buf)
         if self.log:
-            print("R:", bytes(m[:ln]), file=usys.stderr)
+            print("R:", bytes(m[:ln]), file=sys.stderr)
         return ln
 
     async def recv(self, n=512):
@@ -87,7 +87,7 @@ class AsyncFD:
                     try:
                         await wait_for_ms(_wrq(self.fd_o), 100)
                     except TimeoutError:
-                        print("W?", len(buf), file=usys.stderr)
+                        print("W?", len(buf), file=sys.stderr)
                         await _wrq(self.fd_o)
                 else:
                     await _wrq(self.fd_o)
@@ -96,11 +96,11 @@ class AsyncFD:
                 err = errno()
                 if self.log:
                     if ln == len(b):
-                        print("w:", bytes(b), file=usys.stderr)
+                        print("w:", bytes(b), file=sys.stderr)
                     elif ln == -1:
-                        print("w:", bytes(b), "=E", errno(), file=usys.stderr)
+                        print("w:", bytes(b), "=E", errno(), file=sys.stderr)
                     else:
-                        print("w:", bytes(b), "=", ln, file=usys.stderr)
+                        print("w:", bytes(b), "=", ln, file=sys.stderr)
 
                 if ln < 0:
                     if err == E.ENOENT:

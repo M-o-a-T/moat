@@ -2,7 +2,7 @@ import gc
 
 import machine
 import uos
-import usys
+import sys
 from moat.util import NotGiven, drop_proxy
 
 from .cmd import BaseCmd, RootCmd
@@ -206,7 +206,7 @@ class SysCmd(BaseCmd):
         fb = self.base.is_fallback
         if fb is not None:
             d["fallback"] = fb
-        d["path"] = usys.path
+        d["path"] = sys.path
         return d
 
     async def cmd_mem(self):

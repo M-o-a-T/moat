@@ -1,5 +1,5 @@
 import uasyncio
-import usys
+import sys
 
 Event = uasyncio.Event
 Lock = uasyncio.Lock
@@ -33,8 +33,8 @@ else:
 WouldBlock = (QueueFull, QueueEmpty)
 
 
-def print_exc(a, b=usys.stderr):
-    usys.print_exception(a, b)
+def print_exc(a, b=sys.stderr):
+    sys.print_exception(a, b)
 
 
 from moat.util import NotGiven
@@ -99,11 +99,11 @@ class TaskGroup(_tg):
     async def spawn(self, p, *a, _name=None, **k):
         # returns something you can cancel
 
-        # print("RUN",_name,p,a,k, file=usys.stderr)
+        # print("RUN",_name,p,a,k, file=sys.stderr)
         return self.create_task(p(*a, **k))  # , name=_name)
 
     def start_soon(self, p, *a, _name=None, **k):
-        # print("RUN",_name,p,a,k, file=usys.stderr)
+        # print("RUN",_name,p,a,k, file=sys.stderr)
         self.create_task(p(*a, **k))
 
 

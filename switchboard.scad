@@ -10,7 +10,7 @@ bot_d=20;
 
 /* [Screw-down holes] */
 // height of screw carrier
-screw_h=2.5;
+screw_h=1.8;
 // diameter of shaft
 screw_d1=4;
 // diameter of head
@@ -20,34 +20,34 @@ screw_d3=8;
 // offset screw holes from edge
 screw_off=7;
 // number of screws
-n_screw=2; //[2:5];
+n_screw=5; //[2:5];
 
 /* [Panel] */
 // panel thickness
 side_h=1;
 // distance between switches
-side_w=12;
+side_w=13;
 // height of panel
-side_d=32;
+side_d=35;
 // panel/board angle
 p_angle=80; //[60:5:90]
 // number of switches
-n_sw=2;
+n_sw=15;
 // size of holes
-hole_d=[6, 7.5];
+hole_d=[6.25, 8];
 // position of holes
 hole_off=[12, 22];
 // you can add more
 
 /* [misc] */
 // ridge between switches, for stiffness
-ridge_d=2;
+ridge_d=1.5;
 // extent of panel/board stiffening
 p_carrier=12;
 // chamfer angle for the top edge of the stiffeners
-edge_top=45;
+edge_top=80;
 
-// cutoff below
+// cutoff at the edge
 x_cut=3;
 
 /* [hidden] */
@@ -61,6 +61,7 @@ module screw_p() {
 module screw_n() {
     translate([0,0,-_d]) cylinder(h=bot_h+screw_h+2*_d,d=screw_d1);
     translate([0,0,bot_h]) cylinder(d1=screw_d1,d2=screw_d2,h=screw_h+_d);
+    translate([0,0,bot_h+screw_h]) cylinder(d=screw_d2,h=screw_h*5);
 }
 
 module side() {
@@ -118,7 +119,6 @@ module bottom() {
             translate([0,-ridge_d/2,0]) cube([bot_d,ridge_d+side_w*n_sw,bot_h]);
             place_screws() screw_p();
         }
-        place_screws() screw_n();
         translate([-_d,-ridge_d/2-_d,-side_h-ridge_d+_d]) cube([bot_d+_d,ridge_d+n_sw*side_w,side_h+ridge_d+_d]);
     }
 }
@@ -135,7 +135,8 @@ module panel() {
                 linear_extrude(ridge_d+n_sw*side_w)
                 polygon([[0,0],[xd,0],[xd*cos(p_angle), -xd*sin(p_angle)]]);
         }
-        rotate([0,90-p_angle/2,0])
+         place_screws() screw_n();
+       rotate([0,90-p_angle/2,0])
         translate([-50,-ridge_d/2-2*_d,-_d])
         cube([100,ridge_d+n_sw*side_w+4*_d,x_cut+_d]);
     }

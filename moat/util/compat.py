@@ -10,7 +10,10 @@ import traceback as _traceback
 from concurrent.futures import CancelledError
 
 import anyio as _anyio
-import greenback
+try:
+    import greenback
+except ImportError:
+    greenback = None
 
 from .queue import Queue  # pylint:disable=unused-import
 
@@ -121,7 +124,8 @@ def TaskGroup():
                 async def catch(p, a, k, *, task_status):
                     with _anyio.CancelScope() as s:
                         task_status.started(s)
-                        await greenback.ensure_portal()
+                        if greenback is not None:
+                            await greenback.ensure_portal()
                         try:
                             await p(*a, **k)
                         except CancelledError:  # error from concurrent.futures

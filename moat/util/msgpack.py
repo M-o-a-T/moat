@@ -26,11 +26,11 @@ def _encode(data):
     if isinstance(data, Path):
         # Path
         return msgpack.ExtType(3, b"".join(packer(x) for x in data))
-    if isinstance(data, Proxy):
-        # Proxy object
+    if issubclass(data, Proxy):
+        # proxy class
         return msgpack.ExtType(4, data.name.encode("utf-8"))
     if isinstance(data, Proxy):
-        # proxy class
+        # Proxy object
         return msgpack.ExtType(5, packer(data.name) + b"".join(packer(x) for x in data.data))
     try:
         name = obj2name(data)

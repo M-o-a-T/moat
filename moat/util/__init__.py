@@ -12,6 +12,44 @@ import logging as _logging
 
 _log = _logging.getLogger(__name__)
 
+
+def packer(*a, cbor=False, **k):
+    """single message packer"""
+    if cbor:
+        return _cbor.packb(*a, **k)
+    return msgpack.packb(*a, strict_types=False, use_bin_type=True, default=_msgpack._encode, **k)
+
+
+def unpacker(*a, cbor=False, **k):
+    """single message unpacker"""
+    if cbor:
+        return _cbor.unpackb(*a, **k)
+    return msgpack.unpackb(
+        *a,
+        object_pairs_hook=attrdict,
+        strict_map_key=False,
+        raw=False,
+        use_list=False,
+        ext_hook=_msgpack._decode,
+        **k,
+    )
+
+
+def stream_unpacker(*a, cbor=False, **k):
+    """stream unpacker factory"""
+    if cbor:
+        return _cbor.Unpacker(*a, **k)
+    return msgpack.Unpacker(
+        *a,
+        object_pairs_hook=attrdict,
+        strict_map_key=False,
+        raw=False,
+        use_list=False,
+        ext_hook=_msgpack._decode,
+        **k,
+    )
+
+
 from .alert import *  # noqa: F401,F403,E402  # isort:skip
 from .impl import *  # noqa: F401,F403,E402  # isort:skip
 from .dict import *  # noqa: F401,F403,E402  # isort:skip
@@ -30,11 +68,6 @@ except ImportError as exc:
 
 try:
     from .queue import *  # noqa: F401,F403
-except ImportError as exc:
-    _log.warning("Missing: %s", exc)
-
-try:
-    from .msgpack import *  # noqa: F401,F403
 except ImportError as exc:
     _log.warning("Missing: %s", exc)
 
@@ -77,3 +110,7 @@ try:
     from .main import *  # noqa: F401,F403
 except ImportError as exc:
     _log.warning("Missing: %s", exc)
+
+from . import cbor as _cbor
+from . import msgpack as _msgpack
+import msgpack

@@ -12,11 +12,10 @@ from functools import partial
 
 import msgpack
 
+from . import packer, stream_unpacker
 from .dict import attrdict
 from .path import Path
 from .proxy import Proxy, _CProxy, obj2name
-
-__all__ = ["packer", "unpacker", "stream_unpacker"]
 
 
 def _encode(data):
@@ -83,27 +82,3 @@ def _decode(code, data):
             pk.__dict__.update(next(s))
         return pk
     return msgpack.ExtType(code, data)
-
-
-# single message packer
-packer = partial(msgpack.packb, strict_types=False, use_bin_type=True, default=_encode)
-
-# single message unpacker
-unpacker = partial(
-    msgpack.unpackb,
-    object_pairs_hook=attrdict,
-    strict_map_key=False,
-    raw=False,
-    use_list=False,
-    ext_hook=_decode,
-)
-
-# stream unpacker factory
-stream_unpacker = partial(
-    msgpack.Unpacker,
-    object_pairs_hook=attrdict,
-    strict_map_key=False,
-    raw=False,
-    use_list=False,
-    ext_hook=_decode,
-)

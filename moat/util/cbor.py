@@ -4,72 +4,73 @@
 import re
 import struct
 import sys
-
 from io import BytesIO
+
 try:
     from micropython import const
 except ImportError:
+
     def const(x):
         return x
 
-from moat.util import NotGiven
 
+from moat.util import NotGiven
 
 CBOR_TYPE_MASK = const(0xE0)  # top 3 bits
 CBOR_INFO_BITS = const(0x1F)  # low 5 bits
 
 
-CBOR_UINT    = const(0x00)
-CBOR_NEGINT  = const(0x20)
-CBOR_BYTES   = const(0x40)
-CBOR_TEXT    = const(0x60)
-CBOR_ARRAY   = const(0x80)
-CBOR_MAP     = const(0xA0)
-CBOR_TAG     = const(0xC0)
-CBOR_7       = const(0xE0)  # float and other types
+CBOR_UINT = const(0x00)
+CBOR_NEGINT = const(0x20)
+CBOR_BYTES = const(0x40)
+CBOR_TEXT = const(0x60)
+CBOR_ARRAY = const(0x80)
+CBOR_MAP = const(0xA0)
+CBOR_TAG = const(0xC0)
+CBOR_7 = const(0xE0)  # float and other types
 
-CBOR_UINT8_FOLLOWS  = const(24)  # 0x18
+CBOR_UINT8_FOLLOWS = const(24)  # 0x18
 CBOR_UINT16_FOLLOWS = const(25)  # 0x19
 CBOR_UINT32_FOLLOWS = const(26)  # 0x1a
 CBOR_UINT64_FOLLOWS = const(27)  # 0x1b
-CBOR_VAR_FOLLOWS    = const(31)  # 0x1f
+CBOR_VAR_FOLLOWS = const(31)  # 0x1f
 
-CBOR_BREAK  = const(0xFF)
+CBOR_BREAK = const(0xFF)
 
-CBOR_FALSE  = const(CBOR_7 | 20)
-CBOR_TRUE   = const(CBOR_7 | 21)
-CBOR_NULL   = const(CBOR_7 | 22)
-CBOR_UNDEFINED   = const(CBOR_7 | 23)  # js 'undefined' value
+CBOR_FALSE = const(CBOR_7 | 20)
+CBOR_TRUE = const(CBOR_7 | 21)
+CBOR_NULL = const(CBOR_7 | 22)
+CBOR_UNDEFINED = const(CBOR_7 | 23)  # js 'undefined' value
 
 CBOR_FLOAT16 = const(CBOR_7 | 25)
 CBOR_FLOAT32 = const(CBOR_7 | 26)
 CBOR_FLOAT64 = const(CBOR_7 | 27)
 
-#CBOR_TAG_DATE_STRING = const(0) # RFC3339
-#CBOR_TAG_DATE_ARRAY = const(1) # any number type follows, seconds since 1970-01-01T00:00:00 UTC
-CBOR_TAG_BIGNUM = const(2) # big endian byte string follows
-CBOR_TAG_NEGBIGNUM = const(3) # big endian byte string follows
-#CBOR_TAG_DECIMAL = const(4) # [ 10^x exponent, number ]
-#CBOR_TAG_BIGFLOAT = const(5) # [ 2^x exponent, number ]
-#CBOR_TAG_BASE64URL = const(21)
-#CBOR_TAG_BASE64 = const(22)
-#CBOR_TAG_BASE16 = const(23)
-#CBOR_TAG_CBOR = const(24) # following byte string is embedded CBOR data
+# CBOR_TAG_DATE_STRING = const(0) # RFC3339
+# CBOR_TAG_DATE_ARRAY = const(1) # any number type follows, seconds since 1970-01-01T00:00:00 UTC
+CBOR_TAG_BIGNUM = const(2)  # big endian byte string follows
+CBOR_TAG_NEGBIGNUM = const(3)  # big endian byte string follows
+# CBOR_TAG_DECIMAL = const(4) # [ 10^x exponent, number ]
+# CBOR_TAG_BIGFLOAT = const(5) # [ 2^x exponent, number ]
+# CBOR_TAG_BASE64URL = const(21)
+# CBOR_TAG_BASE64 = const(22)
+# CBOR_TAG_BASE16 = const(23)
+# CBOR_TAG_CBOR = const(24) # following byte string is embedded CBOR data
 
-#CBOR_TAG_URI = const(32)
-#CBOR_TAG_BASE64URL = const()33
-#CBOR_TAG_BASE64 = const(34)
-#CBOR_TAG_REGEX = const(35)
-#CBOR_TAG_MIME = const(36) # following text is MIME message, headers, separators and all
-#CBOR_TAG_CBOR_FILEHEADER = const(55799) # can open a file with 0xd9d9f7
+# CBOR_TAG_URI = const(32)
+# CBOR_TAG_BASE64URL = const()33
+# CBOR_TAG_BASE64 = const(34)
+# CBOR_TAG_REGEX = const(35)
+# CBOR_TAG_MIME = const(36) # following text is MIME message, headers, separators and all
+# CBOR_TAG_CBOR_FILEHEADER = const(55799) # can open a file with 0xd9d9f7
 
-_CBOR_TAG_BIGNUM_BYTES = struct.pack('B', CBOR_TAG | CBOR_TAG_BIGNUM)
-_CBOR_TAG_NEGBIGNUM_BYTES = struct.pack('B', CBOR_TAG | CBOR_TAG_NEGBIGNUM)
+_CBOR_TAG_BIGNUM_BYTES = struct.pack("B", CBOR_TAG | CBOR_TAG_BIGNUM)
+_CBOR_TAG_NEGBIGNUM_BYTES = struct.pack("B", CBOR_TAG | CBOR_TAG_NEGBIGNUM)
 
 
 def _dumps_bignum_to_bytearray(val):
-    return val.to_bytes((val.bit_length()+7)//8, "big")
-    
+    return val.to_bytes((val.bit_length() + 7) // 8, "big")
+
 
 class ExtraData(ValueError):
     def __init__(self, unpacked, extra):
@@ -79,13 +80,14 @@ class ExtraData(ValueError):
     def __str__(self):
         return "unpack(b) received extra data."
 
+
 class OutOfData(EOFError):
     pass
 
 
 class Packer:
     def __init__(self):
-        self._buffer = BytesIO()   
+        self._buffer = BytesIO()
         # self._unicode_errors = unicode_errors or "strict"
 
     def _int(self, val):
@@ -98,10 +100,9 @@ class Packer:
     def _bignum_to_bytearray(self, val):
         out = []
         while val > 0:
-            out.insert(0, val & 0x0ff)
+            out.insert(0, val & 0x0FF)
             val = val >> 8
         return bytes(out)
-
 
     def _float(self, val):
         w = self._w
@@ -110,36 +111,35 @@ class Packer:
         except OverflowError:
             pass
         else:
-            if struct.unpack("!f",ff)[0] == val:  # no loss
+            if struct.unpack("!f", ff)[0] == val:  # no loss
                 try:
                     fe = struct.pack("!e", val)
                 except OverflowError:
                     pass
                 else:
-                    if struct.unpack("!e",fe)[0] == val:  # no loss either
+                    if struct.unpack("!e", fe)[0] == val:  # no loss either
                         return w(struct.pack("!B", CBOR_FLOAT16) + fe)
             return w(struct.pack("!B", CBOR_FLOAT32) + ff)
         return w(struct.pack("!Bd", CBOR_FLOAT64, val))
-
 
     def _encode_type_num(self, cbor_type, val):
         """For some CBOR primary type [0..7] and an auxiliary unsigned number, return CBOR encoded bytes"""
         w = self._w
 
         if val is None:
-            return w(struct.pack('B', cbor_type | CBOR_VAR_FOLLOWS))
+            return w(struct.pack("B", cbor_type | CBOR_VAR_FOLLOWS))
 
         assert val >= 0
         if val <= 23:
-            return w(struct.pack('B', cbor_type | val))
-        if val <= 0x0ff:
-            return w(struct.pack('BB', cbor_type | CBOR_UINT8_FOLLOWS, val))
-        if val <= 0x0ffff:
-            return w(struct.pack('!BH', cbor_type | CBOR_UINT16_FOLLOWS, val))
-        if val <= 0x0ffffffff:
-            return w(struct.pack('!BI', cbor_type | CBOR_UINT32_FOLLOWS, val))
-        if val <= (0x07fffffffffffffff if cbor_type == CBOR_NEGINT else 0x0ffffffffffffffff):
-            return w(struct.pack('!BQ', cbor_type | CBOR_UINT64_FOLLOWS, val))
+            return w(struct.pack("B", cbor_type | val))
+        if val <= 0x0FF:
+            return w(struct.pack("BB", cbor_type | CBOR_UINT8_FOLLOWS, val))
+        if val <= 0x0FFFF:
+            return w(struct.pack("!BH", cbor_type | CBOR_UINT16_FOLLOWS, val))
+        if val <= 0x0FFFFFFFF:
+            return w(struct.pack("!BI", cbor_type | CBOR_UINT32_FOLLOWS, val))
+        if val <= (0x07FFFFFFFFFFFFFFF if cbor_type == CBOR_NEGINT else 0x0FFFFFFFFFFFFFFFF):
+            return w(struct.pack("!BQ", cbor_type | CBOR_UINT64_FOLLOWS, val))
 
         # too large: write a bignum
         if cbor_type == CBOR_UINT:
@@ -147,20 +147,18 @@ class Packer:
         elif cbor_type == CBOR_NEGINT:
             w(_CBOR_TAG_NEGBIGNUM_BYTES)
         else:
-            raise FormatError("value too big: "+repr(val))
+            raise FormatError("value too big: " + repr(val))
         outb = _dumps_bignum_to_bytearray(val)
         self._encode_type_num(CBOR_BYTES, len(outb))
         w(self._bignum_to_bytearray(val))
 
-
     def _string(self, val):
         if isinstance(val, str):
-            val = val.encode('utf8')
+            val = val.encode("utf8")
             self._encode_type_num(CBOR_TEXT, len(val))
         else:
             self._encode_type_num(CBOR_BYTES, len(val))
         self._w(val)
-
 
     def _array(self, arr):
         try:
@@ -169,39 +167,35 @@ class Packer:
             self._encode_type_num(CBOR_ARRAY, None)
             for x in arr:
                 self._any(x)
-            self._w(struct.pack('B', CBOR_BREAK))
+            self._w(struct.pack("B", CBOR_BREAK))
         else:
             for x in arr:
                 self._any(x)
 
-
     def _dict(self, d):
         w = self._w
         self._encode_type_num(CBOR_MAP, len(d))
-        for k,v in d.items():
+        for k, v in d.items():
             self._any(k)
             self._any(v)
 
-
     def _bool(self, b):
         if b:
-            self._w(struct.pack('B', CBOR_TRUE))
-        self._w(struct.pack('B', CBOR_FALSE))
-
+            self._w(struct.pack("B", CBOR_TRUE))
+        self._w(struct.pack("B", CBOR_FALSE))
 
     def _tag(self, t):
         self._encode_type_num(CBOR_TAG, t.tag)
         self._any(t.value)
-        
+
     def _w(self, d):
         self._buffer.write(d)
 
-
     def _any(self, ob):
         if ob is None:
-            self._w(struct.pack('B', CBOR_NULL))
+            self._w(struct.pack("B", CBOR_NULL))
         elif ob is NotGiven:
-            self._w(struct.pack('B', CBOR_UNDEFINED))
+            self._w(struct.pack("B", CBOR_UNDEFINED))
         elif isinstance(ob, bool):
             self._bool(ob)
         elif isinstance(ob, (str, bytes)):
@@ -218,8 +212,7 @@ class Packer:
         elif isinstance(ob, Tag):
             self._tag(ob)
         else:
-            raise TypeError("Cannot serialize type "+repr(type(ob)))
-
+            raise TypeError("Cannot serialize type " + repr(type(ob)))
 
     def packb(self, obj):
         if self._buffer.getvalue():
@@ -244,10 +237,11 @@ class Tag(object):
             return False
         return self.tag == other.tag and self.value == other.value
 
+
 class Unpacker:
     _stream = None
     _buff_i = 0
-    _rsz= 64
+    _rsz = 64
 
     _MAX_DEPTH = 100
 
@@ -278,7 +272,6 @@ class Unpacker:
             aux = None
 
         return tag, tag_aux, aux
-
 
     async def _read(self, n):
         # (int) -> bytearray
@@ -314,7 +307,6 @@ class Unpacker:
             self._buff_i = 0  # rollback
             raise OutOfData
 
-
     def __aiter__(self):
         return self
 
@@ -332,11 +324,10 @@ class Unpacker:
             return exc.value
         except OutOfData:
             raise StopIteration
-#       except BaseException as err:
-#           raise RuntimeError(err)
+        #       except BaseException as err:
+        #           raise RuntimeError(err)
         else:
             raise RuntimeError("Needs async")
-
 
     async def _var_array(self):
         ob = []
@@ -357,14 +348,12 @@ class Unpacker:
             tb = self._read_byte()
         return ob
 
-
     async def _array(self, aux):
         ob = []
         for i in range(aux):
             subob = await self._any()
             ob.append(subob)
         return ob
-
 
     async def _map(self, aux):
         ob = {}
@@ -406,8 +395,8 @@ class Unpacker:
         self._buff_i = 0
 
     async def _any(self):
-#       if depth > _MAX_DEPTH:
-#           raise RuntimeError("load recursion limit")
+        #       if depth > _MAX_DEPTH:
+        #           raise RuntimeError("load recursion limit")
 
         tb = await self._read_byte()
         return await self._tb(tb)
@@ -436,7 +425,7 @@ class Unpacker:
         elif tag == CBOR_BYTES:
             return await self._bytes(aux)
         elif tag == CBOR_TEXT:
-            return str(await self._bytes(aux, btag=CBOR_TEXT), 'utf8')
+            return str(await self._bytes(aux, btag=CBOR_TEXT), "utf8")
         elif tag == CBOR_ARRAY:
             if aux is None:
                 return await self._var_array()
@@ -460,7 +449,6 @@ class Unpacker:
                 return NotGiven
             raise ValueError("unknown cbor tag 7 byte: {:02x}".format(tb))
 
-
     async def _bytes(self, aux, btag=CBOR_BYTES):
         # TODO: limit to some maximum number of chunks and some maximum total bytes
         if aux is not None:
@@ -475,29 +463,30 @@ class Unpacker:
                 break
             tag, tag_aux, aux = await self._tag_aux(tb)
             if tag != btag:
-                raise ValueError('var length with unexpected component')
+                raise ValueError("var length with unexpected component")
             ob = await self._read(aux)
             chunklist.append(ob)
-        return b''.join(chunklist)
+        return b"".join(chunklist)
 
 
 def tagify(aux, ob):
     # TODO: make this extensible?
     # cbor.register_tag_handler(tagnumber, tag_handler)
     # where tag_handler takes (tagnumber, tagged_object)
-#   if aux == CBOR_TAG_DATE_STRING:
-#       # TODO: parse RFC3339 date string
-#       pass
-#   if aux == CBOR_TAG_DATE_ARRAY:
-#       return datetime.datetime.utcfromtimestamp(ob)
+    #   if aux == CBOR_TAG_DATE_STRING:
+    #       # TODO: parse RFC3339 date string
+    #       pass
+    #   if aux == CBOR_TAG_DATE_ARRAY:
+    #       return datetime.datetime.utcfromtimestamp(ob)
     if aux == CBOR_TAG_BIGNUM:
         return int.from_bytes(ob, "big")
     if aux == CBOR_TAG_NEGBIGNUM:
         return -1 - int.from_bytes(ob, "big")
-#   if aux == CBOR_TAG_REGEX:
-#       # Is this actually a good idea? Should we just return the tag and the raw value to the user somehow?
-#       return re.compile(ob)
+    #   if aux == CBOR_TAG_REGEX:
+    #       # Is this actually a good idea? Should we just return the tag and the raw value to the user somehow?
+    #       return re.compile(ob)
     return Tag(aux, ob)
+
 
 def packb(o, **kwargs):
     """
@@ -507,6 +496,7 @@ def packb(o, **kwargs):
     """
     return Packer(**kwargs).packb(o)
 
+
 def unpackb(packed, **kwargs):
     """
     Unpack an object from `packed`.
@@ -515,4 +505,3 @@ def unpackb(packed, **kwargs):
     """
     unpacker = Unpacker(None, **kwargs)
     return unpacker.unpackb(packed)
-

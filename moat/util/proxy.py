@@ -102,4 +102,5 @@ def as_proxy(name, obj=NotGiven, replace=False):
         _proxy(obj)
         return obj
 
+
 as_proxy("_p", Proxy)

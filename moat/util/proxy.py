@@ -46,9 +46,12 @@ def name2obj(name, obj=NotGiven, replace=False):
     """
     if obj is NotGiven and not replace:
         return _CProxy[name]
-    if not replace and _CProxy.get(name, None) is not obj:
-        raise KeyError(name)  # exists
-    _CProxy[name] = obj
+    if replace:
+        _CProxy[name] = obj
+    else:
+        oobj = _CProxy.get(name, None)
+        if oobj is not None and oobj is not obj:
+            raise KeyError(name)  # exists
     return None
 
 
@@ -64,9 +67,12 @@ def obj2name(obj, name=NotGiven, replace=False):
     if name is NotGiven and not replace:
         return _RProxy[id(obj)]
     oid = id(obj)
-    if not replace and _RProxy.get(oid, None) != name:
-        raise KeyError(name)  # exists
-    _RProxy[oid] = name
+    if replace:
+        _RProxy[oid] = name
+    else:
+        oname = _RProxy.get(oid, None)
+        if oname is not None and oname != name:
+            raise KeyError(name)  # exists
     return None
 
 

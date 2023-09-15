@@ -28,7 +28,6 @@ may fail.
 import sys
 
 from moat.util import (  # pylint: disable=no-name-in-module
-    Broadcaster,
     Queue,
     ValueEvent,
     as_proxy,
@@ -37,31 +36,29 @@ from moat.util import (  # pylint: disable=no-name-in-module
     obj2name,
 )
 
-from moat.micro.compat import CancelledError, TaskGroup, WouldBlock, idle, print_exc
+from moat.micro.compat import CancelledError, TaskGroup, WouldBlock, idle, print_exc, Event, wait_for_ms
 from moat.micro.proto.stack import RemoteError, SilentRemoteError, _Stacked
 
 as_proxy("_KyErr", KeyError, replace=True)
 as_proxy("_AtErr", AttributeError, replace=True)
+as_proxy("_NiErr", NotImplementedError, replace=True)
 
 
-class BaseCmd(_Stacked):
+class BaseCmd:
     """
     Request/response handler
 
-    This is attached as a child to the Request object.
+    This object dispatches commands.
 
-    Incoming requests call `cmd_*` with `*` being the action. If the
-    action is a string, the complete string is tried first, then
-    the first character. Otherwise (action is a list) the first
-    element is used as-is.
+    Incoming requests call `cmd` if the action is empty. Otherwise, if the
+    action is a string, the complete string is tried first, then the first
+    character. Otherwise (action is a list) the first element is used
+    as-is.
 
     If the action is empty, call the `cmd` method instead. Otherwise if
     no method is found return an error.
 
-    Attach a sub-base directly to their parents by setting their
-    `cmd_XX` property to it.
-
-    The `send` method simply forwards to its parent, for convenience.
+    The `send` method simply forwards to the root, for convenience.
 
     This is the toplevel entry point. You build a request stack by piling
     modules on top of each other; the final one is a Request. On top of
@@ -71,40 +68,74 @@ class BaseCmd(_Stacked):
 
     _tg: TaskGroup = None
 
+    def __init__(self, root, cfg):
+        self._sub = {}
+        self.cfg = cfg
+        self.root = root
+        self._t = None
+        self._ready = Event()
+
     async def run(self):
         """
         Main loop for this part of your code.
 
-        By default, does nothing.
+        By default, does nothing except setting the ``_ready`` event.
         """
-        pass  # pylint: disable=unnecessary-pass
+        self._ready.set()
 
-    async def _run_sub(self):
+    async def _run(self):
         """
         Runs my (and my children's) "run" methods.
         """
         async with TaskGroup() as tg:
             self._tg = tg
-            await tg.spawn(self.run, _name="run")
+            self._t = await tg.spawn(self.run, _name="run")
+            await self._start()
 
-            for k in dir(self):
-                if not k.startswith('dis_'):
-                    continue
-                v = getattr(self, k)
-                if isinstance(v, BaseCmd):
-                    await tg.spawn(v._run_sub, _name="sub:" + k)
+    async def _start(self):
+        for k,v in self._sub.items():
+            if isinstance(v, BaseCmd):
+                v.__t = await self._tg.spawn(v._run, _name="sub:" + k)
 
-    async def aclose(self):
+    async def restart(self):
         """
-        Stop my (and my children's) "run" methods.
+        Tell this module to restart itself.
+
+        This module's taskgroup persists. The module's runner and all
+        submodules are cancelled and restarted.
         """
-        self._tg.cancel()
-        await super().aclose()
+        for k,v in self._sub.items():
+            v.__t.cancel()
+        self._t.cancel()
+        self._t = await tg.spawn(self.run, _name="run")
+        await self._start()
+
+    async def attach(self, name, cmd, *a, **kw):
+        """
+        Attach a named command handler to me and run it.
+        """
+        self.detach(name)
+        self._sub[name] = cmd
+        cmd.__t = await self._tg.spawn(cmd._run, *a, _name="sub:" + name, **kw)
+
+    def detach(self, name):
+        """
+        Detach a named command handler from me and kill its task.
+        """
+        try:
+            cmd = self._sub.pop(name)
+        except KeyError:
+            return
+        try:
+            cmd.__t.cancel()
+        except AttributeError:
+            pass
+        else:
+            del cmd.__t
 
     async def dispatch(
-        self, action: str | list[str], msg: dict
+            self, action: str | list[str], msg: dict, wait:bool = True,
     ):  # pylint:disable=arguments-differ
-        # TODO rename dispatch+send when with actions
         """
         Process one incoming message.
 
@@ -131,179 +162,91 @@ class BaseCmd(_Stacked):
 
         if not action:
             # pylint: disable=no-member
+            await self._ready.wait()
             return await c(self.cmd)
             # if there's no "self.cmd", the resulting AttributeError is our reply
 
-        if isinstance(action, str) and len(action) > 1:
+        if not isinstance(action, str) and len(action) == 1:
+            action = action[0]
+        if isinstance(action, str):
             try:
                 p = getattr(self, "cmd_" + action)
             except AttributeError:
                 pass
             else:
+                await self._ready.wait()
                 return await c(p)
 
-        if len(action) > 1:
-            try:
-                dis = getattr(self, "dis_" + action[0])
-            except AttributeError:
-                raise AttributeError(action) from None
-            else:
-                return await dis(action[1:], msg)
+        try:
+            sub = self._sub[action[0]]
+        except KeyError:
+            raise AttributeError(action) from None
         else:
-            return await c(getattr(self, "cmd_" + action[0]))
-
-    async def __call__(self, *a, **k):
-        """
-        Alias for the dispatcher
-        """
-        return await self.dispatch(*a, **k)
-
-    async def config_updated(self, cfg):
-        """
-        Trigger: when the config has been updated, tell this module to
-        update itself.
-
-        May be overridden, but do call ``super()``.
-        """
-        for k in dir(self):
-            if k.startswith("dis_"):
-                v = getattr(self, k)
-                await v.config_updated(cfg.get(k[4:], {}))
+            return await sub.dispatch(action[1:], msg, wait=wait)
 
     def cmd__dir(self):
         """
         Rudimentary introspection. Returns a list of available commands @c and
-        submodules @d
+        submodules @d. j=True if callable directly.
         """
-        d = []
         c = []
+        d = list(self._sub.keys())
         res = dict(c=c, d=d)
+
         for k in dir(self):
             if k.startswith("cmd_") and k[4] != '_':
                 c.append(k[4:])
-            elif k.startswith("dis_") and k[4] != '_':
-                d.append(k[4:])
             elif k == "cmd":
                 res['j'] = True
         return res
 
-    @property
-    def request(self):
-        "returns the request handler. Just asks the parent."
-        return self.parent.request
 
-    @property
-    def base(self):
-        "returns base command."
-        return self.parent.base
-
-
-class Request(_Stacked):
+class StreamCmd(_Stacked):
     """
-    Request/Response handler (client side)
+    This is a command handler that packages requests and sends them onto a
+    channel.
 
-    Call "send" with an action (a string or list) to select
-    the function of the recipient. The response is returned / raised.
-    The second argument is expanded by the recipient if it is a dict.
-    Requests are cancelled when the lower layer terminates.
-
-    The transport may re-order messages, but it must not lose them.
-
-    This is the "top" module of a connection's stack.
-
-    @ready is an Enevt that'll be set when the system is up.
+    It is both a BaseCmd and a _Stacked. Because MicroPython doesn't support
+    multiple inheritance we duck-type the BaseCmd part.
     """
 
-    APP = "app"
-    _tg: TaskGroup = None
-
-    def __init__(self, *a, ready=None, **k):
-        if sys.implementation.name != "micropython" and self.APP == "app":
-            raise ValueError("Cannot work")
-        super().__init__(*a, **k)
+    def __init__(self, root, cfg):
+        # called as a BaseCmd
+        BaseCmd.__init__(self, root, cfg)
         self.reply = {}
         self.seq = 0
-        self._ready = ready
-        self.apps = {}
-
-    @property
-    def request(self):
-        "return request handler, i.e. self"
-        return self
-
-    @property
-    def base(self):
-        "return base command, i.e. my child"
-        return self.child
-
-    async def wait_ready(self):
-        "delay until ready"
-        if self._ready is not None:
-            await self._ready.wait()
-
-    async def update_config(self):
-        "called after the config has been updated"
-        if self.APP is not None:
-            await self._setup_apps()
-
-    async def _setup_apps(self):
-        # TODO send errors back
-        if self.APP is None:
-            return
-        gcfg = self.base.cfg
-        apps = gcfg.get("apps", {})
-        tg = self._tg
-
-        def imp(name):
-            return import_(f"{self.APP}.{name}", 1)
-
-        for name in list(self.apps.keys()):
-            if name not in apps:
-                app = self.apps.pop(name)
-                delattr(self.base, "dis_" + name)
-                app._req_scope.cancel()  # pylint: disable=protected-access
-                sys.modules.pop(app.__module__, None)
-
-        # First setup the app data structures
-        for name, v in apps.items():
-            if name in self.apps:
-                continue
-
-            cfg = getattr(gcfg, name, {})
-            cmd = imp(v)(self, name, cfg, gcfg)
-            self.apps[name] = cmd
-            setattr(self.base, "dis_" + name, cmd)
-
-        # then run them all.
-        # For existing apps, tell it to update its configuration.
-        for name, app in self.apps.items():
-            if hasattr(app, "_req_scope"):
-                cfg = getattr(gcfg, name, attrdict())
-                await app.config_updated(cfg)
-            else:
-                app._req_scope = await tg.spawn(  # pylint: disable=protected-access
-                    app.run, _name="mp_app_" + name
-                )
-
-        if self._ready is not None:
-            self._ready.set()
+        self._ready = Event()
 
     async def run(self):
         """
-        Main loop for this stack. Starts child modules' mainloops and
-        reads+dispatches incoming requests.
+        Start the stack
         """
+        top = await self.setup()
+        self.parent = top
+        top.child = self
+        await self._tg.spawn(top._run, self._ready)
         try:
-            async with TaskGroup() as tg:
-                self._tg = tg
-                await tg.spawn(self._setup_apps)
-
-                while True:
-                    msg = await self.parent.recv()
-                    await self.dispatch(msg)
+            while True:
+                msg = await self.parent.recv()
+                await self._handle(msg)
         finally:
             self._cleanup_open_commands()
-            await self.aclose()
+            top.child = None
+            self.parent = None
+
+    # stacked
+    async def error(self, exc):
+        print("ERROR: " + repr(error), file=sys.stderr)
+
+    async def send(self,*a,**k):
+        raise RuntimeError("Should not be called")
+
+    async def recv(self,*a,**k):
+        raise RuntimeError("Should not be called")
+
+    async def setup(self):
+        """Setup my stack. Returns the stack's top module. Must be overridden."""
+        raise NotImplementedError("Override me! "+self.__class__.__name__)
 
     def _cleanup_open_commands(self):
         for e in self.reply.values():
@@ -313,11 +256,11 @@ class Request(_Stacked):
         """
         Handler for a single request.
 
-        `dispatch` starts this in a new task.
+        `_handle` starts this in a new task for each message.
         """
         res = {'i': i}
         try:
-            r = await self.child.dispatch(a, d)
+            r = await self.root.dispatch(a, d)
         except SilentRemoteError as exc:
             if i is None:
                 return
@@ -348,7 +291,7 @@ class Request(_Stacked):
             res = {'e': "T:" + repr(exc), 'i': i}
             await self.parent.send(res)
 
-    async def dispatch(self, msg):  # pylint:disable=arguments-differ
+    async def _handle(self, msg):
         """
         Main handler for incoming messages
         """
@@ -360,9 +303,9 @@ class Request(_Stacked):
         d = msg.pop("d", None)
 
         if a is not None:
-            # request from the other side
+            # incoming request
             # runs in a separate task
-            # TODO create a task pool
+            # TODO create a task pool?
             await self._tg.spawn(self._handle_request, a, i, d, msg, _name="hdl:" + str(a))
 
         else:
@@ -388,17 +331,21 @@ class Request(_Stacked):
             else:
                 evt.set_error(RemoteError(e, d))
 
-    async def send(self, action, _msg=None, **kw):  # pylint:disable=arguments-differ
+    async def dispatch(self, action, msg=None, wait=True):  # pylint:disable=arguments-differ
         """
-        Send a request, return the response.
+        Forward a request to the remote side, return the response.
 
         The message is either the second parameter, or a dict (use any
         number of keywords).
+
+        If @wait is False, the message doesn't have a sequence number and
+        thus no reply will be expected.
         """
-        if _msg is None:
-            _msg = kw
-        elif kw:
-            raise TypeError("cannot use both msg data and keywords")
+
+        if not wait:
+            msg = {"a": action, "d": msg}
+            await self.parent.send(msg)
+            return
 
         # Find a small-ish but unique seqnum
         if self.seq > 10 * (len(self.reply) + 5):
@@ -408,7 +355,7 @@ class Request(_Stacked):
             seq = self.seq
             if seq not in self.reply:
                 break
-        msg = {"a": action, "d": _msg, "i": seq}
+        msg = {"a": action, "d": msg, "i": seq}
 
         self.reply[seq] = e = ValueEvent()
         try:
@@ -417,112 +364,110 @@ class Request(_Stacked):
         finally:
             del self.reply[seq]
 
-    async def send_nr(self, action, msg=None, **kw):
-        """
-        Send an unsolicited message (no seqnum == no reply)
-        """
-        if msg is None:
-            msg = kw
-        elif kw:
-            raise TypeError("cannot use both msg data and keywords")
 
-        msg = {"a": action, "d": msg}
-        await self.parent.send(msg)
-
-
-class RootCmd(BaseCmd):
+class Dispatch(BaseCmd):
     """
-    Standard toplevel base implementation.
+    This is the system's root dispatcher.
 
-    Adds commands to set and query broadcasters.
+    Call "send" with an action (a string or list) and either a single
+    parameter or some key/value data. The response is returned / raised.
+
+    @ready is an Event that'll be set when the system is up.
     """
 
-    _cfg = None
+    APP = "app"
+    _tg: TaskGroup = None
+    _ready: Event = None
 
-    def __init__(self, parent):
-        super().__init__(parent)
-        self._s = {}
-        self._q = Queue(20)
+    def __init__(self, cfg:dict=None):
+        self._ready = Event()
+        self.apps = {}
+        super().__init__(self, cfg)
 
-    #   @property
-    #   def cfg(self):
-    #       return self._cfg
-    #   @cfg.setter
-    #   def cfg(self, val):
-    #       if not isinstance(val, attrdict):
-    #           breakpoint()
-    #       self._cfg = val
-
-    async def cmd_s(self, o, d):
-        """
-        State update.
-        """
-        b = self._get_br(o)
-        b(d)
-
-    async def cmd_sq(self, o):
-        """
-        State query.
-        """
-        b = self._get_br(o)
-        return await b.read()
-
-    loc_s = cmd_s
-    loc_sq = cmd_sq
+    async def _run(self):
+        raise RuntimeError("don't call")
 
     async def run(self):
-        try:
-            await idle()
-        finally:
+        """
+        Runs the stack.
+        """
+        async with TaskGroup() as self._tg:
+            await self._setup_apps()
 
-            def _cls(s):
-                for v in s.values():
-                    if isinstance(v, dict):
-                        _cls(v)
-                    else:
-                        v.close()
+    async def wait_ready(self):
+        "delay until ready"
+        if self._ready is not None:
+            await self._ready.wait()
 
-            _cls(self._s)
+    async def update_config(self):
+        "called after the config has been updated"
+        if self.APP is not None:
+            await self._setup_apps()
 
-    def _get_br(self, o):
-        s = self._s
-        for x in o[:-1]:
+    async def _setup_apps(self):
+        # TODO send errors back
+        if self.APP is None:
+            return
+        gcfg = self.cfg
+        apps = gcfg.get("apps", {})
+        tg = self._tg
+
+        def imp(name):
+            return import_(f"{self.APP}.{name}", 1)
+
+        for name in list(self.apps.keys()):
+            if name not in apps:
+                app = self.apps[name]
+                self.detach(app)  # pylint: disable=protected-access
+                sys.modules.pop(app.__module__, None)
+
+        # First setup the app data structures
+        for name, v in apps.items():
+            if name in self.apps:
+                continue
+
+            cfg = getattr(gcfg, name, {})
+            cmd = imp(v)(self, cfg)
+            self.apps[name] = cmd
+            self._sub[name] = cmd
+
+        # Second, run them all.
+        # For existing apps, tell it to update its configuration.
+        for name, app in self.apps.items():
+            if hasattr(app, "_req_scope"):
+                cfg = getattr(gcfg, name, attrdict())
+                await app.config_updated(cfg)
+            else:
+                app._req_scope = await tg.spawn(  # pylint: disable=protected-access
+                    app.run, _name="mp_app_" + name
+                )
+
+        # Third, wait for them to be up.
+        for k,v in self.apps.items():
             try:
-                s = s[x]
-            except KeyError:
-                s = s[x] = {}
-        x = o[-1]
-        try:
-            b = s[x]
-        except KeyError:
-            b = s[x] = RemBroadcaster()
-            Broadcaster.__enter__(b)  # pylint:disable=unnecessary-dunder-call
-        return b
+                await wait_for_ms(250, v._ready.wait)
+            except TimeoutError:
+                print(f"* Waiting for App:{k}", file=sys.stderr)
+                await v._ready.wait()
 
-    def watch(self, *o):
-        "return a context to watch a specific broadcast"
-        b = self._get_br(o)
-        return b.reader(1)
-
-    def register(self, obj, *o):
-        "register a source object for a specific broadcast"
-        b = self._get_br(o)
-        if b.obj is not None:
-            raise RuntimeError(f"{b.obj} already registered on {o}")
-        b.obj = obj
-        return b
+        if self._ready is not None:
+            print("* Running", file=sys.stderr)
+            self._ready.set()
 
 
-class RemBroadcaster(Broadcaster):
-    "A broadcaster that reads from an object"
-    obj = None
+    async def send(self, action, _msg=None, **kw):  # pylint:disable=arguments-differ
+        if _msg is None:
+            _msg = kw
+        elif kw:
+            raise TypeError("cannot use both msg data and keywords")
+        return await self.dispatch(action, _msg)
 
-    def __enter__(self):
-        return self
+    async def send_nr(self, action, _msg=None, **kw):  # pylint:disable=arguments-differ
+        if _msg is None:
+            _msg = kw
+        elif kw:
+            raise TypeError("cannot use both msg data and keywords")
+        return await self.dispatch(action, _msg, wait=False)
+        # XXX run in a detached task
 
-    def __exit__(self, *tb):
-        self.obj = None
 
-    async def read(self):
-        "read data"
-        return await self.obj.read_()

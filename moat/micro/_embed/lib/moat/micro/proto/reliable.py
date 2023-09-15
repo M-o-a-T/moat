@@ -302,9 +302,9 @@ class Reliable(_Stacked):
                 if self.__tg is not None:
                     self.__tg.cancel()
                 return
-            await self.dispatch(msg)
+            await self._dispatch(msg)
 
-    async def dispatch(self, msg):
+    async def _dispatch(self, msg):
         a = msg.get('a', None)
 
         if a is None:

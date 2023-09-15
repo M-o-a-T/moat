@@ -54,6 +54,12 @@ class _Base(_Stacked):
     async def aclose(self):
         self.s.close()
 
+    async def run(self, evt):
+        evt.set()
+
+    async def _run(self, evt):
+        await self.run(evt)
+
 
 # msgpack encode/decode
 

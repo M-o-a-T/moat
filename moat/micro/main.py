@@ -125,7 +125,7 @@ async def get_serial(obj, reset: bool = False, flush: bool = True):
         raise NoPort("No port given")
     _h = {}
     try:
-        _h['baudrate'] = obj.baudrate
+        _h['baudrate'] = obj.mode.rate
     except AttributeError:
         pass
     # if not reset:

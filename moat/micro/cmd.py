@@ -5,7 +5,7 @@ extends BaseCmd to also return loc_* functions
 """
 
 from ._cmd import BaseCmd as _BaseCmd
-from ._cmd import Request, RootCmd  # pylint:disable=unused-import
+from ._cmd import Dispatch as _Dispatch
 
 
 class BaseCmd(_BaseCmd):
@@ -31,3 +31,7 @@ class BaseCmd(_BaseCmd):
         return res
 
     loc__dir = cmd__dir
+
+
+class Dispatch(_Dispatch):
+    APP = "moat.micro.app"

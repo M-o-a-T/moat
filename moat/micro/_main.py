@@ -16,6 +16,7 @@ from moat.util import (
     as_service,
     attr_args,
     attrdict,
+    to_attrdict,
     merge,
     packer,
     process_args,
@@ -47,17 +48,17 @@ def _clean_cfg(cfg):
 @click.option(
     "-s",
     "--socket",
-    help="Socket to use / listen to when multiplexing (cfg.port.socket)",
+    help="Socket to use / listen to when multiplexing (cfg.connect.unix.port)",
     type=click.Path(dir_okay=False, writable=True, readable=True),
 )
 @click.option(
     "-p",
     "--port",
-    help="Port your µPy device is connected to (cfg.port.dev)",
+    help="Port your µPy device is connected to (cfg.setup.serial.port)",
     type=click.Path(dir_okay=False, writable=True, readable=True, exists=True),
 )
 @click.option(
-    "-b", "--baudrate", type=int, default=115200, help="Baud rate to use (cfg.port.rate)"
+    "-b", "--baudrate", type=int, default=115200, help="Baud rate to use (cfg.setup.serial.rate)"
 )
 async def cli(obj, socket, port, baudrate, config):
     """MicroPython satellites"""
@@ -67,59 +68,22 @@ async def cli(obj, socket, port, baudrate, config):
         with open(config, "r") as f:
             cc = yload(f)
             merge(cfg, cc)
-    try:
-        cfg.port
-    except AttributeError:
-        cfg.port = attrdict()
-    try:
-        if socket:
-            cfg.port.socket = socket
-        else:
-            socket = cfg.port.socket
-    except AttributeError:
-        pass
-    try:
+    if socket:
+        if not os.path.isabs(socket):
+            socket = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), socket)
+        cf = cfg.setdefault("connect", {})
+        cf.setdefault("mode","unix")
+        cf.setdefault("unix",{})["port"] = socket
+    if port or baudrate:
+        cf = cfg.setdefault("setup", {})
+        cf.setdefault("mode","serial")
+        cf = cf.setdefault("serial",{})
         if port:
-            cfg.port.dev = port
-        else:
-            port = cfg.port.dev
-    except AttributeError:
-        pass
-    try:
+            cf["port"]= port
         if baudrate:
-            cfg.port.rate = baudrate
-            baudrate = cfg.port.rate
-    except AttributeError:
-        cfg.port = attrdict()
-    try:
-        if socket:
-            cfg.port.socket = socket
-        else:
-            socket = cfg.port.socket
-    except AttributeError:
-        pass
-    try:
-        if port:
-            cfg.port.dev = port
-        else:
-            port = cfg.port.dev
-    except AttributeError:
-        pass
-    try:
-        if baudrate:
-            cfg.port.rate = baudrate
-            baudrate = cfg.port.rate
-    except AttributeError:
-        pass
+            cf.setdefault("mode", {})["rate"]= baudrate
 
-    if not os.path.isabs(socket):
-        socket = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), socket)
-    obj.socket = socket
-    obj.port = port
-    if baudrate:
-        obj.baudrate = baudrate
-    obj.lossy = cfg.link.lossy
-    obj.guarded = cfg.link.guarded
+    obj.cfg = to_attrdict(cfg)
 
 
 @cli.command(short_help='Copy MoaT to MicroPython')
@@ -138,6 +102,7 @@ async def cli(obj, socket, port, baudrate, config):
 @click.option("-f", "--force-exit", is_flag=True, help="Halt via an error packet")
 @click.option("-e", "--exit", "exit_", is_flag=True, help="Halt using an exit message")
 @click.option("-c", "--config", type=click.File("rb"), help="Config file to copy over")
+@click.option("-L", "--link", type=str, help="Link name to use, if ambiguous")
 @click.option("-v", "--verbose", is_flag=True, help="Use verbose mode on the target")
 @click.option(
     "-m", "--mplex", "--multiplex", is_flag=True, help="Run the multiplexer after syncing"
@@ -154,6 +119,7 @@ async def setup(
     force_exit,
     exit_,
     verbose,
+    link,
     state,
     config,
     mplex,
@@ -166,8 +132,28 @@ async def setup(
     If MoaT is already running on the target and "sync" doesn't work,
     you can use "-e" or "-f" to stop it.
     """
-    if not obj.port:
-        raise click.UsageError("You need to specify a port")
+    cfg = obj.cfg
+    links = []
+    for k,v in cfg.apps.items():
+        if v == "serial.Link":
+            links.append(k)
+    if link:
+        lcfg = obj.cfg[link]
+    elif cfg.setup.mode == "serial":
+        lcfg = cfg.setup.serial
+    elif len(k) == 1:
+        lcfg = cfg[k[0]]
+    elif k:
+        raise click.UsageError(f"Multiple serial apps ({','.join(k)}) found in the config.")
+    else:
+        raise click.UsageError(f"No serial apps found in the config.")
+
+    except KeyError as exc:
+        raise click.UsageError(f"No data for {exc} found in the config.")
+
+    if mark:
+        lcfg.mode.mark = mark
+
     if no_run and verbose:
         raise click.UsageError("You can't not-start the target in verbose mode")
     # 	if not source:
@@ -176,18 +162,27 @@ async def setup(
     from .main import ABytes, copy_over, get_link_serial, get_serial
     from .path import MoatDevPath
 
-    async with get_serial(obj) as ser:
+    async with get_serial(lcfg) as ser:
         if force_exit or exit_:
             if force_exit:
-                pk = b"\xc1\xc1"
+                if lcfg.mode.guarded:
+                    pk = b"\xc1\xc1"
+                else:
+                    pk = b"\xc1"
             else:
                 pk = packer(dict(a=["sys", "stop"], code="SysStoP"))
-                pk = pk + b"\xc1" + pk
+                if lcfg.guarded:
+                    pk = b"\xc1" + pk
 
-            if obj.lossy:
+            if obj.mode.reliable:
                 from serialpacker import SerialPacker  # pylint:disable=import-error
 
-                sp = SerialPacker(**({"mark": mark} if mark is not None else {}))
+                spc = {}
+                if lcfg.mode.mark is not None:
+                    spc["mark"] = lcfg.mode.mark
+                elif lcfg.mode.guarded:
+                    spc["mark"] = 0xc1
+                sp = SerialPacker(**spc)
                 h, pk, t = sp.frame(pk)
                 pk = h + pk + t
 

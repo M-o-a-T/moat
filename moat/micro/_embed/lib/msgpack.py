@@ -131,8 +131,6 @@ class Unpacker(object):
         #: Which position we currently reads
         self._buff_i = 0
 
-        self._buf_checkpoint = 0
-
         self._read_size = read_size
         # self._unicode_errors = unicode_errors
         # self._use_list = use_list
@@ -145,11 +143,6 @@ class Unpacker(object):
         assert self._stream is None
         self._buffer = memoryview(data)
         self._buff_i = 0
-        self._buf_checkpoint = 0
-
-    def _consume(self):
-        """Gets rid of the used parts of the buffer."""
-        self._buf_checkpoint = self._buff_i
 
     def _got_extradata(self):
         return self._buff_i < len(self._buffer)
@@ -178,15 +171,7 @@ class Unpacker(object):
             return
 
         if not self._stream:
-            self._buff_i = self._buf_checkpoint
             raise OutOfData
-
-        # Strip buffer before checkpoint before reading file.
-        if self._buf_checkpoint > 0:
-            # del self._buffer[: self._buf_checkpoint]
-            self._buffer = self._buffer[self._buf_checkpoint :]
-            self._buff_i -= self._buf_checkpoint
-            self._buf_checkpoint = 0
 
         # Read from file
         remain_bytes = -remain_bytes

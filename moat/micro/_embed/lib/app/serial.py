@@ -19,6 +19,7 @@ from moat.micro.proto.stream import AsyncStream
 #
 class Serial:
     max_idle = 100
+    pack = None
 
     def __init__(self, cmd, cfg, gcfg):
         self.cmd = cmd
@@ -28,32 +29,36 @@ class Serial:
 
     async def run(self, cmd):
         cfg = self.cfg
+        uart_cfg = {}
+        if 'tx' in cfg:
+            uart_cfg['tx'] = M.pin(cfg["tx"])
+        if 'rx' in cfg:
+            uart_cfg['rx'] = M.pin(cfg["rx"])
+        uart_cfg['baudrate']=cfg.get("rate", 9600)
+
         self.ser = AsyncStream(
-            M.UART(
-                cfg.get("uart", 0),
-                tx=M.Pin(cfg.get("tx", 0)),
-                rx=M.Pin(cfg.get("rx", 1)),
-                baudrate=cfg.get("baud", 9600),
-            )
+            M.UART(cfg.get("uart", 0), **uart_cfg)
         )
-        sp = {}
-        try:
-            sp["max_idle"] = self.max_idle = cfg["max"]["idle"]
-        except KeyError:
-            sp["max_idle"] = self.max_idle
-        try:
-            sp["max_packet"] = cfg["max"]["len"]
-        except KeyError:
-            pass
-        try:
-            sp["frame_start"] = cfg["start"]
-        except KeyError:
-            pass
-        try:
-            sp["mark"] = cfg["mark"]
-        except KeyError:
-            pass
-        self.pack = SerialPacker(**sp)
+        sp_cfg = cfg.get('frame', None)
+        if sp_cfg is not None:
+            sp = {}
+            try:
+                sp["max_idle"] = self.max_idle = sp_cfg["idle"]
+            except KeyError:
+                sp["max_idle"] = self.max_idle
+            try:
+                sp["max_packet"] = sp_cfg["len"]
+            except KeyError:
+                pass
+            try:
+                sp["frame_start"] = sp_cfg["start"]
+            except KeyError:
+                pass
+            try:
+                sp["mark"] = sp_cfg["mark"]
+            except KeyError:
+                pass
+            self.pack = SerialPacker(**sp)
 
         buf = bytearray(32)
         cons = bytearray()
@@ -75,16 +80,17 @@ class Serial:
                     continue
 
             for i in range(n):
-                p = self.pack.feed(buf[i])
-                if p is None:
-                    continue
-                if isinstance(p, int):  # console byte
-                    cons.append(p)
-                    if len(cons) > 127 or p == 10:  # linefeed
-                        await self.cmd.send_raw(cons)
-                        cons = bytearray()
-                else:  # "real" message
-                    await self.cmd.send_pkt(p)
+                if self.pack is not None:
+                    p = self.pack.feed(buf[i])
+                    if p is None:
+                        continue
+                    if not isinstance(p, int):  # console byte
+                        await self.cmd.send_pkt(p)
+                        continue
+                cons.append(p)
+                if len(cons) > 127 or p == 10:  # linefeed
+                    await self.cmd.send_raw(cons)
+                    cons = bytearray()
 
     async def send(self, data):
         h, data, t = self.pack.frame(data)
@@ -113,6 +119,8 @@ class SerialCmd(BaseCmd):
         super().__init__(parent)
         self.ser = Serial(self, cfg, gcfg)
         self.name = name
+        self.dp = self.cfg.get("dest", None)
+        self.dr = self.cfg.get("dest_raw", None)
 
     async def run(self):
         try:
@@ -129,8 +137,19 @@ class SerialCmd(BaseCmd):
         else:
             await self.ser.send(data)
 
+    def cmd_x(self, data):
+        return self.cmd_send(data, raw=False)
+
+    def cmd_w(self, data):
+        return self.cmd_send(data, raw=True)
+
     async def send_raw(self, data):
-        await self.request.send_nr([self.name, "in_raw"], data)
+        if self.dr is not None:
+            return await self.root.send_nr(self.dr, data)
+        # TODO store for eventual reading by the remote end
+
 
     async def send_pkt(self, data):
-        await self.request.send_nr([self.name, "in_pkt"], data)
+        if self.dp is not None:
+            return await self.root.send_nr(self.dp, data)
+        # TODO store for eventual reading by the remote end

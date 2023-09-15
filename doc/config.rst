@@ -106,14 +106,19 @@ Applications
 net.unix.Port
 =============
 
+Config
+++++++
+
 Create a Unix-domain port and listen to it. Used mainly for connecting
 command line clients.
 
-* port
+port
+----
 
-  The path of the socket. Required. Prefixed with ``XDG_RUNTIME_DIR`` (or ``/tmp``) if relative.
+The path of the socket. Required. Prefixed with ``XDG_RUNTIME_DIR`` (or ``/tmp``) if relative.
 
-* replace
+replace
+-------
 
   Action when there is more than one connection to the port. The value is
   expected to be a boolean. If `True` a new connection replaces the old
@@ -124,7 +129,8 @@ command line clients.
   individual links are numbered. Accessing the link via the application's
   path is not possible.
 
-* wait
+wait
+----
 
   Action when there is no open connection. If `False`, raise an exception;
   otherwise wait for a new link.
@@ -133,22 +139,32 @@ command line clients.
 
   This parameter is ignored when ``replace`` is `None`.
 
-* fatal
+fatal
+-----
 
   Flag whether to raise an exception if the link closes (and is not
   re-established within ``wait`` seconds, if that is not `False`).
 
+Commands 
+++++++++
+
+None so far.
 
 net.unix.Link
 =============
 
 Connect to a Unix-domain port. Used mainly for testing.
 
-* port
+Config
+++++++
 
-  The path of the socket. Required. Prefixed with ``XDG_RUNTIME_DIR`` (or ``/tmp``) if relative.
+port
+----
 
-* wait
+The path of the socket. Required. Prefixed with ``XDG_RUNTIME_DIR`` (or ``/tmp``) if relative.
+
+wait
+----
 
   Timeout for messages sent to the link when there is no open connection.
   A numeric value specifies how long to wait until returning an error.
@@ -164,18 +180,52 @@ Connect to a Unix-domain port. Used mainly for testing.
   Ignored when `wait` is `True`.
 
 
+net.pipe.Process
+================
+
+Start a process and connect to its standard input and output.
+
+Config
+++++++
+
+command
+-------
+
+An array with the command's name and arguments.
+
+Mandatory of course.
+
+path
+----
+
+Path to the command. If not given, the command's first element is used.
+
+frame
+-----
+
+SerialPacker configuration. See below.
+
+
 net.ip.Port
 ===========
 
 Connect to an IPv4 TCP port.
 
-* address
+Config
+++++++
+
+address
+-------
 
   The address to connect to. The default is ``localhost``.
 
-* port
+port
+----
 
   The port number to connect to. Required.
+
+Other parameters
+----------------
 
 All other parameters are as in ``net.unix.Port``.
 
@@ -185,13 +235,19 @@ net.ip.Link
 
 Create an IPv4 TCP socket and listen to it.
 
-* address
+Config
+++++++
+
+address
 
   The address to bind to. The default is ``localhost``.
 
-* port
+port
 
   The port number to bind to. Required.
+
+Other parameters
+----------------
 
 All other parameters are as in ``net.unix.Link``.
 
@@ -205,13 +261,225 @@ files stored on embedded clients.
 There currently is no implementation for servers, as network file systems
 (NFS, CIFS) perform much better than a MoaT server.
 
-* path
+Config
+======
+
+path
+----
 
   The prefix to use.
 
-* readonly
+readonly
+--------
 
   Flag, defaults to `False`. If `True`, write access is rejected.
+
+Commands
+++++++++
+
+reset
+-----
+
+Close all open files.
+
+* p
+
+  New path for this file system. Appended to the currently-set root if relative.
+
+No return value.
+
+open
+----
+
+Open a file. Returns a file handle.
+
+* p
+
+  Path of the file.
+
+* m
+
+  File mode. 'r or 'w', or possibly 'a'.
+
+  Files are always opened in binary mode.
+  
+rd
+--
+
+Read a file.
+
+* f
+
+  A valid file handle.
+
+* off
+
+  Read offset. Must be positive, defaults to zero.
+
+* n
+
+  Number of bytes to read. The default is 64.
+
+Return value: the bytes read.
+
+wr
+--
+
+Write to a file.
+
+* f
+
+  A valid file handle, opened for writing.
+
+* data
+
+  The bytes to be written.
+
+* off
+
+  Write offset. Must be positive, defaults to zero.
+
+Return value: the number of bytes written.
+
+cl
+--
+
+Close a file.
+
+* fd
+
+  A valid file handle.
+
+dir
+---
+
+List a directory.
+
+* p
+
+  Path to the directory to be enumerated.
+
+* x
+
+  Flag for extended output.
+
+Return value: a list of entries. ``.`` and ``..`` are not returned.
+
+If ``x`` is False, the file names are returned directly. Otherwise, each
+value is a map with these entries:
+
+* n
+
+  Name of the file
+
+* t
+
+  Modification timestamp
+
+* s
+
+  File status flags
+
+mkdir
+-----
+
+Create a directory.
+
+* p
+
+  The path of the new directory.
+
+hash
+----
+
+Return the ``sha256`` of a file's contents.
+
+* p 
+
+  The path to the file to be hashed.
+
+Return value: The hash value, as 32 bytes.
+
+stat
+----
+
+Return the status of a file.
+
+* p
+
+  The path to the file or directory to be probed.
+
+Return value: a dict of
+
+* m
+
+  File mode: 'd' or 'f'
+
+* s
+
+  File size. Not used for directories.
+
+* t
+
+  Modification time.
+
+* d
+
+  Status array.
+
+mv
+--
+
+Rename a file.
+
+* s
+
+  Source path.
+
+* d
+
+  Destination path.
+
+* x
+
+  If set, used as a temporary file name to exchange the files.
+
+* n
+
+  Flag whether the destination must not exist.
+
+``n`` and ``x`` are mutually exclusive.
+
+rm
+--
+
+Delete a file.
+
+* p
+
+  Path to the file to delete.
+
+rmdir
+-----
+
+Delete a directory.
+
+* p
+
+  Path to the directory to delete.
+
+The directory must be empty.
+
+new
+---
+
+Create a file.
+
+* p
+
+  Path to the file to create
+
+The new file is *not* opened for writing by this command.
 
 
 serial.Cmd
@@ -219,31 +487,118 @@ serial.Cmd
 
 Access to a serial port.
 
-* port
+The 
+
+Config
+++++++
+
+port
+----
 
   The port to use. Typically a number.
 
-* tx, rx
+tx, rx
+------
 
   Pins to use, if they need to be specified.
 
-* rate
+rate
+----
 
   Baud rate.
 
-* stop
+stop
+----
 
   Flag whether to send two stop bits. Defaults to `False`. If `None`, 1.5
   stop bits are used (if supported).
 
-* parity
+parity
+------
 
-  `True`: odd parity, `False`: even parity. The default is `None` for no parity bit.
+`True`: odd parity, `False`: even parity. The default is `None` for no parity bit.
 
-* bits
+bits
+----
 
-  The default is 8. Other values may or may not be supported.
+The default is 8. Other values may or may not be supported.
 
+frame
+-----
+
+SerialPacker configuration. If this element is missing or `None`, no
+framing is performed; trying to send a packet will result in an error.
+
+Otherwise this should be a map with these entries:
+
+* idle
+
+  Inter-packet timeout im milliseconds. Default: 100.
+
+* max
+
+  Max packet length. The default is 127.
+
+* frame
+
+  Frame start byte. The default is 0x85. `None` relies on inter-frame
+  timing and does not allow non-framed data unless you use a mark byte.
+
+  This byte should not occur in standard console output. The frame receiver
+  understands UTF-8 sequences, thus the range 0x80…0xBF is safe to use.
+
+* mark
+
+  Every byte that's part of a frame *must* be prefixed with a ``mark``
+  byte. Other bytes are transmitted as-is. There is no provision for
+  escaping. A mark byte like "DLE" (0x10) should be used that will not
+  occur in normal console output.
+
+
+dest
+----
+
+The destination for received packetized data, i.e. the content of valid
+SerialPacker frames.
+
+The destination command receives the serial data as a single non-keyword
+argument.
+
+If no destination is set, the message is discarded. TODO: implement a
+buffer.
+
+dest_raw
+--------
+
+like ``dest`` but for received non-packetized data, i.e. bytes received
+outside of SerialPacker framing.
+
+Commands
+++++++++
+
+send
+----
+
+Transmit a packet of data.
+
+* data
+
+  The bytes to send.
+
+* raw
+
+  Flag whether to send the bytes directly.
+
+  Otherwise the dara are encapsulated in a SerialPacker frame.
+
+The commands ``x`` ("xmit") and ``w`` ("write") are aliases for ``send``
+with the ``raw`` flag cleared and set, respectively, in order to save
+a couple of bytes when talking to a remote serial port.
+
+errcount
+--------
+
+Returns the number of transmission errors encountered so far.
 
 wdt
 ===

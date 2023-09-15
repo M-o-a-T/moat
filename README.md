@@ -5,82 +5,53 @@ This module contains code to talk to MoaT satellites running MicroPython.
 ## Operation
 
 After installation, the MicroPython node runs a script that loads a config
-file, set up networking if possible, and then accepts structured commands
-across TCP or a serial link.
+file, connects to a microcontroller (or two or …), runs some application
+code, and accepts structured commands across TCP or Unix sockets.
+
+There is no conceptual difference between the master program and the
+microcontrollers; if the MCU supports networking, you can connect MCUs
+directly to each other.
 
 ## Supported devices
 
-Basically, anything that can run MicroPython and has barely enough RAM.
+Basically, anything that can run MicroPython and has enough RAM.
 
-This does include the ESP8266, though you need to compile the MoaT support
-code directly into Flash.
+This does include the ESP8266.
+
+On most MCUs there is not enough RAM to run the MoaT.micro support code,
+thus you need to extend MicroPython to include the MoaT modules from Flash.
+
+## Principle of Operation
+
+Each controller runs a main task which loads some applications. These apps  
+might do something locally, let a LED blink or poll a button, or they  
+provide a link to a remote system.
+
+The "moat micro mplex" command runs a controller on "standard" CPython;
+tested on Linux, but might work elsewhere.
+
+Apps are connected hierarchically. They send messages to each other; these
+messages might result in a reply ("read this temperature"). Multiple
+replies ("read this temperature every ten seconds"), i.e. async iterators,
+are not (yet?) implemented.
+
+All app-related code is written in async Python. We use anyio on the
+multiplexer and native asyncio on the MCUs; a compatibility layer ensures
+that much code can be used on both.
+
 
 ## Installation
 
-### MicroPython
-
-`moat.micro` comes with its own MicroPython fork, for two reasons.
-
-One is that async code on MicroPython is not yet supported natively, as of
-2023-02-26.
-
-The other is that most µPy systems don't have enough RAM to load the MoaT
-code. It hasn't been size-optimized (much). While that too will change,
-some devices (in particular, the ESP8266) just don't have enough RAM.
-
-For these reasons, you need to build and flash a MicroPython image that
-includes a "frozen" copy of the embedded MoaT modules. (You can still
-upload your own enhancements.)
-
-Go to `lib/micropython/ports/esp32` (or whichever microcontroller you have).
-Add this line to `boards/manifest.py`:
-
-	include("../../../../../moat/micro/_embed/lib")
-
-You might have to modify the number of `../` prefixes based on the build
-system of the port in question.
-
-Run `make` and flash your board as appropriate. Connect to it, and verify
-that you get a MicroPython prompt.
-
-#### Serial link
-
-Copy `configs/fallback_serial.cfg` to `whatever.cfg` and edit as appropriate.
-
-Run this command:
-
-	moat micro -c whatever.cfg setup \
-		-C micro/lib/micropython/mpy-cross/build/mpy-cross \
-		-c whatever.cfg -s micro/moat/micro/_embed/main.py \
-		-S std -m
-
-initally, or
-
-	moat micro -c whatever.cfg mplex
-
-afterwards.
+See "INSTALL".
 
 
-#### Networking
+## MoaT.micro Commands
 
-Copy `configs/fallback_net.cfg` to `whatever.cfg` and edit as appropriate.
+### Built-in commands
 
-Run these commands:
+#### command directory lookup
 
-	moat micro -c whatever.cfg setup \
-		-C micro/lib/micropython/mpy-cross/build/mpy-cross \
-		-c whatever.cfg -s micro/moat/micro/_embed/main.py \
-		-S std
-
-once, then
-
-	moat micro -c whatever.cfg mplex -r
-
-to talk to the satellite.
-
-## Commands
-
-There's a basic directory function:
+There's a directory function:
 
 	moat micro -c whatever.cfg cmd _dir
 
@@ -90,13 +61,12 @@ There's a basic directory function:
 
 * d
 
-  A list of submodules. You can enumerate them, too:
+  A list of submodules. You can enumerate them:
 
 	moat micro -c whatever.cfg cmd sys._dir
 
-Online docstrings for these are on the TODO list.
+Online docstrings are on the TODO list.
 
-### Built-in commands
 
 #### ping
 

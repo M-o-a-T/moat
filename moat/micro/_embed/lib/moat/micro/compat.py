@@ -10,7 +10,7 @@ _run = asyncio.run
 _tg = asyncio.TaskGroup
 CancelledError = asyncio.CancelledError
 from asyncio.queues import Queue, QueueEmpty, QueueFull
-from utime import ticks_add, ticks_diff, ticks_ms
+from time import ticks_add, ticks_diff, ticks_ms
 
 
 class EndOfStream(Exception):

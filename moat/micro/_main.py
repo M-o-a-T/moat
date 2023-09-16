@@ -159,8 +159,8 @@ async def setup(
     # 	if not source:
     # 		source = anyio.Path(__file__).parent / "_embed"
 
-    from .main import ABytes, copy_over, get_link_serial, get_serial
-    from .path import MoatDevPath
+    from .main import get_link_serial, get_serial
+    from .path import MoatDevPath, ABytes, copy_over
 
     async with get_serial(lcfg) as ser:
         if force_exit or exit_:

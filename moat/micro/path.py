@@ -19,6 +19,53 @@ from .proto.stack import RemoteError
 
 logger = logging.getLogger(__name__)
 
+class ABytes(io.BytesIO):
+    """
+    An async-IO-mimicing version of `io.BytesIO`.
+    """
+
+    def __init__(self, name, data):
+        super().__init__()
+        self.name = name
+        self.write(data)
+        self.suffix = Path(name).suffix
+
+    def __str__(self):
+        return str(self.name)
+
+    async def open(self, mode):  # pylint: disable=unused-argument
+        "reset the buffer pointer"
+        self.seek(0, 0)
+        return self
+
+    async def read_bytes(self):
+        "return the current buffer"
+        return self.getbuffer()
+
+    async def sha256(self):
+        "hash the current buffer"
+        _h = hashlib.sha256()
+        _h.update(self.getbuffer())
+        return _h.digest()
+
+    def close(self):
+        "does nothing"
+        pass  # pylint:disable=unnecessary-pass
+
+    async def is_dir(self):
+        "returns False"
+        return False
+
+    async def is_file(self):
+        "returns True"
+        return True
+
+    async def stat(self):
+        "returns the size. All other stat fields are empty"
+        res = attrdict()
+        res.st_size = len(self.getbuffer())
+        return res
+
 
 class _MoatPath(pathlib.PurePosixPath):  # pathlib.PosixPath
     __slots__ = ('_repl', '_stat_cache')
@@ -553,8 +600,6 @@ async def copytree(src, dst, check=_nullcheck, cross=None):
 
     Returns the number of modified files.
     """
-    from .main import ABytes  # pylint:disable=import-outside-toplevel,cyclic-import
-
     if await src.is_file():
         if src.suffix == ".py" and str(dst) not in ("/boot.py", "boot.py", "/main.py", "main.py"):
             if cross:
@@ -619,3 +664,25 @@ async def copytree(src, dst, check=_nullcheck, cross=None):
             d = dst / s.name
             n += await copytree(s, d, check=check, cross=cross)
         return n
+
+async def copy_over(src, dst, cross=None):
+    """
+    Transfer a file tree from @src to @dst.
+
+    This procedure verifies that the data arrived OK.
+    """
+    from moat.micro.path import copytree  # pylint:disable=import-outside-toplevel
+
+    tn = 0
+    if await src.is_file():
+        if await dst.is_dir():
+            dst /= src.name
+    while n := await copytree(src, dst, cross=cross):
+        tn += n
+        if n == 1:
+            logger.info("One file changed. Verifying.")
+        else:
+            logger.info("%d files changed. Verifying.", n)
+    logger.info("Done. No (more) differences detected.")
+    return tn
+

@@ -78,6 +78,11 @@ class Queue:
     close_reader = close_receiver
 
 
+class Lockstep(Queue):
+    def __init__(self):
+        super().__init__(0)
+
+
 def create_queue(length=0):
     """Create a queue. Compatibility method.
 

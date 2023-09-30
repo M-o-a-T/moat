@@ -55,7 +55,8 @@ class Path(collections.abc.Sequence):
         :yAB Bytestring, hex encoding
         :sAB Bytestring, base64 encoding
         :mXX This path is marked with XX
-        :XYZ otherwise: evaluate XYZ as a Python expression (may not start with a letter)
+        :iXY evaluate YZ as a Python expression.
+             The 'i' may be missing if YZ does not start with a letter.
 
     The empty path is denoted by a single colon. A path starting with a dot
     is illegal.
@@ -300,6 +301,10 @@ class Path(collections.abc.Sequence):
                     new(None, True)
                 elif e == "_":
                     add(" ")
+                elif e[0] == "i":
+                    done(None)
+                    part = e[1:]
+                    eval_ = 1
                 elif e[0] == "b":
                     done(None)
                     part = e[1:]

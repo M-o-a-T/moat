@@ -6,12 +6,12 @@ import random
 from math import exp, tanh
 
 from moat.micro.compat import Event
-from moat.micro.link import Reader
+from moat.micro.cmd.base import BaseCmd
 
 PINS = {}
 
 
-class PIN:
+class PIN(BaseCmd):
     """
     This is a fake Pin.
     """
@@ -46,17 +46,17 @@ class PIN:
     async def run(self, cmd):
         pass
 
-    async def get(self):
+    async def cmd_r(self):
         return self._value
 
-    async def set(self, value):
-        if self._value != value:
+    async def cmd_w(self, v):
+        if self._value != v:
             self.flag.set()
             self.flag = Event()
-            self._value = value
+            self._value = v
 
 
-class ADC(Reader):
+class ADC(BaseCmd):
     """
     This is a "fake" ADC that walks between a given min and max value.
 
@@ -70,7 +70,9 @@ class ADC(Reader):
     - seed: used to reproduce the random sequence.
     """
 
-    def __init__(self, cfg, **kw):
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        cfg = self.cfg
         self.min = cfg.min if "min" in cfg else 0
         self.max = cfg.max if "max" in cfg else 1
         self.border = cfg.border if "border" in cfg else 2
@@ -82,7 +84,7 @@ class ADC(Reader):
         self.bias = 0
         self.rand = random.Random(cfg.seed if "seed" in cfg else None)
 
-    async def read_(self):
+    async def cmd_r(self):
         b = self.bias + (self.rand.random() - 0.5) * self.step
         v = self.val + b
         if v > self.border and b > 0:

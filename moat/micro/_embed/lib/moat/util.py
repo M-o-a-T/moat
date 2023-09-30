@@ -3,6 +3,53 @@ from asyncio.queues import Queue, QueueEmpty, QueueFull
 
 from moat.micro.compat import Event
 
+class Path(tuple):
+    """
+    somewhat-dummy Path
+
+    no string analysis, somewhat-broken output for non-basics
+    """
+    def __str__(self):
+        def _escol(x):
+            x = x.replace(":", "::").replace(".", ":.").replace(" ", ":_")
+            return x
+        res = []
+        if not len(self):
+            res.append(":")
+        for x in self:
+            if isinstance(x, str):
+                if x == "":
+                    res.append(":e")
+                else:
+                    if res:
+                        res.append(".")
+                    res.append(_escol(x))
+            elif x is True:
+                res.append(":t")
+            elif x is False:
+                res.append(":f")
+            elif x is None:
+                res.append(":n")
+            elif isinstance(x, (bytes, bytearray, memoryview)):
+                if all(32 <= b < 127 for b in x):
+                    res.append(":v" + _escol(x.decode("ascii")))
+                else:
+                    from base64 import b64encode
+                    res.append(":s" + b64encode(x).decode("ascii"))
+                    # no hex
+            else:
+                res.append(":" + _escol(repr(x)))
+        return "".join(res)
+
+    def __repr__(self):
+        return f"P({repr(str(self))})"
+
+    def __truediv__(self,x):
+        return Path(self+(x,))
+
+    def __add__(self,x):
+        return Path(self+x)
+
 
 class NotGiven:
     """Placeholder value for 'no data' or 'deleted'."""
@@ -27,6 +74,15 @@ class CancelledError(Exception):
     """
 
     pass
+
+class CtxObj:
+    """Add an async context manager that calls `_ctx` to run the context."""
+    async def __aenter__(self):
+        self.__ctx = ctx = self._ctx()  # pylint: disable=E1101,W0201
+        return await ctx.__aenter__()
+
+    def __aexit__(self, *tb):
+        return self.__ctx.__aexit__(*tb)
 
 
 class OptCtx:
@@ -506,6 +562,36 @@ class AlertHandler:
         Monitor for new alerts.
         """
         return self.__q.reader(length)
+
+
+class Lockstep:
+    """
+    A lock-step buffer. Very simple, but works only for one reader and one write.
+    """
+    def __init__(self):  
+        self.q = q
+        self._get = Event()      
+        self._put = Event()      
+
+    def __aiter__(self):
+        return self
+        
+    async def __anext__(self):
+        # reader. Signal we're reading, then wait for the item
+        self._get.set()
+        await self._put.wait()
+        self.s = None
+        
+        self._put = Event()
+        return s                 
+
+    get = __anext__
+
+    async def put(s):
+        await self._get.wait()
+        self.s = s         
+        self._put.set()    
+        self._get = Event()
 
 
 class AlertMixin:

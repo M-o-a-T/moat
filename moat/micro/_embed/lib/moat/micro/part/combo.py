@@ -42,7 +42,7 @@ class Array(Reader):
         "Start the parts' background tasks"
         async with TaskGroup() as tg:
             for p in self.parts:
-                await tg.spawn(p.run, cmd)
+                await tg.spawn(p.run, cmd, _name="Arr")
 
     async def read(self):
         """
@@ -79,8 +79,8 @@ class Subtract(Reader):
 
     async def run(self, cmd):
         async with TaskGroup() as tg:
-            await tg.spawn(self.pos.run, cmd)
-            await tg.spawn(self.neg.run, cmd)
+            await tg.spawn(self.pos.run, cmd, _name="Pos")
+            await tg.spawn(self.neg.run, cmd, _name="Neg")
 
     async def read_(self):
         p = n = None

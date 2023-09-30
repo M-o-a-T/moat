@@ -3,7 +3,7 @@
 import sys
 import os
 
-dd = sys.argv[1] if sys.argv else "/tmp/test-upy"
+dd = sys.argv[1] if len(sys.argv)>1 else "/tmp/test-upy"
 mode = sys.argv[2] if len(sys.argv)>2 else "once"
 root=dd+"/root"
 try:
@@ -54,5 +54,5 @@ sys.path.insert(0,d+"/lib/micropython-lib/asyncio.queues/")
 import asyncio.queues
 
 import main
-main.go_moat("mode", fake_end=False, log=True)
+main.go_moat(mode, fake_end=False, log=True)
 

@@ -15,6 +15,8 @@ from anyio.streams.buffered import BufferedByteReceiveStream
 
 from .os_error_list import os_error_mapping
 
+from moat.util import CtxObj
+
 logger = logging.getLogger(__name__)
 
 re_oserror = re.compile(r'OSError: (\[Errno )?(\d+)(\] )?')
@@ -25,31 +27,17 @@ async def _noop_hook(ser):  # pylint:disable=unused-argument
     pass
 
 
-@asynccontextmanager
-async def direct_repl(port, baudrate=115200, hook=_noop_hook):
-    """
-    Context manager to create a front-end to the remote REPL
-    """
-    from anyio_serial import Serial  # pylint: disable=import-outside-toplevel
-
-    ser = Serial(port=port, baudrate=baudrate)
-    async with ser:
-        await hook(ser)
-        repl = DirectREPL(ser)
-        async with repl:
-            yield repl
-
-
-class DirectREPL:
+class DirectREPL(CtxObj):
     """
     Interface to the remote REPL
     """
 
-    def __init__(self, serial):
+    def __init__(self, serial:anyio.abc.ByteStream):
         self.serial = serial
         self.srbuf = BufferedByteReceiveStream(serial)
 
-    async def __aenter__(self):
+    @asynccontextmanager
+    async def _ctx(self):
         "Context. Tries hard to exit any special MicroPython mode"
         await self.serial.send(b'\x02\x03')  # exit raw repl, CTRL+C
         await self.flush_in(0.2)
@@ -68,17 +56,17 @@ class DirectREPL:
             except IOError:
                 await anyio.sleep(0.2)
                 await self.exec_raw("1")
-        return self
-
-    async def __aexit__(self, *tb):
-        await self.serial.send(b'\x02\x03\x03')
+        try:
+            yield self
+        finally:
+            await self.serial.send(b'\x02\x03\x03')
 
     async def flush_in(self, timeout=0.1):
         "flush incoming data"
         while True:
             with anyio.move_on_after(timeout):
                 res = await self.serial.receive(200)
-                logger.debug("Flush: IN %r", res)
+                logger.debug("Flush: IN %r", bytes(res))
                 continue
             break
         self.srbuf._buffer = bytearray()  # pylint: disable=protected-access

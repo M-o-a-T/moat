@@ -15,7 +15,8 @@ def go_moat(state=None, fake_end=True, log=False):
     * std
       Work normally. Enter Fallback mode if there's a problem.
       (Warning: Switching to fallback doesn't always work, esp. when you
-      run out of memory or otherwise hard-crash the system.)
+      run out of memory or otherwise hard-crash the system. Always set up a
+      hardware watchdog, if available.)
 
     * safe
       Work normally. Enter Fallback mode next time.
@@ -42,7 +43,7 @@ def go_moat(state=None, fake_end=True, log=False):
         "once": "skip",
         "skiponce": "std",
         "safe": "fallback",
-        "skipfb": "fallback",
+        "fbskip": "fallback",
     }
     crash = {
         "std": "fallback",

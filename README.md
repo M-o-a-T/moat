@@ -14,30 +14,38 @@ directly to each other.
 
 ## Supported devices
 
-Basically, anything that can run MicroPython and has enough RAM.
+On servers, CPython or (possibly) PyPy.
 
-This does include the ESP8266.
+On satellites, basically anything that can run MicroPython and has enough
+flash (2MB) and RAM (128k).
 
-On most MCUs there is not enough RAM to run the MoaT.micro support code,
-thus you need to extend MicroPython to include the MoaT modules from Flash.
+This does include the ESP8266, if barely.
+
+On most MCUs there is not enough RAM to load the MoaT support code, which
+is admittedly rather large. Thus, you need to build a version of
+MicroPython that includes the MoaT modules. Fortunately this is not
+difficult.
 
 ## Principle of Operation
 
 Each controller runs a main task which loads some applications. These apps  
-might do something locally, let a LED blink or poll a button, or they  
+might do something locally, e.g. let a LED blink or poll a button, or they
 provide a link to a remote system.
 
-The "moat micro mplex" command runs a controller on "standard" CPython;
+The "moat micro run" command runs the MoaT controller on "standard" CPython;
 tested on Linux, but might work elsewhere.
 
 Apps are connected hierarchically. They send messages to each other; these
-messages might result in a reply ("read this temperature"). Multiple
-replies ("read this temperature every ten seconds"), i.e. async iterators,
-are not (yet?) implemented.
+messages might result in a reply ("read this temperature").
+Multiple replies ("read this temperature every ten seconds") are supported.
 
 All app-related code is written in async Python. We use anyio on the
-multiplexer and native asyncio on the MCUs; a compatibility layer ensures
-that much code can be used on both.
+multiplexer and native asyncio on the MCUs; a shallow compatibility layer
+ensures that most code can be shared on both.
+
+As of version 1.20, MicroPython doesn't support taskgroups, which are
+essential for structuring large applications. Our version includes support
+for them.
 
 
 ## Installation
@@ -79,30 +87,7 @@ Triggers sending a "link" message.
 
 ## Message structure
 
-Messages are encoded using MsgPack dictionaries. Short keywords are used to
-conserve client memory.
-
-* a
-
-  Command Action. May be either a string or a list of strings.
-
-  If this field is missing, the message is a reply.
-
-* d
-
-  Data. Commands use a dict: keyword args to the command in question.
-  Replies use whatever data the command returns.
-
-* i
-
-  Sequence number. An action with a sequence number *must* be replied to,
-  eventually. Actions without sequence numbers are unsolicited typed status
-  messages. Replies without sequence numbers are illegal.
-
-* e
-
-  Error. The content is a string (error type), data must be an array
-  (arguments).
+See `doc/messages.md`.
 
 ### Built-in unsolicited messages
 

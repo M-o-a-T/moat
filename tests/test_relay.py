@@ -22,7 +22,7 @@ async def test_rly():
     p = PINS["X"]
 
     async with TaskGroup() as tg:
-        await tg.spawn(r.run, None)
+        await tg.spawn(r.run, None, _name="RlyTest")
         await sleep_ms(50)
 
         await p.set(True)

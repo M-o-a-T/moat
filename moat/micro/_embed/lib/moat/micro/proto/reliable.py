@@ -16,49 +16,58 @@ from ..compat import (
 from .stack import ChannelClosed, _Stacked
 
 
-class Reliable(_Stacked):
+class ReliableMsg(_Stacked):
     """
     Message retry.
 
     This module handles retransmitting missing messages.
 
     Messages are wrapped in a dict with retransmit data.
-
-    If @persist is set, the protocol stack above this module is persistent,
-    i.e. detached from the taskgroup the connection is running in.
-    In this mode you *must* call `run_p()`.
-
     """
 
     # Operation:
-    # Both sender and receiver carry two message counter: head and tail.
     #
-    # Sending, "head" is the next message to be sent, "tail" points to the
+    # Both sender and receiver carry a window-sized array of messages and
+    # two position markers: head and tail.
+    #
+    # Sending, "head" is the next message to be sent, "tail" is the
     # oldest message that's not yet acknowledged. "tail" is populated (if
     # different from "head"), "head" is not, those in between may not be if
     # they have been selectively acknowledged.
     #
-    # Receiving, "head" is the next message we expect, "tail" is the first
+    # Receiving, "head" is the next message we expect, "tail" is the oldest
     # message we have not received yet. The data at both "head" and "tail"
     # must be empty (obviously). Between those there may be messages that
     # have been received out of order.
     #
     # Both sender and receiver limit the difference from tail to head to
-    # window/2. The sender blocks until there is queue space while the
-    # receiver discards messages outside this window. In order not to block
-    # its clients, the sender also maintains a queue of waiting packets.
+    # window/2. The sender delays messages that would exceed the window.
+    # The receiver discards messages outside of this range.
     #
-    # All messages contain send_head `s`, recv_tail `r`, recv_done `x`,
-    # and data `d`. "recv_done" is the list of messages that have been
-    # received out-of-order so they're not retransmitted.
+    # All messages are maps and contain the send_position `s`, recv_tail
+    # `r`, recv_done `x`, and data `d`. "recv_done" is a list of messages
+    # that have been received out-of-order so they're not retransmitted.
+    #
     # The receiver advances its send_tail until it matches `r` and queues
     # all messages for retransmission that are still outstanding but not
-    # mentioned in `x`.
+    # mentioned in `x`. `x` is omitted when empty, `d` is omitted when not
+    # yet queued.
     #
-    # Connection reset is signalled by s=r=-1 and answered with s=r=0
-    # before regular message exchange can take place. This exchange must
-    # happen in both directions. Other messages received during a reset
-    # are discarded.
+    # Connection reset or restart is signalled by an item `a`='r', a
+    # sequence counter `n`=1 to `n`=3, and a negotiated configuration `c`.
+    # The value `n`=0 signals that the link is closed. Other values are
+    # reserved.
+    #
+    # `c` should contains item `m` (window size) and `t` (timeout,
+    # milliseconds). When values do not match, max timeout and min
+    # window values are used by both sides. Other items are ignored.
+    #
+    # The minimum window size is 4. The minimum timeout is 10 msec, which
+    # is probably not useful. The default is 1000 (one second).
+    #
+    # All other values of `a` are reserved and result in a discarded
+    # message. Regular data exchange does not contain an item `a`.
+    # All other items are ignored.
 
     rq = None
     __tg = None
@@ -73,7 +82,8 @@ class Reliable(_Stacked):
         self.timeout = timeout
         self._trigger = Event()
         self._is_up = Event()
-        self.closed = True
+        self._is_down = Event()
+        self._is_down.set()
         self.persist = persist
 
     def reset(self, level=1):
@@ -89,7 +99,6 @@ class Reliable(_Stacked):
         self.in_reset = ticks_ms()
         self.reset_level = level
         self.pend_ack = True
-        self.closed = False
         if self.rq is None:
             self.rq = Queue(self.window)
 
@@ -174,19 +183,6 @@ class Reliable(_Stacked):
                 if nk is None:
                     self.t_recv = ticks_add(ticks_ms(), self.timeout)
 
-    async def run_p(self, immediate=False):
-        """
-        Run Persistent.
-
-        If @immediate is set, the upper stack is started even if the lower
-        half is not yet ready.
-        """
-        if not self.persist:
-            return
-        if not immediate:
-            await self.wait()
-        await self.child.run()
-
     async def wait(self):
         """
         Wait until the lower side is (again) ready to be used.
@@ -197,36 +193,50 @@ class Reliable(_Stacked):
         while self.closed:
             await self._is_up.wait()
 
-    async def run(self):
+    @asynccontextmanager
+    async def _ctx(self):
+        async with TaskGroup() as tg:
+            await tg.spawn(self._run, _name="_rel_run")
+            if self.persist and self.persist is not True:
+                await tg.spawn(self._pers)
+            await self.wait()
+            yield self
+
+    async def _pers(self):
+        while True:
+            await wait_for_ms(self.persist, self.wait)
+            await self.is_down.wait()
+
+    async def _run(self):
         self.reset()
-        try:
-            async with TaskGroup() as tg:
-                self.__tg = tg
-                reader = await tg.spawn(self._read, _name="rel_read")
-                runner = await tg.spawn(self._run_bg, _name="rel_run")
-                while self.in_reset:
-                    t = ticks_ms()
-                    td = ticks_diff(self.in_reset, t)
-                    if td > 0:
-                        try:
-                            await wait_for_ms(td, self._trigger.wait)
-                        except TimeoutError:
-                            pass
-                        # DO NOT replace self._trigger here. _run_bg() already does that.
-                    else:
-                        await self.send_reset()
+        while True:
+            try:
+                async with TaskGroup() as tg, self.parent as par:
+                    self.__tg = tg
+                    self.par = par
+                    reader = await tg.spawn(self._read, _name="rel_read")
+                    runner = await tg.spawn(self._run_bg, _name="rel_bg")
+                    while self.in_reset:
+                        t = ticks_ms()
+                        td = ticks_diff(self.in_reset, t)
+                        if td > 0:
+                            try:
+                                await wait_for_ms(td, self._trigger.wait)
+                            except TimeoutError:
+                                pass
+                            # DO NOT replace self._trigger here. _run_bg() already does that.
+                        else:
+                            await self.send_reset()
 
-                if self.closed:
-                    raise EOFError(self)
+                    if self.closed:
+                        raise EOFError(self)
 
-                # At this point the module above us can talk, so run it
-                # print(f"X {self.parent.txt}: running", file=sys.stderr)
-                if self.persist:
                     await idle()
-                else:
-                    await self.child.run()
-                # print(f"X {self.parent.txt}: ending", file=sys.stderr)
-                tg.cancel()
+
+            except Exception as exc:
+                if not self.persist:
+                    raise
+                print_exc()
 
         except BaseException as exc:
             err = str(exc)
@@ -243,12 +253,13 @@ class Reliable(_Stacked):
                 e.set_error(ChannelClosed())
             if self._is_up.is_set():
                 self._is_up = Event()
+            self._is_down.set()
             if not cl:
                 msg = {'a': 'r', 'n': 0}
                 if err is not None:
                     msg['err'] = err
                 try:
-                    await self.parent.send(msg)
+                    await self.par.send(msg)
                 except EOFError:
                     pass
 
@@ -267,7 +278,7 @@ class Reliable(_Stacked):
         if self.reset_level < 3:
             self.in_reset = ticks_add(ticks_ms(), self.timeout)
         self._trigger.set()
-        await self.parent.send(msg)
+        await self.par.send(msg)
 
     async def send(self, msg):
         if self.closed:
@@ -282,7 +293,7 @@ class Reliable(_Stacked):
         return {'t': self.timeout, 'm': self.window}
 
     def _update_config(self, c):
-        self.timeout = max(self.timeout, c.get('t', 0))
+        self.timeout = max(10, self.timeout, c.get('t', 0))
         self.window = max(4, min(self.window, c.get('m', self.window)))
 
     def _reset_done(self):
@@ -290,6 +301,8 @@ class Reliable(_Stacked):
             self.in_reset = False
             self._trigger.set()
             self._is_up.set()
+            if self._is_down.is_set():
+                self._is_down = Event()
 
     async def recv(self):
         return await self.rq.get()
@@ -297,12 +310,18 @@ class Reliable(_Stacked):
     async def _read(self):
         while True:
             try:
-                msg = await self.parent.recv()
+                if self.par is None:
+                    return
+                msg = await self.par.recv()
             except EOFError:
                 if self.__tg is not None:
                     self.__tg.cancel()
                 return
             await self._dispatch(msg)
+
+    @property
+    def closed(self):
+        return self._is_down.is_set()
 
     async def _dispatch(self, msg):
         a = msg.get('a', None)
@@ -314,7 +333,7 @@ class Reliable(_Stacked):
             n = msg.get('n', 0)
             e = msg.get('e', None)
             if n == 0:  # closed
-                self.closed = True
+                self._is_down.set()
                 if self._is_up.is_set():
                     self._is_up = Event()
                 self._trigger.set()

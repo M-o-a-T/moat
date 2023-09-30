@@ -71,7 +71,10 @@ class _MoatPath(pathlib.PurePosixPath):  # pathlib.PosixPath
     __slots__ = ('_repl', '_stat_cache')
 
     def __init__(self, *a, **kw):
-        super().__init__(*a, **kw)
+        try:
+            super().__init__(*a, **kw)
+        except TypeError:
+            super().__init__()
         self._stat_cache = None
         self._repl = None
 
@@ -310,7 +313,7 @@ class MoatDevPath(_MoatPath):
         if not isinstance(data, (bytes, bytearray, memoryview)):
             raise TypeError(f'contents must be bytes/bytearray, got {type(data)} instead')
         await self._repl.exec(
-            f'from ubinascii import a2b_base64 as a2b; _f = open({self.as_posix()!r}, "wb")'
+            f'from binascii import a2b_base64 as _a2b; _f = open({self.as_posix()!r}, "wb")'
         )
         # write in chunks
         with io.BytesIO(data) as local_file:
@@ -319,7 +322,7 @@ class MoatDevPath(_MoatPath):
                 if not block:
                     break
                 await self._repl.exec(f'_f.write(a2b({binascii.b2a_base64(block).rstrip()!r}))')
-        await self._repl.exec('_f.close(); del _f, a2b')
+        await self._repl.exec('_f.close(); del _f, _a2b')
         return len(data)
 
     # read_text(), write_text()
@@ -356,13 +359,13 @@ class MoatDevPath(_MoatPath):
         """
         try:
             await self._repl.exec(
-                'import uhashlib; _h = uhashlib.sha256(); _mem = memoryview(bytearray(512))\n'
+                'import hashlib; _h = hashlib.sha256(); _mem = memoryview(bytearray(512))\n'
                 f'with open({self.as_posix()!r}, "rb") as _f:\n'
                 '  while True:\n'
-                '    n = _f.readinto(_mem)\n'
-                '    if not n: break\n'
-                '    _h.update(_mem[:n])\n'
-                'del n, _f, _mem\n'
+                '    _n = _f.readinto(_mem)\n'
+                '    if not _n: break\n'
+                '    _h.update(_mem[:_n])\n'
+                'del _n, _f, _mem\n'
             )
         except ImportError:
             # fallback if no hashlib is available: download and hash here.
@@ -386,6 +389,7 @@ class MoatFSPath(_MoatPath):
     target board.
 
     This is the implementation that connects via MoaT "f*" commands.
+
     To actually modify the target, `connect_repl()` must have
     been called.
     """
@@ -393,7 +397,7 @@ class MoatFSPath(_MoatPath):
     # methods that access files
 
     async def _req(self, cmd, **kw):
-        return await self._repl.send("f" + cmd, **kw)
+        return await self._repl.send("f", cmd, **kw)
 
     # >>> os.stat_result((1,2,3,4,5,6,7,8,9,10))
     # os.stat_result(st_mode=1, st_ino=2, st_dev=3, st_nlink=4,

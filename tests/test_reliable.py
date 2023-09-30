@@ -33,7 +33,7 @@ class Xmit(Head):
         done_[pos] = 0
         async with TaskGroup() as tg:
             for n in range(10):
-                await tg.spawn(self.send, dict(n=n, msg="Hey"))
+                await tg.spawn(self.send, dict(n=n, msg="Hey"), _name="Xhey")
                 done_[pos] += 1
         self.done.set()
 
@@ -76,7 +76,7 @@ async def test_basic(qlen1, qlen2, window, loss):
     u2 = u2.stack(Recv, 1, done2)
 
     async with TaskGroup() as tg:
-        x1 = await tg.spawn(r1.run_p)
+        x1 = await tg.spawn(r1.run_p, _name="RunB")
         tg.start_soon(l1.run)
         tg.start_soon(l2.run)
 

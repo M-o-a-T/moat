@@ -40,23 +40,24 @@ system.
 Consider this example::
 
     apps:
-      s: serial.Link
-    s:
+      r: serial.Link
+    r:
       port: "/dev/ttyUSB0"
-	  mode: &rs
+      mode: &rs
         rate: 115200
+      frame: 0xc1
     cfg:
-      s:
+      r:
         apps:
           wdt: wdt.Cmd
-		  r: serial.Link
-		  f: fs.Cmd
+          r: serial.Link
+          f: fs.Cmd
         r: 
-		  port: 2
-		  mode: *rs
+          port: 2
+          mode: *rs
 
-Here, the top-level section ``s`` contains the data that describes how to
-talk to the serial port. ``cfg.s`` is the configuration file that ``moat
+Here, the top-level section ``r`` contains the data that describes how to
+talk to the serial port. ``cfg.r`` is the configuration file that ``moat
 micro setup`` will initially send to the remote side.
 
 On the remote side, ``apps.r`` configures the MCU's serial link back to the
@@ -76,28 +77,135 @@ initially copying the MoaT main program to the MCU.
 .. note::
 
     While you can use ``setup`` to copy your apps onto the MicroPython
-	machine, once MoaT is running it's usually easier to use the remote
-	file system app.
+    machine, once MoaT is running it's easier / less disruptive to use the
+    remote file system app.
+
+The ``setup`` tool uses a serial or network connection and expects a MicroPython
+console at the other end.
+
+The default configuration requires a ``port`` option.
+
+link
+++++
+
+The setup to use for the connection to the remote system.
+
+The default is this structure::
+
+    apps:
+      r: port.Port
+    r:
+      device: moat.micro.part.serial.Serial
+      port: "Specify a port!"
+      mode:
+        rate: 115200
+
+This starts a single "r" app which talks to a serial port.
+
+path
+++++
+
+The path to reach the remote system.
+
+The default is to use "r". More complicated setups are possible; e.g. you
+can tunnel through a MoaT link and use one MoaT peripheral to program another.
+
+param
++++++
+
+Other parameters for setup. See "moat micro setup --help"; the
+configuration replaces dashes in the command line parameters with
+underscores.
+
+section
+-------
+
+The config file section where the remote system's configuration is located.
+
+The section must have an "apps" entry.
+
+reset
+-----
+
+Perform a (soft) reset after uploading. This typically causes MoaT to
+start.
+
+run
+---
+
+After uploading, start MoaT directly. May or may not be incompatible with
+``reset``.
+
+source
+------
+
+Local path to copy files from. No files get copied if not given.
+
+root
+----
+
+The root of the remote file system. Useful for updating the fallback system
+if you don't use ``dest``.
+
+dest
+----
+
+Path on the destination system where files shall be copied to.
+
+The default is the source, starting at the ``_embed`` subdirectory if it
+exists.
+
+state
+-----
+
+The MoaT system state to boot with.
+
+You might want to use "once" for initial debugging.
+
+verbose
+-------
+
+Start the target in verbose mode.
+
+
+cross
+-----
+
+``mpy-cross`` compiler. If set, all files ending in ``.py`` will be
+cross-compiled and uploaded with an extension of ``.mpy``.
+
 
 connect
 =======
 
-This section is used by ``moat micro cmd`` to discover how to talk to a
-multiplexer.
+This section lists parameters used by ``moat micro cmd`` to talk to a
+MoaT system.
 
-Consider this example::
+link
+++++
+
+The setup to use for the connection to the remote system.
+
+The default is this structure::
 
     apps:
-      pu: net.unix.Port
-    pu: &ru
-      port: "moat.fallback"
-    connect:
-      mode: unix
-      unix: *ru
+      r: net.unix.Link
+    r:
+      port: "Specify a Unix socket!"
 
-The ``pu`` app tells the multiplexer to open a Unix port for connectivity.
-The client then uses the information from the ``connect`` section to open
-this port.
+This starts a single "r" app which talks to this socket. The settings in
+the `data transport`_ section, below, are used as described.
+
+path
+++++
+
+The path to reach the remote system. The default is "r.r"; the first
+component selects the link to the multiplexed local server, the second
+the server's link to the remote system.
+
+More complicated setups are possible; e.g. you
+can tunnel through a MoaT link and use one MoaT peripheral to directly talk
+to another, without using overly-long actions.
 
 ------------
 Applications
@@ -120,30 +228,30 @@ The path of the socket. Required. Prefixed with ``XDG_RUNTIME_DIR`` (or ``/tmp``
 replace
 -------
 
-  Action when there is more than one connection to the port. The value is
-  expected to be a boolean. If `True` a new connection replaces the old
-  one; all open requests are re-sent. If `False` the new connection is
-  rejected with an error broadcast.
+Action when there is more than one connection to the port. The value is
+expected to be a boolean. If `True` a new connection replaces the old
+one; all open requests are re-sent. If `False` the new connection is
+rejected with an error broadcast.
 
-  If `None` (the default), multiple connections are allowed. In this case,
-  individual links are numbered. Accessing the link via the application's
-  path is not possible.
+If `None` (the default), multiple connections are allowed. In this case,
+individual links are numbered. A method to derive the link's path is
+TODO.
 
 wait
 ----
 
-  Action when there is no open connection. If `False`, raise an exception;
-  otherwise wait for a new link.
+Action when there is no open connection. If `False`, raise an exception;
+otherwise wait for a new link.
 
-  A numeric value specifies how long to wait until returning an error.
+A numeric value specifies how long to wait until returning an error.
 
-  This parameter is ignored when ``replace`` is `None`.
+This parameter is ignored when ``replace`` is `None`.
 
 fatal
 -----
 
-  Flag whether to raise an exception if the link closes (and is not
-  re-established within ``wait`` seconds, if that is not `False`).
+Flag whether to raise an exception if the link closes (and is not
+re-established within ``wait`` seconds, if that is not `False`).
 
 Commands 
 ++++++++
@@ -200,10 +308,10 @@ path
 
 Path to the command. If not given, the command's first element is used.
 
-frame
------
+link
+----
 
-SerialPacker configuration. See below.
+Data framing and link configuration. See below.
 
 
 net.ip.Port
@@ -217,12 +325,12 @@ Config
 address
 -------
 
-  The address to connect to. The default is ``localhost``.
+The address to connect to. The default is ``localhost``.
 
 port
 ----
 
-  The port number to connect to. Required.
+The port number to connect to. Required.
 
 Other parameters
 ----------------
@@ -239,12 +347,14 @@ Config
 ++++++
 
 address
+-------
 
-  The address to bind to. The default is ``localhost``.
+The address to bind to. The default is ``localhost``.
 
 port
+----
 
-  The port number to bind to. Required.
+The port number to bind to. Required.
 
 Other parameters
 ----------------
@@ -258,11 +368,12 @@ fs
 This application affords basic file system access. It is used to access
 files stored on embedded clients.
 
-There currently is no implementation for servers, as network file systems
-(NFS, CIFS) perform much better than a MoaT server.
+There currently is no implementation of this app for servers, as network
+file systems (NFS, CIFS) perform much better than a MoaT server.
+
 
 Config
-======
+++++++
 
 path
 ----
@@ -482,12 +593,16 @@ Create a file.
 The new file is *not* opened for writing by this command.
 
 
+
 serial.Cmd
 ==========
 
 Access to a serial port.
 
-The 
+This app controls a local serial port. Some other MoaT component only needs
+the path to that port to talk to it; whether the port is on a local system
+or three links away is transparent (the latter is slower, obviously).
+
 
 Config
 ++++++
@@ -495,151 +610,449 @@ Config
 port
 ----
 
-  The port to use. Typically a number.
+The port to use. Typically a number (on satellites), or a path (on Unix).
 
-tx, rx
-------
+tx, rx, rts, cts
+----------------
 
-  Pins to use, if they need to be specified.
+Pins to use, if they need to be specified.
+
+The default is port specific for ``tx`` and ``rx``, and no pin for the
+others.
+
+rts_state, dtr_state
+--------------------
+
+State of RTS and DTR. Unix only.
+
+rts_flip, dtr_flip
+------------------
+
+Flag whether RTS and/ir DTR should be inverted briefly when opening the
+port. Unix only.
+
+flush
+-----
+
+Timer for dropping spurious incoming characters after opening the port.
+The default is 200 msec if `True`. Data trickling in extends the timeout.
+
+txb, rxb
+--------
+
+Buffer sizes for transmit and receive. The default is 128 for each.
+
+
+mode
+----
+
+Basic communication parameters.
 
 rate
-----
+....
 
   Baud rate.
 
 stop
-----
+....
 
   Flag whether to send two stop bits. Defaults to `False`. If `None`, 1.5
   stop bits are used (if supported).
 
 parity
-------
+......
 
 `True`: odd parity, `False`: even parity. The default is `None` for no parity bit.
 
 bits
+....
+
+Number of bits. The default is 8. Other values may or may not be supported.
+
+flow
+....
+
+Hardware flow control: "R" and/or "C" to use RTS / CTS. The default is neither.
+
+
+link
 ----
 
-The default is 8. Other values may or may not be supported.
-
-frame
------
-
-SerialPacker configuration. If this element is missing or `None`, no
-framing is performed; trying to send a packet will result in an error.
-
-Otherwise this should be a map with these entries:
-
-* idle
-
-  Inter-packet timeout im milliseconds. Default: 100.
-
-* max
-
-  Max packet length. The default is 127.
-
-* frame
-
-  Frame start byte. The default is 0x85. `None` relies on inter-frame
-  timing and does not allow non-framed data unless you use a mark byte.
-
-  This byte should not occur in standard console output. The frame receiver
-  understands UTF-8 sequences, thus the range 0x80…0xBF is safe to use.
-
-* mark
-
-  Every byte that's part of a frame *must* be prefixed with a ``mark``
-  byte. Other bytes are transmitted as-is. There is no provision for
-  escaping. A mark byte like "DLE" (0x10) should be used that will not
-  occur in normal console output.
+Data framing and link configuration. See below.
 
 
-dest
-----
+cfg
+===
 
-The destination for received packetized data, i.e. the content of valid
-SerialPacker frames.
+Access to the configuration file.
 
-The destination command receives the serial data as a single non-keyword
-argument.
 
-If no destination is set, the message is discarded. TODO: implement a
-buffer.
+r
+--
 
-dest_raw
---------
+Read part of the configuration.
 
-like ``dest`` but for received non-packetized data, i.e. bytes received
-outside of SerialPacker framing.
+A complex satellite device with small memory may have problems keeping
+a serialized copy of its configuration in memory, let alone two, which is
+necessary when building the bytestring for transmitting it.
+
+Thus this method retrieves a config slice.
+
+p
+..
+
+The path to the data to be retrieved, as a sequence of map keys.
+
+The default is the empty path, i.e. the config root.
+
+Result
+......
+
+Same as ``eval``.
+
+
+w
+--
+
+Update part of the configuration.
+
+This afects only the in-memory config data. The satellite's nonvolatile config 
+is stored on its file system an can be accessed using the ``fs`` module.
+
+p
+..
+
+Path to the destination. It cannot be empty.
+
+d
+..
+
+Data to be put there. If ``NotGiven`` (or simply missing, though you
+shouldn't depend on that), data at the destination is deleted.
+
+Result
+......
+
+None.
+
+
+x
+--
+
+Activates the new configuration.
+
+This might be disruptive in that the connection used to send this command
+may or may not be broken by it. The satellite will try to deliver the
+confirmation before rebooting, but currently it does not guarantee that.
+
+
+_sys
+====
+
+This app is installed by default. It cannot be configured.
 
 Commands
 ++++++++
 
-send
+state
+-----
+
+MoaT devices have a state file in Flash or possibly NVRAM, which controls
+what happens when the system ends, dies with an error, or the device is
+reset due to watchdog or power failure.
+
+state
+.....
+
+A simple string which, if set, replaces the previous state file.
+
+Result
+......
+
+A map consisting of ``n``: the previous state, ``c``: the state when the
+system was started, and ``fb``: a flag whether the current state is using
+the fall-back MaoT stack and configuration.
+
+test
 ----
 
-Transmit a packet of data.
+This command builds and returns a test string, consisting of ``r CR n LF -
+NUL c ^C e ESC !``. It is used to verify the integrity of the
+communications line towards the server.
 
-* data
+Use ``ping`` to verify consistency in the other direction.
 
-  The bytes to send.
+eval
+----
 
-* raw
+Evaluate an object / return its details. This call can be used to evaluate
+a string, or to dig into the data held by a proxy.
 
-  Flag whether to send the bytes directly.
+x
+..
 
-  Otherwise the dara are encapsulated in a SerialPacker frame.
+The object to access. Strings are evaluated. Anything else (typically a
+proxy) is used as-is.
 
-The commands ``x`` ("xmit") and ``w`` ("write") are aliases for ``send``
-with the ``raw`` flag cleared and set, respectively, in order to save
-a couple of bytes when talking to a remote serial port.
+p
+..
 
-errcount
---------
+The path to the data to be retrieved. The first element is an attribute of
+the object; all others are map keys or list indices.
 
-Returns the number of transmission errors encountered so far.
+The path is ignored when an object is proxied to the remote side.
+
+r
+..
+
+If set, returns ``repr(result)`` instead of the result itself.
+
+The default is `False` though the caller should not depend on that.
+
+Result
+......
+
+If the accessed element is a "simple" object, i.e. anything that's not a
+map or a list, it is returned as-is (i.e. as a proxy object if it cannot be
+serialized).
+
+Maps and lists are returned as a two-element list: the original object,
+stripped of non-simple members; and a list of map keys / offsets of the
+removed members.
+
+The caller is expected to recurse retrieval of the configuration.
+
+
+unproxy
+-------
+
+Proxy objects represent data that cannot be serialized. They are kept
+around, potentially cluttering memory.
+
+Proxies should only be processed and generated by ``eval`` commands. Unless
+expressly noted, no other command may return them. Sending a proxy to
+anything other than an ``eval`` may result in unpredictable behavior.
+
+p
+..
+
+The proxy object to be deallocated.
+
+
+ping
+----
+
+m
+...
+
+The message to be echoed. Defaults to `None`.
+
+Result
+......
+
+A map: ``m``, the message sent to it, and ``rep``: ``repr(m)``.
+
 
 wdt
 ===
 
-The watchdog timer.
+The watchdog timer, on the client side.
 
-* hw
+Config
+++++++
 
-  Flag whether to use the hardware watchdog timer.
 
-* t
+hw
+--
 
-  Watchdog timeout in seconds.
+Flag whether to use the hardware watchdog timer.
 
-* tt
+t
+--
 
-  Timer for periodically triggering the watchdog; defaults to ``t/2``.
+Watchdog timeout in seconds.
 
-* ext
+tt
+--
 
-  Flag whether a periodic external message is required. Note that the timer
-  does start before the first message arrives, thus a too-small value of ``t``
-  might cause the client to be non-recoverable.
+Timer for periodically triggering the watchdog; defaults to ``t/2``.
+
+ext
+---
+
+Flag whether a periodic external message is required. Note that the timer
+does start before the first message arrives, thus a too-small value of ``t``
+might cause the client to be non-recoverable.
+
 
 wdt.ping
 ========
 
 Server component to periodically reassure a remote watchdog.
 
-* p
+Config
+++++++
 
-  Path to the remote watchdog timer.
+p
+--
 
-* tt
+Path to the remote watchdog timer.
 
-  Timer for periodically sending a keepalive message, in seconds.
+tt
+--
 
-  Communication errors are ignored.
+Timer for periodically sending a keepalive message, in seconds.
 
-* t
+Communication errors are ignored.
 
-  If set, raises an error if no watchdog reply arrives within this many
-  seconds.
+t
+--
 
+If set, raises an error if no watchdog reply arrives within this many
+seconds.
+
+
+-------------------
+Additional settings
+-------------------
+
+Data transport
+++++++++++++++
+
+MoaT-micro supports data links that are
+
+* 100% reliable (serial data emulated over USB)
+
+* randomly unreliable (e.g. serial data using a UART)
+
+* deterministically unreliable (e.g. a TCP connection)
+
+It also supports using the same link for packet data that's used as the
+Python console, i.e. carries the result of calls to ``print(...,
+file=sys.stderr)``. A variety of line-specific settings ensure that this is
+done with as little overhead as possible.
+
+If the link is lossless (e.g. the MCU emulates a serial port on USB, or
+the link uses TCP), MsgPack or CBOR are run on the link as-is. Otherwise
+the SerialPacker protocol is used to protect packet integrity; on top of
+that, the ``Reliable`` module handles retransmissions.
+
+The default is to use MsgPack without framing.
+
+Some considerations:
+
+* CBOR plus console data requires a lead-in or framing.
+
+* A MsgPack link works without framing if the console data consists of
+  ASCII only. Otherwise, i.e. if messages might contain UTF-8, it requires
+  a lead-in or framing.
+
+* A randomly unreliable line requires framing and loss protection.
+
+* A deterministically unreliable link requires loss protection.
+
+* ASCII console data on msgpack are transparent and don't require framing.
+
+* Client/server TCP connections are one-shot and require no special
+  handling.
+
+* TCP links to a MCU that uses a network connection to "its" server typically
+  tries to reconnect without losing state, and thus needs loss protection.
+
+cbor
+----
+
+A flag. Set this if you want to use CBOR instead of MsgPack. The default is
+`False`, but that might change.
+
+If you use CBOR on a link that also carries stdout/stderr from the remote
+system, you definitely need a lead-in or framing. With msgpack this is only
+required if the output can contain UTF-8.
+
+console
+-------
+
+A flag. If set, incoming console data (i.e. outside of a frame) will be
+processed (e.g. printed to stderr). Further details are TODO.
+
+Otherwise console data are ignored.
+
+The default is `True` on serial lines, `False` for network links.
+
+lossy
+-----
+
+Loss protection. If this element is missing or `None`, the link
+is assumed to be lossless.
+
+Otherwise this should be a map with these entries:
+
+window
+......
+
+The maximum number of messages that have not been acknowledged. The
+default is 8.
+
+timeout
+.......
+
+Retransmission timer, in milliseconds. The default is 1000.
+
+persist
+.......
+
+Mark the link as persistent: a link error will cause reconnecton
+attempts.
+
+If set and not `True`, the value is interpreted as the number of seconds 
+until a failure is deemed to be permanent.
+
+Loss protection 
+
+
+frame
+-----
+
+SerialPacker configuration. If this element is missing or `None`, no
+framing is performed.
+
+Otherwise it should be a map with these entries:
+
+idle
+....
+
+Inter-packet timeout im milliseconds. Default: 100.
+
+max
+...
+
+Max packet length. The default is 127.
+
+frame
+.....
+
+Frame start byte. The default is ``0x85``. `None` relies on inter-frame
+timing and does not allow non-framed data.
+
+This byte should not occur in standard console output. The frame receiver
+understands UTF-8 sequences, thus the ranges ``0x00…0x1F``, and
+``0x80…0xBF`` are safe to use.
+
+mark
+....
+
+Every byte that's part of a frame *must* be prefixed with a ``mark``
+byte. Other bytes are transmitted as-is. There is no provision for
+escaping and no UTF-8 handling. A mark byte like "DLE" (0x10) should be
+used that will not occur in normal console output.
+
+This doubles the number of bytes transmitted. Don't use unless you need
+to do really-low-level debugging.
+
+Frame mark
+----------
+
+Alternately, ``frame`` can be an integer between ``0x00`` and ``0xFF``.
+In this case, SerialPacker is not used; instead, the integer is used as
+the packet lead-in byte. For maximum compatibility with console messages
+this should be in the ``0x80…0xBF`` range.

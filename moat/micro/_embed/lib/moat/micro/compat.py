@@ -11,6 +11,7 @@ _tg = asyncio.TaskGroup
 CancelledError = asyncio.CancelledError
 from asyncio.queues import Queue, QueueEmpty, QueueFull
 from time import ticks_add, ticks_diff, ticks_ms
+from micropython import const
 
 
 class EndOfStream(Exception):
@@ -35,6 +36,13 @@ WouldBlock = (QueueFull, QueueEmpty)
 
 def print_exc(a, b=sys.stderr):
     sys.print_exception(a, b)
+
+def log(s, *x, err=None):
+    if x:
+        s = s % x
+    print(s, file=sys.stderr)
+    if err is not None:
+        sys.print_exception(a, sys.stderr)
 
 
 from moat.util import NotGiven

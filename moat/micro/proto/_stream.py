@@ -1,1 +1,1 @@
-../_embed/lib/moat/micro/proto/stream.py
+../_embed/lib/moat/micro/proto/_stream.py

@@ -12,6 +12,9 @@ from concurrent.futures import CancelledError
 import anyio as _anyio
 import greenback
 
+def const(_x):
+    return _x
+
 logger = logging.getLogger(__name__)
 
 Pin_IN = 0
@@ -24,6 +27,13 @@ sleep = _anyio.sleep
 EndOfStream = _anyio.EndOfStream
 BrokenResourceError = _anyio.BrokenResourceError
 TimeoutError = TimeoutError  # pylint:disable=redefined-builtin,self-assigning-variable
+
+from inspect import currentframe
+
+def log(s, *x, err=None):
+    caller = currentframe().f_back
+    logger = logging.getLogger(caller.f_globals["__name__"])
+    (logger.debug if err is None else logger.error)(s,*x, exc_info=err)
 
 
 def print_exc(exc):
@@ -103,6 +113,10 @@ _tg = None
 def TaskGroup():
     "A TaskGroup subclass (generator) that supports `spawn` and `cancel`"
     global _tg  # pylint:disable=global-statement
+
+    caller = currentframe().f_back
+    logger = logging.getLogger(caller.f_globals["__name__"])
+
     if _tg is None:
         _tgt = type(_anyio.create_task_group())
 
@@ -113,7 +127,8 @@ def TaskGroup():
                 """\
                     Like start(), but returns something you can cancel
                 """
-                # logger.info("Launch %s %s %s %s",_name, p,a,k)
+                nonlocal logger
+                logger.info("Launch %s %s %s %s",_name, p,a,k)
 
                 async def catch(p, a, k, *, task_status):
                     with _anyio.CancelScope() as s:
@@ -146,37 +161,3 @@ async def run_server(cb, host, port, backlog=5, taskgroup=None, reuse_port=True)
 
     await listener.serve(lambda sock: cb(sock, sock), task_group=taskgroup)
 
-
-class AnyioMoatStream:
-    """
-    Adapts an anyio stream to MoaT
-    """
-
-    def __init__(self, stream):
-        self.s = stream
-        self.aclose = stream.aclose
-
-    async def recv(self, n=128):
-        "basic receive"
-        try:
-            res = await self.s.receive(n)
-            return res
-        except (_anyio.EndOfStream, _anyio.ClosedResourceError):
-            raise EOFError from None
-
-    async def send(self, buf):
-        "basic send"
-        try:
-            return await self.s.send(buf)
-        except (_anyio.EndOfStream, _anyio.ClosedResourceError):
-            raise EOFError from None
-
-    async def recvi(self, buf):
-        "basic receive into"
-        try:
-            res = await self.s.receive(len(buf))
-        except (_anyio.EndOfStream, _anyio.ClosedResourceError):
-            raise EOFError from None
-        else:
-            buf[: len(res)] = res
-            return len(res)

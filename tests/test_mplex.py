@@ -17,10 +17,10 @@ async def test_mplex():
     """
     cfg = get_cfg(__name__)
     d = Dispatch(cfg)
-    async with TaskGroup() as tg:
-        await tg.spawn(d.run)
-        await d.wait_ready()
+    async with TaskGroup() as tg, d:
         r = await d.send("aecho",m="Hi")
         assert r["r"] == "Hi"
+        r = await d.send("a","echo",m="Ho")
+        assert r["r"] == "Ho"
         tg.cancel()
 

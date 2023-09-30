@@ -71,7 +71,7 @@ class Relay(Reader):
         t = self.t[val]
         if not t:
             return
-        self._delay = await self.__tg.spawn(self._run_delay, t)
+        self._delay = await self.__tg.spawn(self._run_delay, t, _name="Rly")
         await self.pin.set(val)
         self.t_last = ticks_ms()
 

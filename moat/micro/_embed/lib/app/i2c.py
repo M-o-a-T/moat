@@ -2,7 +2,7 @@ import errno
 
 import machine
 
-from moat.micro.cmd import BaseCmd
+from moat.micro.cmd.base import BaseCmd
 from moat.micro.compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms
 
 

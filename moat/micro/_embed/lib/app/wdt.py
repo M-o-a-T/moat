@@ -22,7 +22,7 @@ import sys
 import machine
 from moat.micro.wdt import WDT, M
 
-from moat.micro.cmd import BaseCmd
+from moat.micro.cmd.base import BaseCmd
 from moat.micro.compat import Event, TimeoutError, wait_for_ms
 
 

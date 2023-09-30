@@ -86,6 +86,12 @@ def test_paths():
 
 
 def test_tagged():
+    p = P(":mfoo:")
+    assert p.mark == "foo"
+    assert len(p) == 0
+    p = Path()
+    p.mark = "bar"
+    assert str(p) == ":mbar:"
     p = P("a:mx.b")
     assert p.mark == "x"  # pylint: disable=no-member
     p = P(":mx.a.b")

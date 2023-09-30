@@ -234,9 +234,9 @@ class Path(collections.abc.Sequence):
         mp = _RTagRE.match(path)
         if mp:
             if not mark:
-                mark = mp[2:-1]
-            elif mark != mp[2:-1]:
-                raise SyntaxError(f"Conflicting tags: {mark} vs. {mp[2:-1]}")
+                mark = mp[0][2:-1]
+            elif mark != mp[0][2:-1]:
+                raise SyntaxError(f"Conflicting tags: {mark} vs. {mp[0][2:-1]}")
             return cls(mark=mark)
 
         def add(x):

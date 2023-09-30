@@ -11,7 +11,7 @@ from moat.util import P, Path, packer, unpacker, yformat, yload
 _valid = (
     (("a", "b", "c"), "a.b.c"),
     (("a", 2, "c"), "a:2.c"),
-    ((2, "c"), ":2.c"),
+    ((2, "c"), (":i2.c", ":2.c")),
     ((True, "c"), ":t.c"),
     ((1.23, "c"), ":1:.23.c"),
     (("", 1.23, "c"), ":e:1:.23.c"),

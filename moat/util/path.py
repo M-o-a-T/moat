@@ -1,5 +1,19 @@
 """
-This module contains various helper functions and classes.
+This module contains functions dealing with MoaT's Path objects.
+
+MoaT Paths are represented as dot-separated strings. The colon is special.
+See "moat util path" / moat.util.Path.__doc__ for details.
+ 
+Behind the scenes, a Path is an immutable lists with special representation.
+This is particularly useful in YAML (MoaT uses a ``!P`` prefix).
+
+They are also marked in msgpack and CBOR.
+
+Joining the string representation of two non-empty paths requires a dot iff
+the second part doesn't start with a separator-colon, but you shouldn't
+ever want to do that: paths are best processed as Path objects, not
+strings.
+
 """
 import ast
 import collections.abc
@@ -9,6 +23,7 @@ from functools import total_ordering
 from typing import Union
 
 import simpleeval
+from base64 import b64encode, b64decode
 
 __all__ = ["Path", "P", "logger_for", "PathShortener", "PathLongener", "path_eval"]
 
@@ -19,20 +34,17 @@ _RTagRE = re.compile("^:m[^:._]+:$")
 @total_ordering
 class Path(collections.abc.Sequence):
     """
-    This object represents the path to some node or other.
-
-    It is an immutable list with special representation, esp. in YAML,
-    and distinctive encoding in msgpack.
-
     Paths are represented as dot-separated strings. The colon is special.
     Inline (within an element):
 
+    \b
         :.  escapes a dot
         ::  escapes a colon
         :_  escapes a space
 
     As separator (starts a new element):
 
+    \b
         :t   True
         :f   False
         :e   empty string
@@ -41,19 +53,12 @@ class Path(collections.abc.Sequence):
         :b01 Binary integer
         :vXY Bytestring, inline
         :yAB Bytestring, hex encoding
-
+        :sAB Bytestring, base64 encoding
         :mXX This path is marked with XX
-        :XYZ otherwise: evaluate XYZ (may not start with a letter)
+        :XYZ otherwise: evaluate XYZ as a Python expression (may not start with a letter)
 
     The empty path is denoted by a single colon. A path starting with a dot
     is illegal.
-
-    Joining two paths requires a dot iff the second part doesn't start with
-    a separator-colon, but you shouldn't ever want to do that: paths are
-    best stored in Path objects, not strings.
-
-    Paths are immutable and behave like lists with a human-readable string
-    representation (if they consist of simple elements).
     """
 
     def __init__(self, *a, mark=""):
@@ -89,11 +94,12 @@ class Path(collections.abc.Sequence):
                 if res:
                     res.append(".")
                 res.append(_escol(x))
-            elif isinstance(x, (bytes, bytearray)):
+            elif isinstance(x, (bytes, bytearray, memoryview)):
                 if all(32 <= b < 127 for b in x):
                     res.append(":v" + _escol(x.decode("ascii"), True))
                 else:
-                    res.append(":y" + x.hex())
+                    res.append(":s" + b64encode(x).decode("ascii"))
+                    # no hex
             elif isinstance(x, (Path, tuple)) and len(x):
                 x = ",".join(repr(y) for y in x)
                 res.append(":" + _escol(x))
@@ -251,6 +257,8 @@ class Path(collections.abc.Sequence):
                             part = bytes.fromhex(part)
                         elif eval_ == -2:
                             part = part.encode("ascii")
+                        elif eval_ == -3:
+                            part = b64decode(part.encode("ascii"))
                         elif eval_ > 1:
                             part = int(part, eval_)
                         else:
@@ -308,6 +316,10 @@ class Path(collections.abc.Sequence):
                     done(None)
                     part = e[1:]
                     eval_ = -2
+                elif e[0] == "s":
+                    done(None)
+                    part = e[1:]
+                    eval_ = -3
                 else:
                     if part is None:
                         raise SyntaxError(f"Cannot parse {path!r} at {pos}")

@@ -79,7 +79,13 @@ class Path(collections.abc.Sequence):
         return p
 
     def __str__(self):
-        def _escol(x, spaces=True):  # XXX make the default adjustable?
+        """
+        Stringify the path to a dotstring.
+
+        Spaces are escaped somewhat aggressively, for better
+        doubleclickability. Do not depend on this.
+        """
+        def _escol(x, spaces=True):
             x = x.replace(":", "::").replace(".", ":.")
             if spaces:
                 x = x.replace(" ", ":_")
@@ -106,7 +112,7 @@ class Path(collections.abc.Sequence):
                 res.append(":n")
             elif isinstance(x, (bytes, bytearray, memoryview)):
                 if all(32 <= b < 127 for b in x):
-                    res.append(":v" + _escol(x.decode("ascii")))
+                    res.append(":v" + _escol(x.decode("ascii"), True))
                 else:
                     res.append(":s" + b64encode(x).decode("ascii"))
                     # no hex

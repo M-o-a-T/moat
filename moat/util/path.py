@@ -91,33 +91,35 @@ class Path(collections.abc.Sequence):
         if not self._data:
             res.append(":")
         for x in self._data:
-            if isinstance(x, str) and len(x):
-                if res:
-                    res.append(".")
-                res.append(_escol(x))
-            elif isinstance(x, (bytes, bytearray, memoryview)):
-                if all(32 <= b < 127 for b in x):
-                    res.append(":v" + _escol(x.decode("ascii"), True))
+            if isinstance(x, str):
+                if x == "":
+                    res.append(":e")
                 else:
-                    res.append(":s" + b64encode(x).decode("ascii"))
-                    # no hex
-            elif isinstance(x, (Path, tuple)) and len(x):
-                x = ",".join(repr(y) for y in x)
-                res.append(":" + _escol(x))
+                    if res:
+                        res.append(".")
+                    res.append(_escol(x))
             elif x is True:
                 res.append(":t")
             elif x is False:
                 res.append(":f")
             elif x is None:
                 res.append(":n")
-            elif x == "":
-                res.append(":e")
-            else:
-                if isinstance(x, (Path, tuple)):  # no spaces
-                    assert len(x) == 0
-                    x = "()"
+            elif isinstance(x, (bytes, bytearray, memoryview)):
+                if all(32 <= b < 127 for b in x):
+                    res.append(":v" + _escol(x.decode("ascii")))
                 else:
-                    x = repr(x)
+                    res.append(":s" + b64encode(x).decode("ascii"))
+                    # no hex
+            elif isinstance(x, (Path, tuple)):
+                if len(x):
+                    x = ",".join(repr(y) for y in x)
+                    res.append(":" + _escol(x))
+                else:
+                    x = "()"
+            else:
+                x = repr(x)
+                if x[0].isalpha():
+                    x = "i"+x
                 res.append(":" + _escol(x))
         return "".join(res)
 

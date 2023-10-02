@@ -333,7 +333,7 @@ class Unpacker(object):
     def unpackb(self, packed):
         self.feed(packed)
         try:
-            ret = next(self.unpack())
+            next(self.unpack())
         except StopIteration as s:
             if self._got_extradata():
                 raise ExtraData(s.value, bytes(self._get_extradata()))

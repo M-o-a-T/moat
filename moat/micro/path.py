@@ -68,15 +68,8 @@ class ABytes(io.BytesIO):
 
 
 class _MoatPath(pathlib.PurePosixPath):  # pathlib.PosixPath
-    __slots__ = ('_repl', '_stat_cache')
-
-    def __init__(self, *a, **kw):
-        try:
-            super().__init__(*a, **kw)
-        except TypeError:
-            super().__init__()
-        self._stat_cache = None
-        self._repl = None
+    _stat_cache = None
+    _repl = None
 
     def connect_repl(self, repl):
         """Connect object to remote connection."""
@@ -321,7 +314,7 @@ class MoatDevPath(_MoatPath):
                 block = local_file.read(chunk)
                 if not block:
                     break
-                await self._repl.exec(f'_f.write(a2b({binascii.b2a_base64(block).rstrip()!r}))')
+                await self._repl.exec(f'_f.write(_a2b({binascii.b2a_base64(block).rstrip()!r}))')
         await self._repl.exec('_f.close(); del _f, _a2b')
         return len(data)
 

@@ -107,12 +107,12 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
 @click.option("-n", "--run", is_flag=True, help="Run MoaT after updating")
 @click.option("-N", "--reset", is_flag=True, help="Reboot after updating")
 @click.option(
-    "-s",
+    "-S",
     "--source",
     type=click.Path(dir_okay=True, file_okay=True, path_type=anyio.Path),
     help="Files to sync",
 )
-@click.option("-d", "--dest", type=str, default="", help="Destination path")
+@click.option("-D", "--dest", type=str, default="", help="Destination path")
 @click.option("-R", "--root", type=str, default="/", help="Destination root")
 @click.option("-s", "--state", type=str, help="State to enter")
 @click.option("-c", "--config", type=P, help="Config part to use for the device")

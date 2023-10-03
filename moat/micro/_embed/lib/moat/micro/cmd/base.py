@@ -26,9 +26,7 @@ may fail.
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
-
-from moat.micro.compat import TaskGroup, idle, Event, wait_for_ms, log, Lock
+from moat.micro.compat import TaskGroup, idle, Event, wait_for_ms, log, Lock, AC_use
 from moat.util import Path
 
 from .util import run_no_exc
@@ -68,7 +66,6 @@ class BaseCmd:
         """
         return await self.root.dispatch(action, kw)
 
-    @asynccontextmanager
     async def send_iter(self, _rep, *action, **kw):
         """
         Send a message, receive an iterated reply.
@@ -82,11 +79,8 @@ class BaseCmd:
                     ...
         """
         res = await self.root.dispatch(action, kw, rep=_rep)
-        try:
-            yield res
-        finally:
-            if hasattr(res,"aclose"):
-                await res.aclose()
+        await AC_use(self, res.aclose)
+        return res
 
     async def send_nr(self, *action, **kw):  # pylint:disable=arguments-differ
         """
@@ -110,6 +104,7 @@ class BaseCmd:
     async def wait_ready(self):
         "delay until ready"
         if not isinstance(self._ready, Event):
+            breakpoint()
             raise self._ready
         try:
             await wait_for_ms(500, self._ready.wait)
@@ -118,6 +113,7 @@ class BaseCmd:
             await self._ready.wait()
             log("Delay %s OK", self.path)
         if not isinstance(self._ready, Event):
+            breakpoint()
             raise self._ready
 
     async def wait_all_ready(self):
@@ -155,7 +151,8 @@ class BaseCmd:
                     # Subprogram config is either in init or at runtime.
                     await self.wait_ready()
                     self._starting = False
-            except BaseException:
+            except Exception as exc:
+                log("out", err=exc)
                 if isinstance(self._ready, Event):
                     self._ready.set()
                     self._ready = RuntimeError("died")

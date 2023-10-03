@@ -3,8 +3,7 @@ Serial port access apps
 """
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
-
+from moat.micro.compat import AC_use
 from moat.micro.cmd.stream import BaseBBMCmd, StreamCmd
 from moat.micro.stacks.console import console_stack
 from moat.micro.part.serial import Serial
@@ -25,15 +24,12 @@ class Raw(BaseBBMCmd):
     max_idle = 100
     pack = None
 
-    @asynccontextmanager
     async def setup(self):
-        async with Serial(self.cfg) as dev:
-            yield dev
+        return await AC_use(self, Serial(self.cfg))
 
 
 class Link(StreamCmd):
-    """Sends/receives MoaT messages"""
-    @asynccontextmanager
+    """Sends/receives MoaT messages using some device"""
     async def stream(self):
-        async with console_stack(Serial(self.cfg), self.cfg) as stream:
-            yield stream
+        return await AC_use(self, console_stack(Serial(self.cfg), self.cfg))
+

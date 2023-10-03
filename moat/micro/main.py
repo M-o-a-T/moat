@@ -6,18 +6,14 @@ from __future__ import annotations
 import hashlib
 import io
 import logging
-from contextlib import asynccontextmanager
 from itertools import chain
 from pathlib import Path
 
-import anyio
-from anyio_serial import Serial
 from moat.util import NotGiven, attrdict
 
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.compat import Event, TaskGroup
 from moat.micro.stacks.console import console_stack
-from moat.micro.proto.stream import AnyioBuf
 
 logger = logging.getLogger(__name__)
 

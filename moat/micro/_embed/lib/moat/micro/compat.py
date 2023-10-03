@@ -188,3 +188,83 @@ class ValueEvent:
         # The value can only be read once.
         await self.event.wait()
         return self.value.unwrap()
+
+
+def ACM(obj):
+    """A bare-bones async context manager.
+
+    Usage::
+
+        class Foo():
+            async def __aenter__(self):
+                AC = ACM(obj)
+                ctx1 = await AC(obj1)
+                ...
+            async def __aexit__(self, *exc):
+                return await AC_exit(self, *exc)
+
+    Calls to `ACM` and `AC_exit` can be nested. They **must** balance.
+    """
+
+    if hasattr(obj,"_AC_"):
+        obj._AC_.append(None)
+    else:
+        obj._AC_ = []
+
+    def _ACc(ctx):
+        return AC_use(obj, ctx)
+    return _ACc
+
+
+async def AC_use(obj, ctx):
+    """
+    Attach a callback / (async) context manager to this object's AC.
+    """
+    if hasattr(ctx, "__aenter__"):
+        cm = await ctx.__aenter__()
+    elif hasattr(ctx, "__enter__"):
+        cm = ctx.__enter__()
+    else:
+        cm = None
+    obj._AC_.append(ctx)
+    return cm
+
+
+async def AC_exit(obj, *exc):
+    received_exc = exc[0] is not None
+
+    # Callbacks are invoked in LIFO order to match the behaviour of
+    # nested context managers.
+    if not exc:
+        exc = (None,None,None)
+
+    suppressed_exc = False
+    pending_raise = False
+    while obj._AC_:
+        cb = obj._AC_.pop()
+        if cb is None:
+            break
+        try:
+            if hasattr(cb, "__aexit__"):
+                res = await cb.__aexit__(*exc)
+            elif hasattr(cb, "__exit__"):
+                res = cb.__exit__(*exc)
+            else:
+                res = cb()
+                if hasattr(cb,"throw"):  # async cb
+                    res = await res
+
+            if res:  # suppress error
+                suppressed_exc = True
+                pending_raise = False
+                exc= (None, None, None)
+        except:
+            exc = sys.exc_info()
+            pending_raise = True
+    if pending_raise:
+        # bare "raise exc_details[1]" replaces our carefully
+        # set-up context
+        raise exc_details[1]
+    return received_exc and suppressed_exc
+
+

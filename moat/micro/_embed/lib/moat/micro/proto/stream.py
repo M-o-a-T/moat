@@ -1,6 +1,7 @@
 from asyncio import core
 from asyncio.stream import Stream
 
+from ..compat import AC_use
 from .stack import BaseBuf
 from ._stream import _MsgpackFold, _MsgpackMsg
 
@@ -23,7 +24,7 @@ class FileBuf(BaseBuf):
     @force_write must be set if the write side doesn't support polling.
 
     Override the `setup` async context manager to set up and tear down the
-    stream.
+    stream. It must yield either a single file or a stdin/stdout tuple.
     """
 
     _buf = None
@@ -35,21 +36,14 @@ class FileBuf(BaseBuf):
         self.force_write = force_write
         self.timeout = timeout
 
-    @asynccontextmanager
-    async def _ctx(self):
-        async with self.stream() as s:
-            self.s = s
-            self._any = getattr(s, "any", lambda: 1)
-            try:
-                yield self
-            finally:
-                if hasattr(s,"deinit"):
-                    s.deinit()
-                elif hasattr(s,"close"):
-                    s.close()
-                    self.s = None
+    async def setup(self):
+        s = await AC_use(self, self.stream())
+        if isinstance(s,tuple):
+            self.rs, self.ws = s
+        else:
+            self.rs = self.ws = s
+        self._any = getattr(self.rs, "any", lambda: 1)
 
-    @asynccontextmanager
     async def stream(self):
         raise NotImplementedError
 
@@ -58,13 +52,13 @@ class FileBuf(BaseBuf):
         m = memoryview(buf)
         while len(m):
             if n == 0 or timeout is None:
-                await _rdq(self.s)
+                await _rdq(self.rs)
             else:
                 try:
-                    await wait_for_ms(timeout, _rdq, self.s)
+                    await wait_for_ms(timeout, _rdq, self.rs)
                 except TimeoutError:
                     break
-            d = self.s.readinto(m[: min(self._any(), len(m))])
+            d = self.rs.readinto(m[: min(self._any(), len(m))])
             if not d:
                 break
             m = m[d:]
@@ -77,8 +71,8 @@ class FileBuf(BaseBuf):
             i = 0
             while i < len(buf):
                 if not self.force_write:  # XXX *sigh*
-                    await _wrq(self.s)
-                n = self.s.write(m[i:])
+                    await _wrq(self.ws)
+                n = self.ws.write(m[i:])
                 if n:
                     i += n
             self._buf = None
@@ -189,17 +183,8 @@ class AIOBuf(BaseBuf):
     def __init__(self):
         pass
 
-    @asynccontextmanager
     async def stream(self):
         raise NotImplementedError
-
-    @asynccontextmanager
-    async def _ctx(self):
-        async with self.stream() as self.s:
-            try:
-                yield self
-            finally:
-                self.s = None
 
     async def wr(self, buf):
         self.s.write(buf)
@@ -222,16 +207,18 @@ class SingleAIOBuf(AIOBuf):
     def __init__(self, stream):
         self._s = stream
 
-    @asynccontextmanager
-    def stream(self):
+    async def stream(self):
+        if self._s is None:
+            raise RuntimeError("used twice")
         s, self._s = self._s, None
-        try:
-            yield s
-        finally:
-            if hasattr(s,"deinit"):
-                s.deinit()
-            elif hasattr(s,"close"):
-                s.close()
+        await AC_use(self._destr)
+        return s
+
+    def _destr(self):
+        if hasattr(s,"deinit"):
+            s.deinit()
+        elif hasattr(s,"close"):
+            s.close()
 
 class MsgpackFold(_MsgpackFold):
     """

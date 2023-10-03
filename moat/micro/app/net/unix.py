@@ -1,11 +1,10 @@
-from contextlib import asynccontextmanager
-
 import anyio
 
 from moat.micro.proto.unix import Link as UnixLink
 from moat.micro.stacks.console import console_stack
 from moat.micro.cmd.stream import StreamCmd, BaseBBMCmd
 from moat.micro.cmd.base import BaseCmd
+from moat.micro.compat import AC_use
 
 
 class Raw(BaseBBMCmd):
@@ -14,10 +13,8 @@ class Raw(BaseBBMCmd):
         return UnixLink(self.port)
 
 class Link(StreamCmd):
-    @asynccontextmanager
     async def stream(self):
-        async with console_stack(UnixLink(self.port), self.cfg) as stream:
-            yield stream
+        return await AC_use(self, console_stack(UnixLink(self.port), self.cfg))
 
 
 class Port(BaseCmd):

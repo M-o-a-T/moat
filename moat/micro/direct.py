@@ -8,14 +8,15 @@ import ast
 import logging
 import os
 import re
-from contextlib import asynccontextmanager
+from functools import partial
 
 import anyio
 from anyio.streams.buffered import BufferedByteReceiveStream
 
-from .os_error_list import os_error_mapping
+from moat.micro.compat import AC_use
+from moat.micro.proto.stream import SingleAnyioBuf
 
-from moat.util import CtxObj
+from .os_error_list import os_error_mapping
 
 logger = logging.getLogger(__name__)
 
@@ -27,23 +28,23 @@ async def _noop_hook(ser):  # pylint:disable=unused-argument
     pass
 
 
-class DirectREPL(CtxObj):
+class DirectREPL(SingleAnyioBuf):
     """
     Interface to the remote REPL
     """
 
-    def __init__(self, serial:anyio.abc.ByteStream):
-        self.serial = serial
-        self.srbuf = BufferedByteReceiveStream(serial)
+    async def stream(self):
+        "Context. Tries hard to exit special MicroPython modes, if any"
+        self.serial = await super().stream()
+        await AC_use(self, partial(self.serial.send, b'\x02\x03\x03'))
 
-    @asynccontextmanager
-    async def _ctx(self):
-        "Context. Tries hard to exit any special MicroPython mode"
+        self.srbuf = BufferedByteReceiveStream(self.serial)
+
         await self.serial.send(b'\x02\x03')  # exit raw repl, CTRL+C
         await self.flush_in(0.2)
         await self.serial.send(b'\x03\x01')  # CTRL+C, enter raw repl
 
-        # Rather than wait for a timeout we try sending a command.
+        # Rather than wait for a longer timeout we try sending a command.
         # Most likely the first time will go splat because the response
         # doesn't start with "OK", but that's fine, just try again.
         try:
@@ -56,10 +57,7 @@ class DirectREPL(CtxObj):
             except IOError:
                 await anyio.sleep(0.2)
                 await self.exec_raw("1")
-        try:
-            yield self
-        finally:
-            await self.serial.send(b'\x02\x03\x03')
+        return self.serial
 
     async def flush_in(self, timeout=0.1):
         "flush incoming data"

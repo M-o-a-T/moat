@@ -5,10 +5,9 @@ Command tree support for MoaT commands
 from __future__ import annotations
 
 import sys
-from contextlib import asynccontextmanager
 
 from moat.util import attrdict, import_, Path
-from moat.micro.compat import wait_for_ms, log, TaskGroup
+from moat.micro.compat import wait_for_ms, log, TaskGroup, ACM, AC_exit
 
 from .base import BaseCmd
 
@@ -89,24 +88,21 @@ class Dispatch(BaseDirCmd):
     def __init__(self,cfg):
         super().__init__(cfg)
 
-
     async def __aenter__(self):
-        self.__ctx = ctx = self._ctx()  # pylint: disable=E1101,W0201
-        return await ctx.__aenter__()
-
-    def __aexit__(self, *tb):
-        return self.__ctx.__aexit__(*tb)
-
-    @asynccontextmanager
-    async def _ctx(self):
-        async with TaskGroup() as tg:
+        acm = ACM(self)
+        try:
+            tg = await acm(TaskGroup())
             log("Start Main Run")
             await tg.spawn(self._run, _name="DispatchMain")
             await self.wait_all_ready()
-            try:
-                yield self
-            finally:
-                tg.cancel()
+            await acm(tg.cancel)
+            return self
+        except BaseException as exc:
+            if not await AC_exit(self, type(exc),exc,exc.__traceback__):
+                raise
+
+    async def __aexit__(self, *tb):
+        return await AC_exit(self, *tb)
 
     @property
     def root(self):

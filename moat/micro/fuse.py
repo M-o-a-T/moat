@@ -127,7 +127,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             return await self.getattr(self._path_inode_map[p], ctx)
         except KeyError:
             try:
-                d = await self._link.send("fstat", str(p))
+                d = await self._link.send("stat", str(p))
             except Exception as err:  # pylint: disable=broad-exception-caught
                 self.raise_error(err)
             else:
@@ -174,7 +174,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         p = self.i_path(inode)
         if _res is None:
             try:
-                d = await self._link.send("fstat", str(p))
+                d = await self._link.send("stat", str(p))
             except Exception as err:  # pylint: disable=broad-exception-caught
                 self.raise_error(err, inode)
         else:
@@ -273,7 +273,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
         p = self.i_path(parent_inode) / name.decode()
         try:
-            await self._link.send("fmkdir", str(p))
+            await self._link.send("mkdir", str(p))
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
         return await self.getattr(self.i_add(p), ctx)
@@ -300,7 +300,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         p = self.i_path(parent_inode) / name.decode()
         try:
-            await self._link.send("frm", str(p))
+            await self._link.send("rm", str(p))
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
 
@@ -328,7 +328,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         p = self.i_path(parent_inode) / name.decode()
         try:
-            await self._link.send("frmdir", str(p))
+            await self._link.send("rmdir", str(p))
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
 
@@ -384,12 +384,12 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             q = self.i_path(parent_inode_new) / name_new.decode()
 
             if flags == 0:
-                await self._link.send("fmv", s=str(p), d=str(q))
+                await self._link.send("mv", s=str(p), d=str(q))
             elif flags == RENAME_EXCHANGE:
                 r = f"_xfn_{os.getpid()}"  # in the root
-                await self._link.send("fmv", s=str(p), d=str(q), x=str(r))
+                await self._link.send("mv", s=str(p), d=str(q), x=str(r))
             elif flags == RENAME_NOREPLACE:
-                await self._link.send("fmv", s=str(p), d=str(q), n=True)
+                await self._link.send("mv", s=str(p), d=str(q), n=True)
             else:
                 logger.warning(
                     "NotImpl: rename: p=%r n=%r d=%r n=%r f=%r ctx=%r",
@@ -445,7 +445,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             m = "r"
 
         try:
-            fd = await self._link.send("fopen", p=str(self.i_path(inode)), m=m)
+            fd = await self._link.send("open", p=str(self.i_path(inode)), m=m)
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
         self.f_open(fd, inode)
@@ -464,14 +464,14 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         if size <= self.max_read:
-            return await self._link.send("frd", fd=fh, off=off, n=size)
+            return await self._link.send("rd", fd=fh, off=off, n=size)
 
         # OWCH. Need to break that large read up.
 
         data = []
         while size > 0:
             dl = min(size, self.max_read)
-            buf = await self._link.send("frd", fd=fh, off=off, n=dl)
+            buf = await self._link.send("rd", fd=fh, off=off, n=dl)
             if buf == b'':
                 break
             data.append(buf)
@@ -494,13 +494,13 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         if len(buf) <= self.max_write:
-            return await self._link.send("fwr", fd=fh, data=buf, off=off)
+            return await self._link.send("wr", fd=fh, data=buf, off=off)
 
         # OWCH. Break that up.
         sent = 0
         while sent < len(buf):
             sn = await self._link.send(
-                "fwr",
+                "wr",
                 fd=fh,
                 data=buf[sent : sent + self.max_write],
                 off=off + sent,
@@ -539,7 +539,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         will be discarded because there is no corresponding client request.
         """
         self.f_close(fh)
-        await self._link.send("fcl", fd=fh)
+        await self._link.send("cl", fd=fh)
 
     async def fsync(self, fh, datasync):
         """Flush buffers for open file *fh*
@@ -564,7 +564,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         p = self.i_path(inode)
         try:
-            dc = await self._link.send("fdir", p=str(p))
+            dc = await self._link.send("dir", p=str(p))
         except Exception as err:  # pylint:disable=broad-exception-caught
             self.raise_error(err)
 
@@ -761,7 +761,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             gen = True
 
         try:
-            r = await self._link.send("fnew", p=str(p))
+            r = await self._link.send("new", p=str(p))
         except Exception as err:  # pylint: disable=broad-exception-caught
             if gen:
                 self.i_del(i)
@@ -774,9 +774,9 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
 
 @asynccontextmanager
-async def wrap(link, path, blocksize=0, debug=1):
+async def wrap(link:SubDispatch, path:pathlib.Path, blocksize=0, debug=1):
     """
-    Context manager that mounts our FUSE file system
+    Context manager that mounts a satellite file system locally
     """
     operations = Operations(link)
     if blocksize:
@@ -785,7 +785,7 @@ async def wrap(link, path, blocksize=0, debug=1):
 
     logger.debug('Mounting...')
     fuse_options = set(pyfuse3.default_options)  # pylint: disable=I1101
-    fuse_options.add('fsname=microfs')
+    fuse_options.add('fsname=moat_fs')
     # fuse_options.add(f'max_read={operations.max_read}')
     if debug > 1:
         fuse_options.add('debug')

@@ -30,10 +30,8 @@ from __future__ import annotations
 
 import sys
 
-from contextlib import asynccontextmanager
-
-from moat.micro.compat import TaskGroup, log
-from moat.util import as_proxy, CtxObj
+from moat.micro.compat import TaskGroup, log, ACM, AC_use, AC_exit
+from moat.util import as_proxy
 
 
 @as_proxy("_rErr", replace=True)
@@ -50,27 +48,65 @@ class SilentRemoteError(RemoteError):
 class ChannelClosed(RuntimeError):
     pass
 
-class _BaseAny(CtxObj):
+
+class _BaseAny:
     """
-    A stream base module.
+    The MoaT stream base module.
+
+    This class *must* be used as an async context manager.
+
+    Override `setup` or `teardown` to add non-stream related features.
+
+    Override `stream` to return the actual data link, which is stored in
+    attibute `s` by default.
     """
     s = None
 
-    def __init__(self):
+    def __init__(self, cfg={}):
+        self.cfg = cfg
         pass
 
-    @asynccontextmanager
-    async def _ctx(self):
-        raise NotImplementedError("'_ctx' in "+self.__class__.__name__)
-        yield None
+    async def __aenter__(self):
+        acm = ACM(self)
+        await AC_use(self, self.teardown)
+        await self.setup()
+        return self
 
-    @asynccontextmanager
+    async def __aexit__(self, *tb):
+        self.s = None
+        return await AC_exit(self, *tb)
+
     async def setup(self):
-        raise NotImplementedError("'setup' in "+self.__class__.__name__)
-        yield None
+        """
+        Object setup. Call the superclass!
+        """
+        pass
+
+    async def teardown(self):
+        """
+        Object destructor.
+
+        Should not fail when called with a partially-created object.
+        """
+        pass
 
 
-class BaseMsg(_BaseAny):
+class _BaseConn(_BaseAny):
+    """
+    Base class for something connected.
+    """
+    async def setup(self):
+        await super().setup()
+        self.s = await self.stream()
+
+    async def stream(self):
+        """
+        Data stream setup.
+        """
+        raise NotImplementedError("'stream' in "+self.__class__.__name__)
+
+
+class BaseMsg(_BaseConn):
     """
     A stream base module for messages. May not be useful.
 
@@ -82,7 +118,7 @@ class BaseMsg(_BaseAny):
     async def recv(self) -> Any:
         raise NotImplementedError("'recv' in "+self.__class__.__name__)
 
-class BaseBlk(_BaseAny):
+class BaseBlk(_BaseConn):
     """
     A stream base module for bytestrings. May not be useful.
 
@@ -94,7 +130,7 @@ class BaseBlk(_BaseAny):
     async def rcv(self) -> Any:
         raise NotImplementedError("'recv' in "+self.__class__.__name__)
 
-class BaseBuf(_BaseAny):
+class BaseBuf(_BaseConn):
     """
     A stream base module for bytestreams.
 
@@ -107,44 +143,52 @@ class BaseBuf(_BaseAny):
         raise NotImplementedError("'wr' in "+self.__class__.__name__)
 
 
-class _StackedAny(CtxObj):
+class _StackedAny(_BaseConn):
 
-    def __init__(self, parent):
-        self.parent = parent
-
-    async def setup(par):
-        breakpoint()
-        pass
-
-    @asynccontextmanager
-    async def _ctx(self):
-        """
-        Open a context. By default, simply forwards to the parent.
-        """
-        async with self.parent.conn() as par:
-            await self.setup(par)
-            self.par = par
-            try:
-                yield self
-            finally:
-                await self.teardown(par)
-                self.par = None
-
-
-class StackedMsg(BaseMsg):
-    """
-    A no-op stack module for messages. Override me to implement interesting features.
-
-    Override the "_ctx" async context manager to do interesting things.
-    
-    Use "par" to store the parent's context.
-    """
     par = None
     parent = None
 
-    __init__ = _StackedAny.__init__
-    _ctx = _StackedAny._ctx
+    def __init__(self, parent, cfg={}):
+        super().__init__(cfg=cfg)
+        self.parent = parent
 
+    async def setup(self):
+        """
+        Start using this link.
+
+        By default, calls `stream` with the parent object.
+        """
+        if self.par is not None:
+            raise RuntimeError("Busy!")
+
+        self.par = await self.stream(self.parent)
+        await super().setup()
+
+    async def teardown(self):
+        """
+        Stop using this link.
+        """
+        if self.par is None:
+            raise RuntimeError("NotBusy!")
+
+        self.par = None
+        await super().teardown()
+
+    async def stream(self, parent):
+        """
+        Use this parent.
+
+        By default, simply enter its async context.
+        """
+        return await AC_use(self, parent)
+
+
+class StackedMsg(_StackedAny, BaseMsg):
+    """
+    A no-op stack module for messages. Override me to implement interesting features.
+
+    Use "par" to store the parent's context.
+    """
     async def send(self, m):
         "Send. Transmits a structured message"
         return await self.par.send(m)
@@ -161,7 +205,8 @@ class StackedMsg(BaseMsg):
         "Console Receive. Returns data by reading into a buffer."
         return await self.par.crd(buf)
 
-class StackedBuf(BaseBuf):
+
+class StackedBuf(_StackedAny, BaseBuf):
     """
     A no-op stack module for byte steams. Override me to implement interesting features.
 
@@ -169,12 +214,6 @@ class StackedBuf(BaseBuf):
     
     Use "par" instead of "parent" for the parent's context.
     """
-    par = None
-    parent = None
-
-    __init__ = _StackedAny.__init__
-    _ctx = _StackedAny._ctx
-
     async def wr(self, buf):
         "Send. Returns when the buffer is transmitted."
         await self.par.wr(buf)
@@ -184,19 +223,12 @@ class StackedBuf(BaseBuf):
         return await self.par.rd(buf)
 
 
-class StackedBlk(BaseBlk):
+class StackedBlk(_StackedAny, BaseBlk):
     """
     A no-op stack module for bytestrings. Override me to implement interesting features.
 
-    Override the "_ctx" async context manager to do interesting things.
-    
     Use "par" instead of "parent" for the parent's context.
     """
-    par = None
-    parent = None
-
-    __init__ = _StackedAny.__init__
-    _ctx = _StackedAny._ctx
     cwr = StackedMsg.cwr
     crd = StackedMsg.crd
 
@@ -209,29 +241,23 @@ class StackedBlk(BaseBlk):
         return await self.par.recv(*a)
 
 
-class LogMsg:
+class LogMsg(_StackedAny):
     """
     Log whatever messages cross this stack.
 
     This implements all of StackedMsg/Buf/Blk.
     """
-    def __init__(self, parent, txt="S", **k):
-        super().__init__(parent, **k)
+    def __init__(self, parent, txt="S"):
+        super().__init__(parent)
         self.txt = txt
 
-    @asynccontextmanager
-    async def _ctx(self):
+    async def setup(self, par):
         log("X:%s start", self.txt)
-        try:
-            async with self.parent as self.par:
-                yield self
-        except BaseException as exc:
-            log("X:%s stop %r", self.txt, exc)
-            raise
-        else:
-            log("X:%s stop", self.txt)
-        finally:
-            self.par = None
+        await super().setup(par)
+
+    async def teardown(self):
+        log("X:%s stop", self.txt)
+
 
     def _repr(self, m, sub=None):
         if not isinstance(m,dict):

@@ -5,10 +5,9 @@ Stream link-up support for MoaT commands
 from __future__ import annotations
 
 import sys
-from contextlib import asynccontextmanager
 
 from moat.util import ValueEvent, obj2name
-from moat.micro.compat import CancelledError, WouldBlock, log, Lock
+from moat.micro.compat import CancelledError, WouldBlock, log, Lock, ACM, AC_exit
 from moat.micro.proto.stack import RemoteError, SilentRemoteError, BaseMsg
 
 from .base import BaseCmd
@@ -24,17 +23,17 @@ class BaseBBMCmd(BaseCmd):
         super().__init__(cfg)
         self.w_lock = Lock()
 
-    @asynccontextmanager
     async def setup(self):
         raise NotImplementedError("setup", self.path)
-        yield None
 
     async def run(self):
-        async with self.setup() as self.dev:
-            try:
-                await super().run()
-            finally:
-                self.dev = None
+        ACM(self)
+        try:
+            self.dev = await self.setup()
+            await super().run()
+        finally:
+            del self.dev
+            await AC_exit(self)
     
     async def cmd_rd(self, n=64):
         """read some data"""
@@ -91,10 +90,9 @@ class StreamCmd(BaseCmd):
         self.reply = {}
         self.seq = 0
 
-    @asynccontextmanager
     async def stream(self):
         """
-        Context manager for creating the actual data stream.
+        Creates the actual data stream. Must be called with an active ACM.
 
         Must be overridden.
         """
@@ -106,15 +104,17 @@ class StreamCmd(BaseCmd):
 
         You typically override `stream`, not this method.
         """
+        acm = ACM(self)
         try:
-            async with self.stream() as self.s:
-                self.set_ready()
-                while True:
-                    msg = await self.s.recv()
-                    await self._handle(msg)
+            await acm(self._cleanup_open_commands)
+            self.s = await self.stream()
+            self.set_ready()
+            while True:
+                msg = await self.s.recv()
+                await self._handle(msg)
         finally:
-            self._cleanup_open_commands()
             self.s = None
+            await AC_exit(self)
 
     # stacked
     async def error(self, exc):
@@ -327,11 +327,8 @@ class StreamCmd(BaseCmd):
                 del self.reply[seq]
 
 
-class EphemeralStreamCmd(StreamCmd):
-    """A StreamCmd that tolerates when the connection ends"""
-    def __init__(self, cfg):
-        super().__init__(cfg)
-
+class SingleStreamCmd(StreamCmd):
+    """A StreamCmd that disconnects on error, or when the connection ends."""
     async def run(self):
         try:
             await super().run()
@@ -342,17 +339,4 @@ class EphemeralStreamCmd(StreamCmd):
             raise
         finally:
             await self._parent.detach(self._name)
-
-
-class SingleStreamCmd(EphemeralStreamCmd):
-    def __init__(self, stream, cfg):
-        self._s = stream
-        super().__init__(cfg)
-
-    def stream(self):
-        try:
-            return self._s
-        finally:
-            self._s = None
-
 

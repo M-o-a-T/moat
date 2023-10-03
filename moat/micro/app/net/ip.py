@@ -1,4 +1,3 @@
-from contextlib import asynccontextmanager
 
 import anyio
 
@@ -6,6 +5,7 @@ from moat.micro.proto.ip import Link as IPLink
 from moat.micro.stacks.console import console_stack
 from moat.micro.cmd.stream import StreamCmd, BaseBBMCmd
 from moat.micro.cmd.base import BaseCmd
+from moat.micro.compat import AC_use
 
 
 class Raw(BaseBBMCmd):
@@ -16,10 +16,8 @@ class Raw(BaseBBMCmd):
 
 class Link(StreamCmd):
     """Sends/receives MoaT messages"""
-    @asynccontextmanager
     async def stream(self):
-        async with console_stack(IPLink(self.cfg.host, self.cfg.port), self.cfg) as stream:
-            yield stream
+        return await AC_use(self, console_stack(IPLink(self.cfg.host, self.cfg.port), self.cfg))
 
 
 class Port(BaseCmd):

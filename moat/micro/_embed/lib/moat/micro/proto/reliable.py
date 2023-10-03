@@ -12,6 +12,7 @@ from ..compat import (
     ticks_diff,
     ticks_ms,
     wait_for_ms,
+    ACM, AC_exit,
 )
 from .stack import ChannelClosed, _Stacked
 
@@ -193,14 +194,16 @@ class ReliableMsg(_Stacked):
         while self.closed:
             await self._is_up.wait()
 
-    @asynccontextmanager
-    async def _ctx(self):
-        async with TaskGroup() as tg:
-            await tg.spawn(self._run, _name="_rel_run")
-            if self.persist and self.persist is not True:
-                await tg.spawn(self._pers)
-            await self.wait()
-            yield self
+    async def __aenter__(self):
+        acm = ACM(self)
+        tg = await acm(TaskGroup())
+        if self.persist and self.persist is not True:
+            await tg.spawn(self._pers)
+        await self.wait()
+        return self
+
+    async def __aexit__(self, *err):
+        return await AC_exit(self, *err)
 
     async def _pers(self):
         while True:

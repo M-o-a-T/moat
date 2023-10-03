@@ -6,7 +6,6 @@ from __future__ import annotations
 import logging
 import os
 import sys
-from contextlib import asynccontextmanager
 from pathlib import Path
 from random import random
 
@@ -24,20 +23,6 @@ logging.basicConfig(level=logging.DEBUG)
 def lbc(*a,**k):
     raise RuntimeError("don't configure logging a second time")
 logging.basicConfig = lbc
-
-
-class MpyCmd(StreamCmd):
-    def __init__(self, cfg, cff="test"):
-        super().__init__(cfg)
-        self.temp = temp
-        self.cfg = cfg
-        self.cff = cff
-
-    @asynccontextmanager
-    async def stream(self):
-        mpy = MpyBuf(self.cfg,self.temp,cff=self.cff)
-        async with console_stack(mpy) as stream:
-            yield stream
 
 
 class MpyBuf(ProcessStream):
@@ -80,8 +65,8 @@ class MpyBuf(ProcessStream):
             str(pre),
         ]
 
-        
-async def mpy_stack(cfg={}):
+
+async def mpy_stack(cfg={}, **kw):
     """
     Creates a multiplexer with a Unix MicroPython process behind it
     """
@@ -166,17 +151,12 @@ class Loopback(BaseMsg, BaseBuf):
             b = bytes(buf)
         await self.send(bytes(buf), _loss=False)
 
-    @asynccontextmanager
-    async def _ctx(self):
-        try:
-            yield self
-        finally:
-            await self.aclose()
 
-    async def aclose(self):
+    async def teardown(self):
         await self.q_wr.aclose()
         if self._link is not None and self._link is not self:
             await self._link.q_rd.aclose()
+        await super().teardown()
 
 
 class Root(Dispatch):

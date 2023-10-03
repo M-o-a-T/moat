@@ -1,6 +1,7 @@
 import machine as M
 
 from moat.micro.proto.stream import FileBuf
+from moat.micro.compat import AC_use
 
 
 # Serial link driver
@@ -17,8 +18,7 @@ class Serial(FileBuf):
     def __init__(self, cfg):
         self.cfg = cfg
 
-    @asynccontextmanager
-    async def setup(self):
+    async def stream(self):
         cfg = self.cfg
         uart_cfg = {}
         if 'tx' in cfg:
@@ -45,7 +45,7 @@ class Serial(FileBuf):
         uart_cfg['stop'] = p.get("stop", None) or 1  # no 1.5 stop bits
 
         ser = M.UART(cfg.get("port", 0), **uart_cfg)
-
+        await AC_use(self, ser.deinit)
         if (t := cfg.get("flush")):
             if t is True:
                 t = 200
@@ -57,7 +57,5 @@ class Serial(FileBuf):
                     break
                 else:
                     log("Flush: %r", buf[:n])
-        try:
-            yield ser
-        finally:
-            ser.deinit()
+
+        return ser

@@ -7,7 +7,6 @@ Command-line code for moat.micro
 import logging
 import os
 import sys
-from contextlib import asynccontextmanager
 
 import anyio
 import asyncclick as click

@@ -4,8 +4,6 @@ class UnixLink(AIOBuf):
     def __init__(self, port:str|Path):
         self.port = port
 
-    @asynccontextmanager
-    async def _ctx(self):
+    async def setup(self):
         raise NotImplementedError("UnixSocket on MicroPy")
-        yield None
 

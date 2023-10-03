@@ -5,12 +5,13 @@ from __future__ import annotations
 
 import sys
 import anyio
-from contextlib import asynccontextmanager
+
+from moat.util import CtxObj
+from moat.micro.compat import AC_use
 
 from ._stream import _MsgpackMsgBuf, _MsgpackMsgBlk, SerialPackerBlkBuf
 from .stack import BaseBuf
 
-from moat.util import CtxObj
 
 class SyncStream:
     """
@@ -136,13 +137,10 @@ class MsgpackMsgBuf(_MsgpackMsgBuf):
         super().__init__(stream, kw)
         self.kw = kw
 
-    @asynccontextmanager
-    async def _ctx(self):
+    async def setup(self):
+        await super().setup()
         self.pack = Packer(default=_encode).pack
         self._unpacker = Unpacker(SyncReadStream(stream), **self.kw)
-
-        async with self.parent as self.par:
-            yield self
 
     async def unpack(self):
         # This calls the unpacker synchronously,
@@ -173,17 +171,16 @@ class MsgpackMsgBlk(_MsgpackMsgBlk):
 class AnyioBuf(BaseBuf):
     """
     Adapts an anyio stream to MoaT.
-
-    You need a context manager that assigns the anyio stream to ``self.s``.
     """
 
-    @asynccontextmanager
-    async def _ctx(self):
-        try:
-            async with self.setup() as self.s:
-                yield self
-        finally:
-            self.s = None
+    async def stream() -> anyio.abc.ByteStream:
+        """
+        Create the stream to use.
+
+        Use `AC_use` to arrange for closing it. This class will not do it
+        for you.
+        """
+        raise NotImplementedError(f"Override {self.__class__.__name__}.stream")
 
     async def wr(self, buf) -> int:
         "basic send"
@@ -207,7 +204,7 @@ class RemoteBufAnyio(anyio.abc.ByteStream):
     """
     Adapts a MoaT buf stream to a remote buffer read/write
 
-    TODO use remote iteration for receiving
+    TODO: use remote iteration for receiving
     """
     def __init__(self, disp:SubDispatch):
         self.disp = disp
@@ -234,13 +231,11 @@ class BufAnyio(CtxObj, anyio.abc.ByteStream):
     def __init__(self, stream:BaseBuf):
         self.stream = stream
 
-    @asynccontextmanager
-    async def _ctx(self):
-        try:
-            async with self.stream as self.par:
-                yield self
-        finally:
-            self.par = None
+    async def __ainit__(self):
+        self.par = await self.stream.__ainit__()
+
+    async def __aexit__(self, *tb):
+        return await self.stream.__aexit__(*tb)
 
 
     async def receive(self, max_bytes=256):
@@ -268,36 +263,38 @@ class SingleAnyioBuf(AnyioBuf):
     def __init__(self, stream):
         self._s = stream
 
-    @asynccontextmanager
-    async def _ctx(self):
-        async with self._s as self.s:
-            yield self
+    async def stream(self):
+        return await AC_use(self, self._s)
 
 
 class ProcessBuf(AnyioBuf):
     """
     A stream that connects to an external process.
     """
-    def __init__(self, argv):
+    def __init__(self, argv, **kw):
         super().__init__()
         self.argv = argv
+        kw.setdefault("stderr", sys.stderr)
+        kw.setdefault("checked", True)
+        self.kw = kw
 
     def args(self):
-        """Keyword arguments for starting the process."""
-        return dict(stderr=sys.stderr, checked=True)
+        """Keyword arguments for starting the process.
 
-    @asynccontextmanager
-    async def _ctx(self):
-        async with await anyio.open_process(self.argv, **self.args()) as proc:
-            self.s = anyio.streams.stapled.StapledByteStream(proc.stdin, proc.stdout)
-            try:
-                yield self
-            finally:
-                with anyio.CancelScope(shield=True):
-                    await self.s.aclose()
-                    try:
-                        with anyio.fail_after(2):
-                            await proc.wait()
-                    except TimeoutError:
-                        proc.kill()
+        Default is whatever has been passed to the ProcessBuf constructor."""
+        return self.kw
+
+    async def stream(self):
+        proc = await AC_use(self, await anyio.open_process(self.argv, **self.args()))
+        s = anyio.streams.stapled.StapledByteStream(proc.stdin, proc.stdout)
+        async def _close():
+            with anyio.CancelScope(shield=True):
+                await s.aclose()
+                try:
+                    with anyio.fail_after(2):
+                        await proc.wait()
+                except TimeoutError:
+                    proc.kill()
+        await AC_use(self, _close)
+        return s
 

@@ -1,3 +1,9 @@
+"""
+Support code to connect to a TCP server.
+"""
+
+from __future__ import annotations
+from moat.micro.compat import AC_use
 from moat.micro.proto.stream import AnyioBuf
 
 class Link(AnyioBuf):
@@ -5,8 +11,6 @@ class Link(AnyioBuf):
         self.host = host
         self.port = port
 
-    @asynccontextmanager
-    async def _ctx(self):
-        async with await anyio.connect_tcp(self.host, self.port) as self.s:
-            yield self
+    async def stream(self):
+        return await AC_use(await anyio.connect_tcp(self.host, self.port))
 

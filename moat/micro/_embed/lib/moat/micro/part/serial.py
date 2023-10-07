@@ -1,7 +1,7 @@
 import machine as M
 
 from moat.micro.proto.stream import FileBuf
-from moat.micro.compat import AC_use
+from moat.micro.compat import AC_use, TimeoutError
 
 
 # Serial link driver

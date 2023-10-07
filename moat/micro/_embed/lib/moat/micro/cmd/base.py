@@ -26,7 +26,7 @@ may fail.
 
 from __future__ import annotations
 
-from moat.micro.compat import TaskGroup, idle, Event, wait_for_ms, log, Lock, AC_use
+from moat.micro.compat import TaskGroup, idle, Event, wait_for_ms, log, Lock, AC_use, TimeoutError
 from moat.util import Path
 
 from .util import run_no_exc
@@ -104,7 +104,6 @@ class BaseCmd:
     async def wait_ready(self):
         "delay until ready"
         if not isinstance(self._ready, Event):
-            breakpoint()
             raise self._ready
         try:
             await wait_for_ms(500, self._ready.wait)
@@ -113,7 +112,6 @@ class BaseCmd:
             await self._ready.wait()
             log("Delay %s OK", self.path)
         if not isinstance(self._ready, Event):
-            breakpoint()
             raise self._ready
 
     async def wait_all_ready(self):
@@ -152,7 +150,7 @@ class BaseCmd:
                     await self.wait_ready()
                     self._starting = False
             except Exception as exc:
-                log("out", err=exc)
+                # log("out", err=exc)
                 if isinstance(self._ready, Event):
                     self._ready.set()
                     self._ready = RuntimeError("died")
@@ -192,6 +190,7 @@ class BaseCmd:
             raise RuntimeError(f"already {'.'.join(self.path)}")
         self._parent = parent
         self._name = name
+        self.root = parent.root
 
     async def stop(self):
         if not isinstance(self._ready, Event):
@@ -203,6 +202,7 @@ class BaseCmd:
         if self._parent is not self:
             self._parent = None
             self._name = None
+            self.root = None
 
     async def attach(self, name, cmd, run=True):
         """
@@ -313,7 +313,7 @@ class BaseCmd:
 
     def send(self, *a, **k):
         "Sending is forwarded to the root"
-        return self.root.send(*a, **k)
+        return self.root.dispatch(a, k)
 
 
     # globally-available commands

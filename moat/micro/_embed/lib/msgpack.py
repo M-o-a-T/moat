@@ -177,11 +177,13 @@ class Unpacker(object):
         remain_bytes = -remain_bytes
         while remain_bytes > 0:
             to_read_bytes = max(self._read_size, remain_bytes)
-            read_data = await self._stream.recv(to_read_bytes)
+            # TODO simplify, read into existing buffer
+            b = bytearray(to_read_bytes)
+            read_data = await self._stream.rd(b)
             if not read_data:
                 break
-            self._buffer += read_data
-            remain_bytes -= len(read_data)
+            self._buffer += b[:read_data]
+            remain_bytes -= read_data
 
         if len(self._buffer) < n + self._buff_i and raise_outofdata:
             self._buff_i = 0  # rollback

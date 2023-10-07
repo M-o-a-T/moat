@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 
 from moat.util import attrdict, import_, Path
-from moat.micro.compat import wait_for_ms, log, TaskGroup, ACM, AC_exit
+from moat.micro.compat import wait_for_ms, log, TaskGroup, ACM, AC_exit, TimeoutError
 
 from .base import BaseCmd
 
@@ -20,7 +20,9 @@ class BaseDirCmd(BaseCmd):
     """
 
     async def run(self):
-        await self._setup_apps()
+        async with TaskGroup() as self._tg:
+            await self._setup_apps()
+            await super().run()
 
     async def update_config(self):
         "called after the config has been updated"
@@ -50,7 +52,10 @@ class BaseDirCmd(BaseCmd):
                 continue
 
             cfg = getattr(gcfg, name, {})
-            await self.attach(name, imp(v)(cfg), run=False)
+            try:
+                await self.attach(name, imp(v)(cfg), run=False)
+            except TypeError as exc:
+                raise TypeError(f"{name}: {v} {repr(imp(v))} {repr(exc)}: {repr(cfg)}")
 
         # Second, run them all.
         # For existing apps, tell it to update its configuration.
@@ -98,7 +103,7 @@ class Dispatch(BaseDirCmd):
             await acm(tg.cancel)
             return self
         except BaseException as exc:
-            if not await AC_exit(self, type(exc),exc,exc.__traceback__):
+            if not await AC_exit(self, type(exc),exc,getattr(exc,"__traceback__",None)):
                 raise
 
     async def __aexit__(self, *tb):

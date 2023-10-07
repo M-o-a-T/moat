@@ -101,7 +101,7 @@ class WDT:
                     pass
             else:
                 # use a software timeout
-                if t is None:
+                if t is None and T is not None:
                     t = T()
                 if t is None:
                     raise RuntimeError("no timer")

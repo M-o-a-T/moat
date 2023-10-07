@@ -1,1 +1,1 @@
-import moat.micro._test.py
+import moat.micro._test

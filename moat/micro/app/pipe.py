@@ -3,9 +3,12 @@ from moat.micro.cmd.stream import StreamCmd
 from moat.micro.proto.stream import ProcessBuf
 
 class Process(StreamCmd):
+    argv = None
+    path = None
+
     async def stream(self):
-        argv = self.cfg["command"]
-        path = self.cfg.get("path")
+        argv = self.cfg["command"] if self.argv is None else self.argv
+        path = self.cfg.get("path") if self.path is None else self.path
         if path is None and argv[0][0] == '/':
             path = argv[0]
 

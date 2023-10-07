@@ -26,7 +26,7 @@ from moat.micro.cmd.base import BaseCmd
 from moat.micro.compat import Event, TimeoutError, wait_for_ms
 
 
-class WDTCmd(BaseCmd):
+class Cmd(BaseCmd):
     """
     Watchdog Timer control.
     """
@@ -34,9 +34,8 @@ class WDTCmd(BaseCmd):
     wdt = None
     timeout = None
 
-    def __init__(self, parent, name, cfg, gcfg):
-        super().__init__(parent)
-        self.cfg = cfg
+    def __init__(self, cfg):
+        super().__init__(cfg)
         self._ping = Event()
         if cfg.get("hw", False) and M.WDT is not None:
             self.wdt = M.WDT

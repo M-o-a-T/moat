@@ -9,7 +9,7 @@ TimeoutError = asyncio.TimeoutError
 _run = asyncio.run
 _tg = asyncio.TaskGroup
 CancelledError = asyncio.CancelledError
-from asyncio.queues import Queue, QueueEmpty, QueueFull
+from async_queue import Queue, QueueEmpty, QueueFull
 from time import ticks_add, ticks_diff, ticks_ms
 from micropython import const
 
@@ -42,7 +42,7 @@ def log(s, *x, err=None):
         s = s % x
     print(s, file=sys.stderr)
     if err is not None:
-        sys.print_exception(a, sys.stderr)
+        sys.print_exception(err, sys.stderr)
 
 
 from moat.util import NotGiven
@@ -264,7 +264,7 @@ async def AC_exit(obj, *exc):
     if pending_raise:
         # bare "raise exc_details[1]" replaces our carefully
         # set-up context
-        raise exc_details[1]
+        raise exc[1]
     return received_exc and suppressed_exc
 
 

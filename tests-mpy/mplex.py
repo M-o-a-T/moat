@@ -3,11 +3,9 @@
 import sys
 import os
 
-dd = sys.argv[1] if len(sys.argv)>1 else "/tmp/test-upy"
+root = sys.argv[1] if len(sys.argv)>1 else "/tmp/test-upy"
 mode = sys.argv[2] if len(sys.argv)>2 else "once"
-root=dd+"/root"
 try:
-    os.mkdir(dd)
     os.mkdir(root)
 except OSError:
     pass
@@ -21,7 +19,9 @@ except OSError:
     pass
 else:
     d+=os.sep+"micro"
-os.chdir(dd)
+
+# print("DIR:",root, file=sys.stderr)
+os.chdir(root)
 
 for p in os.getenv("PYTHONPATH").split(":"):
     if p == ".":
@@ -32,15 +32,19 @@ for p in os.getenv("PYTHONPATH").split(":"):
     try:
         os.stat(ep)
     except OSError:
+        # print ("NO",ep,file=sys.stderr)
         pass
     else:
+        # print ("YS",ep,file=sys.stderr)
         sys.path.insert(0,ep)
         try:
             os.stat(ep+"/lib")
         except OSError:
             pass
         else:
+            # print ("YS",ep+"/lib",file=sys.stderr)
             sys.path.insert(0,ep+"/lib")
+sys.path.insert(0,"./stdlib")
 sys.path.insert(0,".")
 sys.path.insert(0,d+"/lib/micropython/extmod")
 
@@ -51,7 +55,7 @@ import asyncio.lock
 import asyncio.taskgroup
 import asyncio.stream
 sys.path.insert(0,d+"/lib/micropython-lib/asyncio.queues/")
-import asyncio.queues
+#import asyncio.queues
 
 import main
 main.go_moat(mode, fake_end=False, log=True)

@@ -5,32 +5,37 @@ from __future__ import annotations
 
 import sys
 import anyio
+import greenback
+from contextlib import asynccontextmanager
 
-from moat.util import CtxObj
-from moat.micro.compat import AC_use
+from moat.util import CtxObj, name2obj
+from moat.micro.compat import AC_use, TaskGroup, Event
 
 from ._stream import _MsgpackMsgBuf, _MsgpackMsgBlk, SerialPackerBlkBuf
 from .stack import BaseBuf
 
+from msgpack import Packer,Unpacker,OutOfData
 
 class SyncStream:
     """
-    Convert a MoaT stream to sync reading, via greenback.
+    Convert a MoaT BaseBuf to sync reading, via greenback.
 
     Use case: msgpack is not sans-IO; on CPython we don't want to
     mangle msgpack to async-ize it.
     """
 
-    def __init__(self, stream:BaseBuf):
+    def __init__(self, stream:BaseBuf, max_n=10240):
         self.s = stream
+        self.max_n = max_n
 
     def read(self, n):
         """standard sync read"""
+        n = min(n,self.max_n)
         b = bytearray(n)
         r = greenback.await_(self.s.rd(b))
         if r < n:
             b = b[:n]
-        return b
+        return bytes(b)  # stupid msgpack decoder is stupid
 
     def write(self, b):
         """standard sync write"""
@@ -140,7 +145,7 @@ class MsgpackMsgBuf(_MsgpackMsgBuf):
     async def setup(self):
         await super().setup()
         self.pack = Packer(default=_encode).pack
-        self._unpacker = Unpacker(SyncReadStream(stream), **self.kw)
+        self._unpacker = Unpacker(SyncStream(self.par), **self.kw)
 
     async def unpack(self):
         # This calls the unpacker synchronously,
@@ -172,6 +177,12 @@ class AnyioBuf(BaseBuf):
     """
     Adapts an anyio stream to MoaT.
     """
+
+    async def setup(self):
+        """
+        The default simply opens the stream and assigns it to ``s``.
+        """
+        self.s = await self.stream()
 
     async def stream() -> anyio.abc.ByteStream:
         """
@@ -267,15 +278,16 @@ class SingleAnyioBuf(AnyioBuf):
         return await AC_use(self, self._s)
 
 
-class ProcessBuf(AnyioBuf):
+
+class ProcessBuf(CtxObj, AnyioBuf):
     """
     A stream that connects to an external process.
     """
-    def __init__(self, argv, **kw):
-        super().__init__()
-        self.argv = argv
+    proc = None
+    def __init__(self, cfg, **kw):
+        super().__init__(cfg)
         kw.setdefault("stderr", sys.stderr)
-        kw.setdefault("checked", True)
+        # kw.setdefault("check", True)
         self.kw = kw
 
     def args(self):
@@ -284,17 +296,28 @@ class ProcessBuf(AnyioBuf):
         Default is whatever has been passed to the ProcessBuf constructor."""
         return self.kw
 
-    async def stream(self):
-        proc = await AC_use(self, await anyio.open_process(self.argv, **self.args()))
-        s = anyio.streams.stapled.StapledByteStream(proc.stdin, proc.stdout)
-        async def _close():
-            with anyio.CancelScope(shield=True):
-                await s.aclose()
-                try:
-                    with anyio.fail_after(2):
-                        await proc.wait()
-                except TimeoutError:
-                    proc.kill()
-        await AC_use(self, _close)
-        return s
+    @asynccontextmanager
+    async def _ctx(self):
+        await self.setup()
+        proc = None
 
+        try:
+            async with await anyio.open_process(self.argv, **self.args()) as proc:
+                try:
+                    async with SingleAnyioBuf(anyio.streams.stapled.StapledByteStream(proc.stdin, proc.stdout)) as s:
+                        yield s
+                    await proc.wait()
+                except BaseException as exc:
+                    proc.kill()
+                    with anyio.CancelScope(shield=True):
+                        await proc.wait()
+                    raise
+        finally:
+            if proc is not None and proc.returncode != 0 and proc.returncode != -9:
+                raise RuntimeError(f"{self} died with {proc.returncode}")
+
+    async def setup(self):
+        pass
+
+    async def stream(self):
+        raise RuntimeError("should not be called")

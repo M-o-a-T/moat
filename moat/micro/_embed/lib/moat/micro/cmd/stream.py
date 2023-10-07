@@ -7,6 +7,7 @@ from __future__ import annotations
 import sys
 
 from moat.util import ValueEvent, obj2name
+from .util import ValueTask, SendIter, RecvIter
 from moat.micro.compat import CancelledError, WouldBlock, log, Lock, ACM, AC_exit
 from moat.micro.proto.stack import RemoteError, SilentRemoteError, BaseMsg
 
@@ -86,9 +87,12 @@ class StreamCmd(BaseCmd):
     """
 
     def __init__(self, cfg):
-        super().__init__(self, cfg)
+        super().__init__(cfg)
         self.reply = {}
-        self.seq = 0
+        self.seq = 3
+        # seqnum must be odd
+        # we want it to not be zero when the low bit is flipped
+        # TODO: CBOR: use negative seqnums for replies 
 
     async def stream(self):
         """
@@ -105,6 +109,7 @@ class StreamCmd(BaseCmd):
         You typically override `stream`, not this method.
         """
         acm = ACM(self)
+        err = None
         try:
             await acm(self._cleanup_open_commands)
             self.s = await self.stream()
@@ -112,9 +117,18 @@ class StreamCmd(BaseCmd):
             while True:
                 msg = await self.s.recv()
                 await self._handle(msg)
+        except Exception as exc:
+            err = exc
+            log("Run", err=err)
+            raise
+        except BaseException as exc:
+            err = exc
+            raise
         finally:
             self.s = None
-            await AC_exit(self)
+            await AC_exit(self, type(err) if err is not None else err, err, None)
+            if err is not None:
+                raise err
 
     # stacked
     async def error(self, exc):
@@ -122,7 +136,7 @@ class StreamCmd(BaseCmd):
 
     def _cleanup_open_commands(self):
         for e in self.reply.values():
-            e.set_error(CancelledError())
+            e.cancel()
 
     async def _handle_request(self, a, i, d, msg):
         """
@@ -161,17 +175,17 @@ class StreamCmd(BaseCmd):
             res["d"] = r
 
         try:
-            await self.parent.send(res)
+            await self.s.send(res)
         except TypeError as exc:
             log("ERROR returning %r", res, err=exc)
             res = {'e': "T:" + repr(exc), 'i': i}
-            await self.parent.send(res)
+            await self.s.send(res)
 
     async def reply_result(self, i, res):
         if i is None:
             return
         try:
-            await self.parent.send({'i':i, 'd':res})
+            await self.s.send({'i':i, 'd':res})
         except Exception as e:
             await self.reply_error(i, e)
         except BaseException as e:
@@ -195,10 +209,10 @@ class StreamCmd(BaseCmd):
             else:
                 res["e"] = type(StoppedError)
                 res["d"] = (repr(exc),)
-            await self.parent.send(res)
+            await self.s.send(res)
         except TypeError as e2:
             log("ERROR returning %r", res, err=e2)
-            await self.parent.send({'e': "T:" + repr(exc), 'i': i})
+            await self.s.send({'e': "T:" + repr(exc), 'i': i})
 
     async def _handle(self, msg):
         """
@@ -210,6 +224,7 @@ class StreamCmd(BaseCmd):
         a = msg.get("a", None)
         i = msg.get("i", None)
         d = msg.get("d", None)
+        e = msg.get("e", None)
         r = msg.get("r", None)
 
         if i is not None:
@@ -238,7 +253,7 @@ class StreamCmd(BaseCmd):
                 self.reply[i] = t
             rm = await t.start()
             if r is not None:
-                await self.parent.send({'i':i, 'r':rm})
+                await self.s.send({'i':i, 'r':rm})
 
         else:
             # reply
@@ -263,7 +278,7 @@ class StreamCmd(BaseCmd):
                 else:
                     log("unknown err %r", msg)
                     e = StoppedError()
-                t.error(e)
+                t.set_error(e)
 
             elif r is not None:
                 if r is False:
@@ -273,7 +288,7 @@ class StreamCmd(BaseCmd):
                     t.set_r(r)
 
             elif d is not None:
-                t.set(e)
+                t.set(d)
                 if not isinstance(t, (SendIter,RecvIter)):
                     del self.reply[i]
 
@@ -295,16 +310,20 @@ class StreamCmd(BaseCmd):
         @rep requests iterated replies.
         """
 
+        if self.s is None:
+            raise EOFError
+
         if not wait:
             msg = {"a": action, "d": msg}
-            await self.parent.send(msg)
+            await self.s.send(msg)
             return
         
-        # Find a small-ish but unique seqnum
+        # Find a small-ish but unique *ODD* seqnum
+        # even seqnums are requests from the other side
         if self.seq > 10 * (len(self.reply) + 5):
             self.seq = 9
         while True:
-            self.seq += 1
+            self.seq += 2
             seq = self.seq
             if seq not in self.reply:
                 break
@@ -313,7 +332,7 @@ class StreamCmd(BaseCmd):
         if rep:
             msg["r"] = rep
             self.reply[seq] = e = RecvIter(rep)
-            await self.parent.send(msg)
+            await self.s.send(msg)
             res = await e.get()
             if res is not None:
                 log("Spurious IterReply %r", res)
@@ -321,10 +340,10 @@ class StreamCmd(BaseCmd):
         else:
             self.reply[seq] = e = ValueEvent()
             try:
-                await self.parent.send(msg)
+                await self.s.send(msg)
                 return await e.get()
             finally:
-                del self.reply[seq]
+                self.reply.pop(seq, None)
 
 
 class SingleStreamCmd(StreamCmd):

@@ -8,16 +8,20 @@ import os
 import sys
 from pathlib import Path
 from random import random
+from contextlib import asynccontextmanager, suppress
+from contextvars import ContextVar
 
 import anyio
 from moat.util import attrdict, merge, packer, yload, Queue
 
-from moat.micro.compat import TaskGroup
+from moat.micro.compat import TaskGroup, AC_use
 from moat.micro.cmd.stream import StreamCmd
 from moat.micro.cmd.tree import Dispatch
 #from moat.micro.main import Request, get_link, get_link_serial
 #from moat.micro.proto.multiplex import Multiplexer
+from moat.micro.proto.stack import BaseMsg, BaseBuf
 from moat.micro.proto.stream import ProcessBuf
+from moat.micro.app.pipe import Process
 
 logging.basicConfig(level=logging.DEBUG)
 def lbc(*a,**k):
@@ -25,21 +29,36 @@ def lbc(*a,**k):
 logging.basicConfig = lbc
 
 
-class MpyBuf(ProcessStream):
+temp_dir = ContextVar("temp_dir")
+
+required = [
+        "__future__",
+        "functools",
+        "collections",
+        "collections-deque",
+]
+
+def rlink(s,d):
+    if s.is_file():
+        with suppress(FileExistsError):
+            d.symlink_to(s)
+    else:
+        with suppress(FileExistsError):
+            d.mkdir()
+        for f in s.iterdir():
+            rlink(s/f.name,d/f.name)
+
+class MpyBuf(ProcessBuf):
     """
     A stream that links to MicroPython
     """
-    def __init__(self, cfg, temp, cff="test"):
-        super().__init__([])
-        self.temp = temp
-        self.cfg = cfg
-        self.cff = cff
+#   async def __init__(self, cfg, cff):
+#       super().__init__(cfg)
+#       self.cff = cff
 
     async def setup(self):
-        cff = Path(f"tests/{self.cff}.cfg")
-        with open(cff, "r") as f:
-            cf = yload(f, attr=True)
-        cfg = merge(cf, cfg) if cfg else cf
+        self.cfg.setdefault("path", "lib/micropython/ports/unix/build-standard/micropython")
+        self.cfg.setdefault("command", ("micropython","micro/tests-mpy/mplex.py"))
 
         try:
             os.stat("micro/lib")
@@ -48,36 +67,54 @@ class MpyBuf(ProcessStream):
         else:
             pre = "micro/"
 
-        root = temp / "root"
-        try:
+        root = temp_dir.get() / "root"
+        lib = root / "stdlib"
+        with suppress(FileExistsError):
             root.mkdir()
+        with suppress(FileExistsError):
+            lib.mkdir()
+        with suppress(FileExistsError):
             (root / "tests").symlink_to(Path("tests").absolute())
-        except EnvironmentError:
-            pass
+
+        std = Path("lib/micropython-lib/python-stdlib")
+        for req in required:
+            rlink(std.absolute()/req, lib.absolute())
+
         with (root / "moat.cfg").open("wb") as f:
-            f.write(packer(cfg))
+            f.write(packer(self.cfg["cfg"]))
 
         self.argv = [
             # "strace","-s300","-o/tmp/bla",
             pre / "lib/micropython/ports/unix/build-standard/micropython",
             pre / "tests-mpy/mplex.py",
             str(root),
-            str(pre),
+            # str(pre),
         ]
 
+        await super().setup()
 
-async def mpy_stack(cfg={}, **kw):
+
+@asynccontextmanager
+async def mpy_stack(temp: Path, cfg:dict|str):
     """
-    Creates a multiplexer with a Unix MicroPython process behind it
+    Creates a multiplexer.
     """
-    async with TaskGroup() as tg:
-        stack = Dispatch(cfg)
-        try:
-            await tg.spawn(stack.run, _name="Stack")
-            await stack.wait_all_up()
-            yield stack
-        finally:
-            tg.cancel()
+    if isinstance(cfg,str):
+        with (Path("tests")/"cfg"/(cfg+".cfg")).open("r") as cff:
+            cfg = yload(cff, attr=True)
+
+    rst = temp_dir.set(temp)
+    try:
+        async with TaskGroup() as tg:
+            stack = Dispatch(cfg)
+            try:
+                await tg.spawn(stack.run, _name="Stack")
+                await stack.wait_all_ready()
+                yield stack
+            finally:
+                tg.cancel()
+    finally:
+        temp_dir.reset(rst)
 
 
 class Loopback(BaseMsg, BaseBuf):

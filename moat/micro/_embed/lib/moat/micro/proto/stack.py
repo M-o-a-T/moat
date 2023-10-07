@@ -62,7 +62,7 @@ class _BaseAny:
     """
     s = None
 
-    def __init__(self, cfg={}):
+    def __init__(self, cfg):
         self.cfg = cfg
         pass
 
@@ -94,6 +94,10 @@ class _BaseAny:
 class _BaseConn(_BaseAny):
     """
     Base class for something connected.
+
+    The default "setup" method calls the "stream" method and stores the
+    result in the attribute "s".
+
     """
     async def setup(self):
         await super().setup()
@@ -110,7 +114,7 @@ class BaseMsg(_BaseConn):
     """
     A stream base module for messages. May not be useful.
 
-    Implement @_ctx and send/recv.
+    Implement send/recv.
     """
     async def send(self, m:Any) -> Any:
         raise NotImplementedError("'send' in "+self.__class__.__name__)
@@ -122,7 +126,7 @@ class BaseBlk(_BaseConn):
     """
     A stream base module for bytestrings. May not be useful.
 
-    Implement @_ctx and snd/rcv.
+    Implement snd/rcv.
     """
     async def snd(self, m:Any) -> Any:
         raise NotImplementedError("'send' in "+self.__class__.__name__)
@@ -134,7 +138,7 @@ class BaseBuf(_BaseConn):
     """
     A stream base module for bytestreams.
 
-    Implement @_ctx and rd/wr.
+    Implement rd/wr.
     """
     async def rd(self, buf) -> int:
         raise NotImplementedError("'rd' in "+self.__class__.__name__)
@@ -148,7 +152,7 @@ class _StackedAny(_BaseConn):
     par = None
     parent = None
 
-    def __init__(self, parent, cfg={}):
+    def __init__(self, parent, cfg):
         super().__init__(cfg=cfg)
         self.parent = parent
 
@@ -162,7 +166,6 @@ class _StackedAny(_BaseConn):
             raise RuntimeError("Busy!")
 
         self.par = await self.stream(self.parent)
-        await super().setup()
 
     async def teardown(self):
         """
@@ -247,13 +250,13 @@ class LogMsg(_StackedAny):
 
     This implements all of StackedMsg/Buf/Blk.
     """
-    def __init__(self, parent, txt="S"):
-        super().__init__(parent)
-        self.txt = txt
+    def __init__(self, parent, cfg):
+        super().__init__(parent, cfg)
+        self.txt = cfg.get("txt","S")
 
-    async def setup(self, par):
+    async def setup(self):
         log("X:%s start", self.txt)
-        await super().setup(par)
+        await super().setup()
 
     async def teardown(self):
         log("X:%s stop", self.txt)
@@ -297,7 +300,7 @@ class LogMsg(_StackedAny):
 
     async def snd(self, m):
         "Send buffer."
-        log("S:%s %r", self.txt, m)
+        log("S:%s %r", self.txt, repr_b(m))
         try:
             res = await self.par.snd(m)
         except BaseException as exc:
@@ -313,12 +316,12 @@ class LogMsg(_StackedAny):
             log("R:%s stop %r", self.txt, exc)
             raise
         else:
-            log("R:%s %r", self.txt, msg)
+            log("R:%s %r", self.txt, repr_b(msg))
             return msg
 
     async def wr(self, buf):
         "Send buf."
-        log("S:%s %r", self.txt, buf)
+        log("S:%s %r", self.txt, repr_b(buf))
         try:
             res = await self.par.wr(buf)
         except BaseException as exc:
@@ -337,8 +340,13 @@ class LogMsg(_StackedAny):
             log("R:%s stop %r", self.txt, exc)
             raise
         else:
-            log("R:%s %r", self.txt, repr(buf[:res]))
+            log("R:%s %r", self.txt, repr_b(buf[:res]))
             return res
+
+def repr_b(b):
+    if isinstance(b,bytes):
+        return b
+    return bytes(b)
 
 LogBuf = LogMsg
 LogBlk = LogMsg

@@ -1,9 +1,12 @@
 from asyncio import core
 from asyncio.stream import Stream
 
-from ..compat import AC_use
+from msgpack import Packer,Unpacker, ExtType
+
+from moat.util import Proxy, obj2name, name2obj
+from moat.micro.compat import AC_use, TimeoutError, Lock, wait_for_ms
 from .stack import BaseBuf
-from ._stream import _MsgpackFold, _MsgpackMsg
+from ._stream import _MsgpackMsgBuf, _MsgpackMsgBlk
 
 
 def _rdq(s):  # async
@@ -31,13 +34,13 @@ class FileBuf(BaseBuf):
     _any = lambda: 1
 
     def __init__(self, force_write=False, timeout=100):
-        super().__init__()
+        super().__init__({})
         self._wlock = Lock()
         self.force_write = force_write
         self.timeout = timeout
 
     async def setup(self):
-        s = await AC_use(self, self.stream())
+        s = await self.stream()
         if isinstance(s,tuple):
             self.rs, self.ws = s
         else:
@@ -51,11 +54,11 @@ class FileBuf(BaseBuf):
         n = 0
         m = memoryview(buf)
         while len(m):
-            if n == 0 or timeout is None:
+            if n == 0 or self.timeout is None:
                 await _rdq(self.rs)
             else:
                 try:
-                    await wait_for_ms(timeout, _rdq, self.rs)
+                    await wait_for_ms(self.timeout, _rdq, self.rs)
                 except TimeoutError:
                     break
             d = self.rs.readinto(m[: min(self._any(), len(m))])
@@ -123,7 +126,7 @@ def _decode(code, data):
 def _encode(obj):
     # encode an object by building a proxy.
 
-    if Proxy is not None and isinstance(obj, Proxy):
+    if isinstance(obj, Proxy):
         return ExtType(4, obj.name.encode("utf-8"))
 
     try:
@@ -161,14 +164,15 @@ def _encode(obj):
             p = p[1:]
         return ExtType(5, packb(k) + b"".join(packb(x) for x in p))
 
-class MsgpackMsg(_MsgpackMsg):
+class MsgpackMsgBuf(_MsgpackMsgBuf):
     def __init__(self, stream, **kw):
         super().__init__(stream, kw)
         self.kw = kw
 
-    async def setup(self, par):
+    async def setup(self):
+        await super().setup()
         self.pack = Packer(default=_encode).packb
-        self.unpack = Unpacker(stream, **self.kw).unpack
+        self.unpack = Unpacker(self.par, **self.kw).unpack
 
 
 class AIOBuf(BaseBuf):
@@ -220,7 +224,7 @@ class SingleAIOBuf(AIOBuf):
         elif hasattr(s,"close"):
             s.close()
 
-class MsgpackFold(_MsgpackFold):
+class MsgpackMsgBlk(_MsgpackMsgBlk):
     """
     structured messages > chunked bytestrings
                 

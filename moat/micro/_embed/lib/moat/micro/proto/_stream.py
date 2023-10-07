@@ -17,8 +17,6 @@ except ImportError:
     def get_proxy(x):
         raise NotImplementedError(f"get_proxy({repr(x)})")
 
-MPy = const(sys.implementation.name == "micropython")
-
 from msgpack import ExtType, OutOfData, Packer, Unpacker, packb, unpackb
 from serialpacker import FRAME_START, SerialPacker
 
@@ -100,7 +98,9 @@ class _MsgpackMsgBuf(StackedMsg):
         # console: size of console buffer, 128 if True
         # msg_prefix: int: code for start-of-packet
         #
-        super().__init__(stream)
+        from .stream import _encode,_decode
+
+        super().__init__(stream, {})
         self.w_lock = Lock()
         kw['ext_hook'] = _decode
 
@@ -109,9 +109,9 @@ class _MsgpackMsgBuf(StackedMsg):
             pref = bytes((pref,))
         self.pref = pref
 
-        cons = kw.pop["console"]
+        cons = kw.pop("console", False)
 
-        if cons or msg_prefix is not None:
+        if cons or pref is not None:
             kw["read_size"] = 1
         if cons:
             _CReader.__init__(self, cons)
@@ -124,7 +124,7 @@ class _MsgpackMsgBuf(StackedMsg):
     async def cwr(self, buf):
         if not self.cons:
             return
-        return await super().wr(buf)
+        return await self.par.wr(buf)
 
     async def crd(self, buf):
         return _CReader.crd(self, buf)
@@ -136,8 +136,8 @@ class _MsgpackMsgBuf(StackedMsg):
                 if self.cons:
                     msg = self.pref+msg  # *sigh* must be atomic
                 else:
-                    await super().wr(self.pref)
-            await super().wr(msg)
+                    await self.par.wr(self.pref)
+            await self.par.wr(msg)
 
     async def recv(self) -> Any:
         if self.pref is not None:
@@ -177,6 +177,8 @@ class _MsgpackMsgBlk(StackedMsg):
     """
 
     def __init__(self, stream:BaseBlk, **kw):
+        from .stream import _encode,_decode
+
         super().__init__(stream)
         self.pack = Packer(default=_encode).packb
         self.unpacker = Unpacker(None, ext_hook=_decode, **kw).unpackb

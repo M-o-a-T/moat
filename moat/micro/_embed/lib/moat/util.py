@@ -1,7 +1,7 @@
 import sys
-from asyncio.queues import Queue, QueueEmpty, QueueFull
+#from asyncio.queues import Queue, QueueEmpty, QueueFull
 
-from moat.micro.compat import Event
+from moat.micro.compat import Event, WouldBlock
 
 class Path(tuple):
     """
@@ -48,7 +48,7 @@ class Path(tuple):
         return Path(self+(x,))
 
     def __add__(self,x):
-        return Path(self+x)
+        return Path(tuple(self)+x)
 
 
 class NotGiven:
@@ -583,6 +583,30 @@ class Lockstep:
         self.s = s         
         self._put.set()    
         self._get = Event()
+
+class NoProxyError(ValueError):
+    "Error for nonexistent proxy values"
+    pass  # pylint:disable=unnecessary-pass
+
+class Proxy:
+    """
+    A proxy object, i.e. a placeholder for things that cannot pass through MsgPack.
+    """
+
+    def __init__(self, name, *data):
+        self.name = name
+        self.data = data
+
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}({repr(self.name)},"
+            + ",".join(repr(x) for x in self.data)
+            + ")"
+        )
+
+    def ref(self):
+        """Dereferences the proxy"""
+        return name2obj(self.name)
 
 
 class AlertMixin:

@@ -1,5 +1,7 @@
 import sys
 
+from ..proto.stack import BaseBuf, BaseMsg
+
 def console_stack(stream, cfg, cons=False):
     # lossy=False, log=False, use_console=False, msg_prefix=None
     """
@@ -11,25 +13,28 @@ def console_stack(stream, cfg, cons=False):
     Set @msg_prefix to the SerialPacker (or msgpack) lead-in character.
     """
 
-    assert hasattr(stream, "recv")
-    assert hasattr(stream, "aclose")
-
-    cons = cfg.get("console", cons)
-    frame = cfg.get("frame", None)
-    lossy = cfg.get("lossy", None)
-    log = cfg.get("log", None)
-
     assert isinstance(stream, BaseBuf)
 
-    if cfg.get("cbor", False):
+    link = cfg.get("link", {})
+    cons = link.get("console", cons)
+    frame = link.get("frame", None)
+    lossy = link.get("lossy", None)
+    log = cfg.get("log", None)
+    log_raw = cfg.get("log_raw", None)
+
+    if log_raw is not None:
+        from ..proto.stack import LogMsg
+        stream = LogMsg(stream, log_raw)
+
+    if link.get("cbor", False):
         raise NotImplementedError("CBOR")
     else:
         if isinstance(frame, dict):
-            from ..proto.stream import SerialPackerBlkBuf
+            from ..proto.stream import SerialPackerBlkBuf, MsgpackMsgBlk
             stream = SerialPackerBlkBuf(stream, frame=frame, cons=cons)
             stream = MsgpackMsgBlk(stream)
         else:
-            from ..proto.stream import MsgpackHandler
+            from ..proto.stream import MsgpackMsgBuf
             stream = MsgpackMsgBuf(stream, msg_prefix=frame)
 
     assert isinstance(stream, BaseMsg)
@@ -39,8 +44,8 @@ def console_stack(stream, cfg, cons=False):
 
         stream = ReliableMsg(stream, **lossy)
 
-    if log:
-        from ..proto.stack import Logger
-        stream = Logger(stream)
+    if log is not None:
+        from ..proto.stack import LogMsg
+        stream = LogMsg(stream, log)
 
     return stream

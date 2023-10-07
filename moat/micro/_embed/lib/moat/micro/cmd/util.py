@@ -96,12 +96,12 @@ class ValueTask:
     async def start(self):
         if self._t is not None:
             raise RuntimeError("dup")
-        self._t = await self.cmd._tg.spawn(self._wrap, p,a,k, _name="Val")
+        self._t = await self.cmd._tg.spawn(self._wrap, _name="Val")
                        
-    async def _wrap(self, p,a,k):
+    async def _wrap(self):
         try:
             err = None
-            res = await p(*a,**k)
+            res = await self.p(*self.a,**self.k)
         except Exception as exc:
             err = exc
         except BaseException as exc:

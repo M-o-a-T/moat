@@ -1,11 +1,12 @@
-from moat.micro.cmd import Dispatch as _Dispatch
+from moat.micro.cmd.tree import Dispatch as _Dispatch
 
 from moat.util import yload
 
 from pathlib import Path
 
 class Dispatch(_Dispatch):
-	APP = "test.app"
+	pass
+	# APP = "test.app"
 
 def get_cfg(n):
 	pn=Path(n)

@@ -196,7 +196,7 @@ def ACM(obj):
 
     # AsyncExitStack.__aenter__ is a no-op. We don't depend on that but at
     # least it shouldn't yield
-    log("AC_Enter",nback=2)
+    # log("AC_Enter",nback=2)
     try:
         cr = cm.__aenter__()
         cr.send(None)
@@ -211,7 +211,7 @@ def ACM(obj):
 
 async def AC_use(obj, ctx):
     acm = obj._AC_[-1]
-    log("AC_Use %r",ctx,nback=2)
+    # log("AC_Use %r",ctx,nback=2)
     if hasattr(ctx,"__aenter__"):
         return await acm.enter_async_context(ctx)
     elif hasattr(ctx,"__enter__"):
@@ -223,7 +223,7 @@ async def AC_use(obj, ctx):
     return None
 
 async def AC_exit(obj, *exc):
-    log("AC_End",nback=2)
+    # log("AC_End",nback=2)
     if not exc:
         exc = (None,None,None)
     return await obj._AC_.pop().__aexit__(*exc)

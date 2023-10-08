@@ -270,7 +270,7 @@ class LogMsg(_StackedAny):
             if sub == k:
                 res.append(f"{k}={self._repr(v)}")
             else:
-                res.append(f"{k}={v}")
+                res.append(f"{k}={repr(v)}")
         return "{" + " ".join(res) + "}"
 
     async def send(self, m):

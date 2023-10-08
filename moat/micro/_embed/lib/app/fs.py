@@ -5,7 +5,7 @@ import os
 from moat.util import as_proxy
 
 from moat.micro.cmd.base import BaseCmd
-from moat.micro.compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms
+from moat.micro.compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms, log
 from moat.micro.proto.stack import SilentRemoteError
 
 
@@ -23,20 +23,20 @@ as_proxy("_FnErr", FileNotFoundError)
 as_proxy("_FxErr", FileExistsError)
 
 
-class FsCmd(BaseCmd):
+class Cmd(BaseCmd):
     _fd_last = 0
     _fd_cache = None
 
-    def __init__(self, parent, name, cfg, gcfg):
-        super().__init__(parent)
+    def __init__(self, cfg):
+        super().__init__(cfg)
         self._fd_cache = dict()
-        self.cfg = cfg
         try:
             self._pre = cfg["prefix"]
-            if self._pre and self._pre[-1] != "/":
-                self._pre += "/"
         except KeyError:
             self._pre = ""
+        else:
+            if self._pre and self._pre[-1] != "/":
+                self._pre += "/"
 
     def _fsp(self, p):
         if self._pre:
@@ -47,22 +47,23 @@ class FsCmd(BaseCmd):
         # raise FSError("nf")
         return p
 
-    def _fd(self, fd, drop=False):
+    def _fd(self, fd):
         # filenr > fileobj
-        if drop:
-            return self._fd_cache.pop(fd)
-        else:
-            return self._fd_cache[fd]
+        f = self._fd_cache[fd]
+        # log(f"{fd}:{repr(f)}")
+        return f
 
     def _add_f(self, f):
         # fileobj > filenr
         self._fd_last += 1
         fd = self._fd_last
         self._fd_cache[fd] = f
+        # log(f"{fd}={repr(f)}")
         return fd
 
     def _del_f(self, fd):
         f = self._fd_cache.pop(fd)
+        # log(f"{fd}!{repr(f)}")
         f.close()
 
     def cmd_reset(self, p=None):
@@ -89,21 +90,21 @@ class FsCmd(BaseCmd):
         else:
             return self._add_f(f)
 
-    def cmd_rd(self, fd, off=0, n=64):
+    def cmd_rd(self, f, o=0, n=64):
         # read
-        f = self._fd(fd)
-        f.seek(off)
-        return f.read(n)
+        fh = self._fd(f)
+        fh.seek(o)
+        return fh.read(n)
 
-    def cmd_wr(self, fd, data, off=0):
+    def cmd_wr(self, f, d, o=0):
         # write
-        f = self._fd(fd)
-        f.seek(off)
-        return f.write(data)
+        fh = self._fd(f)
+        fh.seek(o)
+        return fh.write(d)
 
-    def cmd_cl(self, fd):
+    def cmd_cl(self, f):
         # close
-        self._del_f(fd)
+        self._del_f(f)
 
     def cmd_dir(self, p="", x=False):
         # dir

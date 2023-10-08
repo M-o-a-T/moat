@@ -1,38 +1,50 @@
 """
-Basic test using a MicroPython subtask
+Basic file system test, using multithreading / subprocess
 """
 import multiprocessing as mp
 
 import anyio
 import pytest
 
-from moat.micro._test import mpy_client, mpy_server
+from moat.micro._test import mpy_stack
 from moat.micro.fuse import wrap
 
 pytestmark = pytest.mark.anyio
 
 # pylint:disable=R0801 # Similar lines in 2 files
 
+CFG="""
+apps:
+  r: _test.MpyCmd
+r:
+  cfg:
+    apps:
+      r: stdio.StdIO
+      f: fs.Cmd
+    f:
+      prefix: "/tmp/nonexisting"
+    r:
+      log:
+        txt: "S"
+"""
 
 async def test_fuse(tmp_path):
     "basic file system test"
     p = anyio.Path(tmp_path) / "fuse"
     r = anyio.Path(tmp_path) / "root"
-    async with mpy_server(tmp_path, cfg={"f": {"prefix": str(r)}}) as obj:
-        async with mpy_client(obj) as req:
-            res = await req.send("ping", "hello")
-            assert res == "R:hello"
-            await p.mkdir()
-            async with wrap(req, p, debug=4):
+    await p.mkdir()
 
-                def fn(p):
-                    with open(p, "w") as f:
-                        f.write("Fubar\n")
+    async with mpy_stack(tmp_path, CFG, {"r":{"cfg":{"f": {"prefix": str(r)}}}}) as d:
+        async with wrap(d.sub_at("r", "f"), p, debug=4):
 
-                def fx(p):
-                    pp = mp.Process(target=fn, args=[str(p)])
-                    pp.run()
+            def fn(p):
+                with open(p, "w") as f:
+                    f.write("Fubar\n")
 
-                await anyio.to_thread.run_sync(fx, str(p / "test.txt"))
-            st = await (r / "test.txt").stat()
-            assert st.st_size == 6  # Fubar\n
+            def fx(p):
+                pp = mp.Process(target=fn, args=[str(p)])
+                pp.run()
+
+            await anyio.to_thread.run_sync(fx, str(p / "test.txt"))
+        st = await (r / "test.txt").stat()
+        assert st.st_size == 6  # Fubar\n

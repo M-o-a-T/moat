@@ -3,21 +3,41 @@ Empty test file
 """
 
 import sys
-from moat.util import yload
 import pytest
-from moat.micro.compat import Event, TaskGroup
+
 from moat.micro._test import mpy_stack
 
-from ._support import get_cfg, Dispatch
+CFG="""
+apps:
+  r: _test.MpyCmd
+  a: _test.Cmd
+r:
+  cfg:
+    apps:
+#     w: wdt.Cmd
+      r: stdio.StdIO
+      b: _test.Cmd
+    r:
+      link: &link
+        lossy: False
+        guarded: False
+      log:
+        txt: "MH"
+      log_raw:
+        txt: "ML"
 
+  link: *link
+  log:
+    txt: "TH"
+  log_raw:
+    txt: "TL"
+"""
 @pytest.mark.anyio
 async def test_mplex(tmp_path):
     """
     Basic multiplex test
     """
-    cfg = get_cfg(__name__)
-    d = Dispatch(cfg)
-    async with mpy_stack(tmp_path,"mplex") as d:
+    async with mpy_stack(tmp_path, CFG) as d:
         r = await d.send("rbecho",m="Hi")
         assert r["r"] == "Hi"
         r = await d.send("r","b","echo",m="Ho")

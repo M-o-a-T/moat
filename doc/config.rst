@@ -423,7 +423,7 @@ Read a file.
 
   A valid file handle.
 
-* off
+* o
 
   Read offset. Must be positive, defaults to zero.
 
@@ -442,11 +442,11 @@ Write to a file.
 
   A valid file handle, opened for writing.
 
-* data
+* d
 
   The bytes to be written.
 
-* off
+* o
 
   Write offset. Must be positive, defaults to zero.
 

@@ -1,6 +1,7 @@
 """
 FUSE operations for MoaT-micro-FS
 """
+from __future__ import annotations
 
 import errno
 import logging
@@ -127,7 +128,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             return await self.getattr(self._path_inode_map[p], ctx)
         except KeyError:
             try:
-                d = await self._link.send("stat", str(p))
+                d = await self._link.send("stat", p=str(p))
             except Exception as err:  # pylint: disable=broad-exception-caught
                 self.raise_error(err)
             else:
@@ -174,7 +175,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         p = self.i_path(inode)
         if _res is None:
             try:
-                d = await self._link.send("stat", str(p))
+                d = await self._link.send("stat", p=str(p))
             except Exception as err:  # pylint: disable=broad-exception-caught
                 self.raise_error(err, inode)
         else:
@@ -273,7 +274,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
         p = self.i_path(parent_inode) / name.decode()
         try:
-            await self._link.send("mkdir", str(p))
+            await self._link.send("mkdir", p=str(p))
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
         return await self.getattr(self.i_add(p), ctx)
@@ -300,7 +301,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         p = self.i_path(parent_inode) / name.decode()
         try:
-            await self._link.send("rm", str(p))
+            await self._link.send("rm", p=str(p))
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
 
@@ -328,7 +329,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         p = self.i_path(parent_inode) / name.decode()
         try:
-            await self._link.send("rmdir", str(p))
+            await self._link.send("rmdir", p=str(p))
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
 
@@ -464,14 +465,14 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         if size <= self.max_read:
-            return await self._link.send("rd", fd=fh, off=off, n=size)
+            return await self._link.send("rd", f=fh, o=off, n=size)
 
         # OWCH. Need to break that large read up.
 
         data = []
         while size > 0:
             dl = min(size, self.max_read)
-            buf = await self._link.send("rd", fd=fh, off=off, n=dl)
+            buf = await self._link.send("rd", f=fh, o=off, n=dl)
             if buf == b'':
                 break
             data.append(buf)
@@ -494,16 +495,16 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         if len(buf) <= self.max_write:
-            return await self._link.send("wr", fd=fh, data=buf, off=off)
+            return await self._link.send("wr", f=fh, d=buf, o=off)
 
         # OWCH. Break that up.
         sent = 0
         while sent < len(buf):
             sn = await self._link.send(
                 "wr",
-                fd=fh,
-                data=buf[sent : sent + self.max_write],
-                off=off + sent,
+                f=fh,
+                d=buf[sent : sent + self.max_write],
+                o=off + sent,
             )
             sent += sn
             if sn < self.max_write:
@@ -539,7 +540,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         will be discarded because there is no corresponding client request.
         """
         self.f_close(fh)
-        await self._link.send("cl", fd=fh)
+        await self._link.send("cl", f=fh)
 
     async def fsync(self, fh, datasync):
         """Flush buffers for open file *fh*

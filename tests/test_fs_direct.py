@@ -1,11 +1,10 @@
 """
-Basic file system test, no multithreading / subprocess
+Basic file system test, using commands directly
 """
 import anyio
 import pytest
 
 from moat.micro._test import mpy_stack
-from moat.micro.fuse import wrap
 
 pytestmark = pytest.mark.anyio
 
@@ -32,9 +31,11 @@ async def test_fuse(tmp_path):
     r = anyio.Path(tmp_path) / "root"
     async with mpy_stack(tmp_path, CFG, {"r":{"cfg":{"f": {"prefix": str(r)}}}}) as d:
         await p.mkdir()
-        async with wrap(d.sub_at("r", "f"), p, debug=4):
-            async with await (p / "test").open("w") as f:
-                n = await f.write("Fubar\n")
-                assert n == 6
+        async with d.sub_at("r", "f") as w:
+            await w.send("new", p="test")
+            f = await w.send("open", p="test",m="w")
+            n = await w.send("wr", f=f, d="Fubar\n")
+            await w.send("cl", f=f)
+            assert n == 6
         st = await (r / "test").stat()
         assert st.st_size == n

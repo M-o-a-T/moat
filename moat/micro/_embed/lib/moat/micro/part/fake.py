@@ -16,7 +16,8 @@ class PIN(BaseCmd):
     This is a fake Pin.
     """
 
-    def __init__(self, cfg, **kw):
+    def __init__(self, cfg):
+        super().__init__(cfg)
         PINS[cfg.pin] = self
         self.flag = Event()
         self._value = False
@@ -70,19 +71,19 @@ class ADC(BaseCmd):
     - seed: used to reproduce the random sequence.
     """
 
-    def __init__(self, *a, **kw):
-        super().__init__(*a, **kw)
+    def __init__(self, cfg):
+        super().__init__(cfg)
         cfg = self.cfg
-        self.min = cfg.min if "min" in cfg else 0
-        self.max = cfg.max if "max" in cfg else 1
-        self.border = cfg.border if "border" in cfg else 2
-        self.step = cfg.step / (self.max - self.min) / 2 if "step" in cfg else 0.1
+        self.min = cfg.get("min", 0)
+        self.max = cfg.get("max", 1)
+        self.border = cfg.get("border", 2)
+        self.step = cfg["step"] / (self.max - self.min) / 2 if "step" in cfg else 0.1
 
-        seed = cfg.seed if "seed" in cfg else random.random()
+        seed = cfg.get("seed", random.random())
 
         self.val = 0
         self.bias = 0
-        self.rand = random.Random(cfg.seed if "seed" in cfg else None)
+        self.rand = random.Random(cfg.get("seed", None))
 
     async def cmd_r(self):
         b = self.bias + (self.rand.random() - 0.5) * self.step

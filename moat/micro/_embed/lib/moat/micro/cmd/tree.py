@@ -51,7 +51,7 @@ class BaseDirCmd(BaseCmd):
             if name in self._sub:
                 continue
 
-            cfg = getattr(gcfg, name, {})
+            cfg = gcfg.get(name, {})
             try:
                 await self.attach(name, imp(v)(cfg), run=False)
             except TypeError as exc:
@@ -108,6 +108,10 @@ class Dispatch(BaseDirCmd):
 
     async def __aexit__(self, *tb):
         return await AC_exit(self, *tb)
+
+    def sub_at(self, *p):
+        from .tree import SubDispatch
+        return SubDispatch(self, p)
 
     @property
     def root(self):

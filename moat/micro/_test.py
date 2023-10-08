@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager, suppress
 from contextvars import ContextVar
 
 import anyio
-from moat.util import attrdict, merge, packer, yload, Queue
+from moat.util import attrdict, merge, packer, yload, Queue, combine_dict
 
 from moat.micro.compat import TaskGroup, AC_use
 from moat.micro.cmd.stream import StreamCmd
@@ -95,13 +95,19 @@ class MpyBuf(ProcessBuf):
 
 
 @asynccontextmanager
-async def mpy_stack(temp: Path, cfg:dict|str):
+async def mpy_stack(temp: Path, cfg:dict|str, cfg2:dict|None):
     """
     Creates a multiplexer.
     """
     if isinstance(cfg,str):
-        with (Path("tests")/"cfg"/(cfg+".cfg")).open("r") as cff:
-            cfg = yload(cff, attr=True)
+        if "\n" in cfg:
+            cfg = yload(cfg, attr=True)
+        else:
+            with (Path("tests")/"cfg"/(cfg+".cfg")).open("r") as cff:
+                cfg = yload(cff, attr=True)
+
+    if cfg2 is not None:
+        cfg = combine_dict(cfg2,cfg)
 
     rst = temp_dir.set(temp)
     try:

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import sys
 
-from moat.util import ValueEvent, obj2name
+from moat.util import ValueEvent, obj2name, NotGiven
 from .util import ValueTask, SendIter, RecvIter
 from moat.micro.compat import CancelledError, WouldBlock, log, Lock, ACM, AC_exit
 from moat.micro.proto.stack import RemoteError, SilentRemoteError, BaseMsg
@@ -194,7 +194,10 @@ class StreamCmd(BaseCmd):
 
     async def reply_error(self, i, exc):
         try:
-            log("ERROR handling %d", i, err=exc)
+            if isinstance(exc, (FileExistsError,FileNotFoundError)):
+                pass
+            else:
+                log("ERROR handling %d", i, err=exc)
             if i is None:
                 return
             res = {'i': i}
@@ -223,7 +226,7 @@ class StreamCmd(BaseCmd):
             return
         a = msg.get("a", None)
         i = msg.get("i", None)
-        d = msg.get("d", None)
+        d = msg.get("d", NotGiven)
         e = msg.get("e", None)
         r = msg.get("r", None)
 
@@ -231,14 +234,16 @@ class StreamCmd(BaseCmd):
             i ^= 1
 
         for k in msg.keys():
-            if k not in "aidr":
-                log("Spurious %s: %r", k, msg)
+            if k not in "aidre":
+                log("Unknown %s: %r", k, msg)
                 break
 
         if a is not None:
             # incoming request
             # runs in a separate task
             # XXX create a task pool?
+            if d is NotGiven:
+                d = None
             if r is None:
                 t = ValueTask(self, i, self.root.dispatch, a, d)
             else:
@@ -268,7 +273,7 @@ class StreamCmd(BaseCmd):
 
             if e is not None:
                 if isinstance(e,type):
-                    if d is None:
+                    if d is NotGiven:
                         d = ()
                     e = e(*d)
                 elif isinstance(e,str):
@@ -287,7 +292,7 @@ class StreamCmd(BaseCmd):
                 else:
                     t.set_r(r)
 
-            elif d is not None:
+            elif d is not NotGiven:
                 t.set(d)
                 if not isinstance(t, (SendIter,RecvIter)):
                     del self.reply[i]

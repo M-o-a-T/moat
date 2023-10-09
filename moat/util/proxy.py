@@ -4,7 +4,7 @@ This module contains proxy helpers.
 
 from .impl import NotGiven
 
-__all__ = ["Proxy", "NoProxyError", "as_proxy", "name2obj", "obj2name"]
+__all__ = ["Proxy", "NoProxyError", "as_proxy", "name2obj", "obj2name", "get_proxy", "drop_proxy"]
 
 
 class NoProxyError(ValueError):
@@ -33,10 +33,35 @@ class Proxy:
         return name2obj(self.name)
 
 
-# _pkey = 1
+_pkey = 1
 _CProxy: dict[str, object] = {}
 _RProxy: dict[int, str] = {}
 
+
+def get_proxy(obj):
+    try:
+        return _RProxy[id(obj)]
+    except KeyError:
+        global _pkey
+        k = "p_" + str(_pkey)
+        _pkey += 1
+        _CProxy[k] = obj
+        _RProxy[id(obj)] = k
+        return k
+
+def drop_proxy(p):
+    """
+    After sending a proxy we keep it in memory in case the remote returns
+    it, or an expression with it.
+
+    If that won't happen, the remote needs to tell us to clean it up.
+    """
+    if not isinstance(p, str):
+        p = _RProxy[id(p)]
+    if p == "" or p[0] == "_":
+        raise ValueError("Can't delete a system proxy")
+    r = _CProxy.pop(p)
+    del _RProxy[id(r)]
 
 def name2obj(name, obj=NotGiven, replace=False):
     """
@@ -92,15 +117,17 @@ def as_proxy(name, obj=NotGiven, replace=False):
     def _proxy(obj):
         if replace is None and name in _CProxy:
             return _CProxy[name]
-        name2obj(name, obj, replace=replace)
-        obj2name(obj, name, replace=replace)
+        _RProxy[id(obj)] = name
+        _CProxy[name] = obj
         return obj
 
-    if obj is NotGiven:
+    if _CProxy and obj is NotGiven:
+        # this allows us to register the NotGiven object
         return _proxy
     else:
         _proxy(obj)
         return obj
 
 
+as_proxy("_", NotGiven, replace=True)
 as_proxy("_p", Proxy)

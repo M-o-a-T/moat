@@ -5,6 +5,7 @@ import machine as M
 import asyncio
 
 from moat.micro.compat import idle
+from moat.util import attrdict
 
 try:
     sup = M.Pin

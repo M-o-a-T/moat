@@ -2,16 +2,17 @@ import sys
 from moat.util import NotGiven
 
 from moat.micro.cmd.base import BaseCmd
+from moat.micro.cmd.util import enc_part, get_part
 
 
 class Cmd(BaseCmd):
     """
     Subsystem to handle config data.
 
-    Split off because this ability probably shouldn't be available generally
+    This app serves the config of the parent subcommand.
     """
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, cfg):
+        super().__init__(cfg)
         self.repeats = {}
 
     async def cmd_r(self, p=()):
@@ -29,7 +30,7 @@ class Cmd(BaseCmd):
 
         Same for a list.
         """
-        return self.encode_part(self.root.cfg, p)
+        return enc_part(get_part(self._parent.cfg, p))
 
     async def cmd_w(self, p=(), d=NotGiven):
         """
@@ -49,12 +50,14 @@ class Cmd(BaseCmd):
         You can use app.fs for this, or you can configure a "safe" skeleton
         setup and update it online after booting.
         """
-        cur = self.root.cfg
+        cur = self._parent.cfg
+        if not p:
+            raise ValueError("NoPath")
         for pp in p[:-1]:
             try:
                 cur = cur[pp]
             except KeyError:
-                cur[pp] = []
+                cur[pp] = {}
                 cur = cur[pp]
             except IndexError as exc:
                 if len(cur) != pp:
@@ -77,6 +80,6 @@ class Cmd(BaseCmd):
         """
         Activate the new config.
         """
-        await self.root.update_config()
+        await self._parent.update_config()
         return
 

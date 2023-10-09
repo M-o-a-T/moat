@@ -9,16 +9,8 @@ from ..compat import Lock, TimeoutError, wait_for_ms, const, Event
 from .stack import StackedBuf, BaseBuf, StackedMsg, StackedBlk
 
 
-try:
-    from moat.util import Proxy, get_proxy
-except ImportError:
-    Proxy = None
-
-    def get_proxy(x):
-        raise NotImplementedError(f"get_proxy({repr(x)})")
-
-from msgpack import ExtType, OutOfData, Packer, Unpacker, packb, unpackb
-from serialpacker import FRAME_START, SerialPacker
+from msgpack import OutOfData, Packer, Unpacker, packb, unpackb
+from serialpacker import  SerialPacker
 
 as_proxy("_", NotGiven, replace=True)
 
@@ -89,27 +81,24 @@ class _MsgpackMsgBuf(StackedMsg):
     If @console is set and a prefix is used, sends data atomically.
     Otherwise two separate write calls are used to save on message copying.
 
-    You need to override .pack and .unpack
+    You need to override .pack and .unpack.
     """
     cons = False
 
-    def __init__(self, stream:BaseBuf, kw:dict):
+    def __init__(self, stream:BaseBuf, cfg:dict):
         #
         # console: size of console buffer, 128 if True
         # msg_prefix: int: code for start-of-packet
         #
-        from .stream import _encode,_decode
-
-        super().__init__(stream, {})
+        super().__init__(stream, cfg)
         self.w_lock = Lock()
-        kw['ext_hook'] = _decode
 
-        pref = kw.pop("msg_prefix", None)
+        pref = cfg.get("msg_prefix", None)
         if pref is not None:
             pref = bytes((pref,))
         self.pref = pref
 
-        cons = kw.pop("console", False)
+        cons = cfg.get("console", False)
 
         if cons or pref is not None:
             kw["read_size"] = 1
@@ -117,6 +106,9 @@ class _MsgpackMsgBuf(StackedMsg):
             _CReader.__init__(self, cons)
 
         # we use a hacked version of msgpack with a stream-y async unpacker
+
+    async def pack(self):
+        raise NotImplementedError(self.__class__.__name__ + ".pack")
 
     async def unpack(self):
         raise NotImplementedError(self.__class__.__name__ + ".unpack")
@@ -176,21 +168,11 @@ class _MsgpackMsgBlk(StackedMsg):
     (one bytestring-ized message per call).
     """
 
-    def __init__(self, stream:BaseBlk, **kw):
-        from .stream import _encode,_decode
-
-        super().__init__(stream)
-        self.pack = Packer(default=_encode).packb
-        self.unpacker = Unpacker(None, ext_hook=_decode, **kw).unpackb
-        # SIGH
-        #self.unpacker = partial(unpackb, ext_hook=_decode, **kw)
-        #self.pack = partial(packb, default=_encode)
-
     async def send(self, msg):
-        await super().snd(self.pack(msg))
+        await self.par.snd(self.pack(msg))
 
     async def recv(self):
-        m = await super().rcv()
+        m = await self.par.rcv()
         return self.unpacker(m)
 
 

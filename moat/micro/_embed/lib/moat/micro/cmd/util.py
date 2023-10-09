@@ -31,11 +31,27 @@ async def run_no_exc(p,msg):
     except Exception as err:
         log("Error in %r %r",p,msg, _err=err)
 
-def encode_part(cur, p):
+def get_part(cur, p):
+    import sys
+    print("GP",cur,p, file=sys.stderr)
+    for pp in p:
+        try:
+            cur = getattr(cur,pp)
+        except (TypeError,AttributeError):
+            cur = cur[pp]
+    return cur
+
+def set_part(cur, p, v):
+    cur = get_part(cur,p[:-1])
+    try:
+        cur[p[-1]] = v
+    except TypeError:
+        setattr(cur, p[-1], v)
+
+
+def enc_part(cur):
     """
-    Helper method to encode a larger object partially.
-    @p is the path to the corner of the result the reader is interested
-    in.
+    Helper method to encode a larger dict/list partially.
 
     The result is either some object that's not a dict or list, or a
     (X,L) tuple where X is the dict/list in question except with all the
@@ -46,9 +62,6 @@ def encode_part(cur, p):
         if isinstance(v, (dict, list, tuple)):
             return True
         return False
-
-    for pp in p:
-        cur = cur[pp]
 
     if isinstance(cur, dict):
         c = {}
@@ -160,9 +173,11 @@ class SendIter(ValueTask):
 
     async def _run(self):
         try:
+            cnt = 1
             async with self.cmd.root.dispatch(self.ac, self.ad, rep=self.r) as self.it:
                 async for msg in self.it:
-                    await self.cmd.parent.send({'i':self.i, 'd':msg})
+                    await self.cmd.parent.send({'i':self.i, 'd':msg, 'n': cnt})
+                    cnt += 1
         finally:
             self.it = None
 
@@ -218,12 +233,10 @@ class RecvIter(_DelayedIter):
         self.t = t
         self._warned = 1
         self._val = ValueEvent()
+        self.cnt = 0
 
     def __aiter__(self):
         return self
-
-    async def __aenter__(self):
-        pass
 
     async def __aexit__(self, *err):
         pass
@@ -238,6 +251,9 @@ class RecvIter(_DelayedIter):
             if self._val.is_set():
                 self._val = ValueEvent()
 
+    async def __aenter__(self):
+        pass
+
     __anext__ = get
 
     def set_r(self, t):
@@ -247,20 +263,33 @@ class RecvIter(_DelayedIter):
         self.t = t
         self._val.set(None)
 
-    def set(self, val):
+    def set(self, val, n=0):
         if self._val.is_set():
             if self._warned:
                 self._warned += 1
-            if not self.warned & (self.warned-1):
+            if not self._warned & (self._warned-1):
                 log("RemIterSoon %r", val)
             if not self._warned:
                 return
             self._val = ValueEvent()
+        if n > 0:
+            if n == self.cnt:
+                log(f"dup {n}")
+                return
+            if n < self.cnt:
+                self.cnt = 1
+            else:
+                self.cnt += 1
+            if n > self.cnt:
+                log(f"Missed {n-self.cnt}")
+                self.cnt = n
         self._val.set(val)
 
     def error(self, err):
         self._val.set_error(err)
+        self._warned = 0
 
     def cancel(self):
         self._val.set_error(StoppedError("cancel"))
+        self._warned = 0
 

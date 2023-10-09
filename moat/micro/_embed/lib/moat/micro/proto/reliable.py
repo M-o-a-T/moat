@@ -6,7 +6,7 @@ from ..compat import (
     TaskGroup,
     TimeoutError,
     idle,
-    print_exc,
+    log,
     sleep,
     ticks_add,
     ticks_diff,
@@ -14,10 +14,15 @@ from ..compat import (
     wait_for_ms,
     ACM, AC_exit,
 )
-from .stack import ChannelClosed, _Stacked
+from .stack import ChannelClosed, StackedMsg
 
+def brk():
+    try:
+        breakpoint()
+    except NameError:
+        pass
 
-class ReliableMsg(_Stacked):
+class ReliableMsg(StackedMsg):
     """
     Message retry.
 
@@ -73,8 +78,12 @@ class ReliableMsg(_Stacked):
     rq = None
     __tg = None
 
-    def __init__(self, parent, window=8, timeout=1000, persist=False, **k):
-        super().__init__(parent, **k)
+    def __init__(self, parent, cfg):
+        super().__init__(parent, cfg)
+
+        window = cfg.get("window",8)
+        timeout = cfg.get("timeout", 1000)
+        retries = cfg.get("retries", 5)
 
         if window < 4:
             raise RuntimeError(f"window must be >=4, not {window}")
@@ -85,7 +94,8 @@ class ReliableMsg(_Stacked):
         self._is_up = Event()
         self._is_down = Event()
         self._is_down.set()
-        self.persist = persist
+        self.retries = retries
+        self._iters = {}
 
     def reset(self, level=1):
         self.s_send_head = 0  # next to be transmitted
@@ -145,14 +155,18 @@ class ReliableMsg(_Stacked):
                     ntx = txd
                     nk = k
 
-            if self.s_q and (self.s_send_head - self.s_send_tail) % self.window < self.window // 2:
+            w_open = self.s_q and (self.s_send_head - self.s_send_tail) % self.window < self.window // 2
+            if w_open:
+                # yes, we can send another message
                 # print(f"R {self.parent.txt}: tx", file=sys.stderr)
                 pass
             elif ntx is None:
+                # nothing to do
                 # print(f"R {self.parent.txt}: inf", file=sys.stderr)
                 await self._trigger.wait()
                 self._trigger = Event()
             elif ntx > 0:
+                # we need to do something soon
                 # print(f"R {self.parent.txt}: {ntx}", file=sys.stderr)
                 try:
                     await wait_for_ms(ntx, self._trigger.wait)
@@ -161,11 +175,12 @@ class ReliableMsg(_Stacked):
                 else:
                     self._trigger = Event()
             else:
+                # we need to re-send now
                 # print(f"R {self.parent.txt}: now {ticks_ms()}", file=sys.stderr)
                 pass
 
             # process pending-send queue
-            if self.s_q and (self.s_send_head - self.s_send_tail) % self.window < self.window // 2:
+            if w_open:
                 seq = self.s_send_head
                 msg, evt = self.s_q.pop(0)
                 nseq = (seq + 1) % self.window
@@ -175,10 +190,11 @@ class ReliableMsg(_Stacked):
                 self.m_send[seq] = [msg, None, evt]
                 await self.send_msg(seq)
 
-            if ntx is not None and ntx <= 0:  # work
+            if ntx is not None and ntx <= 0:
+                # send a retransmission or a pending ack
                 if nk is not None:  # retransmit message K
                     await self.send_msg(nk)
-                if self.pend_ack:
+                elif self.pend_ack:
                     await self.send_msg()
 
                 if nk is None:
@@ -196,51 +212,68 @@ class ReliableMsg(_Stacked):
 
     async def __aenter__(self):
         acm = ACM(self)
-        tg = await acm(TaskGroup())
-        if self.persist and self.persist is not True:
-            await tg.spawn(self._pers)
-        await self.wait()
-        return self
+
+        try:
+            tg = await acm(TaskGroup())
+            if self.retries:
+                await tg.spawn(self._mon)
+            await tg.spawn(self._run)
+            await self.wait()
+            return self
+        except BaseException as exc:
+            await AC_exit(self, type(exc), exc, None)
+            raise
 
     async def __aexit__(self, *err):
         return await AC_exit(self, *err)
 
-    async def _pers(self):
-        while True:
-            await wait_for_ms(self.persist, self.wait)
-            await self.is_down.wait()
+    async def _mon(self):
+        try:
+            while True:
+                await wait_for_ms(self.retries * self.timeout, self._is_up.wait)
+                await self._is_down.wait()
+        finally:
+            # brk()
+            pass 
+
+    async def _run_(self):
+        if self._is_down.is_set():
+            self._is_down = Event()
+        self.reset_level = 1
+
+        try:
+            async with TaskGroup() as tg, self.parent as par:
+                self.__tg = tg
+                self.par = par
+                reader = await tg.spawn(self._read, _name="rel_read")
+                runner = await tg.spawn(self._run_bg, _name="rel_bg")
+                while self.in_reset:
+                    t = ticks_ms()
+                    td = ticks_diff(self.in_reset, t)
+                    if td > 0:
+                        try:
+                            await wait_for_ms(td, self._trigger.wait)
+                        except TimeoutError:
+                            pass
+                        # DO NOT replace self._trigger here. _run_bg() already does that.
+                    else:
+                        await self.send_reset()
+
+                if self.closed:
+                    raise EOFError(self)
+
+                await idle()
+
+        except Exception as exc:
+#           if not self.persist:
+                raise
+#           log("Reliable", err=exc)
 
     async def _run(self):
         self.reset()
-        while True:
-            try:
-                async with TaskGroup() as tg, self.parent as par:
-                    self.__tg = tg
-                    self.par = par
-                    reader = await tg.spawn(self._read, _name="rel_read")
-                    runner = await tg.spawn(self._run_bg, _name="rel_bg")
-                    while self.in_reset:
-                        t = ticks_ms()
-                        td = ticks_diff(self.in_reset, t)
-                        if td > 0:
-                            try:
-                                await wait_for_ms(td, self._trigger.wait)
-                            except TimeoutError:
-                                pass
-                            # DO NOT replace self._trigger here. _run_bg() already does that.
-                        else:
-                            await self.send_reset()
-
-                    if self.closed:
-                        raise EOFError(self)
-
-                    await idle()
-
-            except Exception as exc:
-                if not self.persist:
-                    raise
-                print_exc()
-
+        try:
+            while True:
+                await self._run_()
         except BaseException as exc:
             err = str(exc)
             raise
@@ -248,7 +281,7 @@ class ReliableMsg(_Stacked):
             err = None
         finally:
             self.__tg = None
-            cl, self.closed = self.closed, True
+            self._is_down.set()
             for _m, _t, e in self.m_send.values():
                 e.set_error(ChannelClosed())
             while self.s_q:
@@ -256,23 +289,27 @@ class ReliableMsg(_Stacked):
                 e.set_error(ChannelClosed())
             if self._is_up.is_set():
                 self._is_up = Event()
-            self._is_down.set()
-            if not cl:
-                msg = {'a': 'r', 'n': 0}
-                if err is not None:
-                    msg['err'] = err
+            msg = {'a': 'r', 'n': 0}
+            if err is not None:
+                msg['e'] = err
+            try:
                 try:
                     await self.par.send(msg)
-                except EOFError:
-                    pass
+                except TypeError:
+                    if 'e' in msg:
+                        msg['e'] = repr(err)
+                        await self.par.send(msg)
+                    else:
+                        raise
+            except EOFError:
+                pass
 
-    async def send_reset(self, level=0, err=None):
-        if self.closed:
-            level = 0
-        elif level:
-            self.reset_level = level
-        else:
+    async def send_reset(self, level=None, err=None):
+        # brk()
+        if level is None:
             level = self.reset_level
+        else:
+            self.reset_level = level
         msg = {'a': 'r', 'n': level}
         if level:
             msg['c'] = self._get_config()
@@ -284,9 +321,19 @@ class ReliableMsg(_Stacked):
         await self.par.send(msg)
 
     async def send(self, msg):
-        if self.closed:
-            raise ChannelClosed()
+        """
+        Sender.
+
+        Iterated messages get cached and updated.
+        """
         evt = ValueEvent()
+        if 'n' in msg and 'i' in msg and 'a' not in msg:
+            i = msg['i']
+            if (om := self._iters.get(i,None)) is not None:
+                if 'e' not in om:
+                    om.update(msg)
+                return
+            self._iters[i] = msg
         # print(f"T {self.parent.txt}: SQ {msg} {id(self._trigger)}", file=sys.stderr)
         self.s_q.append((msg, evt))
         self._trigger.set()
@@ -304,8 +351,6 @@ class ReliableMsg(_Stacked):
             self.in_reset = False
             self._trigger.set()
             self._is_up.set()
-            if self._is_down.is_set():
-                self._is_down = Event()
 
     async def recv(self):
         return await self.rq.get()
@@ -332,6 +377,7 @@ class ReliableMsg(_Stacked):
         if a is None:
             pass
         elif a == 'r':
+            # XXX CBOR: send the data with a tag instead?
             c = msg.get('c', {})
             n = msg.get('n', 0)
             e = msg.get('e', None)
@@ -373,22 +419,12 @@ class ReliableMsg(_Stacked):
         else:
             return  # unknown action
 
-        if self.closed:
-            # if we're down, reply with a reset, but not every time
-            if self.reset_level > 2:
-                try:
-                    await self.send_reset()
-                except EOFError:
-                    pass
-                self.reset_level = 0
-            else:
-                self.reset_level += 1
-            return
-
         if self.in_reset:
             if self.reset_level < 2:
                 await self.send_reset()
                 return
+            # assume that the other side got our reset=2
+            # but their ack got lost
             self._reset_done()
 
         r = msg.get('s', None)  # swapped (our PoV of incoming msg)
@@ -438,10 +474,12 @@ class ReliableMsg(_Stacked):
                     # XXX
                     break
                 try:
-                    _m, _t, e = self.m_send.pop(rr)
+                    m, _t, e = self.m_send.pop(rr)
                 except KeyError:
                     pass
                 else:
+                    if 'n' in m and (i := m.get('i',None)) is not None:
+                        self._iters.pop(i, None)
                     self.pend_ack = True
                     e.set(None)
                 rr = (rr + 1) % self.window
@@ -464,6 +502,7 @@ class ReliableMsg(_Stacked):
             try:
                 d = self.m_recv.pop(rr)
             except KeyError:
+                # missing message. Do not proceed.
                 break
             else:
                 rr = (rr + 1) % self.window

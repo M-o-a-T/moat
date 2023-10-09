@@ -34,17 +34,17 @@ from moat.micro.compat import TaskGroup, log, ACM, AC_use, AC_exit
 from moat.util import as_proxy
 
 
-@as_proxy("_rErr", replace=True)
+@as_proxy("_rErr")
 class RemoteError(RuntimeError):
     pass
 
 
-@as_proxy("_rErrS", replace=True)
+@as_proxy("_rErrS")
 class SilentRemoteError(RemoteError):
     pass
 
 
-@as_proxy("_rErrCCl", replace=True)
+@as_proxy("_rErrCCl")
 class ChannelClosed(RuntimeError):
     pass
 

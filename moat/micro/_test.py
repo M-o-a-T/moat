@@ -95,7 +95,7 @@ class MpyBuf(ProcessBuf):
 
 
 @asynccontextmanager
-async def mpy_stack(temp: Path, cfg:dict|str, cfg2:dict|None):
+async def mpy_stack(temp: Path, cfg:dict|str, cfg2:dict|None=None):
     """
     Creates a multiplexer.
     """
@@ -137,14 +137,18 @@ class Loopback(BaseMsg, BaseBuf):
     _buf = None
 
     def __init__(self, qlen=0, loss=0):
+        super().__init__({})
         assert 0 <= loss < 1
         self.q_wr, self.q_rd = anyio.create_memory_object_stream(qlen)
         self.loss = loss
 
+    async def setup(self):
+        if self._link is None:
+            raise RuntimeError("Link before setup!")
+
     def link(self, other):
         """Tell this loopback to read from some other loopback."""
         self._link = other
-        self.set_ready()
 
     async def send(self, data, _loss=True):  # pylint:disable=arguments-differ
         """Send data."""
@@ -156,6 +160,7 @@ class Loopback(BaseMsg, BaseBuf):
             await self.q_wr.send(data)
         except (anyio.ClosedResourceError, anyio.BrokenResourceError, anyio.EndOfStream) as exc:
             raise EOFError from exc
+    snd = send
 
     async def recv(self):  # pylint:disable=arguments-differ
         if self._link is None:
@@ -164,6 +169,7 @@ class Loopback(BaseMsg, BaseBuf):
             return await self._link.q_rd.receive()
         except (anyio.ClosedResourceError, anyio.BrokenResourceError, anyio.EndOfStream):
             raise EOFError from None
+    rcv = recv
 
     async def rd(self, buf) -> int:
         while True:

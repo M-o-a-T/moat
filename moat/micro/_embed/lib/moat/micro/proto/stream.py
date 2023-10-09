@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 from asyncio import core
 from asyncio.stream import Stream
 
-from msgpack import Packer,Unpacker, ExtType
+from msgpack import Packer,Unpacker, ExtType, packb
 
-from moat.util import Proxy, obj2name, name2obj
-from moat.micro.compat import AC_use, TimeoutError, Lock, wait_for_ms
+from moat.util import Proxy, DProxy, obj2name, name2obj, get_proxy
+from moat.micro.compat import AC_use, TimeoutError, Lock, wait_for_ms, log
 from .stack import BaseBuf
 from ._stream import _MsgpackMsgBuf, _MsgpackMsgBlk
 
@@ -96,38 +98,38 @@ def _decode(code, data):
                 raise NoProxyError(n)
             return Proxy(n)
     elif code == 5:
-        try:
-            s = Unpacker(None)
-            s.feed(data)
+        s = Unpacker(None)
+        s.feed(data)
 
-            s, *d = list(s)
-            st = d[1] if len(d) > 1 else {}
-            d = d[0]
+        s, *d = list(s)
+        st = d[1] if len(d) > 1 else {}
+        d = d[0]
+        try:
             p = name2obj(s)
+            o = p(*d, **st)
+        except KeyError:
+            o = DProxy(s,*d,**st)
+        except TypeError:
+            o = p(*d)
             try:
-                o = p(*d, **st)
-            except TypeError:
-                o = p(*d)
+                o.__setstate__(st)
+            except AttributeError:
                 try:
-                    o.__setstate__(st)
+                    o.__dict__.update(st)
                 except AttributeError:
-                    try:
-                        o.__dict__.update(st)
-                    except AttributeError:
-                        for k, v in st.items():
-                            setattr(o, k, v)
-            return o
-        except Exception as exc:
-            print("Cannot unpack", repr(data), file=sys.stderr)
-            # fall thru to ExtType
+                    for k, v in st.items():
+                        setattr(o, k, v)
+        return o
     return ExtType(code, data)
 
 
 def _encode(obj):
     # encode an object by building a proxy.
 
-    if isinstance(obj, Proxy):
+    if type(obj) is Proxy:
         return ExtType(4, obj.name.encode("utf-8"))
+    if type(obj) is DProxy:
+        return ExtType(5, packb(obj.name) + packb(obj.a, default=_encode) + packb(obj.k, default=_encode))
 
     try:
         k = obj2name(obj)
@@ -162,17 +164,27 @@ def _encode(obj):
 
             assert p[0] is type(obj), (obj, p)
             p = p[1:]
-        return ExtType(5, packb(k) + b"".join(packb(x) for x in p))
+        return ExtType(5, packb(k) + b"".join(packb(x, default=_encode) for x in p))
+
 
 class MsgpackMsgBuf(_MsgpackMsgBuf):
-    def __init__(self, stream, **kw):
-        super().__init__(stream, kw)
-        self.kw = kw
-
     async def setup(self):
         await super().setup()
         self.pack = Packer(default=_encode).packb
-        self.unpack = Unpacker(self.par, **self.kw).unpack
+        self.unpack = Unpacker(self.par, ext_hook=_decode, **self.cfg.get("pack",{})).unpack
+
+class MsgpackMsgBlk(_MsgpackMsgBlk):
+    """
+    structured messages > chunked bytestrings
+                
+    Use this if the layer below supports byte boundaries
+    (one bytestring-ized message per call).
+    """
+                
+    async def setup(self):
+        await super().setup()
+        self.pack = Packer(default=_encode).packb
+        self.unpack = Unpacker(self.par, ext_hook=_decode, **self.cfg.get("pack",{})).unpack
 
 
 class AIOBuf(BaseBuf):
@@ -223,21 +235,4 @@ class SingleAIOBuf(AIOBuf):
             s.deinit()
         elif hasattr(s,"close"):
             s.close()
-
-class MsgpackMsgBlk(_MsgpackMsgBlk):
-    """
-    structured messages > chunked bytestrings
-                
-    Use this if the layer below supports byte boundaries
-    (one bytestring-ized message per call).
-    """
-                
-    def __init__(self, stream, **kw):
-        super().__init__(stream)
-        self.pack = Packer(default=_encode).packb
-        self.unpacker = Unpacker(None, ext_hook=_decode, **kw).unpackb
-        # SIGH
-        #self.unpacker = partial(unpackb, ext_hook=_decode, **kw)
-        #self.pack = partial(packb, default=_encode)
-        
 

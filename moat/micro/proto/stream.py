@@ -7,14 +7,15 @@ import sys
 import anyio
 import greenback
 from contextlib import asynccontextmanager
+from functools import partial
 
-from moat.util import CtxObj, name2obj
-from moat.micro.compat import AC_use, TaskGroup, Event
+from moat.util import CtxObj, name2obj, Proxy, DProxy, obj2name, get_proxy
+from moat.micro.compat import AC_use, TaskGroup, Event, log
 
 from ._stream import _MsgpackMsgBuf, _MsgpackMsgBlk, SerialPackerBlkBuf
 from .stack import BaseBuf
 
-from msgpack import Packer,Unpacker,OutOfData
+from msgpack import Packer,Unpacker,OutOfData,ExtType, packb, unpackb
 
 class SyncStream:
     """
@@ -53,8 +54,6 @@ def _decode(code, data):
         try:
             return name2obj(n)
         except KeyError:
-            if Proxy is None:
-                raise NoProxyError(n)
             return Proxy(n)
     elif code == 5:
         try:
@@ -79,7 +78,7 @@ def _decode(code, data):
                             setattr(o, k, v)
             return o
         except Exception as exc:
-            print("Cannot unpack", repr(data), file=sys.stderr)
+            log("Cannot unpack %r", data, err=exc)
             # fall thru to ExtType
     return ExtType(code, data)
 
@@ -87,8 +86,10 @@ def _decode(code, data):
 def _encode(obj):
     # encode an object by building a proxy.
 
-    if Proxy is not None and isinstance(obj, Proxy):
+    if isinstance(obj, Proxy):
         return ExtType(4, obj.name.encode("utf-8"))
+    if type(obj) is DProxy:
+        return ExtType(5, packb(obj.name) + packb(obj.a, default=_encode) + packb(obj.k, default=_encode))
 
     try:
         k = obj2name(obj)
@@ -123,7 +124,7 @@ def _encode(obj):
 
             assert p[0] is type(obj), (obj, p)
             p = p[1:]
-        return ExtType(5, packb(k) + b"".join(packb(x) for x in p))
+        return ExtType(5, packb(k) + b"".join(packb(x, default=_encode) for x in p))
 
 
 class MsgpackMsgBuf(_MsgpackMsgBuf):
@@ -134,18 +135,10 @@ class MsgpackMsgBuf(_MsgpackMsgBuf):
     message boundaries.
     """
 
-    def __init__(self, stream:BaseBuf, **kw):
-        #
-        # console_handler: called with console bytes
-        # msg_prefix: int: code for start-of-packet
-        #
-        super().__init__(stream, kw)
-        self.kw = kw
-
     async def setup(self):
         await super().setup()
         self.pack = Packer(default=_encode).pack
-        self._unpacker = Unpacker(SyncStream(self.par), **self.kw)
+        self._unpacker = Unpacker(SyncStream(self.par), ext_hook=_decode, **self.cfg.get("pack",{}))
 
     async def unpack(self):
         # This calls the unpacker synchronously,
@@ -164,13 +157,10 @@ class MsgpackMsgBlk(_MsgpackMsgBlk):
     (one bytestring-ized message per call).
     """
 
-    def __init__(self, stream, **kw):
-        super().__init__(stream)
-        self.pack = Packer(default=_encode).packb
-        self.unpacker = Unpacker(None, ext_hook=_decode, **kw).unpackb
-        # SIGH
-        #self.unpacker = partial(unpackb, ext_hook=_decode, **kw)
-        #self.pack = partial(packb, default=_encode)
+    async def setup(self):
+        await super().setup()
+        self.pack = Packer(default=_encode).pack
+        self.unpacker = partial(unpackb, ext_hook=_decode, **self.cfg.get("pack",{}))
 
 
 class AnyioBuf(BaseBuf):

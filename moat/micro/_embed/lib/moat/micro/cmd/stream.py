@@ -194,7 +194,7 @@ class StreamCmd(BaseCmd):
 
     async def reply_error(self, i, exc):
         try:
-            if isinstance(exc, (FileExistsError,FileNotFoundError)):
+            if isinstance(exc, SilentRemoteError):
                 pass
             else:
                 log("ERROR handling %d", i, err=exc)
@@ -229,12 +229,13 @@ class StreamCmd(BaseCmd):
         d = msg.get("d", NotGiven)
         e = msg.get("e", None)
         r = msg.get("r", None)
+        n = msg.get("n", None)
 
         if i is not None:
             i ^= 1
 
         for k in msg.keys():
-            if k not in "aidre":
+            if k not in "aidren":
                 log("Unknown %s: %r", k, msg)
                 break
 
@@ -293,8 +294,14 @@ class StreamCmd(BaseCmd):
                     t.set_r(r)
 
             elif d is not NotGiven:
-                t.set(d)
-                if not isinstance(t, (SendIter,RecvIter)):
+                if isinstance(t, (SendIter,RecvIter)):
+                    if n:
+                        t.set(d,n=n)
+                    else:
+                        t.set(d)
+                    return
+                else:
+                    t.set(d)
                     del self.reply[i]
 
             else: # just i

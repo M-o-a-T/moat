@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 
 from moat.util import attrdict, import_, Path
-from moat.micro.compat import wait_for_ms, log, TaskGroup, ACM, AC_exit, TimeoutError
+from moat.micro.compat import wait_for_ms, log, TaskGroup, ACM, AC_exit, TimeoutError, Event
 
 from .base import BaseCmd
 
@@ -71,11 +71,12 @@ class BaseDirCmd(BaseCmd):
 
         # Third, wait for them to be up.
         for k,v in self._sub.items():
-            try:
-                await wait_for_ms(250, v._ready.wait)
-            except TimeoutError:
-                log("* Waiting for App:%s", v.path)
-                await v._ready.wait()
+            if isinstance(v._ready,Event):
+                try:
+                    await wait_for_ms(250, v._ready.wait)
+                except TimeoutError:
+                    log("* Waiting for App:%s", v.path)
+                    await v._ready.wait()
 
         self.set_ready()
 
@@ -112,6 +113,10 @@ class Dispatch(BaseDirCmd):
     def sub_at(self, *p):
         from .tree import SubDispatch
         return SubDispatch(self, p)
+
+    def cfg_at(self, *p):
+        from .tree import CfgStore
+        return CfgStore(self, p)
 
     @property
     def root(self):

@@ -1,5 +1,5 @@
 import sys
-#from asyncio.queues import Queue, QueueEmpty, QueueFull
+from async_queue import Queue, QueueEmpty, QueueFull
 
 from moat.micro.compat import Event, WouldBlock
 
@@ -230,6 +230,7 @@ def name2obj(name, obj=NotGiven):
     if obj is NotGiven and _CProxy:
         return _CProxy[name]
     _CProxy[name] = obj
+    _RProxy[id(obj)] = name
     return None
 
 
@@ -237,6 +238,7 @@ def obj2name(obj, name=NotGiven):
     if name is NotGiven:
         return _RProxy[id(obj)]
     _RProxy[id(obj)] = name
+    _CProxy[name] = obj
     return None
 
 
@@ -283,7 +285,7 @@ def as_proxy(name, obj=NotGiven, replace=False):
         #           obj.__getstate__ = _getstate
         return obj
 
-    if obj is NotGiven:
+    if obj is NotGiven and not replace:
         return _proxy
     else:
         _proxy(obj)
@@ -588,19 +590,43 @@ class NoProxyError(ValueError):
     "Error for nonexistent proxy values"
     pass  # pylint:disable=unnecessary-pass
 
+
 class Proxy:
     """
     A proxy object, i.e. a placeholder for things that cannot pass through MsgPack.
     """
 
-    def __init__(self, name, *data):
+    def __init__(self, name):
         self.name = name
-        self.data = data
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({repr(self.name)})"
+
+    def ref(self):
+        """Dereferences the proxy"""
+        return name2obj(self.name)
+
+
+class DProxy(Proxy):
+    """
+    A proxy object of a class to which the reciipient doesn't have a type.
+    """
+
+    def __init__(self, name, *a,**k):
+        super().__init__(name)
+        self.a = a
+        self.k = k
+
+    def __getitem__(self, i):
+        if i in self.k:
+            return self.k[i]
+        else:
+            return self.a[i]
 
     def __repr__(self):
         return (
             f"{self.__class__.__name__}({repr(self.name)},"
-            + ",".join(repr(x) for x in self.data)
+            + ",".join(repr(x) for x in (self.a,self.k))
             + ")"
         )
 

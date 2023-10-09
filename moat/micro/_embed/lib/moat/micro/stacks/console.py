@@ -21,6 +21,7 @@ def console_stack(stream, cfg, cons=False):
     lossy = link.get("lossy", None)
     log = cfg.get("log", None)
     log_raw = cfg.get("log_raw", None)
+    log_rel = cfg.get("log_rel", None)
 
     if log_raw is not None:
         from ..proto.stack import LogMsg
@@ -32,17 +33,22 @@ def console_stack(stream, cfg, cons=False):
         if isinstance(frame, dict):
             from ..proto.stream import SerialPackerBlkBuf, MsgpackMsgBlk
             stream = SerialPackerBlkBuf(stream, frame=frame, cons=cons)
-            stream = MsgpackMsgBlk(stream)
+            stream = MsgpackMsgBlk(stream, cfg)
         else:
             from ..proto.stream import MsgpackMsgBuf
-            stream = MsgpackMsgBuf(stream, msg_prefix=frame)
+            stream = MsgpackMsgBuf(stream, dict(msg_prefix=frame))
 
     assert isinstance(stream, BaseMsg)
 
     if lossy:
+        if lossy is True:
+            lossy = {}
         from ..proto.reliable import ReliableMsg
+        if log_rel is not None:
+            from ..proto.stack import LogMsg
+            stream = LogMsg(stream, log_rel)
 
-        stream = ReliableMsg(stream, **lossy)
+        stream = ReliableMsg(stream, lossy)
 
     if log is not None:
         from ..proto.stack import LogMsg

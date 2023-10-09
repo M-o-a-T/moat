@@ -114,6 +114,8 @@ class BaseCmd:
         if not isinstance(self._ready, Event):
             raise self._ready
 
+    cmd_rdy = wait_ready
+
     async def wait_all_ready(self):
         "delay until this subtree is up"
         await self.wait_ready()

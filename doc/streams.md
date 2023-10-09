@@ -172,7 +172,7 @@ A ReconnectBuf doesn't prevent message loss. Use a `ReliableMsg` above it.
 TODO.
 
 
-#### MsgpackMsg
+#### MsgpackMsgBuf
 
 A stream translator that encapsulates structured messages to a MsgPack bytestream.
 
@@ -181,9 +181,9 @@ Console messages are passed through transparently.
 Defined in ``moat.micro.proto.msgpack``.
 
 
-#### MsgpackFold
+#### MsgpackMsgBlk
 
-Like MsgpackMsg, except that encoded messages are sent and expected in
+Like MsgpackMsgBuf, except that encoded messages are sent and expected in
 message-sized chunks of bytes.
 
 

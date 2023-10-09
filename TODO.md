@@ -1,8 +1,9 @@
 
-* write ReconnectBuf
 * security, esp. for specific subtrees / apps
-* remote (async) iterators
-* remote cancellation
+* test for iterators
+* test for remote cancellation
+* test for reconnecting
+
 * link path. Right now an app doesn't know where it itself is.
   Does it need to?
 

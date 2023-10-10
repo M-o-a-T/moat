@@ -2,45 +2,52 @@
 Test the relay implementation
 """
 import pytest
-from moat.util import attrdict
 
-from moat.micro.compat import TaskGroup, sleep_ms
-from moat.micro.part.fake import PINS
-from moat.micro.part.relay import Relay
+from moat.micro._test import mpy_stack
+from moat.micro.compat import sleep_ms
 
+CFG="""
+apps:
+  r: part.Relay
+  p: _fake.Pin
+r:
+  pin: !P p
+  t:
+    on: 50
+    off: 150
+p:
+  pin: X
+"""
 
 @pytest.mark.anyio
-async def test_rly():
-    "relay test"
-    cfg = attrdict(
-        pin=attrdict(server="moat.micro.part.fake.PIN", pin="X"),
-        t_on=50,
-        t_off=150,
-    )
+async def test_rly(tmp_path):
+    "fake relay test"
+    async with mpy_stack(tmp_path, CFG) as d:
+        r = d.sub_at("r")
+        p = d.sub_at("p")
 
-    r = Relay(cfg)
-    p = PINS["X"]
+        # this starts the min-on timer 50.
+        await p.w(v=True)
+        await r.w(v=True)
+        assert True is await p.r()
 
-    async with TaskGroup() as tg:
-        await tg.spawn(r.run, None, _name="RlyTest")
-        await sleep_ms(50)
+        await r.w(f=False)
+        # this kills the previous timer and starts a min-off-timer 150.
 
-        await p.set(True)
-        await r.set(True)
-        assert True is p.value
-        await r.set(force=False)
-        # this starts a timer 150.
-        assert False is p.value
-        await r.set(True, force=None)  # X
-        assert False is p.value
+        assert False is await p.r()
+        await r.w(v=True, f=None)  # X
+        assert False is await p.r()
         await sleep_ms(100)
-        assert False is p.value
-        # the timer runs out after 150 and the (X) starts a new timer 50.
+        assert False is await p.r()
+        # the off timer runs out after 150, i.e. sometime during the next
+        # sleep, and the (X) turns the relay on and starts a new
+        # min-on-timer 50.
         await sleep_ms(80)
-        assert True is p.value
-        await r.set(False)
-        # the new timer now has 20 remaining.
-        assert True is p.value
+        assert True is await p.r()
+        await r.w(False)
+        # the min-on timer has ~20 msec remaining at this point, thus the
+        # pin is still on.
+        assert True is await p.r()
         await sleep_ms(40)
-        assert False is p.value
-        tg.cancel()
+        # Now it is not.
+        assert False is await p.r()

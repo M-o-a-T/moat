@@ -144,6 +144,10 @@ class ReliableMsg(StackedMsg):
 
     async def _run_bg(self):
         while not self.closed:
+            if self.in_reset:
+                await self._trigger.wait()
+                self._trigger = Event()
+                continue
             t = ticks_ms()
             # calculate time to next action
             ntx = None if self.t_recv is None else ticks_diff(self.t_recv, t)
@@ -187,6 +191,8 @@ class ReliableMsg(StackedMsg):
                 # print("SH1",self.parent.txt,self.s_send_tail,
                 #             self.s_send_head,nseq, file=sys.stderr)
                 self.s_send_head = nseq
+                if seq in self.m_send:
+                    raise RuntimeError("Clash")
                 self.m_send[seq] = [msg, None, evt]
                 await self.send_msg(seq)
 
@@ -218,13 +224,17 @@ class ReliableMsg(StackedMsg):
             if self.retries:
                 await tg.spawn(self._mon)
             await tg.spawn(self._run)
-            await self.wait()
+            if not self.cfg.get("_nowait"):  # required for testing
+                await self.wait()
+            self._tg = tg
             return self
         except BaseException as exc:
             await AC_exit(self, type(exc), exc, None)
             raise
 
     async def __aexit__(self, *err):
+        self._tg.cancel()
+        self._tg = None
         return await AC_exit(self, *err)
 
     async def _mon(self):
@@ -274,6 +284,7 @@ class ReliableMsg(StackedMsg):
         try:
             while True:
                 await self._run_()
+                await sleep_ms(self.timeout)
         except BaseException as exc:
             err = str(exc)
             raise
@@ -295,6 +306,8 @@ class ReliableMsg(StackedMsg):
             try:
                 try:
                     await self.par.send(msg)
+                except AttributeError:
+                    return  # closing. XXX should not happen
                 except TypeError:
                     if 'e' in msg:
                         msg['e'] = repr(err)
@@ -473,6 +486,7 @@ class ReliableMsg(StackedMsg):
                 if rr == self.s_send_head:
                     # XXX
                     break
+                # log("ACKING %d",rr)
                 try:
                     m, _t, e = self.m_send.pop(rr)
                 except KeyError:

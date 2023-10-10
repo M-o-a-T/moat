@@ -198,7 +198,7 @@ class StackedMsg(_StackedAny, BaseMsg):
 
     async def recv(self):
         "Receive. Returns a message."
-        return await self.par.recv(*a)
+        return await self.par.recv()
 
     async def cwr(self, buf):
         "Console Send. Returns when the buffer is transmitted."
@@ -260,7 +260,7 @@ class LogMsg(_StackedAny):
 
     async def teardown(self):
         log("X:%s stop", self.txt)
-
+        await super().teardown()
 
     def _repr(self, m, sub=None):
         if not isinstance(m,dict):

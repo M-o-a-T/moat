@@ -94,11 +94,30 @@ class BaseCmd:
 
     async def run(self):
         """
-        Main loop for this part of your code.
+        Runner for this part of your code.
 
-        If you override this you must call `set_ready` at some point.
+        By default calls `setup`, `set_ready`, and `loop`.
+        You need to do all of that if you override `run`.
         """
+        await self.setup()
         self.set_ready()
+        await self.loop()
+
+    async def setup(self):
+        """
+        Async setup for this object.
+
+        By default does nothing.
+
+        If you override this, be aware that the command is not yet marked ready.
+        Thus, beware of deadlocks if you depend on the readiness of other objects.
+        """
+        pass
+
+    async def loop(self):
+        """
+        Main loop. By default does nothing.
+        """
         await idle()
 
     async def wait_ready(self):

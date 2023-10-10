@@ -11,14 +11,16 @@ from moat.micro.cmd.base import BaseCmd
 PINS = {}
 
 
-class PIN(BaseCmd):
+class Pin(BaseCmd):
     """
     This is a fake Pin.
+
+    Iterating it yields a new value whenever the pin changes.
     """
 
     def __init__(self, cfg):
         super().__init__(cfg)
-        PINS[cfg.pin] = self
+        PINS[cfg["pin"]] = self
         self.flag = Event()
         self._value = False
 
@@ -43,9 +45,6 @@ class PIN(BaseCmd):
     async def __anext__(self):
         await self.flag.wait()
         return self._value
-
-    async def run(self, cmd):
-        pass
 
     async def cmd_r(self):
         return self._value

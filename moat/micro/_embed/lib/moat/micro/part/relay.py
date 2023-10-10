@@ -1,13 +1,12 @@
 """
 More common code
 """
-from moat.util import NotGiven, attrdict, load_from_cfg
+from moat.util import NotGiven, attrdict, load_from_cfg, Path
 
 from ..compat import Event, Pin_OUT, TaskGroup, idle, sleep, sleep_ms, ticks_diff, ticks_ms
-from ..link import Reader
+from ..cmd.base import BaseCmd
 
-
-class Relay(Reader):
+class Relay(BaseCmd):
     """
     A relay is an output pin with an overriding "force" state.
 
@@ -21,39 +20,45 @@ class Relay(Reader):
     value = None
     force = None
 
-    def __init__(self, cfg, value=None, force=None, **kw):
+    def __init__(self, cfg):
         super().__init__(cfg)
-        pin = cfg.pin
-        if isinstance(pin, int):
-            cfg.pin = attrdict(client="moat.micro.part.pin.Pin", pin=pin)
-        kw.setdefault("mode", Pin_OUT)
-        self.pin = load_from_cfg(cfg.pin, **kw)
-        if self.pin is None:
-            raise ImportError(cfg.pin)
-        self.t = [cfg.get("t_off", 0), cfg.get("t_on", 0)]
+        if not isinstance(cfg.get("pin", None), (tuple,list,Path)):
+            raise ValueError(f"Pin not set")
+        t = cfg.get("t", {})
+        self.t = [t.get("off", 0), t.get("on", 0)]
         self.note = cfg.get("note", None)
 
-    async def set(self, value=None, force=NotGiven):
+    async def setup(self):
+        await self.pin.rdy()
+        await self.cmd_w()
+        await super().setup()
+
+    async def run(self):
+        self.pin = self.root.sub_at(*self.cfg.pin)
+        async with TaskGroup() as self.__tg:
+            await super().run()
+
+    async def cmd_w(self, v=None, f=NotGiven):
         """
         Change relay state.
 
-        The state is set to @force, or @value if @force is None,
-        or self.value if @value is None too.
+        The state is set to @f ("force"), or @v ("value") if @f is None,
+        or self.value if @v is None too.
 
         If you don't pass a @force argument in, the forcing state of the
         relay is not changed.
         """
-        if force is NotGiven:
-            force = self.force
+        if f is NotGiven:
+            f = self.force
         else:
-            self.force = force
+            self.force = f
 
-        if value is None:
-            value = self.value
+        if v is None:
+            v = self.value
         else:
-            self.value = value
+            self.value = v
 
-        if force is None and self._delay is not None:
+        if f is None and self._delay is not None:
             return
         await self._set()
 
@@ -61,18 +66,18 @@ class Relay(Reader):
         val = self.value if self.force is None else self.force
         if val is None:
             return
-        p = await self.pin.get()
+        p = await self.pin.r()
         if p == val:
             return
 
         if self._delay is not None:
             self._delay.cancel()
             self._delay = None
+        await self.pin.w(v=val)
         t = self.t[val]
         if not t:
             return
         self._delay = await self.__tg.spawn(self._run_delay, t, _name="Rly")
-        await self.pin.set(val)
         self.t_last = ticks_ms()
 
     async def _run_delay(self, t):
@@ -95,16 +100,10 @@ class Relay(Reader):
     def delayed(self):
         return self._delay is not None
 
-    async def read_(self):
+    async def cmd_r(self):
         return dict(
-            s=self.value,
+            v=self.value,
             f=self.force,
             d=None if self._delay is None else ticks_diff(ticks_ms(), self.t_last),
         )
 
-    async def run(self, cmd):
-        async with TaskGroup() as self.__tg:
-            await self.set()
-            await self.read()
-            self.__tg.start_soon(super().run, cmd)
-            await idle()

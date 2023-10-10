@@ -1,1 +1,1 @@
-../_embed/lib/moat/micro/cmd/tree.py
+../_embed/lib/moat/micro/cmd/_tree.py

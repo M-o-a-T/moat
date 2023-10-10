@@ -10,14 +10,11 @@ The dispatcher is a context manager that can be iterated to receive new
 alerts.
 """
 
-import logging
 from contextlib import asynccontextmanager
 
 from .broadcast import Broadcaster, BroadcastReader
 from .compat import Event, TaskGroup
 from .ctx import CtxObj
-
-logger = logging.getLogger(__name__)
 
 __all__ = [
     "Alert",

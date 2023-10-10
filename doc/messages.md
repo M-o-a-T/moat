@@ -72,3 +72,32 @@ The stream is terminated by a message with `r` set to `False`, an
 exception, or a cancellation.
 
 
+## Common commands
+
+### \_rl
+
+Reload this object. A subtree reloads all subcommands.
+
+The `w` flag states whether to wait for the reload to succeed.
+
+### \_rlq
+
+Query Reload. Return a flag whether the last implicit reload has succeeded
+(True), failed (False), or never happened (None).
+
+if `cl` is set, clear the flag.
+
+### \_rs
+
+Restart this object. A subtree restart affects all subcommands.
+
+The `w` flag states whether to wait for the restart to succeed.
+
+### \_stp
+
+Stop this subsystem.
+
+The `w` flag states whether to wait for the stop to finish.
+
+Restarting is on the TODO list.
+

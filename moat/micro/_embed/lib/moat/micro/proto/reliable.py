@@ -16,11 +16,6 @@ from ..compat import (
 )
 from .stack import ChannelClosed, StackedMsg
 
-def brk():
-    try:
-        breakpoint()
-    except NameError:
-        pass
 
 class ReliableMsg(StackedMsg):
     """
@@ -238,13 +233,9 @@ class ReliableMsg(StackedMsg):
         return await AC_exit(self, *err)
 
     async def _mon(self):
-        try:
-            while True:
-                await wait_for_ms(self.retries * self.timeout, self._is_up.wait)
-                await self._is_down.wait()
-        finally:
-            # brk()
-            pass 
+        while True:
+            await wait_for_ms(self.retries * self.timeout, self._is_up.wait)
+            await self._is_down.wait()
 
     async def _run_(self):
         if self._is_down.is_set():
@@ -318,7 +309,6 @@ class ReliableMsg(StackedMsg):
                 pass
 
     async def send_reset(self, level=None, err=None):
-        # brk()
         if level is None:
             level = self.reset_level
         else:

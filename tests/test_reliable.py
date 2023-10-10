@@ -77,15 +77,9 @@ async def test_basic(qlen1, qlen2, window, loss):
 
     async with TaskGroup() as tg:
         async with u1,u2:
-            log("XXX1")
             await tg.spawn(u1.run)
             await tg.spawn(u2.run)
-            log("XXX2")
             await u1.done.wait()
-            log("XXX3")
             await u2.done.wait()
-            log("XXX4")
-        log("XXX5")
-    log("XXX6")
     assert u1.n == 10
     assert u2.n == 10

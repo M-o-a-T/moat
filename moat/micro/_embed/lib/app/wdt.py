@@ -43,11 +43,13 @@ class Cmd(BaseCmd):
             self.wdt = WDT(cfg)
 
     async def run(self):
-        await self.wdt.run(self)
+        self.wdt.setup(self.cfg)
+        self.set_ready()
+        await self.wdt.run()
 
-    async def config_updated(self, cfg):
-        await super().config_updated(cfg)
-        self.wdt._setup(cfg)
+    async def reload(self):
+        await super().reload()
+        self.wdt.setup(self.cfg)
         self.wdt.ping()
 
     def cmd_x(self, f=False):

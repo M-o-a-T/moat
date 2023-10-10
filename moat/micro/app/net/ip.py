@@ -36,7 +36,7 @@ class Port(BaseCmd):
 
     def cmd_lc(self):
         """list connections"""
-        return list(self._sub.keys())
+        return list(self.sub.keys())
 
     def cmd_ic(self, n):
         """show details of a single connection"""

@@ -781,3 +781,15 @@ class AlertCollector:
             self.evt = Event()
             self.non_empty.set()
         self.objs.add(thing)
+
+
+def exc_iter(exc):
+    """
+    iterate over all non-exceptiongroup parts of an exception(group)
+    """
+    from moat.micro.compat import ExceptionGroup, BaseExceptionGroup
+    if isinstance(exc, (ExceptionGroup, BaseExceptionGroup)):
+        for e in exc.exceptions:
+            yield from exc_iter(e)
+    else:
+        yield exc

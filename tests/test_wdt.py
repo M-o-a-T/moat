@@ -4,38 +4,72 @@ Basic test using a MicroPython subtask
 import pytest
 from moat.util import NotGiven
 
-from moat.micro._test import mpy_client, mpy_server
-from moat.micro.compat import sleep_ms
+from moat.micro._test import mpy_stack
+from moat.micro.compat import sleep_ms, log
+from moat.micro.cmd.util import StoppedError
 
 pytestmark = pytest.mark.anyio
 
-TT = 250  # XXX assume that this is OK
+TT = 500  # XXX depends on how much we're logging
 
+CFG="""
+apps:
+# r: _test.MpyCmd
+  r: sub.Err
+  a: _test.Cmd
+r:
+ app: _test.MpyCmd
+ cfg:
+  cfg:
+    apps:
+#     w: wdt.Cmd
+      r: stdio.StdIO
+      b: _test.Cmd
+      c: cfg.Cmd
+    r:
+      link: &link
+        lossy: False
+        guarded: False
+      log:
+        txt: "MH"
+      log_raw:
+        txt: "ML"
 
-async def test_wdt(tmp_path):
+  link: *link
+  log:
+    txt: "TH"
+  log_raw:
+    txt: "TL"
+"""
+
+@pytest.mark.parametrize("guard", [False, True])
+async def test_wdt(tmp_path, guard):
     "basic watchdog test"
     ended = False
-    with pytest.raises(EOFError):
-        async with mpy_server(tmp_path) as obj:
-            async with mpy_client(obj) as req:
-                res = await req.send("ping", "hello")
-                assert res == "R:hello"
+    async with mpy_stack(tmp_path, CFG) as d,d.sub_at("r","b") as r,d.cfg_at("r","c") as c:
+        res = await r.echo(m="hello")
+        assert res == dict(r="hello")
 
-                # XXX unfortunately we can't test ext=False or hw=True on Linux
-                await req.set_cfg(
-                    {
-                        "apps": {"w1": "wdt.WDTCmd"},
-                        "w1": dict(t=TT, ext=True, hw=False),
-                    },
-                    sync=True,
-                )
-                await sleep_ms(TT / 2)
-                await req.send(["w1", "x"])
-                await sleep_ms(TT / 2)
-                await req.send(["w1", "x"])
-                ended = True
-                await sleep_ms(TT * 1.5)
-                raise RuntimeError("didn't die")
+        # XXX unfortunately we can't test ext=False or hw=True on Linux
+        await c.set(
+            {
+                "apps": {"w": "sub.Err"},
+                "w": dict(app="wdt.Cmd",cfg=dict(t=TT, ext=True, hw=False)),
+            } if guard else {
+                "apps": {"w": "wdt.Cmd"},
+                "w": dict(t=TT, ext=True, hw=False),
+            },
+            sync=True,
+        )
+        async with d.sub_at("r","w") as wd:
+            await sleep_ms(TT / 2)
+            await wd.x()
+            await sleep_ms(TT / 2)
+            await wd.x()
+            ended = True
+            await sleep_ms(TT * 1.5)
+            with pytest.raises(StoppedError):
+                res = await r.echo(m="hello")
     assert ended
 
 
@@ -43,26 +77,31 @@ async def test_wdt_off(tmp_path):
     """
     Check that the watchdog can be removed
     """
-    async with mpy_server(tmp_path) as obj:
-        async with mpy_client(obj) as req:
-            await req.set_cfg(
-                {
-                    "apps": {"w1": "wdt.WDTCmd"},
-                    "w1": dict(t=TT, ext=True, hw=False),
-                },
-                sync=True,
-            )
-            await sleep_ms(TT / 2)
-            await req.send(["w1", "x"])
-            await sleep_ms(TT / 2)
-            await req.send(["w1", "x"])
-            await req.set_cfg(
-                {
-                    "apps": {"w1": NotGiven},
-                },
-                sync=True,
-            )
-            await sleep_ms(TT * 2)
+    async with mpy_stack(tmp_path, CFG) as d,d.sub_at("r","b") as r,d.cfg_at("r","c") as c:
+        await c.set(
+            {
+                "apps": {"w1": "wdt.Cmd"},
+                "w1": dict(t=TT*2, ext=True, hw=False),
+            },
+            sync=True,
+        )
+        async with d.sub_at("r","w1") as wd:
+            await sleep_ms(TT)
+            await wd.x()
+            await sleep_ms(TT)
+            await wd.x()
+        await c.set(
+            {
+                "apps": {"w1": NotGiven},
+            },
+            sync=True,
+        )
+        await sleep_ms(TT * 3)
+
+        res = await r.echo(m="hello again")
+        assert res == dict(r="hello again")
+        ended = True
+    assert ended
 
 
 async def test_wdt_update(tmp_path):
@@ -70,26 +109,29 @@ async def test_wdt_update(tmp_path):
     Check that the watchdog can be updated
     """
     ended = False
-    with pytest.raises(EOFError):
-        async with mpy_server(tmp_path) as obj:
-            async with mpy_client(obj) as req:
-                await req.set_cfg(
-                    {
-                        "apps": {"w1": "wdt.WDTCmd"},
-                        "w1": dict(t=TT, ext=True, hw=False),
-                    },
-                    sync=True,
-                )
-                await sleep_ms(TT / 2)
-                await req.send(["w1", "x"])
-                await sleep_ms(TT / 2)
-                await req.send(["w1", "x"])
-                await req.set_cfg({"w1": dict(t=TT * 3)}, sync=True)
-                await sleep_ms(TT * 2)
-                await req.send(["w1", "x"])
-                await sleep_ms(TT * 2)
-                await req.send(["w1", "x"])
-                ended = True
-                await sleep_ms(TT * 4)
-                raise RuntimeError("didn't die")
+    async with mpy_stack(tmp_path, CFG) as d,d.sub_at("r","b") as r,d.cfg_at("r","c") as c:
+        await c.set(
+            {
+                "apps": {"w": "wdt.Cmd"},
+                "w": dict(t=TT, ext=True, hw=False),
+            },
+            sync=True,
+        )
+
+        async with d.sub_at("r","w") as wd:
+            await sleep_ms(TT / 2)
+            await wd.x()
+            await sleep_ms(TT / 2)
+            await wd.x()
+            await c.set({"w": dict(t=TT * 3)}, sync=True)
+            await wd.x()
+            await sleep_ms(TT * 2)
+            await wd.x()
+            await sleep_ms(TT * 2)
+            await wd.x()
+            ended = True
+            await sleep_ms(TT * 4)
+
+            with pytest.raises(StoppedError):
+                res = await r.echo(m="hello")
     assert ended

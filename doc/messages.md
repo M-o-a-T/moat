@@ -20,6 +20,14 @@ conserve client memory.
   Data. Requests contain a dict: keyword args to the command in question.
   Replies contain whatever the called command returns.
 
+* x
+
+  List of expected exception types. Commands only.
+
+  If the recipient encounters one of these, it will still send it back to
+  the sender but it won't log them. Use case is e.g. file system errors
+  where "file not found" is not the client's fault, or config updates where
+  a missing key will simply be sent.
 
 ## Request/Reply
 
@@ -57,6 +65,14 @@ Thus the MoaT protocol offers a method to set up bidirectional message streams.
 * r
 
   Interval between reply messages, in milliseconds. Must be greater than zero, or `False`.
+
+* n
+
+  Counter for iterated messages. A store-and-forward transport (e.g.
+  `Reliable`) uses this sequencer and `i` to update the buffered message
+  instead of storing an unbound amount of stale data that are useless by
+  the time the iterator's recipient gets them.
+
 
 A request for iterated results adds an integer parameter `r`.
 The initial reply also contains this key, possibly modified. If `r` is

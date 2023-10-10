@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 
 from moat.util import ValueEvent, obj2name, NotGiven
-from .util import ValueTask, SendIter, RecvIter
+from .util import ValueTask, SendIter, RecvIter, StoppedError
 from moat.micro.compat import CancelledError, WouldBlock, log, Lock, ACM, AC_exit
 from moat.micro.proto.stack import RemoteError, SilentRemoteError, BaseMsg
 
@@ -138,49 +138,6 @@ class StreamCmd(BaseCmd):
         for e in self.reply.values():
             e.cancel()
 
-    async def _handle_request(self, a, i, d, msg):
-        """
-        Handler for a single request.
-
-        `_handle` starts this in a new task for each message.
-        """
-        res = {'i': i}
-        try:
-            r = await self.root.dispatch(a, d)
-        except SilentRemoteError as exc:
-            if i is None:
-                return
-            res["e"] = type(exc)
-            res["d"] = exc.args
-        except WouldBlock:
-            raise
-        except Exception as exc:  # pylint:disable=broad-exception-caught
-            # TODO only when debugging
-            log("ERROR handling %r %r %r %r", a, i, d, msg, err=exc)
-            if i is None:
-                return
-            try:
-                obj2name(type(exc))
-            except KeyError:
-                res["e"] = "E:" + repr(exc)
-            else:
-                res["e"] = type(exc)
-                res["d"] = exc.args
-        except BaseException as exc:  # pylint:disable=broad-exception-caught
-            res["e"] = type(StoppedError)
-            res["d"] = (repr(exc),)
-        else:
-            if i is None:
-                return
-            res["d"] = r
-
-        try:
-            await self.s.send(res)
-        except TypeError as exc:
-            log("ERROR returning %r", res, err=exc)
-            res = {'e': "T:" + repr(exc), 'i': i}
-            await self.s.send(res)
-
     async def reply_result(self, i, res):
         if i is None:
             return
@@ -192,9 +149,17 @@ class StreamCmd(BaseCmd):
             await self.reply_error(i, e)
             raise
 
-    async def reply_error(self, i, exc):
+    async def reply_error(self, i, exc, x=()):
+        """
+        Reply to message #@i with an error.
+
+        Exception types in @x are expected and will not be logged.
+        """
+        res = NotGiven
         try:
             if isinstance(exc, SilentRemoteError):
+                pass
+            elif x and isinstance(exc, tuple(x)):
                 pass
             else:
                 log("ERROR handling %d", i, err=exc)
@@ -210,12 +175,12 @@ class StreamCmd(BaseCmd):
                     res["e"] = type(exc)
                     res["d"] = exc.args
             else:
-                res["e"] = type(StoppedError)
+                res["e"] = StoppedError
                 res["d"] = (repr(exc),)
             await self.s.send(res)
         except TypeError as e2:
             log("ERROR returning %r", res, err=e2)
-            await self.s.send({'e': "T:" + repr(exc), 'i': i})
+            await self.s.send({'e': "T:" + repr(e2), 'i': i})
 
     async def _handle(self, msg):
         """
@@ -230,12 +195,13 @@ class StreamCmd(BaseCmd):
         e = msg.get("e", None)
         r = msg.get("r", None)
         n = msg.get("n", None)
+        x = msg.get("x", ())
 
         if i is not None:
             i ^= 1
 
         for k in msg.keys():
-            if k not in "aidren":
+            if k not in "aidrenx":
                 log("Unknown %s: %r", k, msg)
                 break
 
@@ -246,7 +212,7 @@ class StreamCmd(BaseCmd):
             if d is NotGiven:
                 d = None
             if r is None:
-                t = ValueTask(self, i, self.root.dispatch, a, d)
+                t = ValueTask(self, i, x, self.root.dispatch, a, d, x_err=x)
             else:
                 t = SendIter(self, i, r, a, d)
 
@@ -309,7 +275,7 @@ class StreamCmd(BaseCmd):
                 del self.reply[i]
 
 
-    async def dispatch(self, action, msg=None, rep:int=None, wait=True):  # pylint:disable=arguments-differ
+    async def dispatch(self, action, msg=None, rep:int=None, wait=True, x_err=()):  # pylint:disable=arguments-differ
         """
         Forward a request to the remote side, return the response.
 
@@ -340,6 +306,8 @@ class StreamCmd(BaseCmd):
             if seq not in self.reply:
                 break
         msg = {"a": action, "d": msg, "i": seq}
+        if x_err:
+            msg["x"] = x_err
 
         if rep:
             msg["r"] = rep

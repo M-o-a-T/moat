@@ -76,10 +76,12 @@ class Cmd(BaseCmd):
                     raise exc
                 cur.append(d)
 
-    async def cmd_x(self):
+    async def cmd_x(self, p=()):
         """
         Activate the new config.
         """
-        await self._parent.update_config()
-        return
+        dest = self._parent
+        for pp in p:
+            dest = dest.sub[pp]
+        await dest.reload()
 

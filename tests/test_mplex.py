@@ -38,7 +38,7 @@ async def test_mplex(tmp_path):
     Basic multiplex test
     """
     async with mpy_stack(tmp_path, CFG) as d:
-        r = await d.send("rbecho",m="Hi")
+        r = await d.send("r","b","echo",m="Hi")
         assert r["r"] == "Hi"
         r = await d.send("r","b","echo",m="Ho")
         assert r["r"] == "Ho"

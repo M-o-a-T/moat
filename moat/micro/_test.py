@@ -33,6 +33,7 @@ temp_dir = ContextVar("temp_dir")
 
 required = [
         "__future__",
+        "pprint",
         "functools",
         "collections",
         "collections-deque",
@@ -114,8 +115,8 @@ async def mpy_stack(temp: Path, cfg:dict|str, cfg2:dict|None=None):
         async with TaskGroup() as tg:
             stack = Dispatch(cfg)
             try:
-                await tg.spawn(stack.run, _name="Stack")
-                await stack.wait_all_ready()
+                await tg.spawn(stack.run_sub, _name="Stack")
+                await stack.wait_ready()
                 yield stack
             finally:
                 tg.cancel()

@@ -54,7 +54,6 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
         cfg_network(cfg["net"])
 
 #   async def setup(tg, state, ready=None):
-#       breakpoint()
 #       import sys
 #
 #       # import msgpack

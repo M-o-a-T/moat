@@ -4,13 +4,19 @@ Server side of BaseCmd
 
 from moat.util import attrdict, NotGiven
 
+from ._tree import BaseDirCmd, BaseFwdCmd
 from ._tree import Dispatch as _Dispatch
 from ._tree import SubDispatch
+
 
 class Dispatch(_Dispatch):
     APP = "moat.micro.app"
 
-class CfgStore(SubDispatch):
+    def cfg_at(self, *p):
+        return CfgStore(self, p)
+
+
+class CfgStore:
     """
     Config file storage.
 
@@ -19,12 +25,21 @@ class CfgStore(SubDispatch):
     cfg:dict = None
     subpath = ()
 
+    def __init__(self, dispatch, path):
+        self.sd = dispatch.sub_at(*path)
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *tb):
+        pass
+
     async def get(self, again=False):
         """
         Collect the client's configuration data.
         """
         async def _get(p):
-            d = await self.send("r", p=p)
+            d = await self.sd.r(p=p)
             if isinstance(d, (list, tuple)):
                 d, s = d
                 if isinstance(d, dict):
@@ -52,7 +67,7 @@ class CfgStore(SubDispatch):
         async def _set(p, c):
             # current client cfg
             try:
-                ocd = await self.send("r", p=p)
+                ocd = await self.sd.r(p=p, _x_err=(KeyError,))
                 if isinstance(ocd, (list, tuple)):
                     ocd, ocl = ocd
                 else:
@@ -60,22 +75,22 @@ class CfgStore(SubDispatch):
             except KeyError:
                 ocd = {}
                 ocl = []
-                await self.send("w", p=p, d={})
+                await self.sd.w(p=p, d={})
             for k, v in c.items():
                 if isinstance(v, dict):
                     await _set(p + (k,), v)
                 elif ocd.get(k, NotGiven) != v:
-                    await self.send("w", p=p + (k,), d=v)
+                    await self.sd.w(p=p + (k,), d=v)
 
             if not replace:
                 return
             # drop those client cfg snippets that are not on the server
             for k in chain(ocd.keys(), ocl):
                 if k not in c:
-                    await self.send("w", p=p + (k,), d=NotGiven)
+                    await self.sd.w(p=p + (k,), d=NotGiven)
 
         self.cfg = None
         await _set(self.subpath, cfg)
 
         if sync:
-            await self.send("x")  # runs
+            await self.sd.x()  # runs

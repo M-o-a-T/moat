@@ -29,7 +29,7 @@ from __future__ import annotations
 from moat.micro.compat import TaskGroup, idle, Event, wait_for_ms, log, Lock, AC_use, TimeoutError
 from moat.util import Path
 
-from .util import run_no_exc
+from .util import run_no_exc, StoppedError
 
 class BaseCmd:
     """
@@ -38,33 +38,34 @@ class BaseCmd:
     This object accepts (sub)commands.
     """
 
-    _tg: TaskGroup = None
-    _starting = None
+    tg: TaskGroup = None
+
     _parent:BaseCmd = None
     _ts = None
-    _start_lock = Lock()
+    _rl_ok = None  # result of last reload
 
     def __init__(self, cfg):
-        self._sub = {}
         self.cfg = cfg
         self._ready: None|Event|Exception = Event()
         # None: stopped
         # Event: running
-        # Exception: died
+        # Exception: dead
         self._stopped = Event()
-        self._restart = True
+
+        self.start_lock = Lock()  # used by my parent
+        self.th = None  # task handle, used by the parent
 
     @property
     def path(self):
         return self._parent.path / self._name
 
-    async def send(self, *action, **kw):  # pylint:disable=arguments-differ
+    def send(self, *action, _x_err=(), **kw):  # pylint:disable=arguments-differ
         """
         Send a message, returns a reply.
 
         Delegates to the root dispatcher
         """
-        return await self.root.dispatch(action, kw)
+        return self.root.dispatch(action, kw, x_err=_x_err)
 
     async def send_iter(self, _rep, *action, **kw):
         """
@@ -82,13 +83,13 @@ class BaseCmd:
         await AC_use(self, res.aclose)
         return res
 
-    async def send_nr(self, *action, **kw):  # pylint:disable=arguments-differ
+    async def send_nr(self, *action, _x_err=(), **kw):  # pylint:disable=arguments-differ
         """
         Send a possibly-lossy message, does not return a reply.
 
         Delegates to the root dispatcher
         """
-        return await self.root.dispatch(action, kw, wait=False)
+        return await self.root.dispatch(action, kw, wait=False, x_err=_x_err)
         # XXX run in a separate task
 
 
@@ -96,10 +97,9 @@ class BaseCmd:
         """
         Runner for this part of your code.
 
-        By default calls `setup`, `set_ready`, and `loop`.
-        You need to do all of that if you override `run`.
+        By default calls `set_ready`, and `loop`.
+        If you override this, you need to do that too.
         """
-        await self.setup()
         self.set_ready()
         await self.loop()
 
@@ -133,18 +133,7 @@ class BaseCmd:
         if not isinstance(self._ready, Event):
             raise self._ready
 
-    cmd_rdy = wait_ready
-
-    async def wait_all_ready(self):
-        "delay until this subtree is up"
-        await self.wait_ready()
-        while True:
-            n = len(self._sub)
-            for k,v in list(self._sub.items()):
-                await v.wait_all_ready()
-                # TODO warn when delayed
-            if len(self._sub) == n:
-                break
+    cmd__rdy = wait_ready
 
     def set_ready(self, error=None):
         if self._ready is None:
@@ -154,48 +143,33 @@ class BaseCmd:
         self._ready.set()
 
 
-    async def _run(self):
+    async def run_sub(self):
         """
         Runs my (and my children's) "run" methods.
         """
-        while isinstance(self._ready, Event):
-            try:
-                if self._stopped.is_set():
-                    self._stopped = Event()
-                async with TaskGroup() as tg:
-                    self._tg = tg
-                    await tg.spawn(self.run, _name=f"r_{self.path}")
-                    await self._start()
-
-                    # Subprogram config is either in init or at runtime.
-                    await self.wait_ready()
-                    self._starting = False
-            except Exception as exc:
-                # log("out", err=exc)
-                if isinstance(self._ready, Event):
-                    self._ready.set()
-                    self._ready = RuntimeError("died")
-                raise
-            else:
-                if self._ready.is_set():
-                    self._ready = Event()
-            finally:
-                self._stopped.set()
-
-    async def _start(self):
-        self._starting = True
-        for k,v in self._sub.items():
-            if isinstance(v, BaseCmd):
-                async with v._start_lock:
-                    if v._ts is None:
-                        log("Startup %s",self.path/k)
-                        v._ts = await self._tg.spawn(v._run_, _name=f"r_st_{v.path}")
-
-    async def _run_(self):
         try:
-            await self._run()
+            if self._stopped.is_set():
+                self._stopped = Event()
+
+            async with TaskGroup() as self.tg:
+                await self.start()
+
+                pass  # wait for started tasks to end
+        except BaseException as exc:
+            # log("out", err=exc)
+            if isinstance(self._ready, Event):
+                self._ready.set()
+                self._ready = RuntimeError(f"died {repr(exc)}")
+            raise
+        else:
+            if self._ready.is_set():
+                self._ready = Event()
         finally:
-            self._ts = None
+            self._stopped.set()
+            self.th = None
+
+    async def start(self):
+        await self.tg.spawn(self.run, _name=f"r_{self.path}")
 
 
     # Restarting may or may not work properly on MicroPython
@@ -203,8 +177,30 @@ class BaseCmd:
     async def restart(self):
         """
         Tell this module to restart itself.
+
+        DO NOT override this.
         """
-        self._tg.cancel()
+        if not isinstance(self._ready, Event):
+            raise self._ready
+        if self._ready.is_set():
+            self._ready = Event()
+        self.tg.cancel()
+        await self._stopped.wait()
+
+    cmd__rs = restart  # restart command
+
+    async def cmd__rl(self, w=False):  # reload
+        await self.reload()
+
+    async def cmd__rlq(self, cl=False):  # query reload
+        try:
+            return self._rl_ok
+        finally:
+            if cl:
+                self._rl_ok = None
+
+    async def reload(self):
+        return False
 
     def attached(self, parent:BaseDirCmd, name:str):
         if self._parent is not None:
@@ -213,46 +209,19 @@ class BaseCmd:
         self._name = name
         self.root = parent.root
 
-    async def stop(self):
+    async def stop(self, w=True):
         if not isinstance(self._ready, Event):
             return
         self._ready.set()
         self._ready = StoppedError()
-        self._tg.cancel()
-        await self._stopped.wait()
-        if self._parent is not self:
-            self._parent = None
-            self._name = None
-            self.root = None
+        self.tg.cancel()
+        if w:
+            await self._stopped.wait()
 
-    async def attach(self, name, cmd, run=True):
-        """
-        Attach a named command handler to me and run it.
-        """
-        await self.detach(name)
-        self._sub[name] = cmd
-        cmd.attached(self, name)
-        if run:
-            await self._tg.spawn(cmd._run, _name=f"r_at_{cmd.path}")
-
-    async def detach(self, name):
-        """
-        Detach a named command handler from me and kill its task.
-
-        Waits for the subtask to end.
-        """
-        try:
-            cmd = self._sub.pop(name)
-        except KeyError:
-            return
-        try:
-            await cmd.stop()
-        except AttributeError:
-            pass
-
+    cmd__stp = stop
 
     async def dispatch(
-            self, action: str | list[str], msg: dict, rep:int = None, wait:bool = True,
+            self, action: list[str], msg: dict, rep:int = None, wait:bool = True, x_err=()
     ):  # pylint:disable=arguments-differ
         """
         Process a message.
@@ -272,86 +241,59 @@ class BaseCmd:
         (This doesn't apply to replies of course.)
 
         If @rep is >0, this request wants an iterator.
+
+        TODO: remove string dispatch.
         """
 
-        async def c(p,a):
-            if not wait:
-                if rep:
-                    raise ValueError("can't rep without wait")
-                self._tg.spawn(run_no_exc,p,msg, _name=f"Call:{self.path}/{a or '-'}")
-                return
-
-            r = p(**msg)
-            if hasattr(r, "throw"):  # coroutine
-                r = await r
-            if rep:
-                if hasattr(r, "__aiter__"):  # async iter
-                    r = r.__aiter__()
-                if not hasattr(r,"__anext__"):
-                    # This is not an iterator
-                    r = IterWrap(p,(),msg, r)
-                if not isinstance(r,_DelayedIter):
-                    r = DelayedIter(it=r, t=rep)
-            else:
-                if hasattr(r, "__aiter__"):  # async iter
-                    raise ValueError("iterator")
-
-            return r
-
-
         if not action:
-            # pylint: disable=no-member
-            await self.wait_ready()
-            return await c(self.__aiter__ if rep else self.cmd, None)
-            # if there's no iterator/cmd, the resulting AttributeError is our reply
-
-        if not isinstance(action, str) and len(action) == 1:
-            action = action[0]
-        if isinstance(action, str):
-#           if rep:
-#               # TODO XXX do we need separate iter_* methods?
-#               try:
-#                   p = getattr(self, "iter_"+action)
-#               except AttributeError:
-#                   pass
-#               else:
-#                   await self.wait_ready()
-#                   return await c(p)
-            try:
-                p = getattr(self, "cmd_" + action)
-            except AttributeError:
-                pass
-            else:
-                await self.wait_ready()
-                return await c(p,action)
-
-        try:
-            sub = self._sub[action[0]]
-        except KeyError:
-            raise AttributeError(action) from None
+            raise RuntimeError("noAction")
+        elif len(action) > 1:
+            raise ValueError("no chain here")
         else:
-            return await sub.dispatch(action[1:], msg, wait=wait, rep=rep)
+            p = getattr(self,"cmd_"+action[0])
+            
+        if not wait:
+            if rep:
+                raise ValueError("can't rep without wait")
+            self.tg.spawn(run_no_exc,p,msg, _name=f"Call:{self.path}/{a or '-'}")
+            return
 
-    def send(self, *a, **k):
+        await self.wait_ready()
+        r = p(**msg)
+        if hasattr(r, "throw"):  # coroutine
+            r = await r
+        if rep:
+            if hasattr(r, "__aiter__"):  # async iter
+                r = r.__aiter__()
+            if not hasattr(r,"__anext__"):
+                # This is not an iterator
+                r = IterWrap(p,(),msg, r)
+            if not isinstance(r,_DelayedIter):
+                r = DelayedIter(it=r, t=rep)
+        else:
+            if hasattr(r, "__aiter__"):  # async iter
+                raise ValueError("iterator")
+        return r
+
+    def send(self, *a, _x_err=(), **k):
         "Sending is forwarded to the root"
-        return self.root.dispatch(a, k)
+        return self.root.dispatch(a, k, x_err=_x_err)
 
 
     # globally-available commands
 
-    def cmd__dir(self):
+    def cmd__dir(self, h=False):
         """
         Rudimentary introspection. Returns a list of available commands @c and
         submodules @d. j=True if callable directly.
         """
         c = []
-        d = list(self._sub.keys())
-        res = dict(c=c, d=d)
+        res = dict(c=c)
 
         for k in dir(self):
-            if k.startswith("cmd_") and k[4] != '_':
+            if k.startswith("cmd_") and h == (k[4] == '_'):
                 c.append(k[4:])
-            elif k == "cmd":
+            elif k == ("_cmd" if h else "cmd"):
                 res['j'] = True
         return res
 

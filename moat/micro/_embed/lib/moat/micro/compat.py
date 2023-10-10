@@ -13,6 +13,8 @@ from async_queue import Queue, QueueEmpty, QueueFull
 from time import ticks_add, ticks_diff, ticks_ms
 from micropython import const
 
+ExceptionGroup = asyncio.ExceptionGroup
+BaseExceptionGroup = asyncio.BaseExceptionGroup
 
 class EndOfStream(Exception):
     pass
@@ -266,5 +268,4 @@ async def AC_exit(obj, *exc):
         # set-up context
         raise exc[1]
     return received_exc and suppressed_exc
-
 

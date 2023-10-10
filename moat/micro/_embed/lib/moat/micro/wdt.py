@@ -53,14 +53,14 @@ class WDT:
     _ping = None
 
     def __init__(self, cfg):
+        self.cfg = cfg
         if cfg.get("hw", False):
             if M.WDT is not None:
                 raise RuntimeError("one hw watchdog")
             M.WDT = self
         self._ping = Event()
-        self._setup(cfg)
 
-    def _setup(self, cfg):
+    def setup(self, cfg):
         self.cfg = cfg
         t = cfg.get("t", 0)
         if not t:
@@ -76,9 +76,7 @@ class WDT:
             self.trigger = self.cfg.get("tt", self.timeout / 2)
         self._ping.set()
 
-    async def run(self, cmd):
-        cmd  # not used
-
+    async def run(self):
         T = getattr(machine, "Timer", None)
         t = None
         while True:
@@ -92,6 +90,9 @@ class WDT:
                     try:
                         await wait_for_ms(self.timeout, self._ping.wait)
                     except TimeoutError:
+                        print("\n\nPANIC WDT REBOOT\n", file=sys.stderr)
+                        for i in range(10000):
+                            pass
                         _reset()
             elif self.wdt is not None:
                 # feed the watchdog when the trigger expires

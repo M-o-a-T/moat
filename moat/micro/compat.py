@@ -19,6 +19,9 @@ def const(_x):
 
 logger = logging.getLogger(__name__)
 
+ExceptionGroup = ExceptionGroup
+BaseExceptionGroup = BaseExceptionGroup
+
 Pin_IN = 0
 Pin_OUT = 1
 

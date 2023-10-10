@@ -98,18 +98,19 @@ class ValueTask:
     """
     An object that forwards a task's return value.
     """
-    def __init__(self, cmd, i, p, *a, **k):
+    def __init__(self, cmd:BaseCmd, i, x, p, *a, **k):
         self.cmd = cmd
         self.i = i
         self.p = p
         self.a = a
         self.k = k
+        self.x = x
         self._t = None
     
     async def start(self):
         if self._t is not None:
             raise RuntimeError("dup")
-        self._t = await self.cmd._tg.spawn(self._wrap, _name="Val")
+        self._t = await self.cmd.tg.spawn(self._wrap, _name="Val")
                        
     async def _wrap(self):
         try:
@@ -124,7 +125,7 @@ class ValueTask:
             if err is None:
                 await self.cmd.reply_result(self.i, res)
             else:
-                await self.cmd.reply_error(self.i, err)
+                await self.cmd.reply_error(self.i, err, self.x)
 
     def cancel(self):
         if self._t is not None:

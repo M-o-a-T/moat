@@ -6,6 +6,7 @@ Extension types defined here:
 2: contains raw bytes, interpreted as unsigned bignum
 3: Path, as a msgpack object stream of its elements
 4: contains raw bytes, interpreted as UTF-8, returned as (named) Proxy object
+5: object constructor
 """
 
 from functools import partial

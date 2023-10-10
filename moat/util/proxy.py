@@ -4,7 +4,7 @@ This module contains proxy helpers.
 
 from .impl import NotGiven
 
-__all__ = ["Proxy", "NoProxyError", "as_proxy", "name2obj", "obj2name", "get_proxy", "drop_proxy"]
+__all__ = ["Proxy", "DProxy", "NoProxyError", "as_proxy", "name2obj", "obj2name", "get_proxy", "drop_proxy"]
 
 
 class NoProxyError(ValueError):
@@ -17,20 +17,40 @@ class Proxy:
     A proxy object, i.e. a placeholder for things that cannot pass through MsgPack.
     """
 
-    def __init__(self, name, *data):
+    def __init__(self, name):
         self.name = name
-        self.data = data
 
     def __repr__(self):
-        return (
-            f"{self.__class__.__name__}({repr(self.name)},"
-            + ",".join(repr(x) for x in self.data)
-            + ")"
-        )
+        return f"{self.__class__.__name__}({repr(self.name)})"
 
     def ref(self):
         """Dereferences the proxy"""
         return name2obj(self.name)
+
+
+class DProxy(Proxy):
+    """
+    A proxy object with data, i.e. an object of a proxied class which
+    the receiver doesn't know about
+    """
+
+    def __init__(self, name, *a,**k):
+        super().__init__(name)
+        self.a = a
+        self.k = k
+
+    def __getitem__(self, i):
+        if i in self.k:
+            return self.k[i]
+        else:
+            return self.a[i]
+
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}({repr(self.name)},"
+            + ",".join(repr(x) for x in (self.a,self.k))
+            + ")"
+        )
 
 
 _pkey = 1

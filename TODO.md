@@ -9,3 +9,5 @@
 
 * docstrings for commands?
 
+* implement (and test) all the fancy pin and relay features
+

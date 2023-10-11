@@ -36,9 +36,9 @@ class Xmit(Head):
         self.done.set()
 
     async def send(self, d):
-        log("StX %r",d)
+        # log("StX %r",d)
         await super().send(d)
-        log("EtX %r",d)
+        # log("EtX %r",d)
 
 class Recv(Head):
     "receiving test class"
@@ -66,8 +66,8 @@ async def test_basic(qlen1, qlen2, window, loss):
     u2 = Loopback(qlen=qlen2, loss=loss)
     u1.link(u2)
     u2.link(u1)
-    u1 = LogMsg(u1, dict( txt="L1"))
-    u2 = LogMsg(u2, dict( txt="L2"))
+#   u1 = LogMsg(u1, dict( txt="L1"))
+#   u2 = LogMsg(u2, dict( txt="L2"))
     u1 = ReliableMsg(u1, dict(_nowait=True, retries=999, window=window, timeout=100, persist=True))
     u2 = ReliableMsg(u2, dict(_nowait=True, retries=999, timeout=100))
     u1 = LogMsg(u1, dict(txt="U1"))

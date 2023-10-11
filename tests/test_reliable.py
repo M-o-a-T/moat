@@ -48,7 +48,7 @@ class Recv(Head):
         got = 0
         for _ in range(10):
             msg = await self.recv()
-            log("Rcv %r", msg)
+            # log("Rcv %r", msg)
             got |= 1 << msg["n"]
         assert got == (2**10) - 1
         self.n = 10

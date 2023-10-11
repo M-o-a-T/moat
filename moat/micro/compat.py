@@ -137,8 +137,8 @@ def TaskGroup():
                 """\
                     Like start(), but returns something you can cancel
                 """
-                nonlocal logger
-                logger.info("Launch %s %s %s %s",_name, p,a,k)
+                # nonlocal logger
+                # logger.info("Launch %s %s %s %s",_name, p,a,k)
 
                 async def catch(p, a, k, *, task_status):
                     with _anyio.CancelScope() as s:

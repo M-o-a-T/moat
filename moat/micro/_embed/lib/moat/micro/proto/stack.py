@@ -49,16 +49,18 @@ class ChannelClosed(RuntimeError):
     pass
 
 
-class _BaseAny:
+class BaseConn:
     """
-    The MoaT stream base module.
+    The MoaT stream base class for "something connected that talks".
 
     This class *must* be used as an async context manager.
 
-    Override `setup` or `teardown` to add non-stream related features.
+    Override `stream` to return the actual data link. Use `AC_use` to
+    call an async context manager or to register a destructor.
 
-    Override `stream` to return the actual data link, which is stored in
-    attibute `s` by default.
+    Augment `setup` or `teardown` to add non-stream related features.
+    The default implementation of `setup` calls `stream` and stores the
+    result in the attibute `s`.
     """
     s = None
 
@@ -91,14 +93,6 @@ class _BaseAny:
         pass
 
 
-class _BaseConn(_BaseAny):
-    """
-    Base class for something connected.
-
-    The default "setup" method calls the "stream" method and stores the
-    result in the attribute "s".
-
-    """
     async def setup(self):
         await super().setup()
         self.s = await self.stream()
@@ -110,7 +104,7 @@ class _BaseConn(_BaseAny):
         raise NotImplementedError("'stream' in "+self.__class__.__name__)
 
 
-class BaseMsg(_BaseConn):
+class BaseMsg(BaseConn):
     """
     A stream base module for messages. May not be useful.
 
@@ -122,7 +116,7 @@ class BaseMsg(_BaseConn):
     async def recv(self) -> Any:
         raise NotImplementedError("'recv' in "+self.__class__.__name__)
 
-class BaseBlk(_BaseConn):
+class BaseBlk(BaseConn):
     """
     A stream base module for bytestrings. May not be useful.
 
@@ -134,7 +128,7 @@ class BaseBlk(_BaseConn):
     async def rcv(self) -> Any:
         raise NotImplementedError("'recv' in "+self.__class__.__name__)
 
-class BaseBuf(_BaseConn):
+class BaseBuf(BaseConn):
     """
     A stream base module for bytestreams.
 
@@ -147,7 +141,14 @@ class BaseBuf(_BaseConn):
         raise NotImplementedError("'wr' in "+self.__class__.__name__)
 
 
-class _StackedAny(_BaseConn):
+class StackedConn(BaseConn):
+    """
+    Base class for connection stacking.
+
+    Connection stacks have a parent. `stream` generates a new
+    connection from it, using its async context manager, and
+    stores the result in the attribute ``par`.`
+    """
 
     par = None
     parent = None
@@ -186,9 +187,9 @@ class _StackedAny(_BaseConn):
         return await AC_use(self, parent)
 
 
-class StackedMsg(_StackedAny, BaseMsg):
+class StackedMsg(StackedConn, BaseMsg):
     """
-    A no-op stack module for messages. Override me to implement interesting features.
+    A no-op stack module for messages. Override to implement interesting features.
 
     Use "par" to store the parent's context.
     """
@@ -200,6 +201,7 @@ class StackedMsg(_StackedAny, BaseMsg):
         "Receive. Returns a message."
         return await self.par.recv()
 
+
     async def cwr(self, buf):
         "Console Send. Returns when the buffer is transmitted."
         await self.par.cwr(buf)
@@ -209,12 +211,10 @@ class StackedMsg(_StackedAny, BaseMsg):
         return await self.par.crd(buf)
 
 
-class StackedBuf(_StackedAny, BaseBuf):
+class StackedBuf(StackedConn, BaseBuf):
     """
-    A no-op stack module for byte steams. Override me to implement interesting features.
+    A no-op stack module for byte steams. Override to implement interesting features.
 
-    Override the "_ctx" async context manager to do interesting things.
-    
     Use "par" instead of "parent" for the parent's context.
     """
     async def wr(self, buf):
@@ -226,9 +226,9 @@ class StackedBuf(_StackedAny, BaseBuf):
         return await self.par.rd(buf)
 
 
-class StackedBlk(_StackedAny, BaseBlk):
+class StackedBlk(StackedConn, BaseBlk):
     """
-    A no-op stack module for bytestrings. Override me to implement interesting features.
+    A no-op stack module for bytestrings. Override to implement interesting features.
 
     Use "par" instead of "parent" for the parent's context.
     """
@@ -244,12 +244,15 @@ class StackedBlk(_StackedAny, BaseBlk):
         return await self.par.recv(*a)
 
 
-class LogMsg(_StackedAny):
+class LogMsg(StackedMsg, StackedBuf, StackedBlk):
     """
     Log whatever messages cross this stack.
 
     This implements all of StackedMsg/Buf/Blk.
     """
+    # StackedMsg is first because MicroPython uses only the first class and
+    # we get `cwr` and `crd` that way.
+
     def __init__(self, parent, cfg):
         super().__init__(parent, cfg)
         self.txt = cfg.get("txt","S")

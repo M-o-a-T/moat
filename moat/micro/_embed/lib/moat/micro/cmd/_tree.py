@@ -241,13 +241,12 @@ class BaseDirCmd(BaseSubCmd):
 
         # Third, wait for them to be up.
         for k,v in self.sub.items():
-            if isinstance(v._ready,Event):
-                try:
-                    await wait_for_ms(250, v._ready.wait)
-                except TimeoutError:
-                    log("* Waiting for App %s", v.path)
-                    await v._ready.wait()
-                    log("* OK wait for App %s", v.path)
+            try:
+                await wait_for_ms(250, v.wait_ready)
+            except TimeoutError:
+                log("* Waiting for App %s", v.path)
+                await v.wait_ready()
+                log("* OK wait for App %s", v.path)
 
         self.set_ready()
 

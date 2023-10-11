@@ -117,6 +117,9 @@ class StreamCmd(BaseCmd):
             while True:
                 msg = await self.s.recv()
                 await self._handle(msg)
+        except EOFError as exc:
+            err = exc
+            raise
         except Exception as exc:
             err = exc
             log("Run", err=err)

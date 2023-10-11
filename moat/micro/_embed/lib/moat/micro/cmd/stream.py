@@ -8,7 +8,7 @@ import sys
 
 from moat.util import ValueEvent, obj2name, NotGiven
 from .util import ValueTask, SendIter, RecvIter, StoppedError
-from moat.micro.compat import CancelledError, WouldBlock, log, Lock, ACM, AC_exit
+from moat.micro.compat import CancelledError, WouldBlock, log, Lock, ACM, AC_exit, shield
 from moat.micro.proto.stack import RemoteError, SilentRemoteError, BaseMsg
 
 from .base import BaseCmd
@@ -339,5 +339,7 @@ class SingleStreamCmd(StreamCmd):
         except Exception as exc:
             log("Err %s", self.path, err=exc)
         finally:
-            await self._parent.detach(self._name)
+            with shield():
+                await self._parent.detach(self._name, w=False)
+
 

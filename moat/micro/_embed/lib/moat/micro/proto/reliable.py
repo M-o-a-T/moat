@@ -173,10 +173,16 @@ class ReliableMsg(StackedMsg):
                     pass
                 else:
                     self._trigger = Event()
+
+                # recalculate, as it may have changed during the wait 
+                w_open = self.s_q and (self.s_send_head - self.s_send_tail) % self.window < self.window // 2
+                # XXX this prevents the "clash" error below but is probably
+                # not the real fix
             else:
                 # we need to re-send now
                 # print(f"R {self.parent.txt}: now {ticks_ms()}", file=sys.stderr)
                 pass
+
 
             # process pending-send queue
             if w_open:
@@ -398,6 +404,7 @@ class ReliableMsg(StackedMsg):
                         self.reset_level = 2
                 else:
                     self.reset(2)
+
                     await self.error(RuntimeError(e or "ext reset"))
                 self._update_config(c)
                 await self.send_reset()

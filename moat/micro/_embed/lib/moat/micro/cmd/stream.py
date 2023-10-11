@@ -100,7 +100,7 @@ class StreamCmd(BaseCmd):
 
         Must be overridden.
         """
-        raise NotImplementedError("Create the stream: ",self.__class__.__name)
+        raise NotImplementedError("Create the stream: ",self.__class__.__name__)
 
     async def run(self):
         """

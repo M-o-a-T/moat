@@ -294,6 +294,8 @@ class StreamCmd(BaseCmd):
         if self.s is None:
             raise EOFError
 
+        await self.wait_ready()
+
         if not wait:
             msg = {"a": action, "d": msg}
             await self.s.send(msg)

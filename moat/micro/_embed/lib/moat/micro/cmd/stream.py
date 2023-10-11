@@ -342,4 +342,15 @@ class SingleStreamCmd(StreamCmd):
             with shield():
                 await self._parent.detach(self._name, w=False)
 
+class ExtStreamCmd(SingleStreamCmd):
+    """A SingleStreamCmd on a stream that was established externally.
+
+    The caller is responsible for calling `wait_dead` and then closing the stream!
+    """
+    def __init__(self, stream:BaseMsg, cfg={}):
+        super().__init__(cfg)
+        self.__s = stream
+
+    async def stream(self):
+        return self.__s
 

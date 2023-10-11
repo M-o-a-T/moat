@@ -45,8 +45,6 @@ class BaseLayerCmd(BaseCmd):
         if len(action) == 1:
             return await super().dispatch(action, msg, **kw)
         else:
-            if isinstance(self.app._ready, Exception):
-                raise StoppedError() from self.app._ready
             return await self.app.dispatch(action, msg, **kw)
 
     def __getattr__(self, k):

@@ -14,6 +14,8 @@ from moat.micro.cmd.util import StoppedError
 
 from .base import BaseCmd
 
+__all__ = ["BaseDirCmd", "BaseFwdCmd", "BaseLayerCmd", "BaseSubCmd",
+        "Dispatch", "SubDispatch"]
 
 class BaseLayerCmd(BaseCmd):
     """

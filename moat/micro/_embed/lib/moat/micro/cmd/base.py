@@ -123,7 +123,7 @@ class BaseCmd:
     async def wait_ready(self):
         "delay until ready"
         if not isinstance(self._ready, Event):
-            raise self._ready
+            raise StoppedError() from self._ready
         try:
             await wait_for_ms(500, self._ready.wait)
         except TimeoutError:

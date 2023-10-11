@@ -248,7 +248,7 @@ class BaseCmd:
         if not action:
             raise RuntimeError("noAction")
         elif len(action) > 1:
-            raise ValueError("no chain here")
+            raise ValueError("no chain here", action)
         else:
             p = getattr(self,"cmd_"+action[0])
             

@@ -117,7 +117,7 @@ class StreamCmd(BaseCmd):
             while True:
                 msg = await self.s.recv()
                 await self._handle(msg)
-        except EOFError as exc:
+        except (EOFError,FileNotFoundError) as exc:
             err = exc
             raise
         except Exception as exc:
@@ -334,11 +334,10 @@ class SingleStreamCmd(StreamCmd):
     async def run(self):
         try:
             await super().run()
+        except (EOFError, FileNotFoundError) as exc:
+            log("Err %s: %r", self.path, repr(exc))
         except Exception as exc:
             log("Err %s", self.path, err=exc)
-        except BaseException:
-            log("Err %s", self.path, err=exc)
-            raise
         finally:
             await self._parent.detach(self._name)
 

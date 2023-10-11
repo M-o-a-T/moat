@@ -107,6 +107,11 @@ except ImportError as exc:
     _log.warning("Missing: %s", exc)
 
 try:
+    from .exc import *  # noqa: F401,F403
+except ImportError as exc:
+    _log.warning("Missing: %s", exc)
+
+try:
     from .main import *  # noqa: F401,F403
 except ImportError as exc:
     _log.warning("Missing: %s", exc)

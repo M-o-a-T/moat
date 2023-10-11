@@ -128,7 +128,7 @@ class BaseSubCmd(BaseCmd):
                 if app.th is None:
                     app.th = await self.tg.spawn(app.run_sub, _name=f"r_at_{app.path}")
 
-    async def detach(self, name):
+    async def detach(self, name, w=True):
         """
         Detach a named command handler from me and kill its task.
 
@@ -139,7 +139,7 @@ class BaseSubCmd(BaseCmd):
         except KeyError:
             return
         try:
-            await app.stop(w=True)
+            await app.stop(w=w)
         except AttributeError:
             pass
         finally:

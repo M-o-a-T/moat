@@ -143,6 +143,12 @@ class BaseCmd:
         self._ready.set()
 
 
+    async def wait_dead(self):
+        await self._stopped.wait()
+
+    cmd__dead = wait_dead
+
+
     async def run_sub(self):
         """
         Runs my (and my children's) "run" methods.

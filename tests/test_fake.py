@@ -21,7 +21,7 @@ async def test_fake(seed, tmp_path):
         mdi = 0
         v = None
         for i in range(100):
-            vv = await d.send("xr")
+            vv = await d.send("x","r")
             assert 0 < vv < 100
             if v is not None:
                 vd = abs(vv - v)

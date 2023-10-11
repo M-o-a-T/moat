@@ -32,10 +32,10 @@ async def test_fuse(tmp_path):
     async with mpy_stack(tmp_path, CFG, {"r":{"cfg":{"f": {"prefix": str(r)}}}}) as d:
         await p.mkdir()
         async with d.sub_at("r", "f") as w:
-            await w.send("new", p="test")
-            f = await w.send("open", p="test",m="w")
-            n = await w.send("wr", f=f, d="Fubar\n")
-            await w.send("cl", f=f)
+            await w.new(p="test")
+            f = await w.open(p="test",m="w")
+            n = await w.wr(f=f, d="Fubar\n")
+            await w.cl(f=f)
             assert n == 6
         st = await (r / "test").stat()
         assert st.st_size == n

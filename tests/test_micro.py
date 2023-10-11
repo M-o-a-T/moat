@@ -134,19 +134,19 @@ async def test_eval(tmp_path, cons):
         b = Bar(95)
         as_proxy("b", b, replace=True)
 
-        await req.send(x=f,a=["foo"])
-        await req.send(x=42,a=["foo","x"])
-        r = await req.send(x="foo")
+        await req(x=f,a=["foo"])
+        await req(x=42,a=["foo","x"])
+        r = await req(x="foo")
         assert isinstance(r,Foo), r
-        r = await req.send(x=f, p=("x",))
+        r = await req(x=f, p=("x",))
         assert r == 42, r
 
-        r = await req.send(x=b)
+        r = await req(x=b)
         assert r is b, r
-        r = await req.send(x=b, p=("x",))
+        r = await req(x=b, p=("x",))
         assert r == 95, r
-        await req.send(x=b, a=("b",))
-        r = await req.send(x="b.__dict__")
+        await req(x=b, a=("b",))
+        r = await req(x="b.__dict__")
         assert r == {"x":95}, r
 
 
@@ -163,10 +163,10 @@ async def test_msgpack(tmp_path):
         b = Bar(95)
         as_proxy("b", b, replace=True)
 
-        r = await req.send(x=f)
+        r = await req(x=f)
         assert isinstance(r,Foo), r
-        r = await req.send(x=f, p=("x",))
+        r = await req(x=f, p=("x",))
         assert r == 42, r
 
-        r = await req.send(x=b)
+        r = await req(x=b)
         assert r is b

@@ -4,7 +4,7 @@ Server side of BaseCmd
 
 from moat.util import attrdict, NotGiven
 
-from ._tree import BaseDirCmd, BaseFwdCmd
+from ._tree import BaseDirCmd, BaseFwdCmd, BaseLayerCmd, BaseSubCmd
 from ._tree import Dispatch as _Dispatch
 from ._tree import SubDispatch
 
@@ -67,7 +67,11 @@ class CfgStore:
         async def _set(p, c):
             # current client cfg
             try:
-                ocd = await self.sd.r(p=p, _x_err=(KeyError,))
+                try:
+                    ocd = await self.sd.r(p=p, _x_err=(KeyError,))
+                except TypeError:
+                    # local version, not dispatched
+                    ocd = await self.sd.r(p=p)
                 if isinstance(ocd, (list, tuple)):
                     ocd, ocl = ocd
                 else:

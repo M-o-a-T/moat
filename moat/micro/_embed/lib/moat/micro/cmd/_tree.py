@@ -14,7 +14,8 @@ from moat.micro.cmd.util import StoppedError
 
 from .base import BaseCmd
 
-class BaseFwdCmd(BaseCmd):
+
+class BaseLayerCmd(BaseCmd):
     """
     A handler for a single nested app.
 
@@ -28,8 +29,36 @@ class BaseFwdCmd(BaseCmd):
 
     async def wait_ready(self):
         await self.app.wait_ready()
-        await super().wait_ready()
 
+    async def wait_dead(self):
+        await self.app.wait_dead()
+
+    async def run_app(self):
+        """
+        Run the underlying app.
+
+        By default, just call it.
+        """
+        await self.app.run_sub()
+
+    async def dispatch(self, action, msg, **kw):
+        if len(action) == 1:
+            return await super().dispatch(action, msg, **kw)
+        else:
+            if isinstance(self.app._ready, Exception):
+                raise StoppedError() from self.app._ready
+            return await self.app.dispatch(action, msg, **kw)
+
+    def __getattr__(self, k):
+        if k.endswith("_f"):
+            return getattr(self,k[:-2])
+        return getattr(self.app, k)
+
+
+class BaseFwdCmd(BaseLayerCmd):
+    """
+    A handler for a single nested app that's configured locally.
+    """
     async def start(self):
         """
         Start the underlying app
@@ -60,35 +89,13 @@ class BaseFwdCmd(BaseCmd):
         async with app.start_lock:
             app.th = await self.tg.spawn(self.run_app, _name=f"r_at_{app.path}")
 
-        await app._ready.wait()
+        await app.wait_ready()
         self.set_ready()
 
-    async def run_app(self):
-        """
-        Run the underlying app.
 
-        By default, just call it.
-        """
-        await self.app.run_sub()
-
-
-    async def dispatch(self, action, msg, **kw):
-        if len(action) == 1:
-            return await super().dispatch(action, msg, **kw)
-        else:
-            if isinstance(self.app._ready, Exception):
-                raise StoppedError() from self.app._ready
-            return await self.app.dispatch(action, msg, **kw)
-
-    def __getattr__(self, k):
-        if k.endswith("_f"):
-            return getattr(self,k[:-2])
-        return getattr(self.app, k)
-
-
-class BaseDirCmd(BaseCmd):
+class BaseSubCmd(BaseCmd):
     """
-    A handler for a directory with apps.
+    A handler for a directory.
 
     Apps have a hierarchical structure. This class serves as the equivalent
     of a subdirectory.
@@ -97,13 +104,6 @@ class BaseDirCmd(BaseCmd):
     def __init__(self, cfg):
         super().__init__(cfg)
         self.sub = {}
-
-    async def start(self):
-        await self._setup_apps()
-
-    async def run(self):
-        # no-op; readiness is signalled by setup
-        await idle()
 
     async def wait_ready(self):
         "delay until this subtree is up"
@@ -115,15 +115,6 @@ class BaseDirCmd(BaseCmd):
                 # TODO warn when delayed
             if len(self.sub) == n:
                 break
-
-    async def _start(self):
-        await super()._start()
-        for k,v in self.sub.items():
-            if isinstance(v, BaseCmd):
-                async with v.start_lock:
-                    if v.th is None:
-                        log("Startup %s",self.path/k)
-                        v.th = await self.tg.spawn(v.run_sub, _name=f"r_st_{v.path}")
 
     async def attach(self, name, app, run=True):
         """
@@ -172,6 +163,33 @@ class BaseDirCmd(BaseCmd):
             sub = self.sub[action[0]]
             action = action[1:]
             return await sub.dispatch(action, msg, **kw)
+
+    def cmd__dir(self, h=False):
+        res = super().cmd__dir(h=h)
+        res["d"] = list(self.sub.keys())
+        return res
+
+
+class BaseDirCmd(BaseSubCmd):
+    """
+    A BaseSubCmd handler with apps started by local configuration.
+    """
+
+    async def start(self):
+        await self._setup_apps()
+
+    async def run(self):
+        # no-op; readiness is signalled by setup
+        await idle()
+
+    async def _start(self):
+        await super()._start()
+        for k,v in self.sub.items():
+            if isinstance(v, BaseCmd):
+                async with v.start_lock:
+                    if v.th is None:
+                        log("Startup %s",self.path/k)
+                        v.th = await self.tg.spawn(v.run_sub, _name=f"r_st_{v.path}")
 
     async def reload(self):
         "called after the config has been updated"
@@ -232,11 +250,6 @@ class BaseDirCmd(BaseCmd):
                     log("* OK wait for App %s", v.path)
 
         self.set_ready()
-
-    def cmd__dir(self, h=False):
-        res = super().cmd__dir(h=h)
-        res["d"] = list(self.sub.keys())
-        return res
 
 
 class Dispatch(BaseDirCmd):

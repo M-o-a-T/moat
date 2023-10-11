@@ -4,7 +4,7 @@ Satellite side of cmd.tree
 
 from moat.util import attrdict, NotGiven
 
-from ._tree import BaseDirCmd, BaseFwdCmd
+from ._tree import BaseDirCmd, BaseFwdCmd, BaseLayerCmd, BaseSubCmd
 from ._tree import Dispatch as _Dispatch
 from ._tree import SubDispatch
 

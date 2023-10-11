@@ -31,6 +31,7 @@ are typically very short, in order to reduce communication overhead.
 
 These sections contain the corresponding app's configuration data.
 
+
 cfg
 ===
 

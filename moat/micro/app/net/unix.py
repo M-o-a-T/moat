@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import anyio
 
 from moat.micro.proto.unix import Link as UnixLink
@@ -6,29 +8,43 @@ from moat.micro.stacks.console import console_stack
 from moat.micro.cmd.stream import StreamCmd, BaseBBMCmd, SingleStreamCmd, ExtStreamCmd
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.tree import BaseLayerCmd, BaseSubCmd
-from moat.micro.compat import AC_use
+from moat.micro.compat import AC_use, TaskGroup
+from moat.micro.stacks.unix import UnixIter
 
 
 class Raw(BaseBBMCmd):
     """Sends/receives raw data"""
-    def stream(self):
-        return UnixLink(self.port)
+    def stream(self) -> Awaitable:
+        return AC_use(UnixLink(self.port))
 
 class Link(SingleStreamCmd):
+    """
+    An app that connects to a remote socket.
+    """
     async def stream(self):
         return await AC_use(self, console_stack(UnixLink(self.cfg["port"]), self.cfg))
 
-
 class Port(BaseSubCmd):
-    async def _handle(self, client):
-        fd = client.extra(anyio.abc.SocketAttribute.raw_socket).fileno()
-        async with console_stack(SingleAnyioBuf(client), self.cfg) as s:
+    """
+    An app that accepts multiple Unix connections.
+    """
+    step = 3
 
+    async def _handle(self, client):
+        n = len(self.sub)
+        while n in self.sub:
+            n += self.step+3
+            self.step = (self.step+1)%9
+            # arbitrary complicator to make immediate reuse somewhat unlikely
+        # use the file descriptor as the command's "name"
+        # somewhat-small, integer, guaranteed to be unique
+        async with console_stack(client, self.cfg) as s:
             sc = ExtStreamCmd(s)
-            await self.attach(fd, sc)
+            await self.attach(n, sc)
             await sc._stopped.wait()
 
     async def run(self):
-        listener = await anyio.create_unix_listener(self.cfg["port"])
-        self.set_ready()
-        await listener.serve(self._handle)
+        async with UnixIter(self.cfg["port"]) as stp:
+            self.set_ready()
+            async for s in stp:
+                await self.tg.spawn(self._handle, s)

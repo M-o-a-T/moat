@@ -342,6 +342,7 @@ class SingleStreamCmd(StreamCmd):
             with shield():
                 await self._parent.detach(self._name, w=False)
 
+
 class ExtStreamCmd(SingleStreamCmd):
     """A SingleStreamCmd on a stream that was established externally.
 

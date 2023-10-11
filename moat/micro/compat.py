@@ -234,3 +234,6 @@ async def AC_exit(obj, *exc):
     if not exc:
         exc = (None,None,None)
     return await obj._AC_.pop().__aexit__(*exc)
+
+def shield():
+    return _anyio.CancelScope(shield=True)

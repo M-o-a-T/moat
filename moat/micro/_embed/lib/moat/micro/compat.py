@@ -269,3 +269,11 @@ async def AC_exit(obj, *exc):
         raise exc[1]
     return received_exc and suppressed_exc
 
+class Shield():
+    def __enter__(self):
+        pass
+    def __exit__(self, *tb):
+        pass
+_shield = Shield()
+async def shield():
+    return _shield

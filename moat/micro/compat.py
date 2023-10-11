@@ -4,6 +4,7 @@ well as MicroPython/asyncio.
 
 Well, for the most part.
 """
+import os
 import logging
 import time as _time
 import traceback as _traceback
@@ -44,6 +45,9 @@ def log(s, *x, err=None, nback=1):
         nback -= 1
     logger = logging.getLogger(caller.f_globals["__name__"])
     (logger.debug if err is None else logger.error)(s,*x, exc_info=err)
+    if err and int(os.getenv("LOG_BRK",False)):
+        breakpoint()
+        pass # ERROR: err
 
 
 def print_exc(exc):

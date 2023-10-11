@@ -6,6 +6,8 @@ Testing MoaT.micro
 Unix MicroPython
 ++++++++++++++++
 
+Setting the LOG_BRK envvar to 1 forces a breakpoint when logging an error.
+
 -------------
 Running tests
 -------------

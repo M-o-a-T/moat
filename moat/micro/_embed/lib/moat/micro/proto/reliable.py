@@ -7,7 +7,7 @@ from ..compat import (
     TimeoutError,
     idle,
     log,
-    sleep,
+    sleep_ms,
     ticks_add,
     ticks_diff,
     ticks_ms,

@@ -162,17 +162,18 @@ def TaskGroup():
     return _tg()
 
 
-async def run_server(cb, host, port, backlog=5, taskgroup=None, reuse_port=True):
+async def run_server(cb, host, port, backlog=5, taskgroup=None, reuse_port=True, evt=None):
     """Listen to and serve a TCP stream.
 
-    This mirrors [u]asyncio, including the fact that the callback gets the
-    socket twice.
+    This mirrors [u]asyncio, except that the callback gets the socket once.
     """
     listener = await _anyio.create_tcp_listener(
         local_host=host, local_port=port, backlog=backlog, reuse_port=reuse_port
     )
-
-    await listener.serve(lambda sock: cb(sock, sock), task_group=taskgroup)
+    async with listener:
+        if evt is not None:
+            evt.set()
+        await listener.serve(lambda sock: cb(sock), task_group=taskgroup)
 
 # async context stack
 

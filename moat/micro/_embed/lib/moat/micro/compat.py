@@ -123,10 +123,53 @@ def run(p, *a, **k):
     return _run(p(*a, **k))
 
 
-def run_server(*a, **kw) -> Awaitable:
-    from asyncio import run_server as rs
+# Helper task to run a TCP stream server.
+# Callbacks (i.e. connection handlers) may run in a different taskgroup.
+async def run_server(cb, host, port, backlog=5, taskgroup=None, evt=None) -> Never:
+    """
+    Task that runs a TCP stream server.
+    Callbacks (i.e. connection handlers) may run in a different taskgroup.
 
-    return rs(*a, **kw)
+    The optional event is set when the socket is listening.
+    """
+    import socket
+
+    # Create and bind server socket.
+    host = socket.getaddrinfo(host, port)[0]  # TODO this is blocking!
+    s = socket.socket()
+    s.setblocking(False)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(host[-1])
+    s.listen(backlog)
+    if evt is not None:
+        evt.set()
+
+    try:
+        if taskgroup is None:
+            async with TaskGroup() as tg:
+                await _run_server(tg, s, cb)
+        else:
+            await _run_server(taskgroup, s, cb)
+    finally:
+        s.close()
+
+
+async def _run_server(tg, s, cb):
+    from asyncio import core as _core
+
+    while True:
+        yield _core._io_queue.queue_read(s)
+        try:
+            s2, addr = s.accept()
+        except Exception:
+            # Ignore a failed accept
+            continue
+
+        s2.setblocking(False)
+        # XXX uasyncio implementation detail
+        s2s = asyncio.StreamReader(s2, {"peername": addr})
+        await tg.spawn(cb, s2s)
+
 
 
 # minimal Outcome clone

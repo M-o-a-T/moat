@@ -38,13 +38,12 @@ from inspect import currentframe
 
 def log(s, *x, err=None, nback=1):
     caller = currentframe()
-    while nback:
+    for _ in range(nback):
         if caller.f_back is None:
             break
         caller = caller.f_back
-        nback -= 1
     logger = logging.getLogger(caller.f_globals["__name__"])
-    (logger.debug if err is None else logger.error)(s,*x, exc_info=err)
+    (logger.debug if err is None else logger.error)(s,*x, exc_info=err,stacklevel=1+nback)
     if err and int(os.getenv("LOG_BRK",False)):
         breakpoint()
         pass # ERROR: err

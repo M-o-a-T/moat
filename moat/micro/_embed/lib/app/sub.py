@@ -32,25 +32,21 @@ class Err(BaseFwdCmd):
     async def run_app(self):
         r = self.cfg.get("retry",0)
         t = self.cfg.get("timeout",100)
+
         self._wait = self.cfg.get("wait",True)
         self._ready.set()
         while True:
+            err = None
             try:
                 await super().run_app()
             except Exception as exc:
-                log("died %r", exc)
-            except BaseExceptionGroup as exc:
-                a,b = exc.split(ExceptionGroup)
-                if a:
-                    log("died %r", a)
-                if not b:
-                    log("???",err=exc)
-                    break
-                if len(b.exceptions) == 1:
-                    raise b.exceptions[0]
-                raise
+                err = exc
+            else:
+                # ends without error
+                log("End %r", self.app)
+                return
             if not r:
-                break
+                raise err
             if r > 0:
                 r -= 1
             await sleep_ms(t)

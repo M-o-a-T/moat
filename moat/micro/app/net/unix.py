@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import anyio
-
 from moat.micro.proto.unix import Link as UnixLink
-from moat.micro.proto.stream import SingleAnyioBuf
 from moat.micro.stacks.console import console_stack
 from moat.micro.cmd.stream import StreamCmd, BaseBBMCmd, SingleStreamCmd, ExtStreamCmd
 from moat.micro.cmd.base import BaseCmd

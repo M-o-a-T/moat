@@ -26,10 +26,15 @@ may fail.
 
 from __future__ import annotations
 
+import sys
+
 from moat.micro.compat import TaskGroup, idle, Event, wait_for_ms, log, Lock, AC_use, TimeoutError
 from moat.util import Path
 
 from .util import run_no_exc, StoppedError
+
+uPy = sys.implementation.name == "micropython"
+
 
 class BaseCmd:
     """
@@ -123,7 +128,7 @@ class BaseCmd:
     async def wait_ready(self):
         "delay until ready"
         if not isinstance(self._ready, Event):
-            raise StoppedError() from self._ready
+            raise StoppedError() from (None if uPy else self._ready)
         try:
             await wait_for_ms(500, self._ready.wait)
         except TimeoutError:

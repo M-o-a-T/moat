@@ -1,5 +1,3 @@
-import errno
-
 import machine
 
 from moat.micro.cmd.base import BaseCmd
@@ -7,6 +5,12 @@ from moat.micro.compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms
 
 
 class Cmd(BaseCmd):
+    """
+    This command implements basic access to an I²C bus.
+
+    Warning: This is synchronous, thus subjects the whole system to
+    arbitrary slowdowns if the destination device employs clock stretching.
+    """
     _bus_cache = None  # c,d > busobj
 
     def __init__(self, parent, name, cfg, gcfg):

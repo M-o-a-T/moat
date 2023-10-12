@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import sys
 
@@ -121,10 +123,10 @@ def run(p, *a, **k):
     return _run(p(*a, **k))
 
 
-async def run_server(*a, **kw):
+def run_server(*a, **kw) -> Awaitable:
     from asyncio import run_server as rs
 
-    return await rs(*a, **kw)
+    return rs(*a, **kw)
 
 
 # minimal Outcome clone

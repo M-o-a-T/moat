@@ -50,6 +50,8 @@ class BaseLayerCmd(BaseCmd):
             return await self.app.dispatch(action, msg, **kw)
 
     def __getattr__(self, k):
+        if k.startswith("_"):
+            raise AttributeError(k)
         if k.endswith("_f"):
             return getattr(self,k[:-2])
         return getattr(self.app, k)

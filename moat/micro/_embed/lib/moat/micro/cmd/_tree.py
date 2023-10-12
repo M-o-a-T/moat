@@ -321,7 +321,8 @@ class BaseDirCmd(BaseSubCmd):
                 await wait_for_ms(250, v.wait_ready)
             except TimeoutError:
                 log("* Waiting for App %s", v.path)
-                await v.wait_ready()
+                if v.cfg.get("wait",True):
+                    await v.wait_ready()
                 log("* OK wait for App %s", v.path)
 
         self.set_ready()

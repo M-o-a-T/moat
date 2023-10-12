@@ -32,8 +32,6 @@ async def run_no_exc(p,msg):
         log("Error in %r %r",p,msg, _err=err)
 
 def get_part(cur, p):
-    import sys
-    print("GP",cur,p, file=sys.stderr)
     for pp in p:
         try:
             cur = getattr(cur,pp)

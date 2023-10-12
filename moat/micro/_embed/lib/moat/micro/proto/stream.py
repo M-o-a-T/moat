@@ -208,7 +208,7 @@ class AIOBuf(BaseBuf):
 
     async def rd(self, buf):
         s = self.s
-        res = await self.readinto(buf)
+        res = await s.readinto(buf)
         if not res:
             raise EOFError
         return res
@@ -227,7 +227,7 @@ class SingleAIOBuf(AIOBuf):
         if self._s is None:
             raise RuntimeError("used twice")
         s, self._s = self._s, None
-        await AC_use(self._destr)
+        await AC_use(self, self._destr)
         return s
 
     def _destr(self):

@@ -2,6 +2,9 @@
 Connection tests
 """
 import pytest
+
+import os
+
 from moat.util import NotGiven, as_proxy, attrdict, to_attrdict
 from moat.micro.compat import log, sleep_ms
 
@@ -26,34 +29,45 @@ apps:
 
 @pytest.mark.parametrize("server_first", [True, False])
 @pytest.mark.parametrize("link_in", [True, False])
-async def test_unix(tmp_path, server_first, link_in):
+@pytest.mark.parametrize("unix", [False,True])
+async def test_net(tmp_path, server_first, link_in, unix):
     "basic connectivity test"
-    sock=tmp_path/"test.sock"
-    try:
-        sock.unlink()
-    except FileNotFoundError:
-        pass
+    if unix:
+        sock=tmp_path/"test.sock"
+        try:
+            sock.unlink()
+        except FileNotFoundError:
+            pass
+    else:
+        port=50000+os.getpid()%10000
 
     async def set_server(c):
-        await c.set({
-            "apps": {"r": "net.unix.LinkIn" if link_in else "net.unix.Port"},
-            "r": {"port": str(sock), "wait":False},
-            }, sync=True)
+        if unix:
+            await c.set({
+                "apps": {"r": "net.unix.LinkIn" if link_in else "net.unix.Port"},
+                "r": {"port": str(sock), "wait":False},
+                }, sync=True)
+        else:
+            await c.set({
+                "apps": {"r": "net.tcp.LinkIn" if link_in else "net.tcp.Port"},
+                "r": {"host": "127.0.0.1", "port": port, "wait":False},
+                }, sync=True)
+
     async def set_client(c):
         await c.set({
 #           "apps": {"l": "net.unix.Link"},
 #           "l": {"port": str(sock)},
             "apps": {"l": "sub.Err"},
             "l": {
-                "app":"net.unix.Link",
-                "cfg":{"port": str(sock)},
+                "app":"net.unix.Link" if unix else "net.tcp.Link",
+                "cfg":{"port": str(sock)} if unix else {"host":"127.0.0.1","port":port},
                 "retry":9,
                 "timeout":100,
                 "wait": False,
               },
             }, sync=True)
 
-    async with mpy_stack(tmp_path, CFG1.format(sock=sock)) as d, d.cfg_at("c") as c:
+    async with mpy_stack(tmp_path, CFG1) as d, d.cfg_at("c") as c:
         await (set_server if server_first else set_client)(c)
         await sleep_ms(100)
         await (set_client if server_first else set_server)(c)

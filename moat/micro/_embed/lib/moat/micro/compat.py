@@ -277,5 +277,5 @@ class Shield():
     def __exit__(self, *tb):
         pass
 _shield = Shield()
-async def shield():
+def shield():
     return _shield

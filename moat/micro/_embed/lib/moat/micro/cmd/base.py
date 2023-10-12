@@ -135,6 +135,12 @@ class BaseCmd:
 
     cmd__rdy = wait_ready
 
+    async def is_ready(self):
+        "test if ready"
+        if not isinstance(self._ready, Event):
+            return False
+        return self._ready.is_set()
+
     def set_ready(self, error=None):
         if self._ready is None:
             raise RuntimeError("dead")
@@ -142,16 +148,17 @@ class BaseCmd:
             raise RuntimeError("errored", self._ready)
         self._ready.set()
 
-
-    async def wait_dead(self):
+    async def wait_stopped(self):
         await self._stopped.wait()
 
-    cmd__dead = wait_dead
+    cmd__nrdy = wait_stopped
 
 
     async def run_sub(self):
         """
         Runs my (and my children's) "run" methods.
+
+        Must already be attached.
         """
         try:
             if self._stopped.is_set():

@@ -348,7 +348,7 @@ class SingleStreamCmd(StreamCmd):
 class ExtStreamCmd(SingleStreamCmd):
     """A SingleStreamCmd on a stream that was established externally.
 
-    The caller is responsible for calling `wait_dead` and then closing the stream!
+    The caller is responsible for calling `wait_stopped` and then closing the stream!
     """
     def __init__(self, stream:BaseMsg, cfg={}):
         super().__init__(cfg)

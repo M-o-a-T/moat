@@ -30,10 +30,11 @@ class BaseLayerCmd(BaseCmd):
         await idle()
 
     async def wait_ready(self):
+        await super().wait_ready()
         await self.app.wait_ready()
 
-    async def wait_dead(self):
-        await self.app.wait_dead()
+    async def wait_stopped(self):
+        await self.app.wait_stopped()
 
     async def run_app(self):
         """

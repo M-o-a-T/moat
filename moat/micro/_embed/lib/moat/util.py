@@ -1,7 +1,7 @@
 import sys
 from async_queue import Queue, QueueEmpty, QueueFull
 
-from moat.micro.compat import Event, WouldBlock
+from moat.micro.compat import Event, WouldBlock, log
 
 class Path(tuple):
     """
@@ -199,7 +199,8 @@ def import_(name, off=0):
         for nn in n[1:]:
             res = getattr(res, nn)
     except AttributeError as exc:
-        raise AttributeError(name) from None
+        log("ERR loading %s", name)
+        raise
     return res
 
 

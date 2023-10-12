@@ -25,7 +25,8 @@ apps:
 
 
 @pytest.mark.parametrize("server_first", [True, False])
-async def test_unix(tmp_path, server_first):
+@pytest.mark.parametrize("link_in", [True, False])
+async def test_unix(tmp_path, server_first, link_in):
     "basic connectivity test"
     sock=tmp_path/"test.sock"
     try:
@@ -35,8 +36,8 @@ async def test_unix(tmp_path, server_first):
 
     async def set_server(c):
         await c.set({
-            "apps": {"r": "net.unix.Port"},
-            "r": {"port": str(sock)},
+            "apps": {"r": "net.unix.LinkIn" if link_in else "net.unix.Port"},
+            "r": {"port": str(sock), "wait":False},
             }, sync=True)
     async def set_client(c):
         await c.set({

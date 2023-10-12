@@ -7,7 +7,7 @@ from moat.micro.proto.stream import SingleAnyioBuf
 from moat.micro.stacks.console import console_stack
 from moat.micro.cmd.stream import StreamCmd, BaseBBMCmd, SingleStreamCmd, ExtStreamCmd
 from moat.micro.cmd.base import BaseCmd
-from moat.micro.cmd.tree import BaseLayerCmd, BaseSubCmd
+from moat.micro.cmd.tree import BaseLayerCmd, BaseSubCmd, BaseListenCmd
 from moat.micro.compat import AC_use, TaskGroup
 from moat.micro.stacks.unix import UnixIter
 
@@ -23,6 +23,17 @@ class Link(SingleStreamCmd):
     """
     async def stream(self):
         return await AC_use(self, console_stack(UnixLink(self.cfg["port"]), self.cfg))
+
+class LinkIn(BaseListenCmd):
+    """
+    An app that accepts a single connection from a remote socket.
+
+    New connections may or may not supersede existing ones, depending on the
+    "replace" config item.
+    """
+    def listener(self):
+        return UnixIter(self.cfg["port"])
+
 
 class Port(BaseSubCmd):
     """

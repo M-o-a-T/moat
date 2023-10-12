@@ -1,4 +1,7 @@
 
+* the single-channel listener+connect apps must be converted to streams
+  * so that we can put a Reliable above them
+* more flex build of stream structure?
 * security, esp. for specific subtrees / apps
 * test for iterators
 * test for remote cancellation

@@ -15,7 +15,7 @@ from moat.micro.cmd.util import StoppedError
 from .base import BaseCmd
 
 __all__ = ["BaseDirCmd", "BaseFwdCmd", "BaseLayerCmd", "BaseSubCmd",
-        "Dispatch", "SubDispatch"]
+        "BaseListenCmd", "Dispatch", "SubDispatch"]
 
 class BaseLayerCmd(BaseCmd):
     """
@@ -55,6 +55,80 @@ class BaseLayerCmd(BaseCmd):
         if k.endswith("_f"):
             return getattr(self,k[:-2])
         return getattr(self.app, k)
+
+
+class BaseListenCmd(BaseLayerCmd):
+    """
+    An app that runs a 
+
+    Override `listener` to return it.
+    """
+    def listener(self) -> BaseConnIter:
+        """
+        How to get new connections. Returns a BaseConnIter.
+
+        Must be implemented in your subclass.
+        """
+        raise NotImplementedError()
+
+    def wrapper(self, conn) -> BaseMsg:
+        """
+        How to wrap the connection so that you can communicate on it.
+
+        By default, use `console_stack`.
+        """
+        from moat.micro.stacks.console import console_stack
+
+        return console_stack(conn, self.cfg)
+
+    async def reject(self, conn) -> None:
+        """
+        Checker whether to reject a new incoming connection.
+
+        By default does nothing.
+        """
+        pass
+
+    async def handler(self, conn):
+        """
+        Process a connection
+        """
+        from moat.micro.cmd.stream import ExtStreamCmd
+
+        async with self.wrapper(conn) as c:
+            app = ExtStreamCmd(c, self.cfg)
+            if self.app is None or not self.app.is_ready() or self._running or self.cfg.get("replace", True):
+                if self.app is not None:
+                    self.th_app.cancel()
+                    await self.app.wait_stop()
+                app.attached(self, "_")  # XXX better name?
+                self.app = app
+                self.th_app = await self.tg.spawn(app.run_sub)
+                self.set_ready()
+                await app.wait_ready()
+
+                await app.wait_stopped()
+                if self.app is app:
+                    self.th_app = None
+                    self.app = None
+            else:
+                # close the thing
+                await self.reject(conn)
+
+    async def start(self) -> Never:
+        """
+        Accept connections.
+        """
+        async with self.listener() as conns:
+            async for conn in conns:
+                task = await self.tg.spawn(self.handler, conn)
+
+    async def detach(self, name, w=None):
+        """Sub-App detahc. Only called from the app during shutdown"""
+        if name != "_":
+            raise RuntimeError(f"ListenDetach {name}")
+        self.app = None
+        self.th_app = None
 
 
 class BaseFwdCmd(BaseLayerCmd):

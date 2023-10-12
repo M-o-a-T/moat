@@ -116,8 +116,12 @@ class ReliableMsg(StackedMsg):
             msg = {'s': self.s_send_head}
         else:
             mte = self.m_send[k]
-            mte[1] = ticks_add(ticks_ms(), self.timeout)
-            msg = {'s': k, 'd': mte[0]}
+            if mte[1] is False:
+                # already ack'd.
+                msg = {'s': self.s_send_head}
+            else:
+                mte[1] = ticks_add(ticks_ms(), self.timeout)
+                msg = {'s': k, 'd': mte[0]}
         msg['r'] = r = self.s_recv_tail
         x = []
         while r != self.s_recv_head:
@@ -149,8 +153,10 @@ class ReliableMsg(StackedMsg):
             nk = None
             for k, mte in self.m_send.items():
                 m, tx, e = mte
+                if tx is None or tx is False:
+                    continue
                 txd = ticks_diff(tx, t)
-                if (ntx is None or ntx > txd) and not e.is_set():
+                if ntx is None or ntx > txd:
                     ntx = txd
                     nk = k
 
@@ -291,7 +297,8 @@ class ReliableMsg(StackedMsg):
             self.__tg = None
             self._is_down.set()
             for _m, _t, e in self.m_send.values():
-                e.set_error(ChannelClosed())
+                if e is not None:
+                    e.set_error(ChannelClosed())
             while self.s_q:
                 _m, e = self.s_q.pop()
                 e.set_error(ChannelClosed())
@@ -334,19 +341,30 @@ class ReliableMsg(StackedMsg):
         Sender.
 
         Iterated messages get cached and updated.
+        The sender won't wait until they're transmitted.
         """
-        evt = ValueEvent()
         if 'n' in msg and 'i' in msg and 'a' not in msg:
+            evt = None
             i = msg['i']
             if (om := self._iters.get(i,None)) is not None:
                 if 'e' not in om:
                     om.update(msg)
                 return
             self._iters[i] = msg
+
         # print(f"T {self.parent.txt}: SQ {msg} {id(self._trigger)}", file=sys.stderr)
+        evt = ValueEvent() if 'a' in msg else None
         self.s_q.append((msg, evt))
         self._trigger.set()
-        return await evt.wait()
+        if evt is None:
+            return
+        try:
+            return await evt.wait()
+        except BaseException:
+            # send a cancellation
+            self.s_q.append(({"i": msg["i"]}, None))
+            self._trigger.set()
+            raise
 
     def _get_config(self):
         return {'t': self.timeout, 'm': self.window}
@@ -492,7 +510,8 @@ class ReliableMsg(StackedMsg):
                     if 'n' in m and (i := m.get('i',None)) is not None:
                         self._iters.pop(i, None)
                     self.pend_ack = True
-                    e.set(None)
+                    if e is not None:
+                        e.set(None)
                 rr = (rr + 1) % self.window
                 self._trigger.set()
 
@@ -505,7 +524,9 @@ class ReliableMsg(StackedMsg):
             except KeyError:
                 pass
             else:
-                e.set(None)
+                self.m_send[rr][1] = False
+                if e is not None:
+                    e.set(None)
 
         # Forward incoming messages if s_recv[recv_tail] has arrived
         rr = self.s_recv_tail

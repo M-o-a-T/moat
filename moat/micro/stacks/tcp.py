@@ -20,7 +20,7 @@ class TcpIter(BaseConnIter):
     async def accept(self) -> Never:
         li = await anyio.create_tcp_listener(local_host=self.host, local_port=self.port)
         async with li:
-            self.ready()
+            self.set_ready()
             await li.serve(self._handle)
 
     async def _handle(self, client):

@@ -25,7 +25,7 @@ class BaseConnIter:
     async def __aexit__(self, *exc):
         await AC_exit(self,*exc)
 
-    def ready(self) -> None:
+    def set_ready(self) -> None:
         self.evt.set()
 
     def is_ready(self) -> Awaitable:

@@ -19,7 +19,7 @@ class UnixIter(BaseConnIter):
     async def accept(self) -> Never:
         li = await anyio.create_unix_listener(self.path)
         async with li:
-            self.ready()
+            self.set_ready()
             await li.serve(self._handle)
 
     async def _handle(self, client):

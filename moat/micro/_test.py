@@ -33,6 +33,7 @@ temp_dir = ContextVar("temp_dir")
 
 required = [
         "__future__",
+        "errno",
         "pprint",
         "functools",
         "collections",

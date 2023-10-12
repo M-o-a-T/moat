@@ -10,7 +10,7 @@ from ..proto.stream import SingleAnyioBuf
 
 class TcpIter(BaseConnIter):
     """
-    A connection iterator for Unix sockets
+    A connection iterator for TCP sockets
     """
     def __init__(self, host, port):
         super().__init__()

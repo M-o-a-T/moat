@@ -92,14 +92,15 @@ class BaseConn:
         """
         pass
 
-
     async def setup(self):
-        await super().setup()
         self.s = await self.stream()
 
     async def stream(self):
         """
         Data stream setup.
+
+        You need to use `AC_use` for setting up an async context
+        or to register a cleanup handler.
         """
         raise NotImplementedError("'stream' in "+self.__class__.__name__)
 

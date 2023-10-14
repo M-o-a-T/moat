@@ -7,3 +7,6 @@
 [submodule "lib/micropython-lib"]
 	path = lib/micropython-lib
 	url = git://github.com/M-o-a-T/micropython-lib.git
+[submodule "lib/mpdb"]
+	path = lib/mpdb
+	url = git@github.com:bobveringa/mpdb.git

@@ -86,30 +86,6 @@ class Cmd(BaseCmd):
         d["path"] = sys.path
         return d
 
-    async def cmd_load(self, n, m, r=False, kw={}):
-        """
-        (re)load a dispatcher: set dis_@n to point to @m.
-
-        Set @r if you want to reload the module if it already exists.
-        @kw may contain additional params for the module.
-
-        For example, ``most micro cmd sys.load -v n f -v m fs.FsCmd``
-        loads the file system module if it isn't loaded already.
-        """
-        om = getattr(self.parent, "dis_" + n, None)
-        if om is not None:
-            if not r:
-                return
-            await om.aclose()
-            del om  # free memory
-
-        from .main import import_app
-
-        m = import_app(m, drop=True)
-        m = m(self.parent, n, kw, self.root.cfg)
-        setattr(self.parent, "dis_" + n, m)
-        await self.parent._tg.spawn(m._run_sub, _name="_sys.load")
-
     async def cmd_ping(self, m=None):
         """
         Echo @m.

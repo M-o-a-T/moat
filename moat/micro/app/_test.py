@@ -4,7 +4,7 @@ Apps used for testing.
 
 from __future__ import annotations
 
-from moat.micro.cmd.stream import StreamCmd
+from moat.micro.cmd.stream import BaseCmdMsg
 from moat.micro.proto.stream import MsgpackMsgBlk
 from moat.micro._test import MpyBuf
 from moat.micro.stacks.console import console_stack
@@ -13,14 +13,14 @@ from moat.micro._test import Loopback
 
 from ._test_ import Cmd
 
-class MpyCmd(StreamCmd):
+class MpyCmd(BaseCmdMsg):
     """links to a local micropython process"""
 
     async def stream(self):
         mpy = MpyBuf(self.cfg)
         return await AC_use(self, console_stack(mpy, self.cfg))
 
-class Loop(StreamCmd):
+class Loop(BaseCmdMsg):
     async def stream(self):
         s = Loopback(**self.cfg.get("loop", {}))
         s.link(s)

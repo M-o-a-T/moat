@@ -138,7 +138,7 @@ class MsgpackMsgBuf(_MsgpackMsgBuf):
     async def setup(self):
         await super().setup()
         self.pack = Packer(default=_encode).pack
-        self._unpacker = Unpacker(SyncStream(self.par), ext_hook=_decode, **self.cfg.get("pack",{}))
+        self._unpacker = Unpacker(SyncStream(self.s), ext_hook=_decode, **self.cfg.get("pack",{}))
 
     async def unpack(self):
         # This calls the unpacker synchronously,
@@ -223,7 +223,7 @@ class RemoteBufAnyio(anyio.abc.ByteStream):
         raise NotImplementedError("EOF")
 
     
-class BufAnyio(CtxObj, anyio.abc.ByteStream):
+class BufAnyio(anyio.abc.ByteStream):
     """
     Adapts a MoaT Buf stream to an anyio bytestream.
     """
@@ -232,8 +232,8 @@ class BufAnyio(CtxObj, anyio.abc.ByteStream):
     def __init__(self, stream:BaseBuf):
         self.stream = stream
 
-    async def __ainit__(self):
-        self.par = await self.stream.__ainit__()
+    async def __aenter__(self):
+        self.s = await self.stream.__aenter__()
 
     async def __aexit__(self, *tb):
         return await self.stream.__aexit__(*tb)
@@ -241,7 +241,7 @@ class BufAnyio(CtxObj, anyio.abc.ByteStream):
 
     async def receive(self, max_bytes=256):
         b = bytearray(max_bytes)
-        r = await self.par.rd(b)
+        r = await self.s.rd(b)
         if r == max_bytes:
             return b
         elif r <= max_bytes>>2:
@@ -251,7 +251,7 @@ class BufAnyio(CtxObj, anyio.abc.ByteStream):
             return b[:r]
 
     async def send(self, buf):
-        await self.par.wr(buf)
+        await self.s.wr(buf)
 
 
 class SingleAnyioBuf(AnyioBuf):

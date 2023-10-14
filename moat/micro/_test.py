@@ -15,7 +15,6 @@ import anyio
 from moat.util import attrdict, merge, packer, yload, Queue, combine_dict
 
 from moat.micro.compat import TaskGroup, AC_use
-from moat.micro.cmd.stream import StreamCmd
 from moat.micro.cmd.tree import Dispatch
 #from moat.micro.main import Request, get_link, get_link_serial
 #from moat.micro.proto.multiplex import Multiplexer
@@ -116,7 +115,7 @@ async def mpy_stack(temp: Path, cfg:dict|str, cfg2:dict|None=None):
         async with TaskGroup() as tg:
             stack = Dispatch(cfg)
             try:
-                await tg.spawn(stack.run_sub, _name="Stack")
+                await tg.spawn(stack.run)
                 await stack.wait_ready()
                 yield stack
             finally:

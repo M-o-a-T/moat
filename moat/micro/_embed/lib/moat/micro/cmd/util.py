@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.util import ValueEvent, as_proxy, NotGiven
 
-from moat.micro.compat import ticks_diff, ticks_ms, sleep_ms, log
+from moat.micro.compat import ticks_diff, ticks_ms, sleep_ms, wait_for_ms, log
 from moat.micro.proto.stack import RemoteError, SilentRemoteError
 
 StopIter = StopAsyncIteration
@@ -23,13 +23,25 @@ as_proxy("_StpIter", StopIter, replace=True)
 class StoppedError(Exception):
     pass
 
-async def run_no_exc(p,msg):
+async def wait_complain(s,i,p,*a,**k):
+    try:
+        await wait_for_ms(i,p,*a,**k)
+    except TimeoutError:
+        log("Delayed  %s",s)
+        await p(*a,**k)
+        log("Delay OK %s",s)
+
+
+async def run_no_exc(p,msg, x_err=()):
+    """Call p(msg) but log exceptions"""
     try:
         r = p(**msg)
         if hasattr(r, "throw"):  # coroutine
             r = await r
+    except x_err as err:
+        log("Error in %r %r: %r",p,msg, err)
     except Exception as err:
-        log("Error in %r %r",p,msg, _err=err)
+        log("Error in %r %r",p,msg, err=err)
 
 def get_part(cur, p):
     for pp in p:
@@ -105,10 +117,10 @@ class ValueTask:
         self.x = x
         self._t = None
     
-    async def start(self):
+    async def start(self, tg):
         if self._t is not None:
             raise RuntimeError("dup")
-        self._t = await self.cmd.tg.spawn(self._wrap, _name="Val")
+        self._t = await tg.spawn(self._wrap, _name="Val")
                        
     async def _wrap(self):
         try:
@@ -173,12 +185,13 @@ class SendIter(ValueTask):
     async def _run(self):
         try:
             cnt = 1
-            async with self.cmd.root.dispatch(self.ac, self.ad, rep=self.r) as self.it:
-                async for msg in self.it:
-                    await self.cmd.parent.send({'i':self.i, 'd':msg, 'n': cnt})
+            async with self.cmd.root.dispatch(self.ac, self.ad, rep=self.r) as it:
+                async for msg in it:
+                    await self.cmd.send({'i':self.i, 'd':msg, 'n': cnt})
                     cnt += 1
         finally:
             self.it = None
+            await self.cmd.send({'i':self.i})
 
     async def set(self, msg):
         await self.it.set(msg)
@@ -201,7 +214,19 @@ class DelayedIter(_DelayedIter):
         # don't warn on the first call: starting the iterator
         # might take some extra time
 
+    async def __aenter__(self):
+        self._it = self.it.__aenter__()
+        return self
+
+    async def __aexit__(self, *tb):
+        try:
+            return await self._it.__aexit__(*tb)
+        finally:
+            del self._it
+            del self._i
+    
     def __aiter__(self):
+        self._i = self._it.__aiter__()
         return self
 
     async def __anext__(self):
@@ -218,14 +243,14 @@ class DelayedIter(_DelayedIter):
                 # if power of two
                 log("IterDelay %r %d", -td)
             self._next = ticks_add(t, self.t)
-        return await self.it.__anext__()
+        return await self._i.__anext__()
 
 
 class RecvIter(_DelayedIter):
     """
     The recipient of incoming iterated messages.
 
-    It implements an iterator protocol and forwards them to its reader.
+    It implements an iterator protocol that forwards them to its reader.
     """
 
     def __init__(self, t):
@@ -234,11 +259,14 @@ class RecvIter(_DelayedIter):
         self._val = ValueEvent()
         self.cnt = 0
 
-    def __aiter__(self):
+    async def __aenter__(self):
         return self
 
     async def __aexit__(self, *err):
         pass
+
+    def __aiter__(self):
+        return self
 
     async def get(self):
         try:
@@ -249,9 +277,6 @@ class RecvIter(_DelayedIter):
                 self._warned = 1
             if self._val.is_set():
                 self._val = ValueEvent()
-
-    async def __aenter__(self):
-        pass
 
     __anext__ = get
 

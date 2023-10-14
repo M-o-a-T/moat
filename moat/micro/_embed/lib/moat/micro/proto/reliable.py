@@ -73,8 +73,8 @@ class ReliableMsg(StackedMsg):
     rq = None
     __tg = None
 
-    def __init__(self, parent, cfg):
-        super().__init__(parent, cfg)
+    def __init__(self, link, cfg):
+        super().__init__(link, cfg)
 
         window = cfg.get("window",8)
         timeout = cfg.get("timeout", 1000)
@@ -133,7 +133,7 @@ class ReliableMsg(StackedMsg):
         self.pend_ack = False
 
         try:
-            await self.parent.send(msg)
+            await self.s.send(msg)
         except RuntimeError:
             # print("NOSEND RESET", self.reset_level, file=sys.stderr)
             pass
@@ -163,16 +163,16 @@ class ReliableMsg(StackedMsg):
             w_open = self.s_q and (self.s_send_head - self.s_send_tail) % self.window < self.window // 2
             if w_open:
                 # yes, we can send another message
-                # print(f"R {self.parent.txt}: tx", file=sys.stderr)
+                # print(f"R {self.link.txt}: tx", file=sys.stderr)
                 pass
             elif ntx is None:
                 # nothing to do
-                # print(f"R {self.parent.txt}: inf", file=sys.stderr)
+                # print(f"R {self.link.txt}: inf", file=sys.stderr)
                 await self._trigger.wait()
                 self._trigger = Event()
             elif ntx > 0:
                 # we need to do something soon
-                # print(f"R {self.parent.txt}: {ntx}", file=sys.stderr)
+                # print(f"R {self.link.txt}: {ntx}", file=sys.stderr)
                 try:
                     await wait_for_ms(ntx, self._trigger.wait)
                 except TimeoutError:
@@ -186,7 +186,7 @@ class ReliableMsg(StackedMsg):
                 # not the real fix
             else:
                 # we need to re-send now
-                # print(f"R {self.parent.txt}: now {ticks_ms()}", file=sys.stderr)
+                # print(f"R {self.link.txt}: now {ticks_ms()}", file=sys.stderr)
                 pass
 
 
@@ -195,7 +195,7 @@ class ReliableMsg(StackedMsg):
                 seq = self.s_send_head
                 msg, evt = self.s_q.pop(0)
                 nseq = (seq + 1) % self.window
-                # print("SH1",self.parent.txt,self.s_send_tail,
+                # print("SH1",self.link.txt,self.s_send_tail,
                 #             self.s_send_head,nseq, file=sys.stderr)
                 self.s_send_head = nseq
                 if seq in self.m_send:
@@ -255,9 +255,9 @@ class ReliableMsg(StackedMsg):
         self.reset_level = 1
 
         try:
-            async with TaskGroup() as tg, self.parent as par:
+            async with TaskGroup() as tg, self.link as s:
                 self.__tg = tg
-                self.par = par
+                self.s = s
                 reader = await tg.spawn(self._read, _name="rel_read")
                 runner = await tg.spawn(self._run_bg, _name="rel_bg")
                 while self.in_reset:
@@ -309,13 +309,13 @@ class ReliableMsg(StackedMsg):
                 msg['e'] = err
             try:
                 try:
-                    await self.par.send(msg)
+                    await self.s.send(msg)
                 except AttributeError:
                     return  # closing. XXX should not happen
                 except TypeError:
                     if 'e' in msg:
                         msg['e'] = repr(err)
-                        await self.par.send(msg)
+                        await self.s.send(msg)
                     else:
                         raise
             except EOFError:
@@ -334,7 +334,7 @@ class ReliableMsg(StackedMsg):
         if self.reset_level < 3:
             self.in_reset = ticks_add(ticks_ms(), self.timeout)
         self._trigger.set()
-        await self.par.send(msg)
+        await self.s.send(msg)
 
     async def send(self, msg):
         """
@@ -352,7 +352,7 @@ class ReliableMsg(StackedMsg):
                 return
             self._iters[i] = msg
 
-        # print(f"T {self.parent.txt}: SQ {msg} {id(self._trigger)}", file=sys.stderr)
+        # print(f"T {self.link.txt}: SQ {msg} {id(self._trigger)}", file=sys.stderr)
         evt = ValueEvent() if 'a' in msg else None
         self.s_q.append((msg, evt))
         self._trigger.set()
@@ -385,9 +385,9 @@ class ReliableMsg(StackedMsg):
     async def _read(self):
         while True:
             try:
-                if self.par is None:
+                if self.s is None:
                     return
-                msg = await self.par.recv()
+                msg = await self.s.recv()
             except EOFError:
                 if self.__tg is not None:
                     self.__tg.cancel()
@@ -472,13 +472,13 @@ class ReliableMsg(StackedMsg):
             self.pend_ack = True
             if self.between(self.s_recv_tail, self.s_recv_head, r):
                 if (r - self.s_recv_tail) % self.window < self.window // 2:
-                    # print("RH1",self.parent.txt,self.s_recv_tail,
+                    # print("RH1",self.link.txt,self.s_recv_tail,
                     #             self.s_recv_head,r,r+1, file=sys.stderr)
                     self.m_recv[r] = d
                     self.s_recv_head = (r + 1) % self.window
                 else:
                     pass
-                    # print("RH1-",self.parent.txt,self.s_recv_tail,
+                    # print("RH1-",self.link.txt,self.s_recv_tail,
                     #             self.s_recv_head,r,r+1, file=sys.stderr)
             elif self.between(self.s_recv_tail, r, self.s_recv_head):
                 self.m_recv[r] = d
@@ -487,11 +487,11 @@ class ReliableMsg(StackedMsg):
             # no data. R is the next-expected sequence number.
             if (r - self.s_recv_tail) % self.window <= self.window // 2:
                 self.s_recv_head = r
-                # print("RH2",self.parent.txt,self.s_recv_tail,
+                # print("RH2",self.link.txt,self.s_recv_tail,
                 #             self.s_recv_head,r,r+1, file=sys.stderr)
             else:
                 pass
-                # print("RH2-",self.parent.txt,self.s_recv_tail,
+                # print("RH2-",self.link.txt,self.s_recv_tail,
                 #             self.s_recv_head,r,r+1, file=sys.stderr)
 
         # process ACKs
@@ -515,7 +515,7 @@ class ReliableMsg(StackedMsg):
                 rr = (rr + 1) % self.window
                 self._trigger.set()
 
-            # print("ST1",self.parent.txt,self.s_send_tail,self.s_send_head,rr, file=sys.stderr)
+            # print("ST1",self.link.txt,self.s_send_tail,self.s_send_head,rr, file=sys.stderr)
             self.s_send_tail = rr
 
         for rr in x:
@@ -539,7 +539,7 @@ class ReliableMsg(StackedMsg):
             else:
                 rr = (rr + 1) % self.window
                 self.s_recv_tail = rr
-                # print("RT1",self.parent.txt,self.s_recv_tail,
+                # print("RT1",self.link.txt,self.s_recv_tail,
                 #             self.s_recv_head,r,r+1, file=sys.stderr)
                 self.pend_ack = True
                 await self.rq.put(d)

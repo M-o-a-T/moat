@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 from functools import partial
 
-from moat.micro.cmd.stream import StreamCmd
+from moat.micro.cmd.stream import BaseCmdMsg
 from moat.micro.stacks.console import console_stack
 from moat.micro.part.serial import Serial
 from moat.micro.proto.stream import FileBuf
@@ -18,7 +18,7 @@ class StdioBuf(FileBuf):
     async def stream(self):
         return sys.stdin.buffer,sys.stdout.buffer
 
-class StdIO(StreamCmd):
+class StdIO(BaseCmdMsg):
     """Sends/receives MoaT messages using stdin/stdout"""
 
     async def stream(self):

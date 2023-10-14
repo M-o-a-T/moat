@@ -1,8 +1,8 @@
 
-from moat.micro.cmd.stream import StreamCmd
+from moat.micro.cmd.stream import BaseCmdMsg
 from moat.micro.proto.stream import ProcessBuf
 
-class Process(StreamCmd):
+class Process(BaseCmdMsg):
     argv = None
     path = None
 

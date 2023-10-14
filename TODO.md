@@ -1,4 +1,6 @@
 
+* test console data
+  * write an app for it
 * the single-channel listener+connect apps must be converted to streams
   * so that we can put a Reliable above them
 * more flex build of stream structure?
@@ -7,6 +9,8 @@
 * test for remote cancellation
 * test for reconnecting
 * implement start/stop/restart of subsystems more cleanly
+* teach a subdispatcher to refresh themselves if their destination
+  terminates / restarts
 
 * link path. Right now an app doesn't know where it itself is.
   Does it need to?

@@ -9,48 +9,114 @@ import sys
 from functools import partial
 
 from moat.util import attrdict, import_, Path
-from moat.micro.compat import wait_for_ms, log, TaskGroup, ACM, AC_exit, TimeoutError, Event, idle
-from moat.micro.cmd.util import StoppedError
+from moat.micro.compat import wait_for_ms, log, TaskGroup, ACM, AC_use, AC_exit, TimeoutError, Event, idle
+from moat.micro.cmd.util import StoppedError, wait_complain
 
 from .base import BaseCmd
 
-__all__ = ["BaseDirCmd", "BaseFwdCmd", "BaseLayerCmd", "BaseSubCmd",
-        "BaseListenCmd", "Dispatch", "SubDispatch"]
+__all__ = ["DirCmd", "BaseSuperCmd", "BaseFwdCmd", "BaseLayerCmd", "BaseSubCmd",
+        "BaseListenCmd", "BaseListenOneCmd", "Dispatch", "SubDispatch"]
 
-class BaseLayerCmd(BaseCmd):
+class BaseSuperCmd(BaseCmd):
+    """
+    A handler that can have a nested app (or more).
+    """
+    async def setup(self):
+        await super().setup()
+        self.tg = await AC_use(self, TaskGroup())
+        await AC_use(self, self.tg.cancel)
+
+
+    async def start_app(self, app):
+        async def _run(app):
+            try:
+                await app.run()
+            finally:
+                app.p_task = None
+
+        if app.p_task:
+            return
+        if app.p_task is False:
+            raise RuntimeError("DupStartB")
+        app.p_task = False
+        try:
+            app.p_task = await self.tg.spawn(_run, app)
+        except BaseException:
+            app.p_task = None
+            raise
+
+
+class BaseLayerCmd(BaseSuperCmd):
     """
     A handler for a single nested app.
 
     This handler doesn't affect the command hierarchy.
     Its own commands, if any, are reachable by adding "_f" to their name.
+
+    Alternately, the nested app is named "_".
+
+    You need to override "gen_cmd" to create the app object.
     """
     app = None
-
-    async def run(self):
-        await idle()
-
-    async def wait_ready(self):
-        await super().wait_ready()
-        await self.app.wait_ready()
-
-    async def wait_stopped(self):
-        await self.app.wait_stopped()
+    name = "_"
 
     async def run_app(self):
         """
-        Run the underlying app.
+        The command handler's executor. By default, calls `self.app.run`
+        within the command's context.
 
-        By default, just call it.
+        You might override this e.g. for restarting or
+        shielding the rest of MoaT from errors.
         """
-        await self.app.run_sub()
+        await self.app.run()
+
+    async def task(self):
+        """
+        Run the app as a subtask.
+
+        You typically don't override this.
+        """
+        async with TaskGroup() as tg:
+            if self.app is not None:
+                await tg.spawn(self.run_app)
+            await wait_complain(f"Rdy {self.app.path}", 250, self.app.wait_ready)
+            self.set_ready()
+
+            # await self.app.stopped()
+            # the return from the taskgroup already does that
+
+    async def setup(self):
+        await super().setup()
+        self.app = await self.gen_cmd()
+        if self.app is not None:
+            self.app.attached(self, self.name)
+
+    async def gen_cmd(self) -> BaseCmd:
+        """
+        Create the actual app to use.
+
+        The default uses `None` and leaves the setup to `task`.
+        """
+        return None
 
     async def dispatch(self, action, msg, **kw):
-        if len(action) == 1:
-            return await super().dispatch(action, msg, **kw)
-        else:
-            if self.app is None:
-                await self.wait_ready()
-            return await self.app.dispatch(action, msg, **kw)
+        """
+        Forward to the sub-app unless specifically directed not to.
+        """
+        if len(action) > 1:
+            if action[0] == self.name:
+                action = action[1:]
+            elif action[0] == f"!{self.name}":
+                action = action[1:]
+                return await super().dispatch(action, msg, **kw)
+        elif action[0] == "_dir":
+            res = await self.app.dispatch(action, msg, **kw)
+            res.setdefault("d",[]).append(f"!{self.name}")
+            return res
+
+        if self.app is None:
+            await self.wait_ready()
+        return await self.app.dispatch(action, msg, **kw)
 
     def __getattr__(self, k):
         if k.startswith("_"):
@@ -60,90 +126,16 @@ class BaseLayerCmd(BaseCmd):
         return getattr(self.app, k)
 
 
-class BaseListenCmd(BaseLayerCmd):
-    """
-    An app that runs a 
-
-    Override `listener` to return it.
-    """
-    def listener(self) -> BaseConnIter:
-        """
-        How to get new connections. Returns a BaseConnIter.
-
-        Must be implemented in your subclass.
-        """
-        raise NotImplementedError()
-
-    def wrapper(self, conn) -> BaseMsg:
-        """
-        How to wrap the connection so that you can communicate on it.
-
-        By default, use `console_stack`.
-        """
-        from moat.micro.stacks.console import console_stack
-
-        return console_stack(conn, self.cfg)
-
-    async def reject(self, conn) -> None:
-        """
-        Checker whether to reject a new incoming connection.
-
-        By default does nothing.
-        """
-        pass
-
-    async def handler(self, conn):
-        """
-        Process a connection
-        """
-        from moat.micro.cmd.stream import ExtStreamCmd
-
-        async with self.wrapper(conn) as c:
-            app = ExtStreamCmd(c, self.cfg)
-            if self.app is None or not self.app.is_ready() or self._running or self.cfg.get("replace", True):
-                if self.app is not None:
-                    self.th_app.cancel()
-                    await self.app.wait_stop()
-                app.attached(self, "_")  # XXX better name?
-                self.app = app
-                self.th_app = await self.tg.spawn(app.run_sub)
-                self.set_ready()
-                await app.wait_ready()
-
-                await app.wait_stopped()
-                if self.app is app:
-                    self.th_app = None
-                    self.app = None
-            else:
-                # close the thing
-                await self.reject(conn)
-
-    async def start(self) -> Never:
-        """
-        Accept connections.
-        """
-        async with self.listener() as conns:
-            async for conn in conns:
-                task = await self.tg.spawn(self.handler, conn)
-
-    async def detach(self, name, w=None):
-        """Sub-App detahc. Only called from the app during shutdown"""
-        if name != "_":
-            raise RuntimeError(f"ListenDetach {name}")
-        self.app = None
-        self.th_app = None
-
-
 class BaseFwdCmd(BaseLayerCmd):
     """
     A handler for a single nested app that's configured locally.
     """
-    async def start(self):
+    async def gen_cmd(self):
         """
-        Start the underlying app
+        Create the underlying app object
         """
         if self.root.APP is None:
-            return
+            raise RuntimeError("WhereApp")
         gcfg = self.cfg
         name = gcfg.get("app", None)
         cfg = gcfg.get("cfg", {})
@@ -152,32 +144,24 @@ class BaseFwdCmd(BaseLayerCmd):
 
         if name is None:
             if self.app is not None:
-                self.app.th.cancel()
+                self.app.stop()
                 self.app = None
             return
 
         def imp(name):
             return import_(f"{self.root.APP}.{name}", 1)
 
-        self.app = app = imp(name)(cfg)
-
-        await super().start()
-
-        app.attached(self._parent, name)
-
-        async with app.start_lock:
-            app.th = await self.tg.spawn(self.run_app, _name=f"r_at_{app.path}")
-
-        await app.wait_ready()
-        self.set_ready()
+        return imp(name)(cfg)
 
 
-class BaseSubCmd(BaseCmd):
+class BaseSubCmd(BaseSuperCmd):
     """
     A handler for a directory.
 
     Apps have a hierarchical structure. This class serves as the equivalent
     of a subdirectory.
+
+    How to create new entries is not specified in this class.
     """
 
     def __init__(self, cfg):
@@ -187,44 +171,31 @@ class BaseSubCmd(BaseCmd):
     async def wait_ready(self):
         "delay until this subtree is up"
         await super().wait_ready()
-        while True:
-            n = len(self.sub)
-            for k,v in list(self.sub.items()):
-                await v.wait_ready()
-                # TODO warn when delayed
-            if len(self.sub) == n:
-                break
+        again = True
+        while again:
+            again = False
+            for app in list(self.sub.values()):
+                if await app.wait_ready() is None:
+                    again = True
 
-    async def attach(self, name, app, run=True):
+    async def attach(self, name, app) -> None:
         """
-        Attach a named command handler to me and run it.
-        """
-        await self.detach(name)
-        self.sub[name] = app
-        app.attached(self, name)
-        if run:
-            async with app.start_lock:
-                if app.th is None:
-                    app.th = await self.tg.spawn(app.run_sub, _name=f"r_at_{app.path}")
+        Attach a sub-handler to me.
 
-    async def detach(self, name, w=True):
+        An existing handler with this name is stopped.
         """
-        Detach a named command handler from me and kill its task.
+        oa = self.sub.pop(name, None)
+        if app is not None:
+            self.sub[name] = app
+            app.attached(self, name)
+        if oa is not None:
+            await oa.stop()
 
-        Waits for the subtask to end.
+    def detach(self, name) -> Awaitable:
         """
-        try:
-            app = self.sub.pop(name)
-        except KeyError:
-            return
-        try:
-            await app.stop(w=w)
-        except AttributeError:
-            pass
-        finally:
-            app._parent = None
-            app._name = None
-            app.root = None
+        Detach and stop a command handler.
+        """
+        return self.attach(name, None)
 
 
     async def dispatch(self, action: list[str], msg: dict, **kw):
@@ -248,38 +219,139 @@ class BaseSubCmd(BaseCmd):
         res["d"] = list(self.sub.keys())
         return res
 
+class BaseListenOneCmd(BaseLayerCmd):
+    """
+    An app that runs a listener and accepts a single connection.
 
-class BaseDirCmd(BaseSubCmd):
+    Override `listener` to return it.
+
+    TODO: this needs to be a stream layer instead: we want the
+    Reliable module to be able to pick up where it left off.
+    """
+    def listener(self) -> BaseConnIter:
+        """
+        How to get new connections. Returns a BaseConnIter.
+
+        Must be implemented in your subclass.
+        """
+        raise NotImplementedError()
+
+    def wrapper(self, conn) -> BaseMsg:
+        """
+        How to wrap the connection so that you can communicate on it.
+
+        By default, use `console_stack`.
+        """
+        from moat.micro.stacks.console import console_stack
+
+        return console_stack(conn, self.cfg)
+
+    async def reject(self, conn:BaseBuf):
+        """
+        Close the connection.
+        """
+        # an async context should do it
+        async with conn:
+            pass
+
+    async def handler(self, conn):
+        """
+        Process a connection
+        """
+        from moat.micro.cmd.stream import ExtCmdMsg
+
+        app = ExtCmdMsg(self.wrapper(conn), self.cfg)
+        if self.app is None or not self.app.is_ready() or self._running or self.cfg.get("replace", True):
+            if self.app is not None:
+                await self.app.stop()
+            app.attached(self,"_")
+            self.app = app
+            await self.start_app(app)
+            self.set_ready()
+            await app.wait_ready()
+
+            await app.wait_stopped()
+            if self.app is app:
+                self.app = None
+        else:
+            # close the thing
+            await self.reject(conn)
+
+    async def task(self) -> Never:
+        """
+        Accept connections.
+        """
+        async with self.listener() as conns:
+            async for conn in conns:
+                task = await self.tg.spawn(self.handler, conn)
+ 
+
+class BaseListenCmd(BaseSubCmd):
+    """
+    An app that runs a listener and connects all incoming connections
+    to numbered subcommands.
+
+    Override `listener` to return an async context manager / iterator.
+    """
+    seq = 1
+
+    # no multiple inheritance for MicroPython
+    listener = BaseListenOneCmd.listener
+    wrapper = BaseListenOneCmd.wrapper
+    task = BaseListenOneCmd.task
+
+    async def handler(self, conn):
+        """
+        Process a new connection.
+        """
+        from moat.micro.cmd.stream import ExtCmdMsg
+
+        conn = self.wrapper(conn)
+        app = ExtCmdMsg(conn, self.cfg)
+        seq = self.seq
+        if seq > len(self.sub)*3:
+            seq = 10
+        while seq in self.sub:
+            seq += 1
+        self.seq = seq+1
+        await self.attach(seq, app)
+        await self.start_app(app)
+
+
+class DirCmd(BaseSubCmd):
     """
     A BaseSubCmd handler with apps started by local configuration.
+    
+    Not typically subclassed.
     """
 
-    async def start(self):
-        await self._setup_apps()
+    def __init__(self, cfg):
+        super().__init__(cfg)
+        self._did_update: Event = None
+        self._updated = Event()
 
-    async def run(self):
-        # no-op; readiness is signalled by setup
-        await idle()
+    async def task(self):
+        if self.root.APP is None:
+            raise RuntimeError("Root no APP")
+        while True:
+            self._did_update = Event()
+            await self._setup_apps()
+            self._did_update.set()
 
-    async def _start(self):
-        await super()._start()
-        for k,v in self.sub.items():
-            if isinstance(v, BaseCmd):
-                async with v.start_lock:
-                    if v.th is None:
-                        log("Startup %s",self.path/k)
-                        v.th = await self.tg.spawn(v.run_sub, _name=f"r_st_{v.path}")
+            await self._updated.wait()
+            self._updated = Event()
+
 
     async def reload(self):
         "called after the config has been updated"
-        await self._setup_apps()
-        return True
+        self._updated.set()
+        await self._did_update.wait()
+
+    cmd_upd = reload
+
 
     async def _setup_apps(self):
-        # TODO send errors back
         log("Setup %s", self.path)
-        if self.root.APP is None:
-            return
         gcfg = self.cfg
         # from pprint import pprint
         # pprint(gcfg,sys.stderr)
@@ -289,11 +361,10 @@ class BaseDirCmd(BaseSubCmd):
         def imp(name):
             return import_(f"{self.root.APP}.{name}", 1)
 
+        # Zeroth, kill apps that are no longer live
         for name in list(self.sub.keys()):
             if name not in apps:
-                app = self.sub[name]
-                await self.detach(name)  # pylint: disable=protected-access
-                sys.modules.pop(app.__module__, None)
+                await self.detach(name)
 
         # First, setup the app data structures
         for name, v in apps.items():
@@ -302,36 +373,32 @@ class BaseDirCmd(BaseSubCmd):
 
             cfg = gcfg.get(name, {})
             try:
-                await self.attach(name, imp(v)(cfg), run=False)
+                await self.attach(name, imp(v)(cfg))
             except TypeError as exc:
                 raise # TypeError(f"{name}: {v} {repr(imp(v))} {repr(exc)}: {repr(cfg)}")
 
         # Second, run them all.
         # For existing apps, tell it to update its configuration.
-        for name, app in self.sub.items():
-            async with app.start_lock:
-                if app.th is not None:
-                    cfg = getattr(gcfg, name, attrdict())
-                    app._rl_ok = await app.reload()
-                else:
-                    app.th = await tg.spawn(  # pylint: disable=protected-access
-                        app.run_sub, _name=f"mp_{self.path/name}"
-                    )
+        for app in self.sub.values():
+            await self.start_app(app)
 
         # Third, wait for them to be up.
-        for k,v in self.sub.items():
+        for app in self.sub.values():
             try:
-                await wait_for_ms(250, v.wait_ready)
+                await wait_for_ms(250, app.wait_ready)
             except TimeoutError:
-                log("* Waiting for App %s", v.path)
-                if v.cfg.get("wait",True):
-                    await v.wait_ready()
-                log("* OK wait for App %s", v.path)
+                if app.cfg.get("wait",True):
+                    log("* Wait for %s", app.path)
+                    await app.wait_ready()
+                    log("* OK wait %s", app.path)
+                else:
+                    log("* NO WAIT %s", app.path)
 
+        # Finally, mark done.
         self.set_ready()
 
 
-class Dispatch(BaseDirCmd):
+class Dispatch(DirCmd):
     """
     This is the system's root dispatcher.
 
@@ -339,26 +406,7 @@ class Dispatch(BaseDirCmd):
     parameter or some key/value data. The response is returned / raised.
     """
 
-    APP = "app"
-
-    def __init__(self,cfg):
-        super().__init__(cfg)
-
-    async def __aenter__(self):
-        acm = ACM(self)
-        try:
-            tg = await acm(TaskGroup())
-            log("Start Main Run")
-            await tg.spawn(self.run_sub, _name="DispatchMain")
-            await self.wait_ready()
-            await acm(tg.cancel)
-            return self
-        except BaseException as exc:
-            if not await AC_exit(self, type(exc),exc,getattr(exc,"__traceback__",None)):
-                raise
-
-    async def __aexit__(self, *tb):
-        return await AC_exit(self, *tb)
+    APP = None  # server / satellite must override
 
     def sub_at(self, *p):
         from .tree import SubDispatch
@@ -394,7 +442,7 @@ class SubDispatch:
             self._dest = dispatch
             self._rem = ()
             for k in dir(dispatch):
-                if k.startswith("cmd"):
+                if k.startswith("cmd_"):
                     setattr(self, k[4:], getattr(dispatch,k))
 
     async def __aenter__(self):

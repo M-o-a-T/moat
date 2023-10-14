@@ -116,7 +116,7 @@ class _MsgpackMsgBuf(StackedMsg):
     async def cwr(self, buf):
         if not self.cons:
             return
-        return await self.par.wr(buf)
+        return await self.s.wr(buf)
 
     async def crd(self, buf):
         return _CReader.crd(self, buf)
@@ -128,14 +128,14 @@ class _MsgpackMsgBuf(StackedMsg):
                 if self.cons:
                     msg = self.pref+msg  # *sigh* must be atomic
                 else:
-                    await self.par.wr(self.pref)
-            await self.par.wr(msg)
+                    await self.s.wr(self.pref)
+            await self.s.wr(msg)
 
     async def recv(self) -> Any:
         if self.pref is not None:
             buf = bytearray(1)
             while True:
-                if await self.par.rd(buf) != 1:
+                if await self.s.rd(buf) != 1:
                     raise EOFError
                 b = buf[0]
                 if b == self.pref[0]:
@@ -169,10 +169,10 @@ class _MsgpackMsgBlk(StackedMsg):
     """
 
     async def send(self, msg):
-        await self.par.snd(self.pack(msg))
+        await self.s.snd(self.pack(msg))
 
     async def recv(self):
-        m = await self.par.rcv()
+        m = await self.s.rcv()
         return self.unpacker(m)
 
 

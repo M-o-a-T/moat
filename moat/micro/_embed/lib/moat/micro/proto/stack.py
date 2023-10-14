@@ -2,35 +2,25 @@
 This class implements the basic infrastructure to run an RPC system via an
 unreliable, possibly-reordering, and/or stream-based transport
 
-We have a stack of classes, linked by parent/child pointers.
-The parent chain leads to the actual hardware, represented by some Stream
-subclass.
+We have a stack of classes. The "link" chain leads from the command handler
+to the actual hardware, represented by some Stream subclass.
 
-The child chain leads to the subcommand handler responsible for this RPC
-connection, which forwards the incoming command to the system's main
-command handler.
+Everything is fully asynchronous and controlled by the MoaT stack.
+There are no callbacks from a linked-to module back to its user.
+Opening a link is equivalent to entering its async context.
 
-Everything is fully asynchronous. Each class has a "run" method which is
-required to call its child's "run", as well as do internal housekeeping
-if required. A "run" method may expect its parent to be operational;
-it gets cancelled if/when that is no longer true. When a child "run"
-terminates, the parent's "run" needs to return.
+The "wrap" method provides a secondary context that can be used for
+a persistent outer context, e.g. to hold a listening socket.
 
-Incoming messages are handled by the child's "dispatch" method. They
-are expected to be fully asynchronous, i.e. a "run" method that calls
-"dispatch" must use a separate task to do so.
-
-Outgoing messages are handled by the parent's "send" method. Send calls
-return when the data has been sent, implying that sending on an
-unreliable transport will wait for the message to be confirmed. Sending
-may fail.
+Methods for sending data typically return when the data has been sent. The
+exception is the `Reliable` module, which limits this to commands.
 """
 
 from __future__ import annotations
 
 import sys
 
-from moat.micro.compat import TaskGroup, log, ACM, AC_use, AC_exit
+from moat.micro.compat import log, ACM, AC_use, AC_exit
 from moat.util import as_proxy
 
 
@@ -49,38 +39,61 @@ class ChannelClosed(RuntimeError):
     pass
 
 
-class BaseConn:
+class _NullCtx:
+    async def __aenter__(self):
+        return self
+    async def __aexit__(self, *tb):
+        pass
+_nullctx = _NullCtx()
+
+
+class Base:
     """
-    The MoaT stream base class for "something connected that talks".
+    The MoaT stream base class for "something connected".
 
     This class *must* be used as an async context manager.
 
-    Override `stream` to return the actual data link. Use `AC_use` to
-    call an async context manager or to register a destructor.
+    Usage:
+
+    Override `stream` to create the data link. Use the `AC_use` helper
+    if you need to call an async context manager or to register a destructor.
 
     Augment `setup` or `teardown` to add non-stream related features.
-    The default implementation of `setup` calls `stream` and stores the
-    result in the attibute `s`.
+
+    Override `wrap` to return an async context manager that holds resources
+    which must survive reconnection, e.g. a MQTT link's persistent state or
+    a listening socket.
     """
     s = None
 
     def __init__(self, cfg):
         self.cfg = cfg
-        pass
+
+    def wrap(self) -> AsyncContextManager:
+        """
+        Async context manager for holding a cross-connection context.
+
+        By default does nothing.
+        """
+        return _nullctx
 
     async def __aenter__(self):
-        acm = ACM(self)
-        await AC_use(self, self.teardown)
-        await self.setup()
-        return self
+        await ACM(self)(self.teardown)
+        try:
+            await self.setup()
+            return self
+        except BaseException as exc:
+            await AC_exit(self, type(exc), exc, getattr(exc,"__traceback__",None))
+            raise
 
-    async def __aexit__(self, *tb):
-        self.s = None
-        return await AC_exit(self, *tb)
+    def __aexit__(self, *tb) -> Awaitable:
+        return AC_exit(self, *tb)
 
     async def setup(self):
         """
-        Object setup. Call the superclass!
+        Basic async setup.
+
+        Call first when overriding.
         """
         pass
 
@@ -92,8 +105,41 @@ class BaseConn:
         """
         pass
 
+
+class BaseConn(Base):
+    """
+    The MoaT stream base class for "something connected that talks".
+
+    This class *must* be used as an async context manager.
+
+    Usage:
+
+    Override `stream` to create the data link. Use `AC_use` to
+    call an async context manager or to register a destructor.
+
+    Augment `setup` or `teardown` to add non-stream related features.
+    """
+    s = None
+
     async def setup(self):
+        """
+        Object construction.
+
+        By default, assigns the result of calling `stream` to the attribute
+        ``s``.
+        """
+        if self.s is not None:
+            raise RuntimeError("Busy!")
+
         self.s = await self.stream()
+
+    async def teardown(self):
+        """
+        Object destructor.
+
+        Should not fail when called with a partially-created object.
+        """
+        self.s = None
 
     async def stream(self):
         """
@@ -146,103 +192,84 @@ class StackedConn(BaseConn):
     """
     Base class for connection stacking.
 
-    Connection stacks have a parent. `stream` generates a new
-    connection from it, using its async context manager, and
+    Connection stacks have a lower layer. `stream` generates a new
+    connection from it, using its async context manager.
     stores the result in the attribute ``par`.`
     """
 
-    par = None
-    parent = None
+    link = None
 
-    def __init__(self, parent, cfg):
+    def __init__(self, link, cfg):
         super().__init__(cfg=cfg)
-        self.parent = parent
+        self.link = link
 
-    async def setup(self):
+    def wrap(self):
+        return self.link.wrap()
+
+    async def stream(self):
         """
-        Start using this link.
+        Generate the low-level connection this module uses.
 
-        By default, calls `stream` with the parent object.
+        By default, returns the linked stream's async context.
         """
-        if self.par is not None:
-            raise RuntimeError("Busy!")
-
-        self.par = await self.stream(self.parent)
-
-    async def teardown(self):
-        """
-        Stop using this link.
-        """
-        if self.par is None:
-            raise RuntimeError("NotBusy!")
-
-        self.par = None
-        await super().teardown()
-
-    async def stream(self, parent):
-        """
-        Use this parent.
-
-        By default, simply enter its async context.
-        """
-        return await AC_use(self, parent)
+        return await AC_use(self, self.link)
 
 
 class StackedMsg(StackedConn, BaseMsg):
     """
     A no-op stack module for messages. Override to implement interesting features.
 
-    Use "par" to store the parent's context.
+    Use the attribute "s" to store the linked stream's context.
     """
     async def send(self, m):
         "Send. Transmits a structured message"
-        return await self.par.send(m)
+        return await self.s.send(m)
 
     async def recv(self):
         "Receive. Returns a message."
-        return await self.par.recv()
+        return await self.s.recv()
 
 
     async def cwr(self, buf):
         "Console Send. Returns when the buffer is transmitted."
-        await self.par.cwr(buf)
+        await self.s.cwr(buf)
 
     async def crd(self, buf) -> len:
         "Console Receive. Returns data by reading into a buffer."
-        return await self.par.crd(buf)
+        return await self.s.crd(buf)
 
 
 class StackedBuf(StackedConn, BaseBuf):
     """
     A no-op stack module for byte steams. Override to implement interesting features.
 
-    Use "par" instead of "parent" for the parent's context.
+    Use the attribute "s" to store the linked stream's context.
     """
     async def wr(self, buf):
         "Send. Returns when the buffer is transmitted."
-        await self.par.wr(buf)
+        await self.s.wr(buf)
 
     async def rd(self, buf) -> len:
         "Receive. Returns data by reading into a buffer."
-        return await self.par.rd(buf)
+        return await self.s.rd(buf)
 
 
 class StackedBlk(StackedConn, BaseBlk):
     """
     A no-op stack module for bytestrings. Override to implement interesting features.
 
-    Use "par" instead of "parent" for the parent's context.
+    Use the attribute "s" to store the linked stream's context.
     """
     cwr = StackedMsg.cwr
     crd = StackedMsg.crd
 
     async def snd(self, m):
         "Send. Transmits a structured message"
-        return await self.par.send(m)
+        return await self.s.send(m)
 
     async def rcv(self):
         "Receive. Returns a message."
-        return await self.par.recv(*a)
+        return await self.s.recv(*a)
 
 
 class LogMsg(StackedMsg, StackedBuf, StackedBlk):
@@ -254,8 +281,8 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
     # StackedMsg is first because MicroPython uses only the first class and
     # we get `cwr` and `crd` that way.
 
-    def __init__(self, parent, cfg):
-        super().__init__(parent, cfg)
+    def __init__(self, link, cfg):
+        super().__init__(link, cfg)
         self.txt = cfg.get("txt","S")
 
     async def setup(self):
@@ -282,7 +309,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
         mm = self._repr(m)
         log("S:%s %s", self.txt, self._repr(m,'d'))
         try:
-            res = await self.par.send(m)
+            res = await self.s.send(m)
         except BaseException as exc:
             log("S:%s stop %r", self.txt, exc)
             raise
@@ -294,7 +321,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
         "Recv message."
         log("R:%s", self.txt)
         try:
-            msg = await self.par.recv()
+            msg = await self.s.recv()
         except BaseException as exc:
             log("R:%s stop %r", self.txt, exc)
             raise
@@ -306,7 +333,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
         "Send buffer."
         log("S:%s %r", self.txt, repr_b(m))
         try:
-            res = await self.par.snd(m)
+            res = await self.s.snd(m)
         except BaseException as exc:
             log("S:%s stop %r", self.txt, exc)
             raise
@@ -315,7 +342,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
         "Recv buffer."
         log("R:%s", self.txt)
         try:
-            msg = await self.par.rcv()
+            msg = await self.s.rcv()
         except BaseException as exc:
             log("R:%s stop %r", self.txt, exc)
             raise
@@ -327,7 +354,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
         "Send buf."
         log("S:%s %r", self.txt, repr_b(buf))
         try:
-            res = await self.par.wr(buf)
+            res = await self.s.wr(buf)
         except BaseException as exc:
             log("S:%s stop %r", self.txt, exc)
             raise
@@ -339,7 +366,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
         "Receive buf."
         log("R:%s %d", self.txt, len(buf))
         try:
-            res = await self.par.rd(buf)
+            res = await self.s.rd(buf)
         except BaseException as exc:
             log("R:%s stop %r", self.txt, exc)
             raise

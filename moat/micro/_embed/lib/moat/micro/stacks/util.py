@@ -11,7 +11,7 @@ class BaseConnIter:
     """
     Iterate incoming connections.
 
-    You need to override "accept".
+    You need to override the "accept" method.
     """
     def __init__(self):
         self.q = Queue(1)

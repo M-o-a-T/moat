@@ -8,7 +8,7 @@ import sys
 
 from moat.util import ValueEvent, obj2name, NotGiven
 from .util import ValueTask, SendIter, RecvIter, StoppedError
-from moat.micro.compat import CancelledError, WouldBlock, log, Lock, ACM, AC_exit, shield
+from moat.micro.compat import CancelledError, WouldBlock, log, Lock, ACM, AC_use, AC_exit, shield, TaskGroup
 from moat.micro.proto.stack import RemoteError, SilentRemoteError, BaseMsg
 
 from .base import BaseCmd
@@ -80,11 +80,12 @@ class BaseBBMCmd(BaseCmd):
 
 
 
-class StreamCmd(BaseCmd):
+class BaseCmdMsg(BaseCmd):
     """
     This is a command handler that relays messages between MoaT's Cmd tree
     and a `BaseMsg` stream.
     """
+    tg:TaskGroup = None
 
     def __init__(self, cfg):
         super().__init__(cfg)
@@ -94,44 +95,41 @@ class StreamCmd(BaseCmd):
         # we want it to not be zero when the low bit is flipped
         # TODO: CBOR: use negative seqnums for replies 
 
-    async def stream(self):
+    async def stream(self) -> BaseMsg:
         """
-        Creates the actual data stream. Must be called with an active ACM.
+        Creates the actual data stream.
 
         Must be overridden.
         """
         raise NotImplementedError("Create the stream: ",self.__class__.__name__)
 
-    async def run(self):
+    async def task(self):
         """
         Start the stack.
 
         You typically override `stream`, not this method.
         """
-        acm = ACM(self)
         err = None
         try:
-            await acm(self._cleanup_open_commands)
+            await AC_use(self, self._cleanup_open_commands)
             self.s = await self.stream()
-            self.set_ready()
-            while True:
-                msg = await self.s.recv()
-                await self._handle(msg)
-        except (EOFError,SilentRemoteError) as exc:
-            err = exc
-            raise
-        except Exception as exc:
-            err = exc
-            log("Run", err=err)
-            raise
-        except BaseException as exc:
-            err = exc
-            raise
+            async with TaskGroup() as self.tg:
+                self.set_ready()
+                while True:
+                    msg = await self.s.recv()
+                    await self._handle(msg)
+#       except (EOFError,OSError,SilentRemoteError) as exc:
+#           err = exc
+#           raise
+#       except Exception as exc:
+#           err = exc
+#           log("Run", err=err)
+#           raise
+#       except BaseException as exc:
+#           err = exc
+#           raise
         finally:
             self.s = None
-            await AC_exit(self, type(err) if err is not None else err, err, None)
-            if err is not None:
-                raise err
 
     # stacked
     async def error(self, exc):
@@ -226,7 +224,7 @@ class StreamCmd(BaseCmd):
                     tt.i = None
                     tt.error(RuntimeError("OldCmd"))
                 self.reply[i] = t
-            rm = await t.start()
+            rm = await t.start(self.tg)
             if r is not None:
                 await self.s.send({'i':i, 'r':rm})
 
@@ -330,30 +328,41 @@ class StreamCmd(BaseCmd):
             finally:
                 self.reply.pop(seq, None)
 
+class CmdMsg(BaseCmdMsg):
+    """
+    A baseCmdMsg with a ready-made link that it opens.
+    """
+    def __init__(self, link, cfg):
+        super().__init__(cfg)
+        self.link = link
 
-class SingleStreamCmd(StreamCmd):
-    """A StreamCmd that disconnects on error, or when the connection ends."""
+    def stream(self) -> Awaitable[BaseMsg]:
+        return AC_use(self, self.link)
+
+class SingleCmdMsg(BaseCmdMsg):
+    """
+    A BaseCmdMsg that disconnects on error, or when the connection ends,
+    without propagating the exception.
+    """
     async def run(self):
         try:
             await super().run()
-        except (EOFError, SilentRemoteError) as exc:
+        except (EOFError, OSError, SilentRemoteError) as exc:
             log("Err %s: %r", self.path, repr(exc))
         except Exception as exc:
             log("Err %s", self.path, err=exc)
-        finally:
-            with shield():
-                await self._parent.detach(self._name, w=False)
 
 
-class ExtStreamCmd(SingleStreamCmd):
-    """A SingleStreamCmd on a stream that was established externally.
+class ExtCmdMsg(SingleCmdMsg):
+    """SingleCmdMsg, on a stream that was established externally.
 
-    The caller is responsible for calling `wait_stopped` and then closing the stream!
+    The caller is responsible for calling `wait_stopped`
+    and then closing the stream!
     """
     def __init__(self, stream:BaseMsg, cfg={}):
         super().__init__(cfg)
         self.__s = stream
 
     async def stream(self):
-        return self.__s
+        return await AC_use(self, self.__s)
 

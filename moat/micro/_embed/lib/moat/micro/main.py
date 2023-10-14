@@ -135,9 +135,8 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
                 sys.stdout.write("OK\x04\x04>")
                 await sleep_ms(100)
 
+            await dsp.task()
             await idle()
-
-            pass  # end of taskgroup
 
     from moat.micro.compat import run
     run(_main)

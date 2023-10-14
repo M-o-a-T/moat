@@ -171,7 +171,7 @@ class MsgpackMsgBuf(_MsgpackMsgBuf):
     async def setup(self):
         await super().setup()
         self.pack = Packer(default=_encode).packb
-        self.unpack = Unpacker(self.par, ext_hook=_decode, **self.cfg.get("pack",{})).unpack
+        self.unpack = Unpacker(self.s, ext_hook=_decode, **self.cfg.get("pack",{})).unpack
 
 class MsgpackMsgBlk(_MsgpackMsgBlk):
     """
@@ -184,7 +184,7 @@ class MsgpackMsgBlk(_MsgpackMsgBlk):
     async def setup(self):
         await super().setup()
         self.pack = Packer(default=_encode).packb
-        self.unpack = Unpacker(self.par, ext_hook=_decode, **self.cfg.get("pack",{})).unpack
+        self.unpack = Unpacker(self.s, ext_hook=_decode, **self.cfg.get("pack",{})).unpack
 
 
 class AIOBuf(BaseBuf):

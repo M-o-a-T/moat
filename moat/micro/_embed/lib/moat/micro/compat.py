@@ -47,6 +47,7 @@ def log(s, *x, err=None):
     print(s, file=sys.stderr)
     if err is not None:
         sys.print_exception(err, sys.stderr)
+    pass
 
 
 from moat.util import NotGiven
@@ -298,19 +299,17 @@ async def AC_exit(obj, *exc):
                 res = cb.__exit__(*exc)
             else:
                 res = cb()
-                if hasattr(cb,"throw"):  # async cb
+                if hasattr(res,"throw"):  # async cb
                     res = await res
 
             if res:  # suppress error
                 suppressed_exc = True
                 pending_raise = False
                 exc= (None, None, None)
-        except:
-            exc = sys.exc_info()
+        except BaseException as ex:
+            exc = (type(ex),ex,getattr(ex,"__traceback__",None))
             pending_raise = True
     if pending_raise:
-        # bare "raise exc_details[1]" replaces our carefully
-        # set-up context
         raise exc[1]
     return received_exc and suppressed_exc
 

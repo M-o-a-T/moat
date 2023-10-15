@@ -90,10 +90,11 @@ class BaseCmdMsg(BaseCmd):
     def __init__(self, cfg):
         super().__init__(cfg)
         self.reply = {}
-        self.seq = 3
-        # seqnum must be odd
-        # we want it to not be zero when the low bit is flipped
-        # TODO: CBOR: use negative seqnums for replies 
+        self.seq = 2
+        # locally-generated seqnums must be even
+        # also we want them to not be zero
+        # TODO: CBOR: use negative seqnums for replies
+        #            instead of flipping the bottom bit
 
     async def stream(self) -> BaseMsg:
         """
@@ -299,10 +300,10 @@ class BaseCmdMsg(BaseCmd):
             await self.s.send(msg)
             return
         
-        # Find a small-ish but unique *ODD* seqnum
+        # Find a small-ish but unique *even* seqnum
         # even seqnums are requests from the other side
         if self.seq > 10 * (len(self.reply) + 5):
-            self.seq = 9
+            self.seq = 10
         while True:
             self.seq += 2
             seq = self.seq

@@ -32,12 +32,10 @@ class Pin(BaseCmd):
     def value(self):
         return self._value
 
-    async def __aenter__(self):
+    async def setup(self):
+        await super().setup()
         self.flag.set()
         self.flag = Event()
-
-    async def __aexit__(self, *err):
-        pass
 
     def __aiter__(self):
         return self

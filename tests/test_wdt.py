@@ -67,6 +67,7 @@ async def test_wdt(tmp_path, guard):
             await sleep_ms(TT / 2)
             await wd.x(n=2)
             ended = True
+            log("Waiting for the watchdog to trigger")
             await sleep_ms(TT * 1.5)
             with pytest.raises(StoppedError):
                 res = await r.echo(m="hello")

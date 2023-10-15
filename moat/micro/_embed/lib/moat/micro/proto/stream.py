@@ -231,8 +231,8 @@ class SingleAIOBuf(AIOBuf):
         return s
 
     def _destr(self):
-        if hasattr(s,"deinit"):
-            s.deinit()
-        elif hasattr(s,"close"):
-            s.close()
+        if hasattr(self.s,"deinit"):
+            self.s.deinit()
+        elif hasattr(self.s,"close"):
+            self.s.close()
 

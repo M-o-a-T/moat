@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.util import ValueEvent, as_proxy, NotGiven
 
-from moat.micro.compat import ticks_diff, ticks_ms, sleep_ms, wait_for_ms, log
+from moat.micro.compat import ticks_diff, ticks_ms, sleep_ms, wait_for_ms, log, TimeoutError
 from moat.micro.proto.stack import RemoteError, SilentRemoteError
 
 StopIter = StopAsyncIteration

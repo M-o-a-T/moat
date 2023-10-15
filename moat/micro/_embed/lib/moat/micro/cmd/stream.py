@@ -300,6 +300,11 @@ class BaseCmdMsg(BaseCmd):
             await self.s.send(msg)
             return
         
+        if len(action) == 1:
+            a=action[0]
+            if a[0] == "!":
+                return await super().dispatch((a[1:],),msg,reg=reg,wait=wait,x_err=x_err)
+
         # Find a small-ish but unique *even* seqnum
         # even seqnums are requests from the other side
         if self.seq > 10 * (len(self.reply) + 5):

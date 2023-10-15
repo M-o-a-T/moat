@@ -125,9 +125,9 @@ async def test_eval(tmp_path, cons):
     cf2 = {} if cons is None else {"l":{"link":{"cons": cons}}}
     async with mpy_stack(tmp_path,LCFG, cf2) as d, d.sub_at("l","_sys","eval") as req:
         from pprint import pprint
-        dr=await d.send("l","_dir")
+        dr=await d.send("l","dir")
         pprint(dr)
-        dr=await d.send("l","_sys","_dir")
+        dr=await d.send("l","_sys","dir")
         pprint(dr)
 
         f = Foo(42)
@@ -154,9 +154,9 @@ async def test_msgpack(tmp_path):
     "test proxying"
     async with mpy_stack(tmp_path,CFG) as d, d.sub_at("r","_sys","eval") as req:
         from pprint import pprint
-        dr=await d.send("r","_dir")
+        dr=await d.send("r","dir")
         pprint(dr)
-        dr=await d.send("r","_sys","_dir")
+        dr=await d.send("r","_sys","dir")
         pprint(dr)
 
         f = Foo(42)

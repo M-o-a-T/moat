@@ -90,26 +90,32 @@ exception, or a cancellation.
 
 ## Common commands
 
-### \_rl
+### dir
+
+Retrieve an app's directory, i.e. a list of commands and sub-apps.
+
+Docstrings are not yet supported.
+
+### rlo
 
 Reload this object. A subtree reloads all subcommands.
 
 The `w` flag states whether to wait for the reload to succeed.
 
-### \_rlq
+### rlq
 
 Query Reload. Return a flag whether the last implicit reload has succeeded
 (True), failed (False), or never happened (None).
 
 if `cl` is set, clear the flag.
 
-### \_rs
+### rst
 
 Restart this object. A subtree restart affects all subcommands.
 
 The `w` flag states whether to wait for the restart to succeed.
 
-### \_stp
+### stp
 
 Stop this subsystem.
 

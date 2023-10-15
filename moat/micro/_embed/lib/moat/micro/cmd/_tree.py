@@ -117,7 +117,7 @@ class BaseLayerCmd(BaseSuperCmd):
             elif action[0] == f"!{self.name}":
                 action = action[1:]
                 return await super().dispatch(action, msg, **kw)
-        elif action[0] == "_dir":
+        elif action[0] == "dir":
             res = await self.app.dispatch(action, msg, **kw)
             res.setdefault("d",[]).append(f"!{self.name}")
             return res
@@ -229,8 +229,8 @@ class BaseSubCmd(BaseSuperCmd):
             action = action[1:]
             return await sub.dispatch(action, msg, **kw)
 
-    def cmd__dir(self, h=False):
-        res = super().cmd__dir(h=h)
+    def cmd_dir(self, h=False):
+        res = super().cmd_dir(h=h)
         res["d"] = list(self.sub.keys())
         return res
 

@@ -61,7 +61,7 @@ See "INSTALL".
 
 There's a directory function:
 
-	moat micro -c whatever.cfg cmd _dir
+	moat micro -c whatever.cfg cmd dir
 
 * c
 
@@ -71,7 +71,7 @@ There's a directory function:
 
   A list of submodules. You can enumerate them:
 
-	moat micro -c whatever.cfg cmd sys._dir
+	moat micro -c whatever.cfg cmd sys.dir
 
 Online docstrings are on the TODO list.
 

@@ -151,13 +151,14 @@ class BaseCmd(Base):
             await wait_complain(f"Rdy {self.path}", 250, self._ready.wait)
         return None
 
-    cmd__rdy = wait_ready
+    def cmd_rdy(self, w=True) -> Awaitable:
+        return self.wait_ready(wait=w)
 
     async def wait_stopped(self):
         if self._stopped is not None:
             await self._stopped.wait()
 
-    cmd__stp = wait_stopped
+    cmd_stp = wait_stopped
 
     @property
     def path(self):
@@ -260,7 +261,7 @@ class BaseCmd(Base):
 
     # globally-available commands
 
-    def cmd__dir(self, h=False):
+    def cmd_dir(self, h=False):
         """
         Rudimentary introspection. Returns a list of available commands @c and
         submodules @d. j=True if callable directly.

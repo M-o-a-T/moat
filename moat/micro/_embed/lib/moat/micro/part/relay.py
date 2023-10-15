@@ -29,7 +29,8 @@ class Relay(BaseCmd):
         self.note = cfg.get("note", None)
 
     async def setup(self):
-        await self.pin.rdy()
+        if await self.pin.rdy():
+            raise StoppedError("pin")
         await self.cmd_w()
         await super().setup()
 

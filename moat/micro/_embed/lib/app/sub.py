@@ -24,9 +24,25 @@ class Tree(DirCmd):
 
 class Err(BaseFwdCmd):
     """
-    An error catcher and possibly-retrying subcommand manager.
+    An error handler and possibly-retrying subcommand manager.
 
-    This catches errors
+    This handler catches some retryable exceptions, thus shielding the rest
+    of MoaT from them.
+
+    If the @retry config is zero the exception is ignored, otherwise the
+    app is restarted after a timeout.
+
+    Set @retry to -1 for infinite retries.
+
+    Set @always to `True` if the app should be restarted if it ends without
+    raising an error.
+
+    Errors caught:
+    * OSError
+    * EOFError
+    * ProcessDeadError
+
+    TODO: exponential back-off
     """
     _wait = True
 
@@ -36,11 +52,18 @@ class Err(BaseFwdCmd):
         await self.app.wait_ready()
         return await super().dispatch(*a, **k)
 
+    async def reload(self):
+        self._load()
+        await super().reload()
+
+    def _load(self):
+        self.r = self.cfg.get("retry",0)
+        self.t = self.cfg.get("timeout",100)
+        self.a = self.cfg.get("always",False)
+
     async def run_app(self):
         log("Fwd Start %s", self.path)
-        r = self.cfg.get("retry",0)
-        t = self.cfg.get("timeout",100)
-        a = self.cfg.get("always",False)
+        self._load()
 
         self._wait = self.cfg.get("wait",True)
         while True:
@@ -50,18 +73,19 @@ class Err(BaseFwdCmd):
                 await super().run_app()
             except (OSError,ProcessDeadError,EOFError) as exc:
                 log("Fwd Err %s %r", self.path, exc)
-                err = exc
+                if not self.r:
+                    if self.cfg.get("retry",0):
+                        raise
+                    return
             else:
                 # ends without error
                 log("Fwd End %s %r", self.path, self.app)
-                if not a or not r:
+                if not self.a or not self.r:
                     return
-            if not r:
-                raise err
-            if r > 0:
-                r -= 1
+            if self.r > 0:
+                self.r -= 1
             try:
-                await sleep_ms(t)
+                await sleep_ms(self.t)
             except BaseException as exc:
                 log("Fwd ErrX %s %r", self.path, exc)
                 raise

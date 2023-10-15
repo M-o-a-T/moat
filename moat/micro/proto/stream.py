@@ -17,6 +17,10 @@ from .stack import BaseBuf
 
 from msgpack import Packer,Unpacker,OutOfData,ExtType, packb, unpackb
 
+class ProcessDeadError(RuntimeError):
+    """Process has died"""
+    pass
+
 class SyncStream:
     """
     Convert a MoaT BaseBuf to sync reading, via greenback.
@@ -304,7 +308,7 @@ class ProcessBuf(CtxObj, AnyioBuf):
                     raise
         finally:
             if proc is not None and proc.returncode != 0 and proc.returncode != -9:
-                raise RuntimeError(f"{self} died with {proc.returncode}")
+                raise ProcessDeadError(f"{self} died with {proc.returncode}")
 
     async def setup(self):
         pass

@@ -7,6 +7,12 @@ from __future__ import annotations
 from moat.micro.cmd.tree import DirCmd, BaseFwdCmd
 from moat.micro.cmd.base import BaseCmd
 
+try:
+    from moat.micro.proto.stream import ProcessDeadError
+except ImportError:  # satellite
+    class ProcessDeadError(Exception):
+        pass
+
 from moat.micro.compat import log, ExceptionGroup, BaseExceptionGroup, sleep_ms
 from moat.util import exc_iter 
 
@@ -42,7 +48,7 @@ class Err(BaseFwdCmd):
             try:
                 log("Fwd Run %s %r", self.path, self)
                 await super().run_app()
-            except OSError as exc:
+            except (OSError,ProcessDeadError,EOFError) as exc:
                 log("Fwd Err %s %r", self.path, exc)
                 err = exc
             else:

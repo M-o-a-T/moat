@@ -76,6 +76,14 @@ class BaseCmd(Base):
         """
         pass
 
+    async def reload(self):
+        """
+        Reload from updated config.
+
+        The default does nothing, which is probably the wrong thing to do.
+        """
+        pass
+
     def _is_stopped(self):
         """
         The command has ended.

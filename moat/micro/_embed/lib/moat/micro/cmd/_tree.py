@@ -35,6 +35,7 @@ class BaseSuperCmd(BaseCmd):
                 app.p_task = None
 
         if app.p_task:
+            await app.reload()
             return
         if app.p_task is False:
             raise RuntimeError("DupStartB")
@@ -91,6 +92,11 @@ class BaseLayerCmd(BaseSuperCmd):
         if self.app is not None:
             self.app.attached(self, self.name)
             self.set_ready()
+
+    async def reload(self):
+        await super().reload()
+        if self.app is not None:
+            await self.app.reload()
 
     async def wait_ready(self, wait=True):
         if await super().wait_ready(wait=wait):
@@ -212,6 +218,10 @@ class BaseSubCmd(BaseSuperCmd):
         """
         return self.attach(name, None)
 
+    async def reload(self):
+        await super().reload()
+        for app in list(self.sub.values()):
+            await app.reload()
 
     async def dispatch(self, action: list[str], msg: dict, **kw):
         """
@@ -342,16 +352,16 @@ class DirCmd(BaseSubCmd):
 
     def __init__(self, cfg):
         super().__init__(cfg)
-        self._did_update: Event = None
+        self._did_update = Event()
         self._updated = Event()
 
     async def task(self):
         if self.root.APP is None:
             raise RuntimeError("Root no APP")
         while True:
-            self._did_update = Event()
             await self._setup_apps()
             self._did_update.set()
+            self._did_update = Event()
 
             await self._updated.wait()
             self._updated = Event()

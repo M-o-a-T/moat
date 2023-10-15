@@ -42,7 +42,7 @@ class Cmd(BaseCmd):
         else:
             self.wdt = WDT(cfg)
 
-    async def run(self):
+    async def task(self):
         self.wdt.setup(self.cfg)
         self.set_ready()
         await self.wdt.run()

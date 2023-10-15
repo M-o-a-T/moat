@@ -290,21 +290,19 @@ class BaseCmdMsg(BaseCmd):
         @rep requests iterated replies.
         """
 
-        if self.s is None:
-            raise EOFError
+        if len(action) == 1:
+            a=action[0]
+            if a[0] == "!":
+                return await super().dispatch((a,),msg, rep=rep,wait=wait,x_err=x_err)
 
-        await self.wait_ready()
+        if await self.wait_ready():
+            raise EOFError  # already down
 
         if not wait:
             msg = {"a": action, "d": msg}
             await self.s.send(msg)
             return
         
-        if len(action) == 1:
-            a=action[0]
-            if a[0] == "!":
-                return await super().dispatch((a[1:],),msg,reg=reg,wait=wait,x_err=x_err)
-
         # Find a small-ish but unique *even* seqnum
         # even seqnums are requests from the other side
         if self.seq > 10 * (len(self.reply) + 5):

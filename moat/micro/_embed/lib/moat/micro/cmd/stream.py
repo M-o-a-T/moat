@@ -296,7 +296,7 @@ class BaseCmdMsg(BaseCmd):
                 return await super().dispatch((a,),msg, rep=rep,wait=wait,x_err=x_err)
 
         if await self.wait_ready():
-            raise EOFError  # already down
+            raise StoppedError  # already down
 
         if not wait:
             msg = {"a": action, "d": msg}

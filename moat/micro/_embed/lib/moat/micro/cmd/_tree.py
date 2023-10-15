@@ -79,7 +79,7 @@ class BaseLayerCmd(BaseSuperCmd):
         async with TaskGroup() as tg:
             if self.app is not None:
                 await tg.spawn(self.run_app)
-            await wait_complain(f"Rdy {self.app.path}", 250, self.app.wait_ready)
+            await self.app.wait_ready()
             self.set_ready()
 
             # await self.app.stopped()
@@ -90,6 +90,14 @@ class BaseLayerCmd(BaseSuperCmd):
         self.app = await self.gen_cmd()
         if self.app is not None:
             self.app.attached(self, self.name)
+            self.set_ready()
+
+    async def wait_ready(self, wait=True):
+        if await super().wait_ready(wait=wait):
+            return True
+        if self.app is None:
+            return None
+        return await self.app.wait_ready(wait=wait)
 
     async def gen_cmd(self) -> BaseCmd:
         """
@@ -117,6 +125,11 @@ class BaseLayerCmd(BaseSuperCmd):
         if self.app is None:
             await self.wait_ready()
         return await self.app.dispatch(action, msg, **kw)
+
+    def set_ready(self):
+        if self.app is None:
+            raise RuntimeError("early")
+        super().set_ready()
 
     def __getattr__(self, k):
         if k.startswith("_"):
@@ -168,14 +181,16 @@ class BaseSubCmd(BaseSuperCmd):
         super().__init__(cfg)
         self.sub = {}
 
-    async def wait_ready(self):
+    async def wait_ready(self, wait=True):
         "delay until this subtree is up"
-        await super().wait_ready()
+        await super().wait_ready(wait=wait)
         again = True
         while again:
             again = False
             for app in list(self.sub.values()):
-                if await app.wait_ready() is None:
+                if await app.wait_ready(wait=wait) is None:
+                    if not wait:
+                        return None
                     again = True
 
     async def attach(self, name, app) -> None:
@@ -384,15 +399,8 @@ class DirCmd(BaseSubCmd):
 
         # Third, wait for them to be up.
         for app in self.sub.values():
-            try:
-                await wait_for_ms(250, app.wait_ready)
-            except TimeoutError:
-                if app.cfg.get("wait",True):
-                    log("* Wait for %s", app.path)
-                    await app.wait_ready()
-                    log("* OK wait %s", app.path)
-                else:
-                    log("* NO WAIT %s", app.path)
+            if app.cfg.get("wait",True):
+                await app.wait_ready()
 
         # Finally, mark done.
         self.set_ready()

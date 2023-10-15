@@ -30,9 +30,6 @@ class Err(BaseFwdCmd):
         await self.app.wait_ready()
         return await super().dispatch(*a, **k)
 
-    def set_ready(self):
-        pass  # XXX ?
-
     async def run_app(self):
         log("Fwd Start %s", self.path)
         r = self.cfg.get("retry",0)
@@ -40,7 +37,6 @@ class Err(BaseFwdCmd):
         a = self.cfg.get("always",False)
 
         self._wait = self.cfg.get("wait",True)
-        # await self.set_ready()  ## TEST
         while True:
             err = None
             try:

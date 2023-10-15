@@ -27,7 +27,7 @@ from moat.micro.proto.stack import Base
 from moat.micro.compat import TaskGroup, idle, Event, wait_for_ms, log, Lock, AC_use, TimeoutError
 from moat.util import Path
 
-from .util import run_no_exc, StoppedError
+from .util import run_no_exc, StoppedError, wait_complain
 
 uPy = sys.implementation.name == "micropython"
 
@@ -148,7 +148,7 @@ class BaseCmd(Base):
         if self._ready is None:
             return False
         if wait:
-            await self._ready.wait()
+            await wait_complain(f"Rdy {self.path}", 250, self._ready.wait)
         return None
 
     cmd__rdy = wait_ready

@@ -52,7 +52,7 @@ class Cmd(BaseCmd):
         self.wdt.setup(self.cfg)
         self.wdt.ping()
 
-    def cmd_x(self, f=False):
+    def cmd_x(self, f=False, n=None):
         """
         External keepalive.
 

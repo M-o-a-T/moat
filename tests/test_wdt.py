@@ -63,9 +63,9 @@ async def test_wdt(tmp_path, guard):
         )
         async with d.sub_at("r","w") as wd:
             await sleep_ms(TT / 2)
-            await wd.x()
+            await wd.x(n=1)
             await sleep_ms(TT / 2)
-            await wd.x()
+            await wd.x(n=2)
             ended = True
             await sleep_ms(TT * 1.5)
             with pytest.raises(StoppedError):
@@ -120,15 +120,15 @@ async def test_wdt_update(tmp_path):
 
         async with d.sub_at("r","w") as wd:
             await sleep_ms(TT)
-            await wd.x()
+            await wd.x(n=1)
             await sleep_ms(TT)
-            await wd.x()
+            await wd.x(n=2)
             await c.set({"w": dict(t=TT * 4)}, sync=True)
-            await wd.x()
+            await wd.x(n=3)
             await sleep_ms(TT * 3)
-            await wd.x()
+            await wd.x(n=4)
             await sleep_ms(TT * 3)
-            await wd.x()
+            await wd.x(n=5)
             ended = True
             await sleep_ms(TT * 5)
 

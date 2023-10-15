@@ -3,7 +3,7 @@ Basic infrastructure to run an RPC system via an unreliable,
 possibly-reordering, and/or stream-based transport
 
 We have a stack of classes. At the top there's the adapting App, a subclass
-of StreamCmdMsg. Linked to it via a chain of *Msg…Buf modules there's a
+of CmdMsg. Linked to it via a chain of *Msg…Buf modules there's a
 *Buf adapter that affords an external interface.
 
 Everything is fully asynchronous. Each class is an async context manager,
@@ -238,16 +238,23 @@ class BaseCmd(Base):
             raise RuntimeError("noAction")
         elif len(action) > 1:
             raise ValueError("no chain here", action)
+
+        a = action[0]
+        if a[0] == "!":
+            wr = False
+            p = getattr(self,"cmd_"+a[1:])
         else:
-            p = getattr(self,"cmd_"+action[0])
+            wr = True
+            p = getattr(self,"cmd_"+a)
             
         if not wait:
             if rep:
                 raise ValueError("can't rep without wait")
-            self.tg.spawn(run_no_exc, p,msg,x_err, _name=f"Call:{self.path}/{a or '-'}")
+            self.tg.spawn(run_no_exc, p,msg,x_err, _name=f"Call:{self.path}/{p}")
             return
 
-        await self.wait_ready()
+        if wr:
+            await self.wait_ready()
         r = p(**msg)
         if hasattr(r, "throw"):  # coroutine
             r = await r

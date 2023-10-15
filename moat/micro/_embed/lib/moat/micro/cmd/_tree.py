@@ -19,13 +19,12 @@ __all__ = ["DirCmd", "BaseSuperCmd", "BaseFwdCmd", "BaseLayerCmd", "BaseSubCmd",
 
 class BaseSuperCmd(BaseCmd):
     """
-    A handler that can have a nested app (or more).
+    A handler that can have a nested app (or more than one).
     """
     async def setup(self):
         await super().setup()
         self.tg = await AC_use(self, TaskGroup())
         await AC_use(self, self.tg.cancel)
-
 
     async def start_app(self, app):
         async def _run(app):
@@ -279,6 +278,7 @@ class BaseListenOneCmd(BaseLayerCmd):
         async with conn:
             pass
 
+
     async def handler(self, conn):
         """
         Process a connection
@@ -323,7 +323,6 @@ class BaseListenCmd(BaseSubCmd):
     # no multiple inheritance for MicroPython
     listener = BaseListenOneCmd.listener
     wrapper = BaseListenOneCmd.wrapper
-    task = BaseListenOneCmd.task
 
     async def handler(self, conn):
         """
@@ -341,6 +340,16 @@ class BaseListenCmd(BaseSubCmd):
         self.seq = seq+1
         await self.attach(seq, app)
         await self.start_app(app)
+
+    async def task(self) -> Never:
+        """
+        Accept connections.
+        """
+        async with self.listener() as conns:
+            self.set_ready()
+            async for conn in conns:
+                task = await self.tg.spawn(self.handler, conn)
+ 
 
 
 class DirCmd(BaseSubCmd):

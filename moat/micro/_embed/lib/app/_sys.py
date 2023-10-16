@@ -20,17 +20,16 @@ class Cmd(_Cmd):
         * fb: flag whether the current state is a fall-back state
         """
         if state is not None:
-            f = open("moat.state", "w")
-            f.write(state)
-            f.close()
+            with open("moat.state", "w") as f:
+                f.write(state)
         else:
             try:
                 f = open("moat.state", "r")
             except OSError:
                 state = None
             else:
-                state = f.read()
-                f.close()
+                with f:
+                    state = f.read()
         return dict(n=state, c=self.root.moat_state, fb=self.root.is_fallback)
 
     async def cmd_mem(self):

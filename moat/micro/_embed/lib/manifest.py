@@ -1,12 +1,13 @@
 # flake8: noqa
 
-package("moat", opt=0)
-package("collections", opt=0)
+require("collections")
+require("collections-deque")
+require("contextlib")
+require("functools")
+require("pprint")
+require("__future__")
+
 module("serialpacker.py", opt=0)
-module("contextlib.py", opt=0)
-module("ucontextlib.py", opt=0)
-module("functools.py", opt=0)
-module("pprint.py", opt=0)
-module("msgpack.py", opt=0)
-module("asyncio/queues.py", opt=0)
+module("async_queue.py", opt=0)
+package("moat", opt=0)
 package("app", opt=0)

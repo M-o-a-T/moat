@@ -67,7 +67,7 @@ def go(state=None, fake_end=True):
     """
 
     import sys
-    import utime
+    import time
 
     fallback = False
 
@@ -159,7 +159,7 @@ def go(state=None, fake_end=True):
 
         print("CRASH! REBOOT to", new_state, file=sys.stderr)
         print_exc(exc)
-        utime.sleep_ms(500)
+        time.sleep_ms(500)
         machine.soft_reset()
 
     else:

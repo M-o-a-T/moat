@@ -102,7 +102,7 @@ def go(state=None, fake_end=True):
         f.close()
 
     if state[0:4] == "skip":
-        print(state, file=sys.stderr)
+        log(state)
         return
 
     # no empty path
@@ -157,13 +157,12 @@ def go(state=None, fake_end=True):
             f.write(new_state)
             f.close()
 
-        print("CRASH! REBOOT to", new_state, file=sys.stderr)
-        print_exc(exc)
-        time.sleep_ms(500)
+        log("CRASH! REBOOT to %r", new_state, err=exc)
+        time.sleep_ms(1000)
         machine.soft_reset()
 
     else:
-        print("MoaT Ended.", file=sys.stderr)
+        log("MoaT Ended.")
         sys.exit(0)
 
 

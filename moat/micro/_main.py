@@ -181,7 +181,7 @@ async def setup(
 
         elif run:
             o, e = await repl.exec_raw(
-                f"from main import go_moat; go_moat(state='once',log={verbose !r})", timeout=30
+                f"from main import go; go(state='once')", timeout=30
             )
             if o:
                 print(o)

@@ -3,7 +3,7 @@ cfg = {}
 import machine
 
 
-def go_moat(state=None, fake_end=True, log=False):
+def go(state=None, fake_end=True, log=False):
     """
     Start MoaT.
 
@@ -139,8 +139,8 @@ def go_moat(state=None, fake_end=True, log=False):
 
 
 def g():
-    go_moat("once")
+    go("once")
 
 
 if __name__ == "__main__":
-    go_moat(fake_end=False)
+    go()

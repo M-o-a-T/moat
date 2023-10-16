@@ -1,5 +1,3 @@
-cfg = {}
-
 # global hardware watchdog
 WDT = None
 
@@ -15,7 +13,7 @@ def dict_upd(d,k,v):
     else:
         d[k] = v
 
-def main(state=None, fake_end=True, cfg=cfg):
+def main(cfg, fake_end=False):
     import os
     import sys
     import machine

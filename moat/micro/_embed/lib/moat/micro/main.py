@@ -2,7 +2,6 @@ cfg = {}
 
 import sys
 from builtins import __import__ as _imp
-from moat.micro.compat import idle
 
 import machine
 
@@ -25,7 +24,7 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
     import os
 
     from ..util import import_
-    from .compat import Event, TaskGroup, print_exc, sleep_ms
+    from .compat import Event, TaskGroup, print_exc
 
     if isinstance(cfg, str):
         import msgpack
@@ -97,9 +96,11 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
     async def _main():
         import sys
         from moat.micro.cmd.tree import Dispatch
+        from moat.micro.compat import idle
 
         async with Dispatch(cfg) as dsp:
             if fake_end:
+                from .compat import sleep_ms
                 await sleep_ms(1000)
                 sys.stdout.write("OK\x04\x04>")
                 await sleep_ms(100)

@@ -129,7 +129,7 @@ def go(state=None, fake_end=True):
 
     cfg = "moat_fb.cfg" if fallback else "moat.cfg"
     try:
-        main(state=state, fake_end=fake_end, cfg=cfg, fallback=fallback)
+        main(state=state, fake_end=fake_end, cfg=cfg)
 
     except KeyboardInterrupt:
         print("MoaT stopped.", file=sys.stderr)

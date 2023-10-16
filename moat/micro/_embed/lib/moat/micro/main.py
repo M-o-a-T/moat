@@ -15,7 +15,7 @@ def dict_upd(d,k,v):
     else:
         d[k] = v
 
-def main(state=None, fake_end=True, fallback=False, cfg=cfg):
+def main(state=None, fake_end=True, cfg=cfg):
     import os
     import sys
     import machine

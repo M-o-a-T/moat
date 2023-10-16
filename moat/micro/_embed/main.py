@@ -35,7 +35,7 @@ def get(attr, fs=None, default=None):
             return str(state)
     return default
 
-def go(state=None, fake_end=True, log=False):
+def go(state=None, fake_end=True):
     """
     Start MoaT.
 
@@ -129,26 +129,23 @@ def go(state=None, fake_end=True, log=False):
 
     cfg = "moat_fb.cfg" if fallback else "moat.cfg"
     try:
-        main(state=state, fake_end=fake_end, log=log, cfg=cfg, fallback=fallback)
+        main(state=state, fake_end=fake_end, cfg=cfg, fallback=fallback)
 
     except KeyboardInterrupt:
         print("MoaT stopped.", file=sys.stderr)
 
     except SystemExit:
-        f = open("moat.state", "r")
-        new_state = f.read()
-        f.close()
+        new_state = get("state")
         print("REBOOT to", new_state, file=sys.stderr)
-        utime.sleep_ms(100)
+        time.sleep_ms(100)
         machine.soft_reset()
 
     except BaseException as exc:
         if sys.platform == "linux":
-            if isinstance(exc, EOFError) and sys.platform == "linux":
-                print("MoaT stopped: EOF", file=sys.stderr)
+            if isinstance(exc, EOFError):
+                log("MoaT stopped: EOF")
                 sys.exit(0)
-            print("CRASH! Exiting!", file=sys.stderr)
-            print_exc(exc)
+            log("CRASH! Exiting!", err=exc)
             sys.exit(1)
 
         try:

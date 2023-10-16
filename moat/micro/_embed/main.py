@@ -69,7 +69,6 @@ def go(state=None, fake_end=True):
     import sys
     import time
 
-    fallback = False
 
     uncond = {
         "once": "skip",
@@ -117,6 +116,7 @@ def go(state=None, fake_end=True):
         pass
     sys.path.insert(0, "/lib")
 
+    fallback = False
     if state in ("fallback", "fbskip"):
         import sys
 

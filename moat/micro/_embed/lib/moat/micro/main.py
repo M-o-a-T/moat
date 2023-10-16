@@ -57,14 +57,25 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
 
     def cfg_network(n):
         import time
-
         import network
 
-        wlan = network.WLAN(network.STA_IF)  # create station interface
-        wlan.active(True)  # activate the interface
-        if "addr" in n:
-            wlan.ifconfig((n["addr"], n["netmask"], n["router"], n["dns"]))
-        wlan.connect(n["ap"], n.get("pwd", ''))  # connect to an AP
+        if "name" in n:
+            network.hostname(n["name"])
+        if "country" in n:
+            network.country(n["country"])
+        if "ap" in n:
+            wlan = network.WLAN(network.STA_IF)  # create station interface
+            wlan.active(True)
+            if "addr" in n:
+                nm = n.get("netmask",24)
+                if isinstance(nm,int):
+                    ff = (1<<32) - 1
+                    nm = (ff << (32-nm)) & ff
+                    nm = f"{(nm>>24)&0xFF}.{(nm>>16)&0xFF}.{(nm>>8)&0xFF}.{nm&0xFF}"
+                wlan.ifconfig((n["addr"], n["netmask"], n["router"], n["dns"]))
+            wlan.connect(n["ap"], n.get("pwd", ''))  # connect to an AP
+        else:
+            wlan = network.WLAN(network.AP_IF)  # create a station interface
 
         n = 0
         if wlan.isconnected():

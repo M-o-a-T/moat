@@ -4,16 +4,31 @@ Installing the moat.micro client
 The *moat.micro* client is a Python program, running on MicroPython.
 
 Most controllers have quite limited RAM. The first step is therefore to
-build a version of MicroPython that incudes the *moat.micro* core:
+build a version of MicroPython that includes the *moat.micro* core:
 
 :: shell
 
-    cd …/micropython/mpy-cross
-    make
-    cd ../ports/esp8266
-    echo 'include("…/moat/micro/moat/micro/_embed/lib")' >> boards/manifest.py
-    make # with whichever options you need
-    # now install on your board normally
+    $ git submodule update --init
+    $ cd lib/micropython/mpy-cross
+    $ make
+    $ cd ../ports/esp8266
+    $ echo 'include("…/moat/micro/moat/micro/_embed/lib")' >> boards/manifest.py
+
+    # adjust as required
+    $ make PORT=/dev/ttyUSB0 ESPTOOL=esptool BAUD=500000 deploy
+
+    # Verify that it's working
+    $ pyserial-miniterm -f direct /dev/ttyUSB0 74880
+
+    # You might have to press ^T^D ^T^R
+    MicroPython v1.20.0-468-ge8e839253  # or whatever
+    >>> help("modules")
+    [ a whole lot ]
+    >>> ^TQ
+    $
+
+    # now let's deploy the MoaT main 
+
     
 
 Connect to the board and verify that it works.

@@ -1,0 +1,63 @@
+"""
+Basic test using a MicroPython subtask
+"""
+import pytest
+from moat.util import NotGiven, as_proxy, attrdict, to_attrdict
+
+from moat.micro._test import mpy_stack
+
+pytestmark = pytest.mark.anyio
+
+CFG="""
+apps:
+  r: _test.MpyCmd
+  a: _test.Cmd
+  _sys: _sys.Cmd
+r:
+  cfg:
+    apps:
+      r: stdio.StdIO
+      c: cfg.Cmd
+      t: rtc.Cmd
+      _sys: _sys.Cmd
+    t:
+      fake: true
+    r:
+      link: &link
+        lossy: false
+        guarded: false
+      log:
+        txt: "S"
+    tt:
+      a: b
+      c:
+        d: e
+      z: 99
+
+  link: *link
+  log:
+    txt: "M"
+
+"""
+
+async def test_rtc(tmp_path):
+    "test config updating"
+    async with mpy_stack(tmp_path, CFG) as d, d.cfg_at("r", "c") as cfg, d.cfg_at("r","t") as rtc:
+        cf = to_attrdict(await cfg.get())
+        # rt = to_attrdict(await rtc.get())
+        rt = attrdict()
+        assert cf.tt.a == "b"
+        assert cf.tt.c.d == "e"
+        assert cf.tt.z == 99
+
+        rt.tt = attrdict()
+        rt.tt.c = dict(d="f",g="h")
+        rt.tt.a = NotGiven
+        # await rtc.set(rt, replace=True, sync=True)
+
+        cf = to_attrdict(await cfg.get(again=True))
+        assert "a" not in cf.tt, cf.tt
+        assert cf.tt.c.d == "f"
+        assert cf.tt.x == "y"
+        assert "z" not in cf.tt
+

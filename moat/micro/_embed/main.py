@@ -1,13 +1,45 @@
 cfg = {}
 
 import machine
+from moat.micro.rtc import state
+from moat.micro.compat import log
 
+def set(attr, value=None, fs=None):
+    if state is None and fs is False:
+        raise RuntimeError("no RTC")
+    if state is not None and not fs:
+        state[attr] = state
+    else:
+        try:
+            with open(f"moat.{attr}", "r") as f:
+                d = f.read()
+                if d == str(value):
+                    return
+        except OSError:
+            pass  # file not found, most likely
+        with open(f"moat.{attr}", "w") as f:
+            f.write(str(value))
+
+def get(attr, fs=None, default=None):
+    if state is not None and fs is not True:
+        if attr in state:
+            return state[attr]
+    if state is None or fs is not False:
+        try:
+            f = open(f"moat.{attr}", "r")
+        except OSError:
+            pass
+        else:
+            with f:
+                state = f.read()
+            return str(state)
+    return default
 
 def go(state=None, fake_end=True, log=False):
     """
     Start MoaT.
 
-    The interpreter state is read from Flash and updated as appropriate.
+    The interpreter state is read from Flash / RTC, and updated as appropriate.
 
     * skip
       Do nothing, exit to MicroPython prompt.

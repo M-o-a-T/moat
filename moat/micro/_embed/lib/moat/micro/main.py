@@ -1,10 +1,5 @@
 cfg = {}
 
-import sys
-from builtins import __import__ as _imp
-
-import machine
-
 # global hardware watchdog
 WDT = None
 
@@ -22,13 +17,12 @@ def dict_upd(d,k,v):
 
 def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
     import os
-
-    from ..util import import_
-    from .compat import Event, TaskGroup, print_exc
+    import sys
+    import machine
+    from moat.micro.compat import print_exc
+    import msgpack
 
     if isinstance(cfg, str):
-        import msgpack
-
         try:
             f = open(cfg, "rb")
         except OSError as err:

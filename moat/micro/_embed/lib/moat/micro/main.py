@@ -37,6 +37,24 @@ def main(state=None, fake_end=True, log=False, fallback=False, cfg=cfg):
         with f:
             cfg = msgpack.unpackb(f.read())
 
+    # Update config from RTC memory, if present
+    try:
+        rtc = machine.RTC()
+    except AttributeError:
+        pass
+    else:
+        try:
+            if (m := rtc.memory()) != b"":
+
+                cf2 = msgpack.unpackb(m)
+                for k,v in cf2:
+                    if not isinstance(v,dict):
+                        continue
+                    dict_upd(cfg,k,v)
+
+        except Exception as exc:
+            print_exc(exc)
+
     def cfg_network(n):
         import time
 

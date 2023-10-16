@@ -50,9 +50,6 @@ def log(s, *x, err=None):
     pass
 
 
-from moat.util import NotGiven
-
-
 class LostData(ValueError):
     pass
 

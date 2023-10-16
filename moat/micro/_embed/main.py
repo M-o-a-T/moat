@@ -10,14 +10,18 @@ def set(attr, value=None, fs=None):
     if state is not None and not fs:
         state[attr] = state
     else:
+        import os
+        fn = f"moat.{attr}"
         try:
-            with open(f"moat.{attr}", "r") as f:
-                d = f.read()
-                if d == str(value):
-                    return
+            f = open(fn, "r")
         except OSError:
-            pass  # file not found, most likely
-        with open(f"moat.{attr}", "w") as f:
+            pass  # most likely file not found
+        else:
+            with f:
+                d = f.read()
+            if d == str(value):
+                return
+        with open(fn, "w") as f:
             f.write(str(value))
 
 def get(attr, fs=None, default=None):
@@ -69,6 +73,8 @@ def go(state=None, fake_end=True):
     import sys
     import time
 
+    if state is None:
+        state = get("state", default="skip")
 
     uncond = {
         "once": "skip",
@@ -81,24 +87,12 @@ def go(state=None, fake_end=True):
         "fbskip": "skip",
     }
 
-    if state is None:
-        try:
-            f = open("moat.state", "r")
-        except OSError:
-            print("No 'moat.state' found", file=sys.stderr)
-            return
-        else:
-            state = f.read()
-            f.close()
-
     try:
         new_state = uncond[state]
     except KeyError:
         new_state = state
     else:
-        f = open("moat.state", "w")
-        f.write(new_state)
-        f.close()
+        set("state", new_state)
 
     if state[0:4] == "skip":
         log(state)
@@ -153,9 +147,7 @@ def go(state=None, fake_end=True):
         except KeyError:
             new_state = state
         else:
-            f = open("moat.state", "w")
-            f.write(new_state)
-            f.close()
+            set("state", new_state)
 
         log("CRASH! REBOOT to %r", new_state, err=exc)
         time.sleep_ms(1000)

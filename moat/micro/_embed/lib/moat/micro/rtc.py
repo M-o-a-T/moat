@@ -61,7 +61,8 @@ class _State:
 
         for k,v in self._d.items():
             if isinstance(v,dict):
-                dict__upd(self._d,k,v)
+                dict_upd(cfg,k,v)
+
         return cfg
 
     def __iter__(self):

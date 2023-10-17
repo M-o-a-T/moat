@@ -5,7 +5,7 @@ def dict_upd(d,k,v):
     if isinstance(v,dict):
         dd = d.setdefault(k,{})
         for kk,vv in v.items():
-            _upd(dd,kk,vv)
+            dict_upd(dd,kk,vv)
         if not dd:
             del d[k]
     elif v is NotGiven:

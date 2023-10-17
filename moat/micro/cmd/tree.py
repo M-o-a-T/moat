@@ -2,6 +2,8 @@
 Server side of BaseCmd
 """
 
+from itertools import chain
+
 from moat.util import attrdict, NotGiven
 
 from ._tree import *

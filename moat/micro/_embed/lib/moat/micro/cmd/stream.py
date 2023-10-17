@@ -20,20 +20,25 @@ class BaseBBMCmd(BaseCmd):
 
     Override `setup` to return that instance.
     """
+    dev = None
+
     def __init__(self, cfg):
         super().__init__(cfg)
         self.w_lock = Lock()
 
-    async def setup(self):
+    async def stream(self):
         raise NotImplementedError("setup", self.path)
+
+    async def setup(self):
+        await super().setup()
+        self.dev = await self.stream()
 
     async def run(self):
         ACM(self)
         try:
-            self.dev = await self.setup()
             await super().run()
         finally:
-            del self.dev
+            self.dev = None
             await AC_exit(self)
     
     async def cmd_rd(self, n=64):

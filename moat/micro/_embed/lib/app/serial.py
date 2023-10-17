@@ -24,7 +24,7 @@ class Raw(BaseBBMCmd):
     max_idle = 100
     pack = None
 
-    async def setup(self):
+    async def stream(self):
         return await AC_use(self, Serial(self.cfg))
 
 

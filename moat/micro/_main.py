@@ -118,7 +118,6 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
 @click.option("-R", "--root", type=str, default="/", help="Destination root")
 @click.option("-s", "--state", type=str, help="State to enter")
 @click.option("-c", "--config", type=P, help="Config part to use for the device")
-@click.option("-v", "--verbose", is_flag=True, help="Use verbose mode on the target")
 @click.option("-w", "--watch", is_flag=True, help="monitor the target's output after setup")
 @click.option("-C", "--cross", help="path to mpy-cross")
 async def setup_(obj, **kw):
@@ -137,7 +136,6 @@ async def setup(
     dest,
     run,
     reset,
-    verbose,
     state,
     config,
     cross,
@@ -148,8 +146,6 @@ async def setup(
 
     MoaT must not currently run on the target.
     """
-    if not run and verbose:
-        raise click.UsageError("You can't not-start the target in verbose mode")
     # 	if not source:
     # 		source = anyio.Path(__file__).parent / "_embed"
 

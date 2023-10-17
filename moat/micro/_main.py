@@ -156,7 +156,8 @@ async def setup(
     from .path import MoatDevPath, ABytes, copy_over
     from .cmd.tree import Dispatch,SubDispatch
 
-    async with Dispatch(cfg) as dsp, SubDispatch(dsp,cfg["path"]) as sd, \
+    async with Dispatch(cfg, run=True) as dsp, \
+            SubDispatch(dsp,cfg["path"]) as sd, \
             RemoteBufAnyio(sd) as ser, DirectREPL(ser) as repl:
 
         dst = MoatDevPath(root).connect_repl(repl)

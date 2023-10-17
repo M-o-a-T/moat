@@ -435,6 +435,22 @@ class Dispatch(DirCmd):
 
     APP = None  # server / satellite must override
 
+    def __init__(self, cfg, run=False):
+        super().__init__(cfg)
+        self._run = run
+
+    async def __aenter__(self):
+        await super().__aenter__()
+        try:
+            if self._run:
+                await self.tg.spawn(self.task)
+                await self.wait_ready()
+        except BaseException as exc:
+            await super().__aexit__(type(exc),exc,None)
+            raise
+        return self
+
+
     def sub_at(self, *p):
         from .tree import SubDispatch
         return SubDispatch(self, p)

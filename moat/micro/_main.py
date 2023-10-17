@@ -42,19 +42,21 @@ def _get(d,p):
     return d
 
 @load_subgroup(prefix="moat.micro", epilog="""
-        The 'section' parameter says which part of the config file to use
-        for connecting to the remote system.
+        The 'section' parameter says which part of the configuration to use.
+        for connecting to the remote system. The defaults are:
 
         \b
-        run    config root (':')
-        setup  'setup' section
-        *      'connect' (used for everything else)
+        Command  Section
+        =======  =======
+        run      :          the config file's root
+        setup    setup
+        *        connect    used for all other commands
 
-        The link path defaults to 'r'. Using it makes no sense in a 'moat
-        micro run' command.
+        The 'link' parameter specifies which app is the actual link.
+        It defaults to 'r'.
 
-        Paths('P') are a shorthand for lists. See 'moat util path' for
-        details.
+        Paths('P') are a shorthand notation for lists. See 'moat util path'
+        for details.
         """)
 @click.pass_context
 @click.option(

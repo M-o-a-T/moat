@@ -215,10 +215,10 @@ class RemoteBufAnyio(anyio.abc.ByteStream):
         self.disp = disp
 
     async def receive(self, max_bytes=256):
-        return await self.disp.send("rd", n=max_bytes)
+        return await self.disp.rd(n=max_bytes)
 
     async def send(self, buf):
-        await self.disp.send("wr", b=buf)
+        await self.disp.wr(b=buf)
 
     async def aclose(self):
         pass

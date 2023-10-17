@@ -150,6 +150,8 @@ class BaseCmdMsg(BaseCmd):
         except BaseException as e:
             await self.reply_error(i, e)
             raise
+        else:
+            self.reply.pop(i, None)
 
     async def reply_error(self, i, exc, x=()):
         """
@@ -158,6 +160,7 @@ class BaseCmdMsg(BaseCmd):
         Exception types in @x are expected and will not be logged.
         """
         res = NotGiven
+        self.reply.pop(i, None)
         try:
             if isinstance(exc, SilentRemoteError):
                 pass
@@ -308,8 +311,8 @@ class BaseCmdMsg(BaseCmd):
         if self.seq > 10 * (len(self.reply) + 5):
             self.seq = 10
         while True:
-            self.seq += 2
             seq = self.seq
+            self.seq += 2
             if seq not in self.reply:
                 break
         msg = {"a": action, "d": msg, "i": seq}

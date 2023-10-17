@@ -130,12 +130,12 @@ class ValueTask:
             err = exc
         except BaseException as exc:
             err = StoppedError(repr(exc))
-            raise                
-        finally:
-            if err is None:
-                await self.cmd.reply_result(self.i, res)
-            else:
-                await self.cmd.reply_error(self.i, err, self.x)
+        if err is None:
+            await self.cmd.reply_result(self.i, res)
+        else:
+            await self.cmd.reply_error(self.i, err, self.x)
+            if not isinstance(err, Exception):
+                raise err
 
     def cancel(self):
         if self._t is not None:

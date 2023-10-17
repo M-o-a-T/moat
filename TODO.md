@@ -20,3 +20,5 @@
 * implement (and test) all the fancy pin and relay features
 
 * add a frozen moat.version module with date and commit
+
+* move encode/decode helpers to someplace other than m.m.proto.streams

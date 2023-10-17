@@ -142,6 +142,10 @@ class ValueTask:
             self._t.cancel()
             self._t = False
 
+    async def error(self, err):
+        self.cancel()
+        await self.cmd.reply_error(self.i, err, self.x)
+
 
 class IterWrap:
     """

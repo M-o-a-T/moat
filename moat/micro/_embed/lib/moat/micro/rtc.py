@@ -14,6 +14,11 @@ except ImportError:
 import msgpack as mp
 from moat.micro.compat import log
 
+from moat.micro.proto.stream import _encode,_decode
+
+_pack = mp.Packer(default=_encode).packb
+_unpack = lambda x: mp.unpackb(x, ext_hook=_decode)
+
 _dfn = "moat.rtc"
 
 def get_p(cur, p):
@@ -46,7 +51,7 @@ class _State:
         else:
             try:
                 if m() != b"":
-                    self._d = mp.unpackb(m())
+                    self._d = _unpack(m())
                     return
             except Exception as exc:
                 log("RTC error", err=exc)
@@ -95,7 +100,7 @@ class _State:
 
     def _wr(self):
         if self._m is not None:
-            self._m(mp.packb(self._d))
+            self._m(_pack(self._d))
 
 try:
     state = _State()

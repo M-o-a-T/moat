@@ -9,6 +9,8 @@ from moat.util import attrdict, NotGiven
 from ._tree import *
 from ._tree import Dispatch as _Dispatch
 
+class NotGiven2:
+    pass
 
 class Dispatch(_Dispatch):
     APP = "moat.micro.app"
@@ -84,7 +86,7 @@ class CfgStore:
             for k, v in c.items():
                 if isinstance(v, dict):
                     await _set(p + (k,), v)
-                elif ocd.get(k, NotGiven) != v:
+                elif ocd.get(k, NotGiven2) != v:
                     await self.sd.w(p=p + (k,), d=v)
 
             if not replace:

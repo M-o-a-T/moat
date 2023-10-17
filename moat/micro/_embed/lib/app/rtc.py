@@ -38,11 +38,7 @@ class Cmd(BaseCmd):
 
         Same for a list.
         """
-        try:
-            return enc_part(get_part(self.st.data, p))
-        except Exception as exc:
-            log("UGG", err=exc)
-            return 123
+        return enc_part(get_part(self.st.data, p))
 
     async def cmd_w(self, p=(), d=NotGiven2):
         """

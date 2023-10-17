@@ -24,7 +24,15 @@ def dict_upd(d,k,v):
         d[k] = v
 
 def main(cfg:str|dict, fake_end=False):
+    """
+    The MoaT.micro satellite's main entry point.
 
+    If @cfg is a string, it's the name of the config file.
+
+    @fake_end sends a fake MicroPython prompt to trick the setup code into
+    thinking that the current command has concluded, so it can cleanly
+    terminate / start the local dispatcher.
+    """
     if isinstance(cfg, str):
         try:
             f = open(cfg, "rb")

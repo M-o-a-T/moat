@@ -61,7 +61,7 @@ class _State:
         return self._d
 
     def update(self, cfg):
-        """Given a config, update it"""
+        """Given a config, update it with my data"""
         from moat.micro.main import dict_upd
 
         for k,v in self._d.items():

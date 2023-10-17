@@ -1,3 +1,9 @@
+"""
+RTC access
+"""
+
+from __future__ import annotations
+
 import sys
 from moat.util import NotGiven
 
@@ -10,9 +16,10 @@ class NotGiven2:
 
 class Cmd(BaseCmd):
     """
-    Subsystem to handle config data.
+    Subsystem to handle RTC data.
 
-    This app serves the config of the parent subcommand.
+    This app serves access to the config snippet(s) stored in the system's
+    RTC chip.
     """
     def __init__(self, cfg):
         if cfg.get("fake",False):

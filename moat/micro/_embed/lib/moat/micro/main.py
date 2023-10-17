@@ -1,6 +1,16 @@
 # global hardware watchdog
 WDT = None
 
+import os
+import sys
+import machine
+
+import msgpack
+
+from moat.util import NotGiven
+from moat.micro.compat import print_exc
+
+
 def dict_upd(d,k,v):
     if isinstance(v,dict):
         dd = d.setdefault(k,{})
@@ -13,12 +23,7 @@ def dict_upd(d,k,v):
     else:
         d[k] = v
 
-def main(cfg, fake_end=False):
-    import os
-    import sys
-    import machine
-    from moat.micro.compat import print_exc
-    import msgpack
+def main(cfg:str|dict, fake_end=False):
 
     if isinstance(cfg, str):
         try:

@@ -13,9 +13,11 @@ build a version of MicroPython that includes the *moat.micro* core:
     $ make
     $ cd ../ports/esp8266
     $ echo 'include("…/moat/micro/moat/micro/_embed/lib")' >> boards/manifest.py
+    $ DEV=/dev/ttyUSB0
+    $ BAUD=74880  # 115200 for ESP32
 
     # adjust as required
-    $ make PORT=/dev/ttyUSB0 ESPTOOL=esptool BAUD=500000 deploy
+    $ make PORT=$DEV ESPTOOL=esptool BAUD=500000 deploy
 
     # Verify that it's working
     $ pyserial-miniterm -f direct /dev/ttyUSB0 74880
@@ -28,6 +30,8 @@ build a version of MicroPython that includes the *moat.micro* core:
     $
 
     # now let's deploy the MoaT main 
+    $ cd ..  # to go …/src/moat
+    $ ./mt -c micro/deploy/esp.cfg micro -v setup.r.port $DEV -e setup.r.mode.rate $BAUD setup
 
     
 

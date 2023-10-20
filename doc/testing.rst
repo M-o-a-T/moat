@@ -27,8 +27,8 @@ _test.MpyCmd
 ============
 
 The ``_test.MpyCmd`` app starts a locally-built MicroPython
-subprocess. The ``cfg`` member of its configuration contains its local
-setup.
+subprocess. If you set its "mplex" config value to `True`, it will run a
+MoaT subsystem using the ``cfg`` value as its configuration.
 
 _test.Cmd
 =========

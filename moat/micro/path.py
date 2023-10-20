@@ -647,13 +647,18 @@ async def copytree(src, dst, check=None, drop=None, cross=None):
     Files are copied if their size or content hash differs.
 
     Returns the number of modified files.
+
+    @drop is an async function with the destination file as input. If it
+    returns `True` the file is deleted unconditionally, `False` (the
+    default) does a standard sync-and-update, `None` ignores it.
     """
     n = 0
     if await src.is_file():
         if dst.name == "_version.py":
             return 0
         if src.suffix == ".py" and str(dst) not in ("/boot.py", "boot.py", "/main.py", "main.py"):
-            if drop is not None and await drop(dst):
+            dr = False if drop is None else await drop(dst)
+            if dr:
                 with suppress(FileNotFoundError):
                     await dst.unlink()
                     n += 1
@@ -661,6 +666,9 @@ async def copytree(src, dst, check=None, drop=None, cross=None):
                     await dst.with_suffix(".mpy").unlink()
                     n += 1
                 return n
+
+            if dr is None:
+                return 0
 
             if cross:
                 try:

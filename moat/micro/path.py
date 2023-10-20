@@ -85,36 +85,32 @@ class _MoatPath(pathlib.PurePosixPath):  # pathlib.PosixPath
     def with_name(self, name):
         "set name"
         # pylint: disable=no-member
-        return super().with_name(name).connect_repl(self._repl)
+        return type(self)(super().with_name(name)).connect_repl(self._repl)
 
     def with_suffix(self, suffix):
         "set suffix"
         # pylint: disable=no-member
-        return super().with_suffix(suffix).connect_repl(self._repl)
+        return type(self)(super().with_suffix(suffix)).connect_repl(self._repl)
 
     def relative_to(self, *other):
         "return relative path"
         # pylint: disable=no-member
-        return super().relative_to(*other).connect_repl(self._repl)
+        return type(self)(super().relative_to(*other)).connect_repl(self._repl)
 
     def joinpath(self, *args):
         "join paths"
         # pylint: disable=no-member
-        return super().joinpath(*args).connect_repl(self._repl)
+        return type(self)(super().joinpath(*args)).connect_repl(self._repl)
 
     def __truediv__(self, key):
         # pylint: disable=no-member
-        return super().__truediv__(key).connect_repl(self._repl)
-
-    def __rtruediv__(self, key):
-        # pylint: disable=no-member
-        return super().__rtruediv__(key).connect_repl(self._repl)
+        return type(self)(super().__truediv__(key)).connect_repl(self._repl)
 
     @property
     def parent(self):
         "parent directory"
         # pylint: disable=no-member
-        return super().parent.connect_repl(self._repl)
+        return type(self)(super().parent).connect_repl(self._repl)
 
     async def glob(self, pattern: str):
         """

@@ -12,6 +12,8 @@ from contextlib import asynccontextmanager, suppress
 from contextvars import ContextVar
 
 import anyio
+
+import moat.micro
 from moat.util import attrdict, merge, packer, yload, Queue, combine_dict
 
 from moat.micro.compat import TaskGroup, AC_use
@@ -98,9 +100,16 @@ class MpyBuf(ProcessBuf):
             with suppress(FileExistsError):
                 (lib/"asyncio").symlink_to(aio)
 
+            libp = []
+            for p in moat.micro.__path__:
+                p = Path(p)/"_embed"
+                if p.exists():
+                    libp.append(p)
+                if (p/"lib").exists():
+                    libp.append(p/"lib")
+
             self.env = {
-                    "MICROPYPATH": os.pathsep.join((str(lib),str(lib2))),
-                    "PYTHONPATH":os.environ["PYTHONPATH"],
+                    "MICROPYPATH": os.pathsep.join(str(x) for x in (lib,lib2,*libp)),
                 }
             self.cwd = root
 

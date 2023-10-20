@@ -15,28 +15,6 @@ except OSError:
 else:
     d+=os.sep+"micro"
 
-if os.getenv("PYTHONPATH"):
-    for p in os.getenv("PYTHONPATH").split(":"):
-        if p == ".":
-            p = h
-        elif p.startswith("."):
-            p = h+"/"+p
-        ep = p+"/moat/micro/_embed"
-        try:
-            os.stat(ep)
-        except OSError:
-            # print ("NO",ep,file=sys.stderr)
-            pass
-        else:
-            # print ("YS",ep,file=sys.stderr)
-            sys.path.insert(0,ep)
-            try:
-                os.stat(ep+"/lib")
-            except OSError:
-                pass
-            else:
-                # print ("YS",ep+"/lib",file=sys.stderr)
-                sys.path.insert(0,ep+"/lib")
 sys.path.insert(0,"./stdlib")
 sys.path.insert(0,".")
 

@@ -650,6 +650,8 @@ async def copytree(src, dst, check=None, drop=None, cross=None):
     """
     n = 0
     if await src.is_file():
+        if dst.name == "_version.py":
+            return 0
         if src.suffix == ".py" and str(dst) not in ("/boot.py", "boot.py", "/main.py", "main.py"):
             if drop is not None and await drop(dst):
                 with suppress(FileNotFoundError):
@@ -708,8 +710,6 @@ async def copytree(src, dst, check=None, drop=None, cross=None):
             return 0
     else:
         if dst.name == "__pycache__":
-            return 0
-        if dst.name == "_version.py":
             return 0
         if dst.name.startswith("."):
             return 0

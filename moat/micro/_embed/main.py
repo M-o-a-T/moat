@@ -35,8 +35,8 @@ def get(attr, fs=None, default=None):
             pass
         else:
             with f:
-                state = f.read()
-            return str(state)
+                res = f.read()
+            return str(res)
     return default
 
 def go(state=None, fake_end=True):

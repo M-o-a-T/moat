@@ -636,7 +636,6 @@ async def copytree(src, dst, check=None, drop=None, cross=None):
             s2 = (await dst.stat()).st_size
         except FileNotFoundError:
             s2 = -1
-            await dst.parent.mkdir(parents=True, exist_ok=True)
         except RemoteError as err:
             if err.args[0] != "fn":
                 raise
@@ -647,6 +646,7 @@ async def copytree(src, dst, check=None, drop=None, cross=None):
             if h1 != h2:
                 s2 = -1
         if s1 != s2:
+            await dst.parent.mkdir(parents=True, exist_ok=True)
             await dst.write_bytes(await src.read_bytes())
             logger.info("Copy: updated %s > %s", src, dst)
             return 1
@@ -663,12 +663,10 @@ async def copytree(src, dst, check=None, drop=None, cross=None):
         try:
             s = await dst.stat()
         except (OSError, RemoteError):
-            await dst.mkdir(parents=True)
+            pass
 
         logger.info("Copy: dir %s > %s", src, dst)
         n = 0
-        if not await dst.exists():
-            await dst.mkdir()
         async for s in src.iterdir():
             if not await check(s):
                 continue

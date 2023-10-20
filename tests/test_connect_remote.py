@@ -25,6 +25,7 @@ apps:
 #r:
 #  port: /tmp/test.sock
 s:
+  mplex: true
   link: &link
     lossy: False
     guarded: False

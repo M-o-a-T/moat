@@ -14,6 +14,7 @@ apps:
   a: _test.Cmd
   _sys: _sys.Cmd
 r:
+  mplex: true
   cfg:
     apps:
       r: stdio.StdIO

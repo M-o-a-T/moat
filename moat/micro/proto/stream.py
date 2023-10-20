@@ -276,27 +276,56 @@ class SingleAnyioBuf(AnyioBuf):
 class ProcessBuf(CtxObj, AnyioBuf):
     """
     A stream that connects to an external process.
+
+    Config:
+    - exec: path to the executable
+    - argv: Arguments
+    - env: environment vars
+    
+    You can set these as attributes on the object, statically or in your
+    subclass's `setup` method. Configuration can then override them.
     """
-    proc = None
+    proc:anyio.Process = None
+    exec:str = None
+    cwd:str = None
+    argv:list[str] = None
+    env:Optional[dict[str,str]] = None
+
     def __init__(self, cfg, **kw):
         super().__init__(cfg)
         kw.setdefault("stderr", sys.stderr)
-        # kw.setdefault("check", True)
         self.kw = kw
 
-    def args(self):
-        """Keyword arguments for starting the process.
+    def open_args(self):
+        """Return keyword arguments for `anyio.open_process`.
 
-        Default is whatever has been passed to the ProcessBuf constructor."""
+        Default is whatever has been passed to the ProcessBuf constructor.
+        """
+        # Ugh, anyio doesn't accept 'executable'
+        if self.exec is not None:
+            # self.kw["executable"] = self.exec
+            self.argv[0] = self.exec
+        elif "/" in (a0 := str(self.argv[0])):
+            # self.kw["executable"] = a0
+            # self.argv[0] = a0.rsplit("/",1)[1]
+            pass
+        if self.cwd is not None:
+            self.kw["cwd"] = self.cwd
+
         return self.kw
 
     @asynccontextmanager
     async def _ctx(self):
         await self.setup()
         proc = None
+        for k in ("exec","argv","env","cwd"):
+            if (v := self.cfg.get(k, None)) is not None:
+                setattr(self,k,v)
+        if self.argv is None:
+            raise ValueError("Don't know what")
 
         try:
-            async with await anyio.open_process(self.argv, **self.args()) as proc:
+            async with await anyio.open_process(self.argv, **self.open_args()) as proc:
                 try:
                     async with SingleAnyioBuf(anyio.streams.stapled.StapledByteStream(proc.stdin, proc.stdout)) as s:
                         yield s

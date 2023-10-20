@@ -17,6 +17,7 @@ CFG="""
 apps:
   r: _test.MpyCmd
 r:
+  mplex: true
   cfg:
     apps:
       r: stdio.StdIO

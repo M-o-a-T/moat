@@ -51,46 +51,52 @@ def rlink(s,d):
 
 class MpyBuf(ProcessBuf):
     """
-    A stream that links to MicroPython
+    A stream that links to MicroPython.
+
+    If the config option "mplex" is set, this starts a standard
+    multiplexer. Otherwise you get a plain micropython interpreter.
+
+    Setting this option requires either running as part of a MpyStack,
+    or setting the ``cwd`` config to a suitable directory.
     """
-#   async def __init__(self, cfg, cff):
-#       super().__init__(cfg)
-#       self.cff = cff
-
     async def setup(self):
-        self.cfg.setdefault("path", "lib/micropython/ports/unix/build-standard/micropython")
-        self.cfg.setdefault("command", ("micropython","micro/tests-mpy/mplex.py"))
+        if self.cfg.get("mplex", False):
+            try:
+                os.stat("micro/lib")
+            except OSError:
+                pre = Path(__file__).parents[2]
+            else:
+                pre = "micro/"
 
-        try:
-            os.stat("micro/lib")
-        except OSError:
-            pre = Path(__file__).parents[2]
+            root = self.cfg.get("cwd", None)
+            if root is None:
+                root = temp_dir.get() / "root"
+            lib = root / "stdlib"
+            with suppress(FileExistsError):
+                root.mkdir()
+            with suppress(FileExistsError):
+                lib.mkdir()
+            with suppress(FileExistsError):
+                (root / "tests").symlink_to(Path("tests").absolute())
+
+            std = Path("lib/micropython-lib/python-stdlib")
+            for req in required:
+                rlink(std.absolute()/req, lib.absolute())
+
+            with (root / "moat.cfg").open("wb") as f:
+                f.write(packer(self.cfg["cfg"]))
+
+            self.argv = [
+                # "strace","-s300","-o/tmp/bla",
+                pre / "lib/micropython/ports/unix/build-standard/micropython",
+                pre / "tests-mpy/mplex.py",
+                str(root),
+                # str(pre),
+            ]
         else:
-            pre = "micro/"
-
-        root = temp_dir.get() / "root"
-        lib = root / "stdlib"
-        with suppress(FileExistsError):
-            root.mkdir()
-        with suppress(FileExistsError):
-            lib.mkdir()
-        with suppress(FileExistsError):
-            (root / "tests").symlink_to(Path("tests").absolute())
-
-        std = Path("lib/micropython-lib/python-stdlib")
-        for req in required:
-            rlink(std.absolute()/req, lib.absolute())
-
-        with (root / "moat.cfg").open("wb") as f:
-            f.write(packer(self.cfg["cfg"]))
-
-        self.argv = [
-            # "strace","-s300","-o/tmp/bla",
-            pre / "lib/micropython/ports/unix/build-standard/micropython",
-            pre / "tests-mpy/mplex.py",
-            str(root),
-            # str(pre),
-        ]
+            self.argv = [
+                pre / "lib/micropython/ports/unix/build-standard/micropython",
+            ]
 
         await super().setup()
 

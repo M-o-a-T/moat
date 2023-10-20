@@ -21,6 +21,7 @@ l:
   log:
     txt: "LOOP"
 r:
+  mplex: true
   cfg:
     apps:
 #     w: wdt.Cmd

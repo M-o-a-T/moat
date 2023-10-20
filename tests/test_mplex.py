@@ -12,6 +12,7 @@ apps:
   r: _test.MpyCmd
   a: _test.Cmd
 r:
+  mplex: true
   cfg:
     apps:
 #     w: wdt.Cmd

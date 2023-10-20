@@ -510,7 +510,7 @@ class SubDispatch:
             raise AttributeError(k)
         return partial(self._send, k)
 
-    def __call__(self, *a, _x_err=(), **k) -> Async:
+    def __call__(self, *a, _x_err=(), **k) -> Awaitable:
         """
         Enables code like:
             s = d.get_sub("a","b","c")

@@ -15,6 +15,8 @@ from subprocess import CalledProcessError
 
 import anyio
 
+from moat.util import attrdict
+
 from .proto.stack import RemoteError
 
 logger = logging.getLogger(__name__)

@@ -123,7 +123,7 @@ class BaseCmd(Base):
 
     def set_ready(self):
         if self._starting is not None:
-            raise RuntimeError("Ready w/o start")
+            raise RuntimeError(f"Ready w/o start {self !r}")
             # self._starting.set()
             # self._starting = None
         if self._ready is not None:

@@ -102,6 +102,7 @@ class MpyBuf(ProcessBuf):
                     "MICROPYPATH": os.pathsep.join((str(lib),str(lib2))),
                     "PYTHONPATH":os.environ["PYTHONPATH"],
                 }
+            self.cwd = root
 
         if mplex:
             with (root / "moat.cfg").open("wb") as f:

@@ -62,6 +62,8 @@ async def run_update(dest: MoatPath, release:str|None = None, check=None, cross=
             sp = src/dst
             # XXX we might want to ask git which files differ,
             # it's supposed to have a cache for that
+            if await sp.is_symlink():
+                return None  # ignore completely
             try:
                 return t[str(dst)].binsha == githash(await rd(sp))
             except KeyError:

@@ -642,6 +642,12 @@ async def copytree(src, dst, check=_nullcheck, cross=None):
             logger.debug("Copy: unchanged %s > %s", src, dst)
             return 0
     else:
+        if dst.name == "__pycache__":
+            return 0
+        if dst.name == "_version.py":
+            return 0
+        if dst.name.startswith("."):
+            return 0
         try:
             s = await dst.stat()
         except (OSError, RemoteError):

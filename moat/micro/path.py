@@ -665,8 +665,7 @@ async def copytree(src, dst, check=None, drop=None, cross=None):
         except (OSError, RemoteError):
             pass
 
-        logger.info("Copy: dir %s > %s", src, dst)
-        n = 0
+        logger.debug("Copy: dir %s > %s", src, dst)
         async for s in src.iterdir():
             if not await check(s):
                 continue

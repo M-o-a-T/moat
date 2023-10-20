@@ -309,8 +309,9 @@ class ProcessBuf(CtxObj, AnyioBuf):
             # self.kw["executable"] = a0
             # self.argv[0] = a0.rsplit("/",1)[1]
             pass
-        if self.cwd is not None:
-            self.kw["cwd"] = self.cwd
+        for k in ("cwd","env"):
+            if (v := getattr(self,k)) is not None:
+                self.kw[k] = v
 
         return self.kw
 

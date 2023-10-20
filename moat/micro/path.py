@@ -585,7 +585,7 @@ async def _nullcheck(p):
     return False
 
 
-async def copytree(src, dst, check=_nullcheck, cross=None):
+async def copytree(src, dst, check=None, drop=None, cross=None):
     """
     Copy a file tree from @src to @dst.
     Skip files/subtrees for which "await check(src)" is False.
@@ -595,8 +595,18 @@ async def copytree(src, dst, check=_nullcheck, cross=None):
 
     Returns the number of modified files.
     """
+    n = 0
     if await src.is_file():
         if src.suffix == ".py" and str(dst) not in ("/boot.py", "boot.py", "/main.py", "main.py"):
+            if drop is not None and await drop(dst):
+                with suppress(FileNotFoundError):
+                    await dst.unlink()
+                    n += 1
+                with suppress(FileNotFoundError):
+                    await dst.with_suffix(".mpy").unlink()
+                    n += 1
+                return n
+
             if cross:
                 try:
                     p = str(src)
@@ -663,7 +673,7 @@ async def copytree(src, dst, check=_nullcheck, cross=None):
             if not await check(s):
                 continue
             d = dst / s.name
-            n += await copytree(s, d, check=check, cross=cross)
+            n += await copytree(s, d, check=check, cross=cross, drop=drop)
         return n
 
 async def copy_over(src, dst, cross=None):

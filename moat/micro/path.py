@@ -12,6 +12,8 @@ import pathlib
 import stat
 import sys
 from subprocess import CalledProcessError
+from contextlib import suppress
+from pathlib import Path
 
 import anyio
 
@@ -50,6 +52,13 @@ class ABytes(io.BytesIO):
         _h.update(self.getbuffer())
         return _h.digest()
 
+    async def gitsha1(self):
+        "hash the current buffer"
+        _h = hashlib.sha1()
+        _h.update(f"blob {len(self.getbuffer())}\0".encode("utf-8"))
+        _h.update(self.getbuffer())
+        return _h.digest()
+
     def close(self):
         "does nothing"
         pass  # pylint:disable=unnecessary-pass
@@ -68,8 +77,52 @@ class ABytes(io.BytesIO):
         res.st_size = len(self.getbuffer())
         return res
 
+class APath(anyio.Path):
+    async def sha256(self) -> bytes:
+        """
+        :returns: hash over file contents
 
-class _MoatPath(pathlib.PurePosixPath):  # pathlib.PosixPath
+        Calculate a SHA256 over the file contents and return the digest.
+        """
+        _h = hashlib.sha256()
+        async for block in ff.read_as_stream():
+            _h.update(block)
+        return _h.digest()
+
+    async def gitsha1(self):
+        """
+        :returns: hash over file contents
+
+        Calculate a SHA1 over the file contents, the way "git" does it.
+        """
+        _h = hashlib.sha1()
+        sz = (await self.stat()).st_size
+        _h.update(f"blob {sz}\0".encode("utf-8"))
+        _h.update(self.getbuffer())
+        return _h.digest()
+
+    async def read_as_stream(self, chunk=4096):
+        """
+        :returns: async Iterator
+        :rtype: Iterator of bytes
+
+        Iterate over blocks (`bytes`) of a remote file.
+        """
+        fd = await self.open("r")
+        try:
+            while True:
+                d = await self.read(chunk)
+                if not d:
+                    break
+                yield d
+        except EOFError:
+            pass
+        finally:
+            await fd.close()
+
+
+
+class MoatPath(anyio.Path):  # pathlib.PosixPath
     _stat_cache = None
     _repl = None
 
@@ -153,7 +206,7 @@ class _MoatPath(pathlib.PurePosixPath):  # pathlib.PosixPath
         raise NotImplementedError()
 
 
-class MoatDevPath(_MoatPath):
+class MoatDevPath(MoatPath):
     """
     This object represents a file or directory (existing or not) on the
     target board.
@@ -374,7 +427,7 @@ class MoatDevPath(_MoatPath):
         return hash_value
 
 
-class MoatFSPath(_MoatPath):
+class MoatFSPath(MoatPath):
     """
     This object represents a file or directory (existing or not) on the
     target board.
@@ -667,7 +720,7 @@ async def copytree(src, dst, check=None, drop=None, cross=None):
 
         logger.debug("Copy: dir %s > %s", src, dst)
         async for s in src.iterdir():
-            if not await check(s):
+            if check is not None and not await check(s):
                 continue
             d = dst / s.name
             n += await copytree(s, d, check=check, cross=cross, drop=drop)

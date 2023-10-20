@@ -25,6 +25,7 @@ from moat.util import (
 )
 from moat.micro.proto.stream import RemoteBufAnyio
 from moat.util.main import load_subgroup
+from moat.micro.util import run_update
 
 from .compat import TaskGroup, idle
 from .direct import DirectREPL
@@ -106,7 +107,7 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
 
 @cli.command(name="setup", short_help='Copy MoaT to MicroPython')
 @click.pass_obj
-@click.option("-n", "--run", is_flag=True, help="Run MoaT after updating")
+@click.option("-r", "--run", is_flag=True, help="Run MoaT after updating")
 @click.option("-N", "--reset", is_flag=True, help="Reboot after updating")
 @click.option(
     "-S",
@@ -116,13 +117,15 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
 )
 @click.option("-D", "--dest", type=str, default="", help="Destination path")
 @click.option("-R", "--root", type=str, default="/", help="Destination root")
-@click.option("-s", "--state", type=str, help="State to enter")
+@click.option("-U", "--update", is_flag=True, help="Run standard updates")
+@click.option("-M", "--mount", type=click.Path(dir_okay=True, file_okay=False), help="Mount point for FUSE mount")
+@click.option("-s", "--state", type=str, help="State to enter by default")
 @click.option("-c", "--config", type=P, help="Config part to use for the device")
 @click.option("-w", "--watch", is_flag=True, help="monitor the target's output after setup")
 @click.option("-C", "--cross", help="path to mpy-cross")
 async def setup_(obj, **kw):
     cfg = obj.cfg
-    st = cfg.setdefault("settings", {})
+    st = cfg.setdefault("args", {})
     for k,v in kw.items():
         if k not in st or v is not None:
             st[k] = v
@@ -139,6 +142,8 @@ async def setup(
     state,
     config,
     cross,
+    update,
+    mount,
     watch,
 ):
     """
@@ -148,6 +153,9 @@ async def setup(
     """
     # 	if not source:
     # 		source = anyio.Path(__file__).parent / "_embed"
+
+    if watch and run:
+        raise click.UsageError("You can't use 'watch' and 'run' at the same time")
 
     from .path import MoatDevPath, ABytes, copy_over
     from .cmd.tree import Dispatch,SubDispatch
@@ -174,11 +182,20 @@ async def setup(
             f = ABytes("moat.cfg", packer(config))
             await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl))
 
+        if update:
+            try:
+                res = (await repl.exec(f"from moat.micro import _version as _v; print(_v.git); del _v")).strip()
+            except ImportError:
+                res = None
+            await run_update(MoatDevPath(".").connect_repl(repl), res, cross=cross)
+            # do not use "/". Running micropython tests locally requires
+            # all satellite paths to be relative.
+
         if reset:
             await repl.soft_reset(run_main=run)
             # reset with run_main set should boot into MoaT
 
-        elif run:
+        if run:
             o, e = await repl.exec_raw(
                 f"from main import go; go(state='once')", timeout=30
             )

@@ -88,7 +88,7 @@ class DirectREPL(SingleAnyioBuf):
                     raise OSError(err_num, os_error_mapping.get(err_num, (None, 'OSError'))[1])
             m = re_exceptions.match(lines[-1])
             if m:
-                raise getattr(__builtins__, m.group(1))(m.group(2))
+                raise __builtins__[m.group(1)](m.group(2))
 
     async def exec_raw(self, cmd, timeout=5):
         """Exec code, returning (stdout, stderr)"""

@@ -53,14 +53,20 @@ class MpyBuf(ProcessBuf):
     """
     A stream that links to MicroPython.
 
-    If the config option "mplex" is set, this starts a standard
-    multiplexer. Otherwise you get a plain micropython interpreter.
+    If the config option "mplex" is `True`, this starts a standard
+    multiplexer. Otherwise you get a plain micropython interpreter;
+    if `False` (instead of missing or `None`), your directory contains a
+    "stdlib" folder and MICROPYPATH will point to it.
 
-    Setting this option requires either running as part of a MpyStack,
+    Using this option requires either running as part of a MpyStack,
     or setting the ``cwd`` config to a suitable directory.
+
+    If "mplex" is a string, it is interpreted as the "state" argument to 
+    ``main.go()``. The default for ``mplex=True`` is "once".
     """
     async def setup(self):
-        if self.cfg.get("mplex", False):
+        mplex = self.cfg.get("mplex", None)
+        if mplex is not None:
             try:
                 os.stat("micro/lib")
             except OSError:
@@ -71,18 +77,30 @@ class MpyBuf(ProcessBuf):
             root = self.cfg.get("cwd", None)
             if root is None:
                 root = temp_dir.get() / "root"
+            else:
+                root = Path(root).absolute()
             lib = root / "stdlib"
+            lib2 = root / "lib"
             with suppress(FileExistsError):
                 root.mkdir()
             with suppress(FileExistsError):
                 lib.mkdir()
             with suppress(FileExistsError):
-                (root / "tests").symlink_to(Path("tests").absolute())
+                lib2.mkdir()
+            if mplex:
+                with suppress(FileExistsError):
+                    (root / "tests").symlink_to(Path("tests").absolute())
 
-            std = Path("lib/micropython-lib/python-stdlib")
+            std = Path("lib/micropython-lib/python-stdlib").absolute()
             for req in required:
-                rlink(std.absolute()/req, lib.absolute())
+                rlink(std/req, lib)
+            aio = Path("lib/micropython/extmod/asyncio").absolute()
+            with suppress(FileExistsError):
+                (lib/"asyncio").symlink_to(aio)
 
+            self.env = {"MICROPYPATH": os.pathsep.join((str(lib),str(lib2)))}
+
+        if mplex:
             with (root / "moat.cfg").open("wb") as f:
                 f.write(packer(self.cfg["cfg"]))
 
@@ -90,12 +108,13 @@ class MpyBuf(ProcessBuf):
                 # "strace","-s300","-o/tmp/bla",
                 pre / "lib/micropython/ports/unix/build-standard/micropython",
                 pre / "tests-mpy/mplex.py",
-                str(root),
-                # str(pre),
             ]
+            if isinstance(mplex,str):
+                self.argv.append(md)
         else:
             self.argv = [
                 pre / "lib/micropython/ports/unix/build-standard/micropython",
+                "-e",
             ]
 
         await super().setup()

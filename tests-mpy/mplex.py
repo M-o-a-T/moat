@@ -3,12 +3,7 @@
 import sys
 import os
 
-root = sys.argv[1] if len(sys.argv)>1 else "/tmp/test-upy"
-mode = sys.argv[2] if len(sys.argv)>2 else "once"
-try:
-    os.mkdir(root)
-except OSError:
-    pass
+mode = sys.argv[1] if len(sys.argv)>1 else "once"
 
 
 h = os.getcwd()
@@ -19,9 +14,6 @@ except OSError:
     pass
 else:
     d+=os.sep+"micro"
-
-# print("DIR:",root, file=sys.stderr)
-os.chdir(root)
 
 for p in os.getenv("PYTHONPATH").split(":"):
     if p == ".":
@@ -46,16 +38,6 @@ for p in os.getenv("PYTHONPATH").split(":"):
             sys.path.insert(0,ep+"/lib")
 sys.path.insert(0,"./stdlib")
 sys.path.insert(0,".")
-sys.path.insert(0,d+"/lib/micropython/extmod")
-
-# TODO asyncio's lazy importer doesn't yet mesh well with our micropython path hack
-import asyncio
-import asyncio.event
-import asyncio.lock
-import asyncio.taskgroup
-import asyncio.stream
-sys.path.insert(0,d+"/lib/micropython-lib/asyncio.queues/")
-#import asyncio.queues
 
 import main
 main.go(mode, fake_end=False)

@@ -98,7 +98,10 @@ class MpyBuf(ProcessBuf):
             with suppress(FileExistsError):
                 (lib/"asyncio").symlink_to(aio)
 
-            self.env = {"MICROPYPATH": os.pathsep.join((str(lib),str(lib2)))}
+            self.env = {
+                    "MICROPYPATH": os.pathsep.join((str(lib),str(lib2))),
+                    "PYTHONPATH":os.environ["PYTHONPATH"],
+                }
 
         if mplex:
             with (root / "moat.cfg").open("wb") as f:

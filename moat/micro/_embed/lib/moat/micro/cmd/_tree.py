@@ -470,8 +470,8 @@ class SubDispatch:
 
     Calls are executed directly if possible.
 
-    Do not call this before the object hierarchy is assembled.
-    Otherwise your code will be inefficient.
+    Create this object in your ``setup`` method.
+    Using it from ``__init__`` results in ineficient call execution.
     """
     def __init__(self, dispatch, path):
         for i,p in enumerate(path):
@@ -494,7 +494,11 @@ class SubDispatch:
     async def __aexit__(self, *tb):
         pass
 
-    def _send(self, *a, _x_err=(), **k):
+    def dispatch(self, a, msg, **kw) -> Awaitable:
+        "Forward an explicit dispatch call"
+        return self._dest.dispatch(self._rem + a, msg, **kw)
+
+    def _send(self, *a, _x_err=(), **k) -> Awaitable:
         return self._dest.dispatch(self._rem + a, k, x_err=_x_err)
 
     def __getattr__(self, k):

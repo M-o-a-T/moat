@@ -57,9 +57,10 @@ process those are named "…Buf". They provide `rd` and `wr` methods to read
 and write arbitrary amounts of data.
 
 Reading is always performed into a caller-provided buffer; the read command
-returns the number of bytes filled.
+returns the number of bytes filled. Reading does not wait for the buffer to
+be full.
 
-Writing returns when the whole buffer passed to `wr` has been transmitted.
+A write call returns when the whole buffer passed to `wr` has been transmitted.
 
 Blk
 +++
@@ -69,15 +70,17 @@ block (of some type). Stream modules that process byte blocks are named
 "…Blk". They provide `snd` and `rcv` methods to read and write one block
 each.
 
-The Reader returns a complete data block. The caller may not assume that
-the returned buffer will survive beyond the next call to `rcv`.
+Reading returns a complete data block. It may be a memoryview; the caller
+must not assume that the returned buffer will survive beyond the next call
+to `rcv`.
 
 Msg
 +++
 
-A (serializeable) Python data structure, typically using a dict/map as the
+A (serializable) Python data structure, typically using a dict/map as the
 top level. Stream modules that process structured data are named "…Msg".
 They provide `send` and `recv` methods.
+
 
 Combinations
 ++++++++++++
@@ -87,7 +90,7 @@ Examples are a MsgPack or CBOR codec, as these protocols are self-delimiting.
 
 Likewise for "…MsgBlk" or "…BlkBuf".
 
-On top of all of this, a "…CmdMsg" class accepts MoaT commands via its
+On top of this, a "…CmdMsg" class accepts MoaT commands via its
 ``dispatch`` method and translates them to a standardizes mapping. See
 `doc/messages.md`_ for details.
 

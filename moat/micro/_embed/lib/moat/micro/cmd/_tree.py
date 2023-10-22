@@ -187,16 +187,27 @@ class BaseSubCmd(BaseSuperCmd):
         self.sub = {}
 
     async def wait_ready(self, wait=True):
-        "delay until this subtree is up"
+        """Delay until this subtree is up,
+
+        Returns True if all sub-apps are stopped.
+        """
         await super().wait_ready(wait=wait)
         again = True
+        res = False
         while again:
             again = False
+            if res:
+                # if all apps were dead, maybe they are not now
+                res = False
             for app in list(self.sub.values()):
-                if await app.wait_ready(wait=wait) is None:
+                if (w := await app.wait_ready(wait=wait)) is None:
                     if not wait:
                         return None
                     again = True
+                    res = None
+                elif res is not None:
+                    res &= w
+        return res
 
     async def attach(self, name, app) -> None:
         """

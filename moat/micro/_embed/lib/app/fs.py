@@ -106,7 +106,7 @@ class Cmd(BaseCmd):
         # close
         self._del_f(f)
 
-    def cmd_dir(self, p="", x=False):
+    def cmd_ls(self, p="", x=False):
         # dir
         p = self._fsp(p)
         if x:

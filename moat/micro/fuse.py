@@ -564,7 +564,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         p = self.i_path(inode)
         try:
-            dc = await self._link.dir(p=str(p))
+            dc = await self._link.ls(p=str(p))
         except Exception as err:  # pylint:disable=broad-exception-caught
             self.raise_error(err)
 

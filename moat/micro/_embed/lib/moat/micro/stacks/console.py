@@ -13,7 +13,8 @@ def console_stack(stream, cfg, cons=False):
     Set @msg_prefix to the SerialPacker (or msgpack) lead-in character.
     """
 
-    assert isinstance(stream, BaseBuf)
+    if not hasattr(stream,"rd") or not hasattr(stream,"wr"):
+        raise TypeError(f"need a BaseBuf not {stream}")
 
     link = cfg.get("link", {})
     cons = link.get("console", cons)

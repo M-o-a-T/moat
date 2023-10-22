@@ -131,11 +131,14 @@ class ValueTask:
         except BaseException as exc:
             err = StoppedError(repr(exc))
         if err is None:
-            await self.cmd.reply_result(self.i, res)
+            await self.reply_result(res)
         else:
             await self.cmd.reply_error(self.i, err, self.x)
             if not isinstance(err, Exception):
                 raise err
+
+    async def reply_result(self, res):
+        await self.cmd.reply_result(self.i, res)
 
     def cancel(self):
         if self._t is not None:
@@ -206,6 +209,10 @@ class SendIter(ValueTask):
     async def set(self, msg):
         await self.it.set(msg)
 
+    async def reply_result(self, msg):
+        # override ValueTask's reply sender
+        pass
+
 
 class _DelayedIter:
     pass
@@ -263,30 +270,54 @@ class RecvIter(_DelayedIter):
     It implements an iterator protocol that forwards them to its reader.
     """
 
-    def __init__(self, t):
+    _err = None
+    _warned = 1
+    cnt = 0
+
+    def __init__(self, cmd, i, t):
+        self.cmd = cmd
+        self.i = i
         self.t = t
-        self._warned = 1
         self._val = ValueEvent()
-        self.cnt = 0
 
     async def __aenter__(self):
         return self
 
     async def __aexit__(self, *err):
-        pass
+        await self.aclose()
+    
+    async def aclose(self):
+        i,self.i = self.i,None
+        if i is not None:
+            await self.cmd.s.send({"i":i})
 
     def __aiter__(self):
         return self
 
     async def get(self):
+        log("ITER WAIT")
+        r = NotGiven
+        if self._val is None:
+            raise StopAsyncIteration
+
         try:
-            return await self._val.get()
+            r = await self._val.get()
+        except StopAsyncIteration:
+            self._val = None
+            raise
+        else:
+            self._val = ValueEvent()
+            if self._err is not None:
+                self._val.set_error(self._err)
+                self._err is None
+
+            return r
+
         finally:
+            log("ITER GOT %r", r)
             if not self._warned:
                 # startup is done
                 self._warned = 1
-            if self._val.is_set():
-                self._val = ValueEvent()
 
     __anext__ = get
 

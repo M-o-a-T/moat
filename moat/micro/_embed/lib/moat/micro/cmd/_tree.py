@@ -20,6 +20,8 @@ __all__ = ["DirCmd", "BaseSuperCmd", "BaseFwdCmd", "BaseLayerCmd", "BaseSubCmd",
 class BaseSuperCmd(BaseCmd):
     """
     A handler that can have a nested app (or more than one).
+
+    Sets up a taskgroup for the sub-app(s) tp run in.
     """
     async def setup(self):
         await super().setup()
@@ -27,6 +29,9 @@ class BaseSuperCmd(BaseCmd):
         await AC_use(self, self.tg.cancel)
 
     async def start_app(self, app):
+        """
+        Run (or reload) this app.
+        """
         async def _run(app):
             try:
                 await app.run()

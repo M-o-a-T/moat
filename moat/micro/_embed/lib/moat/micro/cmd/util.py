@@ -225,12 +225,12 @@ class DelayedIter(_DelayedIter):
         # might take some extra time
 
     async def __aenter__(self):
-        self._it = self.it.__aenter__()
+        self._it = await self.it.__aenter__()
         return self
 
     async def __aexit__(self, *tb):
         try:
-            return await self._it.__aexit__(*tb)
+            return await self.it.__aexit__(*tb)
         finally:
             del self._it
             del self._i

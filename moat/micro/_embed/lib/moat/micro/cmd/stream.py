@@ -288,13 +288,13 @@ class BaseCmdMsg(BaseCmd):
         if not isinstance(msg, dict):
             print("?3", msg, file=sys.stderr)
             return
-        a = msg.get("a", None)
-        i = msg.get("i", None)
-        d = msg.get("d", NotGiven)
-        e = msg.get("e", None)
-        r = msg.get("r", None)
-        n = msg.get("n", None)
-        x = msg.get("x", ())
+        a: Optional[tuple[str|int]] = msg.get("a", None)  # action
+        i: Optional[int] = msg.get("i", None)  # seqnum
+        d: Mapping[str,Any]|type[NotGiven] = msg.get("d", NotGiven)  # data
+        e: type[Exception]|str = msg.get("e", None)  # error
+        r: Optional[int] = msg.get("r", None)  # repeat
+        n: Optional[int] = msg.get("n", None)  # iter_seq
+        x: list[type[Exception]] = msg.get("x", ())  # exclude_error
 
         if i is not None:
             i ^= 1

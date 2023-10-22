@@ -107,6 +107,10 @@ def enc_part(cur):
 class ValueTask:
     """
     An object that forwards a task's return value.
+
+    @i: seqnum
+    @x: excluded errors
+    @p: callable
     """
     def __init__(self, cmd:BaseCmd, i, x, p, *a, **k):
         self.cmd = cmd
@@ -188,6 +192,12 @@ class SendIter(ValueTask):
     It implements a task that iterates the source and forwards the data.
 
     When the task ends, a cancellation message is sent to the remote side.
+
+    @cmd: the channel to send to
+    @i: seqnum to use
+    @r: msec between messages
+    @a: action to fetch the iterator from
+    @d: data for it
     """
     def __init__(self, cmd, i:int, r:int, a:list[str], d:dict):
         self.r = r

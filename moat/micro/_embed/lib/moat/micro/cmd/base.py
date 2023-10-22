@@ -215,7 +215,8 @@ class BaseCmd(Base):
                 async for msg in it:
                     ...
 
-        Delegates to the root dispatcher.
+        Delegates to the root dispatcher, using a wrapper so the caller
+        doesn't need to write "async with await self.iter(…)".
          
         Do not override this.
         """
@@ -235,7 +236,7 @@ class BaseCmd(Base):
 
     async def dispatch(
             self, action: list[str], msg: dict, rep:int = None, wait:bool = True, x_err=()
-    ):  # pylint:disable=arguments-differ
+    ) -> Awaitable|AsyncContextManager[AsyncIterator]:  # pylint:disable=arguments-differ
         """
         Process a message.
 
@@ -250,9 +251,10 @@ class BaseCmd(Base):
 
         Warning: All incoming commands wait for the subsystem to be ready.
 
-        If @rep is >0, the requestor wants an iterator with (roughly) "@rep"
-        milliseconds between values. You need to return an async context
-        manager that implements one.
+        If @rep is >0, the requestor wants an async context manager that
+        yields/implements an iterator with (roughly) @rep milliseconds between
+        values. If no `iter_‹name›` method exists, `cmd_‹name›` will be
+        called repeatedly.
         """
 
         if not action:

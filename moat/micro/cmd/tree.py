@@ -4,6 +4,8 @@ Server side of BaseCmd
 
 from itertools import chain
 
+import anyio
+
 from moat.util import attrdict, NotGiven
 
 from ._tree import *
@@ -14,6 +16,24 @@ class NotGiven2:
 
 class Dispatch(_Dispatch):
     APP = "moat.micro.app"
+
+    def __init__(self, cfg, sig=False, run=False):
+        super().__init__(cfg, run=run)
+        self.sig = sig
+
+    async def setup(self):
+        await super().setup()
+        if self.sig:
+
+            async def sig_handler(tg):
+                import signal
+
+                with anyio.open_signal_receiver(signal.SIGINT, signal.SIGTERM, signal.SIGHUP) as signals:
+                    async for _ in signals:
+                        self.tg.cancel()
+                        break  # default handler on next
+
+            await self.tg.spawn(sig_handler, self.tg, _name="sig")
 
     def cfg_at(self, *p):
         return CfgStore(self, p)

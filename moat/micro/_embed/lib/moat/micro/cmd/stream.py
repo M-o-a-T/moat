@@ -418,11 +418,8 @@ class BaseCmdMsg(BaseCmd):
 
         if rep:
             msg["r"] = rep
-            self.reply[seq] = e = RecvIter(rep)
+            self.reply[seq] = e = RecvIter(self,seq,rep)
             await self.s.send(msg)
-            res = await e.get()
-            if res is not None:
-                log("Spurious IterReply %r", res)
             return e
         else:
             self.reply[seq] = e = ValueEvent()
@@ -431,6 +428,7 @@ class BaseCmdMsg(BaseCmd):
                 return await e.get()
             finally:
                 self.reply.pop(seq, None)
+
 
 class CmdMsg(BaseCmdMsg):
     """

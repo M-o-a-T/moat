@@ -27,9 +27,28 @@ from moat.micro.proto.stack import Base
 from moat.micro.compat import TaskGroup, idle, Event, wait_for_ms, log, Lock, AC_use, TimeoutError
 from moat.util import Path
 
-from .util import run_no_exc, StoppedError, wait_complain
+from .util import run_no_exc, StoppedError, wait_complain, IterWrap, DelayedIter
 
 uPy = sys.implementation.name == "micropython"
+
+class _acm:
+    # Helper class.
+    #
+    # We want to use "async with disp.send_iter(…)", but send_iter forwards
+    # to dispatch, which is async, and "async with await …" is cumbersome.
+    #
+    # Thus we use this class to defer resolving the coroutine to the
+    # __aenter__ call.
+    def __init__(self, coro):
+        self.coro = coro
+
+    async def __aenter__(self):
+        self._cm = cm = await self.coro
+        del self.coro
+        return await cm.__aenter__()
+
+    def __aexit__(self, *tb) -> Awaitable:
+        return self._cm.__aexit__(*tb)
 
 
 class BaseCmd(Base):
@@ -200,7 +219,7 @@ class BaseCmd(Base):
          
         Do not override this.
         """
-        return self.root.dispatch(action, kw, rep=_rep)
+        return _acm(self.root.dispatch(action, kw, rep=_rep))
 
     def send_nr(self, *action, _x_err=(), **kw) -> Awaitable:
         """
@@ -244,10 +263,10 @@ class BaseCmd(Base):
         a = action[0]
         if a[0] == "!":
             wr = False
-            p = getattr(self,"cmd_"+a[1:])
+            fn = a[1:]
         else:
             wr = True
-            p = getattr(self,"cmd_"+a)
+            fn = a
             
         if not wait:
             if rep:
@@ -255,25 +274,25 @@ class BaseCmd(Base):
             self.tg.spawn(run_no_exc, p,msg,x_err, _name=f"Call:{self.path}/{p}")
             return
 
+        if rep:
+            try:
+                p = getattr(self, f"iter_{fn}")
+            except AttributeError:
+                p = getattr(self, f"cmd_{fn}")
+                r = IterWrap(p,(),msg)
+            else:
+                r = p(**msg)
+                if hasattr(r, "throw"):  # coroutine
+                    r = await r
+            return DelayedIter(it=r, t=rep)
+
+        p = getattr(self, f"cmd_{fn}")
         if wr:
             await self.wait_ready()
         r = p(**msg)
         if hasattr(r, "throw"):  # coroutine
             r = await r
-        if rep:
-            if not hasattr(r, "__aiter__"):
-                # This is not already an iterator
-                r = IterWrap(p,(),msg, r)
-            if not isinstance(r,_DelayedIter):
-                r = DelayedIter(it=r, t=rep)
-        else:
-            if hasattr(r, "__aiter__"):  # async iter
-                raise ValueError("iterator")
         return r
-
-    def send(self, *a, _x_err=(), **k):
-        "Sending is forwarded to the root"
-        return self.root.dispatch(a, k, x_err=_x_err)
 
 
     # globally-available commands

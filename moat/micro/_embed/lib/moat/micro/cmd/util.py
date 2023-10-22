@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.util import ValueEvent, as_proxy, NotGiven
 
-from moat.micro.compat import ticks_diff, ticks_ms, sleep_ms, wait_for_ms, log, TimeoutError
+from moat.micro.compat import ticks_diff, ticks_add, ticks_ms, sleep_ms, wait_for_ms, log, TimeoutError
 from moat.micro.proto.stack import RemoteError, SilentRemoteError
 
 StopIter = StopAsyncIteration
@@ -189,25 +189,25 @@ class SendIter(ValueTask):
 
     When the task ends, a cancellation message is sent to the remote side.
     """
-    def __init__(self, cmd, i, r, a, d):
+    def __init__(self, cmd, i:int, r:int, a:list[str], d:dict):
         self.r = r
         self.ac = a
         self.ad = d
-        super().__init__(cmd, i, self._run)
+        super().__init__(cmd, i, (), self._run)
 
     async def _run(self):
         try:
             cnt = 1
-            async with self.cmd.root.dispatch(self.ac, self.ad, rep=self.r) as it:
+            async with await self.cmd.root.dispatch(self.ac, self.ad, rep=self.r) as it:
                 async for msg in it:
-                    await self.cmd.send({'i':self.i, 'd':msg, 'n': cnt})
+                    await self.cmd.s.send({'i':self.i, 'd':msg, 'n': cnt})
                     cnt += 1
+        except BaseException:
+            raise
+        else:
+            await self.cmd.s.send({'i':self.i, 'r': False})
         finally:
-            self.it = None
-            await self.cmd.send({'i':self.i})
-
-    async def set(self, msg):
-        await self.it.set(msg)
+            self.cmd.reply.pop(self.i, None)
 
     async def reply_result(self, msg):
         # override ValueTask's reply sender
@@ -239,8 +239,9 @@ class DelayedIter(_DelayedIter):
         try:
             return await self.it.__aexit__(*tb)
         finally:
-            del self._it
             del self._i
+            del self._it
+            del self.it
     
     def __aiter__(self):
         self._i = self._it.__aiter__()

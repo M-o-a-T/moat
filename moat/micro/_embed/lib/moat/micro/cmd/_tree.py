@@ -502,6 +502,10 @@ class SubDispatch:
                 if k.startswith("cmd_"):
                     setattr(self, k[4:], getattr(dispatch,k))
 
+    @property
+    def root(self):
+        return self._dest.root
+
     async def __aenter__(self):
         return self
 

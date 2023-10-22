@@ -3,6 +3,7 @@ Basic test using a MicroPython subtask
 """
 import pytest
 from moat.util import NotGiven, as_proxy, attrdict, to_attrdict
+from moat.micro.compat import ticks_ms, ticks_diff
 
 from moat.micro._test import mpy_stack
 
@@ -58,6 +59,38 @@ async def test_ping(tmp_path):
     async with mpy_stack(tmp_path, CFG) as d:
         res = await d.send("r","b","echo", m="hello")
         assert res == dict(r="hello")
+
+async def test_iter_m(tmp_path):
+    async with mpy_stack(tmp_path, CFG) as d:
+        t1 = ticks_ms()
+
+        res = []
+        async with d.send_iter(200, "r","b","it", lim=3) as it:
+            async for n in it:
+                res.append(n)
+        assert res == [0,1,2]
+        t2 = ticks_ms()
+        assert 450 < ticks_diff(t2,t1) < 850
+
+        res = []
+        async with d.send_iter(200, "r","b","it") as it:
+            async for n in it:
+                if n == 3:
+                    break
+                res.append(n)
+        assert res == [0,1,2]
+        t1 = ticks_ms()
+        assert 450 < ticks_diff(t1,t2) < 850
+
+        res = []
+        async with d.send_iter(200, "r","b","nit", lim=3) as it:
+            async for n in it:
+                res.append(n)
+        assert res == [1,2,3]
+        t2 = ticks_ms()
+        assert 450 < ticks_diff(t2,t1) < 850
+
+
 
 
 @pytest.mark.parametrize("lossy", [False, True])

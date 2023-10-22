@@ -159,6 +159,12 @@ class IterWrap:
         self.k = k
         self.ival = ival
 
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *tb):
+        pass
+
     def __aiter__(self):
         return self
 

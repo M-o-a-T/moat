@@ -351,6 +351,10 @@ class BaseListenCmd(BaseSubCmd):
         self.seq = seq+1
         await self.attach(seq, app)
         await self.start_app(app)
+        await app.wait_ready()
+
+        await app.wait_stopped()
+        await self.detach(seq)
 
     async def task(self) -> Never:
         """

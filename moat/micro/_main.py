@@ -23,11 +23,13 @@ from moat.util import (
     yload,
     yprint,
 )
+from moat.micro.cmd.tree import Dispatch,SubDispatch
+from moat.micro.cmd.util import get_part
 from moat.micro.proto.stream import RemoteBufAnyio
 from moat.util.main import load_subgroup
 from moat.micro.util import run_update
 
-from .compat import TaskGroup, idle
+from .compat import TaskGroup, idle, log
 from .direct import DirectREPL
 
 logger = logging.getLogger(__name__)
@@ -36,11 +38,6 @@ logger = logging.getLogger(__name__)
 def _clean_cfg(cfg):
     # cfg = attrdict(apps=cfg["apps"])  # drop all the other stuff
     return cfg
-
-def _get(d,p):
-    for pp in p:
-        d = d[pp]
-    return d
 
 @load_subgroup(prefix="moat.micro", epilog="""
         The 'section' parameter says which part of the configuration to use.
@@ -75,7 +72,7 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
     'moat micro' configures MoaT satellites and runs the link to them,
     as well as applications using it."""
     obj = ctx.obj
-    cfg = obj.cfg.micro
+    obj.ocfg = cfg = obj.cfg["micro"]
     inv = ctx.invoked_subcommand
     if section is None:
         if inv == "setup":
@@ -84,7 +81,7 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
             section = Path()
         else:
             section = Path("connect")
-    cfg = _get(cfg, section)
+    cfg = get_part(cfg, section)
 
     if config:
         with open(config, "r") as f:
@@ -100,7 +97,6 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
         cfg["path"] = link
     elif link is not None:
         raise click.UsageError("You can't use a link path with 'moat micro run'")
-
 
     obj.cfg = to_attrdict(cfg)
 
@@ -129,11 +125,12 @@ async def setup_(obj, **kw):
     for k,v in kw.items():
         if k not in st or v is not None:
             st[k] = v
-    return await setup(obj,cfg,**st)
+    return await setup(obj,cfg,obj.ocfg,**st)
 
 async def setup(
     obj,
     cfg, 
+    ocfg,
     source,
     root,
     dest,
@@ -158,7 +155,6 @@ async def setup(
         raise click.UsageError("You can't use 'watch' and 'run' at the same time")
 
     from .path import MoatDevPath, ABytes, copy_over
-    from .cmd.tree import Dispatch,SubDispatch
 
     async with Dispatch(cfg, run=True) as dsp, \
             SubDispatch(dsp,cfg["path"]) as sd, \
@@ -178,8 +174,8 @@ async def setup(
         if state:
             await repl.exec(f"f=open('moat.state','w'); f.write({state !r}); f.close()")
         if config:
-            config = _clean_cfg(config)
-            f = ABytes("moat.cfg", packer(config))
+            config = _clean_cfg(get_part(ocfg, config))
+            f = ABytes(name="moat.cfg", data=packer(config))
             await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl))
 
         if update:
@@ -195,7 +191,7 @@ async def setup(
             await repl.soft_reset(run_main=run)
             # reset with run_main set should boot into MoaT
 
-        if run:
+        if run or watch:
             o, e = await repl.exec_raw(
                 f"from main import go; go(state='once')", timeout=30
             )
@@ -211,6 +207,13 @@ async def setup(
                 d = await ser.receive()
                 sys.stderr.buffer.write(d)
                 sys.stderr.buffer.flush()
+
+        if run:
+            log("Reloading.")
+            merge(dsp.cfg, ocfg, drop=True)
+            await dsp.reload()
+            log("Running.")
+            await idle()
 
 
 @cli.command("sync", short_help='Sync MoaT code')
@@ -230,10 +233,10 @@ async def sync_(obj, source, dest, cross, section):
     Sync of MoaT code on a running MicroPython device.
 
     """
-    from .main import copy_over, get_link
+    from .main import copy_over
     from .path import MoatFSPath
 
-    cfg = _get(obj.cfg, section)
+    cfg = obj.cfg
     async with Dispatch(cfg) as dsp, SubDispatch(dsp, cfg.get("path",P("r"))) as sd:
         dst = MoatFSPath("/" + dest).connect_repl(sd)
         await copy_over(source, dst, cross=cross)
@@ -247,7 +250,7 @@ async def boot(obj, state):
     Restart a MoaT node
 
     """
-    cfg = _get(obj.cfg, section)
+    cfg = obj.cfg
     async with Dispatch(cfg) as dsp, SubDispatch(dsp, cfg.get("path",P("r"))) as sd:
         if state:
             await sd.send("sys", "state", state=state)
@@ -277,17 +280,17 @@ async def cmd(obj, path, **attrs):
     Send a MoaT command.
 
     """
+    cfg = obj.cfg
     val = {}
     val = process_args(val, **attrs)
     if len(path) == 0:
         raise click.UsageError("Path cannot be empty")
 
-    from .main import get_link
     from .proto.stack import RemoteError
 
-    async with get_link(obj) as req:
+    async with Dispatch(cfg, run=True) as dsp, SubDispatch(dsp, cfg.get("path",P("r"))) as sd:
         try:
-            res = await req.send(list(path), val)
+            res = await sd.dispatch(tuple(path), val)
         except RemoteError as err:
             yprint(dict(e=str(err.args[0])))
         else:
@@ -346,19 +349,22 @@ async def cfg_(obj, read, read_client, write, write_client, sync, client, **attr
         yprint(cfg, stream=write)
         return
 
-    async with get_link(obj) as req:
+    # TODO does not work yet
+    async with Dispatch(cfg, run=True, sig=True) as dsp, \
+            dsp.cfg_at(*cfg["path"]) as cf, \
+            dsp.sub_at(*cfg["fs"]) as fs:
         has_attrs = any(a for a in attrs.values())
 
         if has_attrs and not (read or read_client or write or write_client):
             # No file access at all. Just update the client's RAM.
             val = merge(*attrs.values())  # pylint: disable=no-value-for-parameter
-            await req.set_cfg(val, sync=sync)
+            await cf.set_cfg(val, sync=sync)
             return
 
         if read:
             cfg = yload(read)
         if read_client:
-            p = MoatFSPath(read_client).connect_repl(req)
+            p = MoatFSPath(read_client).connect_repl(fs)
             d = await p.read_bytes(chunk=64)
             if not read:
                 cfg = unpacker(d)
@@ -385,84 +391,13 @@ async def cfg_(obj, read, read_client, write, write_client, sync, client, **attr
 
 
 @cli.command("mplex", short_help='Run the multiplexer')
-@click.option("-n", "--no-config", is_flag=True, help="don't fetch the config from the client")
-@click.option("-r", "--remote", is_flag=True, help="talk via TCP")
-@click.option("-S", "--server", help="talk to this system")
-@click.argument("pipe", nargs=-1)
 @click.pass_obj
-async def mplex_(obj, **kw):
-    "Multiplexer call"
-    await _mplex(obj, **kw)
-
-
-async def _mplex(obj, no_config=False, remote=False, server=None, pipe=None):
+async def run(obj):
     """
-    Run a multiplex channel to MoaT code on a running MicroPython device.
-
-    If arguments are given, interpret as command to run as pipe to the
-    device.
+    Run the MoaT stack.
     """
-    if not remote and not obj.port:
-        raise click.UsageError("You need to specify a port")
-    if not obj.socket:
-        raise click.UsageError("You need to specify a socket")
-    if server:
-        remote = True
-    elif remote:
-        server = obj.cfg.micro.net.addr
-
-    from .main import get_link_serial, get_remote, get_serial
-    from .proto.multiplex import Multiplexer
-
-    cfg_p = obj.cfg.micro.port
-    if pipe:
-        cfg_p.dev = pipe
-
-    @asynccontextmanager
-    async def stream_factory(req):
-        # build a serial stream link
-        if isinstance(cfg_p.get("dev", None), (list, tuple)):
-            # array = program behind a pipe
-            async with await anyio.open_process(cfg_p.dev, stderr=sys.stderr) as proc:
-                ser = anyio.streams.stapled.StapledByteStream(proc.stdin, proc.stdout)
-                async with get_link_serial(
-                    obj, ser, request_factory=req, log=obj.debug > 3, lossy=False
-                ) as link:
-                    yield link
-        else:
-            async with get_serial(obj) as ser:
-                async with get_link_serial(
-                    obj, ser, request_factory=req, log=obj.debug > 3
-                ) as link:
-                    yield link
-
-    @asynccontextmanager
-    async def net_factory(req):
-        # build a network connection link
-        async with get_remote(obj, server, port=27587, request_factory=req) as link:
-            yield link
-
-    async def sig_handler(tg):
-        import signal
-
-        with anyio.open_signal_receiver(signal.SIGINT, signal.SIGTERM, signal.SIGHUP) as signals:
-            async for _ in signals:
-                tg.cancel()
-                break  # default handler on next
-
-    async with TaskGroup() as tg:
-        await tg.spawn(sig_handler, tg, _name="sig")
-        obj.debug = False  # for as_service
-
-        async with as_service(obj):
-            mplex = Multiplexer(
-                net_factory if remote else stream_factory,
-                obj.socket,
-                cfg=obj.cfg.micro,
-                load_cfg=not no_config,
-            )
-            await mplex.serve()
-
+    async with Dispatch(cfg, run=True, sig=True) as dsp:
+        await idle()
 
 @cli.command()
 @click.option("-b", "--blocksize", type=int, help="Max read/write message size", default=256)
@@ -470,10 +405,12 @@ async def _mplex(obj, no_config=False, remote=False, server=None, pipe=None):
 @click.pass_obj
 async def mount(obj, path, blocksize):
     """Mount a controller's file system on the host"""
-    from .main import get_link
+    from moat.micro.fuse import wrap
 
-    async with get_link(obj) as req:
-        from moat.micro.fuse import wrap
+    cfg = obj.cfg
 
-        async with wrap(req, path, blocksize=blocksize, debug=obj.debug):
+    async with Dispatch(cfg, run=True, sig=True) as dsp, \
+            SubDispatch(dsp,cfg["path"]) as sd:
+
+        async with wrap(sd, path, blocksize=blocksize, debug=4):
             await idle()

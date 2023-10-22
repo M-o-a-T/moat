@@ -33,7 +33,7 @@ class Fwd(BaseCmd):
 
     def dispatch(self, action, msg, **kw) -> Awaitable:
         "call via the subdispatcher"
-        await self.sd.dispatch(action, msg, **kw)
+        return self.sd.dispatch(action, msg, **kw)
 
 
 class Link(BaseCmdMsg):
@@ -44,6 +44,6 @@ class Link(BaseCmdMsg):
     """
     async def stream(self) -> BaseMsg:
         "returns the stack-wrapped link"
-        sd = AC_use(self, self.root.sub_at(*self.cfg["path"]))
+        sd = BufCmd(self.cfg)
         return await AC_use(self, console_stack(sd, self.cfg))
 

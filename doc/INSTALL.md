@@ -61,7 +61,7 @@ this YAML file::
         apps:
           wdt: wdt.WDTCmd
           m: serial.Link
-          f: fs.FsCmd
+          f: fs.Cmd
         m: 
           port: 0
           mode: *rs

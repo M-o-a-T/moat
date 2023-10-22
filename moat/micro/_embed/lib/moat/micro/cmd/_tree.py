@@ -405,7 +405,6 @@ class DirCmd(BaseSubCmd):
         # from pprint import pprint
         # pprint(gcfg,sys.stderr)
         apps = gcfg.get("apps", {})
-        tg = self.tg
 
         def imp(name):
             return import_(f"{self.root.APP}.{name}", 1)

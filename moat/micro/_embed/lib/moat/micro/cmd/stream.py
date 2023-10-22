@@ -322,7 +322,7 @@ class BaseCmdMsg(BaseCmd):
 
                 self.reply[i] = t
             rm = await t.start(self.tg)
-            if r is not None:
+            if rm is not None:  # revised iterator rate
                 await self.s.send({'i':i, 'r':rm})
 
         else:

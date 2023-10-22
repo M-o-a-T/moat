@@ -23,7 +23,7 @@ r:
       r: stdio.StdIO
       f: fs.Cmd
     f:
-      prefix: "/tmp/nonexisting"
+      root: "/tmp/nonexisting"
     r:
       log:
         txt: "S"
@@ -35,7 +35,7 @@ async def test_fuse(tmp_path):
     r = anyio.Path(tmp_path) / "root"
     await p.mkdir()
 
-    async with mpy_stack(tmp_path, CFG, {"r":{"cfg":{"f": {"prefix": str(r)}}}}) as d:
+    async with mpy_stack(tmp_path, CFG, {"r":{"cfg":{"f": {"root": str(r)}}}}) as d:
         async with wrap(d.sub_at("r", "f"), p, debug=4):
 
             def fn(p):

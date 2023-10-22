@@ -31,7 +31,7 @@ class Cmd(BaseCmd):
         super().__init__(cfg)
         self._fd_cache = dict()
         try:
-            self._pre = cfg["prefix"]
+            self._pre = cfg["root"]
         except KeyError:
             self._pre = ""
         else:

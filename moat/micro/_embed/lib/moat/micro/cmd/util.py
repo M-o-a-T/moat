@@ -256,7 +256,7 @@ class DelayedIter(_DelayedIter):
         else:
             # This took too long. Reset.
             self._warned += 1
-            if not self.warned & (self.warned-1):
+            if not self._warned & (self._warned-1):
                 # if power of two
                 log("IterDelay %r %d", -td)
             self._next = ticks_add(t, self.t)

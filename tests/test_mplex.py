@@ -24,14 +24,14 @@ r:
         guarded: False
       log:
         txt: "MH"
-      log_raw:
-        txt: "ML"
+#     log_raw:
+#       txt: "ML"
 
   link: *link
   log:
     txt: "TH"
-  log_raw:
-    txt: "TL"
+# log_raw:
+#   txt: "TL"
 """
 @pytest.mark.anyio
 async def test_mplex(tmp_path):

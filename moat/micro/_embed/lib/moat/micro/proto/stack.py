@@ -148,7 +148,7 @@ class BaseConn(Base):
         You need to use `AC_use` for setting up an async context
         or to register a cleanup handler.
         """
-        raise NotImplementedError("'stream' in "+self.__class__.__name__)
+        raise NotImplementedError(f"'stream' in {self !r}")
 
 
 class BaseMsg(BaseConn):
@@ -158,10 +158,10 @@ class BaseMsg(BaseConn):
     Implement send/recv.
     """
     async def send(self, m:Any) -> Any:
-        raise NotImplementedError("'send' in "+self.__class__.__name__)
+        raise NotImplementedError(f"'send' in {self !r}")
 
     async def recv(self) -> Any:
-        raise NotImplementedError("'recv' in "+self.__class__.__name__)
+        raise NotImplementedError(f"'recv' in {self !r}")
 
 class BaseBlk(BaseConn):
     """
@@ -170,10 +170,10 @@ class BaseBlk(BaseConn):
     Implement snd/rcv.
     """
     async def snd(self, m:Any) -> Any:
-        raise NotImplementedError("'send' in "+self.__class__.__name__)
+        raise NotImplementedError(f"'send' in {self !r}")
 
     async def rcv(self) -> Any:
-        raise NotImplementedError("'recv' in "+self.__class__.__name__)
+        raise NotImplementedError(f"'recv' in {self !r}")
 
 class BaseBuf(BaseConn):
     """
@@ -182,10 +182,10 @@ class BaseBuf(BaseConn):
     Implement rd/wr.
     """
     async def rd(self, buf) -> int:
-        raise NotImplementedError("'rd' in "+self.__class__.__name__)
+        raise NotImplementedError(f"'rd' in {self !r}")
 
     async def wr(self, buf) -> int:
-        raise NotImplementedError("'wr' in "+self.__class__.__name__)
+        raise NotImplementedError(f"'wr' in {self !r}")
 
 
 class StackedConn(BaseConn):

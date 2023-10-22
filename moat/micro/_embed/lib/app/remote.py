@@ -4,11 +4,12 @@ Remote port access apps
 from __future__ import annotations
 
 from moat.micro.compat import AC_use
-from moat.micro.cmd.stream import BaseBBMCmd, BaseCmdMsg
+from moat.micro.cmd.stream import BaseCmdBBM, BufCmd, BaseCmdMsg
+from moat.micro.cmd.base import BaseCmd
 from moat.micro.stacks.console import console_stack
 from moat.micro.part.serial import Serial
 
-class Raw(BaseBBMCmd):
+class Raw(BaseCmdBBM):
     """
     Link to a stream that's someplace else.
 
@@ -37,7 +38,9 @@ class Fwd(BaseCmd):
 
 class Link(BaseCmdMsg):
     """
-    Sends/receives MoaT messages using a stream that's somewhere else.
+    Connects to a `BaseCmdBBM` object exporting a `BaseBuf`.
+
+    
     """
     async def stream(self) -> BaseMsg:
         "returns the stack-wrapped link"

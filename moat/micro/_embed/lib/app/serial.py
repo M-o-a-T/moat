@@ -4,7 +4,7 @@ Serial port access apps
 from __future__ import annotations
 
 from moat.micro.compat import AC_use
-from moat.micro.cmd.stream import BaseBBMCmd, BaseCmdMsg
+from moat.micro.cmd.stream import BaseCmdBBM, BaseCmdMsg
 from moat.micro.stacks.console import console_stack
 from moat.micro.part.serial import Serial
 
@@ -20,7 +20,7 @@ from moat.micro.part.serial import Serial
 #   idle: MSEC
 # start: NUM
 #
-class Raw(BaseBBMCmd):
+class Raw(BaseCmdBBM):
     max_idle = 100
     pack = None
 

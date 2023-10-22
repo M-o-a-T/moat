@@ -3,7 +3,7 @@ from serialpacker import SerialPacker
 
 from moat.util import import_
 from moat.micro.compat import AC_use
-from moat.micro.cmd.stream import BaseBBMCmd
+from moat.micro.cmd.stream import BaseCmdBBM
 
 
 # Serial packet forwarder
@@ -17,7 +17,7 @@ from moat.micro.cmd.stream import BaseBBMCmd
 #   idle: MSEC
 # start: NUM
 #
-class Port(BaseBBMCmd):
+class Port(BaseCmdBBM):
     max_idle = 100
     pack = None
 

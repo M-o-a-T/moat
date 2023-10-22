@@ -8,17 +8,27 @@ import sys
 
 from moat.util import ValueEvent, obj2name, NotGiven
 from .util import ValueTask, SendIter, RecvIter, StoppedError
-from moat.micro.compat import CancelledError, WouldBlock, log, Lock, ACM, AC_use, AC_exit, shield, TaskGroup
-from moat.micro.proto.stack import RemoteError, SilentRemoteError, BaseMsg
+from moat.micro.compat import CancelledError, WouldBlock, log, Lock, ACM, AC_use, AC_exit, shield, TaskGroup, ExceptionGroup
+from moat.micro.proto.stack import RemoteError, SilentRemoteError, BaseMsg, BaseBlk, BaseBuf, Base
 
 from .base import BaseCmd
 
-class BaseBBMCmd(BaseCmd):
+class BaseCmdBBM(BaseCmd):
     """
     This is a command handler that connects MoaT's Cmd tree to a `BaseBuf`,
     `BaseBlk` or `BaseMsg` instance.
 
-    Override `setup` to return that instance.
+    Override `stream` to return that instance, possibly wrapped with `AC_use`.
+
+    This is a single class that adapts to any of a `BaseMsg`, `BaseBlk`, or
+    `BaseBuf` stream.
+
+    The difference between this and a `BaseCmdMsg`-derived class is that
+    this class exposes commands that directly access the underlying stream
+    (of whatever type).
+
+    In contrast, a `BaseCmdMsg` objects encapsulates arbitrary commands,
+    and requires a `BaseCmdMsg` handler on the other side to talk to.
     """
     dev = None
 
@@ -26,7 +36,7 @@ class BaseBBMCmd(BaseCmd):
         super().__init__(cfg)
         self.w_lock = Lock()
 
-    async def stream(self):
+    async def stream(self) -> BaseMsg|BaseBlk|BaseBuf:
         raise NotImplementedError("setup", self.path)
 
     async def setup(self):
@@ -41,6 +51,8 @@ class BaseBBMCmd(BaseCmd):
             self.dev = None
             await AC_exit(self)
     
+    # Buf: rd/wr = .rd/.wr
+
     async def cmd_rd(self, n=64):
         """read some data"""
         b = bytearray(n)
@@ -58,7 +70,9 @@ class BaseBBMCmd(BaseCmd):
         async with self.w_lock:
             await self.dev.wr(b)
 
-    async def cmd_crd(self, n=64):
+    # Blk/Msg: Console crd/cwr = .crd/cwr
+
+    async def cmd_crd(self, n=64) -> bytes:
         """read some console data"""
         b = bytearray(n)
         r = await self.dev.crd(b)
@@ -75,6 +89,8 @@ class BaseBBMCmd(BaseCmd):
         async with self.w_lock:
             await self.dev.cwr(b)
 
+    # Msg: s/r = .send/.recv
+
     async def cmd_s(self, m):
         """send a message"""
         return await self.dev.send(m)
@@ -83,12 +99,93 @@ class BaseBBMCmd(BaseCmd):
         """receive a message"""
         return await self.dev.recv(m)
 
+    # Blk: sb/rb = .snd/.rcv
+
+    async def cmd_sb(self, m):
+        """send a message"""
+        return await self.dev.snd(m)
+
+    async def cmd_rb(self):
+        """receive a message"""
+        return await self.dev.rcv()
+
+
+class _BBMCmd(Base):
+    def __init__(self, cfg):
+        super().__init__(cfg)
+        self.cmd = cfg["_cmd"]
+
+    async def setup(self):
+        await Base.setup(self)
+        # not using super() because {Msg,Buf,Base}Cmd pull in inheritance
+        # from BaseConn which calls ``.stream`` which we don't have, or want
+        self.s = self.cmd.root.sub_at(*self.cfg["path"])
+
+class MsgCmd(_BBMCmd, BaseMsg):
+    """
+    This is the reverse of a CmdBBM for messages, i.e. a stream handler that forwards
+    send/recv (and console) requests via MoaT.
+
+    The remote link is addressed by the config item "path".
+    """
+    def send(self, msg) -> Awaitable:
+        return self.s.s(m=msg)
+
+    def recv(self) -> Awaitable:
+        return self.s.r()
+
+    def cwr(self, buf) -> Awaitable:
+        return self.s.cwr(b=buf)
+
+    async def crd(self, buf):
+        msg = await self.s.crd(n=len(buf))
+        buf[:len(msg)] = msg
+        return len(msg)
+
+class BufCmd(_BBMCmd, BaseBuf):
+    """
+    This is the reverse of a CmdBBM for blocks, i.e. a stream handler that forwards
+    snd/rcv (and console) requests via MoaT.
+
+    The remote link is addressed by the config item "path".
+    """
+    def wr(self, buf) -> Awaitable:
+        return self.s.wr(b=buf)
+
+    async def rd(self, buf):
+        msg = await self.s.rd(n=len(buf))
+        buf[:len(msg)] = msg
+        return len(msg)
+
+
+class BlkCmd(_BBMCmd, BaseBlk):
+    """
+    This is the reverse of a CmdBBM for blocks, i.e. a stream handler that forwards
+    snd/rcv (and console) requests via MoaT.
+
+    The remote link is addressed by the config item "path".
+    """
+    crd = MsgCmd.crd
+    cwr = MsgCmd.cwr
+
+    def snd(self, msg) -> Awaitable:
+        return self.s.sb(m=msg)
+
+    def rcv(self) -> Awaitable:
+        return self.s.rb()
 
 
 class BaseCmdMsg(BaseCmd):
     """
-    This is a command handler that relays messages between MoaT's Cmd tree
-    and a `BaseMsg` stream.
+    This is a command handler that relays arbitrary messages between MoaT's
+    Cmd tree and a `BaseMsg` stream.
+
+    The difference between this and a `BaseCmdBBM`-derived class is that
+    this class encapsulates any message and requires a `BaseCmdMsg` handler
+    on the other side to talk to.
+
+    In contrast, a `BaseCmdBBM` exposes commands that directly access the underlying
+    stream (of whatever type).
     """
     tg:TaskGroup = None
 

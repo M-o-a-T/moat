@@ -4,7 +4,7 @@ Apps used for testing.
 
 from __future__ import annotations
 
-from moat.micro.cmd.stream import BaseCmdMsg, BaseBBMCmd
+from moat.micro.cmd.stream import BaseCmdMsg, BaseCmdBBM
 from moat.micro.proto.stream import MsgpackMsgBlk
 from moat.micro._test import MpyBuf
 from moat.micro.stacks.console import console_stack
@@ -20,7 +20,7 @@ class MpyCmd(BaseCmdMsg):
         mpy = MpyBuf(self.cfg)
         return await AC_use(self, console_stack(mpy, self.cfg))
 
-class MpyRaw(BaseBBMCmd):
+class MpyRaw(BaseCmdBBM):
     """links to a local micropython process"""
 
     async def stream(self):

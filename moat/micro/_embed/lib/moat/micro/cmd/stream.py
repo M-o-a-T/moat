@@ -226,10 +226,6 @@ class BaseCmdMsg(BaseCmd):
         finally:
             self.s = None
 
-    # stacked
-    async def error(self, exc):
-        print("ERROR: " + repr(error), file=sys.stderr)
-
     def _cleanup_open_commands(self):
         for e in self.reply.values():
             e.cancel()
@@ -320,7 +316,10 @@ class BaseCmdMsg(BaseCmd):
                     log("msgid known?!? %d", i)
                     tt = self.reply.pop(i)
                     tt.i = None
-                    tt.error(RuntimeError("OldCmd"))
+                    r = tt.set_error(RuntimeError("OldCmd"))
+                    if hasattr(r,"throw"):
+                        await r
+
                 self.reply[i] = t
             rm = await t.start(self.tg)
             if r is not None:
@@ -349,11 +348,15 @@ class BaseCmdMsg(BaseCmd):
                 else:
                     log("unknown err %r", msg)
                     e = StoppedError()
-                t.set_error(e)
+                r = t.set_error(e)
+                if hasattr(r,"throw"):
+                    await r
 
             elif r is not None:
                 if r is False:
-                    t.error(StopIter())
+                    r = t.set_error(StopAsyncIteration())
+                    if hasattr(r,"throw"):
+                        await r
                     del self.reply[i]
                 else:
                     t.set_r(r)

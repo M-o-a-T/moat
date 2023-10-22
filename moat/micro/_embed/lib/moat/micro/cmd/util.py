@@ -142,7 +142,7 @@ class ValueTask:
             self._t.cancel()
             self._t = False
 
-    async def error(self, err):
+    async def set_error(self, err):
         self.cancel()
         await self.cmd.reply_error(self.i, err, self.x)
 
@@ -313,8 +313,11 @@ class RecvIter(_DelayedIter):
                 self.cnt = n
         self._val.set(val)
 
-    def error(self, err):
-        self._val.set_error(err)
+    def set_error(self, err):
+        if self._val.is_set():
+            self._err = err
+        else:
+            self._val.set_error(err)
         self._warned = 0
 
     def cancel(self):

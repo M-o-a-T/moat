@@ -44,6 +44,7 @@ class BaseCmd(Base):
     p_task = None  # managed by parent. Do not touch.
 
     def __init__(self, cfg):
+        cfg["_cmd"] = self
         super().__init__(cfg)
         # self.cfg = cfg
         self._init_events()
@@ -122,6 +123,7 @@ class BaseCmd(Base):
         await idle()
 
     def set_ready(self):
+        self.cfg.pop("_cmd", None)
         if self._starting is not None:
             raise RuntimeError(f"Ready w/o start {self !r}")
             # self._starting.set()

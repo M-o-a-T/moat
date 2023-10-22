@@ -221,10 +221,11 @@ class BaseCmdMsg(BaseCmd):
                 while True:
                     msg = await self.s.recv()
                     await self._handle(msg)
-#       except (EOFError,OSError,SilentRemoteError) as exc:
-#           err = exc
-#           raise
-#       except Exception as exc:
+        except (EOFError,OSError,SilentRemoteError) as exc:
+            pass
+        except ExceptionGroup as exc:
+            if len(exc.exceptions) != 1 or not isinstance(exc.exceptions[0],(EOFError,OSError,SilentRemoteError)):
+                raise
 #           err = exc
 #           log("Run", err=err)
 #           raise

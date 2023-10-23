@@ -40,6 +40,7 @@ required = [
     "__future__",
     "errno",
     "pprint",
+    "typing",
     "functools",
     "collections",
     "collections-deque",

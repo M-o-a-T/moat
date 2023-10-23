@@ -6,42 +6,47 @@ from __future__ import annotations
 import logging
 import os
 import sys
-from pathlib import Path
-from random import random
 from contextlib import asynccontextmanager, suppress
 from contextvars import ContextVar
+from pathlib import Path
+from random import random
 
 import anyio
+from moat.util import Queue, attrdict, combine_dict, merge, packer, yload
 
 import moat.micro
-from moat.util import attrdict, merge, packer, yload, Queue, combine_dict
-
-from moat.micro.compat import TaskGroup, AC_use
-from moat.micro.cmd.tree import Dispatch
-#from moat.micro.main import Request, get_link, get_link_serial
-#from moat.micro.proto.multiplex import Multiplexer
-from moat.micro.proto.stack import BaseMsg, BaseBuf
-from moat.micro.proto.stream import ProcessBuf
 from moat.micro.app.pipe import Process
+from moat.micro.cmd.tree import Dispatch
+from moat.micro.compat import AC_use, TaskGroup
+
+# from moat.micro.main import Request, get_link, get_link_serial
+# from moat.micro.proto.multiplex import Multiplexer
+from moat.micro.proto.stack import BaseBuf, BaseMsg
+from moat.micro.proto.stream import ProcessBuf
 
 logging.basicConfig(level=logging.DEBUG)
-def lbc(*a,**k):
+
+
+def lbc(*a, **k):
     raise RuntimeError("don't configure logging a second time")
+
+
 logging.basicConfig = lbc
 
 
 temp_dir = ContextVar("temp_dir")
 
 required = [
-        "__future__",
-        "errno",
-        "pprint",
-        "functools",
-        "collections",
-        "collections-deque",
+    "__future__",
+    "errno",
+    "pprint",
+    "functools",
+    "collections",
+    "collections-deque",
 ]
 
-def rlink(s,d):
+
+def rlink(s, d):
     if s.is_file():
         with suppress(FileExistsError):
             d.symlink_to(s)
@@ -49,7 +54,8 @@ def rlink(s,d):
         with suppress(FileExistsError):
             d.mkdir()
         for f in s.iterdir():
-            rlink(s/f.name,d/f.name)
+            rlink(s / f.name, d / f.name)
+
 
 class MpyBuf(ProcessBuf):
     """
@@ -63,9 +69,10 @@ class MpyBuf(ProcessBuf):
     Using this option requires either running as part of a MpyStack,
     or setting the ``cwd`` config to a suitable directory.
 
-    If "mplex" is a string, it is interpreted as the "state" argument to 
+    If "mplex" is a string, it is interpreted as the "state" argument to
     ``main.go()``. The default for ``mplex=True`` is "once".
     """
+
     async def setup(self):
         mplex = self.cfg.get("mplex", None)
         if mplex is not None:
@@ -95,22 +102,22 @@ class MpyBuf(ProcessBuf):
 
             std = Path("lib/micropython-lib/python-stdlib").absolute()
             for req in required:
-                rlink(std/req, lib)
+                rlink(std / req, lib)
             aio = Path("lib/micropython/extmod/asyncio").absolute()
             with suppress(FileExistsError):
-                (lib/"asyncio").symlink_to(aio)
+                (lib / "asyncio").symlink_to(aio)
 
             libp = []
             for p in moat.micro.__path__:
-                p = Path(p)/"_embed"
+                p = Path(p) / "_embed"
                 if p.exists():
                     libp.append(p)
-                if (p/"lib").exists():
-                    libp.append(p/"lib")
+                if (p / "lib").exists():
+                    libp.append(p / "lib")
 
             self.env = {
-                    "MICROPYPATH": os.pathsep.join(str(x) for x in (lib,lib2,*libp)),
-                }
+                "MICROPYPATH": os.pathsep.join(str(x) for x in (lib, lib2, *libp)),
+            }
             self.cwd = root
 
         if mplex:
@@ -122,7 +129,7 @@ class MpyBuf(ProcessBuf):
                 pre / "lib/micropython/ports/unix/build-standard/micropython",
                 pre / "tests-mpy/mplex.py",
             ]
-            if isinstance(mplex,str):
+            if isinstance(mplex, str):
                 self.argv.append(md)
         else:
             self.argv = [
@@ -134,19 +141,19 @@ class MpyBuf(ProcessBuf):
 
 
 @asynccontextmanager
-async def mpy_stack(temp: Path, cfg:dict|str, cfg2:dict|None=None):
+async def mpy_stack(temp: Path, cfg: dict | str, cfg2: dict | None = None):
     """
     Creates a multiplexer.
     """
-    if isinstance(cfg,str):
+    if isinstance(cfg, str):
         if "\n" in cfg:
             cfg = yload(cfg, attr=True)
         else:
-            with (Path("tests")/"cfg"/(cfg+".cfg")).open("r") as cff:
+            with (Path("tests") / "cfg" / (cfg + ".cfg")).open("r") as cff:
                 cfg = yload(cff, attr=True)
 
     if cfg2 is not None:
-        cfg = combine_dict(cfg2,cfg)
+        cfg = combine_dict(cfg2, cfg)
 
     rst = temp_dir.set(temp)
     try:
@@ -199,6 +206,7 @@ class Loopback(BaseMsg, BaseBuf):
             await self.q_wr.send(data)
         except (anyio.ClosedResourceError, anyio.BrokenResourceError, anyio.EndOfStream) as exc:
             raise EOFError from exc
+
     snd = send
 
     async def recv(self):  # pylint:disable=arguments-differ
@@ -208,6 +216,7 @@ class Loopback(BaseMsg, BaseBuf):
             return await self._link.q_rd.receive()
         except (anyio.ClosedResourceError, anyio.BrokenResourceError, anyio.EndOfStream):
             raise EOFError from None
+
     rcv = recv
 
     async def rd(self, buf) -> int:
@@ -222,8 +231,8 @@ class Loopback(BaseMsg, BaseBuf):
     async def wr(self, buf) -> int:
         if self.loss:
             b = bytearray(buf)
-            l = 1 - (1-self.loss)**(1/len(b)/2)
-            # '1-l' is the chance of not killing each single byte 
+            l = 1 - (1 - self.loss) ** (1 / len(b) / 2)
+            # '1-l' is the chance of not killing each single byte
             # that's required to not kill a message of size len(b)
             # given two chances of mangling each byte
 
@@ -233,12 +242,11 @@ class Loopback(BaseMsg, BaseBuf):
                     del b[n]
                 else:
                     if random() < l:
-                        b[n] = b[n] ^ (1<<int(8*random()))
+                        b[n] = b[n] ^ (1 << int(8 * random()))
                     n += 1
         else:
             b = bytes(buf)
         await self.send(bytes(buf), _loss=False)
-
 
     async def teardown(self):
         await self.q_wr.aclose()

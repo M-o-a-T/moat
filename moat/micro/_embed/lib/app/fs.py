@@ -1,11 +1,11 @@
 import errno
+import os
 
 import machine
-import os
 from moat.util import as_proxy
 
 from moat.micro.cmd.base import BaseCmd
-from moat.micro.compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms, log
+from moat.micro.compat import TaskGroup, log, sleep_ms, ticks_diff, ticks_ms
 from moat.micro.proto.stack import SilentRemoteError
 
 

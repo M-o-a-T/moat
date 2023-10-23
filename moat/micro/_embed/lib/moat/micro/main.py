@@ -3,27 +3,28 @@ WDT = None
 
 import os
 import sys
+
 import machine
-
 import msgpack
-
 from moat.util import NotGiven
+
 from moat.micro.compat import print_exc
 
 
-def dict_upd(d,k,v):
-    if isinstance(v,dict):
-        dd = d.setdefault(k,{})
-        for kk,vv in v.items():
-            dict_upd(dd,kk,vv)
+def dict_upd(d, k, v):
+    if isinstance(v, dict):
+        dd = d.setdefault(k, {})
+        for kk, vv in v.items():
+            dict_upd(dd, kk, vv)
         if not dd:
             del d[k]
     elif v is NotGiven:
-        d.pop(k,None)
+        d.pop(k, None)
     else:
         d[k] = v
 
-def main(cfg:str|dict, fake_end=False):
+
+def main(cfg: str | dict, fake_end=False):
     """
     The MoaT.micro satellite's main entry point.
 
@@ -49,18 +50,18 @@ def main(cfg:str|dict, fake_end=False):
     else:
         try:
             if (m := rtc.memory()) != b"":
-
                 cf2 = msgpack.unpackb(m)
-                for k,v in cf2:
-                    if not isinstance(v,dict):
+                for k, v in cf2:
+                    if not isinstance(v, dict):
                         continue
-                    dict_upd(cfg,k,v)
+                    dict_upd(cfg, k, v)
 
         except Exception as exc:
             print_exc(exc)
 
     def cfg_network(n):
         import time
+
         import network
 
         if "name" in n:
@@ -71,10 +72,10 @@ def main(cfg:str|dict, fake_end=False):
             wlan = network.WLAN(network.STA_IF)  # create station interface
             wlan.active(True)
             if "addr" in n:
-                nm = n.get("netmask",24)
-                if isinstance(nm,int):
-                    ff = (1<<32) - 1
-                    nm = (ff << (32-nm)) & ff
+                nm = n.get("netmask", 24)
+                if isinstance(nm, int):
+                    ff = (1 << 32) - 1
+                    nm = (ff << (32 - nm)) & ff
                     nm = f"{(nm>>24)&0xFF}.{(nm>>16)&0xFF}.{(nm>>8)&0xFF}.{nm&0xFF}"
                 wlan.ifconfig((n["addr"], n["netmask"], n["router"], n["dns"]))
             wlan.connect(n["ap"], n.get("pwd", ''))  # connect to an AP
@@ -97,15 +98,16 @@ def main(cfg:str|dict, fake_end=False):
     if "net" in cfg:
         cfg_network(cfg["net"])
 
-
     async def _main():
         import sys
+
         from moat.micro.cmd.tree import Dispatch
         from moat.micro.compat import idle
 
         async with Dispatch(cfg) as dsp:
             if fake_end:
                 from .compat import sleep_ms
+
                 await sleep_ms(1000)
                 sys.stdout.write("OK\x04\x04>")
                 await sleep_ms(100)
@@ -114,4 +116,5 @@ def main(cfg:str|dict, fake_end=False):
             await idle()
 
     from moat.micro.compat import run
+
     run(_main)

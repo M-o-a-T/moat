@@ -8,7 +8,7 @@ from moat.micro._test import mpy_stack
 
 pytestmark = pytest.mark.anyio
 
-CFG="""
+CFG = """
 apps:
   r: _test.MpyCmd
   a: _test.Cmd
@@ -41,9 +41,10 @@ r:
 
 """
 
+
 async def test_rtc(tmp_path):
     "test config updating"
-    async with mpy_stack(tmp_path, CFG) as d, d.cfg_at("r", "c") as cfg, d.cfg_at("r","t") as rtc:
+    async with mpy_stack(tmp_path, CFG) as d, d.cfg_at("r", "c") as cfg, d.cfg_at("r", "t") as rtc:
         cf = to_attrdict(await cfg.get())
         rt = to_attrdict(await rtc.get())
         assert cf.tt.a == "b"
@@ -51,7 +52,7 @@ async def test_rtc(tmp_path):
         assert cf.tt.z == 99
 
         rt.tt = attrdict()
-        rt.tt.c = dict(d="f",g={"h":"i"})
+        rt.tt.c = dict(d="f", g={"h": "i"})
         rt.tt.a = NotGiven
         await rtc.set(rt, replace=True, sync=True)
 
@@ -60,4 +61,3 @@ async def test_rtc(tmp_path):
         assert cf.tt.c.d == "f"
         assert cf.tt.c.g.h == "i"
         assert cf.tt.z == 99
-

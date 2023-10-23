@@ -1,13 +1,15 @@
 import sys
 
-from ..compat import TaskGroup, run_server, AC_use, Event
+from ..compat import AC_use, Event, TaskGroup, run_server
 from ..proto.stream import SingleAIOBuf
 from ..stacks.util import BaseConnIter
+
 
 class TcpIter(BaseConnIter):
     """
     A connection iterator for TCP sockets
     """
+
     def __init__(self, host, port):
         super().__init__()
         self.host = host
@@ -16,10 +18,12 @@ class TcpIter(BaseConnIter):
     async def accept(self) -> Never:
         async with TaskGroup() as tgx:
             evt = Event()
+
             async def rdy(evt):
                 await evt.wait()
                 self.set_ready()
-            await tgx.spawn(rdy,evt)
+
+            await tgx.spawn(rdy, evt)
 
             await run_server(self._handle, self.host, self.port, evt=evt)
 

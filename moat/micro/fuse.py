@@ -774,7 +774,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
 
 @asynccontextmanager
-async def wrap(link:SubDispatch, path:pathlib.Path, blocksize=0, debug=1):
+async def wrap(link: SubDispatch, path: pathlib.Path, blocksize=0, debug=1):
     """
     Context manager that mounts a satellite file system locally
     """

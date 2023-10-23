@@ -5,7 +5,9 @@ Basic handler for iterating incoming Moat connections.
 from __future__ import annotations
 
 from moat.util import Queue
-from moat.micro.compat import TaskGroup, ACM, AC_exit, Event, shield, AC_use
+
+from moat.micro.compat import ACM, AC_exit, AC_use, Event, TaskGroup, shield
+
 
 class BaseConnIter:
     """
@@ -13,6 +15,7 @@ class BaseConnIter:
 
     You need to override the "accept" method.
     """
+
     def __init__(self):
         self.q = Queue(1)
         self.evt = Event()
@@ -23,7 +26,7 @@ class BaseConnIter:
         return self
 
     async def __aexit__(self, *exc):
-        await AC_exit(self,*exc)
+        await AC_exit(self, *exc)
 
     def set_ready(self) -> None:
         self.evt.set()

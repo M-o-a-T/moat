@@ -6,12 +6,25 @@ from __future__ import annotations
 
 import sys
 
-from moat.util import ValueEvent, obj2name, NotGiven
-from .util import ValueTask, SendIter, RecvIter, StoppedError
-from moat.micro.compat import CancelledError, WouldBlock, log, Lock, ACM, AC_use, AC_exit, shield, TaskGroup, ExceptionGroup
-from moat.micro.proto.stack import RemoteError, SilentRemoteError, BaseMsg, BaseBlk, BaseBuf, Base
+from moat.util import NotGiven, ValueEvent, obj2name
+
+from moat.micro.compat import (
+    ACM,
+    AC_exit,
+    AC_use,
+    CancelledError,
+    ExceptionGroup,
+    Lock,
+    TaskGroup,
+    WouldBlock,
+    log,
+    shield,
+)
+from moat.micro.proto.stack import Base, BaseBlk, BaseBuf, BaseMsg, RemoteError, SilentRemoteError
 
 from .base import BaseCmd
+from .util import RecvIter, SendIter, StoppedError, ValueTask
+
 
 class BaseCmdBBM(BaseCmd):
     """
@@ -30,13 +43,14 @@ class BaseCmdBBM(BaseCmd):
     In contrast, a `BaseCmdMsg` objects encapsulates arbitrary commands,
     and requires a `BaseCmdMsg` handler on the other side to talk to.
     """
+
     dev = None
 
     def __init__(self, cfg):
         super().__init__(cfg)
         self.w_lock = Lock()
 
-    async def stream(self) -> BaseMsg|BaseBlk|BaseBuf:
+    async def stream(self) -> BaseMsg | BaseBlk | BaseBuf:
         raise NotImplementedError("setup", self.path)
 
     async def setup(self):
@@ -50,7 +64,7 @@ class BaseCmdBBM(BaseCmd):
         finally:
             self.dev = None
             await AC_exit(self)
-    
+
     # Buf: rd/wr = .rd/.wr
 
     async def cmd_rd(self, n=64):
@@ -59,7 +73,7 @@ class BaseCmdBBM(BaseCmd):
         r = await self.dev.rd(b)
         if r == n:
             return b
-        elif r <= n>>2:
+        elif r <= n >> 2:
             return bytes(b[:r])
         else:
             b = memoryview(b)
@@ -78,7 +92,7 @@ class BaseCmdBBM(BaseCmd):
         r = await self.dev.crd(b)
         if r == n:
             return b
-        elif r <= n>>2:
+        elif r <= n >> 2:
             return bytes(b[:r])
         else:
             b = memoryview(b)
@@ -121,6 +135,7 @@ class _BBMCmd(Base):
         # from BaseConn which calls ``.stream`` which we don't have, or want
         self.s = self.cmd.root.sub_at(*self.cfg["path"])
 
+
 class MsgCmd(_BBMCmd, BaseMsg):
     """
     This is the reverse of a CmdBBM for messages, i.e. a stream handler that forwards
@@ -128,6 +143,7 @@ class MsgCmd(_BBMCmd, BaseMsg):
 
     The remote link is addressed by the config item "path".
     """
+
     def send(self, msg) -> Awaitable:
         return self.s.s(m=msg)
 
@@ -139,8 +155,9 @@ class MsgCmd(_BBMCmd, BaseMsg):
 
     async def crd(self, buf):
         msg = await self.s.crd(n=len(buf))
-        buf[:len(msg)] = msg
+        buf[: len(msg)] = msg
         return len(msg)
+
 
 class BufCmd(_BBMCmd, BaseBuf):
     """
@@ -149,12 +166,13 @@ class BufCmd(_BBMCmd, BaseBuf):
 
     The remote link is addressed by the config item "path".
     """
+
     def wr(self, buf) -> Awaitable:
         return self.s.wr(b=buf)
 
     async def rd(self, buf):
         msg = await self.s.rd(n=len(buf))
-        buf[:len(msg)] = msg
+        buf[: len(msg)] = msg
         return len(msg)
 
 
@@ -165,6 +183,7 @@ class BlkCmd(_BBMCmd, BaseBlk):
 
     The remote link is addressed by the config item "path".
     """
+
     crd = MsgCmd.crd
     cwr = MsgCmd.cwr
 
@@ -187,7 +206,8 @@ class BaseCmdMsg(BaseCmd):
     In contrast, a `BaseCmdBBM` exposes commands that directly access the underlying
     stream (of whatever type).
     """
-    tg:TaskGroup = None
+
+    tg: TaskGroup = None
 
     def __init__(self, cfg):
         super().__init__(cfg)
@@ -204,7 +224,7 @@ class BaseCmdMsg(BaseCmd):
 
         Must be overridden.
         """
-        raise NotImplementedError("Create the stream: ",self.__class__.__name__)
+        raise NotImplementedError("Create the stream: ", self.__class__.__name__)
 
     async def task(self):
         """
@@ -234,7 +254,7 @@ class BaseCmdMsg(BaseCmd):
         if i is None:
             return
         try:
-            await self.s.send({'i':i, 'd':res})
+            await self.s.send({'i': i, 'd': res})
         except Exception as e:
             await self.reply_error(i, e)
         except BaseException as e:
@@ -261,7 +281,7 @@ class BaseCmdMsg(BaseCmd):
             if i is None:
                 return
             res = {'i': i}
-            if isinstance(exc,Exception):
+            if isinstance(exc, Exception):
                 try:
                     obj2name(type(exc))
                 except KeyError:
@@ -284,10 +304,10 @@ class BaseCmdMsg(BaseCmd):
         if not isinstance(msg, dict):
             print("?3", msg, file=sys.stderr)
             return
-        a: Optional[tuple[str|int]] = msg.get("a", None)  # action
+        a: Optional[tuple[str | int]] = msg.get("a", None)  # action
         i: Optional[int] = msg.get("i", None)  # seqnum
-        d: Mapping[str,Any]|type[NotGiven] = msg.get("d", NotGiven)  # data
-        e: type[Exception]|str = msg.get("e", None)  # error
+        d: Mapping[str, Any] | type[NotGiven] = msg.get("d", NotGiven)  # data
+        e: type[Exception] | str = msg.get("e", None)  # error
         r: Optional[int] = msg.get("r", None)  # repeat
         n: Optional[int] = msg.get("n", None)  # iter_seq
         x: list[type[Exception]] = msg.get("x", ())  # exclude_error
@@ -317,13 +337,13 @@ class BaseCmdMsg(BaseCmd):
                     tt = self.reply.pop(i)
                     tt.i = None
                     r = tt.set_error(RuntimeError("OldCmd"))
-                    if hasattr(r,"throw"):
+                    if hasattr(r, "throw"):
                         await r
 
                 self.reply[i] = t
             rm = await t.start(self.tg)
             if rm is not None:  # revised iterator rate
-                await self.s.send({'i':i, 'r':rm})
+                await self.s.send({'i': i, 'r': rm})
 
         else:
             # reply
@@ -337,34 +357,34 @@ class BaseCmdMsg(BaseCmd):
                 return
 
             if e is not None:
-                if isinstance(e,type):
+                if isinstance(e, type):
                     if d is NotGiven:
                         d = ()
                     e = e(*d)
-                elif isinstance(e,str):
+                elif isinstance(e, str):
                     e = RemoteError(e)
-                elif isinstance(e,Exception):
+                elif isinstance(e, Exception):
                     pass
                 else:
                     log("unknown err %r", msg)
                     e = StoppedError()
                 r = t.set_error(e)
-                if hasattr(r,"throw"):
+                if hasattr(r, "throw"):
                     await r
 
             elif r is not None:
                 if r is False:
                     r = t.set_error(StopAsyncIteration())
-                    if hasattr(r,"throw"):
+                    if hasattr(r, "throw"):
                         await r
                     del self.reply[i]
                 else:
                     t.set_r(r)
 
             elif d is not NotGiven:
-                if isinstance(t, (SendIter,RecvIter)):
+                if isinstance(t, (SendIter, RecvIter)):
                     if n:
-                        t.set(d,n=n)
+                        t.set(d, n=n)
                     else:
                         t.set(d)
                     return
@@ -372,12 +392,13 @@ class BaseCmdMsg(BaseCmd):
                     t.set(d)
                     del self.reply[i]
 
-            else: # just i
+            else:  # just i
                 t.cancel()
                 del self.reply[i]
 
-
-    async def dispatch(self, action, msg=None, rep:int=None, wait=True, x_err=()):  # pylint:disable=arguments-differ
+    async def dispatch(
+        self, action, msg=None, rep: int = None, wait=True, x_err=()
+    ):  # pylint:disable=arguments-differ
         """
         Forward a request to the remote side, return the response.
 
@@ -391,9 +412,9 @@ class BaseCmdMsg(BaseCmd):
         """
 
         if len(action) == 1:
-            a=action[0]
+            a = action[0]
             if a[0] == "!":
-                return await super().dispatch((a,),msg, rep=rep,wait=wait,x_err=x_err)
+                return await super().dispatch((a,), msg, rep=rep, wait=wait, x_err=x_err)
 
         if await self.wait_ready():
             raise StoppedError  # already down
@@ -402,7 +423,7 @@ class BaseCmdMsg(BaseCmd):
             msg = {"a": action, "d": msg}
             await self.s.send(msg)
             return
-        
+
         # Find a small-ish but unique *even* seqnum
         # even seqnums are requests from the other side
         if self.seq > 10 * (len(self.reply) + 5):
@@ -418,7 +439,7 @@ class BaseCmdMsg(BaseCmd):
 
         if rep:
             msg["r"] = rep
-            self.reply[seq] = e = RecvIter(self,seq,rep)
+            self.reply[seq] = e = RecvIter(self, seq, rep)
             await self.s.send(msg)
             return e
         else:
@@ -434,6 +455,7 @@ class CmdMsg(BaseCmdMsg):
     """
     A baseCmdMsg with a ready-made link that it opens.
     """
+
     def __init__(self, link, cfg):
         super().__init__(cfg)
         self.link = link
@@ -441,11 +463,13 @@ class CmdMsg(BaseCmdMsg):
     def stream(self) -> Awaitable[BaseMsg]:
         return AC_use(self, self.link)
 
+
 class SingleCmdMsg(BaseCmdMsg):
     """
     A BaseCmdMsg that disconnects on error, or when the connection ends,
     without propagating the exception.
     """
+
     async def run(self):
         try:
             await super().run()
@@ -461,10 +485,10 @@ class ExtCmdMsg(SingleCmdMsg):
     The caller is responsible for calling `wait_stopped`
     and then closing the stream!
     """
-    def __init__(self, stream:BaseMsg, cfg={}):
+
+    def __init__(self, stream: BaseMsg, cfg={}):
         super().__init__(cfg)
         self.__s = stream
 
     async def stream(self):
         return await AC_use(self, self.__s)
-

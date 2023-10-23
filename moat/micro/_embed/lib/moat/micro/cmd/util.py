@@ -4,9 +4,17 @@ Helpers for MoaT command interpreters et al.
 
 from __future__ import annotations
 
-from moat.util import ValueEvent, as_proxy, NotGiven
+from moat.util import NotGiven, ValueEvent, as_proxy
 
-from moat.micro.compat import ticks_diff, ticks_add, ticks_ms, sleep_ms, wait_for_ms, log, TimeoutError
+from moat.micro.compat import (
+    TimeoutError,
+    log,
+    sleep_ms,
+    ticks_add,
+    ticks_diff,
+    ticks_ms,
+    wait_for_ms,
+)
 from moat.micro.proto.stack import RemoteError, SilentRemoteError
 
 StopIter = StopAsyncIteration
@@ -19,40 +27,44 @@ as_proxy("_SRemErr", SilentRemoteError, replace=True)
 
 as_proxy("_StpIter", StopIter, replace=True)
 
+
 @as_proxy("_StpErr")
 class StoppedError(Exception):
     pass
 
-async def wait_complain(s,i,p,*a,**k):
+
+async def wait_complain(s, i, p, *a, **k):
     try:
-        await wait_for_ms(i,p,*a,**k)
+        await wait_for_ms(i, p, *a, **k)
     except TimeoutError:
-        log("Delayed  %s",s)
-        await p(*a,**k)
-        log("Delay OK %s",s)
+        log("Delayed  %s", s)
+        await p(*a, **k)
+        log("Delay OK %s", s)
 
 
-async def run_no_exc(p,msg, x_err=()):
+async def run_no_exc(p, msg, x_err=()):
     """Call p(msg) but log exceptions"""
     try:
         r = p(**msg)
         if hasattr(r, "throw"):  # coroutine
             r = await r
     except x_err as err:
-        log("Error in %r %r: %r",p,msg, err)
+        log("Error in %r %r: %r", p, msg, err)
     except Exception as err:
-        log("Error in %r %r",p,msg, err=err)
+        log("Error in %r %r", p, msg, err=err)
+
 
 def get_part(cur, p):
     for pp in p:
         try:
-            cur = getattr(cur,pp)
-        except (TypeError,AttributeError):
+            cur = getattr(cur, pp)
+        except (TypeError, AttributeError):
             cur = cur[pp]
     return cur
 
+
 def set_part(cur, p, v):
-    cur = get_part(cur,p[:-1])
+    cur = get_part(cur, p[:-1])
     try:
         cur[p[-1]] = v
     except TypeError:
@@ -68,6 +80,7 @@ def enc_part(cur):
     complex parts removed, and L is a list of keys/offsets with complex
     data to retrieve
     """
+
     def _complex(v):
         if isinstance(v, (dict, list, tuple)):
             return True
@@ -112,7 +125,8 @@ class ValueTask:
     @x: excluded errors
     @p: callable
     """
-    def __init__(self, cmd:BaseCmd, i, x, p, *a, **k):
+
+    def __init__(self, cmd: BaseCmd, i, x, p, *a, **k):
         self.cmd = cmd
         self.i = i
         self.p = p
@@ -120,16 +134,16 @@ class ValueTask:
         self.k = k
         self.x = x
         self._t = None
-    
+
     async def start(self, tg):
         if self._t is not None:
             raise RuntimeError("dup")
         self._t = await tg.spawn(self._wrap, _name="Val")
-                       
+
     async def _wrap(self):
         try:
             err = None
-            res = await self.p(*self.a,**self.k)
+            res = await self.p(*self.a, **self.k)
         except Exception as exc:
             err = exc
         except BaseException as exc:
@@ -160,7 +174,8 @@ class IterWrap:
 
     Set @ival to the initial value.
     """
-    def __init__(self, p,a=(),k={}, ival=NotGiven):
+
+    def __init__(self, p, a=(), k={}, ival=NotGiven):
         self.p = p
         self.a = a
         self.k = k
@@ -177,11 +192,11 @@ class IterWrap:
 
     async def __anext__(self):
         if self.ival is NotGiven:
-            r =  self.p(*self.a,**self.k)
+            r = self.p(*self.a, **self.k)
             if hasattr(r, "throw"):  # coroutine
                 r = await r
         else:
-            r,self.ival = self.ival,NotGiven
+            r, self.ival = self.ival, NotGiven
         return r
 
 
@@ -199,7 +214,8 @@ class SendIter(ValueTask):
     @a: action to fetch the iterator from
     @d: data for it
     """
-    def __init__(self, cmd, i:int, r:int, a:list[str], d:dict):
+
+    def __init__(self, cmd, i: int, r: int, a: list[str], d: dict):
         self.r = r
         self.ac = a
         self.ad = d
@@ -210,12 +226,12 @@ class SendIter(ValueTask):
             cnt = 1
             async with await self.cmd.root.dispatch(self.ac, self.ad, rep=self.r) as it:
                 async for msg in it:
-                    await self.cmd.s.send({'i':self.i, 'd':msg, 'n': cnt})
+                    await self.cmd.s.send({'i': self.i, 'd': msg, 'n': cnt})
                     cnt += 1
         except BaseException:
             raise
         else:
-            await self.cmd.s.send({'i':self.i, 'r': False})
+            await self.cmd.s.send({'i': self.i, 'r': False})
         finally:
             self.cmd.reply.pop(self.i, None)
 
@@ -227,11 +243,13 @@ class SendIter(ValueTask):
 class _DelayedIter:
     pass
 
+
 class DelayedIter(_DelayedIter):
     """
     An iterator that delays calling the wrapped iterator.
     """
-    def __init__(self, t:int, it:Iterator):
+
+    def __init__(self, t: int, it: Iterator):
         self.it = it
         self.t = t
         self._next = ticks_add(ticks_ms(), -t)
@@ -252,7 +270,7 @@ class DelayedIter(_DelayedIter):
             del self._i
             del self._it
             del self.it
-    
+
     def __aiter__(self):
         self._i = self._it.__aiter__()
         return self
@@ -267,7 +285,7 @@ class DelayedIter(_DelayedIter):
         else:
             # This took too long. Reset.
             self._warned += 1
-            if not self._warned & (self._warned-1):
+            if not self._warned & (self._warned - 1):
                 # if power of two
                 log("IterDelay %r %d", -td)
             self._next = ticks_add(t, self.t)
@@ -296,11 +314,11 @@ class RecvIter(_DelayedIter):
 
     async def __aexit__(self, *err):
         await self.aclose()
-    
+
     async def aclose(self):
-        i,self.i = self.i,None
+        i, self.i = self.i, None
         if i is not None:
-            await self.cmd.s.send({"i":i})
+            await self.cmd.s.send({"i": i})
 
     def __aiter__(self):
         return self
@@ -343,7 +361,7 @@ class RecvIter(_DelayedIter):
         if self._val.is_set():
             if self._warned:
                 self._warned += 1
-            if not self._warned & (self._warned-1):
+            if not self._warned & (self._warned - 1):
                 log("RemIterSoon %r", val)
             if not self._warned:
                 return
@@ -371,4 +389,3 @@ class RecvIter(_DelayedIter):
     def cancel(self):
         self._val.set_error(StoppedError("cancel"))
         self._warned = 0
-

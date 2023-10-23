@@ -1,5 +1,6 @@
 import sys
-from moat.util import drop_proxy, obj2name, Proxy
+
+from moat.util import Proxy, drop_proxy, obj2name
 
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util import enc_part, get_part, set_part
@@ -9,6 +10,7 @@ class Cmd(BaseCmd):
     """
     Generic system specific commands
     """
+
     def __init__(self, cfg):
         super().__init__(cfg)
         self.cache = {}
@@ -59,11 +61,11 @@ class Cmd(BaseCmd):
             x = eval(x, self.cache)
         x = get_part(x, p)
         if a:
-            set_part(self.cache,a,x)
+            set_part(self.cache, a, x)
             return None
         else:
             if not isinstance(x, (int, float, list, tuple, dict, Proxy)):
-                print("TX=",type(x), file=sys.stderr)
+                print("TX=", type(x), file=sys.stderr)
                 try:
                     obj2name(x)
                 except KeyError:

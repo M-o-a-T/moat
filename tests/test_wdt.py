@@ -5,14 +5,14 @@ import pytest
 from moat.util import NotGiven
 
 from moat.micro._test import mpy_stack
-from moat.micro.compat import sleep_ms, log
 from moat.micro.cmd.util import StoppedError
+from moat.micro.compat import log, sleep_ms
 
 pytestmark = pytest.mark.anyio
 
 TT = 500  # XXX depends on how much we're logging
 
-CFG="""
+CFG = """
 apps:
 # r: _test.MpyCmd
   r: sub.Err
@@ -43,11 +43,12 @@ r:
     txt: "TL"
 """
 
+
 @pytest.mark.parametrize("guard", [False, True])
 async def test_wdt(tmp_path, guard):
     "basic watchdog test"
     ended = False
-    async with mpy_stack(tmp_path, CFG) as d,d.sub_at("r","b") as r,d.cfg_at("r","c") as c:
+    async with mpy_stack(tmp_path, CFG) as d, d.sub_at("r", "b") as r, d.cfg_at("r", "c") as c:
         res = await r.echo(m="hello")
         assert res == dict(r="hello")
 
@@ -55,14 +56,16 @@ async def test_wdt(tmp_path, guard):
         await c.set(
             {
                 "apps": {"w": "sub.Err"},
-                "w": dict(app="wdt.Cmd",cfg=dict(t=TT, ext=True, hw=False)),
-            } if guard else {
+                "w": dict(app="wdt.Cmd", cfg=dict(t=TT, ext=True, hw=False)),
+            }
+            if guard
+            else {
                 "apps": {"w": "wdt.Cmd"},
                 "w": dict(t=TT, ext=True, hw=False),
             },
             sync=True,
         )
-        async with d.sub_at("r","w") as wd:
+        async with d.sub_at("r", "w") as wd:
             await sleep_ms(TT / 2)
             await wd.x(n=1)
             await sleep_ms(TT / 2)
@@ -79,15 +82,15 @@ async def test_wdt_off(tmp_path):
     """
     Check that the watchdog can be removed
     """
-    async with mpy_stack(tmp_path, CFG) as d,d.sub_at("r","b") as r,d.cfg_at("r","c") as c:
+    async with mpy_stack(tmp_path, CFG) as d, d.sub_at("r", "b") as r, d.cfg_at("r", "c") as c:
         await c.set(
             {
                 "apps": {"w1": "wdt.Cmd"},
-                "w1": dict(t=TT*2, ext=True, hw=False),
+                "w1": dict(t=TT * 2, ext=True, hw=False),
             },
             sync=True,
         )
-        async with d.sub_at("r","w1") as wd:
+        async with d.sub_at("r", "w1") as wd:
             await sleep_ms(TT)
             await wd.x()
             await sleep_ms(TT)
@@ -111,16 +114,16 @@ async def test_wdt_update(tmp_path):
     Check that the watchdog can be updated
     """
     ended = False
-    async with mpy_stack(tmp_path, CFG) as d,d.sub_at("r","b") as r,d.cfg_at("r","c") as c:
+    async with mpy_stack(tmp_path, CFG) as d, d.sub_at("r", "b") as r, d.cfg_at("r", "c") as c:
         await c.set(
             {
                 "apps": {"w": "wdt.Cmd"},
-                "w": dict(t=TT*2, ext=True, hw=False),
+                "w": dict(t=TT * 2, ext=True, hw=False),
             },
             sync=True,
         )
 
-        async with d.sub_at("r","w") as wd:
+        async with d.sub_at("r", "w") as wd:
             await sleep_ms(TT)
             await wd.x(n=1)
             await sleep_ms(TT)

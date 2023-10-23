@@ -6,7 +6,7 @@ import pytest
 from moat.micro._test import mpy_stack
 from moat.micro.compat import sleep_ms
 
-CFG="""
+CFG = """
 apps:
   r: part.Relay
   p: _fake.Pin
@@ -18,6 +18,7 @@ r:
 p:
   pin: X
 """
+
 
 @pytest.mark.anyio
 async def test_rly(tmp_path):

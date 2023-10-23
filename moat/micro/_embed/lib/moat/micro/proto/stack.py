@@ -20,8 +20,9 @@ from __future__ import annotations
 
 import sys
 
-from moat.micro.compat import log, ACM, AC_use, AC_exit
 from moat.util import as_proxy
+
+from moat.micro.compat import ACM, AC_exit, AC_use, log
 
 
 @as_proxy("_rErr")
@@ -42,8 +43,11 @@ class ChannelClosed(RuntimeError):
 class _NullCtx:
     async def __aenter__(self):
         return self
+
     async def __aexit__(self, *tb):
         pass
+
+
 _nullctx = _NullCtx()
 
 
@@ -64,6 +68,7 @@ class Base:
     which must survive reconnection, e.g. a MQTT link's persistent state or
     a listening socket.
     """
+
     s = None
 
     def __init__(self, cfg):
@@ -83,7 +88,7 @@ class Base:
             await self.setup()
             return self
         except BaseException as exc:
-            await AC_exit(self, type(exc), exc, getattr(exc,"__traceback__",None))
+            await AC_exit(self, type(exc), exc, getattr(exc, "__traceback__", None))
             raise
 
     def __aexit__(self, *tb) -> Awaitable:
@@ -119,6 +124,7 @@ class BaseConn(Base):
 
     Augment `setup` or `teardown` to add non-stream related features.
     """
+
     s = None
 
     async def setup(self):
@@ -157,11 +163,13 @@ class BaseMsg(BaseConn):
 
     Implement send/recv.
     """
-    async def send(self, m:Any) -> Any:
+
+    async def send(self, m: Any) -> Any:
         raise NotImplementedError(f"'send' in {self !r}")
 
     async def recv(self) -> Any:
         raise NotImplementedError(f"'recv' in {self !r}")
+
 
 class BaseBlk(BaseConn):
     """
@@ -169,11 +177,13 @@ class BaseBlk(BaseConn):
 
     Implement snd/rcv.
     """
-    async def snd(self, m:Any) -> Any:
+
+    async def snd(self, m: Any) -> Any:
         raise NotImplementedError(f"'send' in {self !r}")
 
     async def rcv(self) -> Any:
         raise NotImplementedError(f"'recv' in {self !r}")
+
 
 class BaseBuf(BaseConn):
     """
@@ -181,6 +191,7 @@ class BaseBuf(BaseConn):
 
     Implement rd/wr.
     """
+
     async def rd(self, buf) -> int:
         raise NotImplementedError(f"'rd' in {self !r}")
 
@@ -221,6 +232,7 @@ class StackedMsg(StackedConn, BaseMsg):
 
     Use the attribute "s" to store the linked stream's context.
     """
+
     async def send(self, m):
         "Send. Transmits a structured message"
         return await self.s.send(m)
@@ -228,7 +240,6 @@ class StackedMsg(StackedConn, BaseMsg):
     async def recv(self):
         "Receive. Returns a message."
         return await self.s.recv()
-
 
     async def cwr(self, buf):
         "Console Send. Returns when the buffer is transmitted."
@@ -245,6 +256,7 @@ class StackedBuf(StackedConn, BaseBuf):
 
     Use the attribute "s" to store the linked stream's context.
     """
+
     async def wr(self, buf):
         "Send. Returns when the buffer is transmitted."
         await self.s.wr(buf)
@@ -260,6 +272,7 @@ class StackedBlk(StackedConn, BaseBlk):
 
     Use the attribute "s" to store the linked stream's context.
     """
+
     cwr = StackedMsg.cwr
     crd = StackedMsg.crd
 
@@ -278,12 +291,13 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
 
     This implements all of StackedMsg/Buf/Blk.
     """
+
     # StackedMsg is first because MicroPython uses only the first class and
     # we get `cwr` and `crd` that way.
 
     def __init__(self, link, cfg):
         super().__init__(link, cfg)
-        self.txt = cfg.get("txt","S")
+        self.txt = cfg.get("txt", "S")
 
     async def setup(self):
         log("X:%s start", self.txt)
@@ -294,10 +308,10 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
         await super().teardown()
 
     def _repr(self, m, sub=None):
-        if not isinstance(m,dict):
+        if not isinstance(m, dict):
             return repr(m)
         res = []
-        for k,v in m.items():
+        for k, v in m.items():
             if sub == k:
                 res.append(f"{k}={self._repr(v)}")
             else:
@@ -307,14 +321,14 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
     async def send(self, m):
         "Send message."
         mm = self._repr(m)
-        log("S:%s %s", self.txt, self._repr(m,'d'))
+        log("S:%s %s", self.txt, self._repr(m, 'd'))
         try:
             res = await self.s.send(m)
         except BaseException as exc:
             log("S:%s stop %r", self.txt, exc)
             raise
         else:
-            log("S:%s =%s", self.txt, self._repr(res,'d'))
+            log("S:%s =%s", self.txt, self._repr(res, 'd'))
             return res
 
     async def recv(self):
@@ -326,7 +340,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             log("R:%s stop %r", self.txt, exc)
             raise
         else:
-            log("R:%s %s", self.txt, self._repr(msg,'d'))
+            log("R:%s %s", self.txt, self._repr(msg, 'd'))
             return msg
 
     async def snd(self, m):
@@ -374,10 +388,12 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             log("R:%s %r", self.txt, repr_b(buf[:res]))
             return res
 
+
 def repr_b(b):
-    if isinstance(b,bytes):
+    if isinstance(b, bytes):
         return b
     return bytes(b)
+
 
 LogBuf = LogMsg
 LogBlk = LogMsg

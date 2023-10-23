@@ -6,9 +6,10 @@ from pathlib import Path
 root = Path("../../../..")
 
 import git
+
+
 def commits(r):
-    """Iterate over topo sort of commits following HEAD.
-    """
+    """Iterate over topo sort of commits following HEAD."""
     ref = r.head.commit
     visited = set()
     res = []
@@ -37,14 +38,15 @@ def commits(r):
     while res:
         yield res.pop()
 
-p=Path("moat/micro/_version.py")
+
+p = Path("moat/micro/_version.py")
 r = git.Repo(root)
 c = r.head.commit
 t = c.tree
 td = t.diff(None)
 for dif in td:
     if dif.a_path.startswith("moat/micro/_embed/"):
-        raise RuntimeError("Not checked in",dif.a_path)
+        raise RuntimeError("Not checked in", dif.a_path)
 
 tl = {}
 for t in r.tags:
@@ -53,20 +55,22 @@ for t in r.tags:
         break
     tl[t.commit] = t
 else:
-    n=0
+    n = 0
     for cc in commits(r):
         n += 1
         if cc in tl:
-            tag=f"{tl[cc].name}-n{n}-g{c.hexsha[:9]}"
+            tag = f"{tl[cc].name}-n{n}-g{c.hexsha[:9]}"
             break
     else:
-        tag=""
+        tag = ""
 
 with p.open("w") as f:
-    f.write(f"""\
+    f.write(
+        f"""\
 git="{c.hexsha[:9]}"
 tag="{tag}"
-""")
+"""
+    )
 
 try:
     require("collections")

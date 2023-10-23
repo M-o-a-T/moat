@@ -4,13 +4,11 @@ import sys
 from functools import partial
 
 from moat.util import NoProxyError, NotGiven, as_proxy, name2obj, obj2name
-
-from ..compat import Lock, TimeoutError, wait_for_ms, const, Event
-from .stack import StackedBuf, BaseBuf, StackedMsg, StackedBlk
-
-
 from msgpack import OutOfData, Packer, Unpacker, packb, unpackb
-from serialpacker import  SerialPacker
+from serialpacker import SerialPacker
+
+from ..compat import Event, Lock, TimeoutError, const, wait_for_ms
+from .stack import BaseBuf, StackedBlk, StackedBuf, StackedMsg
 
 as_proxy("_", NotGiven, replace=True)
 
@@ -33,6 +31,7 @@ class _CReader:
     """
     A mix-in that processes incoming console data.
     """
+
     def __init__(self, cons):
         if cons is True:
             cons = 128
@@ -48,10 +47,10 @@ class _CReader:
         if not self.cpos:
             await cevt.wait()
             cevt = Event()
-        n = min(len(buf),cpos)
+        n = min(len(buf), cpos)
         buf[:n] = self.cbuf[:n]
         if n < self.cpos:
-            self.cbuf[:self.cpos-n] = self.cbuf[n:self.cpos]
+            self.cbuf[: self.cpos - n] = self.cbuf[n : self.cpos]
             self.cpos -= n
         else:
             self.cpos = 0
@@ -62,7 +61,7 @@ class _CReader:
         if self.cpos == len(self.cbuf):
             if len(self.cbuf) > 10:
                 bfull = b"\n?BUF\n"
-                self.cpos[0:self.cpos] = bfull
+                self.cpos[0 : self.cpos] = bfull
                 self.cpos = len(bfull)
             else:
                 self.cpos = 0
@@ -83,9 +82,10 @@ class _MsgpackMsgBuf(StackedMsg):
 
     You need to override .pack and .unpack.
     """
+
     cons = False
 
-    def __init__(self, stream:BaseBuf, cfg:dict):
+    def __init__(self, stream: BaseBuf, cfg: dict):
         #
         # console: size of console buffer, 128 if True
         # msg_prefix: int: code for start-of-packet
@@ -121,12 +121,12 @@ class _MsgpackMsgBuf(StackedMsg):
     async def crd(self, buf):
         return _CReader.crd(self, buf)
 
-    async def send(self, msg:Any) -> None:
+    async def send(self, msg: Any) -> None:
         msg = self.pack(msg)
         async with self.w_lock:
             if self.pref is not None:
                 if self.cons:
-                    msg = self.pref+msg  # *sigh* must be atomic
+                    msg = self.pref + msg  # *sigh* must be atomic
                 else:
                     await self.s.wr(self.pref)
             await self.s.wr(msg)
@@ -183,9 +183,10 @@ class SerialPackerBlkBuf(StackedBlk):
     Use this (and a MsgpackHandler and a Reliable) if your AIO stream
     is unreliable (TTL serial).
     """
+
     cons = False
 
-    def __init__(self, stream:BaseBuf, frame:dict, cons:bool|int = False):
+    def __init__(self, stream: BaseBuf, frame: dict, cons: bool | int = False):
         super().__init__(None)
 
         self.s = stream
@@ -232,5 +233,4 @@ class SerialPackerBlkBuf(StackedBlk):
                 await self.s.wr(msg)
                 await self.s.wr(t)
             else:
-                await self.s.wr(h+msg+t)
-
+                await self.s.wr(h + msg + t)

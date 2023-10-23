@@ -4,22 +4,25 @@ CPython-specific stream handling.
 from __future__ import annotations
 
 import sys
-import anyio
-import greenback
 from contextlib import asynccontextmanager
 from functools import partial
 
-from moat.util import CtxObj, name2obj, Proxy, DProxy, obj2name, get_proxy
-from moat.micro.compat import AC_use, TaskGroup, Event, log
+import anyio
+import greenback
+from moat.util import CtxObj, DProxy, Proxy, get_proxy, name2obj, obj2name
+from msgpack import ExtType, OutOfData, Packer, Unpacker, packb, unpackb
 
-from ._stream import _MsgpackMsgBuf, _MsgpackMsgBlk, SerialPackerBlkBuf
+from moat.micro.compat import AC_use, Event, TaskGroup, log
+
+from ._stream import SerialPackerBlkBuf, _MsgpackMsgBlk, _MsgpackMsgBuf
 from .stack import BaseBuf
 
-from msgpack import Packer,Unpacker,OutOfData,ExtType, packb, unpackb
 
 class ProcessDeadError(RuntimeError):
     """Process has died"""
+
     pass
+
 
 class SyncStream:
     """
@@ -29,13 +32,13 @@ class SyncStream:
     mangle msgpack to async-ize it.
     """
 
-    def __init__(self, stream:BaseBuf, max_n=10240):
+    def __init__(self, stream: BaseBuf, max_n=10240):
         self.s = stream
         self.max_n = max_n
 
     def read(self, n):
         """standard sync read"""
-        n = min(n,self.max_n)
+        n = min(n, self.max_n)
         b = bytearray(n)
         r = greenback.await_(self.s.rd(b))
         if r < n:
@@ -93,7 +96,9 @@ def _encode(obj):
     if isinstance(obj, Proxy):
         return ExtType(4, obj.name.encode("utf-8"))
     if type(obj) is DProxy:
-        return ExtType(5, packb(obj.name) + packb(obj.a, default=_encode) + packb(obj.k, default=_encode))
+        return ExtType(
+            5, packb(obj.name) + packb(obj.a, default=_encode) + packb(obj.k, default=_encode)
+        )
 
     try:
         k = obj2name(obj)
@@ -142,7 +147,7 @@ class MsgpackMsgBuf(_MsgpackMsgBuf):
     async def setup(self):
         await super().setup()
         self.pack = Packer(default=_encode).pack
-        self._unpacker = Unpacker(SyncStream(self.s), ext_hook=_decode, **self.cfg.get("pack",{}))
+        self._unpacker = Unpacker(SyncStream(self.s), ext_hook=_decode, **self.cfg.get("pack", {}))
 
     async def unpack(self):
         # This calls the unpacker synchronously,
@@ -153,10 +158,11 @@ class MsgpackMsgBuf(_MsgpackMsgBuf):
         except OutOfData:
             raise anyio.EndOfStream
 
+
 class MsgpackMsgBlk(_MsgpackMsgBlk):
     """
     structured messages > chunked bytestrings
-                
+
     Use this if the layer below supports byte boundaries
     (one bytestring-ized message per call).
     """
@@ -164,7 +170,7 @@ class MsgpackMsgBlk(_MsgpackMsgBlk):
     async def setup(self):
         await super().setup()
         self.pack = Packer(default=_encode).pack
-        self.unpacker = partial(unpackb, ext_hook=_decode, **self.cfg.get("pack",{}))
+        self.unpacker = partial(unpackb, ext_hook=_decode, **self.cfg.get("pack", {}))
 
 
 class AnyioBuf(BaseBuf):
@@ -190,7 +196,7 @@ class AnyioBuf(BaseBuf):
     async def wr(self, buf) -> int:
         "basic send"
         try:
-            return await self.s.send(buf) 
+            return await self.s.send(buf)
         except (anyio.EndOfStream, anyio.ClosedResourceError):
             raise EOFError from None
 
@@ -211,7 +217,8 @@ class RemoteBufAnyio(anyio.abc.ByteStream):
 
     TODO: use remote iteration for receiving
     """
-    def __init__(self, disp:SubDispatch):
+
+    def __init__(self, disp: SubDispatch):
         self.disp = disp
 
     async def receive(self, max_bytes=256):
@@ -226,14 +233,15 @@ class RemoteBufAnyio(anyio.abc.ByteStream):
     async def send_eof(self):
         raise NotImplementedError("EOF")
 
-    
+
 class BufAnyio(anyio.abc.ByteStream):
     """
     Adapts a MoaT Buf stream to an anyio bytestream.
     """
+
     par = None
 
-    def __init__(self, stream:BaseBuf):
+    def __init__(self, stream: BaseBuf):
         self.stream = stream
 
     async def __aenter__(self):
@@ -242,13 +250,12 @@ class BufAnyio(anyio.abc.ByteStream):
     async def __aexit__(self, *tb):
         return await self.stream.__aexit__(*tb)
 
-
     async def receive(self, max_bytes=256):
         b = bytearray(max_bytes)
         r = await self.s.rd(b)
         if r == max_bytes:
             return b
-        elif r <= max_bytes>>2:
+        elif r <= max_bytes >> 2:
             return bytes(b[:r])
         else:
             b = memoryview(b)
@@ -265,12 +272,12 @@ class SingleAnyioBuf(AnyioBuf):
     The stream is passed to the class constructor and can only be used
     once.
     """
+
     def __init__(self, stream):
         self._s = stream
 
     async def stream(self):
         return await AC_use(self, self._s)
-
 
 
 class ProcessBuf(CtxObj, AnyioBuf):
@@ -281,15 +288,16 @@ class ProcessBuf(CtxObj, AnyioBuf):
     - exec: path to the executable
     - argv: Arguments
     - env: environment vars
-    
+
     You can set these as attributes on the object, statically or in your
     subclass's `setup` method. Configuration can then override them.
     """
-    proc:anyio.Process = None
-    exec:str = None
-    cwd:str = None
-    argv:list[str] = None
-    env:Optional[dict[str,str]] = None
+
+    proc: anyio.Process = None
+    exec: str = None
+    cwd: str = None
+    argv: list[str] = None
+    env: Optional[dict[str, str]] = None
 
     def __init__(self, cfg, **kw):
         super().__init__(cfg)
@@ -309,8 +317,8 @@ class ProcessBuf(CtxObj, AnyioBuf):
             # self.kw["executable"] = a0
             # self.argv[0] = a0.rsplit("/",1)[1]
             pass
-        for k in ("cwd","env"):
-            if (v := getattr(self,k)) is not None:
+        for k in ("cwd", "env"):
+            if (v := getattr(self, k)) is not None:
                 self.kw[k] = v
 
         return self.kw
@@ -319,16 +327,18 @@ class ProcessBuf(CtxObj, AnyioBuf):
     async def _ctx(self):
         await self.setup()
         proc = None
-        for k in ("exec","argv","env","cwd"):
+        for k in ("exec", "argv", "env", "cwd"):
             if (v := self.cfg.get(k, None)) is not None:
-                setattr(self,k,v)
+                setattr(self, k, v)
         if self.argv is None:
             raise ValueError("Don't know what")
 
         try:
             async with await anyio.open_process(self.argv, **self.open_args()) as proc:
                 try:
-                    async with SingleAnyioBuf(anyio.streams.stapled.StapledByteStream(proc.stdin, proc.stdout)) as s:
+                    async with SingleAnyioBuf(
+                        anyio.streams.stapled.StapledByteStream(proc.stdin, proc.stdout)
+                    ) as s:
                         yield s
                     await proc.wait()
                 except BaseException as exc:

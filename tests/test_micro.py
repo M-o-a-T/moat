@@ -3,13 +3,13 @@ Basic test using a MicroPython subtask
 """
 import pytest
 from moat.util import NotGiven, as_proxy, attrdict, to_attrdict
-from moat.micro.compat import ticks_ms, ticks_diff
 
 from moat.micro._test import mpy_stack
+from moat.micro.compat import ticks_diff, ticks_ms
 
 pytestmark = pytest.mark.anyio
 
-CFG="""
+CFG = """
 apps:
   r: _test.MpyCmd
   a: _test.Cmd
@@ -54,54 +54,58 @@ r:
 
 """
 
+
 async def test_ping(tmp_path):
     "basic connectivity test"
     async with mpy_stack(tmp_path, CFG) as d:
-        res = await d.send("r","b","echo", m="hello")
+        res = await d.send("r", "b", "echo", m="hello")
         assert res == dict(r="hello")
+
 
 async def test_iter_m(tmp_path):
     async with mpy_stack(tmp_path, CFG) as d:
         t1 = ticks_ms()
 
         res = []
-        async with d.send_iter(200, "r","b","it", lim=3) as it:
+        async with d.send_iter(200, "r", "b", "it", lim=3) as it:
             async for n in it:
                 res.append(n)
-        assert res == [0,1,2]
+        assert res == [0, 1, 2]
         t2 = ticks_ms()
-        assert 450 < ticks_diff(t2,t1) < 850
+        assert 450 < ticks_diff(t2, t1) < 850
 
         res = []
-        async with d.send_iter(200, "r","b","it") as it:
+        async with d.send_iter(200, "r", "b", "it") as it:
             async for n in it:
                 if n == 3:
                     break
                 res.append(n)
-        assert res == [0,1,2]
+        assert res == [0, 1, 2]
         t1 = ticks_ms()
-        assert 450 < ticks_diff(t1,t2) < 850
+        assert 450 < ticks_diff(t1, t2) < 850
 
         res = []
-        async with d.send_iter(200, "r","b","nit", lim=3) as it:
+        async with d.send_iter(200, "r", "b", "nit", lim=3) as it:
             async for n in it:
                 res.append(n)
-        assert res == [1,2,3]
+        assert res == [1, 2, 3]
         t2 = ticks_ms()
-        assert 450 < ticks_diff(t2,t1) < 850
-
-
+        assert 450 < ticks_diff(t2, t1) < 850
 
 
 @pytest.mark.parametrize("lossy", [False, True])
 @pytest.mark.parametrize("guarded", [False, True])
 async def test_modes(tmp_path, lossy, guarded):
     "test different link modes"
-    cfu = dict(r=dict(link=dict(lossy=lossy, guarded=guarded),
-        cfg=dict(r=dict(link=dict(lossy=lossy, guarded=guarded)))))
+    cfu = dict(
+        r=dict(
+            link=dict(lossy=lossy, guarded=guarded),
+            cfg=dict(r=dict(link=dict(lossy=lossy, guarded=guarded))),
+        )
+    )
     async with mpy_stack(tmp_path, CFG, cfu) as d:
-        res = await d.send("r","b","echo", m="hi")
-        assert res == {"r":"hi"}
+        res = await d.send("r", "b", "echo", m="hi")
+        assert res == {"r": "hi"}
 
 
 async def test_cfg(tmp_path):
@@ -113,7 +117,7 @@ async def test_cfg(tmp_path):
         assert cf.tt.c[1] == 2
         assert cf.tt.z == 99
 
-        await cfg.set({"tt": {"a": "d", "e": {"f": 42}, "z":NotGiven}})
+        await cfg.set({"tt": {"a": "d", "e": {"f": 42}, "z": NotGiven}})
 
         cf = to_attrdict(await cfg.get(again=True))
         assert cf.tt.a == "d"
@@ -134,13 +138,14 @@ class Bar:
     def __eq__(self, other):
         return self.x == other.x
 
+
 @as_proxy("fu")
 class Foo(Bar):
     "proxied test class"
     pass  # pylint:disable=unnecessary-pass
 
 
-LCFG="""
+LCFG = """
 apps:
   a: _test.Cmd
   l: _test.Loop
@@ -153,25 +158,28 @@ l:
   log:
     txt: "LOOP"
 """
+
+
 @pytest.mark.parametrize("cons", [None, False, True])
 async def test_eval(tmp_path, cons):
     "test proxying"
-    cf2 = {} if cons is None else {"l":{"link":{"cons": cons}}}
-    async with mpy_stack(tmp_path,LCFG, cf2) as d, d.sub_at("l","_sys","eval") as req:
+    cf2 = {} if cons is None else {"l": {"link": {"cons": cons}}}
+    async with mpy_stack(tmp_path, LCFG, cf2) as d, d.sub_at("l", "_sys", "eval") as req:
         from pprint import pprint
-        dr=await d.send("l","dir")
+
+        dr = await d.send("l", "dir")
         pprint(dr)
-        dr=await d.send("l","_sys","dir")
+        dr = await d.send("l", "_sys", "dir")
         pprint(dr)
 
         f = Foo(42)
         b = Bar(95)
         as_proxy("b", b, replace=True)
 
-        await req(x=f,a=["foo"])
-        await req(x=42,a=["foo","x"])
+        await req(x=f, a=["foo"])
+        await req(x=42, a=["foo", "x"])
         r = await req(x="foo")
-        assert isinstance(r,Foo), r
+        assert isinstance(r, Foo), r
         r = await req(x=f, p=("x",))
         assert r == 42, r
 
@@ -181,16 +189,17 @@ async def test_eval(tmp_path, cons):
         assert r == 95, r
         await req(x=b, a=("b",))
         r = await req(x="b.__dict__")
-        assert r == {"x":95}, r
+        assert r == {"x": 95}, r
 
 
 async def test_msgpack(tmp_path):
     "test proxying"
-    async with mpy_stack(tmp_path,CFG) as d, d.sub_at("r","_sys","eval") as req:
+    async with mpy_stack(tmp_path, CFG) as d, d.sub_at("r", "_sys", "eval") as req:
         from pprint import pprint
-        dr=await d.send("r","dir")
+
+        dr = await d.send("r", "dir")
         pprint(dr)
-        dr=await d.send("r","_sys","dir")
+        dr = await d.send("r", "_sys", "dir")
         pprint(dr)
 
         f = Foo(42)
@@ -198,7 +207,7 @@ async def test_msgpack(tmp_path):
         as_proxy("b", b, replace=True)
 
         r = await req(x=f)
-        assert isinstance(r,Foo), r
+        assert isinstance(r, Foo), r
         r = await req(x=f, p=("x",))
         assert r == 42, r
 

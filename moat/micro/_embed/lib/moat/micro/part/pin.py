@@ -1,11 +1,12 @@
 """
 Module for pins
 """
-import machine as M
 import asyncio
 
-from moat.micro.compat import idle
+import machine as M
 from moat.util import attrdict
+
+from moat.micro.compat import idle
 
 try:
     sup = M.Pin

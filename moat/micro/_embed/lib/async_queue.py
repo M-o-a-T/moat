@@ -1,6 +1,5 @@
-from collections.deque import deque
-
 from asyncio import core
+from collections.deque import deque
 
 
 class QueueEmpty(Exception):

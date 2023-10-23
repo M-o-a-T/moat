@@ -11,6 +11,7 @@ class Cmd(BaseCmd):
     Warning: This is synchronous, thus subjects the whole system to
     arbitrary slowdowns if the destination device employs clock stretching.
     """
+
     _bus_cache = None  # c,d > busobj
 
     def __init__(self, parent, name, cfg, gcfg):

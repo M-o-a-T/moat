@@ -1,4 +1,5 @@
 import sys
+
 from moat.util import NotGiven
 
 from moat.micro.cmd.base import BaseCmd
@@ -11,6 +12,7 @@ class Cmd(BaseCmd):
 
     This app serves the config of the parent subcommand.
     """
+
     def __init__(self, cfg):
         super().__init__(cfg)
         self.repeats = {}
@@ -66,7 +68,7 @@ class Cmd(BaseCmd):
                 cur = cur[pp]
         if d is NotGiven:
             del cur[p[-1]]
-        elif isinstance(cur,list) and p[-1] is None:
+        elif isinstance(cur, list) and p[-1] is None:
             cur.append(d)
         else:
             try:
@@ -84,4 +86,3 @@ class Cmd(BaseCmd):
         for pp in p:
             dest = dest.sub[pp]
         await dest.reload()
-

@@ -2,7 +2,9 @@ cfg = {}
 
 import machine
 from moat.micro.rtc import state
+
 from moat.micro.compat import log
+
 
 def set(attr, value=None, fs=None):
     if state is None and fs is False:
@@ -11,6 +13,7 @@ def set(attr, value=None, fs=None):
         state[attr] = state
     else:
         import os
+
         fn = f"moat.{attr}"
         try:
             f = open(fn, "r")
@@ -23,6 +26,7 @@ def set(attr, value=None, fs=None):
                 return
         with open(fn, "w") as f:
             f.write(str(value))
+
 
 def get(attr, fs=None, default=None):
     if state is not None and fs is not True:
@@ -38,6 +42,7 @@ def get(attr, fs=None, default=None):
                 res = f.read()
             return str(res)
     return default
+
 
 def go(state=None, fake_end=True):
     """
@@ -118,8 +123,9 @@ def go(state=None, fake_end=True):
         fallback = True
 
     print("Start MoaT:", state, file=sys.stderr)
-    from moat.micro.compat import print_exc
     from moat.micro.main import main
+
+    from moat.micro.compat import print_exc
 
     cfg = "moat_fb.cfg" if fallback else "moat.cfg"
     try:

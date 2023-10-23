@@ -3,10 +3,10 @@ Serial port access apps
 """
 from __future__ import annotations
 
-from moat.micro.compat import AC_use
 from moat.micro.cmd.stream import BaseCmdBBM, BaseCmdMsg
-from moat.micro.stacks.console import console_stack
+from moat.micro.compat import AC_use
 from moat.micro.part.serial import Serial
+from moat.micro.stacks.console import console_stack
 
 
 # Serial packet forwarder
@@ -30,6 +30,6 @@ class Raw(BaseCmdBBM):
 
 class Link(BaseCmdMsg):
     """Sends/receives MoaT messages using some device"""
+
     async def stream(self):
         return await AC_use(self, console_stack(Serial(self.cfg), self.cfg))
-

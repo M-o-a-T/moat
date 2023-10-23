@@ -4,8 +4,8 @@ well as MicroPython/asyncio.
 
 Well, for the most part.
 """
-import os
 import logging
+import os
 import time as _time
 import traceback as _traceback
 from concurrent.futures import CancelledError
@@ -15,8 +15,10 @@ from inspect import iscoroutinefunction
 import anyio as _anyio
 import greenback
 
+
 def const(_x):
     return _x
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +38,7 @@ TimeoutError = TimeoutError  # pylint:disable=redefined-builtin,self-assigning-v
 
 from inspect import currentframe
 
+
 def log(s, *x, err=None, nback=1):
     caller = currentframe()
     for _ in range(nback):
@@ -43,10 +46,10 @@ def log(s, *x, err=None, nback=1):
             break
         caller = caller.f_back
     logger = logging.getLogger(caller.f_globals["__name__"])
-    (logger.debug if err is None else logger.error)(s,*x, exc_info=err,stacklevel=1+nback)
-    if err and int(os.getenv("LOG_BRK",False)):
+    (logger.debug if err is None else logger.error)(s, *x, exc_info=err, stacklevel=1 + nback)
+    if err and int(os.getenv("LOG_BRK", False)):
         breakpoint()
-        pass # ERROR: err
+        pass  # ERROR: err
 
 
 def print_exc(exc):
@@ -175,27 +178,28 @@ async def run_server(cb, host, port, backlog=5, taskgroup=None, reuse_port=True,
             evt.set()
         await listener.serve(lambda sock: cb(sock), task_group=taskgroup)
 
+
 # async context stack
 
 
 def ACM(obj):
     """A bare-bones async context manager.
-    
+
     Usage::
 
         class Foo():
             async def __aenter__(self):
-                AC = ACM(obj)  
+                AC = ACM(obj)
                 ctx1 = await AC(obj1)
                 ctx2 = await AC_use(self, obj2)  # same thing
                 ...
             async def __aexit__(self, *exc):
                 return await AC_exit(self, *exc)
-    
+
     Calls to `ACM` and `AC_exit` can be nested. They **must** balance.
     """
-        
-    if not hasattr(obj,"_AC_"):
+
+    if not hasattr(obj, "_AC_"):
         obj._AC_ = []
 
     cm = AsyncExitStack()
@@ -214,14 +218,16 @@ def ACM(obj):
 
     def _ACc(ctx):
         return AC_use(obj, ctx)
+
     return _ACc
+
 
 async def AC_use(obj, ctx):
     acm = obj._AC_[-1]
     # log("AC_Use %r",ctx,nback=2)
-    if hasattr(ctx,"__aenter__"):
+    if hasattr(ctx, "__aenter__"):
         return await acm.enter_async_context(ctx)
-    elif hasattr(ctx,"__enter__"):
+    elif hasattr(ctx, "__enter__"):
         return acm.enter_context(ctx)
     elif iscoroutinefunction(ctx):
         acm.push_async_callback(ctx)
@@ -229,11 +235,13 @@ async def AC_use(obj, ctx):
         acm.callback(ctx)
     return None
 
+
 async def AC_exit(obj, *exc):
     # log("AC_End",nback=2)
     if not exc:
-        exc = (None,None,None)
+        exc = (None, None, None)
     return await obj._AC_.pop().__aexit__(*exc)
+
 
 def shield():
     return _anyio.CancelScope(shield=True)

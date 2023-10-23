@@ -1,9 +1,9 @@
 import machine as M
+from moat.util import import_
 from serialpacker import SerialPacker
 
-from moat.util import import_
-from moat.micro.compat import AC_use
 from moat.micro.cmd.stream import BaseCmdBBM
+from moat.micro.compat import AC_use
 
 
 # Serial packet forwarder

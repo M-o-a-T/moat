@@ -5,17 +5,37 @@ Command tree support for MoaT commands
 from __future__ import annotations
 
 import sys
-
 from functools import partial
 
-from moat.util import attrdict, import_, Path
-from moat.micro.compat import wait_for_ms, log, TaskGroup, ACM, AC_use, AC_exit, TimeoutError, Event, idle
+from moat.util import Path, attrdict, import_
+
 from moat.micro.cmd.util import StoppedError, wait_complain
+from moat.micro.compat import (
+    ACM,
+    AC_exit,
+    AC_use,
+    Event,
+    TaskGroup,
+    TimeoutError,
+    idle,
+    log,
+    wait_for_ms,
+)
 
 from .base import BaseCmd
 
-__all__ = ["DirCmd", "BaseSuperCmd", "BaseFwdCmd", "BaseLayerCmd", "BaseSubCmd",
-        "BaseListenCmd", "BaseListenOneCmd", "Dispatch", "SubDispatch"]
+__all__ = [
+    "DirCmd",
+    "BaseSuperCmd",
+    "BaseFwdCmd",
+    "BaseLayerCmd",
+    "BaseSubCmd",
+    "BaseListenCmd",
+    "BaseListenOneCmd",
+    "Dispatch",
+    "SubDispatch",
+]
+
 
 class BaseSuperCmd(BaseCmd):
     """
@@ -23,6 +43,7 @@ class BaseSuperCmd(BaseCmd):
 
     Sets up a taskgroup for the sub-app(s) tp run in.
     """
+
     async def setup(self):
         await super().setup()
         self.tg = await AC_use(self, TaskGroup())
@@ -32,6 +53,7 @@ class BaseSuperCmd(BaseCmd):
         """
         Run (or reload) this app.
         """
+
         async def _run(app):
             try:
                 await app.run()
@@ -62,6 +84,7 @@ class BaseLayerCmd(BaseSuperCmd):
 
     You need to override "gen_cmd" to create the app object.
     """
+
     app = None
     name = "_"
 
@@ -129,7 +152,7 @@ class BaseLayerCmd(BaseSuperCmd):
                 return await super().dispatch(action, msg, **kw)
         elif action[0] == "dir":
             res = await self.app.dispatch(action, msg, **kw)
-            res.setdefault("d",[]).append(f"!{self.name}")
+            res.setdefault("d", []).append(f"!{self.name}")
             return res
 
         if self.app is None:
@@ -145,7 +168,7 @@ class BaseLayerCmd(BaseSuperCmd):
         if k.startswith("_"):
             raise AttributeError(k)
         if k.endswith("_f"):
-            return getattr(self,k[:-2])
+            return getattr(self, k[:-2])
         return getattr(self.app, k)
 
 
@@ -153,6 +176,7 @@ class BaseFwdCmd(BaseLayerCmd):
     """
     A handler for a single nested app that's configured locally.
     """
+
     async def gen_cmd(self):
         """
         Create the underlying app object
@@ -163,7 +187,7 @@ class BaseFwdCmd(BaseLayerCmd):
         name = gcfg.get("app", None)
         cfg = gcfg.get("cfg", {})
         tg = self.tg
-        log("Setup %s: %s", self.path,name)
+        log("Setup %s: %s", self.path, name)
 
         if name is None:
             if self.app is not None:
@@ -259,6 +283,7 @@ class BaseSubCmd(BaseSuperCmd):
         res["d"] = list(self.sub.keys())
         return res
 
+
 class BaseListenOneCmd(BaseLayerCmd):
     """
     An app that runs a listener and accepts a single connection.
@@ -268,6 +293,7 @@ class BaseListenOneCmd(BaseLayerCmd):
     TODO: this needs to be a stream layer instead: we want the
     Reliable module to be able to pick up where it left off.
     """
+
     def listener(self) -> BaseConnIter:
         """
         How to get new connections. Returns a BaseConnIter.
@@ -286,14 +312,13 @@ class BaseListenOneCmd(BaseLayerCmd):
 
         return console_stack(conn, self.cfg)
 
-    async def reject(self, conn:BaseBuf):
+    async def reject(self, conn: BaseBuf):
         """
         Close the connection.
         """
         # an async context should do it
         async with conn:
             pass
-
 
     async def handler(self, conn):
         """
@@ -302,10 +327,15 @@ class BaseListenOneCmd(BaseLayerCmd):
         from moat.micro.cmd.stream import ExtCmdMsg
 
         app = ExtCmdMsg(self.wrapper(conn), self.cfg)
-        if self.app is None or not self.app.is_ready() or self._running or self.cfg.get("replace", True):
+        if (
+            self.app is None
+            or not self.app.is_ready()
+            or self._running
+            or self.cfg.get("replace", True)
+        ):
             if self.app is not None:
                 await self.app.stop()
-            app.attached(self,"_")
+            app.attached(self, "_")
             self.app = app
             await self.start_app(app)
             self.set_ready()
@@ -325,7 +355,7 @@ class BaseListenOneCmd(BaseLayerCmd):
         async with self.listener() as conns:
             async for conn in conns:
                 task = await self.tg.spawn(self.handler, conn)
- 
+
 
 class BaseListenCmd(BaseSubCmd):
     """
@@ -334,6 +364,7 @@ class BaseListenCmd(BaseSubCmd):
 
     Override `listener` to return an async context manager / iterator.
     """
+
     seq = 1
 
     # no multiple inheritance for MicroPython
@@ -349,11 +380,11 @@ class BaseListenCmd(BaseSubCmd):
         conn = self.wrapper(conn)
         app = ExtCmdMsg(conn, self.cfg)
         seq = self.seq
-        if seq > len(self.sub)*3:
+        if seq > len(self.sub) * 3:
             seq = 10
         while seq in self.sub:
             seq += 1
-        self.seq = seq+1
+        self.seq = seq + 1
         await self.attach(seq, app)
         await self.start_app(app)
         await app.wait_ready()
@@ -369,13 +400,12 @@ class BaseListenCmd(BaseSubCmd):
             self.set_ready()
             async for conn in conns:
                 task = await self.tg.spawn(self.handler, conn)
- 
 
 
 class DirCmd(BaseSubCmd):
     """
     A BaseSubCmd handler with apps started by local configuration.
-    
+
     Not typically subclassed.
     """
 
@@ -395,14 +425,12 @@ class DirCmd(BaseSubCmd):
             await self._updated.wait()
             self._updated = Event()
 
-
     async def reload(self):
         "called after the config has been updated"
         self._updated.set()
         await self._did_update.wait()
 
     cmd_upd = reload
-
 
     async def _setup_apps(self):
         log("Setup %s", self.path)
@@ -428,7 +456,7 @@ class DirCmd(BaseSubCmd):
             try:
                 await self.attach(name, imp(v)(cfg))
             except TypeError as exc:
-                raise # TypeError(f"{name}: {v} {repr(imp(v))} {repr(exc)}: {repr(cfg)}")
+                raise  # TypeError(f"{name}: {v} {repr(imp(v))} {repr(exc)}: {repr(cfg)}")
 
         # Second, run them all.
         # For existing apps, tell it to update its configuration.
@@ -437,7 +465,7 @@ class DirCmd(BaseSubCmd):
 
         # Third, wait for them to be up.
         for app in self.sub.values():
-            if app.cfg.get("wait",True):
+            if app.cfg.get("wait", True):
                 await app.wait_ready()
 
         # Finally, mark done.
@@ -465,13 +493,13 @@ class Dispatch(DirCmd):
                 await self.tg.spawn(self.task)
                 await self.wait_ready()
         except BaseException as exc:
-            await super().__aexit__(type(exc),exc,None)
+            await super().__aexit__(type(exc), exc, None)
             raise
         return self
 
-
     def sub_at(self, *p):
         from .tree import SubDispatch
+
         return SubDispatch(self, p)
 
     @property
@@ -492,11 +520,12 @@ class SubDispatch:
     Create this object in your ``setup`` method.
     Using it from ``__init__`` results in ineficient call execution.
     """
+
     def __init__(self, dispatch, path):
-        for i,p in enumerate(path):
+        for i, p in enumerate(path):
             try:
                 dispatch = dispatch.sub[p]
-            except (AttributeError,KeyError):
+            except (AttributeError, KeyError):
                 self._dest = dispatch
                 self._rem = path[i:]
                 break
@@ -505,7 +534,7 @@ class SubDispatch:
             self._rem = ()
             for k in dir(dispatch):
                 if k.startswith("cmd_"):
-                    setattr(self, k[4:], getattr(dispatch,k))
+                    setattr(self, k[4:], getattr(dispatch, k))
 
     @property
     def root(self):

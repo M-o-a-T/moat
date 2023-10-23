@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from anyio_serial import Serial as _Serial
 
-from moat.micro.compat import Event, Lock, TimeoutError, wait_for_ms, AC_use
+from moat.micro.compat import AC_use, Event, Lock, TimeoutError, wait_for_ms
 from moat.micro.proto.stream import AnyioBuf
 
 
@@ -20,6 +20,7 @@ class Serial(AnyioBuf):
     """
     Serial port abstraction.
     """
+
     max_idle = 100
     pack = None
 
@@ -40,7 +41,7 @@ class Serial(AnyioBuf):
             pa = "N"
         uart_cfg['parity'] = pa
 
-        fl =  p.get("flow", None)
+        fl = p.get("flow", None)
         if fl:
             if 'R' not in fl or 'C' not in fl:
                 if 'R' in fl or 'C' in fl:

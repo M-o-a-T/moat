@@ -2,6 +2,8 @@ import sys
 
 from ...util import NotGiven, Queue, ValueEvent
 from ..compat import (
+    ACM,
+    AC_exit,
     Event,
     TaskGroup,
     TimeoutError,
@@ -12,7 +14,6 @@ from ..compat import (
     ticks_diff,
     ticks_ms,
     wait_for_ms,
-    ACM, AC_exit,
 )
 from .stack import ChannelClosed, StackedMsg
 
@@ -76,7 +77,7 @@ class ReliableMsg(StackedMsg):
     def __init__(self, link, cfg):
         super().__init__(link, cfg)
 
-        window = cfg.get("window",8)
+        window = cfg.get("window", 8)
         timeout = cfg.get("timeout", 1000)
         retries = cfg.get("retries", 5)
 
@@ -160,7 +161,9 @@ class ReliableMsg(StackedMsg):
                     ntx = txd
                     nk = k
 
-            w_open = self.s_q and (self.s_send_head - self.s_send_tail) % self.window < self.window // 2
+            w_open = (
+                self.s_q and (self.s_send_head - self.s_send_tail) % self.window < self.window // 2
+            )
             if w_open:
                 # yes, we can send another message
                 # print(f"R {self.link.txt}: tx", file=sys.stderr)
@@ -180,15 +183,17 @@ class ReliableMsg(StackedMsg):
                 else:
                     self._trigger = Event()
 
-                # recalculate, as it may have changed during the wait 
-                w_open = self.s_q and (self.s_send_head - self.s_send_tail) % self.window < self.window // 2
+                # recalculate, as it may have changed during the wait
+                w_open = (
+                    self.s_q
+                    and (self.s_send_head - self.s_send_tail) % self.window < self.window // 2
+                )
                 # XXX this prevents the "clash" error below but is probably
                 # not the real fix
             else:
                 # we need to re-send now
                 # print(f"R {self.link.txt}: now {ticks_ms()}", file=sys.stderr)
                 pass
-
 
             # process pending-send queue
             if w_open:
@@ -278,9 +283,10 @@ class ReliableMsg(StackedMsg):
                 await idle()
 
         except Exception as exc:
-#           if not self.persist:
-                raise
-#           log("Reliable", err=exc)
+            #           if not self.persist:
+            raise
+
+    #           log("Reliable", err=exc)
 
     async def _run(self):
         self.reset()
@@ -346,7 +352,7 @@ class ReliableMsg(StackedMsg):
         if 'n' in msg and 'i' in msg and 'a' not in msg:
             evt = None
             i = msg['i']
-            if (om := self._iters.get(i,None)) is not None:
+            if (om := self._iters.get(i, None)) is not None:
                 if 'e' not in om:
                     om.update(msg)
                 return
@@ -507,7 +513,7 @@ class ReliableMsg(StackedMsg):
                 except KeyError:
                     pass
                 else:
-                    if 'n' in m and (i := m.get('i',None)) is not None:
+                    if 'n' in m and (i := m.get('i', None)) is not None:
                         self._iters.pop(i, None)
                     self.pend_ack = True
                     if e is not None:

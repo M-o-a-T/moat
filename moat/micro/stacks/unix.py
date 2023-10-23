@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 import anyio
-
 from moat.util.queue import Queue
 
-from ..compat import TaskGroup, Event, ACM, AC_exit
-from ..stacks.util import BaseConnIter
+from ..compat import ACM, AC_exit, Event, TaskGroup
 from ..proto.stream import SingleAnyioBuf
+from ..stacks.util import BaseConnIter
+
 
 class UnixIter(BaseConnIter):
     """
     A connection iterator for Unix sockets
     """
+
     def __init__(self, path):
         super().__init__()
         self.path = path

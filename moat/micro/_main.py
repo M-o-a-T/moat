@@ -11,22 +11,24 @@ import sys
 import anyio
 import asyncclick as click
 from moat.util import (
-    P, Path,
+    P,
+    Path,
     as_service,
     attr_args,
     attrdict,
-    to_attrdict,
     merge,
     packer,
     process_args,
+    to_attrdict,
     unpacker,
     yload,
     yprint,
 )
-from moat.micro.cmd.tree import Dispatch,SubDispatch
+from moat.util.main import load_subgroup
+
+from moat.micro.cmd.tree import Dispatch, SubDispatch
 from moat.micro.cmd.util import get_part
 from moat.micro.proto.stream import RemoteBufAnyio
-from moat.util.main import load_subgroup
 from moat.micro.util import run_update
 
 from .compat import TaskGroup, idle, log
@@ -39,7 +41,10 @@ def _clean_cfg(cfg):
     # cfg = attrdict(apps=cfg["apps"])  # drop all the other stuff
     return cfg
 
-@load_subgroup(prefix="moat.micro", epilog="""
+
+@load_subgroup(
+    prefix="moat.micro",
+    epilog="""
         The 'section' parameter says which part of the configuration to use.
         for connecting to the remote system. The defaults are:
 
@@ -55,7 +60,8 @@ def _clean_cfg(cfg):
 
         Paths('P') are a shorthand notation for lists. See 'moat util path'
         for details.
-        """)
+        """,
+)
 @click.pass_context
 @click.option(
     "-c",
@@ -114,7 +120,12 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
 @click.option("-D", "--dest", type=str, default="", help="Destination path")
 @click.option("-R", "--root", type=str, default="/", help="Destination root")
 @click.option("-U", "--update", is_flag=True, help="Run standard updates")
-@click.option("-M", "--mount", type=click.Path(dir_okay=True, file_okay=False), help="Mount point for FUSE mount")
+@click.option(
+    "-M",
+    "--mount",
+    type=click.Path(dir_okay=True, file_okay=False),
+    help="Mount point for FUSE mount",
+)
 @click.option("-s", "--state", type=str, help="State to enter by default")
 @click.option("-c", "--config", type=P, help="Config part to use for the device")
 @click.option("-w", "--watch", is_flag=True, help="monitor the target's output after setup")
@@ -122,14 +133,15 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
 async def setup_(obj, **kw):
     cfg = obj.cfg
     st = cfg.setdefault("args", {})
-    for k,v in kw.items():
+    for k, v in kw.items():
         if k not in st or v is not None:
             st[k] = v
-    return await setup(obj,cfg,obj.ocfg,**st)
+    return await setup(obj, cfg, obj.ocfg, **st)
+
 
 async def setup(
     obj,
-    cfg, 
+    cfg,
     ocfg,
     source,
     root,
@@ -154,12 +166,11 @@ async def setup(
     if watch and run:
         raise click.UsageError("You can't use 'watch' and 'run' at the same time")
 
-    from .path import MoatDevPath, ABytes, copy_over
+    from .path import ABytes, MoatDevPath, copy_over
 
-    async with Dispatch(cfg, run=True) as dsp, \
-            SubDispatch(dsp,cfg["path"]) as sd, \
-            RemoteBufAnyio(sd) as ser, DirectREPL(ser) as repl:
-
+    async with Dispatch(cfg, run=True) as dsp, SubDispatch(dsp, cfg["path"]) as sd, RemoteBufAnyio(
+        sd
+    ) as ser, DirectREPL(ser) as repl:
         dst = MoatDevPath(root).connect_repl(repl)
         if source:
             if not dest:
@@ -180,7 +191,11 @@ async def setup(
 
         if update:
             try:
-                res = (await repl.exec(f"from moat.micro import _version as _v; print(_v.git); del _v")).strip()
+                res = (
+                    await repl.exec(
+                        f"from moat.micro import _version as _v; print(_v.git); del _v"
+                    )
+                ).strip()
             except ImportError:
                 res = None
             await run_update(MoatDevPath(".").connect_repl(repl), res, cross=cross)
@@ -192,9 +207,7 @@ async def setup(
             # reset with run_main set should boot into MoaT
 
         if run or watch:
-            o, e = await repl.exec_raw(
-                f"from main import go; go(state='once')", timeout=30
-            )
+            o, e = await repl.exec_raw(f"from main import go; go(state='once')", timeout=30)
             if o:
                 print(o)
             if e:
@@ -237,7 +250,7 @@ async def sync_(obj, source, dest, cross, section):
     from .path import MoatFSPath
 
     cfg = obj.cfg
-    async with Dispatch(cfg) as dsp, SubDispatch(dsp, cfg.get("path",P("r"))) as sd:
+    async with Dispatch(cfg) as dsp, SubDispatch(dsp, cfg.get("path", P("r"))) as sd:
         dst = MoatFSPath("/" + dest).connect_repl(sd)
         await copy_over(source, dst, cross=cross)
 
@@ -251,7 +264,7 @@ async def boot(obj, state):
 
     """
     cfg = obj.cfg
-    async with Dispatch(cfg) as dsp, SubDispatch(dsp, cfg.get("path",P("r"))) as sd:
+    async with Dispatch(cfg) as dsp, SubDispatch(dsp, cfg.get("path", P("r"))) as sd:
         if state:
             await sd.send("sys", "state", state=state)
 
@@ -288,7 +301,7 @@ async def cmd(obj, path, **attrs):
 
     from .proto.stack import RemoteError
 
-    async with Dispatch(cfg, run=True) as dsp, SubDispatch(dsp, cfg.get("path",P("r"))) as sd:
+    async with Dispatch(cfg, run=True) as dsp, SubDispatch(dsp, cfg.get("path", P("r"))) as sd:
         try:
             res = await sd.dispatch(tuple(path), val)
         except RemoteError as err:
@@ -350,9 +363,9 @@ async def cfg_(obj, read, read_client, write, write_client, sync, client, **attr
         return
 
     # TODO does not work yet
-    async with Dispatch(cfg, run=True, sig=True) as dsp, \
-            dsp.cfg_at(*cfg["path"]) as cf, \
-            dsp.sub_at(*cfg["fs"]) as fs:
+    async with Dispatch(cfg, run=True, sig=True) as dsp, dsp.cfg_at(
+        *cfg["path"]
+    ) as cf, dsp.sub_at(*cfg["fs"]) as fs:
         has_attrs = any(a for a in attrs.values())
 
         if has_attrs and not (read or read_client or write or write_client):
@@ -399,6 +412,7 @@ async def run(obj):
     async with Dispatch(cfg, run=True, sig=True) as dsp:
         await idle()
 
+
 @cli.command()
 @click.option("-b", "--blocksize", type=int, help="Max read/write message size", default=256)
 @click.argument("path", type=click.Path(file_okay=False, dir_okay=True), nargs=1)
@@ -409,8 +423,6 @@ async def mount(obj, path, blocksize):
 
     cfg = obj.cfg
 
-    async with Dispatch(cfg, run=True, sig=True) as dsp, \
-            SubDispatch(dsp,cfg["path"]) as sd:
-
+    async with Dispatch(cfg, run=True, sig=True) as dsp, SubDispatch(dsp, cfg["path"]) as sd:
         async with wrap(sd, path, blocksize=blocksize, debug=4):
             await idle()

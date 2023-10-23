@@ -11,17 +11,17 @@ import os
 import pathlib
 import stat
 import sys
-from subprocess import CalledProcessError
 from contextlib import suppress
 from pathlib import Path
+from subprocess import CalledProcessError
 
 import anyio
-
 from moat.util import attrdict
 
 from .proto.stack import RemoteError
 
 logger = logging.getLogger(__name__)
+
 
 class ABytes(io.BytesIO):
     """
@@ -77,6 +77,7 @@ class ABytes(io.BytesIO):
         res.st_size = len(self.getbuffer())
         return res
 
+
 class APath(anyio.Path):
     async def sha256(self) -> bytes:
         """
@@ -119,7 +120,6 @@ class APath(anyio.Path):
             pass
         finally:
             await fd.close()
-
 
 
 class MoatPath(anyio.Path):  # pathlib.PosixPath
@@ -734,6 +734,7 @@ async def copytree(src, dst, check=None, drop=None, cross=None):
             n += await copytree(s, d, check=check, cross=cross, drop=drop)
         return n
 
+
 async def copy_over(src, dst, cross=None):
     """
     Transfer a file tree from @src to @dst.
@@ -754,4 +755,3 @@ async def copy_over(src, dst, cross=None):
             logger.info("%d files changed. Verifying.", n)
     logger.info("Done. No (more) differences detected.")
     return tn
-

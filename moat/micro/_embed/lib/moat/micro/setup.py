@@ -10,9 +10,8 @@ alloc_emergency_exception_buf(300)
 import os
 
 if hasattr(os, "dupterm"):
-    import sys
-
     import io
+    import sys
     from asyncio import core as _core
     from asyncio import run_until_complete as _wc
     from asyncio.stream import Stream as _str

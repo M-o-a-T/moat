@@ -3,16 +3,18 @@ from __future__ import annotations
 from asyncio import core
 from asyncio.stream import Stream
 
-from msgpack import Packer,Unpacker, ExtType, packb
+from moat.util import DProxy, Proxy, get_proxy, name2obj, obj2name
+from msgpack import ExtType, Packer, Unpacker, packb
 
-from moat.util import Proxy, DProxy, obj2name, name2obj, get_proxy
-from moat.micro.compat import AC_use, TimeoutError, Lock, wait_for_ms, log
+from moat.micro.compat import AC_use, Lock, TimeoutError, log, wait_for_ms
+
+from ._stream import _MsgpackMsgBlk, _MsgpackMsgBuf
 from .stack import BaseBuf
-from ._stream import _MsgpackMsgBuf, _MsgpackMsgBlk
 
 
 def _rdq(s):  # async
     yield core._io_queue.queue_read(s)
+
 
 def _wrq(s):  # async
     yield core._io_queue.queue_write(s)
@@ -25,7 +27,7 @@ class FileBuf(BaseBuf):
     Reads a byte at a time if the stream doesn't have an "any()" method.
 
     Times out short reads if no more data arrives.
-    
+
     @force_write must be set if the write side doesn't support polling.
 
     Override the `setup` async context manager to set up and tear down the
@@ -43,7 +45,7 @@ class FileBuf(BaseBuf):
 
     async def setup(self):
         s = await self.stream()
-        if isinstance(s,tuple):
+        if isinstance(s, tuple):
             self.rs, self.ws = s
         else:
             self.rs = self.ws = s
@@ -86,6 +88,7 @@ class FileBuf(BaseBuf):
 
 # msgpack encode/decode
 
+
 def _decode(code, data):
     # decode an object, possibly by building a proxy.
 
@@ -108,7 +111,7 @@ def _decode(code, data):
             p = name2obj(s)
             o = p(*d, **st)
         except KeyError:
-            o = DProxy(s,*d,**st)
+            o = DProxy(s, *d, **st)
         except TypeError:
             o = p(*d)
             try:
@@ -129,7 +132,9 @@ def _encode(obj):
     if type(obj) is Proxy:
         return ExtType(4, obj.name.encode("utf-8"))
     if type(obj) is DProxy:
-        return ExtType(5, packb(obj.name) + packb(obj.a, default=_encode) + packb(obj.k, default=_encode))
+        return ExtType(
+            5, packb(obj.name) + packb(obj.a, default=_encode) + packb(obj.k, default=_encode)
+        )
 
     try:
         k = obj2name(obj)
@@ -171,20 +176,21 @@ class MsgpackMsgBuf(_MsgpackMsgBuf):
     async def setup(self):
         await super().setup()
         self.pack = Packer(default=_encode).packb
-        self.unpack = Unpacker(self.s, ext_hook=_decode, **self.cfg.get("pack",{})).unpack
+        self.unpack = Unpacker(self.s, ext_hook=_decode, **self.cfg.get("pack", {})).unpack
+
 
 class MsgpackMsgBlk(_MsgpackMsgBlk):
     """
     structured messages > chunked bytestrings
-                
+
     Use this if the layer below supports byte boundaries
     (one bytestring-ized message per call).
     """
-                
+
     async def setup(self):
         await super().setup()
         self.pack = Packer(default=_encode).packb
-        self.unpack = Unpacker(self.s, ext_hook=_decode, **self.cfg.get("pack",{})).unpack
+        self.unpack = Unpacker(self.s, ext_hook=_decode, **self.cfg.get("pack", {})).unpack
 
 
 class AIOBuf(BaseBuf):
@@ -194,6 +200,7 @@ class AIOBuf(BaseBuf):
     Implement an async context handler @stream to set the stream up
     (and close it when done).
     """
+
     s = None
 
     def __init__(self):
@@ -213,6 +220,7 @@ class AIOBuf(BaseBuf):
             raise EOFError
         return res
 
+
 class SingleAIOBuf(AIOBuf):
     """
     Adapts an asyncio stream to MoaT.
@@ -220,6 +228,7 @@ class SingleAIOBuf(AIOBuf):
     The stream is passed to the class constructor and can only be used
     once.
     """
+
     def __init__(self, stream):
         self._s = stream
 
@@ -231,8 +240,7 @@ class SingleAIOBuf(AIOBuf):
         return s
 
     def _destr(self):
-        if hasattr(self.s,"deinit"):
+        if hasattr(self.s, "deinit"):
             self.s.deinit()
-        elif hasattr(self.s,"close"):
+        elif hasattr(self.s, "close"):
             self.s.close()
-

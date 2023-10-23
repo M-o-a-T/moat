@@ -14,11 +14,13 @@ def githash(data):
     h.update(data)
     return h.digest()
 
+
 async def rd(f):
     async with await f.open("rb") as fd:
         return await fd.read()
 
-async def run_update(dest: MoatPath, release:str|None = None, check=None, cross=None):
+
+async def run_update(dest: MoatPath, release: str | None = None, check=None, cross=None):
     """
     Update a remote file system.
 
@@ -38,8 +40,10 @@ async def run_update(dest: MoatPath, release:str|None = None, check=None, cross=
     except git.exc.InvalidGitRepositoryError:
         if release:
             raise RuntimeError("release version found but no git")
+
         async def drop(dst):
             return False
+
     else:
         if not release:
             # raise RuntimeError("git but no release version found")
@@ -59,7 +63,7 @@ async def run_update(dest: MoatPath, release:str|None = None, check=None, cross=
             """
             # rp = dst.relative_to(emb_r)
             # assume dst is relative
-            sp = src/dst
+            sp = src / dst
             # XXX we might want to ask git which files differ,
             # it's supposed to have a cache for that
             if await sp.is_symlink():
@@ -73,5 +77,3 @@ async def run_update(dest: MoatPath, release:str|None = None, check=None, cross=
         # otherwise sync as normal
 
     await copytree(src, dest, check=check, drop=drop, cross=cross)
-
-

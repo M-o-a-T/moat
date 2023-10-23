@@ -7,16 +7,19 @@ from __future__ import annotations
 import sys
 from functools import partial
 
+import micropython
+
 from moat.micro.cmd.stream import BaseCmdMsg
-from moat.micro.stacks.console import console_stack
+from moat.micro.compat import AC_use
 from moat.micro.part.serial import Serial
 from moat.micro.proto.stream import FileBuf
-from moat.micro.compat import AC_use
-import micropython
+from moat.micro.stacks.console import console_stack
+
 
 class StdioBuf(FileBuf):
     async def stream(self):
-        return sys.stdin.buffer,sys.stdout.buffer
+        return sys.stdin.buffer, sys.stdout.buffer
+
 
 class StdIO(BaseCmdMsg):
     """Sends/receives MoaT messages using stdin/stdout"""

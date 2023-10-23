@@ -1,7 +1,9 @@
 import sys
+
 from async_queue import Queue, QueueEmpty, QueueFull
 
 from moat.micro.compat import Event, WouldBlock, log
+
 
 class Path(tuple):
     """
@@ -9,10 +11,12 @@ class Path(tuple):
 
     no string analysis, somewhat-broken output for non-basics
     """
+
     def __str__(self):
         def _escol(x):
             x = x.replace(":", "::").replace(".", ":.").replace(" ", ":_")
             return x
+
         res = []
         if not len(self):
             res.append(":")
@@ -35,6 +39,7 @@ class Path(tuple):
                     res.append(":v" + _escol(x.decode("ascii")))
                 else:
                     from base64 import b64encode
+
                     res.append(":s" + b64encode(x).decode("ascii"))
                     # no hex
             else:
@@ -44,11 +49,11 @@ class Path(tuple):
     def __repr__(self):
         return f"P({repr(str(self))})"
 
-    def __truediv__(self,x):
-        return Path(self+(x,))
+    def __truediv__(self, x):
+        return Path(self + (x,))
 
-    def __add__(self,x):
-        return Path(tuple(self)+x)
+    def __add__(self, x):
+        return Path(tuple(self) + x)
 
 
 class NotGiven:
@@ -310,30 +315,32 @@ class Lockstep:
     """
     A lock-step buffer. Very simple, but works only for one reader and one write.
     """
-    def __init__(self):  
+
+    def __init__(self):
         self.q = q
-        self._get = Event()      
-        self._put = Event()      
+        self._get = Event()
+        self._put = Event()
 
     def __aiter__(self):
         return self
-        
+
     async def __anext__(self):
         # reader. Signal we're reading, then wait for the item
         self._get.set()
         await self._put.wait()
         self.s = None
-        
+
         self._put = Event()
-        return s                 
+        return s
 
     get = __anext__
 
     async def put(s):
         await self._get.wait()
-        self.s = s         
-        self._put.set()    
+        self.s = s
+        self._put.set()
         self._get = Event()
+
 
 class NoProxyError(ValueError):
     "Error for nonexistent proxy values"
@@ -361,7 +368,7 @@ class DProxy(Proxy):
     A proxy object of a class to which the reciipient doesn't have a type.
     """
 
-    def __init__(self, name, *a,**k):
+    def __init__(self, name, *a, **k):
         super().__init__(name)
         self.a = a
         self.k = k
@@ -375,7 +382,7 @@ class DProxy(Proxy):
     def __repr__(self):
         return (
             f"{self.__class__.__name__}({repr(self.name)},"
-            + ",".join(repr(x) for x in (self.a,self.k))
+            + ",".join(repr(x) for x in (self.a, self.k))
             + ")"
         )
 
@@ -536,7 +543,8 @@ def exc_iter(exc):
     """
     iterate over all non-exceptiongroup parts of an exception(group)
     """
-    from moat.micro.compat import ExceptionGroup, BaseExceptionGroup
+    from moat.micro.compat import BaseExceptionGroup, ExceptionGroup
+
     if isinstance(exc, (ExceptionGroup, BaseExceptionGroup)):
         for e in exc.exceptions:
             yield from exc_iter(e)

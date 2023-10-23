@@ -1,10 +1,11 @@
 """
 More common code
 """
-from moat.util import NotGiven, attrdict, load_from_cfg, Path
+from moat.util import NotGiven, Path, attrdict, load_from_cfg
 
-from ..compat import Event, Pin_OUT, TaskGroup, idle, sleep, sleep_ms, ticks_diff, ticks_ms
 from ..cmd.base import BaseCmd
+from ..compat import Event, Pin_OUT, TaskGroup, idle, sleep, sleep_ms, ticks_diff, ticks_ms
+
 
 class Relay(BaseCmd):
     """
@@ -22,7 +23,7 @@ class Relay(BaseCmd):
 
     def __init__(self, cfg):
         super().__init__(cfg)
-        if not isinstance(cfg.get("pin", None), (tuple,list,Path)):
+        if not isinstance(cfg.get("pin", None), (tuple, list, Path)):
             raise ValueError(f"Pin not set")
         t = cfg.get("t", {})
         self.t = [t.get("off", 0), t.get("on", 0)]
@@ -107,4 +108,3 @@ class Relay(BaseCmd):
             f=self.force,
             d=None if self._delay is None else ticks_diff(ticks_ms(), self.t_last),
         )
-

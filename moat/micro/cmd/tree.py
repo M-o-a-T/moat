@@ -5,14 +5,15 @@ Server side of BaseCmd
 from itertools import chain
 
 import anyio
+from moat.util import NotGiven, attrdict
 
-from moat.util import attrdict, NotGiven
-
-from ._tree import *
 from ._tree import Dispatch as _Dispatch
+from ._tree import *
+
 
 class NotGiven2:
     pass
+
 
 class Dispatch(_Dispatch):
     APP = "moat.micro.app"
@@ -28,7 +29,9 @@ class Dispatch(_Dispatch):
             async def sig_handler(tg):
                 import signal
 
-                with anyio.open_signal_receiver(signal.SIGINT, signal.SIGTERM, signal.SIGHUP) as signals:
+                with anyio.open_signal_receiver(
+                    signal.SIGINT, signal.SIGTERM, signal.SIGHUP
+                ) as signals:
                     async for _ in signals:
                         self.tg.cancel()
                         break  # default handler on next
@@ -45,7 +48,8 @@ class CfgStore:
 
     The subpath points to the destination's "cfg.Cmd" app.
     """
-    cfg:dict = None
+
+    cfg: dict = None
     subpath = ()
 
     def __init__(self, dispatch, path):
@@ -61,6 +65,7 @@ class CfgStore:
         """
         Collect the client's configuration data.
         """
+
         async def _get(p):
             d = await self.sd.r(p=p)
             if isinstance(d, (list, tuple)):
@@ -87,6 +92,7 @@ class CfgStore:
         If @sync is set, the client will reload apps etc. after updating
         the config.
         """
+
         async def _set(p, c):
             # current client cfg
             try:

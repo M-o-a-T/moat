@@ -5,8 +5,8 @@ fake sensors
 import random
 from math import exp, tanh
 
-from moat.micro.compat import Event
 from moat.micro.cmd.base import BaseCmd
+from moat.micro.compat import Event
 
 PINS = {}
 

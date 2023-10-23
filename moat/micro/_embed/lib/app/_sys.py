@@ -3,6 +3,7 @@ import gc
 import machine
 
 from moat.micro.compat import sleep_ms, ticks_diff, ticks_ms
+
 from ._sys_ import Cmd as _Cmd
 
 
@@ -10,6 +11,7 @@ class Cmd(_Cmd):
     """
     System stuff that's satellite specific
     """
+
     async def cmd_state(self, state=None):
         """
         Set/return the string in the MoaT state file.

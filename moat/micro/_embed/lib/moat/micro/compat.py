@@ -11,12 +11,14 @@ TimeoutError = asyncio.TimeoutError
 _run = asyncio.run
 _tg = asyncio.TaskGroup
 CancelledError = asyncio.CancelledError
-from async_queue import Queue, QueueEmpty, QueueFull
 from time import ticks_add, ticks_diff, ticks_ms
+
+from async_queue import Queue, QueueEmpty, QueueFull
 from micropython import const
 
 ExceptionGroup = asyncio.ExceptionGroup
 BaseExceptionGroup = asyncio.BaseExceptionGroup
+
 
 class EndOfStream(Exception):
     pass
@@ -40,6 +42,7 @@ WouldBlock = (QueueFull, QueueEmpty)
 
 def print_exc(a, b=sys.stderr):
     sys.print_exception(a, b)
+
 
 def log(s, *x, err=None):
     if x:
@@ -169,7 +172,6 @@ async def _run_server(tg, s, cb):
         await tg.spawn(cb, s2s)
 
 
-
 # minimal Outcome clone
 
 
@@ -251,13 +253,14 @@ def ACM(obj):
     Calls to `ACM` and `AC_exit` can be nested. They **must** balance.
     """
 
-    if hasattr(obj,"_AC_"):
+    if hasattr(obj, "_AC_"):
         obj._AC_.append(None)
     else:
         obj._AC_ = []
 
     def _ACc(ctx):
         return AC_use(obj, ctx)
+
     return _ACc
 
 
@@ -281,7 +284,7 @@ async def AC_exit(obj, *exc):
     # Callbacks are invoked in LIFO order to match the behaviour of
     # nested context managers.
     if not exc:
-        exc = (None,None,None)
+        exc = (None, None, None)
 
     suppressed_exc = False
     pending_raise = False
@@ -296,25 +299,31 @@ async def AC_exit(obj, *exc):
                 res = cb.__exit__(*exc)
             else:
                 res = cb()
-                if hasattr(res,"throw"):  # async cb
+                if hasattr(res, "throw"):  # async cb
                     res = await res
 
             if res:  # suppress error
                 suppressed_exc = True
                 pending_raise = False
-                exc= (None, None, None)
+                exc = (None, None, None)
         except BaseException as ex:
-            exc = (type(ex),ex,getattr(ex,"__traceback__",None))
+            exc = (type(ex), ex, getattr(ex, "__traceback__", None))
             pending_raise = True
     if pending_raise:
         raise exc[1]
     return received_exc and suppressed_exc
 
-class Shield():
+
+class Shield:
     def __enter__(self):
         pass
+
     def __exit__(self, *tb):
         pass
+
+
 _shield = Shield()
+
+
 def shield():
     return _shield

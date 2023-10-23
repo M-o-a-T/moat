@@ -5,14 +5,17 @@ RTC access
 from __future__ import annotations
 
 import sys
+
 from moat.util import NotGiven
 
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util import enc_part, get_part
 from moat.micro.compat import log
 
+
 class NotGiven2:
     pass
+
 
 class Cmd(BaseCmd):
     """
@@ -21,8 +24,9 @@ class Cmd(BaseCmd):
     This app serves access to the config snippet(s) stored in the system's
     RTC chip.
     """
+
     def __init__(self, cfg):
-        if cfg.get("fake",False):
+        if cfg.get("fake", False):
             from moat.micro.test.rtc import state
         else:
             from moat.micro.rtc import state
@@ -77,4 +81,3 @@ class Cmd(BaseCmd):
         if self.st.update(dest.cfg) is not dest.cfg:
             raise RuntimeError("must be updated inplace")
         await dest.reload()
-

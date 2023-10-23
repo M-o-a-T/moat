@@ -23,13 +23,15 @@ from __future__ import annotations
 
 import sys
 
-from moat.micro.proto.stack import Base
-from moat.micro.compat import TaskGroup, idle, Event, wait_for_ms, log, Lock, AC_use, TimeoutError
 from moat.util import Path
 
-from .util import run_no_exc, StoppedError, wait_complain, IterWrap, DelayedIter
+from moat.micro.compat import AC_use, Event, Lock, TaskGroup, TimeoutError, idle, log, wait_for_ms
+from moat.micro.proto.stack import Base
+
+from .util import DelayedIter, IterWrap, StoppedError, run_no_exc, wait_complain
 
 uPy = sys.implementation.name == "micropython"
+
 
 class _acm:
     # Helper class.
@@ -57,7 +59,8 @@ class BaseCmd(Base):
 
     This class does not accept subcommands.
     """
-    _parent:BaseCmd = None
+
+    _parent: BaseCmd = None
     _ts = None
     _rl_ok = None  # result of last reload
     p_task = None  # managed by parent. Do not touch.
@@ -79,7 +82,7 @@ class BaseCmd(Base):
 
         Call first when overriding.
         """
-        await AC_use(self,self._is_stopped)
+        await AC_use(self, self._is_stopped)
         if self._stopped is None:
             self._init_events()
         elif self._starting is None or self._starting.is_set():
@@ -120,7 +123,6 @@ class BaseCmd(Base):
         if self._ready is not None:
             self._ready.set()
             self._ready = None
-
 
     async def run(self):
         """
@@ -164,7 +166,7 @@ class BaseCmd(Base):
             return
         await self._starting.wait()
 
-    async def wait_ready(self, wait=True) -> bool|None:
+    async def wait_ready(self, wait=True) -> bool | None:
         """
         Check if the command is ready.
 
@@ -217,7 +219,7 @@ class BaseCmd(Base):
 
         Delegates to the root dispatcher, using a wrapper so the caller
         doesn't need to write "async with await self.iter(…)".
-         
+
         Do not override this.
         """
         return _acm(self.root.dispatch(action, kw, rep=_rep))
@@ -233,10 +235,9 @@ class BaseCmd(Base):
         return self.root.dispatch(action, kw, wait=False, x_err=_x_err)
         # XXX run in a separate task
 
-
     async def dispatch(
-            self, action: list[str], msg: dict, rep:int = None, wait:bool = True, x_err=()
-    ) -> Awaitable|AsyncContextManager[AsyncIterator]:  # pylint:disable=arguments-differ
+        self, action: list[str], msg: dict, rep: int = None, wait: bool = True, x_err=()
+    ) -> Awaitable | AsyncContextManager[AsyncIterator]:  # pylint:disable=arguments-differ
         """
         Process a message.
 
@@ -269,11 +270,11 @@ class BaseCmd(Base):
         else:
             wr = True
             fn = a
-            
+
         if not wait:
             if rep:
                 raise ValueError("can't rep without wait")
-            self.tg.spawn(run_no_exc, p,msg,x_err, _name=f"Call:{self.path}/{p}")
+            self.tg.spawn(run_no_exc, p, msg, x_err, _name=f"Call:{self.path}/{p}")
             return
 
         if rep:
@@ -281,7 +282,7 @@ class BaseCmd(Base):
                 p = getattr(self, f"iter_{fn}")
             except AttributeError:
                 p = getattr(self, f"cmd_{fn}")
-                r = IterWrap(p,(),msg)
+                r = IterWrap(p, (), msg)
             else:
                 r = p(**msg)
                 if hasattr(r, "throw"):  # coroutine
@@ -295,7 +296,6 @@ class BaseCmd(Base):
         if hasattr(r, "throw"):  # coroutine
             r = await r
         return r
-
 
     # globally-available commands
 
@@ -314,8 +314,7 @@ class BaseCmd(Base):
                 res['j'] = True
         return res
 
-
-    def attached(self, parent:DirCmd, name:str):
+    def attached(self, parent: DirCmd, name: str):
         if self._parent is not None:
             raise RuntimeError(f"already {'.'.join(self.path)}")
         self._parent = parent

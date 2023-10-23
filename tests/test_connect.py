@@ -1,20 +1,19 @@
 """
 Connection tests
 """
-import pytest
-
 import os
 
+import pytest
 from moat.util import NotGiven, as_proxy, attrdict, to_attrdict
-from moat.micro.compat import log, sleep_ms
 
 from moat.micro._test import mpy_stack
+from moat.micro.compat import log, sleep_ms
 
 pytestmark = pytest.mark.anyio
 
 # step 1, locally
 
-CFG1="""
+CFG1 = """
 apps:
 # l: net.unix.Link
 # r: net.unix.Port
@@ -29,55 +28,64 @@ apps:
 
 @pytest.mark.parametrize("server_first", [True, False])
 @pytest.mark.parametrize("link_in", [True, False])
-@pytest.mark.parametrize("unix", [False,True])
+@pytest.mark.parametrize("unix", [False, True])
 async def test_net(tmp_path, server_first, link_in, unix):
     "basic connectivity test"
     if unix:
-        sock=tmp_path/"test.sock"
+        sock = tmp_path / "test.sock"
         try:
             sock.unlink()
         except FileNotFoundError:
             pass
     else:
-        port=50000+os.getpid()%10000
+        port = 50000 + os.getpid() % 10000
 
     async def set_server(c):
         if unix:
-            await c.set({
-                "apps": {"r": "net.unix.LinkIn" if link_in else "net.unix.Port"},
-                "r": {"port": str(sock), "wait":False},
-                }, sync=True)
+            await c.set(
+                {
+                    "apps": {"r": "net.unix.LinkIn" if link_in else "net.unix.Port"},
+                    "r": {"port": str(sock), "wait": False},
+                },
+                sync=True,
+            )
         else:
-            await c.set({
-                "apps": {"r": "net.tcp.LinkIn" if link_in else "net.tcp.Port"},
-                "r": {"host": "127.0.0.1", "port": port, "wait":False},
-                }, sync=True)
+            await c.set(
+                {
+                    "apps": {"r": "net.tcp.LinkIn" if link_in else "net.tcp.Port"},
+                    "r": {"host": "127.0.0.1", "port": port, "wait": False},
+                },
+                sync=True,
+            )
 
     async def set_client(c):
-        await c.set({
-#           "apps": {"l": "net.unix.Link"},
-#           "l": {"port": str(sock)},
-            "apps": {"l": "sub.Err"},
-            "l": {
-                "app":"net.unix.Link" if unix else "net.tcp.Link",
-                "cfg":{"port": str(sock)} if unix else {"host":"127.0.0.1","port":port},
-                "retry":9,
-                "timeout":100,
-                "wait": False,
-              },
-            }, sync=True)
+        await c.set(
+            {
+                #           "apps": {"l": "net.unix.Link"},
+                #           "l": {"port": str(sock)},
+                "apps": {"l": "sub.Err"},
+                "l": {
+                    "app": "net.unix.Link" if unix else "net.tcp.Link",
+                    "cfg": {"port": str(sock)} if unix else {"host": "127.0.0.1", "port": port},
+                    "retry": 9,
+                    "timeout": 100,
+                    "wait": False,
+                },
+            },
+            sync=True,
+        )
 
     async with mpy_stack(tmp_path, CFG1) as d, d.cfg_at("c") as c:
         await (set_server if server_first else set_client)(c)
         await sleep_ms(100)
         await (set_client if server_first else set_server)(c)
-        while await d.send("l","!rdy"):
+        while await d.send("l", "!rdy"):
             await sleep_ms(50)
-        while await d.send("r","!rdy"):
+        while await d.send("r", "!rdy"):
             await sleep_ms(50)
-        res = await d.send("l","a","echo", m="hello")
+        res = await d.send("l", "a", "echo", m="hello")
         assert res == dict(r="hello")
 
         if link_in:
-            res = await d.send("r","a","echo", m="hello")
+            res = await d.send("r", "a", "echo", m="hello")
             assert res == dict(r="hello")

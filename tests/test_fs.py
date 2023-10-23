@@ -11,7 +11,7 @@ pytestmark = pytest.mark.anyio
 
 # pylint:disable=R0801 # Similar lines in 2 files
 
-CFG="""
+CFG = """
 apps:
   r: _test.MpyCmd
 r:
@@ -27,11 +27,12 @@ r:
         txt: "S"
 """
 
+
 async def test_fuse(tmp_path):
     "file system test"
     p = anyio.Path(tmp_path) / "fuse"
     r = anyio.Path(tmp_path) / "root"
-    async with mpy_stack(tmp_path, CFG, {"r":{"cfg":{"f": {"root": str(r)}}}}) as d:
+    async with mpy_stack(tmp_path, CFG, {"r": {"cfg": {"f": {"root": str(r)}}}}) as d:
         await p.mkdir()
         async with wrap(d.sub_at("r", "f"), p, debug=4):
             async with await (p / "test").open("w") as f:

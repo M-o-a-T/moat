@@ -85,22 +85,22 @@ def _merge_one(d, other, drop=False, replace=True):
 
 def merge(d, *others, drop=False, replace=True):
     """
-    Deep-merge two data structures. Values from later structures overwrite earlier ones.
-    Values of `NotGiven` are deleted.
+    Deep-merge a "source" and one or more "replacement" data structures.
+
+    In contrast to `combine_dict`, the source is modified in-place.
 
     Rules:
-    * Two dicts recurses into same-key items, and adds new items
-    * Two lists recurses into same-index items, and appends from a longer list
-    * A list and a dict treats the dict as a sparse list. The value of numeric keys just
+    * two dicts: recurse into same-key items, and adds new items
+    * two lists: recurse into same-index items
+      append to the source if the replacement is longer
+    * a list and a dict treats the dict as a sparse list. The value of numeric keys just
       beyond the list's length are appended, others are ignored.
-    * otherwise, returns the second argument if it is not None, otherwise the first
-
-    This applies recursively.
+    * a replacement value of `NotGiven` deletes the source entry
+    * otherwise, use the second argument if it is not None, otherwise the first
+      * except that if "replace" is False, these are swapped
 
     If "drop" is given, delete source keys that are not in the destination.
     This is useful for in-place replacements.
-
-    If "replace" is False, don't overwrite.
     """
     for other in others:
         d = _merge_one(d, other, drop=drop, replace=replace)

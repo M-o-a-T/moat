@@ -3,7 +3,7 @@ This module contains functions dealing with MoaT's Path objects.
 
 MoaT Paths are represented as dot-separated strings. The colon is special.
 See "moat util path" / moat.util.Path.__doc__ for details.
- 
+
 Behind the scenes, a Path is an immutable lists with special representation.
 This is particularly useful in YAML (MoaT uses a ``!P`` prefix).
 
@@ -19,11 +19,11 @@ import ast
 import collections.abc
 import logging
 import re
+from base64 import b64decode, b64encode
 from functools import total_ordering
 from typing import Union
 
 import simpleeval
-from base64 import b64encode, b64decode
 
 __all__ = ["Path", "P", "logger_for", "PathShortener", "PathLongener", "path_eval"]
 
@@ -85,6 +85,7 @@ class Path(collections.abc.Sequence):
         Spaces are escaped somewhat aggressively, for better
         doubleclickability. Do not depend on this.
         """
+
         def _escol(x, spaces=True):
             x = x.replace(":", "::").replace(".", ":.")
             if spaces:
@@ -125,7 +126,7 @@ class Path(collections.abc.Sequence):
             else:
                 x = repr(x)
                 if x[0].isalpha():
-                    x = "i"+x
+                    x = "i" + x
                 res.append(":" + _escol(x))
         return "".join(res)
 

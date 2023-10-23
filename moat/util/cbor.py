@@ -1,9 +1,10 @@
-#!python
-# -*- Python -*-
+"""
+An overly-simple CBOR packer/unpacker.
+"""
 
-import re
+from __future__ import annotations
+
 import struct
-import sys
 from io import BytesIO
 
 try:
@@ -11,10 +12,18 @@ try:
 except ImportError:
 
     def const(x):
+        "µPy compatibility"
         return x
 
 
 from moat.util import NotGiven
+
+# Typing
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Any
+
 
 CBOR_TYPE_MASK = const(0xE0)  # top 3 bits
 CBOR_INFO_BITS = const(0x1F)  # low 5 bits
@@ -73,6 +82,8 @@ def _dumps_bignum_to_bytearray(val):
 
 
 class ExtraData(ValueError):
+    "buffer contains data beyond end of encoded object"
+
     def __init__(self, unpacked, extra):
         self.unpacked = unpacked
         self.extra = extra
@@ -82,10 +93,13 @@ class ExtraData(ValueError):
 
 
 class OutOfData(EOFError):
+    "bytes missing"
     pass
 
 
 class Packer:
+    "Basic CBOR packer"
+
     def __init__(self):
         self._buffer = BytesIO()
         # self._unicode_errors = unicode_errors or "strict"
@@ -122,8 +136,11 @@ class Packer:
             return w(struct.pack("!B", CBOR_FLOAT32) + ff)
         return w(struct.pack("!Bd", CBOR_FLOAT64, val))
 
-    def _encode_type_num(self, cbor_type, val):
-        """For some CBOR primary type [0..7] and an auxiliary unsigned number, return CBOR encoded bytes"""
+    def _encode_type_num(self, cbor_type, val) -> None:
+        """
+        For some CBOR primary type [0..7] and an auxiliary unsigned
+        number, return CBOR encoded bytes
+        """
         w = self._w
 
         if val is None:
@@ -147,10 +164,11 @@ class Packer:
         elif cbor_type == CBOR_NEGINT:
             w(_CBOR_TAG_NEGBIGNUM_BYTES)
         else:
-            raise FormatError("value too big: " + repr(val))
+            raise ValueError("value too big: " + repr(val))
         outb = _dumps_bignum_to_bytearray(val)
         self._encode_type_num(CBOR_BYTES, len(outb))
         w(self._bignum_to_bytearray(val))
+        return None
 
     def _string(self, val):
         if isinstance(val, str):
@@ -173,7 +191,6 @@ class Packer:
                 self._any(x)
 
     def _dict(self, d):
-        w = self._w
         self._encode_type_num(CBOR_MAP, len(d))
         for k, v in d.items():
             self._any(k)
@@ -192,10 +209,11 @@ class Packer:
         self._buffer.write(d)
 
     def _any(self, ob):
+        w = self._w
         if ob is None:
-            self._w(struct.pack("B", CBOR_NULL))
+            w(struct.pack("B", CBOR_NULL))
         elif ob is NotGiven:
-            self._w(struct.pack("B", CBOR_UNDEFINED))
+            w(struct.pack("B", CBOR_UNDEFINED))
         elif isinstance(ob, bool):
             self._bool(ob)
         elif isinstance(ob, (str, bytes)):
@@ -215,6 +233,7 @@ class Packer:
             raise TypeError("Cannot serialize type " + repr(type(ob)))
 
     def packb(self, obj):
+        "pack @obj, return the resulting bytes"
         if self._buffer.getvalue():
             raise RuntimeError("Writer busy")
         try:
@@ -224,13 +243,15 @@ class Packer:
             self._buffer = BytesIO()  # always reset
 
 
-class Tag(object):
+class Tag:
+    "a random CBOR tag"
+
     def __init__(self, tag=None, value=None):
         self.tag = tag
         self.value = value
 
     def __repr__(self):
-        return "Tag({0!r}, {1!r})".format(self.tag, self.value)
+        return f"Tag({self.tag !r}, {self.value !r})"
 
     def __eq__(self, other):
         if not isinstance(other, Tag):
@@ -239,6 +260,8 @@ class Tag(object):
 
 
 class Unpacker:
+    "Basic CBOR unpacker"
+
     _stream = None
     _buff_i = 0
     _rsz = 64
@@ -268,10 +291,10 @@ class Unpacker:
             data = await self._read(8)
             aux = struct.unpack_from("!Q", data, 0)[0]
         else:
-            assert tag_aux == CBOR_VAR_FOLLOWS, "bogus tag {0:02x}".format(tb)
+            assert tag_aux == CBOR_VAR_FOLLOWS, f"bogus tag {tb :02x}"
             aux = None
 
-        return tag, tag_aux, aux
+        return tag, aux
 
     async def _read(self, n):
         # (int) -> bytearray
@@ -323,7 +346,7 @@ class Unpacker:
         except StopIteration as exc:
             return exc.value
         except OutOfData:
-            raise StopIteration
+            raise StopIteration from None
         #       except BaseException as err:
         #           raise RuntimeError(err)
         else:
@@ -350,20 +373,21 @@ class Unpacker:
 
     async def _array(self, aux):
         ob = []
-        for i in range(aux):
+        for _ in range(aux):
             subob = await self._any()
             ob.append(subob)
         return ob
 
     async def _map(self, aux):
         ob = {}
-        for i in range(aux):
+        for _ in range(aux):
             subk = await self._any()
             subv = await self._any()
             ob[subk] = subv
         return ob
 
-    async def unpack(self):
+    async def unpack(self) -> Any:
+        "unpack my buffer into an object"
         res = await self._any()
         # Buffer management: chop off the part we've read
         self._buffer = self._buffer[self._buff_i :]
@@ -376,20 +400,22 @@ class Unpacker:
     def _get_extradata(self):
         return self._buffer[self._buff_i :]
 
-    def unpackb(self, packed):
+    def unpackb(self, packed) -> Any:
+        "unpack"
         self.feed(packed)
         try:
             upack = self.unpack()
-            ret = upack.send(None)
+            upack.send(None)
         except StopIteration as s:
             if self._got_extradata():
-                raise ExtraData(s.value, bytes(self._get_extradata()))
+                raise ExtraData(s.value, bytes(self._get_extradata())) from None
             return s.value
         except OutOfData:
-            raise ValueError("incomplete")
+            raise ValueError("incomplete") from None
         raise RuntimeError("No way")
 
-    def feed(self, data):
+    def feed(self, data: bytes):
+        "set the decode buffer"
         assert self._stream is None
         self._buffer = memoryview(data)
         self._buff_i = 0
@@ -416,7 +442,7 @@ class Unpacker:
             pf = struct.unpack_from("!d", data, 0)
             return pf[0]
 
-        tag, tag_aux, aux = await self._tag_aux(tb)
+        tag, aux = await self._tag_aux(tb)
 
         if tag == CBOR_UINT:
             return aux
@@ -447,7 +473,7 @@ class Unpacker:
                 return None
             if tb == CBOR_UNDEFINED:
                 return NotGiven
-            raise ValueError("unknown cbor tag 7 byte: {:02x}".format(tb))
+            raise ValueError(f"unknown cbor tag 7 byte: {tb :02x}")
 
     async def _bytes(self, aux, btag=CBOR_BYTES):
         # TODO: limit to some maximum number of chunks and some maximum total bytes
@@ -461,7 +487,7 @@ class Unpacker:
             tb = await self._read_byte()
             if tb == CBOR_BREAK:
                 break
-            tag, tag_aux, aux = await self._tag_aux(tb)
+            tag, aux = await self._tag_aux(tb)
             if tag != btag:
                 raise ValueError("var length with unexpected component")
             ob = await self._read(aux)
@@ -470,6 +496,7 @@ class Unpacker:
 
 
 def tagify(aux, ob):
+    "create data types from tagged CBOR input"
     # TODO: make this extensible?
     # cbor.register_tag_handler(tagnumber, tag_handler)
     # where tag_handler takes (tagnumber, tagged_object)
@@ -482,8 +509,9 @@ def tagify(aux, ob):
         return int.from_bytes(ob, "big")
     if aux == CBOR_TAG_NEGBIGNUM:
         return -1 - int.from_bytes(ob, "big")
-    #   if aux == CBOR_TAG_REGEX:
-    #       # Is this actually a good idea? Should we just return the tag and the raw value to the user somehow?
+    # if aux == CBOR_TAG_REGEX:
+    # Is this actually a good idea? Should we just return
+    # the tag and the raw value to the user somehow?
     #       return re.compile(ob)
     return Tag(aux, ob)
 

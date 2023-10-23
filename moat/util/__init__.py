@@ -10,6 +10,8 @@ or too interrelated … or the author was too lazy.
 
 import logging as _logging
 
+import msgpack as _mp
+
 _log = _logging.getLogger(__name__)
 
 
@@ -17,20 +19,21 @@ def packer(*a, cbor=False, **k):
     """single message packer"""
     if cbor:
         return _cbor.packb(*a, **k)
-    return msgpack.packb(*a, strict_types=False, use_bin_type=True, default=_msgpack._encode, **k)
+    # pylint:disable=protected-access
+    return _mp.packb(*a, strict_types=False, use_bin_type=True, default=_msgpack._encode, **k)
 
 
 def unpacker(*a, cbor=False, **k):
     """single message unpacker"""
     if cbor:
         return _cbor.unpackb(*a, **k)
-    return msgpack.unpackb(
+    return _mp.unpackb(
         *a,
         object_pairs_hook=attrdict,
         strict_map_key=False,
         raw=False,
         use_list=False,
-        ext_hook=_msgpack._decode,
+        ext_hook=_msgpack._decode,  # pylint:disable=protected-access
         **k,
     )
 
@@ -39,16 +42,18 @@ def stream_unpacker(*a, cbor=False, **k):
     """stream unpacker factory"""
     if cbor:
         return _cbor.Unpacker(*a, **k)
-    return msgpack.Unpacker(
+    return _mp.Unpacker(
         *a,
         object_pairs_hook=attrdict,
         strict_map_key=False,
         raw=False,
         use_list=False,
-        ext_hook=_msgpack._decode,
+        ext_hook=_msgpack._decode,  # pylint:disable=protected-access
         **k,
     )
 
+
+from .dict import attrdict
 
 from .alert import *  # noqa: F401,F403,E402  # isort:skip
 from .impl import *  # noqa: F401,F403,E402  # isort:skip
@@ -117,5 +122,4 @@ except ImportError as exc:
     _log.warning("Missing: %s", exc)
 
 from . import cbor as _cbor
-from . import msgpack as _msgpack
-import msgpack
+from . import msgpack as _msgpack  # pylint:disable=reimported  # nonsense

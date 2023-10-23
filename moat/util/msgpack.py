@@ -14,7 +14,6 @@ from functools import partial
 import msgpack
 
 from . import packer, stream_unpacker
-from .dict import attrdict
 from .path import Path
 from .proxy import Proxy, _CProxy, obj2name
 

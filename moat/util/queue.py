@@ -1,3 +1,8 @@
+"""
+trio/anyio no longer have queues, but sometimes a memory object stream is
+unwieldy. Thus this re-implemens a simple queue using
+`anyio.create_memory_object_stream`.
+"""
 import logging
 from collections.abc import Awaitable
 
@@ -89,6 +94,8 @@ class Queue:
 
 
 class Lockstep(Queue):
+    "A queue with sender/receiver rendez-vous"
+
     def __init__(self):
         super().__init__(0)
 

@@ -6,9 +6,9 @@ Some rudimentary tests for packing
 
 import pytest
 
-pytestmark = pytest.mark.skip
-
 from moat.util import as_proxy, attrdict, packer, unpacker
+
+pytestmark = pytest.mark.skip
 
 
 class Bar:

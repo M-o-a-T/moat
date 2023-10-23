@@ -4,7 +4,16 @@ This module contains proxy helpers.
 
 from .impl import NotGiven
 
-__all__ = ["Proxy", "DProxy", "NoProxyError", "as_proxy", "name2obj", "obj2name", "get_proxy", "drop_proxy"]
+__all__ = [
+    "Proxy",
+    "DProxy",
+    "NoProxyError",
+    "as_proxy",
+    "name2obj",
+    "obj2name",
+    "get_proxy",
+    "drop_proxy",
+]
 
 
 class NoProxyError(ValueError):
@@ -34,7 +43,7 @@ class DProxy(Proxy):
     the receiver doesn't know about
     """
 
-    def __init__(self, name, *a,**k):
+    def __init__(self, name, *a, **k):
         super().__init__(name)
         self.a = a
         self.k = k
@@ -48,7 +57,7 @@ class DProxy(Proxy):
     def __repr__(self):
         return (
             f"{self.__class__.__name__}({repr(self.name)},"
-            + ",".join(repr(x) for x in (self.a,self.k))
+            + ",".join(repr(x) for x in (self.a, self.k))
             + ")"
         )
 
@@ -59,15 +68,21 @@ _RProxy: dict[int, str] = {}
 
 
 def get_proxy(obj):
+    """
+    Return a proxy for @obj.
+
+    If no proxy for it exists, a new one is created.
+    """
     try:
         return _RProxy[id(obj)]
     except KeyError:
-        global _pkey
+        global _pkey  # pylint:disable=global-statement
         k = "p_" + str(_pkey)
         _pkey += 1
         _CProxy[k] = obj
         _RProxy[id(obj)] = k
         return k
+
 
 def drop_proxy(p):
     """
@@ -82,6 +97,7 @@ def drop_proxy(p):
         raise ValueError("Can't delete a system proxy")
     r = _CProxy.pop(p)
     del _RProxy[id(r)]
+
 
 def name2obj(name, obj=NotGiven, replace=False):
     """

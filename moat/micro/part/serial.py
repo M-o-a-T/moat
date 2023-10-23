@@ -3,9 +3,10 @@ Serial ports on Unix
 """
 from __future__ import annotations
 
+import anyio
 from anyio_serial import Serial as _Serial
 
-from moat.micro.compat import AC_use, Event, Lock, TimeoutError, wait_for_ms
+from moat.micro.compat import AC_use, Event, Lock, TimeoutError, log, wait_for_ms
 from moat.micro.proto.stream import AnyioBuf
 
 
@@ -72,7 +73,7 @@ class Serial(AnyioBuf):
             while True:
                 with anyio.move_on_after(t):
                     res = await ser.receive(200)
-                    logger.debug("Flush: %r", res)
+                    log("Flush: %r", res)
                     continue
                 break
         return ser

@@ -24,6 +24,13 @@ from moat.util import as_proxy
 
 from moat.micro.compat import ACM, AC_exit, AC_use, log
 
+# Typing
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Any, AsyncContextManager, Awaitable
+
 
 @as_proxy("_rErr")
 class RemoteError(RuntimeError):
@@ -282,7 +289,7 @@ class StackedBlk(StackedConn, BaseBlk):
 
     async def rcv(self):
         "Receive. Returns a message."
-        return await self.s.recv(*a)
+        return await self.s.rcv()
 
 
 class LogMsg(StackedMsg, StackedBuf, StackedBlk):

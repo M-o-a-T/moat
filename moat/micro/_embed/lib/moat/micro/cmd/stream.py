@@ -5,6 +5,7 @@ Stream link-up support for MoaT commands
 from __future__ import annotations
 
 import sys
+from typing import Any, Awaitable, Mapping, Optional
 
 from moat.util import NotGiven, ValueEvent, obj2name
 
@@ -111,7 +112,7 @@ class BaseCmdBBM(BaseCmd):
 
     async def cmd_r(self):
         """receive a message"""
-        return await self.dev.recv(m)
+        return await self.dev.recv()
 
     # Blk: sb/rb = .snd/.rcv
 

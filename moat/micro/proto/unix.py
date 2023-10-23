@@ -9,6 +9,13 @@ import anyio
 from moat.micro.compat import AC_use
 from moat.micro.proto.stream import AnyioBuf
 
+# Typing
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from moat.util import Path
+
 
 class Link(AnyioBuf):
     def __init__(self, port: str | Path):

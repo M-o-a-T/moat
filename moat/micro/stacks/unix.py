@@ -7,6 +7,13 @@ from ..compat import ACM, AC_exit, Event, TaskGroup
 from ..proto.stream import SingleAnyioBuf
 from ..stacks.util import BaseConnIter
 
+# Typing
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Never
+
 
 class UnixIter(BaseConnIter):
     """

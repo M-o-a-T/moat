@@ -15,7 +15,7 @@ import anyio
 from moat.util import Queue, attrdict, combine_dict, merge, packer, yload
 
 import moat.micro
-from moat.micro.app.pipe import Process
+from moat.micro.app.pipe import ProcessCmd
 from moat.micro.cmd.tree import Dispatch
 from moat.micro.compat import AC_use, TaskGroup
 
@@ -131,7 +131,7 @@ class MpyBuf(ProcessBuf):
                 pre / "tests-mpy/mplex.py",
             ]
             if isinstance(mplex, str):
-                self.argv.append(md)
+                self.argv.append(mplex)
         else:
             self.argv = [
                 pre / "lib/micropython/ports/unix/build-standard/micropython",
@@ -232,17 +232,17 @@ class Loopback(BaseMsg, BaseBuf):
     async def wr(self, buf) -> int:
         if self.loss:
             b = bytearray(buf)
-            l = 1 - (1 - self.loss) ** (1 / len(b) / 2)
-            # '1-l' is the chance of not killing each single byte
+            loss = 1 - (1 - self.loss) ** (1 / len(b) / 2)
+            # '1-loss' is the chance of not killing each single byte
             # that's required to not kill a message of size len(b)
             # given two chances of mangling each byte
 
             n = 0
             while n < len(b):
-                if random() < l:
+                if random() < loss:
                     del b[n]
                 else:
-                    if random() < l:
+                    if random() < loss:
                         b[n] = b[n] ^ (1 << int(8 * random()))
                     n += 1
         else:

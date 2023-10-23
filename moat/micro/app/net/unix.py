@@ -2,16 +2,24 @@ from __future__ import annotations
 
 from moat.micro.cmd.stream import BaseCmdBBM, CmdMsg
 from moat.micro.cmd.tree import BaseListenCmd, BaseListenOneCmd
+from moat.micro.compat import AC_use
 from moat.micro.proto.unix import Link as UnixLink
 from moat.micro.stacks.console import console_stack
 from moat.micro.stacks.unix import UnixIter
+
+# Typing
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Awaitable
 
 
 class Raw(BaseCmdBBM):
     """Sends/receives raw data"""
 
     def stream(self) -> Awaitable:
-        return AC_use(UnixLink(self.port))
+        return AC_use(self, UnixLink(self.port))
 
 
 class Link(CmdMsg):

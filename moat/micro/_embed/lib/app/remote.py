@@ -9,6 +9,15 @@ from moat.micro.compat import AC_use
 from moat.micro.part.serial import Serial
 from moat.micro.stacks.console import console_stack
 
+# Typing
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Awaitable
+
+    from most.micro.proto.stack import BaseBuf, BaseMsg
+
 
 class Raw(BaseCmdBBM):
     """

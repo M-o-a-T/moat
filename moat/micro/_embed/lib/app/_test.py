@@ -7,6 +7,12 @@ from __future__ import annotations
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.compat import log
 
+# Typing
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Any
+
 
 class Cmd(BaseCmd):
     n = 0

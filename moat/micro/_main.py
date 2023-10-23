@@ -193,9 +193,7 @@ async def setup(
         if update:
             try:
                 res = (
-                    await repl.exec(
-                        f"from moat.micro import _version as _v; print(_v.git); del _v"
-                    )
+                    await repl.exec("from moat.micro import _version as _v; print(_v.git); del _v")
                 ).strip()
             except ImportError:
                 res = None
@@ -208,7 +206,7 @@ async def setup(
             # reset with run_main set should boot into MoaT
 
         if run or watch:
-            o, e = await repl.exec_raw(f"from main import go; go(state='once')", timeout=30)
+            o, e = await repl.exec_raw("from main import go; go(state={state !r})", timeout=30)
             if o:
                 print(o)
             if e:
@@ -267,19 +265,19 @@ async def boot(obj, state):
     cfg = obj.cfg
     async with Dispatch(cfg) as dsp, SubDispatch(dsp, cfg.get("path", P("r"))) as sd:
         if state:
-            await sd.send("sys", "state", state=state)
+            await sd.state(state=state)
 
         # reboot via the multiplexer
         logger.info("Rebooting target.")
-        await req.send(["mplex", "boot"])
+        await sd.boot()
 
         # await t.send(["sys","boot"], code="SysBooT")
         await anyio.sleep(2)
 
-        res = await req.request.send("sys", "test")
+        res = await sd("test")
         assert res == TEST_MAGIC, res
 
-        res = await req.request.send("ping", "pong")
+        res = await sd("ping", m="pong")
         if res != "R:pong":
             raise RuntimeError("wrong reply")
         print("Success:", res)
@@ -387,17 +385,17 @@ async def cfg_(obj, read, read_client, write, write_client, sync, client, **attr
             else:
                 cfg = merge(cfg, unpacker(d), replace=False)
         if not read and not read_client:
-            cfg = await req.get_cfg()
+            cfg = await cf.get()
 
         cfg = process_args(cfg, **attrs)
         if not write:
             if "apps" not in cfg:
                 raise click.UsageError("No 'apps' section.")
             if not write_client:
-                await req.set_cfg(cfg, sync=sync, replace=True)
+                await cf.set(cfg, sync=sync, replace=True)
 
         if write_client:
-            p = MoatFSPath(write_client).connect_repl(req)
+            p = MoatFSPath(write_client).connect_repl(fs)
             d = packer(cfg)
             await p.write_bytes(d, chunk=64)
         if write:
@@ -410,7 +408,7 @@ async def run(obj):
     """
     Run the MoaT stack.
     """
-    async with Dispatch(cfg, run=True, sig=True) as dsp:
+    async with Dispatch(obj.cfg, run=True, sig=True) as dsp:
         await idle()
 
 

@@ -33,6 +33,16 @@ from .util import DelayedIter, IterWrap, StoppedError, run_no_exc, wait_complain
 uPy = sys.implementation.name == "micropython"
 
 
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import AsyncContextManager, AsyncIterator, Awaitable, Never
+
+    from moat.micro.cmd.tree import DirCmd
+    from moat.micro.proto.stack import BaseBuf, BaseMsg
+    from moat.micro.stacks.util import BaseConnIter
+
+
 class _acm:
     # Helper class.
     #
@@ -271,13 +281,9 @@ class BaseCmd(Base):
             wr = True
             fn = a
 
-        if not wait:
-            if rep:
-                raise ValueError("can't rep without wait")
-            self.tg.spawn(run_no_exc, p, msg, x_err, _name=f"Call:{self.path}/{p}")
-            return
-
         if rep:
+            if not wait:
+                raise ValueError("can't rep without wait")
             try:
                 p = getattr(self, f"iter_{fn}")
             except AttributeError:
@@ -290,6 +296,11 @@ class BaseCmd(Base):
             return DelayedIter(it=r, t=rep)
 
         p = getattr(self, f"cmd_{fn}")
+
+        if not wait:
+            self.tg.spawn(run_no_exc, p, msg, x_err, _name=f"Call:{self.path}/{p}")
+            return
+
         if wr:
             await self.wait_ready()
         r = p(**msg)

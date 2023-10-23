@@ -7,6 +7,13 @@ import hashlib
 
 from .path import APath, copytree
 
+# Typing
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from moat.micro.path import MoatPath
+
 
 def githash(data):
     h = hashlib.sha1()

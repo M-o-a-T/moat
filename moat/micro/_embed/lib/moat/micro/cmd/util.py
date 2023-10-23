@@ -17,6 +17,16 @@ from moat.micro.compat import (
 )
 from moat.micro.proto.stack import RemoteError, SilentRemoteError
 
+# Typing
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Iterator
+
+    from moat.micro.cmd.base import BaseCmd
+
+
 StopIter = StopAsyncIteration
 
 as_proxy("_KyErr", KeyError, replace=True)

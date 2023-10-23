@@ -10,6 +10,14 @@ from serialpacker import SerialPacker
 from ..compat import Event, Lock, TimeoutError, const, wait_for_ms
 from .stack import BaseBuf, StackedBlk, StackedBuf, StackedMsg
 
+# Typing
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Any
+
+
 as_proxy("_", NotGiven, replace=True)
 
 
@@ -35,7 +43,7 @@ class _CReader:
     def __init__(self, cons):
         if cons is True:
             cons = 128
-        self.cwait = Event()
+        self.cevt = Event()
         self.cpos = 0
         self.cbuf = bytearray(cons)
         self.cons = cons
@@ -45,9 +53,9 @@ class _CReader:
         if not self.cons:
             raise EOFError
         if not self.cpos:
-            await cevt.wait()
-            cevt = Event()
-        n = min(len(buf), cpos)
+            await self.cevt.wait()
+            self.cevt = Event()
+        n = min(len(buf), self.cpos)
         buf[:n] = self.cbuf[:n]
         if n < self.cpos:
             self.cbuf[: self.cpos - n] = self.cbuf[n : self.cpos]
@@ -101,7 +109,7 @@ class _MsgpackMsgBuf(StackedMsg):
         cons = cfg.get("console", False)
 
         if cons or pref is not None:
-            kw["read_size"] = 1
+            cfg["read_size"] = 1  # XXX
         if cons:
             _CReader.__init__(self, cons)
 

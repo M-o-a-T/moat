@@ -7,6 +7,13 @@ from moat.micro.proto.tcp import Link as TcpLink
 from moat.micro.stacks.console import console_stack
 from moat.micro.stacks.tcp import TcpIter
 
+# Typing
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Awaitable
+
 
 class Raw(BaseCmdBBM):
     """Sends/receives raw data"""

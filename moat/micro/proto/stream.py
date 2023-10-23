@@ -17,6 +17,15 @@ from moat.micro.compat import AC_use, Event, TaskGroup, log
 from ._stream import SerialPackerBlkBuf, _MsgpackMsgBlk, _MsgpackMsgBuf
 from .stack import BaseBuf
 
+# Typing
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Optional
+
+    from moat.micro.cmd.tree import SubDispatch
+
 
 class ProcessDeadError(RuntimeError):
     """Process has died"""
@@ -184,7 +193,7 @@ class AnyioBuf(BaseBuf):
         """
         self.s = await self.stream()
 
-    async def stream() -> anyio.abc.ByteStream:
+    async def stream(self) -> anyio.abc.ByteStream:
         """
         Create the stream to use.
 
@@ -299,10 +308,11 @@ class ProcessBuf(CtxObj, AnyioBuf):
     argv: list[str] = None
     env: Optional[dict[str, str]] = None
 
-    def __init__(self, cfg, **kw):
+    def __init__(self, cfg, executable: str | None = None, **kw):
         super().__init__(cfg)
         kw.setdefault("stderr", sys.stderr)
         self.kw = kw
+        self.exec = executable
 
     def open_args(self):
         """Return keyword arguments for `anyio.open_process`.

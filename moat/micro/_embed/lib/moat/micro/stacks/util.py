@@ -7,8 +7,15 @@ from __future__ import annotations
 from moat.util import Queue
 
 from moat.micro.compat import ACM, AC_exit, AC_use, Event, TaskGroup, shield
+from moat.micro.proto.stack import BaseConn
 
 TEST_MAGIC = b"r\x0dn\x0a-\x00x\x0ce\x1b!"
+
+# typing
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Awaitable, Never
 
 
 class BaseConnIter:

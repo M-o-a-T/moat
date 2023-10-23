@@ -22,6 +22,14 @@ from pyfuse3 import (  # pylint: disable=E0611
     FUSEError,
 )
 
+# Typing
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from moat.micro.cmd.tree import SubDispatch
+
+
 logger = logging.getLogger(__name__)
 
 as_proxy("_FnErr", FileNotFoundError, replace=True)
@@ -774,7 +782,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
 
 @asynccontextmanager
-async def wrap(link: SubDispatch, path: pathlib.Path, blocksize=0, debug=1):
+async def wrap(link: SubDispatch, path: Path, blocksize=0, debug=1):
     """
     Context manager that mounts a satellite file system locally
     """

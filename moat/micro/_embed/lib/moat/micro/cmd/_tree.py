@@ -24,6 +24,17 @@ from moat.micro.compat import (
 
 from .base import BaseCmd
 
+# Typing
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Awaitable, Never
+
+    from moat.micro.proto.stack import BaseBuf, BaseMsg
+    from moat.micro.stacks.util import BaseConnIter
+
+
 __all__ = [
     "DirCmd",
     "BaseSuperCmd",

@@ -86,7 +86,7 @@ class APath(anyio.Path):
         Calculate a SHA256 over the file contents and return the digest.
         """
         _h = hashlib.sha256()
-        async for block in ff.read_as_stream():
+        async for block in self.read_as_stream():
             _h.update(block)
         return _h.digest()
 

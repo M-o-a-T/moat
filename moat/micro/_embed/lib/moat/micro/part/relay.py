@@ -4,6 +4,7 @@ More common code
 from moat.util import NotGiven, Path, attrdict, load_from_cfg
 
 from ..cmd.base import BaseCmd
+from ..cmd.util import StoppedError
 from ..compat import Event, Pin_OUT, TaskGroup, idle, sleep, sleep_ms, ticks_diff, ticks_ms
 
 
@@ -24,7 +25,7 @@ class Relay(BaseCmd):
     def __init__(self, cfg):
         super().__init__(cfg)
         if not isinstance(cfg.get("pin", None), (tuple, list, Path)):
-            raise ValueError(f"Pin not set")
+            raise ValueError("Pin not set")
         t = cfg.get("t", {})
         self.t = [t.get("off", 0), t.get("on", 0)]
         self.note = cfg.get("note", None)

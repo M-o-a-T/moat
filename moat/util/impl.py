@@ -75,9 +75,9 @@ def import_(name, off=0):
         res = __import__(mn)
         for nn in n[1:]:
             res = getattr(res, nn)
-    except Exception as exc:
+    except Exception:
         sys.modules.pop(mn, None)
-        raise exc
+        raise
     return res
 
 

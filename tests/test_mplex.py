@@ -2,8 +2,6 @@
 Empty test file
 """
 
-import sys
-
 import pytest
 
 from moat.micro._test import mpy_stack

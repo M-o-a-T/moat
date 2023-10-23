@@ -21,6 +21,8 @@ from moat.micro.stacks.console import console_stack
 # start: NUM
 #
 class Raw(BaseCmdBBM):
+    """Sends/receives raw bytes off a serial port"""
+
     max_idle = 100
     pack = None
 

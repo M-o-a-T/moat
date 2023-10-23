@@ -1,14 +1,18 @@
 """
 This module contains an async version of mpy_repl.repl_connection.MpyPath,
 and an equivalent that uses the MoaT file access protocol
+
 """
+
+# CPython only
+
+from __future__ import annotations
 
 import binascii
 import hashlib
 import io
 import logging
 import os
-import pathlib
 import stat
 import sys
 from contextlib import suppress
@@ -71,7 +75,7 @@ class ABytes(io.BytesIO):
         "returns True"
         return True
 
-    async def stat(self):
+    async def stat(self, follow_symlinks=False):  # pylint: disable=unused-argument
         "returns the size. All other stat fields are empty"
         res = attrdict()
         res.st_size = len(self.getbuffer())
@@ -79,6 +83,8 @@ class ABytes(io.BytesIO):
 
 
 class APath(anyio.Path):
+    "anyio.Path, enhanced with a couple of our methods"
+
     async def sha256(self) -> bytes:
         """
         :returns: hash over file contents
@@ -99,7 +105,8 @@ class APath(anyio.Path):
         _h = hashlib.sha1()
         sz = (await self.stat()).st_size
         _h.update(f"blob {sz}\0".encode("utf-8"))
-        _h.update(self.getbuffer())
+        async for block in self.read_as_stream():
+            _h.update(block)
         return _h.digest()
 
     async def read_as_stream(self, chunk=4096):
@@ -109,20 +116,21 @@ class APath(anyio.Path):
 
         Iterate over blocks (`bytes`) of a remote file.
         """
+        # pylint:disable=unused-argument
+
         fd = await self.open("r")
         try:
-            while True:
-                d = await self.read(chunk)
-                if not d:
-                    break
-                yield d
+            d = await self.read_bytes()
+            yield d
         except EOFError:
             pass
+
         finally:
             await fd.close()
 
 
 class MoatPath(anyio.Path):  # pathlib.PosixPath
+    "abstract superclass for MoaT-connected async file access"
     _stat_cache = None
     _repl = None
 
@@ -167,7 +175,7 @@ class MoatPath(anyio.Path):  # pathlib.PosixPath
         # pylint: disable=no-member
         return type(self)(super().parent).connect_repl(self._repl)
 
-    async def glob(self, pattern: str):
+    async def glob(self, pattern: str):  # pylint:disable=invalid-overridden-method
         """
         :param str pattern: string with optional wildcards.
         :return: generator over matches (MpyPath objects)
@@ -201,7 +209,7 @@ class MoatPath(anyio.Path):  # pathlib.PosixPath
                         async for r in path.glob(remaining_parts):
                             yield r
 
-    async def iterdir(self):
+    async def iterdir(self):  # pylint:disable=invalid-overridden-method
         "list a directory under this path."
         raise NotImplementedError()
 
@@ -218,7 +226,7 @@ class MoatDevPath(MoatPath):
 
     # methods that access files
 
-    async def stat(self) -> os.stat_result:
+    async def stat(self, *, follow_symlinks=False) -> os.stat_result:
         """
         Return stat information about path on remote. The information is cached
         to speed up operations.
@@ -251,18 +259,22 @@ class MoatDevPath(MoatPath):
         except FileNotFoundError:
             return False
 
-    async def unlink(self):
+    async def unlink(self, missing_ok=False):
         """
         :raises FileNotFoundError:
 
         Delete file. See also :meth:`rmdir`.
         """
         self._stat_cache = None
-        await self._repl.evaluate(f'import os; print(os.remove({self.as_posix()!r}))')
+        try:
+            await self._repl.evaluate(f'import os; print(os.remove({self.as_posix()!r}))')
+        except FileNotFoundError:
+            if not missing_ok:
+                raise
 
-    async def rename(self, path_to):
+    async def rename(self, target):
         """
-        :param path_to: new name
+        :param target: new name
         :return: new path object
         :raises FileNotFoundError: Source is not found
         :raises FileExistsError: Target already exits
@@ -272,14 +284,15 @@ class MoatDevPath(MoatPath):
         """
         self._stat_cache = None
         await self._repl.evaluate(
-            f'import os; print(os.rename({self.as_posix()!r}, {path_to.as_posix()!r}))'
+            f'import os; print(os.rename({self.as_posix()!r}, {target.as_posix()!r}))'
         )
-        return self.with_name(path_to)  # XXX, moves across dirs
+        return self.with_name(target)  # XXX, moves across dirs
 
-    async def mkdir(self, parents=False, exist_ok=False):
+    async def mkdir(self, mode=0o755, parents=False, exist_ok=False):
         """
         :param parents: When true, create parent directories
         :param exist_ok: No error if the directory does not exist
+        :param mode: ignored.
         :raises FileNotFoundError:
 
         Create new directory.
@@ -447,7 +460,7 @@ class MoatFSPath(MoatPath):
     # os.stat_result(st_mode=1, st_ino=2, st_dev=3, st_nlink=4,
     #                st_uid=5, st_gid=6, st_size=7, st_atime=8, st_mtime=9, st_ctime=10)
 
-    async def stat(self) -> os.stat_result:
+    async def stat(self, *, follow_symlinks=False) -> os.stat_result:
         """
         Return stat information about path on remote. The information is cached
         to speed up operations.
@@ -480,18 +493,22 @@ class MoatFSPath(MoatPath):
         except FileNotFoundError:
             return False
 
-    async def unlink(self):
+    async def unlink(self, missing_ok=False):
         """
         :raises FileNotFoundError:
 
         Delete file. See also :meth:`rmdir`.
         """
         self._stat_cache = None
-        await self._req("rm", p=self.as_posix())
+        try:
+            await self._req("rm", p=self.as_posix())
+        except FileNotFoundError:
+            if not missing_ok:
+                raise
 
-    async def rename(self, path_to):
+    async def rename(self, target):
         """
-        :param path_to: new name
+        :param target: new name
         :return: new path object
         :raises FileNotFoundError: Source is not found
         :raises FileExistsError: Target already exits
@@ -500,10 +517,10 @@ class MoatFSPath(MoatPath):
         filesystem.
         """
         self._stat_cache = None
-        await self._req("rm", s=self.as_posix(), d=path_to.as_posix())
-        return self.with_name(path_to)  # XXX, moves across dirs
+        await self._req("rm", s=self.as_posix(), d=target.as_posix())
+        return self.with_name(target)  # XXX, moves across dirs
 
-    async def mkdir(self, parents=False, exist_ok=False):
+    async def mkdir(self, mode=0o755, parents=False, exist_ok=False):
         """
         :param parents: When true, create parent directories
         :param exist_ok: No error if the directory does not exist
@@ -741,8 +758,6 @@ async def copy_over(src, dst, cross=None):
 
     This procedure verifies that the data arrived OK.
     """
-    from moat.micro.path import copytree  # pylint:disable=import-outside-toplevel
-
     tn = 0
     if await src.is_file():
         if await dst.is_dir():

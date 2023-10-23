@@ -5,7 +5,6 @@ Apps used for testing.
 from __future__ import annotations
 
 from moat.micro.cmd.base import BaseCmd
-from moat.micro.compat import log
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
@@ -15,24 +14,34 @@ if TYPE_CHECKING:
 
 
 class Cmd(BaseCmd):
+    """
+    A rather basic test command.
+    """
+
     n = 0
 
     async def cmd_echo(self, m: Any):
+        "Basic echo method, returns @m as ``result[" r"]``"
         return {'r': m}
 
     def iter_it(self, lim: int = None):
+        "returns a `NumIter`"
         return NumIter(lim)
 
     def cmd_nit(self, lim: int = None):
+        "A non-iterator counter; simply counts calls to it."
         self.n += 1
-        log("NIT %d", self.n)
         if lim is not None and self.n > lim:
             raise StopAsyncIteration
         return self.n
 
 
 class NumIter:
-    def __init__(self, lim):
+    """
+    A test iterator that mimics ``range(0,‹lim›)``.
+    """
+
+    def __init__(self, lim=None):
         self.lim = lim
         self.n = 0
 

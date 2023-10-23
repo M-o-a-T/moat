@@ -21,24 +21,17 @@ may fail.
 
 from __future__ import annotations
 
-import sys
-
-from moat.util import Path
-
-from moat.micro.compat import AC_use, Event, Lock, TaskGroup, TimeoutError, idle, log, wait_for_ms
+from moat.micro.compat import AC_use, Event, idle
 from moat.micro.proto.stack import Base
 
-from .util import DelayedIter, IterWrap, StoppedError, run_no_exc, wait_complain
-
-uPy = sys.implementation.name == "micropython"
-
+from .util import DelayedIter, IterWrap, run_no_exc, wait_complain
 
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from typing import AsyncContextManager, AsyncIterator, Awaitable, Never
 
-    from moat.micro.cmd.tree import DirCmd
+    from moat.micro.cmd.tree import BaseSuperCmd, Dispatch
     from moat.micro.proto.stack import BaseBuf, BaseMsg
     from moat.micro.stacks.util import BaseConnIter
 
@@ -51,7 +44,9 @@ class _acm:
     #
     # Thus we use this class to defer resolving the coroutine to the
     # __aenter__ call.
-    def __init__(self, coro):
+    _cm: AsyncContextManager = None
+
+    def __init__(self, coro: Awaitable):
         self.coro = coro
 
     async def __aenter__(self):
@@ -70,10 +65,18 @@ class BaseCmd(Base):
     This class does not accept subcommands.
     """
 
-    _parent: BaseCmd = None
+    _parent: BaseSuperCmd = None
+    _name: str = None
     _ts = None
     _rl_ok = None  # result of last reload
     p_task = None  # managed by parent. Do not touch.
+
+    root: Dispatch = None
+    _parent: BaseSuperCmd = None
+
+    _starting: Event = None
+    _ready: Event = None
+    _stopped: Event = None
 
     def __init__(self, cfg):
         cfg["_cmd"] = self
@@ -154,6 +157,11 @@ class BaseCmd(Base):
         await idle()
 
     def set_ready(self):
+        """
+        This command is now ready.
+
+        Called internally only!
+        """
         self.cfg.pop("_cmd", None)
         if self._starting is not None:
             raise RuntimeError(f"Ready w/o start {self !r}")
@@ -164,6 +172,7 @@ class BaseCmd(Base):
             self._ready = None
 
     async def stop(self):
+        "Stop this subcommand"
         if self.p_task is None:
             return  # not running
         elif self.p_task is False:
@@ -171,7 +180,12 @@ class BaseCmd(Base):
         self.p_task.cancel()
         await wait_complain(f"Stop {self.path}", 250, self.wait_stopped)
 
+    cmd_stp = stop
+
     async def wait_started(self):
+        """
+        Wait for the command's setup procedure to commence.
+        """
         if self._starting is None:
             return
         await self._starting.wait()
@@ -193,16 +207,27 @@ class BaseCmd(Base):
         return None
 
     def cmd_rdy(self, w=True) -> Awaitable:
+        """
+        Check if / wait for readiness.
+
+        Returns `True` if down, `False` if OK.
+
+        `None` with @w=`False` means "not yet OK", while if w=`True` the
+        command is ready but this call has waited for it.
+        """
         return self.wait_ready(wait=w)
 
     async def wait_stopped(self):
+        "wait until this is no longer running"
         if self._stopped is not None:
             await self._stopped.wait()
 
-    cmd_stp = wait_stopped
+    cmd_stq = wait_stopped
 
     @property
     def path(self):
+        "calculate the path to myself"
+        # XXX cache it?
         return self._parent.path / self._name
 
     def send(self, *action, _x_err=(), **kw) -> Awaitable:
@@ -246,7 +271,7 @@ class BaseCmd(Base):
         # XXX run in a separate task
 
     async def dispatch(
-        self, action: list[str], msg: dict, rep: int = None, wait: bool = True, x_err=()
+        self, action: list[str], msg: dict, *, rep: int = None, wait: bool = True, x_err=()
     ) -> Awaitable | AsyncContextManager[AsyncIterator]:  # pylint:disable=arguments-differ
         """
         Process a message.
@@ -270,7 +295,7 @@ class BaseCmd(Base):
 
         if not action:
             raise RuntimeError("noAction")
-        elif len(action) > 1:
+        if len(action) > 1:
             raise ValueError("no chain here", action)
 
         a = action[0]
@@ -298,7 +323,9 @@ class BaseCmd(Base):
         p = getattr(self, f"cmd_{fn}")
 
         if not wait:
-            self.tg.spawn(run_no_exc, p, msg, x_err, _name=f"Call:{self.path}/{p}")
+            # XXX better idea without forcing a taskgroup on everything?
+            tg = getattr(self, "tg", self.root.tg)
+            tg.spawn(run_no_exc, p, msg, x_err, _name=f"Call:{self.path}/{p}")
             return
 
         if wr:
@@ -325,7 +352,8 @@ class BaseCmd(Base):
                 res['j'] = True
         return res
 
-    def attached(self, parent: DirCmd, name: str):
+    def attached(self, parent: BaseSuperCmd, name: str):
+        "Tell this Cmd it's attached under this parent, with this name."
         if self._parent is not None:
             raise RuntimeError(f"already {'.'.join(self.path)}")
         self._parent = parent

@@ -2,7 +2,7 @@
 Basic test using a MicroPython subtask
 """
 import pytest
-from moat.util import NotGiven, as_proxy, attrdict, to_attrdict
+from moat.util import NotGiven, attrdict, to_attrdict
 
 from moat.micro._test import mpy_stack
 

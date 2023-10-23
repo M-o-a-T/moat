@@ -10,11 +10,11 @@ from moat.micro.compat import AC_use
 from moat.micro.proto.stream import MsgpackMsgBlk
 from moat.micro.stacks.console import console_stack
 
-from ._test_ import Cmd
+from ._test_ import Cmd  # pylint:disable=unused-import
 
 
 class MpyCmd(BaseCmdMsg):
-    """links to a local micropython process"""
+    """MoaT link to a local micropython process"""
 
     async def stream(self):
         mpy = MpyBuf(self.cfg)
@@ -22,13 +22,15 @@ class MpyCmd(BaseCmdMsg):
 
 
 class MpyRaw(BaseCmdBBM):
-    """links to a local micropython process"""
+    """stdio of a local micropython process"""
 
     async def stream(self):
         return await AC_use(self, MpyBuf(self.cfg))
 
 
 class Loop(BaseCmdMsg):
+    """Loopback. Unlike remote.Fwd this goes through msgpack."""
+
     async def stream(self):
         s = Loopback(**self.cfg.get("loop", {}))
         s.link(s)

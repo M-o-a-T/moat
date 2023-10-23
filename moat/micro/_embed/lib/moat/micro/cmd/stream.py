@@ -5,26 +5,20 @@ Stream link-up support for MoaT commands
 from __future__ import annotations
 
 import sys
-from typing import Any, Awaitable, Mapping, Optional
 
 from moat.util import NotGiven, ValueEvent, obj2name
 
-from moat.micro.compat import (
-    ACM,
-    AC_exit,
-    AC_use,
-    CancelledError,
-    ExceptionGroup,
-    Lock,
-    TaskGroup,
-    WouldBlock,
-    log,
-    shield,
-)
+from moat.micro.compat import ACM, AC_exit, AC_use, Lock, TaskGroup, log
 from moat.micro.proto.stack import Base, BaseBlk, BaseBuf, BaseMsg, RemoteError, SilentRemoteError
 
 from .base import BaseCmd
 from .util import RecvIter, SendIter, StoppedError, ValueTask
+
+# Typing
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Any, Awaitable, Mapping, Optional
 
 
 class BaseCmdBBM(BaseCmd):
@@ -52,6 +46,7 @@ class BaseCmdBBM(BaseCmd):
         self.w_lock = Lock()
 
     async def stream(self) -> BaseMsg | BaseBlk | BaseBuf:
+        "create the actual data stream. Override this!"
         raise NotImplementedError("setup", self.path)
 
     async def setup(self):
@@ -106,23 +101,23 @@ class BaseCmdBBM(BaseCmd):
 
     # Msg: s/r = .send/.recv
 
-    async def cmd_s(self, m):
+    def cmd_s(self, m):  # pylint:disable=invalid-overridden-method
         """send a message"""
-        return await self.dev.send(m)
+        return self.dev.send(m)
 
-    async def cmd_r(self):
+    def cmd_r(self):  # pylint:disable=invalid-overridden-method
         """receive a message"""
-        return await self.dev.recv()
+        return self.dev.recv()
 
     # Blk: sb/rb = .snd/.rcv
 
-    async def cmd_sb(self, m):
-        """send a message"""
-        return await self.dev.snd(m)
+    def cmd_sb(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
+        """send a binary message"""
+        return self.dev.snd(m)
 
-    async def cmd_rb(self):
-        """receive a message"""
-        return await self.dev.rcv()
+    def cmd_rb(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
+        """receive a binary message"""
+        return self.dev.rcv()
 
 
 class _BBMCmd(Base):
@@ -145,16 +140,22 @@ class MsgCmd(_BBMCmd, BaseMsg):
     The remote link is addressed by the config item "path".
     """
 
-    def send(self, msg) -> Awaitable:
-        return self.s.s(m=msg)
+    # pylint:disable=abstract-method
 
-    def recv(self) -> Awaitable:
+    def send(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
+        "send a message"
+        return self.s.s(m=m)
+
+    def recv(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
+        "receive a message"
         return self.s.r()
 
-    def cwr(self, buf) -> Awaitable:
+    def cwr(self, buf) -> Awaitable:  # pylint:disable=invalid-overridden-method
+        "write console data"
         return self.s.cwr(b=buf)
 
     async def crd(self, buf):
+        "read console data"
         msg = await self.s.crd(n=len(buf))
         buf[: len(msg)] = msg
         return len(msg)
@@ -168,7 +169,11 @@ class BufCmd(_BBMCmd, BaseBuf):
     The remote link is addressed by the config item "path".
     """
 
+    # pylint:disable=abstract-method
+    # `stream` needs to be implemented by a subclass
+
     def wr(self, buf) -> Awaitable:
+        # pylint: disable=invalid-overridden-method
         return self.s.wr(b=buf)
 
     async def rd(self, buf):
@@ -185,13 +190,17 @@ class BlkCmd(_BBMCmd, BaseBlk):
     The remote link is addressed by the config item "path".
     """
 
+    # pylint:disable=abstract-method
+
     crd = MsgCmd.crd
     cwr = MsgCmd.cwr
 
-    def snd(self, msg) -> Awaitable:
-        return self.s.sb(m=msg)
+    def snd(self, m) -> Awaitable:
+        # pylint: disable=invalid-overridden-method
+        return self.s.sb(m=m)
 
     def rcv(self) -> Awaitable:
+        # pylint: disable=invalid-overridden-method
         return self.s.rb()
 
 
@@ -233,7 +242,6 @@ class BaseCmdMsg(BaseCmd):
 
         You typically override `stream`, not this method.
         """
-        err = None
         try:
             await AC_use(self, self._cleanup_open_commands)
             self.s = await self.stream()
@@ -252,16 +260,18 @@ class BaseCmdMsg(BaseCmd):
             e.cancel()
 
     async def reply_result(self, i, res):
+        "send the result back"
         if i is None:
             return
         try:
             await self.s.send({'i': i, 'd': res})
-        except Exception as e:
+        except Exception as e:  # pylint:disable=broad-exception-caught
             await self.reply_error(i, e)
         except BaseException as e:
             await self.reply_error(i, e)
             raise
         else:
+            # reply_error also does this
             self.reply.pop(i, None)
 
     async def reply_error(self, i, exc, x=()):
@@ -398,7 +408,7 @@ class BaseCmdMsg(BaseCmd):
                 del self.reply[i]
 
     async def dispatch(
-        self, action, msg=None, rep: int = None, wait=True, x_err=()
+        self, action, msg=None, *, rep: int = None, wait=True, x_err=()
     ):  # pylint:disable=arguments-differ
         """
         Forward a request to the remote side, return the response.
@@ -462,6 +472,7 @@ class CmdMsg(BaseCmdMsg):
         self.link = link
 
     def stream(self) -> Awaitable[BaseMsg]:
+        # pylint:disable=invalid-overridden-method
         return AC_use(self, self.link)
 
 
@@ -471,12 +482,15 @@ class SingleCmdMsg(BaseCmdMsg):
     without propagating the exception.
     """
 
+    # pylint:disable=abstract-method
+    # `stream` needs to be implemented by a subclass
+
     async def run(self):
         try:
             await super().run()
         except (EOFError, OSError, SilentRemoteError) as exc:
             log("Err %s: %r", self.path, repr(exc))
-        except Exception as exc:
+        except Exception as exc:  # pylint:disable=broad-exception-caught
             log("Err %s", self.path, err=exc)
 
 
@@ -487,7 +501,9 @@ class ExtCmdMsg(SingleCmdMsg):
     and then closing the stream!
     """
 
-    def __init__(self, stream: BaseMsg, cfg={}):
+    def __init__(self, stream: BaseMsg, cfg: dict[str, Any] = None):
+        if cfg is None:
+            cfg = {}
         super().__init__(cfg)
         self.__s = stream
 

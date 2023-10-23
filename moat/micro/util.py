@@ -16,13 +16,15 @@ if TYPE_CHECKING:
 
 
 def githash(data):
+    "Hash a shunk of bytes the ay git does"
     h = hashlib.sha1()
     h.update(f"blob {len(data)}\0".encode("utf-8"))
     h.update(data)
     return h.digest()
 
 
-async def rd(f):
+async def _rd(f):
+    "return file contents"
     async with await f.open("rb") as fd:
         return await fd.read()
 
@@ -37,18 +39,18 @@ async def run_update(dest: MoatPath, release: str | None = None, check=None, cro
     its file system. It might be there as a left-over artefact from a
     previous update. Thus we delete it.
     """
-    import git
+    import git  # pylint:disable=import-outside-toplevel
 
     src = APath(__file__).parent / "_embed"
     root = APath(__file__).parent.parent.parent
 
     try:
         r = git.Repo(str(root))
-    except git.exc.InvalidGitRepositoryError:
+    except git.exc.InvalidGitRepositoryError:  # pylint:disable=no-member
         if release:
-            raise RuntimeError("release version found but no git")
+            raise RuntimeError("release version found but no git") from None
 
-        async def drop(dst):
+        async def drop(dst):  # pylint: disable=unused-argument
             return False
 
     else:
@@ -76,7 +78,7 @@ async def run_update(dest: MoatPath, release: str | None = None, check=None, cro
             if await sp.is_symlink():
                 return None  # ignore completely
             try:
-                return t[str(dst)].binsha == githash(await rd(sp))
+                return t[str(dst)].binsha == githash(await _rd(sp))
             except KeyError:
                 # not yet in git
                 return False

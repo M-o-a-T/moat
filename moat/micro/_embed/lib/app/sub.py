@@ -4,7 +4,6 @@ Apps used for structure.
 
 from __future__ import annotations
 
-from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.tree import BaseFwdCmd, DirCmd
 
 try:
@@ -12,12 +11,11 @@ try:
 except ImportError:  # satellite
 
     class ProcessDeadError(Exception):
+        "dummy"
         pass
 
 
-from moat.util import exc_iter
-
-from moat.micro.compat import BaseExceptionGroup, ExceptionGroup, log, sleep_ms
+from moat.micro.compat import log, sleep_ms
 
 
 class Tree(DirCmd):
@@ -53,6 +51,10 @@ class Err(BaseFwdCmd):
 
     _wait = True
 
+    r: int = None
+    t: int = None
+    a: bool = None
+
     async def dispatch(self, *a, **k):
         if self.app is None:
             await super().wait_ready()
@@ -74,7 +76,6 @@ class Err(BaseFwdCmd):
 
         self._wait = self.cfg.get("wait", True)
         while True:
-            err = None
             try:
                 log("Fwd Run %s %r", self.path, self)
                 await super().run_app()

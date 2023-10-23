@@ -5,19 +5,17 @@ from __future__ import annotations
 
 import logging
 import os
-import sys
 from contextlib import asynccontextmanager, suppress
 from contextvars import ContextVar
 from pathlib import Path
 from random import random
 
 import anyio
-from moat.util import Queue, attrdict, combine_dict, merge, packer, yload
+from moat.util import combine_dict, packer, yload
 
 import moat.micro
-from moat.micro.app.pipe import ProcessCmd
 from moat.micro.cmd.tree import Dispatch
-from moat.micro.compat import AC_use, TaskGroup
+from moat.micro.compat import TaskGroup
 
 # from moat.micro.main import Request, get_link, get_link_serial
 # from moat.micro.proto.multiplex import Multiplexer
@@ -27,11 +25,12 @@ from moat.micro.proto.stream import ProcessBuf
 logging.basicConfig(level=logging.DEBUG)
 
 
-def lbc(*a, **k):
+def _lbc(*a, **k):
+    "block log configuration"
     raise RuntimeError("don't configure logging a second time")
 
 
-logging.basicConfig = lbc
+logging.basicConfig = _lbc
 
 
 temp_dir = ContextVar("temp_dir")
@@ -48,6 +47,7 @@ required = [
 
 
 def rlink(s, d):
+    "recursive linking"
     if s.is_file():
         with suppress(FileExistsError):
             d.symlink_to(s)
@@ -180,6 +180,8 @@ class Loopback(BaseMsg, BaseBuf):
     This object can be self-linked.
     """
 
+    # pylint:disable=abstract-method
+
     _link = None
     _buf = None
 
@@ -197,14 +199,14 @@ class Loopback(BaseMsg, BaseBuf):
         """Tell this loopback to read from some other loopback."""
         self._link = other
 
-    async def send(self, data, _loss=True):  # pylint:disable=arguments-differ
+    async def send(self, m, _loss=True):  # pylint:disable=arguments-differ
         """Send data."""
         if self._link is None:
             raise anyio.BrokenResourceError(self)
         if _loss and random() < self.loss:
             return
         try:
-            await self.q_wr.send(data)
+            await self.q_wr.send(m)
         except (anyio.ClosedResourceError, anyio.BrokenResourceError, anyio.EndOfStream) as exc:
             raise EOFError from exc
 
@@ -257,6 +259,7 @@ class Loopback(BaseMsg, BaseBuf):
 
 
 class Root(Dispatch):
-    # an empty root for testing
+    "an empty root for testing"
+
     def __init__(self):
         super().__init__({})

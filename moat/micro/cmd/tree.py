@@ -7,7 +7,7 @@ from itertools import chain
 import anyio
 from moat.util import NotGiven, attrdict
 
-from ._tree import (
+from ._tree import (  # pylint:disable=unused-import
     BaseFwdCmd,
     BaseLayerCmd,
     BaseListenCmd,
@@ -15,16 +15,19 @@ from ._tree import (
     BaseSubCmd,
     BaseSuperCmd,
     DirCmd,
+    SubDispatch,
 )
-from ._tree import Dispatch as _Dispatch
-from ._tree import SubDispatch
+
+from ._tree import Dispatch as _Dispatch  # isort:skip
 
 
 class NotGiven2:
+    # pylint:disable=missing-class-docstring
     pass
 
 
 class Dispatch(_Dispatch):
+    "Root dispatcher"
     APP = "moat.micro.app"
 
     def __init__(self, cfg, sig=False, run=False):
@@ -32,11 +35,12 @@ class Dispatch(_Dispatch):
         self.sig = sig
 
     async def setup(self):
+        "Root setup: adds signal handling if requested"
         await super().setup()
         if self.sig:
 
-            async def sig_handler(tg):
-                import signal
+            async def sig_handler():
+                import signal  # pylint:disable=import-outside-toplevel
 
                 with anyio.open_signal_receiver(
                     signal.SIGINT, signal.SIGTERM, signal.SIGHUP
@@ -45,9 +49,10 @@ class Dispatch(_Dispatch):
                         self.tg.cancel()
                         break  # default handler on next
 
-            await self.tg.spawn(sig_handler, self.tg, _name="sig")
+            await self.tg.spawn(sig_handler, _name="sig")
 
     def cfg_at(self, *p):
+        "returns a CfgStore object at this subpath"
         return CfgStore(self, p)
 
 

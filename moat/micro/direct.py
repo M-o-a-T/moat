@@ -18,6 +18,13 @@ from moat.micro.proto.stream import SingleAnyioBuf
 
 from .os_error_list import os_error_mapping
 
+# Typing
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from moat.micro.proto.stack import BaseBuf
+
+
 logger = logging.getLogger(__name__)
 
 re_oserror = re.compile(r'OSError: (\[Errno )?(\d+)(\] )?')
@@ -32,6 +39,9 @@ class DirectREPL(SingleAnyioBuf):
     """
     Interface to the remote REPL
     """
+
+    serial: BaseBuf = None  # pylint:disable=used-before-assignment # WTF
+    srbuf: BufferedByteReceiveStream = None
 
     async def stream(self):
         "Context. Tries hard to exit special MicroPython modes, if any"

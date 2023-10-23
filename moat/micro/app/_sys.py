@@ -1,5 +1,3 @@
-from ._sys_ import Cmd as _Cmd
+# pylint:disable=missing-module-docstring,unused-import
 
-
-class Cmd(_Cmd):
-    pass
+from ._sys_ import Cmd

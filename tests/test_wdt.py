@@ -138,5 +138,5 @@ async def test_wdt_update(tmp_path):
             await sleep_ms(TT * 5)
 
             with pytest.raises(StoppedError):
-                res = await r.echo(m="hello")
+                await r.echo(m="hello")
     assert ended

@@ -2,7 +2,7 @@
 Basic test using a MicroPython subtask
 """
 import pytest
-from moat.util import NotGiven, as_proxy, attrdict, to_attrdict
+from moat.util import NotGiven, as_proxy, to_attrdict
 
 from moat.micro._test import mpy_stack
 from moat.micro.compat import ticks_diff, ticks_ms
@@ -63,6 +63,7 @@ async def test_ping(tmp_path):
 
 
 async def test_iter_m(tmp_path):
+    "basic iterator tests"
     async with mpy_stack(tmp_path, CFG) as d:
         t1 = ticks_ms()
 
@@ -165,7 +166,7 @@ async def test_eval(tmp_path, cons):
     "test proxying"
     cf2 = {} if cons is None else {"l": {"link": {"cons": cons}}}
     async with mpy_stack(tmp_path, LCFG, cf2) as d, d.sub_at("l", "_sys", "eval") as req:
-        from pprint import pprint
+        from pprint import pprint  # pylint:disable=import-outside-toplevel
 
         dr = await d.send("l", "dir")
         pprint(dr)
@@ -195,7 +196,7 @@ async def test_eval(tmp_path, cons):
 async def test_msgpack(tmp_path):
     "test proxying"
     async with mpy_stack(tmp_path, CFG) as d, d.sub_at("r", "_sys", "eval") as req:
-        from pprint import pprint
+        from pprint import pprint  # pylint:disable=import-outside-toplevel
 
         dr = await d.send("r", "dir")
         pprint(dr)

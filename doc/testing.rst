@@ -27,13 +27,24 @@ _test.MpyCmd
 ============
 
 The ``_test.MpyCmd`` app starts a locally-built MicroPython
-subprocess. If you set its "mplex" config value to `True`, it will run a
-MoaT subsystem using the ``cfg`` value as its configuration.
+subprocess and runs a MoaT link to its stdin/stdout.
 
-_test.Cmd
-=========
+Its MoaT system uses the app's ``cfg`` config value as its configuration.
 
-This app contains a couple of commands useful for testing.
+_test.MpyRaw
+============
+
+Likewise but stdio is exported as a bytestream.
+
+Loop
+====
+
+A loopback link.
+
+Messages are MsgPack-encoded (and immediately decoded again of course).
+Note however that both sides use the same Proxy cache, thus this link
+exercises encoding of proxied classes, but random objects are still passed
+transparently.
 
 echo
 ++++

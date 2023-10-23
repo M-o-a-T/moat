@@ -3,7 +3,7 @@ fake sensors
 """
 
 import random
-from math import exp, tanh
+from math import tanh  # exp
 
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.compat import Event
@@ -22,17 +22,20 @@ class Pin(BaseCmd):
         super().__init__(cfg)
         PINS[cfg["pin"]] = self
         self.flag = Event()
-        self._value = False
+        self._value = cfg.get("init", False)
 
     def in_value(self, val):
+        "set+send pin value unconditionally"
         self.flag.set()
         self._value = val
 
     @property
     def value(self):
+        "current pin value"
         return self._value
 
     async def setup(self):
+        "initialization, triggers change"
         await super().setup()
         self.flag.set()
         self.flag = Event()
@@ -44,10 +47,14 @@ class Pin(BaseCmd):
         await self.flag.wait()
         return self._value
 
-    async def cmd_r(self):
+    async def cmd_r(self, prev=None):
+        "read. Wait for change if @prev (previous value) is not None"
+        if prev is self._value:
+            await self.flag.wait()
         return self._value
 
     async def cmd_w(self, v):
+        "set fake pin; trigger iter if changed"
         if self._value != v:
             self.flag.set()
             self.flag = Event()
@@ -80,9 +87,10 @@ class ADC(BaseCmd):
 
         self.val = 0
         self.bias = 0
-        self.rand = random.Random(cfg.get("seed", None))
+        self.rand = random.Random(seed)
 
     async def cmd_r(self):
+        "read current value"
         b = self.bias + (self.rand.random() - 0.5) * self.step
         v = self.val + b
         if v > self.border and b > 0:

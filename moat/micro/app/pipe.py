@@ -3,8 +3,6 @@ App to open a channel to a process.
 """
 from __future__ import annotations
 
-import sys
-
 from moat.micro.cmd.stream import BaseCmdBBM, BaseCmdMsg
 from moat.micro.compat import AC_use
 from moat.micro.proto.stream import ProcessBuf

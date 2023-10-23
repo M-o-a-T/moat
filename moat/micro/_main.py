@@ -5,7 +5,6 @@ Command-line code for moat.micro
 # pylint: disable=import-outside-toplevel
 
 import logging
-import os
 import sys
 
 import anyio
@@ -13,9 +12,7 @@ import asyncclick as click
 from moat.util import (
     P,
     Path,
-    as_service,
     attr_args,
-    attrdict,
     merge,
     packer,
     process_args,
@@ -32,7 +29,7 @@ from moat.micro.proto.stream import RemoteBufAnyio
 from moat.micro.stacks.util import TEST_MAGIC
 from moat.micro.util import run_update
 
-from .compat import TaskGroup, idle, log
+from .compat import idle, log
 from .direct import DirectREPL
 
 logger = logging.getLogger(__name__)
@@ -132,16 +129,20 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
 @click.option("-w", "--watch", is_flag=True, help="monitor the target's output after setup")
 @click.option("-C", "--cross", help="path to mpy-cross")
 async def setup_(obj, **kw):
+    """
+    Initial sync of MoaT code to a MicroPython device.
+
+    MoaT must not currently run on the target.
+    """
     cfg = obj.cfg
     st = cfg.setdefault("args", {})
     for k, v in kw.items():
         if k not in st or v is not None:
             st[k] = v
-    return await setup(obj, cfg, obj.ocfg, **st)
+    return await setup(cfg, obj.ocfg, **st)
 
 
 async def setup(
-    obj,
     cfg,
     ocfg,
     source,
@@ -156,16 +157,12 @@ async def setup(
     mount,
     watch,
 ):
-    """
-    Initial sync of MoaT code to a MicroPython device.
-
-    MoaT must not currently run on the target.
-    """
+    "sync helper"
     # 	if not source:
     # 		source = anyio.Path(__file__).parent / "_embed"
 
-    if watch and run:
-        raise click.UsageError("You can't use 'watch' and 'run' at the same time")
+    if bool(watch) + bool(run) + bool(mount) > 1:
+        raise click.UsageError("You can't use 'watch','mount', or 'run' concurrently.")
 
     from .path import ABytes, MoatDevPath, copy_over
 
@@ -205,7 +202,7 @@ async def setup(
             await repl.soft_reset(run_main=run)
             # reset with run_main set should boot into MoaT
 
-        if run or watch:
+        if run or watch or mount:
             o, e = await repl.exec_raw("from main import go; go(state={state !r})", timeout=30)
             if o:
                 print(o)
@@ -214,23 +211,29 @@ async def setup(
                 print(e, file=sys.stderr)
                 sys.exit(1)
 
-        if watch:
-            while True:
-                d = await ser.receive()
-                sys.stderr.buffer.write(d)
-                sys.stderr.buffer.flush()
+            if watch:
+                while True:
+                    d = await ser.receive()
+                    sys.stderr.buffer.write(d)
+                    sys.stderr.buffer.flush()
 
-        if run:
-            log("Reloading.")
-            merge(dsp.cfg, ocfg, drop=True)
-            await dsp.reload()
-            log("Running.")
-            await idle()
+            if mount:
+                from moat.micro.fuse import wrap
+
+                async with SubDispatch(dsp, cfg["path"] + (f,)) as fs:
+                    async with wrap(fs, mount, blocksize=cfg.get("blocksize", 64), debug=4):
+                        await idle()
+
+            if run:
+                log("Reloading.")
+                merge(dsp.cfg, ocfg, drop=True)
+                await dsp.reload()
+                log("Running.")
+                await idle()
 
 
 @cli.command("sync", short_help='Sync MoaT code')
 @click.pass_obj
-@click.option("-S", "--section", type=P, default=P("connect"), help="Setup section to use")
 @click.option(
     "-s",
     "--source",
@@ -240,13 +243,12 @@ async def setup(
 )
 @click.option("-d", "--dest", type=str, required=True, default="", help="Destination path")
 @click.option("-C", "--cross", help="path to mpy-cross")
-async def sync_(obj, source, dest, cross, section):
+async def sync_(obj, source, dest, cross):
     """
     Sync of MoaT code on a running MicroPython device.
 
     """
-    from .main import copy_over
-    from .path import MoatFSPath
+    from .path import MoatFSPath, copy_over
 
     cfg = obj.cfg
     async with Dispatch(cfg) as dsp, SubDispatch(dsp, cfg.get("path", P("r"))) as sd:
@@ -348,7 +350,6 @@ async def cfg_(obj, read, read_client, write, write_client, sync, client, **attr
     if sync and (write or write_client):
         raise click.UsageError("You're not changing the running config!")
 
-    from .main import get_link
     from .path import MoatFSPath
 
     if read and write and not (read_client or write_client):
@@ -362,7 +363,7 @@ async def cfg_(obj, read, read_client, write, write_client, sync, client, **attr
         return
 
     # TODO does not work yet
-    async with Dispatch(cfg, run=True, sig=True) as dsp, dsp.cfg_at(
+    async with Dispatch(obj.cfg, run=True, sig=True) as dsp, dsp.cfg_at(
         *cfg["path"]
     ) as cf, dsp.sub_at(*cfg["fs"]) as fs:
         has_attrs = any(a for a in attrs.values())
@@ -402,21 +403,21 @@ async def cfg_(obj, read, read_client, write, write_client, sync, client, **attr
             yprint(cfg, stream=write)
 
 
-@cli.command("mplex", short_help='Run the multiplexer')
+@cli.command("run", short_help='Run the multiplexer')
 @click.pass_obj
-async def run(obj):
+async def run_(obj):
     """
     Run the MoaT stack.
     """
-    async with Dispatch(obj.cfg, run=True, sig=True) as dsp:
+    async with Dispatch(obj.cfg, run=True, sig=True):
         await idle()
 
 
-@cli.command()
+@cli.command("mount")
 @click.option("-b", "--blocksize", type=int, help="Max read/write message size", default=256)
 @click.argument("path", type=click.Path(file_okay=False, dir_okay=True), nargs=1)
 @click.pass_obj
-async def mount(obj, path, blocksize):
+async def mount_(obj, path, blocksize):
     """Mount a controller's file system on the host"""
     from moat.micro.fuse import wrap
 

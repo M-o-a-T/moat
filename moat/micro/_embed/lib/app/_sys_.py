@@ -1,3 +1,8 @@
+"""
+System access app
+"""
+from __future__ import annotations
+
 import sys
 
 from moat.util import Proxy, drop_proxy, obj2name
@@ -59,7 +64,7 @@ class Cmd(BaseCmd):
         if x is None:
             x = self.cache
         elif isinstance(x, str):
-            x = eval(x, self.cache)
+            x = eval(x, self.cache)  # pylint:disable=eval-used
         x = get_part(x, p)
         if a:
             set_part(self.cache, a, x)

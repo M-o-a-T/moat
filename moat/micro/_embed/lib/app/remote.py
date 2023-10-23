@@ -6,7 +6,6 @@ from __future__ import annotations
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.stream import BaseCmdBBM, BaseCmdMsg, BufCmd
 from moat.micro.compat import AC_use
-from moat.micro.part.serial import Serial
 from moat.micro.stacks.console import console_stack
 
 # Typing
@@ -17,6 +16,8 @@ if TYPE_CHECKING:
     from typing import Awaitable
 
     from most.micro.proto.stack import BaseBuf, BaseMsg
+
+    from moat.micro.cmd.tree import SubDispatch
 
 
 class Raw(BaseCmdBBM):
@@ -38,12 +39,15 @@ class Fwd(BaseCmd):
     This app forwards to somewhere else.
     """
 
+    sd: SubDispatch = None
+
     async def setup(self):
         "create a subdispatcher"
         await super().setup()
         self.sd = self.root.sub_at(*self.cfg["path"])
 
     def dispatch(self, action, msg, **kw) -> Awaitable:
+        # pylint:disable=invalid-overridden-method
         "call via the subdispatcher"
         return self.sd.dispatch(action, msg, **kw)
 

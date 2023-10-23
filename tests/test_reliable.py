@@ -2,13 +2,12 @@
 Test reliable retransmission, using various parameters.
 """
 
-import anyio
 import pytest
 
 from moat.micro._test import Loopback
-from moat.micro.compat import Event, TaskGroup, log
+from moat.micro.compat import Event, TaskGroup
 from moat.micro.proto.reliable import ReliableMsg
-from moat.micro.proto.stack import LogMsg, StackedMsg
+from moat.micro.proto.stack import StackedMsg
 
 pytestmark = pytest.mark.anyio
 
@@ -17,11 +16,12 @@ done_ = [None] * 4
 
 class Head(StackedMsg):
     "sender/receiver test common code"
+    n: int = 0
+    done: Event = None
 
     async def setup(self):
         await super().setup()
         self.done = Event()
-        self.n = 0
 
 
 class Xmit(Head):
@@ -35,11 +35,6 @@ class Xmit(Head):
                 self.n += 1
         self.done.set()
 
-    async def send(self, d):
-        # log("StX %r",d)
-        await super().send(d)
-        # log("EtX %r",d)
-
 
 class Recv(Head):
     "receiving test class"
@@ -49,7 +44,6 @@ class Recv(Head):
         got = 0
         for _ in range(10):
             msg = await self.recv()
-            # log("Rcv %r", msg)
             got |= 1 << msg["n"]
         assert got == (2**10) - 1
         self.n = 10
@@ -62,7 +56,6 @@ class Recv(Head):
 @pytest.mark.parametrize("window", [4, 8, 20])
 async def test_basic(qlen1, qlen2, window):
     "basic test for Reliable channel"
-    loss = 0
     u1 = Loopback(qlen=qlen1)
     u2 = Loopback(qlen=qlen2)
     u1.link(u2)

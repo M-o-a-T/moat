@@ -10,20 +10,19 @@ import time as _time
 import traceback as _traceback
 from concurrent.futures import CancelledError
 from contextlib import AsyncExitStack
-from inspect import iscoroutinefunction
+from inspect import currentframe, iscoroutinefunction
 
 import anyio as _anyio
 import greenback
 
 
 def const(_x):
+    "compatibility with µPy"
     return _x
 
 
-logger = logging.getLogger(__name__)
-
-ExceptionGroup = ExceptionGroup
-BaseExceptionGroup = BaseExceptionGroup
+ExceptionGroup = ExceptionGroup  # pylint:disable=redefined-builtin,self-assigning-variable
+BaseExceptionGroup = BaseExceptionGroup  # pylint:disable=redefined-builtin,self-assigning-variable
 
 Pin_IN = 0
 Pin_OUT = 1
@@ -36,20 +35,18 @@ EndOfStream = _anyio.EndOfStream
 BrokenResourceError = _anyio.BrokenResourceError
 TimeoutError = TimeoutError  # pylint:disable=redefined-builtin,self-assigning-variable
 
-from inspect import currentframe
-
 
 def log(s, *x, err=None, nback=1):
+    "Basic logger.debug/error call (depends on @err)"
     caller = currentframe()
     for _ in range(nback):
         if caller.f_back is None:
             break
         caller = caller.f_back
-    logger = logging.getLogger(caller.f_globals["__name__"])
-    (logger.debug if err is None else logger.error)(s, *x, exc_info=err, stacklevel=1 + nback)
-    if err and int(os.getenv("LOG_BRK", False)):
-        breakpoint()
-        pass  # ERROR: err
+    log_ = logging.getLogger(caller.f_globals["__name__"])
+    (log_.debug if err is None else log_.error)(s, *x, exc_info=err, stacklevel=1 + nback)
+    if err and int(os.getenv("LOG_BRK", "0")):
+        breakpoint()  # pylint:disable=forgotten-debug-statement
 
 
 def print_exc(exc):
@@ -130,9 +127,6 @@ def TaskGroup():
     "A TaskGroup subclass (generator) that supports `spawn` and `cancel`"
     global _tg  # pylint:disable=global-statement
 
-    caller = currentframe().f_back
-    logger = logging.getLogger(caller.f_globals["__name__"])
-
     if _tg is None:
         _tgt = type(_anyio.create_task_group())
 
@@ -176,7 +170,7 @@ async def run_server(cb, host, port, backlog=5, taskgroup=None, reuse_port=True,
     async with listener:
         if evt is not None:
             evt.set()
-        await listener.serve(lambda sock: cb(sock), task_group=taskgroup)
+        await listener.serve(cb, task_group=taskgroup)
 
 
 # async context stack
@@ -190,15 +184,20 @@ def ACM(obj):
         class Foo():
             async def __aenter__(self):
                 AC = ACM(obj)
-                ctx1 = await AC(obj1)
-                ctx2 = await AC_use(self, obj2)  # same thing
+                try:
+                    ctx1 = await AC(obj1)
+                    ctx2 = await AC_use(self, obj2)  # same thing
+                except BaseException:
+                    await AC_exit(self, *exc)
+                    raise
                 ...
             async def __aexit__(self, *exc):
                 return await AC_exit(self, *exc)
 
-    Calls to `ACM` and `AC_exit` can be nested. They **must** balance.
+    Calls to `ACM` and `AC_exit` can be nested. They **must** balance;
+    hence the above error handling dance.
     """
-
+    # pylint:disable=protected-access
     if not hasattr(obj, "_AC_"):
         obj._AC_ = []
 
@@ -209,6 +208,7 @@ def ACM(obj):
     # least it shouldn't yield
     # log("AC_Enter",nback=2)
     try:
+        # pylint:disable=no-member,unnecessary-dunder-call
         cr = cm.__aenter__()
         cr.send(None)
     except StopIteration as s:
@@ -223,8 +223,15 @@ def ACM(obj):
 
 
 async def AC_use(obj, ctx):
-    acm = obj._AC_[-1]
-    # log("AC_Use %r",ctx,nback=2)
+    """
+    Add an async context to this object's AsyncExitStack.
+
+    If the object is a context manager (async or sync), this opens the
+    context and return its value.
+
+    Otherwise it's a callable and will run on exit.
+    """
+    acm = obj._AC_[-1]  # pylint:disable=protected-access
     if hasattr(ctx, "__aenter__"):
         return await acm.enter_async_context(ctx)
     elif hasattr(ctx, "__enter__"):
@@ -237,11 +244,15 @@ async def AC_use(obj, ctx):
 
 
 async def AC_exit(obj, *exc):
-    # log("AC_End",nback=2)
+    """End the latest AsyncExitStack added by `ACM`."""
     if not exc:
         exc = (None, None, None)
-    return await obj._AC_.pop().__aexit__(*exc)
+    return await obj._AC_.pop().__aexit__(*exc)  # pylint:disable=protected-access
 
 
 def shield():
+    """A wrapper shielding the contents from external cancellation.
+
+    Equivalent to ``CancelScope(shield=True)``.
+    """
     return _anyio.CancelScope(shield=True)

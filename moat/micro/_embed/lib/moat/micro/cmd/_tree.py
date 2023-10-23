@@ -4,23 +4,11 @@ Command tree support for MoaT commands
 
 from __future__ import annotations
 
-import sys
 from functools import partial
 
-from moat.util import Path, attrdict, import_
+from moat.util import Path, import_
 
-from moat.micro.cmd.util import StoppedError, wait_complain
-from moat.micro.compat import (
-    ACM,
-    AC_exit,
-    AC_use,
-    Event,
-    TaskGroup,
-    TimeoutError,
-    idle,
-    log,
-    wait_for_ms,
-)
+from moat.micro.compat import AC_use, Event, TaskGroup, log
 
 from .base import BaseCmd
 
@@ -54,6 +42,8 @@ class BaseSuperCmd(BaseCmd):
 
     Sets up a taskgroup for the sub-app(s) tp run in.
     """
+
+    tg: TaskGroup = None
 
     async def setup(self):
         await super().setup()
@@ -197,7 +187,6 @@ class BaseFwdCmd(BaseLayerCmd):
         gcfg = self.cfg
         name = gcfg.get("app", None)
         cfg = gcfg.get("cfg", {})
-        tg = self.tg
         log("Setup %s: %s", self.path, name)
 
         if name is None:
@@ -282,12 +271,12 @@ class BaseSubCmd(BaseSuperCmd):
 
         if not action:
             raise RuntimeError("NoCmd")
-        elif len(action) == 1:
+        if len(action) == 1:
             return await super().dispatch(action, msg, **kw)
-        else:
-            sub = self.sub[action[0]]
-            action = action[1:]
-            return await sub.dispatch(action, msg, **kw)
+
+        sub = self.sub[action[0]]
+        action = action[1:]
+        return await sub.dispatch(action, msg, **kw)
 
     def cmd_dir(self, h=False):
         res = super().cmd_dir(h=h)
@@ -319,6 +308,7 @@ class BaseListenOneCmd(BaseLayerCmd):
 
         By default, use `console_stack`.
         """
+        # pylint:disable=import-outside-toplevel
         from moat.micro.stacks.console import console_stack
 
         return console_stack(conn, self.cfg)
@@ -335,7 +325,7 @@ class BaseListenOneCmd(BaseLayerCmd):
         """
         Process a connection
         """
-        from moat.micro.cmd.stream import ExtCmdMsg
+        from moat.micro.cmd.stream import ExtCmdMsg  # pylint:disable=import-outside-toplevel
 
         app = ExtCmdMsg(self.wrapper(conn), self.cfg)
         if (
@@ -365,7 +355,7 @@ class BaseListenOneCmd(BaseLayerCmd):
         """
         async with self.listener() as conns:
             async for conn in conns:
-                task = await self.tg.spawn(self.handler, conn)
+                await self.tg.spawn(self.handler, conn)
 
 
 class BaseListenCmd(BaseSubCmd):
@@ -386,7 +376,7 @@ class BaseListenCmd(BaseSubCmd):
         """
         Process a new connection.
         """
-        from moat.micro.cmd.stream import ExtCmdMsg
+        from moat.micro.cmd.stream import ExtCmdMsg  # pylint:disable=import-outside-toplevel
 
         conn = self.wrapper(conn)
         app = ExtCmdMsg(conn, self.cfg)
@@ -410,7 +400,7 @@ class BaseListenCmd(BaseSubCmd):
         async with self.listener() as conns:
             self.set_ready()
             async for conn in conns:
-                task = await self.tg.spawn(self.handler, conn)
+                await self.tg.spawn(self.handler, conn)
 
 
 class DirCmd(BaseSubCmd):
@@ -464,10 +454,7 @@ class DirCmd(BaseSubCmd):
                 continue
 
             cfg = gcfg.get(name, {})
-            try:
-                await self.attach(name, imp(v)(cfg))
-            except TypeError as exc:
-                raise  # TypeError(f"{name}: {v} {repr(imp(v))} {repr(exc)}: {repr(cfg)}")
+            await self.attach(name, imp(v)(cfg))
 
         # Second, run them all.
         # For existing apps, tell it to update its configuration.
@@ -509,16 +496,20 @@ class Dispatch(DirCmd):
         return self
 
     def sub_at(self, *p):
+        "returns a SubDispatch to this path"
+        # pylint:disable=import-outside-toplevel,cyclic-import,redefined-outer-name
         from .tree import SubDispatch
 
         return SubDispatch(self, p)
 
     @property
-    def root(self):
+    def root(self) -> Dispatch:
+        "root dispatcher"
         return self
 
     @property
     def path(self):
+        "root path"
         return Path()
 
 
@@ -548,8 +539,13 @@ class SubDispatch:
                     setattr(self, k[4:], getattr(dispatch, k))
 
     @property
-    def root(self):
+    def root(self) -> Dispatch:
+        "root dispatcher"
         return self._dest.root
+
+    def wait_ready(self) -> Awaitable:
+        "forwards to the destination"
+        return self._dest.wait_ready()
 
     async def __aenter__(self):
         return self

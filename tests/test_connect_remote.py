@@ -4,7 +4,6 @@ Connection tests
 import os
 
 import pytest
-from moat.util import NotGiven, as_proxy, attrdict, to_attrdict
 
 from moat.micro._test import mpy_stack
 from moat.micro.compat import log, sleep_ms

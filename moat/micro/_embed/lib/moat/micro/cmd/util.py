@@ -6,15 +6,8 @@ from __future__ import annotations
 
 from moat.util import NotGiven, ValueEvent, as_proxy
 
-from moat.micro.compat import (
-    TimeoutError,
-    log,
-    sleep_ms,
-    ticks_add,
-    ticks_diff,
-    ticks_ms,
-    wait_for_ms,
-)
+from moat.micro.compat import TimeoutError  # pylint: disable=redefined-builtin
+from moat.micro.compat import log, sleep_ms, ticks_add, ticks_diff, ticks_ms, wait_for_ms
 from moat.micro.proto.stack import RemoteError, SilentRemoteError
 
 # Typing
@@ -22,7 +15,9 @@ from moat.micro.proto.stack import RemoteError, SilentRemoteError
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Iterator
+    from typing import Any, AsyncIterable, AsyncIterator, Callable, Iterator, Mapping
+
+    from anyio import CancelScope
 
     from moat.micro.cmd.base import BaseCmd
 
@@ -40,10 +35,12 @@ as_proxy("_StpIter", StopIter, replace=True)
 
 @as_proxy("_StpErr")
 class StoppedError(Exception):
+    "Called command/app is not running"
     pass
 
 
-async def wait_complain(s, i, p, *a, **k):
+async def wait_complain(s: str, i: int, p: Callable, *a, **k):
+    "Complain on stderr if waiting too long"
     try:
         await wait_for_ms(i, p, *a, **k)
     except TimeoutError:
@@ -60,11 +57,12 @@ async def run_no_exc(p, msg, x_err=()):
             r = await r
     except x_err as err:
         log("Error in %r %r: %r", p, msg, err)
-    except Exception as err:
+    except Exception as err:  # pylint:disable=broad-exception-caught
         log("Error in %r %r", p, msg, err=err)
 
 
-def get_part(cur, p):
+def get_part(cur, p: list[str | int]):
+    "Walk into a mapping or object structure"
     for pp in p:
         try:
             cur = getattr(cur, pp)
@@ -73,7 +71,8 @@ def get_part(cur, p):
     return cur
 
 
-def set_part(cur, p, v):
+def set_part(cur, p: list[str | int], v: Any):
+    "Modify a mapping or object structure"
     cur = get_part(cur, p[:-1])
     try:
         cur[p[-1]] = v
@@ -136,16 +135,17 @@ class ValueTask:
     @p: callable
     """
 
-    def __init__(self, cmd: BaseCmd, i, x, p, *a, **k):
+    def __init__(self, cmd: BaseCmd, i: int, x: list[Exception], p: Callable, *a, **k):
         self.cmd = cmd
         self.i = i
         self.p = p
-        self.a = a
-        self.k = k
+        self.a: list[Any] = a
+        self.k: Mapping[str, Any] = k
         self.x = x
-        self._t = None
+        self._t: CancelScope = None
 
     async def start(self, tg):
+        "Task starter. Called from the command."
         if self._t is not None:
             raise RuntimeError("dup")
         self._t = await tg.spawn(self._wrap, _name="Val")
@@ -154,9 +154,9 @@ class ValueTask:
         try:
             err = None
             res = await self.p(*self.a, **self.k)
-        except Exception as exc:
+        except Exception as exc:  # pylint:disable=broad-exception-caught
             err = exc
-        except BaseException as exc:
+        except BaseException as exc:  # pylint:disable=broad-exception-caught
             err = StoppedError(repr(exc))
         if err is None:
             await self.reply_result(res)
@@ -166,14 +166,17 @@ class ValueTask:
                 raise err
 
     async def reply_result(self, res):
+        "forward the task's return value to the caller"
         await self.cmd.reply_result(self.i, res)
 
     def cancel(self):
+        "cancel the iterator"
         if self._t is not None:
             self._t.cancel()
             self._t = False
 
     async def set_error(self, err):
+        "tell the iterator to raise an error"
         self.cancel()
         await self.cmd.reply_error(self.i, err, self.x)
 
@@ -185,7 +188,7 @@ class IterWrap:
     Set @ival to the initial value.
     """
 
-    def __init__(self, p, a=(), k={}, ival=NotGiven):
+    def __init__(self, p, a=(), k={}, ival=NotGiven):  # pylint:disable=dangerous-default-value
         self.p = p
         self.a = a
         self.k = k
@@ -238,15 +241,15 @@ class SendIter(ValueTask):
                 async for msg in it:
                     await self.cmd.s.send({'i': self.i, 'd': msg, 'n': cnt})
                     cnt += 1
-        except BaseException:
+        except BaseException:  # pylint:disable=try-except-raise
             raise
         else:
             await self.cmd.s.send({'i': self.i, 'r': False})
         finally:
             self.cmd.reply.pop(self.i, None)
 
-    async def reply_result(self, msg):
-        # override ValueTask's reply sender
+    async def reply_result(self, res):
+        "no-op; overrides ValueTask's reply sender."
         pass
 
 
@@ -259,15 +262,18 @@ class DelayedIter(_DelayedIter):
     An iterator that delays calling the wrapped iterator.
     """
 
+    _warned: int = 2
+    # warns on the second, fifth, ninth excessive delay
+    # don't warn on the first call: starting the iterator
+    # might take some extra time
+
+    _i: AsyncIterable = None
+    _it: AsyncIterator = None
+
     def __init__(self, t: int, it: Iterator):
         self.it = it
         self.t = t
         self._next = ticks_add(ticks_ms(), -t)
-
-        self._warned = 2
-        # warns on the second, fifth, ninth excessive delay
-        # don't warn on the first call: starting the iterator
-        # might take some extra time
 
     async def __aenter__(self):
         self._it = await self.it.__aenter__()
@@ -326,6 +332,7 @@ class RecvIter(_DelayedIter):
         await self.aclose()
 
     async def aclose(self):
+        "close iterator cleanly"
         i, self.i = self.i, None
         if i is not None:
             await self.cmd.s.send({"i": i})
@@ -334,7 +341,11 @@ class RecvIter(_DelayedIter):
         return self
 
     async def get(self):
-        log("ITER WAIT")
+        """
+        Return the next iterator value.
+
+        May raise `StopAsyncIteration`, or any forwarded non-base exception.
+        """
         r = NotGiven
         if self._val is None:
             raise StopAsyncIteration
@@ -348,12 +359,10 @@ class RecvIter(_DelayedIter):
             self._val = ValueEvent()
             if self._err is not None:
                 self._val.set_error(self._err)
-                self._err is None
-
+                self._err = None
             return r
 
         finally:
-            log("ITER GOT %r", r)
             if not self._warned:
                 # startup is done
                 self._warned = 1
@@ -362,12 +371,17 @@ class RecvIter(_DelayedIter):
 
     def set_r(self, t):
         """
-        Initial message for iterators
+        Initial value for iterators
         """
         self.t = t
         self._val.set(None)
 
     def set(self, val, n=0):
+        """Set new iterator value.
+
+        This overrides the previous value if it wasn't fetched.
+        It may emit a warning in this case.
+        """
         if self._val.is_set():
             if self._warned:
                 self._warned += 1
@@ -390,6 +404,7 @@ class RecvIter(_DelayedIter):
         self._val.set(val)
 
     def set_error(self, err):
+        "tell the iterator to raise an error"
         if self._val.is_set():
             self._err = err
         else:
@@ -397,5 +412,6 @@ class RecvIter(_DelayedIter):
         self._warned = 0
 
     def cancel(self):
+        "cancel the iterator"
         self._val.set_error(StoppedError("cancel"))
         self._warned = 0

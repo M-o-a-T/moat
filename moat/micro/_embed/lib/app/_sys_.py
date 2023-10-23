@@ -4,6 +4,7 @@ from moat.util import Proxy, drop_proxy, obj2name
 
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util import enc_part, get_part, set_part
+from moat.micro.stacks.util import TEST_MAGIC
 
 
 class Cmd(BaseCmd):
@@ -21,7 +22,7 @@ class Cmd(BaseCmd):
 
         Use this to verify that nothing mangles anything.
         """
-        return b"r\x0dn\x0a-\x00x\x0ce\x1b!"
+        return TEST_MAGIC
 
     async def cmd_unproxy(self, p):
         """

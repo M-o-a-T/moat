@@ -29,6 +29,7 @@ from moat.util.main import load_subgroup
 from moat.micro.cmd.tree import Dispatch, SubDispatch
 from moat.micro.cmd.util import get_part
 from moat.micro.proto.stream import RemoteBufAnyio
+from moat.micro.stacks.util import TEST_MAGIC
 from moat.micro.util import run_update
 
 from .compat import TaskGroup, idle, log
@@ -276,7 +277,7 @@ async def boot(obj, state):
         await anyio.sleep(2)
 
         res = await req.request.send("sys", "test")
-        assert res == b"a\x0db\x0ac", res
+        assert res == TEST_MAGIC, res
 
         res = await req.request.send("ping", "pong")
         if res != "R:pong":

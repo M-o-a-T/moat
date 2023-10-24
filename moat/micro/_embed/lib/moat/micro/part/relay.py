@@ -106,8 +106,18 @@ class Relay(BaseCmd):
         return self._delay is not None
 
     async def cmd_r(self):
+        """
+        Returns the current state, as a mapping.
+
+        v: currently set value
+        f: currently forced value
+        d: delay until next change (msec) or None
+        p: actual pin state
+        """
+        p = await self.pin.r()
         return dict(
             v=self.value,
             f=self.force,
+            p=p,
             d=None if self._delay is None else ticks_diff(ticks_ms(), self.t_last),
         )

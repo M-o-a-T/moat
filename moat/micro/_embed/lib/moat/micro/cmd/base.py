@@ -24,7 +24,7 @@ from __future__ import annotations
 from moat.micro.compat import AC_use, Event, idle
 from moat.micro.proto.stack import Base
 
-from .util import DelayedIter, IterWrap, run_no_exc, wait_complain
+from .util import DelayedIter, IterWrap, enc_part, get_part, run_no_exc, wait_complain
 
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -351,6 +351,14 @@ class BaseCmd(Base):
             elif k == ("_cmd" if h else "cmd"):
                 res['j'] = True
         return res
+
+    def cmd_cfg(self, p=()):
+        """
+        Read this item's config.
+
+        Writing is intentionally not supported.
+        """
+        return enc_part(get_part(self.cfg, p))
 
     def attached(self, parent: BaseSuperCmd, name: str):
         "Tell this Cmd it's attached under this parent, with this name."

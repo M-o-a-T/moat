@@ -1,6 +1,5 @@
-import sys
 
-from ..proto.stack import BaseBuf, BaseMsg
+from ..proto.stack import BaseMsg
 
 
 def console_stack(stream, cfg, cons=False):

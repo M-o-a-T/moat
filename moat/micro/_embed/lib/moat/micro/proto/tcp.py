@@ -5,10 +5,9 @@ Support code to connect to a TCP server.
 from __future__ import annotations
 
 import asyncio
-import errno
 import select
 
-from moat.micro.compat import AC_use, log
+from moat.micro.compat import AC_use
 from moat.micro.proto.stream import AIOBuf
 
 p = select.poll()

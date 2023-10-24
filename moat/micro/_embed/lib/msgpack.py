@@ -3,7 +3,6 @@
 
 # Parts of this have been modified to be compatble with micropython.
 
-import os
 import struct
 import sys
 from io import BytesIO

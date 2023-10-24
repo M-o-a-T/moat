@@ -1,7 +1,6 @@
 # global hardware watchdog
 WDT = None
 
-import os
 import sys
 
 import machine
@@ -37,7 +36,7 @@ def main(cfg: str | dict, fake_end=False):
     if isinstance(cfg, str):
         try:
             f = open(cfg, "rb")
-        except OSError as err:
+        except OSError:
             raise OSError(cfg)
         with f:
             cfg = msgpack.unpackb(f.read())

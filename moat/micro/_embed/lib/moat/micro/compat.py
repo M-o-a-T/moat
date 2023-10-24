@@ -13,8 +13,7 @@ _tg = asyncio.TaskGroup
 CancelledError = asyncio.CancelledError
 from time import ticks_add, ticks_diff, ticks_ms
 
-from async_queue import Queue, QueueEmpty, QueueFull
-from micropython import const
+from async_queue import QueueEmpty, QueueFull
 
 ExceptionGroup = asyncio.ExceptionGroup
 BaseExceptionGroup = asyncio.BaseExceptionGroup

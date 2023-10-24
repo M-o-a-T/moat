@@ -4,13 +4,10 @@ RTC access
 
 from __future__ import annotations
 
-import sys
 
-from moat.util import NotGiven
 
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util import enc_part, get_part
-from moat.micro.compat import log
 
 
 class NotGiven2:

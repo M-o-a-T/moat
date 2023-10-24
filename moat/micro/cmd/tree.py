@@ -7,7 +7,7 @@ from itertools import chain
 import anyio
 from moat.util import NotGiven, attrdict
 
-from ._tree import (  # pylint:disable=unused-import
+from ._tree import (  # noqa:F401 pylint:disable=unused-import
     BaseFwdCmd,
     BaseLayerCmd,
     BaseListenCmd,

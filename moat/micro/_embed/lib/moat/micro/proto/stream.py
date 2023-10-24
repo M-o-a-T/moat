@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from asyncio import core
-from asyncio.stream import Stream
 
 from moat.util import DProxy, Proxy, get_proxy, name2obj, obj2name
 from msgpack import ExtType, Packer, Unpacker, packb
 
-from moat.micro.compat import AC_use, Lock, TimeoutError, log, wait_for_ms
+from moat.micro.compat import AC_use, Lock, TimeoutError, wait_for_ms
 
 from ._stream import _MsgpackMsgBlk, _MsgpackMsgBuf
 from .stack import BaseBuf

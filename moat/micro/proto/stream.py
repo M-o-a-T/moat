@@ -12,9 +12,9 @@ import greenback
 from moat.util import CtxObj, DProxy, Proxy, get_proxy, name2obj, obj2name
 from msgpack import ExtType, OutOfData, Packer, Unpacker, packb, unpackb
 
-from moat.micro.compat import AC_use, Event, TaskGroup, log
+from moat.micro.compat import AC_use, log
 
-from ._stream import SerialPackerBlkBuf, _MsgpackMsgBlk, _MsgpackMsgBuf
+from ._stream import _MsgpackMsgBlk, _MsgpackMsgBuf
 from .stack import BaseBuf
 
 # Typing
@@ -351,7 +351,7 @@ class ProcessBuf(CtxObj, AnyioBuf):
                     ) as s:
                         yield s
                     await proc.wait()
-                except BaseException as exc:
+                except BaseException:
                     proc.kill()
                     with anyio.CancelScope(shield=True):
                         await proc.wait()

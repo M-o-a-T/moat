@@ -3,7 +3,6 @@ Module for pins
 """
 import machine as M
 from moat.compat import TaskGroup, load_from_cfg, sleep_ms
-from moat.util import attrdict
 
 from .link import Reader
 

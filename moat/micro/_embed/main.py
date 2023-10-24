@@ -12,7 +12,6 @@ def set(attr, value=None, fs=None):
     if state is not None and not fs:
         state[attr] = state
     else:
-        import os
 
         fn = f"moat.{attr}"
         try:
@@ -125,7 +124,6 @@ def go(state=None, fake_end=True):
     print("Start MoaT:", state, file=sys.stderr)
     from moat.micro.main import main
 
-    from moat.micro.compat import print_exc
 
     cfg = "moat_fb.cfg" if fallback else "moat.cfg"
     try:

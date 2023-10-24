@@ -6,7 +6,7 @@ from __future__ import annotations
 import anyio
 from anyio_serial import Serial as _Serial
 
-from moat.micro.compat import AC_use, Event, Lock, TimeoutError, log, wait_for_ms
+from moat.micro.compat import AC_use, log
 from moat.micro.proto.stream import AnyioBuf
 
 

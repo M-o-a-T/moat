@@ -29,11 +29,9 @@ from .util import DelayedIter, IterWrap, enc_part, get_part, run_no_exc, wait_co
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import AsyncContextManager, AsyncIterator, Awaitable, Never
+    from typing import AsyncContextManager, AsyncIterator, Awaitable
 
     from moat.micro.cmd.tree import BaseSuperCmd, Dispatch
-    from moat.micro.proto.stack import BaseBuf, BaseMsg
-    from moat.micro.stacks.util import BaseConnIter
 
 
 class ACM_h:

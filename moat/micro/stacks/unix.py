@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import anyio
-from moat.util.queue import Queue
 
-from ..compat import ACM, AC_exit, Event, TaskGroup
 from ..proto.stream import SingleAnyioBuf
 from ..stacks.util import BaseConnIter
 

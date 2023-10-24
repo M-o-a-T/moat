@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import sys
-from functools import partial
 
-from moat.util import NoProxyError, NotGiven, as_proxy, name2obj, obj2name
-from msgpack import OutOfData, Packer, Unpacker, packb, unpackb
+from moat.util import NotGiven, as_proxy
+from msgpack import OutOfData
 from serialpacker import SerialPacker
 
-from ..compat import Event, Lock, TimeoutError, const, wait_for_ms
-from .stack import BaseBuf, StackedBlk, StackedBuf, StackedMsg
+from ..compat import Event, Lock
+from .stack import BaseBuf, StackedBlk, StackedMsg
 
 # Typing
 

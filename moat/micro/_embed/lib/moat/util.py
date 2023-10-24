@@ -1,8 +1,7 @@
-import sys
 
-from async_queue import Queue, QueueEmpty, QueueFull
+from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
 
-from moat.micro.compat import Event, WouldBlock, log
+from moat.micro.compat import Event, log
 
 
 class Path(tuple):
@@ -203,7 +202,7 @@ def import_(name, off=0):
         res = __import__(mn)
         for nn in n[1:]:
             res = getattr(res, nn)
-    except AttributeError as exc:
+    except AttributeError:
         log("ERR loading %s", name)
         raise
     return res

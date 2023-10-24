@@ -4,7 +4,6 @@ Module for pins
 import asyncio
 
 import machine as M
-from moat.util import attrdict
 
 from moat.micro.compat import idle
 

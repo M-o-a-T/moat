@@ -1,11 +1,11 @@
 """
 More common code
 """
-from moat.util import NotGiven, Path, attrdict, load_from_cfg
+from moat.util import NotGiven, Path
 
 from ..cmd.base import BaseCmd
 from ..cmd.util import StoppedError
-from ..compat import Event, Pin_OUT, TaskGroup, idle, sleep, sleep_ms, ticks_diff, ticks_ms
+from ..compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms
 
 
 class Relay(BaseCmd):

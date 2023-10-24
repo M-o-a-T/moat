@@ -1,6 +1,5 @@
-import sys
 
-from ..compat import AC_use, Event, TaskGroup, run_server
+from ..compat import Event, TaskGroup, run_server
 from ..proto.stream import SingleAIOBuf
 from ..stacks.util import BaseConnIter
 

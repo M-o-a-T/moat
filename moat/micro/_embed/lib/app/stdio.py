@@ -11,7 +11,6 @@ import micropython
 
 from moat.micro.cmd.stream import BaseCmdMsg
 from moat.micro.compat import AC_use
-from moat.micro.part.serial import Serial
 from moat.micro.proto.stream import FileBuf
 from moat.micro.stacks.console import console_stack
 

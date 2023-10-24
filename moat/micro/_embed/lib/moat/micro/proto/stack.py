@@ -18,7 +18,6 @@ exception is the `Reliable` module, which limits this to commands.
 
 from __future__ import annotations
 
-import sys
 
 from moat.util import as_proxy
 

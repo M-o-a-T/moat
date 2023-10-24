@@ -1,4 +1,3 @@
-import sys
 
 from ...util import NotGiven, Queue, ValueEvent
 from ..compat import (
@@ -8,7 +7,6 @@ from ..compat import (
     TaskGroup,
     TimeoutError,
     idle,
-    log,
     sleep_ms,
     ticks_add,
     ticks_diff,
@@ -282,7 +280,7 @@ class ReliableMsg(StackedMsg):
 
                 await idle()
 
-        except Exception as exc:
+        except Exception:
             #           if not self.persist:
             raise
 

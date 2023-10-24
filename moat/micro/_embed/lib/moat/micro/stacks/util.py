@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.util import Queue
 
-from moat.micro.compat import ACM, AC_exit, AC_use, Event, TaskGroup, shield
+from moat.micro.compat import ACM, AC_exit, Event, TaskGroup
 from moat.micro.proto.stack import BaseConn
 
 TEST_MAGIC = b"r\x0dn\x0a-\x00x\x0ce\x1b!"

@@ -4,16 +4,28 @@ A command that accesses a row of mostly-identical subcommands
 
 from __future__ import annotations
 
-from moat.util import import_, combine_dict
+from moat.util import combine_dict, import_
 
 from .tree import BaseSuperCmd
 from .util import set_part
 
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Awaitable
+
+
 class ArrayCmd(BaseSuperCmd):
+    """
+    A command that hosts a number of mostly-identical subcommands.
+    """
+
+    n: int = None
+
     def __init__(self, cfg):
         super().__init__(cfg)
         self.apps = []
-    
+
     async def setup(self):
         await super().setup()
         await self._setup_apps()
@@ -65,14 +77,14 @@ class ArrayCmd(BaseSuperCmd):
 
     def _cfg(self, i):
         cfg = combine_dict(self.cfg.get("cfg", {}), self.cfg.get(i, {}))
-        if (ii := self.cfg.get("i",None)) is not None:
-            set_part(cfg,ii, i+self.cfg.get("i_off", 0))
+        if (ii := self.cfg.get("i", None)) is not None:
+            set_part(cfg, ii, i + self.cfg.get("i_off", 0))
         return cfg
 
     async def reload(self):
         await super().reload()
         self.n = self.cfg["n"]
-        for i,app in enumerate(self.apps):
+        for i, app in enumerate(self.apps):
             app.cfg.merge(self._cfg(i))
             await app.reload()
         while len(self.apps) > self.n:
@@ -106,13 +118,14 @@ class ArrayCmd(BaseSuperCmd):
         sub = self.apps[action[0]]
         return await sub.dispatch(action[1:], msg, **kw)
 
-    async def cmd_all(self, a, d={}, s=None, e=None):
+    async def cmd_all(self, a, d=None, s=None, e=None):
         """
         Call all sub-apps and collect the result.
         """
+        if d is None:
+            d = {}
         res = []
         for app in self.apps[s:e]:
             res.append(await app.dispatch(a, d))
 
         return res
-

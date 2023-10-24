@@ -550,3 +550,57 @@ def exc_iter(exc):
             yield from exc_iter(e)
     else:
         yield exc
+
+
+def combine_dict(*d, cls=dict, deep=False) -> dict:
+    """
+    Returns a dict with all keys+values of all dict arguments.
+    The first found value wins.
+
+    This operation is recursive and non-destructive. If `deep` is set, the
+    result always is a deep copy.
+
+    A value of `NotGiven` causes an entry to be skipped.
+
+    TODO: arrays are not merged.
+
+    Args:
+      cls (type): a class to instantiate the result with. Default: dict.
+        Often used: :class:`attrdict`.
+      deep (bool): if set, always copy.
+    """
+    res = cls()
+    keys = {}
+    if not d:
+        return res
+
+    if len(d) == 1 and deep and not isinstance(d[0], Mapping):
+        if deep and isinstance(d[0], (list, tuple)):
+            return deepcopy(d[0])
+        else:
+            return d[0]
+
+    for kv in d:
+        if kv is None:
+            continue
+        for k, v in kv.items():
+            if k not in keys:
+                keys[k] = []
+            keys[k].append(v)
+
+    for k, v in keys.items():
+        if v[0] is NotGiven:
+            pass
+        elif len(v) == 1 and not deep:
+            res[k] = v[0]
+        elif not isinstance(v[0], Mapping):
+            for vv in v[1:]:
+                assert vv is NotGiven or not isinstance(vv, Mapping)
+            if deep and isinstance(v[0], (list, tuple)):
+                res[k] = deepcopy(v[0])
+            else:
+                res[k] = v[0]
+        else:
+            res[k] = combine_dict(*v, cls=cls)
+
+    return res

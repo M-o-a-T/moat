@@ -312,7 +312,7 @@ class Lockstep:
     """
 
     def __init__(self):
-        self.q = q
+        self.q = Queue(0)
         self._get = Event()
         self._put = Event()
 
@@ -323,14 +323,14 @@ class Lockstep:
         # reader. Signal we're reading, then wait for the item
         self._get.set()
         await self._put.wait()
-        self.s = None
+        s,self.s = self.s,None
 
         self._put = Event()
         return s
 
     get = __anext__
 
-    async def put(s):
+    async def put(self, s):
         await self._get.wait()
         self.s = s
         self._put.set()

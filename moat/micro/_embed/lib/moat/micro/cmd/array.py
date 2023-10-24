@@ -71,9 +71,13 @@ class ArrayCmd(BaseSuperCmd):
 
     async def reload(self):
         await super().reload()
+        self.n = self.cfg["n"]
         for i,app in enumerate(self.apps):
             app.cfg.merge(self._cfg(i))
             await app.reload()
+        while len(self.apps) > self.n:
+            app = self.apps.pop()
+            await self.detach(len(self.apps))
 
     async def _setup_apps(self):
         name = self.cfg["app"]

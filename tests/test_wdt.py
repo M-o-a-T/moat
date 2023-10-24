@@ -1,7 +1,10 @@
 """
 Basic test using a MicroPython subtask
 """
+from __future__ import annotations
+
 import pytest
+
 from moat.util import NotGiven
 
 from moat.micro._test import mpy_stack

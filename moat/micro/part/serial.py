@@ -4,10 +4,11 @@ Serial ports on Unix
 from __future__ import annotations
 
 import anyio
-from anyio_serial import Serial as _Serial
 
 from moat.micro.compat import AC_use, log
 from moat.micro.proto.stream import AnyioBuf
+
+from anyio_serial import Serial as _Serial
 
 
 # Serial link driver

@@ -25,7 +25,22 @@ local_scheme = "no-local-version"
 [tool.moat]
 
 [tool.ruff]
+select = ["E", "F", "I"]
+
 line-length = 99
+
+[tool.ruff.isort]
+no-lines-before = ["future"]
+required-imports = ["from __future__ import annotations"]
+section-order = ["future", "typing", "standard-library", "first-party", "upy", "moat-util", "moat", "moat-micro", "local-folder", "third-party"]
+extra-standard-library = ["pytest", "anyio"]
+
+[tool.ruff.isort.sections]
+"moat" = ["moat"]
+"moat-micro" = ["moat.micro"]
+"moat-util" = ["moat.util"]
+"upy" = ["micropython", "machine", "esp"]
+"typing" = ["typing"]
 
 [tool.flake8]
 max-line-length = 99

@@ -4,8 +4,6 @@ RTC access
 
 from __future__ import annotations
 
-
-
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util import enc_part, get_part
 

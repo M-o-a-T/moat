@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from asyncio import core
 from collections.deque import deque
 

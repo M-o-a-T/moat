@@ -1,3 +1,4 @@
+from __future__ import annotations
 
 from ...util import NotGiven, Queue, ValueEvent
 from ..compat import (

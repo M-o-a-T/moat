@@ -3,15 +3,15 @@ This module implements the direct connection to a micropython board.
 
 MoaT uses this to can sync the initial files and get things running.
 """
+from __future__ import annotations
 
+import anyio
 import ast
 import logging
 import os
 import re
-from functools import partial
-
-import anyio
 from anyio.streams.buffered import BufferedByteReceiveStream
+from functools import partial
 
 from moat.micro.compat import AC_use
 from moat.micro.proto.stream import SingleAnyioBuf

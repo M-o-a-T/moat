@@ -6,8 +6,15 @@ from __future__ import annotations
 
 from moat.util import NotGiven, ValueEvent, as_proxy
 
-from moat.micro.compat import TimeoutError  # pylint: disable=redefined-builtin
-from moat.micro.compat import log, sleep_ms, ticks_add, ticks_diff, ticks_ms, wait_for_ms
+from moat.micro.compat import (
+    TimeoutError,  # pylint: disable=redefined-builtin
+    log,
+    sleep_ms,
+    ticks_add,
+    ticks_diff,
+    ticks_ms,
+    wait_for_ms,
+)
 from moat.micro.proto.stack import RemoteError, SilentRemoteError
 
 # Typing
@@ -15,9 +22,8 @@ from moat.micro.proto.stack import RemoteError, SilentRemoteError
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any, AsyncIterable, AsyncIterator, Callable, Iterator, Mapping
-
     from anyio import CancelScope
+    from typing import Any, AsyncIterable, AsyncIterator, Callable, Iterator, Mapping
 
     from moat.micro.cmd.base import BaseCmd
 

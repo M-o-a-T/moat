@@ -3,6 +3,7 @@ FUSE operations for MoaT-micro-FS
 """
 from __future__ import annotations
 
+import anyio
 import errno
 import logging
 import os
@@ -11,9 +12,9 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 from pathlib import PosixPath as Path
 
-import anyio
-import pyfuse3
 from moat.util import as_proxy  # pylint: disable=no-name-in-module
+
+import pyfuse3
 from pyfuse3 import (  # pylint: disable=E0611
     RENAME_EXCHANGE,
     RENAME_NOREPLACE,

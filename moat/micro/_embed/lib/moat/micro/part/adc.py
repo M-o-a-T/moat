@@ -1,7 +1,10 @@
 """
 Module for pins
 """
+from __future__ import annotations
+
 import machine as M
+
 from moat.compat import TaskGroup, load_from_cfg, sleep_ms
 
 from .link import Reader

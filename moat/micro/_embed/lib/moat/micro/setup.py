@@ -2,6 +2,7 @@
 
 # We hook our own reader into the micropython REPL
 # which uses asyncio to fetch the actual data.
+from __future__ import annotations
 
 from micropython import alloc_emergency_exception_buf
 

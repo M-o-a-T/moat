@@ -1,11 +1,12 @@
 """
 Readers that aggregate multiple results
 """
+from __future__ import annotations
 
-from moat.micro.link import Reader
 from moat.util import attrdict, load_from_cfg
 
 from moat.micro.compat import TaskGroup
+from moat.micro.link import Reader
 
 
 class Array(Reader):

@@ -17,11 +17,11 @@ There is one main "wdt" option which
 
   Require external keepalives. Reboot if they're missing.
 """
-
-from moat.micro.wdt import WDT, M
+from __future__ import annotations
 
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.compat import Event
+from moat.micro.wdt import WDT, M
 
 
 class Cmd(BaseCmd):

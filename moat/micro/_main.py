@@ -3,12 +3,12 @@ Command-line code for moat.micro
 """
 
 # pylint: disable=import-outside-toplevel
+from __future__ import annotations
 
+import anyio
 import logging
 import sys
 
-import anyio
-import asyncclick as click
 from moat.util import (
     P,
     Path,
@@ -31,6 +31,8 @@ from moat.micro.util import run_update
 
 from .compat import idle, log
 from .direct import DirectREPL
+
+import asyncclick as click
 
 logger = logging.getLogger(__name__)
 

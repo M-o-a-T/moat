@@ -1,6 +1,8 @@
 """
 App and command base classes
 """
+from __future__ import annotations
+
 from moat.micro.cmd.base import BaseCmd
 
 

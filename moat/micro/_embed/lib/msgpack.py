@@ -2,12 +2,14 @@
 # cloned from https://github.com/msgpack/msgpack-python
 
 # Parts of this have been modified to be compatble with micropython.
+from __future__ import annotations
 
 import struct
 import sys
 from io import BytesIO
 
 from micropython import const
+
 from moat.util import attrdict
 
 #

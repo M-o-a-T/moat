@@ -15,9 +15,9 @@ from typing import TYPE_CHECKING  # isort:skip
 if TYPE_CHECKING:
     from typing import Awaitable
 
-    from most.micro.proto.stack import BaseBuf, BaseMsg
-
     from moat.micro.cmd.tree import SubDispatch
+
+    from most.micro.proto.stack import BaseBuf, BaseMsg
 
 
 class Raw(BaseCmdBBM):

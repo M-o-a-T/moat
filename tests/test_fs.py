@@ -1,6 +1,8 @@
 """
 Basic file system test, no multithreading / subprocess
 """
+from __future__ import annotations
+
 import anyio
 import pytest
 

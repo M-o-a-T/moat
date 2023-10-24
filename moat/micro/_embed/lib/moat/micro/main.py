@@ -1,13 +1,17 @@
 # global hardware watchdog
-WDT = None
+from __future__ import annotations
 
 import sys
 
 import machine
-import msgpack
+
 from moat.util import NotGiven
 
 from moat.micro.compat import print_exc
+
+import msgpack
+
+WDT = None
 
 
 def dict_upd(d, k, v):

@@ -17,11 +17,13 @@ Config options:
   Use the singleton hardware watchdog.
 
 """
+from __future__ import annotations
+
 import sys
 
 import machine
-import moat.micro.main as M
 
+import moat.micro.main as M
 from moat.micro.compat import Event, TimeoutError, wait_for_ms
 
 try:

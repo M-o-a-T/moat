@@ -6,15 +6,16 @@ file system if that is not available or dead.
 
 The state behaves like a dict.
 """
+from __future__ import annotations
 
 try:
     from machine import RTC
 except ImportError:
     RTC = None
-import msgpack as mp
-
 from moat.micro.compat import log
 from moat.micro.proto.stream import _decode, _encode
+
+import msgpack as mp
 
 _pack = mp.Packer(default=_encode).packb
 _unpack = lambda x: mp.unpackb(x, ext_hook=_decode)

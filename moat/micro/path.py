@@ -8,6 +8,7 @@ and an equivalent that uses the MoaT file access protocol
 
 from __future__ import annotations
 
+import anyio
 import binascii
 import hashlib
 import io
@@ -19,7 +20,6 @@ from contextlib import suppress
 from pathlib import Path
 from subprocess import CalledProcessError
 
-import anyio
 from moat.util import attrdict
 
 from .proto.stack import RemoteError

@@ -1,9 +1,10 @@
 """
 Test the "every" iterator
 """
-import time
+from __future__ import annotations
 
 import pytest
+import time
 
 from moat.micro.compat import every_ms
 

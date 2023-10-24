@@ -1,7 +1,8 @@
 # micropython
+from __future__ import annotations
 
-import sys
 import os
+import sys
 
 mode = sys.argv[1] if len(sys.argv)>1 else "once"
 
@@ -19,5 +20,6 @@ sys.path.insert(0,"./stdlib")
 sys.path.insert(0,".")
 
 import main
+
 main.go(mode, fake_end=False)
 

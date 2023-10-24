@@ -1,6 +1,7 @@
 """
 Steinhart-Hart NTC thermistor formulae
 """
+from __future__ import annotations
 
 from math import exp, log
 

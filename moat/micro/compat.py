@@ -4,6 +4,9 @@ well as MicroPython/asyncio.
 
 Well, for the most part.
 """
+from __future__ import annotations
+
+import anyio as _anyio
 import logging
 import os
 import time as _time
@@ -12,7 +15,6 @@ from concurrent.futures import CancelledError
 from contextlib import AsyncExitStack
 from inspect import currentframe, iscoroutinefunction
 
-import anyio as _anyio
 import greenback
 
 

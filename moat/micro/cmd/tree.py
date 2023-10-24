@@ -1,10 +1,11 @@
 """
 Server side of BaseCmd
 """
-
-from itertools import chain
+from __future__ import annotations
 
 import anyio
+from itertools import chain
+
 from moat.util import NotGiven, attrdict
 
 from ._tree import (  # noqa:F401 pylint:disable=unused-import

@@ -1,6 +1,7 @@
 """
 Test reliable retransmission, using various parameters.
 """
+from __future__ import annotations
 
 import pytest
 

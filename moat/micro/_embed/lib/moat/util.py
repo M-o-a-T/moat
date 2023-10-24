@@ -1,7 +1,8 @@
-
-from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
+from __future__ import annotations
 
 from moat.micro.compat import Event, log
+
+from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
 
 
 class Path(tuple):

@@ -3,6 +3,7 @@ Test runner
 """
 from __future__ import annotations
 
+import anyio
 import logging
 import os
 from contextlib import asynccontextmanager, suppress
@@ -10,7 +11,6 @@ from contextvars import ContextVar
 from pathlib import Path
 from random import random
 
-import anyio
 from moat.util import combine_dict, packer, yload
 
 import moat.micro

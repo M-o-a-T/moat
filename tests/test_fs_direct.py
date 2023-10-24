@@ -1,6 +1,8 @@
 """
 Basic file system test, using commands directly
 """
+from __future__ import annotations
+
 import anyio
 import pytest
 

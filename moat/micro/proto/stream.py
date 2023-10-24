@@ -3,19 +3,20 @@ CPython-specific stream handling.
 """
 from __future__ import annotations
 
+import anyio
 import sys
 from contextlib import asynccontextmanager
 from functools import partial
 
-import anyio
-import greenback
 from moat.util import CtxObj, DProxy, Proxy, get_proxy, name2obj, obj2name
-from msgpack import ExtType, OutOfData, Packer, Unpacker, packb, unpackb
 
 from moat.micro.compat import AC_use, log
 
 from ._stream import _MsgpackMsgBlk, _MsgpackMsgBuf
 from .stack import BaseBuf
+
+import greenback
+from msgpack import ExtType, OutOfData, Packer, Unpacker, packb, unpackb
 
 # Typing
 

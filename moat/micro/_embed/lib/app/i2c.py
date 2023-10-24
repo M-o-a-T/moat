@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import machine
 
 from moat.micro.cmd.base import BaseCmd

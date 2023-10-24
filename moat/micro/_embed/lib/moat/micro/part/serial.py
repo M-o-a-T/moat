@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import machine as M
 
 from moat.micro.compat import AC_use, TimeoutError

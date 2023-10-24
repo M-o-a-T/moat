@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-
 from moat.util import NotGiven, as_proxy
-from msgpack import OutOfData
-from serialpacker import SerialPacker
 
 from ..compat import Event, Lock
 from .stack import BaseBuf, StackedBlk, StackedMsg
+
+from msgpack import OutOfData
+from serialpacker import SerialPacker
 
 # Typing
 

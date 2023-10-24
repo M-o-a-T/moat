@@ -1,10 +1,11 @@
-cfg = {}
+from __future__ import annotations
 
 import machine
-from moat.micro.rtc import state
 
 from moat.micro.compat import log
+from moat.micro.rtc import state
 
+cfg = {}
 
 def set(attr, value=None, fs=None):
     if state is None and fs is False:

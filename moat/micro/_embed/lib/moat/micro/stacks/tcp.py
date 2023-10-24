@@ -1,3 +1,4 @@
+from __future__ import annotations
 
 from ..compat import Event, TaskGroup, run_server
 from ..proto.stream import SingleAIOBuf

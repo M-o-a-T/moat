@@ -1,4 +1,6 @@
 "OS Error map"
+from __future__ import annotations
+
 os_error_mapping = {
     1: ('EPERM', 'Operation not permitted'),
     2: ('ENOENT', 'No such file or directory'),

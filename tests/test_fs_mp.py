@@ -1,9 +1,10 @@
 """
 Basic file system test, using multithreading / subprocess
 """
-import multiprocessing as mp
+from __future__ import annotations
 
 import anyio
+import multiprocessing as mp
 import pytest
 
 from moat.micro._test import mpy_stack

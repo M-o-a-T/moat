@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import moat.micro.rtc as _rtc
 
 

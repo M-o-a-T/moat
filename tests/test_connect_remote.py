@@ -1,8 +1,9 @@
 """
 Connection tests
 """
-import os
+from __future__ import annotations
 
+import os
 import pytest
 
 from moat.micro._test import mpy_stack

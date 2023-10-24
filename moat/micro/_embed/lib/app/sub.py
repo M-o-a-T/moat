@@ -4,6 +4,7 @@ Apps used for structure.
 
 from __future__ import annotations
 
+from moat.micro.cmd.array import ArrayCmd
 from moat.micro.cmd.tree import BaseFwdCmd, DirCmd
 
 try:
@@ -21,6 +22,14 @@ from moat.micro.compat import log, sleep_ms
 class Tree(DirCmd):
     """
     Structured subcommands.
+    """
+
+    pass
+
+
+class Array(ArrayCmd):
+    """
+    List of mostly-same things.
     """
 
     pass

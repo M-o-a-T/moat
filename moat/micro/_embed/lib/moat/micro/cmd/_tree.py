@@ -10,7 +10,7 @@ from moat.util import Path, import_
 
 from moat.micro.compat import AC_use, Event, TaskGroup, log
 
-from .base import BaseCmd
+from .base import ACM_h, BaseCmd
 
 # Typing
 
@@ -521,9 +521,24 @@ class SubDispatch:
 
     Create this object in your ``setup`` method.
     Using it from ``__init__`` results in ineficient call execution.
+
+    You can then use::
+
+            s = d.get_sub("a","b")
+            await s.c()
+
+    as a fast shorthand for ``await d.send("a","b","c")``.
+
+    Non-keyword arguments access subcommands (or try to do so).
+
+    It's also possible to access iterators this way: an ``it_X`` attribute
+    accesses the destination's ``iter_X`` method. As with
+    `dispatch.send_iter`, the timer is the first argument.
     """
 
     def __init__(self, dispatch, path):
+        self._path = path  # for creating sub-subdispatcher
+
         for i, p in enumerate(path):
             try:
                 dispatch = dispatch.sub[p]
@@ -547,6 +562,12 @@ class SubDispatch:
         "forwards to the destination"
         return self._dest.wait_ready()
 
+    def sub_at(self, *p):
+        "create a sub-subdispatcher"
+        from .tree import SubDispatch
+
+        return SubDispatch(self, self._path + p)
+
     async def __aenter__(self):
         return self
 
@@ -560,18 +581,16 @@ class SubDispatch:
     def _send(self, *a, _x_err=(), **k) -> Awaitable:
         return self._dest.dispatch(self._rem + a, k, x_err=_x_err)
 
-    def __getattr__(self, k):
-        """
-        Enables code like:
-            s = d.get_sub("a","b")
-            await s.c()
-        which calls the subhandler at "a.b"'s `cmd_c` method.
+    def _send_r(self, _a, _rep, *a, _x_err=(), **kw) -> AsyncContextManager:
+        return ACM_h(self._dest.dispatch(self._rem + (_a,) + a, kw, rep=_rep, x_err=_x_err))
 
-        Note that non-keyword arguments access subcommands (or try to do so).
-        """
+    def __getattr__(self, k):
         if k[0] == "_":
             raise AttributeError(k)
-        return partial(self._send, k)
+        if k[:3] == "it_":
+            return partial(self._send_r, k[3:])
+        else:
+            return partial(self._send, k)
 
     def __call__(self, *a, _x_err=(), **k) -> Awaitable:
         """

@@ -35,6 +35,9 @@ class Cmd(BaseCmd):
             raise StopAsyncIteration
         return self.n
 
+    def cmd_clr(self, n: int = 0):
+        self.n = n
+
 
 class NumIter:
     """

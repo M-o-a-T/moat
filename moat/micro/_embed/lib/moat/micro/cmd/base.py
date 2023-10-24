@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from moat.micro.stacks.util import BaseConnIter
 
 
-class _acm:
+class ACM_h:
     # Helper class.
     #
     # We want to use "async with disp.send_iter(…)", but send_iter forwards
@@ -257,7 +257,7 @@ class BaseCmd(Base):
 
         Do not override this.
         """
-        return _acm(self.root.dispatch(action, kw, rep=_rep))
+        return ACM_h(self.root.dispatch(action, kw, rep=_rep))
 
     def send_nr(self, *action, _x_err=(), **kw) -> Awaitable:
         """

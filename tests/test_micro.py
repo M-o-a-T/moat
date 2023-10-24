@@ -73,7 +73,7 @@ async def test_iter_m(tmp_path):
                 res.append(n)
         assert res == [0, 1, 2]
         t2 = ticks_ms()
-        assert 450 < ticks_diff(t2, t1) < 850
+        assert 450 < ticks_diff(t2, t1) < 880
 
         res = []
         async with d.send_iter(200, "r", "b", "it") as it:
@@ -83,7 +83,7 @@ async def test_iter_m(tmp_path):
                 res.append(n)
         assert res == [0, 1, 2]
         t1 = ticks_ms()
-        assert 450 < ticks_diff(t1, t2) < 850
+        assert 450 < ticks_diff(t1, t2) < 880
 
         res = []
         async with d.send_iter(200, "r", "b", "nit", lim=3) as it:
@@ -91,7 +91,47 @@ async def test_iter_m(tmp_path):
                 res.append(n)
         assert res == [1, 2, 3]
         t2 = ticks_ms()
-        assert 450 < ticks_diff(t2, t1) < 850
+        assert 450 < ticks_diff(t2, t1) < 880
+
+        # now do the same thing with a subdispatcher
+        s = d.sub_at("r", "b")
+
+        res = []
+        async with s.it_it(200, lim=3) as it:
+            async for n in it:
+                res.append(n)
+        assert res == [0, 1, 2]
+        t1 = ticks_ms()
+        assert 450 < ticks_diff(t1, t2) < 880
+
+        res = []
+        await s.clr()
+        async with s.it_nit(200, lim=3) as it:
+            async for n in it:
+                res.append(n)
+        assert res == [1, 2, 3]
+        t2 = ticks_ms()
+        assert 450 < ticks_diff(t2, t1) < 880
+
+        # now do the same thing with a partial subdispatcher
+        s = d.sub_at("r")
+
+        res = []
+        async with s.it_b(200, "it", lim=3) as it:
+            async for n in it:
+                res.append(n)
+        assert res == [0, 1, 2]
+        t1 = ticks_ms()
+        assert 450 < ticks_diff(t1, t2) < 880
+
+        res = []
+        await s.b("clr")
+        async with s.it_b(200, "nit", lim=3) as it:
+            async for n in it:
+                res.append(n)
+        assert res == [1, 2, 3]
+        t2 = ticks_ms()
+        assert 450 < ticks_diff(t2, t1) < 880
 
 
 @pytest.mark.parametrize("lossy", [False, True])

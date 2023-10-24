@@ -68,10 +68,6 @@ class NotGiven:
         return "NotGiven"
 
 
-class NoProxyError(ValueError):
-    pass
-
-
 class CancelledError(Exception):
     """
     Not an asyncio-style cancellation

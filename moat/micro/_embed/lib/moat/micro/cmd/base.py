@@ -204,7 +204,7 @@ class BaseCmd(Base):
             await wait_complain(f"Rdy {self.path}", 250, self._ready.wait)
         return None
 
-    def cmd_rdy(self, w=True) -> Awaitable:
+    async def cmd_rdy(self, w=True) -> Awaitable:
         """
         Check if / wait for readiness.
 
@@ -315,7 +315,7 @@ class BaseCmd(Base):
             else:
                 r = p(**msg)
                 if hasattr(r, "throw"):  # coroutine
-                    r = await r
+                    raise TypeError("iter is async")
             return DelayedIter(it=r, t=rep)
 
         p = getattr(self, f"cmd_{fn}")
@@ -328,14 +328,12 @@ class BaseCmd(Base):
 
         if wr:
             await self.wait_ready()
-        r = p(**msg)
-        if hasattr(r, "throw"):  # coroutine
-            r = await r
+        r = await p(**msg)
         return r
 
     # globally-available commands
 
-    def cmd_dir(self, h=False):
+    async def cmd_dir(self, h=False):
         """
         Rudimentary introspection. Returns a list of available commands @c and
         submodules @d. j=True if callable directly.
@@ -350,7 +348,7 @@ class BaseCmd(Base):
                 res['j'] = True
         return res
 
-    def cmd_cfg(self, p=()):
+    async def cmd_cfg(self, p=()):
         """
         Read this item's config.
 

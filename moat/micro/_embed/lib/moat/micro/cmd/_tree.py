@@ -278,8 +278,8 @@ class BaseSubCmd(BaseSuperCmd):
         action = action[1:]
         return await sub.dispatch(action, msg, **kw)
 
-    def cmd_dir(self, h=False):
-        res = super().cmd_dir(h=h)
+    async def cmd_dir(self, h=False):
+        res = await super().cmd_dir(h=h)
         res["d"] = list(self.sub.keys())
         return res
 

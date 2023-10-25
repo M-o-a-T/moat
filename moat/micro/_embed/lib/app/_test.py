@@ -28,14 +28,14 @@ class Cmd(BaseCmd):
         "returns a `NumIter`"
         return NumIter(lim)
 
-    def cmd_nit(self, lim: int = None):
+    async def cmd_nit(self, lim: int = None):
         "A non-iterator counter; simply counts calls to it."
         self.n += 1
         if lim is not None and self.n > lim:
             raise StopAsyncIteration
         return self.n
 
-    def cmd_clr(self, n: int = 0):
+    async def cmd_clr(self, n: int = 0):
         self.n = n
 
 

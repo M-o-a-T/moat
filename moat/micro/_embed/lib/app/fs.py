@@ -66,7 +66,7 @@ class Cmd(BaseCmd):
         # log(f"{fd}!{repr(f)}")
         f.close()
 
-    def cmd_reset(self, p=None):
+    async def cmd_reset(self, p=None):
         # close all
         for v in self._fd_cache.values():
             v.close()
@@ -79,7 +79,7 @@ class Cmd(BaseCmd):
         else:
             self._fs_prefix += "/" + p
 
-    def cmd_open(self, p, m="r"):
+    async def cmd_open(self, p, m="r"):
         p = self._fsp(p)
         try:
             f = open(p, m + 'b')
@@ -90,23 +90,23 @@ class Cmd(BaseCmd):
         else:
             return self._add_f(f)
 
-    def cmd_rd(self, f, o=0, n=64):
+    async def cmd_rd(self, f, o=0, n=64):
         # read
         fh = self._fd(f)
         fh.seek(o)
         return fh.read(n)
 
-    def cmd_wr(self, f, d, o=0):
+    async def cmd_wr(self, f, d, o=0):
         # write
         fh = self._fd(f)
         fh.seek(o)
         return fh.write(d)
 
-    def cmd_cl(self, f):
+    async def cmd_cl(self, f):
         # close
         self._del_f(f)
 
-    def cmd_ls(self, p="", x=False):
+    async def cmd_ls(self, p="", x=False):
         # dir
         p = self._fsp(p)
         if x:
@@ -120,12 +120,12 @@ class Cmd(BaseCmd):
             except AttributeError:
                 return [x[0] for x in os.ilistdir(p)]
 
-    def cmd_mkdir(self, p):
+    async def cmd_mkdir(self, p):
         # new dir
         p = self._fsp(p)
         os.mkdir(p)
 
-    def cmd_hash(self, p):
+    async def cmd_hash(self, p):
         # Hash the contents of a file
         import uhashlib
 
@@ -141,7 +141,7 @@ class Cmd(BaseCmd):
                 _h.update(_mem[:n])
         return _h.digest()
 
-    def cmd_stat(self, p):
+    async def cmd_stat(self, p):
         p = self._fsp(p)
         try:
             s = os.stat(p)
@@ -156,7 +156,7 @@ class Cmd(BaseCmd):
         else:
             return dict(m="?", d=s)
 
-    def cmd_mv(self, s, d, x=None, n=False):
+    async def cmd_mv(self, s, d, x=None, n=False):
         # move file
         p = self._fsp(s)
         q = self._fsp(d)
@@ -186,7 +186,7 @@ class Cmd(BaseCmd):
             os.rename(q, p)
             os.rename(r, q)
 
-    def cmd_rm(self, p):
+    async def cmd_rm(self, p):
         # unlink
         p = self._fsp(p)
         try:
@@ -196,7 +196,7 @@ class Cmd(BaseCmd):
                 raise FileNotFoundError(p)
             raise
 
-    def cmd_rmdir(self, p):
+    async def cmd_rmdir(self, p):
         # unlink dir
         p = self._fsp(p)
         try:
@@ -206,7 +206,7 @@ class Cmd(BaseCmd):
                 raise FileNotFoundError(p)
             raise
 
-    def cmd_new(self, p):
+    async def cmd_new(self, p):
         # new file
         p = self._fsp(p)
         try:

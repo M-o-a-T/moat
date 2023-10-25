@@ -33,13 +33,13 @@ class Cmd(BaseCmd):
         bus = self._bus(cd, True)
         # bus.close()
 
-    def cmd_reset(self, p=None):
+    async def cmd_reset(self, p=None):
         # close all
         for b in self._bus_cache.values():
             pass  # b.close()
         self._bus_cache = dict()
 
-    def cmd_open(self, c, d, cx={}, dx={}, f=1000000, t=1000000, s=False):
+    async def cmd_open(self, c, d, cx={}, dx={}, f=1000000, t=1000000, s=False):
         cd = (c, d)
         if cd in self._bus_cache:
             pass  # close it
@@ -49,17 +49,17 @@ class Cmd(BaseCmd):
         self._bus_cache[cd] = bus
         return cd
 
-    def cmd_rd(self, cd, i, n=16):
+    async def cmd_rd(self, cd, i, n=16):
         # read bus
         bus = self._bus(cd)
         return bus.readfrom(i, n)
 
-    def cmd_wr(self, cd, i, buf):
+    async def cmd_wr(self, cd, i, buf):
         # write bus
         bus = self._bus(cd)
         return bus.writeto(i, buf)
 
-    def cmd_wrrd(self, cd, i, buf, n=16):
+    async def cmd_wrrd(self, cd, i, buf, n=16):
         # write-then-read
         bus = self._bus(cd)
         d = bus.writeto(i, buf, False)
@@ -67,11 +67,11 @@ class Cmd(BaseCmd):
             return -d
         return bus.readfrom(i, n)
 
-    def cmd_cl(self, cd):
+    async def cmd_cl(self, cd):
         # close
         self._del_cd(cd)
 
-    def cmd_scan(self, cd):
+    async def cmd_scan(self, cd):
         # dir
         bus = self._bus(cd)
         return bus.scan()

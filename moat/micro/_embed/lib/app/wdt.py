@@ -50,7 +50,7 @@ class Cmd(BaseCmd):
         self.wdt.setup(self.cfg)
         self.wdt.ping()
 
-    def cmd_x(self, f=False, n=None):
+    async def cmd_x(self, f=False, n=None):
         """
         External keepalive.
 
@@ -58,7 +58,7 @@ class Cmd(BaseCmd):
         """
         self.wdt.ping(force=f)
 
-    def cmd_info(self):
+    async def cmd_info(self):
         if self.wdt is None:
             return None
         return dict(t=self.wdt.timeout, x=self.wdt.cfg["ext"], h=(self.wdt.wdt is not None))

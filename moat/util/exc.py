@@ -1,6 +1,7 @@
 """
 Exception handling helpers
 """
+from __future__ import annotations
 
 __all__ = ["exc_iter"]
 

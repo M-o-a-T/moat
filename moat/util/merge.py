@@ -1,3 +1,6 @@
+"Support for merge-in-place of dict contents"
+from __future__ import annotations
+
 __all__ = ["merge"]
 
 
@@ -15,7 +18,7 @@ def _merge_dict(d, other, drop=False, replace=True):
 
     if drop:
         keys = []
-        for k in d.keys():
+        for k in d.keys():  # noqa:SIM118
             if k not in other:
                 keys.append(k)
         for k in keys:

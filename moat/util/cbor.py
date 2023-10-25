@@ -94,7 +94,6 @@ class ExtraData(ValueError):
 
 class OutOfData(EOFError):
     "bytes missing"
-    pass
 
 
 class Packer:
@@ -258,6 +257,9 @@ class Tag:
             return False
         return self.tag == other.tag and self.value == other.value
 
+    def __hash__(self):
+        return hash(self.tag) ^ hash(self.value)
+
 
 class Unpacker:
     "Basic CBOR unpacker"
@@ -291,7 +293,7 @@ class Unpacker:
             data = await self._read(8)
             aux = struct.unpack_from("!Q", data, 0)[0]
         else:
-            assert tag_aux == CBOR_VAR_FOLLOWS, f"bogus tag {tb :02x}"
+            assert tag_aux == CBOR_VAR_FOLLOWS, f"bogus tag {tb:02x}"
             aux = None
 
         return tag, aux
@@ -300,7 +302,7 @@ class Unpacker:
         # (int) -> bytearray
         await self._reserve(n)
         i = self._buff_i
-        ret = self._buffer[i : i + n]
+        ret = self._buffer[i: i + n]
         self._buff_i = i + len(ret)
         return ret
 
@@ -390,7 +392,7 @@ class Unpacker:
         "unpack my buffer into an object"
         res = await self._any()
         # Buffer management: chop off the part we've read
-        self._buffer = self._buffer[self._buff_i :]
+        self._buffer = self._buffer[self._buff_i:]
         self._buff_i = 0
         return res
 
@@ -398,7 +400,7 @@ class Unpacker:
         return self._buff_i < len(self._buffer)
 
     def _get_extradata(self):
-        return self._buffer[self._buff_i :]
+        return self._buffer[self._buff_i:]
 
     def unpackb(self, packed) -> Any:
         "unpack"
@@ -464,7 +466,8 @@ class Unpacker:
             ob = await self._any()
             # attempt to interpet the tag and the value into a Python object.
             return self.tag_hook(aux, ob)
-        elif tag == CBOR_7:
+        else:
+            assert tag == CBOR_7
             if tb == CBOR_TRUE:
                 return True
             if tb == CBOR_FALSE:
@@ -473,7 +476,7 @@ class Unpacker:
                 return None
             if tb == CBOR_UNDEFINED:
                 return NotGiven
-            raise ValueError(f"unknown cbor tag 7 byte: {tb :02x}")
+            raise ValueError(f"unknown cbor tag 7 byte: {tb:02x}")
 
     async def _bytes(self, aux, btag=CBOR_BYTES):
         # TODO: limit to some maximum number of chunks and some maximum total bytes

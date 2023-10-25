@@ -1,6 +1,7 @@
 """
 This module contains proxy helpers.
 """
+from __future__ import annotations
 
 from .impl import NotGiven
 
@@ -18,7 +19,7 @@ __all__ = [
 
 class NoProxyError(ValueError):
     "Error for nonexistent proxy values"
-    pass  # pylint:disable=unnecessary-pass
+    # pylint:disable=unnecessary-pass
 
 
 class Proxy:
@@ -30,7 +31,7 @@ class Proxy:
         self.name = name
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({repr(self.name)})"
+        return f"{self.__class__.__name__}({self.name!r})"
 
     def ref(self):
         """Dereferences the proxy"""
@@ -56,7 +57,7 @@ class DProxy(Proxy):
 
     def __repr__(self):
         return (
-            f"{self.__class__.__name__}({repr(self.name)},"
+            f"{self.__class__.__name__}({self.name!r},"
             + ",".join(repr(x) for x in (self.a, self.k))
             + ")"
         )
@@ -76,7 +77,7 @@ def get_proxy(obj):
     try:
         return _RProxy[id(obj)]
     except KeyError:
-        global _pkey  # pylint:disable=global-statement
+        global _pkey  # noqa:PLW0603 pylint:disable=global-statement
         k = "p_" + str(_pkey)
         _pkey += 1
         _CProxy[k] = obj

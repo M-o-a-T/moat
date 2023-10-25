@@ -1,9 +1,11 @@
 """
 This module contains various helper functions and classes.
 """
-from concurrent.futures import CancelledError
+from __future__ import annotations
 
 import anyio
+from concurrent.futures import CancelledError
+
 import attr
 import outcome
 

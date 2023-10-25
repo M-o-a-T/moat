@@ -2,7 +2,8 @@
 Some rudimentary tests for packing
 """
 
-# pylint: disable=missing-function-docstring
+# ruff:noqa:D103 pylint: disable=missing-function-docstring
+from __future__ import annotations
 
 import pytest
 
@@ -11,6 +12,7 @@ from moat.util import as_proxy, attrdict, packer, unpacker
 
 class Bar:
     "A proxied object"
+    # ruff:noqa:PLW1641
 
     def __init__(self, x):
         self.x = x
@@ -23,7 +25,7 @@ class Bar:
 @as_proxy("fu", replace=True)
 class Foo(Bar):
     "A proxied class"
-    pass  # pylint: disable=unnecessary-pass
+    # pylint: disable=unnecessary-pass
 
 
 _val = [

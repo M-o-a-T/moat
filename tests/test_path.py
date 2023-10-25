@@ -2,7 +2,8 @@
 Testing util.Path
 """
 
-# pylint: disable=missing-function-docstring
+# ruff:noqa:D103 pylint: disable=missing-function-docstring
+from __future__ import annotations
 
 import pytest
 
@@ -54,7 +55,7 @@ _invalid = (
 )
 
 
-@pytest.mark.parametrize("a,b", _valid)
+@pytest.mark.parametrize("a,b", _valid)  # noqa:PT006
 def test_valid_paths(a, b):
     if isinstance(b, tuple):
         b, xb = b
@@ -76,9 +77,9 @@ def test_paths():
     q = p | "c"
     assert str(p) == "a.b"
     assert str(q) == "a.b.c"
-    r = p + ()
+    r = p + ()  # noqa:RUF005
     assert p is r
-    r = p + ("c", "d")
+    r = p + ("c", "d")  # noqa:RUF005
     assert str(p) == "a.b"
     assert str(r) == "a.b.c.d"
     pp = Path.build(("a", "b"))

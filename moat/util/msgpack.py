@@ -8,14 +8,15 @@ Extension types defined here:
 4: contains raw bytes, interpreted as UTF-8, returned as (named) Proxy object
 5: object constructor
 """
+from __future__ import annotations
 
 from functools import partial
-
-import msgpack
 
 from . import packer, stream_unpacker
 from .path import Path
 from .proxy import Proxy, _CProxy, obj2name
+
+import msgpack
 
 
 def _encode(data):

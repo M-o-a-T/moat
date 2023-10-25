@@ -1,6 +1,8 @@
 """
 Broadcasting support
 """
+from __future__ import annotations
+
 try:
     from weakref import WeakSet
 except ImportError:
@@ -100,7 +102,7 @@ class BroadcastReader:
     def close(self):
         "close this reader, detaching it from its parent"
         self._close()
-        self.parent._closed_reader(self)  # pylint: disable=protected-access
+        self.parent._closed_reader(self)  # noqa:SLF001 pylint: disable=protected-access
 
     async def aclose(self):
         "close this reader, detaching it from its parent"
@@ -198,5 +200,5 @@ class Broadcaster:
         "Close the broadcaster. No more writing."
         if self._rdr is not None:
             for r in self._rdr:
-                r._close()  # pylint: disable=protected-access
+                r._close()  # noqa:SLF001 pylint: disable=protected-access
             self._rdr = None

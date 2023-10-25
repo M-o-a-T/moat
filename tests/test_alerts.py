@@ -2,7 +2,8 @@
 Some rudimentary tests for queues and broadcasting
 """
 
-# pylint: disable=missing-function-docstring
+# ruff:noqa:D103 pylint: disable=missing-function-docstring
+from __future__ import annotations
 
 import anyio
 import pytest
@@ -10,7 +11,7 @@ import pytest
 from moat.util import AlertCollector
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_collect():
     r = AlertCollector()
     async with r, anyio.create_task_group() as tg:

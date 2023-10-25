@@ -1,12 +1,11 @@
 """
 Empty test file
 """
-
-import moat.util  # pylint: disable=unused-import
+from __future__ import annotations
 
 
 def test_nothing():
     """
     Empty test
     """
-    pass  # pylint: disable=unnecessary-pass
+    # pylint: disable=unnecessary-pass

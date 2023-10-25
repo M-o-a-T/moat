@@ -15,13 +15,14 @@ ever want to do that: paths are best processed as Path objects, not
 strings.
 
 """
+from __future__ import annotations
+
 import ast
 import collections.abc
 import logging
 import re
 from base64 import b64decode, b64encode
 from functools import total_ordering
-from typing import Union
 
 import simpleeval
 
@@ -74,7 +75,7 @@ class Path(collections.abc.Sequence):
         if not isinstance(data, tuple):
             return cls(*data)
         p = object.__new__(cls)
-        p._data = data
+        p._data = data  # noqa:SLF001
         p.mark = mark
         return p
 
@@ -98,6 +99,7 @@ class Path(collections.abc.Sequence):
         if not self._data:
             res.append(":")
         for x in self._data:
+            # ruff:noqa:PLW2901 # var overwritten
             if isinstance(x, str):
                 if x == "":
                     res.append(":e")
@@ -175,7 +177,7 @@ class Path(collections.abc.Sequence):
             return other.mark
         if self.mark != other.mark:
             raise RuntimeError(
-                f"Can't concat paths with different tags: {self.mark} and {other.mark}"
+                f"Can't concat paths with different tags: {self.mark} and {other.mark}",
             )
         return self.mark
 
@@ -219,7 +221,7 @@ class Path(collections.abc.Sequence):
         Constructor to build a Path from its string representation.
         """
         res = []
-        part: Union[type(None), bool, str] = False
+        part: None | bool | str = False
         # non-empty string: accept colon-eval or dot (inline)
         # True: require dot or colon-eval (after :t)
         # False: accept only colon-eval (start)
@@ -228,7 +230,7 @@ class Path(collections.abc.Sequence):
         esc: bool = False
         # marks that an escape char has been seen
 
-        eval_: Union[bool, int] = False
+        eval_: bool | int = False
         # marks whether the current input shall be evaluated;
         # 2=it's a hex number
 
@@ -254,7 +256,7 @@ class Path(collections.abc.Sequence):
                 part += x
             except TypeError:
                 raise SyntaxError(  # pylint: disable=raise-missing-from
-                    f"Cannot add {x!r} at {pos}"
+                    f"Cannot add {x!r} at {pos}",
                 )
 
         def done(new_part):
@@ -375,7 +377,7 @@ class P(Path):
     objects.
     """
 
-    def __new__(cls, path, *, mark=""):
+    def __new__(cls, path, *, mark=""):  # noqa:D102
         if isinstance(path, Path):
             if path.mark != mark:
                 path = Path(*path, mark=mark)
@@ -470,7 +472,8 @@ class PathShortener:
         self.depth = len(prefix)
         self.path = []
 
-    def __call__(self, res):
+    def __call__(self, res: dict):
+        "shortens the 'path' element in @res"
         try:
             p = res["path"]
         except KeyError:
@@ -478,7 +481,7 @@ class PathShortener:
         if list(p[: self.depth]) != list(self.prefix):
             raise RuntimeError(f"Wrong prefix: has {p!r}, want {self.prefix!r}")
 
-        p = p[self.depth :]  # noqa: E203
+        p = p[self.depth:]
         cdepth = min(len(p), len(self.path))
         for i in range(cdepth):
             if p[i] != self.path[i]:
@@ -499,11 +502,12 @@ class PathLongener:
     attributes is a no-op.
     """
 
-    def __init__(self, prefix: Union[Path, tuple] = ()):
+    def __init__(self, prefix: Path | tuple = ()):
         self.depth = len(prefix)
         self.path = Path.build(prefix)
 
     def __call__(self, res):
+        "expands the 'path' element in @res"
         p = res.get("path", None)
         if p is None:
             return
@@ -523,6 +527,6 @@ class PathLongener:
 # is to process tuples.
 _eval = simpleeval.SimpleEval(functions={})
 _eval.nodes[ast.Tuple] = lambda node: tuple(
-    _eval._eval(x) for x in node.elts  # pylint: disable=protected-access
+        _eval._eval(x) for x in node.elts  # noqa:SLF001 pylint: disable=protected-access
 )
 path_eval = _eval.eval

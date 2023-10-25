@@ -29,27 +29,33 @@ from .util import DelayedIter, IterWrap, enc_part, get_part, run_no_exc, wait_co
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import AsyncContextManager, AsyncIterator, Awaitable
+    from typing import AsyncContextManager, AsyncIterator, Awaitable, Callable
 
     from moat.micro.cmd.tree import BaseSuperCmd, Dispatch
 
 
 class ACM_h:
-    # Helper class.
-    #
-    # We want to use "async with disp.send_iter(…)", but send_iter forwards
-    # to dispatch, which is async, and "async with await …" is cumbersome.
-    #
-    # Thus we use this class to defer resolving the coroutine to the
-    # __aenter__ call.
+    """
+    Helper class.
+
+    We want to use "async with disp.send_iter(…)", but send_iter forwards
+    to dispatch, which is async, and "async with await …" is cumbersome.
+
+    Thus we use this class to defer resolving the coroutine to the
+    __aenter__ call.
+    """
     _cm: AsyncContextManager = None
 
-    def __init__(self, coro: Awaitable):
-        self.coro = coro
+    def __init__(self, p: Callable, *a, **k):
+        self.p = p
+        self.a = a
+        self.k = k
 
     async def __aenter__(self):
-        self._cm = cm = await self.coro
-        del self.coro
+        self._cm = cm = await self.p(*self.a, **self.k)
+        del self.p
+        del self.a
+        del self.k
         return await cm.__aenter__()
 
     def __aexit__(self, *tb) -> Awaitable:
@@ -255,7 +261,7 @@ class BaseCmd(Base):
 
         Do not override this.
         """
-        return ACM_h(self.root.dispatch(action, kw, rep=_rep))
+        return ACM_h(self.root.dispatch, action, kw, rep=_rep)
 
     def send_nr(self, *action, _x_err=(), **kw) -> Awaitable:
         """

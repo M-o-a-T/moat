@@ -582,7 +582,7 @@ class SubDispatch:
         return self._dest.dispatch(self._rem + a, k, x_err=_x_err)
 
     def _send_r(self, _a, _rep, *a, _x_err=(), **kw) -> AsyncContextManager:
-        return ACM_h(self._dest.dispatch(self._rem + (_a,) + a, kw, rep=_rep, x_err=_x_err))
+        return ACM_h(self._dest.dispatch, self._rem + (_a,) + a, kw, rep=_rep, x_err=_x_err)
 
     def __getattr__(self, k):
         if k[0] == "_":

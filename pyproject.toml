@@ -25,10 +25,12 @@ local_scheme = "no-local-version"
 [tool.moat]
 
 [tool.ruff]
-select = ["E", "F", "I", "D1"]
-ignore = ["D105", "D107"]
+select = ["ALL","E", "F", "I", "D1"]
+ignore = ["BLE001","ERA","N","FIX","TD","RET50","C","PLR","EM10","TRY003","FBT","T2","D4","D3","D2","PLW1514","RUF002","RUF001","S101","A003","PERF","PTH","ANN","D105", "D107"]
 
 line-length = 99
+preview = true
+explicit-preview-rules = true
 
 [tool.ruff.isort]
 no-lines-before = ["future"]
@@ -42,6 +44,12 @@ force-to-top = ["moat.util"]
 "upy" = ["micropython", "machine", "esp"]
 "typing" = ["typing"]
 
+
+[tool.ruff.flake8-comprehensions]
+allow-dict-calls-with-keyword-arguments = true
+
+[tool.ruff.flake8-builtins]
+builtins-ignorelist = ["help","id"]
 [tool.flake8]
 max-line-length = 99
 ignore = ["F841","F401","E731","E502","E402","E127","E123","E203","E231","W503"]

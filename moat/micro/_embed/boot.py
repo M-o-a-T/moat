@@ -1,3 +1,4 @@
+"MoaT satellite boot script"
 # from moat import setup
 # setup.run()
 from __future__ import annotations

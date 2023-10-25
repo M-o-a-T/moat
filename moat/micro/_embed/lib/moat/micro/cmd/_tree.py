@@ -7,7 +7,6 @@ from __future__ import annotations
 from functools import partial
 
 from moat.util import Path, import_
-
 from moat.micro.compat import AC_use, Event, TaskGroup, log
 
 from .base import ACM_h, BaseCmd
@@ -17,7 +16,7 @@ from .base import ACM_h, BaseCmd
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Awaitable, Never
+    from typing import AsyncContextManager, Awaitable, Never
 
     from moat.micro.proto.stack import BaseBuf, BaseMsg
     from moat.micro.stacks.util import BaseConnIter

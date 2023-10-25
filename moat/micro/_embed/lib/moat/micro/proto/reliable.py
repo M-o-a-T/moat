@@ -1,3 +1,6 @@
+"""
+When a channel is lossy, this module implements re-sending messages.
+"""
 from __future__ import annotations
 
 from ...util import NotGiven, Queue, ValueEvent
@@ -16,6 +19,10 @@ from ..compat import (
 )
 from .stack import ChannelClosed, StackedMsg
 
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Never
 
 class ReliableMsg(StackedMsg):
     """
@@ -92,7 +99,7 @@ class ReliableMsg(StackedMsg):
         self.retries = retries
         self._iters = {}
 
-    def reset(self, level=1):
+    def reset(self, level=1):  # noqa:D102
         self.s_send_head = 0  # next to be transmitted
         self.s_send_tail = 0  # no open messages before this point
         self.s_recv_head = 0  # next expected message. Messages before this are out of sequence
@@ -109,6 +116,12 @@ class ReliableMsg(StackedMsg):
             self.rq = Queue(self.window)
 
     async def send_msg(self, k=None):
+        """
+        Send some message.
+
+        @k: index of whatever to send next, if unacknowledged;
+        `None` if only sending an ACK.
+        """
         self.progressed = True
         if k is None:
             if not self.pend_ack:
@@ -262,8 +275,8 @@ class ReliableMsg(StackedMsg):
             async with TaskGroup() as tg, self.link as s:
                 self.__tg = tg
                 self.s = s
-                reader = await tg.spawn(self._read, _name="rel_read")
-                runner = await tg.spawn(self._run_bg, _name="rel_bg")
+                await tg.spawn(self._read, _name="rel_read")
+                await tg.spawn(self._run_bg, _name="rel_bg")
                 while self.in_reset:
                     t = ticks_ms()
                     td = ticks_diff(self.in_reset, t)
@@ -327,6 +340,7 @@ class ReliableMsg(StackedMsg):
                 pass
 
     async def send_reset(self, level=None, err=None):
+        "send a Reset message to the other side"
         if level is None:
             level = self.reset_level
         else:
@@ -385,9 +399,10 @@ class ReliableMsg(StackedMsg):
             self._is_up.set()
 
     async def recv(self):
+        "return the next message in the receive queue"
         return await self.rq.get()
 
-    async def _read(self):
+    async def _read(self) -> Never:
         while True:
             try:
                 if self.s is None:
@@ -400,7 +415,8 @@ class ReliableMsg(StackedMsg):
             await self._dispatch(msg)
 
     @property
-    def closed(self):
+    def closed(self) -> bool:
+        "check if the link is down"
         return self._is_down.is_set()
 
     async def _dispatch(self, msg):
@@ -563,6 +579,7 @@ class ReliableMsg(StackedMsg):
                 pass
 
     def between(self, a, b, c):
+        "check if a,b,c are consecutive, modulo the window size"
         d1 = (b - a) % self.window
         d2 = (c - a) % self.window
         return d1 <= d2

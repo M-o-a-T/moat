@@ -40,12 +40,12 @@ class Cmd(BaseCmd):
         else:
             self.wdt = WDT(cfg)
 
-    async def task(self):
+    async def task(self):  # noqa:D102
         self.wdt.setup(self.cfg)
         self.set_ready()
         await self.wdt.run()
 
-    async def reload(self):
+    async def reload(self):  # noqa:D102
         await super().reload()
         self.wdt.setup(self.cfg)
         self.wdt.ping()
@@ -59,6 +59,13 @@ class Cmd(BaseCmd):
         self.wdt.ping(force=f)
 
     async def cmd_info(self):
+        """
+        Current watchdog state::
+
+            t: timeout
+            x: external cfg
+            h: hot?
+        """
         if self.wdt is None:
             return None
         return dict(t=self.wdt.timeout, x=self.wdt.cfg["ext"], h=(self.wdt.wdt is not None))

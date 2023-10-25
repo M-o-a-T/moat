@@ -1,7 +1,20 @@
+"""
+A heap of compatibility code that adapts CPython and MicroPython
+to something roughly equivalent.
+"""
 from __future__ import annotations
 
 import asyncio
 import sys
+from time import ticks_add, ticks_diff, ticks_ms
+
+from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Never
+
 
 Event = asyncio.Event
 Lock = asyncio.Lock
@@ -11,19 +24,20 @@ TimeoutError = asyncio.TimeoutError
 _run = asyncio.run
 _tg = asyncio.TaskGroup
 CancelledError = asyncio.CancelledError
-from time import ticks_add, ticks_diff, ticks_ms
 
-from async_queue import QueueEmpty, QueueFull
+
 
 ExceptionGroup = asyncio.ExceptionGroup
 BaseExceptionGroup = asyncio.BaseExceptionGroup
 
 
 class EndOfStream(Exception):
+    "as from anyio"
     pass
 
 
 class BrokenResourceError(Exception):
+    "as from anyio"
     pass
 
 
@@ -40,10 +54,12 @@ WouldBlock = (QueueFull, QueueEmpty)
 
 
 def print_exc(a, b=sys.stderr):
+    "forwards to sys.print_exception"
     sys.print_exception(a, b)
 
 
 def log(s, *x, err=None):
+    "Basic logger.debug/error call (depends on @err)"
     if x:
         s = s % x
     print(s, file=sys.stderr)
@@ -52,11 +68,8 @@ def log(s, *x, err=None):
     pass
 
 
-class LostData(ValueError):
-    pass
-
-
 async def idle():
+    "sleep forever"
     while True:
         await sleep(60 * 60 * 12)  # half a day
 
@@ -100,26 +113,30 @@ class _MsecIter:
 
 
 def every_ms(t, p, *a, **k):
+    "call a function every @t milliseconds"
     return _MsecIter(t, p, a, k)
 
 
 def every(t, p, *a, **k):
+    "call a function every @t seconds"
     return every_ms(t * 1000, p, *a, **k)
 
 
 class TaskGroup(_tg):
+    "anyio.TaskGroup, lightly enhanced"
     async def spawn(self, p, *a, _name=None, **k):
-        # returns something you can cancel
-
+        "Starts a task now. Returns something you can cancel."
         # print("RUN",_name,p,a,k, file=sys.stderr)
         return self.create_task(p(*a, **k))  # , name=_name)
 
     def start_soon(self, p, *a, _name=None, **k):
+        "Starts a task soon."
         # print("RUN",_name,p,a,k, file=sys.stderr)
         self.create_task(p(*a, **k))
 
 
 def run(p, *a, **k):
+    "like anyio.run"
     return _run(p(*a, **k))
 
 
@@ -196,42 +213,54 @@ class _Error(_Outcome):
 
 
 class ValueEvent:
-    # A waitable value useful for inter-task synchronization,
-    # inspired by :class:`threading.Event`.
+    """
+    A waitable value useful for inter-task synchronization,
+    inspired by :class:`threading.Event`.
 
-    # An event object manages an internal value, which is initially
-    # unset, and a task can wait for it to become True.
+    An event object manages an internal value, which is initially
+    unset, and a task can wait for it to become True.
 
-    # Note that the value can only be read once.
+    Note that the value can only be read once.
+    """
 
     def __init__(self):
         self.event = Event()
         self.value = None
 
     def set(self, value):
-        # Set the result to return this value, and wake any waiting task.
+        """
+        Set the result to return this value, and wake any waiting task.
+        """
         self.value = _Value(value)
         self.event.set()
 
     def set_error(self, exc):
-        # Set the result to raise this exception, and wake any waiting task.
+        """
+        Set the result to raise this exception, and wake any waiting task.
+        """
         self.value = _Error(exc)
         self.event.set()
 
     def is_set(self):
-        # Check whether the event has occurred.
+        """
+        Check whether the event has occurred.
+        """
         return self.value is not None
 
     def cancel(self):
-        # Send a cancelation to the recipient.
+        """
+        Send a cancelation to the recipient.
+        """
         self.set_error(CancelledError())
 
     async def get(self):
-        # Block until the value is set.
+        """
+        Block until the value is set.
 
-        # If it's already set, then this method returns immediately.
+        If it's already set, then this method returns immediately.
 
-        # The value can only be read once.
+        The value can only be read once.
+        """
         await self.event.wait()
         return self.value.unwrap()
 
@@ -278,6 +307,7 @@ async def AC_use(obj, ctx):
 
 
 async def AC_exit(obj, *exc):
+    """End the latest async context manager opened by `ACM`."""
     received_exc = exc[0] is not None
 
     # Callbacks are invoked in LIFO order to match the behaviour of
@@ -313,7 +343,7 @@ async def AC_exit(obj, *exc):
     return received_exc and suppressed_exc
 
 
-class Shield:
+class _Shield:
     def __enter__(self):
         pass
 
@@ -321,8 +351,9 @@ class Shield:
         pass
 
 
-_shield = Shield()
+_shield = _Shield()
 
 
 def shield():
+    "no-op context manager, supposed to shield a (sub)task from cancels"
     return _shield

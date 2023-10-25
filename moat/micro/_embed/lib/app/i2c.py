@@ -1,3 +1,6 @@
+"""
+Access a satellite's i²c bus.
+"""
 from __future__ import annotations
 
 import machine
@@ -30,37 +33,44 @@ class Cmd(BaseCmd):
             return self._bus_cache[cd]
 
     def _del_cd(self, cd):
-        bus = self._bus(cd, True)
-        # bus.close()
+        self._bus(cd, True)
 
     async def cmd_reset(self, p=None):
-        # close all
+        "close all"
         for b in self._bus_cache.values():
             pass  # b.close()
         self._bus_cache = dict()
 
     async def cmd_open(self, c, d, cx={}, dx={}, f=1000000, t=1000000, s=False):
+        """
+        Open a bus.
+        @c, @d: control and data pins.
+        @cx, @dx: additional params for the pins.
+        @f: clock frequency in Hz.
+        @t: bus timeout in milliseconds.
+        @s: flag: use software I²C driver?
+        """
         cd = (c, d)
         if cd in self._bus_cache:
             pass  # close it
         c = machine.Pin(c, **cx)
         d = machine.Pin(d, **cx)
-        bus = (machine.SoftI2C if s else machine.I2C)(scl=c, sda=d, freq=f, timeout=t)
+        bus = (machine.SoftI2C if s else machine.I2C)(scl=c, sda=d, freq=f, timeout=t*1000)
         self._bus_cache[cd] = bus
         return cd
 
     async def cmd_rd(self, cd, i, n=16):
-        # read bus
+        "read @n bytes from bus @cd at address @i"
         bus = self._bus(cd)
         return bus.readfrom(i, n)
 
     async def cmd_wr(self, cd, i, buf):
-        # write bus
+        "write @buf to bus @cd at address @i"
         bus = self._bus(cd)
         return bus.writeto(i, buf)
 
     async def cmd_wrrd(self, cd, i, buf, n=16):
-        # write-then-read
+        "write @buf to bus @cd at address @i, then read @n bytes"
         bus = self._bus(cd)
         d = bus.writeto(i, buf, False)
         if d < len(buf):
@@ -68,10 +78,10 @@ class Cmd(BaseCmd):
         return bus.readfrom(i, n)
 
     async def cmd_cl(self, cd):
-        # close
+        "close bus @cd"
         self._del_cd(cd)
 
     async def cmd_scan(self, cd):
-        # dir
+        "scan bus @cd"
         bus = self._bus(cd)
         return bus.scan()

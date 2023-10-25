@@ -1,3 +1,8 @@
+"""
+Fake RTC, actually writes he state to disk
+
+Linux MicroPython only
+"""
 from __future__ import annotations
 
 import moat.micro.rtc as _rtc
@@ -23,4 +28,4 @@ class _FakeRTC:
 
 
 _rtc.RTC = _FakeRTC
-state = _rtc._State()
+state = _rtc.State()

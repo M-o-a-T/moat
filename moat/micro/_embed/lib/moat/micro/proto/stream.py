@@ -1,9 +1,11 @@
+"""
+Adaptor for MicroPython streams.
+"""
 from __future__ import annotations
 
 from asyncio import core
 
-from moat.util import DProxy, Proxy, get_proxy, name2obj, obj2name
-
+from moat.util import DProxy, NoProxyError, Proxy, get_proxy, name2obj, obj2name
 from moat.micro.compat import AC_use, Lock, TimeoutError, wait_for_ms
 
 from ._stream import _MsgpackMsgBlk, _MsgpackMsgBuf
@@ -35,7 +37,7 @@ class FileBuf(BaseBuf):
     """
 
     _buf = None
-    _any = lambda: 1
+    _any = lambda: 1  # noqa:E731
 
     def __init__(self, force_write=False, timeout=100):
         super().__init__({})
@@ -43,7 +45,7 @@ class FileBuf(BaseBuf):
         self.force_write = force_write
         self.timeout = timeout
 
-    async def setup(self):
+    async def setup(self):  # noqa:D102
         s = await self.stream()
         if isinstance(s, tuple):
             self.rs, self.ws = s
@@ -51,10 +53,11 @@ class FileBuf(BaseBuf):
             self.rs = self.ws = s
         self._any = getattr(self.rs, "any", lambda: 1)
 
-    async def stream(self):
+    async def stream(self):  # noqa:D102
         raise NotImplementedError
 
     async def rd(self, buf):
+        "forwards to ``.read(into)``"
         n = 0
         m = memoryview(buf)
         while len(m):
@@ -73,6 +76,7 @@ class FileBuf(BaseBuf):
         return n
 
     async def wr(self, buf):
+        "forwards to ``.write``"
         async with self._wlock:
             m = memoryview(buf)
             i = 0
@@ -173,7 +177,14 @@ def _encode(obj):
 
 
 class MsgpackMsgBuf(_MsgpackMsgBuf):
-    async def setup(self):
+    """
+    structured messages > stream of bytes
+
+    Use this if the layer below does not support/require byte boundaries
+    (one bytestring-ized message per call).
+    """
+
+    async def setup(self):  # noqa:D102
         await super().setup()
         self.pack = Packer(default=_encode).packb
         self.unpack = Unpacker(self.s, ext_hook=_decode, **self.cfg.get("pack", {})).unpack
@@ -187,7 +198,7 @@ class MsgpackMsgBlk(_MsgpackMsgBlk):
     (one bytestring-ized message per call).
     """
 
-    async def setup(self):
+    async def setup(self):  # noqa:D102
         await super().setup()
         self.pack = Packer(default=_encode).packb
         self.unpack = Unpacker(self.s, ext_hook=_decode, **self.cfg.get("pack", {})).unpack
@@ -206,14 +217,16 @@ class AIOBuf(BaseBuf):
     def __init__(self):
         pass
 
-    async def stream(self):
+    async def stream(self):  # noqa:D102
         raise NotImplementedError
 
     async def wr(self, buf):
+        "translates to ``.write`` + ``.drain``"
         self.s.write(buf)
         await self.s.drain()
 
     async def rd(self, buf):
+        "translates to ``.readinto``"
         s = self.s
         res = await s.readinto(buf)
         if not res:
@@ -232,7 +245,7 @@ class SingleAIOBuf(AIOBuf):
     def __init__(self, stream):
         self._s = stream
 
-    async def stream(self):
+    async def stream(self):  # noqa:D102
         if self._s is None:
             raise RuntimeError("used twice")
         s, self._s = self._s, None

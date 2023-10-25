@@ -1,9 +1,12 @@
-#!python
-# -*- Python -*-
+"""
+Minimal CBOR codec. Non-extensible (for now).
+"""
 from __future__ import annotations
 
 import struct
 from io import BytesIO
+
+from .msgpack import FormatError  # XXX
 
 try:
     from micropython import const
@@ -14,6 +17,8 @@ except ImportError:
 
 
 from moat.util import NotGiven
+
+# ruff: noqa:D102,D101,D103
 
 CBOR_TYPE_MASK = const(0xE0)  # top 3 bits
 CBOR_INFO_BITS = const(0x1F)  # low 5 bits
@@ -137,7 +142,13 @@ class Packer:
         return w(struct.pack("!Bd", CBOR_FLOAT64, val))
 
     def _encode_type_num(self, cbor_type, val):
-        """For some CBOR primary type [0..7] and an auxiliary unsigned number, return CBOR encoded bytes"""
+        """
+        For some CBOR primary type [0..7]
+        and an auxiliary unsigned number,
+        return CBOR encoded bytes.
+
+        If @val is None, assume variable-length content.
+        """
         w = self._w
 
         if val is None:
@@ -187,7 +198,6 @@ class Packer:
                 self._any(x)
 
     def _dict(self, d):
-        w = self._w
         self._encode_type_num(CBOR_MAP, len(d))
         for k, v in d.items():
             self._any(k)
@@ -394,7 +404,7 @@ class Unpacker:
         self.feed(packed)
         try:
             upack = self.unpack()
-            ret = upack.send(None)
+            upack.send(None)
         except StopIteration as s:
             if self._got_extradata():
                 raise ExtraData(s.value, bytes(self._get_extradata()))
@@ -510,7 +520,8 @@ def tagify(aux, ob):
     if aux == CBOR_TAG_NEGBIGNUM:
         return -1 - int.from_bytes(ob, "big")
     #   if aux == CBOR_TAG_REGEX:
-    #       # Is this actually a good idea? Should we just return the tag and the raw value to the user somehow?
+    #       # Is this actually a good idea? Should we just
+    #       # return the tag and the raw value to the user somehow?
     #       return re.compile(ob)
     return Tag(aux, ob)
 

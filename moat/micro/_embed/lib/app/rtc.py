@@ -8,7 +8,7 @@ from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util import enc_part, get_part
 
 
-class NotGiven2:
+class _NotGiven:
     pass
 
 
@@ -46,7 +46,7 @@ class Cmd(BaseCmd):
         """
         return enc_part(get_part(self.st.data, p))
 
-    async def cmd_w(self, p=(), d=NotGiven2):
+    async def cmd_w(self, p=(), d=_NotGiven):
         """
         Write (part of) the RTC data area.
 
@@ -61,7 +61,7 @@ class Cmd(BaseCmd):
         """
         if not p:
             raise ValueError("NoPath")
-        if d is NotGiven2:
+        if d is _NotGiven:
             del self.st[p]
         else:
             self.st[p] = d

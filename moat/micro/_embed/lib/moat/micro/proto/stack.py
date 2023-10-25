@@ -19,7 +19,6 @@ exception is the `Reliable` module, which limits this to commands.
 from __future__ import annotations
 
 from moat.util import as_proxy
-
 from moat.micro.compat import ACM, AC_exit, AC_use, log
 
 # Typing
@@ -27,21 +26,30 @@ from moat.micro.compat import ACM, AC_exit, AC_use, log
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any, AsyncContextManager, Awaitable
+    from typing import Any, AsyncContextManager, Awaitable, Buffer
 
 
 @as_proxy("_rErr")
 class RemoteError(RuntimeError):
+    """
+    Forwarded error from a remote system.
+    """
     pass
 
 
 @as_proxy("_rErrS")
 class SilentRemoteError(RemoteError):
+    """
+    Forwarded error from a remote system.
+
+    Unlike `RemoteError`, this should not trogger a stack dump.
+    """
     pass
 
 
 @as_proxy("_rErrCCl")
 class ChannelClosed(RuntimeError):
+    "Link closed."
     pass
 
 
@@ -170,9 +178,15 @@ class BaseMsg(BaseConn):
     """
 
     async def send(self, m: Any) -> Any:
+        """
+        Send a message.
+        """
         raise NotImplementedError(f"'send' in {self !r}")
 
     async def recv(self) -> Any:
+        """
+        Receive a message.
+        """
         raise NotImplementedError(f"'recv' in {self !r}")
 
 
@@ -183,10 +197,16 @@ class BaseBlk(BaseConn):
     Implement snd/rcv.
     """
 
-    async def snd(self, m: Any) -> Any:
+    async def snd(self, m: Buffer|bytes) -> None:
+        """
+        Send a block of bytes.
+        """
         raise NotImplementedError(f"'send' in {self !r}")
 
-    async def rcv(self) -> Any:
+    async def rcv(self) -> Buffer|bytes:
+        """
+        Receive a block of bytes.
+        """
         raise NotImplementedError(f"'recv' in {self !r}")
 
 
@@ -197,10 +217,21 @@ class BaseBuf(BaseConn):
     Implement rd/wr.
     """
 
-    async def rd(self, buf) -> int:
+    async def rd(self, buf: Buffer) -> int:
+        """
+        Read some bytes.
+
+        @buf is a bytearray to read data into. The return value is the
+        number of bytes filled.
+
+        This method never returns zero. End-of-file raises `EOFError`.
+        """
         raise NotImplementedError(f"'rd' in {self !r}")
 
-    async def wr(self, buf) -> int:
+    async def wr(self, buf: Buffer|bytes) -> int:
+        """
+        Write some bytes.
+        """
         raise NotImplementedError(f"'wr' in {self !r}")
 
 
@@ -219,7 +250,7 @@ class StackedConn(BaseConn):
         super().__init__(cfg=cfg)
         self.link = link
 
-    def wrap(self):
+    def wrap(self):  # noqa:D102
         return self.link.wrap()
 
     async def stream(self):
@@ -304,11 +335,11 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
         super().__init__(link, cfg)
         self.txt = cfg.get("txt", "S")
 
-    async def setup(self):
+    async def setup(self):  # noqa:D102
         log("X:%s start", self.txt)
         await super().setup()
 
-    async def teardown(self):
+    async def teardown(self):  # noqa:D102
         log("X:%s stop", self.txt)
         await super().teardown()
 
@@ -323,9 +354,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
                 res.append(f"{k}={repr(v)}")
         return "{" + " ".join(res) + "}"
 
-    async def send(self, m):
-        "Send message."
-        mm = self._repr(m)
+    async def send(self, m):  # noqa:D102
         log("S:%s %s", self.txt, self._repr(m, 'd'))
         try:
             res = await self.s.send(m)
@@ -336,8 +365,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             log("S:%s =%s", self.txt, self._repr(res, 'd'))
             return res
 
-    async def recv(self):
-        "Recv message."
+    async def recv(self):  # noqa:D102
         log("R:%s", self.txt)
         try:
             msg = await self.s.recv()
@@ -348,29 +376,26 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             log("R:%s %s", self.txt, self._repr(msg, 'd'))
             return msg
 
-    async def snd(self, m):
-        "Send buffer."
-        log("S:%s %r", self.txt, repr_b(m))
+    async def snd(self, m):  # noqa:D102
+        log("SB:%s %r", self.txt, repr_b(m))
         try:
-            res = await self.s.snd(m)
+            return await self.s.snd(m)
         except BaseException as exc:
-            log("S:%s stop %r", self.txt, exc)
+            log("SB:%s stop %r", self.txt, exc)
             raise
 
-    async def rcv(self):
-        "Recv buffer."
-        log("R:%s", self.txt)
+    async def rcv(self):  # noqa:D102
+        log("RB:%s", self.txt)
         try:
             msg = await self.s.rcv()
         except BaseException as exc:
-            log("R:%s stop %r", self.txt, exc)
+            log("RB:%s stop %r", self.txt, exc)
             raise
         else:
-            log("R:%s %r", self.txt, repr_b(msg))
+            log("RB:%s %r", self.txt, repr_b(msg))
             return msg
 
-    async def wr(self, buf):
-        "Send buf."
+    async def wr(self, buf):  # noqa:D102
         log("S:%s %r", self.txt, repr_b(buf))
         try:
             res = await self.s.wr(buf)
@@ -381,8 +406,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             log("S:%s =%r", self.txt, res)
             return res
 
-    async def rd(self, buf) -> len:
-        "Receive buf."
+    async def rd(self, buf) -> len:  # noqa:D102
         log("R:%s %d", self.txt, len(buf))
         try:
             res = await self.s.rd(buf)
@@ -393,8 +417,31 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             log("R:%s %r", self.txt, repr_b(buf[:res]))
             return res
 
+    async def cwr(self, buf):  # noqa:D102
+        log("SC:%s %r", self.txt, repr_b(buf))
+        try:
+            res = await self.s.cwr(buf)
+        except BaseException as exc:
+            log("SC:%s stop %r", self.txt, exc)
+            raise
+        else:
+            log("SC:%s =%r", self.txt, res)
+            return res
+
+    async def crd(self, buf) -> len:  # noqa:D102
+        log("RC:%s %d", self.txt, len(buf))
+        try:
+            res = await self.s.crd(buf)
+        except BaseException as exc:
+            log("RC:%s stop %r", self.txt, exc)
+            raise
+        else:
+            log("RC:%s %r", self.txt, repr_b(buf[:res]))
+            return res
+
 
 def repr_b(b):
+    "show bytearray and memoryview as bytes"
     if isinstance(b, bytes):
         return b
     return bytes(b)

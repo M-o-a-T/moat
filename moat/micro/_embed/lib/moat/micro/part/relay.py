@@ -32,13 +32,13 @@ class Relay(BaseCmd):
         self.t = [t.get("off", 0), t.get("on", 0)]
         self.note = cfg.get("note", None)
 
-    async def setup(self):
+    async def setup(self):  # noqa:D102
         if await self.pin.rdy():
             raise StoppedError("pin")
         await self.cmd_w()
         await super().setup()
 
-    async def run(self):
+    async def run(self):  # noqa:D102
         self.pin = self.root.sub_at(*self.cfg.pin)
         async with TaskGroup() as self.__tg:
             await super().run()
@@ -99,10 +99,14 @@ class Relay(BaseCmd):
         return self.value
 
     async def get(self):
+        """
+        Return the current intended state (async version)
+        """
         return self.get_sync()
 
     @property
     def delayed(self):
+        "flag whether the relay is delaying a change"
         return self._delay is not None
 
     async def cmd_r(self):

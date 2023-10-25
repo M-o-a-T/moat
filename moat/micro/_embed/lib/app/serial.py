@@ -26,12 +26,12 @@ class Raw(BaseCmdBBM):
     max_idle = 100
     pack = None
 
-    async def stream(self):
+    async def stream(self):  # noqa:D102
         return await AC_use(self, Serial(self.cfg))
 
 
 class Link(BaseCmdMsg):
     """Sends/receives MoaT messages using some device"""
 
-    async def stream(self):
+    async def stream(self):  # noqa:D102
         return await AC_use(self, console_stack(Serial(self.cfg), self.cfg))

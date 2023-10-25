@@ -1,20 +1,24 @@
+"""
+Access a satellite's Flash file system.
+"""
 from __future__ import annotations
 
 import errno
 import os
 
 from moat.util import as_proxy
-
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.proto.stack import SilentRemoteError
 
 
 class FileNotFoundError(SilentRemoteError):
+    "standard exception"
     def __reduce__(self):
         return (FileNotFoundError, (self.args[0],), {})
 
 
 class FileExistsError(SilentRemoteError):
+    "standard exception"
     def __reduce__(self):
         return (FileExistsError, (self.args[0],), {})
 
@@ -24,6 +28,11 @@ as_proxy("_FxErr", FileExistsError)
 
 
 class Cmd(BaseCmd):
+    """
+    File system access.
+
+    Set "root" to the file system path this command should apply to.
+    """
     _fd_last = 0
     _fd_cache = None
 
@@ -67,7 +76,7 @@ class Cmd(BaseCmd):
         f.close()
 
     async def cmd_reset(self, p=None):
-        # close all
+        "close all"
         for v in self._fd_cache.values():
             v.close()
         self._fd_cache = dict()
@@ -80,6 +89,7 @@ class Cmd(BaseCmd):
             self._fs_prefix += "/" + p
 
     async def cmd_open(self, p, m="r"):
+        "open @f in binary mode @m (r,w)"
         p = self._fsp(p)
         try:
             f = open(p, m + 'b')
@@ -91,23 +101,30 @@ class Cmd(BaseCmd):
             return self._add_f(f)
 
     async def cmd_rd(self, f, o=0, n=64):
-        # read
+        "read @n bytes from @f at offset @o"
         fh = self._fd(f)
         fh.seek(o)
         return fh.read(n)
 
     async def cmd_wr(self, f, d, o=0):
-        # write
+        "write @d to @f at offset @o"
         fh = self._fd(f)
         fh.seek(o)
         return fh.write(d)
 
     async def cmd_cl(self, f):
-        # close
+        "close @f"
         self._del_f(f)
 
     async def cmd_ls(self, p="", x=False):
-        # dir
+        """
+        dir of @p.
+
+        Set @x to return a list of stat mappings::
+        n: name
+        t: time
+        s: size
+        """
         p = self._fsp(p)
         if x:
             try:
@@ -121,12 +138,14 @@ class Cmd(BaseCmd):
                 return [x[0] for x in os.ilistdir(p)]
 
     async def cmd_mkdir(self, p):
-        # new dir
+        "new dir at @p"
         p = self._fsp(p)
         os.mkdir(p)
 
     async def cmd_hash(self, p):
-        # Hash the contents of a file
+        """
+        Hash the contents of @p, sha256
+        """
         import uhashlib
 
         _h = uhashlib.sha256()
@@ -142,6 +161,16 @@ class Cmd(BaseCmd):
         return _h.digest()
 
     async def cmd_stat(self, p):
+        """
+        Flags of @p.
+
+        Returns a mapping::
+
+            m: mode (f,d,?)
+            s: size (files only)
+            t: mod time
+            d: state bits
+        """
         p = self._fsp(p)
         try:
             s = os.stat(p)
@@ -157,7 +186,13 @@ class Cmd(BaseCmd):
             return dict(m="?", d=s)
 
     async def cmd_mv(self, s, d, x=None, n=False):
-        # move file
+        """
+        move file @s to @d.
+
+        If @n is True, the destination must not exist
+        @x is the name of a temp file; if set, it is used for swapping @s
+        and @d.
+        """
         p = self._fsp(s)
         q = self._fsp(d)
         os.stat(p)  # must exist
@@ -187,7 +222,7 @@ class Cmd(BaseCmd):
             os.rename(r, q)
 
     async def cmd_rm(self, p):
-        # unlink
+        "unlink file @p"
         p = self._fsp(p)
         try:
             os.remove(p)
@@ -197,7 +232,7 @@ class Cmd(BaseCmd):
             raise
 
     async def cmd_rmdir(self, p):
-        # unlink dir
+        "unlink dir @p"
         p = self._fsp(p)
         try:
             os.rmdir(p)
@@ -207,7 +242,7 @@ class Cmd(BaseCmd):
             raise
 
     async def cmd_new(self, p):
-        # new file
+        "new file @p"
         p = self._fsp(p)
         try:
             f = open(p, "wb")

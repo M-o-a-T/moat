@@ -1,4 +1,8 @@
-# micropython
+"""
+This code is used by MicroPython to set up the test dispatcher.
+
+TODO: replace this with the standard "main.py".
+"""
 from __future__ import annotations
 
 import os
@@ -19,7 +23,7 @@ else:
 sys.path.insert(0,"./stdlib")
 sys.path.insert(0,".")
 
-import main
+import main  # noqa:E402
 
 main.go(mode, fake_end=False)
 

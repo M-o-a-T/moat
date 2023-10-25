@@ -1,3 +1,6 @@
+"""
+Connection handling for TCP sockets
+"""
 from __future__ import annotations
 
 import anyio
@@ -16,6 +19,10 @@ if TYPE_CHECKING:
 class TcpIter(BaseConnIter):
     """
     A connection iterator for TCP sockets
+
+    @host: address to listen on. No default!
+
+    @port: port to listen on. No default.
     """
 
     def __init__(self, host, port):
@@ -23,7 +30,7 @@ class TcpIter(BaseConnIter):
         self.host = host
         self.port = port
 
-    async def accept(self) -> Never:
+    async def accept(self) -> Never:  # noqa:D102
         li = await anyio.create_tcp_listener(local_host=self.host, local_port=self.port)
         async with li:
             self.set_ready()

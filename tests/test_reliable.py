@@ -20,7 +20,7 @@ class Head(StackedMsg):
     n: int = 0
     done: Event = None
 
-    async def setup(self):
+    async def setup(self):  # noqa:D102
         await super().setup()
         self.done = Event()
 

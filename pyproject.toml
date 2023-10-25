@@ -25,20 +25,20 @@ local_scheme = "no-local-version"
 [tool.moat]
 
 [tool.ruff]
-select = ["E", "F", "I"]
+select = ["E", "F", "I", "D1"]
+ignore = ["D105", "D107"]
 
 line-length = 99
 
 [tool.ruff.isort]
 no-lines-before = ["future"]
 required-imports = ["from __future__ import annotations"]
-section-order = ["future", "typing", "standard-library", "first-party", "upy", "moat-util", "moat", "moat-micro", "local-folder", "third-party"]
+section-order = ["future", "typing", "standard-library", "first-party", "upy", "moat", "local-folder", "third-party"]
 extra-standard-library = ["pytest", "anyio"]
+force-to-top = ["moat.util"]
 
 [tool.ruff.isort.sections]
 "moat" = ["moat"]
-"moat-micro" = ["moat.micro"]
-"moat-util" = ["moat.util"]
 "upy" = ["micropython", "machine", "esp"]
 "typing" = ["typing"]
 

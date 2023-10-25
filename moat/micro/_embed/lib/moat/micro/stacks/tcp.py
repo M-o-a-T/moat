@@ -1,9 +1,16 @@
+"""
+Support code to connect to a TCP server.
+"""
 from __future__ import annotations
 
 from ..compat import Event, TaskGroup, run_server
 from ..proto.stream import SingleAIOBuf
 from ..stacks.util import BaseConnIter
 
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Never
 
 class TcpIter(BaseConnIter):
     """
@@ -15,7 +22,7 @@ class TcpIter(BaseConnIter):
         self.host = host
         self.port = port
 
-    async def accept(self) -> Never:
+    async def accept(self) -> Never:  # noqa:D102
         async with TaskGroup() as tgx:
             evt = Event()
 

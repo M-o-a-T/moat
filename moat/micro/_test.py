@@ -11,9 +11,8 @@ from contextvars import ContextVar
 from pathlib import Path
 from random import random
 
-from moat.util import combine_dict, packer, yload
-
 import moat.micro
+from moat.util import combine_dict, packer, yload
 from moat.micro.cmd.tree import Dispatch
 from moat.micro.compat import TaskGroup
 
@@ -37,9 +36,11 @@ temp_dir = ContextVar("temp_dir")
 
 required = [
     "__future__",
+    "copy",
     "errno",
     "pprint",
     "typing",
+    "types",
     "functools",
     "collections",
     "collections-deque",

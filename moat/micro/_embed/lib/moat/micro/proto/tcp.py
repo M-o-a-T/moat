@@ -14,11 +14,14 @@ p = select.poll()
 
 
 class Link(AIOBuf):
+    """
+    A channel that connects to a remote TCP socket.
+    """
     def __init__(self, host: str, port: int):
         self.host = host
         self.port = port
 
-    async def stream(self):
+    async def stream(self):  # noqa:D102
         rs, ws = await asyncio.open_connection(self.host, self.port)
         if rs is not ws:
             RuntimeError("SingleSockOnly %r %r", rs, ws)

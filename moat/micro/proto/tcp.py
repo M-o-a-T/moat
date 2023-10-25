@@ -11,10 +11,13 @@ from moat.micro.proto.stream import AnyioBuf
 
 
 class Link(AnyioBuf):
+    """
+    A channel that connects to a remote TCP socket.
+    """
     def __init__(self, host: str, port: int):
         self.host = host
         self.port = port
 
-    async def stream(self):
+    async def stream(self):  # noqa:D102
         s = await anyio.connect_tcp(self.host, self.port)
         return await AC_use(self, s)

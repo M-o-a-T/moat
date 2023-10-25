@@ -5,11 +5,8 @@ Basic handler for iterating incoming Moat connections.
 from __future__ import annotations
 
 from moat.util import Queue
-
 from moat.micro.compat import ACM, AC_exit, Event, TaskGroup
 from moat.micro.proto.stack import BaseConn
-
-TEST_MAGIC = b"r\x0dn\x0a-\x00x\x0ce\x1b!"
 
 # typing
 from typing import TYPE_CHECKING  # isort:skip
@@ -17,6 +14,8 @@ from typing import TYPE_CHECKING  # isort:skip
 if TYPE_CHECKING:
     from typing import Awaitable, Never
 
+
+TEST_MAGIC = b"r\x0dn\x0a-\x00x\x0ce\x1b!"
 
 class BaseConnIter:
     """
@@ -38,12 +37,15 @@ class BaseConnIter:
         await AC_exit(self, *exc)
 
     def set_ready(self) -> None:
+        "signals that the socket-or-whatever accepts connections"
         self.evt.set()
 
     def is_ready(self) -> Awaitable:
+        "wait for the socket-or-whatever to accept connections"
         return self.evt.wait()
 
     def add_conn(self, c: BaseConn) -> Awaitable:
+        "queues the connection for starting a task"
         return self.q.put(c)
 
     async def accept(self) -> Never:

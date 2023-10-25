@@ -26,7 +26,7 @@ class ArrayCmd(BaseSuperCmd):
         super().__init__(cfg)
         self.apps = []
 
-    async def setup(self):
+    async def setup(self):  # noqa:D102
         await super().setup()
         await self._setup_apps()
 
@@ -81,7 +81,7 @@ class ArrayCmd(BaseSuperCmd):
             set_part(cfg, ii, i + self.cfg.get("i_off", 0))
         return cfg
 
-    async def reload(self):
+    async def reload(self):  # noqa:D102
         await super().reload()
         self.n = self.cfg["n"]
         for i, app in enumerate(self.apps):

@@ -4,7 +4,6 @@ R/W access to configuration data.
 from __future__ import annotations
 
 from moat.util import NotGiven
-
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util import enc_part, get_part
 

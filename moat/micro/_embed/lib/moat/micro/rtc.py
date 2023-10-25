@@ -12,29 +12,33 @@ try:
     from machine import RTC
 except ImportError:
     RTC = None
+from moat.util import merge
 from moat.micro.compat import log
 from moat.micro.proto.stream import _decode, _encode
 
 import msgpack as mp
 
 _pack = mp.Packer(default=_encode).packb
-_unpack = lambda x: mp.unpackb(x, ext_hook=_decode)
+_unpack = lambda x: mp.unpackb(x, ext_hook=_decode)  # noqa:E731
 
 _dfn = "moat.rtc"
 
 
 def get_p(cur, p):
+    "retrieve an item"
     for pp in p:
         cur = cur[pp]
     return cur
 
 
 def set_p(cur, p, v):
+    "set an item"
     cur = get_p(cur, p[:-1])
     cur[p[-1]] = v
 
 
 def del_p(cur, p):
+    "delete an item"
     pp = p[0]
     if pp in cur:
         if len(p) > 1:
@@ -44,7 +48,18 @@ def del_p(cur, p):
         del cur[pp]
 
 
-class _State:
+class State:
+    """
+    Storage for MoaT state.
+
+    This is a singleton object, representing the content of non-volatile
+    RAM. MoaT uses it to avoid writing volatile data to Flash file system
+    storage.
+
+    Data are represented as a mapping. String keys are global settings.
+    Tuples are paths into the configuration: the value updates or replaces
+    the static configuration's content at that point.
+    """
     def __init__(self):
         self._d = {}
         try:
@@ -62,15 +77,14 @@ class _State:
 
     @property
     def data(self):
+        "data directory"
         return self._d
 
     def update(self, cfg):
         """Given a config, update it with my data"""
-        from moat.micro.main import dict_upd
-
         for k, v in self._d.items():
             if isinstance(v, dict):
-                dict_upd(cfg, k, v)
+                merge(cfg.setdefault(k, {}), v)
 
         return cfg
 
@@ -108,6 +122,6 @@ class _State:
 
 
 try:
-    state = _State()
+    state = State()
 except ImportError:
     state = None

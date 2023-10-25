@@ -1,4 +1,6 @@
-# coding: utf-8
+"""
+async MsgPack codec
+"""
 # cloned from https://github.com/msgpack/msgpack-python
 
 # Parts of this have been modified to be compatble with micropython.
@@ -31,26 +33,22 @@ from moat.util import attrdict
 
 
 class UnpackException(Exception):
-    pass
-
-
-class BufferFull(UnpackException):
+    "superclass, not raised"
     pass
 
 
 class OutOfData(UnpackException):
+    "missing data in buffer"
     pass
 
 
 class FormatError(UnpackException):
-    pass
-
-
-class StackError(UnpackException):
+    "Error code read"
     pass
 
 
 class ExtraData(ValueError):
+    "too much data in buffer"
     def __init__(self, unpacked, extra):
         self.unpacked = unpacked
         self.extra = extra
@@ -60,14 +58,12 @@ class ExtraData(ValueError):
 
 
 class ExtType:
-    """ExtType represents ext type in msgpack."""
+    """ExtType represents extension types in msgpack."""
 
     def __init__(self, code, data):
         self.code = code
         self.data = data
 
-
-newlist_hint = lambda size: []
 
 _TYPE_IMMEDIATE = const(0)
 _TYPE_ARRAY = const(1)
@@ -113,6 +109,9 @@ _MSGPACK_HEADERS = {
 
 
 class Unpacker(object):
+    """
+    Manager for buffered and streamed unpacking.
+    """
     def __init__(
         self,
         stream=None,
@@ -140,6 +139,7 @@ class Unpacker(object):
         self._min_memview_len = min_memview_len
 
     def feed(self, data):
+        "set the buffer"
         assert self._stream is None
         self._buffer = memoryview(data)
         self._buff_i = 0
@@ -213,7 +213,7 @@ class Unpacker(object):
         elif b == 0xC0:
             obj = None
         elif b == 0xC1:
-            raise RuntimeError("unused code")
+            raise FormatError("unused code")
         elif b == 0xC2:
             obj = False
         elif b == 0xC3:
@@ -265,11 +265,10 @@ class Unpacker(object):
             await self._reserve(size)
             (n,) = struct.unpack_from(fmt, self._buffer, self._buff_i)
             self._buff_i += size
-        # else:
-        # raise FormatError("Unknown header: 0x%x" % b)
         return typ, n, obj
 
     async def unpack(self):
+        "extract one (top-level) item from the buffer"
         res = await self._unpack()
         # Buffer management: chop off the part we've read
         self._buffer = self._buffer[self._buff_i :]
@@ -280,7 +279,7 @@ class Unpacker(object):
         typ, n, obj = await self._read_header()
 
         if typ == _TYPE_ARRAY:
-            ret = newlist_hint(n)
+            ret = []
             for i in range(n):
                 ret.append(await self.unpack())
             # if self._list_hook is not None:
@@ -291,7 +290,7 @@ class Unpacker(object):
             ret = attrdict()
             for _ in range(n):
                 key = await self.unpack()
-                if type(key) is str and hasattr(sys, 'intern'):
+                if type(key) is str and hasattr(sys, 'intern'):  # noqa:E721
                     key = sys.intern(key)
                 ret[key] = await self.unpack()
             # if self._object_hook is not None:
@@ -333,6 +332,11 @@ class Unpacker(object):
             raise RuntimeError("Needs async")
 
     def unpackb(self, packed):
+        """
+        Decode the given buffer.
+
+        The buffer cannot have too many (or too few) bytes.
+        """
         self.feed(packed)
         try:
             next(self.unpack())
@@ -346,6 +350,9 @@ class Unpacker(object):
 
 
 class Packer(object):
+    """
+    Manager for buffered and streamed packing.
+    """
     def __init__(
         self,
         # unicode_errors=None,
@@ -502,6 +509,7 @@ class Packer(object):
             raise TypeError("Cannot serialize %r" % (obj,))
 
     def packb(self, obj):
+        "Packs a single data item. Returns the bytes."
         try:
             self._pack(obj)
             return self._buffer.getvalue()
@@ -554,7 +562,6 @@ def unpackb(packed, **kwargs):
     Raises ``ExtraData`` when *packed* contains extra bytes.
     Raises ``ValueError`` when *packed* is incomplete.
     Raises ``FormatError`` when *packed* is not valid msgpack.
-    Raises ``StackError`` when *packed* contains too nested.
     Other exceptions can be raised during unpacking.
 
     See :class:`Unpacker` for options.

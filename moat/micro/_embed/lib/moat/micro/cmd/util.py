@@ -5,7 +5,6 @@ Helpers for MoaT command interpreters et al.
 from __future__ import annotations
 
 from moat.util import NotGiven, ValueEvent, as_proxy
-
 from moat.micro.compat import (
     TimeoutError,  # pylint: disable=redefined-builtin
     log,
@@ -22,8 +21,9 @@ from moat.micro.proto.stack import RemoteError, SilentRemoteError
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from anyio import CancelScope
     from typing import Any, AsyncIterable, AsyncIterator, Callable, Iterator, Mapping
+
+    from anyio import CancelScope
 
     from moat.micro.cmd.base import BaseCmd
 
@@ -67,19 +67,25 @@ async def run_no_exc(p, msg, x_err=()):
         log("Error in %r %r", p, msg, err=err)
 
 
-def get_part(cur, p: list[str | int]):
+def get_part(cur, p: list[str | int], add:bool = False):
     "Walk into a mapping or object structure"
     for pp in p:
         try:
             cur = getattr(cur, pp)
         except (TypeError, AttributeError):
-            cur = cur[pp]
+            try:
+                cur = cur[pp]
+            except KeyError:
+                if not add:
+                    raise
+                cur[pp] = nc = []
+                cur = nc
     return cur
 
 
 def set_part(cur, p: list[str | int], v: Any):
     "Modify a mapping or object structure"
-    cur = get_part(cur, p[:-1])
+    cur = get_part(cur, p[:-1], add=True)
     try:
         cur[p[-1]] = v
     except TypeError:
@@ -130,6 +136,36 @@ def enc_part(cur):
     else:
         return cur
         # guaranteed not to be a tuple
+
+
+# like get/set_part but without the attributes
+
+def get_p(cur, p, add=False):
+    "retrieve an item"
+    for pp in p:
+        try:
+            cur = cur[pp]
+        except KeyError:
+            if not add:
+                raise
+            cur[pp] = nc = {}
+            cur = nc
+    return cur
+
+def set_p(cur, p, v):
+    "set an item"
+    cur = get_p(cur, p[:-1], add=True)
+    cur[p[-1]] = v
+
+def del_p(cur, p):
+    "delete an item"
+    pp = p[0]
+    if pp in cur:
+        if len(p) > 1:
+            del_p(cur[pp], p[1:])
+        if cur[pp]:
+            return
+        del cur[pp]
 
 
 class ValueTask:
@@ -421,3 +457,35 @@ class RecvIter(_DelayedIter):
         "cancel the iterator"
         self._val.set_error(StoppedError("cancel"))
         self._warned = 0
+
+
+class CallIter:
+    """
+    An iterator helper.
+
+    You initialize it with the read function.
+
+    The optional "old" attribute (override) is a function that extracts
+    an ``o=`` parameter from the previous return value, so that constant
+    results won't trigger the iterator.
+    """
+    old=None
+
+    def __init__(self, fn):
+        self.fn = fn
+
+    async def __aenter__(self):
+        return self
+    async def __aexit__(self, *tb):
+        pass
+    def __aiter__(self):
+        self.o = None
+        return self
+    async def __anext__(self):
+        if self.o is None or self.old is None:
+            v = await self.fn()
+        else:
+            v = await self.fn(o=self.old(self.o))
+        self.o = v
+        return v
+

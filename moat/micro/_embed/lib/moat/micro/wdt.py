@@ -26,6 +26,11 @@ import machine
 import moat.micro.main as M
 from moat.micro.compat import Event, TimeoutError, wait_for_ms
 
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Never
+
 try:
     _reset = machine.reset
 except AttributeError:  # on Linux?
@@ -61,7 +66,7 @@ class WDT:
             M.WDT = self
         self._ping = Event()
 
-    def setup(self, cfg):
+    def setup(self, cfg):  # noqa:D102
         self.cfg = cfg
         t = cfg.get("t", 0)
         if not t:
@@ -77,7 +82,7 @@ class WDT:
             self.trigger = self.cfg.get("tt", self.timeout / 2)
         self._ping.set()
 
-    async def run(self):
+    async def run(self) -> Never:  # noqa:D102
         T = getattr(machine, "Timer", None)
         t = None
         while True:

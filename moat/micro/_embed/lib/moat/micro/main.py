@@ -1,30 +1,20 @@
-# global hardware watchdog
+"""
+Main entry point for satellites.
+
+Called from the root "main.py".
+"""
 from __future__ import annotations
 
 import sys
 
 import machine
 
-from moat.util import NotGiven
-
+from moat.util import merge
 from moat.micro.compat import print_exc
 
 import msgpack
 
 WDT = None
-
-
-def dict_upd(d, k, v):
-    if isinstance(v, dict):
-        dd = d.setdefault(k, {})
-        for kk, vv in v.items():
-            dict_upd(dd, kk, vv)
-        if not dd:
-            del d[k]
-    elif v is NotGiven:
-        d.pop(k, None)
-    else:
-        d[k] = v
 
 
 def main(cfg: str | dict, fake_end=False):
@@ -57,7 +47,7 @@ def main(cfg: str | dict, fake_end=False):
                 for k, v in cf2:
                     if not isinstance(v, dict):
                         continue
-                    dict_upd(cfg, k, v)
+                    merge(cfg.setdefault(k, {}), v)
 
         except Exception as exc:
             print_exc(exc)

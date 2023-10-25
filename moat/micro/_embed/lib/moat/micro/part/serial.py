@@ -1,8 +1,11 @@
+"""
+Adapter for MicroPython serial ports.
+"""
 from __future__ import annotations
 
 import machine as M
 
-from moat.micro.compat import AC_use, TimeoutError
+from moat.micro.compat import AC_use, TimeoutError, log, wait_for_ms
 from moat.micro.proto.stream import FileBuf
 
 
@@ -14,6 +17,9 @@ from moat.micro.proto.stream import FileBuf
 # baud: 9600
 #
 class Serial(FileBuf):
+    """
+    Interface to a MicroPython serial port.
+    """
     max_idle = 100
     pack = None
 
@@ -21,6 +27,7 @@ class Serial(FileBuf):
         self.cfg = cfg
 
     async def stream(self):
+        "opens the port, does flushing and RTS/CTS"
         cfg = self.cfg
         uart_cfg = {}
         if 'tx' in cfg:
@@ -41,9 +48,9 @@ class Serial(FileBuf):
         fl = p.get("flow", "")
         f = 0
         if "C" in fl:
-            f |= UART.CTS
+            f |= M.UART.CTS
         if "R" in fl:
-            f |= UART.RTS
+            f |= M.UART.RTS
         uart_cfg['stop'] = p.get("stop", None) or 1  # no 1.5 stop bits
 
         ser = M.UART(cfg.get("port", 0), **uart_cfg)

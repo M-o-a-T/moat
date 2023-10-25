@@ -112,7 +112,7 @@ async def AC_use(obj, ctx):
 
 
 async def AC_exit(obj, *exc):
-    """End the latest AsyncExitStack added by `ACM`."""
+    """End the latest AsyncExitStack opened by `ACM`."""
     if not exc:
         exc = (None, None, None)
     return await obj._AC_.pop().__aexit__(*exc)  # pylint:disable=protected-access

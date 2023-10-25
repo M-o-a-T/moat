@@ -26,7 +26,7 @@ class Serial(AnyioBuf):
     max_idle = 100
     pack = None
 
-    async def stream(self):
+    async def stream(self):  # noqa:D102
         cfg = self.cfg
         uart_cfg = {}
         uart_cfg['port'] = cfg["port"]

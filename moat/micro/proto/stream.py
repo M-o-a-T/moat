@@ -9,7 +9,6 @@ from contextlib import asynccontextmanager
 from functools import partial
 
 from moat.util import CtxObj, DProxy, Proxy, get_proxy, name2obj, obj2name
-
 from moat.micro.compat import AC_use, log
 
 from ._stream import _MsgpackMsgBlk, _MsgpackMsgBuf
@@ -154,15 +153,17 @@ class MsgpackMsgBuf(_MsgpackMsgBuf):
     message boundaries.
     """
 
-    async def setup(self):
+    async def setup(self):  # noqa:D102
         await super().setup()
         self.pack = Packer(default=_encode).pack
         self._unpacker = Unpacker(SyncStream(self.s), ext_hook=_decode, **self.cfg.get("pack", {}))
 
     async def unpack(self):
-        # This calls the unpacker synchronously,
-        # reading from the async stream via greenback
-        # because we don't want to rewrite MsgPack
+        """
+        This calls the unpacker synchronously,
+        reading from the async stream via greenback
+        because we don't want to rewrite MsgPack
+        """
         try:
             return self._unpacker.unpack()
         except OutOfData:
@@ -177,7 +178,7 @@ class MsgpackMsgBlk(_MsgpackMsgBlk):
     (one bytestring-ized message per call).
     """
 
-    async def setup(self):
+    async def setup(self):  # noqa:D102
         await super().setup()
         self.pack = Packer(default=_encode).pack
         self.unpacker = partial(unpackb, ext_hook=_decode, **self.cfg.get("pack", {}))
@@ -232,15 +233,19 @@ class RemoteBufAnyio(anyio.abc.ByteStream):
         self.disp = disp
 
     async def receive(self, max_bytes=256):
+        "forward to ``.rd``"
         return await self.disp.rd(n=max_bytes)
 
     async def send(self, buf):
+        "forward to ``.wr``"
         await self.disp.wr(b=buf)
 
     async def aclose(self):
+        "no-op"
         pass
 
     async def send_eof(self):
+        "not implemented"
         raise NotImplementedError("EOF")
 
 
@@ -261,6 +266,7 @@ class BufAnyio(anyio.abc.ByteStream):
         return await self.stream.__aexit__(*tb)
 
     async def receive(self, max_bytes=256):
+        "forward to ``.rd``"
         b = bytearray(max_bytes)
         r = await self.s.rd(b)
         if r == max_bytes:
@@ -272,6 +278,7 @@ class BufAnyio(anyio.abc.ByteStream):
             return b[:r]
 
     async def send(self, buf):
+        "forward to ``.wr``"
         await self.s.wr(buf)
 
 
@@ -286,7 +293,7 @@ class SingleAnyioBuf(AnyioBuf):
     def __init__(self, stream):
         self._s = stream
 
-    async def stream(self):
+    async def stream(self):  # noqa:D102
         return await AC_use(self, self._s)
 
 
@@ -324,7 +331,7 @@ class ProcessBuf(CtxObj, AnyioBuf):
         if self.exec is not None:
             # self.kw["executable"] = self.exec
             self.argv[0] = self.exec
-        elif "/" in (a0 := str(self.argv[0])):
+        elif "/" in (a0 := str(self.argv[0])):  # noqa:F841 # a0 unused
             # self.kw["executable"] = a0
             # self.argv[0] = a0.rsplit("/",1)[1]
             pass
@@ -361,8 +368,8 @@ class ProcessBuf(CtxObj, AnyioBuf):
             if proc is not None and proc.returncode != 0 and proc.returncode != -9:
                 raise ProcessDeadError(f"{self} died with {proc.returncode}")
 
-    async def setup(self):
+    async def setup(self):  # noqa:D102
         pass
 
-    async def stream(self):
+    async def stream(self):  # noqa:D102
         raise RuntimeError("should not be called")

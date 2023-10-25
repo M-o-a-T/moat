@@ -7,7 +7,6 @@ from __future__ import annotations
 import sys
 
 from moat.util import NotGiven, ValueEvent, obj2name
-
 from moat.micro.compat import ACM, AC_exit, AC_use, Lock, TaskGroup, log
 from moat.micro.proto.stack import Base, BaseBlk, BaseBuf, BaseMsg, RemoteError, SilentRemoteError
 
@@ -49,11 +48,11 @@ class BaseCmdBBM(BaseCmd):
         "create the actual data stream. Override this!"
         raise NotImplementedError("setup", self.path)
 
-    async def setup(self):
+    async def setup(self):  # noqa:D102
         await super().setup()
         self.dev = await self.stream()
 
-    async def run(self):
+    async def run(self):  # noqa:D102
         ACM(self)
         try:
             await super().run()
@@ -101,21 +100,21 @@ class BaseCmdBBM(BaseCmd):
 
     # Msg: s/r = .send/.recv
 
-    def cmd_s(self, m):  # pylint:disable=invalid-overridden-method
+    async def cmd_s(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """send a message"""
         return self.dev.send(m)
 
-    def cmd_r(self):  # pylint:disable=invalid-overridden-method
+    async def cmd_r(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """receive a message"""
         return self.dev.recv()
 
     # Blk: sb/rb = .snd/.rcv
 
-    def cmd_sb(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
+    async def cmd_sb(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """send a binary message"""
         return self.dev.snd(m)
 
-    def cmd_rb(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
+    async def cmd_rb(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """receive a binary message"""
         return self.dev.rcv()
 
@@ -172,11 +171,11 @@ class BufCmd(_BBMCmd, BaseBuf):
     # pylint:disable=abstract-method
     # `stream` needs to be implemented by a subclass
 
-    def wr(self, buf) -> Awaitable:
+    def wr(self, buf) -> Awaitable:  # noqa:D102
         # pylint: disable=invalid-overridden-method
         return self.s.wr(b=buf)
 
-    async def rd(self, buf):
+    async def rd(self, buf):  # noqa:D102
         msg = await self.s.rd(n=len(buf))
         buf[: len(msg)] = msg
         return len(msg)
@@ -195,11 +194,11 @@ class BlkCmd(_BBMCmd, BaseBlk):
     crd = MsgCmd.crd
     cwr = MsgCmd.cwr
 
-    def snd(self, m) -> Awaitable:
+    def snd(self, m) -> Awaitable:  # noqa:D102
         # pylint: disable=invalid-overridden-method
         return self.s.sb(m=m)
 
-    def rcv(self) -> Awaitable:
+    def rcv(self) -> Awaitable:  # noqa:D102
         # pylint: disable=invalid-overridden-method
         return self.s.rb()
 
@@ -471,7 +470,7 @@ class CmdMsg(BaseCmdMsg):
         super().__init__(cfg)
         self.link = link
 
-    def stream(self) -> Awaitable[BaseMsg]:
+    def stream(self) -> Awaitable[BaseMsg]:  # noqa:D102
         # pylint:disable=invalid-overridden-method
         return AC_use(self, self.link)
 
@@ -485,7 +484,7 @@ class SingleCmdMsg(BaseCmdMsg):
     # pylint:disable=abstract-method
     # `stream` needs to be implemented by a subclass
 
-    async def run(self):
+    async def run(self):  # noqa:D102
         try:
             await super().run()
         except (EOFError, OSError, SilentRemoteError) as exc:
@@ -507,5 +506,5 @@ class ExtCmdMsg(SingleCmdMsg):
         super().__init__(cfg)
         self.__s = stream
 
-    async def stream(self):
+    async def stream(self):  # noqa:D102
         return await AC_use(self, self.__s)

@@ -1,1 +1,1 @@
-# pylint:disable=missing-module-docstring
+# noqa:D104 pylint:disable=missing-module-docstring

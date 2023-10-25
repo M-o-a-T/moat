@@ -16,14 +16,15 @@ from moat.micro.stacks.console import console_stack
 
 
 class StdioBuf(FileBuf):
-    async def stream(self):
+    "direct access to stdio"
+    async def stream(self):  # noqa:D102
         return sys.stdin.buffer, sys.stdout.buffer
 
 
 class StdIO(BaseCmdMsg):
     """Sends/receives MoaT messages using stdin/stdout"""
 
-    async def stream(self):
+    async def stream(self):  # noqa:D102
         cs = StdioBuf(self.cfg)
         micropython.kbd_intr(-1)
         await AC_use(self, partial(micropython.kbd_intr, 3))

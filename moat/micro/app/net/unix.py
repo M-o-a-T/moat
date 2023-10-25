@@ -1,3 +1,6 @@
+"""
+Apps for Unix socket connectivity
+"""
 from __future__ import annotations
 
 from moat.micro.cmd.stream import BaseCmdBBM, CmdMsg
@@ -18,7 +21,7 @@ if TYPE_CHECKING:
 class Raw(BaseCmdBBM):
     """Sends/receives raw data"""
 
-    def stream(self) -> Awaitable:
+    def stream(self) -> Awaitable:  # noqa:D102
         return AC_use(self, UnixLink(self.port))
 
 
@@ -40,7 +43,7 @@ class LinkIn(BaseListenOneCmd):
     "replace" config item.
     """
 
-    def listener(self):
+    def listener(self):  # noqa:D102
         return UnixIter(self.cfg["port"])
 
 
@@ -49,5 +52,5 @@ class Port(BaseListenCmd):
     An app that accepts multiple Unix connections.
     """
 
-    def listener(self):
+    def listener(self):  # noqa:D102
         return UnixIter(self.cfg["port"])

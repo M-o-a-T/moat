@@ -21,7 +21,7 @@ class Cmd(BaseCmd):
     n = 0
 
     async def cmd_echo(self, m: Any):
-        "Basic echo method, returns @m as ``result[" r"]``"
+        "Basic echo method, returns @m as ``result['r']``"
         return {'r': m}
 
     def iter_it(self, lim: int = None):

@@ -17,7 +17,7 @@ class ProcessCmd(BaseCmdMsg):
     argv = None
     path = None
 
-    async def stream(self):
+    async def stream(self):  # noqa:D102
         argv = self.cfg["command"] if self.argv is None else self.argv
         path = self.cfg.get("path") if self.path is None else self.path
         if path is None and argv[0][0] == '/':
@@ -35,7 +35,7 @@ class ProcessIO(BaseCmdBBM):
     argv = None
     path = None
 
-    async def stream(self):
+    async def stream(self):  # noqa:D102
         argv = self.cfg["command"] if self.argv is None else self.argv
         path = self.cfg.get("path") if self.path is None else self.path
         if path is None and argv[0][0] == '/':

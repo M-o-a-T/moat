@@ -1,3 +1,6 @@
+"""
+Connection handling for Unix sockets
+"""
 from __future__ import annotations
 
 import anyio
@@ -15,14 +18,16 @@ if TYPE_CHECKING:
 
 class UnixIter(BaseConnIter):
     """
-    A connection iterator for Unix sockets
+    A connection iterator for Unix sockets.
+
+    @path: the socket file to listen on
     """
 
     def __init__(self, path):
         super().__init__()
         self.path = path
 
-    async def accept(self) -> Never:
+    async def accept(self) -> Never:  # noqa:D102
         li = await anyio.create_unix_listener(self.path)
         async with li:
             self.set_ready()

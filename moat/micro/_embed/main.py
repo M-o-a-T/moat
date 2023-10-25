@@ -1,3 +1,6 @@
+"""
+Datellite main code.
+"""
 from __future__ import annotations
 
 import machine
@@ -8,6 +11,7 @@ from moat.micro.rtc import state
 cfg = {}
 
 def set(attr, value=None, fs=None):
+    "Setter for a value in RTC / file system"
     if state is None and fs is False:
         raise RuntimeError("no RTC")
     if state is not None and not fs:
@@ -29,6 +33,7 @@ def set(attr, value=None, fs=None):
 
 
 def get(attr, fs=None, default=None):
+    "Getter for a value in RTC / file system"
     if state is not None and fs is not True:
         if attr in state:
             return state[attr]
@@ -164,6 +169,7 @@ def go(state=None, fake_end=True):
 
 
 def g():
+    "shortcut for ``go('once')``"
     go("once")
 
 

@@ -22,8 +22,7 @@ from ._tree import (  # noqa:F401 pylint:disable=unused-import
 from ._tree import Dispatch as _Dispatch  # isort:skip
 
 
-class NotGiven2:
-    # pylint:disable=missing-class-docstring
+class _NotGiven:
     pass
 
 
@@ -127,7 +126,7 @@ class CfgStore:
             for k, v in c.items():
                 if isinstance(v, dict):
                     await _set(p + (k,), v)
-                elif ocd.get(k, NotGiven2) != v:
+                elif ocd.get(k, _NotGiven) != v:
                     await self.sd.w(p=p + (k,), d=v)
 
             if not replace:

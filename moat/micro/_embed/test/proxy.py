@@ -1,8 +1,11 @@
-#
+"""
+Test module for proxying
+"""
 from __future__ import annotations
 
 from moat.util import as_proxy
 
+# ruff: noqa:D101,D102,D103
 
 class Bar:
     def __init__(self, x):

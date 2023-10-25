@@ -5,41 +5,39 @@ from __future__ import annotations
 
 import machine as M
 
-from moat.compat import TaskGroup, load_from_cfg, sleep_ms
+from moat.compat import AC_use, Event, TaskGroup, sleep_ms
+from moat.micro.cmd.base import BaseCmd
 
-from .link import Reader
 
-
-class ADC(M.ADC):
-    """
-    A config-enabled pin that you can async-iterate for changes.
-
-        p = Pin(attrdict(pin=3), mode=machine.Pin.IN)
-        with p:
-            async for val in p:
-                print("Pin",p,"is now",val)
-
-    All other import arguments are taken from keywords.
-
-    This class pseudo-multiple-inherits from Reader.
-    """
-
+class _ADC(M.ADC):
     def __new__(cls, cfg, **kw):
-        kw["id"] = cfg.pin
+        kw["id"] = M.Pin(cfg["pin"])
         self = super().__new__(**kw)
-        self.cfg = cfg
         return self
 
     def __init__(self, cfg, **kw):
-        self.n = cfg.get("n", 1)
+        self.t = cfg.get("t", 1000)
         self.nn = cfg.get("nn", 1)
         self.dly = cfg.get("delay", 1)
         self.factor = cfg.get("factor", 1) / self.n / self.nn
         self.offset = cfg.get("offset", 0)
-        Reader.__init__(self, cfg)
 
-    async def run(self, cmd):
-        await Reader.run(cmd)
+        self.val = 0
+        self.evt = Event()
+        self.delta = cfg.get("delta", 3)
+
+    async def scan(self):
+        self.val = await self.read()
+        self.evt.set()
+        self.evt = Event()
+
+        while True:
+            await sleep_ms(self.t)
+            v = await self.read()
+            ov,self.val = self.val,v
+            if abs(ov-v) >= self.delta:
+                self.evt.set()
+                self.evt = Event()
 
     async def read(self):
         c = 0
@@ -49,44 +47,52 @@ class ADC(M.ADC):
             for b in range(self.n):
                 c += self.read_u16()
         res = c * self.factor + self.offset
-        await self.send(res)
         return res
 
-    async def send(self, **msg):
-        await Reader.send(**msg)
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *err):
+        pass
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        await self.evt.wait()
+        return self.val
 
 
-class Multiply(Reader):
+class ADC(BaseCmd):
     """
-    Measure/aggregate data by multiplying two readouts.
+    This is a basic analog input.
 
-    Useful e.g. for power (separate channels for U and I).
-
-    Returns a dict with u,i,p.
+    Iterating it yields a new value whenever the value changes by a given
+    threshold.
     """
 
-    def __init__(self, cfg, **kw):
-        super().__init__(cfg, **kw)
-        self.rdr_u = load_from_cfg(cfg.u)
-        self.rdr_i = load_from_cfg(cfg.u)
+    def __init__(self, cfg):
+        super().__init__(cfg)
+        kw = {}
+        if "ts" in cfg:
+            kw["sample_ns"] = int(cfg["ts"] * 1000000)
+        if "atten" in cfg:
+            kw["atten"] = cfg["atten"]
+        self.adc = _ADC(cfg, **kw)
 
-    async def read(self):
-        now_u = None
-        now_i = None
+    async def setup(self):
+        "initialization, triggers change"
+        await super().setup()
+        if getattr(self, "tg", None) is None:
+            self.tg = await AC_use(self, TaskGroup())
+        await self.tg.spawn(self.pin.scan)
 
-        async with TaskGroup() as tg:
+    def iter_r(self):
+        "iterate the pin's values"
+        return self.adc
 
-            async def rd_u():
-                nonlocal now_u
-                now_u = await self.rdr_u.read()
-
-            async def rd_i():
-                nonlocal now_i
-                now_i = await self.rdr_i.read()
-
-            tg.start_soon(rd_u)
-            tg.start_soon(rd_i)
-
-        res = dict(u=now_u, i=now_i, p=now_u * now_i)
-        await self.send(res)
-        return res
+    async def cmd_r(self, o=None):
+        "read. Wait for change if @o (old value) is not None"
+        if o is not None and self.adc.val != o:
+            await self.adc.evt.wait()
+        return self.adc.val

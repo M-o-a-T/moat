@@ -6,7 +6,6 @@ from __future__ import annotations
 import pytest
 
 from moat.util import NotGiven
-
 from moat.micro._test import mpy_stack
 from moat.micro.cmd.util import StoppedError
 from moat.micro.compat import log, sleep_ms

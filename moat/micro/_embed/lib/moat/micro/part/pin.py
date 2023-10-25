@@ -7,13 +7,15 @@ import asyncio
 
 import machine as M
 
-from moat.micro.compat import idle
+from moat.micro.cmd.base import BaseCmd
+from moat.micro.compat import AC_use, Event, TaskGroup
 
 try:
     sup = M.Pin
 except AttributeError:
 
-    class XPin:
+    class _XPin:
+        # fake
         __val = False
 
         def __new__(cls, **kw):
@@ -28,10 +30,10 @@ except AttributeError:
             else:
                 self.__val = None
 
-    sup = XPin
+    sup = _XPin
 
 
-class Pin(sup):
+class _Pin(sup):
     """
     A config-enabled pin that you can async-iterate for changes.
 
@@ -43,17 +45,30 @@ class Pin(sup):
     All other import arguments are taken from keywords.
     """
 
-    def __new__(cls, cfg, **kw):
-        kw["id"] = cfg.pin
+    def __new__(cls, pin, **kw):
+        kw["id"] = pin
         self = super().__new__(cls, **kw)
         self.flag = asyncio.ThreadSafeFlag()
+        self.evt = Event()
+        self.val = False
         return self
 
-    def __init__(self, cfg, **kw):
+    def __init__(self, **kw):
         super().__init__(**kw)
 
     def _irq(self):
+        "sets the change flag"
+        self.val = self.value()
         self.flag.set()
+
+    async def flag_watch(self):
+        "Flag reader, since a ThreadSafeFlag only acepts one task"
+        while True:
+            if self.value() == self.val:
+                await self.flag.wait()
+                self.flag.clear()
+            self.evt.set()
+            self.evt = Event()
 
     async def __aenter__(self):
         self.irq(self._irq, M.Pin.FALLING | M.Pin.RISING)
@@ -66,22 +81,45 @@ class Pin(sup):
         return self
 
     async def __anext__(self):
-        await self.flag.wait()
-        self.flag.clear()
-        return self.pin.value()
+        await self.evt.wait()
+        return self.pin()
 
-    async def run(self, cmd):
-        async with self:
-            await idle()
 
-    async def get(self):
-        return super().value()
+class Pin(BaseCmd):
+    """
+    This is a basic analog pin.
 
-    async def set(self, value):
-        super().value(value)
+    Iterating it yields a new value whenever the pin changes.
+    """
 
-    async def on(self):
-        super().on()
+    def __init__(self, cfg):
+        super().__init__(cfg)
+        kw = {}
+        if (val := cfg.get("init", None)) is not None:
+            kw["value"] = val
 
-    async def off(self):
-        super().off()
+        self.pin = _Pin(cfg["pin"], **kw)
+
+    async def setup(self):
+        "initialization, triggers change"
+        await super().setup()
+        if getattr(self, "tg", None) is None:
+            self.tg = await AC_use(self, TaskGroup())
+        await self.tg.spawn(self.pin.flag_watch)
+        self.flag.set()
+        self.flag = Event()
+
+    def iter_r(self, prev=None):
+        "iterate the pin's values"
+        return self.pin
+
+    async def cmd_r(self, o=None):
+        "read. Wait for change if @o (old value) is not None"
+        if o is None or self.pin() is o:
+            await self.pin.evt.wait()
+        return self._value
+
+    async def cmd_w(self, v):
+        "write. Set pin value"
+        self.pin(v)
+        self.pin.evt.set()

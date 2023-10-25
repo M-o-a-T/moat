@@ -64,13 +64,13 @@ class Err(BaseFwdCmd):
     t: int = None
     a: bool = None
 
-    async def dispatch(self, *a, **k):
+    async def dispatch(self, *a, **k):  # noqa:D102
         if self.app is None:
             await super().wait_ready()
         await self.app.wait_ready()
         return await super().dispatch(*a, **k)
 
-    async def reload(self):
+    async def reload(self):  # noqa:D102
         self._load()
         await super().reload()
 
@@ -80,6 +80,9 @@ class Err(BaseFwdCmd):
         self.a = self.cfg.get("always", False)
 
     async def run_app(self):
+        """
+        Runs the sub-app and handles restarting and error shielding.
+        """
         log("Fwd Start %s", self.path)
         self._load()
 

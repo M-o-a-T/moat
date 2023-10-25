@@ -152,7 +152,8 @@ def process_args(val, vars_, eval_, path_, proxy_=(), vs=None):
             elif v == "/":  # pylint: disable=W0631
                 if vs is None:
                     raise click.BadOptionUsage(
-                        option_name=k, message="A slash value doesn't work here.",
+                        option_name=k,
+                        message="A slash value doesn't work here.",
                     )
                 v = NoneType
             else:
@@ -169,11 +170,13 @@ def process_args(val, vars_, eval_, path_, proxy_=(), vs=None):
         if not k:
             if vs is not None:
                 raise click.BadOptionUsage(
-                    option_name=k, message="You can't use empty paths here.",
+                    option_name=k,
+                    message="You can't use empty paths here.",
                 )
             if n:
                 raise click.BadOptionUsage(
-                    option_name=k, message="Setting a single value conflicts.",
+                    option_name=k,
+                    message="Setting a single value conflicts.",
                 )
             val = v
             n = -1
@@ -246,9 +249,7 @@ def load_ext(name, *attr, err=False):
         if err is not None:
             logger.debug("Err %s: %r", dp, exc)
         if (
-            exc.name != dp
-            and exc.name != dpe
-            and not exc.name.startswith(f"{dp}._")  # pylint: disable=no-member ## duh?
+            exc.name != dp and exc.name != dpe and not exc.name.startswith(f"{dp}._")  # pylint: disable=no-member ## duh?
         ):
             raise
         return None
@@ -355,7 +356,13 @@ def list_ext(name, func=None, pkg_only=True):
 
 
 def load_subgroup(
-    _fn=None, prefix=None, sub_pre=None, sub_post=None, ext_pre=None, ext_post=None, **kw,
+    _fn=None,
+    prefix=None,
+    sub_pre=None,
+    sub_post=None,
+    ext_pre=None,
+    ext_post=None,
+    **kw,
 ):
     """
     A decorator like click.group, enabling loading of subcommands
@@ -798,7 +805,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         try:
             s = str(exc)
         except TypeError:
-            logger.exception(repr(exc), exc_info=exc)
+            logger.exception("??", exc_info=exc)
         else:
             print(s, file=sys.stderr)
         sys.exit(2)

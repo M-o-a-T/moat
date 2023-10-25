@@ -36,9 +36,24 @@ BrokenResourceError = _anyio.BrokenResourceError
 ClosedResourceError = _anyio.ClosedResourceError
 TimeoutError = TimeoutError  # noqa:PLW0127,A001 pylint:disable=redefined-builtin,self-assigning-variable
 
-__all__ = ["log", "Queue", "print_exc", "ticks_ms", "sleep_ms", "wait_for",
-        "wait_for_ms", "every_ms", "every", "idle", "ticks_add", "ticks_diff",
-        "run", "TaskGroup", "run_server", "shield"]
+__all__ = [
+    "log",
+    "Queue",
+    "print_exc",
+    "ticks_ms",
+    "sleep_ms",
+    "wait_for",
+    "wait_for_ms",
+    "every_ms",
+    "every",
+    "idle",
+    "ticks_add",
+    "ticks_diff",
+    "run",
+    "TaskGroup",
+    "run_server",
+    "shield",
+]
 
 
 def log(s, *x, err=None, nback=1):
@@ -167,7 +182,10 @@ async def run_server(cb, host, port, backlog=5, taskgroup=None, reuse_port=True,
     This mirrors [u]asyncio, except that the callback gets the socket once.
     """
     listener = await _anyio.create_tcp_listener(
-        local_host=host, local_port=port, backlog=backlog, reuse_port=reuse_port,
+        local_host=host,
+        local_port=port,
+        backlog=backlog,
+        reuse_port=reuse_port,
     )
     async with listener:
         if evt is not None:

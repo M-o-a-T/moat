@@ -16,6 +16,7 @@ now = None
 
 # ruff:noqa:PLW0603 # update global var
 
+
 def chk(iso, a, invert=False, back=False):
     a = () if a == "" else a.split(" ")
     res = time_until(a, t_now=now, invert=invert, back=back)

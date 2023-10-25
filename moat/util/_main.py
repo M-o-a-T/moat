@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
 """
 Basic tool support
-
 """
 from __future__ import annotations
 
@@ -124,7 +122,10 @@ def msgpack(decode, path):
 
 @cli.command("path", help=Path.__doc__, no_args_is_help=True)
 @click.option(
-    "-e", "--encode", is_flag=True, help="evaluate a Python expr and encode to a pathstr",
+    "-e",
+    "--encode",
+    is_flag=True,
+    help="evaluate a Python expr and encode to a pathstr",
 )
 @click.option("-d", "--decode", is_flag=True, help="decode a path to a list")
 @click.argument("path", nargs=-1)

@@ -302,7 +302,7 @@ class Unpacker:
         # (int) -> bytearray
         await self._reserve(n)
         i = self._buff_i
-        ret = self._buffer[i: i + n]
+        ret = self._buffer[i : i + n]
         self._buff_i = i + len(ret)
         return ret
 
@@ -392,7 +392,7 @@ class Unpacker:
         "unpack my buffer into an object"
         res = await self._any()
         # Buffer management: chop off the part we've read
-        self._buffer = self._buffer[self._buff_i:]
+        self._buffer = self._buffer[self._buff_i :]
         self._buff_i = 0
         return res
 
@@ -400,7 +400,7 @@ class Unpacker:
         return self._buff_i < len(self._buffer)
 
     def _get_extradata(self):
-        return self._buffer[self._buff_i:]
+        return self._buffer[self._buff_i :]
 
     def unpackb(self, packed) -> Any:
         "unpack"

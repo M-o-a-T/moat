@@ -50,9 +50,11 @@ time = [ "calendar",]
 dev = [ "flake8", "isort",]
 
 [tool.ruff]
-select = ["E", "F", "W", "I", "D1", "UP","YTT","ASYNC","PLE","PLW","ARG","TCH","SIM","SLOT","SLF","RET503","RSE","PT","PIE","G","ISC","FA","T10","DTZ","C4","COM","A","S","RUF","LOG","FURB","FLY","PGH"]
-# ANN,PTH,PERF
-ignore = ["D105", "D107","A003","S101","RUF001","RUF002","PLW1514"]
+select = ["ALL"]
+ignore = ["ANN","PTH","PERF", "D105", "D107","A003","S101","RUF001","RUF002","PLW1514", "D2","D3","D4","T2","FBT","TRY003","EM10","PLR","C","RET50","TD","FIX","N","ERA","BLE001"]
+
+preview = true
+explicit-preview-rules = true
 
 line-length = 99
 

@@ -202,12 +202,12 @@ class Path(collections.abc.Sequence):
 
     def __truediv__(self, other):
         if isinstance(other, Path):
-            raise RuntimeError("You want + not /")
+            raise TypeError("You want + not /")
         return Path(*self._data, other, mark=self.mark)
 
     def __itruediv__(self, other):
         if isinstance(other, Path):
-            raise RuntimeError("You want + not /")
+            raise TypeError("You want + not /")
         self._data.append(other)
 
     # TODO add alternate output with hex integers
@@ -255,9 +255,7 @@ class Path(collections.abc.Sequence):
             try:
                 part += x
             except TypeError:
-                raise SyntaxError(  # pylint: disable=raise-missing-from
-                    f"Cannot add {x!r} at {pos}",
-                )
+                raise SyntaxError(f"Cannot add {x!r} at {pos}") from None
 
         def done(new_part):
             nonlocal part
@@ -481,7 +479,7 @@ class PathShortener:
         if list(p[: self.depth]) != list(self.prefix):
             raise RuntimeError(f"Wrong prefix: has {p!r}, want {self.prefix!r}")
 
-        p = p[self.depth:]
+        p = p[self.depth :]
         cdepth = min(len(p), len(self.path))
         for i in range(cdepth):
             if p[i] != self.path[i]:
@@ -527,6 +525,7 @@ class PathLongener:
 # is to process tuples.
 _eval = simpleeval.SimpleEval(functions={})
 _eval.nodes[ast.Tuple] = lambda node: tuple(
-        _eval._eval(x) for x in node.elts  # noqa:SLF001 pylint: disable=protected-access
+    _eval._eval(x)  # noqa:SLF001
+    for x in node.elts
 )
 path_eval = _eval.eval

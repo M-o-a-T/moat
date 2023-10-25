@@ -189,4 +189,4 @@ def add_repr(typ, r=None):
     elif issubclass(r, Sequence):
         SafeRepresenter.add_representer(typ, SafeRepresenter.represent_list)
     else:
-        raise RuntimeError(f"Don't know what to do with {typ}")
+        raise TypeError(f"Don't know what to do with {typ}")

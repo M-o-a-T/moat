@@ -11,7 +11,7 @@ __all__ = ["make_proc", "Module", "make_module"]
 
 
 def _call_proc(code, variables, *a, **kw):
-    v = variables[len(a):]
+    v = variables[len(a) :]
     if v:
         a = list(a)
         for k in v:

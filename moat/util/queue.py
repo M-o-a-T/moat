@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable
 
 import logging  # isort:skip
+
 logger = logging.getLogger(__name__)
 
 __all__ = [

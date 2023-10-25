@@ -1,4 +1,3 @@
-
 """\
 This code does some time handling.
 

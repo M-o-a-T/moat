@@ -27,7 +27,9 @@ class _Server:
     async def _accept(self, conn):
         if self.ssl:
             conn = await anyio.streams.tls.TLSStream.wrap(
-                conn, server_side=True, ssl_context=self.ssl,
+                conn,
+                server_side=True,
+                ssl_context=self.ssl,
             )
         await self.handler(conn)
 
@@ -54,7 +56,8 @@ async def run_tcp_server(*a, **kv) -> _Server:
 
 
 def gen_ssl(
-    ctx: bool | SSLContext | dict[str, str] = False, server: bool = True,
+    ctx: bool | SSLContext | dict[str, str] = False,
+    server: bool = True,
 ) -> SSLContext | None:
     """
     Generate a SSL config from the given context.

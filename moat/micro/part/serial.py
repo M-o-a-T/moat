@@ -29,11 +29,11 @@ class Serial(AnyioBuf):
     async def stream(self):  # noqa:D102
         cfg = self.cfg
         uart_cfg = {}
-        uart_cfg['port'] = cfg["port"]
+        uart_cfg["port"] = cfg["port"]
 
         p = cfg.get("mode", {})
 
-        uart_cfg['baudrate'] = p.get("rate", 9600)
+        uart_cfg["baudrate"] = p.get("rate", 9600)
         pa = p.get("parity", None)
         if pa:
             pa = "O"
@@ -41,16 +41,16 @@ class Serial(AnyioBuf):
             pa = "E"
         else:
             pa = "N"
-        uart_cfg['parity'] = pa
+        uart_cfg["parity"] = pa
 
         fl = p.get("flow", None)
         if fl:
-            if 'R' not in fl or 'C' not in fl:
-                if 'R' in fl or 'C' in fl:
+            if "R" not in fl or "C" not in fl:  # noqa:SIM102
+                if "R" in fl or "C" in fl:
                     raise ValueError("no support for partial flow control")
-            uart_cfg['rtscts'] = True
-        uart_cfg['stopbits'] = p.get("stop", None) or 1  # no 1.5 stop bits
-        uart_cfg['bytesize'] = p.get("bits", 8)
+            uart_cfg["rtscts"] = True
+        uart_cfg["stopbits"] = p.get("stop", None) or 1  # no 1.5 stop bits
+        uart_cfg["bytesize"] = p.get("bits", 8)
 
         rts = cfg.get("rts_state", 0)
         dtr = cfg.get("dtr_state", 0)

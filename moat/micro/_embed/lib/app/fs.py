@@ -92,7 +92,7 @@ class Cmd(BaseCmd):
         "open @f in binary mode @m (r,w)"
         p = self._fsp(p)
         try:
-            f = open(p, m + 'b')
+            f = open(p, m + "b")
         except OSError as e:
             if e.errno == errno.ENOENT:
                 raise FileNotFoundError(p)

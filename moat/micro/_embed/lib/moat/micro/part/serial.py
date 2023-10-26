@@ -30,28 +30,28 @@ class Serial(FileBuf):
         "opens the port, does flushing and RTS/CTS"
         cfg = self.cfg
         uart_cfg = {}
-        if 'tx' in cfg:
-            uart_cfg['tx'] = M.pin(cfg["tx"])
-        if 'rx' in cfg:
-            uart_cfg['rx'] = M.pin(cfg["rx"])
-        if 'rts' in cfg:
-            uart_cfg['rts'] = M.pin(cfg["rts"])
-        if 'cts' in cfg:
-            uart_cfg['cts'] = M.pin(cfg["cts"])
-        uart_cfg['txbuf'] = cfg.get("txb", 128)
-        uart_cfg['rxbuf'] = cfg.get("rxb", 128)
+        if "tx" in cfg:
+            uart_cfg["tx"] = M.pin(cfg["tx"])
+        if "rx" in cfg:
+            uart_cfg["rx"] = M.pin(cfg["rx"])
+        if "rts" in cfg:
+            uart_cfg["rts"] = M.pin(cfg["rts"])
+        if "cts" in cfg:
+            uart_cfg["cts"] = M.pin(cfg["cts"])
+        uart_cfg["txbuf"] = cfg.get("txb", 128)
+        uart_cfg["rxbuf"] = cfg.get("rxb", 128)
 
         p = cfg.get("mode", {})
-        uart_cfg['baudrate'] = p.get("rate", 9600)
-        uart_cfg['parity'] = p.get("parity", None)
-        uart_cfg['bits'] = p.get("bits", 8)
+        uart_cfg["baudrate"] = p.get("rate", 9600)
+        uart_cfg["parity"] = p.get("parity", None)
+        uart_cfg["bits"] = p.get("bits", 8)
         fl = p.get("flow", "")
         f = 0
         if "C" in fl:
             f |= M.UART.CTS
         if "R" in fl:
             f |= M.UART.RTS
-        uart_cfg['stop'] = p.get("stop", None) or 1  # no 1.5 stop bits
+        uart_cfg["stop"] = p.get("stop", None) or 1  # no 1.5 stop bits
 
         ser = M.UART(cfg.get("port", 0), **uart_cfg)
         await AC_use(self, ser.deinit)

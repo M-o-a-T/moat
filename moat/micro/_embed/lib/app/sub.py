@@ -13,7 +13,6 @@ except ImportError:  # satellite
 
     class ProcessDeadError(Exception):
         "dummy"
-        pass
 
 
 from moat.micro.compat import log, sleep_ms
@@ -24,7 +23,6 @@ class Tree(DirCmd):
     Structured subcommands.
     """
 
-    pass
 
 
 class Array(ArrayCmd):
@@ -32,7 +30,6 @@ class Array(ArrayCmd):
     List of mostly-same things.
     """
 
-    pass
 
 
 class Err(BaseFwdCmd):

@@ -43,7 +43,7 @@ class Dispatch(_Dispatch):
                 import signal  # pylint:disable=import-outside-toplevel
 
                 with anyio.open_signal_receiver(
-                    signal.SIGINT, signal.SIGTERM, signal.SIGHUP
+                    signal.SIGINT, signal.SIGTERM, signal.SIGHUP,
                 ) as signals:
                     async for _ in signals:
                         self.tg.cancel()

@@ -60,7 +60,7 @@ class Queue:
         Return an item if one is immediately available, else raise QueueEmpty.
         """
         if not self._queue:
-            raise QueueEmpty()
+            raise QueueEmpty
         return self._get()
 
     def _put(self, val):
@@ -87,7 +87,7 @@ class Queue:
         If no free slot is immediately available, raise QueueFull.
         """
         if self.maxsize and self.qsize() >= self.maxsize:
-            raise QueueFull()
+            raise QueueFull
         self._put(val)
 
     def qsize(self):

@@ -25,8 +25,8 @@ local_scheme = "no-local-version"
 [tool.moat]
 
 [tool.ruff]
-select = ["ALL","E", "F", "I", "D1"]
-ignore = ["BLE001","ERA","N","FIX","TD","RET50","C","PLR","EM10","TRY003","FBT","T2","D4","D3","D2","PLW1514","RUF002","RUF001","S101","A003","PERF","PTH","ANN","D105", "D107"]
+select = ["ALL"]
+ignore = ["BLE001","ERA","N","FIX","TD","RET50","C","PLR","EM10","TRY003","FBT","T2","D4","D3","D2","PLW1514","RUF002","RUF001","S101","A003","PERF","PTH","ANN","D105","D107","TID252","INP001","RUF005","SIM118","B904","TRY300","S311"]
 
 line-length = 99
 preview = true

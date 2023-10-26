@@ -8,7 +8,7 @@ from moat.micro.cmd.base import BaseCmd
 
 class ConfigError(RuntimeError):
     "generic config error exception"
-    pass  # pylint:disable=unnecessary-pass
+    # pylint:disable=unnecessary-pass
 
 
 class BaseAppCmd(BaseCmd):

@@ -3,6 +3,8 @@ When a channel is lossy, this module implements re-sending messages.
 """
 from __future__ import annotations
 
+from contextlib import suppress
+
 from ...util import NotGiven, Queue, ValueEvent
 from ..compat import (
     ACM,
@@ -126,30 +128,27 @@ class ReliableMsg(StackedMsg):
         if k is None:
             if not self.pend_ack:
                 return
-            msg = {'s': self.s_send_head}
+            msg = {"s": self.s_send_head}
         else:
             mte = self.m_send[k]
             if mte[1] is False:
                 # already ack'd.
-                msg = {'s': self.s_send_head}
+                msg = {"s": self.s_send_head}
             else:
                 mte[1] = ticks_add(ticks_ms(), self.timeout)
-                msg = {'s': k, 'd': mte[0]}
-        msg['r'] = r = self.s_recv_tail
+                msg = {"s": k, "d": mte[0]}
+        msg["r"] = r = self.s_recv_tail
         x = []
         while r != self.s_recv_head:
             if r in self.m_recv:
                 x.append(r)
             r = (r + 1) % self.window
         if x:
-            msg['x'] = x
+            msg["x"] = x
         self.pend_ack = False
 
-        try:
+        with suppress(RuntimeError):
             await self.s.send(msg)
-        except RuntimeError:
-            # print("NOSEND RESET", self.reset_level, file=sys.stderr)
-            pass
 
         if k is not None and self.m_send.get(k, None) is mte:
             mte[1] = ticks_add(ticks_ms(), self.timeout)
@@ -281,24 +280,21 @@ class ReliableMsg(StackedMsg):
                     t = ticks_ms()
                     td = ticks_diff(self.in_reset, t)
                     if td > 0:
-                        try:
+                        with suppress(TimeoutError):
                             await wait_for_ms(td, self._trigger.wait)
-                        except TimeoutError:
-                            pass
                         # DO NOT replace self._trigger here. _run_bg() already does that.
                     else:
                         await self.send_reset()
 
                 if self.closed:
-                    raise EOFError(self)
+                    raise EOFError(self)  # noqa: TRY301
 
                 await idle()
 
-        except Exception:
-            #           if not self.persist:
+        except Exception:  # noqa:TRY302
+            # if not self.persist:
             raise
-
-    #           log("Reliable", err=exc)
+            # log("Reliable", err=exc)
 
     async def _run(self):
         self.reset()
@@ -322,17 +318,17 @@ class ReliableMsg(StackedMsg):
                 e.set_error(ChannelClosed())
             if self._is_up.is_set():
                 self._is_up = Event()
-            msg = {'a': 'r', 'n': 0}
+            msg = {"a": "r", "n": 0}
             if err is not None:
-                msg['e'] = err
+                msg["e"] = err
             try:
                 try:
                     await self.s.send(msg)
                 except AttributeError:
                     return  # closing. XXX should not happen
                 except TypeError:
-                    if 'e' in msg:
-                        msg['e'] = repr(err)
+                    if "e" in msg:
+                        msg["e"] = repr(err)
                         await self.s.send(msg)
                     else:
                         raise
@@ -345,11 +341,11 @@ class ReliableMsg(StackedMsg):
             level = self.reset_level
         else:
             self.reset_level = level
-        msg = {'a': 'r', 'n': level}
+        msg = {"a": "r", "n": level}
         if level:
-            msg['c'] = self._get_config()
+            msg["c"] = self._get_config()
         if err is not None:
-            msg['e'] = err
+            msg["e"] = err
         if self.reset_level < 3:
             self.in_reset = ticks_add(ticks_ms(), self.timeout)
         self._trigger.set()
@@ -362,17 +358,17 @@ class ReliableMsg(StackedMsg):
         Iterated messages get cached and updated.
         The sender won't wait until they're transmitted.
         """
-        if 'n' in msg and 'i' in msg and 'a' not in msg:
+        if "n" in msg and "i" in msg and "a" not in msg:
             evt = None
-            i = msg['i']
+            i = msg["i"]
             if (om := self._iters.get(i, None)) is not None:
-                if 'e' not in om:
+                if "e" not in om:
                     om.update(msg)
                 return
             self._iters[i] = msg
 
         # print(f"T {self.link.txt}: SQ {msg} {id(self._trigger)}", file=sys.stderr)
-        evt = ValueEvent() if 'a' in msg else None
+        evt = ValueEvent() if "a" in msg else None
         self.s_q.append((msg, evt))
         self._trigger.set()
         if evt is None:
@@ -386,11 +382,11 @@ class ReliableMsg(StackedMsg):
             raise
 
     def _get_config(self):
-        return {'t': self.timeout, 'm': self.window}
+        return {"t": self.timeout, "m": self.window}
 
     def _update_config(self, c):
-        self.timeout = max(10, self.timeout, c.get('t', 0))
-        self.window = max(4, min(self.window, c.get('m', self.window)))
+        self.timeout = max(10, self.timeout, c.get("t", 0))
+        self.window = max(4, min(self.window, c.get("m", self.window)))
 
     def _reset_done(self):
         if self.in_reset:
@@ -420,15 +416,15 @@ class ReliableMsg(StackedMsg):
         return self._is_down.is_set()
 
     async def _dispatch(self, msg):
-        a = msg.get('a', None)
+        a = msg.get("a", None)
 
         if a is None:
             pass
-        elif a == 'r':
+        elif a == "r":
             # XXX CBOR: send the data with a tag instead?
-            c = msg.get('c', {})
-            n = msg.get('n', 0)
-            e = msg.get('e', None)
+            c = msg.get("c", {})
+            n = msg.get("n", 0)
+            e = msg.get("e", None)
             if n == 0:  # closed
                 self._is_down.set()
                 if self._is_up.is_set():
@@ -476,9 +472,9 @@ class ReliableMsg(StackedMsg):
             # but their ack got lost
             self._reset_done()
 
-        r = msg.get('s', None)  # swapped (our PoV of incoming msg)
-        s = msg.get('r', None)
-        x = msg.get('x', ())
+        r = msg.get("s", None)  # swapped (our PoV of incoming msg)
+        s = msg.get("r", None)
+        x = msg.get("x", ())
 
         if r is None or s is None:
             return
@@ -487,7 +483,7 @@ class ReliableMsg(StackedMsg):
             await self.send_reset(err="R/S out of bounds")
             return
 
-        d = msg.get('d', NotGiven)
+        d = msg.get("d", NotGiven)
         if d is not NotGiven:
             # data. R is the message's sequence number.
             self.pend_ack = True
@@ -528,7 +524,7 @@ class ReliableMsg(StackedMsg):
                 except KeyError:
                     pass
                 else:
-                    if 'n' in m and (i := m.get('i', None)) is not None:
+                    if "n" in m and (i := m.get("i", None)) is not None:
                         self._iters.pop(i, None)
                     self.pend_ack = True
                     if e is not None:
@@ -573,10 +569,8 @@ class ReliableMsg(StackedMsg):
 
         if self.pend_ack:
             # TODO delay ACK somewhat
-            try:
+            with suppress(EOFError):
                 await self.send_msg()
-            except EOFError:
-                pass
 
     def between(self, a, b, c):
         "check if a,b,c are consecutive, modulo the window size"

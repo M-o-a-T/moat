@@ -22,13 +22,13 @@ class Cmd(BaseCmd):
 
     async def cmd_echo(self, m: Any):
         "Basic echo method, returns @m as ``result['r']``"
-        return {'r': m}
+        return {"r": m}
 
-    def iter_it(self, lim: int = None):
+    def iter_it(self, lim: int|None = None):
         "returns a `NumIter`"
         return NumIter(lim)
 
-    async def cmd_nit(self, lim: int = None):
+    async def cmd_nit(self, lim: int|None = None):
         "A non-iterator counter; simply counts calls to it."
         self.n += 1
         if lim is not None and self.n > lim:

@@ -22,15 +22,14 @@ from msgpack import ExtType, OutOfData, Packer, Unpacker, packb, unpackb
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Optional
 
     from moat.micro.cmd.tree import SubDispatch
 
+# ruff:noqa:B904
 
 class ProcessDeadError(RuntimeError):
     """Process has died"""
 
-    pass
 
 
 class SyncStream:
@@ -106,7 +105,7 @@ def _encode(obj):
         return ExtType(4, obj.name.encode("utf-8"))
     if type(obj) is DProxy:
         return ExtType(
-            5, packb(obj.name) + packb(obj.a, default=_encode) + packb(obj.k, default=_encode)
+            5, packb(obj.name) + packb(obj.a, default=_encode) + packb(obj.k, default=_encode),
         )
 
     try:
@@ -242,7 +241,6 @@ class RemoteBufAnyio(anyio.abc.ByteStream):
 
     async def aclose(self):
         "no-op"
-        pass
 
     async def send_eof(self):
         "not implemented"
@@ -311,10 +309,10 @@ class ProcessBuf(CtxObj, AnyioBuf):
     """
 
     proc: anyio.Process = None
-    exec: str = None
-    cwd: str = None
-    argv: list[str] = None
-    env: Optional[dict[str, str]] = None
+    exec: str | None = None
+    cwd: str | None = None
+    argv: list[str] | None = None
+    env: dict[str, str] | None = None
 
     def __init__(self, cfg, executable: str | None = None, **kw):
         super().__init__(cfg)
@@ -355,7 +353,7 @@ class ProcessBuf(CtxObj, AnyioBuf):
             async with await anyio.open_process(self.argv, **self.open_args()) as proc:
                 try:
                     async with SingleAnyioBuf(
-                        anyio.streams.stapled.StapledByteStream(proc.stdin, proc.stdout)
+                        anyio.streams.stapled.StapledByteStream(proc.stdin, proc.stdout),
                     ) as s:
                         yield s
                     await proc.wait()

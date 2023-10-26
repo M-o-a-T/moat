@@ -9,7 +9,7 @@ import logging
 import os
 import stat
 from collections import defaultdict
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from pathlib import PosixPath as Path
 
 from moat.util import as_proxy  # pylint: disable=no-name-in-module
@@ -166,10 +166,8 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         for i in inode_list:
-            try:
+            with suppress(KeyError):
                 self.i_del(i)
-            except KeyError:
-                pass
 
     async def getattr(self, inode, _ctx, _res=None):
         """Get attributes for *inode*
@@ -191,19 +189,19 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             d = _res
 
         r = EntryAttributes()
-        t = d['t']
+        t = d["t"]
         r.st_ino = inode
         r.entry_timeout = 300
         r.attr_timeout = 300
-        if d.get('m') == 'd':
+        if d.get("m") == "d":
             r.st_mode = stat.S_IFDIR | 0o777
-        elif d.get('m') == 'f':
+        elif d.get("m") == "f":
             r.st_mode = stat.S_IFREG | 0o666
         r.st_mtime_ns = t * 1_000_000_000
         r.st_ctime_ns = t * 1_000_000_000
         r.st_atime_ns = t * 1_000_000_000
         r.st_birthtime_ns = t * 1_000_000_000
-        r.st_size = d.get('s', 0)
+        r.st_size = d.get("s", 0)
         r.st_blksize = 256
         r.st_blocks = (r.st_size - 1) // r.st_blksize + 1
         return r
@@ -234,7 +232,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         logger.warning(
-            "NotImpl: setattr: i=%r a=%r f=%r h=%r ctx=%r", inode, attr, fields, fh, ctx
+            "NotImpl: setattr: i=%r a=%r f=%r h=%r ctx=%r", inode, attr, fields, fh, ctx,
         )
         raise FUSEError(errno.ENOSYS)
 
@@ -264,7 +262,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         logger.warning(
-            "NotImpl: mknod: p=%r n=%r m=%r d=%r ctx=%r", parent_inode, name, mode, rdev, ctx
+            "NotImpl: mknod: p=%r n=%r m=%r d=%r ctx=%r", parent_inode, name, mode, rdev, ctx,
         )
         raise FUSEError(errno.ENOSYS)
 
@@ -410,7 +408,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
                     flags,
                     ctx,
                 )
-                raise FUSEError(errno.ENOSYS)
+                raise FUSEError(errno.ENOSYS)  # noqa:TRY301
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
 
@@ -427,7 +425,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         logger.warning(
-            "NotImpl: link: i=%r p=%r n=%r ctx=%r", inode, new_parent_inode, new_name, ctx
+            "NotImpl: link: i=%r p=%r n=%r ctx=%r", inode, new_parent_inode, new_name, ctx,
         )
         raise FUSEError(errno.ENOSYS)
 
@@ -482,14 +480,14 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         while size > 0:
             dl = min(size, self.max_read)
             buf = await self._link.rd(f=fh, o=off, n=dl)
-            if buf == b'':
+            if buf == b"":
                 break
             data.append(buf)
             if len(buf) < dl:
                 break
             size -= dl
             off += dl
-        return b''.join(data)
+        return b"".join(data)
 
     async def write(self, fh, off, buf):
         """Write *buf* into *fh* at *off*
@@ -530,7 +528,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         has been duplicated).
         """
 
-        pass  # pylint: disable=unnecessary-pass
+        # pylint: disable=unnecessary-pass
 
     async def release(self, fh):
         """Release open file
@@ -559,7 +557,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         *fh* will by an integer filehandle returned by a prior `open` or
         `create` call.
         """
-        pass  # pylint: disable=unnecessary-pass
+        # pylint: disable=unnecessary-pass
 
     async def opendir(self, inode, ctx):
         """Open the directory with inode *inode*
@@ -623,7 +621,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
             start_id += 1
             if not pyfuse3.readdir_reply(  # pylint: disable=I1101
-                token, name.encode("utf-8"), attr, start_id
+                token, name.encode("utf-8"), attr, start_id,
             ):
                 break
 
@@ -643,7 +641,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         If *datasync* is true, only the directory contents should be
         flushed (in contrast to metadata about the directory itself).
         """
-        pass  # pylint: disable=unnecessary-pass
+        # pylint: disable=unnecessary-pass
 
     async def statfs(self, ctx):
         """Get file system statistics
@@ -670,10 +668,10 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         import traceback
 
         code = []
-        for threadId, frame in sys._current_frames().items():  # pylint:disable=protected-access
+        for threadId, frame in sys._current_frames().items():  # noqa:SLF001 pylint:disable=protected-access
             code.append(f"\n# ThreadID: {threadId}")
             for filename, lineno, name, line in traceback.extract_stack(frame):
-                code.append(f'{os.path.basename(filename)}:{lineno}, in {name}')
+                code.append(f"{os.path.basename(filename)}:{lineno}, in {name}")
                 if line:
                     code.append("    {line.strip()}")
 
@@ -792,15 +790,15 @@ async def wrap(link: SubDispatch, path: Path, blocksize=0, debug=1):
         operations.max_read = blocksize
         operations.max_write = blocksize
 
-    logger.debug('Mounting...')
+    logger.debug("Mounting...")
     fuse_options = set(pyfuse3.default_options)  # pylint: disable=I1101
-    fuse_options.add('fsname=moat_fs')
+    fuse_options.add("fsname=moat_fs")
     # fuse_options.add(f'max_read={operations.max_read}')
     if debug > 1:
-        fuse_options.add('debug')
+        fuse_options.add("debug")
     pyfuse3.init(operations, str(path), fuse_options)  # pylint: disable=I1101
 
-    logger.debug('Entering main loop..')
+    logger.debug("Entering main loop..")
     async with anyio.create_task_group() as tg:
         try:
             tg.start_soon(pyfuse3.main)  # pylint: disable=I1101

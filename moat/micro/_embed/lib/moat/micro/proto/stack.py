@@ -34,7 +34,6 @@ class RemoteError(RuntimeError):
     """
     Forwarded error from a remote system.
     """
-    pass
 
 
 @as_proxy("_rErrS")
@@ -44,13 +43,11 @@ class SilentRemoteError(RemoteError):
 
     Unlike `RemoteError`, this should not trogger a stack dump.
     """
-    pass
 
 
 @as_proxy("_rErrCCl")
 class ChannelClosed(RuntimeError):
     "Link closed."
-    pass
 
 
 class _NullCtx:
@@ -113,7 +110,6 @@ class Base:
 
         Call first when overriding.
         """
-        pass
 
     async def teardown(self):
         """
@@ -121,7 +117,6 @@ class Base:
 
         Should not fail when called with a partially-created object.
         """
-        pass
 
 
 class BaseConn(Base):
@@ -351,18 +346,18 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             if sub == k:
                 res.append(f"{k}={self._repr(v)}")
             else:
-                res.append(f"{k}={repr(v)}")
+                res.append(f"{k}={v!r}")
         return "{" + " ".join(res) + "}"
 
     async def send(self, m):  # noqa:D102
-        log("S:%s %s", self.txt, self._repr(m, 'd'))
+        log("S:%s %s", self.txt, self._repr(m, "d"))
         try:
             res = await self.s.send(m)
         except BaseException as exc:
             log("S:%s stop %r", self.txt, exc)
             raise
         else:
-            log("S:%s =%s", self.txt, self._repr(res, 'd'))
+            log("S:%s =%s", self.txt, self._repr(res, "d"))
             return res
 
     async def recv(self):  # noqa:D102
@@ -373,7 +368,7 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
             log("R:%s stop %r", self.txt, exc)
             raise
         else:
-            log("R:%s %s", self.txt, self._repr(msg, 'd'))
+            log("R:%s %s", self.txt, self._repr(msg, "d"))
             return msg
 
     async def snd(self, m):  # noqa:D102

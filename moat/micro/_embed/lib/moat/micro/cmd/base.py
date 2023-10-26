@@ -69,14 +69,12 @@ class BaseCmd(Base):
     This class does not accept subcommands.
     """
 
+    root: Dispatch = None
     _parent: BaseSuperCmd = None
     _name: str = None
     _ts = None
     _rl_ok = None  # result of last reload
     p_task = None  # managed by parent. Do not touch.
-
-    root: Dispatch = None
-    _parent: BaseSuperCmd = None
 
     _starting: Event = None
     _ready: Event = None
@@ -114,7 +112,6 @@ class BaseCmd(Base):
 
         Call last when overriding.
         """
-        pass
 
     async def reload(self):
         """
@@ -122,7 +119,6 @@ class BaseCmd(Base):
 
         The default does nothing, which is probably the wrong thing to do.
         """
-        pass
 
     def _is_stopped(self):
         """
@@ -275,7 +271,7 @@ class BaseCmd(Base):
         # XXX run in a separate task
 
     async def dispatch(
-        self, action: list[str], msg: dict, *, rep: int = None, wait: bool = True, x_err=()
+        self, action: list[str], msg: dict, *, rep: int|None = None, wait: bool = True, x_err=(),
     ) -> Awaitable | AsyncContextManager[AsyncIterator]:  # pylint:disable=arguments-differ
         """
         Process a message.
@@ -348,10 +344,10 @@ class BaseCmd(Base):
         res = dict(c=c)
 
         for k in dir(self):
-            if k.startswith("cmd_") and h == (k[4] == '_'):
+            if k.startswith("cmd_") and h == (k[4] == "_"):
                 c.append(k[4:])
             elif k == ("_cmd" if h else "cmd"):
-                res['j'] = True
+                res["j"] = True
         return res
 
     async def cmd_cfg(self, p=()):

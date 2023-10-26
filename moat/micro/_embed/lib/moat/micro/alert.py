@@ -19,7 +19,6 @@ from .compat import AC_use, TaskGroup
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Optional
 
     from moat.util import Path
 
@@ -43,14 +42,14 @@ class AlertIter:
         self.s = s
 
     async def __aenter__(self):
-        if self.ah._q is not None:
+        if self.ah._q is not None:  # noqa:SLF001
             raise RuntimeError("already on")
-        self.ah._q = Queue(10)
+        self.ah._q = Queue(10)  # noqa:SLF001
         self.xal = iter(list(self.ah.alarms.items()))
         return self
 
     async def __aexit__(self, *tb):
-        self.ah._q = None
+        self.ah._q = None  # noqa:SLF001
 
     def __aiter__(self):
         return self
@@ -69,7 +68,7 @@ class AlertIter:
                 d = al.data
 
         if a is None:
-            a, p, d = await self.ah._q.get()
+            a, p, d = await self.ah._q.get()  # noqa:SLF001
         res = {"a": a, "p": p}
         if d is not None:
             res["d"] = d
@@ -144,7 +143,7 @@ class AlertHandler(BaseCmd):
         """
         return AlertIter(self, s)
 
-    async def cmd_w(self, a: type[Alert], p: Path, d: Optional[dict] = None):
+    async def cmd_w(self, a: type[Alert], p: Path, d: dict|None = None):
         """
         Set an alert.
 

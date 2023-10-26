@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from typing import Mapping
 
 
-class Path(tuple):
+class Path(tuple):  # noqa:SLOT001
     """
     somewhat-dummy Path
 
@@ -57,7 +57,7 @@ class Path(tuple):
         return "".join(res)
 
     def __repr__(self):
-        return f"P({repr(str(self))})"
+        return f"P({str(self)!r})"
 
     def __truediv__(self, x):
         return Path(self + (x,))
@@ -84,7 +84,6 @@ class CancelledError(Exception):
     Not an asyncio-style cancellation
     """
 
-    pass
 
 
 class OptCtx:
@@ -183,7 +182,7 @@ class attrdict(dict):
             return self[k]
         except KeyError:
             if d is NotGiven:
-                raise AttributeError(k)
+                raise AttributeError(k) from None
             return d
 
     def __setattr__(self, k, v):
@@ -280,7 +279,7 @@ def get_proxy(obj):
     try:
         return _RProxy[id(obj)]
     except KeyError:
-        global _pkey
+        global _pkey  # noqa:PLW0603
         k = "p_" + str(_pkey)
         _pkey += 1
         _CProxy[k] = obj
@@ -376,7 +375,7 @@ class Lockstep:
 
 class NoProxyError(ValueError):
     "Error for nonexistent proxy values"
-    pass  # pylint:disable=unnecessary-pass
+    # pylint:disable=unnecessary-pass
 
 
 class Proxy:
@@ -388,7 +387,7 @@ class Proxy:
         self.name = name
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({repr(self.name)})"
+        return f"{self.__class__.__name__}({self.name!r})"
 
     def ref(self):
         """Dereferences the proxy"""
@@ -413,7 +412,7 @@ class DProxy(Proxy):
 
     def __repr__(self):
         return (
-            f"{self.__class__.__name__}({repr(self.name)},"
+            f"{self.__class__.__name__}({self.name!r},"
             + ",".join(repr(x) for x in (self.a, self.k))
             + ")"
         )

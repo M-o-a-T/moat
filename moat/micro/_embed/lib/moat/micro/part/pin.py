@@ -18,7 +18,7 @@ except AttributeError:
         # fake
         __val = False
 
-        def __new__(cls, **kw):
+        def __new__(cls, **kw):  # noqa:ARG003
             return object.__new__(cls)
 
         def __init__(self, **kw):
@@ -109,7 +109,7 @@ class Pin(BaseCmd):
         self.flag.set()
         self.flag = Event()
 
-    def iter_r(self, prev=None):
+    def iter_r(self):
         "iterate the pin's values"
         return self.pin
 

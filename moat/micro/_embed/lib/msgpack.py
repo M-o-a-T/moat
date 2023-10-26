@@ -1,5 +1,18 @@
 """
-async MsgPack codec
+This is a micropython-asyncio-compatible MsgPack implementation.
+It does not support
+* a "default" fallback encoder
+* encoding binary data to strings (which is legacy nonsense anyway)
+* auto-encoding datetime to the timestamp extension
+* the object_pairs hook
+
+The encoder is synchronous and returns bytes.
+The decoder is async and yields messages.
+You can also decode single messages synchronously.
+
+The decoder returns binary data as memoryviews if they're larger
+than the threshold (default -1: always copy). Extension objects always
+get a memoryview and must decode or copy it.
 """
 # cloned from https://github.com/msgpack/msgpack-python
 
@@ -14,37 +27,18 @@ from micropython import const
 
 from moat.util import attrdict
 
-#
-# This is a micropython-asyncio-compatible MsgPack implementation.
-# It does not support
-# * a "default" fallback encoder
-# * encoding binary data to strings (which is legacy nonsense anyway)
-# * auto-encoding datetime to the timestamp extension
-# * the object_pairs hook
-#
-# The encoder is synchronous and returns bytes.
-# The decoder is async and yields messages.
-# You can also decode single messages synchronously.
-#
-# The decoder returns binary data as memoryviews if they're larger
-# than the threshold (default -1: always copy). Extension objects always
-# get a memoryview and must decode or copy it.
-#
-
+# ruff:noqa:TRY200
 
 class UnpackException(Exception):
     "superclass, not raised"
-    pass
 
 
 class OutOfData(UnpackException):
     "missing data in buffer"
-    pass
 
 
 class FormatError(UnpackException):
     "Error code read"
-    pass
 
 
 class ExtraData(ValueError):
@@ -108,7 +102,7 @@ _MSGPACK_HEADERS = {
 }
 
 
-class Unpacker(object):
+class Unpacker:
     """
     Manager for buffered and streamed unpacking.
     """
@@ -280,7 +274,7 @@ class Unpacker(object):
 
         if typ == _TYPE_ARRAY:
             ret = []
-            for i in range(n):
+            for _ in range(n):
                 ret.append(await self.unpack())
             # if self._list_hook is not None:
             # ret = self._list_hook(ret)
@@ -290,7 +284,7 @@ class Unpacker(object):
             ret = attrdict()
             for _ in range(n):
                 key = await self.unpack()
-                if type(key) is str and hasattr(sys, 'intern'):  # noqa:E721
+                if type(key) is str and hasattr(sys, "intern"):  # noqa:E721
                     key = sys.intern(key)
                 ret[key] = await self.unpack()
             # if self._object_hook is not None:
@@ -349,7 +343,7 @@ class Unpacker(object):
         raise RuntimeError("No way")
 
 
-class Packer(object):
+class Packer:
     """
     Manager for buffered and streamed packing.
     """
@@ -406,19 +400,19 @@ class Packer(object):
                         wp(">BQ", 0xCF, obj)
                         continue
                 else:
-                    if -0x20 <= obj:
+                    if obj >= -0x20:
                         wp("b", obj)
                         continue
-                    if -0x80 <= obj:
+                    if obj >= -0x80:
                         wp(">Bb", 0xD0, obj)
                         continue
-                    if -0x8000 <= obj:
+                    if obj >= -0x8000:
                         wp(">Bh", 0xD1, obj)
                         continue
-                    if -0x80000000 <= obj:
+                    if obj >= -0x80000000:
                         wp(">Bi", 0xD2, obj)
                         continue
-                    if -0x8000000000000000 <= obj:
+                    if obj >= -0x8000000000000000:
                         wp(">Bq", 0xD3, obj)
                         continue
                 if _default:
@@ -506,7 +500,7 @@ class Packer(object):
                     _ndefault = False
                     todo.append(res)
                     continue
-            raise TypeError("Cannot serialize %r" % (obj,))
+            raise TypeError(f"Cannot serialize {obj !r}")
 
     def packb(self, obj):
         "Packs a single data item. Returns the bytes."

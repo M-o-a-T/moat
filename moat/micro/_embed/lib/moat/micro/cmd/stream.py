@@ -17,7 +17,7 @@ from .util import RecvIter, SendIter, StoppedError, ValueTask
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any, Awaitable, Mapping, Optional
+    from typing import Any, Awaitable, Mapping
 
 
 class BaseCmdBBM(BaseCmd):
@@ -263,7 +263,7 @@ class BaseCmdMsg(BaseCmd):
         if i is None:
             return
         try:
-            await self.s.send({'i': i, 'd': res})
+            await self.s.send({"i": i, "d": res})
         except Exception as e:  # pylint:disable=broad-exception-caught
             await self.reply_error(i, e)
         except BaseException as e:
@@ -282,7 +282,7 @@ class BaseCmdMsg(BaseCmd):
         res = NotGiven
         self.reply.pop(i, None)
         try:
-            if isinstance(exc, SilentRemoteError):
+            if isinstance(exc, SilentRemoteError):  # noqa:SIM114
                 pass
             elif x and isinstance(exc, tuple(x)):
                 pass
@@ -290,7 +290,7 @@ class BaseCmdMsg(BaseCmd):
                 log("ERROR handling %d", i, err=exc)
             if i is None:
                 return
-            res = {'i': i}
+            res = {"i": i}
             if isinstance(exc, Exception):
                 try:
                     obj2name(type(exc))
@@ -305,7 +305,7 @@ class BaseCmdMsg(BaseCmd):
             await self.s.send(res)
         except TypeError as e2:
             log("ERROR returning %r", res, err=e2)
-            await self.s.send({'e': "T:" + repr(e2), 'i': i})
+            await self.s.send({"e": "T:" + repr(e2), "i": i})
 
     async def _handle(self, msg):
         """
@@ -314,12 +314,12 @@ class BaseCmdMsg(BaseCmd):
         if not isinstance(msg, dict):
             print("?3", msg, file=sys.stderr)
             return
-        a: Optional[tuple[str | int]] = msg.get("a", None)  # action
-        i: Optional[int] = msg.get("i", None)  # seqnum
+        a: tuple[str | int] | None = msg.get("a", None)  # action
+        i: int | None = msg.get("i", None)  # seqnum
         d: Mapping[str, Any] | type[NotGiven] = msg.get("d", NotGiven)  # data
         e: type[Exception] | str = msg.get("e", None)  # error
-        r: Optional[int] = msg.get("r", None)  # repeat
-        n: Optional[int] = msg.get("n", None)  # iter_seq
+        r: int | None = msg.get("r", None)  # repeat
+        n: int | None = msg.get("n", None)  # iter_seq
         x: list[type[Exception]] = msg.get("x", ())  # exclude_error
 
         if i is not None:
@@ -353,7 +353,7 @@ class BaseCmdMsg(BaseCmd):
                 self.reply[i] = t
             rm = await t.start(self.tg)
             if rm is not None:  # revised iterator rate
-                await self.s.send({'i': i, 'r': rm})
+                await self.s.send({"i": i, "r": rm})
 
         else:
             # reply
@@ -407,7 +407,7 @@ class BaseCmdMsg(BaseCmd):
                 del self.reply[i]
 
     async def dispatch(
-        self, action, msg=None, *, rep: int = None, wait=True, x_err=()
+        self, action, msg=None, *, rep: int|None = None, wait=True, x_err=(),
     ):  # pylint:disable=arguments-differ
         """
         Forward a request to the remote side, return the response.
@@ -500,7 +500,7 @@ class ExtCmdMsg(SingleCmdMsg):
     and then closing the stream!
     """
 
-    def __init__(self, stream: BaseMsg, cfg: dict[str, Any] = None):
+    def __init__(self, stream: BaseMsg, cfg: dict[str, Any] | None = None):
         if cfg is None:
             cfg = {}
         super().__init__(cfg)

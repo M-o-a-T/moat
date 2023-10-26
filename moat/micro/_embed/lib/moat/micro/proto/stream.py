@@ -137,7 +137,7 @@ def _encode(obj):
         return ExtType(4, obj.name.encode("utf-8"))
     if type(obj) is DProxy:
         return ExtType(
-            5, packb(obj.name) + packb(obj.a, default=_encode) + packb(obj.k, default=_encode)
+            5, packb(obj.name) + packb(obj.a, default=_encode) + packb(obj.k, default=_encode),
         )
 
     try:

@@ -68,8 +68,8 @@ CBOR_TAG_NEGBIGNUM = const(3)  # big endian byte string follows
 # CBOR_TAG_MIME = const(36) # following text is MIME message, headers, separators and all
 # CBOR_TAG_CBOR_FILEHEADER = const(55799) # can open a file with 0xd9d9f7
 
-_CBOR_TAG_BIGNUM_BYTES = struct.pack('B', CBOR_TAG | CBOR_TAG_BIGNUM)
-_CBOR_TAG_NEGBIGNUM_BYTES = struct.pack('B', CBOR_TAG | CBOR_TAG_NEGBIGNUM)
+_CBOR_TAG_BIGNUM_BYTES = struct.pack("B", CBOR_TAG | CBOR_TAG_BIGNUM)
+_CBOR_TAG_NEGBIGNUM_BYTES = struct.pack("B", CBOR_TAG | CBOR_TAG_NEGBIGNUM)
 
 # XXX µPy doesn't have int.bit_length
 # try:
@@ -152,19 +152,19 @@ class Packer:
         w = self._w
 
         if val is None:
-            return w(struct.pack('B', cbor_type | CBOR_VAR_FOLLOWS))
+            return w(struct.pack("B", cbor_type | CBOR_VAR_FOLLOWS))
 
         assert val >= 0
         if val <= 23:
-            return w(struct.pack('B', cbor_type | val))
+            return w(struct.pack("B", cbor_type | val))
         if val <= 0x0FF:
-            return w(struct.pack('BB', cbor_type | CBOR_UINT8_FOLLOWS, val))
+            return w(struct.pack("BB", cbor_type | CBOR_UINT8_FOLLOWS, val))
         if val <= 0x0FFFF:
-            return w(struct.pack('!BH', cbor_type | CBOR_UINT16_FOLLOWS, val))
+            return w(struct.pack("!BH", cbor_type | CBOR_UINT16_FOLLOWS, val))
         if val <= 0x0FFFFFFFF:
-            return w(struct.pack('!BI', cbor_type | CBOR_UINT32_FOLLOWS, val))
+            return w(struct.pack("!BI", cbor_type | CBOR_UINT32_FOLLOWS, val))
         if val <= (0x07FFFFFFFFFFFFFFF if cbor_type == CBOR_NEGINT else 0x0FFFFFFFFFFFFFFFF):
-            return w(struct.pack('!BQ', cbor_type | CBOR_UINT64_FOLLOWS, val))
+            return w(struct.pack("!BQ", cbor_type | CBOR_UINT64_FOLLOWS, val))
 
         # too large: write a bignum
         if cbor_type == CBOR_UINT:
@@ -179,7 +179,7 @@ class Packer:
 
     def _string(self, val):
         if isinstance(val, str):
-            val = val.encode('utf8')
+            val = val.encode("utf8")
             self._encode_type_num(CBOR_TEXT, len(val))
         else:
             self._encode_type_num(CBOR_BYTES, len(val))
@@ -192,7 +192,7 @@ class Packer:
             self._encode_type_num(CBOR_ARRAY, None)
             for x in arr:
                 self._any(x)
-            self._w(struct.pack('B', CBOR_BREAK))
+            self._w(struct.pack("B", CBOR_BREAK))
         else:
             for x in arr:
                 self._any(x)
@@ -205,8 +205,8 @@ class Packer:
 
     def _bool(self, b):
         if b:
-            self._w(struct.pack('B', CBOR_TRUE))
-        self._w(struct.pack('B', CBOR_FALSE))
+            self._w(struct.pack("B", CBOR_TRUE))
+        self._w(struct.pack("B", CBOR_FALSE))
 
     def _tag(self, t):
         self._encode_type_num(CBOR_TAG, t.tag)
@@ -217,9 +217,9 @@ class Packer:
 
     def _any(self, ob):
         if ob is None:
-            self._w(struct.pack('B', CBOR_NULL))
+            self._w(struct.pack("B", CBOR_NULL))
         elif ob is NotGiven:
-            self._w(struct.pack('B', CBOR_UNDEFINED))
+            self._w(struct.pack("B", CBOR_UNDEFINED))
         elif isinstance(ob, bool):
             self._bool(ob)
         elif isinstance(ob, (str, bytes)):
@@ -248,13 +248,13 @@ class Packer:
             self._buffer = BytesIO()  # always reset
 
 
-class Tag(object):
+class Tag:
     def __init__(self, tag=None, value=None):
         self.tag = tag
         self.value = value
 
     def __repr__(self):
-        return "Tag({0!r}, {1!r})".format(self.tag, self.value)
+        return f"Tag({self.tag!r}, {self.value!r})"
 
     def __eq__(self, other):
         if not isinstance(other, Tag):
@@ -292,7 +292,7 @@ class Unpacker:
             data = await self._read(8)
             aux = struct.unpack_from("!Q", data, 0)[0]
         else:
-            assert tag_aux == CBOR_VAR_FOLLOWS, "bogus tag {0:02x}".format(tb)
+            assert tag_aux == CBOR_VAR_FOLLOWS, f"bogus tag {tb:02x}"
             aux = None
 
         return tag, tag_aux, aux
@@ -436,9 +436,9 @@ class Unpacker:
                 val = mant * (2.0**-24)
             elif exp == 31:
                 if mant == 0:
-                    val = float('Inf')
+                    val = float("Inf")
                 else:
-                    val = float('NaN')
+                    val = float("NaN")
             else:
                 val = (mant + 1024.0) * (2 ** (exp - 25))
             if hibyte & 0x80:
@@ -462,7 +462,7 @@ class Unpacker:
         elif tag == CBOR_BYTES:
             return await self._bytes(aux)
         elif tag == CBOR_TEXT:
-            return str(await self._bytes(aux, btag=CBOR_TEXT), 'utf8')
+            return str(await self._bytes(aux, btag=CBOR_TEXT), "utf8")
         elif tag == CBOR_ARRAY:
             if aux is None:
                 return await self._var_array()
@@ -484,7 +484,7 @@ class Unpacker:
                 return None
             if tb == CBOR_UNDEFINED:
                 return NotGiven
-            raise ValueError("unknown cbor tag 7 byte: {:02x}".format(tb))
+            raise ValueError(f"unknown cbor tag 7 byte: {tb:02x}")
 
     async def _bytes(self, aux, btag=CBOR_BYTES):
         # TODO: limit to some maximum number of chunks and some maximum total bytes
@@ -500,10 +500,10 @@ class Unpacker:
                 break
             tag, tag_aux, aux = await self._tag_aux(tb)
             if tag != btag:
-                raise ValueError('var length with unexpected component')
+                raise ValueError("var length with unexpected component")
             ob = await self._read(aux)
             chunklist.append(ob)
-        return b''.join(chunklist)
+        return b"".join(chunklist)
 
 
 def tagify(aux, ob):

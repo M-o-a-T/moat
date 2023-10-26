@@ -144,7 +144,7 @@ async def test_modes(tmp_path, lossy, guarded):
         r=dict(
             link=dict(lossy=lossy, guarded=guarded),
             cfg=dict(r=dict(link=dict(lossy=lossy, guarded=guarded))),
-        )
+        ),
     )
     async with mpy_stack(tmp_path, CFG, cfu) as d:
         res = await d.send("r", "b", "echo", m="hi")
@@ -185,7 +185,7 @@ class Bar:
 @as_proxy("fu")
 class Foo(Bar):
     "proxied test class"
-    pass  # pylint:disable=unnecessary-pass
+    # pylint:disable=unnecessary-pass
 
 
 LCFG = """

@@ -24,7 +24,7 @@ from moat.micro.proto.stream import ProcessBuf
 logging.basicConfig(level=logging.DEBUG)
 
 
-def _lbc(*a, **k):
+def _lbc(*a, **k):  # noqa: ARG001
     "block log configuration"
     raise RuntimeError("don't configure logging a second time")
 
@@ -86,7 +86,7 @@ class MpyBuf(ProcessBuf):
                 pre = "micro/"
 
             root = self.cfg.get("cwd", None)
-            if root is None:
+            if root is None:  # noqa:SIM108
                 root = temp_dir.get() / "root"
             else:
                 root = Path(root).absolute()
@@ -111,7 +111,7 @@ class MpyBuf(ProcessBuf):
 
             libp = []
             for p in moat.micro.__path__:
-                p = Path(p) / "_embed"
+                p = Path(p) / "_embed"  # noqa:PLW2901
                 if p.exists():
                     libp.append(p)
                 if (p / "lib").exists():

@@ -41,7 +41,7 @@ class ABytes(io.BytesIO):
     def __str__(self):
         return str(self.name)
 
-    async def open(self, mode):  # pylint: disable=unused-argument
+    async def open(self, mode):  # noqa:ARG002 pylint: disable=unused-argument
         "reset the buffer pointer"
         self.seek(0, 0)
         return self
@@ -58,14 +58,14 @@ class ABytes(io.BytesIO):
 
     async def gitsha1(self):
         "hash the current buffer"
-        _h = hashlib.sha1()
-        _h.update(f"blob {len(self.getbuffer())}\0".encode("utf-8"))
+        _h = hashlib.sha1()  # noqa:S324  # sha1
+        _h.update(f"blob {len(self.getbuffer())}\0".encode())
         _h.update(self.getbuffer())
         return _h.digest()
 
     def close(self):
         "does nothing"
-        pass  # pylint:disable=unnecessary-pass
+        # pylint:disable=unnecessary-pass
 
     async def is_dir(self):
         "returns False"
@@ -75,7 +75,7 @@ class ABytes(io.BytesIO):
         "returns True"
         return True
 
-    async def stat(self, follow_symlinks=False):  # pylint: disable=unused-argument
+    async def stat(self, follow_symlinks=False):  # noqa:ARG002 pylint: disable=unused-argument
         "returns the size. All other stat fields are empty"
         res = attrdict()
         res.st_size = len(self.getbuffer())
@@ -102,14 +102,14 @@ class APath(anyio.Path):
 
         Calculate a SHA1 over the file contents, the way "git" does it.
         """
-        _h = hashlib.sha1()
+        _h = hashlib.sha1()  # noqa:S324  # sha1
         sz = (await self.stat()).st_size
-        _h.update(f"blob {sz}\0".encode("utf-8"))
+        _h.update(f"blob {sz}\0".encode())
         async for block in self.read_as_stream():
             _h.update(block)
         return _h.digest()
 
-    async def read_as_stream(self, chunk=4096):
+    async def read_as_stream(self, chunk=4096):  # noqa:ARG002
         """
         :returns: async Iterator
         :rtype: Iterator of bytes
@@ -182,9 +182,9 @@ class MoatPath(anyio.Path):  # pathlib.PosixPath
 
         Pattern match files on remote.
         """
-        if pattern.startswith('/'):
+        if pattern.startswith("/"):
             pattern = pattern[1:]  # XXX
-        parts = pattern.split('/')
+        parts = pattern.split("/")
         # print('glob', self, pattern, parts)
         if not parts:
             return
@@ -193,9 +193,9 @@ class MoatPath(anyio.Path):  # pathlib.PosixPath
                 if r.match(pattern):
                     yield r
         else:
-            remaining_parts = '/'.join(parts[1:])
+            remaining_parts = "/".join(parts[1:])
             # pylint:disable=no-else-raise
-            if parts[0] == '**':
+            if parts[0] == "**":
                 raise NotImplementedError
                 # for dirpath, dirnames, filenames in walk(self):
                 # for path in filenames:
@@ -204,14 +204,14 @@ class MoatPath(anyio.Path):  # pathlib.PosixPath
             else:
                 for path in self.iterdir():
                     if (await path.is_dir()) and path.relative_to(path.parent).match(
-                        parts[0]
+                        parts[0],
                     ):  # XXX ?
                         async for r in path.glob(remaining_parts):
                             yield r
 
     async def iterdir(self):  # pylint:disable=invalid-overridden-method
         "list a directory under this path."
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class MoatDevPath(MoatPath):
@@ -226,13 +226,13 @@ class MoatDevPath(MoatPath):
 
     # methods that access files
 
-    async def stat(self, *, follow_symlinks=False) -> os.stat_result:
+    async def stat(self, *, follow_symlinks=False) -> os.stat_result:  # noqa:ARG002
         """
         Return stat information about path on remote. The information is cached
         to speed up operations.
         """
         if self._stat_cache is None:
-            st = await self._repl.evaluate(f'import os; print(os.stat({self.as_posix()!r}))')
+            st = await self._repl.evaluate(f"import os; print(os.stat({self.as_posix()!r}))")
             self._stat_cache = os.stat_result(st)
         return self._stat_cache
 
@@ -267,7 +267,7 @@ class MoatDevPath(MoatPath):
         """
         self._stat_cache = None
         try:
-            await self._repl.evaluate(f'import os; print(os.remove({self.as_posix()!r}))')
+            await self._repl.evaluate(f"import os; print(os.remove({self.as_posix()!r}))")
         except FileNotFoundError:
             if not missing_ok:
                 raise
@@ -284,11 +284,11 @@ class MoatDevPath(MoatPath):
         """
         self._stat_cache = None
         await self._repl.evaluate(
-            f'import os; print(os.rename({self.as_posix()!r}, {target.as_posix()!r}))'
+            f"import os; print(os.rename({self.as_posix()!r}, {target.as_posix()!r}))",
         )
         return self.with_name(target)  # XXX, moves across dirs
 
-    async def mkdir(self, mode=0o755, parents=False, exist_ok=False):
+    async def mkdir(self, mode=0o755, parents=False, exist_ok=False):  # noqa:ARG002
         """
         :param parents: When true, create parent directories
         :param exist_ok: No error if the directory does not exist
@@ -298,7 +298,7 @@ class MoatDevPath(MoatPath):
         Create new directory.
         """
         try:
-            return await self._repl.evaluate(f'import os; print(os.mkdir({self.as_posix()!r}))')
+            return await self._repl.evaluate(f"import os; print(os.mkdir({self.as_posix()!r}))")
         except FileExistsError:
             if exist_ok:
                 pass
@@ -317,7 +317,7 @@ class MoatDevPath(MoatPath):
 
         Remove (empty) directory
         """
-        await self._repl.evaluate(f'import os; print(os.rmdir({self.as_posix()!r}))')
+        await self._repl.evaluate(f"import os; print(os.rmdir({self.as_posix()!r}))")
         self._stat_cache = None
 
     async def read_as_stream(self):
@@ -338,15 +338,15 @@ class MoatDevPath(MoatPath):
             '    n = _f.readinto(_mem)\n'
             '    if not n: break\n'
             '    print(ubinascii.b2a_base64(_mem[:n]), ",")\n'
-            '  print("]")'
+            '  print("]")',
         )
         while True:
-            blocks = await self._repl.evaluate(f'_b({n_blocks})')
+            blocks = await self._repl.evaluate(f"_b({n_blocks})")
             if not blocks:
                 break
             for block in blocks:
                 yield binascii.a2b_base64(block)
-        await self._repl.exec('_f.close(); del _f, _b')
+        await self._repl.exec("_f.close(); del _f, _b")
 
     async def read_bytes(self) -> bytes:
         """
@@ -358,7 +358,7 @@ class MoatDevPath(MoatPath):
         res = []
         async for r in self.read_as_stream():
             res.append(r)
-        return b''.join(res)
+        return b"".join(res)
 
     async def write_bytes(self, data, chunk=512) -> int:
         """
@@ -368,9 +368,9 @@ class MoatDevPath(MoatPath):
         """
         self._stat_cache = None
         if not isinstance(data, (bytes, bytearray, memoryview)):
-            raise TypeError(f'contents must be bytes/bytearray, got {type(data)} instead')
+            raise TypeError(f"contents must be bytes/bytearray, got {type(data)} instead")
         await self._repl.exec(
-            f'from binascii import a2b_base64 as _a2b; _f = open({self.as_posix()!r}, "wb")'
+            f'from binascii import a2b_base64 as _a2b; _f = open({self.as_posix()!r}, "wb")',
         )
         # write in chunks
         with io.BytesIO(data) as local_file:
@@ -378,8 +378,8 @@ class MoatDevPath(MoatPath):
                 block = local_file.read(chunk)
                 if not block:
                     break
-                await self._repl.exec(f'_f.write(_a2b({binascii.b2a_base64(block).rstrip()!r}))')
-        await self._repl.exec('_f.close(); del _f, _a2b')
+                await self._repl.exec(f"_f.write(_a2b({binascii.b2a_base64(block).rstrip()!r}))")
+        await self._repl.exec("_f.close(); del _f, _a2b")
         return len(data)
 
     # read_text(), write_text()
@@ -395,16 +395,16 @@ class MoatDevPath(MoatPath):
         # return [(self / p).connect_repl(self._repl) for p in remote_paths]
         # variant with pre-loading stat info
         posix_path_slash = self.as_posix()
-        if not posix_path_slash.endswith('/'):
-            posix_path_slash += '/'
+        if not posix_path_slash.endswith("/"):
+            posix_path_slash += "/"
         remote_paths_stat = await self._repl.evaluate(
             'import os; print("[")\n'
             f'for n in os.listdir({self.as_posix()!r}): '
             '    print("[", repr(n), ",", os.stat({posix_path_slash!r} + n), "],")\n'
-            'print("]")'
+            'print("]")',
         )
         for p, st in remote_paths_stat:
-            yield (self / p)._with_stat(st)  # pylint:disable=protected-access
+            yield (self / p)._with_stat(st)  # noqa:SLF001 pylint:disable=protected-access
 
     # custom extension methods
 
@@ -422,7 +422,7 @@ class MoatDevPath(MoatPath):
                 '    _n = _f.readinto(_mem)\n'
                 '    if not _n: break\n'
                 '    _h.update(_mem[:_n])\n'
-                'del _n, _f, _mem\n'
+                'del _n, _f, _mem\n',
             )
         except ImportError:
             # fallback if no hashlib is available: download and hash here.
@@ -432,11 +432,11 @@ class MoatDevPath(MoatPath):
                     _h.update(block)
                 return _h.digest()
             except FileNotFoundError:
-                return b''
+                return b""
         except OSError:
-            hash_value = b''
+            hash_value = b""
         else:
-            hash_value = await self._repl.evaluate('print(_h.digest()); del _h')
+            hash_value = await self._repl.evaluate("print(_h.digest()); del _h")
         return hash_value
 
 
@@ -460,7 +460,7 @@ class MoatFSPath(MoatPath):
     # os.stat_result(st_mode=1, st_ino=2, st_dev=3, st_nlink=4,
     #                st_uid=5, st_gid=6, st_size=7, st_atime=8, st_mtime=9, st_ctime=10)
 
-    async def stat(self, *, follow_symlinks=False) -> os.stat_result:
+    async def stat(self, *, follow_symlinks=False) -> os.stat_result:  # noqa:ARG002
         """
         Return stat information about path on remote. The information is cached
         to speed up operations.
@@ -520,7 +520,7 @@ class MoatFSPath(MoatPath):
         await self._req("rm", s=self.as_posix(), d=target.as_posix())
         return self.with_name(target)  # XXX, moves across dirs
 
-    async def mkdir(self, mode=0o755, parents=False, exist_ok=False):
+    async def mkdir(self, mode=0o755, parents=False, exist_ok=False):  # noqa:ARG002
         """
         :param parents: When true, create parent directories
         :param exist_ok: No error if the directory does not exist
@@ -582,7 +582,7 @@ class MoatFSPath(MoatPath):
         res = []
         async for r in self.read_as_stream(chunk=chunk):
             res.append(r)
-        return b''.join(res)
+        return b"".join(res)
 
     async def write_bytes(self, data, chunk=128) -> int:
         """
@@ -592,7 +592,7 @@ class MoatFSPath(MoatPath):
         """
         self._stat_cache = None
         if not isinstance(data, (bytes, bytearray, memoryview)):
-            raise TypeError(f'contents must be a buffer, got {type(data)} instead')
+            raise TypeError(f"contents must be a buffer, got {type(data)} instead")
         fd = await self._req("open", p=self.as_posix(), m="w")
         try:
             off = 0
@@ -700,16 +700,12 @@ async def copytree(src, dst, check=None, drop=None, cross=None):
                     # copy this file unmodified
                 else:
                     src = ABytes(src.with_suffix(".mpy"), data.stdout)
-                    try:
+                    with suppress(OSError, RemoteError):
                         await dst.unlink()
-                    except (OSError, RemoteError):
-                        pass
                     dst = dst.with_suffix(".mpy")
             else:
-                try:
+                with suppress(OSError, RemoteError):
                     await dst.with_suffix(".mpy").unlink()
-                except (OSError, RemoteError):
-                    pass
 
         s1 = (await src.stat()).st_size
         try:
@@ -738,10 +734,8 @@ async def copytree(src, dst, check=None, drop=None, cross=None):
             return 0
         if dst.name.startswith("."):
             return 0
-        try:
+        with suppress(OSError, RemoteError):
             s = await dst.stat()
-        except (OSError, RemoteError):
-            pass
 
         logger.debug("Copy: dir %s > %s", src, dst)
         async for s in src.iterdir():
@@ -759,7 +753,7 @@ async def copy_over(src, dst, cross=None):
     This procedure verifies that the data arrived OK.
     """
     tn = 0
-    if await src.is_file():
+    if await src.is_file():  # noqa:SIM102
         if await dst.is_dir():
             dst /= src.name
     while n := await copytree(src, dst, cross=cross):

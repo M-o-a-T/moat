@@ -29,9 +29,9 @@ def main(cfg: str | dict, fake_end=False):
     """
     if isinstance(cfg, str):
         try:
-            f = open(cfg, "rb")
+            f = open(cfg, "rb")  # noqa:SIM115
         except OSError:
-            raise OSError(cfg)
+            raise OSError(cfg) from None
         with f:
             cfg = msgpack.unpackb(f.read())
 
@@ -71,7 +71,7 @@ def main(cfg: str | dict, fake_end=False):
                     nm = (ff << (32 - nm)) & ff
                     nm = f"{(nm>>24)&0xFF}.{(nm>>16)&0xFF}.{(nm>>8)&0xFF}.{nm&0xFF}"
                 wlan.ifconfig((n["addr"], n["netmask"], n["router"], n["dns"]))
-            wlan.connect(n["ap"], n.get("pwd", ''))  # connect to an AP
+            wlan.connect(n["ap"], n.get("pwd", ""))  # connect to an AP
         else:
             wlan = network.WLAN(network.AP_IF)  # create a station interface
 

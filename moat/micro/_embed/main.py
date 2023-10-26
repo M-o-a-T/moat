@@ -3,6 +3,8 @@ Datellite main code.
 """
 from __future__ import annotations
 
+from contextlib import suppress
+
 import machine
 
 from moat.micro.compat import log
@@ -10,7 +12,7 @@ from moat.micro.rtc import state
 
 cfg = {}
 
-def set(attr, value=None, fs=None):
+def set_rtc(attr, value=None, fs=None):
     "Setter for a value in RTC / file system"
     if state is None and fs is False:
         raise RuntimeError("no RTC")
@@ -20,7 +22,7 @@ def set(attr, value=None, fs=None):
 
         fn = f"moat.{attr}"
         try:
-            f = open(fn, "r")
+            f = open(fn)  # noqa:SIM115
         except OSError:
             pass  # most likely file not found
         else:
@@ -32,14 +34,14 @@ def set(attr, value=None, fs=None):
             f.write(str(value))
 
 
-def get(attr, fs=None, default=None):
+def get_rtc(attr, fs=None, default=None):
     "Getter for a value in RTC / file system"
-    if state is not None and fs is not True:
+    if state is not None and fs is not True:  # noqa:SIM102
         if attr in state:
             return state[attr]
     if state is None or fs is not False:
         try:
-            f = open(f"moat.{attr}", "r")
+            f = open(f"moat.{attr}")  # noqa:SIM115
         except OSError:
             pass
         else:
@@ -84,7 +86,7 @@ def go(state=None, fake_end=True):
     import time
 
     if state is None:
-        state = get("state", default="skip")
+        state = get_rtc("state", default="skip")
 
     uncond = {
         "once": "skip",
@@ -102,22 +104,19 @@ def go(state=None, fake_end=True):
     except KeyError:
         new_state = state
     else:
-        set("state", new_state)
+        set_rtc("state", new_state)
 
     if state[0:4] == "skip":
         log(state)
         return
 
     # no empty path
-    try:
+    with suppress(ValueError):
         sys.path.remove("")
-    except ValueError:
-        pass
+
     # /lib to the front
-    try:
+    with suppress(ValueError):
         sys.path.remove("/lib")
-    except ValueError:
-        pass
     sys.path.insert(0, "/lib")
 
     fallback = False
@@ -139,7 +138,7 @@ def go(state=None, fake_end=True):
         print("MoaT stopped.", file=sys.stderr)
 
     except SystemExit:
-        new_state = get("state")
+        new_state = get_rtc("state")
         print("REBOOT to", new_state, file=sys.stderr)
         time.sleep_ms(100)
         machine.soft_reset()
@@ -157,7 +156,7 @@ def go(state=None, fake_end=True):
         except KeyError:
             new_state = state
         else:
-            set("state", new_state)
+            set_rtc("state", new_state)
 
         log("CRASH! REBOOT to %r", new_state, err=exc)
         time.sleep_ms(1000)

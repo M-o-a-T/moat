@@ -17,7 +17,7 @@ x:
 """
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 @pytest.mark.parametrize("seed", range(10))
 async def test_fake(seed, tmp_path):
     "basic random-walk ADC test"

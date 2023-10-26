@@ -70,12 +70,11 @@ async def test_basic(qlen1, qlen2, window):
     u1 = Xmit(u1, {})
     u2 = Recv(u2, {})
 
-    async with TaskGroup() as tg:
-        async with u1, u2:
-            await tg.spawn(u1.run)
-            await tg.spawn(u2.run)
-            await u1.done.wait()
-            await u2.done.wait()
+    async with TaskGroup() as tg, u1, u2:
+        await tg.spawn(u1.run)
+        await tg.spawn(u2.run)
+        await u1.done.wait()
+        await u2.done.wait()
     assert u1.n == 10
     assert u2.n == 10
 
@@ -99,11 +98,10 @@ async def test_lossy(window, loss):
     u1 = Xmit(u1, {})
     u2 = Recv(u2, {})
 
-    async with TaskGroup() as tg:
-        async with u1, u2:
-            await tg.spawn(u1.run)
-            await tg.spawn(u2.run)
-            await u1.done.wait()
-            await u2.done.wait()
+    async with TaskGroup() as tg, u1, u2:
+        await tg.spawn(u1.run)
+        await tg.spawn(u2.run)
+        await u1.done.wait()
+        await u2.done.wait()
     assert u1.n == 10
     assert u2.n == 10

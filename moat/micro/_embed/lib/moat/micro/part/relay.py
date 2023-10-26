@@ -27,7 +27,7 @@ class Relay(BaseCmd):
     def __init__(self, cfg):
         super().__init__(cfg)
         if not isinstance(cfg.get("pin", None), (tuple, list, Path)):
-            raise ValueError("Pin not set")
+            raise ValueError("Pin not set")  # noqa:TRY004
         t = cfg.get("t", {})
         self.t = [t.get("off", 0), t.get("on", 0)]
         self.note = cfg.get("note", None)

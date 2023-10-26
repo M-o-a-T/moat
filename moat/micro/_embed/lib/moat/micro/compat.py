@@ -20,25 +20,23 @@ Event = asyncio.Event
 Lock = asyncio.Lock
 sleep = asyncio.sleep
 sleep_ms = asyncio.sleep_ms
-TimeoutError = asyncio.TimeoutError
+TimeoutError = asyncio.TimeoutError  # noqa:A001
 _run = asyncio.run
 _tg = asyncio.TaskGroup
 CancelledError = asyncio.CancelledError
 
 
 
-ExceptionGroup = asyncio.ExceptionGroup
-BaseExceptionGroup = asyncio.BaseExceptionGroup
+ExceptionGroup = asyncio.ExceptionGroup  # noqa:A001
+BaseExceptionGroup = asyncio.BaseExceptionGroup  # noqa:A001
 
 
 class EndOfStream(Exception):
     "as from anyio"
-    pass
 
 
 class BrokenResourceError(Exception):
     "as from anyio"
-    pass
 
 
 try:
@@ -65,7 +63,6 @@ def log(s, *x, err=None):
     print(s, file=sys.stderr)
     if err is not None:
         sys.print_exception(err, sys.stderr)
-    pass
 
 
 async def idle():
@@ -175,10 +172,10 @@ async def _run_server(tg, s, cb):
     from asyncio import core as _core
 
     while True:
-        yield _core._io_queue.queue_read(s)
+        yield _core._io_queue.queue_read(s)  # noqa:SLF001
         try:
             s2, addr = s.accept()
-        except Exception:
+        except Exception:  # noqa:S112
             # Ignore a failed accept
             continue
 
@@ -282,9 +279,9 @@ def ACM(obj):
     """
 
     if hasattr(obj, "_AC_"):
-        obj._AC_.append(None)
+        obj._AC_.append(None)  # noqa:SLF001
     else:
-        obj._AC_ = []
+        obj._AC_ = []  # noqa:SLF001
 
     def _ACc(ctx):
         return AC_use(obj, ctx)
@@ -302,7 +299,7 @@ async def AC_use(obj, ctx):
         cm = ctx.__enter__()
     else:
         cm = None
-    obj._AC_.append(ctx)
+    obj._AC_.append(ctx)  # noqa:SLF001
     return cm
 
 
@@ -317,8 +314,8 @@ async def AC_exit(obj, *exc):
 
     suppressed_exc = False
     pending_raise = False
-    while obj._AC_:
-        cb = obj._AC_.pop()
+    while obj._AC_:  # noqa:SLF001
+        cb = obj._AC_.pop()  # noqa:SLF001
         if cb is None:
             break
         try:

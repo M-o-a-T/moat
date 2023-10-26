@@ -7,18 +7,8 @@ Well, for the most part.
 from __future__ import annotations
 
 import anyio as _anyio
-import logging
-import os
-import time as _time
-import traceback as _traceback
-from concurrent.futures import CancelledError
 from contextlib import AsyncExitStack
-from inspect import currentframe, iscoroutinefunction
-
-import greenback
-from moat.util import Queue
-from moat.util.compat import log,Queue,print_exc,ticks_ms,sleep_ms,wait_for,wait_for_ms,every_ms,every,idle,ticks_add,ticks_diff,run,TaskGroup,run_server,shield
-
+from inspect import iscoroutinefunction
 
 
 def const(_x):
@@ -26,8 +16,8 @@ def const(_x):
     return _x
 
 
-ExceptionGroup = ExceptionGroup  # pylint:disable=redefined-builtin,self-assigning-variable
-BaseExceptionGroup = BaseExceptionGroup  # pylint:disable=redefined-builtin,self-assigning-variable
+ExceptionGroup = ExceptionGroup  # noqa:A001,PLW0127 pylint:disable=redefined-builtin,self-assigning-variable
+BaseExceptionGroup = BaseExceptionGroup  # noqa:A001,PLW0127 pylint:disable=redefined-builtin,self-assigning-variable
 
 Pin_IN = 0
 Pin_OUT = 1
@@ -38,7 +28,7 @@ WouldBlock = _anyio.WouldBlock
 sleep = _anyio.sleep
 EndOfStream = _anyio.EndOfStream
 BrokenResourceError = _anyio.BrokenResourceError
-TimeoutError = TimeoutError  # pylint:disable=redefined-builtin,self-assigning-variable
+TimeoutError = TimeoutError  # noqa:A001,PLW0127 pylint:disable=redefined-builtin,self-assigning-variable
 
 
 # async context stack
@@ -67,10 +57,10 @@ def ACM(obj):
     """
     # pylint:disable=protected-access
     if not hasattr(obj, "_AC_"):
-        obj._AC_ = []
+        obj._AC_ = []  # noqa:SLF001
 
     cm = AsyncExitStack()
-    obj._AC_.append(cm)
+    obj._AC_.append(cm)  # noqa:SLF001
 
     # AsyncExitStack.__aenter__ is a no-op. We don't depend on that but at
     # least it shouldn't yield
@@ -99,7 +89,7 @@ async def AC_use(obj, ctx):
 
     Otherwise it's a callable and will run on exit.
     """
-    acm = obj._AC_[-1]  # pylint:disable=protected-access
+    acm = obj._AC_[-1]  # noqa:SLF001  pylint:disable=protected-access
     if hasattr(ctx, "__aenter__"):
         return await acm.enter_async_context(ctx)
     elif hasattr(ctx, "__enter__"):
@@ -115,5 +105,5 @@ async def AC_exit(obj, *exc):
     """End the latest AsyncExitStack opened by `ACM`."""
     if not exc:
         exc = (None, None, None)
-    return await obj._AC_.pop().__aexit__(*exc)  # pylint:disable=protected-access
+    return await obj._AC_.pop().__aexit__(*exc)  # noqa:SLF001  pylint:disable=protected-access
 

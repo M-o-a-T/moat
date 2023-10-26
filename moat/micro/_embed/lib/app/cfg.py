@@ -63,9 +63,9 @@ class Cmd(BaseCmd):
             except KeyError:
                 cur[pp] = {}
                 cur = cur[pp]
-            except IndexError as exc:
+            except IndexError:
                 if len(cur) != pp:
-                    raise exc
+                    raise
                 cur.append({})
                 cur = cur[pp]
         if d is NotGiven:
@@ -75,9 +75,9 @@ class Cmd(BaseCmd):
         else:
             try:
                 cur[p[-1]] = d
-            except IndexError as exc:
+            except IndexError:
                 if len(cur) != p[-1]:
-                    raise exc
+                    raise
                 cur.append(d)
 
     async def cmd_x(self, p=()):

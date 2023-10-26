@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 import pytest
+from contextlib import suppress
 
 from moat.micro._test import mpy_stack
 from moat.micro.compat import sleep_ms
@@ -33,10 +34,8 @@ async def test_net(tmp_path, server_first, link_in, unix):
     "basic connectivity test"
     if unix:
         sock = tmp_path / "test.sock"
-        try:
+        with suppress(FileNotFoundError):
             sock.unlink()
-        except FileNotFoundError:
-            pass
     else:
         port = 50000 + os.getpid() % 10000
 

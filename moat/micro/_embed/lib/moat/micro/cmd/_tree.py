@@ -299,7 +299,7 @@ class BaseListenOneCmd(BaseLayerCmd):
 
         Must be implemented in your subclass.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def wrapper(self, conn) -> BaseMsg:
         """

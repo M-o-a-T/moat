@@ -15,7 +15,7 @@ class _ADC(M.ADC):
         self = super().__new__(**kw)
         return self
 
-    def __init__(self, cfg, **kw):
+    def __init__(self, cfg, **kw):  # noqa:ARG002
         self.t = cfg.get("t", 1000)
         self.nn = cfg.get("nn", 1)
         self.dly = cfg.get("delay", 1)
@@ -44,7 +44,7 @@ class _ADC(M.ADC):
         for a in range(self.nn):
             if a:
                 await sleep_ms(self.dly)
-            for b in range(self.n):
+            for _ in range(self.n):
                 c += self.read_u16()
         res = c * self.factor + self.offset
         return res

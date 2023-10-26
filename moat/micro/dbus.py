@@ -21,7 +21,7 @@ def reg_name(base, name):
         name = NAME
     elif name[0] == "+":
         name = f"{base}.{name[1:]}"
-    elif '.' not in name:
+    elif "." not in name:
         name = f"{base}.{name}"
     return name
 

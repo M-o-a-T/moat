@@ -28,7 +28,7 @@ class Cmd(_Cmd):
                 f.write(state)
         else:
             try:
-                f = open("moat.state", "r")
+                f = open("moat.state")
             except OSError:
                 state = None
             else:

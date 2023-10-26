@@ -22,7 +22,7 @@ p:
 """
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_rly(tmp_path):
     "fake relay test"
     async with mpy_stack(tmp_path, CFG) as d:

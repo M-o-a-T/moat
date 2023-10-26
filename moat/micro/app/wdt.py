@@ -8,4 +8,4 @@ from ._base import BaseAppCmd
 
 class WDTCmd(BaseAppCmd):
     "empty"
-    pass  # pylint:disable=unnecessary-pass
+    # pylint:disable=unnecessary-pass

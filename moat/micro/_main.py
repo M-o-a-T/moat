@@ -89,7 +89,7 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
     cfg = get_part(cfg, section)
 
     if config:
-        with open(config, "r") as f:
+        with open(config) as f:  # noqa:ASYNC101
             cc = yload(f)
             merge(cfg, cc)
     cfg = process_args(cfg, vars_, eval_, path_)
@@ -106,7 +106,7 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
     obj.cfg = to_attrdict(cfg)
 
 
-@cli.command(name="setup", short_help='Copy MoaT to MicroPython')
+@cli.command(name="setup", short_help="Copy MoaT to MicroPython")
 @click.pass_obj
 @click.option("-r", "--run", is_flag=True, help="Run MoaT after updating")
 @click.option("-N", "--reset", is_flag=True, help="Reboot after updating")
@@ -168,7 +168,7 @@ async def setup(
     from .path import ABytes, MoatDevPath, copy_over
 
     async with Dispatch(cfg, run=True) as dsp, SubDispatch(dsp, cfg["path"]) as sd, RemoteBufAnyio(
-        sd
+        sd,
     ) as ser, DirectREPL(ser) as repl:
         dst = MoatDevPath(root).connect_repl(repl)
         if source:
@@ -221,9 +221,9 @@ async def setup(
             if mount:
                 from moat.micro.fuse import wrap
 
-                async with SubDispatch(dsp, cfg["path"] + (f,)) as fs:
-                    async with wrap(fs, mount, blocksize=cfg.get("blocksize", 64), debug=4):
-                        await idle()
+                async with SubDispatch(dsp, cfg["path"] + (f,)) as fs, \
+                        wrap(fs, mount, blocksize=cfg.get("blocksize", 64), debug=4):
+                    await idle()
 
             if run:
                 log("Reloading.")
@@ -233,7 +233,7 @@ async def setup(
                 await idle()
 
 
-@cli.command("sync", short_help='Sync MoaT code')
+@cli.command("sync", short_help="Sync MoaT code")
 @click.pass_obj
 @click.option(
     "-s",
@@ -257,7 +257,7 @@ async def sync_(obj, source, dest, cross):
         await copy_over(source, dst, cross=cross)
 
 
-@cli.command(short_help='Reboot MoaT node')
+@cli.command(short_help="Reboot MoaT node")
 @click.pass_obj
 @click.option("-s", "--state", help="State after reboot")
 async def boot(obj, state):
@@ -286,7 +286,7 @@ async def boot(obj, state):
         print("Success:", res)
 
 
-@cli.command(short_help='Send a MoaT command')
+@cli.command(short_help="Send a MoaT command")
 @click.pass_obj
 @click.argument("path", nargs=1, type=P)
 @attr_args(with_path=False, with_proxy=True)
@@ -312,7 +312,7 @@ async def cmd(obj, path, **attrs):
             yprint(res)
 
 
-@cli.command("cfg", short_help='Get / Update the configuration')
+@cli.command("cfg", short_help="Get / Update the configuration")
 @click.pass_obj
 @click.option("-r", "--read", type=click.File("r"), help="Read config from this file")
 @click.option("-R", "--read-client", help="Read config file from the client")
@@ -320,7 +320,7 @@ async def cmd(obj, path, **attrs):
 @click.option("-W", "--write-client", help="Write config file to the client")
 @click.option("-s", "--sync", is_flag=True, help="Sync the client after writing")
 @click.option(
-    "-c", "--client", is_flag=True, help="The client's data win if both -r and -R are used"
+    "-c", "--client", is_flag=True, help="The client's data win if both -r and -R are used",
 )
 @click.option("-u", "--update", is_flag=True, help="Don't replace the client config")
 @attr_args(with_proxy=True)
@@ -365,7 +365,7 @@ async def cfg_(obj, read, read_client, write, write_client, sync, client, **attr
 
     # TODO does not work yet
     async with Dispatch(obj.cfg, run=True, sig=True) as dsp, dsp.cfg_at(
-        *cfg["path"]
+        *cfg["path"],
     ) as cf, dsp.sub_at(*cfg["fs"]) as fs:
         has_attrs = any(a for a in attrs.values())
 
@@ -404,7 +404,7 @@ async def cfg_(obj, read, read_client, write, write_client, sync, client, **attr
             yprint(cfg, stream=write)
 
 
-@cli.command("run", short_help='Run the multiplexer')
+@cli.command("run", short_help="Run the multiplexer")
 @click.pass_obj
 async def run_(obj):
     """
@@ -424,6 +424,6 @@ async def mount_(obj, path, blocksize):
 
     cfg = obj.cfg
 
-    async with Dispatch(cfg, run=True, sig=True) as dsp, SubDispatch(dsp, cfg["path"]) as sd:
-        async with wrap(sd, path, blocksize=blocksize, debug=4):
-            await idle()
+    async with Dispatch(cfg, run=True, sig=True) as dsp, SubDispatch(dsp, cfg["path"]) as sd, \
+            wrap(sd, path, blocksize=blocksize, debug=4):
+        await idle()

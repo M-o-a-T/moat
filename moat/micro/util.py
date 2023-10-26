@@ -17,8 +17,8 @@ if TYPE_CHECKING:
 
 def githash(data):
     "Hash a shunk of bytes the ay git does"
-    h = hashlib.sha1()
-    h.update(f"blob {len(data)}\0".encode("utf-8"))
+    h = hashlib.sha1()  # noqa:S324  # sha1 is 'unsafe'
+    h.update(f"blob {len(data)}\0".encode())
     h.update(data)
     return h.digest()
 
@@ -50,7 +50,7 @@ async def run_update(dest: MoatPath, release: str | None = None, check=None, cro
         if release:
             raise RuntimeError("release version found but no git") from None
 
-        async def drop(dst):  # pylint: disable=unused-argument
+        async def drop(dst):  # noqa:ARG001 pylint: disable=unused-argument
             return False
 
     else:
@@ -59,10 +59,7 @@ async def run_update(dest: MoatPath, release: str | None = None, check=None, cro
             pass
         root_r = await root.resolve()
         emb_r = await src.resolve()
-        if release:
-            t = r.commit(release).tree
-        else:
-            t = r.head.commit.tree
+        t = r.commit(release).tree if release else r.head.commit.tree
         t = t[str(emb_r.relative_to(root_r))]
 
         async def drop(dst):

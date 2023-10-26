@@ -42,7 +42,6 @@ as_proxy("_StpIter", StopIter, replace=True)
 @as_proxy("_StpErr")
 class StoppedError(Exception):
     "Called command/app is not running"
-    pass
 
 
 async def wait_complain(s: str, i: int, p: Callable, *a, **k):
@@ -230,7 +229,7 @@ class IterWrap:
     Set @ival to the initial value.
     """
 
-    def __init__(self, p, a=(), k={}, ival=NotGiven):  # pylint:disable=dangerous-default-value
+    def __init__(self, p, a=(), k={}, ival=NotGiven):  # noqa:B006 pylint:disable=dangerous-default-value
         self.p = p
         self.a = a
         self.k = k
@@ -281,18 +280,15 @@ class SendIter(ValueTask):
             cnt = 1
             async with await self.cmd.root.dispatch(self.ac, self.ad, rep=self.r) as it:
                 async for msg in it:
-                    await self.cmd.s.send({'i': self.i, 'd': msg, 'n': cnt})
+                    await self.cmd.s.send({"i": self.i, "d": msg, "n": cnt})
                     cnt += 1
-        except BaseException:  # pylint:disable=try-except-raise
-            raise
-        else:
-            await self.cmd.s.send({'i': self.i, 'r': False})
+
+            await self.cmd.s.send({"i": self.i, "r": False})
         finally:
             self.cmd.reply.pop(self.i, None)
 
     async def reply_result(self, res):
         "no-op; overrides ValueTask's reply sender."
-        pass
 
 
 class _DelayedIter:

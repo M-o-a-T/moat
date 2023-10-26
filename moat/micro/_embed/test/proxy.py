@@ -15,7 +15,7 @@ class Bar:
         return f"{self.__class__.__name__}.x={self.x}"
 
 
-@as_proxy('fu')
+@as_proxy("fu")
 class Foo(Bar):
     pass
 

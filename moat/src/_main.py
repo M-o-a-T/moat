@@ -444,10 +444,10 @@ async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
 
     Default: amend if the text is identical and the prev head isn't tagged.
     """
-    repo = Repo(None)
+    repo = Repo()
     skip = set(skip)
     if only:
-        repos = (Repo(repo, x) for x in only)
+        repos = (Repo(x) for x in only)
     else:
         repos = (x for x in repo.subrepos(depth=True) if x.moat_name[5:] not in skip)
 

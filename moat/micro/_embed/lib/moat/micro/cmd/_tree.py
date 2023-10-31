@@ -68,6 +68,7 @@ class BaseSuperCmd(BaseCmd):
         app.p_task = False
         try:
             app.p_task = await self.tg.spawn(_run, app)
+            await app.wait_started()
         except BaseException:
             app.p_task = None
             raise

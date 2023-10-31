@@ -195,7 +195,7 @@ class BaseCmd(Base):
         if self.p_task is None:
             return  # not running
         elif self.p_task is False:
-            raise RuntimeError("Colliison")
+            raise RuntimeError("Collision")
         self.p_task.cancel()
         await wait_complain(f"Stop {self.path}", 250, self.wait_stopped)
 
@@ -272,7 +272,7 @@ class BaseCmd(Base):
                     ...
 
         Delegates to the root dispatcher, using a wrapper so the caller
-        doesn't need to write "async with await self.iter(…)".
+        doesn't need to write ``async with await self.iter(…)``.
 
         Do not override this.
         """

@@ -331,7 +331,7 @@ class BaseCmd(Base):
             wr = True
             fn = a
 
-        if rep:
+        if rep is not None:
             if not wait:
                 raise ValueError("can't rep without wait")
             try:

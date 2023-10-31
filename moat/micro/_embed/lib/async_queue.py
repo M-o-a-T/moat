@@ -32,6 +32,7 @@ class Queue:
         self._queue = deque()
         self._full = core.TaskQueue()
         self._empty = core.TaskQueue()
+        self._closed_w = False
 
     def _get(self):
         res = self._queue.popleft()
@@ -48,6 +49,8 @@ class Queue:
             item = await queue.get()
         """
         if not self._queue:
+            if self._closed_w:
+                raise EOFError
             self._empty.push(core.cur_task)
             core.cur_task.data = self._empty
             yield
@@ -60,7 +63,7 @@ class Queue:
         Return an item if one is immediately available, else raise QueueEmpty.
         """
         if not self._queue:
-            raise QueueEmpty
+            raise EOFError if self._closed_w else QueueEmpty
         return self._get()
 
     def _put(self, val):
@@ -108,3 +111,13 @@ class Queue:
             return False
         else:
             return self.qsize() >= self.maxsize
+
+    def close_sender(self):
+        """
+        Close the send part of the queue.
+
+        Readers will get an EOFError after they drained it.
+        """
+        self._closed_w = True
+        while self._empty.peek():
+            core._task_queue.push(self._empty.pop())  # noqa:SLF001

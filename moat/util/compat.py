@@ -20,7 +20,7 @@ try:
 except ImportError:
     greenback = None
 
-from .queue import Queue  # pylint:disable=unused-import
+from .queue import Queue as _Queue
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,15 @@ EndOfStream = _anyio.EndOfStream
 BrokenResourceError = _anyio.BrokenResourceError
 ClosedResourceError = _anyio.ClosedResourceError
 TimeoutError = TimeoutError  # noqa:PLW0127,A001 pylint:disable=redefined-builtin,self-assigning-variable
+
+
+class QueueFull(Exception):
+    pass
+
+
+class QueueEmpty(Exception):
+    pass
+
 
 __all__ = [
     "log",
@@ -199,3 +208,30 @@ def shield():
     Equivalent to ``CancelScope(shield=True)``.
     """
     return _anyio.CancelScope(shield=True)
+
+
+class Queue(_Queue):
+    """
+    compatibility mode: raise `EOFError` and `QueueEmpty`/`QueueFull`
+    instead of `anyio.EndOfStream` and `anyio.WouldBlock`
+    """
+
+    async def get(self):  # noqa:D102
+        try:
+            return await super().get()
+        except _anyio.EndOfStream:
+            raise EOFError from None
+
+    def get_nowait(self):  # noqa:D102
+        try:
+            return super().get_nowait()
+        except _anyio.EndOfStream:
+            raise EOFError from None
+        except _anyio.WouldBlock:
+            raise QueueEmpty from None
+
+    def put_nowait(self, x):  # noqa:D102
+        try:
+            super().put_nowait(x)
+        except _anyio.WouldBlock:
+            raise QueueFull from None

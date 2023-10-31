@@ -339,7 +339,7 @@ class DelayedIter(_DelayedIter):
             self._next = ticks_add(self._next, self.t)
             if td > 0:
                 await sleep_ms(td)
-        else:
+        elif self.t > 10:  # XXX add explicit param whether to warn?
             # This took too long. Reset.
             self._warned += 1
             if not self._warned & (self._warned - 1):

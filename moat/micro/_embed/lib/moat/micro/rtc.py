@@ -66,7 +66,7 @@ class State:
             r = RTC()
             m = self._m = r.memory
         except (TypeError, AttributeError):
-            raise ImportError("No RTC")
+            raise ImportError("No RTC") from None
         else:
             try:
                 if m() != b"":

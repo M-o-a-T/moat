@@ -407,10 +407,10 @@ class Unpacker:
             upack.send(None)
         except StopIteration as s:
             if self._got_extradata():
-                raise ExtraData(s.value, bytes(self._get_extradata()))
+                raise ExtraData(s.value, bytes(self._get_extradata())) from None
             return s.value
-        except OutOfData:
-            raise ValueError("incomplete")
+        except OutOfData as exc:
+            raise ValueError("incomplete") from exc
         raise RuntimeError("No way")
 
     def feed(self, data):

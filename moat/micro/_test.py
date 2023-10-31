@@ -12,7 +12,7 @@ from pathlib import Path
 from random import random
 
 import moat.micro
-from moat.util import combine_dict, packer, yload
+from moat.util import combine_dict, packer, yload, attrdict
 from moat.micro.cmd.tree import Dispatch
 from moat.micro.compat import TaskGroup
 
@@ -264,3 +264,21 @@ class Root(Dispatch):
 
     def __init__(self):
         super().__init__({})
+
+
+# Fake "machine" module
+
+machine = attrdict()
+
+class FakeI2C:
+    def __init__(self, c,d, **_):
+        self._c = c
+        self._d = d
+
+class FakePin:
+    def __init__(self, pin, **_):
+        self._pin = pin
+
+machine.Pin = FakePin
+machine.I2C = FakeI2C
+machine.SoftI2C = FakeI2C

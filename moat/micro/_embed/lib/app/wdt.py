@@ -50,7 +50,7 @@ class Cmd(BaseCmd):
         self.wdt.setup(self.cfg)
         self.wdt.ping()
 
-    async def cmd_x(self, f=False, n=None):
+    async def cmd_x(self, f=False, n=None):  # noqa:ARG002
         """
         External keepalive.
 

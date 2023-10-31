@@ -24,12 +24,10 @@ class Tree(DirCmd):
     """
 
 
-
 class Array(ArrayCmd):
     """
     List of mostly-same things.
     """
-
 
 
 class Err(BaseFwdCmd):

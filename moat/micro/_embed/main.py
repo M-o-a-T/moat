@@ -12,6 +12,7 @@ from moat.micro.rtc import state
 
 cfg = {}
 
+
 def set_rtc(attr, value=None, fs=None):
     "Setter for a value in RTC / file system"
     if state is None and fs is False:
@@ -19,7 +20,6 @@ def set_rtc(attr, value=None, fs=None):
     if state is not None and not fs:
         state[attr] = state
     else:
-
         fn = f"moat.{attr}"
         try:
             f = open(fn)  # noqa:SIM115
@@ -128,7 +128,6 @@ def go(state=None, fake_end=True):
 
     print("Start MoaT:", state, file=sys.stderr)
     from moat.micro.main import main
-
 
     cfg = "moat_fb.cfg" if fallback else "moat.cfg"
     try:

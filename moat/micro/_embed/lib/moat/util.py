@@ -9,11 +9,6 @@ from moat.micro.compat import Event, log
 
 from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
 
-from typing import TYPE_CHECKING  # isort:skip
-
-if TYPE_CHECKING:
-    from typing import Mapping
-
 
 class Path(tuple):  # noqa:SLOT001
     """
@@ -83,7 +78,6 @@ class CancelledError(Exception):
     """
     Not an asyncio-style cancellation
     """
-
 
 
 class OptCtx:
@@ -354,7 +348,7 @@ class Lockstep:
         """
         self._get.set()
         await self._put.wait()
-        s,self.s = self.s,None
+        s, self.s = self.s, None
 
         self._put = Event()
         return s
@@ -457,7 +451,7 @@ def combine_dict(*d, cls=dict, deep=False) -> dict:
     if not d:
         return res
 
-    if len(d) == 1 and deep and not isinstance(d[0], Mapping):
+    if len(d) == 1 and deep and not isinstance(d[0], dict):
         if deep and isinstance(d[0], (list, tuple)):
             return deepcopy(d[0])
         else:
@@ -476,9 +470,9 @@ def combine_dict(*d, cls=dict, deep=False) -> dict:
             pass
         elif len(v) == 1 and not deep:
             res[k] = v[0]
-        elif not isinstance(v[0], Mapping):
+        elif not isinstance(v[0], dict):
             for vv in v[1:]:
-                assert vv is NotGiven or not isinstance(vv, Mapping)
+                assert vv is NotGiven or not isinstance(vv, dict)
             if deep and isinstance(v[0], (list, tuple)):
                 res[k] = deepcopy(v[0])
             else:
@@ -490,6 +484,7 @@ def combine_dict(*d, cls=dict, deep=False) -> dict:
 
 
 # Merge.
+
 
 def _merge_dict(d, other, drop=False, replace=True):
     for key, value in other.items():

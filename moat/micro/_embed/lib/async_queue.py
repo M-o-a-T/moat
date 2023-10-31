@@ -36,7 +36,7 @@ class Queue:
     def _get(self):
         res = self._queue.popleft()
         if self._full.peek():
-            core._task_queue.push(self._full.pop())
+            core._task_queue.push(self._full.pop())  # noqa:SLF001
         return res
 
     def get(self):
@@ -65,7 +65,7 @@ class Queue:
 
     def _put(self, val):
         if self._empty.peek():
-            core._task_queue.push(self._empty.pop())
+            core._task_queue.push(self._empty.pop())  # noqa:SLF001
         self._queue.append(val)
 
     def put(self, val):

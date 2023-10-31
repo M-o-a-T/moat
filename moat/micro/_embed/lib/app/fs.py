@@ -11,14 +11,16 @@ from moat.micro.cmd.base import BaseCmd
 from moat.micro.proto.stack import SilentRemoteError
 
 
-class FileNotFoundError(SilentRemoteError):
+class FileNotFoundError(SilentRemoteError):  # noqa:A001
     "standard exception"
+
     def __reduce__(self):
         return (FileNotFoundError, (self.args[0],), {})
 
 
-class FileExistsError(SilentRemoteError):
+class FileExistsError(SilentRemoteError):  # noqa:A001
     "standard exception"
+
     def __reduce__(self):
         return (FileExistsError, (self.args[0],), {})
 
@@ -33,6 +35,7 @@ class Cmd(BaseCmd):
 
     Set "root" to the file system path this command should apply to.
     """
+
     _fd_last = 0
     _fd_cache = None
 
@@ -92,10 +95,10 @@ class Cmd(BaseCmd):
         "open @f in binary mode @m (r,w)"
         p = self._fsp(p)
         try:
-            f = open(p, m + "b")
+            f = open(p, m + "b")  # noqa:ASYNC101,SIM115
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise FileNotFoundError(p)
+                raise FileNotFoundError(p) from None
             raise
         else:
             return self._add_f(f)
@@ -152,7 +155,7 @@ class Cmd(BaseCmd):
         _mem = memoryview(bytearray(512))
 
         p = self._fsp(p)
-        with open(p, "rb") as _f:
+        with open(p, "rb") as _f:  # noqa:ASYNC101
             while True:
                 n = _f.readinto(_mem)
                 if not n:
@@ -176,7 +179,7 @@ class Cmd(BaseCmd):
             s = os.stat(p)
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise FileNotFoundError(p)
+                raise FileNotFoundError(p)  # noqa:TRY200
             raise
         if s[0] & 0x8000:  # file
             return dict(m="f", s=s[6], t=s[7], d=s)
@@ -228,7 +231,7 @@ class Cmd(BaseCmd):
             os.remove(p)
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise FileNotFoundError(p)
+                raise FileNotFoundError(p)  # noqa:TRY200
             raise
 
     async def cmd_rmdir(self, p):
@@ -238,16 +241,16 @@ class Cmd(BaseCmd):
             os.rmdir(p)
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise FileNotFoundError(p)
+                raise FileNotFoundError(p)  # noqa:TRY200
             raise
 
     async def cmd_new(self, p):
         "new file @p"
         p = self._fsp(p)
         try:
-            f = open(p, "wb")
+            f = open(p, "wb")  # noqa:ASYNC101,SIM115
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise FileNotFoundError(p)
+                raise FileNotFoundError(p)  # noqa:TRY200
             raise
         f.close()

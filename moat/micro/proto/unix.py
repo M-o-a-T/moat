@@ -21,6 +21,7 @@ class Link(AnyioBuf):
     """
     A channel that connects to a remote TCP socket.
     """
+
     def __init__(self, port: str | Path):
         self.port = port
 

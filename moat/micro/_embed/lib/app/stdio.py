@@ -17,6 +17,7 @@ from moat.micro.stacks.console import console_stack
 
 class StdioBuf(FileBuf):
     "direct access to stdio"
+
     async def stream(self):  # noqa:D102
         return sys.stdin.buffer, sys.stdout.buffer
 

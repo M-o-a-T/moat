@@ -26,7 +26,6 @@ _tg = asyncio.TaskGroup
 CancelledError = asyncio.CancelledError
 
 
-
 ExceptionGroup = asyncio.ExceptionGroup  # noqa:A001
 BaseExceptionGroup = asyncio.BaseExceptionGroup  # noqa:A001
 
@@ -121,6 +120,7 @@ def every(t, p, *a, **k):
 
 class TaskGroup(_tg):
     "anyio.TaskGroup, lightly enhanced"
+
     async def spawn(self, p, *a, _name=None, **k):
         "Starts a task now. Returns something you can cancel."
         # print("RUN",_name,p,a,k, file=sys.stderr)

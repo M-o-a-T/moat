@@ -20,6 +20,7 @@ class Serial(FileBuf):
     """
     Interface to a MicroPython serial port.
     """
+
     max_idle = 100
     pack = None
 

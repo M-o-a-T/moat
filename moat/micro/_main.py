@@ -221,8 +221,12 @@ async def setup(
             if mount:
                 from moat.micro.fuse import wrap
 
-                async with SubDispatch(dsp, cfg["path"] + (f,)) as fs, \
-                        wrap(fs, mount, blocksize=cfg.get("blocksize", 64), debug=4):
+                async with SubDispatch(dsp, cfg["path"] + (f,)) as fs, wrap(
+                    fs,
+                    mount,
+                    blocksize=cfg.get("blocksize", 64),
+                    debug=4,
+                ):
                     await idle()
 
             if run:
@@ -320,7 +324,10 @@ async def cmd(obj, path, **attrs):
 @click.option("-W", "--write-client", help="Write config file to the client")
 @click.option("-s", "--sync", is_flag=True, help="Sync the client after writing")
 @click.option(
-    "-c", "--client", is_flag=True, help="The client's data win if both -r and -R are used",
+    "-c",
+    "--client",
+    is_flag=True,
+    help="The client's data win if both -r and -R are used",
 )
 @click.option("-u", "--update", is_flag=True, help="Don't replace the client config")
 @attr_args(with_proxy=True)
@@ -424,6 +431,10 @@ async def mount_(obj, path, blocksize):
 
     cfg = obj.cfg
 
-    async with Dispatch(cfg, run=True, sig=True) as dsp, SubDispatch(dsp, cfg["path"]) as sd, \
-            wrap(sd, path, blocksize=blocksize, debug=4):
+    async with Dispatch(cfg, run=True, sig=True) as dsp, SubDispatch(dsp, cfg["path"]) as sd, wrap(
+        sd,
+        path,
+        blocksize=blocksize,
+        debug=4,
+    ):
         await idle()

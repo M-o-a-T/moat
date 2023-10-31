@@ -66,7 +66,7 @@ async def run_no_exc(p, msg, x_err=()):
         log("Error in %r %r", p, msg, err=err)
 
 
-def get_part(cur, p: list[str | int], add:bool = False):
+def get_part(cur, p: list[str | int], add: bool = False):
     "Walk into a mapping or object structure"
     for pp in p:
         try:
@@ -139,6 +139,7 @@ def enc_part(cur):
 
 # like get/set_part but without the attributes
 
+
 def get_p(cur, p, add=False):
     "retrieve an item"
     for pp in p:
@@ -151,10 +152,12 @@ def get_p(cur, p, add=False):
             cur = nc
     return cur
 
+
 def set_p(cur, p, v):
     "set an item"
     cur = get_p(cur, p[:-1], add=True)
     cur[p[-1]] = v
+
 
 def del_p(cur, p):
     "delete an item"
@@ -465,18 +468,22 @@ class CallIter:
     an ``o=`` parameter from the previous return value, so that constant
     results won't trigger the iterator.
     """
-    old=None
+
+    old = None
 
     def __init__(self, fn):
         self.fn = fn
 
     async def __aenter__(self):
         return self
+
     async def __aexit__(self, *tb):
         pass
+
     def __aiter__(self):
         self.o = None
         return self
+
     async def __anext__(self):
         if self.o is None or self.old is None:
             v = await self.fn()
@@ -484,4 +491,3 @@ class CallIter:
             v = await self.fn(o=self.old(self.o))
         self.o = v
         return v
-

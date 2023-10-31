@@ -15,11 +15,11 @@ from msgpack import ExtType, Packer, Unpacker, packb
 
 
 def _rdq(s):  # async
-    yield core._io_queue.queue_read(s)
+    yield core._io_queue.queue_read(s)  # noqa:SLF001
 
 
 def _wrq(s):  # async
-    yield core._io_queue.queue_write(s)
+    yield core._io_queue.queue_write(s)  # noqa:SLF001
 
 
 class FileBuf(BaseBuf):
@@ -102,7 +102,7 @@ def _decode(code, data):
             return name2obj(n)
         except KeyError:
             if Proxy is None:
-                raise NoProxyError(n)
+                raise NoProxyError(n) from None
             return Proxy(n)
     elif code == 5:
         s = Unpacker(None)
@@ -137,7 +137,8 @@ def _encode(obj):
         return ExtType(4, obj.name.encode("utf-8"))
     if type(obj) is DProxy:
         return ExtType(
-            5, packb(obj.name) + packb(obj.a, default=_encode) + packb(obj.k, default=_encode),
+            5,
+            packb(obj.name) + packb(obj.a, default=_encode) + packb(obj.k, default=_encode),
         )
 
     try:

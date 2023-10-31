@@ -10,6 +10,25 @@ import anyio as _anyio
 from contextlib import AsyncExitStack
 from inspect import iscoroutinefunction
 
+from moat.util.compat import (
+    Queue,  # noqa:F401
+    TaskGroup,  # noqa:F401
+    every,  # noqa:F401
+    every_ms,  # noqa:F401
+    idle,  # noqa:F401
+    log,  # noqa:F401
+    print_exc,  # noqa:F401
+    run,  # noqa:F401
+    run_server,  # noqa:F401
+    shield,  # noqa:F401
+    sleep_ms,  # noqa:F401
+    ticks_add,  # noqa:F401
+    ticks_diff,  # noqa:F401
+    ticks_ms,  # noqa:F401
+    wait_for,  # noqa:F401
+    wait_for_ms,  # noqa:F401
+)
+
 
 def const(_x):
     "compatibility with µPy"
@@ -106,4 +125,3 @@ async def AC_exit(obj, *exc):
     if not exc:
         exc = (None, None, None)
     return await obj._AC_.pop().__aexit__(*exc)  # noqa:SLF001  pylint:disable=protected-access
-

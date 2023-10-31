@@ -39,6 +39,7 @@ as_proxy("_FxErr", FileExistsError, replace=True)
 
 class Operations(pyfuse3.Operations):  # pylint: disable=I1101
     "FUSE operations to delegate to a MicroPython client"
+
     # pylint: disable=too-many-public-methods
     supports_dot_lookup = False
     enable_writeback_cache = False
@@ -232,7 +233,12 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         logger.warning(
-            "NotImpl: setattr: i=%r a=%r f=%r h=%r ctx=%r", inode, attr, fields, fh, ctx,
+            "NotImpl: setattr: i=%r a=%r f=%r h=%r ctx=%r",
+            inode,
+            attr,
+            fields,
+            fh,
+            ctx,
         )
         raise FUSEError(errno.ENOSYS)
 
@@ -262,7 +268,12 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         logger.warning(
-            "NotImpl: mknod: p=%r n=%r m=%r d=%r ctx=%r", parent_inode, name, mode, rdev, ctx,
+            "NotImpl: mknod: p=%r n=%r m=%r d=%r ctx=%r",
+            parent_inode,
+            name,
+            mode,
+            rdev,
+            ctx,
         )
         raise FUSEError(errno.ENOSYS)
 
@@ -425,7 +436,11 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         logger.warning(
-            "NotImpl: link: i=%r p=%r n=%r ctx=%r", inode, new_parent_inode, new_name, ctx,
+            "NotImpl: link: i=%r p=%r n=%r ctx=%r",
+            inode,
+            new_parent_inode,
+            new_name,
+            ctx,
         )
         raise FUSEError(errno.ENOSYS)
 
@@ -621,7 +636,10 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
             start_id += 1
             if not pyfuse3.readdir_reply(  # pylint: disable=I1101
-                token, name.encode("utf-8"), attr, start_id,
+                token,
+                name.encode("utf-8"),
+                attr,
+                start_id,
             ):
                 break
 

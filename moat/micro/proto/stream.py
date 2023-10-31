@@ -22,14 +22,13 @@ from msgpack import ExtType, OutOfData, Packer, Unpacker, packb, unpackb
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-
     from moat.micro.cmd.tree import SubDispatch
 
 # ruff:noqa:B904
 
+
 class ProcessDeadError(RuntimeError):
     """Process has died"""
-
 
 
 class SyncStream:
@@ -105,7 +104,8 @@ def _encode(obj):
         return ExtType(4, obj.name.encode("utf-8"))
     if type(obj) is DProxy:
         return ExtType(
-            5, packb(obj.name) + packb(obj.a, default=_encode) + packb(obj.k, default=_encode),
+            5,
+            packb(obj.name) + packb(obj.a, default=_encode) + packb(obj.k, default=_encode),
         )
 
     try:

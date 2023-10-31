@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING  # isort:skip
 if TYPE_CHECKING:
     from typing import Never
 
+
 class TcpIter(BaseConnIter):
     """
     A connection iterator for TCP sockets

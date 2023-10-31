@@ -97,12 +97,12 @@ class WDT:
                         await wait_for_ms(self.timeout, self._ping.wait)
                     except TimeoutError:
                         print("\n\nPANIC WDT REBOOT\n", file=sys.stderr)
-                        for i in range(10000):
+                        for _ in range(10000):
                             pass
                         _reset()
             elif self.wdt is not None:
                 # feed the watchdog when the trigger expires
-                try:
+                try:  # noqa:SIM105  # no "with suppress" on µPy
                     await wait_for_ms(self.trigger, self._ping.wait)
                 except TimeoutError:
                     pass
@@ -112,7 +112,7 @@ class WDT:
                     t = T()
                 if t is None:
                     raise RuntimeError("no timer")
-                t.init(period=self.timeout, mode=T.ONE_SHOT, callback=lambda x: _reset)
+                t.init(period=self.timeout, mode=T.ONE_SHOT, callback=lambda _: _reset())
                 try:
                     await self._ping.wait()
                 finally:

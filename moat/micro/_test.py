@@ -12,7 +12,7 @@ from pathlib import Path
 from random import random
 
 import moat.micro
-from moat.util import combine_dict, packer, yload, attrdict
+from moat.util import attrdict, combine_dict, packer, yload
 from moat.micro.cmd.tree import Dispatch
 from moat.micro.compat import TaskGroup
 
@@ -107,9 +107,9 @@ class MpyBuf(ProcessBuf):
             std = Path("lib/micropython-lib/python-stdlib").absolute()
             ustd = Path("lib/micropython-lib/micropython").absolute()
             for req in required:
-                if (std/req).exists():
+                if (std / req).exists():
                     rlink(std / req, lib)
-                elif (ustd/req).exists():
+                elif (ustd / req).exists():
                     rlink(ustd / req, lib)
                 else:
                     raise FileNotFoundError(req)
@@ -279,14 +279,17 @@ class Root(Dispatch):
 
 machine = attrdict()
 
+
 class FakeI2C:
-    def __init__(self, c,d, **_):
+    def __init__(self, c, d, **_):
         self._c = c
         self._d = d
+
 
 class FakePin:
     def __init__(self, pin, **_):
         self._pin = pin
+
 
 machine.Pin = FakePin
 machine.I2C = FakeI2C

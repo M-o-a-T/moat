@@ -3,7 +3,10 @@ Access a satellite's i²c bus.
 """
 from __future__ import annotations
 
-import machine
+try:
+    import machine
+except ImportError:
+    from moat.micro._test import machine
 
 from moat.micro.cmd.base import BaseCmd
 
@@ -18,10 +21,9 @@ class Cmd(BaseCmd):
 
     _bus_cache = None  # c,d > busobj
 
-    def __init__(self, parent, name, cfg, gcfg):
-        super().__init__(parent)
+    def __init__(self, cfg):
+        super().__init__(cfg)
         self._bus_cache = dict()
-        self.cfg = cfg
 
     def _bus(self, cd, drop=False):
         # (c,d) > bus
@@ -35,13 +37,13 @@ class Cmd(BaseCmd):
     def _del_cd(self, cd):
         self._bus(cd, True)
 
-    async def cmd_reset(self, p=None):
+    async def cmd_reset(self, p=None):  # noqa:ARG002
         "close all"
-        for b in self._bus_cache.values():
-            pass  # b.close()
+        # for _ in self._bus_cache.values():
+        #     pass  # XXX b.close()
         self._bus_cache = dict()
 
-    async def cmd_open(self, c, d, cx={}, dx={}, f=1000000, t=1000000, s=False):
+    async def cmd_open(self, c, d, cx={}, dx={}, f=1000000, t=1000000, s=False):  # noqa:B006
         """
         Open a bus.
         @c, @d: control and data pins.
@@ -54,8 +56,8 @@ class Cmd(BaseCmd):
         if cd in self._bus_cache:
             pass  # close it
         c = machine.Pin(c, **cx)
-        d = machine.Pin(d, **cx)
-        bus = (machine.SoftI2C if s else machine.I2C)(scl=c, sda=d, freq=f, timeout=t*1000)
+        d = machine.Pin(d, **dx)
+        bus = (machine.SoftI2C if s else machine.I2C)(scl=c, sda=d, freq=f, timeout=t * 1000)
         self._bus_cache[cd] = bus
         return cd
 

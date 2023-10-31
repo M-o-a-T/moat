@@ -60,6 +60,7 @@ class State:
     Tuples are paths into the configuration: the value updates or replaces
     the static configuration's content at that point.
     """
+
     def __init__(self):
         self._d = {}
         try:

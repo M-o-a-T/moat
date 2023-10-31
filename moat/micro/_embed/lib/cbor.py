@@ -374,14 +374,14 @@ class Unpacker:
 
     async def _array(self, aux):
         ob = []
-        for i in range(aux):
+        for _ in range(aux):
             subob = await self._any()
             ob.append(subob)
         return ob
 
     async def _map(self, aux):
         ob = {}
-        for i in range(aux):
+        for _ in range(aux):
             subk = await self._any()
             subv = await self._any()
             ob[subk] = subv
@@ -435,10 +435,7 @@ class Unpacker:
             if exp == 0:
                 val = mant * (2.0**-24)
             elif exp == 31:
-                if mant == 0:
-                    val = float("Inf")
-                else:
-                    val = float("NaN")
+                val = float("Inf") if mant == 0 else float("NaN")
             else:
                 val = (mant + 1024.0) * (2 ** (exp - 25))
             if hibyte & 0x80:

@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING  # isort:skip
 if TYPE_CHECKING:
     from typing import Never
 
+
 class ReliableMsg(StackedMsg):
     """
     Message retry.

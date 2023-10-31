@@ -66,7 +66,7 @@ class Cmd(BaseCmd):
         else:
             self.st[p] = d
 
-    async def cmd_x(self, p=()):
+    async def cmd_x(self, p=()):  # noqa:ARG002
         """
         Activate the possibly-mangled config.
 

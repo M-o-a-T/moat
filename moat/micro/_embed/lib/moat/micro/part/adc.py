@@ -34,8 +34,8 @@ class _ADC(M.ADC):
         while True:
             await sleep_ms(self.t)
             v = await self.read()
-            ov,self.val = self.val,v
-            if abs(ov-v) >= self.delta:
+            ov, self.val = self.val, v
+            if abs(ov - v) >= self.delta:
                 self.evt.set()
                 self.evt = Event()
 

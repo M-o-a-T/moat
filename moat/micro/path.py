@@ -131,6 +131,7 @@ class APath(anyio.Path):
 
 class MoatPath(anyio.Path):  # pathlib.PosixPath
     "abstract superclass for MoaT-connected async file access"
+
     _stat_cache = None
     _repl = None
 
@@ -331,12 +332,12 @@ class MoatDevPath(MoatPath):
         n_blocks = max(1, self._repl.serial.baudrate // 5120)
         await self._repl.exec(
             f'import ubinascii; _f = open({self.as_posix()!r}, "rb"); '
-            '_mem = memoryview(bytearray(512))\n'
-            'def _b(blocks=8):\n'
+            "_mem = memoryview(bytearray(512))\n"
+            "def _b(blocks=8):\n"
             '  print("[")\n'
-            '  for _ in range(blocks):\n'
-            '    n = _f.readinto(_mem)\n'
-            '    if not n: break\n'
+            "  for _ in range(blocks):\n"
+            "    n = _f.readinto(_mem)\n"
+            "    if not n: break\n"
             '    print(ubinascii.b2a_base64(_mem[:n]), ",")\n'
             '  print("]")',
         )
@@ -399,7 +400,7 @@ class MoatDevPath(MoatPath):
             posix_path_slash += "/"
         remote_paths_stat = await self._repl.evaluate(
             'import os; print("[")\n'
-            f'for n in os.listdir({self.as_posix()!r}): '
+            f"for n in os.listdir({self.as_posix()!r}): "
             '    print("[", repr(n), ",", os.stat({posix_path_slash!r} + n), "],")\n'
             'print("]")',
         )
@@ -416,13 +417,13 @@ class MoatDevPath(MoatPath):
         """
         try:
             await self._repl.exec(
-                'import hashlib; _h = hashlib.sha256(); _mem = memoryview(bytearray(512))\n'
+                "import hashlib; _h = hashlib.sha256(); _mem = memoryview(bytearray(512))\n"
                 f'with open({self.as_posix()!r}, "rb") as _f:\n'
-                '  while True:\n'
-                '    _n = _f.readinto(_mem)\n'
-                '    if not _n: break\n'
-                '    _h.update(_mem[:_n])\n'
-                'del _n, _f, _mem\n',
+                "  while True:\n"
+                "    _n = _f.readinto(_mem)\n"
+                "    if not _n: break\n"
+                "    _h.update(_mem[:_n])\n"
+                "del _n, _f, _mem\n",
             )
         except ImportError:
             # fallback if no hashlib is available: download and hash here.

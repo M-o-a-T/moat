@@ -407,7 +407,13 @@ class BaseCmdMsg(BaseCmd):
                 del self.reply[i]
 
     async def dispatch(
-        self, action, msg=None, *, rep: int|None = None, wait=True, x_err=(),
+        self,
+        action,
+        msg=None,
+        *,
+        rep: int | None = None,
+        wait=True,
+        x_err=(),
     ):  # pylint:disable=arguments-differ
         """
         Forward a request to the remote side, return the response.

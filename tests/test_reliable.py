@@ -17,6 +17,7 @@ done_ = [None] * 4
 
 class Head(StackedMsg):
     "sender/receiver test common code"
+
     n: int = 0
     done: Event = None
 

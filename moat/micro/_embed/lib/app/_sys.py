@@ -24,11 +24,11 @@ class Cmd(_Cmd):
         * fb: flag whether the current state is a fall-back state
         """
         if state is not None:
-            with open("moat.state", "w") as f:
+            with open("moat.state", "w") as f:  # noqa:ASYNC101
                 f.write(state)
         else:
             try:
-                f = open("moat.state")
+                f = open("moat.state")  # noqa:ASYNC101,SIM115
             except OSError:
                 state = None
             else:
@@ -103,7 +103,7 @@ class Cmd(_Cmd):
             await sleep_ms(100)
             raise SystemExit
 
-        await self.request._tg.spawn(_boot, _name="_sys.boot3")
+        await self.request._tg.spawn(_boot, _name="_sys.boot3")  # noqa:SLF001
         return True
 
     async def cmd_machid(self):

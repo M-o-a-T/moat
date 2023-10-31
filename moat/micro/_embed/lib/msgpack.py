@@ -29,6 +29,7 @@ from moat.util import attrdict
 
 # ruff:noqa:TRY200
 
+
 class UnpackException(Exception):
     "superclass, not raised"
 
@@ -43,6 +44,7 @@ class FormatError(UnpackException):
 
 class ExtraData(ValueError):
     "too much data in buffer"
+
     def __init__(self, unpacked, extra):
         self.unpacked = unpacked
         self.extra = extra
@@ -106,6 +108,7 @@ class Unpacker:
     """
     Manager for buffered and streamed unpacking.
     """
+
     def __init__(
         self,
         stream=None,
@@ -347,6 +350,7 @@ class Packer:
     """
     Manager for buffered and streamed packing.
     """
+
     def __init__(
         self,
         # unicode_errors=None,

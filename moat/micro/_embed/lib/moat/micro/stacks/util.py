@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 TEST_MAGIC = b"r\x0dn\x0a-\x00x\x0ce\x1b!"
 
+
 class BaseConnIter:
     """
     Iterate incoming connections.

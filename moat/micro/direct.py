@@ -201,7 +201,7 @@ class DirectREPL(SingleAnyioBuf):
         """
         return await self.evaluate(
             f'_f = open({str(path)!r}, "ab")\n'
-            f'print(_f.seek({int(length)}))\n'
+            f"print(_f.seek({int(length)}))\n"
             '_f.write(b"")\n'
-            '_f.close(); del _f',
+            "_f.close(); del _f",
         )

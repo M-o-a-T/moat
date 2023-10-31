@@ -19,7 +19,6 @@ from .compat import AC_use, TaskGroup
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-
     from moat.util import Path
 
 
@@ -143,7 +142,7 @@ class AlertHandler(BaseCmd):
         """
         return AlertIter(self, s)
 
-    async def cmd_w(self, a: type[Alert], p: Path, d: dict|None = None):
+    async def cmd_w(self, a: type[Alert], p: Path, d: dict | None = None):
         """
         Set an alert.
 

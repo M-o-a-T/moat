@@ -192,13 +192,13 @@ class BaseBlk(BaseConn):
     Implement snd/rcv.
     """
 
-    async def snd(self, m: Buffer|bytes) -> None:
+    async def snd(self, m: Buffer | bytes) -> None:
         """
         Send a block of bytes.
         """
         raise NotImplementedError(f"'send' in {self !r}")
 
-    async def rcv(self) -> Buffer|bytes:
+    async def rcv(self) -> Buffer | bytes:
         """
         Receive a block of bytes.
         """
@@ -223,7 +223,7 @@ class BaseBuf(BaseConn):
         """
         raise NotImplementedError(f"'rd' in {self !r}")
 
-    async def wr(self, buf: Buffer|bytes) -> int:
+    async def wr(self, buf: Buffer | bytes) -> int:
         """
         Write some bytes.
         """

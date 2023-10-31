@@ -44,6 +44,7 @@ class ACM_h:
     Thus we use this class to defer resolving the coroutine to the
     __aenter__ call.
     """
+
     _cm: AsyncContextManager = None
 
     def __init__(self, p: Callable, *a, **k):
@@ -206,7 +207,7 @@ class BaseCmd(Base):
             await wait_complain(f"Rdy {self.path}", 250, self._ready.wait)
         return None
 
-    async def cmd_rdy(self, w=True) -> Awaitable:
+    def cmd_rdy(self, w=True) -> Awaitable:
         """
         Check if / wait for readiness.
 
@@ -271,7 +272,13 @@ class BaseCmd(Base):
         # XXX run in a separate task
 
     async def dispatch(
-        self, action: list[str], msg: dict, *, rep: int|None = None, wait: bool = True, x_err=(),
+        self,
+        action: list[str],
+        msg: dict,
+        *,
+        rep: int | None = None,
+        wait: bool = True,
+        x_err=(),
     ) -> Awaitable | AsyncContextManager[AsyncIterator]:  # pylint:disable=arguments-differ
         """
         Process a message.

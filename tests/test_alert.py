@@ -25,6 +25,7 @@ a:
 """
 # ruff: noqa:D101,D103
 
+
 class Alert(_Alert):
     def __repr__(self):
         return f"{self.__class__.__name__}:{self._data !r}"
@@ -40,7 +41,7 @@ class AlertB(Alert):
 
 async def rd(x):
     res = []
-    async with x.it_r(1,s=False) as it:
+    async with x.it_r(1, s=False) as it:
         async for r in it:
             res.append(r)
     return res
@@ -57,5 +58,5 @@ async def test_ary(tmp_path):
 
         await a.w(a=AlertA, p=("x",), d={"a": "Foo"})
         n = 0
-        #r = await rd(a)
-        #assert r == []
+        r = await rd(a)
+        assert r == []

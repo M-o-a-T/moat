@@ -7,6 +7,7 @@ from moat.util import as_proxy
 
 # ruff: noqa:D101,D102,D103
 
+
 class Bar:
     def __init__(self, x):
         self.x = x

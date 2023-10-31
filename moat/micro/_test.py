@@ -42,6 +42,8 @@ required = [
     "typing",
     "types",
     "functools",
+    "contextlib",
+    "ucontextlib",
     "collections",
     "collections-deque",
 ]
@@ -103,8 +105,15 @@ class MpyBuf(ProcessBuf):
                     (root / "tests").symlink_to(Path("tests").absolute())
 
             std = Path("lib/micropython-lib/python-stdlib").absolute()
+            ustd = Path("lib/micropython-lib/micropython").absolute()
             for req in required:
-                rlink(std / req, lib)
+                if (std/req).exists():
+                    rlink(std / req, lib)
+                elif (ustd/req).exists():
+                    rlink(ustd / req, lib)
+                else:
+                    raise FileNotFoundError(req)
+
             aio = Path("lib/micropython/extmod/asyncio").absolute()
             with suppress(FileExistsError):
                 (lib / "asyncio").symlink_to(aio)

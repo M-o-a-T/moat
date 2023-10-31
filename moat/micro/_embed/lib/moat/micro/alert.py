@@ -11,7 +11,8 @@ Alarm conditions are subclasses of exceptions.
 """
 from __future__ import annotations
 
-from moat.util import Queue, merge
+from moat.util import merge
+from moat.micro.compat import Event, Queue, WouldBlock
 
 from .cmd.base import BaseCmd
 from .compat import AC_use, TaskGroup
@@ -19,6 +20,8 @@ from .compat import AC_use, TaskGroup
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
+    from typing import Iterator
+
     from moat.util import Path
 
 
@@ -36,19 +39,24 @@ class Alert(Exception):
 
 
 class AlertIter:
-    def __init__(self, ah: AlertHandler, s: bool):
+    q: Queue = None
+    xal: Iterator[tuple[tuple[type[Alert], Path], Alert]]
+
+    def __init__(self, ah: AlertHandler, s: bool | None):
         self.ah = ah
         self.s = s
 
     async def __aenter__(self):
-        if self.ah._q is not None:  # noqa:SLF001
+        if self.q is not None:
             raise RuntimeError("already on")
-        self.ah._q = Queue(10)  # noqa:SLF001
-        self.xal = iter(list(self.ah.alarms.items()))
+        self.q = q = Queue(10)
+        self.ah.q.add(q)
+        self.xal = iter(() if self.s is False else list(self.ah.alarms.items()))
         return self
 
     async def __aexit__(self, *tb):
-        self.ah._q = None  # noqa:SLF001
+        self.ah.q.discard(self.q)
+        self.q = None
 
     def __aiter__(self):
         return self
@@ -67,7 +75,10 @@ class AlertIter:
                 d = al.data
 
         if a is None:
-            a, p, d = await self.ah._q.get()  # noqa:SLF001
+            try:
+                a, p, d = await self.q.get()
+            except EOFError:
+                raise StopAsyncIteration
         res = {"a": a, "p": p}
         if d is not None:
             res["d"] = d
@@ -81,13 +92,13 @@ class AlertHandler(BaseCmd):
     This helper class keeps track of open alerts and lets multiple clients
     receive them.
 
-    This command can pull + redistribute alerts from satellites::
+    This command can monitor + redistribute alerts from satellites::
 
         apps:
           al: link.Alert
           r: …
         al:
-          pull:
+          mon:
           - rem: !P r
             al: !P a
         r:
@@ -98,47 +109,56 @@ class AlertHandler(BaseCmd):
     the "rem" path so that the destination is known and unique.
     """
 
-    _q: Queue = None
+    q: set[Queue] = None
+    m: dict = None
 
     def __init__(self, cfg):
         super().__init__(cfg)
         self.alarms: dict[tuple[type[Alert], Path], Alert] = {}
-        self._pull = {}
+        self.q = set()
+        self._mon = {}
 
     async def setup(self):  # noqa:D102
         await super().setup()
-        await self._start_pull()
+        await self._start_mon()
 
-    async def _rdr(self, p):
+    async def _rdr(self, p, evt):
         rem = p["rem"]
         al = p["al"]
-        async with self.root.send_iter(*rem, *al) as it:
+        async with self.root.send_iter(0, *rem, *al, "r") as it:
+            evt.set()
             async for res in it:
                 await self.cmd_w(a=res["a"], p=rem + res["p"], d=res.get("d", None))
 
-    async def _start_pull(self):
-        if (pl := self.cfg.get("pull", None)) is not None:
+    async def _start_mon(self):
+        if (pl := self.cfg.get("mon", None)) is not None:
             if getattr(self, "tg", None) is None:
                 self.tg = await AC_use(self, TaskGroup())
 
-            for p in pl:
-                self._pull[p] = await self.tg.spawn(self._rdr, p)
+            evs = []
+            for k, v in pl.items():
+                evt = Event()
+                self._mon[k] = await self.tg.spawn(self._rdr, v, evt)
+                evs.append(evt)
+            for e in evs:
+                await e.wait()
+
         else:
             pl = {}
 
-        for k, v in list(self._pull):
+        for k, v in list(self._mon.items()):
             if k not in pl:
                 v.cancel()
-                del self._pull[k]
+                del self._mon[k]
 
     async def reload(self):  # noqa:D102
-        await self._start_pull()
+        await self._start_mon()
 
-    def iter_r(self, s: bool = False):
+    def iter_r(self, s: bool | None = None):
         """read open alarms.
 
-        If @s is True, send a snapshot.
-        Otherwise iterate for new alerts.
+        If @s ("static") is True, send a snapshot.
+        Otherwise iterate on new alerts.
         """
         return AlertIter(self, s)
 
@@ -155,6 +175,8 @@ class AlertHandler(BaseCmd):
         k = (a, p)
         al = self.alarms.get(k, None)
         if al is None:
+            if d is None:
+                return  # nothing to do
             self.alarms[k] = a(d)
         else:
             if d is not None:
@@ -162,5 +184,19 @@ class AlertHandler(BaseCmd):
             else:
                 del self.alarms[k]
 
-        if self._q is not None:
-            self._q.put((a, p, d))
+        for q in list(self.q):
+            try:
+                q.put_nowait((a, p, d))
+            except WouldBlock:
+                self.q.discard(q)
+                q.close_sender()
+
+    async def cmd_cl(self):
+        """
+        Close all iterators of this alert handler.
+
+        Used mainly for testing.
+        """
+        q, self.q = self.q, set()
+        while q:
+            q.pop().close_sender()

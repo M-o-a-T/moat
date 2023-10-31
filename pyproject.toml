@@ -102,7 +102,7 @@ dependencies = [
   "msgpack",
   "serialpacker",
   "pyfuse3",
-  "moat-util ~= 0.36",
+  "moat-util ~= 0.36.1",
   "moat-main",
 ]
 requires-python = ">=3.8"

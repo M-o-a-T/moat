@@ -9,7 +9,7 @@ from functools import partial
 from moat.util import Path, import_
 from moat.micro.compat import AC_use, Event, TaskGroup, log
 
-from .base import ACM_h, BaseCmd
+from .base import ACM_h, BaseCmd, ShortCommandError
 
 # Typing
 
@@ -269,7 +269,7 @@ class BaseSubCmd(BaseSuperCmd):
         """
 
         if not action:
-            raise RuntimeError("NoCmd")
+            raise ShortCommandError
         if len(action) == 1:
             return await super().dispatch(action, msg, **kw)
 

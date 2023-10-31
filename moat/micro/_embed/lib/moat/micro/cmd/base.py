@@ -24,7 +24,7 @@ from __future__ import annotations
 from moat.micro.compat import AC_use, Event, idle
 from moat.micro.proto.stack import Base
 
-from .util import DelayedIter, IterWrap, enc_part, get_part, run_no_exc, wait_complain
+from .util import DelayedIter, IterWrap, as_proxy, enc_part, get_part, run_no_exc, wait_complain
 
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -32,6 +32,24 @@ if TYPE_CHECKING:
     from typing import AsyncContextManager, AsyncIterator, Awaitable, Callable
 
     from moat.micro.cmd.tree import BaseSuperCmd, Dispatch
+
+
+as_proxy("_SCmdErr")
+
+
+class ShortCommandError(ValueError):
+    "The command path was too short"
+
+    pass  # noqa:PIE790
+
+
+as_proxy("_LCmdErr")
+
+
+class LongCommandError(ValueError):
+    "The command path was too long"
+
+    pass  # noqa:PIE790
 
 
 class ACM_h:
@@ -301,9 +319,9 @@ class BaseCmd(Base):
         """
 
         if not action:
-            raise RuntimeError("noAction")
+            raise ShortCommandError(())
         if len(action) > 1:
-            raise ValueError("no chain here", action)
+            raise LongCommandError(action)
 
         a = action[0]
         if a[0] == "!":

@@ -44,6 +44,8 @@ force-to-top = ["moat.util"]
 "upy" = ["micropython", "machine", "esp"]
 "typing" = ["typing"]
 
+[tool.pytest.ini_options]
+log_cli_level = "DEBUG"
 
 [tool.ruff.flake8-comprehensions]
 allow-dict-calls-with-keyword-arguments = true

@@ -207,7 +207,7 @@ class BaseCmd(Base):
         """
         if self._starting is None:
             return
-        await self._starting.wait()
+        await wait_complain(f"Starting {self.path}", 250, self._starting.wait)
 
     async def wait_ready(self, wait=True) -> bool | None:
         """

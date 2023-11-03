@@ -27,6 +27,9 @@ project:
     homepage: https://m-o-a-t.org
     repository: https://github.com/M-o-a-T/SUBNAME
 tool:
+  pytest:
+    ini_options:
+      log_cli_level: DEBUG
   ruff:
     select:
     - ALL

@@ -9,6 +9,7 @@ from moat.util import NotGiven
 from moat.micro._test import mpy_stack
 from moat.micro.cmd.util import StoppedError
 from moat.micro.compat import log, sleep_ms
+from moat.src.test import raises
 
 pytestmark = pytest.mark.anyio
 
@@ -75,7 +76,7 @@ async def test_wdt(tmp_path, guard):
             ended = True
             log("Waiting for the watchdog to trigger")
             await sleep_ms(TT * 1.5)
-            with pytest.raises(StoppedError):
+            with raises(StoppedError):
                 res = await r.echo(m="hello")
     assert ended
 
@@ -139,6 +140,6 @@ async def test_wdt_update(tmp_path):
             ended = True
             await sleep_ms(TT * 5)
 
-            with pytest.raises(StoppedError):
+            with raises(StoppedError):
                 await r.echo(m="hello")
     assert ended

@@ -61,6 +61,7 @@ from .impl import *  # noqa: F403, E402  # isort:skip
 from .dict import *  # noqa: F403, E402  # isort:skip
 from .merge import *  # noqa: F403, E402  # isort:skip
 from .proxy import *  # noqa: F403, E402  # isort:skip
+from .misc import *  # noqa: F403, E402  # isort:skip
 
 try:
     from .event import *  # noqa: F403

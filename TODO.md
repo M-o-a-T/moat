@@ -3,6 +3,7 @@
   * write an app for it
 * the single-channel listener+connect apps must be converted to streams
   * so that we can put a Reliable above them
+* BaseCmdMsg dispatcher: multiplex remote iterators locally
 * more flex build of stream structure?
 * security, esp. for specific subtrees / apps
 * test for iterators

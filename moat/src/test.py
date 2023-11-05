@@ -5,6 +5,7 @@ import io
 import logging
 import shlex
 import sys
+from contextlib import contextmanager
 
 from asyncscope import main_scope, scope
 from moat.util import OptCtx, attrdict, wrap_main  # pylint:disable=no-name-in-module
@@ -41,6 +42,10 @@ async def run(*args, expect_exit=0, do_stdout=True):
         res = exc
         assert exc.code == expect_exit, exc.code
         return exc
+    except Exception as exc:
+        while isinstance(exc,ExceptionGroup) and len(exc.exceptions) == 1:
+            exc = exc.exceptions[0]
+        raise exc
     except BaseException as exc:
         res = exc
         raise
@@ -48,6 +53,35 @@ async def run(*args, expect_exit=0, do_stdout=True):
         assert expect_exit == 0
         return res
     finally:
+        if res is None:
+            res = attrdict()
         if do_stdout:
             res.stdout = out.getvalue()
             CFG["_stdout"] = sys.stdout
+
+
+class DidNotRaise(Exception):
+    pass
+
+
+@contextmanager
+def raises(*exc):
+    """
+    Like pytest.raises, but handles exception groups
+    """
+    res = attrdict()
+    try:
+        yield res
+    except exc as e:
+        res.value = e
+        pass
+    except ExceptionGroup as e:
+        while isinstance(e,ExceptionGroup) and len(e.exceptions) == 1:
+            e = e.exceptions[0]
+        res.value = e
+        if isinstance(e,exc):
+            return
+        raise
+    else:
+        res.value = None
+        raise DidNotRaise(exc)

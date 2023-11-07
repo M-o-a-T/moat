@@ -8,8 +8,9 @@ import sys
 import time
 from pprint import pprint
 from moat.util import NotGiven, load_from_cfg, as_proxy, attrdict, val2pos
-from moat.util.alert import Alert, AlertMixin
-from moat.util.broadcast import Broadcaster
+from moat.util.compat import log
+from moat.micro.rtc import state as rtc_state
+from moat.micro.alert import Alert
 
 from moat.util.compat import (
     Event,
@@ -67,6 +68,11 @@ class CellImbalance(BatteryAlert):
     "Excessive cell imbalance"
 
 
+@as_proxy("bms_UD", replace=True)
+class VoltageDelta(BatteryAlert):
+    "High diff between cell sum and total voltage"
+
+
 @as_proxy("bms_IH", replace=True)
 class HighChargeCurrent(BatteryAlert):
     "Charge current exceeds limit"
@@ -95,6 +101,16 @@ class NoBatteryData(BatteryAlert):
 @as_proxy("bms_NCD", replace=True)
 class NoCellData(BatteryAlert):
     "no cell data seen"
+
+
+@as_proxy("bms_EL", replace=True)
+class EnergyLow(BatteryAlert):
+    "total energy below zero"
+
+
+@as_proxy("bms_EH", replace=True)
+class EnergyHigh(BatteryAlert):
+    "total energy larger than Wmax"
 
 
 @as_proxy("bms_VM", replace=True)
@@ -144,6 +160,15 @@ class BaseCell(BaseCmd):
     Comtrollers are free to implement more complicated curves.
 
     """
+    vchg:float|None = None
+    vdis:float|None = None
+    fchg:bool = False
+    fdis:bool = False
+
+    async def cmd_c(self):
+        "read cell charge level [0…1]"
+        raise NotImplementedError("no idea how")
+
     async def cmd_u(self):
         "read cell voltage"
         raise NotImplementedError("no idea how")
@@ -156,18 +181,47 @@ class BaseCell(BaseCmd):
         "read cell balancer temperature"
         raise NotImplementedError("no idea how")
 
-    async def cmd_dis(self, v:float|None):
+    async def cmd_dis(self, v:float|None=None, f:bool = None):
         """
-        balance low: drain cell until below @v
+        balance low: drain cell until below @v.
+
+        If @f (force) is set, the cell will be skipped by the balancer;
+        changing @v will be ignored if @f is `None`.
+
+        Returns (voltage,force) tuple.
         """
+        if f is not None:
+            self.fdis = f
+        if v is not None:
+            if not self.fdis or f:
+                self.vdis = v
+                await self.set_dis()
+        return (self.vdis,self.fdis)
+
+    async def set_dis(self):
+        """set discharging balancer"""
         raise NotImplementedError("no idea how")
 
-    async def cmd_chg(self, v:float|None):
+    async def cmd_chg(self, v:float|None=None, force:bool = None):
         """
         balance high: charge cell until above @v
 
-        obviously this only works with an active balancer
+        Obviously this only works with an active balancer.
+
+        If @force is set, the cell will be skipped by the balancer.
+
+        Returns (voltage,force) tuple.
         """
+        if f is not None:
+            self.fchg = f
+        if v is not None:
+            if not self.fchg or f:
+                self.vchg = v
+                await self.set_chg()
+        return (self.vchg,self.fchg)
+
+    async def set_chg(self):
+        """set charging balancer"""
         raise NotImplementedError("no idea how")
 
     async def cmd_lim(self, soc:float = 0.5):
@@ -178,6 +232,8 @@ class BaseCell(BaseCmd):
         May raise an exception, in which case the relay should disengage.
 
         Otherwise, returns (chg,dis) factors to limit max cell charge/discharge.
+
+        The default implementation doesn't use SoC.
         """
         u = await self.cmd_u()
         t = await self.cmd_t()
@@ -220,26 +276,73 @@ class BaseCells(ArrayCmd):
           app: bms._test.Cell
           cfg: {}
           n: 8
+          w: 1000000 # battery's total energy, in watt seconds
+          lim:
+            ud: 0.02 # relativ difference u/ud
           t:
-            w: 500  # calculate energy
+            w: 500  # calculate cumulative energy every this-many-msec
+            ud: 5000  # watch the difference between cell and cumulative voltage
+          alarm: !P path.to.alarm.handler
+          loss: 0.01 # average capacity loss when charging
 
     """
     rly = None
-    w:float = 0
+    w:attrdict = None
+    w_max:float = None
     p:float = None
+    al:SubDispatcher[AlertHandler]|None = None
+    rly:SubDispatcher[Relay]|None = None
+    n_warn_w = 0
+    n_warn_ud = 0
+    n_save = 98
 
     def __init__(self, cfg):
         super().__init__(cfg)
-        if "relay" in self.cfg:
-            self.rly = self.root.sub_at(cfg["relay"])
+        self._reloaded = Event()
+        self.clear_work()
 
-    def cmd_tb(self) -> Awaitable:
-        """fetch all cells' voltages"""
-        return self.cmd_all("tb")
+    async def _setup(self):
+        cfg = self.cfg
+        self.al = self.root.sub_at(*cfg["alarm"]) if "alarm" in cfg else None
+        self.rly = self.root.sub_at(*cfg["rly"]) if "relay" in cfg else None
+        try:
+            self.ud_max = cfg["lim"]["ud"]
+        except KeyError:
+            self.ud_max = 0.02
+        try:
+            self.t_w = cfg["t"]["w"]
+        except KeyError:
+            self.t_w = 500
 
-    async def cmd_su(self):
+        c = self.cfg["cfg"]["lim"]["u"]["ext"]
+        n = self.cfg["n"]
+        self.u_mid = (c["min"]+c["max"])*n/2
+
+
+    async def setup(self):
+        await super().setup()
+        await self._setup()
+        try:
+            w = rtc_state[("state",*self.path)]
+        except KeyError:
+            pass
+        else:
+            self.work = attrdict(**w)
+
+
+    async def reload(self):
+        await super().reload()
+        await self._setup()
+
+    async def cmd_c(self):
+        """fetch charge state"""
+        if self.w_max is None:
+            return .5
+        return self.w / self.w_max
+
+    async def cmd_u(self):
         """fetch voltage sum"""
-        r = await self.cmd_u()
+        r = await self.cmd_all("u")
         return sum(r)
 
     async def cmd_lim(self):
@@ -258,39 +361,134 @@ class BaseCells(ArrayCmd):
                 await self.rly.w(v=False)
             raise
 
-    async def _run_e(self):
-        # calculate battery energy
+    async def reload(self):
+        self._reloaded.set()
+        self._reloaded = Event()
+
+    async def monitor_ud(self):
+        while True:
+            try:
+                await sleep_ms(self.cfg["t"]["ud"])
+            except KeyError:
+                await self._reloaded.wait()
+                continue
+            u = await self.cmd_u()
+            ud = sum(await self.cmd_all("u"))
+            if abs((u-ud)/ud) > self.ud_max:
+                if self.al and not (self.n_warn_ud % 10):
+                    await self.al.w(a=VoltageDelta, p=self.path, d=dict(u=u,ud=ud))
+                self.n_warn_ud += 1
+            elif self.n_warn_ud:
+                self.n_warn_ud = 0
+                await self.al.w(a=VoltageDelta, p=self.path)
+
+
+    async def get_energy(self):
+        """
+        loop to calculate battery energy
+
+        The base version sums up (u*i), i.e. watt seconds.
+        """
         t1 = ticks_ms()
         i = await self.cmd_i()
         while True:
-            await sleep_ms(self.cfg["t"]["w"]/2)
+            await sleep_ms(self.t_w)
             u = await self.cmd_u()
             t2 = ticks_ms()
             self.p = p = i*u
-            self.w += p * ticks_diff(t2,t1)
-            u = await self.cmd_u()
+            await self._add_w(p, ticks_diff(t2,t1)/1000, u>self.u_mid)
 
-            await sleep_ms(self.cfg["t"]["w"]/2)
+            await sleep_ms(self.t_w)
             i = await self.cmd_i()
             t1 = ticks_ms()
             self.p = p = i*u
-            self.w += p * ticks_diff(t2,t1)
+            await self._add_w(p, ticks_diff(t1,t2)/1000, u>self.u_mid)
 
+    async def cmd_w(self,w:float|None = None) -> float:
+        """get, or manually override, battery energy content"""
+        wx = self.w
+        if w is not None:
+            self.clear_work(w)
+        return wx
+
+    def clear_work(self, w=None):
+        if w is None:
+            pass
+        elif w < 0 or (self.w_max is not None and w > self.w_max):
+            return False
+        self.work = attrdict()
+        self.work.sum = w or 0
+        self.work.t = 0
+        self.work.chg = 0
+        self.work.dis = 0
+        self.work.xchg = 0
+        self.work.xdis = 0
+        return True
+
+    async def _add_w(self, w, t, hi):
+        self.work.t += t
+        w *= t
+
+        if w > 0:
+            self.work.chg += w
+            w *= 1 - self.cfg.get("loss",0)
+        else:
+            self.work.dis -= w
+        self.work.sum += w
+
+        # outside "standard" limits
+        if self.work.sum < 0:
+            self.work.xdis += -self.work.sum
+            self.work.sum = 0
+            if w < 0:
+                if self.al and not (self.n_warn_w%10):
+                    await self.al.w(a=EnergyLow, p=self.path, d=dict(w=self.work.xdis,wd=w))
+                self.n_warn_w += 1
+
+        elif self.w_max is not None and self.work.sum > self.w_max:
+            self.work.xchg += self.work.sum - self.w_max
+            self.work.sum = self.w_max
+
+            if w > 0:
+                if self.al and not (self.n_warn_w%10):
+                    await self.al.w(a=EnergyHigh, p=self.path, d=dict(w=self.work.xchg,wd=w))
+                self.n_warn_w += 1
+
+        elif self.n_warn_w:
+            self.n_warn_w = 0
+            if self.w_max is None or self.work.sum < self.w_max/2:
+                await self.al.w(a=EnergyLow if self.work.sum < self.w_max/2 else EnergyHigh, p=self.path)
+
+        self.n_save += 1
+        if self.n_save > 99:
+            self.n_save = 0
+            rtc_state[("state",*self.path)] = self.work
+
+    def get_work(self, clear: bool = False, poll: bool = False):
+        res = self.work
+        if clear:
+            self.clear_work()
+        return res
+
+    async def start_tasks(self, tg):
+        await tg.spawn(self.get_energy)
+        await tg.spawn(self.monitor_ud)
 
     async def task(self):
         async with TaskGroup() as tg:
-            await tg.spawn(self._run_e)
-        pass
+            await self.start_tasks(tg)
+            await super().task()
 
 
 class BaseBattery(BaseCells):
     """
-    Skeleton for a battery.
+    Skeleton for a balanced battery.
     """
 
-    async def cmd_u(self):
-        """fetch battery voltage"""
-        raise RuntimeError
+# superclass does sum of cell voltages
+#   async def cmd_u(self):
+#       """fetch battery voltage"""
+#       raise RuntimeError
 
     async def cmd_i(self):
         """fetch battery current"""
@@ -304,352 +502,194 @@ class BaseBattery(BaseCells):
         return u2-u1
 
 
-class BaseBalancer:
+
+class BaseBalancer(BaseCmd):
     """
-    Skeleton of a balancing controller
+    Basic battery balancing.
 
     Config::
-
-        bat: !P r.x.bat
-        n: 3  # max #cells to balance at the same time
-
-
+        bat: !P battery.to.balance
+        t:
+          chk: 1000  # time between checks when not balancing
+          run: 500  # time between updates when balancing
+        h:
+          n: 3 # max parallel balancing
+          d: 0.1  # min absolute voltage delta high vs. low
+        u:
+          max: 3.45  # no discharging below this point
+          min: 3.05  # no charging above this point
     """
+    # currently configured limits
+    uh:float = None
+    ul:float = None
 
-    def __init__(self, cfg: attrdict):
-        self.cfg = cfg
-        self.bat = self.root.sub_at(self.cfg["bat"])
+    # configured limits, battery
+    chg_max:float = None
+    chg_min:float = None
+    dis_max:float = None
+    dis_min:float = None
+
+    def __init__(self, cfg):
+        super().__init__(cfg)
+        self._reloaded = Event()
+        self._run = Event()
+
+    async def reload(self):
+        await super().reload()
+        await self._setup()
+
+    async def _setup(self):
+        self.n = self.cfg.get("n",9999)
+        self.bat = self.root.sub_at(*self.cfg["bat"]) if "bat" in self.cfg else None
+        if self.bat is not None:
+            # get battery limits
+            c = await self.bat.cfg(("cfg","lim","u","ext"))
+            self.dis_max = c["max"]
+            self.chg_min = c["min"]
+            c = await self.bat.cfg(("cfg","lim","u","std"))
+            self.dis_min = c["max"]
+            self.chg_max = c["min"]
+            c = self.cfg.get("u",{})
+            self.dis_min = max(self.dis_min,c.get("max",0))
+            self.chg_max = max(self.chg_max,c.get("min",9999))
+            if self.dis_min >= self.dis_max:
+                raise RuntimeError("Cf dis")
+            if self.chg_min >= self.chg_max:
+                raise RuntimeError("Cf Chg")
+
+            self._reloaded.set()
+            self._reloaded = Event()
+
+    async def setup(self):
+        await super().setup()
+        await self._setup()
+
+    async def start_tasks(self, tg):
+        await tg.spawn(self.run_bms)
 
     async def task(self):
-        pass  # TODO
+        async with TaskGroup() as tg:
+            await self.start_tasks(tg)
+            await super().task()
 
+    async def cmd_u(self, h:float=None, l:float=None):
+        "set desired voltage levels"
+        if h is not None:
+            self.uh = min(self.dis_max,max(self.dis_min,h))
+        if l is not None:
+            self.ul = min(self.chg_max,max(self.chg_min,l))
+        self._run.set()
 
-#class BasePower(MultiplyDict):
-#    def __init__(self, cfg, bms):
-#        super().__init__(cfg)
-#        self.bms = bms
-#        self.cfg = cfg
-#        self.n = 0
-#
-#    async def task(self):
-#        await every_ms(cfg.t, self.read)
-#
-#    async def read_(self):
-#        res = await super().read_()
-#        p = res["_"]
-#        await self.bms.update_power(u=res["u"], i=res["i"], p=p)
-#        return p
-#
-#    
-#class BaseBattery:
-#    """
-#    This is the skeleton of a battery monitor client.
-#
-#    Alerts and updates are monitored.
-#    """
-#
-#    cmd = None
-#
-#    ext_u: float = None  # last external voltage measurement
-#    ext_i: float = None  # last external current measurement
-#    ext_r: float = None  # wire resistance, to calculate ext/batt voltage delta
-#
-#    val_u: float = None  # voltage
-#    val_i: float = None  # current
-#    val_p: float = None  # momentary power
-#    val_t: list[float] = None  # other temperatures
-#    int_r: float = None  # internal resistance, whole battery
-#
-#    # required modules
-#    cells: BaseCells = None
-#    balancer: BaseBalancer = None
-#    relay = None
-#    power = None  # reader for voltage and current
-#
-#    sum_w: float = 0  # sum of u*i
-#    sum_c: float = 0  # sum of i
-#
-#    _live_task = None
-#    live: int = None  # required msec between pings
-#    _main_task = None
-#
-#    def __init__(self, cfg):
-#        pprint(cfg, sys.stderr)
-#        self.cfg = cfg
-#        self.xmit_evt = Event()
-#        self.gen = 0  # generation, incremented every time a new value is read
-#        self._q = Broadcaster()
-#
-#        super().__init__()
-#
-#    async def run(self, cmd):
-#        """
-#        Main loop. Runs the cell and balancer main code.
-#        """
-#        self.t_last = ticks_ms()
-#
-#        self.cmd = cmd
-#        self.sum_w = 0
-#        self.sum_c = 0
-#        self.n_w = 0
-#        self.live_flag = Event()
-#
-#        async with TaskGroup() as tg:
-#            self.__tg = tg
-#            self._main_task = await tg.spawn(self._run)
-#            while True:
-#                await sleep(9999)
-#
-#    async def update_power(
-#        self, u: float, i: float, p: float = None, w: float = None, c: float = None
-#    ):
-#        self.val_u = u
-#        self.val_i = i
-#        self.val_p = u * i if p is None else p
-#        if w is None or c is None:
-#            t = ticks_ms()
-#            td = ticks_diff(t, self.t_last)
-#            self.t_last = t
-#
-#            if w is None:
-#                self.val_w += td * self.val_p
-#            else:
-#                self.val_w = w
-#
-#            if c is None:
-#                self.val_c += td * self.val_i
-#            else:
-#                self.val_c = c
-#        await self.send_update("u_i")
-#
-#    async def _live(self):
-#        while True:
-#            await timeout_ms(self.live, self._live_evt.wait)
-#            self._live_evt = Event()
-#
-#    async def set_live(self, t):
-#        self.live = t
-#        if not t:
-#            if self._live_task is not None:
-#                self._live_task.cancel()
-#                self._live_task = None
-#                self._live_evt = None
-#        elif self._live_task is not None:
-#            self._live_evt.set()
-#        else:
-#            self._live_evt = Event()
-#            self._live_task = await self._tg.spawn(self._live)
-#
-#    async def live_ping(self):
-#        if self._live_task is not None:
-#            self._live_evt.set()
-#
-#    def stat(self, clear=False):
-#        """
-#        return current state + sums, optionally clear the sums
-#        """
-#        if self.relay is not None:
-#            rs = self.relay.state()
-#        else:
-#            rs = {}
-#
-#        if self.live is not None:
-#            rs["l"] = self.live
-#
-#        res = dict(
-#            u=self.last_u,
-#            i=self.last_i,
-#            s=dict(w=self.sum_w, c=self.sum_c, n=self.n_w),
-#            gen=self.gen,
-#        )
-#        if rs:
-#            res["r"] = rs
-#
-#        if clear:
-#            self.sum_w = 0
-#            self.sum_c = 0
-#            self.n_w = 0
-#        return res
-#
-#    async def set_relay_force(self, st):
-#        """
-#        manually change the relay's state
-#        """
-#        if isinstance(self.relay, Listener):
-#            await self.cmd.request.send([self.cmd.name, "rly"], st=st)
-#        else:
-#            self.relay_force = st
-#            await self.relay.set(force=st)
-#            await self.send_rly_state("forced")
-#
-#    async def live_state(self, live: bool):
-#        """
-#        is the system OK?
-#        """
-#        if self.live == live:
-#            return
-#        self.live = live
-#        if not live and not isinstance(self.relay, Listener):
-#            await self.relay.set(False)
-#            await self.send_rly_state("Live Fail")
-#
-#    def set_live(self):
-#        self.live_flag.set()
-#
-#    async def live_task(self):
-#        while True:
-#            try:
-#                await wait_for_ms(self.cfg.poll.t.live, self.live_flag.wait)
-#            except TimeoutError:
-#                await self.live_state(False)
-#            else:
-#                self.live_flag = Event()
-#                await self.live_state(True)
-#
-#    async def config_updated(self, cfg):
-#        """
-#        Kill it all off and restart.
-#
-#        TODO: try to be somewhat less intrusive.
-#        """
-#        if self._main_task is None:
-#            self.cfg = cfg
-#            return
-#        self._main_task.cancel()
-#        await sleep_ms(100)
-#        self.cfg = cfg
-#        self._main_task = await self.__tg.spawn(self._run)
-#
-#    async def send_work(self, flush: bool = False):
-#        if not self.cmd:
-#            return
-#        res = dict(
-#            w=self.sum_w,
-#            c=self.sum_c,
-#            n=self.n_w,
-#            f=flush,
-#        )
-#        if flush:
-#            self.sum_w = 0
-#            self.sum_c = 0
-#            self.n_w = 0
-#        await self.cmd.request.send_nr([self.cmd.name, "work"], **res)
-#
-#    async def _run(self):
-#        async with TaskGroup() as tg:
-#            cfg = self.cfg
-#            try:
-#                self.cells = load_from_cfg(cfg.cells, bms=self)
-#            except AttributeError:
-#                breakpoint()
-#                raise
-#            self.balancer = load_from_cfg(cfg.balancer, cells=self.cells)
-#            self.relay = load_from_cfg(cfg.relay, bms=self, _raise=True)
-#            self.power = load_from_cfg(cfg.power, bms=self)
-#
-#            if self.relay is not None:
-#                tg.start_soon(self.relay.run, self.cmd)
-#            if self.cells is not None:
-#                tg.start_soon(self.cells.run, self.cmd)
-#            if self.balancer is not None:
-#                tg.start_soon(self.balancer.run, self.cmd)
-#            if self.power is not None:
-#                tg.start_soon(self.power.run, self.cmd)
-#
-#            await tg.spawn(self.live_task, _name="bms.live")
-#            await self._run_()
-#
-#    async def _run_(self):
-#        xmit_n = 0
-#        self.live = (await self.relay.read())["s"]
-#        # we start off with the current relay state
-#        # so a soft reboot won't toggle the relay
-#
-#        self.t = ticks_ms()
-#
-#        while True:
-#            self.t = ticks_add(self.t, self.cfg.poll.t.voltage)
-#
-#            if self.live:
-#                rs = self.relay.get_sync()
-#
-#                if await self._check():
-#                    await self.relay.set(True)
-#                else:
-#                    await self.relay.set(False)
-#
-#                if rs != self.relay.get_sync():
-#                    if rs:
-#                        await self.send_rly_state("Check OK")
-#                    else:
-#                        await self.send_rly_state("Check Fail")
-#                    xmit_n = 0
-#
-#            xmit_n -= 1
-#            if xmit_n <= 0 or self.xmit_evt.is_set():
-#                if self.gen >= 99:
-#                    self.gen = 10
-#                else:
-#                    self.gen += 1
-#                self.xmit_evt.set()
-#                self.xmit_evt = Event()
-#                xmit_n = self.cfg.poll.n.voltage
-#
-#            t = ticks_ms()
-#            td = ticks_diff(self.t, t)
-#            if td > 0:
-#                if self.n_w >= 10000:
-#                    await self.send_work()
-#                await sleep_ms(td)
-#            else:
-#                self.t = t
-#
-#    async def send_rly_state(self, txt):
-#        self.xmit_evt.set()
-#        print("RELAY", (await self.relay.read()), txt, file=sys.stderr)
-#
-#
-#class BaseBMSCmd(BaseCmd):
-#    def __init__(self, parent: BaseCmd, name: str, cfg: attrdict, gcfg: attrdict):
-#        super().__init__(parent)
-#        self.name = name
-#        self.batt = None
-#        self.bms = load_from_cfg(cfg)
-#        if self.bms is None:
-#            raise ImportError(cfg)
-#
-#    async def run(self):
-#        try:
-#            await self.bms.run(self)
-#        finally:
-#            self.bms = None
-#
-#    async def config_updated(self, cfg):
-#        await super().config_updated(cfg)
-#        await self.bms.config_updated(cfg)
-#
-#    async def cmd_rly(self, st=NotGiven):
-#        """
-#        Called manually, but also irreversibly when there's a "hard" cell over/undervoltage
-#        """
-#        rly = self.batt.relay
-#        if rly is None:
-#            raise RuntimeError("no relay")
-#        if st is NotGiven:
-#            return rly.state()
-#        await rly.set(force=st)
-#
-#    async def cmd_info(self, gen=-1, r=False):
-#        if self.batt.gen == gen:
-#            await self.batt.xmit_evt.wait()
-#        return self.batt.stat(r)
-#
-#    async def cmd_live(self, t=None):
-#        """
-#        Keepalive. Set t=x to require a call every t seconds.
-#        t=0 disables. No t is the ping.
-#        """
-#        if t is None:
-#            self.batt.ping()
-#        else:
-#            await self.batt.set_live(t)
+    async def run_bms(self):
+        res = False
+        while True:
+            try:
+                await wait_for_ms(self.cfg["t"]["run" if res else "chk"], self._run.wait)
+            except KeyError:
+                await self._reloaded.wait()
+                continue
+            except TimeoutError:
+                pass
+            if self.bat is None:
+                await self._reloaded.wait()
+                continue
+
+            u = await self.bat.all("u")
+            res = await self._run_h(u)
+            # res = (await self._run_l(u)) || res
+
+    async def _run_h(self, u):
+        maxv = max(u)
+        minv = min(u)
+
+        # discharger states
+        st = await self.bat.all("dis")
+
+        if not self.uh or self.uh > maxv:
+            for uv,f in st:
+                if uv and not f:
+                    await self.bat.all("dis", v=0)
+                    break
+            return
+        try:
+            d = self.cfg["h"]["d"]
+        except KeyError:
+            d = 0.05
+        
+        if maxv - minv < 2 * d or maxv < self.uh:
+            # all OK. Don't do any (more) work.
+            log("Bal- %.3f %.3f %.3f %.3f", minv, maxv, d, self.dis_min)
+            await self.bat.all("dis", v=0)
+            return
+
+        thrv1 = self.uh
+        minv = max(minv, self.dis_min)
+        thrv2 = minv + 0.8 * (thrv1 - minv)  # small hysteresis
+        cc = list(enumerate(u))
+        cc.sort(key=lambda x: x[1], reverse=True)
+        ret = False
+
+        log("Bal %.3f %.3f %s %s", thrv1, thrv2, cc[0], cc[-1])
+
+        want = 0
+        cur = 0
+        # Step 1, count what we currently have+need (and do some cleanup)
+        for i,cv in cc:
+            if st[i][1]:
+                cur += 1
+                continue
+
+            if st[i][0] is not None:
+                if st[i][0] < cv:
+                    cur += 1
+                    if st[i][0] < minv:
+                        # don't balance below the minimum
+                        log("Balance1 %s", c)
+                        await c.set_balancing(minv + 2 * d)
+                        # don't spam the system when the min level changes
+                else:
+                    # goal reached.
+                    log("Unbalance1 %s", c)
+                    await self.bat(i,"dis",v=0)
+
+            elif cv >= thrv1 + d:
+                want += 1
+
+#       if cur:
+#           # update balancer power levels
+#           h, res = await self.send(RequestBalancePower())
+#           for c, r in zip(self.cells, res):
+#               r.to_cell(c)
+
+        if cur or want:
+            ret = True
+
+        # Step 1, if there are too many active cells, reduce the load
+        for i,cv in cc[::-1]:
+            if want + cur <= self.n:
+                # done
+                break
+            if st[i][1]:
+                continue
+            if st[i][0] > cv and cv < thrv2:
+                log("Unbalance2 %s", c)
+                await self.bat(i,"dis",v=0)
+                cur -= 1
+
+        # Step 2, turn on balancing on cells that need it
+        for i,cv in cc:
+            if st[i][1]:
+                continue
+            if st[i][0]:
+                continue
+            if cur > self.n:
+                break
+            if cv >= thrv1 + d:
+                log("Balance2 %d %s", i,cv)
+                await self.bat(i,"dis",v=minv)
+                cur += 1
+                ret = True
+                continue
+            break
+
+        return ret

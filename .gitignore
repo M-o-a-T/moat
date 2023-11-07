@@ -10,6 +10,7 @@
 /.coverage
 /coverage.xml
 /dist/
+/fake.rtc
 docs/_build/
 docs/build/
 /downloads/

@@ -118,7 +118,7 @@ class ArrayCmd(BaseSuperCmd):
         sub = self.apps[action[0]]
         return await sub.dispatch(action[1:], msg, **kw)
 
-    async def cmd_all(self, a, d=None, s=None, e=None):
+    async def cmd_all(self, *a, d=None, s=None, e=None):
         """
         Call all sub-apps and collect the result.
         """

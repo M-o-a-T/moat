@@ -428,6 +428,7 @@ class DirCmd(BaseSubCmd):
 
     async def reload(self):
         "called after the config has been updated"
+        await super().reload()
         self._updated.set()
         await self._did_update.wait()
 

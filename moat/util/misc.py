@@ -3,10 +3,10 @@ This module contains various helper functions and classes.
 """
 from __future__ import annotations
 
-__all__ = ["range_at"]
+__all__ = ["val2pos", "pos2val"]
 
 
-def range_at(a: float, b: float, c: float, /, clamp: bool = False):
+def val2pos(a: float, b: float, c: float, /, clamp: bool = False):
     """
     Return the position of @b within [@a…@c].
 
@@ -29,7 +29,7 @@ def range_at(a: float, b: float, c: float, /, clamp: bool = False):
     return res
 
 
-def range_for(a: float, b: float, c: float, /, clamp: bool = False):
+def pos2val(a: float, b: float, c: float, /, clamp: bool = False):
     """
     Return the value of @b within [@a…@c].
 

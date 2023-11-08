@@ -19,12 +19,8 @@ from moat.micro.cmd.util import get_p,set_p,del_p
 
 import msgpack as mp
 
-try:
-    _pack = mp.Packer(default=_encode).packb
-    _unpack = lambda x: mp.unpackb(x, ext_hook=_decode)  # noqa:E731
-except AttributeError:
-    _pack = mp.Packer(default=_encode).pack
-    _unpack = lambda x: mp.unpackb(x, ext_hook=_decode)  # noqa:E731
+_pack = mp.Packer(default=_encode).pack
+_unpack = lambda x: mp.unpackb(x, ext_hook=_decode)  # noqa:E731
 
 _dfn = "moat.rtc"
 

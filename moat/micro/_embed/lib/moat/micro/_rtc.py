@@ -13,9 +13,9 @@ try:
 except ImportError:
     RTC = None
 from moat.util import merge
+from moat.micro.cmd.util import del_p, get_p, set_p
 from moat.micro.compat import log
 from moat.micro.proto.stream import _decode, _encode
-from moat.micro.cmd.util import get_p,set_p,del_p
 
 import msgpack as mp
 

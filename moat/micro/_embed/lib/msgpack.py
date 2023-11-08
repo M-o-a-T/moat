@@ -141,10 +141,12 @@ class Unpacker:
         self._buffer = memoryview(data)
         self._buff_i = 0
 
-    def _got_extradata(self):
+    def has_extradata(self):
+        "are there extra data in the buffer?"
         return self._buff_i < len(self._buffer)
 
-    def _get_extradata(self):
+    def get_extradata(self):
+        "return extra data, if any"
         return self._buffer[self._buff_i :]
 
     # async def read_bytes(self, n):
@@ -552,10 +554,9 @@ def unpackb(packed, **kwargs):
     try:
         next(unpacker.unpack())
     except StopIteration as s:
-        if unpacker._got_extradata():
-            raise ExtraData(s.value, bytes(unpacker._get_extradata()))
+        if unpacker.has_extradata():
+            raise ExtraData(s.value, bytes(unpacker.get_extradata()))
         return s.value
     except OutOfData:
         raise ValueError("incomplete")
     raise RuntimeError("No way")
-

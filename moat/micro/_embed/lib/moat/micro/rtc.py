@@ -15,6 +15,7 @@ except ImportError:
 from moat.util import merge
 from moat.micro.compat import log
 from moat.micro.proto.stream import _decode, _encode
+from moat.micro.cmd.util import get_p,set_p,del_p
 
 import msgpack as mp
 
@@ -22,30 +23,6 @@ _pack = mp.Packer(default=_encode).packb
 _unpack = lambda x: mp.unpackb(x, ext_hook=_decode)  # noqa:E731
 
 _dfn = "moat.rtc"
-
-
-def get_p(cur, p):
-    "retrieve an item"
-    for pp in p:
-        cur = cur[pp]
-    return cur
-
-
-def set_p(cur, p, v):
-    "set an item"
-    cur = get_p(cur, p[:-1])
-    cur[p[-1]] = v
-
-
-def del_p(cur, p):
-    "delete an item"
-    pp = p[0]
-    if pp in cur:
-        if len(p) > 1:
-            del_p(cur[pp], p[1:])
-        if cur[pp]:
-            return
-        del cur[pp]
 
 
 class State:

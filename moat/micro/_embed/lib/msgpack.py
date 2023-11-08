@@ -328,23 +328,6 @@ class Unpacker:
         else:
             raise RuntimeError("Needs async")
 
-    def unpackb(self, packed):
-        """
-        Decode the given buffer.
-
-        The buffer cannot have too many (or too few) bytes.
-        """
-        self.feed(packed)
-        try:
-            next(self.unpack())
-        except StopIteration as s:
-            if self._got_extradata():
-                raise ExtraData(s.value, bytes(self._get_extradata()))
-            return s.value
-        except OutOfData:
-            raise ValueError("incomplete")
-        raise RuntimeError("No way")
-
 
 class Packer:
     """
@@ -506,7 +489,7 @@ class Packer:
                     continue
             raise TypeError(f"Cannot serialize {obj !r}")
 
-    def packb(self, obj):
+    def pack(self, obj):
         "Packs a single data item. Returns the bytes."
         try:
             self._pack(obj)
@@ -539,7 +522,7 @@ def packb(o, **kwargs):
 
     See :class:`Packer` for options.
     """
-    return Packer(**kwargs).packb(o)
+    return Packer(**kwargs).pack(o)
 
 
 # def unpack(stream, **kwargs):
@@ -565,4 +548,14 @@ def unpackb(packed, **kwargs):
     See :class:`Unpacker` for options.
     """
     unpacker = Unpacker(None, **kwargs)
-    return unpacker.unpackb(packed)
+    unpacker.feed(packed)
+    try:
+        next(unpacker.unpack())
+    except StopIteration as s:
+        if unpacker._got_extradata():
+            raise ExtraData(s.value, bytes(unpacker._get_extradata()))
+        return s.value
+    except OutOfData:
+        raise ValueError("incomplete")
+    raise RuntimeError("No way")
+

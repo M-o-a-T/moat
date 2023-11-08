@@ -1,11 +1,11 @@
 """
 Fake RTC, actually writes he state to disk
 
-Linux MicroPython only
+Linux only
 """
 from __future__ import annotations
 
-import moat.micro.rtc as _rtc
+import moat.micro._rtc as _rtc
 
 
 class _FakeRTC:

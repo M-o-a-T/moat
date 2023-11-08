@@ -86,15 +86,16 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
             section = Path()
         else:
             section = Path("connect")
-    cfg = get_part(cfg, section)
+    try:
+        cfg = get_part(cfg, section)
+    except KeyError:
+        cfg = {}
 
     if config:
         with open(config) as f:  # noqa:ASYNC101
             cc = yload(f)
             merge(cfg, cc)
     cfg = process_args(cfg, vars_, eval_, path_)
-    if "apps" not in cfg:
-        raise ValueError(f"Config at {section} requires 'apps' section")
 
     if inv != "run":
         if link is None:

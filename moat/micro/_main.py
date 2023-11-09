@@ -325,15 +325,16 @@ async def cmd(obj, path, **attrs):
 @click.option("-w", "--write", type=click.File("w"), help="Write config to this file")
 @click.option("-W", "--write-client", help="Write config file to the client")
 @click.option("-s", "--sync", is_flag=True, help="Sync the client after writing")
+@click.option("--cfg-path", type=P, help="Path to the remote's config", default=P("c"))
+@click.option("--fs-path", type=P, help="Path to the remote's files", default=P("f"))
 @click.option(
     "-c",
     "--client",
     is_flag=True,
     help="The client's data win if both -r and -R are used",
 )
-@click.option("-u", "--update", is_flag=True, help="Don't replace the client config")
 @attr_args(with_proxy=True)
-async def cfg_(obj, read, read_client, write, write_client, sync, client, update, **attrs):
+async def cfg_(obj, read, read_client, write, write_client, sync, client, cfg_path, fs_path, **attrs):
     """
     Update a remote configuration.
 
@@ -360,7 +361,6 @@ async def cfg_(obj, read, read_client, write, write_client, sync, client, update
     if sync and (write or write_client):
         raise click.UsageError("You're not changing the running config!")
 
-    from .path import MoatFSPath
     cfg = obj.cfg
 
     if read and write and not (read_client or write_client):
@@ -373,9 +373,12 @@ async def cfg_(obj, read, read_client, write, write_client, sync, client, update
         yprint(cfg, stream=write)
         return
 
+    if read_client or write_client:
+        from .path import MoatFSPath
+
     async with Dispatch(obj.cfg, run=True, sig=True) as dsp, dsp.cfg_at(
-        *cfg["path"],"c"
-    ) as cf, dsp.sub_at(*cfg["path"], "f") as fs:
+        *cfg["path"],*cfg_path,
+    ) as cf, dsp.sub_at(*cfg["path"], *fs_path) as fs:
         has_attrs = any(a for a in attrs.values())
 
         if has_attrs and not (read or read_client or write or write_client):

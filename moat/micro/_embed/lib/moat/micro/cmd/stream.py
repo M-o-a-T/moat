@@ -493,8 +493,23 @@ class SingleCmdMsg(BaseCmdMsg):
     # `stream` needs to be implemented by a subclass
 
     async def run(self):  # noqa:D102
+        # this would be far easier with "except*"
+        # but µPy doesn't have that.
         try:
-            await super().run()
+            try:
+                await super().run()
+            except BaseExceptionGroup as e:
+                while True:
+                    if len(e.exceptions) != 1:
+                        a,b = e.split((EOFError, OSError, SilentRemoteError))
+                        if a is not None:
+                            log("Err %s: %r", self.path, repr(a))
+                        if b is None:
+                            return
+                        raise b
+                    e = e.exceptions[0]
+                    if not isinstance(e,BaseExceptionGroup):
+                        raise e
         except (EOFError, OSError, SilentRemoteError) as exc:
             log("Err %s: %r", self.path, repr(exc))
         except Exception as exc:  # pylint:disable=broad-exception-caught

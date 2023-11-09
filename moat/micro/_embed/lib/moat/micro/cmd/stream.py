@@ -64,6 +64,7 @@ class BaseCmdBBM(BaseCmd):
 
     async def cmd_rd(self, n=64):
         """read some data"""
+        await self.wait_ready()
         b = bytearray(n)
         r = await self.dev.rd(b)
         if r == n:
@@ -76,6 +77,7 @@ class BaseCmdBBM(BaseCmd):
 
     async def cmd_wr(self, b):
         """write some data"""
+        await self.wait_ready()
         async with self.w_lock:
             await self.dev.wr(b)
 

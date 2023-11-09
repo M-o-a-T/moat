@@ -44,14 +44,20 @@ async def test_stack(tmp_path):
         else:
             raise RuntimeError("Startup failed, no socket")
 
-        print("ROOT")
-        res = await run("-c",str(cfx),"-vvvvv", "micro","cmd","dir")
-        print("R")
-        res = await run("-c",str(cfx),"-vvvvv", "micro","cmd","r.dir")
-        print("N")
-        res = await run("-c",str(cfx),"-vvvvv", "micro","cmd","n.dir")
-        print("S")
-        res = await run("-c",str(cfx),"-vvvvv", "micro","cmd","s.dir")
-        print(res)
+        # A couple of command tests
+        res = await run("-c",str(cfx),"-vvvvv", "micro","cmd","dir", do_stdout=True)
+        assert "\n- s\n" in res.stdout
+        assert "\n- dir\n" in res.stdout
+        assert "\n- wr\n" not in res.stdout
+
+        res = await run("-c",str(cfx),"-vvvvv", "micro","cmd","s.f.dir", do_stdout=True)
+        assert "\n- rmdir\n" in res.stdout
+
+        # now do the same thing sanely
+        async with mpy_stack(tmp_path/"x", cfg.micro.connect) as d, d.sub_at("r","s") as s:
+            res = await s("f","dir")
+            assert "rmdir" in res["c"]
+            res = await s.f("dir")
+            assert "rmdir" in res["c"]
         sc.cancel()
 

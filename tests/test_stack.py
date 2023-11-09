@@ -5,6 +5,9 @@ from __future__ import annotations
 
 import pytest
 import anyio
+from functools import partial
+
+import msgpack
 
 from moat.micro._test import mpy_stack
 from moat.src.test import run
@@ -113,6 +116,7 @@ async def test_stack(tmp_path):
     await run("-c",str(cfx),"-vvvvv", "micro","setup")
     sc = None
 
+    rm = partial(run, "-c",str(cfx),"-vvvvv", "micro")
     async with anyio.create_task_group() as tg:
         @tg.start_soon
         async def r_setup():
@@ -127,19 +131,40 @@ async def test_stack(tmp_path):
             raise RuntimeError("Startup failed, no socket")
 
         # A couple of command tests
-        res = await run("-c",str(cfx),"-vvvvv", "micro","cmd","dir", do_stdout=True)
+        res = await rm("cmd","dir", do_stdout=True)
         assert "\n- s\n" in res.stdout
         assert "\n- dir\n" in res.stdout
         assert "\n- wr\n" not in res.stdout
 
-        res = await run("-c",str(cfx),"-vvvvv", "micro","cmd","s.f.dir", do_stdout=True)
+        res = await rm("cmd","s.f.dir", do_stdout=True)
         assert "\n- rmdir\n" in res.stdout
 
+        res = await rm("-L","r.s","cfg", do_stdout=True)
+        assert "\nf:\n  root:" in res.stdout
+        assert "fubar" not in res.stdout
+
+        res = await rm("-L","r.s","cfg","-v","a.b","fubar","-e","a.ft","42", do_stdout=True)
+        assert res.stdout == ""
+
+        res = await rm("-L","r.s","cfg","-e","a.ft","43", "-W","moat.cf2", do_stdout=True)
+        assert res.stdout == ""
+
         # now do the same thing sanely
-        async with mpy_stack(tmp_path/"x", cfg.micro.connect) as d, d.sub_at("r","s") as s:
+        async with mpy_stack(tmp_path/"x", cfg.micro.connect) as d, d.sub_at("r","s") as s,\
+                d.cfg_at("r", "s", "c") as cfg:
             res = await s("f","dir")
             assert "rmdir" in res["c"]
             res = await s.f("dir")
             assert "rmdir" in res["c"]
+            cf = await cfg.get()
+            assert cf["a"]["b"] == "fubar"
+            assert cf["a"]["ft"] == 42
+
+            with (root/"moat.cf2").open("rb") as f:
+                cfm = msgpack.unpack(f)
+                assert cfm["a"]["ft"] == 43
+                cfm["a"]["ft"] = 42
+                assert cfm == cf
+
         sc.cancel()
 

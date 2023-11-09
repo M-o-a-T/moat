@@ -333,7 +333,7 @@ async def cmd(obj, path, **attrs):
 )
 @click.option("-u", "--update", is_flag=True, help="Don't replace the client config")
 @attr_args(with_proxy=True)
-async def cfg_(obj, read, read_client, write, write_client, sync, client, **attrs):
+async def cfg_(obj, read, read_client, write, write_client, sync, client, update, **attrs):
     """
     Update a remote configuration.
 
@@ -361,6 +361,7 @@ async def cfg_(obj, read, read_client, write, write_client, sync, client, **attr
         raise click.UsageError("You're not changing the running config!")
 
     from .path import MoatFSPath
+    cfg = obj.cfg
 
     if read and write and not (read_client or write_client):
         # local file update: don't talk to the client
@@ -372,16 +373,16 @@ async def cfg_(obj, read, read_client, write, write_client, sync, client, **attr
         yprint(cfg, stream=write)
         return
 
-    # TODO does not work yet
     async with Dispatch(obj.cfg, run=True, sig=True) as dsp, dsp.cfg_at(
-        *cfg["path"],
-    ) as cf, dsp.sub_at(*cfg["fs"]) as fs:
+        *cfg["path"],"c"
+    ) as cf, dsp.sub_at(*cfg["path"], "f") as fs:
         has_attrs = any(a for a in attrs.values())
 
         if has_attrs and not (read or read_client or write or write_client):
             # No file access at all. Just update the client's RAM.
-            val = merge(*attrs.values())  # pylint: disable=no-value-for-parameter
-            await cf.set_cfg(val, sync=sync)
+
+            val = process_args({}, **attrs)
+            await cf.set(val, sync=sync)
             return
 
         if read:
@@ -411,6 +412,8 @@ async def cfg_(obj, read, read_client, write, write_client, sync, client, **attr
             await p.write_bytes(d, chunk=64)
         if write:
             yprint(cfg, stream=write)
+        if not has_attrs and not write and not write_client:
+            yprint(cfg, stream=obj.stdout)
 
 
 @cli.command("run", short_help="Run the multiplexer")

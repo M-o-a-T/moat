@@ -143,9 +143,15 @@ async def test_stack(tmp_path):
         assert "\nf:\n  root:" in res.stdout
         assert "fubar" not in res.stdout
 
+        # change some config in remote live data
         res = await rm("-L","r.s","cfg","-v","a.b","fubar","-e","a.ft","42", do_stdout=True)
         assert res.stdout == ""
 
+        # change more config but only on local data
+        res = await rm("-L","r.s","cfg","-e","a.ft","44", "-w","-", do_stdout=True)
+        assert "\n  ft: 44\n" in res.stdout
+
+        # change more config but only on remote data
         res = await rm("-L","r.s","cfg","-e","a.ft","43", "-W","moat.cf2", do_stdout=True)
         assert res.stdout == ""
 

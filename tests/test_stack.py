@@ -11,11 +11,93 @@ from moat.src.test import run
 from moat.util import yload, yprint
 from pathlib import Path
 
+CFG = """
+micro:
+  setup:
+    args:
+      cross: "/src/moat/micro/lib/micropython/mpy-cross/build/mpy-cross"
+      config: !P cfg.r
+      update: true
+      state: std
+    std: true
+    apps:
+      r: _test.MpyRaw
+    r: &rm
+      cwd: /tmp/mpy-test
+      mplex: false
+      log:
+        txt: "M"
+    
+  # main service. This could be a serial.Link instead, but this way
+  # "moat micro setup --run" keeps the existing link going
+  apps:
+    r: _test.MpyRaw
+    s: remote.Link
+    n: net.unix.Port
+  r: *rm
+  s:
+    path: !P r
+    log:
+      txt: "S"
+  n: &np
+    port: /tmp/moat.test
+    log:
+      txt: "N"
+      
+  cfg:
+    r:
+      apps:
+        c: cfg.Cmd
+        r: stdio.StdIO
+        f: fs.Cmd
+      r: *rm
+      f:
+        root: /tmp/mpy-test
+
+  # Service for connecting to the main code.
+  connect:
+    apps:
+      r: net.unix.Link
+    r: *np
+
+logging:
+  version: 1
+  loggers:
+    asyncserf:
+      level: INFO
+    xknx.raw_socket:
+      level: INFO
+    moat.micro.direct:
+      level: DEBUG
+    moat.micro.path:
+      level: INFO
+  root:
+    handlers:
+      - stderr
+    level: INFO
+  handlers:
+    logfile:
+      class: logging.FileHandler
+      filename: test.log
+      level: DEBUG
+      formatter: std
+    stderr:
+      class: logging.StreamHandler
+      level: DEBUG
+      formatter: std
+      stream: "ext://sys.stderr"
+  formatters:
+    std:
+      class: "moat.util.TimeOnlyFormatter"
+      format: "%(asctime)s %(levelname)s:%(name)s:%(message)s"
+      disable_existing_loggers: false
+  
+"""
+
 @pytest.mark.anyio()
 async def test_stack(tmp_path):
     "full-stack test"
-    with open("tests/test_stack.cfg","r") as f:
-        cfg = yload(f, attr=True)
+    cfg = yload(CFG, attr=True)
     here = Path(".").absolute()
     port = tmp_path/"uport"
     root = tmp_path/"root"

@@ -313,9 +313,9 @@ async def cmd(obj, path, **attrs):
         try:
             res = await sd.dispatch(tuple(path), val)
         except RemoteError as err:
-            yprint(dict(e=str(err.args[0])))
+            yprint(dict(e=str(err.args[0])), stream=obj.stdout)
         else:
-            yprint(res)
+            yprint(res, stream=obj.stdout)
 
 
 @cli.command("cfg", short_help="Get / Update the configuration")

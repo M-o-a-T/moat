@@ -108,7 +108,7 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
 
 
 @cli.command(name="setup", short_help="Copy MoaT to MicroPython")
-@click.pass_obj
+@click.pass_context
 @click.option("-r", "--run", is_flag=True, help="Run MoaT after updating")
 @click.option("-N", "--reset", is_flag=True, help="Reboot after updating")
 @click.option(
@@ -130,16 +130,17 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
 @click.option("-c", "--config", type=P, help="Config part to use for the device")
 @click.option("-w", "--watch", is_flag=True, help="monitor the target's output after setup")
 @click.option("-C", "--cross", help="path to mpy-cross")
-async def setup_(obj, **kw):
+async def setup_(ctx, **kw):
     """
     Initial sync of MoaT code to a MicroPython device.
 
     MoaT must not currently run on the target.
     """
+    obj = ctx.obj
     cfg = obj.cfg
     st = cfg.setdefault("args", {})
     for k, v in kw.items():
-        if k not in st or v is not None:
+        if k not in st or ctx.get_parameter_source(k) != click.core.ParameterSource.DEFAULT:
             st[k] = v
     return await setup(cfg, obj.ocfg, **st)
 

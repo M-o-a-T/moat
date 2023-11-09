@@ -49,7 +49,7 @@ class SyncStream:
         b = bytearray(n)
         r = greenback.await_(self.s.rd(b))
         if r < n:
-            b = b[:n]
+            b = b[:r]
         return bytes(b)  # stupid msgpack decoder is stupid
 
     def write(self, b):

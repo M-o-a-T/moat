@@ -455,7 +455,7 @@ class MoatFSPath(MoatPath):
     # methods that access files
 
     async def _req(self, cmd, **kw):
-        return await self._repl.send("f", cmd, **kw)
+        return await self._repl(cmd, **kw)
 
     # >>> os.stat_result((1,2,3,4,5,6,7,8,9,10))
     # os.stat_result(st_mode=1, st_ino=2, st_dev=3, st_nlink=4,
@@ -565,13 +565,13 @@ class MoatFSPath(MoatPath):
         try:
             off = 0
             while True:
-                d = await self._req("rd", fd=fd, off=off, n=chunk)
+                d = await self._req("rd", f=fd, o=off, n=chunk)
                 if not d:
                     break
                 off += len(d)
                 yield d
         finally:
-            await self._req("cl", fd=fd)
+            await self._req("cl", f=fd)
 
     async def read_bytes(self, chunk=128) -> bytes:
         """
@@ -598,13 +598,13 @@ class MoatFSPath(MoatPath):
         try:
             off = 0
             while off < len(data):
-                n = await self._req("wr", fd=fd, off=off, data=data[off : off + chunk])
+                n = await self._req("wr", f=fd, o=off, d=data[off : off + chunk])
                 if not n:
                     raise EOFError
                 off += n
 
         finally:
-            await self._req("cl", fd=fd)
+            await self._req("cl", f=fd)
 
     # read_text(), write_text()
 

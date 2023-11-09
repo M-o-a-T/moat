@@ -54,11 +54,12 @@ def _clean_cfg(cfg):
         setup    setup
         *        connect    used for all other commands
 
-        The 'link' parameter specifies which app is the actual link.
-        It defaults to 'r'.
+        The 'link' parameter specifies the name of the app that connects to
+        the remote system. It defaults to 'r'.
 
         Paths('P') are a shorthand notation for lists. See 'moat util path'
-        for details.
+        for details. The paths here are relative to the configuration's
+        ``micro`` section.
         """,
 )
 @click.pass_context
@@ -349,7 +350,7 @@ async def cfg_(obj, read, read_client, write, write_client, sync, client, cfg_pa
 
     It is then modified according to the "-v -e -P" arguments (if any) and
     written to Flash (``-W xx.cfg``), a file(``-w PATH``), stdout (``-w -``),
-    or the client (no ``-w``/``-W`` argument).
+    or the client's live config (no ``-w``/``-W`` argument).
 
     The client will not be updated if a ``-w``/``-W`` argument is present.
     If you want to update the client *and* write the config data to a file,
@@ -357,6 +358,11 @@ async def cfg_(obj, read, read_client, write, write_client, sync, client, cfg_pa
 
     An "apps" section must be present if you write a complete configuration
     to the client.
+
+    This command assumes that the remote system has a ``cfg.Cmd`` app at
+    path "r.c", and a ``fs.Cmd`` app at path "r.f". You can change the "r"
+    part with the ``moat micro -L ‹name› cfg …``  option, and the others
+    with ``… cfg --fs-path ‹path›`` and ``… cfg --fs-path ‹path›``.
     """
     if write is sys.stdout:
         write = obj.stdout

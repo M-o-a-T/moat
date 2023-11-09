@@ -358,6 +358,9 @@ async def cfg_(obj, read, read_client, write, write_client, sync, client, cfg_pa
     An "apps" section must be present if you write a complete configuration
     to the client.
     """
+    if write is sys.stdout:
+        write = obj.stdout
+
     if sync and (write or write_client):
         raise click.UsageError("You're not changing the running config!")
 

@@ -3,30 +3,32 @@
 import asyncclick as click
 from moat.micro.main import get_link
 from moat.util import attrdict, P, yload, Path
-from distkv.client import open_client
+from moat.cmd.util import get_p
+from moat.kv.client import open_client as kv_client
 
 import anyio
 
 @click.command
-@click.option("-s","--socket",help="MoaT multiplexer socket", required=True)
-async def main(socket):
+@click.option("-c","--config",type=click.File("r"),help="config file", default="/etc/distkv.cfg")
+@click.option("-l","--link", type=P, help="link name", default=P("r"))
+@click.option("-p","--path", type=P, help="path to I²C", default=P("r.i"))
+async def main(config,link,path):
     """Read temperatures"""
-    obj = attrdict()
-    obj.socket = socket
-    obj.debug=1
-    with open("/etc/distkv.cfg") as cff:
-        cfg = yload(cff)
-    async with get_link(obj, ignore=True) as m, open_client(**cfg) as dkv:
-        await m.send(["sys","load"], n="i",m="i2c.Cmd")
-        cd = await m.send(["i","open"], c=5,d=4)
-        thl = await m.send(["i","scan"], cd=cd)
+    cfg = yload(config)
+    cf = get_p(cfg["micro"]),link)
+
+    async with (
+            Dispatch(cf, run=True, sig=True) as dsp,
+            kv_client(**cfg["kv"]) as kv,
+            dsp.sub_at(*path) as c:
+        thl = await m.scan()
         tw={}
 
         t_low=43
         t_high=45
         tx_low=23
         tx_high=25
-        d = await dkv.get(P("home.ass.dyn.switch.esp_s3.relay.state"))
+        d = await kv.get(P("home.ass.dyn.switch.esp_s3.relay.state"))
         t_on=d.value
         tx_on=True
 
@@ -44,9 +46,9 @@ async def main(socket):
                     print(f"{a:2d} {t:7.4f}", end="   ")
             if not n%5:
                 print()
-                await dkv.set(P("home.ass.dyn.sensor.temp.bad_wall.state"), value=tw[25], idem=True)
-                await dkv.set(P("home.ass.dyn.sensor.temp.bad_wall_heat.state"), value=tw[30], idem=True)
-                await dkv.set(P("home.ass.dyn.sensor.temp.bad_room.state"), value=tw[24], idem=True)
+                await kv.set(P("home.ass.dyn.sensor.temp.bad_wall.state"), value=tw[25], idem=True)
+                await kv.set(P("home.ass.dyn.sensor.temp.bad_wall_heat.state"), value=tw[30], idem=True)
+                await kv.set(P("home.ass.dyn.sensor.temp.bad_room.state"), value=tw[24], idem=True)
             tx=max(tw[24],tw[25])
             if tx_on:
                 if tx > tx_high:
@@ -61,7 +63,7 @@ async def main(socket):
             else:
                 if t < t_low:
                     t_on = True
-            await dkv.set(P("home.ass.dyn.switch.esp_s3.relay.cmd"), value=(t_on and tx_on))
+            await kv.set(P("home.ass.dyn.switch.esp_s3.relay.cmd"), value=(t_on and tx_on))
             await anyio.sleep(5)
             n += 1
 

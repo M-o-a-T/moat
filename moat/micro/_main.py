@@ -335,7 +335,18 @@ async def cmd(obj, path, **attrs):
     help="The client's data win if both -r and -R are used",
 )
 @attr_args(with_proxy=True)
-async def cfg_(obj, read, read_client, write, write_client, sync, client, cfg_path, fs_path, **attrs):
+async def cfg_(
+    obj,
+    read,
+    read_client,
+    write,
+    write_client,
+    sync,
+    client,
+    cfg_path,
+    fs_path,
+    **attrs,
+):
     """
     Update a remote configuration.
 
@@ -385,9 +396,11 @@ async def cfg_(obj, read, read_client, write, write_client, sync, client, cfg_pa
     if read_client or write_client:
         from .path import MoatFSPath
 
-    async with Dispatch(obj.cfg, run=True, sig=True) as dsp, dsp.cfg_at(
-        *cfg["path"],*cfg_path,
-    ) as cf, dsp.sub_at(*cfg["path"], *fs_path) as fs:
+    async with (
+        Dispatch(obj.cfg, run=True, sig=True) as dsp,
+        dsp.cfg_at(*cfg["path"], *cfg_path) as cf,
+        dsp.sub_at(*cfg["path"], *fs_path) as fs,
+    ):
         has_attrs = any(a for a in attrs.values())
 
         if has_attrs and not (read or read_client or write or write_client):

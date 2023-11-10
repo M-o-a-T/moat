@@ -3,16 +3,16 @@ Test the whole stack
 """
 from __future__ import annotations
 
-import pytest
 import anyio
+import pytest
 from functools import partial
+from pathlib import Path
 
-import msgpack
-
+from moat.util import yload, yprint
 from moat.micro._test import mpy_stack
 from moat.src.test import run
-from moat.util import yload, yprint
-from pathlib import Path
+
+import msgpack
 
 CFG = """
 micro:
@@ -30,7 +30,7 @@ micro:
       mplex: false
       log:
         txt: "M"
-    
+
   # main service. This could be a serial.Link instead, but this way
   # "moat micro setup --run" keeps the existing link going
   apps:
@@ -46,7 +46,7 @@ micro:
     port: /tmp/moat.test
     log:
       txt: "N"
-      
+
   cfg:
     r:
       apps:
@@ -94,18 +94,19 @@ logging:
       class: "moat.util.TimeOnlyFormatter"
       format: "%(asctime)s %(levelname)s:%(name)s:%(message)s"
       disable_existing_loggers: false
-  
+
 """
+
 
 @pytest.mark.anyio()
 async def test_stack(tmp_path):
     "full-stack test"
     cfg = yload(CFG, attr=True)
     here = Path(".").absolute()
-    port = tmp_path/"uport"
-    root = tmp_path/"root"
-    cfx = tmp_path/"run.cfg"
-    cross = here/"lib"/"micropython"/"mpy-cross"/"build"/"mpy-cross"
+    port = tmp_path / "uport"
+    root = tmp_path / "root"
+    cfx = tmp_path / "run.cfg"
+    cross = here / "lib" / "micropython" / "mpy-cross" / "build" / "mpy-cross"
     cfg.micro.cfg.r.f.root = str(root)
     cfg.micro.n.port = str(port)
     cfg.micro.setup.args.cross = str(cross)
@@ -113,16 +114,18 @@ async def test_stack(tmp_path):
     with cfx.open("w") as f:
         yprint(cfg, f)
 
-    await run("-c",str(cfx),"-vvvvv", "micro","setup")
+    await run("-c", str(cfx), "-vvvvv", "micro", "setup")
     sc = None
 
-    rm = partial(run, "-c",str(cfx),"-vvvvv", "micro")
+    rm = partial(run, "-c", str(cfx), "-vvvvv", "micro")
     async with anyio.create_task_group() as tg:
+
         @tg.start_soon
         async def r_setup():
             nonlocal sc
             with anyio.CancelScope() as sc:
-                await run("-c",str(cfx),"-vvvvv", "micro","run")
+                await run("-c", str(cfx), "-vvvvv", "micro", "run")
+
         for _ in range(20):
             await anyio.sleep(0.1)
             if port.exists():
@@ -131,34 +134,37 @@ async def test_stack(tmp_path):
             raise RuntimeError("Startup failed, no socket")
 
         # A couple of command tests
-        res = await rm("cmd","dir", do_stdout=True)
+        res = await rm("cmd", "dir", do_stdout=True)
         assert "\n- s\n" in res.stdout
         assert "\n- dir\n" in res.stdout
         assert "\n- wr\n" not in res.stdout
 
-        res = await rm("cmd","s.f.dir", do_stdout=True)
+        res = await rm("cmd", "s.f.dir", do_stdout=True)
         assert "\n- rmdir\n" in res.stdout
 
-        res = await rm("-L","r.s","cfg", do_stdout=True)
+        res = await rm("-L", "r.s", "cfg", do_stdout=True)
         assert "\nf:\n  root:" in res.stdout
         assert "fubar" not in res.stdout
 
         # change some config in remote live data
-        res = await rm("-L","r.s","cfg","-v","a.b","fubar","-e","a.ft","42", do_stdout=True)
+        res = await rm(
+            "-L", "r.s", "cfg", "-v", "a.b", "fubar", "-e", "a.ft", "42", do_stdout=True,
+        )
         assert res.stdout == ""
 
         # change more config but only on local data
-        res = await rm("-L","r.s","cfg","-e","a.ft","44", "-w","-", do_stdout=True)
+        res = await rm("-L", "r.s", "cfg", "-e", "a.ft", "44", "-w", "-", do_stdout=True)
         assert "\n  ft: 44\n" in res.stdout
 
         # change more config but only on remote data
-        res = await rm("-L","r.s","cfg","-e","a.ft","43", "-W","moat.cf2", do_stdout=True)
+        res = await rm("-L", "r.s", "cfg", "-e", "a.ft", "43", "-W", "moat.cf2", do_stdout=True)
         assert res.stdout == ""
 
         # now do the same thing sanely
-        async with mpy_stack(tmp_path/"x", cfg.micro.connect) as d, d.sub_at("r","s") as s,\
-                d.cfg_at("r", "s", "c") as cfg:
-            res = await s("f","dir")
+        async with mpy_stack(tmp_path / "x", cfg.micro.connect) as d, d.sub_at(
+            "r", "s",
+        ) as s, d.cfg_at("r", "s", "c") as cfg:
+            res = await s("f", "dir")
             assert "rmdir" in res["c"]
             res = await s.f("dir")
             assert "rmdir" in res["c"]
@@ -166,11 +172,10 @@ async def test_stack(tmp_path):
             assert cf["a"]["b"] == "fubar"
             assert cf["a"]["ft"] == 42
 
-            with (root/"moat.cf2").open("rb") as f:
+            with (root / "moat.cf2").open("rb") as f:
                 cfm = msgpack.unpack(f)
                 assert cfm["a"]["ft"] == 43
                 cfm["a"]["ft"] = 42
                 assert cfm == cf
 
         sc.cancel()
-

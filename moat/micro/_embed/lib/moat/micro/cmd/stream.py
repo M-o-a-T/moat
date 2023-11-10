@@ -501,15 +501,15 @@ class SingleCmdMsg(BaseCmdMsg):
             except BaseExceptionGroup as e:
                 while True:
                     if len(e.exceptions) != 1:
-                        a,b = e.split((EOFError, OSError, SilentRemoteError))
+                        a, b = e.split((EOFError, OSError, SilentRemoteError))
                         if a is not None:
                             log("Err %s: %r", self.path, repr(a))
                         if b is None:
                             return
                         raise b
                     e = e.exceptions[0]
-                    if not isinstance(e,BaseExceptionGroup):
-                        raise e
+                    if not isinstance(e, BaseExceptionGroup):
+                        raise e  # noqa:TRY201
         except (EOFError, OSError, SilentRemoteError) as exc:
             log("Err %s: %r", self.path, repr(exc))
         except Exception as exc:  # pylint:disable=broad-exception-caught

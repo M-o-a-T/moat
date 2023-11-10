@@ -472,3 +472,10 @@ async def mount_(obj, path, blocksize):
         debug=4,
     ):
         await idle()
+
+
+@cli.command("path")
+async def path_():
+    """Path to the embedded system's files"""
+
+    print(anyio.Path(__file__).parent / "_embed")

@@ -153,7 +153,7 @@ async def test_stack(tmp_path):
         assert res.stdout == ""
 
         # change more config but only on local data
-        res = await rm("-L", "r.s", "cfg", "-e", "a.ft", "44", "-w", "-", do_stdout=True)
+        res = await rm("-L", "r.s", "cfg", "-e", "a.ft", "44", "-S", do_stdout=True)
         assert "\n  ft: 44\n" in res.stdout
 
         # change more config but only on remote data

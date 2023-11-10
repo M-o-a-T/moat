@@ -324,6 +324,7 @@ async def cmd(obj, path, **attrs):
 @click.option("-r", "--read", type=click.File("r"), help="Read config from this file")
 @click.option("-R", "--read-client", help="Read config file from the client")
 @click.option("-w", "--write", type=click.File("w"), help="Write config to this file")
+@click.option("-S", "--stdout", is_flag=True, hidden=True)
 @click.option("-W", "--write-client", help="Write config file to the client")
 @click.option("-s", "--sync", is_flag=True, help="Sync the client after writing")
 @click.option("--cfg-path", type=P, help="Path to the remote's config", default=P("c"))
@@ -342,6 +343,7 @@ async def cfg_(
     write,
     write_client,
     sync,
+    stdout,
     client,
     cfg_path,
     fs_path,
@@ -375,7 +377,9 @@ async def cfg_(
     part with the ``moat micro -L ‹name› cfg …``  option, and the others
     with ``… cfg --fs-path ‹path›`` and ``… cfg --fs-path ‹path›``.
     """
-    if write is sys.stdout:
+    if write and stdout:
+        raise click.UsageError("no -S and -w")
+    if stdout:
         write = obj.stdout
 
     if sync and (write or write_client):

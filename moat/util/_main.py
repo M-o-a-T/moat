@@ -146,3 +146,21 @@ async def path_(encode, decode, path):
     else:
         for p in path:
             print(repr(list(P(p))))
+
+@cli.command("cfg", help="dump a ", no_args_is_help=True)
+@click.pass_obj
+@click.option("-y", "--yaml", is_flag=True, help="print as YAML")
+@click.argument("path", nargs=-1, type=P)
+async def cfg_(obj, path, yaml):
+    if yaml:
+        delim = False
+        for p in path:
+            if delim:
+                print("---",file=obj.stdout)
+            v = obj.cfg._get(p)
+            yprint(v, obj.stdout)
+            delim = True
+    else:
+        for p in path:
+            v = obj.cfg._get(p)
+            print(v, file=obj.stdout)

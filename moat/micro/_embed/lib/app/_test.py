@@ -5,6 +5,7 @@ Apps used for testing.
 from __future__ import annotations
 
 from moat.micro.cmd.base import BaseCmd
+from moat.micro.compat import Event
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
@@ -49,7 +50,6 @@ class Cmd(BaseCmd):
 
     async def cmd_crash(e: Exception = RuntimeError, a=("UserCrash",)):
         "raise an exception"
-        self.
         if isinstance(e,Exception):
             self.err = e
         else:

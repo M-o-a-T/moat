@@ -21,36 +21,48 @@ flash (2MB) and RAM (128k).
 
 This does include the ESP8266, if barely.
 
-On most MCUs there is not enough RAM to load the MoaT support code, which
-is admittedly rather large. Thus, you need to build a version of
-MicroPython that includes the MoaT modules. Fortunately this is not
-difficult.
+On most MCUs there is not enough RAM to load the MoaT support code.
+Thus, you need to build a version of MicroPython that includes the MoaT
+modules in Flash. The installer script uses MoaT's MicroPython fork 
+to build the required binaries.
 
 ## Principle of Operation
 
 Each controller runs a main task which loads some applications. These apps  
-might do something locally, e.g. let a LED blink or poll a button, or they
-provide a link to a remote system.
+might do something locally, e.g. let a LED blink or poll a button, provide
+a link to a remote system, or call other apps for high-level functions.
 
-The "moat micro run" command runs the MoaT controller on "standard" CPython;
-tested on Linux, but might work elsewhere.
+Apps are connected hierarchically. They can send messages to each other;
+a message may return a reply ("read this temperature").
 
-Apps are connected hierarchically. They send messages to each other; these
-messages might result in a reply ("read this temperature").
 Multiple replies ("read this temperature every ten seconds") are supported.
 
-All app-related code is written in async Python. We use anyio on the
+All app-related code is written in async Python. We use ``anyio`` on the
 multiplexer and native asyncio on the MCUs; a shallow compatibility layer
-ensures that most code can be shared on both.
-
-As of version 1.20, MicroPython doesn't support taskgroups, which are
-essential for structuring large applications. Our version includes support
-for them.
+ensures that most code can be shared.
 
 
 ## Installation
 
 See "INSTALL".
+
+### MicroPython
+
+Our fork of MicroPython is kept up-to-date with the official release. It
+contains a couple of improvements:
+
+* Taskgroups are essential for structuring large async applications. Our
+  version includes support for them.
+
+* Our version does not require submodules to be located below the same path
+  as their parent modules.
+
+* We include a ``_hash`` module, which contains a mapping of hashes for the
+  source code of the modules included in Flash. 
+
+The latter two changes allow you to selectively update single packages, while
+the rest of the system continues to run from code "frozen" into flash. This
+saves on RAM usage and/or Flash cycles, particularly when debugging.
 
 
 ## MoaT.micro Commands

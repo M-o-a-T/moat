@@ -185,7 +185,7 @@ async def setup(
                 dst /= dest
             await copy_over(source, dst, cross=cross)
         if state:
-            await repl.exec(f"f=open('moat.state','w'); f.write({state !r}); f.close()")
+            await repl.exec(f"f=open('moat.state','w'); f.write({state !r}); f.close(); del f")
         if config:
             config = _clean_cfg(get_part(ocfg, config))
             f = ABytes(name="moat.cfg", data=packer(config))

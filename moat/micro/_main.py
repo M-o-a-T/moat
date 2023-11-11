@@ -192,13 +192,7 @@ async def setup(
             await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl))
 
         if update:
-            try:
-                res = (
-                    await repl.exec("from moat.micro import _version as _v; print(_v.git); del _v")
-                ).strip()
-            except ImportError:
-                res = None
-            await run_update(MoatDevPath(".").connect_repl(repl), res, cross=cross)
+            await run_update(MoatDevPath(".").connect_repl(repl), cross=cross)
             # do not use "/". Running micropython tests locally requires
             # all satellite paths to be relative.
 

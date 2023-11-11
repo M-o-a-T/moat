@@ -150,14 +150,10 @@ def go(state=None, fake_end=True):
             log("CRASH! Exiting!", err=exc)
             sys.exit(1)
 
-        try:
-            new_state = crash[state]
-        except KeyError:
-            new_state = state
-        else:
-            set_rtc("state", new_state)
+        new_state = crash.get(state, state)
+        set_rtc("state", new_state)
 
-        log("CRASH! REBOOT to %r", new_state, err=exc)
+        log("CRASH! %r :: REBOOT to %r", exc, new_state, err=exc)
         time.sleep_ms(1000)
         machine.soft_reset()
 

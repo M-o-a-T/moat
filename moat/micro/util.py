@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 def githash(data):
-    "Hash a shunk of bytes the ay git does"
+    "Hash a chunk of bytes the way git does"
     h = hashlib.sha1()  # noqa:S324  # sha1 is 'unsafe'
     h.update(f"blob {len(data)}\0".encode())
     h.update(data)

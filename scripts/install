@@ -24,7 +24,11 @@ else
     M=moat
 fi
 
-export PYTHONPATH=$(shell pwd)/..:$(shell pwd)
+if test -e .git && test -d moat/micro/_embed ; then
+    export PYTHONPATH=$(realpath ..)
+fi
+# otherwise use the installed version
+
 cfg="$1"
 
 port=$($M -c "$cfg" util cfg micro.setup.r.port)

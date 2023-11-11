@@ -24,6 +24,7 @@ else
     M=moat
 fi
 
+export PYTHONPATH=$(shell pwd)/..:$(shell pwd)
 cfg="$1"
 
 port=$($M -c "$cfg" util cfg micro.setup.r.port)
@@ -31,8 +32,6 @@ baud=$($M -c "$cfg" util cfg micro.setup.r.mode.rate)
 
 dev=$($M -c "$cfg" util cfg micro.install.port)
 rate=$($M -c "$cfg" util cfg micro.install.rate)
-
-export MOAT_EMBED="$($M -c "$cfg" micro path)"
 
 git submodule update --init
 pushd $MPY

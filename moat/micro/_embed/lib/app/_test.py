@@ -19,6 +19,8 @@ class Cmd(BaseCmd):
     """
 
     n = 0
+    err:Exception = None
+    err_evt:Event = None
 
     async def cmd_echo(self, m: Any):
         "Basic echo method, returns @m as ``result['r']``"
@@ -38,6 +40,30 @@ class Cmd(BaseCmd):
     async def cmd_clr(self, n: int = 0):
         self.n = n
 
+    async def cmd_error(e: Exception = RuntimeError):
+        "return an exception"
+        if isinstance(e,Exception):
+            raise e
+        else:
+            raise e("UserCrash")
+
+    async def cmd_crash(e: Exception = RuntimeError, a=("UserCrash",)):
+        "raise an exception"
+        self.
+        if isinstance(e,Exception):
+            self.err = e
+        else:
+            self.err = e(*a)
+        self.err_evt.set()
+
+    async def setup(self):
+        self.err_evt = Event()
+        await super().setup()
+
+    async def task(self):
+        self.set_ready()
+        await self.err_evt.wait()
+        raise self.err
 
 class NumIter:
     """

@@ -477,5 +477,10 @@ async def mount_(obj, path, blocksize):
 @cli.command("path")
 async def path_():
     """Path to the embedded system's files"""
-
-    print(anyio.Path(__file__).parent / "_embed")
+    import moat.micro
+    import os
+    from pathlib import Path as PP
+    for p in moat.micro.__path__:
+        p=PP(p)/"_embed"/"lib"
+        if p.exists():
+            print(p)

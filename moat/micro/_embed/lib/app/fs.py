@@ -149,9 +149,9 @@ class Cmd(BaseCmd):
         """
         Hash the contents of @p, sha256
         """
-        import uhashlib
+        import hashlib
 
-        _h = uhashlib.sha256()
+        _h = hashlib.sha256()
         _mem = memoryview(bytearray(512))
 
         p = self._fsp(p)

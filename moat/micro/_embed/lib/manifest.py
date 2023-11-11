@@ -39,7 +39,7 @@ def commits(r):
         yield res.pop()
 
 
-p = Path("moat/micro/_version.py")
+vers = Path("moat/micro/_version.py")
 r = git.Repo(root)
 c = r.head.commit
 t = c.tree
@@ -64,7 +64,7 @@ else:
     else:
         tag = ""
 
-with p.open("w") as f:
+with vers.open("w") as f:
     f.write(
         f"""\
 git="{c.hexsha[:9]}"

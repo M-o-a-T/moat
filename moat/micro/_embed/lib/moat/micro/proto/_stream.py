@@ -124,7 +124,7 @@ class _MsgpackMsgBuf(StackedMsg):
             return
         return await self.s.wr(buf)
 
-    async def crd(self, buf):
+    def crd(self, buf) -> Awaitable:
         return _CReader.crd(self, buf)
 
     async def send(self, msg: Any) -> None:

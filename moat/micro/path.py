@@ -656,9 +656,9 @@ async def _nullcheck(p):
     return False
 
 
-async def copytree(src, dst, check=None, drop=None, cross=None):
+async def copytree(src:APath, dst:MoatPath, check=None, drop=None, cross=None):
     """
-    Copy a file tree from @src to @dst.
+    Copy a file or directory tree from @src to @dst.
     Skip files/subtrees for which "await check(src)" is False.
     (@src is never checked.)
 
@@ -672,9 +672,11 @@ async def copytree(src, dst, check=None, drop=None, cross=None):
     """
     n = 0
     if await src.is_file():
-        if dst.name == "_version.py":
-            return 0
-        if src.suffix == ".py" and str(dst) not in ("/boot.py", "boot.py", "/main.py", "main.py"):
+        if src.suffix == ".py":
+
+            # here we replace "src" with a buffer containing the
+            # corresponding mpy-cross output.
+
             dr = False if drop is None else await drop(dst)
             if dr:
                 with suppress(FileNotFoundError):

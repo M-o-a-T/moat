@@ -54,14 +54,21 @@ async def _run_update(src, dest: MoatPath, check=None, cross=None):
         version in their firmware and our current version.
         """
         # rp = dst.relative_to(emb_r)
+        if dst.name == "manifest.py":
+            return None
+
         # assume dst is relative
         sp = src / dst
         # XXX we might want to ask git which files differ,
         # it's supposed to have a cache for that
-        repl = dst.repl
-        breakpoint()
+        repl = dst._repl
         dn = str(dst)[:-3].replace("/",".")
-        res = await repl.exec(f"import _hash; print(repr(_hash.hash[{dn}])); del _hash")
+        if dn.endswith(".__init__"):
+            dn = dn[:-9]
+        try:
+            res = await repl.exec(f"import _hash; print(repr(_hash.hash[{dn !r}])); del _hash")
+        except ImportError:
+            return False
         res = eval(res.strip())
         return res == hash256(await _rd(sp))[:8]
 

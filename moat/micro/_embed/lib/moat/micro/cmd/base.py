@@ -324,7 +324,7 @@ class BaseCmd(Base):
             raise LongCommandError(action)
 
         a = action[0]
-        if a[0] == "!":
+        if a[0] == "?":
             wr = False
             fn = a[1:]
         else:

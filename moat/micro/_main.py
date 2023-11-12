@@ -23,6 +23,7 @@ from moat.util import (
 )
 from moat.micro.cmd.tree import Dispatch, SubDispatch
 from moat.micro.cmd.util import get_part
+from moat.micro.path import copytree
 from moat.micro.proto.stream import RemoteBufAnyio
 from moat.micro.stacks.util import TEST_MAGIC
 from moat.micro.util import run_update
@@ -192,9 +193,13 @@ async def setup(
             await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl))
 
         if update:
-            await run_update(MoatDevPath(".").connect_repl(repl), cross=cross)
+            await run_update(MoatDevPath("lib").connect_repl(repl), cross=cross)
             # do not use "/". Running micropython tests locally requires
             # all satellite paths to be relative.
+            import moat.micro._embed
+            p = anyio.Path(moat.micro._embed.__path__[0])
+            await copytree(p/"boot.py", MoatDevPath("boot.py").connect_repl(repl), cross=None)
+            await copytree(p/"main.py", MoatDevPath("main.py").connect_repl(repl), cross=None)
 
         if reset:
             await repl.soft_reset(run_main=run)

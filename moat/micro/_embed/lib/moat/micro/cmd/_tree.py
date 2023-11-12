@@ -552,9 +552,9 @@ class SubDispatch:
         "root dispatcher"
         return self._dest.root
 
-    def wait_ready(self) -> Awaitable:
+    def wait_ready(self, wait:bool = True) -> Awaitable:
         "forwards to the destination"
-        return self._dest.wait_ready()
+        return self._dest.wait_ready(wait=wait)
 
     def sub_at(self, *p):
         "create a sub-subdispatcher"

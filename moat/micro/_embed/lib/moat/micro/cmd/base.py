@@ -103,12 +103,13 @@ class BaseCmd(Base):
         cfg["_cmd"] = self
         super().__init__(cfg)
         # self.cfg = cfg
-        self._init_events()
+        self.init_events()
 
-    def _init_events(self):
-        self._starting = Event()
-        self._ready = Event()
-        self._stopped = Event()
+    def init_events(self):
+        if self._stopped is None:
+            self._starting = Event()
+            self._ready = Event()
+            self._stopped = Event()
 
     async def setup(self):
         """
@@ -116,9 +117,9 @@ class BaseCmd(Base):
 
         Call first when overriding.
         """
-        await AC_use(self, self._is_stopped)
+        await AC_use(self, self.set_stopped)
         if self._stopped is None:
-            self._init_events()
+            self.init_events()
         elif self._starting is None or self._starting.is_set():
             raise RuntimeError("DupStartA")
 
@@ -139,7 +140,7 @@ class BaseCmd(Base):
         The default does nothing, which is probably the wrong thing to do.
         """
 
-    def _is_stopped(self):
+    def set_stopped(self):
         """
         The command has ended.
         """

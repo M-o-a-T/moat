@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from moat.micro.cmd.array import ArrayCmd
 from moat.micro.cmd.tree import BaseFwdCmd, DirCmd
+from moat.micro.compat import Event
 
 try:
     from moat.micro.proto.stream import ProcessDeadError
@@ -97,6 +98,9 @@ class Err(BaseFwdCmd):
                 log("Fwd End %s %r", self.path, self.app)
                 if not self.a or not self.r:
                     return
+            finally:
+                self.app.init_events()
+
             if self.r > 0:
                 self.r -= 1
             try:

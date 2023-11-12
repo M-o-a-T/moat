@@ -67,7 +67,7 @@ class _CReader:
         if self.cpos == len(self.cbuf):
             if len(self.cbuf) > 10:
                 bfull = b"\n?BUF\n"
-                self.cpos[0 : self.cpos] = bfull
+                self.cbuf[0 : len(bfull)] = bfull
                 self.cpos = len(bfull)
             else:
                 self.cpos = 0

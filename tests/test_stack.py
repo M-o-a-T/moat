@@ -10,6 +10,7 @@ from pathlib import Path
 
 from moat.util import yload, yprint
 from moat.micro._test import mpy_stack
+from moat.micro.compat import log
 from moat.src.test import run
 
 import msgpack
@@ -37,9 +38,12 @@ micro:
     r: _test.MpyRaw
     s: remote.Link
     n: net.unix.Port
+    co: _test.Cons
   r: *rm
   s:
     path: !P r
+    link:
+      console: true
     log:
       txt: "S"
   n: &np
@@ -47,6 +51,9 @@ micro:
     log:
       txt: "N"
 
+  co:
+    cons: !P s
+    prefix: "C"
   cfg:
     r:
       apps:
@@ -133,37 +140,40 @@ async def test_stack(tmp_path):
         else:
             raise RuntimeError("Startup failed, no socket")
 
-        # A couple of command tests
-        res = await rm("cmd", "dir", do_stdout=True)
-        assert "\n- s\n" in res.stdout
-        assert "\n- dir\n" in res.stdout
-        assert "\n- wr\n" not in res.stdout
-
-        res = await rm("cmd", "s.f.dir", do_stdout=True)
-        assert "\n- rmdir\n" in res.stdout
-
-        res = await rm("-L", "r.s", "cfg", do_stdout=True)
-        assert "\nf:\n  root:" in res.stdout
-        assert "fubar" not in res.stdout
-
-        # change some config in remote live data
-        res = await rm(
-            "-L", "r.s", "cfg", "-v", "a.b", "fubar", "-e", "a.ft", "42", do_stdout=True,
-        )
-        assert res.stdout == ""
-
-        # change more config but only on local data
-        res = await rm("-L", "r.s", "cfg", "-e", "a.ft", "44", "-S", do_stdout=True)
-        assert "\n  ft: 44\n" in res.stdout
-
-        # change more config but only on remote data
-        res = await rm("-L", "r.s", "cfg", "-e", "a.ft", "43", "-W", "moat.cf2", do_stdout=True)
-        assert res.stdout == ""
-
-        # now do the same thing sanely
         async with mpy_stack(tmp_path / "x", cfg.micro.connect) as d, d.sub_at(
             "r", "s",
         ) as s, d.cfg_at("r", "s", "c") as cfg:
+            # First a couple of command tests
+            res = await rm("cmd", "dir", do_stdout=True)
+            assert "\n- s\n" in res.stdout
+            assert "\n- dir\n" in res.stdout
+            assert "\n- wr\n" not in res.stdout
+
+            res = await s("?rdy")
+            assert not res, "Link is not ready"
+
+            res = await rm("cmd", "s.f.dir", do_stdout=True)
+            assert "\n- rmdir\n" in res.stdout
+
+            res = await rm("-L", "r.s", "cfg", do_stdout=True)
+            assert "\nf:\n  root:" in res.stdout
+            assert "fubar" not in res.stdout
+
+            # change some config in remote live data
+            res = await rm(
+                "-L", "r.s", "cfg", "-v", "a.b", "fubar", "-e", "a.ft", "42", do_stdout=True,
+            )
+            assert res.stdout == ""
+
+            # change more config but only on local data
+            res = await rm("-L", "r.s", "cfg", "-e", "a.ft", "44", "-S", do_stdout=True)
+            assert "\n  ft: 44\n" in res.stdout
+
+            # change more config but only on remote data
+            res = await rm("-L", "r.s", "cfg", "-e", "a.ft", "43", "-W", "moat.cf2", do_stdout=True)
+            assert res.stdout == ""
+
+            # now do the same thing sanely
             res = await s("f", "dir")
             assert "rmdir" in res["c"]
             res = await s.f("dir")

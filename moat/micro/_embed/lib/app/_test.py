@@ -41,6 +41,10 @@ class Cmd(BaseCmd):
     async def cmd_clr(self, n: int = 0):
         self.n = n
 
+    async def cmd_print(self, d:str, e:bool=False):
+        "print to stdout/stderr"
+        print(d, file=sys.stderr if e else sys.stdout)
+
     async def cmd_error(e: Exception = RuntimeError):
         "return an exception"
         if isinstance(e,Exception):

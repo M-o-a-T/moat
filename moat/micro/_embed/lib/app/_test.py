@@ -5,13 +5,13 @@ Apps used for testing.
 from __future__ import annotations
 
 from moat.micro.cmd.base import BaseCmd
-from moat.micro.compat import Event
+from moat.micro.compat import Event, Queue, wait_for_ms, log
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any, Awaitable
 
 
 class Cmd(BaseCmd):
@@ -64,6 +64,55 @@ class Cmd(BaseCmd):
         self.set_ready()
         await self.err_evt.wait()
         raise self.err
+
+class Cons(BaseCmd):
+    """
+    A console reader.
+
+    Config:
+
+        cons: path to the *Blk / *Msg reading the data
+        lines: max lines to queue up
+        prefix: log prefix.
+
+    """
+    def __init__(self, cfg):
+        super().__init__(cfg)
+    
+    async def setup(self):
+        await super().setup()
+        self.con = self.root.sub_at(*self.cfg["cons"])
+        if self.cfg.get("prefix", None) is None:
+            self.q = Queue(self.cfg.get("lines",10))
+
+    def cmd_rd(self) -> Awaitable:
+        return self.q.get()
+
+    async def task(self):
+        self.set_ready()
+        buf = bytearray(200)
+        d = 0
+        while True:
+            timed = False
+            try:
+                if d:
+                    b = await wait_for_ms(200,self.con.crd,n=len(buf)-d)
+                else:
+                    b = await self.con("!crd",n=len(buf))
+            except TimeoutError:
+                timed = True
+            else:
+                buf[d:d+len(b)] = b
+                d += len(b)
+            if d == len(buf) or d > 0 and (timed or buf[d-1] == 10): # lf
+                p = self.cfg.get("prefix", None)
+                if p is None:
+                    self.q.put(buf[:d])
+                else:
+                    log("%s: %s", p, str(memoryview(buf)[:d-(buf[d-1]==10)], "utf-8"))
+                d = 0
+
+
 
 class NumIter:
     """

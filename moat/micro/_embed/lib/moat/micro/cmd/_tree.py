@@ -145,16 +145,9 @@ class BaseLayerCmd(BaseSuperCmd):
         """
         Forward to the sub-app unless specifically directed not to.
         """
-        if len(action) > 1:
-            if action[0] == self.name:
-                action = action[1:]
-            elif action[0] == f"!{self.name}":
-                action = action[1:]
-                return await super().dispatch(action, msg, **kw)
-        elif action[0] == "dir":
-            res = await self.app.dispatch(action, msg, **kw)
-            res.setdefault("d", []).append(f"!{self.name}")
-            return res
+        if action and action[0][0] == "!":
+            action = tuple(action[0][1:], *action[1:])
+            return await super().dispatch(action, msg, **kw)
 
         if self.app is None:
             await self.wait_ready()

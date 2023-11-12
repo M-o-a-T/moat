@@ -432,7 +432,7 @@ class BaseCmdMsg(BaseCmd):
         if len(action) == 1:
             a = action[0]
             if a[0] == "!":
-                return await super().dispatch((a,), msg, rep=rep, wait=wait, x_err=x_err)
+                return await super().dispatch((a[1:],), msg, rep=rep, wait=wait, x_err=x_err)
 
         if await self.wait_ready():
             raise StoppedError  # already down

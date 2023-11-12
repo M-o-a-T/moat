@@ -149,8 +149,7 @@ class BaseLayerCmd(BaseSuperCmd):
             action = tuple(action[0][1:], *action[1:])
             return await super().dispatch(action, msg, **kw)
 
-        if self.app is None:
-            await self.wait_ready()
+        await self.wait_ready()
         return await self.app.dispatch(action, msg, **kw)
 
     def set_ready(self):

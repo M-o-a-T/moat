@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.micro.cmd.array import ArrayCmd
 from moat.micro.cmd.tree import BaseFwdCmd, DirCmd
-from moat.micro.compat import Event
+from moat.micro.compat import Event, ExceptionGroup, TaskGroup, sleep_ms
 
 try:
     from moat.micro.proto.stream import ProcessDeadError
@@ -75,6 +75,15 @@ class Err(BaseFwdCmd):
         self.t = self.cfg.get("timeout", 100)
         self.a = self.cfg.get("always", False)
 
+    async def wait_ready(self, wait:bool=True):
+        while (res := await super().wait_ready(wait=wait)):
+            if not self.r:
+                return res
+            await sleep_ms(1)
+            breakpoint()
+
+        return res
+
     async def run_app(self):
         """
         Runs the sub-app and handles restarting and error shielding.
@@ -98,8 +107,10 @@ class Err(BaseFwdCmd):
                 log("Fwd End %s %r", self.path, self.app)
                 if not self.a or not self.r:
                     return
-            finally:
+
+            if self.r:
                 self.app.init_events()
+            # otherwise dead
 
             if self.r > 0:
                 self.r -= 1

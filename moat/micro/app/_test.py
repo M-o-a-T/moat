@@ -10,7 +10,7 @@ from moat.micro.compat import AC_use
 from moat.micro.proto.stream import MsgpackMsgBlk
 from moat.micro.stacks.console import console_stack
 
-from ._test_ import Cmd  # noqa:F401 pylint:disable=unused-import
+from ._test_ import Cmd, Cons  # noqa:F401 pylint:disable=unused-import
 
 
 class MpyCmd(BaseCmdMsg):

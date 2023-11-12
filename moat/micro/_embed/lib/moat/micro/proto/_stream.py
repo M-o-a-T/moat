@@ -192,7 +192,7 @@ class SerialPackerBlkBuf(StackedBlk):
 
     cons = False
 
-    def __init__(self, stream: BaseBuf, frame: dict, cons: bool | int = False):
+    def __init__(self, stream: BaseBuf, frame: dict, console: bool | int = False):
         super().__init__(None)
 
         self.s = stream
@@ -201,8 +201,8 @@ class SerialPackerBlkBuf(StackedBlk):
         self.i = 0
         self.n = 0
         self.w_lock = Lock()
-        if cons:
-            _CReader.__init__(self, cons)
+        if console:
+            _CReader.__init__(self, console)
 
     async def crd(self, buf):
         if not self.cons:

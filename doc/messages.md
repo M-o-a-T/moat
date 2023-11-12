@@ -15,6 +15,13 @@ conserve client memory.
   Integer items are used to refer to a list of sub-items, e.g. one of 20
   thermometers or individual connections of a listening socket.
 
+  The first character of an action may be ``!``, indicating that the action
+  should be applied locally instead of getting forwarded.
+
+  If the first character of an action is ``?``, the command won't wait for
+  the app to be "ready". This is dangerous if applied to any command other
+  than ``rdy``.
+
 * d
 
   Data. Requests contain a dict: keyword args to the command in question.

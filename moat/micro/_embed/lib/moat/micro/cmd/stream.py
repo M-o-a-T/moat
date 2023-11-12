@@ -38,7 +38,7 @@ class BaseCmdBBM(BaseCmd):
     and requires a `BaseCmdMsg` handler on the other side to talk to.
     """
 
-    dev = None
+    s = None
 
     def __init__(self, cfg):
         super().__init__(cfg)
@@ -50,14 +50,14 @@ class BaseCmdBBM(BaseCmd):
 
     async def setup(self):  # noqa:D102
         await super().setup()
-        self.dev = await self.stream()
+        self.s = await self.stream()
 
     async def run(self):  # noqa:D102
         ACM(self)
         try:
             await super().run()
         finally:
-            self.dev = None
+            self.s = None
             await AC_exit(self)
 
     # Buf: rd/wr = .rd/.wr
@@ -66,7 +66,7 @@ class BaseCmdBBM(BaseCmd):
         """read some data"""
         await self.wait_ready()
         b = bytearray(n)
-        r = await self.dev.rd(b)
+        r = await self.s.rd(b)
         if r == n:
             return b
         elif r <= n >> 2:
@@ -79,14 +79,14 @@ class BaseCmdBBM(BaseCmd):
         """write some data"""
         await self.wait_ready()
         async with self.w_lock:
-            await self.dev.wr(b)
+            await self.s.wr(b)
 
     # Blk/Msg: Console crd/cwr = .crd/cwr
 
     async def cmd_crd(self, n=64) -> bytes:
         """read some console data"""
         b = bytearray(n)
-        r = await self.dev.crd(b)
+        r = await self.s.crd(b)
         if r == n:
             return b
         elif r <= n >> 2:
@@ -98,27 +98,27 @@ class BaseCmdBBM(BaseCmd):
     async def cmd_cwr(self, b):
         """write some console data"""
         async with self.w_lock:
-            await self.dev.cwr(b)
+            await self.s.cwr(b)
 
     # Msg: s/r = .send/.recv
 
     async def cmd_s(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """send a message"""
-        return self.dev.send(m)
+        return self.s.send(m)
 
     async def cmd_r(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """receive a message"""
-        return self.dev.recv()
+        return self.s.recv()
 
     # Blk: sb/rb = .snd/.rcv
 
     async def cmd_sb(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """send a binary message"""
-        return self.dev.snd(m)
+        return self.s.snd(m)
 
     async def cmd_rb(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """receive a binary message"""
-        return self.dev.rcv()
+        return self.s.rcv()
 
 
 class _BBMCmd(Base):
@@ -467,6 +467,9 @@ class BaseCmdMsg(BaseCmd):
                 return await e.get()
             finally:
                 self.reply.pop(seq, None)
+
+    cmd_crd = BaseCmdBBM.cmd_crd
+    cmd_cwr = BaseCmdBBM.cmd_cwr
 
 
 class CmdMsg(BaseCmdMsg):

@@ -44,7 +44,7 @@ def console_stack(stream, cfg, cons=False):
         else:
             from ..proto.stream import MsgpackMsgBuf
 
-            stream = MsgpackMsgBuf(stream, dict(msg_prefix=frame))
+            stream = MsgpackMsgBuf(stream, dict(msg_prefix=frame, console=cons))
 
     assert isinstance(stream, BaseMsg)
 

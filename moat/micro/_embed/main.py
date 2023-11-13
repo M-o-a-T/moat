@@ -166,7 +166,7 @@ def go(state=None, fake_end=True):
             log("CRASH! Exiting!", err=exc)
             sys.exit(1)
 
-        new_state = crash.get(state, state)
+        new_state = crash.get(state, new_state)
         set_rtc("state", new_state)
 
         log("CRASH! %r :: REBOOT to %r", exc, new_state, err=exc)

@@ -140,6 +140,7 @@ def go(state=None, fake_end=True):
         sys.path.insert(0, "/fallback")
         fallback = True
 
+    x=" "*1000
     print("Start MoaT:", state, file=sys.stderr)
     from moat.micro.main import main
 
@@ -157,6 +158,7 @@ def go(state=None, fake_end=True):
         machine.soft_reset()
 
     except BaseException as exc:
+        del x
         if sys.platform == "linux":
             if isinstance(exc, EOFError):
                 log("MoaT stopped: EOF")

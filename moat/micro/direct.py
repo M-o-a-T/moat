@@ -123,6 +123,10 @@ class DirectREPL(SingleAnyioBuf):
         except ValueError:
             raise OSError(f"CTRL-D missing in response: {data!r}") from None
 
+        if b"\nStart MoaT:" in out:
+            i = out.find(b"\nOK")
+            if i > 0:
+                out = out[i+1:]
         if not out.startswith(b"OK"):
             raise OSError(f"data was not accepted: {out}: {err}")
         out = out[2:].decode("utf-8")

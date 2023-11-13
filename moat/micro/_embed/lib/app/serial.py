@@ -20,9 +20,9 @@ from moat.micro.part.serial import Serial
 #
 def Raw(*a,**k):
     """Sends/receives raw bytes off a serial port"""
-    from moat.micro.cmd.stream import BaseCmdBBM, BaseCmdMsg
+    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
 
-    class Raw(BaseCmdBBM):
+    class _Raw(BaseCmdBBM):
         max_idle = 100
         pack = None
 
@@ -33,10 +33,10 @@ def Raw(*a,**k):
 
 def Link(*a,**k):
     """Sends/receives MoaT messages using some device"""
-    from moat.micro.cmd.stream import BaseCmdBBM, BaseCmdMsg
+    from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
     from moat.micro.stacks.console import console_stack
 
-    class Link(BaseCmdMsg):
+    class _Link(BaseCmdMsg):
         async def stream(self):  # noqa:D102
             return await AC_use(self, console_stack(Serial(self.cfg), self.cfg))
 

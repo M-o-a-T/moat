@@ -3,6 +3,8 @@ Access a satellite's i²c bus.
 """
 from __future__ import annotations
 
+from functools import partial
+
 try:
     import machine
 except ImportError:
@@ -54,12 +56,13 @@ class Cmd(BaseCmd):
         cfg = self.cfg
         c = machine.Pin(cfg["c"], **cfg.get("cx", {}))
         d = machine.Pin(cfg["d"], **cfg.get("dx", {}))
-        self._bus = (machine.SoftI2C if cfg.get("soft", False) else machine.I2C)(
-            scl=c,
-            sda=d,
-            freq=cfg.get("f", 100000),
-            timeout=cfg.get("t", 1000) * 1000,
-        )
+        f = cfg.get("f", 100000)
+        t = cfg.get("t", 1000) * 1000
+        if (i := cfg.get("id", None)) is None:
+            cls = machine.SoftI2C
+        else:
+            cls = partial(machine.I2C, i)
+        self._bus = cls(scl=c, sda=d, freq=f, timeout=t)
 
     async def teardown(self):
         "shutdown"

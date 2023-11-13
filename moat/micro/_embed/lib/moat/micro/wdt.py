@@ -66,7 +66,7 @@ class WDT:
             M.WDT = self
         self._ping = Event()
 
-    def setup(self, cfg):  # noqa:D102
+    async def setup(self):  # noqa:D102
         self.cfg = cfg
         t = cfg.get("t", 0)
         if not t:
@@ -76,13 +76,13 @@ class WDT:
             pass  # can't change or turn off
 
         else:
-            if self.cfg.get("hw"):
+            if self.cfg.get("hw", False):
                 self.wdt = machine.WDT(t)
             self.timeout = t
             self.trigger = self.cfg.get("tt", self.timeout / 2)
         self._ping.set()
 
-    async def run(self) -> Never:  # noqa:D102
+    async def task(self) -> Never:  # noqa:D102
         T = getattr(machine, "Timer", None)
         t = None
         while True:
@@ -109,7 +109,7 @@ class WDT:
             else:
                 # use a software timeout
                 if t is None and T is not None:
-                    t = T()
+                    t = T(0)
                 if t is None:
                     raise RuntimeError("no timer")
                 t.init(period=self.timeout, mode=T.ONE_SHOT, callback=lambda _: _reset())

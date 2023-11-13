@@ -17,7 +17,7 @@ elif [ -x "../mt" ] ; then
     MPY=$S/lib/micropython
 else
     if test ! -v MPY ; then
-        echo "Usage: MPY=/path/to/src/micropython $0 cfg.file"
+        echo "Usage: MPY=/path/to/src/micropython $0 cfg.file" >&2
         exit 1
     fi
 
@@ -37,6 +37,23 @@ baud=$($M -c "$cfg" util cfg micro.setup.r.mode.rate)
 dev=$($M -c "$cfg" util cfg micro.install.port)
 rate=$($M -c "$cfg" util cfg micro.install.rate)
 
+board=$($M -c "$cfg" util cfg micro.install.board)
+BOARD=${dev@U}
+if [ -n "$board" ] ; then
+    BOARD="${BOARD}_${board@U}"
+fi
+
+if [ $port = esp32 ] ; then
+    if ! type -t idf.py >/dev/null ; then
+        if ! test -v ESP ; then
+            echo "Usage: ESP=/path/to/src/esp-idf $0 cfg.file" >&2
+            echo " or source $ESP/export.sh and retry" >&2
+            exit 1
+        fi
+        . "$ESP/export.sh"
+    fi
+fi
+
 git submodule update --init
 MANIFEST="$($M micro path -m)"
 pushd "$MPY"
@@ -44,7 +61,7 @@ pushd "$MPY"
 make -C ports/$dev submodules
 make -C mpy-cross
 cd ports/$dev
-make -j ESPTOOL=esptool PORT=$port BAUD=$rate BOARD=${dev@U}_MOAT FROZEN_MANIFEST="$MANIFEST" deploy
+make -j ESPTOOL=esptool PORT=$port BAUD=$rate BOARD=${BOARD} FROZEN_MANIFEST="$MANIFEST" deploy
 
 popd
 $M -vvvc "$cfg" micro setup -c cfg.r -N -r -U -s once -C "$MPY/mpy-cross/build/mpy-cross"

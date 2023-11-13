@@ -17,7 +17,7 @@ elif [ -x "../mt" ] ; then
     MPY=$S/lib/micropython
 else
     if test ! -v MPY ; then
-        echo "Usage: MPY=/path/to/micropython $0 cfg.file"
+        echo "Usage: MPY=/path/to/src/micropython $0 cfg.file"
         exit 1
     fi
 
@@ -38,10 +38,12 @@ dev=$($M -c "$cfg" util cfg micro.install.port)
 rate=$($M -c "$cfg" util cfg micro.install.rate)
 
 git submodule update --init
-pushd $MPY
+pushd "$MPY"
 
 make -C ports/$dev submodules
 make -C mpy-cross
 cd ports/$dev
 make -j ESPTOOL=esptool PORT=$port BAUD=$rate BOARD=${dev@U}_MOAT deploy
 
+popd
+#$M -vvvc "$cfg" micro setup -c r -N -r -U -s once -C "$MPY/mpy-cross/build/mpy-cross"

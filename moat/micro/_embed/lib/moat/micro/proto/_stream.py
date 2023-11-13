@@ -13,7 +13,7 @@ from serialpacker import SerialPacker
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any, Awaitable
 
 
 as_proxy("_", NotGiven, replace=True)

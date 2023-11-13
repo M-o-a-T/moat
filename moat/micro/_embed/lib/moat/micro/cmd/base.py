@@ -106,6 +106,7 @@ class BaseCmd(Base):
         self.init_events()
 
     def init_events(self):
+        "Setup events"
         if self._stopped is None:
             self._starting = Event()
             self._ready = Event()

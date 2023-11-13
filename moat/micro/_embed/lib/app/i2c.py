@@ -28,9 +28,11 @@ class Cmd(BaseCmd):
         s: false  # use bit-banging I²C driver?
         t: 500 # bus timeout, msec
     """
+
     _bus = None
 
     async def cmd_reset(self, p=None):  # noqa:ARG002
+        "bus reset"
         # for _ in self._bus_cache.values():
         #     pass  # XXX b.close()
         self._bus_cache = dict()
@@ -43,31 +45,33 @@ class Cmd(BaseCmd):
         self._setup()
 
     async def reload(self):
+        "reconfigured"
         self._teardown()
         self._setup()
         await super().reload()
 
     def _setup(self):
-        c = machine.Pin(cfg["c"], **cfg.get("cx",{}))
-        d = machine.Pin(cfg["d"], **cfg.get("dx",{}))
-        self._bus = (machine.SoftI2C if cfg.get("soft",False) else machine.I2C)(
+        cfg = self.cfg
+        c = machine.Pin(cfg["c"], **cfg.get("cx", {}))
+        d = machine.Pin(cfg["d"], **cfg.get("dx", {}))
+        self._bus = (machine.SoftI2C if cfg.get("soft", False) else machine.I2C)(
             scl=c,
             sda=d,
-            freq=cfg.get(f, 100000),
+            freq=cfg.get("f", 100000),
             timeout=cfg.get("t", 1000) * 1000,
         )
 
     async def teardown(self):
+        "shutdown"
         self._teardown()
         await super().teardown()
 
     def _teardown(self):
         if self._bus is None:
-            try:
+            try:  # noqa:SIM105
                 self._bus.deinit()
             except AttributeError:
                 pass
-
 
     async def cmd_rd(self, i, n=16):
         "read @n bytes from bus @cd at address @i"

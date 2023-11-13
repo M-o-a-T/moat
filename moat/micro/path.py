@@ -656,7 +656,7 @@ async def _nullcheck(p):
     return False
 
 
-async def copytree(src:APath, dst:MoatPath, check=None, drop=None, cross=None):
+async def copytree(src: APath, dst: MoatPath, check=None, drop=None, cross=None):
     """
     Copy a file or directory tree from @src to @dst.
     Skip files/subtrees for which "await check(src)" is False.
@@ -673,7 +673,6 @@ async def copytree(src:APath, dst:MoatPath, check=None, drop=None, cross=None):
     n = 0
     if await src.is_file():
         if src.suffix == ".py":
-
             # here we replace "src" with a buffer containing the
             # corresponding mpy-cross output.
 

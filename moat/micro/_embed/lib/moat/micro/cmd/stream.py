@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 
 from moat.util import NotGiven, ValueEvent, obj2name
-from moat.micro.compat import ACM, AC_exit, AC_use, Lock, TaskGroup, log, BaseExceptionGroup
+from moat.micro.compat import ACM, AC_exit, AC_use, BaseExceptionGroup, Lock, TaskGroup, log
 from moat.micro.proto.stack import Base, BaseBlk, BaseBuf, BaseMsg, RemoteError, SilentRemoteError
 
 from .base import BaseCmd

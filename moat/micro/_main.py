@@ -197,9 +197,10 @@ async def setup(
             # do not use "/". Running micropython tests locally requires
             # all satellite paths to be relative.
             import moat.micro._embed
-            p = anyio.Path(moat.micro._embed.__path__[0])
-            await copytree(p/"boot.py", MoatDevPath("boot.py").connect_repl(repl), cross=None)
-            await copytree(p/"main.py", MoatDevPath("main.py").connect_repl(repl), cross=None)
+
+            p = anyio.Path(moat.micro._embed.__path__[0])  # noqa:SLF001
+            await copytree(p / "boot.py", MoatDevPath("boot.py").connect_repl(repl), cross=None)
+            await copytree(p / "main.py", MoatDevPath("main.py").connect_repl(repl), cross=None)
 
         if reset:
             await repl.soft_reset(run_main=run)
@@ -476,10 +477,10 @@ async def mount_(obj, path, blocksize):
 @cli.command("path")
 async def path_():
     """Path to the embedded system's files"""
+
     import moat.micro
-    import os
-    from pathlib import Path as PP
+
     for p in moat.micro.__path__:
-        p=PP(p)/"_embed"/"lib"
+        p = P(p) / "_embed" / "lib"  # noqa:PLW2901
         if p.exists():
             print(p)

@@ -45,6 +45,7 @@ async def run_update(*a, **kw):
         src = APath(p)
         await _run_update(src, *a, **kw)
 
+
 async def _run_update(src, dest: MoatPath, check=None, cross=None):
     # update a single _embed/lib directory
 
@@ -61,15 +62,15 @@ async def _run_update(src, dest: MoatPath, check=None, cross=None):
         sp = src / dst
         # XXX we might want to ask git which files differ,
         # it's supposed to have a cache for that
-        repl = dst._repl
-        dn = str(dst)[:-3].replace("/",".")
+        repl = dst._repl  # noqa:SLF001
+        dn = str(dst)[:-3].replace("/", ".")
         if dn.endswith(".__init__"):
             dn = dn[:-9]
         try:
             res = await repl.exec(f"import _hash; print(repr(_hash.hash[{dn !r}])); del _hash")
         except ImportError:
             return False
-        res = eval(res.strip())
+        res = eval(res.strip())  # noqa:S307,PGH001
         return res == hash256(await _rd(sp))[:8]
 
     await copytree(src, dest, check=check, drop=drop, cross=cross)

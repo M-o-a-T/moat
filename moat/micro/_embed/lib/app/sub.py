@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.micro.cmd.array import ArrayCmd
 from moat.micro.cmd.tree import BaseFwdCmd, DirCmd
-from moat.micro.compat import Event, ExceptionGroup, TaskGroup, sleep_ms
+from moat.micro.compat import log, sleep_ms
 
 try:
     from moat.micro.proto.stream import ProcessDeadError
@@ -14,9 +14,6 @@ except ImportError:  # satellite
 
     class ProcessDeadError(Exception):
         "dummy"
-
-
-from moat.micro.compat import log, sleep_ms
 
 
 class Tree(DirCmd):
@@ -75,12 +72,12 @@ class Err(BaseFwdCmd):
         self.t = self.cfg.get("timeout", 100)
         self.a = self.cfg.get("always", False)
 
-    async def wait_ready(self, wait:bool=True):
-        while (res := await super().wait_ready(wait=wait)):
+    async def wait_ready(self, wait: bool = True):
+        "allow for non-restarted sub-app"
+        while res := await super().wait_ready(wait=wait):
             if not self.r:
                 return res
             await sleep_ms(1)
-            breakpoint()
 
         return res
 

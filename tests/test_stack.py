@@ -5,15 +5,19 @@ from __future__ import annotations
 
 import anyio
 import pytest
-from functools import partial
 from pathlib import Path
 
 from moat.util import yload, yprint
 from moat.micro._test import mpy_stack
-from moat.micro.compat import log
 from moat.src.test import run
 
 import msgpack
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Awaitable
+
 
 CFG = """
 micro:
@@ -121,17 +125,19 @@ async def test_stack(tmp_path):
     with cfx.open("w") as f:
         yprint(cfg, f)
 
-    await run("-c", str(cfx), "-vvvvv", "micro", "setup")
+    await run("-c", str(cfx), "-vvv", "micro", "setup")
     sc = None
 
-    rm = partial(run, "-c", str(cfx), "-vvvvv", "micro")
+    def rm(s, **kw) -> Awaitable:
+        return run("-c", str(cfx), "-vvv", "micro", *s.split(), **kw)
+
     async with anyio.create_task_group() as tg:
 
         @tg.start_soon
         async def r_setup():
             nonlocal sc
             with anyio.CancelScope() as sc:
-                await run("-c", str(cfx), "-vvvvv", "micro", "run")
+                await run("-c", str(cfx), "-vvv", "micro", "run")
 
         for _ in range(20):
             await anyio.sleep(0.1)
@@ -140,11 +146,13 @@ async def test_stack(tmp_path):
         else:
             raise RuntimeError("Startup failed, no socket")
 
-        async with mpy_stack(tmp_path / "x", cfg.micro.connect) as d, d.sub_at(
-            "r", "s",
-        ) as s, d.cfg_at("r", "s", "c") as cfg:
+        async with (
+            mpy_stack(tmp_path / "x", cfg.micro.connect) as d,
+            d.sub_at("r", "s") as s,
+            d.cfg_at("r", "s", "c") as cfg,
+        ):
             # First a couple of command tests
-            res = await rm("cmd", "dir", do_stdout=True)
+            res = await rm("cmd dir", do_stdout=True)
             assert "\n- s\n" in res.stdout
             assert "\n- dir\n" in res.stdout
             assert "\n- wr\n" not in res.stdout
@@ -160,9 +168,7 @@ async def test_stack(tmp_path):
             assert "fubar" not in res.stdout
 
             # change some config in remote live data
-            res = await rm(
-                "-L", "r.s", "cfg", "-v", "a.b", "fubar", "-e", "a.ft", "42", do_stdout=True,
-            )
+            res = await rm("-L r.s cfg -v a.b fubar -e a.ft 42", do_stdout=True)
             assert res.stdout == ""
 
             # change more config but only on local data
@@ -170,7 +176,7 @@ async def test_stack(tmp_path):
             assert "\n  ft: 44\n" in res.stdout
 
             # change more config but only on remote data
-            res = await rm("-L", "r.s", "cfg", "-e", "a.ft", "43", "-W", "moat.cf2", do_stdout=True)
+            res = await rm("-L r.s cfg -e a.ft 43 -W moat.cf2", do_stdout=True)
             assert res.stdout == ""
 
             # now do the same thing sanely

@@ -97,7 +97,7 @@ def _decode(code, data):
     # decode an object, possibly by building a proxy.
 
     if code == 4:
-        n = data.decode("utf-8")
+        n = str(data, "utf-8")
         try:
             return name2obj(n)
         except KeyError:

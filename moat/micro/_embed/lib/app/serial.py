@@ -3,10 +3,8 @@ Serial port access apps
 """
 from __future__ import annotations
 
-from moat.micro.cmd.stream import BaseCmdBBM, BaseCmdMsg
 from moat.micro.compat import AC_use
 from moat.micro.part.serial import Serial
-from moat.micro.stacks.console import console_stack
 
 
 # Serial packet forwarder
@@ -20,18 +18,26 @@ from moat.micro.stacks.console import console_stack
 #   idle: MSEC
 # start: NUM
 #
-class Raw(BaseCmdBBM):
+def Raw(*a,**k):
     """Sends/receives raw bytes off a serial port"""
+    from moat.micro.cmd.stream import BaseCmdBBM, BaseCmdMsg
 
-    max_idle = 100
-    pack = None
+    class Raw(BaseCmdBBM):
+        max_idle = 100
+        pack = None
 
-    async def stream(self):  # noqa:D102
-        return await AC_use(self, Serial(self.cfg))
+        async def stream(self):  # noqa:D102
+            return await AC_use(self, Serial(self.cfg))
 
+    return _Raw(*a,**k)
 
-class Link(BaseCmdMsg):
+def Link(*a,**k):
     """Sends/receives MoaT messages using some device"""
+    from moat.micro.cmd.stream import BaseCmdBBM, BaseCmdMsg
+    from moat.micro.stacks.console import console_stack
 
-    async def stream(self):  # noqa:D102
-        return await AC_use(self, console_stack(Serial(self.cfg), self.cfg))
+    class Link(BaseCmdMsg):
+        async def stream(self):  # noqa:D102
+            return await AC_use(self, console_stack(Serial(self.cfg), self.cfg))
+
+    return _Link(*a,**k)

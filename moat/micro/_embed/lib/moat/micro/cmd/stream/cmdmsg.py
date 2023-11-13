@@ -10,199 +10,15 @@ from moat.util import NotGiven, ValueEvent, obj2name
 from moat.micro.compat import ACM, AC_exit, AC_use, BaseExceptionGroup, Lock, TaskGroup, log
 from moat.micro.proto.stack import Base, BaseBlk, BaseBuf, BaseMsg, RemoteError, SilentRemoteError
 
-from .base import BaseCmd
-from .util import RecvIter, SendIter, StoppedError, ValueTask
+from moat.micro.cmd.base import BaseCmd
+from moat.micro.cmd.util import RecvIter, SendIter, StoppedError, ValueTask
+
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from typing import Any, Awaitable, Mapping
-
-
-class BaseCmdBBM(BaseCmd):
-    """
-    This is a command handler that connects MoaT's Cmd tree to a `BaseBuf`,
-    `BaseBlk` or `BaseMsg` instance.
-
-    Override `stream` to return that instance, possibly wrapped with `AC_use`.
-
-    This is a single class that adapts to any of a `BaseMsg`, `BaseBlk`, or
-    `BaseBuf` stream.
-
-    The difference between this and a `BaseCmdMsg`-derived class is that
-    this class exposes commands that directly access the underlying stream
-    (of whatever type).
-
-    In contrast, a `BaseCmdMsg` objects encapsulates arbitrary commands,
-    and requires a `BaseCmdMsg` handler on the other side to talk to.
-    """
-
-    s = None
-
-    def __init__(self, cfg):
-        super().__init__(cfg)
-        self.w_lock = Lock()
-
-    async def stream(self) -> BaseMsg | BaseBlk | BaseBuf:
-        "create the actual data stream. Override this!"
-        raise NotImplementedError("setup", self.path)
-
-    async def setup(self):  # noqa:D102
-        await super().setup()
-        self.s = await self.stream()
-
-    async def run(self):  # noqa:D102
-        ACM(self)
-        try:
-            await super().run()
-        finally:
-            self.s = None
-            await AC_exit(self)
-
-    # Buf: rd/wr = .rd/.wr
-
-    async def cmd_rd(self, n=64):
-        """read some data"""
-        await self.wait_ready()
-        b = bytearray(n)
-        r = await self.s.rd(b)
-        if r == n:
-            return b
-        elif r <= n >> 2:
-            return bytes(b[:r])
-        else:
-            b = memoryview(b)
-            return b[:r]
-
-    async def cmd_wr(self, b):
-        """write some data"""
-        await self.wait_ready()
-        async with self.w_lock:
-            await self.s.wr(b)
-
-    # Blk/Msg: Console crd/cwr = .crd/cwr
-
-    async def cmd_crd(self, n=64) -> bytes:
-        """read some console data"""
-        b = bytearray(n)
-        r = await self.s.crd(b)
-        if r == n:
-            return b
-        elif r <= n >> 2:
-            return bytes(b[:r])
-        else:
-            b = memoryview(b)
-            return b[:r]
-
-    async def cmd_cwr(self, b):
-        """write some console data"""
-        async with self.w_lock:
-            await self.s.cwr(b)
-
-    # Msg: s/r = .send/.recv
-
-    async def cmd_s(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
-        """send a message"""
-        return self.s.send(m)
-
-    async def cmd_r(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
-        """receive a message"""
-        return self.s.recv()
-
-    # Blk: sb/rb = .snd/.rcv
-
-    async def cmd_sb(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
-        """send a binary message"""
-        return self.s.snd(m)
-
-    async def cmd_rb(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
-        """receive a binary message"""
-        return self.s.rcv()
-
-
-class _BBMCmd(Base):
-    def __init__(self, cfg):
-        super().__init__(cfg)
-        self.cmd = cfg["_cmd"]
-
-    async def setup(self):
-        await Base.setup(self)
-        # not using super() because {Msg,Buf,Base}Cmd pull in inheritance
-        # from BaseConn which calls ``.stream`` which we don't have, or want
-        self.s = self.cmd.root.sub_at(*self.cfg["path"])
-
-
-class MsgCmd(_BBMCmd, BaseMsg):
-    """
-    This is the reverse of a CmdBBM for messages, i.e. a stream handler that forwards
-    send/recv (and console) requests via MoaT.
-
-    The remote link is addressed by the config item "path".
-    """
-
-    # pylint:disable=abstract-method
-
-    def send(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
-        "send a message"
-        return self.s.s(m=m)
-
-    def recv(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
-        "receive a message"
-        return self.s.r()
-
-    def cwr(self, buf) -> Awaitable:  # pylint:disable=invalid-overridden-method
-        "write console data"
-        return self.s.cwr(b=buf)
-
-    async def crd(self, buf):
-        "read console data"
-        msg = await self.s.crd(n=len(buf))
-        buf[: len(msg)] = msg
-        return len(msg)
-
-
-class BufCmd(_BBMCmd, BaseBuf):
-    """
-    This is the reverse of a CmdBBM for blocks, i.e. a stream handler that forwards
-    snd/rcv (and console) requests via MoaT.
-
-    The remote link is addressed by the config item "path".
-    """
-
-    # pylint:disable=abstract-method
-    # `stream` needs to be implemented by a subclass
-
-    def wr(self, buf) -> Awaitable:  # noqa:D102
-        # pylint: disable=invalid-overridden-method
-        return self.s.wr(b=buf)
-
-    async def rd(self, buf):  # noqa:D102
-        msg = await self.s.rd(n=len(buf))
-        buf[: len(msg)] = msg
-        return len(msg)
-
-
-class BlkCmd(_BBMCmd, BaseBlk):
-    """
-    This is the reverse of a CmdBBM for blocks, i.e. a stream handler that forwards
-    snd/rcv (and console) requests via MoaT.
-
-    The remote link is addressed by the config item "path".
-    """
-
-    # pylint:disable=abstract-method
-
-    crd = MsgCmd.crd
-    cwr = MsgCmd.cwr
-
-    def snd(self, m) -> Awaitable:  # noqa:D102
-        # pylint: disable=invalid-overridden-method
-        return self.s.sb(m=m)
-
-    def rcv(self) -> Awaitable:  # noqa:D102
-        # pylint: disable=invalid-overridden-method
-        return self.s.rb()
 
 
 class BaseCmdMsg(BaseCmd):
@@ -468,8 +284,22 @@ class BaseCmdMsg(BaseCmd):
             finally:
                 self.reply.pop(seq, None)
 
-    cmd_crd = BaseCmdBBM.cmd_crd
-    cmd_cwr = BaseCmdBBM.cmd_cwr
+    async def cmd_crd(self, n=64) -> bytes:
+        """read some console data"""
+        b = bytearray(n)
+        r = await self.s.crd(b)
+        if r == n:
+            return b
+        elif r <= n >> 2:
+            return bytes(b[:r])
+        else:
+            b = memoryview(b)
+            return b[:r]
+
+    async def cmd_cwr(self, b):
+        """write some console data"""
+        async with self.w_lock:
+            await self.s.cwr(b)
 
 
 class CmdMsg(BaseCmdMsg):

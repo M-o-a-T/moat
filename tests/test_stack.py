@@ -160,10 +160,10 @@ async def test_stack(tmp_path):
             res = await s("?rdy")
             assert not res, "Link is not ready"
 
-            res = await rm("cmd", "s.f.dir", do_stdout=True)
+            res = await rm("cmd s.f.dir", do_stdout=True)
             assert "\n- rmdir\n" in res.stdout
 
-            res = await rm("-L", "r.s", "cfg", do_stdout=True)
+            res = await rm("-L r.s cfg", do_stdout=True)
             assert "\nf:\n  root:" in res.stdout
             assert "fubar" not in res.stdout
 
@@ -172,7 +172,7 @@ async def test_stack(tmp_path):
             assert res.stdout == ""
 
             # change more config but only on local data
-            res = await rm("-L", "r.s", "cfg", "-e", "a.ft", "44", "-S", do_stdout=True)
+            res = await rm("-L r.s cfg -e a.ft 44 -S", do_stdout=True)
             assert "\n  ft: 44\n" in res.stdout
 
             # change more config but only on remote data

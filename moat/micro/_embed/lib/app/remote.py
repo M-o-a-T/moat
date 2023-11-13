@@ -3,8 +3,6 @@ Remote port access apps
 """
 from __future__ import annotations
 
-from moat.micro.cmd.base import BaseCmd
-from moat.micro.cmd.stream import BaseCmdBBM, BaseCmdMsg, BufCmd
 from moat.micro.compat import AC_use
 from moat.micro.stacks.console import console_stack
 
@@ -20,46 +18,57 @@ if TYPE_CHECKING:
     from most.micro.proto.stack import BaseBuf, BaseMsg
 
 
-class Raw(BaseCmdBBM):
+def Raw(*a,**k):
     """
     Link to a stream that's someplace else.
 
     This app forwards read/write requests to somewhere else.
     """
+    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
 
-    async def stream(self) -> BaseBuf:
-        "returns the link"
-        return await AC_use(self, self.root.sub_at(*self.cfg["path"]))
+    class _Raw(BaseCmdBBM):
+        async def stream(self) -> BaseBuf:
+            "returns the link"
+            return await AC_use(self, self.root.sub_at(*self.cfg["path"]))
+
+    return _Raw(*a,**k)
 
 
-class Fwd(BaseCmd):
+def Fwd(*a,**k):
     """
     Link to a stream that's someplace else.
 
     This app forwards to somewhere else.
     """
+    from moat.micro.cmd.base import BaseCmd
 
-    sd: SubDispatch = None
+    class _Fwd(BaseCmd):
 
-    async def setup(self):
-        "create a subdispatcher"
-        await super().setup()
-        self.sd = self.root.sub_at(*self.cfg["path"])
+        sd: SubDispatch = None
 
-    def dispatch(self, action, msg, **kw) -> Awaitable:
-        # pylint:disable=invalid-overridden-method
-        "call via the subdispatcher"
-        return self.sd.dispatch(action, msg, **kw)
+        async def setup(self):
+            "create a subdispatcher"
+            await super().setup()
+            self.sd = self.root.sub_at(*self.cfg["path"])
+
+        def dispatch(self, action, msg, **kw) -> Awaitable:
+            # pylint:disable=invalid-overridden-method
+            "call via the subdispatcher"
+            return self.sd.dispatch(action, msg, **kw)
+    
+    return _Fwd(*a,**k)
 
 
-class Link(BaseCmdMsg):
+def Link(*a,**k):
     """
     Connects to a `BaseCmdBBM` object exporting a `BaseBuf`.
-
-
     """
+    from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
+    from moat.micro.cmd.stream.xcmd import BufCmd
 
-    async def stream(self) -> BaseMsg:
-        "returns the stack-wrapped link"
-        sd = BufCmd(self.cfg)
-        return await AC_use(self, console_stack(sd, self.cfg))
+    class _Link(BaseCmdMsg):
+        async def stream(self) -> BaseMsg:
+            "returns the stack-wrapped link"
+            sd = BufCmd(self.cfg)
+            return await AC_use(self, console_stack(sd, self.cfg))
+    return _Link(*a,**k)

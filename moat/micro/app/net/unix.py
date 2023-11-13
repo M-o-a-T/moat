@@ -3,12 +3,9 @@ Apps for Unix socket connectivity
 """
 from __future__ import annotations
 
-from moat.micro.cmd.stream import BaseCmdBBM, CmdMsg
-from moat.micro.cmd.tree import BaseListenCmd, BaseListenOneCmd
 from moat.micro.compat import AC_use
 from moat.micro.proto.unix import Link as UnixLink
 from moat.micro.stacks.console import console_stack
-from moat.micro.stacks.unix import UnixIter
 
 # Typing
 
@@ -18,39 +15,53 @@ if TYPE_CHECKING:
     from typing import Awaitable
 
 
-class Raw(BaseCmdBBM):
+def Raw(*a,**k):
     """Sends/receives raw data"""
+    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
 
-    def stream(self) -> Awaitable:  # noqa:D102
-        return AC_use(self, UnixLink(self.port))
+    class _Raw(BaseCmdBBM):
+        def stream(self) -> Awaitable:  # noqa:D102
+            return AC_use(self, UnixLink(self.port))
+    return _Raw(*a,**k)
 
 
-class Link(CmdMsg):
+def Link(*a,**k):
     """
     An app that connects to a remote socket.
     """
+    from moat.micro.cmd.stream.cmdmsg import CmdMsg
+    class _Link(CmdMsg):
 
-    def __init__(self, cfg):
-        stack = console_stack(UnixLink(cfg["port"]), cfg)
-        super().__init__(stack, cfg)
+        def __init__(self, cfg):
+            stack = console_stack(UnixLink(cfg["port"]), cfg)
+            super().__init__(stack, cfg)
+    return _Link(*a,**k)
 
 
-class LinkIn(BaseListenOneCmd):
+def LinkIn(*a,**k):
     """
     An app that accepts a single connection from a remote socket.
 
     New connections may or may not supersede existing ones, depending on the
     "replace" config item.
     """
+    from moat.micro.cmd.tree import BaseListenOneCmd
+    from moat.micro.stacks.unix import UnixIter
 
-    def listener(self):  # noqa:D102
-        return UnixIter(self.cfg["port"])
+    class _LinkIn(BaseListenOneCmd):
+        def listener(self):  # noqa:D102
+            return UnixIter(self.cfg["port"])
+    return _LinkIn(*a,**k)
 
 
-class Port(BaseListenCmd):
+def Port(*a,**k):
     """
     An app that accepts multiple Unix connections.
     """
+    from moat.micro.cmd.tree import BaseListenCmd
+    from moat.micro.stacks.unix import UnixIter
 
-    def listener(self):  # noqa:D102
-        return UnixIter(self.cfg["port"])
+    class _Port(BaseListenCmd):
+        def listener(self):  # noqa:D102
+            return UnixIter(self.cfg["port"])
+    return _Port(*a,**k)

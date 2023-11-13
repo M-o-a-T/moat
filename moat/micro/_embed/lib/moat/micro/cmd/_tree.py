@@ -317,7 +317,7 @@ class BaseListenOneCmd(BaseLayerCmd):
         """
         Process a connection
         """
-        from moat.micro.cmd.stream import ExtCmdMsg  # pylint:disable=import-outside-toplevel
+        from moat.micro.cmd.stream.cmdmsg import ExtCmdMsg  # pylint:disable=import-outside-toplevel
 
         app = ExtCmdMsg(self.wrapper(conn), self.cfg)
         if (
@@ -368,7 +368,7 @@ class BaseListenCmd(BaseSubCmd):
         """
         Process a new connection.
         """
-        from moat.micro.cmd.stream import ExtCmdMsg  # pylint:disable=import-outside-toplevel
+        from moat.micro.cmd.stream.cmdmsg import ExtCmdMsg  # pylint:disable=import-outside-toplevel
 
         conn = self.wrapper(conn)
         app = ExtCmdMsg(conn, self.cfg)

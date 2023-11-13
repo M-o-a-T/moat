@@ -9,7 +9,7 @@ from functools import partial
 
 import micropython
 
-from moat.micro.cmd.stream import BaseCmdMsg
+from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
 from moat.micro.compat import AC_use
 from moat.micro.proto.stream import FileBuf
 from moat.micro.stacks.console import console_stack

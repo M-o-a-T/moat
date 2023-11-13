@@ -14,18 +14,22 @@ import msgpack as mp
 
 cfg = {}
 
+try:
+    mem=machine.RTC().memory
+except AttributeError:
+    def mem(x=None):
+        return b""
 
 def set_rtc(attr, value=None, fs=None):
     "Setter for a value in RTC / file system"
     if not fs:
-        m = machine.RTC().memory
         try:
-            s = mp.unpackb(m())
+            s = mp.unpackb(mem())
         except ValueError:
             pass
         else:
             s[attr] = value
-            m(mp.packb(s))
+            mem(mp.packb(s))
             return
     if fs is False:
         raise ValueError("no RTC")
@@ -47,8 +51,7 @@ def get_rtc(attr, fs=None, default=None):
     "Getter for a value in RTC / file system"
     if not fs:
         try:
-            m = machine.RTC().memory
-            s = mp.unpackb(m())
+            s = mp.unpackb(mem())
             return s[attr]
         except (ValueError, KeyError):
             pass

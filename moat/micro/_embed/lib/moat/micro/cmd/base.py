@@ -24,7 +24,9 @@ from __future__ import annotations
 from moat.micro.compat import AC_use, Event, idle
 from moat.micro.proto.stack import Base
 
-from .util import DelayedIter, IterWrap, as_proxy, enc_part, get_part, run_no_exc, wait_complain
+from .util import as_proxy, run_no_exc, wait_complain
+from .util.part import enc_part, get_part
+from .util.iter import DelayedIter, IterWrap
 
 from typing import TYPE_CHECKING  # isort:skip
 

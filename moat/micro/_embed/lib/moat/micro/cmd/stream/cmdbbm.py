@@ -11,7 +11,6 @@ from moat.micro.compat import ACM, AC_exit, AC_use, BaseExceptionGroup, Lock, Ta
 from moat.micro.proto.stack import Base, BaseBlk, BaseBuf, BaseMsg, RemoteError, SilentRemoteError
 
 from moat.micro.cmd.base import BaseCmd
-from moat.micro.cmd.util import RecvIter, SendIter, StoppedError, ValueTask
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip

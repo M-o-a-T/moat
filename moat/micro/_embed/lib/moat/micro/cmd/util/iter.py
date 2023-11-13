@@ -15,6 +15,8 @@ from moat.micro.compat import (
     wait_for_ms,
 )
 from moat.micro.proto.stack import RemoteError, SilentRemoteError
+from .valtask import ValueTask
+from . import StoppedError
 
 # Typing
 
@@ -26,203 +28,6 @@ if TYPE_CHECKING:
     from anyio import CancelScope
 
     from moat.micro.cmd.base import BaseCmd
-
-
-StopIter = StopAsyncIteration
-
-as_proxy("_KyErr", KeyError, replace=True)
-as_proxy("_AtErr", AttributeError, replace=True)
-as_proxy("_NiErr", NotImplementedError, replace=True)
-as_proxy("_RemErr", RemoteError, replace=True)
-as_proxy("_SRemErr", SilentRemoteError, replace=True)
-
-as_proxy("_StpIter", StopIter, replace=True)
-
-
-@as_proxy("_StpErr")
-class StoppedError(Exception):
-    "Called command/app is not running"
-
-
-async def wait_complain(s: str, i: int, p: Callable, *a, **k):
-    "Complain on stderr if waiting too long"
-    try:
-        await wait_for_ms(i, p, *a, **k)
-    except TimeoutError:
-        log("Delayed  %s", s)
-        await p(*a, **k)
-        log("Delay OK %s", s)
-
-
-async def run_no_exc(p, msg, x_err=()):
-    """Call p(msg) but log exceptions"""
-    try:
-        r = p(**msg)
-        if hasattr(r, "throw"):  # coroutine
-            r = await r
-    except x_err as err:
-        log("Error in %r %r: %r", p, msg, err)
-    except Exception as err:  # pylint:disable=broad-exception-caught
-        log("Error in %r %r", p, msg, err=err)
-
-
-def get_part(cur, p: list[str | int], add: bool = False):
-    "Walk into a mapping or object structure"
-    for pp in p:
-        try:
-            cur = getattr(cur, pp)
-        except (TypeError, AttributeError):
-            try:
-                cur = cur[pp]
-            except KeyError:
-                if not add:
-                    raise
-                cur[pp] = nc = []
-                cur = nc
-    return cur
-
-
-def set_part(cur, p: list[str | int], v: Any):
-    "Modify a mapping or object structure"
-    cur = get_part(cur, p[:-1], add=True)
-    try:
-        cur[p[-1]] = v
-    except TypeError:
-        setattr(cur, p[-1], v)
-
-
-def enc_part(cur):
-    """
-    Helper method to encode a larger dict/list partially.
-
-    The result is either some object that's not a dict or list, or a
-    (X,L) tuple where X is the dict/list in question except with all the
-    complex parts removed, and L is a list of keys/offsets with complex
-    data to retrieve
-    """
-
-    def _complex(v):
-        if isinstance(v, (dict, list, tuple)):
-            return True
-        return False
-
-    if isinstance(cur, dict):
-        c = {}
-        s = []
-        for k, v in cur.items():
-            if _complex(v):
-                s.append(k)
-            else:
-                c[k] = v
-        if s:
-            return c, s
-        else:
-            # dict has no complex values: return directly
-            return c
-
-    elif isinstance(cur, (list, tuple)):
-        c = []
-        s = []
-        for k, v in enumerate(cur):
-            if _complex(v):
-                c.append(None)
-                s.append(k)
-            else:
-                c.append(v)
-        # cannot do a direct return here
-        return c, s
-
-    else:
-        return cur
-        # guaranteed not to be a tuple
-
-
-# like get/set_part but without the attributes
-
-
-def get_p(cur, p, add=False):
-    "retrieve an item"
-    for pp in p:
-        try:
-            cur = cur[pp]
-        except KeyError:
-            if not add:
-                raise
-            cur[pp] = nc = {}
-            cur = nc
-    return cur
-
-
-def set_p(cur, p, v):
-    "set an item"
-    cur = get_p(cur, p[:-1], add=True)
-    cur[p[-1]] = v
-
-
-def del_p(cur, p):
-    "delete an item"
-    pp = p[0]
-    if pp in cur:
-        if len(p) > 1:
-            del_p(cur[pp], p[1:])
-        if cur[pp]:
-            return
-        del cur[pp]
-
-
-class ValueTask:
-    """
-    An object that forwards a task's return value.
-
-    @i: seqnum
-    @x: excluded errors
-    @p: callable
-    """
-
-    def __init__(self, cmd: BaseCmd, i: int, x: list[Exception], p: Callable, *a, **k):
-        self.cmd = cmd
-        self.i = i
-        self.p = p
-        self.a: list[Any] = a
-        self.k: Mapping[str, Any] = k
-        self.x = x
-        self._t: CancelScope = None
-
-    async def start(self, tg):
-        "Task starter. Called from the command."
-        if self._t is not None:
-            raise RuntimeError("dup")
-        self._t = await tg.spawn(self._wrap, _name="Val")
-
-    async def _wrap(self):
-        try:
-            err = None
-            res = await self.p(*self.a, **self.k)
-        except Exception as exc:  # pylint:disable=broad-exception-caught
-            err = exc
-        except BaseException as exc:  # pylint:disable=broad-exception-caught
-            err = StoppedError(repr(exc))
-        if err is None:
-            await self.reply_result(res)
-        else:
-            await self.cmd.reply_error(self.i, err, self.x)
-            if not isinstance(err, Exception):
-                raise err
-
-    async def reply_result(self, res):
-        "forward the task's return value to the caller"
-        await self.cmd.reply_result(self.i, res)
-
-    def cancel(self):
-        "cancel the iterator"
-        if self._t is not None:
-            self._t.cancel()
-            self._t = False
-
-    async def set_error(self, err):
-        "tell the iterator to raise an error"
-        self.cancel()
-        await self.cmd.reply_error(self.i, err, self.x)
 
 
 class IterWrap:
@@ -272,6 +77,7 @@ class SendIter(ValueTask):
     @d: data for it
     """
 
+    _IT = True
     def __init__(self, cmd, i: int, r: int, a: list[str], d: dict):
         self.r = r
         self.ac = a
@@ -355,6 +161,7 @@ class RecvIter(_DelayedIter):
 
     It implements an iterator protocol that forwards them to its reader.
     """
+    _IT = True
 
     _err = None
     _warned = 1

@@ -11,7 +11,8 @@ from moat.micro.compat import ACM, AC_exit, AC_use, BaseExceptionGroup, Lock, Ta
 from moat.micro.proto.stack import Base, BaseBlk, BaseBuf, BaseMsg, RemoteError, SilentRemoteError
 
 from moat.micro.cmd.base import BaseCmd
-from moat.micro.cmd.util import RecvIter, SendIter, StoppedError, ValueTask
+from moat.micro.cmd.util import StoppedError
+from moat.micro.cmd.util.valtask import ValueTask
 
 
 # Typing
@@ -157,6 +158,7 @@ class BaseCmdMsg(BaseCmd):
             if r is None:
                 t = ValueTask(self, i, x, self.root.dispatch, a, d, x_err=x)
             else:
+                from moat.micro.cmd.util.iter import SendIter
                 t = SendIter(self, i, r, a, d)
 
             if i is not None:
@@ -210,7 +212,7 @@ class BaseCmdMsg(BaseCmd):
                     t.set_r(r)
 
             elif d is not NotGiven:
-                if isinstance(t, (SendIter, RecvIter)):
+                if getattr(t,"_IT",False):
                     if n:
                         t.set(d, n=n)
                     else:
@@ -272,6 +274,7 @@ class BaseCmdMsg(BaseCmd):
             msg["x"] = x_err
 
         if rep:
+            from moat.micro.cmd.util.iter import RecvIter
             msg["r"] = rep
             self.reply[seq] = e = RecvIter(self, seq, rep)
             await self.s.send(msg)

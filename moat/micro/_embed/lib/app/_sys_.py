@@ -7,7 +7,7 @@ import sys
 
 from moat.util import Proxy, drop_proxy, obj2name
 from moat.micro.cmd.base import BaseCmd
-from moat.micro.cmd.util import enc_part, get_part, set_part
+from moat.micro.cmd.util.part import enc_part, get_part, set_part
 from moat.micro.stacks.util import TEST_MAGIC
 
 

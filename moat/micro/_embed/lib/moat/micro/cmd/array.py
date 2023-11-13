@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.util import combine_dict, import_
 
-from .tree import BaseSuperCmd
+from .tree.dir import BaseSuperCmd
 from .util import set_part
 
 from typing import TYPE_CHECKING  # isort:skip

@@ -28,7 +28,7 @@ from pyfuse3 import (  # pylint: disable=E0611
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from moat.micro.cmd.tree import SubDispatch
+    from moat.micro.cmd.tree.dir import SubDispatch
 
 
 logger = logging.getLogger(__name__)

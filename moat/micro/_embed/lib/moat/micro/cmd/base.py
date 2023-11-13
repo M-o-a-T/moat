@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING  # isort:skip
 if TYPE_CHECKING:
     from typing import AsyncContextManager, AsyncIterator, Awaitable, Callable
 
-    from moat.micro.cmd.tree import BaseSuperCmd, Dispatch
+    from moat.micro.cmd.tree.dir import BaseSuperCmd, Dispatch
 
 
 as_proxy("_SCmdErr")

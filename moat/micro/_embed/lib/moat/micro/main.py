@@ -94,7 +94,7 @@ def main(cfg: str | dict, fake_end=False):
     async def _main():
         import sys
 
-        from moat.micro.cmd.tree import Dispatch
+        from moat.micro.cmd.tree.dir import Dispatch
         from moat.micro.compat import idle
 
         async with Dispatch(cfg) as dsp:

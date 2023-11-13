@@ -1,25 +1,10 @@
 """
-Server side of BaseCmd
+Server-side dir support
 """
-from __future__ import annotations
-
-import anyio
 from itertools import chain
-
-from moat.util import NotGiven, attrdict
-
-from ._tree import (  # noqa:F401 pylint:disable=unused-import
-    BaseFwdCmd,
-    BaseLayerCmd,
-    BaseListenCmd,
-    BaseListenOneCmd,
-    BaseSubCmd,
-    BaseSuperCmd,
-    DirCmd,
-    SubDispatch,
-)
-
-from ._tree import Dispatch as _Dispatch  # isort:skip
+from moat.util import attrdict
+from ._dir import BaseSuperCmd,BaseSubCmd,DirCmd,SubDispatch
+from ._dir import Dispatch as _Dispatch  # isort:skip
 
 
 class _NotGiven:
@@ -42,6 +27,7 @@ class Dispatch(_Dispatch):
 
             async def sig_handler():
                 import signal  # pylint:disable=import-outside-toplevel
+                import anyio
 
                 with anyio.open_signal_receiver(
                     signal.SIGINT,

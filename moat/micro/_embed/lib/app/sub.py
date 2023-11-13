@@ -4,8 +4,6 @@ Apps used for structure.
 
 from __future__ import annotations
 
-from moat.micro.cmd.array import ArrayCmd
-from moat.micro.cmd.tree import BaseFwdCmd, DirCmd
 from moat.micro.compat import log, sleep_ms
 
 try:
@@ -16,19 +14,27 @@ except ImportError:  # satellite
         "dummy"
 
 
-class Tree(DirCmd):
+def Tree(*a,**k):
     """
     Structured subcommands.
     """
+    from moat.micro.cmd.tree.dir import DirCmd
+    class _Tree(DirCmd):
+        pass
+    return _Tree(*a,**k)
 
 
-class Array(ArrayCmd):
+def Array(*a,**k):
     """
     List of mostly-same things.
     """
+    from moat.micro.cmd.array import ArrayCmd
+    class _Array(ArrayCmd):
+        pass
+    return _Array(*a,**k)
 
 
-class Err(BaseFwdCmd):
+def Err(*a,**k):
     """
     An error handler and possibly-retrying subcommand manager.
 
@@ -51,68 +57,71 @@ class Err(BaseFwdCmd):
     TODO: exponential back-off
     """
 
-    _wait = True
+    from moat.micro.cmd.tree.layer import BaseFwdCmd
+    class _Err(BaseFwdCmd):
+        _wait = True
 
-    r: int = None
-    t: int = None
-    a: bool = None
+        r: int = None
+        t: int = None
+        a: bool = None
 
-    async def dispatch(self, *a, **k):  # noqa:D102
-        if self.app is None:
-            await super().wait_ready()
-        await self.app.wait_ready()
-        return await super().dispatch(*a, **k)
+        async def dispatch(self, *a, **k):  # noqa:D102
+            if self.app is None:
+                await super().wait_ready()
+            await self.app.wait_ready()
+            return await super().dispatch(*a, **k)
 
-    async def reload(self):  # noqa:D102
-        self._load()
-        await super().reload()
+        async def reload(self):  # noqa:D102
+            self._load()
+            await super().reload()
 
-    def _load(self):
-        self.r = self.cfg.get("retry", 0)
-        self.t = self.cfg.get("timeout", 100)
-        self.a = self.cfg.get("always", False)
+        def _load(self):
+            self.r = self.cfg.get("retry", 0)
+            self.t = self.cfg.get("timeout", 100)
+            self.a = self.cfg.get("always", False)
 
-    async def wait_ready(self, wait: bool = True):
-        "allow for non-restarted sub-app"
-        while res := await super().wait_ready(wait=wait):
-            if not self.r:
-                return res
-            await sleep_ms(1)
-
-        return res
-
-    async def run_app(self):
-        """
-        Runs the sub-app and handles restarting and error shielding.
-        """
-        log("Fwd Start %s", self.path)
-        self._load()
-
-        self._wait = self.cfg.get("wait", True)
-        while True:
-            try:
-                log("Fwd Run %s %r", self.path, self)
-                await super().run_app()
-            except (OSError, ProcessDeadError, EOFError) as exc:
-                log("Fwd Err %s %r", self.path, exc)
+        async def wait_ready(self, wait: bool = True):
+            "allow for non-restarted sub-app"
+            while res := await super().wait_ready(wait=wait):
                 if not self.r:
-                    if self.cfg.get("retry", 0):
-                        raise
-                    return
-            else:
-                # ends without error
-                log("Fwd End %s %r", self.path, self.app)
-                if not self.a or not self.r:
-                    return
+                    return res
+                await sleep_ms(1)
 
-            if self.r:
-                self.app.init_events()
-            # otherwise dead
+            return res
 
-            if self.r > 0:
-                self.r -= 1
-            try:
-                await sleep_ms(self.t)
-            except BaseException as exc:
-                log("Fwd ErrX %s %r", self.path, exc)
-                raise
+        async def run_app(self):
+            """
+            Runs the sub-app and handles restarting and error shielding.
+            """
+            log("Fwd Start %s", self.path)
+            self._load()
+
+            self._wait = self.cfg.get("wait", True)
+            while True:
+                try:
+                    log("Fwd Run %s %r", self.path, self)
+                    await super().run_app()
+                except (OSError, ProcessDeadError, EOFError) as exc:
+                    log("Fwd Err %s %r", self.path, exc)
+                    if not self.r:
+                        if self.cfg.get("retry", 0):
+                            raise
+                        return
+                else:
+                    # ends without error
+                    log("Fwd End %s %r", self.path, self.app)
+                    if not self.a or not self.r:
+                        return
+
+                if self.r:
+                    self.app.init_events()
+                # otherwise dead
+
+                if self.r > 0:
+                    self.r -= 1
+                try:
+                    await sleep_ms(self.t)
+                except BaseException as exc:
+                    log("Fwd ErrX %s %r", self.path, exc)
+                    raise
+    return _Err(*a,**k)

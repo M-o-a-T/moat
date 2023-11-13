@@ -21,7 +21,7 @@ from moat.util import (
     yload,
     yprint,
 )
-from moat.micro.cmd.tree import Dispatch, SubDispatch
+from moat.micro.cmd.tree.dir import Dispatch, SubDispatch
 from moat.micro.cmd.util import get_part
 from moat.micro.path import copytree
 from moat.micro.proto.stream import RemoteBufAnyio

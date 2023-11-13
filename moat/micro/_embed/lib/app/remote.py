@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING  # isort:skip
 if TYPE_CHECKING:
     from typing import Awaitable
 
-    from moat.micro.cmd.tree import SubDispatch
+    from moat.micro.cmd.tree.dir import SubDispatch
 
     from most.micro.proto.stack import BaseBuf, BaseMsg
 

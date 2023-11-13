@@ -8,8 +8,8 @@ from functools import partial
 
 from moat.util import Path, import_
 from moat.micro.compat import AC_use, Event, TaskGroup, log
-
-from .base import ACM_h, BaseCmd, ShortCommandError
+from moat.micro.cmd.base import ACM_h, BaseCmd, ShortCommandError
+from moat.micro.cmd.base import ACM_h, BaseCmd, ShortCommandError
 
 # Typing
 
@@ -20,19 +20,6 @@ if TYPE_CHECKING:
 
     from moat.micro.proto.stack import BaseBuf, BaseMsg
     from moat.micro.stacks.util import BaseConnIter
-
-
-__all__ = [
-    "DirCmd",
-    "BaseSuperCmd",
-    "BaseFwdCmd",
-    "BaseLayerCmd",
-    "BaseSubCmd",
-    "BaseListenCmd",
-    "BaseListenOneCmd",
-    "Dispatch",
-    "SubDispatch",
-]
 
 
 class BaseSuperCmd(BaseCmd):
@@ -72,125 +59,6 @@ class BaseSuperCmd(BaseCmd):
         except BaseException:
             app.p_task = None
             raise
-
-
-class BaseLayerCmd(BaseSuperCmd):
-    """
-    A handler for a single nested app.
-
-    This handler doesn't affect the command hierarchy.
-    Its own commands, if any, are reachable by adding "_f" to their name.
-
-    Alternately, the nested app is named "_".
-
-    You need to override "gen_cmd" to create the app object.
-    """
-
-    app = None
-    name = "_"
-
-    async def run_app(self):
-        """
-        The command handler's executor. By default, calls `self.app.run`
-        within the command's context.
-
-        You might override this e.g. for restarting or
-        shielding the rest of MoaT from errors.
-        """
-        await self.app.run()
-
-    async def task(self):
-        """
-        Run the app as a subtask.
-
-        You typically don't override this.
-        """
-        async with TaskGroup() as tg:
-            if self.app is not None:
-                await tg.spawn(self.run_app)
-            await self.app.wait_ready()
-            self.set_ready()
-
-            # await self.app.stopped()
-            # the return from the taskgroup already does that
-
-    async def setup(self):
-        await super().setup()
-        self.app = await self.gen_cmd()
-        if self.app is not None:
-            self.app.attached(self, self.name)
-            self.set_ready()
-
-    async def reload(self):
-        await super().reload()
-        if self.app is not None:
-            await self.app.reload()
-
-    async def wait_ready(self, wait=True):
-        if await super().wait_ready(wait=wait):
-            return True
-        if self.app is None:
-            return None
-        return await self.app.wait_ready(wait=wait)
-
-    async def gen_cmd(self) -> BaseCmd:
-        """
-        Create the actual app to use.
-
-        The default uses `None` and leaves the setup to `task`.
-        """
-        return None
-
-    async def dispatch(self, action, msg, **kw):
-        """
-        Forward to the sub-app unless specifically directed not to.
-        """
-        if action and action[0][0] == "!":
-            action = tuple(action[0][1:], *action[1:])
-            return await super().dispatch(action, msg, **kw)
-
-        await self.wait_ready()
-        return await self.app.dispatch(action, msg, **kw)
-
-    def set_ready(self):
-        if self.app is None:
-            raise RuntimeError("early")
-        super().set_ready()
-
-    def __getattr__(self, k):
-        if k.startswith("_"):
-            raise AttributeError(k)
-        if k.endswith("_f"):
-            return getattr(self, k[:-2])
-        return getattr(self.app, k)
-
-
-class BaseFwdCmd(BaseLayerCmd):
-    """
-    A handler for a single nested app that's configured locally.
-    """
-
-    async def gen_cmd(self):
-        """
-        Create the underlying app object
-        """
-        if self.root.APP is None:
-            raise RuntimeError("WhereApp")
-        gcfg = self.cfg
-        name = gcfg.get("app", None)
-        cfg = gcfg.get("cfg", {})
-        log("Setup %s: %s", self.path, name)
-
-        if name is None:
-            if self.app is not None:
-                self.app.stop()
-                self.app = None
-            return
-
-        def imp(name):
-            return import_(f"{self.root.APP}.{name}", 1)
-
-        return imp(name)(cfg)
 
 
 class BaseSubCmd(BaseSuperCmd):
@@ -276,125 +144,6 @@ class BaseSubCmd(BaseSuperCmd):
         return res
 
 
-class BaseListenOneCmd(BaseLayerCmd):
-    """
-    An app that runs a listener and accepts a single connection.
-
-    Override `listener` to return it.
-
-    TODO: this needs to be a stream layer instead: we want the
-    Reliable module to be able to pick up where it left off.
-    """
-
-    def listener(self) -> BaseConnIter:
-        """
-        How to get new connections. Returns a BaseConnIter.
-
-        Must be implemented in your subclass.
-        """
-        raise NotImplementedError
-
-    def wrapper(self, conn) -> BaseMsg:
-        """
-        How to wrap the connection so that you can communicate on it.
-
-        By default, use `console_stack`.
-        """
-        # pylint:disable=import-outside-toplevel
-        from moat.micro.stacks.console import console_stack
-
-        return console_stack(conn, self.cfg)
-
-    async def reject(self, conn: BaseBuf):
-        """
-        Close the connection.
-        """
-        # an async context should do it
-        async with conn:
-            pass
-
-    async def handler(self, conn):
-        """
-        Process a connection
-        """
-        from moat.micro.cmd.stream.cmdmsg import ExtCmdMsg  # pylint:disable=import-outside-toplevel
-
-        app = ExtCmdMsg(self.wrapper(conn), self.cfg)
-        if (
-            self.app is None
-            or not self.app.is_ready()
-            or self._running
-            or self.cfg.get("replace", True)
-        ):
-            if self.app is not None:
-                await self.app.stop()
-            app.attached(self, "_")
-            self.app = app
-            await self.start_app(app)
-            self.set_ready()
-            await app.wait_ready()
-
-            await app.wait_stopped()
-            if self.app is app:
-                self.app = None
-        else:
-            # close the thing
-            await self.reject(conn)
-
-    async def task(self) -> Never:
-        """
-        Accept connections.
-        """
-        async with self.listener() as conns:
-            async for conn in conns:
-                await self.tg.spawn(self.handler, conn)
-
-
-class BaseListenCmd(BaseSubCmd):
-    """
-    An app that runs a listener and connects all incoming connections
-    to numbered subcommands.
-
-    Override `listener` to return an async context manager / iterator.
-    """
-
-    seq = 1
-
-    # no multiple inheritance for MicroPython
-    listener = BaseListenOneCmd.listener
-    wrapper = BaseListenOneCmd.wrapper
-
-    async def handler(self, conn):
-        """
-        Process a new connection.
-        """
-        from moat.micro.cmd.stream.cmdmsg import ExtCmdMsg  # pylint:disable=import-outside-toplevel
-
-        conn = self.wrapper(conn)
-        app = ExtCmdMsg(conn, self.cfg)
-        seq = self.seq
-        if seq > len(self.sub) * 3:
-            seq = 10
-        while seq in self.sub:
-            seq += 1
-        self.seq = seq + 1
-        await self.attach(seq, app)
-        await self.start_app(app)
-        await app.wait_ready()
-
-        await app.wait_stopped()
-        await self.detach(seq)
-
-    async def task(self) -> Never:
-        """
-        Accept connections.
-        """
-        async with self.listener() as conns:
-            self.set_ready()
-            async for conn in conns:
-                await self.tg.spawn(self.handler, conn)
-
-
 class DirCmd(BaseSubCmd):
     """
     A BaseSubCmd handler with apps started by local configuration.
@@ -471,7 +220,7 @@ class Dispatch(DirCmd):
     parameter or some key/value data. The response is returned / raised.
     """
 
-    APP = None  # server / satellite must override
+    APP = "app"  # Satellite. server must override.
 
     def __init__(self, cfg, run=False):
         super().__init__(cfg)
@@ -491,8 +240,6 @@ class Dispatch(DirCmd):
     def sub_at(self, *p):
         "returns a SubDispatch to this path"
         # pylint:disable=import-outside-toplevel,cyclic-import,redefined-outer-name
-        from .tree import SubDispatch
-
         return SubDispatch(self, p)
 
     @property

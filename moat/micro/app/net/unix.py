@@ -45,7 +45,7 @@ def LinkIn(*a,**k):
     New connections may or may not supersede existing ones, depending on the
     "replace" config item.
     """
-    from moat.micro.cmd.tree import BaseListenOneCmd
+    from moat.micro.cmd.tree.listen import BaseListenOneCmd
     from moat.micro.stacks.unix import UnixIter
 
     class _LinkIn(BaseListenOneCmd):
@@ -58,7 +58,7 @@ def Port(*a,**k):
     """
     An app that accepts multiple Unix connections.
     """
-    from moat.micro.cmd.tree import BaseListenCmd
+    from moat.micro.cmd.tree.listen import BaseListenCmd
     from moat.micro.stacks.unix import UnixIter
 
     class _Port(BaseListenCmd):

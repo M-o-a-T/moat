@@ -7,39 +7,52 @@ from contextlib import suppress
 
 import machine
 
+# XXX m.m.compat and msgpack cannot be superseded
 from moat.micro.compat import log
-from moat.micro.rtc import state
+
+import msgpack as mp
 
 cfg = {}
 
 
 def set_rtc(attr, value=None, fs=None):
     "Setter for a value in RTC / file system"
-    if state is None and fs is False:
-        raise RuntimeError("no RTC")
-    if state is not None and not fs:
-        state[attr] = state
-    else:
-        fn = f"moat.{attr}"
+    if not fs:
+        m = machine.RTC().memory
         try:
-            f = open(fn)  # noqa:SIM115
-        except OSError:
-            pass  # most likely file not found
+            s = mp.unpackb(m())
+        except ValueError:
+            pass
         else:
-            with f:
-                d = f.read()
-            if d == str(value):
-                return
-        with open(fn, "w") as f:
-            f.write(str(value))
+            s[attr] = value
+            m(mp.packb(s))
+            return
+    if fs is False:
+        raise ValueError("no RTC")
+    fn = f"moat.{attr}"
+    try:
+        f = open(fn)  # noqa:SIM115
+    except OSError:
+        pass  # most likely file not found
+    else:
+        with f:
+            d = f.read()
+        if d == str(value):
+            return
+    with open(fn, "w") as f:
+        f.write(str(value))
 
 
 def get_rtc(attr, fs=None, default=None):
     "Getter for a value in RTC / file system"
-    if state is not None and fs is not True:  # noqa:SIM102
-        if attr in state:
-            return state[attr]
-    if state is None or fs is not False:
+    if not fs:
+        try:
+            m = machine.RTC().memory
+            s = mp.unpackb(m())
+            return s[attr]
+        except (ValueError, KeyError):
+            pass
+    if fs is not False:
         try:
             f = open(f"moat.{attr}")  # noqa:SIM115
         except OSError:
@@ -121,8 +134,6 @@ def go(state=None, fake_end=True):
 
     fallback = False
     if state in ("fallback", "fbskip"):
-        import sys
-
         sys.path.insert(0, "/fallback")
         fallback = True
 

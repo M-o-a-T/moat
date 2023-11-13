@@ -57,6 +57,8 @@ class ExtType:
     """ExtType represents extension types in msgpack."""
 
     def __init__(self, code, data):
+        if isinstance(data, memoryview):
+            data = bytes(data)
         self.code = code
         self.data = data
 

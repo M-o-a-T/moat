@@ -692,10 +692,8 @@ async def copytree(src: APath, dst: MoatPath, check=None, drop=None, cross=None)
             if cross:
                 try:
                     p = str(src)
-                    if (pi := p.find("/_embed/")) > 0:
-                        p = p[pi + 8 :]
-                    if p.startswith("lib/moat/"):
-                        p = p[9:]
+                    if (pi := p.find("/_embed/lib/")) > 0:
+                        p = p[pi + 12 :]
                     data = await anyio.run_process([cross, str(src), "-s", p, "-o", "/dev/stdout"])
                 except CalledProcessError as exc:
                     print(exc.stderr.decode("utf-8"), file=sys.stderr)

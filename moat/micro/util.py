@@ -59,16 +59,18 @@ async def _run_update(src, dest: MoatPath, check=None, cross=None):
             return None
 
         # assume dst is relative
-        sp = src / dst
+        sp = src.parent / dst
         # XXX we might want to ask git which files differ,
         # it's supposed to have a cache for that
         repl = dst._repl  # noqa:SLF001
         dn = str(dst)[:-3].replace("/", ".")
+        if dn.startswith("lib."):
+            dn = dn[4:]
         if dn.endswith(".__init__"):
             dn = dn[:-9]
         try:
             res = await repl.exec(f"import _hash; print(repr(_hash.hash[{dn !r}])); del _hash")
-        except ImportError:
+        except (ImportError, KeyError):
             return False
         res = eval(res.strip())  # noqa:S307,PGH001
         return res == hash256(await _rd(sp))[:8]

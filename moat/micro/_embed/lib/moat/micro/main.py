@@ -44,7 +44,7 @@ def main(cfg: str | dict, fake_end=False):
         try:
             if (m := rtc.memory()) != b"":
                 cf2 = msgpack.unpackb(m)
-                for k, v in cf2:
+                for k, v in cf2.items():
                     if not isinstance(v, dict):
                         continue
                     merge(cfg.setdefault(k, {}), v)

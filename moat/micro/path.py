@@ -233,7 +233,7 @@ class MoatDevPath(MoatPath):
         to speed up operations.
         """
         if self._stat_cache is None:
-            st = await self._repl.evaluate(f"import os; print(os.stat({self.as_posix()!r}))")
+            st = await self._repl.evaluate(f"import os; print(os.stat({self.as_posix()!r}))", quiet=True)
             self._stat_cache = os.stat_result(st)
         return self._stat_cache
 
@@ -268,7 +268,7 @@ class MoatDevPath(MoatPath):
         """
         self._stat_cache = None
         try:
-            await self._repl.evaluate(f"import os; print(os.remove({self.as_posix()!r}))")
+            await self._repl.evaluate(f"import os; print(os.remove({self.as_posix()!r}))", quiet=True)
         except FileNotFoundError:
             if not missing_ok:
                 raise
@@ -286,6 +286,7 @@ class MoatDevPath(MoatPath):
         self._stat_cache = None
         await self._repl.evaluate(
             f"import os; print(os.rename({self.as_posix()!r}, {target.as_posix()!r}))",
+            quiet=True,
         )
         return self.with_name(target)  # XXX, moves across dirs
 
@@ -299,7 +300,7 @@ class MoatDevPath(MoatPath):
         Create new directory.
         """
         try:
-            return await self._repl.evaluate(f"import os; print(os.mkdir({self.as_posix()!r}))")
+            return await self._repl.evaluate(f"import os; print(os.mkdir({self.as_posix()!r}))", quiet=True)
         except FileExistsError:
             if exist_ok:
                 pass
@@ -318,7 +319,7 @@ class MoatDevPath(MoatPath):
 
         Remove (empty) directory
         """
-        await self._repl.evaluate(f"import os; print(os.rmdir({self.as_posix()!r}))")
+        await self._repl.evaluate(f"import os; print(os.rmdir({self.as_posix()!r}))", quiet=True)
         self._stat_cache = None
 
     async def read_as_stream(self):
@@ -340,14 +341,16 @@ class MoatDevPath(MoatPath):
             "    if not n: break\n"
             '    print(ubinascii.b2a_base64(_mem[:n]), ",")\n'
             '  print("]")',
+            quiet=True,
         )
         while True:
-            blocks = await self._repl.evaluate(f"_b({n_blocks})")
+            blocks = await self._repl.evaluate(f"_b({n_blocks})",
+                    quiet=True)
             if not blocks:
                 break
             for block in blocks:
                 yield binascii.a2b_base64(block)
-        await self._repl.exec("_f.close(); del _f, _b")
+        await self._repl.exec("_f.close(); del _f, _b", quiet=True)
 
     async def read_bytes(self) -> bytes:
         """
@@ -372,6 +375,7 @@ class MoatDevPath(MoatPath):
             raise TypeError(f"contents must be bytes/bytearray, got {type(data)} instead")
         await self._repl.exec(
             f'from binascii import a2b_base64 as _a2b; _f = open({self.as_posix()!r}, "wb")',
+            quiet=True,
         )
         # write in chunks
         with io.BytesIO(data) as local_file:
@@ -379,8 +383,8 @@ class MoatDevPath(MoatPath):
                 block = local_file.read(chunk)
                 if not block:
                     break
-                await self._repl.exec(f"_f.write(_a2b({binascii.b2a_base64(block).rstrip()!r}))")
-        await self._repl.exec("_f.close(); del _f, _a2b")
+                await self._repl.exec(f"_f.write(_a2b({binascii.b2a_base64(block).rstrip()!r}))", quiet=True)
+        await self._repl.exec("_f.close(); del _f, _a2b", quiet=True)
         return len(data)
 
     # read_text(), write_text()
@@ -392,7 +396,7 @@ class MoatDevPath(MoatPath):
         if not self.is_absolute():
             raise ValueError(f'only absolute paths are supported (beginning with "/"): {self!r}')
         # simple version
-        # remote_paths = self._repl.evaluate(f'import os; print(os.listdir({self.as_posix()!r}))')
+        # remote_paths = self._repl.evaluate(f'import os; print(os.listdir({self.as_posix()!r}))', quiet=True)
         # return [(self / p).connect_repl(self._repl) for p in remote_paths]
         # variant with pre-loading stat info
         posix_path_slash = self.as_posix()
@@ -403,6 +407,7 @@ class MoatDevPath(MoatPath):
             f"for n in os.listdir({self.as_posix()!r}): "
             '    print("[", repr(n), ",", os.stat({posix_path_slash!r} + n), "],")\n'
             'print("]")',
+            quiet=True,
         )
         for p, st in remote_paths_stat:
             yield (self / p)._with_stat(st)  # noqa:SLF001 pylint:disable=protected-access
@@ -424,6 +429,7 @@ class MoatDevPath(MoatPath):
                 "    if not _n: break\n"
                 "    _h.update(_mem[:_n])\n"
                 "del _n, _f, _mem\n",
+                quiet=True,
             )
         except ImportError:
             # fallback if no hashlib is available: download and hash here.
@@ -437,7 +443,7 @@ class MoatDevPath(MoatPath):
         except OSError:
             hash_value = b""
         else:
-            hash_value = await self._repl.evaluate("print(_h.digest()); del _h")
+            hash_value = await self._repl.evaluate("print(_h.digest()); del _h", quiet=True)
         return hash_value
 
 
@@ -727,7 +733,7 @@ async def copytree(src: APath, dst: MoatPath, check=None, drop=None, cross=None)
             logger.info("Copy: updated %s > %s", src, dst)
             return 1
         else:
-            logger.debug("Copy: unchanged %s > %s", src, dst)
+            # logger.debug("Copy: unchanged %s > %s", src, dst)
             return 0
     else:
         if dst.name == "__pycache__":
@@ -737,7 +743,9 @@ async def copytree(src: APath, dst: MoatPath, check=None, drop=None, cross=None)
         with suppress(OSError, RemoteError):
             s = await dst.stat()
 
-        logger.debug("Copy: dir %s > %s", src, dst)
+        # logger.debug("Copy: dir %s > %s", src, dst)
+        print("  Copy:", dst, "       ", end="\r", file=sys.stderr)
+        sys.stderr.flush()
         async for s in src.iterdir():
             if check is not None and not await check(s):
                 continue
@@ -758,9 +766,9 @@ async def copy_over(src, dst, cross=None):
             dst /= src.name
     while n := await copytree(src, dst, cross=cross):
         tn += n
-        if n == 1:
-            logger.info("One file changed. Verifying.")
-        else:
-            logger.info("%d files changed. Verifying.", n)
-    logger.info("Done. No (more) differences detected.")
+#       if n == 1:
+#           logger.info("One file changed. Verifying.")
+#       else:
+#           logger.info("%d files changed. Verifying.", n)
+#   logger.info("Done. No (more) differences detected.")
     return tn

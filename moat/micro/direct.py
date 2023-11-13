@@ -100,9 +100,10 @@ class DirectREPL(SingleAnyioBuf):
             if m:
                 raise __builtins__[m.group(1)](m.group(2))
 
-    async def exec_raw(self, cmd, timeout=5):
+    async def exec_raw(self, cmd, timeout=5, quiet=False):
         """Exec code, returning (stdout, stderr)"""
-        logger.debug("Exec: %r", cmd)
+        if not quiet:
+            logger.debug("Exec: %r", cmd)
         await self.serial.send(cmd.encode("utf-8"))
         await self.serial.send(b"\x04")
 
@@ -131,23 +132,24 @@ class DirectREPL(SingleAnyioBuf):
             raise OSError(f"data was not accepted: {out}: {err}")
         out = out[2:].decode("utf-8")
         err = err.decode("utf-8")
-        if out:
-            logger.debug("OUT %r", out)
-        if err:
-            logger.debug("ERR %r", err)
+        if not quiet:
+            if out:
+                logger.debug("OUT %r", out)
+            if err:
+                logger.debug("ERR %r", err)
         return out, err
 
-    async def exec(self, cmd, timeout=3):
+    async def exec(self, cmd, timeout=3, quiet=False):
         """run a command"""
         if not cmd.endswith("\n"):
             cmd += "\n"
-        out, err = await self.exec_raw(cmd, timeout)
+        out, err = await self.exec_raw(cmd, timeout, quiet=quiet)
         if err:
             self._parse_error(err)
             raise OSError(f"execution failed: {out}: {err}")
         return out
 
-    async def evaluate(self, cmd):
+    async def evaluate(self, cmd, quiet=False):
         """
         :param str code: code to execute
         :returns: Python object
@@ -156,7 +158,7 @@ class DirectREPL(SingleAnyioBuf):
         parsed using ``ast.literal_eval`` so that numbers, strings, lists etc.
         can be handled as Python objects.
         """
-        return ast.literal_eval(await self.exec(cmd))
+        return ast.literal_eval(await self.exec(cmd, quiet=quiet))
 
     async def soft_reset(self, run_main=True):
         """

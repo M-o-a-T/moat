@@ -5,4 +5,4 @@ from __future__ import annotations
 
 import sys
 
-print("BOOT", file=sys.stderr)
+print("\n*** MoaT ***\n", file=sys.stderr)

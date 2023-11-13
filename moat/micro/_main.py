@@ -475,12 +475,20 @@ async def mount_(obj, path, blocksize):
 
 
 @cli.command("path")
-async def path_():
+@click.pass_obj
+@click.option("-m", "--manifest", is_flag=True, help="main manifest")
+async def path_(obj, manifest):
     """Path to the embedded system's files"""
 
     import moat.micro
+    import pathlib
+
+    if manifest:
+        import moat.micro._embed._tag as m
+        print(m.__file__.replace("_tag","manifest"), file=obj.stdout)
+        return
 
     for p in moat.micro.__path__:
-        p = P(p) / "_embed" / "lib"  # noqa:PLW2901
+        p = pathlib.Path(p) / "_embed" / "lib"  # noqa:PLW2901
         if p.exists():
             print(p)

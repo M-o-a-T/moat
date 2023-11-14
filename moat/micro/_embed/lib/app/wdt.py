@@ -20,7 +20,7 @@ There is one main "wdt" option which
 from __future__ import annotations
 
 from moat.micro.cmd.base import BaseCmd
-from moat.micro.compat import Event
+from moat.micro.compat import Event, L
 from moat.micro.wdt import WDT, M
 
 
@@ -41,13 +41,14 @@ class Cmd(BaseCmd):
             self.wdt = WDT(cfg)
 
     async def task(self):  # noqa:D102
-        self.wdt.setup(self.cfg)
-        self.set_ready()
+        self.wdt.setup()
+        if L:
+            self.set_ready()
         await self.wdt.run()
 
     async def reload(self):  # noqa:D102
         await super().reload()
-        self.wdt.setup(self.cfg)
+        self.wdt.setup()
         self.wdt.ping()
 
     async def cmd_x(self, f=False, n=None):  # noqa:ARG002

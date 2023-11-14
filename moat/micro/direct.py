@@ -51,14 +51,14 @@ class DirectREPL(SingleAnyioBuf):
         self.srbuf = BufferedByteReceiveStream(self.serial)
 
         await self.serial.send(b"\x02\x03")  # exit raw repl, CTRL+C
-        await self.flush_in(0.2)
+        await self.flush_in(1.5)
         await self.serial.send(b"\x03\x01")  # CTRL+C, enter raw repl
+        await self.flush_in(0.2)
 
         # Rather than wait for a longer timeout we try sending a command.
         # Most likely the first time will go splat because the response
         # doesn't start with "OK", but that's fine, just try again.
         try:
-            await anyio.sleep(0.1)
             await self.exec_raw("1")
         except (OSError,TimeoutError):
             await self.serial.send(b"\x02\x03")  # exit raw repl, CTRL+C

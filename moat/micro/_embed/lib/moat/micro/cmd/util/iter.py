@@ -263,38 +263,3 @@ class RecvIter(_DelayedIter):
         "cancel the iterator"
         self._val.set_error(StoppedError("cancel"))
         self._warned = 0
-
-
-class CallIter:
-    """
-    An iterator helper.
-
-    You initialize it with the read function.
-
-    The optional "old" attribute (override) is a function that extracts
-    an ``o=`` parameter from the previous return value, so that constant
-    results won't trigger the iterator.
-    """
-
-    old = None
-
-    def __init__(self, fn):
-        self.fn = fn
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *tb):
-        pass
-
-    def __aiter__(self):
-        self.o = None
-        return self
-
-    async def __anext__(self):
-        if self.o is None or self.old is None:
-            v = await self.fn()
-        else:
-            v = await self.fn(o=self.old(self.o))
-        self.o = v
-        return v

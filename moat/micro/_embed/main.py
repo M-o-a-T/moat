@@ -3,6 +3,11 @@ Datellite main code.
 """
 from __future__ import annotations
 
+import gc as _gc
+_gc.collect()
+_fm=_gc.mem_free()
+_fa=_gc.mem_alloc()
+
 from contextlib import suppress
 
 import machine
@@ -14,7 +19,7 @@ from moat.rtc import get_rtc,set_rtc
 
 cfg = {}
 
-def go(state=None, fake_end=True):
+def go(state=None, fake_end=True, free=None):
     """
     Start MoaT.
 
@@ -92,7 +97,7 @@ def go(state=None, fake_end=True):
     from moat.micro.main import main
 
     cfg = "moat_fb.cfg" if fallback else "moat.cfg"
-    i=attrdict(fb=fallback, s=state, ns=new_state)
+    i=attrdict(fb=fallback, s=state, ns=new_state, fm=_fm,fa=_fa)
 
     try:
         main(cfg, i=i, fake_end=fake_end)

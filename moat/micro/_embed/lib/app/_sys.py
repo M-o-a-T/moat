@@ -35,9 +35,10 @@ class Cmd(_Cmd):
         """
         Info about memory. Calls `gc.collect`.
 
-        * f: free memory
-        * c: memory freed by the garbage collector
+        * c: bytes freed by the garbage collector
         * t: time (ms) for the garbage collector to run
+        * a: allocation: (now,early)
+        * f: free memory: (now,early)
         """
         t1 = ticks_ms()
         f1 = gc.mem_free()
@@ -45,7 +46,7 @@ class Cmd(_Cmd):
         f2 = gc.mem_free()
         a2 = gc.mem_alloc()
         t2 = ticks_ms()
-        return dict(t=ticks_diff(t2, t1), a=a2, m=self.root.i.free - f2, f=f2, c=f2 - f1)
+        return dict(t=ticks_diff(t2, t1), a=(a2,self.root.i.fa), f=(f2,self.root.i.fm), c=f2 - f1)
 
     async def cmd_boot(self, code):
         """

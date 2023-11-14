@@ -92,7 +92,7 @@ def main(cfg: str | dict, i:attrdict, fake_end=False):
         from moat.micro.compat import idle
         from moat.util import attrdict
 
-        async with Dispatch(cfg, i=attrdict( )) as dsp:
+        async with Dispatch(cfg, i=i) as dsp:
             if fake_end:
                 from .compat import sleep_ms
 

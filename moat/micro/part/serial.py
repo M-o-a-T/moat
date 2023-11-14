@@ -61,7 +61,7 @@ class Serial(AnyioBuf):
         if rts_flip or dtr_flip:
             ser.rts = rts_flip ^ rts
             ser.dtr = dtr_flip ^ dtr
-            await anyio.sleep(0.1)
+            await anyio.sleep(0.2)
         ser.rts = rts
         ser.dtr = dtr
 

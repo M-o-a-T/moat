@@ -60,13 +60,16 @@ class DirectREPL(SingleAnyioBuf):
         try:
             await anyio.sleep(0.1)
             await self.exec_raw("1")
-        except OSError:
+        except (OSError,TimeoutError):
+            await self.serial.send(b"\x02\x03")  # exit raw repl, CTRL+C
+            await self.flush_in(0.2)
+            await self.serial.send(b"\x03\x01")  # CTRL+C, enter raw repl
             try:
                 await anyio.sleep(0.2)
-                await self.exec_raw("1")
+                await self.exec_raw("2")
             except OSError:
                 await anyio.sleep(0.2)
-                await self.exec_raw("1")
+                await self.exec_raw("3")
         return self.serial
 
     async def flush_in(self, timeout=0.1):
@@ -117,7 +120,8 @@ class DirectREPL(SingleAnyioBuf):
         except TimeoutError:
             # interrupt, read output again to get the expected traceback message
             await self.serial.send(b"\x03")  # CTRL+C
-            data = await self.srbuf.receive_until(b"\x04>", max_bytes=10000)
+            with anyio.fail_after(3):
+                data = await self.srbuf.receive_until(b"\x04>", max_bytes=10000)
 
         try:
             out, err = data.split(b"\x04")
@@ -177,14 +181,14 @@ class DirectREPL(SingleAnyioBuf):
             # and consume all the outputs form the soft reset
             try:
                 await anyio.sleep(0.1)
-                await self.exec("1")
+                await self.exec("4")
             except OSError:
                 try:
                     await anyio.sleep(0.2)
-                    await self.exec("1")
+                    await self.exec("5")
                 except OSError:
                     await anyio.sleep(0.2)
-                    await self.exec("1")
+                    await self.exec("6")
 
     async def statvfs(self, path):
         """

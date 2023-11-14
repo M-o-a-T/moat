@@ -16,8 +16,8 @@ class Dispatch(_Dispatch):
 
     APP = "moat.micro.app"
 
-    def __init__(self, cfg, sig=False, run=False):
-        super().__init__(cfg, run=run)
+    def __init__(self, cfg, sig=False, **kw):
+        super().__init__(cfg, **kw)
         self.sig = sig
 
     async def setup(self):

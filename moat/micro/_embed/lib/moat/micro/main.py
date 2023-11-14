@@ -9,15 +9,21 @@ import sys
 
 import machine
 
+from moat.rtc import all_rtc,get_rtc,set_rtc
 from moat.util import merge
 from moat.micro.compat import print_exc
 
 import msgpack
 
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from moat.util import attrdict
+
 WDT = None
 
 
-def main(cfg: str | dict, fake_end=False):
+def main(cfg: str | dict, i:attrdict, fake_end=False):
     """
     The MoaT.micro satellite's main entry point.
 
@@ -36,21 +42,9 @@ def main(cfg: str | dict, fake_end=False):
             cfg = msgpack.unpackb(f.read())
 
     # Update config from RTC memory, if present
-    try:
-        rtc = machine.RTC()
-    except AttributeError:
-        pass
-    else:
-        try:
-            if (m := rtc.memory()) != b"":
-                cf2 = msgpack.unpackb(m)
-                for k, v in cf2.items():
-                    if not isinstance(v, dict):
-                        continue
-                    merge(cfg.setdefault(k, {}), v)
-
-        except Exception as exc:
-            print_exc(exc)
+    if not i.fb:
+        for k, v in all_rtc():
+            merge(cfg.setdefault(k, {}), v)
 
     def cfg_network(n):
         import time
@@ -96,8 +90,9 @@ def main(cfg: str | dict, fake_end=False):
 
         from moat.micro.cmd.tree.dir import Dispatch
         from moat.micro.compat import idle
+        from moat.util import attrdict
 
-        async with Dispatch(cfg) as dsp:
+        async with Dispatch(cfg, i=attrdict( )) as dsp:
             if fake_end:
                 from .compat import sleep_ms
 

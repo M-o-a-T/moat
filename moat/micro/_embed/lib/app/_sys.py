@@ -14,27 +14,22 @@ class Cmd(_Cmd):
     System stuff that's satellite specific
     """
 
-    async def cmd_state(self, state=None):
+    async def cmd_state(self):
         """
-        Set/return the string in the MoaT state file.
+        Return the root info.
+        """
+        return self.root.i
 
-        The result is a dict:
-        * n: current file content
-        * c: state when the system was booted
-        * fb: flag whether the current state is a fall-back state
+    async def cmd_rtc(self, k="state", v=None, fs=None):
         """
+        Set/return a MoaT state.
+        """
+        from moat.rtc import get_rtc,set_rtc
+
         if state is not None:
-            with open("moat.state", "w") as f:  # noqa:ASYNC101
-                f.write(state)
+            set_rtc(k, v, fs=fs)
         else:
-            try:
-                f = open("moat.state")  # noqa:ASYNC101,SIM115
-            except OSError:
-                state = None
-            else:
-                with f:
-                    state = f.read()
-        return dict(n=state, c=self.root.moat_state, fb=self.root.is_fallback)
+            return get_rtc(k, fs=fs)
 
     async def cmd_mem(self):
         """
@@ -48,8 +43,9 @@ class Cmd(_Cmd):
         f1 = gc.mem_free()
         gc.collect()
         f2 = gc.mem_free()
+        a2 = gc.mem_alloc()
         t2 = ticks_ms()
-        return dict(t=ticks_diff(t2, t1), f=f2, c=f2 - f1)
+        return dict(t=ticks_diff(t2, t1), a=a2, m=self.root.i.free - f2, f=f2, c=f2 - f1)
 
     async def cmd_boot(self, code):
         """
@@ -62,11 +58,9 @@ class Cmd(_Cmd):
 
         async def _boot():
             await sleep_ms(100)
-            await self.root.send_nr("link", False)
-            await sleep_ms(1000)
             machine.soft_reset()
 
-        await self.root.spawn(_boot, _name="_sys.boot1")
+        await self.root.tg.spawn(_boot, _name="_sys.boot1")
         return True
 
     async def cmd_reset(self, code):
@@ -80,11 +74,9 @@ class Cmd(_Cmd):
 
         async def _boot():
             await sleep_ms(100)
-            await self.root.send_nr("link", False)
-            await sleep_ms(100)
             machine.reset()
 
-        await self.root.spawn(_boot, _name="_sys.boot2")
+        await self.root.tg.spawn(_boot, _name="_sys.boot2")
         return True
 
     async def cmd_stop(self, code):

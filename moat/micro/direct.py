@@ -74,12 +74,19 @@ class DirectREPL(SingleAnyioBuf):
 
     async def flush_in(self, timeout=0.1):
         "flush incoming data"
+        started = False
+        b = b""
         while True:
             with anyio.move_on_after(timeout):
                 res = await self.serial.receive(200)
-                logger.debug("Flush: IN %r", bytes(res))
+                if not started:
+                    logger.debug("Flushing…")
+                    started = True
+                b = (b+res)[-200:]
                 continue
             break
+        if b:
+            logger.debug("Flush: IN %r", b)
         self.srbuf._buffer = bytearray()  # noqa:SLF001 pylint: disable=protected-access
 
     def _parse_error(self, text):

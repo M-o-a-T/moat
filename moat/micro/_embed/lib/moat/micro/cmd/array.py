@@ -5,6 +5,7 @@ A command that accesses a row of mostly-identical subcommands
 from __future__ import annotations
 
 from moat.util import combine_dict, import_
+from moat.micro.compat import L
 
 from .tree.dir import BaseSuperCmd
 from .util.part import set_part
@@ -30,25 +31,26 @@ class ArrayCmd(BaseSuperCmd):
         await super().setup()
         await self._setup_apps()
 
-    async def wait_ready(self, wait=True):
-        """Delay until this subtree is up,
+    if L:
+        async def wait_ready(self, wait=True):
+            """Delay until this subtree is up,
 
-        Returns True if any sub-apps are stopped.
-        """
-        await super().wait_ready(wait=wait)
-        again = True
-        res = False
-        while again:
-            again = False
-            for app in self.apps:
-                if (w := await app.wait_ready(wait=wait)) is None:
-                    if not wait:
-                        return None
-                    again = True
-                    res = None
-                elif w is True:
-                    return True
-        return res
+            Returns True if any sub-apps are stopped.
+            """
+            await super().wait_ready(wait=wait)
+            again = True
+            res = False
+            while again:
+                again = False
+                for app in self.apps:
+                    if (w := await app.wait_ready(wait=wait)) is None:
+                        if not wait:
+                            return None
+                        again = True
+                        res = None
+                    elif w is True:
+                        return True
+            return res
 
     async def attach(self, name, app) -> None:
         """

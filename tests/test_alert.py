@@ -7,7 +7,7 @@ import pytest
 
 from moat.micro._test import mpy_stack
 from moat.micro.alert import Alert as _Alert
-from moat.micro.compat import Event, TaskGroup, sleep_ms
+from moat.micro.compat import Event, TaskGroup, sleep_ms, L
 
 CFG = """
 apps:
@@ -59,7 +59,8 @@ async def test_ary(tmp_path):
         b = d.sub_at("b")
         c = d.sub_at("c")
 
-        await d.wait_ready()
+        if L:
+            await d.wait_ready()
         await b.w(a=AlertA, p=("x",), d={"a": "Foo"})
         await sleep_ms(100)
 

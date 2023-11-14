@@ -128,6 +128,7 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
     type=click.Path(dir_okay=True, file_okay=False),
     help="Mount point for FUSE mount",
 )
+@click.option("-l/-L", "--large", type=bool, help="Use more RAM", default=None)
 @click.option("-s", "--state", type=str, help="State to enter by default")
 @click.option("-c", "--config", type=P, help="Config part to use for the device")
 @click.option("-w", "--watch", is_flag=True, help="monitor the target's output after setup")
@@ -153,6 +154,7 @@ async def setup(
     source,
     root,
     dest,
+    large,
     run,
     reset,
     state,
@@ -190,6 +192,12 @@ async def setup(
             await copy_over(source, dst, cross=cross)
         if state:
             await repl.exec(f"f=open('moat.state','w'); f.write({state !r}); f.close(); del f")
+        if large is not None:
+            if large:
+                await repl.exec(f"f=open('moat.lrg','w'); f.close()", quiet=True)
+            else:
+                await repl.exec(f"import os; os.unlink('moat.lrg')", quiet=True)
+
         if config:
             config = _clean_cfg(get_part(ocfg, config))
             f = ABytes(name="moat.cfg", data=packer(config))

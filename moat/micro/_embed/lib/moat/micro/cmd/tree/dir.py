@@ -7,7 +7,7 @@ from __future__ import annotations
 from functools import partial
 
 from moat.util import Path, import_
-from moat.micro.compat import AC_use, Event, TaskGroup, log
+from moat.micro.compat import AC_use, Event, TaskGroup, log, L
 from moat.micro.cmd.base import ACM_h, BaseCmd, ShortCommandError
 from moat.micro.cmd.base import ACM_h, BaseCmd, ShortCommandError
 
@@ -55,7 +55,8 @@ class BaseSuperCmd(BaseCmd):
         app.p_task = False
         try:
             app.p_task = await self.tg.spawn(_run, app)
-            await app.wait_started()
+            if L:
+                await app.wait_started()
         except BaseException:
             app.p_task = None
             raise
@@ -75,28 +76,29 @@ class BaseSubCmd(BaseSuperCmd):
         super().__init__(cfg)
         self.sub = {}
 
-    async def wait_ready(self, wait=True):
-        """Delay until this subtree is up,
+    if L:
+        async def wait_ready(self, wait=True):
+            """Delay until this subtree is up,
 
-        Returns True if all sub-apps are stopped.
-        """
-        await super().wait_ready(wait=wait)
-        again = True
-        res = False
-        while again:
-            again = False
-            if res:
-                # if all apps were dead, maybe they are not now
-                res = False
-            for app in list(self.sub.values()):
-                if (w := await app.wait_ready(wait=wait)) is None:
-                    if not wait:
-                        return None
-                    again = True
-                    res = None
-                elif res is not None:
-                    res &= w
-        return res
+            Returns True if all sub-apps are stopped.
+            """
+            await super().wait_ready(wait=wait)
+            again = True
+            res = False
+            while again:
+                again = False
+                if res:
+                    # if all apps were dead, maybe they are not now
+                    res = False
+                for app in list(self.sub.values()):
+                    if (w := await app.wait_ready(wait=wait)) is None:
+                        if not wait:
+                            return None
+                        again = True
+                        res = None
+                    elif res is not None:
+                        res &= w
+            return res
 
     async def attach(self, name, app) -> None:
         """
@@ -204,12 +206,14 @@ class DirCmd(BaseSubCmd):
             await self.start_app(app)
 
         # Third, wait for them to be up.
-        for app in self.sub.values():
-            if app.cfg.get("wait", True):
-                await app.wait_ready()
+        if L:
+            for app in self.sub.values():
+                if app.cfg.get("wait", True):
+                    await app.wait_ready()
 
         # Finally, mark done.
-        self.set_ready()
+        if L:
+            self.set_ready()
 
 
 class Dispatch(DirCmd):
@@ -231,7 +235,8 @@ class Dispatch(DirCmd):
         try:
             if self._run:
                 await self.tg.spawn(self.task)
-                await self.wait_ready()
+                if L:
+                    await self.wait_ready()
         except BaseException as exc:
             await super().__aexit__(type(exc), exc, None)
             raise
@@ -298,9 +303,10 @@ class SubDispatch:
         "root dispatcher"
         return self._dest.root
 
-    def wait_ready(self, wait: bool = True) -> Awaitable:
-        "forwards to the destination"
-        return self._dest.wait_ready(wait=wait)
+    if L:
+        def wait_ready(self, wait: bool = True) -> Awaitable:
+            "forwards to the destination"
+            return self._dest.wait_ready(wait=wait)
 
     def sub_at(self, *p):
         "create a sub-subdispatcher"

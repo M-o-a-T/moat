@@ -34,6 +34,7 @@ def const(_x):
     "compatibility with µPy"
     return _x
 
+L = const(True)
 
 ExceptionGroup = ExceptionGroup  # noqa:A001,PLW0127 pylint:disable=redefined-builtin,self-assigning-variable
 BaseExceptionGroup = BaseExceptionGroup  # noqa:A001,PLW0127 pylint:disable=redefined-builtin,self-assigning-variable

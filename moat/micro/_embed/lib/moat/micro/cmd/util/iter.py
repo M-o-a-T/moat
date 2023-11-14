@@ -13,6 +13,7 @@ from moat.micro.compat import (
     ticks_diff,
     ticks_ms,
     wait_for_ms,
+    L,
 )
 from moat.micro.proto.stack import RemoteError, SilentRemoteError
 from .valtask import ValueTask
@@ -29,6 +30,8 @@ if TYPE_CHECKING:
 
     from moat.micro.cmd.base import BaseCmd
 
+if not L:
+    raise RuntimeError("not Large")
 
 class IterWrap:
     """

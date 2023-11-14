@@ -4,7 +4,7 @@ Apps used for structure.
 
 from __future__ import annotations
 
-from moat.micro.compat import log, sleep_ms
+from moat.micro.compat import log, sleep_ms, L
 
 try:
     from moat.micro.proto.stream import ProcessDeadError
@@ -66,9 +66,10 @@ def Err(*a,**k):
         a: bool = None
 
         async def dispatch(self, *a, **k):  # noqa:D102
-            if self.app is None:
-                await super().wait_ready()
-            await self.app.wait_ready()
+            if L:
+                if self.app is None:
+                    await super().wait_ready()
+                await self.app.wait_ready()
             return await super().dispatch(*a, **k)
 
         async def reload(self):  # noqa:D102
@@ -80,14 +81,15 @@ def Err(*a,**k):
             self.t = self.cfg.get("timeout", 100)
             self.a = self.cfg.get("always", False)
 
-        async def wait_ready(self, wait: bool = True):
-            "allow for non-restarted sub-app"
-            while res := await super().wait_ready(wait=wait):
-                if not self.r:
-                    return res
-                await sleep_ms(1)
+        if L:
+            async def wait_ready(self, wait: bool = True):
+                "allow for non-restarted sub-app"
+                while res := await super().wait_ready(wait=wait):
+                    if not self.r:
+                        return res
+                    await sleep_ms(1)
 
-            return res
+                return res
 
         async def run_app(self):
             """

@@ -134,6 +134,9 @@ class MpyBuf(ProcessBuf):
         if mplex:
             with (root / "moat.cfg").open("wb") as f:
                 f.write(packer(self.cfg["cfg"]))
+            if self.cfg.get("large", True):
+                with (root / "moat.lrg").open("wb") as f:
+                    pass
 
             self.argv = [
                 # "strace","-s300","-o/tmp/bla",

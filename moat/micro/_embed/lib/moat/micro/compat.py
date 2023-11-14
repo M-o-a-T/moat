@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 def _l():
     import os
     try:
-        os.stat("/moat.lrg")
+        os.stat("moat.lrg")
     except OSError:
         return False
     else:

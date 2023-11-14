@@ -64,7 +64,8 @@ class BaseCmdMsg(BaseCmd):
             await AC_use(self, self._cleanup_open_commands)
             self.s = await self.stream()
             async with TaskGroup() as self.tg:
-                self.set_ready()
+                if L:
+                    self.set_ready()
                 while True:
                     msg = await self.s.recv()
                     await self._handle(msg)

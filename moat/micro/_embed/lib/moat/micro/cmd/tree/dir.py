@@ -226,9 +226,10 @@ class Dispatch(DirCmd):
 
     APP = "app"  # Satellite. server must override.
 
-    def __init__(self, cfg, run=False):
+    def __init__(self, cfg, run=False, i=None):
         super().__init__(cfg)
         self._run = run
+        self.i = i
 
     async def __aenter__(self):
         await super().__aenter__()

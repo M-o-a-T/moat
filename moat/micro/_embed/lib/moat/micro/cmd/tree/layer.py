@@ -59,7 +59,7 @@ class BaseLayerCmd(BaseSuperCmd):
                 await tg.spawn(self.run_app)
             if L:
                 await self.app.wait_ready()
-            self.set_ready()
+                self.set_ready()
 
             # await self.app.stopped()
             # the return from the taskgroup already does that
@@ -69,7 +69,8 @@ class BaseLayerCmd(BaseSuperCmd):
         self.app = await self.gen_cmd()
         if self.app is not None:
             self.app.attached(self, self.name)
-            self.set_ready()
+            if L:
+                self.set_ready()
 
     async def reload(self):
         await super().reload()
@@ -104,10 +105,11 @@ class BaseLayerCmd(BaseSuperCmd):
             await self.wait_ready()
         return await self.app.dispatch(action, msg, **kw)
 
-    def set_ready(self):
-        if self.app is None:
-            raise RuntimeError("early")
-        super().set_ready()
+    if L:
+        def set_ready(self):
+            if self.app is None:
+                raise RuntimeError("early")
+            super().set_ready()
 
     def __getattr__(self, k):
         if k.startswith("_"):

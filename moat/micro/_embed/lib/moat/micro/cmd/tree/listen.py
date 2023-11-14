@@ -70,7 +70,7 @@ class BaseListenOneCmd(BaseLayerCmd):
         app = ExtCmdMsg(self.wrapper(conn), self.cfg)
         if (
             self.app is None
-            or not self.app.is_ready()
+            # or not await self.app.is_ready()
             or self._running
             or self.cfg.get("replace", True)
         ):
@@ -79,8 +79,8 @@ class BaseListenOneCmd(BaseLayerCmd):
             app.attached(self, "_")
             self.app = app
             await self.start_app(app)
-            self.set_ready()
             if L:
+                self.set_ready()
                 await app.wait_ready()
 
             await app.wait_stopped()
@@ -140,6 +140,7 @@ class BaseListenCmd(BaseSubCmd):
         Accept connections.
         """
         async with self.listener() as conns:
-            self.set_ready()
+            if L:
+                self.set_ready()
             async for conn in conns:
                 await self.tg.spawn(self.handler, conn)

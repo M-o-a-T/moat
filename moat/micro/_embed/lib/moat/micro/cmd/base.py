@@ -102,22 +102,21 @@ class BaseCmd(Base):
     if L:
         _starting: Event = None
         _ready: Event = None
-        _stopped: Event = None
+    _stopped: Event = None
 
     def __init__(self, cfg):
         cfg["_cmd"] = self
         super().__init__(cfg)
         # self.cfg = cfg
-        if L:
-            self.init_events()
+        self.init_events()
 
-    if L:
-        def init_events(self):
-            "Setup events"
-            if self._stopped is None:
+    def init_events(self):
+        "Setup events"
+        if self._stopped is None:
+            if L:
                 self._starting = Event()
                 self._ready = Event()
-                self._stopped = Event()
+            self._stopped = Event()
 
     async def setup(self):
         """
@@ -125,11 +124,11 @@ class BaseCmd(Base):
 
         Call first when overriding.
         """
-        if L:
-            await AC_use(self, self.set_stopped)
-            if self._stopped is None:
-                self.init_events()
-            elif self._starting is None or self._starting.is_set():
+        await AC_use(self, self.set_stopped)
+        if self._stopped is None:
+            self.init_events()
+        elif L:
+            if self._starting is None or self._starting.is_set():
                 raise RuntimeError("DupStartA")
 
             self._starting.set()
@@ -149,16 +148,16 @@ class BaseCmd(Base):
         The default does nothing, which is probably the wrong thing to do.
         """
 
-    if L:
-        def set_stopped(self):
-            """
-            The command has ended.
-            """
-            if self._stopped is None:
-                return
-            self._stopped.set()
-            self._stopped = None
+    def set_stopped(self):
+        """
+        The command has ended.
+        """
+        if self._stopped is None:
+            return
+        self._stopped.set()
+        self._stopped = None
 
+        if L:
             if self._starting is not None:
                 self._starting.set()
                 self._starting = None
@@ -183,7 +182,8 @@ class BaseCmd(Base):
         If you override this, you're responsible for eventually calling `set_ready`.
         Otherwise the MoaT system will stall!
         """
-        self.set_ready()
+        if L:
+            self.set_ready()
         await idle()
 
     if L:
@@ -249,12 +249,12 @@ class BaseCmd(Base):
             """
             return self.wait_ready(wait=w)
 
-        async def wait_stopped(self):
-            "wait until this is no longer running"
-            if self._stopped is not None:
-                await self._stopped.wait()
+    async def wait_stopped(self):
+        "wait until this is no longer running"
+        if self._stopped is not None:
+            await self._stopped.wait()
 
-        cmd_stq = wait_stopped
+    cmd_stq = wait_stopped
 
     @property
     def path(self):

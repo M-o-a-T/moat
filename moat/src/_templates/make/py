@@ -15,6 +15,8 @@ CODE ?= $(subst -,/,$(PACKAGE))
 BUILD_DIR ?= build
 INPUT_DIR ?= docs/source
 
+RQ := grep -qs tool.ruff pyproject.toml
+
 # Sphinx options (are passed to build_docs, which passes them to sphinx-build)
 #   -W       : turn warning into errors
 #   -a       : write all files
@@ -60,16 +62,21 @@ cov:
 
 test: statictest pytest
 statictest:
-	black --check $(CODE) $(TESTS) $(SETUP)
-	python3 -misort --check $(CODE) $(TESTS) $(SETUP)
-	flake8p $(CODE) $(TESTS) $(SETUP)
-	pylint $(CODE) $(TESTS) $(SETUP)
+	${RQ} || black --check $(CODE) $(TESTS) $(SETUP)
+	${RQ} || python3 -misort --check $(CODE) $(TESTS) $(SETUP)
+	${RQ} || flake8p $(CODE) $(TESTS) $(SETUP)
+	${RQ} || pylint $(CODE) $(TESTS) $(SETUP)
+	${RQ} && ruff format $(CODE) $(TESTS) $(SETUP)
+	${RQ} && ruff check $(CODE) $(TESTS) $(SETUP)
+
 pytest:
 	$(PYTEST) $(PYTEST_OPTIONS) $(TESTS)
 
 format:
-	black $(CODE) $(TESTS) $(SETUP)
-	python3 -misort $(CODE) $(TESTS) $(SETUP)
+	${RQ} || black $(CODE) $(TESTS) $(SETUP)
+	${RQ} || python3 -misort $(CODE) $(TESTS) $(SETUP)
+	${RQ} && ruff format --check $(CODE) $(TESTS) $(SETUP)
+	${RQ} && ruff check --fix $(CODE) $(TESTS) $(SETUP)
 
 precommit: format test
 

@@ -4,16 +4,24 @@ well as MicroPython/uasyncio.
 
 Well, for the most part.
 """
+from __future__ import annotations
+
+import anyio as _anyio
 import logging
+import os
 import time as _time
 import traceback as _traceback
 from concurrent.futures import CancelledError
+from contextlib import suppress
+from inspect import currentframe
 
-import anyio as _anyio
-import greenback
+try:
+    import greenback
+except ImportError:
+    greenback = None
 
-from .queue import Queue  # pylint:disable=unused-import
 from .impl import NotGiven
+from .queue import Queue as _Queue
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +35,48 @@ sleep = _anyio.sleep
 EndOfStream = _anyio.EndOfStream
 BrokenResourceError = _anyio.BrokenResourceError
 ClosedResourceError = _anyio.ClosedResourceError
-TimeoutError = TimeoutError  # pylint:disable=redefined-builtin,self-assigning-variable
+TimeoutError = TimeoutError  # noqa:PLW0127,A001 pylint:disable=redefined-builtin,self-assigning-variable
+
+
+class QueueFull(Exception):
+    pass
+
+
+class QueueEmpty(Exception):
+    pass
+
+
+__all__ = [
+    "log",
+    "Queue",
+    "print_exc",
+    "ticks_ms",
+    "sleep_ms",
+    "wait_for",
+    "wait_for_ms",
+    "every_ms",
+    "every",
+    "idle",
+    "ticks_add",
+    "ticks_diff",
+    "run",
+    "TaskGroup",
+    "run_server",
+    "shield",
+]
+
+
+def log(s, *x, err=None, nback=1):
+    "Basic logger.debug/error call (depends on @err)"
+    caller = currentframe()
+    for _ in range(nback):
+        if caller.f_back is None:
+            break
+        caller = caller.f_back
+    log_ = logging.getLogger(caller.f_globals["__name__"])
+    (log_.debug if err is None else log_.error)(s, *x, exc_info=err, stacklevel=1 + nback)
+    if err and int(os.getenv("LOG_BRK", "0")):
+        breakpoint()  # noqa:T100 pylint:disable=forgotten-debug-statement
 
 
 def print_exc(exc):
@@ -106,7 +155,7 @@ _tg = None
 
 def TaskGroup():
     "A TaskGroup subclass (generator) that supports `spawn` and `cancel`"
-    global _tg  # pylint:disable=global-statement
+    global _tg  # noqa:PLW0603 pylint:disable=global-statement
     if _tg is None:
         _tgt = type(_anyio.create_task_group())
 
@@ -122,11 +171,10 @@ def TaskGroup():
                 async def catch(p, a, k, *, task_status):
                     with _anyio.CancelScope() as s:
                         task_status.started(s)
-                        await greenback.ensure_portal()
-                        try:
+                        if greenback is not None:
+                            await greenback.ensure_portal()
+                        with suppress(CancelledError):  # error from concurrent.futures
                             await p(*a, **k)
-                        except CancelledError:  # error from concurrent.futures
-                            pass
 
                 return await super().start(catch, p, a, k, name=_name)
 
@@ -138,49 +186,53 @@ def TaskGroup():
     return _tg()
 
 
-async def run_server(cb, host, port, backlog=5, taskgroup=None, reuse_port=True):
+async def run_server(cb, host, port, backlog=5, taskgroup=None, reuse_port=True, evt=None):
     """Listen to and serve a TCP stream.
 
-    This mirrors [u]asyncio, including the fact that the callback gets the
-    socket twice.
+    This mirrors [u]asyncio, except that the callback gets the socket once.
     """
     listener = await _anyio.create_tcp_listener(
-        local_host=host, local_port=port, backlog=backlog, reuse_port=reuse_port
+        local_host=host,
+        local_port=port,
+        backlog=backlog,
+        reuse_port=reuse_port,
     )
+    async with listener:
+        if evt is not None:
+            evt.set()
+        await listener.serve(cb, task_group=taskgroup)
 
-    await listener.serve(lambda sock: cb(sock, sock), task_group=taskgroup)
 
+def shield():
+    """A wrapper shielding the contents from external cancellation.
 
-class AnyioMoatStream:
+    Equivalent to ``CancelScope(shield=True)``.
     """
-    Adapts an anyio stream to MoaT
+    return _anyio.CancelScope(shield=True)
+
+
+class Queue(_Queue):
+    """
+    compatibility mode: raise `EOFError` and `QueueEmpty`/`QueueFull`
+    instead of `anyio.EndOfStream` and `anyio.WouldBlock`
     """
 
-    def __init__(self, stream):
-        self.s = stream
-        self.aclose = stream.aclose
-
-    async def recv(self, n=128):
-        "basic receive"
+    async def get(self):  # noqa:D102
         try:
-            res = await self.s.receive(n)
-            return res
-        except (_anyio.EndOfStream, _anyio.ClosedResourceError):
+            return await super().get()
+        except _anyio.EndOfStream:
             raise EOFError from None
 
-    async def send(self, buf):
-        "basic send"
+    def get_nowait(self):  # noqa:D102
         try:
-            return await self.s.send(buf)
-        except (_anyio.EndOfStream, _anyio.ClosedResourceError):
+            return super().get_nowait()
+        except _anyio.EndOfStream:
             raise EOFError from None
+        except _anyio.WouldBlock:
+            raise QueueEmpty from None
 
-    async def recvi(self, buf):
-        "basic receive into"
+    def put_nowait(self, x):  # noqa:D102
         try:
-            res = await self.s.receive(len(buf))
-        except (_anyio.EndOfStream, _anyio.ClosedResourceError):
-            raise EOFError from None
-        else:
-            buf[: len(res)] = res
-            return len(res)
+            super().put_nowait(x)
+        except _anyio.WouldBlock:
+            raise QueueFull from None

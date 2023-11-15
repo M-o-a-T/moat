@@ -6,17 +6,17 @@ Extension types defined here:
 2: contains raw bytes, interpreted as unsigned bignum
 3: Path, as a msgpack object stream of its elements
 4: contains raw bytes, interpreted as UTF-8, returned as (named) Proxy object
+5: object constructor
 """
+from __future__ import annotations
 
 from functools import partial
 
-import msgpack
-
-from .dict import attrdict
+from . import packer, stream_unpacker
 from .path import Path
 from .proxy import Proxy, _CProxy, obj2name
 
-__all__ = ["packer", "unpacker", "stream_unpacker"]
+import msgpack
 
 
 def _encode(data):
@@ -28,9 +28,6 @@ def _encode(data):
         return msgpack.ExtType(3, b"".join(packer(x) for x in data))
     if isinstance(data, Proxy):
         # Proxy object
-        return msgpack.ExtType(4, data.name.encode("utf-8"))
-    if isinstance(data, Proxy):
-        # proxy class
         return msgpack.ExtType(5, packer(data.name) + b"".join(packer(x) for x in data.data))
     try:
         name = obj2name(data)
@@ -86,27 +83,3 @@ def _decode(code, data):
             pk.__dict__.update(next(s))
         return pk
     return msgpack.ExtType(code, data)
-
-
-# single message packer
-packer = partial(msgpack.packb, strict_types=False, use_bin_type=True, default=_encode)
-
-# single message unpacker
-unpacker = partial(
-    msgpack.unpackb,
-    object_pairs_hook=attrdict,
-    strict_map_key=False,
-    raw=False,
-    use_list=False,
-    ext_hook=_decode,
-)
-
-# stream unpacker factory
-stream_unpacker = partial(
-    msgpack.Unpacker,
-    object_pairs_hook=attrdict,
-    strict_map_key=False,
-    raw=False,
-    use_list=False,
-    ext_hook=_decode,
-)

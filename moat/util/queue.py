@@ -1,11 +1,23 @@
-import logging
-from collections.abc import Awaitable
+"""
+trio/anyio no longer have queues, but sometimes a memory object stream is
+unwieldy. Thus this re-implemens a simple queue using
+`anyio.create_memory_object_stream`.
+"""
+from __future__ import annotations
 
 import anyio
 from anyio import create_memory_object_stream as _cmos
-from outcome import Error, Value
 
 from .dict import attrdict
+
+from outcome import Error, Value
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable
+
+import logging  # isort:skip
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +98,13 @@ class Queue:
         self._r.close()
 
     close_reader = close_receiver
+
+
+class Lockstep(Queue):
+    "A queue with sender/receiver rendez-vous"
+
+    def __init__(self):
+        super().__init__(0)
 
 
 def create_queue(length=0):

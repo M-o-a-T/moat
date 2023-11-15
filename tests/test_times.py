@@ -3,29 +3,27 @@ Tests to figure out how long until a time spec fits / does not fit,
 also stringification
 """
 
-# pylint: disable=missing-function-docstring,global-statement
+# ruff:noqa:D103 pylint: disable=missing-function-docstring,global-statement
+from __future__ import annotations
 
 import datetime
-import sys
 
 from moat.util.times import time_until
 
 lnp = None
-err = False
+err = 0
 now = None
+
+# ruff:noqa:PLW0603 # update global var
 
 
 def chk(iso, a, invert=False, back=False):
-    if a == "":
-        a = ()
-    else:
-        a = a.split(" ")
+    a = () if a == "" else a.split(" ")
     res = time_until(a, t_now=now, invert=invert, back=back)
-    if res is None:
-        if iso == "-":
-            return
+    if res is None and iso == "-":
+        return
     res -= datetime.timedelta(0, 0, res.microsecond)
-    res = str(res)
+    res = str(res.replace(tzinfo=None))
     if iso == res:
         return
 
@@ -40,7 +38,7 @@ def chk(iso, a, invert=False, back=False):
 
 def test_fore():
     global now
-    now = datetime.datetime(2003, 4, 5, 6, 7, 8)
+    now = datetime.datetime(2003, 4, 5, 6, 7, 8).astimezone()
 
     chk("2003-04-05 06:07:08", "6 h 4 month 8 sec")
     chk("2003-04-05 06:07:10", "10 sec")
@@ -92,13 +90,12 @@ def test_fore():
     chk("2003-04-06 00:00:00", "14 wk sat", True)
     chk("2003-04-05 06:07:08", "15 wk", True)
 
-    if err:
-        sys.exit(1)
+    assert not err
 
 
 def test_back():
     global now
-    now = datetime.datetime(2003, 4, 5, 6, 7, 8)
+    now = datetime.datetime(2003, 4, 5, 6, 7, 8).astimezone()
 
     chk("2003-04-05 06:07:08", "6 h 4 month 8 sec", back=True)
     chk("2003-04-05 06:07:05", "5 sec", back=True)
@@ -143,5 +140,4 @@ def test_back():
     chk("2003-04-05 06:07:08", "14 wk mon", True, back=True)
     chk("2003-04-05 06:07:08", "15 wk", True, back=True)
 
-    if err:
-        sys.exit(1)
+    assert not err

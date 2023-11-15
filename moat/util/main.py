@@ -1,16 +1,21 @@
+"""
+Support for main program, argv, etc.
+"""
+from __future__ import annotations
+
+from typing import Awaitable
+
 import importlib
 import logging
 import os
 import sys
 from collections import defaultdict
 from collections.abc import Mapping
+from contextlib import suppress
 from contextvars import ContextVar
 from functools import partial
 from logging.config import dictConfig
 from pathlib import Path
-from typing import Awaitable
-
-import asyncclick as click
 
 from .dict import attrdict, to_attrdict
 from .impl import NotGiven
@@ -18,6 +23,8 @@ from .merge import merge
 from .msgpack import Proxy
 from .path import P, path_eval
 from .yaml import yload
+
+import asyncclick as click
 
 logger = logging.getLogger("_loader")
 
@@ -139,12 +146,14 @@ def process_args(val, vars_, eval_, path_, proxy_=(), vs=None):
         for k, v in vars_:
             yield k, v
         for k, v in eval_:
+            # ruff:noqa:PLW2901 # var overwritten
             if v == "-":
                 v = NotGiven
             elif v == "/":  # pylint: disable=W0631
                 if vs is None:
                     raise click.BadOptionUsage(
-                        option_name=k, message="A slash value doesn't work here."
+                        option_name=k,
+                        message="A slash value doesn't work here.",
                     )
                 v = NoneType
             else:
@@ -161,11 +170,13 @@ def process_args(val, vars_, eval_, path_, proxy_=(), vs=None):
         if not k:
             if vs is not None:
                 raise click.BadOptionUsage(
-                    option_name=k, message="You can't use empty paths here."
+                    option_name=k,
+                    message="You can't use empty paths here.",
                 )
             if n:
                 raise click.BadOptionUsage(
-                    option_name=k, message="Setting a single value conflicts."
+                    option_name=k,
+                    message="Setting a single value conflicts.",
                 )
             val = v
             n = -1
@@ -204,7 +215,7 @@ def read_cfg(name, path):
             return
         if os.path.exists(path):
             try:
-                with open(path, "r") as cf:
+                with open(path) as cf:
                     cfg = yload(cf, attr=True)
             except PermissionError:
                 pass
@@ -238,9 +249,7 @@ def load_ext(name, *attr, err=False):
         if err is not None:
             logger.debug("Err %s: %r", dp, exc)
         if (
-            exc.name != dp
-            and exc.name != dpe
-            and not exc.name.startswith(f"{dp}._")  # pylint: disable=no-member ## duh?
+            exc.name != dp and exc.name != dpe and not exc.name.startswith(f"{dp}._")  # pylint: disable=no-member ## duh?
         ):
             raise
         return None
@@ -323,10 +332,8 @@ def list_ext(name, func=None, pkg_only=True):
     """
     logger.debug("List Ext %s (%s)", name, func)
     if name not in _ext_cache:
-        try:
+        with suppress(ModuleNotFoundError):
             _cache_ext(name, pkg_only)
-        except ModuleNotFoundError:
-            pass
     if func is None:
         for a, b in _ext_cache[name].items():
             logger.debug("Found %s %s", a, b)
@@ -349,7 +356,13 @@ def list_ext(name, func=None, pkg_only=True):
 
 
 def load_subgroup(
-    _fn=None, prefix=None, sub_pre=None, sub_post=None, ext_pre=None, ext_post=None, **kw
+    _fn=None,
+    prefix=None,
+    sub_pre=None,
+    sub_post=None,
+    ext_pre=None,
+    ext_post=None,
+    **kw,
 ):
     """
     A decorator like click.group, enabling loading of subcommands
@@ -410,6 +423,7 @@ class Loader(click.Group):
         async def cmd(self):
             print("I am", self.name)  # prints "subcmd"
     """
+    # ruff:noqa:SLF001
 
     def __init__(
         self,
@@ -483,12 +497,14 @@ class Loader(click.Group):
         return sub_pre, sub_post, ext_pre, ext_post
 
     def list_commands(self, ctx):
+        "add subpackages"
         rv = super().list_commands(ctx)
         sub_pre, sub_post, ext_pre, ext_post = self.get_sub_ext(ctx)
         logger.debug("* List: %s.*.%s / %s.*.%s", sub_pre, sub_post, ext_pre, ext_post)
 
         if sub_pre:
             for _finder, name, _ispkg in _namespaces(sub_pre):
+                # ruff:noqa:PLW2901 # var overwritten
                 logger.debug("Sub %s", name)
                 name = name.rsplit(".", 1)[1]
                 if name[0] == "_":
@@ -505,6 +521,7 @@ class Loader(click.Group):
         return rv
 
     def get_command(self, ctx, cmd_name):
+        "add subpackages"
         command = super().get_command(ctx, cmd_name)
 
         sub_pre, sub_post, ext_pre, ext_post = self.get_sub_ext(ctx)
@@ -706,7 +723,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         p = Path(CFG)
         if not p.is_absolute():
             p = Path((main or main_).__file__).parent / p
-        with open(p, "r") as cfgf:
+        with open(p) as cfgf:
             CFG = yload(cfgf, attr=True)
     elif CFG is None:
         CFG = obj.get("CFG", None)
@@ -727,15 +744,14 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     obj.DEBUG = debug
 
     for k in conf:
+        # ruff:noqa:PLW2901 # var overwritten
         try:
             k, v = k.split("=", 1)
         except ValueError:
             v = NotGiven
         else:
-            try:
+            with suppress(Exception):  # pylint: disable=broad-except
                 v = path_eval(v)
-            except Exception:  # pylint: disable=broad-except
-                pass
         obj.cfg._update(P(k), v)  # pylint: disable=protected-access
 
     if wrap:
@@ -744,9 +760,9 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         logging.debug("Logging already set up")
     else:
         # Configure logging. This is a somewhat arcane art.
-        lcfg = obj.cfg.setdefault("logging", dict())
+        lcfg = obj.cfg.setdefault("logging", {})
         lcfg.setdefault("version", 1)
-        lcfg.setdefault("root", dict())["level"] = (
+        lcfg.setdefault("root", {})["level"] = (
             "DEBUG"
             if verbose > 2
             else "INFO"
@@ -789,7 +805,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         try:
             s = str(exc)
         except TypeError:
-            logger.exception(repr(exc), exc_info=exc)
+            logger.exception("??", exc_info=exc)
         else:
             print(s, file=sys.stderr)
         sys.exit(2)

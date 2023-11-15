@@ -9,6 +9,7 @@ Iterating will receive new state and end when the alert is resolved.
 The dispatcher is a context manager that can be iterated to receive new
 alerts.
 """
+from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
@@ -29,7 +30,7 @@ __all__ = [
 class BaseAlert(Exception):
     """Alert, initial OR repeat wrapper"""
 
-    pass  # pylint:disable=unnecessary-pass
+    # pylint:disable=unnecessary-pass
 
 
 class Alert(BaseAlert):

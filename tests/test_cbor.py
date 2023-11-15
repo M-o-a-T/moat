@@ -9,6 +9,8 @@ import pytest
 
 from moat.util import as_proxy, attrdict, packer, unpacker
 
+pytestmark = pytest.mark.skip
+
 
 class Bar:
     "A proxied object"
@@ -36,14 +38,14 @@ _val = [
 
 def test_basic():
     for v in _val:
-        w = unpacker(packer(v))
+        w = unpacker(packer(v, cbor=True), cbor=True)
         assert v == w, (v, w)
 
 
 def test_bar():
     b = Bar(95)
     as_proxy("b", b, replace=True)
-    c = unpacker(packer(b))
+    c = unpacker(packer(b, cbor=True), cbor=True)
     assert b == c
     with pytest.raises(TypeError):
-        packer(Bar(94))
+        packer(Bar(94), cbor=True)

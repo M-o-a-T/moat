@@ -2,7 +2,8 @@
 Testing util.Path
 """
 
-# pylint: disable=missing-function-docstring
+# ruff:noqa:D103 pylint: disable=missing-function-docstring
+from __future__ import annotations
 
 import pytest
 
@@ -11,7 +12,7 @@ from moat.util import P, Path, packer, unpacker, yformat, yload
 _valid = (
     (("a", "b", "c"), "a.b.c"),
     (("a", 2, "c"), "a:2.c"),
-    ((2, "c"), ":2.c"),
+    ((2, "c"), (":i2.c", ":2.c")),
     ((True, "c"), ":t.c"),
     ((1.23, "c"), ":1:.23.c"),
     (("", 1.23, "c"), ":e:1:.23.c"),
@@ -30,7 +31,7 @@ _valid = (
     (((1, "a b", 2), "c"), (":1,'a b',2.c", ":1,'a:_b',2.c")),
     ((), ":"),
     (("a", b"abc"), "a:vabc"),
-    (("a", b"ab\x99"), "a:y616299"),
+    (("a", b"ab\x99"), ("a:y616299", "a:sYWKZ")),
     (("a", b"a b"), "a:va:_b"),
     (("a", b"", "c"), "a:v.c"),
 )
@@ -54,7 +55,7 @@ _invalid = (
 )
 
 
-@pytest.mark.parametrize("a,b", _valid)
+@pytest.mark.parametrize("a,b", _valid)  # noqa:PT006
 def test_valid_paths(a, b):
     if isinstance(b, tuple):
         b, xb = b
@@ -76,9 +77,9 @@ def test_paths():
     q = p | "c"
     assert str(p) == "a.b"
     assert str(q) == "a.b.c"
-    r = p + ()
+    r = p + ()  # noqa:RUF005
     assert p is r
-    r = p + ("c", "d")
+    r = p + ("c", "d")  # noqa:RUF005
     assert str(p) == "a.b"
     assert str(r) == "a.b.c.d"
     pp = Path.build(("a", "b"))
@@ -86,6 +87,12 @@ def test_paths():
 
 
 def test_tagged():
+    p = P(":mfoo:")
+    assert p.mark == "foo"
+    assert len(p) == 0
+    p = Path()
+    p.mark = "bar"
+    assert str(p) == ":mbar:"
     p = P("a:mx.b")
     assert p.mark == "x"  # pylint: disable=no-member
     p = P(":mx.a.b")

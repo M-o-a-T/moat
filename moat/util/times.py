@@ -1,22 +1,22 @@
-# -*- coding: utf-8 -*-
-
 """\
 This code does some time handling.
 
 """
+from __future__ import annotations
 
 import datetime as dt
 from calendar import monthrange
 
 from . import attrdict
 
-startup = dt.datetime.now()
+startup = dt.datetime.now().astimezone()
 _log = None
 TRACE = None
 
 
-def now(force=False):  # pylint: disable=unused-argument,missing-function-docstring
-    return dt.datetime.now()
+def now(force=False):  # noqa:ARG001 pylint: disable=unused-argument
+    "current time"
+    return dt.datetime.now().astimezone()
 
 
 units = (
@@ -51,7 +51,7 @@ def humandelta(delta: dt.timedelta) -> str:
             res.append(f"{delta // lim} {name}")
             delta %= lim
     if delta >= 0.1:
-        res.append(f"{delta :3.1f} sec")
+        res.append(f"{delta:3.1f} sec")
 
     if len(res) < 1:
         return "now"
@@ -81,10 +81,7 @@ def simple_time_delta(w):
     """
     Convert a string ("1 day 2 hours") to a timedelta.
     """
-    if isinstance(w, str):
-        w = w.split()
-    else:
-        w = list(w)[:]
+    w = w.split() if isinstance(w, str) else list(w)[:]
     s = 0
     m = 1
     while w:
@@ -149,7 +146,7 @@ def collect_words(cur, w):
     p.dow = None  # week_of_year, weekday, which day?
     p.nth = None
 
-    p.now = now() if cur is None else cur
+    p.now = now().astimezone() if cur is None else cur
 
     weekdays = {
         "monday": 0,
@@ -183,7 +180,7 @@ def collect_words(cur, w):
         pass
     else:
         if s > 1000000000:  # 30 years plus. Forget it, that's a unixtime.
-            p.now = dt.datetime.fromtimestamp(s)
+            p.now = dt.datetime.fromtimestamp(s).astimezone()
             w.pop(0)
 
     while w:
@@ -254,7 +251,7 @@ def collect_words(cur, w):
             else:
                 if val < p.now.year or val >= p.now.year + 100:
                     raise SyntaxError(
-                        "WHICH year? Sorry, the time machine module is not available."
+                        "WHICH year? Sorry, the time machine module is not available.",
                     )
             p.yr = val
 
@@ -271,7 +268,7 @@ def collect_words(cur, w):
                 raise SyntaxError("You already specified the day of week")
             if val == 0 or abs(val) > 4:
                 raise SyntaxError(
-                    "Months have max. 5 of each weekday; use -1 if you want the last one."
+                    "Months have max. 5 of each weekday; use -1 if you want the last one.",
                 )
             p.dow = weekdays[unit]
             p.nth = val
@@ -364,7 +361,7 @@ def time_until(args, t_now=None, invert=False, back=False):
                 else:
                     if rgoal > lim():
                         rgoal = beg
-            if force or goal is not None:
+            if force or goal is not None:  # noqa:SIM102
                 if real != rgoal:  # otherwise we clear fields for no reason
                     h = {ln: rgoal}
                     h.update(clear_fields)
@@ -450,7 +447,7 @@ def time_until(args, t_now=None, invert=False, back=False):
                 return p.now
             p.res = p.now
             check_day(True)
-            if back:
+            if back:  # noqa:SIM108  # use x-if-y-else-z
                 d = p.res - dt.timedelta(dow - 1)  # until end-of-week
             else:
                 d = p.res + dt.timedelta(7 - dow)  # until end-of-week

@@ -1,9 +1,11 @@
 """
 This module contains various helper functions and classes.
 """
+from __future__ import annotations
+
 import anyio
 
-from .msgpack import packer, stream_unpacker
+from . import packer, stream_unpacker
 
 __all__ = ["MsgReader", "MsgWriter"]
 
@@ -25,7 +27,7 @@ class _MsgRW:
         if self.path is not None:
             p = self.path
             if p == "-":
-                if self._mode[0] == "r":  # pylint: disable=unsubscriptable-object
+                if self._mode[0] == "r":  # noqa:SIM108 pylint: disable=unsubscriptable-object
                     p = "/dev/stdin"
                 else:
                     p = "/dev/stdout"

@@ -1,14 +1,16 @@
 """
 This module contains various helper functions and classes.
 """
+from __future__ import annotations
+
 import sys
 from collections.abc import Mapping, Sequence
-
-import ruyaml as yaml
 
 from .dict import attrdict
 from .msgpack import Proxy
 from .path import Path
+
+import ruyaml as yaml
 
 __all__ = ["yload", "yprint", "yformat", "yaml_named", "add_repr"]
 
@@ -165,26 +167,26 @@ def yformat(data, compact=None):
     return s.getvalue()
 
 
-def add_repr(typ, repr=None):
+def add_repr(typ, r=None):
     """
     Add a way to add representations for subtypes.
 
     This is useful for subclassed dict/int/str/… objects.
     """
     # pylint: disable=redefined-builtin
-    if repr is None:
-        repr = typ
-    if issubclass(repr, str):
+    if r is None:
+        r = typ
+    if issubclass(r, str):
         SafeRepresenter.add_representer(typ, SafeRepresenter.represent_str)
-    elif issubclass(repr, float):
+    elif issubclass(r, float):
         SafeRepresenter.add_representer(typ, SafeRepresenter.represent_float)
-    elif issubclass(repr, bool):
+    elif issubclass(r, bool):
         SafeRepresenter.add_representer(typ, SafeRepresenter.represent_bool)
-    elif issubclass(repr, int):
+    elif issubclass(r, int):
         SafeRepresenter.add_representer(typ, SafeRepresenter.represent_int)
-    elif issubclass(repr, Mapping):
+    elif issubclass(r, Mapping):
         SafeRepresenter.add_representer(typ, SafeRepresenter.represent_dict)
-    elif issubclass(repr, Sequence):
+    elif issubclass(r, Sequence):
         SafeRepresenter.add_representer(typ, SafeRepresenter.represent_list)
     else:
-        raise RuntimeError(f"Don't know what to do with {typ}")
+        raise TypeError(f"Don't know what to do with {typ}")

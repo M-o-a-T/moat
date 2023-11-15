@@ -1,10 +1,11 @@
 """
 This module contains various helper functions and classes.
 """
-import os
-from contextlib import asynccontextmanager
+from __future__ import annotations
 
 import anyio
+import os
+from contextlib import asynccontextmanager
 
 __all__ = ["as_service"]
 

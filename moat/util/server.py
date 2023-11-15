@@ -1,10 +1,14 @@
 """
 This module contains various helper functions and classes.
 """
-from ssl import SSLContext
-from typing import Dict, Optional, Union
+from __future__ import annotations
 
 import anyio
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from ssl import SSLContext
 
 __all__ = ["run_tcp_server", "gen_ssl"]
 
@@ -23,7 +27,9 @@ class _Server:
     async def _accept(self, conn):
         if self.ssl:
             conn = await anyio.streams.tls.TLSStream.wrap(
-                conn, server_side=True, ssl_context=self.ssl
+                conn,
+                server_side=True,
+                ssl_context=self.ssl,
             )
         await self.handler(conn)
 
@@ -50,8 +56,9 @@ async def run_tcp_server(*a, **kv) -> _Server:
 
 
 def gen_ssl(
-    ctx: Union[bool, SSLContext, Dict[str, str]] = False, server: bool = True
-) -> Optional[SSLContext]:
+    ctx: bool | SSLContext | dict[str, str] = False,
+    server: bool = True,
+) -> SSLContext | None:
     """
     Generate a SSL config from the given context.
 
@@ -62,7 +69,7 @@ def gen_ssl(
     if not ctx:
         return None
     if ctx is True:
-        ctx = dict()
+        ctx = {}
     if not isinstance(ctx, dict):
         return ctx
 
@@ -70,7 +77,7 @@ def gen_ssl(
     import ssl  # pylint: disable=import-outside-toplevel
 
     ctx_ = ssl.create_default_context(
-        purpose=ssl.Purpose.CLIENT_AUTH if server else ssl.Purpose.SERVER_AUTH
+        purpose=ssl.Purpose.CLIENT_AUTH if server else ssl.Purpose.SERVER_AUTH,
     )
     if "key" in ctx:
         ctx_.load_cert_chain(ctx["cert"], ctx["key"])

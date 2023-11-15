@@ -1,12 +1,28 @@
 """
-This module contains various helper functions and classes.
+This module contains functions dealing with MoaT's Path objects.
+
+MoaT Paths are represented as dot-separated strings. The colon is special.
+See "moat util path" / moat.util.Path.__doc__ for details.
+
+Behind the scenes, a Path is an immutable lists with special representation.
+This is particularly useful in YAML (MoaT uses a ``!P`` prefix).
+
+They are also marked in msgpack and CBOR.
+
+Joining the string representation of two non-empty paths requires a dot iff
+the second part doesn't start with a separator-colon, but you shouldn't
+ever want to do that: paths are best processed as Path objects, not
+strings.
+
 """
+from __future__ import annotations
+
 import ast
 import collections.abc
 import logging
 import re
+from base64 import b64decode, b64encode
 from functools import total_ordering
-from typing import Union
 
 import simpleeval
 
@@ -19,20 +35,17 @@ _RTagRE = re.compile("^:m[^:._]+:$")
 @total_ordering
 class Path(collections.abc.Sequence):
     """
-    This object represents the path to some node or other.
-
-    It is an immutable list with special representation, esp. in YAML,
-    and distinctive encoding in msgpack.
-
     Paths are represented as dot-separated strings. The colon is special.
     Inline (within an element):
 
+    \b
         :.  escapes a dot
         ::  escapes a colon
         :_  escapes a space
 
     As separator (starts a new element):
 
+    \b
         :t   True
         :f   False
         :e   empty string
@@ -41,19 +54,13 @@ class Path(collections.abc.Sequence):
         :b01 Binary integer
         :vXY Bytestring, inline
         :yAB Bytestring, hex encoding
-
+        :sAB Bytestring, base64 encoding
         :mXX This path is marked with XX
-        :XYZ otherwise: evaluate XYZ (may not start with a letter)
+        :iXY evaluate YZ as a Python expression.
+             The 'i' may be missing if YZ does not start with a letter.
 
     The empty path is denoted by a single colon. A path starting with a dot
     is illegal.
-
-    Joining two paths requires a dot iff the second part doesn't start with
-    a separator-colon, but you shouldn't ever want to do that: paths are
-    best stored in Path objects, not strings.
-
-    Paths are immutable and behave like lists with a human-readable string
-    representation (if they consist of simple elements).
     """
 
     def __init__(self, *a, mark=""):
@@ -68,12 +75,19 @@ class Path(collections.abc.Sequence):
         if not isinstance(data, tuple):
             return cls(*data)
         p = object.__new__(cls)
-        p._data = data
+        p._data = data  # noqa:SLF001
         p.mark = mark
         return p
 
     def __str__(self):
-        def _escol(x, spaces=True):  # XXX make the default adjustable?
+        """
+        Stringify the path to a dotstring.
+
+        Spaces are escaped somewhat aggressively, for better
+        doubleclickability. Do not depend on this.
+        """
+
+        def _escol(x, spaces=True):
             x = x.replace(":", "::").replace(".", ":.")
             if spaces:
                 x = x.replace(" ", ":_")
@@ -85,32 +99,36 @@ class Path(collections.abc.Sequence):
         if not self._data:
             res.append(":")
         for x in self._data:
-            if isinstance(x, str) and len(x):
-                if res:
-                    res.append(".")
-                res.append(_escol(x))
-            elif isinstance(x, (bytes, bytearray)):
-                if all(32 <= b < 127 for b in x):
-                    res.append(":v" + _escol(x.decode("ascii"), True))
+            # ruff:noqa:PLW2901 # var overwritten
+            if isinstance(x, str):
+                if x == "":
+                    res.append(":e")
                 else:
-                    res.append(":y" + x.hex())
-            elif isinstance(x, (Path, tuple)) and len(x):
-                x = ",".join(repr(y) for y in x)
-                res.append(":" + _escol(x))
+                    if res:
+                        res.append(".")
+                    res.append(_escol(x))
             elif x is True:
                 res.append(":t")
             elif x is False:
                 res.append(":f")
             elif x is None:
                 res.append(":n")
-            elif x == "":
-                res.append(":e")
-            else:
-                if isinstance(x, (Path, tuple)):  # no spaces
-                    assert len(x) == 0
-                    x = "()"
+            elif isinstance(x, (bytes, bytearray, memoryview)):
+                if all(32 <= b < 127 for b in x):
+                    res.append(":v" + _escol(x.decode("ascii"), True))
                 else:
-                    x = repr(x)
+                    res.append(":s" + b64encode(x).decode("ascii"))
+                    # no hex
+            elif isinstance(x, (Path, tuple)):
+                if len(x):
+                    x = ",".join(repr(y) for y in x)
+                    res.append(":" + _escol(x))
+                else:
+                    x = "()"
+            else:
+                x = repr(x)
+                if x[0].isalpha():
+                    x = "i" + x
                 res.append(":" + _escol(x))
         return "".join(res)
 
@@ -159,7 +177,7 @@ class Path(collections.abc.Sequence):
             return other.mark
         if self.mark != other.mark:
             raise RuntimeError(
-                f"Can't concat paths with different tags: {self.mark} and {other.mark}"
+                f"Can't concat paths with different tags: {self.mark} and {other.mark}",
             )
         return self.mark
 
@@ -184,12 +202,12 @@ class Path(collections.abc.Sequence):
 
     def __truediv__(self, other):
         if isinstance(other, Path):
-            raise RuntimeError("You want + not /")
+            raise TypeError("You want + not /")
         return Path(*self._data, other, mark=self.mark)
 
     def __itruediv__(self, other):
         if isinstance(other, Path):
-            raise RuntimeError("You want + not /")
+            raise TypeError("You want + not /")
         self._data.append(other)
 
     # TODO add alternate output with hex integers
@@ -203,7 +221,7 @@ class Path(collections.abc.Sequence):
         Constructor to build a Path from its string representation.
         """
         res = []
-        part: Union[type(None), bool, str] = False
+        part: None | bool | str = False
         # non-empty string: accept colon-eval or dot (inline)
         # True: require dot or colon-eval (after :t)
         # False: accept only colon-eval (start)
@@ -212,7 +230,7 @@ class Path(collections.abc.Sequence):
         esc: bool = False
         # marks that an escape char has been seen
 
-        eval_: Union[bool, int] = False
+        eval_: bool | int = False
         # marks whether the current input shall be evaluated;
         # 2=it's a hex number
 
@@ -225,9 +243,9 @@ class Path(collections.abc.Sequence):
         mp = _RTagRE.match(path)
         if mp:
             if not mark:
-                mark = mp[2:-1]
-            elif mark != mp[2:-1]:
-                raise SyntaxError(f"Conflicting tags: {mark} vs. {mp[2:-1]}")
+                mark = mp[0][2:-1]
+            elif mark != mp[0][2:-1]:
+                raise SyntaxError(f"Conflicting tags: {mark} vs. {mp[0][2:-1]}")
             return cls(mark=mark)
 
         def add(x):
@@ -237,9 +255,7 @@ class Path(collections.abc.Sequence):
             try:
                 part += x
             except TypeError:
-                raise SyntaxError(  # pylint: disable=raise-missing-from
-                    f"Cannot add {x!r} at {pos}"
-                )
+                raise SyntaxError(f"Cannot add {x!r} at {pos}") from None
 
         def done(new_part):
             nonlocal part
@@ -251,6 +267,8 @@ class Path(collections.abc.Sequence):
                             part = bytes.fromhex(part)
                         elif eval_ == -2:
                             part = part.encode("ascii")
+                        elif eval_ == -3:
+                            part = b64decode(part.encode("ascii"))
                         elif eval_ > 1:
                             part = int(part, eval_)
                         else:
@@ -292,6 +310,10 @@ class Path(collections.abc.Sequence):
                     new(None, True)
                 elif e == "_":
                     add(" ")
+                elif e[0] == "i":
+                    done(None)
+                    part = e[1:]
+                    eval_ = 1
                 elif e[0] == "b":
                     done(None)
                     part = e[1:]
@@ -308,6 +330,10 @@ class Path(collections.abc.Sequence):
                     done(None)
                     part = e[1:]
                     eval_ = -2
+                elif e[0] == "s":
+                    done(None)
+                    part = e[1:]
+                    eval_ = -3
                 else:
                     if part is None:
                         raise SyntaxError(f"Cannot parse {path!r} at {pos}")
@@ -349,7 +375,7 @@ class P(Path):
     objects.
     """
 
-    def __new__(cls, path, *, mark=""):
+    def __new__(cls, path, *, mark=""):  # noqa:D102
         if isinstance(path, Path):
             if path.mark != mark:
                 path = Path(*path, mark=mark)
@@ -444,7 +470,8 @@ class PathShortener:
         self.depth = len(prefix)
         self.path = []
 
-    def __call__(self, res):
+    def __call__(self, res: dict):
+        "shortens the 'path' element in @res"
         try:
             p = res["path"]
         except KeyError:
@@ -452,7 +479,7 @@ class PathShortener:
         if list(p[: self.depth]) != list(self.prefix):
             raise RuntimeError(f"Wrong prefix: has {p!r}, want {self.prefix!r}")
 
-        p = p[self.depth :]  # noqa: E203
+        p = p[self.depth :]
         cdepth = min(len(p), len(self.path))
         for i in range(cdepth):
             if p[i] != self.path[i]:
@@ -473,11 +500,12 @@ class PathLongener:
     attributes is a no-op.
     """
 
-    def __init__(self, prefix: Union[Path, tuple] = ()):
+    def __init__(self, prefix: Path | tuple = ()):
         self.depth = len(prefix)
         self.path = Path.build(prefix)
 
     def __call__(self, res):
+        "expands the 'path' element in @res"
         p = res.get("path", None)
         if p is None:
             return
@@ -497,6 +525,7 @@ class PathLongener:
 # is to process tuples.
 _eval = simpleeval.SimpleEval(functions={})
 _eval.nodes[ast.Tuple] = lambda node: tuple(
-    _eval._eval(x) for x in node.elts  # pylint: disable=protected-access
+    _eval._eval(x)  # noqa:SLF001
+    for x in node.elts
 )
 path_eval = _eval.eval

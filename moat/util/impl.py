@@ -1,10 +1,12 @@
 """
 This module contains various helper functions and classes.
 """
+from __future__ import annotations
+
 import logging
 import sys
 from collections import deque
-from contextlib import nullcontext
+from contextlib import nullcontext, suppress
 from getpass import getpass
 from math import log10
 
@@ -60,6 +62,7 @@ class OptCtx:
     async def __aexit__(self, *tb):
         if self.obj is not None:
             return await self.obj.__aexit__(*tb)
+        return None
 
 
 def import_(name, off=0):
@@ -75,9 +78,9 @@ def import_(name, off=0):
         res = __import__(mn)
         for nn in n[1:]:
             res = getattr(res, nn)
-    except Exception as exc:
+    except Exception:
         sys.modules.pop(mn, None)
-        raise exc
+        raise
     return res
 
 
@@ -120,7 +123,7 @@ class TimeOnlyFormatter(logging.Formatter):
 class NotGiven:
     """Placeholder value for 'no data' or 'deleted'."""
 
-    def __new__(cls):
+    def __new__(cls):  # noqa:D102
         return cls
 
     def __getstate__(self):
@@ -144,7 +147,7 @@ def count(it):
 async def acount(it):
     """async iter count"""
     n = 0
-    async for _ in it:  # noqa: F841
+    async for _ in it:
         n += 1
     return n
 
@@ -243,10 +246,8 @@ def split_arg(p, kw):
         if k[-1] == "?":
             k = k[:-1]
             v = getpass(v + ": ")
-        try:
+        with suppress(ValueError):
             v = int(v)
-        except ValueError:
-            pass
     kw[k] = v
 
 

@@ -6,7 +6,6 @@
 /.tested.yaml
 /local/
 __pycache__/
-/debian/
 .#*
 \#*
 /build/

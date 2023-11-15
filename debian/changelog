@@ -1,3 +1,9 @@
+moat (0.3.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 15 Nov 2023 17:25:37 +0100
+
 moat-main (0.1.1-2) unstable; urgency=medium
 
   * dep generator bug

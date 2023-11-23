@@ -75,7 +75,7 @@ pytest:
 format:
 	${RQ} || black $(CODE) $(TESTS) $(SETUP)
 	${RQ} || python3 -misort $(CODE) $(TESTS) $(SETUP)
-	${RQ} && ruff format --check $(CODE) $(TESTS) $(SETUP)
+	${RQ} && ruff format $(CODE) $(TESTS) $(SETUP)
 	${RQ} && ruff check --fix $(CODE) $(TESTS) $(SETUP)
 
 precommit: format test

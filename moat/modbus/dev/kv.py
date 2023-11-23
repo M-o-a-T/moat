@@ -14,9 +14,9 @@ class Register(BaseRegister):
     One possibly-complex Modbus register that's mirrored from and/or to MoaT-KV
     """
 
-    def __init__(self, *a, dkv=None, tg=None, **kw):
+    def __init__(self, *a, mt_kv=None, tg=None, **kw):
         super().__init__(*a, **kw)
-        self.dkv = dkv
+        self.mt_kv = mt_kv
 
         if "dest" not in self.data and "src" not in self.data:
             if self.data.get("slot", "write") != "write":
@@ -30,38 +30,38 @@ class Register(BaseRegister):
                 logger.warning("%s:%s: no read slot", self.unit, self.path)
 
             elif self.data.dest.mark == "r":
-                tg.start_soon(self.poll_dkv_raw, dkv)
+                tg.start_soon(self.poll_dkv_raw, mt_kv)
             else:
-                tg.start_soon(self.poll_dkv, dkv)
+                tg.start_soon(self.poll_dkv, mt_kv)
 
         if self.data.get("src"):
             if self.data.src.mark == "r":
-                tg.start_soon(self.send_dkv_raw, dkv)
+                tg.start_soon(self.send_dkv_raw, mt_kv)
             else:
-                tg.start_soon(self.send_dkv, dkv)
+                tg.start_soon(self.send_dkv, mt_kv)
 
-    async def poll_dkv(self, dkv):
+    async def poll_dkv(self, mt_kv):
         """Copy a Modbus value to MoaT-KV"""
         async for val in self:
             logger.debug("%s R %r", self.path, val)
-            await dkv.set(self.data.dest, value=val, idem=self.data.get("idem", True))
+            await mt_kv.set(self.data.dest, value=val, idem=self.data.get("idem", True))
 
-    async def poll_dkv_raw(self, dkv):
+    async def poll_dkv_raw(self, mt_kv):
         """Copy a Modbus value to MQTT"""
         async for val in self:
             logger.debug("%s r %r", self.path, val)
-            await dkv.msg_send(list(self.data.dest), val)
+            await mt_kv.msg_send(list(self.data.dest), val)
 
-    async def send_dkv(self, dkv):
+    async def send_dkv(self, mt_kv):
         """Copy a MoaT-KV value to Modbus"""
-        async with dkv.watch(self.data.src) as mon:
+        async with mt_kv.watch(self.data.src) as mon:
             async for val in mon:
                 logger.debug("%s W %r", self.path, val.value)
                 await self._set(val.value)
 
-    async def send_dkv_raw(self, dkv):
+    async def send_dkv_raw(self, mt_kv):
         """Copy an MQTT value to Modbus"""
-        async with dkv.msg_monitor(self.data.src) as mon:
+        async with mt_kv.msg_monitor(self.data.src) as mon:
             async for val in mon:
                 logger.debug("%s w %r", self.path, val.value)
                 await self._set(val.value)
@@ -71,8 +71,8 @@ class Register(BaseRegister):
 
         if self.data.get("dest") and self.data.get("mirror", False):
             if self.data.dest.mark == "r":
-                await self.dkv.msg_send(list(self.data.dest), self.value)
+                await self.mt_kv.msg_send(list(self.data.dest), self.value)
             else:
-                await self.dkv.set(
+                await self.mt_kv.set(
                     self.data.dest, value=self.value, idem=self.data.get("idem", True)
                 )

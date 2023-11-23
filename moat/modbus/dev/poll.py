@@ -16,7 +16,7 @@ from .server import Server
 logger = logging.getLogger(__name__)
 
 
-async def dev_poll(cfg, dkv, *, task_status=None):
+async def dev_poll(cfg, mt_kv, *, task_status=None):
     """
     Run a device task on this set of devices, as configured by the config.
 
@@ -49,13 +49,13 @@ async def dev_poll(cfg, dkv, *, task_status=None):
             return await scope.spawn_service(dev.as_scope)
 
         async with anyio.create_task_group() as tg:
-            if dkv is None:
+            if mt_kv is None:
                 from .device import Register as Reg  # pylint: disable=import-outside-toplevel
             else:
                 # The MoaT-KV client must live longer than the taskgroup
                 from .kv import Register  # pylint: disable=import-outside-toplevel
 
-                Reg = partial(Register, dkv=dkv, tg=tg)  # noqa: F811
+                Reg = partial(Register, mt_kv=mt_kv, tg=tg)  # noqa: F811
 
             servers = []
             for s in cfg.get("server", ()):

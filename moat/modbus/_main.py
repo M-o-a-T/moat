@@ -117,9 +117,12 @@ async def to(obj, retry, **params):
 
     while True:
         try:
-            async with ModbusClient() as g_a, g_a.serial(**obj.A) as A, Server(
-                client=A, **params
-            ) as B, anyio.create_task_group() as tg:
+            async with (
+                    ModbusClient() as g_a,
+                    g_a.serial(**obj.A) as A,
+                    Server(client=A, **params) as B,
+                    # anyio.create_task_group() as tg,
+                ):
                 await B.watch(obj.timeout, obj.timeout1)
         except Exception as exc:  # pylint: disable=broad-exception-caught
             if not retry or not A or not B:

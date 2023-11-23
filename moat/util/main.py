@@ -23,6 +23,7 @@ from .merge import merge
 from .msgpack import Proxy
 from .path import P, path_eval
 from .yaml import yload
+from .exc import ungroup
 
 import asyncclick as click
 
@@ -792,7 +793,8 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         elif main is not None:
             if wrap:
                 main = main.main
-            return main(args=args, standalone_mode=False, obj=obj)
+            with ungroup():
+                return main(args=args, standalone_mode=False, obj=obj)
 
     except click.exceptions.MissingParameter as exc:
         print(

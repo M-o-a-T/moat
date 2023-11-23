@@ -59,7 +59,7 @@ async def poll1(ctx, host, port, unit, path, slot):
     if "kv" in obj.cfg:
         from moat.kv .client import open_client
 
-        from .distkv import Register
+        from .kv import Register
 
         dkv = await ctx.with_async_resource(open_client(**obj.cfg.kv))
         tg = await ctx.with_async_resource(anyio.create_task_group())

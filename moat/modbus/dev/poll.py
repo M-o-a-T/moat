@@ -52,8 +52,8 @@ async def dev_poll(cfg, dkv, *, task_status=None):
             if dkv is None:
                 from .device import Register as Reg  # pylint: disable=import-outside-toplevel
             else:
-                # The DistKV client must live longer than the taskgroup
-                from .distkv import Register  # pylint: disable=import-outside-toplevel
+                # The MoaT-KV client must live longer than the taskgroup
+                from .kv import Register  # pylint: disable=import-outside-toplevel
 
                 Reg = partial(Register, dkv=dkv, tg=tg)  # noqa: F811
 

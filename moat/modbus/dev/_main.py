@@ -56,12 +56,12 @@ async def poll1(ctx, host, port, unit, path, slot):
     s.setdefault("unit", unit)
 
     # pylint: disable=import-outside-toplevel
-    if "distkv" in obj.cfg:
-        from distkv.client import open_client
+    if "kv" in obj.cfg:
+        from moat.kv .client import open_client
 
         from .distkv import Register
 
-        dkv = await ctx.with_async_resource(open_client(**obj.cfg.distkv))
+        dkv = await ctx.with_async_resource(open_client(**obj.cfg.kv))
         tg = await ctx.with_async_resource(anyio.create_task_group())
         Reg = partial(Register, dkv=dkv, tg=tg)
     else:
@@ -84,11 +84,11 @@ async def poll(ctx, path):
 
     cfg = yload(path, attr=True)
 
-    if "distkv" in obj.cfg:
+    if "kv" in obj.cfg:
         # pylint: disable=import-outside-toplevel
-        from distkv.client import client_scope
+        from moat.kv.client import client_scope
 
-        dkv = await client_scope(**obj.cfg.distkv)
+        dkv = await client_scope(**obj.cfg.kv)
     else:
         dkv = None
 

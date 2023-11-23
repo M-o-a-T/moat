@@ -1,5 +1,5 @@
 """
-Support values on DistKV
+Support values on MoaT-KV
 """
 
 import logging
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class Register(BaseRegister):
     """
-    One possibly-complex Modbus register that's mirrored from and/or to DistKV
+    One possibly-complex Modbus register that's mirrored from and/or to MoaT-KV
     """
 
     def __init__(self, *a, dkv=None, tg=None, **kw):
@@ -41,7 +41,7 @@ class Register(BaseRegister):
                 tg.start_soon(self.send_dkv, dkv)
 
     async def poll_dkv(self, dkv):
-        """Copy a Modbus value to DistKV"""
+        """Copy a Modbus value to MoaT-KV"""
         async for val in self:
             logger.debug("%s R %r", self.path, val)
             await dkv.set(self.data.dest, value=val, idem=self.data.get("idem", True))
@@ -53,7 +53,7 @@ class Register(BaseRegister):
             await dkv.msg_send(list(self.data.dest), val)
 
     async def send_dkv(self, dkv):
-        """Copy a DistKV value to Modbus"""
+        """Copy a MoaT-KV value to Modbus"""
         async with dkv.watch(self.data.src) as mon:
             async for val in mon:
                 logger.debug("%s W %r", self.path, val.value)

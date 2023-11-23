@@ -3,7 +3,9 @@ Exception handling helpers
 """
 from __future__ import annotations
 
-__all__ = ["exc_iter"]
+from contextlib import contextmanager
+
+__all__ = ["exc_iter", "ungroup"]
 
 
 def exc_iter(exc):
@@ -15,3 +17,14 @@ def exc_iter(exc):
             yield from exc_iter(e)
     else:
         yield exc
+
+@contextmanager
+def ungroup():
+    try:
+        yield None
+    except BaseException as e:
+        while isinstance(e, BaseExceptionGroup):
+            if len(e.exceptions) == 1:
+                e = e.exceptions[0]
+        raise e from None
+

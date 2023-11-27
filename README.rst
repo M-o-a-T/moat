@@ -1,18 +1,18 @@
-=======
-DistKNX
-=======
+===========
+MoaT-KV-KNX
+===========
 
-DistKNX is a link between KNX buses and DistKV.
+MoaT-KV-KNX is a link between KNX buses and MoaT-KV.
 
 It will
 
 * query and monitor inputs as specified
 
-* write values that it reads from them to some DistKV entry
+* write values that it reads from them to some entry in MoaT-KV
 
-* monitor a DistKV entry and write any updates to KNX
+* monitor a MoaT-KV entry and write any updates to KNX
 
-* work with DistKV's runner system, either centrally or distributed
+* work with MoaT-KV's runner system, either centrally or distributed
 
 
 Warning

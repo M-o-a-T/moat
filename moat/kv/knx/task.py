@@ -1,5 +1,5 @@
 """
-KNX task for DistKV
+KNX task for MoaT-KV
 """
 
 import anyio
@@ -12,9 +12,9 @@ try:
 except ImportError:
     from collections import Mapping
 
-from distkv.util import combine_dict
-from distkv.exceptions import ClientConnectionError
-from distkv_ext.knx.model import KNXserver
+from moat.kv.util import combine_dict
+from moat.kv.exceptions import ClientConnectionError
+from .model import KNXserver
 
 import logging
 

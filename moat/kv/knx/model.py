@@ -1,11 +1,11 @@
 """
-DistKV client data model for KNX
+MoaT-KV client data model for KNX
 """
 import anyio
 
-from distkv.obj import ClientEntry, ClientRoot
-from distkv.util import NotGiven
-from distkv.errors import ErrorRoot
+from moat.kv.obj import ClientEntry, ClientRoot
+from moat.kv.util import NotGiven
+from moat.kv.errors import ErrorRoot
 
 from xknx.telegram import GroupAddress
 from xknx.devices import Sensor, BinarySensor, Switch, ExposeSensor

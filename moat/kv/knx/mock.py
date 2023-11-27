@@ -3,7 +3,7 @@ This module implements an XKNX client, connecting to a local knx daemon
 (not discoverable, on localhost, not talking to any other KNX stuff you
 might have running).
 
-This code is here for support of testing. It does not talk to distkv.
+This code is here for support of testing. It does not talk to MoaT-KV.
 See ``tests/test_basic.py`` for code that does.
 
 """

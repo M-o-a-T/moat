@@ -3,8 +3,8 @@
 import asyncclick as click
 from collections.abc import Mapping
 
-from distkv.data import res_get, res_update, node_attr
-from distkv.util import yprint, attrdict, NotGiven, as_service, P, Path, path_eval, attr_args
+from moat.kv.data import res_get, res_update, node_attr
+from moat.util import yprint, attrdict, NotGiven, as_service, P, Path, path_eval, attr_args
 
 from xknx.remote_value import RemoteValueSensor
 
@@ -26,13 +26,14 @@ async def cli():
 @click.pass_obj
 async def dump(obj, path):
     """Emit the current state as a YAML file."""
+    cfg = obj.cfg.kv.knx
     res = {}
     path = P(path)
     if len(path) > 4:
         raise click.UsageError("Only up to four path elements allowed")
 
     async for r in obj.client.get_tree(
-        obj.cfg.knx.prefix + path, nchain=obj.meta, max_depth=4 - len(path)
+        cfg.prefix + path, nchain=obj.meta, max_depth=4 - len(path)
     ):
         # pl = len(path) + len(r.path)
         rr = res
@@ -48,12 +49,13 @@ async def dump(obj, path):
 @click.pass_obj
 async def list_(obj, path):
     """List the next stage."""
+    cfg = obj.cfg.kv.knx
     path = P(path)
     if len(path) > 4:
         raise click.UsageError("Only up to four path elements allowed")
 
     async for r in obj.client.get_tree(
-        obj.cfg.knx.prefix + path, nchain=obj.meta, min_depth=1, max_depth=1, empty=True
+        cfg.prefix + path, nchain=obj.meta, min_depth=1, max_depth=1, empty=True
     ):
         if len(path) and not isinstance(r.path[-1], int):
             continue
@@ -70,15 +72,16 @@ async def attr_(obj, bus, group, vars_, eval_, path_):
 
     `--eval` without a value deletes the attribute.
     """
+    cfg = obj.cfg.kv.knx
     group = (int(x) for x in group.split("/")) if group else ()
     path = Path(bus, *group)
     if len(path) != 4:
         raise click.UsageError("Group address must be 3 /-separated elements.")
  
-    res = await obj.client.get(obj.cfg.knx.prefix + path, nchain=obj.meta or 1)
+    res = await obj.client.get(cfg.prefix + path, nchain=obj.meta or 1)
 
     if vars_ or eval_ or path_:
-        res = await node_attr(obj, obj.cfg.knx.prefix + path, vars_,eval_,path_, res=res)
+        res = await node_attr(obj, cfg.prefix + path, vars_,eval_,path_, res=res)
         if obj.meta:
             yprint(res, stream=obj.stdout)
     else:
@@ -120,15 +123,16 @@ Known modes: {" ".join(RemoteValueSensor.DPTMAP.keys())}
 @click.pass_obj
 async def addr(obj, bus, group, typ, mode, attr):
     """Set/get/delete device settings. This is a shortcut for the "attr" command."""
+    cfg = obj.cfg.kv.knx
     group = (int(x) for x in group.split("/"))
     path = Path(bus, *group)
     if len(path) != 4:
         raise click.UsageError("Group address must be 3 /-separated elements.")
-    res = await obj.client.get(obj.cfg.knx.prefix + path, nchain=obj.meta or 1)
+    res = await obj.client.get(cfg.prefix + path, nchain=obj.meta or 1)
     val = res.get("value", attrdict())
 
     if typ == "-":
-        res = await obj.client.delete(obj.cfg.knx.prefix + path, nchain=obj.meta)
+        res = await obj.client.delete(cfg.prefix + path, nchain=obj.meta)
         if obj.meta:
             yprint(res, stream=obj.stdout)
         return
@@ -156,8 +160,9 @@ async def addr(obj, bus, group, typ, mode, attr):
 async def _attr(obj, attr, value, path, eval_, res=None):
     # Sub-attr setter.
     # Special: if eval_ is True, an empty value deletes. A mapping replaces instead of updating.
+    cfg = obj.cfg.kv.knx
     if res is None:
-        res = await obj.client.get(obj.cfg.knx.prefix + path, nchain=obj.meta or 1)
+        res = await obj.client.get(cfg.prefix + path, nchain=obj.meta or 1)
     try:
         val = res.value
     except AttributeError:
@@ -184,7 +189,7 @@ async def _attr(obj, attr, value, path, eval_, res=None):
         value = res_update(res, attr, value=value)
 
     res = await obj.client.set(
-        obj.cfg.knx.prefix + path, value=value, nchain=obj.meta, chain=res.chain
+        cfg.prefix + path, value=value, nchain=obj.meta, chain=res.chain
     )
     if obj.meta:
         yprint(res, stream=obj.stdout)
@@ -201,10 +206,11 @@ async def server_(obj, bus, name, host, port, delete):
     """
     Configure a server for a bus.
     """
+    cfg = obj.cfg.kv.knx
     if not name:
         if host or port or delete:
             raise click.UsageError("Use a server name to set parameters")
-        async for r in obj.client.get_tree(obj.cfg.knx.prefix, bus, min_depth=1, max_depth=1):
+        async for r in obj.client.get_tree(cfg.prefix, bus, min_depth=1, max_depth=1):
             print(r.path[-1], file=obj.stdout)
         return
     elif len(name) > 1:
@@ -223,7 +229,7 @@ async def server_(obj, bus, name, host, port, delete):
             else:
                 value.port = int(port)
     elif delete:
-        res = await obj.client.delete_tree(obj.cfg.knx.prefix | name, nchain=obj.meta)
+        res = await obj.client.delete_tree(cfg.prefix | name, nchain=obj.meta)
         if obj.meta:
             yprint(res, stream=obj.stdout)
         return
@@ -240,8 +246,9 @@ async def server_(obj, bus, name, host, port, delete):
 @click.pass_obj
 async def monitor(obj, bus, server, local_ip, initial):
     """Stand-alone task to talk to a single server."""
-    from distkv_ext.knx.task import task
-    from distkv_ext.knx.model import KNXroot
+    from .task import task
+    from .model import KNXroot
+    cfg = obj.cfg.kv.knx
 
     knx = await KNXroot.as_handler(obj.client)
     await knx.wait_loaded()
@@ -255,5 +262,5 @@ async def monitor(obj, bus, server, local_ip, initial):
 
     async with as_service(obj) as srv:
         await task(
-            obj.client, obj.cfg.knx, knx[bus][server], srv, local_ip=local_ip, initial=initial
+            obj.client, cfg, knx[bus][server], srv, local_ip=local_ip, initial=initial
         )

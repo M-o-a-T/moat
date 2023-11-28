@@ -12,6 +12,8 @@ from moat.util import load_subgroup
 from moat.modbus.client import ModbusClient
 from moat.modbus.server import RelayServer, SerialModbusServer
 
+from pymodbus.register_write_message import WriteSingleRegisterRequest
+
 from .__main__ import add_serial_cfg, mk_client, mk_serial_client, mk_server
 
 
@@ -80,7 +82,7 @@ async def monitor(ctx, timeout, timeout1, **params):
 @click.pass_obj
 async def to(obj, retry, **params):
     """
-    This subcommand describes the ModBus interface with the client(s).
+    This subcommand describes the ModBus interface of the client(s).
 
     Useful for reverse engineering, serial speed/format translation, debugging …
     """
@@ -96,12 +98,17 @@ async def to(obj, retry, **params):
 
         def mon_request(self, request):
             "request monitor"
-            print(f"> {request}")
+            if isinstance(request, WriteSingleRegisterRequest):
+                print(f"> {request}", request.value)
+            else:
+                print(f"> {request}", getattr(request,"registers",""))
+            return request
 
         def mon_response(self, response):
             "response monitor"
-            print(f"< {response}")
+            print(f"< {response}", getattr(response,"registers",""))
             self.__evt.set()
+            return response
 
         async def watch(self, t2, t1):
             "Timeout manager"

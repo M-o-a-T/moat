@@ -211,7 +211,7 @@ class SerialModbusServer(BaseModbusServer):
 
 class RelayServer:
     """
-    A mix-in class for servers that forwards to a client
+    A mix-in class to teach a server to forward all requests to a client
     """
 
     single = True
@@ -221,22 +221,22 @@ class RelayServer:
         super().__init__(*a, **k)
 
     async def _process(self, request):
-        self.mon_request(request)
+        request = self.mon_request(request)
         tid = request.transaction_id
-        r = await self._client.execute(request)
+        resp = await self._client.execute(request)
 
-        r.transaction_id = tid
-        self.mon_response(r)
-        r = self.framer.buildPacket(r)  # pylint:disable=no-member
-        await self._serial.send(r)  # pylint:disable=no-member
+        resp.transaction_id = tid
+        resp = self.mon_response(resp) or resp
+        resp = self.framer.buildPacket(resp)  # pylint:disable=no-member
+        await self._serial.send(resp)  # pylint:disable=no-member
 
     def mon_request(self, request):
         """Request monitor. Override me."""
-        pass
+        return request
 
     def mon_response(self, response):
         """Response monitor. Override me."""
-        pass
+        return response
 
 
 class ModbusServer(BaseModbusServer):

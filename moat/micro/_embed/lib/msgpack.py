@@ -1,53 +1,50 @@
-# coding: utf-8
+"""
+This is a micropython-asyncio-compatible MsgPack implementation.
+It does not support
+* a "default" fallback encoder
+* encoding binary data to strings (which is legacy nonsense anyway)
+* auto-encoding datetime to the timestamp extension
+* the object_pairs hook
+
+The encoder is synchronous and returns bytes.
+The decoder is async and yields messages.
+You can also decode single messages synchronously.
+
+The decoder returns binary data as memoryviews if they're larger
+than the threshold (default -1: always copy). Extension objects always
+get a memoryview and must decode or copy it.
+"""
 # cloned from https://github.com/msgpack/msgpack-python
 
 # Parts of this have been modified to be compatble with micropython.
+from __future__ import annotations
 
-import uos as os
-import usys as sys
-from uio import BytesIO
 import struct
+import sys
+from io import BytesIO
 
 from micropython import const
 
-#
-# This is a micropython-asyncio-compatible MsgPack implementation.
-# It does not support
-# * a "default" fallback encoder
-# * encoding binary data to strings (which is legacy nonsense anyway)
-# * auto-encoding datetime to the timestamp extension
-# * the object_pairs hook
-#
-# The encoder is synchronous and returns bytes.
-# The decoder is async and yields messages.
-# You can also decode single messages synchronously.
-#
-# The decoder returns binary data as memoryviews if they're larger
-# than the threshold (default -1: always copy). Extension objects always
-# get a memoryview and must decode or copy it.
-# 
+from moat.util import attrdict
+
+# ruff:noqa:TRY200
+
 
 class UnpackException(Exception):
-    pass
-
-
-class BufferFull(UnpackException):
-    pass
+    "superclass, not raised"
 
 
 class OutOfData(UnpackException):
-    pass
+    "missing data in buffer"
 
 
 class FormatError(UnpackException):
-    pass
-
-
-class StackError(UnpackException):
-    pass
+    "Error code read"
 
 
 class ExtraData(ValueError):
+    "too much data in buffer"
+
     def __init__(self, unpacked, extra):
         self.unpacked = unpacked
         self.extra = extra
@@ -57,13 +54,14 @@ class ExtraData(ValueError):
 
 
 class ExtType:
-    """ExtType represents ext type in msgpack."""
+    """ExtType represents extension types in msgpack."""
 
     def __init__(self, code, data):
+        if isinstance(data, memoryview):
+            data = bytes(data)
         self.code = code
         self.data = data
 
-newlist_hint = lambda size: []
 
 _TYPE_IMMEDIATE = const(0)
 _TYPE_ARRAY = const(1)
@@ -107,15 +105,20 @@ _MSGPACK_HEADERS = {
     0xDF: (4, ">I", _TYPE_MAP),
 }
 
-class Unpacker(object):
+
+class Unpacker:
+    """
+    Manager for buffered and streamed unpacking.
+    """
+
     def __init__(
         self,
         stream=None,
         read_size=64,
-#       use_list=True,
-#       object_hook=None,
-#       list_hook=None,
-#       unicode_errors="strict",
+        # use_list=True,
+        # object_hook=None,
+        # list_hook=None,
+        # unicode_errors="strict",
         ext_hook=ExtType,
         min_memview_len=-1,
     ):
@@ -126,36 +129,32 @@ class Unpacker(object):
         #: Which position we currently reads
         self._buff_i = 0
 
-        self._buf_checkpoint = 0
-
         self._read_size = read_size
-#       self._unicode_errors = unicode_errors
-#       self._use_list = use_list
-#       self._list_hook = list_hook
-#       self._object_hook = object_hook
+        # self._unicode_errors = unicode_errors
+        # self._use_list = use_list
+        # self._list_hook = list_hook
+        # self._object_hook = object_hook
         self._ext_hook = ext_hook
         self._min_memview_len = min_memview_len
 
-    def set_buffer(self, data):
+    def feed(self, data):
+        "set the buffer"
         assert self._stream is None
         self._buffer = memoryview(data)
         self._buff_i = 0
-        self._buf_checkpoint = 0
 
-    def _consume(self):
-        """ Gets rid of the used parts of the buffer. """
-        self._buf_checkpoint = self._buff_i
-
-    def _got_extradata(self):
+    def has_extradata(self):
+        "are there extra data in the buffer?"
         return self._buff_i < len(self._buffer)
 
-    def _get_extradata(self):
+    def get_extradata(self):
+        "return extra data, if any"
         return self._buffer[self._buff_i :]
 
-#   async def read_bytes(self, n):
-#       ret = await self._read(n, raise_outofdata=False)
-#       self._consume()
-#       return ret
+    # async def read_bytes(self, n):
+    # ret = await self._read(n, raise_outofdata=False)
+    # self._consume()
+    # return ret
 
     async def _read(self, n, raise_outofdata=True):
         # (int) -> bytearray
@@ -173,25 +172,19 @@ class Unpacker(object):
             return
 
         if not self._stream:
-            self._buff_i = self._buf_checkpoint
             raise OutOfData
-
-        # Strip buffer before checkpoint before reading file.
-        if self._buf_checkpoint > 0:
-            # del self._buffer[: self._buf_checkpoint]
-            self._buffer = self._buffer[self._buf_checkpoint :]
-            self._buff_i -= self._buf_checkpoint
-            self._buf_checkpoint = 0
 
         # Read from file
         remain_bytes = -remain_bytes
         while remain_bytes > 0:
             to_read_bytes = max(self._read_size, remain_bytes)
-            read_data = await self._stream.recv(to_read_bytes)
+            # TODO simplify, read into existing buffer
+            b = bytearray(to_read_bytes)
+            read_data = await self._stream.rd(b)
             if not read_data:
                 break
-            self._buffer += read_data
-            remain_bytes -= len(read_data)
+            self._buffer += b[:read_data]
+            remain_bytes -= read_data
 
         if len(self._buffer) < n + self._buff_i and raise_outofdata:
             self._buff_i = 0  # rollback
@@ -221,7 +214,7 @@ class Unpacker(object):
         elif b == 0xC0:
             obj = None
         elif b == 0xC1:
-             raise RuntimeError("unused code")
+            raise FormatError("unused code")
         elif b == 0xC2:
             obj = False
         elif b == 0xC3:
@@ -268,19 +261,18 @@ class Unpacker(object):
             await self._reserve(size)
             (n,) = struct.unpack_from(fmt, self._buffer, self._buff_i)
             self._buff_i += size
-        else: # if b <= 0xDF:  # can't be anything else
+        else:  # if b <= 0xDF:  # can't be anything else
             size, fmt, typ = _MSGPACK_HEADERS[b]
             await self._reserve(size)
             (n,) = struct.unpack_from(fmt, self._buffer, self._buff_i)
             self._buff_i += size
-#       else:
-#           raise FormatError("Unknown header: 0x%x" % b)
         return typ, n, obj
 
     async def unpack(self):
+        "extract one (top-level) item from the buffer"
         res = await self._unpack()
         # Buffer management: chop off the part we've read
-        self._buffer = self._buffer[self._buff_i:]
+        self._buffer = self._buffer[self._buff_i :]
         self._buff_i = 0
         return res
 
@@ -288,34 +280,34 @@ class Unpacker(object):
         typ, n, obj = await self._read_header()
 
         if typ == _TYPE_ARRAY:
-            ret = newlist_hint(n)
-            for i in range(n):
+            ret = []
+            for _ in range(n):
                 ret.append(await self.unpack())
-#           if self._list_hook is not None:
-#               ret = self._list_hook(ret)
+            # if self._list_hook is not None:
+            # ret = self._list_hook(ret)
             # TODO is the interaction between `list_hook` and `use_list` ok?
             return ret  # if self._use_list else tuple(ret)
         if typ == _TYPE_MAP:
-            ret = {}
+            ret = attrdict()
             for _ in range(n):
                 key = await self.unpack()
-                if type(key) is str and hasattr(sys,'intern'):
+                if type(key) is str and hasattr(sys, "intern"):  # noqa:E721
                     key = sys.intern(key)
                 ret[key] = await self.unpack()
-#           if self._object_hook is not None:
-#               ret = self._object_hook(ret)
+            # if self._object_hook is not None:
+            # ret = self._object_hook(ret)
             return ret
         if typ == _TYPE_RAW:
             if isinstance(obj, memoryview):  # sigh
                 obj = bytearray(obj)
             return obj.decode("utf_8")  # , self._unicode_errors)
         if typ == _TYPE_BIN:
-            if self._min_memview_len<0 and len(obj) < self._min_memview_len:
+            if self._min_memview_len < 0 and len(obj) < self._min_memview_len:
                 obj = bytearray(obj)
             return obj
         if typ == _TYPE_EXT:
             return self._ext_hook(n, obj)
-#       assert typ == _TYPE_IMMEDIATE
+        # assert typ == _TYPE_IMMEDIATE
         return obj
 
     def __aiter__(self):
@@ -324,34 +316,38 @@ class Unpacker(object):
     def __anext__(self):
         return self.unpack()
 
-    def unpackb(self, packed):
-        self.set_buffer(packed)
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        g = self.unpack()
         try:
-            ret = next(self.unpack())
-        except StopIteration as s:
-            if self._got_extradata():
-                raise ExtraData(s.value, bytes(self._get_extradata()))
-            return s.value
+            g.send(None)
+        except StopIteration as exc:
+            return exc.value
         except OutOfData:
-            raise ValueError("incomplete")
-        raise RuntimeError("No way")
+            raise StopIteration
+        except BaseException as err:
+            raise RuntimeError(err)
+        else:
+            raise RuntimeError("Needs async")
 
 
-class Packer(object):
+class Packer:
+    """
+    Manager for buffered and streamed packing.
+    """
+
     def __init__(
         self,
-#       unicode_errors=None,
+        # unicode_errors=None,
         default=None,
     ):
         self._buffer = BytesIO()
-#       self._unicode_errors = unicode_errors or "strict"
+        # self._unicode_errors = unicode_errors or "strict"
         self._default = default
 
-    def _pack(
-        self,
-        obj,
-        default=None
-    ):
+    def _pack(self, obj, default=None):
         # Warning, does not deal with recursive data structures
         # (except by running out of memory)
         list_types = (list, tuple)
@@ -363,12 +359,13 @@ class Packer(object):
         # shorter bytecode
         def wp(*x):
             return self._buffer.write(struct.pack(*x))
+
         wb = self._buffer.write
         is_ = isinstance
 
         _ndefault = default
         while todo:
-            _default,_ndefault = _ndefault,default
+            _default, _ndefault = _ndefault, default
             obj = todo.pop()
             if obj is None:
                 wb(b"\xc0")
@@ -394,19 +391,19 @@ class Packer(object):
                         wp(">BQ", 0xCF, obj)
                         continue
                 else:
-                    if -0x20 <= obj:
+                    if obj >= -0x20:
                         wp("b", obj)
                         continue
-                    if -0x80 <= obj:
+                    if obj >= -0x80:
                         wp(">Bb", 0xD0, obj)
                         continue
-                    if -0x8000 <= obj:
+                    if obj >= -0x8000:
                         wp(">Bh", 0xD1, obj)
                         continue
-                    if -0x80000000 <= obj:
+                    if obj >= -0x80000000:
                         wp(">Bi", 0xD2, obj)
                         continue
-                    if -0x8000000000000000 <= obj:
+                    if obj >= -0x8000000000000000:
                         wp(">Bq", 0xD3, obj)
                         continue
                 if _default:
@@ -436,10 +433,10 @@ class Packer(object):
                 wb(obj)
                 continue
             if is_(obj, float):
-#               if self._use_float:
+                # if self._use_float:
                 wp(">Bf", 0xCA, obj)
-#               else:
-#                   wp(">Bd", 0xCB, obj)
+                # else:
+                # wp(">Bd", 0xCB, obj)
                 continue
             if is_(obj, ExtType):
                 code = obj.code
@@ -494,9 +491,10 @@ class Packer(object):
                     _ndefault = False
                     todo.append(res)
                     continue
-            raise TypeError("Cannot serialize %r" % (obj,))
+            raise TypeError(f"Cannot serialize {obj !r}")
 
-    def packb(self, obj):
+    def pack(self, obj):
+        "Packs a single data item. Returns the bytes."
         try:
             self._pack(obj)
             return self._buffer.getvalue()
@@ -512,7 +510,7 @@ class Packer(object):
         return wb(struct.pack(">BI", 0xC6, n))
 
 
-#def pack(o, stream, **kwargs):
+# def pack(o, stream, **kwargs):
 #    """
 #    Pack object `o` and write it to `stream`
 #
@@ -528,10 +526,10 @@ def packb(o, **kwargs):
 
     See :class:`Packer` for options.
     """
-    return Packer(**kwargs).packb(o)
+    return Packer(**kwargs).pack(o)
 
 
-#def unpack(stream, **kwargs):
+# def unpack(stream, **kwargs):
 #    """
 #    Unpack an object from `stream`.
 #
@@ -549,12 +547,18 @@ def unpackb(packed, **kwargs):
     Raises ``ExtraData`` when *packed* contains extra bytes.
     Raises ``ValueError`` when *packed* is incomplete.
     Raises ``FormatError`` when *packed* is not valid msgpack.
-    Raises ``StackError`` when *packed* contains too nested.
     Other exceptions can be raised during unpacking.
 
     See :class:`Unpacker` for options.
     """
     unpacker = Unpacker(None, **kwargs)
-    return unpacker.unpackb(packed)
-
-
+    unpacker.feed(packed)
+    try:
+        next(unpacker.unpack())
+    except StopIteration as s:
+        if unpacker.has_extradata():
+            raise ExtraData(s.value, bytes(unpacker.get_extradata()))
+        return s.value
+    except OutOfData:
+        raise ValueError("incomplete")
+    raise RuntimeError("No way")

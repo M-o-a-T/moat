@@ -1,0 +1,67 @@
+#!/bin/bash
+
+set -ex
+
+if [ $# != 1 ] ; then
+    echo "Usage: $0 cfg.file"
+    exit 1
+fi
+
+if [ -x "./mt" ] ; then 
+    M=./mt
+    S=micro
+    MPY=$S/lib/micropython
+elif [ -x "../mt" ] ; then 
+    M=../mt
+    S=.
+    MPY=$S/lib/micropython
+else
+    if test ! -v MPY ; then
+        echo "Usage: MPY=/path/to/src/micropython $0 cfg.file" >&2
+        exit 1
+    fi
+
+    M=moat
+fi
+
+if test -e .git && test -d moat/micro/_embed ; then
+    export PYTHONPATH=$(realpath ..)
+fi
+# otherwise use the installed version
+
+cfg="$1"
+
+port=$($M -c "$cfg" util cfg micro.setup.r.port)
+baud=$($M -c "$cfg" util cfg micro.setup.r.mode.rate)
+
+dev=$($M -c "$cfg" util cfg micro.install.port)
+rate=$($M -c "$cfg" util cfg micro.install.rate)
+
+board=$($M -c "$cfg" util cfg micro.install.board)
+BOARD=${dev@U}
+if [ -n "$board" ] ; then
+    BOARD="${BOARD}_${board@U}"
+fi
+
+if [ $port = esp32 ] ; then
+    if ! type -t idf.py >/dev/null ; then
+        if ! test -v ESP ; then
+            echo "Usage: ESP=/path/to/src/esp-idf $0 cfg.file" >&2
+            echo " or source $ESP/export.sh and retry" >&2
+            exit 1
+        fi
+        . "$ESP/export.sh"
+    fi
+fi
+
+git submodule update --init
+MANIFEST="$($M micro path -m)"
+pushd "$MPY"
+
+make -C ports/$dev submodules
+make -C mpy-cross
+cd ports/$dev
+make -j ESPTOOL=esptool PORT=$port BAUD=$rate BOARD=${BOARD} FROZEN_MANIFEST="$MANIFEST" deploy
+
+popd
+$M -vvvc "$cfg" micro setup -c cfg.r -N -r -U -s once -C "$MPY/mpy-cross/build/mpy-cross"

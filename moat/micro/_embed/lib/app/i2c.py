@@ -1,72 +1,102 @@
-import machine
+"""
+Access a satellite's i²c bus.
+"""
+from __future__ import annotations
 
-from moat.micro.cmd import BaseCmd
-from moat.micro.compat import TaskGroup, sleep_ms, ticks_ms, ticks_diff
-from moat.micro.proto import SilentRemoteError as FSError
+from functools import partial
 
-import uos
-import usys
-import errno
+try:
+    import machine
+except ImportError:
+    from moat.micro._test import machine
+
+from moat.micro.cmd.base import BaseCmd
+
 
 class Cmd(BaseCmd):
-    _bus_cache = None  # c,d > busobj
+    """
+    This command implements basic access to an I²C bus.
 
-    def __init__(self, parent, name, cfg, gcfg):
-        super().__init__(parent)
+    Warning: This is synchronous, thus subjects the whole system to
+    arbitrary slowdowns if the destination device employs clock stretching.
+
+    Config::
+
+        c: 3  # pin# of control
+        d: 4  # pin# of data
+        cx: {}  # additional machine.Pin params for control pin
+        dx: {}  # additional machine.Pin params for data pin
+        f: 100000  # frequency, Hz
+        s: false  # use bit-banging I²C driver?
+        t: 500 # bus timeout, msec
+    """
+
+    _bus = None
+
+    async def cmd_reset(self, p=None):  # noqa:ARG002
+        "bus reset"
+        # for _ in self._bus_cache.values():
+        #     pass  # XXX b.close()
         self._bus_cache = dict()
-        self.cfg = cfg
 
-    def _bus(self, cd, drop=False):
-        # (c,d) > bus
-        c,d = cd; cd = (c,d)
-        if drop:
-            return self._bus_cache.pop(cd)
+    async def setup(self):
+        """
+        Open a bus.
+        """
+        await super().setup()
+        self._setup()
+
+    async def reload(self):
+        "reconfigured"
+        self._teardown()
+        self._setup()
+        await super().reload()
+
+    def _setup(self):
+        cfg = self.cfg
+        c = machine.Pin(cfg["c"], **cfg.get("cx", {}))
+        d = machine.Pin(cfg["d"], **cfg.get("dx", {}))
+        f = cfg.get("f", 100000)
+        t = cfg.get("t", 1000) * 1000
+        if (i := cfg.get("id", None)) is None:
+            cls = machine.SoftI2C
         else:
-            return self._bus_cache[cd]
+            cls = partial(machine.I2C, i)
+        self._bus = cls(scl=c, sda=d, freq=f, timeout=t)
 
-    def _del_cd(self,cd):
-        bus = self._bus(cd, True)
-        # bus.close()
+    async def teardown(self):
+        "shutdown"
+        self._teardown()
+        await super().teardown()
 
-    def cmd_reset(self, p=None):
-        # close all
-        for b in self._bus_cache.values():
-            pass # b.close()
-        self._bus_cache = dict()
+    def _teardown(self):
+        if self._bus is None:
+            try:  # noqa:SIM105
+                self._bus.deinit()
+            except AttributeError:
+                pass
 
-    def cmd_open(self, c,d, cx={}, dx={}, f=1000000, t=1000000, s=False):
-        cd = (c,d)
-        if cd in self._bus_cache:
-            pass # close it
-        c = machine.Pin(c, **cx)
-        d = machine.Pin(d, **cx)
-        bus = (machine.SoftI2C if s else machine.I2C)(scl=c,sda=d,freq=f,timeout=t)
-        self._bus_cache[cd] = bus
-        return cd
+    async def cmd_rd(self, i, n=16):
+        "read @n bytes from bus @cd at address @i"
+        return self._bus.readfrom(i, n)
 
-    def cmd_rd(self, cd, i, n=16):
-        # read bus
-        bus = self._bus(cd)
-        return bus.readfrom(i,n)
-        
-    def cmd_wr(self, cd, i, buf):
-        # write bus
-        bus = self._bus(cd)
-        return bus.writeto(i,buf)
-        
-    def cmd_wrrd(self, cd, i, buf, n=16):
-        # write-then-read
-        bus = self._bus(cd)
-        d = bus.writeto(i,buf,False)
+    async def cmd_wr(self, i, buf):
+        "write @buf to bus @cd at address @i"
+        return self._bus.writeto(i, buf)
+
+    async def cmd_wrrd(self, i, buf, n=16):
+        """
+        write @buf to bus @cd at address @i, then read @n bytes.
+
+        Returns -x if only x bytes could be written.
+        """
+        bus = self._bus
+        d = self._bus.writeto(i, buf, False)
         if d < len(buf):
+            bus.stop()
             return -d
-        return bus.readfrom(i,n)
+        return self._bus.readfrom(i, n)
 
-    def cmd_cl(self, cd):
-        # close
-        self._del_cd(cd)
-
-    def cmd_scan(self, cd):
-        # dir
-        bus = self._bus(cd)
-        return bus.scan()
+    async def cmd_scan(self):
+        "scan the bus"
+        return self._bus.scan()

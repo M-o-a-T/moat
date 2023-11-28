@@ -1,12 +1,18 @@
-# FUSE operations
+"""
+FUSE operations for MoaT-micro-FS
+"""
+from __future__ import annotations
 
+import anyio
 import errno
 import logging
 import os
 import stat
 from collections import defaultdict
+from contextlib import asynccontextmanager, suppress
 from pathlib import PosixPath as Path
-from .proto import RemoteError
+
+from moat.util import as_proxy  # pylint: disable=no-name-in-module
 
 import pyfuse3
 from pyfuse3 import (  # pylint: disable=E0611
@@ -17,10 +23,24 @@ from pyfuse3 import (  # pylint: disable=E0611
     FUSEError,
 )
 
+# Typing
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from moat.micro.cmd.tree.dir import SubDispatch
+
+
 logger = logging.getLogger(__name__)
+
+as_proxy("_FnErr", FileNotFoundError, replace=True)
+as_proxy("_FxErr", FileExistsError, replace=True)
 
 
 class Operations(pyfuse3.Operations):  # pylint: disable=I1101
+    "FUSE operations to delegate to a MicroPython client"
+
+    # pylint: disable=too-many-public-methods
     supports_dot_lookup = False
     enable_writeback_cache = False
     enable_acl = False
@@ -45,21 +65,25 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         self._last_inode = pyfuse3.ROOT_INODE
 
     def f_open(self, fd, inode):
+        "remember opened file"
         self._fd_inode_map[fd] = inode
         self._inode_fd_map[inode] = fd
 
     def f_close(self, fd):
+        "close opened file"
         i = self._fd_inode_map.pop(fd)
         del self._inode_fd_map[i]
 
     def i_path(self, inode):
+        "return path for inode"
         try:
             return self._inode_path_map[inode]
         except KeyError:
             logger.debug("NotFound: i=%r", inode)
-            raise FUSEError(errno.ENOENT)
+            raise FUSEError(errno.ENOENT) from None
 
     def i_add(self, path, inode=None):
+        "invent new inode number"
         try:
             return self._path_inode_map[path]
         except KeyError:
@@ -71,6 +95,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             return inode
 
     def i_del(self, inode):
+        "drop inode number"
         try:
             p = self._inode_path_map.pop(inode)
         except KeyError:
@@ -79,13 +104,13 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             del self._path_inode_map[p]
 
     def raise_error(self, err, inode=None):
-        if isinstance(err,RemoteError):
-            if err.args[0] == "fn":
-                if inode is not None:
-                    self.i_del(inode)
-                raise FUSEError(errno.ENOENT)
-            if err.args[0] == "fx":
-                raise FUSEError(errno.EEXIST)
+        "translate generic exception to FUSE exception"
+        if isinstance(err, FileNotFoundError):
+            if inode is not None:
+                self.i_del(inode)
+            raise FUSEError(errno.ENOENT)
+        if isinstance(err, FileExistsError):
+            raise FUSEError(errno.EEXIST)
         raise FUSEError(errno.EIO)
 
     async def lookup(self, parent_inode, name, ctx):
@@ -113,8 +138,8 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             return await self.getattr(self._path_inode_map[p], ctx)
         except KeyError:
             try:
-                d = await self._link.send("fstat", str(p))
-            except Exception as err:
+                d = await self._link.stat(p=str(p))
+            except Exception as err:  # pylint: disable=broad-exception-caught
                 self.raise_error(err)
             else:
                 inode = self.i_add(p)
@@ -142,10 +167,8 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         for i in inode_list:
-            try:
+            with suppress(KeyError):
                 self.i_del(i)
-            except KeyError:
-                pass
 
     async def getattr(self, inode, _ctx, _res=None):
         """Get attributes for *inode*
@@ -160,26 +183,26 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         p = self.i_path(inode)
         if _res is None:
             try:
-                d = await self._link.send("fstat", str(p))
-            except Exception as err:
+                d = await self._link.stat(p=str(p))
+            except Exception as err:  # pylint: disable=broad-exception-caught
                 self.raise_error(err, inode)
         else:
             d = _res
 
         r = EntryAttributes()
-        t = d['t']
+        t = d["t"]
         r.st_ino = inode
         r.entry_timeout = 300
         r.attr_timeout = 300
-        if d.get('m') == 'd':
+        if d.get("m") == "d":
             r.st_mode = stat.S_IFDIR | 0o777
-        elif d.get('m') == 'f':
+        elif d.get("m") == "f":
             r.st_mode = stat.S_IFREG | 0o666
         r.st_mtime_ns = t * 1_000_000_000
         r.st_ctime_ns = t * 1_000_000_000
         r.st_atime_ns = t * 1_000_000_000
         r.st_birthtime_ns = t * 1_000_000_000
-        r.st_size = d.get('s', 0)
+        r.st_size = d.get("s", 0)
         r.st_blksize = 256
         r.st_blocks = (r.st_size - 1) // r.st_blksize + 1
         return r
@@ -210,7 +233,12 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         logger.warning(
-            "NotImpl: setattr: i=%r a=%r f=%r h=%r ctx=%r", inode, attr, fields, fh, ctx
+            "NotImpl: setattr: i=%r a=%r f=%r h=%r ctx=%r",
+            inode,
+            attr,
+            fields,
+            fh,
+            ctx,
         )
         raise FUSEError(errno.ENOSYS)
 
@@ -240,7 +268,12 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         logger.warning(
-            "NotImpl: mknod: p=%r n=%r m=%r d=%r ctx=%r", parent_inode, name, mode, rdev, ctx
+            "NotImpl: mknod: p=%r n=%r m=%r d=%r ctx=%r",
+            parent_inode,
+            name,
+            mode,
+            rdev,
+            ctx,
         )
         raise FUSEError(errno.ENOSYS)
 
@@ -259,8 +292,8 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
         p = self.i_path(parent_inode) / name.decode()
         try:
-            await self._link.send("fmkdir", str(p))
-        except Exception as err:
+            await self._link.mkdir(p=str(p))
+        except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
         return await self.getattr(self.i_add(p), ctx)
 
@@ -286,8 +319,8 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         p = self.i_path(parent_inode) / name.decode()
         try:
-            await self._link.send("frm", str(p))
-        except Exception as err:
+            await self._link.rm(p=str(p))
+        except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
 
     async def rmdir(self, parent_inode, name, _ctx):
@@ -314,8 +347,8 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         p = self.i_path(parent_inode) / name.decode()
         try:
-            await self._link.send("frmdir", str(p))
-        except Exception as err:
+            await self._link.rmdir(p=str(p))
+        except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
 
     async def symlink(self, parent_inode, name, target, ctx):
@@ -370,12 +403,12 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             q = self.i_path(parent_inode_new) / name_new.decode()
 
             if flags == 0:
-                await self._link.send("fmv", s=str(p), d=str(q))
+                await self._link.mv(s=str(p), d=str(q))
             elif flags == RENAME_EXCHANGE:
-                r = "_xfn_%d" % os.getpid()  # in the root
-                await self._link.send("fmv", s=str(p), d=str(q), x=str(r))
+                r = f"_xfn_{os.getpid()}"  # in the root
+                await self._link.mv(s=str(p), d=str(q), x=str(r))
             elif flags == RENAME_NOREPLACE:
-                await self._link.send("fmv", s=str(p), d=str(q), n=True)
+                await self._link.mv(s=str(p), d=str(q), n=True)
             else:
                 logger.warning(
                     "NotImpl: rename: p=%r n=%r d=%r n=%r f=%r ctx=%r",
@@ -386,8 +419,8 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
                     flags,
                     ctx,
                 )
-                raise FUSEError(errno.ENOSYS)
-        except Exception as err:
+                raise FUSEError(errno.ENOSYS)  # noqa:TRY301
+        except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
 
     async def link(self, inode, new_parent_inode, new_name, ctx):
@@ -403,7 +436,11 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         logger.warning(
-            "NotImpl: link: i=%r p=%r n=%r ctx=%r", inode, new_parent_inode, new_name, ctx
+            "NotImpl: link: i=%r p=%r n=%r ctx=%r",
+            inode,
+            new_parent_inode,
+            new_name,
+            ctx,
         )
         raise FUSEError(errno.ENOSYS)
 
@@ -431,8 +468,8 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             m = "r"
 
         try:
-            fd = await self._link.send("fopen", p=str(self.i_path(inode)), m=m)
-        except Exception as err:
+            fd = await self._link.open(p=str(self.i_path(inode)), m=m)
+        except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
         self.f_open(fd, inode)
         fh.fh = fd
@@ -450,22 +487,22 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         if size <= self.max_read:
-            return await self._link.send("frd", fd=fh, off=off, n=size)
+            return await self._link.rd(f=fh, o=off, n=size)
 
         # OWCH. Need to break that large read up.
 
         data = []
         while size > 0:
             dl = min(size, self.max_read)
-            buf = await self._link.send("frd", fd=fh, off=off, n=dl)
-            if not len(buf):
+            buf = await self._link.rd(f=fh, o=off, n=dl)
+            if buf == b"":
                 break
             data.append(buf)
             if len(buf) < dl:
                 break
             size -= dl
             off += dl
-        return b''.join(data)
+        return b"".join(data)
 
     async def write(self, fh, off, buf):
         """Write *buf* into *fh* at *off*
@@ -480,13 +517,15 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         if len(buf) <= self.max_write:
-            return await self._link.send("fwr", fd=fh, data=buf, off=off)
+            return await self._link.wr(f=fh, d=buf, o=off)
 
         # OWCH. Break that up.
         sent = 0
         while sent < len(buf):
-            sn = await self._link.send(
-                "fwr", fd=fh, data=buf[sent : sent + self.max_write], off=off + sent,
+            sn = await self._link.wr(
+                f=fh,
+                d=buf[sent : sent + self.max_write],
+                o=off + sent,
             )
             sent += sn
             if sn < self.max_write:
@@ -504,7 +543,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         has been duplicated).
         """
 
-        pass
+        # pylint: disable=unnecessary-pass
 
     async def release(self, fh):
         """Release open file
@@ -522,7 +561,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         will be discarded because there is no corresponding client request.
         """
         self.f_close(fh)
-        await self._link.send("fcl", fd=fh)
+        await self._link.cl(f=fh)
 
     async def fsync(self, fh, datasync):
         """Flush buffers for open file *fh*
@@ -533,7 +572,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         *fh* will by an integer filehandle returned by a prior `open` or
         `create` call.
         """
-        pass
+        # pylint: disable=unnecessary-pass
 
     async def opendir(self, inode, ctx):
         """Open the directory with inode *inode*
@@ -547,8 +586,8 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         p = self.i_path(inode)
         try:
-            dc = await self._link.send("fdir", p=str(p))
-        except Exception as err:
+            dc = await self._link.ls(p=str(p))
+        except Exception as err:  # pylint:disable=broad-exception-caught
             self.raise_error(err)
 
         self._last_dir_fh += 1
@@ -592,15 +631,15 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             inode = self.i_add(p / name)
             try:
                 attr = await self.getattr(inode, ctx)
-            except Exception as err:
-                if err.s == "fn":
-                    self.i_del(inode)
-                    continue
-                raise
+            except FileNotFoundError:
+                self.i_del(inode)
 
             start_id += 1
             if not pyfuse3.readdir_reply(  # pylint: disable=I1101
-                token, name.encode("utf-8"), attr, start_id
+                token,
+                name.encode("utf-8"),
+                attr,
+                start_id,
             ):
                 break
 
@@ -620,8 +659,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         If *datasync* is true, only the directory contents should be
         flushed (in contrast to metadata about the directory itself).
         """
-
-        pass
+        # pylint: disable=unnecessary-pass
 
     async def statfs(self, ctx):
         """Get file system statistics
@@ -643,16 +681,17 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         useful to debug file system deadlocks.
         """
 
+        # pylint: disable=import-outside-toplevel
         import sys
         import traceback
 
-        code = list()
-        for threadId, frame in sys._current_frames().items():
-            code.append("\n# ThreadID: %s" % threadId)
+        code = []
+        for threadId, frame in sys._current_frames().items():  # noqa:SLF001 pylint:disable=protected-access
+            code.append(f"\n# ThreadID: {threadId}")
             for filename, lineno, name, line in traceback.extract_stack(frame):
-                code.append('%s:%d, in %s' % (os.path.basename(filename), lineno, name))
+                code.append(f"{os.path.basename(filename)}:{lineno}, in {name}")
                 if line:
-                    code.append("    %s" % (line.strip()))
+                    code.append("    {line.strip()}")
 
         logger.error("\n".join(code))
 
@@ -747,8 +786,8 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             gen = True
 
         try:
-            r = await self._link.send("fnew", p=str(p))
-        except Exception as err:
+            r = await self._link.new(p=str(p))
+        except Exception as err:  # pylint: disable=broad-exception-caught
             if gen:
                 self.i_del(i)
             self.raise_error(err)
@@ -757,3 +796,49 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             h = await self.open(i, flags, ctx)
             a = await self.getattr(i, ctx, _res=r)
             return (h, a)
+
+
+@asynccontextmanager
+async def wrap(link: SubDispatch, path: Path, blocksize=0, debug=1):
+    """
+    Context manager that mounts a satellite file system locally
+    """
+    operations = Operations(link)
+    if blocksize:
+        operations.max_read = blocksize
+        operations.max_write = blocksize
+
+    logger.debug("Mounting...")
+    fuse_options = set(pyfuse3.default_options)  # pylint: disable=I1101
+    fuse_options.add("fsname=moat_fs")
+    fuse_options.add(f'max_read={operations.max_read}')
+    # fuse_options.add(f'max_write={operations.max_write}')
+    if debug > 1:
+        fuse_options.add("debug")
+    pyfuse3.init(operations, str(path), fuse_options)  # pylint: disable=I1101
+
+    logger.debug("Entering main loop..")
+    async with anyio.create_task_group() as tg:
+
+        async def fuse_main():
+            try:
+                await pyfuse3.main()
+            except anyio.get_cancelled_exc_class():
+                pyfuse3.close(unmount=True)
+                raise
+            except BaseExceptionGroup as exc:
+                exc = exc.split(anyio.get_cancelled_exc_class())[1]
+                pyfuse3.close(unmount=exc is None)
+                raise
+            except BaseException as exc:
+                pyfuse3.close(unmount=False)
+                raise
+            else:
+                pyfuse3.close(unmount=True)
+
+        try:
+            tg.start_soon(fuse_main)  # pylint: disable=I1101
+            yield None
+
+        finally:
+            tg.cancel_scope.cancel()

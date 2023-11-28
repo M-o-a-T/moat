@@ -1,21 +1,4 @@
-from moat.micro.cmd import BaseCmd
+# noqa:D104 pylint: disable=missing-module-docstring
+from __future__ import annotations
 
-class ConfigError(RuntimeError):
-    pass
-
-class BaseApp:
-    def __init__(self, name, cfg, gcfg):
-        self.cfg = cfg
-        self.gcfg = gcfg
-        self.name = name
-
-    async def config_updated(self):
-        pass
-
-class BaseAppCmd(BaseCmd):
-    def __init__(self, parent, name, cfg, gcfg):
-        super().__init__(parent)
-        self.name = name
-        self.cfg = cfg
-        self.gcfg = gcfg
-
+__path__ = __import__("pkgutil").extend_path(__path__, __name__)

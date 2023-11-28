@@ -1,57 +1,85 @@
-import machine
+"""
+Access a satellite's Flash file system.
+"""
+from __future__ import annotations
 
-from moat.micro.cmd import BaseCmd
-from moat.micro.compat import TaskGroup, sleep_ms, ticks_ms, ticks_diff
-from moat.micro.proto import SilentRemoteError as FSError
-
-import uos
-import usys
 import errno
+import os
 
-class FsCmd(BaseCmd):
+from moat.util import as_proxy
+from moat.micro.cmd.base import BaseCmd
+from moat.micro.proto.stack import SilentRemoteError
+
+
+class FileNotFoundError(SilentRemoteError):  # noqa:A001
+    "standard exception"
+
+    def __reduce__(self):
+        return (FileNotFoundError, (self.args[0],), {})
+
+
+class FileExistsError(SilentRemoteError):  # noqa:A001
+    "standard exception"
+
+    def __reduce__(self):
+        return (FileExistsError, (self.args[0],), {})
+
+
+as_proxy("_FnErr", FileNotFoundError)
+as_proxy("_FxErr", FileExistsError)
+
+
+class Cmd(BaseCmd):
+    """
+    File system access.
+
+    Set "root" to the file system path this command should apply to.
+    """
+
     _fd_last = 0
     _fd_cache = None
 
-    def __init__(self, parent, name, cfg, gcfg):
-        super().__init__(parent)
+    def __init__(self, cfg):
+        super().__init__(cfg)
         self._fd_cache = dict()
-        self.cfg = cfg
         try:
-            self._pre = cfg["prefix"]
-            if self._pre and self._pre[-1] != "/":
-                self._pre += "/"
+            self._pre = cfg["root"]
         except KeyError:
             self._pre = ""
+        else:
+            if self._pre and self._pre[-1] != "/":
+                self._pre += "/"
 
     def _fsp(self, p):
         if self._pre:
-            p=self._pre+p
+            p = self._pre + p
         if p == "":
             p = "/"
-#       elif p == ".." or p.startswith("../") or "/../" in p: or p.endswith("/..")
-#           raise FSError("nf")
+        # elif p == ".." or p.startswith("../") or "/../" in p: or p.endswith("/..")
+        # raise FSError("nf")
         return p
 
-    def _fd(self, fd, drop=False):
+    def _fd(self, fd):
         # filenr > fileobj
-        if drop:
-            return self._fd_cache.pop(fd)
-        else:
-            return self._fd_cache[fd]
+        f = self._fd_cache[fd]
+        # log(f"{fd}:{repr(f)}")
+        return f
 
     def _add_f(self, f):
         # fileobj > filenr
         self._fd_last += 1
         fd = self._fd_last
         self._fd_cache[fd] = f
+        # log(f"{fd}={repr(f)}")
         return fd
 
-    def _del_f(self,fd):
+    def _del_f(self, fd):
         f = self._fd_cache.pop(fd)
+        # log(f"{fd}!{repr(f)}")
         f.close()
 
-    def cmd_reset(self, p=None):
-        # close all
+    async def cmd_reset(self, p=None):
+        "close all"
         for v in self._fd_cache.values():
             v.close()
         self._fd_cache = dict()
@@ -61,135 +89,168 @@ class FsCmd(BaseCmd):
         elif p[0] == "/":
             self._fs_prefix = p
         else:
-            self._fs_prefix += "/"+p
+            self._fs_prefix += "/" + p
 
-    def cmd_open(self, p, m="r"):
+    async def cmd_open(self, p, m="r"):
+        "open @f in binary mode @m (r,w)"
+        p = self._fsp(p)
         try:
-            f=open(p,m+'b')
+            f = open(p, m + "b")  # noqa:ASYNC101,SIM115
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise FSError("fn")
+                raise FileNotFoundError(p) from None
             raise
         else:
             return self._add_f(f)
 
-    def cmd_rd(self, fd, off=0, n=64):
-        # read
-        f = self._fd(fd)
-        f.seek(off)
-        return f.read(n)
+    async def cmd_rd(self, f, o=0, n=64):
+        "read @n bytes from @f at offset @o"
+        fh = self._fd(f)
+        fh.seek(o)
+        return fh.read(n)
 
-    def cmd_wr(self, fd, data, off=0):
-        # write
-        f = self._fd(fd)
-        f.seek(off)
-        return f.write(data)
+    async def cmd_wr(self, f, d, o=0):
+        "write @d to @f at offset @o"
+        fh = self._fd(f)
+        fh.seek(o)
+        return fh.write(d)
 
+    async def cmd_cl(self, f):
+        "close @f"
+        self._del_f(f)
 
-    def cmd_cl(self, fd):
-        # close
-        self._del_f(fd)
+    async def cmd_ls(self, p="", x=False):
+        """
+        dir of @p.
 
-    def cmd_dir(self, p="", x=False):
-        # dir
+        Set @x to return a list of stat mappings::
+        n: name
+        t: time
+        s: size
+        """
         p = self._fsp(p)
         if x:
             try:
-                 uos.listdir(p)
+                os.listdir(p)
             except AttributeError:
-                return [ dict(n=x[0],t=x[1],s=x[3]) for x in uos.ilistdir(p) ]
+                return [dict(n=x[0], t=x[1], s=x[3]) for x in os.ilistdir(p)]
         else:
             try:
-                return uos.listdir(p)
+                return os.listdir(p)
             except AttributeError:
-                return [ x[0] for x in uos.ilistdir(p) ]
+                return [x[0] for x in os.ilistdir(p)]
 
-    def cmd_mkdir(self, p):
-        # new dir
+    async def cmd_mkdir(self, p):
+        "new dir at @p"
         p = self._fsp(p)
-        uos.mkdir(p)
+        os.mkdir(p)
 
+    async def cmd_hash(self, p):
+        """
+        Hash the contents of @p, sha256
+        """
+        import hashlib
 
-    def cmd_hash(self, p):
-        # Hash the contents of a file
-        import uhashlib
-        _h = uhashlib.sha256()
+        _h = hashlib.sha256()
         _mem = memoryview(bytearray(512))
 
         p = self._fsp(p)
-        with open(p, "rb") as _f:
+        with open(p, "rb") as _f:  # noqa:ASYNC101
             while True:
                 n = _f.readinto(_mem)
-                if not n: break
+                if not n:
+                    break
                 _h.update(_mem[:n])
         return _h.digest()
-        
 
-    def cmd_stat(self, p):
+    async def cmd_stat(self, p):
+        """
+        Flags of @p.
+
+        Returns a mapping::
+
+            m: mode (f,d,?)
+            s: size (files only)
+            t: mod time
+            d: state bits
+        """
         p = self._fsp(p)
         try:
-            s = uos.stat(p)
+            s = os.stat(p)
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise FSError("fn")
+                raise FileNotFoundError(p)  # noqa:TRY200
             raise
-        if s[0] & 0x8000: # file
-            return dict(m="f",s=s[6], t=s[7], d=s)
-        elif s[0] & 0x4000: # file
+        if s[0] & 0x8000:  # file
+            return dict(m="f", s=s[6], t=s[7], d=s)
+        elif s[0] & 0x4000:  # file
             return dict(m="d", t=s[7], d=s)
         else:
             return dict(m="?", d=s)
 
-    def cmd_mv(self, s,d, x=None, n=False):
-        # move file
+    async def cmd_mv(self, s, d, x=None, n=False):
+        """
+        move file @s to @d.
+
+        If @n is True, the destination must not exist
+        @x is the name of a temp file; if set, it is used for swapping @s
+        and @d.
+        """
         p = self._fsp(s)
         q = self._fsp(d)
-        uos.stat(p)  # must exist
+        os.stat(p)  # must exist
         if n:
             # dest must not exist
             try:
-                uos.stat(q)
+                os.stat(q)
             except OSError as err:
                 if err.errno != errno.ENOENT:
                     raise
             else:
-                raise FSError("fx")
+                raise FileExistsError(q)
         if x is None:
-            uos.rename(p,q)
+            os.rename(p, q)
         else:
             r = self._fsp(x)
             # exchange contents, via third file
             try:
-                uos.stat(r)
+                os.stat(r)
             except OSError as err:
                 if err.errno != errno.ENOENT:
                     raise
             else:
-                raise FSError("fx")
-            uos.rename(p,r)
-            uos.rename(q,p)
-            uos.rename(r,q)
+                raise FileExistsError(r)
+            os.rename(p, r)
+            os.rename(q, p)
+            os.rename(r, q)
 
-    def cmd_rm(self, p):
-        # unlink
+    async def cmd_rm(self, p):
+        "unlink file @p"
+        p = self._fsp(p)
         try:
-            uos.remove(p)
+            os.remove(p)
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise FSError("fn")
+                raise FileNotFoundError(p)  # noqa:TRY200
             raise
 
-    def cmd_rmdir(self, p):
-        # unlink dir
+    async def cmd_rmdir(self, p):
+        "unlink dir @p"
+        p = self._fsp(p)
         try:
-            uos.rmdir(p)
+            os.rmdir(p)
         except OSError as e:
             if e.errno == errno.ENOENT:
-                raise FSError("fn")
+                raise FileNotFoundError(p)  # noqa:TRY200
             raise
 
-    def cmd_new(self, p):
-        # new file
-        f = open(p,"wb")
+    async def cmd_new(self, p):
+        "new file @p"
+        p = self._fsp(p)
+        try:
+            f = open(p, "wb")  # noqa:ASYNC101,SIM115
+        except OSError as e:
+            if e.errno == errno.ENOENT:
+                raise FileNotFoundError(p)  # noqa:TRY200
+            raise
         f.close()
-

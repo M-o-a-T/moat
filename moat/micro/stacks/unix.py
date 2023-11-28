@@ -1,39 +1,37 @@
-import sys
+"""
+Connection handling for Unix sockets
+"""
+from __future__ import annotations
+
 import anyio
 
-# All Stacks builders return a (top,bot) tuple.
-# The top is the Request object. You're expected to attach your Base
-# (or a subclass) to it, then call `bot.run()`.
+from ..proto.stream import SingleAnyioBuf
+from ..stacks.util import BaseConnIter
 
-from moat.util.queue import Queue
+# Typing
 
-from ..cmd import Request
-from ..compat import TaskGroup, AnyioMoatStream
-from ..proto.stream import MsgpackStream
-from ..proto import Logger
+from typing import TYPE_CHECKING  # isort:skip
 
-import logging
-logger = logging.getLogger(__name__)
-
-async def unix_stack_iter(path="upy-moat", log=False, *, request_factory=Request):
-    # an iterator for Unix-domain connections / their stacks. Yields one t,b
-    # pair for each successful connection.
-
-    q=Queue(1)
-
-    async with TaskGroup() as tg:
-        listener = await anyio.create_unix_listener(path)
-
-        await tg.spawn(listener.serve, q.put)
-        n = 0
-        async for sock in q:
-            n += 1
-            t = b = MsgpackStream(AnyioMoatStream(sock))
-            await b.init()
-            if log:
-                t = t.stack(Logger, txt="U%d" % n)
-            t = t.stack(request_factory)
-            yield t,b
+if TYPE_CHECKING:
+    from typing import Never
 
 
+class UnixIter(BaseConnIter):
+    """
+    A connection iterator for Unix sockets.
 
+    @path: the socket file to listen on
+    """
+
+    def __init__(self, path):
+        super().__init__()
+        self.path = path
+
+    async def accept(self) -> Never:  # noqa:D102
+        li = await anyio.create_unix_listener(self.path)
+        async with li:
+            self.set_ready()
+            await li.serve(self._handle)
+
+    async def _handle(self, client):
+        await self.add_conn(SingleAnyioBuf(client))

@@ -1,180 +1,127 @@
+"""
+Compatibility wrappers that allows MoaT code to run on CPython/anyio as
+well as MicroPython/asyncio.
+
+Well, for the most part.
+"""
+from __future__ import annotations
+
 import anyio as _anyio
+from contextlib import AsyncExitStack
+from inspect import iscoroutinefunction
+
+from moat.util.compat import (
+    Queue,  # noqa:F401
+    TaskGroup,  # noqa:F401
+    every,  # noqa:F401
+    every_ms,  # noqa:F401
+    idle,  # noqa:F401
+    log,  # noqa:F401
+    print_exc,  # noqa:F401
+    run,  # noqa:F401
+    run_server,  # noqa:F401
+    shield,  # noqa:F401
+    sleep_ms,  # noqa:F401
+    ticks_add,  # noqa:F401
+    ticks_diff,  # noqa:F401
+    ticks_ms,  # noqa:F401
+    wait_for,  # noqa:F401
+    wait_for_ms,  # noqa:F401
+)
+
+
+def const(_x):
+    "compatibility with µPy"
+    return _x
+
+
+ExceptionGroup = ExceptionGroup  # noqa:A001,PLW0127 pylint:disable=redefined-builtin,self-assigning-variable
+BaseExceptionGroup = BaseExceptionGroup  # noqa:A001,PLW0127 pylint:disable=redefined-builtin,self-assigning-variable
+
+Pin_IN = 0
+Pin_OUT = 1
+
 Event = _anyio.Event
 Lock = _anyio.Lock
 WouldBlock = _anyio.WouldBlock
 sleep = _anyio.sleep
-import time as _time
-import traceback as _traceback
-import outcome as _outcome
-import greenback
-from moat.util import Queue, ValueEvent
+EndOfStream = _anyio.EndOfStream
+BrokenResourceError = _anyio.BrokenResourceError
+TimeoutError = TimeoutError  # noqa:A001,PLW0127 pylint:disable=redefined-builtin,self-assigning-variable
 
-TimeoutError=TimeoutError # compat
 
-from concurrent.futures import CancelledError
+# async context stack
 
-def print_exc(exc):
-    _traceback.print_exception(type(exc),exc,exc.__traceback__)
 
-def ticks_ms():
-    return _time.monotonic_ns() // 1000000
+def ACM(obj):
+    """A bare-bones async context manager.
 
-async def sleep_ms(ms):
-    await sleep(ms/1000)
+    Usage::
 
-async def wait_for(timeout,p,*a,**k):
-    with _anyio.fail_after(timeout):
-        return await p(*a,**k)
+        class Foo():
+            async def __aenter__(self):
+                AC = ACM(obj)
+                try:
+                    ctx1 = await AC(obj1)
+                    ctx2 = await AC_use(self, obj2)  # same thing
+                except BaseException:
+                    await AC_exit(self, *exc)
+                    raise
+                ...
+            async def __aexit__(self, *exc):
+                return await AC_exit(self, *exc)
 
-async def wait_for_ms(timeout,p,*a,**k):
-    with _anyio.fail_after(timeout/1000):
-        return await p(*a,**k)
-
-async def idle():
-    while True:
-        await anyio.sleep(60*60*12)  # half a day
-
-def ticks_add(a,b):
-    return a+b
-
-def ticks_diff(a,b):
-    return a-b
-
-from concurrent.futures import CancelledError as _Cancelled
-
-import attr as _attr
-
-try:
-    _d_a = _anyio.DeprecatedAwaitable
-except AttributeError: # no back compat
-    _d_a = lambda _: None
-
-@_attr.s
-class ValueEvent:
-    """A waitable value useful for inter-task synchronization,
-    inspired by :class:`threading.Event`.
-
-    An event object manages an internal value, which is initially
-    unset, and a task can wait for it to become True.
-
-    Args:
-      ``scope``:  A cancelation scope that will be cancelled if/when
-                  this ValueEvent is. Used for clean cancel propagation.
-
-    Note that the value can only be read once.
+    Calls to `ACM` and `AC_exit` can be nested. They **must** balance;
+    hence the above error handling dance.
     """
+    # pylint:disable=protected-access
+    if not hasattr(obj, "_AC_"):
+        obj._AC_ = []  # noqa:SLF001
 
-    event = _attr.ib(factory=Event, init=False)
-    value = _attr.ib(default=None, init=False)
-    scope = _attr.ib(default=None, init=True)
+    cm = AsyncExitStack()
+    obj._AC_.append(cm)  # noqa:SLF001
 
-    def set(self, value):
-        """Set the result to return this value, and wake any waiting task."""
-        self.value = _outcome.Value(value)
-        self.event.set()
-        return _d_a(self.set)
+    # AsyncExitStack.__aenter__ is a no-op. We don't depend on that but at
+    # least it shouldn't yield
+    # log("AC_Enter",nback=2)
+    try:
+        # pylint:disable=no-member,unnecessary-dunder-call
+        cr = cm.__aenter__()
+        cr.send(None)
+    except StopIteration as s:
+        cm = s.value
+    else:
+        raise RuntimeError("AExS ??")
 
-    def set_error(self, exc):
-        """Set the result to raise this exceptio, and wake any waiting task."""
-        self.value = _outcome.Error(exc)
-        self.event.set()
-        return _d_a(self.set_error)
+    def _ACc(ctx):
+        return AC_use(obj, ctx)
 
-    def is_set(self):
-        """Check whether the event has occurred."""
-        return self.value is not None
-
-    def cancel(self):
-        """Send a cancelation to the recipient.
-
-        TODO: Trio can't do that cleanly.
-        """
-        if self.scope is not None:
-            self.scope.cancel()
-        self.set_error(_Cancelled())
-        return _d_a(self.cancel)
-
-    async def get(self):
-        """Block until the value is set.
-
-        If it's already set, then this method returns immediately.
-
-        The value can only be read once.
-        """
-        await self.event.wait()
-        return self.value.unwrap()
-
-_tg = None
-
-async def _run(p,a,k):
-    global _tg
-    async with _anyio.create_task_group() as _tg:
-        try:
-            return await p(*a,**k)
-        finally:
-            _tg.cancel_scope.cancel()
-            _tg = None
-
-def run(p,*a,**k):
-    return _anyio.run(_run,p,a,k)
+    return _ACc
 
 
-_tg = None
-def TaskGroup():
-    global _tg
-    if _tg is None:
-        _tgt = type(_anyio.create_task_group())
-        class TaskGroup(_tgt):
-            """An augmented taskgroup
-            """
+async def AC_use(obj, ctx):
+    """
+    Add an async context to this object's AsyncExitStack.
 
-            async def spawn(self, p,*a,**k):
-                """\
-                    Like start(), but returns something you can cancel
-                """
-                async def catch(p,a,k, *, task_status):
-                    with _anyio.CancelScope() as s:
-                        task_status.started(s)
-                        await greenback.ensure_portal()
-                        try:
-                            await p(*a,**k)
-                        except CancelledError: # error from concurrent.futures
-                            pass
+    If the object is a context manager (async or sync), this opens the
+    context and return its value.
 
-                return await super().start(catch,p,a,k)
-
-            def cancel(self):
-                self.cancel_scope.cancel()
-        _tg=TaskGroup
-    return _tg()
+    Otherwise it's a callable and will run on exit.
+    """
+    acm = obj._AC_[-1]  # noqa:SLF001  pylint:disable=protected-access
+    if hasattr(ctx, "__aenter__"):
+        return await acm.enter_async_context(ctx)
+    elif hasattr(ctx, "__enter__"):
+        return acm.enter_context(ctx)
+    elif iscoroutinefunction(ctx):
+        acm.push_async_callback(ctx)
+    else:
+        acm.callback(ctx)
+    return None
 
 
-async def run_server(cb,host,port, backlog=5, taskgroup=None, reuse_port=True):
-    listener = await anyio.create_tcp_listener(local_host=host, local_port=port, backlog=backlog, reuse_port=reuse_port)
-
-    async def cbc(sock):
-        await cb(sock,sock);
-
-    await listener.serve(cbc, task_group=taskgroup)
-
-class AnyioMoatStream:
-    # adapt an anyio stream to our scheme.
-    def __init__(self, stream):
-        self.s = stream
-        self.aclose = stream.aclose
-
-    async def recv(self, n=128):
-        try:
-            res = await self.s.receive(n)
-            return res
-        except _anyio.EndOfStream:
-            raise EOFError from None
-
-    async def send(self, buf):
-        return await self.s.send(buf)
-
-    async def recvi(self, buf):
-        res = self.s.receive(len(buf))
-        buf[:] = res
-        return res
-
+async def AC_exit(obj, *exc):
+    """End the latest AsyncExitStack opened by `ACM`."""
+    if not exc:
+        exc = (None, None, None)
+    return await obj._AC_.pop().__aexit__(*exc)  # noqa:SLF001  pylint:disable=protected-access

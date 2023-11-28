@@ -29,7 +29,6 @@ from moat.micro.util import run_update
 from moat.util.main import load_subgroup
 
 from .compat import idle, log
-from .direct import DirectREPL
 
 import asyncclick as click
 
@@ -174,6 +173,7 @@ async def setup(
 
     from .path import ABytes, MoatDevPath, copy_over
     from .proto.stream import RemoteBufAnyio
+    from .direct import DirectREPL
 
     async with (
             Dispatch(cfg, run=True) as dsp,

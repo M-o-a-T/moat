@@ -1,0 +1,133 @@
+# stiebel eltron modbus serial
+#
+regs:
+  op:
+    mode:
+      _doc: state setting, 0=off 3:on
+      register: 257
+      len: 1
+      reg_type: h
+      values:
+        0: off
+        3: on
+    power:
+      _doc: thermo power setting
+      unit: kW
+      scale: -1
+      reg_type: h
+      register: 288
+
+  state:
+    state:
+      register: 769
+    compressor:
+      register: 770
+      unit: Hz
+      scale: 0
+    _x1:
+      register: 771
+    water:
+      in:
+        register: 772
+        len: 1
+        reg_type: h
+        unit: °C
+        scale: -1
+      out:
+        register: 773
+        len: 1
+        reg_type: h
+        unit: °C
+        scale: -1
+    evaporator:
+      register: 774
+      len: 1
+      reg_type: h
+      scale: -1
+      unit: °C
+      scale: -1
+    hot_gas:
+      register: 775
+      len: 1
+      reg_type: h
+      unit: °C
+      scale: -1
+    low_p:
+      register: 776
+      len: 1
+      reg_type: h
+      unit: bar
+      scale: -2
+    _x2:
+      register: 777
+      len: 1
+      reg_type: h
+    high_p:
+      register: 778
+      len: 1
+      reg_type: h
+      unit: bar
+      scale: -2
+
+    power:
+      register: 869
+      len: 1
+      reg_type: h
+      unit: kW
+      scale: -1
+    flow:
+      register: 787
+      len: 1
+      reg_type: h
+      unit: l/min
+      scale: -1
+
+    de_ice:
+      _doc: set if de-icing, i.e. eats heat instead of producing it
+      register: 939
+      len: 1
+      reg_type: h
+      values:
+        0: false
+        1: true
+
+    _c1:
+      _doc: const 1
+      register: 848
+      len: 1
+      reg_type: h
+      values:
+        1: known
+    _c2:
+      _doc: const 0
+      register: 872
+      len: 1
+      reg_type: h
+      values:
+        0: known
+    _c3:
+      _doc: const 1
+      register: 940
+      len: 1
+      reg_type: h
+      values:
+        1: known
+    _c4:
+      _doc: const 1
+      register: 944
+      len: 1
+      reg_type: h
+      values:
+        1: known
+
+    error:
+      repeat:
+        n: 20
+        start: 1
+        offset: 1
+        data:
+          register: 816
+          type: int
+          reg_type: h
+          values:
+            0: ok

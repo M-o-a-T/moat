@@ -15,6 +15,16 @@ from typing import TYPE_CHECKING  # isort:skip
 if TYPE_CHECKING:
     from typing import Never
 
+def _l():
+    import os
+    try:
+        os.stat("moat.lrg")
+    except OSError:
+        return False
+    else:
+        return True
+L = _l()
+del _l
 
 Event = asyncio.Event
 Lock = asyncio.Lock

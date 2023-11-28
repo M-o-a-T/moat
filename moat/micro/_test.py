@@ -14,7 +14,7 @@ from random import random
 import moat.micro
 from moat.util import attrdict, combine_dict, packer, yload
 from moat.micro.cmd.tree.dir import Dispatch
-from moat.micro.compat import TaskGroup
+from moat.micro.compat import TaskGroup, L
 
 # from moat.micro.main import Request, get_link, get_link_serial
 # from moat.micro.proto.multiplex import Multiplexer
@@ -134,6 +134,9 @@ class MpyBuf(ProcessBuf):
         if mplex:
             with (root / "moat.cfg").open("wb") as f:
                 f.write(packer(self.cfg["cfg"]))
+            if self.cfg.get("large", True):
+                with (root / "moat.lrg").open("wb") as f:
+                    pass
 
             self.argv = [
                 # "strace","-s300","-o/tmp/bla",
@@ -172,7 +175,8 @@ async def mpy_stack(temp: Path, cfg: dict | str, cfg2: dict | None = None):
             stack = Dispatch(cfg)
             try:
                 await tg.spawn(stack.run)
-                await stack.wait_ready()
+                if L:
+                    await stack.wait_ready()
                 yield stack
             finally:
                 tg.cancel()

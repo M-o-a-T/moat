@@ -21,12 +21,14 @@ may fail.
 
 from __future__ import annotations
 
-from moat.micro.compat import AC_use, Event, idle
+from moat.micro.compat import AC_use, Event, idle, L
 from moat.micro.proto.stack import Base
 
-from .util import as_proxy, run_no_exc, wait_complain
-from .util.part import enc_part, get_part
-from .util.iter import DelayedIter, IterWrap
+from moat.util import as_proxy
+from moat.micro.cmd.util import run_no_exc, wait_complain
+from moat.micro.cmd.util.part import enc_part, get_part
+if L:
+    from .util.iter import DelayedIter, IterWrap
 
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -97,8 +99,9 @@ class BaseCmd(Base):
     _rl_ok = None  # result of last reload
     p_task = None  # managed by parent. Do not touch.
 
-    _starting: Event = None
-    _ready: Event = None
+    if L:
+        _starting: Event = None
+        _ready: Event = None
     _stopped: Event = None
 
     def __init__(self, cfg):
@@ -110,8 +113,9 @@ class BaseCmd(Base):
     def init_events(self):
         "Setup events"
         if self._stopped is None:
-            self._starting = Event()
-            self._ready = Event()
+            if L:
+                self._starting = Event()
+                self._ready = Event()
             self._stopped = Event()
 
     async def setup(self):
@@ -123,11 +127,12 @@ class BaseCmd(Base):
         await AC_use(self, self.set_stopped)
         if self._stopped is None:
             self.init_events()
-        elif self._starting is None or self._starting.is_set():
-            raise RuntimeError("DupStartA")
+        elif L:
+            if self._starting is None or self._starting.is_set():
+                raise RuntimeError("DupStartA")
 
-        self._starting.set()
-        self._starting = None
+            self._starting.set()
+            self._starting = None
 
     async def teardown(self):
         """
@@ -152,13 +157,14 @@ class BaseCmd(Base):
         self._stopped.set()
         self._stopped = None
 
-        if self._starting is not None:
-            self._starting.set()
-            self._starting = None
+        if L:
+            if self._starting is not None:
+                self._starting.set()
+                self._starting = None
 
-        if self._ready is not None:
-            self._ready.set()
-            self._ready = None
+            if self._ready is not None:
+                self._ready.set()
+                self._ready = None
 
     async def run(self):
         """
@@ -176,23 +182,25 @@ class BaseCmd(Base):
         If you override this, you're responsible for eventually calling `set_ready`.
         Otherwise the MoaT system will stall!
         """
-        self.set_ready()
+        if L:
+            self.set_ready()
         await idle()
 
-    def set_ready(self):
-        """
-        This command is now ready.
+    if L:
+        def set_ready(self):
+            """
+            This command is now ready.
 
-        Called internally only!
-        """
-        self.cfg.pop("_cmd", None)
-        if self._starting is not None:
-            raise RuntimeError(f"Ready w/o start {self !r}")
-            # self._starting.set()
-            # self._starting = None
-        if self._ready is not None:
-            self._ready.set()
-            self._ready = None
+            Called internally only!
+            """
+            self.cfg.pop("_cmd", None)
+            if self._starting is not None:
+                raise RuntimeError(f"Ready w/o start {self !r}")
+                # self._starting.set()
+                # self._starting = None
+            if self._ready is not None:
+                self._ready.set()
+                self._ready = None
 
     async def stop(self):
         "Stop this subcommand"
@@ -205,40 +213,41 @@ class BaseCmd(Base):
 
     cmd_stp = stop
 
-    async def wait_started(self):
-        """
-        Wait for the command's setup procedure to commence.
-        """
-        if self._starting is None:
-            return
-        await wait_complain(f"Starting {self.path}", 250, self._starting.wait)
+    if L:
+        async def wait_started(self):
+            """
+            Wait for the command's setup procedure to commence.
+            """
+            if self._starting is None:
+                return
+            await wait_complain(f"Starting {self.path}", 250, self._starting.wait)
 
-    async def wait_ready(self, wait=True) -> bool | None:
-        """
-        Check if the command is ready.
+        async def wait_ready(self, wait=True) -> bool | None:
+            """
+            Check if the command is ready.
 
-        Returns True if it is stopped, False if it is already running, and
-        None if the command has (or would have, if @wait is False) waited
-        for it to become ready.
-        """
-        if self._stopped is None:
-            return True
-        if self._ready is None:
-            return False
-        if wait:
-            await wait_complain(f"Rdy {self.path}", 250, self._ready.wait)
-        return None
+            Returns True if it is stopped, False if it is already running, and
+            None if the command has (or would have, if @wait is False) waited
+            for it to become ready.
+            """
+            if self._stopped is None:
+                return True
+            if self._ready is None:
+                return False
+            if wait:
+                await wait_complain(f"Rdy {self.path}", 250, self._ready.wait)
+            return None
 
-    def cmd_rdy(self, w=True) -> Awaitable:
-        """
-        Check if / wait for readiness.
+        def cmd_rdy(self, w=True) -> Awaitable:
+            """
+            Check if / wait for readiness.
 
-        Returns `True` if down, `False` if OK.
+            Returns `True` if down, `False` if OK.
 
-        `None` with @w=`False` means "not yet OK", while if w=`True` the
-        command is ready but this call has waited for it.
-        """
-        return self.wait_ready(wait=w)
+            `None` with @w=`False` means "not yet OK", while if w=`True` the
+            command is ready but this call has waited for it.
+            """
+            return self.wait_ready(wait=w)
 
     async def wait_stopped(self):
         "wait until this is no longer running"
@@ -336,6 +345,8 @@ class BaseCmd(Base):
             fn = a
 
         if rep is not None:
+            if not L:
+                raise RuntimeError("not Large")
             if not wait:
                 raise ValueError("can't rep without wait")
             try:
@@ -357,7 +368,7 @@ class BaseCmd(Base):
             tg.spawn(run_no_exc, p, msg, x_err, _name=f"Call:{self.path}/{p}")
             return
 
-        if wr:
+        if L and wr:
             await self.wait_ready()
         r = await p(**msg)
         return r

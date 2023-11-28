@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 
 from moat.util import NotGiven, ValueEvent, obj2name
-from moat.micro.compat import ACM, AC_exit, AC_use, BaseExceptionGroup, Lock, TaskGroup, log
+from moat.micro.compat import ACM, AC_exit, AC_use, BaseExceptionGroup, Lock, TaskGroup, log, L
 from moat.micro.proto.stack import Base, BaseBlk, BaseBuf, BaseMsg, RemoteError, SilentRemoteError
 
 from moat.micro.cmd.base import BaseCmd
@@ -64,7 +64,8 @@ class BaseCmdMsg(BaseCmd):
             await AC_use(self, self._cleanup_open_commands)
             self.s = await self.stream()
             async with TaskGroup() as self.tg:
-                self.set_ready()
+                if L:
+                    self.set_ready()
                 while True:
                     msg = await self.s.recv()
                     await self._handle(msg)
@@ -158,6 +159,8 @@ class BaseCmdMsg(BaseCmd):
             if r is None:
                 t = ValueTask(self, i, x, self.root.dispatch, a, d, x_err=x)
             else:
+                if not L:
+                    raise RuntimeError("not Large")
                 from moat.micro.cmd.util.iter import SendIter
                 t = SendIter(self, i, r, a, d)
 
@@ -252,7 +255,7 @@ class BaseCmdMsg(BaseCmd):
             if a[0] == "!":
                 return await super().dispatch((a[1:],), msg, rep=rep, wait=wait, x_err=x_err)
 
-        if await self.wait_ready():
+        if L and await self.wait_ready():
             raise StoppedError  # already down
 
         if not wait:
@@ -274,11 +277,14 @@ class BaseCmdMsg(BaseCmd):
             msg["x"] = x_err
 
         if rep:
-            from moat.micro.cmd.util.iter import RecvIter
-            msg["r"] = rep
-            self.reply[seq] = e = RecvIter(self, seq, rep)
-            await self.s.send(msg)
-            return e
+            if L:
+                from moat.micro.cmd.util.iter import RecvIter
+                msg["r"] = rep
+                self.reply[seq] = e = RecvIter(self, seq, rep)
+                await self.s.send(msg)
+                return e
+            else:
+                raise RuntimeError("not Large")
         else:
             self.reply[seq] = e = ValueEvent()
             try:

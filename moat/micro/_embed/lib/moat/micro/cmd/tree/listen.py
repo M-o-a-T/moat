@@ -7,7 +7,7 @@ from __future__ import annotations
 from functools import partial
 
 from moat.util import Path, import_
-from moat.micro.compat import AC_use, Event, TaskGroup, log
+from moat.micro.compat import AC_use, Event, TaskGroup, log, L
 
 from moat.micro.cmd.base import ACM_h, BaseCmd, ShortCommandError
 from .layer import BaseLayerCmd
@@ -70,7 +70,7 @@ class BaseListenOneCmd(BaseLayerCmd):
         app = ExtCmdMsg(self.wrapper(conn), self.cfg)
         if (
             self.app is None
-            or not self.app.is_ready()
+            # or not await self.app.is_ready()
             or self._running
             or self.cfg.get("replace", True)
         ):
@@ -79,8 +79,9 @@ class BaseListenOneCmd(BaseLayerCmd):
             app.attached(self, "_")
             self.app = app
             await self.start_app(app)
-            self.set_ready()
-            await app.wait_ready()
+            if L:
+                self.set_ready()
+                await app.wait_ready()
 
             await app.wait_stopped()
             if self.app is app:
@@ -128,7 +129,8 @@ class BaseListenCmd(BaseSubCmd):
         self.seq = seq + 1
         await self.attach(seq, app)
         await self.start_app(app)
-        await app.wait_ready()
+        if L:
+            await app.wait_ready()
 
         await app.wait_stopped()
         await self.detach(seq)
@@ -138,6 +140,7 @@ class BaseListenCmd(BaseSubCmd):
         Accept connections.
         """
         async with self.listener() as conns:
-            self.set_ready()
+            if L:
+                self.set_ready()
             async for conn in conns:
                 await self.tg.spawn(self.handler, conn)

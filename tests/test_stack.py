@@ -27,6 +27,7 @@ micro:
       config: !P cfg.r
       update: true
       state: std
+      large: true
     std: true
     apps:
       r: _test.MpyRaw

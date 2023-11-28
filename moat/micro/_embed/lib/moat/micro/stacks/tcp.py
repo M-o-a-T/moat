@@ -3,9 +3,9 @@ Support code to connect to a TCP server.
 """
 from __future__ import annotations
 
-from ..compat import Event, TaskGroup, run_server
-from ..proto.stream import SingleAIOBuf
-from ..stacks.util import BaseConnIter
+from moat.micro.compat import Event, TaskGroup, run_server, L
+from moat.micro.proto.stream import SingleAIOBuf
+from .util import BaseConnIter
 
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -29,7 +29,8 @@ class TcpIter(BaseConnIter):
 
             async def rdy(evt):
                 await evt.wait()
-                self.set_ready()
+                if L:
+                    self.set_ready()
 
             await tgx.spawn(rdy, evt)
 

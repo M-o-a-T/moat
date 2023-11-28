@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 
 from moat.micro.cmd.base import BaseCmd
-from moat.micro.compat import Event, Queue, log, wait_for_ms
+from moat.micro.compat import Event, Queue, log, wait_for_ms, L
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
@@ -67,7 +67,8 @@ class Cmd(BaseCmd):
         await super().setup()
 
     async def task(self):
-        self.set_ready()
+        if L:
+            self.set_ready()
         await self.err_evt.wait()
         raise self.err
 
@@ -97,7 +98,8 @@ class Cons(BaseCmd):
         return self.q.get()
 
     async def task(self):
-        self.set_ready()
+        if L:
+            self.set_ready()
         buf = bytearray(200)
         d = 0
         while True:

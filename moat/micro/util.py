@@ -69,7 +69,7 @@ async def _run_update(src, dest: MoatPath, check=None, cross=None):
         if dn.endswith(".__init__"):
             dn = dn[:-9]
         try:
-            res = await repl.exec(f"import _hash; print(repr(_hash.hash[{dn !r}])); del _hash")
+            res = await repl.exec(f"import _hash; print(repr(_hash.hash[{dn !r}])); del _hash", quiet=True)
         except (ImportError, KeyError):
             return False
         res = eval(res.strip())  # noqa:S307,PGH001

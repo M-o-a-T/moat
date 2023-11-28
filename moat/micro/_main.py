@@ -128,6 +128,8 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
     type=click.Path(dir_okay=True, file_okay=False),
     help="Mount point for FUSE mount",
 )
+@click.option("-l", "--large", is_flag=True, help="Use more RAM")
+@click.option("-L", "--no-large", is_flag=True, help="Use less RAM")
 @click.option("-s", "--state", type=str, help="State to enter by default")
 @click.option("-c", "--config", type=P, help="Config part to use for the device")
 @click.option("-w", "--watch", is_flag=True, help="monitor the target's output after setup")
@@ -153,6 +155,8 @@ async def setup(
     source,
     root,
     dest,
+    large,
+    no_large,
     run,
     reset,
     state,
@@ -171,9 +175,12 @@ async def setup(
 
     from .path import ABytes, MoatDevPath, copy_over
 
-    async with Dispatch(cfg, run=True) as dsp, SubDispatch(dsp, cfg["path"]) as sd, RemoteBufAnyio(
-        sd,
-    ) as ser, DirectREPL(ser) as repl:
+    async with (
+            Dispatch(cfg, run=True) as dsp,
+            dsp.sub_at(*cfg["path"]) as sd,
+            RemoteBufAnyio(sd) as ser,
+            DirectREPL(ser) as repl,
+        ):
         dst = MoatDevPath(root).connect_repl(repl)
         if source:
             if not dest:
@@ -187,6 +194,11 @@ async def setup(
             await copy_over(source, dst, cross=cross)
         if state:
             await repl.exec(f"f=open('moat.state','w'); f.write({state !r}); f.close(); del f")
+        if large:
+            await repl.exec(f"f=open('moat.lrg','w'); f.close()", quiet=True)
+        elif no_large:
+            await repl.exec(f"import os; os.unlink('moat.lrg')", quiet=True)
+
         if config:
             config = _clean_cfg(get_part(ocfg, config))
             f = ABytes(name="moat.cfg", data=packer(config))
@@ -207,7 +219,7 @@ async def setup(
             # reset with run_main set should boot into MoaT
 
         if run or watch or mount:
-            o, e = await repl.exec_raw(f"from main import go; go(state={state !r})", timeout=30)
+            o, e = await repl.exec_raw(f"from main import go; go(state={state !r})", timeout=None if watch else 30)
             if o:
                 print(o)
             if e:

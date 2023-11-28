@@ -7,7 +7,7 @@ from __future__ import annotations
 from functools import partial
 
 from moat.util import Path, import_
-from moat.micro.compat import AC_use, Event, TaskGroup, log
+from moat.micro.compat import AC_use, Event, TaskGroup, log, L
 
 from moat.micro.cmd.base import ACM_h, BaseCmd, ShortCommandError
 from .dir import BaseSuperCmd
@@ -57,8 +57,9 @@ class BaseLayerCmd(BaseSuperCmd):
         async with TaskGroup() as tg:
             if self.app is not None:
                 await tg.spawn(self.run_app)
-            await self.app.wait_ready()
-            self.set_ready()
+            if L:
+                await self.app.wait_ready()
+                self.set_ready()
 
             # await self.app.stopped()
             # the return from the taskgroup already does that
@@ -68,19 +69,21 @@ class BaseLayerCmd(BaseSuperCmd):
         self.app = await self.gen_cmd()
         if self.app is not None:
             self.app.attached(self, self.name)
-            self.set_ready()
+            if L:
+                self.set_ready()
 
     async def reload(self):
         await super().reload()
         if self.app is not None:
             await self.app.reload()
 
-    async def wait_ready(self, wait=True):
-        if await super().wait_ready(wait=wait):
-            return True
-        if self.app is None:
-            return None
-        return await self.app.wait_ready(wait=wait)
+    if L:
+        async def wait_ready(self, wait=True):
+            if await super().wait_ready(wait=wait):
+                return True
+            if self.app is None:
+                return None
+            return await self.app.wait_ready(wait=wait)
 
     async def gen_cmd(self) -> BaseCmd:
         """
@@ -98,13 +101,15 @@ class BaseLayerCmd(BaseSuperCmd):
             action = tuple(action[0][1:], *action[1:])
             return await super().dispatch(action, msg, **kw)
 
-        await self.wait_ready()
+        if L:
+            await self.wait_ready()
         return await self.app.dispatch(action, msg, **kw)
 
-    def set_ready(self):
-        if self.app is None:
-            raise RuntimeError("early")
-        super().set_ready()
+    if L:
+        def set_ready(self):
+            if self.app is None:
+                raise RuntimeError("early")
+            super().set_ready()
 
     def __getattr__(self, k):
         if k.startswith("_"):

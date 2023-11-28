@@ -5,8 +5,9 @@ from __future__ import annotations
 
 import anyio
 
-from ..proto.stream import SingleAnyioBuf
-from ..stacks.util import BaseConnIter
+from moat.micro.compat import L
+from moat.micro.proto.stream import SingleAnyioBuf
+from .util import BaseConnIter
 
 # Typing
 
@@ -33,7 +34,8 @@ class TcpIter(BaseConnIter):
     async def accept(self) -> Never:  # noqa:D102
         li = await anyio.create_tcp_listener(local_host=self.host, local_port=self.port)
         async with li:
-            self.set_ready()
+            if L:
+                self.set_ready()
             await li.serve(self._handle)
 
     async def _handle(self, client):

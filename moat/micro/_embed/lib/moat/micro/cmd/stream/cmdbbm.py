@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 
 from moat.util import NotGiven, ValueEvent, obj2name
-from moat.micro.compat import ACM, AC_exit, AC_use, BaseExceptionGroup, Lock, TaskGroup, log
+from moat.micro.compat import ACM, AC_exit, AC_use, BaseExceptionGroup, Lock, TaskGroup, log, L
 from moat.micro.proto.stack import Base, BaseBlk, BaseBuf, BaseMsg, RemoteError, SilentRemoteError
 
 from moat.micro.cmd.base import BaseCmd
@@ -63,7 +63,8 @@ class BaseCmdBBM(BaseCmd):
 
     async def cmd_rd(self, n=64):
         """read some data"""
-        await self.wait_ready()
+        if L:
+            await self.wait_ready()
         b = bytearray(n)
         r = await self.s.rd(b)
         if r == n:
@@ -76,7 +77,8 @@ class BaseCmdBBM(BaseCmd):
 
     async def cmd_wr(self, b):
         """write some data"""
-        await self.wait_ready()
+        if L:
+            await self.wait_ready()
         async with self.w_lock:
             await self.s.wr(b)
 

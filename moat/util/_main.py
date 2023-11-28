@@ -147,7 +147,7 @@ async def path_(encode, decode, path):
         for p in path:
             print(repr(list(P(p))))
 
-@cli.command("cfg", help="dump a ", no_args_is_help=True)
+@cli.command("cfg", help="dump a config value", no_args_is_help=True)
 @click.pass_obj
 @click.option("-y", "--yaml", is_flag=True, help="print as YAML")
 @click.argument("path", nargs=-1, type=P)

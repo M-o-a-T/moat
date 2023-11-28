@@ -20,6 +20,7 @@ try:
 except ImportError:
     greenback = None
 
+from .impl import NotGiven
 from .queue import Queue as _Queue
 
 logger = logging.getLogger(__name__)

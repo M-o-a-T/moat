@@ -8,7 +8,7 @@ try:
 except ImportError:
     WeakSet = set
 
-from .compat import EndOfStream, WouldBlock
+from .compat import EndOfStream, WouldBlock, NotGiven
 from .impl import NotGiven
 from .queue import Queue
 
@@ -128,7 +128,7 @@ class Broadcaster:
                 print(msg)
 
         async with anyio.create_task_group() as tg, Broadcaster() as bc:
-            tg.spawn(rdr, aiter(bc))  # "bc" also works
+            tg.start_soon(rdr, aiter(bc))
             for x in range(5):
                 bc(x)
                 await anyio.sleep(0.01)
@@ -147,6 +147,7 @@ class Broadcaster:
     """
 
     _rdr = None
+    value = NotGiven
 
     def __init__(self, length=1):
         self.length = length
@@ -193,8 +194,12 @@ class Broadcaster:
 
     def __call__(self, value):
         """Enqueue a value to all readers"""
+        self.value = value
         for r in self._rdr:
             r(value)
+
+    async def read(self):
+        return self.value
 
     def close(self):
         "Close the broadcaster. No more writing."

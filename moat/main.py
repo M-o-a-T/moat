@@ -2,10 +2,13 @@
 This module contains the entry point to the MOAT command line interface
 """
 
+import os
+import sys
 import anyio
 import asyncclick as click
 from asyncscope import main_scope
 from moat.util import attrdict, main_
+from moat.util import exc_iter
 
 
 def cmd(backend="trio"):
@@ -24,7 +27,19 @@ This is the main command handler for MoaT, the Master of all Things.
             obj = attrdict(moat=attrdict(main_scope=m_s, sub_pre="moat", sub_post="_main.cli"))
             await main_.main(obj=obj)
 
-    anyio.run(runner, backend=backend)
+    ec = 0
+    try:
+        anyio.run(runner, backend=backend)
+    except* KeyboardInterrupt:
+        if "MOAT_TB" in os.environ:
+            raise
+        print("\rInterrupted.   ", file=sys.stderr)
+        ec = 9
+    except* SystemExit as ex:
+        for e in exc_iter(ex):
+            ec |= e.code
+    return ec
+
 
 
 @main_.command(short_help="Import the debugger")

@@ -1,5 +1,5 @@
-#include "moatbus/crc.h"
-#include "moatbus/message.h"
+#include "moat/crc.h"
+#include "moat/message.h"
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdlib.h>

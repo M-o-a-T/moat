@@ -14,21 +14,20 @@ to keep those interoperable, though usage details necesarily differ.
 Physical bus interface
 ----------------------
 
-``moatbus/handler`` implements sending and receiving buffered bus messages.
+``moat.bus.handler`` implements sending and receiving buffered bus messages.
 Both use an I/O-less strategy so that they can be used however necessary.
 
 There currently is no implementation of a buffer-less sender or receiver.
 Feel free to add one.
 
-Encapsulation of bus messages is handled by ``moatbus/message``.
+Encapsulation of bus messages is handled by ``moat.bus.message``.
 
 --------------------
 Serial bus interface
 --------------------
 
-The serial adapter is in ``moatbus/serial.c``; there's also a Python
-version. Both implement an I/O-less module which can be used in a variety
-of environments.
+The serial adapter is in ``c/serial.c``; the Python version is in
+``moat.bus.serial``. Both are based on ``SerialPacker``.
 
 -------------------------
 Microcontroller interface
@@ -72,7 +71,7 @@ C macros
   Transfer all messages received on A to B and vice versa. Define as the
   (positive) server address SA (1..3).
 
-  A Bus ACK is sent if the message addressed to -SA or -4 (server broadcast).
+  A Bus ACK is sent if an message is addressed to -SA or -4 (server broadcast).
   Otherwise this is transparent, i.e. *all* messages are forwarded.
 
 * MOAT_GATEWAY
@@ -107,27 +106,27 @@ daemon on a Unix socket which reads it, ORs it to the latest bytes from
 all other clients, and then sends the updated bus state to them, applying a
 variable delay to simulate bus latency.
 
-This bus is implemented by ``fakebus/bus.py``.
+This bus is implemented by ``moat.bus.fake.bus``.
 
 ``fakebus/send`` and ``fakebus/recv`` send one message and receive any
 number of messages, respectively. The common code for bus access is in
 ``fakebus/client``.
 
-``fakebus/spam.c`` transmits random changes to the bus.
+``c/fake/bus/spam.c`` transmits random changes to the bus.
 
-Finally, ``fakebus/serialbus.c`` treats its stdin/stdout like a serial wire
+Finally, ``c/fake/bus/serial.c`` treats its stdin/stdout like a serial wire
 and bidirectionally forwards messages from that to the fakebus and back.
 
 Like on the real bus, debugging disrupts the low-level bus simulator.
 
-For a full-stack simulation, "fakebus/server.py" starts the serial adapter
-and then attaches the bus master module to it.
+For a full-stack simulation, "moat.bus.fake.server.py" starts the serial
+adapter and then attaches the bus master module to it.
 
 -------------------------
 High-level bus simulation
 -------------------------
 
-We'll use MQTT and send the message's bytes (without header) to the
+We use MQTT. The message's bytes (without header) are sent to the
 test/raw/moatbus/SRC/DST/CODE topic.
 
 
@@ -135,14 +134,15 @@ test/raw/moatbus/SRC/DST/CODE topic.
 Hardware Test setup
 +++++++++++++++++++
 
-Simulating a bus is nice but there's something to be said for using actual
+Simulating a bus is nice but at some point we need to use actual
 hardware.
 
-Our canonical test setup requires a Raspberry Pi 2 (or better). You need
+Our standard test setup requires a Raspberry Pi 2 (or better). You need
 three Blue Pill boards, three **3.3V TTL** serial bus adapters (two if you
-use the Pi's built-in serial for the third), four 10k resistors (for bus
-pull-up) and two standard-sized breadboards if you don't want to have the
-Pills float around your desk.
+use the Pi's built-in serial; remember to turn off the console and
+Bluetooth serial ports), four 10k resistors (for bus pull-up) and two
+standard-sized breadboards if you don't want to have the Pills float around
+your desk.
 
 If you don't have a Pi: anything that runs Linux and can handle three TTL
 serial ports and twelve 3.3V digital ports will work. You'll need to
@@ -152,9 +152,6 @@ Install ``stm32flash``. If you want to debug on the Pill with gdb, also
 install ``openocd`` (from Bullseye or better; the version from Buster
 doesn't work).
 
-NB: If you even thought of using those RS232 adapters you still have in
-your grab bag, you probably deserve frying your hardware. Then again, maybe
-not. Anyway: just don't do that.
 
 -----------
 Connections
@@ -163,9 +160,7 @@ Connections
 Let's name the Blue Pill boards A, B and C. Their serial ports should be
 /dev/pill_a through /dev/pill_c; one way to create them is with something
 like the udev rules in ``ci/71-serial.rules``. You'll need to change the
-serial numbers and USB product IDs to match yours. Don't forget to disable
-the Pi's serial console if you use it; on the Pi 3 you also need to disable
-Bluetooth.
+serial numbers and USB product IDs to match yours.
 
 Pins ``SIO``, ``CLK`` and ``BT0`` are *not* located on the Pill's
 breadboard headers. ``SIO`` and ``CLK`` are the second and third pins on
@@ -181,9 +176,9 @@ Connect all Bus1 to Bus3 lines, and add one of the 10k resistors to each.
 The other end of the resistor goes to one of the Pills' 3.3 outputs.
 
 RX1 to RX3 are the serial adapters' Rx pins. Likewise for Tx. Don't set the
-adapters to 5V; the Pill is supposed to be able to take it but better not
-to count on it. Also, it's best to connect the serial adapters to the same
-Pi you power the pills from.
+adapters to 5V; the Pills are supposed to be able to take it, but it's
+better not to require them to. Also, connect the serial adapters to the
+same Pi you power the pills from.
 
 ====  == === === ===
 GPIO  Pi   A   B   C
@@ -218,8 +213,6 @@ Bus3     B14 B14 B14
 Bus4     B15 B15 B15
 ====  == === === ===
 
-Pins 8 and 10 are Pi's the serial port. Only connect the Pill A's pins A9
-and A10 to them if you do **not** have a third serial-TTL adapter.
 
 -------
 Testing
@@ -237,7 +230,7 @@ each terminal in the samples below.
 Running the test
 ----------------
 
-Start an MQTT server if it doesn't run anyway.
+Start an MQTT server if you don't run one anyway.
 
 On the Pi, start three terminals. Run ``ci/run a``, ``ci/run b`` and ``ci/run c``
 in each, respectively.

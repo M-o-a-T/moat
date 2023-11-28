@@ -18,8 +18,8 @@ WLAN for breakfast.
 
 Also, radio is susceptible to random connectivity problems, dynamic mesh
 radio is easy to get wrong and requires always-on nodes which again
-requires too much power. Also², radio needs nontrivial hardware; for some
-reason *g* most MCUs don't have a built-in mesh-capable radio.
+requires too much power. Also², radio needs nontrivial hardware and power.
+Most MCUs don't have built-in mesh-capable radio.
 
 A three-wire bus like 1wire is too fiddly to write bit-banging clients for.
 (Several people have tried.) Also, 1wire doesn't have multi-master and you
@@ -32,57 +32,53 @@ differential signalling) but not if your bus extends over a building,
 your MCU has no CAN hardware, your wiring isn't twisted-pair, and you want
 to do firmware updates over the wire.
 
-You could use half-duplex serial but there's the collision problem which
-many UARTs are not equipped to handle. Also, your MCU might not have many
-serial ports, and those might better required for firmware update,
-debugging, or talking to peripherals.
+Half-duplex serial doesn't work either because most UARTs are not equipped
+to handle half-duplex operation with collision detection. Also, your MCU
+might not have many serial ports, and those might better required for
+firmware update, debugging, or talking to peripherals.
 
 Next problem: long wires have somewhat high impedance, which limit your
 transmission speed. You could use I²C, but many hardware clients are too
 susceptible to noise – in fact on many embedded CPUs the I²C interface can
 freeze up. Also, you need 16 bus transitions per byte. This is rather slow.
 
-The MoaT bus offers a solution to all of this. It requires four wires:
-ground, power, and two data lines. It adapts easily to more than two wires.
-It is multi-master and does not require particularly accurate timers:
-timers for serial ports must be accurate within at most ~4% of the
-bit rate, while MoaT work well with ~20% accuracy.
 
-Downsides
----------
+The MoaT approach
+-----------------
 
-There are always compromises. With MoaT, the main problem is that it's a
-bit-banging interface (well, until somebody writes an FPGA implementation,
-which is unlikely as of 2021) which requires reasonably-fast interrupts.
-While the current proof of concept implementattion runs in the Arduino main
-loop, that's far too slow and doesn't allow the MCU to sleep.
+The MoaT bus offers a unique solution. It requires four wires:
+ground, power, and at least two data lines. It adapts easily to more than
+two wires, with much better efficiency. It is multi-master and has quite
+modest hardware requirements:
 
-While MoaT is designed for small(ish) MCUs, packet assembly and disassembly
-is somewhat expensive in terms of both CPU speed and memory: the boot
-loader for Cortex-M CPUs barely fits in 32k, thus online firmware upgrades
-or non-trivial applications requires 64k of flash storage. The situation
-on ATmega CPUs is likely to be worse.
+* pin-level interrupts (latency: somewhat less than the baud rate)
+* a timer/counter (free-running, no interrupts)
+* periodic calls from the main loop while active
 
 ----------------------
 Principle of operation
 ----------------------
 
 A bus with N wires can assume 2^n states. Our self-timing requirement
-enforces *some* transiton between states. Thus each time slot can transmit
-log2(2^n-1) bits of information.
+enforces *some* transiton between states, while interrupt-free operation
+requires that the idle state is not used during data transmission. Thus
+each time slot can transmit log2(2^n-2) bits of information.
 
-We still need to transmit binary data. The optimal message size on a
-two-wire system ends up as 7 transitions which carry 11 bits of information
-(log2(3^7)). Using three wires, we can send 14 bits using 5 transitions;
-four wires, 11 bits using 3 transitions.
+On a two-wire system this is one bit per baud and thus offers no speed
+advantage over a conventional serial line. However, a three-wire system
+achieves 2.58 bits; on four wires we get 3.8 bits.
 
-Since a message can contain excess bits (3^7 > 2^11), we can use an
-"illegal" sequence to terminate the message. Bus messages thus don't need a
-length byte and can be generated on the fly if necessary.
+A three-wire bus can thus combine two transactions to transmit five bits
+and has some states left over for out-of-band signalling.
+
+On a four-wire bus, best efficiency would be achieved using five
+transactions (19 bits); however, this would require a >16-bit division or a
+large lookup table. As both are too much overhead for cheap 8-bit
+controllers, we limit the size to 7 bits. As before, this yields four
+"out-of-band" values for signalling.
 
 A small header carries addressing and a few bits of message type
-information. All messages are terminated with a CRC. Every message must be
-acknowledged.
+information. All messages are terminated with a 14-bit CRC.
 
 The details are documented in ``doc/spec_wire.rst``.
 
@@ -96,7 +92,7 @@ supplies power to all of them. Device addresses on the MoatBus thus are 7
 bits wide. More devices are possible with gateways.
 
 Lots of communication flows between small dumb devices ("clients") and some
-central system ("server"). On the MoatBus there may be more than one server,
+central system ("server"). On the MoaT bus there may be more than one server,
 so the server addresses get 2 bits. Server address 0 is reserved for
 broadcast messages. Three "real" servers is deemed to be sufficient for
 redundancy.
@@ -112,7 +108,7 @@ from the master.
 Message content
 ---------------
 
-MoatBus devices shall be auto-discoverable. Each device carries a data
+MoaT bus devices shall be auto-discoverable. Each device carries a data
 dictionary; if there's not enough ROM for it, the dictionary may be stored
 on the server and referred to by name.
 
@@ -133,9 +129,7 @@ computer (Raspberry Pi, ESP32, …) then relays to MQTT.
 
 This allows the daemons which do address assignment, message relaying, and
 data collection to operate independently. In particular, each part can be
-debugged or restarted without affecting the other components of the MoaT
-bus system.
-
+debugged or restarted without affecting the other components of the system.
 
 The details are documented in ``doc/spec_infra.rst``.
 
@@ -144,7 +138,8 @@ The details are documented in ``doc/spec_infra.rst``.
 MoatBus code
 ------------
 
-The MoaT bus is implemented in three programming languages: C, Forth, and Python.
+The MoaT bus will be implemented in three programming languages: C, Forth,
+and Python.
 
 C
 ====

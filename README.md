@@ -10,6 +10,7 @@ the mark.
 
 Well, except for the water.
 
+
 ## Seriously …
 
 The MoaT code comprises a lot of somewhat-opinionated code to control
@@ -23,35 +24,36 @@ Satellite microcontrollers typically run MicroPython, again heavily using
 structured async code: MicroPython supports taskgroups if you patch it
 lightly.
 
+
 ### Structured what?
 
 Structured Concurrency.
 
-There's a [Wikipedia article](https://en.wikipedia.org/wiki/Structured_concurrency).
+There's a [Wikipedia article](https://en.wikipedia.org/wiki/Structured_concurrency) about it.
 
 A good Pythonic introduction is [here](https://vorpus.org/blog/notes-on-structured-concurrency-or-go-statement-considered-harmful/).
 
 
 ## Repository Structure
 
-This repository contains a lot of submodules, corresponding to separate `moat-XXX`
-packages..
+The MoaT code is built using git submodules, corresponding to separate
+`moat-XXX` packages.
 
-The submodule "main" contains the command-line front-end of the MoaT. Any
+The top module contains the command-line front-end of MoaT. Any
 MoaT code that can reasonably be controlled by a command line hooks into
 it, by way of a `_main` module with a `cli` object, which should be an
-`asyncclick` command.
+`asyncclick` group (or command).
 
-All other parts are submodules, so you can ignore the parts you don't want.
+The only mandatory submodule is "util". It contains a heap of
+semi-structured helper code which the rest of the MoaT infrastructure
+depends on. "moat-util" also has a command line; it serves as a convenient
+example for building your own extension, and exports a
+time-until-absolute-date calculator and a msgpack codec.
 
-One mandatory submodule is "util". It contains a heap of semi-structured helper code
-which the rest of the MoaT infrastructure depends on.
 
 ## Modules
 
 ### Libraries
-
-These can be used standalone.
 
 * dbus: an async DBus client.
 
@@ -66,15 +68,26 @@ These can be used standalone.
 
 * micro: Support for MoaT sattelites running MicroPython
 
+
 ### MoaT parts
 
 * main, util: See above.
 
 * kv: distributed masterless eventually-consistent key-value storage.
 
-* pv: photovoltaics.
+* ems: Battery management, photovoltaics, …
+
+* src: MoaT source code management
+
 
 ### MoaT-KV components
+
+Moat-KV is a master-less distributed key-value storage system. It is
+resistant to partitioning and intended to be always-on. It will not block
+or lose updates in a partitioned network; inconsistent entries are
+re-synchronized upon reconnection.
+
+"moat.kv" is currently named "distkv". Conversion to MoaT is planned.
 
 * kv-akumuli: Data storage to [Akumuli](https://docs.akumuli.org/), an
   efficient light-weight time series database
@@ -91,8 +104,15 @@ These can be used standalone.
 
 * kv-wago: A rudimentary interface for WAGO 330 controllers
 
-### MoaT-PV components
 
-* pv-bms: Battery management
+### MoaT-EMS components
+
+EMS is an acronym for "Energy Management System".
+
+* ems-battery: Battery management
+
+* ems-inv: Inverter management
+
+* ems-sched: Energy storage scheduling
 
 More will follow.

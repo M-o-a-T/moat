@@ -94,20 +94,15 @@ everything is checked in, tagged (creating new tags if necessary), and
 linked (i.e. submodule references are updated). This way, your copy of the
 `moat` repository contains a reference to your new module.
 
+
 ## Why not a single repository?
 
 Because this way it's possible to work on part of the tree and ignore all
 the rest of MoaT.
 
-With a single large repository, `git status` looks at the whole repository
-even when you're deep in some subdirectory. You need to remember to add the
-relative path to the top of your workspace, and it's far too easy to
-habitually type `git status .` and forget to check in that important
-`../READ_BEFORE_INSTALLING.txt` file until it#s too late.
-
-More importantly, we want to be able to tag different modules and their
-requirements independently. A breaking change in `moat.mqtt` should not
-affect the tag of `moat.modbus`.
+We want to be able to tag different modules and their requirements
+independently. A breaking change in `moat.mqtt` should not affect
+`moat.modbus`.
 
 With `moat src build` there's a reasonably-powerful tool that pulls the
 disparate parts of Moat back together, so the disadvantages of keeping

@@ -39,6 +39,8 @@ CancelledError = asyncio.CancelledError
 ExceptionGroup = asyncio.ExceptionGroup  # noqa:A001
 BaseExceptionGroup = asyncio.BaseExceptionGroup  # noqa:A001
 
+DEBUG = const(False)
+
 
 class EndOfStream(Exception):
     "as from anyio"
@@ -127,6 +129,14 @@ def every(t, p, *a, **k):
     "call a function every @t seconds"
     return every_ms(t * 1000, p, *a, **k)
 
+if DEBUG:
+    async def _catch(p,*a,**k):
+        try:
+            return await p(*a,**k)
+        except Exception as exc:
+            print("Error:", repr(exc), file=usys.stderr)
+            print_exc(exc)
+            raise
 
 class TaskGroup(_tg):
     "anyio.TaskGroup, lightly enhanced"
@@ -134,12 +144,18 @@ class TaskGroup(_tg):
     async def spawn(self, p, *a, _name=None, **k):
         "Starts a task now. Returns something you can cancel."
         # print("RUN",_name,p,a,k, file=sys.stderr)
-        return self.create_task(p(*a, **k))  # , name=_name)
+        if DEBUG:
+            return self.create_task(_catch(p, *a, **k))  # , name=_name)
+        else:
+            return self.create_task(p(*a, **k))  # , name=_name)
 
     def start_soon(self, p, *a, _name=None, **k):
         "Starts a task soon."
         # print("RUN",_name,p,a,k, file=sys.stderr)
-        self.create_task(p(*a, **k))
+        if DEBUG:
+            self.create_task(_catch(p, *a, **k))
+        else:
+            self.create_task(p(*a, **k))
 
 
 def run(p, *a, **k):

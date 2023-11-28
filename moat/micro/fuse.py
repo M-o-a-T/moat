@@ -811,17 +811,34 @@ async def wrap(link: SubDispatch, path: Path, blocksize=0, debug=1):
     logger.debug("Mounting...")
     fuse_options = set(pyfuse3.default_options)  # pylint: disable=I1101
     fuse_options.add("fsname=moat_fs")
-    # fuse_options.add(f'max_read={operations.max_read}')
+    fuse_options.add(f'max_read={operations.max_read}')
+    # fuse_options.add(f'max_write={operations.max_write}')
     if debug > 1:
         fuse_options.add("debug")
     pyfuse3.init(operations, str(path), fuse_options)  # pylint: disable=I1101
 
     logger.debug("Entering main loop..")
     async with anyio.create_task_group() as tg:
+
+        async def fuse_main():
+            try:
+                await pyfuse3.main()
+            except anyio.get_cancelled_exc_class():
+                pyfuse3.close(unmount=True)
+                raise
+            except BaseExceptionGroup as exc:
+                exc = exc.split(anyio.get_cancelled_exc_class())[1]
+                pyfuse3.close(unmount=exc is None)
+                raise
+            except BaseException as exc:
+                pyfuse3.close(unmount=False)
+                raise
+            else:
+                pyfuse3.close(unmount=True)
+
         try:
-            tg.start_soon(pyfuse3.main)  # pylint: disable=I1101
+            tg.start_soon(fuse_main)  # pylint: disable=I1101
             yield None
 
         finally:
-            pyfuse3.close(unmount=True)  # pylint: disable=I1101  # was False but we don't continue
             tg.cancel_scope.cancel()

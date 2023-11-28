@@ -4,7 +4,7 @@ fake sensors
 from __future__ import annotations
 
 import random
-from math import tanh  # exp
+from math import tanh, atanh
 
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.compat import Event
@@ -71,7 +71,7 @@ class ADC(BaseCmd):
     Config parameters:
     - min, max: range. Defaults to 0…1.
     - step: max difference between two consecutive values.
-    - border: A hint for how long the sequence is likely to be close to
+    - border: A hint for how long the sequence should be close to
       the min/max. Float. Default 2.
     - seed: used to reproduce the random sequence.
     """
@@ -86,9 +86,13 @@ class ADC(BaseCmd):
 
         seed = cfg.get("seed", random.random())
 
-        self.val = 0
+        self.val = atanh(((cfg.init - self.min) / (self.max - self.min) - 0.5) * 2) if "init" in cfg else 0
         self.bias = 0
-        self.rand = random.Random(seed)
+        try:
+            self.rand = random.Random(cfg.seed if "seed" in cfg else None)
+        except AttributeError:
+            from moat.util.random import Random
+            self.rand = Random(cfg.seed if "seed" in cfg else random.getrandbits(32))
 
     async def cmd_r(self):
         "read current value"
@@ -102,6 +106,4 @@ class ADC(BaseCmd):
         self.val = v
         self.bias = b
 
-        # tanh is steeper
         return self.min + (self.max - self.min) * (0.5 + 0.5 * tanh(v))
-        # return self.min + (self.max-self.min) / (1+exp(v))

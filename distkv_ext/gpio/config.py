@@ -1,7 +1,7 @@
 from moat.util import attrdict, Path
 
 CFG = attrdict(
-    prefix=Path(".distkv", "gpio"),
+    prefix=Path(".kv", "gpio"),
     interval=1,  # input/count: Pulse reporting frequency
     count=True,  # input/count, input/button: Pulse direction
     # up down both=True False None

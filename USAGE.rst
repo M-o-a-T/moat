@@ -2,21 +2,19 @@
 Using DistGPIO
 ==============
 
-Run "distkv client gpio monitor" to connect to the server on localhost.
-
-See "distkv dump cfg gpio" for configuration options.
+Run "moat kv gpio monitor" to connect to the server on localhost.
 
 Data structure
 ==============
 
-On disk, the path to the port is ".distkv gpio SERVER TYPE CARD PORT" by
+On disk, the path to the port is ":.kv.gpio.SERVER.TYPE.DRIVER.PORT" by
 default. All attributes are also looked up in the higher nodes, so you can
 set per-type or per-server defaults easily.
 
 Server attributes
 +++++++++++++++++
 
-* server: a dict with host and port. Set by ``distkv client gpio server``.
+* server: a dict with host and port. Set by ``moat kv gpio server``.
 
 * poll: The cylce time of the controller. Typical: 0.05 seconds.
 
@@ -51,7 +49,7 @@ level, should be ignored. The default is ``True``.
 read
 ~~~~
 
-The current value of a wire on the controller is mirrored to some DistKV entry.
+The current value of a wire on the controller is mirrored to some MoaT-KV entry.
 
 * dest: the path to store the result at.
 
@@ -64,7 +62,7 @@ The current value of a wire on the controller is mirrored to some DistKV entry.
 count
 ~~~~~
 
-The number of transitions of a wire on the controller is mirrored to some DistKV entry.
+The number of transitions of a wire on the controller is mirrored to some MoaT-KV entry.
 
 * dest: the path to save the counter to.
 
@@ -111,8 +109,8 @@ Multiple interleaved buttons are not yet supported.
 write
 ~~~~~
 
-The current value of some DistKV entry is mirrored to a wire on the controller.
-Also, the current output state is mirrored to a "state" entry in DistKV.
+The current value of some MoaT-KV entry is mirrored to a wire on the controller.
+Also, the current output state is mirrored to a "state" entry in MoaT-KV.
 
 * src: the path to monitor the valoe of.
 
@@ -123,10 +121,10 @@ Also, the current output state is mirrored to a "state" entry in DistKV.
 oneshot
 ~~~~~~~
 
-The current value of some DistKV entry is mirrored to a wire on the controller for some time (max).
-Also, the current output state is mirrored to a "state" entry in DistKV.
+The current value of some MoaT-KV entry is mirrored to a wire on the controller for some time (max).
+Also, the current output state is mirrored to a "state" entry in MoaT-KV.
 
-The wire is cleared when the time has passed, or when the DistKV entry is set to `False`.
+The wire is cleared when the time has passed, or when the MoaT-KV entry is set to `False`.
 
 * src
 
@@ -142,10 +140,10 @@ The wire is cleared when the time has passed, or when the DistKV entry is set to
 pulse
 ~~~~~~~
 
-If some DistKV entry is set, a wire on the controller flips between on and
-off. The "on" ratio is mirrored to a "state" entry in DistKV.
+If some MoaT-KV entry is set, a wire on the controller flips between on and
+off. The "on" ratio is mirrored to a "state" entry in MoaT-KV.
 
-The wire is cleared (and the state entry set to zero) when the DistKV entry is set to `False`.
+The wire is cleared (and the state entry set to zero) when the MoaT-KV entry is set to `False`.
 
 * src
 * src
@@ -166,12 +164,12 @@ Command line
 ============
 
 
-.. program:: distkv client gpio
+.. program:: moat kv gpio
 
 The main entry point for this extension.
 
 
-.. program:: distkv client gpio port
+.. program:: moat kv gpio port
 
 Print or modify port settings.
 
@@ -198,7 +196,7 @@ lets you easily change more than one at a time.
    The port is numeric, starting with 0.
 
 
-.. program:: distkv client gpio attr
+.. program:: moat kv gpio attr
 
 Print, modify or delete a single attribute.
 
@@ -237,12 +235,12 @@ If you set a value that is evaluated to a mapping, exising values will be merged
    The port is numeric, starting with 0.
 
 
-.. program:: distkv client gpio list
+.. program:: moat kv gpio list
 
 Print the current state of your GPIO controllers.
 
 This command does not access the device; it is used solely for displaying
-the configuration of the interaction with DistKV.
+the configuration of the interaction with MoaT-KV.
 
 .. option:: server
 
@@ -266,7 +264,7 @@ the configuration of the interaction with DistKV.
    The port number. Ports are numbered starting with 1.
 
 
-.. program:: distkv client gpio monitor
+.. program:: moat kv gpio monitor
 
 This is a stand-alone GPIO monitor. It connects to a single controller
 and runs polls and monitors.

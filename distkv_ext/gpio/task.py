@@ -1,11 +1,11 @@
 """
-GPIO task for DistKV
+GPIO task for MoaT-KV
 """
 
 import anyio
 import asyncgpio
 
-from distkv_ext.gpio.model import GPIOchip
+from .model import GPIOchip
 
 import logging
 

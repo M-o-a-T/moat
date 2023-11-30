@@ -1,5 +1,5 @@
 """
-DistKV client data model for GPIO
+MoaT-KV client data model for GPIO
 """
 import anyio
 try:
@@ -8,9 +8,9 @@ except ImportError:
     from anyio.exceptions import ClosedResourceError
 
 from moat.util import PathLongener, NotGiven
-from distkv.obj import ClientEntry, ClientRoot
-from distkv.errors import ErrorRoot
-from distkv.exceptions import ServerError
+from moat.kv.obj import ClientEntry, ClientRoot
+from moat.kv.errors import ErrorRoot
+from moat.kv.exceptions import ServerError
 import asyncgpio as gpio
 
 import logging
@@ -510,7 +510,7 @@ class GPIOline(_GPIOnode):
 
         Also the value is mirrored to ``cur`` if that's set.
 
-        `proc` is called with the GPIO line, the current value from DistKV,
+        `proc` is called with the GPIO line, the current value from MoaT-KV,
         and the remaining arguments as given.
         """
         async with anyio.open_cancel_scope() as sc:
@@ -588,7 +588,7 @@ class GPIOline(_GPIOnode):
         present.
 
         ``t_on`` may be a number or a path, if the latter
-        it's read from DistKV. ``state`` must be a path.
+        it's read from MoaT-KV. ``state`` must be a path.
 
         """
 
@@ -689,7 +689,7 @@ class GPIOline(_GPIOnode):
             logger.info("mode or src not set in %s", self.subpath)
             return
 
-        # Rest state. The input value in DistKV is always active=high.
+        # Rest state. The input value in MoaT-KV is always active=high.
         negate = self.find_cfg("low")
         t_on = self.find_cfg("t_on", default=None)
         t_off = self.find_cfg("t_off", default=None)

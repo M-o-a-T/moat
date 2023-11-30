@@ -5,7 +5,7 @@ import asyncclick as click
 from collections.abc import Mapping
 
 from moat.util import yprint, attrdict, as_service, P, attr_args
-from distkv.data import res_get, res_update, node_attr
+from moat.kv.data import res_get, res_update, node_attr
 
 import logging
 
@@ -208,8 +208,8 @@ async def monitor(obj, name, controller):
 
     The first argument must be the local host name.
     """
-    from distkv_ext.gpio.task import task
-    from distkv_ext.gpio.model import GPIOroot
+    from .task import task
+    from .model import GPIOroot
 
     server = await GPIOroot.as_handler(obj.client)
     await server.wait_loaded()

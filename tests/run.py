@@ -3,13 +3,13 @@ import anyio
 import trio
 import trio.testing
 
-from distmqtt.test import test_client
+from moat.mqtt.test import test_client
 from asyncgpio.test import GpioWatcher, Pin
 
 from moat.util import Path
-from distkv_ext.gpio.task import task as GPIOtask
-from distkv_ext.gpio.model import GPIOroot
-from distkv_ext.gpio.config import CFG
+from moat.kv.gpio.task import task as GPIOtask
+from moat.kv.gpio.model import GPIOroot
+from moat.kv.gpio.config import CFG
 
 import logging
 
@@ -96,7 +96,7 @@ class _test(metaclass=_test_m):
         want_msgs = []
         in_pins = []
         in_msgs = []
-        # Sort pin changes and DistKV messages into different bins
+        # Sort pin changes and MoaT-KV messages into different bins
         # because they may interleave randomly
         for d in data:
             if isinstance(d, Pin):

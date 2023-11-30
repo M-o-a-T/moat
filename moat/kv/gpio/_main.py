@@ -26,12 +26,13 @@ async def cli():
 async def dump(obj, path):
     """Emit the current state as a YAML file.
     """
+    cfg = obj.cfg.kv.gpio
     res = {}
     if len(path) > 3:
         raise click.UsageError("Only up to three path elements (host.controller:pin) allowed")
 
     async for r in obj.client.get_tree(
-        obj.cfg.gpio.prefix + path, nchain=obj.meta, max_depth=4 - len(path)
+        cfg.prefix + path, nchain=obj.meta, max_depth=4 - len(path)
     ):
         # pl = len(path) + len(r.path)
         rr = res
@@ -48,14 +49,12 @@ async def dump(obj, path):
 async def list_(obj, path):
     """List the next stage.
     """
+    cfg = obj.cfg.kv.gpio
     res = {}
     if len(path) > 3:
         raise click.UsageError("Only up to three path elements (host.controller:pin) allowed")
 
-    res = await obj.client._request(
-        action="enumerate", path=obj.cfg.gpio.prefix + path, empty=True
-    )
-    for r in res.result:
+    for r in await obj.client.list(cfg.prefix + path, empty=True):
         print(r, file=obj.stdout)
 
 
@@ -68,9 +67,10 @@ async def attr_(obj, path, vars_, eval_, path_):
 
     `--eval` without a value deletes the attribute.
     """
+    cfg = obj.cfg.kv.gpio
     if len(path) != 3:
         raise click.UsageError("Three path elements (host.controller:pin) required")
-    await node_attr(obj, obj.cfg.gpio.prefix + path, vars_, eval_, path_)
+    await node_attr(obj, cfg.prefix + path, vars_, eval_, path_)
 
 
 @cli.command()
@@ -80,9 +80,10 @@ async def delete(obj, path):
     """
     Delete a port.
     """
+    cfg = obj.cfg.kv.gpio
     if len(path) != 3:
         raise click.UsageError("Three path elements (host.controller:pin) required")
-    res = await obj.client.delete(obj.cfg.gpio.prefix + path)
+    res = await obj.client.delete(cfg.prefix + path)
     if obj.meta:
         yprint(res, stream=obj.stdout)
 
@@ -121,9 +122,10 @@ async def port(obj, path, typ, mode, attr):
     "low" is the state of the wire when the input is False.
     Floats may be paths, in which case they're read from there when starting.
     """
+    cfg = obj.cfg.kv.gpio
     if len(path) != 3:
         raise click.UsageError("Three path elements (host.controller:pin) required")
-    res = await obj.client.get(obj.cfg.gpio.prefix + path, nchain=obj.meta or 1)
+    res = await obj.client.get(cfg.prefix + path, nchain=obj.meta or 1)
     val = res.get("value", attrdict())
 
     if type is None:
@@ -166,8 +168,9 @@ async def port(obj, path, typ, mode, attr):
 async def _attr(obj, attr, value, path, eval_, res=None):
     # Sub-attr setter. (Or whole-attr-setter if 'attr' is empty.)
     # Special: if eval_ is True, a value of '-' deletes. A mapping replaces instead of updating.
+    cfg = obj.cfg.kv.gpio
     if res is None:
-        res = await obj.client.get(obj.cfg.gpio.prefix + path, nchain=obj.meta or 2)
+        res = await obj.client.get(cfg.prefix + path, nchain=obj.meta or 2)
     try:
         val = res.value
     except AttributeError:
@@ -193,7 +196,7 @@ async def _attr(obj, attr, value, path, eval_, res=None):
             return
         value = res_update(res, attr, value=value)
     res = await obj.client.set(
-        obj.cfg.gpio.prefix + path, value=value, nchain=obj.meta, chain=res.chain
+        cfg.prefix + path, value=value, nchain=obj.meta, chain=res.chain
     )
     if obj.meta:
         yprint(res, stream=obj.stdout)

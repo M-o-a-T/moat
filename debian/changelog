@@ -1,3 +1,9 @@
+moat-kv-knx (0.11.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 30 Nov 2023 17:16:33 +0100
+
 moat-kv-knx (0.11.0-1) unstable; urgency=medium
 
   * Renamed

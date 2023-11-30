@@ -12,7 +12,7 @@ try:
 except ImportError:
     from collections import Mapping
 
-from moat.kv.util import combine_dict
+from moat.util import combine_dict
 from moat.kv.exceptions import ClientConnectionError
 from .model import KNXserver
 

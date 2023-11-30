@@ -1,23 +1,21 @@
 import anyio
 from functools import partial
 
-from distkv.util import P, load_ext
-from distkv.mock.mqtt import stdtest
+from moat.util import P, load_ext
+from moat.kv.mock.mqtt import stdtest
 
-knx_mock = load_ext("distkv_ext.knx", "mock")
+knx_mock = load_ext("moat.kv.knx.mock")
 Tester = knx_mock.Tester
-
-knx_task = load_ext("distkv_ext.knx", "task")
-task = knx_task.task
-
-knx_model = load_ext("distkv_ext.knx", "model")
-KNXroot = knx_model.KNXroot
+task = load_ext("moat.kv.knx.task", "task")
+KNXroot = load_ext("moat.kv.knx.model", "KNXroot")
 
 
 async def test_basic():
-    async with stdtest(test_0={"init": 125}, n=1, tocks=200) as st, st.client(
-        0
-    ) as client, Tester().run() as t:
+    async with (
+            stdtest(test_0={"init": 125}, n=1, tocks=200) as st,
+            st.client(0) as client,
+            Tester().run() as t,
+        ):
         await st.run(f"knx server test localhost -h 127.0.0.1 -p {knx_mock.TCP_PORT}")
         await st.run("knx addr -t in -m power test 1/2/3 -a dest test.some.power")
         await st.run("knx addr -t in -m binary test 1/2/4 -a dest test.some.switch")

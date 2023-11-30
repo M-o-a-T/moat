@@ -5,4 +5,3 @@ kv:
       port: 3671
     poll: 10  # poll frequency: server
     count: true  # Pulses up=True/down=False/both=None, default Up
-)

@@ -139,7 +139,7 @@ def flint(v):
         return float(v)
 
 
-async def _client(host, port, unit, kind, start, num, type_, values, debug):
+async def _client(host, port, unit, kind, start, num, type_, values, debug, interval):
     """
     Basic Modbus-TCP client.
     """
@@ -165,14 +165,23 @@ async def _client(host, port, unit, kind, start, num, type_, values, debug):
             start += t.len
             num -= 1
 
-        try:
-            if values:
-                await s._setValues()  # pylint:disable=protected-access  ## TODO
+        last_res = None
+        while True:
+            try:
+                if values:
+                    await s._setValues()  # pylint:disable=protected-access  ## TODO
+                else:
+                    res = await s._getValues()  # pylint:disable=protected-access  ## TODO
+                    if last_res != res:
+                        pprint(res)
+                        last_res = res
+            except Exception as exc:  # pylint: disable=broad-except
+                log.exception("Problem: %r", exc)
+
+            if interval:
+                anyio.sleep(interval)
             else:
-                res = await s._getValues()  # pylint:disable=protected-access  ## TODO
-                pprint(res)
-        except Exception as exc:  # pylint: disable=broad-except
-            log.exception("Problem: %r", exc)
+                break
 
 
 def mk_client(m):
@@ -195,6 +204,7 @@ def mk_client(m):
     c = click.option("--unit", "-u", type=int, default=1, help="unit to query")(c)
     c = click.option("--port", "-p", type=int, default=502, help="destination port")(c)
     c = click.option("--host", "-h", default="localhost", help="destination host")(c)
+    c = click.option("--interval", "-i", type=float, help="loop: read/write every N seconds")(c)
     c = m.command("client", context_settings=dict(show_default=True))(c)
     return c
 

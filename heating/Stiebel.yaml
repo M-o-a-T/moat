@@ -1,4 +1,8 @@
-# stiebel eltron modbus serial
+#
+# This is a partial, reverse-engineered register list for
+# a Solvis heat pump. It is (assumed to be) a relabeled Stiebel-Eltron device.
+#
+# This device is controlled via Modbus/RTU, 19200/8/e/1.
 #
 regs:
   op:

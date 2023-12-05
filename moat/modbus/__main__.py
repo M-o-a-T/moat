@@ -162,7 +162,7 @@ async def _client(host, port, unit, kind, start, num, type_, values, debug, inte
         for i in range(num):
             v = s.add(k, start, t)
             if values:
-                v.value = flint(values[i])
+                v.set(flint(values[i]), idem=False)
             start += t.len
             num -= 1
 

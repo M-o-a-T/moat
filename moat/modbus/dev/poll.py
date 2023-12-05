@@ -10,11 +10,10 @@ from asyncscope import scope
 from moat.util import attrdict, merge, to_attrdict
 
 from ..client import ModbusClient
-from .device import Device, fixup
+from .device import MasterDevice, fixup
 from .server import Server
 
 logger = logging.getLogger(__name__)
-
 
 async def dev_poll(cfg, mt_kv, *, task_status=None):
     """
@@ -43,7 +42,7 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
 
             logger.info("Starting %r", vs)
 
-            dev = Device(client=cl, factory=Reg)
+            dev = MasterDevice(client=cl, factory=Reg)
             dev.load(data=v)
 
             return await scope.spawn_service(dev.as_scope)

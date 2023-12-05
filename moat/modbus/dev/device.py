@@ -240,7 +240,7 @@ class Register:
 
     @property
     def value(self):
-        """Return the factor+offset-adjusted value"""
+        """Returns the factor+offset-adjusted value from the bus"""
         val = self.reg.value
         if val is not None:
             val = val * self.factor + self.offset
@@ -248,7 +248,10 @@ class Register:
 
     @value.setter
     def value(self, val):
-        """Set the value, reverse factor+offset-adjustment. May trigger an update."""
+        """Sets the value that'll be written to the bus.
+        Reverses factor+offset-adjustment.
+        Should trigger an update.
+        """
         if val is not None:
             val = (val - self.offset) / self.factor
         self.reg.set(val)
@@ -285,7 +288,7 @@ class Register:
 _data = FSPath(__file__).parent / "_data"
 
 
-class Device(CtxObj):
+class BaseDevice(CtxObj):
     """A modbus device.
 
     The idea is to use the device description file as a template.
@@ -407,6 +410,10 @@ class Device(CtxObj):
                         tg.start_soon(proc, v)
         return vals
 
+class MasterDevice(BaseDevice):
+    """
+    A master device, i.e. one that mirrors some Modbus slave
+    """
     async def poll_slot(self, slot: str, *, task_status=None):
         """Task to register and periodically poll a given slot"""
         # slots:
@@ -438,3 +445,9 @@ class Device(CtxObj):
 
         while True:
             await anyio.sleep(99999)
+
+
+class SlaveDevice(BaseDevice):
+    """
+    A slave device, i.e. one that's accessed by a master
+    """

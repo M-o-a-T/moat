@@ -688,7 +688,7 @@ class Slot(CtxObj):
                 return False
         return True
 
-    def add(self, typ: TypeCodec, offset: int, cls: Type[BaseValue]) -> BaseValue:
+    def add(self, typ: TypeCodec, offset: int, cls: Type[BaseValue] | BaseValue) -> BaseValue:
         """Add a field to this slot.
 
         :param typ: The `TypeCodec` instance to use.

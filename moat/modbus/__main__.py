@@ -168,16 +168,13 @@ async def _client(host, port, unit, kind, start, num, type_, values, debug, inte
 
         last_res = None
         while True:
-            try:
-                if values:
-                    await s._setValues()  # pylint:disable=protected-access  ## TODO
-                else:
-                    res = await s._getValues()  # pylint:disable=protected-access  ## TODO
-                    if last_res != res:
-                        pprint(res)
-                        last_res = res
-            except Exception as exc:  # pylint: disable=broad-except
-                log.exception("Problem: %r", exc)
+            if values:
+                await s._setValues()  # pylint:disable=protected-access  ## TODO
+            else:
+                res = await s._getValues()  # pylint:disable=protected-access  ## TODO
+                if last_res != res:
+                    pprint(res)
+                    last_res = res
 
             if interval:
                 await anyio.sleep(interval)

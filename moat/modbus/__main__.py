@@ -8,6 +8,7 @@ from getopt import getopt
 from pprint import pprint
 
 import asyncclick as click
+import anyio
 
 from .typemap import get_type, map_kind, map_type
 from .types import InputRegisters, IntValue
@@ -179,7 +180,7 @@ async def _client(host, port, unit, kind, start, num, type_, values, debug, inte
                 log.exception("Problem: %r", exc)
 
             if interval:
-                anyio.sleep(interval)
+                await anyio.sleep(interval)
             else:
                 break
 

@@ -7,6 +7,7 @@ regs:
       register: 257
       len: 1
       reg_type: h
+      type: int
       values:
         0: off
         3: on
@@ -15,57 +16,74 @@ regs:
       unit: kW
       scale: -1
       reg_type: h
+      type: int
       register: 288
 
   state:
     state:
       register: 769
+      len: 1
+      reg_type: h
+      type: int
     compressor:
       register: 770
       unit: Hz
       scale: 0
+      reg_type: h
+      len: 1
+      type: int
     _x1:
       register: 771
+      len: 1
+      reg_type: h
+      type: int
+      unit: °C
     water:
-      in:
+      out:
         register: 772
         len: 1
         reg_type: h
+        type: int
         unit: °C
         scale: -1
-      out:
+      in:
         register: 773
         len: 1
         reg_type: h
+        type: int
         unit: °C
         scale: -1
     evaporator:
       register: 774
       len: 1
       reg_type: h
+      type: int
       scale: -1
       unit: °C
-      scale: -1
     hot_gas:
       register: 775
       len: 1
       reg_type: h
+      type: int
       unit: °C
       scale: -1
     low_p:
       register: 776
       len: 1
       reg_type: h
+      type: int
       unit: bar
       scale: -2
     _x2:
       register: 777
       len: 1
       reg_type: h
+      type: int
     high_p:
       register: 778
       len: 1
       reg_type: h
+      type: int
       unit: bar
       scale: -2
 
@@ -73,12 +91,14 @@ regs:
       register: 869
       len: 1
       reg_type: h
+      type: int
       unit: kW
       scale: -1
     flow:
       register: 787
       len: 1
       reg_type: h
+      type: int
       unit: l/min
       scale: -1
 
@@ -87,6 +107,7 @@ regs:
       register: 939
       len: 1
       reg_type: h
+      type: int
       values:
         0: false
         1: true
@@ -96,6 +117,7 @@ regs:
       register: 848
       len: 1
       reg_type: h
+      type: int
       values:
         1: known
     _c2:
@@ -103,6 +125,7 @@ regs:
       register: 872
       len: 1
       reg_type: h
+      type: int
       values:
         0: known
     _c3:
@@ -110,6 +133,7 @@ regs:
       register: 940
       len: 1
       reg_type: h
+      type: int
       values:
         1: known
     _c4:
@@ -117,6 +141,7 @@ regs:
       register: 944
       len: 1
       reg_type: h
+      type: int
       values:
         1: known
 

@@ -62,8 +62,7 @@ class BaseValue:
 
     Do not instantiate directly.
 
-    Set @idem if setting the item shall trigger iterators even if it
-    doesn't change.
+    Clear @idem if unchanged items shall trigger iterators.
     """
 
     len = 0
@@ -72,9 +71,10 @@ class BaseValue:
     block: "DataBlock" = None
     to_write: int = None
 
-    def __init__(self, value=None, idem=False):
+    def __init__(self, value=None, idem=True):
         self.changed = anyio.Event()
         self._value = value
+        self._value_w = None
         self.idem = idem
 
         if value is not None:
@@ -82,25 +82,34 @@ class BaseValue:
             self.changed = anyio.Event()
 
     @property
+    def value_w(self):
+        "value to be written to the bus"
+        return self._value_w
+
+    @property
     def value(self):
-        # pylint: disable=missing-function-docstring
+        "value read from the bus"
         return self._value
 
     @value.setter
-    def value(self, val):
-        # pylint: disable=missing-function-docstring
+    def value(self, val:int|float):
+        "sets the value that's read from the bus"
         self._value = self._constrain(val)
 
-    def set(self, val, idem: bool = True):
-        """Set the value. Triggers a write if changed (or @idem is False)."""
+    def set(self, val:int|float, idem: bool = False):
+        """Set the value-to-be-written.
+
+        Triggers a write unless @idem is set (default: it is not).
+        """
         # pylint: disable=missing-function-docstring
+        if idem and self._value == val:
+            return
         val = self._constrain(val)
-        if not idem or (val is None) != (self._value is None) or self._value != val:
-            self._value = val
-            self.gen += 1
-            self.to_write = self.gen
-            if self.block is not None:
-                self.block.trigger_send()
+        self._value_w = val
+        self.gen += 1
+        self.to_write = self.gen
+        if self.block is not None:
+            self.block.trigger_send()
 
     def _constrain(self, val):
         return val
@@ -114,10 +123,12 @@ class BaseValue:
     def decode(self, regs: List[int]) -> None:
         """
         Decode the passed-in register value(s) into this variable.
-        Triggers iterators.
+
+        Triggers iterators, except if the value doesn't change
+        and ``self.idem`` is set.
         """
         val = self._decode(regs)
-        if not self.idem and val == self.value:
+        if self.idem and val == self.value:
             return
         self.value = self._decode(regs)
         self.changed.set()
@@ -139,7 +150,7 @@ class BaseValue:
         """
         Encode the current value. Returns a list of registers.
         """
-        return self._encode(self.value)
+        return self._encode(self.value_w)
 
     def __str__(self):
         return f"‹{self.value}›"
@@ -259,6 +270,18 @@ class BitValue(BaseValue):
 
     def _encode(self, value):
         return value
+
+
+class InvBitValue(BaseValue):
+    """Inverted bits, for "coil"s."""
+
+    len = 1
+
+    def _decode(self, regs):
+        return not bool(regs[0])
+
+    def _encode(self, value):
+        return 0 if value else 1
 
 
 class FloatValue(BaseValue):
@@ -653,6 +676,6 @@ class ValueIterator:
         if val.value is None:
             raise StopAsyncIteration
         if self.gen + 1 != val.gen:
-            logger.notice("%r: skipped %d", val.gen - self.gen - 1)
+            logger.info("%r: skipped %d", val, val.gen - self.gen - 1)
         self.gen = val.gen
         return val.value

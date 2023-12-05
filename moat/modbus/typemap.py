@@ -6,6 +6,7 @@ from functools import partial
 
 from moat.modbus.types import (
     BitValue,
+    InvBitValue,
     ByteValue,
     Coils,
     DiscreteInputs,
@@ -32,7 +33,8 @@ from moat.modbus.types import (
 
 map_type = {
     "raw": IntValue,
-    "b": BitValue,
+    "x": BitValue,
+    "X": InvBitValue,
     "u1": IntValue,
     "U1": IntValue,
     "u2": LongValue,
@@ -123,9 +125,11 @@ def get_type2(s, l):
             return partial([ByteValue, SwappedByteValue][swapped], length=l)
         if s == "str":
             return partial([ByteValue, SwappedByteValue][swapped], length=l)
-        if not swapped:
-            if s == "bit" and l == 1:
+        if not swapped and l == 1:
+            if s == "bit":
                 return BitValue
+            if s == "invbit":
+                return InvBitValue
     raise KeyError(f"Unknown: {os}:{l}")
 
 

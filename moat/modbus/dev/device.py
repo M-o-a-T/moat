@@ -31,8 +31,23 @@ class NotARegisterError(ValueError):
 
     pass
 
+def mark_orig(d):
+    if isinstance(d, dict):
+        d._is_orig = True
+        for k,v in d.items():
+            if k != "default":
+                mark_orig(v)
 
-def fixup(
+def fixup(d,*a,**k):
+    """
+    See `fixup_`.
+
+    Also marks original data
+    """
+    mark_orig(d)
+    return fixup_(d, *a, **k)
+
+def fixup_(
     d,
     root=None,
     path=Path(),
@@ -72,7 +87,7 @@ def fixup(
                 df = f.open("r")
             with df:
                 dd = yload(df, attr=True)
-            inc[i] = fixup(
+            inc[i] = fixup_(
                 dd, None, Path(), default=default, offset=offset, do_refs=do_refs, this_file=f
             )
         inc.reverse()
@@ -121,7 +136,7 @@ def fixup(
         off = offset
         while n > 0:
             v = combine_dict(d.get(k, attrdict()), deepcopy(rep.data), cls=attrdict)
-            d[k] = fixup(
+            d[k] = fixup_(
                 v,
                 root,
                 path / k,
@@ -141,7 +156,7 @@ def fixup(
         if k in reps:
             continue
         if isinstance(v, Mapping):
-            d[k] = fixup(
+            d[k] = fixup_(
                 v,
                 root,
                 path / k,
@@ -180,7 +195,7 @@ class Register:
             else:
                 raise AttributeError(f"No type in {path}") from None
         else:
-            if s == "bit":
+            if s in {"bit", "invbit"}:
                 if not (self.reg_type is DiscreteInputs or self.reg_type is Coils):
                     raise RuntimeError(f"Only Coils/Discretes can be BitValue, at {path}")
             elif self.reg_type is DiscreteInputs or self.reg_type is Coils:
@@ -189,7 +204,7 @@ class Register:
         try:
             l = d.len
         except AttributeError:
-            if s in {"bit", "int", "uint"}:
+            if s in {"bit", "invbit", "int", "uint"}:
                 l = 1
             elif s == "float":
                 l = 2
@@ -225,7 +240,7 @@ class Register:
 
     @property
     def value(self):
-        """Return the factor+offset-adjusted value"""
+        """Returns the factor+offset-adjusted value from the bus"""
         val = self.reg.value
         if val is not None:
             val = val * self.factor + self.offset
@@ -233,7 +248,10 @@ class Register:
 
     @value.setter
     def value(self, val):
-        """Set the value, reverse factor+offset-adjustment. May trigger an update."""
+        """Sets the value that'll be written to the bus.
+        Reverses factor+offset-adjustment.
+        Should trigger an update.
+        """
         if val is not None:
             val = (val - self.offset) / self.factor
         self.reg.set(val)
@@ -270,7 +288,7 @@ class Register:
 _data = FSPath(__file__).parent / "_data"
 
 
-class Device(CtxObj):
+class BaseDevice(CtxObj):
     """A modbus device.
 
     The idea is to use the device description file as a template.
@@ -392,6 +410,10 @@ class Device(CtxObj):
                         tg.start_soon(proc, v)
         return vals
 
+class MasterDevice(BaseDevice):
+    """
+    A master device, i.e. one that mirrors some Modbus slave
+    """
     async def poll_slot(self, slot: str, *, task_status=None):
         """Task to register and periodically poll a given slot"""
         # slots:
@@ -423,3 +445,9 @@ class Device(CtxObj):
 
         while True:
             await anyio.sleep(99999)
+
+
+class SlaveDevice(BaseDevice):
+    """
+    A slave device, i.e. one that's accessed by a master
+    """

@@ -183,10 +183,7 @@ class _HostCommon:
                 await self.send(request)
                 with anyio.fail_after(self.timeout):
                     res = await request._response_value.get()
-            except TimeoutError:
-                await self.stream.aclose()
-                raise
-            else:
+
                 if res.isError():
                     raise ModbusError(res)
 

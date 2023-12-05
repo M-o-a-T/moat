@@ -34,8 +34,9 @@ class NotARegisterError(ValueError):
 def mark_orig(d):
     if isinstance(d, dict):
         d._is_orig = True
-        for v in d.values():
-            mark_orig(v)
+        for k,v in d.items():
+            if k != "default":
+                mark_orig(v)
 
 def fixup(d,*a,**k):
     """

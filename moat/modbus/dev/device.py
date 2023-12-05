@@ -31,8 +31,22 @@ class NotARegisterError(ValueError):
 
     pass
 
+def mark_orig(d):
+    if isinstance(d, dict):
+        d._is_orig = True
+        for v in d.values():
+            mark_orig(v)
 
-def fixup(
+def fixup(d,*a,**k):
+    """
+    See `fixup_`.
+
+    Also marks original data
+    """
+    mark_orig(d)
+    return fixup_(d, *a, **k)
+
+def fixup_(
     d,
     root=None,
     path=Path(),
@@ -72,7 +86,7 @@ def fixup(
                 df = f.open("r")
             with df:
                 dd = yload(df, attr=True)
-            inc[i] = fixup(
+            inc[i] = fixup_(
                 dd, None, Path(), default=default, offset=offset, do_refs=do_refs, this_file=f
             )
         inc.reverse()
@@ -121,7 +135,7 @@ def fixup(
         off = offset
         while n > 0:
             v = combine_dict(d.get(k, attrdict()), deepcopy(rep.data), cls=attrdict)
-            d[k] = fixup(
+            d[k] = fixup_(
                 v,
                 root,
                 path / k,
@@ -141,7 +155,7 @@ def fixup(
         if k in reps:
             continue
         if isinstance(v, Mapping):
-            d[k] = fixup(
+            d[k] = fixup_(
                 v,
                 root,
                 path / k,

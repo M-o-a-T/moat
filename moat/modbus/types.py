@@ -665,6 +665,6 @@ class ValueIterator:
         if val.value is None:
             raise StopAsyncIteration
         if self.gen + 1 != val.gen:
-            logger.notice("%r: skipped %d", val.gen - self.gen - 1)
+            logger.info("%r: skipped %d", val, val.gen - self.gen - 1)
         self.gen = val.gen
         return val.value

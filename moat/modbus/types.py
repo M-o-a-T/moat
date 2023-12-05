@@ -261,6 +261,18 @@ class BitValue(BaseValue):
         return value
 
 
+class InvBitValue(BaseValue):
+    """Inverted bits, for "coil"s."""
+
+    len = 1
+
+    def _decode(self, regs):
+        return not bool(regs[0])
+
+    def _encode(self, value):
+        return 0 if value else 1
+
+
 class FloatValue(BaseValue):
     """network-ordered floating point."""
 

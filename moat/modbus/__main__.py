@@ -192,7 +192,7 @@ def mk_client(m):
         "-t",
         "type_",
         default="raw",
-        help="value type: s1,s2,s4,u1,u2,u4,f2,f4,raw; Sx/Fx=swapped",
+        help="value type: raw, s1,u2,f4, c#/b#:text/bytes, x/X:bool/inv; Sx/Fx=swapped",
     )(c)
     c = click.option("--num", "-n", type=int, default=1, help="number of values")(c)
     c = click.option("--start", "-s", default=0, help="starting register")(c)

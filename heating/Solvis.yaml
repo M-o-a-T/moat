@@ -119,23 +119,25 @@ regs:
             type: uint
 
   plan:
-    # heating area, 1…3
     default:
       reg_type: h
       unit: h
       factor: 0.25
       type: uint
     repeat:
+      # heating area, 1…3
       n: 3
       start: 1
       offset: 42
       data:
         repeat:
+          # day, 1…7 Mon-Sun
           n: 7
           start: 1
           offset: 6
           data:
             repeat:
+              # three distinct time ranges
               n: 3
               start: 0
               offset: 2
@@ -145,13 +147,14 @@ regs:
                 stop:
                   register: 34049
     water:
-      # day, 1…7 Mon-Sun
       repeat:
+        # day, 1…7 Mon-Sun
         n: 7
         start: 1
         offset: 6
         data:
           repeat:
+            # three distinct time ranges
             n: 3
             start: 0
             offset: 2
@@ -163,11 +166,13 @@ regs:
 
     circ:
       repeat:
+        # day, 1…7 Mon-Sun
         n: 7
         start: 1
         offset: 6
         data:
           repeat:
+            # three distinct time ranges
             n: 3
             start: 0
             offset: 2
@@ -179,11 +184,13 @@ regs:
 
     eco:
       repeat:
+        # day, 1…7 Mon-Sun
         n: 7
         start: 1
         offset: 6
         data:
           repeat:
+            # three distinct time ranges
             n: 3
             start: 0
             offset: 2

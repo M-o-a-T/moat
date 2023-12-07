@@ -181,7 +181,7 @@ class Register:
     last_gen = -1
     block = None
 
-    def __init__(self, d, path, unit):
+    def __init__(self, d, path, unit=None):
         try:
             self.reg_type = get_kind(d.reg_type)
         except AttributeError:
@@ -215,7 +215,7 @@ class Register:
 
         self.register = d.register
 
-        if "slot" in d:
+        if "slot" in d and unit is not None:
             slot = unit.slot(d.slot)
             try:
                 slot.add(self.reg_type, offset=self.register, cls=self.reg)
@@ -305,12 +305,10 @@ class BaseDevice(CtxObj):
     """
 
     data: attrdict = None
-    unit: Unit = None
     cfg: attrdict = None
     cfg_path: FSPath = None
 
-    def __init__(self, client: ModbusClient, factory=Register):
-        self.client = client
+    def __init__(self, factory=Register):
         self.factory = factory
 
     def load(self, path: str = None, data: dict = None):
@@ -327,6 +325,27 @@ class BaseDevice(CtxObj):
             d = merge(d, data)
         self.cfg = d
         self.cfg_path = path
+
+    def get(self, path: Path):
+        """Fetch the register at a subpath.
+
+        Raises an error if there's no register there.
+        """
+        dev = self.data._get(path)  # pylint: disable=protected-access
+        if not isinstance(dev, Register):
+            raise NotARegisterError(path)
+        return dev
+
+
+class ClientDevice(BaseDevice):
+    """
+    A client device, i.e. one that mirrors some Modbus master's unit
+    """
+    unit: Unit = None
+
+    def __init__(self, client: ModbusClient, factory=Register):
+        super().__init__(factory)
+        self.client = client
 
     @asynccontextmanager
     async def _ctx(self):
@@ -348,6 +367,9 @@ class BaseDevice(CtxObj):
         async with self:
             scope.register(self)
             await scope.no_more_dependents()
+
+    async def add_slots(self):
+        return
 
     async def add_slots(self):
         """Add configured slots to this instance"""
@@ -385,16 +407,6 @@ class BaseDevice(CtxObj):
 
         a_r(self.data)
 
-    def get(self, path: Path):
-        """Fetch the register at a subpath.
-
-        Raises an error if there's no register there.
-        """
-        dev = self.data._get(path)  # pylint: disable=protected-access
-        if not isinstance(dev, Register):
-            raise NotARegisterError(path)
-        return dev
-
     @property
     def slots(self):
         """The slots of this unit"""
@@ -410,10 +422,6 @@ class BaseDevice(CtxObj):
                         tg.start_soon(proc, v)
         return vals
 
-class MasterDevice(BaseDevice):
-    """
-    A master device, i.e. one that mirrors some Modbus slave
-    """
     async def poll_slot(self, slot: str, *, task_status=None):
         """Task to register and periodically poll a given slot"""
         # slots:
@@ -447,7 +455,39 @@ class MasterDevice(BaseDevice):
             await anyio.sleep(99999)
 
 
-class SlaveDevice(BaseDevice):
+class ServerDevice(BaseDevice):
     """
-    A slave device, i.e. one that's accessed by a master
+    A server device, i.e. a unit that's accessed via modbus.
     """
+    def __init__(self, *a, **k):
+        super().__init__(self, *a, **k)
+        self.unit = UnitContext()
+
+    def load(self, path: str = None, data: dict = None):
+        super().load(path, data)
+        self.add_registers()
+
+    def add_registers(self):
+        """Replace entries w/ register/slot members with Register instances"""
+
+        def a_r(d, path=Path()):
+            seen = False
+            for k, v in d.items():
+                if not isinstance(v, dict):
+                    continue
+                if a_r(v, path / k):
+                    seen = True
+                    if "register" in v:
+                        logger.warning("%s has a sub-register: ignored", path / k)
+                    elif "slot" in v:
+                        logger.warning("%s is not a register", path / k)
+                    continue
+
+                if "register" in v:
+                    d[k] = reg = self.factory(v, path / k)
+                    self.unit.add(v.get("reg_type","k"), offset=register, cls=reg)
+                    seen = True
+            return seen
+
+        a_r(self.data)
+

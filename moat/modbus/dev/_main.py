@@ -11,7 +11,7 @@ import asyncclick as click
 from moat.util import attrdict, yload, yprint
 
 from ..client import ModbusClient
-from .device import MasterDevice, fixup
+from .device import ClientDevice, fixup
 from .poll import dev_poll
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ async def poll1(ctx, host, port, unit, path, slot):
 
     cl = await ctx.with_async_resource(ModbusClient())
 
-    dev = MasterDevice(client=cl, factory=Reg)
+    dev = ClientDevice(client=cl, factory=Reg)
     dev.load(data=d)
 
     await dev.poll(set(slot))

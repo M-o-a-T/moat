@@ -10,8 +10,8 @@ from asyncscope import scope
 from moat.util import attrdict, merge, to_attrdict
 
 from ..client import ModbusClient
-from .device import MasterDevice, fixup
-from .server import Server
+from .device import ServerDevice, fixup
+from ..server import ModbusServer, SerialModbusServer
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
 
             logger.info("Starting %r", vs)
 
-            dev = MasterDevice(client=cl, factory=Reg)
+            dev = ClientDevice(client=cl, factory=Reg)
             dev.load(data=v)
 
             return await scope.spawn_service(dev.as_scope)
@@ -58,7 +58,39 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
         # relay-out server(s)
         servers = []
         for s in cfg.get("server", ()):
-            servers.append(Server(**s))
+            if "serial" in s:
+                port = s.get("port", None)
+                kw = s["serial"]
+                if port is not None:
+                    kw["port"] = port
+                srv = SerialModbusServer(**kw)
+            elif "host" in s or ("port" in s and isinstance(s["port"],int)):
+                kw = {}
+                for k,v in s:
+                    if isinstance(k,str):
+                        kw[k] = v
+                srv = ModbusServer(**kw)
+            else:
+                raise ValueError("neither serial nor TCP config found")
+            servers.append(srv)
+
+            for u,v in s:
+                if not isinstance(u,int):
+                    continue
+                dev = ServerDevice(factory=Reg)
+                dev.load(data=v)
+                srv.add_unit(u, dev)
+
+
+        def do_attach(v, dev):
+            p = v.get("server", None)
+            if p is None:
+                return
+            if isinstance(p,int):
+                s,u = servers[p//1000],p%1000
+            else:
+                s,u = servers[p[0]],p[1]
+            s.add_unit(u, dev.unit)
 
         # serial clients
         for h, hv in cfg.get("ports", {}).items():
@@ -73,12 +105,7 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
                 dev = await make_dev(v, Reg, port=h, serial=sp, unit=u)
                 nd += 1
                 tg.start_soon(dev.poll)
-
-                us = v.get("server", None)
-                if us is not None:
-                    srv = servers[us // 1000]
-                    us %= 1000
-                    srv.attach(us, dev.unit)
+                do_attach(v,dev)
 
         # TCP clients
         for h, hv in cfg.get("hosts", {}).items():
@@ -88,12 +115,7 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
                 dev = await make_dev(v, Reg, host=h, unit=u)
                 nd += 1
                 tg.start_soon(dev.poll)
-
-                us = v.get("server", None)
-                if us is not None:
-                    srv = servers[us // 1000]
-                    us %= 1000
-                    srv.attach(us, dev.unit)
+                do_attach(v,dev)
 
         # more TCP clients
         for h, hv in cfg.get("hostports", {}).items():
@@ -104,15 +126,12 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
                     dev = await make_dev(v, Reg, host=h, port=p, unit=u)
                     tg.start_soon(dev.poll)
                     nd += 1
-
-                    us = v.get("server", None)
-                    if us is not None:
-                        srv = servers[us // 1000]
-                        us %= 1000
-                        srv.attach(us, dev.unit)
+                    do_attach(v,dev)
 
         for s in servers:
-            tg.start_soon(s.run)
+            evt = anyio.Event()
+            tg.start_soon(s.serve, opened=evt)
+            await evt.wait()
 
         if task_status is not None:
             task_status.started(cfg)

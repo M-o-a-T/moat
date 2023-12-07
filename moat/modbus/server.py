@@ -32,7 +32,7 @@ class UnitContext(ModbusSlaveContext):
     individual variables.
     """
 
-    def __init__(self, server, unit):
+    def __init__(self, server=None, unit=None):
         super().__init__(
             di=DataBlock(),
             co=DataBlock(),
@@ -40,8 +40,9 @@ class UnitContext(ModbusSlaveContext):
             hr=DataBlock(),
             zero_mode=True,
         )
-        self.unit = unit
-        server._add_unit(self)
+        if server:
+            self.unit = unit
+            server._add_unit(self)
 
     def add(
         self, typ: TypeCodec, offset: int, val: Union[BaseValue, Type[BaseValue]]
@@ -270,7 +271,7 @@ class ModbusServer(BaseModbusServer):
             port if port is not None else Defaults.Port  # pylint: disable=no-member  # YES IT DOES
         )
 
-    async def serve(self, opened=None):
+    async def serve(self, opened:anyio.Event|None=None):
         """Run this server.
         Sets the `opened` event, if given, as soon as the server port is open.
         """

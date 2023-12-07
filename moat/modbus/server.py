@@ -32,7 +32,7 @@ class UnitContext(ModbusSlaveContext):
     individual variables.
     """
 
-    def __init__(self, server, unit):
+    def __init__(self, server=None, unit=None):
         super().__init__(
             di=DataBlock(),
             co=DataBlock(),
@@ -40,8 +40,9 @@ class UnitContext(ModbusSlaveContext):
             hr=DataBlock(),
             zero_mode=True,
         )
-        self.unit = unit
-        server._add_unit(self)
+        if server:
+            self.unit = unit
+            server._add_unit(self)
 
     def add(
         self, typ: TypeCodec, offset: int, val: Union[BaseValue, Type[BaseValue]]
@@ -114,9 +115,12 @@ class BaseModbusServer(CtxObj):
         raise RuntimeError("You need to override .serve")
 
     async def process_request(self, request):
-        """Basic async request processor"""
+        """Basic request processor"""
         context = self.context[request.unit_id]
-        response = request.execute(context)
+        if hasattr(context, "process_request"):
+            response = await context.process_request(request)
+        else:
+            response = request.execute(context)
         return response
 
     @asynccontextmanager
@@ -267,7 +271,7 @@ class ModbusServer(BaseModbusServer):
             port if port is not None else Defaults.Port  # pylint: disable=no-member  # YES IT DOES
         )
 
-    async def serve(self, opened=None):
+    async def serve(self, opened:anyio.Event|None=None):
         """Run this server.
         Sets the `opened` event, if given, as soon as the server port is open.
         """
@@ -354,41 +358,3 @@ class MockAioModbusServer(ModbusServer):
     """A test modbus server with static data"""
 
     pass
-
-
-class ForwardingAioModbusServer:
-    """A modbus server mix-in that forwards requests to a modbus client"""
-
-    def __init__(self):
-        self._units = {}
-
-    def add_unit(self, unit):  # pylint: disable=missing-function-docstring
-        """Use 'set_forward' with a forwarding server instead of this method."""
-        raise RuntimeError("Use 'set_forward' with a forwarding server")
-
-    def set_forward(
-        self, id, unit: ModbusSlaveContext = None
-    ):  # pylint: disable=redefined-builtin
-        """Arrange for requests to the given ID to be forwarded
-        to this client.
-
-        Use unit=None to stop forwarding.
-        """
-        if unit is None:
-            del self._units[id]
-        else:
-            self._units[id] = unit
-
-    async def process_request(self, request):
-        """Process this request by forwarding it to the client."""
-        old_unit = request.unit_id
-        old_tid = request.transaction_id
-
-        unit = self._units[request.unit_id]
-        request.unit_id = unit.unit
-        try:
-            async with unit.concurrent_requests:
-                return await unit.host.execute(request)
-        finally:
-            request.unit_id = old_unit
-            request.transaction_id = old_tid

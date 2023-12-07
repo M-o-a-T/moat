@@ -20,6 +20,7 @@ from pymodbus.exceptions import ModbusIOException
 from pymodbus.factory import ClientDecoder
 from pymodbus.framer.rtu_framer import ModbusRtuFramer
 from pymodbus.framer.socket_framer import ModbusSocketFramer
+from pymodbus.pdu import ModbusExceptions as merror
 
 from .types import BaseValue, DataBlock, TypeCodec
 
@@ -583,6 +584,19 @@ class Unit(CtxObj):
         s, self.slots = self.slots, None
         for slot in s.values():
             await slot.aclose()
+
+    async def process_request(self, request):
+        """
+        Forward a request to the host.
+        """
+        request.unit_id = self.unit
+        try:
+            response = await self.host.execute(request)
+        except Exception as exc:
+            logger.exception("Handler for %d: %r", unit_id, exc)
+            response = request.doException(merror.SlaveFailure)
+
+        return response
 
 
 class Slot(CtxObj):

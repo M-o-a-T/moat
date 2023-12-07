@@ -39,16 +39,7 @@ class Forwarder:
             except KeyError:
                 response = request.doException(merror.SlaveFailure)
             else:
-                request.unit_id = unit.unit
-                try:
-                    response = await unit.host.execute(request)
-                except Exception as exc:  # pylint:disable=broad-except
-                    logger.exception(
-                        "Handler for %d: %r",
-                        unit_id,
-                        exc,
-                    )
-                    response = request.doException(merror.SlaveFailure)
+                response = await unit.process_request(request)
 
             response.unit_id = unit_id
             response.transaction_id = transaction_id
@@ -76,10 +67,7 @@ class Forwarder:
                 while True:
                     data = await self.client.receive(4096)
 
-                    # unit = self.framer.decode_data(data).get("uid", 0)
                     msgs = []
-
-                    # check for decoding errors
                     self.framer.processIncomingPacket(data, msgs.append, unit=0, single=True)
 
                     for msg in msgs:

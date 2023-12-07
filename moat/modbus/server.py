@@ -114,9 +114,12 @@ class BaseModbusServer(CtxObj):
         raise RuntimeError("You need to override .serve")
 
     async def process_request(self, request):
-        """Basic async request processor"""
+        """Basic request processor"""
         context = self.context[request.unit_id]
-        response = request.execute(context)
+        if hasattr(context, "process_request"):
+            response = await context.process_request(request)
+        else:
+            response = request.execute(context)
         return response
 
     @asynccontextmanager

@@ -32,9 +32,9 @@ async def test_rw():
 
                 c = sru.store["h"].changed
                 assert not c.is_set()
-                clv1.value = 345678
-                clv2.value *= 3
-                clv3.value = "CoMiNg"
+                clv1._value_w = 345678
+                clv2._value_w = clv2._value * 3
+                clv3._value_w = "CoMiNg"
                 await cls._setValues()  # pylint:disable=protected-access
                 assert srv1.value == 345678
                 assert srv2.value == 9999.125 * 3

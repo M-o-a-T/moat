@@ -74,7 +74,7 @@ class BaseValue:
     def __init__(self, value=None, idem=True):
         self.changed = anyio.Event()
         self._value = value
-        self._value_w = None
+        self._value_w = value
         self.idem = idem
 
         if value is not None:

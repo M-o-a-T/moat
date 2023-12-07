@@ -38,44 +38,6 @@ def dump(path, raw, no_refs):
 
 
 @cli.command()
-@click.option("--host", "-h", help="host to bind to")
-@click.option("--port", "-p", type=int, help="port to bind to")
-@click.option("--unit", "-u", type=int, help="Modbus unit to poll")
-@click.argument("path", nargs=1, type=click.File("r"))
-@click.argument("slot", nargs=-1)
-@click.pass_context
-async def poll1(ctx, host, port, unit, path, slot):
-    """Poll a single Modbus device"""
-    obj = ctx.obj
-
-    d = yload(path, attr=True)
-    d = fixup(d)
-    s = d.setdefault("src", attrdict())
-    s.setdefault("host", host)
-    s.setdefault("port", port)
-    s.setdefault("unit", unit)
-
-    # pylint: disable=import-outside-toplevel
-    if "kv" in obj.cfg:
-        from moat.kv .client import open_client
-
-        from .kv import Register
-
-        mt_kv = await ctx.with_async_resource(open_client(**obj.cfg.kv))
-        tg = await ctx.with_async_resource(anyio.create_task_group())
-        Reg = partial(Register, mt_kv=mt_kv, tg=tg)
-    else:
-        from .device import Register as Reg
-
-    cl = await ctx.with_async_resource(ModbusClient())
-
-    dev = ClientDevice(client=cl, factory=Reg)
-    dev.load(data=d)
-
-    await dev.poll(set(slot))
-
-
-@cli.command()
 @click.argument("path", type=click.File("r"))
 @click.pass_context
 async def poll(ctx, path):

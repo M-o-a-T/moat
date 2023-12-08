@@ -16,6 +16,7 @@ from moat.util import CtxObj, P, Path, attrdict, combine_dict, merge, yload
 from ..client import ModbusClient, Slot, Unit
 from ..typemap import get_kind, get_type2
 from ..types import Coils, DiscreteInputs, InputRegisters
+from ..server import UnitContext
 
 logger = logging.getLogger(__name__)
 
@@ -246,6 +247,14 @@ class Register:
             val = val * self.factor + self.offset
         return val
 
+    @property
+    def value_w(self):
+        """Returns the factor+offset-adjusted value from the bus"""
+        val = self.reg.value_w
+        if val is not None:
+            val = val * self.factor + self.offset
+        return val
+
     @value.setter
     def value(self, val):
         """Sets the value that'll be written to the bus.
@@ -460,7 +469,7 @@ class ServerDevice(BaseDevice):
     A server device, i.e. a unit that's accessed via modbus.
     """
     def __init__(self, *a, **k):
-        super().__init__(self, *a, **k)
+        super().__init__(*a, **k)
         self.unit = UnitContext()
 
     def load(self, path: str = None, data: dict = None):
@@ -485,9 +494,9 @@ class ServerDevice(BaseDevice):
 
                 if "register" in v:
                     d[k] = reg = self.factory(v, path / k)
-                    self.unit.add(v.get("reg_type","k"), offset=register, cls=reg)
+                    self.unit.add(get_kind(v.get("reg_type")), offset=v.register, val=reg)
                     seen = True
             return seen
 
-        a_r(self.data)
+        a_r(self.cfg)
 

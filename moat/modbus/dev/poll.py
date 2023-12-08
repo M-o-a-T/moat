@@ -49,11 +49,13 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
 
         if mt_kv is None:
             from .device import Register as Reg  # pylint: disable=import-outside-toplevel
+            RegS = Reg
         else:
             # The MoaT-KV client must live longer than the taskgroup
             from .kv import Register  # pylint: disable=import-outside-toplevel
 
             Reg = partial(Register, mt_kv=mt_kv, tg=tg)  # noqa: F811
+            RegS = partial(Register, mt_kv=mt_kv, tg=tg, is_server=True)  # noqa: F811
 
         # relay-out server(s)
         servers = []
@@ -66,20 +68,23 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
                 srv = SerialModbusServer(**kw)
             elif "host" in s or ("port" in s and isinstance(s["port"],int)):
                 kw = {}
-                for k,v in s:
+                for k,v in s.items():
                     if isinstance(k,str):
+                        if k == "units":
+                            continue
+                        if k == "host":
+                            k = "address"
                         kw[k] = v
                 srv = ModbusServer(**kw)
             else:
                 raise ValueError("neither serial nor TCP config found")
             servers.append(srv)
 
-            for u,v in s:
-                if not isinstance(u,int):
-                    continue
-                dev = ServerDevice(factory=Reg)
+            for u,v in s.get("units",{}).items():
+                dev = ServerDevice(factory=RegS)
                 dev.load(data=v)
                 srv.add_unit(u, dev)
+                nd += 1
 
 
         def do_attach(v, dev):
@@ -92,6 +97,9 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
                 s,u = servers[p[0]],p[1]
             s.add_unit(u, dev.unit)
 
+            nonlocal nd
+            nd += 1
+
         # serial clients
         for h, hv in cfg.get("ports", {}).items():
             try:
@@ -103,7 +111,6 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
                 if not isinstance(u, int):
                     continue
                 dev = await make_dev(v, Reg, port=h, serial=sp, unit=u)
-                nd += 1
                 tg.start_soon(dev.poll)
                 do_attach(v,dev)
 
@@ -113,7 +120,6 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
                 if not isinstance(u, int):
                     continue
                 dev = await make_dev(v, Reg, host=h, unit=u)
-                nd += 1
                 tg.start_soon(dev.poll)
                 do_attach(v,dev)
 
@@ -125,12 +131,11 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
                 for u, v in pv.items():
                     dev = await make_dev(v, Reg, host=h, port=p, unit=u)
                     tg.start_soon(dev.poll)
-                    nd += 1
                     do_attach(v,dev)
 
         for s in servers:
             evt = anyio.Event()
-            tg.start_soon(s.serve, opened=evt)
+            tg.start_soon(partial(s.serve, opened=evt))
             await evt.wait()
 
         if task_status is not None:

@@ -16,7 +16,7 @@ class Register(BaseRegister):
     One possibly-complex Modbus register that's mirrored from and/or to MoaT-KV
     """
 
-    def __init__(self, *a, mt_kv=None, tg=None, **kw):
+    def __init__(self, *a, mt_kv=None, tg=None, is_server=False, **kw):
         super().__init__(*a, **kw)
         self.mt_kv = mt_kv
 
@@ -29,9 +29,12 @@ class Register(BaseRegister):
         logger.info("%s:%s: Polling", self.unit, self.path)
 
         if (dest := self.dest) is not None:
-            slot = self.data.get("slot", None)
-            if slot is None:
-                logger.warning("%s:%s: no read slot", self.unit, self.path)
+            if is_server:
+                slot = None
+            else:
+                slot = self.data.get("slot", None)
+                if slot is None:
+                    logger.warning("%s:%s: no read slot", self.unit, self.path)
 
             if isinstance(dest, Path):
                 dest = (dest,)
@@ -51,7 +54,7 @@ class Register(BaseRegister):
             else:
                 mon = mt_kv.watch(self.src, fetch=True, max_depth=0)
 
-            if slot in (None, "write"):
+            if is_server or slot in (None, "write"):
                 tg.start_soon(self.from_dkv, mon)
             else:
                 tg.start_soon(self.from_dkv_p, mon, slot)
@@ -63,6 +66,9 @@ class Register(BaseRegister):
     @property
     def dest(self):
         return self.data.get("dest")
+
+    def set(self, val):
+        self.reg.set(val)
 
     async def to_dkv(self, dest, mt_kv):
         """Copy a Modbus value to MoaT-KV"""
@@ -83,6 +89,7 @@ class Register(BaseRegister):
         async with mon as mon_:
             async for val in mon_:
                 if "value" not in val:
+                    logger.debug("%s Wx", self.path)
                     continue
                 logger.debug("%s W %r", self.path, val.value)
                 await self._set(val.value)

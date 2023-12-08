@@ -97,7 +97,7 @@ class BaseModbusServer(CtxObj):
             identity.MajorMinorRevision = "1.0"
         self.identity = identity
 
-    def add_unit(self, unit) -> UnitContext:
+    def add_unit(self, unit, ctx=None) -> UnitContext:
         """
         Add an empty unit (= slave context) to this server (and return it).
 
@@ -105,7 +105,9 @@ class BaseModbusServer(CtxObj):
         """
         if unit in self.units:
             raise RuntimeError(f"Unit {unit} already exists")
-        return UnitContext(self, unit)
+        if ctx is None:
+            return UnitContext(self, unit)
+        self.units[unit] = ctx
 
     def _add_unit(self, unit):
         self.units[unit.unit] = unit

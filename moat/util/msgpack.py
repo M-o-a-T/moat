@@ -25,6 +25,9 @@ def _encode(data):
         return msgpack.ExtType(2, data.to_bytes((data.bit_length() + 7) // 8, "big"))
     if isinstance(data, Path):
         # Path
+        # XXX the mark is dropped until everybody understands type 6
+#       if data.mark:
+#           return msgpack.ExtType(6, packer(data.mark) + b"".join(packer(x) for x in data))
         return msgpack.ExtType(3, b"".join(packer(x) for x in data))
     if isinstance(data, Proxy):
         # Proxy object
@@ -82,4 +85,13 @@ def _decode(code, data):
         except AttributeError:
             pk.__dict__.update(next(s))
         return pk
+    elif code == 6:
+        # A marked path
+        s = stream_unpacker()
+        s.feed(data)
+        s = iter(s)
+        mark = next(s)
+        p = Path(*s)
+        p.mark = mark
+        return p
     return msgpack.ExtType(code, data)

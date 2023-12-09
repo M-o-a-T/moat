@@ -13,7 +13,9 @@ import click
 
 @click.command()
 @click.option("-i", "--info")
-def main(info):
+@click.argument("fn")
+@click.argument("fo")
+def main(info, fn, fo):
     d = attrdict()
     if not info:
         d.include = [
@@ -30,9 +32,10 @@ def main(info):
         }
         d.ref = P("universal")
 
-    r = csv.reader(sys.stdin, dialect=csv.excel_tab)
-    next(r)  # heading
-    for r in csv.reader(sys.stdin, dialect=csv.excel_tab):
+    with open(fn,"r") as f, open(fo,"w") as ff:
+      r = csv.reader(f, dialect=csv.excel_tab)
+      next(r)  # heading
+      for r in csv.reader(f, dialect=csv.excel_tab):
         p = P(r[4].lower())
         pa = p[1].split("_")
         if pa[0] in ("i", "sw", "o", "do", "di"):
@@ -93,7 +96,7 @@ def main(info):
             pp = P("regs")
         d = d._update(pp + p, e)
 
-    yprint(d)
+      yprint(d,ff)
 
 
 main()

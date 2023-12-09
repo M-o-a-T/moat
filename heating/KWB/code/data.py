@@ -43,7 +43,9 @@ def main(info, fn, fo):
         elif pa[0] in ("alarme", "anlage", "modbus"):
             pa = p[1].split("_", 1)
             p = P(p[0]) + Path(*pa) + p[2:]
-        if r[3] in ("s16", "s32"):
+        if r[8] in ("system_yes_no_t", "system_ein_aus_t"):
+            tt = "bit"
+        elif r[3] in ("s16", "s32"):
             tt = "int"
         elif r[3] in ("u8", "u16", "u32"):
             tt = "uint"

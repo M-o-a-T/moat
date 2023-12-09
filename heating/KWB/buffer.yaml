@@ -12,7 +12,7 @@ regs:
           len: 1
           reg_type: i
           register: 8895
-          type: int
+          type: bit
           unit: system_ein_aus_t
           values:
             ref: !P enum.system_ein_aus_t
@@ -62,7 +62,7 @@ regs:
           len: 1
           reg_type: i
           register: 8878
-          type: int
+          type: bit
           unit: system_ein_aus_t
           values:
             ref: !P enum.system_ein_aus_t

@@ -43,7 +43,7 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
             logger.info("Starting %r", vs)
 
             dev = ClientDevice(client=cl, factory=Reg)
-            dev.load(data=v)
+            await dev.load(data=v)
 
             return await scope.spawn_service(dev.as_scope)
 
@@ -82,7 +82,7 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
 
             for u,v in s.get("units",{}).items():
                 dev = ServerDevice(factory=RegS)
-                dev.load(data=v)
+                await dev.load(data=v)
                 srv.add_unit(u, dev)
                 nd += 1
 

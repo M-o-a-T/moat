@@ -217,8 +217,8 @@ class SerialModbusServer(BaseModbusServer):
                 response, skip_encoding = self.response_manipulator(response)
             if not skip_encoding:
                 response = self.framer.buildPacket(response)
-            if _logger.isEnabledFor(logging.DEBUG):
-                _logger.debug("send: [%s]- %s", request, b2a_hex(response))
+#           if _logger.isEnabledFor(logging.DEBUG):
+#               _logger.debug("send: [%s]- %s", request, b2a_hex(response))
 
             await self._serial.send(response)
 

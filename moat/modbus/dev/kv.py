@@ -19,6 +19,8 @@ class Register(BaseRegister):
     def __init__(self, *a, mt_kv=None, tg=None, is_server=False, **kw):
         super().__init__(*a, **kw)
         self.mt_kv = mt_kv
+        self.tg = tg
+        self.is_server = is_server
 
         if self.src is None and self.dest is None:
             if self.data.get("slot", "write") != "write":
@@ -26,10 +28,14 @@ class Register(BaseRegister):
                     logger.warning("%s:%s: no source/destination", self.unit, self.path)
             return
 
+    async def start(self):
+        await super().start()
+
         logger.info("%s:%s: Polling", self.unit, self.path)
+        tg = self.tg
 
         if (dest := self.dest) is not None:
-            if is_server:
+            if self.is_server:
                 slot = None
             else:
                 slot = self.data.get("slot", None)
@@ -41,23 +47,23 @@ class Register(BaseRegister):
 
             for d in dest:
                 if d.mark == "r":
-                    tg.start_soon(self.to_dkv_raw, d, mt_kv)
+                    tg.start_soon(self.to_dkv_raw, d)
                 else:
-                    tg.start_soon(self.to_dkv, d, mt_kv)
+                    tg.start_soon(self.to_dkv, d)
 
         if self.src is not None:
             slot = self.data.get("slot", None) if self.dest is None else None
             # if a slot is set AND src is set AND dst is not set,
             # then we want to do a periodic write (keepalive etc.).
             if self.src.mark == "r":
-                mon = mt_kv.msg_monitor(self.src)
+                mon = self.mt_kv.msg_monitor(self.src)
             else:
-                mon = mt_kv.watch(self.src, fetch=True, max_depth=0)
+                mon = self.mt_kv.watch(self.src, fetch=True, max_depth=0)
 
-            if is_server or slot in (None, "write"):
-                tg.start_soon(self.from_dkv, mon)
+            if self.is_server or slot in (None, "write"):
+                await tg.start(self.from_dkv, mon)
             else:
-                tg.start_soon(self.from_dkv_p, mon, slot)
+                tg.start_soon(self.from_dkv_p, mon, self.slot.write_delay)
 
     @property
     def src(self):
@@ -70,24 +76,27 @@ class Register(BaseRegister):
     def set(self, val):
         self.reg.set(val)
 
-    async def to_dkv(self, dest, mt_kv):
+    async def to_dkv(self, dest):
         """Copy a Modbus value to MoaT-KV"""
         async for val in self:
 #            if "load.goal" in str(dest):
 #                breakpoint()
             logger.debug("%s R %r", self.path, val)
-            await mt_kv.set(dest, value=val, idem=self.data.get("idem", True))
+            await self.mt_kv.set(dest, value=val, idem=self.data.get("idem", True))
 
-    async def to_dkv_raw(self, dest, mt_kv):
+    async def to_dkv_raw(self, dest):
         """Copy a Modbus value to MQTT"""
         async for val in self:
             logger.debug("%s r %r", self.path, val)
-            await mt_kv.msg_send(list(dest), val)
+            await self.mt_kv.msg_send(list(dest), val)
 
-    async def from_dkv(self, mon):
+    async def from_dkv(self, mon, *, task_status):
         """Copy a MoaT-KV value to Modbus"""
         async with mon as mon_:
             async for val in mon_:
+                if task_status is not None:
+                    task_status.started()
+                    task_status = None
                 if "value" not in val:
                     logger.debug("%s Wx", self.path)
                     continue

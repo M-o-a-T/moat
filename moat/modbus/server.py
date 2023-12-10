@@ -207,7 +207,7 @@ class SerialModbusServer(BaseModbusServer):
         if isinstance(response,ExceptionResponse):
             _logger.error("Source: %r %d %d %d", type(request), request.function_code, request.address, getattr(request,"count",1))
 
-        if request.should_respond and not broadcast:
+        if response.should_respond and not broadcast:
             response.transaction_id = request.transaction_id
             response.unit_id = request.unit_id
             skip_encoding = False

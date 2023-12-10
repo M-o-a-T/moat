@@ -233,17 +233,22 @@ class Register:
 
     async def _iter(self):
         async for val in self.reg:
-            if val is None:
-                yield val
-            else:
-                yield val * self.factor + self.offset
+            if val is not None:
+                if self.factor != 1:
+                    val *= self.factor
+                if self.offset:
+                    val += self.offset
+            yield val
 
     @property
     def value(self):
         """Returns the factor+offset-adjusted value from the bus"""
         val = self.reg.value
         if val is not None:
-            val = val * self.factor + self.offset
+            if self.factor != 1:
+                val *= self.factor
+            if self.offset:
+                val += self.offset
         return val
 
     @property
@@ -251,7 +256,10 @@ class Register:
         """Returns the factor+offset-adjusted value from the bus"""
         val = self.reg.value_w
         if val is not None:
-            val = val * self.factor + self.offset
+            if self.factor != 1:
+                val *= self.factor
+            if self.offset:
+                val += self.offset
         return val
 
     @value.setter
@@ -261,7 +269,10 @@ class Register:
         Should trigger an update.
         """
         if val is not None:
-            val = (val - self.offset) / self.factor
+            if self.offset:
+                val -= self.offset
+            if self.factor != 1:
+                val /= self.factor
         self.reg.set(val)
 
     @property

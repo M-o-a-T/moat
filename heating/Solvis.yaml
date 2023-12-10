@@ -21,24 +21,28 @@ dev:
       register: 33792
       type: uint
       len: 1
-    1:
-      code:
-        register: 33793
-        type: uint
-        len: 1
-      time:
-        register: 33794
-        type: suint
-        len: 2
-      par:
-        1:
-          register: 33796
+    repeat:
+      n: 10
+      start: 1
+      offset: 5
+      data:
+        code:
+          register: 33793
           type: uint
           len: 1
-        2:
-          register: 33797
-          type: uint
-          len: 1
+        time:
+          register: 33794
+          type: suint
+          len: 2
+        par:
+          1:
+            register: 33796
+            type: uint
+            len: 1
+          2:
+            register: 33797
+            type: uint
+            len: 1
 
 
   limit:
@@ -46,6 +50,16 @@ dev:
 
 regs:
   water:
+    circ:
+      mode:
+       register: 2049
+       reg_type: i
+       type: uint
+       values:
+         0: off
+         1: pulse
+         2: time
+         3: pulse+time
     mode:
       register: 2304
       reg_type: h
@@ -56,70 +70,86 @@ regs:
       type: int
       unit: dC
   heat:
-    1:
-      ww_pref:
-        register: 2817
-        type: uint
-      mode:
-        register: 2818
-        type: uint
-      fix_day:
-        register: 2820
-        type: uint
-      fix_night:
-        register: 2821
-        type: uint
-      curve:
-        day:
-          1:
-            register: 2822
-            type: uint
-          2:
-            register: 2823
-            type: uint
-          3:
-            register: 2824
-            type: uint
-        night:
-          register: 2825
+    default:
+      reg_type: h
+    repeat:
+      n: 3
+      start: 1
+      offset: 256
+      data:
+        ww_pref:
+          register: 2817
           type: uint
-        slope:
-          register: 2932
+          values:
+            0: false
+            1: true
+        mode:
+          register: 2818
           type: uint
-          scale: -1
-      holiday:
-        home:
-          temp:
-            register: 2870
-            type: int
-            unit: dC
-          days:
-            register: 2871
-            type: uint
-          start:
-            register: 2872
-            unit: h
-            type: uint
-            factor: 0.25
-          stop:
-            register: 2873
-            unit: h
-            type: uint
-            factor: 0.25
-        away:
-          temp:
-            register: 2880
-            unit: dC
-            type: int
+          values:
+            2: auto
+            3: day
+            4: night
+            5: standby
+            6: eco
+            7: holiday
+        fix_day:
+          register: 2820
+          type: uint
+        fix_night:
+          register: 2821
+          type: uint
+        curve:
           day:
-            register: 2881
+            1:
+              register: 2822
+              type: uint
+            2:
+              register: 2823
+              type: uint
+            3:
+              register: 2824
+              type: uint
+          night:
+            register: 2825
             type: uint
-          month:
-            register: 2882
+          slope:
+            register: 2932
             type: uint
-          year:
-            register: 2883
-            type: uint
+            scale: -1
+        holiday:
+          home:
+            temp:
+              register: 2870
+              type: int
+              unit: dC
+            days:
+              register: 2871
+              type: uint
+            start:
+              register: 2872
+              unit: h
+              type: uint
+              factor: 0.25
+            stop:
+              register: 2873
+              unit: h
+              type: uint
+              factor: 0.25
+          away:
+            temp:
+              register: 2880
+              unit: dC
+              type: int
+            day:
+              register: 2881
+              type: uint
+            month:
+              register: 2882
+              type: uint
+            year:
+              register: 2883
+              type: uint
 
   plan:
     default:
@@ -275,6 +305,7 @@ regs:
       data:
         register: 33280
         len: 1
+        reg_type: i
         type: uint
         factor: 25600
 
@@ -291,6 +322,22 @@ regs:
           scale: -1
           unit: V
 
+    out_modes:
+      repeat:
+        n: 6
+        start: 1
+        offset: 5
+        values:
+          0: auto_pwm
+          1: manual_pwm
+          2: auto_analog
+          3: manual_analog
+        data:
+          register: 3840
+          len: 1
+          type: uint
+          scale: -1
+          unit: V
     out:
       repeat:
         n: 6

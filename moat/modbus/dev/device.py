@@ -46,7 +46,41 @@ def fixup(d,*a,**k):
     Also marks original data
     """
     mark_orig(d)
+    d = fixup_i(d)
     return fixup_(d, *a, **k)
+
+def fixup_i(d):
+    """
+    Run processing instructions: include
+    """
+    if isinstance(d,Mapping):
+        try:
+            inc = d.pop("include")
+        except KeyError:
+            pass
+        else:
+            if isinstance(inc, tuple):
+                inc = list(inc)
+            elif not isinstance(inc, list):
+                inc = [inc]
+            for i, dd in enumerate(inc):
+                try:
+                    f = _data / dd
+                    df = f.open("r")
+                except FileNotFoundError:
+                    f = this_file.parent / dd
+                    df = f.open("r")
+                with df:
+                    dd = yload(df, attr=True)
+                inc[i] = fixup_i(dd)
+            inc.reverse()
+            d = combine_dict(d, *inc, cls=attrdict)
+
+    for k, v in (d.items() if hasattr(d,"items") else enumerate(d)):
+        if isinstance(v, (Mapping,list,tuple)):
+            d[k] = fixup_i(v)
+
+    return d
 
 def fixup_(
     d,
@@ -60,7 +94,7 @@ def fixup_(
     apply_default=False,
 ):
     """
-    Run processing instructions: include, ref, default, repeat
+    Run processing instructions: ref, default, repeat
     """
     if root is None:
         root = d
@@ -70,93 +104,69 @@ def fixup_(
     if default is None:
         default = attrdict()
 
-    try:
-        inc = d.pop("include")
-    except KeyError:
-        pass
-    else:
-        if isinstance(inc, tuple):
-            inc = list(inc)
-        elif not isinstance(inc, list):
-            inc = [inc]
-        for i, dd in enumerate(inc):
-            try:
-                f = _data / dd
-                df = f.open("r")
-            except FileNotFoundError:
-                f = this_file.parent / dd
-                df = f.open("r")
-            with df:
-                dd = yload(df, attr=True)
-            inc[i] = fixup_(
-                dd, None, Path(), default=default, offset=offset, do_refs=do_refs, this_file=f
-            )
-        inc.reverse()
-        d = combine_dict(d, *inc, cls=attrdict)
-        if set_root:
-            root = d
+    reps = set()
 
-    try:
-        defs = d.pop("default")
-    except KeyError:
-        pass
-    else:
-        default = combine_dict(defs, default, cls=attrdict)
-
-    if do_refs:
+    if isinstance(d,Mapping):
         try:
-            refs = d.pop("ref")
+            defs = d.pop("default")
         except KeyError:
             pass
         else:
-            if isinstance(refs, str):
-                refs = P(refs)
-            if isinstance(refs, Path):
-                refs = [refs]
-            for i, p in enumerate(refs):
-                refs[i] = root._get(p)  # pylint: disable=protected-access
+            default = combine_dict(defs, default, cls=attrdict)
 
-            refs.reverse()
-            d = combine_dict(d, *refs, cls=attrdict)
+        if do_refs:
+            try:
+                refs = d.pop("ref")
+            except KeyError:
+                pass
+            else:
+                if isinstance(refs, str):
+                    refs = P(refs)
+                if isinstance(refs, Path):
+                    refs = [refs]
+                for i, p in enumerate(refs):
+                    refs[i] = root._get(p)  # pylint: disable=protected-access
 
-    try:
-        rep = d.pop("repeat")
-    except KeyError:
-        rep = None
+                refs.reverse()
+                d = combine_dict(d, *refs, cls=attrdict)
 
-    if "register" in d or apply_default:
-        if "register" in d:
-            d.register += offset
-        merge(d, default, replace=False)
+        try:
+            rep = d.pop("repeat")
+        except KeyError:
+            rep = None
 
-    # Offset is modified here
-    reps = set()
-    if rep:
-        k = rep.get("start", 0)
-        n = rep.n
-        off = offset
-        while n > 0:
-            v = combine_dict(d.get(k, attrdict()), deepcopy(rep.data), cls=attrdict)
-            d[k] = fixup_(
-                v,
-                root,
-                path / k,
-                default=default,
-                offset=off,
-                do_refs=do_refs,
-                this_file=this_file,
-                apply_default=getattr(d, "_apply_default", False),
-            )
-            reps.add(k)
+        if "register" in d or apply_default:
+            if "register" in d:
+                d.register += offset
+            merge(d, default, replace=False)
 
-            n -= 1
-            k += 1
-            off += rep.offset
+        # Offset is modified here
+        if rep:
+            k = rep.get("start", 0)
+            n = rep.n
+            off = offset
+            while n > 0:
+                v = combine_dict(d.get(k, attrdict()), deepcopy(rep.data), cls=attrdict)
+                d[k] = fixup_(
+                    v,
+                    root,
+                    path / k,
+                    default=default,
+                    offset=off,
+                    do_refs=do_refs,
+                    this_file=this_file,
+                    apply_default=getattr(d, "_apply_default", False),
+                )
+                reps.add(k)
 
-    for k, v in d.items():
+                n -= 1
+                k += 1
+                off += rep.offset
+
+    for k, v in (d.items() if hasattr(d,"items") else enumerate(d)):
         if k in reps:
             continue
-        if isinstance(v, Mapping):
+        if isinstance(v, (Mapping,list,tuple)):
             d[k] = fixup_(
                 v,
                 root,

@@ -10,7 +10,7 @@ from asyncscope import scope
 from moat.util import attrdict, merge, to_attrdict
 
 from ..client import ModbusClient
-from .device import ServerDevice, fixup
+from .device import ServerDevice, ClientDevice, fixup
 from ..server import ModbusServer, SerialModbusServer
 
 logger = logging.getLogger(__name__)

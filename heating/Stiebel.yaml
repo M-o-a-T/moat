@@ -149,6 +149,22 @@ regs:
       values:
         1: known
 
+    _y1:
+      register: 1040
+      len: 1
+      reg_type: h
+      type: int
+    _y2:
+      register: 803
+      len: 4
+      reg_type: h
+      type: int
+    _y3:
+      register: 866
+      len: 1
+      reg_type: h
+      type: int
+
     error:
       repeat:
         n: 20

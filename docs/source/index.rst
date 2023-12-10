@@ -13,7 +13,7 @@ Welcome to advanced-pid's documentation!
 Complete API documentation
 ========================================
 
-.. autoclass:: advanced_pid.PID
+.. autoclass:: moat.lib.pid.PID
     :members:
     :special-members: __call__
     :undoc-members:

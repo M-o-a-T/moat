@@ -1,7 +1,5 @@
-[![Run Tests and Publish PyPI](https://github.com/eadali/advanced-pid/actions/workflows/main-branch.yml/badge.svg)](https://github.com/eadali/advanced-pid/actions/workflows/main-branch.yml)
-[![Documentation Status](https://readthedocs.org/projects/advanced-pid/badge/?version=latest)](https://advanced-pid.readthedocs.io/en/latest/?badge=latest)
 
-# advanced-pid    
+# moat-lib-pid    
 An advanced PID controller in Python. The derivative term can also be used in 
 practice thanks to built-in first-order filter. Detailed information can be
 found [here](https://en.wikipedia.org/wiki/PID_controller#Derivative_term).
@@ -9,7 +7,7 @@ found [here](https://en.wikipedia.org/wiki/PID_controller#Derivative_term).
 Usage is very simple:
 
 ```python
-from advanced_pid import PID
+from moat.lib.pid import PID
 
 # Create PID controller 
 pid = PID(Kp=2.0, Ki=0.1, Kd=1.0, Tf=0.05)
@@ -27,6 +25,8 @@ while True:
     system.set_input(control)
 ```
 
+This module was vendorized from the advanced-pid module by Erkan Adali <erkanadali91@gmail.com>.
+
 Complete API documentation can be found 
 [here](https://advanced-pid.readthedocs.io/en/latest/).
 
@@ -36,8 +36,8 @@ filter.
 advanced-pid package includes a toy mass-spring-damper system model for testing:
 
 ```python
-from advanced_pid import PID
-from advanced_pid.models import MassSpringDamper
+from moat.lib.pid import PID
+from examples.mass_spring_damper import MassSpringDamper
 from matplotlib import pyplot as plt
 from numpy import diff
 
@@ -87,12 +87,12 @@ As It can be seen in the figure, derivative term cannot be use without a filter:
 ## Installation
 To install, run:
 ```
-pip3 install advanced-pid
+pip3 install moat-lib-pid
 ```
 ## Tests
 To run tests, run:
 ```
-python -m unittest tests.test_pid
+pytest tests
 ```
 
 ## License

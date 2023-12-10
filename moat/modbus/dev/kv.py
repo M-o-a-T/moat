@@ -118,6 +118,7 @@ class Register(BaseRegister):
                 if val is NotGiven:
                     continue
 
+                logger.debug("%s W %r", self.path, val)
                 await self._set(val)
 
         async with mon as mon_, anyio.create_task_group() as tg:

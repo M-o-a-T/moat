@@ -621,7 +621,8 @@ class Slot(CtxObj):
     for possible collation.
     """
 
-    _run_scope = None
+    _get_scope = None
+    _set_scope = None
     delay: float = None
     t_read = None
     _scope = None
@@ -731,8 +732,10 @@ class Slot(CtxObj):
         return k.delete(offset)
 
     async def _stop_run(self):
-        if self._run_scope is not None:
-            await self._run_scope.cancel()
+        if self._get_scope is not None:
+            await self._get_scope.cancel()
+        if self._set_scope is not None:
+            await self._set_scope.cancel()
 
     def close(self):
         """
@@ -758,9 +761,9 @@ class Slot(CtxObj):
                 rr.update(r)
 
             async with anyio.create_task_group() as tg:
-                if self._run_scope is not None:
+                if self._get_scope is not None:
                     raise RuntimeError("already running")
-                self._run_scope = tg.cancel_scope
+                self._get_scope = tg.cancel_scope
 
                 for typ, vl in self.modes.items():
                     res[typ] = r = {}
@@ -773,7 +776,7 @@ class Slot(CtxObj):
                 raise ClosedResourceError("dropped while running")
             return res
         finally:
-            self._run_scope = None
+            self._get_scope = None
 
     async def _setValues(self, changed=False):
         """
@@ -781,16 +784,16 @@ class Slot(CtxObj):
         """
         try:
             async with anyio.create_task_group() as tg:
-                if self._run_scope is not None:
+                if self._set_scope is not None:
                     raise RuntimeError("already running")
-                self._run_scope = tg.cancel_scope
+                self._set_scope = tg.cancel_scope
 
                 for vl in self.modes.values():
                     tg.start_soon(vl.writeValues, changed)
             if self.unit is None:
                 raise ClosedResourceError("dropped while running")
         finally:
-            self._run_scope = None
+            self._set_scope = None
 
     async def read(self):
         """Read this slot's data."""

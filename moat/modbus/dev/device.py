@@ -238,6 +238,9 @@ class Register:
         self.offset = self.data.get("offset", 0)
         self.path = path
 
+    async def start(self):
+        pass
+
     def __aiter__(self):
         return self._iter().__aiter__()
 
@@ -340,7 +343,7 @@ class BaseDevice(CtxObj):
     def __init__(self, factory=Register):
         self.factory = factory
 
-    def load(self, path: str = None, data: dict = None):
+    async def load(self, path: str = None, data: dict = None):
         """Load a device description from @path, augmented by @data"""
         if self.cfg is not None:
             raise RuntimeError("already called")
@@ -388,7 +391,7 @@ class ClientDevice(BaseDevice):
 
         self.data = fixup(self.cfg, self.cfg, Path(), this_file=self.cfg_path)
         await self.add_slots()
-        self.add_registers()
+        await self.add_registers()
         yield self
 
     async def as_scope(self):
@@ -410,15 +413,15 @@ class ClientDevice(BaseDevice):
                 v = {}
             self.slots[k] = await self.unit.slot_scope(k, **v)
 
-    def add_registers(self):
+    async def add_registers(self):
         """Replace entries w/ register/slot members with Register instances"""
 
-        def a_r(d, path=Path()):
+        async def a_r(d, path=Path()):
             seen = False
             for k, v in d.items():
                 if not isinstance(v, dict):
                     continue
-                if a_r(v, path / k):
+                if await a_r(v, path / k):
                     seen = True
                     if "register" in v:
                         logger.warning("%s has a sub-register: ignored", path / k)
@@ -428,13 +431,14 @@ class ClientDevice(BaseDevice):
 
                 if "register" in v:
                     v.setdefault("slot", "write")
-                    d[k] = self.factory(v, path / k, self.unit)
+                    d[k] = f = self.factory(v, path / k, self.unit)
+                    await f.start()
                     seen = True
                 elif "slot" in v:
                     logger.warning("%s is not a register", path / k)
             return seen
 
-        a_r(self.data)
+        await a_r(self.data)
 
     @property
     def slots(self):
@@ -492,19 +496,25 @@ class ServerDevice(BaseDevice):
         super().__init__(*a, **k)
         self.unit = UnitContext()
 
-    def load(self, path: str = None, data: dict = None):
-        super().load(path, data)
-        self.add_registers()
+        # duck-type me
+        self.validate = self.unit.validate
+        self.getValues = self.unit.getValues
+        self.setValues = self.unit.setValues
 
-    def add_registers(self):
+    async def load(self, path: str = None, data: dict = None):
+        await super().load(path, data)
+        self.data = fixup(self.cfg, self.cfg, Path(), this_file=self.cfg_path)
+        await self.add_registers()
+
+    async def add_registers(self):
         """Replace entries w/ register/slot members with Register instances"""
 
-        def a_r(d, path=Path()):
+        async def a_r(d, path=Path()):
             seen = False
             for k, v in d.items():
                 if not isinstance(v, dict):
                     continue
-                if a_r(v, path / k):
+                if await a_r(v, path / k):
                     seen = True
                     if "register" in v:
                         logger.warning("%s has a sub-register: ignored", path / k)
@@ -514,9 +524,10 @@ class ServerDevice(BaseDevice):
 
                 if "register" in v:
                     d[k] = reg = self.factory(v, path / k)
+                    await reg.start()
                     self.unit.add(get_kind(v.get("reg_type")), offset=v.register, val=reg)
                     seen = True
             return seen
 
-        a_r(self.cfg)
+        await a_r(self.cfg)
 

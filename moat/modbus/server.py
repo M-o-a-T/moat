@@ -18,7 +18,7 @@ from pymodbus.datastore import ModbusServerContext, ModbusSlaveContext
 from pymodbus.device import ModbusControlBlock, ModbusDeviceIdentification
 from pymodbus.exceptions import NoSuchSlaveException
 from pymodbus.factory import ServerDecoder
-from pymodbus.pdu import ModbusExceptions as merror
+from pymodbus.pdu import ModbusExceptions as merror, ExceptionResponse
 from pymodbus.utilities import hexlify_packets
 
 from moat.modbus.types import BaseValue, DataBlock, TypeCodec
@@ -204,6 +204,9 @@ class SerialModbusServer(BaseModbusServer):
             _logger.exception("Unable to fulfill request")
             response = request.doException(merror.SlaveFailure)
         # no response when broadcasting
+        if isinstance(response,ExceptionResponse):
+            _logger.error("Source: %r %d %d %d", type(request), request.function_code, request.address, getattr(request,"count",1))
+
         if request.should_respond and not broadcast:
             response.transaction_id = request.transaction_id
             response.unit_id = request.unit_id

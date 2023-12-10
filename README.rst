@@ -48,6 +48,16 @@ How to get there:
 The values can be modified (factor+offset); the gateway works in both
 directions (command/state).
 
+++++++++++++++++++++++++
+MQTT / MoaT-KV interface
+++++++++++++++++++++++++
+
+MoaT-Modbus includes a server that's informed by a device profile. This server
+acts as a bidirectional gateway from and to MQTT and/or MoaT-KV storage.
+
+See "gateway.rst" for details.
+
+
 TODO
 ++++
 

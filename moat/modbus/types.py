@@ -269,7 +269,7 @@ class BitValue(BaseValue):
         return bool(regs[0])
 
     def _encode(self, value):
-        return value
+        return (int(value),)
 
 
 class InvBitValue(BaseValue):
@@ -281,7 +281,7 @@ class InvBitValue(BaseValue):
         return not bool(regs[0])
 
     def _encode(self, value):
-        return 0 if value else 1
+        return (int(not value),)
 
 
 class FloatValue(BaseValue):

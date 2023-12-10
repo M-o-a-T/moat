@@ -141,6 +141,8 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
         if task_status is not None:
             task_status.started(cfg)
 
+        if nd:
+            logger.info("Running.")
         if not nd:
             logger.error("No devices to poll found.")
 

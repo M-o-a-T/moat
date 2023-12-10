@@ -113,7 +113,7 @@ class Register(BaseRegister):
                 if val is NotGiven:
                     await evt.wait()
                 else:
-                    with anyio.move_on_after(self.cfg.slots[slot]):
+                    with anyio.move_on_after(slot):
                         await evt.wait()
                 if val is NotGiven:
                     continue

@@ -197,8 +197,7 @@ class Register:
                 raise AttributeError(f"No type in {path}") from None
         else:
             if s in {"bit", "invbit"}:
-                if not (self.reg_type is DiscreteInputs or self.reg_type is Coils):
-                    raise RuntimeError(f"Only Coils/Discretes can be BitValue, at {path}")
+                pass
             elif self.reg_type is DiscreteInputs or self.reg_type is Coils:
                 raise RuntimeError(f"Coils/Discretes must be BitValue, at {path}")
 

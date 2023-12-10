@@ -154,9 +154,12 @@ class SerialModbusServer(BaseModbusServer):
         from pymodbus.framer.rtu_framer import (  # pylint: disable=import-outside-toplevel
             ModbusRtuFramer,
         )
+        class Framer(ModbusRtuFramer):
+            def _validate_unit_id(self, unit, single):
+                return True
 
         self.decoder = ServerDecoder()  # pylint: disable=no-value-for-parameter ## duh?
-        self.Framer = ModbusRtuFramer
+        self.Framer = Framer
 
     async def serve(self, opened=None):
         from anyio_serial import Serial  # pylint: disable=import-outside-toplevel

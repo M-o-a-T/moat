@@ -171,16 +171,18 @@ class SerialModbusServer(BaseModbusServer):
             if opened is not None:
                 opened.set()
             while True:
-                data = await ser.receive()
-                msgs = []
-                self.framer.processIncomingPacket(
-                    data=data,
-                    callback=msgs.append,
-                    unit=self.units,
-                    single=self.single,
-                )
+                with anyio.fail_after(5):
+                    data = await ser.receive()
+                    msgs = []
+                    self.framer.processIncomingPacket(
+                        data=data,
+                        callback=msgs.append,
+                        unit=self.units,
+                        single=self.single,
+                    )
                 for msg in msgs:
-                    await self._process(msg)
+                    with anyio.fail_after(2):
+                        await self._process(msg)
 
     async def _process(self, request):
         broadcast = False

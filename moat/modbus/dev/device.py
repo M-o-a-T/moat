@@ -39,17 +39,17 @@ def mark_orig(d):
             if k != "default":
                 mark_orig(v)
 
-def fixup(d,*a,**k):
+def fixup(d,this_file=None,**k):
     """
     See `fixup_`.
 
     Also marks original data
     """
     mark_orig(d)
-    d = fixup_i(d)
-    return fixup_(d, *a, **k)
+    d = fixup_i(d,this_file=this_file)
+    return fixup_(d, **k)
 
-def fixup_i(d):
+def fixup_i(d, this_file=None):
     """
     Run processing instructions: include
     """
@@ -72,9 +72,10 @@ def fixup_i(d):
                     df = f.open("r")
                 with df:
                     dd = yload(df, attr=True)
-                inc[i] = fixup_i(dd)
+                inc[i] = fixup_i(dd, this_file=f)
             inc.reverse()
             d = combine_dict(d, *inc, cls=attrdict)
+            d._root = True
 
     for k, v in (d.items() if hasattr(d,"items") else enumerate(d)):
         if isinstance(v, (Mapping,list,tuple)):
@@ -90,13 +91,12 @@ def fixup_(
     default=None,
     offset=0,
     do_refs=True,
-    this_file=None,
     apply_default=False,
 ):
     """
     Run processing instructions: ref, default, repeat
     """
-    if root is None:
+    if root is None or getattr(d,"_root",False):
         root = d
         set_root = True
     else:
@@ -154,7 +154,6 @@ def fixup_(
                     default=default,
                     offset=off,
                     do_refs=do_refs,
-                    this_file=this_file,
                     apply_default=getattr(d, "_apply_default", False),
                 )
                 reps.add(k)
@@ -174,7 +173,6 @@ def fixup_(
                 default=default,
                 offset=offset,
                 do_refs=do_refs,
-                this_file=this_file,
                 apply_default=getattr(d, "_apply_default", False),
             )
 
@@ -389,7 +387,7 @@ class ClientDevice(BaseDevice):
             )
         self.unit = await host.unit_scope(self.cfg.src.unit)
 
-        self.data = fixup(self.cfg, self.cfg, Path(), this_file=self.cfg_path)
+        self.data = fixup(self.cfg, root=self.cfg, path=Path(), this_file=self.cfg_path)
         await self.add_slots()
         await self.add_registers()
         yield self
@@ -503,7 +501,7 @@ class ServerDevice(BaseDevice):
 
     async def load(self, path: str = None, data: dict = None):
         await super().load(path, data)
-        self.data = fixup(self.cfg, self.cfg, Path(), this_file=self.cfg_path)
+        self.data = fixup(self.cfg, root=self.cfg, path=Path(), this_file=self.cfg_path)
         await self.add_registers()
 
     async def add_registers(self):

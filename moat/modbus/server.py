@@ -190,6 +190,8 @@ class SerialModbusServer(BaseModbusServer):
 
     async def _process(self, request):
         broadcast = False
+        unit = request.unit_id
+        tid = request.transaction_id
 
         try:
             if self.broadcast_enable and not request.unit_id:
@@ -210,6 +212,8 @@ class SerialModbusServer(BaseModbusServer):
             _logger.exception("Unable to fulfill request")
             response = request.doException(merror.SlaveFailure)
         # no response when broadcasting
+        response.unit_id = unit
+        response.transaction_id = tid
         if isinstance(response,ExceptionResponse):
             _logger.error("Source: %r %d %d %d", type(request), request.function_code, request.address, getattr(request,"count",1))
 
@@ -332,6 +336,8 @@ class ModbusServer(BaseModbusServer):
                 )
 
                 for request in reqs:
+                    unit = request.unit_id
+                    tid = request.transaction_id
                     try:
                         response = await self.process_request(request)
                     except NoSuchSlaveException:
@@ -341,8 +347,8 @@ class ModbusServer(BaseModbusServer):
                         _logger.warning("Datastore unable to fulfill request", exc_info=exc)
                         response = request.doException(merror.SlaveFailure)
                     if response.should_respond:
-                        response.transaction_id = request.transaction_id
-                        response.unit_id = request.unit_id
+                        response.transaction_id = tid
+                        response.unit_id = unit
                         # self.server.control.Counter.BusMessage += 1
                         pdu = framer.buildPacket(response)
                         if _logger.isEnabledFor(logging.DEBUG):

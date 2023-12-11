@@ -171,6 +171,10 @@ class SerialModbusServer(BaseModbusServer):
             if opened is not None:
                 opened.set()
             while True:
+                with anyio.move_on_after(0.1):
+                    await ser.receive()
+                    break
+            while True:
                 with anyio.fail_after(5):
                     data = await ser.receive()
                     msgs = []

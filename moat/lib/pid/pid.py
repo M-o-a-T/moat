@@ -178,7 +178,7 @@ class PID:
         # Calculate integral term
         i = i0 + dt * self.Ki * e
         i = min(max(i, self.lower), self.upper)
-        # Calcuate derivative term
+        # Calculate derivative term
         d = 0.0
         if self.Kd != 0.0 and self.Tf > 0.0:
             Kn = 1.0 / self.Tf

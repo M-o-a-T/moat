@@ -8,6 +8,8 @@ Created on Wed Jun 22 20:06:38 2022
 
 from warnings import warn
 from math import exp
+from time import monotonic as time
+from moat.util import attrdict
 
 
 class PID:
@@ -189,3 +191,65 @@ class PID:
         # Set initial value for next cycle
         self.set_initial_value(t, e, i)
         return min(max(p+i+d, self.lower), self.upper)
+
+class CPID(PID):
+    """
+    A PID that's configured::
+
+        flow:
+            p: 0.1
+            i: 0.01
+            d: 0.0
+            tf: 0.0  # both must be set
+
+            # output limits
+            min: .3
+            max: .95
+
+            # setpoint change: adjust integral for best guess
+            # input 20, output .8 == 20/.8
+            factor: .04 
+            offset: 0
+
+            state: foo
+    """
+    def __init__(self, cfg, state=None):
+        """
+        @cfg: our configuration. See above.
+        @state: the state storage. Ours is at ``state[cfg.state]``.
+        """
+        super().__init__(cfg.p,cfg.i,cfg.d,cfg.tf)
+        self.cfg = cfg
+        self.set_output_limits(self.cfg.get("min",None),self.cfg.get("max",None))
+
+        if "state" in cfg and state is not None:
+            s = state.setdefault(cfg.state, attrdict())
+        else:
+            s = attrdict()
+        self.state = s
+        self.set_initial_value(time(), s.get("e",0), s.get("i",0))
+        s.setdefault("setpoint",None)
+
+    def setpoint(self, setpoint):
+        """
+        Adjust the setpoint.
+        """
+        if self.state.setpoint == setpoint:
+            return
+        _t,e,i = self.get_initial_value()
+        osp = self.state.setpoint
+        if osp is not None:
+            i -= osp*self.cfg.factor + self.cfg.offset
+        self.state.setpoint = nsp = setpoint
+        i += nsp*self.cfg.factor+self.cfg.offset
+        self.set_initial_value(_t,e,i)
+
+    def __call__(self, i, t=None):
+        if t is None:
+            t = time()
+        res = super().integrate(t, self.state.setpoint-i)
+        _t,e,i = self.get_initial_value()
+        self.state.e = e
+        self.state.i = i
+        return res
+

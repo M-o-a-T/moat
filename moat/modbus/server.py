@@ -9,6 +9,7 @@ import socket
 from binascii import b2a_hex
 from contextlib import asynccontextmanager
 from typing import Type, Union
+import time
 
 import anyio
 from anyio.abc import SocketAttribute
@@ -147,9 +148,10 @@ class SerialModbusServer(BaseModbusServer):
     ignore_missing_slaves = False
     single = False
 
-    def __init__(self, identity=None, **args):
+    def __init__(self, identity=None, timeout=None, **args):
         super().__init__(identity=identity)
         self.args = args
+        self.timeout = timeout
 
         from pymodbus.framer.rtu_framer import (  # pylint: disable=import-outside-toplevel
             ModbusRtuFramer,
@@ -170,15 +172,23 @@ class SerialModbusServer(BaseModbusServer):
 
             if opened is not None:
                 opened.set()
+            t = time.monotonic()
             while True:
                 with anyio.move_on_after(0.1):
                     await ser.receive()
                     break
             while True:
-                with anyio.fail_after(5):
+                if self.timeout:
+                    with anyio.fail_after(self.timeout):
+                        data = await ser.receive()
+                else:
                     data = await ser.receive()
-                    msgs = []
-                    self.framer.processIncomingPacket(data=data, unit=0, callback=msgs.append, single=True)
+                t2 = time.monotonic()
+                if t2-t > 0.2:
+                    self.framer.resetFrame()
+                t = t2
+                msgs = []
+                self.framer.processIncomingPacket(data=data, unit=0, callback=msgs.append, single=True)
                 for msg in msgs:
                     with anyio.fail_after(2):
                         await self._process(msg)

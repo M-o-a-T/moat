@@ -31,6 +31,9 @@ class PID:
     def __init__(self, Kp, Ki, Kd, Tf):
         self.set_gains(Kp, Ki, Kd, Tf)
         self.set_output_limits(None, None)
+        self.reset()
+
+    def reset(self):
         self.set_initial_value(None, None, None)
 
     def __call__(self, t, e):

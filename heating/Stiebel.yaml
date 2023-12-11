@@ -17,11 +17,11 @@ regs:
         3: on
     power:
       _doc: thermo power setting
-      unit: kW
-      scale: -1
       reg_type: h
-      type: int
+      type: uint
       register: 288
+      factor: 0.004 # 1/250
+      unit: "%"
 
   state:
     state:

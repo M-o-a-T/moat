@@ -350,5 +350,4 @@ regs:
           register: 33294
           len: 1
           type: uint
-          scale: -1
-          unit: V
+          scale: -3

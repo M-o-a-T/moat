@@ -178,12 +178,7 @@ class SerialModbusServer(BaseModbusServer):
                 with anyio.fail_after(5):
                     data = await ser.receive()
                     msgs = []
-                    self.framer.processIncomingPacket(
-                        data=data,
-                        callback=msgs.append,
-                        unit=self.units,
-                        single=self.single,
-                    )
+                    self.framer.processIncomingPacket(data=data, unit=0, callback=msgs.append, single=True)
                 for msg in msgs:
                     with anyio.fail_after(2):
                         await self._process(msg)
@@ -331,9 +326,7 @@ class ModbusServer(BaseModbusServer):
 
                 reqs = []
                 # TODO fix pymodbus
-                framer.processIncomingPacket(
-                    data, reqs.append, list(self.units.keys()), single=self.single
-                )
+                framer.processIncomingPacket(data, unit=0, callback=reqs.append, single=True)
 
                 for request in reqs:
                     unit = request.unit_id

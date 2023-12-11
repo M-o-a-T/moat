@@ -247,6 +247,17 @@ class CPID(PID):
         i += nsp*self.cfg.factor+self.cfg.offset
         self.set_initial_value(_t,e,i)
 
+    def state(self, state=None):
+        """
+        save/restore the current state. Restoring resets the time.
+        """
+        if state is None:
+            return self.e0,self.i0
+        else:
+            self.e0,self.i0 = state
+            self.t0 = time()
+
+
     def __call__(self, i, t=None):
         if t is None:
             t = time()

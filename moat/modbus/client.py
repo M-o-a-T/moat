@@ -870,7 +870,7 @@ class Slot(CtxObj):
         await self.run_lock.wait()
         while True:
             await self.write_trigger.wait()
-            await anyio.sleep(self.write_delay)
+            await anyio.sleep(1) # self.write_delay)
             self.write_trigger = anyio.Event()
             await self.write(changed=True)
 

@@ -31,7 +31,7 @@ class Register(BaseRegister):
     async def start(self):
         await super().start()
 
-        logger.info("%s:%s: Polling", self.unit, self.path)
+        # logger.info("%s:%s: Polling", self.unit, self.path)
         tg = self.tg
 
         if (dest := self.dest) is not None:
@@ -42,6 +42,7 @@ class Register(BaseRegister):
                 if slot is None:
                     logger.warning("%s:%s: no read slot", self.unit, self.path)
 
+            # logger.info("%s:%s: Write %s", self.unit, self.path, dest)
             if isinstance(dest, Path):
                 dest = (dest,)
 
@@ -59,6 +60,8 @@ class Register(BaseRegister):
                 mon = self.mt_kv.msg_monitor(self.src)
             else:
                 mon = self.mt_kv.watch(self.src, fetch=True, max_depth=0)
+
+            # logger.info("%s:%s: Watch %s", self.unit, self.path,self.src)
 
             if self.is_server or slot in (None, "write"):
                 await tg.start(self.from_dkv, mon)
@@ -118,7 +121,7 @@ class Register(BaseRegister):
                 if val is NotGiven:
                     continue
 
-                logger.debug("%s W %r", self.path, val)
+                logger.debug("%s Wr %r", self.path, val)
                 await self._set(val)
 
         async with mon as mon_, anyio.create_task_group() as tg:

@@ -111,10 +111,7 @@ regs:
       register: 939
       len: 1
       reg_type: h
-      type: int
-      values:
-        0: false
-        1: true
+      type: bit
 
     _c1:
       _doc: const 1

@@ -44,6 +44,8 @@ class Run(IntEnum):
     temp=auto()
     # operation
     run=auto()
+    # ice
+    ice=auto()
     # wait for outflow-inflow<2 for n seconds, cool down
     down=auto()
 
@@ -75,7 +77,8 @@ sensor:
         mid: !P heat.s.buffer.temp.mid     # tb_mid
         low: !P heat.s.buffer.temp.return  # tb_low
     error: !P heat.s.pump.err
-    power: !P heat.s.pump.power  # c_power
+    power: !P heat.s.pump.power  # m_power
+    cop: !P home.ass.dyn.sensor.heizung.wp_cop.state  # m_cop
 setting:
     heat:
       day: !P heat.s.heat.temp        # c_heat
@@ -106,6 +109,7 @@ cmd:
 feedback:
     main: !P home.ass.dyn.switch.heizung.wp.state
     heat: !P home.ass.dyn.switch.heizung.main.state
+    ice: !P home.ass.dyn.binary_densor.heizung.wp_de_ice.state
 misc:
     init_timeout: 5
     de_ice: 17  # flow rate when de-icing
@@ -236,7 +240,6 @@ class Data:
         self._got = anyio.Event()
         self._want = set()
         self._sigs = {}
-        self.load_prev = -1
         self.record=record
 
         try:
@@ -291,15 +294,13 @@ class Data:
 
     async def set_load(self, p):
         if p < self.cfg.lim.power.min:
-            if self.load_prev:
-                print("*** OFF")
             await self.cl.set(self.cfg.cmd.power, value=0, idem=True)
             await self.cl.set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off, idem=True)
-            self.load_prev = p
+            self.state.last_load = 0
         else:
-            await self.cl.set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.on, idem=True)
             await self.cl.set(self.cfg.cmd.power, value=min(p,1), idem=True)
-            self.load_prev = 0
+            await self.cl.set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.on, idem=True)
+            self.state.last_load = p
 
     async def run_pump(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         cm_main = None
@@ -313,6 +314,9 @@ class Data:
         flow_on = None
         cm_main = None
         cm_heat = None
+        n_cop = 0
+        t_no_power = None
+        heat_off=False
 
         while True:
             #
@@ -324,6 +328,10 @@ class Data:
                 pass
             elif orun is None:
                 pass
+            elif run == Run.off:
+                pass
+            elif run == Run.ice:
+                pass
             elif run.value == orun.value+1:
                 pass
             elif orun != Run.off and run == Run.down:
@@ -331,22 +339,18 @@ class Data:
             elif orun == Run.down and run == Run.off:
                 pass
             else:
-                raise ValueError(f"Cannot go from {orun} to {run}")
+                raise ValueError(f"Cannot go from {orun.name} to {run.name}")
 
             # Handle state changes
 
-            # redirect
+            # redirect for shutdown
             if run == Run.off:
                 if orun not in (Run.off,Run.wait_time,Run.wait_flow,Run.wait_power,Run.down):
                     run = Run.down
 
             # Report
-            if orun == run:
-                pass
-            elif orun is None:
+            if orun != run:
                 print(f"*** STATE: {run.name}")
-            else:
-                print(f"*** STATE: {orun.name} >> {run.name}")
 
             # Leaving a state
             if orun is None:  # fix stuff for startup
@@ -363,13 +367,18 @@ class Data:
             elif orun == Run.down:
                 pass
 
+            oheat_off,heat_off = heat_off,None
+
             # Entering a state
             if orun == run:  # no change
+                heat_off = oheat_off
+
                 task_status.started()
                 task_status = anyio.TASK_STATUS_IGNORED
                 await self.wait()
 
             elif run == Run.off:  # nothing happens
+                heat_off=False
                 await self.set_flow_pwm(0)
                 await self.set_load(0)
                 self.state.last_pwm = None
@@ -379,12 +388,15 @@ class Data:
                 await self.set_load(0)
 
             elif run == Run.wait_flow:  # wait for flow
+                heat_off=True
+                await self.cl.set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off)
                 await self.set_flow_pwm(self.cfg.misc.start.flow.init.pwm)
 
             elif run == Run.flow:  # wait for decent throughput
                 pass
 
             elif run == Run.wait_power:  # wait for pump to draw power
+                self.pid_flow.move_to(self.r_flow,self.state.last_pwm)
                 await self.set_load(self.cfg.misc.start.power)
 
             elif run == Run.temp:  # wait for outflow-inflow>2
@@ -392,14 +404,23 @@ class Data:
                 await self.set_flow_pwm(self.cfg.misc.start.flow.power.pwm)
 
             elif run == Run.run:  # operation
-                t_low = self.time
-                self.pid_limit.reset()
-                self.pid_load.reset()
+                heat_off=False
+                self.state.setdefault("t_run", self.time)
+                if orun is not None:
+                    self.pid_limit.reset()
+                    self.pid_load.reset()
                 self.pid_pump.move_to(self.t_out, self.state.last_pwm, t=self.time)
                 self.state.load_last = None
 
+            elif run == Run.ice:  # wait for ice condition to stop
+                heat_off=True
+                self.pid_flow.setpoint(self.cfg.misc.de_ice)
+                await self.cl.set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off)
+                await self.cl.set(self.cfg.cmd.power, value=0)
+
             elif run == Run.down:  # wait for outflow-inflow<2 for n seconds, cool down
-                self.cp_flow = self.cfg.misc.stop.flow
+                heat_off=True
+                self.pid_flow.setpoint(self.cfg.misc.stop.flow)
                 await self.cl.set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off)
                 await self.cl.set(self.cfg.cmd.power, value=0)
 
@@ -412,10 +433,15 @@ class Data:
             # When de-icing starts, shut down (for now).
             if self.m_ice:
                 if not m_ice:
+                    print("*** ICE ***")
                     m_ice = True
-                    run = Run.off()
+                    await self.cl.set(self.cfg.feedback.ice, True)
+                    run = Run.ice
                     continue
             else:
+                if m_ice:
+                    await self.cl.set(self.cfg.feedback.ice, False)
+                    print("*** NO ICE ***")
                 m_ice = False
 
             # Process the main switch
@@ -424,7 +450,7 @@ class Data:
                 if cm_main:
                     cm_main = False
                     await self.cl.set(self.cfg.feedback.main, self.cm_main)
-                    run = Run.off()
+                    run = Run.off
                     continue
             else:
                 if not cm_main:
@@ -473,14 +499,17 @@ class Data:
 
             if run == Run.off:  # nothing happens
                 if not cm_main:
+                    print("-main",end="\r"); sys.stdout.flush()
                     continue
                 if bool(self.m_errors):
+                    print("-errn",end="\r"); sys.stdout.flush()
                     continue
                 if self.force_on or t_cur < (t_min*2+t_max)/3:
                     # TODO configureable threshold?
                     run = Run.wait_time
                     self.force_on=False
                     continue
+                print(f"-temp cur={t_cur :.1f} min={t_min :.1f} max={t_max :.1f}",end="\r"); sys.stdout.flush()
 
             elif run == Run.wait_time:  # wait for pump to be ready after doing whatever
                 if self.state.get("t_load",0) + self.cfg.misc.start.delay < self.time:
@@ -501,11 +530,11 @@ class Data:
                 await self.set_flow_pwm(l_flow)
 
             elif run == Run.wait_power:  # wait for pump to draw power
-                if self.c_power >= self.cfg.misc.min_power:
+                if self.m_power >= self.cfg.misc.min_power:
                     run = Run.temp
                     continue
                 l_flow = self.pid_flow(self.r_flow, t=self.time)
-                print(f"Flow: {self.r_flow :.1f} : {l_flow :.3f} p={self.c_power :.1f}")
+                print(f"Flow: {self.r_flow :.1f} : {l_flow :.3f} p={self.m_power :.1f}")
                 await self.set_flow_pwm(l_flow)
 
             elif run == Run.temp:  # wait for outflow-inflow>2
@@ -519,54 +548,67 @@ class Data:
                 # see below for the main loop
                 self.state.t_load = self.time
 
-            elif run == Run.down:  # wait for outflow-inflow<2 for n seconds, cool down
-                if self.m_ice:
-                    # do not stop flow while de-icing
+            elif run == Run.ice:  # no operation
+                await self.handle_flow()
+                if not self.m_ice:
+                    run = Run.down
                     continue
+
+            elif run == Run.down:  # wait for outflow-inflow<2 for n seconds, cool down
+                await self.handle_flow()
                 if self.t_out-self.t_in < self.cfg.misc.stop.delta:
                     run = Run.off
                     continue
-                await self.handle_flow()
 
             else:
                 raise ValueError(f"State ?? {run !r}")
 
-            if run != Run.run:
+
+            heat_ok = (not heat_off) and min(self.tb_heat,self.t_out if self.state.last_pwm else 9999) >= self.c_heat
+            if not heat_ok:
                 # If the incoming water is too cold, turn off heating
                 # We DO NOT turn heating off while running: danger of overloading the heat pump
                 # due to temperature jump, because the backflow is now fed by warm buffer
                 # from the buffer instead of cold water returning from radiators,
                 # esp. when they have been cooling off for some time
+                if run != Run.run and self.state.heat_ok is not False:
+                    print("HC 1",end="\r");sys.stdout.flush();
+                    await self.cl.set(self.cfg.setting.heat.mode.path, self.cfg.setting.heat.mode.off)
+                    self.state.heat_ok = False
+                else:
+                    print("HC 2",end="\r");sys.stdout.flush();
+            elif self.state.heat_ok is True:
+                print("HC 3",end="\r");sys.stdout.flush();
+                pass
+            elif self.state.heat_ok is False:
+                print("HC 4",end="\r");sys.stdout.flush();
+                self.state.heat_ok = self.time
+            elif self.time-self.state.heat_ok > self.cfg.setting.heat.mode.delay:
+                print("HC 5",end="\r");sys.stdout.flush();
+                await self.cl.set(self.cfg.setting.heat.mode.path, self.cfg.setting.heat.mode.on)
+                self.state.heat_ok = True
+            else:
+                # wait
+                print("HC 6",end="\r");sys.stdout.flush();
+                pass
 
-                heat_ok = min(self.tb_heat,self.t_out if self.state.last_pwm else 9999) >= self.c_heat
-                if not heat_ok:
-                    if self.state.heat_ok is not False:
-                        self.state.heat_ok = False
-                        await self.cl.set(self.cfg.setting.heat.mode.path, self.cfg.setting.heat.mode.off)
-
+            if run != Run.run:
                 continue
                 # END not running
 
             # RUNNING ONLY after this point
 
-            # if incoming water is no longer too cold, turn on heating
-            heat_ok = min(self.tb_heat,self.t_out if self.state.last_pwm else 9999) >= self.c_heat
-            if heat_ok:
-                if self.state.heat_ok is True:
-                    pass
-                elif self.state.heat_ok is False:
-                    self.state.heat_ok = self.time
-                elif self.time-self.state.heat_ok > self.cfg.setting.heat.mode.delay:
-                    await self.cl.set(self.cfg.setting.heat.mode.path, self.cfg.setting.heat.mode.on)
-                    self.state.heat_ok = True
-            else:
-                # remember to wait
-                self.state.heat_ok = self.time
 
-            if self.c_power < self.cfg.misc.min_power:
-                print(" NO POWER USE")
-                run = Run.off
-                continue
+            if self.m_power < self.cfg.misc.min_power:
+                # might be ice or whatever, so wait
+                if t_no_power is None:
+                    t_no_power = self.time
+                elif self.time-t_no_power > 20:
+                    print(" NO POWER USE")
+                    run = Run.off
+                    continue
+            else:
+                t_no_power = None
 
             if self.pid_load.state.get("setpoint",None) != t_load:
                 logger.info("Load SET %.3f",t_load)
@@ -591,19 +633,36 @@ class Data:
             l_load = self.pid_load(t_cur, t=self.time)
             l_limit = self.pid_limit(self.t_out, t=self.time)
             lim=min(l_load,l_limit)
-            self.pid_limit.move_to(self.t_out, lim, t=self.time)
-            self.pid_load.move_to(t_cur, lim, t=self.time)
+
+            #self.pid_limit.move_to(self.t_out, lim, t=self.time)
+            #self.pid_load.move_to(t_cur, lim, t=self.time)
 
             tt = self.time
             if tt-tlast>5 or self.t_out>self.cfg.adj.max:
                 tlast=tt
-                print(f"t={int(tt)%1000:03d} cur={t_cur :.1f} t={self.t_out :.1f} Pump={l_pump :.3f} load={l_load :.3f}{'<' if l_load<l_limit else '>' if l_load>l_limit else '|'}{l_limit :.3f}")
+                print(f"t={int(tt)%1000:03d} cur={t_cur :.1f} t={self.t_out :.1f}/{self.t_in :.1f} Pump={l_pump :.3f} load={l_load :.3f}{'<' if l_load<l_limit else '>' if l_load>l_limit else '|'}{l_limit :.3f}")
             await self.set_load(lim)
             await self.set_flow_pwm(l_pump)
             self.state.load_last = lim
 
+
+            # COP
+            if self.m_power:
+                cop = 1.16*60*self.r_flow*(self.t_out-self.t_in)/1000/self.m_power
+                self.m_cop += 0.001*(cop-self.m_cop)
+                if n_cop <= 0:
+                    n_cop = 100
+                    await self.cl.set(self.cfg.sensor.cop, self.m_cop)
+                else:
+                    n_cop -= 1
+
+            # Finally, we might want to turn the heater off.
+
+            # Buffer head temperature high and load low enough?
             if lim < self.cfg.lim.power.off and t_cur > t_min:
-                if self.time-t_low > self.cfg.lim.power.time or self.tb_mid > (t_min*2+t_max)/3:
+
+                # Running long enough or temperature *really* high?
+                if self.time-self.state.t_run > self.cfg.lim.power.time or self.tb_mid > t_on:
                     run=Run.off
 
 
@@ -640,7 +699,7 @@ class Data:
             elif run == 2:
                 # Startup B: get some power in until we have a delta
                 await self.set_load(self.cfg.misc.start.power)
-                if self.c_power < self.cfg.misc.min_power:
+                if self.m_power < self.cfg.misc.min_power:
                     self.cp_flow = self.cfg.misc.start.flow_init
                     continue
                 self.cp_flow = self.cfg.misc.start.flow
@@ -701,7 +760,7 @@ class Data:
         """
         l_flow = self.pid_flow(self.r_flow, t=self.time)
         l_temp = self.pid_pump(self.t_out, t=self.time)
-        print(f"t={self.time%1000 :03.0f} Pump={l_flow :.3f}/{l_temp :.3f} in:{self.r_flow :.1f}")
+        print(f"t={self.time%1000 :03.0f} Pump:{l_flow :.3f}/{l_temp :.3f} flow={self.r_flow :.1f} t={self.t_out :.1f}")
         res = max(l_flow,l_temp)
         self.pid_flow.move_to(self.r_flow, res, t=self.time)
         self.pid_pump.move_to(self.t_out, res, t=self.time)
@@ -740,8 +799,9 @@ class Data:
                     if m.value == 30055:
                         print("WP COMM ERR")
                     elif m.path == P(":1"):
-                        print("OOMPH?",m.value)
+                        print("ERROR",m.value)
                     else:
+                        print("ERROR",m.path,m.value)
                         errs[err] = m.value
                 else:
                     errs.pop(err,None)
@@ -823,8 +883,12 @@ class Data:
     async def run(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         try:
             await self.run_pump(task_status=task_status)
+        except BaseException as exc:
+            e = exc
+        else:
+            e = None
         finally:
-            print("*** OFF ***")
+            print(f"*** OFF {e !r} ***")
             with anyio.CancelScope(shield=True):
                 await self.off()
 
@@ -842,11 +906,12 @@ class Data:
             await tg.start(self._kv, cfg.sensor.pump["out"], "t_out")
             await tg.start(self._kv, cfg.sensor.pump.flow, "r_flow")
             await tg.start(self._kv, cfg.sensor.pump.ice, "m_ice")
+            await tg.start(self._kv, cfg.sensor.cop, "m_cop")
             await tg.start(self._kv, cfg.sensor.buffer.top, "tb_water")
             await tg.start(self._kv, cfg.sensor.buffer.heat, "tb_heat")
             await tg.start(self._kv, cfg.sensor.buffer.mid, "tb_mid")
             await tg.start(self._kv, cfg.sensor.buffer.low, "tb_low")
-            await tg.start(self._kv, cfg.sensor.power, "c_power")
+            await tg.start(self._kv, cfg.sensor.power, "m_power")
 
             try:
                 with anyio.fail_after(self.cfg.misc.init_timeout):
@@ -855,6 +920,7 @@ class Data:
                 raise ValueError("missing:"+repr(self._want)) from None
             task_status.started()
             yprint({k:v for k,v in vars(self).items() if not k.startswith("_") and isinstance(v,(int,float,str))})
+
 
     async def run_rec(self, rec, tg, *, task_status=anyio.TASK_STATUS_IGNORED):
         task_status.started()
@@ -893,7 +959,7 @@ class Data:
             await fkv("tb_heat")
             await fkv("tb_mid")
             await fkv("tb_low")
-            await fkv("c_power")
+            await fkv("m_power")
             task_status.started()
 
     async def saver(self, *, task_status=anyio.TASK_STATUS_IGNORED):

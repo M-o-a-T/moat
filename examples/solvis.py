@@ -439,19 +439,33 @@ class Data:
 
             # Calculate desired temperatures
 
-            # TODO handle switch-over water/heating correctly
+            # TODO:
+
             # we need three states:
             # - water only
             # - water while (water OR heating) is too low
             # - heating while water is sufficient
+        
+            # The system should be able to run in either steady-state or max-charge mode.
 
-            t_max = self.c_water+self.cfg.adj.water
+            t_max = t_on = self.c_water+self.cfg.adj.water
             t_min = self.c_water+self.cfg.adj.low.water
             t_cur = self.tb_water
             if cm_heat:
-                t_max = max(t_max, self.c_heat+self.cfg.adj.heat)
+                t_load = max(t_max, self.c_heat+self.cfg.adj.heat)
+                # less than this much doesn't make sense
+                th_min = self.c_heat+self.cfg.adj.low.heat
+                # more than this doesn't either
+                th_max = self.c_heat+self.cfg.adj.heat
+
+                # the boundary is the adjusted current buffer temperature, except when the load is low
+                t_set = min(th_max,max(th_min, self.tb_heat-self.cfg.adj.low.heat))
+
+                t_max = max(t_max, t_set)
+                t_on = max(t_on, self.c_heat+self.cfg.adj.heat)
                 t_min = max(t_min, self.c_heat+self.cfg.adj.low.heat)
-                t_cur = min(t_cur,self.tb_heat)
+                t_cur = self.tb_heat # min(t_cur,self.tb_heat)
+                t_on = max(t_on, th_max)
             t_max_out = min(self.cfg.adj.max, t_max+self.cfg.adj.more)
 
 
@@ -554,17 +568,17 @@ class Data:
                 run = Run.off
                 continue
 
-            if self.pid_load.state.get("setpoint",None) != t_max:
-                logger.info("Load SET %.3f",t_max)
-                self.pid_load.setpoint(t_max)
+            if self.pid_load.state.get("setpoint",None) != t_load:
+                logger.info("Load SET %.3f",t_load)
+                self.pid_load.setpoint(t_load)
 
             if self.pid_limit.state.get("setpoint",None) != t_max_out:
                 logger.info("Limit SET %.3f",t_max_out)
                 self.pid_limit.setpoint(t_max_out)
 
-            if self.pid_pump.state.get("setpoint",None) != t_max:
-                logger.info("Pump SET %.3f",t_max)
-                self.pid_pump.setpoint(t_max)
+            if self.pid_pump.state.get("setpoint",None) != th_max:
+                logger.info("Pump SET %.3f",th_max)
+                self.pid_pump.setpoint(th_max)
             
             # The pump rate is controlled by its intended output heat now
             if self.t_out>self.cfg.adj.max:

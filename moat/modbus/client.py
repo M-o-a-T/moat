@@ -872,7 +872,11 @@ class Slot(CtxObj):
             await self.write_trigger.wait()
             await anyio.sleep(1) # self.write_delay)
             self.write_trigger = anyio.Event()
-            await self.write(changed=True)
+            try:
+                await self.write(changed=True)
+            except ModbusError as exc:
+                _logger.exception("Write %s", self)
+                # TODO examine+record the error
 
 
 class ValueList(DataBlock):

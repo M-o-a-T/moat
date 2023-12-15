@@ -92,8 +92,8 @@ lim:
         min: 5
     power:
         min: .04
-        off: .2
-        time: 60
+        off: .2   # power cutoff if the buffer is warm enough
+        time: 300  # must run at least this long
 cmd:
     flow: !P heat.s.pump.rate.cmd       # c_flow
     main: !P home.ass.dyn.switch.heizung.wp.cmd  # cm_main
@@ -108,12 +108,12 @@ feedback:
     heat: !P home.ass.dyn.switch.heizung.main.state
 misc:
     init_timeout: 5
-    de_ice: 12  # flow rate when de-icing
+    de_ice: 17  # flow rate when de-icing
     stop:
       flow: 10  # or more if the max outflow temperature wants us to
       delta: 3  # outflow-inflow: if less than .delta, the pump can be turned off
     start: # conditions when starting up
-      delay: 600  # 10min
+      delay: 330  # 10min
       flow:
         init:
           rate: 6
@@ -136,7 +136,7 @@ pid:
         d: 0.0
         tf: 0.0
 
-        min: .1
+        min: .25
         max: .95
 
         # setpoint change
@@ -157,8 +157,8 @@ pid:
         # input: exchanger output temperature
         # output: PWM for the flow pump
         ## Adjust the flow to keep the output temperature within range.
-        p: -0.05
-        i: -0.0002
+        p: -0.06
+        i: -0.001
         d: 0.0
         tf: 0.0
 
@@ -178,8 +178,8 @@ pid:
         # input: buffer temperature
         # output: heat exchanger load
         ## Add as much load as required to keep the buffer temperature up.
-        p: 0.0025
-        i: 0.00025
+        p: 0.08
+        i: 0.0005
         d: 0.0
         tf: 0.0
 
@@ -203,8 +203,8 @@ pid:
         # setpoint: desired buffer temperature plus adj.more
         # input: exchanger output temperature
         # output: heat exchanger load
-        p: 0.005
-        i: 0.0005
+        p: 0.05
+        i: 0.0007
         d: 0.0
         tf: 0.0
 

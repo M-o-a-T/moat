@@ -11,7 +11,6 @@ sys.path.insert(0,".")
 import io
 import time
 import anyio
-import RPi.GPIO as GPIO
 import asyncclick as click
 import logging
 from enum import IntEnum,auto
@@ -26,8 +25,9 @@ FORMAT = (
 )
 logging.basicConfig(level=logging.INFO,format=FORMAT)
 
-GPIO.setmode(GPIO.BCM)
 logger = logging.root
+
+GPIO = None
 
 class Run(IntEnum):
     # nothing happens
@@ -1010,19 +1010,32 @@ class fake_cl:
 @click.pass_context
 @click.option("-c","--config",type=click.File("r"), help="config file")
 async def cli(ctx, config):
+    """
+    Manage a Solvis heat pump controller
+
+    Given a SolvisLea heat pump, teach it to behave.
+    """
     ctx.obj = attrdict()
     if config is not None:
         cfg = yload(config,attr=True)
     else:
         cfg = yload(CFG,attr=True)
     ctx.obj.cfg = cfg
-    pass
+
+    global GPIO
+    try:
+        import RPi.GPIO as GPIO
+    except ImportError:
+        pass
+    else:
+        GPIO.setmode(GPIO.BCM)
 
 @cli.command
 @click.pass_obj
 @click.option("-r","--record",type=click.File("w"))
 @click.option("-f","--force-on",is_flag=True)
 async def run(obj,record,force_on):
+    "Heat pump controller. Designed to run continuously"
     async with open_client(**mcfg.kv) as cl, anyio.create_task_group() as tg:
         d = Data(obj.cfg,cl, record=record)
         d.force_on=force_on
@@ -1037,6 +1050,7 @@ async def run(obj,record,force_on):
 @click.pass_obj
 @click.argument("record",type=click.File("r"))
 async def replay(obj,record):
+    "Replay a previous run, for testing"
     async with fake_cl() as cl, anyio.create_task_group() as tg:
         d = Data(obj.cfg,cl)
         await tg.start(d.run_rec, record, tg)
@@ -1048,7 +1062,9 @@ async def replay(obj,record):
 @click.pass_obj
 async def pwm(obj):
     """
-    Run backgrounds task for software PWM outputs.
+    Run a backgrounds task for software PWM outputs.
+
+    This keeps the PWM alive if/when "… solvis run" is restarted.
     """
     async with open_client(**mcfg.kv) as cl, anyio.create_task_group() as tg:
         for k,p in obj.cfg.output.items():
@@ -1071,6 +1087,7 @@ async def _run_pwm(cl,k,v):
 @cli.command
 @click.pass_obj
 async def off(obj):
+    "Emergency handler to turn the heat pump off in a controlled way."
     async with open_client(**mcfg.kv) as cl, anyio.create_task_group() as tg:
         d = Data(obj.cfg,cl)
         await tg.start(d.run_init)

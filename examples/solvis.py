@@ -18,7 +18,7 @@ from enum import IntEnum,auto
 
 from moat.lib.pid import CPID
 
-from moat.util import yload,yprint,attrdict, PathLongener, P,to_attrdict,to_attrdict
+from moat.util import yload,yprint,attrdict, PathLongener, P,to_attrdict,to_attrdict, pos2val,val2pos
 from moat.kv.client import open_client
 
 FORMAT = (
@@ -54,12 +54,13 @@ state: "/tmp/solvis.state"
 adj:
     # offsets to destination temperature
     water: 3
-    heat: 3
-    more: 4  # output temperature offset
-    max: 62  # don't try for more
+    heat: 1.5
+    more: 2  # output temperature offset
+    max: 61  # don't try for more
     low:
         water: 1
-        heat: 1
+        heat: .5
+        buffer: -2
 output:
     flow:
         pin: 4
@@ -83,6 +84,7 @@ setting:
     heat:
       day: !P heat.s.heat.temp        # c_heat
       night: !P heat.s.heat.temp_low  # c_heat_night
+      power: 19
       mode:
         path: !P heat.s.heat.mode.cmd    # 5:standby 2:auto 3:day 4:night
         on: 3
@@ -161,7 +163,7 @@ pid:
         # input: exchanger output temperature
         # output: PWM for the flow pump
         ## Adjust the flow to keep the output temperature within range.
-        p: -0.06
+        p: -0.05
         i: -0.001
         d: 0.0
         tf: 0.0
@@ -176,7 +178,7 @@ pid:
         state: p_pump
 
     load:
-        ## Primary heat exchanger control. We want the buffer temperature to be at a certain value.
+        ## Primary heat exchanger control. We want the top buffer temperature to be at a certain value.
         ## 
         # setpoint: desired buffer temperature
         # input: buffer temperature
@@ -199,6 +201,31 @@ pid:
 
         # state attr
         state: p_load
+
+    buffer:
+        ## More heat exchanger control. We want the bottom buffer temperature not to get too high.
+        ## 
+        # setpoint: desired buffer temperature
+        # input: buffer temperature
+        # output: heat exchanger load
+        ## Reduce the load as required to keep the buffer temperature down.
+        p: 0.2
+        i: 0.0001
+        d: 0.0
+        tf: 0.0
+
+        min: .04
+        max: 1
+
+        # no setpoint change, always zero
+        # 
+        # 50: 5 /min
+        # 
+        factor: 0
+        offset: 0
+
+        # state attr
+        state: p_buffer
 
     limit:
         ## Secondary heat exchanger control. We don't want more load than the pump can transfer
@@ -253,6 +280,7 @@ class Data:
         self.m_errors = {}
 
         self.pid_load = CPID(self.cfg.pid.load, self.state)
+        self.pid_buffer = CPID(self.cfg.pid.buffer, self.state)
         self.pid_limit = CPID(self.cfg.pid.limit, self.state)
         self.pid_pump = CPID(self.cfg.pid.pump, self.state)
         self.pid_flow = CPID(self.cfg.pid.flow, self.state)
@@ -317,6 +345,10 @@ class Data:
         n_cop = 0
         t_no_power = None
         heat_off=False
+        water_ok = True
+        heat_pin = self.cfg.setting.heat.get("power", None)
+        if heat_pin is not None:
+            GPIO.setup(heat_pin, GPIO.OUT)
 
         while True:
             #
@@ -409,6 +441,7 @@ class Data:
                 if orun is not None:
                     self.pid_limit.reset()
                     self.pid_load.reset()
+                    self.pid_buffer.reset()
                 self.pid_pump.move_to(self.t_out, self.state.last_pwm, t=self.time)
                 self.state.load_last = None
 
@@ -469,16 +502,61 @@ class Data:
 
             # we need three states:
             # - water only
-            # - water while (water OR heating) is too low
+            # - water while (water OR heating) is too low  # TODO, needs switch
             # - heating while water is sufficient
+            # 
+            # buffer temp < nominal: pump speed: deliver nominal+adj_low
+            # buffer temp > nominal+adj: pump speed: deliver MAXTEMP
+            # in between: interpolate
         
             # The system should be able to run in either steady-state or max-charge mode.
 
-            t_max = t_on = self.c_water+self.cfg.adj.water
-            t_min = self.c_water+self.cfg.adj.low.water
-            t_cur = self.tb_water
+            tw_nom = self.c_water
+            tw_low = tw_nom + self.cfg.adj.low.water
+            tw_adj = tw_nom + self.cfg.adj.water
+
+            th_nom = self.c_heat
+            th_low = th_nom + self.cfg.adj.low.heat
+            th_adj = th_nom + self.cfg.adj.heat
+
+            ## TODO add an output to switch the supply
+            if True:
+                pass
+            elif tb_water < tw_low:
+                water_ok = False
+            elif tb_water >= tw_adj and tb_heat >= tw_low:
+                water_ok = True
+
+            if cm_heat and water_ok:
+                t_nom = max(th_nom, tw_nom)
+                t_low = max(th_low, tw_low)
+                t_adj = max(th_adj, tw_adj)
+
+                t_cur = self.tb_heat
+            else:
+                t_nom = tw_nom
+                t_low = tw_low
+                t_adj = tw_adj
+
+                t_cur = self.tb_water
+
+            # PID controller settings
+            f = val2pos(t_nom,t_cur,t_adj, clamp=True)
+            t_limit = min(self.cfg.adj.max, t_adj+self.cfg.adj.more)
+            t_pump = pos2val(t_low,f,t_limit)
+            t_load = t_adj+self.cfg.adj.more
+            t_buffer = t_low+self.cfg.adj.low.buffer
+
+            # on/off thresholds
+            t_set_on = (t_low+t_adj)/2  # top
+            t_set_off = t_nom
+
+
+
+
+            # if tt-tlast>5 or self.t_out>self.cfg.adj.max:
             if cm_heat:
-                t_load = max(t_max, self.c_heat+self.cfg.adj.heat)
+                # * 
                 # less than this much doesn't make sense
                 th_min = self.c_heat+self.cfg.adj.low.heat
                 # more than this doesn't either
@@ -487,29 +565,23 @@ class Data:
                 # the boundary is the adjusted current buffer temperature, except when the load is low
                 t_set = min(th_max,max(th_min, self.tb_heat-self.cfg.adj.low.heat))
 
-                t_max = max(t_max, t_set)
-                t_on = max(t_on, self.c_heat+self.cfg.adj.heat)
-                t_min = max(t_min, self.c_heat+self.cfg.adj.low.heat)
-                t_cur = self.tb_heat # min(t_cur,self.tb_heat)
-                t_on = max(t_on, th_max)
-            t_max_out = min(self.cfg.adj.max, t_max+self.cfg.adj.more)
 
 
             # State handling
 
             if run == Run.off:  # nothing happens
                 if not cm_main:
-                    print("-main",end="\r"); sys.stdout.flush()
-                    continue
-                if bool(self.m_errors):
-                    print("-errn",end="\r"); sys.stdout.flush()
-                    continue
-                if self.force_on or t_cur < (t_min*2+t_max)/3:
+                    r="main"
+                elif bool(self.m_errors):
+                    r="errn"
+                elif self.force_on or t_cur < t_set_on:
                     # TODO configureable threshold?
                     run = Run.wait_time
                     self.force_on=False
                     continue
-                print(f"-temp cur={t_cur :.1f} min={t_min :.1f} max={t_max :.1f}",end="\r"); sys.stdout.flush()
+                else:
+                    r="temp"
+                print(f"      -{r} cur={t_cur :.1f} on={t_set_on :.1f}",end="\r"); sys.stdout.flush()
 
             elif run == Run.wait_time:  # wait for pump to be ready after doing whatever
                 if self.state.get("t_load",0) + self.cfg.misc.start.delay < self.time:
@@ -573,7 +645,10 @@ class Data:
                 # esp. when they have been cooling off for some time
                 if run != Run.run and self.state.heat_ok is not False:
                     print("HC 1",end="\r");sys.stdout.flush();
-                    await self.cl.set(self.cfg.setting.heat.mode.path, self.cfg.setting.heat.mode.off)
+                    if heat_pin is None:
+                        await self.cl.set(self.cfg.setting.heat.mode.path, self.cfg.setting.heat.mode.off)
+                    else:
+                        GPIO.output(heat_pin,False)
                     self.state.heat_ok = False
                 else:
                     print("HC 2",end="\r");sys.stdout.flush();
@@ -585,7 +660,10 @@ class Data:
                 self.state.heat_ok = self.time
             elif self.time-self.state.heat_ok > self.cfg.setting.heat.mode.delay:
                 print("HC 5",end="\r");sys.stdout.flush();
-                await self.cl.set(self.cfg.setting.heat.mode.path, self.cfg.setting.heat.mode.on)
+                if heat_pin is None:
+                    await self.cl.set(self.cfg.setting.heat.mode.path, self.cfg.setting.heat.mode.on)
+                else:
+                    GPIO.output(heat_pin,True)
                 self.state.heat_ok = True
             else:
                 # wait
@@ -614,13 +692,17 @@ class Data:
                 logger.info("Load SET %.3f",t_load)
                 self.pid_load.setpoint(t_load)
 
-            if self.pid_limit.state.get("setpoint",None) != t_max_out:
-                logger.info("Limit SET %.3f",t_max_out)
-                self.pid_limit.setpoint(t_max_out)
+            if self.pid_buffer.state.get("setpoint",None) != t_buffer:
+                logger.info("Buffer SET %.3f",t_buffer)
+                self.pid_buffer.setpoint(t_buffer)
 
-            if self.pid_pump.state.get("setpoint",None) != th_max:
-                logger.info("Pump SET %.3f",th_max)
-                self.pid_pump.setpoint(th_max)
+            if self.pid_limit.state.get("setpoint",None) != t_limit:
+                logger.info("Limit SET %.3f",t_limit)
+                self.pid_limit.setpoint(t_limit)
+
+            if self.pid_pump.state.get("setpoint",None) != t_pump:
+                logger.info("Pump SET %.3f",t_pump)
+                self.pid_pump.setpoint(t_pump)
             
             # The pump rate is controlled by its intended output heat now
             if self.t_out>self.cfg.adj.max:
@@ -631,16 +713,23 @@ class Data:
                 self.pid_flow.move_to(self.r_flow, l_pump, t=self.time)
 
             l_load = self.pid_load(t_cur, t=self.time)
+            l_buffer = self.pid_buffer(self.tb_low, t=self.time)
             l_limit = self.pid_limit(self.t_out, t=self.time)
-            lim=min(l_load,l_limit)
-
-            #self.pid_limit.move_to(self.t_out, lim, t=self.time)
-            #self.pid_load.move_to(t_cur, lim, t=self.time)
+            lim=min(l_load,l_buffer,l_limit)
 
             tt = self.time
             if tt-tlast>5 or self.t_out>self.cfg.adj.max:
                 tlast=tt
-                print(f"t={int(tt)%1000:03d} cur={t_cur :.1f} t={self.t_out :.1f}/{self.t_in :.1f} Pump={l_pump :.3f} load={l_load :.3f}{'<' if l_load<l_limit else '>' if l_load>l_limit else '|'}{l_limit :.3f}")
+                pr = (
+                        f"t={int(tt)%1000:03d}",
+                        f"buf={t_cur :.1f}/{self.tb_mid :.1f}/{self.tb_low :.1f}",
+                        f"t={self.t_out :.1f}/{self.t_in :.1f}",
+                        f"Pump={l_pump :.3f}",
+                        f"load{'=' if lim == l_load else '_'}{l_load :.3f}",
+                        f"buf{'=' if lim == l_buffer else '_'}{l_buffer :.3f}",
+                        f"lim{'=' if lim == l_limit else '_'}{l_limit :.3f}",
+                      )
+                print(*pr)
             await self.set_load(lim)
             await self.set_flow_pwm(l_pump)
             self.state.load_last = lim
@@ -656,103 +745,20 @@ class Data:
                 else:
                     n_cop -= 1
 
-            # Finally, we might want to turn the heater off.
 
-            # Buffer head temperature high and load low enough?
-            if lim < self.cfg.lim.power.off and t_cur > t_min:
+            # Finally, we might want to turn the heat exchanger off.
+
+            # Buffer head temperature high enough?
+            if t_cur >= t_adj:
 
                 # Running long enough or temperature *really* high?
-                if self.time-self.state.t_run > self.cfg.lim.power.time or self.tb_mid > t_on:
+                if self.time-self.state.t_run > self.cfg.lim.power.time and self.tb_mid >= t_set_off:
                     run=Run.off
-
-
-
-
-
-
-
-
-
-            if True:
-                pass
-
-            elif run == 0: # off
-                self.cp_flow = None
-                await self.set_flow_pwm(0)
-                await self.set_load(0)
-
-            elif run == 1:
-                # Startup A: start the load pump
-                if "start_d" in self.state:
-                    if self.time - self.state.start_d < self.cfg.misc.start.delay:
-                        continue
-                    self.cp_flow = self.cfg.misc.start.flow_init
-                    self.pid_flow.reset()
-                    self.state.last_pump = None
-                    del self.state.start_d
-
-                self.cp_flow = self.cfg.misc.start.flow_init
-                if self.r_flow >= self.cfg.misc.start.flow*3/4:
-                    run = 2
+                    continue
+                elif self.tb_low >= t_low:
+                    run=Run.off
                     continue
 
-            elif run == 2:
-                # Startup B: get some power in until we have a delta
-                await self.set_load(self.cfg.misc.start.power)
-                if self.m_power < self.cfg.misc.min_power:
-                    self.cp_flow = self.cfg.misc.start.flow_init
-                    continue
-                self.cp_flow = self.cfg.misc.start.flow
-
-                # prime the controllers
-                self.pid_pump.move_to(self.t_out, self.cfg.misc.start.flow_rate, t=self.time)
-                self.pid_flow.move_to(self.cfg.misc.start.flow, self.cfg.misc.start.flow_rate, t=self.time)
-
-                if self.t_out-self.t_in > self.cfg.misc.start.delta:
-                    run = -1
-                    continue
-
-
-
-    async def _old_setup_flow(self):
-        warned = False
-        self.set_flow_pwm = set_pwm
-        task_status.started()
-        zero=False
-
-        while True:
-            await self.wait()
-            if self.m_passthru is not False:
-                await set_pwm(self.m_passthru)
-                continue
-            if self.cp_flow is None:
-                if self.m_ice:
-                    print("** ICE ERR PUMP **")
-                continue
-
-#           if self.t_out - self.t_in < 2 and not self.cp_heat:
-#               port.ChangeDutyCycle(0)
-#               continue
-
-            r = self.cp_flow
-            if r < self.cfg.lim.flow.min:
-                await set_pwm(0)
-                print("DUTY","OFF")
-            else:
-                if self.pid_flow.state.get("setpoint",None) != r:
-                    logger.info("PUMP SET %.3f",r)
-                    self.pid_flow.setpoint(r)
-                warned = False
-
-                if self.r_flow < self.cfg.lim.flow.min:
-                    print(f"t={self.time%1000 :03.0f} in:0 want={r :.1f}")
-                    zero=True
-                    self.pid_flow.t0 = self.time
-                    self.pid_pump.t0 = self.time
-
-                    continue
-                if zero:
-                    zero=False
 
     async def handle_flow(self):
         """
@@ -762,8 +768,8 @@ class Data:
         l_temp = self.pid_pump(self.t_out, t=self.time)
         print(f"t={self.time%1000 :03.0f} Pump:{l_flow :.3f}/{l_temp :.3f} flow={self.r_flow :.1f} t={self.t_out :.1f}")
         res = max(l_flow,l_temp)
-        self.pid_flow.move_to(self.r_flow, res, t=self.time)
-        self.pid_pump.move_to(self.t_out, res, t=self.time)
+        # self.pid_flow.move_to(self.r_flow, res, t=self.time)
+        # self.pid_pump.move_to(self.t_out, res, t=self.time)
         await self.set_flow_pwm(res)
         self.state.last_pump = res
 
@@ -869,6 +875,7 @@ class Data:
             await self.save()
 
             await self.set_load(0)
+            task_status.started()
             if self.t_out-self.t_in > self.cfg.misc.stop.delta:
                 while self.t_out-self.t_in > self.cfg.misc.stop.delta:
                     await self.handle_flow()

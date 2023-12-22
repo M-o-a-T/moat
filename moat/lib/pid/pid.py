@@ -247,24 +247,25 @@ class CPID(PID):
         """
         if self.state.setpoint == setpoint:
             return
-        _t,e,i = self.get_initial_value()
+        i = self.i0
+        if i is None:
+            i = 0
         osp = self.state.setpoint
         if osp is not None:
             i -= osp*self.cfg.get("factor",0) + self.cfg.get("offset",0)
         self.state.setpoint = nsp = setpoint
         i += nsp*self.cfg.get("factor",0) + self.cfg.get("offset",0)
-        self.set_initial_value(_t,e,i)
+        self.i0 = i
 
     def state(self, state=None):
         """
         save/restore the current state. Restoring resets the time.
         """
-        if state is None:
-            return self.e0,self.i0
-        else:
-            self.e0,self.i0 = state
-            self.t0 = time()
-
+        if t is None:
+            t = time()
+        self.t0 = t
+        self.i0 = o-(self.state.setpoint-i)*self.Kp
+        self.e0 = 0
 
     def __call__(self, i, t=None, split=False):
         if t is None:

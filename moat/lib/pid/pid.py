@@ -257,9 +257,9 @@ class CPID(PID):
         i += nsp*self.cfg.get("factor",0) + self.cfg.get("offset",0)
         self.i0 = i
 
-    def state(self, state=None):
+    def move_to(self, i, o, t=None):
         """
-        save/restore the current state. Restoring resets the time.
+        Tell the controller that this input shall result in that output, for now.
         """
         if t is None:
             t = time()

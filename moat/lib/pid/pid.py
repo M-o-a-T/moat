@@ -155,7 +155,7 @@ class PID:
             return False
         return True
 
-    def integrate(self, t, e):
+    def integrate(self, t, e, split=False):
         """Calculates PID controller output.
 
         Parameters
@@ -196,7 +196,11 @@ class PID:
                 d = self.Kd * (e-e0) / dt
         # Set initial value for next cycle
         self.set_initial_value(t, e, i)
-        return min(max(p+i+d, self.lower), self.upper)
+
+        res = min(max(p+i+d, self.lower), self.upper)
+        if split:
+            res = (res,(p,i,d))
+        return res
 
 class CPID(PID):
     """
@@ -261,10 +265,10 @@ class CPID(PID):
             self.t0 = time()
 
 
-    def __call__(self, i, t=None):
+    def __call__(self, i, t=None, split=False):
         if t is None:
             t = time()
-        res = super().integrate(t, self.state.setpoint-i)
+        res = super().integrate(t, e=self.state.setpoint-i, split=split)
         _t,e,i = self.get_initial_value()
         self.state.e = e
         self.state.i = i

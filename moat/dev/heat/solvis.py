@@ -61,6 +61,23 @@ adj:
         water: 1
         heat: .5
         buffer: -2
+    curve:
+        dest: 21
+        max: 70
+        min: -15
+        exp: 1.2
+        current: !P temp.avg.temp.aussen_kompost.min
+        setting: !P heat.s.heat.temp.cmd
+
+        night:
+            dest: 17
+            start:
+                wk: 5.5
+                we: 7
+            stop:
+                wk: 21.5
+                we: 23
+
 output:
     flow:
         pin: 4
@@ -80,6 +97,11 @@ sensor:
     error: !P heat.s.pump.err
     power: !P heat.s.pump.power  # m_power
     cop: !P home.ass.dyn.sensor.heizung.wp_cop.state  # m_cop
+    temp:
+        current: !P temp.avg.temp.aussen_kompost
+        predict: !P temp.min.forecast:6
+        pellet: !P heat.s.pellets.temp.top
+
 setting:
     heat:
       day: !P heat.s.heat.temp        # c_heat
@@ -108,11 +130,20 @@ cmd:
       on: 3
       off: 0
     power: !P heat.s.pump.cmd.power
+    pellet:
+      power: !P home.ass.dyn.switch.heizung.pellets.cmd
+      temp: !P heat.s.pellets.temp.goal.cmd
+
 feedback:
     main: !P home.ass.dyn.switch.heizung.wp.state
     heat: !P home.ass.dyn.switch.heizung.main.state
     ice: !P home.ass.dyn.binary_densor.heizung.wp_de_ice.state
+
 misc:
+    pellet:
+        current: 1
+        predict: 0.5
+
     init_timeout: 5
     de_ice: 17  # flow rate when de-icing
     stop:
@@ -260,6 +291,8 @@ with open("/etc/moat/moat.cfg","r") as _f:
 
 class Data:
     force_on=False
+    heat_dest = None
+    pellet_on = None
 
     def __init__(self, cfg, cl, record=None):
         self._cfg = cfg
@@ -570,6 +603,8 @@ class Data:
             # State handling
 
             if run == Run.off:  # nothing happens
+                if self.pellet_on:
+                    r="pell"
                 if not cm_main:
                     r="main"
                 elif bool(self.m_errors):
@@ -670,6 +705,11 @@ class Data:
                 print("HC 6",end="\r");sys.stdout.flush();
                 pass
 
+            # turn off if the pellet burner is warm
+            if self.pellet_on and self.heat_dest <= self.m_pellet-1:
+                run = Run.off
+                continue
+
             if run != Run.run:
                 continue
                 # END not running
@@ -758,6 +798,83 @@ class Data:
                 elif self.tb_low >= t_low:
                     run=Run.off
                     continue
+
+    async def run_set_pellet(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        """run the pellet burner when it's too cold for the heat pump"""
+        run = None
+        task_status.started()
+
+        while True:
+            if self.m_air < self.cfg.misc.pellet.current and self.m_air_pred < self.cfg.misc.pellet.predict:
+                if run is True:
+                    continue
+                run = True
+            elif self.m_air > self.cfg.misc.pellet.current and self.m_air_pred > self.cfg.misc.pellet.predict:
+                if run is False:
+                    continue
+                run = False
+            else:
+                continue
+
+            await self.set(self.cfg.cmd.pellet.power, run)
+            if run and self.heat_dest is not None:
+                await self.set(self.cfg.cmd.pellet.temp, round(self.heat_dest+.8,1), idem=True)
+            self.pellet_on = run
+            for _ in range(100):
+                await self.wait()
+
+
+    async def run_set_heat(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        """set the goal for heating"""
+
+        cf=self.cfg.adj.curve
+        def vt(tau,ti):
+            return ti+(cf.max-ti)*pow((ti-tau)/(ti-cf.min), 1/cf.exp)
+
+        dest = cf.dest
+        def _upd():
+            nonlocal dest
+            import datetime
+            dt = datetime.datetime.now()
+            s1 = cf.night.start.wk if dt.weekday()<5 else cf.night.start.we # 5=sat
+            h = dt.hour+dt.minute/60
+            if h<s1:
+                logger.debug("NIGHT")
+                dest=cf.night.dest
+                return (s1-h)*60
+            s2 = cf.night.stop.wk if dt.weekday() not in (4,5) else cf.night.stop.we # 5=sat
+            if h<s2:
+                logger.debug("DAY")
+                dest=cf.dest
+                return (s2-h)*60
+            logger.debug("NIGHT2")
+            dest=cf.night.dest
+            return (24-h)*60
+
+        async def update_dest(*, task_status):
+            d = _upd()
+            task_status.started()
+            while True:
+                await anyio.sleep(d+10)
+                d = _upd()
+
+        async with (
+                anyio.create_task_group() as tg,
+                self._cl.watch(cf.current, max_depth=0,fetch=True) as msgs,
+            ):
+            await tg.start(update_dest)
+            task_status.started()
+            async for m in msgs:
+                if m.get("state","") == "uptodate":
+                    pass
+                elif "value" not in m:
+                    logger.warning("Unknown: %r:%r: %r", p,v,m)
+                else:
+                    ht = vt(m.value,dest)
+                    logger.debug("HZ: %f %f",ht,m.value)
+                    await self._cl.set(cf.setting,int(ht+.8), idem=True)
+                    self.heat_dest = ht
+
 
 
     async def handle_flow(self):
@@ -919,6 +1036,9 @@ class Data:
             await tg.start(self._kv, cfg.sensor.buffer.mid, "tb_mid")
             await tg.start(self._kv, cfg.sensor.buffer.low, "tb_low")
             await tg.start(self._kv, cfg.sensor.power, "m_power")
+            await tg.start(self._kv, cfg.sensor.temp.current, "m_air")
+            await tg.start(self._kv, cfg.sensor.temp.predict, "m_air_pred")
+            await tg.start(self._kv, cfg.sensor.temp.pellet, "m_pellet")
 
             try:
                 with anyio.fail_after(self.cfg.misc.init_timeout):
@@ -1042,8 +1162,10 @@ async def run(obj,record,force_on):
 
         await tg.start(d.run_init)
         await tg.start(d.err_mon)
-        await tg.start(d.run)
+        await tg.start(d.run_set_heat)
+        await tg.start(d.run_set_pellet)
         await tg.start(d.saver)
+        await d.run()
 
 
 @cli.command
@@ -1093,3 +1215,17 @@ async def off(obj):
         await tg.start(d.run_init)
         await d.off()
         tg.cancel_scope.cancel()
+
+
+@cli.command
+@click.pass_obj
+async def curve(obj):
+    "show the current heating curve"
+    from math import pow
+    cf = obj.cfg.adj.curve
+
+    def vt(tau,ti):
+        return ti+(cf.max-ti)*pow((ti-tau)/(ti-cf.min), 1/cf.exp)
+
+    for t in range(cf.min,cf.night.dest):
+        print(f"{t :3d} {vt(t,cf.dest) :.1f} {vt(t,cf.night.dest) :.1f}")

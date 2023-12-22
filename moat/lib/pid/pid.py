@@ -182,7 +182,8 @@ class PID:
         p = self.Kp * e
         # Calculate integral term
         i = i0 + dt * self.Ki * e
-        i = min(max(i, self.lower), self.upper)
+        # anti-windup
+        i = min(max(i, self.lower-p), self.upper-p)
         # Calculate derivative term
         d = 0.0
         if self.Kd != 0.0:

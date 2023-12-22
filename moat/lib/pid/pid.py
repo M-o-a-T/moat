@@ -250,9 +250,9 @@ class CPID(PID):
         _t,e,i = self.get_initial_value()
         osp = self.state.setpoint
         if osp is not None:
-            i -= osp*self.cfg.factor + self.cfg.offset
+            i -= osp*self.cfg.get("factor",0) + self.cfg.get("offset",0)
         self.state.setpoint = nsp = setpoint
-        i += nsp*self.cfg.factor+self.cfg.offset
+        i += nsp*self.cfg.get("factor",0) + self.cfg.get("offset",0)
         self.set_initial_value(_t,e,i)
 
     def state(self, state=None):

@@ -805,6 +805,9 @@ class Data:
         task_status.started()
 
         while True:
+            for _ in range(100):
+                await self.wait()
+
             if self.m_air < self.cfg.misc.pellet.current and self.m_air_pred < self.cfg.misc.pellet.predict:
                 if run is True:
                     continue
@@ -816,12 +819,10 @@ class Data:
             else:
                 continue
 
-            await self.set(self.cfg.cmd.pellet.power, run)
+            await self._cl.set(self.cfg.cmd.pellet.power, run)
             if run and self.heat_dest is not None:
-                await self.set(self.cfg.cmd.pellet.temp, round(self.heat_dest+.8,1), idem=True)
+                await self._cl.set(self.cfg.cmd.pellet.temp, round(self.heat_dest+.8,1), idem=True)
             self.pellet_on = run
-            for _ in range(100):
-                await self.wait()
 
 
     async def run_set_heat(self, *, task_status=anyio.TASK_STATUS_IGNORED):

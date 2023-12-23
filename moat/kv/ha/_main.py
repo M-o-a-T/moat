@@ -3,12 +3,60 @@
 import os
 import asyncclick as click
 
-from moat.util import yprint, attrdict, combine_dict, NotGiven, P, Path, yload
+from moat.util import yprint, attrdict, combine_dict, NotGiven, P, Path, yload, attr_args, process_args
 
 import logging
 
 logger = logging.getLogger(__name__)
 
+_DEV_CLS = {
+    None,
+    "apparent_power",
+    "aqi",
+    "atmospheric_pressure",
+    "battery",
+    "carbon_dioxide",
+    "carbon_monoxide",
+    "current",
+    "data_rate",
+    "data_size",
+    "distance",
+    "energy",
+    "energy_storage",
+    "frequency",
+    "gas",
+    "humidity",
+    "illuninance",
+    "irradiance",
+    "moisture",
+    "monetary",
+    "nitrogen_dioxide",
+    "nitrogen_monoxide",
+    "nitrous_oxide",
+    "ozone",
+    "ph",
+    "pm1",
+    "pm10",
+    "pm25",
+    "power",
+    "power_factor",
+    "precipitation",
+    "precipitation_intensity",
+    "pressure",
+    "reactive_power",
+    "signal_strength",
+    "sound_pressure",
+    "speed",
+    "sulphur_dioxide",
+    "temperature",
+    "volatile_organic_compounds",
+    "voltage",
+    "volume",
+    "volume_storage",
+    "water",
+    "weight",
+    "wind_speed",
+}
 
 @click.group(short_help="Manage Home Assistant.")
 @click.option("-t", "--test", is_flag=True, help="Use test data.")
@@ -97,6 +145,15 @@ _types = {
         icon=(str, None, "Device icon", "icon"),
         _payload=True,
     ),
+    "number": attrdict(
+        cmd=(str, "‹prefix›/number/‹path›/cmd", "topic for writing the value (r/w)", "command_topic"),
+        state=(str, "‹prefix›/number/‹path›/state", "topic for reading a value update", "state_topic"),
+        unit=(str, None, "Unit of measurement", "unit_of_measurement"),
+        cls=(str, None, "Device class", "device_class"),
+        icon=(str, None, "Device icon", "icon"),
+        min=(float, None, "minimum value", "min"),
+        max=(float, None, "maximum value", "max"),
+    ),
     "sensor": attrdict(
         state=(str, "‹prefix›/binary_switch/‹path›/state", "topic for state", "state_topic"),
         unit=(str, None, "Unit of measurement", "unit_of_measurement"),
@@ -141,8 +198,9 @@ for _v in _types.values():
         _v.ons = (str, "on", "state when turned on", "state_on")
         _v.offs = (str, "off", "state when turned off", "state_off")
     _v.name = (str, "‹type› ‹path›", "The name of this device", "name")
-    _v.uid = (str, "dkv_‹tock›", "A unique ID for this device", "unique_id")
+    _v.uid = (str, None, "A unique ID for this device", "unique_id")
     _v.device = (str, "", "ID of the device this is part of", "device")
+    _v.template = (str, None, "template for display", "value_template")
 
 
 @cli.command(
@@ -158,8 +216,7 @@ Known types: %s
     % (" ".join(_types.keys()),),
 )
 @click.pass_obj
-@click.option("-o", "--option", multiple=True, help="Special entry (string)")
-@click.option("-O", "--eval-option", multiple=True, help="Special entry (evaluated)")
+@attr_args
 @click.option("-L", "--list-options", is_flag=True, help="List possible options")
 @click.option("-p", "--plus", multiple=True, help="Add a sub-option")
 @click.option(
@@ -167,7 +224,7 @@ Known types: %s
 )
 @click.argument("typ", nargs=1)
 @click.argument("path", nargs=1)
-async def set_(obj, typ, path, option, eval_option, list_options, force, plus):
+async def set_(obj, typ, path, list_options, force, plus, vars_, eval_, path_):
     path = P(path)
     if typ == "-":
         t = None
@@ -186,7 +243,7 @@ async def set_(obj, typ, path, option, eval_option, list_options, force, plus):
                 t.update(p)
 
     if list_options:
-        if option or eval_option:
+        if vars_ or eval_ or path_:
             raise click.UsageError("Deletion and options at the same time? No.")
 
         if t is None:
@@ -221,35 +278,11 @@ async def set_(obj, typ, path, option, eval_option, list_options, force, plus):
         val = attrdict(**res.value)
         r.chain = res.chain
 
-    i = attrdict()
-    for k in option:
-        if k[0] in "-!":
-            k = k[1:]
-            v = False
-            if t[k][1] is not bool:
-                val.pop(k, None)
-                continue
-        elif "=" in k:
-            k, v = k.split("=", 1)
-        else:
-            v = True
-        i[t[k][3]] = v
-    for k in eval_option:
-        k, v = k.split("=", 1)
-        if v[0] in "/.":
-            i[t[k][3]] = v[1:].split(v[0])
-        else:
-            i[t[k][3]] = eval(v)  # pylint: disable=eval-used
-    if "unique_id" in i and "unique_id" in val and not force:
-        raise click.UsageError("A unique ID is fixed. You can't change it.")
+    i = process_args(attrdict(), vars_, eval_, path_)
 
-    d = attrdict()
+    d = {v[3]: v[1] for v in t.values() if v[1] is not None}
     for k, v in t.items():
-        if k == "uid":
-            continue
-        elif isinstance(v, dict):
-            continue  # plus option
-        elif k == "name":
+        if k == "name":
             vv = "_".join(path)
         elif k == "cmd":
             vv = "/".join((*obj.hass_name, typ, *path, "cmd"))
@@ -259,51 +292,51 @@ async def set_(obj, typ, path, option, eval_option, list_options, force, plus):
             vv = "/".join((*obj.hass_name, typ, *path, "state"))
         elif k.endswith("state"):
             vv = "/".join((*obj.hass_name, typ, *path, k[:-5], "state"))
-        elif v[1] == 0 or v[1] == "":
+        else:
             continue
-        else:
-            vv = v[1]
-        try:
-            kk, _ = k.split("_")
-        except ValueError:
-            pass
-        else:
-            kk = t[kk][3]
-            if not (i[kk] if kk in i else val.get(kk, False)):
-                continue
         d[v[3]] = vv
-        if v[3] in i:
-            if not isinstance(i[v[3]], v[0]):
-                raise click.UsageError("Option %r is not a %s" % (k, v[0].__name__))
 
-    v = combine_dict(i, val, d)
+    for k, v in i.items():
+        tt = t.get(k)
+        if k == "uid":
+            if "unique_id" in val and i.uid != val.unique_id and not force:
+                raise click.UsageError("A unique ID is fixed. You can't change it.")
+        elif isinstance(v, dict):
+            continue  # plus option
+        elif k not in t:
+            logger.warning(f"Key {k!r} may be unknown. Skipping.")
+            continue
+        vv = i[k]
+#       try:
+#           kk, _ = k.split("_")
+#       except ValueError:
+#           pass
+#       else:
+#           kk = t[kk][3]
+#           if not (i[kk] if kk in i else val.get(kk, False)):
+#               continue
+        if tt is not None:
+            if tt[0] is float and isinstance(vv,int):
+                pass
+            elif not isinstance(vv, tt[0]):
+                raise click.UsageError("Option %r is %r, not a %s" % (k, vv, tt[0].__name__))
+        val[k if tt is None else tt[3]] = vv
+
+    v = combine_dict(val, d)
     v = {k: v for k, v in v.items() if v is not None}
-    if "uid" in t and "unique_id" not in v:
+    if "unique_id" not in v:
+        import base64
         tock = await obj.client.get_tock()
-        v["unique_id"] = "dkv_" + str(tock)
-    if "device_class" in v:
-        if v["device_class"] not in (
-            None,
-            "battery",
-            "humidity",
-            "illuninance",
-            "signal_strength",
-            "temperature",
-            "power",
-            "pressure",
-            "timestamp",
-        ):
-            raise click.UsageError("Device class %r is unknown" % (v["device_class"],))
+        tock = str(base64.b32encode(tock.to_bytes((tock.bit_length()+7)//8)),"ascii").rstrip("=")
+        v["unique_id"] = f"dkv_{tock}"
+    if v.get("device_class") not in _DEV_CLS:
+        raise click.UsageError("Device class %r is unknown" % (v["device_class"],))
     if "device" in v:
         dv = v["device"]
         if not dv:
             del v["device"]
         elif isinstance(dv, str):
             v["device"] = dict(identifiers=dv.split(":"))
-    if "cmd" in t:
-        v["retain"] = True
-    else:
-        v.pop("retain", None)
 
     await obj.client.set(cp, value=v, **r)
 

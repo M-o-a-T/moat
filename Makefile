@@ -1,27 +1,17 @@
 #!/usr/bin/make -f
 
-.PHONY: install
+PACKAGE = moat-kv-ha
+MAKEINCL ?= $(shell python3 -mmoat src path)/make/py
 
-PACKAGE=distkv_ext
-PYPI=distkv_hass
-
-install:
-	mkdir -p $(PREFIX)/lib/systemd/system
-	mkdir -p $(PREFIX)/usr/bin
-	mkdir -p $(PREFIX)/usr/lib/distkv
-	mkdir -p $(PREFIX)/usr/lib/sysusers.d
-	cp systemd/*.service $(PREFIX)/lib/systemd/system/
-	cp systemd/*.timer $(PREFIX)/lib/systemd/system/
-	cp systemd/sysusers $(PREFIX)/usr/lib/sysusers.d/distkv.conf
-	cp scripts/* $(PREFIX)/usr/lib/distkv/
-	cp bin/* $(PREFIX)/usr/bin/
-
-ifneq ($(wildcard /usr/share/sourcemgr/make/py),)
-include /usr/share/sourcemgr/make/py
-# availabe via http://github.com/smurfix/sourcemgr
+ifneq ($(wildcard $(MAKEINCL)),)
+include $(MAKEINCL)
+# availabe via https://github.com/moat-src
 
 else
 %:
-		@echo "Please use 'python setup.py'."
-		@exit 1
+	@echo "Please fix 'python3 -mmoat src path'."
+	@exit 1
 endif
+
+pytest:
+	sudo tests/test.sh

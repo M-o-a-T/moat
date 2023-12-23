@@ -195,7 +195,7 @@ pid:
         # output: PWM for the flow pump
         ## Adjust the flow to keep the output temperature within range.
         p: -0.05
-        i: -0.001
+        i: -0.0015
         d: 0.0
         tf: 0.0
 
@@ -266,7 +266,7 @@ pid:
         # input: exchanger output temperature
         # output: heat exchanger load
         p: 0.05
-        i: 0.0007
+        i: 0.001
         d: 0.0
         tf: 0.0
 

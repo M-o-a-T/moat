@@ -63,9 +63,9 @@ adj:
         buffer: -2
     curve:
         dest: 21
-        max: 70
+        max: 75
         min: -15
-        exp: 1.2
+        exp: 1.3
         current: !P temp.avg.temp.aussen_kompost.min
         setting: !P heat.s.heat.temp.cmd
 

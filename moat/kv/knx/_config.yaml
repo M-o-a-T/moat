@@ -1,6 +1,6 @@
 kv:
   knx:
-    prefix: !P :.kv.knx
+    prefix: !P :.moat.kv.knx
     server_default:
       port: 3671
     poll: 10  # poll frequency: server

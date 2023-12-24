@@ -1,6 +1,6 @@
 kv:
   gpio:
-    prefix: !P :.kv.gpio
+    prefix: !P :.moat.kv.gpio
     interval: 1     # input/count: Pulse reporting frequency
     count: True     # input/count, input/button: Pulse direction
     # up down both: True False None

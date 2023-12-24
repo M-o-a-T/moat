@@ -12,7 +12,7 @@ import logging
 logging.basicConfig(format=FORMAT, level=logging.WARNING)
 
 def nbc(*a,**k):
-    logging.warning(f"Logging: another basicConfig call: ignored {a} {k} ")
+    logging.debug(f"Logging: another basicConfig call: ignored {a} {k} ")
 logging.basicConfig = nbc
 
 try:

@@ -3,3 +3,6 @@
 __pycache__
 /*.egg-info/
 /.eggs/
+/.hypothesis/
+/build/
+/debian/

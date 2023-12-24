@@ -1,4 +1,4 @@
 kv:
   ow:
-    prefix: !P :.distkv.onewire
+    prefix: !P :.moat.kv.onewire
     port: 4304

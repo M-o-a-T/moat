@@ -12,7 +12,7 @@ from moat.kv.mock.mqtt import stdtest
 from moat.util import attrdict, Path, P, load_ext
 from moat.kv.data import data_get
 
-owfs_mock = load_ext("moat.kv.ow", "mock")
+owfs_mock = load_ext("moat.kv.ow.mock")
 
 import logging
 

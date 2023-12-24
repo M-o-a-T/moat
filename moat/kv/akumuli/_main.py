@@ -4,8 +4,8 @@ import asyncclick as click
 from asyncakumuli import DS
 
 from moat.util import yprint, attrdict, NotGiven, as_service, P, attr_args
-from distkv.data import node_attr, data_get
-from distkv.obj.command import std_command
+from moat.kv.data import node_attr, data_get
+from moat.kv.obj.command import std_command
 
 from .model import AkumuliRoot
 
@@ -166,8 +166,8 @@ async def attr_(obj, vars_, eval_, path_):
 @click.argument("paths", nargs=-1, type=P)
 async def monitor(obj, paths):
     """Stand-alone task to monitor a single Akumuli tree"""
-    from distkv_ext.akumuli.task import task
-    from distkv_ext.akumuli.model import AkumuliRoot
+    from .task import task
+    from .model import AkumuliRoot
 
     server = await AkumuliRoot.as_handler(obj.client)
     await server.wait_loaded()

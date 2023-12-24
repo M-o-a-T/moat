@@ -2,14 +2,13 @@ import anyio
 from time import time
 
 from moat.util import P, load_ext
-from distkv.mock.mqtt import stdtest
+from moat.kv.mock.mqtt import stdtest
 
 from asyncakumuli.mock import Tester, TCP_PORT
 
-akumuli_task = load_ext("distkv_ext.akumuli.task", err=True)
-task = akumuli_task.task
+task = akumuli_task = load_ext("moat.kv.akumuli.task", "task", err=True)
 
-akumuli_model = load_ext("distkv_ext.akumuli.model", err=True)
+akumuli_model = load_ext("moat.kv.akumuli.model", err=True)
 AkumuliRoot = akumuli_model.AkumuliRoot
 
 

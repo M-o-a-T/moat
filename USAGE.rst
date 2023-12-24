@@ -1,40 +1,40 @@
-=================
-Using DistAkumuli
-=================
+=====================
+Using MoaT-KV-Akumuli
+=====================
 
-Run "distkv client akumuli monitor server" to connect to the specified server.
+Run "moat kv akumuli monitor server" to connect to the specified server.
 
-See "distkv dump cfg akumuli" for configuration options.
+See "moat util cfg kv.akumuli" for configuration options.
 
 Data structure
 ==============
 
-On disk, the path to the port is ".distkv akumuli SERVER NAME…" by
+On disk, the path to the port is ".moat kv akumuli SERVER NAME…" by
 default. All attributes are also looked up in the higher nodes, so you can
 set per-type values easily.
 
 Attributes
 ++++++++++
 
-* server: a dict with host and port. Set by ``distkv client akumuli server``.
+* server: a dict with host and port. Set by ``moat kv akumuli server``.
 
 * metric: the Akumuli metric to use. Inherited.
 
 * keys: a dict with keys that a value shall have. Inherited.
 
-* src: An array. The path to the DistKV value which shall be stored.
+* src: An array. The path to the Moat-KV value which shall be stored.
 
 
 Command line
 ============
 
 
-.. program:: distkv client akumuli
+.. program:: moat kv akumuli
 
 The main entry point for this extension.
 
 
-.. program:: distkv client akumuli set
+.. program:: moat kv akumuli set
 
 Print or modify port settings.
 
@@ -69,7 +69,7 @@ lets you easily change more than one at a time.
    The path to the node to be modified.
 
 
-.. program:: distkv client akumuli list
+.. program:: moat kv akumuli list
 
 Lists the names below of a subtree.
 
@@ -78,7 +78,7 @@ Lists the names below of a subtree.
    The path to the node to be shown.
 
 
-.. program:: distkv client akumuli get
+.. program:: moat kv akumuli get
 
 Displays the data at a node.
 

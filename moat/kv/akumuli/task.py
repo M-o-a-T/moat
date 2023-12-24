@@ -1,5 +1,5 @@
 """
-Akumuli task for DistKV
+Akumuli task for MoaT-KV
 """
 
 import anyio
@@ -13,8 +13,8 @@ except ImportError:
     from collections import Mapping
 
 from moat.util import combine_dict
-from distkv.exceptions import ClientConnectionError
-from distkv_ext.akumuli.model import AkumuliServer
+from moat.kv.exceptions import ClientConnectionError
+from .model import AkumuliServer
 
 from asyncakumuli import Entry, DS
 

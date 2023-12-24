@@ -1,12 +1,12 @@
 """
-DistKV client data model for Akumuli
+MoaT-KV client data model for Akumuli
 """
 import anyio
 from collections.abc import Mapping
 
 from moat.util import NotGiven, attrdict, Path
-from distkv.obj import ClientEntry, ClientRoot, AttrClientEntry
-from distkv.errors import ErrorRoot
+from moat.kv.obj import ClientEntry, ClientRoot, AttrClientEntry
+from moat.kv.errors import ErrorRoot
 from asyncakumuli import Entry, DS
 
 import logging

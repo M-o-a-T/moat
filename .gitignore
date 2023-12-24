@@ -1,4 +1,5 @@
 /build/
+/.hypothesis/
 /.pybuild/
 /dist/
 __pycache__

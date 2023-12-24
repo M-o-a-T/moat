@@ -778,7 +778,7 @@ class Data:
             # COP
             if self.m_power:
                 cop = 1.16*60*self.r_flow*(self.t_out-self.t_in)/1000/self.m_power
-                self.m_cop += 0.001*(cop-self.m_cop)
+                self.m_cop += 0.0001*self.m_power*(cop-self.m_cop)
                 if n_cop <= 0:
                     n_cop = 100
                     await self.cl.set(self.cfg.sensor.cop, self.m_cop)

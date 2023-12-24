@@ -45,7 +45,7 @@ async def test_alarm(mock_clock):
     async with stdtest(test_0={"init": 125}, n=1, tocks=200) as st, st.client(0) as client:
         evt = anyio.create_event()
         obj = attrdict(client=client, meta=0, stdout=sys.stdout)
-        await st.tg.spawn(partial(owfs_mock.server, client, tree=my_tree, evt=evt))
+        st.tg.start_soon(partial(owfs_mock.server, client, tree=my_tree, evt=evt))
         await evt.wait()
         assert dt["foo"]["bar"] == 123
         await st.run("owfs attr -d 10.345678.90 -i 5 temperature test.foo.temp")

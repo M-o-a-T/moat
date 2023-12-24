@@ -3,8 +3,8 @@ MoaT-KV client data model for KNX
 """
 import anyio
 
+from moat.util import NotGiven
 from moat.kv.obj import ClientEntry, ClientRoot
-from moat.kv.util import NotGiven
 from moat.kv.errors import ErrorRoot
 
 from xknx.telegram import GroupAddress

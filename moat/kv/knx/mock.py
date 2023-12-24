@@ -8,7 +8,7 @@ See ``tests/test_basic.py`` for code that does.
 
 """
 import os
-import trio
+import anyio
 import tempfile
 from contextlib import asynccontextmanager
 
@@ -65,25 +65,24 @@ trace-mask = 0x3ff
 """,
                     file=f,
                 )
-            proc = await trio.open_process(["knxd", cfg])
+            proc = await anyio.open_process(["knxd", cfg])
             try:
-                with trio.fail_after(10):
+                with anyio.fail_after(10):
                     while True:
                         try:
-                            s = await trio.open_tcp_stream("127.0.0.1", TCP_PORT)
+                            s = await anyio.connect_tcp("127.0.0.1", TCP_PORT)
                             await s.aclose()
                             break
                         except OSError:
-                            await trio.sleep(0.1)
-                await trio.sleep(0.5)
+                            await anyio.sleep(0.1)
+                await anyio.sleep(0.2)
                 yield proc
             finally:
                 proc.terminate()
-                with trio.move_on_after(2) as cs:
+                with anyio.move_on_after(2) as cs:
                     cs.shield = True
                     await proc.wait()
-                if proc.poll() is None:
-                    proc.kill()
+                proc.kill()
 
     @asynccontextmanager
     async def run(self):

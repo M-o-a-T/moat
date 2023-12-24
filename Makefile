@@ -1,16 +1,14 @@
 #!/usr/bin/make -f
 
-.PHONY: install
+PACKAGE = moat-kv-akumuli
+MAKEINCL ?= $(shell python3 -mmoat src path)/make/py
 
-PACKAGE=distkv_ext
-PYPI=distkv_akumuli
-
-ifneq ($(wildcard /usr/share/sourcemgr/make/py),)
-include /usr/share/sourcemgr/make/py
-# availabe via http://github.com/smurfix/sourcemgr
+ifneq ($(wildcard $(MAKEINCL)),)
+include $(MAKEINCL)
+# availabe via https://github.com/moat-src
 
 else
 %:
-		@echo "Please use 'python setup.py'."
-		@exit 1
+	@echo "Please fix 'python3 -mmoat src path'."
+	@exit 1
 endif

@@ -671,7 +671,7 @@ class Data:
                 raise ValueError(f"State ?? {run !r}")
 
 
-            heat_ok = (not heat_off) and min(self.tb_heat,self.t_out if self.state.last_pwm else 9999) >= self.c_heat
+            heat_ok = run in {Run.off,Run.wait_time,Run.run,Run.down} and (not heat_off) and min(self.tb_heat,self.t_out if self.state.last_pwm else 9999) >= self.c_heat
             if not heat_ok:
                 # If the incoming water is too cold, turn off heating
                 # We DO NOT turn heating off while running: danger of overloading the heat pump

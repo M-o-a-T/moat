@@ -5,7 +5,7 @@ MAKEINCL ?= $(shell python3 -mmoat src path)/make/py
 
 ifneq ($(wildcard $(MAKEINCL)),)
 include $(MAKEINCL)
-# availabe via http://github.com/smurfix/sourcemgr
+# availabe via https://github.com/moat-src
 
 else
 %:

@@ -23,6 +23,7 @@ cli = std_command(
     name="server",
     sub_base=None,
     sub_name=NotGiven,
+    id_name=None,
     prepare=_prepare_cli,
     aux=(
         click.option("-h", "--host", help="Host name of this server.", type=str),

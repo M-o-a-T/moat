@@ -17,7 +17,7 @@ from enum import IntEnum,auto
 
 from moat.lib.pid import CPID
 
-from moat.util import yload,yprint,attrdict, PathLongener, P,to_attrdict,to_attrdict, pos2val,val2pos
+from moat.util import yload,yprint,attrdict, PathLongener, P,to_attrdict,to_attrdict, pos2val,val2pos,combine_dict
 from moat.kv.client import open_client
 
 FORMAT = (
@@ -1137,10 +1137,9 @@ async def cli(ctx, config):
     Given a SolvisLea heat pump, teach it to behave.
     """
     ctx.obj = attrdict()
+    cfg = yload(CFG,attr=True)
     if config is not None:
-        cfg = yload(config,attr=True)
-    else:
-        cfg = yload(CFG,attr=True)
+        cfg = combine_dict(yload(config,attr=True), cfg)
     ctx.obj.cfg = cfg
 
     global GPIO

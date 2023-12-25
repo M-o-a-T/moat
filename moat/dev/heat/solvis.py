@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 This program controls a SolvisMax+SolvisLea combination "manually"
 because the SolvisMax controller doesn't support a heap of features I need.
@@ -5,7 +7,6 @@ because the SolvisMax controller doesn't support a heap of features I need.
 See the accompanying .rst file for details.
 """
 
-from __future__ import annotations
 
 import asyncclick as click
 

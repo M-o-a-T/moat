@@ -383,6 +383,12 @@ class Data:
     # async def set_flow_pwm(self, rate):
     # added by .run_flow
 
+    async def log_pid(self, name, val, pid):
+        if not "log" in pid.cfg:
+            return
+        await self.cl.set(pid.cfg.log, value=val, idem=True)
+
+
     async def set_load(self, p):
         "heat pump load update; sets to zero if less than minimum"
         if p < self.cfg.lim.power.min:
@@ -651,6 +657,7 @@ class Data:
                 l_flow = self.pid_flow(self.r_flow, t=self.time)
                 print(f"Flow: {self.r_flow :.1f} : {l_flow :.3f}")
                 await self.set_flow_pwm(l_flow)
+                await self.log_pid("flow",l_flow,self.pid_flow)
 
             elif run == Run.wait_power:  # wait for pump to draw power
                 if self.m_power >= self.cfg.misc.min_power:
@@ -659,6 +666,7 @@ class Data:
                 l_flow = self.pid_flow(self.r_flow, t=self.time)
                 print(f"Flow: {self.r_flow :.1f} : {l_flow :.3f} p={self.m_power :.1f}")
                 await self.set_flow_pwm(l_flow)
+                await self.log_pid("flow",l_flow,self.pid_flow)
 
             elif run == Run.temp:  # wait for outflow-inflow>2
                 self.state.t_load = self.time
@@ -779,10 +787,14 @@ class Data:
             else:
                 l_pump = self.pid_pump(self.t_out, self.time)
                 self.pid_flow.move_to(self.r_flow, l_pump, t=self.time)
+                await self.log_pid("pump",l_pump,self.pid_pump)
 
             l_load = self.pid_load(t_cur, t=self.time)
             l_buffer = self.pid_buffer(self.tb_low, t=self.time)
             l_limit = self.pid_limit(self.t_out, t=self.time)
+            await self.log_pid("load",l_load,self.pid_load)
+            await self.log_pid("buffer",l_buffer,self.pid_buffer)
+            await self.log_pid("limit",l_limit,self.pid_limit)
             lim = min(l_load, l_buffer, l_limit)
 
             tt = self.time
@@ -960,6 +972,8 @@ class Data:
         """
         l_flow = self.pid_flow(self.r_flow, t=self.time)
         l_temp = self.pid_pump(self.t_out, t=self.time)
+        await self.log_pid("flow",l_flow,self.pid_flow)
+        await self.log_pid("pump",l_temp,self.pid_pump)
         print(
             f"t={self.time%1000 :03.0f}",
             f"Pump:{l_flow :.3f}/{l_temp :.3f}",

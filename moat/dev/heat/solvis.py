@@ -1266,7 +1266,7 @@ async def cli(ctx, config):
     ctx.obj = attrdict()
     cfg = yload(CFG, attr=True)
     if config is not None:
-        cfg = combine_dict(yload(config, attr=True), cfg)
+        cfg = combine_dict(yload(config, attr=True), cfg, cls=attrdict)
     ctx.obj.cfg = cfg
 
     global GPIO

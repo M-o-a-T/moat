@@ -1178,7 +1178,7 @@ async def cli(ctx, config):
     """
     Manage a Solvis heat pump controller
 
-    Given a SolvisLea heat pump, teach it to behave.
+    Given a SolvisLea heat pump (and another, modbus-controllable, source of heat), teach it to behave.
     """
     ctx.obj = attrdict()
     cfg = yload(CFG,attr=True)

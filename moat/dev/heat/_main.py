@@ -1,12 +1,15 @@
-#!/usr/bin/env python3
 """
-Basic tool support
+Basic heater tool support
 
 """
-import logging  # pylint: disable=wrong-import-position
 
 import asyncclick as click
+
 from moat.util import load_subgroup
+
+import logging  # pylint: disable=wrong-import-position
+
+from __future__ import annotations
 
 log = logging.getLogger()
 
@@ -15,4 +18,4 @@ log = logging.getLogger()
 @click.pass_obj
 async def cli(obj):
     """Device Manager for heaters"""
-    obj  # pylint: disable=pointless-statement  # TODO
+    obj  # noqa:B018  pylint: disable=pointless-statement  # TODO

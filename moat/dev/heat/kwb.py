@@ -2,12 +2,15 @@
 command line interface thing for KWB pellet burner
 """
 
-import logging
+import asyncclick as click
+
+from moat.util import yload
+from moat.modbus.dev.poll import dev_poll
 
 import anyio
-import asyncclick as click
-from moat.modbus.dev.poll import dev_poll
-from moat.util import yload
+import logging
+
+from __future__ import annotations
 
 logger = logging.getLogger()
 
@@ -76,7 +79,7 @@ async def cli(ctx, cfg, host, port, unit):
 
         def proc(dest):
             try:
-                dest.regs.ksm.modbus.lifetick  # pylint: disable=pointless-statement
+                dest.regs.ksm.modbus.lifetick  # noqa:B018 pylint: disable=pointless-statement
             except AttributeError:
                 return
             tg.start_soon(lifeticker, dest)

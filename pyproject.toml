@@ -80,7 +80,7 @@ log_cli_level = "DEBUG"
 
 [tool.ruff]
 select = ["ALL"]
-ignore = ["BLE001","ERA","N","FIX","TD","RET50","C","PLR","EM10","TRY003","FBT","T2","D4","D3","D2","PLW1514","RUF002","RUF001","S101","A003","D107","D105","PERF","PTH","ANN"]
+ignore = ["BLE001","ERA","N","FIX","TD","RET50","C","PLR","EM10","TRY003","FBT","T2","D4","D3","D2","PLW1514","RUF002","RUF001","S101","A003","D107","D105","PERF","PTH","ANN","SIM","DTZ005","PLW0603","COM812", "ISC001","UP015"]
 preview = true
 explicit-preview-rules = true
 line-length = 99

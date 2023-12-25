@@ -932,7 +932,8 @@ class Data:
                         continue
                     await self._cl.set(sf[dn].state, val)
                     if val:
-                        await self._cl.set(sf[nd].state, False)
+                        await self._cl.set(sf[nd].cmd, False, idem=True)
+                        await self._cl.set(sf[nd].state, False, idem=True)
                         locks[nd] = False
                     locks[dn] = val
                     await _upd()

@@ -112,6 +112,13 @@ setting:
         on: 3
         off: 5
         delay: 30
+        force:
+          day:
+            cmd: !P home.ass.dyn.switch.heizung.day_mode.cmd
+            state: !P home.ass.dyn.switch.heizung.day_mode.state
+          night:
+            cmd: !P home.ass.dyn.switch.heizung.night_mode.cmd
+            state: !P home.ass.dyn.switch.heizung.night_mode.state
     water: !P heat.s.water.temp         # c_water
     passthru: !P heat.s.pump.pass       # m_passthru
 lim:
@@ -827,54 +834,91 @@ class Data:
 
     async def run_set_heat(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """set the goal for heating"""
+        lock_day = False
 
         cf=self.cfg.adj.curve
         def vt(tau,ti):
             return ti+(cf.max-ti)*pow((ti-tau)/(ti-cf.min), 1/cf.exp)
 
+        locks = attrdict(day=False,night=False)
         dest = cf.dest
-        def _upd():
-            nonlocal dest
-            import datetime
-            dt = datetime.datetime.now()
-            s1 = cf.night.start.wk if dt.weekday()<5 else cf.night.start.we # 5=sat
-            h = dt.hour+dt.minute/60
-            if h<s1:
-                logger.debug("NIGHT")
-                dest=cf.night.dest
-                return (s1-h)*60
-            s2 = cf.night.stop.wk if dt.weekday() not in (4,5) else cf.night.stop.we # 5=sat
-            if h<s2:
-                logger.debug("DAY")
-                dest=cf.dest
-                return (s2-h)*60
-            logger.debug("NIGHT2")
-            dest=cf.night.dest
-            return (24-h)*60
+        t_cur = None
+        _lock = anyio.Lock()
+
+        async def _upd():
+            nonlocal cf,dest,locks,t_cur,_lock
+            async with _lock:
+                import datetime
+                dt = datetime.datetime.now()
+                s1 = cf.night.start.wk if dt.weekday()<5 else cf.night.start.we # 5=sat
+                h = dt.hour+dt.minute/60
+                if h<s1:
+                    dest=cf.night.dest
+                    delay = (s1-h)*60
+                else:
+                    s2 = cf.night.stop.wk if dt.weekday() not in (4,5) else cf.night.stop.we # 5=sat
+                    if h<s2:
+                        dest=cf.dest
+                        delay = (s2-h)*60
+                    else:
+                        dest=cf.night.dest
+                        delay = (24-h)*60
+
+                if locks.day:
+                    dest=cf.dest
+                elif locks.night:
+                    dest=cf.night.dest
+
+                ht = vt(t_cur,dest)
+                logger.info("HZ: %.1f %.1f",ht,t_cur)
+                await self._cl.set(cf.setting,int(ht+.8), idem=True)
+                self.heat_dest = ht
+
+                return delay
+
+        async def sf_day_night(sf,dn,nd,*,task_status):
+            async with self._cl.watch(sf[dn].cmd, max_depth=0,fetch=True) as msgs:
+                task_status.started()
+                async for m in msgs:
+                    try:
+                        val = m.value
+                    except AttributeError:
+                        continue
+                    await self._cl.set(sf[dn].state,val)
+                    if val:
+                        await self._cl.set(sf[nd].state,False)
+                        locks[nd]=False
+                    locks[dn]=val
+                    await _upd()
 
         async def update_dest(*, task_status):
-            d = _upd()
+            nonlocal lock_day,t_cur
+            d = await _upd()
             task_status.started()
             while True:
                 await anyio.sleep(d+10)
-                d = _upd()
+                d = await _upd()
 
         async with (
                 anyio.create_task_group() as tg,
                 self._cl.watch(cf.current, max_depth=0,fetch=True) as msgs,
             ):
-            await tg.start(update_dest)
+            sf = self.cfg.setting.heat.mode.force
             task_status.started()
             async for m in msgs:
-                if m.get("state","") == "uptodate":
-                    pass
-                elif "value" not in m:
-                    logger.warning("Unknown: %r:%r: %r", p,v,m)
+                if "value" not in m:
+                    if m.get("state","") == "uptodate":
+                        await tg.start(update_dest)
+                        await tg.start(sf_day_night,sf,"day","night")
+                        await tg.start(sf_day_night,sf,"night","day")
+                    else:
+                        continue
+                elif t_cur is None:
+                    t_cur = m.value
+                    continue
                 else:
-                    ht = vt(m.value,dest)
-                    logger.debug("HZ: %f %f",ht,m.value)
-                    await self._cl.set(cf.setting,int(ht+.8), idem=True)
-                    self.heat_dest = ht
+                    t_cur = m.value
+                await _upd()
 
 
 

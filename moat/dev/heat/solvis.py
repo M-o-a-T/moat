@@ -310,6 +310,36 @@ pid:
 with open("/etc/moat/moat.cfg", "r") as _f:
     mcfg = yload(_f, attr=True)
 
+class APID(CPID):
+    def __init__(self, data, name, cfg):
+        super().__init__(cfg, data.state)
+        self.data = data
+        self.name = name
+
+    async def setpoint(self, val):
+        if self.state.get("setpoint", None) == val:
+            return
+        super().setpoint(val)
+
+        try:
+            await self.data.cl.set(self.cfg.log.setpoint, value=val, idem=True)
+        except AttributeError:
+            pass
+
+    async def __call__(self, val, **kw):
+        res = super().__call__(val, **kw)
+        await self.log_value(res)
+        return res
+
+    async def log_value(self, res):
+
+        if not isinstance(res,(int,float)):
+            return
+        try:
+            await self.data.cl.set(self.cfg.log.value, value=res, idem=True)
+        except AttributeError:
+            pass
+
 
 class Data:
     "encapsulates the heat supply system"
@@ -325,6 +355,7 @@ class Data:
         self._want = set()
         self._sigs = {}
         self.record = record
+        self.pid = attrdict()
 
         try:
             with open(cfg.state) as sf:
@@ -336,11 +367,9 @@ class Data:
         self.cp_flow = None
         self.m_errors = {}
 
-        self.pid_load = CPID(self.cfg.pid.load, self.state)
-        self.pid_buffer = CPID(self.cfg.pid.buffer, self.state)
-        self.pid_limit = CPID(self.cfg.pid.limit, self.state)
-        self.pid_pump = CPID(self.cfg.pid.pump, self.state)
-        self.pid_flow = CPID(self.cfg.pid.flow, self.state)
+        for k,v in self.cfg.pid.items():
+            self.pid[k] = APID(self,k,v)
+
         self.state.setdefault("heat_ok", False)
 
         try:
@@ -498,32 +527,34 @@ class Data:
                 pass
 
             elif run == Run.wait_power:  # wait for pump to draw power
-                self.pid_flow.move_to(self.r_flow, self.state.last_pwm)
+                self.pid.flow.move_to(self.r_flow, self.state.last_pwm)
                 await self.set_load(self.cfg.misc.start.power)
 
             elif run == Run.temp:  # wait for outflow-inflow>2
-                self.pid_flow.setpoint(self.cfg.misc.start.flow.power.rate)
+                await self.pid.flow.setpoint(self.cfg.misc.start.flow.power.rate)
                 await self.set_flow_pwm(self.cfg.misc.start.flow.power.pwm)
 
             elif run == Run.run:  # operation
                 heat_off = False
                 self.state.setdefault("t_run", self.time)
                 if orun is not None:
-                    self.pid_limit.reset()
-                    self.pid_load.reset()
-                    self.pid_buffer.reset()
-                self.pid_pump.move_to(self.t_out, self.state.last_pwm, t=self.time)
+                    self.pid.limit.reset()
+                    self.pid.load.reset()
+                    self.pid.buffer.reset()
+                else:
+                    await self.pid.flow.log_value(0)
+                self.pid.pump.move_to(self.t_out, self.state.last_pwm, t=self.time)
                 self.state.load_last = None
 
             elif run == Run.ice:  # wait for ice condition to stop
                 heat_off = True
-                self.pid_flow.setpoint(self.cfg.misc.de_ice)
+                await self.pid.flow.setpoint(self.cfg.misc.de_ice)
                 await self.cl.set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off)
                 await self.cl.set(self.cfg.cmd.power, value=0)
 
             elif run == Run.down:  # wait for outflow-inflow<2 for n seconds, cool down
                 heat_off = True
-                self.pid_flow.setpoint(self.cfg.misc.stop.flow)
+                await self.pid.flow.setpoint(self.cfg.misc.stop.flow)
                 await self.cl.set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off)
                 await self.cl.set(self.cfg.cmd.power, value=0)
 
@@ -654,19 +685,17 @@ class Data:
                 if self.r_flow >= self.cfg.misc.start.flow.init.rate * 3 / 4:
                     run = Run.wait_power
                     continue
-                l_flow = self.pid_flow(self.r_flow, t=self.time)
+                l_flow = await self.pid.flow(self.r_flow, t=self.time)
                 print(f"Flow: {self.r_flow :.1f} : {l_flow :.3f}")
                 await self.set_flow_pwm(l_flow)
-                await self.log_pid("flow",l_flow,self.pid_flow)
 
             elif run == Run.wait_power:  # wait for pump to draw power
                 if self.m_power >= self.cfg.misc.min_power:
                     run = Run.temp
                     continue
-                l_flow = self.pid_flow(self.r_flow, t=self.time)
+                l_flow = await self.pid.flow(self.r_flow, t=self.time)
                 print(f"Flow: {self.r_flow :.1f} : {l_flow :.3f} p={self.m_power :.1f}")
                 await self.set_flow_pwm(l_flow)
-                await self.log_pid("flow",l_flow,self.pid_flow)
 
             elif run == Run.temp:  # wait for outflow-inflow>2
                 self.state.t_load = self.time
@@ -764,37 +793,22 @@ class Data:
             else:
                 t_no_power = None
 
-            if self.pid_load.state.get("setpoint", None) != t_load:
-                logger.info("Load SET %.3f", t_load)
-                self.pid_load.setpoint(t_load)
-
-            if self.pid_buffer.state.get("setpoint", None) != t_buffer:
-                logger.info("Buffer SET %.3f", t_buffer)
-                self.pid_buffer.setpoint(t_buffer)
-
-            if self.pid_limit.state.get("setpoint", None) != t_limit:
-                logger.info("Limit SET %.3f", t_limit)
-                self.pid_limit.setpoint(t_limit)
-
-            if self.pid_pump.state.get("setpoint", None) != t_pump:
-                logger.info("Pump SET %.3f", t_pump)
-                self.pid_pump.setpoint(t_pump)
+            await self.pid.load.setpoint(t_load)
+            await self.pid.buffer.setpoint(t_buffer)
+            await self.pid.limit.setpoint(t_limit)
+            await self.pid.pump.setpoint(t_pump)
 
             # The pump rate is controlled by its intended output heat now
             if self.t_out > self.cfg.adj.max:
                 l_pump = 1
                 # emergency handler
             else:
-                l_pump = self.pid_pump(self.t_out, self.time)
-                self.pid_flow.move_to(self.r_flow, l_pump, t=self.time)
-                await self.log_pid("pump",l_pump,self.pid_pump)
+                l_pump = await self.pid.pump(self.t_out, t=self.time)
+                # self.pid.flow.move_to(self.r_flow, l_pump, t=self.time)
 
-            l_load = self.pid_load(t_cur, t=self.time)
-            l_buffer = self.pid_buffer(self.tb_low, t=self.time)
-            l_limit = self.pid_limit(self.t_out, t=self.time)
-            await self.log_pid("load",l_load,self.pid_load)
-            await self.log_pid("buffer",l_buffer,self.pid_buffer)
-            await self.log_pid("limit",l_limit,self.pid_limit)
+            l_load = await self.pid.load(t_cur, t=self.time)
+            l_buffer = await self.pid.buffer(self.tb_low, t=self.time)
+            l_limit = await self.pid.limit(self.t_out, t=self.time)
             lim = min(l_load, l_buffer, l_limit)
 
             tt = self.time
@@ -971,10 +985,8 @@ class Data:
         """
         Flow handler while not operational
         """
-        l_flow = self.pid_flow(self.r_flow, t=self.time)
-        l_temp = self.pid_pump(self.t_out, t=self.time)
-        await self.log_pid("flow",l_flow,self.pid_flow)
-        await self.log_pid("pump",l_temp,self.pid_pump)
+        l_flow = await self.pid.flow(self.r_flow, t=self.time)
+        l_temp = await self.pid.pump(self.t_out, t=self.time)
         print(
             f"t={self.time%1000 :03.0f}",
             f"Pump:{l_flow :.3f}/{l_temp :.3f}",
@@ -982,8 +994,8 @@ class Data:
             f"t={self.t_out :.1f}",
         )
         res = max(l_flow, l_temp)
-        # self.pid_flow.move_to(self.r_flow, res, t=self.time)
-        # self.pid_pump.move_to(self.t_out, res, t=self.time)
+        # self.pid.flow.move_to(self.r_flow, res, t=self.time)
+        # self.pid.pump.move_to(self.t_out, res, t=self.time)
         await self.set_flow_pwm(res)
         self.state.last_pump = res
 

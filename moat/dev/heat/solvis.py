@@ -413,11 +413,10 @@ class Data:
     # async def set_flow_pwm(self, rate):
     # added by .run_flow
 
-    async def log_pid(self, name, val, pid):
-        if not "log" in pid.cfg:
-            return
-        await self.cl.set(pid.cfg.log, value=val, idem=True)
-
+    async def log_zero(self):
+        "log zero values for all PIDs"
+        for pid in self.pid.values():
+            await pid.log_value(0)
 
     async def set_load(self, p):
         "heat pump load update; sets to zero if less than minimum"
@@ -514,10 +513,12 @@ class Data:
                 await self.set_flow_pwm(0)
                 await self.set_load(0)
                 self.state.last_pwm = None
+                await self.log_zero()
 
             elif run == Run.wait_time:  # wait for the heat pump to be ready after doing whatever
                 await self.set_flow_pwm(0)
                 await self.set_load(0)
+                await self.log_zero()
 
             elif run == Run.wait_flow:  # wait for flow
                 heat_off = True
@@ -536,9 +537,11 @@ class Data:
                 await self.set_flow_pwm(self.cfg.misc.start.flow.power.pwm)
 
             elif run == Run.run:  # operation
+
                 heat_off = False
                 self.state.setdefault("t_run", self.time)
                 if orun is not None:
+                    await self.log_zero()
                     self.pid.limit.reset()
                     self.pid.load.reset()
                     self.pid.buffer.reset()
@@ -548,12 +551,16 @@ class Data:
                 self.state.load_last = None
 
             elif run == Run.ice:  # wait for ice condition to stop
+                await self.log_zero()
+
                 heat_off = True
                 await self.pid.flow.setpoint(self.cfg.misc.de_ice)
                 await self.cl.set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off)
                 await self.cl.set(self.cfg.cmd.power, value=0)
 
             elif run == Run.down:  # wait for outflow-inflow<2 for n seconds, cool down
+                await self.log_zero()
+
                 heat_off = True
                 await self.pid.flow.setpoint(self.cfg.misc.stop.flow)
                 await self.cl.set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off)

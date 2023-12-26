@@ -74,6 +74,7 @@ adj:
         water: 1
         heat: .5
         buffer: -2
+        factor: 0.4
     curve:
         dest: 21
         max: 75
@@ -644,6 +645,8 @@ class Data:
             # PID controller settings
             f = val2pos(t_nom, t_cur, t_adj, clamp=True)
             t_limit = min(self.cfg.adj.max, t_adj + self.cfg.adj.more)
+            if self.tb_heat < t_low:
+                t_limit += (t_low-self.tb_heat) * self.cfg.adj.low.factor
             t_pump = pos2val(t_low, f, t_limit + 0.2 * (t_low - t_limit))
             t_load = t_adj + self.cfg.adj.more
             t_buffer = t_low + self.cfg.adj.low.buffer

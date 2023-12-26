@@ -592,6 +592,7 @@ class Data:
                 if cm_main:
                     cm_main = False
                     await self.cl.set(self.cfg.feedback.main, self.cm_main)
+                    print("OFF 7")
                     run = Run.off
                     continue
             else:
@@ -727,6 +728,7 @@ class Data:
             elif run == Run.down:  # wait for outflow-inflow<2 for n seconds, cool down
                 await self.handle_flow()
                 if self.t_out - self.t_in < self.cfg.misc.stop.delta:
+                    print("OFF 1",self.t_out, self.t_in)
                     run = Run.off
                     continue
 
@@ -783,6 +785,7 @@ class Data:
 
             # turn off if the pellet burner is warm
             if self.pellet_on and self.heat_dest <= self.m_pellet - 1:
+                print("OFF 2",self.heat_dest, self.m_pellet)
                 run = Run.off
                 continue
 
@@ -797,7 +800,7 @@ class Data:
                 if t_no_power is None:
                     t_no_power = self.time
                 elif self.time - t_no_power > 20:
-                    print(" NO POWER USE")
+                    print("OFF 3 NO POWER USE")
                     run = Run.off
                     continue
             else:
@@ -857,9 +860,11 @@ class Data:
                     self.time - self.state.t_run > self.cfg.lim.power.time
                     and self.tb_mid >= t_set_off
                 ):
+                    print("OFF 4",t_cur,t_adj,self.tb_mid,t_set_off)
                     run = Run.off
                     continue
                 elif self.tb_low >= t_low:
+                    print("OFF 5",t_cur,t_adj,self.tb_low,self.t_low)
                     run = Run.off
                     continue
 
@@ -940,7 +945,7 @@ class Data:
                     dest = cf.night.dest
 
                 ht = vt(t_cur, dest)
-                logger.info("HZ: %.1f %.1f", ht, t_cur)
+                logger.debug("HZ: %.1f %.1f", ht, t_cur)
                 await self._cl.set(cf.setting, int(ht + 0.8), idem=True)
                 self.heat_dest = ht
 

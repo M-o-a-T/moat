@@ -413,6 +413,10 @@ class Data:
     # async def set_flow_pwm(self, rate):
     # added by .run_flow
 
+    def log_hc(self, i, *a):
+        print("HC",i,*a, end="\r")
+        sys.stdout.flush()
+
     async def log_zero(self):
         "log zero values for all PIDs"
         for pid in self.pid.values():
@@ -747,8 +751,7 @@ class Data:
                 # from the buffer instead of cold water returning from radiators,
                 # esp. when they have been cooling off for some time
                 if run != Run.run and self.state.heat_ok is not False:
-                    print("HC 1", end="\r")
-                    sys.stdout.flush()
+                    self.log_hc(1)
                     if heat_pin is None:
                         await self.cl.set(
                             self.cfg.setting.heat.mode.path,
@@ -758,18 +761,14 @@ class Data:
                         GPIO.output(heat_pin, False)
                     self.state.heat_ok = False
                 else:
-                    print("HC 2", end="\r")
-                    sys.stdout.flush()
+                    self.log_hc(2)
             elif self.state.heat_ok is True:
-                print("HC 3", end="\r")
-                sys.stdout.flush()
+                self.log_hc(3)
             elif self.state.heat_ok is False:
-                print("HC 4", end="\r")
-                sys.stdout.flush()
+                self.log_hc(4)
                 self.state.heat_ok = self.time
             elif self.time - self.state.heat_ok > self.cfg.setting.heat.mode.delay:
-                print("HC 5", end="\r")
-                sys.stdout.flush()
+                self.log_hc(5)
                 if heat_pin is None:
                     await self.cl.set(
                         self.cfg.setting.heat.mode.path,
@@ -780,8 +779,7 @@ class Data:
                 self.state.heat_ok = True
             else:
                 # wait
-                print("HC 6", end="\r")
-                sys.stdout.flush()
+                self.log_hc(6)
 
             # turn off if the pellet burner is warm
             if self.pellet_on and self.heat_dest <= self.m_pellet - 1:

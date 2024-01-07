@@ -148,6 +148,11 @@ lim:
         min: .04
         off: .2   # power cutoff if the buffer is warm enough
         time: 300  # must run at least this long
+    low:
+        # when we switch off: If the decaying average of the heat pump limiter with "scale"
+        # goes below "limit"
+        scale: .01
+        limit: .1
 cmd:
     flow: !P heat.s.pump.rate.cmd       # c_flow
     main: !P home.ass.dyn.switch.heizung.wp.cmd  # cm_main
@@ -555,11 +560,13 @@ class Data:
                 heat_off = False
                 self.state.setdefault("t_run", self.time)
                 if orun is not None:
+                    self.state.scaled_low = 1.0
                     await self.log_zero()
                     self.pid.limit.reset()
                     self.pid.load.reset()
                     self.pid.buffer.reset()
                 else:
+                    self.state.setdefault("scaled_low", 1.0)
                     await self.pid.flow.log_value(0)
                 self.pid.pump.move_to(self.t_out, self.state.last_pwm, t=self.time)
                 self.state.load_last = None
@@ -832,7 +839,17 @@ class Data:
             l_load = await self.pid.load(t_cur, t=self.time)
             l_buffer = await self.pid.buffer(self.tb_low, t=self.time)
             l_limit = await self.pid.limit(self.t_out, t=self.time)
-            lim = min(l_load, l_buffer, l_limit)
+
+            if cm_heat and tw_low <= th_low:
+                w = val2pos(t_adj-self.cfg.adj.more, t_cur, t_adj)
+            else:
+                # if no heating OR the heating req is lower than tha water's,
+                # don't try steady-state mode.
+                # TODO refine steady-state instead
+                w = 0
+            l_buf = pos2val(l_limit,w,l_buffer, clamp=True)
+            lim = min(l_buf, l_limit, l_load)
+            self.state.scaled_low += (lim-self.state.scaled_low)*self.cfg.lim.low.scale
 
             tt = self.time
             if tt - tlast > 5 or self.t_out > self.cfg.adj.max:
@@ -861,14 +878,17 @@ class Data:
                 else:
                     n_cop -= 1
 
-            # Finally, we might want to turn the heat exchanger off.
-
-            # Buffer head temperature high enough?
+            # Finally, we might want to turn the heat exchanger off
+            # if the buffer head temperature is high enough.
             if t_cur >= t_adj:
-                # Running long enough or temperature *really* high?
+                # Running long enough, or lower buffer temperature higher than goal?
+                if self.state.scaled_low < self.cfg.lim.low.limit:
+                    print("OFF SCALED")
+                    run = Run.off
+                    continue
                 if (
                     self.time - self.state.t_run > self.cfg.lim.power.time
-                    and self.tb_mid >= t_set_off
+                    and self.tb_mid > t_set_off
                 ):
                     print("OFF 4",t_cur,t_adj,self.tb_mid,t_set_off)
                     run = Run.off

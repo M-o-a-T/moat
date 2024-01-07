@@ -70,6 +70,7 @@ adj:
     heat: 1.5
     more: 2  # output temperature offset
     max: 61  # don't try for more
+    buffer: 1
     low:
         water: 1
         heat: .5
@@ -660,8 +661,8 @@ class Data:
             if self.tb_heat < t_low:
                 t_limit += (t_low-self.tb_heat) * self.cfg.adj.low.factor
             t_pump = pos2val(t_low, f, t_limit + 0.2 * (t_low - t_limit))
-            t_load = t_adj + self.cfg.adj.more
-            t_buffer = t_low + self.cfg.adj.low.buffer
+            t_load = t_adj + self.cfg.adj.buffer
+            t_buffer = t_low + self.cfg.adj.low.buffer  # <0
 
             # on/off thresholds
             t_set_on = (t_low + t_adj) / 2  # top

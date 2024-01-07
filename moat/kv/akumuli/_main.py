@@ -174,4 +174,4 @@ async def monitor(obj, paths):
     await server.wait_loaded()
 
     async with as_service(obj) as srv:
-        await task(obj.client, obj.cfg.akumuli, server[obj.server._name], evt=srv, paths=paths)
+        await task(obj.client, obj.cfg.kv.akumuli, server[obj.server._name], evt=srv, paths=paths)

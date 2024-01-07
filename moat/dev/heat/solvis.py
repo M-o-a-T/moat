@@ -76,6 +76,10 @@ adj:
         heat: .5
         buffer: -2
         factor: 0.4
+
+        # threshold for heating. If pump PWM is zero, use buffer temperature.
+        # If at least .pwm, use heat pump output.
+        pwm: 0.8
     curve:
         dest: 21
         max: 75
@@ -748,7 +752,7 @@ class Data:
             heat_ok = (
                 run in {Run.off, Run.wait_time, Run.run, Run.down}
                 and (not heat_off)
-                and min(self.tb_heat, self.t_out if self.state.last_pwm else 9999) >= self.c_heat
+                and pos2val(self.tb_heat, (self.state.last_pwm or 0)/self.cfg.adj.low.pwm, self.t_out, clamp=True) >= self.c_heat
             )
             if not heat_ok:
                 # If the incoming water is too cold, turn off heating

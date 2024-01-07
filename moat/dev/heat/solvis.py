@@ -168,7 +168,9 @@ misc:
         predict: 0.5
 
     init_timeout: 5
-    de_ice: 17  # flow rate when de-icing
+    de_ice:
+      flow: 17  # desired flow rate when de-icing
+      pwm: .5  # corresponding PWM output
     stop:
       flow: 10  # or more if the max outflow temperature wants us to
       delta: 3  # outflow-inflow: if less than .delta, the pump can be turned off
@@ -560,7 +562,9 @@ class Data:
                 await self.log_zero()
 
                 heat_off = True
-                await self.pid.flow.setpoint(self.cfg.misc.de_ice)
+                await self.pid.flow.setpoint(self.cfg.misc.de_ice.flow)
+                self.pid.flow.move_to(self.cfg.misc.de_ice.flow,self.cfg.misc.de_ice.pwm)
+
                 await self.cl.set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off)
                 await self.cl.set(self.cfg.cmd.power, value=0)
 

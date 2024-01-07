@@ -32,6 +32,8 @@ def _fix():
             yield (rs if rs.is_dir() else r)
             try:
                 rp = git.Repo(r)
+            except git.exc.InvalidGitRepositoryError:
+                return
             except Exception as exc:
                 raise RuntimeError(r) from exc
             for rr in rp.submodules:

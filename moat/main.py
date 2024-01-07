@@ -3,6 +3,7 @@ This module contains the entry point to the MOAT command line interface
 """
 
 import os
+import sys
 import anyio
 import asyncclick as click
 from asyncscope import main_scope

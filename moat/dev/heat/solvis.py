@@ -1386,6 +1386,7 @@ async def cli(ctx, config):
         pass
     else:
         GPIO.setmode(GPIO.BCM)
+        GPIO.setwarnings(False)
 
 
 @cli.command

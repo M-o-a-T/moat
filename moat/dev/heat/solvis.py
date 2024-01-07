@@ -430,8 +430,9 @@ class Data:
     # added by .run_flow
 
     def log_hc(self, i, *a):
-        print("HC",i,*a, end="\r")
+        print(f" H={i}",*a, end="\r")
         sys.stdout.flush()
+        self.hc_pos = i
 
     async def log_zero(self):
         "log zero values for all PIDs"

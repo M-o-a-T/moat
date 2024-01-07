@@ -954,14 +954,14 @@ class Data:
 
             if (
                 self.m_air < self.cfg.misc.pellet.current
-                and self.m_air_pred < self.cfg.misc.pellet.predict
+                and min(self.m_air,self.m_air_pred) < self.cfg.misc.pellet.predict
             ):
                 if run is True:
                     continue
                 run = True
             elif (
                 self.m_air > self.cfg.misc.pellet.current
-                and self.m_air_pred > self.cfg.misc.pellet.predict
+                and min(self.m_air,self.m_air_pred) > self.cfg.misc.pellet.predict
             ):
                 if run is False:
                     continue

@@ -179,22 +179,12 @@ class SignalClient:
         contacts = []
         groups = []
         attachments = []
-        try:
-            attachments = get_attachments(
-                attachments_as_files,
-                attachments_as_bytes,
-            )
-        except Exception as err:  # pylint: disable=broad-except
-            error = getattr(err, "message", repr(err))
-            raise SignalError(
-                f"Error while parsing attachments: {error}"
-            ) from err
+        attachments = get_attachments(
+            attachments_as_files,
+            attachments_as_bytes,
+        )
         try:
             unknown, contacts, groups = await self.get_recipients(recipients)
-        except Exception as err:  # pylint: disable=broad-except  # pragma: no cover
-            error = getattr(err, "message", repr(err))
-            raise SignalError(f"Error preparing recipients: {error}") from err
-        try:
             params = {
                 "account": self._account,
                 "message": message,
@@ -230,11 +220,6 @@ class SignalClient:
                             }
                         )
             return {"timestamps": timestamps}
-        except Exception as err:  # pylint: disable=broad-except
-            error = getattr(err, "message", repr(err))
-            raise SignalError(
-                f"signal-cli JSON RPC request failed: {error}"
-            ) from err
         finally:
             if cleanup_attachments:
                 for filename in attachments_as_files:
@@ -280,31 +265,25 @@ class SignalClient:
         Raises:
             :exc:`moat.signal.api.SignalError`
         """
-        try:
-            params = {
-                "name": name,
-                "member": members,
-                "setPermissionAddMember": add_member_permissions,
-                "setPermissionEditDetails": edit_group_permissions,
-                "link": group_link,
-                "admin": admins,
-                "description": description,
-                "expiration": message_expiration_timer,
-            }
-            if avatar_as_bytes:  # pragma: no cover
-                if version_parse(self.version) < version_parse("0.11.6"):
-                    warn("'avatar_as_bytes' not supported (>= 0.11.6), skipping.")
-                else:
-                    params.update(
-                        {"avatarFile": bytearray_to_rfc_2397_data_url(avatar_as_bytes)}
-                    )
-            ret = await self._jsonrpc(method="updateGroup", params=params, **kwargs)
-            return ret.get("groupId")
-        except Exception as err:  # pylint: disable=broad-except
-            error = getattr(err, "message", repr(err))
-            raise SignalError(
-                f"signal-cli JSON RPC request failed: {error}"
-            ) from err
+        params = {
+            "name": name,
+            "member": members,
+            "setPermissionAddMember": add_member_permissions,
+            "setPermissionEditDetails": edit_group_permissions,
+            "link": group_link,
+            "admin": admins,
+            "description": description,
+            "expiration": message_expiration_timer,
+        }
+        if avatar_as_bytes:  # pragma: no cover
+            if version_parse(self.version) < version_parse("0.11.6"):
+                warn("'avatar_as_bytes' not supported (>= 0.11.6), skipping.")
+            else:
+                params.update(
+                    {"avatarFile": bytearray_to_rfc_2397_data_url(avatar_as_bytes)}
+                )
+        ret = await self._jsonrpc(method="updateGroup", params=params, **kwargs)
+        return ret.get("groupId")
 
     async def quit_group(
         self,
@@ -328,17 +307,11 @@ class SignalClient:
         Raises:
             :exc:`moat.signal.api.SignalError`
         """
-        try:
-            params = {
-                "groupId": groupid,
-                "delete": delete,
-            }
-            return await self._jsonrpc(method="quitGroup", params=params, **kwargs)
-        except Exception as err:  # pylint: disable=broad-except
-            error = getattr(err, "message", repr(err))
-            raise SignalError(
-                f"signal-cli JSON RPC request failed: {error}"
-            ) from err
+        params = {
+            "groupId": groupid,
+            "delete": delete,
+        }
+        return await self._jsonrpc(method="quitGroup", params=params, **kwargs)
 
     async def list_groups(
         self,
@@ -357,17 +330,11 @@ class SignalClient:
          Raises:
              :exc:`moat.signal.api.SignalError`
         """
-        try:
-            res = await self._jsonrpc(
-                method="listGroups",
-                **kwargs,
-            )
-            return res or []
-        except Exception as err:  # pylint: disable=broad-except
-            error = getattr(err, "message", repr(err))
-            raise SignalError(
-                f"signal-cli JSON RPC request failed: {error}"
-            ) from err
+        res = await self._jsonrpc(
+            method="listGroups",
+            **kwargs,
+        )
+        return res or []
 
     async def get_group(self, groupid: str):
         """
@@ -382,14 +349,8 @@ class SignalClient:
         Raises:
             :exc:`moat.signal.api.SignalError`
         """
-        try:
-            groups = await self.list_groups()
-            return j_search(f"[?id==`{groupid}`]", groups) or [{}]
-        except Exception as err:  # pylint: disable=broad-except  # pragma: no cover
-            error = getattr(err, "message", repr(err))
-            raise SignalError(
-                f"signal-cli JSON RPC request failed: {error}"
-            ) from err
+        groups = await self.list_groups()
+        return j_search(f"[?id==`{groupid}`]", groups) or [{}]
 
     async def join_group(
         self,
@@ -407,16 +368,10 @@ class SignalClient:
         Raises:
             :exc:`moat.signal.api.SignalError`
         """
-        try:
-            params = {
-                "uri": uri,
-            }
-            return await self._jsonrpc(method="joinGroup", params=params, **kwargs)
-        except Exception as err:  # pylint: disable=broad-except
-            error = getattr(err, "message", repr(err))
-            raise SignalError(
-                f"signal-cli JSON RPC request failed: {error}"
-            ) from err
+        params = {
+            "uri": uri,
+        }
+        return await self._jsonrpc(method="joinGroup", params=params, **kwargs)
 
     async def update_profile(
         self,
@@ -442,29 +397,23 @@ class SignalClient:
         Raises:
             :exc:`moat.signal.api.SignalError`
         """
-        try:
-            params = {}
-            if given_name:
-                params.update({"givenName": family_name})
-            if family_name:
-                params.update({"familyName": family_name})
-            if about:
-                params.update({"about": about})
-            if avatar_as_bytes:  # pragma: no cover
-                if version_parse(self.version) < version_parse("0.11.6"):
-                    warn("'avatar_as_bytes' not supported (>= 0.11.6), skipping.")
-                else:
-                    params.update(
-                        {"avatar": bytearray_to_rfc_2397_data_url(avatar_as_bytes)}
-                    )
-            if params:
-                await self._jsonrpc(method="updateProfile", params=params, **kwargs)
-            return True
-        except Exception as err:  # pylint: disable=broad-except
-            error = getattr(err, "message", repr(err))
-            raise SignalError(
-                f"signal-cli JSON RPC request failed: {error}"
-            ) from err
+        params = {}
+        if given_name:
+            params.update({"givenName": family_name})
+        if family_name:
+            params.update({"familyName": family_name})
+        if about:
+            params.update({"about": about})
+        if avatar_as_bytes:  # pragma: no cover
+            if version_parse(self.version) < version_parse("0.11.6"):
+                warn("'avatar_as_bytes' not supported (>= 0.11.6), skipping.")
+            else:
+                params.update(
+                    {"avatar": bytearray_to_rfc_2397_data_url(avatar_as_bytes)}
+                )
+        if params:
+            await self._jsonrpc(method="updateProfile", params=params, **kwargs)
+        return True
 
     async def send_reaction(
         self,
@@ -493,29 +442,18 @@ class SignalClient:
         Returns:
             timestamp (int): Timestamp of reaction.
 
-        Raises:
-            :exc:`moat.signal.api.SignalError`
-
-        Raises:
-            :exc:`moat.signal.api.SignalError`
         """
-        try:
-            params = {
-                "emoji": emoji,
-                "remove": remove,
-                "targetAuthor": target_author,
-                "targetTimestamp": target_timestamp,
-                "recipient": recipient,
-            }
-            if groupid:  # pragma: no cover
-                params.update({"groupId": groupid})
-            ret = await self._jsonrpc(method="sendReaction", params=params, **kwargs)
-            return ret.get("timestamp")
-        except Exception as err:  # pylint: disable=broad-except
-            error = getattr(err, "message", repr(err))
-            raise SignalError(
-                f"signal-cli JSON RPC request failed: {error}"
-            ) from err
+        params = {
+            "emoji": emoji,
+            "remove": remove,
+            "targetAuthor": target_author,
+            "targetTimestamp": target_timestamp,
+            "recipient": recipient,
+        }
+        if groupid:  # pragma: no cover
+            params.update({"groupId": groupid})
+        ret = await self._jsonrpc(method="sendReaction", params=params, **kwargs)
+        return ret.get("timestamp")
 
     async def get_user_status(self, recipients: list, **kwargs):
         """
@@ -532,20 +470,14 @@ class SignalClient:
         Raises:
             :exc:`moat.signal.api.SignalError`
         """
-        try:
-            recipients[:] = [re_sub("^([1-9])[0-9]+$", r"+\1", s) for s in recipients]
-            return await self._jsonrpc(
-                method="getUserStatus",
-                params={
-                    "recipient": recipients,
-                },
-                **kwargs,
-            )
-        except Exception as err:  # pylint: disable=broad-except
-            error = getattr(err, "message", repr(err))
-            raise SignalError(
-                f"signal-cli JSON RPC request failed: {error}"
-            ) from err
+        recipients[:] = [re_sub("^([1-9])[0-9]+$", r"+\1", s) for s in recipients]
+        return await self._jsonrpc(
+            method="getUserStatus",
+            params={
+                "recipient": recipients,
+            },
+            **kwargs,
+        )
 
     async def register(self, captcha: str = "", voice: bool = False, **kwargs):
         """
@@ -565,18 +497,12 @@ class SignalClient:
         Raises:
             :exc:`moat.signal.api.SignalError`
         """
-        try:
-            params = {}
-            if captcha:  # pragma: no cover
-                params.update({"captcha": captcha})
-            if voice:  # pragma: no cover
-                params.update({"voice": voice})
-            return await self._jsonrpc(method="register", params=params, **kwargs)
-        except Exception as err:  # pylint: disable=broad-except
-            error = getattr(err, "message", repr(err))
-            raise SignalError(
-                f"signal-cli JSON RPC request failed: {error}"
-            ) from err
+        params = {}
+        if captcha:  # pragma: no cover
+            params.update({"captcha": captcha})
+        if voice:  # pragma: no cover
+            params.update({"voice": voice})
+        return await self._jsonrpc(method="register", params=params, **kwargs)
 
     async def verify(self, verification_code: str, pin: str = "", **kwargs):
         """
@@ -594,19 +520,12 @@ class SignalClient:
         Raises:
             :exc:`moat.signal.api.SignalError`
         """
-        try:
-            params = {
-                "verificationCode": verification_code,
-            }
-            if pin:  # pragma: no cover
-                params.update({"pin": pin})
-            return await self._jsonrpc(method="verify", params=params, **kwargs)
-        except Exception as err:  # pylint: disable=broad-except
-            error = getattr(err, "message", repr(err))
-            raise SignalError(
-                f"signal-cli JSON RPC request failed: {error}"
-            ) from err
-
+        params = {
+            "verificationCode": verification_code,
+        }
+        if pin:  # pragma: no cover
+            params.update({"pin": pin})
+        return await self._jsonrpc(method="verify", params=params, **kwargs)
 
     async def get_recipients(self, recipients: list):
         """
@@ -639,5 +558,3 @@ class SignalClient:
                 continue
             unknown.append(recipient)  # pragma: no cover
         return (unknown, contacts, groups)
-
-

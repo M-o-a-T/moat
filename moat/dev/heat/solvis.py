@@ -167,6 +167,8 @@ feedback:
     ice: !P home.ass.dyn.binary_densor.heizung.wp_de_ice.state
 
 misc:
+    switch:
+      state: !P heat.s.pump.switchover
     pellet:
         current: 1
         predict: 0.5
@@ -752,7 +754,7 @@ class Data:
             heat_ok = (
                 run in {Run.off, Run.wait_time, Run.run, Run.down}
                 and (not heat_off)
-                and pos2val(self.tb_heat, (self.state.last_pwm or 0)/self.cfg.adj.low.pwm, self.t_out, clamp=True) >= self.c_heat
+                and (self.tb_heat if self.m_switch else pos2val(self.tb_heat, (self.state.last_pwm or 0)/self.cfg.adj.low.pwm, self.t_out, clamp=True)) >= self.c_heat
             )
             if not heat_ok:
                 # If the incoming water is too cold, turn off heating
@@ -1188,6 +1190,7 @@ class Data:
             await tg.start(self._kv, cfg.sensor.temp.current, "m_air")
             await tg.start(self._kv, cfg.sensor.temp.predict, "m_air_pred")
             await tg.start(self._kv, cfg.sensor.temp.pellet, "m_pellet")
+            await tg.start(self._kv, cfg.misc.switch.state, "m_switch")
 
             try:
                 with anyio.fail_after(self.cfg.misc.init_timeout):
@@ -1246,6 +1249,7 @@ class Data:
         await fkv("m_air")
         await fkv("m_air_pred")
         await fkv("m_pellet")
+        await fkv("m_switch")
         task_status.started()
 
     async def saver(self, *, task_status=anyio.TASK_STATUS_IGNORED):

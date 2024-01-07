@@ -802,6 +802,8 @@ class Data:
                 self.log_hc(4)
                 self.state.heat_ok = self.time
             elif self.time - self.state.heat_ok > self.cfg.setting.heat.mode.delay:
+
+                # turn on heating
                 self.log_hc(5)
                 if "pump" in self.cfg.feedback:
                     await self.cl.set(self.cfg.feedback.pump, True, idem=True)
@@ -835,8 +837,8 @@ class Data:
                 # might be ice or whatever, so wait
                 if t_no_power is None:
                     t_no_power = self.time
-                elif self.time - t_no_power > 20:
-                    print("OFF 3 NO POWER USE")
+                elif self.time - t_no_power > 30:
+                    print(f"OFF 3 NO POWER USE {self.m_power} {self.cfg.misc.min_power}")
                     run = Run.off
                     continue
             else:
@@ -958,6 +960,7 @@ class Data:
             ):
                 if run is True:
                     continue
+                print("  PELLET ON  ")
                 run = True
             elif (
                 self.m_air > self.cfg.misc.pellet.current
@@ -966,6 +969,7 @@ class Data:
                 if run is False:
                     continue
                 run = False
+                print("  PELLET OFF  ")
             else:
                 continue
 

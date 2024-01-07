@@ -169,7 +169,8 @@ cmd:
 feedback:
     main: !P home.ass.dyn.switch.heizung.wp.state
     heat: !P home.ass.dyn.switch.heizung.main.state
-    ice: !P home.ass.dyn.binary_densor.heizung.wp_de_ice.state
+    pump: !P home.ass.dyn.binary_sensor.heizung.pump.state
+    ice: !P home.ass.dyn.binary_sensor.heizung.wp_de_ice.state
 
 misc:
     switch:
@@ -769,18 +770,27 @@ class Data:
                 # due to temperature jump, because the backflow is now fed by warm buffer
                 # from the buffer instead of cold water returning from radiators,
                 # esp. when they have been cooling off for some time
-                if run != Run.run and self.state.heat_ok is not False:
+                # 
+                # This doesn't apply when the heat pump is routed to the water buffer (m_switch is set)
+                # because in this case the buffer is cold anyway.
+
+                if self.state.heat_ok is False:
+                    self.log_hc(7)
+                elif run == Run.run and not self.m_switch:
+                    self.log_hc(2)
+                else:
+                    # turn off heating
                     self.log_hc(1)
-                    if heat_pin is None:
+                    if "pump" in self.cfg.feedback:
+                        await self.cl.set(self.cfg.feedback.pump, False, idem=True)
+                    if heat_pin is not None:
+                        GPIO.output(heat_pin, False)
+                    elif "path" in self.cfg.setting.heat.mode:
                         await self.cl.set(
                             self.cfg.setting.heat.mode.path,
                             self.cfg.setting.heat.mode.off,
                         )
-                    else:
-                        GPIO.output(heat_pin, False)
                     self.state.heat_ok = False
-                else:
-                    self.log_hc(2)
             elif self.state.heat_ok is True:
                 self.log_hc(3)
             elif self.state.heat_ok is False:
@@ -788,13 +798,16 @@ class Data:
                 self.state.heat_ok = self.time
             elif self.time - self.state.heat_ok > self.cfg.setting.heat.mode.delay:
                 self.log_hc(5)
-                if heat_pin is None:
+                if "pump" in self.cfg.feedback:
+                    await self.cl.set(self.cfg.feedback.pump, True, idem=True)
+                if heat_pin is not None:
+                    GPIO.output(heat_pin, True)
+                # no "elif" here, this is intentional
+                if "path" in self.cfg.setting.heat.mode:
                     await self.cl.set(
                         self.cfg.setting.heat.mode.path,
                         self.cfg.setting.heat.mode.on,
                     )
-                else:
-                    GPIO.output(heat_pin, True)
                 self.state.heat_ok = True
             else:
                 # wait

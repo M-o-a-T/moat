@@ -544,13 +544,17 @@ class Data:
             elif run == Run.wait_flow:  # wait for flow
                 heat_off = True
                 await self.cl.set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off)
+                await self.pid.flow.setpoint(self.cfg.misc.start.flow.init.rate)
+                self.pid.flow.move_to(self.cfg.misc.start.flow.init.rate,self.cfg.misc.start.flow.init.pwm)
                 await self.set_flow_pwm(self.cfg.misc.start.flow.init.pwm)
 
             elif run == Run.flow:  # wait for decent throughput
                 pass
 
             elif run == Run.wait_power:  # wait for pump to draw power
-                self.pid.flow.move_to(self.r_flow, self.state.last_pwm)
+                await self.pid.flow.setpoint(self.cfg.misc.start.flow.power.rate)
+                self.pid.flow.move_to(self.cfg.misc.start.flow.power.rate,self.cfg.misc.start.flow.power.pwm)
+                # self.pid.flow.move_to(self.r_flow, self.state.last_pwm)
                 await self.set_load(self.cfg.misc.start.power)
 
             elif run == Run.temp:  # wait for outflow-inflow>2

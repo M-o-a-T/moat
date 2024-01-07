@@ -121,7 +121,8 @@ setting:
     heat:
       day: !P heat.s.heat.temp        # c_heat
       night: !P heat.s.heat.temp_low  # c_heat_night
-      power: 19
+      power:
+        pin: 19
       mode:
         path: !P heat.s.heat.mode.cmd    # 5:standby 2:auto 3:day 4:night
         on: 3
@@ -450,7 +451,7 @@ class Data:
         t_no_power = None
         heat_off = False
         water_ok = True
-        heat_pin = self.cfg.setting.heat.get("power", None)
+        heat_pin = self.cfg.setting.heat.get("power", {}).get("pin", None)
         if heat_pin is not None:
             GPIO.setup(heat_pin, GPIO.OUT)
 

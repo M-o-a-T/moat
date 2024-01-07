@@ -821,17 +821,18 @@ class Data:
                 # wait
                 self.log_hc(6)
 
+            if run != Run.run:
+                continue
+                # END not running
+
+
+            # RUNNING ONLY after this point
+
             # turn off if the pellet burner is warm
             if self.state.pellet_on and self.m_pellet >= t_low:
                 print("OFF 2",self.m_pellet,t_low)
                 run = Run.off
                 continue
-
-            if run != Run.run:
-                continue
-                # END not running
-
-            # RUNNING ONLY after this point
 
             if self.m_power < self.cfg.misc.min_power:
                 # might be ice or whatever, so wait

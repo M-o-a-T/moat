@@ -345,7 +345,7 @@ class APID(CPID):
 
     async def __call__(self, val, **kw):
         res = super().__call__(val, **kw)
-        await self.log_value(res)
+        await self.log_value(res[0] if isinstance(res,tuple) else res)
         return res
 
     async def log_value(self, res):
@@ -845,13 +845,15 @@ class Data:
             # The pump rate is controlled by its intended output heat now
             if self.t_out > self.cfg.adj.max:
                 l_pump = 1
+                i_pump=()
                 # emergency handler
             else:
-                l_pump = await self.pid.pump(self.t_out, t=self.time)
+                l_pump,i_pump = await self.pid.pump(self.t_out, t=self.time, split=True)
                 # self.pid.flow.move_to(self.r_flow, l_pump, t=self.time)
+            self.state.last_pwm = l_pump
 
             l_load = await self.pid.load(t_cur, t=self.time)
-            l_buffer = await self.pid.buffer(self.tb_low, t=self.time)
+            l_buffer,i_buffer = await self.pid.buffer(self.tb_low, t=self.time, split=True)
             l_limit = await self.pid.limit(self.t_out, t=self.time)
 
             if cm_heat and tw_low <= th_low:
@@ -873,11 +875,33 @@ class Data:
                     f"buf={t_cur :.1f}/{self.tb_mid :.1f}/{self.tb_low :.1f}",
                     f"t={self.t_out :.1f}/{self.t_in :.1f}",
                     f"Pump={l_pump :.3f}",
+                    #*(f"{x :6.3f}" for x in i_pump),
                     f"load{'=' if lim == l_load else '_'}{l_load :.3f}",
-                    f"buf{'=' if lim == l_buffer else '_'}{l_buffer :.3f}",
                     f"lim{'=' if lim == l_limit else '_'}{l_limit :.3f}",
+                    f"buf{'=' if lim == l_buf else '_'}{l_buffer :.3f}",
+                    *(f"{x :6.3f}" for x in i_buffer),
                 )
                 print(*pr)
+
+            # l_buffer is disregarded when the buffer head is too far
+            # below its setpoint. Otherwise the initial surge would delay heat-up
+            print(
+                f" H={self.hc_pos}",
+                f"W={w :.1f}",
+                #f"res={l_buf :.2f}",
+                f"lim={lim:.2f}",
+                f"cur={t_cur :.1f}",
+                f"hlow={th_low :.1f}",
+                f"wlow={tw_low :.1f}",
+                f"buf={t_buffer :.1f}",
+                #f"off={t_set_off :.1f}",
+                f"scl={self.state.scaled_low :.3f}",
+                f"tbh={self.tb_heat :.1f}",
+                f"ch={self.c_heat :.1f}",
+                end="\r")
+            sys.stdout.flush()
+#                and min(self.tb_heat, self.t_out if self.state.last_pwm else 9999) >= self.c_heat
+
             await self.set_load(lim)
             await self.set_flow_pwm(l_pump)
             self.state.load_last = lim

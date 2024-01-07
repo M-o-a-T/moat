@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Test for SignalCliJSONRPCApi.bytearray_to_rfc_2397_data_url
+Test for SignalClient.bytearray_to_rfc_2397_data_url
 """
 
 from base64 import b64decode
 
 #  pylint: disable=import-error
-from pysignalclijsonrpc.api import bytearray_to_rfc_2397_data_url
+from moat.signal.api import bytearray_to_rfc_2397_data_url
 
 # pylint: disable=line-too-long
 IMAGE = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+P+/HgAFhAJ/wlseKgAAAABJRU5ErkJggg=="

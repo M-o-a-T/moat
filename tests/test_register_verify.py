@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Test for SignalCliJSONRPCApi.register
+Test for SignalClient.register
 """
 
 
@@ -8,9 +8,9 @@ import pook
 import pytest
 
 #  pylint: disable=import-error
-from pysignalclijsonrpc.api import SignalCliJSONRPCApi
+from moat.signal.api import SignalClient
 
-SIGNAL_CLI = SignalCliJSONRPCApi(
+SIGNAL_CLI = SignalClient(
     endpoint="http://mock.pook/api/v1/rpc",
     account="42",
 )
@@ -26,7 +26,7 @@ RESPONSE_JSON_OK = {
 @pook.activate
 def test_register_ok():
     """
-    Test successful SignalCliJSONRPCApi.register.
+    Test successful SignalClient.register.
     """
     # pylint: disable=protected-access
     pook.post(
@@ -43,7 +43,7 @@ def test_register_ok():
 @pook.activate
 def test_register_error():
     """
-    Test unsuccessful SignalCliJSONRPCApi.register.
+    Test unsuccessful SignalClient.register.
     """
     # pylint: disable=protected-access
     pook.post(
@@ -70,7 +70,7 @@ def test_register_error():
 @pook.activate
 def test_verify_ok():
     """
-    Test successful SignalCliJSONRPCApi.verify.
+    Test successful SignalClient.verify.
     """
     # pylint: disable=protected-access
     pook.post(
@@ -89,7 +89,7 @@ def test_verify_ok():
 @pook.activate
 def test_verify_error():
     """
-    Test unsuccessful SignalCliJSONRPCApi.verify.
+    Test unsuccessful SignalClient.verify.
     """
     # pylint: disable=protected-access
     pook.post(

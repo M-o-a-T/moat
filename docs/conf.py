@@ -15,13 +15,13 @@ import sys
 
 sys.path.insert(0, os.path.abspath(".."))
 
-_PROJECT = "pysignalclijsonrpc"
+_PROJECT = "moat.signal"
 _DISTRIBUTION_METADATA = importlib.metadata.metadata(_PROJECT)
 
 author = _DISTRIBUTION_METADATA["Author"]
 project = _DISTRIBUTION_METADATA["Name"]
 version = _DISTRIBUTION_METADATA["Version"]
-copyright = "2022, Stefan Heitmüller"  # pylint: disable=redefined-builtin
+copyright = "2024, Matthias Urlichs"  # pylint: disable=redefined-builtin
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

@@ -6,7 +6,7 @@ Pypi
 
    .. code-block:: python
 
-      pip install pysignalclijsonrpc
+      pip install moat.signal
 
 
 Development
@@ -14,4 +14,4 @@ Development
 
    .. code-block:: python
 
-      pip install git+https://gitlab.com/morph027/pysignalclijsonrpc#main
+      git clone https://git.smurf.noris.de/moat-signal.git

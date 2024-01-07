@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to pysignalclijsonrpc documentation!
-============================================
+Welcome to the MoaT.Signal documentation!
+=========================================
 
 .. toctree::
    :maxdepth: 2
@@ -19,7 +19,7 @@ Welcome to pysignalclijsonrpc documentation!
     autodoc/index
 
 
-``pysignalclijsonrpc`` is a Python package providing access to `signal-cli JSON-RPC service <https://github.com/AsamK/signal-cli/wiki/JSON-RPC-service>`_.
+``moat.signal`` is an async Python package providing access to the `signal-cli JSON-RPC service <https://github.com/AsamK/signal-cli/wiki/JSON-RPC-service>`_.
 
 Indices and tables
 ------------------

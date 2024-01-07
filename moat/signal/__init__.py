@@ -1,10 +1,10 @@
 """
-pysignalclijsonrpc
+MoaT Signal
 """
 
-from pysignalclijsonrpc.api import SignalCliJSONRPCApi, SignalCliJSONRPCError
+from .api import SignalClient, SignalError
 
 __all__ = (
-    "SignalCliJSONRPCApi",
-    "SignalCliJSONRPCError",
+    "SignalClient",
+    "SignalError",
 )

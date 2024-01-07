@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Test for SignalCliJSONRPCApi.get_user_status
+Test for SignalClient.get_user_status
 """
 
 
@@ -9,9 +9,9 @@ import pytest
 from jmespath import search as j_search
 
 #  pylint: disable=import-error
-from pysignalclijsonrpc.api import SignalCliJSONRPCApi
+from moat.signal.api import SignalClient
 
-SIGNAL_CLI = SignalCliJSONRPCApi(
+SIGNAL_CLI = SignalClient(
     endpoint="http://mock.pook/api/v1/rpc",
     account="42",
 )
@@ -20,7 +20,7 @@ SIGNAL_CLI = SignalCliJSONRPCApi(
 @pook.activate
 def test_get_user_status_ok():
     """
-    Test successful SignalCliJSONRPCApi.get_user_status.
+    Test successful SignalClient.get_user_status.
     """
     # pylint: disable=protected-access
     pook.post(
@@ -53,7 +53,7 @@ def test_get_user_status_ok():
 @pook.activate
 def test_get_user_status_error():
     """
-    Test unsuccessful SignalCliJSONRPCApi.get_user_status.
+    Test unsuccessful SignalClient.get_user_status.
     """
     # pylint: disable=protected-access
     pook.post(

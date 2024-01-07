@@ -1,4 +1,10 @@
-# Changelog
+# MoaT-Signal changelog
+
+## 0.1.1
+
+Renamed to moat.signal and anyio-ized.
+
+# Original Changelog
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).

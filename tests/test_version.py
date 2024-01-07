@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Test for SignalCliJSONRPCApi.version
+Test for SignalClient.version
 """
 
 
@@ -8,9 +8,9 @@ import pook
 from packaging import version
 
 #  pylint: disable=import-error
-from pysignalclijsonrpc.api import SignalCliJSONRPCApi
+from moat.signal.api import SignalClient
 
-SIGNAL_CLI = SignalCliJSONRPCApi(
+SIGNAL_CLI = SignalClient(
     endpoint="http://mock.pook/api/v1/rpc",
     account="42",
 )
@@ -19,7 +19,7 @@ SIGNAL_CLI = SignalCliJSONRPCApi(
 @pook.activate
 def test_version():
     """
-    Test successful SignalCliJSONRPCApi.version.
+    Test successful SignalClient.version.
     """
     # pylint: disable=protected-access
     pook.post(

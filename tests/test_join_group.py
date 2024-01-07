@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Test for SignalCliJSONRPCApi.join_group
+Test for SignalClient.join_group
 """
 
 
@@ -8,9 +8,9 @@ import pook
 import pytest
 
 #  pylint: disable=import-error
-from pysignalclijsonrpc.api import SignalCliJSONRPCApi
+from moat.signal.api import SignalClient
 
-SIGNAL_CLI = SignalCliJSONRPCApi(
+SIGNAL_CLI = SignalClient(
     endpoint="http://mock.pook/api/v1/rpc",
     account="42",
 )
@@ -19,7 +19,7 @@ SIGNAL_CLI = SignalCliJSONRPCApi(
 @pook.activate
 def test_join_group_ok():
     """
-    Test successful SignalCliJSONRPCApi.join_group.
+    Test successful SignalClient.join_group.
     """
     # pylint: disable=protected-access
     pook.post(
@@ -50,7 +50,7 @@ def test_join_group_ok():
 @pook.activate
 def test_join_group_error():
     """
-    Test unsuccessful SignalCliJSONRPCApi.join_group.
+    Test unsuccessful SignalClient.join_group.
     """
     # pylint: disable=protected-access
     pook.post(

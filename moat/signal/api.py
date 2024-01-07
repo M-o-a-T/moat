@@ -1,5 +1,5 @@
 """
-pysignalclijsonrpc.api
+MoaT.signal API
 """
 
 from base64 import b64encode
@@ -62,7 +62,7 @@ def get_recipients(client: object, recipients: list):
     registered with the network or a group.
 
     Args:
-        client (object): SignalCliJSONRPCApi
+        client (object): SignalClient
         recipients (list): List of recipients
 
     Returns:
@@ -90,22 +90,22 @@ def get_recipients(client: object, recipients: list):
     return (unknown, contacts, groups)
 
 
-class SignalCliJSONRPCError(Exception):
+class SignalError(Exception):
     """
-    SignalCliJSONRPCError
+    Exception
     """
 
 
-class SignalCliJSONRPCApi:
+class SignalClient:
     """
-    SignalCliJSONRPCApi
+    SignalClient
     """
 
     def __init__(
         self, endpoint: str, account: str, auth: tuple = (), verify_ssl: bool = True
     ):
         """
-        SignalCliJSONRPCApi
+        SignalClient
 
         Args:
             endpoint (str): signal-cli JSON-RPC endpoint.
@@ -131,7 +131,7 @@ class SignalCliJSONRPCApi:
             result (dict): The JSON-RPC result.
 
         Raises:
-            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`moat.signal.api.SignalError`
         """
         request_id = kwargs.get("request_id") or str(uuid4())
         if not params:
@@ -155,11 +155,11 @@ class SignalCliJSONRPCApi:
             if ret.get("id") == request_id:
                 if ret.get("error"):
                     error = ret.get("error").get("message")
-                    raise SignalCliJSONRPCError(error)
+                    raise SignalError(error)
             return ret.get("result")
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
-            raise SignalCliJSONRPCError(
+            raise SignalError(
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
@@ -172,7 +172,7 @@ class SignalCliJSONRPCApi:
             version (str): Version of signal-cli
 
         Raises:
-            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`moat.signal.api.SignalError`
         """
         return self._jsonrpc(method="version").get("version")
 
@@ -205,7 +205,7 @@ class SignalCliJSONRPCApi:
                 Example: `{'timestamps': {timestamp: {'recipients': ['...']}}}`
 
         Raises:
-            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`moat.signal.api.SignalError`
         """
         response_method_mapping = {
             "recipient": "recipientAddress.number",
@@ -222,14 +222,14 @@ class SignalCliJSONRPCApi:
             )
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
-            raise SignalCliJSONRPCError(
+            raise SignalError(
                 f"Error while parsing attachments: {error}"
             ) from err
         try:
             unknown, contacts, groups = get_recipients(self, recipients)
         except Exception as err:  # pylint: disable=broad-except  # pragma: no cover
             error = getattr(err, "message", repr(err))
-            raise SignalCliJSONRPCError(f"Error preparing recipients: {error}") from err
+            raise SignalError(f"Error preparing recipients: {error}") from err
         try:
             params = {
                 "account": self._account,
@@ -268,7 +268,7 @@ class SignalCliJSONRPCApi:
             return {"timestamps": timestamps}
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
-            raise SignalCliJSONRPCError(
+            raise SignalError(
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
         finally:
@@ -314,7 +314,7 @@ class SignalCliJSONRPCApi:
             group_id (str): The group id.
 
         Raises:
-            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`moat.signal.api.SignalError`
         """
         try:
             params = {
@@ -338,7 +338,7 @@ class SignalCliJSONRPCApi:
             return ret.get("groupId")
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
-            raise SignalCliJSONRPCError(
+            raise SignalError(
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
@@ -362,7 +362,7 @@ class SignalCliJSONRPCApi:
             result (dict)
 
         Raises:
-            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`moat.signal.api.SignalError`
         """
         try:
             params = {
@@ -372,7 +372,7 @@ class SignalCliJSONRPCApi:
             return self._jsonrpc(method="quitGroup", params=params, **kwargs)
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
-            raise SignalCliJSONRPCError(
+            raise SignalError(
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
@@ -391,7 +391,7 @@ class SignalCliJSONRPCApi:
              result (list)
 
          Raises:
-             :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+             :exc:`moat.signal.api.SignalError`
         """
         try:
             res = self._jsonrpc(
@@ -401,7 +401,7 @@ class SignalCliJSONRPCApi:
             return res or []
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
-            raise SignalCliJSONRPCError(
+            raise SignalError(
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
@@ -416,14 +416,14 @@ class SignalCliJSONRPCApi:
             result (dict)
 
         Raises:
-            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`moat.signal.api.SignalError`
         """
         try:
             groups = self.list_groups()
             return j_search(f"[?id==`{groupid}`]", groups) or [{}]
         except Exception as err:  # pylint: disable=broad-except  # pragma: no cover
             error = getattr(err, "message", repr(err))
-            raise SignalCliJSONRPCError(
+            raise SignalError(
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
@@ -441,7 +441,7 @@ class SignalCliJSONRPCApi:
                 :meth:`._jsonrpc`.
 
         Raises:
-            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`moat.signal.api.SignalError`
         """
         try:
             params = {
@@ -450,7 +450,7 @@ class SignalCliJSONRPCApi:
             return self._jsonrpc(method="joinGroup", params=params, **kwargs)
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
-            raise SignalCliJSONRPCError(
+            raise SignalError(
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
@@ -476,7 +476,7 @@ class SignalCliJSONRPCApi:
             result (bool): True for success.
 
         Raises:
-            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`moat.signal.api.SignalError`
         """
         try:
             params = {}
@@ -498,7 +498,7 @@ class SignalCliJSONRPCApi:
             return True
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
-            raise SignalCliJSONRPCError(
+            raise SignalError(
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
@@ -530,10 +530,10 @@ class SignalCliJSONRPCApi:
             timestamp (int): Timestamp of reaction.
 
         Raises:
-            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`moat.signal.api.SignalError`
 
         Raises:
-            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`moat.signal.api.SignalError`
         """
         try:
             params = {
@@ -549,7 +549,7 @@ class SignalCliJSONRPCApi:
             return ret.get("timestamp")
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
-            raise SignalCliJSONRPCError(
+            raise SignalError(
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
@@ -566,7 +566,7 @@ class SignalCliJSONRPCApi:
             result (dict): The network result.
 
         Raises:
-            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`moat.signal.api.SignalError`
         """
         try:
             recipients[:] = [re_sub("^([1-9])[0-9]+$", r"+\1", s) for s in recipients]
@@ -579,7 +579,7 @@ class SignalCliJSONRPCApi:
             )
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
-            raise SignalCliJSONRPCError(
+            raise SignalError(
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
@@ -599,7 +599,7 @@ class SignalCliJSONRPCApi:
             result: The network result. `{}` if successful.
 
         Raises:
-            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`moat.signal.api.SignalError`
         """
         try:
             params = {}
@@ -610,7 +610,7 @@ class SignalCliJSONRPCApi:
             return self._jsonrpc(method="register", params=params, **kwargs)
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
-            raise SignalCliJSONRPCError(
+            raise SignalError(
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
@@ -622,13 +622,13 @@ class SignalCliJSONRPCApi:
             verification_code (str): The verification code you received via sms or voice call.
             pin (str, optional): The registration lock PIN, that was set by the user.
             **kwargs: Arbitrary keyword arguments passed to
-                :meth:`pysignalclijsonrpc.SignalCliJSONRPCApi._jsonrpc`.
+                :meth:`moat.signal.api.SignalClient._jsonrpc`.
 
         Returns:
             result: The network result. `{}` if successful.
 
         Raises:
-            :exc:`pysignalclijsonrpc.api.SignalCliJSONRPCError`
+            :exc:`moat.signal.api.SignalError`
         """
         try:
             params = {
@@ -639,6 +639,6 @@ class SignalCliJSONRPCApi:
             return self._jsonrpc(method="verify", params=params, **kwargs)
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
-            raise SignalCliJSONRPCError(
+            raise SignalError(
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err

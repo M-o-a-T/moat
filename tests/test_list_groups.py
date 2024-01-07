@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Test for SignalCliJSONRPCApi.list_groups
+Test for SignalClient.list_groups
 """
 
 
@@ -8,9 +8,9 @@ import pook
 import pytest
 
 #  pylint: disable=import-error
-from pysignalclijsonrpc.api import SignalCliJSONRPCApi
+from moat.signal.api import SignalClient
 
-SIGNAL_CLI = SignalCliJSONRPCApi(
+SIGNAL_CLI = SignalClient(
     endpoint="http://mock.pook/api/v1/rpc",
     account="42",
 )
@@ -76,7 +76,7 @@ RESPONSE_JSON = {
 @pook.activate
 def test_list_groups_ok():
     """
-    Test successful SignalCliJSONRPCApi.list_groups.
+    Test successful SignalClient.list_groups.
     """
     # pylint: disable=protected-access
     pook.post(
@@ -94,7 +94,7 @@ def test_list_groups_ok():
 @pook.activate
 def test_get_group_ok():
     """
-    Test successful SignalCliJSONRPCApi.get_group.
+    Test successful SignalClient.get_group.
     """
     # pylint: disable=protected-access
     pook.post(
@@ -114,7 +114,7 @@ def test_get_group_ok():
 @pook.activate
 def test_list_groups_error():
     """
-    Test unsuccessful SignalCliJSONRPCApi.list_groups.
+    Test unsuccessful SignalClient.list_groups.
     """
     # pylint: disable=protected-access
     pook.post(

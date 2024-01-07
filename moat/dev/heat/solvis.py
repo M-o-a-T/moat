@@ -697,7 +697,7 @@ class Data:
             if run == Run.off:  # nothing happens
                 if self.state.pellet_on:
                     r = "pell"
-                if not cm_main:
+                elif not cm_main:
                     r = "main"
                 elif bool(self.m_errors):
                     r = "errn"

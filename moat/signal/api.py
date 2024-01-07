@@ -13,7 +13,7 @@ from warnings import warn
 from jmespath import search as j_search
 from magic import from_buffer, from_file
 from packaging.version import parse as version_parse
-from requests import Session
+from httpx import AsyncClient
 
 
 def bytearray_to_rfc_2397_data_url(byte_array: bytearray):
@@ -56,40 +56,6 @@ def get_attachments(attachments_as_files, attachments_as_bytes):
     return attachments
 
 
-def get_recipients(client: object, recipients: list):
-    """
-    Get recipients. Could be either a valid recipient
-    registered with the network or a group.
-
-    Args:
-        client (object): SignalClient
-        recipients (list): List of recipients
-
-    Returns:
-        result (tuple): Tuple of `(unknown, contacts, groups)`
-    """
-    unknown = []
-    contacts = []
-    groups = []
-    check_registered = []
-    for recipient in recipients:
-        if j_search(f"[?id==`{recipient}`]", client.list_groups()):  # pragma: no cover
-            groups.append(recipient)
-            continue
-        if re_search("[a-zA-Z/=]", recipient):  # pragma: no cover
-            unknown.append(recipient)
-            continue
-        check_registered.append(recipient)
-    if check_registered:
-        registered = client.get_user_status(recipients=check_registered)
-    for recipient in check_registered:
-        if j_search(f"[?number==`{recipient}`]", registered):
-            contacts.append(recipient)
-            continue
-        unknown.append(recipient)  # pragma: no cover
-    return (unknown, contacts, groups)
-
-
 class SignalError(Exception):
     """
     Exception
@@ -102,7 +68,7 @@ class SignalClient:
     """
 
     def __init__(
-        self, endpoint: str, account: str, auth: tuple = (), verify_ssl: bool = True
+            self, endpoint: str, account: str, auth: tuple = (), **kw
     ):
         """
         SignalClient
@@ -111,16 +77,15 @@ class SignalClient:
             endpoint (str): signal-cli JSON-RPC endpoint.
             account (str): signal-cli account to use.
             auth (tuple): basic authentication credentials (e.g. `("user", "pass")`)
-            verify_ssl (bool): SSL verfification for https endpoints
-                (defaults to True).
+        … and any other arguments of `httpx.AsyncClient`.
+
         """
-        self._session = Session()
+        self._session = AsyncClient(**kw)
         self._endpoint = endpoint
         self._account = account
-        self._auth = auth
-        self._verify_ssl = verify_ssl
+        self._auth = auth or None
 
-    def _jsonrpc(self, method: str, params: object = None, **kwargs):
+    async def _jsonrpc(self, method: str, params: object = None, **kwargs):
         """
         Args:
             method (str): JSON-RPC method. Equals signal-cli command.
@@ -144,11 +109,10 @@ class SignalClient:
             "params": params,
         }
         try:
-            res = self._session.post(
+            res = await self._session.post(
                 url=f"{self._endpoint}",
                 json=data,
                 auth=self._auth,
-                verify=self._verify_ssl,
             )
             res.raise_for_status()
             ret = res.json()
@@ -164,7 +128,7 @@ class SignalClient:
             ) from err
 
     @property
-    def version(self):
+    async def version(self):
         """
         Fetch version.
 
@@ -174,9 +138,9 @@ class SignalClient:
         Raises:
             :exc:`moat.signal.api.SignalError`
         """
-        return self._jsonrpc(method="version").get("version")
+        return (await self._jsonrpc(method="version")).get("version")
 
-    def send_message(
+    async def send_message(
         self,
         message: str,
         recipients: list,
@@ -226,7 +190,7 @@ class SignalClient:
                 f"Error while parsing attachments: {error}"
             ) from err
         try:
-            unknown, contacts, groups = get_recipients(self, recipients)
+            unknown, contacts, groups = await self.get_recipients(recipients)
         except Exception as err:  # pylint: disable=broad-except  # pragma: no cover
             error = getattr(err, "message", repr(err))
             raise SignalError(f"Error preparing recipients: {error}") from err
@@ -243,7 +207,7 @@ class SignalClient:
                 if value:
                     t_params = params.copy()
                     t_params.update({key: value})
-                    t_res = self._jsonrpc(
+                    t_res = await self._jsonrpc(
                         method="send",
                         params=t_params,
                         **kwargs,
@@ -276,7 +240,7 @@ class SignalClient:
                 for filename in attachments_as_files:
                     os_remove(filename)
 
-    def update_group(
+    async def update_group(
         self,
         name: str,
         members: list,
@@ -334,7 +298,7 @@ class SignalClient:
                     params.update(
                         {"avatarFile": bytearray_to_rfc_2397_data_url(avatar_as_bytes)}
                     )
-            ret = self._jsonrpc(method="updateGroup", params=params, **kwargs)
+            ret = await self._jsonrpc(method="updateGroup", params=params, **kwargs)
             return ret.get("groupId")
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
@@ -342,7 +306,7 @@ class SignalClient:
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
-    def quit_group(
+    async def quit_group(
         self,
         groupid: str,
         delete: bool = False,
@@ -369,14 +333,14 @@ class SignalClient:
                 "groupId": groupid,
                 "delete": delete,
             }
-            return self._jsonrpc(method="quitGroup", params=params, **kwargs)
+            return await self._jsonrpc(method="quitGroup", params=params, **kwargs)
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
             raise SignalError(
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
-    def list_groups(
+    async def list_groups(
         self,
         **kwargs,
     ):
@@ -394,7 +358,7 @@ class SignalClient:
              :exc:`moat.signal.api.SignalError`
         """
         try:
-            res = self._jsonrpc(
+            res = await self._jsonrpc(
                 method="listGroups",
                 **kwargs,
             )
@@ -405,7 +369,7 @@ class SignalClient:
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
-    def get_group(self, groupid: str):
+    async def get_group(self, groupid: str):
         """
         Get group details.
 
@@ -419,7 +383,7 @@ class SignalClient:
             :exc:`moat.signal.api.SignalError`
         """
         try:
-            groups = self.list_groups()
+            groups = await self.list_groups()
             return j_search(f"[?id==`{groupid}`]", groups) or [{}]
         except Exception as err:  # pylint: disable=broad-except  # pragma: no cover
             error = getattr(err, "message", repr(err))
@@ -427,7 +391,7 @@ class SignalClient:
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
-    def join_group(
+    async def join_group(
         self,
         uri: str,
         **kwargs,
@@ -447,14 +411,14 @@ class SignalClient:
             params = {
                 "uri": uri,
             }
-            return self._jsonrpc(method="joinGroup", params=params, **kwargs)
+            return await self._jsonrpc(method="joinGroup", params=params, **kwargs)
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
             raise SignalError(
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
-    def update_profile(
+    async def update_profile(
         self,
         given_name: str = "",
         family_name: str = "",
@@ -494,7 +458,7 @@ class SignalClient:
                         {"avatar": bytearray_to_rfc_2397_data_url(avatar_as_bytes)}
                     )
             if params:
-                self._jsonrpc(method="updateProfile", params=params, **kwargs)
+                await self._jsonrpc(method="updateProfile", params=params, **kwargs)
             return True
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
@@ -502,7 +466,7 @@ class SignalClient:
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
-    def send_reaction(
+    async def send_reaction(
         self,
         recipient: str,
         emoji: str,
@@ -545,7 +509,7 @@ class SignalClient:
             }
             if groupid:  # pragma: no cover
                 params.update({"groupId": groupid})
-            ret = self._jsonrpc(method="sendReaction", params=params, **kwargs)
+            ret = await self._jsonrpc(method="sendReaction", params=params, **kwargs)
             return ret.get("timestamp")
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
@@ -553,7 +517,7 @@ class SignalClient:
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
-    def get_user_status(self, recipients: list, **kwargs):
+    async def get_user_status(self, recipients: list, **kwargs):
         """
         Get user network status (is registered?).
 
@@ -570,7 +534,7 @@ class SignalClient:
         """
         try:
             recipients[:] = [re_sub("^([1-9])[0-9]+$", r"+\1", s) for s in recipients]
-            return self._jsonrpc(
+            return await self._jsonrpc(
                 method="getUserStatus",
                 params={
                     "recipient": recipients,
@@ -583,7 +547,7 @@ class SignalClient:
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
-    def register(self, captcha: str = "", voice: bool = False, **kwargs):
+    async def register(self, captcha: str = "", voice: bool = False, **kwargs):
         """
         Register account.
 
@@ -607,14 +571,14 @@ class SignalClient:
                 params.update({"captcha": captcha})
             if voice:  # pragma: no cover
                 params.update({"voice": voice})
-            return self._jsonrpc(method="register", params=params, **kwargs)
+            return await self._jsonrpc(method="register", params=params, **kwargs)
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
             raise SignalError(
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
 
-    def verify(self, verification_code: str, pin: str = "", **kwargs):
+    async def verify(self, verification_code: str, pin: str = "", **kwargs):
         """
         Verify pending account registration.
 
@@ -636,9 +600,44 @@ class SignalClient:
             }
             if pin:  # pragma: no cover
                 params.update({"pin": pin})
-            return self._jsonrpc(method="verify", params=params, **kwargs)
+            return await self._jsonrpc(method="verify", params=params, **kwargs)
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
             raise SignalError(
                 f"signal-cli JSON RPC request failed: {error}"
             ) from err
+
+
+    async def get_recipients(self, recipients: list):
+        """
+        Get recipients. Could be either a valid recipient
+        registered with the network or a group.
+
+        Args:
+            recipients (list): List of recipients
+
+        Returns:
+            result (tuple): Tuple of `(unknown, contacts, groups)`
+        """
+        unknown = []
+        contacts = []
+        groups = []
+        check_registered = []
+        for recipient in recipients:
+            if j_search(f"[?id==`{recipient}`]", await self.list_groups()):  # pragma: no cover
+                groups.append(recipient)
+                continue
+            if re_search("[a-zA-Z/=]", recipient):  # pragma: no cover
+                unknown.append(recipient)
+                continue
+            check_registered.append(recipient)
+        if check_registered:
+            registered = await self.get_user_status(recipients=check_registered)
+        for recipient in check_registered:
+            if j_search(f"[?number==`{recipient}`]", registered):
+                contacts.append(recipient)
+                continue
+            unknown.append(recipient)  # pragma: no cover
+        return (unknown, contacts, groups)
+
+

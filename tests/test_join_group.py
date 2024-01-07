@@ -16,8 +16,9 @@ SIGNAL_CLI = SignalClient(
 )
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_join_group_ok():
+async def test_join_group_ok():
     """
     Test successful SignalClient.join_group.
     """
@@ -40,15 +41,16 @@ def test_join_group_ok():
             "id": "test_join_group_ok",
         },
     )
-    res = SIGNAL_CLI.join_group(
+    res = await SIGNAL_CLI.join_group(
         uri="1337",
     )
     assert res.get("groupId") == "1337"
     pook.reset()
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_join_group_error():
+async def test_join_group_error():
     """
     Test unsuccessful SignalClient.join_group.
     """
@@ -67,7 +69,7 @@ def test_join_group_error():
         },
     )
     with pytest.raises(Exception) as exc_info:
-        SIGNAL_CLI.join_group(
+        await SIGNAL_CLI.join_group(
             uri="1337",
             request_id="test_join_group_error",
         )

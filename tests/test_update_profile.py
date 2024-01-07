@@ -16,8 +16,9 @@ SIGNAL_CLI = SignalClient(
 )
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_update_profile_ok():
+async def test_update_profile_ok():
     """
     Test successful SignalClient.update_profile.
     """
@@ -31,7 +32,7 @@ def test_update_profile_ok():
             "id": "test_update_profile_ok",
         },
     )
-    res = SIGNAL_CLI.update_profile(
+    res = await SIGNAL_CLI.update_profile(
         given_name="Test",
         family_name="Test",
         about="Test",
@@ -41,8 +42,9 @@ def test_update_profile_ok():
     pook.reset()
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_update_profile_error():
+async def test_update_profile_error():
     """
     Test unsuccessful SignalClient.update_profile.
     """
@@ -61,7 +63,7 @@ def test_update_profile_error():
         },
     )
     with pytest.raises(Exception) as exc_info:
-        SIGNAL_CLI.update_profile(
+        await SIGNAL_CLI.update_profile(
             given_name="Test",
             family_name="Test",
             about="Test",

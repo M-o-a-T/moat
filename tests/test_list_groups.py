@@ -73,8 +73,9 @@ RESPONSE_JSON = {
 }
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_list_groups_ok():
+async def test_list_groups_ok():
     """
     Test successful SignalClient.list_groups.
     """
@@ -84,15 +85,16 @@ def test_list_groups_ok():
         reply="200",
         response_json=RESPONSE_JSON,
     )
-    res = SIGNAL_CLI.list_groups()
+    res = await SIGNAL_CLI.list_groups()
     assert isinstance(res, list)
     assert isinstance(res[0], dict)
     assert len(res) == 2
     pook.reset()
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_get_group_ok():
+async def test_get_group_ok():
     """
     Test successful SignalClient.get_group.
     """
@@ -102,7 +104,7 @@ def test_get_group_ok():
         reply="200",
         response_json=RESPONSE_JSON,
     )
-    res = SIGNAL_CLI.get_group(
+    res = await SIGNAL_CLI.get_group(
         groupid="1",
     )
     assert isinstance(res, list)
@@ -111,8 +113,9 @@ def test_get_group_ok():
     pook.reset()
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_list_groups_error():
+async def test_list_groups_error():
     """
     Test unsuccessful SignalClient.list_groups.
     """
@@ -131,7 +134,7 @@ def test_list_groups_error():
         },
     )
     with pytest.raises(Exception) as exc_info:
-        SIGNAL_CLI.list_groups(
+        await SIGNAL_CLI.list_groups(
             request_id="test_list_groups_error",
         )
     assert "Specified account does not exist" in str(exc_info.value)

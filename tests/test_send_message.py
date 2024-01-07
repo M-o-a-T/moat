@@ -24,7 +24,7 @@ IMAGE_BYTEARRAY = bytearray(b64decode(IMAGE))
 
 
 @pook.activate
-def _send_message_ok(
+async def _send_message_ok(
     recipients: list = None,
     message: str = "",
     mention: str = "",
@@ -85,8 +85,7 @@ def _send_message_ok(
             reply="200",
             response_json=response_json,
         )
-        assert (
-            SIGNAL_CLI.send_message(
+        res = await SIGNAL_CLI.send_message(
                 message=message,
                 recipients=recipients,
                 attachments_as_files=attachments_as_files,
@@ -94,6 +93,7 @@ def _send_message_ok(
                 cleanup_attachments=cleanup_attachments,
                 request_id="test_send_message_ok",
             )
+        assert (res
             .get("timestamps")
             .get(1)
             .get("recipients")
@@ -103,7 +103,7 @@ def _send_message_ok(
 
 
 @pook.activate
-def _send_message_error(
+async def _send_message_error(
     recipients: list = None,
     message: str = "",
     mention: str = "",
@@ -158,7 +158,7 @@ def _send_message_error(
                     "id": "test_send_message_error",
                 },
             )
-            SIGNAL_CLI.send_message(
+            await SIGNAL_CLI.send_message(
                 message=message,
                 recipients=recipients,
                 attachments_as_files=attachments_as_files,
@@ -172,97 +172,109 @@ def _send_message_error(
     pook.reset()
 
 
-def test_send_message_ok_text_group():
+@pytest.mark.anyio
+async def test_send_message_ok_text_group():
     """
     Test successful SignalClient.send_message to group with plain text message.
     """
-    _send_message_ok(message="Test", group_id="aabbcc")
+    await _send_message_ok(message="Test", group_id="aabbcc")
 
 
-def test_send_message_error_text_group():
+@pytest.mark.anyio
+async def test_send_message_error_text_group():
     """
     Test unsuccessful SignalClient.send_message to group with plain text message.
     """
-    _send_message_error(message="Test", group_id="aabbcc")
+    await _send_message_error(message="Test", group_id="aabbcc")
 
 
-def test_send_message_ok_text():
+@pytest.mark.anyio
+async def test_send_message_ok_text():
     """
     Test successful SignalClient.send_message with plain text message.
     """
-    _send_message_ok(message="Test")
+    await _send_message_ok(message="Test")
 
 
-def test_send_message_error_text():
+@pytest.mark.anyio
+async def test_send_message_error_text():
     """
     Test unsuccessful SignalClient.send_message with plain text message.
     """
-    _send_message_error(message="Test")
+    await _send_message_error(message="Test")
 
 
-def test_send_message_ok_text_mention():
+@pytest.mark.anyio
+async def test_send_message_ok_text_mention():
     """
     Test successful SignalClient.send_message with plain text message and mention.
     """
-    _send_message_ok(message="Test", mention="0:0:+491337")
+    await _send_message_ok(message="Test", mention="0:0:+491337")
 
 
-def test_send_message_error_text_mention():
+@pytest.mark.anyio
+async def test_send_message_error_text_mention():
     """
     Test unsuccessful SignalClient.send_message with plain text message and mention.
     """
-    _send_message_error(
+    await _send_message_error(
         message="Test",
         mention="0:0:+491337",
         exception="Invalid mention syntax",
     )
 
 
-def _send_message_ok_attachments_as_files(**kwargs):
+@pytest.mark.anyio
+async def _send_message_ok_attachments_as_files(**kwargs):
     """
     Test successful SignalClient.send_message with attachments_as_files and params.
     """
     _, filename = mkstemp(suffix="png")
     with open(filename, "wb") as f_h:
         f_h.write(b64decode(IMAGE))
-    _send_message_ok(attachments_as_files=[filename], **kwargs)
+    await _send_message_ok(attachments_as_files=[filename], **kwargs)
     return filename
 
 
-def test_send_message_ok_attachments_as_files_keep():
+@pytest.mark.anyio
+async def test_send_message_ok_attachments_as_files_keep():
     """
     Test successful SignalClient.send_message with attachments_as_files and keep files.
     """
-    filename = _send_message_ok_attachments_as_files()
+    filename = await _send_message_ok_attachments_as_files()
     assert os.path.exists(filename)
 
 
-def test_send_message_ok_attachments_as_files_cleanup():
+@pytest.mark.anyio
+async def test_send_message_ok_attachments_as_files_cleanup():
     """
     Test successful SignalClient.send_message with attachments_as_files and cleanup files.
     """
-    filename = _send_message_ok_attachments_as_files(cleanup_attachments=True)
+    filename = await _send_message_ok_attachments_as_files(cleanup_attachments=True)
     assert not os.path.exists(filename)
 
 
-def test_send_message_error_attachments_as_files():
+@pytest.mark.anyio
+async def test_send_message_error_attachments_as_files():
     """
     Test unsuccessful SignalClient.send_message with attachments_as_files.
     """
-    _send_message_error(
+    await _send_message_error(
         attachments_as_files=["/foo/bar.gif"], exception="FileNotFoundError"
     )
 
 
-def test_send_message_ok_attachments_as_bytes():
+@pytest.mark.anyio
+async def test_send_message_ok_attachments_as_bytes():
     """
     Test successful SignalClient.send_message with attachments_as_bytes.
     """
-    _send_message_ok(attachments_as_bytes=[IMAGE_BYTEARRAY])
+    await _send_message_ok(attachments_as_bytes=[IMAGE_BYTEARRAY])
 
 
-def test_send_message_error_attachments_as_bytes():
+@pytest.mark.anyio
+async def test_send_message_error_attachments_as_bytes():
     """
     Test unsuccessful SignalClient.send_message with attachments_as_bytes.
     """
-    _send_message_error(attachments_as_bytes=[IMAGE_BYTEARRAY])
+    await _send_message_error(attachments_as_bytes=[IMAGE_BYTEARRAY])

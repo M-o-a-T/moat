@@ -5,6 +5,7 @@ Test for SignalClient.version
 
 
 import pook
+import pytest
 from packaging import version
 
 #  pylint: disable=import-error
@@ -16,12 +17,13 @@ SIGNAL_CLI = SignalClient(
 )
 
 
-@pook.activate
-def test_version():
+@pytest.mark.anyio
+async def test_version():
     """
     Test successful SignalClient.version.
     """
     # pylint: disable=protected-access
+    pook.activate()
     pook.post(
         SIGNAL_CLI._endpoint,
         reply="200",
@@ -31,7 +33,7 @@ def test_version():
             "id": "test_version",
         },
     )
-    res = SIGNAL_CLI.version
+    res = await SIGNAL_CLI.version
     assert isinstance(res, str)
     assert version.parse(res) > version.parse("0.0.1")
     pook.reset()

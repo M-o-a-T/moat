@@ -16,8 +16,9 @@ SIGNAL_CLI = SignalClient(
 )
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_send_reaction_ok():
+async def test_send_reaction_ok():
     """
     Test successful SignalClient.send_reaction.
     """
@@ -39,7 +40,7 @@ def test_send_reaction_ok():
             "id": "test_send_reaction_ok",
         },
     )
-    res = SIGNAL_CLI.send_reaction(
+    res = await SIGNAL_CLI.send_reaction(
         recipient="+491337",
         emoji="✅",
         target_author="+4942",
@@ -50,8 +51,9 @@ def test_send_reaction_ok():
     pook.reset()
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_send_reaction_error():
+async def test_send_reaction_error():
     """
     Test unsuccessful SignalClient.send_reaction.
     """
@@ -70,7 +72,7 @@ def test_send_reaction_error():
         },
     )
     with pytest.raises(Exception) as exc_info:
-        SIGNAL_CLI.send_reaction(
+        await SIGNAL_CLI.send_reaction(
             recipient="+491337",
             emoji="✅",
             target_author="+4942",

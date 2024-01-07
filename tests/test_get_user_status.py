@@ -17,8 +17,9 @@ SIGNAL_CLI = SignalClient(
 )
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_get_user_status_ok():
+async def test_get_user_status_ok():
     """
     Test successful SignalClient.get_user_status.
     """
@@ -39,7 +40,7 @@ def test_get_user_status_ok():
             "id": "test_get_user_status_ok",
         },
     )
-    res = SIGNAL_CLI.get_user_status(
+    res = await SIGNAL_CLI.get_user_status(
         recipients=["+491337"],
     )
     assert j_search(
@@ -50,8 +51,9 @@ def test_get_user_status_ok():
     pook.reset()
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_get_user_status_error():
+async def test_get_user_status_error():
     """
     Test unsuccessful SignalClient.get_user_status.
     """
@@ -70,7 +72,7 @@ def test_get_user_status_error():
         },
     )
     with pytest.raises(Exception) as exc_info:
-        SIGNAL_CLI.get_user_status(
+        await SIGNAL_CLI.get_user_status(
             recipients=["+491337"],
             request_id="test_get_user_status_error",
         )

@@ -23,8 +23,9 @@ RESPONSE_JSON_OK = {
 }
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_register_ok():
+async def test_register_ok():
     """
     Test successful SignalClient.register.
     """
@@ -34,14 +35,15 @@ def test_register_ok():
         reply="200",
         response_json=RESPONSE_JSON_OK,
     )
-    res = SIGNAL_CLI.register()
+    res = await SIGNAL_CLI.register()
     assert isinstance(res, dict)
     assert not res
     pook.reset()
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_register_error():
+async def test_register_error():
     """
     Test unsuccessful SignalClient.register.
     """
@@ -60,15 +62,16 @@ def test_register_error():
         },
     )
     with pytest.raises(Exception) as exc_info:
-        SIGNAL_CLI.register(
+        await SIGNAL_CLI.register(
             request_id="test_register_error",
         )
     assert "Method requires valid account parameter" in str(exc_info.value)
     pook.reset()
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_verify_ok():
+async def test_verify_ok():
     """
     Test successful SignalClient.verify.
     """
@@ -78,7 +81,7 @@ def test_verify_ok():
         reply="200",
         response_json=RESPONSE_JSON_OK,
     )
-    res = SIGNAL_CLI.verify(
+    res = await SIGNAL_CLI.verify(
         verification_code="42",
     )
     assert isinstance(res, dict)
@@ -86,8 +89,9 @@ def test_verify_ok():
     pook.reset()
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_verify_error():
+async def test_verify_error():
     """
     Test unsuccessful SignalClient.verify.
     """
@@ -106,7 +110,7 @@ def test_verify_error():
         },
     )
     with pytest.raises(Exception) as exc_info:
-        SIGNAL_CLI.verify(
+        await SIGNAL_CLI.verify(
             verification_code="42",
             request_id="test_verify_error",
         )

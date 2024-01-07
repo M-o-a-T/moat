@@ -16,8 +16,9 @@ SIGNAL_CLI = SignalClient(
 )
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_quit_group_ok():
+async def test_quit_group_ok():
     """
     Test successful SignalClient.quit_group.
     """
@@ -32,16 +33,17 @@ def test_quit_group_ok():
         },
     )
     assert (
-        SIGNAL_CLI.quit_group(
+        (await SIGNAL_CLI.quit_group(
             groupid="1337",
-        ).get("timestamp")
+        )).get("timestamp")
         == 1
     )
     pook.reset()
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_quit_group_error():
+async def test_quit_group_error():
     """
     Test unsuccessful SignalClient.quit_group.
     """
@@ -60,7 +62,7 @@ def test_quit_group_error():
         },
     )
     with pytest.raises(Exception) as exc_info:
-        SIGNAL_CLI.quit_group(
+        await SIGNAL_CLI.quit_group(
             groupid="1337",
             request_id="test_quit_group_error",
         )

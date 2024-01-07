@@ -16,8 +16,9 @@ SIGNAL_CLI = SignalClient(
 )
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_update_group_ok():
+async def test_update_group_ok():
     """
     Test successful SignalClient.update_group.
     """
@@ -36,7 +37,7 @@ def test_update_group_ok():
         },
     )
     assert (
-        SIGNAL_CLI.update_group(
+        await SIGNAL_CLI.update_group(
             name="TEST",
             members=["+491337"],
         )
@@ -45,8 +46,9 @@ def test_update_group_ok():
     pook.reset()
 
 
+@pytest.mark.anyio
 @pook.activate
-def test_update_group_error():
+async def test_update_group_error():
     """
     Test unsuccessful SignalClient.update_group.
     """
@@ -65,7 +67,7 @@ def test_update_group_error():
         },
     )
     with pytest.raises(Exception) as exc_info:
-        SIGNAL_CLI.update_group(
+        await SIGNAL_CLI.update_group(
             name="TEST",
             members=["+491337"],
             request_id="test_update_group_error",

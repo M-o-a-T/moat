@@ -348,7 +348,6 @@ class Data:
 
     force_on = False
     heat_dest = None
-    pellet_on = None
 
     def __init__(self, cfg, cl, record=None):
         self._cfg = cfg
@@ -373,6 +372,7 @@ class Data:
             self.pid[k] = APID(self,k,v)
 
         self.state.setdefault("heat_ok", False)
+        self.state.setdefault("pellet_on", None)
 
         try:
             path = self.cfg.output.flow.path
@@ -671,7 +671,7 @@ class Data:
             # State handling
 
             if run == Run.off:  # nothing happens
-                if self.pellet_on:
+                if self.state.pellet_on:
                     r = "pell"
                 if not cm_main:
                     r = "main"
@@ -783,7 +783,7 @@ class Data:
                 self.log_hc(6)
 
             # turn off if the pellet burner is warm
-            if self.pellet_on and self.heat_dest <= self.m_pellet - 1:
+            if self.state.pellet_on and self.heat_dest <= self.m_pellet - 1:
                 print("OFF 2",self.heat_dest, self.m_pellet)
                 run = Run.off
                 continue
@@ -869,7 +869,9 @@ class Data:
 
     async def run_set_pellet(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """run the pellet burner when it's too cold for the heat pump"""
-        run = None
+        run = self.state.pellet_on
+        if run is not None:
+            await self._cl.set(self.cfg.cmd.pellet.power, run)
         task_status.started()
 
         while True:
@@ -900,7 +902,7 @@ class Data:
                     round(self.heat_dest + 0.8, 1),
                     idem=True,
                 )
-            self.pellet_on = run
+            self.state.pellet_on = run
 
     async def run_set_heat(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """set the goal for heating"""
@@ -947,6 +949,12 @@ class Data:
                 logger.debug("HZ: %.1f %.1f", ht, t_cur)
                 await self._cl.set(cf.setting, int(ht + 0.8), idem=True)
                 self.heat_dest = ht
+                if self.state.pellet_on:
+                    await self._cl.set(
+                        self.cfg.cmd.pellet.temp,
+                        round(ht + 0.8, 1),
+                        idem=True,
+                    )
 
                 return delay
 

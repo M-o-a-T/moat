@@ -814,13 +814,14 @@ class Data:
                         self.cfg.setting.heat.mode.on,
                     )
                 self.state.heat_ok = True
+
             else:
                 # wait
                 self.log_hc(6)
 
             # turn off if the pellet burner is warm
-            if self.state.pellet_on and self.heat_dest <= self.m_pellet - 1:
-                print("OFF 2",self.heat_dest, self.m_pellet)
+            if self.state.pellet_on and self.m_pellet >= t_low:
+                print("OFF 2",self.m_pellet,t_low)
                 run = Run.off
                 continue
 

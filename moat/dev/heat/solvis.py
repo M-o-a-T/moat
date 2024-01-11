@@ -716,7 +716,8 @@ class Data:
                 if cm_wp is not False:
                     cm_wp = False
                     await self.cl_set(self.cfg.feedback.wp, self.cm_wp)
-                    print("OFF 7")
+                    if run != Run.off:
+                        print("OFF 7    ")
                     run = Run.off
                     continue
             else:

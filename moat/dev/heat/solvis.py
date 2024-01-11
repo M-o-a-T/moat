@@ -148,7 +148,7 @@ setting:
             cmd: !P home.ass.dyn.switch.heizung.night_mode.cmd
             state: !P home.ass.dyn.switch.heizung.night_mode.state
     water: !P heat.s.water.temp         # c_water
-    passthru: !P heat.s.pump.pass       # m_passthru
+
 lim:
     pellet:
       start:
@@ -1468,7 +1468,7 @@ class Data:
             await tg.start(self._kv, cfg.setting.heat.day, "c_heat")
             await tg.start(self._kv, cfg.setting.heat.night, "c_heat_night")
             await tg.start(self._kv, cfg.setting.water, "c_water")
-            await tg.start(self._kv, cfg.setting.passthru, "m_passthru")
+            #await tg.start(self._kv, cfg.setting.passthru, "m_passthru")
             await tg.start(self._kv, cfg.sensor.pump["in"], "t_in")
             await tg.start(self._kv, cfg.sensor.pump["out"], "t_out")
             await tg.start(self._kv, cfg.sensor.temp.heat, "t_heat")
@@ -1530,7 +1530,7 @@ class Data:
         await fkv("c_heat")
         await fkv("c_heat_night")
         await fkv("c_water")
-        await fkv("m_passthru")
+        #await fkv("m_passthru")
         await fkv("t_in")
         await fkv("t_out")
         await fkv("t_heat")

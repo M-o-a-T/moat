@@ -710,7 +710,9 @@ class Data:
 
             # Process the main switch
 
-            if not self.cm_wp or bool(self.m_errors):
+            if self.m_ice:
+                pass
+            elif not self.cm_wp or bool(self.m_errors):
                 if cm_wp is not False:
                     cm_wp = False
                     await self.cl_set(self.cfg.feedback.wp, self.cm_wp)

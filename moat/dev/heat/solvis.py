@@ -521,7 +521,9 @@ class Data:
 
     async def log_zero(self):
         "log zero values for all PIDs"
-        for pid in self.pid.values():
+        for name,pid in self.pid.items():
+            if name.startswith("p_"):
+                continue
             await pid.log_value(0)
 
     async def set_load(self, p):

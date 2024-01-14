@@ -757,7 +757,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
 
     if wrap:
         pass
-    elif logging.root.handlers:
+    elif hasattr(logging.root,"_MoaT"):
         logging.debug("Logging already set up")
     else:
         # Configure logging. This is a somewhat arcane art.
@@ -782,6 +782,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
             logger.level = logging.DEBUG
             for p in sys.path:
                 logger.debug("Path: %s", p)
+        logging.root._MoaT = True
 
     obj.logger = logging.getLogger(name)
 

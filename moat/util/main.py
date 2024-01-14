@@ -579,7 +579,7 @@ class MainLoader(Loader):
     add_help_option=False,
     invoke_without_command=True,
 )  # , __file__, "command"))
-@click.option("-v", "--verbose", count=True, help="Be more verbose. Can be used multiple times.")
+@click.option("-V", "--verbose", count=True, help="Be more verbose. Can be used multiple times.")
 @click.option("-L", "--debug-loader", is_flag=True, help="Debug submodule loading.")
 @click.option("-q", "--quiet", count=True, help="Be less verbose. Opposite of '--verbose'.")
 @click.option("-D", "--debug", count=True, help="Enable debug speed-ups (smaller keys etc).")
@@ -591,18 +591,13 @@ class MainLoader(Loader):
 )
 @click.option("-c", "--cfg", type=click.Path("r"), default=None, help="Configuration file (YAML).")
 @click.option(
-    "-C",
-    "--conf",
-    multiple=True,
-    help="Override a config entry. Example: '-C server.bind_default.port=57586'",
-)
-@click.option(
     "-h",
     "-?",
     "--help",
     is_flag=True,
     help="Show help. Subcommands only understand '--help'.",
 )
+@attr_args(par_name="Config item")
 @click.pass_context
 async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redefined-builtin
     """
@@ -626,12 +621,12 @@ async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redef
 def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statements
     main=main_,
     *,
+    vars_,eval_,path_,
     name=None,
     sub_pre=None,
     sub_post=None,
     ext_pre=None,
     ext_post=None,
-    conf=(),
     cfg=None,
     CFG=None,
     args=None,
@@ -650,7 +645,6 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     name: command name, defaults to {main}'s toplevel module name.
     {sub,ext}_{pre,post}: commands to load in submodules or extensions.
 
-    conf: a list of additional config changes
     cfg: configuration file, default: various locations based on {name}, False=don't load
     CFG: default configuration (dir or file), relative to caller
          Default: load from name._config
@@ -747,16 +741,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     obj.debug = verbose
     obj.DEBUG = debug
 
-    for k in conf:
-        # ruff:noqa:PLW2901 # var overwritten
-        try:
-            k, v = k.split("=", 1)
-        except ValueError:
-            v = NotGiven
-        else:
-            with suppress(Exception):  # pylint: disable=broad-except
-                v = path_eval(v)
-        obj.cfg._update(P(k), v)  # pylint: disable=protected-access
+    obj.cfg = process_args(obj.cfg, vars_,eval_,path_)
 
     if wrap:
         pass

@@ -7,6 +7,7 @@ from typing import Awaitable
 
 import importlib
 import logging
+import logging.config
 import os
 import sys
 from collections import defaultdict
@@ -14,7 +15,6 @@ from collections.abc import Mapping
 from contextlib import suppress
 from contextvars import ContextVar
 from functools import partial
-from logging.config import dictConfig
 from pathlib import Path
 
 from .dict import attrdict, to_attrdict
@@ -45,6 +45,9 @@ this_load = ContextVar("this_load", default=None)
 
 NoneType = type(None)
 
+def _no_config(*a,**k):
+    import warnings
+    warnings.warn("Call to logging config ignored", stacklevel=2)
 
 def attr_args(proc=None, with_path=True, with_eval=True, with_proxy=False):
     """
@@ -775,7 +778,12 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         for k in log:
             k, v = k.split("=")
             lcfg["loggers"].setdefault(k, {})["level"] = v
-        dictConfig(lcfg)
+        logging.config.dictConfig(lcfg)
+
+        logging.basicConfig = _no_config
+        logging.config.dictConfig = _no_config
+        logging.config.fileConfig = _no_config
+
         logging.captureWarnings(verbose > 0)
         logger.disabled = False
         if debug_loader:

@@ -49,7 +49,7 @@ def _no_config(*a,**k):
     import warnings
     warnings.warn("Call to logging config ignored", stacklevel=2)
 
-def attr_args(proc=None, with_path=True, with_eval=True, with_proxy=False):
+def attr_args(proc=None, with_path=True, with_eval=True, with_proxy=False, par_name="Parameter"):
     """
     Attach the standard ``-v``/``-e``/``-p`` arguments to a ``click.command``.
     Passes ``vars_``/``eval_``/``path_`` args.
@@ -73,7 +73,7 @@ def attr_args(proc=None, with_path=True, with_eval=True, with_proxy=False):
             nargs=2,
             type=(P, P),
             multiple=True,
-            help="Parameter (name value), as path",
+            help=f"{par_name} (name value), as path",
             hidden=not with_path,
         )(proc)
 
@@ -91,7 +91,7 @@ def attr_args(proc=None, with_path=True, with_eval=True, with_proxy=False):
             nargs=2,
             type=(P, str),
             multiple=True,
-            help="Parameter (name value), evaluated",
+            help=f"{par_name} (name value), evaluated",
             hidden=not with_eval,
         )(proc)
 
@@ -102,7 +102,7 @@ def attr_args(proc=None, with_path=True, with_eval=True, with_proxy=False):
             nargs=2,
             type=(P, str),
             multiple=True,
-            help="Parameter (name value)",
+            help=f"{par_name} (name value)",
         )(proc)
 
         if with_proxy:

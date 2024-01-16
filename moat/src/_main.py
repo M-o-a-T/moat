@@ -797,5 +797,5 @@ async def build(version, no_test, no_commit, no_dirty, cache):
 add_repr(tomlkit.items.String)
 add_repr(tomlkit.items.Integer)
 add_repr(tomlkit.items.Bool, bool)
-add_repr(tomlkit.items.MutableMapping)
-add_repr(tomlkit.items.MutableSequence)
+add_repr(tomlkit.items.AbstractTable)
+add_repr(tomlkit.items.Array)

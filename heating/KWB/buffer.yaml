@@ -27,31 +27,30 @@ regs:
 
     temperatur:
       repeat:
-        n: 15
+        n: 5
         start: 1
         offset: 34
         data:
-          ist:
-            repeat:
-              n: 15
-              start: 0
-              offset: 2
-              data:
-                status:
-                  len: 1
-                  reg_type: i
-                  register: 8709
-                  type: int
-                  values:
-                    ref: !P enum.system_sensor_status_t
-                value:
-                  _doc: Temperature 1 (value)
-                  len: 1
-                  reg_type: i
-                  register: 8708
-                  scale: -1
-                  type: int
-                  unit: °C
+          repeat:
+            n: 15
+            start: 0
+            offset: 2
+            data:
+              status:
+                len: 1
+                reg_type: i
+                register: 8709
+                type: int
+                values:
+                  ref: !P enum.system_sensor_status_t
+              value:
+                _doc: Temperature 1 (value)
+                len: 1
+                reg_type: i
+                register: 8708
+                scale: -1
+                type: int
+                unit: °C
     pumpe:
       repeat:
         n: 15
@@ -88,7 +87,7 @@ regs:
           _doc: Select program
           len: 1
           reg_type: h
-          register: 24774
+          register: 24760
           type: int
           values:
             ref: !P enum.puffer_programm_t
@@ -102,7 +101,7 @@ regs:
             _doc: Temp. min/max (max)
             len: 1
             reg_type: h
-            register: 24806
+            register: 24778
             scale: -1
             type: int
             unit: °C
@@ -110,7 +109,7 @@ regs:
             _doc: Temp. min/max (min)
             len: 1
             reg_type: h
-            register: 24805
+            register: 24777
             scale: -1
             type: int
             unit: °C

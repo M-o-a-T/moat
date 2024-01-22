@@ -306,8 +306,9 @@ regs:
         register: 33280
         len: 1
         reg_type: i
-        type: uint
-        factor: 25600
+        type: bit
+      _doc:
+        14: switch heat/warmwater
 
   analog:
     in:

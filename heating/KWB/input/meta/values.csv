@@ -21,6 +21,8 @@ ak_kesselprogramm_t	1	Time program
 ak_kesselprogramm_t	2	Continuous operation
 ak_kesselprogramm_t	3	Modbus temperature
 ak_kesselprogramm_t	4	Modbus output+temperature
+system_ein_aus_t	0	Off
+system_ein_aus_t	1	On
 system_sensor_status_t	0	Faulty
 system_sensor_status_t	1	Missing
 system_sensor_status_t	2	OK

@@ -13,4 +13,10 @@ Changes to the API:
 
 ## Support
 
-If you like what i'm doing, you can support me via [Paypal](https://paypal.me/morph027), [Ko-Fi](https://ko-fi.com/morph027) or [Patreon](https://www.patreon.com/morph027).
+The original author is Stefan Heitmüller <stefan.heitmueller@gmx.com>.
+He can be supported via [Paypal](https://paypal.me/morph027), [Ko-Fi](https://ko-fi.com/morph027) or [Patreon](https://www.patreon.com/morph027).
+
+The async support and MoaT integration is by Matthias Urlichs
+<matthias@urlichs.de>. Supporting MoaT is possible via
+[Paypal](https://paypal.me/MMoooaaTT) or bank transfer
+(DE34430609671145580100, GENODEM1GLS).

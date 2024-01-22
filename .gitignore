@@ -4,3 +4,4 @@
 pytest.xml
 dist
 build
+/.hypothesis/

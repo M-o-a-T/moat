@@ -24,13 +24,11 @@ from moat.util import (
 from moat.micro.cmd.tree.dir import Dispatch, SubDispatch
 from moat.micro.cmd.util.part import get_part
 from moat.micro.path import copytree
-from moat.micro.proto.stream import RemoteBufAnyio
 from moat.micro.stacks.util import TEST_MAGIC
 from moat.micro.util import run_update
 from moat.util.main import load_subgroup
 
 from .compat import idle, log
-from .direct import DirectREPL
 
 import asyncclick as click
 
@@ -174,6 +172,8 @@ async def setup(
         raise click.UsageError("You can't use 'watch','mount', or 'run' concurrently.")
 
     from .path import ABytes, MoatDevPath, copy_over
+    from .proto.stream import RemoteBufAnyio
+    from .direct import DirectREPL
 
     async with (
             Dispatch(cfg, run=True) as dsp,

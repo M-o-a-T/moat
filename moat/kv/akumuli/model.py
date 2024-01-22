@@ -125,7 +125,7 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
     async def setup(self):
         await super().setup()
         if self._work is not None:
-            await self._work.cancel()
+            self._work.cancel()
             self._work = None
         if self.server is None:
             return

@@ -265,7 +265,7 @@ class CPID(PID):
             t = time()
         self.t0 = t
         self.i0 = o-(self.state.setpoint-i)*self.Kp
-        self.e0 = 0
+        self.e0 = self.state.setpoint-i
 
     def __call__(self, i, t=None, split=False):
         if t is None:

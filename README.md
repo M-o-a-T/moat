@@ -53,7 +53,7 @@ time-until-absolute-date calculator and a msgpack codec.
 
 ## Modules
 
-### Libraries
+### Components
 
 * dbus: an async DBus client.
 
@@ -68,16 +68,19 @@ time-until-absolute-date calculator and a msgpack codec.
 
 * micro: Support for MoaT sattelites running MicroPython
 
-
-### MoaT parts
-
-* main, util: See above.
-
 * kv: distributed masterless eventually-consistent key-value storage.
 
 * ems: Battery management, photovoltaics, …
 
 * src: MoaT source code management
+
+* dev: support for specific devices
+
+
+### Support Libraries
+
+* pid: a PID controller with anti-wind-up, saveable state, bumpless transfer, and
+  measurement noise suppression.
 
 
 ### MoaT-KV components
@@ -89,30 +92,44 @@ re-synchronized upon reconnection.
 
 "moat.kv" is currently named "distkv". Conversion to MoaT is planned.
 
-* kv-akumuli: Data storage to [Akumuli](https://docs.akumuli.org/), an
+* akumuli: Data storage to [Akumuli](https://docs.akumuli.org/), an
   efficient light-weight time series database
 
-* kv-gpio: Connecting Moat-KV and MoaT-GPIO
+* gpio: Connecting Moat-KV and MoaT-GPIO
 
-* kv-hass: Use MoaT-KV as the MQTT back-end to Home Assistant
+* hass: Use MoaT-KV as the MQTT back-end to Home Assistant
 
-* kv-inv: Network inventory management (hosts, networks, VLANs, links between hosts)
+* inv: Network inventory management (hosts, networks, VLANs, links between hosts)
 
-* kv-knx: Link with KNX building automation networks
+* knx: Link with KNX building automation networks
 
-* kv-owfs: Connecting 1wire sensors
+* owfs: Connecting 1wire sensors
 
-* kv-wago: A rudimentary interface for WAGO 330 controllers
+* wago: A rudimentary interface for WAGO 330 controllers
 
 
 ### MoaT-EMS components
 
 EMS is an acronym for "Energy Management System".
 
-* ems-battery: Battery management
+* battery: Battery management
 
-* ems-inv: Inverter management
+* inv: Inverter management
 
-* ems-sched: Energy storage scheduling
+* sched: Energy storage scheduling
 
 More will follow.
+
+### MoaT-dev support
+
+* heat: example for controlling a home's heating system (heat exchanger,
+  pellet boiler, buffer for hot water and radiator-based heating).
+
+
+# Support
+
+Supporting MoaT is possible via [Paypal](https://paypal.me/MMoooaaTT) or
+bank transfer (DE34430609671145580100, GENODEM1GLS).
+
+Direct support via email or Zoom/Teamviewer is also available.
+Contact [Matthias Urlichs](mailto:urlichs@m-u-it.de) for details.

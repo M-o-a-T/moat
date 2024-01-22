@@ -1,6 +1,6 @@
 # flake8: noqa
 
-freeze("$(PORT_DIR)/modules")
+#freeze("$(PORT_DIR)/modules")
 
 require("copy")
 require("collections")

@@ -581,7 +581,7 @@ class MainLoader(Loader):
 )  # , __file__, "command"))
 @click.option("-V", "--verbose", count=True, help="Be more verbose. Can be used multiple times.")
 @click.option("-L", "--debug-loader", is_flag=True, help="Debug submodule loading.")
-@click.option("-q", "--quiet", count=True, help="Be less verbose. Opposite of '--verbose'.")
+@click.option("-Q", "--quiet", count=True, help="Be less verbose. Opposite of '--verbose'.")
 @click.option("-D", "--debug", count=True, help="Enable debug speed-ups (smaller keys etc).")
 @click.option(
     "-l",

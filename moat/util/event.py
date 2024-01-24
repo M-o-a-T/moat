@@ -1,5 +1,5 @@
 """
-This module contains various helper functions and classes.
+This module contains an awaitable value.
 """
 from __future__ import annotations
 

@@ -5,31 +5,14 @@ Utilities for Python
 This is a Python "util" submodule with code that I habitually use in so
 many projects that I decided to split it off into its own git archive.
 
-This code is not a Python module. The idea is to add it as a submodule to
-your own Python code::
-
-   git submodule add git@github.com:smurfix/util-py.git src/your_module/util 
-
-and then relative-import::
-
-   from .util import attrdict
-
 Feel free to extend and embrace. Patches welcome.
 
 
 Features
 ========
 
-A few. Read the code, I didn't get around to documenting all of that yet.
-
-times
-+++++
-
-This code implements calculating an offset to an under-specified future
-time. Like "how long until next Wednesday 8 am"?
-
-The code also supports the inverse question, as in "how long until it's no
-longer Wednesday 8 am".
+A few. Read the code and the subpackages' documentation; I didn't get
+around to documenting all of that yet.
 
 
 License

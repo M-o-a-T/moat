@@ -20,6 +20,10 @@ def exc_iter(exc):
 
 @contextmanager
 def ungroup():
+    """
+    Unwraps single-member exception groups for easier handling in
+    high-level error reporting.
+    """
     try:
         yield None
     except BaseException as e:

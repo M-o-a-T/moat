@@ -1,6 +1,9 @@
 """\
-This code does some time handling.
+This code implements calculating an offset to an under-specified future
+time. Like "how long until next Wednesday 8 am"?
 
+The code also supports the inverse question, as in "how long until it's no
+longer Wednesday 8 am something".
 """
 from __future__ import annotations
 

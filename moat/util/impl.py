@@ -137,7 +137,7 @@ class NotGiven:
 
 
 def count(it):
-    """iter count"""
+    """counts the length of an iterator"""
     n = 0
     for _ in it:
         n += 1
@@ -145,7 +145,7 @@ def count(it):
 
 
 async def acount(it):
-    """async iter count"""
+    """counts the length of an async iterator"""
     n = 0
     async for _ in it:
         n += 1

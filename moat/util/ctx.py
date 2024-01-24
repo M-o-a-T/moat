@@ -1,5 +1,6 @@
 """
-Async Context handling.
+This module affords a helper class to make "async with OBJECT" map
+seamlessly to an async context management method.
 """
 from __future__ import annotations
 

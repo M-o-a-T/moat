@@ -15,13 +15,13 @@ from collections.abc import Mapping
 from contextlib import suppress
 from contextvars import ContextVar
 from functools import partial
-from pathlib import Path
+from pathlib import Path as FSPath
 
 from .dict import attrdict, to_attrdict
 from .impl import NotGiven
 from .merge import merge
 from .msgpack import Proxy
-from .path import P, path_eval
+from .path import P, path_eval, Path
 from .yaml import yload
 from .exc import ungroup
 
@@ -124,7 +124,7 @@ def attr_args(proc=None, with_path=True, with_eval=True, with_proxy=False, par_n
         return _proc(proc)
 
 
-def process_args(val, vars_, eval_, path_, proxy_=(), vs=None):
+def process_args(val, vars_, eval_, path_, proxy_=(), no_path=False, vs=None):
     """
     process ``vars_``/``eval_``/``path_``/``proxy_`` args.
 
@@ -165,6 +165,8 @@ def process_args(val, vars_, eval_, path_, proxy_=(), vs=None):
             yield k, v
         for k, v in path_:
             v = P(v)
+            if no_path:
+                v = tuple(v)
             yield k, v
         for k, v in proxy_:
             v = Proxy(v)
@@ -283,9 +285,9 @@ def load_cfg(name):
         try:
             p = ext.__path__
         except AttributeError:
-            p = (str(Path(ext.__file__).parent),)
+            p = (str(FSPath(ext.__file__).parent),)
         for d in p:
-            fn = Path(d) / "_config.yaml"
+            fn = FSPath(d) / "_config.yaml"
             if fn.is_file():
                 merge(cf, yload(fn, attr=True))
     return cf
@@ -302,7 +304,7 @@ def _namespaces(name):
     try:
         p = ext.__path__
     except AttributeError:
-        p = (str(Path(ext.__file__).parent),)
+        p = (str(FSPath(ext.__file__).parent),)
     logger.debug("NS: %s %s", name, p)
     return pkgutil.iter_modules(p, ext.__name__ + ".")
 
@@ -323,7 +325,7 @@ def _cache_ext(ext_name, pkg_only):
             continue
         logger.debug("ExtC %s", name)
         x = name.rsplit(".", 1)[-1]
-        f = Path(finder.path) / x
+        f = FSPath(finder.path) / x
         _ext_cache[ext_name][x] = f
 
 
@@ -718,9 +720,9 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         CFG = opts.get("CFG")
 
     if isinstance(CFG, str):
-        p = Path(CFG)
+        p = FSPath(CFG)
         if not p.is_absolute():
-            p = Path((main or main_).__file__).parent / p
+            p = FSPath((main or main_).__file__).parent / p
         with open(p) as cfgf:
             CFG = yload(cfgf, attr=True)
     elif CFG is None:

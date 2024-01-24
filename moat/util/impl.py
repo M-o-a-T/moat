@@ -24,7 +24,7 @@ __all__ = [
     "num2byte",
     "byte2num",
     "split_arg",
-    "id36",
+    "num2id",
     "import_",
     "load_from_cfg",
 ]
@@ -258,7 +258,7 @@ def num2id(number, alphabet=_alphabet):
     """
     Encode a number / object ID in baseXX, or whatever.
 
-    No, this doesn't care about id36(739172) or similar.
+    No, this doesn't care about num2id(739172) or similar.
 
     You can pass a different alphabet as the second parameter.
     """

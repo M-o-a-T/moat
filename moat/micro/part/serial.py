@@ -52,8 +52,8 @@ class Serial(AnyioBuf):
         uart_cfg["stopbits"] = p.get("stop", None) or 1  # no 1.5 stop bits
         uart_cfg["bytesize"] = p.get("bits", 8)
 
-        rts = cfg.get("rts_state", 0)
-        dtr = cfg.get("dtr_state", 0)
+        rts = cfg.get("rts_state", 1)
+        dtr = cfg.get("dtr_state", 1)
         rts_flip = cfg.get("rts_flip", 0)
         dtr_flip = cfg.get("dtr_flip", 0)
 

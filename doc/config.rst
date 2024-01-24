@@ -621,16 +621,18 @@ Pins to use, if they need to be specified.
 The default is port specific for ``tx`` and ``rx``, and no pin for the
 others.
 
+The RTS and DTR pins default to being enabled.
+
 rts_state, dtr_state
 --------------------
 
-State of RTS and DTR. Unix only.
+State of RTS and DTR.
 
 rts_flip, dtr_flip
 ------------------
 
 Flag whether RTS and/ir DTR should be inverted briefly when opening the
-port. Unix only.
+port.
 
 flush
 -----

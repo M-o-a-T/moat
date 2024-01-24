@@ -29,24 +29,31 @@ class Serial(FileBuf):
 
     async def stream(self):
         "opens the port, does flushing and RTS/CTS"
+        pin_rts = pin_cts = pin_dtr = None
         cfg = self.cfg
         uart_cfg = {}
+        p = cfg.get("mode", {})
+        fl = p.get("flow", "")
         if "tx" in cfg:
-            uart_cfg["tx"] = M.pin(cfg["tx"])
+            uart_cfg["tx"] = M.Pin(cfg["tx"], M.Pin.OUT)
         if "rx" in cfg:
-            uart_cfg["rx"] = M.pin(cfg["rx"])
+            uart_cfg["rx"] = M.Pin(cfg["rx"])
         if "rts" in cfg:
-            uart_cfg["rts"] = M.pin(cfg["rts"])
+            pin_rts = M.Pin(cfg["rts"], M.Pin.OUT)
+            if "R" in fl:
+                uart_cfg["rts"] = pin_rts
         if "cts" in cfg:
-            uart_cfg["cts"] = M.pin(cfg["cts"])
+            pin_cts = M.Pin(cfg["cts"])
+            if "C" in fl:
+                uart_cfg["cts"] = pin_cts
+        if "dtr" in cfg:
+            pin_dtr = M.Pin(cfg["dtr"], M.Pin.OUT)
         uart_cfg["txbuf"] = cfg.get("txb", 128)
         uart_cfg["rxbuf"] = cfg.get("rxb", 128)
 
-        p = cfg.get("mode", {})
         uart_cfg["baudrate"] = p.get("rate", 9600)
         uart_cfg["parity"] = p.get("parity", None)
         uart_cfg["bits"] = p.get("bits", 8)
-        fl = p.get("flow", "")
         f = 0
         if "C" in fl:
             f |= M.UART.CTS
@@ -54,8 +61,27 @@ class Serial(FileBuf):
             f |= M.UART.RTS
         uart_cfg["stop"] = p.get("stop", None) or 1  # no 1.5 stop bits
 
+        rts = cfg.get("rts_state", 1)
+        dtr = cfg.get("dtr_state", 1)
+        rts_flip = cfg.get("rts_flip", 0)
+        dtr_flip = cfg.get("dtr_flip", 0)
+
+        if rts_flip or dtr_flip:
+            if pin_rts is not None:
+                pin_rts.value(rts_flip ^ rts)
+            if pin.dtr is not None:
+                pin_dtr.value(dtr_flip ^ dtr)
+            await anyio.sleep(0.2)
+        if pin_rts is not None:
+            pin_rts.value(rts)
+        if pin_dtr is not None:
+            pin_dtr.value(dtr)
+        ser.rts = rts
+        ser.dtr = dtr
+
         ser = M.UART(cfg.get("port", 0), **uart_cfg)
         await AC_use(self, ser.deinit)
+
         if t := cfg.get("flush"):
             if t is True:
                 t = 200

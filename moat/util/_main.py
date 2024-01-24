@@ -121,33 +121,6 @@ def msgpack(decode, path):
                 sys.stdout.buffer.write(packer(obj))
 
 
-@cli.command("cfg")
-@click.argument("path", nargs=1)
-@click.pass_obj
-async def cfg_dump(obj, path):
-    """Emit the current configuration as a YAML file.
-
-    You can limit the output by path elements.
-    E.g., "cfg kv.connect.host" will print "localhost".
-
-    Single values are printed with a trailing line feed.
-
-    Dump the whole config with "moat util cfg :".
-    """
-    cfg = obj.cfg
-    for p in P(path):
-        try:
-            cfg = cfg[p]
-        except KeyError:
-            if obj.debug:
-                print("Unknown:", p, file=sys.stderr)
-            sys.exit(1)
-    if isinstance(cfg, str):
-        print(cfg, file=obj.stdout)
-    else:
-        yprint(cfg, stream=obj.stdout)
-
-
 @cli.command("path", help=Path.__doc__, no_args_is_help=True)
 @click.option(
     "-e",
@@ -178,17 +151,34 @@ async def path_(encode, decode, path):
 @cli.command("cfg", help="Retrieve+show a config value", no_args_is_help=True)
 @click.pass_obj
 @click.option("-y", "--yaml", is_flag=True, help="print as YAML")
+@click.option("-e", "--empty", is_flag=True, help="empty string if the key doesn't exist")
 @click.argument("path", nargs=-1, type=P)
-async def cfg_(obj, path, yaml):
-    if yaml:
-        delim = False
-        for p in path:
-            if delim:
-                print("---",file=obj.stdout)
-            v = obj.cfg._get(p)
-            yprint(v, obj.stdout)
-            delim = True
-    else:
-        for p in path:
-            v = obj.cfg._get(p)
-            print(v, file=obj.stdout)
+async def cfg_(obj, path, yaml, empty):
+    """Emit the current configuration as a YAML file.
+
+    You can limit the output by path elements.
+    E.g., "cfg kv.connect.host" will print "localhost".
+
+    Single values are printed with a trailing line feed.
+
+    Dump the whole config with "moat util cfg :".
+    """
+    from .exc import ungroup
+
+    delim = False
+    for p in path:
+        if delim and yaml:
+            print("---",file=obj.stdout)
+        with ungroup():
+            try:
+                v = obj.cfg._get(p)
+            except KeyError:
+                if not empty:
+                    print("Unknown:", p, file=sys.stderr)
+                    sys.exit(1)
+            else:
+                if yaml:
+                    yprint(v, obj.stdout)
+                else:
+                    print(v, file=obj.stdout)
+        delim = True

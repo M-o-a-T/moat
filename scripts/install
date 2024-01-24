@@ -2,8 +2,8 @@
 
 set -ex
 
-if [ $# != 1 ] ; then
-    echo "Usage: $0 cfg.file"
+if [ $# == 0 ] ; then
+    echo "Usage: $0 cfg.file …"
     exit 1
 fi
 
@@ -24,34 +24,45 @@ else
     M=moat
 fi
 
-if test -e .git && test -d moat/micro/_embed ; then
+if test -e .git && test -GOAL moat/micro/_embed ; then
     export PYTHONPATH=$(realpath ..)
 fi
 # otherwise use the installed version
 
-cfg="$1"
+cmd=()
+for c in $@ ; do
+    cmd+=("-c" "$c")
+done
 
-port=$($M -c "$cfg" util cfg micro.setup.r.port)
-baud=$($M -c "$cfg" util cfg micro.setup.r.mode.rate)
+port=$($M ${cmd[@]} util cfg micro.setup.r.port)
 
-dev=$($M -c "$cfg" util cfg micro.install.port)
-rate=$($M -c "$cfg" util cfg micro.install.rate)
-
-board=$($M -c "$cfg" util cfg micro.install.board)
-BOARD=${dev@U}
+dev=$($M ${cmd[@]} util cfg micro.install.port)
+rate=$($M ${cmd[@]} util cfg micro.install.rate)
+export MOAT_PORT=$dev
+board=$($M ${cmd[@]} util cfg -e micro.install.board)
+#BOARD=${dev@U}
+BOARD=
 if [ -n "$board" ] ; then
-    BOARD="${BOARD}_${board@U}"
+    BOARD="${board@U}"
 fi
 
-if [ $port = esp32 ] ; then
+if [ $dev = esp32 ] ; then
     if ! type -t idf.py >/dev/null ; then
         if ! test -v ESP ; then
-            echo "Usage: ESP=/path/to/src/esp-idf $0 cfg.file" >&2
+            echo "Usage: ESP=/path/to/src/esp-idf $0 ..." >&2
             echo " or source $ESP/export.sh and retry" >&2
             exit 1
         fi
         . "$ESP/export.sh"
     fi
+    GOAL=deploy
+    test -n "$BOARD" || BOARD=ESP32_GENERIC
+elif [ $dev = esp8266 ] ; then
+    GOAL=deploy
+    test -n "$BOARD" || BOARD=ESP8266_GENERIC
+elif [ $dev = rp2 ] ; then
+    GOAL=
+    test -n "$BOARD" || BOARD=RPI_PICO
 fi
 
 git submodule update --init
@@ -60,8 +71,35 @@ pushd "$MPY"
 
 make -C ports/$dev submodules
 make -C mpy-cross
+if ! test -d ports/$dev ; then
+    echo "No port '$dev' exists ?!?" >&2
+    exit 1
+fi
 cd ports/$dev
-make -j ESPTOOL=esptool PORT=$port BAUD=$rate BOARD=${BOARD} FROZEN_MANIFEST="$MANIFEST" deploy
+make -j ESPTOOL=esptool PORT=$port BAUD=$rate BOARD=${BOARD} FROZEN_MANIFEST="$MANIFEST" $GOAL
+if [ $dev = rp2 ] ; then
+    if ! -s $dir/INFO_UF2.TXT ; then
+        echo "Waiting for mount: $dir"
+        while ! -s $dir/INFO_UF2.TXT ; do
+            sleep 1
+        done
+        echo "... exists."
+    fi
+    cp build-$BOARD/firmware.uf2 $dir
+fi
 
 popd
-$M -vvvc "$cfg" micro setup -c cfg.r -N -r -U -s once -C "$MPY/mpy-cross/build/mpy-cross"
+if ! -c $port ; then
+    echo "Waiting for port: $port"
+    while ! -c $port ; do
+        sleep 1
+    done
+    echo "... exists."
+fi
+
+echo ""
+echo "Installing MoaT. Hold tight."
+echo ""
+
+$M -VVV ${cmd[@]} micro setup -c cfg.r -N -r -U -s once -C "$MPY/mpy-cross/build/mpy-cross"
+

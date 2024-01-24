@@ -589,7 +589,7 @@ class MainLoader(Loader):
     multiple=True,
     help="Adjust log level. Example: '--log asyncactor=DEBUG'.",
 )
-@click.option("-c", "--cfg", type=click.Path("r"), default=None, help="Configuration file (YAML).")
+@click.option("-c", "--cfg", type=click.Path("r"), default=None, help="Configuration file (YAML).", multiple=True)
 @click.option(
     "-h",
     "-?",
@@ -645,7 +645,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     name: command name, defaults to {main}'s toplevel module name.
     {sub,ext}_{pre,post}: commands to load in submodules or extensions.
 
-    cfg: configuration file, default: various locations based on {name}, False=don't load
+    cfg: configuration file(s), default: various locations based on {name}, False=don't load
     CFG: default configuration (dir or file), relative to caller
          Default: load from name._config
 
@@ -731,7 +731,14 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     obj.stdout = CFG.get("_stdout", sys.stdout)  # used for testing
     obj.CFG = CFG
 
-    cfg = to_attrdict(read_cfg(name, cfg))
+    if isinstance(cfg,(list,tuple)):
+        cf = { }
+        for fn in cfg:
+            merge(cf, read_cfg(name, fn), replace=True)
+        cfg = to_attrdict(cf)
+    else:
+        cfg = to_attrdict(read_cfg(name, cfg))
+
     if cfg:
         merge(cfg, obj.CFG, replace=False)
     else:

@@ -102,5 +102,5 @@ echo ""
 echo "Installing MoaT. Hold tight."
 echo ""
 
-$M -VVV ${cmd[@]} micro setup -c cfg.r -N -r -U -s once -C "$MPY/mpy-cross/build/mpy-cross"
+$M -VVV ${cmd[@]} micro setup -c cfg.r -r -U -s once -C "$MPY/mpy-cross/build/mpy-cross"
 

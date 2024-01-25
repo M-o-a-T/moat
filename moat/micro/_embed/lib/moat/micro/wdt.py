@@ -91,7 +91,7 @@ class WDT:
                     # wait for external trigger
                     # the HW WDT will kill us if it doesn't arrive
                     await self._ping.wait()
-                else:
+                elif self.timeout > 0:
                     # die hard if the external ping doesn't arrive
                     try:
                         await wait_for_ms(self.timeout, self._ping.wait)
@@ -100,6 +100,8 @@ class WDT:
                         for _ in range(10000):
                             pass
                         _reset()
+                else:
+                    await self._ping.wait()
             elif self.wdt is not None:
                 # feed the watchdog when the trigger expires
                 try:  # noqa:SIM105  # no "with suppress" on µPy

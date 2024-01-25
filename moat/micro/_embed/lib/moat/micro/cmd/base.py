@@ -118,6 +118,9 @@ class BaseCmd(Base):
                 self._ready = Event()
             self._stopped = Event()
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self.path} {hex((id(self)>>4)&((1<<(3*5))-1))[2:]}>"
+
     async def setup(self):
         """
         Start up this command.

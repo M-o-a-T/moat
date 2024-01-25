@@ -51,8 +51,7 @@ def main(cfg: str | dict, i:attrdict, fake_end=False):
 
         import network
 
-        if "name" in n:
-            network.hostname(n["name"])
+        network.hostname(n["name"])
         if "country" in n:
             network.country(n["country"])
         if "ap" in n:
@@ -82,7 +81,7 @@ def main(cfg: str | dict, i:attrdict, fake_end=False):
             print(".", end="", file=sys.stderr)
         print(" -", wlan.ifconfig()[0], file=sys.stderr)
 
-    if "net" in cfg:
+    if "net" in cfg and cfg["net"].get("name", None) is not None:
         cfg_network(cfg["net"])
 
     async def _main():

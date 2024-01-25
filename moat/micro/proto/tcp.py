@@ -19,6 +19,25 @@ class Link(AnyioBuf):
         self.host = host
         self.port = port
 
-    async def stream(self):  # noqa:D102
-        s = await anyio.connect_tcp(self.host, self.port)
-        return await AC_use(self, s)
+    async def stream(self):
+        """
+        Open a TCP connection.
+
+        TODO make reconnect behavior on ECONNREFUSED configurable
+        """
+
+        n = 0
+        sl = 0.1
+        while True:
+            try:
+                s = await anyio.connect_tcp(self.host, self.port)
+            except OSError as e:
+                if not isinstance(e,ConnectionRefusedError) and not isinstance(e.__cause__, ConnectionRefusedError):
+                    raise
+                if n > 10:
+                    raise
+                n += 1
+                await anyio.sleep(sl)
+                sl *= 1.3
+            else:
+                return await AC_use(self, s)

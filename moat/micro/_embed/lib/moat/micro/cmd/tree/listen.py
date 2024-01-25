@@ -71,7 +71,6 @@ class BaseListenOneCmd(BaseLayerCmd):
         if (
             self.app is None
             # or not await self.app.is_ready()
-            or self._running
             or self.cfg.get("replace", True)
         ):
             if self.app is not None:

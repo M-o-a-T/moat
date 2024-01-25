@@ -11,7 +11,7 @@ import machine
 
 from moat.rtc import all_rtc,get_rtc,set_rtc
 from moat.util import merge
-from moat.micro.compat import print_exc
+from moat.micro.compat import print_exc, L
 
 import msgpack
 
@@ -95,8 +95,10 @@ def main(cfg: str | dict, i:attrdict, fake_end=False):
         async with Dispatch(cfg, i=i) as dsp:
             if fake_end:
                 from .compat import sleep_ms
-
-                await sleep_ms(1000)
+                if L:
+                    await dsp.wait_ready()
+                else:
+                    await sleep_ms(1000)
                 sys.stdout.write("OK\x04\x04>")
                 await sleep_ms(100)
 

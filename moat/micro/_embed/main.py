@@ -19,7 +19,7 @@ from moat.rtc import get_rtc,set_rtc
 
 cfg = {}
 
-def go(state=None, fake_end=True, free=None):
+def go(state=None, fake_end=True, free=None, cmd=True):
     """
     Start MoaT.
 
@@ -99,6 +99,10 @@ def go(state=None, fake_end=True, free=None):
     cfg = "moat_fb.cfg" if fallback else "moat.cfg"
     i=attrdict(fb=fallback, s=state, ns=new_state, fm=_fm,fa=_fa)
 
+    if cmd:
+        main(cfg, i=i, fake_end=fake_end)
+        return
+
     try:
         main(cfg, i=i, fake_end=fake_end)
 
@@ -138,4 +142,4 @@ def g():
 
 
 if __name__ == "__main__":
-    go()
+    go(cmd=False)

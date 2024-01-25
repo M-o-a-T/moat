@@ -124,7 +124,7 @@ def attr_args(proc=None, with_path=True, with_eval=True, with_proxy=False, par_n
         return _proc(proc)
 
 
-def process_args(val, vars_, eval_, path_, proxy_=(), no_path=False, vs=None):
+def process_args(val, vars_=(), eval_=(), path_=(), proxy_=(), no_path=False, vs=None):
     """
     process ``vars_``/``eval_``/``path_``/``proxy_`` args.
 

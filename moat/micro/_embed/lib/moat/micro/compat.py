@@ -130,30 +130,33 @@ def every(t, p, *a, **k):
     return every_ms(t * 1000, p, *a, **k)
 
 if DEBUG:
-    async def _catch(p,*a,**k):
+    async def _catch(n,p,*a,**k):
         try:
+            print("RRR",n, file=sys.stderr)
             return await p(*a,**k)
         except Exception as exc:
-            print("Error:", repr(exc), file=usys.stderr)
+            print("Error:", n, repr(exc), file=sys.stderr)
             print_exc(exc)
             raise
+        else:
+            print("Done:", n, file=sys.stderr)
 
 class TaskGroup(_tg):
     "anyio.TaskGroup, lightly enhanced"
 
     async def spawn(self, p, *a, _name=None, **k):
         "Starts a task now. Returns something you can cancel."
-        # print("RUN",_name,p,a,k, file=sys.stderr)
         if DEBUG:
-            return self.create_task(_catch(p, *a, **k))  # , name=_name)
+            print("RUN",_name,p,a,k, file=sys.stderr)
+            return self.create_task(_catch(_name, p, *a, **k))  # , name=_name)
         else:
             return self.create_task(p(*a, **k))  # , name=_name)
 
     def start_soon(self, p, *a, _name=None, **k):
         "Starts a task soon."
-        # print("RUN",_name,p,a,k, file=sys.stderr)
         if DEBUG:
-            self.create_task(_catch(p, *a, **k))
+            print("RUN",_name,p,a,k, file=sys.stderr)
+            self.create_task(_catch(_name, p, *a, **k))
         else:
             self.create_task(p(*a, **k))
 
@@ -198,13 +201,20 @@ async def _run_server(tg, s, cb):
     from asyncio import core as _core
 
     while True:
+        if DEBUG:
+            print("WaitServer", file=sys.stderr)
         yield _core._io_queue.queue_read(s)  # noqa:SLF001
+        if DEBUG:
+            print("WaitedServer", file=sys.stderr)
         try:
             s2, addr = s.accept()
-        except Exception:  # noqa:S112
+        except Exception as err:  # noqa:S112
             # Ignore a failed accept
+            print("ErrServer", repr(err), file=sys.stderr)
             continue
 
+        if DEBUG:
+            print("GotServer", file=sys.stderr)
         s2.setblocking(False)
         # XXX uasyncio implementation detail
         s2s = asyncio.StreamReader(s2, {"peername": addr})

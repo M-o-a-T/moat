@@ -11,7 +11,7 @@ import machine
 
 from moat.rtc import all_rtc,get_rtc,set_rtc
 from moat.util import merge
-from moat.micro.compat import print_exc, L
+from moat.micro.compat import print_exc, L, TaskGroup
 
 import msgpack
 
@@ -91,7 +91,8 @@ def main(cfg: str | dict, i:attrdict, fake_end=False):
         from moat.micro.compat import idle
         from moat.util import attrdict
 
-        async with Dispatch(cfg, i=i) as dsp:
+        async with Dispatch(cfg, i=i) as dsp, TaskGroup() as tg:
+            tg.start_soon(dsp.task)
             if fake_end:
                 from .compat import sleep_ms
                 if L:
@@ -101,7 +102,6 @@ def main(cfg: str | dict, i:attrdict, fake_end=False):
                 sys.stdout.write("OK\x04\x04>")
                 await sleep_ms(100)
 
-            await dsp.task()
             await idle()
 
     from moat.micro.compat import run

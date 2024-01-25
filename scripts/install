@@ -78,9 +78,9 @@ fi
 cd ports/$dev
 make -j ESPTOOL=esptool PORT=$port BAUD=$rate BOARD=${BOARD} FROZEN_MANIFEST="$MANIFEST" $GOAL
 if [ $dev = rp2 ] ; then
-    if ! -s $dir/INFO_UF2.TXT ; then
+    if [ ! -s $dir/INFO_UF2.TXT ] ; then
         echo "Waiting for mount: $dir"
-        while ! -s $dir/INFO_UF2.TXT ; do
+        while [ ! -s $dir/INFO_UF2.TXT ] ; do
             sleep 1
         done
         echo "... exists."
@@ -89,9 +89,9 @@ if [ $dev = rp2 ] ; then
 fi
 
 popd
-if ! -c $port ; then
+if [ ! -c $port ] ; then
     echo "Waiting for port: $port"
-    while ! -c $port ; do
+    while [ ! -c $port ] ; do
         sleep 1
     done
     echo "... exists."

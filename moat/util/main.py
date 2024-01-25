@@ -623,7 +623,10 @@ async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redef
 def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statements
     main=main_,
     *,
-    vars_,eval_,path_,
+    vars_=(),
+    eval_=(),
+    path_=(),
+    proxy_=(),
     name=None,
     sub_pre=None,
     sub_post=None,
@@ -750,7 +753,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     obj.debug = verbose
     obj.DEBUG = debug
 
-    obj.cfg = process_args(obj.cfg, vars_,eval_,path_)
+    obj.cfg = process_args(obj.cfg, vars_=vars_,eval_=eval_,path_=path_,proxy_=proxy_)
 
     if wrap:
         pass

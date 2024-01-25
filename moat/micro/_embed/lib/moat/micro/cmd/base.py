@@ -208,9 +208,8 @@ class BaseCmd(Base):
     async def stop(self):
         "Stop this subcommand"
         if self.p_task is None:
-            return  # not running
-        elif self.p_task is False:
-            raise RuntimeError("Collision")
+            self.p_task = False
+            return  # starting up or not running
         self.p_task.cancel()
         await wait_complain(f"Stop {self.path}", 250, self.wait_stopped)
 

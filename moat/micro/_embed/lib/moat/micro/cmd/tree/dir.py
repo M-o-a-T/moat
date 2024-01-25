@@ -7,7 +7,7 @@ from __future__ import annotations
 from functools import partial
 
 from moat.util import Path, import_
-from moat.micro.compat import AC_use, Event, TaskGroup, log, L
+from moat.micro.compat import AC_use, Event, TaskGroup, log, L, Lock
 from moat.micro.cmd.base import ACM_h, BaseCmd, ShortCommandError
 from moat.micro.cmd.base import ACM_h, BaseCmd, ShortCommandError
 
@@ -30,9 +30,11 @@ class BaseSuperCmd(BaseCmd):
     """
 
     tg: TaskGroup = None
+    app_lock:Lock = None
 
     async def setup(self):
         await super().setup()
+        self.app_lock = Lock()
         self.tg = await AC_use(self, TaskGroup())
         await AC_use(self, self.tg.cancel)
 
@@ -47,19 +49,24 @@ class BaseSuperCmd(BaseCmd):
             finally:
                 app.p_task = None
 
-        if app.p_task:
-            await app.reload()
-            return
-        if app.p_task is False:
-            raise RuntimeError("DupStartB")
-        app.p_task = False
-        try:
-            app.p_task = await self.tg.spawn(_run, app)
-            if L:
-                await app.wait_started()
-        except BaseException:
-            app.p_task = None
-            raise
+        async with self.app_lock:
+            if app.p_task:
+                await app.reload()
+                return
+            try:
+                t = await self.tg.spawn(_run, app)
+                if app.p_task is False:
+                    # set by .stop()
+                    t.cancel()
+                    app.p_task = None
+                    return
+
+                app.p_task = t
+                if L:
+                    await app.wait_started()
+            except BaseException as exc:
+                app.p_task = None
+                raise
 
 
 class BaseSubCmd(BaseSuperCmd):

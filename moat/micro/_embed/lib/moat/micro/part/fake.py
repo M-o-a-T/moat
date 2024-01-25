@@ -92,7 +92,7 @@ class ADC(BaseCmd):
             self.rand = random.Random(cfg.seed if "seed" in cfg else None)
         except AttributeError:
             from moat.util.random import Random
-            self.rand = Random(cfg.seed if "seed" in cfg else random.getrandbits(32))
+            self.rand = Random(cfg["seed"] if "seed" in cfg else random.getrandbits(32))
 
     async def cmd_r(self):
         "read current value"

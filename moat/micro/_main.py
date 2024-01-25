@@ -321,7 +321,7 @@ async def boot(obj, state):
 @cli.command(short_help="Send a MoaT command")
 @click.pass_obj
 @click.argument("path", nargs=1, type=P)
-@attr_args(with_path=False, with_proxy=True)
+@attr_args(with_path=True, with_proxy=True)
 async def cmd(obj, path, **attrs):
     """
     Send a MoaT command.
@@ -329,7 +329,7 @@ async def cmd(obj, path, **attrs):
     """
     cfg = obj.cfg
     val = {}
-    val = process_args(val, **attrs)
+    val = process_args(val, no_path=True, **attrs)
     if len(path) == 0:
         raise click.UsageError("Path cannot be empty")
 

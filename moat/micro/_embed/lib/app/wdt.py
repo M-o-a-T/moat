@@ -59,6 +59,14 @@ class Cmd(BaseCmd):
         """
         self.wdt.ping(force=f)
 
+    async def cmd_set(self, t=None):
+        """
+        Set the watchdog timeout.
+
+        Returns the previosu value.
+        """
+        return self.wdt.tmo(t)
+
     async def cmd_info(self):
         """
         Current watchdog state::

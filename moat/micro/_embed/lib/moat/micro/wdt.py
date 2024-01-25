@@ -123,6 +123,16 @@ class WDT:
             if self._ping.is_set():
                 self._ping = Event()
 
+    def tmo(self, timeout=None):
+        """
+        get/set the timeout
+        """
+        t = self.timeout
+        if timeout is not None:
+            self.timeout = timeout
+            self._ping.set()
+        return t
+
     def ping(self, force=False):
         """
         Keepalive trigger for the watchdog.

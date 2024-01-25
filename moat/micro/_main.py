@@ -205,7 +205,7 @@ async def setup(
             else:
                 dst /= dest
             await copy_over(source, dst, cross=cross)
-        if state:
+        if state and not watch:
             await repl.exec(f"f=open('moat.state','w'); f.write({state !r}); f.close(); del f")
         if large:
             await repl.exec(f"f=open('moat.lrg','w'); f.close()", quiet=True)

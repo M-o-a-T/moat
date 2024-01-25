@@ -126,11 +126,11 @@ async def test_stack(tmp_path):
     with cfx.open("w") as f:
         yprint(cfg, f)
 
-    await run("-c", str(cfx), "-vvv", "micro", "setup")
+    await run("-c", str(cfx), "-VVV", "micro", "setup")
     sc = None
 
     def rm(s, **kw) -> Awaitable:
-        return run("-c", str(cfx), "-vvv", "micro", *s.split(), **kw)
+        return run("-c", str(cfx), "-VVV", "micro", *s.split(), **kw)
 
     async with anyio.create_task_group() as tg:
 
@@ -138,7 +138,7 @@ async def test_stack(tmp_path):
         async def r_setup():
             nonlocal sc
             with anyio.CancelScope() as sc:
-                await run("-c", str(cfx), "-vvv", "micro", "run")
+                await run("-c", str(cfx), "-VVV", "micro", "run")
 
         for _ in range(20):
             await anyio.sleep(0.1)

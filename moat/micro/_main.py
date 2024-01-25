@@ -185,8 +185,8 @@ async def setup(
                 DirectREPL(ser) as repl,
             ):
             dst = MoatDevPath(root).connect_repl(repl)
-            await repl.reset(run_main=run)
-            await anyio.sleep(0.5)
+            await repl.reset()
+        await anyio.sleep(2)
 
     async with (
             Dispatch(cfg, run=True) as dsp,

@@ -114,7 +114,8 @@ class WDT:
                     t = T(self.cfg.get("timer",-1))
                 if t is None:
                     raise RuntimeError("no timer")
-                t.init(period=self.timeout, mode=T.ONE_SHOT, callback=lambda _: _reset())
+                if self.timeout:
+                    t.init(period=self.timeout, mode=T.ONE_SHOT, callback=lambda _: _reset())
                 try:
                     await self._ping.wait()
                 finally:

@@ -111,6 +111,7 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
 @click.pass_context
 @click.option("-r", "--run", is_flag=True, help="Run MoaT after updating")
 @click.option("-N", "--reset", is_flag=True, help="Reboot after updating")
+@click.option("-K", "--kill", is_flag=True, help="Reboot initially")
 @click.option(
     "-S",
     "--source",
@@ -153,6 +154,7 @@ async def setup(
     source,
     root,
     dest,
+    kill,
     large,
     no_large,
     run,
@@ -174,6 +176,17 @@ async def setup(
     from .path import ABytes, MoatDevPath, copy_over
     from .proto.stream import RemoteBufAnyio
     from .direct import DirectREPL
+
+    if kill:
+        async with (
+                Dispatch(cfg, run=True) as dsp,
+                dsp.sub_at(*cfg["path"]) as sd,
+                RemoteBufAnyio(sd) as ser,
+                DirectREPL(ser) as repl,
+            ):
+            dst = MoatDevPath(root).connect_repl(repl)
+            await repl.reset(run_main=run)
+            await anyio.sleep(0.5)
 
     async with (
             Dispatch(cfg, run=True) as dsp,

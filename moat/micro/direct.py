@@ -173,6 +173,12 @@ class DirectREPL(SingleAnyioBuf):
         """
         return ast.literal_eval(await self.exec(cmd, quiet=quiet))
 
+    async def reset(self):
+        """
+        Send a hard reset command
+        """
+        await self.exec_raw("import machine; machine.reset()", timeout=0, quiet=False)
+
     async def soft_reset(self, run_main=True):
         """
         :param bool run_main: select if program should be started

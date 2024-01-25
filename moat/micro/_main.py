@@ -232,13 +232,14 @@ async def setup(
             # reset with run_main set should boot into MoaT
 
         if run or watch or mount:
-            o, e = await repl.exec_raw(f"from main import go; go(state={state !r})", timeout=None if watch else 30)
-            if o:
-                print(o)
-            if e:
-                print("ERROR", file=sys.stderr)
-                print(e, file=sys.stderr)
-                sys.exit(1)
+            if not reset:
+                o, e = await repl.exec_raw(f"from main import go; go(state={state !r})", timeout=None if watch else 30)
+                if o:
+                    print(o)
+                if e:
+                    print("ERROR", file=sys.stderr)
+                    print(e, file=sys.stderr)
+                    sys.exit(1)
 
             if watch:
                 while True:

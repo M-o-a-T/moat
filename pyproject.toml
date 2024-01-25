@@ -104,7 +104,7 @@ dependencies = [
   "msgpack",
   "serialpacker >= 0.10.3",
   "pyfuse3 >= 3.2",
-  "moat-util ~= 0.38.0",
+  "moat-util ~= 0.41.0",
   "moat-src ~= 0.5.0",
   "moat-main",
 ]

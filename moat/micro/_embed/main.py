@@ -40,13 +40,25 @@ def go(state=None, fake_end=True, cmd=True):
       hardware watchdog, if available.)
 
     * safe
-      Work normally. Enter Fallback mode next time.
+      Work normally. Unconditionally enter "fallback" mode next time.
+
+    * saferom
+      Work normally. Unconditionally enter "rom" mode next time.
 
     * fallback
       Use the `moat_fb.cfg` config file and the `/fallback` library.
 
     * fbskip
-      Use fallback mode once, then "skip".
+      Use "fallback" mode once, then "skip".
+
+    * fbrom
+      Use "fallback" mode once, then "rom".
+
+    * rom
+      Use the `moat_rom.cfg` config file and the library in Flash.
+
+    * romskip
+      Use "rom" mode once, then "skip".
 
     * once
       Work normally once, then "skip".
@@ -65,11 +77,15 @@ def go(state=None, fake_end=True, cmd=True):
         "once": "skip",
         "skiponce": "std",
         "safe": "fallback",
+        "saferom": "rom",
         "fbskip": "fallback",
+        "fbrom": "rom",
+        "romskip": "rom",
     }
     crash = {
         "std": "fallback",
         "fbskip": "skip",
+        "romskip": "skip",
     }
 
     try:
@@ -92,16 +108,23 @@ def go(state=None, fake_end=True, cmd=True):
         sys.path.remove("/lib")
     sys.path.insert(0, "/lib")
 
-    fallback = False
+    fallback = None
     if state in ("fallback", "fbskip"):
         sys.path.insert(0, "/fallback")
-        fallback = True
+        fallback = "_fb"
+    elif state in ("rom", "romskip"):
+        with suppress(ValueError):
+            sys.path.remove(".frozen")
+        sys.path.insert(0, ".frozen")
+        fallback = "_rom"
+    else:
+        fallback = ""
 
     x = " " * 1000
-    print("Start MoaT:", state, file=sys.stderr)
+    print(f"Start MoaT{fallback}:", state, file=sys.stderr)
     from moat.micro.main import main
 
-    cfg = "moat_fb.cfg" if fallback else "moat.cfg"
+    cfg = f"moat{fallback}.cfg"
     i = attrdict(fb=fallback, s=state, ns=new_state, fm=_fm, fa=_fa)
 
     if cmd:

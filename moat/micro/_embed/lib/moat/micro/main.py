@@ -8,7 +8,7 @@ from __future__ import annotations
 import sys
 
 from moat.util import merge
-from moat.micro.compat import L, TaskGroup
+from moat.micro.compat import L, TaskGroup, sleep_ms
 from moat.rtc import all_rtc
 
 import msgpack
@@ -90,16 +90,12 @@ def main(cfg: str | dict, i: attrdict, fake_end=False):
 
         async with Dispatch(cfg, i=i) as dsp, TaskGroup() as tg:
             tg.start_soon(dsp.task)
+            if L:
+                await dsp.wait_ready()
+            else:
+                await sleep_ms(1000)
             if fake_end:
-                from .compat import sleep_ms
-
-                if L:
-                    await dsp.wait_ready()
-                else:
-                    await sleep_ms(1000)
                 sys.stdout.write("OK\x04\x04>")
-                await sleep_ms(100)
-
             await idle()
 
     from moat.micro.compat import run

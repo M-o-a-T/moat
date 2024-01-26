@@ -4,21 +4,17 @@ Command tree support for MoaT commands
 
 from __future__ import annotations
 
-from functools import partial
+from moat.micro.compat import L
 
-from moat.util import Path, import_
-from moat.micro.compat import AC_use, Event, TaskGroup, log, L
-
-from moat.micro.cmd.base import ACM_h, BaseCmd, ShortCommandError
-from .layer import BaseLayerCmd
 from .dir import BaseSubCmd
+from .layer import BaseLayerCmd
 
 # Typing
 
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import AsyncContextManager, Awaitable, Never
+    from typing import Never
 
     from moat.micro.proto.stack import BaseBuf, BaseMsg
     from moat.micro.stacks.util import BaseConnIter
@@ -65,7 +61,9 @@ class BaseListenOneCmd(BaseLayerCmd):
         """
         Process a connection
         """
-        from moat.micro.cmd.stream.cmdmsg import ExtCmdMsg  # pylint:disable=import-outside-toplevel
+        from moat.micro.cmd.stream.cmdmsg import (
+            ExtCmdMsg,  # pylint:disable=import-outside-toplevel
+        )
 
         app = ExtCmdMsg(self.wrapper(conn), self.cfg)
         if (
@@ -116,7 +114,9 @@ class BaseListenCmd(BaseSubCmd):
         """
         Process a new connection.
         """
-        from moat.micro.cmd.stream.cmdmsg import ExtCmdMsg  # pylint:disable=import-outside-toplevel
+        from moat.micro.cmd.stream.cmdmsg import (
+            ExtCmdMsg,  # pylint:disable=import-outside-toplevel
+        )
 
         conn = self.wrapper(conn)
         app = ExtCmdMsg(conn, self.cfg)

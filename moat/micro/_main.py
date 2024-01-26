@@ -173,27 +173,27 @@ async def setup(
     if bool(watch) + bool(run) + bool(mount) > 1:
         raise click.UsageError("You can't use 'watch','mount', or 'run' concurrently.")
 
+    from .direct import DirectREPL
     from .path import ABytes, MoatDevPath, copy_over
     from .proto.stream import RemoteBufAnyio
-    from .direct import DirectREPL
 
     if kill:
         async with (
-                Dispatch(cfg, run=True) as dsp,
-                dsp.sub_at(*cfg["path"]) as sd,
-                RemoteBufAnyio(sd) as ser,
-                DirectREPL(ser) as repl,
-            ):
-            dst = MoatDevPath(root).connect_repl(repl)
-            await repl.reset()
-        await anyio.sleep(2)
-
-    async with (
             Dispatch(cfg, run=True) as dsp,
             dsp.sub_at(*cfg["path"]) as sd,
             RemoteBufAnyio(sd) as ser,
             DirectREPL(ser) as repl,
         ):
+            dst = MoatDevPath(root).connect_repl(repl)
+            await repl.reset()
+        await anyio.sleep(2)
+
+    async with (
+        Dispatch(cfg, run=True) as dsp,
+        dsp.sub_at(*cfg["path"]) as sd,
+        RemoteBufAnyio(sd) as ser,
+        DirectREPL(ser) as repl,
+    ):
         dst = MoatDevPath(root).connect_repl(repl)
         if source:
             if not dest:
@@ -208,9 +208,9 @@ async def setup(
         if state and not watch:
             await repl.exec(f"f=open('moat.state','w'); f.write({state !r}); f.close(); del f")
         if large:
-            await repl.exec(f"f=open('moat.lrg','w'); f.close()", quiet=True)
+            await repl.exec("f=open('moat.lrg','w'); f.close()", quiet=True)
         elif no_large:
-            await repl.exec(f"import os; os.unlink('moat.lrg')", quiet=True)
+            await repl.exec("import os; os.unlink('moat.lrg')", quiet=True)
 
         if config:
             config = _clean_cfg(get_part(ocfg, config))
@@ -233,7 +233,9 @@ async def setup(
 
         if run or watch or mount:
             if not reset:
-                o, e = await repl.exec_raw(f"from main import go; go(state={state !r})", timeout=None if watch else 30)
+                o, e = await repl.exec_raw(
+                    f"from main import go; go(state={state !r})", timeout=None if watch else 30,
+                )
                 if o:
                     print(o)
                 if e:
@@ -506,12 +508,14 @@ async def mount_(obj, path, blocksize):
 async def path_(obj, manifest):
     """Path to the embedded system's files"""
 
-    import moat.micro
     import pathlib
+
+    import moat.micro
 
     if manifest:
         import moat.micro._embed._tag as m
-        print(m.__file__.replace("_tag","manifest"), file=obj.stdout)
+
+        print(m.__file__.replace("_tag", "manifest"), file=obj.stdout)
         return
 
     for p in moat.micro.__path__:

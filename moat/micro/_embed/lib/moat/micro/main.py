@@ -7,11 +7,9 @@ from __future__ import annotations
 
 import sys
 
-import machine
-
-from moat.rtc import all_rtc,get_rtc,set_rtc
 from moat.util import merge
-from moat.micro.compat import print_exc, L, TaskGroup
+from moat.micro.compat import L, TaskGroup
+from moat.rtc import all_rtc
 
 import msgpack
 
@@ -23,7 +21,7 @@ if TYPE_CHECKING:
 WDT = None
 
 
-def main(cfg: str | dict, i:attrdict, fake_end=False):
+def main(cfg: str | dict, i: attrdict, fake_end=False):
     """
     The MoaT.micro satellite's main entry point.
 
@@ -89,12 +87,12 @@ def main(cfg: str | dict, i:attrdict, fake_end=False):
 
         from moat.micro.cmd.tree.dir import Dispatch
         from moat.micro.compat import idle
-        from moat.util import attrdict
 
         async with Dispatch(cfg, i=i) as dsp, TaskGroup() as tg:
             tg.start_soon(dsp.task)
             if fake_end:
                 from .compat import sleep_ms
+
                 if L:
                     await dsp.wait_ready()
                 else:

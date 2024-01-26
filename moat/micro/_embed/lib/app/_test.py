@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 
 from moat.micro.cmd.base import BaseCmd
-from moat.micro.compat import Event, Queue, log, wait_for_ms, L
+from moat.micro.compat import Event, L, Queue, log, wait_for_ms
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip

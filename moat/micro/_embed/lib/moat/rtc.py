@@ -10,10 +10,12 @@ import msgpack as mp
 cfg = {}
 
 try:
-    mem=machine.RTC().memory
+    mem = machine.RTC().memory
 except AttributeError:
+
     def mem(x=None):
         return b""
+
 
 def set_rtc(attr, value=None, fs=None):
     "Setter for a value in RTC / file system"
@@ -66,8 +68,8 @@ def all_rtc():
     "Iterate RTC update values"
     try:
         s = mp.unpackb(mem())
-        for k,v in s.items():
-            if isinstance(v,dict):
-                yield k,v
+        for k, v in s.items():
+            if isinstance(v, dict):
+                yield k, v
     except (ValueError, KeyError):
         pass

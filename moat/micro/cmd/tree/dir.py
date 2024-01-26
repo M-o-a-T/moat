@@ -1,9 +1,12 @@
 """
 Server-side dir support
 """
+from __future__ import annotations
+
 from itertools import chain
+
 from moat.util import attrdict
-from ._dir import BaseSuperCmd,BaseSubCmd,DirCmd,SubDispatch
+
 from ._dir import Dispatch as _Dispatch  # isort:skip
 
 
@@ -26,8 +29,8 @@ class Dispatch(_Dispatch):
         if self.sig:
 
             async def sig_handler():
-                import signal  # pylint:disable=import-outside-toplevel
                 import anyio
+                import signal  # pylint:disable=import-outside-toplevel
 
                 with anyio.open_signal_receiver(
                     signal.SIGINT,

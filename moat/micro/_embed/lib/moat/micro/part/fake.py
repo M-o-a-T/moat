@@ -4,7 +4,7 @@ fake sensors
 from __future__ import annotations
 
 import random
-from math import tanh, atanh
+from math import atanh, tanh
 
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.compat import Event
@@ -86,12 +86,17 @@ class ADC(BaseCmd):
 
         seed = cfg.get("seed", random.random())
 
-        self.val = atanh(((cfg.init - self.min) / (self.max - self.min) - 0.5) * 2) if "init" in cfg else 0
+        self.val = (
+            atanh(((cfg.init - self.min) / (self.max - self.min) - 0.5) * 2)
+            if "init" in cfg
+            else 0
+        )
         self.bias = 0
         try:
             self.rand = random.Random(cfg.seed if "seed" in cfg else None)
         except AttributeError:
             from moat.util.random import Random
+
             self.rand = Random(cfg["seed"] if "seed" in cfg else random.getrandbits(32))
 
     async def cmd_r(self):

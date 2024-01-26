@@ -4,10 +4,11 @@
 from __future__ import annotations
 
 import sys
+
 try:
-	sys.path.remove("/lib")
+    sys.path.remove("/lib")
 except ValueError:
-	pass
-sys.path.insert(0,"/lib")
+    pass
+sys.path.insert(0, "/lib")
 
 print("\n*** MoaT ***\n", file=sys.stderr)

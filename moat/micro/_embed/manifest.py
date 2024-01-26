@@ -1,6 +1,7 @@
 # flake8: noqa
 
 import os
+
 if "MOAT_PORT" in os.environ:
     freeze("$(PORT_DIR)/modules")
 
@@ -21,6 +22,7 @@ require("webrepl")
 
 
 import moat.micro._embed.lib
+
 for p in moat.micro._embed.lib.__path__:
     print(p)
-    include(p+"/manifest.py")
+    include(p + "/manifest.py")

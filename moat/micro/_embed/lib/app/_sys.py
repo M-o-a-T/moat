@@ -24,7 +24,7 @@ class Cmd(_Cmd):
         """
         Set/return a MoaT state.
         """
-        from moat.rtc import get_rtc,set_rtc
+        from moat.rtc import get_rtc, set_rtc
 
         if state is not None:
             set_rtc(k, v, fs=fs)
@@ -46,7 +46,9 @@ class Cmd(_Cmd):
         f2 = gc.mem_free()
         a2 = gc.mem_alloc()
         t2 = ticks_ms()
-        return dict(t=ticks_diff(t2, t1), a=(a2,self.root.i.fa), f=(f2,self.root.i.fm), c=f2 - f1)
+        return dict(
+            t=ticks_diff(t2, t1), a=(a2, self.root.i.fa), f=(f2, self.root.i.fm), c=f2 - f1,
+        )
 
     async def cmd_boot(self, code, m):
         """
@@ -70,13 +72,12 @@ class Cmd(_Cmd):
             elif m == 2:
                 machine.reset()
             elif m == 3:
-                raise KeyboardInterrupt()
+                raise KeyboardInterrupt
             elif m == 4:
-                raise SystemExit()
+                raise SystemExit
 
         await self.root.tg.spawn(_boot, _name="_sys.boot1")
         return True
-
 
     async def cmd_machid(self):
         """

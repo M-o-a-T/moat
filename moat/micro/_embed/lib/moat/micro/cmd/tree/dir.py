@@ -7,19 +7,16 @@ from __future__ import annotations
 from functools import partial
 
 from moat.util import Path, import_
-from moat.micro.compat import AC_use, Event, TaskGroup, log, L, Lock
 from moat.micro.cmd.base import ACM_h, BaseCmd, ShortCommandError
-from moat.micro.cmd.base import ACM_h, BaseCmd, ShortCommandError
+from moat.micro.compat import AC_use, Event, L, Lock, TaskGroup, log
 
 # Typing
 
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import AsyncContextManager, Awaitable, Never
+    from typing import AsyncContextManager, Awaitable
 
-    from moat.micro.proto.stack import BaseBuf, BaseMsg
-    from moat.micro.stacks.util import BaseConnIter
 
 
 class BaseSuperCmd(BaseCmd):
@@ -30,7 +27,7 @@ class BaseSuperCmd(BaseCmd):
     """
 
     tg: TaskGroup = None
-    app_lock:Lock = None
+    app_lock: Lock = None
 
     async def setup(self):
         await super().setup()
@@ -64,7 +61,7 @@ class BaseSuperCmd(BaseCmd):
                 app.p_task = t
                 if L:
                     await app.wait_started()
-            except BaseException as exc:
+            except BaseException:
                 app.p_task = None
                 raise
 
@@ -84,6 +81,7 @@ class BaseSubCmd(BaseSuperCmd):
         self.sub = {}
 
     if L:
+
         async def wait_ready(self, wait=True):
             """Delay until this subtree is up,
 
@@ -312,6 +310,7 @@ class SubDispatch:
         return self._dest.root
 
     if L:
+
         def wait_ready(self, wait: bool = True) -> Awaitable:
             "forwards to the destination"
             return self._dest.wait_ready(wait=wait)

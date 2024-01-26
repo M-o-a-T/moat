@@ -32,6 +32,7 @@ class ArrayCmd(BaseSuperCmd):
         await self._setup_apps()
 
     if L:
+
         async def wait_ready(self, wait=True):
             """Delay until this subtree is up,
 

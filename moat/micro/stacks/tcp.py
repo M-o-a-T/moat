@@ -7,6 +7,7 @@ import anyio
 
 from moat.micro.compat import L
 from moat.micro.proto.stream import SingleAnyioBuf
+
 from .util import BaseConnIter
 
 # Typing

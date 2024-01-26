@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from most.micro.proto.stack import BaseBuf, BaseMsg
 
 
-def Raw(*a,**k):
+def Raw(*a, **k):
     """
     Link to a stream that's someplace else.
 
@@ -31,10 +31,10 @@ def Raw(*a,**k):
             "returns the link"
             return await AC_use(self, self.root.sub_at(*self.cfg["path"]))
 
-    return _Raw(*a,**k)
+    return _Raw(*a, **k)
 
 
-def Fwd(*a,**k):
+def Fwd(*a, **k):
     """
     Link to a stream that's someplace else.
 
@@ -43,7 +43,6 @@ def Fwd(*a,**k):
     from moat.micro.cmd.base import BaseCmd
 
     class _Fwd(BaseCmd):
-
         sd: SubDispatch = None
 
         async def setup(self):
@@ -55,11 +54,11 @@ def Fwd(*a,**k):
             # pylint:disable=invalid-overridden-method
             "call via the subdispatcher"
             return self.sd.dispatch(action, msg, **kw)
-    
-    return _Fwd(*a,**k)
+
+    return _Fwd(*a, **k)
 
 
-def Link(*a,**k):
+def Link(*a, **k):
     """
     Connects to a `BaseCmdBBM` object exporting a `BaseBuf`.
     """
@@ -71,4 +70,5 @@ def Link(*a,**k):
             "returns the stack-wrapped link"
             sd = BufCmd(self.cfg)
             return await AC_use(self, console_stack(sd, self.cfg))
-    return _Link(*a,**k)
+
+    return _Link(*a, **k)

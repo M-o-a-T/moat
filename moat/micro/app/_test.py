@@ -11,34 +11,36 @@ from moat.micro.proto.stream import MsgpackMsgBlk
 from ._test_ import Cmd, Cons  # noqa:F401 pylint:disable=unused-import
 
 
-def MpyCmd(*a,**k):
+def MpyCmd(*a, **k):
     """MoaT link to a local micropython process"""
     from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
     from moat.micro.stacks.console import console_stack
-    class _MpyCmd(BaseCmdMsg):
 
+    class _MpyCmd(BaseCmdMsg):
         async def stream(self):
             mpy = MpyBuf(self.cfg)
             return await AC_use(self, console_stack(mpy, self.cfg))
-    return _MpyCmd(*a,**k)
+
+    return _MpyCmd(*a, **k)
 
 
-def MpyRaw(*a,**k):
+def MpyRaw(*a, **k):
     """stdio of a local micropython process"""
     from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
-    class _MpyRaw(BaseCmdBBM):
 
+    class _MpyRaw(BaseCmdBBM):
         async def stream(self):
             return await AC_use(self, MpyBuf(self.cfg))
-    return _MpyRaw(*a,**k)
+
+    return _MpyRaw(*a, **k)
 
 
-def Loop(*a,**k):
+def Loop(*a, **k):
     """Loopback. Unlike remote.Fwd this goes through msgpack."""
     from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
     from moat.micro.stacks.console import console_stack
-    class _Loop(BaseCmdMsg):
 
+    class _Loop(BaseCmdMsg):
         async def stream(self):
             s = Loopback(**self.cfg.get("loop", {}))
             s.link(s)
@@ -48,4 +50,5 @@ def Loop(*a,**k):
                 else:
                     s = await AC_use(self, console_stack(s, self.cfg))
             return s
-    return _Loop(*a,**k)
+
+    return _Loop(*a, **k)

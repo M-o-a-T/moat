@@ -5,7 +5,7 @@ Basic handler for iterating incoming Moat connections.
 from __future__ import annotations
 
 from moat.util import Queue
-from moat.micro.compat import ACM, AC_exit, Event, TaskGroup, L
+from moat.micro.compat import ACM, AC_exit, Event, L, TaskGroup
 
 # typing
 from typing import TYPE_CHECKING  # isort:skip
@@ -39,6 +39,7 @@ class BaseConnIter:
         await AC_exit(self, *exc)
 
     if L:
+
         def set_ready(self) -> None:
             "signals that the socket-or-whatever accepts connections"
             self.evt.set()

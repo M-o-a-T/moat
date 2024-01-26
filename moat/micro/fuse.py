@@ -810,10 +810,10 @@ async def wrap(link: SubDispatch, path: Path, blocksize=0, debug=1):
 
     logger.debug("Mounting...")
     # Whether max_read needs to be set is anybody's guess, so try both
-    for mx in (False,True):
+    for mx in (False, True):
         fuse_options = set(pyfuse3.default_options)  # pylint: disable=I1101
         fuse_options.add("fsname=moat_fs")
-        fuse_options.add(f'max_read={operations.max_read if mx else 0}')
+        fuse_options.add(f"max_read={operations.max_read if mx else 0}")
         # fuse_options.add(f'max_write={operations.max_write}')
         if debug > 1:
             fuse_options.add("debug")
@@ -838,7 +838,7 @@ async def wrap(link: SubDispatch, path: Path, blocksize=0, debug=1):
                 exc = exc.split(anyio.get_cancelled_exc_class())[1]
                 pyfuse3.close(unmount=exc is None)
                 raise
-            except BaseException as exc:
+            except BaseException:
                 pyfuse3.close(unmount=False)
                 raise
             else:

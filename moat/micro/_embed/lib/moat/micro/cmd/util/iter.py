@@ -4,34 +4,30 @@ Helpers for MoaT command interpreters et al.
 
 from __future__ import annotations
 
-from moat.util import NotGiven, ValueEvent, as_proxy
+from moat.util import NotGiven, ValueEvent
 from moat.micro.compat import (
-    TimeoutError,  # pylint: disable=redefined-builtin
+    L,
     log,
     sleep_ms,
     ticks_add,
     ticks_diff,
     ticks_ms,
-    wait_for_ms,
-    L,
 )
-from moat.micro.proto.stack import RemoteError, SilentRemoteError
-from .valtask import ValueTask
+
 from . import StoppedError
+from .valtask import ValueTask
 
 # Typing
 
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any, AsyncIterable, AsyncIterator, Callable, Iterator, Mapping
+    from typing import AsyncIterable, AsyncIterator, Iterator
 
-    from anyio import CancelScope
-
-    from moat.micro.cmd.base import BaseCmd
 
 if not L:
     raise RuntimeError("not Large")
+
 
 class IterWrap:
     """
@@ -81,6 +77,7 @@ class SendIter(ValueTask):
     """
 
     _IT = True
+
     def __init__(self, cmd, i: int, r: int, a: list[str], d: dict):
         self.r = r
         self.ac = a
@@ -164,6 +161,7 @@ class RecvIter(_DelayedIter):
 
     It implements an iterator protocol that forwards them to its reader.
     """
+
     _IT = True
 
     _err = None

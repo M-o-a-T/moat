@@ -15,14 +15,18 @@ from typing import TYPE_CHECKING  # isort:skip
 if TYPE_CHECKING:
     from typing import Never
 
+
 def _l():
     import os
+
     try:
         os.stat("moat.lrg")
     except OSError:
         return False
     else:
         return True
+
+
 L = _l()
 del _l
 
@@ -129,11 +133,13 @@ def every(t, p, *a, **k):
     "call a function every @t seconds"
     return every_ms(t * 1000, p, *a, **k)
 
+
 if DEBUG:
-    async def _catch(n,p,*a,**k):
+
+    async def _catch(n, p, *a, **k):
         try:
-            print("RRR",n, file=sys.stderr)
-            return await p(*a,**k)
+            print("RRR", n, file=sys.stderr)
+            return await p(*a, **k)
         except Exception as exc:
             print("Error:", n, repr(exc), file=sys.stderr)
             print_exc(exc)
@@ -141,13 +147,14 @@ if DEBUG:
         else:
             print("Done:", n, file=sys.stderr)
 
+
 class TaskGroup(_tg):
     "anyio.TaskGroup, lightly enhanced"
 
     async def spawn(self, p, *a, _name=None, **k):
         "Starts a task now. Returns something you can cancel."
         if DEBUG:
-            print("RUN",_name,p,a,k, file=sys.stderr)
+            print("RUN", _name, p, a, k, file=sys.stderr)
             return self.create_task(_catch(_name, p, *a, **k))  # , name=_name)
         else:
             return self.create_task(p(*a, **k))  # , name=_name)
@@ -155,7 +162,7 @@ class TaskGroup(_tg):
     def start_soon(self, p, *a, _name=None, **k):
         "Starts a task soon."
         if DEBUG:
-            print("RUN",_name,p,a,k, file=sys.stderr)
+            print("RUN", _name, p, a, k, file=sys.stderr)
             self.create_task(_catch(_name, p, *a, **k))
         else:
             self.create_task(p(*a, **k))
@@ -208,7 +215,7 @@ async def _run_server(tg, s, cb):
             print("WaitedServer", file=sys.stderr)
         try:
             s2, addr = s.accept()
-        except Exception as err:  # noqa:S112
+        except Exception as err:
             # Ignore a failed accept
             print("ErrServer", repr(err), file=sys.stderr)
             continue

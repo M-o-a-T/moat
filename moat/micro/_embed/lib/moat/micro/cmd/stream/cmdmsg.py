@@ -7,13 +7,11 @@ from __future__ import annotations
 import sys
 
 from moat.util import NotGiven, ValueEvent, obj2name
-from moat.micro.compat import ACM, AC_exit, AC_use, BaseExceptionGroup, Lock, TaskGroup, log, L
-from moat.micro.proto.stack import Base, BaseBlk, BaseBuf, BaseMsg, RemoteError, SilentRemoteError
-
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util import StoppedError
 from moat.micro.cmd.util.valtask import ValueTask
-
+from moat.micro.compat import AC_use, BaseExceptionGroup, L, TaskGroup, log
+from moat.micro.proto.stack import BaseMsg, RemoteError, SilentRemoteError
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
@@ -162,6 +160,7 @@ class BaseCmdMsg(BaseCmd):
                 if not L:
                     raise RuntimeError("not Large")
                 from moat.micro.cmd.util.iter import SendIter
+
                 t = SendIter(self, i, r, a, d)
 
             if i is not None:
@@ -215,7 +214,7 @@ class BaseCmdMsg(BaseCmd):
                     t.set_r(r)
 
             elif d is not NotGiven:
-                if getattr(t,"_IT",False):
+                if getattr(t, "_IT", False):
                     if n:
                         t.set(d, n=n)
                     else:
@@ -279,6 +278,7 @@ class BaseCmdMsg(BaseCmd):
         if rep:
             if L:
                 from moat.micro.cmd.util.iter import RecvIter
+
                 msg["r"] = rep
                 self.reply[seq] = e = RecvIter(self, seq, rep)
                 await self.s.send(msg)

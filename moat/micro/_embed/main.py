@@ -4,20 +4,23 @@ Datellite main code.
 from __future__ import annotations
 
 import gc as _gc
+
 _gc.collect()
-_fm=_gc.mem_free()
-_fa=_gc.mem_alloc()
+_fm = _gc.mem_free()
+_fa = _gc.mem_alloc()
 
 from contextlib import suppress
 
 import machine
 
+from moat.util import attrdict
+
 # XXX m.m.compat and msgpack cannot be superseded
 from moat.micro.compat import log
-from moat.util import attrdict
-from moat.rtc import get_rtc,set_rtc
+from moat.rtc import get_rtc, set_rtc
 
 cfg = {}
+
 
 def go(state=None, fake_end=True, free=None, cmd=True):
     """
@@ -92,12 +95,12 @@ def go(state=None, fake_end=True, free=None, cmd=True):
         sys.path.insert(0, "/fallback")
         fallback = True
 
-    x=" "*1000
+    x = " " * 1000
     print("Start MoaT:", state, file=sys.stderr)
     from moat.micro.main import main
 
     cfg = "moat_fb.cfg" if fallback else "moat.cfg"
-    i=attrdict(fb=fallback, s=state, ns=new_state, fm=_fm,fa=_fa)
+    i = attrdict(fb=fallback, s=state, ns=new_state, fm=_fm, fa=_fa)
 
     if cmd:
         main(cfg, i=i, fake_end=fake_end)

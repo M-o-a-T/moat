@@ -62,7 +62,7 @@ class DirectREPL(SingleAnyioBuf):
         # doesn't start with "OK", but that's fine, just try again.
         try:
             await self.exec_raw("print(1)")
-        except (OSError,TimeoutError):
+        except (OSError, TimeoutError):
             await self.serial.send(b"\x02\x03")  # exit raw repl, CTRL+C
             await self.flush_in(0.2)
             await self.serial.send(b"\x03\x01")  # CTRL+C, enter raw repl
@@ -84,7 +84,7 @@ class DirectREPL(SingleAnyioBuf):
                 if not started:
                     logger.debug("Flushing…")
                     started = True
-                b = (b+res)[-200:]
+                b = (b + res)[-200:]
                 continue
             break
         if b:
@@ -140,7 +140,7 @@ class DirectREPL(SingleAnyioBuf):
         if b"\nStart MoaT:" in out:
             i = out.find(b"\nOK")
             if i > 0:
-                out = out[i+1:]
+                out = out[i + 1 :]
         if not out.startswith(b"OK"):
             raise OSError(f"data was not accepted: {out}: {err}")
         out = out[2:].decode("utf-8")

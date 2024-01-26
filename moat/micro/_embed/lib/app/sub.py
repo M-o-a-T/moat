@@ -4,7 +4,7 @@ Apps used for structure.
 
 from __future__ import annotations
 
-from moat.micro.compat import log, sleep_ms, L
+from moat.micro.compat import L, log, sleep_ms
 
 try:
     from moat.micro.proto.stream import ProcessDeadError
@@ -14,27 +14,31 @@ except ImportError:  # satellite
         "dummy"
 
 
-def Tree(*a,**k):
+def Tree(*a, **k):
     """
     Structured subcommands.
     """
     from moat.micro.cmd.tree.dir import DirCmd
+
     class _Tree(DirCmd):
         pass
-    return _Tree(*a,**k)
+
+    return _Tree(*a, **k)
 
 
-def Array(*a,**k):
+def Array(*a, **k):
     """
     List of mostly-same things.
     """
     from moat.micro.cmd.array import ArrayCmd
+
     class _Array(ArrayCmd):
         pass
-    return _Array(*a,**k)
+
+    return _Array(*a, **k)
 
 
-def Err(*a,**k):
+def Err(*a, **k):
     """
     An error handler and possibly-retrying subcommand manager.
 
@@ -58,6 +62,7 @@ def Err(*a,**k):
     """
 
     from moat.micro.cmd.tree.layer import BaseFwdCmd
+
     class _Err(BaseFwdCmd):
         _wait = True
 
@@ -65,14 +70,14 @@ def Err(*a,**k):
         t: int = None
         a: bool = None
 
-        async def dispatch(self, *a, **k):  # noqa:D102
+        async def dispatch(self, *a, **k):
             if L:
                 if self.app is None:
                     await super().wait_ready()
                 await self.app.wait_ready()
             return await super().dispatch(*a, **k)
 
-        async def reload(self):  # noqa:D102
+        async def reload(self):
             self._load()
             await super().reload()
 
@@ -82,6 +87,7 @@ def Err(*a,**k):
             self.a = self.cfg.get("always", False)
 
         if L:
+
             async def wait_ready(self, wait: bool = True):
                 "allow for non-restarted sub-app"
                 while res := await super().wait_ready(wait=wait):
@@ -126,4 +132,5 @@ def Err(*a,**k):
                 except BaseException as exc:
                     log("Fwd ErrX %s %r", self.path, exc)
                     raise
-    return _Err(*a,**k)
+
+    return _Err(*a, **k)

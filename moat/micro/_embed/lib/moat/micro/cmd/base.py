@@ -21,12 +21,12 @@ may fail.
 
 from __future__ import annotations
 
-from moat.micro.compat import AC_use, Event, idle, L
-from moat.micro.proto.stack import Base
-
 from moat.util import as_proxy
 from moat.micro.cmd.util import run_no_exc, wait_complain
 from moat.micro.cmd.util.part import enc_part, get_part
+from moat.micro.compat import AC_use, Event, L, idle
+from moat.micro.proto.stack import Base
+
 if L:
     from .util.iter import DelayedIter, IterWrap
 
@@ -190,6 +190,7 @@ class BaseCmd(Base):
         await idle()
 
     if L:
+
         def set_ready(self):
             """
             This command is now ready.
@@ -216,6 +217,7 @@ class BaseCmd(Base):
     cmd_stp = stop
 
     if L:
+
         async def wait_started(self):
             """
             Wait for the command's setup procedure to commence.

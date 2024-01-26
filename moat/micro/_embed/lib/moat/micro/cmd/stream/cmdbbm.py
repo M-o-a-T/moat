@@ -4,19 +4,15 @@ Stream link-up support for MoaT commands
 
 from __future__ import annotations
 
-import sys
-
-from moat.util import NotGiven, ValueEvent, obj2name
-from moat.micro.compat import ACM, AC_exit, AC_use, BaseExceptionGroup, Lock, TaskGroup, log, L
-from moat.micro.proto.stack import Base, BaseBlk, BaseBuf, BaseMsg, RemoteError, SilentRemoteError
-
 from moat.micro.cmd.base import BaseCmd
+from moat.micro.compat import ACM, AC_exit, L, Lock
+from moat.micro.proto.stack import BaseBlk, BaseBuf, BaseMsg
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any, Awaitable, Mapping
+    from typing import Awaitable
 
 
 class BaseCmdBBM(BaseCmd):

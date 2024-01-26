@@ -4,17 +4,6 @@ Helpers for MoaT command interpreters et al.
 
 from __future__ import annotations
 
-from moat.util import NotGiven, ValueEvent, as_proxy
-from moat.micro.compat import (
-    TimeoutError,  # pylint: disable=redefined-builtin
-    log,
-    sleep_ms,
-    ticks_add,
-    ticks_diff,
-    ticks_ms,
-    wait_for_ms,
-)
-from moat.micro.proto.stack import RemoteError, SilentRemoteError
 from . import StoppedError
 
 # Typing
@@ -22,7 +11,7 @@ from . import StoppedError
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any, AsyncIterable, AsyncIterator, Callable, Iterator, Mapping
+    from typing import Any, Callable, Mapping
 
     from anyio import CancelScope
 

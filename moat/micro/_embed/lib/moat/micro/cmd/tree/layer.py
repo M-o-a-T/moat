@@ -4,23 +4,15 @@ Command tree support for MoaT commands
 
 from __future__ import annotations
 
-from functools import partial
+from moat.util import import_
+from moat.micro.cmd.base import BaseCmd
+from moat.micro.compat import L, TaskGroup, log
 
-from moat.util import Path, import_
-from moat.micro.compat import AC_use, Event, TaskGroup, log, L
-
-from moat.micro.cmd.base import ACM_h, BaseCmd, ShortCommandError
 from .dir import BaseSuperCmd
 
 # Typing
 
-from typing import TYPE_CHECKING  # isort:skip
 
-if TYPE_CHECKING:
-    from typing import AsyncContextManager, Awaitable, Never
-
-    from moat.micro.proto.stack import BaseBuf, BaseMsg
-    from moat.micro.stacks.util import BaseConnIter
 
 
 class BaseLayerCmd(BaseSuperCmd):
@@ -78,6 +70,7 @@ class BaseLayerCmd(BaseSuperCmd):
             await self.app.reload()
 
     if L:
+
         async def wait_ready(self, wait=True):
             if await super().wait_ready(wait=wait):
                 return True
@@ -106,6 +99,7 @@ class BaseLayerCmd(BaseSuperCmd):
         return await self.app.dispatch(action, msg, **kw)
 
     if L:
+
         def set_ready(self):
             if self.app is None:
                 raise RuntimeError("early")

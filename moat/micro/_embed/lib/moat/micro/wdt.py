@@ -111,7 +111,7 @@ class WDT:
             else:
                 # use a software timeout
                 if t is None and T is not None:
-                    t = T(self.cfg.get("timer",-1))
+                    t = T(self.cfg.get("timer", -1))
                 if t is None:
                     raise RuntimeError("no timer")
                 if self.timeout:

@@ -623,17 +623,6 @@ others.
 
 The RTS and DTR pins default to being enabled.
 
-rts_state, dtr_state
---------------------
-
-State of RTS and DTR.
-
-rts_flip, dtr_flip
-------------------
-
-Flag whether RTS and/ir DTR should be inverted briefly when opening the
-port.
-
 flush
 -----
 
@@ -676,6 +665,41 @@ flow
 ....
 
 Hardware flow control: "R" and/or "C" to use RTS / CTS. The default is neither.
+
+rts_state, dtr_state
+....................
+
+State of RTS and DTR.
+
+rts_flip, dtr_flip
+..................
+
+Flag whether RTS and/or DTR should be inverted briefly, when opening the
+port.
+
+dtr_rts
+.......
+
+The delay from setting or changing DTR to affecting RTS.
+
+If negative, RTS is changed first.
+
+The default is zero.
+
+delay
+.....
+
+The initial delay between opening the port and affecting its wires.
+
+The default is zero.
+
+delay_flip
+..........
+
+The delay between initially flipping the wires and setting them to their
+final configuration.
+
+The default is 0.2 seconds.
 
 
 link

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import machine as M
 
-from moat.micro.compat import AC_use, TimeoutError, log, sleep_ms, wait_for_ms
+from moat.micro.compat import AC_use, TimeoutError, log, sleep, sleep_ms, wait_for_ms
 from moat.micro.proto.stream import FileBuf
 
 
@@ -61,21 +61,42 @@ class Serial(FileBuf):
             f |= M.UART.RTS
         uart_cfg["stop"] = p.get("stop", None) or 1  # no 1.5 stop bits
 
-        rts = cfg.get("rts_state", 1)
-        dtr = cfg.get("dtr_state", 1)
-        rts_flip = cfg.get("rts_flip", 0)
-        dtr_flip = cfg.get("dtr_flip", 0)
+        rts = p.get("rts_state", 1)
+        dtr = p.get("dtr_state", 1)
+        dtr_rts = p.get("dtr_rts", 0)
+        rts_flip = p.get("rts_flip", 0)
+        dtr_flip = p.get("dtr_flip", 0)
+        delay = p.get("delay", 0)
+        delay_flip = p.get("delay_flip", 0.2)
 
+        await sleep(delay)
         if rts_flip or dtr_flip:
-            if pin_rts is not None:
-                pin_rts.value(rts_flip ^ rts)
+            if dtr_rts >= 0:
+                if pin_dtr is not None:
+                    pin_dtr.value(dtr_flip ^ dtr)
+                await sleep(dtr_rts)
+                if pin_rts is not None:
+                    pin_rts.value(rts_flip ^ rts)
+            else:
+                if pin_rts is not None:
+                    pin_rts.value(rts_flip ^ rts)
+                await sleep(-dtr_rts)
+                if pin_dtr is not None:
+                    pin_dtr.value(dtr_flip ^ dtr)
+            await sleep(delay_flip)
+
+        if dtr_rts > 0:
             if pin_dtr is not None:
-                pin_dtr.value(dtr_flip ^ dtr)
-            await sleep_ms(200)
-        if pin_rts is not None:
-            pin_rts.value(rts)
-        if pin_dtr is not None:
-            pin_dtr.value(dtr)
+                pin_dtr.value(dtr)
+            await sleep(dtr_rts)
+            if pin_rts is not None:
+                pin_rts.value(rts)
+        else:
+            if pin_rts is not None:
+                pin_rts.value(rts)
+            await sleep(-dtr_rts)
+            if pin_dtr is not None:
+                pin_dtr.value(dtr)
 
         ser = M.UART(cfg.get("port", 0), **uart_cfg)
         ser.rts = rts

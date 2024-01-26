@@ -52,18 +52,35 @@ class Serial(AnyioBuf):
         uart_cfg["stopbits"] = p.get("stop", None) or 1  # no 1.5 stop bits
         uart_cfg["bytesize"] = p.get("bits", 8)
 
-        rts = cfg.get("rts_state", 1)
-        dtr = cfg.get("dtr_state", 1)
-        rts_flip = cfg.get("rts_flip", 0)
-        dtr_flip = cfg.get("dtr_flip", 0)
+        rts = p.get("rts_state", 1)
+        dtr = p.get("dtr_state", 1)
+        dtr = p.get("dtr_state", 1)
+        dtr_rts = p.get("dtr_rts", 0)
+        rts_flip = p.get("rts_flip", 0)
+        dtr_flip = p.get("dtr_flip", 0)
+        delay = p.get("delay", 0)
+        delay_flip = p.get("delay_flip", 0.2)
 
         ser = await AC_use(self, _Serial(**uart_cfg))
+        await anyio.sleep(delay)
         if rts_flip or dtr_flip:
-            ser.rts = rts_flip ^ rts
-            ser.dtr = dtr_flip ^ dtr
-            await anyio.sleep(0.2)
-        ser.rts = rts
-        ser.dtr = dtr
+            if dtr_rts >= 0:
+                ser.dtr = dtr_flip ^ dtr
+                await anyio.sleep(dtr_rts)
+                ser.rts = rts_flip ^ rts
+            else:
+                ser.rts = rts_flip ^ rts
+                await anyio.sleep(-dtr_rts)
+                ser.dtr = dtr_flip ^ dtr
+            await anyio.sleep(delay_flip)
+        if dtr_rts > 0:
+            ser.dtr = dtr
+            await anyio.sleep(dtr_rts)
+            ser.rts = rts
+        else:
+            ser.rts = rts
+            await anyio.sleep(-dtr_rts)
+            ser.dtr = dtr
 
         # flush messages
         if t := cfg.get("flush"):

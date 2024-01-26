@@ -17,6 +17,7 @@ from moat.util import (
     packer,
     process_args,
     to_attrdict,
+    ungroup,
     unpacker,
     yload,
     yprint,
@@ -329,7 +330,6 @@ async def boot(obj, state):
 async def cmd(obj, path, **attrs):
     """
     Send a MoaT command.
-
     """
     cfg = obj.cfg
     val = {}
@@ -494,13 +494,26 @@ async def mount_(obj, path, blocksize):
 
     cfg = obj.cfg
 
-    async with Dispatch(cfg, run=True, sig=True) as dsp, SubDispatch(dsp, cfg["path"]) as sd, wrap(
-        sd,
-        path,
-        blocksize=blocksize,
-        debug=4,
-    ):
-        await idle()
+    async with Dispatch(cfg, run=True, sig=True) as dsp:
+        for pd in (cfg["path"], Path("r") + cfg.path):
+            try:
+                async with ungroup, SubDispatch(dsp, pd) as sd:
+                    await sd.stat(p="/")
+            except KeyError:
+                pass
+            else:
+                break
+        else:
+            print(f"Path {sd._path} doesn't seem to exist.", file=sys.stderr)
+            sys.exit(1)
+
+        async with (
+                SubDispatch(dsp, pd) as sd,
+                wrap(sd, path, blocksize=blocksize, debug=max(obj.debug-1, 0)),
+                ):
+            if obj.debug:
+                print("Mounted.")
+            await idle()
 
 
 @cli.command("path")

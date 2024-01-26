@@ -24,11 +24,18 @@ from moat.rtc import get_rtc, set_rtc
 cfg = {}
 
 
-def go(state=None, fake_end=True, cmd=True):
+def go(state=None, cmd=True):
     """
     Start MoaT.
 
-    The interpreter state is read from Flash / RTC, and updated as appropriate.
+    The system state can be passed as an argument; otherwise it's read from
+    RTC, Flash, or defaults to "skip".
+
+    If @cmd is True, the system has been started manually. This prevents
+    processing of error tracebacks. Also, a fake "OK" prompt is emitted, to
+    fool the host's command line processing.
+
+    @state can be one of these strings:
 
     * skip
       Do nothing, exit to MicroPython prompt.
@@ -127,11 +134,11 @@ def go(state=None, fake_end=True, cmd=True):
     i = attrdict(fb=fallback, s=state, ns=new_state, fm=_fm, fa=_fa)
 
     if cmd:
-        main(cfg, i=i, fake_end=fake_end)
+        main(cfg, i=i, fake_end=True)
         return
 
     try:
-        main(cfg, i=i, fake_end=fake_end)
+        main(cfg, i=i)
 
     except KeyboardInterrupt:
         print("MoaT stopped.", file=sys.stderr)

@@ -4,15 +4,16 @@ Command tree support for MoaT commands
 
 from __future__ import annotations
 
+# Typing
+from typing import TYPE_CHECKING
+
 from moat.util import import_
-from moat.micro.cmd.base import BaseCmd
 from moat.micro.compat import L, TaskGroup, log
 
 from .dir import BaseSuperCmd
 
-# Typing
-
-
+if TYPE_CHECKING:
+    from .base import BaseCmd
 
 
 class BaseLayerCmd(BaseSuperCmd):
@@ -57,6 +58,7 @@ class BaseLayerCmd(BaseSuperCmd):
             # the return from the taskgroup already does that
 
     async def setup(self):
+        "attach the nested app"
         await super().setup()
         self.app = await self.gen_cmd()
         if self.app is not None:
@@ -65,6 +67,7 @@ class BaseLayerCmd(BaseSuperCmd):
                 self.set_ready()
 
     async def reload(self):
+        "reload the nested app"
         await super().reload()
         if self.app is not None:
             await self.app.reload()
@@ -72,6 +75,7 @@ class BaseLayerCmd(BaseSuperCmd):
     if L:
 
         async def wait_ready(self, wait=True):
+            "wait for nested app"
             if await super().wait_ready(wait=wait):
                 return True
             if self.app is None:
@@ -101,6 +105,7 @@ class BaseLayerCmd(BaseSuperCmd):
     if L:
 
         def set_ready(self):
+            "guards that the nested app exists"
             if self.app is None:
                 raise RuntimeError("early")
             super().set_ready()

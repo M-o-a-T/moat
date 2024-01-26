@@ -1,6 +1,8 @@
 """
 Datellite main code.
 """
+# ruff: noqa:E402
+
 from __future__ import annotations
 
 import gc as _gc
@@ -22,7 +24,7 @@ from moat.rtc import get_rtc, set_rtc
 cfg = {}
 
 
-def go(state=None, fake_end=True, free=None, cmd=True):
+def go(state=None, fake_end=True, cmd=True):
     """
     Start MoaT.
 

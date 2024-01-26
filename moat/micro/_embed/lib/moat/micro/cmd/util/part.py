@@ -12,7 +12,6 @@ if TYPE_CHECKING:
     from typing import Any
 
 
-
 def get_part(cur, p: list[str | int], add: bool = False):
     "Walk into a mapping or object structure"
     for pp in p:

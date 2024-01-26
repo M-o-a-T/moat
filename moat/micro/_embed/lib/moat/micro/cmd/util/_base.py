@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     from typing import Callable
 
 
-
 StopIter = StopAsyncIteration
 
 as_proxy("_KyErr", KeyError, replace=True)

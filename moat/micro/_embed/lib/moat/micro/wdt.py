@@ -66,7 +66,7 @@ class WDT:
             M.WDT = self
         self._ping = Event()
 
-    def setup(self):
+    def setup(self):  # noqa:D102
         cfg = self.cfg
         t = cfg.get("t", 0)
         if not t:
@@ -104,7 +104,7 @@ class WDT:
                     await self._ping.wait()
             elif self.wdt is not None:
                 # feed the watchdog when the trigger expires
-                try:  # noqa:SIM105  # no "with suppress" on µPy
+                try:  # no "with suppress" on µPy
                     await wait_for_ms(self.trigger, self._ping.wait)
                 except TimeoutError:
                     pass

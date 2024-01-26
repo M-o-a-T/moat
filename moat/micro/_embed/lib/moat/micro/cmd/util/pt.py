@@ -7,8 +7,6 @@ from __future__ import annotations
 # Typing
 
 
-
-
 # like get/set_part but without the attributes
 
 

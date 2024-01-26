@@ -13,7 +13,7 @@ try:
     mem = machine.RTC().memory
 except AttributeError:
 
-    def mem(x=None):
+    def mem(x=None):  # noqa:D103,ARG001
         return b""
 
 

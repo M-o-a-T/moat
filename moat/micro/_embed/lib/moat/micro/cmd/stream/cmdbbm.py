@@ -6,13 +6,14 @@ from __future__ import annotations
 
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.compat import ACM, AC_exit, L, Lock
-from moat.micro.proto.stack import BaseBlk, BaseBuf, BaseMsg
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from typing import Awaitable
+
+    from moat.micro.proto.stack import BaseBlk, BaseBuf, BaseMsg
 
 
 class BaseCmdBBM(BaseCmd):

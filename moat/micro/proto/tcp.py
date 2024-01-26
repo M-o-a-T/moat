@@ -33,7 +33,8 @@ class Link(AnyioBuf):
                 s = await anyio.connect_tcp(self.host, self.port)
             except OSError as e:
                 if not isinstance(e, ConnectionRefusedError) and not isinstance(
-                    e.__cause__, ConnectionRefusedError,
+                    e.__cause__,
+                    ConnectionRefusedError,
                 ):
                     raise
                 if n > 10:

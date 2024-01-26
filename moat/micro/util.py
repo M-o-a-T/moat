@@ -70,7 +70,8 @@ async def _run_update(src, dest: MoatPath, check=None, cross=None):
             dn = dn[:-9]
         try:
             res = await repl.exec(
-                f"import _hash; print(repr(_hash.hash[{dn !r}])); del _hash", quiet=True,
+                f"import _hash; print(repr(_hash.hash[{dn !r}])); del _hash",
+                quiet=True,
             )
         except (ImportError, KeyError):
             return False

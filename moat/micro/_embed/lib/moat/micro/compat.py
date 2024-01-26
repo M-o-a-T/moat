@@ -43,7 +43,7 @@ CancelledError = asyncio.CancelledError
 ExceptionGroup = asyncio.ExceptionGroup  # noqa:A001
 BaseExceptionGroup = asyncio.BaseExceptionGroup  # noqa:A001
 
-DEBUG = const(False)
+DEBUG = const(False)  # noqa:F821
 
 
 class EndOfStream(Exception):

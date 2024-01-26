@@ -84,8 +84,6 @@ class ADC(BaseCmd):
         self.border = cfg.get("border", 2)
         self.step = cfg["step"] / (self.max - self.min) / 2 if "step" in cfg else 0.1
 
-        seed = cfg.get("seed", random.random())
-
         self.val = (
             atanh(((cfg.init - self.min) / (self.max - self.min) - 0.5) * 2)
             if "init" in cfg
@@ -93,7 +91,7 @@ class ADC(BaseCmd):
         )
         self.bias = 0
         try:
-            self.rand = random.Random(cfg.seed if "seed" in cfg else None)
+            self.rand = random.Random(cfg["seed"] if "seed" in cfg else None)
         except AttributeError:
             from moat.util.random import Random
 

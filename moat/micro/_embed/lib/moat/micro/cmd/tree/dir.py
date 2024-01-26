@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     from typing import AsyncContextManager, Awaitable
 
 
-
 class BaseSuperCmd(BaseCmd):
     """
     A handler that can have a nested app (or more than one).
@@ -30,6 +29,7 @@ class BaseSuperCmd(BaseCmd):
     app_lock: Lock = None
 
     async def setup(self):
+        "setup apps"
         await super().setup()
         self.app_lock = Lock()
         self.tg = await AC_use(self, TaskGroup())
@@ -125,6 +125,7 @@ class BaseSubCmd(BaseSuperCmd):
         return self.attach(name, None)
 
     async def reload(self):
+        "reload apps"
         await super().reload()
         for app in list(self.sub.values()):
             await app.reload()
@@ -146,6 +147,7 @@ class BaseSubCmd(BaseSuperCmd):
         return await sub.dispatch(action, msg, **kw)
 
     async def cmd_dir(self, h=False):
+        "dir: add subdirs"
         res = await super().cmd_dir(h=h)
         res["d"] = list(self.sub.keys())
         return res
@@ -164,6 +166,7 @@ class DirCmd(BaseSubCmd):
         self._updated = Event()
 
     async def task(self):
+        "Monitor task for updating"
         if self.root.APP is None:
             raise RuntimeError("Root no APP")
         while True:

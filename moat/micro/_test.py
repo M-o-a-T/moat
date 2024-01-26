@@ -93,7 +93,7 @@ class MpyBuf(ProcessBuf):
                 pre = "micro/"
 
             root = self.cfg.get("cwd", None)
-            if root is None:  # noqa:SIM108
+            if root is None:
                 root = temp_dir.get() / "root"
             else:
                 root = Path(root).absolute()

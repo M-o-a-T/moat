@@ -5,9 +5,10 @@ from __future__ import annotations
 
 from itertools import chain
 
-from moat.util import attrdict
+from moat.util import NotGiven, attrdict
 
 from ._dir import Dispatch as _Dispatch  # isort:skip
+from ._dir import BaseSubCmd, BaseSuperCmd, DirCmd, SubDispatch  # noqa:F401
 
 
 class _NotGiven:

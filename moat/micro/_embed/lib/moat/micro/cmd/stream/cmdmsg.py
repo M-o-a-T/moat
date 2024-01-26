@@ -354,7 +354,7 @@ class SingleCmdMsg(BaseCmdMsg):
                         raise e  # noqa:TRY201
         except EOFError:
             pass
-        except (EOFError, OSError, SilentRemoteError) as exc:
+        except (OSError, SilentRemoteError) as exc:
             log("Err %s: %r", self.path, repr(exc))
         except Exception as exc:  # pylint:disable=broad-exception-caught
             log("Err %s", self.path, err=exc)

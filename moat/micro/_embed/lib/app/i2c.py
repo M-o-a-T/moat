@@ -71,7 +71,7 @@ class Cmd(BaseCmd):
 
     def _teardown(self):
         if self._bus is None:
-            try:  # noqa:SIM105
+            try:
                 self._bus.deinit()
             except AttributeError:
                 pass

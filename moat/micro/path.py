@@ -234,7 +234,8 @@ class MoatDevPath(MoatPath):
         """
         if self._stat_cache is None:
             st = await self._repl.evaluate(
-                f"import os; print(os.stat({self.as_posix()!r}))", quiet=True,
+                f"import os; print(os.stat({self.as_posix()!r}))",
+                quiet=True,
             )
             self._stat_cache = os.stat_result(st)
         return self._stat_cache
@@ -271,7 +272,8 @@ class MoatDevPath(MoatPath):
         self._stat_cache = None
         try:
             await self._repl.evaluate(
-                f"import os; print(os.remove({self.as_posix()!r}))", quiet=True,
+                f"import os; print(os.remove({self.as_posix()!r}))",
+                quiet=True,
             )
         except FileNotFoundError:
             if not missing_ok:
@@ -305,7 +307,8 @@ class MoatDevPath(MoatPath):
         """
         try:
             return await self._repl.evaluate(
-                f"import os; print(os.mkdir({self.as_posix()!r}))", quiet=True,
+                f"import os; print(os.mkdir({self.as_posix()!r}))",
+                quiet=True,
             )
         except FileExistsError:
             if exist_ok:
@@ -389,7 +392,8 @@ class MoatDevPath(MoatPath):
                 if not block:
                     break
                 await self._repl.exec(
-                    f"_f.write(_a2b({binascii.b2a_base64(block).rstrip()!r}))", quiet=True,
+                    f"_f.write(_a2b({binascii.b2a_base64(block).rstrip()!r}))",
+                    quiet=True,
                 )
         await self._repl.exec("_f.close(); del _f, _a2b", quiet=True)
         return len(data)
@@ -403,7 +407,8 @@ class MoatDevPath(MoatPath):
         if not self.is_absolute():
             raise ValueError(f'only absolute paths are supported (beginning with "/"): {self!r}')
         # simple version
-        # remote_paths = self._repl.evaluate(f'import os; print(os.listdir({self.as_posix()!r}))', quiet=True)
+        # remote_paths = self._repl.evaluate(
+        #     f'import os; print(os.listdir({self.as_posix()!r}))', quiet=True)
         # return [(self / p).connect_repl(self._repl) for p in remote_paths]
         # variant with pre-loading stat info
         posix_path_slash = self.as_posix()

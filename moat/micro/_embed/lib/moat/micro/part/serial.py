@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import machine as M
 
-from moat.micro.compat import AC_use, TimeoutError, log, wait_for_ms
+from moat.micro.compat import AC_use, TimeoutError, log, sleep_ms, wait_for_ms
 from moat.micro.proto.stream import FileBuf
 
 
@@ -69,17 +69,17 @@ class Serial(FileBuf):
         if rts_flip or dtr_flip:
             if pin_rts is not None:
                 pin_rts.value(rts_flip ^ rts)
-            if pin.dtr is not None:
+            if pin_dtr is not None:
                 pin_dtr.value(dtr_flip ^ dtr)
-            await anyio.sleep(0.2)
+            await sleep_ms(200)
         if pin_rts is not None:
             pin_rts.value(rts)
         if pin_dtr is not None:
             pin_dtr.value(dtr)
-        ser.rts = rts
-        ser.dtr = dtr
 
         ser = M.UART(cfg.get("port", 0), **uart_cfg)
+        ser.rts = rts
+        ser.dtr = dtr
         await AC_use(self, ser.deinit)
 
         if t := cfg.get("flush"):

@@ -1,8 +1,13 @@
-# A hacked-up Mersenne Twister.
+"""
+A hacked-up Mersenne Twister.
+"""
+
 from __future__ import annotations
 
 
 class Random:
+    "simplified random number generator"
+
     def __init__(self, c_seed=0):
         # MT19937 except with a smaller period
         (self.w, self.n, self.m, self.r) = (32, 624, 397, 31)

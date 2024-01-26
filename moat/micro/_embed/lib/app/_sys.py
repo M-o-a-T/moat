@@ -26,7 +26,7 @@ class Cmd(_Cmd):
         """
         from moat.rtc import get_rtc, set_rtc
 
-        if state is not None:
+        if v is not None:
             set_rtc(k, v, fs=fs)
         else:
             return get_rtc(k, fs=fs)
@@ -47,7 +47,10 @@ class Cmd(_Cmd):
         a2 = gc.mem_alloc()
         t2 = ticks_ms()
         return dict(
-            t=ticks_diff(t2, t1), a=(a2, self.root.i.fa), f=(f2, self.root.i.fm), c=f2 - f1,
+            t=ticks_diff(t2, t1),
+            a=(a2, self.root.i.fa),
+            f=(f2, self.root.i.fm),
+            c=f2 - f1,
         )
 
     async def cmd_boot(self, code, m):
@@ -85,15 +88,6 @@ class Cmd(_Cmd):
         `micropython.unique_id`.
         """
         return machine.unique_id()
-
-    async def cmd_rtc(self, d=None):
-        """
-        Set, or query, the current time.
-        """
-        if d is None:
-            return machine.RTC.now()
-        else:
-            machine.RTC((d[0], d[1], d[2], 0, d[3], d[4], d[5], 0))
 
     async def cmd_pin(self, n, v=None, **kw):
         """

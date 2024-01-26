@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 
     from anyio import CancelScope
 
+    from moat.micro.cmd.base import BaseCmd
+
 
 class ValueTask:
     """

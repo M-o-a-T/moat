@@ -105,7 +105,7 @@ class BaseCmdMsg(BaseCmd):
             elif x and isinstance(exc, tuple(x)):
                 pass
             else:
-                log("ERROR handling %d", i, err=exc)
+                log("ERROR handling %d: %r", i, exc, err=exc)
             if i is None:
                 return
             res = {"i": i}
@@ -119,7 +119,7 @@ class BaseCmdMsg(BaseCmd):
                     res["d"] = exc.args
             else:
                 res["e"] = StoppedError
-                res["d"] = (repr(exc),)
+                res["d"] = (repr(exc),"echo")
             await self.s.send(res)
         except TypeError as e2:
             log("ERROR returning %r", res, err=e2)
@@ -199,7 +199,7 @@ class BaseCmdMsg(BaseCmd):
                     pass
                 else:
                     log("unknown err %r", msg)
-                    e = StoppedError()
+                    e = StoppedError(f"unknown {msg !r}")
                 r = t.set_error(e)
                 if hasattr(r, "throw"):
                     await r
@@ -255,7 +255,7 @@ class BaseCmdMsg(BaseCmd):
                 return await super().dispatch((a[1:],), msg, rep=rep, wait=wait, x_err=x_err)
 
         if L and await self.wait_ready():
-            raise StoppedError  # already down
+            raise StoppedError("is down")  # already down
 
         if not wait:
             msg = {"a": action, "d": msg}

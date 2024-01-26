@@ -38,7 +38,7 @@ port=$($M ${cmd[@]} util cfg micro.setup.r.port)
 
 dev=$($M ${cmd[@]} util cfg micro.install.port)
 dir=$($M ${cmd[@]} util cfg -e micro.install.dir)
-rate=$($M ${cmd[@]} util cfg micro.install.rate)
+rate=$($M ${cmd[@]} util cfg -e micro.install.rate)
 export MOAT_PORT=$dev
 board=$($M ${cmd[@]} util cfg -e micro.install.board)
 #BOARD=${dev@U}

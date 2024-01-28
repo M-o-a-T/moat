@@ -736,7 +736,9 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     obj.stdout = CFG.get("_stdout", sys.stdout)  # used for testing
     obj.CFG = CFG
 
-    if isinstance(cfg,(list,tuple)):
+    if not cfg:
+        cfg = to_attrdict(read_cfg(name, None))
+    elif isinstance(cfg,(list,tuple)):
         cf = { }
         for fn in cfg:
             merge(cf, read_cfg(name, fn), replace=True)

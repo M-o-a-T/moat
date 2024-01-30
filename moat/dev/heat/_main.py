@@ -1,15 +1,15 @@
-from __future__ import annotations
-
 """
 Basic heater tool support
 
 """
 
+from __future__ import annotations
+
+import logging  # pylint: disable=wrong-import-position
+
 import asyncclick as click
 
 from moat.util import load_subgroup
-
-import logging  # pylint: disable=wrong-import-position
 
 log = logging.getLogger()
 

@@ -2,15 +2,15 @@
 command line interface thing for KWB pellet burner
 """
 
-import asyncclick as click
-
-from moat.util import yload
-from moat.modbus.dev.poll import dev_poll
+from __future__ import annotations
 
 import anyio
 import logging
 
-from __future__ import annotations
+import asyncclick as click
+
+from moat.util import yload
+from moat.modbus.dev.poll import dev_poll
 
 logger = logging.getLogger()
 

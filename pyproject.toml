@@ -94,7 +94,7 @@ builtins-ignorelist = ["help","id"]
 [tool.ruff.isort]
 no-lines-before = ["future"]
 required-imports = ["from __future__ import annotations"]
-section-order = ["third-party","local-folder","moat","upy","first-party","standard-library","typing","future"]
+section-order = ["future","standard-library","first-party","third-party","moat","local-folder","upy","typing"]
 extra-standard-library = ["anyio","pytest"]
 force-to-top = ["moat.util"]
 

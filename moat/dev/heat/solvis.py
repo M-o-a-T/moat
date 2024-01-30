@@ -206,7 +206,7 @@ feedback:
     heat: !P home.ass.dyn.switch.heizung.main.state
     pump: !P home.ass.dyn.binary_sensor.heizung.pump.state
     ice: !P home.ass.dyn.binary_sensor.heizung.wp_de_ice.state
-    pellet: !P home.ass.dyn.binary_sensor.heizung.pellets.state
+#   pellet: !P home.ass.dyn.binary_sensor.heizung.pellets.state
     passthru:
       pump: !P home.ass.dyn.switch.heizung.wp_auto_mode.state
       pellet: !P home.ass.dyn.switch.heizung.pellet_auto_mode.state

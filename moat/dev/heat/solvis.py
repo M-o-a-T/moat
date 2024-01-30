@@ -1534,22 +1534,6 @@ class Data:
         self.state.run = 0
         await self.save()
 
-    async def run(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        """
-        main runner. Wraps `run_pump`
-        but turns the heat pump off on exit/error.
-        """
-        try:
-            await self.run_pump(task_status=task_status)
-        except BaseException as exc:
-            e = exc
-        else:
-            e = None
-        finally:
-            print(f"*** OFF {e !r} ***")
-#           with anyio.CancelScope(shield=True):
-#               await self.off()
-
     async def run_init(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         "setup listeners"
         cfg = self._cfg
@@ -1725,18 +1709,26 @@ async def cli(ctx, config):
 @click.option("-f", "--force-on", is_flag=True)
 async def run(obj, record, force_on, no_save):
     "Heat pump controller. Designed to run continuously"
-    async with open_client(**mcfg.kv) as cl, anyio.create_task_group() as tg:
-        d = Data(obj.cfg, cl, record=record, no_op=no_save)
-        d.force_on = force_on
+    async with open_client(**mcfg.kv) as cl:
+        try:
+            async with anyio.create_task_group() as tg:
+                d = Data(obj.cfg, cl, record=record, no_op=no_save)
+                d.force_on = force_on
 
-        await tg.start(d.run_init)
-        await tg.start(d.err_mon)
-        await tg.start(d.run_temp_thresh)
-        await tg.start(d.run_set_heat)
-        await tg.start(d.run_set_pellet)
-        if not no_save:
-            await tg.start(d.saver)
-        await d.run()
+                await tg.start(d.run_init)
+                await tg.start(d.err_mon)
+                await tg.start(d.run_temp_thresh)
+                await tg.start(d.run_set_heat)
+                await tg.start(d.run_set_pellet)
+                if not no_save:
+                    await tg.start(d.saver)
+                await d.run_pump()
+        finally:
+            with anyio.fail_after(30,shield=True):
+                async with anyio.create_task_group() as tg:
+                    await tg.start(d.run_init)
+                    await d.off()
+                    tg.cancel_scope.cancel()
 
 
 @cli.command
@@ -1748,7 +1740,7 @@ async def replay(obj, record):
         d = Data(obj.cfg, cl)
         await tg.start(d.run_rec, record, tg)
         await tg.start(d.run_fake)
-        await tg.start(d.run)
+        await tg.start(d.run_pump)
 
 
 @cli.command

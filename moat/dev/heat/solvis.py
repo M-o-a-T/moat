@@ -1306,8 +1306,8 @@ class Data:
                 self.state.t_pellet_on = self.time
                 run = True
 
-                self.pid.p_load.move_to(self.tb_heat, 1., t=t)
-                self.pid.p_buffer.move_to(self.tb_low, 1., t=t)
+                self.pid.p_load.move_to(self.tb_heat, 1., t=self.time)
+                self.pid.p_buffer.move_to(self.tb_low, 1., t=self.time)
 
             elif run and (
                 self.m_air > self.cfg.misc.pellet.current

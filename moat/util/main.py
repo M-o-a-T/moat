@@ -1,9 +1,8 @@
 """
 Support for main program, argv, etc.
 """
-from __future__ import annotations
 
-from typing import Awaitable
+from __future__ import annotations
 
 import importlib
 import logging
@@ -17,15 +16,17 @@ from contextvars import ContextVar
 from functools import partial
 from pathlib import Path as FSPath
 
+import asyncclick as click
+
 from .dict import attrdict, to_attrdict
+from .exc import ungroup
 from .impl import NotGiven
 from .merge import merge
 from .msgpack import Proxy
-from .path import P, path_eval, Path
+from .path import P, path_eval
 from .yaml import yload
-from .exc import ungroup
 
-import asyncclick as click
+from typing import Awaitable
 
 logger = logging.getLogger("_loader")
 
@@ -45,9 +46,12 @@ this_load = ContextVar("this_load", default=None)
 
 NoneType = type(None)
 
-def _no_config(*a,**k):
+
+def _no_config(*a, **k):  # noqa:ARG001
     import warnings
+
     warnings.warn("Call to logging config ignored", stacklevel=2)
+
 
 def attr_args(proc=None, with_path=True, with_eval=True, with_proxy=False, par_name="Parameter"):
     """
@@ -429,6 +433,7 @@ class Loader(click.Group):
         async def cmd(self):
             print("I am", self.name)  # prints "subcmd"
     """
+
     # ruff:noqa:SLF001
 
     def __init__(
@@ -591,7 +596,14 @@ class MainLoader(Loader):
     multiple=True,
     help="Adjust log level. Example: '--log asyncactor=DEBUG'.",
 )
-@click.option("-c", "--cfg", type=click.Path("r"), default=None, help="Configuration file (YAML).", multiple=True)
+@click.option(
+    "-c",
+    "--cfg",
+    type=click.Path("r"),
+    default=None,
+    help="Configuration file (YAML).",
+    multiple=True,
+)
 @click.option(
     "-h",
     "-?",
@@ -738,8 +750,8 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
 
     if not cfg:
         cfg = to_attrdict(read_cfg(name, None))
-    elif isinstance(cfg,(list,tuple)):
-        cf = { }
+    elif isinstance(cfg, (list, tuple)):
+        cf = {}
         for fn in cfg:
             merge(cf, read_cfg(name, fn), replace=True)
         cfg = to_attrdict(cf)
@@ -755,11 +767,11 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     obj.debug = verbose
     obj.DEBUG = debug
 
-    obj.cfg = process_args(obj.cfg, vars_=vars_,eval_=eval_,path_=path_,proxy_=proxy_)
+    obj.cfg = process_args(obj.cfg, vars_=vars_, eval_=eval_, path_=path_, proxy_=proxy_)
 
     if wrap:
         pass
-    elif hasattr(logging.root,"_MoaT"):
+    elif hasattr(logging.root, "_MoaT"):
         logging.debug("Logging already set up")
     else:
         # Configure logging. This is a somewhat arcane art.

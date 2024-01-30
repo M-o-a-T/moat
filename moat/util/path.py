@@ -15,6 +15,7 @@ ever want to do that: paths are best processed as Path objects, not
 strings.
 
 """
+
 from __future__ import annotations
 
 import ast

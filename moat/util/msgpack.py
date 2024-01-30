@@ -8,15 +8,16 @@ Extension types defined here:
 4: contains raw bytes, interpreted as UTF-8, returned as (named) Proxy object
 5: object constructor
 """
+
 from __future__ import annotations
 
 from functools import partial
 
+import msgpack
+
 from . import packer, stream_unpacker
 from .path import Path
 from .proxy import Proxy, _CProxy, obj2name
-
-import msgpack
 
 
 def _encode(data):
@@ -26,8 +27,8 @@ def _encode(data):
     if isinstance(data, Path):
         # Path
         # XXX the mark is dropped until everybody understands type 6
-#       if data.mark:
-#           return msgpack.ExtType(6, packer(data.mark) + b"".join(packer(x) for x in data))
+        #   if data.mark:
+        #      return msgpack.ExtType(6, packer(data.mark) + b"".join(packer(x) for x in data))
         return msgpack.ExtType(3, b"".join(packer(x) for x in data))
     if isinstance(data, Proxy):
         # Proxy object

@@ -1,17 +1,18 @@
 """
 This module contains various helper functions and classes.
 """
+
 from __future__ import annotations
 
 import os
 import sys
 from collections.abc import Mapping, Sequence
 
+import ruyaml as yaml
+
 from .dict import attrdict
 from .msgpack import Proxy
 from .path import Path
-
-import ruyaml as yaml
 
 __all__ = ["yload", "yprint", "yformat", "yaml_named", "add_repr"]
 
@@ -63,9 +64,11 @@ def _proxy_repr(dumper, data):
     # return ScalarNode(tag, value, style=style)
     # return yaml.events.ScalarEvent(anchor=None, tag='!P', implicit=(True, True), value=str(data))
 
+
 def read_env(loader, node):
     value = loader.construct_scalar(node)
     return os.environ[value]
+
 
 SafeRepresenter.add_representer(Path, _path_repr)
 SafeConstructor.add_constructor("!P", Path._make)

@@ -1,9 +1,10 @@
 """
 More util functions
 """
+
 from __future__ import annotations
 
-from moat.util.misc import val2pos, pos2val
+from moat.util.misc import pos2val, val2pos
 
 
 def test_val2pos():
@@ -21,6 +22,7 @@ def test_val2pos():
     assert val2pos(0, 4, 2) == 2.0
     assert val2pos(0, 4, 2, clamp=True) == 1.0
     assert val2pos(0, -1, 2, clamp=True) == 0.0
+
 
 def test_pos2val():
     """

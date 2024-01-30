@@ -1,4 +1,5 @@
 "Support for merge-in-place of dict contents"
+
 from __future__ import annotations
 
 __all__ = ["merge"]

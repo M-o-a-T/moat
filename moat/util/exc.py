@@ -1,6 +1,7 @@
 """
 Exception handling helpers
 """
+
 from __future__ import annotations
 
 from contextlib import contextmanager
@@ -18,6 +19,7 @@ def exc_iter(exc):
     else:
         yield exc
 
+
 @contextmanager
 def ungroup():
     """
@@ -31,4 +33,3 @@ def ungroup():
             if len(e.exceptions) == 1:
                 e = e.exceptions[0]
         raise e from None
-

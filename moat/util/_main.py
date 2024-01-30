@@ -1,6 +1,7 @@
 """
 Basic tool support
 """
+
 from __future__ import annotations
 
 import anyio
@@ -9,14 +10,13 @@ import sys
 from datetime import datetime
 from time import time
 
+import asyncclick as click
+
 from . import packer, stream_unpacker
 from .main import load_subgroup
 from .path import P, Path, path_eval
 from .times import humandelta, time_until
 from .yaml import yload, yprint
-from .path import P
-
-import asyncclick as click
 
 log = logging.getLogger()
 
@@ -148,6 +148,7 @@ async def path_(encode, decode, path):
         for p in path:
             print(repr(list(P(p))))
 
+
 @cli.command("cfg", help="Retrieve+show a config value", no_args_is_help=True)
 @click.pass_obj
 @click.option("-y", "--yaml", is_flag=True, help="print as YAML")
@@ -168,10 +169,10 @@ async def cfg_(obj, path, yaml, empty):
     delim = False
     for p in path:
         if delim and yaml:
-            print("---",file=obj.stdout)
+            print("---", file=obj.stdout)
         with ungroup():
             try:
-                v = obj.cfg._get(p)
+                v = obj.cfg._get(p)  # noqa:SLF001
             except KeyError:
                 if not empty:
                     print("Unknown:", p, file=sys.stderr)

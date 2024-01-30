@@ -1,6 +1,7 @@
 """
 This module contains proxy helpers.
 """
+
 from __future__ import annotations
 
 from .impl import NotGiven
@@ -19,6 +20,7 @@ __all__ = [
 
 class NoProxyError(ValueError):
     "Error for nonexistent proxy values"
+
     # pylint:disable=unnecessary-pass
 
 
@@ -111,7 +113,7 @@ def name2obj(name, obj=NotGiven, replace=False):
     if replace:
         _CProxy[name] = obj
     else:
-        oobj = _CProxy.get(name, None)
+        oobj = _CProxy.get(name)
         if oobj is not None and oobj is not obj:
             raise KeyError(name)  # exists
     return None
@@ -132,7 +134,7 @@ def obj2name(obj, name=NotGiven, replace=False):
     if replace:
         _RProxy[oid] = name
     else:
-        oname = _RProxy.get(oid, None)
+        oname = _RProxy.get(oid)
         if oname is not None and oname != name:
             raise KeyError(name)  # exists
     return None

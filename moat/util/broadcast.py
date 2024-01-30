@@ -1,6 +1,7 @@
 """
 Broadcasting support
 """
+
 from __future__ import annotations
 
 try:
@@ -8,7 +9,7 @@ try:
 except ImportError:
     WeakSet = set
 
-from .compat import EndOfStream, WouldBlock, NotGiven
+from .compat import EndOfStream, WouldBlock
 from .impl import NotGiven
 from .queue import Queue
 
@@ -199,6 +200,7 @@ class Broadcaster:
             r(value)
 
     async def read(self):
+        "just gets the value"
         return self.value
 
     def close(self):

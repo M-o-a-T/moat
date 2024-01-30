@@ -1346,7 +1346,12 @@ class Data:
 
         async def _upd():
             nonlocal cf, dest, locks, t_cur, _lock
+            if t_cur is None:
+                print("t_cur bad")
+                return 10
             async with _lock:
+                if self.heat_dest is None:
+                    print("t_cur OK")
                 import datetime
 
                 dt = datetime.datetime.now()

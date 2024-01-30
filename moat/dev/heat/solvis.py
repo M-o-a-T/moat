@@ -1008,12 +1008,12 @@ class Data:
 
             # RUNNING ONLY after this point
 
-            if self.state.pellet_on:
-                if not self.state.start_p and self.m_pellet >= t_low:
-                    # turn off when the pellet burner is warm as it's turned on
-                    print("OFF 2",self.m_pellet,t_low,self.state.start_p, "    ")
-                    run = Run.off
-                    continue
+            if self.state.t_pellet_on:
+#               if not self.state.start_p and self.m_pellet >= t_low:
+#                   # turn off when the pellet burner is warm as it's turned on
+#                   print("OFF 2",self.m_pellet,t_low,self.state.start_p, "    ")
+#                   run = Run.off
+#                   continue
 
                 # the next two conditions cut off early.
                 # TODO do so only when the PID output is below whatever

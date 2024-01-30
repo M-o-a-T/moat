@@ -1398,7 +1398,6 @@ class Data:
                     await _upd()
 
         async def update_dest(*, task_status):
-            nonlocal lock_day, t_cur
             d = await _upd()
             task_status.started()
             while True:

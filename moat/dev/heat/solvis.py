@@ -1164,7 +1164,7 @@ class Data:
                 # starting up
                 continue
 
-            if self.m_pellet_state in (0,1,3,30,31):
+            if self.m_pellet_state in (0,1,3,5,30,31):
                 self.state.t_pellet_on = False
                 self.pid.load.Kd = self.cfg.pid.load.d
                 self.pid.load.Tf = self.cfg.pid.load.tf

@@ -809,19 +809,23 @@ class Data:
                 t_nom = max(th_nom, tw_nom)
                 t_low = max(th_low, tw_low)
                 t_adj = max(th_adj, tw_adj)
+                t_set_on = max(tw_nom, th_nom)  # test: buffer top
+                t_set_off = max(tw_nom, th_low)  # test: buffer mid
 
                 t_cur = self.tb_heat
             else:
                 t_nom = tw_nom
                 t_low = tw_low
                 t_adj = tw_adj
+                t_set_on = tw_nom  # test: buffer top
+                t_set_off = tw_nom  # test: buffer mid
 
                 t_cur = self.tb_water
 
             # PID controller settings
             f = val2pos(t_nom, t_cur, t_adj, clamp=True)
             max2 = (self.cfg.adj.max_max+self.cfg.adj.max)/2
-            t_limit = min(max2, t_adj + self.cfg.adj.more)
+            t_limit = min(max2, max(self.tb_low+self.cfg.misc.heat.delta, t_adj + self.cfg.adj.more))
             tp_limit = min(self.cfg.adj.max_pellet, t_adj + self.cfg.adj.more, self.tb_heat+self.cfg.adj.more)
             if self.tb_heat < t_low:
                 adj = (t_low-self.tb_heat) * self.cfg.adj.low.factor
@@ -838,10 +842,9 @@ class Data:
             await self.cl_set(self.cfg.cmd.pellet.temp, tp_limit, idem=True)
 
             # on/off thresholds
-            t_set_on = (t_low + t_adj) / 2  # top
-            t_set_off = t_nom
+            #t_set_on = (t_low + t_adj) / 2  # top
 
-            await self.pid.load.setpoint(t_load)
+            # t_load is later
             await self.pid.buffer.setpoint(t_buffer)
             await self.pid.limit.setpoint(t_limit)
             await self.pid.pump.setpoint(t_pump)
@@ -1103,11 +1106,12 @@ class Data:
                     f"t={int(tt)%1000:03d}",
                     f"buf={t_cur :.1f}/{self.tb_mid :.1f}/{self.tb_low :.1f}",
                     f"t={self.t_out :.1f}/{self.t_in :.1f}",
-                    f"Pump={l_pump :.3f}",
+                    f"P={l_pump :.3f}",
                     #*(f"{x :6.3f}" for x in i_pump),
-                    f"load{'=' if lim == l_load else '_'}{l_load :.3f}",
                     f"lim{'=' if lim == l_limit else '_'}{l_limit :.3f}",
+                    f"load{'=' if lim == l_load else '_'}{l_load :.3f}",
                     f"buf{'=' if lim == l_buf else '_'}{l_buffer :.3f}",
+                    #*(f"{x :6.3f}" for x in i_pump),
                     #*(f"{x :6.3f}" for x in i_buffer),
                     *(f"{x :6.3f}" for x in i_load),
                 )
@@ -1258,7 +1262,7 @@ class Data:
                         pr += tuple(f"{x :6.3f}" for x in i_load)
                         print(*pr, "    ")
                     else:
-                        print(*pr, self.state.t_pellet_on, "  ")
+                        print(*pr, int(self.state.t_pellet_on-self.time), "  ")
                 o_r = r
 
                 await self.cl_set(self.cfg.cmd.pellet.load, lim, idem=True)
@@ -1303,7 +1307,6 @@ class Data:
             )):
 
                 print("  PELLET ON  ")
-                self.state.t_pellet_on = self.time
                 run = True
 
                 self.pid.p_load.move_to(self.tb_heat, 1., t=self.time)

@@ -616,7 +616,7 @@ class Data:
 
             # redirect for shutdown
             if run == Run.off:
-                if orun is None and (self.state.pellet_on and not self.cm_pellet):
+                if orun is None and (self.state.t_pellet_on and not self.cm_pellet):
                     pass
                 elif orun not in (Run.off, Run.wait_time, Run.wait_flow, Run.wait_power, Run.down):
                     run = Run.down
@@ -819,10 +819,6 @@ class Data:
                 tp_limit += adj
             t_pump = min(self.cfg.adj.max,pos2val(t_low, f, t_limit + 0.2 * (t_low - t_limit)))
             # t_load = t_adj + self.cfg.adj.buffer
-            if self.state.pellet_on:
-                t_load = min(t_adj + self.cfg.adj.pellet.load, self.cfg.adj.pellet.max)
-            else:
-                t_load = min(t_adj + self.cfg.adj.buffer, self.cfg.adj.max)
             t_buffer = t_low + self.cfg.adj.low.buffer  # <0
 
             self.t_adj = t_adj
@@ -852,7 +848,7 @@ class Data:
                     print("** PS5     ")
                     r = None
                     self.force_on = False
-                elif self.state.pellet_on:
+                elif self.state.t_pellet_on is True:
                     if self.pellet_load < 0.9:
                         r="psml"
                     elif self.tb_low > self.cfg.lim.start:
@@ -938,14 +934,16 @@ class Data:
                 raise ValueError(f"State ?? {run !r}")
 
             heat_ok = False
-            if self.state.heat_ok and self.state.pellet_on:
+            if self.state.t_pellet_on:
                 heat_ok = True
             elif run not in {Run.off, Run.wait_time, Run.run, Run.down}:
                 self.log_hc(7)
             elif heat_off:
                 self.log_hc(8)
-            elif (self.tb_heat if self.m_switch or self.state.pellet_on else pos2val(self.tb_heat, (self.state.last_pwm or 0)/self.cfg.adj.low.pwm, self.t_out, clamp=True)) < self.c_heat:
-                self.log_hc(9)
+            elif (self.tb_heat if self.m_switch or self.state.t_pellet_on else pos2val(self.tb_heat, (self.state.last_pwm or 0)/self.cfg.adj.low.pwm, self.t_out, clamp=True)) < self.c_heat:
+                if run != Run.run or self.m_switch:
+                    self.log_hc(9, self.m_switch or self.state.t_pellet_on,self.tb_heat,self.c_heat)
+
             else:
                 heat_ok = True
 
@@ -1043,6 +1041,12 @@ class Data:
                 no_power = 0
                 t_no_power = None
 
+            if self.state.t_pellet_on:
+                t_load = min(t_adj + self.cfg.adj.pellet.load, self.cfg.adj.pellet.max)
+            else:
+                t_load = min(t_adj + self.cfg.adj.buffer, self.cfg.adj.max)
+            await self.pid.load.setpoint(t_load)
+
             # The pump rate is controlled by its intended output heat now
             if self.t_out > self.cfg.adj.max_max:
                 l_pump = 1
@@ -1067,7 +1071,7 @@ class Data:
                 w = 0
             l_buf = pos2val(l_limit,w,l_buffer, clamp=True)
             lim = min(l_buf, l_limit, l_load)
-            self.state.scaled_low += (lim-self.state.scaled_low)*(self.cfg.lim.low.pellet.scale if self.state.pellet_on else self.cfg.lim.low.scale)
+            self.state.scaled_low += (lim-self.state.scaled_low)*(self.cfg.lim.low.pellet.scale if self.state.t_pellet_on else self.cfg.lim.low.scale)
 
             tt = self.time
             if tt - tlast > 5 or self.t_out > self.cfg.adj.max:
@@ -1121,13 +1125,13 @@ class Data:
 
             # Finally, we might want to turn the heat exchanger off
             # if the buffer head temperature is high enough.
-            if self.state.pellet_on and self.state.scaled_low < self.cfg.lim.low.pellet.limit:
+            if self.state.t_pellet_on and self.state.scaled_low < self.cfg.lim.low.pellet.limit:
                 print("OFF SCALE PELLET    ")
                 run = Run.off
                 continue
             if t_cur >= t_adj:
                 # Running long enough, or lower buffer temperature higher than goal?
-                if self.state.scaled_low < (self.cfg.lim.low.pellet.limit if self.state.pellet_on else self.cfg.lim.low.limit):
+                if self.state.scaled_low < (self.cfg.lim.low.pellet.limit if self.state.t_pellet_on else self.cfg.lim.low.limit):
                     print("OFF SCALED    ")
                     run = Run.off
                     continue

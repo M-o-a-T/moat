@@ -587,6 +587,12 @@ class Data:
         if heat_pin is not None:
             GPIO.setup(heat_pin, GPIO.OUT)
 
+        if self.heat_dest is None:
+            print("wait heat_dest")
+            while self.heat_dest is None:
+                await self.wait()
+            print("OK")
+
         while True:
             #
             # Part 1: what to do when a state changes

@@ -1410,13 +1410,13 @@ class Data:
             self._cl.watch(cf.current, max_depth=0, fetch=True) as msgs,
         ):
             sf = self.cfg.setting.heat.mode.force
-            task_status.started()
             async for m in msgs:
                 if "value" not in m:
                     if m.get("state", "") == "uptodate":
                         await tg.start(update_dest)
                         await tg.start(sf_day_night, sf, "day", "night")
                         await tg.start(sf_day_night, sf, "night", "day")
+                        task_status.started()
                     else:
                         continue
                 elif t_cur is None:

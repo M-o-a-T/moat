@@ -240,6 +240,9 @@ misc:
       delta: 2  # outflow-inflow: if more than .delta, we start the main control algorithm
       # TODO add pump power uptake, to make sure this is no fluke
     min_power: 0.9
+    heat:
+      delta: 10
+      # if buffer_low+delta is > t_adj then run the heating pump
 pid:
     flow:
         ## direct flow rate control for the pump
@@ -942,6 +945,19 @@ class Data:
             heat_ok = False
             if self.state.t_pellet_on:
                 heat_ok = True
+            elif run == Run.temp and self.tb_low + self.cfg.misc.heat.delta > t_adj:
+                if cm_heat:
+                    # if the temperature delta is too low so that the heat pump
+                    # won't do much at startup, run the heating system to get more
+                    # cold water to its inflow
+                    heat_ok = True
+                    self.log_hc(10)
+                    self.state.heat_ok = 1  # start now
+                else:
+                    # ugh
+                    self.log_hc(11)
+                    t_adj = self.tb_low + self.cfg.misc.heat.delta
+
             elif run not in {Run.off, Run.wait_time, Run.run, Run.down}:
                 self.log_hc(7)
             elif heat_off:

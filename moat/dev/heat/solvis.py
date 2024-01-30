@@ -1034,7 +1034,7 @@ class Data:
                     no_power = 0
                 elif self.time - t_no_power > 10:
                     print(f"\nNO POWER USE {self.m_power} {self.cfg.misc.min_power}", "    ")
-                    if no_power > 3:
+                    if no_power > 9:
                         run = Run.off
                         continue
                     else:

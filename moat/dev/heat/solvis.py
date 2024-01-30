@@ -194,7 +194,8 @@ cmd:
       force: !P heat.s.pellets.load.force  # cm_pellet_force
       temp: !P heat.s.pellets.temp.goal.cmd
       load: !P heat.s.pellets.load.goal.cmd
-      wanted: !P heat.s.pellets.power.cmd  # cm_pellet
+      wanted: !P heat.s.pellets.power.cmd.auto  # set by us when requesting
+      run: !P heat.s.pellets.power.cmd  # cm_pellet - set by MoaT-VK, also controls the burner
 
     passthru:
       pump: !P home.ass.dyn.switch.heizung.wp_auto_mode.cmd       # m_passthru_pump
@@ -1290,18 +1291,13 @@ class Data:
 
     async def run_temp_thresh(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         task_status.started()
-        run = bool(self.state.t_pellet_on)
+        run = (await self.cl.get(self.cfg.cmd.pellet.wanted)).value
 
         while True:
             for _ in range(100):
                 await self.wait()
 
-            if not isinstance(self.state.t_pellet_on, bool):
-                if self.state.t_pellet_on > self.time:
-                    continue
-                self.state.t_pellet_on = True
-
-            if not run and self.cm_pellet and ( not self.cm_wp or (
+            if not run and ( not self.cm_wp or (
                 self.m_air < self.cfg.misc.pellet.current and
                 min(self.m_air,self.m_air_pred) < self.cfg.misc.pellet.predict
             )):
@@ -1313,12 +1309,12 @@ class Data:
                 self.pid.p_load.move_to(self.tb_heat, 1., t=t)
                 self.pid.p_buffer.move_to(self.tb_low, 1., t=t)
 
-            elif run and (not self.cm_pellet or (
+            elif run and (
                 self.m_air > self.cfg.misc.pellet.current
                 and min(self.m_air,self.m_air_pred) > self.cfg.misc.pellet.predict
                 and self.t_low is not None and self.tb_heat > self.t_low
                 and self.t_ext_avg is not None and self.t_ext_avg > self.cfg.misc.pellet.avg_off
-            )):
+            ):
                 run = False
                 self.state.t_pellet_on = False
                 self.pellet_load = 0
@@ -1327,7 +1323,9 @@ class Data:
             else:
                 continue
 
-            await self.cl_set(self.cfg.feedback.pellet, run)
+            await self.cl_set(self.cfg.cmd.pellet.wanted, run)
+            if "pellet" in self.cfg.feedback:
+                await self.cl_set(self.cfg.feedback.pellet, run)
 
 
     async def run_set_heat(self, *, task_status=anyio.TASK_STATUS_IGNORED):
@@ -1572,7 +1570,7 @@ class Data:
             await tg.start(self._kv, cfg.cmd.flow, "c_flow")
             await tg.start(self._kv, cfg.cmd.wp, "cm_wp")
             await tg.start(self._kv, cfg.cmd.heat, "cm_heat")
-            await tg.start(self._kv, cfg.cmd.pellet.wanted, "cm_pellet")
+            await tg.start(self._kv, cfg.cmd.pellet.run, "cm_pellet")
             await tg.start(self._kv, cfg.cmd.pellet.force, "cm_pellet_force")
             await tg.start(self._kv, cfg.setting.heat.day, "c_heat")
             await tg.start(self._kv, cfg.setting.heat.night, "c_heat_night")

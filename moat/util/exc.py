@@ -18,17 +18,23 @@ def exc_iter(exc):
     else:
         yield exc
 
-@contextmanager
-def ungroup():
-    """
-    Unwraps single-member exception groups for easier handling in
-    high-level error reporting.
-    """
-    try:
-        yield None
-    except BaseException as e:
+class ungroup:
+    def __call__(self):
+        return self
+    def __enter__(self):
+        return self
+    async def __aenter__(self):
+        return self
+
+    def __exit__(self, c,e,t):
+        if e is None:
+            return
         while isinstance(e, BaseExceptionGroup):
             if len(e.exceptions) == 1:
                 e = e.exceptions[0]
         raise e from None
 
+    async def __aexit__(self, c,e,t):
+        return self.__exit__(c,e,t)
+
+ungroup = ungroup()

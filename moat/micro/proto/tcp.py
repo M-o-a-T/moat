@@ -40,7 +40,7 @@ class Link(AnyioBuf):
                         if er.errno not in {errno.ENETUNREACH,errno.EHOSTUNREACH,errno.ECONNREFUSED}:
                             raise
                         if n > retry.get("attempts", 10):
-                            raise TimeoutError from None
+                            raise TimeoutError from er
                         if n == 0:
                             log("Retrying: %s %d, %r", self.host,self.port,er)
                         n += 1

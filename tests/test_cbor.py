@@ -14,6 +14,7 @@ pytestmark = pytest.mark.skip
 
 class Bar:
     "A proxied object"
+
     # ruff:noqa:PLW1641
 
     def __init__(self, x):
@@ -27,6 +28,7 @@ class Bar:
 @as_proxy("fu", replace=True)
 class Foo(Bar):
     "A proxied class"
+
     # pylint: disable=unnecessary-pass
 
 

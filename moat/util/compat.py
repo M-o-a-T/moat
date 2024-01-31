@@ -4,6 +4,7 @@ well as MicroPython/uasyncio.
 
 Well, for the most part.
 """
+
 from __future__ import annotations
 
 import anyio as _anyio
@@ -20,7 +21,6 @@ try:
 except ImportError:
     greenback = None
 
-from .impl import NotGiven
 from .queue import Queue as _Queue
 
 logger = logging.getLogger(__name__)

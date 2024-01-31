@@ -51,7 +51,7 @@ dev = [ "flake8", "isort",]
 
 [tool.ruff]
 select = ["ALL"]
-ignore = ["ANN","PTH","PERF", "D105", "D107","A003","S101","RUF001","RUF002","PLW1514", "D2","D3","D4","T2","FBT","TRY003","EM10","PLR","C","RET50","TD","FIX","N","ERA","BLE001"]
+ignore = ["ANN","PTH","PERF", "D105", "D107","A003","S101","RUF001","RUF002","PLW1514", "D2","D3","D4","T2","FBT","TRY003","EM10","PLR","C","RET50","TD","FIX","N","ERA","BLE001","COM812","ISC001"]
 
 preview = true
 explicit-preview-rules = true
@@ -67,7 +67,7 @@ builtins-ignorelist = ["id","help"]
 [tool.ruff.isort]
 no-lines-before = ["future"]
 required-imports = ["from __future__ import annotations"]
-section-order = ["future", "typing", "standard-library", "first-party", "upy", "moat", "local-folder", "third-party"]
+section-order = ["future","standard-library","first-party","third-party","moat","local-folder","upy","typing"]
 extra-standard-library = ["pytest", "anyio"]
 force-to-top = ["moat.util"]
 

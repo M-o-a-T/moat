@@ -5,19 +5,22 @@ Some rudimentary tests for queues and broadcasting
 # ruff:noqa:D103 pylint: disable=missing-function-docstring
 from __future__ import annotations
 
-from __future__ import annotations
-
 import anyio
 import pytest
 
 from moat.util.broadcast import Broadcaster, LostData
 
-@pytest.mark.anyio
-async def test_example():
+from typing import TYPE_CHECKING  # isort:skip
 
+if TYPE_CHECKING:
+    from moat.util.broadcast import BroadcastReader
+
+
+@pytest.mark.anyio()
+async def test_example():
     res = []
 
-    async def rdr(bcr: BroadcastReader|Broadcaster, task_status):
+    async def rdr(bcr: BroadcastReader | Broadcaster, task_status):
         bcr = aiter(bcr)
         task_status.started()
         async for msg in bcr:
@@ -30,7 +33,7 @@ async def test_example():
             await anyio.sleep(0.01)
         bc(42)
 
-    assert res == [0,1,2,3,4,42]
+    assert res == [0, 1, 2, 3, 4, 42]
 
 
 @pytest.mark.anyio()

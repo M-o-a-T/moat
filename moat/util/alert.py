@@ -9,6 +9,7 @@ Iterating will receive new state and end when the alert is resolved.
 The dispatcher is a context manager that can be iterated to receive new
 alerts.
 """
+
 from __future__ import annotations
 
 from contextlib import asynccontextmanager

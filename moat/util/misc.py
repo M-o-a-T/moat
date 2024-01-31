@@ -1,6 +1,7 @@
 """
 This module contains various helper functions and classes.
 """
+
 from __future__ import annotations
 
 __all__ = ["val2pos", "pos2val"]
@@ -50,4 +51,4 @@ def pos2val(a: float, b: float, c: float, /, clamp: bool = False):
         elif b > 1:
             b = 1
 
-    return a + b * (c-a)
+    return a + b * (c - a)

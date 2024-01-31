@@ -1,13 +1,14 @@
 """
 This module contains various helper functions and classes for dictionaries.
 """
-from __future__ import annotations
 
-from typing import Mapping
+from __future__ import annotations
 
 from copy import deepcopy
 
 from .impl import NotGiven
+
+from typing import Mapping
 
 __all__ = ["combine_dict", "drop_dict", "attrdict", "to_attrdict"]
 

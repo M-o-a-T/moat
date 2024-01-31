@@ -25,4 +25,4 @@ sys.path.insert(0, ".")
 
 import main  # noqa:E402
 
-main.go(mode, fake_end=False)
+main.go(mode, cmd=False)

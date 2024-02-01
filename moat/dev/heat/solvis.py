@@ -585,7 +585,6 @@ class Data:
         cm_heat = None
         n_cop = 0
         t_no_power = None
-        no_power = 0
         heat_off = False
         water_ok = True
         heat_pin = self.cfg.setting.heat.get("power", {}).get("pin", None)
@@ -1098,16 +1097,11 @@ class Data:
                 # might be ice or whatever, so wait
                 if t_no_power is None:
                     t_no_power = self.time
-                    no_power = 0
-                elif self.time - t_no_power > 10:
+                elif self.time - t_no_power > 30:
                     print(f"\nNO POWER USE {self.m_power} {self.cfg.misc.min_power}", "    ")
-                    if no_power > 9:
-                        run = Run.off
-                        continue
-                    else:
-                        no_power += 1
+                    run = Run.off
+                    continue
             else:
-                no_power = 0
                 t_no_power = None
 
             if self.state.t_pellet_on:

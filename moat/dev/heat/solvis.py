@@ -165,7 +165,10 @@ lim:
         heat:
           delta: 1.5  #
           scale: .1
-
+    times:
+       start: 200
+       ice: 900
+       stop: 100
     power:
         min: .04
         off: .2   # power cutoff if the buffer is warm enough
@@ -592,6 +595,7 @@ class Data:
         self.state.setdefault("avg_heat", self.t_heat)
         self.state.pop("avg_heat_d", 0)
         self.state.setdefault("avg_heat_t", 0)
+        self.state.setdefault("t_change", None)
 
         if heat_pin is not None:
             GPIO.setup(heat_pin, GPIO.OUT)
@@ -668,6 +672,7 @@ class Data:
 
             elif run == Run.off:  # nothing happens
                 heat_off = False
+                self.state.t_change = None
                 await self.set_flow_pwm(0)
                 await self.set_load(0)
                 self.state.last_pwm = None
@@ -680,6 +685,10 @@ class Data:
 
             elif run == Run.wait_flow:  # wait for flow
                 heat_off = True
+                if self.state.t_change is None:
+                    self.state.t_change = self.time
+                t_change_max = self.cfg.lim.times.start
+
                 await self.cl_set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off)
                 await self.pid.flow.setpoint(self.cfg.misc.start.flow.init.rate)
                 self.pid.flow.move_to(
@@ -708,6 +717,7 @@ class Data:
 
             elif run == Run.run:  # operation
                 heat_off = False
+                self.state.t_change = None
                 self.state.setdefault("t_run", self.time)
                 if orun is not None:
                     self.state.scaled_low = 1.0
@@ -724,6 +734,9 @@ class Data:
             elif run == Run.ice:  # wait for ice condition to stop
                 await self.log_zero()
 
+                if self.state.t_change is None:
+                    self.state.t_change = self.time
+                t_change_max = self.cfg.lim.times.ice
                 heat_off = True
                 await self.pid.flow.setpoint(self.cfg.misc.de_ice.flow)
                 self.pid.flow.move_to(
@@ -735,6 +748,9 @@ class Data:
 
             elif run == Run.down:  # wait for outflow-inflow<2 for n seconds, cool down
                 await self.log_zero()
+                if self.state.t_change is None:
+                    self.state.t_change = self.time
+                t_change_max = self.cfg.lim.times.stop
 
                 heat_off = True
                 await self.pid.flow.setpoint(self.cfg.misc.stop.flow)
@@ -743,6 +759,9 @@ class Data:
 
             else:
                 raise ValueError(f"State ?? {run !r}")
+
+            if self.state.t_change is not None and self.time - self.state.t_change > t_change_max:
+                raise TimeoutError("Time exceeded. Turning off.")
 
             orun = run
             self.state.run = int(run)
@@ -1620,13 +1639,14 @@ class Data:
 
         await self.set_load(0)
         task_status.started()
-        if self.t_out - self.t_in > self.cfg.misc.stop.delta:
-            while self.t_out - self.t_in > self.cfg.misc.stop.delta:
-                await self.handle_flow()
-                await self.wait()
-
-        await self.set_flow_pwm(0)
-        self.state.run = 0
+        try:
+            with anyio.fail_after(self.cfg.lim.times.stop):
+                while self.t_out - self.t_in > self.cfg.misc.stop.delta:
+                    await self.handle_flow()
+                    await self.wait()
+        finally:
+            await self.set_flow_pwm(0)
+            self.state.run = 0
         await self.save()
 
     async def run_init(self, *, task_status=anyio.TASK_STATUS_IGNORED):

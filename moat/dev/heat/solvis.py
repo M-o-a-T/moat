@@ -964,7 +964,14 @@ class Data:
             elif run == Run.ice:  # no operation
                 await self.handle_flow()
                 if not self.m_ice:
-                    run = Run.wait_flow  ## XXX instead: off = wait_time?
+                    if self.tb_mid > t_set_off:
+                        print("OFF 4A", t_cur, t_adj, self.tb_mid, t_set_off, "    ")
+                        run = Run.off
+                    elif self.tb_low >= t_low:
+                        print("OFF 5A", t_cur, t_adj, self.tb_low, t_low, "    ")
+                        run = Run.off
+                    else:
+                        run = Run.wait_flow  ## XXX instead: off = wait_time?
                     continue
 
             elif run == Run.down:  # wait for outflow-inflow<2 for n seconds, cool down

@@ -1223,7 +1223,7 @@ class Data:
                     run = Run.off
                     continue
                 elif self.tb_low >= t_low:
-                    print("OFF 5", t_cur, t_adj, self.tb_low, self.t_low, "    ")
+                    print("OFF 5", t_cur, t_adj, self.tb_low, t_low, "    ")
                     run = Run.off
                     continue
 

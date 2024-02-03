@@ -71,8 +71,7 @@ def _clean_cfg(cfg):
 )
 @click.option("-S", "--section", type=P, help="Section to use")
 @click.option("-L", "--link", type=P, help="path to the link")
-@attr_args
-async def cli(ctx, config, vars_, eval_, path_, section, link):
+async def cli(ctx, config, section, link):
     """Run MicroPython satellites
 
     'moat micro' configures MoaT satellites and runs the link to them,
@@ -96,7 +95,6 @@ async def cli(ctx, config, vars_, eval_, path_, section, link):
         with open(config) as f:  # noqa:ASYNC101
             cc = yload(f)
             merge(cfg, cc)
-    cfg = process_args(cfg, vars_, eval_, path_)
 
     if inv != "run":
         if link is None:

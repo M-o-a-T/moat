@@ -6,7 +6,6 @@ from ..compat import Event, Lock
 from .stack import BaseBuf, StackedBlk, StackedMsg
 
 from msgpack import OutOfData
-from serialpacker import SerialPacker
 
 # Typing
 
@@ -194,6 +193,8 @@ class SerialPackerBlkBuf(StackedBlk):
 
     def __init__(self, stream: BaseBuf, frame: dict, console: bool | int = False):
         super().__init__(None)
+
+        from serialpacker import SerialPacker
 
         self.s = stream
         self.p = SerialPacker(**frame)

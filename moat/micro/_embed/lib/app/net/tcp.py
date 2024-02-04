@@ -35,7 +35,10 @@ def Link(*a, **k):
 
     class _Link(CmdMsg):
         def __init__(self, cfg):
-            stack = console_stack(TcpLink(cfg.get("host", "127.0.0.1"), cfg["port"], retry=cfg.get("retry", {})), cfg)
+            stack = console_stack(
+                TcpLink(cfg.get("host", "127.0.0.1"), cfg["port"], retry=cfg.get("retry", {})),
+                cfg,
+            )
             super().__init__(stack, cfg)
 
     return _Link(*a, **k)

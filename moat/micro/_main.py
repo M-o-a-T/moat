@@ -501,13 +501,13 @@ async def mount_(obj, path, blocksize):
             else:
                 break
         else:
-            print(f"Path {sd._path} doesn't seem to exist.", file=sys.stderr)
+            print(f"Path {sd._path} doesn't seem to exist.", file=sys.stderr)  # noqa:SLF001
             sys.exit(1)
 
         async with (
-                SubDispatch(dsp, pd) as sd,
-                wrap(sd, path, blocksize=blocksize, debug=max(obj.debug - 1, 0)),
-                ):
+            SubDispatch(dsp, pd) as sd,
+            wrap(sd, path, blocksize=blocksize, debug=max(obj.debug - 1, 0)),
+        ):
             if obj.debug:
                 print("Mounted.")
             await idle()

@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from typing import Any, Awaitable, Mapping
+
     from moat.micro.proto.stack import BaseMsg
 
 
@@ -119,7 +120,7 @@ class BaseCmdMsg(BaseCmd):
                     res["d"] = exc.args
             else:
                 res["e"] = StoppedError
-                res["d"] = (repr(exc),"echo")
+                res["d"] = (repr(exc), "echo")
             await self.s.send(res)
         except TypeError as e2:
             log("ERROR returning %r", res, err=e2)

@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from contextlib import suppress
 
+from moat.micro.errors import ChannelClosed
+
 from ...util import NotGiven, Queue, ValueEvent
 from ..compat import (
     ACM,
@@ -19,7 +21,7 @@ from ..compat import (
     ticks_ms,
     wait_for_ms,
 )
-from .stack import ChannelClosed, StackedMsg
+from .stack import StackedMsg
 
 from typing import TYPE_CHECKING  # isort:skip
 

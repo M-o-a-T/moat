@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import machine as M
 
-from moat.micro.compat import AC_use, TimeoutError, log, sleep, sleep_ms, wait_for_ms
+from moat.micro.compat import AC_use, TimeoutError, log, sleep, wait_for_ms
 from moat.micro.proto.stream import FileBuf
 
 

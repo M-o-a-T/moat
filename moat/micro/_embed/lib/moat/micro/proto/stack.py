@@ -18,7 +18,6 @@ exception is the `Reliable` module, which limits this to commands.
 
 from __future__ import annotations
 
-from moat.util import as_proxy
 from moat.micro.compat import ACM, AC_exit, AC_use, log
 
 # Typing
@@ -27,27 +26,6 @@ from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from typing import Any, AsyncContextManager, Awaitable, Buffer
-
-
-@as_proxy("_rErr")
-class RemoteError(RuntimeError):
-    """
-    Forwarded error from a remote system.
-    """
-
-
-@as_proxy("_rErrS")
-class SilentRemoteError(RemoteError):
-    """
-    Forwarded error from a remote system.
-
-    Unlike `RemoteError`, this should not trogger a stack dump.
-    """
-
-
-@as_proxy("_rErrCCl")
-class ChannelClosed(RuntimeError):
-    "Link closed."
 
 
 class _NullCtx:

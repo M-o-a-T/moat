@@ -6,27 +6,8 @@ from __future__ import annotations
 import errno
 import os
 
-from moat.util import as_proxy
 from moat.micro.cmd.base import BaseCmd
-from moat.micro.proto.stack import SilentRemoteError
-
-
-class FileNotFoundError(SilentRemoteError):  # noqa:A001
-    "standard exception"
-
-    def __reduce__(self):
-        return (FileNotFoundError, (self.args[0],), {})
-
-
-class FileExistsError(SilentRemoteError):  # noqa:A001
-    "standard exception"
-
-    def __reduce__(self):
-        return (FileExistsError, (self.args[0],), {})
-
-
-as_proxy("_FnErr", FileNotFoundError)
-as_proxy("_FxErr", FileExistsError)
+from moat.micro.errors import FileExistsError, FileNotFoundError
 
 
 class Cmd(BaseCmd):

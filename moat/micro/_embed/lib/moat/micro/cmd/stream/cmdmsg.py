@@ -8,16 +8,16 @@ import sys
 
 from moat.util import NotGiven, ValueEvent, obj2name
 from moat.micro.cmd.base import BaseCmd
-from moat.micro.cmd.util import StoppedError
 from moat.micro.cmd.util.valtask import ValueTask
 from moat.micro.compat import AC_use, BaseExceptionGroup, L, TaskGroup, log
-from moat.micro.proto.stack import BaseMsg, RemoteError, SilentRemoteError
+from moat.micro.errors import RemoteError, SilentRemoteError, StoppedError
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from typing import Any, Awaitable, Mapping
+    from moat.micro.proto.stack import BaseMsg
 
 
 class BaseCmdMsg(BaseCmd):
@@ -100,7 +100,7 @@ class BaseCmdMsg(BaseCmd):
         res = NotGiven
         self.reply.pop(i, None)
         try:
-            if isinstance(exc, SilentRemoteError):  # noqa:SIM114
+            if isinstance(exc, (SilentRemoteError, OSError)):  # noqa:SIM114
                 pass
             elif x and isinstance(exc, tuple(x)):
                 pass

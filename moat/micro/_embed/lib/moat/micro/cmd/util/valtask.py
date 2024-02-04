@@ -4,7 +4,7 @@ Helpers for MoaT command interpreters et al.
 
 from __future__ import annotations
 
-from . import StoppedError
+from moat.micro.errors import StoppedError
 
 # Typing
 

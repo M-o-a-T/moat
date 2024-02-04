@@ -24,6 +24,7 @@ from moat.util import (
 )
 from moat.micro.cmd.tree.dir import Dispatch, SubDispatch
 from moat.micro.cmd.util.part import get_part
+from moat.micro.errors import RemoteError
 from moat.micro.path import copytree
 from moat.micro.stacks.util import TEST_MAGIC
 from moat.micro.util import run_update
@@ -335,8 +336,6 @@ async def cmd(obj, path, **attrs):
     if len(path) == 0:
         raise click.UsageError("Path cannot be empty")
 
-    from .proto.stack import RemoteError
-
     async with Dispatch(cfg, run=True) as dsp, SubDispatch(dsp, cfg.get("path", P("r"))) as sd:
         try:
             res = await sd.dispatch(tuple(path), val)
@@ -507,7 +506,7 @@ async def mount_(obj, path, blocksize):
 
         async with (
                 SubDispatch(dsp, pd) as sd,
-                wrap(sd, path, blocksize=blocksize, debug=max(obj.debug-1, 0)),
+                wrap(sd, path, blocksize=blocksize, debug=max(obj.debug - 1, 0)),
                 ):
             if obj.debug:
                 print("Mounted.")

@@ -13,8 +13,8 @@ from moat.micro.compat import (
     ticks_diff,
     ticks_ms,
 )
+from moat.micro.errors import StoppedError
 
-from . import StoppedError
 from .valtask import ValueTask
 
 # Typing

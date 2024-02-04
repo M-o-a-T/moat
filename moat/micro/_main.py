@@ -10,9 +10,11 @@ import logging
 import sys
 
 from moat.util import (
+    NotGiven,
     P,
     Path,
     attr_args,
+    combine_dict,
     merge,
     packer,
     process_args,
@@ -127,8 +129,8 @@ async def cli(ctx, config, section, link):
     type=click.Path(dir_okay=True, file_okay=False),
     help="Mount point for FUSE mount",
 )
-@click.option("-l", "--large", is_flag=True, help="Use more RAM")
-@click.option("-L", "--no-large", is_flag=True, help="Use less RAM")
+@click.option("-l/-L", "--large/--no-large", is_flag=True, help="Use more RAM")
+#@click.option("-L", "--no-large", is_flag=True, help="Use less RAM")
 @click.option("-s", "--state", type=str, help="State to enter by default")
 @click.option("-c", "--config", type=P, help="Config part to use for the device")
 @click.option("-w", "--watch", is_flag=True, help="monitor the target's output after setup")
@@ -137,14 +139,22 @@ async def setup_(ctx, **kw):
     """
     Initial sync of MoaT code to a MicroPython device.
 
-    MoaT must not currently run on the target.
+    MoaT must not currently run on the target. If it does,
+    send `` TBD `` commmands.
     """
+    default = {k:v for k,v in kw.items()
+        if ctx.get_parameter_source(k) == click.core.ParameterSource.DEFAULT }
+    param = {k:v for k,v in kw.items()
+        if ctx.get_parameter_source(k) != click.core.ParameterSource.DEFAULT }
+
+    if "large" in default:
+        default["large"] = None
+
     obj = ctx.obj
     cfg = obj.cfg
-    st = cfg.setdefault("args", {})
-    for k, v in kw.items():
-        if k not in st or ctx.get_parameter_source(k) != click.core.ParameterSource.DEFAULT:
-            st[k] = v
+    st = { k:(v if v != "-" else NotGiven) for k,v in cfg.setdefault("args", {}).items() }
+
+    st = combine_dict(param,st,default)
     try:
         with ungroup:
             return await setup(cfg, obj.ocfg, **st)
@@ -159,20 +169,19 @@ async def setup_(ctx, **kw):
 async def setup(
     cfg,
     ocfg,
-    source,
-    root,
-    dest,
-    kill,
-    large,
-    no_large,
-    run,
-    reset,
-    state,
-    config,
-    cross,
-    update,
-    mount,
-    watch,
+    source=None,
+    root="/",
+    dest="",
+    kill=False,
+    large=None,
+    run=False,
+    reset=False,
+    state=None,
+    config=None,
+    cross=None,
+    update=False,
+    mount=False,
+    watch=False,
 ):
     "sync helper"
     # 	if not source:
@@ -215,9 +224,9 @@ async def setup(
             await copy_over(source, dst, cross=cross)
         if state and not watch:
             await repl.exec(f"f=open('moat.state','w'); f.write({state !r}); f.close(); del f")
-        if large:
+        if large is True:
             await repl.exec("f=open('moat.lrg','w'); f.close()", quiet=True)
-        elif no_large:
+        elif large is False:
             await repl.exec("import os; os.unlink('moat.lrg')", quiet=True)
 
         if config:

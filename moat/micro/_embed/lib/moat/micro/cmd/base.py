@@ -364,7 +364,10 @@ class BaseCmd(Base):
                     raise TypeError("iter is async")
             return DelayedIter(it=r, t=rep)
 
-        p = getattr(self, f"cmd_{fn}")
+        try:
+            p = getattr(self, f"cmd_{fn}")
+        except AttributeError:
+            raise AttributeError(f"{self.path}: no cmd_{fn}")
 
         if not wait:
             # XXX better idea without forcing a taskgroup on everything?

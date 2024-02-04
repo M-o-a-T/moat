@@ -5,7 +5,10 @@ from __future__ import annotations
 
 import asyncio
 
-import machine as M
+try:
+    import machine as M
+except ImportError:
+    M = None
 
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.compat import AC_use, Event, TaskGroup

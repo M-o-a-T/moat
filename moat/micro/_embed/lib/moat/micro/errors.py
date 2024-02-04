@@ -28,8 +28,9 @@ class NoPathError(KeyError):
             f"‹NoPath {self.args[0]} {Path.build(self.args[1])}"
             f"{' '+' '.join(str(x) for x in self.args[2:]) if len(self.args) > 2 else ''}›"
         )
+
     def prefixed(self, path):
-        return NoPathError(path / self.args[0], self,args[1])
+        return NoPathError(path / self.args[0], *self.args[1:])
 
 
 try:

@@ -24,7 +24,7 @@ from moat.util import (
 )
 from moat.micro.cmd.tree.dir import Dispatch, SubDispatch
 from moat.micro.cmd.util.part import get_part
-from moat.micro.errors import RemoteError
+from moat.micro.errors import RemoteError, NoPathError
 from moat.micro.path import copytree
 from moat.micro.stacks.util import TEST_MAGIC
 from moat.micro.util import run_update
@@ -145,7 +145,15 @@ async def setup_(ctx, **kw):
     for k, v in kw.items():
         if k not in st or ctx.get_parameter_source(k) != click.core.ParameterSource.DEFAULT:
             st[k] = v
-    return await setup(cfg, obj.ocfg, **st)
+    try:
+        with ungroup:
+            return await setup(cfg, obj.ocfg, **st)
+    except NoPathError as exc:
+        logger.error("Problem: %s", exc)
+        if len(exc.args[0]) == 0:
+            logger.error("You probably need to load a configuration.")
+            
+
 
 
 async def setup(

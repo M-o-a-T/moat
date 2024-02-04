@@ -9,6 +9,7 @@ from functools import partial
 from moat.util import Path, import_
 from moat.micro.cmd.base import ACM_h, BaseCmd, ShortCommandError
 from moat.micro.compat import AC_use, Event, L, Lock, TaskGroup, log
+from moat.micro.errors import NoPathError
 
 # Typing
 
@@ -145,7 +146,7 @@ class BaseSubCmd(BaseSuperCmd):
         try:
             sub = self.sub[action[0]]
         except KeyError:
-            raise KeyError(str(self.path), str(Path.build(action))) from None
+            raise NoPathError(self.path, action, self.__class__.__name__) from None
         action = action[1:]
         return await sub.dispatch(action, msg, **kw)
 

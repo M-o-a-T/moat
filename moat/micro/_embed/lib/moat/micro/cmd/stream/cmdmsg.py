@@ -10,7 +10,7 @@ from moat.util import NotGiven, ValueEvent, obj2name
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util.valtask import ValueTask
 from moat.micro.compat import AC_use, BaseExceptionGroup, L, TaskGroup, log
-from moat.micro.errors import RemoteError, SilentRemoteError, StoppedError
+from moat.micro.errors import NoPathError, RemoteError, SilentRemoteError, StoppedError
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
@@ -196,6 +196,8 @@ class BaseCmdMsg(BaseCmd):
                     e = e(*d)
                 elif isinstance(e, str):
                     e = RemoteError(e)
+                elif isinstance(e, NoPathError):
+                    e = e.prefixed(self.path)
                 elif isinstance(e, Exception):
                     pass
                 else:

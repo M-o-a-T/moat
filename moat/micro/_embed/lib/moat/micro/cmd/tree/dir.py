@@ -142,7 +142,10 @@ class BaseSubCmd(BaseSuperCmd):
         if len(action) == 1:
             return await super().dispatch(action, msg, **kw)
 
-        sub = self.sub[action[0]]
+        try:
+            sub = self.sub[action[0]]
+        except KeyError:
+            raise KeyError(str(self.path), str(Path.build(action))) from None
         action = action[1:]
         return await sub.dispatch(action, msg, **kw)
 

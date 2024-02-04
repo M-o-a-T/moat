@@ -147,6 +147,7 @@ async def setup_(ctx, **kw):
     param = {k:v for k,v in kw.items()
         if ctx.get_parameter_source(k) != click.core.ParameterSource.DEFAULT }
 
+    # teach the 'large' flag to be ternary
     if "large" in default:
         default["large"] = None
 

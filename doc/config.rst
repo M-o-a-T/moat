@@ -462,8 +462,8 @@ Close a file.
 
   A valid file handle.
 
-dir
----
+ls
+--
 
 List a directory.
 
@@ -488,9 +488,9 @@ value is a map with these entries:
 
   Modification timestamp
 
-* s
+* m
 
-  File status flags
+  file type ("d", "f", "?").
 
 mkdir
 -----

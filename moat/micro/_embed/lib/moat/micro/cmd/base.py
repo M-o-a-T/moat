@@ -214,7 +214,7 @@ class BaseCmd(Base):
         self.p_task.cancel()
         await wait_complain(f"Stop {self.path}", 250, self.wait_stopped)
 
-    cmd_stp = stop
+    cmd__stp = stop
 
     if L:
 
@@ -242,7 +242,7 @@ class BaseCmd(Base):
                 await wait_complain(f"Rdy {self.path}", 250, self._ready.wait)
             return None
 
-        def cmd_rdy(self, w=True) -> Awaitable:
+        def cmd__rdy(self, w=True) -> Awaitable:
             """
             Check if / wait for readiness.
 
@@ -258,7 +258,7 @@ class BaseCmd(Base):
         if self._stopped is not None:
             await self._stopped.wait()
 
-    cmd_stq = wait_stopped
+    cmd__stq = wait_stopped
 
     @property
     def path(self):
@@ -382,7 +382,7 @@ class BaseCmd(Base):
 
     # globally-available commands
 
-    async def cmd_dir(self, h=False):
+    async def cmd__dir(self, h=False):
         """
         Rudimentary introspection. Returns a list of available commands @c and
         submodules @d. j=True if callable directly.
@@ -397,7 +397,7 @@ class BaseCmd(Base):
                 res["j"] = True
         return res
 
-    async def cmd_cfg(self, p=()):
+    async def cmd__cfg(self, p=()):
         """
         Read this item's config.
 

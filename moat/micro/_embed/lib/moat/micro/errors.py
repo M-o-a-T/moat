@@ -25,7 +25,7 @@ class NoPathError(KeyError):
     """An error that marks a nonexisting path"""
     def __str__(self):
         return (
-            f"‹NoPath {self.args[0]} {Path.build(self.args[1])}"
+            f"‹NoPath {self.args[0]} {Path.build(self.args[1])}" +
             f"{' '+' '.join(str(x) for x in self.args[2:]) if len(self.args) > 2 else ''}›"
         )
 

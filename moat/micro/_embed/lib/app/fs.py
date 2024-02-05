@@ -144,16 +144,18 @@ class Cmd(BaseCmd):
                 _h.update(_mem[:n])
         return _h.digest()
 
-    async def cmd_stat(self, p):
+    async def cmd_stat(self, p, v=False):
         """
-        Flags of @p.
+        State of @p.
 
         Returns a mapping::
 
             m: mode (f,d,?)
             s: size (files only)
             t: mod time
-            d: state bits
+            d: state array
+
+        @d will not be sent if @v is False.
         """
         p = self._fsp(p)
         try:
@@ -163,11 +165,14 @@ class Cmd(BaseCmd):
                 raise FileNotFoundError(p)  # noqa:TRY200
             raise
         if s[0] & 0x8000:  # file
-            return dict(m="f", s=s[6], t=s[7], d=s)
+            res = dict(m="f", s=s[6], t=s[7])
         elif s[0] & 0x4000:  # file
-            return dict(m="d", t=s[7], d=s)
+            res = dict(m="d", t=s[7])
         else:
-            return dict(m="?", d=s)
+            res = dict(m="?")
+        if v:
+            res[d] = s
+        return res
 
     async def cmd_mv(self, s, d, x=None, n=False):
         """

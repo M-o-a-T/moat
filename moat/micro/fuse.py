@@ -194,10 +194,13 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         r.st_ino = inode
         r.entry_timeout = 300
         r.attr_timeout = 300
-        if d.get("m") == "d":
+
+        r.st_size = 0
+        if d["m"] == "d":
             r.st_mode = stat.S_IFDIR | 0o777
-        elif d.get("m") == "f":
+        elif d["m"] == "f":
             r.st_mode = stat.S_IFREG | 0o666
+            r.st_size = d["s"]
         r.st_mtime_ns = t * 1_000_000_000
         r.st_ctime_ns = t * 1_000_000_000
         r.st_atime_ns = t * 1_000_000_000

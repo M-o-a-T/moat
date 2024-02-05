@@ -246,10 +246,7 @@ class BaseCmd(Base):
             """
             Check if / wait for readiness.
 
-            Returns `True` if down, `False` if OK.
-
-            `None` with @w=`False` means "not yet OK", while if w=`True` the
-            command is ready but this call has waited for it.
+            See `wait_ready` for return values.
             """
             return self.wait_ready(wait=w)
 

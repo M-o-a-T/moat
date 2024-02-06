@@ -365,7 +365,7 @@ class BaseCmd(Base):
         try:
             p = getattr(self, f"cmd_{fn}")
         except AttributeError:
-            raise NoPathError(self.path, fn, self.__class__.__name__, await self.cmd__dir()) from None
+            raise NoPathError(self.path, (fn,), self.__class__.__name__, await self.cmd__dir()) from None
 
         if not wait:
             # XXX better idea without forcing a taskgroup on everything?

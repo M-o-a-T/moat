@@ -150,7 +150,7 @@ class Cmd(BaseCmd):
         efix(os.mkdir, p)
 
 
-    async def cmd_hash(self, p):
+    async def cmd_hash(self, p:str, l:int = None):
         """
         Hash the contents of @p, sha256
         """
@@ -166,7 +166,10 @@ class Cmd(BaseCmd):
                 if not n:
                     break
                 _h.update(_mem[:n])
-        return _h.digest()
+        res = _h.digest()
+        if l is not None:
+            res = res[:l]
+        return res
 
     async def cmd_stat(self, p, v=False):
         """

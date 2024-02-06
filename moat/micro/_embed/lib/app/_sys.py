@@ -53,12 +53,15 @@ class Cmd(_Cmd):
             c=f2 - f1,
         )
 
-    async def cmd_hash(self, p: str):
+    async def cmd_hash(self, p: str, l:int = None):
         """
         Get the hash for a built-in module.
         """
         import _hash
-        return _hash.hash.get(p, None)
+        res = _hash.hash.get(p, None)
+        if l is not None:
+            res = res[:l]
+        return res
 
     async def cmd_boot(self, code, m):
         """

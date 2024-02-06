@@ -35,7 +35,7 @@ async def test_ary(tmp_path):
         await a.all("w", d={"v": True})
         assert [True, True, True] == await a.all("r")
 
-        cfg = await d.send("a", 1, "cfg")
+        cfg = await d.send("a", 1, "_cfg")
         assert cfg["pin"] == 2
 
         # TODO change n

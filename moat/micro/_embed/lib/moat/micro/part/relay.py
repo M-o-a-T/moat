@@ -34,7 +34,7 @@ class Relay(BaseCmd):
 
     async def setup(self):  # noqa:D102
         await super().setup()
-        if await self.pin.rdy():
+        if await self.pin._rdy():
             raise StoppedError("pin")
         await self.cmd_w()
 

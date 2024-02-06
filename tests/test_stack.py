@@ -158,10 +158,10 @@ async def test_stack(tmp_path):
             assert "\n- dir\n" in res.stdout
             assert "\n- wr\n" not in res.stdout
 
-            res = await s("?rdy")
+            res = await s("?_rdy")
             assert not res, "Link is not ready"
 
-            res = await rm("cmd s.f.dir", do_stdout=True)
+            res = await rm("cmd s.f._dir", do_stdout=True)
             assert "\n- rmdir\n" in res.stdout
 
             res = await rm("-L r.s cfg", do_stdout=True)
@@ -181,9 +181,9 @@ async def test_stack(tmp_path):
             assert res.stdout == ""
 
             # now do the same thing sanely
-            res = await s("f", "dir")
+            res = await s("f", "_dir")
             assert "rmdir" in res["c"]
-            res = await s.f("dir")
+            res = await s.f("_dir")
             assert "rmdir" in res["c"]
             cf = await cfg.get()
             assert cf["a"]["b"] == "fubar"

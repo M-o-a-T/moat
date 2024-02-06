@@ -386,13 +386,15 @@ class BaseCmd(Base):
         submodules @d. j=True if callable directly.
         """
         c = []
-        res = dict(c=c)
+        res = {}
 
         for k in dir(self):
             if k.startswith("cmd_") and h == (k[4] == "_"):
                 c.append(k[4:])
             elif k == ("_cmd" if h else "cmd"):
                 res["j"] = True
+        if c:
+            res["c"] = c
         return res
 
     async def cmd__cfg(self, p=()):

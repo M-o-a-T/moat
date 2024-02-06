@@ -97,36 +97,42 @@ exception, or a cancellation.
 
 ## Common commands
 
-### dir
+### \_dir
 
 Retrieve an app's directory, i.e. a list of commands and sub-apps.
 
-Docstrings are not yet supported.
+Docstrings are not supported.
 
-### rlo
+### \_upd
 
 Reload this object. A subtree reloads all subcommands.
 
-The `w` flag states whether to wait for the reload to succeed.
+### \_rdy
 
-### rlq
+Check whether this object is ready.
 
-Query Reload. Return a flag whether the last implicit reload has succeeded
-(True), failed (False), or never happened (None).
+If `w` is `True` (the default), don't return until it is.
 
-if `cl` is set, clear the flag.
+Return value:
 
-### rst
+* `False`: ready, no wait necessary.
 
-Restart this object. A subtree restart affects all subcommands.
+* `True`: down.
 
-The `w` flag states whether to wait for the restart to succeed.
+* `None`: going up, or (when `w` is set) signalling that the caller
+  did have to wait for readiness.
 
-### stp
+This command is not available if the satellite runs in "small" mode.
+
+### \_stp
 
 Stop this subsystem.
 
-The `w` flag states whether to wait for the stop to finish.
+The command returns when the subsystem is halted.
 
-Restarting is on the TODO list.
+### \_stq
+
+Query stop state.
+
+XXX do we need this?
 

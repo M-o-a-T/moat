@@ -202,7 +202,7 @@ async def setup_(ctx, **kw):
 
     obj = ctx.obj
     cfg = obj.cfg
-    st = { k:(v if v != "-" else NotGiven) for k,v in cfg.setdefault("args", {}).items() }
+    st = { k:(v if v != "-" else NotGiven) for k,v in cfg.setdefault("args", {}).items() if k in kw }
 
     st = combine_dict(param,st,default)
     return await setup(cfg, obj.ocfg, **st)

@@ -375,7 +375,7 @@ async def sync_(ctx, **kw):
             if update:
                 await _do_update(dst, root, cross, hsh)
             for s in source:
-                await _do_copy(s, sd, dest, cross)
+                await _do_copy(s, root, dest, cross)
             if boot:
                 await rsys.boot(code="SysBooT", m=1)
     await syn(**st)

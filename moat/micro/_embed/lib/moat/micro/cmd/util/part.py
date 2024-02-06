@@ -37,7 +37,7 @@ def set_part(cur, p: list[str | int], v: Any):
         setattr(cur, p[-1], v)
 
 
-def enc_part(cur):
+def enc_part(cur, name=None):
     """
     Helper method to encode a larger dict/list partially.
 
@@ -45,6 +45,8 @@ def enc_part(cur):
     (X,L) tuple where X is the dict/list in question except with all the
     complex parts removed, and L is a list of keys/offsets with complex
     data to retrieve
+
+    The tuple may have a third element: the name, if passed in.
     """
 
     def _complex(v):
@@ -60,8 +62,8 @@ def enc_part(cur):
                 s.append(k)
             else:
                 c[k] = v
-        if s:
-            return c, s
+        if s or name:
+            return (c, s, name) if name else (c, s)
         else:
             # dict has no complex values: return directly
             return c

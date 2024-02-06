@@ -44,15 +44,25 @@ def _clean_cfg(cfg):
     # cfg = attrdict(apps=cfg["apps"])  # drop all the other stuff
     return cfg
 
+skip_exc = {FileNotFoundError,FileExistsError,ConnectionRefusedError}
 
 def catch_errors(fn):
+    """
+    Wrapper for commands so that some errors don't cause a stack trace.
+    """
     @wraps(fn)
     async def wrapper(*a,**k):
         try:
             with ungroup:
                 return await fn(*a,**k)
-        except NoPathError as e:
+        except (NoPathError,ConnectionRefusedError) as e:
             raise click.ClickException(e)
+        except Exception as e:
+            if "bdb" in sys.modules:
+                skip_exc.add(sys.modules["bdb"].BdbQuit)
+            if type(e) in skip_exc:
+                raise click.ClickException(RuntimeError(repr(e)))
+            raise
 
     return wrapper
 

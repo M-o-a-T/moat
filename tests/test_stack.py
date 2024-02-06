@@ -71,6 +71,10 @@ micro:
 
   # Service for connecting to the main code.
   connect:
+    remote: !P r.s
+    path:
+      cfg: !P c
+      fs: !P f
     apps:
       r: net.unix.Link
     r: *np
@@ -153,31 +157,30 @@ async def test_stack(tmp_path):
             d.cfg_at("r", "s", "c") as cfg,
         ):
             # First a couple of command tests
-            res = await rm("cmd dir", do_stdout=True)
-            assert "\n- s\n" in res.stdout
-            assert "\n- dir\n" in res.stdout
-            assert "\n- wr\n" not in res.stdout
+            res = await rm("cmd _dir", do_stdout=True)
+            assert "\n  c: Cmd\n" in res.stdout
+            assert " wr\n" not in res.stdout
 
             res = await s("?_rdy")
             assert not res, "Link is not ready"
 
-            res = await rm("cmd s.f._dir", do_stdout=True)
+            res = await rm("cmd f._dir", do_stdout=True)
             assert "\n- rmdir\n" in res.stdout
 
-            res = await rm("-L r.s cfg", do_stdout=True)
+            res = await rm("cfg", do_stdout=True)
             assert "\nf:\n  root:" in res.stdout
             assert "fubar" not in res.stdout
 
             # change some config in remote live data
-            res = await rm("-L r.s cfg -v a.b fubar -e a.ft 42", do_stdout=True)
+            res = await rm("cfg -v a.b fubar -e a.ft 42", do_stdout=True)
             assert res.stdout == ""
 
             # change more config but only on local data
-            res = await rm("-L r.s cfg -e a.ft 44 -S", do_stdout=True)
+            res = await rm("cfg -e a.ft 44 -S", do_stdout=True)
             assert "\n  ft: 44\n" in res.stdout
 
             # change more config but only on remote data
-            res = await rm("-L r.s cfg -e a.ft 43 -W moat.cf2", do_stdout=True)
+            res = await rm("cfg -e a.ft 43 -W moat.cf2", do_stdout=True)
             assert res.stdout == ""
 
             # now do the same thing sanely

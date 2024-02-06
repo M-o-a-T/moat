@@ -8,6 +8,7 @@ from __future__ import annotations
 import anyio
 import logging
 import sys
+from functools import wraps
 
 from moat.util import (
     NotGiven,
@@ -43,6 +44,17 @@ def _clean_cfg(cfg):
     # cfg = attrdict(apps=cfg["apps"])  # drop all the other stuff
     return cfg
 
+
+def catch_errors(fn):
+    @wraps(fn)
+    async def wrapper(*a,**k):
+        try:
+            with ungroup:
+                return await fn(*a,**k)
+        except NoPathError as e:
+            raise click.ClickException(e)
+
+    return wrapper
 
 @load_subgroup(
     prefix="moat.micro",
@@ -135,6 +147,7 @@ async def cli(ctx, config, section, link):
 @click.option("-c", "--config", type=P, help="Config part to use for the device")
 @click.option("-w", "--watch", is_flag=True, help="monitor the target's output after setup")
 @click.option("-C", "--cross", help="path to mpy-cross")
+@catch_errors
 async def setup_(ctx, **kw):
     """
     Initial sync of MoaT code to a MicroPython device.
@@ -298,6 +311,7 @@ async def setup(
 )
 @click.option("-d", "--dest", type=str, required=True, default="", help="Destination path")
 @click.option("-C", "--cross", help="path to mpy-cross")
+@catch_errors
 async def sync_(obj, source, dest, cross):
     """
     Sync of MoaT code on a running MicroPython device.
@@ -314,6 +328,7 @@ async def sync_(obj, source, dest, cross):
 @cli.command(short_help="Reboot MoaT node")
 @click.pass_obj
 @click.option("-s", "--state", help="State after reboot")
+@catch_errors
 async def boot(obj, state):
     """
     Restart a MoaT node
@@ -344,6 +359,7 @@ async def boot(obj, state):
 @click.pass_obj
 @click.argument("path", nargs=1, type=P)
 @attr_args(with_path=True, with_proxy=True)
+@catch_errors
 async def cmd(obj, path, **attrs):
     """
     Send a MoaT command.
@@ -380,6 +396,7 @@ async def cmd(obj, path, **attrs):
     help="The client's data win if both -r and -R are used",
 )
 @attr_args(with_proxy=True)
+@catch_errors
 async def cfg_(
     obj,
     read,
@@ -491,6 +508,7 @@ async def cfg_(
 
 @cli.command("run", short_help="Run the multiplexer")
 @click.pass_obj
+@catch_errors
 async def run_(obj):
     """
     Run the MoaT stack.
@@ -503,6 +521,7 @@ async def run_(obj):
 @click.option("-b", "--blocksize", type=int, help="Max read/write message size", default=256)
 @click.argument("path", type=click.Path(file_okay=False, dir_okay=True), nargs=1)
 @click.pass_obj
+@catch_errors
 async def mount_(obj, path, blocksize):
     """Mount a controller's file system on the host"""
     from moat.micro.fuse import wrap
@@ -534,6 +553,7 @@ async def mount_(obj, path, blocksize):
 @cli.command("path")
 @click.pass_obj
 @click.option("-m", "--manifest", is_flag=True, help="main manifest")
+@catch_errors
 async def path_(obj, manifest):
     """Path to the embedded system's files"""
 

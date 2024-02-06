@@ -27,7 +27,7 @@ from moat.util import (
 )
 from moat.micro.cmd.tree.dir import Dispatch, SubDispatch
 from moat.micro.cmd.util.part import get_part
-from moat.micro.errors import RemoteError, NoPathError
+from moat.micro.errors import NoPathError, RemoteError
 from moat.micro.path import copytree
 from moat.micro.stacks.util import TEST_MAGIC
 from moat.micro.util import run_update
@@ -44,27 +44,31 @@ def _clean_cfg(cfg):
     # cfg = attrdict(apps=cfg["apps"])  # drop all the other stuff
     return cfg
 
-skip_exc = {FileNotFoundError,FileExistsError,ConnectionRefusedError}
+
+skip_exc = {FileNotFoundError, FileExistsError, ConnectionRefusedError}
+
 
 def catch_errors(fn):
     """
     Wrapper for commands so that some errors don't cause a stack trace.
     """
+
     @wraps(fn)
-    async def wrapper(*a,**k):
+    async def wrapper(*a, **k):
         try:
             with ungroup:
-                return await fn(*a,**k)
-        except (NoPathError,ConnectionRefusedError) as e:
-            raise click.ClickException(e)
+                return await fn(*a, **k)
+        except (NoPathError, ConnectionRefusedError) as e:
+            raise click.ClickException(e)  # noqa:TRY200
         except Exception as e:
             if "bdb" in sys.modules:
                 skip_exc.add(sys.modules["bdb"].BdbQuit)
             if type(e) in skip_exc:
-                raise click.ClickException(RuntimeError(repr(e)))
+                raise click.ClickException(RuntimeError(repr(e)))  # noqa:TRY200
             raise
 
     return wrapper
+
 
 @load_subgroup(
     prefix="moat.micro",
@@ -89,7 +93,7 @@ def catch_errors(fn):
 @click.pass_context
 @click.option("-S", "--section", type=P, help="Section to use")
 @click.option("-R", "--remote", type=P, help="path to the satellite")
-@click.option("-P", "--path", type=(str,P), multiple=True, help="remote's component")
+@click.option("-P", "--path", type=(str, P), multiple=True, help="remote's component")
 async def cli(ctx, section, remote, path):
     """Run MicroPython satellites
 
@@ -123,11 +127,11 @@ async def cli(ctx, section, remote, path):
     elif "remote" not in cfg:
         cfg["remote"] = P("r")
     pth = cfg.setdefault("path", {})
-    for n,p in path:
+    for n, p in path:
         cfg["path"][n] = p
-    for k,v in pth.items():
-        if isinstance(v,str):
-            v = P(v)
+    for k, v in pth.items():
+        if isinstance(v, str):
+            v = P(v)  # noqa:PLW2901
         pth[k] = cfg["remote"] + v
 
     obj.cfg = to_attrdict(cfg)
@@ -144,6 +148,7 @@ async def _do_update(dst, root, cross, hfn):
     await copytree(p / "boot.py", root / "boot.py", cross=None)
     await copytree(p / "main.py", root / "main.py", cross=None)
 
+
 async def _do_copy(source, dst, dest, cross):
     from .path import copy_over
 
@@ -156,6 +161,7 @@ async def _do_copy(source, dst, dest, cross):
     else:
         dst /= dest
     await copy_over(source, dst, cross=cross)
+
 
 @cli.command(name="setup", short_help="Copy MoaT to MicroPython")
 @click.pass_context
@@ -190,10 +196,16 @@ async def setup_(ctx, **kw):
     MoaT must not currently run on the target. If it does,
     send `` TBD `` commmands.
     """
-    default = {k:v for k,v in kw.items()
-        if ctx.get_parameter_source(k) == click.core.ParameterSource.DEFAULT }
-    param = {k:v for k,v in kw.items()
-        if ctx.get_parameter_source(k) != click.core.ParameterSource.DEFAULT }
+    default = {
+        k: v
+        for k, v in kw.items()
+        if ctx.get_parameter_source(k) == click.core.ParameterSource.DEFAULT
+    }
+    param = {
+        k: v
+        for k, v in kw.items()
+        if ctx.get_parameter_source(k) != click.core.ParameterSource.DEFAULT
+    }
 
     # teach the 'large' flag to be ternary
     if "large" in default:
@@ -201,11 +213,12 @@ async def setup_(ctx, **kw):
 
     obj = ctx.obj
     cfg = obj.cfg
-    st = { k:(v if v != "-" else NotGiven) for k,v in cfg.setdefault("args", {}).items() if k in kw }
+    st = {
+        k: (v if v != "-" else NotGiven) for k, v in cfg.setdefault("args", {}).items() if k in kw
+    }
 
-    st = combine_dict(param,st,default)
+    st = combine_dict(param, st, default)
     return await setup(cfg, obj.ocfg, **st)
-
 
 
 async def setup(
@@ -272,12 +285,14 @@ async def setup(
             await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl))
 
         if update:
+
             async def hfn(p):
                 res = await repl.exec(
                     f"import _hash; print(repr(_hash.hash[{p !r}])); del _hash",
                     quiet=True,
                 )
-                return eval(res)
+                return eval(res)  # noqa:S307,PGH001
+
             await _do_update(dst, MoatDevPath(".").connect_repl(repl), cross, hfn)
         if reset:
             await repl.soft_reset(run_main=run)
@@ -345,12 +360,18 @@ async def sync_(ctx, **kw):
     obj = ctx.obj
     cfg = obj.cfg
 
-    default = {k:v for k,v in kw.items()
-        if ctx.get_parameter_source(k) == click.core.ParameterSource.DEFAULT }
-    param = {k:v for k,v in kw.items()
-        if ctx.get_parameter_source(k) != click.core.ParameterSource.DEFAULT }
-    st = { k:(v if v != "-" else NotGiven) for k,v in cfg.get("sync", {}).items() if k in kw }
-    st = combine_dict(param,st,default)
+    default = {
+        k: v
+        for k, v in kw.items()
+        if ctx.get_parameter_source(k) == click.core.ParameterSource.DEFAULT
+    }
+    param = {
+        k: v
+        for k, v in kw.items()
+        if ctx.get_parameter_source(k) != click.core.ParameterSource.DEFAULT
+    }
+    st = {k: (v if v != "-" else NotGiven) for k, v in cfg.get("sync", {}).items() if k in kw}
+    st = combine_dict(param, st, default)
 
     async def syn(source=(), dest=".", cross=None, update=False, boot=False):
         if cross == "-":
@@ -363,21 +384,23 @@ async def sync_(ctx, **kw):
         if dest is None:
             raise click.UsageError("Destination cannot be empty")
         async with (
-                Dispatch(cfg, run=True) as dsp,
-                SubDispatch(dsp, cfg.path.fs) as rfs,
-                SubDispatch(dsp, cfg.path.sys) as rsys,
-                ):
-
+            Dispatch(cfg, run=True) as dsp,
+            SubDispatch(dsp, cfg.path.fs) as rfs,
+            SubDispatch(dsp, cfg.path.sys) as rsys,
+        ):
             root = MoatFSPath("/").connect_repl(rfs)
             dst = MoatFSPath(dest).connect_repl(rfs)
+
             async def hsh(p):
                 return await rsys.hash(p=p)
+
             if update:
                 await _do_update(dst, root, cross, hsh)
             for s in source:
                 await _do_copy(s, root, dest, cross)
             if boot:
                 await rsys.boot(code="SysBooT", m=1)
+
     await syn(**st)
 
 
@@ -428,7 +451,11 @@ async def cmd(obj, path, **attrs):
     val = process_args(val, no_path=True, **attrs)
     if len(path) == 0:
         raise click.UsageError("Path cannot be empty")
-    logger.debug("Command: %s %s", cfg.remote+path, " ".join(f"{k}={v !r}" for k,v in val.items()))
+    logger.debug(
+        "Command: %s %s",
+        cfg.remote + path,
+        " ".join(f"{k}={v !r}" for k, v in val.items()),
+    )
 
     async with Dispatch(cfg, run=True) as dsp, SubDispatch(dsp, cfg.remote) as sd:
         try:
@@ -584,14 +611,14 @@ async def mount_(obj, path, blocksize):
 
     cfg = obj.cfg
 
-    async with Dispatch(cfg, run=True, sig=True) as dsp:
-        async with (
-            SubDispatch(dsp, cfg.path.fs) as sd,
-            wrap(sd, path, blocksize=blocksize, debug=max(obj.debug - 1, 0)),
-        ):
-            if obj.debug:
-                print("Mounted.")
-            await idle()
+    async with (
+        Dispatch(cfg, run=True, sig=True) as dsp,
+        SubDispatch(dsp, cfg.path.fs) as sd,
+        wrap(sd, path, blocksize=blocksize, debug=max(obj.debug - 1, 0)),
+    ):
+        if obj.debug:
+            print("Mounted.")
+        await idle()
 
 
 @cli.command("path")

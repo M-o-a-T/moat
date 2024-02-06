@@ -49,7 +49,7 @@ class ABytes(io.BytesIO):
         "return the current buffer"
         return self.getbuffer()
 
-    async def sha256(self, l:int|None = None):
+    async def sha256(self, l: int | None = None):
         "hash the current buffer"
         _h = hashlib.sha256()
         _h.update(self.getbuffer())
@@ -431,7 +431,7 @@ class MoatDevPath(MoatPath):
 
     # custom extension methods
 
-    async def sha256(self, l:int|None = None) -> bytes:
+    async def sha256(self, l: int | None = None) -> bytes:
         """
         :returns: hash over file contents
 
@@ -463,7 +463,10 @@ class MoatDevPath(MoatPath):
             if l is None:
                 hash_value = await self._repl.evaluate("print(_h.digest()); del _h", quiet=True)
             else:
-                hash_value = await self._repl.evaluate(f"print(_h.digest()[:{l}]); del _h", quiet=True)
+                hash_value = await self._repl.evaluate(
+                    f"print(_h.digest()[:{l}]); del _h",
+                    quiet=True,
+                )
         return hash_value
 
 
@@ -645,7 +648,7 @@ class MoatFSPath(MoatPath):
             yield self / n
             # TODO add stat
 
-    async def sha256(self, l:int|None = None) -> bytes:
+    async def sha256(self, l: int | None = None) -> bytes:
         """
         :returns: hash over file contents
 
@@ -654,7 +657,7 @@ class MoatFSPath(MoatPath):
         return await self._req("hash", p=self.as_posix(), l=l)
 
 
-async def sha256(p, l:int|None = None):
+async def sha256(p, l: int | None = None):
     """
     Calculate a SHA256 of the file contents at @p.
     """

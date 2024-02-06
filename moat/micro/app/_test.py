@@ -46,7 +46,11 @@ def Loop(*a, **k):
             s.link(s)
             if (li := self.cfg.get("link", None)) is not None:
                 if "pack" in li and len(li) == 1:
-                    s = await AC_use(self, MsgpackMsgBlk(s, li))
+                    s = MsgpackMsgBlk(s, li)
+                    if (log := self.cfg.get("log", None)) is not None:
+                        from ..proto.stack import LogMsg
+                        s = LogMsg(s, log)
+                    s = await AC_use(self, s)
                 else:
                     s = await AC_use(self, console_stack(s, self.cfg))
             return s

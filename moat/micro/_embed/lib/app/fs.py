@@ -7,10 +7,12 @@ import errno
 import os
 
 from moat.micro.cmd.base import BaseCmd
-from moat.micro.errors import FileExistsError, FileNotFoundError
 from moat.micro.compat import sleep_ms
+from moat.micro.errors import FileExistsError, FileNotFoundError
+
 
 def _fty(s, **r):
+    # file type/size: stat array to dict
     sn = s[0]
     if sn & 0x8000:  # file
         m = "f"
@@ -26,15 +28,18 @@ def _fty(s, **r):
         r["t"] = s[7]
     return r
 
-def efix(f,p,*a):
+
+def _efix(f, p, *a):
+    # fix errors
     try:
-        return f(p,*a)
+        return f(p, *a)
     except OSError as e:
         if e.errno == errno.ENOENT:
             raise FileNotFoundError(p) from None
         if e.errno == errno.EEXIST:
             raise FileExistsError(p) from None
         raise
+
 
 class Cmd(BaseCmd):
     """
@@ -101,7 +106,7 @@ class Cmd(BaseCmd):
     async def cmd_open(self, p, m="r"):
         "open @f in binary mode @m (r,w)"
         p = self._fsp(p)
-        f = efix(open, p, m + "b")
+        f = _efix(open, p, m + "b")
         return self._add_f(f)
 
     async def cmd_rd(self, f, o=0, n=64):
@@ -133,13 +138,13 @@ class Cmd(BaseCmd):
         p = self._fsp(p)
         res = []
         if x:
-            for n,*_ in os.ilistdir(p):
+            for n, *_ in os.ilistdir(p):
                 await sleep_ms(1)
                 st = os.stat(f"{p}/{n}")
                 await sleep_ms(1)
                 res.append(_fty(st, n=n))
         else:
-            for n,*_ in os.ilistdir(p):
+            for n, *_ in os.ilistdir(p):
                 await sleep_ms(1)
                 res.append(n)
         return res
@@ -147,10 +152,9 @@ class Cmd(BaseCmd):
     async def cmd_mkdir(self, p):
         "new dir at @p"
         p = self._fsp(p)
-        efix(os.mkdir, p)
+        _efix(os.mkdir, p)
 
-
-    async def cmd_hash(self, p:str, l:int = None):
+    async def cmd_hash(self, p: str, l: int | None = None):
         """
         Hash the contents of @p, sha256
         """
@@ -185,7 +189,7 @@ class Cmd(BaseCmd):
         @d will not be sent if @v is False.
         """
         p = self._fsp(p)
-        s = efix(os.stat,p)
+        s = _efix(os.stat, p)
         res = _fty(s)
         if v:
             res["d"] = s
@@ -204,13 +208,13 @@ class Cmd(BaseCmd):
         os.stat(p)  # must exist
         if n:
             # dest must not exist
-            efix(os.stat,q)
+            _efix(os.stat, q)
         if x is None:
             os.rename(p, q)
         else:
             r = self._fsp(x)
             # exchange contents, via third file
-            efix(os.stat,r)
+            _efix(os.stat, r)
             os.rename(p, r)
             os.rename(q, p)
             os.rename(r, q)
@@ -218,15 +222,15 @@ class Cmd(BaseCmd):
     async def cmd_rm(self, p):
         "unlink file @p"
         p = self._fsp(p)
-        efix(os.remove,p)
+        _efix(os.remove, p)
 
     async def cmd_rmdir(self, p):
         "unlink dir @p"
         p = self._fsp(p)
-        efix(os.rmdir,p)
+        _efix(os.rmdir, p)
 
     async def cmd_new(self, p):
         "new file @p"
         p = self._fsp(p)
-        f = efix(open, p, "wb")  # noqa:ASYNC101,SIM115
+        f = _efix(open, p, "wb")
         f.close()

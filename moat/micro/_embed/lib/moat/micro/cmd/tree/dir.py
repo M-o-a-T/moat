@@ -146,14 +146,19 @@ class BaseSubCmd(BaseSuperCmd):
         try:
             sub = self.sub[action[0]]
         except KeyError:
-            raise NoPathError(self.path, action, self.__class__.__name__, await self.cmd__dir()) from None
+            raise NoPathError(
+                self.path,
+                action,
+                self.__class__.__name__,
+                await self.cmd__dir(),
+            ) from None
         action = action[1:]
         return await sub.dispatch(action, msg, **kw)
 
     async def cmd__dir(self, h=False):
         "dir: add subdirs"
         res = await super().cmd__dir(h=h)
-        res["d"] = { k:v.__class__.__name__ for k,v in self.sub.items() if h == (k[0] == '_') }
+        res["d"] = {k: v.__class__.__name__ for k, v in self.sub.items() if h == (k[0] == "_")}
         return res
 
 

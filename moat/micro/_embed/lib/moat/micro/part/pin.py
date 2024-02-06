@@ -36,6 +36,7 @@ except AttributeError:
 
         def irq(self, p, flg):
             pass
+
         IRQ_RISING = 1
         IRQ_FALLING = 2
 
@@ -51,6 +52,7 @@ class _Pin:
 
     All other import arguments are taken from keywords.
     """
+
     def __init__(self, *a, **kw):
         self._pin = _XPin(*a, **kw)
         self.flag = asyncio.ThreadSafeFlag()

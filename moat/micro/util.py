@@ -62,7 +62,6 @@ async def _run_update(src, dest: MoatPath, check=None, cross=None, hash_fn=None)
         sp = src.parent / dst
         # XXX we might want to ask git which files differ,
         # it's supposed to have a cache for that
-        repl = dst._repl  # noqa:SLF001
         dn = str(dst)[:-3].replace("/", ".").lstrip(".")
         if dn.startswith("lib."):
             dn = dn[4:]
@@ -72,9 +71,9 @@ async def _run_update(src, dest: MoatPath, check=None, cross=None, hash_fn=None)
             res = await hash_fn(dn)
             if res is None:
                 return False
-        except (ImportError, KeyError) as exc:
+        except (ImportError, KeyError):
             return False
         rs = await _rd(sp)
-        return res == hash256(rs)[:len(res)]
+        return res == hash256(rs)[: len(res)]
 
     await copytree(src, dest, check=check, drop=drop, cross=cross)

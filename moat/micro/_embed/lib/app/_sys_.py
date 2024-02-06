@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import sys
 
-from moat.util import Proxy, drop_proxy, obj2name
+from moat.util import Proxy, drop_proxy
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util.part import enc_part, get_part, set_part
 from moat.micro.stacks.util import TEST_MAGIC
@@ -38,7 +38,7 @@ class Cmd(BaseCmd):
             raise RuntimeError("cannot be deleted")
         drop_proxy(p)
 
-    async def cmd_eval(self, x, r:str|bool = False, a=None, k=None):
+    async def cmd_eval(self, x, r: str | bool = False, a=None, k=None):
         """
         Debugging/Introspection/Evaluation.
 
@@ -87,7 +87,7 @@ class Cmd(BaseCmd):
                 res = await res
 
         # store it?
-        if isinstance(r,str):
+        if isinstance(r, str):
             # None: drop from the cache
             if res is None:
                 del self.cache[r]
@@ -95,11 +95,11 @@ class Cmd(BaseCmd):
                 self.cache[r] = res
             return res is not None
 
-        if isinstance(r,(list,tuple)):
+        if isinstance(r, (list, tuple)):
             set_part(self.cache, r, res)
             return None
 
-        if isinstance(res,(dict,list,tuple)):
+        if isinstance(res, (dict, list, tuple)):
             # dicts+lists always get encoded
             res = enc_part(res)
         elif not isinstance(res, (int, float, Proxy)):
@@ -111,7 +111,7 @@ class Cmd(BaseCmd):
                 except AttributeError:
                     pass
                 else:
-                    res = enc_part(res.__dict__, res.__class__.__name__)
+                    res = enc_part(rd, res.__class__.__name__)
         return res
 
     async def cmd_info(self):

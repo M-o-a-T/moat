@@ -70,6 +70,8 @@ async def _run_update(src, dest: MoatPath, check=None, cross=None, hash_fn=None)
             dn = dn[:-9]
         try:
             res = await hash_fn(dn)
+            if res is None:
+                return False
         except (ImportError, KeyError) as exc:
             return False
         rs = await _rd(sp)

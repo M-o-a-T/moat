@@ -336,7 +336,7 @@ async def sync_(ctx, **kw):
         if ctx.get_parameter_source(k) == click.core.ParameterSource.DEFAULT }
     param = {k:v for k,v in kw.items()
         if ctx.get_parameter_source(k) != click.core.ParameterSource.DEFAULT }
-    st = { k:(v if v != "-" else NotGiven) for k,v in cfg.setdefault("args", {}).items() }
+    st = { k:(v if v != "-" else NotGiven) for k,v in cfg.get("sync", {}).items() if k in kw }
     st = combine_dict(param,st,default)
 
     async def syn(source=(), dest=".", cross=None, update=False):

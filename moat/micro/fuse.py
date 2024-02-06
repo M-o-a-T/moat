@@ -586,6 +586,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         be passed to the `readdir`, `fsyncdir` and `releasedir` methods to
         identify the directory.
         """
+        # TODO: send an extended "ls" command and cache the state and timestamp
 
         p = self.i_path(inode)
         try:

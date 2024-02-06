@@ -484,7 +484,7 @@ class MoatFSPath(MoatPath):
         to speed up operations.
         """
         if self._stat_cache is None:
-            st = await self._req("stat", p=self.as_posix())
+            st = await self._req("stat", p=self.as_posix(), v=True)
             self._stat_cache = os.stat_result(st["d"])
         return self._stat_cache
 
@@ -689,6 +689,8 @@ async def copytree(src: APath, dst: MoatPath, check=None, drop=None, cross=None)
     """
     n = 0
     if await src.is_file():
+        if "functools" in str(src):
+            breakpoint()
         if src.suffix == ".py":
             # here we replace "src" with a buffer containing the
             # corresponding mpy-cross output.

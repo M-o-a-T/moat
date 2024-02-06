@@ -179,34 +179,35 @@ cross-compiled and uploaded with an extension of ``.mpy``.
 connect
 =======
 
-This section lists parameters used by ``moat micro cmd`` to talk to a
-MoaT system.
+This section lists parameters used by other ``moat micro`` subcommands (i.e. all except ``setup`` and ``run``) to talk to a MoaT system.
 
-link
-++++
+The standard content of this section is something like this:
 
-The setup to use for the connection to the remote system.
+    micro:
+      connect:
+        apps:
+          r: net.unix.Link
+        r:
+          port: "Specify a Unix socket!"
 
-The default is this structure::
+        remote: !P r.s
+        path:
+          fs: !P f
+          sys: !P _s
+          cfg: !P _c
 
-    apps:
-      r: net.unix.Link
-    r:
-      port: "Specify a Unix socket!"
+This means:
 
-This starts a single "r" app which talks to this socket. The settings in
-the `data transport`_ section, below, are used as described.
+* connect to a ``moat micro run`` command that listens on this port
+* and use its ``s`` subcommand (presumably a serial link) to talk to the remote.
+* The remote's file, system, and config objects are thus reached via ``r.s.f``,
+  ``r.s._s`` and ``r.s._c``, respectively.
 
-path
-++++
+More complicated setups are possible; for instance, you can tunnel through a
+MoaT link and use one MoaT peripheral to directly talk to another.
 
-The path to reach the remote system. The default is "r.r"; the first
-component selects the link to the multiplexed local server, the second
-the server's link to the remote system.
+You can omit the Path markers in the ``path`` section, but we don't recommend it.
 
-More complicated setups are possible; e.g. you
-can tunnel through a MoaT link and use one MoaT peripheral to directly talk
-to another, without using overly-long actions.
 
 ------------
 Applications

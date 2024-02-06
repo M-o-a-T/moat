@@ -69,24 +69,18 @@ def catch_errors(fn):
         setup    setup
         *        connect    used for all other commands
 
-        The 'link' parameter specifies the name of the app that connects to
-        the remote system. It defaults to 'r'.
+        The 'remote' parameter specifies the app that connects to
+        the remote system.
 
-        Paths('P') are a shorthand notation for lists. See 'moat util path'
-        for details. The paths here are relative to the configuration's
-        ``micro`` section.
+        The '--path NAME P' parameter is a shorthand for
+            "moat -p micro.connect.path.NAME P micro …"
         """,
 )
 @click.pass_context
-@click.option(
-    "-c",
-    "--config",
-    help="Configuration file (YAML)",
-    type=click.Path(dir_okay=False, readable=True),
-)
 @click.option("-S", "--section", type=P, help="Section to use")
-@click.option("-L", "--link", type=P, help="path to the link")
-async def cli(ctx, config, section, link):
+@click.option("-R", "--remote", type=P, help="path to the satellite")
+@click.option("-P", "--path", type=(str,P), multiple=True, help="remote's component")
+async def cli(ctx, section, remote, path):
     """Run MicroPython satellites
 
     'moat micro' configures MoaT satellites and runs the link to them,
@@ -94,32 +88,64 @@ async def cli(ctx, config, section, link):
     obj = ctx.obj
     obj.ocfg = cfg = obj.cfg["micro"]
     inv = ctx.invoked_subcommand
-    if section is None:
-        if inv == "setup":
-            section = Path("setup")
-        elif inv == "run":
+    if inv == "run":
+        if remote is not None:
+            raise click.UsageError("You don't use a remote with 'moat micro run'")
+        if path:
+            raise click.UsageError("You don't use paths with 'moat micro run'")
+        if section is None:
             section = Path()
-        else:
+    elif inv == "setup":
+        if path:
+            raise click.UsageError("You don't use paths with 'moat micro run'")
+        if section is None:
+            section = Path("setup")
+    else:
+        if section is None:
             section = Path("connect")
     try:
         cfg = get_part(cfg, section)
     except KeyError:
         cfg = {}
 
-    if config:
-        with open(config) as f:  # noqa:ASYNC101
-            cc = yload(f)
-            merge(cfg, cc)
-
-    if inv != "run":
-        if link is None:
-            link = Path("r")
-        cfg["path"] = link
-    elif link is not None:
-        raise click.UsageError("You can't use a link path with 'moat micro run'")
+    if remote is not None:
+        cfg["remote"] = remote
+    elif "remote" not in cfg:
+        cfg["remote"] = P("r")
+    pth = cfg.setdefault("path", {})
+    for n,p in path:
+        cfg["path"][n] = p
+    for k,v in pth.items():
+        if isinstance(v,str):
+            v = P(v)
+        pth[k] = cfg["remote"] + v
 
     obj.cfg = to_attrdict(cfg)
 
+
+async def _do_update(dst, root, cross, hfn):
+    await run_update(dst / "lib", cross=cross, hash_fn=hfn)
+
+    # do not use "/". Running micropython tests locally requires
+    # all satellite paths to be relative.
+    import moat.micro._embed
+
+    p = anyio.Path(moat.micro._embed.__path__[0])  # noqa:SLF001
+    await copytree(p / "boot.py", root / "boot.py", cross=None)
+    await copytree(p / "main.py", root / "main.py", cross=None)
+
+async def _do_copy(source, dst, dest, cross):
+    from .path import copy_over
+
+    if not dest:
+        dest = str(source)
+        pi = dest.find("/_embed/")
+        if pi > 0:
+            dest = dest[pi + 8 :]
+            dst /= dest
+    else:
+        dst /= dest
+    await copy_over(source, dst, cross=cross)
 
 @cli.command(name="setup", short_help="Copy MoaT to MicroPython")
 @click.pass_context
@@ -133,7 +159,7 @@ async def cli(ctx, config, section, link):
     help="Files to sync",
 )
 @click.option("-D", "--dest", type=str, default="", help="Destination path")
-@click.option("-R", "--root", type=str, default="/", help="Destination root")
+@click.option("-R", "--root", type=str, default=".", help="Destination root")
 @click.option("-U", "--update", is_flag=True, help="Run standard updates")
 @click.option(
     "-M",
@@ -169,14 +195,7 @@ async def setup_(ctx, **kw):
     st = { k:(v if v != "-" else NotGiven) for k,v in cfg.setdefault("args", {}).items() }
 
     st = combine_dict(param,st,default)
-    try:
-        with ungroup:
-            return await setup(cfg, obj.ocfg, **st)
-    except NoPathError as exc:
-        logger.error("Problem: %s", exc)
-        if len(exc.args[0]) == 0:
-            logger.error("You probably need to load a configuration.")
-            
+    return await setup(cfg, obj.ocfg, **st)
 
 
 
@@ -184,7 +203,7 @@ async def setup(
     cfg,
     ocfg,
     source=None,
-    root="/",
+    root=".",
     dest="",
     kill=False,
     large=None,
@@ -227,15 +246,7 @@ async def setup(
     ):
         dst = MoatDevPath(root).connect_repl(repl)
         if source:
-            if not dest:
-                dest = str(source)
-                pi = dest.find("/_embed/")
-                if pi > 0:
-                    dest = dest[pi + 8 :]
-                    dst /= dest
-            else:
-                dst /= dest
-            await copy_over(source, dst, cross=cross)
+            await _do_copy(source, dst, dest, cross)
         if state and not watch:
             await repl.exec(f"f=open('moat.state','w'); f.write({state !r}); f.close(); del f")
         if large is True:
@@ -249,15 +260,13 @@ async def setup(
             await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl))
 
         if update:
-            await run_update(MoatDevPath("lib").connect_repl(repl), cross=cross)
-            # do not use "/". Running micropython tests locally requires
-            # all satellite paths to be relative.
-            import moat.micro._embed
-
-            p = anyio.Path(moat.micro._embed.__path__[0])  # noqa:SLF001
-            await copytree(p / "boot.py", MoatDevPath("boot.py").connect_repl(repl), cross=None)
-            await copytree(p / "main.py", MoatDevPath("main.py").connect_repl(repl), cross=None)
-
+            async def hfn(p):
+                res = await repl.exec(
+                    f"import _hash; print(repr(_hash.hash[{p !r}])); del _hash",
+                    quiet=True,
+                )
+                return eval(res)
+            await _do_update(dst, MoatDevPath(".").connect_repl(repl), cross, hfn)
         if reset:
             await repl.soft_reset(run_main=run)
             # reset with run_main set should boot into MoaT
@@ -301,28 +310,58 @@ async def setup(
 
 
 @cli.command("sync", short_help="Sync MoaT code")
-@click.pass_obj
+@click.pass_context
 @click.option(
     "-s",
     "--source",
     type=click.Path(dir_okay=True, file_okay=True, path_type=anyio.Path),
-    required=True,
-    help="Files to sync",
+    multiple=True,
+    help="more files to sync",
 )
-@click.option("-d", "--dest", type=str, required=True, default="", help="Destination path")
+@click.option("-d", "--dest", type=str, default=".", help="Destination path")
 @click.option("-C", "--cross", help="path to mpy-cross")
+@click.option("-U/-V", "--update/--no-update", is_flag=True, help="Run standard updates")
 @catch_errors
-async def sync_(obj, source, dest, cross):
+async def sync_(ctx, **kw):
     """
     Sync of MoaT code on a running MicroPython device.
 
     """
-    from .path import MoatFSPath, copy_over
+    from .path import MoatFSPath
 
+    obj = ctx.obj
     cfg = obj.cfg
-    async with Dispatch(cfg) as dsp, SubDispatch(dsp, cfg.get("path", P("r"))) as sd:
-        dst = MoatFSPath("/" + dest).connect_repl(sd)
-        await copy_over(source, dst, cross=cross)
+
+    default = {k:v for k,v in kw.items()
+        if ctx.get_parameter_source(k) == click.core.ParameterSource.DEFAULT }
+    param = {k:v for k,v in kw.items()
+        if ctx.get_parameter_source(k) != click.core.ParameterSource.DEFAULT }
+    st = { k:(v if v != "-" else NotGiven) for k,v in cfg.setdefault("args", {}).items() }
+    st = combine_dict(param,st,default)
+
+    async def syn(source=(), dest=".", cross=None, update=False):
+        dest = dest.lstrip("/")  # needs to be relative
+        if not update and not source:
+            if obj.debug:
+                print("Nothing to do.", file=sys.stderr)
+            return
+        if dest is None:
+            raise click.UsageError("Destination cannot be empty")
+        async with (
+                Dispatch(cfg, run=True) as dsp,
+                SubDispatch(dsp, cfg.path.fs) as rfs,
+                SubDispatch(dsp, cfg.path.sys) as rsys,
+                ):
+
+            root = MoatFSPath("/").connect_repl(rfs)
+            dst = MoatFSPath(dest).connect_repl(rfs)
+            async def hsh(p):
+                return await rsys.hash(p=p)
+            if update:
+                await _do_update(dst, root, cross, hsh)
+            for s in source:
+                await _do_copy(s, sd, dest, cross)
+    await syn(**st)
 
 
 @cli.command(short_help="Reboot MoaT node")
@@ -335,7 +374,7 @@ async def boot(obj, state):
 
     """
     cfg = obj.cfg
-    async with Dispatch(cfg) as dsp, SubDispatch(dsp, cfg.get("path", P("r"))) as sd:
+    async with Dispatch(cfg) as dsp, SubDispatch(dsp, cfg.path.sys) as sd:
         if state:
             await sd.state(state=state)
 
@@ -363,14 +402,18 @@ async def boot(obj, state):
 async def cmd(obj, path, **attrs):
     """
     Send a MoaT command.
+
+    The command is prefixed by the "micro.connect.remote" option;
+    use "moat micro -R ‹path› cmd …" to change it if necessary.
     """
     cfg = obj.cfg
     val = {}
     val = process_args(val, no_path=True, **attrs)
     if len(path) == 0:
         raise click.UsageError("Path cannot be empty")
+    logger.debug("Command: %s %s", cfg.remote+path, " ".join(f"{k}={v !r}" for k,v in val.items()))
 
-    async with Dispatch(cfg, run=True) as dsp, SubDispatch(dsp, cfg.get("path", P("r"))) as sd:
+    async with Dispatch(cfg, run=True) as dsp, SubDispatch(dsp, cfg.remote) as sd:
         try:
             res = await sd.dispatch(tuple(path), val)
         except RemoteError as err:
@@ -463,8 +506,8 @@ async def cfg_(
 
     async with (
         Dispatch(obj.cfg, run=True, sig=True) as dsp,
-        dsp.cfg_at(*cfg["path"], *cfg_path) as cf,
-        dsp.sub_at(*cfg["path"], *fs_path) as fs,
+        dsp.cfg_at(*cfg.path.cfg) as cf,
+        dsp.sub_at(*cfg.path.fs) as fs,
     ):
         has_attrs = any(a for a in attrs.values())
 
@@ -529,20 +572,8 @@ async def mount_(obj, path, blocksize):
     cfg = obj.cfg
 
     async with Dispatch(cfg, run=True, sig=True) as dsp:
-        for pd in (cfg["path"], Path("r") + cfg.path):
-            try:
-                async with ungroup, SubDispatch(dsp, pd) as sd:
-                    await sd.stat(p="/")
-            except KeyError:
-                pass
-            else:
-                break
-        else:
-            print(f"Path {sd._path} doesn't seem to exist.", file=sys.stderr)  # noqa:SLF001
-            sys.exit(1)
-
         async with (
-            SubDispatch(dsp, pd) as sd,
+            SubDispatch(dsp, cfg.path.fs) as sd,
             wrap(sd, path, blocksize=blocksize, debug=max(obj.debug - 1, 0)),
         ):
             if obj.debug:
@@ -567,7 +598,9 @@ async def path_(obj, manifest):
         print(m.__file__.replace("_tag", "manifest"), file=obj.stdout)
         return
 
-    for p in moat.micro.__path__:
-        p = pathlib.Path(p) / "_embed" / "lib"  # noqa:PLW2901
+    import moat.micro._embed
+
+    for p in moat.micro._embed.__path__:  # noqa:SLF001
+        p = pathlib.Path(p) / "lib"  # noqa:PLW2901
         if p.exists():
             print(p)

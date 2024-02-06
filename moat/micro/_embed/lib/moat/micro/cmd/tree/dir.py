@@ -324,8 +324,6 @@ class SubDispatch:
 
     def sub_at(self, *p):
         "create a sub-subdispatcher"
-        from .tree import SubDispatch
-
         return SubDispatch(self.root, self._path + p)
 
     async def __aenter__(self):

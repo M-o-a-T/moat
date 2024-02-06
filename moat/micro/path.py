@@ -701,8 +701,6 @@ async def copytree(src: APath, dst: MoatPath, check=None, drop=None, cross=None)
     """
     n = 0
     if await src.is_file():
-        if "functools" in str(src):
-            breakpoint()
         if src.suffix == ".py":
             # here we replace "src" with a buffer containing the
             # corresponding mpy-cross output.

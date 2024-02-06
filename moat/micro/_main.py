@@ -178,7 +178,6 @@ async def _do_copy(source, dst, dest, cross):
     help="Mount point for FUSE mount",
 )
 @click.option("-l/-L", "--large/--no-large", is_flag=True, help="Use more RAM")
-#@click.option("-L", "--no-large", is_flag=True, help="Use less RAM")
 @click.option("-s", "--state", type=str, help="State to enter by default")
 @click.option("-c", "--config", type=P, help="Config part to use for the device")
 @click.option("-w", "--watch", is_flag=True, help="monitor the target's output after setup")
@@ -448,8 +447,6 @@ async def cmd(obj, path, **attrs):
 @click.option("-S", "--stdout", is_flag=True, hidden=True)
 @click.option("-W", "--write-client", help="Write config file to the client")
 @click.option("-s", "--sync", is_flag=True, help="Sync the client after writing")
-@click.option("--cfg-path", type=P, help="Path to the remote's config", default=P("c"))
-@click.option("--fs-path", type=P, help="Path to the remote's files", default=P("f"))
 @click.option(
     "-c",
     "--client",
@@ -467,8 +464,6 @@ async def cfg_(
     sync,
     stdout,
     client,
-    cfg_path,
-    fs_path,
     **attrs,
 ):
     """

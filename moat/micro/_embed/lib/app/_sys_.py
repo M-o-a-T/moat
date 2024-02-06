@@ -38,49 +38,79 @@ class Cmd(BaseCmd):
             raise RuntimeError("cannot be deleted")
         drop_proxy(p)
 
-    async def cmd_eval(self, x, p=(), a=None, r=False):
+    async def cmd_eval(self, x, r:str|bool = False, a=None, k=None):
         """
-        Evaluation.
+        Debugging/Introspection/Evaluation.
 
         @x can be
-        * `None`: an alias for the eval cache
-        * a string: evaluated with the eval cache as globals
+        * a string: member of the eval cache
+        * a list: descend into an object on the eval cache
         * an object (possibly proxied): left as-is
 
         If @p is a list, @x is replaced by successive attributes or
         indices in @p.
 
-        If @a is set, the result is stored in the eval cache instead of
-        being returned.
+        Then if a or k is not None, the given function is called.
+
+        If @r is  a string, the result is stored in the eval cache
+        under that name instead of being returned. If it's a list,
+        it's interpreted as a 
+        If True, its ``repr`` is returned.
         Otherwise, if the result is a dict or array, it is returned as a
         two-element list of (dict/list of simple members; list of indices
         of complex members).
+        The same thing happens if @r is False.
+        Otherwise a proxy is returned.
+
         """
         if not self.cache:
             self.cache["self"] = self
             self.cache["root"] = self.root
 
-        if x is None:
-            x = self.cache
-        elif isinstance(x, str):
-            x = eval(x, self.cache)  # noqa:S307,PGH001 pylint:disable=eval-used
-        x = get_part(x, p)
-        if a:
-            set_part(self.cache, a, x)
-            return None
+        if isinstance(x, str):
+            res = self.cache[x]
+            print("RL=", type(res), repr(res), file=sys.stderr)
+        elif isinstance(x, (tuple,list)):
+            res = get_part(self.cache, x)
+            print("RP=", type(res), repr(res), file=sys.stderr)
         else:
-            if not isinstance(x, (int, float, list, tuple, dict, Proxy)):
-                print("TX=", type(x), file=sys.stderr)
+            res = x
+            print("RX=", type(res), repr(res), file=sys.stderr)
+
+        # call it?
+        if a is not None or k is not None:
+            res = res(*(a or ()), **(k or {}))
+            if hasattr(res, "throw"):
+                res = await res
+
+        # store it?
+        if isinstance(r,str):
+            # None: drop from the cache
+            if res is None:
+                del self.cache[r]
+            else:
+                self.cache[r] = res
+            return res is not None
+
+        if isinstance(r,(list,tuple)):
+            set_part(self.cache, r, res)
+            return None
+
+        if isinstance(res,(dict,list,tuple)):
+            # dicts+lists always get encoded
+            res = enc_part(res)
+        elif not isinstance(res, (int, float, Proxy)):
+            print("TX=", type(res), r, file=sys.stderr)
+            if r is True:
+                return repr(res)
+            if r is False:
                 try:
-                    obj2name(x)
-                except KeyError:
-                    try:
-                        obj2name(type(x))
-                    except KeyError:
-                        x = enc_part(get_part(x.__dict__, p))
-            if r:
-                return repr(x)
-            return x
+                    rd = res.__dict__
+                except AttributeError:
+                    pass
+                else:
+                    res = enc_part(res.__dict__, res.__class__.__name__)
+        return res
 
     async def cmd_info(self):
         """

@@ -146,7 +146,7 @@ class BaseSubCmd(BaseSuperCmd):
         try:
             sub = self.sub[action[0]]
         except KeyError:
-            raise NoPathError(self.path, action, self.__class__.__name__) from None
+            raise NoPathError(self.path, action, self.__class__.__name__, await self.cmd__dir()) from None
         action = action[1:]
         return await sub.dispatch(action, msg, **kw)
 

@@ -25,6 +25,7 @@ from moat.util import as_proxy
 from moat.micro.cmd.util import run_no_exc, wait_complain
 from moat.micro.cmd.util.part import enc_part, get_part
 from moat.micro.compat import AC_use, Event, L, idle
+from moat.micro.errors import NoPathError
 from moat.micro.proto.stack import Base
 
 if L:
@@ -364,7 +365,7 @@ class BaseCmd(Base):
         try:
             p = getattr(self, f"cmd_{fn}")
         except AttributeError:
-            raise AttributeError(f"{self.path}: no cmd_{fn}") from None
+            raise NoPathError(self.path, fn, self.__class__.__name__, await self.cmd__dir()) from None
 
         if not wait:
             # XXX better idea without forcing a taskgroup on everything?

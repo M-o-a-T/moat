@@ -13,8 +13,9 @@ import ruyaml as yaml
 from .dict import attrdict
 from .msgpack import Proxy
 from .path import Path
+from .proxy import name2obj
 
-__all__ = ["yload", "yprint", "yformat", "yaml_named", "add_repr"]
+__all__ = ["yload", "yprint", "yformat", "yaml_repr", "yaml_parse", "add_repr"]
 
 SafeRepresenter = yaml.representer.SafeRepresenter
 SafeConstructor = yaml.constructor.SafeConstructor
@@ -35,7 +36,7 @@ def str_presenter(dumper, data):
         return dumper.represent_scalar("tag:yaml.org,2002:str", data)
 
 
-def yaml_named(name: str, use_repr: bool = False):
+def yaml_repr(name: str, use_repr: bool = False):
     """
     A class decorator that allows representing an object in YAML
     """
@@ -45,6 +46,19 @@ def yaml_named(name: str, use_repr: bool = False):
             return dumper.represent_scalar("!" + name, repr(data) if use_repr else str(data))
 
         SafeRepresenter.add_representer(cls, str_me)
+        return cls
+
+    return register
+
+
+def yaml_parse(name: str, use_repr: bool = False):
+    """
+    A decorator that allows parsing a YAML representation,
+    i.e. the opposite of `yaml_repr`.
+    """
+
+    def register(cls):
+        SafeConstructor.add_constructor(f"!{name}", cls)
         return cls
 
     return register
@@ -72,9 +86,11 @@ def read_env(loader, node):
 
 SafeRepresenter.add_representer(Path, _path_repr)
 SafeConstructor.add_constructor("!P", Path._make)
+
 SafeConstructor.add_constructor("!env", read_env)
 
 SafeRepresenter.add_representer(Proxy, _proxy_repr)
+SafeConstructor.add_constructor("!R", name2obj)
 
 
 def _bin_from_ascii(loader, node):

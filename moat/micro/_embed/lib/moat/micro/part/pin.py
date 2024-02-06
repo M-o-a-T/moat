@@ -14,7 +14,8 @@ from moat.micro.cmd.base import BaseCmd
 from moat.micro.compat import AC_use, Event, TaskGroup
 
 try:
-    sup = M.Pin
+    _XPin = M.Pin
+
 except AttributeError:
 
     class _XPin:
@@ -33,10 +34,13 @@ except AttributeError:
             else:
                 self.__val = None
 
-    sup = _XPin
+        def irq(self, p, flg):
+            pass
+        IRQ_RISING = 1
+        IRQ_FALLING = 2
 
 
-class _Pin(sup):
+class _Pin:
     """
     A config-enabled pin that you can async-iterate for changes.
 
@@ -47,38 +51,42 @@ class _Pin(sup):
 
     All other import arguments are taken from keywords.
     """
-
-    def __new__(cls, pin, **kw):
-        kw["id"] = pin
-        self = super().__new__(cls, **kw)
+    def __init__(self, *a, **kw):
+        self._pin = _XPin(*a, **kw)
         self.flag = asyncio.ThreadSafeFlag()
         self.evt = Event()
-        self.val = False
-        return self
-
-    def __init__(self, **kw):
-        super().__init__(**kw)
+        self.val = self._pin.value()
 
     def _irq(self):
         "sets the change flag"
-        self.val = self.value()
+        self.val = self._pin.value()
         self.flag.set()
+
+    def value(self, n=None):
+        if n is None:
+            return self._pin.value()
+        else:
+            self._pin.value(n)
+            self.val = self._pin.value()
+            self.flag.set()
 
     async def flag_watch(self):
         "Flag reader, since a ThreadSafeFlag only acepts one task"
-        while True:
-            if self.value() == self.val:
+        try:
+            self._pin.irq(self._irq, _XPin.IRQ_FALLING | _XPin.IRQ_RISING)
+            while True:
                 await self.flag.wait()
                 self.flag.clear()
-            self.evt.set()
-            self.evt = Event()
+                self.evt.set()
+                self.evt = Event()
+        finally:
+            self._pin.irq(None)
 
     async def __aenter__(self):
-        self.irq(self._irq, M.Pin.FALLING | M.Pin.RISING)
         self.flag.set()
 
     async def __aexit__(self, *err):
-        self.irq(None)
+        pass
 
     def __aiter__(self):
         return self
@@ -109,8 +117,6 @@ class Pin(BaseCmd):
         if getattr(self, "tg", None) is None:
             self.tg = await AC_use(self, TaskGroup())
         await self.tg.spawn(self.pin.flag_watch)
-        self.flag.set()
-        self.flag = Event()
 
     def iter_r(self):
         "iterate the pin's values"
@@ -118,11 +124,10 @@ class Pin(BaseCmd):
 
     async def cmd_r(self, o=None):
         "read. Wait for change if @o (old value) is not None"
-        if o is None or self.pin() is o:
+        if o is not None and self.pin() == o:
             await self.pin.evt.wait()
-        return self._value
+        return self.pin.val
 
     async def cmd_w(self, v):
         "write. Set pin value"
-        self.pin(v)
-        self.pin.evt.set()
+        self.pin.value(v)

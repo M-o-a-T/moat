@@ -182,7 +182,7 @@ class Bar:
         return self.x == other.x
 
 
-@as_proxy("fu")
+@as_proxy("foo")
 class Foo(Bar):
     "proxied test class"
     # pylint:disable=unnecessary-pass
@@ -219,20 +219,22 @@ async def test_eval(tmp_path, cons):
         b = Bar(95)
         as_proxy("b", b, replace=True)
 
-        await req(x=f, a=["foo"])
-        await req(x=42, a=["foo", "x"])
-        r = await req(x="foo")
+        await req(x=f, r=["foo"])
+        await req(x=42, r=["foo", "x"])
+        r = await req(x="foo", r=None)
         assert isinstance(r, Foo), r
-        r = await req(x=f, p=("x",))
+        r = await req(x=(f, "x",))
         assert r == 42, r
 
-        r = await req(x=b)
+        r = await req(x=b, r=None)
         assert r is b, r
-        r = await req(x=b, p=("x",))
+        r = await req(x=(b, "x"))
         assert r == 95, r
-        await req(x=b, a=("b",))
-        r = await req(x="b.__dict__")
-        assert r == {"x": 95}, r
+        # await req(x=b, a=("b",))
+        r = await req(x=(b,),r=False)
+        assert r[0] == {"x": 95}
+        assert not r[1]
+        assert r[2] == "Bar"
 
 
 async def test_msgpack(tmp_path):
@@ -251,8 +253,8 @@ async def test_msgpack(tmp_path):
 
         r = await req(x=f)
         assert isinstance(r, Foo), r
-        r = await req(x=f, p=("x",))
+        r = await req(x=(f, "x"))
         assert r == 42, r
 
-        r = await req(x=b)
+        r = await req(x=b, r=None)
         assert r is b

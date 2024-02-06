@@ -109,11 +109,15 @@ def go(state=None, cmd=True):
     # no empty path
     with suppress(ValueError):
         sys.path.remove("")
+    with suppress(ValueError):
+        sys.path.remove("/")
+    with suppress(ValueError):
+        sys.path.remove(".")
+
+    # we do keep the root in the path, but at the end
+    sys.path.append("/")
 
     # /lib to the front
-    with suppress(ValueError):
-        sys.path.remove("/lib")
-    sys.path.insert(0, "/lib")
 
     fallback = None
     if state in ("fallback", "fbskip"):
@@ -126,6 +130,9 @@ def go(state=None, cmd=True):
         fallback = "_rom"
     else:
         fallback = ""
+        with suppress(ValueError):
+            sys.path.remove("/lib")
+        sys.path.insert(0, "/lib")
 
     print(f"Start MoaT{fallback}:", state, file=sys.stderr)
     from moat.micro.main import main

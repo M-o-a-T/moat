@@ -44,7 +44,8 @@ class Cmd(BaseCmd):
 
         @x can be
         * a string: member of the eval cache
-        * a list: descend into an object on the eval cache
+        * a list: descend into an object
+          the first item must be a proxy, or a string (cache lookup)
         * an object (possibly proxied): left as-is
 
         If @p is a list, @x is replaced by successive attributes or
@@ -53,14 +54,16 @@ class Cmd(BaseCmd):
         Then if a or k is not None, the given function is called.
 
         If @r is  a string, the result is stored in the eval cache
-        under that name instead of being returned. If it's a list,
-        it's interpreted as a 
-        If True, its ``repr`` is returned.
-        Otherwise, if the result is a dict or array, it is returned as a
-        two-element list of (dict/list of simple members; list of indices
-        of complex members).
-        The same thing happens if @r is False.
-        Otherwise a proxy is returned.
+        under that name. A list is interpreted as an accessor:
+        ``x=42, r=('a','b','c')`` assigns ``cache['a'].b.c=42``.
+        Nothing is returned in these cases.
+
+        If @r is True, its ``repr`` is returned.
+        If @r is False *or* if the result is a dict or array, it is
+        returned as a two-element list of (dict/list of simple members;
+        list of indices of complex members). For objects, a third element
+        contains the object type's name.
+        Otherwise (@r is ``None``), a proxy is returned.
 
         """
         if not self.cache:
@@ -69,13 +72,13 @@ class Cmd(BaseCmd):
 
         if isinstance(x, str):
             res = self.cache[x]
-            print("RL=", type(res), repr(res), file=sys.stderr)
-        elif isinstance(x, (tuple,list)):
-            res = get_part(self.cache, x)
-            print("RP=", type(res), repr(res), file=sys.stderr)
+        elif isinstance(x, (tuple, list)):
+            res = x[0]
+            if isinstance(res, str):
+                res = self.cache[res]
+            res = get_part(res, x[1:])
         else:
             res = x
-            print("RX=", type(res), repr(res), file=sys.stderr)
 
         # call it?
         if a is not None or k is not None:

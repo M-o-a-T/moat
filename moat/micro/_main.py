@@ -160,7 +160,7 @@ async def _do_copy(source, dst, dest, cross):
 )
 @click.option("-D", "--dest", type=str, default="", help="Destination path")
 @click.option("-R", "--root", type=str, default=".", help="Destination root")
-@click.option("-U", "--update", is_flag=True, help="Run standard updates")
+@click.option("-U/-V", "--update/--no-update", is_flag=True, help="Run standard updates")
 @click.option(
     "-M",
     "--mount",

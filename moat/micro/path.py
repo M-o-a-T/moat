@@ -49,11 +49,14 @@ class ABytes(io.BytesIO):
         "return the current buffer"
         return self.getbuffer()
 
-    async def sha256(self):
+    async def sha256(self, l:int|None = None):
         "hash the current buffer"
         _h = hashlib.sha256()
         _h.update(self.getbuffer())
-        return _h.digest()
+        res = _h.digest()
+        if l is not None:
+            res = res[:l]
+        return res
 
     async def gitsha1(self):
         "hash the current buffer"
@@ -84,7 +87,7 @@ class ABytes(io.BytesIO):
 class APath(anyio.Path):
     "anyio.Path, enhanced with a couple of our methods"
 
-    async def sha256(self) -> bytes:
+    async def sha256(self, l=None) -> bytes:
         """
         :returns: hash over file contents
 
@@ -93,7 +96,10 @@ class APath(anyio.Path):
         _h = hashlib.sha256()
         async for block in self.read_as_stream():
             _h.update(block)
-        return _h.digest()
+        res = _h.digest()
+        if l is not None:
+            res = res[:l]
+        return res
 
     async def gitsha1(self):
         """
@@ -425,7 +431,7 @@ class MoatDevPath(MoatPath):
 
     # custom extension methods
 
-    async def sha256(self) -> bytes:
+    async def sha256(self, l:int|None = None) -> bytes:
         """
         :returns: hash over file contents
 
@@ -454,7 +460,10 @@ class MoatDevPath(MoatPath):
         except OSError:
             hash_value = b""
         else:
-            hash_value = await self._repl.evaluate("print(_h.digest()); del _h", quiet=True)
+            if l is None:
+                hash_value = await self._repl.evaluate("print(_h.digest()); del _h", quiet=True)
+            else:
+                hash_value = await self._repl.evaluate(f"print(_h.digest()[:{l}]); del _h", quiet=True)
         return hash_value
 
 
@@ -636,21 +645,21 @@ class MoatFSPath(MoatPath):
             yield self / n
             # TODO add stat
 
-    async def sha256(self) -> bytes:
+    async def sha256(self, l:int|None = None) -> bytes:
         """
         :returns: hash over file contents
 
         Calculate a SHA256 over the file contents and return the digest.
         """
-        return await self._req("hash", p=self.as_posix())
+        return await self._req("hash", p=self.as_posix(), l=l)
 
 
-async def sha256(p):
+async def sha256(p, l:int|None = None):
     """
     Calculate a SHA256 of the file contents at @p.
     """
     try:
-        return await p.sha256()
+        return await p.sha256(l=l)
     except AttributeError:
         _h = hashlib.sha256()
         if hasattr(p, "read_as_stream"):
@@ -660,7 +669,10 @@ async def sha256(p):
             async with await p.open("rb") as _f:
                 _h.update(await _f.read())
 
-        return _h.digest()
+        res = _h.digest()
+        if l is not None:
+            res = res[:l]
+        return res
 
 
 async def _nullcheck(p):
@@ -736,8 +748,8 @@ async def copytree(src: APath, dst: MoatPath, check=None, drop=None, cross=None)
                 raise
             s2 = -1
         if s1 == s2:
-            h1 = await sha256(src)
-            h2 = await sha256(dst)
+            h1 = await sha256(src, 12)
+            h2 = await sha256(dst, 12)
             if h1 != h2:
                 s2 = -1
         if s1 != s2:

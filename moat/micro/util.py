@@ -73,6 +73,6 @@ async def _run_update(src, dest: MoatPath, check=None, cross=None, hash_fn=None)
         except (ImportError, KeyError) as exc:
             return False
         rs = await _rd(sp)
-        return res == hash256(rs)[:8]
+        return res == hash256(rs)[:len(res)]
 
     await copytree(src, dest, check=check, drop=drop, cross=cross)

@@ -237,6 +237,9 @@ async def setup(
     from .path import ABytes, MoatDevPath, copy_over
     from .proto.stream import RemoteBufAnyio
 
+    if cross == "-":
+        cross = None
+
     if kill:
         async with (
             Dispatch(cfg, run=True) as dsp,
@@ -350,6 +353,8 @@ async def sync_(ctx, **kw):
     st = combine_dict(param,st,default)
 
     async def syn(source=(), dest=".", cross=None, update=False):
+        if cross == "-":
+            cross = None
         dest = dest.lstrip("/")  # needs to be relative
         if not update and not source:
             if obj.debug:

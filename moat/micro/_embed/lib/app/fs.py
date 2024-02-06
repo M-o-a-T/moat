@@ -8,7 +8,33 @@ import os
 
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.errors import FileExistsError, FileNotFoundError
+from moat.micro.compat import sleep_ms
 
+def _fty(s, **r):
+    sn = s[0]
+    if sn & 0x8000:  # file
+        m = "f"
+    elif sn & 0x4000:  # file
+        m = "d"
+    else:
+        m = "?"
+    r["m"] = m
+
+    if m == "f":
+        r["s"] = s[6]
+    if m != "?":
+        r["t"] = s[7]
+    return r
+
+def efix(f,p,*a):
+    try:
+        return f(p,*a)
+    except OSError as e:
+        if e.errno == errno.ENOENT:
+            raise FileNotFoundError(p) from None
+        if e.errno == errno.EEXIST:
+            raise FileExistsError(p) from None
+        raise
 
 class Cmd(BaseCmd):
     """
@@ -75,14 +101,8 @@ class Cmd(BaseCmd):
     async def cmd_open(self, p, m="r"):
         "open @f in binary mode @m (r,w)"
         p = self._fsp(p)
-        try:
-            f = open(p, m + "b")  # noqa:ASYNC101,SIM115
-        except OSError as e:
-            if e.errno == errno.ENOENT:
-                raise FileNotFoundError(p) from None
-            raise
-        else:
-            return self._add_f(f)
+        f = efix(open, p, m + "b")
+        return self._add_f(f)
 
     async def cmd_rd(self, f, o=0, n=64):
         "read @n bytes from @f at offset @o"
@@ -108,23 +128,27 @@ class Cmd(BaseCmd):
         n: name
         t: time
         s: size
+        m: type
         """
         p = self._fsp(p)
+        res = []
         if x:
-            try:
-                os.listdir(p)
-            except AttributeError:
-                return [dict(n=x[0], t=x[1], s=x[3]) for x in os.ilistdir(p)]
+            for n,*_ in os.ilistdir(p):
+                await sleep_ms(1)
+                st = os.stat(f"{p}/{n}")
+                await sleep_ms(1)
+                res.append(_fty(st, n=n))
         else:
-            try:
-                return os.listdir(p)
-            except AttributeError:
-                return [x[0] for x in os.ilistdir(p)]
+            for n,*_ in os.ilistdir(p):
+                await sleep_ms(1)
+                res.append(n)
+        return res
 
     async def cmd_mkdir(self, p):
         "new dir at @p"
         p = self._fsp(p)
-        os.mkdir(p)
+        efix(os.mkdir, p)
+
 
     async def cmd_hash(self, p):
         """
@@ -158,20 +182,10 @@ class Cmd(BaseCmd):
         @d will not be sent if @v is False.
         """
         p = self._fsp(p)
-        try:
-            s = os.stat(p)
-        except OSError as e:
-            if e.errno == errno.ENOENT:
-                raise FileNotFoundError(p)  # noqa:TRY200
-            raise
-        if s[0] & 0x8000:  # file
-            res = dict(m="f", s=s[6], t=s[7])
-        elif s[0] & 0x4000:  # file
-            res = dict(m="d", t=s[7])
-        else:
-            res = dict(m="?")
+        s = efix(os.stat,p)
+        res = _fty(s)
         if v:
-            res[d] = s
+            res["d"] = s
         return res
 
     async def cmd_mv(self, s, d, x=None, n=False):
@@ -187,25 +201,13 @@ class Cmd(BaseCmd):
         os.stat(p)  # must exist
         if n:
             # dest must not exist
-            try:
-                os.stat(q)
-            except OSError as err:
-                if err.errno != errno.ENOENT:
-                    raise
-            else:
-                raise FileExistsError(q)
+            efix(os.stat,q)
         if x is None:
             os.rename(p, q)
         else:
             r = self._fsp(x)
             # exchange contents, via third file
-            try:
-                os.stat(r)
-            except OSError as err:
-                if err.errno != errno.ENOENT:
-                    raise
-            else:
-                raise FileExistsError(r)
+            efix(os.stat,r)
             os.rename(p, r)
             os.rename(q, p)
             os.rename(r, q)
@@ -213,30 +215,15 @@ class Cmd(BaseCmd):
     async def cmd_rm(self, p):
         "unlink file @p"
         p = self._fsp(p)
-        try:
-            os.remove(p)
-        except OSError as e:
-            if e.errno == errno.ENOENT:
-                raise FileNotFoundError(p)  # noqa:TRY200
-            raise
+        efix(os.remove,p)
 
     async def cmd_rmdir(self, p):
         "unlink dir @p"
         p = self._fsp(p)
-        try:
-            os.rmdir(p)
-        except OSError as e:
-            if e.errno == errno.ENOENT:
-                raise FileNotFoundError(p)  # noqa:TRY200
-            raise
+        efix(os.rmdir,p)
 
     async def cmd_new(self, p):
         "new file @p"
         p = self._fsp(p)
-        try:
-            f = open(p, "wb")  # noqa:ASYNC101,SIM115
-        except OSError as e:
-            if e.errno == errno.ENOENT:
-                raise FileNotFoundError(p)  # noqa:TRY200
-            raise
+        f = efix(open, p, "wb")  # noqa:ASYNC101,SIM115
         f.close()

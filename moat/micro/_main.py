@@ -173,7 +173,7 @@ async def _do_copy(source, dst, dest, cross):
 @click.option("-c", "--config", type=P, help="Config part to use for the device")
 @click.option("-w", "--watch", is_flag=True, help="monitor the target's output after setup")
 @click.option("-C", "--cross", help="path to mpy-cross")
-@catch_errors
+#@catch_errors
 async def setup_(ctx, **kw):
     """
     Initial sync of MoaT code to a MicroPython device.
@@ -230,7 +230,7 @@ async def setup(
     if kill:
         async with (
             Dispatch(cfg, run=True) as dsp,
-            dsp.sub_at(*cfg["path"]) as sd,
+            dsp.sub_at(*cfg.remote) as sd,
             RemoteBufAnyio(sd) as ser,
             DirectREPL(ser) as repl,
         ):
@@ -240,7 +240,7 @@ async def setup(
 
     async with (
         Dispatch(cfg, run=True) as dsp,
-        dsp.sub_at(*cfg["path"]) as sd,
+        dsp.sub_at(*cfg.remote) as sd,
         RemoteBufAnyio(sd) as ser,
         DirectREPL(ser) as repl,
     ):

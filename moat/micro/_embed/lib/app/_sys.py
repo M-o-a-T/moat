@@ -53,6 +53,13 @@ class Cmd(_Cmd):
             c=f2 - f1,
         )
 
+    async def cmd_hash(self, p: str):
+        """
+        Get the hash for a built-in module.
+        """
+        import _hash
+        return _hash.hash.get(p, None)
+
     async def cmd_boot(self, code, m):
         """
         Reboot MoaT.

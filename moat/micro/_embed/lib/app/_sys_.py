@@ -103,7 +103,6 @@ class Cmd(BaseCmd):
             # dicts+lists always get encoded
             res = enc_part(res)
         elif not isinstance(res, (int, float, Proxy)):
-            print("TX=", type(res), r, file=sys.stderr)
             if r is True:
                 return repr(res)
             if r is False:

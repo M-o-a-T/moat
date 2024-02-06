@@ -153,7 +153,7 @@ class BaseSubCmd(BaseSuperCmd):
     async def cmd__dir(self, h=False):
         "dir: add subdirs"
         res = await super().cmd__dir(h=h)
-        res["d"] = list(k for k in self.sub.keys() if h == (k[0] == '_'))
+        res["d"] = { k:v.__class__.__name__ for k,v in self.sub.items() if h == (k[0] == '_') }
         return res
 
 

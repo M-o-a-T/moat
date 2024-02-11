@@ -130,6 +130,11 @@ class ArrayCmd(BaseSuperCmd):
             ) from None
         return await sub.dispatch(action[1:], msg, **kw)
 
+    async def cmd__dir(self, **kw):
+        res = await super().cmd__dir(**kw)
+        res["na"] = len(self.apps)
+        return res
+
     async def cmd_all(self, *a, d=None, s=None, e=None):
         """
         Call all sub-apps and collect the result.

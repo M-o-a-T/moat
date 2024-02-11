@@ -1,1 +1,1 @@
-../../_embed/app/bms/_test.py
+../../../micro/_embed/lib/app/bms/_test.py

@@ -263,7 +263,7 @@ class Loopback(BaseMsg, BaseBuf):
                 if random() < loss:
                     del b[n]
                 else:
-                    if random() < loss:
+                    while random() < loss:
                         b[n] = b[n] ^ (1 << int(8 * random()))
                     n += 1
         else:

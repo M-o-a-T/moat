@@ -3,28 +3,28 @@ Basic BMS classes
 """
 from __future__ import annotations
 
-import sys
-
-import time
-from pprint import pprint
-from moat.util import NotGiven, load_from_cfg, as_proxy, attrdict, val2pos
-from moat.util.compat import log
-from moat.micro.rtc import state as rtc_state
+from moat.util import as_proxy, attrdict, val2pos
 from moat.micro.alert import Alert
-
+from moat.micro.cmd.array import ArrayCmd
+from moat.micro.cmd.base import BaseCmd
+from moat.micro.rtc import state as rtc_state
 from moat.util.compat import (
     Event,
     TaskGroup,
     TimeoutError,
+    log,
     sleep_ms,
-    ticks_add,
     ticks_diff,
     ticks_ms,
     wait_for_ms,
-    sleep,
 )
-from moat.micro.cmd.base import BaseCmd
-from moat.micro.cmd.array import ArrayCmd
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from moat.micro.cmd.alert import AlertHandler
+    from moat.micro.cmd.tree.dir import SubDispatcher
+    from moat.micro.part.relay import Relay
 
 
 class BatteryAlert(Alert):
@@ -113,11 +113,6 @@ class EnergyHigh(BatteryAlert):
     "total energy larger than Wmax"
 
 
-@as_proxy("bms_VM", replace=True)
-class VoltageDelta(BatteryAlert):
-    "Battery and sum-of-cell voltages don't match"
-
-
 class BaseCell(BaseCmd):
     """
     Skeleton for a single cell.
@@ -160,10 +155,11 @@ class BaseCell(BaseCmd):
     Comtrollers are free to implement more complicated curves.
 
     """
-    vchg:float|None = None
-    vdis:float|None = None
-    fchg:bool = False
-    fdis:bool = False
+
+    vchg: float | None = None
+    vdis: float | None = None
+    fchg: bool = False
+    fdis: bool = False
 
     async def cmd_c(self):
         "read cell charge level [0…1]"
@@ -181,7 +177,7 @@ class BaseCell(BaseCmd):
         "read cell balancer temperature"
         raise NotImplementedError("no idea how")
 
-    async def cmd_dis(self, v:float|None=None, f:bool = None):
+    async def cmd_dis(self, v: float | None = None, f: bool | None = None):
         """
         balance low: drain cell until below @v.
 
@@ -192,17 +188,17 @@ class BaseCell(BaseCmd):
         """
         if f is not None:
             self.fdis = f
-        if v is not None:
+        if v is not None:  # noqa:SIM102
             if not self.fdis or f:
                 self.vdis = v
                 await self.set_dis()
-        return (self.vdis,self.fdis)
+        return (self.vdis, self.fdis)
 
     async def set_dis(self):
         """set discharging balancer"""
         raise NotImplementedError("no idea how")
 
-    async def cmd_chg(self, v:float|None=None, force:bool = None):
+    async def cmd_chg(self, v: float | None = None, f: bool | None = None):
         """
         balance high: charge cell until above @v
 
@@ -214,17 +210,17 @@ class BaseCell(BaseCmd):
         """
         if f is not None:
             self.fchg = f
-        if v is not None:
+        if v is not None:  # noqa:SIM102
             if not self.fchg or f:
                 self.vchg = v
                 await self.set_chg()
-        return (self.vchg,self.fchg)
+        return (self.vchg, self.fchg)
 
     async def set_chg(self):
         """set charging balancer"""
         raise NotImplementedError("no idea how")
 
-    async def cmd_lim(self, soc:float = 0.5):
+    async def cmd_lim(self, soc: float = 0.5):
         """
         Limits (as fraction of C) depending on @soc, cell
         temperature, voltage, and whatnot.
@@ -247,16 +243,20 @@ class BaseCell(BaseCmd):
             if t < lt["abs"]["min"]:
                 raise LowTemperature(t, self.path)
 
-            tf = val2pos(lt["abs"]["max"],t,lt["ext"]["max"], clamp=True) * \
-                val2pos(lt["abs"]["min"],t,lt["ext"]["min"], clamp=True)
+            tf = val2pos(lt["abs"]["max"], t, lt["ext"]["max"], clamp=True) * val2pos(
+                lt["abs"]["min"],
+                t,
+                lt["ext"]["min"],
+                clamp=True,
+            )
 
         if u > lu["abs"]["max"]:
             raise HighCellVoltage(u, self.path)
-        chg = tf * val2pos(lu["ext"]["max"],u,lu["std"]["max"], clamp=True)
+        chg = tf * val2pos(lu["ext"]["max"], u, lu["std"]["max"], clamp=True)
 
         if u < lu["abs"]["min"]:
             raise LowCellVoltage(u, self.path)
-        dis = tf * val2pos(lu["ext"]["min"],u,lu["std"]["min"], clamp=True)
+        dis = tf * val2pos(lu["ext"]["min"], u, lu["std"]["min"], clamp=True)
 
         # TODO adapt these limits
         # TODO use an exponent != 1
@@ -289,12 +289,12 @@ class BaseCells(ArrayCmd):
           loss: 0.01 # average capacity loss when charging
 
     """
-    rly = None
-    w:attrdict = None
-    w_max:float = None
-    p:float = None
-    al:SubDispatcher[AlertHandler]|None = None
-    rly:SubDispatcher[Relay]|None = None
+
+    w: attrdict = None
+    w_max: float = None
+    p: float = None
+    al: SubDispatcher[AlertHandler] | None = None
+    rly: SubDispatcher[Relay] | None = None
     n_warn_w = 0
     n_warn_ud = 0
     n_save = 98
@@ -319,28 +319,22 @@ class BaseCells(ArrayCmd):
 
         c = self.cfg["cfg"]["lim"]["u"]["ext"]
         n = self.cfg["n"]
-        self.u_mid = (c["min"]+c["max"])*n/2
-
+        self.u_mid = (c["min"] + c["max"]) * n / 2
 
     async def setup(self):
         await super().setup()
         await self._setup()
         try:
-            w = rtc_state[tuple("state",*self.path)]
+            w = rtc_state[tuple("state", *self.path)]
         except KeyError:
             pass
         else:
             self.work = attrdict(**w)
 
-
-    async def reload(self):
-        await super().reload()
-        await self._setup()
-
     async def cmd_c(self):
         """fetch charge state"""
         if self.w_max is None:
-            return .5
+            return 0.5
         return self.w / self.w_max
 
     async def cmd_u(self):
@@ -350,14 +344,14 @@ class BaseCells(ArrayCmd):
 
     async def cmd_lim(self):
         """return charge,discharge limit factors"""
-        chg,dis = None,None
+        chg, dis = None, None
         try:
-            for c,d in await self.cmd_all("lim"):
+            for c, d in await self.cmd_all("lim"):
                 if chg is None or chg > c:
                     chg = c
                 if dis is None or dis > d:
                     dis = d
-            return chg,dis
+            return chg, dis
 
         except BatteryAlert:
             if self.rly is not None:
@@ -365,6 +359,7 @@ class BaseCells(ArrayCmd):
             raise
 
     async def reload(self):
+        await super().reload()
         self._reloaded.set()
         self._reloaded = Event()
 
@@ -377,14 +372,13 @@ class BaseCells(ArrayCmd):
                 continue
             u = await self.cmd_u()
             ud = sum(await self.cmd_all("u"))
-            if abs((u-ud)/ud) > self.ud_max:
+            if abs((u - ud) / ud) > self.ud_max:
                 if self.al and not (self.n_warn_ud % 10):
-                    await self.al.w(a=VoltageDelta, p=self.path, d=dict(u=u,ud=ud))
+                    await self.al.w(a=VoltageDelta, p=self.path, d=dict(u=u, ud=ud))
                 self.n_warn_ud += 1
             elif self.n_warn_ud:
                 self.n_warn_ud = 0
                 await self.al.w(a=VoltageDelta, p=self.path)
-
 
     async def get_energy(self):
         """
@@ -398,16 +392,16 @@ class BaseCells(ArrayCmd):
             await sleep_ms(self.t_w)
             u = await self.cmd_u()
             t2 = ticks_ms()
-            self.p = p = i*u
-            await self._add_w(p, ticks_diff(t2,t1)/1000, u>self.u_mid)
+            self.p = p = i * u
+            await self._add_w(p, ticks_diff(t2, t1) / 1000, u > self.u_mid)
 
             await sleep_ms(self.t_w)
             i = await self.cmd_i()
             t1 = ticks_ms()
-            self.p = p = i*u
-            await self._add_w(p, ticks_diff(t1,t2)/1000, u>self.u_mid)
+            self.p = p = i * u
+            await self._add_w(p, ticks_diff(t1, t2) / 1000, u > self.u_mid)
 
-    async def cmd_w(self,w:float|None = None) -> float:
+    async def cmd_w(self, w: float | None = None) -> float:
         """get, or manually override, battery energy content"""
         wx = self.w
         if w is not None:
@@ -429,12 +423,13 @@ class BaseCells(ArrayCmd):
         return True
 
     async def _add_w(self, w, t, hi):
+        hi  # noqa:B018
         self.work.t += t
         w *= t
 
         if w > 0:
             self.work.chg += w
-            w *= 1 - self.cfg.get("loss",0)
+            w *= 1 - self.cfg.get("loss", 0)
         else:
             self.work.dis -= w
         self.work.sum += w
@@ -444,8 +439,8 @@ class BaseCells(ArrayCmd):
             self.work.xdis += -self.work.sum
             self.work.sum = 0
             if w < 0:
-                if self.al and not (self.n_warn_w%10):
-                    await self.al.w(a=EnergyLow, p=self.path, d=dict(w=self.work.xdis,wd=w))
+                if self.al and not (self.n_warn_w % 10):
+                    await self.al.w(a=EnergyLow, p=self.path, d=dict(w=self.work.xdis, wd=w))
                 self.n_warn_w += 1
 
         elif self.w_max is not None and self.work.sum > self.w_max:
@@ -453,21 +448,25 @@ class BaseCells(ArrayCmd):
             self.work.sum = self.w_max
 
             if w > 0:
-                if self.al and not (self.n_warn_w%10):
-                    await self.al.w(a=EnergyHigh, p=self.path, d=dict(w=self.work.xchg,wd=w))
+                if self.al and not (self.n_warn_w % 10):
+                    await self.al.w(a=EnergyHigh, p=self.path, d=dict(w=self.work.xchg, wd=w))
                 self.n_warn_w += 1
 
         elif self.n_warn_w:
             self.n_warn_w = 0
-            if self.w_max is None or self.work.sum < self.w_max/2:
-                await self.al.w(a=EnergyLow if self.work.sum < self.w_max/2 else EnergyHigh, p=self.path)
+            if self.w_max is None or self.work.sum < self.w_max / 2:
+                await self.al.w(
+                    a=EnergyLow if self.work.sum < self.w_max / 2 else EnergyHigh,
+                    p=self.path,
+                )
 
         self.n_save += 1
         if self.n_save > 99:
             self.n_save = 0
-            rtc_state[tuple("state",*self.path)] = self.work
+            rtc_state[tuple("state", *self.path)] = self.work
 
     def get_work(self, clear: bool = False, poll: bool = False):
+        poll  # noqa:B018
         res = self.work
         if clear:
             self.clear_work()
@@ -488,22 +487,20 @@ class BaseBattery(BaseCells):
     Skeleton for a balanced battery.
     """
 
-# superclass does sum of cell voltages
-#   async def cmd_u(self):
-#       """fetch battery voltage"""
-#       raise RuntimeError
+    # superclass does sum of cell voltages
+    #   async def cmd_u(self):
+    #       """fetch battery voltage"""
+    #       raise RuntimeError
 
     async def cmd_i(self):
         """fetch battery current"""
         raise RuntimeError
 
     async def cmd_ud(self):
-        """Get delta between cell voltage sum and battery voltage.
-        """
+        """Get delta between cell voltage sum and battery voltage."""
         u1 = await self.cmd_u()
         u2 = sum(await self.all("u"))
-        return u2-u1
-
+        return u2 - u1
 
 
 class BaseBalancer(BaseCmd):
@@ -522,15 +519,16 @@ class BaseBalancer(BaseCmd):
           max: 3.45  # no discharging below this point
           min: 3.05  # no charging above this point
     """
+
     # currently configured limits
-    uh:float = None
-    ul:float = None
+    uh: float = None
+    ul: float = None
 
     # configured limits, battery
-    chg_max:float = None
-    chg_min:float = None
-    dis_max:float = None
-    dis_min:float = None
+    chg_max: float = None
+    chg_min: float = None
+    dis_max: float = None
+    dis_min: float = None
 
     def __init__(self, cfg):
         super().__init__(cfg)
@@ -542,19 +540,19 @@ class BaseBalancer(BaseCmd):
         await self._setup()
 
     async def _setup(self):
-        self.n = self.cfg.get("n",9999)
+        self.n = self.cfg.get("n", 9999)
         self.bat = self.root.sub_at(*self.cfg["bat"]) if "bat" in self.cfg else None
         if self.bat is not None:
             # get battery limits
-            c = await self.bat.cfg(("cfg","lim","u","ext"))
+            c = await self.bat.cfg(("cfg", "lim", "u", "ext"))
             self.dis_max = c["max"]
             self.chg_min = c["min"]
-            c = await self.bat.cfg(("cfg","lim","u","std"))
+            c = await self.bat.cfg(("cfg", "lim", "u", "std"))
             self.dis_min = c["max"]
             self.chg_max = c["min"]
-            c = self.cfg.get("u",{})
-            self.dis_min = max(self.dis_min,c.get("max",0))
-            self.chg_max = max(self.chg_max,c.get("min",9999))
+            c = self.cfg.get("u", {})
+            self.dis_min = max(self.dis_min, c.get("max", 0))
+            self.chg_max = max(self.chg_max, c.get("min", 9999))
             if self.dis_min >= self.dis_max:
                 raise RuntimeError("Cf dis")
             if self.chg_min >= self.chg_max:
@@ -575,12 +573,12 @@ class BaseBalancer(BaseCmd):
             await self.start_tasks(tg)
             await super().task()
 
-    async def cmd_u(self, h:float=None, l:float=None):
+    async def cmd_u(self, h: float | None = None, l: float | None = None):
         "set desired voltage levels"
         if h is not None:
-            self.uh = min(self.dis_max,max(self.dis_min,h))
+            self.uh = min(self.dis_max, max(self.dis_min, h))
         if l is not None:
-            self.ul = min(self.chg_max,max(self.chg_min,l))
+            self.ul = min(self.chg_max, max(self.chg_min, l))
         self._run.set()
 
     async def run_bms(self):
@@ -609,7 +607,7 @@ class BaseBalancer(BaseCmd):
         st = await self.bat.all("dis")
 
         if not self.uh or self.uh > maxv:
-            for uv,f in st:
+            for uv, f in st:
                 if uv and not f:
                     await self.bat.all("dis", v=0)
                     break
@@ -618,7 +616,7 @@ class BaseBalancer(BaseCmd):
             d = self.cfg["h"]["d"]
         except KeyError:
             d = 0.05
-        
+
         if maxv - minv < 2 * d or maxv < self.uh:
             # all OK. Don't do any (more) work.
             log("Bal- %.3f %.3f %.3f %.3f", minv, maxv, d, self.dis_min)
@@ -637,7 +635,7 @@ class BaseBalancer(BaseCmd):
         want = 0
         cur = 0
         # Step 1, count what we currently have+need (and do some cleanup)
-        for i,cv in cc:
+        for i, cv in cc:
             if st[i][1]:
                 cur += 1
                 continue
@@ -647,40 +645,40 @@ class BaseBalancer(BaseCmd):
                     cur += 1
                     if st[i][0] < minv:
                         # don't balance below the minimum
-                        log("Balance1 %s", c)
-                        await c.set_balancing(minv + 2 * d)
+                        log("Balance1 %s", cv)
+                        await self.bat(i, "dis", v=cv)
                         # don't spam the system when the min level changes
                 else:
                     # goal reached.
-                    log("Unbalance1 %s", c)
-                    await self.bat(i,"dis",v=0)
+                    log("Unbalance1 %s", cv)
+                    await self.bat(i, "dis", v=0)
 
             elif cv >= thrv1 + d:
                 want += 1
 
-#       if cur:
-#           # update balancer power levels
-#           h, res = await self.send(RequestBalancePower())
-#           for c, r in zip(self.cells, res):
-#               r.to_cell(c)
+        #       if cur:
+        #           # update balancer power levels
+        #           h, res = await self.send(RequestBalancePower())
+        #           for c, r in zip(self.cells, res):
+        #               r.to_cell(c)
 
         if cur or want:
             ret = True
 
         # Step 1, if there are too many active cells, reduce the load
-        for i,cv in cc[::-1]:
+        for i, cv in cc[::-1]:
             if want + cur <= self.n:
                 # done
                 break
             if st[i][1]:
                 continue
             if st[i][0] > cv and cv < thrv2:
-                log("Unbalance2 %s", c)
-                await self.bat(i,"dis",v=0)
+                log("Unbalance2 %s", cv)
+                await self.bat(i, "dis", v=0)
                 cur -= 1
 
         # Step 2, turn on balancing on cells that need it
-        for i,cv in cc:
+        for i, cv in cc:
             if st[i][1]:
                 continue
             if st[i][0]:
@@ -688,8 +686,8 @@ class BaseBalancer(BaseCmd):
             if cur > self.n:
                 break
             if cv >= thrv1 + d:
-                log("Balance2 %d %s", i,cv)
-                await self.bat(i,"dis",v=minv)
+                log("Balance2 %d %s", i, cv)
+                await self.bat(i, "dis", v=minv)
                 cur += 1
                 ret = True
                 continue

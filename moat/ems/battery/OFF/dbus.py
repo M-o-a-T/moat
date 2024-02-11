@@ -1,13 +1,15 @@
 """
 dbus helpers
 """
-
-from contextlib import asynccontextmanager
+from __future__ import annotations
 
 import anyio
+from contextlib import asynccontextmanager
+
+from moat.util import CtxObj
+
 from asyncdbus.constants import NameFlag
 from asyncdbus.service import dbus as dbus_
-from moat.util import CtxObj
 
 INTF = "org.m_o_a_t"
 NAME = "org.m_o_a_t"
@@ -19,7 +21,7 @@ def reg_name(base, name):
         name = NAME
     elif name[0] == "+":
         name = f"{base}.{name[1:]}"
-    elif '.' not in name:
+    elif "." not in name:
         name = f"{base}.{name}"
     return name
 

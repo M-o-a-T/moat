@@ -1,19 +1,24 @@
 """
 Basic test using a MicroPython subtask
 """
+from __future__ import annotations
+
+import anyio
 import os
 import pytest
-import anyio
-from moat.micro._test import mpy_stack
-from moat.util.compat import ticks_add, ticks_diff, ticks_ms, log
+
 from moat.util import yload
+from moat.micro._test import mpy_stack
+from moat.util.compat import log
 
 pytestmark = pytest.mark.anyio
 
 TT = 250  # XXX assume that this is OK
 
-def as_attr(d):
+
+def as_attr(d):  # noqa:D103
     return yload(d, attr=True)
+
 
 CFGC = """
 apps:
@@ -52,59 +57,60 @@ c:
 """
 CFGC = as_attr(CFGC)
 
+
 async def test_cell(tmp_path):
     "Basic fake cell verification"
     async with mpy_stack(tmp_path, CFGC) as d, d.sub_at("c") as c:
-        assert 5 == await c.u()
-        assert 2 == await c.u(c=0.25)
+        assert await c.u() == 5
+        assert await c.u(c=0.25) == 2
         assert abs(1.96 - await c.u(c=0.20)) < 0.00001
         assert abs(1.64 - await c.u(c=0.10)) < 0.00001
         assert abs(1.36 - await c.u(c=0.05)) < 0.00001
         assert abs(1.0784 - await c.u(c=0.01)) < 0.00001
-        assert 8 == await c.u(c=0.75)
-        assert 9 == await c.u(c=1)
-        assert 1 == await c.u(c=0)
+        assert await c.u(c=0.75) == 8
+        assert await c.u(c=1) == 9
+        assert await c.u(c=0) == 1
         assert abs(0.04 - await c.u(c=-0.1)) < 0.00001
 
         # charge
-        assert 0.5 == await c.c()
-        assert 25 == await c.t()
-        await c.add_p(p=100,t=100)
-        assert 0.505 == await c.c()
-        assert 25.1 == await c.t()
-        assert (1,1) == await c.lim()
+        assert await c.c() == 0.5
+        assert await c.t() == 25
+        await c.add_p(p=100, t=100)
+        assert await c.c() == 0.505
+        assert await c.t() == 25.1
+        assert await c.lim() == (1, 1)
         for _ in range(100):
-            await c.add_p(p=100,t=100)
-            if (1,1) != await c.lim():
+            await c.add_p(p=100, t=100)
+            if await c.lim() != (1, 1):
                 break
         else:
             raise RuntimeError("took too long")
 
-        rc,rd = await c.lim()
+        rc, rd = await c.lim()
         assert rd == 1
         assert abs(0.96 - rc) < 0.00001
-        await c.add_p(p=-200,t=100)
+        await c.add_p(p=-200, t=100)
 
         # temperature
         for _ in range(200):
-            if (1,1) != await c.lim():
+            if await c.lim() != (1, 1):
                 break
-            await c.add_p(p=200,t=100)
-            await c.add_p(p=-200,t=100)
+            await c.add_p(p=200, t=100)
+            await c.add_p(p=-200, t=100)
         else:
             raise RuntimeError("took too long")
         assert 40 < await c.t() < 40.1
 
         # discharge
         for _ in range(100):
-            await c.add_p(p=-100,t=100)
-            if (1,1) != await c.lim():
+            await c.add_p(p=-100, t=100)
+            if await c.lim() != (1, 1):
                 break
         else:
             raise RuntimeError("took too long")
-        assert 38 > await c.t()
+        assert await c.t() < 38
 
-        rc,rd = await c.lim()
+        rc, rd = await c.lim()
         assert rc == 1
         assert abs(0.96 - rd) < 0.00001
 
@@ -135,9 +141,9 @@ CFGA = as_attr(CFGA)
 assert CFGA.b.cfg == "CFGA"
 CFGA.b.cfg = CFGC.c
 
+
 async def test_batt(tmp_path):
     "Basic BMS test"
-    ended = False
     try:
         os.unlink("fake.rtc")
     except FileNotFoundError:
@@ -147,7 +153,7 @@ async def test_batt(tmp_path):
         assert u == 20.2  # 1% plus
         await b.i(100)
         while True:
-            c,d = await b.lim()
+            c, _ = await b.lim()
             if c < 0.1:
                 break
             await anyio.sleep(0.05)
@@ -162,7 +168,7 @@ async def test_batt(tmp_path):
         xu = max(uu)  # maX and miN-U
         nu = min(uu)
         assert xu > 8.3
-        assert xu-nu > 0.01
+        assert xu - nu > 0.01
         log(f"u={xu :.3f} … {nu :.3f}")
 
         # now start balancing to lowest cell

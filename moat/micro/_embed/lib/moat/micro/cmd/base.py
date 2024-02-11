@@ -387,19 +387,26 @@ class BaseCmd(Base):
 
     async def cmd__dir(self, h=False):
         """
-        Rudimentary introspection. Returns a list of available commands @c and
-        submodules @d. j=True if callable directly.
+        Rudimentary introspection. Returns a dict with
+        a list of available commands @c,
+        iterators @i, and submodules @d.
+        j=True if callable directly.
         """
         c = []
+        i = []
         res = {}
 
         for k in dir(self):
             if k.startswith("cmd_") and h == (k[4] == "_"):
                 c.append(k[4:])
+            elif k.startswith("iter_") and h == (k[5] == "_"):
+                i.append(k[5:])
             elif k == ("_cmd" if h else "cmd"):
                 res["j"] = True
         if c:
             res["c"] = c
+        if i:
+            res["i"] = i
         return res
 
     async def cmd__cfg(self, p=()):

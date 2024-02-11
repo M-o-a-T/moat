@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from moat.util import combine_dict, import_
 from moat.micro.compat import L
+from moat.micro.errors import NoPathError
 
 from .tree.dir import BaseSuperCmd
 from .util.part import set_part
@@ -118,7 +119,15 @@ class ArrayCmd(BaseSuperCmd):
         if len(action) == 1:
             return await super().dispatch(action, msg, **kw)
 
-        sub = self.apps[action[0]]
+        try:
+            sub = self.apps[action[0]]
+        except TypeError:
+            raise NoPathError(
+                self.path,
+                action,
+                self.__class__.__name__,
+                await self.cmd__dir(),
+            ) from None
         return await sub.dispatch(action[1:], msg, **kw)
 
     async def cmd_all(self, *a, d=None, s=None, e=None):

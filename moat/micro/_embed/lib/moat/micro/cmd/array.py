@@ -121,7 +121,7 @@ class ArrayCmd(BaseSuperCmd):
 
         try:
             sub = self.apps[action[0]]
-        except TypeError:
+        except (TypeError,IndexError):
             raise NoPathError(
                 self.path,
                 action,

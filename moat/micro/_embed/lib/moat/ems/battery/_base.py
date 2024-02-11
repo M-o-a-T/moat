@@ -325,7 +325,7 @@ class BaseCells(ArrayCmd):
         await super().setup()
         await self._setup()
         try:
-            w = rtc_state[tuple("state", *self.path)]
+            w = rtc_state[("state", *self.path)]
         except KeyError:
             pass
         else:
@@ -463,7 +463,7 @@ class BaseCells(ArrayCmd):
         self.n_save += 1
         if self.n_save > 99:
             self.n_save = 0
-            rtc_state[tuple("state", *self.path)] = self.work
+            rtc_state[("state", *self.path)] = self.work
 
     def get_work(self, clear: bool = False, poll: bool = False):
         poll  # noqa:B018
@@ -544,10 +544,10 @@ class BaseBalancer(BaseCmd):
         self.bat = self.root.sub_at(*self.cfg["bat"]) if "bat" in self.cfg else None
         if self.bat is not None:
             # get battery limits
-            c = await self.bat.cfg(("cfg", "lim", "u", "ext"))
+            c = await self.bat._cfg(("cfg", "lim", "u", "ext"))
             self.dis_max = c["max"]
             self.chg_min = c["min"]
-            c = await self.bat.cfg(("cfg", "lim", "u", "std"))
+            c = await self.bat._cfg(("cfg", "lim", "u", "std"))
             self.dis_min = c["max"]
             self.chg_max = c["min"]
             c = self.cfg.get("u", {})

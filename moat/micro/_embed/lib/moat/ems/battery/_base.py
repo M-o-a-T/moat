@@ -232,8 +232,6 @@ class BaseCell(BaseCmd):
         May raise an exception, in which case the relay should disengage.
 
         Otherwise, returns (chg,dis) factors to limit max cell charge/discharge.
-
-        The default implementation doesn't use SoC.
         """
         u = await self.cmd_u()
         t = await self.cmd_t()
@@ -260,8 +258,13 @@ class BaseCell(BaseCmd):
             raise LowCellVoltage(u, self.path)
         dis = tf * val2pos(lu["ext"]["min"],u,lu["std"]["min"], clamp=True)
 
-        return (chg,dis)
-        
+        # TODO adapt these limits
+        # TODO use an exponent != 1
+        if soc < 0.05:
+            dis *= 20 * soc
+        if soc > 0.95:
+            chg *= 20 * (1 - soc)
+        return (chg, dis)
 
 
 class BaseCells(ArrayCmd):

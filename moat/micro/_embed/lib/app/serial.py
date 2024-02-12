@@ -32,8 +32,21 @@ def Raw(*a, **k):
     return _Raw(*a, **k)
 
 
+def Msg(*a, **k):
+    """snd/rcv: packetized data, via SerialPacker"""
+    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
+    from moat.micro.cmd.proto.stream import SerialPackerBlkBuf
+
+    class _Msg(BaseCmdBBM):
+        async def stream(self):
+            ser = SerialPackerBlkBuf(Serial(self.cfg), frame=self.cfg.get("frame",{}), cons=self.cfg.get("console", ))
+            return await AC_use(self, BaseCmdBBM(ser))
+
+    return _Msg(*a, **k)
+
+
 def Link(*a, **k):
-    """Sends/receives MoaT messages using some device"""
+    """r/w: exchange MoaT messages, possibly framed"""
     from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
     from moat.micro.stacks.console import console_stack
 

@@ -100,20 +100,20 @@ class BaseCmdBBM(BaseCmd):
 
     # Msg: s/r = .send/.recv
 
-    async def cmd_s(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
+    def cmd_s(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """send a message"""
         return self.s.send(m)
 
-    async def cmd_r(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
+    def cmd_r(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """receive a message"""
         return self.s.recv()
 
     # Blk: sb/rb = .snd/.rcv
 
-    async def cmd_sb(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
+    def cmd_sb(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """send a binary message"""
         return self.s.snd(m)
 
-    async def cmd_rb(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
+    def cmd_rb(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """receive a binary message"""
         return self.s.rcv()

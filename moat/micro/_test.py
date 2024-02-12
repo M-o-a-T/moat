@@ -19,7 +19,7 @@ from moat.micro.compat import L, TaskGroup
 
 # from moat.micro.main import Request, get_link, get_link_serial
 # from moat.micro.proto.multiplex import Multiplexer
-from moat.micro.proto.stack import BaseBuf, BaseMsg
+from moat.micro.proto.stack import BaseBuf, BaseMsg, BaseBlk
 from moat.micro.proto.stream import ProcessBuf
 
 with warnings.catch_warnings(record=True) as _w:
@@ -189,7 +189,7 @@ async def mpy_stack(temp: Path, cfg: dict | str, cfg2: dict | None = None):
         temp_dir.reset(rst)
 
 
-class Loopback(BaseMsg, BaseBuf):
+class Loopback(BaseMsg, BaseBuf, BaseBlk):
     """
     A simple loopback object.
 

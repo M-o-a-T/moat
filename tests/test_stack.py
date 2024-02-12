@@ -157,14 +157,14 @@ async def test_stack(tmp_path):
             d.cfg_at("r", "s", "c") as cfg,
         ):
             # First a couple of command tests
-            res = await rm("cmd _dir", do_stdout=True)
+            res = await rm("cmd dir_", do_stdout=True)
             assert "\n  c: Cmd\n" in res.stdout
             assert " wr\n" not in res.stdout
 
-            res = await s("?_rdy")
+            res = await s("?rdy_")
             assert not res, "Link is not ready"
 
-            res = await rm("cmd f._dir", do_stdout=True)
+            res = await rm("cmd f.dir_", do_stdout=True)
             assert "\n- rmdir\n" in res.stdout
 
             res = await rm("cfg", do_stdout=True)
@@ -184,9 +184,9 @@ async def test_stack(tmp_path):
             assert res.stdout == ""
 
             # now do the same thing sanely
-            res = await s("f", "_dir")
+            res = await s("f", "dir_")
             assert "rmdir" in res["c"]
-            res = await s.f("_dir")
+            res = await s.f("dir_")
             assert "rmdir" in res["c"]
             cf = await cfg.get()
             assert cf["a"]["b"] == "fubar"

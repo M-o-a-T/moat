@@ -97,17 +97,17 @@ exception, or a cancellation.
 
 ## Common commands
 
-### \_dir
+### dir\_
 
 Retrieve an app's directory, i.e. a list of commands and sub-apps.
 
 Docstrings are not supported.
 
-### \_upd
+### upd\_
 
 Reload this object. A subtree reloads all subcommands.
 
-### \_rdy
+### rdy\_
 
 Check whether this object is ready.
 
@@ -124,13 +124,13 @@ Return value:
 
 This command is not available if the satellite runs in "small" mode.
 
-### \_stp
+### stp\_
 
 Stop this subsystem.
 
 The command returns when the subsystem is halted.
 
-### \_stq
+### stq\_
 
 Query stop state.
 

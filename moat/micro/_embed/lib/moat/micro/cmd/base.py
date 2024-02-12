@@ -215,7 +215,7 @@ class BaseCmd(Base):
         self.p_task.cancel()
         await wait_complain(f"Stop {self.path}", 250, self.wait_stopped)
 
-    cmd__stp = stop
+    cmd_stp_ = stop
 
     if L:
 
@@ -243,7 +243,7 @@ class BaseCmd(Base):
                 await wait_complain(f"Rdy {self.path}", 250, self._ready.wait)
             return None
 
-        def cmd__rdy(self, w=True) -> Awaitable:
+        def cmd_rdy_(self, w=True) -> Awaitable:
             """
             Check if / wait for readiness.
 
@@ -256,7 +256,7 @@ class BaseCmd(Base):
         if self._stopped is not None:
             await self._stopped.wait()
 
-    cmd__stq = wait_stopped
+    cmd_stq_ = wait_stopped
 
     @property
     def path(self):
@@ -369,7 +369,7 @@ class BaseCmd(Base):
                 self.path,
                 (fn,),
                 self.__class__.__name__,
-                await self.cmd__dir(),
+                await self.cmd_dir_(v=None),
             ) from None
 
         if not wait:
@@ -385,31 +385,37 @@ class BaseCmd(Base):
 
     # globally-available commands
 
-    async def cmd__dir(self, h=False):
+    async def cmd_dir_(self, v=True):
         """
         Rudimentary introspection. Returns a dict with
         a list of available commands @c,
         iterators @i, and submodules @d.
         j=True if callable directly.
+
+        If @v is set (the default), don't return hidden commands.
         """
         c = []
         i = []
         res = {}
 
         for k in dir(self):
-            if k.startswith("cmd_") and h == (k[4] == "_"):
+            if v is (k[-1] == "_"):
+                continue
+            if k.startswith("cmd_"):
                 c.append(k[4:])
-            elif k.startswith("iter_") and h == (k[5] == "_"):
+            elif k.startswith("iter_"):
                 i.append(k[5:])
-            elif k == ("_cmd" if h else "cmd"):
+            elif k == "cmd":
                 res["j"] = True
+            elif k == "cmd_":
+                res["J"] = True
         if c:
             res["c"] = c
         if i:
             res["i"] = i
         return res
 
-    async def cmd__cfg(self, p=()):
+    async def cmd_cfg_(self, p=()):
         """
         Read this item's config.
 

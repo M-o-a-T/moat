@@ -126,12 +126,12 @@ class ArrayCmd(BaseSuperCmd):
                 self.path,
                 action,
                 self.__class__.__name__,
-                await self.cmd__dir(),
+                await self.cmd_dir_(v=None),
             ) from None
         return await sub.dispatch(action[1:], msg, **kw)
 
-    async def cmd__dir(self, **kw):
-        res = await super().cmd__dir(**kw)
+    async def cmd_dir_(self, **kw):
+        res = await super().cmd_dir_(**kw)
         res["na"] = len(self.apps)
         return res
 

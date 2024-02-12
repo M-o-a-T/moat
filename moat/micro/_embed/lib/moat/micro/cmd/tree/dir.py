@@ -150,15 +150,15 @@ class BaseSubCmd(BaseSuperCmd):
                 self.path,
                 action,
                 self.__class__.__name__,
-                await self.cmd__dir(),
+                await self.cmd_dir_(v=None),
             ) from None
         action = action[1:]
         return await sub.dispatch(action, msg, **kw)
 
-    async def cmd__dir(self, h=False):
+    async def cmd_dir_(self, v=True):
         "dir: add subdirs"
-        res = await super().cmd__dir(h=h)
-        res["d"] = {k: v.__class__.__name__ for k, v in self.sub.items() if h == (k[0] == "_")}
+        res = await super().cmd_dir_(v=v)
+        res["d"] = {k: v.__class__.__name__ for k, v in self.sub.items() if v is not (k[-1] == "_")}
         return res
 
 
@@ -192,7 +192,7 @@ class DirCmd(BaseSubCmd):
         self._updated.set()
         await self._did_update.wait()
 
-    cmd__upd = reload
+    cmd_upd_ = reload
 
     async def _setup_apps(self):
         log("Setup %s", self.path)

@@ -84,10 +84,10 @@ async def test_net_r(tmp_path, server_first, link_in, remote_first):
         await sleep_ms(100)
         await (set_client if server_first else set_server)(cr)
         if (server_first == remote_first, link_in) != (True, False):
-            while await d.send("s", "r", "?_rdy"):
+            while await d.send("s", "r", "?rdy_"):
                 await sleep_ms(100)
         if (server_first == remote_first, link_in) != (False, False):
-            while await d.send("r", "?_rdy"):
+            while await d.send("r", "?rdy_"):
                 await sleep_ms(100)
 
         async def chk(*p):

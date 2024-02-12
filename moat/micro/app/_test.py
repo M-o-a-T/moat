@@ -66,7 +66,7 @@ def LoopCmd(*a, **k):
 def LoopMsg(*a, **k):
     """Test Loopback connection.
 
-    This app uses the LoopBBM back-end, thus needs to connect to a LoopLink
+    This app tests the LoopBBM back-end. Thus it needs to connect to a LoopLink
     that uses queues for both directions.
     """
     from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
@@ -103,11 +103,19 @@ def LoopLink(*a, **k):
     from moat.micro.cmd.base import BaseCmd
     from moat.micro._test import Loopback
 
-    class _LoopLink(BaseCmd):
+    class _LoopLink(BaseCmd):  # duck-typed to BaseCmdBBM
+        # q_ATX.
+        # A: r=read_side w=write_side
+        # T: see docstring
+        # X: back end: r=read w=write e=event
+
+        # write queues.
         q_wm,q_wmr = None,None
         q_wb,q_wbr = None,None
         q_ws,q_wse = None,None
         q_wc,q_wce = None,None
+
+        # read queues
         q_rmw,q_rm = None,None
         q_rbw,q_rb = None,None
         q_rse,q_rs = None,None

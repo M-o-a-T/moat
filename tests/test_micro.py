@@ -15,7 +15,7 @@ CFG = """
 apps:
   r: _test.MpyCmd
   a: _test.Cmd
-  l: _test.Loop
+  l: _test.LoopCmd
   _sys: _sys.Cmd
 l:
   loop:
@@ -191,7 +191,7 @@ class Foo(Bar):
 LCFG = """
 apps:
   a: _test.Cmd
-  l: _test.Loop
+  l: _test.LoopCmd
   _sys: _sys.Cmd
 l:
   loop:

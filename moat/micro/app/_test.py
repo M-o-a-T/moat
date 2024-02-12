@@ -38,13 +38,13 @@ def MpyRaw(*a, **k):
     return _MpyRaw(*a, **k)
 
 
-def Loop(*a, **k):
+def LoopCmd(*a, **k):
     """Full-stack Loopback. This goes through msgpack."""
     from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
     from moat.micro.stacks.console import console_stack
     from moat.micro._test import Loopback
 
-    class _Loop(BaseCmdMsg):
+    class _LoopCmd(BaseCmdMsg):
         async def stream(self):
             # accepts qlen and loss
             s = Loopback(**self.cfg.get("loop", {}))
@@ -60,7 +60,7 @@ def Loop(*a, **k):
                     s = await AC_use(self, console_stack(s, self.cfg))
             return s
 
-    return _Loop(*a, **k)
+    return _LoopCmd(*a, **k)
 
 
 def LoopMsg(*a, **k):

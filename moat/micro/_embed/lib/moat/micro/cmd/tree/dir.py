@@ -276,7 +276,7 @@ class Dispatch(DirCmd):
         return Path()
 
 
-class SubDispatch:
+def SubDispatch(dispatch, path):
     """
     A Dispatch forwarder that prefixes a path.
 
@@ -297,24 +297,33 @@ class SubDispatch:
     It's also possible to access iterators this way: an ``it_X`` attribute
     accesses the destination's ``iter_X`` method. As with
     `dispatch.send_iter`, the timer is the first argument.
+
+    This is a constructor. The actual class is ``_SubDispatch``.
     """
 
-    def __init__(self, dispatch, path):
-        self._path = path  # for creating sub-subdispatcher
+    for i, p in enumerate(path):
+        try:
+            dispatch = dispatch.sub[p]
+        except (AttributeError, KeyError):
+            return _SubDispatch(path, dispatch, path[i:])
+    else:
+        try:
+            return dispatch._subD
+        except AttributeError:
+            dispatch._subD = sd = _SubDispatch(path, dispatch, ())
 
-        for i, p in enumerate(path):
-            try:
-                dispatch = dispatch.sub[p]
-            except (AttributeError, KeyError):
-                self._dest = dispatch
-                self._rem = path[i:]
-                break
-        else:
-            self._dest = dispatch
-            self._rem = ()
             for k in dir(dispatch):
-                if k.startswith("cmd_"):
-                    setattr(self, k[4:], getattr(dispatch, k))
+                if k.startswith("cmd_") and k[4] != "_":
+                    setattr(sd, k[4:], getattr(dispatch, k))
+            return sd
+
+
+class _SubDispatch:
+
+    def __init__(self, path, dest, rem):
+        self._path = path
+        self._dest = dest
+        self._rem = rem
 
     @property
     def root(self) -> Dispatch:

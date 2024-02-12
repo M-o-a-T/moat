@@ -277,6 +277,69 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
         await super().teardown()
 
 
+class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
+    """
+    A loopback BBM. It talks to a remote LoopLink.
+
+    This BBM is not a command, thus it cannot be linked to.
+    
+    The remote LoopLink must have the appropriate buffers,
+    i.e. `usage: mM` for messages, etc.
+    """
+
+    # pylint:disable=abstract-method
+
+    _link = None
+
+    async def setup(self):
+        p = self.cfg["path"]
+        if isinstance(p, str):
+            raise ValueError(f"Need a path, not {p !r}")
+        self._link = self.cfg["_cmd"].root.sub_at(*p)
+
+    def send(self, m) -> Awaitable:
+        """Send message data."""
+        return self._link.xs(m=m)
+
+    def recv(self) -> Awaitable:
+        """Read message data."""
+        return self._link.xr()
+
+
+    def snd(self, m) -> Awaitable:
+        """Send block data."""
+        return self._link.xsb(m=m)
+
+    def rcv(self) -> Awaitable:
+        return self._link.xrb()
+        """Read block data."""
+
+
+    def wr(self, b) -> Awaitable:
+        """Send bytes."""
+        return self._link.xwr(b=b)
+
+    async def rd(self, b):
+        """Read bytes."""
+        r = await self._link.xrd(n=len(b))
+        n = len(r)
+        b[:n] = r
+        return n
+
+
+    def cwr(self, b) -> Awaitable:
+        """Send bytes."""
+        return self._link.xcwr(b=b)
+
+    async def crd(self, b):
+        """Read bytes."""
+        r = await self._link.xcrd(n=len(b))
+        n = len(r)
+        b[:n] = r
+        return n
+
+
+
 class Root(Dispatch):
     "an empty root for testing"
 

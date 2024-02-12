@@ -313,7 +313,7 @@ def SubDispatch(dispatch, path):
             dispatch._subD = sd = _SubDispatch(path, dispatch, ())
 
             for k in dir(dispatch):
-                if k.startswith("cmd_") and k[4] != "_":
+                if k.startswith("cmd_"):
                     setattr(sd, k[4:], getattr(dispatch, k))
             return sd
 

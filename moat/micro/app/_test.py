@@ -4,7 +4,6 @@ Apps used for testing.
 
 from __future__ import annotations
 
-from moat.micro._test import Loopback, MpyBuf
 import anyio
 
 from moat.micro.compat import AC_use
@@ -17,6 +16,7 @@ def MpyCmd(*a, **k):
     """MoaT link to a local micropython process"""
     from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
     from moat.micro.stacks.console import console_stack
+    from moat.micro._test import MpyBuf
 
     class _MpyCmd(BaseCmdMsg):
         async def stream(self):
@@ -29,6 +29,7 @@ def MpyCmd(*a, **k):
 def MpyRaw(*a, **k):
     """stdio of a local micropython process"""
     from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
+    from moat.micro._test import MpyBuf
 
     class _MpyRaw(BaseCmdBBM):
         async def stream(self):
@@ -38,12 +39,14 @@ def MpyRaw(*a, **k):
 
 
 def Loop(*a, **k):
-    """Loopback. Unlike remote.Fwd this goes through msgpack."""
+    """Full-stack Loopback. This goes through msgpack."""
     from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
     from moat.micro.stacks.console import console_stack
+    from moat.micro._test import Loopback
 
     class _Loop(BaseCmdMsg):
         async def stream(self):
+            # accepts qlen and loss
             s = Loopback(**self.cfg.get("loop", {}))
             s.link(s)
             if (li := self.cfg.get("link", None)) is not None:

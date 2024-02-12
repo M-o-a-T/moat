@@ -213,10 +213,14 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
     async def setup(self):
         if self._link is None:
             raise RuntimeError("Link before setup!")
+        elif isinstance(self._link, anyio.Event):
+            await self._link.wait()
 
-    def link(self, other):
+    def link(self, other: Loopback|anyio.Event):
         """Tell this loopback to read from some other loopback."""
-        self._link = other
+        evt,self._link = self._link,other
+        if isinstance(evt, anyio.Event):
+            evt.set()
 
     async def send(self, m, _loss=True):  # pylint:disable=arguments-differ
         """Send data."""

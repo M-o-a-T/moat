@@ -544,10 +544,10 @@ class BaseBalancer(BaseCmd):
         self.bat = self.root.sub_at(*self.cfg["bat"]) if "bat" in self.cfg else None
         if self.bat is not None:
             # get battery limits
-            c = await self.bat._cfg(("cfg", "lim", "u", "ext"))
+            c = await self.bat.cfg_(("cfg", "lim", "u", "ext"))
             self.dis_max = c["max"]
             self.chg_min = c["min"]
-            c = await self.bat._cfg(("cfg", "lim", "u", "std"))
+            c = await self.bat.cfg_(("cfg", "lim", "u", "std"))
             self.dis_min = c["max"]
             self.chg_max = c["min"]
             c = self.cfg.get("u", {})

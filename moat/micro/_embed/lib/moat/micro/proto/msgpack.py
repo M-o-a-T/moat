@@ -30,19 +30,20 @@ def _decode(code, data):
         d = d[0]
         try:
             p = name2obj(s)
-            o = p(*d, **st)
+            if hasattr(p, "__setstate__"):
+                o = p(*d)
+                p.__setstate__(st)
+            else:
+                o = p(*d, **st)
         except KeyError:
             o = DProxy(s, *d, **st)
         except TypeError:
             o = p(*d)
             try:
-                o.__setstate__(st)
+                o.__dict__.update(st)
             except AttributeError:
-                try:
-                    o.__dict__.update(st)
-                except AttributeError:
-                    for k, v in st.items():
-                        setattr(o, k, v)
+                for k, v in st.items():
+                    setattr(o, k, v)
         return o
     return ExtType(code, data)
 

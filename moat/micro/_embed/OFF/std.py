@@ -1,7 +1,7 @@
-from ._base import BaseBMSCmd
+from ._base import BaseBMS
 
 
-class Cmd(BaseBMSCmd):
+class Cmd(BaseBMS):
     async def loc_state(self):
         return {"Foo": 123}
 

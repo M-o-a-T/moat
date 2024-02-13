@@ -5,15 +5,20 @@ Test implementation of something that may or may not behave like a battery
 from __future__ import annotations
 
 import random
+import logging
 import sys
 
 from moat.util.compat import TaskGroup, sleep_ms, Event
 from moat.util import pos2val,val2pos
+from moat.micro.compat import ticks_ms
 from moat.micro.cmd.array import ArrayCmd
 from moat.micro.cmd.base import BaseCmd
 
 from moat.ems.battery._base import BaseCell, BaseBattery, BaseBalancer
+from moat.ems.battery.diy_serial.packet import PacketHeader,PacketType
+from moat.ems.battery.diy_serial.packet import ReplyTiming
 
+logger = logging.getLogger(__name__)
 
 class Cell(BaseCell):
     """
@@ -124,8 +129,26 @@ class CellSim(BaseCmd):
         self.set_ready()
         while True:
             msg = await self.ctrl.xrb()
-            print("MSG",msg,file=sys.stderr)
-            await self.ctrl.xsb(m=b'#'+msg)
+            hdr,msg = PacketHeader.decode(msg)
+            addr = hdr.hops
+            hdr.hops += 1
+            if hdr.start > addr or hdr.start+hdr.cells < addr:
+                # not for us
+                await self.ctrl.xsb(m=hdr.encode(msg))
+                continue
+
+            hdr.seen = True
+
+            pkt,msg = hdr.decode_one(msg)
+            logger.debug("MSG %r %r",hdr,pkt)
+            rsp = None
+            if hdr.command == PacketType.Timing:
+                rsp = ReplyTiming(timer=ticks_ms())
+            else:
+                logger.warning("Not answering %r", msg)
+                continue
+
+            await self.ctrl.xsb(m=hdr.encode_one(msg, rsp))
 
 
 

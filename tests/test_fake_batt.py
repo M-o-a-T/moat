@@ -11,51 +11,18 @@ from moat.util import yload
 from moat.micro._test import mpy_stack
 from moat.util.compat import log
 
+from.support import as_attr,CF
+
 pytestmark = pytest.mark.anyio
 
 TT = 250  # XXX assume that this is OK
 
 
-def as_attr(d):  # noqa:D103
-    return yload(d, attr=True)
-
-
 CFGC = """
 apps:
   c: bms._test.Cell
-c:
-  c: 0.5
-  t: 25
-  cap: 2000
-  i:
-    dis: -1
-    chg: 0
-  lim:
-    t:
-      abs:
-        min: 0
-        max: 45
-      ext:
-        min: 10
-        max: 40
-    c:
-      min: 0.25
-      max: 0.75
-    p:  # exponent when 'ext' limit is exceeded
-      min: 2
-      max: 2
-    u:
-      abs:
-        min: 1
-        max: 9
-      std:
-        min: 3
-        max: 7
-      ext:
-        min: 2
-        max: 8
 """
-CFGC = as_attr(CFGC)
+CFGC = as_attr(CFGC, c=CF.c)
 
 
 async def test_cell(tmp_path):

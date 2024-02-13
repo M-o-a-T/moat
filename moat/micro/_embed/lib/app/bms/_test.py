@@ -5,10 +5,12 @@ Test implementation of something that may or may not behave like a battery
 from __future__ import annotations
 
 import random
+import sys
 
 from moat.util.compat import TaskGroup, sleep_ms, Event
 from moat.util import pos2val,val2pos
 from moat.micro.cmd.array import ArrayCmd
+from moat.micro.cmd.base import BaseCmd
 
 from moat.ems.battery._base import BaseCell, BaseBattery, BaseBalancer
 
@@ -110,6 +112,22 @@ class Cell(BaseCell):
                 u = await self.cmd_u()
                 if u < self.vchg:
                     await self.cmd_add_p(u*self.cfg["i"]["chg"], 100)
+
+
+class CellSim(BaseCmd):
+    async def setup(self):
+        await super().setup()
+        self.cell = self.root.sub_at(*self.cfg["cell"])
+        self.ctrl = self.root.sub_at(*self.cfg["ctrl"])
+
+    async def task(self):
+        self.set_ready()
+        while True:
+            msg = await self.ctrl.xrb()
+            print("MSG",msg,file=sys.stderr)
+            await self.ctrl.xsb(m=b'#'+msg)
+
+
 
 
 class Batt(BaseBattery):

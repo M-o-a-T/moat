@@ -33,9 +33,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-as_proxy("_FnErr", FileNotFoundError, replace=True)
-as_proxy("_FxErr", FileExistsError, replace=True)
-
 
 class Operations(pyfuse3.Operations):  # pylint: disable=I1101
     "FUSE operations to delegate to a MicroPython client"

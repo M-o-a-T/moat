@@ -117,7 +117,12 @@ class BattComm(BaseCmd):
             self.t = t + 10000 * mlen / self.rate
             await self.comm.sb(m=msg)
 
-        res = await wait_for_ms(5000, evt.get)
+        try:
+            res = await wait_for_ms(5000, evt.get)
+        except TimeoutError as exc:
+            evt.set_error(exc)
+            if self.waiting[seq] is evt:
+                self.waiting[seq] = None
         logger.debug("RES %s", pformat(res))
         return res
 

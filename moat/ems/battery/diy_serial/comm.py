@@ -138,7 +138,8 @@ class BattComm(BaseCmd):
             msg = await self.comm.rb()
 
             try:
-                hdr, pkt = PacketHeader.decode(msg)
+                hdr, msg = PacketHeader.decode(msg)
+                pkt = hdr.decode_all(msg)
             except MessageError:
                 logger.warning("Cannot decode: %r", msg)
                 continue

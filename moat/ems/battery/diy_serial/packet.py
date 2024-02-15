@@ -108,7 +108,7 @@ class PacketHeader:
                 if off + pkt_len > len(msg):
                     raise MessageError(msg)  # incomplete
                 pkt.append(RC.from_bytes(msg[off : off + pkt_len]))
-                off += RCL
+                off += pkt_len
         if off != len(msg):
             raise MessageError(msg)
         return pkt

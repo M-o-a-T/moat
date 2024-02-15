@@ -258,12 +258,12 @@ class BaseCell(BaseCmd):
             raise LowCellVoltage(u, self.path)
         dis = tf * val2pos(lu["ext"]["min"], u, lu["std"]["min"], clamp=True)
 
-        # TODO adapt these limits
         # TODO use an exponent != 1
-        if soc < 0.05:
-            dis *= 20 * soc
-        if soc > 0.95:
-            chg *= 20 * (1 - soc)
+        lc = self.cfg["lim"]["c"]
+        if soc < lc["min"]:
+            dis *= soc / lc["min"]
+        if soc > lc["max"]:
+            chg *= (1 - soc) / (1 - lc["max"])
         return (chg, dis)
 
 

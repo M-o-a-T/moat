@@ -7,16 +7,18 @@ from __future__ import annotations
 import random
 import logging
 import sys
+from math import exp
+from functools import partial
 
 from moat.util.compat import TaskGroup, sleep_ms, Event
-from moat.util import pos2val,val2pos
-from moat.micro.compat import ticks_ms
+from moat.util import pos2val,val2pos,attrdict
+from moat.micro.compat import ticks_ms, Queue
 from moat.micro.cmd.array import ArrayCmd
 from moat.micro.cmd.base import BaseCmd
 
 from moat.ems.battery._base import BaseCell, BaseBattery, BaseBalancer
-from moat.ems.battery.diy_serial.packet import PacketHeader,PacketType
-from moat.ems.battery.diy_serial.packet import ReplyTiming
+from moat.ems.battery.diy_serial.packet import PacketHeader,PacketType,replyClass
+from moat.ems.battery.diy_serial.packet import ReplyIdentify
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +31,14 @@ class Cell(BaseCell):
     The voltages are linear between u.ext, plus a power term when exceeding
     that.
 
-    Config::
+    A configuration that replicates a LiFePo4 cell, *very* approximately::
 
         c: 0.5
+        t: 25
         cap: 2000
+        i:
+          dis: -1  # balancer discharge current
+          chg: 0  # TODO
         lim:
           t:
             abs:
@@ -51,29 +57,36 @@ class Cell(BaseCell):
             abs:
               min: 2.5
               max: 3.65
+            std:
+              min: 2.6
+              max: 3.55
             ext:
               min: 2.9
               max: 3.4
-          i:
-            dis: -1  # balancer discharge current
-            chg: 0
     """
     def __init__(self, cfg):
         super().__init__(cfg)
         self._c = cfg["c"]
         self._t = cfg["t"]
         self._tb = 25
+        self.t_env = 25
     
     async def set_dis(self):
         "set discharger. No-op since we can use .vdis directly."
         pass
 
     async def cmd_c(self, c:float|None=None) -> float:
+        "get/set the current charge"
         if c is not None:
             self._c = c
         return self._c
 
-    async def cmd_u(self, c:float|None=None):
+    async def cmd_u(self, c:float|None=None) -> float:
+        """
+        return the current voltage.
+
+        If @c is set, return the voltage the cell would have if its current charge was c.
+        """
         li = self.cfg["lim"]
         liu = li["u"]
         if c is None:
@@ -89,10 +102,18 @@ class Cell(BaseCell):
             u = pos2val(liu["ext"]["min"],up,liu["ext"]["max"])
         return u
 
+    async def cmd_te(self, t=None) -> float:
+        "gets/sets the environment temperature"
+        if t is None:
+            return self.t_env
+        self.t_env = t
+
     async def cmd_t(self):
+        "returns the balancer resistor temperature"
         return self._t
 
     async def cmd_tb(self):
+        "returns the battery temperature"
         return self._tb
 
     async def cmd_add_p(self, p, t):
@@ -100,8 +121,8 @@ class Cell(BaseCell):
         # watt seconds
         self._c += p*t/self.cfg["cap"]/1000
 
-        # incoming power adds heat to the battery
-        self._t += (25-self._t)*0.01 + abs(p)*t/100000
+        # time takes heat away, Charge+Discharge adds it
+        self._t += (self.t_env-self._t)*(1-exp(-t/10000)) + abs(p)*t/100000*(1 if p>0 else 0.5)
 
     async def task(self):
         self.set_ready()
@@ -119,14 +140,12 @@ class Cell(BaseCell):
                     await self.cmd_add_p(u*self.cfg["i"]["chg"], 100)
 
 
-class CellSim(BaseCmd):
-    async def setup(self):
-        await super().setup()
-        self.cell = self.root.sub_at(*self.cfg["cell"])
-        self.ctrl = self.root.sub_at(*self.cfg["ctrl"])
+class _CellSim(BaseCmd):
+    # needs "ctrl" and "cell" attributes
+    ctrl=None
+    cell=None
 
     async def task(self):
-        self.set_ready()
         while True:
             msg = await self.ctrl.xrb()
             hdr,msg = PacketHeader.decode(msg)
@@ -134,23 +153,115 @@ class CellSim(BaseCmd):
             hdr.hops += 1
             if hdr.start > addr or hdr.start+hdr.cells < addr:
                 # not for us
-                await self.ctrl.xsb(m=hdr.encode(msg))
+                await self.ctrl.xsb(m=hdr.encode_one(msg))
                 continue
 
             hdr.seen = True
 
             pkt,msg = hdr.decode_one(msg)
             logger.debug("MSG %r %r",hdr,pkt)
-            rsp = None
-            if hdr.command == PacketType.Timing:
-                rsp = ReplyTiming(timer=ticks_ms())
+            rsp = replyClass[hdr.command]()
+            if hdr.command == PacketType.ResetPacketCounters:
+                pass
+            elif hdr.command == PacketType.ReadVoltageAndStatus:
+                pass
+            elif hdr.command == PacketType.Identify:
+                pass
+            elif hdr.command == PacketType.ReadTemperature:
+                pass
+            elif hdr.command == PacketType.ReadPacketCounters:
+                pass
+            elif hdr.command == PacketType.ReadSettings:
+                pass
+            elif hdr.command == PacketType.WriteSettings:
+                pass
+            elif hdr.command == PacketType.ReadBalancePowerPWM:
+                pass
+            elif hdr.command == PacketType.Timing:
+                rsp.timer = pkt.timer
+            elif hdr.command == PacketType.ReadBalanceCurrentCounter:
+                pass
+            elif hdr.command == PacketType.ResetBalanceCurrentCounter:
+                pass
+            elif hdr.command == PacketType.WriteBalanceLevel:
+                pass
+            elif hdr.command == PacketType.WritePIDconfig:
+                pass
+            elif hdr.command == PacketType.ReadPIDconfig:
+                pass
             else:
                 logger.warning("Not answering %r", msg)
                 continue
 
             await self.ctrl.xsb(m=hdr.encode_one(msg, rsp))
 
+class CellSim(_CellSim):
+    """
+    Back-end to simulate a single cell.
 
+    This is a background app. It reads byte blocks from the loopback app at @ctrl,
+    analyzes them, and replies according to the cell app at @cell.
+    """
+    async def setup(self):
+        await super().setup()
+        self.cell = self.root.sub_at(*self.cfg["cell"])
+        self.ctrl = self.root.sub_at(*self.cfg["ctrl"])
+
+    async def task(self):
+        self.set_ready()
+        await super().task()
+
+
+class _SingleCellSim(_CellSim):
+    """
+    Interface for a cell in a series, configured via CellsSim.
+    """
+    def __init__(self, cell, ctrl):
+        self.cell = cell
+        self.ctrl = ctrl
+
+
+class CellsSim(_CellSim):
+    """
+    Back-end to simulate multiple cells.
+
+    Config:
+        n: number of cells
+        ctrl: LoopLink taking to them
+        cell: path to the array of Cell objects this app shall control
+    """
+    def __init__(self, cfg):
+        super().__init__(cfg)
+        self.n_cells = cfg["n"]
+
+    async def setup(self):
+        await super().setup()
+        self.ctrl = self.root.sub_at(*self.cfg["ctrl"])
+
+    async def task(self):
+        cell = self.cfg["cell"]
+
+        def _mput(q, m):
+            return q(m)
+
+        async with TaskGroup() as tg:
+            q = None
+            for i in range(self.n_cells):
+                c = attrdict()
+                if i == 0:  # first
+                    c.xrb = self.ctrl.xrb
+                else:
+                    c.xrb = q.get
+                if i < self.n_cells-1:
+                    q = Queue()
+                    c.xsb = partial(_mput, q.put)
+                else:  # last
+                    c.xsb = self.ctrl.xsb
+
+                cp = self.root.sub_at(*cell, i)
+                sim = _SingleCellSim(cp, c)
+                await tg.spawn(sim.task)
+            self.set_ready()
 
 
 class Batt(BaseBattery):
@@ -217,3 +328,9 @@ class Bal(BaseBalancer):
     Balancer support for a battery.
     """
     pass
+
+###
+
+def etb(self):
+    return b""
+ReplyIdentify.to_bytes=etb

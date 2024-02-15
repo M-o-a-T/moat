@@ -62,8 +62,8 @@ async def test_cell(tmp_path):
         for _ in range(200):
             if await c.lim() != (1, 1):
                 break
-            await c.add_p(p=200, t=100)
-            await c.add_p(p=-200, t=100)
+            await c.add_p(p=200, t=1000)
+            await c.add_p(p=-200, t=1000)
         else:
             raise RuntimeError("took too long")
         assert 40 < await c.t() < 40.1

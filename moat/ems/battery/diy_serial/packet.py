@@ -99,7 +99,7 @@ class PacketHeader:
 
         off = 0
         pkt = []
-        if hdr.broadcast:
+        if self.broadcast:
             # The request header has not been deleted,
             # so we need to skip it
             off += requestClass[self.command].S.size
@@ -136,10 +136,10 @@ class PacketHeader:
     def encode(self):
         return self.to_bytes()
 
-    def encode_one(self, msg, pkt):
-        return self.to_bytes()+msg+(pkt.to_bytes() if pkt is not None else None)
+    def encode_one(self, msg, pkt:_Reply=None):
+        return self.to_bytes()+msg+(pkt.to_bytes() if pkt is not None else b'')
 
-    def encode_all(self, pkt, end=None):
+    def encode_all(self, pkt:list[_Request]|_Request, end=None):
         "encode me, plus some packets, to a message"
         if not isinstance(pkt, (list, tuple)):
             pkt = (pkt,)
@@ -246,8 +246,12 @@ class _Request(NullData):
     def to_bytes(self):
         return b''
 
-    def __setstate__(self, m):
+    def __setstate__(self, data):
         pass
+
+    def __getstate__(self):
+        return dict()
+
 
 class _Reply(NullData):
     @classmethod
@@ -703,7 +707,7 @@ class RequestCellVoltage(_Request):
 
 
 @_dc("id>")
-class RequestIdentifyModule(_Request):
+class RequestIdentify(_Request):
     T = PacketType.Identify
 
 
@@ -745,7 +749,7 @@ class ReplyWritePIDconfig(_Reply):
 requestClass = [
     RequestResetPacketCounters,  # ResetPacketCounters=0
     RequestCellVoltage,  # ReadVoltageAndStatus=1
-    RequestIdentifyModule,  # Identify=2
+    RequestIdentify,  # Identify=2
     RequestCellTemperature,  # ReadTemperature=3
     RequestPacketCounters,  # ReadPacketCounters=4
     RequestGetSettings,  # ReadSettings=5

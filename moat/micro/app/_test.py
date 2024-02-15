@@ -11,12 +11,17 @@ from moat.micro.proto.stream import MsgpackMsgBlk
 
 from ._test_ import Cmd, Cons  # noqa:F401 pylint:disable=unused-import
 
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Awaitable
+
 
 def MpyCmd(*a, **k):
     """MoaT link to a local micropython process"""
+    from moat.micro._test import MpyBuf
     from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
     from moat.micro.stacks.console import console_stack
-    from moat.micro._test import MpyBuf
 
     class _MpyCmd(BaseCmdMsg):
         async def stream(self):
@@ -28,8 +33,8 @@ def MpyCmd(*a, **k):
 
 def MpyRaw(*a, **k):
     """stdio of a local micropython process"""
-    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
     from moat.micro._test import MpyBuf
+    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
 
     class _MpyRaw(BaseCmdBBM):
         async def stream(self):
@@ -40,9 +45,9 @@ def MpyRaw(*a, **k):
 
 def LoopCmd(*a, **k):
     """Full-stack Loopback. This goes through msgpack."""
+    from moat.micro._test import Loopback
     from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
     from moat.micro.stacks.console import console_stack
-    from moat.micro._test import Loopback
 
     class _LoopCmd(BaseCmdMsg):
         async def stream(self):
@@ -54,6 +59,7 @@ def LoopCmd(*a, **k):
                     s = MsgpackMsgBlk(s, li)
                     if (log := self.cfg.get("log", None)) is not None:
                         from ..proto.stack import LogMsg
+
                         s = LogMsg(s, log)
                     s = await AC_use(self, s)
                 else:
@@ -69,8 +75,8 @@ def LoopMsg(*a, **k):
     This app tests the LoopBBM back-end. Thus it needs to connect to a LoopLink
     that uses queues for both directions.
     """
-    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
     from moat.micro._test import LoopBBM
+    from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
 
     class _LoopMsg(BaseCmdBBM):
         async def stream(self):
@@ -101,7 +107,6 @@ def LoopLink(*a, **k):
     to the external end of the remote queue.
     """
     from moat.micro.cmd.base import BaseCmd
-    from moat.micro._test import Loopback
 
     class _LoopLink(BaseCmd):  # duck-typed to BaseCmdBBM
         # q_ATX.
@@ -110,41 +115,41 @@ def LoopLink(*a, **k):
         # X: back end: r=read w=write e=event
 
         # write queues.
-        q_wm,q_wmr = None,None
-        q_wb,q_wbr = None,None
-        q_ws,q_wse = None,None
-        q_wc,q_wce = None,None
+        q_wm, q_wmr = None, None
+        q_wb, q_wbr = None, None
+        q_ws, q_wse = None, None
+        q_wc, q_wce = None, None
 
         # read queues
-        q_rmw,q_rm = None,None
-        q_rbw,q_rb = None,None
-        q_rse,q_rs = None,None
-        q_rce,q_rc = None,None
+        q_rmw, q_rm = None, None
+        q_rbw, q_rb = None, None
+        q_rse, q_rs = None, None
+        q_rce, q_rc = None, None
 
         async def setup(self):
-            p = self.cfg.get("path",None)
-            if isinstance(p,str):
-                raise ValueError(f"Need a path, not {p !r}")
+            p = self.cfg.get("path", None)
+            if isinstance(p, str):
+                raise TypeError(f"Need a path, not {p !r}")
             self.remote = self.root.sub_at(*p) if p is not None else None
 
-            u = self.cfg.get("usage","")
+            u = self.cfg.get("usage", "")
             if "m" in u:
-                self.q_wm,self.q_wmr = anyio.create_memory_object_stream(self.cfg.get("qlen",99))
+                self.q_wm, self.q_wmr = anyio.create_memory_object_stream(self.cfg.get("qlen", 99))
             if "b" in u:
-                self.q_wb,self.q_wbr = anyio.create_memory_object_stream(self.cfg.get("qlen",99))
+                self.q_wb, self.q_wbr = anyio.create_memory_object_stream(self.cfg.get("qlen", 99))
             if "s" in u:
-                self.q_ws,self.q_wse = bytearray(),anyio.Event()
+                self.q_ws, self.q_wse = bytearray(), anyio.Event()
             if "c" in u:
-                self.q_wc,self.q_wce = bytearray(),anyio.Event()
+                self.q_wc, self.q_wce = bytearray(), anyio.Event()
 
             if "M" in u:
-                self.q_rmw,self.q_rm = anyio.create_memory_object_stream(self.cfg.get("qlen",99))
+                self.q_rmw, self.q_rm = anyio.create_memory_object_stream(self.cfg.get("qlen", 99))
             if "B" in u:
-                self.q_rbw,self.q_rb = anyio.create_memory_object_stream(self.cfg.get("qlen",99))
+                self.q_rbw, self.q_rb = anyio.create_memory_object_stream(self.cfg.get("qlen", 99))
             if "S" in u:
-                self.q_rse,self.q_rs = anyio.Event(),bytearray()
+                self.q_rse, self.q_rs = anyio.Event(), bytearray()
             if "C" in u:
-                self.q_rce,self.q_rc = anyio.Event(),bytearray()
+                self.q_rce, self.q_rc = anyio.Event(), bytearray()
 
             await super().setup()
 
@@ -219,18 +224,18 @@ def LoopLink(*a, **k):
                 return await self.remote.xrd(n=n)
             while not self.q_rs:
                 await self.q_rse.wait()
-            n = min(n,len(self.q_rs))
+            n = min(n, len(self.q_rs))
             res = self.q_rs[:n]
-            self.q_rs[:n] = b''
+            self.q_rs[:n] = b""
             return res
 
         async def cmd_xrd(self, n=64):
             "remotely read the byte write queue"
             while not self.q_ws:
                 await self.q_wse.wait()
-            n = min(n,len(self.q_ws))
+            n = min(n, len(self.q_ws))
             res = self.q_ws[:n]
-            self.q_ws[:n] = b''
+            self.q_ws[:n] = b""
             return res
 
         # Console
@@ -256,18 +261,18 @@ def LoopLink(*a, **k):
                 return await self.remote.xcrd(n=n)
             while not self.q_rc:
                 await self.q_rce.wait()
-            n = min(n,len(self.q_rc))
+            n = min(n, len(self.q_rc))
             res = self.q_rc[:n]
-            self.q_rc[:n] = b''
+            self.q_rc[:n] = b""
             return res
 
         async def cmd_xcrd(self, n=64):
             "remotely read the console write queue"
             while not self.q_wc:
                 await self.q_wce.wait()
-            n = min(n,len(self.q_wc))
+            n = min(n, len(self.q_wc))
             res = self.q_wc[:n]
-            self.q_wc[:n] = b''
+            self.q_wc[:n] = b""
             return res
 
     return _LoopLink(*a, **k)

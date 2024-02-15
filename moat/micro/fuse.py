@@ -12,8 +12,6 @@ from collections import defaultdict
 from contextlib import asynccontextmanager, suppress
 from pathlib import PosixPath as Path
 
-from moat.util import as_proxy  # pylint: disable=no-name-in-module
-
 import pyfuse3
 from pyfuse3 import (  # pylint: disable=E0611
     RENAME_EXCHANGE,

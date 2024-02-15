@@ -121,7 +121,7 @@ class ArrayCmd(BaseSuperCmd):
 
         try:
             sub = self.apps[action[0]]
-        except (TypeError,IndexError):
+        except (TypeError, IndexError):
             raise NoPathError(
                 self.path,
                 action,
@@ -131,6 +131,7 @@ class ArrayCmd(BaseSuperCmd):
         return await sub.dispatch(action[1:], msg, **kw)
 
     async def cmd_dir_(self, **kw):
+        "report max index"
         res = await super().cmd_dir_(**kw)
         res["na"] = len(self.apps)
         return res

@@ -223,7 +223,7 @@ async def test_eval(tmp_path, cons):
         await req(x=42, r=["foo", "x"])
         r = await req(x="foo", r=None)
         assert isinstance(r, Foo), r
-        r = await req(x=(f, "x",))
+        r = await req(x=(f, "x"))
         assert r == 42, r
 
         r = await req(x=b, r=None)
@@ -231,7 +231,7 @@ async def test_eval(tmp_path, cons):
         r = await req(x=(b, "x"))
         assert r == 95, r
         # await req(x=b, a=("b",))
-        r = await req(x=(b,),r=False)
+        r = await req(x=(b,), r=False)
         assert r[0] == {"x": 95}
         assert not r[1]
         assert r[2] == "Bar"

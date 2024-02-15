@@ -158,7 +158,9 @@ class BaseSubCmd(BaseSuperCmd):
     async def cmd_dir_(self, v=True):
         "dir: add subdirs"
         res = await super().cmd_dir_(v=v)
-        res["d"] = {k: v.__class__.__name__ for k, v in self.sub.items() if v is not (k[-1] == "_")}
+        res["d"] = {
+            k: v.__class__.__name__ for k, v in self.sub.items() if v is not (k[-1] == "_")
+        }
         return res
 
 
@@ -306,20 +308,21 @@ def SubDispatch(dispatch, path):
             dispatch = dispatch.sub[p]
         except (AttributeError, KeyError):
             return _SubDispatch(path, dispatch, path[i:])
-    else:
-        try:
-            return dispatch._subD
-        except AttributeError:
-            dispatch._subD = sd = _SubDispatch(path, dispatch, ())
 
-            for k in dir(dispatch):
-                if k.startswith("cmd_"):
-                    setattr(sd, k[4:], getattr(dispatch, k))
-            return sd
+    # Cache the subdispatcher for this app
+    try:
+        sd = dispatch._subD  # noqa:SLF001
+    except AttributeError:
+        sd = _SubDispatch(path, dispatch, ())
+
+        for k in dir(dispatch):
+            if k.startswith("cmd_"):
+                setattr(sd, k[4:], getattr(dispatch, k))
+        dispatch._subD = sd  # noqa:SLF001
+    return sd
 
 
 class _SubDispatch:
-
     def __init__(self, path, dest, rem):
         self._path = path
         self._dest = dest

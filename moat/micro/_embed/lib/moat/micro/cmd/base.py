@@ -120,7 +120,7 @@ class BaseCmd(Base):
             self._stopped = Event()
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.path} {hex((id(self)>>4)&((1<<(3*5))-1))[2:]}>"
+        return f"<{self.__class__.__name__}: {self.path} {(id(self)>>4)&0xFFF :03x}>"
 
     async def setup(self):
         """

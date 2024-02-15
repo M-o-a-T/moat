@@ -5,11 +5,10 @@ from __future__ import annotations
 
 import pytest
 
-from moat.micro._test import mpy_stack
-from moat.micro.compat import sleep_ms
 from moat.util import yload
+from moat.micro._test import mpy_stack
 
-CFGW= """
+CFGW = """
 apps:
   a: _test.LoopLink
   b: _test.LoopLink
@@ -42,9 +41,9 @@ c:
 """
 
 
-@pytest.mark.parametrize("cfg", [yload(CFGW),yload(CFGR)])
+@pytest.mark.parametrize("cfg", [yload(CFGW), yload(CFGR)])
 @pytest.mark.anyio()
-async def test_loop(tmp_path,cfg):
+async def test_loop(tmp_path, cfg):
     "relay test"
     async with mpy_stack(tmp_path, cfg) as d:
         a = d.sub_at("a")

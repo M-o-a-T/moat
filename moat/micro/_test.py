@@ -19,8 +19,13 @@ from moat.micro.compat import L, TaskGroup
 
 # from moat.micro.main import Request, get_link, get_link_serial
 # from moat.micro.proto.multiplex import Multiplexer
-from moat.micro.proto.stack import BaseBuf, BaseMsg, BaseBlk
+from moat.micro.proto.stack import BaseBlk, BaseBuf, BaseMsg
 from moat.micro.proto.stream import ProcessBuf
+
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from typing import Awaitable
 
 with warnings.catch_warnings(record=True) as _w:
     # may already have been done elsewhere
@@ -216,9 +221,9 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
         elif isinstance(self._link, anyio.Event):
             await self._link.wait()
 
-    def link(self, other: Loopback|anyio.Event):
+    def link(self, other: Loopback | anyio.Event):
         """Tell this loopback to read from some other loopback."""
-        evt,self._link = self._link,other
+        evt, self._link = self._link, other
         if isinstance(evt, anyio.Event):
             evt.set()
 
@@ -286,7 +291,7 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
     A loopback BBM. It talks to a remote LoopLink.
 
     This BBM is not a command, thus it cannot be linked to.
-    
+
     The remote LoopLink must have the appropriate buffers,
     i.e. `usage: mM` for messages, etc.
     """
@@ -298,7 +303,7 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
     async def setup(self):
         p = self.cfg["path"]
         if isinstance(p, str):
-            raise ValueError(f"Need a path, not {p !r}")
+            raise TypeError(f"Need a path, not {p !r}")
         self._link = self.cfg["_cmd"].root.sub_at(*p)
 
     def send(self, m) -> Awaitable:
@@ -309,7 +314,6 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
         """Read message data."""
         return self._link.xr()
 
-
     def snd(self, m) -> Awaitable:
         """Send block data."""
         return self._link.xsb(m=m)
@@ -317,7 +321,6 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
     def rcv(self) -> Awaitable:
         return self._link.xrb()
         """Read block data."""
-
 
     def wr(self, b) -> Awaitable:
         """Send bytes."""
@@ -330,7 +333,6 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
         b[:n] = r
         return n
 
-
     def cwr(self, b) -> Awaitable:
         """Send bytes."""
         return self._link.xcwr(b=b)
@@ -341,7 +343,6 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
         n = len(r)
         b[:n] = r
         return n
-
 
 
 class Root(Dispatch):

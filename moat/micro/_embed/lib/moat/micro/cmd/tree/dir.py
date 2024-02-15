@@ -263,8 +263,15 @@ class Dispatch(DirCmd):
         return self
 
     def sub_at(self, *p):
-        "returns a SubDispatch to this path"
+        """
+        Returns a SubDispatch to this path.
+
+        You can call this either with a sequence of path elements
+        or with a path.
+        """
         # pylint:disable=import-outside-toplevel,cyclic-import,redefined-outer-name
+        if len(p) == 1 and isinstance(p[0], Path):
+            p = p[0]
         return SubDispatch(self, p)
 
     @property
@@ -341,6 +348,8 @@ class _SubDispatch:
 
     def sub_at(self, *p):
         "create a sub-subdispatcher"
+        if len(p) == 1 and isinstance(p[0], Path):
+            p = p[0]
         return SubDispatch(self.root, self._path + p)
 
     async def __aenter__(self):

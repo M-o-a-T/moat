@@ -32,6 +32,9 @@ logger = logging.getLogger(__name__)
 class BattComm(BaseCmd):
     """
     Communicator for our serial BMS.
+
+    This app accepts calls with control packets, encodes and forwards them
+    to the link, and returns the reply packets.
     """
     n_cells:int = None
 
@@ -43,7 +46,7 @@ class BattComm(BaseCmd):
         self.w_lock = Lock()
         self.retries = cfg.get("retry", 10)
         self.rate = cfg.get("rate", 2400)
-        self.n_cells = cfg.get("nr", 6)
+        self.n_cells = cfg.get("n", 16)
 
     async def setup(self):
         await super().setup()
@@ -56,30 +59,35 @@ class BattComm(BaseCmd):
     async def cmd(self, p, s=None, e=None, bc:bool=False):
         """
         Send message(s) @p to the cells @s through @e.
+
         Returns the per-battery replies.
         """
+        await self.wait_ready()
 
         err = None
+        max_t = self.n_cells * 300 if self.n_cells else 5000
+        if not isinstance(p,(list,tuple)):
+            p = (p,)
+
         for n in range(self.retries):
             try:
-                return await wait_for_ms(self.n_cells * 300 if self.n_cells else 10000,
-                    self._send, pkt=p, start=s, end=e, broadcast=bc)
+                return (await self._send(pkt=p, start=s, end=e, broadcast=bc, max_t=max_t))[1]
             except (TimeoutError, MessageLost) as exc:
                 if err is None:
                     err = exc
         raise err from None
 
-    async def _send(self, pkt, start=None, end=None, broadcast=False):
+    async def _send(self, pkt, start=None, end=None, broadcast=False, max_t=5000):
         """
         Send a message to the cells.
         Returns the per-battery replies.
 
         May time out.
         """
-        # "broadcast" means the request data is not deleted.
+        # "broadcast" means the request header is not deleted.
         # start=None requires broadcast.
-        # end!=start and len(pkt)==1 requires broadcast IF the packet
-        # actually contains data.
+        # end!=start and len(pkt)==1 requires broadcast IF the request packet
+        # contains data.
 
         h = PacketHeader(start=start or 0, broadcast=broadcast)
 
@@ -97,10 +105,12 @@ class BattComm(BaseCmd):
                 # wait for the previous request to complete
                 logger.warning("Wait for slot %d", seq)
                 try:
-                    await wait_for_ms(5000, evt.wait)
+                    # TODO calculate worst-case delay
+                    await wait_for_ms(10000, evt.wait)
                 except TimeoutError:
                     # ugh, everything dead?
-                    self.waiting[seq] = None
+                    if self.waiting[seq] is evt:
+                        self.waiting[seq] = None
                     raise
 
             # update self.seq only when the slot is empty
@@ -110,19 +120,25 @@ class BattComm(BaseCmd):
 
             # We need to delay by whatever the affected cells add to the
             # message, otherwise the next msg might catch up
+            # The 3 is start byte and length (1…2 bytes), the 2 is CRC.
+            # The header et al. sizes are multiplied in because each slave delays
+            # by the header size *and* it adds the reply.
             msg = h.encode_all(pkt)
             n_cells = h.cells + 1
-            mlen = len(msg) + n_cells * (replyClass[h.command].S.size + h.S.size + 4)
+            mlen = len(msg) + n_cells * (replyClass[h.command].S.size + h.S.size + 3) + 2
 
-            self.t = t + 10000 * mlen / self.rate
+            # A byte needs ten bit slots to transmit. However, the modules'
+            # baud rates can be slightly off, which increases the delay
+            self.t = t + (10000 + 500*n_cells) * mlen / self.rate
             await self.comm.sb(m=msg)
 
         try:
-            res = await wait_for_ms(5000, evt.get)
+            res = await wait_for_ms(max_t, evt.get)
         except TimeoutError as exc:
             evt.set_error(exc)
             if self.waiting[seq] is evt:
                 self.waiting[seq] = None
+            raise
         logger.debug("RES %s", pformat(res))
         return res
 

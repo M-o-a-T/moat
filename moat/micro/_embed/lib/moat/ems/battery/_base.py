@@ -113,6 +113,10 @@ class EnergyHigh(BatteryAlert):
     "total energy larger than Wmax"
 
 
+def _s(r):
+    # Helper to create a sequence
+    return (x for x in r if x is not None)
+
 class BaseCell(BaseCmd):
     """
     Skeleton for a single cell.
@@ -266,6 +270,24 @@ class BaseCell(BaseCmd):
             chg *= (1 - soc) / (1 - lc["max"])
         return (chg, dis)
 
+class BalBaseCell(BaseCell):
+    "A BaseCell with balancing state"
+
+    in_balance: bool = False
+    balance_pwm: float = None  # percentage of time the balancer is on
+    balance_over_temp: bool = False
+    balance_threshold: float = None
+    balance_forced: bool = False
+
+    async def cmd_bal(self):
+        "Get Balancer state/data"
+        res = dict(b=self.in_balance,f=self.balance_forced,ot=self.balance_over_temp)
+        if self.balance_pwm is not None:
+            res["pwm"] = self.balance_pwm
+        if self.balance_threshold is not None:
+            res["th"] = self.balance_threshold
+        return res
+
 
 class BaseCells(ArrayCmd):
     """
@@ -341,6 +363,16 @@ class BaseCells(ArrayCmd):
         """fetch voltage sum"""
         r = await self.cmd_all("u")
         return sum(r)
+
+    async def cmd_t(self):
+        """fetch temperature min/max"""
+        r = await self.cmd_all("t")
+        return min(_s(r), default=None), max(_s(r), default=None)
+
+    async def cmd_tb(self):
+        """fetch balancer temperature min/max"""
+        r = await self.cmd_all("tb")
+        return min(_s(r), default=None), max(_s(r), default=None)
 
     async def cmd_lim(self):
         """return charge,discharge limit factors"""

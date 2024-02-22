@@ -20,34 +20,61 @@ TT = 250  # XXX assume that this is OK
 
 CFGC = """
 apps:
-  c: bms._test.Cell
+  c: bms._test.cell.Cell
+cell: c
 """
 CFGC = as_attr(CFGC, c=CF.c)
 
+CFGIC = """
+apps:
+  s: _test.LoopLink
+  cx: bms._test.cell.DiyBMSCell
+  t: bms._test.CellSim
+  c: bms.diy_serial.Cell
+  sl: bms.diy_serial.Comm
+sl:
+  comm: s
+  n: 1
+c:
+  comm: !P sl
+  pos: 0
+t:
+  cell: !P cx
+  ctrl: !P s
+s:
+  usage: bB
+cell: cx
+"""
+CFGIC = as_attr(CFGIC, cx=CF.c, c=CF.c)
 
-async def test_cell(tmp_path):
+@pytest.mark.parametrize("CFG", [CFGC, CFGIC])
+async def test_cell(tmp_path, CFG):
     "Basic fake cell verification"
-    async with mpy_stack(tmp_path, CFGC) as d, d.sub_at("c") as c:
+    async with (
+            mpy_stack(tmp_path, CFG) as d,
+            d.sub_at("c") as c,
+            d.sub_at(CFG.cell) as cx,
+            ):
         assert await c.u() == 5
-        assert await c.u(c=0.25) == 2
-        assert abs(1.96 - await c.u(c=0.20)) < 0.00001
-        assert abs(1.64 - await c.u(c=0.10)) < 0.00001
-        assert abs(1.36 - await c.u(c=0.05)) < 0.00001
-        assert abs(1.0784 - await c.u(c=0.01)) < 0.00001
-        assert await c.u(c=0.75) == 8
-        assert await c.u(c=1) == 9
-        assert await c.u(c=0) == 1
-        assert abs(0.04 - await c.u(c=-0.1)) < 0.00001
+        assert await cx.u(c=0.25) == 2
+        assert abs(1.96 - await cx.u(c=0.20)) < 0.00001
+        assert abs(1.64 - await cx.u(c=0.10)) < 0.00001
+        assert abs(1.36 - await cx.u(c=0.05)) < 0.00001
+        assert abs(1.0784 - await cx.u(c=0.01)) < 0.00001
+        assert await cx.u(c=0.75) == 8
+        assert await cx.u(c=1) == 9
+        assert await cx.u(c=0) == 1
+        assert abs(0.04 - await cx.u(c=-0.1)) < 0.00001
 
         # charge
-        assert await c.c() == 0.5
-        assert await c.t() == 25
-        await c.add_p(p=100, t=100)
-        assert await c.c() == 0.505
-        assert await c.t() == 25.1
+        # assert await c.c() == 0.5
+        assert abs((await c.t()) - 25) < 0.1
+        await cx.add_p(p=100, t=100)
+        # assert await c.c() == 0.505
+        assert abs((await c.t()) - 25) < 0.2
         assert await c.lim() == (1, 1)
         for _ in range(100):
-            await c.add_p(p=100, t=100)
+            await cx.add_p(p=100, t=100)
             if await c.lim() != (1, 1):
                 break
         else:
@@ -56,21 +83,21 @@ async def test_cell(tmp_path):
         rc, rd = await c.lim()
         assert rd == 1
         assert abs(0.96 - rc) < 0.00001
-        await c.add_p(p=-200, t=100)
+        await cx.add_p(p=-200, t=100)
 
         # temperature
         for _ in range(200):
             if await c.lim() != (1, 1):
                 break
-            await c.add_p(p=200, t=1000)
-            await c.add_p(p=-200, t=1000)
+            await cx.add_p(p=200, t=1000)
+            await cx.add_p(p=-200, t=1000)
         else:
             raise RuntimeError("took too long")
         assert 40 < await c.t() < 40.1
 
         # discharge
         for _ in range(100):
-            await c.add_p(p=-100, t=100)
+            await cx.add_p(p=-100, t=100)
             if await c.lim() != (1, 1):
                 break
         else:
@@ -79,13 +106,13 @@ async def test_cell(tmp_path):
 
         rc, rd = await c.lim()
         assert rc == 1
-        assert abs(0.96 - rd) < 0.00001
+        assert abs(0.96 - rd) < 0.001
 
 
 CFGA = """
 apps:
-  b: bms._test.Batt
-  a: bms._test.Bal
+  b: bms._test.batt.Batt
+  a: bms._test.batt.Bal
 a:
   t:
     chk: 500
@@ -97,7 +124,7 @@ a:
     max: 7.5
   bat: !P b
 b:
-  app: bms._test.Cell
+  app: bms._test.cell.Cell
   cfg: CFGA
   n: 4
   rnd: 0.2

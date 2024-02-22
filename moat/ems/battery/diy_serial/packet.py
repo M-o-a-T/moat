@@ -51,14 +51,14 @@ def _dc(name):
 
 
 class PacketType(IntEnum):
-    ResetPacketCounters = 0
-    ReadVoltageAndStatus = 1
+    ResetCounters = 0
+    ReadVoltages = 1
     Identify = 2
     ReadTemperature = 3
-    ReadPacketCounters = 4
+    ReadCounters = 4
     ReadSettings = 5
     WriteSettings = 6
-    ReadBalancePowerPWM = 7
+    ReadBalancePower = 7
     Timing = 8
     ReadBalanceCurrentCounter = 9
     ResetBalanceCurrentCounter = 10
@@ -79,6 +79,10 @@ class PacketHeader:
 
     S: ClassVar = Struct("BBBB")
     n_seq: ClassVar = 8
+
+    def __post_init__(self, *a,**k):
+        if not isinstance(self.start,int):
+            breakpoint()
 
     @classmethod
     def decode(cls, msg:bytes):
@@ -102,42 +106,20 @@ class PacketHeader:
         if self.broadcast:
             # The request header has not been deleted,
             # so we need to skip it
-            off += requestClass[self.command].S.size
+            off += replyClass[self.command].S.size
         if pkt_len:
             while off < len(msg):
                 if off + pkt_len > len(msg):
-                    raise MessageError(msg)  # incomplete
+                    raise MessageError(bytes(msg))  # incomplete
                 pkt.append(RC.from_bytes(msg[off : off + pkt_len]))
                 off += pkt_len
         if off != len(msg):
-            raise MessageError(msg)
+            raise MessageError(bytes(msg))
         return pkt
 
 
-    def decode_one(self, msg):
-        """Decode a single message to packet + rest.
-
-        This method is used by the client.
-        """
-        off = 0
-        RC = replyClass[self.command]
-        pkt_len = RC.S.size
-        pkt = None
-        if pkt_len:
-            if off + pkt_len > len(msg):
-                raise MessageError(msg)  # incomplete
-            pkt = RC.from_bytes(msg[off : off + pkt_len])
-            if not self.broadcast:
-                off += pkt_len
-        if off:
-            msg = memoryview(msg)[off:]
-        return pkt, msg
-
     def encode(self):
         return self.to_bytes()
-
-    def encode_one(self, msg, pkt:_Reply=None):
-        return self.to_bytes()+msg+(pkt.to_bytes() if pkt is not None else b'')
 
     def encode_all(self, pkt:list[_Request]|_Request, end=None):
         "encode me, plus some packets, to a message"
@@ -176,6 +158,7 @@ class PacketHeader:
         return self
 
     def __setstate__(self, data):
+        breakpoint()
         self.start = data.get("s", 0)
         self.sequence = data.get("i", None)
         self.cells = data.get("n", 0)
@@ -206,28 +189,6 @@ class PacketHeader:
         if self.hops > 0:
             res["h"] = self.hops
         return res
-
-
-class FloatUint:
-    f = 0
-    u = 0
-
-    @classmethod
-    def F(cls, val):
-        self = cls()
-        self.f = val
-        self.u = unpack("<I", pack("f", val))[0]
-        return self
-
-    @classmethod
-    def U(cls, val):
-        self = cls()
-        self.u = val
-        self.f = unpack("f", pack("<I", val))[0]
-        return self
-
-    def __repr__(self):
-        return f"‹FU {self.f}›"
 
 
 class NullStruct:
@@ -273,7 +234,7 @@ class _Reply(NullData):
 
 @_dc("cfg>")
 class RequestConfig:
-    voltageCalibration: FloatUint = FloatUint.U(0)
+    voltageCalibration: float = 0
     bypassTempRaw: int = None
     bypassVoltRaw: int = None
 
@@ -283,7 +244,7 @@ class RequestConfig:
     @classmethod
     def from_cell(cls, cell):
         self = cls()
-        self.voltageCalibration = FloatUint.F(cell.v_calibration)
+        self.voltageCalibration = cell.v_calibration
         self.bypassTempRaw = cell.load_maxtemp_raw
         self.bypassVoltRaw = cell.balance_config_threshold_raw
         return self
@@ -334,7 +295,7 @@ class ReplyVoltages(_Reply):
     bypassRaw: int = None
 
     S: ClassVar = Struct("<HH")
-    T: ClassVar = PacketType.ReadVoltageAndStatus
+    T: ClassVar = PacketType.ReadVoltages
 
     @classmethod
     def from_bytes(cls, data):
@@ -343,14 +304,8 @@ class ReplyVoltages(_Reply):
         return self
 
     def to_cell(self, cell):
-        chg = False
-
-        if cell.in_balance != bool(self.voltRaw & 0x8000):
-            chg = True
-            cell.in_balance = not cell.in_balance
-        if cell.balance_over_temp != bool(self.voltRaw & 0x4000):
-            chg = True
-            cell.balance_over_temp = not cell.balance_over_temp
+        cell.in_balance = bool(self.voltRaw & 0x8000)
+        cell.balance_over_temp = bool(self.voltRaw & 0x4000)
         vRaw = self.voltRaw & 0x1FFF
         if vRaw:
             v = cell._raw2volt(vRaw)
@@ -359,9 +314,6 @@ class ReplyVoltages(_Reply):
                 cell.voltage = v
             cell.valid = True
         return chg
-
-    def to_bytes(self):
-        return self.S.pack(self.voltRaw, self.bypassRaw)
 
     def __setstate__(self, m):
         self.voltRaw = m["vr"]
@@ -426,7 +378,7 @@ class ReplyCounters(_Reply):
     bad: int = None
 
     S: ClassVar = Struct("<HH")
-    T: ClassVar = PacketType.ReadPacketCounters
+    T: ClassVar = PacketType.ReadCounters
 
     @classmethod
     def from_bytes(cls, data):
@@ -452,13 +404,13 @@ class ReplyCounters(_Reply):
         return dict(nr=self.received, nb=self.bad)
 
 @_dc("set<")
-class ReplySettings(_Reply):
+class ReplyReadSettings(_Reply):
     gitVersion: int = None
     boardVersion: int = None
     dataVersion: int = None
     mvPerADC: int = None
 
-    voltageCalibration: FloatUint = FloatUint.U(0)
+    voltageCalibration: float = 0
     bypassTempRaw: int = None
     bypassVoltRaw: int = None
     BCoeffInternal: int = None
@@ -466,7 +418,7 @@ class ReplySettings(_Reply):
     numSamples: int = None
     loadResRaw: int = None
 
-    S: ClassVar = Struct("<LHBBLHHHHBB")
+    S: ClassVar = Struct("<LHBBfHHHHBB")
     T: ClassVar = PacketType.ReadSettings
 
     @classmethod
@@ -477,7 +429,7 @@ class ReplySettings(_Reply):
             self.boardVersion,
             self.dataVersion,
             self.mvPerADC,
-            vc,
+            self.voltageCalibration,
             self.bypassTempRaw,
             self.bypassVoltRaw,
             self.BCoeffInternal,
@@ -485,15 +437,13 @@ class ReplySettings(_Reply):
             self.numSamples,
             self.loadResRaw,
         ) = self.S.unpack(data)
-
-        self.voltageCalibration = FloatUint.U(vc)
         return self
 
     def to_cell(self, cell):
         cell.code_version = self.gitVersion
         cell.board_version = self.boardVersion
         cell.v_per_ADC = self.mvPerADC / 1000 / 64
-        cell.v_calibration = self.voltageCalibration.f
+        cell.v_calibration = self.voltageCalibration
         cell.load_maxtemp_raw = self.bypassTempRaw
         cell.balance_config_threshold_raw = self.bypassVoltRaw
         cell.internal_B = self.BCoeffInternal
@@ -622,11 +572,11 @@ class RequestBalanceLevel:
     S: ClassVar = Struct("<H")
     T: ClassVar = PacketType.WriteBalanceLevel
 
-    @classmethod
-    def from_cell(cls, cell):
-        self = cls()
+    async def from_cell(self, cell):
+        thr = await cell.bal()
+        thr = await cell.v2raw()
+
         self.levelRaw = cell.balance_threshold_raw
-        return self
 
     def to_bytes(self):
         return self.S.pack(self.levelRaw or 0)
@@ -643,7 +593,7 @@ class ReplyBalancePower(_Reply):
     pwm: int = None
 
     S: ClassVar = Struct("B")
-    T: ClassVar = PacketType.ReadBalancePowerPWM
+    T: ClassVar = PacketType.ReadBalancePower
 
     @classmethod
     def from_bytes(cls, data):
@@ -667,12 +617,12 @@ class ReplyBalancePower(_Reply):
 
 
 @_dc("set>")
-class RequestGetSettings(_Request):
+class RequestReadSettings(_Request):
     T = PacketType.ReadSettings
 
 
 @_dc("ct>")
-class RequestCellTemperature(_Request):
+class RequestTemperature(_Request):
     T = PacketType.ReadTemperature
 
 
@@ -682,18 +632,18 @@ class RequestBalanceCurrentCounter(_Request):
 
 
 @_dc("pc>")
-class RequestPacketCounters(_Request):
-    T = PacketType.ReadPacketCounters
+class RequestCounters(_Request):
+    T = PacketType.ReadCounters
 
 
 @_dc("bp>")
 class RequestBalancePower(_Request):
-    T = PacketType.ReadBalancePowerPWM
+    T = PacketType.ReadBalancePower
 
 
 @_dc("rpc>")
-class RequestResetPacketCounters(_Request):
-    T = PacketType.ResetPacketCounters
+class RequestResetCounters(_Request):
+    T = PacketType.ResetCounters
 
 
 @_dc("rpcc>")
@@ -702,8 +652,8 @@ class RequestResetBalanceCurrentCounter(_Request):
 
 
 @_dc("cv>")
-class RequestCellVoltage(_Request):
-    T = PacketType.ReadVoltageAndStatus
+class RequestVoltages(_Request):
+    T = PacketType.ReadVoltages
 
 
 @_dc("id>")
@@ -727,8 +677,8 @@ class ReplyResetBalanceCurrentCounter(_Reply):
 
 
 @_dc("rpc<")
-class ReplyResetPacketCounters(_Reply):
-    T = PacketType.ResetPacketCounters
+class ReplyResetCounters(_Reply):
+    T = PacketType.ResetCounters
 
 
 @_dc("bl<")
@@ -747,14 +697,14 @@ class ReplyWritePIDconfig(_Reply):
 
 
 requestClass = [
-    RequestResetPacketCounters,  # ResetPacketCounters=0
-    RequestCellVoltage,  # ReadVoltageAndStatus=1
+    RequestResetCounters,  # ResetCounters=0
+    RequestVoltages,  # ReadVoltages=1
     RequestIdentify,  # Identify=2
-    RequestCellTemperature,  # ReadTemperature=3
-    RequestPacketCounters,  # ReadPacketCounters=4
-    RequestGetSettings,  # ReadSettings=5
+    RequestTemperature,  # ReadTemperature=3
+    RequestCounters,  # ReadCounters=4
+    RequestReadSettings,  # ReadSettings=5
     RequestConfig,  # WriteSettings=6
-    RequestBalancePower,  # ReadBalancePowerPWM=7
+    RequestBalancePower,  # ReadBalancePower=7
     RequestTiming,  # Timing=8
     RequestBalanceCurrentCounter,  # ReadBalanceCurrentCounter=9
     RequestResetBalanceCurrentCounter,  # ResetBalanceCurrentCounter=10
@@ -766,14 +716,14 @@ requestClass = [
 ]
 
 replyClass = [
-    ReplyResetPacketCounters,  # ResetPacketCounters=0
-    ReplyVoltages,  # ReadVoltageAndStatus=1
+    ReplyResetCounters,  # ResetCounters=0
+    ReplyVoltages,  # ReadVoltages=1
     ReplyIdentify,  # Identify=2
     ReplyTemperature,  # ReadTemperature=3
-    ReplyCounters,  # ReadPacketCounters=4
-    ReplySettings,  # ReadSettings=5
+    ReplyCounters,  # ReadCounters=4
+    ReplyReadSettings,  # ReadSettings=5
     ReplyConfig,  # WriteSettings=6
-    ReplyBalancePower,  # ReadBalancePowerPWM=7
+    ReplyBalancePower,  # ReadBalancePower=7
     ReplyTiming,  # Timing=8
     ReplyBalanceCurrentCounter,  # ReadBalanceCurrentCounter=9
     ReplyResetBalanceCurrentCounter,  # ResetBalanceCurrentCounter=10

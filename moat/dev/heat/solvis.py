@@ -760,8 +760,8 @@ class Data:
             else:
                 raise ValueError(f"State ?? {run !r}")
 
-            if self.state.t_change is not None and self.time - self.state.t_change > t_change_max:
-                raise TimeoutError("Time exceeded. Turning off.")
+#            if self.state.t_change is not None and self.time - self.state.t_change > t_change_max:
+#                raise TimeoutError("Time exceeded. Turning off.")
 
             orun = run
             self.state.run = int(run)
@@ -1267,7 +1267,7 @@ class Data:
                 # starting up
                 continue
 
-            if self.m_pellet_state in (0, 1, 3, 5, 30, 31):
+            if self.m_pellet_state in (0, 1, 3, 5) or 21 <= self.m_pellet_state <= 35:
                 self.state.t_pellet_on = False
                 self.pid.load.Kd = self.cfg.pid.load.d
                 self.pid.load.Tf = self.cfg.pid.load.tf

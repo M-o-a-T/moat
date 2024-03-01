@@ -148,9 +148,6 @@ def as_proxy(name, obj=NotGiven, replace=False):
     - False (default): error when the name exists
     - True: replace the stored name
     - None: replace the object
-
-    @codec is used on MicroPython for built-in classes that need
-    special handling. It is ignored on CPython.
     """
 
     def _proxy(obj):

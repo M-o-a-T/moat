@@ -10,7 +10,7 @@ from weakref import WeakSet, WeakValueDictionary, ref
 
 from moat.kv.errors import ErrorRoot
 from moat.kv.obj import AttrClientEntry, ClientEntry, ClientRoot, NamedRoot
-from moat.util import NotGiven, Path, attrdict, yaml_named
+from moat.util import NotGiven, Path, attrdict, yaml_repr
 from netaddr import EUI, AddrFormatError, IPAddress, IPNetwork
 
 logger = logging.getLogger(__name__)
@@ -91,7 +91,7 @@ class InventoryRoot(ClientRoot):
         return self.cable.cable_for(*a, **k)
 
 
-@yaml_named("vlan")
+@yaml_repr("vlan")
 class Vlan(Cleaner, SkipNone, AttrClientEntry):
     """\
         A single VLAN.
@@ -181,7 +181,7 @@ class VlanRoot(NamedRoot, ClientEntry):
         raise ValueError("No values here!")
 
 
-@yaml_named("net")
+@yaml_repr("net")
 class Network(Cleaner, SkipNone, AttrClientEntry):
     """\
         Manage a network.
@@ -509,7 +509,7 @@ class NetRoot(NamedRoot, ClientEntry):
         raise ValueError("No values here!")
 
 
-@yaml_named("port")
+@yaml_repr("port")
 class HostPort(Cleaner):
     ATTRS = ("desc", "mac", "force_vlan")
     ATTRS2 = ("net", "num")
@@ -701,7 +701,7 @@ class HostPort(Cleaner):
         return "%s:%s" % (self.host.name, self.name)
 
 
-@yaml_named("host")
+@yaml_repr("host")
 class Host(Cleaner, SkipNone, AttrClientEntry):
     ATTRS = ("name", "net", "mac", "num", "desc", "loc", "groups")
     AUX_ATTRS = ("ports", "domain", "cable", "netaddr")
@@ -1120,7 +1120,7 @@ class CableRootB(ClientEntry):
         raise ValueError("No values here!")
 
 
-@yaml_named("cable")
+@yaml_repr("cable")
 class Cable(Cleaner, AttrClientEntry):
     ATTRS = ()
 
@@ -1264,7 +1264,7 @@ class Cable(Cleaner, AttrClientEntry):
         return "%s %s" % (a, b)
 
 
-@yaml_named("wire")
+@yaml_repr("wire")
 class Wire(Cleaner, SkipNone, AttrClientEntry):
     ATTRS = ("loc", "desc")
     AUX_ATTRS = ("ports",)

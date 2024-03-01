@@ -14,6 +14,7 @@ classifiers = [
 ]
 dependencies = [
 	"moat-kv ~= 0.70.2",
+	"moat-util ~= 0.42.0",
 ]
 dynamic = [ "version",]
 keywords = [ "MoaT",]

@@ -173,23 +173,28 @@ async def server_(obj, name, host, port, delete):
     if host or port:
         if delete:
             raise click.UsageError("You can't delete and set at the same time.")
-        value = attrdict()
+        value = dict()
         if host:
-            value.host = host
+            value["server.host"] = host
         if port:
             if port == "-":
-                value.port = NotGiven
+                value["server.port"] = NotGiven
             else:
-                value.port = int(port)
+                value["server.port"] = int(port)
     elif delete:
         res = await obj.client.delete_tree(cfg.prefix / name, nchain=obj.meta)
         if obj.meta:
-            yprint(res, stream=obj.stdout)
+            async for k in res:
+                yprint(k, stream=obj.stdout)
         return
     else:
-        value = None
-    res = await node_attr(obj, obj.cfg.wago.prefix | name, ("server",), value)
+        res = await obj.client.get(cfg.prefix / name, nchain=obj.meta)
+        if not obj.meta:
+            res = res.value
+        yprint(res, stream=obj.stdout)
+        return
 
+    res = await node_attr(obj, cfg.prefix / name, value, (),() )
     if obj.meta:
         yprint(res, stream=obj.stdout)
 

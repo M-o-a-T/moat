@@ -2,8 +2,8 @@
 
 import asyncclick as click
 
+from moat.util import yprint, attrdict, NotGiven, as_service, P, attr_args
 from distkv.data import node_attr
-from distkv.util import yprint, attrdict, NotGiven, as_service, P, attr_args
 
 import logging
 

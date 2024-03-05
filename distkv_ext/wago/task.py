@@ -11,7 +11,7 @@ try:
 except ImportError:
     from collections import Mapping
 
-from distkv.util import combine_dict, attrdict
+from moat.util import combine_dict, attrdict
 from distkv.exceptions import ClientConnectionError
 from distkv_ext.wago.model import WAGOserver
 

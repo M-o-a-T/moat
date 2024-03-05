@@ -3,9 +3,9 @@ DistKV client data model for Wago
 """
 import anyio
 
+from moat.util import Path
 from distkv.obj import ClientEntry, ClientRoot
 from distkv.errors import ErrorRoot
-from distkv.util import Path
 
 import logging
 

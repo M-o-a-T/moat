@@ -1,7 +1,7 @@
 import anyio
 from functools import partial
 
-from moat.util import P, load_ext
+from moat.util import P, load_ext, attrdict
 from moat.kv.mock.mqtt import stdtest
 
 knx_mock = load_ext("moat.kv.knx.mock")
@@ -25,11 +25,11 @@ async def test_basic():
         await st.run("knx addr -t out -m percentU8 test 2/3/6 -a src test.some.other.percent")
         knx = await KNXroot.as_handler(client)
 
-        await st.run("data get -rd_ :", do_stdout=False)
+        await st.run("data : get -rd_", do_stdout=False)
 
         evt = anyio.Event()
-        await st.tg.spawn(
-            partial(task, client, client._cfg.knx, knx["test"]["localhost"], evt=evt)
+        st.tg.start_soon(
+            partial(task, client, attrdict(server_default=attrdict(port=3671)), knx["test"]["localhost"], evt=evt)
         )
         await evt.wait()
 
@@ -52,7 +52,7 @@ async def test_basic():
         await client.set(P("test.some.other.percent"), 68)
 
         await anyio.sleep(2.5)
-        await st.run("data get -rd_ :", do_stdout=False)
+        await st.run("data : get -rd_", do_stdout=False)
 
         assert te.sensor_value.value == 33
         assert tw.state.value == 1

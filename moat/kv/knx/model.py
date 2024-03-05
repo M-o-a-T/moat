@@ -82,22 +82,19 @@ class _KNXnode(_KNXbase):
             self._task = None
 
     async def spawn(self, p, *a, **k):
-        evt = anyio.Event()
-
-        async def _spawn(evt, p, a, k):
+        async def _spawn(p, a, k, task_status=anyio.TASK_STATUS_IGNORED):
             await self._kill()
-            async with anyio.open_cancel_scope() as sc:
+            with anyio.CancelScope() as sc:
                 self._task = sc
                 self._task_done = anyio.Event()
-                evt.set()
+                task_status.started()
                 try:
                     await p(*a, **k)
                 finally:
-                    async with anyio.open_cancel_scope(shield=True):
+                    with anyio.CancelScope(shield=True):
                         self._task_done.set()
 
-        await self.tg.spawn(_spawn, evt, p, a, k)
-        await evt.wait()
+        await self.tg.start(_spawn, p, a, k)
 
 
 class KNXnode(_KNXnode):
@@ -180,11 +177,12 @@ class KNXnode(_KNXnode):
                 lock = anyio.Lock()
                 chain = None
 
-                async def _rdr():
+                async def _rdr(task_status=anyio.TASK_STATUS_IGNORED):
                     # The "goal" value may also be set by the bus. Thus we monitor
                     # the device we send on, and set the value accordingly.
                     nonlocal val
                     async with device.run() as dev:
+                        task_status.started()
                         async for _ in dev:
                             nval = get_val(device)
                             if val is None or nval != val:
@@ -196,7 +194,7 @@ class KNXnode(_KNXnode):
                                     nonlocal chain
                                     chain = res.chain
 
-                await tg.spawn(_rdr)
+                await tg.start(_rdr)
 
                 async with self.client.watch(
                     src, min_depth=0, max_depth=0, fetch=initial, nchain=1

@@ -64,7 +64,7 @@ class OWFSattr(ClientEntry):
             self.watch_src = src
             self.watch_src_attr = src_attr
             if src is not None:
-                evt = anyio.create_event()
+                evt = anyio.Event()
                 await self.root._tg.spawn(self._watch_src, evt)
                 await evt.wait()
             else:
@@ -143,7 +143,7 @@ class OWFSattr(ClientEntry):
                     if self.watch_src_scope is not None:
                         await self.watch_src_scope.cancel()
                     self.watch_src_scope = sc
-                    await evt.set()
+                    evt.set()
 
                     async for msg in wp:
                         logger.debug("Process %r", msg)

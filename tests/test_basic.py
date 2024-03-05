@@ -25,7 +25,7 @@ async def test_basic():
         await st.run("knx addr -t out -m percentU8 test 2/3/6 -a src test.some.other.percent")
         knx = await KNXroot.as_handler(client)
 
-        await st.run("data get -rd_ :", do_stdout=False)
+        await st.run("data : get -rd_", do_stdout=False)
 
         evt = anyio.Event()
         await st.tg.spawn(
@@ -52,7 +52,7 @@ async def test_basic():
         await client.set(P("test.some.other.percent"), 68)
 
         await anyio.sleep(2.5)
-        await st.run("data get -rd_ :", do_stdout=False)
+        await st.run("data : get -rd_", do_stdout=False)
 
         assert te.sensor_value.value == 33
         assert tw.state.value == 1

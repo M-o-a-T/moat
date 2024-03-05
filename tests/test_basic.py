@@ -27,7 +27,7 @@ async def test_basic():
 
         await st.run("data get -rd_ :", do_stdout=False)
 
-        evt = anyio.create_event()
+        evt = anyio.Event()
         await st.tg.spawn(
             partial(task, client, client._cfg.knx, knx["test"]["localhost"], evt=evt)
         )

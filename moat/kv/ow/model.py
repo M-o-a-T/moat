@@ -60,7 +60,7 @@ class OWFSattr(ClientEntry):
         src_attr = val.get("src_attr", ())
         if force or src != self.watch_src:
             if self.watch_src_scope is not None:
-                await self.watch_src_scope.cancel()
+                self.watch_src_scope.cancel()
             self.watch_src = src
             self.watch_src_attr = src_attr
             if src is not None:
@@ -133,13 +133,13 @@ class OWFSattr(ClientEntry):
         Task that monitors one entry and writes its value to the 1wire
         device.
         """
-        async with anyio.open_cancel_scope() as sc:
+        with anyio.CancelScope() as sc:
             try:
                 async with self.client.watch(
                     self.watch_src, min_depth=0, max_depth=0, fetch=True
                 ) as wp:
                     if self.watch_src_scope is not None:
-                        await self.watch_src_scope.cancel()
+                        self.watch_src_scope.cancel()
                     self.watch_src_scope = sc
                     task_status.started()
 

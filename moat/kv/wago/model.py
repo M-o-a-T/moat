@@ -83,7 +83,7 @@ class WAGOinput(_WAGOnode):
     """
 
     async def _poll_task(self, dest, *, task_status):
-        async with anyio.open_cancel_scope() as sc:
+        with anyio.CancelScope() as sc:
             self._poll = sc
             rest = self.find_cfg("rest", default=False)
             async with self.server.monitor_input(self.card, self.port) as mon:
@@ -92,7 +92,7 @@ class WAGOinput(_WAGOnode):
                     await self.client.set(dest, value=(val != rest))
 
     async def _count_task(self, dest, intv, direc, *, task_status):
-        async with anyio.open_cancel_scope() as sc:
+        with anyio.CancelScope() as sc:
             self._poll = sc
             delta = await self.client.get(dest)
             delta = delta.get("value", 0)
@@ -146,7 +146,7 @@ class WAGOoutput(_WAGOnode):
         Also the value is mirrored to ``cur`` if that's set.
         """
         preload = True
-        async with anyio.open_cancel_scope() as sc:
+        with anyio.CancelScope() as sc:
             self._poll = sc
             ready = False
             async with self.client.watch(src, min_depth=0, max_depth=0, fetch=True) as wp:
@@ -220,12 +220,12 @@ class WAGOoutput(_WAGOnode):
             if isinstance(t_on, (Path, list, tuple)):
                 t_on = (await self.client.get(t_on)).value_or(None)
             try:
-                async with anyio.open_cancel_scope() as sc:
+                with anyio.CancelScope() as sc:
                     async with self.server.write_timed_output(
                         self.card, self.port, not negate, t_on
                     ) as work:
                         self._work = sc
-                        self._work_done = anyio.create_event()
+                        self._work_done = anyio.Event()
                         task_status.started()
                         if state is not None:
                             await self.client.set(state, value=True)
@@ -242,7 +242,7 @@ class WAGOoutput(_WAGOnode):
                             await self.client.set(state, value=(val != negate))
                     if self._work is sc:
                         self._work = None
-                        await self._work_done.set()
+                        self._work_done.set()
 
         if val and not preload:
             await self.server.task_group.start(work_oneshot)
@@ -271,12 +271,12 @@ class WAGOoutput(_WAGOnode):
                 raise StopAsyncIteration
 
             try:
-                async with anyio.open_cancel_scope() as sc:
+                with anyio.CancelScope() as sc:
                     async with self.server.write_pulsed_output(
                         self.card, self.port, not negate, t_on, t_off
                     ) as work:
                         self._work = sc
-                        self._work_done = anyio.create_event()
+                        self._work_done = anyio.Event()
                         task_status.started()
 
                         if state is not None:
@@ -285,7 +285,7 @@ class WAGOoutput(_WAGOnode):
                         await work.wait()
             finally:
                 if self._work is sc:
-                    await self._work_done.set()
+                    self._work_done.set()
                     self._work = None
                     self._work_done = None
 

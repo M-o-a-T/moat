@@ -30,7 +30,7 @@ async def dump(obj, path):
         raise click.UsageError("Only up to four path elements allowed")
 
     async for r in obj.client.get_tree(
-        obj.cfg.wago.prefix + path, nchain=obj.meta, max_depth=4 - len(path)
+        obj.cfg.kv.wago.prefix + path, nchain=obj.meta, max_depth=4 - len(path)
     ):
         rr = res
         if r.path:
@@ -51,7 +51,7 @@ async def list_(obj, path):
         raise click.UsageError("Only up to four path elements allowed")
 
     async for r in obj.client.get_tree(
-        obj.cfg.wago.prefix + path, nchain=obj.meta, min_depth=1, max_depth=1
+        obj.cfg.kv.wago.prefix + path, nchain=obj.meta, min_depth=1, max_depth=1
     ):
         print(r.path[-1], file=obj.stdout)
 
@@ -66,7 +66,7 @@ async def attr_(obj, path, vars_, eval_, path_):
     `--eval` without a value deletes the attribute.
     """
     path = P(path)
-    res = await node_attr(obj, obj.cfg.wago.prefix + path, vars_,eval_,path_)
+    res = await node_attr(obj, obj.cfg.kv.wago.prefix + path, vars_,eval_,path_)
 
     if obj.meta:
         yprint(res, stream=obj.stdout)
@@ -101,10 +101,11 @@ async def port_(obj, path, mode, attr):
     "rest" is the state of the wire when the input is False.
     Floats may be paths, in which case they're read from there when starting.
     """
+    cfg = obj.cfg.kv.wago
     path = P(path)
     if len(path) != 4:
         raise click.UsageError("Path must be 4 elements: server+type+card+port.")
-    res = await obj.client.get(obj.cfg.wago.prefix + path, nchain=obj.meta or 1)
+    res = await obj.client.get(cfg.prefix + path, nchain=obj.meta or 1)
     val = res.get("value", attrdict())
     val_p = attrdict()
 
@@ -140,7 +141,7 @@ async def port_(obj, path, mode, attr):
                     pass
         val[k] = v
 
-    res = await node_attr(obj, obj.cfg.wago.prefix + path, val, {}, val_p, res=res)
+    res = await node_attr(obj, cfg.prefix + path, val, {}, val_p, res=res)
 
     if obj.meta:
         yprint(res, stream=obj.stdout)
@@ -158,10 +159,12 @@ async def server_(obj, name, host, port, delete):
 
     No arguments: list them.
     """
+    cfg = obj.cfg.kv.wago
+
     if not name:
         if host or port or delete:
             raise click.UsageError("Use a server name to set parameters")
-        async for r in obj.client.get_tree(obj.cfg.wago.prefix, min_depth=1, max_depth=1):
+        async for r in obj.client.get_tree(cfg.prefix, min_depth=1, max_depth=1):
             print(r.path[-1], file=obj.stdout)
         return
     elif len(name) > 1:
@@ -179,7 +182,7 @@ async def server_(obj, name, host, port, delete):
             else:
                 value.port = int(port)
     elif delete:
-        res = await obj.client.delete_tree(*obj.cfg.wago.prefix, name, nchain=obj.meta)
+        res = await obj.client.delete_tree(cfg.prefix / name, nchain=obj.meta)
         if obj.meta:
             yprint(res, stream=obj.stdout)
         return
@@ -204,4 +207,4 @@ async def monitor(obj, name):
     await server.wait_loaded()
 
     async with as_service(obj) as srv:
-        await task(obj.client, obj.cfg.wago, server[name], srv)
+        await task(obj.client, obj.cfg.kv.wago, server[name], srv)

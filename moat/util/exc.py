@@ -37,8 +37,9 @@ class ungroup:
         if e is None:
             return
         while isinstance(e, BaseExceptionGroup):
-            if len(e.exceptions) == 1:
-                e = e.exceptions[0]
+            if len(e.exceptions) != 1:
+                break
+            e = e.exceptions[0]
         raise e from None
 
     async def __aexit__(self, c, e, t):

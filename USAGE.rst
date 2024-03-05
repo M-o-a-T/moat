@@ -1,22 +1,22 @@
 ==============
-Using DistWAGO
+Using MoaT-KV-WAGO
 ==============
 
-Run "distkv client wago monitor" to connect to the server on localhost.
+Run "moat kv wago monitor" to connect to the server on localhost.
 
-See "distkv dump cfg wago" for configuration options.
+See "moat util cfg wago" for configuration options.
 
 Data structure
 ==============
 
-On disk, the path to the port is ".distkv wago SERVER TYPE CARD PORT" by
+On disk, the path to the port is ``:.moat.kv.wago.SERVER.TYPE.CARD.PORT`` by
 default. All attributes are also looked up in the higher nodes, so you can
 set per-type or per-server defaults easily.
 
 Server attributes
 +++++++++++++++++
 
-* server: a dict with host and port. Set by ``distkv client wago server``.
+* server: a dict with host and port. Set by ``moat kv wago server``.
 
 * poll: The cylce time of the controller. Typical: 0.05 seconds.
 
@@ -35,7 +35,7 @@ Port attributes
 read
 ~~~~
 
-The current value of a wire on the controller is mirrored to some DistKV entry.
+The current value of a wire on the controller is mirrored to some MoaT-KV entry.
 
 * dest: the path to store the result at.
 
@@ -44,7 +44,7 @@ The current value of a wire on the controller is mirrored to some DistKV entry.
 count
 ~~~~~
 
-The number of transitions of a wire on the controller is mirrored to some DistKV entry.
+The number of transitions of a wire on the controller is mirrored to some MoaT-KV entry.
 
 * dest: the path to store the counter at.
 
@@ -58,8 +58,8 @@ The number of transitions of a wire on the controller is mirrored to some DistKV
 write
 ~~~~~
 
-The current value of some DistKV entry is mirrored to a wire on the controller.
-Also, the current output state is mirrored to a "state" entry in DistKV.
+The current value of some MoaT-KV entry is mirrored to a wire on the controller.
+Also, the current output state is mirrored to a "state" entry in MoaT-KV.
 
 * src: the path to monitor the valoe of.
 
@@ -70,10 +70,10 @@ Also, the current output state is mirrored to a "state" entry in DistKV.
 oneshot
 ~~~~~~~
 
-The current value of some DistKV entry is mirrored to a wire on the controller for some time (max).
-Also, the current output state is mirrored to a "state" entry in DistKV.
+The current value of some MoaT-KV entry is mirrored to a wire on the controller for some time (max).
+Also, the current output state is mirrored to a "state" entry in MoaT-KV.
 
-The wire is cleared when the time has passed, or when the DistKV entry is set to `False`.
+The wire is cleared when the time has passed, or when the MoaT-KV entry is set to `False`.
 
 * src
 
@@ -89,10 +89,10 @@ The wire is cleared when the time has passed, or when the DistKV entry is set to
 pulse
 ~~~~~~~
 
-If some DistKV entry is set, a wire on the controller flips between on and
-off. The "on" ratio is mirrored to a "state" entry in DistKV.
+If some MoaT-KV entry is set, a wire on the controller flips between on and
+off. The "on" ratio is mirrored to a "state" entry in MoaT-KV.
 
-The wire is cleared (and the state entry set to zero) when the DistKV entry is set to `False`.
+The wire is cleared (and the state entry set to zero) when the MoaT-KV entry is set to `False`.
 
 * src
 * src
@@ -113,12 +113,12 @@ Command line
 ============
 
 
-.. program:: distkv client wago
+.. program:: moat kv wago
 
 The main entry point for this extension.
 
 
-.. program:: distkv client wago port
+.. program:: moat kv wago port
 
 Print or modify port settings.
 
@@ -144,7 +144,7 @@ lets you easily change more than one at a time.
    Card and port are numeric, starting with 1.
 
 
-.. program:: distkv client wago attr
+.. program:: moat kv wago attr
 
 Print, modify or delete a single attribute.
 
@@ -177,12 +177,12 @@ If you set a value that is evaluated to a mapping, exising values will be merged
    and "--eval".
 
 
-.. program:: distkv client wago list
+.. program:: moat kv wago list
 
 Print the current state of your Wago controllers.
 
 This command does not access the device; it is used solely for displaying
-the configuration of the interaction with DistKV.
+the configuration of the interaction with MoaT-KV.
 
 .. option:: server
 
@@ -202,7 +202,7 @@ the configuration of the interaction with DistKV.
    The port number. Ports are numbered starting with 1.
 
 
-.. program:: distkv client wago monitor
+.. program:: moat kv wago monitor
 
 This is a stand-alone Wago monitor. It connects to a single controller
 and runs polls and monitors.
@@ -236,7 +236,7 @@ this might cause results to be read more often than configured here.
    The interval to poll at. Use ``-`` to disable polling.
 
 
-.. program:: distkv client wago set
+.. program:: moat kv wago set
 
 You can use this command to add arbitrary values to a device's entry. Use
 this e.g. to add a note where the device is located, or to signal your own

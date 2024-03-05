@@ -3,7 +3,7 @@
 import asyncclick as click
 
 from moat.util import yprint, attrdict, NotGiven, as_service, P, attr_args
-from distkv.data import node_attr
+from moat.kv.data import node_attr
 
 import logging
 
@@ -197,8 +197,8 @@ async def server_(obj, name, host, port, delete):
 async def monitor(obj, name):
     """Stand-alone task to monitor a single contoller.
     """
-    from distkv_ext.wago.task import task
-    from distkv_ext.wago.model import WAGOroot
+    from .task import task
+    from .model import WAGOroot
 
     server = await WAGOroot.as_handler(obj.client)
     await server.wait_loaded()

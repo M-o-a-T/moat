@@ -1,11 +1,11 @@
 """
-DistKV client data model for Wago
+MoaT-KV client data model for Wago
 """
 import anyio
 
 from moat.util import Path
-from distkv.obj import ClientEntry, ClientRoot
-from distkv.errors import ErrorRoot
+from moat.kv.obj import ClientEntry, ClientRoot
+from moat.kv.errors import ErrorRoot
 
 import logging
 
@@ -211,7 +211,7 @@ class WAGOoutput(_WAGOnode):
         present.
 
         ``intv`` and ``direc`` may be numbers or paths, if the latter
-        they're read from DistKV. ``cur`` must be a path.
+        they're read from MoaT-KV. ``cur`` must be a path.
 
         """
 
@@ -322,7 +322,7 @@ class WAGOoutput(_WAGOnode):
             logger.info("mode or src not set in %s", self.subpath)
             return
 
-        # Rest state. The input value in DistKV is always active=high.
+        # Rest state. The input value in MoaT-KV is always active=high.
         rest = self.find_cfg("rest", default=False)
         t_on = self.find_cfg("t_on", default=None)
         t_off = self.find_cfg("t_off", default=None)

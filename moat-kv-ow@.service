@@ -12,8 +12,6 @@ WantedBy=multi-user.target
 Type=notify
 ExecStart=/usr/bin/moat kv ow monitor %I
 
-EnvironmentFile=/etc/moat/moat.env
-
 TimeoutSec=300
 WatchdogSec=10
 

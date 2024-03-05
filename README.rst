@@ -1,8 +1,8 @@
-========
-DistWAGO
-========
+============
+Moat-KV-Wago
+============
 
-DistWAGO is a link between WAGO controllers and DistKV.
+MoaT-KV-Wago is a link between WAGO controllers and MoaT-KV.
 
 It will
 
@@ -10,8 +10,8 @@ It will
 
 * monitor inputs as specified
 
-* write values that it reads from them to some DistKV entry
+* write values that it reads from them to some MoaT-KV entry
 
-* monitor a DistKV entry and write any updates to wago
+* monitor a MoaT-KV entry and write any updates to wago
 
-* work with DistKV's runner system, either centrally or distributed
+* work with MoaT-KV's runner system, either centrally or distributed

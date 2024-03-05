@@ -82,19 +82,19 @@ class _KNXnode(_KNXbase):
             self._task = None
 
     async def spawn(self, p, *a, **k):
-        evt = anyio.create_event()
+        evt = anyio.Event()
 
         async def _spawn(evt, p, a, k):
             await self._kill()
             async with anyio.open_cancel_scope() as sc:
                 self._task = sc
-                self._task_done = anyio.create_event()
-                await evt.set()
+                self._task_done = anyio.Event()
+                evt.set()
                 try:
                     await p(*a, **k)
                 finally:
                     async with anyio.open_cancel_scope(shield=True):
-                        await self._task_done.set()
+                        self._task_done.set()
 
         await self.tg.spawn(_spawn, evt, p, a, k)
         await evt.wait()
@@ -131,11 +131,11 @@ class KNXnode(_KNXnode):
                 return
 
             async with device.run() as dev:
-                await evt.set()
+                evt.set()
                 async for _ in dev:
                     await self.client.set(dest, value=get_val(device), idem=idem)
         finally:
-            await evt.set()
+            evt.set()
 
     async def _task_out(self, evt, src, initial=False):
         try:
@@ -177,7 +177,7 @@ class KNXnode(_KNXnode):
                 return
 
             async with anyio.create_task_group() as tg:
-                lock = anyio.create_lock()
+                lock = anyio.Lock()
                 chain = None
 
                 async def _rdr():
@@ -201,7 +201,7 @@ class KNXnode(_KNXnode):
                 async with self.client.watch(
                     src, min_depth=0, max_depth=0, fetch=initial, nchain=1
                 ) as wp:
-                    await evt.set()
+                    evt.set()
                     async for msg in wp:
                         if "path" not in msg:
                             continue
@@ -216,7 +216,7 @@ class KNXnode(_KNXnode):
                             await set_val(device, val)
 
         finally:
-            await evt.set()
+            evt.set()
 
     async def setup(self, initial=False):
         await super().setup(initial=initial)
@@ -224,7 +224,7 @@ class KNXnode(_KNXnode):
         if self.server is None:
             return
 
-        evt = anyio.create_event()
+        evt = anyio.Event()
         typ = self.find_cfg("type")
         if typ == "in":
             dest = self.find_cfg("dest", default=None)

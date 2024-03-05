@@ -64,9 +64,7 @@ class OWFSattr(ClientEntry):
             self.watch_src = src
             self.watch_src_attr = src_attr
             if src is not None:
-                evt = anyio.Event()
-                await self.root._tg.spawn(self._watch_src, evt)
-                await evt.wait()
+                await self.root._tg.start(self._watch_src)
             else:
                 await self.root.err.record_working(
                     "owfs", self.subpath + ("write",), comment="dropped"
@@ -130,7 +128,7 @@ class OWFSattr(ClientEntry):
         else:
             await self.root.err.record_working("owfs", self.subpath + ("read",))
 
-    async def _watch_src(self, evt):
+    async def _watch_src(self, task_status=anyio.TASK_STATUS_IGNORED):
         """
         Task that monitors one entry and writes its value to the 1wire
         device.
@@ -143,7 +141,7 @@ class OWFSattr(ClientEntry):
                     if self.watch_src_scope is not None:
                         await self.watch_src_scope.cancel()
                     self.watch_src_scope = sc
-                    evt.set()
+                    task_status.started()
 
                     async for msg in wp:
                         logger.debug("Process %r", msg)

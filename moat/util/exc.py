@@ -27,6 +27,14 @@ class ungroup:
         "Singleton. Returns itself."
         return self
 
+    def one(self, e):
+        "convert the exceptiongroup @e to a single exception"
+        while isinstance(e, BaseExceptionGroup):
+            if len(e.exceptions) != 1:
+                break
+            e = e.exceptions[0]
+        return e
+
     def __enter__(self):
         return self
 
@@ -36,10 +44,7 @@ class ungroup:
     def __exit__(self, c, e, t):
         if e is None:
             return
-        while isinstance(e, BaseExceptionGroup):
-            if len(e.exceptions) != 1:
-                break
-            e = e.exceptions[0]
+        e = self.one(e)
         raise e from None
 
     async def __aexit__(self, c, e, t):

@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -x
+## pre-commit hook to catch editing in "deb" branch without modifying the changelog
+B="$(git rev-parse --abbrev-ref HEAD)"
+if test "$B" = "deb" || test "$B" = "debian" ; then
+    S="$(git status -s -- debian/changelog | head -c2 | sed -e 's/ //g')"
+    if test "$S" != "A" && test "$S" != "M" ; then
+        echo "You can't commit to Debian without a changelog entry."
+        exit 1
+    fi
+fi

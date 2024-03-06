@@ -49,8 +49,12 @@ class Repo(git.Repo):
                 try:
                     res = self._subrepo_cache[r.path]
                 except KeyError:
-                    p = Path(self.working_dir) / r.path
-                    self._subrepo_cache[r.path] = res = Repo(p)
+                    try:
+                        p = Path(self.working_dir) / r.path
+                        self._subrepo_cache[r.path] = res = Repo(p)
+                    except git.exc.InvalidGitRepositoryError:
+                        logger.info("%s: invalid, skipping.", p)
+                        continue
                     res.submod = r
                 if recurse:
                     yield from res.subrepos(depth=depth)
@@ -265,6 +269,28 @@ def encomma(proj, path):
     """list > comma-delimited string"""
     _mangle(proj, path, lambda x: ",".join(x))  # pylint: disable=unnecessary-lambda
 
+def apply_hooks(repo, force=False):
+    h = Path(repo.git_dir)/"hooks"
+    drop = set()
+    seen = set()
+    for f in h.iterdir():
+        if f.suffix == ".sample":
+            drop.add(f)
+            continue
+        seen.add(f.name)
+    for f in drop:
+        f.unlink()
+
+    pt = (Path(__file__).parent / "_hooks")
+    for f in pt.iterdir():
+        if not force:
+            if f.name in seen:
+                continue
+        t = h/f.name
+        d = f.read_text()
+        t.write_text(d)
+        t.chmod(0o755)
+
 
 def apply_templates(repo):
     """
@@ -429,6 +455,8 @@ By default, changes amend the HEAD commit if the text didn't change.
 @click.option("-D", "--no-dirty", is_flag=True, help="don't check for dirtiness (DANGER)")
 @click.option("-C", "--no-commit", is_flag=True, help="don't commit")
 @click.option("-s", "--skip", type=str, multiple=True, help="skip this repo")
+@click.option("--hooks", is_flag=True, help="only update hooks")
+@click.option("--HOOKS", "fhooks", is_flag=True, help="force-update hooks")
 @click.option(
     "-m",
     "--message",
@@ -437,7 +465,7 @@ By default, changes amend the HEAD commit if the text didn't change.
     default="Update from MoaT template",
 )
 @click.option("-o", "--only", type=str, multiple=True, help="affect only this repo")
-async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
+async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend, hooks, fhooks):
     """
     Set up projects using templates.
 
@@ -451,6 +479,11 @@ async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
         repos = (x for x in repo.subrepos(depth=True) if x.moat_name[5:] not in skip)
 
     for r in repos:
+        apply_hooks(r, fhooks)
+        if hooks or fhooks:
+            print(r.working_dir)
+            continue
+
         if not is_clean(r, not no_dirty):
             if not no_dirty:
                 continue
@@ -459,7 +492,7 @@ async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend):
         if proj.is_file():
             apply_templates(r)
         else:
-            logger.info("%s: no pyproject.toml file. Skipping.")
+            logger.info("%s: no pyproject.toml file. Skipping.", r.working_dir)
             continue
 
         if no_commit:

@@ -53,10 +53,9 @@ async def run(*args, expect_exit=0, do_stdout=True):
         assert expect_exit == 0
         return res
     finally:
-        if res is None:
-            res = attrdict()
         if do_stdout:
-            res.stdout = out.getvalue()
+            if res is not None:
+                res.stdout = out.getvalue()
             CFG["_stdout"] = sys.stdout
 
 

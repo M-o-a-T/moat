@@ -401,6 +401,7 @@ def logger_for(path: Path):
         :.foo.z   foo.sub.z
         foo       foo
         foo.a.b   foo.a.b
+        foo.:.a.b foo.a.b
         bar       foo.at.bar
         bar.c.d   foo.at.bar.c.d
 
@@ -421,6 +422,7 @@ def logger_for(path: Path):
         p = f"{this}.at.{path[0]}"
     if len(path) > 1:
         p += "." + ".".join(str(x) or "-" for x in path[1:])
+    p = p.replace("..", ".")
     return logging.getLogger(p)
 
 

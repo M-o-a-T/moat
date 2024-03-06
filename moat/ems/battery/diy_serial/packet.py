@@ -263,20 +263,12 @@ class RequestConfig:
 
 @_dc("pidc>")
 class RequestWritePIDconfig:
-    kp: int = None
-    ki: int = None
-    kd: int = None
+    p: int = None
+    i: int = None
+    d: int = None
 
     S: ClassVar = Struct("<III")
     T: ClassVar = PacketType.WritePIDconfig
-
-    @classmethod
-    def from_cell(cls, cell):
-        self = cls()
-        self.kp = cell.pid_kp
-        self.ki = cell.pid_ki
-        self.kd = cell.pid_kd
-        return self
 
     def to_bytes(self):
         return self.S.pack(self.kp, self.ki, self.kd)
@@ -304,16 +296,7 @@ class ReplyVoltages(_Reply):
         return self
 
     def to_cell(self, cell):
-        cell.in_balance = bool(self.voltRaw & 0x8000)
-        cell.balance_over_temp = bool(self.voltRaw & 0x4000)
-        vRaw = self.voltRaw & 0x1FFF
-        if vRaw:
-            v = cell._raw2volt(vRaw)
-            if cell.voltage != v:
-                chg = True
-                cell.voltage = v
-            cell.valid = True
-        return chg
+        cell.m_volt(self)
 
     def __setstate__(self, m):
         self.voltRaw = m["vr"]
@@ -321,12 +304,12 @@ class ReplyVoltages(_Reply):
             self.voltRaw |= 0x8000
         if m.get("ot", False):
             self.voltRaw |= 0x4000
-        self.bypassRaw = m["br"]
+        # self.bypassRaw = m["br"]
 
     def __getstate__(self):
         m=dict(vr=self.voltRaw&0x1FFF)
-        if self.bypassRaw:
-            m["br"] = self.bypassRaw
+        # if self.bypassRaw:
+        #     m["br"] = self.bypassRaw
         if self.voltRaw & 0x8000:
             m["bal"] = True
         if self.voltRaw & 0x4000:
@@ -350,14 +333,7 @@ class ReplyTemperature(_Reply):
         return self
 
     def to_cell(self, cell):
-        chg = False
-        if cell.internal_temp_raw != self.intRaw:
-            chg = True
-            cell.internal_temp_raw = self.intRaw
-        if cell.external_temp_raw != self.extRaw:
-            chg = True
-            cell.external_temp_raw = self.extRaw
-        return chg
+        cell.m_temp(self)
 
     def __setstate__(self, m):
         self.intRaw = m.get("ir", None)
@@ -387,14 +363,8 @@ class ReplyCounters(_Reply):
         return self
 
     def to_cell(self, cell):
-        chg = False
-        if cell.packets_in != self.received:
-            chg = True
-            cell.packets_in = self.received
-        if cell.packets_bad != self.bad:
-            chg = True
-            cell.packets_bad = self.bad
-        return chg
+        cell.packets_in = self.received
+        cell.packets_bad = self.bad
 
     def __setstate__(self, m):
         self.received = m.get("nr", 0)
@@ -438,18 +408,6 @@ class ReplyReadSettings(_Reply):
             self.loadResRaw,
         ) = self.S.unpack(data)
         return self
-
-    def to_cell(self, cell):
-        cell.code_version = self.gitVersion
-        cell.board_version = self.boardVersion
-        cell.v_per_ADC = self.mvPerADC / 1000 / 64
-        cell.v_calibration = self.voltageCalibration
-        cell.load_maxtemp_raw = self.bypassTempRaw
-        cell.balance_config_threshold_raw = self.bypassVoltRaw
-        cell.internal_B = self.BCoeffInternal
-        cell.external_B = self.BCoeffExternal
-        cell.n_samples = self.numSamples
-        cell.load_resistance_raw = self.loadResRaw / 16
 
     def __setstate__(self, m):
         self.gitVersion = m.get("gitV", None)
@@ -520,11 +478,7 @@ class ReplyBalanceCurrentCounter(_Reply):
         return self
 
     def to_cell(self, cell):
-        chg = False
-        if cell.balance_current_count != self.counter:
-            chg = True
-            cell.balance_current_count = self.counter
-        return chg
+        cell.balance_current_count = self.counter
 
     def __setstate__(self, m):
         self.cmounter = m["c"]
@@ -548,13 +502,7 @@ class ReplyReadPIDconfig(_Reply):
         return self
 
     def to_cell(self, cell):
-        chg = False
-        if (cell.pid_kp, cell.pid_ki, cell.pid_kd) != (self.kp, self.ki, self.kd):
-            chg = True
-            cell.pid_kp = self.kp
-            cell.pid_ki = self.ki
-            cell.pid_kd = self.kd
-        return chg
+        cell.m_pid(self)
 
     def __setstate__(self, m):
         self.kp = m["p"]

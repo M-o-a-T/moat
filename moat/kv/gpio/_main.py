@@ -223,8 +223,8 @@ async def monitor(obj, name, controller):
         async with anyio.create_task_group() as tg:
             e = []
             for chip in sub:
-                evt = anyio.create_event()
-                await tg.spawn(task, chip, evt)
+                evt = anyio.Event()
+                tg.start_soon(task, chip, evt)
                 e.append(evt)
             for evt in e:
                 await evt.wait()

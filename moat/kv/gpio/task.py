@@ -19,7 +19,7 @@ async def task(chip: GPIOchip, evt=None):
                 chip.task_group = tg
                 await chip.set_chip(srv)
                 if evt is not None:
-                    await evt.set()
+                    evt.set()
 
                 while True:
                     await anyio.sleep(99999)

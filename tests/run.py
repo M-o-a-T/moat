@@ -77,11 +77,11 @@ class _test(metaclass=_test_m):
         """
         Flush the message queue, ensure that we're not getting flooded
         """
-        async with anyio.move_on_after(timeout):
+        with anyio.move_on_after(timeout):
             while True:
                 await self.queue.get()
         try:
-            async with anyio.fail_after(timeout / 10):
+            with anyio.fail_after(timeout / 10):
                 msg = await self.queue.get()
         except TimeoutError:
             pass
@@ -105,7 +105,7 @@ class _test(metaclass=_test_m):
                 want_msgs.append(d)
         try:
             while True:
-                async with anyio.fail_after(timeout):
+                with anyio.fail_after(timeout):
                     msg = await self.queue.get()
                     if isinstance(msg, Pin):
                         in_pins.append(msg)
@@ -442,13 +442,13 @@ async def main(label="gpio-mockup-A", host="HosT"):
         controller = server.follow(Path(host, label), create=None)
 
         async with anyio.create_task_group() as tg:
-            evt = anyio.create_event()
-            await tg.spawn(GPIOtask, controller, evt)
+            evt = anyio.Event()
+            tg.start_soon(GPIOtask, controller, evt)
             await evt.wait()
 
             try:
                 while True:
-                    async with anyio.fail_after(1):
+                    with anyio.fail_after(1):
                         msg = await ts.__anext__()
                         print("init", msg)
             except TimeoutError:
@@ -464,7 +464,7 @@ async def main(label="gpio-mockup-A", host="HosT"):
             async def runner(tl, c, q, p):
                 # run all tests in TL
                 async with anyio.create_task_group() as tj:
-                    await tj.spawn(watcher, q, p)
+                    tj.start_soon(watcher, q, p)
                     for t in tl:
                         if isinstance(t, type):
                             t = t()
@@ -477,9 +477,9 @@ async def main(label="gpio-mockup-A", host="HosT"):
                 queues = {}
                 for nr in tests:
                     queues[nr] = anyio.create_queue(10)
-                await tg.spawn(fwd_q, ts, queues)
+                tg.start_soon(fwd_q, ts, queues)
                 for nr, tl in tests.items():
-                    await tt.spawn(runner, tl, c, queues[nr], w.pin(label, nr))
+                    tt.start_soon(runner, tl, c, queues[nr], w.pin(label, nr))
             # we come here when all tests have finished
             await tg.cancel_scope.cancel()
 

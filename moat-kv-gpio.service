@@ -13,6 +13,8 @@ WantedBy=multi-user.target
 Type=notify
 ExecStart=/usr/bin/moat kv gpio monitor $NAME
 
+EnvironmentFile=/etc/moat/kv.env
+
 TimeoutSec=300
 WatchdogSec=10
 

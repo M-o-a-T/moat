@@ -43,3 +43,6 @@ __pycache__/
 /.venv
 /venv/
 /wheels/
+
+# Debian packaging
+/debian/

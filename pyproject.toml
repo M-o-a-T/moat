@@ -21,7 +21,7 @@ keywords = [ "MoaT",]
 requires-python = ">=3.10"
 name = "moat-cad"
 description = "CAD files for various MoaT-related things"
-readme = "README.rst"
+readme = "README.md"
 [[project.authors]]
 email = "matthias@urlichs.de"
 name = "Matthias Urlichs"

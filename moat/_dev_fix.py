@@ -42,8 +42,6 @@ def _fix():
         _pp.append(str(md))
 
         # assume that sys.path[0] is the main …/moat directory
-        import sys
-
         sys.path[0:0] = (str(x) for x in _pp)
 
         import pkgutil

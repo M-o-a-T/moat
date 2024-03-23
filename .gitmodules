@@ -40,3 +40,6 @@
 [submodule "signal"]
 	path = signal
 	url = git://git.smurf.noris.de/moat-signal.git
+[submodule "cad"]
+	path = cad
+	url = git://git.smurf.noris.de/moat-cad.git

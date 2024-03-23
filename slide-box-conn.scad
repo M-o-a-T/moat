@@ -28,6 +28,8 @@ chh=12;
 chl=6;
 // side offset
 cso=0;
+// additional right side hole width
+cswr=0;
 
 /* [Hidden] */
 _d1=0.01;
@@ -42,21 +44,21 @@ module indent(c) {
 }
 
 module bottom() {
-    hull() { 
+   hull() { 
         translate([-w,0,0]) cube([x+w,y,_d1]);
         translate([-w,w,-w]) cube([x,y-2*w,_d1]);
     }
     translate([-w,-w,-w]) cube([x/2+cw/2+w+cso,y+2*w,w]);
     translate([_d1-w,0,-_d1]) cube([w,y,z]);
     translate([_d1-w,-w,-w]) cube([w,y+2*w,w+chh]);
-    translate([-w,-w,-w]) cube([x/2-cw/2+w+cso,w,w+chh]);
+    #translate([-w,-w,-w]) cube([x/2-cw/2+w+cso-cswr,w,w+chh]);
     translate([-w,y,-w]) cube([x/2-cw/2+w+cso,w,w+chh]);
     // lowers
     if(h3) {
         translate([x,y/2-cw/2,-w]) cube([w,cw,chl+w]);
         translate([x-w+_d1,y/2-cw/2,-w]) cube([w+_d2,cw,w]);
     }
-    translate([x/2-cw/2-_d1+cso,-w,-_d1]) cube([cw,w,h2?chl:chh]);
+    translate([x/2-cw/2-_d1+cso-cswr,-w,-_d1]) cube([cw+cswr,w,h2?chl:chh]);
     translate([x/2-cw/2-_d1+cso,y,-_d1]) cube([cw,w,h1?chl:chh]);
     // align sliders on top
     translate([-_d1,0,z]) rotate([-90,0,0]) linear_extrude(y/2-cw/2) polygon([[0,0],[0,w],[w,0]]);

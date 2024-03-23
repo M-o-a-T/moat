@@ -6,15 +6,14 @@ This call is auto-added to a ``moat/__init__.py`` file when the MoaT
 template is applied to a MoaT submodule.
 """
 
-_fixed = False
-
-
 def _fix():
-    # pylint: disable=import-outside-toplevel
-    global _fixed  # pylint: disable=global-statement
-    if _fixed:
+    import sys
+    try:
+        sys.__fixed
+    except AttributeError:
+        pass
+    else:
         return
-    _fixed = True
 
     from pathlib import Path
 
@@ -74,3 +73,5 @@ def _fix():
         os.environ["PYTHONPATH"] = os.pathsep.join(roots) + (
             ":" + os.environ["PYTHONPATH"] if "PYTHONPATH" in os.environ else ""
         )
+
+    sys.__fixed = True

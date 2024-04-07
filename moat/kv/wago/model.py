@@ -232,7 +232,7 @@ class WAGOoutput(_WAGOnode):
 
                         await work.wait()
             finally:
-                async with anyio.fail_after(2, shield=True):
+                with anyio.fail_after(2, shield=True):
                     if state is not None:
                         try:
                             val = await self.server.read_output(self.card, self.port)
@@ -289,7 +289,7 @@ class WAGOoutput(_WAGOnode):
                     self._work = None
                     self._work_done = None
 
-                async with anyio.fail_after(2, shield=True):
+                with anyio.fail_after(2, shield=True):
                     if state is not None:
                         try:
                             val = await self.server.read_output(self.card, self.port)

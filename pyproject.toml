@@ -84,4 +84,29 @@ deps =
 [tool.pylint.messages_control]
 disable = "wrong-import-order,ungrouped-imports,too-many-nested-blocks,use-dict-literal,unspecified-encoding,too-many-statements,too-many-return-statements,too-many-locals,too-many-instance-attributes,too-many-branches,too-many-arguments,too-few-public-methods,superfluous-parens,no-else-return,no-else-continue,invalid-name,fixme"
 
-[tool.moat]
+[tool.ruff]
+select = ["ALL"]
+ignore = ["ANN","PTH","PERF", "D105", "D107","A003","S101","RUF001","RUF002","PLW1514", "D2","D3","D4","T2","FBT","TRY003","EM10","PLR","C","RET50","TD","FIX","N","ERA","BLE001","COM812","ISC001"]
+
+preview = true
+explicit-preview-rules = true
+
+line-length = 99
+
+[tool.ruff.flake8-comprehensions]
+allow-dict-calls-with-keyword-arguments = true
+
+[tool.ruff.flake8-builtins]
+builtins-ignorelist = ["id","help"]
+
+[tool.ruff.isort]
+no-lines-before = ["future"]
+required-imports = ["from __future__ import annotations"]
+section-order = ["future","standard-library","first-party","third-party","moat","local-folder","upy","typing"]
+extra-standard-library = ["pytest", "anyio"]
+force-to-top = ["moat.util"]
+
+[tool.ruff.isort.sections]
+"moat" = ["moat"]
+"upy" = ["micropython", "machine", "esp"]
+"typing" = ["typing"]

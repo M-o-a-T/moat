@@ -19,7 +19,7 @@ dependencies = [
 	]
 dynamic = [ "version",]
 keywords = [ "MoaT",]
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 name = "moat"
 description = "The command line for MoaT"
 readme = "README.md"

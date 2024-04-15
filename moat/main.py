@@ -8,7 +8,7 @@ import anyio
 import asyncclick as click
 from asyncscope import main_scope
 from moat.util import attrdict, main_
-from moat.util import exc_iter
+from moat.util import exc_iter, ungroup
 
 
 def cmd(backend="trio"):
@@ -29,15 +29,19 @@ This is the main command handler for MoaT, the Master of all Things.
 
     ec = 0
     try:
-        anyio.run(runner, backend=backend)
-    except* KeyboardInterrupt:
-        if "MOAT_TB" in os.environ:
-            raise
-        print("\rInterrupted.   ", file=sys.stderr)
-        ec = 9
-    except* SystemExit as ex:
-        for e in exc_iter(ex):
-            ec |= e.code
+        with ungroup:
+            anyio.run(runner, backend=backend)
+    except BaseException as exc:
+        for e in exc_iter(exc):
+            if isinstance(e, KeyboardInterrupt):
+                if "MOAT_TB" in os.environ:
+                    raise
+                print("\rInterrupted.   ", file=sys.stderr)
+                break
+            elif isinstance(e, SystemExit):
+                ec |= e.code
+            else:
+                raise
     return ec
 
 

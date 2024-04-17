@@ -12,6 +12,7 @@ import io
 import logging
 import sys
 import time
+import subprocess
 from enum import IntEnum, auto
 
 import asyncclick as click
@@ -246,6 +247,9 @@ misc:
     heat:
       delta: 10
       # if buffer_low+delta is > t_adj then run the heating pump
+    mon_solvis:
+      err: !P heat.s.control.errors
+      data: "/etc/moat/modbus.stiebelfake.yaml"
 pid:
     flow:
         ## direct flow rate control for the pump
@@ -502,7 +506,7 @@ class Data:
             self.pid[k] = APID(self, k, v)
 
         self.state.setdefault("heat_ok", False)
-        self.state.setdefault("pellet_on", None)
+        self.state.setdefault("t_pellet_on", None)
         self.state.setdefault("start_p", False)
 
         try:
@@ -590,6 +594,7 @@ class Data:
         t_no_power = None
         heat_off = False
         water_ok = True
+        t_change_max = None
         heat_pin = self.cfg.setting.heat.get("power", {}).get("pin", None)
 
         self.state.setdefault("avg_heat", self.t_heat)
@@ -645,19 +650,17 @@ class Data:
                 print(f"*** STATE: {run.name}")
 
             # Leaving a state
-            if orun is None:  # fix stuff for startup
+            if orun is None:  # startup
+                # Restarting: restart the timer if required
+                if self.state.t_change is not None:
+                    self.state.t_change = self.time
+
                 # assume PIDs are restored from state
                 # assume PWM is stable
                 if run == Run.run:
                     last = self.state.get("load_last", None)
                     if last is not None:
                         await self.set_load(last)
-
-            elif orun == run:  # no change
-                pass
-
-            elif orun == Run.down:
-                pass
 
             oheat_off, heat_off = heat_off, None
             self.wp_on = run == Run.run
@@ -673,6 +676,7 @@ class Data:
             elif run == Run.off:  # nothing happens
                 heat_off = False
                 self.state.t_change = None
+                t_change_max = None
                 await self.set_flow_pwm(0)
                 await self.set_load(0)
                 self.state.last_pwm = None
@@ -685,9 +689,9 @@ class Data:
 
             elif run == Run.wait_flow:  # wait for flow
                 heat_off = True
-                if self.state.t_change is None:
-                    self.state.t_change = self.time
-                t_change_max = self.cfg.lim.times.start
+                self.state.t_change = self.time
+                if t_change_max is None or t_change_max < self.cfg.lim.times.start:
+                    t_change_max = self.cfg.lim.times.start
 
                 await self.cl_set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off)
                 await self.pid.flow.setpoint(self.cfg.misc.start.flow.init.rate)
@@ -699,9 +703,12 @@ class Data:
                 await self.set_flow_pwm(self.cfg.misc.start.flow.init.pwm)
 
             elif run == Run.flow:  # wait for decent throughput
-                pass
+                if t_change_max is None or t_change_max < self.cfg.lim.times.start:
+                    t_change_max = self.cfg.lim.times.start
 
             elif run == Run.wait_power:  # wait for pump to draw power
+                if t_change_max is None or t_change_max < self.cfg.lim.times.start:
+                    t_change_max = self.cfg.lim.times.start
                 await self.pid.flow.setpoint(self.cfg.misc.start.flow.power.rate)
                 self.pid.flow.move_to(
                     self.cfg.misc.start.flow.power.rate,
@@ -712,12 +719,15 @@ class Data:
                 await self.set_load(self.cfg.misc.start.power)
 
             elif run == Run.temp:  # wait for outflow-inflow>2
+                if t_change_max is None or t_change_max < self.cfg.lim.times.start:
+                    t_change_max = self.cfg.lim.times.start
                 await self.pid.flow.setpoint(self.cfg.misc.start.flow.power.rate)
                 await self.set_flow_pwm(self.cfg.misc.start.flow.power.pwm)
 
             elif run == Run.run:  # operation
                 heat_off = False
                 self.state.t_change = None
+                t_change_max = None
                 self.state.setdefault("t_run", self.time)
                 if orun is not None:
                     self.state.scaled_low = 1.0
@@ -736,7 +746,8 @@ class Data:
 
                 if self.state.t_change is None:
                     self.state.t_change = self.time
-                t_change_max = self.cfg.lim.times.ice
+                if t_change_max is None or t_change_max < self.cfg.lim.times.ice:
+                    t_change_max = self.cfg.lim.times.ice
                 heat_off = True
                 await self.pid.flow.setpoint(self.cfg.misc.de_ice.flow)
                 self.pid.flow.move_to(
@@ -750,7 +761,8 @@ class Data:
                 await self.log_zero()
                 if self.state.t_change is None:
                     self.state.t_change = self.time
-                t_change_max = self.cfg.lim.times.stop
+                if t_change_max is None or t_change_max < self.cfg.lim.times.stop:
+                    t_change_max = self.cfg.lim.times.stop
 
                 heat_off = True
                 await self.pid.flow.setpoint(self.cfg.misc.stop.flow)
@@ -760,8 +772,8 @@ class Data:
             else:
                 raise ValueError(f"State ?? {run !r}")
 
-#            if self.state.t_change is not None and self.time - self.state.t_change > t_change_max:
-#                raise TimeoutError("Time exceeded. Turning off.")
+            if self.state.t_change is not None and self.time - self.state.t_change > t_change_max:
+                raise TimeoutError("Time exceeded. Turning off.")
 
             orun = run
             self.state.run = int(run)
@@ -1025,7 +1037,7 @@ class Data:
                 self.log_hc(8)
             elif (
                 self.tb_heat
-                if self.m_switch or self.state.t_pellet_on
+                if self.m_switch # or self.state.t_pellet_on
                 else pos2val(
                     self.tb_heat,
                     (self.state.last_pwm or 0) / self.cfg.adj.low.pwm,
@@ -1041,7 +1053,7 @@ class Data:
             else:
                 heat_ok = True
 
-            if not heat_ok:
+            if not heat_ok or not cm_heat:
                 # If the incoming water is too cold, turn off heating
                 # We DO NOT turn heating off while running: danger of
                 # overloading the heat pump due to temperature jump,
@@ -1053,9 +1065,9 @@ class Data:
                 # water buffer (m_switch is set) because in this case the
                 # buffer is cold anyway.
 
-                if self.state.heat_ok is False:
+                if cm_heat and self.state.heat_ok is False:
                     pass
-                elif run == Run.run and not self.m_switch:
+                elif cm_heat and run == Run.run and not self.m_switch:
                     self.log_hc(2)
                 else:
                     # turn off heating
@@ -1599,7 +1611,7 @@ class Data:
         """
         while self._want:
             t = self.time
-            print("Waiting", self._want)
+            print("Waiting", " ".join(self._want))
             await self._got.wait()
             while (t2 := self.time) - t < 1:
                 if not self._want:
@@ -1763,6 +1775,52 @@ class Data:
         await fn.rename(f)
 
 
+    async def run_solvis_mon(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        again = anyio.Event()
+        kick = anyio.Event()
+        cfg = self.cfg.misc.mon_solvis
+
+        task_status.started()  # well not really but the caller doesn't care
+
+        async def s_run():
+            nonlocal again,kick
+            while True:
+                async with await anyio.open_process(['moat','modbus','dev','poll',cfg.data], stdin=subprocess.DEVNULL, stdout=sys.stdout, stderr=sys.stderr) as p:
+                    try:
+                        kick.set()
+                        kick = anyio.Event()
+                        await again.wait()
+                    finally:
+                        p.kill()
+                    await anyio.sleep(3)
+
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(s_run)
+            await kick.wait()
+            await anyio.sleep(60)
+
+            async with self.cl.watch(cfg.err, long_path=False, fetch=True, max_depth=0) as msgs:
+                async for m in msgs:
+                    if "value" not in m:
+                        continue
+                    if not m.value:
+                        continue
+                    m = await self.cl.get(cfg.err / 1 / "code")
+                    if m.value == 26:
+                        print("\nRESTART SOLVIS")
+                        again.set()
+                        again = anyio.Event()
+                        try:
+                            with anyio.fail_after(15):
+                                await kick.wait()
+                        except TimeoutError:
+                            print("\nRESTART SOLVIS ERROR")
+                        else:
+                            print("\nRESTART SOLVIS OK")
+
+                    else:
+                        print("\nERROR SOLVIS",m.value,file=sys.stderr)
+
 class fake_cl:
     "fake MoaT-KW client, for playbacks"
 
@@ -1817,6 +1875,12 @@ async def cli(ctx, config):
         GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
 
+@cli.command
+@click.pass_obj
+async def solvis_mon(obj):
+    async with open_client(**mcfg.kv) as cl:
+        d = Data(obj.cfg, cl, no_op=True)
+        await d.run_solvis_mon()
 
 @cli.command
 @click.pass_obj
@@ -1837,6 +1901,13 @@ async def run(obj, record, force_on, no_save):
                 await tg.start(d.run_set_heat)
                 await tg.start(d.run_set_pellet)
                 if not no_save:
+                    try:
+                        obj.cfg.misc.mon_solvis.err
+                    except AttributeError:
+                        pass
+                    else:
+                        await tg.start(d.run_solvis_mon)
+
                     await tg.start(d.saver)
                 await d.run_pump()
         finally:

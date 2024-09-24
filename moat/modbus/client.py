@@ -942,7 +942,7 @@ class ValueList(DataBlock):
         Send messages writing our values to the bus.
         """
         async with anyio.create_task_group() as tg:
-            for start, length in self.ranges(changed):
+            for start, length in self.ranges(changed=changed):
                 tg.start_soon(partial(self.writeBlock, start, length))
 
     async def readBlock(self, start, length, *, res=None):

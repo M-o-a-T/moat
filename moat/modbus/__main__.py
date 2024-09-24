@@ -237,7 +237,7 @@ async def _serclient(
         for i in range(num):
             v = s.add(k, start, t)
             if values:
-                v.value = flint(values[i])
+                v.set(flint(values[i]))
             start += t.len
             num -= 1
 

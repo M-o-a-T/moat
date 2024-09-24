@@ -1,0 +1,9 @@
+dev:
+  sew:
+    power: !P :mr.moat.sew.power
+    state: !P :mr.moat.sew.state
+    mqtt:
+      codec: msgpack
+      will:
+        topic: !P :mr.moat.sew.state
+        message: null

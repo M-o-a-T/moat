@@ -36,6 +36,7 @@ DISCONNECT_DELAY = 0.1
 RECONNECT_TIMEOUT = 10
 CHECK_STREAM_TIMEOUT = 0.001
 
+MAX_REQ_LEN=30
 
 class ModbusClient(CtxObj):
     """The main bus handler. Use as
@@ -238,11 +239,11 @@ class Host(CtxObj, _HostCommon):
 
     _tg = None
 
-    max_req_len = 50  # max number of registers to fetch w/ one request
-
-    def __init__(self, gate, addr, port, timeout=10, cap=1, debug=False):
+    def __init__(self, gate, addr, port, timeout=10, cap=1, debug=False, max_req_len=MAX_REQ_LEN):
         self.addr = addr
         self.port = port
+
+        self.max_req_len=max_req_len
 
         log = logging.getLogger(f"modbus.{addr}")
         self._trace = log.info if debug else log.debug
@@ -405,12 +406,11 @@ class SerialHost(CtxObj, _HostCommon):
 
     _tg = None
 
-    max_req_len = 50  # max number of registers to fetch w/ one request
-
-    def __init__(self, gate, /, port, timeout=10, cap=1, debug=False, monitor=None, **ser):
+    def __init__(self, gate, /, port, timeout=10, cap=1, debug=False, monitor=None, max_req_len=MAX_REQ_LEN, **ser):
         self.port = port
         self.ser = ser
         self.framer = ModbusRtuFramer(ClientDecoder(), self)
+        self.max_req_len=max_req_len
 
         log = logging.getLogger(f"modbus.{Path(port).name}")
         self._trace = log.info if debug else log.debug

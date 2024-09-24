@@ -140,7 +140,7 @@ def flint(v):
         return float(v)
 
 
-async def _client(host, port, unit, kind, start, num, type_, values, debug, interval):
+async def _client(host, port, unit, kind, start, num, type_, values, debug, interval, maxlen):
     """
     Basic Modbus-TCP client.
     """
@@ -149,9 +149,12 @@ async def _client(host, port, unit, kind, start, num, type_, values, debug, inte
 
     from moat.modbus.client import ModbusClient  # pylint: disable=import-outside-toplevel
 
+    c = {}
+    if maxlen:
+        c["max_req_len"] = maxlen
     async with (
             ModbusClient() as g,
-            g.host(host, port) as h,
+            g.host(host, port, **c) as h,
             h.unit(unit) as u,
             u.slot("default") as s,
         ):
@@ -208,6 +211,7 @@ def mk_client(m):
     c = click.option("--port", "-p", type=int, default=502, help="destination port")(c)
     c = click.option("--host", "-h", default="localhost", help="destination host")(c)
     c = click.option("--interval", "-i", type=float, help="loop: read/write every N seconds")(c)
+    c = click.option("--max-len", "-L", "maxlen", type=int, default=30, help="max. modbus words per packet")(c)
     c = m.command("client", context_settings=dict(show_default=True))(c)
     return c
 
@@ -216,7 +220,7 @@ client = mk_client(main)
 
 
 async def _serclient(
-    port, baudrate, stopbits, parity, unit, kind, start, num, type_, values, debug
+    port, baudrate, stopbits, parity, unit, kind, start, num, type_, values, debug, maxlen
 ):
     """
     Basic Modbus-RTU client.
@@ -226,9 +230,14 @@ async def _serclient(
 
     from moat.modbus.client import ModbusClient  # pylint: disable=import-outside-toplevel
 
-    async with ModbusClient() as g, g.serial(
-        port=port, baudrate=baudrate, stopbits=stopbits, parity=parity
-    ) as h, h.unit(unit) as u, u.slot("default") as s:
+    if maxlen:
+        c["max_req_len"] = maxlen
+    async with (
+        ModbusClient() as g,
+        g.serial(port=port, baudrate=baudrate, stopbits=stopbits, parity=parity, **c) as h,
+        h.unit(unit) as u,
+        u.slot("default") as s,
+    ):
         k = map_kind[kind[0]]
         t = get_type(type_)
         if values:
@@ -283,6 +292,7 @@ def mk_serial_client(m):
     )
     c = add_serial_cfg(c)
     c = click.option("--unit", "-u", type=int, default=1, help="unit to query")(c)
+    c = click.option("--max-len", "-L", "maxlen", type=int, default=30, help="max. modbus words per packet")(c)
     c = m.command("serial", context_settings=dict(show_default=True))(c)
     return c
 

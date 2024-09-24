@@ -11,7 +11,7 @@ from moat.util import attrdict, merge, to_attrdict
 
 from ..client import ModbusClient
 from .device import ServerDevice, ClientDevice, fixup
-from ..server import ModbusServer, SerialModbusServer
+from ..server import create_server
 
 logger = logging.getLogger(__name__)
 
@@ -60,25 +60,7 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
         # relay-out server(s)
         servers = []
         for s in cfg.get("server", ()):
-            if "serial" in s:
-                port = s.get("port", None)
-                kw = s["serial"]
-                if port is not None:
-                    kw["port"] = port
-                srv = SerialModbusServer(**kw)
-            elif "host" in s or ("port" in s and isinstance(s["port"],int)):
-                kw = {}
-                for k,v in s.items():
-                    if isinstance(k,str):
-                        if k == "units":
-                            continue
-                        if k == "host":
-                            k = "address"
-                        kw[k] = v
-                srv = ModbusServer(**kw)
-            else:
-                raise ValueError("neither serial nor TCP config found")
-            servers.append(srv)
+            servers.append(create_modbus_server(s))
 
             for u,v in s.get("units",{}).items():
                 dev = ServerDevice(factory=RegS)

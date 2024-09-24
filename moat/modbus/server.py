@@ -235,6 +235,32 @@ class SerialModbusServer(BaseModbusServer):
             await self._serial.send(response)
 
 
+def create_server(cfg):
+	"""
+	Create a server (TCP or serial) according to the configuration.
+
+	@cfg is a dict with either host/port or port/serial keys.
+	"""
+	if "serial" in cfg:
+		port = cfg.get("port", None)
+		kw = cfg["serial"]
+		if port is not None:
+			kw["port"] = port
+		srv = SerialModbusServer(**kw)
+	elif "host" in cfg or ("port" in cfg and isinstance(cfg["port"],int)):
+		kw = {}
+		for k,v in cfg.items():
+			if isinstance(k,str):
+				if k == "units":
+					continue
+				if k == "host":
+					k = "address"
+				kw[k] = v
+		srv = ModbusServer(**kw)
+	else:
+		raise ValueError("neither serial nor TCP config found")
+
+
 class RelayServer:
     """
     A mix-in class to teach a server to forward all requests to a client

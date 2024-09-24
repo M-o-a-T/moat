@@ -100,6 +100,33 @@ class ModbusClient(CtxObj):
         """Run a serial client in an AsyncScope."""
         return await scope.service(f"MC_{num2id(self)}:{port}", self._serial, port, **ser)
 
+    async def conn(self, cfg):
+        """Run a serial OR TCP client according to the config.
+
+        @cfg is a dict with either host/port or port/serial keys.
+        Returns a host.
+
+        Usage::
+            async with ModbusClient() as g, g.conn(cfg) as c, c.unit(cfg["unit"]) as u:
+                ...
+        """
+        if "serial" in cfg:
+            port = cfg.get("port", None)
+            kw = cfg["serial"]
+            if port is not None:
+                kw["port"] = port
+            return self.serial(**kw)
+
+        elif "host" in cfg or ("port" in cfg and isinstance(cfg["port"],int)):
+            kw = {}
+            for k in ("host","port"):
+                try:
+                    kw[k] = cfg[k]
+                except KeyError:
+                    pass
+            return self.host(**kw)
+        else:
+            raise ValueError("neither serial nor TCP config found")
 
 class ModbusError(RuntimeError):
     """Error entry in returned datasets"""

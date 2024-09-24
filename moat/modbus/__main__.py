@@ -160,6 +160,8 @@ async def _client(host, port, unit, kind, start, num, type_, values, debug, inte
         if values:
             if len(values) == 1:
                 values = values * num
+            elif num == 1:
+                num = len(values)
             elif len(values) != num:
                 raise click.UsageError("One or N values!")
         for i in range(num):

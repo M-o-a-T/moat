@@ -450,7 +450,7 @@ class SerialHost(CtxObj, _HostCommon):
                 replies = []
 
                 # check for decoding errors
-                self.framer.processIncomingPacket(data, replies.append, unit=0, single=True)  # bah
+                self.framer.processIncomingPacket(data, replies.append, slave=0, single=True)  # bah
 
             except (
                 IncompleteRead,

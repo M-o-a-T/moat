@@ -320,7 +320,7 @@ class SignedLongValue(_Signed, LongValue):
     pass
 
 
-class SwappedSignedLongValue(_Signed, _Swapped, BaseValue):
+class SwappedSignedLongValue(_Signed, _Swapped, LongValue):
     """two registers, signed, swapped."""
 
     pass

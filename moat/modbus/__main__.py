@@ -174,9 +174,9 @@ async def _client(host, port, unit, kind, start, num, type_, values, debug, inte
         last_res = None
         while True:
             if values:
-                await s._setValues()  # pylint:disable=protected-access  ## TODO
+                await s.setValues()  # pylint:disable=protected-access  ## TODO
             else:
-                res = await s._getValues()  # pylint:disable=protected-access  ## TODO
+                res = await s.getValues()  # pylint:disable=protected-access  ## TODO
                 if last_res != res:
                     pprint(res)
                     last_res = res
@@ -245,9 +245,9 @@ async def _serclient(
 
         try:
             if values:
-                await s._setValues()  # pylint:disable=protected-access  ## TODO
+                await s.setValues()  # pylint:disable=protected-access  ## TODO
             else:
-                res = await s._getValues()  # pylint:disable=protected-access  ## TODO
+                res = await s.getValues()  # pylint:disable=protected-access  ## TODO
                 pprint(res)
         except Exception as exc:  # pylint: disable=broad-except
             log.exception("Problem: %r", exc)

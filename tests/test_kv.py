@@ -103,7 +103,7 @@ async def test_kv_poll(autojump_clock):  # pylint: disable=unused-argument
             u.slot("default") as s,
         ):
             v = s.add(HoldingRegisters, 12342, IntValue)
-            res = await s._getValues()
+            res = await s.getValues()
             pass # v,res
 
 

@@ -745,7 +745,7 @@ class Slot(CtxObj):
             return
         self._scope.cancel()
 
-    async def _getValues(self) -> Dict[TypeCodec, Dict[int, Any]]:
+    async def getValues(self) -> Dict[TypeCodec, Dict[int, Any]]:
         """
         Send messages reading this slot's values from the bus.
         Returns a (type,(offset,value)) dict-of-dicts.
@@ -778,7 +778,7 @@ class Slot(CtxObj):
         finally:
             self._get_scope = None
 
-    async def _setValues(self, changed=False):
+    async def setValues(self, changed=False):
         """
         Send a message writing the values in this block to the bus.
         """
@@ -799,7 +799,7 @@ class Slot(CtxObj):
         """Read this slot's data."""
         async with self.read_lock:
             self.t_read = anyio.current_time()
-            await self._getValues()
+            await self.getValues()
 
     async def read_task(self):
         """A background task for reading Modbus register values.
@@ -849,7 +849,7 @@ class Slot(CtxObj):
                         tn -= tn % self.read_delay
 
                 try:
-                    await self._getValues()  # already locked
+                    await self.getValues()  # already locked
                 except Exception as exc:  # pylint:disable=broad-except
                     _logger.warning("Error %s: %r", self, exc)
                     backoff = 1 + backoff * 1.2
@@ -863,7 +863,7 @@ class Slot(CtxObj):
         If @changed is set, only write changed data.
         """
         async with self.write_lock:
-            await self._setValues(changed=changed)
+            await self.setValues(changed=changed)
 
     async def write_task(self):
         """A background task for updating changed Modbus register values"""

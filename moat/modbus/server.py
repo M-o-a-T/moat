@@ -14,7 +14,6 @@ import time
 import anyio
 from anyio.abc import SocketAttribute
 from moat.util import CtxObj
-from pymodbus.constants import Defaults
 from pymodbus.datastore import ModbusServerContext, ModbusSlaveContext
 from pymodbus.device import ModbusControlBlock, ModbusDeviceIdentification
 from pymodbus.exceptions import NoSuchSlaveException
@@ -291,7 +290,7 @@ class ModbusServer(BaseModbusServer):
         self.framer = ModbusSocketFramer
         self.address = address or "localhost"
         self.port = (
-            port if port is not None else Defaults.Port  # pylint: disable=no-member  # YES IT DOES
+            port if port is not None else 502
         )
 
     async def serve(self, opened:anyio.Event|None=None):

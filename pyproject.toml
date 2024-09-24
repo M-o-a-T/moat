@@ -14,7 +14,7 @@ classifiers = [
 	]
 dependencies = [
 	"anyio ~= 3.0",
-	"pymodbus",
+	"pymodbus ~= 3.6.0",
 	"anyio-serial",
 	"moat-util ~= 0.41.5",
 	"asyncscope ~= 0.8.3",

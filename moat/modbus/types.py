@@ -6,44 +6,31 @@ from typing import List
 
 import anyio
 
-try:
-    from pymodbus.client.common import (
-        ReadCoilsRequest,
-        ReadCoilsResponse,
-        ReadDiscreteInputsRequest,
-        ReadDiscreteInputsResponse,
-        ReadHoldingRegistersRequest,
-        ReadHoldingRegistersResponse,
-        ReadInputRegistersRequest,
-        ReadInputRegistersResponse,
-        WriteMultipleCoilsRequest,
-        WriteMultipleCoilsResponse,
-        WriteMultipleRegistersRequest,
-        WriteMultipleRegistersResponse,
-        WriteSingleCoilRequest,
-        WriteSingleCoilResponse,
-        WriteSingleRegisterRequest,
-        WriteSingleRegisterResponse,
-    )
-except ImportError:
-    from pymodbus.factory import (
-        ReadCoilsRequest,
-        ReadCoilsResponse,
-        ReadDiscreteInputsRequest,
-        ReadDiscreteInputsResponse,
-        ReadHoldingRegistersRequest,
-        ReadHoldingRegistersResponse,
-        ReadInputRegistersRequest,
-        ReadInputRegistersResponse,
-        WriteMultipleCoilsRequest,
-        WriteMultipleCoilsResponse,
-        WriteMultipleRegistersRequest,
-        WriteMultipleRegistersResponse,
-        WriteSingleCoilRequest,
-        WriteSingleCoilResponse,
-        WriteSingleRegisterRequest,
-        WriteSingleRegisterResponse,
-    )
+from pymodbus.register_read_message import (
+    ReadHoldingRegistersRequest,
+    ReadHoldingRegistersResponse,
+    ReadInputRegistersRequest,
+    ReadInputRegistersResponse,
+)
+from pymodbus.register_write_message import (
+    WriteMultipleRegistersRequest,
+    WriteMultipleRegistersResponse,
+    WriteSingleRegisterRequest,
+    WriteSingleRegisterResponse,
+)
+from pymodbus.bit_read_message import (
+    ReadCoilsRequest,
+    ReadCoilsResponse,
+    ReadDiscreteInputsRequest,
+    ReadDiscreteInputsResponse,
+)
+from pymodbus.bit_write_message import (
+    WriteSingleCoilRequest,
+    WriteSingleCoilResponse,
+    WriteMultipleCoilsRequest,
+    WriteMultipleCoilsResponse,
+)
+
 
 import logging
 

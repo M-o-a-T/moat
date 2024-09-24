@@ -291,7 +291,7 @@ class Host(CtxObj, _HostCommon):
                 replies = []
 
                 # check for decoding errors
-                self.framer.processIncomingPacket(data, replies.append, unit=0, single=True)  # bah
+                self.framer.processIncomingPacket(data, replies.append, slave=0, single=True)  # bah
 
             except (
                 IncompleteRead,
@@ -923,7 +923,7 @@ class ValueList(DataBlock):
         if res is None:
             res = {}
         u = self.slot.unit
-        msg = self.kind.encoder(address=start, count=length, unit=u.unit)
+        msg = self.kind.encoder(address=start, count=length, slave=u.unit)
 
         r = await u.host.execute(msg)
 
@@ -955,9 +955,9 @@ class ValueList(DataBlock):
             off += val.len
             res -= val.len
         if len(values) == 1:
-            msg = self.kind.encoder_s(address=start, unit=u.unit, value=values[0])
+            msg = self.kind.encoder_s(address=start, slave=u.unit, value=values[0])
         else:
-            msg = self.kind.encoder_m(address=start, count=length, unit=u.unit, values=values)
+            msg = self.kind.encoder_m(address=start, count=length, slave=u.unit, values=values)
 
         r = await u.host.execute(msg)  # pylint: disable=unused-variable
         # raises an error if failed

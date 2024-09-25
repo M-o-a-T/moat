@@ -99,7 +99,7 @@ class ModbusClient(CtxObj):
         """Run a serial client in an AsyncScope."""
         return await scope.service(f"MC_{num2id(self)}:{port}", self._serial, port, **ser)
 
-    async def conn(self, cfg):
+    def conn(self, cfg):
         """Run a serial OR TCP client according to the config.
 
         @cfg is a dict with either host/port or port/serial keys.

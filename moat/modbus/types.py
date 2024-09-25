@@ -31,6 +31,7 @@ from pymodbus.bit_write_message import (
     WriteMultipleCoilsResponse,
 )
 
+MAX_REQ_LEN=30
 
 import logging
 
@@ -484,9 +485,10 @@ class DataBlock(dict, BaseModbusDataBlock):
     succeeds.
     """
 
-    def __init__(self, max_len=30):
+    def __init__(self, max_rd_len=MAX_REQ_LEN, max_wr_len=MAX_REQ_LEN):
         super().__init__()
-        self.max_len = max_len
+        self.max_rd_len = max_rd_len
+        self.max_wr_len = max_wr_len
         self.changed = anyio.Event()
 
     def reset(self):
@@ -539,7 +541,7 @@ class DataBlock(dict, BaseModbusDataBlock):
             count -= val.len
         return True
 
-    def ranges(self, changed=False):
+    def ranges(self, changed=False, max_len=MAX_REQ_LEN):
         """Iterate over to-be-retrieved/sent range(s).
 
         If @changed is set, skip unmodified items.
@@ -555,7 +557,7 @@ class DataBlock(dict, BaseModbusDataBlock):
             elif start is None:
                 start = offset
                 cur = start + val.len
-            elif cur == offset and (cur + val.len - start) <= self.max_len:
+            elif cur == offset and (cur + val.len - start) <= max_len:
                 cur += val.len
             else:
                 yield (start, cur - start)

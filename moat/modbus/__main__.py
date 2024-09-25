@@ -151,7 +151,8 @@ async def _client(host, port, unit, kind, start, num, type_, values, debug, inte
 
     c = {}
     if maxlen:
-        c["max_req_len"] = maxlen
+        c["max_rd_len"] = maxlen
+        c["max_wr_len"] = maxlen
     async with (
             ModbusClient() as g,
             g.host(host, port, **c) as h,
@@ -231,7 +232,8 @@ async def _serclient(
     from moat.modbus.client import ModbusClient  # pylint: disable=import-outside-toplevel
 
     if maxlen:
-        c["max_req_len"] = maxlen
+        c["max_rd_len"] = maxlen
+        c["max_wr_len"] = maxlen
     async with (
         ModbusClient() as g,
         g.serial(port=port, baudrate=baudrate, stopbits=stopbits, parity=parity, **c) as h,

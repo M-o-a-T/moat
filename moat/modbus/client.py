@@ -22,7 +22,7 @@ from pymodbus.framer.rtu_framer import ModbusRtuFramer
 from pymodbus.framer.socket_framer import ModbusSocketFramer
 from pymodbus.pdu import ModbusExceptions as merror
 
-from .types import BaseValue, DataBlock, TypeCodec
+from .types import BaseValue, DataBlock, TypeCodec, MAX_REQ_LEN
 
 _logger = logging.getLogger(__name__)
 
@@ -35,8 +35,6 @@ __all__ = [
 DISCONNECT_DELAY = 0.1
 RECONNECT_TIMEOUT = 10
 CHECK_STREAM_TIMEOUT = 0.001
-
-MAX_REQ_LEN=30
 
 class ModbusClient(CtxObj):
     """The main bus handler. Use as
@@ -111,15 +109,19 @@ class ModbusClient(CtxObj):
             async with ModbusClient() as g, g.conn(cfg) as c, c.unit(cfg["unit"]) as u:
                 ...
         """
+        kw = {}
+        for k in ("max_rd_len", "max_wr_len"):
+            if k in cfg:
+                kw[k] = cfg[k]
+
         if "serial" in cfg:
             port = cfg.get("port", None)
-            kw = cfg["serial"]
+            kw.update(cfg["serial"])
             if port is not None:
                 kw["port"] = port
             return self.serial(**kw)
 
         elif "host" in cfg or ("port" in cfg and isinstance(cfg["port"],int)):
-            kw = {}
             for k in ("host","port"):
                 try:
                     kw[k] = cfg[k]
@@ -239,11 +241,12 @@ class Host(CtxObj, _HostCommon):
 
     _tg = None
 
-    def __init__(self, gate, addr, port, timeout=10, cap=1, debug=False, max_req_len=MAX_REQ_LEN):
+    def __init__(self, gate, addr, port, timeout=10, cap=1, debug=False, max_rd_len=MAX_REQ_LEN, max_wr_len=MAX_REQ_LEN):
         self.addr = addr
         self.port = port
 
-        self.max_req_len=max_req_len
+        self.max_rd_len=max_rd_len
+        self.max_wr_len=max_wr_len
 
         log = logging.getLogger(f"modbus.{addr}")
         self._trace = log.info if debug else log.debug
@@ -406,11 +409,12 @@ class SerialHost(CtxObj, _HostCommon):
 
     _tg = None
 
-    def __init__(self, gate, /, port, timeout=10, cap=1, debug=False, monitor=None, max_req_len=MAX_REQ_LEN, **ser):
+    def __init__(self, gate, /, port, timeout=10, cap=1, debug=False, monitor=None, max_rd_len=MAX_REQ_LEN, max_wr_len=MAX_REQ_LEN, **ser):
         self.port = port
         self.ser = ser
         self.framer = ModbusRtuFramer(ClientDecoder(), self)
-        self.max_req_len=max_req_len
+        self.max_rd_len=max_rd_len
+        self.max_wr_len=max_wr_len
 
         log = logging.getLogger(f"modbus.{Path(port).name}")
         self._trace = log.info if debug else log.debug
@@ -916,7 +920,7 @@ class ValueList(DataBlock):
     """
 
     def __init__(self, slot, kind):
-        super().__init__(max_len=slot.unit.host.max_req_len)
+        super().__init__(max_rd_len=slot.unit.host.max_rd_len, max_wr_len=slot.unit.host.max_wr_len)
         self.slot = slot
         self.kind = kind
         self.do_write = anyio.Event()
@@ -933,7 +937,7 @@ class ValueList(DataBlock):
         if res is None:
             res = {}
         async with anyio.create_task_group() as tg:
-            for start, length in self.ranges():
+            for start, length in self.ranges(max_len=self.max_rd_len):
                 tg.start_soon(partial(self.readBlock, start, length, res=res))
         return res
 
@@ -942,7 +946,7 @@ class ValueList(DataBlock):
         Send messages writing our values to the bus.
         """
         async with anyio.create_task_group() as tg:
-            for start, length in self.ranges(changed=changed):
+            for start, length in self.ranges(changed=changed, max_len=self.max_wr_len):
                 tg.start_soon(partial(self.writeBlock, start, length))
 
     async def readBlock(self, start, length, *, res=None):

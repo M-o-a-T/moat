@@ -2,6 +2,8 @@ from moat.mqtt.client import open_mqttclient, CodecError
 from moat.modbus.types import HoldingRegisters as H, IntValue as I, SignedIntValue as S
 from moat.modbus.client import ModbusClient
 import anyio
+import logging
+logger = logging.getLogger(__name__)
 
 __all__ = ["run", ]
 
@@ -17,9 +19,8 @@ async def _setup(cfg, u):
 
         await s.getValues()
         def want(reg,val,txt):
-            if reg.value != want:
-                breakpoint()
-                logger.warn(f"Change P5-{reg.start+1 :%02d} from {reg.value} to {val} ({txt})")
+            if reg.value != val:
+                logger.warn(f"Change P{reg.offset//100}-{(reg.offset%100)+1 :02d} from {reg.value} to {val} ({txt})")
                 reg.set(val)
 
         want(wr1,1,"speed percentage")

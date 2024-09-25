@@ -13,3 +13,4 @@ dev:
         baudrate: 19200
         parity: N
       unit: 1
+      max_wr_len: 1

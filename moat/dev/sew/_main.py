@@ -46,10 +46,5 @@ async def cli(obj, sub):
 async def run_(obj):
     cfg = obj.sew
 
-    from moat.util import yprint
-    from moat.mqtt.client import open_mqttclient, CodecError
-
-    yprint(cfg)
     from .control import run
-
-    await run(cfg, name=str(obj.sub))
+    await run(cfg, name="moat."+str(obj.sub))

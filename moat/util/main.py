@@ -253,7 +253,7 @@ def load_ext(name, *attr, err=False):
     dpe = ".".join(path[:-1])
     try:
         mod = importlib.import_module(dp)
-    except (ModuleNotFoundError, FileNotFoundError) as exc:
+    except ModuleNotFoundError as exc:
         if err:
             raise
         if err is not None:
@@ -261,6 +261,10 @@ def load_ext(name, *attr, err=False):
         if (
             exc.name != dp and exc.name != dpe and not exc.name.startswith(f"{dp}._")  # pylint: disable=no-member ## duh?
         ):
+            raise
+        return None
+    except FileNotFoundError as exc:
+        if err:
             raise
         return None
     else:

@@ -710,6 +710,7 @@ class Slot(CtxObj):
         finally:
             self.run_lock = None
             self._running = False
+            del self.unit.slots[self.slot]
 
     def start(self):
         """

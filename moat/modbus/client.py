@@ -745,7 +745,7 @@ class Slot(CtxObj):
             k = self.modes[typ]
         except KeyError:
             self.modes[typ] = k = ValueList(self, typ)
-        val = cls() if isinstance(cls, type) else cls
+        val = cls(offset=offset) if isinstance(cls, type) else cls
         k.add(offset, val)
         return val
 

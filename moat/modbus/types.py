@@ -59,11 +59,12 @@ class BaseValue:
     block: "DataBlock" = None
     to_write: int = None
 
-    def __init__(self, value=None, idem=True):
+    def __init__(self, offset=None, value=None, idem=True):
         self.changed = anyio.Event()
         self._value = value
         self._value_w = value
         self.idem = idem
+        self.offset = offset
 
         if value is not None:
             self.gen = 1
@@ -144,7 +145,15 @@ class BaseValue:
         return f"‹{self.value}›"
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}:{self.value}>"
+        res = f"<{self.__class__.__name__}"
+        if self.offset is not None:
+            res += f" @{self.offset}"
+        res += f":{self._value}"
+        if self._value_w != self._value:
+            res += f":{self._value_w}"
+        res += ">"
+
+        return res
 
     def __aiter__(self):
         return ValueIterator(self)

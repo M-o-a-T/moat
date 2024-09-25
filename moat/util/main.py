@@ -33,6 +33,7 @@ logger = logging.getLogger("_loader")
 __all__ = [
     "main_",
     "read_cfg",
+    "load_cfg",
     "wrap_main",
     "Loader",
     "load_subgroup",

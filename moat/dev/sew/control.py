@@ -15,7 +15,7 @@ async def _setup(cfg, u):
         rd2 = s.add(H,512,S)  # P5-13
         #rd3 = s.add(H,513,S)  # P5-14
 
-        await s._getValues()
+        await s.getValues()
         def want(reg,val,txt):
             if reg.value != want:
                 breakpoint()
@@ -28,7 +28,7 @@ async def _setup(cfg, u):
         want(rd1,1,"speed percentage")
         want(rd2,4,"power")
         #want(rd3,??)
-        await s._setValues(changed=True)
+        await s.setValues(changed=True)
 
 
 async def run(cfg, name="moat.dev.sew"):

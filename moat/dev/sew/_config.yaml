@@ -2,6 +2,7 @@ dev:
   sew:
     power: !P :mr.moat.sew.power
     state: !P :mr.moat.sew.state
+    timeout: 1.0
     mqtt:
       codec: msgpack
       will:

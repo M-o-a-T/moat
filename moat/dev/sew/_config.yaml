@@ -7,3 +7,9 @@ dev:
       will:
         topic: !P :mr.moat.sew.state
         message: null
+    modbus:
+      port: "/dev/null"  # EDIT
+      serial:
+        baudrate: 19200
+        parity: N
+      unit: 1

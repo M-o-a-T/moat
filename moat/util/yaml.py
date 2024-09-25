@@ -11,7 +11,10 @@ from collections.abc import Mapping, Sequence
 import ruyaml as yaml
 
 from .dict import attrdict
-from .msgpack import Proxy
+try:
+    from .msgpack import Proxy
+except ImportError:
+    Proxy = None
 from .path import Path
 from .proxy import name2obj
 
@@ -89,7 +92,8 @@ SafeConstructor.add_constructor("!P", Path._make)
 
 SafeConstructor.add_constructor("!env", read_env)
 
-SafeRepresenter.add_representer(Proxy, _proxy_repr)
+if Proxy is not None:
+    SafeRepresenter.add_representer(Proxy, _proxy_repr)
 SafeConstructor.add_constructor("!R", name2obj)
 
 

@@ -1,12 +1,14 @@
 """
-This module contains various helper functions and classes.
+This module contains msgpack-based helper functions and classes.
+
+TODO add CBOR.
 """
 
 from __future__ import annotations
 
 import anyio
 
-from . import packer, stream_unpacker
+from .msgpack import packer, stream_unpacker
 
 __all__ = ["MsgReader", "MsgWriter"]
 

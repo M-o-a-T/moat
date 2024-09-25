@@ -15,10 +15,15 @@ from functools import partial
 
 import msgpack
 
-from . import packer, stream_unpacker
 from .path import Path
 from .proxy import Proxy, _CProxy, obj2name
 
+__all__ = ["packer", "unpacker", "stream_unpacker"]
+
+try:
+    from . import cbor as _cbor  # noqa:E402
+except ImportError:
+    pass
 
 def _encode(data):
     if isinstance(data, int) and data >= 1 << 64:
@@ -96,3 +101,42 @@ def _decode(code, data):
         p.mark = mark
         return p
     return msgpack.ExtType(code, data)
+
+
+def packer(*a, cbor=False, **k):
+    """single message packer"""
+    if cbor:
+        return _cbor.packb(*a, **k)
+    # ruff:noqa:SLF001 pylint:disable=protected-access
+    return _mp.packb(*a, strict_types=False, use_bin_type=True, default=_msgpack._encode, **k)
+
+
+def unpacker(*a, cbor=False, **k):
+    """single message unpacker"""
+    if cbor:
+        return _cbor.unpackb(*a, **k)
+    return _mp.unpackb(
+        *a,
+        object_pairs_hook=attrdict,
+        strict_map_key=False,
+        raw=False,
+        use_list=False,
+        ext_hook=_msgpack._decode,  # pylint:disable=protected-access
+        **k,
+    )
+
+
+def stream_unpacker(*a, cbor=False, **k):
+    """stream unpacker factory"""
+    if cbor:
+        return _cbor.Unpacker(*a, **k)
+    return _mp.Unpacker(
+        *a,
+        object_pairs_hook=attrdict,
+        strict_map_key=False,
+        raw=False,
+        use_list=False,
+        ext_hook=_msgpack._decode,  # pylint:disable=protected-access
+        **k,
+    )
+

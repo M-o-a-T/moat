@@ -22,7 +22,10 @@ from .dict import attrdict, to_attrdict
 from .exc import ungroup
 from .impl import NotGiven
 from .merge import merge
-from .msgpack import Proxy
+try:
+    from .msgpack import Proxy
+except ImportError:
+    Proxy = None
 from .path import P, path_eval
 from .yaml import yload
 
@@ -173,9 +176,12 @@ def process_args(val, vars_=(), eval_=(), path_=(), proxy_=(), no_path=False, vs
             if no_path:
                 v = tuple(v)
             yield k, v
-        for k, v in proxy_:
-            v = Proxy(v)
-            yield k, v
+        if proxy_:
+            if Proxy is None:
+                raise ImportError("msgpack")
+            for k, v in proxy_:
+                v = Proxy(v)
+                yield k, v
 
     for k, v in data():
         if not k:
@@ -513,7 +519,7 @@ class Loader(click.Group):
         return sub_pre, sub_post, ext_pre, ext_post
 
     def list_commands(self, ctx):
-        "add subpackages"
+        "show subpackages"
         rv = super().list_commands(ctx)
         sub_pre, sub_post, ext_pre, ext_post = self.get_sub_ext(ctx)
         logger.debug("* List: %s.*.%s / %s.*.%s", sub_pre, sub_post, ext_pre, ext_post)

@@ -12,7 +12,6 @@ from time import time
 
 import asyncclick as click
 
-from . import packer, stream_unpacker
 from .main import load_subgroup
 from .path import P, Path, path_eval
 from .times import humandelta, time_until
@@ -107,6 +106,8 @@ def msgpack(decode, path):
     moat util msgpack data.yaml > data.mp    # encode
     moat util msgpack -d data.mp > data.yaml # decode
     """
+    from .msgpack import packer, stream_unpacker
+
     if decode:
         with sys.stdin.buffer if path == "-" else open(path, "rb") as f:
             n = 0

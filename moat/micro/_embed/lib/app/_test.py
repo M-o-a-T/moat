@@ -90,7 +90,7 @@ class Cons(BaseCmd):
 
     async def setup(self):
         await super().setup()
-        self.con = self.root.sub_at(*self.cfg["cons"])
+        self.con = self.root.sub_at(self.cfg["cons"])
         if self.cfg.get("prefix", None) is None:
             self.q = Queue(self.cfg.get("lines", 10))
 

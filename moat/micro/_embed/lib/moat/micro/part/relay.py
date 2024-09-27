@@ -39,7 +39,7 @@ class Relay(BaseCmd):
         await self.cmd_w()
 
     async def run(self):  # noqa:D102
-        self.pin = self.root.sub_at(*self.cfg.pin)
+        self.pin = self.root.sub_at(self.cfg.pin)
         async with TaskGroup() as self.__tg:
             await super().run()
 

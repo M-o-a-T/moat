@@ -29,7 +29,7 @@ def Raw(*a, **k):
     class _Raw(BaseCmdBBM):
         async def stream(self) -> BaseBuf:
             "returns the link"
-            return await AC_use(self, self.root.sub_at(*self.cfg["path"]))
+            return await AC_use(self, self.root.sub_at(self.cfg["path"]))
 
     return _Raw(*a, **k)
 
@@ -48,7 +48,7 @@ def Fwd(*a, **k):
         async def setup(self):
             "create a subdispatcher"
             await super().setup()
-            self.sd = self.root.sub_at(*self.cfg["path"])
+            self.sd = self.root.sub_at(self.cfg["path"])
 
         def dispatch(self, action, msg, **kw) -> Awaitable:
             # pylint:disable=invalid-overridden-method

@@ -20,7 +20,7 @@ async def main(config,link,path):
     async with (
             Dispatch(cf, run=True, sig=True) as dsp,
             kv_client(**cfg["kv"]) as kv,
-            dsp.sub_at(*path) as c:
+            dsp.sub_at(path) as c:
         thl = await m.scan()
         tw={}
 

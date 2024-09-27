@@ -22,7 +22,7 @@ class _BBMCmd(Base):
         await Base.setup(self)
         # not using super() because {Msg,Buf,Base}Cmd pull in inheritance
         # from BaseConn which calls ``.stream`` which we don't have, or want
-        self.s = self.cmd.root.sub_at(*self.cfg["path"])
+        self.s = self.cmd.root.sub_at(self.cfg["path"])
 
 
 class MsgCmd(_BBMCmd, BaseMsg):

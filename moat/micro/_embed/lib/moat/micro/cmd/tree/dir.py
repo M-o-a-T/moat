@@ -269,7 +269,6 @@ class Dispatch(DirCmd):
         You can call this either with a sequence of path elements
         or with a path.
         """
-        # pylint:disable=import-outside-toplevel,cyclic-import,redefined-outer-name
         if len(p) == 1 and isinstance(p[0], Path):
             p = p[0]
         return SubDispatch(self, p)

@@ -304,7 +304,7 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
         p = self.cfg["path"]
         if isinstance(p, str):
             raise TypeError(f"Need a path, not {p !r}")
-        self._link = self.cfg["_cmd"].root.sub_at(*p)
+        self._link = self.cfg["_cmd"].root.sub_at(p)
 
     def send(self, m) -> Awaitable:
         """Send message data."""

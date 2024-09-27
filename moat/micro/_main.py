@@ -255,7 +255,7 @@ async def setup(
     if kill:
         async with (
             Dispatch(cfg, run=True) as dsp,
-            dsp.sub_at(*cfg.remote) as sd,
+            dsp.sub_at(cfg.remote) as sd,
             RemoteBufAnyio(sd) as ser,
             DirectREPL(ser) as repl,
         ):
@@ -265,7 +265,7 @@ async def setup(
 
     async with (
         Dispatch(cfg, run=True) as dsp,
-        dsp.sub_at(*cfg.remote) as sd,
+        dsp.sub_at(cfg.remote) as sd,
         RemoteBufAnyio(sd) as ser,
         DirectREPL(ser) as repl,
     ):
@@ -547,7 +547,7 @@ async def cfg_(
     async with (
         Dispatch(obj.cfg, run=True, sig=True) as dsp,
         dsp.cfg_at(*cfg.path.cfg) as cf,
-        dsp.sub_at(*cfg.path.fs) as fs,
+        dsp.sub_at(cfg.path.fs) as fs,
     ):
         has_attrs = any(a for a in attrs.values())
 

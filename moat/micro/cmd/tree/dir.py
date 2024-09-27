@@ -10,6 +10,12 @@ from moat.util import NotGiven, attrdict
 from ._dir import Dispatch as _Dispatch  # isort:skip
 from ._dir import BaseSubCmd, BaseSuperCmd, DirCmd, SubDispatch  # noqa:F401
 
+# Typing
+from typing import TYPE_CHECKING  # isort:skip
+
+if TYPE_CHECKING:
+    from moat.util import Path
+
 
 class _NotGiven:
     pass
@@ -59,8 +65,8 @@ class CfgStore:
     cfg: dict = None
     subpath = ()
 
-    def __init__(self, dispatch, path):
-        self.sd = dispatch.sub_at(*path)
+    def __init__(self, dispatch, path: Path):
+        self.sd = dispatch.sub_at(path)
 
     async def __aenter__(self):
         return self

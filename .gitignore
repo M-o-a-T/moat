@@ -44,3 +44,5 @@ __pycache__/
 /.venv
 /venv/
 /wheels/
+
+/moat/micro/_embed/lib/moat/micro/_version.py

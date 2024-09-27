@@ -58,7 +58,7 @@ class ModbusClient(CtxObj):
                 self._tg = None
                 self.hosts = {}
 
-    def host(self, addr, port=None):
+    def host(self, addr, port=None, **kw):
         """Return a host object for connections to this address+port.
 
         You cannot create two host objects for the same destination.
@@ -68,7 +68,7 @@ class ModbusClient(CtxObj):
         if (addr, port) in self.hosts:
             raise KeyError(f"Host {addr}:{port} already exists")
 
-        h = Host(self, addr, port)
+        h = Host(self, addr, port, **kw)
         return h
 
     async def _host(self, addr, port=None):

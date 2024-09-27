@@ -11,8 +11,8 @@ from moat.util import load_subgroup
 log = logging.getLogger()
 
 
-@load_subgroup(sub_pre="moat.bms")
+@load_subgroup(sub_pre="moat.ems")
 @click.pass_obj
 async def cli(obj):
-    """Battery Manager"""
+    """Energy Management System"""
     obj  # pylint: disable=pointless-statement  # TODO

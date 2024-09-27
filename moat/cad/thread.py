@@ -51,9 +51,9 @@ def AngledThread(
 
     return _t.Thread(
         apex_radius=apex_radius,
-        apex_width=0,
+        apex_width=0.1,
         root_radius=radius,
-        root_width=root_width,
+        root_width=root_width-0.1,
         simple=simple,
         **kw,
     )

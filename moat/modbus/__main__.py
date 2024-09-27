@@ -231,6 +231,7 @@ async def _serclient(
 
     from moat.modbus.client import ModbusClient  # pylint: disable=import-outside-toplevel
 
+    c = {}
     if maxlen:
         c["max_rd_len"] = maxlen
         c["max_wr_len"] = maxlen

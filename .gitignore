@@ -43,6 +43,7 @@ __pycache__/
 /.venv
 /venv/
 /wheels/
+*.stl
 
 # Debian packaging
 /debian/

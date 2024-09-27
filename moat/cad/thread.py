@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from math import pi, tan
 
-import cq_warehouse.thread as _t
+import bd_warehouse.thread as _t
 
 import cadquery
 

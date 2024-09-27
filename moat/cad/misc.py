@@ -46,9 +46,9 @@ def Slider(x, y, size=2, inset=0, chamfer=None, back=True, centered=True):
         d = -1 if offset > 0 else 1
         ws = (
             ws.moveTo(offset, 0)
-            .line(0, size * 3 + cap + inset + ifix)
-            .line(d * (size-ifix), -cap)
-            .line(d * (size + inset+ifix), -size - inset-ifix)
+            .line(0, size * 3 + cap + inset)
+            .line(d * (size), -cap)
+            .line(d * (size + inset), -size - inset)
             .line(-d * size, -size)
             .line(0, -size)
             .close()
@@ -92,7 +92,7 @@ def Mount(length, inner, outer=None, cone=0):
         )
     return ws
 
-def WoodScrew(height, outer, inner, angle=45, head=None):
+def WoodScrew(height, outer, inner, angle=45, head=None, negate=False):
     """The mount for a wood screw, i.e. one with a non-flat head.
 
     Hole not included.
@@ -101,7 +101,17 @@ def WoodScrew(height, outer, inner, angle=45, head=None):
     is @inner and the head's @angle starts at the @head (diameter)'s edge.
     """
     if head is None:
-        head = inner/2
+        head = inner*3/2
+
+    h_head = (head-inner)/2*tan(rad(angle))
+
+    if negate:
+        return (cq.Workplane("XY")
+            .at(0,0)
+            .circle(inner/2)
+            .extrude(height)
+            .add(Cone(inner/2,head/2,(head-inner)/2*tan(rad(angle))).off_z(height-h_head))
+            )
 
     ws = (cq.Workplane("XY")
             .at(0,0)
@@ -110,7 +120,7 @@ def WoodScrew(height, outer, inner, angle=45, head=None):
             .extrude(height)
             #.faces(">Z").workplane()
             #.circle(head/2)
-            .cut(Cone(head/2,inner/2,(head-inner)/2*tan(rad(angle))).rot_x(180).off_z(height))
+            .cut(Cone(inner/2,head/2,(head-inner)/2*tan(rad(angle))).off_z(height-h_head))
             )
 
     return ws

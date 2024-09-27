@@ -1,8 +1,14 @@
 anyio
 anyio_serial
+trio
+asyncclick
+asyncscope
+git
+msgpack
+simpleeval
+ruyaml
+
 cffi
-gitpython
 packaging
 pymodbus
 tomlkit
-trio

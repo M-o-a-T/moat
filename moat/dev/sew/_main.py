@@ -44,7 +44,23 @@ async def cli(obj, sub):
 @cli.command("run")
 @click.pass_obj
 async def run_(obj):
+    """
+    Run a simple SEW MOVITRAC control process
+    """
     cfg = obj.sew
 
     from .control import run
     await run(cfg, name="moat."+str(obj.sub))
+
+
+@cli.command("set")
+@click.pass_obj
+@click.argument("value", type=float)
+async def set_(obj, value):
+    cfg = obj.sew
+    if value < -1 or value > 1:
+        log.error("Value must be between -1 and 1")
+        return
+
+    from .control import set
+    await set(cfg, value)

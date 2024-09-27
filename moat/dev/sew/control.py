@@ -42,7 +42,7 @@ class _Run:
             #want(rd3,??)
             await s.setValues(changed=True)
 
-    async def _stop(self):
+    async def stop(self):
         self.ctrl.set(1)
         self.out_pct.set(0)
         await self.sc.setValues()
@@ -65,9 +65,11 @@ class _Run:
         prev_pct = 0
         prev_power = 0
         rep = anyio.current_time()
+        oreptxt = ""
 
         while True:
             await si.getValues()
+
             if rep <= anyio.current_time() or info.value != prev_info or in_pct.value != prev_pct or in_power.value != prev_power:
                 rep = anyio.current_time()+REP
                 v=info.value
@@ -95,8 +97,14 @@ class _Run:
                     report.state.state = "tech"
                 elif vs == 0xc:
                     report.state.state = "ref"
+                else:
+                    report.state.state = vs
                 self.tg.start_soon(self.bus.publish, topic, report, QOS_1, False)
-                print(srepr(report))
+
+                report_txt = srepr(report)
+                if report_txt != oreptxt:
+                    print(report_txt)
+                    oreptxt = report_txt
 
                 prev_info = info.value
                 prev_pct = in_pct.value
@@ -112,6 +120,25 @@ class _Run:
             else:
                 logger.warning("DELAY %.3f", t2-t)
                 t=anyio.current_time()+timeout
+
+    async def _control(self, task_status=anyio.TASK_STATUS_IGNORED):
+        async with self.bus.subscription("/".join(self.cfg["power"])) as sub:
+            task_status.started()
+            async for msg in sub:
+                if -1 <= msg.data <= 1:
+                    await self.set_power(msg.data)
+                else:
+                    logger.error("?PWR %r", msg.data)
+
+    async def set_power(self, pwr):
+        if abs(pwr) < 0.001:
+            logger.info("STOP")
+            return await self.stop()
+
+        logger.info("RUN %.3f", pwr)
+        self.out_pct.set(int(0x4000 * pwr))
+        self.ctrl.set(0x06)
+        await self.sc.setValues(changed=True)
 
     async def run(self):
         cfg = self.cfg
@@ -139,10 +166,11 @@ class _Run:
                 self.in_pct = si.add(H,6,I)
                 self.in_power = si.add(H,7,I)
 
-                await self._stop()
+                await self.stop()
                 await self._setup()
 
                 await tg.start(self._report)
+                await tg.start(self._control)
 
 
 
@@ -151,3 +179,6 @@ async def run(*a,**kw):
     """
     await _Run(*a,**kw).run()
 
+async def set(cfg, val):
+    async with open_mqttclient(config=cfg["mqtt"]) as bus:
+        await bus.publish("/".join(cfg["power"]), val, QOS_1, False)

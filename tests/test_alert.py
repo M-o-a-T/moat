@@ -8,6 +8,7 @@ import pytest
 from moat.micro._test import mpy_stack
 from moat.micro.alert import Alert as _Alert
 from moat.micro.compat import Event, L, TaskGroup, sleep_ms
+from moat.util import P
 
 CFG = """
 apps:
@@ -55,9 +56,9 @@ async def test_ary(tmp_path):
     "fake alert test"
     async with mpy_stack(tmp_path, CFG) as d, TaskGroup() as tg:
         # ruff: noqa: F841
-        a = d.sub_at("a")
-        b = d.sub_at("b")
-        c = d.sub_at("c")
+        a = d.sub_at(P("a"))
+        b = d.sub_at(P("b"))
+        c = d.sub_at(P("c"))
 
         if L:
             await d.wait_ready()

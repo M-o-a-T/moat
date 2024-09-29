@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import yload
+from moat.util import yload, P
 from moat.micro._test import mpy_stack
 
 CFGW = """
@@ -46,9 +46,9 @@ c:
 async def test_loop(tmp_path, cfg):
     "relay test"
     async with mpy_stack(tmp_path, cfg) as d:
-        a = d.sub_at("a")
-        b = d.sub_at("b")
-        c = d.sub_at("c")
+        a = d.sub_at(P("a"))
+        b = d.sub_at(P("b"))
+        c = d.sub_at(P("c"))
 
         await a.s("c")
         await b.s("a")
@@ -98,8 +98,8 @@ b:
 async def test_loopmsg(tmp_path):
     "relay test"
     async with mpy_stack(tmp_path, CFGL) as d:
-        a = d.sub_at("a")
-        b = d.sub_at("b")
+        a = d.sub_at(P("a"))
+        b = d.sub_at(P("b"))
 
         await a.s("b")
         await b.s("a")

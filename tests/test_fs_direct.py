@@ -7,6 +7,7 @@ import anyio
 import pytest
 
 from moat.micro._test import mpy_stack
+from moat.util import P
 
 pytestmark = pytest.mark.anyio
 
@@ -35,7 +36,7 @@ async def test_fuse(tmp_path):
     r = anyio.Path(tmp_path) / "root"
     async with mpy_stack(tmp_path, CFG, {"r": {"cfg": {"f": {"root": str(r)}}}}) as d:
         await p.mkdir()
-        async with d.sub_at("r", "f") as w:
+        async with d.sub_at(P("r.f")) as w:
             await w.new(p="test")
             f = await w.open(p="test", m="w")
             n = await w.wr(f=f, d="Fubar\n")

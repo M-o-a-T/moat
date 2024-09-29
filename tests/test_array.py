@@ -6,6 +6,7 @@ from __future__ import annotations
 import pytest
 
 from moat.micro._test import mpy_stack
+from moat.util import P
 
 CFG = """
 apps:
@@ -27,7 +28,7 @@ a:
 async def test_ary(tmp_path):
     "fake array test"
     async with mpy_stack(tmp_path, CFG) as d:  # , d.cfg_at("c") as cf:
-        a = d.sub_at("a")
+        a = d.sub_at(P("a"))
         assert False is await d.send("a", 0, "r")
         assert True is await d.send("a", 1, "r")
         assert False is await d.send("a", 2, "r")

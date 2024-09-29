@@ -262,15 +262,13 @@ class Dispatch(DirCmd):
             raise
         return self
 
-    def sub_at(self, *p):
+    def sub_at(self, p: Path):
         """
         Returns a SubDispatch to this path.
 
         You can call this either with a sequence of path elements
         or with a path.
         """
-        if len(p) == 1 and isinstance(p[0], Path):
-            p = p[0]
         return SubDispatch(self, p)
 
     @property
@@ -345,10 +343,8 @@ class _SubDispatch:
             "forwards to the destination"
             return self._dest.wait_ready(wait=wait)
 
-    def sub_at(self, *p):
+    def sub_at(self, p: Path):
         "create a sub-subdispatcher"
-        if len(p) == 1 and isinstance(p[0], Path):
-            p = p[0]
         return SubDispatch(self.root, self._path + p)
 
     async def __aenter__(self):

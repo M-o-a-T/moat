@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import NotGiven, as_proxy, to_attrdict
+from moat.util import NotGiven, as_proxy, to_attrdict, P
 from moat.micro._test import mpy_stack
 from moat.micro.compat import ticks_diff, ticks_ms
 
@@ -96,7 +96,7 @@ async def test_iter_m(tmp_path):
         assert 450 < ticks_diff(t2, t1) < 880
 
         # now do the same thing with a subdispatcher
-        s = d.sub_at("r", "b")
+        s = d.sub_at(P("r.b"))
 
         res = []
         async with s.it_it(200, lim=3) as it:
@@ -116,7 +116,7 @@ async def test_iter_m(tmp_path):
         assert 450 < ticks_diff(t2, t1) < 880
 
         # now do the same thing with a partial subdispatcher
-        s = d.sub_at("r")
+        s = d.sub_at(P("r"))
 
         res = []
         async with s.it_b(200, "it", lim=3) as it:
@@ -207,7 +207,7 @@ l:
 async def test_eval(tmp_path, cons):
     "test proxying"
     cf2 = {} if cons is None else {"l": {"link": {"cons": cons}}}
-    async with mpy_stack(tmp_path, LCFG, cf2) as d, d.sub_at("l", "_sys", "eval") as req:
+    async with mpy_stack(tmp_path, LCFG, cf2) as d, d.sub_at(P("l._sys.eval")) as req:
         from pprint import pprint  # pylint:disable=import-outside-toplevel
 
         dr = await d.send("l", "dir_")
@@ -239,7 +239,7 @@ async def test_eval(tmp_path, cons):
 
 async def test_msgpack(tmp_path):
     "test proxying"
-    async with mpy_stack(tmp_path, CFG) as d, d.sub_at("r", "_sys", "eval") as req:
+    async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r._sys.eval")) as req:
         from pprint import pprint  # pylint:disable=import-outside-toplevel
 
         dr = await d.send("r", "dir_")

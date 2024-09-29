@@ -7,6 +7,7 @@ import pytest
 
 from moat.micro._test import mpy_stack
 from moat.micro.compat import sleep_ms
+from moat.util import P
 
 CFG = """
 apps:
@@ -26,8 +27,8 @@ p:
 async def test_rly(tmp_path):
     "fake relay test"
     async with mpy_stack(tmp_path, CFG) as d:
-        r = d.sub_at("r")
-        p = d.sub_at("p")
+        r = d.sub_at(P("r"))
+        p = d.sub_at(P("p"))
 
         # this starts the min-on timer 50.
         await p.w(v=True)

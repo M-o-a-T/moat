@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import NotGiven
+from moat.util import NotGiven, P
 from moat.micro._test import mpy_stack
 from moat.micro.compat import log, sleep_ms
 from moat.micro.errors import StoppedError
@@ -51,7 +51,7 @@ r:
 async def test_wdt(tmp_path, guard):
     "basic watchdog test"
     ended = False
-    async with mpy_stack(tmp_path, CFG) as d, d.sub_at("r", "b") as r, d.cfg_at("r", "c") as c:
+    async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as r, d.cfg_at("r", "c") as c:
         res = await r.echo(m="hello")
         assert res == dict(r="hello")
 
@@ -68,7 +68,7 @@ async def test_wdt(tmp_path, guard):
             },
             sync=True,
         )
-        async with d.sub_at("r", "w") as wd:
+        async with d.sub_at(P("r.w")) as wd:
             await sleep_ms(TT / 2)
             await wd.x(n=1)
             await sleep_ms(TT / 2)
@@ -85,7 +85,7 @@ async def test_wdt_off(tmp_path):
     """
     Check that the watchdog can be removed
     """
-    async with mpy_stack(tmp_path, CFG) as d, d.sub_at("r", "b") as r, d.cfg_at("r", "c") as c:
+    async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as r, d.cfg_at("r", "c") as c:
         await c.set(
             {
                 "apps": {"w1": "wdt.Cmd"},
@@ -93,7 +93,7 @@ async def test_wdt_off(tmp_path):
             },
             sync=True,
         )
-        async with d.sub_at("r", "w1") as wd:
+        async with d.sub_at(P("r.w1")) as wd:
             await sleep_ms(TT)
             await wd.x()
             await sleep_ms(TT)
@@ -117,7 +117,7 @@ async def test_wdt_update(tmp_path):
     Check that the watchdog can be updated
     """
     ended = False
-    async with mpy_stack(tmp_path, CFG) as d, d.sub_at("r", "b") as r, d.cfg_at("r", "c") as c:
+    async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as r, d.cfg_at("r", "c") as c:
         await c.set(
             {
                 "apps": {"w": "wdt.Cmd"},
@@ -126,7 +126,7 @@ async def test_wdt_update(tmp_path):
             sync=True,
         )
 
-        async with d.sub_at("r", "w") as wd:
+        async with d.sub_at(P("r.w")) as wd:
             await sleep_ms(TT)
             await wd.x(n=1)
             await sleep_ms(TT)

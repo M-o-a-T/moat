@@ -13,10 +13,11 @@ from __future__ import annotations
 
 from functools import partial
 
-import msgpack
+import msgpack as _msgpack
 
 from .path import Path
 from .proxy import Proxy, _CProxy, obj2name
+from .dict import attrdict
 
 __all__ = ["packer", "unpacker", "stream_unpacker"]
 
@@ -28,22 +29,22 @@ except ImportError:
 def _encode(data):
     if isinstance(data, int) and data >= 1 << 64:
         # bignum
-        return msgpack.ExtType(2, data.to_bytes((data.bit_length() + 7) // 8, "big"))
+        return _msgpack.ExtType(2, data.to_bytes((data.bit_length() + 7) // 8, "big"))
     if isinstance(data, Path):
         # Path
         # XXX the mark is dropped until everybody understands type 6
         #   if data.mark:
-        #      return msgpack.ExtType(6, packer(data.mark) + b"".join(packer(x) for x in data))
-        return msgpack.ExtType(3, b"".join(packer(x) for x in data))
+        #      return _msgpack.ExtType(6, packer(data.mark) + b"".join(packer(x) for x in data))
+        return _msgpack.ExtType(3, b"".join(packer(x) for x in data))
     if isinstance(data, Proxy):
         # Proxy object
-        return msgpack.ExtType(5, packer(data.name) + b"".join(packer(x) for x in data.data))
+        return _msgpack.ExtType(5, packer(data.name) + b"".join(packer(x) for x in data.data))
     try:
         name = obj2name(data)
     except KeyError:
         pass
     else:
-        return msgpack.ExtType(4, name.encode("utf-8"))
+        return _msgpack.ExtType(4, name.encode("utf-8"))
 
     try:
         name = obj2name(type(data))
@@ -53,7 +54,7 @@ def _encode(data):
         p = data.__getstate__()
         if not isinstance(p, (list, tuple)):
             p = (p,)
-        return msgpack.ExtType(5, packer(name) + b"".join(packer(x) for x in p))
+        return _msgpack.ExtType(5, packer(name) + b"".join(packer(x) for x in p))
 
     # XXX we crash instead of sending an unnamed proxy
     # TODO sending a proxied object a second time will build a new one
@@ -100,7 +101,7 @@ def _decode(code, data):
         p = Path(*s)
         p.mark = mark
         return p
-    return msgpack.ExtType(code, data)
+    return _msgpack.ExtType(code, data)
 
 
 def packer(*a, cbor=False, **k):
@@ -108,20 +109,20 @@ def packer(*a, cbor=False, **k):
     if cbor:
         return _cbor.packb(*a, **k)
     # ruff:noqa:SLF001 pylint:disable=protected-access
-    return _mp.packb(*a, strict_types=False, use_bin_type=True, default=_msgpack._encode, **k)
+    return _msgpack.packb(*a, strict_types=False, use_bin_type=True, default=_encode, **k)
 
 
 def unpacker(*a, cbor=False, **k):
     """single message unpacker"""
     if cbor:
         return _cbor.unpackb(*a, **k)
-    return _mp.unpackb(
+    return _msgpack.unpackb(
         *a,
         object_pairs_hook=attrdict,
         strict_map_key=False,
         raw=False,
         use_list=False,
-        ext_hook=_msgpack._decode,  # pylint:disable=protected-access
+        ext_hook=_decode,  # pylint:disable=protected-access
         **k,
     )
 
@@ -130,13 +131,13 @@ def stream_unpacker(*a, cbor=False, **k):
     """stream unpacker factory"""
     if cbor:
         return _cbor.Unpacker(*a, **k)
-    return _mp.Unpacker(
+    return _msgpack.Unpacker(
         *a,
         object_pairs_hook=attrdict,
         strict_map_key=False,
         raw=False,
         use_list=False,
-        ext_hook=_msgpack._decode,  # pylint:disable=protected-access
+        ext_hook=_decode,  # pylint:disable=protected-access
         **k,
     )
 

@@ -27,7 +27,7 @@ a:
 @pytest.mark.anyio()
 async def test_ary(tmp_path):
     "fake array test"
-    async with mpy_stack(tmp_path, CFG) as d:  # , d.cfg_at("c") as cf:
+    async with mpy_stack(tmp_path, CFG) as d:  # , d.cfg_at(P("c")) as cf:
         a = d.sub_at(P("a"))
         assert False is await d.send("a", 0, "r")
         assert True is await d.send("a", 1, "r")

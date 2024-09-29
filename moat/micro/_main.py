@@ -546,7 +546,7 @@ async def cfg_(
 
     async with (
         Dispatch(obj.cfg, run=True, sig=True) as dsp,
-        dsp.cfg_at(*cfg.path.cfg) as cf,
+        dsp.cfg_at(cfg.path.cfg) as cf,
         dsp.sub_at(cfg.path.fs) as fs,
     ):
         has_attrs = any(a for a in attrs.values())

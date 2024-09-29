@@ -154,7 +154,7 @@ async def test_stack(tmp_path):
         async with (
             mpy_stack(tmp_path / "x", cfg.micro.connect) as d,
             d.sub_at(P("r.s")) as s,
-            d.cfg_at("r", "s", "c") as cfg,
+            d.cfg_at(P("r.s.c")) as cfg,
         ):
             # First a couple of command tests
             res = await rm("cmd dir_", do_stdout=True)

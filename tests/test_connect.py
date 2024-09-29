@@ -9,6 +9,7 @@ from contextlib import suppress
 
 from moat.micro._test import mpy_stack
 from moat.micro.compat import sleep_ms
+from moat.util import P
 
 pytestmark = pytest.mark.anyio
 
@@ -74,7 +75,7 @@ async def test_net(tmp_path, server_first, link_in, unix):
             sync=True,
         )
 
-    async with mpy_stack(tmp_path, CFG1) as d, d.cfg_at("c") as c:
+    async with mpy_stack(tmp_path, CFG1) as d, d.cfg_at(P("c")) as c:
         await (set_server if server_first else set_client)(c)
         await sleep_ms(100)
         await (set_client if server_first else set_server)(c)

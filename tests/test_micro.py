@@ -153,7 +153,7 @@ async def test_modes(tmp_path, lossy, guarded):
 
 async def test_cfg(tmp_path):
     "test config updating"
-    async with mpy_stack(tmp_path, CFG) as d, d.cfg_at("r", "c") as cfg:
+    async with mpy_stack(tmp_path, CFG) as d, d.cfg_at(P("r.c")) as cfg:
         cf = to_attrdict(await cfg.get())
         assert cf.tt.a == "b"
         cf.tt.a = "x"

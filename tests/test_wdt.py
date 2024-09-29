@@ -51,7 +51,7 @@ r:
 async def test_wdt(tmp_path, guard):
     "basic watchdog test"
     ended = False
-    async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as r, d.cfg_at("r", "c") as c:
+    async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as r, d.cfg_at(P("r.c")) as c:
         res = await r.echo(m="hello")
         assert res == dict(r="hello")
 
@@ -85,7 +85,7 @@ async def test_wdt_off(tmp_path):
     """
     Check that the watchdog can be removed
     """
-    async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as r, d.cfg_at("r", "c") as c:
+    async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as r, d.cfg_at(P("r.c")) as c:
         await c.set(
             {
                 "apps": {"w1": "wdt.Cmd"},
@@ -117,7 +117,7 @@ async def test_wdt_update(tmp_path):
     Check that the watchdog can be updated
     """
     ended = False
-    async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as r, d.cfg_at("r", "c") as c:
+    async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as r, d.cfg_at(P("r.c")) as c:
         await c.set(
             {
                 "apps": {"w": "wdt.Cmd"},

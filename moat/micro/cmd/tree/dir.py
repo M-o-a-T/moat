@@ -50,7 +50,7 @@ class Dispatch(_Dispatch):
 
             await self.tg.spawn(sig_handler, _name="sig")
 
-    def cfg_at(self, *p):
+    def cfg_at(self, p: Path):
         "returns a CfgStore object at this subpath"
         return CfgStore(self, p)
 

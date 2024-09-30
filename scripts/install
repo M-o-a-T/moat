@@ -11,10 +11,12 @@ if [ -x "./mt" ] ; then
     M=./mt
     S=micro
     MPY=$S/lib/micropython
+    export PYTHONPATH="$(pwd)"
 elif [ -x "../mt" ] ; then 
     M=../mt
     S=.
     MPY=$S/lib/micropython
+    export PYTHONPATH="$(pwd)/.."
 else
     if test ! -v MPY ; then
         echo "Usage: MPY=/path/to/src/micropython $0 cfg.file" >&2
@@ -23,11 +25,6 @@ else
 
     M=moat
 fi
-
-if test -e .git && test -GOAL moat/micro/_embed ; then
-    export PYTHONPATH=$(realpath ..)
-fi
-# otherwise use the installed version
 
 cmd=()
 for c in $@ ; do

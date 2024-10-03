@@ -23,22 +23,20 @@ class NamedSerial(FileBuf):
     via a module name.
     """
     def __init__(self, cfg):
-        self.cfg = cfg
+        super().__init__(cfg=cfg, timeout=cfg.get("timeout", 50))
 
     async def stream(self):
         return import_(self.cfg.port, 1)
 
 
-class Serial(FileBuf):
+class Serial(NamedSerial):
     """
     Interface to a MicroPython serial port.
     """
+    # inherits from NamedSerial for __init__ which is the same
 
     max_idle = 100
     pack = None
-
-    def __init__(self, cfg):
-        self.cfg = cfg
 
     async def stream(self):
         "opens the port, does flushing and RTS/CTS"

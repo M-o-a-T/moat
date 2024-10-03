@@ -35,8 +35,8 @@ class FileBuf(BaseBuf):
     _buf = None
     _any = lambda: 1  # noqa:E731
 
-    def __init__(self, force_write=False, timeout=100):
-        super().__init__({})
+    def __init__(self, cfg={}, force_write=False, timeout=100):
+        super().__init__(cfg)
         self._wlock = Lock()
         self.force_write = force_write
         self.timeout = timeout

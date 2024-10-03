@@ -63,6 +63,8 @@ class BaseCmdBBM(BaseCmd):
         if L:
             await self.wait_ready()
         b = bytearray(n)
+        if self.s is None:
+            raise EOFError
         r = await self.s.rd(b)
         if r == n:
             return b
@@ -77,6 +79,8 @@ class BaseCmdBBM(BaseCmd):
         if L:
             await self.wait_ready()
         async with self.w_lock:
+            if self.s is None:
+              raise EOFError
             await self.s.wr(b)
 
     # Blk/Msg: Console crd/cwr = .crd/cwr
@@ -84,6 +88,8 @@ class BaseCmdBBM(BaseCmd):
     async def cmd_crd(self, n=64) -> bytes:
         """read some console data"""
         b = bytearray(n)
+        if self.s is None:
+          raise EOFError
         r = await self.s.crd(b)
         if r == n:
             return b
@@ -96,24 +102,34 @@ class BaseCmdBBM(BaseCmd):
     async def cmd_cwr(self, b):
         """write some console data"""
         async with self.w_lock:
+            if self.s is None:
+              raise EOFError
             await self.s.cwr(b)
 
     # Msg: s/r = .send/.recv
 
     def cmd_s(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """send a message"""
+        if self.s is None:
+          raise EOFError
         return self.s.send(m)
 
     def cmd_r(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """receive a message"""
+        if self.s is None:
+          raise EOFError
         return self.s.recv()
 
     # Blk: sb/rb = .snd/.rcv
 
     def cmd_sb(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """send a binary message"""
+        if self.s is None:
+          raise EOFError
         return self.s.snd(m)
 
     def cmd_rb(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """receive a binary message"""
+        if self.s is None:
+          raise EOFError
         return self.s.rcv()

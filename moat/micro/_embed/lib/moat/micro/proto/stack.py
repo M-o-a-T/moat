@@ -226,13 +226,13 @@ class StackedConn(BaseConn):
     def wrap(self):  # noqa:D102
         return self.link.wrap()
 
-    async def stream(self):
+    def stream(self):  # async
         """
         Generate the low-level connection this module uses.
 
         By default, returns the linked stream's async context.
         """
-        return await AC_use(self, self.link)
+        return AC_use(self, self.link)
 
 
 class StackedMsg(StackedConn, BaseMsg):
@@ -242,21 +242,21 @@ class StackedMsg(StackedConn, BaseMsg):
     Use the attribute "s" to store the linked stream's context.
     """
 
-    async def send(self, m):
+    def send(self, m):  # async
         "Send. Transmits a structured message"
-        return await self.s.send(m)
+        return self.s.send(m)
 
-    async def recv(self):
+    def recv(self):  # async
         "Receive. Returns a message."
-        return await self.s.recv()
+        return self.s.recv()
 
-    async def cwr(self, buf):
+    def cwr(self, buf):  # async
         "Console Send. Returns when the buffer is transmitted."
-        await self.s.cwr(buf)
+        return self.s.cwr(buf)
 
-    async def crd(self, buf) -> len:
+    def crd(self, buf) -> len:  # async
         "Console Receive. Returns data by reading into a buffer."
-        return await self.s.crd(buf)
+        return self.s.crd(buf)
 
 
 class StackedBuf(StackedConn, BaseBuf):
@@ -266,13 +266,13 @@ class StackedBuf(StackedConn, BaseBuf):
     Use the attribute "s" to store the linked stream's context.
     """
 
-    async def wr(self, buf):
+    def wr(self, buf):  # async
         "Send. Returns when the buffer is transmitted."
-        await self.s.wr(buf)
+        return self.s.wr(buf)
 
-    async def rd(self, buf) -> len:
+    def rd(self, buf) -> len:  # async
         "Receive. Returns data by reading into a buffer."
-        return await self.s.rd(buf)
+        return self.s.rd(buf)
 
 
 class StackedBlk(StackedConn, BaseBlk):
@@ -285,13 +285,13 @@ class StackedBlk(StackedConn, BaseBlk):
     cwr = StackedMsg.cwr
     crd = StackedMsg.crd
 
-    async def snd(self, m):
+    def snd(self, m): # async
         "Send. Transmits a structured message"
-        return await self.s.send(m)
+        return self.s.send(m)
 
-    async def rcv(self):
+    def rcv(self):  # async
         "Receive. Returns a message."
-        return await self.s.rcv()
+        return self.s.rcv()
 
 
 class LogMsg(StackedMsg, StackedBuf, StackedBlk):

@@ -397,3 +397,14 @@ _shield = _Shield()
 def shield():
     "no-op context manager, supposed to shield a (sub)task from cancels"
     return _shield
+
+
+# "await" for stream read/write-ability
+
+from asyncio import core
+
+def _rdq(s):  # async
+    yield core._io_queue.queue_read(s)  # noqa:SLF001
+
+def _wrq(s):  # async
+    yield core._io_queue.queue_write(s)  # noqa:SLF001

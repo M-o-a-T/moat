@@ -3,19 +3,9 @@ Adaptor for MicroPython streams.
 """
 from __future__ import annotations
 
-from asyncio import core
+from moat.micro.compat import TimeoutError, wait_for_ms, _rdq, _wrq
 
-from moat.micro.compat import Lock, TimeoutError, wait_for_ms
-
-from .stack import BaseBuf
-
-
-def _rdq(s):  # async
-    yield core._io_queue.queue_read(s)  # noqa:SLF001
-
-
-def _wrq(s):  # async
-    yield core._io_queue.queue_write(s)  # noqa:SLF001
+from ..proto.stack import BaseBuf
 
 
 class FileBuf(BaseBuf):

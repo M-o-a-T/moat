@@ -14,7 +14,7 @@ class FileBuf(BaseBuf):
 
     Reads a byte at a time if the stream doesn't have an "any()" method.
 
-    Times out short reads if no more data arrives.
+    @timeout times out short reads if no more data arrives, if >0.
 
     @force_write must be set if the write side doesn't support polling.
 

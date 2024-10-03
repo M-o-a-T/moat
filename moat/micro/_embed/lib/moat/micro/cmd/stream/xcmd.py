@@ -67,7 +67,7 @@ class BufCmd(_BBMCmd, BaseBuf):
 
     def wr(self, buf) -> Awaitable:  # noqa:D102
         # pylint: disable=invalid-overridden-method
-        return self.s.wr(b=buf)
+        return self.s.wr(buf)
 
     async def rd(self, buf):  # noqa:D102
         msg = await self.s.rd(n=len(buf))

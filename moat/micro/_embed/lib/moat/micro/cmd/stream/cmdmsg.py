@@ -105,8 +105,10 @@ class BaseCmdMsg(BaseCmd):
                 pass
             elif x and isinstance(exc, tuple(x)):
                 pass
+            elif i is None:
+                log("ERROR handling <no-i>: %r", exc, err=exc)
             else:
-                log("ERROR handling %d: %r", i, exc, err=exc)
+                log("ERROR handling <%d>: %r", i, exc, err=exc)
             if i is None:
                 return
             res = {"i": i}

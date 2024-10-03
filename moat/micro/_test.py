@@ -55,7 +55,6 @@ required = [
     "contextlib",
     "ucontextlib",
     "collections",
-    "collections-deque",
 ]
 
 

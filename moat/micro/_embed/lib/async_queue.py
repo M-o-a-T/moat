@@ -4,7 +4,7 @@ Clone of asyncio.queue
 from __future__ import annotations
 
 from asyncio import core
-from collections.deque import deque
+from collections import deque
 
 
 class QueueEmpty(Exception):
@@ -18,18 +18,18 @@ class QueueFull(Exception):
 class Queue:
     """A queue, useful for coordinating producer and consumer coroutines.
 
-    If maxsize is less than or equal to zero, the queue size is infinite. If it
-    is an integer greater than 0, then "yield from put()" will block when the
-    queue reaches maxsize, until an item is removed by get().
+    @maxsize defaults to 99. (On MicroPython, the queue cannot be infinitely
+    long.) "await put()" will block when the queue reaches maxsize, until
+    an item is removed by get().
 
     Unlike the standard library Queue, you can reliably know this Queue's size
     with qsize(), since your single-threaded uasyncio application won't be
     interrupted between calling qsize() and doing an operation on the Queue.
     """
 
-    def __init__(self, maxsize=0):
+    def __init__(self, maxsize=99):
         self.maxsize = maxsize
-        self._queue = deque()
+        self._queue = deque((), maxsize)
         self._full = core.TaskQueue()
         self._empty = core.TaskQueue()
         self._closed_w = False

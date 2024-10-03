@@ -7,7 +7,6 @@ if "MOAT_PORT" in os.environ:
 
 require("copy")
 require("collections")
-require("collections-deque")
 require("contextlib")
 require("functools")
 require("pprint")

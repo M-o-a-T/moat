@@ -83,7 +83,7 @@ def catch_errors(fn):
         setup    setup
         *        connect    used for all other commands
 
-        The 'remote' parameter specifies the app that connects to
+        The 'remote' parameter specifies the prefix that connects to
         the remote system.
 
         The '--path NAME P' parameter is a shorthand for

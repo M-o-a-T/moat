@@ -20,3 +20,4 @@
 
 * implement (and test) all the fancy pin and relay features
 
+* NamedSerial should open a device if running on Unix-µPy

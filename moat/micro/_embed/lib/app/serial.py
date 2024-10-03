@@ -4,7 +4,7 @@ Serial port access apps
 from __future__ import annotations
 
 from moat.micro.compat import AC_use
-from moat.micro.part.serial import Serial
+from moat.micro.part.serial import Serial, NamedSerial
 
 
 # Serial packet forwarder
@@ -18,6 +18,10 @@ from moat.micro.part.serial import Serial
 #   idle: MSEC
 # start: NUM
 #
+def _KS(cfg):
+    Ser = NamedSerial if isinstance(cfg["port"], str) else Serial
+    return Ser(cfg)
+
 def Raw(*a, **k):
     """Sends/receives raw bytes off a serial port"""
     from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
@@ -27,7 +31,7 @@ def Raw(*a, **k):
         pack = None
 
         async def stream(self):
-            return await AC_use(self, Serial(self.cfg))
+            return await AC_use(self, _KS(self.cfg))
 
     return _Raw(*a, **k)
 
@@ -40,7 +44,7 @@ def Msg(*a, **k):
     class _Msg(BaseCmdBBM):
         async def stream(self):
             ser = SerialPackerBlkBuf(
-                Serial(self.cfg),
+                _KS(self.cfg),
                 frame=self.cfg.get("frame", {}),
                 cons=self.cfg.get(
                     "console",
@@ -58,6 +62,6 @@ def Link(*a, **k):
 
     class _Link(BaseCmdMsg):
         async def stream(self):
-            return await AC_use(self, console_stack(Serial(self.cfg), self.cfg))
+            return await AC_use(self, console_stack(_KS(self.cfg), self.cfg))
 
     return _Link(*a, **k)

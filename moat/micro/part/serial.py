@@ -20,6 +20,13 @@ from anyio_serial import Serial as _Serial
 #
 class Serial(AnyioBuf):
     """
+    We don't have numbered serial ports on Unix.
+    """
+    def __init__(self, *a, **k):
+        raise NotImplementedError("Use namedSerial on Unix")
+
+class NamedSerial(AnyioBuf):
+    """
     Serial port abstraction.
     """
 

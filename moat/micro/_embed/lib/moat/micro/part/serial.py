@@ -7,6 +7,7 @@ import machine as M
 
 from moat.micro.compat import AC_use, TimeoutError, log, sleep, wait_for_ms
 from moat.micro.proto.stream import FileBuf
+from moat.util import import_
 
 
 # Serial link driver
@@ -16,6 +17,18 @@ from moat.micro.proto.stream import FileBuf
 # rx: PIN
 # baud: 9600
 #
+class NamedSerial(FileBuf):
+    """
+    Interface to a MicroPython serial port that's already open,
+    via a module name.
+    """
+    def __init__(self, cfg):
+        self.cfg = cfg
+
+    async def stream(self):
+        return import_(self.cfg.port, 1)
+
+
 class Serial(FileBuf):
     """
     Interface to a MicroPython serial port.

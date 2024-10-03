@@ -26,7 +26,7 @@ class NamedSerial(FileBuf):
         super().__init__(cfg=cfg, timeout=cfg.get("timeout", 50))
 
     async def stream(self):
-        return import_(self.cfg.port, 1)
+        return import_(self.cfg["port"], 1)
 
     async def wr(self, buf):
         if len(buf) == 64:

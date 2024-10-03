@@ -149,6 +149,7 @@ class AIOBuf(BaseBuf):
         "translates to ``.write`` + ``.drain``"
         self.s.write(buf)
         await self.s.drain()
+        return len(buf)
 
     async def rd(self, buf):
         "translates to ``.readinto``"

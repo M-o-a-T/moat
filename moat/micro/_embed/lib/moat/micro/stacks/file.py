@@ -37,7 +37,6 @@ class FileBuf(BaseBuf):
 
     def __init__(self, cfg={}, force_write=False, timeout=100):
         super().__init__(cfg)
-        self._wlock = Lock()
         self.force_write = force_write
         self.timeout = timeout
 
@@ -72,15 +71,14 @@ class FileBuf(BaseBuf):
         return n
 
     async def wr(self, buf):
-        "forwards to ``.write``"
-        async with self._wlock:
-            m = memoryview(buf)
-            i = 0
-            while i < len(buf):
-                if not self.force_write:  # XXX *sigh*
-                    await _wrq(self.ws)
-                n = self.ws.write(m[i:])
-                if n:
-                    i += n
-            self._buf = None
-            return i
+        "forwards to ``.write``, handles short writes"
+        buf = memoryview(buf)
+        t = len(buf)
+        while len(buf):
+            if not self.force_write:  # XXX *sigh*
+                await _wrq(self.ws)
+            n = self.ws.write(buf)
+            if n is None:
+                n = len(buf)
+            buf = buf[n:]
+        return t

@@ -71,7 +71,7 @@ def _decode(code, data):
             return Proxy(n)
     elif code == 5:
         try:
-            s = Unpacker(None)
+            s = Unpacker(None, strict_map_key=False)
             s.feed(data)
 
             s, *d = list(s)
@@ -155,7 +155,7 @@ class MsgpackMsgBuf(_MsgpackMsgBuf):
     async def setup(self):  # noqa:D102
         await super().setup()
         self.pack = Packer(default=_encode).pack
-        self._unpacker = Unpacker(SyncStream(self.s), ext_hook=_decode, **self.cfg.get("pack", {}))
+        self._unpacker = Unpacker(SyncStream(self.s), strict_map_key=False, ext_hook=_decode, **self.cfg.get("pack", {}))
 
     async def unpack(self):
         """
@@ -180,7 +180,7 @@ class MsgpackMsgBlk(_MsgpackMsgBlk):
     async def setup(self):  # noqa:D102
         await super().setup()
         self.pack = Packer(default=_encode).pack
-        self.unpacker = partial(unpackb, ext_hook=_decode, **self.cfg.get("pack", {}))
+        self.unpacker = partial(unpackb, strict_map_key=False, ext_hook=_decode, **self.cfg.get("pack", {}))
 
 
 class AnyioBuf(BaseBuf):

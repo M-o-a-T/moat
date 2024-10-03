@@ -129,6 +129,6 @@ class Cmd(BaseCmd):
         """
         Echo @m.
 
-        This is for humans. Don't use it for automated keepalive.
+        This is for humans and testing. Don't use it for automated keepalive.
         """
-        return {"m": m, "rep": repr(m)}
+        return {"m": m}

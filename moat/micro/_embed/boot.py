@@ -17,8 +17,8 @@ if not hasattr(moat,"SERIAL"):
         import os
         import time
         import usb.device
-
         from usb.device.cdc import CDCInterface
+
         moat.SERIAL = CDCInterface()
         try:
             moat.SERIAL.init(timeout=0)
@@ -26,6 +26,9 @@ if not hasattr(moat,"SERIAL"):
         except Exception as exc:
             del moat.SERIAL
             raise
+        finally:
+            del CDCInterface
+            del usb
 
     except Exception as exc:
         print("No serial", exc)

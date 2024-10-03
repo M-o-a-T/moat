@@ -259,6 +259,7 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
             self._buf = await self.recv()
 
     async def wr(self, buf) -> int:
+        n = len(buf)
         if self.loss:
             b = bytearray(buf)
             loss = 1 - (1 - self.loss) ** (1 / len(b) / 2)
@@ -277,6 +278,7 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
         else:
             b = bytes(buf)
         await self.send(bytes(buf), _loss=False)
+        return n
 
     async def teardown(self):
         await self.q_wr.aclose()

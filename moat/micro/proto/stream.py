@@ -206,9 +206,11 @@ class AnyioBuf(BaseBuf):
     async def wr(self, buf) -> int:
         "basic send"
         try:
-            return await self.s.send(buf)
+            await self.s.send(buf)
         except (anyio.EndOfStream, anyio.ClosedResourceError):
             raise EOFError from None
+        else:
+            return len(buf)
 
     async def rd(self, buf) -> int:
         "basic receive-into"

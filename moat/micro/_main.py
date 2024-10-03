@@ -299,7 +299,7 @@ async def setup(
             # reset with run_main set should boot into MoaT
 
         if run or watch or mount:
-            if not reset:
+            if run and not reset:
                 o, e = await repl.exec_raw(
                     f"from main import go; go(state={state !r})",
                     timeout=None if watch else 30,

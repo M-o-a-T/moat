@@ -28,6 +28,15 @@ class NamedSerial(FileBuf):
     async def stream(self):
         return import_(self.cfg.port, 1)
 
+    async def wr(self, buf):
+        if len(buf) == 64:
+            buf = memoryview(buf)
+            await super().wr(buf[:32])
+            await super().wr(buf[32:])
+            return 64
+        else:
+            return await super().wr(buf)
+
 
 class Serial(NamedSerial):
     """

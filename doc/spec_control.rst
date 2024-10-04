@@ -4,7 +4,7 @@ Control messages
 Control messages are defined as messages with a command byte of zero.
 Every bus participant *must* read all control messages.
 
-The message type is sent in the lower three bits of the message's first
+The message type is sent in the top three bits of the message's first
 byte. The other five bits contain control-specific flags.
 
 Not all modes are defined for every control message type.
@@ -40,24 +40,30 @@ The following types are defined:
 * 6
   Bus test
   The second byte contains a timer minifloat.
-  Between X/8*timer and timer, where X is the value of the top
+  Between X/8*timer and timer, where X is the value of the lower
   three bits of the first byte, some device will perform tests for bus
-  timing or similar. Clients must ignore the bus during that time and must
-  not try to send any messages.
+  timing or similar. Clients not specifically configured to participate
+  in the test must ignore the bus during that time and must not try to send
+  any messages.
 
   Only one test can be pending. A timer of zero (or a bus power-down)
   cancels a scheduled test; this obviously only works when the test time
   has not yet arrived.
 
-  Bit 3 and 4 must be zero. other values are reserved for exchanging test
+  Bit 3 and 4 must be zero. Other values are reserved for exchanging test
   data with the participating devices, to be specified.
 
 * 7
   Reset
   The second byte contains a timer minifloat.
-  Each device shall sleep some random time between X*timer and timer, where
-  X is a fraction of that timer, as defined by the top three bits of the
-  first byte. Then the device shall reset itself.
+  The device shall sleep between 1/2*timer and timer, and then reset itself.
+
+  Bit 0 specifies that this is a command. Otherwise it's an announcement.
+
+  If bit 1 is set, the recipient shall send a reply. The sender won't
+  actually reboot until it receives a command to do so.
+  
+  If bit 2 is set, the device's address shall/will be cleared.
 
   If bit 3 is set, devices shall deep-sleep, i.e. use as little power as
   possible and not react to further bus messages. Otherwise they shall
@@ -69,6 +75,27 @@ The following types are defined:
   reboot. Bit 4 asks the devices to switch to alternate firmware. Bits 7…5
   are reserved.
 
+  ===== ===== =======
+  Bit 0 Bit 1 State
+  ===== ===== =======
+    0     0   I'm rebooting. Back after ‹timer›.
+    0     1   I want to reboot, ideally after ‹timer›. Please tell me when.
+    1     0   Go ahead and reboot.
+    1     1   You should reboot after ‹timer›. Tell me when you'll do it.
+  ===== ===== =======
+
+  Obviously, replies to messages with bit 1 set must clear it.
+
+  If a server broadcasts a reset announcement for itself, clients should
+  react to bits 2 and 3.
+
+  Clients that talk to other clients should send a Reset message to them
+  (or broadcast it) so that direct links get cleared.
+
+  A reply with the second byte set to 0xFF indicates an unwillingness to
+  reboot. A directly-addressed client that received a reboot request with
+  the wrong firmware ID shall include its real firmware ID in this case.
+
 
 Poll request
 ============
@@ -78,6 +105,10 @@ may contain online/offline timers as in AA requests. The intent is that the
 AA request's timers are permanent, while times in Poll requests are
 temporary and only apply until the next time a client resumes its online
 state.
+
+Clients reply to polls with a Client Ping reply to the polling server,
+or a Mode 5 AA reply when the flag bit 0 is set.
+
 
 Client Ping
 -----------
@@ -91,7 +122,7 @@ is going off-line immediately; it should be sent (if possible) when a
 client is disconnected by a third party, e.g. because of imminent loss of
 power. 0xFF means "undetermined", used e.g. as long as a door is open.
 
-If bit 3 is clear, the client assumes that it'll be online permanently.
+If bit 3 is clear, the client states that it'll be online permanently.
 
 If bit 4 is set, the next byte contains a timer minifloat that states
 how long the client is likely to sleep before re-polling. Zero means
@@ -99,7 +130,7 @@ how long the client is likely to sleep before re-polling. Zero means
 equivalent to not setting this bit. 0xFF means "forever" and requires human
 interaction (e.g. manually resetting the device) to revive the client.
 
-Bits 5…7 are reserved.
+Bits 0…2 are reserved.
 
 Replies to a Server Scan or Server Ping are sent as Mode 5
 (client-to-server) messages and have the same format.
@@ -110,36 +141,40 @@ Server Scan
 
 A server scanning the bus for clients sends a Mode 3 message.
 
-If bit 3 is set, the next byte contains a timer minifloat that states how
+
+Bit 0 indicates that the client shall reply with a Mode 5 AA message.
+
+Bits 1…2 are reserved.
+
+Bit 3: If set, the next byte contains a timer minifloat that states how
 long the client should wait (maximally) until it does address assignment /
-reporting. Otherwise clients shall wait until the bus is reasonably free.
+reporting. Otherwise clients shall reply immediately, using a
+lowest-priority message.
 
-Bits 4…6 select which clients should *not* answer. They are mutually
-exclusive; bits 4…6 all being set is reserved.
-
-Bit 4: clients that have a useable address (i.e. they have broadcast a
-"Client Ping" message).
-
-Bit 5: clients that don't have an address (i.e. they did not yet receive an
-Address Assignment ACK).
-
-Bit 6: Clients that did receive an ACK but did not yet send a "Client Ping"
-message.
-
-Bit 7: Another flag byte (bits 8…15) follows. If this is not set the other
-flags are assumed to be zero.
+Bit 4: Another flag byte (bits 8…15) follows. If this bit is not set,
+bits 8…15 are assumed to be zero.
 
 Bit 8: Clients that are online permanently should not answer.
 
 Bit 9: Clients that are online intermittently should not answer.
 
 Bit 10: Clients whose online state is limited should not answer.
+"Limited" means that the client will go offline sometime, and if it does
+it'll stay offline. This state is mainly used for pre-configuration, when
+the bus is not the one the client will permanently installed on.
 
-Bits 8…10 all being set is reserved. "Limited" means that the client will
-go offline sometime, and if it does it'll stay offline. This state is used
-for pre-configuration.
+Bit 11: clients that don't have an address (i.e. they did not yet receive an
+Address Assignment ACK).
 
-Bits 11…15 are reserved.
+Bit 12: Clients that did receive an ACK but did not yet send a "Client Ping"
+message.
+
+Bit 13: clients that have a final address (i.e. they have broadcast a
+"Client Ping" message).
+
+Bits 8…10 all being set is reserved.
+
+Bits 14…15 are reserved.
 
 
 Server Ping
@@ -147,13 +182,15 @@ Server Ping
 
 A server that checks whether a specific client is online sends a Mode 2 message.
 
+Bit 0 indicates that the client shall reply with a Mode 5 AA message.
+
+Bits 1…2 are reserved.
+
 If bit 3 is set, the next byte contains a timer minifloat that states how
 long the client should listen before shutting down.
 
 If bit 4 is set, the next byte contains a timer minifloat that states
 how long the client may sleep before re-polling.
-
-Bits 5…7 are reserved.
 
 If the server sets a timer, the client is expected to use it; if it can do
 so, its reply may skip echoing it. Otherwise it should reply with the
@@ -215,6 +252,13 @@ Channel Establishment
 A server that wants to establish a reliable console connection sends a Mode
 2 message to the client. Flag bits:
 
+* 0: cancel
+
+  If this bit is set, the console connection (or the attempt to set it up)
+  is aborted.
+
+* 1…2: reserved
+
 * 3: take over
 
   If this bit is clear and there already is an established connection on
@@ -231,13 +275,6 @@ A server that wants to establish a reliable console connection sends a Mode
   *no*. Clients and servers, on the other hand, must not unilaterally
   reject unprotected channels unless doing so would compromise real-world
   safety.
-
-* 5: cancel
-
-  If this bit is set, the console connection (or the attempt to set it up)
-  is aborted.
-
-* 6…7: reserved
 
 
 The combination "reliable+cancel" indicates the passive end of a reliable
@@ -336,6 +373,7 @@ subsystem code.
 
 Messages to a client must be sent on an established channel and may not
 contain metadata.
+
 
 Message Flow
 ------------

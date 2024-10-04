@@ -17,13 +17,13 @@ If the flag bit is set, the serial number is followed by an additional flag
 byte. Otherwise the flag byte is assumed to be zero and the message ends
 after the serial.
 
-Clients process AA messages if
+A client process an AA message if
 
-* they have an assigned client ID and they're addressed to them directly,
+* the client knows its ID and the message is addressed to it directly,
 
 *or*
 
-* the MAC length *and* MAC content matches theirs.
+* MAC length *and* MAC content matches theirs.
 
 Message types
 -------------
@@ -48,7 +48,13 @@ combination of source and destination address.
   Collision. A client has observed its own address with a different MAC, or
   vice versa.
 
-Other messgae modes are reserved.
+* Mode 5 (Client → Server)
+
+  Poll reply. This is used when a server's Poll request indicates that the
+  MAC shall be included.
+
+
+Other message modes are reserved.
 
 
 Flags
@@ -58,11 +64,16 @@ Flag bits, if present, are located directly after the MAC/serial.
 Bit 3 of the first byte states whether a flag byte exists.
 A nonexisting flag byte is equivalent to zero.
 
+If the message is a NACK with a "data problem" reason, bits 7…3 encode the
+reason instead. See below.
 
-* bit 0: wait. The next byte contains a timer minifloat. Its meaning varies
-  depending on the mode:
+
+* bit 0: wait. If set, the next byte contains a timer minifloat.
+  Its meaning varies depending on the mode:
 
   * Request: The server shall delay for this time before sending a reply.
+    Used e.g. when the client does some more initialisation before it restarts
+    its bus listener.
 
   * ACK: The client shall wait this long before proceeding.
 
@@ -71,16 +82,22 @@ A nonexisting flag byte is equivalent to zero.
 
 * bit 1+2: state
 
-  * Request: 0 rebooted, 1 wakeup, 2 assure, 3 reserved.
+  * Request: 0 rebooted, 1 wakeup, 2 check, 3 reserved.
 
   * ACK: 0 new, 1 known, 2 reserved, 3 reassigned.
 
-  * NACK: 0 retry later, 1 no free addrs, 2 data problem, 3 collision.
+  * NACK: 0 retry later, 1 no free addrs, 2 data problem, 3 collision
+    as discovered by the server.
 
-  Collision: 0 I saw my MAC, 1 I saw my client addr, 2+3 reserved.
+  * Collision as discovered by the client: 0 reserved, 1 I see my MAC,
+    2 I see my client addr, 3 reserved.
+
   In both cases the client shall send its own ID and MAC. If it reacts to
   an ACK it must stop processing, must verify its client ID, must request a
-  new ID if verification fails, and may create a random MAC.
+  new ID if verification fails, and may create a random MAC if that fails
+  too.
+
+  The reason for a data problem is noted in bits 7…3.
 
 
 * bit 3: client is/shall be polled.
@@ -89,7 +106,7 @@ A nonexisting flag byte is equivalent to zero.
   it will not listen to the bus.
 
   If this bit is clear, servers may assume that the device has vanished if
-  it doesn't answer repeated queries.
+  it doesn't answer (repeated) queries.
 
   If this bit is set, the next bytes contain two timer minifloats.
   The first states how long the client typically listens before shutting down.
@@ -97,12 +114,13 @@ A nonexisting flag byte is equivalent to zero.
 
   These values apply to both client- and server-generated messages.
 
+
   * Request: tell the server what the client would like to use.
 
   * ACK: tell the client which values the server would prefer, with no
   obligation to use them.
 
-  * NACK: lower or upper limits for these bytes if they're
+  * NACK: lower or upper limits for these timers if they're
   lower or higher than the ones supplied by the client, respectively.
 
   A zero value for one of these timers means "unspecified / don't care"; it
@@ -115,15 +133,15 @@ A nonexisting flag byte is equivalent to zero.
   
   A client should set this bit if it has created a random serial# and uses
   it to register for the first time. The server *must* NACK the address
-  if this bit is set and it has ever seen it before.
+  if this bit is set and it has ever seen the address before.
 
   The client *must* remember the serial# in Flash or NVRAM, including
   through power failures, if (and only if) the server ACKs it with this bit
   cleared. (In a test installation, the server may tell the client not to do
   this by sending the ACK with bit 4 set.)
 
-  The client *must* delay saving the serial# so that it can re-register
-  if it is NACKed after the fact if the server ACK has bit 0 set, as described
+  The client *must* delay saving the serial# if bit 0 is set. It must
+  restart if it receives a NACK after the fact, as described
   above. The server should set a delay appropriately.
 
   After the client saves the randomized serial#, it *must not* set this bit
@@ -131,6 +149,11 @@ A nonexisting flag byte is equivalent to zero.
 
   If a registration with a randomized serial# fails, or looks in any way
   suspicous, a client *must* re-register with a new random serial.
+
+  In an ACK this bit tells the client that its address is Limited.
+  This means that if the device sleeps, it must acquire a new client
+  address upon wake-up, it may not assume that any connections are still
+  valid. Also this changes which poll broadcasts the device responds to.
 
 
 * bit 5: unconfigured
@@ -147,6 +170,7 @@ A nonexisting flag byte is equivalent to zero.
 
 * bit 6…7: reserved.
 
+
 A device with an empty serial number shall randomly invent one. If the CPU
 does not have a hardware RNG, the device must observe bus message timing
 with a high-precision timer long enough to observe reasonable entropy.
@@ -155,12 +179,24 @@ It shall then send a request with bit 4 set. The server shall be extra
 cautious before assigning a new address to such clients.
 
 Clients must monitor all AA requests for their own serial number. If they
-receive an ACK with their current client ID, they should update see a
-their state and send a Poll broadcast. Otherwise they must send a collision
-message.
+receive an ACK with their current client ID, they should update their state
+and send a Poll broadcast. Otherwise they must send a collision message.
 
 Clearing a random address that has been saved is not required (it might be
-impossible, due to the fact that Flash memory can only be cleared).
+impossible).
+
+Data Problem: Reason codes
+--------------------------
+
+These 
+
+* 0: unspecified
+
+* 1: Server doesn't do polling
+
+* 2: Server doesn't
+
+* Others: reserved
 
 
 Sample messages

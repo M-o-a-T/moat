@@ -19,9 +19,9 @@ Header
 * 2/7 bits: sender address
 * 2/5/8 bits: message type
 
-The destination address is first because the receiver should be able to
-determine as quickly as possible that a message is not intended for it.
-This ultimately saves power.
+The destination address is first(i.e. within the initial 11 bits) because
+the receiver should be able to determine as quickly as possible that a
+message is not intended for it. This ultimately saves power.
 
 In the following text, devices with short addresses are commonly called
 "server". Likewise, devices with long addresses are "clients". This is used
@@ -52,16 +52,16 @@ of falsely correct CRCs.
 Addressing
 ++++++++++
 
-The MoatBus is intended for devices which have a hardware ID (MAC, UUID,
+The Moat bus is intended for devices which have a hardware ID (MAC, UUID,
 manufacturer serial).
 
 A newly-connected participant must request a bus address. Waking up from
-deep sleep may or may not be considered "newly-connected", as the address
+deep sleep may or may not be considered "newly-connected". The address
 server(s) are expected to store known addresses permanently.
 
 Bus-based address assignment is only used for clients. Servers are expected
-to know their own address and to have other ways of communication among
-themselves.
+to know their own (distinct!) address and should have other ways of
+communication among themselves.
 
 Reserved addresses
 ------------------
@@ -74,7 +74,7 @@ The server address -4 is used for broadcast and multicast messages,
 i.e. periodic measurements and events if they're of interest to multiple
 clients, client polling, address assignment, etc..
 
-In MoaT code server addresses are identified using negative integers
+In MoaT code, server addresses are identified using negative integers
 -1…-3, for addresses 3…1 (i.e. just add or subtract 4). The broadcast
 address is written as -4.
 
@@ -105,9 +105,9 @@ longer for a free bus. These should be used for
 The exact priority level of any given message is not part of this
 specification. We recommend to use high-priority messages wisely.
 
-NB: Messages lose their priority as soon as they're involved in a
-collision. While this mechanism may delay high-priority messages somewhat,
-it is essential for quickly resolving bus conflicts.
+NB: Messages lose their priority as soon as they're involved in a collision
+(during transmission, not arbitration). While this may delay high-priority
+messages somewhat, it is essential for quickly resolving bus conflicts.
 
 
 +++++++++++++
@@ -124,22 +124,24 @@ Server    Client       0        Mode 2; AA: ACK
 Server    Broadcast    0        Mode 3; AA: NACK
 Client    Broadcast    0        Mode 4; AA: collision
 Client    Server       0        Mode 5; AA: Poll Reply
-any       any          0        reserved
+Server    Server       0        inter-server sync
+Broadcast Server       0        Serial flow control
+========  ===========  =======  ===========================
 Server    Client       1        data directory lookup
 Client    Server       1        lookup reply
 Client    Broadcast    1        alert (by data dictionary path)
-Server    Client       2        data directory read                                              
+Broadcast Broadcast    1        Point-to-Point
+========  ===========  =======  ===========================
+Server    Client       2        data directory read
 Client    Server       2        read reply
+========  ===========  =======  ===========================
 Server    Client       3        data directory write
 Client    Server       3        write reply
+========  ===========  =======  ===========================
 any       any          0…3      reserved
-Broadcast Broadcast    1        Point-to-Point
 Broadcast any          any      reserved
 Client    Broadcast    any      broadcast message
 any       any          any      direct message
-========  ===========  =======  ===========================
-Server    Server       0        inter-server sync
-Broadcast Server       0        Serial flow control
 ========  ===========  =======  ===========================
 
 Clients *must not* send with a source address that's not their assigned address.
@@ -183,6 +185,22 @@ Data dictionary
 MoatBus devices are (supposed to be) configurable, yet flexible; at the
 same time they may have few resources and messages are required to be as
 short as possible. This calls for a novel approach.
+
+Rationale
+---------
+
+Ultimately we want to be able to implement a lot of features in as little
+code as possible (and with the shortest-possible messages) but still be
+somewhat generic so that the server can be configured with YAML instead of
+special-purpose code whenever feasible.
+
+The minimum viable implementation is to code the dictionary as YAML on
+the server and hardcode the prefixes on the client.
+
+None of this is implemented yet.
+
+Details
+-------
 
 Device configuration and access looks like a very simple file system with
 directories. The entries in each directory are numbered 0 to N-1; lookups
@@ -230,7 +248,9 @@ The next nibble contains the length of the entry's name -1. It is followed
 by padding to the next byte (if necessary) and an UTF-8 name.
 
 If bits 6+7 are clear, the entry is a directory. Bits 3…0 encode the number
-of sub-entries minus two. se while bit 4 encodes whether multiple requests are supported.
+of sub-entries minus two.
+
+Bit 4 encodes whether multiple requests are supported.
 
 Directories don't get to have zero or one entries because you can just skip
 the directory in that case. (Yes, this means that files can't be enumerated

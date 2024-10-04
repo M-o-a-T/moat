@@ -2,7 +2,7 @@
 Firmware updates
 ================
 
-Devices on the MoaTbus are typically built into things, or even walls or
+Devices on the MoaT bus are typically built into things, or even walls or
 ceilings; removing them for the purpose of fixing a bug is an exercise we'd
 all like to avoid.
 
@@ -10,14 +10,14 @@ Thus, the bus is able to update firmware.
 
 Small controllers might not have enough space for two firmware copies. We
 therefore add the ability to split the firmware into two parts: one is the
-main system initialization, the bus handler, and the firmware updater
+main system initialization, the basic bus handler, and the firmware updater
 itself; this part is expected not to be updated frequently.
-The other part is the device-specific code.
+The other part is device-specific code.
 
 Firmware updates are split into 64-byte chunks (due to limited client RAM
 and bus usage). They are transmitted consecutively and they are secured by
 an overall 32-bit CRC. Also, individual chunks are secured by a 16-bit
-checksum.
+CRC in addition to the bus CRC.
 
 Messages contain a 4-bit type in the flag part of the control message (bit
 4 is reserved) plus whatever content is required.
@@ -28,10 +28,11 @@ is no (such) firmware. If legitimate checksumming results in either of
 these values, the lowest bit shall be inverted.
 
 If a client is not in boot mode, message 0 must be answered. All others
-may be rejected.
+should be rejected.
 
-Reply messages are addressed to the server that sent the request. Bit 4 of
-the first byte is reserved (server>client) or an error (client>server).
+Replies are addressed to the server that sent the request. Bit 4 of
+the first byte is reserved (server>client) or indicates an error
+(client>server).
 
 Error messages echo the server's first byte except that bit 4 is set.
 The second byte contains a max-64-byte length-1.
@@ -48,13 +49,13 @@ All numbers are big-endian.
   The server sends an otherwise-empty message.
 
   The client shall respond with the 32-bit checksum plus a firmware-defined
-  version number or string (bytes, length variable but nonzero).
+  version number or string (length-1 byte plus byte sequence).
   If there is no current firmware or it could not be verified the CRC must
-  be all-1.
+  be all-1; in this case the version is missing.
   
 * 1
   Bootloader version
-  Return the boot loader magic and CRC (two 32-bit integers).
+  Return the boot loader interface magic number and CRC (two 32-bit integers).
 
 * 2, 3
   reserved
@@ -62,7 +63,7 @@ All numbers are big-endian.
 * 4
   Clear
   Sent by the server, requests the client to clear its firmware, preparing
-  for uploading a new image. The message contains the boot loader CRC,
+  for uploading a new image. The message contains the boot loader magic,
   application start address (in 64-byte blocks relative to the start of
   Flash memory) and the number of 64-byte blocks to be written.
 
@@ -79,7 +80,7 @@ All numbers are big-endian.
 * 6
   Send Block
   The server sends the 16-bit block number, a 16-bit checksum of
-  ``src,dst,block#,data`` and the 64-byte block of data.
+  ``src,dst,block#,data``, and the 64-byte block of data.
 
   The client writes the block to firmware and replies with an empty OK
   message.
@@ -88,7 +89,7 @@ All numbers are big-endian.
   is lost. There is no attempt at a windowed protocol because a CPU that's
   in the process of self-flashing is typically unresponsive.
 
-  Block numbers start with zero, corresponding to the Flash header.
+  Block numbers start with zero, corresponding to the firmware's Flash header.
 
 * 7
   Finish
@@ -103,14 +104,15 @@ All numbers are big-endian.
   The server sends a block# and 1-byte length-1 (i.e. 0…63, corresponding
   to 1…64 bytes). The client replies with the contents, plus 16-bit checksum.
 
-  8: standard flask
+  8: standard flash
   9: boot flash
   10: RAM
   11: EEPROM
   
 * 12-15
   Checksum Range
-  As 'Read' but the reply contains just the checksum. TODO.
+  As 'Read', but the reply contains just the checksum.
+
 
 Updating the boot loader
 ========================

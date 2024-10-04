@@ -60,25 +60,49 @@ Principle of operation
 ----------------------
 
 A bus with N wires can assume 2^n states. Our self-timing requirement
-enforces *some* transiton between states, while interrupt-free operation
-requires that the idle state is not used during data transmission. Thus
-each time slot can transmit log2(2^n-2) bits of information.
+enforces *some* transiton between states. Thus each bus transition can
+send log₂(2^n-1) bits of information.
 
-On a two-wire system this is one bit per baud and thus offers no speed
-advantage over a conventional serial line. However, a three-wire system
-achieves 2.58 bits; on four wires we get 3.8 bits.
+On a two-wire system this is 1.58 bits. We combine multiple such
+transactions until the overhead is minimized: 7 bus transitions can send
+11.09 bits.
 
-A three-wire bus can thus combine two transactions to transmit five bits
-and has some states left over for out-of-band signalling.
+The 0.09 bits translate to 139 states, allowing us to send 7 bits that
+might be required to fill a message's last byte, or to signal that the
+trailing byte is garbage.
 
-On a four-wire bus, best efficiency would be achieved using five
-transactions (19 bits); however, this would require a >16-bit division or a
+Messages end with an 11-bit CRC. The CRC is calculated over the actual
+on-the-wire bits.
+
+Messages are started with a single transition that (roughly) indicates
+message priority. They end with an "illegal"
+
+More wires?
+-----------
+
+For three wires, the optimal size is 5 transitions (14.036 bits).
+However, surprisingly the advantage over using four transactions with 11.22
+bits is only 2% (185 bus transitions instead of 188 for a 64-byte message,
+not counting framing/CRC) and disappears or even reverses for shorter messages.
+
+Four wires yield 11.72 bits (3 transitions) or 15.62 bits (4 transitions).
+In practice there is no advantage of using more than 11 bits.
+
+A 64-byte message (512 bits) thus requires 329 bus transitions for two
+wires, 188 for three, and 141 transitions on four wires. The achievable
+total transmission rate depends on bus topology and needs to be discovered empirically.
+
+On a four-wire bus, perfect efficiency would be achieved using ten
+transactions (39.068 bits); however, this is much too large: encoding would
+require 64-bit division. Supporting small CPUs requires limiting 
+
+struggle with 16-bit division. would require a >16-bit division or a
 large lookup table. As both are too much overhead for cheap 8-bit
 controllers, we limit the size to 7 bits. As before, this yields four
 "out-of-band" values for signalling.
 
 A small header carries addressing and a few bits of message type
-information. All messages are terminated with a 14-bit CRC.
+information. All messages are terminated with an 11-bit CRC.
 
 The details are documented in ``doc/spec_wire.rst``.
 

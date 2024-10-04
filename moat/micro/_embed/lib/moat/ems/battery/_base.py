@@ -347,7 +347,7 @@ class BaseCells(ArrayCmd):
         await super().setup()
         await self._setup()
         try:
-            w = rtc_state[("state", *self.path)]
+            w = rtc_state[("state",) + self.path]
         except KeyError:
             pass
         else:
@@ -495,7 +495,7 @@ class BaseCells(ArrayCmd):
         self.n_save += 1
         if self.n_save > 99:
             self.n_save = 0
-            rtc_state[("state", *self.path)] = self.work
+            rtc_state[("state",) + self.path] = self.work
 
     def get_work(self, clear: bool = False, poll: bool = False):
         poll  # noqa:B018

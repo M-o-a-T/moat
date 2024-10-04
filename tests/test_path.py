@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import P, Path, packer, unpacker, yformat, yload
+from moat.util import P, PS, Path, packer, unpacker, yformat, yload
 
 _valid = (
     (("a", "b", "c"), "a.b.c"),
@@ -17,6 +17,7 @@ _valid = (
     ((1.23, "c"), ":1:.23.c"),
     (("", 1.23, "c"), ":e:1:.23.c"),
     (("a", "", 1.23, "c"), "a:e:1:.23.c"),
+    (("a", "", 1.23, ""), "a:e:1:.23:e"),
     (("a", "", 1.23), "a:e:1:.23"),
     (("a", "", "b"), "a:e.b"),
     (("a", "x y", "b"), ("a.x y.b", "a.x:_y.b")),
@@ -46,10 +47,67 @@ _invalid = (
     "a.:t",
     ":x1g",
     ":x",
+    ":ec",
     ".a.b",
     "a.b.",
     "a:h123",
     "",
+    ":list",
+    ":dict",
+)
+
+_valid_s = (
+    (("a", "b", "c"), "a/b/c"),
+    (("a", 2, "c"), "a/:2/c"),
+    ((2, "c"), (":i2.c", ":2/c")),
+    ((True, "c"), ":t/c"),
+    ((1.23, "c"), ":1/:.23/c"),
+    (("", 1.23, "c"), "/:1.23/c"),
+    (("a", "", 1.23, "c"), "a//:1:.23/c"),
+    (("a", "", 1.23, ""), "a//:1:.23/"),
+    (("a", "", 1.23), "a//:1:.23"),
+    (("a", "", "b"), "a//b"),
+    (("a", "x y", "b"), "a/x y/b"),
+    (("a", True), "a/:t"),
+    (("x", None), "x/:n"),
+    ((31,), (":x1f", ":31")),
+    ((31, "q"), (":x1f/q", ":31/q")),
+    (("b", 31, 5), ("b/:x1f/:5", "b/:31/:5")),
+    (((1, 2), 1.23), (":(1,2):1/:.23", ":1,2/:1:.23")),
+    (((1, 2), "", 1.23), (":(1,2)//:1:.23", ":1,2//:1:.23")),
+    (((1, 2), "c"), ":1,2/c"),
+    (((1, "a b", 2), "c"), (":1,'a b',2/c", ":1,'a:_b',2/c")),
+    (("a", b"abc"), "a/:vabc"),
+    (("a", b"ab\x99"), ("a/:y616299", "a/:sYWKZ")),
+    (("a", b"a b"), "a/:va:_b"),
+    (("a", b"", "c"), "a/:v/c"),
+    ((), ":m"),
+)
+_valid_s2 = (
+    (("", ), ("", ":e"), ""),
+    (("", ""), ("/", ":e:e"), ""),
+    (("", "a", ""), ("/a/", ":e.a:e"), ""),
+    (("", "a", "b", ""), ("/a/b/", ":e.a.b:e"), ""),
+    (("", ), (":mx/", ":mx:e"), "x"),
+    (("", ""), (":mx//", ":mx:e:e"), "x"),
+    (("", "a", ""), (":mx//a/", ":mx:e.a:e"), "x"),
+    (("", "a", "b", ""), (":mx//a/b/", ":mx:e.a.b:e"), "x"),
+)
+
+_invalid_s = (
+    ":w",
+    ":t:",
+    "/:",
+    ":",
+    ":/",
+    ":e",
+    ":ec",
+#   "a:1",
+#   "a:t",
+#   "a:n",
+    ":x1g",
+    ":x",
+    "a/:h123",
     ":list",
     ":dict",
 )
@@ -71,6 +129,29 @@ def test_invalid_paths(a):
         Path.from_str(a)
 
 
+@pytest.mark.parametrize("a,b", _valid_s)  # noqa:PT006
+def test_valid_spaths(a, b):
+    if isinstance(b, tuple):
+        b, xb = b
+    else:
+        xb = b
+    assert Path(*a).slashed == xb
+    assert a == tuple(Path.from_slashed(b))
+
+
+@pytest.mark.parametrize("a,b,m", _valid_s2)  # noqa:PT006
+def test_valid_spaths(a, b, m):
+    b, xb = b
+    assert str(Path(*a, mark=m)) == xb
+    assert a == tuple(Path.from_slashed(b))
+
+
+@pytest.mark.parametrize("a", _invalid_s)
+def test_invalid_spaths(a):
+    with pytest.raises(SyntaxError):
+        Path.from_slashed(a)
+
+
 def test_paths():
     p = P("a.b")
     assert str(p) == "a.b"
@@ -90,8 +171,7 @@ def test_tagged():
     p = P(":mfoo:")
     assert p.mark == "foo"
     assert len(p) == 0
-    p = Path()
-    p.mark = "bar"
+    p = Path(mark="bar")
     assert str(p) == ":mbar:"
     p = P("a:mx.b")
     assert p.mark == "x"  # pylint: disable=no-member

@@ -96,6 +96,11 @@ class BatteryInterface(DbusInterface):
         return self.batt.get_soc()
 
     @dbus.method()
+    def SetSoC(self, soc: 'd') -> 'b'
+        self.batt.set_soc(soc)
+        return True
+
+    @dbus.method()
     async def GetRelayState(self) -> 'bb':
         res = await self.batt.ctrl.req.send([self.batt.ctrl.name, "rly"])
         return bool(res[0]), bool(res[1])

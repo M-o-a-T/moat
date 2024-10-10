@@ -7,6 +7,7 @@ Extension types defined here:
 3: Path, as a msgpack object stream of its elements
 4: contains raw bytes, interpreted as UTF-8, returned as (named) Proxy object
 5: object constructor
+6: marked Path
 """
 
 from __future__ import annotations
@@ -32,9 +33,8 @@ def _encode(data):
         return _msgpack.ExtType(2, data.to_bytes((data.bit_length() + 7) // 8, "big"))
     if isinstance(data, Path):
         # Path
-        # XXX the mark is dropped until everybody understands type 6
-        #   if data.mark:
-        #      return _msgpack.ExtType(6, packer(data.mark) + b"".join(packer(x) for x in data))
+        if data.mark:
+            return _msgpack.ExtType(6, packer(data.mark) + b"".join(packer(x) for x in data))
         return _msgpack.ExtType(3, b"".join(packer(x) for x in data))
     if isinstance(data, Proxy):
         # Proxy object

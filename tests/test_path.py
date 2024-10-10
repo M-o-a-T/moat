@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import P, PS, Path, packer, unpacker, yformat, yload
+from moat.util import P, Path, packer, unpacker, yformat, yload
 
 _valid = (
     (("a", "b", "c"), "a.b.c"),
@@ -59,13 +59,13 @@ _invalid = (
 _valid_s = (
     (("a", "b", "c"), "a/b/c"),
     (("a", 2, "c"), "a/:2/c"),
-    ((2, "c"), (":i2.c", ":2/c")),
+    ((2, "c"), (":i2/c", ":2/c")),
     ((True, "c"), ":t/c"),
-    ((1.23, "c"), ":1/:.23/c"),
+    ((1.23, "c"), ":1.23/c"),
     (("", 1.23, "c"), "/:1.23/c"),
-    (("a", "", 1.23, "c"), "a//:1:.23/c"),
-    (("a", "", 1.23, ""), "a//:1:.23/"),
-    (("a", "", 1.23), "a//:1:.23"),
+    (("a", "", 1.23, "c"), "a//:1.23/c"),
+    (("a", "", 1.23, ""), "a//:1.23/"),
+    (("a", "", 1.23), "a//:1.23"),
     (("a", "", "b"), "a//b"),
     (("a", "x y", "b"), "a/x y/b"),
     (("a", True), "a/:t"),
@@ -73,8 +73,8 @@ _valid_s = (
     ((31,), (":x1f", ":31")),
     ((31, "q"), (":x1f/q", ":31/q")),
     (("b", 31, 5), ("b/:x1f/:5", "b/:31/:5")),
-    (((1, 2), 1.23), (":(1,2):1/:.23", ":1,2/:1:.23")),
-    (((1, 2), "", 1.23), (":(1,2)//:1:.23", ":1,2//:1:.23")),
+    (((1, 2), 1.23), (":(1,2)/:1.23", ":1,2/:1.23")),
+    (((1, 2), "", 1.23), (":(1,2)//:1.23", ":1,2//:1.23")),
     (((1, 2), "c"), ":1,2/c"),
     (((1, "a b", 2), "c"), (":1,'a b',2/c", ":1,'a:_b',2/c")),
     (("a", b"abc"), "a/:vabc"),
@@ -140,7 +140,7 @@ def test_valid_spaths(a, b):
 
 
 @pytest.mark.parametrize("a,b,m", _valid_s2)  # noqa:PT006
-def test_valid_spaths(a, b, m):
+def test_valid_spaths2(a, b, m):
     b, xb = b
     assert str(Path(*a, mark=m)) == xb
     assert a == tuple(Path.from_slashed(b))

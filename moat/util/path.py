@@ -122,15 +122,18 @@ class Path(collections.abc.Sequence):
         res = []
         if self.mark:
             res.append(":m" + self.mark)
-        if not self._data and not slash:
-            res.append(":")
+        if not self._data:
+            if not slash:
+                res.append(":")
+            elif not self.mark:
+                res.append(":m")
         for x in self._data:
             if slash and res:
                 res.append("/")
 
             if isinstance(x, str):
                 if slash:
-                    res.append(_escol(x))
+                    res.append(_escol(x, False))
                 elif x == "":
                     res.append(":e")
                 else:
@@ -448,14 +451,14 @@ class Path(collections.abc.Sequence):
                     if len(p) == 2:
                         res.append(True)
                 elif p[1] == "v":
-                    res.append(_decol(p[2]).encode("ascii"))
+                    res.append(_decol(p[2:]).encode("ascii"))
                 elif p[1] == "x":
                     res.append(int(p[2:], 16))
                 elif p[1] == "y":
                     res.append(bytes.fromhex(p[2:]))
 
                 else:
-                    res.append(path_eval(p))
+                    res.append(path_eval(p[1:]))
 
                 if len(res) != pos + 1 - marks:
                     raise RuntimeError("Slashed-Path syntax")  # noqa: TRY301

@@ -27,7 +27,7 @@ from functools import total_ordering
 
 import simpleeval
 
-__all__ = ["Path", "P", "logger_for", "PathShortener", "PathLongener", "path_eval"]
+__all__ = ["Path", "P", "PS", "logger_for", "PathShortener", "PathLongener", "path_eval"]
 
 _PartRE = re.compile("[^:._]+|_|:|\\.")
 _RTagRE = re.compile("^:m[^:._]+:$")
@@ -40,9 +40,10 @@ class Path(collections.abc.Sequence):
     Inline (within an element):
 
     \b
-        :.  escapes a dot
         ::  escapes a colon
-        :_  escapes a space
+        :.  escapes a dot (dot-path repr only)
+        :_  escapes a space (dot-path repr only)
+        :|  escapes a slash (slash-path repr only)
 
     As separator (starts a new element):
 
@@ -51,22 +52,31 @@ class Path(collections.abc.Sequence):
         :f   False
         :e   empty string
         :n   None
+
         :xAB Hex integer
         :b01 Binary integer
         :vXY Bytestring, inline
         :yAB Bytestring, hex encoding
         :sAB Bytestring, base64 encoding
-        :mXX This path is marked with XX
         :iXY evaluate YZ as a Python expression.
              The 'i' may be missing if YZ does not start with a letter.
 
-    The empty path is denoted by a single colon. A path starting with a dot
-    is illegal.
+    Meta elements (delimits elements, SHOULD be in front):
+
+    \b
+        :mXX This path is marked with XX
+
+    The empty path is denoted by a single colon. A dotted path that starts
+    or ends with a dot, or that contains empty elements (two non-escaped dots,
+    one dot followed by a separator) is illegal. 
+
+    The alternate slash-path representation uses slashes as separators.
+    Colon elements are disallowed within elements.
     """
 
     def __init__(self, *a, mark=""):
         self._data: list = a
-        self.mark = mark
+        self._mark = mark
 
     @classmethod
     def build(cls, data, *, mark=""):
@@ -77,19 +87,33 @@ class Path(collections.abc.Sequence):
             return cls(*data)
         p = object.__new__(cls)
         p._data = data  # noqa:SLF001
-        p.mark = mark
+        p._mark = mark
         return p
 
-    def __str__(self):
+    @property
+    def mark(self):
+        return self._mark
+
+    def with_mark(self, mark=""):
+        """Returns the same path with a different mark"""
+        return type(self).build(self._data, mark=mark)
+
+    def __str__(self, slash=False):
         """
         Stringify the path to a dotstring.
 
-        Spaces are escaped somewhat aggressively, for better
-        doubleclickability. Do not depend on this.
+        If not slashed: Spaces are escaped somewhat aggressively, for
+        better doubleclickability. Do not depend on this.
+
+        If slashed, space escaping is restricted to bytestrings.
         """
 
         def _escol(x, spaces=True):
-            x = x.replace(":", "::").replace(".", ":.")
+            x = x.replace(":", "::")
+            if slash:
+                x = x.replace("/", ":|")
+            else:
+                x = x.replace(".", ":.")
             if spaces:
                 x = x.replace(" ", ":_")
             return x
@@ -97,12 +121,16 @@ class Path(collections.abc.Sequence):
         res = []
         if self.mark:
             res.append(":m" + self.mark)
-        if not self._data:
+        if not self._data and not slash:
             res.append(":")
         for x in self._data:
-            # ruff:noqa:PLW2901 # var overwritten
+            if slash and res:
+                res.append("/")
+
             if isinstance(x, str):
-                if x == "":
+                if slash:
+                    res.append(_escol(x))
+                elif x == "":
                     res.append(":e")
                 else:
                     if res:
@@ -133,6 +161,16 @@ class Path(collections.abc.Sequence):
                 res.append(":" + _escol(x))
         return "".join(res)
 
+    @property
+    def slashed(self):
+        """
+        Stringify the path to a slashed string.
+
+        Spaces are not escaped, except in bytestrings.
+        """
+
+        return self.__str__(slash=True)
+
     def __getitem__(self, x):
         if isinstance(x, slice) and x.start in (0, None) and x.step in (1, None):
             return type(self)(*self._data[x])
@@ -147,7 +185,7 @@ class Path(collections.abc.Sequence):
 
     def __eq__(self, other):
         if isinstance(other, Path):
-            if self.mark and other.mark and self.mark != other.mark:
+            if self.mark != other.mark:
                 return False
             other = other._data
         return self._data == other
@@ -192,24 +230,24 @@ class Path(collections.abc.Sequence):
             return self
         return Path(*self._data, *other, mark=mark)
 
-    def __iadd__(self, other):
-        mark = self._tag_add(other)
-        if isinstance(other, Path):
-            other = other._data
-        if len(other) > 0:
-            self.mark = mark
-            self._data.extend(other)
-        return self
+#   def __iadd__(self, other):
+#       mark = self._tag_add(other)
+#       if isinstance(other, Path):
+#           other = other._data
+#       if len(other) > 0:
+#           self._mark = mark
+#           self._data.extend(other)
+#       return self
 
     def __truediv__(self, other):
         if isinstance(other, Path):
             raise TypeError("You want + not /")
         return Path(*self._data, other, mark=self.mark)
 
-    def __itruediv__(self, other):
-        if isinstance(other, Path):
-            raise TypeError("You want + not /")
-        self._data.append(other)
+#   def __itruediv__(self, other):
+#       if isinstance(other, Path):
+#           raise TypeError("You want + not /")
+#       self._data.append(other)
 
     # TODO add alternate output with hex integers
 
@@ -363,9 +401,78 @@ class Path(collections.abc.Sequence):
         return cls(*res, mark=mark)
 
     @classmethod
+    def from_slashed(cls, path, *, mark=None):
+        """
+        Constructor to build a Path from its slashed string representation.
+        """
+
+        res = []
+
+        if isinstance(path, (tuple, list)):
+            return cls.build(path, mark=mark)
+
+        def _decol(s):
+            return s.replace(":|","/").replace(":_"," ").replace("::",":")
+        
+        marks = 0
+
+        try:
+            for pos,p in enumerate(path.split("/")):
+                if p == "":
+                    res.append("")
+                elif p[0] != ":":
+                    res.append(_decol(p))
+                elif p == ":":
+                    pass
+
+                elif p[1] == "b":
+                    res.append(int(p[2:], 2))
+                elif p[1] == "e":
+                    pass
+                elif p[1] == "f":
+                    if len(p) == 2:
+                        res.append(False)
+                elif p[1] == "i":
+                    res.append(int(p[2:]))
+                elif p[1] == "m":
+                    if mark is None or mark == p[2:]:
+                        mark = p[2:]
+                        marks += 1
+                elif p[1] == "n":
+                    if len(p) == 2:
+                        res.append(None)
+                elif p[1] == "s":
+                    res.append(b64decode(_decol(p[2]).encode("ascii")))
+                elif p[1] == "t":
+                    if len(p) == 2:
+                        res.append(True)
+                elif p[1] == "v":
+                    res.append(_decol(p[2]).encode("ascii"))
+                elif p[1] == "x":
+                    res.append(int(p[2:], 16))
+                elif p[1] == "y":
+                    res.append(bytes.fromhex(p[2:]))
+
+                else:
+                    res.append(path_eval(p))
+
+                if len(res) != pos+1-marks:
+                    raise RuntimeError("Slashed-Path syntax")
+
+        except Exception as exc:
+            raise SyntaxError(f"Cannot eval {path!r}, part {pos+1}") from exc
+
+        if mark is None:
+            mark = ""
+        r = cls(*res, mark=mark)
+        return r
+                
+
+    @classmethod
     def _make(cls, loader, node):
         value = loader.construct_scalar(node)
         return cls.from_str(value)
+
 
 
 class P(Path):
@@ -382,6 +489,22 @@ class P(Path):
                 path = Path(*path, mark=mark)
             return path
         return Path.from_str(path, mark=mark)
+
+
+class PS(Path):
+    """
+    A Path subclass that delegates to `Path.from_path`.
+
+    For idempotency (required by ``click``) it transparently accepts `Path`
+    objects.
+    """
+
+    def __new__(cls, path, *, mark=""):  # noqa:D102
+        if isinstance(path, Path):
+            if path.mark != mark:
+                path = Path(*path, mark=mark)
+            return path
+        return Path.from_slashed(path, mark=mark)
 
 
 def logger_for(path: Path):

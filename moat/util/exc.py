@@ -23,6 +23,7 @@ class ungroup:
     A sync+async context manager that unwraps single-element
     exception groups.
     """
+
     def __call__(self):
         "Singleton. Returns itself."
         return self

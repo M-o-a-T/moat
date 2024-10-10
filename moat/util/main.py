@@ -22,6 +22,7 @@ from .dict import attrdict, to_attrdict
 from .exc import ungroup
 from .impl import NotGiven
 from .merge import merge
+
 try:
     from .msgpack import Proxy
 except ImportError:
@@ -270,7 +271,7 @@ def load_ext(name, *attr, err=False):
         ):
             raise
         return None
-    except FileNotFoundError as exc:
+    except FileNotFoundError:
         if err:
             raise
         return None

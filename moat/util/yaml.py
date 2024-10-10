@@ -11,6 +11,7 @@ from collections.abc import Mapping, Sequence
 import ruyaml as yaml
 
 from .dict import attrdict
+
 try:
     from .msgpack import Proxy
 except ImportError:
@@ -64,6 +65,7 @@ def yaml_parse(name: str, use_repr: bool = False):
         SafeConstructor.add_constructor(f"!{name}", cls)
         return cls
 
+    use_repr  # noqa: B018
     return register
 
 

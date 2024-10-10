@@ -16,16 +16,17 @@ from functools import partial
 
 import msgpack as _msgpack
 
+from .dict import attrdict
 from .path import Path
 from .proxy import Proxy, _CProxy, obj2name
-from .dict import attrdict
 
 __all__ = ["packer", "unpacker", "stream_unpacker"]
 
-try:
-    from . import cbor as _cbor  # noqa:E402
+try:  # noqa: SIM105
+    from . import cbor as _cbor
 except ImportError:
     pass
+
 
 def _encode(data):
     if isinstance(data, int) and data >= 1 << 64:
@@ -140,4 +141,3 @@ def stream_unpacker(*a, cbor=False, **k):
         ext_hook=_decode,  # pylint:disable=protected-access
         **k,
     )
-

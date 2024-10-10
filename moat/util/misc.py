@@ -54,28 +54,28 @@ def pos2val(a: float, b: float, c: float, /, clamp: bool = False):
     return a + b * (c - a)
 
 
-def drepr(k,v):
-    k=str(k)
+def drepr(k, v):
+    k = str(k)
     if v is None:
-        return "?"+k
+        return "?" + k
     if v is False:
-        return "!"+k
+        return "!" + k
     if v is True:
         return k
     return f"{k}={srepr(v)}"
 
+
 def srepr(x):
     "short repr of possibly-complex objects"
-    if isinstance(x,set):
+    if isinstance(x, set):
         if not x:
             return "∅"
         else:
             return "⊕".join(srepr(v) for v in x)
-    if isinstance(x,tuple):
-        return "("+",".join(srepr(v) for v in x)+")"
-    if isinstance(x,list):
-        return "("+",".join(srepr(v) for v in x)+")"
-    if isinstance(x,dict):
-        return "{"+",".join(drepr(k,v) for k,v in x.items())+"}"
+    if isinstance(x, tuple):
+        return "(" + ",".join(srepr(v) for v in x) + ")"
+    if isinstance(x, list):
+        return "(" + ",".join(srepr(v) for v in x) + ")"
+    if isinstance(x, dict):
+        return "{" + ",".join(drepr(k, v) for k, v in x.items()) + "}"
     return str(x)
-

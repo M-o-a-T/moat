@@ -1,0 +1,8 @@
+/.hypothesis/
+/.pybuild/
+/dist/
+__pycache__
+/*.egg-info/
+/.eggs/
+/build/
+/debian/

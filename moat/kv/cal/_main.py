@@ -5,7 +5,7 @@ from functools import partial
 from moat.util import yprint, attrdict, NotGiven, P, Path, as_service, attr_args
 from moat.kv.data import data_get, node_attr
 from .model import CalRoot
-from .util import find_next_event
+from .util import find_next_alarm
 from datetime import datetime, timezone, timedelta
 import pytz
 
@@ -58,15 +58,24 @@ async def run_(obj):
                 cal_cfg = (await kv.get(P("calendar.test"))).value
                 cal_cfg["scan"] = t_scan.timestamp()
                 await kv.set(P("calendar.test"), value=cal_cfg)
+                t_now = t_scan
 
-            ev,ev_t = await find_next_event(calendar, zone=tz, now=t_scan)
+            logger.info("Scan %s", t_scan)
+            ev,v,ev_t = await find_next_alarm(calendar, zone=tz, now=t_scan)
             t_scan += interval
+            t_scan = max(t_now,t_scan)
+
             if ev is None:
+                logger.warning("NO EVT")
                 continue
             if ev_t <= t_now:
-                print("ALARM", ev, ev_t)
+                logger.warning("ALARM %s %s", v.summary.value, ev_t)
+                await kv.set(cal_cfg["dst"], value=dict(time=int(ev_t.timestamp()), info=v.summary.value))
             elif ev_t < t_scan:
                 t_scan = ev_t
+                logger.warning("ScanEarly %s", t_scan)
+            else:
+                logger.warning("ScanLate %s", t_scan)
     
 
 @cli.command("list")

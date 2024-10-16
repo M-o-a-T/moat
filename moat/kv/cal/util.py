@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone, date, time
 from dateutil.rrule import rrulestr
-from vobject.icalendar import VAlarm
+from vobject.icalendar import VAlarm, VEvent
+
+import logging
+logger = logging.getLogger(__name__)
+
 
 async def find_next_alarm(calendar, future=10, now = None, zone=timezone.utc) -> Tuple(VAlarm,datetime):
     """
@@ -24,15 +28,42 @@ async def find_next_alarm(calendar, future=10, now = None, zone=timezone.utc) ->
 
     if now is None:
         now = datetime.now(timezone.utc)
-    print("here is some ical data:")
     ev = None
+    ev_v = None
     ev_t = None
 
     for e in events_fetched:
-        v = e.vobject_instance.vevent
-        t_start = next_start(v, now)
-        t_alarm = None
-        for al in e.vobject_instance.vevent.components():
+        vx = None
+        vx_t = None
+        rids = set()
+        # create a list of superseded events
+        for v in e.vobject_instance.components():
+            if v.behavior is not VEvent:
+                continue
+            try:
+                rid = v.recurrence_id
+            except AttributeError:
+                continue
+            else:
+                rids.add(rid.value)
+
+        # find earliest event, skipping superseded ones
+        for v in e.vobject_instance.components():
+            if v.behavior is not VEvent:
+                continue
+            try:
+                rid = v.recurrence_id
+            except AttributeError:
+                rid = None
+
+            t_start = next_start(v, now)
+            if rid is None and t_start in rids:
+                continue
+
+            if vx is None or t_start < vx_t:
+                vx, vx_t = v, t_start
+
+        for al in vx.components():
             if al.behavior is not VAlarm:
                 continue
             if not al.useBegin:
@@ -45,8 +76,10 @@ async def find_next_alarm(calendar, future=10, now = None, zone=timezone.utc) ->
             if t_al < now:
                 continue
             if ev is None or ev_t > t_al:
-                ev, ev_t = e, t_al
-    return ev,ev_t
+                ev, ev_v, ev_t = e, vx, t_al
+    if ev:
+        logger.warning("Next alarm: %s at %s", ev.vobject_instance.vevent.summary.value, ev_t)
+    return ev,ev_v,ev_t
 
 
 def next_start(v, now):

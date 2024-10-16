@@ -1,0 +1,4 @@
+kv:
+  cal:
+    prefix: !P calendar
+    poll: 1200

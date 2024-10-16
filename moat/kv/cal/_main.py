@@ -1,13 +1,23 @@
 # command line interface
 
 import asyncclick as click
+from functools import partial
 from moat.util import yprint, attrdict, NotGiven, P, Path, as_service, attr_args
 from moat.kv.data import data_get, node_attr
 from .model import CalRoot
+from .util import find_next_event
+from datetime import datetime, timezone, timedelta
+import pytz
+
+import anyio
+import aiocaldav as caldav
 
 import logging
 
 logger = logging.getLogger(__name__)
+
+utc = timezone.utc
+now = partial(datetime.now, utc)
 
 
 @click.group(short_help="Manage calendar polling.")
@@ -18,12 +28,52 @@ async def cli(obj):
     """
     obj.data = await CalRoot.as_handler(obj.client)
 
+@cli.command("run")
+@click.pass_obj
+async def run_(obj):
+    """Process calendar alarms"""
+    from moat.kv.client import client_scope
+    kv = await client_scope(**obj.cfg.kv)
+    cal_cfg = (await kv.get(P("calendar.test"))).value
+    try:
+        tz = pytz.timezone(cal_cfg["zone"])
+    except KeyError:
+        tz = utc
+    else:
+        now = partial(datetime.now, tz)
+
+    try:
+        t_scan = datetime.fromtimestamp(cal_cfg["scan"], utc)
+    except KeyError:
+        t_scan = now()
+    interval = timedelta(0, cal_cfg.get("interval", 1800))
+
+    async with caldav.DAVClient(url=cal_cfg["url"],username=cal_cfg["user"],password=cal_cfg["pass"]) as client:
+        principal = await client.principal()
+        calendar = await principal.calendar(name="privat neu")
+        while True:
+            t_now = now()
+            if t_now < t_scan:
+                await anyio.sleep((t_scan-t_now).total_seconds())
+                cal_cfg = (await kv.get(P("calendar.test"))).value
+                cal_cfg["scan"] = t_scan.timestamp()
+                await kv.set(P("calendar.test"), value=cal_cfg)
+
+            ev,ev_t = await find_next_event(calendar, zone=tz, now=t_scan)
+            t_scan += interval
+            if ev is None:
+                continue
+            if ev_t <= t_now:
+                print("ALARM", ev, ev_t)
+            elif ev_t < t_scan:
+                t_scan = ev_t
+    
 
 @cli.command("list")
 @click.pass_obj
 async def list_(obj):
     """Emit the current state as a YAML file."""
-    prefix = obj.cfg.kv.ow.prefix
+    prefix = obj.cfg.kv.cal.prefix
     path = Path()
 
     def pm(p):
@@ -61,7 +111,7 @@ async def list_(obj):
 #    values.
 #    """
 #    path = P(path)
-#    prefix = obj.cfg.kv.ow.prefix
+#    prefix = obj.cfg.kv.cal.prefix
 #    if (device is not None) + (family is not None) != 1:
 #        raise click.UsageError("Either family or device code must be given")
 #    if interval and write:
@@ -121,7 +171,7 @@ async def list_(obj):
 #        f, d = device.split(".", 2)[0:2]
 #        fd = (int(f, 16), int(d, 16))
 #
-#    res = await node_attr(obj, obj.cfg.kv.ow.prefix + fd + subpath, vars_, eval_, path_)
+#    res = await node_attr(obj, obj.cfg.kv.cal.prefix + fd + subpath, vars_, eval_, path_)
 #    if res and obj.meta:
 #        yprint(res, stream=obj.stdout)
 #
@@ -138,7 +188,7 @@ async def list_(obj):
 #
 #    No arguments: list them.
 #    """
-#    prefix = obj.cfg.kv.ow.prefix
+#    prefix = obj.cfg.kv.cal.prefix
 #    if not name:
 #        if host or port or delete:
 #            raise click.UsageError("Use a server name to set parameters")

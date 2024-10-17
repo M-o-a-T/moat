@@ -1,0 +1,3 @@
+[submodule "ext/server"]
+	path = ext/server
+	url = git://git.smurf.noris.de/moat-link-server.git

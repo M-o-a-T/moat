@@ -11,7 +11,7 @@ import pytest
 from moat.util import AlertCollector
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_collect():
     r = AlertCollector()
     async with r, anyio.create_task_group() as tg:

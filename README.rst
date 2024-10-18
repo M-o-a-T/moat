@@ -57,12 +57,13 @@ generally useful beyond the confines of this specification.
 Path
 ----
 
-::
+    =============== =============================
     Tag             202
     Data Item       array
     Semantics       mark array as object path
     Reference       https://github.com/M-o-a-T/moat-util/
     Contact         Matthias Urlichs <matthias@urlichs.de>
+    =============== =============================
 
 A Path is a list of object accessors, i.e. a way to reference a
 possibly-deeply nested object. These typically include strings
@@ -71,15 +72,16 @@ possibly-deeply nested object. These typically include strings
 The array SHOULD include only strings and non-negative numbers.
 The list of allowed characters in the string is application dependent.
 
-Proxy
------
+Object Proxy
+------------
 
-::
+    =============== =============================
     Tag             203
     Data Item       string, integer, array
     Semantics       reference a well-known or unencodable object
     Reference       https://github.com/M-o-a-T/moat-util/
     Contact         Matthias Urlichs <matthias@urlichs.de>
+    =============== =============================
 
 A Proxy refers to an object that cannot be encoded. Rather than throw an
 encoding error, the sender may cache the object and replace it with a proxy
@@ -98,17 +100,19 @@ be used to construct objects.
 Object Constructor
 ------------------
 
-::
+    =============== =============================
     Tag             27
     Data Item       array
     Semantics       build an object from a class
     Reference       http://cbor.schmorp.de/generic-object
     Contact         Marc A. Lehmann
+    =============== =============================
 
-This tag is already specified.
+This tag is already specified and included here for MoaT-specific usage
+details.
 
 MoaT assumes a Proxy reference as the contained array's first member.
-The decoder treats it as if is tagged with 281.
+The decoder treats it as if tagged with 203.
 
 MoaT uses three-element arrays: the class name or proxy, an array of
 positional arguments, and a map of key/value arguments. Trailing members

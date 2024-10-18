@@ -8,7 +8,8 @@ from __future__ import annotations
 import pytest
 
 import moat.util.cbor  # for the error traceback, if any
-from moat.util import as_proxy, attrdict, packer, unpacker
+import moat.util.msgpack  # for the error traceback, if any
+from moat.util import as_proxy, attrdict, packer, unpacker, stream_unpacker
 
 
 class Bar:
@@ -36,17 +37,18 @@ _val = [
     attrdict(x=1, y=2),
 ]
 
-
-def test_basic():
+@pytest.mark.parametrize("cbor",(False,True))
+def test_basic(cbor):
     for v in _val:
-        w = unpacker(packer(v, cbor=True), cbor=True)
+        w = unpacker(packer(v, cbor=cbor), cbor=cbor)
         assert v == w, (v, w)
 
 
-def test_bar():
+@pytest.mark.parametrize("cbor",(False,True))
+def test_bar(cbor):
     b = Bar(95)
     as_proxy("b", b, replace=True)
-    c = unpacker(packer(b, cbor=True), cbor=True)
+    c = unpacker(packer(b, cbor=cbor), cbor=cbor)
     assert b == c
     with pytest.raises(ValueError):
-        packer(Bar(94), cbor=True)
+        packer(Bar(94), cbor=cbor)

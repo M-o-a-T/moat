@@ -59,7 +59,7 @@ def _encode(data):
 
     # XXX we crash instead of sending an unnamed proxy
     # TODO sending a proxied object a second time will build a new one
-    return data
+    raise ValueError(f"Cannot pack {data !r}")
 
 
 def _decode(code, data):

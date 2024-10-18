@@ -6,23 +6,26 @@ from __future__ import annotations
 
 import struct
 from io import BytesIO
+import datetime as dt
 
-try:
-    from micropython import const
-except ImportError:
-
-    def const(x):
-        "µPy compatibility"
-        return x
+import datetime as dt
+from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 
 
-from moat.util import NotGiven
+from .impl import NotGiven
+from .proxy import Proxy, obj2name, name2obj
+from .path import Path
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from typing import Any
+
+
+def const(x):
+    "µPy compatibility"
+    return x
 
 
 CBOR_TYPE_MASK = const(0xE0)  # top 3 bits
@@ -200,9 +203,11 @@ class Packer:
             self._w(struct.pack("B", CBOR_TRUE))
         self._w(struct.pack("B", CBOR_FALSE))
 
-    def _tag(self, t):
-        self._encode_type_num(CBOR_TAG, t.tag)
-        self._any(t.value)
+    def _tag(self, t, val=NotGiven):
+        if val is NotGiven:
+            t,val = t.tag, t.value
+        self._encode_type_num(CBOR_TAG, t)
+        self._any(val)
 
     def _w(self, d):
         self._buffer.write(d)
@@ -228,8 +233,24 @@ class Packer:
             self._int(ob)
         elif isinstance(ob, Tag):
             self._tag(ob)
+        elif type(ob) in encoders:
+            enc = encoders[type(ob)]
+            self._tag(enc(ob))
         else:
-            raise TypeError("Cannot serialize type " + repr(type(ob)))
+            try:
+                name = obj2name(ob)
+            except KeyError:
+                try:
+                    name = obj2name(type(ob))
+                except KeyError:
+                    raise ValueError(f"not proxied: {ob !r}")
+                else:
+                    p = ob.__getstate__()
+                    if not isinstance(p, (list, tuple)):
+                        p = (p,)
+                    self._tag(27, (Tag(203, name),) + p)
+            else:
+                self._tag(203, name)
 
     def packb(self, obj):
         "pack @obj, return the resulting bytes"
@@ -270,10 +291,9 @@ class Unpacker:
 
     _MAX_DEPTH = 100
 
-    def __init__(self, stream=None, tag_hook=Tag):
+    def __init__(self, stream=None):
         self._stream = stream
         self._buffer = bytearray()
-        self.tag_hook = tag_hook
 
     async def _tag_aux(self, tb):
         tag = tb & CBOR_TYPE_MASK
@@ -465,7 +485,12 @@ class Unpacker:
         elif tag == CBOR_TAG:
             ob = await self._any()
             # attempt to interpet the tag and the value into a Python object.
-            return self.tag_hook(aux, ob)
+            try:
+                dec = decoders[aux]
+            except KeyError:
+                return Tag(aux, ob)
+            else:
+                return dec(ob)
         else:
             assert tag == CBOR_7
             if tb == CBOR_TRUE:
@@ -498,25 +523,121 @@ class Unpacker:
         return b"".join(chunklist)
 
 
-def tagify(aux, ob):
-    "create data types from tagged CBOR input"
-    # TODO: make this extensible?
-    # cbor.register_tag_handler(tagnumber, tag_handler)
-    # where tag_handler takes (tagnumber, tagged_object)
-    #   if aux == CBOR_TAG_DATE_STRING:
-    #       # TODO: parse RFC3339 date string
-    #       pass
-    #   if aux == CBOR_TAG_DATE_ARRAY:
-    #       return datetime.datetime.utcfromtimestamp(ob)
-    if aux == CBOR_TAG_BIGNUM:
-        return int.from_bytes(ob, "big")
-    if aux == CBOR_TAG_NEGBIGNUM:
-        return -1 - int.from_bytes(ob, "big")
-    # if aux == CBOR_TAG_REGEX:
-    # Is this actually a good idea? Should we just return
-    # the tag and the raw value to the user somehow?
-    #       return re.compile(ob)
-    return Tag(aux, ob)
+## built-in codecs
+
+def _enc_datetime_ts(value):
+    # Semantic tag 1
+    if not value.tzinfo:
+        raise ValueError(f"naive datetime {value!r}")
+
+    from calendar import timegm
+
+    if value.microsecond:
+        timestamp = timegm(value.utctimetuple()) + value.microsecond / 1000000
+    else:
+        timestamp: float = timegm(value.utctimetuple())
+
+    return Tag(1, timestamp)
+
+def _enc_datetime_str(value):
+    # Semantic tag 0
+    if not value.tzinfo:
+        raise ValueError(f"naive datetime {value!r}")
+
+    datestring = value.isoformat().replace("+00:00", "Z")
+    return Tag(0, datestring)
+
+
+def _dec_datetime_string(value) -> datetime:
+    # Semantic tag 0
+    match = timestamp_re.match(value)
+    if match:
+        (
+            year,
+            month,
+            day,
+            hour,
+            minute,
+            second,
+            secfrac,
+            offset_sign,
+            offset_h,
+            offset_m,
+        ) = match.groups()
+        if secfrac is None:
+            microsecond = 0
+        else:
+            microsecond = int(f"{secfrac:<06}")
+
+        if offset_h:
+            if offset_sign == "-":
+                sign = -1
+            else:
+                sign = 1
+            hours = int(offset_h) * sign
+            minutes = int(offset_m) * sign
+            tz = timezone(timedelta(hours=hours, minutes=minutes))
+        else:
+            tz = timezone.utc
+
+        return dt.datetime(
+                int(year),
+                int(month),
+                int(day),
+                int(hour),
+                int(minute),
+                int(second),
+                microsecond,
+                tz,
+            )
+    else:
+        raise ValueError(f"invalid datetime string: {value!r}")
+
+def _dec_type(val):
+    if not isinstance(val[0], type):
+        raise ValueError(f"invalid type: {val!r}")
+    return val[0](*(val[1] if len(val) > 1 else ()),**(val[2] if len(val) > 2 else ()))
+
+def _dec_proxy(val):
+    try:
+        if isinstance(val,(str,int)):
+            return name2obj(val)
+        elif len(val) != 2:  # cop-out
+            return Tag(27,val)
+        else:
+            return name2obj(*val)
+    except KeyError:
+        return Proxy(val)
+
+def _dec_obj(val):
+    pk = object.__new__(val[0])
+    try:
+        pk.__setstate__(*val[1:])
+    except AttributeError:
+        pk.__dict__.update(val[1])
+    return pk
+
+# bignums are handled separately
+encoders = {
+    dt.datetime: _enc_datetime_ts, # _enc_dattime_str
+    IPv4Address: lambda adr: Tag(260, adr.packed),
+    IPv6Address: lambda adr: Tag(260, adr.packed),
+    IPv4Network: lambda adr: Tag(261, {adr.network_address.packed: adr.prefixlen}),
+    IPv6Network: lambda adr: Tag(261, {adr.network_address.packed: adr.prefixlen}),
+    Path: lambda val: Tag(202, val._data),
+    Proxy: lambda val: Tag(203, {adr.network_address.packed: adr.prefixlen}),
+}
+
+decoders = {
+    0: _dec_datetime_string,
+    1: lambda val: datetime.fromtimestamp(val, timezone.utc),
+    2: lambda val: int.from_bytes(val, "big"),
+    3: lambda val: -1 - int.from_bytes(val, "big"),
+    27: _dec_obj,
+    202: lambda val: Path(*val),
+    203: _dec_proxy,
+    55799: lambda val: val,
+}
 
 
 def packb(o, **kwargs):

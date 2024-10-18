@@ -72,10 +72,15 @@ class Path(collections.abc.Sequence):
 
     The alternate slash-path representation uses slashes as separators.
     Colon elements are disallowed within elements.
+
+    Paths can be concatenated with "+", "/" or "|".
+    "% n" removes n items from the end.
+    
+    All Path objects are read-only.
     """
 
     def __init__(self, *a, mark=""):
-        self._data: list = a
+        self._data: tuple = a
         self._mark = mark
 
     @classmethod
@@ -86,9 +91,12 @@ class Path(collections.abc.Sequence):
         if not isinstance(data, tuple):
             return cls(*data)
         p = object.__new__(cls)
-        p._data = data  # noqa:SLF001
+        p._data = tuple(data)  # noqa:SLF001
         p._mark = mark  # noqa:SLF001
         return p
+
+    def as_tuple(self):
+        return self._data
 
     @property
     def mark(self):
@@ -192,11 +200,15 @@ class Path(collections.abc.Sequence):
             if self.mark != other.mark:
                 return False
             other = other._data
+        else:
+            other = tuple(other)
         return self._data == other
 
     def __lt__(self, other):
         if isinstance(other, Path):
             other = other._data
+        else:
+            other = tuple(other)
         return self._data < other
 
     def __hash__(self):
@@ -208,8 +220,11 @@ class Path(collections.abc.Sequence):
     def __contains__(self, x):
         return x in self._data
 
-    def __or__(self, other):
-        return Path(*self._data, other, mark=self.mark)
+    def __mod__(self, other):
+        if len(self._data) < other:
+            raise ValueError("Path too short")
+        return Path(*self._data[:-other], mark=self.mark)
+
 
     def _tag_add(self, other):
         if not isinstance(other, Path):
@@ -233,6 +248,12 @@ class Path(collections.abc.Sequence):
                 return Path(*self._data, mark=mark)
             return self
         return Path(*self._data, *other, mark=mark)
+
+    def __or__(self, other):
+        return self + other
+
+    def __div__(self, other):
+        return self + other
 
     #   def __iadd__(self, other):
     #       mark = self._tag_add(other)

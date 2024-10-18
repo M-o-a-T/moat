@@ -47,5 +47,5 @@ def test_bar():
     as_proxy("b", b, replace=True)
     c = unpacker(packer(b))
     assert b == c
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError):
         packer(Bar(94))

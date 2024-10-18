@@ -7,9 +7,8 @@ from __future__ import annotations
 
 import pytest
 
+import moat.util.cbor  # for the error traceback, if any
 from moat.util import as_proxy, attrdict, packer, unpacker
-
-pytestmark = pytest.mark.skip
 
 
 class Bar:
@@ -49,5 +48,5 @@ def test_bar():
     as_proxy("b", b, replace=True)
     c = unpacker(packer(b, cbor=True), cbor=True)
     assert b == c
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError):
         packer(Bar(94), cbor=True)

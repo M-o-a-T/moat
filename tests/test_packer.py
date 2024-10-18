@@ -52,3 +52,18 @@ def test_bar(cbor):
     assert b == c
     with pytest.raises(ValueError):
         packer(Bar(94), cbor=cbor)
+
+@pytest.mark.parametrize("cbor",(False,True))
+@pytest.mark.parametrize("chunks",(1,2,5))
+def test_chunked(cbor,chunks):
+    p = [(dict(a=1,b=23,c=345,d=6789012345678901234567890,e="duh")),"!"]
+    m = b"".join(packer(x) for x in p)
+    r = []
+    u = stream_unpacker()
+    for i in range(chunks):
+        o1 = int(len(m) * (i/chunks))
+        o2 = int(len(m) * ((i+1)/chunks))
+        u.feed(m[o1 : o2])
+        for msg in u:
+            r.append(msg)
+    assert r == p

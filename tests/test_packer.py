@@ -6,11 +6,19 @@ Some rudimentary tests for packing
 from __future__ import annotations
 
 import pytest
+from ipaddress import IPv4Address, IPv4Network, IPv4Interface, IPv6Address, IPv6Network, IPv6Interface
 
 import moat.util.cbor  # for the error traceback, if any
 import moat.util.msgpack  # for the error traceback, if any
 from moat.util import as_proxy, attrdict, packer, unpacker, stream_unpacker
+from moat.util.cbor import Tag
 
+as_proxy("_ip4", IPv4Address)
+as_proxy("_ip6", IPv6Address)
+as_proxy("_ip4n", IPv4Network)
+as_proxy("_ip6n", IPv6Network)
+as_proxy("_ip4i", IPv4Interface)
+as_proxy("_ip6i", IPv6Interface)
 
 class Bar:
     "A proxied object"
@@ -67,3 +75,43 @@ def test_chunked(cbor,chunks):
         for msg in u:
             r.append(msg)
     assert r == p
+
+@pytest.mark.parametrize("cbor",(False,True))
+def test_ip(cbor):
+    adrs = (
+            IPv4Address("1.23.45.181"),
+            IPv6Address("FE80::12:34:0:0"),
+            IPv4Network("1.23.45.128/25"),
+            IPv6Network("FE80::12:35:0:0/111"),
+            IPv4Interface("1.23.45.182/25"),
+            IPv6Interface("FE80::12:36:F:ED/111"),
+        )
+    for a in adrs:
+        m = packer(a, cbor=cbor)
+        if cbor:
+            assert m[0] == 216 and m[1] == (52 if '4' in str(type(a)) else 54)
+        b = unpacker(m, cbor=cbor)
+        assert type(a) == type(b)
+        assert str(a) == str(b)
+
+    p1 = packer(IPv4Address("12.34.0.0"), cbor=cbor)
+    p2 = packer(IPv4Address("12.34.0.1"), cbor=cbor)
+    if cbor:
+        assert len(p1)+2==len(p2)
+
+    p1 = packer(IPv6Address("FE80::12:34:800:0"), cbor=cbor)
+    p2 = packer(IPv6Address("FE80::12:34:800:1"), cbor=cbor)
+    if cbor:
+        assert len(p1)+3==len(p2)
+
+def test_ip_old():
+    for adr in (IPv4Address("1.23.45.181"), IPv6Address("FE80::12:34:56")):
+        msg = unpacker(packer(Tag(260,adr.packed),cbor=True),cbor=True)
+        assert type(adr) == type(msg)
+        assert str(adr) == str(msg)
+
+    for adr in (IPv4Network("1.23.45.128/25"), IPv6Network("FE80::12:35:0:0/111")):
+        msg = unpacker(packer(Tag(261,{adr.prefixlen:adr.network_address.packed}),cbor=True),cbor=True)
+        assert type(adr) == type(msg)
+        assert str(adr) == str(msg)
+

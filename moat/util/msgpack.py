@@ -28,6 +28,12 @@ except ImportError:
     pass
 
 
+def _next(it,dfl=None):
+    try:
+        return next(it)
+    except StopIteration:
+        return dfl
+
 def _encode(data):
     if isinstance(data, int) and data >= 1 << 64:
         # bignum
@@ -52,10 +58,20 @@ def _encode(data):
     except KeyError:
         pass
     else:
-        p = data.__getstate__()
-        if not isinstance(p, (list, tuple)):
-            p = (p,)
-        return _msgpack.ExtType(5, packer(name) + b"".join(packer(x) for x in p))
+        try:
+            p = data.__reduce_ex__(1)
+            if not isinstance(p, (list, tuple)):
+                p = (p,)
+            else:
+                if p[0] is not type(data):
+                    raise ValueError(f"Cannot pack {data !r}")
+                p = p[1:5]  # cannot support dedicated unpackers
+            return _msgpack.ExtType(5, packer(name) + b"".join(packer(x) for x in p))
+        except (AttributeError,ValueError):
+            p = data.__getstate__()
+            if not isinstance(p, (list, tuple)):
+                p = (p,)
+            return _msgpack.ExtType(5, packer(name) + b"".join(packer(x) for x in p))
 
     # XXX we crash instead of sending an unnamed proxy
     # TODO sending a proxied object a second time will build a new one
@@ -87,12 +103,21 @@ def _decode(code, data):
             pk = _CProxy[pk]
         except KeyError:
             pk = partial(Proxy, pk)
-        pk = object.__new__(pk)
-        try:
-            pk.__setstate__(*s)
-        except AttributeError:
-            pk.__dict__.update(next(s))
+
+        a = _next(s,())
+        if isinstance(a,dict):
+            kw = a
+            a = ()
+        else:
+            kw = _next(s,{})
+
+        pk = pk (*a, **kw)
+        for v in _next(s,()):
+            pk.append(v)
+        for k,v in _next(s, {}).items():
+            pk[k] = v
         return pk
+
     elif code == 6:
         # A marked path
         s = stream_unpacker()

@@ -65,12 +65,15 @@ Path
     Contact         Matthias Urlichs <matthias@urlichs.de>
     =============== =============================
 
-A Path is a list of object accessors, i.e. a way to reference a
+A Path is a sequence of object accessors, i.e. a way to reference a
 possibly-deeply nested object. These typically include strings
 (object members) and numbers (array indices).
 
+Using this tag, a recipient can distinguish a sequence of lookups from e.g.
+a tuple that's directly used as a map's key. (Python allows this.)
+
 The array SHOULD include only strings and non-negative numbers.
-The list of allowed characters in the string is application dependent.
+The list of allowed characters in the string(s) is application dependent.
 
 Object Proxy
 ------------

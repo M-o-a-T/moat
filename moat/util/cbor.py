@@ -9,7 +9,7 @@ from io import BytesIO
 import datetime as dt
 
 import datetime as dt
-from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
+from ipaddress import IPv4Address, IPv4Network, IPv4Interface, IPv6Address, IPv6Network, IPv6Interface
 
 
 from .impl import NotGiven
@@ -593,6 +593,74 @@ def _dec_datetime_string(value) -> datetime:
     else:
         raise ValueError(f"invalid datetime string: {value!r}")
 
+def _pad(buf,n):
+    buf = bytes(buf)  # SIGH
+    if (lb := len(buf)) == n:
+        return buf
+    return buf+b"\x00"*(n-lb)
+
+def _dec_ip4address(buf) -> IPv4Address | IPv4Network | IPv4Interface:
+    # Semantic tag 52
+    from ipaddress import IPv4Address, IPv4Network, IPv4Interface
+    if len(buf) == 1 or isinstance(buf, (bytes,bytearray,memoryview)):
+        return IPv4Address(_pad(buf,4))
+    elif len(buf) != 2:
+        pass
+    elif isinstance(buf[0], (bytes,bytearray,memoryview)):
+        return IPv4Interface((_pad(buf[0],4),buf[1]))
+    else:
+        return IPv4Network((_pad(buf[1],4),buf[0]))
+
+    raise ValueError(f"invalid ipaddress value {buf!r}")
+
+
+def _dec_ip6address(buf) -> IPv6Address | IPv6Network | IPv6Interface:
+    # Semantic tag 52
+    from ipaddress import IPv6Address, IPv6Network, IPv6Interface
+    if len(buf) == 1 or isinstance(buf, (bytes,bytearray,memoryview)):
+        return IPv6Address(_pad(buf,16))
+    elif len(buf) != 2:
+        pass
+    elif isinstance(buf[0], (bytes,bytearray,memoryview)):
+        return IPv6Interface((_pad(buf[0],16),buf[1]))
+    else:
+        return IPv6Network((_pad(buf[1],16),buf[0]))
+
+    raise ValueError(f"invalid ipaddress value {buf!r}")
+
+
+def _pack_ip(adr):
+    return adr.packed.rstrip(b"\x00")
+
+
+def _dec_old_ipaddress(buf) -> IPv4Address | IPv6Address | CBORTag:
+    # Semantic tag 260
+    from ipaddress import ip_address
+
+    if isinstance(buf, (bytes,bytearray,memoryview)) or len(buf) not in (4, 6, 16):
+        if len(buf) == 4:
+            return IPv4Address(bytes(buf))
+        elif len(buf) == 16:
+            return IPv6Address(bytes(buf))
+        elif len(buf) == 6:
+            # MAC address
+            return Tag(260, buf)
+
+    raise ValueError(f"invalid ipaddress value {buf!r}")
+
+def _dec_old_ipnetwork(buf) -> IPv4Network | IPv6Network:
+    # Semantic tag 261
+    from ipaddress import ip_network
+
+    if isinstance(buf, dict) and len(buf) == 1:
+        mask,buf = next(iter(buf.items()))
+        if len(buf) == 4:
+            return IPv4Network((bytes(buf),mask))
+        elif len(buf) == 16:
+            return IPv6Network((bytes(buf),mask))
+
+    raise ValueError(f"invalid ipnetwork value {buf!r}")
+
 def _dec_type(val):
     if not isinstance(val[0], type):
         raise ValueError(f"invalid type: {val!r}")
@@ -617,15 +685,18 @@ def _dec_obj(val):
         pk.__dict__.update(val[1])
     return pk
 
-# bignums are handled separately
+# bignums and proxied/constructed objects are handled separately
+
 encoders = {
     dt.datetime: _enc_datetime_ts, # _enc_dattime_str
-    IPv4Address: lambda adr: Tag(260, adr.packed),
-    IPv6Address: lambda adr: Tag(260, adr.packed),
-    IPv4Network: lambda adr: Tag(261, {adr.network_address.packed: adr.prefixlen}),
-    IPv6Network: lambda adr: Tag(261, {adr.network_address.packed: adr.prefixlen}),
+    IPv4Address: lambda adr: Tag(52, _pack_ip(adr)),
+    IPv6Address: lambda adr: Tag(54, _pack_ip(adr)),
+    IPv4Network: lambda adr: Tag(52, (adr.prefixlen, _pack_ip(adr.network_address))),
+    IPv6Network: lambda adr: Tag(54, (adr.prefixlen, _pack_ip(adr.network_address))),
+    IPv4Interface: lambda adr: Tag(52, (_pack_ip(adr), adr.network.prefixlen)),
+    IPv6Interface: lambda adr: Tag(54, (_pack_ip(adr), adr.network.prefixlen)),
     Path: lambda val: Tag(202, val._data),
-    Proxy: lambda val: Tag(203, {adr.network_address.packed: adr.prefixlen}),
+    Proxy: lambda val: Tag(203, val.name),
 }
 
 decoders = {
@@ -633,9 +704,15 @@ decoders = {
     1: lambda val: datetime.fromtimestamp(val, timezone.utc),
     2: lambda val: int.from_bytes(val, "big"),
     3: lambda val: -1 - int.from_bytes(val, "big"),
+    52: _dec_ip4address,
+    54: _dec_ip6address,
     27: _dec_obj,
+    261: _dec_old_ipaddress,
+    262: _dec_old_ipnetwork,
     202: lambda val: Path(*val),
     203: _dec_proxy,
+    260: _dec_old_ipaddress,
+    261: _dec_old_ipnetwork,
     55799: lambda val: val,
 }
 

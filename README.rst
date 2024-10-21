@@ -19,7 +19,7 @@ any reliable, non-reordering messsage stream that can encode basic Python
 data structures (plus whatever objects you send/receive) works.
 
 The MoaT-Cmd library does not itself call the transport. Instead it affords
-basic async methods too iterate on messages to send, and to feed incoming
+basic async methods to iterate on messages to send, and to feed incoming
 lower-level data in.
 
 
@@ -48,7 +48,7 @@ Usage
 
         raise ValueError(f"Unknown: {msg !r}")
         
-    async with Transport() as tr, anyio.create_task_group() as tg:
+    async with Transport(handle_command) as tr, anyio.create_task_group() as tg:
         decoder = stream_unpacker(cbor=True)
 
         def reader():
@@ -63,17 +63,6 @@ Usage
             while True:
                 msg = await tr.msg_out()
                 await channel.send(packer(msg))
-
-        def handler():
-            # process incoming commands
-            while True:
-                msg = await tr.cmd_in()
-                try:
-                    res = await handle_command(msg)
-                except Exception as exc:
-                    await msg.send_error(exc)
-                else:
-                    await msg.send()
 
         def request():
             # streaming data in
@@ -110,51 +99,44 @@ Usage
 Specification
 =============
 
-All messages are arrays with at least two members. Non-array messages
-MAY be used for out-of-band communication.
+All messages are non-empty lists whose first element is a small(ish)
+integer. Messages that don't match this description MAY be used for
+out-of-band communication.
 
 A transport that enforces message boundaries MAY send each message without
-the leading array mark byte(s). In this case, all single-element messages
-MUST be considered out-of-band.
+the leading array mark byte(s).
 
-All message exchanges start with a Command message and ends with a Reply.
-If the Streaming bit is set, further messages will follow. The first
-message with the Streaming bit set is not considered to be part of the
-stream; neither is the terminal message with that bit clear.
+MoaT-Cmd messaging is simple by design and basically consists of a command
+(sent from A to B) followed by a reply (sent from B to A). Both directions
+may independently indicate that more, streamed data will follow. The first
+and last message of a streamed command or reply are considered to be
+out-of-band.
 
-There is no provision for messages that are not replied to. We recommend to
-use out-of-band messages in this case.
 
 Message format
 ++++++++++++++
 
-A Moat-Cmd message consist of one preferably-small signed integer, plus a
-variable but non-empty amount of data.
+A Moat-Cmd message consist of a preferably-small signed integer, plus a
+variable and usually non-empty amount of data.
 
-The leading integer is interpreted as follows.
+The integer is interpreted as follows.
 
 * Bit 0: if set, the message starts or continues a data stream; if clear,
   it either ends a stream or consititues a standalone reply.
 
 * Bit 1: Error/Warning.
 
-All other bits contain the message ID, left-shifted by two. This scheme allows
-for five concurrent messages per direction before encoding to two bytes
-is required.
+All other bits contain the message ID, left-shifted by two bits. This
+scheme allows for five concurrent messages per direction before encoding to
+two bytes is required.
 
 Negative integers signal that the ID has been allocated by that message's
 recipient. They are inverted bit-wise, i.e. ``(-1-id)``. Thus an ID of zero
-is legal. The bits described above refer to the ID's non-negative value.
+is legal. The bits described above are not affected by his inversion. Thus
+a command with ID=1 (no streaming, no error) is sent as ID=4, the reply
+gets ID=-5 (likewise).
 
-
-ID allocation
--------------
-
-Message IDs are assigned by the requestor. The ID spaces of both sides are
-independent; the message type specifies which ID space is used.
-
-IDs MUST NOT be reused if a stream using this ID is active in either direction.
-
+Thus, for incoming messages, non-negative IDs indicate replies.
 
 Error handling
 ++++++++++++++
@@ -185,6 +167,21 @@ message. They are encoded as small negative numbers without further data.
 Other errors are currently returned as (typename,args) tuples.
 (TODO: add an option to send proxied exceptions.)
 
+Known errors
+------------
+
+* -1: Unspecified
+  Somebody called ``.stop()`` without further elucidation
+
+* -2: Can't receive this stream
+  Sent if a command isn't prepared to receive a streamed reply.
+
+* -3: Cancel
+  The sender's or receiver's task is cancelled: the work is no longer
+  required.
+
+
+
 Examples
 ========
 
@@ -207,7 +204,7 @@ Examples
 1 0 - OK here they are
 1 0 - ONE
 1 0 - TWO
-1 1 - NB: Oops I think I missed some here
+1 1 - Missed some
 1 0 - FIVE
 0 0 - that's all
 

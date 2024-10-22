@@ -565,7 +565,7 @@ class Msg:
         receive queue getting full.
         """
         if self._recv_q is not None and self._recv_skip and self.stream_out != S_END:
-            await self._send([E_SKIP], err=True,stream=True)
+            await self.warn(E_SKIP)
             self._recv_skip = False
 
     async def _qsize(self, reading:bool=False):
@@ -577,16 +577,19 @@ class Msg:
         if self._fli is None:
             if self._recv_q.qsize() >= self._recv_qlen // 2:
                 self._fli = 0
-                await self._send([self._recv_qlen // 4], err=True,stream=True)
+                await self.warn(self._recv_qlen // 4)
 
         elif self._recv_q.qsize() <= self._recv_qlen//4 and self._fli > self._recv_qlen//2:
 
             m = self._recv_qlen//2+reading
             self._fli -= m
-            await self._send([m], err=True,stream=True)
+            await self.warn(m)
 
         elif reading:
             self._fli += 1
+            if self._recv_qlen < 10 and self._fli >= self._recv_qlen//4:
+                m,self._fli = self._fli,0
+                await self.warn(self._fli)
 
     async def send(self, *a, **kw) -> None:
         """
@@ -654,11 +657,15 @@ class Msg:
             q, self._recv_q = self._recv_q, None
             if q is not None and q.qsize() and self.stream_in == S_ON:
                 self.stream_in = S_OFF
-                await self._send([E_NO_STREAM],stream=True,err=True)
+                await self.warn(E_NO_STREAM)
             # At this point the msg should not have been iterated yet
             # thus whatever has been received is still in there
 
         self.s_out = sout
+
+        if self._recv_qlen < 10:
+            self._fli = 0
+            await self.warn(self._recv_qlen)
 
         await self._send(d,kw, stream=True)
         await self.replied()

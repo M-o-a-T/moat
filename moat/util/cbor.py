@@ -15,17 +15,13 @@ from ipaddress import IPv4Address, IPv4Network, IPv4Interface, IPv6Address, IPv6
 from .impl import NotGiven
 from .proxy import Proxy, obj2name, name2obj
 from .path import Path
+from .compat import const
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from typing import Any
-
-
-def const(x):
-    "µPy compatibility"
-    return x
 
 
 CBOR_TYPE_MASK = const(0xE0)  # top 3 bits

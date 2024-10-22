@@ -37,6 +37,9 @@ BrokenResourceError = _anyio.BrokenResourceError
 ClosedResourceError = _anyio.ClosedResourceError
 TimeoutError = TimeoutError  # noqa:PLW0127,A001 pylint:disable=redefined-builtin,self-assigning-variable
 
+def const(_x):
+    "µPython compatibility"
+    return _x
 
 class QueueFull(Exception):
     pass
@@ -48,6 +51,7 @@ class QueueEmpty(Exception):
 
 __all__ = [
     "log",
+    "const",
     "Queue",
     "print_exc",
     "ticks_ms",

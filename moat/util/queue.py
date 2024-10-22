@@ -24,11 +24,15 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "Queue",
+    "QueueFull",
+    "QueueEmpty",
     "create_queue",
     "DelayedWrite",
     "DelayedRead",
 ]
 
+QueueFull = anyio.WouldBlock
+QueueEmpty = anyio.WouldBlock
 
 class Queue:
     """

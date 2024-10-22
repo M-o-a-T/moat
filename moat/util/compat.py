@@ -41,13 +41,6 @@ def const(_x):
     "µPython compatibility"
     return _x
 
-class QueueFull(Exception):
-    pass
-
-
-class QueueEmpty(Exception):
-    pass
-
 
 __all__ = [
     "log",

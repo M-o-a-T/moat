@@ -18,7 +18,7 @@ async def test_no_stream_in(no_s):
         await msg.result("Nope")
 
     with OptCtx(pytest.raises(NoStream) if no_s else None):
-        async with ungroup, scaffold(handle,None) as (a,b,tg):
+        async with ungroup, scaffold(handle,None) as (a,b):
             async with b.stream_w("Test", 123) as st:
                 assert tuple(st.msg) == ("Nope",)
                 await anyio.sleep(0.05)
@@ -44,7 +44,7 @@ async def test_no_stream_out(no_s):
         await msg.result("Nope")
 
     with OptCtx(pytest.raises(NoStream) if no_s else None):
-        async with ungroup, scaffold(handle,None) as (a,b,tg):
+        async with ungroup, scaffold(handle,None) as (a,b):
             n = 0
             async with b.stream_r("Test", 123) as st:
                 assert tuple(st.msg) == ("Nope",)
@@ -56,7 +56,6 @@ async def test_no_stream_out(no_s):
             assert tuple(st.msg) == ("Nope",)
             assert n == 0
             print("DONE")
-
 
 
 @pytest.mark.anyio
@@ -72,7 +71,7 @@ async def test_write_both():
             await msg.result("OK", 4)
 
     with pytest.raises(NoStream) as err:
-        async with ungroup, scaffold(handle,None) as (a,b,tg):
+        async with ungroup, scaffold(handle,None) as (a,b):
             async with b.stream_w("Test", 123) as st:
                 assert tuple(st.msg) == ("Takeme",)
                 await st.send(1,"a")

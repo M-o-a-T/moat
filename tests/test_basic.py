@@ -10,7 +10,7 @@ async def test_basic():
         assert tuple(msg.msg) == ("Test",123)
         return {"R":tuple(msg.msg)}
 
-    async with scaffold(handle,None) as (a,b,tg):
+    async with scaffold(handle,None) as (a,b):
         # note the comma
         res, = await b.cmd("Test",123)
         assert res == {"R":("Test",123)}
@@ -23,7 +23,7 @@ async def test_more():
         await anyio.sleep(msg.msg[1]/20)
         return msg.msg[1]
 
-    async with scaffold(handle,None) as (a,b,_tg):
+    async with scaffold(handle,None) as (a,b):
         # note the comma
         r = []
         async with anyio.create_task_group() as tg:
@@ -46,7 +46,7 @@ async def test_return():
         assert tuple(msg.msg) == ("Test",123)
         return ("Foo",234)
 
-    async with scaffold(handle,None) as (a,b,tg):
+    async with scaffold(handle,None) as (a,b):
         res = await b.cmd("Test",123)
         # note the index
         assert res[0] == ("Foo",234)
@@ -58,7 +58,7 @@ async def test_return():
         assert tuple(msg.msg) == ("Test",123)
         await msg.result("Foo",234)
 
-    async with scaffold(handle,None) as (a,b,tg):
+    async with scaffold(handle,None) as (a,b):
         # neither a comma nor an index here
         res = await b.cmd("Test",123)
         assert res == ("Foo",234)
@@ -77,7 +77,7 @@ async def test_stream_in():
             await msg.result("OK", len(res)+1)
         assert res == [1,3,2]
 
-    async with scaffold(handle,None) as (a,b,tg):
+    async with scaffold(handle,None) as (a,b):
         async with b.stream_w("Test", 123) as st:
             assert tuple(st.msg) == ("Gimme",)
             await st.send(1,"a")
@@ -97,7 +97,7 @@ async def test_stream_out():
             await st.send(2,"bc")
             await msg.result("OK", 4)
 
-    async with scaffold(handle,None) as (a,b,tg):
+    async with scaffold(handle,None) as (a,b):
         n = 0
         async with b.stream_r("Test", 123) as st:
             assert tuple(st.msg) == ("Takeme",)

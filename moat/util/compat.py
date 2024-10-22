@@ -41,10 +41,24 @@ def const(_x):
     "µPython compatibility"
     return _x
 
+class CancelScope():
+    def __init__(self):
+        self.sc = _anyio.CancelScope()
+    async def __aenter__(self):
+        self.sc.__enter__()
+        return self
+    async def __aexit__(self, *tb):
+        return self.sc.__exit__(*tb)
+    def cancel(self):
+        self.sc.cancel()
+    @property
+    def cancelled(self):
+        return self.sc.cancel_called()
 
 __all__ = [
     "log",
     "const",
+    "CancelScope",
     "Queue",
     "print_exc",
     "ticks_ms",

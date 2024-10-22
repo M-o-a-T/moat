@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+import anyio
 from tests.scaffold import scaffold
 
 @pytest.mark.anyio
@@ -10,8 +11,57 @@ async def test_basic():
         return {"R":tuple(msg.msg)}
 
     async with scaffold(handle,None) as (a,b,tg):
+        # note the comma
         res, = await b.cmd("Test",123)
         assert res == {"R":("Test",123)}
+
+
+@pytest.mark.anyio
+async def test_more():
+    async def handle(msg):
+        assert msg.msg[0] == "X"
+        await anyio.sleep(msg.msg[1]/20)
+        return msg.msg[1]
+
+    async with scaffold(handle,None) as (a,b,_tg):
+        # note the comma
+        r = []
+        async with anyio.create_task_group() as tg:
+            async def tx(i):
+                nonlocal r
+                res, = await b.cmd("X",i)
+                r.append(res)
+            # well that's one way to sort an array
+            tg.start_soon(tx,5)
+            tg.start_soon(tx,4)
+            tg.start_soon(tx,3)
+            tg.start_soon(tx,2)
+            tg.start_soon(tx,1)
+        assert r == [1,2,3,4,5]
+
+
+@pytest.mark.anyio
+async def test_return():
+    async def handle(msg):
+        assert tuple(msg.msg) == ("Test",123)
+        return ("Foo",234)
+
+    async with scaffold(handle,None) as (a,b,tg):
+        res = await b.cmd("Test",123)
+        # note the index
+        assert res[0] == ("Foo",234)
+
+
+@pytest.mark.anyio
+async def test_return():
+    async def handle(msg):
+        assert tuple(msg.msg) == ("Test",123)
+        await msg.result("Foo",234)
+
+    async with scaffold(handle,None) as (a,b,tg):
+        # neither a comma nor an index here
+        res = await b.cmd("Test",123)
+        assert res == ("Foo",234)
         print("DONE")
 
 

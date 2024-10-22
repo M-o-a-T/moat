@@ -41,6 +41,13 @@ S_OFF = const(6)  # in: we don't want streaming and signalled NO
 # else if S_NEW: go to S_ON: out-of-band
 # else: streamed data
 
+__all__ = []
+
+def _exp(fn):
+    __all__.append(fn.__name__)
+    return fn
+
+@_exp
 class LinkDown(RuntimeError):
     pass
 
@@ -48,18 +55,26 @@ class Flow():
     def __init__(self, n):
         self.n = n
 
+@_exp
 class StopMe(RuntimeError):
     pass
+@_exp
 class NoStream(RuntimeError):
     pass
+@_exp
 class NoCmds(RuntimeError):
     pass
+@_exp
 class NoCmd(RuntimeError):
     pass
+@_exp
+class WantsStream(RuntimeError):
+    pass
 
+@_exp
 class StreamError(RuntimeError):
     def __new__(cls, msg):
-        if len(msg) == 2 and isinstance((m := msg[1]), int):
+        if len(msg) == 1 and isinstance((m := msg[0]), int):
             if m >= 0:
                 return Flow(m)
             elif m == E_UNSPEC:
@@ -70,7 +85,7 @@ class StreamError(RuntimeError):
                 return NoCmds()
             elif m <= E_NO_CMD:
                 return NoCmd(E_NO_CMD-m)
-        return object.__new__(cls)
+        return super().__new__(cls)
     pass
 
 from typing import TYPE_CHECKING  # isort:skip
@@ -113,6 +128,7 @@ class _SA1:
         return it
 
 
+@_exp
 class CmdHandler(CtxObj):
     """
     This is a manager for multiplexed command/response interactions between
@@ -156,7 +172,7 @@ class CmdHandler(CtxObj):
         await msg._send(a, kw if kw else None)
         try:
             await msg.replied()
-            return msg.msg
+            return msg._msg
         except BaseException as exc:
             await msg.kill(exc)
             raise
@@ -308,6 +324,7 @@ class CmdHandler(CtxObj):
         self._msgs = {}
 
 
+@_exp
 class Msg:
     """
     This object handles one conversation.
@@ -329,9 +346,9 @@ class Msg:
         self.cmd_in:Event = Event()
         self.msg2 = None
 
-        self.msg:list = None
-        self.cmd: Any = None  # first element of the message
-        self.data:dict = {}  # last element, if dict
+        self._msg:list = None
+        self._cmd: Any = None  # first element of the message
+        self._data:dict = {}  # last element, if dict
 
         self._recv_q = Queue(qlen) if s_in else None
         self._recv_qlen = qlen
@@ -402,6 +419,27 @@ class Msg:
 
         self.ended()
 
+    @property
+    def msg(self):
+        if isinstance(self._msg,Exception):
+            raise self._msg
+        self.__dict__["msg"] = self._msg
+        return self._msg
+
+    @property
+    def cmd(self):
+        if isinstance(self._msg,Exception):
+            raise self._msg
+        self.__dict__["cmd"] = self._cmd
+        return self._cmd
+
+    @property
+    def data(self):
+        if isinstance(self._msg,Exception):
+            raise self._msg
+        self.__dict__["data"] = self._data
+        return self._data
+
     def _set_msg(self, msg):
         if self.stream_in == S_END:
             pass  # happens when msg2 is set
@@ -410,12 +448,18 @@ class Msg:
         elif self.stream_in == S_NEW and not (msg[0] & B_ERROR):
             self.stream_in = S_ON
 
-        self.msg = _SA1(msg)
-        self.cmd = msg[1]
-        if isinstance(msg[-1], dict):
-            self.data = msg[-1]
+        self.__dict__.pop("msg", None)
+        self.__dict__.pop("cmd", None)
+        self.__dict__.pop("data", None)
+        if msg[0] & B_ERROR:
+            self._msg = StreamError(_SA1(msg))
         else:
-            self.data = None
+            self._msg = _SA1(msg)
+            self._cmd = msg[1]
+            if isinstance(msg[-1], dict):
+                self._data = msg[-1]
+            else:
+                self._data = None
         self.cmd_in.set()
         if self.stream_in != S_END:
             self.cmd_in = Event()
@@ -482,16 +526,16 @@ class Msg:
                 self._recv_skip = True
 
         else:
-            self._debug("Unwanted stream: %r", msg)
+            self.parent._debug("Unwanted stream: %r", msg)
             if self.stream_in == S_ON:
                 self.stream_in = S_OFF
-                self._send_nowait([E_NO_STREAM],err=True)
+                if self.stream_out != S_END:
+                    self._send_nowait([E_NO_STREAM],err=True)
+                    self.stream_out = S_END
 
         self.ended()
 
-    async def _send(self, d,kw=None, stream=False, err=False, _kill=False) -> None:
-        if self.parent is None:
-            return
+    def _sendfix(self, stream:bool, err:bool,_kill:bool):
         if stream is None:
             stream = self.stream_out == S_ON
         if self.stream_out == S_END and not _kill:
@@ -500,7 +544,19 @@ class Msg:
             self.stream_out = S_ON
         elif not stream:
             self.stream_out = S_END
+
+    async def _send(self, d,kw=None, stream=False, err=False, _kill=False) -> None:
+        if self.parent is None:
+            return
+        self._sendfix(stream,err,_kill)
         await self.parent._send(self._i|(B_STREAM if stream else 0)|(B_ERROR if err else 0), d,kw)
+        self.ended()
+
+    def _send_nowait(self, d,kw=None, stream=False, err=False, _kill=False) -> None:
+        if self.parent is None:
+            return
+        self._sendfix(stream,err,_kill)
+        self.parent._send_nowait(self._i|(B_STREAM if stream else 0)|(B_ERROR if err else 0), d,kw)
         self.ended()
 
     async def _skipped(self):
@@ -539,7 +595,7 @@ class Msg:
         await self._skipped()
 
         if self.stream_out != S_ON or not self.s_out:
-            raise RuntimeError("Not streaming: %s", self)
+            raise NoStream()
 
         if self.stream_out == S_ON and self._flo_evt is not None:
             while self._flo <= 0:
@@ -568,9 +624,13 @@ class Msg:
 
     # Stream starters
 
-    def no_stream(self):
+    async def no_stream(self):
         """Mark as neither send or receive streaming.
         """
+        if self.stream_in == S_ON:
+            if self.stream_out != S_END:
+                await self.error(E_NO_STREAM)
+            raise WantsStream()
         self._recv_q = None
         self.s_out = False
         # TODO
@@ -614,7 +674,7 @@ class Msg:
         if self.stream_in == S_END:
             pass
         elif self.msg2 is None:
-            self.msg = None
+            self._msg = None
             await self.replied()
         else:
             self._set_msg(self.msg2)
@@ -623,7 +683,7 @@ class Msg:
 
 
     async def replied(self) -> Awaitable[None]:
-        if self.msg is None:
+        if self._msg is None:
             await self.cmd_in.wait()
 
     def __aiter__(self):

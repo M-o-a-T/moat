@@ -78,4 +78,9 @@ def srepr(x):
         return "(" + ",".join(srepr(v) for v in x) + ")"
     if isinstance(x, dict):
         return "{" + ",".join(drepr(k, v) for k, v in x.items()) + "}"
-    return str(x)
+    try:
+        d=vars(x)
+    except TypeError:
+        return str(x)
+    else:
+        return f"{type(x).__name__}{srepr(d)}"

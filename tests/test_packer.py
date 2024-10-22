@@ -10,8 +10,9 @@ from ipaddress import IPv4Address, IPv4Network, IPv4Interface, IPv6Address, IPv6
 
 import moat.util.cbor  # for the error traceback, if any
 import moat.util.msgpack  # for the error traceback, if any
-from moat.util import as_proxy, attrdict, packer, unpacker, stream_unpacker
+from moat.util import as_proxy, attrdict, packer, unpacker, stream_unpacker, DProxy
 from moat.util.cbor import Tag
+from moat.util.msgpack import ExtType
 
 as_proxy("_ip4", IPv4Address)
 as_proxy("_ip6", IPv6Address)
@@ -31,6 +32,8 @@ class Bar:
     def __eq__(self, other):
         return self.x == other.x
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self.x}>"
 
 # needs "replace" because testing re-imports
 @as_proxy("fu", replace=True)
@@ -114,4 +117,22 @@ def test_ip_old():
         msg = unpacker(packer(Tag(261,{adr.prefixlen:adr.network_address.packed}),cbor=True),cbor=True)
         assert type(adr) == type(msg)
         assert str(adr) == str(msg)
+
+@pytest.mark.parametrize("cbor",(False,True))
+def test_dproxy(cbor):
+    # first manually construct such a thing
+    d = ("FuBar",(),None,[1,2,42],{"one":"two","three":"four"})
+    if cbor:
+        p = packer(Tag(27, ("FuBar",(),None,[1,2,42],{"one":"two","three":"four"})), cbor=cbor)
+    else:
+        p = packer(ExtType(5, b''.join(packer(x) for x in d)))
+    dp = unpacker(p, cbor=cbor)
+    assert type(dp) is DProxy
+    assert dp.name == "FuBar"
+    assert dp[1] == 2
+    assert dp[2] == 42
+    assert dp["three" == "four"]
+    pp = packer(dp, cbor=cbor)
+    assert p == pp
+
 

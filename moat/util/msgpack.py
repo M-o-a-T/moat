@@ -18,7 +18,7 @@ import msgpack as _msgpack
 
 from .dict import attrdict
 from .path import Path
-from .proxy import Proxy, _CProxy, obj2name
+from .proxy import Proxy, _CProxy, obj2name, wrap_obj, unwrap_obj, DProxy
 
 __all__ = ["packer", "unpacker", "stream_unpacker"]
 
@@ -27,51 +27,38 @@ try:  # noqa: SIM105
 except ImportError:
     pass
 
-
-def _next(it,dfl=None):
-    try:
-        return next(it)
-    except StopIteration:
-        return dfl
+ExtType = _msgpack.ExtType
 
 def _encode(data):
     if isinstance(data, int) and data >= 1 << 64:
         # bignum
-        return _msgpack.ExtType(2, data.to_bytes((data.bit_length() + 7) // 8, "big"))
+        return ExtType(2, data.to_bytes((data.bit_length() + 7) // 8, "big"))
     if isinstance(data, Path):
         # Path
         if data.mark:
-            return _msgpack.ExtType(6, packer(data.mark) + b"".join(packer(x) for x in data))
-        return _msgpack.ExtType(3, b"".join(packer(x) for x in data))
+            return ExtType(6, packer(data.mark) + b"".join(packer(x) for x in data))
+        return ExtType(3, b"".join(packer(x) for x in data))
+    if isinstance(data, DProxy):
+        # Proxy object with data
+        return ExtType(5, b"".join(packer(x) for x in (data.name,data.i,data.s,data.a,data.k)))
     if isinstance(data, Proxy):
         # Proxy object
-        return _msgpack.ExtType(5, packer(data.name) + b"".join(packer(x) for x in data.data))
+        return ExtType(5, packer(data.name) + b"".join(packer(x) for x in data.data))
+
     try:
         name = obj2name(data)
     except KeyError:
         pass
     else:
-        return _msgpack.ExtType(4, name.encode("utf-8"))
+        return ExtType(4, name.encode("utf-8"))
 
     try:
         name = obj2name(type(data))
     except KeyError:
         pass
     else:
-        try:
-            p = data.__reduce_ex__(1)
-            if not isinstance(p, (list, tuple)):
-                p = (p,)
-            else:
-                if p[0] is not type(data):
-                    raise ValueError(f"Cannot pack {data !r}")
-                p = p[1:5]  # cannot support dedicated unpackers
-            return _msgpack.ExtType(5, packer(name) + b"".join(packer(x) for x in p))
-        except (AttributeError,ValueError):
-            p = data.__getstate__()
-            if not isinstance(p, (list, tuple)):
-                p = (p,)
-            return _msgpack.ExtType(5, packer(name) + b"".join(packer(x) for x in p))
+        p = wrap_obj(data, name=name)
+        return ExtType(5, b"".join(packer(x) for x in p))
 
     # XXX we crash instead of sending an unnamed proxy
     # TODO sending a proxied object a second time will build a new one
@@ -94,29 +81,12 @@ def _decode(code, data):
             return _CProxy[n]
         except KeyError:
             return Proxy(n)
+
     elif code == 5:
         s = stream_unpacker()
         s.feed(data)
-        s = iter(s)
-        pk = next(s)
-        try:
-            pk = _CProxy[pk]
-        except KeyError:
-            pk = partial(Proxy, pk)
-
-        a = _next(s,())
-        if isinstance(a,dict):
-            kw = a
-            a = ()
-        else:
-            kw = _next(s,{})
-
-        pk = pk (*a, **kw)
-        for v in _next(s,()):
-            pk.append(v)
-        for k,v in _next(s, {}).items():
-            pk[k] = v
-        return pk
+        s = list(iter(s))
+        return unwrap_obj(s)
 
     elif code == 6:
         # A marked path
@@ -127,7 +97,7 @@ def _decode(code, data):
         p = Path(*s)
         p.mark = mark
         return p
-    return _msgpack.ExtType(code, data)
+    return ExtType(code, data)
 
 
 def packer(*a, cbor=False, **k):

@@ -13,7 +13,7 @@ from ipaddress import IPv4Address, IPv4Network, IPv4Interface, IPv6Address, IPv6
 
 
 from .impl import NotGiven
-from .proxy import Proxy, obj2name, name2obj
+from .proxy import Proxy, obj2name, name2obj, wrap_obj, unwrap_obj, DProxy
 from .path import Path
 from .compat import const
 
@@ -229,6 +229,10 @@ class Packer:
             self._int(ob)
         elif isinstance(ob, Tag):
             self._tag(ob)
+        elif type(ob) is DProxy:
+            self._tag(27,(ob.name,ob.i,ob.s,ob.a,ob.k))
+        elif type(ob) is Proxy:
+            self._tag(203,ob.name)
         elif type(ob) in encoders:
             enc = encoders[type(ob)]
             self._tag(enc(ob))
@@ -244,7 +248,7 @@ class Packer:
                     p = ob.__getstate__()
                     if not isinstance(p, (list, tuple)):
                         p = (p,)
-                    self._tag(27, (Tag(203, name),) + p)
+                    self._tag(27, wrap_obj(ob))
             else:
                 self._tag(203, name)
 
@@ -674,12 +678,12 @@ def _dec_proxy(val):
         return Proxy(val)
 
 def _dec_obj(val):
-    pk = object.__new__(val[0])
-    try:
-        pk.__setstate__(*val[1:])
-    except AttributeError:
-        pk.__dict__.update(val[1])
-    return pk
+    if isinstance(val[0],Tag):
+        if val[0].tag != 203:
+            return Tag(27,val)  # not decodable
+        val[0] = val[0].value
+    return unwrap_obj(val)
+
 
 # bignums and proxied/constructed objects are handled separately
 

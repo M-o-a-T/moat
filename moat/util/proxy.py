@@ -4,6 +4,8 @@ This module contains proxy helpers.
 
 from __future__ import annotations
 
+from functools import partial
+
 from .impl import NotGiven
 
 __all__ = [
@@ -46,10 +48,12 @@ class DProxy(Proxy):
     the receiver doesn't know about
     """
 
-    def __init__(self, name, *a, **k):
+    def __init__(self, name, i=(),s=None,a=(),k=None):
         super().__init__(name)
-        self.a = a
-        self.k = k
+        self.i = i
+        self.s = s
+        self.a = list(a) if a else []
+        self.k = k or {}
 
     def __getitem__(self, i):
         if i in self.k:
@@ -57,12 +61,21 @@ class DProxy(Proxy):
         else:
             return self.a[i]
 
+    def append(self, val):
+        self.a.append(val)
+
+    def __setitem__(self, key, val):
+        self.k[key] = val
+
     def __repr__(self):
         return (
             f"{self.__class__.__name__}({self.name!r},"
             + ",".join(repr(x) for x in (self.a, self.k))
             + ")"
         )
+
+    def __reduce__(self):
+        return (type(self), self.i,self.s,self.a,self.k)
 
 
 _pkey = 1
@@ -167,3 +180,67 @@ def as_proxy(name, obj=NotGiven, replace=False):
 
 as_proxy("_", NotGiven, replace=True)
 as_proxy("_p", Proxy)
+
+
+def _next(it,dfl=None):
+    try:
+        return next(it)
+    except StopIteration:
+        return dfl
+
+def wrap_obj(data, name=None):
+    if name is None:
+        name = obj2name(type(data))
+    try:
+        breakpoint()
+        p = data.__reduce__()
+        if not isinstance(p, (list, tuple)):
+            p = (name,(),p)
+        else:
+            if p[0] is not type(data):
+                raise ValueError(f"Reducer for {data !r}")
+            p = (name, ) + p[1:]
+        return p
+    except (AttributeError,ValueError):
+        p = data.__getstate__()
+        if not isinstance(p, (list, tuple)):
+            p = ((), p,)
+        return (name,) + p
+
+def unwrap_obj(s):
+    s = list(s)
+    print("UNWRAP",s)
+    s = iter(s)
+    pk = next(s)
+    if not isinstance(pk,type):
+        # otherwise it was tagged and de-proxied already
+        if isinstance(pk,Proxy):
+            pk = pk.name
+        try:
+            pk = _CProxy[pk]
+        except KeyError:
+            return DProxy(*s)
+
+    a = _next(s,())
+    if isinstance(a,dict):
+        # old version
+        kw = a
+        a = ()
+        st = NotGiven
+    else:
+        kw = {}
+        st = _next(s,None) or {}
+
+    pk = pk (*a, **kw)
+    try:
+        pk.__setstate__(st)
+    except AttributeError:
+        if st:
+            for k,v in st.items():
+                setattr(pk.k.v)
+    for v in _next(s,()):
+        pk.append(v)
+    for k,v in _next(s, {}).items():
+        pk[k] = v
+
+    return pk

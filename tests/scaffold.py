@@ -23,7 +23,5 @@ async def scaffold(ha,hb):
 		tg.start_soon(cp,b,a,"<")
 		yield a,b,tg
 		tg.cancel_scope.cancel()
-		assert not a._in, a._in
-		assert not b._in, b._in
-		assert not a._out, a._out
-		assert not b._out, b._out
+	assert not a._msgs, a._msgs
+	assert not b._msgs, b._msgs

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from moat.util import Queue, CtxObj, NotGiven, QueueFull
-from moat.util.compat import TaskGroup, CancelScope
+from moat.util.compat import TaskGroup, CancelScope, const, CancelledError
 from contextlib import asynccontextmanager
 
 try:
@@ -12,22 +12,65 @@ except ImportError:
 import logging
 logger = logging.getLogger(__name__)
 
+# Lib/enum.py is too large: 84k. No we won't import that beast.
+
 # bitfields
 
-B_STREAM = 1
-B_ERROR = 2
+B_STREAM = const(1)
+B_ERROR = const(2)
 
 # errors
 
-E_UNSPEC = -1
-E_NO_STREAM = -2
-E_CANCEL = -3
-E_NOCMD = -4
+E_UNSPEC = const(-1)
+E_NO_STREAM = const(-2)
+E_CANCEL = const(-3)
+E_NO_CMDS = const(-4)
+E_SKIP = const(-5)
+E_NO_CMD = const(-11)
+
+# Stream states
+
+S_END = const(3)  # terminal Stream=False message has been sent/received
+S_NEW = const(4)  # No incoming message yet
+S_ON = const(5)  # we're streaming (seen/sent first message)
+S_OFF = const(6)  # in: we don't want streaming and signalled NO
+
+# if S_END, no message may be exchanged
+# else if Stream bit is False, stop streaming if it is on, go to S_END: out of band
+# else if Error bit is True: warning
+# else if S_NEW: go to S_ON: out-of-band
+# else: streamed data
 
 class LinkDown(RuntimeError):
     pass
 
+class Flow():
+    def __init__(self, n):
+        self.n = n
+
+class StopMe(RuntimeError):
+    pass
+class NoStream(RuntimeError):
+    pass
+class NoCmds(RuntimeError):
+    pass
+class NoCmd(RuntimeError):
+    pass
+
 class StreamError(RuntimeError):
+    def __new__(cls, msg):
+        if len(msg) == 2 and isinstance((m := msg[1]), int):
+            if m >= 0:
+                return Flow(m)
+            elif m == E_UNSPEC:
+                return StopMe()
+            elif m == E_NO_STREAM:
+                return NoStream()
+            elif m == E_NO_CMDS:
+                return NoCmds()
+            elif m <= E_NO_CMD:
+                return NoCmd(E_NO_CMD-m)
+        return object.__new__(cls)
     pass
 
 from typing import TYPE_CHECKING  # isort:skip
@@ -79,9 +122,8 @@ class CmdHandler(CtxObj):
     data streams.
     """
     def __init__(self, callback):
-        self._in: dict[int,Msg] = {}
-        self._out: dict[int,Msg] = {}
-        self._id = 0
+        self._msgs: dict[int,Msg] = {}
+        self._id = 1
         self._send_q = Queue(9)
         self._recv_q = Queue(99)
         self._debug = logger.warning
@@ -92,11 +134,12 @@ class CmdHandler(CtxObj):
         # TODO
         i = self._id
         while i < 6:
-            if i not in self._out:
+            if i not in self._msgs:
                 self._id = i
                 return i
             i += 1
-        while i in self._out:
+        i = 1
+        while i in self._msgs:
             i += 1
         self._id = i
         return i
@@ -105,95 +148,116 @@ class CmdHandler(CtxObj):
         """Retrieve new incoming commands"""
         return self._recv_q.get()
 
-    async def cmd(self, *d, **kw):
+    async def cmd(self, *a, **kw):
         """Send a simple command, receive a simple reply."""
         i = self._gen_id()
-        self._out[i] = c = Msg(self, i)
-        c.stream_in = NotGiven
-        await self._send(i<<2, d, kw if kw else None)
+        self._msgs[i] = msg = Msg(self, i, s_in=False, s_out=False)
+        self.add(msg)
+        await msg._send(a, kw if kw else None)
         try:
-            await c.cmd_in.wait()
-            return c.msg
+            await msg.replied()
+            return msg.msg
         except BaseException as exc:
-            self._send_nowait((i<<2)|B_ERROR, [E_CANCEL])
+            await msg.kill(exc)
             raise
-        finally:
-            del self._out[i]
+        else:
+            await msg.kill()
 
+    def add(self, msg):
+        if msg.stream_in != S_NEW or msg.stream_out != S_NEW:
+            raise RuntimeError(f"Add while not new {msg}")
+        self._msgs[msg.id] = msg
+
+    def drop(self, msg):
+        if msg.stream_in != S_END or msg.stream_out != S_END:
+            raise RuntimeError(f"Drop while in progress {msg}")
+        del self._msgs[msg.id]
 
     async def _handle(self, msg):
+        assert msg.id<0, msg
+
         async def _wrap(msg, task_status):
             async with CancelScope() as cs:
                 msg.scope = cs
                 task_status.started()
                 err = ()
-                res = NotGiven
+                res = None
                 try:
+                    await msg.replied()
                     res = await self._in_cb(msg)
                 except AssertionError:
                     raise
                 except Exception as exc:
-                    if msg.stream_out is False:
+                    if msg.stream_out == S_END:
                         logger.error("Error not sent (msg=%r)", msg, exc_info=exc)
                     else:
                         err = (exc.__class__.__name__, *exc.args)
+                        logger.debug("Error (msg=%r)", msg, exc_info=exc)
                 except BaseException as exc:
                     err = (E_CANCEL,)
                     raise
                 finally:
-                    # Handle termination.
-                    if msg.stream_in is True:
-                        msg.recv_q = None
-                    else:
-                        assert msg.id<0
-                        del self._in[-1-msg.id]
-
                     # terminate outgoing stream, if any
-                    if msg.stream_out is False:  # already sent
-                        if res is not NotGiven:
+                    if msg.stream_out == S_END:  # already sent last msg!
+                        if res is not None:
                             self._debug("Result for %r suppressed: %r", msg, res)
+                        if err:
+                            self._debug("Error for %r suppressed: %r", msg, err)
                     elif err:
-                        self._send_nowait(msg._i|B_ERROR, err)
+                        await msg.error(*err)
                     else:
-                        if not isinstance(res,(list,tuple)):
-                            res = (res,)
-                        await self._send(msg._i, res)
+                        await msg.result(res)
+
+                    # Handle termination.
+                    if msg.stream_in != S_END:
+                        msg._recv_q = None
+                    else:
+                        assert msg.id<0, msg
+                        msg.ended()
 
         await self._tg.start(_wrap, msg)
-            
+
 
     def stream_r(self, *data, **kw) -> AsyncContextManager[Msg]:
+        """Start an incoming stream"""
         return self._stream(data,kw,True,False)
 
     def stream_w(self, *data, **kw) -> AsyncContextManager[Msg]:
+        """Start an outgoing stream"""
         return self._stream(data,kw,False,True)
 
     def stream_rw(self, *data, **kw) -> AsyncContextManager[Msg]:
+        """Start a bidirectional stream"""
         return self._stream(data,kw,True,True)
 
 
     @asynccontextmanager
     async def _stream(self, d,kw,sin,sout):
+        "Generic stream handler"
         i = self._gen_id()
-        self._out[i] = c = Msg(self, i)
+        self._msgs[i] = msg = Msg(self, i)
+
+        # avoid creating an inner cancel scope
         async with CancelScope() as cs:
             msg.scope = cs
-
-            c.stream_in = sin
-            c.stream_out = out
-            try:
-                await self._send(i<<2+bool(sout), data, kw)
-                d = await c.recv_q.get()
-            finally:
-                if msg.stream_in is True:
-                    msg.recv_q = None
+            async with msg._stream(d,kw,sin,sout):
+                try:
+                    yield msg
+                except Exception as exc:
+                    await msg.kill(exc)
+                    raise
                 else:
-                    del self._out[i]
+                    await msg.kill()
+
 
     def _send(self, i, data, kw=None):
+        assert isinstance(data,(list,tuple)), data
+        assert isinstance(i,int), i
         return self._send_q.put((i, data, kw))
 
     def _send_nowait(self, i, data, kw=None):
+        assert isinstance(data,(list,tuple)), data
+        assert isinstance(i,int), i
         self._send_q.put_nowait((i, data, kw))
 
     async def msg_out(self):
@@ -209,29 +273,26 @@ class CmdHandler(CtxObj):
         stream = i&B_STREAM
         error = i&B_ERROR
         i = -1-(i >> 2)
-        if i < 0:
-            ch = self._in
-            idx = -1-i
-        else:
-            ch = self._out
-            idx = i
+        if i >= 0:
+            i += 1
         try:
-            conv = ch[idx]
+            conv = self._msgs[i]
         except KeyError:
-            if ch is self._out:
+            if i > 0:
                 self._debug("Spurious message %r", msg)
-            elif ch is self._out:
+            elif error:
                 self._debug("Spurious error %r", msg)
             elif self._in_cb is None:
-                self._send_nowait(((i<<2)&~B_STREAM)|B_ERROR, [E_NOCMD])
+                self._send_nowait((i<<2)|B_ERROR, [E_NOCMD])
             else:
-                ch[idx] = conv = Msg(self, i, msg=msg)
+                self._msgs[i] = conv = Msg(self, i)
                 await self._handle(conv)
-            return
-        try:
-            await conv._recv(msg)
-        except EOFError:
-            del ch[i]
+                await conv._recv(msg)
+        else:
+            try:
+                await conv._recv(msg)
+            except EOFError:
+                del self._msgs[i]
 
 
     @asynccontextmanager
@@ -241,13 +302,10 @@ class CmdHandler(CtxObj):
             try:
                 yield self
             finally:
-                for conv in self._out.values():
-                    conv.kill()
-                for conv in self._in.values():
-                    conv.kill()
+#               for conv in self._msgs.values():
+#                   await conv.kill()
                 tg.cancel()
-        self._in = {}
-        self._out = {}
+        self._msgs = {}
 
 
 class Msg:
@@ -260,11 +318,14 @@ class Msg:
     mapping it's in @data and individual keys can be accessed by indexing
     the message.
     """
-    def __init__(self, parent:CmdHandler, i:int, msg:list|None = None):
+    def __init__(self, parent:CmdHandler, mid:int, qlen=42, s_in=True, s_out=True):
         self.parent = parent
-        self._i = i<<2  # ready for sending
-        self.stream_out: bool|None = None  # None if we never sent
-        self.stream_in: bool|None= None  # None if never received, NotGiven if unwanted
+        self.id = mid
+        if mid > 0:
+            mid -= 1
+        self._i = mid<<2  # ready for sending
+        self.stream_out = S_NEW  # None if we never sent
+        self.stream_in = S_NEW  # None if never received, NotGiven if unwanted
         self.cmd_in:Event = Event()
         self.msg2 = None
 
@@ -272,11 +333,14 @@ class Msg:
         self.cmd: Any = None  # first element of the message
         self.data:dict = {}  # last element, if dict
 
-        self.recv_q = Queue(99)
+        self._recv_q = Queue(qlen) if s_in else None
+        self._recv_qlen = qlen
+        self._fli = None # flow control for incoming messages
+        self._flo = None # flow control for outgoing messages
+        self._flo_evt = None
+        self._recv_skip = False
         self.scope = None
-
-        if msg is not None:
-            self._set_msg(msg)
+        self.s_out = s_out
 
     def __getitem__(self, k):
         return self.data[k]
@@ -286,44 +350,66 @@ class Msg:
 
     def __repr__(self):
         r= f"<Msg:{self.id}"
-        if self.stream_in is not False:
-            r += " I"
-            if self.stream_in is None:
-                r += "?"
-            elif self.stream_in is NotGiven:
-                r += "-"
-            elif self.stream_in is not True:
-                r += repr(self.stream_in)
-        if self.stream_out is not False:
+        if self.stream_out != S_END:
             r += " O"
-            if self.stream_in is None:
+            if self.stream_out == S_NEW:
                 r += "?"
-            elif self.stream_out is not True:
+            elif self.stream_out == S_ON:
+                r += "+"
+            elif self.stream_out == S_OFF:
+                r += "-"
+            else:
                 r += repr(self.stream_out)
+            if self._flo is not None:
+                r += repr(self._flo)
+        if self.stream_in != S_END:
+            r += " I"
+            if self.stream_in == S_NEW:
+                r += "?"
+            elif self.stream_in == S_ON:
+                r += "+"
+            elif self.stream_in == S_OFF:
+                r += "-"
+            else:
+                r += repr(self.stream_in)
+            if self._fli is not None:
+                r += repr(self._fli)
         return r+">"
 
-    @property
-    def id(self):
-        """
-        This message's ID in human-readable form, avoiding zero
-        so that when you examine log files, one sides has id=+3 and the
-        other shows as -3
-        """
-        i = self._i >> 2
-        if i >= 0:
-            i += 1
-        return i
+    async def kill(self, exc=None):
+        if self.parent is None:
+            return
 
-    def kill(self):
-        self.parent = None
-        try:
-            self.recv_q.put_nowait_error(LinkDown())
-        except QueueFull:
-            self.recv_q = LinkDown()
-        except Exception as exc:
-            logger.error("Shutting down: %r", exc)
+        if self.stream_out != S_END:
+            self.stream_out = S_END
+
+            if exc is None:
+                await self._send([None], _kill=True)
+            elif exc is True:
+                await self._send([E_UNSPEC], err=True, _kill=True)
+            elif isinstance(exc , Exception):
+                await self._send((exc.__class__.__name__, *exc.args), err=True, _kill=True)
+            else:  # BaseException
+                await self._send([E_CANCEL], err=True, _kill=True)
+
+        if self._recv_q is not None:
+            try:
+                self._recv_q.put_nowait_error(LinkDown())
+            except EOFError:
+                pass
+            if self.stream_in == S_ON:
+                self.stream_in = S_OFF
+
+        self.ended()
 
     def _set_msg(self, msg):
+        if self.stream_in == S_END:
+            pass  # happens when msg2 is set
+        elif not (msg[0] & B_STREAM):
+            self.stream_in = S_END
+        elif self.stream_in == S_NEW and not (msg[0] & B_ERROR):
+            self.stream_in = S_ON
+
         self.msg = _SA1(msg)
         self.cmd = msg[1]
         if isinstance(msg[-1], dict):
@@ -331,81 +417,163 @@ class Msg:
         else:
             self.data = None
         self.cmd_in.set()
+        if self.stream_in != S_END:
+            self.cmd_in = Event()
+        else:
+            self.ended()
+
+    def ended(self):
+        if self.stream_in != S_END:
+            return
+        if self.stream_out != S_END:
+            return
+        if self.parent is None:
+            return
+        self.parent.drop(self)
+        self.parent = None
 
     async def _recv(self, msg):
-        """process further incoming messages"""
+        """process an incoming messages on this stream"""
         stream = msg[0]&B_STREAM
         err = msg[0]&B_ERROR
-        if stream and self.stream_in is not True and err:
+
+        # if S_END, no message may be exchanged
+        # else if Stream bit is False, stop streaming if it is on, go to S_END: out of band
+        # else if Error bit is True: flow / warning
+        # else if S_NEW: go to S_ON: out-of-band
+        # else: streamed data
+
+        if self.stream_in == S_END:
             # This is a late-delivered incoming-stream-terminating error.
-            return
+            logger.warning("LATE? %r", msg)
 
-        if self.msg is None or not stream:
-            if self.msg is None:
-                self._set_msg(msg)
-            else:
-                # this can happen when the stream ends
-                # before the reader starts to retrieve data
-                assert not stream
-                self.msg2 = msg
-        if stream:
-            if self.stream_in is NotGiven:
-                # reject: we don't accept incoming streams
-                self.stream_in = False
-                await self._send([E_NO_STREAM],{},err=True)
-            elif self.stream_in is None:
-                self.stream_in = True
-            elif self.stream_in:
-                if self.recv_q is None:
-                    return  # closed on our side, ignore
-                if err:
-                    exc = StreamError(msg)
-                    self.recv_q.put_nowait_error(exc)
+        elif not stream:
+            self._set_msg(msg)
+            self.stream_in = S_END
+            if self._recv_q is not None:
+                self._recv_q.close_sender()
+
+        elif err:
+            exc = StreamError(msg)
+            if isinstance(exc, Flow):
+                if self._flo_evt is None:
+                    self._flo = exc.n
+                    self._flo_evt = Event()
                 else:
-                    self.recv_q.put_nowait(msg)
-        else:
-            if self.stream_in is not False:
-                if self.recv_q is None:
-                    raise EOFError  # drop
-                self.recv_q.close_sender()
-            self.stream_in = False
-            if self.scope and err:
+                    if self._flo == 0:
+                        self._flo_evt.set()
+                        self._flo_evt = Event()
+                    self._flo += exc.n
+                # otherwise ignore
+            elif isinstance(exc, CancelledError) and self.scope is not None:
                 self.scope.cancel()
-                self.error = StreamError(msg)
-
-    async def _send(self, d,kw, stream=False, err=False) -> None:
-        if stream is None:
-            stream = bool(self.stream_out)
-        if self.stream_out is False:
-            if self.stream_in and err and not stream:
-                stream = True
-                # special case to kill an incoming stream
+            elif self.stream_in == S_ON and self._recv_q is not None:
+                self._recv_q.put_nowait_error(exc)
             else:
-                raise RuntimeError("already replied")
-        else:
-            self.stream_out = stream
-        await self.parent._send(self._i|(B_STREAM if stream else 0)|(B_ERROR if err else 0), d,kw)
+                self.warn.append(exc)
 
-    def send(self, *a, **kw) -> Awaitable[None]:
+        elif self.stream_in == S_NEW:
+            self._set_msg(msg)
+
+        elif self._recv_q is not None:
+            try:
+                self._recv_q.put_nowait(_SA1(msg))
+            except QueueFull:
+                self._recv_skip = True
+
+        else:
+            self._debug("Unwanted stream: %r", msg)
+            if self.stream_in == S_ON:
+                self.stream_in = S_OFF
+                self._send_nowait([E_NO_STREAM],err=True)
+
+        self.ended()
+
+    async def _send(self, d,kw=None, stream=False, err=False, _kill=False) -> None:
+        if self.parent is None:
+            return
+        if stream is None:
+            stream = self.stream_out == S_ON
+        if self.stream_out == S_END and not _kill:
+            raise RuntimeError("already replied")
+        if self.stream_out == S_NEW and stream and not err:
+            self.stream_out = S_ON
+        elif not stream:
+            self.stream_out = S_END
+        await self.parent._send(self._i|(B_STREAM if stream else 0)|(B_ERROR if err else 0), d,kw)
+        self.ended()
+
+    async def _skipped(self):
+        """
+        Test whether incoming data could not be delivered due to the
+        receive queue getting full.
+        """
+        if self._recv_q is not None and self._recv_skip and self.stream_out != S_END:
+            await self._send([E_SKIP], err=True,stream=True)
+            self._recv_skip = False
+
+    async def _qsize(self, reading:bool=False):
+        # Queueing strategy:
+        # - read without flow control until the queue is half full
+        # - send a message announcing 1/4 of the queue space
+        # - then, whenever the queue is at most 1/4 full *and* qlen/2 messages
+        #   have been processed, announce that space
+        if self._fli is None:
+            if self._recv_q.qsize() >= self._recv_qlen // 2:
+                self._fli = 0
+                await self._send([self._recv_qlen // 4], err=True,stream=True)
+
+        elif self._recv_q.qsize() <= self._recv_qlen//4 and self._fli > self._recv_qlen//2:
+
+            m = self._recv_qlen//2+reading
+            self._fli -= m
+            await self._send([m], err=True,stream=True)
+
+        elif reading:
+            self._fli += 1
+
+    async def send(self, *a, **kw) -> None:
         """
         Send a reply.
-        Transmissions are auto-marked as belonging to the stream during streaming.
         """
-        return self._send(a, kw if kw else None, stream=None)
+        await self._skipped()
 
-    def send_error(self, *a, **kw) -> Awaitable[None]:
-        return self._send(d, kw if kw else None, stream=None, err=True)
+        if self.stream_out != S_ON or not self.s_out:
+            raise RuntimeError("Not streaming: %s", self)
 
-    async def stop(self, *err, **kw):
-        """stops an incoming stream"""
-        if not self.stream_in:
-            return  # already closed
-        i = self._i|B_ERROR
-        if self.stream_out is False:
-            i|= B_STREAM
-        if not err:
-            err = [E_UNSPEC]
-        await self.parent._send(i, err, kw if kw else None)
+        if self.stream_out == S_ON and self._flo_evt is not None:
+            while self._flo <= 0:
+                await self._flo_evt.wait()
+            self._flo -= 1
+        await self._send(a, kw if kw else None, stream=True)
+
+    def error(self, *a, **kw) -> Awaitable[None]:
+        """
+        Send an error.
+        """
+        return self._send(a, kw if kw else None, stream=False, err=True)
+
+    def warn(self, *a, **kw) -> Awaitable[None]:
+        """
+        Send a warning.
+        """
+        return self._send(a, kw if kw else None, stream=True, err=True)
+
+    def result(self, *a, **kw) -> Awaitable[None]:
+        """
+        Send the result.
+        """
+        return self._send(a, kw if kw else None, stream=False, err=False)
+
+
+    # Stream starters
+
+    def no_stream(self):
+        """Mark as neither send or receive streaming.
+        """
+        self._recv_q = None
+        self.s_out = False
+        # TODO
 
     def stream_r(self, *data, **kw) -> AsyncContextManager[Msg]:
         return self._stream(data,kw,True,False)
@@ -418,20 +586,45 @@ class Msg:
 
     @asynccontextmanager
     async def _stream(self, d,kw,sin,sout):
-        if self.stream_out is not None:
+        if self.stream_out != S_NEW:
             raise RuntimeError("Stream-out already set")
-        self.stream_out = sout
-        self.msg = self.cmd = self.data = None
-        self.cmd_in = Event()
-        if self.msg2 is not None:
-            # This happens when an incoming stream is already finished
+
+        # stream-in depends on what the remote side sent
+        if not sin:
+            q, self._recv_q = self._recv_q, None
+            if q is not None and q.qsize() and self.stream_in == S_ON:
+                self.stream_in = S_OFF
+                await self._send([E_NO_STREAM],stream=True,err=True)
+            # At this point the msg should not have been iterated yet
+            # thus whatever has been received is still in there
+
+        self.s_out = sout
+
+        await self._send(d,kw, stream=True)
+        await self.replied()
+
+        yield self
+
+        # This code is running inside the handler, which will process the error
+        # case. Thus we don't need error handling here.
+
+        if self.stream_out != S_END:
+            await self._send([None])
+
+        if self.stream_in == S_END:
+            pass
+        elif self.msg2 is None:
+            self.msg = None
+            await self.replied()
+        else:
             self._set_msg(self.msg2)
             self.msg2 = None
 
-        await self._send(d,kw, stream=sout)
-        yield self
-        pass # an end message must be sent, but ours is not the place
 
+
+    async def replied(self) -> Awaitable[None]:
+        if self.msg is None:
+            await self.cmd_in.wait()
 
     def __aiter__(self):
         return self
@@ -439,6 +632,15 @@ class Msg:
     async def __anext__(self):
         if self._recv_q is None:
             raise StopAsyncIteration
-        return await self._recv_q.get()
+        elif isinstance(self._recv_q,Exception):
+            exc,self._recv_q = self._recv_q,None
+            raise exc
+        await self._skipped()
+        await self._qsize(True)
+
+        try:
+            return await self._recv_q.get()
+        except EOFError:
+            raise StopAsyncIteration
 
 

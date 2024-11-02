@@ -26,7 +26,7 @@ lower-level data in.
 Usage
 =====
 
-:: python
+.. code-block:: python
 
     from moat.util import packer, stream_unpacker
 

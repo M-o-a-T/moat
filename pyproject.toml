@@ -74,3 +74,32 @@ packages = ["moat.lib.cmd"]
 disable = "wrong-import-order,use-dict-literal,unspecified-encoding,ungrouped-imports,too-many-statements,too-many-return-statements,too-many-nested-blocks,too-many-locals,too-many-instance-attributes,too-many-branches,too-many-arguments,too-few-public-methods,superfluous-parens,no-else-return,no-else-continue,invalid-name,fixme,line-too-long"
 
 [tool.moat]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+# Regexes for lines to exclude from consideration
+include = [
+    "moat/lib/cmd/*",
+    "tests/*",
+]
+exclude_also = [
+    # Don't complain about missing debug-only code:
+    "def __repr__",
+    "if self\\.debug",
+
+    # Don't complain if tests don't hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "except ImportError:",
+
+    # Don't complain if non-runnable code isn't run:
+    "if 0:",
+    "if __name__ == .__main__.:",
+
+    # Don't complain about abstract methods, they aren't run:
+    "@(abc\\.)?abstractmethod",
+    ]
+
+

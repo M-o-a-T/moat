@@ -7,7 +7,7 @@ from ._cmd import *
 
 try:
 	from concurrent.futures import CancelledError
-except ImportError:
+except ImportError:  # nocover
 	class CancelledError(Exception):
 		"Basic remote cancellation"
 		pass

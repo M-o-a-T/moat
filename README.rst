@@ -178,8 +178,8 @@ However, *if* a stream's recipient has limited buffer space and sends a
 command that might trigger a nontrivial amount of messages, it MAY send a
 specific warning (i.e. a message with both Error and Streaming bits set)
 before its initial command or reply. This warning MUST consist of a single
-non-negative integer that advises the sender of the number of messages it
-may transmit.
+non-negative integer that advises the sender of the number of streamed
+messages it may transmit.
 
 During stream transmission, the recipient then SHOULD periodically send some
 more (positive) integers to signal the availability of more buffer space.
@@ -199,40 +199,30 @@ Error handling
 
 The exact semantics of error messages are application specific.
 
-Error messages with the streaming bit clear SHOULD be treated as a fatal condition.
+Error messages with the streaming bit clear terminate the command.
+They should be treated as fatal.
 
-If both bits are set, handling the message is somewhat more complex; the
-basic rule is that an error cannot start a data stream. Thus:
+Error messages with the streaming bit set are either flow control
+messages (see above) or warnings.
 
-* is this the first message on this stream? yes: ignore.
-* did the sender close its side of the conversation? yes: error
-* otherwise: interpret as a warning
-
-This is required because a sender might terminate its side of the
-conversation, but it should still be able to interrupt the other side
-*and* such an interrupt must not interfere with the next command
-if the stream was closed, and the next command re-uses the ID,
-while the error message was in transit.
-
-This library may generate internal errors and send them to the remote side,
-e.g. if the remote side replies to a simple command with a streaming-start
-message. They are encoded as small negative numbers without further data.
-Other errors are currently returned as (typename,args) tuples.
-(TODO: add an option to send proxied exceptions.)
 
 Known errors
 ------------
 
 * -1: Unspecified
 
-  Somebody called ``.stop()`` without further elucidation.
+  The ``.stop()`` API method was called.
+
+  This message MAY be sent as a warning.
+
+  Usage: assume that a sender reads and transmits a block of ten
+  measurements each second. If a "stop" warning arrives, the sender should
+  complete the current block before terminating, while a "stop" error
+  forces the current transmission to end immediately.
 
 * -2: Can't receive this stream
 
   Sent if a command isn't prepared to receive a streamed reply.
-
-  This message SHOULD be sent as a warning, but MAY be interpreted as a
-  hard error by its receiver.
 
 * -3: Cancel
 
@@ -249,6 +239,15 @@ Known errors
 * -5: Data loss
 
   An incoming message was dropped due to resource exhaustion (full queue).
+
+  This message SHOULD be sent as a warning, but MAY be interpreted as a
+  hard error by its receiver.
+
+* -6: Must stream
+
+  Sent if a command isn't prepared to handle a non-streamed request or
+  reply.
+
 
 * -11 …: No Command
 

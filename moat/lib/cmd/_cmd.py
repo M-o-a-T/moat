@@ -37,14 +37,15 @@ S_ON = const(5)  # we're streaming (seen/sent first message)
 S_OFF = const(6)  # in: we don't want streaming and signalled NO
 
 # if S_END, no message may be exchanged
-# else if Stream bit is False, stop streaming if it is on, go to S_END: out of band
-# else if Error bit is True: warning
+# else if Stream bit is False, stop streaming if it is on, go to S_END: out-of-band
+# else if Error bit is True: warning / out-of-band
 # else if S_NEW: go to S_ON: out-of-band
 # else: streamed data
 
 __all__ = []
 
 def _exp(fn):
+    "export this"
     __all__.append(fn.__name__)
     return fn
 
@@ -71,6 +72,9 @@ class NoCmd(RuntimeError):
 @_exp
 class WantsStream(RuntimeError):
     pass
+@_exp
+class MustStream(RuntimeError):
+    pass
 
 @_exp
 class StreamError(RuntimeError):
@@ -82,6 +86,8 @@ class StreamError(RuntimeError):
                 return StopMe()
             elif m == E_NO_STREAM:
                 return NoStream()
+            elif m == E_MUST_STREAM:
+                return MustStream()
             elif m == E_NO_CMDS:
                 return NoCmds()
             elif m <= E_NO_CMD:

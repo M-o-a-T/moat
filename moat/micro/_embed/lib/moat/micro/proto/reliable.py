@@ -15,6 +15,7 @@ from ..compat import (
     TaskGroup,
     TimeoutError,
     idle,
+    log,
     sleep_ms,
     ticks_add,
     ticks_diff,
@@ -26,16 +27,24 @@ from .stack import StackedMsg
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Never
+    from typing import Never, Any
 
+class EphemeralMsg:
+    """A message that may be replaced while enqueued or in transit.
+
+    Sending an `EphemeralMsg` enqueues the message without waiting for
+    delivery. If a channel's message is waiting to be sent, it'll be
+    updated.
+    """
+    def __init__(self, chan:int, data: Any):
+        self.chan = chan
+        self.data = data
 
 class ReliableMsg(StackedMsg):
     """
     Message retry.
 
     This module handles retransmitting missing messages.
-
-    Messages are wrapped in a dict with retransmit data.
     """
 
     # Operation:
@@ -57,30 +66,39 @@ class ReliableMsg(StackedMsg):
     # window/2. The sender delays messages that would exceed the window.
     # The receiver discards messages outside of this range.
     #
-    # All messages are maps and contain the send_position `s`, recv_tail
+    # All messages are lists and contain the send_position `s`, recv_tail
     # `r`, recv_done `x`, and data `d`. "recv_done" is a list of messages
     # that have been received out-of-order so they're not retransmitted.
+    #
+    # 'x' is only present if 'r' is negated (``-1-r``).
     #
     # The receiver advances its send_tail until it matches `r` and queues
     # all messages for retransmission that are still outstanding but not
     # mentioned in `x`. `x` is omitted when empty, `d` is omitted when not
     # yet queued.
     #
-    # Connection reset or restart is signalled by an item `a`='r', a
-    # sequence counter `n`=1 to `n`=3, and a negotiated configuration `c`.
-    # The value `n`=0 signals that the link is closed. Other values are
-    # reserved.
+    # If data is a list, they're appended as-is to the message, to save a
+    # byte, except when the list is one element long, for data
+    # transparency.
+    # 
+    # Sending an EphemeralMsg does not wait for delivery. Instead, the
+    # message is queued. If the message has not been sent by the time the 
+    # channel's next message is transmitted, it is updated instead.
+    # 
+    # Connection reset or restart is signalled by `s`<0. Values -2 to -4
+    # correspond to restart phases; the following elements contain link
+    # configuration data. A value of `-1` indicated that the connection is
+    # closed. Other values are reserved.
     #
-    # `c` should contains item `m` (window size) and `t` (timeout,
-    # milliseconds). When values do not match, max timeout and min
+    # `c` contains of at least two values: the window size and a timeout,
+    # in milliseconds. When values do not match, max timeout and min
     # window values are used by both sides. Other items are ignored.
+    # A value of zero (or a missing parameter) means "OK I'll take your
+    # value" and may only be sent after the corresponding parameter has
+    # been seen from the remote.
     #
     # The minimum window size is 4. The minimum timeout is 10 msec, which
     # is probably not useful. The default is 1000 (one second).
-    #
-    # All other values of `a` are reserved and result in a discarded
-    # message. Regular data exchange does not contain an item `a`.
-    # All other items are ignored.
 
     rq = None
     __tg = None
@@ -110,7 +128,7 @@ class ReliableMsg(StackedMsg):
         self.s_recv_head = 0  # next expected message. Messages before this are out of sequence
         self.s_recv_tail = 0  # messages before this have been processed
         self.s_q = []
-        self.m_send = {}
+        self.m_send:dict(int, list[Any,int,Event]) = {}  # mte: message timestamp event
         self.m_recv = {}
         self.t_recv = None
         self.progressed = False
@@ -128,26 +146,39 @@ class ReliableMsg(StackedMsg):
         `None` if only sending an ACK.
         """
         self.progressed = True
+        d = NotGiven
         if k is None:
             if not self.pend_ack:
                 return
-            msg = {"s": self.s_send_head}
+            msg = [self.s_send_head]
         else:
             mte = self.m_send[k]
             if mte[1] is False:
                 # already ack'd.
-                msg = {"s": self.s_send_head}
+                msg = [self.s_send_head]
             else:
                 mte[1] = ticks_add(ticks_ms(), self.timeout)
-                msg = {"s": k, "d": mte[0]}
-        msg["r"] = r = self.s_recv_tail
+                msg = [k]
+                d = mte[0]
+        r = self.s_recv_tail
         x = []
         while r != self.s_recv_head:
             if r in self.m_recv:
                 x.append(r)
             r = (r + 1) % self.window
         if x:
-            msg["x"] = x
+            msg.append(-1-self.s_recv_tail)
+            msg.append(x)
+        else:
+            msg.append(self.s_recv_tail)
+        if d is not NotGiven:
+            if isinstance(d, EphemeralMsg):
+                d.sent = True
+                d = d.data
+            if isinstance(d,(tuple,list)) and len(d) != 1:
+                msg.extend(d)
+            else:
+                msg.append(d)
         self.pend_ack = False
 
         with suppress(RuntimeError):
@@ -318,20 +349,21 @@ class ReliableMsg(StackedMsg):
                     e.set_error(ChannelClosed())
             while self.s_q:
                 _m, e = self.s_q.pop()
-                e.set_error(ChannelClosed())
+                if e is not None:
+                    e.set_error(ChannelClosed())
             if self._is_up.is_set():
                 self._is_up = Event()
-            msg = {"a": "r", "n": 0}
+            msg = [-1]
             if err is not None:
-                msg["e"] = err
+                msg.append(err)
             try:
                 try:
                     await self.s.send(msg)
                 except AttributeError:
                     return  # closing. XXX should not happen
                 except TypeError:
-                    if "e" in msg:
-                        msg["e"] = repr(err)
+                    if len(msg) > 1:
+                        msg = [msg[0], repr(err)]
                         await self.s.send(msg)
                     else:
                         raise
@@ -344,11 +376,11 @@ class ReliableMsg(StackedMsg):
             level = self.reset_level
         else:
             self.reset_level = level
-        msg = {"a": "r", "n": level}
+        msg = [-1-level]
         if level:
-            msg["c"] = self._get_config()
-        if err is not None:
-            msg["e"] = err
+            msg.extend(self._get_config())
+        elif err is not None:
+            msg.append(err)
         if self.reset_level < 3:
             self.in_reset = ticks_add(ticks_ms(), self.timeout)
         self._trigger.set()
@@ -358,20 +390,22 @@ class ReliableMsg(StackedMsg):
         """
         Sender.
 
-        Iterated messages get cached and updated.
+        Ephemeral messages get cached and updated.
         The sender won't wait until they're transmitted.
         """
-        if "n" in msg and "i" in msg and "a" not in msg:
-            evt = None
-            i = msg["i"]
+
+        if isinstance(msg, EphemeralMsg):
+            i = msg.chan
             if (om := self._iters.get(i, None)) is not None:
-                if "e" not in om:
-                    om.update(msg)
+                om.data = msg.data
+                om.sent = False
                 return
             self._iters[i] = msg
+            msg.sent = False
+            evt = None
+        else:
+            evt = ValueEvent()
 
-        # print(f"T {self.link.txt}: SQ {msg} {id(self._trigger)}", file=sys.stderr)
-        evt = ValueEvent() if "a" in msg else None
         self.s_q.append((msg, evt))
         self._trigger.set()
         if evt is None:
@@ -379,17 +413,19 @@ class ReliableMsg(StackedMsg):
         try:
             return await evt.wait()
         except BaseException:
-            # send a cancellation
-            self.s_q.append(({"i": msg["i"]}, None))
+            # TODO send a cancellation
+            # self.s_q.append(({"i": msg["i"]}, None))
             self._trigger.set()
             raise
 
     def _get_config(self):
-        return {"t": self.timeout, "m": self.window}
+        return [self.window, self.timeout]
 
     def _update_config(self, c):
-        self.timeout = max(10, self.timeout, c.get("t", 0))
-        self.window = max(4, min(self.window, c.get("m", self.window)))
+        if len(c) > 0 and c[0] > 0:
+            self.window = max(4, min(self.window, c[0]))
+        if len(c) > 1 and c[1] > 0:
+            self.timeout = max(10, self.timeout, c[1])
 
     def _reset_done(self):
         if self.in_reset:
@@ -397,11 +433,11 @@ class ReliableMsg(StackedMsg):
             self._trigger.set()
             self._is_up.set()
 
-    async def recv(self):
+    async def recv(self) -> Any:
         "return the next message in the receive queue"
         return await self.rq.get()
 
-    async def _read(self) -> Never:
+    async def _read(self) -> None:
         while True:
             try:
                 if self.s is None:
@@ -419,15 +455,11 @@ class ReliableMsg(StackedMsg):
         return self._is_down.is_set()
 
     async def _dispatch(self, msg):
-        a = msg.get("a", None)
+        if not isinstance(msg,(tuple,list)):
+            raise ValueError(msg)
 
-        if a is None:
-            pass
-        elif a == "r":
-            # XXX CBOR: send the data with a tag instead?
-            c = msg.get("c", {})
-            n = msg.get("n", 0)
-            e = msg.get("e", None)
+        if msg[0] < 0:  # protocol error / reset sequence
+            n = -1-msg[0]
             if n == 0:  # closed
                 self._is_down.set()
                 if self._is_up.is_set():
@@ -444,17 +476,17 @@ class ReliableMsg(StackedMsg):
                     self.reset(2)
 
                     await self.error(RuntimeError(e or "ext reset"))
-                self._update_config(c)
+                self._update_config(msg[1:])
                 await self.send_reset()
                 return
             elif n == 2:  # incoming ack
-                self._update_config(c)
+                self._update_config(msg[1:])
                 await self.send_reset(3)
                 self._reset_done()
                 return
             elif n == 3:  # incoming ack2
                 if not self.in_reset or self.reset_level > 1:
-                    self._update_config(c)
+                    self._update_config(msg[1:])
                     self._reset_done()
                 else:
                     await self.error(RuntimeError("ext reset ack2"))
@@ -462,10 +494,8 @@ class ReliableMsg(StackedMsg):
                     await self.send_reset()
                 return
             else:
-                # ignored
+                log("Unknown",msg)
                 return
-        else:
-            return  # unknown action
 
         if self.in_reset:
             if self.reset_level < 2:
@@ -475,19 +505,22 @@ class ReliableMsg(StackedMsg):
             # but their ack got lost
             self._reset_done()
 
-        r = msg.get("s", None)  # swapped (our PoV of incoming msg)
-        s = msg.get("r", None)
-        x = msg.get("x", ())
+        r = msg[0]  # swapped, because receiving
+        s = msg[1]
+        if s < 0:
+            s = -1-s
+            x = msg[2]
+            d = msg[3:]
+        else:
+            x = ()
+            d = msg[2:]
 
-        if r is None or s is None:
-            return
         if not (0 <= r < self.window) or not (0 <= s < self.window):
             self.reset(1)
             await self.send_reset(err="R/S out of bounds")
             return
 
-        d = msg.get("d", NotGiven)
-        if d is not NotGiven:
+        if d:
             # data. R is the message's sequence number.
             self.pend_ack = True
             if self.between(self.s_recv_tail, self.s_recv_head, r):
@@ -515,7 +548,7 @@ class ReliableMsg(StackedMsg):
                 #             self.s_recv_head,r,r+1, file=sys.stderr)
 
         # process ACKs
-        if s >= 0:
+        if True:  # s >= 0:
             rr = self.s_send_tail
             while rr != s:
                 if rr == self.s_send_head:
@@ -527,8 +560,12 @@ class ReliableMsg(StackedMsg):
                 except KeyError:
                     pass
                 else:
-                    if "n" in m and (i := m.get("i", None)) is not None:
-                        self._iters.pop(i, None)
+                    if isinstance(m,EphemeralMsg):
+                        mo = self._iters.pop(m.chan, None)
+                        if not mo.sent:
+                            # re-enqueue
+                            self.s_q.append((msg, None))
+
                     self.pend_ack = True
                     if e is not None:
                         e.set(None)
@@ -562,6 +599,8 @@ class ReliableMsg(StackedMsg):
                 # print("RT1",self.link.txt,self.s_recv_tail,
                 #             self.s_recv_head,r,r+1, file=sys.stderr)
                 self.pend_ack = True
+                if len(d) == 1:
+                    d = d[0]
                 await self.rq.put(d)
 
         if self.s_recv_tail == self.s_recv_head:

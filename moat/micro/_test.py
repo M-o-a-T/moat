@@ -30,7 +30,8 @@ if TYPE_CHECKING:
 with warnings.catch_warnings(record=True) as _w:
     # may already have been done elsewhere
     warnings.simplefilter("ignore")
-    logging.basicConfig(level=logging.DEBUG)
+    import sys
+    logging.basicConfig(level=logging.DEBUG, stream=sys.stderr, force=True)
 
 if not len(_w):
     # … if not, then add our own hook

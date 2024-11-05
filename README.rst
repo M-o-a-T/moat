@@ -47,7 +47,8 @@ objects (as in cbor).
 * encoder(cls, key, fn)
 
   Encode an object ``obj`` of type ``type``. ``fn(codec, obj)`` must return
-  a bytestring / an encodeable object.
+  a bytestring / an encodeable object. If the registration key is ``None``
+  the function must return a tuple with the key as first element.
 
 * decoder(key, fn)
 

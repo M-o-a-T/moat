@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any,Callable
 
 class NoCodecError(ValueError):
     "No codec found"
@@ -29,21 +29,40 @@ class Extension:
     binary:bool = None
 
     def __init__(self):
-        self.enc = {}
-        self.dec = {}
+        self.enc: dict[type, tuple[int|None,Callable]] = {}
+        self.dec: dict(int, Callable) = {}
 
-    def encoder(self, cls: type, key: int, fn) -> None:
-        self.enc[type] = (key,fn)
+    def encoder(self, cls: type, key: int|None, fn=None) -> None:
+        def _enc(fn):
+            self.enc[type] = (key,fn)
+            return fn
+        if fn is None:
+            return _enc
+        else:
+            _enc(fn)
 
-    def decoder(self, key: int, fn) -> None:
-        self.dec[type] = fn
+    def decoder(self, key: int, fn=None) -> None:
+        def _dec(fn):
+            self.dec[key] = fn
+            return fn
+        if fn is None:
+            return _dec
+        else:
+            _dec(fn)
 
-    def encode(self, codec, obj):
+    def encode(self, codec, obj) -> tuple[int,bytes]:
         try:
-            fn = self.enc[type(obj)]
+            key,fn = self.enc[type(obj)]
         except KeyError:
-            raise NoCodecError(codec, obj) from None
-        return fn(codec, obj)
+            try:
+                key,fn = self.enc[object]
+            except KeyError:
+                raise NoCodecError(codec, obj) from None
+
+        res = fn(codec, obj)
+        if key is None:
+            key,res = res
+        return key,res
 
     def decode(self, codec, key, data):
         try:

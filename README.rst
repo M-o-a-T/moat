@@ -44,16 +44,16 @@ objects (as in cbor).
 
 * binary (classvar): True if msgpack-style, False if cbor-style
 
-* encode(type, key, encoder)
+* encoder(cls, key, fn)
 
-  Encode an object ``obj`` of type ``type``. ``encoder(codec, obj)`` must return
+  Encode an object ``obj`` of type ``type``. ``fn(codec, obj)`` must return
   a bytestring / an encodeable object.
 
-* decode(key, decoder)
+* decoder(key, fn)
 
-  Decode (key, data) to an object. ``decoder(codec, data)`` is called with a
-  bytestring / a decoded object, and returns the resulting object.
+  Add a decoder (key, data) to an object. ``fn(codec, data)`` is called with a
+  bytestring / a decoded object, and returns whatever has been encoded.
 
 Extensions get the codec as their first argument. They can use it to store
-data, e.g. references.
+data, e.g. references. The extension object is available as ``codec.ext``.
 

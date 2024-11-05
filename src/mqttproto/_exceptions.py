@@ -35,6 +35,10 @@ class MQTTSubscribeFailed(MQTTOperationFailed):
     pass
 
 
+class MQTTTimeoutError(MQTTOperationFailed):
+    """Raised when a MQTT Ping request is not answered"""
+
+
 class MQTTUnsubscribeFailed(MQTTOperationFailed):
     pass
 

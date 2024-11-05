@@ -9,6 +9,7 @@ from ._exceptions import MQTTOperationFailed as MQTTOperationFailed
 from ._exceptions import MQTTProtocolError as MQTTProtocolError
 from ._exceptions import MQTTPublishFailed as MQTTPublishFailed
 from ._exceptions import MQTTSubscribeFailed as MQTTSubscribeFailed
+from ._exceptions import MQTTTimeoutError as MQTTTimeoutError
 from ._exceptions import MQTTUnsubscribeFailed as MQTTUnsubscribeFailed
 from ._exceptions import MQTTUnsupportedPropertyType as MQTTUnsupportedPropertyType
 from ._types import MQTTAuthPacket as MQTTAuthPacket

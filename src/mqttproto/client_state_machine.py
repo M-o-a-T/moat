@@ -9,6 +9,7 @@ from attr.validators import instance_of
 from attrs import define, field
 
 from ._base_client_state_machine import BaseMQTTClientStateMachine, MQTTClientState
+from ._exceptions import MQTTTimeoutError
 from ._types import (
     MQTTConnAckPacket,
     MQTTConnectPacket,
@@ -127,6 +128,8 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
 
     def ping(self) -> None:
         self._out_require_state(MQTTClientState.CONNECTED)
+        if self._ping_pending:
+            raise MQTTTimeoutError("No reply to our Ping request")
         packet = MQTTPingRequestPacket()
         packet.encode(self._out_buffer)
         self._ping_pending = True

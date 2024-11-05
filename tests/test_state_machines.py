@@ -11,6 +11,7 @@ from mqttproto import (
     MQTTPublishPacket,
     MQTTPublishReceivePacket,
     MQTTPublishReleasePacket,
+    MQTTTimeoutError,
     QoS,
     ReasonCode,
     Subscription,
@@ -86,6 +87,10 @@ def test_duplicate_subscription(connected_client: MQTTClientStateMachine) -> Non
     assert connected_client.unsubscribe(["foo/bar"]) is None
     assert connected_client.unsubscribe(["foo/bar"]) == 2
 
+def test_ping_no_answer(connected_client: MQTTClientStateMachine) -> None:
+    connected_client.ping()
+    with pytest.raises(MQTTTimeoutError):
+        connected_client.ping()
 
 def test_client_publish_qos0(
     client_session_pairs: list[

@@ -12,7 +12,7 @@ Package: python3-mqttproto
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   python3-anyio (>= 4.4),
-  python3-attrs (>= 23.2.0),
+  python3-attr (>= 23.2.0),
   python3-stamina (>= 24.2.0),
 Description: Sans-io MQTT v5 client/broker with an AnyIO based I/O implementation
   .. image:: https://github.com/agronholm/mqttproto/actions/workflows/test.yml/badge.svg

@@ -1,3 +1,9 @@
+mqttproto (0.7.2-4) unstable; urgency=medium
+
+  * attr, not attrs
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 05 Nov 2024 16:23:08 +0100
+
 mqttproto (0.7.2-3) unstable; urgency=medium
 
   * Guh

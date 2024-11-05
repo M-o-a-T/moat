@@ -2,4 +2,4 @@ mqttproto (0.7.2-1) unstable; urgency=medium
 
   * Initial Debianization.
 
- -- Matthias Urlichs <matthias@urlichs.de>  Tue, 05 Nov 2024 14:42:31 +0100
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 05 Nov 2024 14:42:32 +0100

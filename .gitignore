@@ -16,3 +16,6 @@ __pycache__
 .idea
 .cache
 .local
+
+# Debian packaging
+/debian/

@@ -222,7 +222,7 @@ def unwrap_obj(s):
         try:
             pk = _CProxy[pk]
         except KeyError:
-            return DProxy(*s)
+            return DProxy(pk, *s)
 
     a = _next(s,())
     if isinstance(a,dict):
@@ -234,13 +234,17 @@ def unwrap_obj(s):
         kw = {}
         st = _next(s,None) or {}
 
-    pk = pk (*a, **kw)
     try:
-        pk.__setstate__(st)
-    except AttributeError:
-        if st:
-            for k,v in st.items():
-                setattr(pk.k.v)
+        pk = pk (*a, **kw)
+    except TypeError:
+        pk = pk (*a, **st)
+    else:
+        try:
+            pk.__setstate__(st)
+        except AttributeError:
+            if st:
+                for k,v in st.items():
+                    setattr(pk.k.v)
     for v in _next(s,()):
         pk.append(v)
     for k,v in _next(s, {}).items():

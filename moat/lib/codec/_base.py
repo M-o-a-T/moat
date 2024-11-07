@@ -77,4 +77,4 @@ class Extension:
             fn = self.dec[key]
         except KeyError:
             raise NoCodecError(codec, key) from None
-        return fn(key, data)
+        return fn(codec, data)

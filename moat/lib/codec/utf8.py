@@ -1,6 +1,10 @@
-from ._base import Codec as _Codec, NoCodecError
 from codecs import lookup
+
+from ._base import Codec as _Codec
+from ._base import NoCodecError
+
 Utf8Stream = lookup("utf-8").incrementaldecoder
+
 
 class Codec(_Codec):
     def __init__(self, ext=None):
@@ -17,9 +21,9 @@ class Codec(_Codec):
     def decode(self, data):
         return data.decode("utf-8")
 
-    def feed(self, data, final:bool=False):
+    def feed(self, data, final: bool = False):
         try:
             return self.dec.decode(data)
         finally:
-            if final and (st := self.dec.getstate()) != (b'',0):
+            if final and (st := self.dec.getstate()) != (b"", 0):
                 raise IncompleteData(self, st)

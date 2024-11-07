@@ -7,7 +7,8 @@ from __future__ import annotations
 
 import struct
 
-from ._base import Codec as _Codec, NoCodecError
+from ._base import Codec as _Codec
+from ._base import NoCodecError
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
@@ -15,8 +16,10 @@ from typing import TYPE_CHECKING  # isort:skip
 try:
     from micropython import const
 except ImportError:
-    def const(x:int) -> int:
+
+    def const(x: int) -> int:
         return x
+
 
 if TYPE_CHECKING:
     from typing import Any
@@ -122,11 +125,10 @@ class ExtraData(ValueError):
 class Codec(_Codec):
     "Basic CBOR codec"
 
-    _buffer:bytes|bytearray = b''
-    _buf_pos:int = 0
+    _buffer: bytes | bytearray = b""
+    _buf_pos: int = 0
 
-
-    def __init__(self, use_attrdict:bool = False, **kw):
+    def __init__(self, use_attrdict: bool = False, **kw):
         super().__init__(**kw)
         self.use_attrdict = use_attrdict
 
@@ -145,9 +147,9 @@ class Codec(_Codec):
             self._enc_any(obj)
             return self._buffer
         finally:
-            self._buffer = b''  # always reset
+            self._buffer = b""  # always reset
 
-    def decode(self, data: bytes|bytearray|memoryview) -> Any:
+    def decode(self, data: bytes | bytearray | memoryview) -> Any:
         if self._buffer:
             raise RuntimeError("Codec is busy")
 
@@ -159,18 +161,17 @@ class Codec(_Codec):
                 raise ExtraData
             return res
         finally:
-            self._buffer = b''  # always reset
+            self._buffer = b""  # always reset
             self._buf_pos = 0
 
-    def feed(self, data: bytes|bytearray|memoryview) -> Iterator[Any]:
+    def feed(self, data: bytes | bytearray | memoryview) -> Iterator[Any]:
         if not self._buffer:
             self._buffer = data
         else:
-            if isinstance(self._buffer, (bytearray,memoryview)):
+            if isinstance(self._buffer, (bytearray, memoryview)):
                 self._buffer = bytearray(self._buffer)
             self._buffer += data
         return iter(self)
-
 
     def _enc_int(self, val):
         "return bytes representing int val in CBOR"
@@ -263,7 +264,7 @@ class Codec(_Codec):
 
     def _enc_tag(self, t, val=...):
         if val is Ellipsis:
-            t,val = t.tag, t.value
+            t, val = t.tag, t.value
         self._enc_type_num(CBOR_TAG, t)
         self._enc_any(val)
 
@@ -294,7 +295,6 @@ class Codec(_Codec):
         else:
             self._enc_tag(*self.ext.encode(self, ob))
 
-
     # Decoder
 
     def _read_byte(self):
@@ -315,9 +315,8 @@ class Codec(_Codec):
             raise
         finally:
             if len(self._buffer) == self._buf_pos:
-                self._buffer = b''
+                self._buffer = b""
                 self._buf_pos = 0
-
 
     def _dec_tag_aux(self, tb):
         tag = tb & CBOR_TYPE_MASK
@@ -342,7 +341,6 @@ class Codec(_Codec):
 
         return tag, aux
 
-
     def _read(self, n):
         # (int) -> bytearray
         if (nb := len(self._buffer) - self._buf_pos) < n:
@@ -350,7 +348,6 @@ class Codec(_Codec):
         i = self._buf_pos
         self._buf_pos += n
         return self._buffer[i : i + n]
-
 
     def _dec_var_array(self):
         ob = []
@@ -458,5 +455,3 @@ class Codec(_Codec):
             ob = self._read(aux)
             chunklist.append(ob)
         return b"".join(chunklist)
-
-

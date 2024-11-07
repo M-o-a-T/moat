@@ -7,7 +7,8 @@ from __future__ import annotations
 
 import msgpack as _msgpack
 
-from ._base import Codec as _Codec, NoCodecError
+from ._base import Codec as _Codec
+from ._base import NoCodecError
 
 __all__ = ["Codec", "Extension"]
 
@@ -17,8 +18,7 @@ attrdict = None
 
 
 class Codec(_Codec):
-
-    def __init__(self, use_attrdict:bool = False, **kw):
+    def __init__(self, use_attrdict: bool = False, **kw):
         super().__init__(**kw)
         self.use_attrdict = use_attrdict
 
@@ -33,14 +33,16 @@ class Codec(_Codec):
             raw=False,
             use_list=False,
             ext_hook=self._decode,  # pylint:disable=protected-access
-    )
+        )
 
     def encode(self, obj):
-        return _msgpack.packb(obj, strict_types=False, use_bin_type=True, default=self._encode)
+        return _msgpack.packb(
+            obj, strict_types=False, use_bin_type=True, default=self._encode
+        )
 
     def _encode(self, obj):
-        k,d = self.ext.encode(self, obj)
-        return ExtType(k,d)
+        k, d = self.ext.encode(self, obj)
+        return ExtType(k, d)
 
     def decode(self, data):
         return _msgpack.unpackb(

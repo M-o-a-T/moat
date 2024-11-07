@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from functools import partial
 
-
 __all__ = [
     "Proxy",
     "DProxy",
@@ -54,7 +53,7 @@ class DProxy(Proxy):
     proxy structure back (if it doesn't). The object's state is included.
     """
 
-    def __init__(self, name, i=(),s=None,a=(),k=None):
+    def __init__(self, name, i=(), s=None, a=(), k=None):
         super().__init__(name)
         self.i = i
         self.s = s
@@ -81,7 +80,7 @@ class DProxy(Proxy):
         )
 
     def __reduce__(self):
-        return (type(self), self.i,self.s,self.a,self.k)
+        return (type(self), self.i, self.s, self.a, self.k)
 
 
 _pkey = 1
@@ -188,11 +187,12 @@ as_proxy("_", NotGiven, replace=True)
 as_proxy("_p", Proxy)
 
 
-def _next(it,dfl=None):
+def _next(it, dfl=None):
     try:
         return next(it)
     except StopIteration:
         return dfl
+
 
 def wrap_obj(data, name=None):
     if name is None:
@@ -200,54 +200,58 @@ def wrap_obj(data, name=None):
     try:
         p = data.__reduce__()
         if not isinstance(p, (list, tuple)):
-            p = (name,(),p)
+            p = (name, (), p)
         else:
             if p[0] is not type(data):
                 raise ValueError(f"Reducer for {data !r}")
-            p = (name, ) + p[1:]
+            p = (name,) + p[1:]
         return p
-    except (AttributeError,ValueError):
+    except (AttributeError, ValueError):
         p = data.__getstate__()
         if not isinstance(p, (list, tuple)):
-            p = ((), p,)
+            p = (
+                (),
+                p,
+            )
         return (name,) + p
+
 
 def unwrap_obj(s):
     s = iter(list(s))
     pk = next(s)
-    if not isinstance(pk,type):
+    if not isinstance(pk, type):
         # otherwise it was tagged and de-proxied already
-        if isinstance(pk,Proxy):
+        if isinstance(pk, Proxy):
             pk = pk.name
         try:
             pk = _CProxy[pk]
         except KeyError:
             return DProxy(pk, *s)
 
-    a = _next(s,())
-    if isinstance(a,dict):
+    a = _next(s, ())
+    if isinstance(a, dict):
         # old version
         kw = a
         a = ()
         st = NotGiven
     else:
         kw = {}
-        st = _next(s,None) or {}
+        st = _next(s, None) or {}
 
     try:
-        pk = pk (*a, **kw)
+        pk = pk(*a, **kw)
     except TypeError:
-        pk = pk (*a, **st)
+        pk = pk(*a, **st)
     else:
         try:
             pk.__setstate__(st)
         except AttributeError:
             if st:
-                for k,v in st.items():
+                for k, v in st.items():
                     setattr(pk.k.v)
-    for v in _next(s,()):
+    for v in _next(s, ()):
         pk.append(v)
-    for k,v in _next(s, {}).items():
+    for k, v in _next(s, {}).items():
         pk[k] = v
 
     return pk

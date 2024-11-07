@@ -1,4 +1,6 @@
-from ._base import Codec as _Codec, NoCodecError
+from ._base import Codec as _Codec
+from ._base import NoCodecError
+
 
 class Codec(_Codec):
     def __init__(self, ext=None):
@@ -7,12 +9,12 @@ class Codec(_Codec):
         super().__init__()
 
     def encode(self, obj):
-        if not isinstance(obj,(bytes,bytearray,memoryview)):
+        if not isinstance(obj, (bytes, bytearray, memoryview)):
             raise NoCodecError(self, obj)
         return obj
 
     def decode(self, data):
         return data
 
-    def feed(self, data, final:bool=False):
+    def feed(self, data, final: bool = False):
         return data

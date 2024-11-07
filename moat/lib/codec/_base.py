@@ -3,10 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any,Callable
+    from typing import Any, Callable
+
 
 class NoCodecError(ValueError):
     "No codec found"
+
     pass
 
 
@@ -17,27 +19,28 @@ class Codec:
         self.ext = ext
         self.buf = b""
 
-    def encode(self, obj:Any) -> bytes:
+    def encode(self, obj: Any) -> bytes:
         raise NotImplementedError
 
-    def decode(self, data:Any) -> Any:
+    def decode(self, data: Any) -> Any:
         raise NotImplementedError
 
-    def feed(self, data, final:bool = False) -> list[Any]:
+    def feed(self, data, final: bool = False) -> list[Any]:
         raise NotImplementedError
 
 
 class Extension:
-    binary:bool = None
+    binary: bool = None
 
     def __init__(self):
-        self.enc: dict[type, tuple[int|None,Callable]] = {}
+        self.enc: dict[type, tuple[int | None, Callable]] = {}
         self.dec: dict(int, Callable) = {}
 
-    def encoder(self, key: int|None, cls: type, fn=None) -> None:
+    def encoder(self, key: int | None, cls: type, fn=None) -> None:
         def _enc(fn):
-            self.enc[cls] = (key,fn)
+            self.enc[cls] = (key, fn)
             return fn
+
         if fn is None:
             return _enc
         else:
@@ -47,24 +50,25 @@ class Extension:
         def _dec(fn):
             self.dec[key] = fn
             return fn
+
         if fn is None:
             return _dec
         else:
             _dec(fn)
 
-    def encode(self, codec, obj) -> tuple[int,bytes]:
+    def encode(self, codec, obj) -> tuple[int, bytes]:
         try:
-            key,fn = self.enc[type(obj)]
+            key, fn = self.enc[type(obj)]
         except KeyError:
             try:
-                key,fn = self.enc[object]
+                key, fn = self.enc[object]
             except KeyError:
                 raise NoCodecError(codec, obj) from None
 
         res = fn(codec, obj)
         if key is None:
-            key,res = res
-        return key,res
+            key, res = res
+        return key, res
 
     def decode(self, codec, key, data):
         try:
@@ -72,4 +76,3 @@ class Extension:
         except KeyError:
             raise NoCodecError(codec, key) from None
         return fn(key, data)
-

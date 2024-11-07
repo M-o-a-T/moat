@@ -1,9 +1,12 @@
-from ._base import Codec as _Codec
 from codecs import lookup
+
+from ._base import Codec as _Codec
+
 try:
-    from json import loads, dumps
+    from json import dumps, loads
 except ImportError:
-    from simplejson import loads, dumps
+    from simplejson import dumps, loads
+
 
 class Codec(_Codec):
     def __init__(self, ext=None):

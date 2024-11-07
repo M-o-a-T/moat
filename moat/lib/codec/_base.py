@@ -12,6 +12,8 @@ class NoCodecError(ValueError):
 
 class Codec:
     def __init__(self, ext=None):
+        if ext is None:
+            ext = Extension()  # empty
         self.ext = ext
         self.buf = b""
 

@@ -12,7 +12,12 @@ except ImportError:
 import logging
 logger = logging.getLogger(__name__)
 
-# Lib/enum.py is too large: 84k. No we won't import that beast.
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Callable,Any
+
+# Lib/enum.py is *large*.
 
 # bitfields
 
@@ -44,7 +49,7 @@ S_OFF = const(6)  # in: we don't want streaming and signalled NO
 
 __all__ = []
 
-def _exp(fn):
+def _exp[F: Callable[..., Any]](fn: F) -> F:
     "export this"
     __all__.append(fn.__name__)
     return fn
@@ -99,6 +104,11 @@ from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from typing import Awaitable
+
+    class MsgIn(Protocol):
+        def __call__(self, msg: Msg, /) -> Any: ...
+
+
 
 class _SA1:
     """

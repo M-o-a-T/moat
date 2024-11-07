@@ -10,7 +10,12 @@ import msgpack as _msgpack
 from ._base import Codec as _Codec
 from ._base import NoCodecError
 
-__all__ = ["Codec", "Extension"]
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Any, Iterator
+
+__all__ = ["Codec", "ExtType"]
 
 ExtType = _msgpack.ExtType
 
@@ -18,12 +23,15 @@ attrdict = None
 
 
 class Codec(_Codec):
+    "Extensible msgpack codec"
+
     def __init__(self, use_attrdict: bool = False, **kw):
+        # TODO add keywords for msgpack enc/dec settings
         super().__init__(**kw)
         self.use_attrdict = use_attrdict
 
         if use_attrdict:
-            global attrdict
+            global attrdict  # noqa: PLW0603
             if attrdict is None:
                 from moat.util import attrdict
 
@@ -36,6 +44,7 @@ class Codec(_Codec):
         )
 
     def encode(self, obj):
+        "object > bytes"
         return _msgpack.packb(obj, strict_types=False, use_bin_type=True, default=self._encode)
 
     def _encode(self, obj):
@@ -43,6 +52,7 @@ class Codec(_Codec):
         return ExtType(k, d)
 
     def decode(self, data):
+        "bytes > object"
         return _msgpack.unpackb(
             data,
             object_pairs_hook=attrdict if self.use_attrdict else dict,
@@ -59,5 +69,6 @@ class Codec(_Codec):
             return ExtType(key, data)
 
     def feed(self, data) -> Iterator[Any]:
+        "Add more bytes. Returns an iterator for the result."
         self.stream.feed(data)
         return iter(self.stream)

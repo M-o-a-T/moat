@@ -10,6 +10,10 @@ class NoCodecError(ValueError):
     "No codec found"
 
 
+class IncompleteData(ValueError):
+    "Stream chopped off"
+
+
 class Codec:
     def __init__(self, ext=None):
         if ext is None:

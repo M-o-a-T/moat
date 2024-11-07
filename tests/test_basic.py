@@ -10,6 +10,7 @@ import pytest
 
 
 def test_noop():
+    "basic tests for doing nothing"
     c = get_codec("noop")
     assert c.encode(b"foo\0\ff") == b"foo\0\ff"
     assert c.decode(b"foo\0\ff") == b"foo\0\ff"
@@ -21,6 +22,7 @@ def test_noop():
 
 
 def test_utf8():
+    "basic UTF-8 string tests"
     c = get_codec("utf8")
     assert c.encode("foo") == b"foo"
     assert c.decode(b"H\xc3\xaby!") == "Hëy!"
@@ -48,6 +50,7 @@ objs = (
 
 @pytest.mark.parametrize("obj", objs)
 def test_json(obj):
+    "basic json tests"
     import json
 
     c = get_codec("json")
@@ -58,6 +61,7 @@ def test_json(obj):
 
 @pytest.mark.parametrize("obj", objs)
 def test_msgpack(obj):
+    "basic msgpack tests"
     import msgpack
 
     c = get_codec("msgpack")
@@ -68,6 +72,7 @@ def test_msgpack(obj):
 
 @pytest.mark.parametrize("obj", objs)
 def test_cbor(obj):
+    "basic CBOR tests"
     import cbor2
 
     c = get_codec("cbor")

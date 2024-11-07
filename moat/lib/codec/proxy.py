@@ -65,9 +65,11 @@ class DProxy(Proxy):
             return self.a[i]
 
     def append(self, val):
+        "Helper for deserializer"
         self.a.append(val)
 
     def __setitem__(self, key, val):
+        "Helper for deserializer"
         self.k[key] = val
 
     def __repr__(self):
@@ -193,6 +195,7 @@ def _next(it, dfl=None):
 
 
 def wrap_obj(data, name=None):
+    "Serialize an object"
     if name is None:
         name = obj2name(type(data))
     try:
@@ -204,6 +207,7 @@ def wrap_obj(data, name=None):
                 raise ValueError(f"Reducer for {data!r}")
             p = (name,) + p[1:]
         return p
+
     except (AttributeError, ValueError):
         p = data.__getstate__()
         if not isinstance(p, (list, tuple)):
@@ -215,6 +219,7 @@ def wrap_obj(data, name=None):
 
 
 def unwrap_obj(s):
+    "Deserialize an object"
     s = iter(list(s))
     pk = next(s)
     if not isinstance(pk, type):

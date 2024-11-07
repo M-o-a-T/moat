@@ -22,10 +22,10 @@ except ImportError:
 
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any, Iterator
 
 
-__all__ = ["Codec", "Extension"]
+__all__ = ["Codec", "Tag", "ExtraData"]
 
 attrdict = None
 
@@ -133,7 +133,7 @@ class Codec(_Codec):
         self.use_attrdict = use_attrdict
 
         if use_attrdict:
-            global attrdict
+            global attrdict  # noqa: PLW0603
             if attrdict is None:
                 from moat.util import attrdict
 
@@ -150,6 +150,7 @@ class Codec(_Codec):
             self._buffer = b""  # always reset
 
     def decode(self, data: bytes | bytearray | memoryview) -> Any:
+        "unpack @data, return the resulting object"
         if self._buffer:
             raise RuntimeError("Codec is busy")
 
@@ -165,6 +166,7 @@ class Codec(_Codec):
             self._buf_pos = 0
 
     def feed(self, data: bytes | bytearray | memoryview) -> Iterator[Any]:
+        "Add additinal input"
         if not self._buffer:
             self._buffer = data
         else:

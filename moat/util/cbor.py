@@ -9,6 +9,7 @@ An overly-simple CBOR packer/unpacker.
 
 from __future__ import annotations
 
+import re
 import datetime as dt
 from ipaddress import (
     IPv4Address,
@@ -70,11 +71,14 @@ def _enc_datetime_str(codec, value):
 
     return value.isoformat().replace("+00:00", "Z")
 
+_timestamp_re = re.compile(
+    r"^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)" r"(?:\.(\d{1,6})\d*)?(?:Z|([+-])(\d\d):(\d\d))$"
+)
 
 @std_ext.decoder(0)
-def _dec_datetime_string(codec, value) -> datetime:
+def _dec_datetime_string(codec, value) -> dt.datetime:
     # Semantic tag 0
-    match = timestamp_re.match(value)
+    match = _timestamp_re.match(value)
     if match:
         (
             year,

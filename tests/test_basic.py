@@ -56,7 +56,7 @@ async def test_return():
 
 
 @pytest.mark.anyio
-async def test_return():
+async def test_return2():
     async def handle(msg):
         assert tuple(msg.msg) == ("Test", 123)
         await msg.result("Foo", 234)

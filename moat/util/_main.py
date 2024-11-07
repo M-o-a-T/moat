@@ -110,11 +110,11 @@ def msgpack(decode, path):
 
     if decode:
         with sys.stdin.buffer if path == "-" else open(path, "rb") as f:
-            n = 0
+            delim = False
             for obj in stream_unpacker(f):
-                if n:
+                if delim:
                     print("---")
-                n += 1
+                delim = True
                 yprint(obj)
     else:
         with sys.stdin if path == "-" else open(path) as f:

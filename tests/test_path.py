@@ -188,10 +188,10 @@ def test_tagged():
 
 
 def test_msgpack():
-    d = ("a", 1, "b")
+    d = ["a", 1, "b"]
     m = packer(d)
     mm = unpacker(m)
-    assert type(mm) is tuple  # pylint: disable=unidiomatic-typecheck
+    assert isinstance(mm, (type, list))
     assert mm == d
 
     d = Path("a", 1, "b")

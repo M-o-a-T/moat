@@ -11,7 +11,7 @@ requires-python = ">=3.8"
 name = "moat-lib-codec"
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='A simple command/stream multiplexer'
-readme = "README.md"
+readme = "README.rst"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 
 [project.license]

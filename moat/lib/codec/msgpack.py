@@ -1,20 +1,13 @@
 """
-This module contains helper functions for packing+unpacking of single messages,
-plus an unpacker factory for streams.
-
-Extension types defined here:
-2: contains raw bytes, interpreted as unsigned bignum
-3: Path, as a msgpack object stream of its elements
-4: contains raw bytes, interpreted as UTF-8, returned as (named) Proxy object
-5: object constructor
-6: marked Path
+This module contains "MoaT-standard" helper functions for packing+unpacking
+of single messages, plus an unpacker factory for streams.
 """
 
 from __future__ import annotations
 
 import msgpack as _msgpack
 
-from ._base import Codec as _Codec
+from ._base import Codec as _Codec, NoCodecError
 
 __all__ = ["Codec", "Extension"]
 
@@ -43,7 +36,7 @@ class Codec(_Codec):
     )
 
     def encode(self, obj):
-        return _msgpack.packb(obj, strict_types=False, use_bin_type=True, default=self._encode, **k)
+        return _msgpack.packb(obj, strict_types=False, use_bin_type=True, default=self._encode)
 
     def _encode(self, obj):
         k,d = self.ext.encode(self, obj)
@@ -60,7 +53,10 @@ class Codec(_Codec):
         )
 
     def _decode(self, key, data):
-        return self.ext.decode(self, key, data)
+        try:
+            return self.ext.decode(self, key, data)
+        except NoCodecError:
+            return ExtType(key, data)
 
     def feed(self, data) -> Iterator[Any]:
         self.stream.feed(data)

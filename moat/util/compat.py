@@ -10,6 +10,7 @@ from __future__ import annotations
 import anyio as _anyio
 import logging
 import os
+import sys
 import time as _time
 import traceback as _traceback
 from concurrent.futures import CancelledError
@@ -169,20 +170,26 @@ def run(p, *a, **k):
 
 
 _tg = None
+_tgt = None
 
 
 def TaskGroup():
     "A TaskGroup subclass (generator) that supports `spawn` and `cancel`"
-    global _tg  # noqa:PLW0603 pylint:disable=global-statement
-    if _tg is None:
-        _tgt = type(_anyio.create_task_group())
+
+    global _tg, _tgt  # noqa:PLW0603 pylint:disable=global-statement
+    if "pytest" in sys.modules or _tgt is None:
+        tgt = type(_anyio.create_task_group())
+    else:
+        tgt = _tgt
+    if tgt is not _tgt:
+        _tgt = tgt
 
         class TaskGroup_(_tgt):
             """An augmented taskgroup"""
 
             async def spawn(self, p, *a, _name=None, **k):
-                """\
-                    Like start(), but returns something you can cancel
+                """
+                Like start(), but returns something you can cancel
                 """
                 # logger.info("Launch %s %s %s %s",_name, p,a,k)
 

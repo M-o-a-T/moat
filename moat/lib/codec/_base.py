@@ -10,7 +10,6 @@ class NoCodecError(ValueError):
     "No codec found"
 
 
-
 class Codec:
     def __init__(self, ext=None):
         if ext is None:

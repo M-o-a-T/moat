@@ -45,26 +45,31 @@ objs = (
     [12, "three four", 56],
 )
 
-@pytest.mark.parametrize("obj",objs)
+
+@pytest.mark.parametrize("obj", objs)
 def test_json(obj):
     import json
+
     c = get_codec("json")
 
     assert json.loads(c.encode(obj).decode("utf-8")) == obj
     assert c.decode(json.dumps(obj).encode("utf-8")) == obj
 
-@pytest.mark.parametrize("obj",objs)
+
+@pytest.mark.parametrize("obj", objs)
 def test_msgpack(obj):
     import msgpack
+
     c = get_codec("msgpack")
 
     assert msgpack.unpackb(c.encode(obj), use_list=True) == obj
     assert c.decode(msgpack.packb(obj)) == obj
 
 
-@pytest.mark.parametrize("obj",objs)
+@pytest.mark.parametrize("obj", objs)
 def test_cbor(obj):
     import cbor2
+
     c = get_codec("cbor")
 
     assert cbor2.loads(c.encode(obj)) == obj, (obj, c.encode(obj))

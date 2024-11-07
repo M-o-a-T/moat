@@ -246,7 +246,7 @@ def unwrap_obj(s):
         except AttributeError:
             if st:
                 for k, v in st.items():
-                    setattr(pk.k.v)
+                    pk[k] = v
     for v in _next(s, ()):
         pk.append(v)
     for k, v in _next(s, {}).items():

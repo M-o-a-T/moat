@@ -830,7 +830,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
 
     except click.exceptions.MissingParameter as exc:
         print(
-            f"You need to provide an argument { exc.param.name.upper() !r}.\n",
+            f"You need to provide an argument {exc.param.name.upper()!r}.\n",
             file=sys.stderr,
         )
         print(exc.cmd.get_help(exc.ctx), file=sys.stderr)

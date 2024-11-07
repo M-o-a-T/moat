@@ -34,6 +34,7 @@ __all__ = [
 QueueFull = anyio.WouldBlock
 QueueEmpty = anyio.WouldBlock
 
+
 class Queue:
     """
     Queues have been replaced in trio/anyio by memory object streams, but

@@ -10,38 +10,41 @@ An overly-simple CBOR packer/unpacker.
 from __future__ import annotations
 
 import datetime as dt
-from ipaddress import IPv4Address, IPv4Network, IPv4Interface, IPv6Address, IPv6Network, IPv6Interface
-
-from moat.lib.codec import NoCodecError
-from moat.lib.codec.proxy import Proxy, obj2name, name2obj, wrap_obj, unwrap_obj, DProxy
-from .path import Path
-from .compat import const
-
-from moat.lib.codec.cbor import Codec, Tag
+from ipaddress import (
+    IPv4Address,
+    IPv4Interface,
+    IPv4Network,
+    IPv6Address,
+    IPv6Interface,
+    IPv6Network,
+)
 
 # Typing
-from typing import TYPE_CHECKING  # isort:skip
+from moat.lib.codec import Extension, NoCodecError
+from moat.lib.codec.cbor import Codec, Tag
+from moat.lib.codec.proxy import DProxy, Proxy, name2obj, obj2name, unwrap_obj, wrap_obj
 
-if TYPE_CHECKING:
-    from typing import Any
-
-from moat.lib.codec import Extension
+from .path import Path
 
 __all__ = ["std_ext", "StdCBOR"]
 
 std_ext = Extension()
 
+
 class StdCBOR(Codec):
     def __init__(self):
         super().__init__(ext=std_ext)
 
+
 @std_ext.encoder(27, DProxy)
 def _enc_dpr(codec, obj):
-    return (obj.name,obj.i,obj.s,obj.a,obj.k)
+    return (obj.name, obj.i, obj.s, obj.a, obj.k)
+
 
 @std_ext.encoder(203, Proxy)
 def _enc_pr(codec, obj):
     return ob.name
+
 
 @std_ext.encoder(1, dt.datetime)
 def _enc_datetime_ts(codec, value):
@@ -58,13 +61,15 @@ def _enc_datetime_ts(codec, value):
 
     return timestamp
 
-#@std_ext.encoder(0, dt.datetime)
+
+# @std_ext.encoder(0, dt.datetime)
 def _enc_datetime_str(codec, value):
     # Semantic tag 0
     if not value.tzinfo:
         raise ValueError(f"naive datetime {value!r}")
 
     return value.isoformat().replace("+00:00", "Z")
+
 
 @std_ext.decoder(0)
 def _dec_datetime_string(codec, value) -> datetime:
@@ -100,63 +105,69 @@ def _dec_datetime_string(codec, value) -> datetime:
             tz = timezone.utc
 
         return dt.datetime(
-                int(year),
-                int(month),
-                int(day),
-                int(hour),
-                int(minute),
-                int(second),
-                microsecond,
-                tz,
-            )
+            int(year),
+            int(month),
+            int(day),
+            int(hour),
+            int(minute),
+            int(second),
+            microsecond,
+            tz,
+        )
     else:
         raise ValueError(f"invalid datetime string: {value!r}")
+
 
 @std_ext.decoder(1)
 def _dec_ts(codec, val):
     return datetime.fromtimestamp(val, timezone.utc)
 
+
 @std_ext.decoder(2)
 def _dec_bigp(codec, val):
     return int.from_bytes(val, "big")
 
+
 @std_ext.decoder(3)
 def _dec_bign(codec, val):
-    return -1-int.from_bytes(val, "big")
+    return -1 - int.from_bytes(val, "big")
 
 
-def _pad(buf,n):
+def _pad(buf, n):
     buf = bytes(buf)  # SIGH
     if (lb := len(buf)) == n:
         return buf
-    return buf+b"\x00"*(n-lb)
+    return buf + b"\x00" * (n - lb)
+
 
 @std_ext.decoder(52)
 def _dec_ip4address(codec, buf) -> IPv4Address | IPv4Network | IPv4Interface:
-    from ipaddress import IPv4Address, IPv4Network, IPv4Interface
-    if isinstance(buf, (bytes,bytearray,memoryview)):
-        return IPv4Address(_pad(buf,4))
+    from ipaddress import IPv4Address, IPv4Interface, IPv4Network
+
+    if isinstance(buf, (bytes, bytearray, memoryview)):
+        return IPv4Address(_pad(buf, 4))
     elif len(buf) != 2:
         pass
     elif isinstance(buf[1], int):
-        return IPv4Interface((_pad(buf[0],4),buf[1]))
+        return IPv4Interface((_pad(buf[0], 4), buf[1]))
     else:
-        return IPv4Network((_pad(buf[1],4),buf[0]))
+        return IPv4Network((_pad(buf[1], 4), buf[0]))
 
     raise ValueError(f"invalid ipaddress value {buf!r}")
 
 
 @std_ext.decoder(54)
 def _dec_ip6address(codec, buf) -> IPv6Address | IPv6Network | IPv6Interface:
-    from ipaddress import IPv6Address, IPv6Network, IPv6Interface
-    if isinstance(buf, (bytes,bytearray,memoryview)):
-        return IPv6Address(_pad(buf,16))
+    from ipaddress import IPv6Address, IPv6Interface, IPv6Network
+
+    if isinstance(buf, (bytes, bytearray, memoryview)):
+        return IPv6Address(_pad(buf, 16))
     elif len(buf) != 2:
         pass
     elif isinstance(buf[1], int):
-        return IPv6Interface((_pad(buf[0],16),buf[1]))
+        return IPv6Interface((_pad(buf[0], 16), buf[1]))
     else:
-        return IPv6Network((_pad(buf[1],16),buf[0]))
+        return IPv6Network((_pad(buf[1], 16), buf[0]))
 
     raise ValueError(f"invalid ipaddress value {buf!r}")
 
@@ -166,10 +177,12 @@ def _dec_ip6address(codec, buf) -> IPv6Address | IPv6Network | IPv6Interface:
 def _pack_ip(codec, adr):
     return adr.packed.rstrip(b"\x00")
 
+
 @std_ext.encoder(52, IPv4Network)
 @std_ext.encoder(54, IPv6Network)
 def _pack_ipnet(codec, adr):
     return (adr.prefixlen, _pack_ip(codec, adr.network_address))
+
 
 @std_ext.encoder(52, IPv4Interface)
 @std_ext.encoder(54, IPv6Interface)
@@ -179,9 +192,7 @@ def _pack_ipintf(codec, adr):
 
 @std_ext.decoder(260)
 def _dec_old_ipaddress(codec, buf) -> IPv4Address | IPv6Address | CBORTag:
-    from ipaddress import ip_address
-
-    if isinstance(buf, (bytes,bytearray,memoryview)) or len(buf) not in (4, 6, 16):
+    if isinstance(buf, (bytes, bytearray, memoryview)) or len(buf) not in (4, 6, 16):
         if len(buf) == 4:
             return IPv4Address(bytes(buf))
         elif len(buf) == 16:
@@ -192,16 +203,15 @@ def _dec_old_ipaddress(codec, buf) -> IPv4Address | IPv6Address | CBORTag:
 
     raise ValueError(f"invalid ipaddress value {buf!r}")
 
+
 @std_ext.decoder(261)
 def _dec_old_ipnetwork(codec, buf) -> IPv4Network | IPv6Network:
-    from ipaddress import ip_network
-
     if isinstance(buf, dict) and len(buf) == 1:
-        mask,buf = next(iter(buf.items()))
+        mask, buf = next(iter(buf.items()))
         if len(buf) == 4:
-            return IPv4Network((bytes(buf),mask))
+            return IPv4Network((bytes(buf), mask))
         elif len(buf) == 16:
-            return IPv6Network((bytes(buf),mask))
+            return IPv6Network((bytes(buf), mask))
 
     raise ValueError(f"invalid ipnetwork value {buf!r}")
 
@@ -209,27 +219,31 @@ def _dec_old_ipnetwork(codec, buf) -> IPv4Network | IPv6Network:
 @std_ext.decoder(203)
 def _dec_proxy(codec, val):
     try:
-        if isinstance(val,(str,int)):
+        if isinstance(val, (str, int)):
             return name2obj(val)
         return unwrap_obj(val)
     except KeyError:
         return Proxy(val)
 
+
 @std_ext.decoder(27)
 def _dec_obj(codec, val):
-    if isinstance(val[0],Tag):
+    if isinstance(val[0], Tag):
         if val[0].tag != 203:
-            return Tag(27,val)  # not decodable
+            return Tag(27, val)  # not decodable
         val[0] = val[0].value
     return unwrap_obj(val)
+
 
 @std_ext.decoder(202)
 def _dec_path(codec, val):
     return Path.build(val)
 
+
 @std_ext.decoder(55799)
 def _dec_file_cbor(codec, val):
     return val
+
 
 @std_ext.encoder(None, object)
 def enc_any(codec, obj):
@@ -249,4 +263,3 @@ def enc_any(codec, obj):
         return 27, p
 
     raise NoCodecError(codec, obj)
-

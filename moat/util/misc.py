@@ -79,7 +79,7 @@ def srepr(x):
     if isinstance(x, dict):
         return "{" + ",".join(drepr(k, v) for k, v in x.items()) + "}"
     try:
-        d=vars(x)
+        d = vars(x)
     except TypeError:
         return str(x)
     else:

@@ -16,8 +16,9 @@ try:
     from .msgpack import Proxy
 except ImportError:
     Proxy = None
-from .path import Path
 from moat.lib.codec.proxy import name2obj
+
+from .path import Path
 
 __all__ = ["yload", "yprint", "yformat", "yaml_repr", "yaml_parse", "add_repr"]
 

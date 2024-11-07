@@ -12,13 +12,11 @@ Extension types defined here:
 
 from __future__ import annotations
 
-from functools import partial
-
 import msgpack as _msgpack
 
 from moat.lib.codec import Extension, NoCodecError
 from moat.lib.codec.msgpack import Codec
-from moat.lib.codec.proxy import Proxy, _CProxy, obj2name, wrap_obj, unwrap_obj, DProxy
+from moat.lib.codec.proxy import DProxy, Proxy, _CProxy, obj2name, unwrap_obj, wrap_obj
 
 from .dict import attrdict
 from .path import Path
@@ -35,34 +33,41 @@ attrdict = None  # loaded on demand
 std_ext = Extension()
 ExtType = _msgpack.ExtType
 
+
 class StdMsgpack(Codec):
     def __init__(self):
         super().__init__(ext=std_ext)
+
 
 @std_ext.encoder(2, int)
 def _enc_int(codec, n):
     return n.to_bytes((n.bit_length() + 7) // 8, "big")
 
+
 @std_ext.encoder(5, DProxy)
 def _enc_dproxy(codec, obj):
-    return b"".join((packer(getattr(obj,x)) for x in ("name","i","s","a","k")))
+    return b"".join(packer(getattr(obj, x)) for x in ("name", "i", "s", "a", "k"))
+
 
 # not actually used
-@std_ext.encoder(None,ExtType)
+@std_ext.encoder(None, ExtType)
 def _enc_exttype(codec, obj):
     return obj.type, obj.data
 
-@std_ext.encoder(None,Path)
+
+@std_ext.encoder(None, Path)
 def _enc_path(codec, obj):
     if obj.mark:
         return 6, packer(obj.mark) + b"".join(packer(x) for x in obj)
     return 3, b"".join(packer(x) for x in obj)
 
+
 @std_ext.encoder(5, Proxy)
 def _enc_proxy(codec, obj):
     return packer(obj.name) + b"".join(packer(x) for x in obj.data)
 
-@std_ext.encoder(None,object)
+
+@std_ext.encoder(None, object)
 def _enc_any(codec, obj):
     try:
         name = obj2name(obj)
@@ -81,15 +86,18 @@ def _enc_any(codec, obj):
 
     raise NoCodecError(codec, obj)
 
+
 @std_ext.decoder(2)
 def _dec_bignum(codec, data):
     return int.from_bytes(data, "big")
+
 
 @std_ext.decoder(3)
 def _dec_path(codec, data):
     s = Codec(codec.enc)
     p = s.feed(data)
     return Path(*p)
+
 
 @std_ext.decoder(4)
 def _dec_proxy(codec, data):
@@ -136,6 +144,7 @@ def packer(obj):
     """
     return Codec(ext=std_ext).encode(obj)
 
+
 def unpacker(obj):
     """
     Unpacker for single msgpack-coded messages.
@@ -150,6 +159,7 @@ class StreamUnpacker:
     A helper class that maps the old unpacker interface (separate
     feed/iterator methods) to the new one (``feed`` returns the iterator).
     """
+
     def __init__(self, **kw):
         self.codec = Codec(**kw)
         self.res = []

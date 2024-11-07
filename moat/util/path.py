@@ -75,7 +75,7 @@ class Path(collections.abc.Sequence):
 
     Paths can be concatenated with "+", "/" or "|".
     "% n" removes n items from the end.
-    
+
     All Path objects are read-only.
     """
 
@@ -231,7 +231,6 @@ class Path(collections.abc.Sequence):
             raise ValueError("Path too short")
         return Path(*self._data[:-other], mark=self.mark)
 
-
     def _tag_add(self, other):
         if not isinstance(other, Path):
             return self.mark
@@ -283,7 +282,7 @@ class Path(collections.abc.Sequence):
     # TODO add alternate output with hex integers
 
     def __repr__(self):
-        return f"P({str(self) !r})"
+        return f"P({str(self)!r})"
 
     @classmethod
     def from_str(cls, path, *, mark=""):
@@ -491,7 +490,7 @@ class Path(collections.abc.Sequence):
                     raise RuntimeError("Slashed-Path syntax")  # noqa: TRY301
 
         except Exception as exc:
-            raise SyntaxError(f"Cannot eval {path!r}, part {pos+1}") from exc
+            raise SyntaxError(f"Cannot eval {path!r}, part {pos + 1}") from exc
 
         if mark is None:
             mark = ""
@@ -631,7 +630,7 @@ class PathShortener:
         self.depth = len(prefix)
         self.path = []
 
-    def short(self, p:Path) -> tuple[int,Path]:
+    def short(self, p: Path) -> tuple[int, Path]:
         """shortens the given path"""
         if self.depth and list(p[: self.depth]) != list(self.prefix):
             raise RuntimeError(f"Wrong prefix: has {p!r}, want {self.prefix!r}")
@@ -651,7 +650,7 @@ class PathShortener:
             p = res["path"]
         except KeyError:
             return
-        cdepth,p = self.short(p)
+        cdepth, p = self.short(p)
         res["path"] = p
         res["depth"] = cdepth
         return res
@@ -669,16 +668,17 @@ class PathLongener:
 
     Caution: this longener ignores path marks.
     """
+
     cls = Path
 
     def __init__(self, prefix: Path | tuple = ()):
-        if isinstance(prefix,Path):
+        if isinstance(prefix, Path):
             self.cls = type(prefix)
             prefix = prefix.raw
         self.depth = len(prefix)
         self.path = prefix
 
-    def long(self, d:int|None,  p:Path):
+    def long(self, d: int | None, p: Path):
         """Expand a given path suffix"""
         p = tuple(p)
         if d is None:
@@ -695,7 +695,7 @@ class PathLongener:
         d = res.pop("depth", None)
         if d is None:
             return
-        res["path"] = self.long(d,p)
+        res["path"] = self.long(d, p)
         return res
 
 

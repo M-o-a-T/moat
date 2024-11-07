@@ -69,11 +69,11 @@ def test_bar():
     as_proxy("b", b, replace=True)
     c = codec.decode(codec.encode(b))
     assert b == c
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="<Bar: 94>"):
         codec.encode(Bar(94))
 
 
-@pytest.mark.parametrize("chunks", (1, 2, 5))
+@pytest.mark.parametrize("chunks", [1, 2, 5])
 def test_chunked(chunks):
     codec = StdCBOR()
     p = [dict(a=1, b=23, c=345, d=6789012345678901234567890, e="duh"), "!"]
@@ -99,9 +99,10 @@ def test_ip():
     )
     for a in adrs:
         m = codec.encode(a)
-        assert m[0] == 216 and m[1] == (52 if "4" in str(type(a)) else 54)
+        assert m[0] == 216
+        assert m[1] == (52 if "4" in str(type(a)) else 54)
         b = codec.decode(m)
-        assert type(a) == type(b)
+        assert type(a) is type(b)
         assert str(a) == str(b)
 
     p1 = codec.encode(IPv4Address("12.34.0.0"))
@@ -117,12 +118,12 @@ def test_ip_old():
     codec = StdCBOR()
     for adr in (IPv4Address("1.23.45.181"), IPv6Address("FE80::12:34:56")):
         msg = codec.decode(codec.encode(Tag(260, adr.packed)))
-        assert type(adr) == type(msg)
+        assert type(adr) is type(msg)
         assert str(adr) == str(msg)
 
     for adr in (IPv4Network("1.23.45.128/25"), IPv6Network("FE80::12:35:0:0/111")):
         msg = codec.decode(codec.encode(Tag(261, {adr.prefixlen: adr.network_address.packed})))
-        assert type(adr) == type(msg)
+        assert type(adr) is type(msg)
         assert str(adr) == str(msg)
 
 
@@ -130,7 +131,7 @@ def test_dproxy():
     codec = StdCBOR()
     # first manually construct such a thing
     d = ("FuBar", (), None, [1, 2, 42], {"one": "two", "three": "four"})
-    p = codec.encode(Tag(27, ("FuBar", (), None, [1, 2, 42], {"one": "two", "three": "four"})))
+    p = codec.encode(Tag(27, d))
     dp = codec.decode(p)
     assert type(dp) is DProxy
     assert dp.name == "FuBar"

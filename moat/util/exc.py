@@ -11,7 +11,7 @@ def exc_iter(exc):
     """
     iterate over all non-exceptiongroup parts of an exception(group)
     """
-    if isinstance(exc, BaseExceptionGroup):
+    if isinstance(exc, BaseExceptionGroup):  # noqa:F821
         for e in exc.exceptions:
             yield from exc_iter(e)
     else:
@@ -30,7 +30,7 @@ class ungroup:
 
     def one(self, e):
         "convert the exceptiongroup @e to a single exception"
-        while isinstance(e, BaseExceptionGroup):
+        while isinstance(e, BaseExceptionGroup):  # noqa:F821
             if len(e.exceptions) != 1:
                 break
             e = e.exceptions[0]

@@ -100,12 +100,6 @@ def test_ip():
         assert type(a) is type(b)
         assert str(a) == str(b)
 
-    p1 = packer(IPv4Address("12.34.0.0"))
-    p2 = packer(IPv4Address("12.34.0.1"))
-
-    p1 = packer(IPv6Address("FE80::12:34:800:0"))
-    p2 = packer(IPv6Address("FE80::12:34:800:1"))
-
 
 def test_dproxy():
     # first manually construct such a thing

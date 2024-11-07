@@ -211,10 +211,7 @@ class Path(collections.abc.Sequence):
         return self._data == other
 
     def __lt__(self, other):
-        if isinstance(other, Path):
-            other = other._data
-        else:
-            other = tuple(other)
+        other = other._data if isinstance(other, Path) else tuple(other)
         return self._data < other
 
     def __hash__(self):
@@ -625,7 +622,7 @@ class PathShortener:
     Caution: this shortener ignores path marks.
     """
 
-    def __init__(self, prefix=Path()):
+    def __init__(self, prefix=Path()):  # noqa:B008
         self.prefix = prefix
         self.depth = len(prefix)
         self.path = []

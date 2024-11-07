@@ -18,45 +18,44 @@ from moat.lib.codec import Extension, NoCodecError
 from moat.lib.codec.msgpack import Codec
 from moat.lib.codec.proxy import DProxy, Proxy, _CProxy, obj2name, unwrap_obj, wrap_obj
 
-from .dict import attrdict
 from .path import Path
 
 __all__ = ["packer", "unpacker", "stream_unpacker", "std_ext", "StdMsgpack"]
 
-try:  # noqa: SIM105
-    from . import cbor as _cbor
-except ImportError:
-    pass
-
-attrdict = None  # loaded on demand
 
 std_ext = Extension()
 ExtType = _msgpack.ExtType
 
 
 class StdMsgpack(Codec):
+    "A MsgPack codec with our extensions"
+
     def __init__(self):
         super().__init__(ext=std_ext)
 
 
 @std_ext.encoder(2, int)
 def _enc_int(codec, n):
+    codec  # noqa:B018
     return n.to_bytes((n.bit_length() + 7) // 8, "big")
 
 
 @std_ext.encoder(5, DProxy)
 def _enc_dproxy(codec, obj):
+    codec  # noqa:B018
     return b"".join(packer(getattr(obj, x)) for x in ("name", "i", "s", "a", "k"))
 
 
 # not actually used
 @std_ext.encoder(None, ExtType)
 def _enc_exttype(codec, obj):
+    codec  # noqa:B018
     return obj.type, obj.data
 
 
 @std_ext.encoder(None, Path)
 def _enc_path(codec, obj):
+    codec  # noqa:B018
     if obj.mark:
         return 6, packer(obj.mark) + b"".join(packer(x) for x in obj)
     return 3, b"".join(packer(x) for x in obj)
@@ -64,11 +63,13 @@ def _enc_path(codec, obj):
 
 @std_ext.encoder(5, Proxy)
 def _enc_proxy(codec, obj):
+    codec  # noqa:B018
     return packer(obj.name) + b"".join(packer(x) for x in obj.data)
 
 
 @std_ext.encoder(None, object)
 def _enc_any(codec, obj):
+    codec  # noqa:B018
     try:
         name = obj2name(obj)
     except KeyError:
@@ -89,6 +90,7 @@ def _enc_any(codec, obj):
 
 @std_ext.decoder(2)
 def _dec_bignum(codec, data):
+    codec  # noqa:B018
     return int.from_bytes(data, "big")
 
 
@@ -101,6 +103,7 @@ def _dec_path(codec, data):
 
 @std_ext.decoder(4)
 def _dec_proxy(codec, data):
+    codec  # noqa:B018
     try:
         n = data.decode("utf-8")
     except UnicodeDecodeError:
@@ -113,6 +116,7 @@ def _dec_proxy(codec, data):
 
 @std_ext.decoder(5)
 def _dec_proxy_obj(codec, data):
+    codec  # noqa:B018
     s = stream_unpacker()
     s.feed(data)
     s = list(iter(s))
@@ -121,6 +125,7 @@ def _dec_proxy_obj(codec, data):
 
 @std_ext.decoder(6)
 def _dec_marked_path(codec, data):
+    codec  # noqa:B018
     # A marked path
     s = stream_unpacker()
     s.feed(data)
@@ -133,7 +138,7 @@ def _dec_marked_path(codec, data):
 
 @std_ext.decoder(None)
 def _dec_blank(codec, data):
-    return ExtType(code, data)
+    return ExtType(codec, data)
 
 
 def packer(obj):

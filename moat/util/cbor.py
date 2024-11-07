@@ -9,8 +9,8 @@ An overly-simple CBOR packer/unpacker.
 
 from __future__ import annotations
 
-import re
 import datetime as dt
+import re
 from ipaddress import (
     IPv4Address,
     IPv4Interface,
@@ -102,21 +102,15 @@ def _dec_datetime_string(codec, value) -> dt.datetime:
             offset_h,
             offset_m,
         ) = match.groups()
-        if secfrac is None:
-            microsecond = 0
-        else:
-            microsecond = int(f"{secfrac:<06}")
+        microsecond = 0 if secfrac is None else int(f"{secfrac:<06}")
 
         if offset_h:
-            if offset_sign == "-":
-                sign = -1
-            else:
-                sign = 1
+            sign = -1 if offset_sign == "-" else 1
             hours = int(offset_h) * sign
             minutes = int(offset_m) * sign
-            tz = timezone(timedelta(hours=hours, minutes=minutes))
+            tz = dt.timezone(dt.timedelta(hours=hours, minutes=minutes))
         else:
-            tz = timezone.utc
+            tz = dt.timezone.utc
 
         return dt.datetime(
             int(year),
@@ -135,7 +129,7 @@ def _dec_datetime_string(codec, value) -> dt.datetime:
 @std_ext.decoder(1)
 def _dec_ts(codec, val):
     codec  # noqa:B018
-    return datetime.fromtimestamp(val, timezone.utc)
+    return dt.fromtimestamp(val, dt.timezone.utc)
 
 
 @std_ext.decoder(2)
@@ -213,7 +207,7 @@ def _pack_ipintf(codec, adr):
 
 
 @std_ext.decoder(260)
-def _dec_old_ipaddress(codec, buf) -> IPv4Address | IPv6Address | CBORTag:
+def _dec_old_ipaddress(codec, buf) -> IPv4Address | IPv6Address | Tag:
     codec  # noqa:B018
     if isinstance(buf, (bytes, bytearray, memoryview)) or len(buf) not in (4, 6, 16):
         if len(buf) == 4:

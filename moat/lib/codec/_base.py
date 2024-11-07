@@ -34,9 +34,9 @@ class Extension:
         self.enc: dict[type, tuple[int|None,Callable]] = {}
         self.dec: dict(int, Callable) = {}
 
-    def encoder(self, cls: type, key: int|None, fn=None) -> None:
+    def encoder(self, key: int|None, cls: type, fn=None) -> None:
         def _enc(fn):
-            self.enc[type] = (key,fn)
+            self.enc[cls] = (key,fn)
             return fn
         if fn is None:
             return _enc

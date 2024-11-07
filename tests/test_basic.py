@@ -21,7 +21,7 @@ async def test_basic():
 async def test_more():
     async def handle(msg):
         assert msg.msg[0] == "X"
-        await anyio.sleep(msg.msg[1] / 20)
+        await anyio.sleep(msg.msg[1] / 10)
         return msg.msg[1]
 
     async with scaffold(handle, None) as (a, b):

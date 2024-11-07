@@ -43,3 +43,6 @@ pip-log.txt
 /.venv
 /venv/
 /wheels/
+
+# Debian packaging
+/debian/

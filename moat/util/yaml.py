@@ -17,7 +17,7 @@ try:
 except ImportError:
     Proxy = None
 from .path import Path
-from .proxy import name2obj
+from moat.lib.codec.proxy import name2obj
 
 __all__ = ["yload", "yprint", "yformat", "yaml_repr", "yaml_parse", "add_repr"]
 

@@ -121,20 +121,7 @@ class TimeOnlyFormatter(logging.Formatter):
     default_msec_format = "%s.%03d"
 
 
-class NotGiven:
-    """Placeholder value for 'no data' or 'deleted'."""
-
-    def __new__(cls):  # noqa:D102
-        return cls
-
-    def __getstate__(self):
-        raise ValueError("You may not serialize this object")
-
-    def __repr__(self):
-        return "‹NotGiven›"
-
-    def __str__(self):
-        return "NotGiven"
+NotGiven = ...
 
 
 def count(it):

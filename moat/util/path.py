@@ -96,6 +96,12 @@ class Path(collections.abc.Sequence):
         return p
 
     def as_tuple(self):
+        """deprecated"""
+        return self._data
+
+    @property
+    def raw(self):
+        """as tuple"""
         return self._data
 
     @property
@@ -245,9 +251,9 @@ class Path(collections.abc.Sequence):
             other = other._data
         if len(other) == 0:
             if self.mark != mark:
-                return Path(*self._data, mark=mark)
+                return self.build(self._data, mark=mark)
             return self
-        return Path(*self._data, *other, mark=mark)
+        return type(self)(*self._data, *other, mark=mark)
 
     def __or__(self, other):
         return self + other
@@ -586,46 +592,48 @@ class PathShortener:
         a b c e f
         a b c e g h
         a b c i
-        a b j
+        a j k
 
     is shortened to
 
-        0
-        0 c d
-        1 e f
-        2 g h
-        1 i
-        0 j
-
-    where the initial number is the passed-in ``depth``, assuming the
-    PathShortener is initialized with ``('a','b')``.
+        0 a b
+        2 c d
+        3 e f
+        4 g h
+        3 i
+        1 j k
 
     Usage::
 
-        >>> d = _PathShortener(['a','b'])
+        >>> d = PathShortener()
+        >>> d.short(P('a.b.c.d'))
+        (4, ('a','b',c','d'))
+        >>> d.short(P('a.b.c.e.f'))
+        (3, ('e','f'))
+        {'depth':1, 'path':['e','f']}
+
+    Alternate, somewhat-deprecated usage::
+        >>> d = PathShortener(['a','b'])
         >>> d({'path': 'a b c d'.split})
         {'depth':0, 'path':['c','d']}
         >>> d({'path': 'a b c e f'.split})
         {'depth':1, 'path':['e','f']}
 
-    etc.
+    Note that the input dict in the second example is modified in-place.
 
-    Note that the input dict is modified in-place.
+    Using a prefix is deprecated.
 
+    Caution: this shortener ignores path marks.
     """
 
-    def __init__(self, prefix):
+    def __init__(self, prefix=Path()):
         self.prefix = prefix
         self.depth = len(prefix)
         self.path = []
 
-    def __call__(self, res: dict):
-        "shortens the 'path' element in @res"
-        try:
-            p = res["path"]
-        except KeyError:
-            return
-        if list(p[: self.depth]) != list(self.prefix):
+    def short(self, p:Path) -> tuple[int,Path]:
+        """shortens the given path"""
+        if self.depth and list(p[: self.depth]) != list(self.prefix):
             raise RuntimeError(f"Wrong prefix: has {p!r}, want {self.prefix!r}")
 
         p = p[self.depth :]
@@ -635,9 +643,18 @@ class PathShortener:
                 cdepth = i
                 break
         self.path = p
-        p = p[cdepth:]
+        return cdepth, p.raw[cdepth:]
+
+    def __call__(self, res: dict):
+        "shortens the 'path' element in @res"
+        try:
+            p = res["path"]
+        except KeyError:
+            return
+        cdepth,p = self.short(p)
         res["path"] = p
         res["depth"] = cdepth
+        return res
 
 
 class PathLongener:
@@ -647,11 +664,28 @@ class PathLongener:
 
     Calling a PathLongener with a dict without ``depth`` or ``path``
     attributes is a no-op.
+
+    Using a prefix is deprecated.
+
+    Caution: this longener ignores path marks.
     """
+    cls = Path
 
     def __init__(self, prefix: Path | tuple = ()):
+        if isinstance(prefix,Path):
+            self.cls = type(prefix)
+            prefix = prefix.raw
         self.depth = len(prefix)
-        self.path = Path.build(prefix)
+        self.path = prefix
+
+    def long(self, d:int|None,  p:Path):
+        """Expand a given path suffix"""
+        p = tuple(p)
+        if d is None:
+            return p
+        p = self.cls.build(self.path[: self.depth + d] + p)
+        self.path = p
+        return p
 
     def __call__(self, res):
         "expands the 'path' element in @res"
@@ -661,12 +695,8 @@ class PathLongener:
         d = res.pop("depth", None)
         if d is None:
             return
-        if not isinstance(p, tuple):
-            # may be a list, dammit
-            p = tuple(p)
-        p = self.path[: self.depth + d] + p
-        self.path = p
-        res["path"] = p
+        res["path"] = self.long(d,p)
+        return res
 
 
 # path_eval is a simple "eval" replacement to implement resolving

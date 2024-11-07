@@ -20,6 +20,7 @@ dependencies = [
 	"outcome",
 	"ruyaml",
 	"simpleeval",
+	"moat-lib-codec",
 	]
 dynamic = [ "version",]
 keywords = [ "MoaT",]

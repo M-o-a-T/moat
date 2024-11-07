@@ -1,4 +1,5 @@
 "Basic JSON codec"
+
 from __future__ import annotations
 
 from ._base import Codec as _Codec
@@ -11,6 +12,7 @@ except ImportError:
 
 class Codec(_Codec):
     "basic JSON codec"
+
     def __init__(self, ext=None):
         if ext is not None:
             raise ValueError("You can't extend the JSON codec")

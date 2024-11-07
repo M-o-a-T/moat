@@ -1,6 +1,7 @@
 """
 UTF-8 codec
 """
+
 from __future__ import annotations
 
 from ._base import Codec as _Codec
@@ -13,6 +14,7 @@ Utf8Stream = lookup("utf-8").incrementaldecoder
 
 class Codec(_Codec):
     "Basic UTF-8 codec"
+
     def __init__(self, ext=None):
         if ext is not None:
             raise ValueError("You can't extend the UTF8 codec")

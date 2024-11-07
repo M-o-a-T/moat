@@ -1,4 +1,5 @@
 "no-op codec"
+
 from __future__ import annotations
 
 from ._base import Codec as _Codec
@@ -7,6 +8,7 @@ from ._base import NoCodecError
 
 class Codec(_Codec):
     "no-op codec"
+
     def __init__(self, ext=None):
         if ext is not None:
             raise ValueError("You can't extend the Null codec")

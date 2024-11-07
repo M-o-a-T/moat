@@ -10,12 +10,13 @@ except ImportError:
     from asyncio import Event
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Callable,Any
+    from typing import Callable, Any
 
 # Lib/enum.py is *large*.
 
@@ -49,37 +50,52 @@ S_OFF = const(6)  # in: we don't want streaming and signalled NO
 
 __all__ = []
 
+
 def _exp[F: Callable[..., Any]](fn: F) -> F:
     "export this"
     __all__.append(fn.__name__)
     return fn
 
+
 @_exp
 class LinkDown(RuntimeError):
     pass
 
-class Flow():
+
+class Flow:
     def __init__(self, n):
         self.n = n
+
 
 @_exp
 class StopMe(RuntimeError):
     pass
+
+
 @_exp
 class NoStream(RuntimeError):
     pass
+
+
 @_exp
 class NoCmds(RuntimeError):
     pass
+
+
 @_exp
 class NoCmd(RuntimeError):
     pass
+
+
 @_exp
 class WantsStream(RuntimeError):
     pass
+
+
 @_exp
 class MustStream(RuntimeError):
     pass
+
 
 @_exp
 class StreamError(RuntimeError):
@@ -96,9 +112,11 @@ class StreamError(RuntimeError):
             elif m == E_NO_CMDS:
                 return NoCmds()
             elif m <= E_NO_CMD:
-                return NoCmd(E_NO_CMD-m)
+                return NoCmd(E_NO_CMD - m)
         return super().__new__(cls)
+
     pass
+
 
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -109,39 +127,44 @@ if TYPE_CHECKING:
         def __call__(self, msg: Msg, /) -> Any: ...
 
 
-
 class _SA1:
     """
     shift a readonly list by 1. This is a minimal implementation, intended
     to avoid copying long-ish arrays.
     """
+
     def __new__(cls, a):
         if len(a) < 10:
             return a[1:]
-        return object.__new__(cls,a)
-    def __init__(self,a):
+        return object.__new__(cls, a)
+
+    def __init__(self, a):
         self.a = a
+
     def __len__(self):
-        return len(self.a)-1
+        return len(self.a) - 1
+
     def __getitem__(self, i):
         if isinstance(i, slice):
-            i=slice(
-                    i.start if i.start<0 else i.start+1,
-                    i.stop if i.stop<0 else i.stop+1,
-                    i.end,
-                    )
+            i = slice(
+                i.start if i.start < 0 else i.start + 1,
+                i.stop if i.stop < 0 else i.stop + 1,
+                i.end,
+            )
             return a[i]
         elif i >= 0:
-            return self.a[i+1]
+            return self.a[i + 1]
         elif i >= -len(self.a):
             return self.a[i]
         else:
             raise IndexError(i)
+
     def __repr__(self):
         return repr(self.a[1:])
+
     def __iter__(self):
         it = iter(self.a)
-        next(it) # skip first
+        next(it)  # skip first
         return it
 
 
@@ -154,8 +177,9 @@ class CmdHandler(CtxObj):
     All such interactions are independent of each other and may contain
     data streams.
     """
+
     def __init__(self, callback):
-        self._msgs: dict[int,Msg] = {}
+        self._msgs: dict[int, Msg] = {}
         self._id = 1
         self._send_q = Queue(9)
         self._recv_q = Queue(99)
@@ -207,7 +231,7 @@ class CmdHandler(CtxObj):
         del self._msgs[msg.id]
 
     async def _handle(self, msg):
-        assert msg.id<0, msg
+        assert msg.id < 0, msg
 
         async def _wrap(msg, task_status):
             async with CancelScope() as cs:
@@ -245,27 +269,25 @@ class CmdHandler(CtxObj):
                     if msg.stream_in != S_END:
                         msg._recv_q = None
                     else:
-                        assert msg.id<0, msg
+                        assert msg.id < 0, msg
                         msg.ended()
 
         await self._tg.start(_wrap, msg)
 
-
     def stream_r(self, *data, **kw) -> AsyncContextManager[Msg]:
         """Start an incoming stream"""
-        return self._stream(data,kw,True,False)
+        return self._stream(data, kw, True, False)
 
     def stream_w(self, *data, **kw) -> AsyncContextManager[Msg]:
         """Start an outgoing stream"""
-        return self._stream(data,kw,False,True)
+        return self._stream(data, kw, False, True)
 
     def stream_rw(self, *data, **kw) -> AsyncContextManager[Msg]:
         """Start a bidirectional stream"""
-        return self._stream(data,kw,True,True)
-
+        return self._stream(data, kw, True, True)
 
     @asynccontextmanager
-    async def _stream(self, d,kw,sin,sout):
+    async def _stream(self, d, kw, sin, sout):
         "Generic stream handler"
         i = self._gen_id()
         self._msgs[i] = msg = Msg(self, i)
@@ -273,7 +295,7 @@ class CmdHandler(CtxObj):
         # avoid creating an inner cancel scope
         async with CancelScope() as cs:
             msg.scope = cs
-            async with msg._stream(d,kw,sin,sout):
+            async with msg._stream(d, kw, sin, sout):
                 try:
                     yield msg
                 except Exception as exc:
@@ -282,30 +304,29 @@ class CmdHandler(CtxObj):
                 else:
                     await msg.kill()
 
-
     def _send(self, i, data, kw=None):
-        assert isinstance(data,(list,tuple)), data
-        assert isinstance(i,int), i
+        assert isinstance(data, (list, tuple)), data
+        assert isinstance(i, int), i
         return self._send_q.put((i, data, kw))
 
     def _send_nowait(self, i, data, kw=None):
-        assert isinstance(data,(list,tuple)), data
-        assert isinstance(i,int), i
+        assert isinstance(data, (list, tuple)), data
+        assert isinstance(i, int), i
         self._send_q.put_nowait((i, data, kw))
 
     async def msg_out(self):
-        i,d,kw = await self._send_q.get()
+        i, d, kw = await self._send_q.get()
         # this is somewhat inefficient but oh well
         if kw:
-            return (i,)+tuple(d)+(kw,)
+            return (i,) + tuple(d) + (kw,)
         else:
-            return (i,)+tuple(d)
+            return (i,) + tuple(d)
 
     async def msg_in(self, msg):
         i = msg[0]
-        stream = i&B_STREAM
-        error = i&B_ERROR
-        i = -1-(i >> 2)
+        stream = i & B_STREAM
+        error = i & B_ERROR
+        i = -1 - (i >> 2)
         if i >= 0:
             i += 1
         try:
@@ -316,7 +337,7 @@ class CmdHandler(CtxObj):
             elif error:
                 self._debug("Spurious error %r", msg)
             elif self._in_cb is None:
-                self._send_nowait((i<<2)|B_ERROR, [E_NOCMD])
+                self._send_nowait((i << 2) | B_ERROR, [E_NOCMD])
             else:
                 self._msgs[i] = conv = Msg(self, i)
                 await self._handle(conv)
@@ -327,7 +348,6 @@ class CmdHandler(CtxObj):
             except EOFError:
                 del self._msgs[i]
 
-
     @asynccontextmanager
     async def _ctx(self):
         async with TaskGroup() as tg:
@@ -335,8 +355,8 @@ class CmdHandler(CtxObj):
             try:
                 yield self
             finally:
-#               for conv in self._msgs.values():
-#                   await conv.kill()
+                #               for conv in self._msgs.values():
+                #                   await conv.kill()
                 tg.cancel()
         self._msgs = {}
 
@@ -352,25 +372,26 @@ class Msg:
     mapping it's in @data and individual keys can be accessed by indexing
     the message.
     """
-    def __init__(self, parent:CmdHandler, mid:int, qlen=42, s_in=True, s_out=True):
+
+    def __init__(self, parent: CmdHandler, mid: int, qlen=42, s_in=True, s_out=True):
         self.parent = parent
         self.id = mid
         if mid > 0:
             mid -= 1
-        self._i = mid<<2  # ready for sending
+        self._i = mid << 2  # ready for sending
         self.stream_out = S_NEW  # None if we never sent
         self.stream_in = S_NEW  # None if never received, NotGiven if unwanted
-        self.cmd_in:Event = Event()
+        self.cmd_in: Event = Event()
         self.msg2 = None
 
-        self._msg:list = None
+        self._msg: list = None
         self._cmd: Any = None  # first element of the message
-        self._data:dict = {}  # last element, if dict
+        self._data: dict = {}  # last element, if dict
 
         self._recv_q = Queue(qlen) if s_in else None
         self._recv_qlen = qlen
-        self._fli = None # flow control for incoming messages
-        self._flo = None # flow control for outgoing messages
+        self._fli = None  # flow control for incoming messages
+        self._flo = None  # flow control for outgoing messages
         self._flo_evt = None
         self._recv_skip = False
         self.scope = None
@@ -383,7 +404,7 @@ class Msg:
         return k in self.data
 
     def __repr__(self):
-        r= f"<Msg:{self.id}"
+        r = f"<Msg:{self.id}"
         if self.stream_out != S_END:
             r += " O"
             if self.stream_out == S_NEW:
@@ -408,7 +429,7 @@ class Msg:
                 r += repr(self.stream_in)
             if self._fli is not None:
                 r += repr(self._fli)
-        return r+">"
+        return r + ">"
 
     async def kill(self, exc=None):
         if self.parent is None:
@@ -421,8 +442,10 @@ class Msg:
                 await self._send([None], _kill=True)
             elif exc is True:
                 await self._send([E_UNSPEC], err=True, _kill=True)
-            elif isinstance(exc , Exception):
-                await self._send((exc.__class__.__name__, *exc.args), err=True, _kill=True)
+            elif isinstance(exc, Exception):
+                await self._send(
+                    (exc.__class__.__name__, *exc.args), err=True, _kill=True
+                )
             else:  # BaseException
                 await self._send([E_CANCEL], err=True, _kill=True)
 
@@ -438,21 +461,21 @@ class Msg:
 
     @property
     def msg(self):
-        if isinstance(self._msg,Exception):
+        if isinstance(self._msg, Exception):
             raise self._msg
         self.__dict__["msg"] = self._msg
         return self._msg
 
     @property
     def cmd(self):
-        if isinstance(self._msg,Exception):
+        if isinstance(self._msg, Exception):
             raise self._msg
         self.__dict__["cmd"] = self._cmd
         return self._cmd
 
     @property
     def data(self):
-        if isinstance(self._msg,Exception):
+        if isinstance(self._msg, Exception):
             raise self._msg
         self.__dict__["data"] = self._data
         return self._data
@@ -495,8 +518,8 @@ class Msg:
 
     async def _recv(self, msg):
         """process an incoming messages on this stream"""
-        stream = msg[0]&B_STREAM
-        err = msg[0]&B_ERROR
+        stream = msg[0] & B_STREAM
+        err = msg[0] & B_ERROR
 
         # if S_END, no message may be exchanged
         # else if Stream bit is False, stop streaming if it is on, go to S_END: out of band
@@ -547,12 +570,12 @@ class Msg:
             if self.stream_in == S_ON:
                 self.stream_in = S_OFF
                 if self.stream_out != S_END:
-                    self._send_nowait([E_NO_STREAM],err=True)
+                    self._send_nowait([E_NO_STREAM], err=True)
                     self.stream_out = S_END
 
         self.ended()
 
-    def _sendfix(self, stream:bool, err:bool,_kill:bool):
+    def _sendfix(self, stream: bool, err: bool, _kill: bool):
         if stream is None:
             stream = self.stream_out == S_ON
         if self.stream_out == S_END and not _kill:
@@ -562,18 +585,22 @@ class Msg:
         elif not stream:
             self.stream_out = S_END
 
-    async def _send(self, d,kw=None, stream=False, err=False, _kill=False) -> None:
+    async def _send(self, d, kw=None, stream=False, err=False, _kill=False) -> None:
         if self.parent is None:
             return
-        self._sendfix(stream,err,_kill)
-        await self.parent._send(self._i|(B_STREAM if stream else 0)|(B_ERROR if err else 0), d,kw)
+        self._sendfix(stream, err, _kill)
+        await self.parent._send(
+            self._i | (B_STREAM if stream else 0) | (B_ERROR if err else 0), d, kw
+        )
         self.ended()
 
-    def _send_nowait(self, d,kw=None, stream=False, err=False, _kill=False) -> None:
+    def _send_nowait(self, d, kw=None, stream=False, err=False, _kill=False) -> None:
         if self.parent is None:
             return
-        self._sendfix(stream,err,_kill)
-        self.parent._send_nowait(self._i|(B_STREAM if stream else 0)|(B_ERROR if err else 0), d,kw)
+        self._sendfix(stream, err, _kill)
+        self.parent._send_nowait(
+            self._i | (B_STREAM if stream else 0) | (B_ERROR if err else 0), d, kw
+        )
         self.ended()
 
     async def _skipped(self):
@@ -585,7 +612,7 @@ class Msg:
             await self.warn(E_SKIP)
             self._recv_skip = False
 
-    async def _qsize(self, reading:bool=False):
+    async def _qsize(self, reading: bool = False):
         # Queueing strategy:
         # - read without flow control until the queue is half full
         # - send a message announcing 1/4 of the queue space
@@ -596,16 +623,18 @@ class Msg:
                 self._fli = 0
                 await self.warn(self._recv_qlen // 4)
 
-        elif self._recv_q.qsize() <= self._recv_qlen//4 and self._fli > self._recv_qlen//2:
-
-            m = self._recv_qlen//2+reading
+        elif (
+            self._recv_q.qsize() <= self._recv_qlen // 4
+            and self._fli > self._recv_qlen // 2
+        ):
+            m = self._recv_qlen // 2 + reading
             self._fli -= m
             await self.warn(m)
 
         elif reading:
             self._fli += 1
-            if self._recv_qlen < 10 and self._fli >= self._recv_qlen//4:
-                m,self._fli = self._fli,0
+            if self._recv_qlen < 10 and self._fli >= self._recv_qlen // 4:
+                m, self._fli = self._fli, 0
                 await self.warn(self._fli)
 
     async def send(self, *a, **kw) -> None:
@@ -641,12 +670,10 @@ class Msg:
         """
         return self._send(a, kw if kw else None, stream=False, err=False)
 
-
     # Stream starters
 
     async def no_stream(self):
-        """Mark as neither send or receive streaming.
-        """
+        """Mark as neither send or receive streaming."""
         if self.stream_in == S_ON:
             if self.stream_out != S_END:
                 await self.error(E_NO_STREAM)
@@ -656,16 +683,16 @@ class Msg:
         # TODO
 
     def stream_r(self, *data, **kw) -> AsyncContextManager[Msg]:
-        return self._stream(data,kw,True,False)
+        return self._stream(data, kw, True, False)
 
     def stream_w(self, *data, **kw) -> AsyncContextManager[Msg]:
-        return self._stream(data,kw,False,True)
+        return self._stream(data, kw, False, True)
 
     def stream_rw(self, *data, **kw) -> AsyncContextManager[Msg]:
-        return self._stream(data,kw,True,True)
+        return self._stream(data, kw, True, True)
 
     @asynccontextmanager
-    async def _stream(self, d,kw,sin,sout):
+    async def _stream(self, d, kw, sin, sout):
         if self.stream_out != S_NEW:
             raise RuntimeError("Stream-out already set")
 
@@ -684,7 +711,7 @@ class Msg:
             self._fli = 0
             await self.warn(self._recv_qlen)
 
-        await self._send(d,kw, stream=True)
+        await self._send(d, kw, stream=True)
         await self.replied()
 
         yield self
@@ -704,8 +731,6 @@ class Msg:
             self._set_msg(self.msg2)
             self.msg2 = None
 
-
-
     async def replied(self) -> Awaitable[None]:
         if self._msg is None:
             await self.cmd_in.wait()
@@ -716,8 +741,8 @@ class Msg:
     async def __anext__(self):
         if self._recv_q is None:
             raise StopAsyncIteration
-        elif isinstance(self._recv_q,Exception):
-            exc,self._recv_q = self._recv_q,None
+        elif isinstance(self._recv_q, Exception):
+            exc, self._recv_q = self._recv_q, None
             raise exc
         await self._skipped()
         await self._qsize(True)
@@ -726,5 +751,3 @@ class Msg:
             return await self._recv_q.get()
         except EOFError:
             raise StopAsyncIteration
-
-

@@ -1,13 +1,15 @@
 """
 cmdhandler on top of anyio pipe
 """
+
 import anyio
 from contextlib import asynccontextmanager
 from moat.lib.cmd import CmdHandler
 from moat.util.cbor import StdCBOR
 
+
 @asynccontextmanager
-async def run(cmd: CmdHandler, stream:anyio.abc.ByteStream):
+async def run(cmd: CmdHandler, stream: anyio.abc.ByteStream):
     """
     Run a command handler on top of an anyio stream.
 
@@ -35,4 +37,3 @@ async def run(cmd: CmdHandler, stream:anyio.abc.ByteStream):
         tg.start_soon(rd, stream)
         tg.start_soon(wr, stream)
         yield cmd
-

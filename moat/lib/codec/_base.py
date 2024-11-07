@@ -9,7 +9,6 @@ if TYPE_CHECKING:
 class NoCodecError(ValueError):
     "No codec found"
 
-    pass
 
 
 class Codec:

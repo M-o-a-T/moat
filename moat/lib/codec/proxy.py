@@ -2,9 +2,8 @@
 This module contains proxy helpers.
 """
 
-from __future__ import annotations
 
-from functools import partial
+from __future__ import annotations
 
 __all__ = [
     "Proxy",
@@ -203,7 +202,7 @@ def wrap_obj(data, name=None):
             p = (name, (), p)
         else:
             if p[0] is not type(data):
-                raise ValueError(f"Reducer for {data !r}")
+                raise ValueError(f"Reducer for {data!r}")
             p = (name,) + p[1:]
         return p
     except (AttributeError, ValueError):

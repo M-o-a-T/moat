@@ -31,14 +31,12 @@ class Codec(_Codec):
             object_pairs_hook=attrdict if use_attrdict else dict,
             strict_map_key=False,
             raw=False,
-            use_list=False,
+            use_list=True,
             ext_hook=self._decode,  # pylint:disable=protected-access
         )
 
     def encode(self, obj):
-        return _msgpack.packb(
-            obj, strict_types=False, use_bin_type=True, default=self._encode
-        )
+        return _msgpack.packb(obj, strict_types=False, use_bin_type=True, default=self._encode)
 
     def _encode(self, obj):
         k, d = self.ext.encode(self, obj)
@@ -50,7 +48,7 @@ class Codec(_Codec):
             object_pairs_hook=attrdict if self.use_attrdict else dict,
             strict_map_key=False,
             raw=False,
-            use_list=False,
+            use_list=True,
             ext_hook=self._decode,  # pylint:disable=protected-access
         )
 

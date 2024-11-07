@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from ._base import Codec, Extension, NoCodecError
 
+
 __all__ = ["Codec", "Extension", "get_codec", "get_ext", "NoCodecError"]
 
 

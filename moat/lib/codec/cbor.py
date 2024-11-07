@@ -5,10 +5,10 @@ plus an unpacker factory for streams.
 
 from __future__ import annotations
 
-import struct
-
 from ._base import Codec as _Codec
 from ._base import NoCodecError
+
+import struct
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
@@ -42,7 +42,7 @@ class Tag:
         self.value = value
 
     def __repr__(self):
-        return f"Tag({self.tag !r}, {self.value !r})"
+        return f"Tag({self.tag!r}, {self.value!r})"
 
     def __eq__(self, other):
         if not isinstance(other, Tag):

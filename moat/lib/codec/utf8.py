@@ -1,7 +1,9 @@
-from codecs import lookup
+from __future__ import annotations
 
 from ._base import Codec as _Codec
 from ._base import NoCodecError
+
+from codecs import lookup
 
 Utf8Stream = lookup("utf-8").incrementaldecoder
 

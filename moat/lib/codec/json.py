@@ -1,4 +1,4 @@
-from codecs import lookup
+from __future__ import annotations
 
 from ._base import Codec as _Codec
 

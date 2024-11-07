@@ -33,23 +33,29 @@ std_ext = Extension()
 
 
 class StdCBOR(Codec):
+    """
+    CBOR codec with MoaT's standard extensions
+    """
+
     def __init__(self):
         super().__init__(ext=std_ext)
 
 
 @std_ext.encoder(27, DProxy)
 def _enc_dpr(codec, obj):
+    codec  # noqa:B018
     return (obj.name, obj.i, obj.s, obj.a, obj.k)
 
 
 @std_ext.encoder(203, Proxy)
 def _enc_pr(codec, obj):
-    return ob.name
+    codec  # noqa:B018
+    return obj.name
 
 
 @std_ext.encoder(1, dt.datetime)
 def _enc_datetime_ts(codec, value):
-    # Semantic tag 1
+    codec  # noqa:B018
     if not value.tzinfo:
         raise ValueError(f"naive datetime {value!r}")
 
@@ -65,19 +71,23 @@ def _enc_datetime_ts(codec, value):
 
 # @std_ext.encoder(0, dt.datetime)
 def _enc_datetime_str(codec, value):
-    # Semantic tag 0
+    codec  # noqa:B018
+
     if not value.tzinfo:
         raise ValueError(f"naive datetime {value!r}")
 
     return value.isoformat().replace("+00:00", "Z")
 
+
 _timestamp_re = re.compile(
     r"^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)" r"(?:\.(\d{1,6})\d*)?(?:Z|([+-])(\d\d):(\d\d))$"
 )
 
+
 @std_ext.decoder(0)
 def _dec_datetime_string(codec, value) -> dt.datetime:
-    # Semantic tag 0
+    codec  # noqa:B018
+
     match = _timestamp_re.match(value)
     if match:
         (
@@ -124,16 +134,19 @@ def _dec_datetime_string(codec, value) -> dt.datetime:
 
 @std_ext.decoder(1)
 def _dec_ts(codec, val):
+    codec  # noqa:B018
     return datetime.fromtimestamp(val, timezone.utc)
 
 
 @std_ext.decoder(2)
 def _dec_bigp(codec, val):
+    codec  # noqa:B018
     return int.from_bytes(val, "big")
 
 
 @std_ext.decoder(3)
 def _dec_bign(codec, val):
+    codec  # noqa:B018
     return -1 - int.from_bytes(val, "big")
 
 
@@ -146,6 +159,7 @@ def _pad(buf, n):
 
 @std_ext.decoder(52)
 def _dec_ip4address(codec, buf) -> IPv4Address | IPv4Network | IPv4Interface:
+    codec  # noqa:B018
     from ipaddress import IPv4Address, IPv4Interface, IPv4Network
 
     if isinstance(buf, (bytes, bytearray, memoryview)):
@@ -162,6 +176,7 @@ def _dec_ip4address(codec, buf) -> IPv4Address | IPv4Network | IPv4Interface:
 
 @std_ext.decoder(54)
 def _dec_ip6address(codec, buf) -> IPv6Address | IPv6Network | IPv6Interface:
+    codec  # noqa:B018
     from ipaddress import IPv6Address, IPv6Interface, IPv6Network
 
     if isinstance(buf, (bytes, bytearray, memoryview)):
@@ -179,23 +194,27 @@ def _dec_ip6address(codec, buf) -> IPv6Address | IPv6Network | IPv6Interface:
 @std_ext.encoder(52, IPv4Address)
 @std_ext.encoder(54, IPv6Address)
 def _pack_ip(codec, adr):
+    codec  # noqa:B018
     return adr.packed.rstrip(b"\x00")
 
 
 @std_ext.encoder(52, IPv4Network)
 @std_ext.encoder(54, IPv6Network)
 def _pack_ipnet(codec, adr):
+    codec  # noqa:B018
     return (adr.prefixlen, _pack_ip(codec, adr.network_address))
 
 
 @std_ext.encoder(52, IPv4Interface)
 @std_ext.encoder(54, IPv6Interface)
 def _pack_ipintf(codec, adr):
+    codec  # noqa:B018
     return (_pack_ip(codec, adr), adr.network.prefixlen)
 
 
 @std_ext.decoder(260)
 def _dec_old_ipaddress(codec, buf) -> IPv4Address | IPv6Address | CBORTag:
+    codec  # noqa:B018
     if isinstance(buf, (bytes, bytearray, memoryview)) or len(buf) not in (4, 6, 16):
         if len(buf) == 4:
             return IPv4Address(bytes(buf))
@@ -210,6 +229,7 @@ def _dec_old_ipaddress(codec, buf) -> IPv4Address | IPv6Address | CBORTag:
 
 @std_ext.decoder(261)
 def _dec_old_ipnetwork(codec, buf) -> IPv4Network | IPv6Network:
+    codec  # noqa:B018
     if isinstance(buf, dict) and len(buf) == 1:
         mask, buf = next(iter(buf.items()))
         if len(buf) == 4:
@@ -222,6 +242,7 @@ def _dec_old_ipnetwork(codec, buf) -> IPv4Network | IPv6Network:
 
 @std_ext.decoder(203)
 def _dec_proxy(codec, val):
+    codec  # noqa:B018
     try:
         if isinstance(val, (str, int)):
             return name2obj(val)
@@ -232,6 +253,7 @@ def _dec_proxy(codec, val):
 
 @std_ext.decoder(27)
 def _dec_obj(codec, val):
+    codec  # noqa:B018
     if isinstance(val[0], Tag):
         if val[0].tag != 203:
             return Tag(27, val)  # not decodable
@@ -241,16 +263,20 @@ def _dec_obj(codec, val):
 
 @std_ext.decoder(202)
 def _dec_path(codec, val):
+    codec  # noqa:B018
     return Path.build(val)
 
 
 @std_ext.decoder(55799)
 def _dec_file_cbor(codec, val):
+    codec  # noqa:B018
     return val
 
 
 @std_ext.encoder(None, object)
 def enc_any(codec, obj):
+    codec  # noqa:B018
+
     try:
         name = obj2name(obj)
     except KeyError:

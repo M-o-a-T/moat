@@ -94,7 +94,7 @@ def _dec_bignum(codec, data):
 
 @std_ext.decoder(3)
 def _dec_path(codec, data):
-    s = Codec(codec.enc)
+    s = Codec(codec.ext)
     p = s.feed(data)
     return Path(*p)
 

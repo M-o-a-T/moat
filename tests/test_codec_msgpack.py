@@ -66,11 +66,11 @@ def test_bar():
     as_proxy("b", b, replace=True)
     c = unpacker(packer(b))
     assert b == c
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="<Bar: 94>"):
         packer(Bar(94))
 
 
-@pytest.mark.parametrize("chunks", (1, 2, 5))
+@pytest.mark.parametrize("chunks", [1, 2, 5])
 def test_chunked(chunks):
     p = [(dict(a=1, b=23, c=345, d=6789012345678901234567890, e="duh")), "!"]
     m = b"".join(packer(x) for x in p)
@@ -97,7 +97,7 @@ def test_ip():
     for a in adrs:
         m = packer(a)
         b = unpacker(m)
-        assert type(a) == type(b)
+        assert type(a) is type(b)
         assert str(a) == str(b)
 
     p1 = packer(IPv4Address("12.34.0.0"))

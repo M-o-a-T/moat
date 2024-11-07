@@ -53,6 +53,7 @@ dev = [ "flake8", "isort",]
 [tool.ruff]
 preview = true
 line-length = 99
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["ALL"]

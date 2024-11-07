@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from moat.util import Queue, CtxObj, NotGiven, QueueFull
+from moat.util import Queue, CtxObj, QueueFull
 from moat.util.compat import TaskGroup, CancelScope, const, CancelledError
 from contextlib import asynccontextmanager
 
@@ -11,12 +11,16 @@ except ImportError:
 
 import logging
 
-logger = logging.getLogger(__name__)
-
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Callable, Any
+    from typing import Callable, Any, Awaitable, Protocol, AsyncContextManager
+
+    class MsgIn(Protocol):
+        def __call__(self, msg: Msg, /) -> Any: ...
+
+
+logger = logging.getLogger(__name__)
 
 # Lib/enum.py is *large*.
 
@@ -118,15 +122,6 @@ class StreamError(RuntimeError):
     pass
 
 
-from typing import TYPE_CHECKING  # isort:skip
-
-if TYPE_CHECKING:
-    from typing import Awaitable
-
-    class MsgIn(Protocol):
-        def __call__(self, msg: Msg, /) -> Any: ...
-
-
 class _SA1:
     """
     shift a readonly list by 1. This is a minimal implementation, intended
@@ -151,7 +146,7 @@ class _SA1:
                 i.stop if i.stop < 0 else i.stop + 1,
                 i.end,
             )
-            return a[i]
+            return self.a[i]
         elif i >= 0:
             return self.a[i + 1]
         elif i >= -len(self.a):
@@ -178,7 +173,7 @@ class CmdHandler(CtxObj):
     data streams.
     """
 
-    def __init__(self, callback):
+    def __init__(self, callback: MsgIn):
         self._msgs: dict[int, Msg] = {}
         self._id = 1
         self._send_q = Queue(9)
@@ -250,7 +245,7 @@ class CmdHandler(CtxObj):
                     else:
                         err = (exc.__class__.__name__, *exc.args)
                         logger.debug("Error (msg=%r)", msg, exc_info=exc)
-                except BaseException as exc:
+                except BaseException:
                     err = (E_CANCEL,)
                     raise
                 finally:
@@ -324,7 +319,7 @@ class CmdHandler(CtxObj):
 
     async def msg_in(self, msg):
         i = msg[0]
-        stream = i & B_STREAM
+        # stream = i & B_STREAM
         error = i & B_ERROR
         i = -1 - (i >> 2)
         if i >= 0:
@@ -337,7 +332,7 @@ class CmdHandler(CtxObj):
             elif error:
                 self._debug("Spurious error %r", msg)
             elif self._in_cb is None:
-                self._send_nowait((i << 2) | B_ERROR, [E_NOCMD])
+                self._send_nowait((i << 2) | B_ERROR, [E_NO_CMD])
             else:
                 self._msgs[i] = conv = Msg(self, i)
                 await self._handle(conv)
@@ -379,8 +374,8 @@ class Msg:
         if mid > 0:
             mid -= 1
         self._i = mid << 2  # ready for sending
-        self.stream_out = S_NEW  # None if we never sent
-        self.stream_in = S_NEW  # None if never received, NotGiven if unwanted
+        self.stream_out = S_NEW
+        self.stream_in = S_NEW
         self.cmd_in: Event = Event()
         self.msg2 = None
 

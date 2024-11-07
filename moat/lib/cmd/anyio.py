@@ -17,19 +17,18 @@ async def run(cmd: CmdHandler, stream: anyio.abc.ByteStream):
 
     This is an async context manager that yields the command handler.
     """
-    packer = StdCBOR()
 
     async def rd(conn):
         unpacker = StdCBOR()
         while True:
             buf = await conn.read(4096)
-            for msg in unpack.feed(buf):
-                await self._cmd.msg_in(msg)
+            for msg in unpacker.feed(buf):
+                await cmd.msg_in(msg)
 
     async def wr(conn):
         packer = StdCBOR()
         while True:
-            msg = await self._cmd.msg_out()
+            msg = await cmd.msg_out()
             buf = packer.encode(msg, cbor=True)
             await conn.write(buf)
 

@@ -71,7 +71,7 @@ async def test_write_both():
             await st.send(2, "bc")
             await msg.result("OK", 4)
 
-    with pytest.raises(NoStream) as err:
+    with pytest.raises(NoStream):
         async with ungroup, scaffold(handle, None) as (a, b):
             async with b.stream_w("Test", 123) as st:
                 assert tuple(st.msg) == ("Takeme",)

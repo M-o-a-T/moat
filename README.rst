@@ -53,7 +53,7 @@ CBOR Tags
 
 This package uses the following CBOR tags.
 
-The author assumes that the proposed tags 202 and 203 generally useful
+The author presumes that the proposed tags 202 and 203 generally useful
 beyond the confines of this specification and has submitted them to IANA.
 
 

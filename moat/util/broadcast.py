@@ -71,7 +71,7 @@ class BroadcastReader:
 
         try:
             return await self._q.get()
-        except (AttributeError, EndOfStream):
+        except (AttributeError, EndOfStream, EOFError):
             raise StopAsyncIteration from None
 
     def flush(self):

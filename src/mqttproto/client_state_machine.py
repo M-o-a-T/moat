@@ -40,6 +40,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
     may_retain: bool = field(init=False, default=True)
     _pings_pending: int = field(init=False, default=0)
     _maximum_qos: bool = field(init=False, default=QoS.EXACTLY_ONCE)
+    _maximum_qos: QoS = field(init=False, default=QoS.EXACTLY_ONCE)
     _subscriptions: dict[str, Subscription] = field(init=False, factory=dict)
     _subscription_counts: dict[str, int] = field(
         init=False, factory=lambda: defaultdict(lambda: 0)
@@ -186,13 +187,12 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
 
         return packet.packet_id
 
-    def supports_qos(self, qos: QoS) -> bool:
+    @property
+    def maximum_qos(self) -> QoS:
         """
-        Check if the broker supports this QoS level.
-
-        :param qos: The desired QoS value.
+        Returns the maximum QoS level that the broker supports.
         """
-        return qos <= self._maximum_qos
+        return self._maximum_qos
 
     def subscribe(self, subscriptions: Sequence[Subscription]) -> int | None:
         """

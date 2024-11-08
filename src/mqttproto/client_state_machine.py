@@ -38,6 +38,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
     )
     keep_alive: int = field(init=False, default=0)
     _pings_pending: int = field(init=False, default=0)
+    _maximum_qos: bool = field(init=False, default=QoS.EXACTLY_ONCE)
     _subscriptions: dict[str, Subscription] = field(init=False, factory=dict)
     _subscription_counts: dict[str, int] = field(
         init=False, factory=lambda: defaultdict(lambda: 0)
@@ -82,6 +83,10 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
                 self.keep_alive = cast(
                     int, packet.properties.get(PropertyType.SERVER_KEEP_ALIVE)
                 )
+                self._maximum_qos = cast(
+                    QoS,
+                    packet.properties.get(PropertyType.MAXIMUM_QOS, QoS.EXACTLY_ONCE),
+                )
 
                 self.reset(session_present=packet.session_present)
 
@@ -89,6 +94,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
                 for publish in self._pending_packets.values():
                     assert isinstance(publish, MQTTPublishPacket)
                     publish.duplicate = True
+
                     publish.encode(self._out_buffer)
             else:
                 self._state = MQTTClientState.DISCONNECTED
@@ -164,6 +170,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
 
         """
         self._out_require_state(MQTTClientState.CONNECTED)
+        qos = min(qos, self._maximum_qos)
         packet_id = self._generate_packet_id() if qos > QoS.AT_MOST_ONCE else None
         packet = MQTTPublishPacket(
             topic=topic, payload=payload, qos=qos, retain=retain, packet_id=packet_id
@@ -173,6 +180,14 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
             self._add_pending_packet(packet)
 
         return packet.packet_id
+
+    def supports_qos(self, qos: QoS) -> bool:
+        """
+        Check if the broker supports this QoS level.
+
+        :param qos: The desired QoS value.
+        """
+        return qos <= self._maximum_qos
 
     def subscribe(self, subscriptions: Sequence[Subscription]) -> int | None:
         """

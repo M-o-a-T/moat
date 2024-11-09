@@ -7,6 +7,9 @@ import pytest
 from mqttproto import MQTTPublishPacket, QoS
 from mqttproto.async_client import AsyncMQTTClient
 
+if sys.version_info < (3, 11):
+    from exceptiongroup import BaseExceptionGroup
+
 pytestmark = [pytest.mark.anyio, pytest.mark.network]
 
 
@@ -33,12 +36,6 @@ async def test_publish_subscribe(qos_sub: QoS, qos_pub: QoS) -> None:
             assert packets[1].topic == "test/binary"
             assert packets[1].payload == b"\x00\xff\x00\x1f"
             assert packets[1].qos == min(qos_sub, qos_pub)
-
-
-if sys.version_info < (3, 11):
-
-    class BaseExceptionGroup(BaseException):
-        exceptions: list[BaseExceptionGroup] = []
 
 
 async def test_retained_message() -> None:

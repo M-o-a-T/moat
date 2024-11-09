@@ -95,7 +95,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
                     packet.properties.get(PropertyType.MAXIMUM_QOS, QoS.EXACTLY_ONCE),
                 )
                 self._may_retain = cast(
-                    bool, packet.properties.get(PropertyType.RETAIN_AVAILABLE)
+                    bool, packet.properties.get(PropertyType.RETAIN_AVAILABLE, True)
                 )
                 self.reset(session_present=packet.session_present)
 

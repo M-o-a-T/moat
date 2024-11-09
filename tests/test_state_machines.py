@@ -11,7 +11,7 @@ from mqttproto import (
     MQTTPublishPacket,
     MQTTPublishReceivePacket,
     MQTTPublishReleasePacket,
-    MQTTTimeoutError,
+    PropertyType,
     QoS,
     ReasonCode,
     Subscription,
@@ -116,6 +116,24 @@ def test_client_publish_qos0(
     assert isinstance(packet, MQTTPublishPacket)
     assert packet.topic == "test-topic"
     assert packet.payload == "payload"
+
+
+@pytest.mark.parametrize("qos", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE])
+def test_client_limit_qos(qos: QoS) -> None:
+    """Test that a limited QoS is processed in the client."""
+    client = MQTTClientStateMachine(client_id="client-X")
+    client.connect()
+    assert client.state is MQTTClientState.CONNECTING
+
+    packet = MQTTConnAckPacket(
+        reason_code=ReasonCode.SUCCESS,
+        session_present=False,
+        properties={PropertyType.MAXIMUM_QOS: qos} if qos < QoS.EXACTLY_ONCE else {},
+    )
+    buffer = bytearray()
+    packet.encode(buffer)
+    client.feed_bytes(buffer)
+    assert client.maximum_qos == qos
 
 
 def test_client_receive_qos0(
@@ -305,3 +323,24 @@ def test_client_receive_qos2(
     packet = packets[0]
     assert isinstance(packet, MQTTPublishCompletePacket)
     assert packet.reason_code is ReasonCode.SUCCESS
+
+
+@pytest.mark.parametrize("retain", [None, False, True])
+def test_client_retain(retain: bool | None) -> None:
+    """Test that server's RETAINability is processed in the client"""
+    client = MQTTClientStateMachine(client_id="client-X")
+    client.connect()
+    assert client.state is MQTTClientState.CONNECTING
+    _bytes = client.get_outbound_data()  # ignored
+
+    packet = MQTTConnAckPacket(
+        reason_code=ReasonCode.SUCCESS,
+        session_present=False,
+        properties={PropertyType.RETAIN_AVAILABLE: retain}
+        if retain is not None
+        else {},
+    )
+    buffer = bytearray()
+    packet.encode(buffer)
+    client.feed_bytes(buffer)
+    assert client.may_retain == (retain is not False)

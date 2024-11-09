@@ -9,6 +9,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sphinx_autodoc_typehints",
+    "sphinx_rtd_theme",
     "sphinx_tabs.tabs",
     "enum_tools.autoenum",
 ]
@@ -16,7 +17,7 @@ extensions = [
 templates_path = ["_templates"]
 source_suffix = ".rst"
 master_doc = "index"
-project = "mqttpproto"
+project = "mqttproto"
 author = "Alex Grönholm"
 copyright = "2024, " + author
 

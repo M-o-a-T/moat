@@ -37,7 +37,11 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
     client_id: str = field(
         validator=instance_of(str), factory=lambda: f"mqttproto-{uuid4().hex}"
     )
-    _ping_pending: bool = field(init=False, default=False)
+    keep_alive: int = field(init=False, default=0)
+    may_retain: bool = field(init=False, default=True)
+    _pings_pending: int = field(init=False, default=0)
+    _maximum_qos: bool = field(init=False, default=QoS.EXACTLY_ONCE)
+    _maximum_qos: QoS = field(init=False, default=QoS.EXACTLY_ONCE)
     _subscriptions: dict[str, Subscription] = field(init=False, factory=dict)
     _subscription_counts: dict[str, int] = field(
         init=False, factory=lambda: defaultdict(lambda: 0)
@@ -48,7 +52,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
         self._auto_ack_publishes = True
 
     def reset(self, session_present: bool) -> None:
-        self._ping_pending = False
+        self._pings_pending = 0
         if session_present:
             self._pending_packets = {
                 packet_id: packet
@@ -58,6 +62,15 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
         else:
             self._next_packet_id = 1
             self._subscriptions.clear()
+
+    @property
+    def pings_pending(self) -> int:
+        """
+        Check whether the last Ping we sent has been answered.
+
+        Returns ``None`` if no Ping request was yet sent.
+        """
+        return self._pings_pending
 
     def _handle_packet(self, packet: MQTTPacket) -> bool:
         if super()._handle_packet(packet):
@@ -70,19 +83,28 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
                 self._auth_method = cast(
                     str, packet.properties.get(PropertyType.AUTHENTICATION_METHOD)
                 )
-
+                self.keep_alive = cast(
+                    int, packet.properties.get(PropertyType.SERVER_KEEP_ALIVE)
+                )
+                self._maximum_qos = cast(
+                    QoS,
+                    packet.properties.get(PropertyType.MAXIMUM_QOS, QoS.EXACTLY_ONCE),
+                )
+                self.may_retain = cast(
+                    bool, packet.properties.get(PropertyType.RETAIN_AVAILABLE)
+                )
                 self.reset(session_present=packet.session_present)
 
                 # Resend any pending publishes (and set the duplicate flag)
-                for publish in self._pending_packets.values():
-                    assert isinstance(publish, MQTTPublishPacket)
-                    publish.duplicate = True
-                    publish.encode(self._out_buffer)
+                for packet in self._pending_packets.values():
+                    if isinstance(packet, MQTTPublishPacket):
+                        packet.duplicate = True
+                    packet.encode(self._out_buffer)
             else:
                 self._state = MQTTClientState.DISCONNECTED
         elif isinstance(packet, MQTTPingResponsePacket):
             self._in_require_state(packet, MQTTClientState.CONNECTED)
-            self._ping_pending = False
+            self._pings_pending = 0
         elif isinstance(packet, MQTTSubscribeAckPacket):
             self._in_require_state(packet, MQTTClientState.CONNECTED)
             self._pop_pending_packet(packet.packet_id, MQTTSubscribePacket)
@@ -132,7 +154,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
             raise MQTTTimeoutError("No reply to our Ping request")
         packet = MQTTPingRequestPacket()
         packet.encode(self._out_buffer)
-        self._ping_pending = True
+        self._pings_pending += 1
 
     def publish(
         self,
@@ -152,8 +174,12 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
             topic too
         :return: the packet ID if ``qos`` was higher than 0
 
+        A QoS that's not supported by the server is silently downgraded.
+        If Retain is not supported, the message is sent as-is because
+        the server is free to accept it anyway.
         """
         self._out_require_state(MQTTClientState.CONNECTED)
+        qos = min(qos, self._maximum_qos)
         packet_id = self._generate_packet_id() if qos > QoS.AT_MOST_ONCE else None
         packet = MQTTPublishPacket(
             topic=topic, payload=payload, qos=qos, retain=retain, packet_id=packet_id
@@ -163,6 +189,13 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
             self._add_pending_packet(packet)
 
         return packet.packet_id
+
+    @property
+    def maximum_qos(self) -> QoS:
+        """
+        Returns the maximum QoS level that the broker supports.
+        """
+        return self._maximum_qos
 
     def subscribe(self, subscriptions: Sequence[Subscription]) -> int | None:
         """

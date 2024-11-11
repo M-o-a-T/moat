@@ -40,6 +40,7 @@ __all__ = ["Path", "P", "PS", "logger_for", "PathShortener", "PathLongener", "pa
 _PartRE = re.compile("[^:._]+|_|:|\\.")
 _RTagRE = re.compile("^:m[^:._]+:$")
 
+
 @total_ordering
 class Path(collections.abc.Sequence):
     """
@@ -105,8 +106,8 @@ class Path(collections.abc.Sequence):
                     if not proxy:
                         continue
 
-                    if len(a) >= i+len(proxy) and a[i:i+len(proxy)] == proxy:
-                        a = a[:i] + (proxy,) + a[i+len(proxy):]
+                    if len(a) >= i + len(proxy) and a[i : i + len(proxy)] == proxy:
+                        a = a[:i] + (proxy,) + a[i + len(proxy) :]
                         break
                 i += 1
 
@@ -772,8 +773,10 @@ path_eval = _eval.eval
 
 Root = ContextVar("Root", default=None)
 
+
 class _RootPath(Path):
     _mark = None
+
     def __init__(self, key, var, name):
         self._key = key
         self._var = var
@@ -798,14 +801,15 @@ class _RootPath(Path):
             return None
         return self._var.get()._data
 
-_root = _RootPath("R",Root,"Root")
+
+_root = _RootPath("R", Root, "Root")
 as_proxy("R", _root)
 _Roots = {"R": _root}
 
 for _idx in "SPQ":  # and R. Yes I know.
     _name = f"{_idx}_Root"
     _ctx = ContextVar(_name, default=None)
-    _path = _RootPath(_idx,_ctx,_name)
+    _path = _RootPath(_idx, _ctx, _name)
 
     globals()[_name] = _ctx
     __all__.append(_name)
@@ -813,6 +817,4 @@ for _idx in "SPQ":  # and R. Yes I know.
     _Roots[_idx] = _path
     as_proxy(f"_P{_idx}", _path)
 
-del _idx,_name,_ctx,_path
-
-
+del _idx, _name, _ctx, _path

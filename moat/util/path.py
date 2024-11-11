@@ -28,12 +28,12 @@ import collections.abc
 import logging
 import re
 from base64 import b64decode, b64encode
-from functools import total_ordering
 from contextvars import ContextVar
-from moat.lib.codec.proxy import DProxy, as_proxy
-from .dict import attrdict
+from functools import total_ordering
 
 import simpleeval
+
+from moat.lib.codec.proxy import as_proxy
 
 __all__ = ["Path", "P", "PS", "logger_for", "PathShortener", "PathLongener", "path_eval", "Root"]
 
@@ -570,7 +570,7 @@ class PP(Path):
     Use this class for command-line processing.
     """
 
-    def __new__(cls, path, *, mark="", scan=True):  # noqa:D102
+    def __new__(cls, path, *, mark="", scan=True):
         if isinstance(path, Path):
             if path.mark != mark:
                 path = Path(*path, mark=mark, scan=scan)
@@ -799,7 +799,7 @@ class _RootPath(Path):
         p = self._var.get()
         if p is None:
             return None
-        return self._var.get()._data
+        return self._var.get()._data  # noqa:SLF001
 
 
 _root = _RootPath("R", Root, "Root")
@@ -812,7 +812,7 @@ for _idx in "SPQ":  # and R. Yes I know.
     _path = _RootPath(_idx, _ctx, _name)
 
     globals()[_name] = _ctx
-    __all__.append(_name)
+    __all__ += [_name]  # noqa:PLE0604
 
     _Roots[_idx] = _path
     as_proxy(f"_P{_idx}", _path)

@@ -31,71 +31,72 @@ tool:
     ini_options:
       log_cli_level: DEBUG
   ruff:
-    select:
-    - ALL
-    ignore:
-    - ANN
-    - PTH
-    - PERF
-    - D105
-    - D107
-    - A003
-    - S101
-    - RUF001
-    - RUF002
-    - PLW1514
-    - D2
-    - D3
-    - D4
-    - T2
-    - FBT
-    - TRY003
-    - EM10
-    - PLR
-    - C
-    - RET50
-    - TD
-    - FIX
-    - N
-    - ERA
-    - BLE001
-    preview: true
-    explicit-preview-rules: true
-    line-length: 99
-    flake8-comprehensions:
-      allow-dict-calls-with-keyword-arguments: true
-    flake8-builtins:
-      builtins-ignorelist:
-      - id
-      - help
-    isort:
-      no-lines-before:
-      - future
-      required-imports:
-      - "from __future__ import annotations"
-      section-order:
-      - future
-      - typing
-      - standard-library
-      - first-party
-      - upy
-      - moat
-      - local-folder
-      - third-party
-      extra-standard-library:
-      - pytest
-      - anyio
-      force-to-top:
-      - moat.util
-      sections:
-        moat:
-        - moat
-        upy:
-        - micropython
-        - machine
-        - esp
-        typing:
+    lint:
+      select:
+      - ALL
+      ignore:
+      - ANN
+      - PTH
+      - PERF
+      - D105
+      - D107
+      - A003
+      - S101
+      - RUF001
+      - RUF002
+      - PLW1514
+      - D2
+      - D3
+      - D4
+      - T2
+      - FBT
+      - TRY003
+      - EM10
+      - PLR
+      - C
+      - RET50
+      - TD
+      - FIX
+      - N
+      - ERA
+      - BLE001
+      explicit-preview-rules: true
+      flake8-comprehensions:
+        allow-dict-calls-with-keyword-arguments: true
+      flake8-builtins:
+        builtins-ignorelist:
+        - id
+        - help
+      isort:
+        no-lines-before:
+        - future
+        required-imports:
+        - "from __future__ import annotations"
+        section-order:
+        - future
         - typing
+        - standard-library
+        - first-party
+        - upy
+        - moat
+        - local-folder
+        - third-party
+        extra-standard-library:
+        - pytest
+        - anyio
+        force-to-top:
+        - moat.util
+        sections:
+          moat:
+          - moat
+          upy:
+          - micropython
+          - machine
+          - esp
+          typing:
+          - typing
+    preview: true
+    line-length: 99
   black:
     line-length: 99
   flake8:

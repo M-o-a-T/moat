@@ -489,6 +489,8 @@ class Path(collections.abc.Sequence):
                 elif p == ":":
                     pass
 
+                elif p[1] == ":":
+                    res.append(_decol(p))
                 elif p[1] == "b":
                     res.append(int(p[2:], 2))
                 elif p[1] == "e":
@@ -506,7 +508,7 @@ class Path(collections.abc.Sequence):
                     if len(p) == 2:
                         res.append(None)
                 elif p[1] == "s":
-                    res.append(b64decode(_decol(p[2]).encode("ascii")))
+                    res.append(b64decode(_decol(p[2:]).encode("ascii")))
                 elif p[1] == "t":
                     if len(p) == 2:
                         res.append(True)

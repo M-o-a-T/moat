@@ -255,6 +255,11 @@ def _dec_obj(codec, val):
     return unwrap_obj(val)
 
 
+@std_ext.encoder(202, Path)
+def _enc_path(codec, val):
+    codec  # noqa:B018
+    return val.raw
+
 @std_ext.decoder(202)
 def _dec_path(codec, val):
     codec  # noqa:B018

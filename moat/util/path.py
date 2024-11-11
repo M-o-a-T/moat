@@ -97,15 +97,18 @@ class Path(collections.abc.Sequence):
     MoaT-Link setup to another, everything still works.
     """
 
-    def __init__(self, *a, mark=""):
-        if a:
-            for proxy in _Roots.values():
-                if not proxy:
-                    continue
+    def __init__(self, *a, mark="", scan=False):
+        if a and scan:
+            i = 0
+            while i < len(a):
+                for proxy in _Roots.values():
+                    if not proxy:
+                        continue
 
-                if a[:len(proxy)] == proxy:
-                    a = (proxy, *a[len(proxy):])
-                    break
+                    if len(a) >= i+len(proxy) and a[i:i+len(proxy)] == proxy:
+                        a = a[:i] + (proxy,) + a[i+len(proxy):]
+                        break
+                i += 1
 
         self._data: tuple = a
         self._mark = mark
@@ -317,7 +320,7 @@ class Path(collections.abc.Sequence):
         return f"P({str(self)!r})"
 
     @classmethod
-    def from_str(cls, path, *, mark=""):
+    def from_str(cls, path, *, mark="", scan=False):
         """
         Constructor to build a Path from its string representation.
         """
@@ -462,10 +465,10 @@ class Path(collections.abc.Sequence):
         if esc or part is None:
             raise SyntaxError(f"Cannot parse {path!r} at {pos}")
         done(None)
-        return cls(*res, mark=mark)
+        return cls(*res, mark=mark, scan=scan)
 
     @classmethod
-    def from_slashed(cls, path, *, mark=None):
+    def from_slashed(cls, path, *, mark=None, scan=True):
         """
         Constructor to build a Path from its slashed string representation.
         """
@@ -530,7 +533,7 @@ class Path(collections.abc.Sequence):
 
         if mark is None:
             mark = ""
-        r = cls(*res, mark=mark)
+        r = cls(*res, mark=mark, scan=scan)
         return r
 
     @classmethod
@@ -545,14 +548,33 @@ class P(Path):
 
     For idempotency (required by ``click``) it transparently accepts `Path`
     objects.
+
+    Scanning for prefixes is disabled. Use this class for paths embedded in
+    MoaT code.
     """
 
-    def __new__(cls, path, *, mark=""):  # noqa:D102
+    def __new__(cls, path, *, mark="", scan=False):  # noqa:D102
         if isinstance(path, Path):
             if path.mark != mark:
-                path = Path(*path, mark=mark)
+                path = Path(*path, mark=mark, scan=scan)
             return path
-        return Path.from_str(path, mark=mark)
+        return Path.from_str(path, mark=mark, scan=scan)
+
+
+class PP(Path):
+    """
+    A Path subclass that delegates to `Path.from_str`.
+
+    This is identical to `P` except that scanning for prefixes is enabled.
+    Use this class for command-line processing.
+    """
+
+    def __new__(cls, path, *, mark="", scan=True):  # noqa:D102
+        if isinstance(path, Path):
+            if path.mark != mark:
+                path = Path(*path, mark=mark, scan=scan)
+            return path
+        return Path.from_str(path, mark=mark, scan=scan)
 
 
 class PS(Path):
@@ -568,7 +590,7 @@ class PS(Path):
             if path.mark != mark:
                 path = Path(*path, mark=mark)
             return path
-        return Path.from_slashed(path, mark=mark)
+        return Path.from_slashed(path, mark=mark, scan=True)
 
 
 def logger_for(path: Path):

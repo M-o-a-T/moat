@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import P, Path, packer, unpacker, yformat, yload
+from moat.util import P, PS, Path, packer, unpacker, yformat, yload
 
 _valid = (
     (("a", "b", "c"), "a.b.c"),
@@ -220,7 +220,7 @@ def test_root():
     Root.set(P("abba.c"))
     Q_Root.set(P("some.queue"))
     p=P(':R.d.::a.e')
-    p2=P(':Q.d.::a.e')
+    p2=P('yes:Q.d.::a.e')
     c=StdCBOR()
     assert p.slashed == "abba/c/d/::a/e"
     assert str(p) == ":R.d.::a.e"
@@ -237,9 +237,14 @@ def test_root():
     pp = c.decode(pc)
     pp2 = c.decode(p2c)
     assert pp.slashed == "duddy/d/::a/e"
-    assert pp2.slashed == "fuddy/d/::a/e"
+    assert pp2.slashed == "yes/fuddy/d/::a/e"
     assert p == pp
     assert p2 == pp2
     assert p != p2
+
+    assert "yes" in pp2
+    assert "fuddy" not in pp2
+
+    assert pp2 == PS("yes/fuddy/d/::a/e")
 
 

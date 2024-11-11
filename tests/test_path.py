@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import P, PS, Path, packer, unpacker, yformat, yload
+from moat.util import PS, P, Path, packer, unpacker, yformat, yload
 
 _valid = (
     (("a", "b", "c"), "a.b.c"),
@@ -213,15 +213,16 @@ def test_yaml():
     assert yformat(a) == b
     assert yload(b) == a
 
+
 def test_root():
-    from moat.util.path import Root, Q_Root
     from moat.util.cbor import StdCBOR
+    from moat.util.path import Q_Root, Root
 
     Root.set(P("abba.c"))
     Q_Root.set(P("some.queue"))
-    p=P(':R.d.::a.e')
-    p2=P('yes:Q.d.::a.e')
-    c=StdCBOR()
+    p = P(":R.d.::a.e")
+    p2 = P("yes:Q.d.::a.e")
+    c = StdCBOR()
     assert p.slashed == "abba/c/d/::a/e"
     assert str(p) == ":R.d.::a.e"
     pc = c.encode(p)
@@ -246,5 +247,3 @@ def test_root():
     assert "fuddy" not in pp2
 
     assert pp2 == PS("yes/fuddy/d/::a/e")
-
-

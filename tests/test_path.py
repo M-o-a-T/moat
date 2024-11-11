@@ -212,3 +212,34 @@ def test_yaml():
     b = "!P a.b.c\n...\n"
     assert yformat(a) == b
     assert yload(b) == a
+
+def test_root():
+    from moat.util.path import Root, Q_Root
+    from moat.util.cbor import StdCBOR
+
+    Root.set(P("abba.c"))
+    Q_Root.set(P("some.queue"))
+    p=P(':R.d.::a.e')
+    p2=P(':Q.d.::a.e')
+    c=StdCBOR()
+    assert p.slashed == "abba/c/d/::a/e"
+    assert str(p) == ":R.d.::a.e"
+    pc = c.encode(p)
+    p2c = c.encode(p2)
+    assert b"abba" not in pc
+    assert b"queue" not in p2c
+
+    assert b":a" in pc
+    assert b"::a" not in pc
+
+    Root.set(P("duddy"))
+    Q_Root.set(P("fuddy"))
+    pp = c.decode(pc)
+    pp2 = c.decode(p2c)
+    assert pp.slashed == "duddy/d/::a/e"
+    assert pp2.slashed == "fuddy/d/::a/e"
+    assert p == pp
+    assert p2 == pp2
+    assert p != p2
+
+

@@ -98,6 +98,60 @@ y, yr   Year (2023–)
 
 
 @cli.command
+@click.option("-d", "--dec", "--decode", type=str, help="Source format", default="json")
+@click.option("-e", "--enc", "--encode", type=str, help="Destination format", default="yaml")
+@click.option("-i", "--in", "--input", "pathi", type=click.File("r"), help="Source file", default=sys.stdin)
+@click.option("-o", "--out", "--output", "patho", type=click.File("w"), help="Destination file", default=sys.stdout)
+def convert(enc, dec, pathi, patho):
+    """File conversion utility.
+
+    Supported file formats: json yaml cbor msgpack python
+    """
+    def get_codec(n):
+        if n == "python":
+            from pprint import pformat
+            return eval, pformat, False, False
+        if n == "json":
+            import simplejson as json
+            return json.loads, json.dumps, False, False
+        if n == "yaml":
+            import ruyaml as yaml
+            y = yaml.YAML(typ="safe")
+            y.default_flow_style = True, False
+            from moat.util import yload,yprint
+            return yload, yprint, False, True
+        if n == "cbor":
+            from moat.util import StdCBOR
+            c = StdCBOR()
+            return c.decode,c.encode,True, False
+        if n == "msgpack":
+            from moat.util import StdMsgpack
+            c = StdMsgpack()
+            return c.decode,c.encode,True, False
+        raise ValueError("unsupported codec")
+
+    dec,_x,bd,csd = get_codec(dec)
+    _y,enc,be,cse = get_codec(enc)
+    if bd:
+        pathi = pathi.buffer
+    if be:
+        patho = pathi.buffer
+
+    if csd:
+        data = dec(pathi)
+    else:
+        data = pathi.read()
+        data = dec(data)
+    if cse:
+        enc(data, patho)
+    else:
+        data = enc(data)
+        patho.write(data)
+    pathi.close()
+    patho.close()
+
+
+@cli.command
 @click.option("-d", "--decode", is_flag=True, help="decode (default: encode)")
 @click.argument("path", type=click.Path(file_okay=True, dir_okay=False))
 def msgpack(decode, path):

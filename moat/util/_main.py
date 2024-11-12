@@ -133,12 +133,12 @@ def convert(enc, dec, pathi, patho, stream):
                 s.write("---\n")
             return partial(yload,multi=True) if stream else yload, ypr if stream else yprint, False, True
         if n == "cbor":
-            from moat.util import StdCBOR
+            from moat.util.cbor import StdCBOR
             c = StdCBOR()
             d = StdCBOR()
             return c.feed if stream else c.decode, d.encode,True, False
         if n == "msgpack":
-            from moat.util import StdMsgpack
+            from moat.util.msgpack import StdMsgpack
             c = StdMsgpack()
             d = StdMsgpack()
             return c.feed if stream else c.decode, d.encode,True, False
@@ -149,7 +149,7 @@ def convert(enc, dec, pathi, patho, stream):
     if bd:
         pathi = pathi.buffer
     if be:
-        patho = pathi.buffer
+        patho = patho.buffer
 
     if stream:
         if csd:

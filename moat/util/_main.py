@@ -180,31 +180,6 @@ def convert(enc, dec, pathi, patho, stream):
     patho.close()
 
 
-@cli.command
-@click.option("-d", "--decode", is_flag=True, help="decode (default: encode)")
-@click.argument("path", type=click.Path(file_okay=True, dir_okay=False))
-def msgpack(decode, path):
-    """encode/decode msgpack from/to YAML
-
-    moat util msgpack data.yaml > data.mp    # encode
-    moat util msgpack -d data.mp > data.yaml # decode
-    """
-    from .msgpack import packer, stream_unpacker
-
-    if decode:
-        with sys.stdin.buffer if path == "-" else open(path, "rb") as f:
-            delim = False
-            for obj in stream_unpacker(f):
-                if delim:
-                    print("---")
-                delim = True
-                yprint(obj)
-    else:
-        with sys.stdin if path == "-" else open(path) as f:
-            for obj in yload(f, multi=True):
-                sys.stdout.buffer.write(packer(obj))
-
-
 @cli.command("path", help=Path.__doc__, no_args_is_help=True)
 @click.option(
     "-e",

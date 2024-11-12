@@ -8,6 +8,7 @@ import anyio
 import logging  # pylint: disable=wrong-import-position
 import sys
 from datetime import datetime
+from functools import partial
 from time import time
 
 import asyncclick as click
@@ -102,7 +103,8 @@ y, yr   Year (2023–)
 @click.option("-e", "--enc", "--encode", type=str, help="Destination format", default="yaml")
 @click.option("-i", "--in", "--input", "pathi", type=click.File("r"), help="Source file", default=sys.stdin)
 @click.option("-o", "--out", "--output", "patho", type=click.File("w"), help="Destination file", default=sys.stdout)
-def convert(enc, dec, pathi, patho):
+@click.option("-s", "--stream", is_flag=True, help="Multiple messages")
+def convert(enc, dec, pathi, patho, stream):
     """File conversion utility.
 
     Supported file formats: json yaml cbor msgpack python
@@ -113,21 +115,33 @@ def convert(enc, dec, pathi, patho):
             return eval, pformat, False, False
         if n == "json":
             import simplejson as json
-            return json.loads, json.dumps, False, False
+            if stream:
+                def jdump(d):
+                    return json.dumps(d,separators=(',', ':'))+"\n"
+            else:
+                def jdump(d):
+                    return json.dumps(d,indent="  ")+"\n"
+
+            return json.loads, jdump, False, False
         if n == "yaml":
             import ruyaml as yaml
             y = yaml.YAML(typ="safe")
             y.default_flow_style = True, False
             from moat.util import yload,yprint
-            return yload, yprint, False, True
+            def ypr(d,s):
+                yprint(d,s)
+                s.write("---\n")
+            return partial(yload,multi=True) if stream else yload, ypr if stream else yprint, False, True
         if n == "cbor":
             from moat.util import StdCBOR
             c = StdCBOR()
-            return c.decode,c.encode,True, False
+            d = StdCBOR()
+            return c.feed if stream else c.decode, d.encode,True, False
         if n == "msgpack":
             from moat.util import StdMsgpack
             c = StdMsgpack()
-            return c.decode,c.encode,True, False
+            d = StdMsgpack()
+            return c.feed if stream else c.decode, d.encode,True, False
         raise ValueError("unsupported codec")
 
     dec,_x,bd,csd = get_codec(dec)
@@ -137,16 +151,31 @@ def convert(enc, dec, pathi, patho):
     if be:
         patho = pathi.buffer
 
-    if csd:
-        data = dec(pathi)
+    if stream:
+        if csd:
+            in_d = lambda: [ pathi.read() ]
+        else:
+            def in_d():
+                while data := pathi.read(4096):
+                    yield data
+        for d in in_d():
+            for data in dec(d):
+                if cse:
+                    enc(data, patho)
+                else:
+                    data = enc(data)
+                    patho.write(data)
     else:
-        data = pathi.read()
-        data = dec(data)
-    if cse:
-        enc(data, patho)
-    else:
-        data = enc(data)
-        patho.write(data)
+        if csd:
+            data = dec(pathi)
+        else:
+            data = pathi.read()
+            data = dec(data)
+        if cse:
+            enc(data, patho)
+        else:
+            data = enc(data)
+            patho.write(data)
     pathi.close()
     patho.close()
 

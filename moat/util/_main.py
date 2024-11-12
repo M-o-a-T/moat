@@ -16,7 +16,7 @@ import asyncclick as click
 from .main import load_subgroup
 from .path import P, Path, path_eval
 from .times import humandelta, time_until
-from .yaml import yload, yprint
+from .yaml import yprint
 
 log = logging.getLogger()
 
@@ -144,7 +144,7 @@ def convert(enc, dec, pathi, patho, stream):
 
             y = yaml.YAML(typ="safe")
             y.default_flow_style = True, False
-            from moat.util import yload, yprint
+            from moat.util import yload
 
             def ypr(d, s):
                 yprint(d, s)
@@ -179,7 +179,8 @@ def convert(enc, dec, pathi, patho, stream):
 
     if stream:
         if csd:
-            in_d = lambda: [pathi.read()]
+            def in_d():
+                return [pathi.read()]
         else:
 
             def in_d():
@@ -191,8 +192,8 @@ def convert(enc, dec, pathi, patho, stream):
                 if cse:
                     enc(data, patho)
                 else:
-                    data = enc(data)
-                    patho.write(data)
+                    dat = enc(data)
+                    patho.write(dat)
     else:
         if csd:
             data = dec(pathi)

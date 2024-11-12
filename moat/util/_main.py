@@ -101,51 +101,77 @@ y, yr   Year (2023–)
 @cli.command
 @click.option("-d", "--dec", "--decode", type=str, help="Source format", default="json")
 @click.option("-e", "--enc", "--encode", type=str, help="Destination format", default="yaml")
-@click.option("-i", "--in", "--input", "pathi", type=click.File("r"), help="Source file", default=sys.stdin)
-@click.option("-o", "--out", "--output", "patho", type=click.File("w"), help="Destination file", default=sys.stdout)
+@click.option(
+    "-i", "--in", "--input", "pathi", type=click.File("r"), help="Source file", default=sys.stdin
+)
+@click.option(
+    "-o",
+    "--out",
+    "--output",
+    "patho",
+    type=click.File("w"),
+    help="Destination file",
+    default=sys.stdout,
+)
 @click.option("-s", "--stream", is_flag=True, help="Multiple messages")
 def convert(enc, dec, pathi, patho, stream):
     """File conversion utility.
 
     Supported file formats: json yaml cbor msgpack python
     """
+
     def get_codec(n):
         if n == "python":
             from pprint import pformat
+
             return eval, pformat, False, False
         if n == "json":
             import simplejson as json
+
             if stream:
+
                 def jdump(d):
-                    return json.dumps(d,separators=(',', ':'))+"\n"
+                    return json.dumps(d, separators=(",", ":")) + "\n"
+
             else:
+
                 def jdump(d):
-                    return json.dumps(d,indent="  ")+"\n"
+                    return json.dumps(d, indent="  ") + "\n"
 
             return json.loads, jdump, False, False
         if n == "yaml":
             import ruyaml as yaml
+
             y = yaml.YAML(typ="safe")
             y.default_flow_style = True, False
-            from moat.util import yload,yprint
-            def ypr(d,s):
-                yprint(d,s)
+            from moat.util import yload, yprint
+
+            def ypr(d, s):
+                yprint(d, s)
                 s.write("---\n")
-            return partial(yload,multi=True) if stream else yload, ypr if stream else yprint, False, True
+
+            return (
+                partial(yload, multi=True) if stream else yload,
+                ypr if stream else yprint,
+                False,
+                True,
+            )
         if n == "cbor":
             from moat.util.cbor import StdCBOR
+
             c = StdCBOR()
             d = StdCBOR()
-            return c.feed if stream else c.decode, d.encode,True, False
+            return c.feed if stream else c.decode, d.encode, True, False
         if n == "msgpack":
             from moat.util.msgpack import StdMsgpack
+
             c = StdMsgpack()
             d = StdMsgpack()
-            return c.feed if stream else c.decode, d.encode,True, False
+            return c.feed if stream else c.decode, d.encode, True, False
         raise ValueError("unsupported codec")
 
-    dec,_x,bd,csd = get_codec(dec)
-    _y,enc,be,cse = get_codec(enc)
+    dec, _x, bd, csd = get_codec(dec)
+    _y, enc, be, cse = get_codec(enc)
     if bd:
         pathi = pathi.buffer
     if be:
@@ -153,11 +179,13 @@ def convert(enc, dec, pathi, patho, stream):
 
     if stream:
         if csd:
-            in_d = lambda: [ pathi.read() ]
+            in_d = lambda: [pathi.read()]
         else:
+
             def in_d():
                 while data := pathi.read(4096):
                     yield data
+
         for d in in_d():
             for data in dec(d):
                 if cse:

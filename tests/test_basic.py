@@ -44,7 +44,7 @@ objs = (
     123,
     99.5,
     {"one": "two"},
-    {"yes": True, "no": False},
+    {"no": False, "yes": True},
     [12, "three four", 56],
 )
 
@@ -79,7 +79,7 @@ def test_cbor(obj):
     c = get_codec("cbor")
 
     a = c.encode(obj)
-    b = cbor2.dumps(obj)
+    b = cbor2.dumps(obj, canonical=True)
     assert a == b, (obj,a,b)
     assert cbor2.loads(a) == obj, (obj, a)
     assert c.decode(a) == obj, (obj, a)

@@ -260,9 +260,7 @@ class Codec(_Codec):
             self._enc_any(v)
 
     def _enc_bool(self, b):
-        if b:
-            self._w(struct.pack("B", CBOR_TRUE))
-        self._w(struct.pack("B", CBOR_FALSE))
+        self._w(struct.pack("B", CBOR_TRUE if b else CBOR_FALSE))
 
     def _enc_tag(self, t, val=...):
         if val is Ellipsis:

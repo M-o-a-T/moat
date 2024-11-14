@@ -172,6 +172,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
         *,
         qos: QoS = QoS.AT_MOST_ONCE,
         retain: bool = False,
+        user_properties: dict[str, str] | None = None,
     ) -> int | None:
         """
         Send a ``PUBLISH`` request.
@@ -187,10 +188,17 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
         If Retain is not supported, the message is sent as-is because
         the server is free to accept it anyway.
         """
+        if user_properties is None:
+            user_properties = {}
         self._out_require_state(MQTTClientState.CONNECTED)
         packet_id = self._generate_packet_id() if qos > QoS.AT_MOST_ONCE else None
         packet = MQTTPublishPacket(
-            topic=topic, payload=payload, qos=qos, retain=retain, packet_id=packet_id
+            topic=topic,
+            payload=payload,
+            qos=qos,
+            retain=retain,
+            packet_id=packet_id,
+            user_properties=user_properties,
         )
         packet.encode(self._out_buffer)
         if packet_id is not None:

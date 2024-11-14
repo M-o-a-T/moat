@@ -80,6 +80,6 @@ def test_cbor(obj):
 
     a = c.encode(obj)
     b = cbor2.dumps(obj, canonical=True)
-    assert a == b, (obj,a,b)
+    assert a == b, (obj, a, b)
     assert cbor2.loads(a) == obj, (obj, a)
     assert c.decode(a) == obj, (obj, a)

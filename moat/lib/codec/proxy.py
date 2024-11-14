@@ -4,6 +4,8 @@ This module contains proxy helpers.
 
 from __future__ import annotations
 
+from inspect import isfunction
+
 __all__ = [
     "Proxy",
     "DProxy",
@@ -16,6 +18,11 @@ __all__ = [
     "NotGiven",
 ]
 
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Callable
 
 NotGiven = ...
 
@@ -84,11 +91,11 @@ class DProxy(Proxy):
 
 
 _pkey = 1
-_CProxy: dict[str, object] = {}
+_CProxy: dict[str, tuple[object, callable | None]] = {}
 _RProxy: dict[int, str] = {}
 
 
-def get_proxy(obj):
+def get_proxy(obj, factory: Callable | None = None):
     """
     Return a proxy for @obj.
 
@@ -100,8 +107,10 @@ def get_proxy(obj):
         global _pkey  # noqa:PLW0603 pylint:disable=global-statement
         k = "p_" + str(_pkey)
         _pkey += 1
-        _CProxy[k] = obj
+        _CProxy[k] = (obj, factory)
         _RProxy[id(obj)] = k
+        if factory:
+            _RProxy[id(factory)] = k
         return k
 
 
@@ -116,22 +125,26 @@ def drop_proxy(p):
         p = _RProxy[id(p)]
     if p == "" or p[0] == "_":
         raise ValueError("Can't delete a system proxy")
-    r = _CProxy.pop(p)
+    r, f = _CProxy.pop(p)
     del _RProxy[id(r)]
+    if f is not None:
+        del _RProxy[id(f)]
 
 
-def name2obj(name, obj=NotGiven, replace=False):
+def name2obj(
+    name, obj: object | type = NotGiven, replace: bool = False, factory: Callable | None = None,
+):
     """
     Translates Proxy name to referred object
 
     Raises `KeyError` if not found.
     """
     if obj is NotGiven and not replace:
-        return _CProxy[name]
+        return _CProxy[name][0]
     if replace:
-        _CProxy[name] = obj
+        _CProxy[name] = (obj, factory)
     else:
-        oobj = _CProxy.get(name)
+        oobj, _f = _CProxy.get(name)
         if oobj is not None and oobj is not obj:
             raise KeyError(name)  # exists
     return None
@@ -158,7 +171,7 @@ def obj2name(obj, name=NotGiven, replace=False):
     return None
 
 
-def as_proxy(name, obj=NotGiven, replace=False):
+def as_proxy(name, obj=NotGiven, replace=False, factory=None):
     """
     Export an object or class as a named proxy.
 
@@ -170,9 +183,9 @@ def as_proxy(name, obj=NotGiven, replace=False):
 
     def _proxy(obj):
         if replace is None and name in _CProxy:
-            return _CProxy[name]
+            return _CProxy[name][0]
         _RProxy[id(obj)] = name
-        _CProxy[name] = obj
+        _CProxy[name] = (obj, factory)
         return obj
 
     if _CProxy and obj is NotGiven:
@@ -183,7 +196,11 @@ def as_proxy(name, obj=NotGiven, replace=False):
         return obj
 
 
-as_proxy("_", NotGiven, replace=True)
+def _NG(*_a):
+    return Ellipsis
+
+
+as_proxy("_", NotGiven, replace=True, factory=_NG)
 as_proxy("_p", Proxy)
 
 
@@ -227,9 +244,12 @@ def unwrap_obj(s):
         if isinstance(pk, Proxy):
             pk = pk.name
         try:
-            pk = _CProxy[pk]
+            pk, f = _CProxy[pk]
         except KeyError:
             return DProxy(pk, *s)
+        pk = f or pk
+    if isfunction(pk):
+        return pk(*s)
 
     a = _next(s, ())
     if isinstance(a, dict):

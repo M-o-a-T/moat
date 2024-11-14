@@ -18,17 +18,32 @@ def _gen(i):
 
     def get(self):
         self._len(ii)
-        return self.a[i]
+        return self[i]
 
     def set(self, val):
         self._len(ii)
-        self.a[i] = val
+        self[i] = val
 
     return property(get,set)
 
 
 @define(kw_only=True)
 class MsgMeta:
+    """
+    This class encapsulates a message's metadata, transmitting them
+    as an array (possibly followed by a dict), encoding non-strings
+    with CBOR and Base85/btoa.
+
+    Currently defined offsets:
+
+    * 0: origin: a string declaring which subsystem created a message.
+    * 1: timestamp: the Unix timestamp when the message was originally
+         created.
+    
+    You can use indexing to address any other array or keyword value.
+    Deleting an array member sets it to ``None``.
+
+    """
     a:list[Any] = field(factory=list)
     kw:dict[str,Any] = field(factory=dict)
 
@@ -44,6 +59,32 @@ class MsgMeta:
         self.__attrs_init__(**kwargs)
         self._clean(name)
     
+    def __getitem__(self, k):
+        if isinstance(k,int):
+            return self.a[k]
+        else:
+            return self.kw[k]
+
+    def __setitem__(self, k, v):
+        if isinstance(k,int):
+            if isinstance(k, slice) or k < 0:
+                raise ValueError("Only use positive indices")
+            if isinstance(v,str):
+                if ("|" in v or "\\" in v):
+                    raise ValueError("Value may not contain '|' or '\\'")
+            elif k == 0:
+                raise ValueError("First item must be a string")
+            self._len(k+1)
+            self.a[k] = v
+        else:
+            self.kw[k] = v
+
+    def __delitem__(self, k):
+        if isinstance(k,int):
+            self.a[k] = None
+        else:
+            del self.kw[k]
+
     def _clean(self, name:str|None):
         if name is NotGiven:
             return

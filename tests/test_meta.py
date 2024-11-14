@@ -39,3 +39,20 @@ def test_dict():
     assert nn.kw["no"] is False
     assert nn.origin == "duh"
     assert time.time()-.1 <= nn.timestamp  <= time.time()+.1
+
+def test_bad():
+    n = MsgMeta("duh")
+    with pytest.raises(ValueError):
+        n.origin = "here|now"
+    # works in a dict
+    n["doc"] = "escaped\\ntext"
+    # but not in the array
+    with pytest.raises(ValueError):
+        n[2] = "escaped\\ntext"
+    # this works
+    n["doc"] = b"escaped\\ntext"
+    # but this doesn't
+    with pytest.raises(ValueError):
+        n.origin = b"not text"
+    # this is broken but not checked
+    n.timestamp = b'1234'

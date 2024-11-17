@@ -24,6 +24,7 @@ from ._types import (
     PropertyType,
     QoS,
     ReasonCode,
+    RetainHandling,
     Subscription,
 )
 
@@ -73,7 +74,26 @@ class MQTTBrokerStateMachine:
     ) -> None:
         session.subscribed_to(subscription.pattern)
         dest = self.shared_subscriptions.setdefault(subscription.pattern, dict())
+        prev = dest.get(session.client_id)
         dest[session.client_id] = subscription
+        if subscription.retain_handling == RetainHandling.NO_RETAINED:
+            return
+        if (
+            subscription.retain_handling
+            == RetainHandling.SEND_RETAINED_IF_NOT_SUBSCRIBED
+            and prev is not None
+        ):
+            return
+
+        for packet in self.retained_messages.values():
+            if subscription.matches(packet):
+                session.deliver_publish(
+                    topic=packet.topic,
+                    payload=packet.payload,
+                    retain=packet.retain,
+                    qos=min(packet.qos, subscription.max_qos),
+                    user_properties=packet.user_properties,
+                )
 
     def unsubscribe_session_from(
         self, session: MQTTBrokerClientStateMachine, pattern: Pattern | str

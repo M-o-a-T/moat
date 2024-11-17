@@ -112,3 +112,35 @@ async def test_publish_subscribe(qos_sub: QoS, qos_pub: QoS) -> None:
             assert packets[1].payload == b"\x00\xff\x00\x1f"
             assert packets[1].qos == min(qos_sub, qos_pub)
             assert packets[1].user_properties == {}
+
+
+@pytest.mark.parametrize(
+    "qos_sub", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE]
+)
+@pytest.mark.parametrize(
+    "qos_pub", [QoS.AT_MOST_ONCE, QoS.AT_LEAST_ONCE, QoS.EXACTLY_ONCE]
+)
+async def test_retain(qos_sub: QoS, qos_pub: QoS) -> None:
+    async with BrokerTest() as broker:
+        client1 = await broker.client()
+        await client1.publish("test/text", "test åäö", qos=qos_pub, retain=True)
+        await client1.publish(
+            "test/binary", b"\x00\xff\x00\x1f", qos=qos_pub, retain=True
+        )
+
+        client = await broker.client()
+        async with client.subscribe("test/+", maximum_qos=qos_sub) as messages:
+            packets: list[MQTTPublishPacket] = []
+            async for packet in messages:
+                packets.append(packet)
+                if len(packets) == 2:
+                    break
+
+            if packets[0].topic == "test_binary":
+                packets.reverse()
+            assert packets[0].topic == "test/text"
+            assert packets[0].payload == "test åäö"
+            assert packets[0].qos == min(qos_sub, qos_pub)
+            assert packets[1].topic == "test/binary"
+            assert packets[1].payload == b"\x00\xff\x00\x1f"
+            assert packets[1].qos == min(qos_sub, qos_pub)

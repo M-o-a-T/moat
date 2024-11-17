@@ -242,6 +242,7 @@ class AsyncMQTTBroker:
                         self._state_machine.subscribe_session_to(
                             client_state_machine, subscr
                         )
+                await session.flush_outbound_data()
 
         elif isinstance(packet, MQTTUnsubscribePacket):
             if client_state_machine.state is MQTTClientState.CONNECTED:

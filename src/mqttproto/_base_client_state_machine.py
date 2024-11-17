@@ -221,11 +221,11 @@ class BaseMQTTClientStateMachine:
                 response = MQTTSubscribeAckPacket(
                     reason_codes=reason_codes, packet_id=packet.packet_id
                 )
-            else:
+            else:  # MQTTUnsubscribePacket
                 reason_codes = [
                     ReasonCode.PACKET_IDENTIFIER_IN_USE for _ in packet.patterns
                 ]
-                response = MQTTSubscribeAckPacket(
+                response = MQTTUnsubscribeAckPacket(
                     reason_codes=reason_codes, packet_id=packet.packet_id
                 )
 

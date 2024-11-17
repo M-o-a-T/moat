@@ -33,6 +33,7 @@ class StdMsgpack(Codec):
     def __init__(self):
         super().__init__(ext=std_ext)
 
+Codec = StdMsgpack
 
 @std_ext.encoder(2, int)
 def _enc_int(codec, n):

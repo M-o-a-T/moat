@@ -35,7 +35,7 @@ import simpleeval
 
 from moat.lib.codec.proxy import as_proxy
 
-__all__ = ["Path", "P", "PS", "logger_for", "PathShortener", "PathLongener", "path_eval", "Root"]
+__all__ = ["Path", "P", "PS", "logger_for", "PathShortener", "PathLongener", "path_eval", "Root", "RootPath"]
 
 _PartRE = re.compile("[^:._]+|_|:|\\.")
 _RTagRE = re.compile("^:m[^:._]+:$")
@@ -191,7 +191,7 @@ class Path(collections.abc.Sequence):
                 res.append(":f")
             elif x is None:
                 res.append(":n")
-            elif isinstance(x, _RootPath):
+            elif isinstance(x, RootPath):
                 if not slash:
                     res.append(f":{x.key}")
                 else:
@@ -774,7 +774,7 @@ path_eval = _eval.eval
 Root = ContextVar("Root", default=None)
 
 
-class _RootPath(Path):
+class RootPath(Path):
     _mark = None
 
     def __init__(self, key, var, name):
@@ -802,14 +802,14 @@ class _RootPath(Path):
         return self._var.get()._data  # noqa:SLF001
 
 
-_root = _RootPath("R", Root, "Root")
+_root = RootPath("R", Root, "Root")
 as_proxy("R", _root)
 _Roots = {"R": _root}
 
 for _idx in "SPQ":  # and R. Yes I know.
     _name = f"{_idx}_Root"
     _ctx = ContextVar(_name, default=None)
-    _path = _RootPath(_idx, _ctx, _name)
+    _path = RootPath(_idx, _ctx, _name)
 
     globals()[_name] = _ctx
     __all__ += [_name]  # noqa:PLE0604

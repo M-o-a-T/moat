@@ -99,7 +99,8 @@ def _dec_bignum(codec, data):
 
 @std_ext.decoder(3)
 def _dec_path(codec, data):
-    s = Codec(codec.ext)
+    codec  # noqa:B018
+    s = Codec()
     p = s.feed(data)
     return Path(*p)
 
@@ -112,7 +113,7 @@ def _dec_proxy(codec, data):
     except UnicodeDecodeError:
         n = str(data)
     try:
-        return _CProxy[n]
+        return _CProxy[n][0]
     except KeyError:
         return Proxy(n)
 
@@ -150,7 +151,7 @@ def packer(obj):
 
     Deprecated.
     """
-    return Codec(ext=std_ext).encode(obj)
+    return Codec().encode(obj)
 
 
 def unpacker(obj):
@@ -159,7 +160,7 @@ def unpacker(obj):
 
     Deprecated.
     """
-    return Codec(ext=std_ext).decode(obj)
+    return Codec().decode(obj)
 
 
 class StreamUnpacker:
@@ -191,4 +192,4 @@ def stream_unpacker():
 
     Deprecated.
     """
-    return StreamUnpacker(ext=std_ext)
+    return StreamUnpacker()

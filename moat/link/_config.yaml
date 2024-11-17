@@ -2,6 +2,7 @@ link:
   backend_example:
     _doc: "Rename to 'backend'"
     typ: mqtt
+    codec: std-cbor
 
     host: localhost
     user: foo
@@ -10,7 +11,7 @@ link:
       cert: '/path/to/cert.pem'
       key: '/path/to/cert.key'
   client:
-    init_timeout: 5
+    init_timeout: 5  # set to None to not require a server
   root: !P moat.test.unconfigured.update-me
   qos: 0
 

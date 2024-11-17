@@ -30,22 +30,33 @@ non-retained messages.
 Structure
 +++++++++
 
-The MoaT-Link client library supports multiple back-ends. It is designed to
-use the most expedient channel. Thus, a client that is coded to Home
-Assistant's view of the world can send its topics and messages to the MQTT
-server for direct low-latency communication.
+MoaT-Link consists of a couple of related services.
 
-The MoaT-Link server will then read these messages and forward them to
-all other channels with matching topic. It preserves MQTT's Retain flag,
-QOS, and other metadata (if possible), and won't forward a message that's a
-no-op.
+Server
+------
 
-Topics
-++++++
+The main server records messages in its history, affords redundancy,
+can re-supply the MQTT server with retained state, and so on.
 
-MoaT-Link can support rearranging topics. For instance, Home Assistant's
-default of device state/cmd/control in one single hierarchy doesn't always
-mesh well with other systems' ideas.
+Translator
+----------
+
+Translators send and receive messages from other channels or topics.
+
+For instance, Home Assistant's default of device state/cmd/control in one
+single hierarchy doesn't always mesh well with other systems' ideas.
+
+Errors
+------
+
+MoaT-Link supports error handling and recovery.
+
+Web view
+--------
+
+Last but not least, we want a HTML front-end for introspection and
+debugging.
+
 
 Message Encoding
 ++++++++++++++++

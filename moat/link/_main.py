@@ -1,29 +1,28 @@
 """
 This module describes the MoaT data link.
 """
-from __future__ import annotations
-# pylint: disable=missing-module-docstring
 
-import io
+from __future__ import annotations
+
+import anyio
+
+# pylint: disable=missing-module-docstring
 import logging
 import sys
+from functools import partial
+from pathlib import Path as FSPath
 
 import asyncclick as click
-import git
-import tomlkit
-import anyio
-from pathlib import Path as FSPath
-from functools import partial
-
-from moat.util import load_subgroup, Path, P, NotGiven
 from mqttproto import MQTTException
 
+from moat.util import NotGiven, P, Path, load_subgroup
+
+from .backend import RawMessage
 from .client import open_link
-from .backend import RawMessage,Message
 
 logger = logging.getLogger(__name__)
 
-usage1="""
+usage1 = """
 "moat link" requires configuration. It should look like this:
 
     link:
@@ -43,7 +42,7 @@ Please add this stanza to the file "/etc/moat/moat.cfg" (or "/etc/moat.cfg",
 or "~/.local/moat.cfg") and try again.
 """
 
-usage2="""
+usage2 = """
 "moat link" requires a root topic.
 
 This entry should be tagged with '!P' and be some dot-separated names.
@@ -62,7 +61,7 @@ Config example:
 
 """
 
-usage9="""
+usage9 = """
 
 "moat link" requires at least one history server for stable operation.
 
@@ -70,9 +69,8 @@ Please run "sudo systemctl start moat-link-server", or
 start "moat link server" in a separate terminal, and try again.
 """
 
-@load_subgroup(
-    sub_pre="moat.link", sub_post="cli", ext_pre="moat.link", ext_post="_main.cli"
-)
+
+@load_subgroup(sub_pre="moat.link", sub_post="cli", ext_pre="moat.link", ext_post="_main.cli")
 @click.pass_context
 async def cli(ctx):
     """
@@ -90,7 +88,6 @@ async def cli(ctx):
         raise click.UsageError("badly configured")
 
 
-
 @cli.command("test")
 def test():
     "Test"
@@ -103,7 +100,7 @@ def _get_message(args):
     for m in args["msg_eval"]:
         yield eval(m)  # pylint: disable=eval-used
     if args["msg_lines"]:
-        with open(args["msg_lines"], "r") as f:  # pylint: disable=unspecified-encoding
+        with open(args["msg_lines"]) as f:  # pylint: disable=unspecified-encoding
             for line in f:
                 yield line.encode(encoding="utf-8")
     if args["msg_stdin_lines"]:
@@ -119,7 +116,7 @@ def _get_message(args):
 
 async def do_pub(client, args, cfg):
     logger.info("%s Connected to broker", client.name)
-    for k,v in args.items():
+    for k, v in args.items():
         if v is None or v is NotGiven:
             continue
         cfg[k] = v
@@ -206,7 +203,7 @@ async def run_sub(client, topic, args, cfg):
     async with client.monitor(topic, qos=qos) as subscr:
         mit = subscr.__aiter__()
         async for message in subscr:
-            if isinstance(message,RawMessage):
+            if isinstance(message, RawMessage):
                 print(message.topic, "*", message.data, repr(message.exc), sep="\t")
             else:
                 print(message.topic, message.data, sep="\t")

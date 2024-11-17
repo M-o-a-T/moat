@@ -6,9 +6,9 @@ import pytest
 import time
 from base64 import b85encode
 
-from moat.link.meta import MsgMeta
 from moat.lib.codec import get_codec
-from moat.lib.codec.proxy import wrap_obj, unwrap_obj
+from moat.lib.codec.proxy import unwrap_obj, wrap_obj
+from moat.link.meta import MsgMeta
 
 
 def test_basic():
@@ -17,7 +17,11 @@ def test_basic():
     with pytest.raises(ValueError):
         n = MsgMeta()
     name = "here"
+
     n = MsgMeta(name=name)
+    assert n.origin == f"via:{name}"
+
+    n = MsgMeta(origin=name)
     tt = 12345
     assert n.origin == name
     assert time.time() - 0.1 <= n.timestamp <= time.time() + 0.1

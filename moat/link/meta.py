@@ -5,12 +5,13 @@ Encoding and decoding the metadata for MoaT
 from __future__ import annotations
 
 import time
+from base64 import b85decode, b85encode
 
 from attrs import define, field
+
+from moat.lib.codec.proxy import as_proxy
 from moat.util import NotGiven
 from moat.util.cbor import StdCBOR
-from moat.lib.codec.proxy import as_proxy
-from base64 import b85decode, b85encode
 
 from typing import TYPE_CHECKING
 
@@ -68,12 +69,14 @@ class MsgMeta:
     timestamp = _gen(1)
 
     def __init__(self, /, name: str | NotGiven | None = None, **kwargs):
-        filtered = {
-            attribute.name: kwargs[attribute.name]
-            for attribute in self.__attrs_attrs__
-            if attribute.name in kwargs
-        }
+        vals = {}
+        for k in dir(self):
+            v = getattr(type(self), k, None)
+            if isinstance(v, property) and (val := kwargs.pop(k, NotGiven)) is not NotGiven:
+                vals[k] = val
         self.__attrs_init__(**kwargs)
+        for k, v in vals.items():
+            setattr(self, k, v)
         self._clean(name)
 
     def __getitem__(self, k):
@@ -115,6 +118,8 @@ class MsgMeta:
             if not self.origin:
                 raise ValueError("You need to set a name")
         elif not self.origin:
+            if not name.startswith("via:"):
+                name = f"via:{name}"
             self.origin = name
         if not self.timestamp:
             self.timestamp = time.time()
@@ -181,13 +186,13 @@ class MsgMeta:
         return "".join(res)
 
     @classmethod
-    def decode(cls, name: str, data) -> Self:
+    def decode(cls, name: str, data: str) -> Self:
         """
         Decode a string to a `MsgMeta` object.
 
         Reverses the effect of `encode`.
         """
-        res = cls(name)
+        res = cls(NotGiven)
         ddec = []
 
         encoded = False

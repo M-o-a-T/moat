@@ -4,129 +4,134 @@ This module contains the basic MoaT-Link data model.
 
 from __future__ import annotations
 
-import time
 from logging import getLogger
-from typing import Any, List
 
-from moat.util import NotGiven, Path, attrdict, create_queue, PathShortener, PathLongener
+from attrs import define, field
+
+from moat.util import NotGiven, Path, PathLongener, PathShortener
+
+from .meta import MsgMeta
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
+    from typing import Any
 
 logger = getLogger(__name__)
 
-Key = str|int|tuple["Key"]
+
+def _keys_repr(x):
+    return ",".join(str(k) for k in x.keys())
 
 
+@define
 class Node:
     """Represents one MoaT-Link item."""
 
-    source: str = None
-    tick: int = None
-    _data: Any = NotGiven
-    _source: str = None
+    _data: Any = field(init=False, default=NotGiven)
+    _meta: MsgMeta | None = field(init=False, default=None)
 
-    _sub: dict = None  # sub-entries
+    _sub: dict = field(init=False, factory=dict, repr=_keys_repr)  # sub-entries
 
-    def __init__(self, data=NotGiven, tick=None):
-        if tick is None:
-            tick = 0 if data is NotGiven else time.time()
-        self._data = data
-        self._tick = tick
+    def __attrs_post_init__(self, data: Any = NotGiven, meta: MsgMeta | None = None):
+        if data is not NotGiven:
+            s._data = data
+            s._meta = meta
 
-    @property
-    def data(self):
-        return self._data
-
-    @property
-    def tick(self):
-        return self._tick
-
-    @property
-    def source(self):
-        return self._source
-
-    def __getitem__(self, item):
-        """Look up the entry.
-
-        Raises KeyError if it doesn't exist."""
-        if isinstance(item,Path):
-            item = item.raw
-        else:
-            item = (item,)
-        s = self
-        for n in item:
-            s = s._sub[n]
-        if s._data is NotGiven:
-            raise KeyError(item)
-        return s
-
-    def get(self, item):
-        """Look up the entry. Create if it doesn't exist."""
-        s = self
-        if not isinstance(item,Path):
-            item = [item]
-        for n in item:
-            try:
-                s = s._sub[n]
-            except KeyError:
-                s = s._add(n)
-            except TypeError:
-                if s._sub is not None:
-                    raise
-                s = s._add(n)
-        return s
-
-    def set(self, item, data, source, tick:int|None=None, force:bool=False) -> bool|None:
+    def set(self, item: Path, data: Any, meta: MsgMeta, force: bool = False) -> None:
         """Save new data below this node.
 
         If @tick is earlier than the item's timestamp, always return False.
         If data changes, apply change and return True.
         If @force is not set, return False.
-        Otherwise, update timestamp+source and return None.
+        Otherwise, update metadata and return None.
         """
-        if tick is None:
-            tick = time.time()
+        assert isinstance(meta, MsgMeta)
         s = self.get(item)
-        if tick <= s.tick:
-            return False
-        if s._data == data:
-            if force:
-                s._tick = tick
-                s._source = source
-                return None
-            return False
-
+        if s._meta is not None:
+            if meta.timestamp < s._meta.timestamp:
+                return False
+            if s._data == data:
+                if force:
+                    s._meta = meta
+                    return None
+                return False
         s._data = data
-        s._tick = tick
-        s._source = source
+        s._meta = meta
         return True
 
+    @property
+    def data(self) -> Any:
+        if self._data is NotGiven:
+            raise ValueError("empty node")
+        return self._data
+
+    def __bool__(self) -> bool:
+        return self._data is not NotGiven
+
+    @property
+    def meta(self) -> MsgMeta:
+        return self._meta
+
+    def __getitem__(self, item) -> Node:
+        """Look up the entry.
+
+        Raises KeyError if it doesn't exist.
+        """
+        if isinstance(item, Path):
+            s = self
+            for k in item:
+                s = s._sub[k]
+        else:
+            s = self._sub[item]
+
+        if s._data is NotGiven:
+            raise KeyError(item)
+        return s
+
+    def get(self, item) -> Node:
+        """Look up an entry. Create if it doesn't exist."""
+        if isinstance(item, Path):
+            s = self
+            for k in item:
+                try:
+                    s = s._sub[k]
+                except KeyError:
+                    s = s._add(k)
+            return s
+
+        try:
+            return self._sub[item]
+        except KeyError:
+            return self._add(item)
+
     def _add(self, item):
-        if self._sub is None:
-            self._sub = {}
-        elif item in self._sub:
+        if isinstance(item, Path):
+            raise ValueError("no path")
+        if item in self._sub:
             raise ValueError("exists")
         self._sub[item] = s = Node()
         return s
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str, Node]:
         """
-        Return a list of keys for that node.
-
-        Used to find data from no-longer-used nodes so they can be deleted.
+        Return a list of keys under this node.
         """
         return self._sub.items()
 
-    def __contains__(self, item):
-        if isinstance(item,Path):
+    def __contains__(self, item) -> bool:
+        if isinstance(item, Path):
             s = self
-            for n in item[:-1]:
-                s = s._sub[n]
-            return item[-1] in s
-        return item in self._sub
+            for k in item:
+                try:
+                    s = s._sub[k]
+                except KeyError:
+                    return False
+            return True
 
-    def __repr__(self):
-        if self.data is NotGiven:
-            return f"<{self.__class__.__name__}: - @{self.source}>" #"@{self.tick}>"
-        return f"<{self.__class__.__name__}: {self.data !r} @{self.source}>" #"@{self.tick}>"
+        return item in self._sub
 
     def deleted(self) -> bool:
         """
@@ -134,67 +139,64 @@ class Node:
         """
         return self._data is NotGiven
 
-
     async def walk(
-        self, proc, max_depth=-1, min_depth=0, _depth=0, _name=Path()
+        self,
+        proc: Callable[Awaitable[bool], [Node, Path]],
+        max_depth=-1,
+        min_depth=0,
+        _depth=0,
+        _name=Path(),
     ):
         """
         Call coroutine ``proc(entry,Path)`` on this node and all its children.
 
         If `proc` raises `StopAsyncIteration`, chop this subtree.
         """
-        todo = [(self,_name)]
+        todo = [(self, _name)]
 
         while todo:
-            s,n = todo.pop()
+            s, n = todo.pop()
 
             if min_depth <= len(n):
                 try:
-                    await proc(s,n)
+                    await proc(s, n)
                 except StopAsyncIteration:
                     continue
             if max_depth == len(n):
                 continue
 
-            for k,v in self._sub.items():
-                todo.append((v, _name/k))
-
+            for k, v in self._sub.items():
+                todo.append((v, _name / k))
 
     def dump(self):
         """Serialize this subtree.
 
         Serialization consists of a sequence of
         * prefix length (cf. .moat.util.PathShortener)
-        * sub-name
+        * sub-path
         * data
-        * timestamp
-        * source
-        * … possibly more
+        * meta
         """
 
         todo = [(self, Path())]
         ps = PathShortener()
 
         while todo:
-            s,name = todo.pop()
+            s, name = todo.pop()
 
-            if s._data is not NotGiven:
-                d,p = ps.short(name)
-                yield d,p,s.data,s.tick,s.source
+            if s:
+                d, p = ps.short(name)
+                yield d, p, s._data, s._meta
 
             if s._sub is None:
                 continue
-            for k,v in s._sub.items():
-                todo.append((v, name/k))
+            for k, v in s._sub.items():
+                todo.append((v, name / k))
 
     def load(self):
-        """De-serialize this subtree.
-        """
+        """De-serialize this subtree."""
         pl = PathLongener()
         while True:
-            d,ps,data,tick,source,*rest = yield
-            item = pl.long(d,ps)
-            self.set(item, data=data, source=source, tick=tick)
-
-
-
+            d, ps, data, meta, *rest = yield
+            item = pl.long(d, ps)
+            self.set(item, data=data, meta=meta)

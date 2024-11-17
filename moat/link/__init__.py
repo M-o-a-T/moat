@@ -15,12 +15,12 @@ Configuration looks like this:
           path: !P some.special.hass
           chop: 1
           codec: home_assistant
-    
+
         root:
           prefix: !P dist.root
           backend: mqtt
           codec: cbor
-    
+
         special:
           prefix: !P :
           backend: mqtt
@@ -40,5 +40,7 @@ Configuration looks like this:
           uri: mqtt://localhost:51883
 
 """
+
 from __future__ import annotations
 
+__path__ = __import__("pkgutil").extend_path(__path__, __name__)

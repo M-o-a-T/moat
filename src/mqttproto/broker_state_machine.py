@@ -24,6 +24,7 @@ from ._types import (
     PropertyType,
     QoS,
     ReasonCode,
+    RetainHandling,
     Subscription,
 )
 
@@ -73,7 +74,26 @@ class MQTTBrokerStateMachine:
     ) -> None:
         session.subscribed_to(subscription.pattern)
         dest = self.shared_subscriptions.setdefault(subscription.pattern, dict())
+        prev = dest.get(session.client_id)
         dest[session.client_id] = subscription
+        if subscription.retain_handling == RetainHandling.NO_RETAINED:
+            return
+        if (
+            subscription.retain_handling
+            == RetainHandling.SEND_RETAINED_IF_NOT_SUBSCRIBED
+            and prev is not None
+        ):
+            return
+
+        for packet in self.retained_messages.values():
+            if subscription.matches(packet):
+                session.deliver_publish(
+                    topic=packet.topic,
+                    payload=packet.payload,
+                    retain=packet.retain,
+                    qos=min(packet.qos, subscription.max_qos),
+                    user_properties=packet.user_properties,
+                )
 
     def unsubscribe_session_from(
         self, session: MQTTBrokerClientStateMachine, pattern: Pattern | str
@@ -188,7 +208,7 @@ class MQTTBrokerClientStateMachine(BaseMQTTClientStateMachine):
             MQTTPingResponsePacket().encode(self._out_buffer)
         elif isinstance(packet, (MQTTSubscribePacket, MQTTUnsubscribePacket)):
             self._in_require_state(packet, MQTTClientState.CONNECTED)
-            if not self._add_pending_packet(packet):
+            if not self._add_pending_packet(packet, send=True, local=False):
                 return True
         elif isinstance(packet, MQTTConnectPacket):
             self._in_require_state(packet, MQTTClientState.DISCONNECTED)
@@ -233,7 +253,7 @@ class MQTTBrokerClientStateMachine(BaseMQTTClientStateMachine):
         )
         packet.encode(self._out_buffer)
         if packet.packet_id is not None:
-            self._add_pending_packet(packet)
+            self._add_pending_packet(packet, local=True)
 
         return packet.packet_id
 
@@ -275,7 +295,11 @@ class MQTTBrokerClientStateMachine(BaseMQTTClientStateMachine):
 
         """
         self._out_require_state(MQTTClientState.CONNECTED)
-        if not (request := self._pop_pending_packet(packet_id, MQTTSubscribePacket)):
+        if not (
+            request := self._pop_pending_packet(
+                packet_id, MQTTSubscribePacket, local=False
+            )
+        ):
             raise MQTTProtocolError(
                 f"attempted to acknowledge a {MQTTSubscribePacket.packet_type._name_} "
                 f"that was either never received or has already been acknowledged"
@@ -305,7 +329,11 @@ class MQTTBrokerClientStateMachine(BaseMQTTClientStateMachine):
 
         """
         self._out_require_state(MQTTClientState.CONNECTED)
-        if not (request := self._pop_pending_packet(packet_id, MQTTUnsubscribePacket)):
+        if not (
+            request := self._pop_pending_packet(
+                packet_id, MQTTUnsubscribePacket, local=False
+            )
+        ):
             raise MQTTProtocolError(
                 f"attempted to acknowledge a {MQTTUnsubscribePacket.packet_type._name_} "
                 f"that was either never received or has already been acknowledged"

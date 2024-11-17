@@ -105,10 +105,12 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
             self._ping_pending = False
         elif isinstance(packet, MQTTSubscribeAckPacket):
             self._in_require_state(packet, MQTTClientState.CONNECTED)
-            self._pop_pending_packet(packet.packet_id, MQTTSubscribePacket)
+            self._pop_pending_packet(packet.packet_id, MQTTSubscribePacket, local=True)
         elif isinstance(packet, MQTTUnsubscribeAckPacket):
             self._in_require_state(packet, MQTTClientState.CONNECTED)
-            self._pop_pending_packet(packet.packet_id, MQTTUnsubscribePacket)
+            self._pop_pending_packet(
+                packet.packet_id, MQTTUnsubscribePacket, local=True
+            )
         elif isinstance(packet, MQTTDisconnectPacket):
             self._in_require_state(
                 packet, MQTTClientState.CONNECTING, MQTTClientState.CONNECTED
@@ -187,7 +189,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
         )
         packet.encode(self._out_buffer)
         if packet_id is not None:
-            self._add_pending_packet(packet)
+            self._add_pending_packet(packet, local=True)
 
         return packet.packet_id
 
@@ -237,7 +239,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
         if subscr_id and self.may_subscription_id:
             packet.properties[PropertyType.SUBSCRIPTION_IDENTIFIER] = subscr_id
         packet.encode(self._out_buffer)
-        self._add_pending_packet(packet)
+        self._add_pending_packet(packet, local=True)
         return packet.packet_id
 
     def unsubscribe(self, patterns: Sequence[Pattern]) -> int | None:
@@ -259,5 +261,5 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
             patterns=patterns, packet_id=self._generate_packet_id()
         )
         packet.encode(self._out_buffer)
-        self._add_pending_packet(packet)
+        self._add_pending_packet(packet, local=True)
         return packet.packet_id

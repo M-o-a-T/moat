@@ -508,7 +508,7 @@ class AsyncMQTTClient:
             if data := self._state_machine.get_outbound_data():
                 try:
                     await self._stream.send(data)
-                except self._ignored_exc_classes as exc:
+                except self._ignored_exc_classes:
                     pass
                     # logger.debug("Skip bytes to transport stream: %r: %r", data, exc)
                 else:

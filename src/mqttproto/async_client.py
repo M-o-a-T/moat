@@ -400,7 +400,7 @@ class AsyncMQTTClient:
         # listeners
         try:
             async for chunk in stream:
-                logger.debug("Received bytes from transport stream: %r", chunk)
+                # logger.debug("Received bytes from transport stream: %r", chunk)
                 received_packets = self._state_machine.feed_bytes(chunk)
                 await self._flush_outbound_data()
 
@@ -509,9 +509,11 @@ class AsyncMQTTClient:
                 try:
                     await self._stream.send(data)
                 except self._ignored_exc_classes as exc:
-                    logger.debug("Skip bytes to transport stream: %r: %r", data, exc)
+                    pass
+                    # logger.debug("Skip bytes to transport stream: %r: %r", data, exc)
                 else:
-                    logger.debug("Sent bytes to transport stream: %r", data)
+                    pass
+                    # logger.debug("Sent bytes to transport stream: %r", data)
 
     async def _run_operation(self, operation: MQTTOperation[Any]) -> None:
         with ExitStack() as exit_stack:

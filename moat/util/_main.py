@@ -179,8 +179,10 @@ def convert(enc, dec, pathi, patho, stream):
 
     if stream:
         if csd:
+
             def in_d():
                 return [pathi.read()]
+
         else:
 
             def in_d():

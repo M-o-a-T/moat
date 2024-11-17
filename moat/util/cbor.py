@@ -40,7 +40,9 @@ class StdCBOR(Codec):
     def __init__(self):
         super().__init__(ext=std_ext)
 
+
 Codec = StdCBOR
+
 
 @std_ext.encoder(27, DProxy)
 def _enc_dpr(codec, obj):

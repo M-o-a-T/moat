@@ -35,7 +35,17 @@ import simpleeval
 
 from moat.lib.codec.proxy import as_proxy
 
-__all__ = ["Path", "P", "PS", "logger_for", "PathShortener", "PathLongener", "path_eval", "Root", "RootPath"]
+__all__ = [
+    "Path",
+    "P",
+    "PS",
+    "logger_for",
+    "PathShortener",
+    "PathLongener",
+    "path_eval",
+    "Root",
+    "RootPath",
+]
 
 _PartRE = re.compile("[^:._]+|_|:|\\.")
 _RTagRE = re.compile("^:m[^:._]+:$")
@@ -775,6 +785,13 @@ Root = ContextVar("Root", default=None)
 
 
 class RootPath(Path):
+    """
+    Wraps access to a contextvar that points to a Path.
+
+    The problem is that the contextvar's ID is not stable. However proxying
+    it must be consistent regardless of its content.
+    """
+
     _mark = None
 
     def __init__(self, key, var, name):
@@ -784,13 +801,16 @@ class RootPath(Path):
 
     @property
     def name(self):
+        "name"
         return self._name
 
     @property
     def key(self):
+        "name of the contextvar"
         return self._key
 
     def __bool__(self):
+        "check if the contextvar is set"
         p = self._var.get()
         return p is not None
 

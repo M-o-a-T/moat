@@ -5,6 +5,7 @@ Priority: optional
 Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 13),
   python3-setuptools (>= 64),
   python3-setuptools-scm (>= 6.4),
+  python3-pytest,
 Standards-Version: 3.9.6
 Homepage: https://github.com/agronholm/mqttproto
 

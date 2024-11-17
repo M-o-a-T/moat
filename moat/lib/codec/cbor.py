@@ -197,7 +197,7 @@ class Codec(_Codec):
                 else:
                     if struct.unpack("!e", fe)[0] == val:  # no loss either
                         return w(struct.pack("!B", CBOR_FLOAT16) + fe)
-            return w(struct.pack("!B", CBOR_FLOAT32) + ff)
+                return w(struct.pack("!B", CBOR_FLOAT32) + ff)
         return w(struct.pack("!Bd", CBOR_FLOAT64, val))
 
     def _enc_type_num(self, cbor_type, val) -> None:

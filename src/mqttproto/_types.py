@@ -447,13 +447,6 @@ class Will(PropertiesMixin):
 @define(eq=False)
 class Pattern:
     pattern: str
-    max_qos: QoS = field(kw_only=True, default=QoS.EXACTLY_ONCE)
-    no_local: bool = field(kw_only=True, default=False)
-    retain_as_published: bool = field(kw_only=True, default=True)
-    retain_handling: RetainHandling = field(
-        kw_only=True, default=RetainHandling.SEND_RETAINED
-    )
-    subscription_id: int = field(kw_only=True, default=0)
     group_id: str | None = field(init=False, default=None)
     _parts: tuple[str, ...] = field(init=False, repr=False, eq=False)
     _prefix: str | None = field(init=False, repr=False, eq=False)

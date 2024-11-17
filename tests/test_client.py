@@ -1,22 +1,19 @@
+"basic client tests"
+
 from __future__ import annotations
 
 import anyio
-import logging
 import pytest
 import time
 
+from moat.link._test import Scaffold
 from moat.link.meta import MsgMeta
 from moat.util import P
-
-formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
-logging.basicConfig(level=logging.DEBUG, format=formatter)
-log = logging.getLogger(__name__)
-
-from moat.link._test import Scaffold
 
 
 @pytest.mark.anyio
 async def test_simple(cfg):
+    "simple client-to-client comm test"
     async with Scaffold(cfg, use_servers=False) as sf:
 
         async def cl(*, task_status):

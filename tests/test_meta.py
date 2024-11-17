@@ -12,9 +12,10 @@ from moat.link.meta import MsgMeta
 
 
 def test_basic():
+    "Basic MsgMeta features"
     codec = get_codec("cbor")
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="need to set a name"):
         n = MsgMeta()
     name = "here"
 
@@ -38,6 +39,7 @@ def test_basic():
 
 
 def test_dict():
+    "Test decoding MsgMeta keywords"
     codec = get_codec("cbor")
 
     md = "owch\\" + b85encode(codec.encode({"yes": True, "no": False})).decode("utf-8")
@@ -49,31 +51,33 @@ def test_dict():
 
 
 def test_bad():
+    "Test various invalid MsgMeta uses"
     n = MsgMeta("duh")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="First item must be a string"):
         n.origin = "here|now"
     # works in a dict
     n["doc"] = "escaped\\ntext"
     # and somewhere in the array
     n[2] = "escaped\\ntext"
     # but not as the origin
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="First item must be a string"):
         n[0] = "more|text"
     # negative indices are bad
     with pytest.raises(KeyError):
         n[-1] = "Hello"
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Only use positive"):
         n[1:2] = ("Hello",)
     # this works
     n["doc"] = b"escaped\\ntext"
     # but this doesn't
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="First item must be a string"):
         n.origin = b"not text"
     # this is broken but not checked
     n.timestamp = b"1234"
 
 
 def test_proxy():
+    "check that MsgMeta objects are proxied correctly"
     codec = get_codec("cbor")
 
     md = "owch\\" + b85encode(codec.encode({"yes": True, "no": False})).decode("utf-8")

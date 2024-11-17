@@ -1,18 +1,27 @@
+"""
+Common code for backends.
+
+Currently the only backend supported is MQTT, but who knows.
+"""
+
 from __future__ import annotations
 
 import anyio
 import logging
-import random
 from abc import ABCMeta, abstractmethod
 from contextlib import asynccontextmanager
 
-from moat.lib.codec import Codec
-from moat.util import CtxObj, NotGiven, Root, RootPath, attrdict
+from moat.lib.codec import get_codec as _get_codec
+from moat.util import CtxObj, NotGiven, Path, Root, RootPath, attrdict
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import AsyncIterator, Message
+    from moat.lib.codec import Codec
+    from moat.link.meta import MsgMeta
+
+    from typing import Any, AsyncIterator, Self
+
 
 __all__ = ["get_backend", "get_codec", "Backend", "Message", "RawMessage"]
 
@@ -44,7 +53,7 @@ class RawMessage(Message):
     raw = True
 
     def __init__(
-        self, topic: Path, data: Any, meta: MsgMeta, orig: Any = None, exc: Exception = None
+        self, topic: Path, data: Any, meta: MsgMeta, orig: Any = None, exc: Exception | None = None
     ):
         self.topic = topic
         self.data = data
@@ -60,14 +69,8 @@ class Backend(CtxObj, metaclass=ABCMeta):
     _njobs: int = 0
     _ended: anyio.Event | None = None
 
-    def __init__(self, cfg: attrdict, name: str | None = None):
+    def __init__(self, cfg: attrdict, name: str):
         self.cfg = cfg
-        if name is None:
-            name = cfg.get("client_id")
-        if name is None:
-            name = "c_" + "".join(
-                random.choices("bcdfghjkmnopqrstvwxyzBCDFGHJKMNOPQRSTVWXYZ23456789", k=10)
-            )
         self.name = name
         self.logger = logging.getLogger(f"moat.link.backend.{name}")
 
@@ -79,7 +82,7 @@ class Backend(CtxObj, metaclass=ABCMeta):
         """
 
     @asynccontextmanager
-    async def _ctx(self) -> AsyncIterators[Self]:
+    async def _ctx(self) -> AsyncIterator[Self]:
         async with (
             anyio.create_task_group() as self._tg,
             self.connect(),
@@ -89,7 +92,11 @@ class Backend(CtxObj, metaclass=ABCMeta):
     @abstractmethod
     @asynccontextmanager
     async def monitor(
-        self, topic: Path, qos: int = None, codec: Codec | None = None, raw: bool | None = False
+        self,
+        topic: Path,
+        qos: int | None = None,
+        codec: Codec | None = None,
+        raw: bool | None = False,
     ) -> AsyncIterator[AsyncIterator[Message]]:
         """
         Return an async iterator that listens to this topic.
@@ -106,8 +113,16 @@ class Backend(CtxObj, metaclass=ABCMeta):
         """
 
     async def send_error(
-        self, subpath: Path, msg: str = None, data: Any = None, exc: Exception | None = None, **kw
+        self,
+        subpath: Path,
+        msg: str | None = None,
+        data: Any = None,
+        exc: Exception | None = None,
+        **kw,
     ):
+        """
+        Send a somewhat-free-form error message.
+        """
         if not isinstance(subpath[0], RootPath):
             subpath = Root / "error" + subpath
         if msg:
@@ -116,16 +131,20 @@ class Backend(CtxObj, metaclass=ABCMeta):
             kw["data"] = data
         if exc is not None:
             kw["exc"] = repr(exc)
+        # TODO include the backtrace?
 
         try:
             await self.send(subpath, kw, codec="std-cbor")
         except Exception:
-            self.logger.exception(f"Failure to log error at {subpath}: {data!r}", exc_info=exc)
+            self.logger.exception("Failure to log error at %s: %r", subpath, data, exc_info=exc)
         else:
-            self.logger.debug(f"Error at {subpath}: {data!r}", exc_info=exc)
+            self.logger.debug("Error at %s: %r", subpath, data, exc_info=exc)
 
 
 def get_backend(cfg: dict, **kw) -> Backend:
+    """
+    Fetch the backend named in the config and initialize it.
+    """
     from importlib import import_module
 
     cfg = cfg["backend"]

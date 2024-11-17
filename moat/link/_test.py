@@ -2,14 +2,12 @@ from __future__ import annotations
 
 import anyio
 import logging
-import os
 import time
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from mqttproto.async_broker import AsyncMQTTBroker
 
-from moat.lib.cmd import CmdHandler
 from moat.link.client import Link
 from moat.link.server import Server
 from moat.util import (  # pylint:disable=no-name-in-module
@@ -19,6 +17,11 @@ from moat.util import (  # pylint:disable=no-name-in-module
     yload,
 )
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Never
+
 CFG = yload(Path(__file__).parent / "_config.yaml", attr=True)
 
 
@@ -26,20 +29,10 @@ logger = logging.getLogger(__name__)
 
 otm = time.time
 
-PORT = 40000 + (os.getpid() + 10) % 10000
-
-broker_cfg = {
-    "listeners": {"default": {"type": "tcp", "bind": f"127.0.0.1:{PORT}"}},
-    "timeout-disconnect-delay": 2,
-    "auth": {"allow-anonymous": True, "password-file": None},
-}
-
-URI = f"mqtt://127.0.0.1:{PORT}/"
+_seq = 0
 
 
 # TODO launch a "real" broker instead
-
-logger = logging.getLogger(__name__)
 
 
 async def run_broker(cfg, *, task_status):
@@ -48,6 +41,7 @@ async def run_broker(cfg, *, task_status):
 
     The task status returns the port we're listening on.
     """
+    cfg  # noqa:B018
     broker = AsyncMQTTBroker(("127.0.0.1", 0))
 
     await broker.serve(task_status=task_status)
@@ -66,48 +60,40 @@ class Scaffold(CtxObj):
 
     @asynccontextmanager
     async def _ctx(self):
-        async with (
-            anyio.create_task_group() as tg,
-            AsyncExitStack() as ex,
-        ):
-            self.tg = tg
-            bport = await tg.start(run_broker, self.cfg)
+        async with anyio.create_task_group() as self.tg:
+            bport = await self.tg.start(run_broker, self.cfg)
 
             self.cfg.backend.port = bport
             yield self
-            tg.cancel_scope.cancel()
+            self.tg.cancel_scope.cancel()
 
-    async def server(self, cfg: dict | None = None) -> Server:
+    async def server(self, cfg: dict | None = None, **kw) -> Server:
+        """
+        Start a server.
+        Returns the (first) port the server runs on.
+        """
         cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
-        return await self.tg.start(self._run_server, cfg)
+        return (await self.tg.start(self._run_server, cfg, kw))[0]
 
     async def client(self, cfg: dict | None = None):
         cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
         return await self.tg.start(self._run_client, cfg)
 
-    async def _run_server(self, cfg, *, task_status) -> Never:
+    async def _run_server(self, cfg, kw, *, task_status) -> Never:
         """
         Runs a basic MoaT-Link server.
         """
+        global _seq  # noqa:PLW0603
+        _seq += 1
 
-        PORT = 40000 + (os.getpid() + 22) % 10000
-
-        async def rdl():
-            pass
-
-        async def rdr(client):
-            cmd = CmdHandler(cmdh)
-            async with anyio.create_task_group() as tg:
-                tg.start_soon(rdl)
-                tg.start_soon(wrl)
-
-        listener = await create_tcp_listener(local_host="127.0.0.1")
-        port = listener.extra(anyio.abc.SocketAttribute.local_port)
-        task_status.started((port, cs))
-        await listener.serve(rdr)
+        s = Server(cfg, f"S_{_seq}", **kw)
+        await s.serve(task_status=task_status)
 
     async def _run_client(self, cfg, *, task_status) -> Never:
-        async with Link(cfg) as li:
+        global _seq  # noqa:PLW0603
+        _seq += 1
+
+        async with Link(cfg, f"C{_seq}") as li:
             task_status.started(li)
-            await anyio.Event().wait()
-            assert False
+            await anyio.sleep_forever()
+            assert False  # noqa:B011,PT015

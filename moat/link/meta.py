@@ -24,20 +24,20 @@ _codec = StdCBOR()
 def _gen(i):
     ii = i + 1
 
-    def get(self):
+    def get_(self):
         self._len(ii)
         return self[i]
 
-    def set(self, val):
+    def set_(self, val):
         self._len(ii)
         self[i] = val
 
-    return property(get, set)
+    return property(get_, set_)
 
 
 def _Meta(a, kw):
     res = MsgMeta(name=NotGiven)
-    res.__setstate__(a, kw)
+    res.__setstate__((a, kw))
     return res
 
 
@@ -88,13 +88,12 @@ class MsgMeta:
     def __getstate__(self):
         return self.a, self.kw
 
-    def __setstate__(self, a, kw):
-        self.a = a
-        self.kw = kw
+    def __setstate__(self, akw):
+        self.a, self.kw, *_ = akw
 
     def __setitem__(self, k, v):
         if isinstance(k, slice):
-            raise ValueError("Only use positive indices")
+            raise ValueError("Only use positive indices")  # noqa:TRY004
         if isinstance(k, int):
             if k < 0:
                 raise KeyError(k)  # only positive indices
@@ -224,6 +223,6 @@ class MsgMeta:
             ddec.append(d)
             encoded = next_enc
 
-        res._unmap(ddec)
-        res._clean(name)
+        res._unmap(ddec)  # noqa:SLF001
+        res._clean(name)  # noqa:SLF001
         return res

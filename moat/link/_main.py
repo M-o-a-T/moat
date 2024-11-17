@@ -98,7 +98,7 @@ def _get_message(args):
     for m in args["msg"]:
         yield m
     for m in args["msg_eval"]:
-        yield eval(m)  # pylint: disable=eval-used
+        yield eval(m)  # pylint: disable=eval-used  # noqa:S307
     if args["msg_lines"]:
         with open(args["msg_lines"]) as f:  # pylint: disable=unspecified-encoding
             for line in f:
@@ -111,7 +111,7 @@ def _get_message(args):
         yield sys.stdin.buffer.read()
     if args["msg_stdin_eval"]:
         message = sys.stdin.read()
-        yield eval(message)  # pylint: disable=eval-used
+        yield eval(message)  # pylint: disable=eval-used  # noqa:S307
 
 
 async def do_pub(client, args, cfg):
@@ -133,8 +133,6 @@ async def do_pub(client, args, cfg):
         logger.info("%s Disconnected from broker", client.name)
     except KeyboardInterrupt:
         logger.info("%s Disconnected from broker", client.name)
-    except MQTTException as ce:
-        logger.fatal("connection to '%s' failed: %r", uri, ce)
 
 
 @cli.command()
@@ -184,6 +182,7 @@ async def pub(obj, **args):
 
 
 async def do_sub(client, args, cfg):
+    "handle subscriptions"
     try:
         async with anyio.create_task_group() as tg:
             for topic in args["topic"]:
@@ -196,12 +195,12 @@ async def do_sub(client, args, cfg):
 
 
 async def run_sub(client, topic, args, cfg):
+    "handle a single subscription"
     qos = args["qos"] or cfg["qos"]
     max_count = args["n_msg"]
     count = 0
 
     async with client.monitor(topic, qos=qos) as subscr:
-        mit = subscr.__aiter__()
         async for message in subscr:
             if isinstance(message, RawMessage):
                 print(message.topic, "*", message.data, repr(message.exc), sep="\t")

@@ -33,7 +33,7 @@ def test_basic():
     }
 
     assert not n
-    assert n._data is NotGiven
+    assert n._data is NotGiven  # noqa:SLF001
     assert n.set(P("a.b.c"), 42, MsgMeta(origin="A"))
     assert n.set(P("a.b.c.d"), 99, MsgMeta(origin="B"))
     assert n.set(P("b.c.d"), 111, MsgMeta(origin="B"))

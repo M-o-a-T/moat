@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
-    from typing import Any
+    from typing import Any, Iterator
 
 logger = getLogger(__name__)
 
@@ -37,8 +37,8 @@ class Node:
 
     def __attrs_post_init__(self, data: Any = NotGiven, meta: MsgMeta | None = None):
         if data is not NotGiven:
-            s._data = data
-            s._meta = meta
+            self._data = data
+            self._meta = meta
 
     def set(self, item: Path, data: Any, meta: MsgMeta, force: bool = False) -> None:
         """Save new data below this node.
@@ -50,29 +50,32 @@ class Node:
         """
         assert isinstance(meta, MsgMeta)
         s = self.get(item)
-        if s._meta is not None:
-            if meta.timestamp < s._meta.timestamp:
+        if s._meta is not None:  # noqa:SLF001
+            if meta.timestamp < s._meta.timestamp:  # noqa:SLF001
                 return False
-            if s._data == data:
+            if s._data == data:  # noqa:SLF001
                 if force:
-                    s._meta = meta
+                    s._meta = meta  # noqa:SLF001
                     return None
                 return False
-        s._data = data
-        s._meta = meta
+        s._data = data  # noqa:SLF001
+        s._meta = meta  # noqa:SLF001
         return True
 
     @property
     def data(self) -> Any:
+        "return current data"
         if self._data is NotGiven:
             raise ValueError("empty node")
         return self._data
 
     def __bool__(self) -> bool:
+        "check if data exist"
         return self._data is not NotGiven
 
     @property
     def meta(self) -> MsgMeta:
+        "return current metadata"
         return self._meta
 
     def __getitem__(self, item) -> Node:
@@ -83,11 +86,11 @@ class Node:
         if isinstance(item, Path):
             s = self
             for k in item:
-                s = s._sub[k]
+                s = s._sub[k]  # noqa:SLF001
         else:
             s = self._sub[item]
 
-        if s._data is NotGiven:
+        if s._data is NotGiven:  # noqa:SLF001
             raise KeyError(item)
         return s
 
@@ -97,9 +100,9 @@ class Node:
             s = self
             for k in item:
                 try:
-                    s = s._sub[k]
+                    s = s._sub[k]  # noqa:SLF001
                 except KeyError:
-                    s = s._add(k)
+                    s = s._add(k)  # noqa:SLF001
             return s
 
         try:
@@ -109,7 +112,7 @@ class Node:
 
     def _add(self, item):
         if isinstance(item, Path):
-            raise ValueError("no path")
+            raise TypeError("no path")
         if item in self._sub:
             raise ValueError("exists")
         self._sub[item] = s = Node()
@@ -126,7 +129,7 @@ class Node:
             s = self
             for k in item:
                 try:
-                    s = s._sub[k]
+                    s = s._sub[k]  # noqa:SLF001
                 except KeyError:
                     return False
             return True
@@ -145,7 +148,7 @@ class Node:
         max_depth=-1,
         min_depth=0,
         _depth=0,
-        _name=Path(),
+        _name=Path(),  # noqa:B008
     ):
         """
         Call coroutine ``proc(entry,Path)`` on this node and all its children.
@@ -186,17 +189,17 @@ class Node:
 
             if s:
                 d, p = ps.short(name)
-                yield d, p, s._data, s._meta
+                yield d, p, s._data, s._meta  # noqa:SLF001
 
-            if s._sub is None:
+            if s._sub is None:  # noqa:SLF001
                 continue
-            for k, v in s._sub.items():
+            for k, v in s._sub.items():  # noqa:SLF001
                 todo.append((v, name / k))
 
     def load(self):
         """De-serialize this subtree."""
         pl = PathLongener()
         while True:
-            d, ps, data, meta, *rest = yield
+            d, ps, data, meta, *_rest = yield
             item = pl.long(d, ps)
             self.set(item, data=data, meta=meta)

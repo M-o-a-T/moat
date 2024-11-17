@@ -1,3 +1,7 @@
+"""
+A backend that talks using MQTT
+"""
+
 from __future__ import annotations
 
 import anyio
@@ -7,29 +11,27 @@ from contextlib import asynccontextmanager
 
 from mqttproto.async_client import AsyncMQTTClient, Will
 
-from moat.lib.codec import Codec
-from moat.lib.codec import get_codec as _get_codec
+from moat.link.meta import MsgMeta
 from moat.mqtt.codecs import NoopCodec
-from moat.util import attrdict
-from moat.util.path import PS
+from moat.util import NotGiven, attrdict
+from moat.util.path import PS, P, Path
 
-from ..meta import MsgMeta
 from . import Backend as _Backend
 from . import Message, RawMessage, get_codec
 
-logger = logging.getLogger(__name__)
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from moat.lib.codec import Codec
 
-def get_codec(name: str | Codec) -> Codec:
-    "Codec loader; replaces 'std-' prefix with 'moat.util.'"
-    if isinstance(name, Codec):
-        return name
-    if name[0:4] == "std-":
-        name = "moat.util." + name[4:]
-    return _get_codec(name)
+    from typing import AsyncIterator, Awaitable
 
 
 class MqttMessage:
+    """
+    Encapsulates (our view of) a message from MQTT.
+    """
+
     def __init__(self, topic, payload, orig, **kw):
         self.topic = topic
         self.payload = payload
@@ -56,17 +58,16 @@ class Backend(_Backend):
         super().__init__(cfg, name=name)
         self.cfg = cfg
         self.meta = meta
+        self.logger = logging.getLogger(__name__ + "." + self.name)
 
         kw = cfg.copy()
         kw.pop("driver", None)
+        self.trace = kw.pop("trace", True)
         codec = kw.pop("codec", None)
 
         kw["client_id"] = self.name
 
-        if "host" in kw:
-            a = (kw.pop("host"),)
-        else:
-            a = ()
+        a = (kw.pop("host"),) if "host" in kw else ()
         self.codec = NoopCodec() if codec is None else get_codec(codec)
         self.mcodec = get_codec("std-cbor")
 
@@ -76,10 +77,7 @@ class Backend(_Backend):
             cdc = will.pop("codec", None)
             cdc = codec if cdc is None else get_codec(cdc)
 
-            if data is NotGiven:
-                data = b""
-            else:
-                data = cdc.encode(data)
+            data = b"" if data is NotGiven else cdc.encode(data)
             kw["will"] = Will(
                 topic=will["topic"].slashed,
                 payload=data,
@@ -90,18 +88,21 @@ class Backend(_Backend):
 
     @asynccontextmanager
     async def connect(self):
+        "connect to the server"
         async with AsyncMQTTClient(*self.a, **self.kw) as self.client:
             try:
                 yield self
             finally:
-                self.client = None
+                self.client = None  # noqa:PLW2901
 
     @asynccontextmanager
     async def monitor(
-        self, topic, *, codec: str | Codec | None = None, qos=None, raw: bool | None = False, **kw
+        self, topic, *, codec: str | Codec | None = None, raw: bool | None = False, **kw
     ) -> AsyncIterator[AsyncIterator[Message]]:
+        "watch a topic"
+
         topic = topic.slashed
-        logger.info("Monitor %s start", topic)
+        self.logger.info("Monitor %s start", topic)
         codec = self.codec if codec is None else get_codec(codec)
         try:
             async with self.client.subscribe(topic, **kw) as sub:
@@ -133,7 +134,7 @@ class Backend(_Backend):
                                     prop.timestamp = time.time()
 
                             except Exception as exc:
-                                logger.debug("Property Error", exc_info=exc)
+                                self.logger.debug("Property Error", exc_info=exc)
                                 await self.send(
                                     P(":R.error.link.mqtt.meta"),
                                     dict(topic=topic, val=oprop, pattern=topic, msg=repr(exc)),
@@ -143,7 +144,7 @@ class Backend(_Backend):
                                 try:
                                     data = codec.decode(msg.payload)
                                 except Exception as exc:
-                                    logger.debug("Decoding Error", exc_info=exc)
+                                    self.logger.debug("Decoding Error", exc_info=exc)
                                     await self.send(
                                         P(":R.error.link.mqtt.codec"),
                                         dict(
@@ -156,21 +157,25 @@ class Backend(_Backend):
                                     err = exc
                                 else:
                                     # everything OK
+                                    if self.trace:
+                                        self.logger.info("R:%d %r", topic, data)
                                     yield Message(topic, data, prop, msg)
                                 continue
                         if raw is False:
                             # don't forward undecodeable messages
                             continue
+                        if self.trace:
+                            self.logger.info("R:%d %r", topic, msg.payload)
                         yield RawMessage(topic, msg.payload, prop, msg, exc=err)
 
                 yield sub_get(sub)
         except anyio.get_cancelled_exc_class():
             raise
         except BaseException as exc:
-            logger.exception("Monitor %s end: %r", topic, exc)
+            self.logger.exception("Monitor %s end", topic, exc_info=exc)
             raise
         else:
-            logger.info("Monitor %s end", topic)
+            self.logger.info("Monitor %s end", topic)
 
     def send(
         self, topic, payload, codec: Codec | str | None = None, meta: MsgMeta | bool | None = None
@@ -194,4 +199,6 @@ class Backend(_Backend):
             codec = get_codec(codec)
         payload = codec.encode(payload)
 
+        if self.trace:
+            self.logger.info("S:%d %r", topic, payload)
         return self.client.publish(topic.slashed, payload=payload, user_properties=prop)

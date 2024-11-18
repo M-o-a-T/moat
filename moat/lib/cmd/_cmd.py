@@ -123,47 +123,6 @@ class StreamError(RuntimeError):
     pass
 
 
-class _SA1:
-    """
-    shift a readonly list by 1. This is a minimal implementation, intended
-    to avoid copying long-ish arrays.
-    """
-
-    def __new__(cls, a):
-        if len(a) < 10:
-            return a[1:]
-        return object.__new__(cls, a)
-
-    def __init__(self, a):
-        self.a = a
-
-    def __len__(self):
-        return len(self.a) - 1
-
-    def __getitem__(self, i):
-        if isinstance(i, slice):
-            i = slice(
-                i.start if i.start < 0 else i.start + 1,
-                i.stop if i.stop < 0 else i.stop + 1,
-                i.end,
-            )
-            return self.a[i]
-        elif i >= 0:
-            return self.a[i + 1]
-        elif i >= -len(self.a):
-            return self.a[i]
-        else:
-            raise IndexError(i)
-
-    def __repr__(self):
-        return repr(self.a[1:])
-
-    def __iter__(self):
-        it = iter(self.a)
-        next(it)  # skip first
-        return it
-
-
 @_exp
 class CmdHandler(CtxObj):
     """
@@ -503,9 +462,9 @@ class Msg:
         self.__dict__.pop("cmd", None)
         self.__dict__.pop("data", None)
         if msg[0] & B_ERROR:
-            self._msg = outcome.Error(StreamError(_SA1(msg)))
+            self._msg = outcome.Error(StreamError(msg[1:]))
         else:
-            self._msg = outcome.Value(_SA1(msg))
+            self._msg = outcome.Value(msg[1:])
             self._cmd = msg[1]
             if isinstance(msg[-1], dict):
                 self._data = msg[-1]
@@ -572,7 +531,7 @@ class Msg:
 
         elif self._recv_q is not None:
             try:
-                self._recv_q.put_nowait(_SA1(msg))
+                self._recv_q.put_nowait(msg[1:])
             except QueueFull:
                 self._recv_skip = True
 

@@ -274,8 +274,16 @@ S E D Data
 - - + Hello
 - - - You too
 = = = ====
+
+= = = ====
+S E D Data
+= = = ====
 - - + Hello again
 - * - Meh. you already said that
+= = = ====
+
+= = = ====
+S E D Data
 = = = ====
 * - + gimme some data
 * - - OK here they are
@@ -287,12 +295,20 @@ S E D Data
 * - - SIX
 - - - stopped
 = = = ====
+
+= = = ====
+S E D Data
+= = = ====
 * - + I want to send some data
 * - - OK send them
 * - + FOO
 - - - Nonono I don't want those after all
 * - + BAR
 - * + OK OK I'll stop
+= = = ====
+
+= = = ====
+S E D Data
 = = = ====
 * - + gimme some more data
 * - - OK here they are
@@ -301,12 +317,20 @@ S E D Data
 - * - oops I crashed
 - - + *sigh*
 = = = ====
+
+= = = ====
+S E D Data
+= = = ====
 * - + Let's talk
 * - - OK
 * - + *voice data* …
 * - - *also voice data* …
 - - + hanging up
 - - - oh well
+= = = ====
+
+= = = ====
+S E D Data
 = = = ====
 * * + 2
 * - + gimme your database

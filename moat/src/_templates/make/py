@@ -1,7 +1,7 @@
 # Makefile snippet for some standard Python stuff
 
 PACKAGE ?= $(notdir $(shell pwd))
-PYPI ?= $(PACKAGE)
+PYPI ?= $(subst -,_,${PACKAGE})
 
 PATH := /usr/share/sphinx/scripts/python3:${PATH}
 export PYTHONPATH := $(PYTHONPATH)$(if $(PYTHONPATH),:)$(shell pwd)

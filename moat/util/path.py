@@ -294,6 +294,8 @@ class Path(collections.abc.Sequence):
         mark = self._tag_add(other)
         if isinstance(other, Path):
             other = other._data
+        elif not isinstance(other,(list,tuple)):
+            other = (other,)
         if len(other) == 0:
             if self.mark != mark:
                 return self.build(self._data, mark=mark)
@@ -711,7 +713,7 @@ class PathShortener:
                 cdepth = i
                 break
         self.path = p
-        return cdepth, p.raw[cdepth:]
+        return cdepth, p[cdepth:]
 
     def __call__(self, res: dict):
         "shortens the 'path' element in @res"

@@ -429,6 +429,9 @@ class Msg:
         return r + ">"
 
     async def kill(self, exc=None):
+        """
+        Stop this stream.
+        """
         if self.parent is None:
             return
 

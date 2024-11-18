@@ -206,7 +206,7 @@ class Path(collections.abc.Sequence):
                     res.append(f":{x.key}")
                 else:
                     if not x or len(x) == 0:
-                        raise RuntimeError("You need to set {x.name}")
+                        raise RuntimeError(f"You need to set {x.name}")
                     res.append(x.slashed)
 
             elif isinstance(x, (bytes, bytearray, memoryview)):

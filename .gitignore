@@ -1,5 +1,6 @@
 __pycache__/
 /.coverage
+/moat_lib_cmd.egg-info/
 
 # Debian packaging
 /debian/

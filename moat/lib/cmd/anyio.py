@@ -20,19 +20,21 @@ async def run(cmd: CmdHandler, stream: anyio.abc.ByteStream):
 
     async def rd(conn):
         unpacker = StdCBOR()
+        rd = conn.read if hasattr(conn,"read") else conn.receive
         while True:
-            buf = await conn.read(4096)
+            buf = await rd(4096)
             for msg in unpacker.feed(buf):
                 await cmd.msg_in(msg)
 
     async def wr(conn):
         packer = StdCBOR()
+        wr = conn.write if hasattr(conn,"write") else conn.send
         while True:
             msg = await cmd.msg_out()
-            buf = packer.encode(msg, cbor=True)
-            await conn.write(buf)
+            buf = packer.encode(msg)
+            await wr(buf)
 
-    async with anyio.create_task_group() as tg:
+    async with cmd, anyio.create_task_group() as tg:
         tg.start_soon(rd, stream)
         tg.start_soon(wr, stream)
         yield cmd

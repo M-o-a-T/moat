@@ -352,8 +352,8 @@ class CmdHandler(CtxObj):
             try:
                 yield self
             finally:
-                #               for conv in self._msgs.values():
-                #                   await conv.kill()
+                for conv in self._msgs.values():
+                    conv.kill_nc()
                 tg.cancel()
         self._msgs = {}
 
@@ -455,6 +455,19 @@ class Msg:
                 self.stream_in = S_OFF
 
         self.ended()
+
+    def kill_nc(self, exc=None):
+        """
+        Stop this stream (backend died).
+        """
+        self.stream_out = S_END
+        self.stream_in = S_OFF
+        self.cmd_in.set()
+        if self._recv_q is not None:
+            try:
+                self._recv_q.put_nowait_error(LinkDown())
+            except EOFError:
+                pass
 
     @property
     def msg(self):

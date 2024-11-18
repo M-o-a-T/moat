@@ -191,8 +191,8 @@ def test_msgpack():
     d = ["a", 1, "b"]
     m = packer(d)
     mm = unpacker(m)
-    assert isinstance(mm, (type, list))
-    assert mm == d
+    assert isinstance(mm, (tuple, list))
+    assert list(mm) == d
 
     d = Path("a", 1, "b")
     m = packer(d)

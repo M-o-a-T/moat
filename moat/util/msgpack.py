@@ -31,7 +31,7 @@ class StdMsgpack(Codec):
     "A MsgPack codec with our extensions"
 
     def __init__(self):
-        super().__init__(ext=std_ext)
+        super().__init__(ext=std_ext, use_attrdict=True)
 
 
 Codec = StdMsgpack

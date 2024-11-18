@@ -12,6 +12,8 @@ async def scaffold(ha, hb):
         while True:
             msg = await src.msg_out()
             logger.debug("%s %r", d, msg)
+            if isinstance(msg,tuple):
+                msg=list(msg)
             await dst.msg_in(msg)
 
     async with (

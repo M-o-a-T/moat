@@ -172,7 +172,10 @@ class CmdHandler(CtxObj):
             await msg.kill(exc)
             raise
         try:
-            return msg._msg.unwrap()
+            res = msg._msg.unwrap()
+            if len(res) > 1 and isinstance(res[-1],dict) and not res[-1] and isinstance(res[-2],dict):
+                res = res[:-1]
+            return res
         finally:
             await msg.kill()
 
@@ -272,11 +275,14 @@ class CmdHandler(CtxObj):
 
     async def msg_out(self):
         i, d, kw = await self._send_q.get()
+
         # this is somewhat inefficient but oh well
-        if kw:
-            return (i,) + tuple(d) + (kw,)
-        else:
+        if kw is None and isinstance(d[-1], dict):
+            kw = {}
+        if kw is None:
             return (i,) + tuple(d)
+        else:
+            return (i,) + tuple(d) + (kw,)
 
     async def msg_in(self, msg):
         i = msg[0]
@@ -352,6 +358,7 @@ class Msg:
         self._recv_skip = False
         self.scope = None
         self.s_out = s_out
+        self._initial = False
 
     def __getitem__(self, k):
         return self.data[k]
@@ -385,6 +392,9 @@ class Msg:
                 r += repr(self.stream_in)
             if self._fli is not None:
                 r += repr(self._fli)
+        msg = self._msg
+        if msg is not None:
+            r += " D:"+repr(msg)
         return r + ">"
 
     async def kill(self, exc=None):
@@ -432,44 +442,49 @@ class Msg:
                 pass
 
     @property
-    def msg(self):
-        if isinstance(self._msg, outcome.Outcome):
-            self._msg = self._msg.unwrap()
-        self.__dict__["msg"] = self._msg
-        return self._msg
-
-    @property
     def cmd(self):
-        self.__dict__["cmd"] = self._cmd
+        "Retrieve the command."
+        self._unwrap()
         return self._cmd
 
     @property
-    def data(self):
-        if isinstance(self._msg, Exception):
-            raise self._msg
-        self.__dict__["data"] = self._data
-        return self._data
+    def args(self):
+        "Retrieve the argument list. NB the command is *not* removed."
+        self._unwrap()
+        return self._args
+
+    @property
+    def kw(self):
+        "Retrieve the keywords."
+        self._unwrap()
+        return self._kw
+
+    def _unwrap(self):
+        # disassemble the message.
+        if not isinstance(self._msg, outcome.Outcome):
+            return
+        msg = self._msg.unwrap()
+        self._kw = msg.pop() if isinstance(msg[-1], dict) else None
+        self._cmd = msg.pop(0) if self._initial else None
+        self._args = msg
+        self._msg = None
 
     def _set_msg(self, msg):
         if self.stream_in == S_END:
             pass  # happens when msg2 is set
-        elif not (msg[0] & B_STREAM):
-            self.stream_in = S_END
-        elif self.stream_in == S_NEW and not (msg[0] & B_ERROR):
-            self.stream_in = S_ON
+        else:
+            self._initial = msg[0] >= 0 and self.stream_in == S_NEW
+            if not (msg[0] & B_STREAM):
+                self.stream_in = S_END
+            elif self.stream_in == S_NEW and not (msg[0] & B_ERROR):
+                self.stream_in = S_ON
 
-        self.__dict__.pop("msg", None)
-        self.__dict__.pop("cmd", None)
-        self.__dict__.pop("data", None)
+        if isinstance(msg,tuple):
+            breakpoint()
         if msg[0] & B_ERROR:
             self._msg = outcome.Error(StreamError(msg[1:]))
         else:
             self._msg = outcome.Value(msg[1:])
-            self._cmd = msg[1]
-            if isinstance(msg[-1], dict):
-                self._data = msg[-1]
-            else:
-                self._data = None
         self.cmd_in.set()
         if self.stream_in != S_END:
             self.cmd_in = Event()
@@ -682,7 +697,9 @@ class Msg:
             await self.warn(self._recv_qlen)
 
         await self._send(d, kw, stream=True)
-        await self.replied()
+        if self._i >= 0:
+            # Wait for the initial reply if we're the sender.
+            await self.replied()
 
         yield self
 

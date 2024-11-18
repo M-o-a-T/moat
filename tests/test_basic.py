@@ -8,21 +8,22 @@ from tests.scaffold import scaffold
 @pytest.mark.anyio
 async def test_basic():
     async def handle(msg):
-        assert tuple(msg.msg) == ("Test", 123)
-        return {"R": tuple(msg.msg)}
+        assert msg.cmd == "Test"
+        assert tuple(msg.args) == (123,)
+        return {"C": msg.cmd, "R": tuple(msg.args)}
 
     async with scaffold(handle, None) as (a, b):
         # note the comma
-        (res,) = await b.cmd("Test", 123)
-        assert res == {"R": ("Test", 123)}
+        res, = await b.cmd("Test", 123)
+        assert res == {"C":"Test", "R": (123,)}
 
 
 @pytest.mark.anyio
 async def test_more():
     async def handle(msg):
-        assert msg.msg[0] == "X"
-        await anyio.sleep(msg.msg[1] / 10)
-        return msg.msg[1]
+        assert msg.cmd == "X"
+        await anyio.sleep(msg.args[0] / 10)
+        return msg.args[0]
 
     async with scaffold(handle, None) as (a, b):
         # note the comma
@@ -46,7 +47,8 @@ async def test_more():
 @pytest.mark.anyio
 async def test_return():
     async def handle(msg):
-        assert tuple(msg.msg) == ("Test", 123)
+        assert msg.cmd == "Test"
+        assert tuple(msg.args) == (123,)
         return ("Foo", 234)
 
     async with scaffold(handle, None) as (a, b):
@@ -58,13 +60,14 @@ async def test_return():
 @pytest.mark.anyio
 async def test_return2():
     async def handle(msg):
-        assert tuple(msg.msg) == ("Test", 123)
+        assert msg.cmd == "Test"
+        assert tuple(msg.args) == (123,)
         await msg.result("Foo", 234)
 
     async with scaffold(handle, None) as (a, b):
         # neither a comma nor an index here
         res = await b.cmd("Test", 123)
-        assert res == ("Foo", 234)
+        assert res == ["Foo", 234]
         print("DONE")
 
 
@@ -72,7 +75,8 @@ async def test_return2():
 async def test_stream_in():
     async def handle(msg):
         res = []
-        assert tuple(msg.msg) == ("Test", 123)
+        assert msg.cmd == "Test"
+        assert tuple(msg.args) == (123,)
         async with msg.stream_r("Gimme") as st:
             async for m in st:
                 assert len(m[1]) == m[0]
@@ -82,18 +86,19 @@ async def test_stream_in():
 
     async with scaffold(handle, None) as (a, b):
         async with b.stream_w("Test", 123) as st:
-            assert tuple(st.msg) == ("Gimme",)
+            assert tuple(st.args) == ("Gimme",)
             await st.send(1, "a")
             await st.send(3, "def")
             await st.send(2, "bc")
-        assert tuple(st.msg) == ("OK", 4)
+        assert tuple(st.args) == ("OK", 4)
         print("DONE")
 
 
 @pytest.mark.anyio
 async def test_stream_out():
     async def handle(msg):
-        assert tuple(msg.msg) == ("Test", 123)
+        assert msg.cmd == "Test"
+        assert tuple(msg.args) == (123,)
         async with msg.stream_w("Takeme") as st:
             await st.send(1, "a")
             await st.send(3, "def")
@@ -103,10 +108,10 @@ async def test_stream_out():
     async with scaffold(handle, None) as (a, b):
         n = 0
         async with b.stream_r("Test", 123) as st:
-            assert tuple(st.msg) == ("Takeme",)
+            assert tuple(st.args) == ("Takeme",)
             async for m in st:
                 assert len(m[1]) == m[0]
                 n += 1
-        assert tuple(st.msg) == ("OK", 4)
+        assert tuple(st.args) == ("OK", 4)
         assert n == 3
         print("DONE")

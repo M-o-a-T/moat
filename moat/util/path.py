@@ -294,7 +294,7 @@ class Path(collections.abc.Sequence):
         mark = self._tag_add(other)
         if isinstance(other, Path):
             other = other._data
-        elif not isinstance(other,(list,tuple)):
+        elif not isinstance(other, (list, tuple)):
             other = (other,)
         if len(other) == 0:
             if self.mark != mark:

@@ -89,6 +89,13 @@ async def attr_(obj, bus, group, vars_, eval_, path_):
             res = res.value
         yprint(res, stream=obj.stdout)
 
+def map_keys():
+    try:
+        return RemoteValueSensor.DPTMAP.keys()
+    except AttributeError:
+        from xknx.dpt import DPTBase
+        return (cls.__name__[3:] for cls in DPTBase.__recursive_subclasses__())
+
 @cli.command(
     "addr",
     help=f"""\
@@ -106,7 +113,7 @@ Known attributes:
 \b
 Paths elements are separated by spaces.
 
-Known modes: {" ".join(RemoteValueSensor.DPTMAP.keys())}
+Known modes: {" ".join(map_keys())}
 """,
 )
 @click.option("-t", "--type", "typ", help="Must be 'in' or 'out'. Use '-' to delete.")

@@ -25,10 +25,11 @@ attrdict = None
 class Codec(_Codec):
     "Extensible msgpack codec"
 
-    def __init__(self, use_attrdict: bool = False, **kw):
+    def __init__(self, use_attrdict: bool = False, use_list=True, **kw):
         # TODO add keywords for msgpack enc/dec settings
         super().__init__(**kw)
         self.use_attrdict = use_attrdict
+        self.use_list = use_list
 
         if use_attrdict:
             global attrdict  # noqa: PLW0603
@@ -39,7 +40,7 @@ class Codec(_Codec):
             object_pairs_hook=attrdict if use_attrdict else dict,
             strict_map_key=False,
             raw=False,
-            use_list=True,
+            use_list=self.use_list,
             ext_hook=self._decode,  # pylint:disable=protected-access
         )
 
@@ -58,7 +59,7 @@ class Codec(_Codec):
             object_pairs_hook=attrdict if self.use_attrdict else dict,
             strict_map_key=False,
             raw=False,
-            use_list=True,
+            use_list=self.use_list,
             ext_hook=self._decode,  # pylint:disable=protected-access
         )
 

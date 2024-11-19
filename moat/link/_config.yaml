@@ -12,6 +12,6 @@ link:
       key: '/path/to/cert.key'
   client:
     init_timeout: 5  # set to None to not require a server
-  root: !P moat.test.unconfigured.update-me
+  root: !P XXX
   qos: 0
 

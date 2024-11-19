@@ -75,7 +75,7 @@ class Backend(_Backend):
         if will is not None:
             data = will.pop("data", NotGiven)
             cdc = will.pop("codec", None)
-            cdc = codec if cdc is None else get_codec(cdc)
+            cdc = self.codec if cdc is None else get_codec(cdc)
 
             data = b"" if data is NotGiven else cdc.encode(data)
             kw["will"] = Will(
@@ -178,7 +178,7 @@ class Backend(_Backend):
             self.logger.info("Monitor %s end", topic)
 
     def send(
-        self, topic, payload, codec: Codec | str | None = None, meta: MsgMeta | bool | None = None
+            self, topic, payload, codec: Codec | str | None = None, meta: MsgMeta | bool | None = None, retain:bool=False,
     ) -> Awaitable:  # pylint: disable=invalid-overridden-method
         """
         Send this payload to this topic.

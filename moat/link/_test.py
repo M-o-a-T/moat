@@ -10,11 +10,13 @@ from mqttproto.async_broker import AsyncMQTTBroker
 
 from moat.link.client import Link
 from moat.link.server import Server
+from moat.link.backend import get_backend
 from moat.util import (  # pylint:disable=no-name-in-module
     CtxObj,
     attrdict,
     combine_dict,
     yload,
+    Root,
 )
 
 from typing import TYPE_CHECKING
@@ -60,12 +62,23 @@ class Scaffold(CtxObj):
 
     @asynccontextmanager
     async def _ctx(self):
+        Root.set(self.cfg.root)
         async with anyio.create_task_group() as self.tg:
             bport = await self.tg.start(run_broker, self.cfg)
 
             self.cfg.backend.port = bport
             yield self
             self.tg.cancel_scope.cancel()
+
+    async def _run_backend(self, cfg: dict|None, kw:dict, *, task_status) -> Backend:
+        """
+        Start a backend.
+        """
+        cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
+        async with get_backend(cfg, **kw) as bk:
+            task_status.started(bk)
+            await anyio.sleep_forever()
+            assert False  # noqa:B011,PT015
 
     async def server(self, cfg: dict | None = None, **kw) -> Server:
         """
@@ -78,6 +91,10 @@ class Scaffold(CtxObj):
     async def client(self, cfg: dict | None = None):
         cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
         return await self.tg.start(self._run_client, cfg)
+
+    async def backend(self, cfg: dict | None = None, **kw):
+        cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
+        return await self.tg.start(self._run_backend, cfg, kw)
 
     async def _run_server(self, cfg, kw, *, task_status) -> Never:
         """

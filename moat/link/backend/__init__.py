@@ -11,6 +11,8 @@ import logging
 from abc import ABCMeta, abstractmethod
 from contextlib import asynccontextmanager
 
+from attrs import define,field
+
 from moat.lib.codec import get_codec as _get_codec
 from moat.util import CtxObj, NotGiven, Path, Root, RootPath, attrdict
 
@@ -20,7 +22,7 @@ if TYPE_CHECKING:
     from moat.lib.codec import Codec
     from moat.link.meta import MsgMeta
 
-    from typing import Any, AsyncIterator, Self
+    from typing import Any, AsyncIterator, Self, ClassVar
 
 
 __all__ = ["get_backend", "get_codec", "Backend", "Message", "RawMessage"]
@@ -33,33 +35,27 @@ def get_codec(name):
     return _get_codec(name)
 
 
-class Message:
+@define
+class Message[TData]:
     """
     An incoming message.
     """
 
-    raw = False
+    topic:Path = field()
+    data:TData = field()
+    meta:MsgMeta = field()
+    orig:Any = field(repr=False)
 
-    def __init__(self, topic: Path, data: Any, meta: MsgMeta, orig: Any = None):
-        self.topic = topic
-        self.data = data
-        self.meta = meta
-        self.orig = orig
+    raw:ClassVar[bool] = False
 
+    def __class_getitem__(cls, TData):
+        return cls  # for now
 
 class RawMessage(Message):
     "A message that couldn't be decoded / shouldn't be encoded"
 
-    raw = True
-
-    def __init__(
-        self, topic: Path, data: Any, meta: MsgMeta, orig: Any = None, exc: Exception | None = None
-    ):
-        self.topic = topic
-        self.data = data
-        self.meta = meta
-        self.orig = orig
-        self.exc = exc
+    exc:Exception = field(default=None)
+    raw:ClassVar[bool] = True
 
 
 class Backend(CtxObj, metaclass=ABCMeta):

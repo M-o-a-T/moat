@@ -34,7 +34,7 @@ class TS(anyio.abc.TaskStatus):
     def __init__(self, ts):
         self.ts = ts
 
-    def started(self, data):
+    def started(self, data=None):
         "call .started once"
         self.ts.started(data)
         self.ts = anyio.TASK_STATUS_IGNORED
@@ -87,6 +87,7 @@ class Link(CtxObj):
         self._cmd = CmdHandler(self._cmd_other_cb)
         self._cmdq_w, self._cmdq_r = anyio.create_memory_object_stream(5)
         self._retry_msgs: set[BasicCmd] = set()
+        self._login_done:anyio.Event=anyio.Event()
 
         if name is None:
             name = cfg.get("client_id")
@@ -147,6 +148,8 @@ class Link(CtxObj):
                 if self.cfg.client.init_timeout:
                     # monitor main server
                     await self.tg.start(self._run_server_link)
+
+                await self._login_done.wait()
                 yield self
             finally:
                 Root.reset(token)
@@ -157,7 +160,12 @@ class Link(CtxObj):
         self.tg.cancel_scope.cancel()
 
     async def _process_server_cmd(self, msg):
-        raise RuntimeError(f"I don't yet know how to process {msg!r}")
+        #cmd = msg.cmd if isinstance(msg.cmd, (Sequence,Path)) else (msg.cmd,)
+        #cmd = "_".join(str(x) for x in cmd)
+        #fn = getattr(self, "cmd_" + str(cmd), None)
+        if msg.cmd == P("i.hello"):
+            return True
+        raise RuntimeError(f"I don't know how to process cmd {msg.cmd}")
 
     async def _run_server_link(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         # Manager for the server link channel. Repeats running a server
@@ -173,8 +181,9 @@ class Link(CtxObj):
             try:
                 await self._connect_server(srv, task_status=task_status)
             except Exception as exc:
-                self.backend.send_error(
-                    P("run.service.main") / srv.origin / self.name, data=srv, exc=exc
+                raise  # XXX
+                await self.backend.send_error(
+                    P("run.service.main") / srv.meta.origin / self.name, data=srv, exc=exc
                 )
             finally:
                 self._server_up = False
@@ -207,7 +216,7 @@ class Link(CtxObj):
                     task_status.started(msg)
                     task_status = None
 
-    async def _connect_run(self):
+    async def _connect_run(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         # We're connected.
         self._server_up = True
 
@@ -217,6 +226,7 @@ class Link(CtxObj):
         async with anyio.create_task_group() as tg:
             for msg in self._retry_msgs:
                 tg.start_soon(run_, msg)
+            task_status.started()
             async for msg in self._cmdq_r:
                 tg.start_soon(run_, msg)
 
@@ -230,57 +240,82 @@ class Link(CtxObj):
         finally:
             self._retry_msgs.discard(cmd)
 
-    async def _connect_server(self, srv: Data[S.run.service.main]):
+    async def _connect_server(self, srv: Message[Data[S.run.service.main]], *, task_status=anyio.TASK_STATUS_IGNORED):
+        task_status = TS(task_status)
+
         # Backend connection
-        link = srv["link"]
+        link = srv.data["link"]
         if isinstance(link, dict):
             link = (link,)
 
         for remote in link:
             try:
                 async with self._connect_one(remote, srv):
-                    self._connect_run()
+                    await self._connect_run(task_status=task_status)
             except Exception as exc:
                 self.logger.warning("Link failed: %r", remote, exc_info=exc)
 
     @asynccontextmanager
-    async def _connect_one(self, remote, srv):
+    async def _connect_one(self, remote, srv:Message):
         cmd = self._cmd_link
         async with (
             await anyio.connect_tcp(remote["host"], remote["port"]) as stream,
             run_stream(cmd, stream),
         ):
-            res = await cmd.cmd("i", "hello", protocol_version, self.name, srv.get("auth", True))
-            it = iter(res.data)
-            self.link_protocol = min(next(it), protocol_version)
-            self._server_name = srv.meta.origin
-            auth = True
-
-            try:
-                server_name = next(it)
-                if server_name != srv.meta.origin:
-                    self.logger.warning("Server name: %r / %r", server_name, srv.meta.origin)
-                if not next(it):
-                    raise RuntimeError("Not talking to a server")
-                auth = next(it)
-            except StopIteration:
-                pass
-
-            if auth is True:
-                self._server_login_done.set()
-            elif auth is False:
-                raise RuntimeError("Server %r didn't like us", srv.meta.origin)
-            elif isinstance(auth, str):
-                if not await self._do_auth(auth):
-                    raise RuntimeError("No auth with %s", auth)
-            else:
-                for m in auth:
-                    if await self._do_auth(m):
-                        break
-                else:
-                    raise RuntimeError("No auth with %s", auth)
-
+            await self._send_hello(srv)
             yield self
+
+    async def _send_hello(self,srv):
+        "Send hello message, do authorization if required"
+
+        cmd = self._cmd_link
+        res = await cmd.cmd(P("i.hello"), protocol_version, self.name, srv.meta.origin, srv.data.get("auth", True))
+        it = iter(res)
+        self.link_protocol = protocol_version
+        self._server_name = srv.meta.origin
+        auth = True
+
+        try:
+            prot = next(it)
+            if prot is False:
+                raise ValueError("Protocol mismatch")
+            elif prot is None:
+                pass
+            else:
+                self.link_protocol = min(tuple(prot), protocol_version)
+
+            server_name = next(it)
+            if server_name is None:
+                pass
+            elif server_name != srv.meta.origin:
+                self.logger.warning("Server name: %r / %r", server_name, srv.meta.origin)
+
+            name = next(it)
+            if name is not None:
+                if self.name:
+                    self.logger.warning("Client name: %r / %r", name, self.name)
+                self.name = name
+
+            if not next(it):
+                raise RuntimeError("Not talking to a server")
+
+            auth = next(it)
+        except StopIteration:
+            pass
+
+        if auth is True:
+            self._login_done.set()
+        elif auth is False:
+            raise RuntimeError("Server %r didn't like us", srv.meta.origin)
+        elif isinstance(auth, str):
+            if not await self._do_auth(auth):
+                raise RuntimeError("No auth with %s", auth)
+        else:
+            for m in auth:
+                if await self._do_auth(m):
+                    break
+            else:
+                raise RuntimeError("No auth with %s", auth)
 
     def monitor(self, *a, **kw):
         "watch this path; see backend doc"

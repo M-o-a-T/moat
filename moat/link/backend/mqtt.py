@@ -158,14 +158,14 @@ class Backend(_Backend):
                                 else:
                                     # everything OK
                                     if self.trace:
-                                        self.logger.info("R:%d %r", topic, data)
+                                        self.logger.info("R:%s %r", topic, data)
                                     yield Message(topic, data, prop, msg)
                                 continue
                         if raw is False:
                             # don't forward undecodeable messages
                             continue
                         if self.trace:
-                            self.logger.info("R:%d %r", topic, msg.payload)
+                            self.logger.info("R:%s %r", topic, msg.payload)
                         yield RawMessage(topic, msg.payload, prop, msg, exc=err)
 
                 yield sub_get(sub)
@@ -200,5 +200,5 @@ class Backend(_Backend):
         payload = codec.encode(payload)
 
         if self.trace:
-            self.logger.info("S:%d %r", topic, payload)
-        return self.client.publish(topic.slashed, payload=payload, user_properties=prop)
+            self.logger.info("S:%s %r", topic, payload)
+        return self.client.publish(topic.slashed, payload=payload, user_properties=prop, retain=retain)

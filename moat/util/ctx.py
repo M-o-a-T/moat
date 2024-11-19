@@ -6,12 +6,13 @@ seamlessly to an async context management method.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from contextlib import asynccontextmanager, AbstractAsyncContextManager
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
+from types import CoroutineType
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable
-    from contextlib import AbstractAsyncContextManager
     from types import TracebackType
 
 
@@ -33,13 +34,29 @@ class CtxObj[T_Ctx](ABC):
 
     __ctx: AbstractAsyncContextManager | None = None
 
+
+    @overload
+    def _ctx(self) -> AsyncIterator[T_Ctx]: ...
+
     @abstractmethod
     def _ctx(self) -> AbstractAsyncContextManager[T_Ctx]: ...
 
     async def __aenter__(self) -> T_Ctx:
         if self.__ctx is not None:
             raise RuntimeError("Nested contexts")
-        self.__ctx = ctx = self._ctx()  # pylint: disable=E1101,W0201
+        ctx = self._ctx()  # pylint: disable=E1101,W0201
+        if not isinstance(ctx, AbstractAsyncContextManager):
+            # No @asynccontextmanager wrapper on `_ctx`.
+            # Kill the "coroutine not awaited" warning.
+            try:
+                await ctx.athrow(StopAsyncIteration)
+            except StopAsyncIteration:
+                pass
+            else:
+                raise RuntimeError(f"Failure to stop {ctx !r}")
+
+            ctx = asynccontextmanager(self._ctx)()
+        self.__ctx = ctx
         return await ctx.__aenter__()
 
     def __aexit__(

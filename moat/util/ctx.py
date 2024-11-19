@@ -6,13 +6,12 @@ seamlessly to an async context management method.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from contextlib import asynccontextmanager, AbstractAsyncContextManager
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
 
 from typing import TYPE_CHECKING, overload
-from types import CoroutineType
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
+    from collections.abc import AsyncIterator, Awaitable
     from types import TracebackType
 
 
@@ -34,7 +33,6 @@ class CtxObj[T_Ctx](ABC):
 
     __ctx: AbstractAsyncContextManager | None = None
 
-
     @overload
     def _ctx(self) -> AsyncIterator[T_Ctx]: ...
 
@@ -53,7 +51,7 @@ class CtxObj[T_Ctx](ABC):
             except StopAsyncIteration:
                 pass
             else:
-                raise RuntimeError(f"Failure to stop {ctx !r}")
+                raise RuntimeError(f"Failure to stop {ctx!r}")
 
             ctx = asynccontextmanager(self._ctx)()
         self.__ctx = ctx

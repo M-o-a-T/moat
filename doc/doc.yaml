@@ -1,0 +1,148 @@
+path: !P ':'
+title: System Root
+doc: |2
+  This is the root of the MoaT-Link topic structure.
+  The topic itself contains some hints about the data itself.
+---
+path: !P error
+title: Error messages
+doc: |2
+  All messages that report errors go here.
+  They are typically not retained; an error handler will collect them.
+  "All OK" messages are sent with a level of zero.
+items:
+  title: Undocumented error. Fix me!
+---
+path: !P error.link.mqtt.codec:
+title: incompatible data
+doc: |2
+  The content of an incoming message could not be decoded.
+  .
+  This problem converts the message to raw data, for obvious reasons.
+---
+path: !P error.link.mqtt.meta:
+title: incompatible metadata
+doc: |2
+  The metadata of an incoming message could not be decoded.
+  It is cleared instead.
+  .
+  This problem converts the message to raw data because otherwise
+  there is no guarantee of it not causing a cycle or similar.
+---
+path: !P error.link.mqtt.topic:
+title: incompatible topic
+doc: |2
+  The topic of an incoming message could not be parsed by moat.util.Path,
+  possibly because one of its elements starts with a colon.
+  It is imported verbatim instead.
+  .
+  This problem does not convert the message to raw data.
+---
+path: !P error.run.service.main.*.*:
+title: Backend link failed
+doc: |2
+  Client [-1] got an error talking to backend [-2].
+---
+path: !P state
+title: System state
+doc: |2
+  This part contains the system state.
+  State items are published with the Retain flag set.
+  Entries are tagged with their source and a timestamp to prevent
+  accidentally introducing stale data.
+items:
+  title: Undocumented state item. Fix me!
+---
+path: !P cmd
+title: System commands
+doc: |2
+  This part contains commands, i.e. messages that instruct some part of
+  MoaT to do something.
+items:
+  title: Undocumented command. Fix me!
+---
+path: !P cfg
+title: Subsystem configurations
+doc: |2
+  This part contains configuration data.
+  Config entries are published with the Retain flag set.
+items:
+  title: Undocumented configuration. Fix me!
+---
+path: !P cfg.link
+title: Data links
+doc: |2
+  MoaT implements bidirectional forwarding of its data to other systems,
+  as well as to other MQTT topics or topic hierarchies.
+items:
+  title: Undocumented link
+---
+path: !P run
+title: Runtime data and related
+---
+_path: !P run.service
+title: Hierarchy for service addresses
+---
+_path: !P run.service.main
+title: Hierarchy for service addresses
+doc: |2
+  This entry points to the main MoaT-Link server. It contains an auth
+  token. If a client is allowed to subscribe to this record, it should be
+  allowed to talk to the server.
+---
+_path: !P run.service.down.main
+title: Death notices for the main service
+doc: |2
+  The main server posts a Will message to this topic, a string containing
+  its name. Backup servers listen to it and immediately publish their
+  own record to `run.service.main` in order to take over.
+---
+path: !P doc
+title: Documentation
+doc: |2
+  MoaT stores its documentation inside itself, as "MarkDown"-enhanced text.
+
+  Any message in ``moat/#`` should have a corresponding entry in
+  ``moat/doc/#``. Entries may be maps tagged by language code. Text is
+  interpreted as Markdown.
+
+  Documentation about MoaT command line usage is located in ``moat.doc.shell``.
+---
+path: !P schema
+title: Schema items
+doc: |2
+  The data structure of every item in the MoaT storage is available
+  at schema/‹Path›.
+  The schema has an additional entry "items" which describes the next level(s)
+  if there's no sepatare Schema entry for it.
+items:
+  title: Schema item
+---
+path: !P schema._
+title: Internal schema items
+doc: |2
+  This part contains schema items that are references by other parts of the schema.
+
+  This part is not named '$defs' because it's not part of the original document
+  and thus needs to be loaded separately.
+items:
+  title: Undocumented schema entry.
+---
+path: !P schema._.api.root
+title: OpenAPI meta schema
+doc: |2
+  A copy of the OpenAPI root schema description
+---
+path: !P _.api.root
+title: OpenAPI root schema
+doc: |2
+  Our OpenAPI root schema is here.
+---
+path: !P msg
+title: Intermediate system messaging
+doc: |2
+  This part collects MQTT messages between MoaT instances that are neither commands
+  nor state.
+items:
+  title: Undocumented message.
+---

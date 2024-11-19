@@ -97,7 +97,7 @@ class MsgMeta:
         if isinstance(k, int):
             if k < 0:
                 raise KeyError(k)  # only positive indices
-            elif k == 0 and (not isinstance(v, str) or v == "" or "|" in v or "\\" in v):
+            elif k == 0 and (not isinstance(v, str) or v == "" or "/" in v or "\\" in v):
                 raise ValueError("First item must be a string")
             self._len(k + 1)
             self.a[k] = v
@@ -150,7 +150,7 @@ class MsgMeta:
         """
         Encode this object to a string.
 
-        Elements are either UTF-8 strings, introduced by ``|``, or
+        Elements are either UTF-8 strings, introduced by ``/``, or
         some other data, introduced by ``\\``. Strings that include
         either of these characters are treated as "other data".
 
@@ -168,11 +168,11 @@ class MsgMeta:
         data = self._map()
         res = []
         for d in data:
-            if isinstance(d, str) and d != "" and "|" not in d and "\\" not in d:
+            if isinstance(d, str) and d != "" and "/" not in d and "\\" not in d:
                 if not d and not res:
                     raise ValueError("No empty origins")
                 if res:
-                    res.append("|")
+                    res.append("/")
                 if d is not None:
                     res.append(d)
                 continue
@@ -199,7 +199,7 @@ class MsgMeta:
             next_enc: bool = None
             cc: int
 
-            c1 = data.find("|")
+            c1 = data.find("/")
             c2 = data.find("\\")
             if c1 == -1:
                 cc = c2

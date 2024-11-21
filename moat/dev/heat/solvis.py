@@ -19,6 +19,7 @@ import asyncclick as click
 
 from moat.util import (
     P,
+    Path,
     PathLongener,
     attrdict,
     combine_dict,
@@ -185,6 +186,10 @@ lim:
           limit: .4
 
 cmd:
+    bypass:
+      cmd: !P home.ass.dyn.switch.heizung.wp_bypass.cmd  # c_bypass
+      mode: !P heat.s.pump.cmd.want.mode
+      power: !P heat.s.pump.cmd.want.power
     flow: !P heat.s.pump.rate.cmd       # c_flow
     wp: !P home.ass.dyn.switch.heizung.wp.cmd  # cm_wp
     heat: !P home.ass.dyn.switch.heizung.main.cmd  # cm_heat
@@ -205,6 +210,7 @@ cmd:
       pellet: !P home.ass.dyn.switch.heizung.pellet_auto_mode.cmd     # m_passthru_pellet
 
 feedback:
+    bypass: !P home.ass.dyn.switch.heizung.wp_bypass.state
     main: !P home.ass.dyn.switch.heizung.wp.state
     heat: !P home.ass.dyn.switch.heizung.main.state
     pump: !P home.ass.dyn.binary_sensor.heizung.pump.state
@@ -227,6 +233,7 @@ misc:
     de_ice:
       flow: 17  # desired flow rate when de-icing
       pwm: .5  # corresponding PWM output
+      min: .3  # minimum PWM
     stop:
       flow: 10  # or more if the max outflow temperature wants us to
       delta: 3  # outflow-inflow: if less than .delta, the pump can be turned off
@@ -247,9 +254,9 @@ misc:
     heat:
       delta: 10
       # if buffer_low+delta is > t_adj then run the heating pump
-    mon_solvis:
-      err: !P heat.s.control.errors
-      data: "/etc/moat/modbus.stiebelfake.yaml"
+#   mon_solvis:
+#     err: !P heat.s.control.errors
+#     data: "/etc/moat/modbus.stiebelfake.yaml"
 pid:
     flow:
         ## direct flow rate control for the pump
@@ -482,7 +489,7 @@ class Data:
     # outside temperature average
     t_ext_avg = None
 
-    def __init__(self, cfg, cl, record=None, no_op=False):
+    def __init__(self, cfg, cl, record=None, no_op=False, state=None):
         self._cfg = cfg
         self._cl = cl
         self._got = anyio.Event()
@@ -492,11 +499,7 @@ class Data:
         self.pid = attrdict()
         self.no_op = no_op
 
-        try:
-            with open(cfg.state) as sf:
-                self.state = yload(sf, attr=True)
-        except OSError:
-            self.state = attrdict()
+        self.state = state or attrdict()
 
         # calculated pump flow rate, 0…1
         self.cp_flow = None
@@ -617,6 +620,34 @@ class Data:
             #
             # check for inappropriate state changes
             #
+            if self.c_bypass:
+                print("*** BYPASS ON ***")
+                await self.cl_set(self.cfg.feedback.bypass, True)
+                cfl = -1
+                cmode = -1
+                cpwr = -1
+
+                while self.c_bypass:
+                    if self.c_flow != cfl:
+                        print("* FLOW",self.c_flow)
+                        cfl = self.c_flow
+                    await self.cl_set(self.cfg.output.flow.path, value=self.c_flow)
+
+                    if self.c_bypass_mode != cmode:
+                        print("* MODE",self.c_bypass_mode)
+                        cmode = self.c_bypass_mode
+                        await self.cl_set(self.cfg.cmd.mode.path, value=self.c_bypass_mode)
+
+                    if self.c_bypass_power != cpwr:
+                        print("* POWER",self.c_bypass_power)
+                        cpwr = self.c_bypass_power
+                        await self.cl_set(self.cfg.cmd.power, value=self.c_bypass_power)
+
+                    await self.wait()
+                await self.cl_set(self.cfg.feedback.bypass, False)
+                print("*** BYPASS OFF ***")
+                run = Run.down
+
             if orun == run:
                 pass
             elif orun is None:
@@ -631,7 +662,7 @@ class Data:
                 pass
             elif orun == Run.down and run == Run.off:
                 pass
-            elif orun == Run.ice and run == Run.wait_flow:
+            elif orun == Run.ice and run in (Run.wait_flow,Run.wait_time):
                 pass
             else:
                 raise ValueError(f"Cannot go from {orun.name} to {run.name}")
@@ -881,10 +912,10 @@ class Data:
             tp_limit = min(
                 self.cfg.adj.max_pellet,
                 t_adj + self.cfg.adj.more,
-                self.tb_heat + self.cfg.adj.more,
+                # t_cur + self.cfg.adj.more,
             )
-            if self.tb_heat < t_low:
-                adj = (t_low - self.tb_heat) * self.cfg.adj.low.factor
+            if t_cur < t_low:
+                adj = (t_low - t_cur) * self.cfg.adj.low.factor
                 t_limit = min(t_limit + adj, max2)
                 tp_limit += adj
             t_pump = min(self.cfg.adj.max, pos2val(t_low, f, t_limit + 0.2 * (t_low - t_limit)))
@@ -993,7 +1024,7 @@ class Data:
                 self.state.t_load = self.time
 
             elif run == Run.ice:  # no operation
-                await self.handle_flow()
+                await self.handle_flow(True)
                 if not self.m_ice:
                     if self.tb_mid > t_set_off:
                         print("OFF 4A", t_cur, t_adj, self.tb_mid, t_set_off, "    ")
@@ -1002,7 +1033,7 @@ class Data:
                         print("OFF 5A", t_cur, t_adj, self.tb_low, t_low, "    ")
                         run = Run.off
                     else:
-                        run = Run.wait_flow  ## XXX instead: off = wait_time?
+                        run = Run.wait_time  ## XXX instead: off = wait_time? # wait_flow
                     continue
 
             elif run == Run.down:  # wait for outflow-inflow<2 for n seconds, cool down
@@ -1163,13 +1194,13 @@ class Data:
             l_buffer, i_buffer = await self.pid.buffer(self.tb_low, t=self.time, split=True)
             l_limit, i_limit = await self.pid.limit(self.t_out, t=self.time, split=True)
 
-            if cm_heat and tw_low <= th_low:
+            if True or cm_heat and tw_low <= th_adj:
                 w = val2pos(t_adj - self.cfg.adj.more, t_cur, t_adj)
             else:
-                # if no heating OR the heating req is lower than tha water's,
+                # if no heating OR the heating req is lower than the water's,
                 # don't try steady-state mode.
                 # TODO refine steady-state instead
-                w = 0
+                w = -1
             l_buf = pos2val(l_limit, w, l_buffer, clamp=True)
             lim = min(l_buf, l_limit, l_load)
             self.state.scaled_low += (lim - self.state.scaled_low) * (
@@ -1187,14 +1218,15 @@ class Data:
                     # *(f"{x :6.3f}" for x in i_pump),
                     f"lim{'=' if lim == l_limit else '_'}{l_limit :.3f}",
                     f"load{'=' if lim == l_load else '_'}{l_load :.3f}",
-                    f"buf{'=' if lim == l_buf else '_'}{l_buffer :.3f}",
+                    f"buf{'=' if lim == l_buf else '_'}{l_buf :.3f}",
                     # *(f"{x :6.3f}" for x in i_pump),
                     # *(f"{x :6.3f}" for x in i_buffer),
-                    *(f"{x :6.3f}" for x in i_load),
+                    #*(f"{x :6.3f}" for x in i_load),
+                    f"w={w :.2f} lb={l_buffer :.2f}",
                 )
                 print(*pr)
 
-                # suppores set-but-not-used warnings
+                # suppress set-but-not-used warnings
                 i_load, i_buffer, i_limit, i_pump  # noqa:B018
 
             # l_buffer is disregarded when the buffer head is too far
@@ -1206,6 +1238,7 @@ class Data:
                 f"lim={lim:.2f}",
                 f"cur={t_cur :.1f}",
                 f"hlow={th_low :.1f}",
+                f"hadj={th_adj :.1f}",
                 f"wlow={tw_low :.1f}",
                 f"buf={t_buffer :.1f}",
                 # f"off={t_set_off :.1f}",
@@ -1262,8 +1295,8 @@ class Data:
         """run the pellet burner when it's too cold for the heat pump"""
         task_status.started()
 
-        while self.state.get("t_pellet_on", None) is None:
-            await self.wait()
+        if self.state.get("t_pellet_on", None) is None:
+            self.state.t_pellet_on = (await self.cl.get(self.cfg.cmd.pellet.wanted)).value
 
         t_on = self.state.t_pellet_on
         if not isinstance(t_on, bool):
@@ -1347,7 +1380,7 @@ class Data:
                         # f"Pump={l_pump :.3f}",
                         # *(f"{x :6.3f}" for x in i_pump),
                         f"load{'=' if lim == l_load else '_'}{l_load :.3f}",
-                        f"buf{'=' if lim == l_buf else '_'}{l_buffer :.3f}",
+                        f"buf{'=' if lim == l_buffer else '_'}{l_buffer :.3f}",
                         f"avg_h={self.state.avg_heat :.1f}",
                         f"{self.state.avg_heat-self.state.avg_heat_t :.1f} ",
                     )
@@ -1432,9 +1465,6 @@ class Data:
         """set the goal for heating"""
         cf = self.cfg.adj.curve
 
-        def vt(tau, ti):
-            return ti + (cf.max - ti) * pow((ti - tau) / (ti - cf.min), 1 / cf.exp)
-
         locks = attrdict(day=False, night=False)
         dest = cf.dest
         t_cur = None
@@ -1472,7 +1502,7 @@ class Data:
                 elif locks.night:
                     dest = cf.night.dest
 
-                ht = vt(t_cur, dest)
+                ht = vt(t_cur, dest, cf)
                 logger.debug("HZ: %.1f %.1f", ht, t_cur)
                 await self.cl_set(cf.setting, int(ht + 0.8), idem=True)
                 self.heat_dest = ht
@@ -1523,7 +1553,7 @@ class Data:
                     self.t_ext_avg = t_cur = m.value
                 await _upd()
 
-    async def handle_flow(self):
+    async def handle_flow(self, use_min=False):
         """
         Flow handler while not operational
         """
@@ -1537,6 +1567,8 @@ class Data:
             "      ",
         )
         res = max(l_flow, l_temp)
+        if use_min:
+            res = max(res, self.cfg.misc.de_ice.min)
         # self.pid.flow.move_to(self.r_flow, res, t=self.time)
         # self.pid.pump.move_to(self.t_out, res, t=self.time)
         await self.set_flow_pwm(res)
@@ -1666,6 +1698,9 @@ class Data:
         cfg = self._cfg
         async with anyio.create_task_group() as tg:
             await tg.start(self._kv, cfg.cmd.flow, "c_flow")
+            await tg.start(self._kv, cfg.cmd.bypass.cmd, "c_bypass")
+            await tg.start(self._kv, cfg.cmd.bypass.mode, "c_bypass_mode")
+            await tg.start(self._kv, cfg.cmd.bypass.power, "c_bypass_power")
             await tg.start(self._kv, cfg.cmd.wp, "cm_wp")
             await tg.start(self._kv, cfg.cmd.heat, "cm_heat")
             await tg.start(self._kv, cfg.cmd.pellet.run, "cm_pellet")
@@ -1730,6 +1765,7 @@ class Data:
                 await self.wait()
 
         await fkv("c_flow")
+        await fkv("c_bypass")
         await fkv("cm_wp")
         await fkv("cm_heat")
         await fkv("cm_pellet")
@@ -1767,12 +1803,15 @@ class Data:
     async def save(self):
         "save the current state"
         logger.debug("Saving")
-        f = anyio.Path(self.cfg.state)
-        fn = anyio.Path(self.cfg.state + ".n")
-        fs = io.StringIO()
-        yprint(self.state, fs)
-        await fn.write_text(fs.getvalue())
-        await fn.rename(f)
+        if isinstance(self.cfg.state,Path):
+            await self.cl.set(self.cfg.state, value=self.state)
+        else:
+            f = anyio.Path(self.cfg.state)
+            fn = anyio.Path(self.cfg.state + ".n")
+            fs = io.StringIO()
+            yprint(self.state, fs)
+            await fn.write_text(fs.getvalue())
+            await fn.rename(f)
 
 
     async def run_solvis_mon(self, *, task_status=anyio.TASK_STATUS_IGNORED):
@@ -1890,9 +1929,22 @@ async def solvis_mon(obj):
 async def run(obj, record, force_on, no_save):
     "Heat pump controller. Designed to run continuously"
     async with open_client(**mcfg.kv) as cl:
+        d = None
         try:
             async with anyio.create_task_group() as tg:
-                d = Data(obj.cfg, cl, record=record, no_op=no_save)
+                try:
+                    if isinstance(obj.cfg.state,Path):
+                        state = await cl.get(obj.cfg.state)
+                        try:
+                            state = state.value
+                        except AttributeError:
+                            state = None
+                    else:
+                        with open(obj.cfg.state) as sf:
+                            state = yload(sf, attr=True)
+                except OSError:
+                    state=None
+                d = Data(obj.cfg, cl, record=record, no_op=no_save, state=state)
                 d.force_on = force_on
 
                 await tg.start(d.run_init)
@@ -1911,11 +1963,12 @@ async def run(obj, record, force_on, no_save):
                     await tg.start(d.saver)
                 await d.run_pump()
         finally:
-            with anyio.fail_after(30, shield=True):
-                async with anyio.create_task_group() as tg:
-                    await tg.start(d.run_init)
-                    await d.off()
-                    tg.cancel_scope.cancel()
+            if d is not None:
+                with anyio.fail_after(30, shield=True):
+                    async with anyio.create_task_group() as tg:
+                        await tg.start(d.run_init)
+                        await d.off()
+                        tg.cancel_scope.cancel()
 
 
 @cli.command
@@ -1968,6 +2021,11 @@ async def off(obj):
         await d.off()
         tg.cancel_scope.cancel()
 
+def vt(tau, ti, cf):
+    if tau>=ti:
+        return ti
+    return ti + (cf.max - ti) * pow((ti - tau) / (ti - cf.min), 1 / cf.exp)
+
 
 @cli.command
 @click.pass_obj
@@ -1977,8 +2035,5 @@ async def curve(obj):
 
     cf = obj.cfg.adj.curve
 
-    def vt(tau, ti):
-        return ti + (cf.max - ti) * pow((ti - tau) / (ti - cf.min), 1 / cf.exp)
-
     for t in range(cf.min, cf.night.dest):
-        print(f"{t :3d} {vt(t,cf.dest) :.1f} {vt(t,cf.night.dest) :.1f}")
+        print(f"{t :3d} {vt(t,cf.dest,cf) :.1f} {vt(t,cf.night.dest,cf) :.1f}")

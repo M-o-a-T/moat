@@ -126,6 +126,10 @@ output:
         pin: 4
         freq: 200
         path: !P heat.s.pump.pid
+        inverted: false
+        override:
+            flag: !P home.ass.state.input_boolean.test_override_on.state
+            val: !P home.ass.state.input_number.test_override_pct.state
 sensor:
     pump:
         in: !P heat.s.pump.temp.in   # t_in
@@ -2032,19 +2036,125 @@ async def pwm(obj):
             tg.start_soon(_run_pwm, cl, k, p)
 
 
+class t_iter:
+    def __init__(self, interval):
+        self.interval = interval
+
+    def time(self):
+        return time.monotonic()
+
+    async def sleep(self, dt):
+        await anyio.sleep(max(dt,0))
+
+    def __aiter__(self):
+        self._t = self.time()-self.interval
+        return self
+
+    def __anext__(self):
+        t = self.time()
+        dt = self._t - t
+        if dt > 0:
+            self._t += self.interval
+        else:
+            self._t = t+self.interval
+            dt = 0
+        return self.sleep(dt)
+
+
+#output:
+#    flow:
+#        pin: 4
+#        freq: 200
+#        path: !P heat.s.pump.pid
+#        override:
+#            flag: !P home.ass.state.input_boolean.test_override_on.state
+#            val: !P home.ass.state.input_number.test_override_pct.state
+
+#           GPIO.output(heat_pin, False)
+#           GPIO.setup(heat_pin, GPIO.OUT)
+
 async def _run_pwm(cl, k, v):
     GPIO.setup(v.pin, GPIO.OUT)
-    port = GPIO.PWM(v.pin, v.get("freq", 200))
-    port.start(0)
-    async with cl.watch(v.path, max_depth=0, fetch=True) as msgs:
-        async for m in msgs:
-            if m.get("state", "") == "uptodate":
-                pass
-            elif "value" not in m:
-                logger.warning("Unknown: %s:%r: %r", k, v, m)
-            else:
-                logger.info("Value: %s:%r", k, m.value)
-                port.ChangeDutyCycle(100 * m.value)
+#   port = GPIO.PWM(v.pin, v.get("freq", 200))
+#   port.start(0)
+
+    xover=False
+    xval=0
+    val=0
+
+    dly = False
+    lpct=-1
+    def upd():
+        nonlocal dly,lpct
+
+        pct = xval if xover else val
+        if lpct != pct:
+            lpct = pct
+            logger.info("Value: %s: %.3f", k, pct)
+        if pct < 0.01:
+            dly=False
+        elif pct > 0.99:
+            dly=True
+        else:
+            dly = pct / v.freq
+
+    async def mon_flag(*, task_status):
+        nonlocal xover
+        async with cl.watch(v.override.flag, max_depth=0, fetch=True) as msgs:
+            async for m in msgs:
+                if m.get("state", "") == "uptodate":
+                    task_status.started()
+                    continue
+                if "value" not in m:
+                    continue
+                xover=m.value
+                upd()
+
+    async def mon_pct(*, task_status):
+        nonlocal xval
+        async with cl.watch(v.override.val, max_depth=0, fetch=True) as msgs:
+            async for m in msgs:
+                if m.get("state", "") == "uptodate":
+                    task_status.started()
+                    continue
+                if "value" not in m:
+                    continue
+                xval=m.value
+                upd()
+    
+    async def mon_value(*, task_status):
+        nonlocal val
+        async with cl.watch(v.path, max_depth=0, fetch=True) as msgs:
+            async for m in msgs:
+                if m.get("state", "") == "uptodate":
+                    task_status.started()
+                    continue
+                if "value" not in m:
+                    continue
+                val=m.value
+                upd()
+    
+    async with anyio.create_task_group() as tg:
+        GPIO.setup(v.pin, GPIO.OUT)
+        GPIO.output(v.pin, False)
+        inv = v.get("inverted", False)
+
+        if "override" in v:
+            await tg.start(mon_flag)
+            await tg.start(mon_pct)
+        await tg.start(mon_value)
+
+        try:
+            async for _ in t_iter(1/v.freq):
+                if dly is not False:
+                    GPIO.output(v.pin, not inv)
+                    if dly is True:
+                        continue
+                    await anyio.sleep(dly)
+                GPIO.output(v.pin, inv)
+        finally:
+            GPIO.output(v.pin, inv)
+
 
 
 @cli.command

@@ -101,7 +101,9 @@ adj:
 
         # threshold for heating. If pump PWM is zero, use buffer temperature.
         # If at least .pwm, use heat pump output.
-        pwm: 0.8
+        # Also adjust the target by pre_heat.
+        pwm: 0.7
+        pre_heat: -1
     curve:
         dest: 21
         max: 75
@@ -1090,15 +1092,16 @@ class Data:
             elif heat_off:
                 self.log_hc(8)
             elif (
+
                 self.tb_heat
                 if self.m_switch # or self.state.t_pellet_on
                 else pos2val(
-                    self.tb_heat,
+                    self.tb_heat,  # buffer heat
                     (self.state.last_pwm or 0) / self.cfg.adj.low.pwm,
-                    self.t_out,
+                    self.t_out,  # flow put
                     clamp=True,
                 )
-            ) < self.c_heat:
+            ) < self.c_heat+self.cfg.adj.low.pre_heat:
                 if run != Run.run or self.m_switch:
                     self.log_hc(
                         9, self.m_switch or self.state.t_pellet_on, self.tb_heat, self.c_heat

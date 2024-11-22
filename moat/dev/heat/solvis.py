@@ -550,7 +550,7 @@ class Data:
         try:
             return self.TS
         except AttributeError:
-            return time.monotonic()
+            return time.time()
 
     @property
     def cl(self):

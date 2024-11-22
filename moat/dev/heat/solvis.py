@@ -85,6 +85,14 @@ adj:
         low: 1.5  # PID controller
         wp: 0.5  # PID controller
       max: 75
+      startup:
+        buf: 5  # add to max buffer temp
+        patch:
+          path:
+          - !P heat.s.pellets.aux:1.goal
+          - !P heat.s.pellets.aux:2.goal
+          - !P heat.s.pellets.aux.r-min.goal
+          stop: 65
     low:
         water: 1
         heat: .5
@@ -167,6 +175,8 @@ lim:
         heat:
           delta: 1.5  #
           scale: .1
+      temp:
+        min: 60  # ask at least for this temperature
     times:
        start: 200
        ice: 900
@@ -926,7 +936,19 @@ class Data:
             self.t_nom = t_nom
             self.t_low = t_low
             self.t_limit = t_limit
-            await self.cl_set(self.cfg.cmd.pellet.temp, tp_limit, idem=True)
+
+            tplim = tp_limit
+            # increase temp settings when starting up
+            if self.state.t_pellet_on is not True:
+                try:
+                    tplim = min(self.cfg.adj.max_pellet, self.cfg.adj.pellet.startup.buf+max(self.tb_water,self.tb_heat))
+                    for p in self.cfg.adj.pellet.startup.patch.path:
+                        await self.cl_set(p, tplim, idem=True)
+                except AttributeError:
+                    pass
+
+            await self.cl_set(self.cfg.cmd.pellet.temp,
+                    max(self.cfg.lim.pellet.temp.min, tplim), idem=True)
 
             # on/off thresholds
             # t_set_on = (t_low + t_adj) / 2  # top
@@ -1325,6 +1347,11 @@ class Data:
                 if not isinstance(self.state.t_pellet_on, bool):
                     if self.time - self.state.t_pellet_on > 1800:
                         self.state.t_pellet_on = True
+                        try:
+                            for p in self.cfg.adj.pellet.startup.patch.path:
+                                await self.cl_set(p, self.cfg.adj.pellet.startup.patch.stop, idem=True)
+                        except AttributeError:
+                            pass
 
                 t = self.time
                 t_load = min(self.t_adj + self.cfg.adj.pellet.load, self.cfg.adj.pellet.max)
@@ -1391,7 +1418,12 @@ class Data:
                         print(*pr, int(self.state.t_pellet_on - self.time), "  ")
                 o_r = r
 
-                await self.cl_set(self.cfg.cmd.pellet.load, lim, idem=True)
+                if self.m_pellet_state in (31,32,):
+                    xlim = 1
+                else:
+                    xlim = lim
+
+                await self.cl_set(self.cfg.cmd.pellet.load, xlim, idem=True)
                 self.pellet_load = lim
 
                 tw_nom = self.c_water

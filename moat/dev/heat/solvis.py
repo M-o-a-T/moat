@@ -220,6 +220,7 @@ cmd:
       pellet: !P home.ass.dyn.switch.heizung.pellet_auto_mode.cmd     # m_passthru_pellet
 
 feedback:
+    wp: !P home.ass.dyn.switch.heizung.wp.state
     bypass: !P home.ass.dyn.switch.heizung.wp_bypass.state
     main: !P home.ass.dyn.switch.heizung.wp.state
     heat: !P home.ass.dyn.switch.heizung.main.state

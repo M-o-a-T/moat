@@ -650,7 +650,7 @@ class Data:
                     if self.c_flow != cfl:
                         print("* FLOW",self.c_flow)
                         cfl = self.c_flow
-                    await self.cl_set(self.cfg.output.flow.path, value=self.c_flow)
+                    await self.set_flow_pwm(self.c_flow)
 
                     if self.c_bypass_mode != cmode:
                         print("* MODE",self.c_bypass_mode)
@@ -850,6 +850,7 @@ class Data:
                 if cm_wp is not False:
                     cm_wp = False
                     await self.cl_set(self.cfg.feedback.wp, self.cm_wp)
+
                     if run != Run.off:
                         print("OFF 7    ")
                     run = Run.off

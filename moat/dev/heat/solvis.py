@@ -1345,7 +1345,7 @@ class Data:
                 # starting up
                 continue
 
-            if self.m_pellet_state in (0, 1, 3, 5) or 21 <= self.m_pellet_state <= 35:
+            if self.m_pellet_state in (0, 1, 3, 5, 6,7,8,9) or 21 <= self.m_pellet_state <= 35 or self.m_pellet_state >= 43:
                 self.state.t_pellet_on = False
                 self.pid.load.Kd = self.cfg.pid.load.d
                 self.pid.load.Tf = self.cfg.pid.load.tf

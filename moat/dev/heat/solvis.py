@@ -174,6 +174,7 @@ setting:
 
 lim:
     pellet:
+      t_min: 10000  # run approx 3h minimum
       stop:
         buffer: -1
       start:
@@ -1353,7 +1354,7 @@ class Data:
                 self.pid.load.Tf = self.cfg.adj.pellet.pid.load.tf
 
                 if not isinstance(self.state.t_pellet_on, bool):
-                    if self.time - self.state.t_pellet_on > 1800:
+                    if self.time - self.state.t_pellet_on > self.cfg.lim.pellet.t_min:
                         self.state.t_pellet_on = True
                         try:
                             for p in self.cfg.adj.pellet.startup.patch.path:
@@ -1488,6 +1489,7 @@ class Data:
                 and self.tb_heat > self.t_low
                 and self.t_ext_avg is not None
                 and self.t_ext_avg > self.cfg.misc.pellet.avg_off
+                and isinstance(self.state.t_pellet_on, bool)
             ):
                 run = False
                 self.state.t_pellet_on = False

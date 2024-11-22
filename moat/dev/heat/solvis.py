@@ -565,6 +565,7 @@ class Data:
     async def cl_set(self, *a, **kw):
         "just calls self.cl.set(), except when running with ``--no-save``"
         if self.no_op:
+            print("SET",a,kw)
             return
         return await self._cl.set(*a, **kw)
 

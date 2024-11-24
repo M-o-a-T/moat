@@ -29,7 +29,7 @@ MoaT's main program loads commands from installed submodules.
 To work with code in this repository (and its subrepos), use the `./mt`
 script instead of the `moat` command that might be installed somewhere.
 This script finds all local submodules and adds them to Python's module
-path, thereby allowng for seamless local work.
+path, thereby allowing for seamless local work.
 
 The `src` submodule contains some useful commands to keep the whole
 submodule structure in sync. The most-used command is `moat src build -c`.

@@ -17,7 +17,7 @@ from ipaddress import (
 
 from moat.util import DProxy, as_proxy, attrdict
 from moat.lib.codec.cbor import Tag
-from moat.util.cbor import StdCBOR
+from moat.util.cbor import StdCBOR, gen_start, gen_stop
 
 as_proxy("_ip4", IPv4Address)
 as_proxy("_ip6", IPv6Address)
@@ -140,3 +140,17 @@ def test_dproxy():
     assert dp["three" == "four"]
     pp = codec.encode(dp)
     assert p == pp
+
+
+def test_tags():
+    t = gen_start("Hello", foo=42)
+    assert t.tag == 55799
+    assert t.value.tag == 1299145044
+    tt = t.value.value
+    assert len(tt[0]) >= 24
+    assert tt[0].rstrip(" ") == "Hello"
+    assert tt[1]["foo"] == 42
+
+    t = gen_stop(bar=123.5)
+    assert t.tag == 1298493254
+    assert t.value["bar"] == 123.5

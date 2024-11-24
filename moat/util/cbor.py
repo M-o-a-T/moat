@@ -22,14 +22,17 @@ from ipaddress import (
 
 # Typing
 from moat.lib.codec import Extension, NoCodecError
-from moat.lib.codec.cbor import Codec, Tag
+from moat.lib.codec.cbor import Codec, Tag, CBOR_TAG_CBOR_FILEHEADER
 from moat.lib.codec.proxy import DProxy, Proxy, name2obj, obj2name, unwrap_obj, wrap_obj
 
 from .path import Path
 
-__all__ = ["std_ext", "StdCBOR"]
+__all__ = ["std_ext", "StdCBOR", "gen_start", "gen_stop"]
 
 std_ext = Extension()
+
+CBOR_TAG_MOAT_FILE_ID = 1299145044  # 'MoaT'
+CBOR_TAG_MOAT_FILE_END = 1298493254  # 'MeoF'
 
 
 class StdCBOR(Codec):
@@ -42,6 +45,25 @@ class StdCBOR(Codec):
 
 
 Codec = StdCBOR
+
+
+def gen_start(text: str, /, **kw) -> Tag:
+    """
+    Generate a MoaT file start tag
+    """
+    if len(text) > 255:
+        raise ValueError("Description too long")
+    # add padding if too short
+    text += " " * (24 - len(text))
+
+    return Tag(CBOR_TAG_CBOR_FILEHEADER, Tag(CBOR_TAG_MOAT_FILE_ID, (text, kw)))
+
+
+def gen_stop(**kw) -> Tag:
+    """
+    Generate a MoaT file stop tag
+    """
+    return Tag(CBOR_TAG_MOAT_FILE_END, kw)
 
 
 @std_ext.encoder(27, DProxy)

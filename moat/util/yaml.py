@@ -32,7 +32,7 @@ try:
     from ansible.vars.hostvars import HostVars, HostVarsVars  # noqa:I001
     from ansible.utils.unsafe_proxy import AnsibleUnsafeText
     from ansible.parsing.yaml.objects import AnsibleUnicode
-except ImportError:
+except (ImportError, EnvironmentError):
     pass
 else:
     SafeRepresenter.add_representer(HostVars, SafeRepresenter.represent_dict)

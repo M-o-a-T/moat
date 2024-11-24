@@ -28,6 +28,17 @@ Emitter = yaml.emitter.Emitter
 
 
 SafeRepresenter.add_representer(attrdict, SafeRepresenter.represent_dict)
+try:
+    from ansible.vars.hostvars import HostVars, HostVarsVars
+    from ansible.utils.unsafe_proxy import AnsibleUnsafeText
+    from ansible.parsing.yaml.objects import AnsibleUnicode
+except ImportError:
+    pass
+else:
+    SafeRepresenter.add_representer(HostVars, SafeRepresenter.represent_dict)
+    SafeRepresenter.add_representer(HostVarsVars, SafeRepresenter.represent_dict)
+    SafeRepresenter.add_representer(AnsibleUnsafeText, SafeRepresenter.represent_str)
+    SafeRepresenter.add_representer(AnsibleUnicode, SafeRepresenter.represent_str)
 SafeConstructor.yaml_base_dict_type = attrdict
 
 

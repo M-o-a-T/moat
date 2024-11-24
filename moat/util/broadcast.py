@@ -19,8 +19,6 @@ from typing import TYPE_CHECKING, cast
 if TYPE_CHECKING:
     from typing import Self, Literal
 
-    reveal_type(NotGiven)
-
 # TODO build something nicer
 try:
     import logging

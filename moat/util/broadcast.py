@@ -4,20 +4,18 @@ Broadcasting support
 
 from __future__ import annotations
 
-from attrs import define, field
-
 from weakref import WeakSet
 
-from .compat import EndOfStream, WouldBlock
+from attrs import define, field
 
+from .compat import EndOfStream, WouldBlock
 from .impl import NotGiven
 from .queue import Queue
-
 
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
-    from typing import Self, Literal
+    from typing import Literal, Self
 
 # TODO build something nicer
 try:

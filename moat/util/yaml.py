@@ -29,7 +29,7 @@ Emitter = yaml.emitter.Emitter
 
 SafeRepresenter.add_representer(attrdict, SafeRepresenter.represent_dict)
 try:
-    from ansible.vars.hostvars import HostVars, HostVarsVars
+    from ansible.vars.hostvars import HostVars, HostVarsVars  # noqa:I001
     from ansible.utils.unsafe_proxy import AnsibleUnsafeText
     from ansible.parsing.yaml.objects import AnsibleUnicode
 except ImportError:

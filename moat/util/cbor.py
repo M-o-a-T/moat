@@ -22,7 +22,7 @@ from ipaddress import (
 
 # Typing
 from moat.lib.codec import Extension, NoCodecError
-from moat.lib.codec.cbor import Codec, Tag, CBOR_TAG_CBOR_FILEHEADER
+from moat.lib.codec.cbor import CBOR_TAG_CBOR_FILEHEADER, Codec, Tag
 from moat.lib.codec.proxy import DProxy, Proxy, name2obj, obj2name, unwrap_obj, wrap_obj
 
 from .path import Path

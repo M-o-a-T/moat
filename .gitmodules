@@ -49,3 +49,6 @@
 [submodule "lib/cmd"]
 	path = lib/cmd
 	url = git://git.smurf.noris.de/moat-lib-cmd.git
+[submodule "lib/codec"]
+	path = lib/codec
+	url = git://git.smurf.noris.de/moat-lib-codec.git

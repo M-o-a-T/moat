@@ -132,7 +132,10 @@ def drop_proxy(p):
 
 
 def name2obj(
-    name, obj: object | type = NotGiven, replace: bool = False, factory: Callable | None = None,
+    name,
+    obj: object | type = NotGiven,
+    replace: bool = False,
+    factory: Callable | None = None,
 ):
     """
     Translates Proxy name to referred object

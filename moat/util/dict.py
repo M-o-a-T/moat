@@ -130,7 +130,7 @@ class attrdict(dict):
                 return default
         return val
 
-    def _update(self, path, value=None, skip_empty=True):
+    def _update(self, path, value=None, skip_empty=False):
         """
         Set some sub-item's value, possibly merging dicts.
         Items set to 'NotGiven' are deleted.
@@ -140,7 +140,7 @@ class attrdict(dict):
         if isinstance(path, str):
             raise TypeError(f"Must be a Path/list, not {path!r}")
         if skip_empty:
-            path = [p for p in path if p]
+            path = [p for p in path if p != ""]
         val = type(self)(**self)
         v = val
         if not path:

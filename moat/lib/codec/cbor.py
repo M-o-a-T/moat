@@ -104,7 +104,7 @@ CBOR_TAG_NEGBIGNUM = const(3)  # big endian byte string follows
 # CBOR_TAG_BASE64 = const(34)
 # CBOR_TAG_REGEX = const(35)
 # CBOR_TAG_MIME = const(36) # following text is MIME message, headers, separators and all
-# CBOR_TAG_CBOR_FILEHEADER = const(55799) # can open a file with 0xd9d9f7
+CBOR_TAG_CBOR_FILEHEADER = const(55799)  # can open a file with 0xd9d9f7
 
 _CBOR_TAG_BIGNUM_BYTES = struct.pack("B", CBOR_TAG | CBOR_TAG_BIGNUM)
 _CBOR_TAG_NEGBIGNUM_BYTES = struct.pack("B", CBOR_TAG | CBOR_TAG_NEGBIGNUM)

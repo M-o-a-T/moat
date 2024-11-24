@@ -136,6 +136,7 @@ sensor:
         out: !P heat.s.pump.temp.out # t_out
         flow: !P heat.s.pump.flow    # r_flow: flow rate
         ice: !P heat.s.pump.de_ice   # m_ice
+        state: !P heat.s.pump.state
     buffer:
         top: !P heat.s.buffer.temp.water   # tb_water
         heat: !P heat.s.buffer.temp.heat   # tb_heat
@@ -827,6 +828,7 @@ class Data:
 
             orun = run
             self.state.run = int(run)
+            await self.cl.set(self.cfg.sensor.pump.state, self.state.run, idem=True)
 
             # When de-icing starts, shut down (for now).
             if self.m_ice:

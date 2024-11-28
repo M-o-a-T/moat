@@ -8,15 +8,17 @@ longer Wednesday 8 am something".
 
 from __future__ import annotations
 
+import anyio
 import datetime as dt
-from calendar import monthrange
 import time
+from calendar import monthrange
 
 from . import attrdict
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
-    from typing import Awaitable
+    from collections.abc import Awaitable
 
 startup = dt.datetime.now().astimezone()
 _log = None
@@ -27,18 +29,22 @@ def now(force=False):  # noqa:ARG001 pylint: disable=unused-argument
     "current time"
     return dt.datetime.now().astimezone()
 
+
 class t_iter:
+    "an iterator that returns on well-defined time intervals"
     def __init__(self, interval):
         self.interval = interval
 
     def time(self):
+        "get-time hook"
         return time.monotonic()
 
     async def sleep(self, dt):
-        await anyio.sleep(max(dt,0))
+        "sleep hook"
+        await anyio.sleep(max(dt, 0))
 
     def __aiter__(self):
-        self._t = self.time()-self.interval
+        self._t = self.time() - self.interval
         return self
 
     def __anext__(self) -> Awaitable[None]:
@@ -47,9 +53,10 @@ class t_iter:
         if dt > 0:
             self._t += self.interval
         else:
-            self._t = t+self.interval
+            self._t = t + self.interval
             dt = 0
         return self.sleep(dt)
+
 
 units = (
     (365 * 24 * 60 * 60, "yr"),

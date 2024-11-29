@@ -20,7 +20,15 @@ from moat.lib.codec.proxy import name2obj
 
 from .path import Path
 
-__all__ = ["yload", "yprint", "yformat", "yaml_repr", "yaml_parse", "add_repr"]
+__all__ = [
+    "yload",
+    "yprint",
+    "yformat",
+    "yaml_repr",
+    "yaml_parse",
+    "add_repr",
+    "load_ansible_repr",
+]
 
 SafeRepresenter = yaml.representer.SafeRepresenter
 SafeConstructor = yaml.constructor.SafeConstructor
@@ -28,25 +36,18 @@ Emitter = yaml.emitter.Emitter
 
 
 SafeRepresenter.add_representer(attrdict, SafeRepresenter.represent_dict)
-try:
-    from ansible.errors import AnsibleError
+
+
+def load_ansible_repr():
+    "Call me if you're using `moat.util` in conjunction with Ansible."
     from ansible.parsing.yaml.objects import AnsibleUnicode
     from ansible.utils.unsafe_proxy import AnsibleUnsafeText
     from ansible.vars.hostvars import HostVars, HostVarsVars
-except (ImportError, AnsibleError):
-    try:
-        AnsibleError
-    except NameError:
 
-        class AnsibleError(Exception):
-            pass
-
-else:
     SafeRepresenter.add_representer(HostVars, SafeRepresenter.represent_dict)
     SafeRepresenter.add_representer(HostVarsVars, SafeRepresenter.represent_dict)
     SafeRepresenter.add_representer(AnsibleUnsafeText, SafeRepresenter.represent_str)
     SafeRepresenter.add_representer(AnsibleUnicode, SafeRepresenter.represent_str)
-SafeConstructor.yaml_base_dict_type = attrdict
 
 
 def str_presenter(dumper, data):

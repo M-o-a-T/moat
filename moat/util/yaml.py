@@ -34,7 +34,13 @@ try:
     from ansible.utils.unsafe_proxy import AnsibleUnsafeText
     from ansible.vars.hostvars import HostVars, HostVarsVars
 except (ImportError, AnsibleError):
-    pass
+    try:
+        AnsibleError
+    except NameError:
+
+        class AnsibleError(Exception):
+            pass
+
 else:
     SafeRepresenter.add_representer(HostVars, SafeRepresenter.represent_dict)
     SafeRepresenter.add_representer(HostVarsVars, SafeRepresenter.represent_dict)

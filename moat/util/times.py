@@ -32,6 +32,7 @@ def now(force=False):  # noqa:ARG001 pylint: disable=unused-argument
 
 class t_iter:
     "an iterator that returns on well-defined time intervals"
+
     def __init__(self, interval):
         self.interval = interval
 

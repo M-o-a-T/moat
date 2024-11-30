@@ -148,11 +148,12 @@ class NoopCodec(BaseCodec):
 
     @staticmethod
     def encode(data):
-        assert isinstance(data, (bytearray, bytes, memoryview))
+        assert isinstance(data, (bytearray, bytes, memoryview)), data
         return data
 
     @staticmethod
     def decode(data):
+        assert isinstance(data, (bytearray, bytes, memoryview)), data
         return data
 
 

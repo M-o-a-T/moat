@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
@@ -9,12 +11,13 @@ import logging
 from collections import namedtuple
 
 import anyio
-import pkg_resources
 
 try:
     from contextlib import asynccontextmanager
 except ImportError:
     from async_generator import asynccontextmanager
+
+from importlib.metadata import entry_points
 
 from functools import partial
 
@@ -52,7 +55,7 @@ class PluginManager:
     def _load_plugins(self, namespace):
         self.logger.debug("Loading plugins for namespace %s", namespace)
         plugs = self.context.config.get("plugins", None)
-        for ep in pkg_resources.iter_entry_points(group=namespace):
+        for ep in entry_points(group=namespace):
             if plugs is not None and ep.name not in plugs:
                 continue
             plugin = self._load_plugin(ep)

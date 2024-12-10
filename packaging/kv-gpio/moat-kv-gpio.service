@@ -1,0 +1,22 @@
+[Unit]
+Description=MoaT-KV GPIO server
+After=moat-kv.service
+# Requires=moat-kv.service
+# only if moat-kv runs on the same host
+
+ConditionFileNotEmpty=/etc/moat/moat.cfg
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/moat kv gpio monitor $NAME
+
+EnvironmentFile=/etc/moat/kv.env
+
+TimeoutSec=300
+WatchdogSec=10
+
+Restart=always
+RestartSec=30

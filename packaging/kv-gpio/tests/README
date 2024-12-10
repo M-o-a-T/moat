@@ -1,0 +1,5 @@
+You need to run "test.sh" as root, in order to load the gpio mock driver.
+
+You also need to do it on a system that has the "gpio-mockup" kernel module.
+Today (mid-2020) this is a Raspberry Pi, or a self-comiled kernel with the
+GPIO_MOCKUP module enabled.

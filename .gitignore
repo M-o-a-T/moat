@@ -20,10 +20,8 @@ htmlcov/
 .installed.cfg
 /lib/
 /lib64/
-# Local test tools
 *.log
 *.mo
-# Mr Developer
 .mr.developer.cfg
 nosetests.xml
 /parts/
@@ -36,7 +34,6 @@ __pycache__/
 .pydevproject
 .pytest_cache
 .Python
-# Rope
 .ropeproject
 /sdist/
 *.so

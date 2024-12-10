@@ -4,9 +4,6 @@
 [submodule "ext/ow"]
 	path = ext/ow
 	url = git://git.smurf.noris.de/moat-kv-ow.git
-[submodule "ext/gpio"]
-	path = ext/gpio
-	url = git://git.smurf.noris.de/moat-kv-gpio.git
 [submodule "ext/wago"]
 	path = ext/wago
 	url = git://git.smurf.noris.de/moat-kv-wago.git

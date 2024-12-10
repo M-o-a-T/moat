@@ -1,4 +1,3 @@
-/debian/
 .#*
 \#*
 /build/
@@ -9,6 +8,7 @@
 .coverage.*
 /.coverage
 /coverage.xml
+/debian/
 /dist/
 docs/_build/
 docs/build/
@@ -17,6 +17,7 @@ docs/build/
 /*.egg-info/
 /.eggs/
 /eggs/
+||||||| empty tree
 /.env
 /env/
 /ENV/
@@ -28,8 +29,6 @@ docs/build/
 *.mo
 /obj/
 /parts/
-pip-delete-this-directory.txt
-pip-log.txt
 *.pot
 /.pybuild/
 __pycache__/
@@ -37,6 +36,8 @@ __pycache__/
 /.pytest_cache/
 /sdist/
 *.so
+*.swo
+*.swp
 /tests/plugins/test.db
 .tox/
 /var/

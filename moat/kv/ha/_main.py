@@ -140,7 +140,7 @@ _types = {
         _payloads=True,
     ),
     "binary_sensor": attrdict(
-        state=(str, "‹prefix›/binary_switch/‹path›/state", "topic for state", "state_topic"),
+        state=(str, "‹prefix›/binary_sensor/‹path›/state", "topic for state", "state_topic"),
         unit=(str, None, "Unit of measurement", "unit_of_measurement"),
         icon=(str, None, "Device icon", "icon"),
         _payload=True,
@@ -155,7 +155,7 @@ _types = {
         max=(float, None, "maximum value", "max"),
     ),
     "sensor": attrdict(
-        state=(str, "‹prefix›/binary_switch/‹path›/state", "topic for state", "state_topic"),
+        state=(str, "‹prefix›/sensor/‹path›/state", "topic for state", "state_topic"),
         unit=(str, None, "Unit of measurement", "unit_of_measurement"),
         cls=(str, None, "Device class", "device_class"),
         icon=(str, None, "Device icon", "icon"),

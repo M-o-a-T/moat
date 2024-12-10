@@ -485,6 +485,10 @@ class InputRegisters(TypeCodec):
     key = "i"
     encoder = ReadInputRegistersRequest
     decoder = ReadInputRegistersResponse
+    encoder_s = WriteSingleRegisterRequest
+    decoder_s = WriteSingleRegisterResponse
+    encoder_m = WriteMultipleRegistersRequest
+    decoder_m = WriteMultipleRegistersResponse
 
 
 class DataBlock(dict, BaseModbusDataBlock):

@@ -1,3 +1,4 @@
+
 *~
 .#*
 \#*
@@ -13,6 +14,7 @@
 /coverage.xml
 /*.deb
 /debian/
+# Debian packaging
 /dist/
 docs/_build/
 docs/build/
@@ -32,6 +34,7 @@ docs/build/
 *.log
 *.manifest
 *.mo
+/moat_lib_cmd.egg-info/
 /obj/
 /parts/
 *.pot

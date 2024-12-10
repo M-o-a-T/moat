@@ -1,0 +1,77 @@
+build-system:
+  build-backend: setuptools.build_meta
+  requires:
+  - setuptools
+  - wheel
+  - setuptools-scm
+project:
+  classifiers:
+  - 'Intended Audience :: Developers'
+  - 'Programming Language :: Python :: 3'
+  - 'Framework :: AsyncIO'
+  - 'Framework :: Trio'
+  - 'Framework :: AnyIO'
+  - 'Intended Audience :: Developers'
+  - 'License :: OSI Approved'
+  - 'Development Status :: 4 - Beta'
+  dependencies:
+  - anyio ~= 3.0
+  dynamic:
+  - version
+  keywords:
+  - MoaT
+  license:
+    file: LICENSE.txt
+  requires-python: '>=3.8'
+  urls:
+    homepage: https://m-o-a-t.org
+  name: SUBNAME
+tool:
+  moat:
+    fixup: |
+        try:
+            toml["tool"]["tox"]["tox"]["envlist"].remove("py39")
+        except(KeyError,ValueError):
+            pass
+  flake8:
+    max-line-length: 99
+    ignore:
+    - W503
+    - E231
+    - E203
+
+  isort:
+    line_length: 99
+    multi_line_output: 3
+    trailing_comma: DELETE
+    profile: black
+  setuptools_scm: {}
+
+  tox:
+    tox:
+      isolated_build: True
+      envlist:
+      - check
+      - py310
+
+    testenv:
+      setenv:
+      - "PYTHONPATH = {env:PYTHONPATH}{:}{toxinidir}"
+      deps:
+      - pytest
+      - trio
+      commands:
+      - python3 -mpytest tests/
+
+    "testenv:check":
+      commands:
+      - black --check moat tests
+      - flake8p moat tests
+      - pylint moat tests
+      deps:
+      - flake8
+      - flake8-pyproject
+      - black
+      - pylint
+      - pytest
+

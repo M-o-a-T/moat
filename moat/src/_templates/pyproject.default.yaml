@@ -1,0 +1,146 @@
+project:
+  authors:
+  - email: matthias@urlichs.de
+    name: Matthias Urlichs
+  classifiers:
+  - 'Intended Audience :: Developers'
+  - 'Programming Language :: Python :: 3'
+  - 'Framework :: AsyncIO'
+  - 'Framework :: Trio'
+  - 'Framework :: Trio'
+  - 'Intended Audience :: Developers'
+  - 'License :: OSI Approved'
+  - 'Development Status :: 4 - Beta'
+  dependencies:
+  - anyio ~= 3.0
+  description: REPLACE ME
+  dynamic:
+  - version
+  keywords:
+  - MoaT
+  license:
+    file: LICENSE.txt
+  name: SUBUNDER
+  readme: README.rst
+  requires-python: '>=3.8'
+  urls:
+    homepage: https://m-o-a-t.org
+    repository: https://github.com/M-o-a-T/SUBNAME
+tool:
+  pytest:
+    ini_options:
+      log_cli_level: DEBUG
+  ruff:
+    lint:
+      select:
+      - ALL
+      ignore:
+      - ANN
+      - PTH
+      - PERF
+      - D105
+      - D107
+      - A003
+      - S101
+      - RUF001
+      - RUF002
+      - PLW1514
+      - D2
+      - D3
+      - D4
+      - T2
+      - FBT
+      - TRY003
+      - EM10
+      - PLR
+      - C
+      - RET50
+      - TD
+      - FIX
+      - N
+      - ERA
+      - BLE001
+      explicit-preview-rules: true
+      flake8-comprehensions:
+        allow-dict-calls-with-keyword-arguments: true
+      flake8-builtins:
+        builtins-ignorelist:
+        - id
+        - help
+      isort:
+        no-lines-before:
+        - future
+        required-imports:
+        - "from __future__ import annotations"
+        section-order:
+        - future
+        - typing
+        - standard-library
+        - first-party
+        - upy
+        - moat
+        - local-folder
+        - third-party
+        extra-standard-library:
+        - pytest
+        - anyio
+        force-to-top:
+        - moat.util
+        sections:
+          moat:
+          - moat
+          upy:
+          - micropython
+          - machine
+          - esp
+          typing:
+          - typing
+    preview: true
+    line-length: 99
+  black:
+    line-length: 99
+  flake8:
+    max-line-length: 99
+    ignore:
+    - E123
+    - E127
+    - E203
+    - E231
+    - E402
+    - E502
+    - E731
+    - F401  # covered by pylint
+    - F841  # covered by pylint
+    - W503
+  setuptools:
+    packages:
+    - SUBDOT
+    package-data:
+      "*": [ "*.yaml" ]
+  setuptools_scm: {}
+  pylint:
+    messages_control:
+      disable:
+      - fixme
+      - invalid-name
+      - no-else-continue
+      - no-else-return
+      - superfluous-parens
+      - too-few-public-methods
+      - too-many-arguments
+      - too-many-branches
+      - too-many-instance-attributes
+      - too-many-locals
+      - too-many-nested-blocks
+      - too-many-return-statements
+      - too-many-statements
+      - ungrouped-imports
+      - unspecified-encoding
+      - use-dict-literal
+      - wrong-import-order
+  tox:
+    tox:
+      isolated_build: True
+      envlist:
+      - check
+

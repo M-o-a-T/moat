@@ -1,0 +1,12 @@
+The code in this repository is part of the MoaT project.
+
+Unless stated otherwise, are files in this repository is licensed under
+the LGPL V3, as published by the FSF at https://www.gnu.org/licenses/lgpl-3.0.html .
+
+In addition to the license's terms, the author(s) respectfully ask all users of
+this code to contribute any bug fixes or enhancements, and to not
+distribute the source code without a link back to https://M-o-a-T.org.
+
+Thank you.
+
+Copyright © of all files: MoaT contributors, 2021 ff., as per the git changelog.

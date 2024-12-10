@@ -1,9 +1,9 @@
 [submodule "lib/serialpacker"]
-	path = lib/serialpacker
+	path = TODO/micro/serialpacker
 	url = https://github.com/M-o-a-T/serialpacker.git
 [submodule "lib/micropython"]
-	path = lib/micropython
+	path = TODO/micro/micropython
 	url = https://github.com/M-o-a-T/micropython.git
 [submodule "lib/mpdb"]
-	path = lib/mpdb
+	path = TODO/micro/mpdb
 	url = git@github.com:bobveringa/mpdb.git

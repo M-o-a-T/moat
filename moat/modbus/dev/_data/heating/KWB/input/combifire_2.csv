@@ -1,0 +1,31 @@
+StartingAddress	NumberOfRegisters	Functions	Type	Parameter	ID	Name	Index	Unit/ValueTable	Values	Min	Max	UserLevel	ExpertLevel
+8197	1	04	s16	KSM.i_kesseltemp_ist.value	589	Boiler temp., actual (value)		1/10°C				read	read
+8198	1	04	s16	KSM.i_kesseltemp_ist.status	589	Boiler temp., actual (status)		system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8199	1	04	s16	KSM.kesseltemp_soll	617	Boiler temperature, setpoint		1/10°C				read	read
+8200	1	04	s16	KSM.DO_Kesselpumpe	608	Boiler pump		system_ein_aus_t	0-Off, 1-On			read	read
+8201	1	04	u16	KSM.kesselpumpe_steuerstufe	758	Boiler pump %		1/10%				read	read
+8202	1	04	s16	KSM.i_ruecklauftemp_ist.value	590	Return flow temp., actual (value)		1/10°C				read	read
+8203	1	04	s16	KSM.i_ruecklauftemp_ist.status	590	Return flow temp., actual (status)		system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8206	1	04	s16	KSM.verbraucher_anforderung	961	Consumer request		ksm_verbraucher_anforderung_t	0-Off, 1-Heat.circ, ... (+2)			read	read
+8208	1	04	s16	KSM.kesselstatus_anzeige	736	Boiler status		ksm_kesselstatus_anzeige_t	0-Off, 1-Measuring mode, ... (+47)			read	read
+8209	2	04	u32	KSM.Betriebsminuten_Summe	729	Full load hours		min				read	read
+8214	1	04	s16	KSM.O2Ist	620	Oxygen, actual		1/10%				read	read
+8215	1	04	s16	KSM.i_flammtemp_ist.value	917	Flame temp., actual (value)		1/10°C				read	read
+8216	1	04	s16	KSM.i_flammtemp_ist.status	917	Flame temp., actual (status)		system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8223	1	04	s16	KSM.Saugzugstufe	626	Induced draught phase		1/10%				read	read
+8224	1	04	s16	KSM.ServiceintervallReststunden	739	Next maintenance in		h				read	read
+8227	1	04	s16	KSM.i_extern1	595	External 1		system_ein_aus_t	0-Off, 1-On			read	read
+8242	1	04	s16	CF2.i_pl_klappe_ist_promille	785	Primary air shutter		1/10%				read	read
+8243	1	04	s16	CF2.i_sl_klappe_ist_promille	787	Secondary air shutter		1/10%				read	read
+8245	1	04	s16	CF2.i_tuer_geschlossen	788	Fill room door		system_ein_aus_t	0-Off, 1-On			read	read
+8246	1	04	s16	CF2.max_befuellgrad_anzeige	859	Maximum fill level		cf2_max_befuellgrad_anzeige_t	0-None, 1-One third, ... (+2)			read	read
+8247	1	04	s16	CF2.o_zuendung_heizung_sh	805	Ignition heating		system_ein_aus_t	0-Off, 1-On			read	read
+9044	1	04	s16	KSM.o_multifunktionsausgang_1	615	Multi-function output 1 (125)		system_ein_aus_t	0-Off, 1-On			read	read
+9046	1	04	s16	KSM.o_multifunktionsausgang_3	1162	Multi-function output 3 (124)		system_ein_aus_t	0-Off, 1-On			read	read
+9495	1	04	s16	KSM.modbus_ueberhitzung	2085	Modbus overheating		system_ein_aus_t	0-Off, 1-On			read	read
+9498	1	04	u16	KSM.i_drehzahl_saugzug	587	Induced draught speed		rpm				read	read
+24581	1	03, 06, 16	s16	KSM.RuecklauftempMin	624	Return flow temperature, minimum		1/10°C		400	700	read	readwrite
+24585	1	03, 06, 16	s16	CF2.kesseltemp_soll_1	793	Boiler temperature, setpoint		1/10°C		600	800	readwrite	readwrite
+24586	1	03, 06, 16	s16	CF2.automatische_Zuendung_SH	853	Automatic ignition Function		cf2_automatische_zuendung_t	0-Off, 1-Selection, ... (+2)			read	readwrite
+24849	1	03, 06, 16	u16	KSM.modbus_lifetick	2069	Modbus Lifetick						read	readwrite
+24850	1	03	u16	KSM.modbus_commit_lifetick	2070	Modbus Commit Lifetick						read	read

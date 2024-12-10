@@ -1,0 +1,421 @@
+StartingAddress	NumberOfRegisters	Functions	Type	Parameter	ID	Name	Index	Unit/ValueTable	Values	Min	Max	UserLevel	ExpertLevel
+8260	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 1.1	1/10°C				read	read
+8261	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 1.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8262	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 1.2	1/10°C				read	read
+8263	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 1.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8264	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 2.1	1/10°C				read	read
+8265	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 2.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8266	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 2.2	1/10°C				read	read
+8267	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 2.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8268	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 3.1	1/10°C				read	read
+8269	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 3.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8270	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 3.2	1/10°C				read	read
+8271	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 3.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8272	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 4.1	1/10°C				read	read
+8273	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 4.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8274	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 4.2	1/10°C				read	read
+8275	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 4.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8276	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 5.1	1/10°C				read	read
+8277	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 5.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8278	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 5.2	1/10°C				read	read
+8279	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 5.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8280	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 6.1	1/10°C				read	read
+8281	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 6.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8282	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 6.2	1/10°C				read	read
+8283	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 6.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8284	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 7.1	1/10°C				read	read
+8285	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 7.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8286	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 7.2	1/10°C				read	read
+8287	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 7.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8288	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 8.1	1/10°C				read	read
+8289	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 8.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8290	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 8.2	1/10°C				read	read
+8291	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 8.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8292	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 9.1	1/10°C				read	read
+8293	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 9.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8294	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 9.2	1/10°C				read	read
+8295	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 9.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8296	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 10.1	1/10°C				read	read
+8297	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 10.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8298	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 10.2	1/10°C				read	read
+8299	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 10.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8300	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 11.1	1/10°C				read	read
+8301	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 11.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8302	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 11.2	1/10°C				read	read
+8303	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 11.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8304	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 12.1	1/10°C				read	read
+8305	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 12.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8306	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 12.2	1/10°C				read	read
+8307	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 12.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8308	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 13.1	1/10°C				read	read
+8309	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 13.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8310	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 13.2	1/10°C				read	read
+8311	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 13.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8312	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 14.1	1/10°C				read	read
+8313	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 14.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8314	1	04	s16	HK.i_vorlauf_temperatur.value	336	Forward flow temp., act. (value)	HC 14.2	1/10°C				read	read
+8315	1	04	s16	HK.i_vorlauf_temperatur.status	336	Forward flow temp., act. (status)	HC 14.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8328	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 1.1	1/10°C				read	read
+8329	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 1.2	1/10°C				read	read
+8330	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 2.1	1/10°C				read	read
+8331	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 2.2	1/10°C				read	read
+8332	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 3.1	1/10°C				read	read
+8333	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 3.2	1/10°C				read	read
+8334	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 4.1	1/10°C				read	read
+8335	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 4.2	1/10°C				read	read
+8336	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 5.1	1/10°C				read	read
+8337	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 5.2	1/10°C				read	read
+8338	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 6.1	1/10°C				read	read
+8339	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 6.2	1/10°C				read	read
+8340	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 7.1	1/10°C				read	read
+8341	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 7.2	1/10°C				read	read
+8342	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 8.1	1/10°C				read	read
+8343	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 8.2	1/10°C				read	read
+8344	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 9.1	1/10°C				read	read
+8345	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 9.2	1/10°C				read	read
+8346	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 10.1	1/10°C				read	read
+8347	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 10.2	1/10°C				read	read
+8348	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 11.1	1/10°C				read	read
+8349	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 11.2	1/10°C				read	read
+8350	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 12.1	1/10°C				read	read
+8351	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 12.2	1/10°C				read	read
+8352	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 13.1	1/10°C				read	read
+8353	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 13.2	1/10°C				read	read
+8354	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 14.1	1/10°C				read	read
+8355	1	04	s16	HK.vorlauf_temperatur_soll	350	Forward flow temp. Setpoint	HC 14.2	1/10°C				read	read
+8365	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 1.1	1/10°C				read	read
+8366	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 1.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8367	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 1.2	1/10°C				read	read
+8368	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 1.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8369	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 2.1	1/10°C				read	read
+8370	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 2.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8371	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 2.2	1/10°C				read	read
+8372	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 2.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8373	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 3.1	1/10°C				read	read
+8374	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 3.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8375	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 3.2	1/10°C				read	read
+8376	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 3.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8377	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 4.1	1/10°C				read	read
+8378	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 4.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8379	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 4.2	1/10°C				read	read
+8380	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 4.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8381	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 5.1	1/10°C				read	read
+8382	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 5.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8383	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 5.2	1/10°C				read	read
+8384	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 5.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8385	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 6.1	1/10°C				read	read
+8386	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 6.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8387	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 6.2	1/10°C				read	read
+8388	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 6.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8389	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 7.1	1/10°C				read	read
+8390	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 7.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8391	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 7.2	1/10°C				read	read
+8392	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 7.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8393	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 8.1	1/10°C				read	read
+8394	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 8.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8395	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 8.2	1/10°C				read	read
+8396	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 8.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8397	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 9.1	1/10°C				read	read
+8398	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 9.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8399	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 9.2	1/10°C				read	read
+8400	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 9.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8401	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 10.1	1/10°C				read	read
+8402	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 10.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8403	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 10.2	1/10°C				read	read
+8404	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 10.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8405	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 11.1	1/10°C				read	read
+8406	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 11.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8407	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 11.2	1/10°C				read	read
+8408	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 11.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8409	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 12.1	1/10°C				read	read
+8410	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 12.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8411	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 12.2	1/10°C				read	read
+8412	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 12.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8413	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 13.1	1/10°C				read	read
+8414	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 13.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8415	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 13.2	1/10°C				read	read
+8416	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 13.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8417	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 14.1	1/10°C				read	read
+8418	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 14.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8419	1	04	s16	HK.i_raum_temperatur.value	335	Room temp., actual (value)	HC 14.2	1/10°C				read	read
+8420	1	04	s16	HK.i_raum_temperatur.status	335	Room temp., actual (status)	HC 14.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8435	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 1.1	1/10°C				read	read
+8436	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 1.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8437	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 1.2	1/10°C				read	read
+8438	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 1.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8439	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 2.1	1/10°C				read	read
+8440	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 2.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8441	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 2.2	1/10°C				read	read
+8442	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 2.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8443	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 3.1	1/10°C				read	read
+8444	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 3.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8445	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 3.2	1/10°C				read	read
+8446	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 3.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8447	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 4.1	1/10°C				read	read
+8448	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 4.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8449	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 4.2	1/10°C				read	read
+8450	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 4.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8451	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 5.1	1/10°C				read	read
+8452	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 5.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8453	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 5.2	1/10°C				read	read
+8454	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 5.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8455	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 6.1	1/10°C				read	read
+8456	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 6.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8457	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 6.2	1/10°C				read	read
+8458	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 6.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8459	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 7.1	1/10°C				read	read
+8460	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 7.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8461	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 7.2	1/10°C				read	read
+8462	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 7.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8463	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 8.1	1/10°C				read	read
+8464	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 8.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8465	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 8.2	1/10°C				read	read
+8466	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 8.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8467	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 9.1	1/10°C				read	read
+8468	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 9.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8469	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 9.2	1/10°C				read	read
+8470	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 9.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8471	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 10.1	1/10°C				read	read
+8472	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 10.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8473	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 10.2	1/10°C				read	read
+8474	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 10.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8475	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 11.1	1/10°C				read	read
+8476	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 11.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8477	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 11.2	1/10°C				read	read
+8478	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 11.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8479	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 12.1	1/10°C				read	read
+8480	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 12.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8481	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 12.2	1/10°C				read	read
+8482	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 12.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8483	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 13.1	1/10°C				read	read
+8484	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 13.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8485	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 13.2	1/10°C				read	read
+8486	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 13.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8487	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 14.1	1/10°C				read	read
+8488	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 14.1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8489	1	04	s16	HK.i_aussen_temperatur.value	334	Actual outside temperature (value)	HC 14.2	1/10°C				read	read
+8490	1	04	s16	HK.i_aussen_temperatur.status	334	Actual outside temperature (status)	HC 14.2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8503	1	04	s16	HK.o_pumpe	340	Pump	HC 1.1	system_ein_aus_t	0-Off, 1-On			read	read
+8504	1	04	s16	HK.o_pumpe	340	Pump	HC 1.2	system_ein_aus_t	0-Off, 1-On			read	read
+8505	1	04	s16	HK.o_pumpe	340	Pump	HC 2.1	system_ein_aus_t	0-Off, 1-On			read	read
+8506	1	04	s16	HK.o_pumpe	340	Pump	HC 2.2	system_ein_aus_t	0-Off, 1-On			read	read
+8507	1	04	s16	HK.o_pumpe	340	Pump	HC 3.1	system_ein_aus_t	0-Off, 1-On			read	read
+8508	1	04	s16	HK.o_pumpe	340	Pump	HC 3.2	system_ein_aus_t	0-Off, 1-On			read	read
+8509	1	04	s16	HK.o_pumpe	340	Pump	HC 4.1	system_ein_aus_t	0-Off, 1-On			read	read
+8510	1	04	s16	HK.o_pumpe	340	Pump	HC 4.2	system_ein_aus_t	0-Off, 1-On			read	read
+8511	1	04	s16	HK.o_pumpe	340	Pump	HC 5.1	system_ein_aus_t	0-Off, 1-On			read	read
+8512	1	04	s16	HK.o_pumpe	340	Pump	HC 5.2	system_ein_aus_t	0-Off, 1-On			read	read
+8513	1	04	s16	HK.o_pumpe	340	Pump	HC 6.1	system_ein_aus_t	0-Off, 1-On			read	read
+8514	1	04	s16	HK.o_pumpe	340	Pump	HC 6.2	system_ein_aus_t	0-Off, 1-On			read	read
+8515	1	04	s16	HK.o_pumpe	340	Pump	HC 7.1	system_ein_aus_t	0-Off, 1-On			read	read
+8516	1	04	s16	HK.o_pumpe	340	Pump	HC 7.2	system_ein_aus_t	0-Off, 1-On			read	read
+8517	1	04	s16	HK.o_pumpe	340	Pump	HC 8.1	system_ein_aus_t	0-Off, 1-On			read	read
+8518	1	04	s16	HK.o_pumpe	340	Pump	HC 8.2	system_ein_aus_t	0-Off, 1-On			read	read
+8519	1	04	s16	HK.o_pumpe	340	Pump	HC 9.1	system_ein_aus_t	0-Off, 1-On			read	read
+8520	1	04	s16	HK.o_pumpe	340	Pump	HC 9.2	system_ein_aus_t	0-Off, 1-On			read	read
+8521	1	04	s16	HK.o_pumpe	340	Pump	HC 10.1	system_ein_aus_t	0-Off, 1-On			read	read
+8522	1	04	s16	HK.o_pumpe	340	Pump	HC 10.2	system_ein_aus_t	0-Off, 1-On			read	read
+8523	1	04	s16	HK.o_pumpe	340	Pump	HC 11.1	system_ein_aus_t	0-Off, 1-On			read	read
+8524	1	04	s16	HK.o_pumpe	340	Pump	HC 11.2	system_ein_aus_t	0-Off, 1-On			read	read
+8525	1	04	s16	HK.o_pumpe	340	Pump	HC 12.1	system_ein_aus_t	0-Off, 1-On			read	read
+8526	1	04	s16	HK.o_pumpe	340	Pump	HC 12.2	system_ein_aus_t	0-Off, 1-On			read	read
+8527	1	04	s16	HK.o_pumpe	340	Pump	HC 13.1	system_ein_aus_t	0-Off, 1-On			read	read
+8528	1	04	s16	HK.o_pumpe	340	Pump	HC 13.2	system_ein_aus_t	0-Off, 1-On			read	read
+8529	1	04	s16	HK.o_pumpe	340	Pump	HC 14.1	system_ein_aus_t	0-Off, 1-On			read	read
+8530	1	04	s16	HK.o_pumpe	340	Pump	HC 14.2	system_ein_aus_t	0-Off, 1-On			read	read
+8538	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 1.1	1/10°C				read	read
+8539	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 1.2	1/10°C				read	read
+8540	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 2.1	1/10°C				read	read
+8541	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 2.2	1/10°C				read	read
+8542	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 3.1	1/10°C				read	read
+8543	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 3.2	1/10°C				read	read
+8544	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 4.1	1/10°C				read	read
+8545	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 4.2	1/10°C				read	read
+8546	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 5.1	1/10°C				read	read
+8547	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 5.2	1/10°C				read	read
+8548	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 6.1	1/10°C				read	read
+8549	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 6.2	1/10°C				read	read
+8550	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 7.1	1/10°C				read	read
+8551	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 7.2	1/10°C				read	read
+8552	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 8.1	1/10°C				read	read
+8553	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 8.2	1/10°C				read	read
+8554	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 9.1	1/10°C				read	read
+8555	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 9.2	1/10°C				read	read
+8556	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 10.1	1/10°C				read	read
+8557	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 10.2	1/10°C				read	read
+8558	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 11.1	1/10°C				read	read
+8559	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 11.2	1/10°C				read	read
+8560	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 12.1	1/10°C				read	read
+8561	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 12.2	1/10°C				read	read
+8562	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 13.1	1/10°C				read	read
+8563	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 13.2	1/10°C				read	read
+8564	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 14.1	1/10°C				read	read
+8565	1	04	s16	HK.raum_temperatur_soll	343	Room temp., setpoint	HC 14.2	1/10°C				read	read
+8573	1	04	s16	HK.status	346	Status	HC 1.1	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8574	1	04	s16	HK.status	346	Status	HC 1.2	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8575	1	04	s16	HK.status	346	Status	HC 2.1	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8576	1	04	s16	HK.status	346	Status	HC 2.2	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8577	1	04	s16	HK.status	346	Status	HC 3.1	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8578	1	04	s16	HK.status	346	Status	HC 3.2	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8579	1	04	s16	HK.status	346	Status	HC 4.1	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8580	1	04	s16	HK.status	346	Status	HC 4.2	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8581	1	04	s16	HK.status	346	Status	HC 5.1	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8582	1	04	s16	HK.status	346	Status	HC 5.2	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8583	1	04	s16	HK.status	346	Status	HC 6.1	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8584	1	04	s16	HK.status	346	Status	HC 6.2	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8585	1	04	s16	HK.status	346	Status	HC 7.1	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8586	1	04	s16	HK.status	346	Status	HC 7.2	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8587	1	04	s16	HK.status	346	Status	HC 8.1	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8588	1	04	s16	HK.status	346	Status	HC 8.2	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8589	1	04	s16	HK.status	346	Status	HC 9.1	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8590	1	04	s16	HK.status	346	Status	HC 9.2	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8591	1	04	s16	HK.status	346	Status	HC 10.1	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8592	1	04	s16	HK.status	346	Status	HC 10.2	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8593	1	04	s16	HK.status	346	Status	HC 11.1	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8594	1	04	s16	HK.status	346	Status	HC 11.2	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8595	1	04	s16	HK.status	346	Status	HC 12.1	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8596	1	04	s16	HK.status	346	Status	HC 12.2	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8597	1	04	s16	HK.status	346	Status	HC 13.1	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8598	1	04	s16	HK.status	346	Status	HC 13.2	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8599	1	04	s16	HK.status	346	Status	HC 14.1	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+8600	1	04	s16	HK.status	346	Status	HC 14.2	hk_status_t	0-Reduct, 1-Comfort, ... (+7)			read	read
+24589	1	03, 06, 16	s16	HK.programm	342	Select program	HC 1.1	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24590	1	03, 06, 16	s16	HK.programm	342	Select program	HC 1.2	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24591	1	03, 06, 16	s16	HK.programm	342	Select program	HC 2.1	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24592	1	03, 06, 16	s16	HK.programm	342	Select program	HC 2.2	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24593	1	03, 06, 16	s16	HK.programm	342	Select program	HC 3.1	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24594	1	03, 06, 16	s16	HK.programm	342	Select program	HC 3.2	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24595	1	03, 06, 16	s16	HK.programm	342	Select program	HC 4.1	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24596	1	03, 06, 16	s16	HK.programm	342	Select program	HC 4.2	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24597	1	03, 06, 16	s16	HK.programm	342	Select program	HC 5.1	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24598	1	03, 06, 16	s16	HK.programm	342	Select program	HC 5.2	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24599	1	03, 06, 16	s16	HK.programm	342	Select program	HC 6.1	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24600	1	03, 06, 16	s16	HK.programm	342	Select program	HC 6.2	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24601	1	03, 06, 16	s16	HK.programm	342	Select program	HC 7.1	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24602	1	03, 06, 16	s16	HK.programm	342	Select program	HC 7.2	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24603	1	03, 06, 16	s16	HK.programm	342	Select program	HC 8.1	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24604	1	03, 06, 16	s16	HK.programm	342	Select program	HC 8.2	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24605	1	03, 06, 16	s16	HK.programm	342	Select program	HC 9.1	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24606	1	03, 06, 16	s16	HK.programm	342	Select program	HC 9.2	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24607	1	03, 06, 16	s16	HK.programm	342	Select program	HC 10.1	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24608	1	03, 06, 16	s16	HK.programm	342	Select program	HC 10.2	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24609	1	03, 06, 16	s16	HK.programm	342	Select program	HC 11.1	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24610	1	03, 06, 16	s16	HK.programm	342	Select program	HC 11.2	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24611	1	03, 06, 16	s16	HK.programm	342	Select program	HC 12.1	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24612	1	03, 06, 16	s16	HK.programm	342	Select program	HC 12.2	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24613	1	03, 06, 16	s16	HK.programm	342	Select program	HC 13.1	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24614	1	03, 06, 16	s16	HK.programm	342	Select program	HC 13.2	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24615	1	03, 06, 16	s16	HK.programm	342	Select program	HC 14.1	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24616	1	03, 06, 16	s16	HK.programm	342	Select program	HC 14.2	hk_programm_t	0-Automatic, 1-Frost protection, ... (+3)			readwrite	readwrite
+24624	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 1.1	1/10°C		0	350	readwrite	readwrite
+24625	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 1.2	1/10°C		0	350	readwrite	readwrite
+24626	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 2.1	1/10°C		0	350	readwrite	readwrite
+24627	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 2.2	1/10°C		0	350	readwrite	readwrite
+24628	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 3.1	1/10°C		0	350	readwrite	readwrite
+24629	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 3.2	1/10°C		0	350	readwrite	readwrite
+24630	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 4.1	1/10°C		0	350	readwrite	readwrite
+24631	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 4.2	1/10°C		0	350	readwrite	readwrite
+24632	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 5.1	1/10°C		0	350	readwrite	readwrite
+24633	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 5.2	1/10°C		0	350	readwrite	readwrite
+24634	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 6.1	1/10°C		0	350	readwrite	readwrite
+24635	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 6.2	1/10°C		0	350	readwrite	readwrite
+24636	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 7.1	1/10°C		0	350	readwrite	readwrite
+24637	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 7.2	1/10°C		0	350	readwrite	readwrite
+24638	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 8.1	1/10°C		0	350	readwrite	readwrite
+24639	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 8.2	1/10°C		0	350	readwrite	readwrite
+24640	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 9.1	1/10°C		0	350	readwrite	readwrite
+24641	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 9.2	1/10°C		0	350	readwrite	readwrite
+24642	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 10.1	1/10°C		0	350	readwrite	readwrite
+24643	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 10.2	1/10°C		0	350	readwrite	readwrite
+24644	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 11.1	1/10°C		0	350	readwrite	readwrite
+24645	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 11.2	1/10°C		0	350	readwrite	readwrite
+24646	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 12.1	1/10°C		0	350	readwrite	readwrite
+24647	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 12.2	1/10°C		0	350	readwrite	readwrite
+24648	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 13.1	1/10°C		0	350	readwrite	readwrite
+24649	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 13.2	1/10°C		0	350	readwrite	readwrite
+24650	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 14.1	1/10°C		0	350	readwrite	readwrite
+24651	1	03, 06, 16	s16	HK.raum_temperatur_soll_tag	345	Comfort temperature	HC 14.2	1/10°C		0	350	readwrite	readwrite
+24659	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 1.1	1/10°C		0	350	readwrite	readwrite
+24660	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 1.2	1/10°C		0	350	readwrite	readwrite
+24661	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 2.1	1/10°C		0	350	readwrite	readwrite
+24662	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 2.2	1/10°C		0	350	readwrite	readwrite
+24663	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 3.1	1/10°C		0	350	readwrite	readwrite
+24664	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 3.2	1/10°C		0	350	readwrite	readwrite
+24665	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 4.1	1/10°C		0	350	readwrite	readwrite
+24666	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 4.2	1/10°C		0	350	readwrite	readwrite
+24667	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 5.1	1/10°C		0	350	readwrite	readwrite
+24668	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 5.2	1/10°C		0	350	readwrite	readwrite
+24669	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 6.1	1/10°C		0	350	readwrite	readwrite
+24670	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 6.2	1/10°C		0	350	readwrite	readwrite
+24671	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 7.1	1/10°C		0	350	readwrite	readwrite
+24672	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 7.2	1/10°C		0	350	readwrite	readwrite
+24673	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 8.1	1/10°C		0	350	readwrite	readwrite
+24674	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 8.2	1/10°C		0	350	readwrite	readwrite
+24675	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 9.1	1/10°C		0	350	readwrite	readwrite
+24676	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 9.2	1/10°C		0	350	readwrite	readwrite
+24677	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 10.1	1/10°C		0	350	readwrite	readwrite
+24678	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 10.2	1/10°C		0	350	readwrite	readwrite
+24679	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 11.1	1/10°C		0	350	readwrite	readwrite
+24680	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 11.2	1/10°C		0	350	readwrite	readwrite
+24681	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 12.1	1/10°C		0	350	readwrite	readwrite
+24682	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 12.2	1/10°C		0	350	readwrite	readwrite
+24683	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 13.1	1/10°C		0	350	readwrite	readwrite
+24684	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 13.2	1/10°C		0	350	readwrite	readwrite
+24685	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 14.1	1/10°C		0	350	readwrite	readwrite
+24686	1	03, 06, 16	s16	HK.raum_temperatur_soll_nacht	344	Reduction temperature	HC 14.2	1/10°C		0	350	readwrite	readwrite
+24859	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 1.1	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24860	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 1.2	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24861	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 2.1	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24862	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 2.2	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24863	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 3.1	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24864	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 3.2	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24865	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 4.1	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24866	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 4.2	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24867	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 5.1	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24868	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 5.2	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24869	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 6.1	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24870	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 6.2	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24871	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 7.1	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24872	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 7.2	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24873	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 8.1	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24874	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 8.2	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24875	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 9.1	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24876	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 9.2	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24877	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 10.1	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24878	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 10.2	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24879	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 11.1	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24880	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 11.2	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24881	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 12.1	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24882	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 12.2	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24883	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 13.1	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24884	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 13.2	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24885	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 14.1	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24886	1	03, 06, 16	s16	HK.modbus_anforderung	2148	Modbus request	HC 14.2	system_ein_aus_t	0-Off, 1-On			read	readwrite
+24894	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 1.1	1/10°C				read	readwrite
+24895	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 1.2	1/10°C				read	readwrite
+24896	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 2.1	1/10°C				read	readwrite
+24897	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 2.2	1/10°C				read	readwrite
+24898	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 3.1	1/10°C				read	readwrite
+24899	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 3.2	1/10°C				read	readwrite
+24900	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 4.1	1/10°C				read	readwrite
+24901	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 4.2	1/10°C				read	readwrite
+24902	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 5.1	1/10°C				read	readwrite
+24903	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 5.2	1/10°C				read	readwrite
+24904	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 6.1	1/10°C				read	readwrite
+24905	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 6.2	1/10°C				read	readwrite
+24906	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 7.1	1/10°C				read	readwrite
+24907	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 7.2	1/10°C				read	readwrite
+24908	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 8.1	1/10°C				read	readwrite
+24909	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 8.2	1/10°C				read	readwrite
+24910	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 9.1	1/10°C				read	readwrite
+24911	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 9.2	1/10°C				read	readwrite
+24912	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 10.1	1/10°C				read	readwrite
+24913	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 10.2	1/10°C				read	readwrite
+24914	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 11.1	1/10°C				read	readwrite
+24915	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 11.2	1/10°C				read	readwrite
+24916	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 12.1	1/10°C				read	readwrite
+24917	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 12.2	1/10°C				read	readwrite
+24918	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 13.1	1/10°C				read	readwrite
+24919	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 13.2	1/10°C				read	readwrite
+24920	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 14.1	1/10°C				read	readwrite
+24921	1	03, 06, 16	s16	HK.modbus_temperatur	2149	Modbus Forward flow temp. Setpoint	HC 14.2	1/10°C				read	readwrite

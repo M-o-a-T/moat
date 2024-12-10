@@ -1,0 +1,15 @@
+regs:
+  humidity:
+    int:
+      register: 2390
+      type: float
+      unit: pC
+  temperature:
+    ext:
+      register: 2384
+      type: float
+      unit: dC
+    int:
+      register: 2386
+      type: float
+      unit: dC

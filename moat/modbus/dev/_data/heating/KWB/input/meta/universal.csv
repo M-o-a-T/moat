@@ -1,0 +1,10 @@
+StartingAddress	NumberOfRegisters	Functions	Type	Parameter	ID	Name	Index	Unit/ValueTable	Values	Min	Max	UserLevel	ExpertLevel
+8192	1	04	u16	SYSTEM.sw_version.major	1163	Software (major)						read	read
+8193	1	04	u16	SYSTEM.sw_version.minor	1163	Software (minor)						read	read
+8194	1	04	u16	SYSTEM.sw_version.patch	1163	Software (patch)						read	read
+8195	2	04	u32	SYSTEM.sw_revision	1171	Revision						read	read
+8204	1	04	s16	KSM.anlage_keine_stoerung	614	System OK		system_yes_no_t	0-No, 1-Yes			read	read
+8205	1	04	s16	KSM.anlage_stoerung	1192	Boiler fault		system_yes_no_t	0-No, 1-Yes			read	read
+8252	2	04	u32	SYSTEM.alarme_total	431	Number of alarms						read	read
+8254	2	04	u32	SYSTEM.alarme_offen	432	Number of pending alarms						read	read
+24582	1	03, 06, 16	s16	SYSTEM.alarme_beheben_von_extern	1144	Rectify alarms		system_ein_aus_t	0-Off, 1-On			readwrite	readwrite

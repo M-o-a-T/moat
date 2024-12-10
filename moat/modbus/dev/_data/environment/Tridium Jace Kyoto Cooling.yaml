@@ -1,0 +1,42 @@
+regs:
+  airflow:
+    _:
+      register: 5600
+      type: float
+      unit: qm-p-min
+  delta:
+    temperature:
+      register: 6000
+      scale: -2
+      type: int
+      unit: d
+  humidity:
+    _:
+      register: 6103
+      scale: -2
+      type: int
+      unit: pC
+  power:
+    active:
+      register: 500
+      scale: -2
+      type: uint
+      unit: W
+    sum3:
+      active:
+        register: 800
+        scale: 1
+        type: int
+        unit: W
+  pressure:
+    int:
+      register: 609
+      scale: -2
+      type: int
+      unit: Pa
+  temperature:
+    _:
+      register: 6500
+      scale: -2
+      type: int
+      unit: dC

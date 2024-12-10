@@ -1,0 +1,148 @@
+regs:
+  current:
+    L1:
+      register: 2999
+      type: float
+      unit: A
+    L2:
+      register: 3001
+      type: float
+      unit: A
+    L3:
+      register: 3003
+      type: float
+      unit: A
+  energy:
+    sum3:
+      active:
+        register: 3203
+        type: uint64
+        unit: Wh
+  frequency:
+    L:
+      register: 3109
+      type: float
+      unit: Hz
+  power:
+    L1:
+      active:
+        register: 3053
+        type: float
+        unit: W
+      apparent:
+        register: 3069
+        type: float
+        unit: VA
+      reactive:
+        register: 3061
+        type: float
+        unit: var
+    L2:
+      active:
+        register: 3055
+        type: float
+        unit: W
+      apparent:
+        register: 3071
+        type: float
+        unit: VA
+      reactive:
+        register: 3063
+        type: float
+        unit: var
+    L3:
+      active:
+        register: 3057
+        type: float
+        unit: W
+      apparent:
+        register: 3073
+        type: float
+        unit: VA
+      reactive:
+        register: 3065
+        type: float
+        unit: var
+    sum3:
+      active:
+        register: 3059
+        type: float
+        unit: W
+      apparent:
+        register: 3075
+        type: float
+        unit: VA
+      reactive:
+        register: 3067
+        type: float
+        unit: var
+  powerfactor:
+    L1:
+      register: 3143
+      type: float
+      unit: x1
+    L2:
+      register: 3145
+      type: float
+      unit: x1
+    L3:
+      register: 3147
+      type: float
+      unit: x1
+    sum3:
+      register: 3149
+      type: float
+      unit: x1
+  thd:
+    L1:
+      current:
+        register: 21299
+        type: float
+        unit: pM
+      voltage:
+        register: 21329
+        type: float
+        unit: pM
+    L2:
+      current:
+        register: 21301
+        type: float
+        unit: pM
+      voltage:
+        register: 21331
+        type: float
+        unit: pM
+    L3:
+      current:
+        register: 21303
+        type: float
+        unit: pM
+      voltage:
+        register: 21333
+        type: float
+        unit: pM
+  voltage:
+    L1:
+      register: 3027
+      type: float
+      unit: V
+    L1-L2:
+      register: 3019
+      type: float
+      unit: V
+    L2:
+      register: 3029
+      type: float
+      unit: V
+    L2-L3:
+      register: 3021
+      type: float
+      unit: V
+    L3:
+      register: 3031
+      type: float
+      unit: V
+    L3-L1:
+      register: 3023
+      type: float
+      unit: V

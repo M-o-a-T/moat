@@ -1,0 +1,57 @@
+StartingAddress	NumberOfRegisters	Functions	Type	Parameter	ID	Name	Index	Unit/ValueTable	Values	Min	Max	UserLevel	ExpertLevel
+8981	1	04	s16	ZK.o_pumpe	524	Boiler pump	SHS 1	system_ein_aus_t	0-Off, 1-On			read	read
+8982	1	04	s16	ZK.o_pumpe	524	Boiler pump	SHS 2	system_ein_aus_t	0-Off, 1-On			read	read
+8983	1	04	s16	ZK.o_pumpe	524	Boiler pump	SHS 3	system_ein_aus_t	0-Off, 1-On			read	read
+8984	1	04	s16	ZK.o_pumpe	524	Boiler pump	SHS 4	system_ein_aus_t	0-Off, 1-On			read	read
+8985	1	04	s16	ZK.o_pumpe	524	Boiler pump	SHS 5	system_ein_aus_t	0-Off, 1-On			read	read
+8986	1	04	s16	ZK.o_pumpe	524	Boiler pump	SHS 6	system_ein_aus_t	0-Off, 1-On			read	read
+8987	1	04	s16	ZK.o_pumpe	524	Boiler pump	SHS 7	system_ein_aus_t	0-Off, 1-On			read	read
+8988	1	04	s16	ZK.o_pumpe	524	Boiler pump	SHS 8	system_ein_aus_t	0-Off, 1-On			read	read
+8989	1	04	s16	ZK.o_pumpe	524	Boiler pump	SHS 9	system_ein_aus_t	0-Off, 1-On			read	read
+8990	1	04	s16	ZK.o_pumpe	524	Boiler pump	SHS 10	system_ein_aus_t	0-Off, 1-On			read	read
+8991	1	04	s16	ZK.o_pumpe	524	Boiler pump	SHS 11	system_ein_aus_t	0-Off, 1-On			read	read
+8992	1	04	s16	ZK.o_pumpe	524	Boiler pump	SHS 12	system_ein_aus_t	0-Off, 1-On			read	read
+8993	1	04	s16	ZK.o_pumpe	524	Boiler pump	SHS 13	system_ein_aus_t	0-Off, 1-On			read	read
+8994	1	04	s16	ZK.o_pumpe	524	Boiler pump	SHS 14	system_ein_aus_t	0-Off, 1-On			read	read
+8998	1	04	s16	ZK.i_temperatur.value	521	Temperature (value)	SHS 1	1/10°C				read	read
+8999	1	04	s16	ZK.i_temperatur.status	521	Temperature (status)	SHS 1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9000	1	04	s16	ZK.i_temperatur.value	521	Temperature (value)	SHS 2	1/10°C				read	read
+9001	1	04	s16	ZK.i_temperatur.status	521	Temperature (status)	SHS 2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9002	1	04	s16	ZK.i_temperatur.value	521	Temperature (value)	SHS 3	1/10°C				read	read
+9003	1	04	s16	ZK.i_temperatur.status	521	Temperature (status)	SHS 3	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9004	1	04	s16	ZK.i_temperatur.value	521	Temperature (value)	SHS 4	1/10°C				read	read
+9005	1	04	s16	ZK.i_temperatur.status	521	Temperature (status)	SHS 4	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9006	1	04	s16	ZK.i_temperatur.value	521	Temperature (value)	SHS 5	1/10°C				read	read
+9007	1	04	s16	ZK.i_temperatur.status	521	Temperature (status)	SHS 5	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9008	1	04	s16	ZK.i_temperatur.value	521	Temperature (value)	SHS 6	1/10°C				read	read
+9009	1	04	s16	ZK.i_temperatur.status	521	Temperature (status)	SHS 6	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9010	1	04	s16	ZK.i_temperatur.value	521	Temperature (value)	SHS 7	1/10°C				read	read
+9011	1	04	s16	ZK.i_temperatur.status	521	Temperature (status)	SHS 7	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9012	1	04	s16	ZK.i_temperatur.value	521	Temperature (value)	SHS 8	1/10°C				read	read
+9013	1	04	s16	ZK.i_temperatur.status	521	Temperature (status)	SHS 8	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9014	1	04	s16	ZK.i_temperatur.value	521	Temperature (value)	SHS 9	1/10°C				read	read
+9015	1	04	s16	ZK.i_temperatur.status	521	Temperature (status)	SHS 9	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9016	1	04	s16	ZK.i_temperatur.value	521	Temperature (value)	SHS 10	1/10°C				read	read
+9017	1	04	s16	ZK.i_temperatur.status	521	Temperature (status)	SHS 10	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9018	1	04	s16	ZK.i_temperatur.value	521	Temperature (value)	SHS 11	1/10°C				read	read
+9019	1	04	s16	ZK.i_temperatur.status	521	Temperature (status)	SHS 11	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9020	1	04	s16	ZK.i_temperatur.value	521	Temperature (value)	SHS 12	1/10°C				read	read
+9021	1	04	s16	ZK.i_temperatur.status	521	Temperature (status)	SHS 12	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9022	1	04	s16	ZK.i_temperatur.value	521	Temperature (value)	SHS 13	1/10°C				read	read
+9023	1	04	s16	ZK.i_temperatur.status	521	Temperature (status)	SHS 13	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9024	1	04	s16	ZK.i_temperatur.value	521	Temperature (value)	SHS 14	1/10°C				read	read
+9025	1	04	s16	ZK.i_temperatur.status	521	Temperature (status)	SHS 14	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9029	1	04	s16	ZK.o_anforderung	523	Request	SHS 1	system_ein_aus_t	0-Off, 1-On			read	read
+9030	1	04	s16	ZK.o_anforderung	523	Request	SHS 2	system_ein_aus_t	0-Off, 1-On			read	read
+9031	1	04	s16	ZK.o_anforderung	523	Request	SHS 3	system_ein_aus_t	0-Off, 1-On			read	read
+9032	1	04	s16	ZK.o_anforderung	523	Request	SHS 4	system_ein_aus_t	0-Off, 1-On			read	read
+9033	1	04	s16	ZK.o_anforderung	523	Request	SHS 5	system_ein_aus_t	0-Off, 1-On			read	read
+9034	1	04	s16	ZK.o_anforderung	523	Request	SHS 6	system_ein_aus_t	0-Off, 1-On			read	read
+9035	1	04	s16	ZK.o_anforderung	523	Request	SHS 7	system_ein_aus_t	0-Off, 1-On			read	read
+9036	1	04	s16	ZK.o_anforderung	523	Request	SHS 8	system_ein_aus_t	0-Off, 1-On			read	read
+9037	1	04	s16	ZK.o_anforderung	523	Request	SHS 9	system_ein_aus_t	0-Off, 1-On			read	read
+9038	1	04	s16	ZK.o_anforderung	523	Request	SHS 10	system_ein_aus_t	0-Off, 1-On			read	read
+9039	1	04	s16	ZK.o_anforderung	523	Request	SHS 11	system_ein_aus_t	0-Off, 1-On			read	read
+9040	1	04	s16	ZK.o_anforderung	523	Request	SHS 12	system_ein_aus_t	0-Off, 1-On			read	read
+9041	1	04	s16	ZK.o_anforderung	523	Request	SHS 13	system_ein_aus_t	0-Off, 1-On			read	read
+9042	1	04	s16	ZK.o_anforderung	523	Request	SHS 14	system_ein_aus_t	0-Off, 1-On			read	read

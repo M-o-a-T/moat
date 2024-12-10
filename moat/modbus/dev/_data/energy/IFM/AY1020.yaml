@@ -1,0 +1,7 @@
+regs:
+  temperature:
+    int:
+      register: 4003
+      scale: -2
+      type: int
+      unit: dC

@@ -1,0 +1,393 @@
+StartingAddress	NumberOfRegisters	Functions	Type	Parameter	ID	Name	Index	Unit/ValueTable	Values	Min	Max	UserLevel	ExpertLevel
+9049	1	04	s16	SOL.status	1435	Status	SOL 1	solar_status_t	0-Off, 1-Manual mode, ... (+6)			read	read
+9050	1	04	s16	SOL.status	1435	Status	SOL 2	solar_status_t	0-Off, 1-Manual mode, ... (+6)			read	read
+9051	1	04	s16	SOL.status	1435	Status	SOL 3	solar_status_t	0-Off, 1-Manual mode, ... (+6)			read	read
+9052	1	04	s16	SOL.status	1435	Status	SOL 4	solar_status_t	0-Off, 1-Manual mode, ... (+6)			read	read
+9053	1	04	s16	SOL.status	1435	Status	SOL 5	solar_status_t	0-Off, 1-Manual mode, ... (+6)			read	read
+9054	1	04	s16	SOL.status	1435	Status	SOL 6	solar_status_t	0-Off, 1-Manual mode, ... (+6)			read	read
+9055	1	04	s16	SOL.status	1435	Status	SOL 7	solar_status_t	0-Off, 1-Manual mode, ... (+6)			read	read
+9056	1	04	s16	SOL.status	1435	Status	SOL 8	solar_status_t	0-Off, 1-Manual mode, ... (+6)			read	read
+9057	1	04	s16	SOL.status	1435	Status	SOL 9	solar_status_t	0-Off, 1-Manual mode, ... (+6)			read	read
+9058	1	04	s16	SOL.status	1435	Status	SOL 10	solar_status_t	0-Off, 1-Manual mode, ... (+6)			read	read
+9059	1	04	s16	SOL.status	1435	Status	SOL 11	solar_status_t	0-Off, 1-Manual mode, ... (+6)			read	read
+9060	1	04	s16	SOL.status	1435	Status	SOL 12	solar_status_t	0-Off, 1-Manual mode, ... (+6)			read	read
+9061	1	04	s16	SOL.status	1435	Status	SOL 13	solar_status_t	0-Off, 1-Manual mode, ... (+6)			read	read
+9062	1	04	s16	SOL.status	1435	Status	SOL 14	solar_status_t	0-Off, 1-Manual mode, ... (+6)			read	read
+9064	1	04	s16	SOL.status_ursache	1436	Stat. R.	SOL 1	solar_status_ursache_t	0-Program Off, 1-Manual mode, ... (+12)			read	read
+9065	1	04	s16	SOL.status_ursache	1436	Stat. R.	SOL 2	solar_status_ursache_t	0-Program Off, 1-Manual mode, ... (+12)			read	read
+9066	1	04	s16	SOL.status_ursache	1436	Stat. R.	SOL 3	solar_status_ursache_t	0-Program Off, 1-Manual mode, ... (+12)			read	read
+9067	1	04	s16	SOL.status_ursache	1436	Stat. R.	SOL 4	solar_status_ursache_t	0-Program Off, 1-Manual mode, ... (+12)			read	read
+9068	1	04	s16	SOL.status_ursache	1436	Stat. R.	SOL 5	solar_status_ursache_t	0-Program Off, 1-Manual mode, ... (+12)			read	read
+9069	1	04	s16	SOL.status_ursache	1436	Stat. R.	SOL 6	solar_status_ursache_t	0-Program Off, 1-Manual mode, ... (+12)			read	read
+9070	1	04	s16	SOL.status_ursache	1436	Stat. R.	SOL 7	solar_status_ursache_t	0-Program Off, 1-Manual mode, ... (+12)			read	read
+9071	1	04	s16	SOL.status_ursache	1436	Stat. R.	SOL 8	solar_status_ursache_t	0-Program Off, 1-Manual mode, ... (+12)			read	read
+9072	1	04	s16	SOL.status_ursache	1436	Stat. R.	SOL 9	solar_status_ursache_t	0-Program Off, 1-Manual mode, ... (+12)			read	read
+9073	1	04	s16	SOL.status_ursache	1436	Stat. R.	SOL 10	solar_status_ursache_t	0-Program Off, 1-Manual mode, ... (+12)			read	read
+9074	1	04	s16	SOL.status_ursache	1436	Stat. R.	SOL 11	solar_status_ursache_t	0-Program Off, 1-Manual mode, ... (+12)			read	read
+9075	1	04	s16	SOL.status_ursache	1436	Stat. R.	SOL 12	solar_status_ursache_t	0-Program Off, 1-Manual mode, ... (+12)			read	read
+9076	1	04	s16	SOL.status_ursache	1436	Stat. R.	SOL 13	solar_status_ursache_t	0-Program Off, 1-Manual mode, ... (+12)			read	read
+9077	1	04	s16	SOL.status_ursache	1436	Stat. R.	SOL 14	solar_status_ursache_t	0-Program Off, 1-Manual mode, ... (+12)			read	read
+9080	1	04	s16	SOL.i_kollektor_temperatur.value	1394	Collector temperature (value)	SOL 1	1/10°C				read	read
+9081	1	04	s16	SOL.i_kollektor_temperatur.status	1394	Collector temperature (status)	SOL 1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9082	1	04	s16	SOL.i_kollektor_temperatur.value	1394	Collector temperature (value)	SOL 2	1/10°C				read	read
+9083	1	04	s16	SOL.i_kollektor_temperatur.status	1394	Collector temperature (status)	SOL 2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9084	1	04	s16	SOL.i_kollektor_temperatur.value	1394	Collector temperature (value)	SOL 3	1/10°C				read	read
+9085	1	04	s16	SOL.i_kollektor_temperatur.status	1394	Collector temperature (status)	SOL 3	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9086	1	04	s16	SOL.i_kollektor_temperatur.value	1394	Collector temperature (value)	SOL 4	1/10°C				read	read
+9087	1	04	s16	SOL.i_kollektor_temperatur.status	1394	Collector temperature (status)	SOL 4	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9088	1	04	s16	SOL.i_kollektor_temperatur.value	1394	Collector temperature (value)	SOL 5	1/10°C				read	read
+9089	1	04	s16	SOL.i_kollektor_temperatur.status	1394	Collector temperature (status)	SOL 5	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9090	1	04	s16	SOL.i_kollektor_temperatur.value	1394	Collector temperature (value)	SOL 6	1/10°C				read	read
+9091	1	04	s16	SOL.i_kollektor_temperatur.status	1394	Collector temperature (status)	SOL 6	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9092	1	04	s16	SOL.i_kollektor_temperatur.value	1394	Collector temperature (value)	SOL 7	1/10°C				read	read
+9093	1	04	s16	SOL.i_kollektor_temperatur.status	1394	Collector temperature (status)	SOL 7	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9094	1	04	s16	SOL.i_kollektor_temperatur.value	1394	Collector temperature (value)	SOL 8	1/10°C				read	read
+9095	1	04	s16	SOL.i_kollektor_temperatur.status	1394	Collector temperature (status)	SOL 8	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9096	1	04	s16	SOL.i_kollektor_temperatur.value	1394	Collector temperature (value)	SOL 9	1/10°C				read	read
+9097	1	04	s16	SOL.i_kollektor_temperatur.status	1394	Collector temperature (status)	SOL 9	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9098	1	04	s16	SOL.i_kollektor_temperatur.value	1394	Collector temperature (value)	SOL 10	1/10°C				read	read
+9099	1	04	s16	SOL.i_kollektor_temperatur.status	1394	Collector temperature (status)	SOL 10	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9100	1	04	s16	SOL.i_kollektor_temperatur.value	1394	Collector temperature (value)	SOL 11	1/10°C				read	read
+9101	1	04	s16	SOL.i_kollektor_temperatur.status	1394	Collector temperature (status)	SOL 11	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9102	1	04	s16	SOL.i_kollektor_temperatur.value	1394	Collector temperature (value)	SOL 12	1/10°C				read	read
+9103	1	04	s16	SOL.i_kollektor_temperatur.status	1394	Collector temperature (status)	SOL 12	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9104	1	04	s16	SOL.i_kollektor_temperatur.value	1394	Collector temperature (value)	SOL 13	1/10°C				read	read
+9105	1	04	s16	SOL.i_kollektor_temperatur.status	1394	Collector temperature (status)	SOL 13	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9106	1	04	s16	SOL.i_kollektor_temperatur.value	1394	Collector temperature (value)	SOL 14	1/10°C				read	read
+9107	1	04	s16	SOL.i_kollektor_temperatur.status	1394	Collector temperature (status)	SOL 14	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9110	1	04	s16	SOL.i_ist_temperatur_speicher_1.value	1396	Temperature storage tank 1 (value)	SOL 1	1/10°C				read	read
+9111	1	04	s16	SOL.i_ist_temperatur_speicher_1.status	1396	Temperature storage tank 1 (status)	SOL 1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9112	1	04	s16	SOL.i_ist_temperatur_speicher_1.value	1396	Temperature storage tank 1 (value)	SOL 2	1/10°C				read	read
+9113	1	04	s16	SOL.i_ist_temperatur_speicher_1.status	1396	Temperature storage tank 1 (status)	SOL 2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9114	1	04	s16	SOL.i_ist_temperatur_speicher_1.value	1396	Temperature storage tank 1 (value)	SOL 3	1/10°C				read	read
+9115	1	04	s16	SOL.i_ist_temperatur_speicher_1.status	1396	Temperature storage tank 1 (status)	SOL 3	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9116	1	04	s16	SOL.i_ist_temperatur_speicher_1.value	1396	Temperature storage tank 1 (value)	SOL 4	1/10°C				read	read
+9117	1	04	s16	SOL.i_ist_temperatur_speicher_1.status	1396	Temperature storage tank 1 (status)	SOL 4	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9118	1	04	s16	SOL.i_ist_temperatur_speicher_1.value	1396	Temperature storage tank 1 (value)	SOL 5	1/10°C				read	read
+9119	1	04	s16	SOL.i_ist_temperatur_speicher_1.status	1396	Temperature storage tank 1 (status)	SOL 5	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9120	1	04	s16	SOL.i_ist_temperatur_speicher_1.value	1396	Temperature storage tank 1 (value)	SOL 6	1/10°C				read	read
+9121	1	04	s16	SOL.i_ist_temperatur_speicher_1.status	1396	Temperature storage tank 1 (status)	SOL 6	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9122	1	04	s16	SOL.i_ist_temperatur_speicher_1.value	1396	Temperature storage tank 1 (value)	SOL 7	1/10°C				read	read
+9123	1	04	s16	SOL.i_ist_temperatur_speicher_1.status	1396	Temperature storage tank 1 (status)	SOL 7	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9124	1	04	s16	SOL.i_ist_temperatur_speicher_1.value	1396	Temperature storage tank 1 (value)	SOL 8	1/10°C				read	read
+9125	1	04	s16	SOL.i_ist_temperatur_speicher_1.status	1396	Temperature storage tank 1 (status)	SOL 8	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9126	1	04	s16	SOL.i_ist_temperatur_speicher_1.value	1396	Temperature storage tank 1 (value)	SOL 9	1/10°C				read	read
+9127	1	04	s16	SOL.i_ist_temperatur_speicher_1.status	1396	Temperature storage tank 1 (status)	SOL 9	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9128	1	04	s16	SOL.i_ist_temperatur_speicher_1.value	1396	Temperature storage tank 1 (value)	SOL 10	1/10°C				read	read
+9129	1	04	s16	SOL.i_ist_temperatur_speicher_1.status	1396	Temperature storage tank 1 (status)	SOL 10	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9130	1	04	s16	SOL.i_ist_temperatur_speicher_1.value	1396	Temperature storage tank 1 (value)	SOL 11	1/10°C				read	read
+9131	1	04	s16	SOL.i_ist_temperatur_speicher_1.status	1396	Temperature storage tank 1 (status)	SOL 11	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9132	1	04	s16	SOL.i_ist_temperatur_speicher_1.value	1396	Temperature storage tank 1 (value)	SOL 12	1/10°C				read	read
+9133	1	04	s16	SOL.i_ist_temperatur_speicher_1.status	1396	Temperature storage tank 1 (status)	SOL 12	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9134	1	04	s16	SOL.i_ist_temperatur_speicher_1.value	1396	Temperature storage tank 1 (value)	SOL 13	1/10°C				read	read
+9135	1	04	s16	SOL.i_ist_temperatur_speicher_1.status	1396	Temperature storage tank 1 (status)	SOL 13	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9136	1	04	s16	SOL.i_ist_temperatur_speicher_1.value	1396	Temperature storage tank 1 (value)	SOL 14	1/10°C				read	read
+9137	1	04	s16	SOL.i_ist_temperatur_speicher_1.status	1396	Temperature storage tank 1 (status)	SOL 14	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9140	1	04	s16	SOL.i_ist_temperatur_speicher_2.value	1397	Temperature storage tank 2 (value)	SOL 1	1/10°C				read	read
+9141	1	04	s16	SOL.i_ist_temperatur_speicher_2.status	1397	Temperature storage tank 2 (status)	SOL 1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9142	1	04	s16	SOL.i_ist_temperatur_speicher_2.value	1397	Temperature storage tank 2 (value)	SOL 2	1/10°C				read	read
+9143	1	04	s16	SOL.i_ist_temperatur_speicher_2.status	1397	Temperature storage tank 2 (status)	SOL 2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9144	1	04	s16	SOL.i_ist_temperatur_speicher_2.value	1397	Temperature storage tank 2 (value)	SOL 3	1/10°C				read	read
+9145	1	04	s16	SOL.i_ist_temperatur_speicher_2.status	1397	Temperature storage tank 2 (status)	SOL 3	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9146	1	04	s16	SOL.i_ist_temperatur_speicher_2.value	1397	Temperature storage tank 2 (value)	SOL 4	1/10°C				read	read
+9147	1	04	s16	SOL.i_ist_temperatur_speicher_2.status	1397	Temperature storage tank 2 (status)	SOL 4	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9148	1	04	s16	SOL.i_ist_temperatur_speicher_2.value	1397	Temperature storage tank 2 (value)	SOL 5	1/10°C				read	read
+9149	1	04	s16	SOL.i_ist_temperatur_speicher_2.status	1397	Temperature storage tank 2 (status)	SOL 5	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9150	1	04	s16	SOL.i_ist_temperatur_speicher_2.value	1397	Temperature storage tank 2 (value)	SOL 6	1/10°C				read	read
+9151	1	04	s16	SOL.i_ist_temperatur_speicher_2.status	1397	Temperature storage tank 2 (status)	SOL 6	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9152	1	04	s16	SOL.i_ist_temperatur_speicher_2.value	1397	Temperature storage tank 2 (value)	SOL 7	1/10°C				read	read
+9153	1	04	s16	SOL.i_ist_temperatur_speicher_2.status	1397	Temperature storage tank 2 (status)	SOL 7	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9154	1	04	s16	SOL.i_ist_temperatur_speicher_2.value	1397	Temperature storage tank 2 (value)	SOL 8	1/10°C				read	read
+9155	1	04	s16	SOL.i_ist_temperatur_speicher_2.status	1397	Temperature storage tank 2 (status)	SOL 8	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9156	1	04	s16	SOL.i_ist_temperatur_speicher_2.value	1397	Temperature storage tank 2 (value)	SOL 9	1/10°C				read	read
+9157	1	04	s16	SOL.i_ist_temperatur_speicher_2.status	1397	Temperature storage tank 2 (status)	SOL 9	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9158	1	04	s16	SOL.i_ist_temperatur_speicher_2.value	1397	Temperature storage tank 2 (value)	SOL 10	1/10°C				read	read
+9159	1	04	s16	SOL.i_ist_temperatur_speicher_2.status	1397	Temperature storage tank 2 (status)	SOL 10	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9160	1	04	s16	SOL.i_ist_temperatur_speicher_2.value	1397	Temperature storage tank 2 (value)	SOL 11	1/10°C				read	read
+9161	1	04	s16	SOL.i_ist_temperatur_speicher_2.status	1397	Temperature storage tank 2 (status)	SOL 11	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9162	1	04	s16	SOL.i_ist_temperatur_speicher_2.value	1397	Temperature storage tank 2 (value)	SOL 12	1/10°C				read	read
+9163	1	04	s16	SOL.i_ist_temperatur_speicher_2.status	1397	Temperature storage tank 2 (status)	SOL 12	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9164	1	04	s16	SOL.i_ist_temperatur_speicher_2.value	1397	Temperature storage tank 2 (value)	SOL 13	1/10°C				read	read
+9165	1	04	s16	SOL.i_ist_temperatur_speicher_2.status	1397	Temperature storage tank 2 (status)	SOL 13	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9166	1	04	s16	SOL.i_ist_temperatur_speicher_2.value	1397	Temperature storage tank 2 (value)	SOL 14	1/10°C				read	read
+9167	1	04	s16	SOL.i_ist_temperatur_speicher_2.status	1397	Temperature storage tank 2 (status)	SOL 14	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9169	1	04	s16	SOL.o_pumpe_1	1377	Pump 1	SOL 1	system_ein_aus_t	0-Off, 1-On			read	read
+9170	1	04	s16	SOL.o_pumpe_1	1377	Pump 1	SOL 2	system_ein_aus_t	0-Off, 1-On			read	read
+9171	1	04	s16	SOL.o_pumpe_1	1377	Pump 1	SOL 3	system_ein_aus_t	0-Off, 1-On			read	read
+9172	1	04	s16	SOL.o_pumpe_1	1377	Pump 1	SOL 4	system_ein_aus_t	0-Off, 1-On			read	read
+9173	1	04	s16	SOL.o_pumpe_1	1377	Pump 1	SOL 5	system_ein_aus_t	0-Off, 1-On			read	read
+9174	1	04	s16	SOL.o_pumpe_1	1377	Pump 1	SOL 6	system_ein_aus_t	0-Off, 1-On			read	read
+9175	1	04	s16	SOL.o_pumpe_1	1377	Pump 1	SOL 7	system_ein_aus_t	0-Off, 1-On			read	read
+9176	1	04	s16	SOL.o_pumpe_1	1377	Pump 1	SOL 8	system_ein_aus_t	0-Off, 1-On			read	read
+9177	1	04	s16	SOL.o_pumpe_1	1377	Pump 1	SOL 9	system_ein_aus_t	0-Off, 1-On			read	read
+9178	1	04	s16	SOL.o_pumpe_1	1377	Pump 1	SOL 10	system_ein_aus_t	0-Off, 1-On			read	read
+9179	1	04	s16	SOL.o_pumpe_1	1377	Pump 1	SOL 11	system_ein_aus_t	0-Off, 1-On			read	read
+9180	1	04	s16	SOL.o_pumpe_1	1377	Pump 1	SOL 12	system_ein_aus_t	0-Off, 1-On			read	read
+9181	1	04	s16	SOL.o_pumpe_1	1377	Pump 1	SOL 13	system_ein_aus_t	0-Off, 1-On			read	read
+9182	1	04	s16	SOL.o_pumpe_1	1377	Pump 1	SOL 14	system_ein_aus_t	0-Off, 1-On			read	read
+9184	1	04	s16	SOL.o_pumpe_2	1381	Pump 2	SOL 1	system_ein_aus_t	0-Off, 1-On			read	read
+9185	1	04	s16	SOL.o_pumpe_2	1381	Pump 2	SOL 2	system_ein_aus_t	0-Off, 1-On			read	read
+9186	1	04	s16	SOL.o_pumpe_2	1381	Pump 2	SOL 3	system_ein_aus_t	0-Off, 1-On			read	read
+9187	1	04	s16	SOL.o_pumpe_2	1381	Pump 2	SOL 4	system_ein_aus_t	0-Off, 1-On			read	read
+9188	1	04	s16	SOL.o_pumpe_2	1381	Pump 2	SOL 5	system_ein_aus_t	0-Off, 1-On			read	read
+9189	1	04	s16	SOL.o_pumpe_2	1381	Pump 2	SOL 6	system_ein_aus_t	0-Off, 1-On			read	read
+9190	1	04	s16	SOL.o_pumpe_2	1381	Pump 2	SOL 7	system_ein_aus_t	0-Off, 1-On			read	read
+9191	1	04	s16	SOL.o_pumpe_2	1381	Pump 2	SOL 8	system_ein_aus_t	0-Off, 1-On			read	read
+9192	1	04	s16	SOL.o_pumpe_2	1381	Pump 2	SOL 9	system_ein_aus_t	0-Off, 1-On			read	read
+9193	1	04	s16	SOL.o_pumpe_2	1381	Pump 2	SOL 10	system_ein_aus_t	0-Off, 1-On			read	read
+9194	1	04	s16	SOL.o_pumpe_2	1381	Pump 2	SOL 11	system_ein_aus_t	0-Off, 1-On			read	read
+9195	1	04	s16	SOL.o_pumpe_2	1381	Pump 2	SOL 12	system_ein_aus_t	0-Off, 1-On			read	read
+9196	1	04	s16	SOL.o_pumpe_2	1381	Pump 2	SOL 13	system_ein_aus_t	0-Off, 1-On			read	read
+9197	1	04	s16	SOL.o_pumpe_2	1381	Pump 2	SOL 14	system_ein_aus_t	0-Off, 1-On			read	read
+9199	1	04	s16	SOL.o_umschaltventil	1389	Switchover valve	SOL 1	system_ein_aus_t	0-Off, 1-On			read	read
+9200	1	04	s16	SOL.o_umschaltventil	1389	Switchover valve	SOL 2	system_ein_aus_t	0-Off, 1-On			read	read
+9201	1	04	s16	SOL.o_umschaltventil	1389	Switchover valve	SOL 3	system_ein_aus_t	0-Off, 1-On			read	read
+9202	1	04	s16	SOL.o_umschaltventil	1389	Switchover valve	SOL 4	system_ein_aus_t	0-Off, 1-On			read	read
+9203	1	04	s16	SOL.o_umschaltventil	1389	Switchover valve	SOL 5	system_ein_aus_t	0-Off, 1-On			read	read
+9204	1	04	s16	SOL.o_umschaltventil	1389	Switchover valve	SOL 6	system_ein_aus_t	0-Off, 1-On			read	read
+9205	1	04	s16	SOL.o_umschaltventil	1389	Switchover valve	SOL 7	system_ein_aus_t	0-Off, 1-On			read	read
+9206	1	04	s16	SOL.o_umschaltventil	1389	Switchover valve	SOL 8	system_ein_aus_t	0-Off, 1-On			read	read
+9207	1	04	s16	SOL.o_umschaltventil	1389	Switchover valve	SOL 9	system_ein_aus_t	0-Off, 1-On			read	read
+9208	1	04	s16	SOL.o_umschaltventil	1389	Switchover valve	SOL 10	system_ein_aus_t	0-Off, 1-On			read	read
+9209	1	04	s16	SOL.o_umschaltventil	1389	Switchover valve	SOL 11	system_ein_aus_t	0-Off, 1-On			read	read
+9210	1	04	s16	SOL.o_umschaltventil	1389	Switchover valve	SOL 12	system_ein_aus_t	0-Off, 1-On			read	read
+9211	1	04	s16	SOL.o_umschaltventil	1389	Switchover valve	SOL 13	system_ein_aus_t	0-Off, 1-On			read	read
+9212	1	04	s16	SOL.o_umschaltventil	1389	Switchover valve	SOL 14	system_ein_aus_t	0-Off, 1-On			read	read
+9215	2	04	u32	SOL.waermeleistung	1444	Thermal output	SOL 1	1/1000kW				read	read
+9217	2	04	u32	SOL.waermeleistung	1444	Thermal output	SOL 2	1/1000kW				read	read
+9219	2	04	u32	SOL.waermeleistung	1444	Thermal output	SOL 3	1/1000kW				read	read
+9221	2	04	u32	SOL.waermeleistung	1444	Thermal output	SOL 4	1/1000kW				read	read
+9223	2	04	u32	SOL.waermeleistung	1444	Thermal output	SOL 5	1/1000kW				read	read
+9225	2	04	u32	SOL.waermeleistung	1444	Thermal output	SOL 6	1/1000kW				read	read
+9227	2	04	u32	SOL.waermeleistung	1444	Thermal output	SOL 7	1/1000kW				read	read
+9229	2	04	u32	SOL.waermeleistung	1444	Thermal output	SOL 8	1/1000kW				read	read
+9231	2	04	u32	SOL.waermeleistung	1444	Thermal output	SOL 9	1/1000kW				read	read
+9233	2	04	u32	SOL.waermeleistung	1444	Thermal output	SOL 10	1/1000kW				read	read
+9235	2	04	u32	SOL.waermeleistung	1444	Thermal output	SOL 11	1/1000kW				read	read
+9237	2	04	u32	SOL.waermeleistung	1444	Thermal output	SOL 12	1/1000kW				read	read
+9239	2	04	u32	SOL.waermeleistung	1444	Thermal output	SOL 13	1/1000kW				read	read
+9241	2	04	u32	SOL.waermeleistung	1444	Thermal output	SOL 14	1/1000kW				read	read
+9245	2	04	u32	SOL.waermemenge_tag	1441	Heat amount day	SOL 1	1/1000kWh				read	read
+9247	2	04	u32	SOL.waermemenge_tag	1441	Heat amount day	SOL 2	1/1000kWh				read	read
+9249	2	04	u32	SOL.waermemenge_tag	1441	Heat amount day	SOL 3	1/1000kWh				read	read
+9251	2	04	u32	SOL.waermemenge_tag	1441	Heat amount day	SOL 4	1/1000kWh				read	read
+9253	2	04	u32	SOL.waermemenge_tag	1441	Heat amount day	SOL 5	1/1000kWh				read	read
+9255	2	04	u32	SOL.waermemenge_tag	1441	Heat amount day	SOL 6	1/1000kWh				read	read
+9257	2	04	u32	SOL.waermemenge_tag	1441	Heat amount day	SOL 7	1/1000kWh				read	read
+9259	2	04	u32	SOL.waermemenge_tag	1441	Heat amount day	SOL 8	1/1000kWh				read	read
+9261	2	04	u32	SOL.waermemenge_tag	1441	Heat amount day	SOL 9	1/1000kWh				read	read
+9263	2	04	u32	SOL.waermemenge_tag	1441	Heat amount day	SOL 10	1/1000kWh				read	read
+9265	2	04	u32	SOL.waermemenge_tag	1441	Heat amount day	SOL 11	1/1000kWh				read	read
+9267	2	04	u32	SOL.waermemenge_tag	1441	Heat amount day	SOL 12	1/1000kWh				read	read
+9269	2	04	u32	SOL.waermemenge_tag	1441	Heat amount day	SOL 13	1/1000kWh				read	read
+9271	2	04	u32	SOL.waermemenge_tag	1441	Heat amount day	SOL 14	1/1000kWh				read	read
+9275	2	04	u32	SOL.waermemenge_gesamt	1440	Heat amount total	SOL 1	1/1000kWh				read	read
+9277	2	04	u32	SOL.waermemenge_gesamt	1440	Heat amount total	SOL 2	1/1000kWh				read	read
+9279	2	04	u32	SOL.waermemenge_gesamt	1440	Heat amount total	SOL 3	1/1000kWh				read	read
+9281	2	04	u32	SOL.waermemenge_gesamt	1440	Heat amount total	SOL 4	1/1000kWh				read	read
+9283	2	04	u32	SOL.waermemenge_gesamt	1440	Heat amount total	SOL 5	1/1000kWh				read	read
+9285	2	04	u32	SOL.waermemenge_gesamt	1440	Heat amount total	SOL 6	1/1000kWh				read	read
+9287	2	04	u32	SOL.waermemenge_gesamt	1440	Heat amount total	SOL 7	1/1000kWh				read	read
+9289	2	04	u32	SOL.waermemenge_gesamt	1440	Heat amount total	SOL 8	1/1000kWh				read	read
+9291	2	04	u32	SOL.waermemenge_gesamt	1440	Heat amount total	SOL 9	1/1000kWh				read	read
+9293	2	04	u32	SOL.waermemenge_gesamt	1440	Heat amount total	SOL 10	1/1000kWh				read	read
+9295	2	04	u32	SOL.waermemenge_gesamt	1440	Heat amount total	SOL 11	1/1000kWh				read	read
+9297	2	04	u32	SOL.waermemenge_gesamt	1440	Heat amount total	SOL 12	1/1000kWh				read	read
+9299	2	04	u32	SOL.waermemenge_gesamt	1440	Heat amount total	SOL 13	1/1000kWh				read	read
+9301	2	04	u32	SOL.waermemenge_gesamt	1440	Heat amount total	SOL 14	1/1000kWh				read	read
+9305	1	04	s16	SOL.i_vorlauf_temperatur.value	1395	Collector forward flow temp. (value)	SOL 1	1/10°C				read	read
+9306	1	04	s16	SOL.i_vorlauf_temperatur.status	1395	Collector forward flow temp. (status)	SOL 1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9307	1	04	s16	SOL.i_vorlauf_temperatur.value	1395	Collector forward flow temp. (value)	SOL 2	1/10°C				read	read
+9308	1	04	s16	SOL.i_vorlauf_temperatur.status	1395	Collector forward flow temp. (status)	SOL 2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9309	1	04	s16	SOL.i_vorlauf_temperatur.value	1395	Collector forward flow temp. (value)	SOL 3	1/10°C				read	read
+9310	1	04	s16	SOL.i_vorlauf_temperatur.status	1395	Collector forward flow temp. (status)	SOL 3	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9311	1	04	s16	SOL.i_vorlauf_temperatur.value	1395	Collector forward flow temp. (value)	SOL 4	1/10°C				read	read
+9312	1	04	s16	SOL.i_vorlauf_temperatur.status	1395	Collector forward flow temp. (status)	SOL 4	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9313	1	04	s16	SOL.i_vorlauf_temperatur.value	1395	Collector forward flow temp. (value)	SOL 5	1/10°C				read	read
+9314	1	04	s16	SOL.i_vorlauf_temperatur.status	1395	Collector forward flow temp. (status)	SOL 5	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9315	1	04	s16	SOL.i_vorlauf_temperatur.value	1395	Collector forward flow temp. (value)	SOL 6	1/10°C				read	read
+9316	1	04	s16	SOL.i_vorlauf_temperatur.status	1395	Collector forward flow temp. (status)	SOL 6	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9317	1	04	s16	SOL.i_vorlauf_temperatur.value	1395	Collector forward flow temp. (value)	SOL 7	1/10°C				read	read
+9318	1	04	s16	SOL.i_vorlauf_temperatur.status	1395	Collector forward flow temp. (status)	SOL 7	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9319	1	04	s16	SOL.i_vorlauf_temperatur.value	1395	Collector forward flow temp. (value)	SOL 8	1/10°C				read	read
+9320	1	04	s16	SOL.i_vorlauf_temperatur.status	1395	Collector forward flow temp. (status)	SOL 8	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9321	1	04	s16	SOL.i_vorlauf_temperatur.value	1395	Collector forward flow temp. (value)	SOL 9	1/10°C				read	read
+9322	1	04	s16	SOL.i_vorlauf_temperatur.status	1395	Collector forward flow temp. (status)	SOL 9	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9323	1	04	s16	SOL.i_vorlauf_temperatur.value	1395	Collector forward flow temp. (value)	SOL 10	1/10°C				read	read
+9324	1	04	s16	SOL.i_vorlauf_temperatur.status	1395	Collector forward flow temp. (status)	SOL 10	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9325	1	04	s16	SOL.i_vorlauf_temperatur.value	1395	Collector forward flow temp. (value)	SOL 11	1/10°C				read	read
+9326	1	04	s16	SOL.i_vorlauf_temperatur.status	1395	Collector forward flow temp. (status)	SOL 11	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9327	1	04	s16	SOL.i_vorlauf_temperatur.value	1395	Collector forward flow temp. (value)	SOL 12	1/10°C				read	read
+9328	1	04	s16	SOL.i_vorlauf_temperatur.status	1395	Collector forward flow temp. (status)	SOL 12	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9329	1	04	s16	SOL.i_vorlauf_temperatur.value	1395	Collector forward flow temp. (value)	SOL 13	1/10°C				read	read
+9330	1	04	s16	SOL.i_vorlauf_temperatur.status	1395	Collector forward flow temp. (status)	SOL 13	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9331	1	04	s16	SOL.i_vorlauf_temperatur.value	1395	Collector forward flow temp. (value)	SOL 14	1/10°C				read	read
+9332	1	04	s16	SOL.i_vorlauf_temperatur.status	1395	Collector forward flow temp. (status)	SOL 14	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9335	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.value	1442	Collector return flow temp. (value)	SOL 1	1/10°C				read	read
+9336	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.status	1442	Collector return flow temp. (status)	SOL 1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9337	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.value	1442	Collector return flow temp. (value)	SOL 2	1/10°C				read	read
+9338	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.status	1442	Collector return flow temp. (status)	SOL 2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9339	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.value	1442	Collector return flow temp. (value)	SOL 3	1/10°C				read	read
+9340	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.status	1442	Collector return flow temp. (status)	SOL 3	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9341	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.value	1442	Collector return flow temp. (value)	SOL 4	1/10°C				read	read
+9342	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.status	1442	Collector return flow temp. (status)	SOL 4	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9343	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.value	1442	Collector return flow temp. (value)	SOL 5	1/10°C				read	read
+9344	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.status	1442	Collector return flow temp. (status)	SOL 5	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9345	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.value	1442	Collector return flow temp. (value)	SOL 6	1/10°C				read	read
+9346	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.status	1442	Collector return flow temp. (status)	SOL 6	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9347	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.value	1442	Collector return flow temp. (value)	SOL 7	1/10°C				read	read
+9348	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.status	1442	Collector return flow temp. (status)	SOL 7	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9349	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.value	1442	Collector return flow temp. (value)	SOL 8	1/10°C				read	read
+9350	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.status	1442	Collector return flow temp. (status)	SOL 8	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9351	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.value	1442	Collector return flow temp. (value)	SOL 9	1/10°C				read	read
+9352	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.status	1442	Collector return flow temp. (status)	SOL 9	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9353	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.value	1442	Collector return flow temp. (value)	SOL 10	1/10°C				read	read
+9354	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.status	1442	Collector return flow temp. (status)	SOL 10	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9355	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.value	1442	Collector return flow temp. (value)	SOL 11	1/10°C				read	read
+9356	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.status	1442	Collector return flow temp. (status)	SOL 11	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9357	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.value	1442	Collector return flow temp. (value)	SOL 12	1/10°C				read	read
+9358	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.status	1442	Collector return flow temp. (status)	SOL 12	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9359	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.value	1442	Collector return flow temp. (value)	SOL 13	1/10°C				read	read
+9360	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.status	1442	Collector return flow temp. (status)	SOL 13	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9361	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.value	1442	Collector return flow temp. (value)	SOL 14	1/10°C				read	read
+9362	1	04	s16	SOL.i_kollektor_ruecklauf_temperatur.status	1442	Collector return flow temp. (status)	SOL 14	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9365	1	04	s16	SOL.i_kollektor_durchfluss.value	1443	Flow-through (value)	SOL 1	1/100l/min				read	read
+9366	1	04	s16	SOL.i_kollektor_durchfluss.status	1443	Flow-through (status)	SOL 1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9367	1	04	s16	SOL.i_kollektor_durchfluss.value	1443	Flow-through (value)	SOL 2	1/100l/min				read	read
+9368	1	04	s16	SOL.i_kollektor_durchfluss.status	1443	Flow-through (status)	SOL 2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9369	1	04	s16	SOL.i_kollektor_durchfluss.value	1443	Flow-through (value)	SOL 3	1/100l/min				read	read
+9370	1	04	s16	SOL.i_kollektor_durchfluss.status	1443	Flow-through (status)	SOL 3	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9371	1	04	s16	SOL.i_kollektor_durchfluss.value	1443	Flow-through (value)	SOL 4	1/100l/min				read	read
+9372	1	04	s16	SOL.i_kollektor_durchfluss.status	1443	Flow-through (status)	SOL 4	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9373	1	04	s16	SOL.i_kollektor_durchfluss.value	1443	Flow-through (value)	SOL 5	1/100l/min				read	read
+9374	1	04	s16	SOL.i_kollektor_durchfluss.status	1443	Flow-through (status)	SOL 5	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9375	1	04	s16	SOL.i_kollektor_durchfluss.value	1443	Flow-through (value)	SOL 6	1/100l/min				read	read
+9376	1	04	s16	SOL.i_kollektor_durchfluss.status	1443	Flow-through (status)	SOL 6	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9377	1	04	s16	SOL.i_kollektor_durchfluss.value	1443	Flow-through (value)	SOL 7	1/100l/min				read	read
+9378	1	04	s16	SOL.i_kollektor_durchfluss.status	1443	Flow-through (status)	SOL 7	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9379	1	04	s16	SOL.i_kollektor_durchfluss.value	1443	Flow-through (value)	SOL 8	1/100l/min				read	read
+9380	1	04	s16	SOL.i_kollektor_durchfluss.status	1443	Flow-through (status)	SOL 8	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9381	1	04	s16	SOL.i_kollektor_durchfluss.value	1443	Flow-through (value)	SOL 9	1/100l/min				read	read
+9382	1	04	s16	SOL.i_kollektor_durchfluss.status	1443	Flow-through (status)	SOL 9	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9383	1	04	s16	SOL.i_kollektor_durchfluss.value	1443	Flow-through (value)	SOL 10	1/100l/min				read	read
+9384	1	04	s16	SOL.i_kollektor_durchfluss.status	1443	Flow-through (status)	SOL 10	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9385	1	04	s16	SOL.i_kollektor_durchfluss.value	1443	Flow-through (value)	SOL 11	1/100l/min				read	read
+9386	1	04	s16	SOL.i_kollektor_durchfluss.status	1443	Flow-through (status)	SOL 11	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9387	1	04	s16	SOL.i_kollektor_durchfluss.value	1443	Flow-through (value)	SOL 12	1/100l/min				read	read
+9388	1	04	s16	SOL.i_kollektor_durchfluss.status	1443	Flow-through (status)	SOL 12	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9389	1	04	s16	SOL.i_kollektor_durchfluss.value	1443	Flow-through (value)	SOL 13	1/100l/min				read	read
+9390	1	04	s16	SOL.i_kollektor_durchfluss.status	1443	Flow-through (status)	SOL 13	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9391	1	04	s16	SOL.i_kollektor_durchfluss.value	1443	Flow-through (value)	SOL 14	1/100l/min				read	read
+9392	1	04	s16	SOL.i_kollektor_durchfluss.status	1443	Flow-through (status)	SOL 14	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9466	1	04	u16	SOL.pumpe_1_steuerstufe	1378	Pump 1	SOL 1	1/10%				read	read
+9467	1	04	u16	SOL.pumpe_1_steuerstufe	1378	Pump 1	SOL 2	1/10%				read	read
+9468	1	04	u16	SOL.pumpe_1_steuerstufe	1378	Pump 1	SOL 3	1/10%				read	read
+9469	1	04	u16	SOL.pumpe_1_steuerstufe	1378	Pump 1	SOL 4	1/10%				read	read
+9470	1	04	u16	SOL.pumpe_1_steuerstufe	1378	Pump 1	SOL 5	1/10%				read	read
+9471	1	04	u16	SOL.pumpe_1_steuerstufe	1378	Pump 1	SOL 6	1/10%				read	read
+9472	1	04	u16	SOL.pumpe_1_steuerstufe	1378	Pump 1	SOL 7	1/10%				read	read
+9473	1	04	u16	SOL.pumpe_1_steuerstufe	1378	Pump 1	SOL 8	1/10%				read	read
+9474	1	04	u16	SOL.pumpe_1_steuerstufe	1378	Pump 1	SOL 9	1/10%				read	read
+9475	1	04	u16	SOL.pumpe_1_steuerstufe	1378	Pump 1	SOL 10	1/10%				read	read
+9476	1	04	u16	SOL.pumpe_1_steuerstufe	1378	Pump 1	SOL 11	1/10%				read	read
+9477	1	04	u16	SOL.pumpe_1_steuerstufe	1378	Pump 1	SOL 12	1/10%				read	read
+9478	1	04	u16	SOL.pumpe_1_steuerstufe	1378	Pump 1	SOL 13	1/10%				read	read
+9479	1	04	u16	SOL.pumpe_1_steuerstufe	1378	Pump 1	SOL 14	1/10%				read	read
+9481	1	04	u16	SOL.pumpe_2_steuerstufe	1382	Pump 2	SOL 1	1/10%				read	read
+9482	1	04	u16	SOL.pumpe_2_steuerstufe	1382	Pump 2	SOL 2	1/10%				read	read
+9483	1	04	u16	SOL.pumpe_2_steuerstufe	1382	Pump 2	SOL 3	1/10%				read	read
+9484	1	04	u16	SOL.pumpe_2_steuerstufe	1382	Pump 2	SOL 4	1/10%				read	read
+9485	1	04	u16	SOL.pumpe_2_steuerstufe	1382	Pump 2	SOL 5	1/10%				read	read
+9486	1	04	u16	SOL.pumpe_2_steuerstufe	1382	Pump 2	SOL 6	1/10%				read	read
+9487	1	04	u16	SOL.pumpe_2_steuerstufe	1382	Pump 2	SOL 7	1/10%				read	read
+9488	1	04	u16	SOL.pumpe_2_steuerstufe	1382	Pump 2	SOL 8	1/10%				read	read
+9489	1	04	u16	SOL.pumpe_2_steuerstufe	1382	Pump 2	SOL 9	1/10%				read	read
+9490	1	04	u16	SOL.pumpe_2_steuerstufe	1382	Pump 2	SOL 10	1/10%				read	read
+9491	1	04	u16	SOL.pumpe_2_steuerstufe	1382	Pump 2	SOL 11	1/10%				read	read
+9492	1	04	u16	SOL.pumpe_2_steuerstufe	1382	Pump 2	SOL 12	1/10%				read	read
+9493	1	04	u16	SOL.pumpe_2_steuerstufe	1382	Pump 2	SOL 13	1/10%				read	read
+9494	1	04	u16	SOL.pumpe_2_steuerstufe	1382	Pump 2	SOL 14	1/10%				read	read
+9882	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.value	2438	Forw. flow temp. sec. (value)	SOL 1	1/10°C				read	read
+9883	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.status	2438	Forw. flow temp. sec. (status)	SOL 1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9884	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.value	2438	Forw. flow temp. sec. (value)	SOL 2	1/10°C				read	read
+9885	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.status	2438	Forw. flow temp. sec. (status)	SOL 2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9886	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.value	2438	Forw. flow temp. sec. (value)	SOL 3	1/10°C				read	read
+9887	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.status	2438	Forw. flow temp. sec. (status)	SOL 3	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9888	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.value	2438	Forw. flow temp. sec. (value)	SOL 4	1/10°C				read	read
+9889	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.status	2438	Forw. flow temp. sec. (status)	SOL 4	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9890	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.value	2438	Forw. flow temp. sec. (value)	SOL 5	1/10°C				read	read
+9891	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.status	2438	Forw. flow temp. sec. (status)	SOL 5	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9892	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.value	2438	Forw. flow temp. sec. (value)	SOL 6	1/10°C				read	read
+9893	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.status	2438	Forw. flow temp. sec. (status)	SOL 6	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9894	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.value	2438	Forw. flow temp. sec. (value)	SOL 7	1/10°C				read	read
+9895	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.status	2438	Forw. flow temp. sec. (status)	SOL 7	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9896	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.value	2438	Forw. flow temp. sec. (value)	SOL 8	1/10°C				read	read
+9897	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.status	2438	Forw. flow temp. sec. (status)	SOL 8	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9898	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.value	2438	Forw. flow temp. sec. (value)	SOL 9	1/10°C				read	read
+9899	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.status	2438	Forw. flow temp. sec. (status)	SOL 9	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9900	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.value	2438	Forw. flow temp. sec. (value)	SOL 10	1/10°C				read	read
+9901	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.status	2438	Forw. flow temp. sec. (status)	SOL 10	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9902	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.value	2438	Forw. flow temp. sec. (value)	SOL 11	1/10°C				read	read
+9903	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.status	2438	Forw. flow temp. sec. (status)	SOL 11	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9904	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.value	2438	Forw. flow temp. sec. (value)	SOL 12	1/10°C				read	read
+9905	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.status	2438	Forw. flow temp. sec. (status)	SOL 12	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9906	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.value	2438	Forw. flow temp. sec. (value)	SOL 13	1/10°C				read	read
+9907	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.status	2438	Forw. flow temp. sec. (status)	SOL 13	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9908	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.value	2438	Forw. flow temp. sec. (value)	SOL 14	1/10°C				read	read
+9909	1	04	s16	SOL.i_vorlauf_temperatur_sekundaer.status	2438	Forw. flow temp. sec. (status)	SOL 14	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9912	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.value	2439	Ret. flow temp. sec. (value)	SOL 1	1/10°C				read	read
+9913	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.status	2439	Ret. flow temp. sec. (status)	SOL 1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9914	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.value	2439	Ret. flow temp. sec. (value)	SOL 2	1/10°C				read	read
+9915	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.status	2439	Ret. flow temp. sec. (status)	SOL 2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9916	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.value	2439	Ret. flow temp. sec. (value)	SOL 3	1/10°C				read	read
+9917	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.status	2439	Ret. flow temp. sec. (status)	SOL 3	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9918	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.value	2439	Ret. flow temp. sec. (value)	SOL 4	1/10°C				read	read
+9919	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.status	2439	Ret. flow temp. sec. (status)	SOL 4	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9920	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.value	2439	Ret. flow temp. sec. (value)	SOL 5	1/10°C				read	read
+9921	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.status	2439	Ret. flow temp. sec. (status)	SOL 5	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9922	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.value	2439	Ret. flow temp. sec. (value)	SOL 6	1/10°C				read	read
+9923	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.status	2439	Ret. flow temp. sec. (status)	SOL 6	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9924	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.value	2439	Ret. flow temp. sec. (value)	SOL 7	1/10°C				read	read
+9925	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.status	2439	Ret. flow temp. sec. (status)	SOL 7	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9926	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.value	2439	Ret. flow temp. sec. (value)	SOL 8	1/10°C				read	read
+9927	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.status	2439	Ret. flow temp. sec. (status)	SOL 8	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9928	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.value	2439	Ret. flow temp. sec. (value)	SOL 9	1/10°C				read	read
+9929	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.status	2439	Ret. flow temp. sec. (status)	SOL 9	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9930	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.value	2439	Ret. flow temp. sec. (value)	SOL 10	1/10°C				read	read
+9931	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.status	2439	Ret. flow temp. sec. (status)	SOL 10	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9932	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.value	2439	Ret. flow temp. sec. (value)	SOL 11	1/10°C				read	read
+9933	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.status	2439	Ret. flow temp. sec. (status)	SOL 11	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9934	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.value	2439	Ret. flow temp. sec. (value)	SOL 12	1/10°C				read	read
+9935	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.status	2439	Ret. flow temp. sec. (status)	SOL 12	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9936	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.value	2439	Ret. flow temp. sec. (value)	SOL 13	1/10°C				read	read
+9937	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.status	2439	Ret. flow temp. sec. (status)	SOL 13	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9938	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.value	2439	Ret. flow temp. sec. (value)	SOL 14	1/10°C				read	read
+9939	1	04	s16	SOL.i_ruecklauf_temperatur_sekundaer.status	2439	Ret. flow temp. sec. (status)	SOL 14	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9942	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.value	2440	Ret. flow temp. prim. (value)	SOL 1	1/10°C				read	read
+9943	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.status	2440	Ret. flow temp. prim. (status)	SOL 1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9944	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.value	2440	Ret. flow temp. prim. (value)	SOL 2	1/10°C				read	read
+9945	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.status	2440	Ret. flow temp. prim. (status)	SOL 2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9946	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.value	2440	Ret. flow temp. prim. (value)	SOL 3	1/10°C				read	read
+9947	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.status	2440	Ret. flow temp. prim. (status)	SOL 3	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9948	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.value	2440	Ret. flow temp. prim. (value)	SOL 4	1/10°C				read	read
+9949	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.status	2440	Ret. flow temp. prim. (status)	SOL 4	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9950	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.value	2440	Ret. flow temp. prim. (value)	SOL 5	1/10°C				read	read
+9951	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.status	2440	Ret. flow temp. prim. (status)	SOL 5	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9952	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.value	2440	Ret. flow temp. prim. (value)	SOL 6	1/10°C				read	read
+9953	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.status	2440	Ret. flow temp. prim. (status)	SOL 6	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9954	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.value	2440	Ret. flow temp. prim. (value)	SOL 7	1/10°C				read	read
+9955	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.status	2440	Ret. flow temp. prim. (status)	SOL 7	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9956	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.value	2440	Ret. flow temp. prim. (value)	SOL 8	1/10°C				read	read
+9957	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.status	2440	Ret. flow temp. prim. (status)	SOL 8	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9958	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.value	2440	Ret. flow temp. prim. (value)	SOL 9	1/10°C				read	read
+9959	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.status	2440	Ret. flow temp. prim. (status)	SOL 9	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9960	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.value	2440	Ret. flow temp. prim. (value)	SOL 10	1/10°C				read	read
+9961	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.status	2440	Ret. flow temp. prim. (status)	SOL 10	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9962	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.value	2440	Ret. flow temp. prim. (value)	SOL 11	1/10°C				read	read
+9963	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.status	2440	Ret. flow temp. prim. (status)	SOL 11	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9964	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.value	2440	Ret. flow temp. prim. (value)	SOL 12	1/10°C				read	read
+9965	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.status	2440	Ret. flow temp. prim. (status)	SOL 12	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9966	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.value	2440	Ret. flow temp. prim. (value)	SOL 13	1/10°C				read	read
+9967	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.status	2440	Ret. flow temp. prim. (status)	SOL 13	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9968	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.value	2440	Ret. flow temp. prim. (value)	SOL 14	1/10°C				read	read
+9969	1	04	s16	SOL.i_ruecklauf_temperatur_primaer.status	2440	Ret. flow temp. prim. (status)	SOL 14	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read

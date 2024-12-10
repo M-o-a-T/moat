@@ -1,0 +1,134 @@
+regs:
+  cosphi:
+    L1:
+      register: 19044
+      type: float
+      unit: x1
+    L2:
+      register: 19046
+      type: float
+      unit: x1
+    L3:
+      register: 19048
+      type: float
+      unit: x1
+  current:
+    L1:
+      register: 19012
+      type: float
+      unit: A
+    L2:
+      register: 19014
+      type: float
+      unit: A
+    L3:
+      register: 19016
+      type: float
+      unit: A
+  energy:
+    L1:
+      active:
+        register: 19054
+        type: float
+        unit: Wh
+    L2:
+      active:
+        register: 19056
+        type: float
+        unit: Wh
+    L3:
+      active:
+        register: 19058
+        type: float
+        unit: Wh
+    sum3:
+      active:
+        register: 19060
+        type: float
+        unit: Wh
+  frequency:
+    L:
+      register: 19050
+      type: float
+      unit: Hz
+  power:
+    L1:
+      active:
+        register: 19020
+        type: float
+        unit: W
+      apparent:
+        register: 19028
+        type: float
+        unit: VA
+      reactive:
+        register: 19036
+        type: float
+        unit: var
+    L2:
+      active:
+        register: 19022
+        type: float
+        unit: W
+      apparent:
+        register: 19030
+        type: float
+        unit: VA
+      reactive:
+        register: 19038
+        type: float
+        unit: var
+    L3:
+      active:
+        register: 19024
+        type: float
+        unit: W
+      apparent:
+        register: 19032
+        type: float
+        unit: VA
+      reactive:
+        register: 19040
+        type: float
+        unit: var
+  thd:
+    L1:
+      current:
+        register: 19116
+        type: float
+        unit: pM
+      voltage:
+        register: 19110
+        type: float
+        unit: pM
+    L2:
+      current:
+        register: 19118
+        type: float
+        unit: pM
+      voltage:
+        register: 19112
+        type: float
+        unit: pM
+    L3:
+      current:
+        register: 19120
+        type: float
+        unit: pM
+      voltage:
+        register: 19114
+        type: float
+        unit: pM
+  voltage:
+    L1:
+      register: 19000
+      type: float
+      unit: V
+    L2:
+      register: 19002
+      type: float
+      unit: V
+    L3:
+      register: 19004
+      type: float
+      unit: V

@@ -1,0 +1,46 @@
+StartingAddress	NumberOfRegisters	Functions	Type	Parameter	ID	Name	Index	Unit/ValueTable	Values	Min	Max	UserLevel	ExpertLevel
+9394	1	04	s16	KFS.mittlere_puffertemperatur	1361	Average buffer temp.		1/10°C				read	read
+9395	1	04	s16	KFS.puffer_fuellgrad	1363	Buffer fill level		1/10%				read	read
+9396	1	04	s16	KFS.netz_vorlauf.value	1551	NetwForwFl (value)		1/10°C				read	read
+9397	1	04	s16	KFS.netz_vorlauf.status	1551	NetwForwFl (status)		system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9398	1	04	s16	KFS.netz_ruecklauf.value	1552	NetwRetFl (value)		1/10°C				read	read
+9399	1	04	s16	KFS.netz_ruecklauf.status	1552	NetwRetFl (status)		system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9400	1	04	s16	KFS.o_anforderung_spitzenlastkessel	1350	Requ. peak load boiler		system_ein_aus_t	0-Off, 1-On			read	read
+9402	1	04	s16	KFK.o_anforderung	1353	Request	B 1	system_ein_aus_t	0-Off, 1-On			read	read
+9403	1	04	s16	KFK.o_anforderung	1353	Request	B 2	system_ein_aus_t	0-Off, 1-On			read	read
+9404	1	04	s16	KFK.o_anforderung	1353	Request	B 3	system_ein_aus_t	0-Off, 1-On			read	read
+9405	1	04	s16	KFK.o_anforderung	1353	Request	B 4	system_ein_aus_t	0-Off, 1-On			read	read
+9406	1	04	s16	KFK.o_anforderung	1353	Request	B 5	system_ein_aus_t	0-Off, 1-On			read	read
+9407	1	04	s16	KFK.o_anforderung	1353	Request	B 6	system_ein_aus_t	0-Off, 1-On			read	read
+9408	1	04	s16	KFK.o_anforderung	1353	Request	B 7	system_ein_aus_t	0-Off, 1-On			read	read
+9409	1	04	s16	KFK.o_anforderung	1353	Request	B 8	system_ein_aus_t	0-Off, 1-On			read	read
+9422	1	04	s16	KFK.i_stoerung	1371	Fault	B 1	system_yes_no_t	0-No, 1-Yes			read	read
+9423	1	04	s16	KFK.i_stoerung	1371	Fault	B 2	system_yes_no_t	0-No, 1-Yes			read	read
+9424	1	04	s16	KFK.i_stoerung	1371	Fault	B 3	system_yes_no_t	0-No, 1-Yes			read	read
+9425	1	04	s16	KFK.i_stoerung	1371	Fault	B 4	system_yes_no_t	0-No, 1-Yes			read	read
+9426	1	04	s16	KFK.i_stoerung	1371	Fault	B 5	system_yes_no_t	0-No, 1-Yes			read	read
+9427	1	04	s16	KFK.i_stoerung	1371	Fault	B 6	system_yes_no_t	0-No, 1-Yes			read	read
+9428	1	04	s16	KFK.i_stoerung	1371	Fault	B 7	system_yes_no_t	0-No, 1-Yes			read	read
+9429	1	04	s16	KFK.i_stoerung	1371	Fault	B 8	system_yes_no_t	0-No, 1-Yes			read	read
+9499	1	04	u8	KFS.anzahl_kessel	1459	Systems						read	read
+9500	1	04	s16	KFS.anzahl_angeforderte_kessel	2125	Systems requested		kfs_angeforderte_kessel_t	0-0, 1-1, ... (+7)			read	read
+9501	1	04	s16	KFS.puffer_solltemperatur_anzeige	2213	Buffer setpoint temperature		1/10°C				read	read
+9502	1	04	s16	KFS.puffer_temperatur_1.value	1366	Buffer temperature 1 (value)		1/10°C				read	read
+9503	1	04	s16	KFS.puffer_temperatur_1.status	1366	Buffer temperature 1 (status)		system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9504	1	04	s16	KFS.puffer_temperatur_2.value	1367	Buffer temperature 2 (value)		1/10°C				read	read
+9505	1	04	s16	KFS.puffer_temperatur_2.status	1367	Buffer temperature 2 (status)		system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9506	1	04	s16	KFS.puffer_temperatur_3.value	1368	Buffer temperature 3 (value)		1/10°C				read	read
+9507	1	04	s16	KFS.puffer_temperatur_3.status	1368	Buffer temperature 3 (status)		system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9508	1	04	s16	KFS.puffer_temperatur_4.value	1369	Buffer temperature 4 (value)		1/10°C				read	read
+9509	1	04	s16	KFS.puffer_temperatur_4.status	1369	Buffer temperature 4 (status)		system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9510	1	04	s16	KFS.puffer_temperatur_5.value	1370	Buffer temperature 5 (value)		1/10°C				read	read
+9511	1	04	s16	KFS.puffer_temperatur_5.status	1370	Buffer temperature 5 (status)		system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9512	1	04	s16	KFS.i_aussen_temperatur_mittelwert.value	2241	Averaged outside temp. (value)		1/10°C				read	read
+9513	1	04	s16	KFS.i_aussen_temperatur_mittelwert.status	2241	Averaged outside temp. (status)		system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9514	1	04	s16	KFS.o_stoerung_dauer	1354	Malfunction contact duration		system_ein_aus_t	0-Off, 1-On			read	read
+9515	1	04	s16	KFS.mittlere_durchladetemperatur	2106	Average charging temp.		1/10°C				read	read
+9516	1	04	s16	KFS.puffer_durchladegrad	2095	Buffer charge-up degree		1/10%				read	read
+24848	1	03, 06, 16	s16	KFS.puffer_solltemperatur_winter	1365	Buffer setpoint temperature Winter		1/10°C		500	900	readwrite	readwrite
+24929	1	03, 06, 16	s16	KFS.anlage_ein	2244	Boiler master-and-slave circuit		system_ein_aus_t	0-Off, 1-On			readwrite	readwrite
+24930	1	03, 06, 16	s16	KFS.active_profile	2214	Active profile		kfs_profile_t	0-Winter, 1-Summer			readwrite	readwrite
+24931	1	03, 06, 16	s16	KFS.puffer_solltemperatur_sommer	2230	Buffer setpoint temperature Summer		1/10°C		300	900	readwrite	readwrite

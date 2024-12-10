@@ -1,0 +1,101 @@
+regs:
+  frequency:
+    register: 19050
+    type: float
+  angle:
+    L1:
+      register: 19044
+      type: float
+  energy:
+    L1:
+      active:
+        register: 19054
+        type: float
+  power:
+    L1:
+      apparent:
+        register: 19028
+        type: float
+      reactive:
+        register: 19036
+        type: float
+  thd:
+    voltage:
+      register: 19110
+      type: float
+    current:
+      register: 19116
+      type: float
+  L2:
+    _:
+      register: 19046
+      scale_reg: '10307'
+      scale_type: int
+      type: float
+    active:
+      register: 19056
+      type: float
+    apparent:
+      register: 19030
+      type: float
+    current:
+      register: 19118
+      type: float
+    reactive:
+      register: 19038
+      type: float
+    voltage:
+      register: 19112
+      type: float
+  L3:
+    _:
+      register: 19048
+      scale_reg: '10308'
+      scale_type: int
+      type: float
+    active:
+      register: 19058
+      type: float
+    apparent:
+      register: 19032
+      type: float
+    current:
+      register: 19120
+      type: float
+    reactive:
+      register: 19040
+      type: float
+    voltage:
+      register: 19114
+      type: float
+  power:
+    sum3:
+      active:
+        register: 19026
+        type: float
+        unit: W
+      apparent:
+        register: 19034
+        type: float
+        unit: VA
+      reactive:
+        register: 19042
+        type: float
+        unit: var
+  sum3:
+    active:
+      register: 19060
+      type: float
+  voltage:
+    L1:
+      register: 19000
+      type: float
+      unit: V
+    L2:
+      register: 19002
+      type: float
+      unit: V
+    L3:
+      register: 19004
+      type: float
+      unit: V

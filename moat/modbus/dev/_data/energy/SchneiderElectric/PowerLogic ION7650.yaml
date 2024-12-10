@@ -1,0 +1,82 @@
+regs:
+  current:
+    L1:
+      register: 149
+      scale: -1
+      type: uint
+      unit: A
+    L2:
+      register: 150
+      scale: -1
+      type: uint
+      unit: A
+    L3:
+      register: 151
+      scale: -1
+      type: uint
+      unit: A
+    L4:
+      register: 152
+      scale: -1
+      type: uint
+      unit: A
+    L5:
+      register: 153
+      scale: -1
+      type: uint
+      unit: A
+  energy:
+    sum3:
+      active:
+        register: 229
+        scale: 3
+        type: uint32
+        unit: Wh
+  frequency:
+    L:
+      register: 158
+      scale: -1
+      type: uint
+      unit: Hz
+  power:
+    sum3:
+      active:
+        register: 203
+        scale: 3
+        type: int32
+        unit: W
+      apparent:
+        register: 223
+        scale: 3
+        type: int32
+        unit: VA
+      reactive:
+        register: 213
+        scale: 3
+        type: int32
+        unit: var
+  voltage:
+    L1:
+      register: 165
+      type: uint32
+      unit: V
+    L1-L2:
+      register: 177
+      type: uint32
+      unit: V
+    L2:
+      register: 167
+      type: uint32
+      unit: V
+    L2-L3:
+      register: 179
+      type: uint32
+      unit: V
+    L3:
+      register: 169
+      type: uint32
+      unit: V
+    L3-L1:
+      register: 181
+      type: uint32
+      unit: V

@@ -157,8 +157,8 @@ setting:
     heat:
       day: !P heat.s.heat.temp        # c_heat
       night: !P heat.s.heat.temp_low  # c_heat_night
-      power:
-        pin: 19
+#     power:
+#       pin: 19
       mode:
         path: !P heat.s.heat.mode.cmd    # 5:standby 2:auto 3:day 4:night
         on: 3

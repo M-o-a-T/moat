@@ -1,0 +1,22 @@
+#!/bin/bash
+
+mkdir -p /run/moat-test
+D="$(dirname "$0")"
+. "$D/config.sh"
+BUS="${BUS:-./test}"
+
+# Terminal? set window title
+case "$TERM" in
+	xterm*|rxvt*)
+		echo -en "\e]0;Test $PILL\a"
+		;;
+esac
+
+cd "$D/.."
+if [ "$CODE" = "gate" ] ; then
+	P="../mt -VV bus run $BUS -s"
+else
+	P="miniterm $DEV 57600"
+fi
+
+bash -x ./utils/runner /run/moat-test/test_$PILL $P

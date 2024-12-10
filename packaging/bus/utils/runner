@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Usage: runner unixpipe cmd args…
+# 
+
+if test $# -lt 2 ; then
+    echo Usage: $0 unixpipe cmd args…
+    exit 1
+fi
+
+PN="$1"
+shift
+PID=
+
+rm -f "$PN"
+mkfifo "$PN"
+sleep 999999 >"$PN" &
+R=$!
+trap 'rm -f "$PN"; kill $R $PID 2>/dev/null; stty sane' 0 1 INT TERM
+
+while read a ; do
+    if test "$a" == "R" ; then
+        test -n "$PID" && kill "$PID" && wait $PID
+        "$@" </dev/tty &
+        PID=$!
+    elif test "$a" == "K" ; then
+        test -n "$PID" && kill "$PID" && wait $PID
+        PID=
+    fi
+done < "$PN"
+

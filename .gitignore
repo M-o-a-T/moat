@@ -1,7 +1,7 @@
-
 *~
 .#*
 \#*
+/bin/
 /*.build
 /build/
 /*.buildinfo
@@ -31,6 +31,7 @@ docs/tmp/
 /.env
 /env/
 /ENV/
+fakebus/raw_bus
 /fake.rtc
 /htmlcov/
 htmlcov/
@@ -48,6 +49,7 @@ htmlcov/
 nosetests.xml
 /obj/
 /parts/
+/.pio/
 pip-log.txt
 *.pot
 .project
@@ -62,6 +64,7 @@ __pycache__/
 /sdist/
 *.so
 /static/ext/
+*.swp
 /.tested.yaml
 /tests/plugins/test.db
 .tox/

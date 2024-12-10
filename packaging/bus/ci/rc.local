@@ -1,0 +1,20 @@
+#!/bin/sh
+
+##        Reset      Boot0    J-A   J-B   J-C
+for n in 17 27 24  16 20 21  18 23  5 6  12 13 ; do
+if ! test -f /sys/class/gpio/gpio$n/direction ; then
+echo $n >/sys/class/gpio/export
+fi
+echo out >/sys/class/gpio/gpio$n/direction
+done
+for n in 17 24 27 ; do
+echo 1 >/sys/class/gpio/gpio$n/active_low
+echo 1 >/sys/class/gpio/gpio$n/value
+done
+for n in 16 20 21  18 23  5 6  12 13; do
+echo 0 >/sys/class/gpio/gpio$n/active_low
+echo 0 >/sys/class/gpio/gpio$n/value
+done
+for n in 17 24 27 ; do
+echo 0 >/sys/class/gpio/gpio$n/value
+done

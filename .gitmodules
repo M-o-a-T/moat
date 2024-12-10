@@ -22,9 +22,6 @@
 [submodule "bus"]
 	path = bus
 	url = https://github.com/M-o-a-T/moat-bus
-[submodule "lib/pid"]
-	path = lib/pid
-	url = git://git.smurf.noris.de/moat-lib-pid.git
 [submodule "signal"]
 	path = signal
 	url = git://git.smurf.noris.de/moat-signal.git

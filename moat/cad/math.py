@@ -1,5 +1,8 @@
-import cadquery as cq
-import numpy as np
+try:
+    import cadquery as cq
+    import numpy as np
+except ImportError:
+    cq = None
 from functools import partial
 
 def rotate(v, k, theta):
@@ -57,24 +60,25 @@ def _at(self, x,y=None,z=0):
 def _rot(self,angle,end):
     return self.rotate((0,0,0),end,angle)
 
-cq.Plane.copy = _copy
-cq.Workplane.translated = _translated
-cq.Workplane.rotated = _rotated
-cq.Workplane.at = _at
-cq.Workplane.wp = _wp
-cq.Workplane.rot_x = lambda s,a: _rot(s,a,(1,0,0))
-cq.Workplane.rot_y = lambda s,a: _rot(s,a,(0,1,0))
-cq.Workplane.rot_z = lambda s,a: _rot(s,a,(0,0,1))
+if cq is not None:
+    cq.Plane.copy = _copy
+    cq.Workplane.translated = _translated
+    cq.Workplane.rotated = _rotated
+    cq.Workplane.at = _at
+    cq.Workplane.wp = _wp
+    cq.Workplane.rot_x = lambda s,a: _rot(s,a,(1,0,0))
+    cq.Workplane.rot_y = lambda s,a: _rot(s,a,(0,1,0))
+    cq.Workplane.rot_z = lambda s,a: _rot(s,a,(0,0,1))
 
-cq.Workplane.off_x = lambda s,x: s.translate((x,0,0))
-cq.Workplane.off_y = lambda s,y: s.translate((0,y,0))
-cq.Workplane.off_z = lambda s,z: s.translate((0,0,z))
+    cq.Workplane.off_x = lambda s,x: s.translate((x,0,0))
+    cq.Workplane.off_y = lambda s,y: s.translate((0,y,0))
+    cq.Workplane.off_z = lambda s,z: s.translate((0,0,z))
 
-_S = cq.occ_impl.shapes.Shape
-_S.rot_x = lambda s,a: _rot(s,a,(1,0,0))
-_S.rot_y = lambda s,a: _rot(s,a,(0,1,0))
-_S.rot_z = lambda s,a: _rot(s,a,(0,0,1))
+    _S = cq.occ_impl.shapes.Shape
+    _S.rot_x = lambda s,a: _rot(s,a,(1,0,0))
+    _S.rot_y = lambda s,a: _rot(s,a,(0,1,0))
+    _S.rot_z = lambda s,a: _rot(s,a,(0,0,1))
 
-_S.off_x = lambda s,x: s.translate((x,0,0))
-_S.off_y = lambda s,y: s.translate((0,y,0))
-_S.off_z = lambda s,z: s.translate((0,0,z))
+    _S.off_x = lambda s,x: s.translate((x,0,0))
+    _S.off_y = lambda s,y: s.translate((0,y,0))
+    _S.off_z = lambda s,z: s.translate((0,0,z))

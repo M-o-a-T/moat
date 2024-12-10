@@ -3,12 +3,18 @@ Miscellaneous helpers.
 """
 from __future__ import annotations
 
-import cadquery as cq
+try:
+    import cadquery as cq
+except ImportError:
+    cq = None
 
 __all__ = ["Slider", "Mount", "Ridge", "WoodScrew"]
 
 from math import tan,pi
-from .things import Cone
+try:
+    from .things import Cone
+except ImportError:
+    pass
 
 def rad(a):
     return a*pi/180

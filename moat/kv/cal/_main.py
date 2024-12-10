@@ -48,6 +48,13 @@ async def run_(obj):
         t_scan = now()
     interval = timedelta(0, cal_cfg.get("interval", 1800))
 
+    try:
+        t_al = await kv.get(cal_cfg["dst"])
+    except KeyError:
+        t_al = now()
+    else:
+        t_al = datetime.fromtimestamp(t_al.value["time"], tz)
+
     async with caldav.DAVClient(url=cal_cfg["url"],username=cal_cfg["user"],password=cal_cfg["pass"]) as client:
         principal = await client.principal()
         calendar = await principal.calendar(name="privat neu")
@@ -63,7 +70,7 @@ async def run_(obj):
             logger.info("Scan %s", t_scan)
             ev,v,ev_t = await find_next_alarm(calendar, zone=tz, now=t_scan)
             t_scan += interval
-            t_scan = max(t_now,t_scan)
+            t_scan = max(t_now,t_scan).astimezone(tz)
 
             if ev is None:
                 logger.warning("NO EVT")

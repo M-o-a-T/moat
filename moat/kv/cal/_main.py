@@ -75,9 +75,13 @@ async def run_(obj):
             if ev is None:
                 logger.warning("NO EVT")
                 continue
-            if ev_t <= t_now:
-                logger.warning("ALARM %s %s", v.summary.value, ev_t)
-                await kv.set(cal_cfg["dst"], value=dict(time=int(ev_t.timestamp()), info=v.summary.value))
+            if evt <= t_now:
+                if t_al != ev_t:
+                    # set alarm message
+                    logger.warning("ALARM %s %s", v.summary.value, ev_t)
+                    await kv.set(cal_cfg["dst"], value=dict(time=int(ev_t.timestamp()), info=v.summary.value))
+                    t_al = ev_t
+                    t_scan = t_now + timedelta(0, cal_cfg.get("interval", 1800)/3)
             elif ev_t < t_scan:
                 t_scan = ev_t
                 logger.warning("ScanEarly %s", t_scan)

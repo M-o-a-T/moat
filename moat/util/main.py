@@ -169,7 +169,7 @@ def process_args(val, vars_=(), eval_=(), path_=(), proxy_=(), no_path=False, vs
                     )
                 v = NoneType
             else:
-                v = path_eval(v)  # pylint: disable=W0631
+                v = eval(v)  # pylint: disable=W0631
             yield k, v
         for k, v in path_:
             v = P(v)

@@ -10,11 +10,12 @@
 /*.changes
 /configs/*.cfg
 *,cover
+.coverage
+.coverage.*
 /.coverage
 /coverage.xml
 /*.deb
 /debian/
-# Debian packaging
 /dist/
 docs/_build/
 docs/build/
@@ -23,6 +24,7 @@ docs/build/
 /*.egg-info/
 /.eggs/
 /eggs/
+||||||| empty tree
 /.env
 /env/
 /ENV/
@@ -46,6 +48,7 @@ __pycache__/
 *.so
 /static/ext/
 /.tested.yaml
+/tests/plugins/test.db
 .tox/
 /*.upload
 /var/

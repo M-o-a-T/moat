@@ -1,0 +1,136 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools-scm","wheel","setuptools"]
+
+[project]
+classifiers = ["Development Status :: 4 - Beta","License :: OSI Approved","Framework :: AnyIO","Framework :: Trio","Framework :: AsyncIO","Programming Language :: Python :: 3","Intended Audience :: Developers"]
+dependencies = ["anyio ~= 3.0"]
+dynamic = ["version"]
+keywords = ["MoaT"]
+requires-python = ">=3.8"
+name = "moat-lib-codec"
+maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
+description='A simple command/stream multiplexer'
+readme = "README.rst"
+authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
+
+[project.license]
+file = "LICENSE.txt"
+
+[project.urls]
+homepage = "https://m-o-a-t.org"
+repository = "https://github.com/M-o-a-T/moat-lib-codec"
+
+[tool]
+[tool.flake8]
+max-line-length = 99
+ignore = ["F841","F401","E731","E502","E402","E127","E123","E203","E231","W503","E501"]
+
+[tool.isort]
+line_length = 99
+multi_line_output = 3
+profile = "black"
+
+[tool.setuptools_scm]
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+isolated_build = True
+envlist = py310,check
+
+[testenv]
+setenv = 
+    PYTHONPATH = {env:PYTHONPATH}{:}{toxinidir}
+deps = 
+    trio
+    pytest
+commands = 
+    python3 -mpytest tests/
+
+[testenv:check]
+commands = 
+    pylint moat tests
+    flake8p moat tests
+    black --check moat tests
+deps = 
+    pytest
+    pylint
+    black
+    flake8-pyproject
+    flake8
+
+"""
+
+[tool.black]
+line-length = 99
+
+[tool.setuptools]
+packages = ["moat.lib.codec"]
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]
+
+[tool.pylint]
+[tool.pylint.messages_control]
+disable = "wrong-import-order,use-dict-literal,unspecified-encoding,ungrouped-imports,too-many-statements,too-many-return-statements,too-many-nested-blocks,too-many-locals,too-many-instance-attributes,too-many-branches,too-many-arguments,too-few-public-methods,superfluous-parens,no-else-return,no-else-continue,invalid-name,fixme,line-too-long"
+
+[tool.moat]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+# Regexes for lines to exclude from consideration
+include = [
+    "moat/lib/codec/*",
+    "tests/*",
+]
+exclude_also = [
+    # Don't complain about missing debug-only code:
+    "def __repr__",
+    "if self\\.debug",
+
+    # Don't complain if tests don't hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "except ImportError:",
+
+    # Don't complain if non-runnable code isn't run:
+    "if 0:",
+    "if __name__ == .__main__.:",
+
+    # Don't complain about abstract methods, they aren't run:
+    "@(abc\\.)?abstractmethod",
+    ]
+
+
+
+[tool.pytest.ini_options]
+log_cli_level = "DEBUG"
+
+[tool.ruff]
+preview = true
+line-length = 99
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["BLE001","ERA","N","FIX","TD","RET50","C","PLR","EM10","TRY003","FBT","T2","D4","D3","D2","PLW1514","RUF002","RUF001","S101","A003","D107","D105","PERF","PTH","ANN","I001","RUF005","TRY300","TRY301","RUF003","INP001"]
+explicit-preview-rules = true
+
+[tool.ruff.lint.flake8-comprehensions]
+allow-dict-calls-with-keyword-arguments = true
+
+[tool.ruff.lint.flake8-builtins]
+builtins-ignorelist = ["help","id"]
+
+[tool.ruff.lint.isort]
+no-lines-before = ["future"]
+required-imports = ["from __future__ import annotations"]
+section-order = ["third-party","local-folder","moat","upy","first-party","standard-library","typing","future"]
+extra-standard-library = ["anyio","pytest"]
+force-to-top = ["moat.util"]
+
+[tool.ruff.lint.isort.sections]
+moat = ["moat"]
+upy = ["esp","machine","micropython"]
+typing = ["typing"]

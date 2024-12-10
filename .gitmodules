@@ -1,3 +1,3 @@
 [submodule "picolibc"]
-	path = c/picolibc
+	path = TODO/bus/c/picolibc
 	url = https://github.com/M-o-a-T/picolibc.git

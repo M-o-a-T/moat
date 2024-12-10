@@ -83,19 +83,22 @@ title: Runtime data and related
 _path: !P run.service
 title: Hierarchy for service addresses
 ---
+_path: !P run.service.ping
+title: AsyncActor channels
+---
 _path: !P run.service.main
-title: Hierarchy for service addresses
+title: Main server announcement
 doc: |2
   This entry points to the main MoaT-Link server. It contains an auth
-  token. If a client is allowed to subscribe to this record, it should be
+  token; if a client is allowed to subscribe to this topic, it should be
   allowed to talk to the server.
 ---
 _path: !P run.service.down.main
-title: Death notices for the main service
+title: Death notice for the main service
 doc: |2
   The main server posts a Will message to this topic, a string containing
-  its name. Backup servers listen to it and immediately publish their
-  own record to `run.service.main` in order to take over.
+  its name. Backup servers listen to it and publish their own record to
+  `run.service.main` in order to take over.
 ---
 path: !P doc
 title: Documentation

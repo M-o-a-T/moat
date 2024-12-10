@@ -67,6 +67,10 @@ _path: !P run.service.down.main
 title: Notice that a server is down
 type: string
 ---
+_path: !P run.service.ping.main
+title: AsyncActor channel
+type: object
+---
 _path: !P schema
 $ref: https://json-schema.org/draft/2020-12/schema
 properties:
@@ -139,7 +143,7 @@ title: "Hello" sent to the server, initial message
 type: array
 prefixItems:
   - type: array
-    title: version number
+    title: protocol version
     items:
       type: integer
   - type: string
@@ -168,3 +172,59 @@ prefixItems:
 _path: !P _.link.server.i.hello.resp
 $ref: _/links/server(i/hello/req
 ---
+_path: !P _.save.data
+title: Save file entry, except for the first and last item
+type: array
+prefixItems:
+  - type: integer
+    title: Path prefix
+    description: The first n items in the previous entry's path atr prepended to this entry's path
+  - type: array
+    $ref: _/path
+  - type: any
+  - type: array
+    $ref: _/meta
+---
+_path: !P _.save.header
+type: object
+title: Saved-file and Data dump transmission header+trailer
+properties:
+  root:
+    title: base directory
+    $ref: _/path
+  timestamp:
+    type: number
+    title: the file contains changes logged after this time
+  prev:
+    type: string
+    title: Previous savefile
+    description: Written after switching to @next
+  next:
+    type: string
+    title: Next savefile
+    description: replaces
+  sup:
+    type: string
+    title: Name of the savefile this one supersedes
+    description: also read @sup if @prev is incomplete
+  level:
+    type: int
+    title: Save level of this file
+
+required:
+  - root
+  - timestamp
+  - level
+
+---
+_path: !P _.meta
+title: metadata
+type: array
+prefixItems:
+  - type: string
+    title: Name of originator
+  - title: Timestamp
+    type: number
+  - type: object
+    title: optionally, random key/value data
+

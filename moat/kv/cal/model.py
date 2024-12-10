@@ -24,7 +24,7 @@ class CalAlarm(AttrClientEntry):
     """
     ATTRS = ("cmd","state","delay","src","timeout")
 
-    cls = None
+    cls = ClientEntry
 
 class CalEntry(AttrClientEntry):
     """
@@ -42,7 +42,7 @@ class CalEntry(AttrClientEntry):
     def child_type(cls, name):
         if isinstance(name,int):
             return CalAlarm
-        return None
+        return ClientEntry
 
 
 class CalBase(AttrClientEntry):

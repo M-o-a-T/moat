@@ -10,9 +10,6 @@
 [submodule "micro"]
 	path = micro
 	url = git://git.smurf.noris.de/moat-micro.git
-[submodule "bus"]
-	path = bus
-	url = https://github.com/M-o-a-T/moat-bus
 [submodule "signal"]
 	path = signal
 	url = git://git.smurf.noris.de/moat-signal.git

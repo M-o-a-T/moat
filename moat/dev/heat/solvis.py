@@ -1424,11 +1424,8 @@ class Data:
                         f"avg_h={self.state.avg_heat :.1f}",
                         f"{self.state.avg_heat-self.state.avg_heat_t :.1f} ",
                     )
-                    if self.state.t_pellet_on is True:
-                        pr += tuple(f"{x :6.3f}" for x in i_load)
-                        print(*pr, "    ")
-                    else:
-                        print(*pr, int(self.state.t_pellet_on - self.time), "  ")
+                    pr += tuple(f"{x :6.3f}" for x in i_load)
+                    print(*pr, "    ")
                 o_r = r
 
                 if self.m_pellet_state in (31,32,):

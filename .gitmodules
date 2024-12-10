@@ -1,6 +1,3 @@
-[submodule "util"]
-	path = util
-	url = git://git.smurf.noris.de/moat-util.git
 [submodule "micro"]
 	path = micro
 	url = git://git.smurf.noris.de/moat-micro.git

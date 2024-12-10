@@ -60,6 +60,8 @@ async def find_next_alarm(calendar, future=10, now = None, zone=timezone.utc) ->
             if t_start is None:
                 raise ValueError("Start time: ??")
                 # t_start = next_start(v, now)
+            if not t_start.tzinfo:
+                t_start = t_start.astimezone(zone)
             if rid is None and t_start in rids:
                 continue
 

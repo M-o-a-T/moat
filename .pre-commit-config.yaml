@@ -1,0 +1,45 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: '23.1.0'
+    hooks:
+      - id: black
+        language_version: python3
+  - repo: https://github.com/pycqa/isort
+    rev: '5.12.0'
+    hooks:
+      - id: isort
+  - repo: https://github.com/pycqa/bandit
+    rev: '1.7.4'
+    hooks:
+      - id: bandit
+        args:
+          - "-c"
+          - "pyproject.toml"
+        additional_dependencies:
+          - "bandit[toml]"
+  - repo: https://github.com/pycqa/flake8
+    rev: '6.0.0'
+    hooks:
+      - id: flake8
+  - repo: https://github.com/pycqa/pylint
+    rev: 'v2.16.2'
+    hooks:
+      - id: pylint
+        additional_dependencies:
+          - requests
+          - python-magic
+          - pook
+          - pytest
+          - jmespath
+          - typing-extensions
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        stages:
+          - commit
+        types:
+          - python
+        entry: pytest
+        language: system
+        pass_filenames: false

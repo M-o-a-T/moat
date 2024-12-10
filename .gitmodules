@@ -10,9 +10,6 @@
 [submodule "signal"]
 	path = signal
 	url = git://git.smurf.noris.de/moat-signal.git
-[submodule "cad"]
-	path = cad
-	url = git://git.smurf.noris.de/moat-cad.git
 [submodule "picolibc"]
 	path = TODO/bus/c/picolibc
 	url = https://github.com/M-o-a-T/picolibc.git

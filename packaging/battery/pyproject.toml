@@ -1,0 +1,121 @@
+[build-system]
+requires = [
+  "setuptools-scm",
+  "wheel",
+  "setuptools",
+  "setuptools >= 42",
+  "setuptools_scm[toml] >= 3.5.0",
+  "setuptools_scm_git_archive >= 1.1",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+skip-string-normalization = true
+line-length = 99
+
+[tool.isort]
+profile = "black"
+# known_first_party = "foo"
+line_length = 99
+multi_line_output = 3
+
+[tool.setuptools_scm]
+local_scheme = "no-local-version"
+
+[tool.pytest.ini_options]
+log_cli_level = "DEBUG"
+
+[tool.moat]
+
+[tool.flake8]
+max-line-length = 99
+ignore = ["F841","F401","E731","E502","E402","E127","E123","E203","E231","W503"]
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+isolated_build = True
+envlist = py310,check
+
+[testenv]
+setenv = 
+    PYTHONPATH = {env:PYTHONPATH}{:}{toxinidir}
+deps = 
+    trio
+    pytest
+commands = 
+    python3 -mpytest tests/
+
+[testenv:check]
+commands = 
+    pylint moat tests
+    flake8p moat tests
+    black --check moat tests
+deps = 
+    pytest
+    pylint
+    black
+    flake8-pyproject
+    flake8
+
+"""
+
+[tool.setuptools]
+packages = ["moat.ems.battery","moat.micro"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]
+
+[tool.pylint.messages_control]
+disable = "wrong-import-order,use-dict-literal,unspecified-encoding,ungrouped-imports,too-many-statements,too-many-return-statements,too-many-nested-blocks,too-many-locals,too-many-instance-attributes,too-many-branches,too-many-arguments,too-few-public-methods,superfluous-parens,no-else-return,no-else-continue,invalid-name,fixme"
+
+[project]
+classifiers = ["Development Status :: 4 - Beta","License :: OSI Approved","Framework :: AnyIO","Framework :: Trio","Framework :: AsyncIO","Programming Language :: Python :: 3","Intended Audience :: Developers"]
+dependencies = [
+  "anyio ~= 3.0",
+  "msgpack",
+  "serialpacker",
+  "pyfuse3",
+  "moat-util ~= 0.35.0",
+  "moat-micro ~= 0.11.5",
+]
+dynamic = ["version"]
+keywords = ["MoaT"]
+requires-python = ">=3.8"
+name = "moat-ems-battery"
+authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
+description = "REPLACE ME"
+readme = "README.rst"
+
+[project.license]
+file = "LICENSE.txt"
+
+[project.urls]
+homepage = "https://m-o-a-t.org"
+repository = "https://github.com/M-o-a-T/moat-micro"
+
+[tool.ruff]
+select = ["ALL"]
+ignore = ["BLE001","ERA","N","FIX","TD","RET50","C","PLR","EM10","TRY003","FBT","T2","D4","D3","D2","PLW1514","RUF002","RUF001","S101","A003","PERF","PTH","ANN","D105","D107","TID252","INP001","RUF005","SIM118","B904","TRY300","S311","SIM105","SIM108","E741","ISC003","RUF003"]
+
+line-length = 99
+preview = true
+explicit-preview-rules = true
+
+[tool.ruff.isort]
+no-lines-before = ["future"]
+required-imports = ["from __future__ import annotations"]
+section-order = ["future", "typing", "standard-library", "first-party", "upy", "moat", "local-folder", "third-party"]
+extra-standard-library = ["pytest", "anyio"]
+force-to-top = ["moat.util"]
+
+[tool.ruff.isort.sections]
+"moat" = ["moat"]
+"upy" = ["micropython", "machine", "esp"]
+"typing" = ["typing"]
+
+[tool.ruff.flake8-comprehensions]
+allow-dict-calls-with-keyword-arguments = true
+
+[tool.ruff.flake8-builtins]
+builtins-ignorelist = ["help","id"]

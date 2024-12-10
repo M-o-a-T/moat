@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import anyio
+import asyncclick as click
+
+from moat.lib.victron.dbus import Dbus
+from moat.lib.victron.dbus.monitor import DbusMonitor
+from moat.lib.victron.dbus.utils import DbusInterface  # XXX move
+from asyncdbus.service import method
+
+import logging
+logger = logging.getLogger(__name__)
+
+
+@click.command()
+@click.option("--debug", "-d", is_flag=True)
+async def main(debug):
+	# Init logging
+	logging.basicConfig(level=logging.DEBUG if debug else logging.INFO)
+	logger.debug(__file__ + " is starting up")
+
+	# Have a mainloop, so we can send/receive asynchronous calls to and from dbus
+
+	import os
+	import sys
+	sys.path.insert(1, os.path.join(os.path.dirname(__file__), '../../'))
+
+		
+	dummy = {'code': None, 'whenToLog': 'configChange', 'accessLevel': None}
+	monitorlist = {
+		'com.victronenergy.solarcharger': {
+			'/Dc/0/Voltage': dummy,
+			'/Dc/0/Current': dummy,
+			'/Link/ChargeCurrent': dummy,
+			'/Yield/Power': dummy,
+		},
+		'com.victronenergy.battery': {
+			'/Dc/0/Voltage': dummy,
+			'/Dc/0/Current': dummy,
+			'/Info/MaxChargeCurrent': dummy,
+			'/Info/MaxChargeVoltage': dummy,
+			'/Info/MaxDischargeCurrent': dummy,
+			'/Io/AllowToCharge': dummy,
+			'/Io/AllowToDischarge': dummy,
+		},
+		'com.victronenergy.vebus': {
+			'/Dc/0/Voltage': dummy,
+			'/Dc/0/Current': dummy,
+			'/Ac/ActiveIn/L1/P': dummy,
+			'/Ac/ActiveIn/L2/P': dummy,
+			'/Ac/ActiveIn/L3/P': dummy,
+			'/Hub/ChargeVoltage': dummy,
+			'/Hub4/L1/AcPowerSetpoint': dummy,
+			'/Hub4/L2/AcPowerSetpoint': dummy,
+			'/Hub4/L3/AcPowerSetpoint': dummy,
+		},
+		'com.victronenergy.system': {
+			'/VebusService': dummy,
+			'/Dc/Pv/Current': dummy,
+			'/Dc/Pv/Power': dummy,
+			'/Dc/Battery/Current': dummy,
+			'/Dc/Battery/Power': dummy,
+			'/Dc/Vebus/Current': dummy,
+			'/Dc/Vebus/Power': dummy,
+			'/Ac/ActiveIn/L1/Power': dummy,
+			'/Ac/ActiveIn/L2/Power': dummy,
+			'/Ac/ActiveIn/L3/Power': dummy,
+			'/Ac/Grid/L1/Power': dummy,
+			'/Ac/Grid/L2/Power': dummy,
+			'/Ac/Grid/L3/Power': dummy,
+			'/Ac/ActiveIn/NumberOfPhases': dummy,
+
+		},
+	}
+
+	# ('com.victronenergy.system', '/Ac/Grid/L2/Power', {'code': None, 'whenToLog': 'configChange', 'accessLevel': None}, {'Value': 561.35498046875, 'Text': '561 W'}, 0)
+
+	def foo(sender, path, _x, value, _y):
+		return  # for debugging
+		if path == "/Info/MaxDischargeCurrent":
+			print(path,value)
+			return
+		if path == "/Io/AllowToDischarge":
+			print(path,value)
+			return
+
+	async with DbusMonitor(None, monitorlist, valueChangedCallback=foo) as d:
+		# logger.info("==configchange values==")
+		# logger.info(pprint.pformat(d.get_values(['configChange'])))
+
+		# logger.info("==onIntervalAlways and onIntervalOnlyWhenChanged==")
+		# logger.info(pprint.pformat(d.get_values(['onIntervalAlways', 'onIntervalAlwaysAndOnEvent'])))
+
+		syst='com.victronenergy.system'
+		phases = d.get_value(syst,'/Ac/ActiveIn/NumberOfPhases')
+		while True:
+			try:
+				await anyio.sleep(1)
+
+				# chargers
+				cur = 0
+				maxcur = 0
+				power = 0
+				nc = 0
+				cvol = 0
+				for chg in d.get_service_list('com.victronenergy.solarcharger'):
+					cvol += d.get_value(chg, '/Dc/0/Voltage')
+					nc += 1
+					cur += d.get_value(chg, '/Dc/0/Current')
+					maxcur += d.get_value(chg, '/Link/ChargeCurrent') or 0
+					power += d.get_value(chg, '/Yield/Power')
+
+			except TypeError:
+				print("Incomplete data")
+				continue
+
+			# batteries
+			bvol = 0
+			bcur = 0
+			bmaxc = 0
+			bmaxd = 0
+			okc = True
+			okd = True
+			nb = 0
+			cv = 0
+			rd=0
+			for bat in d.get_service_list('com.victronenergy.battery'):
+				bvol += d.get_value(bat,'/Dc/0/Voltage')
+				nb += 1
+				bcur += d.get_value(bat,'/Dc/0/Current')
+				bmaxc += d.get_value(bat,'/Info/MaxChargeCurrent')
+				bmaxd += d.get_value(bat,'/Info/MaxDischargeCurrent')
+				cv = d.get_value(bat, '/Info/MaxChargeVoltage') or 0
+				okc = okc and d.get_value(bat,'/Io/AllowToCharge')
+				okd = okd and d.get_value(bat,'/Io/AllowToDischarge')
+
+			vebus = d.get_value(syst,'/VebusService')
+			uv = d.get_value(vebus, '/Dc/0/Voltage')
+			iv = d.get_value(vebus, '/Dc/0/Current')
+			setp = []
+			curp = []
+			runp = []
+			for i in range(phases):
+				i += 1
+				setp.append(d.get_value(vebus, f'/Hub4/L{i}/AcPowerSetpoint'))
+				curp.append(d.get_value('com.victronenergy.system', f'/Ac/ActiveIn/L{i}/Power'))
+				runp.append(d.get_value(vebus, f'/Ac/ActiveIn/L{i}/P'))
+			try:
+				# goal / delta to actual / consumption between Multi and Grid
+				pp=[f'{a :5.0f}:{a-c :3.0f}/{b-c :3.0f}' for a,b,c in zip(setp,curp,runp)]
+			except TypeError:
+				pp=[f'{a}:{b}/{c}' for a,b,c in zip(setp,curp,runp)]
+
+			try:
+				cvol /= (nc or 1)
+				#rd += (bcur-cur-iv-rd)/100
+				cvd=cv-cvol
+				if abs(cvd)<1:
+					cvd=f"{cvd :+.2f}"
+					cvd=cvd[0]+cvd[2:]
+				else:
+					cvd=f"{cvd :+3.1f}"
+				print(f"{cvol :5.2f}{cvd}V  Sol {power :5.0f}W {cur :5.1f}A <{maxcur :3.0f}  Bat {bcur :5.1f}A {'>' if okd else '≫'}{-bmaxd :5.1f}{'<' if okc else '≪'}{bmaxc :5.1f}  Inv {iv :5.1f}A {' '.join(pp)}")
+				#print(f"{cvol :5.2f}{(cv-cvol) :+4.2f}V  Sol {power :5.0f}W {cur :5.1f}A <{maxcur :3.0f}  Bat {bcur :5.1f}A:{cur+iv:6.2f}:{rd:4.2f} {'>' if okd else '≫'}{-bmaxd :5.1f}{'<' if okc else '≪'}{bmaxc :5.1f}  Inv {iv :5.1f}A {' '.join(pp)}")
+			except TypeError:
+				print(f"U={cvol} {cv}  Sol I={cur} {maxcur} {power}  Bat I={bcur} {bmaxc} {bmaxd}  Inv I={iv} P={' '.join(pp)}")
+
+
+if __name__ == "__main__":
+	main(_anyio_backend="trio")

@@ -1,3 +1,4 @@
+*~
 .#*
 \#*
 /*.build
@@ -6,6 +7,7 @@
 .cache
 /*.cfg
 /*.changes
+/configs/*.cfg
 *,cover
 /.coverage
 /coverage.xml
@@ -22,6 +24,7 @@ docs/build/
 /.env
 /env/
 /ENV/
+/fake.rtc
 /htmlcov/
 /.hypothesis/
 /.installed.cfg
@@ -38,6 +41,7 @@ __pycache__/
 /.pytest_cache/
 /sdist/
 *.so
+/static/ext/
 /.tested.yaml
 /tests/plugins/test.db
 .tox/

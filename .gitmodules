@@ -7,9 +7,6 @@
 [submodule "mqtt"]
 	path = mqtt
 	url = git://git.smurf.noris.de/moat-mqtt.git
-[submodule "lib/victron"]
-	path = lib/victron
-	url = git://git.smurf.noris.de/moat-lib-victron.git
 [submodule "dev"]
 	path = dev
 	url = git://git.smurf.noris.de/moat-dev.git

@@ -31,6 +31,3 @@
 [submodule "cad"]
 	path = cad
 	url = git://git.smurf.noris.de/moat-cad.git
-[submodule "lib/cmd"]
-	path = lib/cmd
-	url = git://git.smurf.noris.de/moat-lib-cmd.git

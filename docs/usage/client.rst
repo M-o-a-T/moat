@@ -28,7 +28,7 @@ Create a client with basic authentication
           auth=("user", "password")
       )
 
-Crate a client using HTTPS w/ self-signed certificates
+Create a client using HTTPS w/ self-signed certificates
 ------------------------------------------------------
 
    .. code-block:: python

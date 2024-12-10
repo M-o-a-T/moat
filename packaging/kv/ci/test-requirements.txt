@@ -1,0 +1,7 @@
+pytest
+pytest-cov
+pytest-trio
+trustme
+flake8 >= 3.7
+mock
+distmqtt >= 0.30

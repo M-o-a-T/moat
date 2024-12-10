@@ -1,0 +1,19 @@
+kv:
+  wago:
+    prefix: !P :.moat.kv.wago
+
+    # There is no "server" entry, that's stored in the MoaT-KV node
+    server_default:
+      port: 29995
+
+    # poll frequency: server
+    poll: 0.1
+
+    # ping frequency: server
+    ping: 5
+
+    # for counter reporting: port
+    interval: 1
+
+    # Pulses up=True/down=False/both=None, default Up: port
+    count: true

@@ -1,0 +1,15 @@
+#!/bin/bash
+set -ex
+
+# This script file starts up a MoaT-KV single-node runner.
+
+if test ! -v NAME ; then
+    echo "NAME is not set. Exiting." >&2
+    exit 1
+fi
+
+if test $# = 1 ; then
+    exec moat -c /etc/moat/moat.cfg kv job -n "$NAME" -g "$1" run
+else
+    exec moat -c /etc/moat/moat.cfg kv job -n "$NAME" run
+fi

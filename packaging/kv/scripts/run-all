@@ -1,0 +1,10 @@
+#!/bin/bash
+set -ex
+
+# This script file starts up a MoaT-KV any-node runner.
+
+if test $# = 1 ; then
+    exec moat -c /etc/moat/moat.cfg kv job -n - -g "$1" run
+else
+    exec moat -c /etc/moat/moat.cfg kv job -n - run
+fi

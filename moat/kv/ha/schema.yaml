@@ -1,0 +1,111 @@
+codec:
+  bool onoff bin:
+    decode: |
+      if value == b'unknown': return None
+      return value in ("on","ON",b"on",b"ON")
+    encode: |
+      if value is None: return b'unknown'
+      return b"on" if value else b"off"
+    in:
+    - - !!binary |
+        b24=
+      - true
+    - - !!binary |
+        b2Zm
+      - false
+    out:
+    - - true
+      - !!binary |
+        b24=
+    - - false
+      - !!binary |
+        b2Zm
+  json bin:
+    decode: |
+      import simplejson as json
+      return json.loads(value.decode("utf-8"))
+    encode: |
+      import simplejson as json
+      return json.dumps(value).encode("utf-8")
+    in:
+    - - !!binary |
+        MTIz
+      - 123
+    - - !!binary |
+        bnVsbA==
+      - null
+    out:
+    - - 123
+      - !!binary |
+        MTIz
+    - - null
+      - !!binary |
+        bnVsbA==
+  float bin:
+    decode: |
+      if value == b'unknown': return None
+      if value == b'unavailable': return False
+      return float(value)
+    encode: |
+      if value is None: return b'unknown'
+      if value is False: return b'unavailable'
+      return str(value).encode("utf-8")
+    in:
+    - - !!binary |
+        MS41
+      - 1.5
+    - - !!binary |
+        LTM=
+      - -3
+    out:
+    - - 1.5
+      - !!binary |
+        MS41
+    - - -3
+      - !!binary |
+        LTM=
+  int bin:
+    decode: |
+      if value == b'unknown': return None
+      if value == b'unavailable': return False
+      return int(value)
+    encode: |
+      if value is None: return b'unknown'
+      if value is False: return b'unavailable'
+      return str(value).encode("utf-8")
+    in:
+    - - !!binary |
+        MQ==
+      - 1
+    - - !!binary |
+        LTM=
+      - -3
+    out:
+    - - 1
+      - !!binary |
+        MQ==
+    - - -3
+      - !!binary |
+        LTM=
+
+  
+conv:
+  +:
+    config: [json, bin]
+    online: [bool, onoff, bin]
+  binary_sensor:
+    state: [bool, onoff, bin]
+  sensor:
+    state: [float, bin]
+  switch:
+    cmd: [bool, onoff, bin]
+    state: [bool, onoff, bin]
+  light:
+    cmd: [bool, onoff, bin]
+    state: [bool, onoff, bin]
+    bright/cmd: [float, bin]
+    bright/state: [float, bin]
+  lock:
+    cmd: [bool, onoff, bin]
+    state: [bool, onoff, bin]
+

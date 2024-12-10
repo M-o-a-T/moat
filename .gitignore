@@ -24,7 +24,6 @@ docs/build/
 /*.egg-info/
 /.eggs/
 /eggs/
-||||||| empty tree
 /.env
 /env/
 /ENV/

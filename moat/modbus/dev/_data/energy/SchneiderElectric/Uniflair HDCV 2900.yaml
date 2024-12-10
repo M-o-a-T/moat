@@ -1,0 +1,13 @@
+regs:
+  humidity:
+    _:
+      register: 6
+      scale: -1
+      type: uint
+      unit: pC
+  temperature:
+    _:
+      register: 3
+      scale: -1
+      type: uint
+      unit: dC

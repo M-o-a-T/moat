@@ -1,0 +1,14 @@
+regs:
+  current:
+    L1:
+      register: 12015
+      type: uint
+      unit: A
+    L2:
+      register: 12016
+      type: uint
+      unit: A
+    L3:
+      register: 12016
+      type: uint
+      unit: A

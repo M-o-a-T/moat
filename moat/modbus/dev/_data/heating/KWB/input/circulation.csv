@@ -1,0 +1,61 @@
+StartingAddress	NumberOfRegisters	Functions	Type	Parameter	ID	Name	Index	Unit/ValueTable	Values	Min	Max	UserLevel	ExpertLevel
+8929	1	04	s16	ZIRK.i_temperatur.value	902	Temperature (value)	Circ 0	1/10°C				read	read
+8930	1	04	s16	ZIRK.i_temperatur.status	902	Temperature (status)	Circ 0	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8931	1	04	s16	ZIRK.i_temperatur.value	902	Temperature (value)	Circ 1	1/10°C				read	read
+8932	1	04	s16	ZIRK.i_temperatur.status	902	Temperature (status)	Circ 1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8933	1	04	s16	ZIRK.i_temperatur.value	902	Temperature (value)	Circ 2	1/10°C				read	read
+8934	1	04	s16	ZIRK.i_temperatur.status	902	Temperature (status)	Circ 2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8935	1	04	s16	ZIRK.i_temperatur.value	902	Temperature (value)	Circ 3	1/10°C				read	read
+8936	1	04	s16	ZIRK.i_temperatur.status	902	Temperature (status)	Circ 3	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8937	1	04	s16	ZIRK.i_temperatur.value	902	Temperature (value)	Circ 4	1/10°C				read	read
+8938	1	04	s16	ZIRK.i_temperatur.status	902	Temperature (status)	Circ 4	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8939	1	04	s16	ZIRK.i_temperatur.value	902	Temperature (value)	Circ 5	1/10°C				read	read
+8940	1	04	s16	ZIRK.i_temperatur.status	902	Temperature (status)	Circ 5	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8941	1	04	s16	ZIRK.i_temperatur.value	902	Temperature (value)	Circ 6	1/10°C				read	read
+8942	1	04	s16	ZIRK.i_temperatur.status	902	Temperature (status)	Circ 6	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8943	1	04	s16	ZIRK.i_temperatur.value	902	Temperature (value)	Circ 7	1/10°C				read	read
+8944	1	04	s16	ZIRK.i_temperatur.status	902	Temperature (status)	Circ 7	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8945	1	04	s16	ZIRK.i_temperatur.value	902	Temperature (value)	Circ 8	1/10°C				read	read
+8946	1	04	s16	ZIRK.i_temperatur.status	902	Temperature (status)	Circ 8	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8947	1	04	s16	ZIRK.i_temperatur.value	902	Temperature (value)	Circ 9	1/10°C				read	read
+8948	1	04	s16	ZIRK.i_temperatur.status	902	Temperature (status)	Circ 9	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8949	1	04	s16	ZIRK.i_temperatur.value	902	Temperature (value)	Circ 10	1/10°C				read	read
+8950	1	04	s16	ZIRK.i_temperatur.status	902	Temperature (status)	Circ 10	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8951	1	04	s16	ZIRK.i_temperatur.value	902	Temperature (value)	Circ 11	1/10°C				read	read
+8952	1	04	s16	ZIRK.i_temperatur.status	902	Temperature (status)	Circ 11	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8953	1	04	s16	ZIRK.i_temperatur.value	902	Temperature (value)	Circ 12	1/10°C				read	read
+8954	1	04	s16	ZIRK.i_temperatur.status	902	Temperature (status)	Circ 12	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8955	1	04	s16	ZIRK.i_temperatur.value	902	Temperature (value)	Circ 13	1/10°C				read	read
+8956	1	04	s16	ZIRK.i_temperatur.status	902	Temperature (status)	Circ 13	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8957	1	04	s16	ZIRK.i_temperatur.value	902	Temperature (value)	Circ 14	1/10°C				read	read
+8958	1	04	s16	ZIRK.i_temperatur.status	902	Temperature (status)	Circ 14	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8963	1	04	s16	ZIRK.o_pumpe	904	Pump	Circ 0	system_ein_aus_t	0-Off, 1-On			read	read
+8964	1	04	s16	ZIRK.o_pumpe	904	Pump	Circ 1	system_ein_aus_t	0-Off, 1-On			read	read
+8965	1	04	s16	ZIRK.o_pumpe	904	Pump	Circ 2	system_ein_aus_t	0-Off, 1-On			read	read
+8966	1	04	s16	ZIRK.o_pumpe	904	Pump	Circ 3	system_ein_aus_t	0-Off, 1-On			read	read
+8967	1	04	s16	ZIRK.o_pumpe	904	Pump	Circ 4	system_ein_aus_t	0-Off, 1-On			read	read
+8968	1	04	s16	ZIRK.o_pumpe	904	Pump	Circ 5	system_ein_aus_t	0-Off, 1-On			read	read
+8969	1	04	s16	ZIRK.o_pumpe	904	Pump	Circ 6	system_ein_aus_t	0-Off, 1-On			read	read
+8970	1	04	s16	ZIRK.o_pumpe	904	Pump	Circ 7	system_ein_aus_t	0-Off, 1-On			read	read
+8971	1	04	s16	ZIRK.o_pumpe	904	Pump	Circ 8	system_ein_aus_t	0-Off, 1-On			read	read
+8972	1	04	s16	ZIRK.o_pumpe	904	Pump	Circ 9	system_ein_aus_t	0-Off, 1-On			read	read
+8973	1	04	s16	ZIRK.o_pumpe	904	Pump	Circ 10	system_ein_aus_t	0-Off, 1-On			read	read
+8974	1	04	s16	ZIRK.o_pumpe	904	Pump	Circ 11	system_ein_aus_t	0-Off, 1-On			read	read
+8975	1	04	s16	ZIRK.o_pumpe	904	Pump	Circ 12	system_ein_aus_t	0-Off, 1-On			read	read
+8976	1	04	s16	ZIRK.o_pumpe	904	Pump	Circ 13	system_ein_aus_t	0-Off, 1-On			read	read
+8977	1	04	s16	ZIRK.o_pumpe	904	Pump	Circ 14	system_ein_aus_t	0-Off, 1-On			read	read
+24828	1	03, 06, 16	s16	ZIRK.programm	900	Select program	Circ 0	zirk_programm_t	0-Off, 1-Automatic, 2-Continuous operation			readwrite	readwrite
+24829	1	03, 06, 16	s16	ZIRK.programm	900	Select program	Circ 1	zirk_programm_t	0-Off, 1-Automatic, 2-Continuous operation			readwrite	readwrite
+24830	1	03, 06, 16	s16	ZIRK.programm	900	Select program	Circ 2	zirk_programm_t	0-Off, 1-Automatic, 2-Continuous operation			readwrite	readwrite
+24831	1	03, 06, 16	s16	ZIRK.programm	900	Select program	Circ 3	zirk_programm_t	0-Off, 1-Automatic, 2-Continuous operation			readwrite	readwrite
+24832	1	03, 06, 16	s16	ZIRK.programm	900	Select program	Circ 4	zirk_programm_t	0-Off, 1-Automatic, 2-Continuous operation			readwrite	readwrite
+24833	1	03, 06, 16	s16	ZIRK.programm	900	Select program	Circ 5	zirk_programm_t	0-Off, 1-Automatic, 2-Continuous operation			readwrite	readwrite
+24834	1	03, 06, 16	s16	ZIRK.programm	900	Select program	Circ 6	zirk_programm_t	0-Off, 1-Automatic, 2-Continuous operation			readwrite	readwrite
+24835	1	03, 06, 16	s16	ZIRK.programm	900	Select program	Circ 7	zirk_programm_t	0-Off, 1-Automatic, 2-Continuous operation			readwrite	readwrite
+24836	1	03, 06, 16	s16	ZIRK.programm	900	Select program	Circ 8	zirk_programm_t	0-Off, 1-Automatic, 2-Continuous operation			readwrite	readwrite
+24837	1	03, 06, 16	s16	ZIRK.programm	900	Select program	Circ 9	zirk_programm_t	0-Off, 1-Automatic, 2-Continuous operation			readwrite	readwrite
+24838	1	03, 06, 16	s16	ZIRK.programm	900	Select program	Circ 10	zirk_programm_t	0-Off, 1-Automatic, 2-Continuous operation			readwrite	readwrite
+24839	1	03, 06, 16	s16	ZIRK.programm	900	Select program	Circ 11	zirk_programm_t	0-Off, 1-Automatic, 2-Continuous operation			readwrite	readwrite
+24840	1	03, 06, 16	s16	ZIRK.programm	900	Select program	Circ 12	zirk_programm_t	0-Off, 1-Automatic, 2-Continuous operation			readwrite	readwrite
+24841	1	03, 06, 16	s16	ZIRK.programm	900	Select program	Circ 13	zirk_programm_t	0-Off, 1-Automatic, 2-Continuous operation			readwrite	readwrite
+24842	1	03, 06, 16	s16	ZIRK.programm	900	Select program	Circ 14	zirk_programm_t	0-Off, 1-Automatic, 2-Continuous operation			readwrite	readwrite

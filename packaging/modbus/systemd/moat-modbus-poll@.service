@@ -1,0 +1,19 @@
+[Unit]
+Description=MoaT modbus poll service
+After=mosquitto.service
+
+ConditionFileNotEmpty=/etc/moat.cfg
+ConditionFileNotEmpty=/etc/moat/modbus/%I.yaml
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/moat modbus dev poll /etc/moat/modbus/%I.yaml
+
+TimeoutSec=300
+WatchdogSec=10
+
+Restart=always
+RestartSec=30

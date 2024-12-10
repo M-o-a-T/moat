@@ -1,0 +1,49 @@
+regs:
+  current:
+    L1:
+      register: 2999
+      type: float
+      unit: A
+    L2:
+      register: 3001
+      type: float
+      unit: A
+    L3:
+      register: 3003
+      type: float
+      unit: A
+  energy:
+    L1:
+      active:
+        register: 3517
+        type: uint64
+        unit: Wh
+    L2:
+      active:
+        register: 3521
+        type: uint64
+        unit: Wh
+    L3:
+      active:
+        register: 3525
+        type: uint64
+        unit: Wh
+  power:
+    L1:
+      apparent:
+        register: 3069
+        scale: 3
+        type: float
+        unit: VA
+    L2:
+      apparent:
+        register: 3071
+        scale: 3
+        type: float
+        unit: VA
+    L3:
+      apparent:
+        register: 3073
+        scale: 3
+        type: float
+        unit: VA

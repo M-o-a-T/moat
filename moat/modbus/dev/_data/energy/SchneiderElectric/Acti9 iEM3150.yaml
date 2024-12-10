@@ -1,0 +1,45 @@
+regs:
+  current:
+    L1:
+      register: 2999
+      type: float
+      unit: A
+    L2:
+      register: 3001
+      type: float
+      unit: A
+    L3:
+      register: 3003
+      type: float
+      unit: A
+  energy:
+    sum3:
+      active:
+        register: 3203
+        type: uint64
+        unit: Wh
+  frequency:
+    L:
+      register: 3109
+      type: float
+      unit: Hz
+  power:
+    sum3:
+      active:
+        register: 3059
+        scale: 3
+        type: float
+        unit: W
+  voltage:
+    L1:
+      register: 3027
+      type: float
+      unit: V
+    L2:
+      register: 3029
+      type: float
+      unit: V
+    L3:
+      register: 3031
+      type: float
+      unit: V

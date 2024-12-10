@@ -1,0 +1,61 @@
+regs:
+  current:
+    L1:
+      register: 13
+      type: float
+      unit: A
+    L2:
+      register: 15
+      type: float
+      unit: A
+    L3:
+      register: 17
+      type: float
+      unit: A
+  energy:
+    sum3:
+      active:
+        register: 801
+        type: double
+        unit: Wh
+  power:
+    L1:
+      apparent:
+        register: 19
+        type: float
+        unit: VA
+    L2:
+      apparent:
+        register: 21
+        type: float
+        unit: VA
+    L3:
+      apparent:
+        register: 23
+        type: float
+        unit: VA
+  voltage:
+    L1:
+      register: 1
+      type: float
+      unit: V
+    L1-L2:
+      register: 7
+      type: float
+      unit: V
+    L2:
+      register: 3
+      type: float
+      unit: V
+    L2-L3:
+      register: 9
+      type: float
+      unit: V
+    L3:
+      register: 5
+      type: float
+      unit: V
+    L3-L1:
+      register: 11
+      type: float
+      unit: V

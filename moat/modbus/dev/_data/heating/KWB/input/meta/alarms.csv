@@ -1,0 +1,1237 @@
+StartingAddress	Functions	Alarm ID	Translation
+7	02	0.7	Battery empty
+128	02	1.0	Ignition exhaust gas temperature increase not achieved 1!
+129	02	1.1	Ignition exhaust gas temperature increase not achieved 2!
+130	02	1.2	Ignition not working!
+131	02	1.3	Main drive speed too high!
+132	02	1.4	Main drive speed too low!
+133	02	1.5	Main drive speed measurement not working!
+134	02	1.6	Safety shutdown - room air CO value too high!
+135	02	1.7	No flame detectable!
+136	02	1.8	Attention - emergency operation without lambda probe terminated!
+137	02	1.9	Exhaust gas temperature implausible!
+138	02	1.10	Exhaust gas temperature in operation too high!
+139	02	1.11	Exhaust gas temperature in operation too low!
+256	02	2.0	Safety thermostat! Boiler overheating!
+257	02	2.1	The emergency stop button has been activated!
+258	02	2.2	The ash container was incorrectly installed!
+259	02	2.3	Electronic error on digital inputs!
+260	02	2.4	KSM module error!
+261	02	2.5	Temperature increase in the fuel storage!
+262	02	2.6	Alarm! Internal error!
+263	02	2.7	The secondary air fan speed is too low!
+264	02	2.8	The primary air fan speed is too low!
+265	02	2.9	The induced draught fan speed is too low!
+266	02	2.10	The negative pressure in the combustion chamber cannot be regulated!
+267	02	2.11	Negative pressure sensor is faulty!
+268	02	2.12	Lambda probe is faulty!
+269	02	2.13	Conveyor motor is overheated!
+270	02	2.14	Fuel storage is empty!
+271	02	2.15	Fuel container is empty!
+272	02	2.16	Electronics are overheated!
+273	02	2.17	Boiler sensor is missing or faulty!
+274	02	2.18	Boiler temperature implausible!
+275	02	2.19	Return flow boost malfunction!
+276	02	2.20	Return-flow sensor is missing or faulty!
+277	02	2.21	Maintenance interval expired.
+278	02	2.22	Control interval expired!
+279	02	2.23	Measuring mode is activated!
+280	02	2.24	24V safety circuit not active, input 133!
+281	02	2.25	Safety chain 230V reserve is interrupted
+282	02	2.26	Error conveyor system fill level!
+283	02	2.27	Error in the sampling probe system!
+284	02	2.28	Fuel storage is almost empty!
+285	02	2.29	Secondary air fan speed is too high!
+286	02	2.30	24V safety circuit not active, input 130!
+287	02	2.31	24V safety circuit not active, input 131!
+288	02	2.32	24V safety circuit not active, input 132!
+289	02	2.33	Primary fan speed is too high!
+290	02	2.34	Induced draught fan speed is too high!
+291	02	2.35	Room air CO value too high!
+292	02	2.36	The flame temperature sensor is missing or faulty!
+293	02	2.37	O2 value during operation too high!
+294	02	2.38	Heat exchanger temp. too high!
+295	02	2.39	The automatic cleaning is not working!
+296	02	2.40	The pellet module flame temperature sensor is missing or faulty!
+297	02	2.41	Invalid boiler series number!
+298	02	2.42	KPM module error!
+299	02	2.43	Dust filter and recirculation cannot be operated via the KPM at the same time. Install or check KEM.
+300	02	2.44	Dust filter ash extraction cannot be operated at one KEM at the same time as drive 2.
+301	02	2.45	The exhaust gas temperature sensor is missing or faulty!
+302	02	2.46	Flame temperature in operation too low!
+303	02	2.47	Dust filter, recirculation, flushing valve or switchover valve cannot be operated simultaneously via the KPM.
+304	02	2.48	Ash container full! Please empty
+305	02	2.49	The induced draught speed is implausible
+306	02	2.50	Modbus communication failure
+307	02	2.51	Modbus communication failure Powerfire
+308	02	2.52	The buffer sensor for the modulating buffer operation is missing or faulty!
+309	02	2.53	Error O2 value level!
+310	02	2.54	Stocker system error!
+311	02	2.55	Return flow temperature sensor before boiler inlet (plug 237) is missing or faulty!
+384	02	3.0	Sensor 1 of the buffer {_0_} is missing or faulty!
+385	02	3.1	Sensor 2 of the buffer {_0_} is missing or faulty!
+386	02	3.2	Sensor 3 of the buffer {_0_} is missing or faulty!
+387	02	3.3	Sensor 4 of the buffer {_0_} is missing or faulty!
+388	02	3.4	Sensor 5 of the buffer {_0_} is missing or faulty!
+389	02	3.5	Sensor 1 of the buffer {_1_} is missing or faulty!
+390	02	3.6	Sensor 2 of the buffer {_1_} is missing or faulty!
+391	02	3.7	Sensor 3 of the buffer {_1_} is missing or faulty!
+392	02	3.8	Sensor 4 of the buffer {_1_} is missing or faulty!
+393	02	3.9	Sensor 5 of the buffer {_1_} is missing or faulty!
+394	02	3.10	Sensor 1 of the buffer {_2_} is missing or faulty!
+395	02	3.11	Sensor 2 of the buffer {_2_} is missing or faulty!
+396	02	3.12	Sensor 3 of the buffer {_2_} is missing or faulty!
+397	02	3.13	Sensor 4 of the buffer {_2_} is missing or faulty!
+398	02	3.14	Sensor 5 of the buffer {_2_} is missing or faulty!
+399	02	3.15	Sensor 1 of the buffer {_3_} is missing or faulty!
+400	02	3.16	Sensor 2 of the buffer {_3_} is missing or faulty!
+401	02	3.17	Sensor 3 of the buffer {_3_} is missing or faulty!
+402	02	3.18	Sensor 4 of the buffer {_3_} is missing or faulty!
+403	02	3.19	Sensor 5 of the buffer {_3_} is missing or faulty!
+404	02	3.20	Sensor 1 of the buffer {_4_} is missing or faulty!
+405	02	3.21	Sensor 2 of the buffer {_4_} is missing or faulty!
+406	02	3.22	Sensor 3 of the buffer {_4_} is missing or faulty!
+407	02	3.23	Sensor 4 of the buffer {_4_} is missing or faulty!
+408	02	3.24	Sensor 5 of the buffer {_4_} is missing or faulty!
+409	02	3.25	Sensor 1 of the buffer {_5_} is missing or faulty!
+410	02	3.26	Sensor 2 of the buffer {_5_} is missing or faulty!
+411	02	3.27	Sensor 3 of the buffer {_5_} is missing or faulty!
+412	02	3.28	Sensor 4 of the buffer {_5_} is missing or faulty!
+413	02	3.29	Sensor 5 of the buffer {_5_} is missing or faulty!
+414	02	3.30	Sensor 1 of the buffer {_6_} is missing or faulty!
+415	02	3.31	Sensor 2 of the buffer {_6_} is missing or faulty!
+416	02	3.32	Sensor 3 of the buffer {_6_} is missing or faulty!
+417	02	3.33	Sensor 4 of the buffer {_6_} is missing or faulty!
+418	02	3.34	Sensor 5 of the buffer {_6_} is missing or faulty!
+419	02	3.35	Sensor 1 of the buffer {_7_} is missing or faulty!
+420	02	3.36	Sensor 2 of the buffer {_7_} is missing or faulty!
+421	02	3.37	Sensor 3 of the buffer {_7_} is missing or faulty!
+422	02	3.38	Sensor 4 of the buffer {_7_} is missing or faulty!
+423	02	3.39	Sensor 5 of the buffer {_7_} is missing or faulty!
+424	02	3.40	Sensor 1 of the buffer {_8_} is missing or faulty!
+425	02	3.41	Sensor 2 of the buffer {_8_} is missing or faulty!
+426	02	3.42	Sensor 3 of the buffer {_8_} is missing or faulty!
+427	02	3.43	Sensor 4 of the buffer {_8_} is missing or faulty!
+428	02	3.44	Sensor 5 of the buffer {_8_} is missing or faulty!
+429	02	3.45	Sensor 1 of the buffer {_9_} is missing or faulty!
+430	02	3.46	Sensor 2 of the buffer {_9_} is missing or faulty!
+431	02	3.47	Sensor 3 of the buffer {_9_} is missing or faulty!
+432	02	3.48	Sensor 4 of the buffer {_9_} is missing or faulty!
+433	02	3.49	Sensor 5 of the buffer {_9_} is missing or faulty!
+434	02	3.50	Sensor 1 of the buffer {_10_} is missing or faulty!
+435	02	3.51	Sensor 2 of the buffer {_10_} is missing or faulty!
+436	02	3.52	Sensor 3 of the buffer {_10_} is missing or faulty!
+437	02	3.53	Sensor 4 of the buffer {_10_} is missing or faulty!
+438	02	3.54	Sensor 5 of the buffer {_10_} is missing or faulty!
+439	02	3.55	Sensor 1 of the buffer {_11_} is missing or faulty!
+440	02	3.56	Sensor 2 of the buffer {_11_} is missing or faulty!
+441	02	3.57	Sensor 3 of the buffer {_11_} is missing or faulty!
+442	02	3.58	Sensor 4 of the buffer {_11_} is missing or faulty!
+443	02	3.59	Sensor 5 of the buffer {_11_} is missing or faulty!
+444	02	3.60	Sensor 1 of the buffer {_12_} is missing or faulty!
+445	02	3.61	Sensor 2 of the buffer {_12_} is missing or faulty!
+446	02	3.62	Sensor 3 of the buffer {_12_} is missing or faulty!
+447	02	3.63	Sensor 4 of the buffer {_12_} is missing or faulty!
+448	02	3.64	Sensor 5 of the buffer {_12_} is missing or faulty!
+449	02	3.65	Sensor 1 of the buffer {_13_} is missing or faulty!
+450	02	3.66	Sensor 2 of the buffer {_13_} is missing or faulty!
+451	02	3.67	Sensor 3 of the buffer {_13_} is missing or faulty!
+452	02	3.68	Sensor 4 of the buffer {_13_} is missing or faulty!
+453	02	3.69	Sensor 5 of the buffer {_13_} is missing or faulty!
+454	02	3.70	Sensor 1 of the buffer {_14_} is missing or faulty!
+455	02	3.71	Sensor 2 of the buffer {_14_} is missing or faulty!
+456	02	3.72	Sensor 3 of the buffer {_14_} is missing or faulty!
+457	02	3.73	Sensor 4 of the buffer {_14_} is missing or faulty!
+458	02	3.74	Sensor 5 of the buffer {_14_} is missing or faulty!
+459	02	3.75	Sensor 1 of the buffer {_15_} is missing or faulty!
+460	02	3.76	Sensor 2 of the buffer {_15_} is missing or faulty!
+461	02	3.77	Sensor 3 of the buffer {_15_} is missing or faulty!
+462	02	3.78	Sensor 4 of the buffer {_15_} is missing or faulty!
+463	02	3.79	Sensor 5 of the buffer {_15_} is missing or faulty!
+464	02	3.80	Sensor 1 of the buffer {_16_} is missing or faulty!
+465	02	3.81	Sensor 2 of the buffer {_16_} is missing or faulty!
+466	02	3.82	Sensor 3 of the buffer {_16_} is missing or faulty!
+467	02	3.83	Sensor 4 of the buffer {_16_} is missing or faulty!
+468	02	3.84	Sensor 5 of the buffer {_16_} is missing or faulty!
+512	02	4.0	Sensor of the DHWC {_0_} is missing or faulty!
+513	02	4.1	The DHWC sensor {_1_} is missing or faulty!
+514	02	4.2	The DHWC sensor {_2_} is missing or faulty!
+515	02	4.3	The DHWC sensor {_3_} is missing or faulty!
+516	02	4.4	The DHWC sensor {_4_} is missing or faulty!
+517	02	4.5	The DHWC sensor {_5_} is missing or faulty!
+518	02	4.6	The DHWC sensor {_6_} is missing or faulty!
+519	02	4.7	The DHWC sensor {_7_} is missing or faulty!
+520	02	4.8	The DHWC sensor {_8_} is missing or faulty!
+521	02	4.9	The DHWC sensor {_9_} is missing or faulty!
+522	02	4.10	The DHWC sensor {_10_} is missing or faulty!
+523	02	4.11	The DHWC sensor {_11_} is missing or faulty!
+524	02	4.12	The DHWC sensor {_12_} is missing or faulty!
+525	02	4.13	The DHWC sensor {_13_} is missing or faulty!
+526	02	4.14	The DHWC sensor {_14_} is missing or faulty!
+527	02	4.15	The DHWC sensor {_15_} is missing or faulty!
+528	02	4.16	The DHWC sensor {_16_} is missing or faulty!
+529	02	4.17	Sensor 2 at the DHWC {_0_} is missing or faulty!
+530	02	4.18	Sensor 2 at the DHWC {_1_} is missing or faulty!
+531	02	4.19	Sensor 2 at the DHWC {_2_} is missing or faulty!
+532	02	4.20	Sensor 2 at the DHWC {_3_} is missing or faulty!
+533	02	4.21	Sensor 2 at the DHWC {_4_} is missing or faulty!
+534	02	4.22	Sensor 2 at the DHWC {_5_} is missing or faulty!
+535	02	4.23	Sensor 2 at the DHWC {_6_} is missing or faulty!
+536	02	4.24	Sensor 2 at the DHWC {_7_} is missing or faulty!
+537	02	4.25	Sensor 2 at the DHWC {_8_} is missing or faulty!
+538	02	4.26	Sensor 2 at the DHWC {_9_} is missing or faulty!
+539	02	4.27	Sensor 2 at the DHWC {_10_} is missing or faulty!
+540	02	4.28	Sensor 2 at the DHWC {_11_} is missing or faulty!
+541	02	4.29	Sensor 2 at the DHWC {_12_} is missing or faulty!
+542	02	4.30	Sensor 2 at the DHWC {_13_} is missing or faulty!
+543	02	4.31	Sensor 2 at the DHWC {_14_} is missing or faulty!
+544	02	4.32	Sensor 2 at the DHWC {_15_} is missing or faulty!
+545	02	4.33	Sensor 2 at the DHWC {_16_} is missing or faulty!
+640	02	5.0	The outside temperature sensor at the WMM 0 is missing or faulty!
+641	02	5.1	The outside temperature sensor at the WMM 1 is missing or faulty!
+642	02	5.2	The outside temperature sensor at the WMM 2 is missing or faulty!
+643	02	5.3	The outside temperature sensor at the WMM 3 is missing or faulty!
+644	02	5.4	The outside temperature sensor at the WMM 4 is missing or faulty!
+645	02	5.5	The outside temperature sensor at the WMM 5 is missing or faulty!
+646	02	5.6	The outside temperature sensor at the WMM 6 is missing or faulty!
+647	02	5.7	The outside temperature sensor at the WMM 7 is missing or faulty!
+648	02	5.8	The outside temperature sensor at the WMM 8 is missing or faulty!
+649	02	5.9	The outside temperature sensor at the WMM 9 is missing or faulty!
+650	02	5.10	The outside temperature sensor at the WMM 10 is missing or faulty!
+651	02	5.11	The outside temperature sensor at the WMM 11 is missing or faulty!
+652	02	5.12	The outside temperature sensor at the WMM 12 is missing or faulty!
+653	02	5.13	The outside temperature sensor at the WMM 13 is missing or faulty!
+654	02	5.14	The outside temperature sensor at the WMM 14 is missing or faulty!
+655	02	5.15	The outside temperature sensor at the WMM 15 is missing or faulty!
+768	02	6.0	BGB 2 at WMM 0 is missing or faulty!
+769	02	6.1	BGB 2 at WMM 1 is missing or faulty!
+770	02	6.2	BGB 2 at WMM 2 is missing or faulty!
+771	02	6.3	BGB 2 at WMM 3 is missing or faulty!
+772	02	6.4	BGB 2 at WMM 4 is missing or faulty!
+773	02	6.5	BGB 2 at WMM 5 is missing or faulty!
+774	02	6.6	BGB 2 at WMM 6 is missing or faulty!
+775	02	6.7	BGB 2 at WMM 7 is missing or faulty!
+776	02	6.8	BGB 2 at WMM 8 is missing or faulty!
+777	02	6.9	BGB 2 at WMM 9 is missing or faulty!
+778	02	6.10	BGB 2 at WMM 10 is missing or faulty!
+779	02	6.11	BGB 2 at WMM 11 is missing or faulty!
+780	02	6.12	BGB 2 at WMM 12 is missing or faulty!
+781	02	6.13	BGB 2 at WMM 13 is missing or faulty!
+782	02	6.14	BGB 2 at WMM 14 is missing or faulty!
+783	02	6.15	BGB 2 at WMM 15 is missing or faulty!
+896	02	7.0	Ignition not working!
+897	02	7.1	The overfill protection switch of fuel extraction 1 is open!
+898	02	7.2	Faulty Triac at the main drive or fuel extraction drive!
+899	02	7.3	Main drive motor is overheated!
+900	02	7.4	Main drive motor is overloaded!
+901	02	7.5	Conveyor motor 1 is overloaded!
+902	02	7.6	Ultra sound sensor is faulty or occupied!
+903	02	7.7	Safety shutdown: Temperature increase in the ash container!
+904	02	7.8	Safety shutdown: Ash temperature sensor is missing or faulty!
+905	02	7.9	The temperature in the stoker trough is too high! Inform customer service!
+906	02	7.10	Stoker trough sensor is missing or faulty!
+907	02	7.11	O2 value during operation too high or insufficient fuel!
+908	02	7.12	The fuel bed sensor electronics is missing or faulty!
+909	02	7.13	The fuel bed electronics has been installed incorrectly!
+911	02	7.15	Fire shutter does not open!
+912	02	7.16	Fire shutter does not close!
+913	02	7.17	The suction container is empty!
+914	02	7.18	Grate drive is blocked!
+915	02	7.19	Ash screw drive is blocked!
+916	02	7.20	Fly ash drive is blocked!
+917	02	7.21	Check cleaning openings!
+918	02	7.22	Ash container is almost full!
+919	02	7.23	Additional conveyor motor is overloaded!
+924	02	7.28	The burnout temperature sensor is missing or faulty!
+925	02	7.29	The water container of the emergency fire extinguishing system is empty!
+926	02	7.30	Exhaust gas recirculation fan speed is too low!
+927	02	7.31	Fuel bed is too high!
+928	02	7.32	Ultrasound sensor implausible!
+932	02	7.36	Ash container full – system is shutting down
+933	02	7.37	Exhaust gas recirculation shutter is unable to close!
+934	02	7.38	Exhaust gas recirculation shutter is unable to open!
+935	02	7.39	KPM: Phase 2 interruption!
+936	02	7.40	KPM: Phase 3 interruption!
+937	02	7.41	KPM: Rotating magnetic field power connection wrong!
+938	02	7.42	The power supply for the multi-phase motor is missing or faulty
+942	02	7.46	Grate drive motor faulty(short circuit)
+943	02	7.47	Ash screw motor faulty(short circuit)
+944	02	7.48	Fly ash screw motor faulty(short circuit)
+1536	02	12.0	Boiler sensor on second boiler {_0_} is missing or faulty!
+1537	02	12.1	Boiler sensor on second boiler {_1_} is missing or faulty!
+1538	02	12.2	Boiler sensor on second boiler {_2_} is missing or faulty!
+1539	02	12.3	Boiler sensor on second boiler {_3_} is missing or faulty!
+1540	02	12.4	Boiler sensor on second boiler {_4_} is missing or faulty!
+1541	02	12.5	Boiler sensor on second boiler {_5_} is missing or faulty!
+1542	02	12.6	Boiler sensor on second boiler {_6_} is missing or faulty!
+1543	02	12.7	Boiler sensor on second boiler {_7_} is missing or faulty!
+1544	02	12.8	Boiler sensor on second boiler {_8_} is missing or faulty!
+1545	02	12.9	Boiler sensor on second boiler {_9_} is missing or faulty!
+1546	02	12.10	Boiler sensor on second boiler {_10_} is missing or faulty!
+1547	02	12.11	Boiler sensor on second boiler {_11_} is missing or faulty!
+1548	02	12.12	Boiler sensor on second boiler {_12_} is missing or faulty!
+1549	02	12.13	Boiler sensor on second boiler {_13_} is missing or faulty!
+1550	02	12.14	Boiler sensor on second boiler {_14_} is missing or faulty!
+1551	02	12.15	Boiler sensor on second boiler {_15_} is missing or faulty!
+1664	02	13.0	Forward-flow sensor of heating circuit {_0_} is missing or faulty!
+1665	02	13.1	Forward-flow sensor of heating circuit {_1_} is missing or faulty!
+1666	02	13.2	Forward-flow sensor of heating circuit {_2_} is missing or faulty!
+1667	02	13.3	Forward-flow sensor of heating circuit {_3_} is missing or faulty!
+1668	02	13.4	Forward-flow sensor of heating circuit {_4_} is missing or faulty!
+1669	02	13.5	Forward-flow sensor of heating circuit {_5_} is missing or faulty!
+1670	02	13.6	Forward-flow sensor of heating circuit {_6_} is missing or faulty!
+1671	02	13.7	Forward-flow sensor of heating circuit {_7_} is missing or faulty!
+1672	02	13.8	Forward-flow sensor of heating circuit {_8_} is missing or faulty!
+1673	02	13.9	Forward-flow sensor of heating circuit {_9_} is missing or faulty!
+1674	02	13.10	Forward-flow sensor of heating circuit {_10_} is missing or faulty!
+1675	02	13.11	Forward-flow sensor of heating circuit {_11_} is missing or faulty!
+1676	02	13.12	Forward-flow sensor of heating circuit {_12_} is missing or faulty!
+1677	02	13.13	Forward-flow sensor of heating circuit {_13_} is missing or faulty!
+1678	02	13.14	Forward-flow sensor of heating circuit {_14_} is missing or faulty!
+1679	02	13.15	Forward-flow sensor of heating circuit {_15_} is missing or faulty!
+1680	02	13.16	Forward-flow sensor of heating circuit {_16_} is missing or faulty!
+1681	02	13.17	Forward-flow sensor of heating circuit {_17_} is missing or faulty!
+1682	02	13.18	Forward-flow sensor of heating circuit {_18_} is missing or faulty!
+1683	02	13.19	Forward-flow sensor of heating circuit {_19_} is missing or faulty!
+1684	02	13.20	Forward-flow sensor of heating circuit {_20_} is missing or faulty!
+1685	02	13.21	Forward-flow sensor of heating circuit {_21_} is missing or faulty!
+1686	02	13.22	Forward-flow sensor of heating circuit {_22_} is missing or faulty!
+1687	02	13.23	Forward-flow sensor of heating circuit {_23_} is missing or faulty!
+1688	02	13.24	Forward-flow sensor of heating circuit {_24_} is missing or faulty!
+1689	02	13.25	Forward-flow sensor of heating circuit {_25_} is missing or faulty!
+1690	02	13.26	Forward-flow sensor of heating circuit {_26_} is missing or faulty!
+1691	02	13.27	Forward-flow sensor of heating circuit {_27_} is missing or faulty!
+1692	02	13.28	Forward-flow sensor of heating circuit {_28_} is missing or faulty!
+1693	02	13.29	Forward-flow sensor of heating circuit {_29_} is missing or faulty!
+1694	02	13.30	Forward-flow sensor of heating circuit {_30_} is missing or faulty!
+1792	02	14.0	Dust filter cleaning defective
+1793	02	14.1	Dust filter bypass shutter does not open/close
+1794	02	14.2	Dust filter requires a fully equipped KSM.
+1795	02	14.3	Dust filter requires a fully equipped KEM.
+1796	02	14.4	High voltage cannot be maintained
+1797	02	14.5	Temperature error, high-voltage unit dust filter
+1798	02	14.6	Ash tr. dust filt. inst. incorrectly!
+1799	02	14.7	Dust filter not available.
+1800	02	14.8	Dust filter requires fly ash extraction. None has been configured for the boiler.
+1801	02	14.9	Dust filter temperature sensor ash trace heating is missing/defective
+1802	02	14.10	Without dust filter bypass, cleaning is only possible at variable times.
+1803	02	14.11	Attempt to establish high voltage
+1804	02	14.12	Dust filter adjustment failed
+1920	02	15.0	WMM 0 not accessible!
+1921	02	15.1	WMM 1 not accessible!
+1922	02	15.2	WMM 2 not accessible!
+1923	02	15.3	WMM 3 not accessible!
+1924	02	15.4	WMM 4 not accessible!
+1925	02	15.5	WMM 5 not accessible!
+1926	02	15.6	WMM 6 not accessible!
+1927	02	15.7	WMM 7 not accessible!
+1928	02	15.8	WMM 8 not accessible!
+1929	02	15.9	WMM 9 not accessible!
+1930	02	15.10	WMM 10 not accessible!
+1931	02	15.11	WMM 11 not accessible!
+1932	02	15.12	WMM 12 not accessible!
+1933	02	15.13	WMM 13 not accessible!
+1934	02	15.14	WMM 14 not accessible!
+1935	02	15.15	WMM 15 not accessible!
+2048	02	16.0	The primary air shutter is not working.
+2049	02	16.1	The secondary air shutter is not working.
+2050	02	16.2	Boiler leaking.
+2051	02	16.3	Ignition not working!
+2052	02	16.4	Sealing valve is not working.
+2176	02	17.0	Connection error on the house bus
+2177	02	17.1	More than one boiler-BGE detected
+2178	02	17.2	Log error when reconciling parameters.
+2179	02	17.3	Node with incompatible parameter version detected.
+2180	02	17.4	Unacknowledged alarms are pending at the boiler.
+2181	02	17.5	CAN: Internal error
+2182	02	17.6	No connection to boiler BGE
+2304	02	18.0	BGB 1 at WMM 0 is missing or faulty!
+2305	02	18.1	BGB 1 at WMM 1 is missing or faulty!
+2306	02	18.2	BGB 1 at WMM 2 is missing or faulty!
+2307	02	18.3	BGB 1 at WMM 3 is missing or faulty!
+2308	02	18.4	BGB 1 at WMM 4 is missing or faulty!
+2309	02	18.5	BGB 1 at WMM 5 is missing or faulty!
+2310	02	18.6	BGB 1 at WMM 6 is missing or faulty!
+2311	02	18.7	BGB 1 at WMM 7 is missing or faulty!
+2312	02	18.8	BGB 1 at WMM 8 is missing or faulty!
+2313	02	18.9	BGB 1 at WMM 9 is missing or faulty!
+2314	02	18.10	BGB 1 at WMM 10 is missing or faulty!
+2315	02	18.11	BGB 1 at WMM 11 is missing or faulty!
+2316	02	18.12	BGB 1 at WMM 12 is missing or faulty!
+2317	02	18.13	BGB 1 at WMM 13 is missing or faulty!
+2318	02	18.14	BGB 1 at WMM 14 is missing or faulty!
+2319	02	18.15	BGB 1 at WMM 15 is missing or faulty!
+2432	02	19.0	Analog room temperature sensor of heating circuit {_0_} is missing or faulty!
+2433	02	19.1	Analog room temperature sensor of heating circuit {_1_} is missing or faulty!
+2434	02	19.2	Analog room temperature sensor of heating circuit {_2_} is missing or faulty!
+2435	02	19.3	Analog room temperature sensor of heating circuit {_3_} is missing or faulty!
+2436	02	19.4	Analog room temperature sensor of heating circuit {_4_} is missing or faulty!
+2437	02	19.5	Analog room temperature sensor of heating circuit {_5_} is missing or faulty!
+2438	02	19.6	Analog room temperature sensor of heating circuit {_6_} is missing or faulty!
+2439	02	19.7	Analog room temperature sensor of heating circuit {_7_} is missing or faulty!
+2440	02	19.8	Analog room temperature sensor of heating circuit {_8_} is missing or faulty!
+2441	02	19.9	Analog room temperature sensor of heating circuit {_9_} is missing or faulty!
+2442	02	19.10	Analog room temperature sensor of heating circuit {_10_} is missing or faulty!
+2443	02	19.11	Analog room temperature sensor of heating circuit {_11_} is missing or faulty!
+2444	02	19.12	Analog room temperature sensor of heating circuit {_12_} is missing or faulty!
+2445	02	19.13	Analog room temperature sensor of heating circuit {_13_} is missing or faulty!
+2446	02	19.14	Analog room temperature sensor of heating circuit {_14_} is missing or faulty!
+2447	02	19.15	Analog room temperature sensor of heating circuit {_15_} is missing or faulty!
+2448	02	19.16	Analog room temperature sensor of heating circuit {_16_} is missing or faulty!
+2449	02	19.17	Analog room temperature sensor of heating circuit {_17_} is missing or faulty!
+2450	02	19.18	Analog room temperature sensor of heating circuit {_18_} is missing or faulty!
+2451	02	19.19	Analog room temperature sensor of heating circuit {_19_} is missing or faulty!
+2452	02	19.20	Analog room temperature sensor of heating circuit {_20_} is missing or faulty!
+2453	02	19.21	Analog room temperature sensor of heating circuit {_21_} is missing or faulty!
+2454	02	19.22	Analog room temperature sensor of heating circuit {_22_} is missing or faulty!
+2455	02	19.23	Analog room temperature sensor of heating circuit {_23_} is missing or faulty!
+2456	02	19.24	Analog room temperature sensor of heating circuit {_24_} is missing or faulty!
+2457	02	19.25	Analog room temperature sensor of heating circuit {_25_} is missing or faulty!
+2458	02	19.26	Analog room temperature sensor of heating circuit {_26_} is missing or faulty!
+2459	02	19.27	Analog room temperature sensor of heating circuit {_27_} is missing or faulty!
+2460	02	19.28	Analog room temperature sensor of heating circuit {_28_} is missing or faulty!
+2461	02	19.29	Analog room temperature sensor of heating circuit {_29_} is missing or faulty!
+2462	02	19.30	Analog room temperature sensor of heating circuit {_30_} is missing or faulty!
+2567	02	20.7	ComfortOnline: Server reports 'BGE software version not supported'.
+2568	02	20.8	ComfortOnline: Server reports 'Unknown BGE ser. no. for this boiler ser. no.'.
+2569	02	20.9	ComfortOnline: Server reports 'A system with this series number is already online'.
+2570	02	20.10	ComfortOnline: Server reports 'BGE with this ser. no. was already used with other boiler ser. no.'.
+2688	02	21.0	The outside temperature sensor at the KSM is missing or faulty!
+2816	02	22.0	KEM1: Rotating magnetic field power connection wrong
+2817	02	22.1	KEM2: Rotating magnetic field power connection wrong
+2818	02	22.2	KEM3: Rotating magnetic field power connection wrong
+2819	02	22.3	KEM4: Rotating magnetic field power connection wrong
+2820	02	22.4	KEM5: Rotating magnetic field power connection wrong
+2821	02	22.5	KEM6: Rotating magnetic field power connection wrong
+2822	02	22.6	KEM7: Rotating magnetic field power connection wrong
+2823	02	22.7	KEM8: Rotating magnetic field power connection wrong
+2824	02	22.8	KEM9: Rotating magnetic field power connection wrong
+2825	02	22.9	KEM10: Rotating magnetic field power connection wrong
+2944	02	23.0	The circulation sensor of WMM 0 is missing or faulty!
+2945	02	23.1	The circulation sensor of WMM 1 is missing or faulty!
+2946	02	23.2	The circulation sensor of WMM 2 is missing or faulty!
+2947	02	23.3	The circulation sensor of WMM 3 is missing or faulty!
+2948	02	23.4	The circulation sensor of WMM 4 is missing or faulty!
+2949	02	23.5	The circulation sensor of WMM 5 is missing or faulty!
+2950	02	23.6	The circulation sensor of WMM 6 is missing or faulty!
+2951	02	23.7	The circulation sensor of WMM 7 is missing or faulty!
+2952	02	23.8	The circulation sensor of WMM 8 is missing or faulty!
+2953	02	23.9	The circulation sensor of WMM 9 is missing or faulty!
+2954	02	23.10	The circulation sensor of WMM 10 is missing or faulty!
+2955	02	23.11	The circulation sensor of WMM 11 is missing or faulty!
+2956	02	23.12	The circulation sensor of WMM 12 is missing or faulty!
+2957	02	23.13	The circulation sensor of WMM 13 is missing or faulty!
+2958	02	23.14	The circulation sensor of WMM 14 is missing or faulty!
+2959	02	23.15	The circulation sensor of WMM 15 is missing or faulty!
+3072	02	24.0	Error saving parameter to flash
+3073	02	24.1	Error while uploading settings
+3200	02	25.0	Configuration boiler bus failed!
+3201	02	25.1	Configuration house bus failed!
+3202	02	25.2	Boiler type was not configured.
+3203	02	25.3	Email address invalid
+3204	02	25.4	Buffer tank 0 not available at the autonomous WMM.
+3206	02	25.6	One module has obsolete firmware!
+3207	02	25.7	Restart required. Hardware configuration was changed.
+3328	02	26.0	WMM 0 does not support a second heating circuit.
+3329	02	26.1	WMM 1 does not support a second heating circuit.
+3330	02	26.2	WMM 2 does not support a second heating circuit.
+3331	02	26.3	WMM 3 does not support a second heating circuit:
+3332	02	26.4	WMM 4 does not support a second heating circuit.
+3333	02	26.5	WMM 5 does not support a second heating circuit.
+3334	02	26.6	WMM 6 does not support a second heating circuit.
+3335	02	26.7	WMM 7 does not support a second heating circuit.
+3336	02	26.8	WMM 8 does not support a second heating circuit.
+3337	02	26.9	WMM 9 does not support a second heating circuit.
+3338	02	26.10	WMM 10 does not support a second heating circuit.
+3339	02	26.11	WMM 11 does not support a second heating circuit.
+3340	02	26.12	WMM 12 does not support a second heating circuit.
+3341	02	26.13	WMM 13 does not support a second heating circuit.
+3342	02	26.14	WMM 14 does not support a second heating circuit.
+3343	02	26.15	WMM 15 does not support a second heating circuit.
+3456	02	27.0	WMM 0 does not support a second heating source.
+3457	02	27.1	WMM 1 does not support a second heating source.
+3458	02	27.2	WMM 2 does not support a second heating source.
+3459	02	27.3	WMM 3 does not support a second heating source.
+3460	02	27.4	WMM 4 does not support a second heating source.
+3461	02	27.5	WMM 5 does not support a second heating source.
+3462	02	27.6	WMM 6 does not support a second heating source.
+3463	02	27.7	WMM 7 does not support a second heating source.
+3464	02	27.8	WMM 8 does not support a second heating source.
+3465	02	27.9	WMM 9 does not support a second heating source.
+3466	02	27.10	WMM 10 does not support a second heating source.
+3467	02	27.11	WMM 11 does not support a second heating source.
+3468	02	27.12	WMM 12 does not support a second heating source.
+3469	02	27.13	WMM 13 does not support a second heating source.
+3470	02	27.14	WMM 14 does not support a second heating source.
+3471	02	27.15	WMM 15 does not support a second heating source.
+3584	02	28.0	The control unit with station number 2 is not accessible
+3585	02	28.1	The control unit with station number 3 is not accessible
+3586	02	28.2	The control unit with station number 4 is not accessible
+3587	02	28.3	The control unit with station number 5 is not accessible
+3588	02	28.4	The control unit with station number 6 is not accessible
+3589	02	28.5	The control unit with station number 7 is not accessible
+3590	02	28.6	The control unit with station number 8 is not accessible
+3591	02	28.7	The control unit with station number 9 is not accessible
+3592	02	28.8	The control unit with station number 10 is not accessible
+3593	02	28.9	The control unit with station number 11 is not accessible
+3594	02	28.10	The control unit with station number 12 is not accessible
+3595	02	28.11	The control unit with station number 13 is not accessible
+3596	02	28.12	The control unit with station number 14 is not accessible
+3597	02	28.13	The control unit with station number 15 is not accessible
+3598	02	28.14	The control unit with station number 16 is not accessible
+3599	02	28.15	The control unit with station number 17 is not accessible
+3600	02	28.16	The control unit with station number 18 is not accessible
+3601	02	28.17	The control unit with station number 19 is not accessible
+3602	02	28.18	The control unit with station number 20 is not accessible
+3603	02	28.19	The control unit with station number 21 is not accessible
+3604	02	28.20	The control unit with station number 22 is not accessible
+3605	02	28.21	The control unit with station number 23 is not accessible
+3606	02	28.22	The control unit with station number 24 is not accessible
+3607	02	28.23	The control unit with station number 25 is not accessible
+3608	02	28.24	The control unit with station number 26 is not accessible
+3609	02	28.25	The control unit with station number 27 is not accessible
+3610	02	28.26	The control unit with station number 28 is not accessible
+3611	02	28.27	The control unit with station number 29 is not accessible
+3612	02	28.28	The control unit with station number 30 is not accessible
+3613	02	28.29	The control unit with station number 31 is not accessible
+3614	02	28.30	The control unit with station number 32 is not accessible
+3712	02	29.0	Heating circuit {_0_}: Room influence and Eco operation require a sensor for the room temperature.
+3713	02	29.1	Heating circuit {_1_}: Room influence and Eco operation require a sensor for the room temperature.
+3714	02	29.2	Heating circuit {_2_}: Room influence and Eco operation require a sensor for the room temperature.
+3715	02	29.3	Heating circuit {_3_}: Room influence and Eco operation require a sensor for the room temperature.
+3716	02	29.4	Heating circuit {_4_}: Room influence and Eco operation require a sensor for the room temperature.
+3717	02	29.5	Heating circuit {_5_}: Room influence and Eco operation require a sensor for the room temperature.
+3718	02	29.6	Heating circuit {_6_}: Room influence and Eco operation require a sensor for the room temperature.
+3719	02	29.7	Heating circuit {_7_}: Room influence and Eco operation require a sensor for the room temperature.
+3720	02	29.8	Heating circuit {_8_}: Room influence and Eco operation require a sensor for the room temperature.
+3721	02	29.9	Heating circuit {_9_}: Room influence and Eco operation require a sensor for the room temperature.
+3722	02	29.10	Heating circuit {_10_}: Room influence and Eco operation require a sensor for the room temperature.
+3723	02	29.11	Heating circuit {_11_}: Room influence and Eco operation require a sensor for the room temperature.
+3724	02	29.12	Heating circuit {_12_}: Room influence and Eco operation require a sensor for the room temperature.
+3725	02	29.13	Heating circuit {_13_}: Room influence and Eco operation require a sensor for the room temperature.
+3726	02	29.14	Heating circuit {_14_}: Room influence and Eco operation require a sensor for the room temperature.
+3727	02	29.15	Heating circuit {_15_}: Room influence and Eco operation require a sensor for the room temperature.
+3728	02	29.16	Heating circuit {_16_}: Room influence and Eco operation require a sensor for the room temperature.
+3729	02	29.17	Heating circuit {_17_}: Room influence and Eco operation require a sensor for the room temperature.
+3730	02	29.18	Heating circuit {_18_}: Room influence and Eco operation require a sensor for the room temperature.
+3731	02	29.19	Heating circuit {_19_}: Room influence and Eco operation require a sensor for the room temperature.
+3732	02	29.20	Heating circuit {_20_}: Room influence and Eco operation require a sensor for the room temperature.
+3733	02	29.21	Heating circuit {_21_}: Room influence and Eco operation require a sensor for the room temperature.
+3734	02	29.22	Heating circuit {_22_}: Room influence and Eco operation require a sensor for the room temperature.
+3735	02	29.23	Heating circuit {_23_}: Room influence and Eco operation require a sensor for the room temperature.
+3736	02	29.24	Heating circuit {_24_}: Room influence and Eco operation require a sensor for the room temperature.
+3737	02	29.25	Heating circuit {_25_}: Room influence and Eco operation require a sensor for the room temperature.
+3738	02	29.26	Heating circuit {_26_}: Room influence and Eco operation require a sensor for the room temperature.
+3739	02	29.27	Heating circuit {_27_}: Room influence and Eco operation require a sensor for the room temperature.
+3740	02	29.28	Heating circuit {_28_}: Room influence and Eco operation require a sensor for the room temperature.
+3741	02	29.29	Heating circuit {_29_}: Room influence and Eco operation require a sensor for the room temperature.
+3742	02	29.30	Heating circuit {_30_}: Room influence and Eco operation require a sensor for the room temperature.
+3840	02	30.0	Cellular modem not respondig.
+3841	02	30.1	Cellular Modem Error
+3968	02	31.0	KEM 1 not accessible!
+3969	02	31.1	KEM 2 not accessible!
+3970	02	31.2	KEM 3 not accessible!
+3971	02	31.3	KEM 4 not accessible!
+3972	02	31.4	KEM 5 not accessible!
+3973	02	31.5	KEM 6 not accessible!
+3974	02	31.6	KEM 7 not accessible!
+3975	02	31.7	KEM 8 not accessible!
+3976	02	31.8	KEM 9 not accessible!
+3977	02	31.9	KEM 10 not accessible!
+4096	02	32.0	Emergency escape switch KEM1 was pressed!
+4097	02	32.1	Emergency escape switch KEM2 was pressed!
+4098	02	32.2	Emergency escape switch KEM3 was pressed!
+4099	02	32.3	Emergency escape switch KEM4 was pressed!
+4100	02	32.4	Emergency escape switch KEM5 was pressed!
+4101	02	32.5	Emergency escape switch KEM6 was pressed!
+4102	02	32.6	Emergency escape switch KEM7 was pressed!
+4103	02	32.7	Emergency escape switch KEM8 was pressed!
+4104	02	32.8	Emergency escape switch KEM9 was pressed!
+4105	02	32.9	Emergency escape switch KEM10 was pressed!
+4224	02	33.0	Safety circuit external KEM1 interrupted!
+4225	02	33.1	Safety circuit external KEM2 interrupted!
+4226	02	33.2	Safety circuit external KEM3 interrupted!
+4227	02	33.3	Safety circuit external KEM4 interrupted!
+4228	02	33.4	Safety circuit external KEM5 interrupted!
+4229	02	33.5	Safety circuit external KEM6 interrupted!
+4230	02	33.6	Safety circuit external KEM7 interrupted!
+4231	02	33.7	Safety circuit external KEM8 interrupted!
+4232	02	33.8	Safety circuit external KEM9 interrupted!
+4233	02	33.9	Safety circuit external KEM10 interrupted!
+4352	02	34.0	KEM1: Temperature increase in the fuel storage!
+4353	02	34.1	KEM2: Temperature increase in the fuel storage!
+4354	02	34.2	KEM3: Temperature increase in the fuel storage!
+4355	02	34.3	KEM4: Temperature increase in the fuel storage!
+4356	02	34.4	KEM5: Temperature increase in the fuel storage!
+4357	02	34.5	KEM6: Temperature increase in the fuel storage!
+4358	02	34.6	KEM7: Temperature increase in the fuel storage!
+4359	02	34.7	KEM8: Temperature increase in the fuel storage!
+4360	02	34.8	KEM9: Temperature increase in the fuel storage!
+4361	02	34.9	KEM10: Temperature increase in the fuel storage!
+4480	02	35.0	KEM1: motor1 is overheated!
+4481	02	35.1	KEM2: motor1 is overheated!
+4482	02	35.2	KEM3: motor1 is overheated!
+4483	02	35.3	KEM4: motor1 is overheated!
+4484	02	35.4	KEM5: motor1 is overheated!
+4485	02	35.5	KEM6: motor1 is overheated!
+4486	02	35.6	KEM7: motor1 is overheated!
+4487	02	35.7	KEM8: motor1 is overheated!
+4488	02	35.8	KEM9: motor1 is overheated!
+4489	02	35.9	KEM10: motor1 is overheated!
+4608	02	36.0	KEM1: motor2 is overheated!
+4609	02	36.1	KEM2: motor2 is overheated!
+4610	02	36.2	KEM3: motor2 is overheated!
+4611	02	36.3	KEM4: motor2 is overheated!
+4612	02	36.4	KEM5: motor2 is overheated!
+4613	02	36.5	KEM6: motor2 is overheated!
+4614	02	36.6	KEM7: motor2 is overheated!
+4615	02	36.7	KEM8: motor2 is overheated!
+4616	02	36.8	KEM9: motor2 is overheated!
+4617	02	36.9	KEM10: motor2 is overheated!
+4736	02	37.0	KEM1: Ash temperature sensor is missing or faulty!
+4737	02	37.1	KEM2: Ash temperature sensor is missing or faulty!
+4738	02	37.2	KEM3: Ash temperature sensor is missing or faulty!
+4739	02	37.3	KEM4: Ash temperature sensor is missing or faulty!
+4740	02	37.4	KEM5: Ash temperature sensor is missing or faulty!
+4741	02	37.5	KEM6: Ash temperature sensor is missing or faulty!
+4742	02	37.6	KEM7: Ash temperature sensor is missing or faulty!
+4743	02	37.7	KEM8: Ash temperature sensor is missing or faulty!
+4744	02	37.8	KEM9: Ash temperature sensor is missing or faulty!
+4745	02	37.9	KEM10: Ash temperature sensor is missing or faulty!
+5120	02	40.0	KEM1: Overload drive1!
+5121	02	40.1	KEM2: Overload drive1!
+5122	02	40.2	KEM3: Overload drive1!
+5123	02	40.3	KEM4: Overload drive1!
+5124	02	40.4	KEM5: Overload drive1!
+5125	02	40.5	KEM6: Overload drive1!
+5126	02	40.6	KEM7: Overload drive1!
+5127	02	40.7	KEM8: Overload drive1!
+5128	02	40.8	KEM9: Overload drive1!
+5129	02	40.9	KEM10: Overload drive1!
+5248	02	41.0	KEM1: Overload drive2!
+5249	02	41.1	KEM2: Overload drive2!
+5250	02	41.2	KEM3: Overload drive2!
+5251	02	41.3	KEM4: Overload drive2!
+5252	02	41.4	KEM5: Overload drive2!
+5253	02	41.5	KEM6: Overload drive2!
+5254	02	41.6	KEM7: Overload drive2!
+5255	02	41.7	KEM8: Overload drive2!
+5256	02	41.8	KEM9: Overload drive2!
+5257	02	41.9	KEM10: Overload drive2!
+5376	02	42.0	KEM1: Phase2 interruption!
+5377	02	42.1	KEM2: Phase2 interruption!
+5378	02	42.2	KEM3: Phase2 interruption!
+5379	02	42.3	KEM4: Phase2 interruption!
+5380	02	42.4	KEM5: Phase2 interruption!
+5381	02	42.5	KEM6: Phase2 interruption!
+5382	02	42.6	KEM7: Phase2 interruption!
+5383	02	42.7	KEM8: Phase2 interruption!
+5384	02	42.8	KEM9: Phase2 interruption!
+5385	02	42.9	KEM10: Phase2 interruption!
+5504	02	43.0	KEM1: Phase3 interruption!
+5505	02	43.1	KEM2: Phase3 interruption!
+5506	02	43.2	KEM3: Phase3 interruption!
+5507	02	43.3	KEM4: Phase3 interruption!
+5508	02	43.4	KEM5: Phase3 interruption!
+5509	02	43.5	KEM6: Phase3 interruption!
+5510	02	43.6	KEM7: Phase3 interruption!
+5511	02	43.7	KEM8: Phase3 interruption!
+5512	02	43.8	KEM9: Phase3 interruption!
+5513	02	43.9	KEM10: Phase3 interruption!
+5632	02	44.0	KEM1: Overfill protection switch drive1 is open!
+5633	02	44.1	KEM2: Overfill protection switch drive1 is open!
+5634	02	44.2	KEM3: Overfill protection switch drive1 is open!
+5635	02	44.3	KEM4: Overfill protection switch drive1 is open!
+5636	02	44.4	KEM5: Overfill protection switch drive1 is open!
+5637	02	44.5	KEM6: Overfill protection switch drive1 is open!
+5638	02	44.6	KEM7: Overfill protection switch drive1 is open!
+5639	02	44.7	KEM8: Overfill protection switch drive1 is open!
+5640	02	44.8	KEM9: Overfill protection switch drive1 is open!
+5641	02	44.9	KEM10: Overfill protection switch drive1 is open!
+5760	02	45.0	KEM1: Ash bin is missing!
+5761	02	45.1	KEM2: Ash bin is missing!
+5762	02	45.2	KEM3: Ash bin is missing!
+5763	02	45.3	KEM4: Ash bin is missing!
+5764	02	45.4	KEM5: Ash bin is missing!
+5765	02	45.5	KEM6: Ash bin is missing!
+5766	02	45.6	KEM7: Ash bin is missing!
+5767	02	45.7	KEM8: Ash bin is missing!
+5768	02	45.8	KEM9: Ash bin is missing!
+5769	02	45.9	KEM10: Ash bin is missing!
+5888	02	46.0	Kem1: Drive1 Triac faulty
+5889	02	46.1	Kem2: Drive1 Triac faulty
+5890	02	46.2	Kem3: Drive1 Triac faulty
+5891	02	46.3	Kem4: Drive1 Triac faulty
+5892	02	46.4	Kem5: Drive1 Triac faulty
+5893	02	46.5	Kem6: Drive1 Triac faulty
+5894	02	46.6	Kem7: Drive1 Triac faulty
+5895	02	46.7	Kem8: Drive1 Triac faulty
+5896	02	46.8	Kem9: Drive1 Triac faulty
+5897	02	46.9	Kem10: Drive1 Triac faulty
+6016	02	47.0	Kem1: Drive2 Triac faulty
+6017	02	47.1	Kem2: Drive2 Triac faulty
+6018	02	47.2	Kem3: Drive2 Triac faulty
+6019	02	47.3	Kem4: Drive2 Triac faulty
+6020	02	47.4	Kem5: Drive2 Triac faulty
+6021	02	47.5	Kem6: Drive2 Triac faulty
+6022	02	47.6	Kem7: Drive2 Triac faulty
+6023	02	47.7	Kem8: Drive2 Triac faulty
+6024	02	47.8	Kem9: Drive2 Triac faulty
+6025	02	47.9	Kem10: Drive2 Triac faulty
+6144	02	48.0	Overflow logger
+6145	02	48.1	Duplicate Logging
+6146	02	48.2	Internal test software!
+6147	02	48.3	Validation error, see ParamValidator.log
+6272	02	49.0	Threshold value of heating circuit {_0_} is above minimum temperature.
+6273	02	49.1	Threshold value of heating circuit {_1_} is above minimum temperature.
+6274	02	49.2	Threshold value of heating circuit {_2_} is above minimum temperature.
+6275	02	49.3	Threshold value of heating circuit {_3_} is above minimum temperature.
+6276	02	49.4	Threshold value of heating circuit {_4_} is above minimum temperature.
+6277	02	49.5	Threshold value of heating circuit {_5_} is above minimum temperature.
+6278	02	49.6	Threshold value of heating circuit {_6_} is above minimum temperature.
+6279	02	49.7	Threshold value of heating circuit {_7_} is above minimum temperature.
+6280	02	49.8	Threshold value of heating circuit {_8_} is above minimum temperature.
+6281	02	49.9	Threshold value of heating circuit {_9_} is above minimum temperature.
+6282	02	49.10	Threshold value of heating circuit {_10_} is above minimum temperature.
+6283	02	49.11	Threshold value of heating circuit {_11_} is above minimum temperature.
+6284	02	49.12	Threshold value of heating circuit {_12_} is above minimum temperature.
+6285	02	49.13	Threshold value of heating circuit {_13_} is above minimum temperature.
+6286	02	49.14	Threshold value of heating circuit {_14_} is above minimum temperature.
+6287	02	49.15	Threshold value of heating circuit {_15_} is above minimum temperature.
+6288	02	49.16	Threshold value of heating circuit {_16_} is above minimum temperature.
+6289	02	49.17	Threshold value of heating circuit {_17_} is above minimum temperature.
+6290	02	49.18	Threshold value of heating circuit {_18_} is above minimum temperature.
+6291	02	49.19	Threshold value of heating circuit {_19_} is above minimum temperature.
+6292	02	49.20	Threshold value of heating circuit {_20_} is above minimum temperature.
+6293	02	49.21	Threshold value of heating circuit {_21_} is above minimum temperature.
+6294	02	49.22	Threshold value of heating circuit {_22_} is above minimum temperature.
+6295	02	49.23	Threshold value of heating circuit {_23_} is above minimum temperature.
+6296	02	49.24	Threshold value of heating circuit {_24_} is above minimum temperature.
+6297	02	49.25	Threshold value of heating circuit {_25_} is above minimum temperature.
+6298	02	49.26	Threshold value of heating circuit {_26_} is above minimum temperature.
+6299	02	49.27	Threshold value of heating circuit {_27_} is above minimum temperature.
+6300	02	49.28	Threshold value of heating circuit {_28_} is above minimum temperature.
+6301	02	49.29	Threshold value of heating circuit {_29_} is above minimum temperature.
+6302	02	49.30	Threshold value of heating circuit {_30_} is above minimum temperature.
+6400	02	50.0	No functioning boiler available
+6402	02	50.2	No valid temperature value
+6403	02	50.3	Temperature sensor 1 in the buffer is missing or faulty
+6404	02	50.4	Assigned buffer tank not activated
+6405	02	50.5	Maximum temperature at temperature sensor 1 in buffer exceeded
+6406	02	50.6	The combination BMSC with DHWC1 or ZWQ1 is not possible
+6407	02	50.7	BMSC - The combination of BMSC with SHS2 is not possible
+6408	02	50.8	Temperature undershooting
+6409	02	50.9	Sensor at the network forward flow is missing or faulty
+6410	02	50.10	BMSC - The differential between 'Buffer fill level 0% at' and Buffer setpoint temperature is too low.
+6528	02	51.0	Solar system {_0_}: Non-activated storage tank has been assigned!
+6529	02	51.1	Solar system {_1_}: Non-activated storage tank has been assigned!
+6530	02	51.2	Solar system {_2_}: Non-activated storage tank has been assigned!
+6531	02	51.3	Solar system {_3_}: Non-activated storage tank has been assigned!
+6532	02	51.4	Solar system {_4_}: Non-activated storage tank has been assigned!
+6533	02	51.5	Solar system {_5_}: Non-activated storage tank has been assigned!
+6534	02	51.6	Solar system {_6_}: Non-activated storage tank has been assigned!
+6535	02	51.7	Solar system {_7_}: Non-activated storage tank has been assigned!
+6536	02	51.8	Solar system {_8_}: Non-activated storage tank has been assigned!
+6537	02	51.9	Solar system {_9_}: Non-activated storage tank has been assigned!
+6538	02	51.10	Solar system {_10_}: Non-activated storage tank has been assigned!
+6539	02	51.11	Solar system {_11_}: Non-activated storage tank has been assigned!
+6540	02	51.12	Solar system {_12_}: Non-activated storage tank has been assigned!
+6541	02	51.13	Solar system {_13_}: Non-activated storage tank has been assigned!
+6542	02	51.14	Solar system {_14_}: Non-activated storage tank has been assigned!
+6656	02	52.0	Solar system {_0_}: Already used storage tank has been assigned!
+6657	02	52.1	Solar system {_1_}: Already used storage tank has been assigned!
+6658	02	52.2	Solar system {_2_}: Already used storage tank has been assigned!
+6659	02	52.3	Solar system {_3_}: Already used storage tank has been assigned!
+6660	02	52.4	Solar system {_4_}: Already used storage tank has been assigned!
+6661	02	52.5	Solar system {_5_}: Already used storage tank has been assigned!
+6662	02	52.6	Solar system {_6_}: Already used storage tank has been assigned!
+6663	02	52.7	Solar system {_7_}: Already used storage tank has been assigned!
+6664	02	52.8	Solar system {_8_}: Already used storage tank has been assigned!
+6665	02	52.9	Solar system {_9_}: Already used storage tank has been assigned!
+6666	02	52.10	Solar system {_10_}: Already used storage tank has been assigned!
+6667	02	52.11	Solar system {_11_}: Already used storage tank has been assigned!
+6668	02	52.12	Solar system {_12_}: Already used storage tank has been assigned!
+6669	02	52.13	Solar system {_13_}: Already used storage tank has been assigned!
+6670	02	52.14	Solar system {_14_}: Already used storage tank has been assigned!
+6784	02	53.0	WMM 0 does not support solar.
+6785	02	53.1	WMM 1 does not support solar.
+6786	02	53.2	WMM 2 does not support solar.
+6787	02	53.3	WMM 3 does not support solar.
+6788	02	53.4	WMM 4 does not support solar.
+6789	02	53.5	WMM 5 does not support solar.
+6790	02	53.6	WMM 6 does not support solar.
+6791	02	53.7	WMM 7 does not support solar.
+6792	02	53.8	WMM 8 does not support solar.
+6793	02	53.9	WMM 9 does not support solar.
+6794	02	53.10	WMM 10 does not support solar.
+6795	02	53.11	WMM 11 does not support solar.
+6796	02	53.12	WMM 12 does not support solar.
+6797	02	53.13	WMM 13 does not support solar.
+6798	02	53.14	WMM 14 does not support solar.
+6799	02	53.15	WMM 15 does not support solar.
+6912	02	54.0	The collector temperature sensor of the solar system {_0_} is missing or faulty!
+6913	02	54.1	The collector temperature sensor of the solar system {_1_} is missing or faulty!
+6914	02	54.2	The collector temperature sensor of the solar system {_2_} is missing or faulty!
+6915	02	54.3	The collector temperature sensor of the solar system {_3_} is missing or faulty!
+6916	02	54.4	The collector temperature sensor of the solar system {_4_} is missing or faulty!
+6917	02	54.5	The collector temperature sensor of the solar system {_5_} is missing or faulty!
+6918	02	54.6	The collector temperature sensor of the solar system {_6_} is missing or faulty!
+6919	02	54.7	The collector temperature sensor of the solar system {_7_} is missing or faulty!
+6920	02	54.8	The collector temperature sensor of the solar system {_8_} is missing or faulty!
+6921	02	54.9	The collector temperature sensor of the solar system {_9_} is missing or faulty!
+6922	02	54.10	The collector temperature sensor of the solar system {_10_} is missing or faulty!
+6923	02	54.11	The collector temperature sensor of the solar system {_11_} is missing or faulty!
+6924	02	54.12	The collector temperature sensor of the solar system {_12_} is missing or faulty!
+6925	02	54.13	The collector temperature sensor of the solar system {_13_} is missing or faulty!
+6926	02	54.14	The collector temperature sensor of the solar system {_14_} is missing or faulty!
+7040	02	55.0	The forward-flow temperature sensor of the solar system {_0_} is missing or faulty!
+7041	02	55.1	The forward-flow temperature sensor of the solar system {_1_} is missing or faulty!
+7042	02	55.2	The forward-flow temperature sensor of the solar system {_2_} is missing or faulty!
+7043	02	55.3	The forward-flow temperature sensor of the solar system {_3_} is missing or faulty!
+7044	02	55.4	The forward-flow temperature sensor of the solar system {_4_} is missing or faulty!
+7045	02	55.5	The forward-flow temperature sensor of the solar system {_5_} is missing or faulty!
+7046	02	55.6	The forward-flow temperature sensor of the solar system {_6_} is missing or faulty!
+7047	02	55.7	The forward-flow temperature sensor of the solar system {_7_} is missing or faulty!
+7048	02	55.8	The forward-flow temperature sensor of the solar system {_8_} is missing or faulty!
+7049	02	55.9	The forward-flow temperature sensor of the solar system {_9_} is missing or faulty!
+7050	02	55.10	The forward-flow temperature sensor of the solar system {_10_} is missing or faulty!
+7051	02	55.11	The forward-flow temperature sensor of the solar system {_11_} is missing or faulty!
+7052	02	55.12	The forward-flow temperature sensor of the solar system {_12_} is missing or faulty!
+7053	02	55.13	The forward-flow temperature sensor of the solar system {_13_} is missing or faulty!
+7054	02	55.14	The forward-flow temperature sensor of the solar system {_14_} is missing or faulty!
+7168	02	56.0	Return flow temperature sensor solar system primary circuit {_0_} is missing or faulty!
+7169	02	56.1	Return flow temperature sensor solar system primary circuit {_1_} is missing or faulty!
+7170	02	56.2	Return flow temperature sensor solar system primary circuit {_2_} is missing or faulty!
+7171	02	56.3	Return flow temperature sensor solar system primary circuit {_3_} is missing or faulty!
+7172	02	56.4	Return flow temperature sensor solar system primary circuit {_4_} is missing or faulty!
+7173	02	56.5	Return flow temperature sensor solar system primary circuit {_5_} is missing or faulty!
+7174	02	56.6	Return flow temperature sensor solar system primary circuit {_6_} is missing or faulty!
+7175	02	56.7	Return flow temperature sensor solar system primary circuit {_7_} is missing or faulty!
+7176	02	56.8	Return flow temperature sensor solar system primary circuit {_8_} is missing or faulty!
+7177	02	56.9	Return flow temperature sensor solar system primary circuit {_9_} is missing or faulty!
+7178	02	56.10	Return flow temperature sensor solar system primary circuit {_10_} is missing or faulty!
+7179	02	56.11	Return flow temperature sensor solar system primary circuit {_11_} is missing or faulty!
+7180	02	56.12	Return flow temperature sensor solar system primary circuit {_12_} is missing or faulty!
+7181	02	56.13	Return flow temperature sensor solar system primary circuit {_13_} is missing or faulty!
+7182	02	56.14	Return flow temperature sensor solar system primary circuit {_14_} is missing or faulty!
+7424	02	58.0	Group/Buffer 0 must not have itself as source.
+7425	02	58.1	Group/Buffer 1 must not have itself as source.
+7426	02	58.2	Group/Buffer 2 must not have itself as source.
+7427	02	58.3	Group/Buffer 3 must not have itself as source.
+7428	02	58.4	Group/Buffer 4 must not have itself as source.
+7429	02	58.5	Group/Buffer 5 must not have itself as source.
+7430	02	58.6	Group/Buffer 6 must not have itself as source.
+7431	02	58.7	Group/Buffer 7 must not have itself as source.
+7432	02	58.8	Group/Buffer 8 must not have itself as source.
+7433	02	58.9	Group/Buffer 9 must not have itself as source.
+7434	02	58.10	Group/Buffer 10 must not have itself as source.
+7435	02	58.11	Group/Buffer 11 must not have itself as source.
+7436	02	58.12	Group/Buffer 12 must not have itself as source.
+7437	02	58.13	Group/Buffer 13 must not have itself as source.
+7438	02	58.14	Group/Buffer 14 must not have itself as source.
+7439	02	58.15	Group/Buffer 15 must not have itself as source.
+7440	02	58.16	Group/Buffer 16 must not have itself as source.
+7552	02	59.0	Source configuration of Group/Buffer 0 invalid
+7553	02	59.1	Source configuration of Group/Buffer 1 invalid
+7554	02	59.2	Source configuration of Group/Buffer 2 invalid
+7555	02	59.3	Source configuration of Group/Buffer 3 invalid
+7556	02	59.4	Source configuration of Group/Buffer 4 invalid
+7557	02	59.5	Source configuration of Group/Buffer 5 invalid
+7558	02	59.6	Source configuration of Group/Buffer 6 invalid
+7559	02	59.7	Source configuration of Group/Buffer 7 invalid
+7560	02	59.8	Source configuration of Group/Buffer 8 invalid
+7561	02	59.9	Source configuration of Group/Buffer 9 invalid
+7562	02	59.10	Source configuration of Group/Buffer 10 invalid
+7563	02	59.11	Source configuration of Group/Buffer 11 invalid
+7564	02	59.12	Source configuration of Group/Buffer 12 invalid
+7565	02	59.13	Source configuration of Group/Buffer 13 invalid
+7566	02	59.14	Source configuration of Group/Buffer 14 invalid
+7567	02	59.15	Source configuration of Group/Buffer 15 invalid
+7680	02	60.0	Group 0 must not have more than one secondary heating source.
+7681	02	60.1	Group 1 must not have more than one secondary heating source.
+7682	02	60.2	Group 2 must not have more than one secondary heating source.
+7683	02	60.3	Group 3 must not have more than one secondary heating source.
+7684	02	60.4	Group 4 must not have more than one secondary heating source.
+7685	02	60.5	Group 5 must not have more than one secondary heating source.
+7686	02	60.6	Group 6 must not have more than one secondary heating source.
+7687	02	60.7	Group 7 must not have more than one secondary heating source.
+7688	02	60.8	Group 8 must not have more than one secondary heating source.
+7689	02	60.9	Group 9 must not have more than one secondary heating source.
+7690	02	60.10	Group 10 must not have more than one secondary heating source.
+7691	02	60.11	Group 11 must not have more than one secondary heating source.
+7692	02	60.12	Group 12 must not have more than one secondary heating source.
+7693	02	60.13	Group 13 must not have more than one secondary heating source.
+7694	02	60.14	Group 14 must not have more than one secondary heating source.
+7695	02	60.15	Group 15 must not have more than one secondary heating source.
+7808	02	61.0	{_0_} has a fault
+7809	02	61.1	{_1_} has a fault
+7810	02	61.2	{_2_} has a fault
+7811	02	61.3	{_3_} has a fault
+7812	02	61.4	{_4_} has a fault
+7813	02	61.5	{_5_} has a fault
+7814	02	61.6	{_6_} has a fault
+7815	02	61.7	{_7_} has a fault
+7816	02	61.8	{_8_} has a fault
+7817	02	61.9	{_9_} has a fault
+7818	02	61.10	For {_0_} no contact group was defined!
+7819	02	61.11	For {_1_} no contact group was defined!
+7820	02	61.12	For {_2_} no contact group was defined!
+7821	02	61.13	For {_3_} no contact group was defined!
+7822	02	61.14	For {_4_} no contact group was defined!
+7823	02	61.15	For {_5_} no contact group was defined!
+7824	02	61.16	For {_6_} no contact group was defined!
+7825	02	61.17	For {_7_} no contact group was defined!
+7826	02	61.18	For {_8_} no contact group was defined!
+7827	02	61.19	For {_9_} no contact group was defined!
+7828	02	61.20	For {_0_} a contact group was defined that is already in use!
+7829	02	61.21	For {_1_} a contact group was defined that is already in use!
+7830	02	61.22	For {_2_} a contact group was defined that is already in use!
+7831	02	61.23	For {_3_} a contact group was defined that is already in use!
+7832	02	61.24	For {_4_} a contact group was defined that is already in use!
+7833	02	61.25	For {_5_} a contact group was defined that is already in use!
+7834	02	61.26	For {_6_} a contact group was defined that is already in use!
+7835	02	61.27	For {_7_} a contact group was defined that is already in use!
+7836	02	61.28	For {_8_} a contact group was defined that is already in use!
+7837	02	61.29	For {_9_} a contact group was defined that is already in use!
+7838	02	61.30	For {_0_} no IP address was defined!
+7839	02	61.31	For {_1_} no IP address was defined!
+7840	02	61.32	For {_2_} no IP address was defined!
+7841	02	61.33	For {_3_} no IP address was defined!
+7842	02	61.34	For {_4_} no IP address was defined!
+7843	02	61.35	For {_5_} no IP address was defined!
+7844	02	61.36	For {_6_} no IP address was defined!
+7845	02	61.37	For {_7_} no IP address was defined!
+7846	02	61.38	For {_8_} no IP address was defined!
+7847	02	61.39	For {_9_} no IP address was defined!
+7848	02	61.40	For {_0_} an IP address was defined that is already in use!
+7849	02	61.41	For {_1_} an IP address was defined that is already in use!
+7850	02	61.42	For {_2_} an IP address was defined that is already in use!
+7851	02	61.43	For {_3_} an IP address was defined that is already in use!
+7852	02	61.44	For {_4_} an IP address was defined that is already in use!
+7853	02	61.45	For {_5_} an IP address was defined that is already in use!
+7854	02	61.46	For {_6_} an IP address was defined that is already in use!
+7855	02	61.47	For {_7_} an IP address was defined that is already in use!
+7856	02	61.48	For {_8_} an IP address was defined that is already in use!
+7857	02	61.49	For {_9_} an IP address was defined that is already in use!
+7858	02	61.50	Communication failure to {_0_}!
+7859	02	61.51	Communication failure to {_1_}!
+7860	02	61.52	Communication failure to {_2_}!
+7861	02	61.53	Communication failure to {_3_}!
+7862	02	61.54	Communication failure to {_4_}!
+7863	02	61.55	Communication failure to {_5_}!
+7864	02	61.56	Communication failure to {_6_}!
+7865	02	61.57	Communication failure to {_7_}!
+7866	02	61.58	Communication failure to {_8_}!
+7867	02	61.59	Communication failure to {_9_}!
+7936	02	62.0	Set-up of control not completed!
+7937	02	62.1	Memory module is faulty!
+7938	02	62.2	Electronic error on digital inputs!
+7939	02	62.3	The time must be reset!
+7940	02	62.4	Maintenance interval expired. Inform customer service.
+7941	02	62.5	Safety thermostat! Boiler overheating!
+7942	02	62.6	Main drive motor is overheated!
+7943	02	62.7	Firing not functioning!
+7944	02	62.8	Fuel silo is empty! Please fill up!
+7945	02	62.9	Faulty triac in main motor or extractor motor!
+7946	02	62.10	Return-flow temperature maintenance device (RFTMD) not functioning!
+7947	02	62.11	Extractor motor 1 is overheated!
+7948	02	62.12	Fire shutter does not open!
+7949	02	62.13	Temperature rise in fuel store. Fire alarm!
+7950	02	62.14	Electronics are 70 °C!
+7951	02	62.15	Flue-gas sensor is missing or faulty!
+7952	02	62.16	Return-flow sensor is missing or faulty!
+7953	02	62.17	Boiler sensor is missing or faulty!
+7954	02	62.18	Fire shutter does not close!
+7955	02	62.19	Water container of emergency fire extinguisher is empty!
+7956	02	62.20	Motor of the ash removal system is overheated!
+7957	02	62.21	The battery voltage is too low!
+7958	02	62.22	The main motor is overloaded.
+7959	02	62.23	Ember-bed level overrun 1!
+7960	02	62.24	Overfill trip switch of extractor 1 is on.
+7961	02	62.25	Extractor motor 1 is overloaded.
+7962	02	62.26	A motor with supplemental fuel extractor is overloaded!
+7963	02	62.27	A motor with supplemental fuel extractor is overheated!
+7964	02	62.28	Overfill trip switch of extractor 2 is on.
+7965	02	62.29	Ash-container lid is open!
+7966	02	62.30	The revolving grate is faulty!
+7967	02	62.31	Configuration error! Last protection activates!
+7968	02	62.32	Ember-bed level overrun 2!
+7969	02	62.33	Fault sliding floor or E filter cleaning!
+7970	02	62.34	Malfunction of the induced draught activation!
+7971	02	62.35	Flametemp sensor is missing or faulty!
+7972	02	62.36	Implausible signalof the stoker light  barrier!
+7973	02	62.37	Falling below the buffer temperature
+7974	02	62.38	Fault in the heating circuit network
+7975	02	62.39	Forward-flow sensor of heating circuit  0  is missing or faulty!
+7976	02	62.40	Room sensor of heating circuit  0  is missing or faulty!
+7977	02	62.41	Outer sensor of heating circuit  0  is missing or faulty!
+7978	02	62.42	Forward-flow sensor of heating circuit  1  is missing or faulty!
+7979	02	62.43	Room sensor of heating circuit  1  is missing or faulty!
+7980	02	62.44	Outer sensor of heating circuit  1  is missing or faulty!
+7981	02	62.45	Forward-flow sensor of heating circuit  2  is missing or faulty!
+7982	02	62.46	Room sensor of heating circuit  2  is missing or faulty!
+7983	02	62.47	Outer sensor of heating circuit  2  is missing or faulty!
+7984	02	62.48	Forward-flow sensor of heating circuit  3  is missing or faulty!
+7985	02	62.49	Room sensor of heating circuit  3  is missing or faulty!
+7986	02	62.50	Outer sensor of heating circuit  3  is missing or faulty!
+7987	02	62.51	Forward-flow sensor of heating circuit  4  is missing or faulty!
+7988	02	62.52	Room sensor of heating circuit  4  is missing or faulty!
+7989	02	62.53	Outer sensor of heating circuit  4  is missing or faulty!
+7990	02	62.54	Forward-flow sensor of heating circuit  5  is missing or faulty!
+7991	02	62.55	Room sensor of heating circuit  5  is missing or faulty!
+7992	02	62.56	Outer sensor of heating circuit  5  is missing or faulty!
+7993	02	62.57	Forward-flow sensor of heating circuit  6  is missing or faulty!
+7994	02	62.58	Room sensor of heating circuit  6  is missing or faulty!
+7995	02	62.59	Outer sensor of heating circuit  6  is missing or faulty!
+7996	02	62.60	Forward-flow sensor of heating circuit  7  is missing or faulty!
+7997	02	62.61	Room sensor of heating circuit  7  is missing or faulty!
+7998	02	62.62	Outer sensor of heating circuit  7  is missing or faulty!
+7999	02	62.63	Forward-flow sensor of heating circuit  8  is missing or faulty!
+8000	02	62.64	Room sensor of heating circuit  8  is missing or faulty!
+8001	02	62.65	Outer sensor of heating circuit  8  is missing or faulty!
+8002	02	62.66	Forward-flow sensor of heating circuit  9  is missing or faulty!
+8003	02	62.67	Room sensor of heating circuit  9  is missing or faulty!
+8004	02	62.68	Outer sensor of heating circuit  9  is missing or faulty!
+8005	02	62.69	Forward-flow sensor of heating circuit  10  is missing or faulty!
+8006	02	62.70	Room sensor of heating circuit  10  is missing or faulty!
+8007	02	62.71	Outer sensor of heating circuit  10  is missing or faulty!
+8008	02	62.72	Forward-flow sensor of heating circuit  11  is missing or faulty!
+8009	02	62.73	Room sensor of heating circuit  11  is missing or faulty!
+8010	02	62.74	Outer sensor of heating circuit  11  is missing or faulty!
+8011	02	62.75	Forward-flow sensor of heating circuit  12  is missing or faulty!
+8012	02	62.76	Room sensor of heating circuit  12  is missing or faulty!
+8013	02	62.77	Outer sensor of heating circuit  12  is missing or faulty!
+8014	02	62.78	Forward-flow sensor of heating circuit  13  is missing or faulty!
+8015	02	62.79	Room sensor of heating circuit  13  is missing or faulty!
+8016	02	62.80	Outer sensor of heating circuit  13  is missing or faulty!
+8017	02	62.81	Forward-flow sensor of heating circuit  14  is missing or faulty!
+8018	02	62.82	Room sensor of heating circuit  14  is missing or faulty!
+8019	02	62.83	Outer sensor of heating circuit  14  is missing or faulty!
+8020	02	62.84	Forward-flow sensor of heating circuit  15  is missing or faulty!
+8021	02	62.85	Room sensor of heating circuit  15  is missing or faulty!
+8022	02	62.86	Outer sensor of heating circuit  15  is missing or faulty!
+8023	02	62.87	Forward-flow sensor of heating circuit  16  is missing or faulty!
+8024	02	62.88	Room sensor of heating circuit  16  is missing or faulty!
+8025	02	62.89	Outer sensor of heating circuit  16  is missing or faulty!
+8026	02	62.90	Forward-flow sensor of heating circuit  17  is missing or faulty!
+8027	02	62.91	Room sensor of heating circuit  17  is missing or faulty!
+8028	02	62.92	Outer sensor of heating circuit  17  is missing or faulty!
+8029	02	62.93	Forward-flow sensor of heating circuit  18  is missing or faulty!
+8030	02	62.94	Room sensor of heating circuit  18  is missing or faulty!
+8031	02	62.95	Outer sensor of heating circuit  18  is missing or faulty!
+8032	02	62.96	Forward-flow sensor of heating circuit  19  is missing or faulty!
+8033	02	62.97	Room sensor of heating circuit  19  is missing or faulty!
+8034	02	62.98	Outer sensor of heating circuit  19  is missing or faulty!
+8035	02	62.99	Forward-flow sensor of heating circuit  20  is missing or faulty!
+8036	02	62.100	Room sensor of heating circuit  20  is missing or faulty!
+8037	02	62.101	Outer sensor of heating circuit  20  is missing or faulty!
+8038	02	62.102	Forward-flow sensor of heating circuit  21  is missing or faulty!
+8039	02	62.103	Room sensor of heating circuit  21  is missing or faulty!
+8040	02	62.104	Outer sensor of heating circuit  21  is missing or faulty!
+8041	02	62.105	Forward-flow sensor of heating circuit  22  is missing or faulty!
+8042	02	62.106	Room sensor of heating circuit  22  is missing or faulty!
+8043	02	62.107	Outer sensor of heating circuit  22  is missing or faulty!
+8044	02	62.108	Forward-flow sensor of heating circuit  23  is missing or faulty!
+8045	02	62.109	Room sensor of heating circuit  23  is missing or faulty!
+8046	02	62.110	Outer sensor of heating circuit  23  is missing or faulty!
+8047	02	62.111	Forward-flow sensor of heating circuit  24  is missing or faulty!
+8048	02	62.112	Room sensor of heating circuit  24  is missing or faulty!
+8049	02	62.113	Outer sensor of heating circuit  24  is missing or faulty!
+8050	02	62.114	Forward-flow sensor of heating circuit  25  is missing or faulty!
+8051	02	62.115	Room sensor of heating circuit  25  is missing or faulty!
+8052	02	62.116	Outer sensor of heating circuit  25  is missing or faulty!
+8053	02	62.117	Forward-flow sensor of heating circuit  26  is missing or faulty!
+8054	02	62.118	Room sensor of heating circuit  26  is missing or faulty!
+8055	02	62.119	Outer sensor of heating circuit  26  is missing or faulty!
+8056	02	62.120	Forward-flow sensor of heating circuit  27  is missing or faulty!
+8057	02	62.121	Room sensor of heating circuit  27  is missing or faulty!
+8058	02	62.122	Outer sensor of heating circuit  27  is missing or faulty!
+8059	02	62.123	Forward-flow sensor of heating circuit  28  is missing or faulty!
+8060	02	62.124	Room sensor of heating circuit  28  is missing or faulty!
+8061	02	62.125	Outer sensor of heating circuit  28  is missing or faulty!
+8062	02	62.126	Forward-flow sensor of heating circuit  29  is missing or faulty!
+8063	02	62.127	Room sensor of heating circuit  29  is missing or faulty!
+8064	02	63.0	Outer sensor of heating circuit  29  is missing or faulty!
+8065	02	63.1	Forward-flow sensor of heating circuit  30  is missing or faulty!
+8066	02	63.2	Room sensor of heating circuit  30  is missing or faulty!
+8067	02	63.3	Outer sensor of heating circuit  30  is missing or faulty!
+8068	02	63.4	Forward-flow sensor of heating circuit  31  is missing or faulty!
+8069	02	63.5	Room sensor of heating circuit  31  is missing or faulty!
+8070	02	63.6	Outer sensor of heating circuit  31  is missing or faulty!
+8071	02	63.7	Sensor of DHW cylinder  0  is missing or faulty!
+8072	02	63.8	Sensor of DHW cylinder  1  is missing or faulty!
+8073	02	63.9	Sensor of DHW cylinder  2  is missing or faulty!
+8074	02	63.10	Sensor of DHW cylinder  3  is missing or faulty!
+8075	02	63.11	Sensor of DHW cylinder  4  is missing or faulty!
+8076	02	63.12	Sensor of DHW cylinder  5  is missing or faulty!
+8077	02	63.13	Sensor of DHW cylinder  6  is missing or faulty!
+8078	02	63.14	Sensor of DHW cylinder  7  is missing or faulty!
+8079	02	63.15	Sensor of DHW cylinder  8  is missing or faulty!
+8080	02	63.16	Sensor of DHW cylinder  9  is missing or faulty!
+8081	02	63.17	Sensor of DHW cylinder  10  is missing or faulty!
+8082	02	63.18	Sensor of DHW cylinder  11  is missing or faulty!
+8083	02	63.19	Sensor of DHW cylinder  12  is missing or faulty!
+8084	02	63.20	Sensor of DHW cylinder  13  is missing or faulty!
+8085	02	63.21	Sensor of DHW cylinder  14  is missing or faulty!
+8086	02	63.22	Sensor of DHW cylinder  15  is missing or faulty!
+8087	02	63.23	Sensor of DHW cylinder  16  is missing or faulty!
+8088	02	63.24	Sensor 1 of buffer tank  0  is missing or faulty!
+8089	02	63.25	Sensor 2 of buffer tank  0  is missing or faulty!
+8090	02	63.26	Sensor 1 of buffer tank  1  is missing or faulty!
+8091	02	63.27	Sensor 2 of buffer tank  1  is missing or faulty!
+8092	02	63.28	Sensor 1 of buffer tank  2  is missing or faulty!
+8093	02	63.29	Sensor 2 of buffer tank  2  is missing or faulty!
+8094	02	63.30	Sensor 1 of buffer tank  3  is missing or faulty!
+8095	02	63.31	Sensor 2 of buffer tank  3  is missing or faulty!
+8096	02	63.32	Sensor 1 of buffer tank  4  is missing or faulty!
+8097	02	63.33	Sensor 2 of buffer tank  4  is missing or faulty!
+8098	02	63.34	Sensor 1 of buffer tank  5  is missing or faulty!
+8099	02	63.35	Sensor 2 of buffer tank  5  is missing or faulty!
+8100	02	63.36	Sensor 1 of buffer tank  6  is missing or faulty!
+8101	02	63.37	Sensor 2 of buffer tank  6  is missing or faulty!
+8102	02	63.38	Sensor 1 of buffer tank  7  is missing or faulty!
+8103	02	63.39	Sensor 2 of buffer tank  7  is missing or faulty!
+8104	02	63.40	Sensor 1 of buffer tank  8  is missing or faulty!
+8105	02	63.41	Sensor 2 of buffer tank  8  is missing or faulty!
+8106	02	63.42	Sensor 1 of buffer tank  9  is missing or faulty!
+8107	02	63.43	Sensor 2 of buffer tank  9  is missing or faulty!
+8108	02	63.44	Sensor 1 of buffer tank  10  is missing or faulty!
+8109	02	63.45	Sensor 2 of buffer tank  10  is missing or faulty!
+8110	02	63.46	Sensor 1 of buffer tank  11  is missing or faulty!
+8111	02	63.47	Sensor 2 of buffer tank  11  is missing or faulty!
+8112	02	63.48	Sensor 1 of buffer tank  12  is missing or faulty!
+8113	02	63.49	Sensor 2 of buffer tank  12  is missing or faulty!
+8114	02	63.50	Sensor 1 of buffer tank  13  is missing or faulty!
+8115	02	63.51	Sensor 2 of buffer tank  13  is missing or faulty!
+8116	02	63.52	Sensor 1 of buffer tank  14  is missing or faulty!
+8117	02	63.53	Sensor 2 of buffer tank  14  is missing or faulty!
+8118	02	63.54	Sensor 1 of buffer tank  15  is missing or faulty!
+8119	02	63.55	Sensor 2 of buffer tank  15  is missing or faulty!
+8120	02	63.56	Sensor 1 of buffer tank  16  is missing or faulty!
+8121	02	63.57	Sensor 2 of buffer tank  16  is missing or faulty!
+8122	02	63.58	Network error on boiler module!
+8123	02	63.59	Network error on boiler module 2!
+8124	02	63.60	Network error on heating circuit module  1 !
+8125	02	63.61	Network error on heating circuit module  2 !
+8126	02	63.62	Network error on heating circuit module  3 !
+8127	02	63.63	Network error on heating circuit module  4 !
+8128	02	63.64	Network error on heating circuit module  5 !
+8129	02	63.65	Network error on heating circuit module  6 !
+8130	02	63.66	Network error on heating circuit module  7 !
+8131	02	63.67	Network error on heating circuit module  8 !
+8132	02	63.68	Network error on heating circuit module  9 !
+8133	02	63.69	Network error on heating circuit module  10 !
+8134	02	63.70	Network error on heating circuit module  11 !
+8135	02	63.71	Network error on heating circuit module  12 !
+8136	02	63.72	Network error on heating circuit module  13 !
+8137	02	63.73	Network error on heating circuit module  14 !
+8138	02	63.74	Network error on heating circuit module  15 !
+8139	02	63.75	Network error on heating circuit module  16 !
+8140	02	63.76	Network fault on digital remote control unit  1 !
+8141	02	63.77	Network fault on digital remote control unit  2 !
+8142	02	63.78	Network fault on digital remote control unit  3 !
+8143	02	63.79	Network fault on digital remote control unit  4 !
+8144	02	63.80	Network fault on digital remote control unit  5 !
+8145	02	63.81	Network fault on digital remote control unit  6 !
+8146	02	63.82	Network fault on digital remote control unit  7 !
+8147	02	63.83	Network fault on digital remote control unit  8 !
+8148	02	63.84	Network fault on digital remote control unit  9 !
+8149	02	63.85	Network fault on digital remote control unit  10 !
+8150	02	63.86	Network fault on digital remote control unit  11 !
+8151	02	63.87	Network fault on digital remote control unit  12 !
+8152	02	63.88	Network fault on digital remote control unit  13 !
+8153	02	63.89	Network fault on digital remote control unit  14 !
+8154	02	63.90	Network fault on digital remote control unit  15 !
+8155	02	63.91	Network fault on digital remote control unit  16 !
+8156	02	63.92	Network fault on digital remote control unit  17 !
+8157	02	63.93	Network fault on digital remote control unit  18 !
+8158	02	63.94	Network fault on digital remote control unit  19 !
+8159	02	63.95	Network fault on digital remote control unit  20 !
+8160	02	63.96	Network fault on digital remote control unit  21 !
+8161	02	63.97	Network fault on digital remote control unit  22 !
+8162	02	63.98	Network fault on digital remote control unit  23 !
+8163	02	63.99	Network fault on digital remote control unit  24 !
+8164	02	63.100	Network fault on digital remote control unit  25 !
+8165	02	63.101	Network fault on digital remote control unit  26 !
+8166	02	63.102	Network fault on digital remote control unit  27 !
+8167	02	63.103	Network fault on digital remote control unit  28 !
+8168	02	63.104	Network fault on digital remote control unit  29 !
+8169	02	63.105	Modbus communication failure
+8170	02	63.106	Alarm intern!
+8171	02	63.107	Temperatur Wärmetauscher zu hoch !
+8172	02	63.108	The speed of the cleaning is too low!
+8173	02	63.109	The speed of the reci fan is too low!
+8174	02	63.110	Check the cleaning openings!
+8175	02	63.111	Boiler sensor on second boiler is missing or faulty!
+8176	02	63.112	The partial vacuum in the combustion chamber cannot be adjusted!
+8177	02	63.113	The partial-vacuum sensor is faulty!
+8178	02	63.114	The oxygen sensor is missing or faulty!
+8179	02	63.115	The Ash removal motor 2 is overloaded.
+8180	02	63.116	Calibration error of lambda probe.
+8181	02	63.117	The supply on the fuel extractor module has been interrupted!
+8182	02	63.118	Defective triac on the fuel extractor module!
+8183	02	63.119	Network error on the fuel extractor module!
+8184	02	63.120	Controlinterval expired.
+8185	02	63.121	Chimney sweep function is activated.
+8186	02	63.122	PCB-revision and system number are not compatible.
+8187	02	63.123	External safety device responded!
+8188	02	63.124	The temperature in the stoker trough is too high!
+8189	02	63.125	frei
+8190	02	63.126	Boiler pump is overheated!
+8191	02	63.127	Fault comfort SMS!
+8192	02	64.0	Can Bus address of the MBus module is wrong
+8193	02	64.1	MBus interface module is not available
+8194	02	64.2	MBus counter is not available
+8320	02	65.0	"Solar system {_0_}: Diff. ""Abs. priority"" and Storage 1 ""Max.Temp."" too small"
+8321	02	65.1	"Solar system {_1_}: Diff. ""Abs. priority"" and Storage 1 ""Max.Temp."" too small"
+8322	02	65.2	"Solar system {_2_}: Diff. ""Abs. priority"" and Storage 1 ""Max.Temp."" too small"
+8323	02	65.3	"Solar system {_3_}: Diff. ""Abs. priority"" and Storage 1 ""Max.Temp."" too small"
+8324	02	65.4	"Solar system {_4_}: Diff. ""Abs. priority"" and Storage 1 ""Max.Temp."" too small"
+8325	02	65.5	"Solar system {_5_}: Diff. ""Abs. priority"" and Storage 1 ""Max.Temp."" too small"
+8326	02	65.6	"Solar system {_6_}: Diff. ""Abs. priority"" and Storage 1 ""Max.Temp."" too small"
+8327	02	65.7	"Solar system {_7_}: Diff. ""Abs. priority"" and Storage 1 ""Max.Temp."" too small"
+8328	02	65.8	"Solar system {_8_}: Diff. ""Abs. priority"" and Storage 1 ""Max.Temp."" too small"
+8329	02	65.9	"Solar system {_9_}: Diff. ""Abs. priority"" and Storage 1 ""Max.Temp."" too small"
+8330	02	65.10	"Solar system {_10_}: Diff. ""Abs. priority"" and Storage 1 ""Max.Temp."" too small"
+8331	02	65.11	"Solar system {_11_}: Diff. ""Abs. priority"" and Storage 1 ""Max.Temp."" too small"
+8332	02	65.12	"Solar system {_12_}: Diff. ""Abs. priority"" and Storage 1 ""Max.Temp."" too small"
+8333	02	65.13	"Solar system {_13_}: Diff. ""Abs. priority"" and Storage 1 ""Max.Temp."" too small"
+8334	02	65.14	"Solar system {_14_}: Diff. ""Abs. priority"" and Storage 1 ""Max.Temp."" too small"
+8448	02	66.0	External alarm {_0_} was triggered!
+8449	02	66.1	External alarm {_1_} was triggered!
+8576	02	67.0	{_0_}: Modbus counter is not available.
+8577	02	67.1	{_1_}: Modbus counter is not available.
+8578	02	67.2	{_2_}: Modbus counter is not available.
+8579	02	67.3	{_3_}: Modbus counter is not available.
+8580	02	67.4	{_4_}: Modbus counter is not available.
+8581	02	67.5	{_5_}: Modbus counter is not available.
+8582	02	67.6	{_6_}: Modbus counter is not available.
+8583	02	67.7	{_7_}: Modbus counter is not available.
+8584	02	67.8	{_8_}: Modbus counter is not available.
+8585	02	67.9	{_9_}: Modbus counter is not available.
+8586	02	67.10	{_10_}: Modbus counter is not available.
+8587	02	67.11	{_11_}: Modbus counter is not available.
+8588	02	67.12	{_12_}: Modbus counter is not available.
+8589	02	67.13	{_13_}: Modbus counter is not available.
+8590	02	67.14	{_14_}: Modbus counter is not available.
+8591	02	67.15	{_15_}: Modbus counter is not available.
+8592	02	67.16	{_16_}: Modbus counter is not available.
+8593	02	67.17	{_17_}: Modbus counter is not available.
+8594	02	67.18	{_18_}: Modbus counter is not available.
+8595	02	67.19	{_19_}: Modbus counter is not available.
+8596	02	67.20	{_20_}: Modbus counter is not available.
+8597	02	67.21	{_21_}: Modbus counter is not available.
+8598	02	67.22	{_22_}: Modbus counter is not available.
+8599	02	67.23	{_23_}: Modbus counter is not available.
+8600	02	67.24	{_24_}: Modbus counter is not available.
+8601	02	67.25	{_25_}: Modbus counter is not available.
+8602	02	67.26	{_26_}: Modbus counter is not available.
+8603	02	67.27	{_27_}: Modbus counter is not available.
+8604	02	67.28	{_28_}: Modbus counter is not available.
+8605	02	67.29	{_29_}: Modbus counter is not available.
+8606	02	67.30	{_30_}: Modbus counter is not available.
+8607	02	67.31	{_31_}: Modbus counter is not available.
+8608	02	67.32	{_32_}: Modbus counter is not available.
+8609	02	67.33	{_33_}: Modbus counter is not available.
+8610	02	67.34	{_34_}: Modbus counter is not available.
+8611	02	67.35	{_35_}: Modbus counter is not available.

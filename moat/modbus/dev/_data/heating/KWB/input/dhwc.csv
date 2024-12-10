@@ -1,0 +1,169 @@
+StartingAddress	NumberOfRegisters	Functions	Type	Parameter	ID	Name	Index	Unit/ValueTable	Values	Min	Max	UserLevel	ExpertLevel
+8608	1	04	s16	BOI.i_ist_temperatur.value	487	Temperature actual (value)	DHWC 1	1/10°C				read	read
+8609	1	04	s16	BOI.i_ist_temperatur.status	487	Temperature actual (status)	DHWC 1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8610	1	04	s16	BOI.i_ist_temperatur.value	487	Temperature actual (value)	DHWC 2	1/10°C				read	read
+8611	1	04	s16	BOI.i_ist_temperatur.status	487	Temperature actual (status)	DHWC 2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8612	1	04	s16	BOI.i_ist_temperatur.value	487	Temperature actual (value)	DHWC 3	1/10°C				read	read
+8613	1	04	s16	BOI.i_ist_temperatur.status	487	Temperature actual (status)	DHWC 3	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8614	1	04	s16	BOI.i_ist_temperatur.value	487	Temperature actual (value)	DHWC 4	1/10°C				read	read
+8615	1	04	s16	BOI.i_ist_temperatur.status	487	Temperature actual (status)	DHWC 4	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8616	1	04	s16	BOI.i_ist_temperatur.value	487	Temperature actual (value)	DHWC 5	1/10°C				read	read
+8617	1	04	s16	BOI.i_ist_temperatur.status	487	Temperature actual (status)	DHWC 5	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8618	1	04	s16	BOI.i_ist_temperatur.value	487	Temperature actual (value)	DHWC 6	1/10°C				read	read
+8619	1	04	s16	BOI.i_ist_temperatur.status	487	Temperature actual (status)	DHWC 6	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8620	1	04	s16	BOI.i_ist_temperatur.value	487	Temperature actual (value)	DHWC 7	1/10°C				read	read
+8621	1	04	s16	BOI.i_ist_temperatur.status	487	Temperature actual (status)	DHWC 7	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8622	1	04	s16	BOI.i_ist_temperatur.value	487	Temperature actual (value)	DHWC 8	1/10°C				read	read
+8623	1	04	s16	BOI.i_ist_temperatur.status	487	Temperature actual (status)	DHWC 8	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8624	1	04	s16	BOI.i_ist_temperatur.value	487	Temperature actual (value)	DHWC 9	1/10°C				read	read
+8625	1	04	s16	BOI.i_ist_temperatur.status	487	Temperature actual (status)	DHWC 9	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8626	1	04	s16	BOI.i_ist_temperatur.value	487	Temperature actual (value)	DHWC 10	1/10°C				read	read
+8627	1	04	s16	BOI.i_ist_temperatur.status	487	Temperature actual (status)	DHWC 10	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8628	1	04	s16	BOI.i_ist_temperatur.value	487	Temperature actual (value)	DHWC 11	1/10°C				read	read
+8629	1	04	s16	BOI.i_ist_temperatur.status	487	Temperature actual (status)	DHWC 11	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8630	1	04	s16	BOI.i_ist_temperatur.value	487	Temperature actual (value)	DHWC 12	1/10°C				read	read
+8631	1	04	s16	BOI.i_ist_temperatur.status	487	Temperature actual (status)	DHWC 12	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8632	1	04	s16	BOI.i_ist_temperatur.value	487	Temperature actual (value)	DHWC 13	1/10°C				read	read
+8633	1	04	s16	BOI.i_ist_temperatur.status	487	Temperature actual (status)	DHWC 13	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8634	1	04	s16	BOI.i_ist_temperatur.value	487	Temperature actual (value)	DHWC 14	1/10°C				read	read
+8635	1	04	s16	BOI.i_ist_temperatur.status	487	Temperature actual (status)	DHWC 14	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+8641	1	04	s16	BOI.o_pumpe	491	Charging pump	DHWC 1	system_ein_aus_t	0-Off, 1-On			read	read
+8642	1	04	s16	BOI.o_pumpe	491	Charging pump	DHWC 2	system_ein_aus_t	0-Off, 1-On			read	read
+8643	1	04	s16	BOI.o_pumpe	491	Charging pump	DHWC 3	system_ein_aus_t	0-Off, 1-On			read	read
+8644	1	04	s16	BOI.o_pumpe	491	Charging pump	DHWC 4	system_ein_aus_t	0-Off, 1-On			read	read
+8645	1	04	s16	BOI.o_pumpe	491	Charging pump	DHWC 5	system_ein_aus_t	0-Off, 1-On			read	read
+8646	1	04	s16	BOI.o_pumpe	491	Charging pump	DHWC 6	system_ein_aus_t	0-Off, 1-On			read	read
+8647	1	04	s16	BOI.o_pumpe	491	Charging pump	DHWC 7	system_ein_aus_t	0-Off, 1-On			read	read
+8648	1	04	s16	BOI.o_pumpe	491	Charging pump	DHWC 8	system_ein_aus_t	0-Off, 1-On			read	read
+8649	1	04	s16	BOI.o_pumpe	491	Charging pump	DHWC 9	system_ein_aus_t	0-Off, 1-On			read	read
+8650	1	04	s16	BOI.o_pumpe	491	Charging pump	DHWC 10	system_ein_aus_t	0-Off, 1-On			read	read
+8651	1	04	s16	BOI.o_pumpe	491	Charging pump	DHWC 11	system_ein_aus_t	0-Off, 1-On			read	read
+8652	1	04	s16	BOI.o_pumpe	491	Charging pump	DHWC 12	system_ein_aus_t	0-Off, 1-On			read	read
+8653	1	04	s16	BOI.o_pumpe	491	Charging pump	DHWC 13	system_ein_aus_t	0-Off, 1-On			read	read
+8654	1	04	s16	BOI.o_pumpe	491	Charging pump	DHWC 14	system_ein_aus_t	0-Off, 1-On			read	read
+8658	1	04	s16	BOI.anforderung	485	Request	DHWC 1	system_ein_aus_t	0-Off, 1-On			read	read
+8659	1	04	s16	BOI.anforderung	485	Request	DHWC 2	system_ein_aus_t	0-Off, 1-On			read	read
+8660	1	04	s16	BOI.anforderung	485	Request	DHWC 3	system_ein_aus_t	0-Off, 1-On			read	read
+8661	1	04	s16	BOI.anforderung	485	Request	DHWC 4	system_ein_aus_t	0-Off, 1-On			read	read
+8662	1	04	s16	BOI.anforderung	485	Request	DHWC 5	system_ein_aus_t	0-Off, 1-On			read	read
+8663	1	04	s16	BOI.anforderung	485	Request	DHWC 6	system_ein_aus_t	0-Off, 1-On			read	read
+8664	1	04	s16	BOI.anforderung	485	Request	DHWC 7	system_ein_aus_t	0-Off, 1-On			read	read
+8665	1	04	s16	BOI.anforderung	485	Request	DHWC 8	system_ein_aus_t	0-Off, 1-On			read	read
+8666	1	04	s16	BOI.anforderung	485	Request	DHWC 9	system_ein_aus_t	0-Off, 1-On			read	read
+8667	1	04	s16	BOI.anforderung	485	Request	DHWC 10	system_ein_aus_t	0-Off, 1-On			read	read
+8668	1	04	s16	BOI.anforderung	485	Request	DHWC 11	system_ein_aus_t	0-Off, 1-On			read	read
+8669	1	04	s16	BOI.anforderung	485	Request	DHWC 12	system_ein_aus_t	0-Off, 1-On			read	read
+8670	1	04	s16	BOI.anforderung	485	Request	DHWC 13	system_ein_aus_t	0-Off, 1-On			read	read
+8671	1	04	s16	BOI.anforderung	485	Request	DHWC 14	system_ein_aus_t	0-Off, 1-On			read	read
+8675	1	04	s16	BOI.soll_temperatur	507	Temperature setpoint	DHWC 1	1/10°C				read	read
+8676	1	04	s16	BOI.soll_temperatur	507	Temperature setpoint	DHWC 2	1/10°C				read	read
+8677	1	04	s16	BOI.soll_temperatur	507	Temperature setpoint	DHWC 3	1/10°C				read	read
+8678	1	04	s16	BOI.soll_temperatur	507	Temperature setpoint	DHWC 4	1/10°C				read	read
+8679	1	04	s16	BOI.soll_temperatur	507	Temperature setpoint	DHWC 5	1/10°C				read	read
+8680	1	04	s16	BOI.soll_temperatur	507	Temperature setpoint	DHWC 6	1/10°C				read	read
+8681	1	04	s16	BOI.soll_temperatur	507	Temperature setpoint	DHWC 7	1/10°C				read	read
+8682	1	04	s16	BOI.soll_temperatur	507	Temperature setpoint	DHWC 8	1/10°C				read	read
+8683	1	04	s16	BOI.soll_temperatur	507	Temperature setpoint	DHWC 9	1/10°C				read	read
+8684	1	04	s16	BOI.soll_temperatur	507	Temperature setpoint	DHWC 10	1/10°C				read	read
+8685	1	04	s16	BOI.soll_temperatur	507	Temperature setpoint	DHWC 11	1/10°C				read	read
+8686	1	04	s16	BOI.soll_temperatur	507	Temperature setpoint	DHWC 12	1/10°C				read	read
+8687	1	04	s16	BOI.soll_temperatur	507	Temperature setpoint	DHWC 13	1/10°C				read	read
+8688	1	04	s16	BOI.soll_temperatur	507	Temperature setpoint	DHWC 14	1/10°C				read	read
+8692	1	04	s16	BOI.status	513	Status	DHWC 1	boiler_status_t	0-Fault, 1-Off, ... (+13)			read	read
+8693	1	04	s16	BOI.status	513	Status	DHWC 2	boiler_status_t	0-Fault, 1-Off, ... (+13)			read	read
+8694	1	04	s16	BOI.status	513	Status	DHWC 3	boiler_status_t	0-Fault, 1-Off, ... (+13)			read	read
+8695	1	04	s16	BOI.status	513	Status	DHWC 4	boiler_status_t	0-Fault, 1-Off, ... (+13)			read	read
+8696	1	04	s16	BOI.status	513	Status	DHWC 5	boiler_status_t	0-Fault, 1-Off, ... (+13)			read	read
+8697	1	04	s16	BOI.status	513	Status	DHWC 6	boiler_status_t	0-Fault, 1-Off, ... (+13)			read	read
+8698	1	04	s16	BOI.status	513	Status	DHWC 7	boiler_status_t	0-Fault, 1-Off, ... (+13)			read	read
+8699	1	04	s16	BOI.status	513	Status	DHWC 8	boiler_status_t	0-Fault, 1-Off, ... (+13)			read	read
+8700	1	04	s16	BOI.status	513	Status	DHWC 9	boiler_status_t	0-Fault, 1-Off, ... (+13)			read	read
+8701	1	04	s16	BOI.status	513	Status	DHWC 10	boiler_status_t	0-Fault, 1-Off, ... (+13)			read	read
+8702	1	04	s16	BOI.status	513	Status	DHWC 11	boiler_status_t	0-Fault, 1-Off, ... (+13)			read	read
+8703	1	04	s16	BOI.status	513	Status	DHWC 12	boiler_status_t	0-Fault, 1-Off, ... (+13)			read	read
+8704	1	04	s16	BOI.status	513	Status	DHWC 13	boiler_status_t	0-Fault, 1-Off, ... (+13)			read	read
+8705	1	04	s16	BOI.status	513	Status	DHWC 14	boiler_status_t	0-Fault, 1-Off, ... (+13)			read	read
+9433	1	04	s16	BOI.i_ist_temperatur_2.value	1403	Temperature 2 (value)	DHWC 1	1/10°C				read	read
+9434	1	04	s16	BOI.i_ist_temperatur_2.status	1403	Temperature 2 (status)	DHWC 1	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9435	1	04	s16	BOI.i_ist_temperatur_2.value	1403	Temperature 2 (value)	DHWC 2	1/10°C				read	read
+9436	1	04	s16	BOI.i_ist_temperatur_2.status	1403	Temperature 2 (status)	DHWC 2	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9437	1	04	s16	BOI.i_ist_temperatur_2.value	1403	Temperature 2 (value)	DHWC 3	1/10°C				read	read
+9438	1	04	s16	BOI.i_ist_temperatur_2.status	1403	Temperature 2 (status)	DHWC 3	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9439	1	04	s16	BOI.i_ist_temperatur_2.value	1403	Temperature 2 (value)	DHWC 4	1/10°C				read	read
+9440	1	04	s16	BOI.i_ist_temperatur_2.status	1403	Temperature 2 (status)	DHWC 4	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9441	1	04	s16	BOI.i_ist_temperatur_2.value	1403	Temperature 2 (value)	DHWC 5	1/10°C				read	read
+9442	1	04	s16	BOI.i_ist_temperatur_2.status	1403	Temperature 2 (status)	DHWC 5	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9443	1	04	s16	BOI.i_ist_temperatur_2.value	1403	Temperature 2 (value)	DHWC 6	1/10°C				read	read
+9444	1	04	s16	BOI.i_ist_temperatur_2.status	1403	Temperature 2 (status)	DHWC 6	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9445	1	04	s16	BOI.i_ist_temperatur_2.value	1403	Temperature 2 (value)	DHWC 7	1/10°C				read	read
+9446	1	04	s16	BOI.i_ist_temperatur_2.status	1403	Temperature 2 (status)	DHWC 7	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9447	1	04	s16	BOI.i_ist_temperatur_2.value	1403	Temperature 2 (value)	DHWC 8	1/10°C				read	read
+9448	1	04	s16	BOI.i_ist_temperatur_2.status	1403	Temperature 2 (status)	DHWC 8	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9449	1	04	s16	BOI.i_ist_temperatur_2.value	1403	Temperature 2 (value)	DHWC 9	1/10°C				read	read
+9450	1	04	s16	BOI.i_ist_temperatur_2.status	1403	Temperature 2 (status)	DHWC 9	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9451	1	04	s16	BOI.i_ist_temperatur_2.value	1403	Temperature 2 (value)	DHWC 10	1/10°C				read	read
+9452	1	04	s16	BOI.i_ist_temperatur_2.status	1403	Temperature 2 (status)	DHWC 10	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9453	1	04	s16	BOI.i_ist_temperatur_2.value	1403	Temperature 2 (value)	DHWC 11	1/10°C				read	read
+9454	1	04	s16	BOI.i_ist_temperatur_2.status	1403	Temperature 2 (status)	DHWC 11	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9455	1	04	s16	BOI.i_ist_temperatur_2.value	1403	Temperature 2 (value)	DHWC 12	1/10°C				read	read
+9456	1	04	s16	BOI.i_ist_temperatur_2.status	1403	Temperature 2 (status)	DHWC 12	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9457	1	04	s16	BOI.i_ist_temperatur_2.value	1403	Temperature 2 (value)	DHWC 13	1/10°C				read	read
+9458	1	04	s16	BOI.i_ist_temperatur_2.status	1403	Temperature 2 (status)	DHWC 13	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+9459	1	04	s16	BOI.i_ist_temperatur_2.value	1403	Temperature 2 (value)	DHWC 14	1/10°C				read	read
+9460	1	04	s16	BOI.i_ist_temperatur_2.status	1403	Temperature 2 (status)	DHWC 14	system_sensor_status_t	0-Faulty, 1-Missing, 2-OK			read	read
+24693	1	03, 06, 16	s16	BOI.programm	492	Select program	DHWC 1	boiler_programm_t	0-Time, 1-Temp., 2-Off			readwrite	readwrite
+24694	1	03, 06, 16	s16	BOI.programm	492	Select program	DHWC 2	boiler_programm_t	0-Time, 1-Temp., 2-Off			readwrite	readwrite
+24695	1	03, 06, 16	s16	BOI.programm	492	Select program	DHWC 3	boiler_programm_t	0-Time, 1-Temp., 2-Off			readwrite	readwrite
+24696	1	03, 06, 16	s16	BOI.programm	492	Select program	DHWC 4	boiler_programm_t	0-Time, 1-Temp., 2-Off			readwrite	readwrite
+24697	1	03, 06, 16	s16	BOI.programm	492	Select program	DHWC 5	boiler_programm_t	0-Time, 1-Temp., 2-Off			readwrite	readwrite
+24698	1	03, 06, 16	s16	BOI.programm	492	Select program	DHWC 6	boiler_programm_t	0-Time, 1-Temp., 2-Off			readwrite	readwrite
+24699	1	03, 06, 16	s16	BOI.programm	492	Select program	DHWC 7	boiler_programm_t	0-Time, 1-Temp., 2-Off			readwrite	readwrite
+24700	1	03, 06, 16	s16	BOI.programm	492	Select program	DHWC 8	boiler_programm_t	0-Time, 1-Temp., 2-Off			readwrite	readwrite
+24701	1	03, 06, 16	s16	BOI.programm	492	Select program	DHWC 9	boiler_programm_t	0-Time, 1-Temp., 2-Off			readwrite	readwrite
+24702	1	03, 06, 16	s16	BOI.programm	492	Select program	DHWC 10	boiler_programm_t	0-Time, 1-Temp., 2-Off			readwrite	readwrite
+24703	1	03, 06, 16	s16	BOI.programm	492	Select program	DHWC 11	boiler_programm_t	0-Time, 1-Temp., 2-Off			readwrite	readwrite
+24704	1	03, 06, 16	s16	BOI.programm	492	Select program	DHWC 12	boiler_programm_t	0-Time, 1-Temp., 2-Off			readwrite	readwrite
+24705	1	03, 06, 16	s16	BOI.programm	492	Select program	DHWC 13	boiler_programm_t	0-Time, 1-Temp., 2-Off			readwrite	readwrite
+24706	1	03, 06, 16	s16	BOI.programm	492	Select program	DHWC 14	boiler_programm_t	0-Time, 1-Temp., 2-Off			readwrite	readwrite
+24711	1	03, 06, 16	s16	BOI.temperatur_grenzen.min	981	Temp. min/max (min)	DHWC 1	1/10°C		0	700	readwrite	readwrite
+24712	1	03, 06, 16	s16	BOI.temperatur_grenzen.max	981	Temp. min/max (max)	DHWC 1	1/10°C		0	700	readwrite	readwrite
+24713	1	03, 06, 16	s16	BOI.temperatur_grenzen.min	981	Temp. min/max (min)	DHWC 2	1/10°C		0	700	readwrite	readwrite
+24714	1	03, 06, 16	s16	BOI.temperatur_grenzen.max	981	Temp. min/max (max)	DHWC 2	1/10°C		0	700	readwrite	readwrite
+24715	1	03, 06, 16	s16	BOI.temperatur_grenzen.min	981	Temp. min/max (min)	DHWC 3	1/10°C		0	700	readwrite	readwrite
+24716	1	03, 06, 16	s16	BOI.temperatur_grenzen.max	981	Temp. min/max (max)	DHWC 3	1/10°C		0	700	readwrite	readwrite
+24717	1	03, 06, 16	s16	BOI.temperatur_grenzen.min	981	Temp. min/max (min)	DHWC 4	1/10°C		0	700	readwrite	readwrite
+24718	1	03, 06, 16	s16	BOI.temperatur_grenzen.max	981	Temp. min/max (max)	DHWC 4	1/10°C		0	700	readwrite	readwrite
+24719	1	03, 06, 16	s16	BOI.temperatur_grenzen.min	981	Temp. min/max (min)	DHWC 5	1/10°C		0	700	readwrite	readwrite
+24720	1	03, 06, 16	s16	BOI.temperatur_grenzen.max	981	Temp. min/max (max)	DHWC 5	1/10°C		0	700	readwrite	readwrite
+24721	1	03, 06, 16	s16	BOI.temperatur_grenzen.min	981	Temp. min/max (min)	DHWC 6	1/10°C		0	700	readwrite	readwrite
+24722	1	03, 06, 16	s16	BOI.temperatur_grenzen.max	981	Temp. min/max (max)	DHWC 6	1/10°C		0	700	readwrite	readwrite
+24723	1	03, 06, 16	s16	BOI.temperatur_grenzen.min	981	Temp. min/max (min)	DHWC 7	1/10°C		0	700	readwrite	readwrite
+24724	1	03, 06, 16	s16	BOI.temperatur_grenzen.max	981	Temp. min/max (max)	DHWC 7	1/10°C		0	700	readwrite	readwrite
+24725	1	03, 06, 16	s16	BOI.temperatur_grenzen.min	981	Temp. min/max (min)	DHWC 8	1/10°C		0	700	readwrite	readwrite
+24726	1	03, 06, 16	s16	BOI.temperatur_grenzen.max	981	Temp. min/max (max)	DHWC 8	1/10°C		0	700	readwrite	readwrite
+24727	1	03, 06, 16	s16	BOI.temperatur_grenzen.min	981	Temp. min/max (min)	DHWC 9	1/10°C		0	700	readwrite	readwrite
+24728	1	03, 06, 16	s16	BOI.temperatur_grenzen.max	981	Temp. min/max (max)	DHWC 9	1/10°C		0	700	readwrite	readwrite
+24729	1	03, 06, 16	s16	BOI.temperatur_grenzen.min	981	Temp. min/max (min)	DHWC 10	1/10°C		0	700	readwrite	readwrite
+24730	1	03, 06, 16	s16	BOI.temperatur_grenzen.max	981	Temp. min/max (max)	DHWC 10	1/10°C		0	700	readwrite	readwrite
+24731	1	03, 06, 16	s16	BOI.temperatur_grenzen.min	981	Temp. min/max (min)	DHWC 11	1/10°C		0	700	readwrite	readwrite
+24732	1	03, 06, 16	s16	BOI.temperatur_grenzen.max	981	Temp. min/max (max)	DHWC 11	1/10°C		0	700	readwrite	readwrite
+24733	1	03, 06, 16	s16	BOI.temperatur_grenzen.min	981	Temp. min/max (min)	DHWC 12	1/10°C		0	700	readwrite	readwrite
+24734	1	03, 06, 16	s16	BOI.temperatur_grenzen.max	981	Temp. min/max (max)	DHWC 12	1/10°C		0	700	readwrite	readwrite
+24735	1	03, 06, 16	s16	BOI.temperatur_grenzen.min	981	Temp. min/max (min)	DHWC 13	1/10°C		0	700	readwrite	readwrite
+24736	1	03, 06, 16	s16	BOI.temperatur_grenzen.max	981	Temp. min/max (max)	DHWC 13	1/10°C		0	700	readwrite	readwrite
+24737	1	03, 06, 16	s16	BOI.temperatur_grenzen.min	981	Temp. min/max (min)	DHWC 14	1/10°C		0	700	readwrite	readwrite
+24738	1	03, 06, 16	s16	BOI.temperatur_grenzen.max	981	Temp. min/max (max)	DHWC 14	1/10°C		0	700	readwrite	readwrite
+24744	1	03, 06, 16	s16	BOI.schnellladung	493	Heat DHW 1x	DHWC 1	system_ein_aus_t	0-Off, 1-On			readwrite	readwrite
+24745	1	03, 06, 16	s16	BOI.schnellladung	493	Heat DHW 1x	DHWC 2	system_ein_aus_t	0-Off, 1-On			readwrite	readwrite
+24746	1	03, 06, 16	s16	BOI.schnellladung	493	Heat DHW 1x	DHWC 3	system_ein_aus_t	0-Off, 1-On			readwrite	readwrite
+24747	1	03, 06, 16	s16	BOI.schnellladung	493	Heat DHW 1x	DHWC 4	system_ein_aus_t	0-Off, 1-On			readwrite	readwrite
+24748	1	03, 06, 16	s16	BOI.schnellladung	493	Heat DHW 1x	DHWC 5	system_ein_aus_t	0-Off, 1-On			readwrite	readwrite
+24749	1	03, 06, 16	s16	BOI.schnellladung	493	Heat DHW 1x	DHWC 6	system_ein_aus_t	0-Off, 1-On			readwrite	readwrite
+24750	1	03, 06, 16	s16	BOI.schnellladung	493	Heat DHW 1x	DHWC 7	system_ein_aus_t	0-Off, 1-On			readwrite	readwrite
+24751	1	03, 06, 16	s16	BOI.schnellladung	493	Heat DHW 1x	DHWC 8	system_ein_aus_t	0-Off, 1-On			readwrite	readwrite
+24752	1	03, 06, 16	s16	BOI.schnellladung	493	Heat DHW 1x	DHWC 9	system_ein_aus_t	0-Off, 1-On			readwrite	readwrite
+24753	1	03, 06, 16	s16	BOI.schnellladung	493	Heat DHW 1x	DHWC 10	system_ein_aus_t	0-Off, 1-On			readwrite	readwrite
+24754	1	03, 06, 16	s16	BOI.schnellladung	493	Heat DHW 1x	DHWC 11	system_ein_aus_t	0-Off, 1-On			readwrite	readwrite
+24755	1	03, 06, 16	s16	BOI.schnellladung	493	Heat DHW 1x	DHWC 12	system_ein_aus_t	0-Off, 1-On			readwrite	readwrite
+24756	1	03, 06, 16	s16	BOI.schnellladung	493	Heat DHW 1x	DHWC 13	system_ein_aus_t	0-Off, 1-On			readwrite	readwrite
+24757	1	03, 06, 16	s16	BOI.schnellladung	493	Heat DHW 1x	DHWC 14	system_ein_aus_t	0-Off, 1-On			readwrite	readwrite

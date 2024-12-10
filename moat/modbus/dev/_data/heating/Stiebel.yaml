@@ -1,0 +1,175 @@
+#
+# This is a partial, reverse-engineered register list for
+# a Solvis heat pump. It is (assumed to be) a relabeled Stiebel-Eltron device.
+#
+# This device is controlled via Modbus/RTU, 19200/8/e/1.
+#
+regs:
+  op:
+    mode:
+      _doc: state setting, 0=off 3:on
+      register: 257
+      len: 1
+      reg_type: h
+      type: int
+      values:
+        0: off
+        3: on
+    power:
+      _doc: thermo power setting
+      reg_type: h
+      type: uint
+      register: 288
+      factor: 0.004 # 1/250
+      unit: "%"
+
+  state:
+    state:
+      register: 769
+      len: 1
+      reg_type: h
+      type: int
+    compressor:
+      register: 770
+      unit: Hz
+      scale: 0
+      reg_type: h
+      len: 1
+      type: int
+    _x1:
+      register: 771
+      len: 1
+      reg_type: h
+      type: int
+      unit: °C
+    water:
+      out:
+        register: 772
+        len: 1
+        reg_type: h
+        type: int
+        unit: °C
+        scale: -1
+      in:
+        register: 773
+        len: 1
+        reg_type: h
+        type: int
+        unit: °C
+        scale: -1
+    evaporator:
+      register: 774
+      len: 1
+      reg_type: h
+      type: int
+      scale: -1
+      unit: °C
+    hot_gas:
+      register: 775
+      len: 1
+      reg_type: h
+      type: int
+      unit: °C
+      scale: -1
+    low_p:
+      register: 776
+      len: 1
+      reg_type: h
+      type: int
+      unit: bar
+      scale: -2
+    _x2:
+      register: 777
+      len: 1
+      reg_type: h
+      type: int
+    high_p:
+      register: 778
+      len: 1
+      reg_type: h
+      type: int
+      unit: bar
+      scale: -2
+
+    power:
+      register: 869
+      len: 1
+      reg_type: h
+      type: int
+      unit: kW
+      scale: -1
+    flow:
+      register: 787
+      len: 1
+      reg_type: h
+      type: int
+      unit: l/min
+      scale: -1
+
+    de_ice:
+      _doc: set if de-icing, i.e. eats heat instead of producing it
+      register: 939
+      len: 1
+      reg_type: h
+      type: bit
+
+    _c1:
+      _doc: const 1
+      register: 848
+      len: 1
+      reg_type: h
+      type: int
+      values:
+        1: known
+    _c2:
+      _doc: const 0
+      register: 872
+      len: 1
+      reg_type: h
+      type: int
+      values:
+        0: known
+    _c3:
+      _doc: const 1
+      register: 940
+      len: 1
+      reg_type: h
+      type: int
+      values:
+        1: known
+    _c4:
+      _doc: const 1
+      register: 944
+      len: 1
+      reg_type: h
+      type: int
+      values:
+        1: known
+
+    _y1:
+      register: 1040
+      len: 1
+      reg_type: h
+      type: int
+    _y2:
+      register: 803
+      len: 4
+      reg_type: h
+      type: int
+    _y3:
+      register: 866
+      len: 1
+      reg_type: h
+      type: int
+
+    error:
+      repeat:
+        n: 20
+        start: 1
+        offset: 1
+        data:
+          register: 816
+          type: int
+          reg_type: h
+          values:
+            0: ok

@@ -1,6 +1,3 @@
-[submodule "heat"]
-	path = heat
-	url = git://git.smurf.noris.de/moat-dev-heat.git
 [submodule "sew"]
 	path = sew
 	url = git://git.smurf.noris.de/moat-dev-sew.git

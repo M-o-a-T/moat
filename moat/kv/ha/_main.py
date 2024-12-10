@@ -303,7 +303,7 @@ async def set_(obj, typ, path, list_options, force, plus, vars_, eval_, path_):
                 raise click.UsageError("A unique ID is fixed. You can't change it.")
         elif isinstance(v, dict):
             continue  # plus option
-        elif k not in t:
+        elif not force and k not in t:
             logger.warning(f"Key {k!r} may be unknown. Skipping.")
             continue
         vv = i[k]

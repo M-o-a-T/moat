@@ -18,7 +18,7 @@ from mqttproto import MQTTException
 from moat.util import NotGiven, P, Path, load_subgroup
 
 from .backend import RawMessage
-from .client import open_link
+from .client import Link
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +177,7 @@ async def pub(obj, **args):
     if args["keep_alive"]:
         cfg["keep_alive"] = args["keep_alive"]
 
-    async with open_link(cfg, name=name) as C:
+    async with Link(cfg, name=name) as C:
         await do_pub(C, args, cfg)
 
 
@@ -233,5 +233,5 @@ async def sub(obj, **args):
     if args["keep_alive"]:
         cfg["keep_alive"] = args["keep_alive"]
 
-    async with open_link(cfg, name=name) as C:
+    async with Link(cfg, name=name) as C:
         await do_sub(C, args, cfg)

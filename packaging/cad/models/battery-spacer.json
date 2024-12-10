@@ -1,0 +1,33 @@
+{
+    "parameterSets": {
+        "LiFePo4 groß": {
+            "_d": "0.01",
+            "cell_d": "33",
+            "cell_h": "72",
+            "num": "8",
+            "open": "false",
+            "ring_b": "1",
+            "ring_h": "7",
+            "ring_w": "2",
+            "spacer": "1",
+            "tap_c": "20",
+            "tap_d": "1",
+            "tap_w": "10"
+        },
+        "design default values": {
+            "_d": "0.01",
+            "cell_d": "33",
+            "cell_h": "72",
+            "num": "8",
+            "open": "true",
+            "ring_b": "0.8",
+            "ring_h": "10",
+            "ring_w": "1.6",
+            "spacer": "1",
+            "tap_c": "20",
+            "tap_d": "1",
+            "tap_w": "11"
+        }
+    },
+    "fileFormatVersion": "1"
+}

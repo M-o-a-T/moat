@@ -29,8 +29,6 @@ docs/build/
 *.mo
 /obj/
 /parts/
-pip-delete-this-directory.txt
-pip-log.txt
 *.pot
 /.pybuild/
 __pycache__/

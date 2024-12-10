@@ -1,0 +1,10 @@
+Test Usage:
+
+moat bms sched analyze \
+    -p bms/sched/example/params.yaml \
+    -L bms/sched/example/load.data \
+    -S bms/sched/example/solar.data \
+    -P bms/sched/example/price.data \
+    -s 0.3
+
+which is equivalent to running example/test.py

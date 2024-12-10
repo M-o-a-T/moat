@@ -14,6 +14,11 @@ the second part doesn't start with a separator-colon, but you shouldn't
 ever want to do that: paths are best processed as Path objects, not
 strings.
 
+
+This module also exports the magic paths "Root", "S_Root", "P_Root" and
+"Q_Root". These are contextvars and can be set externally. They are
+interpolated into slashed Path representations.
+
 """
 
 from __future__ import annotations
@@ -23,11 +28,24 @@ import collections.abc
 import logging
 import re
 from base64 import b64decode, b64encode
+from contextvars import ContextVar
 from functools import total_ordering
 
 import simpleeval
 
-__all__ = ["Path", "P", "PS", "logger_for", "PathShortener", "PathLongener", "path_eval"]
+from moat.lib.codec.proxy import as_proxy
+
+__all__ = [
+    "Path",
+    "P",
+    "PS",
+    "logger_for",
+    "PathShortener",
+    "PathLongener",
+    "path_eval",
+    "Root",
+    "RootPath",
+]
 
 _PartRE = re.compile("[^:._]+|_|:|\\.")
 _RTagRE = re.compile("^:m[^:._]+:$")
@@ -65,17 +83,45 @@ class Path(collections.abc.Sequence):
 
     \b
         :mXX This path is marked with XX
+        :R   An alias for the current root
+        :Q   An alias for an alternate root
+        :P   An alias for another alternate root
+        :S   An alias for yet another alternate root
 
     The empty path is denoted by a single colon. A dotted path that starts
     or ends with a dot, or that contains empty elements (two non-escaped dots,
-    one dot followed by a separator) is illegal. 
+    one dot followed by a separator) is illegal.
 
     The alternate slash-path representation uses slashes as separators.
     Colon elements are disallowed within elements.
+
+    Paths can be concatenated with "+", "/" or "|".
+    "% n" removes n items from the end.
+
+    All Path objects are read-only.
+
+    The Root paths are context variables. If they are set and an "incoming"
+    path has one of them as prefix, said prefix is replaced with a placeholder
+    for this root. It is expanded in "slashed" form but not as native
+    representation. That way, specific paths can be encoded in a root-free
+    form, thus if you ever rename the root, or move entries from one
+    MoaT-Link setup to another, everything still works.
     """
 
-    def __init__(self, *a, mark=""):
-        self._data: list = a
+    def __init__(self, *a, mark="", scan=False):
+        if a and scan:
+            i = 0
+            while i < len(a):
+                for proxy in _Roots.values():
+                    if not proxy:
+                        continue
+
+                    if len(a) >= i + len(proxy) and a[i : i + len(proxy)] == proxy:
+                        a = a[:i] + (proxy,) + a[i + len(proxy) :]
+                        break
+                i += 1
+
+        self._data: tuple = a
         self._mark = mark
 
     @classmethod
@@ -86,12 +132,22 @@ class Path(collections.abc.Sequence):
         if not isinstance(data, tuple):
             return cls(*data)
         p = object.__new__(cls)
-        p._data = data  # noqa:SLF001
-        p._mark = mark
+        p._data = tuple(data)  # noqa:SLF001
+        p._mark = mark  # noqa:SLF001
         return p
+
+    def as_tuple(self):
+        """deprecated"""
+        return self._data
+
+    @property
+    def raw(self):
+        """as tuple"""
+        return self._data
 
     @property
     def mark(self):
+        "accessor for the path's mark"
         return self._mark
 
     def with_mark(self, mark=""):
@@ -110,7 +166,7 @@ class Path(collections.abc.Sequence):
 
         def _escol(x, spaces=True):
             x = x.replace(":", "::")
-            if slash:
+            if slash:  # noqa: SIM108
                 x = x.replace("/", ":|")
             else:
                 x = x.replace(".", ":.")
@@ -121,15 +177,18 @@ class Path(collections.abc.Sequence):
         res = []
         if self.mark:
             res.append(":m" + self.mark)
-        if not self._data and not slash:
-            res.append(":")
+        if not self._data:
+            if not slash:
+                res.append(":")
+            elif not self.mark:
+                res.append(":m")
         for x in self._data:
             if slash and res:
                 res.append("/")
 
             if isinstance(x, str):
                 if slash:
-                    res.append(_escol(x))
+                    res.append(_escol(x, False))
                 elif x == "":
                     res.append(":e")
                 else:
@@ -142,6 +201,14 @@ class Path(collections.abc.Sequence):
                 res.append(":f")
             elif x is None:
                 res.append(":n")
+            elif isinstance(x, RootPath):
+                if not slash:
+                    res.append(f":{x.key}")
+                else:
+                    if not x or len(x) == 0:
+                        raise RuntimeError(f"You need to set {x.name}")
+                    res.append(x.slashed)
+
             elif isinstance(x, (bytes, bytearray, memoryview)):
                 if all(32 <= b < 127 for b in x):
                     res.append(":v" + _escol(x.decode("ascii"), True))
@@ -150,14 +217,14 @@ class Path(collections.abc.Sequence):
                     # no hex
             elif isinstance(x, (Path, tuple)):
                 if len(x):
-                    x = ",".join(repr(y) for y in x)
+                    x = ",".join(repr(y) for y in x)  # noqa: PLW2901
                     res.append(":" + _escol(x))
                 else:
-                    x = "()"
+                    x = "()"  # noqa: PLW2901
             else:
-                x = repr(x)
+                x = repr(x)  # noqa: PLW2901
                 if x[0].isalpha():
-                    x = "i" + x
+                    x = "i" + x  # noqa: PLW2901
                 res.append(":" + _escol(x))
         return "".join(res)
 
@@ -188,11 +255,12 @@ class Path(collections.abc.Sequence):
             if self.mark != other.mark:
                 return False
             other = other._data
+        else:
+            other = tuple(other)
         return self._data == other
 
     def __lt__(self, other):
-        if isinstance(other, Path):
-            other = other._data
+        other = other._data if isinstance(other, Path) else tuple(other)
         return self._data < other
 
     def __hash__(self):
@@ -204,8 +272,10 @@ class Path(collections.abc.Sequence):
     def __contains__(self, x):
         return x in self._data
 
-    def __or__(self, other):
-        return Path(*self._data, other, mark=self.mark)
+    def __mod__(self, other):
+        if len(self._data) < other:
+            raise ValueError("Path too short")
+        return Path(*self._data[:-other], mark=self.mark)
 
     def _tag_add(self, other):
         if not isinstance(other, Path):
@@ -224,38 +294,46 @@ class Path(collections.abc.Sequence):
         mark = self._tag_add(other)
         if isinstance(other, Path):
             other = other._data
+        elif not isinstance(other, (list, tuple)):
+            other = (other,)
         if len(other) == 0:
             if self.mark != mark:
-                return Path(*self._data, mark=mark)
+                return self.build(self._data, mark=mark)
             return self
-        return Path(*self._data, *other, mark=mark)
+        return type(self)(*self._data, *other, mark=mark)
 
-#   def __iadd__(self, other):
-#       mark = self._tag_add(other)
-#       if isinstance(other, Path):
-#           other = other._data
-#       if len(other) > 0:
-#           self._mark = mark
-#           self._data.extend(other)
-#       return self
+    def __or__(self, other):
+        return self + other
+
+    def __div__(self, other):
+        return self + other
+
+    #   def __iadd__(self, other):
+    #       mark = self._tag_add(other)
+    #       if isinstance(other, Path):
+    #           other = other._data
+    #       if len(other) > 0:
+    #           self._mark = mark
+    #           self._data.extend(other)
+    #       return self
 
     def __truediv__(self, other):
         if isinstance(other, Path):
             raise TypeError("You want + not /")
         return Path(*self._data, other, mark=self.mark)
 
-#   def __itruediv__(self, other):
-#       if isinstance(other, Path):
-#           raise TypeError("You want + not /")
-#       self._data.append(other)
+    #   def __itruediv__(self, other):
+    #       if isinstance(other, Path):
+    #           raise TypeError("You want + not /")
+    #       self._data.append(other)
 
     # TODO add alternate output with hex integers
 
     def __repr__(self):
-        return f"P({str(self) !r})"
+        return f"P({str(self)!r})"
 
     @classmethod
-    def from_str(cls, path, *, mark=""):
+    def from_str(cls, path, *, mark="", scan=False):
         """
         Constructor to build a Path from its string representation.
         """
@@ -347,6 +425,8 @@ class Path(collections.abc.Sequence):
                     part = True
                 elif e == "n":
                     new(None, True)
+                elif e in _Roots:
+                    new(_Roots[e], True)
                 elif e == "_":
                     add(" ")
                 elif e[0] == "i":
@@ -398,10 +478,10 @@ class Path(collections.abc.Sequence):
         if esc or part is None:
             raise SyntaxError(f"Cannot parse {path!r} at {pos}")
         done(None)
-        return cls(*res, mark=mark)
+        return cls(*res, mark=mark, scan=scan)
 
     @classmethod
-    def from_slashed(cls, path, *, mark=None):
+    def from_slashed(cls, path, *, mark=None, scan=True):
         """
         Constructor to build a Path from its slashed string representation.
         """
@@ -412,12 +492,12 @@ class Path(collections.abc.Sequence):
             return cls.build(path, mark=mark)
 
         def _decol(s):
-            return s.replace(":|","/").replace(":_"," ").replace("::",":")
-        
+            return s.replace(":|", "/").replace(":_", " ").replace("::", ":")
+
         marks = 0
 
         try:
-            for pos,p in enumerate(path.split("/")):
+            for pos, p in enumerate(path.split("/")):
                 if p == "":
                     res.append("")
                 elif p[0] != ":":
@@ -425,6 +505,8 @@ class Path(collections.abc.Sequence):
                 elif p == ":":
                     pass
 
+                elif p[1] == ":":
+                    res.append(_decol(p))
                 elif p[1] == "b":
                     res.append(int(p[2:], 2))
                 elif p[1] == "e":
@@ -442,37 +524,35 @@ class Path(collections.abc.Sequence):
                     if len(p) == 2:
                         res.append(None)
                 elif p[1] == "s":
-                    res.append(b64decode(_decol(p[2]).encode("ascii")))
+                    res.append(b64decode(_decol(p[2:]).encode("ascii")))
                 elif p[1] == "t":
                     if len(p) == 2:
                         res.append(True)
                 elif p[1] == "v":
-                    res.append(_decol(p[2]).encode("ascii"))
+                    res.append(_decol(p[2:]).encode("ascii"))
                 elif p[1] == "x":
                     res.append(int(p[2:], 16))
                 elif p[1] == "y":
                     res.append(bytes.fromhex(p[2:]))
 
                 else:
-                    res.append(path_eval(p))
+                    res.append(path_eval(p[1:]))
 
-                if len(res) != pos+1-marks:
-                    raise RuntimeError("Slashed-Path syntax")
+                if len(res) != pos + 1 - marks:
+                    raise RuntimeError("Slashed-Path syntax")  # noqa: TRY301
 
         except Exception as exc:
-            raise SyntaxError(f"Cannot eval {path!r}, part {pos+1}") from exc
+            raise SyntaxError(f"Cannot eval {path!r}, part {pos + 1}") from exc
 
         if mark is None:
             mark = ""
-        r = cls(*res, mark=mark)
+        r = cls(*res, mark=mark, scan=scan)
         return r
-                
 
     @classmethod
     def _make(cls, loader, node):
         value = loader.construct_scalar(node)
         return cls.from_str(value)
-
 
 
 class P(Path):
@@ -481,14 +561,33 @@ class P(Path):
 
     For idempotency (required by ``click``) it transparently accepts `Path`
     objects.
+
+    Scanning for prefixes is disabled. Use this class for paths embedded in
+    MoaT code.
     """
 
-    def __new__(cls, path, *, mark=""):  # noqa:D102
+    def __new__(cls, path, *, mark="", scan=False):  # noqa:D102
         if isinstance(path, Path):
             if path.mark != mark:
-                path = Path(*path, mark=mark)
+                path = Path(*path, mark=mark, scan=scan)
             return path
-        return Path.from_str(path, mark=mark)
+        return Path.from_str(path, mark=mark, scan=scan)
+
+
+class PP(Path):
+    """
+    A Path subclass that delegates to `Path.from_str`.
+
+    This is identical to `P` except that scanning for prefixes is enabled.
+    Use this class for command-line processing.
+    """
+
+    def __new__(cls, path, *, mark="", scan=True):
+        if isinstance(path, Path):
+            if path.mark != mark:
+                path = Path(*path, mark=mark, scan=scan)
+            return path
+        return Path.from_str(path, mark=mark, scan=scan)
 
 
 class PS(Path):
@@ -504,7 +603,7 @@ class PS(Path):
             if path.mark != mark:
                 path = Path(*path, mark=mark)
             return path
-        return Path.from_slashed(path, mark=mark)
+        return Path.from_slashed(path, mark=mark, scan=True)
 
 
 def logger_for(path: Path):
@@ -563,46 +662,48 @@ class PathShortener:
         a b c e f
         a b c e g h
         a b c i
-        a b j
+        a j k
 
     is shortened to
 
-        0
-        0 c d
-        1 e f
-        2 g h
-        1 i
-        0 j
-
-    where the initial number is the passed-in ``depth``, assuming the
-    PathShortener is initialized with ``('a','b')``.
+        0 a b
+        2 c d
+        3 e f
+        4 g h
+        3 i
+        1 j k
 
     Usage::
 
-        >>> d = _PathShortener(['a','b'])
+        >>> d = PathShortener()
+        >>> d.short(P('a.b.c.d'))
+        (4, ('a','b',c','d'))
+        >>> d.short(P('a.b.c.e.f'))
+        (3, ('e','f'))
+        {'depth':1, 'path':['e','f']}
+
+    Alternate, somewhat-deprecated usage::
+        >>> d = PathShortener(['a','b'])
         >>> d({'path': 'a b c d'.split})
         {'depth':0, 'path':['c','d']}
         >>> d({'path': 'a b c e f'.split})
         {'depth':1, 'path':['e','f']}
 
-    etc.
+    Note that the input dict in the second example is modified in-place.
 
-    Note that the input dict is modified in-place.
+    Using a prefix is deprecated.
 
+    Caution: this shortener ignores path marks.
     """
 
-    def __init__(self, prefix):
+    def __init__(self, prefix=Path()):  # noqa:B008
         self.prefix = prefix
         self.depth = len(prefix)
         self.path = []
 
-    def __call__(self, res: dict):
-        "shortens the 'path' element in @res"
-        try:
-            p = res["path"]
-        except KeyError:
-            return
-        if list(p[: self.depth]) != list(self.prefix):
+    def short(self, p: Path) -> tuple[int, Path]:
+        """shortens the given path"""
+        if self.depth and list(p[: self.depth]) != list(self.prefix):
             raise RuntimeError(f"Wrong prefix: has {p!r}, want {self.prefix!r}")
 
         p = p[self.depth :]
@@ -612,9 +713,18 @@ class PathShortener:
                 cdepth = i
                 break
         self.path = p
-        p = p[cdepth:]
+        return cdepth, p[cdepth:]
+
+    def __call__(self, res: dict):
+        "shortens the 'path' element in @res"
+        try:
+            p = res["path"]
+        except KeyError:
+            return
+        cdepth, p = self.short(p)
         res["path"] = p
         res["depth"] = cdepth
+        return res
 
 
 class PathLongener:
@@ -624,11 +734,29 @@ class PathLongener:
 
     Calling a PathLongener with a dict without ``depth`` or ``path``
     attributes is a no-op.
+
+    Using a prefix is deprecated.
+
+    Caution: this longener ignores path marks.
     """
 
+    cls = Path
+
     def __init__(self, prefix: Path | tuple = ()):
+        if isinstance(prefix, Path):
+            self.cls = type(prefix)
+            prefix = prefix.raw
         self.depth = len(prefix)
-        self.path = Path.build(prefix)
+        self.path = prefix
+
+    def long(self, d: int | None, p: Path):
+        """Expand a given path suffix"""
+        p = tuple(p)
+        if d is None:
+            return p
+        p = self.cls.build(self.path[: self.depth + d] + p)
+        self.path = p
+        return p
 
     def __call__(self, res):
         "expands the 'path' element in @res"
@@ -638,12 +766,8 @@ class PathLongener:
         d = res.pop("depth", None)
         if d is None:
             return
-        if not isinstance(p, tuple):
-            # may be a list, dammit
-            p = tuple(p)
-        p = self.path[: self.depth + d] + p
-        self.path = p
-        res["path"] = p
+        res["path"] = self.long(d, p)
+        return res
 
 
 # path_eval is a simple "eval" replacement to implement resolving
@@ -655,3 +779,64 @@ _eval.nodes[ast.Tuple] = lambda node: tuple(
     for x in node.elts
 )
 path_eval = _eval.eval
+
+
+# Here we declare our bunch of "root" variables.
+
+Root = ContextVar("Root", default=None)
+
+
+class RootPath(Path):
+    """
+    Wraps access to a contextvar that points to a Path.
+
+    The problem is that the contextvar's ID is not stable. However proxying
+    it must be consistent regardless of its content.
+    """
+
+    _mark = None
+
+    def __init__(self, key, var, name):
+        self._key = key
+        self._var = var
+        self._name = name
+
+    @property
+    def name(self):
+        "name"
+        return self._name
+
+    @property
+    def key(self):
+        "name of the contextvar"
+        return self._key
+
+    def __bool__(self):
+        "check if the contextvar is set"
+        p = self._var.get()
+        return p is not None
+
+    @property
+    def _data(self):
+        p = self._var.get()
+        if p is None:
+            return None
+        return self._var.get()._data  # noqa:SLF001
+
+
+_root = RootPath("R", Root, "Root")
+as_proxy("R", _root)
+_Roots = {"R": _root}
+
+for _idx in "SPQ":  # and R. Yes I know.
+    _name = f"{_idx}_Root"
+    _ctx = ContextVar(_name, default=None)
+    _path = RootPath(_idx, _ctx, _name)
+
+    globals()[_name] = _ctx
+    __all__ += [_name]  # noqa:PLE0604
+
+    _Roots[_idx] = _path
+    as_proxy(f"_P{_idx}", _path)
+
+del _idx, _name, _ctx, _path

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import P, PS, Path, packer, unpacker, yformat, yload
+from moat.util import PS, P, Path, packer, unpacker, yformat, yload
 
 _valid = (
     (("a", "b", "c"), "a.b.c"),
@@ -59,13 +59,13 @@ _invalid = (
 _valid_s = (
     (("a", "b", "c"), "a/b/c"),
     (("a", 2, "c"), "a/:2/c"),
-    ((2, "c"), (":i2.c", ":2/c")),
+    ((2, "c"), (":i2/c", ":2/c")),
     ((True, "c"), ":t/c"),
-    ((1.23, "c"), ":1/:.23/c"),
+    ((1.23, "c"), ":1.23/c"),
     (("", 1.23, "c"), "/:1.23/c"),
-    (("a", "", 1.23, "c"), "a//:1:.23/c"),
-    (("a", "", 1.23, ""), "a//:1:.23/"),
-    (("a", "", 1.23), "a//:1:.23"),
+    (("a", "", 1.23, "c"), "a//:1.23/c"),
+    (("a", "", 1.23, ""), "a//:1.23/"),
+    (("a", "", 1.23), "a//:1.23"),
     (("a", "", "b"), "a//b"),
     (("a", "x y", "b"), "a/x y/b"),
     (("a", True), "a/:t"),
@@ -73,8 +73,8 @@ _valid_s = (
     ((31,), (":x1f", ":31")),
     ((31, "q"), (":x1f/q", ":31/q")),
     (("b", 31, 5), ("b/:x1f/:5", "b/:31/:5")),
-    (((1, 2), 1.23), (":(1,2):1/:.23", ":1,2/:1:.23")),
-    (((1, 2), "", 1.23), (":(1,2)//:1:.23", ":1,2//:1:.23")),
+    (((1, 2), 1.23), (":(1,2)/:1.23", ":1,2/:1.23")),
+    (((1, 2), "", 1.23), (":(1,2)//:1.23", ":1,2//:1.23")),
     (((1, 2), "c"), ":1,2/c"),
     (((1, "a b", 2), "c"), (":1,'a b',2/c", ":1,'a:_b',2/c")),
     (("a", b"abc"), "a/:vabc"),
@@ -84,11 +84,11 @@ _valid_s = (
     ((), ":m"),
 )
 _valid_s2 = (
-    (("", ), ("", ":e"), ""),
+    (("",), ("", ":e"), ""),
     (("", ""), ("/", ":e:e"), ""),
     (("", "a", ""), ("/a/", ":e.a:e"), ""),
     (("", "a", "b", ""), ("/a/b/", ":e.a.b:e"), ""),
-    (("", ), (":mx/", ":mx:e"), "x"),
+    (("",), (":mx/", ":mx:e"), "x"),
     (("", ""), (":mx//", ":mx:e:e"), "x"),
     (("", "a", ""), (":mx//a/", ":mx:e.a:e"), "x"),
     (("", "a", "b", ""), (":mx//a/b/", ":mx:e.a.b:e"), "x"),
@@ -102,9 +102,9 @@ _invalid_s = (
     ":/",
     ":e",
     ":ec",
-#   "a:1",
-#   "a:t",
-#   "a:n",
+    #   "a:1",
+    #   "a:t",
+    #   "a:n",
     ":x1g",
     ":x",
     "a/:h123",
@@ -140,7 +140,7 @@ def test_valid_spaths(a, b):
 
 
 @pytest.mark.parametrize("a,b,m", _valid_s2)  # noqa:PT006
-def test_valid_spaths(a, b, m):
+def test_valid_spaths2(a, b, m):
     b, xb = b
     assert str(Path(*a, mark=m)) == xb
     assert a == tuple(Path.from_slashed(b))
@@ -188,11 +188,11 @@ def test_tagged():
 
 
 def test_msgpack():
-    d = ("a", 1, "b")
+    d = ["a", 1, "b"]
     m = packer(d)
     mm = unpacker(m)
-    assert type(mm) is tuple  # pylint: disable=unidiomatic-typecheck
-    assert mm == d
+    assert isinstance(mm, (tuple, list))
+    assert list(mm) == d
 
     d = Path("a", 1, "b")
     m = packer(d)
@@ -212,3 +212,38 @@ def test_yaml():
     b = "!P a.b.c\n...\n"
     assert yformat(a) == b
     assert yload(b) == a
+
+
+def test_root():
+    from moat.util.cbor import StdCBOR
+    from moat.util.path import Q_Root, Root
+
+    Root.set(P("abba.c"))
+    Q_Root.set(P("some.queue"))
+    p = P(":R.d.::a.e")
+    p2 = P("yes:Q.d.::a.e")
+    c = StdCBOR()
+    assert p.slashed == "abba/c/d/::a/e"
+    assert str(p) == ":R.d.::a.e"
+    pc = c.encode(p)
+    p2c = c.encode(p2)
+    assert b"abba" not in pc
+    assert b"queue" not in p2c
+
+    assert b":a" in pc
+    assert b"::a" not in pc
+
+    Root.set(P("duddy"))
+    Q_Root.set(P("fuddy"))
+    pp = c.decode(pc)
+    pp2 = c.decode(p2c)
+    assert pp.slashed == "duddy/d/::a/e"
+    assert pp2.slashed == "yes/fuddy/d/::a/e"
+    assert p == pp
+    assert p2 == pp2
+    assert p != p2
+
+    assert "yes" in pp2
+    assert "fuddy" not in pp2
+
+    assert pp2 == PS("yes/fuddy/d/::a/e")

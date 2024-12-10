@@ -11,14 +11,24 @@ from collections.abc import Mapping, Sequence
 import ruyaml as yaml
 
 from .dict import attrdict
+
 try:
     from .msgpack import Proxy
 except ImportError:
     Proxy = None
-from .path import Path
-from .proxy import name2obj
+from moat.lib.codec.proxy import name2obj
 
-__all__ = ["yload", "yprint", "yformat", "yaml_repr", "yaml_parse", "add_repr"]
+from .path import Path
+
+__all__ = [
+    "yload",
+    "yprint",
+    "yformat",
+    "yaml_repr",
+    "yaml_parse",
+    "add_repr",
+    "load_ansible_repr",
+]
 
 SafeRepresenter = yaml.representer.SafeRepresenter
 SafeConstructor = yaml.constructor.SafeConstructor
@@ -26,7 +36,18 @@ Emitter = yaml.emitter.Emitter
 
 
 SafeRepresenter.add_representer(attrdict, SafeRepresenter.represent_dict)
-SafeConstructor.yaml_base_dict_type = attrdict
+
+
+def load_ansible_repr():
+    "Call me if you're using `moat.util` in conjunction with Ansible."
+    from ansible.parsing.yaml.objects import AnsibleUnicode
+    from ansible.utils.unsafe_proxy import AnsibleUnsafeText
+    from ansible.vars.hostvars import HostVars, HostVarsVars
+
+    SafeRepresenter.add_representer(HostVars, SafeRepresenter.represent_dict)
+    SafeRepresenter.add_representer(HostVarsVars, SafeRepresenter.represent_dict)
+    SafeRepresenter.add_representer(AnsibleUnsafeText, SafeRepresenter.represent_str)
+    SafeRepresenter.add_representer(AnsibleUnicode, SafeRepresenter.represent_str)
 
 
 def str_presenter(dumper, data):
@@ -64,6 +85,7 @@ def yaml_parse(name: str, use_repr: bool = False):
         SafeConstructor.add_constructor(f"!{name}", cls)
         return cls
 
+    use_repr  # noqa: B018
     return register
 
 

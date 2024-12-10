@@ -63,5 +63,4 @@ async def as_service(obj=None):
         try:
             yield RunMsg(obj)
         finally:
-            with anyio.fail_after(2, shield=True):
-                tg.cancel_scope.cancel()
+            tg.cancel_scope.cancel()

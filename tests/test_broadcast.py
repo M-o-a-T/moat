@@ -16,27 +16,30 @@ if TYPE_CHECKING:
     from moat.util.broadcast import BroadcastReader
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_example():
-    res = []
+    r1 = []
+    r2 = []
 
-    async def rdr(bcr: BroadcastReader | Broadcaster, task_status):
+    async def rdr(bcr: BroadcastReader | Broadcaster, res, task_status):
         bcr = aiter(bcr)
         task_status.started()
         async for msg in bcr:
             res.append(msg)
 
     async with anyio.create_task_group() as tg, Broadcaster() as bc:
-        await tg.start(rdr, bc)  # "bc" also works
+        await tg.start(rdr, bc, r1)
+        await tg.start(rdr, bc, r2)
         for x in range(5):
             bc(x)
             await anyio.sleep(0.01)
         bc(42)
+        # end of the "bc" scope: readers' iterators terminate
 
-    assert res == [0, 1, 2, 3, 4, 42]
+    assert r1 == r2 == [0, 1, 2, 3, 4, 42]
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_basic():
     seen = [0, 0, 0]
 
@@ -56,7 +59,7 @@ async def test_basic():
     bq = Broadcaster(1)
     async with anyio.create_task_group() as tg, bq:
         tg.start_soon(a, aiter(bq), 0)
-        await anyio.sleep(0.1)
+        await anyio.sleep(0.2)  # longer than 0.1, for reproducibility
         bq(1)
         await anyio.sleep(0.1)
         tg.start_soon(a, aiter(bq), 1)

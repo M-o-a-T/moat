@@ -24,10 +24,15 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "Queue",
+    "QueueFull",
+    "QueueEmpty",
     "create_queue",
     "DelayedWrite",
     "DelayedRead",
 ]
+
+QueueFull = anyio.WouldBlock
+QueueEmpty = anyio.WouldBlock
 
 
 class Queue:
@@ -51,26 +56,48 @@ class Queue:
 
     async def put(self, x):
         """Send a value, blocking"""
-        await self._s.send(Value(x))
+        try:
+            await self._s.send(Value(x))
+        except anyio.ClosedResourceError:
+            raise EOFError from None
 
     def put_nowait(self, x):
         """Send a value, nonblocking"""
-        self._s.send_nowait(Value(x))
+        try:
+            self._s.send_nowait(Value(x))
+        except anyio.ClosedResourceError:
+            raise EOFError from None
 
     async def put_error(self, x):
         """Send an error value, blocking"""
-        await self._s.send(Error(x))
+        try:
+            await self._s.send(Error(x))
+        except anyio.ClosedResourceError:
+            raise EOFError from None
+
+    def put_nowait_error(self, x):
+        """Send an error, nonblocking"""
+        try:
+            self._s.send_nowait(Error(x))
+        except anyio.ClosedResourceError:
+            raise EOFError from None
 
     async def get(self):
         """Get the next value, blocking.
         May raise an exception if one was sent."""
-        res = await self._r.receive()
+        try:
+            res = await self._r.receive()
+        except anyio.EndOfStream:
+            raise EOFError from None
         return res.unwrap()
 
     def get_nowait(self):
         """Get the next value, nonblocking.
         May raise an exception if one was sent."""
-        res = self._r.receive_nowait()
+        try:
+            res = self._r.receive_nowait()
+        except anyio.EndOfStream:
+            raise EOFError from None
         return res.unwrap()
 
     def qsize(self):

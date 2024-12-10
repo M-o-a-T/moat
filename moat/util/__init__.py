@@ -13,14 +13,16 @@ import logging as _logging
 
 _log = _logging.getLogger(__name__)
 
-from .dict import attrdict  # noqa: E402
+from .dict import attrdict  # noqa: E402, F401
 
 from .alert import *  # noqa: F403, E402  # isort:skip
 from .impl import *  # noqa: F403, E402  # isort:skip
 from .dict import *  # noqa: F403, E402  # isort:skip
 from .merge import *  # noqa: F403, E402  # isort:skip
-from .proxy import *  # noqa: F403, E402  # isort:skip
 from .misc import *  # noqa: F403, E402  # isort:skip
+from .random import *  # noqa: F403, E402  # isort:skip
+
+from moat.lib.codec.proxy import *  # noqa: F403, E402  # isort:skip
 
 try:
     from .event import *  # noqa: F403
@@ -82,4 +84,4 @@ try:
 except ImportError as exc:
     _log.warning("Missing: %s (importing .exc)", exc)
 
-from .main import *  # noqa: F403
+from .main import *  # noqa: F403, E402

@@ -8,6 +8,7 @@ import anyio
 import logging  # pylint: disable=wrong-import-position
 import sys
 from datetime import datetime
+from functools import partial
 from time import time
 
 import asyncclick as click
@@ -15,7 +16,7 @@ import asyncclick as click
 from .main import load_subgroup
 from .path import P, Path, path_eval
 from .times import humandelta, time_until
-from .yaml import yload, yprint
+from .yaml import yprint
 
 log = logging.getLogger()
 
@@ -98,28 +99,116 @@ y, yr   Year (2023–)
 
 
 @cli.command
-@click.option("-d", "--decode", is_flag=True, help="decode (default: encode)")
-@click.argument("path", type=click.Path(file_okay=True, dir_okay=False))
-def msgpack(decode, path):
-    """encode/decode msgpack from/to YAML
+@click.option("-d", "--dec", "--decode", type=str, help="Source format", default="json")
+@click.option("-e", "--enc", "--encode", type=str, help="Destination format", default="yaml")
+@click.option(
+    "-i", "--in", "--input", "pathi", type=click.File("r"), help="Source file", default=sys.stdin
+)
+@click.option(
+    "-o",
+    "--out",
+    "--output",
+    "patho",
+    type=click.File("w"),
+    help="Destination file",
+    default=sys.stdout,
+)
+@click.option("-s", "--stream", is_flag=True, help="Multiple messages")
+def convert(enc, dec, pathi, patho, stream):
+    """File conversion utility.
 
-    moat util msgpack data.yaml > data.mp    # encode
-    moat util msgpack -d data.mp > data.yaml # decode
+    Supported file formats: json yaml cbor msgpack python
     """
-    from .msgpack import packer, stream_unpacker
 
-    if decode:
-        with sys.stdin.buffer if path == "-" else open(path, "rb") as f:
-            n = 0
-            for obj in stream_unpacker(f):
-                if n:
-                    print("---")
-                n += 1
-                yprint(obj)
+    def get_codec(n):
+        if n == "python":
+            from pprint import pformat
+
+            return eval, pformat, False, False
+        if n == "json":
+            import simplejson as json
+
+            if stream:
+
+                def jdump(d):
+                    return json.dumps(d, separators=(",", ":")) + "\n"
+
+            else:
+
+                def jdump(d):
+                    return json.dumps(d, indent="  ") + "\n"
+
+            return json.loads, jdump, False, False
+        if n == "yaml":
+            import ruyaml as yaml
+
+            y = yaml.YAML(typ="safe")
+            y.default_flow_style = True, False
+            from moat.util import yload
+
+            def ypr(d, s):
+                yprint(d, s)
+                s.write("---\n")
+
+            return (
+                partial(yload, multi=True) if stream else yload,
+                ypr if stream else yprint,
+                False,
+                True,
+            )
+        if n == "cbor":
+            from moat.util.cbor import StdCBOR
+
+            c = StdCBOR()
+            d = StdCBOR()
+            return c.feed if stream else c.decode, d.encode, True, False
+        if n == "msgpack":
+            from moat.util.msgpack import StdMsgpack
+
+            c = StdMsgpack()
+            d = StdMsgpack()
+            return c.feed if stream else c.decode, d.encode, True, False
+        raise ValueError("unsupported codec")
+
+    dec, _x, bd, csd = get_codec(dec)
+    _y, enc, be, cse = get_codec(enc)
+    if bd:
+        pathi = pathi.buffer
+    if be:
+        patho = patho.buffer
+
+    if stream:
+        if csd:
+
+            def in_d():
+                return [pathi.read()]
+
+        else:
+
+            def in_d():
+                while data := pathi.read(4096):
+                    yield data
+
+        for d in in_d():
+            for data in dec(d):
+                if cse:
+                    enc(data, patho)
+                else:
+                    dat = enc(data)
+                    patho.write(dat)
     else:
-        with sys.stdin if path == "-" else open(path) as f:
-            for obj in yload(f, multi=True):
-                sys.stdout.buffer.write(packer(obj))
+        if csd:
+            data = dec(pathi)
+        else:
+            data = pathi.read()
+            data = dec(data)
+        if cse:
+            enc(data, patho)
+        else:
+            data = enc(data)
+            patho.write(data)
+    pathi.close()
+    patho.close()
 
 
 @cli.command("path", help=Path.__doc__, no_args_is_help=True)

@@ -17,7 +17,7 @@ def _call_proc(code, variables, *a, **kw):
         a = list(a)
         for k in v:
             a.append(kw.pop(k, None))
-    eval(code, kw)  # noqa:S307,PGH001 pylint: disable=eval-used
+    eval(code, kw)  # noqa: S307 pylint: disable=eval-used
     code = kw["_proc"]
     return code(*a)
 
@@ -35,7 +35,7 @@ def make_proc(code, variables, path, *, use_async=False):  # pylint: disable=red
         dict.
     """
     hdr = f"""\
-def _proc({ ",".join(variables) }):
+def _proc({",".join(variables)}):
     """
 
     if use_async:
@@ -71,6 +71,6 @@ def make_module(code, path):
     m = sys.modules.get(name, None)
     if m is None:
         m = ModuleType(name)
-    eval(code, m.__dict__)  # noqa:S307,PGH001 pylint: disable=eval-used
+    eval(code, m.__dict__)  # noqa: S307 pylint: disable=eval-used
     sys.modules[name] = m
     return m

@@ -43,7 +43,6 @@ __pycache__/
 *.so
 /static/ext/
 /.tested.yaml
-/tests/plugins/test.db
 .tox/
 /*.upload
 /var/

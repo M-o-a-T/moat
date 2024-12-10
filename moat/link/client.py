@@ -100,12 +100,6 @@ class Link(CtxObj):
             )
         self.logger = logging.getLogger(f"moat.link.client.{name}")
 
-    async def _cmd_other_cb(self, msg):
-        """Callback for command-channel messages from the server"""
-        self.logger.warning("Unknown message: %r", msg)
-        raise RuntimeError("No such command")
-        # TODO add client-side commands like get-state or graceful-shutdown
-
     async def _mon_server(self, *, task_status):
         async with self.mqtt.subscription(self.cfg.root) as sub:
             self._server = ValueEvent()
@@ -177,8 +171,6 @@ class Link(CtxObj):
 
         with anyio.fail_after(self.cfg.client.init_timeout):
             srv = await self.tg.start(self._read_server_link)
-
-        self._cmd_link = CmdHandler(self._process_server_cmd)
 
         while True:
             try:
@@ -283,57 +275,6 @@ class Link(CtxObj):
 
             yield self
 
-    async def _send_hello(self,srv):
-        "Send hello message, do authorization if required"
-
-        cmd = self._cmd_link
-        res = await cmd.cmd(P("i.hello"), protocol_version, self.name, srv.meta.origin, srv.data.get("auth", True))
-        it = iter(res)
-        self.link_protocol = protocol_version
-        self._server_name = srv.meta.origin
-        auth = True
-
-        try:
-            prot = next(it)
-            if prot is False:
-                raise ValueError("Protocol mismatch")
-            elif prot is None:
-                pass
-            else:
-                self.link_protocol = min(tuple(prot), protocol_version)
-
-            server_name = next(it)
-            if server_name is None:
-                pass
-            elif server_name != srv.meta.origin:
-                self.logger.warning("Server name: %r / %r", server_name, srv.meta.origin)
-
-            name = next(it)
-            if name is not None:
-                if self.name:
-                    self.logger.warning("Client name: %r / %r", name, self.name)
-                self.name = name
-
-            if not next(it):
-                raise RuntimeError("Not talking to a server")
-
-            auth = next(it)
-        except StopIteration:
-            pass
-
-        if auth is True:
-            self._login_done.set()
-        elif auth is False:
-            raise RuntimeError("Server %r didn't like us", srv.meta.origin)
-        elif isinstance(auth, str):
-            if not await self._do_auth(auth):
-                raise RuntimeError("No auth with %s", auth)
-        else:
-            for m in auth:
-                if await self._do_auth(m):
-                    break
-            else:
-                raise RuntimeError("No auth with %s", auth)
 
     def monitor(self, *a, **kw):
         "watch this path; see backend doc"
@@ -342,113 +283,3 @@ class Link(CtxObj):
     def send(self, *a, **kw):
         "send to this path; see backend doc"
         return self.backend.send(*a, **kw)
-
-
-async def _masked():
-    class _LinkDummy:
-        pass
-
-    class _LinkDead:
-        pass
-
-    async def _cmd_server(self, server, *, task_status):
-        server_updated = self._server
-        task_status = TS(task_status)
-
-        retry = 1  # initially we delay for longer
-        while True:
-            try:
-                await self._run_cmd_server(server, task_status=task_status)
-            except EOFError as exc:
-                self.logger.warning("Link to %s down", server, exc_info=exc)
-
-            # reset backoff if successful
-            if self._uptodate:
-                self._uptodate = False
-                retry = 0.1
-            else:
-                with anyio.move_on_after(retry):
-                    await server_updated.wait()
-                    server_updated = self._server
-                retry *= 1.2
-
-            server = self._current_server
-
-    async def _run_cmd_server(self, server, *, task_status):
-        async with (
-            await anyio.connect_tcp(server["host"], server["port"]) as conn,
-            run_stream(self._cmd, conn),
-        ):
-            task_status.started()
-            raise RuntimeError("obsolete")
-
-    async def foo(self):
-        if tg := False:
-            server = await tg.start(self._mon_server)
-            with anyio.fail_after(self.cfg.client.init_timeout):
-                server = await server.get()
-            await tg.start(self._cmd_server, server)
-
-        self._scan = []
-        self._stack = None
-        self._backends = {}
-
-        for p in self.cfg["dist"]:
-            path = p["path"]
-            i = len(path)
-            self._scan.extend([None] * (i - len(self._scan) + 1))
-            if (d := self._scan[i]) is None:
-                self._scan[i] = d = {}
-            d[path] = _LinkDummy(self, p)
-
-        if self._scan[0] is None:
-            self._scan[0] = {(): _LinkDead(self, "No such link")}
-
-    async def _ctx(self):
-        async with AsyncExitStack() as self._stack:
-            yield self
-
-    async def backend(self, path):
-        i = min(len(path) + 1, len(self._scan))
-        while True:
-            i -= 1
-            d = self._scan[i]
-            if d is None:
-                continue
-            d = d.get(path[:i])
-            if d is not None:
-                break
-
-        if isinstance(d, _LinkDummy):
-            if d.waiting is not None:
-                await d.waiting
-                d = self._scan[i][path[:i]]
-            else:
-                evt = d.waiting = anyio.Event()
-                cls = import_("moat.link.backend.{d.cfg['']}")
-                try:
-                    d = await self._stack.enter_async_context(cls(d.name, d.cfg))
-                except BaseException:
-                    self._scan[i][path[:i]] = _LinkDead()
-                    raise
-                finally:
-                    evt.set()
-                self._scan[i][path[:i]] = d
-
-        return d
-
-    async def get(self, path: Path, *a, **k) -> Any:
-        b = await self.backend(path)
-        return await b.get(path, *a, **k)
-
-    async def set(self, path: Path, *a, **k) -> None:  # noqa:A001
-        b = await self.backend(path)
-        return await b.set(path, *a, **k)
-
-    async def dir(self, path: Path, *a, **k) -> AsyncIterable[str | list]:  # noqa:A001
-        b = await self.backend(path)
-        return await b.dir(path, *a, **k)
-
-    async def monitor(self, path: Path, *a, **k) -> AsyncIterable[Any]:
-        b = await self.backend(path)
-        return await b.monitor(path, *a, **k)

@@ -178,35 +178,3 @@ class Node:
             for k, v in self._sub.items():
                 todo.append((_name / k, v))
 
-    def dump(self):
-        """Serialize this subtree.
-
-        Serialization consists of a sequence of
-        * prefix length (cf. .moat.util.PathShortener)
-        * sub-path
-        * data
-        * meta
-        """
-
-        todo = [(self, Path())]
-        ps = PathShortener()
-
-        while todo:
-            s, name = todo.pop()
-
-            if s:
-                d, p = ps.short(name)
-                yield d, p, s._data, s._meta  # noqa:SLF001
-
-            if s._sub is None:  # noqa:SLF001
-                continue
-            for k, v in s._sub.items():  # noqa:SLF001
-                todo.append((v, name / k))
-
-    def load(self):
-        """De-serialize this subtree."""
-        pl = PathLongener()
-        while True:
-            d, ps, data, meta, *_rest = yield
-            item = pl.long(d, ps)
-            self.set(item, data=data, meta=meta)

@@ -1,0 +1,72 @@
+#!/usr/bin/python3
+
+import asyncclick as click
+from moat.micro.main import get_link
+from moat.util import attrdict, P, yload, Path
+from moat.cmd.util import get_p
+from moat.kv.client import open_client as kv_client
+
+import anyio
+
+@click.command
+@click.option("-c","--config",type=click.File("r"),help="config file", default="/etc/distkv.cfg")
+@click.option("-l","--link", type=P, help="link name", default=P("r"))
+@click.option("-p","--path", type=P, help="path to I²C", default=P("r.i"))
+async def main(config,link,path):
+    """Read temperatures"""
+    cfg = yload(config)
+    cf = get_p(cfg["micro"]),link)
+
+    async with (
+            Dispatch(cf, run=True, sig=True) as dsp,
+            kv_client(**cfg["kv"]) as kv,
+            dsp.sub_at(path) as c:
+        thl = await m.scan()
+        tw={}
+
+        t_low=43
+        t_high=45
+        tx_low=23
+        tx_high=25
+        d = await kv.get(P("home.ass.dyn.switch.esp_s3.relay.state"))
+        t_on=d.value
+        tx_on=True
+
+        n=0
+        while True:
+            for a in thl:
+                t = await m.send(["i","wrrd"], cd=cd, i=a, buf=bytearray((5,)), n=2)
+                t = int.from_bytes(t,byteorder="big")
+                s = t & 0x1000
+                t = (t &0xFFF)/16
+                if s:
+                    t = -t
+                tw[a] = t
+                if not n%5:
+                    print(f"{a:2d} {t:7.4f}", end="   ")
+            if not n%5:
+                print()
+                await kv.set(P("home.ass.dyn.sensor.temp.bad_wall.state"), value=tw[25], idem=True)
+                await kv.set(P("home.ass.dyn.sensor.temp.bad_wall_heat.state"), value=tw[30], idem=True)
+                await kv.set(P("home.ass.dyn.sensor.temp.bad_room.state"), value=tw[24], idem=True)
+            tx=max(tw[24],tw[25])
+            if tx_on:
+                if tx > tx_high:
+                    tx_on = False
+            else:
+                if tx < tx_low:
+                    tx_on = True
+            t=tw[30]
+            if t_on:
+                if t > t_high:
+                    t_on = False
+            else:
+                if t < t_low:
+                    t_on = True
+            await kv.set(P("home.ass.dyn.switch.esp_s3.relay.cmd"), value=(t_on and tx_on))
+            await anyio.sleep(5)
+            n += 1
+
+
+click._anyio_backed="trio"
+main()

@@ -1,0 +1,103 @@
+#!/bin/bash
+
+set -ex
+
+if [ $# == 0 ] ; then
+    echo "Usage: $0 cfg.file …"
+    exit 1
+fi
+
+if [ -x "./mt" ] ; then 
+    M=./mt
+    S=micro
+    MPY=$S/lib/micropython
+    export PYTHONPATH="$(pwd)"
+elif [ -x "../mt" ] ; then 
+    M=../mt
+    S=.
+    MPY=$S/lib/micropython
+    export PYTHONPATH="$(pwd)/.."
+else
+    if test ! -v MPY ; then
+        echo "Usage: MPY=/path/to/src/micropython $0 cfg.file" >&2
+        exit 1
+    fi
+
+    M=moat
+fi
+
+cmd=()
+for c in $@ ; do
+    cmd+=("-c" "$c")
+done
+
+port=$($M ${cmd[@]} util cfg micro.setup.r.port)
+
+dev=$($M ${cmd[@]} util cfg micro.install.port)
+dir=$($M ${cmd[@]} util cfg -e micro.install.dir)
+rate=$($M ${cmd[@]} util cfg -e micro.install.rate)
+export MOAT_PORT=$dev
+board=$($M ${cmd[@]} util cfg -e micro.install.board)
+#BOARD=${dev@U}
+BOARD=
+if [ -n "$board" ] ; then
+    BOARD="${board@U}"
+fi
+
+if [ $dev = esp32 ] ; then
+    if ! type -t idf.py >/dev/null ; then
+        if ! test -v ESP ; then
+            echo "Usage: ESP=/path/to/src/esp-idf $0 ..." >&2
+            echo " or source $ESP/export.sh and retry" >&2
+            exit 1
+        fi
+        . "$ESP/export.sh"
+    fi
+    GOAL=deploy
+    test -n "$BOARD" || BOARD=ESP32_GENERIC
+elif [ $dev = esp8266 ] ; then
+    GOAL=deploy
+    test -n "$BOARD" || BOARD=ESP8266_GENERIC
+elif [ $dev = rp2 ] ; then
+    GOAL=
+    test -n "$BOARD" || BOARD=RPI_PICO
+fi
+
+git submodule update --init
+MANIFEST="$($M micro path -m)"
+pushd "$MPY"
+
+make -C ports/$dev submodules
+make -C mpy-cross
+if ! test -d ports/$dev ; then
+    echo "No port '$dev' exists ?!?" >&2
+    exit 1
+fi
+cd ports/$dev
+make -j ESPTOOL=esptool PORT=$port BAUD=$rate BOARD=${BOARD} FROZEN_MANIFEST="$MANIFEST" $GOAL
+if [ $dev = rp2 ] ; then
+    if [ ! -s $dir/INFO_UF2.TXT ] ; then
+        echo "Waiting for mount: $dir"
+        while [ ! -s $dir/INFO_UF2.TXT ] ; do
+            sleep 1
+        done
+        echo "... exists."
+    fi
+    cp build-$BOARD/firmware.uf2 $dir
+fi
+
+popd
+if [ ! -c $port ] ; then
+    echo "Waiting for port: $port"
+    while [ ! -c $port ] ; do
+        sleep 1
+    done
+    echo "... exists."
+fi
+
+echo ""
+echo "Installing MoaT. Hold tight."
+echo ""
+
+$M -VVV ${cmd[@]} micro setup -c cfg.r -r -U -s once -C "$MPY/mpy-cross/build/mpy-cross"
+

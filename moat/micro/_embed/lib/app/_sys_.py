@@ -1,0 +1,134 @@
+"""
+System access app
+"""
+from __future__ import annotations
+
+import sys
+
+from moat.util import Proxy, drop_proxy
+from moat.micro.cmd.base import BaseCmd
+from moat.micro.cmd.util.part import enc_part, get_part, set_part
+from moat.micro.stacks.util import TEST_MAGIC
+
+
+class Cmd(BaseCmd):
+    """
+    Generic system specific commands
+    """
+
+    def __init__(self, cfg):
+        super().__init__(cfg)
+        self.cache = {}
+
+    async def cmd_test(self):
+        """
+        Returns a test string: r CR n LF - NUL c ^C e ESC !
+
+        Use this to verify that nothing mangles anything.
+        """
+        return TEST_MAGIC
+
+    async def cmd_unproxy(self, p):
+        """
+        Tell the client to forget about a proxy.
+
+        @p accepts either the proxy's name, or the proxied object.
+        """
+        if p == "" or p == "-" or p[0] == "_":
+            raise RuntimeError("cannot be deleted")
+        drop_proxy(p)
+
+    async def cmd_eval(self, x, r: str | bool = False, a=None, k=None):
+        """
+        Debugging/Introspection/Evaluation.
+
+        @x can be
+        * a string: member of the eval cache
+        * a list: descend into an object
+          the first item must be a proxy, or a string (cache lookup)
+        * an object (possibly proxied): left as-is
+
+        If @p is a list, @x is replaced by successive attributes or
+        indices in @p.
+
+        Then if a or k is not None, the given function is called.
+
+        If @r is  a string, the result is stored in the eval cache
+        under that name. A list is interpreted as an accessor:
+        ``x=42, r=('a','b','c')`` assigns ``cache['a'].b.c=42``.
+        Nothing is returned in these cases.
+
+        If @r is True, its ``repr`` is returned.
+        If @r is False *or* if the result is a dict or array, it is
+        returned as a two-element list of (dict/list of simple members;
+        list of indices of complex members). For objects, a third element
+        contains the object type's name.
+        Otherwise (@r is ``None``), a proxy is returned.
+
+        """
+        if not self.cache:
+            self.cache["self"] = self
+            self.cache["root"] = self.root
+
+        if isinstance(x, str):
+            res = self.cache[x]
+        elif isinstance(x, (tuple, list)):
+            res = x[0]
+            if isinstance(res, str):
+                res = self.cache[res]
+            res = get_part(res, x[1:])
+        else:
+            res = x
+
+        # call it?
+        if a is not None or k is not None:
+            res = res(*(a or ()), **(k or {}))
+            if hasattr(res, "throw"):
+                res = await res
+
+        # store it?
+        if isinstance(r, str):
+            # None: drop from the cache
+            if res is None:
+                del self.cache[r]
+            else:
+                self.cache[r] = res
+            return res is not None
+
+        if isinstance(r, (list, tuple)):
+            set_part(self.cache, r, res)
+            return None
+
+        if isinstance(res, (dict, list, tuple)):
+            # dicts+lists always get encoded
+            res = enc_part(res)
+        elif not isinstance(res, (int, float, Proxy)):
+            if r is True:
+                return repr(res)
+            if r is False:
+                try:
+                    rd = res.__dict__
+                except AttributeError:
+                    pass
+                else:
+                    res = enc_part(rd, res.__class__.__name__)
+        return res
+
+    async def cmd_info(self):
+        """
+        Returns some basic system info.
+        """
+        d = {}
+        fb = self.root.is_fallback
+        if fb is not None:
+            d["fallback"] = fb
+        d["path"] = sys.path
+        return d
+
+    async def cmd_ping(self, m=None):
+        """
+        Echo @m.
+
+        This is for humans and testing. Don't use it for automated keepalive.
+        """
+        return {"m": m}

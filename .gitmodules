@@ -4,3 +4,12 @@
 [submodule "picolibc"]
 	path = TODO/bus/c/picolibc
 	url = https://github.com/M-o-a-T/picolibc.git
+[submodule "lib/serialpacker"]
+	path = TODO/micro/serialpacker
+	url = https://github.com/M-o-a-T/serialpacker.git
+[submodule "lib/micropython"]
+	path = TODO/micro/micropython
+	url = https://github.com/M-o-a-T/micropython.git
+[submodule "lib/mpdb"]
+	path = TODO/micro/mpdb
+	url = git@github.com:bobveringa/mpdb.git

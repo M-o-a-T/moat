@@ -4,6 +4,3 @@
 [submodule "inv"]
 	path = inv
 	url = git://git.smurf.noris.de/moat-ems-inv.git
-[submodule "battery"]
-	path = battery
-	url = git://git.smurf.noris.de/moat-ems-battery.git

@@ -201,7 +201,7 @@ async def pub(obj, **args):
 async def do_sub(client, args, cfg):
     try:
         await client.connect(
-            uri=args["uri"] or cfg.uri,
+            uri=cfg.uri,
             cleansession=args["clean_session"],
             cafile=args["ca_file"] or cfg.ca.file,
             capath=args["ca_path"] or cfg.ca.path,
@@ -270,9 +270,11 @@ async def run_sub(client, topic, args, cfg):
 @click.option("--will-retain", is_flag=True, help="Retain Will message?")
 @click.option("--extra-headers", type=click.File("r"), help="File to read extra MQTT headers from")
 @click.pass_obj
-async def sub(obj, **args):
+async def sub(obj, uri, **args):
     """Subscribe to one or more MQTT topics"""
     cfg = obj.cfg.mqtt.client
+    if uri is not None:
+        cfg["uri"] = uri
 
     client_id = args["client_id"] or cfg.get("id", None) or _gen_client_id()
 

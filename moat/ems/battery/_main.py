@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+"""
+Basic tool support
+
+"""
+from contextlib import asynccontextmanager
+import logging  # pylint: disable=wrong-import-position
+
+import asyncclick as click
+from moat.util import load_subgroup, P, Path, yprint
+from moat.micro.cmd.tree.dir import Dispatch
+
+log = logging.getLogger()
+
+
+@load_subgroup(sub_pre="moat.bms")
+@click.option("-b","--bat","--battery",type=P,help="Battery to talk to. Default:'std'")
+@click.pass_obj
+async def cli(obj, bat):
+    """Battery Manager"""
+    cfg = obj.cfg
+    if not bat:
+        try:
+            bat = cfg.ems.battery.paths["std"]
+        except KeyError:
+            raise click.UsageError(f"No default battery. Set config 'ems.battery.paths.std' or use '--batt'.")
+    if len(bat) == 1:
+        try:
+            bat = cfg.ems.battery.paths["bat[0]"]
+        except KeyError:
+            p = P("ems.battery.paths") / bat[0]
+            raise click.UsageError(f"Couldn't find path at {bat}")
+        else:
+            if not isinstance(bat,Path):
+                raise click.UsageError(f"--battery: requires a path (directly or at 'ems.battery.paths')")
+    obj.bat = bat
+
+@asynccontextmanager
+async def _bat(obj):
+    async with Dispatch(cfg, run=True) as dsp, dsp.sub_at(obj.bat) as bat:
+        yield bat
+
+@cli.group
+@click.argument("cell", type=int)
+@click.pass_obj
+async def cell(obj, cell):
+    obj.cell = cell
+
+@cell.command
+@click.pass_obj
+async def state(obj):
+    async with _bat(obj) as bat:
+        c = bat.sub_at(obj.cell)
+        p = await c.param()
+        u = await c.u()
+        t = await c.t()
+        tb = await c.tb()
+        res = dict(param=p, u=u, t=dict(cell=t,balancer=tb))
+        yprint(res, stream=obj.stdout)
+
+@cell.command
+@click.pass_obj
+async def cfg(obj):
+    print("TODO", file=sys.stderr)
+    async with _bat(obj) as bat:
+        c = bat.sub_at(obj.cell)
+        await c.foo()
+
+@cli.command
+@click.pass_obj
+async def state(obj):
+    pass
+

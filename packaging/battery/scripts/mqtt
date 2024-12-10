@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+
+from distmqtt.client import open_mqttclient
+import anyio
+from pprint import pprint
+import json
+
+ID="b827ebe51a1d"
+
+async def subs(client):
+	async with client.subscription("#") as su:
+		async for msg in su:
+			if "/History" in msg.topic:
+				continue
+			try:
+				pprint((msg.topic,json.loads(msg.data.decode("utf-8"))))
+			except ValueError:
+				pprint((msg.topic,msg.data))
+	
+
+async def main():
+	async with open_mqttclient(config=dict(uri="mqtt://localhost:1883")) as client, \
+		anyio.create_task_group() as tg:
+		tg.start_soon(subs, client)
+		while True:
+			await client.publish(f"R/{ID}/keepalive", b"")
+			await anyio.sleep(10)
+
+anyio.run(main,backend="trio")
+

@@ -1,65 +1,43 @@
-# Add any project-specific files here:
 
-
-# Sphinx docs
-docs/build/
-docs/tmp/
-
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
 *~
-\#*
 .#*
-
-# C extensions
-*.so
-
-# Distribution / packaging
-.Python
+\#*
 /build/
-/develop-eggs/
-/dist/
-/eggs/
-/lib/
-/lib64/
-/parts/
-/sdist/
-/var/
-*.egg-info/
-.installed.cfg
-*.egg
-/.eggs
-/.pybuild
-
-# Installer logs
-pip-log.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
+.cache
 .coverage
 .coverage.*
-.cache
-.pytest_cache
-nosetests.xml
 coverage.xml
-
-# Translations
+/debian/
+/develop-eggs/
+/dist/
+docs/build/
+docs/tmp/
+*.egg
+/*.egg-info/
+/.eggs/
+/eggs/
+htmlcov/
+.installed.cfg
+/lib/
+/lib64/
+# Local test tools
+*.log
 *.mo
-
 # Mr Developer
 .mr.developer.cfg
+nosetests.xml
+/parts/
+pip-log.txt
+*.pot
 .project
+/.pybuild
+__pycache__/
+*.py[cod]
 .pydevproject
-
+.pytest_cache
+.Python
 # Rope
 .ropeproject
-
-# Django stuff:
-*.log
-*.pot
-
-# Local test tools
-/kv
-/debian/
+/sdist/
+*.so
+.tox/

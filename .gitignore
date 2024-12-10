@@ -1,11 +1,11 @@
+*~
 .#*
 \#*
 /build/
 .cache
 /*.cfg
+/configs/*.cfg
 *,cover
-.coverage
-.coverage.*
 /.coverage
 /coverage.xml
 /debian/
@@ -36,6 +36,7 @@ __pycache__/
 /.pytest_cache/
 /sdist/
 *.so
+/static/ext/
 /tests/plugins/test.db
 .tox/
 /var/

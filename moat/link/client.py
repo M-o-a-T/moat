@@ -15,6 +15,8 @@ from moat.lib.cmd import CmdHandler
 from moat.lib.cmd.anyio import run as run_stream
 from moat.util import CtxObj, P, Path, Root, ValueEvent, import_
 
+from .conn import Conn
+
 from . import protocol_version
 
 from typing import TYPE_CHECKING
@@ -84,7 +86,6 @@ class Link(CtxObj):
     def __init__(self, cfg, name: str | None = None):
         self.cfg = cfg
         self.name = name
-        self._cmd = CmdHandler(self._cmd_other_cb)
         self._cmdq_w, self._cmdq_r = anyio.create_memory_object_stream(5)
         self._retry_msgs: set[BasicCmd] = set()
         self._login_done:anyio.Event=anyio.Event()
@@ -114,6 +115,8 @@ class Link(CtxObj):
                 self._current_server = msg.msg
                 self._server.set(msg.msg)
                 self._server = ValueEvent()
+
+        return self._cmd.stream_r(*a, **kw)
 
     def stream_r(self, *a, **kw) -> Awaitable:
         """
@@ -250,19 +253,34 @@ class Link(CtxObj):
 
         for remote in link:
             try:
-                async with self._connect_one(remote, srv):
+                async with self._connect_one(remote, srv) as conn:
+                    self._cmd = conn
                     await self._connect_run(task_status=task_status)
             except Exception as exc:
                 self.logger.warning("Link failed: %r", remote, exc_info=exc)
 
     @asynccontextmanager
     async def _connect_one(self, remote, srv:Message):
-        cmd = self._cmd_link
-        async with (
-            await anyio.connect_tcp(remote["host"], remote["port"]) as stream,
-            run_stream(cmd, stream),
-        ):
-            await self._send_hello(srv)
+        async with Conn(me=self.name, them=srv.meta.origin,
+                        host=remote["host"], port=remote["port"]):
+            if self.name is None:
+                self.name = self._cmd.name
+
+            auth = self._cmd_auth
+            if auth is True:
+                self._login_done.set()
+            elif auth is False:
+                raise RuntimeError("Server %r didn't like us", srv.meta.origin)
+            elif isinstance(auth, str):
+                if not await self._do_auth(auth):
+                    raise RuntimeError("No auth with %s", auth)
+            else:
+                for m in auth:
+                    if await self._do_auth(m):
+                        break
+                else:
+                    raise RuntimeError("No auth with %s", auth)
+
             yield self
 
     async def _send_hello(self,srv):

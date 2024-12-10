@@ -90,9 +90,11 @@ class Backend(CtxObj, metaclass=ABCMeta):
     async def monitor(
         self,
         topic: Path,
-        qos: int | None = None,
+        qos: QoS | None = None,
         codec: Codec | None = None,
         raw: bool | None = False,
+        retained: bool = True,
+        echo: bool = False,
     ) -> AsyncIterator[AsyncIterator[Message]]:
         """
         Return an async iterator that listens to this topic.

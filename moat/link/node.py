@@ -69,6 +69,12 @@ class Node:
             raise ValueError("empty node")
         return self._data
 
+    def keys(self):
+        return self._sub.keys()
+
+    def items(self):
+        return self._sub.items()
+
     def __bool__(self) -> bool:
         "check if data exist"
         return self._data is not NotGiven
@@ -144,9 +150,10 @@ class Node:
 
     async def walk(
         self,
-        proc: Callable[Awaitable[bool], [Node, Path]],
+        proc: Callable[Awaitable[bool], [Path, Node]],
         max_depth=-1,
         min_depth=0,
+        timestamp=0,
         _depth=0,
         _name=Path(),  # noqa:B008
     ):
@@ -155,21 +162,21 @@ class Node:
 
         If `proc` raises `StopAsyncIteration`, chop this subtree.
         """
-        todo = [(self, _name)]
+        todo = [(_name, self)]
 
         while todo:
-            s, n = todo.pop()
+            s, p = todo.pop()
 
-            if min_depth <= len(n):
+            if min_depth <= len(p) and s.meta.timestamp >= timestamp:
                 try:
-                    await proc(s, n)
+                    await proc(p, s)
                 except StopAsyncIteration:
                     continue
-            if max_depth == len(n):
+            if max_depth == len(p):
                 continue
 
             for k, v in self._sub.items():
-                todo.append((v, _name / k))
+                todo.append((_name / k, v))
 
     def dump(self):
         """Serialize this subtree.

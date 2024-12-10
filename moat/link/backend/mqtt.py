@@ -46,7 +46,7 @@ class Backend(_Backend):
 
     client = None
 
-    def __init__(self, cfg, will: attrdict | None = None, name=None, meta: bool = True):
+    def __init__(self, cfg, will: attrdict | None = None, name:str|None = None, meta: bool = True):
         """
         Connect to MQTT.
 

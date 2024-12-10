@@ -1,7 +1,11 @@
-# -*- encoding: utf-8 -*-
+"""
+This code implements a transfer service that shuffles messages from the MoaT
+bus to MQTT.
+"""
+
+from __future__ import annotations
 
 import asyncclick as click
-import trio
 from anyio_serial import Serial
 from contextlib import asynccontextmanager
 from distmqtt.client import open_mqttclient
@@ -45,7 +49,7 @@ async def run(uri='mqtt://localhost/', topic_in="test/moat/in", topic_out="test/
                             await CM.send(**msg.data)
 
 
-@click.command("server")
+@cli.command("server")
 @click.option("-u","--uri", default='mqtt://localhost/', help="URI of MQTT server")
 @click.option("-i","--topic-in", default='test/moat/in', help="Topic to send incoming messages to")
 @click.option("-o","--topic-out", default='test/moat/out', help="Topic to read outgoing messages from")
@@ -53,12 +57,12 @@ async def run(uri='mqtt://localhost/', topic_in="test/moat/in", topic_out="test/
 @click.option("-b","--baud", type=int, default=57600, help="Serial port baud rate")
 @click.option("-d","--debug", is_flag=True, help="Debug?")
 async def _main(debug, **kw):
+    """
+    Simple message transfer from MQTT to MoaT-bus-serial and back.
+    """
     logging.basicConfig(level=logging.DEBUG if debug else logging.WARNING)
     l = logging.getLogger("distmqtt.mqtt.protocol.handler")
     l.setLevel(logging.INFO)
     l = logging.getLogger("transitions.core")
     l.setLevel(logging.WARNING)
     await run(**kw)
-
-if __name__ == "__main__":
-    trio.run(_main)

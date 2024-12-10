@@ -1,7 +1,8 @@
 #!/bin/bash
 
 mkdir -p /run/moat-test
-. "$(dirname "$0")/config.sh"
+D="$(dirname "$0")"
+. "$D/config.sh"
 BUS="${BUS:-./test}"
 
 # Terminal? set window title
@@ -11,11 +12,11 @@ case "$TERM" in
 		;;
 esac
 
-cd "$(dirname "$0")/.."
+cd "$D/.."
 if [ "$CODE" = "gate" ] ; then
-	P="distkv -vv client moatbus bus $BUS run -s"
+	P="../mt -VV bus run $BUS -s"
 else
 	P="miniterm $DEV 57600"
 fi
 
-bash -x ./utils/runner /run/moat-test/test_$PILL env PYTHONPATH=moat-bus $P
+bash -x ./utils/runner /run/moat-test/test_$PILL $P

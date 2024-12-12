@@ -749,7 +749,6 @@ class Data:
                 self.pid.flow.move_to(
                     self.cfg.misc.start.flow.init.rate,
                     self.cfg.misc.start.flow.init.pwm,
-                    t=self.time,
                 )
                 await self.set_flow_pwm(self.cfg.misc.start.flow.init.pwm)
 
@@ -764,7 +763,6 @@ class Data:
                 self.pid.flow.move_to(
                     self.cfg.misc.start.flow.power.rate,
                     self.cfg.misc.start.flow.power.pwm,
-                    t=self.time,
                 )
                 # self.pid.flow.move_to(self.r_flow, self.state.last_pwm)
                 await self.set_load(self.cfg.misc.start.power)
@@ -789,7 +787,7 @@ class Data:
                 else:
                     self.state.setdefault("scaled_low", 1.0)
                     await self.pid.flow.log_value(0)
-                self.pid.pump.move_to(self.t_out, self.state.last_pwm, t=self.time)
+                self.pid.pump.move_to(self.t_out, self.state.last_pwm)
                 self.state.load_last = None
 
             elif run == Run.ice:  # wait for ice condition to stop
@@ -801,9 +799,7 @@ class Data:
                     t_change_max = self.cfg.lim.times.ice
                 heat_off = True
                 await self.pid.flow.setpoint(self.cfg.misc.de_ice.flow)
-                self.pid.flow.move_to(
-                    self.cfg.misc.de_ice.flow, self.cfg.misc.de_ice.pwm, t=self.time
-                )
+                self.pid.flow.move_to(self.cfg.misc.de_ice.flow, self.cfg.misc.de_ice.pwm)
 
                 await self.cl_set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off)
                 await self.cl_set(self.cfg.cmd.power, value=0)
@@ -1034,7 +1030,7 @@ class Data:
                 if self.r_flow >= self.cfg.misc.start.flow.init.rate * 3 / 4:
                     run = Run.wait_power
                     continue
-                l_flow = await self.pid.flow(self.r_flow, t=self.time)
+                l_flow = await self.pid.flow(self.r_flow)
                 print(f"Flow: {self.r_flow :.1f} : {l_flow :.3f}       ")
                 await self.set_flow_pwm(l_flow)
 
@@ -1042,7 +1038,7 @@ class Data:
                 if self.m_power >= self.cfg.misc.min_power:
                     run = Run.temp
                     continue
-                l_flow = await self.pid.flow(self.r_flow, t=self.time)
+                l_flow = await self.pid.flow(self.r_flow)
                 print(f"Flow: {self.r_flow :.1f} : {l_flow :.3f} p={self.m_power :.1f}       ")
                 await self.set_flow_pwm(l_flow)
 
@@ -1218,16 +1214,16 @@ class Data:
             if self.t_out > self.cfg.adj.max_max:
                 l_pump = 1
                 i_pump = ()
-                self.pid.pump.move_to(self.t_out, 1.0, t=self.time)
+                self.pid.pump.move_to(self.t_out, 1.0)
                 # emergency handler
             else:
-                l_pump, i_pump = await self.pid.pump(self.t_out, t=self.time, split=True)
-                # self.pid.flow.move_to(self.r_flow, l_pump, t=self.time)
+                l_pump, i_pump = await self.pid.pump(self.t_out, split=True)
+                # self.pid.flow.move_to(self.r_flow, l_pump)
             self.state.last_pwm = l_pump
 
-            l_load, i_load = await self.pid.load(t_cur, t=self.time, split=True)
-            l_buffer, i_buffer = await self.pid.buffer(self.tb_low, t=self.time, split=True)
-            l_limit, i_limit = await self.pid.limit(self.t_out, t=self.time, split=True)
+            l_load, i_load = await self.pid.load(t_cur, split=True)
+            l_buffer, i_buffer = await self.pid.buffer(self.tb_low, split=True)
+            l_limit, i_limit = await self.pid.limit(self.t_out, split=True)
 
             if True or cm_heat and tw_low <= th_adj:
                 w = val2pos(t_adj - self.cfg.adj.more, t_cur, t_adj)
@@ -1374,15 +1370,15 @@ class Data:
                 await self.pid.p_load.setpoint(t_load)
                 await self.pid.p_buffer.setpoint(t_buffer)
 
-                l_buffer = await self.pid.p_buffer(self.tb_low, t=t)
+                l_buffer = await self.pid.p_buffer(self.tb_low)
                 w = val2pos(self.t_adj - self.cfg.adj.more, self.tb_heat, self.t_adj)
                 l_buf = l_buffer
 
-                l_load, i_load = await self.pid.p_load(t_cur, t=t, split=True)
+                l_load, i_load = await self.pid.p_load(t_cur, split=True)
                 if self.cm_pellet_force is not None:
                     # external forcing input
                     lim = self.cm_pellet_force
-                    self.pid.p_load.move_to(self.tb_heat, lim, t=t)
+                    self.pid.p_load.move_to(self.tb_heat, lim)
                     r = "F"
                 elif t_cur + self.cfg.adj.pellet.low < self.state.pp_load.setpoint:
                     r = "B"
@@ -1393,7 +1389,6 @@ class Data:
                     self.pid.p_load.move_to(
                         self.tb_heat + (t_load - self.tb_heat) * self.cfg.adj.pellet.preload.low,
                         1.0,
-                        t=t,
                     )
                 elif self.wp_on:
                     r = "C"
@@ -1401,7 +1396,6 @@ class Data:
                     self.pid.p_load.move_to(
                         self.tb_heat + (t_load - self.tb_heat) * self.cfg.adj.pellet.preload.wp,
                         1.0,
-                        t=t,
                     )
                     lim = 1.0
                 else:
@@ -1480,8 +1474,8 @@ class Data:
                 print("  PELLET ON  ")
                 run = True
 
-                self.pid.p_load.move_to(self.tb_heat, 1.0, t=self.time)
-                self.pid.p_buffer.move_to(self.tb_low, 1.0, t=self.time)
+                self.pid.p_load.move_to(self.tb_heat, 1.0)
+                self.pid.p_buffer.move_to(self.tb_low, 1.0)
 
             elif run and (
                 self.m_air > self.cfg.misc.pellet.current
@@ -1600,8 +1594,8 @@ class Data:
         """
         Flow handler while not operational
         """
-        l_flow = await self.pid.flow(self.r_flow, t=self.time)
-        l_temp = await self.pid.pump(self.t_out, t=self.time)
+        l_flow = await self.pid.flow(self.r_flow)
+        l_temp = await self.pid.pump(self.t_out)
         print(
             f"t={self.time%1000 :03.0f}",
             f"Pump:{l_flow :.3f}/{l_temp :.3f}",
@@ -1612,8 +1606,8 @@ class Data:
         res = max(l_flow, l_temp)
         if use_min:
             res = max(res, self.cfg.misc.de_ice.min)
-        # self.pid.flow.move_to(self.r_flow, res, t=self.time)
-        # self.pid.pump.move_to(self.t_out, res, t=self.time)
+        # self.pid.flow.move_to(self.r_flow, res)
+        # self.pid.pump.move_to(self.t_out, res)
         await self.set_flow_pwm(res)
         self.state.last_pump = res
 

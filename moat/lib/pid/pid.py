@@ -224,7 +224,7 @@ class CPID(PID):
 
             state: foo
     """
-    def __init__(self, cfg, state=None):
+    def __init__(self, cfg, state=None, t=None):
         """
         @cfg: our configuration. See above.
         @state: the state storage. Ours is at ``state[cfg.state]``.
@@ -238,7 +238,7 @@ class CPID(PID):
         else:
             s = attrdict()
         self.state = s
-        self.set_initial_value(time(), s.get("e",0), s.get("i",0))
+        self.set_initial_value(s.get("t", t or time()), s.get("e",0), s.get("i",0))
         s.setdefault("setpoint",None)
 
     def setpoint(self, setpoint):
@@ -259,13 +259,15 @@ class CPID(PID):
 
     def move_to(self, i, o, t=None):
         """
-        Tell the controller that this input shall result in that output, for now.
+        Tell the controller that this input shall result in that output.
         """
         if t is None:
             t = time()
         self.t0 = t
-        self.i0 = o-(self.state.setpoint-i)*self.Kp
-        self.e0 = self.state.setpoint-i
+        if self.state.setpoint is not None:
+            i -= self.state.setpoint
+            self.i0 = o+i*self.Kp
+            self.e0 = i
 
     def __call__(self, i, t=None, split=False):
         if t is None:

@@ -259,13 +259,15 @@ class CPID(PID):
 
     def move_to(self, i, o, t=None):
         """
-        Tell the controller that this input shall result in that output, for now.
+        Tell the controller that this input shall result in that output.
         """
         if t is None:
             t = time()
         self.t0 = t
-        self.i0 = o-(self.state.setpoint-i)*self.Kp
-        self.e0 = self.state.setpoint-i
+        if self.state.setpoint is not None:
+            i -= self.state.setpoint
+            self.i0 = o+i*self.Kp
+            self.e0 = i
 
     def __call__(self, i, t=None, split=False):
         if t is None:

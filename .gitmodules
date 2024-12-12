@@ -9,4 +9,4 @@
 	url = https://github.com/M-o-a-T/micropython.git
 [submodule "lib/mpdb"]
 	path = TODO/micro/mpdb
-	url = git@github.com:bobveringa/mpdb.git
+	url = https://github.com/bobveringa/mpdb.git

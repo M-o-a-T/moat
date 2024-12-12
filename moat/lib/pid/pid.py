@@ -224,7 +224,7 @@ class CPID(PID):
 
             state: foo
     """
-    def __init__(self, cfg, state=None):
+    def __init__(self, cfg, state=None, t=None):
         """
         @cfg: our configuration. See above.
         @state: the state storage. Ours is at ``state[cfg.state]``.
@@ -238,7 +238,7 @@ class CPID(PID):
         else:
             s = attrdict()
         self.state = s
-        self.set_initial_value(time(), s.get("e",0), s.get("i",0))
+        self.set_initial_value(s.get("t", t or time()), s.get("e",0), s.get("i",0))
         s.setdefault("setpoint",None)
 
     def setpoint(self, setpoint):

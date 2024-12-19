@@ -474,6 +474,9 @@ class Stream:
         self._msg = None
 
     def _set_msg(self, msg):
+        """
+        A message has arrived on this stream. Store and set an event.
+        """
         if self.stream_in == S_END:
             pass  # happens when msg2 is set
         else:
@@ -496,6 +499,10 @@ class Stream:
             self._ended()
 
     def _ended(self):
+        """
+        If message processing is finished, finalize processing this
+        message. Otherwise do nothing.
+        """
         if self.stream_in != S_END:
             return
         if self.stream_out != S_END:

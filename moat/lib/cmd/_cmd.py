@@ -179,12 +179,12 @@ class CmdHandler(CtxObj):
         finally:
             await msg.kill()
 
-    def add(self, msg):
+    def _add(self, msg):
         if msg.stream_in != S_NEW or msg.stream_out != S_NEW:
             raise RuntimeError(f"Add while not new {msg}")
         self._msgs[msg.id] = msg
 
-    def drop(self, msg):
+    def _drop(self, msg):
         if msg.stream_in != S_END or msg.stream_out != S_END:
             raise RuntimeError(f"Drop while in progress {msg}")
         del self._msgs[msg.id]
@@ -426,7 +426,7 @@ class Stream:
             if self.stream_in == S_ON:
                 self.stream_in = S_OFF
 
-        self.ended()
+        self._ended()
 
     def kill_nc(self, exc=None):
         """
@@ -489,16 +489,16 @@ class Stream:
         if self.stream_in != S_END:
             self.cmd_in = Event()
         else:
-            self.ended()
+            self._ended()
 
-    def ended(self):
+    def _ended(self):
         if self.stream_in != S_END:
             return
         if self.stream_out != S_END:
             return
         if self.parent is None:
             return
-        self.parent.drop(self)
+        self.parent._drop(self)  # QA
         self.parent = None
 
     async def _recv(self, msg):
@@ -558,7 +558,7 @@ class Stream:
                     self._send_nowait([E_NO_STREAM], err=True)
                     self.stream_out = S_END
 
-        self.ended()
+        self._ended()
 
     def _sendfix(self, stream: bool, err: bool, _kill: bool):
         if stream is None:
@@ -577,7 +577,7 @@ class Stream:
         await self.parent._send(
             self._i | (B_STREAM if stream else 0) | (B_ERROR if err else 0), d, kw
         )
-        self.ended()
+        self._ended()
 
     def _send_nowait(self, d, kw=None, stream=False, err=False, _kill=False) -> None:
         if self.parent is None:
@@ -586,7 +586,7 @@ class Stream:
         self.parent._send_nowait(
             self._i | (B_STREAM if stream else 0) | (B_ERROR if err else 0), d, kw
         )
-        self.ended()
+        self._ended()
 
     async def _skipped(self):
         """

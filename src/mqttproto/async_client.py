@@ -601,7 +601,7 @@ class AsyncMQTTClient:
     async def subscribe(
         self,
         *patterns: str,
-        maximum_qos: QoS = QoS.EXACTLY_ONCE,
+        qos: QoS = QoS.EXACTLY_ONCE,
         no_local: bool = False,
         retain_as_published: bool = True,
         retain_handling: RetainHandling = RetainHandling.SEND_RETAINED,
@@ -611,7 +611,7 @@ class AsyncMQTTClient:
 
         :param patterns: either exact topic names, or patterns containing wildcards
             (``+`` or ``#``)
-        :param maximum_qos: maximum QoS to allow (messages matching the given patterns
+        :param qos: maximum QoS to request (messages matching the given patterns
             but with higher QoS will be downgraded to that QoS)
         :param no_local: if ``True``, messages published by this client will not be sent
             back to it via this subscription
@@ -689,13 +689,13 @@ class AsyncMQTTClient:
                                 f"Already subscribed: cannot get retained messages for {pattern}"
                             )
 
-                        if subscr.max_qos >= maximum_qos:
+                        if subscr.max_qos >= qos:
                             # nothing to do
                             continue
                     else:
                         subscr = ClientSubscription(
                             pattern=pattern,
-                            max_qos=maximum_qos,
+                            max_qos=qos,
                             no_local=no_local,
                             retain_as_published=retain_as_published,
                             retain_handling=retain_handling,
@@ -714,22 +714,22 @@ class AsyncMQTTClient:
                     if subscr.subscription_id:
                         # every topic has (in fact, needs) its own ID.
                         subscribe_packet_id = self._state_machine.subscribe(
-                            [subscr], max_qos=maximum_qos
+                            [subscr], max_qos=qos
                         )
                         subscribe_op = MQTTSubscribeOperation(subscribe_packet_id)
                         await self._run_operation(subscribe_op)
-                        subscr.max_qos = max(maximum_qos, subscr.max_qos)
+                        subscr.max_qos = max(qos, subscr.max_qos)
                     else:
                         to_subscribe.append(subscr)
 
                 if to_subscribe:
                     # no subscription IDs, so do it all at once
                     subscribe_packet_id = self._state_machine.subscribe(
-                        to_subscribe, max_qos=maximum_qos
+                        to_subscribe, max_qos=qos
                     )
                     subscribe_op = MQTTSubscribeOperation(subscribe_packet_id)
                     await self._run_operation(subscribe_op)
                     for subscr in to_subscribe:
-                        subscr.max_qos = max(maximum_qos, subscr.max_qos)
+                        subscr.max_qos = max(qos, subscr.max_qos)
 
             yield subscription

@@ -176,6 +176,9 @@ class CmdHandler(CtxObj):
             if len(res) > 1 and isinstance(res[-1],dict) and not res[-1] and isinstance(res[-2],dict):
                 res = res[:-1]
             return res
+        except NoCmd as e:
+            i = e.args[0]
+            raise NoCmd(i, a[0][i], a, kw) from None
         finally:
             await msg.kill()
 
@@ -417,6 +420,7 @@ class Stream:
                 )
             else:  # BaseException
                 await self._send([E_CANCEL], err=True, _kill=True)
+                raise
 
         if self._recv_q is not None:
             try:

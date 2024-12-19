@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from typing import Callable, Any, Awaitable, Protocol, AsyncContextManager
 
     class MsgIn(Protocol):
-        def __call__(self, msg: Msg, /) -> Any: ...
+        def __call__(self, msg: Stream, /) -> Any: ...
 
 
 logger = logging.getLogger(__name__)
@@ -134,7 +134,7 @@ class CmdHandler(CtxObj):
     """
 
     def __init__(self, callback: MsgIn):
-        self._msgs: dict[int, Msg] = {}
+        self._msgs: dict[int, Stream] = {}
         self._id = 1
         self._send_q = Queue(9)
         self._recv_q = Queue(99)
@@ -156,15 +156,15 @@ class CmdHandler(CtxObj):
         self._id = i
         return i
 
-    def cmd_in(self) -> Awaitable[Msg]:
+    def cmd_in(self) -> Awaitable[Stream]:
         """Retrieve new incoming commands"""
         return self._recv_q.get()
 
     async def cmd(self, *a, **kw):
         """Send a simple command, receive a simple reply."""
         i = self._gen_id()
-        self._msgs[i] = msg = Msg(self, i, s_in=False, s_out=False)
-        self.add(msg)
+        self._msgs[i] = msg = Stream(self, i, s_in=False, s_out=False)
+        self._add(msg)
         await msg._send(a, kw if kw else None)
         try:
             await msg.replied()
@@ -229,19 +229,19 @@ class CmdHandler(CtxObj):
                         msg._recv_q = None
                     else:
                         assert msg.id < 0, msg
-                        msg.ended()
+                        msg._ended()
 
         await self._tg.start(_wrap, msg)
 
-    def stream_r(self, *data, **kw) -> AsyncContextManager[Msg]:
+    def stream_r(self, *data, **kw) -> AsyncContextManager[Stream]:
         """Start an incoming stream"""
         return self._stream(data, kw, True, False)
 
-    def stream_w(self, *data, **kw) -> AsyncContextManager[Msg]:
+    def stream_w(self, *data, **kw) -> AsyncContextManager[Stream]:
         """Start an outgoing stream"""
         return self._stream(data, kw, False, True)
 
-    def stream_rw(self, *data, **kw) -> AsyncContextManager[Msg]:
+    def stream_rw(self, *data, **kw) -> AsyncContextManager[Stream]:
         """Start a bidirectional stream"""
         return self._stream(data, kw, True, True)
 
@@ -249,7 +249,7 @@ class CmdHandler(CtxObj):
     async def _stream(self, d, kw, sin, sout):
         "Generic stream handler"
         i = self._gen_id()
-        self._msgs[i] = msg = Msg(self, i)
+        self._msgs[i] = msg = Stream(self, i)
 
         # avoid creating an inner cancel scope
         async with CancelScope() as cs:
@@ -301,7 +301,7 @@ class CmdHandler(CtxObj):
             elif self._in_cb is None:
                 self._send_nowait((i << 2) | B_ERROR, [E_NO_CMD])
             else:
-                self._msgs[i] = conv = Msg(self, i)
+                self._msgs[i] = conv = Stream(self, i)
                 await self._handle(conv)
                 await conv._recv(msg)
         else:
@@ -324,7 +324,7 @@ class CmdHandler(CtxObj):
 
 
 @_exp
-class Msg:
+class Stream:
     """
     This object handles one conversation.
     It's also used as a message container.
@@ -367,7 +367,7 @@ class Msg:
         return k in self.data
 
     def __repr__(self):
-        r = f"<Msg:{self.id}"
+        r = f"<Stream:{self.id}"
         if self.stream_out != S_END:
             r += " O"
             if self.stream_out == S_NEW:
@@ -667,13 +667,13 @@ class Msg:
         self.s_out = False
         # TODO
 
-    def stream_r(self, *data, **kw) -> AsyncContextManager[Msg]:
+    def stream_r(self, *data, **kw) -> AsyncContextManager[Stream]:
         return self._stream(data, kw, True, False)
 
-    def stream_w(self, *data, **kw) -> AsyncContextManager[Msg]:
+    def stream_w(self, *data, **kw) -> AsyncContextManager[Stream]:
         return self._stream(data, kw, False, True)
 
-    def stream_rw(self, *data, **kw) -> AsyncContextManager[Msg]:
+    def stream_rw(self, *data, **kw) -> AsyncContextManager[Stream]:
         return self._stream(data, kw, True, True)
 
     @asynccontextmanager

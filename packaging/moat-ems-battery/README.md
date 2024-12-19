@@ -55,7 +55,7 @@ Add a "BMS" app to the "moat.micro" configuration::
       …
 
 The "bat1" section (or however you want to name it) is described in 
-`moat/ems/battery/_config.yaml`. More extensive documentation is TODO.
+`moat/ems/battery/_cfg.yaml`. More extensive documentation is TODO.
 
 Start the client and multiplexer normally; the MoaT BMS will run as part of
 the multiplexer.

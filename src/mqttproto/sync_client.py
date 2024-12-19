@@ -113,14 +113,14 @@ class MQTTClient:
     def subscribe(
         self,
         *patterns: str,
-        maximum_qos: QoS = QoS.EXACTLY_ONCE,
+        qos: QoS = QoS.EXACTLY_ONCE,
         no_local: bool = False,
         retain_as_published: bool = True,
         retain_handling: RetainHandling = RetainHandling.SEND_RETAINED,
     ) -> Generator[MQTTSubscription, None, None]:
         async_cm = self._async_client.subscribe(
             *patterns,
-            maximum_qos=maximum_qos,
+            qos=qos,
             no_local=no_local,
             retain_as_published=retain_as_published,
             retain_handling=retain_handling,

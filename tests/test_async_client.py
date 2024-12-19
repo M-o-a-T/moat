@@ -24,7 +24,7 @@ async def test_publish_subscribe(qos_sub: QoS, qos_pub: QoS) -> None:
         if qos_pub > client.maximum_qos:
             return  # TODO add pytest.skip
 
-        async with client.subscribe("test/+", maximum_qos=qos_sub) as messages:
+        async with client.subscribe("test/+", qos=qos_sub) as messages:
             await client.publish("test/text", "test åäö", qos=qos_pub)
             await client.publish("test/binary", b"\x00\xff\x00\x1f", qos=qos_pub)
             packets: list[MQTTPublishPacket] = []

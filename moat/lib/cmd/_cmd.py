@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     class MsgIn(Protocol):
         def __call__(self, msg: Stream, /) -> Any: ...
 
+__all__ = ["Stream", "CmdHandler", "StreamError",
+           "StopMe","NoStream","NoCmd","NoCmds","WantsStream","MustStream"]
 
 logger = logging.getLogger(__name__)
 
@@ -73,36 +75,6 @@ class Flow:
 
 
 @_exp
-class StopMe(RuntimeError):
-    pass
-
-
-@_exp
-class NoStream(RuntimeError):
-    pass
-
-
-@_exp
-class NoCmds(RuntimeError):
-    pass
-
-
-@_exp
-class NoCmd(RuntimeError):
-    pass
-
-
-@_exp
-class WantsStream(RuntimeError):
-    pass
-
-
-@_exp
-class MustStream(RuntimeError):
-    pass
-
-
-@_exp
 class StreamError(RuntimeError):
     def __new__(cls, msg):
         if len(msg) == 1 and isinstance((m := msg[0]), int):
@@ -114,12 +86,49 @@ class StreamError(RuntimeError):
                 return NoStream()
             elif m == E_MUST_STREAM:
                 return MustStream()
+            elif m == E_SKIP:
+                return SkippedData()
             elif m == E_NO_CMDS:
                 return NoCmds()
             elif m <= E_NO_CMD:
                 return NoCmd(E_NO_CMD - m)
         return super().__new__(cls)
 
+    pass
+
+
+@_exp
+class StopMe(StreamError):
+    pass
+
+
+@_exp
+class SkippedData(StreamError):
+    pass
+
+
+@_exp
+class NoStream(StreamError):
+    pass
+
+
+@_exp
+class NoCmds(StreamError):
+    pass
+
+
+@_exp
+class NoCmd(StreamError):
+    pass
+
+
+@_exp
+class WantsStream(StreamError):
+    pass
+
+
+@_exp
+class MustStream(StreamError):
     pass
 
 

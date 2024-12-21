@@ -37,7 +37,7 @@ Usage
         if msg.cmd[0] == "gimme data":
             async with msg.stream_w("Start") as st:
                 for i in range(10):
-                    await st.send(i+msg.data["x"])
+                    await st.send(i+msg.kw["x"])
                 return "OK I'm done"
 
         if msg.cmd[0] == "alive":
@@ -66,26 +66,26 @@ Usage
 
         def request():
             # streaming data in
-            msg = await tr.cmd("Start", x=123)
+            msg, = await tr.cmd("Start", x=123)
             print("Start", msg)
             async with tr.stream_r("gimme data") as st:
                 print("They are starting", st.msg)
                 async for msg in st:
-                    print("I got", msg)
+                    print("I got", msg.args[0])
             print("They are done", st.msg)
             # may be None if they didn't send a stream
 
         def int_stream():
             # streaming data out
             async with tr.stream_w("alive") as st:
-                print("They replied", st.msg)
+                print("They replied", st.args)
                 i = 0
                 while i < 100:
                     await st.send(i)
                     i += 1
                     anyio.sleep(1/10)
-                st.msg = "The end."
-            print("I am done", st.msg)
+                await st.result("The end.")
+            print("I am done", st.msg[0])
             
             
         tg.start_soon(reader)

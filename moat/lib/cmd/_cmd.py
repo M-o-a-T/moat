@@ -181,10 +181,8 @@ class CmdHandler(CtxObj):
             await msg.kill(exc)
             raise
         try:
-            res = msg._msg.unwrap()
-            if len(res) > 1 and isinstance(res[-1],dict) and not res[-1] and isinstance(res[-2],dict):
-                res = res[:-1]
-            return res
+            msg._unwrap()
+            return msg
         except NoCmd as e:
             i = e.args[0]
             raise NoCmd(i, a[0][i], a, kw) from None
@@ -338,11 +336,15 @@ class Stream:
     This object handles one conversation.
     It's also used as a message container.
 
-    The last non-streamed incoming message is available in @msg.
-    The first item in the message is stored in @cmd, if the last item is a
-    mapping it's in @data and individual keys can be accessed by indexing
-    the message.
+    The last non-streamed incoming message's data are available in @msg.
+    The first item of an initial message is stored in @cmd, if the last
+    item is a mapping it's in @kw; the individual items can be accessed
+    directly by indexing the message.
     """
+
+    _cmd: Any  # first element of the message
+    _args:list[Any]
+    _kw:dict[str,Any]
 
     def __init__(self, parent: CmdHandler, mid: int, qlen=42, s_in=True, s_out=True):
         self.parent = parent
@@ -355,9 +357,7 @@ class Stream:
         self.cmd_in: Event = Event()
         self.msg2 = None
 
-        self._msg: list = None
-        self._cmd: Any = None  # first element of the message
-        self._data: dict = {}  # last element, if dict
+        self._msg: outcome.Outcome = None
 
         self._recv_q = Queue(qlen) if s_in else None
         self._recv_qlen = qlen
@@ -370,10 +370,19 @@ class Stream:
         self._initial = False
 
     def __getitem__(self, k):
-        return self.data[k]
+        if isinstance(k,int):
+            return self._args[k]
+        return self._kw[k]
 
     def __contains__(self, k):
-        return k in self.data
+        if isinstance(k,int):
+            return 0 <= k < len(self._args)
+        return k in self._kw
+
+    def __iter__(self):
+        if self._kw:
+            raise ValueError("This message contains keywords.")
+        return iter(self._args)
 
     def __repr__(self):
         r = f"<Stream:{self.id}"
@@ -474,7 +483,7 @@ class Stream:
         if not isinstance(self._msg, outcome.Outcome):
             return
         msg = self._msg.unwrap()
-        self._kw = msg.pop() if isinstance(msg[-1], dict) else None
+        self._kw = msg.pop() if msg and isinstance(msg[-1], dict) else {}
         self._cmd = msg.pop(0) if self._initial else None
         self._args = msg
         self._msg = None

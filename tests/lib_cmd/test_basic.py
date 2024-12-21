@@ -2,11 +2,36 @@ from __future__ import annotations
 
 import pytest
 import anyio
+from moat.lib.cmd import StreamError
 from tests.lib_cmd.scaffold import scaffold
 
 
 @pytest.mark.anyio
-async def test_basic():
+@pytest.mark.parametrize("a_s", [(),("foo"),(12,34)])
+@pytest.mark.parametrize("a_r", [(),("bar"),(2,3)])
+@pytest.mark.parametrize("k_s", [{},dict(a=42)])
+@pytest.mark.parametrize("k_r", [{},dict(b=21)])
+async def test_basic(a_s,a_r,k_s,k_r):
+    async def handle(msg):
+        assert msg.cmd == "Test"
+        assert tuple(msg.args) == tuple(a_s)
+        if not msg.kw:
+            assert not k_s
+        else:
+            assert msg.kw == k_s
+        await msg.result(*a_r,**k_r)
+
+        return {"C": msg.cmd, "R": tuple(msg.args)}
+
+    async with scaffold(handle, None) as (a, b):
+        # note the comma
+        res = await b.cmd("Test", *a_s,**k_s)
+        assert tuple(res.args) == tuple(a_r)
+        assert res.kw == k_r
+
+
+@pytest.mark.anyio
+async def test_basic_res():
     async def handle(msg):
         assert msg.cmd == "Test"
         assert tuple(msg.args) == (123,)
@@ -16,6 +41,19 @@ async def test_basic():
         # note the comma
         res, = await b.cmd("Test", 123)
         assert res == {"C":"Test", "R": (123,)}
+
+
+@pytest.mark.anyio
+async def test_error():
+    async def handle(msg):
+        raise RuntimeError("Duh", msg.args)
+
+    async with scaffold(handle, None) as (a, b):
+        with pytest.raises(StreamError) as err:
+            res = await b.cmd("Test", 123)
+            print(f"OWCH: result is {res !r}")
+        assert err.match("123")
+        assert err.match("Duh")
 
 
 @pytest.mark.anyio
@@ -67,7 +105,7 @@ async def test_return2():
     async with scaffold(handle, None) as (a, b):
         # neither a comma nor an index here
         res = await b.cmd("Test", 123)
-        assert res == ["Foo", 234]
+        assert res.args == ["Foo", 234]
         print("DONE")
 
 

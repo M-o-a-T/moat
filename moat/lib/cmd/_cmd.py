@@ -76,22 +76,22 @@ class Flow:
 
 @_exp
 class StreamError(RuntimeError):
-    def __new__(cls, msg):
+    def __new__(cls, msg=()):
         if len(msg) == 1 and isinstance((m := msg[0]), int):
             if m >= 0:
                 return Flow(m)
             elif m == E_UNSPEC:
-                return StopMe()
+                return super().__new__(StopMe)
             elif m == E_NO_STREAM:
-                return NoStream()
+                return super().__new__(NoStream)
             elif m == E_MUST_STREAM:
-                return MustStream()
+                return super().__new__(MustStream)
             elif m == E_SKIP:
-                return SkippedData()
+                return super().__new__(SkippedData)
             elif m == E_NO_CMDS:
-                return NoCmds()
+                return super().__new__(NoCmds)
             elif m <= E_NO_CMD:
-                return NoCmd(E_NO_CMD - m)
+                return super().__new__(NoCmd,E_NO_CMD - m)
         return super().__new__(cls)
 
     pass

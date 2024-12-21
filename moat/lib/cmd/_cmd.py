@@ -288,8 +288,8 @@ class CmdHandler(CtxObj):
     async def msg_out(self):
         i, d, kw = await self._send_q.get()
 
-        # this is somewhat inefficient but oh well
-        if kw is None and isinstance(d[-1], dict):
+        # Handle last-arg-is-dict ambiguity
+        if kw is None and d and isinstance(d[-1], dict):
             kw = {}
         if kw is None:
             return (i,) + tuple(d)

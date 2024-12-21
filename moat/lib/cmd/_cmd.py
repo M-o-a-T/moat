@@ -291,10 +291,7 @@ class CmdHandler(CtxObj):
         # Handle last-arg-is-dict ambiguity
         if kw is None and d and isinstance(d[-1], dict):
             kw = {}
-        if kw is None:
-            return (i,) + tuple(d)
-        else:
-            return (i,) + tuple(d) + (kw,)
+        return (i,) + tuple(d) + ((kw,) if kw is not None else ())
 
     async def msg_in(self, msg):
         i = msg[0]

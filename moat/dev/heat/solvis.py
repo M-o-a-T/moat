@@ -2030,7 +2030,8 @@ async def run(obj, record, force_on, no_save):
                         await tg.start(d.run_solvis_mon)
 
                     await tg.start(d.saver)
-                await d.run_pump()
+                await tg.start(d.run_pump)
+                print("ALL READY")
         finally:
             if d is not None:
                 with anyio.fail_after(30, shield=True):

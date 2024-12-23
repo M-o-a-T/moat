@@ -111,7 +111,7 @@ class CellsSim(_CellSim):
                 else:  # last
                     c.xsb = self.ctrl.xsb
 
-                cp = self.root.sub_at(*cell, i)
+                cp = self.root.sub_at(cell/i)
                 sim = _SingleCellSim(cp, c)
                 await tg.spawn(sim.task)
             self.set_ready()

@@ -7,12 +7,17 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from attrs import define
+import anyio
 
 from typing import TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable
     from types import TracebackType
+
+
+__all__ = ["CtxObj", "timed_ctx"]
 
 
 class CtxObj[T_Ctx](ABC):
@@ -65,3 +70,28 @@ class CtxObj[T_Ctx](ABC):
             return self.__ctx.__aexit__(*tb)
         finally:
             self.__ctx = None
+
+@define
+class timed_ctx(CtxObj):
+    """
+    A wrapper for an async context manager that times out if entering it
+    takes too long.
+
+    Everything else is unaffected.
+    """
+    timeout:int|float
+    mgr:AbstractAsyncContextManager
+
+    async def _timer(self, *, task_status):
+        with anyio.CancelScope() as sc:
+            task_status.started(sc)
+            await anyio.sleep(self.timeout)
+            raise TimeoutError(self.timeout)
+
+    @asynccontextmanager
+    async def _ctx(self):
+        async with anyio.create_task_group() as tg:
+            sc = await tg.start(self._timer)
+            async with self.mgr as mgr:
+                sc.cancel()
+                yield mgr

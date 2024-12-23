@@ -505,6 +505,7 @@ class Data:
     hc_pos = 0
     r_no = "----"
     pellet_load = 0
+    pellet_on:bool = None
 
     # outside temperature average
     t_ext_avg = None
@@ -965,7 +966,8 @@ class Data:
 
             tplim = tp_limit
             # increase temp settings when starting up
-            if self.state.t_pellet_on is not True:
+
+            if self.pellet_on is False:
                 try:
                     tplim = min(self.cfg.adj.max_pellet, self.cfg.adj.pellet.startup.buf+max(self.tb_water,self.tb_heat))
                     for p in self.cfg.adj.pellet.startup.patch.path:
@@ -1363,19 +1365,24 @@ class Data:
 
             if self.m_pellet_state in (0, 1, 3, 5, 6,7,8,9) or 21 <= self.m_pellet_state <= 35 or self.m_pellet_state >= 43:
                 self.state.t_pellet_on = False
+                self.pellet_on = False
                 self.pid.load.Kd = self.cfg.pid.load.d
                 self.pid.load.Tf = self.cfg.pid.load.tf
-            elif self.m_pellet_state != 4:
+            elif self.m_pellet_state not in (2, 4):
+                self.pellet_on = False
                 self.state.t_pellet_on = self.time
             else:
-                if not isinstance(self.state.t_pellet_on, bool):
-                    if self.time - self.state.t_pellet_on > self.cfg.lim.pellet.t_min:
-                        self.state.t_pellet_on = True
+                if self.m_pellet_state == 4:
+                    if not self.pellet_on:
+                        self.pellet_on = True
                         try:
                             for p in self.cfg.adj.pellet.startup.patch.path:
                                 await self.cl_set(p, self.cfg.adj.pellet.startup.patch.stop, idem=True)
                         except AttributeError:
                             pass
+
+                    if self.time - self.state.t_pellet_on > self.cfg.lim.pellet.t_min:
+                        self.state.t_pellet_on = True
 
                 self.pid.load.Kd = self.cfg.adj.pellet.pid.load.d
                 self.pid.load.Tf = self.cfg.adj.pellet.pid.load.tf
@@ -1480,10 +1487,10 @@ class Data:
         run = (await self.cl.get(self.cfg.cmd.pellet.wanted)).value
 
         while True:
-            for _ in range(100):
+            for _ in range(10):
                 await self.wait()
 
-            if not run and (
+            if not run and self.m_pellet_state in (0,30,31,32) and (
                 not self.cm_wp
                 or (
                     self.m_air < self.cfg.misc.pellet.current

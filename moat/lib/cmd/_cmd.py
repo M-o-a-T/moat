@@ -142,13 +142,13 @@ class CmdHandler(CtxObj):
     data streams.
     """
 
-    def __init__(self, callback: MsgIn):
+    def __init__(self, handler: MsgIn):
         self._msgs: dict[int, Stream] = {}
         self._id = 1
         self._send_q = Queue(9)
         self._recv_q = Queue(99)
         self._debug = logger.warning
-        self._in_cb = callback
+        self._in_cb = handler
 
     def _gen_id(self):
         # Generate the next free ID.

@@ -1194,7 +1194,9 @@ class Data:
 
             # RUNNING ONLY after this point
 
-            if self.state.t_pellet_on:
+            if self.pellet_on and self.tb_heat > t_cur:
+                # if the pellet boiler is (a) on, (b) hot enough
+
                 #               if not self.state.start_p and self.m_pellet >= t_low:
                 #                   # turn off when the pellet burner is warm as it's turned on
                 #                   print("OFF 2",self.m_pellet,t_low,self.state.start_p, "    ")
@@ -1202,7 +1204,6 @@ class Data:
                 #                   continue
 
                 # the next two conditions cut off early.
-                # TODO do so only when the PID output is below whatever
                 if t_cur >= t_nom + self.cfg.lim.pellet.stop.buffer:
                     print("OFF 6", t_cur, t_nom, "    ")
                     run = Run.off

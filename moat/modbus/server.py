@@ -122,7 +122,7 @@ class BaseModbusServer(CtxObj):
         if hasattr(context, "process_request"):
             response = await context.process_request(request)
         else:
-            response = request.execute(context)
+            response = await request.execute(context)
         return response
 
     @asynccontextmanager

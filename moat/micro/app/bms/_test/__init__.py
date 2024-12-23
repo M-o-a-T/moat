@@ -57,8 +57,8 @@ class CellSim(_CellSim):
     """
     async def setup(self):
         await super().setup()
-        self.cell = self.root.sub_at(*self.cfg["cell"])
-        self.ctrl = self.root.sub_at(*self.cfg["ctrl"])
+        self.cell = self.root.sub_at(self.cfg["cell"])
+        self.ctrl = self.root.sub_at(self.cfg["ctrl"])
 
     async def task(self):
         self.set_ready()
@@ -89,7 +89,7 @@ class CellsSim(_CellSim):
 
     async def setup(self):
         await super().setup()
-        self.ctrl = self.root.sub_at(*self.cfg["ctrl"])
+        self.ctrl = self.root.sub_at(self.cfg["ctrl"])
 
     async def task(self):
         cell = self.cfg["cell"]

@@ -50,7 +50,7 @@ class BattComm(BaseCmd):
 
     async def setup(self):
         await super().setup()
-        self.comm = self.root.sub_at(*self.cfg["comm"])
+        self.comm = self.root.sub_at(self.cfg["comm"])
 
     async def task(self):
         self.set_ready()

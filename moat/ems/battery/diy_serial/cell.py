@@ -87,7 +87,7 @@ class Cell(BaseCell):
 
     async def setup(self):
         await super().setup()
-        self.comm = self.root.sub_at(*self.cfg["comm"])
+        self.comm = self.root.sub_at(self.cfg["comm"])
         res = (await self.comm(p=RequestReadSettings(), s=self.cfg.pos))[0]
         self.m_settings(res)
 

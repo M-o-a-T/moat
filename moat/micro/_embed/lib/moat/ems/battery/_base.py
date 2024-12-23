@@ -328,8 +328,8 @@ class BaseCells(ArrayCmd):
 
     async def _setup(self):
         cfg = self.cfg
-        self.al = self.root.sub_at(*cfg["alarm"]) if "alarm" in cfg else None
-        self.rly = self.root.sub_at(*cfg["rly"]) if "relay" in cfg else None
+        self.al = self.root.sub_at(cfg["alarm"]) if "alarm" in cfg else None
+        self.rly = self.root.sub_at(cfg["rly"]) if "relay" in cfg else None
         try:
             self.ud_max = cfg["lim"]["ud"]
         except KeyError:
@@ -573,7 +573,7 @@ class BaseBalancer(BaseCmd):
 
     async def _setup(self):
         self.n = self.cfg.get("n", 9999)
-        self.bat = self.root.sub_at(*self.cfg["bat"]) if "bat" in self.cfg else None
+        self.bat = self.root.sub_at(self.cfg["bat"]) if "bat" in self.cfg else None
         if self.bat is not None:
             # get battery limits
             c = await self.bat.cfg_(("cfg", "lim", "u", "ext"))

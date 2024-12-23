@@ -246,7 +246,7 @@ def create_server(cfg):
 		kw = cfg["serial"]
 		if port is not None:
 			kw["port"] = port
-		srv = SerialModbusServer(**kw)
+		return SerialModbusServer(**kw)
 	elif "host" in cfg or ("port" in cfg and isinstance(cfg["port"],int)):
 		kw = {}
 		for k,v in cfg.items():
@@ -256,7 +256,7 @@ def create_server(cfg):
 				if k == "host":
 					k = "address"
 				kw[k] = v
-		srv = ModbusServer(**kw)
+		return ModbusServer(**kw)
 	else:
 		raise ValueError("neither serial nor TCP config found")
 

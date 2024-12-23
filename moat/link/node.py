@@ -79,6 +79,58 @@ class Node:
         "check if data exist"
         return self._data is not NotGiven
 
+    def dump(self):
+        """
+        Iterator that returns a serialization of this node tree.
+
+        TODO: try not to allocate a mountain of paths.
+        """
+        ps = PathShortener()
+        for p,d,m in self._dump((),):
+            s,p = ps.short(p)
+            yield s,p,d,m
+
+    def dump2(self):
+        yield from self._dump2((),0)
+
+    def _dump(self, path):
+        if self._data is not NotGiven:
+            yield path,self._data,self._meta
+        for k,v in self._sub.items():
+            yield from v._dump(path+(k,),)
+
+    def _dump2(self, path, level):
+        if self._data is not NotGiven:
+            yield level,path,self._data,self._meta
+            level += len(path)
+            path = ()
+        for k,v in self._sub.items():
+            if path:
+                it = iter(v._dump2(path+(k,), level))
+                try:
+                    d = next(it)
+                except StopIteration:
+                    pass
+                else:
+                    level += len(path)
+                    path = ()
+                    yield from it
+
+    def load(self, force=False):
+        """
+        receives a data stream created by `dump`.
+
+        if @force is set, overwrite existing data even if newer.
+        """
+        pl = PathLongener()
+        while True:
+            s,p,d,m = yield
+            p = pl.long(s,p)
+            n = self.get(p)
+            if force or n.meta is None or n.meta.timestamp < m.timestamp:
+                n._data = d
+                n._meta = m
+
     @property
     def meta(self) -> MsgMeta:
         "return current metadata"

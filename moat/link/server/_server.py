@@ -11,11 +11,14 @@ from collections.abc import Sequence
 from pathlib import Path as FPath
 import random
 
+from attrs import define,field
 from asyncscope import scope
 
 from moat.lib.cmd import CmdHandler
 from moat.lib.cmd.anyio import run as run_cmd_anyio
 from moat.link import protocol_version
+from moat.link.auth import AnonAuth,TokenAuth
+from moat.link.conn import SubConn
 from moat.link.backend import get_backend
 from moat.link.meta import MsgMeta
 from moat.util.cbor import StdCBOR,CBOR_TAG_MOAT_FILE_ID,CBOR_TAG_MOAT_FILE_END
@@ -45,10 +48,10 @@ from range_set import RangeSet
 from moat.util import (
     attrdict,
     to_attrdict,
-    Broadcaster,
     byte2num,
     combine_dict,
     create_queue,
+    CtxObj,
     DelayedRead,
     DelayedWrite,
     drop_dict,
@@ -63,9 +66,12 @@ from moat.util import (
     PathLongener,
     PathShortener,
     run_tcp_server,
+    ungroup,
     ValueEvent,
     yload, Root,
 )
+
+from moat.util.broadcast import Broadcaster
 
 # from . import _version_tuple
 # from . import client as moat_kv_client  # needs to be mock-able
@@ -81,7 +87,9 @@ from moat.util import (
 #    ServerConnectionError,
 #    ServerError,
 # )
-from ..node import Node
+from moat.link.node import Node
+from moat.link.hello import Hello
+from moat.link.auth import TokenAuth
 
 from typing import Any, TYPE_CHECKING
 
@@ -89,9 +97,6 @@ if TYPE_CHECKING:
     from typing import Never
 
 # from .types import ACLFinder, ACLStepper, ConvNull, NullACL, RootEntry
-
-class NoCmd(ValueError):
-    pass
 
 class BadFile(ValueError):
     pass
@@ -141,6 +146,7 @@ class HelloProc:
         self.client.in_stream.pop(0, None)
 
 
+@define
 class SaveWriter(CtxObj):
     """
     This class writes a MoaT savefile.
@@ -219,7 +225,7 @@ class MonitorWriter(CtxObj):
     def __setattr__(self,k,v):
         self._wr[k] = v
 
-    def _ctx(self):
+    async def _ctx(self):
         async def _write(it,wr,evt,*,task_status:anyio.TaskStatus):
             with anyio.CancelScope() as sc:
                 task_status.started(sc)
@@ -243,113 +249,69 @@ class MonitorWriter(CtxObj):
             # bail out if we've been cancelled
 
 
-class ServerClient:
+class ServerClient(SubConn):
     """Represent one (non-server) client."""
 
-    auth = None
+    _hello:Hello|None = None
+    _auth_data:Any=None
 
     def __init__(self, server: Server, name: str, stream: Stream):
         self.server = server
-        self.cmd = CmdHandler(self.process)
         self.name = name
         self.stream = stream
-
-        self._hello_in:anyio.Event = anyio.Event()
 
         global _client_nr
         _client_nr += 1
         self.client_nr = _client_nr
 
-        self.logger = logging.getLogger("moat.link.server.{name}.{self._client_nr}")
+        self.logger = logging.getLogger(f"moat.link.server.{name}.{self.client_nr}")
 
     async def run(self):
         """Main loop for this client connection."""
 
+        self.logger.debug("START %s C_%d", self.name, self.client_nr)
+        self._handler=cmd=CmdHandler(self._cmd_in)
+        self._hello = Hello(self, them=f"C_{self.client_nr}", auth_in=[TokenAuth("Duh"),AnonAuth()])
         async with (
             anyio.create_task_group() as self.tg,
-            run_cmd_anyio(self.cmd, self.stream),
+            run_cmd_anyio(cmd, self.stream),
         ):
             # basic setup
-            reply = await self.cmd.cmd(P("i.hello"),
-                protocol_version,
-                self.server.name,
-            )
-            await anyio.sleep_forever()
+            try:
+                if await self._hello.run() is False or not (auth := self._hello.auth_data):
+                    self.logger.debug("NO %s", self.client_nr)
+                    return
+            finally:
+                del self._hello
+            self._auth_data = auth
 
-    async def process(self, msg):
+            # periodic ping
+            while True:
+                await anyio.sleep(30)
+                with anyio.fail_after(self.server.cfg.server.ping_timeout):
+                    await cmd.cmd(P("i.ping"))
+
+    @property
+    def auth_data(self):
+        """
+        Retrieve auth data.
+
+        These might be stored in the Hello processor while startup is incomplete.
+        """
+        if self._hello is not None:
+            return self._hello.auth_data
+        return self._auth_data
+
+
+    def _cmd_in(self, msg) -> Awaitable:
         """
         Process an incoming message.
         """
         self.logger.debug("IN %s", msg)
-
-        cmd = msg.cmd if isinstance(msg.cmd, (Sequence,Path)) else (msg.cmd,)
-        cmd = "_".join(str(x) for x in cmd)
-        fn = getattr(self, "cmd_" + str(cmd), None)
-        if fn is None:
-            raise NoCmd(cmd)
-        return await fn(msg)
-
-    async def cmd_i_hello(self, msg):
-        if self._hello_in.is_set():
-            raise RuntimeError("i.hello: already seen")
-
-        m_it = iter(msg.args)
-
-        self.version = protocol_version
-        auth = None
-        rversion = None
-        sname = None
-        cname = None
-        try:
-            rversion = next(m_it)
-            cname = next(m_it)
-            sname = next(m_it)
-            auth = next(m_it)
-        except StopIteration:
-            pass
-
-        if sname is None:
-            sname = self.server.name
-        elif self.server.name != sname:
-            raise RuntimeError(f"Not me: {sname}")
-        else:
-            sname = None
-
-        if cname is not None:
-            self.name,cname = cname,None
-        else:
-            self.name = cname = "C_"+gen_ident(10)
-
-        if not rversion:
-            rversion = protocol_version
-        elif tuple(rversion) < protocol_version:
-            self.version = rversion
-        else:
-            rversion = None
-
-        if auth is None:
-            auth = ("mqtt",)
-        elif auth == self.server.cur_auth or auth == self.server.last_auth:
-            auth = True
-        else:
-            raise AuthError("Auth Failed")
-
-        if auth is True:
-            self.auth = True
-            self._hello_in.set()
-        await msg.result(rversion,sname,cname,True, auth)
-
-
-    async def cmd_auth(self, msg):
-        if msg.cmd[1] == "mqtt":
-            key = msg.data[1]
-            if key != self.server.current_key and key != self.server.previous_key:
-                raise NoAuthError()
-            self.auth = attrdict(mode="mqtt", tick=time.time())
-
-        else:
-            raise NoAuthError()
-
+        if self._hello is not None and self._hello.auth_data is None:
+            return self._hello.cmd_in(msg)
+        cmd = getattr(self, "cmd_"+"_".join(msg.cmd))
+        return cmd(msg)
 
     async def cmd_d_get(self, msg):
         """Get the data of a sub-node.
@@ -410,13 +372,13 @@ class ServerClient:
             await d.walk(_writer, timestamp=ts,min_depth=xmin,max_depth=xmax)
 
 
-    async def cmd_set_value(self, msg, **kw):
+    async def cmd_d_set(self, msg, **kw):
         """Set a node's value."""
         if "value" not in msg:
             raise ClientError("Call 'delete_value' if you want to clear the value")
         return await self._set_value(msg, value=msg.value, **kw)
 
-    async def cmd_delete_value(self, msg, **kw):
+    async def cmd_d_del(self, msg, **kw):
         """Delete a node's value."""
         if "value" in msg:
             raise ClientError("A deleted entry can't have a value")
@@ -492,7 +454,7 @@ class ServerClient:
 
         return res
 
-    async def cmd_update(self, msg):
+    async def cmd_d_update(self, msg):
         """
         Apply a stored update.
 
@@ -511,7 +473,7 @@ class ServerClient:
         else:
             return res.serialize(chop_path=self._chop_path, conv=self.conv)
 
-    async def cmd_check_deleted(self, msg):
+    async def cmd_d_chkdel(self, msg):
         nodes = msg.nodes
         deleted = NodeSet()
         for n, v in nodes.items():
@@ -525,24 +487,11 @@ class ServerClient:
         if deleted:
             await self.server._send_event("info", attrdict(deleted=deleted.serialize()))
 
-    async def cmd_get_state(self, msg):
+    async def cmd_s_state(self, msg):
         """Return some info about this node's internal state"""
         return await self.server.get_state(**msg)
 
-    async def cmd_msg_send(self, msg):
-        topic = msg.topic
-        if isinstance(topic, str):
-            topic = (topic,)
-        if topic[0][0] == ":":
-            topic = P(self.server.cfg.root) + topic
-        if "raw" in msg:
-            assert "data" not in msg
-            data = msg.raw
-        else:
-            data = packer(msg.data)
-        await self.server.backend.send(*topic, payload=data)
-
-    async def cmd_delete_tree(self, msg):
+    async def cmd_d_deltree(self, msg):
         """Delete a node's value.
         Sub-nodes are cleared (after their parent).
         """
@@ -595,7 +544,7 @@ class ServerClient:
         await self.server.run_saver(path=msg.path, save_state=msg.get("fetch", False))
         return True
 
-    async def cmd_save(self, msg):
+    async def cmd_s_save(self, msg):
         full = msg.get("full", False)
         await self.server.save(path=msg.path, full=full)
 
@@ -608,51 +557,6 @@ class ServerClient:
             return False
         t.cancel()
         return True
-
-    async def cmd_set_auth_typ(self, msg):
-        if not self.user.is_super_root:
-            raise RuntimeError("You're not allowed to do that")
-        a = self.root.follow(Path(None, "auth"), nulls_ok=True)
-        if a.data is NotGiven:
-            val = {}
-        else:
-            val = a.data.copy()
-
-        if msg.typ is None:
-            val.pop("current", None)
-        elif msg.typ not in a or not len(a[msg.typ]["user"].keys()):
-            raise RuntimeError("You didn't configure this method yet:" + repr((msg.typ, vars(a))))
-        else:
-            val["current"] = msg.typ
-        msg.value = val
-        msg.path = (None, "auth")
-        return await self.cmd_set_value(msg, _nulls_ok=True)
-
-    async def send(self, msg):
-        self.logger.debug("OUT%d %s", self._client_nr, msg)
-        if self._send_lock is None:
-            return
-        async with self._send_lock:
-            if self._send_lock is None:
-                # yes this can happen, when the connection is torn down
-                return
-
-            if "tock" not in msg:
-                msg["tock"] = self.server.tock
-            try:
-                await self.stream.send(packer(msg))
-            except ClosedResourceError:
-                self.logger.info("ERO%d %r", self._client_nr, msg)
-                self._send_lock = None
-                raise
-
-    async def send_result(self, seq, res):
-        res["seq"] = seq
-        if "tock" in res:
-            await self.server.tock_seen(res["tock"])
-        else:
-            res["tock"] = self.server.tock
-        await self.send(res)
 
     def drop_old_event(self, evt, old_evt=NotGiven):
         return self.server.drop_old_event(evt, old_evt)
@@ -744,7 +648,7 @@ class Server:
       name (str): the name of this MoaT-KV server instance.
         It **must** be unique.
       cfg: configuration.
-        See ``_config.yaml`` for default values.
+        See ``_cfg.yaml`` for default values.
         The relevant part is the ``link.server`` sub-dict (mostly).
       init (Any):
         The initial content of the root entry. **Do not use this**, except
@@ -786,7 +690,22 @@ class Server:
 
     async def _run_save(self, fn: anyio.Path):
         with anyio.CancelScope() as sc:
-            async with SaveWriter(
+            async with SaveWriter():
+                pass
+
+    def refresh_auth(self):
+        """
+        Generate a new access token (but remember the previous one)
+        """
+        self.last_auth = self.cur_auth
+        self.cur_auth = gen_ident(20)
+
+    @property
+    def tokens(self):
+        res = [self.cur_auth]
+        if self.last_auth is not None:
+            res.append(self.last_auth)
+        return res
 
 
     def maybe_update(self, path, data, meta, *, save=True):
@@ -806,7 +725,7 @@ class Server:
             self.write_monitor((path,data,meta))
 
 
-    async def monitor(self, action: str, delay: anyio.abc.Event = None):
+    async def monitor(self, action: str, delay: anyio.abc.Event = None, **kw):
         """
         The task that hooks to the backend's event stream for receiving messages.
 
@@ -818,7 +737,7 @@ class Server:
         """
         cmd = getattr(self, "user_" + action)
         try:
-            async with self.backend.monitor(*self.cfg.server.root, action) as stream:
+            async with self.backend.monitor(self.cfg.server.root / action, **kw) as stream:
                 if delay is not None:
                     await delay.wait()
 
@@ -844,7 +763,7 @@ class Server:
             self.logger.info("Stream ended %s", action)
 
 
-    async def _pinger(self, ready: anyio.Event, *, task_status: anyio.TASK_STATUS.IGNORED):
+    async def _pinger(self, ready: anyio.Event, *, task_status:anyio.abc.TaskStatus=anyio.TASK_STATUS_IGNORED):
         """
         This task
         * sends PING messages
@@ -858,15 +777,13 @@ class Server:
             sent.
         """
         T = get_transport("moat_link")
-        breakpoint()
         async with Actor(
-            T(self, P(":R.run.servive.ping.main")),
+            T(self.backend, P(":R.run.service.ping.main")),
             name=self.name,
             cfg=self.cfg.server.ping,
             send_raw=True,
         ) as actor:
             self._actor = actor
-            await self._check_ticked()
             task_status.started()
 
             async for msg in actor:
@@ -897,18 +814,20 @@ class Server:
                     if val is not None:
                         tock, val = val
                         await self.tock_seen(tock)
-                    node = Node(msg_node, val, cache=self.node_cache)
-                    if tock is not None:
-                        node.tock = tock
+                    #node = Node(msg_node, val, cache=self.node_cache)
+                    #if tock is not None:
+                    #    node.tock = tock
 
                 elif isinstance(msg, TagEvent):
                     # We're "it"; find missing data
                     # await self._send_missing()
-                    pass
+                    await self.set_main_link()
 
                 elif isinstance(msg, (UntagEvent, DetagEvent)):
                     pass
 
+    async def set_main_link(self):
+        await self.backend.send(P(":R.run.service.main"),{"link":self.link_data, "auth":{"token":self.cur_auth}}, meta=MsgMeta(origin=self.name), retain=True)
 
     async def _get_host_port(self, host):
         """Retrieve the remote system to connect to.
@@ -1540,7 +1459,7 @@ class Server:
         await self._ready2.wait()
 
 
-    async def serve(self, *, task_status=anyio.TASK_STATUS_IGNORED) -> Never:
+    async def serve(self, *, tg:anyio.abc.TaskGroup =None, task_status=anyio.TASK_STATUS_IGNORED) -> Never:
         """
         The task that opens a backend connection and actually runs the server.
         """
@@ -1557,33 +1476,47 @@ class Server:
         Root.set(csr)
 
         async with (
-            anyio.create_task_group() as tg,
+            anyio.create_task_group() as _tg,
             get_backend(self.cfg, name="main."+self.name, will=will_data) as self.backend,
         ):
-            ping_ready = anyio.Event()
-            ports = []
-            await tg.start(self._read_main)
-            await tg.start(self._read_initial)
+            if tg is None:
+                tg = _tg
 
-            tg2.start_soon(self._pinger, ping_ready)
-            if not self.standalone:
-                await ping_ready.wait()
+            ports = []
 
             h1 = None
             for name, conn in self.cfg.server.ports.items():
                 if h1 is None:
                     h1 = conn["host"]
-                ports.append(await tg.start(self._run_server, name, conn))
+                ports.append(await _tg.start(self._run_server, name, conn))
 
             if len(ports) == 1:
                 link = {"host":ports[0][0],"port":ports[0][1]}
             else:
-                link = [ {"host":h,"port":p} for h,p in ports]
-            await self.backend.send(P(":R.run.service.main"),{"link":link, "auth":self.cur_auth},meta=MsgMeta(origin=self.name),retain=True)
+                link = [ {"host":h,"port":p} for h,p in ports ]
+            self.link_data = link
+
+            await tg.start(self._read_main)
+            await tg.start(self._read_initial)
+
+            ping_ready = anyio.Event()
+            _tg.start_soon(self._pinger, ping_ready)
+            if not self.cfg.server.standalone:
+                await ping_ready.wait()
+
+            if self.cfg.server.standalone:
+                await self.set_main_link()
 
             task_status.started(ports)
-            await anyio.sleep_forever()
-            # TODO wait for a shutdown / use a context
+            self.logger.debug("STARTUP DONE")
+
+            # Auth updating
+            while True:
+                await anyio.sleep(900)
+                self.refresh_auth()
+
+                await anyio.sleep(300)
+                self.last_auth = None
 
     async def _read_main(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
@@ -1593,6 +1526,7 @@ class Server:
                 Broadcaster(send_last=True) as self.service_monitor,
                 self.backend.monitor(P(":R.run.service.main")) as mon,
             ):
+            task_status.started()
             async for msg in mon:
                 self.service_monitor(msg)
 
@@ -1745,12 +1679,14 @@ class Server:
                 for msg in main:
                     try:
                         await self._sync_from(msg.meta.origin, msg.data)
+                    finally:
+                        pass # XXX
 
 
     async def _read_saved_data(self, ready:anyio.Event):
         pass
 
-    async def _get_remote_data(self, ready:anyio.Event):
+    async def _get_remote_data(self, main:BroadcastReader, ready:anyio.Event):
         pass
 
     async def _run_server(self, name, cfg, *, task_status=anyio.TASK_STATUS_IGNORED):
@@ -1764,11 +1700,45 @@ class Server:
             task_status.started(listener.extra(SocketAttribute.local_address))
             await listener.serve(partial(self._client_task, name))
 
-    async def _client_task(self, name, link):
-        client = ServerClient(self, name, link)
-        await client.run()
+    async def _client_task(self, name, stream):
+        c = None
+        try:
+            c = ServerClient(server=self, name=name, stream=stream)
+            try:
+                self._clients.add(c)
+                await c.run()
+            finally:
+                self._clients.remove(c)
+        except (ClosedResourceError, anyio.EndOfStream):
+            self.logger.debug("XX %d closed", c.client_nr)
+        except BaseException as exc:
+            CancelExc = anyio.get_cancelled_exc_class()
+            if hasattr(exc, "split"):
+                exc = exc.split(CancelExc)[1]
+            elif hasattr(exc, "filter"):
+                # pylint: disable=no-member
+                exc = exc.filter(lambda e: None if isinstance(e, CancelExc) else e, exc)
 
-class olc_stuff:
+            if exc is not None and not isinstance(exc, CancelExc):
+                if isinstance(exc, (ClosedResourceError, anyio.EndOfStream)):
+                    self.logger.debug("XX %d closed", c.client_nr)
+                else:
+                    self.logger.exception("Client connection killed", exc_info=exc)
+            if exc is None:
+                exc = "Cancelled"
+            try:
+                with anyio.move_on_after(2, shield=True):
+                    if c is not None:
+                        await c.cmd(P("i.error"), str(exc))
+            except (anyio.BrokenResourceError, anyio.ClosedResourceError):
+                pass
+
+        finally:
+            with anyio.move_on_after(2, shield=True):
+                await stream.aclose()
+
+
+class old_stuff:
     @asynccontextmanager
     async def next_event(self):
         """A context manager which returns the next event under a lock.
@@ -1995,36 +1965,3 @@ class olc_stuff:
 
         await run_tcp_server(self._connect, tg=tg, _rdy=partial(rdy, n), **cfg)
 
-    async def _connect(self, stream):
-        c = None
-        try:
-            c = ServerClient(server=self, stream=stream)
-            self._clients.add(c)
-            await c.run()
-        except (ClosedResourceError, anyio.EndOfStream):
-            self.logger.debug("XX %d closed", c._client_nr)
-        except BaseException as exc:
-            CancelExc = anyio.get_cancelled_exc_class()
-            if hasattr(exc, "split"):
-                exc = exc.split(CancelExc)[1]
-            elif hasattr(exc, "filter"):
-                # pylint: disable=no-member
-                exc = exc.filter(lambda e: None if isinstance(e, CancelExc) else e, exc)
-            if exc is not None and not isinstance(exc, CancelExc):
-                if isinstance(exc, (ClosedResourceError, anyio.EndOfStream)):
-                    self.logger.debug("XX %d closed", c._client_nr)
-                else:
-                    self.logger.exception("Client connection killed", exc_info=exc)
-            if exc is None:
-                exc = "Cancelled"
-            try:
-                with anyio.move_on_after(2, shield=True):
-                    if c is not None:
-                        await c.send({"error": str(exc)})
-            except (anyio.BrokenResourceError, anyio.ClosedResourceError):
-                pass
-        finally:
-            with anyio.move_on_after(2, shield=True):
-                if c is not None:
-                    self._clients.remove(c)
-                await stream.aclose()

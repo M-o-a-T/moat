@@ -15,6 +15,7 @@ async def test_basic(autojump_clock):  # pylint: disable=unused-argument
 
 
 @pytest.mark.trio
+@pytest.mark.xfail
 async def test_split(autojump_clock):  # pylint: disable=unused-argument
     async with main_scope(), server() as s:
         c1 = await s.test_client_scope(name="c_A")

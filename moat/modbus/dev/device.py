@@ -318,7 +318,7 @@ class Register:
 _data = FSPath(__file__).parent / "_data"
 
 
-class BaseDevice(CtxObj):
+class BaseDevice:
     """A modbus device.
 
     The idea is to use the device description file as a template.
@@ -367,7 +367,7 @@ class BaseDevice(CtxObj):
         return dev
 
 
-class ClientDevice(BaseDevice):
+class ClientDevice(CtxObj, BaseDevice):
     """
     A client device, i.e. one that mirrors some Modbus master's unit
     """

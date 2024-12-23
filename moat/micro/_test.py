@@ -4,9 +4,7 @@ Test runner
 from __future__ import annotations
 
 import anyio
-import logging
 import os
-import warnings
 from contextlib import asynccontextmanager, suppress
 from contextvars import ContextVar
 from pathlib import Path
@@ -26,22 +24,6 @@ from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from typing import Awaitable
-
-with warnings.catch_warnings(record=True) as _w:
-    # may already have been done elsewhere
-    warnings.simplefilter("ignore")
-    import sys
-    logging.basicConfig(level=logging.DEBUG, stream=sys.stderr, force=True)
-
-if not len(_w):
-    # … if not, then add our own hook
-    def _lbc(*a, **k):  # noqa: ARG001
-        "block log configuration"
-        raise RuntimeError("don't configure logging a second time")
-
-    logging.basicConfig = _lbc
-
-del _w
 
 temp_dir = ContextVar("temp_dir")
 

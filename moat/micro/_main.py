@@ -64,7 +64,7 @@ def catch_errors(fn):
             if "bdb" in sys.modules:
                 skip_exc.add(sys.modules["bdb"].BdbQuit)
             if type(e) in skip_exc:
-                raise click.ClickException(RuntimeError(repr(e)))  # noqa:TRY200
+                raise click.ClickException(repr(e))  # noqa:TRY200
             raise
 
     return wrapper

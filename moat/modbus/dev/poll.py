@@ -60,7 +60,8 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
         # relay-out server(s)
         servers = []
         for s in cfg.get("server", ()):
-            servers.append(create_modbus_server(s))
+            srv = create_server(s)
+            servers.append(srv)
 
             for u,v in s.get("units",{}).items():
                 dev = ServerDevice(factory=RegS)

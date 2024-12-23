@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from functools import partial
 
-from moat.util import Path, import_
+from moat.util import Path, import_, P
 from moat.micro.cmd.base import ACM_h, BaseCmd, ShortCommandError
 from moat.micro.compat import AC_use, Event, L, Lock, TaskGroup, log
 from moat.micro.errors import NoPathError
@@ -262,13 +262,15 @@ class Dispatch(DirCmd):
             raise
         return self
 
-    def sub_at(self, p: Path):
+    def sub_at(self, p: str|Path):
         """
         Returns a SubDispatch to this path.
 
         You can call this either with a sequence of path elements
         or with a path.
         """
+        if isinstance(p,str):
+            p=P(p)
         return SubDispatch(self, p)
 
     @property
@@ -331,6 +333,7 @@ class _SubDispatch:
         self._path = path
         self._dest = dest
         self._rem = rem
+        assert isinstance(rem,(tuple,list,Path))
 
     @property
     def root(self) -> Dispatch:

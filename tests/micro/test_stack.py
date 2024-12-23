@@ -92,7 +92,7 @@ async def test_stack(tmp_path):
     port = tmp_path / "uport"
     root = tmp_path / "root"
     cfx = tmp_path / "run.cfg"
-    cross = here / "lib" / "micropython" / "mpy-cross" / "build" / "mpy-cross"
+    cross = here / "ext" / "micropython" / "mpy-cross" / "build" / "mpy-cross"
     cfg.micro.cfg.r.f.root = str(root)
     cfg.micro.n.port = str(port)
     cfg.micro.setup.args.cross = str(cross)

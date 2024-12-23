@@ -12,6 +12,7 @@ from moat.link.client import Link
 from moat.link.server import Server
 from moat.link.backend import get_backend
 from moat.util import (  # pylint:disable=no-name-in-module
+    CFG,ensure_cfg,
     CtxObj,
     attrdict,
     combine_dict,
@@ -24,7 +25,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Never
 
-CFG = yload(Path(__file__).parent / "_config.yaml", attr=True)
+ensure_cfg("moat.link")
 
 
 logger = logging.getLogger(__name__)

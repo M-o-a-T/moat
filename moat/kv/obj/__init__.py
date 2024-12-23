@@ -16,7 +16,7 @@ try:
 except ImportError:
     from async_generator import asynccontextmanager
 
-from moat.util import NoLock, NotGiven, Path, PathLongener, combine_dict, yload
+from moat.util import NoLock, NotGiven, Path, PathLongener, combine_dict, yload, ensure_cfg,CFG
 
 __all__ = ["ClientEntry", "AttrClientEntry", "ClientRoot"]
 
@@ -440,8 +440,10 @@ class MirrorRoot(ClientEntry):
             from pathlib import Path as _Path
 
             md = inspect.getmodule(cls)
+            ensure_cfg("moat.kv")
+            defcfg = CFG.kv.get(cls.CFG)
             try:
-                f = (_Path(md.__file__).parent / "_config.yaml").open("r")
+                f = (_Path(md.__file__).parent / "_nconfig.yaml").open("r")
             except EnvironmentError:
                 pass
             else:

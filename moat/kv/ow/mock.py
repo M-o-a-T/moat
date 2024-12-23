@@ -2,6 +2,7 @@ import os
 import anyio
 from functools import partial
 from asyncowfs.mock import some_server
+from moat.util import ensure_cfg
 
 from .task import task
 
@@ -24,8 +25,11 @@ async def server(client, tree={}, options={}, evt=None):  # pylint: disable=dang
         addr = listener.extra(anyio.abc.SocketAttribute.raw_socket).getsockname()
         tg.start_soon(may_close)
 
+        cfg={"kv":client._cfg}
+        ensure_cfg("moat.kv.ow",cfg)
+
         await client.set(
-            client._cfg.kv.owfs.prefix + ("server", "127.0.0.1"),
+            client._cfg.ow.prefix + ("server", "127.0.0.1"),
             value=dict(server=dict(host="127.0.0.1", port=addr[1])),
         )
 

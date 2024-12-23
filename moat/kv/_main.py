@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 
 import asyncclick as click
-from moat.util import attrdict, combine_dict, load_subgroup, yload
+from moat.util import attrdict, combine_dict, load_subgroup, CFG, ensure_cfg
 
 from moat.kv.auth import gen_auth
 from moat.kv.client import client_scope
@@ -16,7 +16,7 @@ from moat.kv.client import client_scope
 logger = logging.getLogger(__name__)
 
 
-CFG = yload(Path(__file__).parent / "_config.yaml", attr=True)
+ensure_cfg("moat.kv")
 
 
 class NullObj:

@@ -10,7 +10,7 @@ from pathlib import Path as FPath
 import anyio
 from anyio.abc import SocketAttribute
 from asyncscope import scope
-from moat.util import DelayedRead, DelayedWrite, create_queue, yload
+from moat.util import DelayedRead, DelayedWrite, create_queue, yload, ensure_cfg
 
 try:
     from contextlib import asynccontextmanager
@@ -1357,7 +1357,7 @@ class Server:
       name (str): the name of this MoaT-KV server instance.
         It **must** be unique.
       cfg: configuration.
-        See ``_config.yaml`` for default values.
+        See ``_cfg.yaml`` for default values.
         Relevant is the ``kv.server`` sub-dict (mostly).
       init (Any):
         The initial content of the root entry. **Do not use this**, except
@@ -1381,7 +1381,9 @@ class Server:
 
     def __init__(self, name: str, cfg: dict = None, init: Any = NotGiven):
         self.root = RootEntry(self, tock=self.tock)
-        CFG = yload(FPath(__file__).parent / "_config.yaml")["kv"]
+        from moat.util import CFG
+        ensure_cfg("moat.kv")
+        CFG = CFG["kv"]
 
         self.cfg = combine_dict(cfg or {}, CFG, cls=attrdict)
         csr = self.cfg.server["root"]

@@ -10,9 +10,11 @@ import attr
 from asyncscope import main_scope, scope
 from moat.src.test import run  # pylint:disable=import-error,no-name-in-module
 from moat.util import (  # pylint:disable=no-name-in-module
+    CFG,
     OptCtx,
     attrdict,
     combine_dict,
+    ensure_cfg,
     list_ext,
     load_ext,
     wrap_main,
@@ -27,8 +29,7 @@ try:
 except ImportError:
     from async_generator import asynccontextmanager
 
-CFG = yload(Path(__file__).parent.parent / "_config.yaml", attr=True)
-
+ensure_cfg("moat.kv")
 
 @attr.s
 class S:

@@ -1,7 +1,7 @@
 # command line interface
 
 import asyncclick as click
-from moat.util import yprint, attrdict, NotGiven, P, Path, as_service, attr_args
+from moat.util import yprint, attrdict, NotGiven, P, Path, as_service, attr_args, ensure_cfg
 from moat.kv.data import data_get, node_attr
 from .model import OWFSroot
 
@@ -17,6 +17,7 @@ async def cli(obj):
     List Onewire devices, modify device handling …
     """
     obj.data = await OWFSroot.as_handler(obj.client)
+    ensure_cfg("moat.kv.ow", obj.cfg)
 
 
 @cli.command("list")

@@ -5,11 +5,15 @@ This module imports possibly-partial configuration snippets.
 from importlib import import_module
 from pathlib import Path as FSPath
 
-from moat.util import yload, Path, attrdict
+from .yaml import yload
+from .path import Path
+from .dict import attrdict
+from .merge import merge
 
-CFG = {}
+__all__ = ["CFG","ensure_cfg"]
+CFG = attrdict()
 
-def ensure_cfg(path: str|Path) -> dict:
+def ensure_cfg(path: str|Path, cfg=CFG) -> dict:
     """
     Ensure that a submodule's default configuration is available.
     """
@@ -25,20 +29,20 @@ def ensure_cfg(path: str|Path) -> dict:
             p = (str(FSPath(ext.__file__).parent),)
 
         for d in p:
-            fn = FSPath(d) / "_config.yaml"
+            fn = FSPath(d) / "_cfg.yaml"
             if fn.is_file():
                 merge(cfg, yload(fn, attr=True))
 
 
     try:
-        EXT = CFG.setdefault("ext",attrdict())
-        EXT["moat"] = CFG
+        EXT = cfg.setdefault("ext",attrdict())
+        EXT["moat"] = cfg
 
-        if "logging" not in CFG:
-            _load(CFG, "moat")
+        if "logging" not in cfg:
+            _load(cfg, "moat")
 
-        cc = CFG if path[0] == "moat" else EXT
-        for n in len(path):
+        cc = EXT
+        for n in range(len(path)):
             cc = cc.setdefault(path[n], attrdict())
             if cc:
                 continue
@@ -47,4 +51,4 @@ def ensure_cfg(path: str|Path) -> dict:
     finally:
         del EXT["moat"]
 
-    return CFG
+    return cfg

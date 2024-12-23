@@ -1,4 +1,2 @@
-kv:
-  ow:
-    prefix: !P :.moat.kv.onewire
-    port: 4304
+prefix: !P :.moat.kv.onewire
+port: 4304

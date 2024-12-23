@@ -1,7 +1,5 @@
-kv:
-  akumuli:
-    prefix: !P :.moat.kv.akumuli
-    server_default:
-      host: localhost
-      port: 8282
-      delta: true
+prefix: !P :.moat.kv.akumuli
+server_default:
+  host: localhost
+  port: 8282
+  delta: true

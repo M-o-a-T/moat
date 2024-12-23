@@ -1,4 +1,4 @@
-micro: {}
+setup: []
 # port:
 #   dev: "/dev/ttyUSB0"
 #   socket: "moat.test"

@@ -15,7 +15,7 @@ logging:
   handlers:
 #   logfile:
 #     class: logging.FileHandler
-#     filename: test.log
+#     filename: _test.log
 #     level: DEBUG
 #     formatter: std
     stderr:
@@ -26,5 +26,5 @@ logging:
   formatters:
     std:
       class: moat.util.TimeOnlyFormatter
-      format: "%(asctime)s %(levelname)s:%(name)s:%(message)s"
+      format: "%(asctime)s %(levelname)s %(name)s:%(message)s"
   disable_existing_loggers: False

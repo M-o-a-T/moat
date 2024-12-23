@@ -59,7 +59,7 @@ class BaseValue:
     block: "DataBlock" = None
     to_write: int = None
 
-    def __init__(self, offset=None, value=None, idem=True):
+    def __init__(self, value=None, *, offset=None, idem=True):
         self.changed = anyio.Event()
         self._value = value
         self._value_w = value

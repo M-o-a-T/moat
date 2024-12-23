@@ -1,4 +1,2 @@
-kv:
-  cal:
-    prefix: !P calendar
-    poll: 1200
+prefix: !P calendar
+poll: 1200

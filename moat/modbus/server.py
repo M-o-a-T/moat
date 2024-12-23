@@ -118,7 +118,7 @@ class BaseModbusServer(CtxObj):
 
     async def process_request(self, request):
         """Basic request processor"""
-        context = self.context[request.unit_id]
+        context = self.context[request.slave_id]
         if hasattr(context, "process_request"):
             response = await context.process_request(request)
         else:
@@ -156,7 +156,7 @@ class SerialModbusServer(BaseModbusServer):
             ModbusRtuFramer,
         )
         class Framer(ModbusRtuFramer):
-            def _validate_unit_id(self, unit, single):
+            def _validate_slave_id(self, unit, single):
                 return True
 
         self.decoder = ServerDecoder()  # pylint: disable=no-value-for-parameter ## duh?
@@ -361,22 +361,22 @@ class ModbusServer(BaseModbusServer):
 
                 reqs = []
                 # TODO fix pymodbus
-                framer.processIncomingPacket(data, unit=0, callback=reqs.append, single=True)
+                framer.processIncomingPacket(data, slave=0, callback=reqs.append, single=True)
 
                 for request in reqs:
-                    unit = request.unit_id
+                    unit = request.slave_id
                     tid = request.transaction_id
                     try:
                         response = await self.process_request(request)
                     except NoSuchSlaveException:
-                        _logger.debug("requested slave does not exist: %d", request.unit_id)
+                        _logger.debug("requested slave does not exist: %d", request.slave_id)
                         response = request.doException(merror.GatewayNoResponse)
                     except Exception as exc:  # pylint: disable=broad-except
                         _logger.warning("Datastore unable to fulfill request", exc_info=exc)
                         response = request.doException(merror.SlaveFailure)
                     if response.should_respond:
                         response.transaction_id = tid
-                        response.unit_id = unit
+                        response.slave_id = unit
                         # self.server.control.Counter.BusMessage += 1
                         pdu = framer.buildPacket(response)
                         if _logger.isEnabledFor(logging.DEBUG):

@@ -27,6 +27,7 @@ import ast
 import collections.abc
 import logging
 import re
+import wanings
 from base64 import b64decode, b64encode
 from contextvars import ContextVar
 from functools import total_ordering
@@ -82,7 +83,7 @@ class Path(collections.abc.Sequence):
     Meta elements (delimits elements, SHOULD be in front):
 
     \b
-        :mXX This path is marked with XX
+        :mXX This path is marked with XX (deprecated)
         :R   An alias for the current root
         :Q   An alias for an alternate root
         :P   An alias for another alternate root
@@ -109,6 +110,8 @@ class Path(collections.abc.Sequence):
     """
 
     def __init__(self, *a, mark="", scan=False):
+        if mark:
+            warnings.warn("Marking a path is deprecated")
         if a and scan:
             i = 0
             while i < len(a):
@@ -127,6 +130,8 @@ class Path(collections.abc.Sequence):
     @classmethod
     def build(cls, data, *, mark=""):
         """Optimized shortcut to generate a path from an existing tuple"""
+        if mark:
+            warnings.warn("Marking a path is deprecated")
         if isinstance(data, Path):
             return data
         if not isinstance(data, tuple):
@@ -152,6 +157,8 @@ class Path(collections.abc.Sequence):
 
     def with_mark(self, mark=""):
         """Returns the same path with a different mark"""
+        if mark:
+            warnings.warn("Marking a path is deprecated")
         return type(self).build(self._data, mark=mark)
 
     def __str__(self, slash=False):

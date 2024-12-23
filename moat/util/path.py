@@ -251,6 +251,8 @@ class Path(collections.abc.Sequence):
         return True
 
     def __eq__(self, other):
+        if other is None:
+            return False
         if isinstance(other, Path):
             if self.mark != other.mark:
                 return False

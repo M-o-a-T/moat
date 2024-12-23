@@ -4,13 +4,13 @@ Client code.
 Main entry point: :func:`open_client`.
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import socket
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import iscoroutine
-from pathlib import Path
-from typing import Tuple
 
 import anyio
 from asyncscope import Scope, main_scope, scope
@@ -29,7 +29,6 @@ from moat.util import (  # pylint: disable=no-name-in-module
     ensure_cfg,
     gen_ssl,
     num2byte,
-    yload,
 )
 
 from .codec import packer, stream_unpacker
@@ -225,7 +224,7 @@ class StreamedRequest:
 
     async def get(self):
         """Receive a single reply"""
-        pass  # receive reply
+        # receive reply
         if self._reply_stream:
             raise RuntimeError("Unexpected multi stream msg")
         msg = await self.recv()
@@ -480,7 +479,9 @@ class Client:
 
             k = await anyio.to_thread.run_sync(gen_key)
             res = await self._request(
-                "diffie_hellman", pubkey=num2byte(k.public_key), length=length
+                "diffie_hellman",
+                pubkey=num2byte(k.public_key),
+                length=length,
             )  # length=k.key_length
             await anyio.to_thread.run_sync(k.generate_shared_secret, byte2num(res.pubkey))
             self._dh_key = num2byte(k.shared_secret)[0:32]
@@ -740,7 +741,7 @@ class Client:
 
                 except TimeoutError:
                     raise
-                except socket.error as e:
+                except OSError as e:
                     raise ServerConnectionError(host, port) from e
                 else:
                     yield self
@@ -818,7 +819,12 @@ class Client:
             kw["idem"] = idem
 
         return self._request(
-            action="set_value", path=path, value=value, iter=False, nchain=nchain, **kw
+            action="set_value",
+            path=path,
+            value=value,
+            iter=False,
+            nchain=nchain,
+            **kw,
         )
 
     def delete(self, path, *, chain=NotGiven, prev=NotGiven, nchain=0, recursive=False):
@@ -896,7 +902,11 @@ class Client:
         if long_path:
             lp = PathLongener()
         async for r in await self._request(
-            action="get_tree", path=path, iter=True, long_path=True, **kw
+            action="get_tree",
+            path=path,
+            iter=True,
+            long_path=True,
+            **kw,
         ):
             if long_path:
                 lp(r)
@@ -981,7 +991,7 @@ class Client:
         root = root_type(self, path, **kw)
         return root.run()
 
-    def msg_monitor(self, topic: Tuple[str], raw: bool = False):
+    def msg_monitor(self, topic: tuple[str], raw: bool = False):
         """
         Return an async iterator of tunneled messages. This receives
         all messages sent using :meth:`msg_send` with the same topic.
@@ -1007,7 +1017,7 @@ class Client:
         """
         return self._stream(action="msg_monitor", topic=topic, raw=raw)
 
-    def msg_send(self, topic: Tuple[str], data=None, raw: bytes = None):
+    def msg_send(self, topic: tuple[str], data=None, raw: bytes = None):
         """
         Tunnel a user-tagged message. This sends the message
         to all active callers of :meth:`msg_monitor` which use the same topic.

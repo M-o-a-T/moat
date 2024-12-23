@@ -2,6 +2,8 @@
 Inverter mode: go to specific SoC
 """
 
+from __future__ import annotations
+
 import logging
 
 from . import InvModeBase

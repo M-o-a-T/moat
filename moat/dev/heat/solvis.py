@@ -451,7 +451,7 @@ pid:
 """
 
 
-with open("/etc/moat/moat.cfg", "r") as _f:
+with open("/etc/moat/moat.cfg") as _f:
     mcfg = yload(_f, attr=True)
 
 
@@ -669,21 +669,7 @@ class Data:
                 print("*** BYPASS OFF ***")
                 run = Run.down
 
-            if orun == run:
-                pass
-            elif orun is None:
-                pass
-            elif run == Run.off:
-                pass
-            elif run == Run.ice:
-                pass
-            elif run.value == orun.value + 1:
-                pass
-            elif orun != Run.off and run == Run.down:
-                pass
-            elif orun == Run.down and run == Run.off:
-                pass
-            elif orun == Run.ice and run in (Run.wait_flow, Run.wait_time):
+            if orun == run or orun is None or run == Run.off or run == Run.ice or run.value == orun.value + 1 or orun != Run.off and run == Run.down or orun == Run.down and run == Run.off or orun == Run.ice and run in (Run.wait_flow, Run.wait_time):
                 pass
             else:
                 raise ValueError(f"Cannot go from {orun.name} to {run.name}")
@@ -1385,7 +1371,7 @@ class Data:
                         try:
                             for p in self.cfg.adj.pellet.startup.patch.path:
                                 await self.cl_set(
-                                    p, self.cfg.adj.pellet.startup.patch.stop, idem=True
+                                    p, self.cfg.adj.pellet.startup.patch.stop, idem=True,
                                 )
                         except AttributeError:
                             pass
@@ -2214,7 +2200,6 @@ def vt(tau, ti, cf):
 @click.pass_obj
 async def curve(obj):
     "show the current heating curve"
-    from math import pow
 
     cf = obj.cfg.adj.curve
 

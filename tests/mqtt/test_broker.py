@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 import logging
 import os
 import unittest
@@ -11,8 +12,6 @@ import pytest
 
 from moat.mqtt.adapters import StreamAdapter
 from moat.mqtt.broker import (
-    EVENT_BROKER_CLIENT_CONNECTED,
-    EVENT_BROKER_CLIENT_DISCONNECTED,
     EVENT_BROKER_CLIENT_SUBSCRIBED,
     EVENT_BROKER_CLIENT_UNSUBSCRIBED,
     EVENT_BROKER_MESSAGE_RECEIVED,
@@ -43,7 +42,7 @@ URL = "mqtt://127.0.0.1:%d/" % PORT
 
 test_config = {
     "listeners": {
-        "default": {"type": "tcp", "bind": "127.0.0.1:%d" % PORT, "max_connections": 10}
+        "default": {"type": "tcp", "bind": "127.0.0.1:%d" % PORT, "max_connections": 10},
     },
     "sys_interval": 0,
     "auth": {"allow-anonymous": True},
@@ -63,7 +62,8 @@ class BrokerTest(unittest.TestCase):
     def test_start_stop(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
             async with create_broker(
-                test_config, plugin_namespace="moat.mqtt.test.plugins"
+                test_config,
+                plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
                 self.assertTrue(broker.transitions.is_started())
@@ -92,7 +92,8 @@ class BrokerTest(unittest.TestCase):
     def test_client_connect(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
             async with create_broker(
-                test_config, plugin_namespace="moat.mqtt.test.plugins"
+                test_config,
+                plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
                 self.assertTrue(broker.transitions.is_started())
@@ -111,7 +112,8 @@ class BrokerTest(unittest.TestCase):
     def test_client_connect_will_flag(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
             async with create_broker(
-                test_config, plugin_namespace="moat.mqtt.test.plugins"
+                test_config,
+                plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
                 self.assertTrue(broker.transitions.is_started())
@@ -146,12 +148,14 @@ class BrokerTest(unittest.TestCase):
     def test_client_connect_clean_session_false(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
             async with create_broker(
-                test_config, plugin_namespace="moat.mqtt.test.plugins"
+                test_config,
+                plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
                 self.assertTrue(broker.transitions.is_started())
                 async with open_mqttclient(
-                    client_id="", config={"auto_reconnect": False}
+                    client_id="",
+                    config={"auto_reconnect": False},
                 ) as client:
                     return_code = None
                     with pytest.raises(ConnectException) as ce:
@@ -166,7 +170,8 @@ class BrokerTest(unittest.TestCase):
     def test_client_subscribe(self, MockPluginManager):
         async def test_coro():
             async with create_broker(
-                test_config, plugin_namespace="moat.mqtt.test.plugins"
+                test_config,
+                plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
                 self.assertTrue(broker.transitions.is_started())
@@ -190,7 +195,7 @@ class BrokerTest(unittest.TestCase):
                         client_id=client.session.client_id,
                         topic="/topic",
                         qos=QOS_0,
-                    )
+                    ),
                 ],
                 any_order=True,
             )
@@ -201,7 +206,8 @@ class BrokerTest(unittest.TestCase):
     def test_client_subscribe_twice(self, MockPluginManager):
         async def test_coro():
             async with create_broker(
-                test_config, plugin_namespace="moat.mqtt.test.plugins"
+                test_config,
+                plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
                 self.assertTrue(broker.transitions.is_started())
@@ -231,7 +237,7 @@ class BrokerTest(unittest.TestCase):
                         client_id=client.session.client_id,
                         topic="/topic",
                         qos=QOS_0,
-                    )
+                    ),
                 ],
                 any_order=True,
             )
@@ -242,7 +248,8 @@ class BrokerTest(unittest.TestCase):
     def test_client_unsubscribe(self, MockPluginManager):
         async def test_coro():
             async with create_broker(
-                test_config, plugin_namespace="moat.mqtt.test.plugins"
+                test_config,
+                plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
                 self.assertTrue(broker.transitions.is_started())
@@ -284,7 +291,8 @@ class BrokerTest(unittest.TestCase):
     def test_client_publish(self, MockPluginManager):
         async def test_coro():
             async with create_broker(
-                test_config, plugin_namespace="moat.mqtt.test.plugins"
+                test_config,
+                plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
                 self.assertTrue(broker.transitions.is_started())
@@ -303,7 +311,7 @@ class BrokerTest(unittest.TestCase):
                         EVENT_BROKER_MESSAGE_RECEIVED,
                         client_id=pub_client.session.client_id,
                         message=ret_message,
-                    )
+                    ),
                 ],
                 any_order=True,
             )
@@ -314,7 +322,8 @@ class BrokerTest(unittest.TestCase):
     def test_client_publish_dup(self):
         async def test_coro():
             async with create_broker(
-                test_config, plugin_namespace="moat.mqtt.test.plugins"
+                test_config,
+                plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
                 self.assertTrue(broker.transitions.is_started())
@@ -353,7 +362,8 @@ class BrokerTest(unittest.TestCase):
     def test_client_publish_invalid_topic(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
             async with create_broker(
-                test_config, plugin_namespace="moat.mqtt.test.plugins"
+                test_config,
+                plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
                 self.assertTrue(broker.transitions.is_started())
@@ -371,7 +381,8 @@ class BrokerTest(unittest.TestCase):
     def test_client_publish_big(self, MockPluginManager):
         async def test_coro():
             async with create_broker(
-                test_config, plugin_namespace="moat.mqtt.test.plugins"
+                test_config,
+                plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
                 self.assertTrue(broker.transitions.is_started())
@@ -380,7 +391,9 @@ class BrokerTest(unittest.TestCase):
                     self.assertEqual(ret, 0)
 
                     ret_message = await pub_client.publish(
-                        "/topic", bytearray(b"\x99" * 256 * 1024), QOS_2
+                        "/topic",
+                        bytearray(b"\x99" * 256 * 1024),
+                        QOS_2,
                     )
                 self.assertEqual(broker._retained_messages, {})
 
@@ -391,7 +404,7 @@ class BrokerTest(unittest.TestCase):
                         EVENT_BROKER_MESSAGE_RECEIVED,
                         client_id=pub_client.session.client_id,
                         message=ret_message,
-                    )
+                    ),
                 ],
                 any_order=True,
             )
@@ -402,7 +415,8 @@ class BrokerTest(unittest.TestCase):
     def test_client_publish_retain(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
             async with create_broker(
-                test_config, plugin_namespace="moat.mqtt.test.plugins"
+                test_config,
+                plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
                 self.assertTrue(broker.transitions.is_started())
@@ -426,7 +440,8 @@ class BrokerTest(unittest.TestCase):
     def test_client_publish_retain_delete(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
             async with create_broker(
-                test_config, plugin_namespace="moat.mqtt.test.plugins"
+                test_config,
+                plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
                 self.assertTrue(broker.transitions.is_started())
@@ -445,7 +460,8 @@ class BrokerTest(unittest.TestCase):
     def test_client_subscribe_publish(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
             async with create_broker(
-                test_config, plugin_namespace="moat.mqtt.test.plugins"
+                test_config,
+                plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
                 self.assertTrue(broker.transitions.is_started())
@@ -475,7 +491,8 @@ class BrokerTest(unittest.TestCase):
     def test_client_subscribe_invalid(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
             async with create_broker(
-                test_config, plugin_namespace="moat.mqtt.test.plugins"
+                test_config,
+                plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
                 self.assertTrue(broker.transitions.is_started())
@@ -497,7 +514,8 @@ class BrokerTest(unittest.TestCase):
     def test_client_subscribe_publish_dollar_topic_1(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
             async with create_broker(
-                test_config, plugin_namespace="moat.mqtt.test.plugins"
+                test_config,
+                plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
                 self.assertTrue(broker.transitions.is_started())
@@ -524,7 +542,8 @@ class BrokerTest(unittest.TestCase):
     def test_client_subscribe_publish_dollar_topic_2(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
             async with create_broker(
-                test_config, plugin_namespace="moat.mqtt.test.plugins"
+                test_config,
+                plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
                 self.assertTrue(broker.transitions.is_started())
@@ -551,7 +570,8 @@ class BrokerTest(unittest.TestCase):
     def test_client_publish_retain_subscribe(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
             async with create_broker(
-                test_config, plugin_namespace="moat.mqtt.test.plugins"
+                test_config,
+                plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 with anyio.fail_after(3):
                     broker.plugins_manager._tg = broker._tg

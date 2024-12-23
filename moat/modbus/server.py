@@ -3,12 +3,12 @@
 """
 Modbus server classes for serial(RTU) and TCP.
 """
+from __future__ import annotations
 
 import logging
 import socket
 from binascii import b2a_hex
 from contextlib import asynccontextmanager
-from typing import Type, Union
 import time
 
 import anyio
@@ -45,7 +45,7 @@ class UnitContext(ModbusSlaveContext):
             server._add_unit(self)
 
     def add(
-        self, typ: TypeCodec, offset: int, val: Union[BaseValue, Type[BaseValue]]
+        self, typ: TypeCodec, offset: int, val: BaseValue | type[BaseValue],
     ) -> BaseValue:
         """Add a field to be served.
 
@@ -189,7 +189,7 @@ class SerialModbusServer(BaseModbusServer):
                 t = t2
                 msgs = []
                 self.framer.processIncomingPacket(
-                    data=data, unit=0, callback=msgs.append, single=True
+                    data=data, unit=0, callback=msgs.append, single=True,
                 )
                 for msg in msgs:
                     with anyio.fail_after(2):
@@ -363,7 +363,7 @@ class ModbusServer(BaseModbusServer):
                     break
                 if _logger.isEnabledFor(logging.DEBUG):
                     _logger.debug(  # pylint: disable=logging-not-lazy
-                        "Handling data: " + hexlify_packets(data)
+                        "Handling data: " + hexlify_packets(data),
                     )
 
                 reqs = []
@@ -390,10 +390,10 @@ class ModbusServer(BaseModbusServer):
                             _logger.debug("send: %s", b2a_hex(pdu))
                         await conn.send(pdu)
 
-            except socket.timeout as msg:
+            except TimeoutError as msg:
                 _logger.debug("Socket timeout occurred: %r", msg)
                 reset_frame = True
-            except socket.error as msg:
+            except OSError as msg:
                 _logger.error("Socket error occurred: %r", msg)
                 return
             except anyio.get_cancelled_exc_class():

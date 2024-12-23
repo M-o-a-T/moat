@@ -38,8 +38,8 @@ def const(_x):
 
 L = const(True)
 
-ExceptionGroup = ExceptionGroup  # noqa:A001,PLW0127 pylint:disable=redefined-builtin,self-assigning-variable
-BaseExceptionGroup = BaseExceptionGroup  # noqa:A001,PLW0127 pylint:disable=redefined-builtin,self-assigning-variable
+ExceptionGroup = ExceptionGroup  # noqa: PLW0127 pylint:disable=redefined-builtin,self-assigning-variable
+BaseExceptionGroup = BaseExceptionGroup  # noqa: PLW0127 pylint:disable=redefined-builtin,self-assigning-variable
 
 Pin_IN = 0
 Pin_OUT = 1
@@ -79,10 +79,10 @@ def ACM(obj):
     """
     # pylint:disable=protected-access
     if not hasattr(obj, "_AC_"):
-        obj._AC_ = []  # noqa:SLF001
+        obj._AC_ = []
 
     cm = AsyncExitStack()
-    obj._AC_.append(cm)  # noqa:SLF001
+    obj._AC_.append(cm)
 
     # AsyncExitStack.__aenter__ is a no-op. We don't depend on that but at
     # least it shouldn't yield
@@ -111,7 +111,7 @@ async def AC_use(obj, ctx):
 
     Otherwise it's a callable and will run on exit.
     """
-    acm = obj._AC_[-1]  # noqa:SLF001  pylint:disable=protected-access
+    acm = obj._AC_[-1]
     if hasattr(ctx, "__aenter__"):
         return await acm.enter_async_context(ctx)
     elif hasattr(ctx, "__enter__"):
@@ -127,4 +127,4 @@ async def AC_exit(obj, *exc):
     """End the latest AsyncExitStack opened by `ACM`."""
     if not exc:
         exc = (None, None, None)
-    return await obj._AC_.pop().__aexit__(*exc)  # noqa:SLF001  pylint:disable=protected-access
+    return await obj._AC_.pop().__aexit__(*exc)

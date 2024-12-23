@@ -1,6 +1,7 @@
 """
 This module implements the basics for a bus server.
 """
+from __future__ import annotations
 
 import trio
 from contextlib import asynccontextmanager, contextmanager
@@ -9,7 +10,7 @@ from weakref import ref
 from ..backend import BaseBusHandler
 from ..message import BusMessage
 from .obj import Obj
-from ..util import byte2mini, CtxObj, Dispatcher
+from ..util import CtxObj, Dispatcher
 
 import msgpack
 from functools import partial

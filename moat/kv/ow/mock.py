@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import anyio
 from functools import partial
@@ -12,7 +13,9 @@ PORT = ((os.getpid() + 101) % 9999) + 40000
 async def server(client, tree={}, options={}, evt=None):  # pylint: disable=dangerous-default-value
     async with anyio.create_task_group() as tg:
         listener = await anyio.create_tcp_listener(
-            local_host="127.0.0.1", local_port=PORT, reuse_port=True
+            local_host="127.0.0.1",
+            local_port=PORT,
+            reuse_port=True,
         )
 
         async def may_close():

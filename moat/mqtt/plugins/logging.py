@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 
 from functools import partial
 
@@ -11,7 +12,8 @@ class EventLoggerPlugin:
 
     async def log_event(self, *args, **kwargs):  # pylint: disable=unused-argument
         self.context.logger.info(
-            "### '%s' EVENT FIRED ###", kwargs["event_name"].replace("old", "")
+            "### '%s' EVENT FIRED ###",
+            kwargs["event_name"].replace("old", ""),
         )
 
     def __getattr__(self, name):
@@ -25,7 +27,7 @@ class PacketLoggerPlugin:
 
     async def on_mqtt_packet_received(self, *args, **kwargs):  # pylint: disable=unused-argument
         packet = kwargs.get("packet")
-        session = kwargs.get("session", None)
+        session = kwargs.get("session")
         if session:
             self.context.logger.debug("%s <-in-- %r", session.client_id, packet)
         else:
@@ -33,7 +35,7 @@ class PacketLoggerPlugin:
 
     async def on_mqtt_packet_sent(self, *args, **kwargs):  # pylint: disable=unused-argument
         packet = kwargs.get("packet")
-        session = kwargs.get("session", None)
+        session = kwargs.get("session")
         if session:
             self.context.logger.debug("%s -out-> %r", session.client_id, packet)
         else:

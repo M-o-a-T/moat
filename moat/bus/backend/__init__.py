@@ -3,6 +3,8 @@
 Base class for sending MoaT messages on a Trio system
 """
 
+from __future__ import annotations
+
 import asyncclick as click
 from contextlib import asynccontextmanager
 from distkv.util import P

@@ -3,7 +3,6 @@ from __future__ import annotations
 import random
 from contextlib import asynccontextmanager
 
-from distmqtt.codecs import MsgPackCodec
 
 import typing
 from distkv.util import Path, P

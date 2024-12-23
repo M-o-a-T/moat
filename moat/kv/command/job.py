@@ -1,4 +1,5 @@
 # command line interface
+from __future__ import annotations
 
 import sys
 import time
@@ -140,7 +141,10 @@ async def run(obj, nodes):
         c = obj.client
         cr = await CodeRoot.as_handler(c)
         await obj.runner_root.as_handler(
-            c, subpath=obj.subpath, code=cr, **({"nodes": nodes} if nodes else {})
+            c,
+            subpath=obj.subpath,
+            code=cr,
+            **({"nodes": nodes} if nodes else {}),
         )
         evt.set()
         await anyio.sleep_forever()
@@ -153,7 +157,10 @@ async def _state_fix(obj, state, state_only, path, r):
         return
     if state:
         rs = await obj.client._request(
-            action="get_value", path=state + r.path, iter=False, nchain=obj.meta
+            action="get_value",
+            path=state + r.path,
+            iter=False,
+            nchain=obj.meta,
         )
         if state_only:
             r.value = rs
@@ -277,7 +284,10 @@ async def get(obj, state):
         raise click.UsageError("You need a non-empty path.")
 
     res = await obj.client._request(
-        action="get_value", path=obj.path + path, iter=False, nchain=obj.meta
+        action="get_value",
+        path=obj.path + path,
+        iter=False,
+        nchain=obj.meta,
     )
     if "value" not in res:
         print("Not found.", file=sys.stderr)

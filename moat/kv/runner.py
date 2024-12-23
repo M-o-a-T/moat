@@ -3,6 +3,7 @@ This module's job is to run code, resp. to keep it running.
 
 
 """
+from __future__ import annotations
 
 import time
 from collections.abc import Mapping
@@ -250,7 +251,7 @@ class CallAdmin:
             path = self._path
         r = await self._err.record_error("run", path, **kw)
         await self._err.root.wait_chain(r.chain)
-        raise ErrorRecorded()
+        raise ErrorRecorded
 
     async def open_context(self, ctx):
         return await self._stack.enter_async_context(ctx)
@@ -597,7 +598,7 @@ class RunnerEntry(AttrClientEntry):
             c, self._comment = self._comment, None
             with anyio.move_on_after(5, shield=True):
                 r = await self.root.err.record_error(
-                    "run", self._path, exc=exc, data=self.data, comment=c
+                    "run", self._path, exc=exc, data=self.data, comment=c,
                 )
                 if r is not None:
                     await self.root.err.wait_chain(r.chain)
@@ -800,7 +801,7 @@ class StateEntry(AttrClientEntry):
         self.node = None
         self.backoff = min(20, self.backoff + 1)
         await self.root.runner.err.record_error(
-            "run", self.runner._path, message="Runner restarted"
+            "run", self.runner._path, message="Runner restarted",
         )
         await self.save()
 
@@ -915,7 +916,7 @@ class StateRoot(MirrorRoot):
                 await self.update(val)
             else:
                 await self.client.msg_send(
-                    "run", {"group": self.runner.group, "time": t, "node": self.name}
+                    "run", {"group": self.runner.group, "time": t, "node": self.name},
                 )
 
 
@@ -979,7 +980,7 @@ class _BaseRunnerRoot(ClientRoot):
 
     async def _state_runner(self):
         self.state = await StateRoot.as_handler(
-            self.client, cfg=self._cfg, subpath=self._x_subpath, key="state"
+            self.client, cfg=self._cfg, subpath=self._x_subpath, key="state",
         )
 
     @property
@@ -1109,7 +1110,7 @@ class AnyRunnerRoot(_BaseRunnerRoot):
         Monitor the Actor state, run a :meth:`_run_now` subtask whenever we're 'it'.
         """
         async with ClientActor(
-            self.client, self.name, topic=self.group, cfg=self._cfg["actor"]
+            self.client, self.name, topic=self.group, cfg=self._cfg["actor"],
         ) as act:
             self._act = act
 

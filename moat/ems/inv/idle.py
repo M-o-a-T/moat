@@ -2,6 +2,8 @@
 Inverter mode: do nothing (fixed value)
 """
 
+from __future__ import annotations
+
 import logging
 
 from . import InvModeBase

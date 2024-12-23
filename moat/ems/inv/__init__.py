@@ -8,6 +8,7 @@ Victron MultiPlus only, for now.
 """
 
 # pylint: disable=too-many-lines
+from __future__ import annotations
 
 import logging
 import os
@@ -103,7 +104,7 @@ class InvInterface(DbusInterface):
         return [m._name for m in InvControl.MODES.values()]
 
     @method()
-    async def GetModeInfo(self, mode: "s") -> "a{ss}":
+    async def GetModeInfo(self, mode: s) -> "a{ss}":
         """
         Return information on a specific method
         """
@@ -111,14 +112,14 @@ class InvInterface(DbusInterface):
         return m._doc
 
     @method()
-    async def SetMode(self, mode: "s", args: "a{sv}") -> "b":
+    async def SetMode(self, mode: s, args: "a{sv}") -> b:
         """
         Change the inverter mode, set parameters
         """
         return await self.ctrl.change_mode(mode, unwrap_dbus_dict(args))
 
     @method()
-    async def SetModeParam(self, param: "s", value: "v") -> "b":
+    async def SetModeParam(self, param: s, value: v) -> b:
         """
         Set a specific parameter
         """
@@ -339,17 +340,19 @@ class InvControl(BusVars):
             for i in range(self.n_phase):
                 i += 1
                 self.p_grid_.append(
-                    await self.intf.importer("com.victronenergy.system", f"/Ac/Grid/L{i}/Power")
+                    await self.intf.importer("com.victronenergy.system", f"/Ac/Grid/L{i}/Power"),
                 )
                 self.p_cons_.append(
                     await self.intf.importer(
-                        "com.victronenergy.system", f"/Ac/Consumption/L{i}/Power"
-                    )
+                        "com.victronenergy.system",
+                        f"/Ac/Consumption/L{i}/Power",
+                    ),
                 )
                 self.p_cur_.append(
                     await self.intf.importer(
-                        "com.victronenergy.system", f"/Ac/ActiveIn/L{i}/Power"
-                    )
+                        "com.victronenergy.system",
+                        f"/Ac/ActiveIn/L{i}/Power",
+                    ),
                 )
             self.load = [0] * self.n_phase
 
@@ -437,13 +440,15 @@ class InvControl(BusVars):
         for i in range(self.n_phase):
             i += 1
             self.p_set_.append(
-                await self.intf.importer(self.acc_vebus.value, f"/Hub4/L{i}/AcPowerSetpoint")
+                await self.intf.importer(self.acc_vebus.value, f"/Hub4/L{i}/AcPowerSetpoint"),
             )
             self.p_run_.append(
-                await self.intf.importer(self.acc_vebus.value, f"/Ac/ActiveIn/L{i}/P")
+                await self.intf.importer(self.acc_vebus.value, f"/Ac/ActiveIn/L{i}/P"),
             )
         self._p_inv = await self.intf.importer(
-            self.acc_vebus.value, "/Ac/ActiveIn/P", eventCallback=self._trigger_step
+            self.acc_vebus.value,
+            "/Ac/ActiveIn/P",
+            eventCallback=self._trigger_step,
         )
 
     def _trigger_step(self, _sender, _path, _values):
@@ -1120,7 +1125,7 @@ class InvControl(BusVars):
         else:
             logger.info("SET inverter %.0f", -ps[0])
 
-        for p, v in zip(self.p_set_, ps):
+        for p, v in zip(self.p_set_, ps, strict=True):
             await p.set_value(-v)
             # Victron Multiplus: negative=inverting: positive=charging
             # This code: negative=takes from AC, positive=feeds to AC power

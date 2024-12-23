@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+from __future__ import annotations
 
 import asyncclick as click
 from fakebus.client import Client

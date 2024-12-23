@@ -15,7 +15,8 @@ import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Callable, Any, Awaitable, Protocol, AsyncContextManager
+    from typing import Any, Protocol, AsyncContextManager
+    from collections.abc import Callable, Awaitable
 
     class MsgIn(Protocol):
         def __call__(self, msg: Stream, /) -> Any: ...
@@ -609,7 +610,7 @@ class Stream:
             return
         self._sendfix(stream, err, _kill)
         await self.parent._send(
-            self._i | (B_STREAM if stream else 0) | (B_ERROR if err else 0), d, kw
+            self._i | (B_STREAM if stream else 0) | (B_ERROR if err else 0), d, kw,
         )
         self._ended()
 
@@ -618,7 +619,7 @@ class Stream:
             return
         self._sendfix(stream, err, _kill)
         self.parent._send_nowait(
-            self._i | (B_STREAM if stream else 0) | (B_ERROR if err else 0), d, kw
+            self._i | (B_STREAM if stream else 0) | (B_ERROR if err else 0), d, kw,
         )
         self._ended()
 
@@ -660,7 +661,7 @@ class Stream:
         await self._skipped()
 
         if self.stream_out != S_ON or not self.s_out:
-            raise NoStream()
+            raise NoStream
 
         if self.stream_out == S_ON and self._flo_evt is not None:
             while self._flo <= 0:
@@ -693,7 +694,7 @@ class Stream:
         if self.stream_in == S_ON:
             if self.stream_out != S_END:
                 await self.error(E_NO_STREAM)
-            raise WantsStream()
+            raise WantsStream
         self._recv_q = None
         self.s_out = False
         # TODO

@@ -29,7 +29,7 @@ async def cli(obj, config):
     cfg = obj.cfg.moat.ems.battery
 
     if config:
-        with open(config) as f:  # noqa:ASYNC101
+        with open(config) as f:
             cc = yload(f)
             merge(cfg, cc)
 

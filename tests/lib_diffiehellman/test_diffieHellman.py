@@ -1,11 +1,11 @@
-# coding=utf-8
-
 # ${PROJECTNAME}
 # (c) Chris von Csefalvay, 2015.
 
 """
 test_diffieHellman tests the DiffieHellman class.
 """
+
+from __future__ import annotations
 
 import unittest
 

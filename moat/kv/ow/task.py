@@ -2,6 +2,8 @@
 OWFS task for DistKV
 """
 
+from __future__ import annotations
+
 import anyio
 from asyncowfs import OWFS
 from asyncowfs.event import (
@@ -51,7 +53,9 @@ async def mon(ow, hd):
                 if isinstance(msg.attribute, str):
                     attr = (attr,)
                 await node.root.err.record_error(
-                    "onewire", Path.build(node.subpath) + attr, exc=msg.exception
+                    "onewire",
+                    Path.build(node.subpath) + attr,
+                    exc=msg.exception,
                 )
 
             elif isinstance(msg, DeviceValue):

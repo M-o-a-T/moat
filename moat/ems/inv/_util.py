@@ -1,5 +1,7 @@
 "utility stuff"
 
+from __future__ import annotations
+
 
 def balance(a, val_min=None, val_max=None):
     """

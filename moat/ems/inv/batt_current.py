@@ -2,6 +2,8 @@
 Inverter mode: set a specific battery current
 """
 
+from __future__ import annotations
+
 import logging
 
 from . import InvModeBase

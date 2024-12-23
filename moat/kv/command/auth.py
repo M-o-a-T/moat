@@ -1,4 +1,5 @@
 # command line interface
+from __future__ import annotations
 
 import asyncclick as click
 from moat.util import NotGiven, Path, split_arg, yprint
@@ -41,7 +42,6 @@ async def enum_auth(obj):
     for r in res.result:
         print(r)
         yield r
-    pass
 
 
 async def one_auth(obj):
@@ -73,7 +73,10 @@ async def enum_typ(obj, kind="user", ident=None, nchain=0):
             yield res
         else:
             async with obj.client._stream(
-                action="auth_list", typ=auth, kind=kind, nchain=nchain
+                action="auth_list",
+                typ=auth,
+                kind=kind,
+                nchain=nchain,
             ) as res:
                 async for r in res:
                     yield r

@@ -12,7 +12,8 @@ from msgpack import OutOfData
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any, Awaitable
+    from typing import Any
+    from collections.abc import Awaitable
 
 
 as_proxy("_", NotGiven, replace=True)
@@ -98,7 +99,7 @@ class _MsgpackMsgBuf(StackedMsg):
         super().__init__(stream, cfg)
         self.w_lock = Lock()
 
-        pref = cfg.get("msg_prefix", None)
+        pref = cfg.get("msg_prefix")
         if pref is not None:
             pref = bytes((pref,))
         self.pref = pref

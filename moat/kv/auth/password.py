@@ -5,6 +5,8 @@ Password-based auth method.
 Does not limit anything, allows everything.
 """
 
+from __future__ import annotations
+
 import nacl.secret
 
 from ..client import Client, NoData

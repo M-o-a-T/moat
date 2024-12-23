@@ -1,4 +1,5 @@
 # command line interface
+from __future__ import annotations
 
 import sys
 
@@ -22,7 +23,7 @@ async def cli():
 async def list_(obj):
     """List ACLs."""
     res = await obj.client._request(
-        action="enum_internal", path=("acl",), iter=False, nchain=obj.meta, empty=True
+        action="enum_internal", path=("acl",), iter=False, nchain=obj.meta, empty=True,
     )
     yprint(res if obj.meta else res.result, stream=obj.stdout)
 
@@ -57,7 +58,7 @@ async def get(obj, name, path):
     if not len(path):
         raise click.UsageError("You need a non-empty path.")
     res = await obj.client._request(
-        action="get_internal", path=("acl", name) + path, iter=False, nchain=obj.meta
+        action="get_internal", path=("acl", name) + path, iter=False, nchain=obj.meta,
     )
 
     if not obj.meta:

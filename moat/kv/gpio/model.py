@@ -2,6 +2,8 @@
 MoaT-KV client data model for GPIO
 """
 
+from __future__ import annotations
+
 import anyio
 
 try:
@@ -89,8 +91,6 @@ class _GPIOnode(_GPIObase):
         if self._poll is not None:
             self._poll.cancel()
             self._poll = None
-
-        pass
 
 
 class GPIOline(_GPIOnode):
@@ -555,13 +555,18 @@ class GPIOline(_GPIOnode):
                                 return
                             except Exception as exc:
                                 await self.root.err.record_error(
-                                    "gpio", self.subpath, data={"value": val}, exc=exc
+                                    "gpio",
+                                    self.subpath,
+                                    data={"value": val},
+                                    exc=exc,
                                 )
                             else:
                                 await self.root.err.record_working("gpio", self.subpath)
                         else:
                             await self.root.err.record_error(
-                                "gpio", self.subpath, comment="Bad value: %r" % (val,)
+                                "gpio",
+                                self.subpath,
+                                comment="Bad value: %r" % (val,),
                             )
 
     async def _set_value(self, line, value, state, negate):
@@ -697,7 +702,13 @@ class GPIOline(_GPIOnode):
         evt = anyio.Event()
         if mode == "write":
             self.task_group.start_soon(
-                self._task, self.with_output, evt, src, self._set_value, state, negate
+                self._task,
+                self.with_output,
+                evt,
+                src,
+                self._set_value,
+                state,
+                negate,
             )
         elif mode == "oneshot":
             if t_on is None:

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 
 import csv
-import sys
 
 from moat.util import P, Path, attrdict, yload, yprint
 
-with open("inc/enum.yaml", "r") as f:
+with open("inc/enum.yaml") as f:
     enums = yload(f, attr=True).enum
 
 import click
@@ -28,11 +28,11 @@ def main(info, fn, fo):
             "ref": [
                 P("alarm"),
                 # P("info.modbus"),
-            ]
+            ],
         }
         d.ref = P("universal")
 
-    with open(fn, "r") as f, open(fo, "w") as ff:
+    with open(fn) as f, open(fo, "w") as ff:
         r = csv.reader(f, dialect=csv.excel_tab)
         next(r)  # heading
         for r in csv.reader(f, dialect=csv.excel_tab):

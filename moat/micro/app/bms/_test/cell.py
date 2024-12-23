@@ -4,22 +4,13 @@ Test implementation of something that may or may not behave like a battery
 
 from __future__ import annotations
 
-import random
 import logging
-import sys
 from math import exp
-from functools import partial
 
-from moat.util.compat import TaskGroup, sleep_ms, Event
-from moat.util import pos2val, val2pos, attrdict
-from moat.micro.compat import ticks_ms, Queue
-from moat.micro.cmd.array import ArrayCmd
-from moat.micro.cmd.base import BaseCmd
-from moat.micro.conv.steinhart import celsius2thermistor, thermistor2celsius
+from moat.util.compat import sleep_ms
+from moat.util import pos2val, val2pos
 
-from moat.ems.battery._base import BalBaseCell, BaseBattery, BaseBalancer
-from moat.ems.battery.diy_serial.packet import PacketHeader, PacketType, replyClass
-from moat.ems.battery.diy_serial.packet import ReplyIdentify, ReplyReadSettings
+from moat.ems.battery._base import BalBaseCell
 
 logger = logging.getLogger(__name__)
 

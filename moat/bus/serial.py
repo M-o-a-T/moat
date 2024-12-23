@@ -1,7 +1,7 @@
 ## Code to (de)serialize bus messages
+from __future__ import annotations
 
 from enum import IntEnum
-from typing import Optional
 import trio
 import sys
 

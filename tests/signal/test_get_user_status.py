@@ -1,7 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Test for SignalClient.get_user_status
 """
+
+from __future__ import annotations
 
 import pook
 import pytest
@@ -34,7 +35,7 @@ async def test_get_user_status_ok():
                     "number": "+491337",
                     "uuid": "1337-42-1337-42-1337",
                     "isRegistered": True,
-                }
+                },
             ],
             "id": "test_get_user_status_ok",
         },

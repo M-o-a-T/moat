@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 import itertools
 import logging
 
@@ -236,7 +237,8 @@ class ProtocolHandler:
 
         async with anyio.create_task_group() as tg:
             for message in itertools.chain(
-                self.session.inflight_in.values(), self.session.inflight_out.values()
+                self.session.inflight_in.values(),
+                self.session.inflight_out.values(),
             ):
                 pending += 1
                 tg.start_soon(process_one, message)
@@ -318,7 +320,7 @@ class ProtocolHandler:
         assert app_message.qos == QOS_1
         if app_message.puback_packet:
             raise MoatMQTTException(
-                "Message '%d' has already been acknowledged" % app_message.packet_id
+                "Message '%d' has already been acknowledged" % app_message.packet_id,
             )
         if app_message.direction == OUTGOING:
             if app_message.packet_id not in self.session.inflight_out:
@@ -365,7 +367,7 @@ class ProtocolHandler:
         if app_message.direction == OUTGOING:
             if app_message.pubrel_packet and app_message.pubcomp_packet:
                 raise MoatMQTTException(
-                    "Message '%d' has already been acknowledged" % app_message.packet_id
+                    "Message '%d' has already been acknowledged" % app_message.packet_id,
                 )
             if not app_message.pubrel_packet:
                 # Store message
@@ -373,7 +375,7 @@ class ProtocolHandler:
                     # This is a retry flow, no need to store just check the message exists in session
                     if app_message.packet_id not in self.session.inflight_out:
                         raise MoatMQTTException(
-                            "Unknown inflight message '%d' in session" % app_message.packet_id
+                            "Unknown inflight message '%d' in session" % app_message.packet_id,
                         )
                     publish_packet = app_message.build_publish_packet(dup=True)
                 else:
@@ -588,7 +590,9 @@ class ProtocolHandler:
                     except (ClosedResourceError, BrokenResourceError, EndOfStream):
                         return
                     await self.plugins_manager.fire_event(
-                        EVENT_MQTT_PACKET_SENT, packet=packet, session=self.session
+                        EVENT_MQTT_PACKET_SENT,
+                        packet=packet,
+                        session=self.session,
                     )
         except ConnectionResetError:
             await self.handle_connection_closed()
@@ -662,7 +666,8 @@ class ProtocolHandler:
             await waiter.set(pubrec)
         except KeyError:
             self.logger.warning(
-                "Received PUBREC for unknown pending message with Id: %d", packet_id
+                "Received PUBREC for unknown pending message with Id: %d",
+                packet_id,
             )
         except InvalidStateError:
             self.logger.warning("PUBREC waiter with Id '%d' already done", packet_id)
@@ -674,7 +679,8 @@ class ProtocolHandler:
             await waiter.set(pubcomp)
         except KeyError:
             self.logger.warning(
-                "Received PUBCOMP for unknown pending message with Id: %d", packet_id
+                "Received PUBCOMP for unknown pending message with Id: %d",
+                packet_id,
             )
         except InvalidStateError:
             self.logger.warning("PUBCOMP waiter with Id '%d' already done", packet_id)
@@ -686,7 +692,8 @@ class ProtocolHandler:
             await waiter.set(pubrel)
         except KeyError:
             self.logger.warning(
-                "Received PUBREL for unknown pending message with Id: %d", packet_id
+                "Received PUBREL for unknown pending message with Id: %d",
+                packet_id,
             )
         except InvalidStateError:
             self.logger.warning("PUBREL waiter with Id '%d' already done", packet_id)

@@ -187,7 +187,10 @@ class MsgpackMsgBlk(_MsgpackMsgBlk):
         await super().setup()
         self.pack = Packer(default=_encode).pack
         self.unpacker = partial(
-            unpackb, strict_map_key=False, ext_hook=_decode, **self.cfg.get("pack", {})
+            unpackb,
+            strict_map_key=False,
+            ext_hook=_decode,
+            **self.cfg.get("pack", {}),
         )
 
 

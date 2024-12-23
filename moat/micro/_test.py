@@ -24,7 +24,7 @@ from moat.micro.proto.stream import ProcessBuf
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Awaitable
+    from collections.abc import Awaitable
 
 temp_dir = ContextVar("temp_dir")
 

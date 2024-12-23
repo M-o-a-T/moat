@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 from datetime import datetime
 
 import anyio
@@ -57,7 +58,9 @@ class BrokerSysPlugin:
 
         version = "MoaT-MQTT version " + get_version()
         await self.context.broadcast_message(
-            DOLLAR_SYS_ROOT + "version", version.encode(), retain=True
+            DOLLAR_SYS_ROOT + "version",
+            version.encode(),
+            retain=True,
         )
 
         # Start $SYS topics management
@@ -65,11 +68,14 @@ class BrokerSysPlugin:
             sys_interval = int(self.context.config.get("sys_interval", 0))
             if sys_interval > 0:
                 self.context.logger.debug(
-                    "Setup $SYS broadcasting every %d secondes", sys_interval
+                    "Setup $SYS broadcasting every %d secondes",
+                    sys_interval,
                 )
                 evt = anyio.Event()
                 self.context._broker_instance._tg.start_soon(
-                    self.broadcast_dollar_sys_topics_loop, sys_interval, evt
+                    self.broadcast_dollar_sys_topics_loop,
+                    sys_interval,
+                    evt,
                 )
                 await evt.wait()
             else:
@@ -115,51 +121,62 @@ class BrokerSysPlugin:
 
         # Broadcast updates
         await self._broadcast_sys_topic(
-            "load/bytes/received", int_to_bytes_str(self._stats[STAT_BYTES_RECEIVED])
+            "load/bytes/received",
+            int_to_bytes_str(self._stats[STAT_BYTES_RECEIVED]),
         )
         await self._broadcast_sys_topic(
-            "load/bytes/sent", int_to_bytes_str(self._stats[STAT_BYTES_SENT])
+            "load/bytes/sent",
+            int_to_bytes_str(self._stats[STAT_BYTES_SENT]),
         )
         await self._broadcast_sys_topic(
-            "messages/received", int_to_bytes_str(self._stats[STAT_MSG_RECEIVED])
+            "messages/received",
+            int_to_bytes_str(self._stats[STAT_MSG_RECEIVED]),
         )
         await self._broadcast_sys_topic(
-            "messages/sent", int_to_bytes_str(self._stats[STAT_MSG_SENT])
+            "messages/sent",
+            int_to_bytes_str(self._stats[STAT_MSG_SENT]),
         )
         await self._broadcast_sys_topic("time", str(datetime.now()).encode("utf-8"))
         await self._broadcast_sys_topic("uptime", int_to_bytes_str(int(uptime.total_seconds())))
         await self._broadcast_sys_topic("uptime/formated", str(uptime).encode("utf-8"))
         await self._broadcast_sys_topic("clients/connected", int_to_bytes_str(client_connected))
         await self._broadcast_sys_topic(
-            "clients/disconnected", int_to_bytes_str(client_disconnected)
+            "clients/disconnected",
+            int_to_bytes_str(client_disconnected),
         )
         await self._broadcast_sys_topic(
-            "clients/maximum", int_to_bytes_str(self._stats[STAT_CLIENTS_MAXIMUM])
+            "clients/maximum",
+            int_to_bytes_str(self._stats[STAT_CLIENTS_MAXIMUM]),
         )
         await self._broadcast_sys_topic(
-            "clients/total", int_to_bytes_str(client_connected + client_disconnected)
+            "clients/total",
+            int_to_bytes_str(client_connected + client_disconnected),
         )
         await self._broadcast_sys_topic(
-            "messages/inflight", int_to_bytes_str(inflight_in + inflight_out)
+            "messages/inflight",
+            int_to_bytes_str(inflight_in + inflight_out),
         )
         await self._broadcast_sys_topic("messages/inflight/in", int_to_bytes_str(inflight_in))
         await self._broadcast_sys_topic("messages/inflight/out", int_to_bytes_str(inflight_out))
         await self._broadcast_sys_topic(
-            "messages/inflight/stored", int_to_bytes_str(messages_stored)
+            "messages/inflight/stored",
+            int_to_bytes_str(messages_stored),
         )
         await self._broadcast_sys_topic(
             "messages/publish/received",
             int_to_bytes_str(self._stats[STAT_PUBLISH_RECEIVED]),
         )
         await self._broadcast_sys_topic(
-            "messages/publish/sent", int_to_bytes_str(self._stats[STAT_PUBLISH_SENT])
+            "messages/publish/sent",
+            int_to_bytes_str(self._stats[STAT_PUBLISH_SENT]),
         )
         await self._broadcast_sys_topic(
             "messages/retained/count",
             int_to_bytes_str(len(self.context.retained_messages)),
         )
         await self._broadcast_sys_topic(
-            "messages/subscriptions/count", int_to_bytes_str(subscriptions_count)
+            "messages/subscriptions/count",
+            int_to_bytes_str(subscriptions_count),
         )
 
     async def on_mqtt_packet_received(self, *args, **kwargs):  # pylint: disable=unused-argument
@@ -183,7 +200,8 @@ class BrokerSysPlugin:
     async def on_broker_client_connected(self, *args, **kwargs):  # pylint: disable=unused-argument
         self._stats[STAT_CLIENTS_CONNECTED] += 1
         self._stats[STAT_CLIENTS_MAXIMUM] = max(
-            self._stats[STAT_CLIENTS_MAXIMUM], self._stats[STAT_CLIENTS_CONNECTED]
+            self._stats[STAT_CLIENTS_MAXIMUM],
+            self._stats[STAT_CLIENTS_CONNECTED],
         )
 
     async def on_broker_client_disconnected(self, *args, **kwargs):  # pylint: disable=unused-argument

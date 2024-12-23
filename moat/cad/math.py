@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 try:
     import cadquery as cq
     import numpy as np
 except ImportError:
     cq = None
-from functools import partial
 
 
 def rotate(v, k, theta):

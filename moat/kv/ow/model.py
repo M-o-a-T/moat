@@ -2,6 +2,8 @@
 Moat-KV client data model for 1wire
 """
 
+from __future__ import annotations
+
 import anyio
 
 from moat.util import combine_dict, attrdict
@@ -68,7 +70,9 @@ class OWFSattr(ClientEntry):
                 await self.root._tg.start(self._watch_src)
             else:
                 await self.root.err.record_working(
-                    "owfs", self.subpath + ("write",), comment="dropped"
+                    "owfs",
+                    self.subpath + ("write",),
+                    comment="dropped",
                 )
 
         # poll OWFS
@@ -89,7 +93,9 @@ class OWFSattr(ClientEntry):
                     await dev.set_polling_interval(self.attr, intv)
                 else:
                     await self.root.err.record_working(
-                        "owfs", self.subpath + ("read",), comment="dropped"
+                        "owfs",
+                        self.subpath + ("read",),
+                        comment="dropped",
                     )
             except RuntimeError as exc:
                 await self.root.err.record_error("owfs", self.subpath + ("read",), exc=exc)
@@ -137,7 +143,10 @@ class OWFSattr(ClientEntry):
         with anyio.CancelScope() as sc:
             try:
                 async with self.client.watch(
-                    self.watch_src, min_depth=0, max_depth=0, fetch=True
+                    self.watch_src,
+                    min_depth=0,
+                    max_depth=0,
+                    fetch=True,
                 ) as wp:
                     if self.watch_src_scope is not None:
                         self.watch_src_scope.cancel()
@@ -176,7 +185,9 @@ class OWFSattr(ClientEntry):
                                 return
                             await dev.set(*self.attr, value=val)
                             await self.root.err.record_working(
-                                "owfs", self.subpath + ("write",), comment="write OK"
+                                "owfs",
+                                self.subpath + ("write",),
+                                comment="write OK",
                             )
 
             except Exception as exc:
@@ -315,8 +326,6 @@ class BrokenDict:
 
         pdb.set_trace()
         return object.__getattribute__(self, k, v)
-
-    pass
 
 
 @OWFSroot.register(0x10)

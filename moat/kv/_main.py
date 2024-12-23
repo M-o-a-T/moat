@@ -4,8 +4,9 @@ Basic DistKV support
 
 """
 
+from __future__ import annotations
+
 import logging
-from pathlib import Path
 
 import asyncclick as click
 from moat.util import attrdict, combine_dict, load_subgroup, CFG, ensure_cfg

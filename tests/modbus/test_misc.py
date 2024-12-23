@@ -2,6 +2,8 @@
 Basic client/server tests
 """
 
+from __future__ import annotations
+
 import pytest
 
 from moat.modbus.client import ModbusClient

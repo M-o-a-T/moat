@@ -34,7 +34,8 @@ if L:
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import AsyncContextManager, AsyncIterator, Awaitable, Callable
+    from typing import AsyncContextManager
+    from collections.abc import AsyncIterator, Awaitable, Callable
 
     from moat.micro.cmd.tree.dir import BaseSuperCmd, Dispatch
 
@@ -45,7 +46,7 @@ as_proxy("_SCmdErr")
 class ShortCommandError(ValueError):
     "The command path was too short"
 
-    pass  # noqa:PIE790
+    pass
 
 
 as_proxy("_LCmdErr")
@@ -54,7 +55,7 @@ as_proxy("_LCmdErr")
 class LongCommandError(ValueError):
     "The command path was too long"
 
-    pass  # noqa:PIE790
+    pass
 
 
 class ACM_h:

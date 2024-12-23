@@ -16,8 +16,6 @@ import moat  # just for the namespace
 
 if not hasattr(moat, "SERIAL"):
     try:
-        import os
-        import time
         import usb.device
         from usb.device.cdc import CDCInterface
 
@@ -25,7 +23,7 @@ if not hasattr(moat, "SERIAL"):
         try:
             moat.SERIAL.init(timeout=0)
             usb.device.get().init(moat.SERIAL, builtin_driver=True)
-        except Exception as exc:
+        except Exception:
             del moat.SERIAL
             raise
         finally:

@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 from struct import pack, unpack
 
 import anyio
@@ -275,7 +276,9 @@ class MsgPackJSONCodec(BaseCodec):
 
     def encode(self, data):
         return msgpack.packb(
-            json.loads(data), use_bin_type=self.use_bin_type, use_list=self.use_list
+            json.loads(data),
+            use_bin_type=self.use_bin_type,
+            use_list=self.use_list,
         )
 
     def decode(self, data):

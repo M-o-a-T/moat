@@ -2,6 +2,8 @@
 Inverter mode: set fixed total power
 """
 
+from __future__ import annotations
+
 import logging
 
 from . import InvModeBase

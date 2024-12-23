@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 async def find_next_alarm(calendar, future=10, now=None, zone=timezone.utc) -> Tuple(
-    VAlarm, datetime
+    VAlarm,
+    datetime,
 ):
     """
     fetch the next alarm in the current calendar

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import logging
 
 import pytest
@@ -29,7 +30,9 @@ async def test_11_kill(autojump_clock):  # pylint: disable=unused-argument
         async with st.client(0) as c:
             res = await c.get(P("foo.bar"), nchain=3)
             assert res.chain == dict(
-                node="test_2", tick=2, prev=dict(node="test_1", tick=2, prev=None)
+                node="test_2",
+                tick=2,
+                prev=dict(node="test_1", tick=2, prev=None),
             )
 
             res = await c._request("enum_node", node="test_1", current=True)

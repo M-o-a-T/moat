@@ -2,6 +2,8 @@
 Test program cloned from asyncowfs, but using MoaT-KV for end-to-semi-end testing.
 """
 
+from __future__ import annotations
+
 import sys
 import anyio
 from copy import deepcopy

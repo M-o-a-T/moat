@@ -1,11 +1,9 @@
 #!/usr/bin/python3
+from __future__ import annotations
 
 import trio
 import socket
 import asyncclick as click
-from fakebus.client import Client
-from moatbus.message import BusMessage
-from moatbus.handler import RES
 
 
 async def reader(sock, verbose):
@@ -28,7 +26,7 @@ Arguments show which bit (or bits, separate with comma) to flip at each
 step. Bits are numbered starting with 1, a zero is a no-op.
 
 The sequence repeats until `--loops`, if used, or interrupted.
-"""
+""",
 )
 @click.option("-s", "--socket", "sockname", help="Socket to use", default="/tmp/moatbus")
 @click.option("-d", "--delay", type=float, default=0.1, help="Delay(sec) until next flip")

@@ -2,6 +2,8 @@
 MoaT.signal API
 """
 
+from __future__ import annotations
+
 from base64 import b64encode
 from io import BytesIO
 from os import remove as os_remove
@@ -208,10 +210,10 @@ class SignalClient:
                                         j_search(
                                             search_for,
                                             t_res.get("results"),
-                                        )
-                                    )
-                                )
-                            }
+                                        ),
+                                    ),
+                                ),
+                            },
                         })
             return {"timestamps": timestamps}
         finally:

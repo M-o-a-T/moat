@@ -1,7 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Test for SignalClient.list_groups
 """
+
+from __future__ import annotations
 
 import pook
 import pytest
@@ -59,7 +60,7 @@ RESPONSE_JSON = {
                 {
                     "number": "+4915127115406",
                     "uuid": "f373e846-3781-45a8-8533-433e4bb430f7",
-                }
+                },
             ],
             "banned": [],
             "permissionAddMember": "EVERY_MEMBER",

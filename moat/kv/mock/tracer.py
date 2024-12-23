@@ -1,3 +1,4 @@
+from __future__ import annotations
 import traceback
 
 import trio
@@ -31,7 +32,6 @@ class Tracer(trio.abc.Instrument):
         if isinstance(exception, Exception):
             self.etasks.add(task)
             self._print_with_task("*** task excepted", task, exception)
-        pass
 
     def before_task_step(self, task):
         if isinstance(task._next_send, Error) and isinstance(task._next_send.error, Exception):

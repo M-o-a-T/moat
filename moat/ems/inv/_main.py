@@ -4,6 +4,8 @@
 Main code for inverter control
 """
 
+from __future__ import annotations
+
 import sys
 
 import asyncclick as click

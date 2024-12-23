@@ -1,6 +1,7 @@
 """
 Poll code
 """
+from __future__ import annotations
 
 import logging
 from functools import partial
@@ -56,8 +57,8 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
             # The MoaT-KV client must live longer than the taskgroup
             from .kv import Register  # pylint: disable=import-outside-toplevel
 
-            Reg = partial(Register, mt_kv=mt_kv, tg=tg)  # noqa: F811
-            RegS = partial(Register, mt_kv=mt_kv, tg=tg, is_server=True)  # noqa: F811
+            Reg = partial(Register, mt_kv=mt_kv, tg=tg)
+            RegS = partial(Register, mt_kv=mt_kv, tg=tg, is_server=True)
 
         # relay-out server(s)
         servers = []

@@ -5,7 +5,6 @@ Basic support for SEW motors
 from __future__ import annotations
 
 import logging  # pylint: disable=wrong-import-position
-import anyio
 
 import asyncclick as click
 

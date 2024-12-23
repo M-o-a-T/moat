@@ -2,6 +2,8 @@
 This module imports possibly-partial configuration snippets.
 """
 
+from __future__ import annotations
+
 from importlib import import_module
 from pathlib import Path as FSPath
 

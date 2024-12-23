@@ -2,17 +2,13 @@
 This module implements a basic MoatBus address controller.
 """
 
+from __future__ import annotations
+
 import trio
-from contextlib import asynccontextmanager
-import msgpack
-from functools import partial
 from dataclasses import dataclass
 
-from ...backend import BaseBusHandler
 from ...message import BusMessage, LongMessageError
-from ..obj import Obj
-from ...util import byte2mini, mini2byte, Processor
-from ..server import NoFreeID, IDcollisionError
+from ...util import byte2mini, Processor
 
 import logging
 
@@ -179,7 +175,10 @@ class AddrControl(Processor):
         async def accept(cid, code=0, timer=0):
             self.logger.info("Accept x%x for %d:%r", code, cid, serial)
             await self.send(
-                src=self.my_id, dst=cid, code=0, data=build_aa_data(serial, code, timer)
+                src=self.my_id,
+                dst=cid,
+                code=0,
+                data=build_aa_data(serial, code, timer),
             )
 
         async def reject(err, dly=0):
@@ -254,7 +253,10 @@ class AddrControl(Processor):
             await objs.register(obj2)
         elif obj2.client_id != client:
             self.logger.error(
-                "Conflicting IDs: new:%d known:%d: %s", client, obj.client_id, serial
+                "Conflicting IDs: new:%d known:%d: %s",
+                client,
+                obj.client_id,
+                serial,
             )
             await objs.deregister(obj2)
             await objs.register(obj2)

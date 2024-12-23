@@ -13,7 +13,8 @@ from moat.micro.compat import Event, L, Queue, log, wait_for_ms
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any, Awaitable
+    from typing import Any
+    from collections.abc import Awaitable
 
 
 class Cmd(BaseCmd):

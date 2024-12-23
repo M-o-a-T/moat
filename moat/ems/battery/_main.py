@@ -4,6 +4,8 @@ Basic tool support
 
 """
 
+from __future__ import annotations
+
 from contextlib import asynccontextmanager
 import logging  # pylint: disable=wrong-import-position
 
@@ -25,7 +27,7 @@ async def cli(obj, bat):
             bat = cfg.ems.battery.paths["std"]
         except KeyError:
             raise click.UsageError(
-                f"No default battery. Set config 'ems.battery.paths.std' or use '--batt'."
+                "No default battery. Set config 'ems.battery.paths.std' or use '--batt'.",
             )
     if len(bat) == 1:
         try:
@@ -36,7 +38,7 @@ async def cli(obj, bat):
         else:
             if not isinstance(bat, Path):
                 raise click.UsageError(
-                    f"--battery: requires a path (directly or at 'ems.battery.paths')"
+                    "--battery: requires a path (directly or at 'ems.battery.paths')",
                 )
     obj.bat = bat
 

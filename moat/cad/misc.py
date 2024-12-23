@@ -122,8 +122,8 @@ def WoodScrew(height, outer, inner, angle=45, head=None, negate=False):
             .extrude(height)
             .add(
                 Cone(inner / 2, head / 2, (head - inner) / 2 * tan(rad(angle))).off_z(
-                    height - h_head
-                )
+                    height - h_head,
+                ),
             )
         )
 
@@ -136,7 +136,7 @@ def WoodScrew(height, outer, inner, angle=45, head=None, negate=False):
         # .faces(">Z").workplane()
         # .circle(head/2)
         .cut(
-            Cone(inner / 2, head / 2, (head - inner) / 2 * tan(rad(angle))).off_z(height - h_head)
+            Cone(inner / 2, head / 2, (head - inner) / 2 * tan(rad(angle))).off_z(height - h_head),
         )
     )
 

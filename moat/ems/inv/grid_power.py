@@ -2,6 +2,8 @@
 Inverter mode: set a specific grid power use
 """
 
+from __future__ import annotations
+
 import logging
 
 from . import InvModeBase

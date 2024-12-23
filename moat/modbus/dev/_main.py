@@ -1,17 +1,15 @@
 """
 Device file handling, with a basic multi-device client
 """
+from __future__ import annotations
 
 import logging
-from functools import partial
 from pathlib import Path as FSPath
 
-import anyio
 import asyncclick as click
-from moat.util import attrdict, yload, yprint
+from moat.util import yload, yprint
 
-from ..client import ModbusClient
-from .device import ClientDevice, fixup
+from .device import fixup
 from .poll import dev_poll
 
 logger = logging.getLogger(__name__)

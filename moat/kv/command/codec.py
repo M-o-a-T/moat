@@ -1,4 +1,5 @@
 # command line interface
+from __future__ import annotations
 
 import asyncclick as click
 from moat.util import NotGiven, P, Path, PathLongener, yload, yprint
@@ -22,7 +23,7 @@ async def get(obj, path, script, encode, decode):
     if not len(path):
         raise click.UsageError("You need a non-empty path.")
     res = await obj.client._request(
-        action="get_internal", path=Path("codec") + path, iter=False, nchain=obj.meta
+        action="get_internal", path=Path("codec") + path, iter=False, nchain=obj.meta,
     )
     if encode and res.get("encode", None) is not None:
         encode.write(res.pop("encode"))

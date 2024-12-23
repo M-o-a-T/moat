@@ -2,13 +2,15 @@
 The MoaT Modbus client and its sub-objects (excluding individual bus values).
 """
 
+from __future__ import annotations
+
 import logging
 import socket
 import struct
 from contextlib import asynccontextmanager
 from functools import partial
 from pathlib import Path
-from typing import Any, Dict, Type
+from typing import Any
 
 import anyio
 from anyio import ClosedResourceError, IncompleteRead
@@ -317,7 +319,9 @@ class Host(CtxObj, _HostCommon):
                         self.stream = await anyio.connect_tcp(self.addr, self.port)
                         # set so_linger to force sending RST instead of FIN
                         self.stream.extra(SocketAttribute.raw_socket).setsockopt(
-                            socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0)
+                            socket.SOL_SOCKET,
+                            socket.SO_LINGER,
+                            struct.pack("ii", 1, 0),
                         )
                         # re-send open requests
                         await _send_trans()
@@ -335,7 +339,10 @@ class Host(CtxObj, _HostCommon):
 
                 # check for decoding errors
                 self.framer.processIncomingPacket(
-                    data, replies.append, slave=0, single=True
+                    data,
+                    replies.append,
+                    slave=0,
+                    single=True,
                 )  # bah
 
             except (
@@ -509,7 +516,10 @@ class SerialHost(CtxObj, _HostCommon):
 
                 # check for decoding errors
                 self.framer.processIncomingPacket(
-                    data, replies.append, slave=0, single=True
+                    data,
+                    replies.append,
+                    slave=0,
+                    single=True,
                 )  # bah
 
             except (
@@ -761,7 +771,7 @@ class Slot(CtxObj):
                 return False
         return True
 
-    def add(self, typ: TypeCodec, offset: int, cls: Type[BaseValue] | BaseValue) -> BaseValue:
+    def add(self, typ: TypeCodec, offset: int, cls: type[BaseValue] | BaseValue) -> BaseValue:
         """Add a field to this slot.
 
         :param typ: The `TypeCodec` instance to use.
@@ -806,7 +816,7 @@ class Slot(CtxObj):
             return
         self._scope.cancel()
 
-    async def getValues(self) -> Dict[TypeCodec, Dict[int, Any]]:
+    async def getValues(self) -> dict[TypeCodec, dict[int, Any]]:
         """
         Send messages reading this slot's values from the bus.
         Returns a (type,(offset,value)) dict-of-dicts.
@@ -935,7 +945,7 @@ class Slot(CtxObj):
             self.write_trigger = anyio.Event()
             try:
                 await self.write(changed=True)
-            except ModbusError as exc:
+            except ModbusError:
                 _logger.exception("Write %s", self)
                 # TODO examine+record the error
 
@@ -951,7 +961,8 @@ class ValueList(DataBlock):
 
     def __init__(self, slot, kind):
         super().__init__(
-            max_rd_len=slot.unit.host.max_rd_len, max_wr_len=slot.unit.host.max_wr_len
+            max_rd_len=slot.unit.host.max_rd_len,
+            max_wr_len=slot.unit.host.max_wr_len,
         )
         self.slot = slot
         self.kind = kind

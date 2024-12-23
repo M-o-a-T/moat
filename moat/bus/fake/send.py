@@ -1,9 +1,9 @@
 #!/usr/bin/python3
+from __future__ import annotations
 
 import asyncclick as click
 from fakebus.client import Client
 from moatbus.message import BusMessage
-from moatbus.handler import RES
 
 
 @click.command()
@@ -18,7 +18,11 @@ from moatbus.handler import RES
 @click.argument("data", nargs=-1)
 async def run(socket, timeout, timerb, source, dest, cmd, data, bits, verbose):
     async with Client(
-        wires=bits, socket=socket, timeout=timeout, timeout2=timerb, verbose=verbose
+        wires=bits,
+        socket=socket,
+        timeout=timeout,
+        timeout2=timerb,
+        verbose=verbose,
     ).run() as client:
         msg = BusMessage()
         msg.src = source

@@ -22,7 +22,7 @@ from .valtask import ValueTask
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import AsyncIterable, AsyncIterator, Iterator
+    from collections.abc import AsyncIterable, AsyncIterator, Iterator
 
 
 if not L:

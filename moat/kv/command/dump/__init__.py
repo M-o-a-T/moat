@@ -1,4 +1,5 @@
 # command line interface
+from __future__ import annotations
 
 import datetime
 import sys
@@ -49,7 +50,7 @@ async def init(node, file):
                 path=[],
                 tock=1,
                 value="Initial data",
-            )
+            ),
         )
 
 
@@ -109,7 +110,7 @@ async def msg_(obj, path):
                     v["_type"] = type(msg).__name__
 
                 v["_timestamp"] = datetime.datetime.now().isoformat(
-                    sep=" ", timespec="milliseconds"
+                    sep=" ", timespec="milliseconds",
                 )
 
                 yprint(v, stream=obj.stdout)

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import anyio
 from moat.lib.cmd import CmdHandler
 from contextlib import asynccontextmanager

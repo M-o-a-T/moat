@@ -1,4 +1,5 @@
 # command line interface helpers for objects
+from __future__ import annotations
 
 import logging
 import sys
@@ -104,13 +105,13 @@ def std_command(cli, *a, **kw):
         name=tname,
         invoke_without_command=True,
         short_help=tinv.short_help,
-        help="""\
-            Manager for {tlname}s.
+        help=f"""\
+            Manager for {tinv.long_name}s.
 
             \b
             Use '… {tname} -' to list all entries.
             Use '… {tname} NAME' to show details of a single entry.
-            """.format(tname=tname, tlname=tinv.long_name),
+            """,
     )
     @click.argument("name", type=str, nargs=1)
     @click.pass_context

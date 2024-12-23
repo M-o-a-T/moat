@@ -1,7 +1,8 @@
+from __future__ import annotations
 import logging
 import os
 
-import mock
+from unittest import mock
 import pytest
 import trio
 from asyncactor.actor import Actor
@@ -85,7 +86,7 @@ async def test_10_recover(autojump_clock):  # pylint: disable=unused-argument
         st.ex.enter_context(mock.patch("asyncactor.actor.Actor.queue_msg", new=queue_msg))
         st.ex.enter_context(mock.patch("moat.kv.server.Server._send_event", new=send_evt))
         st.ex.enter_context(
-            mock.patch("moat.kv.server.Server._unpack_multiple", new=unpack_multiple)
+            mock.patch("moat.kv.server.Server._unpack_multiple", new=unpack_multiple),
         )
 
         for x in range(NX):

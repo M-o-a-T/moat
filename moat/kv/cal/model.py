@@ -2,13 +2,11 @@
 Moat-KV client data model for calendars
 """
 
-import anyio
+from __future__ import annotations
 
-from moat.util import combine_dict, attrdict
+
 from moat.kv.obj import ClientEntry, ClientRoot, AttrClientEntry
 from moat.kv.errors import ErrorRoot
-from moat.kv.exceptions import ClientChainError
-from collections.abc import Mapping
 
 import logging
 

@@ -3,6 +3,8 @@ This module contains helpers for testing async gpio, via the Linux kernel's
 ``gpio_mockup`` module (writing) and ``/sys/kernel/debug/cpio`` (monitoring).
 """
 
+from __future__ import annotations
+
 import errno
 import logging
 import os
@@ -16,7 +18,7 @@ from moat.util import Queue
 logger = logging.getLogger(__name__)
 
 _r_chip = re.compile(
-    "^(?P<chip>[a-z0-9]+): GPIOs (?P<base>[0-9]+)-(?:.*, (?P<name>[-_a-zA-Z0-9]+): *$)?"
+    "^(?P<chip>[a-z0-9]+): GPIOs (?P<base>[0-9]+)-(?:.*, (?P<name>[-_a-zA-Z0-9]+): *$)?",
 )
 _r_pin = re.compile("^gpio-(?P<pin>[0-9]+) \\(.*\\) (?P<dir>in|out) +(?P<val>hi|lo)")
 
@@ -30,7 +32,7 @@ class _GpioPin:
 
     fd = None
 
-    def __init__(self, watcher: "GpioWatcher", chip: str, pin: int):
+    def __init__(self, watcher: GpioWatcher, chip: str, pin: int):
         self.watcher = watcher
         self.chip = chip
         self.pin = pin
@@ -41,7 +43,7 @@ class _GpioPin:
                 os.path.join(watcher.debugfs_path, "gpio-mockup-event", chip, str(pin)),
                 os.O_WRONLY,
             )
-        except EnvironmentError as exc:
+        except OSError as exc:
             if exc.errno != errno.ENOENT:
                 raise
 
@@ -79,7 +81,7 @@ class _GpioPin:
         logger.debug("SET %s %d %s", self.chip, self.pin, value)
         if self.fd is None:
             raise RuntimeError(
-                f"Pin {self.chip}/{self.pin} is not controlled via the 'gpio_mockup' module"
+                f"Pin {self.chip}/{self.pin} is not controlled via the 'gpio_mockup' module",
             )
         os.write(self.fd, b"1" if value else b"0")
         # os.lseek(self.fd, 0, os.SEEK_SET)
@@ -102,7 +104,7 @@ class GpioWatcher:
     ):
         self.interval = interval
         self.gpio = open(  # pylint: disable=unspecified-encoding
-            os.path.join(debugfs_path, "gpio"), "r"
+            os.path.join(debugfs_path, "gpio"),
         )
         self.targets = dict()  # chip > line > _GpioPin
         #       self.names = {}

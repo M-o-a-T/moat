@@ -58,7 +58,7 @@ class Cell(BaseCell):
         if val is None or self.n_samples is None or val == 0:
             return 0
         return int(
-            (val - self.cfg.u.offset) / self.v_per_ADC * self.n_samples / self.v_calibration
+            (val - self.cfg.u.offset) / self.v_per_ADC * self.n_samples / self.v_calibration,
         )
 
     def m_temp(self, msg):

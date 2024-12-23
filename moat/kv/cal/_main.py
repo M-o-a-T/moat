@@ -1,9 +1,10 @@
 # command line interface
+from __future__ import annotations
 
 import asyncclick as click
 from functools import partial
-from moat.util import yprint, attrdict, NotGiven, P, Path, as_service, attr_args
-from moat.kv.data import data_get, node_attr
+from moat.util import P, Path
+from moat.kv.data import data_get
 from .model import CalRoot
 from .util import find_next_alarm
 from datetime import datetime, timezone, timedelta
@@ -58,7 +59,9 @@ async def run_(obj):
         t_al = datetime.fromtimestamp(t_al.value["time"], tz)
 
     async with caldav.DAVClient(
-        url=cal_cfg["url"], username=cal_cfg["user"], password=cal_cfg["pass"]
+        url=cal_cfg["url"],
+        username=cal_cfg["user"],
+        password=cal_cfg["pass"],
     ) as client:
         principal = await client.principal()
         calendar = await principal.calendar(name="privat neu")

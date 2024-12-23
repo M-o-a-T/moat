@@ -1,6 +1,6 @@
 # command line interface
+from __future__ import annotations
 
-import json
 import logging
 import os
 import socket
@@ -13,7 +13,6 @@ from moat.util import attrdict, combine_dict, yload
 
 from .broker import create_broker
 from .client import CodecError, ConnectException, _codecs, open_mqttclient
-from .version import get_version
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +76,7 @@ def _get_message(args):
     for m in args["msg_eval"]:
         yield codec.encode(eval(m))  # pylint: disable=eval-used
     if args["msg_lines"]:
-        with open(args["msg_lines"], "r") as f:  # pylint: disable=unspecified-encoding
+        with open(args["msg_lines"]) as f:  # pylint: disable=unspecified-encoding
             for line in f:
                 yield line.encode(encoding="utf-8")
     if args["msg_stdin_lines"]:

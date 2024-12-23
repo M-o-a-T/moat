@@ -27,7 +27,6 @@ import ast
 import collections.abc
 import logging
 import re
-import wanings
 from base64 import b64decode, b64encode
 from contextvars import ContextVar
 from functools import total_ordering
@@ -548,7 +547,7 @@ class Path(collections.abc.Sequence):
                     res.append(path_eval(p[1:]))
 
                 if len(res) != pos + 1 - marks:
-                    raise RuntimeError("Slashed-Path syntax")  # noqa: TRY301
+                    raise RuntimeError("Slashed-Path syntax")
 
         except Exception as exc:
             raise SyntaxError(f"Cannot eval {path!r}, part {pos + 1}") from exc

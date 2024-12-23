@@ -6,14 +6,11 @@ from __future__ import annotations
 
 #
 import logging
-from contextlib import asynccontextmanager
-from functools import cached_property
 from pprint import pformat
 
-from moat.util import ValueEvent, attrdict, combine_dict
+from moat.util import ValueEvent
 
 from moat.micro.compat import (
-    Event,
     Lock,
     TimeoutError,
     sleep_ms,

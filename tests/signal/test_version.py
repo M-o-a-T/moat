@@ -1,7 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Test for SignalClient.version
 """
+
+from __future__ import annotations
 
 import pook
 import pytest

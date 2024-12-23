@@ -2,9 +2,9 @@
 Message structure for MoatBus
 """
 
-from typing import Union
+from __future__ import annotations
+
 from bitstring import BitArray
-from enum import Enum
 from distkv.util import attrdict
 
 

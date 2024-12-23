@@ -2,6 +2,8 @@
 MoaT test support
 """
 
+from __future__ import annotations
+
 import io
 import logging
 import shlex
@@ -75,7 +77,6 @@ def raises(*exc):
         yield res
     except exc as e:
         res.value = e
-        pass
     except ExceptionGroup as e:
         while isinstance(e, ExceptionGroup) and len(e.exceptions) == 1:
             e = e.exceptions[0]

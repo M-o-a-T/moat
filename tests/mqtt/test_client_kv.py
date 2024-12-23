@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 import logging
 import os
 import random
@@ -8,7 +9,6 @@ import unittest
 
 import anyio
 import pytest
-import trio
 
 try:
     from contextlib import asynccontextmanager
@@ -64,7 +64,7 @@ broker_config = {
 
 test_config = {
     "listeners": {
-        "default": {"type": "tcp", "bind": f"127.0.0.1:{PORT_B}", "max_connections": 10}
+        "default": {"type": "tcp", "bind": f"127.0.0.1:{PORT_B}", "max_connections": 10},
     },
     "sys_interval": 0,
     "retain": False,
@@ -87,7 +87,7 @@ async def moat_kv_server(n):
                 async def msglog(evt):
                     try:
                         async with cl._stream(
-                            "msg_monitor", topic="*"
+                            "msg_monitor", topic="*",
                         ) as mon:  # , topic=broker_config['kv']['topic']) as mon:
                             log.info("Monitor Start")
                             evt.set()

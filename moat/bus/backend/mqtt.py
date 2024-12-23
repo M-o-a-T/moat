@@ -1,4 +1,4 @@
-import random
+from __future__ import annotations
 from contextlib import asynccontextmanager
 
 from distmqtt.client import open_mqttclient

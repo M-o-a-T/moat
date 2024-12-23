@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Created on Mon Jun 20 19:45:34 2022
 
 @author: eadali
 """
+
+from __future__ import annotations
 
 from numpy import arange, zeros_like, allclose, diff, insert
 from math import sin, cos, pi

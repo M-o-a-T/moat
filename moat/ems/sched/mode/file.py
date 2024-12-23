@@ -2,6 +2,8 @@
 Read data from a file
 """
 
+from __future__ import annotations
+
 import sys
 
 import anyio

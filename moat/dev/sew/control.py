@@ -1,5 +1,6 @@
+from __future__ import annotations
 from moat.util import attrdict as ad, srepr
-from moat.mqtt.client import open_mqttclient, CodecError, QOS_1
+from moat.mqtt.client import open_mqttclient, QOS_1
 from moat.modbus.types import HoldingRegisters as H, IntValue as I, SignedIntValue as S
 from moat.modbus.client import ModbusClient
 import anyio
@@ -35,8 +36,8 @@ class _Run:
 
             def want(reg, val, txt):
                 if reg.value != val:
-                    logger.warn(
-                        f"Change P{reg.offset // 100}-{(reg.offset % 100) + 1:02d} from {reg.value} to {val} ({txt})"
+                    logger.warning(
+                        f"Change P{reg.offset // 100}-{(reg.offset % 100) + 1:02d} from {reg.value} to {val} ({txt})",
                     )
                     reg.set(val)
 
@@ -155,7 +156,7 @@ class _Run:
     async def run(self):
         cfg = self.cfg
 
-        from moat.mqtt.client import open_mqttclient, CodecError
+        from moat.mqtt.client import open_mqttclient
 
         modbus = cfg["modbus"]
         async with (

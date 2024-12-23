@@ -52,7 +52,7 @@ async def rd(x, s=False, evt=None):
     return res
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_ary(tmp_path):
     "fake alert test"
     async with mpy_stack(tmp_path, CFG) as d, TaskGroup() as tg:

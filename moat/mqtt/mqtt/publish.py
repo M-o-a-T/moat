@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 import anyio
 
 from ..codecs import decode_packet_id, decode_string, encode_string, int_to_bytes
@@ -21,7 +22,7 @@ class PublishVariableHeader(MQTTVariableHeader):
         super().__init__()
         if "*" in topic_name:
             raise MQTTException(
-                "[MQTT-3.3.2-2] Topic name in the PUBLISH Packet MUST NOT contain wildcard characters."
+                "[MQTT-3.3.2-2] Topic name in the PUBLISH Packet MUST NOT contain wildcard characters.",
             )
         if not isinstance(topic_name, str):
             topic_name = "/".join(topic_name)
@@ -29,9 +30,7 @@ class PublishVariableHeader(MQTTVariableHeader):
         self.packet_id = packet_id
 
     def __repr__(self):
-        return type(self).__name__ + "(topic={0}, packet_id={1})".format(
-            self.topic_name, self.packet_id
-        )
+        return type(self).__name__ + f"(topic={self.topic_name}, packet_id={self.packet_id})"
 
     def to_bytes(self):
         out = bytearray()
@@ -78,7 +77,7 @@ class PublishPayload(MQTTPayload):
         return cls(data)
 
     def __repr__(self):
-        return type(self).__name__ + "(data={0!r})".format(repr(self.data))
+        return type(self).__name__ + f"(data={repr(self.data)!r})"
 
 
 class PublishPacket(MQTTPacket):
@@ -100,7 +99,7 @@ class PublishPacket(MQTTPacket):
         else:
             if fixed.packet_type != PUBLISH:
                 raise MoatMQTTException(
-                    "Invalid fixed packet type %s for PublishPacket init" % fixed.packet_type
+                    "Invalid fixed packet type %s for PublishPacket init" % fixed.packet_type,
                 )
             header = fixed
 

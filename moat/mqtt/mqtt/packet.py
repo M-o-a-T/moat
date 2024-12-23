@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 from datetime import datetime
 
 import anyio
@@ -55,7 +56,7 @@ class MQTTFixedHeader:
             out.append(packet_type)
         except OverflowError:
             raise CodecException(  # pylint:disable=W0707
-                "packet_type encoding exceed 1 byte length: value=%d" % (packet_type,)
+                "packet_type encoding exceed 1 byte length: value=%d" % (packet_type,),
             )
 
         encoded_length = encode_remaining_length(self.remaining_length)
@@ -94,7 +95,7 @@ class MQTTFixedHeader:
                     if shift > 21:
                         raise MQTTException(
                             "Invalid remaining length bytes:%s, packet_type=%d"
-                            % (bytes_to_hex_str(buffer), msg_type)
+                            % (bytes_to_hex_str(buffer), msg_type),
                         )
                 else:
                     break
@@ -111,9 +112,7 @@ class MQTTFixedHeader:
             return None
 
     def __repr__(self):
-        return type(self).__name__ + "(length={0}, flags={1})".format(
-            self.remaining_length, hex(self.flags)
-        )
+        return type(self).__name__ + f"(length={self.remaining_length}, flags={hex(self.flags)})"
 
 
 class MQTTVariableHeader:
@@ -156,7 +155,7 @@ class PacketIdVariableHeader(MQTTVariableHeader):
         return cls(packet_id)
 
     def __repr__(self):
-        return type(self).__name__ + "(packet_id={0})".format(self.packet_id)
+        return type(self).__name__ + f"(packet_id={self.packet_id})"
 
 
 class MQTTPayload:
@@ -164,7 +163,7 @@ class MQTTPayload:
         pass
 
     def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader):
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @classmethod
     async def from_stream(
@@ -238,8 +237,9 @@ class MQTTPacket:
         return len(self.to_bytes())
 
     def __repr__(self):
-        return type(
-            self
-        ).__name__ + "(ts={0!s}, fixed={1!r}, variable={2!r}, payload={3!r})".format(
-            self.protocol_ts, self.fixed_header, self.variable_header, self.payload
+        return (
+            type(
+                self,
+            ).__name__
+            + f"(ts={self.protocol_ts!s}, fixed={self.fixed_header!r}, variable={self.variable_header!r}, payload={self.payload!r})"
         )

@@ -1,4 +1,5 @@
 # command line interface
+from __future__ import annotations
 
 import json
 
@@ -23,7 +24,7 @@ async def get(obj, path, script, schema, yaml_):
     if not len(path):
         raise click.UsageError("You need a non-empty path.")
     res = await obj.client._request(
-        action="get_internal", path=Path("type") + path, iter=False, nchain=obj.meta
+        action="get_internal", path=Path("type") + path, iter=False, nchain=obj.meta,
     )
     try:
         r = res.value
@@ -120,7 +121,7 @@ async def match(obj, path, type_, delete, raw):  # pylint: disable=redefined-bui
         y = {}
         pl = PathLongener()
         async for r in await obj.client._request(
-            "get_tree_internal", path=Path("match") + path, iter=True, nchain=0
+            "get_tree_internal", path=Path("match") + path, iter=True, nchain=0,
         ):
             pl(r)
             path = r["path"]
@@ -154,7 +155,7 @@ async def match(obj, path, type_, delete, raw):  # pylint: disable=redefined-bui
     else:
         act = "get_internal"
     res = await obj.client._request(
-        action=act, value=msg, path=Path("match") + path, iter=False, nchain=obj.meta
+        action=act, value=msg, path=Path("match") + path, iter=False, nchain=obj.meta,
     )
     if obj.meta:
         yprint(res, stream=obj.stdout)
@@ -173,7 +174,7 @@ async def list(obj, path):  # pylint: disable=redefined-builtin
     y = {}
     pl = PathLongener()
     async for r in await obj.client._request(
-        "get_tree_internal", path=Path("type") + path, iter=True, nchain=0
+        "get_tree_internal", path=Path("type") + path, iter=True, nchain=0,
     ):
         pl(r)
         path = r["path"]

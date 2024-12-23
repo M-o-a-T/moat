@@ -1,26 +1,21 @@
 #
+from __future__ import annotations
 import logging
-from contextlib import asynccontextmanager
 from functools import cached_property
 from pprint import pformat
 
 import anyio
 import asyncdbus.service as _dbus
-from asyncdbus.constants import NameFlag
-from asyncdbus.signature import Variant
 from moat.dbus import DbusInterface, DbusName
-from moat.util import ValueEvent, attrdict, combine_dict
+from moat.util import ValueEvent
 from victron.dbus.utils import wrap_dbus_dict
 
 from moat.micro.compat import (
-    CancelledError,
     Event,
     Lock,
     TaskGroup,
     TimeoutError,
-    sleep,
     sleep_ms,
-    ticks_add,
     ticks_diff,
     ticks_ms,
     wait_for_ms,
@@ -44,7 +39,7 @@ class ControllerInterface(DbusInterface):
         super().done()
 
     @_dbus.method()
-    async def GetNBatteries(self) -> "y":
+    async def GetNBatteries(self) -> y:
         """
         Number of batteries on this controller
         """
@@ -58,7 +53,7 @@ class ControllerInterface(DbusInterface):
         return [b.get_voltages() for b in self.ctrl.batt]
 
     @_dbus.method()
-    async def GetCurrents(self) -> "ad":
+    async def GetCurrents(self) -> ad:
         """
         Voltage data for all batteries
         """
@@ -73,7 +68,7 @@ class ControllerInterface(DbusInterface):
         return wrap_dbus_dict(self.ctrl.cfg)
 
     @_dbus.method()
-    async def GetWork(self, poll: "b", clear: "b") -> "aa{sd}":
+    async def GetWork(self, poll: b, clear: b) -> "aa{sd}":
         """
         Return work done
         """
@@ -248,7 +243,7 @@ class Controller:
             pkt = (pkt,)
         h = PacketHeader(command=pkt[0].T, start=start or 0, broadcast=broadcast)
         for p in pkt[1:]:
-            if p.T != h.command:
+            if h.command != p.T:
                 raise ValueError("Needs same type, not %s vs %s", pkt[0], p)
 
         if start is None or broadcast:
@@ -259,7 +254,7 @@ class Controller:
             h.cells = end - start
             if pkt[0].S.size > 0 and len(pkt) != h.cells + 1:
                 raise ValueError(
-                    "Wrong packet count, %d vs %d for %s" % (len(pkt), h.cells + 1, pkt[0])
+                    "Wrong packet count, %d vs %d for %s" % (len(pkt), h.cells + 1, pkt[0]),
                 )
         else:
             h.cells = len(pkt) - 1

@@ -2,6 +2,8 @@
 cmdhandler on top of anyio pipe
 """
 
+from __future__ import annotations
+
 import anyio
 from contextlib import asynccontextmanager
 from moat.lib.cmd import CmdHandler

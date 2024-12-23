@@ -5,7 +5,7 @@ Packet handler for diyBMS-serial mock battery
 from __future__ import annotations
 
 import moat.ems.battery.diy_serial.packet as P
-from moat.micro.conv.steinhart import thermistor2celsius, celsius2thermistor
+from moat.micro.conv.steinhart import celsius2thermistor
 
 __all__ = [
     "PacketType",

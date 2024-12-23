@@ -7,14 +7,14 @@ This is a simulated MoaT bus. It offers a Unix socket.
 
 """
 
+from __future__ import annotations
+
 import anyio
-import socket
 import asyncclick as click
 from contextlib import asynccontextmanager
 import time
 import os
 from random import random
-from functools import partial
 
 _seq = 0
 
@@ -85,7 +85,7 @@ class Main:
                 c.last_b = b
                 try:
                     await c.send(b)
-                except (BrokenPipeError, EnvironmentError, anyio.BrokenResourceError):
+                except (OSError, BrokenPipeError, anyio.BrokenResourceError):
                     self.remove(c)
 
             last = val
@@ -134,7 +134,7 @@ async def mainloop(tg, **kw):
 async def main(sockname, **kw):
     try:
         os.unlink(sockname)
-    except EnvironmentError:
+    except OSError:
         pass
 
     listener = await anyio.create_unix_listener(sockname)

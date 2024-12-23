@@ -7,16 +7,12 @@ import os
 import signal
 import time
 from anyio.abc import SocketAttribute
-from collections.abc import Sequence
-from pathlib import Path as FPath
-import random
 
 from attrs import define, field
 from asyncscope import scope
 
 from moat.lib.cmd import CmdHandler
 from moat.lib.cmd.anyio import run as run_cmd_anyio
-from moat.link import protocol_version
 from moat.link.auth import AnonAuth, TokenAuth
 from moat.link.conn import SubConn
 from moat.link.backend import get_backend
@@ -31,7 +27,6 @@ except ImportError:
 
 import logging
 from functools import partial
-from pprint import pformat
 
 from asyncactor import (
     Actor,
@@ -48,27 +43,19 @@ from range_set import RangeSet
 from moat.util import (
     attrdict,
     to_attrdict,
-    byte2num,
     combine_dict,
-    create_queue,
     CtxObj,
-    DelayedRead,
-    DelayedWrite,
-    drop_dict,
     gen_ident,
     gen_ssl,
     MsgReader,
     MsgWriter,
     NotGiven,
-    num2byte,
     P,
     Path,
     PathLongener,
     PathShortener,
     run_tcp_server,
-    ungroup,
     ValueEvent,
-    yload,
     Root,
 )
 
@@ -90,7 +77,6 @@ from moat.util.broadcast import Broadcaster
 # )
 from moat.link.node import Node
 from moat.link.hello import Hello
-from moat.link.auth import TokenAuth
 
 from typing import Any, TYPE_CHECKING
 
@@ -277,7 +263,9 @@ class ServerClient(SubConn):
         self.logger.debug("START %s C_%d", self.name, self.client_nr)
         self._handler = cmd = CmdHandler(self._cmd_in)
         self._hello = Hello(
-            self, them=f"C_{self.client_nr}", auth_in=[TokenAuth("Duh"), AnonAuth()]
+            self,
+            them=f"C_{self.client_nr}",
+            auth_in=[TokenAuth("Duh"), AnonAuth()],
         )
         async with (
             anyio.create_task_group() as self.tg,
@@ -433,7 +421,7 @@ class ServerClient(SubConn):
                 raise ClientChainError(f"Entry is new at {msg.path}")
             elif entry.chain != msg.chain:
                 raise ClientChainError(
-                    f"Chain is {entry.chain!r} not {msg.chain!r} for {msg.path}"
+                    f"Chain is {entry.chain!r} not {msg.chain!r} for {msg.path}",
                 )
             send_prev = False
 
@@ -511,7 +499,10 @@ class ServerClient(SubConn):
 
         try:
             entry, acl = self.root.follow_acl(
-                msg.path, acl=self.acl, acl_key="d", nulls_ok=self.nulls_ok
+                msg.path,
+                acl=self.acl,
+                acl_key="d",
+                nulls_ok=self.nulls_ok,
             )
         except KeyError:
             return False
@@ -963,7 +954,10 @@ class Server:
                     async for r in res:
                         pl(r)
                         r = UpdateEvent.deserialize(
-                            self.root, r, cache=self.node_cache, nulls_ok=True
+                            self.root,
+                            r,
+                            cache=self.node_cache,
+                            nulls_ok=True,
                         )
                         await r.entry.apply(r, server=self, root=self.paranoid_root)
                     await self.tock_seen(res.end_msg.tock)
@@ -979,7 +973,10 @@ class Server:
                     async for r in res:
                         pl(r)
                         r = UpdateEvent.deserialize(
-                            self.root, r, cache=self.node_cache, nulls_ok=True
+                            self.root,
+                            r,
+                            cache=self.node_cache,
+                            nulls_ok=True,
                         )
                         await r.entry.apply(r, server=self, root=self.paranoid_root)
                     await self.tock_seen(res.end_msg.tock)
@@ -1390,7 +1387,11 @@ class Server:
                             cnt += 1
 
     async def _saver(
-        self, path: str = None, stream=None, done: ValueEvent = None, save_state=False
+        self,
+        path: str = None,
+        stream=None,
+        done: ValueEvent = None,
+        save_state=False,
     ):
         with anyio.CancelScope() as s:
             sd = anyio.Event()
@@ -1439,7 +1440,7 @@ class Server:
                     stream=stream,
                     save_state=save_state,
                     done=done,
-                )
+                ),
             )
             if wait:
                 res = await done.get()
@@ -1470,7 +1471,10 @@ class Server:
         await self._ready2.wait()
 
     async def serve(
-        self, *, tg: anyio.abc.TaskGroup = None, task_status=anyio.TASK_STATUS_IGNORED
+        self,
+        *,
+        tg: anyio.abc.TaskGroup = None,
+        task_status=anyio.TASK_STATUS_IGNORED,
     ) -> Never:
         """
         The task that opens a backend connection and actually runs the server.
@@ -1574,7 +1578,7 @@ class Server:
                     them=msg.meta.origin,
                     host=link["host"],
                     port=link["port"],
-                    token=data.get("token", None),
+                    token=data.get("token"),
                 ) as conn:
                     if conn.auth is not True:
                         self.logger.warning("No auth: sync from %s %s", msg.meta.origin, link)
@@ -1649,7 +1653,7 @@ class Server:
                     if head.tag == CBOR_TAG_CBOR_FILEHEADER:
                         head = head.value
                     if head.tag != CBOR_TAG_MOAT_FILE_ID:
-                        raise ValueError(f"missing start tag")
+                        raise ValueError("missing start tag")
                     dh = to_attrdict(head.value)
                     if dh.source != "main":
                         raise ValueError("not from main")

@@ -1,5 +1,7 @@
 """Top-level package for moat.gpio."""
 
+from __future__ import annotations
+
 import sys
 
 from .gpio import Chip, Event, Line  # noqa: F401

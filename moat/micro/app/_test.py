@@ -14,7 +14,7 @@ from ._test_ import Cmd, Cons  # noqa:F401 pylint:disable=unused-import
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Awaitable
+    from collections.abc import Awaitable
 
 
 def MpyCmd(*a, **k):

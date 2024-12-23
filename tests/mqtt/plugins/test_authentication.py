@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 
 import logging
 import os
@@ -64,9 +65,10 @@ class TestFileAuthPlugin(unittest.TestCase):
         context.config = {
             "auth": {
                 "password-file": os.path.join(
-                    os.path.dirname(os.path.realpath(__file__)), "passwd"
-                )
-            }
+                    os.path.dirname(os.path.realpath(__file__)),
+                    "passwd",
+                ),
+            },
         }
 
         async def coro():
@@ -85,9 +87,10 @@ class TestFileAuthPlugin(unittest.TestCase):
         context.config = {
             "auth": {
                 "password-file": os.path.join(
-                    os.path.dirname(os.path.realpath(__file__)), "passwd"
-                )
-            }
+                    os.path.dirname(os.path.realpath(__file__)),
+                    "passwd",
+                ),
+            },
         }
 
         async def coro():
@@ -106,9 +109,10 @@ class TestFileAuthPlugin(unittest.TestCase):
         context.config = {
             "auth": {
                 "password-file": os.path.join(
-                    os.path.dirname(os.path.realpath(__file__)), "passwd"
-                )
-            }
+                    os.path.dirname(os.path.realpath(__file__)),
+                    "passwd",
+                ),
+            },
         }
 
         async def coro():

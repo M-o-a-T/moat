@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 import logging
 
 import anyio
@@ -137,7 +138,7 @@ class BrokerProtocolHandler(ProtocolHandler):
             raise MQTTException("[MQTT-3.1.2-3] CONNECT reserved flag must be set to 0")
         if connect.proto_name != "MQTT":
             raise MQTTException(
-                '[MQTT-3.1.2-1] Incorrect protocol name: "%s"' % connect.proto_name
+                '[MQTT-3.1.2-1] Incorrect protocol name: "%s"' % connect.proto_name,
             )
 
         connack = None
@@ -149,25 +150,31 @@ class BrokerProtocolHandler(ProtocolHandler):
                 connect.proto_level,
             )
             connack = ConnackPacket.build(
-                0, UNACCEPTABLE_PROTOCOL_VERSION
+                0,
+                UNACCEPTABLE_PROTOCOL_VERSION,
             )  # [MQTT-3.2.2-4] session_parent=0
-        elif not connect.username_flag and connect.password_flag:
-            connack = ConnackPacket.build(0, BAD_USERNAME_PASSWORD)  # [MQTT-3.1.2-22]
-        elif connect.username_flag and not connect.password_flag:
+        elif (
+            not connect.username_flag
+            and connect.password_flag
+            or connect.username_flag
+            and not connect.password_flag
+        ):
             connack = ConnackPacket.build(0, BAD_USERNAME_PASSWORD)  # [MQTT-3.1.2-22]
         elif connect.username_flag and connect.username is None:
             error_msg = "Invalid username from %s" % (
                 format_client_message(address=remote_address, port=remote_port)
             )
             connack = ConnackPacket.build(
-                0, BAD_USERNAME_PASSWORD
+                0,
+                BAD_USERNAME_PASSWORD,
             )  # [MQTT-3.2.2-4] session_parent=0
         elif connect.password_flag and connect.password is None:
             error_msg = "Invalid password %s" % (
                 format_client_message(address=remote_address, port=remote_port)
             )
             connack = ConnackPacket.build(
-                0, BAD_USERNAME_PASSWORD
+                0,
+                BAD_USERNAME_PASSWORD,
             )  # [MQTT-3.2.2-4] session_parent=0
         elif connect.clean_session_flag is False and (connect.payload.client_id_is_random):
             error_msg = (

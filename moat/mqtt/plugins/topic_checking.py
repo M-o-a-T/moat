@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 class BaseTopicPlugin:
     def __init__(self, context):
         self.context = context
@@ -22,8 +25,8 @@ class TopicTabooPlugin(BaseTopicPlugin):
     async def topic_filtering(self, *args, **kwargs):
         filter_result = await super().topic_filtering(*args, **kwargs)
         if filter_result:
-            session = kwargs.get("session", None)
-            topic = kwargs.get("topic", None)
+            session = kwargs.get("session")
+            topic = kwargs.get("topic")
             if session.username and session.username == "admin":
                 return True
             if topic and topic in self._taboo:
@@ -60,8 +63,8 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
             return None
         filter_result = await super().topic_filtering(*args, **kwargs)
         if filter_result:
-            session = kwargs.get("session", None)
-            req_topic = kwargs.get("topic", None)
+            session = kwargs.get("session")
+            req_topic = kwargs.get("topic")
             if req_topic:
                 username = session.username
                 if username is None:

@@ -4,6 +4,8 @@ Basic "modbus" tool: network client and server, serial client
 
 """
 
+from __future__ import annotations
+
 import logging  # pylint: disable=wrong-import-position
 from getopt import getopt
 from pprint import pprint
@@ -25,7 +27,7 @@ async def main():
         "%(asctime)-15s %(threadName)-15s %(levelname)-8s %(module)-15s:%(lineno)-8s %(message)s"
     )
     logging.basicConfig(format=FORMAT)
-    log.setLevel(logging.WARN)
+    log.setLevel(logging.WARNING)
 
 
 UNIT = 0x1
@@ -209,7 +211,7 @@ def mk_client(m):
     c = click.option("--num", "-n", type=int, default=1, help="number of values")(c)
     c = click.option("--start", "-s", default=0, help="starting register")(c)
     c = click.option("--kind", "-k", default="i", help="query type: input, discrete, hold, coil")(
-        c
+        c,
     )
     c = click.option("--unit", "-u", type=int, default=1, help="unit to query")(c)
     c = click.option("--port", "-p", type=int, default=502, help="destination port")(c)
@@ -289,7 +291,11 @@ async def _serclient(
 def add_serial_cfg(c):
     """Helper for serial port configuration"""
     c = click.option(
-        "--port", "-p", required=True, type=str, help="destination port (/dev/ttyXXX)"
+        "--port",
+        "-p",
+        required=True,
+        type=str,
+        help="destination port (/dev/ttyXXX)",
     )(c)
     c = click.option("--baudrate", "-b", type=int, default=9600, help="Baud rate (9600)")(c)
     c = click.option("--parity", "-P", type=str, default="N", help="Parity (NEO), default N")(c)
@@ -312,7 +318,7 @@ def mk_serial_client(m):
     c = click.option("--num", "-n", type=int, default=1, help="number of values")(c)
     c = click.option("--start", "-s", default=0, help="starting register")(c)
     c = click.option("--kind", "-k", default="i", help="query type: input, discrete, hold, coil")(
-        c
+        c,
     )
     c = add_serial_cfg(c)
     c = click.option("--unit", "-u", type=int, default=1, help="unit to query")(c)

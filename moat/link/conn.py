@@ -5,19 +5,15 @@ Connection and command helpers
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from attrs import define, field
-from moat.util import CtxObj, P
 from moat.lib.cmd import CmdHandler
 from moat.lib.cmd.anyio import run as run_stream
 import anyio
-from . import protocol_version, protocol_version_min
 import logging
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.cmd import MsgIn
-    from typing import Awaitable
+    from collections.abc import Awaitable
 
 __all__ = ["NotAuthorized", "SubConn", "CmdCommon", "TCPConn"]
 

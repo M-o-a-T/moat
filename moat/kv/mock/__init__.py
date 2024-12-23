@@ -1,4 +1,5 @@
 # from asyncclick.testing import CliRunner
+from __future__ import annotations
 import io
 import logging
 import shlex
@@ -72,7 +73,10 @@ class S:
 
                 async with scope.using_scope():
                     c = await scope.service(
-                        f"moat.kv.client.{i}.{self._seq}", scc, self.s[i], **cfg
+                        f"moat.kv.client.{i}.{self._seq}",
+                        scc,
+                        self.s[i],
+                        **cfg,
                     )
                     yield c
                 return

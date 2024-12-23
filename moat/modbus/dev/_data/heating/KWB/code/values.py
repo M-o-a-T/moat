@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 
 import csv
 import sys
 
-from moat.util import P, Path, attrdict, yprint
+from moat.util import Path, attrdict, yprint
 
 d = attrdict()
-with open(sys.argv[1], "r") as f:
+with open(sys.argv[1]) as f:
     r = csv.reader(f, dialect=csv.excel_tab)
     next(r)  # heading
     for r in csv.reader(f, dialect=csv.excel_tab):

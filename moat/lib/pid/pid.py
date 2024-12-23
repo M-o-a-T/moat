@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Created on Wed Jun 22 20:06:38 2022
 
 @author: eadali
 """
+
+from __future__ import annotations
 
 from warnings import warn
 from math import exp

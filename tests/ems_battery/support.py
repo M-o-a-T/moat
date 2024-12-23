@@ -4,9 +4,6 @@ Support code for tests
 
 from __future__ import annotations
 
-import anyio
-import os
-import pytest
 
 from moat.util import yload, merge
 

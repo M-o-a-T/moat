@@ -28,7 +28,7 @@ from .stack import StackedMsg
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Never, Any
+    from typing import Any
 
 
 class EphemeralMsg:
@@ -325,11 +325,11 @@ class ReliableMsg(StackedMsg):
                         await self.send_reset()
 
                 if self.closed:
-                    raise EOFError(self)  # noqa: TRY301
+                    raise EOFError(self)
 
                 await idle()
 
-        except Exception:  # noqa:TRY302
+        except Exception:  # noqa:TRY203
             # if not self.persist:
             raise
             # log("Reliable", err=exc)

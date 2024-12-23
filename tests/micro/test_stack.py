@@ -17,7 +17,7 @@ import msgpack
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Awaitable
+    from collections.abc import Awaitable
 
 
 CFG = """
@@ -83,7 +83,7 @@ micro:
 """
 
 
-@pytest.mark.anyio()
+@pytest.mark.anyio
 async def test_stack(tmp_path):
     "full-stack test"
     cfg = yload(CFG, attr=True)

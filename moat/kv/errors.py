@@ -79,6 +79,8 @@ of this record.
 
 """
 
+from __future__ import annotations
+
 import logging
 import traceback
 from collections import defaultdict
@@ -447,7 +449,13 @@ class ErrorRoot(ClientRoot):
         raise RuntimeError(f"This cannot happen: {entry.node} {entry.tock}")
 
     async def record_working(  # pylint: disable=dangerous-default-value
-        self, subsystem, path, *, comment=None, data={}, force=False
+        self,
+        subsystem,
+        path,
+        *,
+        comment=None,
+        data={},
+        force=False,
     ):
         """This exception has been fixed.
 
@@ -520,7 +528,11 @@ class ErrorRoot(ClientRoot):
             return  # owch, but can't be helped
 
         r = await rec.real_entry.add_exc(
-            self.name, exc=exc, data=data, comment=comment, message=message
+            self.name,
+            exc=exc,
+            data=data,
+            comment=comment,
+            message=message,
         )
         return r
 

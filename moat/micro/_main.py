@@ -59,12 +59,12 @@ def catch_errors(fn):
             with ungroup:
                 return await fn(*a, **k)
         except (NoPathError, ConnectionRefusedError) as e:
-            raise click.ClickException(e)  # noqa:TRY200
+            raise click.ClickException(e)  # noqa:B904
         except Exception as e:
             if "bdb" in sys.modules:
                 skip_exc.add(sys.modules["bdb"].BdbQuit)
             if type(e) in skip_exc:
-                raise click.ClickException(repr(e))  # noqa:TRY200
+                raise click.ClickException(repr(e))  # noqa:B904
             raise
 
     return wrapper
@@ -291,7 +291,7 @@ async def setup(
                     f"import _hash; print(repr(_hash.hash[{p!r}])); del _hash",
                     quiet=True,
                 )
-                return eval(res)  # noqa:S307,PGH001
+                return eval(res)  # noqa: S307
 
             await _do_update(dst, MoatDevPath(".").connect_repl(repl), cross, hfn)
         if reset:

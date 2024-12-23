@@ -1,3 +1,4 @@
+from __future__ import annotations
 import pytest
 import trio
 from moat.util import P

@@ -19,7 +19,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from enum import IntEnum
-from struct import Struct, pack, unpack
+from struct import Struct
 from typing import ClassVar
 
 from moat.util import as_proxy
@@ -129,7 +129,7 @@ class PacketHeader:
         if self.command is None:
             self.command = pkt[0].T
         for p in pkt:
-            if p.T != self.command:
+            if self.command != p.T:
                 raise ValueError("Needs same type, not %s vs %s", p.T, p)
 
         if self.start is None or self.broadcast:
@@ -140,7 +140,7 @@ class PacketHeader:
             self.cells = end - self.start
             if pkt[0].S.size > 0 and len(pkt) != self.cells + 1:
                 raise ValueError(
-                    "Wrong packet count, %d vs %d for %s" % (len(pkt), self.cells + 1, pkt[0])
+                    "Wrong packet count, %d vs %d for %s" % (len(pkt), self.cells + 1, pkt[0]),
                 )
         else:
             self.cells = len(pkt) - 1

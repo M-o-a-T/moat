@@ -2,6 +2,8 @@
 Get solar data from forecast.solar
 """
 
+from __future__ import annotations
+
 from datetime import datetime
 
 import asks

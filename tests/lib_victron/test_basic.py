@@ -1,8 +1,8 @@
 """
 Empty test file
 """
+from __future__ import annotations
 
-import moat.lib.victron  # pylint: disable=unused-import
 
 
 def test_nothing():

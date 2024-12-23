@@ -6,9 +6,8 @@ from __future__ import annotations
 
 
 from attrs import define, field
-from moat.util import CtxObj, P
+from moat.util import P
 from moat.lib.cmd import CmdHandler
-from moat.lib.cmd.anyio import run as run_stream
 import anyio
 from . import protocol_version, protocol_version_min
 from .conn import SubConn, CmdCommon
@@ -17,8 +16,7 @@ import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.cmd import MsgIn
-    from typing import Awaitable
+    from collections.abc import Awaitable
 
 logger = logging.getLogger(__name__)
 
@@ -216,7 +214,12 @@ class Hello(SubConn, CmdCommon):
         logger.info("H OUT %r %r", auths, kw)
         self._sync.set()
         (res,) = await self._handler.cmd(
-            P("i.hello"), protocol_version, self.me, self.them, auths, **kw
+            P("i.hello"),
+            protocol_version,
+            self.me,
+            self.them,
+            auths,
+            **kw,
         )
 
         if res is False:

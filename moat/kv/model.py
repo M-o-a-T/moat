@@ -9,7 +9,7 @@ from __future__ import annotations
 import weakref
 from collections import defaultdict
 from logging import getLogger
-from typing import Any, List
+from typing import Any
 
 from moat.util import NotGiven, Path, attrdict, create_queue
 from range_set import RangeSet
@@ -369,7 +369,7 @@ class NodeEvent:
 
     """
 
-    def __init__(self, node: Node, tick: int = None, prev: "NodeEvent" = None):
+    def __init__(self, node: Node, tick: int = None, prev: NodeEvent = None):
         self.node = node
         if tick is None:
             tick = node.tick
@@ -522,13 +522,15 @@ class NodeEvent:
             self.prev = cls.deserialize(msg["prev"], cache=cache)
         return self
 
-    def attach(self, prev: "NodeEvent" = None, server=None):
+    def attach(self, prev: NodeEvent = None, server=None):
         """Copy this node, if necessary, and attach a filtered `prev` chain to it"""
         if prev is not None:
             prev = prev.filter(self.node, server=server)
         if self.prev is not None or prev is not None:
             self = NodeEvent(  # pylint: disable=self-cls-assignment
-                node=self.node, tick=self.tick, prev=prev
+                node=self.node,
+                tick=self.tick,
+                prev=prev,
             )
         return self
 
@@ -536,7 +538,7 @@ class NodeEvent:
 class UpdateEvent:
     """Represents an event which updates something."""
 
-    def __init__(self, event: NodeEvent, entry: "Entry", new_value, old_value=NotGiven, tock=None):
+    def __init__(self, event: NodeEvent, entry: Entry, new_value, old_value=NotGiven, tock=None):
         self.event = event
         self.entry = entry
         self.new_value = new_value
@@ -607,10 +609,10 @@ class UpdateEvent:
 class Entry:
     """This class represents one key/value pair"""
 
-    _parent: "Entry" = None
+    _parent: Entry = None
     name: str = None
-    _path: List[str] = None
-    _root: "Entry" = None
+    _path: list[str] = None
+    _root: Entry = None
     chain: NodeEvent = None
     SUBTYPE = None
     SUBTYPES = {}
@@ -618,7 +620,7 @@ class Entry:
 
     monitors = None
 
-    def __init__(self, name: str, parent: "Entry", tock=None):
+    def __init__(self, name: str, parent: Entry, tock=None):
         self.name = name
         self._sub = {}
         self.monitors = set()
@@ -628,7 +630,7 @@ class Entry:
             parent._add_subnode(self)
             self._parent = weakref.ref(parent)
 
-    def _add_subnode(self, child: "Entry"):
+    def _add_subnode(self, child: Entry):
         self._sub[child.name] = child
 
     def __hash__(self):

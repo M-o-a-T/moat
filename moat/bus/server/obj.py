@@ -1,7 +1,7 @@
 # encapsulates one bus participant
+from __future__ import annotations
 
 from weakref import ref
-import outcome
 import trio
 
 
@@ -94,12 +94,12 @@ class BaseObj:
         """
         m = self.server
         if not m:
-            raise NoServerError()
+            raise NoServerError
         m = m()
         if not m:
-            raise NoServerError()
+            raise NoServerError
         if self.client_id is None:
-            raise NoClientError()
+            raise NoClientError
 
         if src is none:
             src = m.id

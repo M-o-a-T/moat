@@ -2,6 +2,8 @@
 Inverter mode: turn the thing off
 """
 
+from __future__ import annotations
+
 import logging
 
 import anyio

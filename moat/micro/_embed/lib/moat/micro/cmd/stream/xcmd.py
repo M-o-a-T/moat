@@ -10,7 +10,7 @@ from moat.micro.proto.stack import Base, BaseBlk, BaseBuf, BaseMsg
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Awaitable
+    from collections.abc import Awaitable
 
 
 class _BBMCmd(Base):

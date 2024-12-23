@@ -2,6 +2,8 @@
 Support values on MoaT-KV
 """
 
+from __future__ import annotations
+
 import logging
 
 from .device import Register as BaseRegister

@@ -2,6 +2,8 @@
 Map strings+kinds to modbuys types
 """
 
+from __future__ import annotations
+
 from functools import partial
 
 from moat.modbus.types import (

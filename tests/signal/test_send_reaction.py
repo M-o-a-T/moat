@@ -1,7 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Test for SignalClient.send_reaction
 """
+
+from __future__ import annotations
 
 import pook
 import pytest
@@ -33,7 +34,7 @@ async def test_send_reaction_ok():
                     {
                         "recipientAddress": {"uuid": "42", "number": "+491337"},
                         "type": "SUCCESS",
-                    }
+                    },
                 ],
             },
             "id": "test_send_reaction_ok",

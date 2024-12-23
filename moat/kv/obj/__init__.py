@@ -2,6 +2,7 @@
 Object interface to moat.kv data
 
 """
+from __future__ import annotations
 
 import heapq
 import weakref
@@ -157,7 +158,7 @@ class ClientEntry:
     @property
     def subpath(self):
         """Return the path to this entry, starting with its :class:`ClientRoot` base."""
-        return self._path[len(self.root._path) :]  # noqa: E203
+        return self._path[len(self.root._path) :]
 
     @property
     def all_children(self):
@@ -262,7 +263,7 @@ class ClientEntry:
         """
         async with NoLock if _locked else self._lock:
             r = await self.root.client.set(
-                self._path, chain=self.chain, value=value, nchain=3, idem=True
+                self._path, chain=self.chain, value=value, nchain=3, idem=True,
             )
             if wait:
                 await self.root.wait_chain(r.chain)
@@ -449,7 +450,7 @@ class MirrorRoot(ClientEntry):
             defcfg = CFG.kv.get(cls.CFG)
             try:
                 f = (_Path(md.__file__).parent / "_nconfig.yaml").open("r")
-            except EnvironmentError:
+            except OSError:
                 pass
             else:
                 with f:
@@ -530,7 +531,7 @@ class MirrorRoot(ClientEntry):
                 pl = PathLongener(())
                 await self.run_starting()
                 async with self.client._stream(
-                    "watch", nchain=3, path=self._path, fetch=True
+                    "watch", nchain=3, path=self._path, fetch=True,
                 ) as w:
                     async for r in w:
                         if "path" not in r:

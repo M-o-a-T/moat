@@ -25,7 +25,8 @@ from moat.micro.compat import ACM, AC_exit, AC_use, log
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any, AsyncContextManager, Awaitable, Buffer
+    from typing import Any, AsyncContextManager, Buffer
+    from collections.abc import Awaitable
 
 
 class _NullCtx:

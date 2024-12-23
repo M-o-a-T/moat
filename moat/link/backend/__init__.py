@@ -22,7 +22,8 @@ if TYPE_CHECKING:
     from moat.lib.codec import Codec
     from moat.link.meta import MsgMeta
 
-    from typing import Any, AsyncIterator, Self, ClassVar
+    from typing import Any, Self, ClassVar
+    from collections.abc import AsyncIterator
 
 
 __all__ = ["get_backend", "get_codec", "Backend", "Message", "RawMessage"]
@@ -105,7 +106,11 @@ class Backend(CtxObj, metaclass=ABCMeta):
 
     @abstractmethod
     async def send(
-        self, topic: Path, data: Any, codec: Codec | None = None, **kw: dict[str, Any]
+        self,
+        topic: Path,
+        data: Any,
+        codec: Codec | None = None,
+        **kw: dict[str, Any],
     ) -> None:
         """
         Send this payload to this topic.

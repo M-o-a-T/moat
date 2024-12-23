@@ -21,7 +21,7 @@ from .compat import AC_use, TaskGroup
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Iterator
+    from collections.abc import Iterator
 
     from moat.util import Path
 

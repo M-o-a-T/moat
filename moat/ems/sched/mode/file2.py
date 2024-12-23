@@ -2,6 +2,8 @@
 Derive buy from sell price
 """
 
+from __future__ import annotations
+
 from . import BaseLoader
 from . import Loader as _Loader
 

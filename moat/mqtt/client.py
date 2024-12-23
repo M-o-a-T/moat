@@ -1,12 +1,12 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 
 import copy
 import logging
 import ssl
 from functools import wraps
-from typing import Union
 from urllib.parse import urlparse, urlunparse
 
 import anyio
@@ -329,13 +329,13 @@ class MQTTClient:
                 self.logger.warning("Reconnection attempt failed: %r", e)
                 if reconnect_retries >= 0 and nb_attempt > reconnect_retries:
                     self.logger.error(
-                        "Maximum number of connection attempts reached. Reconnection aborted"
+                        "Maximum number of connection attempts reached. Reconnection aborted",
                     )
                     raise ConnectException(  # pylint: disable=W0707
-                        "Too many connection attempts failed"
+                        "Too many connection attempts failed",
                     )
                 exp = 2**nb_attempt
-                delay = exp if exp < reconnect_max_interval else reconnect_max_interval
+                delay = min(reconnect_max_interval, exp)
                 self.logger.debug("Waiting %d second before next attempt", delay)
                 await anyio.sleep(delay)
                 nb_attempt += 1
@@ -456,7 +456,7 @@ class MQTTClient:
         """
 
         class _Subscription:
-            def __init__(self, client, topic: Union[str, tuple], qos: int, codec=None):
+            def __init__(self, client, topic: str | tuple, qos: int, codec=None):
                 self.client = client
                 self.topic = topic if isinstance(topic, str) else "/".join(topic)
                 self.qos = qos
@@ -672,7 +672,7 @@ class MQTTClient:
             # Open connection
             if scheme in ("mqtt", "mqtts"):
                 conn = await anyio.connect_tcp(
-                    self.session.remote_address, self.session.remote_port
+                    self.session.remote_address, self.session.remote_port,
                 )
                 if kwargs.pop("autostart_tls", False):
                     try:
@@ -778,7 +778,7 @@ class MQTTClient:
             cancel_tasks()
 
     def _initsession(
-        self, uri=None, cleansession=None, cafile=None, capath=None, cadata=None
+        self, uri=None, cleansession=None, cafile=None, capath=None, cadata=None,
     ) -> Session:
         # Load config
         broker_conf = self.config.get("broker", dict()).copy()

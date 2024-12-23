@@ -5,6 +5,8 @@ Null auth method.
 Does not limit anything, allows everything.
 """
 
+from __future__ import annotations
+
 from . import (
     BaseClientAuth,
     BaseClientAuthMaker,

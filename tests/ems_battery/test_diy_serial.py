@@ -5,7 +5,6 @@ import os
 import pytest
 import time
 
-from moat.util import yload
 from moat.micro._test import mpy_stack
 from moat.util.compat import log
 from moat.ems.battery.diy_serial.packet import RequestTiming

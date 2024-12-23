@@ -1,3 +1,4 @@
+from __future__ import annotations
 import copy
 import logging
 import time
@@ -6,7 +7,7 @@ from functools import partial
 
 import anyio
 import attr
-import mock
+from unittest import mock
 import trio
 from asyncscope import main_scope, scope
 from asyncserf.stream import SerfEvent
@@ -69,7 +70,7 @@ async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):
             self.splits.remove(s)
 
     async def mock_get_host_port(st, host):
-        i = int(host[host.rindex("_") + 1 :])  # noqa: E203
+        i = int(host[host.rindex("_") + 1 :])
         s = st.s[i]
         await s.is_serving
         for host, port, *_ in s.ports:
@@ -96,7 +97,7 @@ async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):
             logging._startTime = tm()
 
             ex.enter_context(
-                mock.patch("asyncserf.serf_client", new=partial(mock_serf_client, st))
+                mock.patch("asyncserf.serf_client", new=partial(mock_serf_client, st)),
             )
 
             for i in range(n):
@@ -121,10 +122,10 @@ async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):
                 )
                 s = Server(name, **args)
                 ex.enter_context(
-                    mock.patch.object(s, "_set_tock", new=partial(mock_set_tock, s, s._set_tock))
+                    mock.patch.object(s, "_set_tock", new=partial(mock_set_tock, s, s._set_tock)),
                 )
                 ex.enter_context(
-                    mock.patch.object(s, "_get_host_port", new=partial(mock_get_host_port, st))
+                    mock.patch.object(s, "_get_host_port", new=partial(mock_get_host_port, st)),
                 )
                 st.s.append(s)
 

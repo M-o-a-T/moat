@@ -3,10 +3,11 @@
 Send bus messages to a Trio stream
 """
 
+from __future__ import annotations
+
 from anyio_serial import Serial
 from contextlib import asynccontextmanager
 
-from ..serial import SerBus
 from ._stream import StreamHandler
 
 

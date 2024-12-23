@@ -1,5 +1,6 @@
+from __future__ import annotations
 import asyncserf
-import mock
+from unittest import mock
 import msgpack
 import pytest
 import trio

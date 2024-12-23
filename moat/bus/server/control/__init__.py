@@ -4,6 +4,8 @@ Handler for control messages.
 Just dispatch them.
 """
 
+from __future__ import annotations
+
 from ...util import SubDispatcher
 
 # import logging

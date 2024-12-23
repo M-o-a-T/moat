@@ -4,6 +4,8 @@ Basic tool support
 
 """
 
+from __future__ import annotations
+
 import logging
 import time
 from textwrap import dedent as _dedent
@@ -56,7 +58,7 @@ async def cli(obj, config, **attrs):
 
     cfg = obj.cfg.bms.sched
     if config:
-        with open(config, "r") as f:
+        with open(config) as f:
             cc = yload(f)
             merge(cfg, cc)
     obj.cfg.bms.sched = process_args(cfg, **attrs)
@@ -129,7 +131,7 @@ List of known inputs+outputs. Use T.‹name› or ‹mode›.‹name› for deta
             f"""\
 {m}:
 {doc}
-"""
+""",
         )
 
 
@@ -137,7 +139,7 @@ List of known inputs+outputs. Use T.‹name› or ‹mode›.‹name› for deta
     help="""
 Calculate proposed SoC by analyzing files with assumed future usage and weather / solar input.
 Goal: minimize cost.
-"""
+""",
 )
 @click.pass_obj
 @click.option(

@@ -4,6 +4,8 @@ task is cancelled when no exception shows up.
 
 """
 
+from __future__ import annotations
+
 import inspect
 import logging
 

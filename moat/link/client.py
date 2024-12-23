@@ -6,21 +6,19 @@ from __future__ import annotations
 
 import anyio
 import logging
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import asynccontextmanager
 
 import outcome
 from mqttproto import RetainHandling
 
 from moat.lib.cmd import CmdHandler
-from moat.lib.cmd.anyio import run as run_stream
-from moat.util import CtxObj, P, Path, Root, ValueEvent, import_, timed_ctx
+from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx
 from moat.util.compat import CancelledError
 
 from .conn import TCPConn, CmdCommon, SubConn
 from .auth import AnonAuth, TokenAuth
 from .hello import Hello
 
-from . import protocol_version
 
 from typing import TYPE_CHECKING
 
@@ -28,7 +26,7 @@ if TYPE_CHECKING:
     from .schema import Data
     from .schema import SchemaName as S
 
-    from typing import Any, AsyncIterable, Awaitable
+    from collections.abc import Awaitable
 
 __all__ = ["Link"]
 
@@ -106,7 +104,7 @@ class Link(CtxObj, SubConn, CmdCommon):
             import random
 
             name = "c_" + "".join(
-                random.choices("bcdfghjkmnopqrstvwxyzBCDFGHJKMNOPQRSTVWXYZ23456789", k=10)
+                random.choices("bcdfghjkmnopqrstvwxyzBCDFGHJKMNOPQRSTVWXYZ23456789", k=10),
             )
         self.logger = logging.getLogger(f"moat.link.client.{name}")
 
@@ -210,7 +208,8 @@ class Link(CtxObj, SubConn, CmdCommon):
 
         self._last_link_seen = anyio.Event()
         async with self.backend.monitor(
-            P(":R.run.service.main"), retain_handling=RetainHandling.SEND_RETAINED
+            P(":R.run.service.main"),
+            retain_handling=RetainHandling.SEND_RETAINED,
         ) as mon:
             async for msg in mon:
                 if task_status is None:
@@ -268,7 +267,8 @@ class Link(CtxObj, SubConn, CmdCommon):
         for remote in link:
             try:
                 async with timed_ctx(
-                    self.cfg.client.init_timeout, self._connect_one(remote, srv)
+                    self.cfg.client.init_timeout,
+                    self._connect_one(remote, srv),
                 ) as conn:
                     await self._connect_run(task_status=task_status)
             except Exception as exc:

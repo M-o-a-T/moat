@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 
 from ..adapters import StreamAdapter
 from ..codecs import (
@@ -42,9 +43,7 @@ class ConnectVariableHeader(MQTTVariableHeader):
         self.keep_alive = keep_alive
 
     def __repr__(self):
-        return "ConnectVariableHeader(proto_name={0}, proto_level={1}, flags={2}, keepalive={3})".format(
-            self.proto_name, self.proto_level, hex(self.flags), self.keep_alive
-        )
+        return f"ConnectVariableHeader(proto_name={self.proto_name}, proto_level={self.proto_level}, flags={hex(self.flags)}, keepalive={self.keep_alive})"
 
     def _set_flag(self, val, mask):
         if val:
@@ -172,13 +171,7 @@ class ConnectPayload(MQTTPayload):
         self.password = password
 
     def __repr__(self):
-        return "ConnectVariableHeader(client_id={0}, will_topic={1}, will_message={2}, username={3}, password={4})".format(
-            self.client_id,
-            self.will_topic,
-            self.will_message,
-            self.username,
-            self.password,
-        )
+        return f"ConnectVariableHeader(client_id={self.client_id}, will_topic={self.will_topic}, will_message={self.will_message}, username={self.username}, password={self.password})"
 
     @classmethod
     async def from_stream(
@@ -385,7 +378,7 @@ class ConnectPacket(MQTTPacket):
         else:
             if fixed.packet_type != CONNECT:
                 raise MoatMQTTException(
-                    "Invalid fixed packet type %s for ConnectPacket init" % fixed.packet_type
+                    "Invalid fixed packet type %s for ConnectPacket init" % fixed.packet_type,
                 )
             header = fixed
         super().__init__(header)

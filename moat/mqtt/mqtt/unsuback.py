@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 from ..errors import MoatMQTTException
 from .packet import UNSUBACK, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
 
@@ -20,7 +21,7 @@ class UnsubackPacket(MQTTPacket):
         else:
             if fixed.packet_type != UNSUBACK:
                 raise MoatMQTTException(
-                    "Invalid fixed packet type %s for UnsubackPacket init" % fixed.packet_type
+                    "Invalid fixed packet type %s for UnsubackPacket init" % fixed.packet_type,
                 )
             header = fixed
 

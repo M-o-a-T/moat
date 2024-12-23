@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
+from __future__ import annotations
 import inspect
 import logging
 from contextlib import asynccontextmanager
@@ -72,7 +72,7 @@ def get_vrm_portal_id():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         info = fcntl.ioctl(s.fileno(), 0x8927, struct.pack("256s", iface[:15]))
-    except IOError:
+    except OSError:
         raise NoVrmPortalIdError("ioctl failed for eth0") from None
 
     __vrm_portal_id = info[18:24].hex()
@@ -119,7 +119,7 @@ def get_free_space(path):
     try:
         s = statvfs(path)
         result = s.f_frsize * s.f_bavail  # Number of free bytes that ordinary users
-    except Exception as ex:  # pylint: disable=broad-except
+    except Exception:  # pylint: disable=broad-except
         logger.exception("Error while retrieving free space for path %s", path)
 
     return result
@@ -133,9 +133,9 @@ def get_free_space(path):
 
 def _get_sysfs_machine_name():
     try:
-        with open("/sys/firmware/devicetree/base/model", "r") as f:
+        with open("/sys/firmware/devicetree/base/model") as f:
             return f.read().rstrip("\x00")
-    except IOError:
+    except OSError:
         pass
 
     return None
@@ -157,9 +157,9 @@ def get_machine_name():
 
     # Fall back to venus build machine name
     try:
-        with open("/etc/venus/machine", "r", encoding="UTF-8") as f:
+        with open("/etc/venus/machine", encoding="UTF-8") as f:
             return f.read().strip()
-    except IOError:
+    except OSError:
         pass
 
     return None

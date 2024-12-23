@@ -11,7 +11,7 @@ from moat.micro.compat import AC_use
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Awaitable
+    from collections.abc import Awaitable
 
 
 def Raw(*a, **k):

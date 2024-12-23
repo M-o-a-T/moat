@@ -7,12 +7,10 @@ from __future__ import annotations
 
 import asyncclick as click
 from anyio_serial import Serial
-from contextlib import asynccontextmanager
 from distmqtt.client import open_mqttclient
 from distmqtt.codecs import MsgPackCodec
 
 from .server import Server
-from ..message import BusMessage
 from ..backend.stream import Anyio2TrioStream, StreamBusHandler
 
 import logging

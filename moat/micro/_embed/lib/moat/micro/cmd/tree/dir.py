@@ -16,7 +16,8 @@ from moat.micro.errors import NoPathError
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import AsyncContextManager, Awaitable
+    from typing import AsyncContextManager
+    from collections.abc import Awaitable
 
 
 class BaseSuperCmd(BaseCmd):

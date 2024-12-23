@@ -17,7 +17,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
-    from typing import Any, Iterator
+    from typing import Any
+    from collections.abc import Iterator
 
 logger = getLogger(__name__)
 

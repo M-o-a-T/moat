@@ -7,7 +7,7 @@ We do not reverse the actual input.
 
 """
 
-import functools
+from __future__ import annotations
 
 
 def _bitrev(x, n):
@@ -128,7 +128,6 @@ class CRC32n(CRC32):
 
 if __name__ == "__main__":
     import re
-    import sys
     import click
 
     def h_int(x):
@@ -141,7 +140,7 @@ CRC table calculator.
 If your polynomial value has the high bit set (i.e. bit 2^depth)
 we reverse it for you.
 
-"""
+""",
     )
     @click.option("-b", "--bits", type=int, help="width of the polynomial")
     @click.option("-d", "--depth", type=int, help="bits to calculate at once (table size)")
@@ -174,7 +173,7 @@ we reverse it for you.
             elif std == 32:
                 pbd(0xEDB88320, 32, 8)
             else:
-                raise click.UsageError(f"I only know std=8/11/16")
+                raise click.UsageError("I only know std=8/11/16")
 
         if not poly or not bits:
             raise click.UsageError("Need poly+bits")

@@ -13,7 +13,8 @@ from ._base import NoCodecError
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any, Iterator
+    from typing import Any
+    from collections.abc import Iterator
 
 __all__ = ["Codec", "ExtType"]
 

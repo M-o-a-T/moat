@@ -1,5 +1,3 @@
-# coding=utf-8
-
 #
 # The MIT License (MIT)
 #
@@ -24,6 +22,8 @@
 """
 diffiehellmann declares the main key exchange class.
 """
+
+from __future__ import annotations
 
 from hashlib import sha256
 
@@ -103,7 +103,8 @@ class DiffieHellman:
         self.shared_secret = pow(other_public_key, self.__private_key, self.prime)
 
         shared_secret_as_bytes = self.shared_secret.to_bytes(
-            self.shared_secret.bit_length() // 8 + 1, byteorder="big"
+            self.shared_secret.bit_length() // 8 + 1,
+            byteorder="big",
         )
 
         _h = sha256()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+from __future__ import annotations
 
 import inspect
 import logging
@@ -533,12 +533,12 @@ class DbusTreeExport(dbus.ServiceInterface):
         return r
 
     @dbus.method()
-    async def GetValue(self) -> "v":
+    async def GetValue(self) -> v:
         value = await self._get_value_handler(self._path)
         return wrap_dbus_value(value)
 
     @dbus.method()
-    async def GetText(self) -> "v":
+    async def GetText(self) -> v:
         value = await self._get_value_handler(self._path, True)
         return wrap_dbus_value(value)
 
@@ -641,7 +641,7 @@ class DbusItemExport(dbus.ServiceInterface):
     # @param value The new value.
     # @return completion-code When successful a 0 is return, and when not a -1 is returned.
     @dbus.method()
-    async def SetValue(self, newvalue: "v") -> "i":
+    async def SetValue(self, newvalue: v) -> i:
         if not self._writeable:
             return 1  # NOT OK
 
@@ -664,7 +664,7 @@ class DbusItemExport(dbus.ServiceInterface):
     # @param length Lenght of the language string.
     # @return description
     @dbus.method()
-    def GetDescription(self, language: "s", length: "i") -> "s":
+    def GetDescription(self, language: s, length: i) -> s:
         language, length  # pylint:disable=pointless-statement
         return self._description if self._description is not None else "No description given"
 
@@ -672,14 +672,14 @@ class DbusItemExport(dbus.ServiceInterface):
     # Returns the value.
     # @return the value when valid, and otherwise an empty array
     @dbus.method()
-    def GetValue(self) -> "v":
+    def GetValue(self) -> v:
         return wrap_dbus_value(self._value)
 
     ## Dbus exported method GetText
     # Returns the value as string of the dbus-object-path.
     # @return text A text-value. '---' when local value is invalid
     @dbus.method()
-    def GetText(self) -> "s":
+    def GetText(self) -> s:
         return self.get_text()
 
     async def get_text(self):

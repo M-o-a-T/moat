@@ -1,10 +1,10 @@
 # command line interface
+from __future__ import annotations
 
 import os
 import asyncclick as click
 
 from moat.util import (
-    yprint,
     attrdict,
     combine_dict,
     NotGiven,
@@ -291,7 +291,7 @@ async def set_(obj, typ, path, list_options, force, plus, vars_, eval_, path_):
             raise click.UsageError("Deletion and options at the same time? No.")
 
         if t is None:
-            for k in _types.keys():
+            for k in _types:
                 print(k, file=obj.stdout)
         else:
             lm = [0, 0, 0, 0]
@@ -373,7 +373,7 @@ async def set_(obj, typ, path, list_options, force, plus, vars_, eval_, path_):
 
         tock = await obj.client.get_tock()
         tock = str(base64.b32encode(tock.to_bytes((tock.bit_length() + 7) // 8)), "ascii").rstrip(
-            "="
+            "=",
         )
         v["unique_id"] = f"dkv_{tock}"
     if v.get("device_class") not in _DEV_CLS:

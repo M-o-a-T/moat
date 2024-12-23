@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 #
 # implements a bus server for our fake bus
+from __future__ import annotations
 
 import sys
 import trio
@@ -15,7 +16,9 @@ from moatbus.server import Server
 async def main():
     try:
         async with await trio.open_process(
-            ["bin/fake_serialbus"], stdin=PIPE, stdout=PIPE
+            ["bin/fake_serialbus"],
+            stdin=PIPE,
+            stdout=PIPE,
         ) as backend:
             backstream = trio.StapledStream(backend.stdin, backend.stdout)
 

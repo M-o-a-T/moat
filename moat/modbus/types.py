@@ -1,9 +1,9 @@
 """
 Various types
 """
+from __future__ import annotations
 
 import struct
-from typing import List
 
 import anyio
 
@@ -57,7 +57,7 @@ class BaseValue:
     len = 0
     _value = None
     gen = 0
-    block: "DataBlock" = None
+    block: DataBlock = None
     to_write: int = None
 
     def __init__(self, value=None, *, offset=None, idem=True):
@@ -110,7 +110,7 @@ class BaseValue:
     def _encode(self, value):
         raise NotImplementedError
 
-    def decode(self, regs: List[int]) -> None:
+    def decode(self, regs: list[int]) -> None:
         """
         Decode the passed-in register value(s) into this variable.
 
@@ -136,7 +136,7 @@ class BaseValue:
         self.changed.set()
         self.changed = anyio.Event()
 
-    def encode(self) -> List[int]:
+    def encode(self) -> list[int]:
         """
         Encode the current value. Returns a list of registers.
         """
@@ -581,7 +581,7 @@ class DataBlock(dict, BaseModbusDataBlock):
         if cur is not None:
             yield (start, cur - start)
 
-    def getValues(self, address: int, count=1) -> List[int]:
+    def getValues(self, address: int, count=1) -> list[int]:
         """Returns the array of Modbus values for the @address:+@count range
 
         Called when preparing a Send request.
@@ -625,7 +625,7 @@ class DataBlock(dict, BaseModbusDataBlock):
                 address += val.len
                 count -= val.len
 
-    def setValues(self, address: int, values: List[int]):
+    def setValues(self, address: int, values: list[int]):
         """Set the variables starting at @address to @values.
 
         Called with the reply of a Read request.

@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from moat.lib.codec import Codec
 
-    from typing import AsyncIterator, Awaitable
+    from collections.abc import AsyncIterator, Awaitable
 
 
 class MqttMessage:
@@ -103,7 +103,12 @@ class Backend(_Backend):
 
     @asynccontextmanager
     async def monitor(
-        self, topic, *, codec: str | Codec | None = None, raw: bool | None = False, **kw
+        self,
+        topic,
+        *,
+        codec: str | Codec | None = None,
+        raw: bool | None = False,
+        **kw,
     ) -> AsyncIterator[AsyncIterator[Message]]:
         "watch a topic"
 
@@ -219,5 +224,9 @@ class Backend(_Backend):
         if self.trace:
             self.logger.info("S:%s %r", topic, payload)
         return self.client.publish(
-            topic.slashed, payload=msg, user_properties=prop, retain=retain, **kw
+            topic.slashed,
+            payload=msg,
+            user_properties=prop,
+            retain=retain,
+            **kw,
         )

@@ -4,9 +4,6 @@ Communicate with diyBMS (MoaT firmware)
 
 from __future__ import annotations
 
-import random
-import sys
-
 
 def Comm(cfg):
     """

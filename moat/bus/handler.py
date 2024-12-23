@@ -1,3 +1,4 @@
+from __future__ import annotations
 from collections import deque
 from moatbus.message import BusMessage
 from moatbus.crc import CRC11

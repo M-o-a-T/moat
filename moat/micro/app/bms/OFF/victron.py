@@ -1,19 +1,12 @@
+from __future__ import annotations
 import logging
-import sys
 
 import anyio
-import asyncdbus.service as _dbus
-from moat.cmd import BaseCmd
 from moat.util import Queue, attrdict
 from victron.dbus import Dbus
 
 from moat.micro.compat import (
     Event,
-    TaskGroup,
-    sleep_ms,
-    ticks_add,
-    ticks_diff,
-    ticks_ms,
 )
 
 logger = logging.getLogger(__name__)
@@ -225,22 +218,22 @@ class BatteryState:
             self.bus.vlo = await srv.add_path(
                 "/Info/BatteryLowVoltage",
                 None,
-                gettextcallback=lambda p, v: "{:0.2f} V".format(v),
+                gettextcallback=lambda p, v: f"{v:0.2f} V",
             )
             self.bus.vhi = await srv.add_path(
                 "/Info/MaxChargeVoltage",
                 None,
-                gettextcallback=lambda p, v: "{:0.2f} V".format(v),
+                gettextcallback=lambda p, v: f"{v:0.2f} V",
             )
             self.bus.ich = await srv.add_path(
                 "/Info/MaxChargeCurrent",
                 None,
-                gettextcallback=lambda p, v: "{:0.2f} A".format(v),
+                gettextcallback=lambda p, v: f"{v:0.2f} A",
             )
             self.bus.idis = await srv.add_path(
                 "/Info/MaxDischargeCurrent",
                 None,
-                gettextcallback=lambda p, v: "{:0.2f} A".format(v),
+                gettextcallback=lambda p, v: f"{v:0.2f} A",
             )
 
             self.bus.sta = await srv.add_path("/State", 1)
@@ -257,24 +250,30 @@ class BatteryState:
             self.bus.soc = await srv.add_path("/Soc", 30)
             self.bus.soh = await srv.add_path("/Soh", 90)
             self.bus.v0 = await srv.add_path(
-                "/Dc/0/Voltage", None, gettextcallback=lambda p, v: "{:2.2f}V".format(v)
+                "/Dc/0/Voltage",
+                None,
+                gettextcallback=lambda p, v: f"{v:2.2f}V",
             )
             self.bus.c0 = await srv.add_path(
-                "/Dc/0/Current", None, gettextcallback=lambda p, v: "{:2.2f}A".format(v)
+                "/Dc/0/Current",
+                None,
+                gettextcallback=lambda p, v: f"{v:2.2f}A",
             )
             self.bus.p0 = await srv.add_path(
-                "/Dc/0/Power", None, gettextcallback=lambda p, v: "{:0.0f}W".format(v)
+                "/Dc/0/Power",
+                None,
+                gettextcallback=lambda p, v: f"{v:0.0f}W",
             )
             self.bus.t0 = await srv.add_path("/Dc/0/Temperature", 21.0)
             self.bus.mv0 = await srv.add_path(
                 "/Dc/0/MidVoltage",
                 None,
-                gettextcallback=lambda p, v: "{:0.2f}V".format(v),
+                gettextcallback=lambda p, v: f"{v:0.2f}V",
             )
             self.bus.mvd0 = await srv.add_path(
                 "/Dc/0/MidVoltageDeviation",
                 None,
-                gettextcallback=lambda p, v: "{:0.1f}%".format(v),
+                gettextcallback=lambda p, v: f"{v:0.1f}%",
             )
 
             # battery extras
@@ -283,13 +282,13 @@ class BatteryState:
             self.bus.maxcv = await srv.add_path(
                 "/System/MaxCellVoltage",
                 None,
-                gettextcallback=lambda p, v: "{:0.3f}V".format(v),
+                gettextcallback=lambda p, v: f"{v:0.3f}V",
             )
             self.bus.maxcvi = await srv.add_path("/System/MaxVoltageCellId", None)
             self.bus.mincv = await srv.add_path(
                 "/System/MinCellVoltage",
                 None,
-                gettextcallback=lambda p, v: "{:0.3f}V".format(v),
+                gettextcallback=lambda p, v: f"{v:0.3f}V",
             )
             self.bus.mincvi = await srv.add_path("/System/MinVoltageCellId", None)
             self.bus.mincti = await srv.add_path("/System/MinTemperatureCellId", None)

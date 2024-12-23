@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+from __future__ import annotations
 
 import trio
 from moatbus.handler import BaseHandler, ERR
@@ -122,7 +123,6 @@ class Client(BaseHandler):
             self.debug("ERROR %s", typ)
         if typ == ERR.COLLISION:
             print("COLL", kw)
-        pass  # ERROR
 
     def debug(self, msg, *a, v=False):
         if not v and not self.__v:
@@ -130,7 +130,6 @@ class Client(BaseHandler):
         if a:
             msg %= a
         print(msg)
-        pass
 
     def set_timeout(self, t):
         if t < 0:
@@ -162,7 +161,7 @@ class Client(BaseHandler):
                     yield self
                 except trio.BrokenResourceError:
                     pass
-                except EnvironmentError as e:
+                except OSError as e:
                     if e.errno != errno.EBADF:
                         raise
 

@@ -25,7 +25,13 @@ def radians(x):
 
 
 def AngledThread(
-    radius, offset, apex=0, angle=45, external: bool = True, simple: bool = False, **kw
+    radius,
+    offset,
+    apex=0,
+    angle=45,
+    external: bool = True,
+    simple: bool = False,
+    **kw,
 ):
     """
     Create a thread with a defined angle.
@@ -52,7 +58,7 @@ def AngledThread(
         radius += offset
     root_width = tan(angle * pi / 180) * offset * 2 + apex
 
-    fin = kw.get("end_finishes", None)
+    fin = kw.get("end_finishes")
     if fin is not None and isinstance(fin, str):
         kw["end_finishes"] = fin.split(",")
 

@@ -1,7 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-from typing import Optional
+from __future__ import annotations
 
 import anyio
 
@@ -46,7 +46,7 @@ class MoatKVbroker(Broker):
         if self.__topic[: len(self.__base)] == self.__base:
             raise ValueError("'topic' must not start with 'base'")
 
-    async def __read_encap(self, client, cfg: dict, evt: Optional[anyio.abc.Event] = None):  # pylint: disable=unused-argument
+    async def __read_encap(self, client, cfg: dict, evt: anyio.abc.Event | None = None):  # pylint: disable=unused-argument
         """
         Read encapsulated messages from the real server and forward them
         """
@@ -63,7 +63,7 @@ class MoatKVbroker(Broker):
                         sess = sess[0]
                 await super().broadcast_message(session=sess, **d)
 
-    async def __read_topic(self, topic, client, cfg: dict, evt: Optional[anyio.abc.Event] = None):  # pylint: disable=unused-argument
+    async def __read_topic(self, topic, client, cfg: dict, evt: anyio.abc.Event | None = None):  # pylint: disable=unused-argument
         """
         Read topical messages from the real server and forward them
         """
@@ -75,7 +75,7 @@ class MoatKVbroker(Broker):
                 t = m.topic
                 await super().broadcast_message(topic=t, data=d, session=None)
 
-    async def __session(self, cfg: dict, evt: Optional[anyio.abc.Event] = None):
+    async def __session(self, cfg: dict, evt: anyio.abc.Event | None = None):
         """
         Connect to the real server, read messages, forward them
         """
@@ -100,7 +100,7 @@ class MoatKVbroker(Broker):
         finally:
             self.__client = None
 
-    async def __retain_reader(self, cfg: dict, evt: Optional[anyio.abc.Event] = None):  # pylint: disable=unused-argument
+    async def __retain_reader(self, cfg: dict, evt: anyio.abc.Event | None = None):  # pylint: disable=unused-argument
         """
         Read changes from MoaT-KV and broadcast them
         """
@@ -144,7 +144,13 @@ class MoatKVbroker(Broker):
         await evt.wait()
 
     async def broadcast_message(
-        self, session, topic, data, force_qos=None, qos=None, retain=False
+        self,
+        session,
+        topic,
+        data,
+        force_qos=None,
+        qos=None,
+        retain=False,
     ):
         if isinstance(topic, str):
             ts = tuple(topic.split("/"))

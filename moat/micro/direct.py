@@ -32,7 +32,7 @@ re_oserror = re.compile(r"OSError: (\[Errno )?(\d+)(\] )?")
 re_exceptions = re.compile(r"(ValueError|KeyError|ImportError): (.*)")
 
 
-async def _noop_hook(ser):  # noqa:ARG001 pylint:disable=unused-argument
+async def _noop_hook(ser):
     pass
 
 

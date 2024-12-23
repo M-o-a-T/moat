@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 
 from ..adapters import StreamAdapter
 from ..codecs import bytes_to_int, int_to_bytes, read_or_raise
@@ -28,7 +29,7 @@ class SubackPayload(MQTTPayload):
         self.return_codes = return_codes
 
     def __repr__(self):
-        return type(self).__name__ + "(return_codes={0})".format(repr(self.return_codes))
+        return type(self).__name__ + f"(return_codes={self.return_codes!r})"
 
     def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader):
         out = b""
@@ -45,7 +46,7 @@ class SubackPayload(MQTTPayload):
     ):
         return_codes = []
         bytes_to_read = fixed_header.remaining_length - variable_header.bytes_length
-        for _ in range(0, bytes_to_read):
+        for _ in range(bytes_to_read):
             try:
                 return_code_byte = await read_or_raise(reader, 1)
                 return_code = bytes_to_int(return_code_byte)
@@ -70,7 +71,7 @@ class SubackPacket(MQTTPacket):
         else:
             if fixed.packet_type != SUBACK:
                 raise MoatMQTTException(
-                    "Invalid fixed packet type %s for SubackPacket init" % fixed.packet_type
+                    "Invalid fixed packet type %s for SubackPacket init" % fixed.packet_type,
                 )
             header = fixed
 

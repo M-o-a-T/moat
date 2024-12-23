@@ -2,10 +2,12 @@
 MoaT-KV client data model for Akumuli
 """
 
+from __future__ import annotations
+
 import anyio
 from collections.abc import Mapping
 
-from moat.util import NotGiven, attrdict, Path
+from moat.util import NotGiven, Path
 from moat.kv.obj import ClientEntry, ClientRoot, AttrClientEntry
 from moat.kv.errors import ErrorRoot
 from asyncakumuli import Entry, DS
@@ -145,7 +147,10 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
 
         if src is None or len(src) == 0 or series is None or not tags or mode is None:
             await self.root.err.record_error(
-                "akumuli", self.subpath, data=self.value, message="incomplete data"
+                "akumuli",
+                self.subpath,
+                data=self.value,
+                message="incomplete data",
             )
             return
 

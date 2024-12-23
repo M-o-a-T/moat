@@ -4,6 +4,8 @@ Basic tool support
 
 """
 
+from __future__ import annotations
+
 import logging  # pylint: disable=wrong-import-position
 
 import asyncclick as click

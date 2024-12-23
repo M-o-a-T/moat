@@ -1,3 +1,4 @@
+from __future__ import annotations
 import pytest
 import trio  # noqa: F401
 from asyncscope import main_scope

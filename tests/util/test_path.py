@@ -158,9 +158,9 @@ def test_paths():
     q = p | "c"
     assert str(p) == "a.b"
     assert str(q) == "a.b.c"
-    r = p + ()  # noqa:RUF005
+    r = p + ()
     assert p is r
-    r = p + ("c", "d")  # noqa:RUF005
+    r = p + ("c", "d")
     assert str(p) == "a.b"
     assert str(r) == "a.b.c.d"
     pp = Path.build(("a", "b"))

@@ -13,7 +13,7 @@ from moat.micro.stacks.console import console_stack
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Awaitable
+    from collections.abc import Awaitable
 
 
 def Raw(*a, **k):

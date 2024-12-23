@@ -1,4 +1,5 @@
 # command line interface
+from __future__ import annotations
 
 import anyio
 import asyncclick as click
@@ -31,7 +32,9 @@ async def dump(obj, path):
         raise click.UsageError("Only up to three path elements (host.controller:pin) allowed")
 
     async for r in obj.client.get_tree(
-        cfg.prefix + path, nchain=obj.meta, max_depth=4 - len(path)
+        cfg.prefix + path,
+        nchain=obj.meta,
+        max_depth=4 - len(path),
     ):
         # pl = len(path) + len(r.path)
         rr = res
@@ -180,7 +183,7 @@ async def _attr(obj, attr, value, path, eval_, res=None):
             value = eval(value)  # pylint: disable=eval-used
             if isinstance(value, Mapping):
                 # replace
-                pass  # value = res_delete(res, attr)
+                # value = res_delete(res, attr)
                 value = value._update(attr, value=value)
             else:
                 value = res_update(res, attr, value=value)

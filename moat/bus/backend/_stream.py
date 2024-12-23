@@ -3,6 +3,8 @@
 Send bus messages to an AnyIO stream
 """
 
+from __future__ import annotations
+
 import anyio
 from anyio.abc import AnyByteStream
 from contextlib import asynccontextmanager

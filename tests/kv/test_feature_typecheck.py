@@ -1,4 +1,4 @@
-import io
+from __future__ import annotations
 import logging
 from functools import partial
 
@@ -153,7 +153,7 @@ async def test_72_cmd(autojump_clock, tmpdir):  # pylint: disable=unused-argumen
                     break
             rr = partial(run, "kv", "-h", h, "-p", p, do_stdout=False)
             path = tmpdir.join("foo")
-            with io.open(path, "w", encoding="utf-8") as f:
+            with open(path, "w", encoding="utf-8") as f:
                 f.write(
                     """\
 good:
@@ -163,11 +163,11 @@ bad:
 - none
 - "Foo"
 code: "if not isinstance(value,int): raise ValueError('not an int')"
-"""
+""",
                 )
             await rr("type", "set", "-d", str(path), "int")
 
-            with io.open(path, "w", encoding="utf-8") as f:
+            with open(path, "w", encoding="utf-8") as f:
                 f.write("if not 0<=value<=100: raise ValueError('not a percentage')\n")
 
             with raises(ServerError):

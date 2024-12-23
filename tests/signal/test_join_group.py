@@ -1,7 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Test for SignalClient.join_group
 """
+
+from __future__ import annotations
 
 import pook
 import pytest
@@ -34,7 +35,7 @@ async def test_join_group_ok():
                     {
                         "recipientAddress": {"uuid": "42", "number": "+491337"},
                         "type": "SUCCESS",
-                    }
+                    },
                 ],
             },
             "id": "test_join_group_ok",

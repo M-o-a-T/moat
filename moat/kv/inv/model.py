@@ -2,11 +2,12 @@
 DistKV client data model for Inventory
 """
 
+from __future__ import annotations
+
 import logging
 import struct
 from collections import deque
 from operator import attrgetter
-from typing import Union
 from weakref import WeakSet, WeakValueDictionary, ref
 
 from moat.kv.errors import ErrorRoot
@@ -596,7 +597,7 @@ class HostPort(Cleaner):
         return self.host.root.vlan.by_name(vlan)
 
     @vlan.setter
-    def vlan(self, vlan: Union[None, bool, str, Vlan]):
+    def vlan(self, vlan: None | bool | str | Vlan):
         if vlan is not None:
             if isinstance(vlan, bool):
                 pass

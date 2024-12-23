@@ -1,6 +1,7 @@
 """
 Basic "moat modbus" tool: network client and server, serial client
 """
+from __future__ import annotations
 
 import sys
 import traceback

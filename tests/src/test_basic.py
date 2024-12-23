@@ -1,8 +1,8 @@
 """
 Empty test file
 """
+from __future__ import annotations
 
-import moat.src  # pylint: disable=unused-import
 from moat.src.test import raises
 
 

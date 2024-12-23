@@ -1,6 +1,3 @@
-# coding=utf-8
-
-
 #
 # The MIT License (MIT)
 #
@@ -29,6 +26,8 @@
 """
 primes holds the RFC 3526 MODP primes and their generators.
 """
+
+from __future__ import annotations
 
 PRIMES = {
     5: {

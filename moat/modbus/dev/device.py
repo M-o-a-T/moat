@@ -1,13 +1,13 @@
 """
 Types that describe a modbus device, as read from file
 """
+from __future__ import annotations
 
 import logging
 from collections.abc import Mapping
 from contextlib import asynccontextmanager
 from copy import deepcopy
 from pathlib import Path as FSPath
-from typing import List
 
 import anyio
 from asyncscope import scope
@@ -299,7 +299,7 @@ class Register:
         """Encode myself"""
         return self.reg.encode()
 
-    def decode(self, regs: List[int]):
+    def decode(self, regs: list[int]):
         """Encode registers into self"""
         self.reg.decode(regs)
 
@@ -388,7 +388,7 @@ class ClientDevice(CtxObj, BaseDevice):
             host = await self.client.host_service(self.cfg.src.host, self.cfg.src.get("port"))
         else:
             host = await self.client.serial_service(
-                port=self.cfg.src.port, **self.cfg.src.get("serial", {})
+                port=self.cfg.src.port, **self.cfg.src.get("serial", {}),
             )
         self.unit = await host.unit_scope(self.cfg.src.unit)
 

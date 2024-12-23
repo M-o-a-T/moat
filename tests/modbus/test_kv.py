@@ -1,14 +1,11 @@
+from __future__ import annotations
 import logging
-from time import time
 
-import asyncclick as click
 import pytest
 import trio
 import os
-from moat.src.test import raises
-from moat.util import P, PathLongener, yload
+from moat.util import P, yload
 
-from moat.kv.client import ServerError
 from moat.kv.mock.mqtt import stdtest
 from moat.modbus.dev.poll import dev_poll
 from moat.modbus.types import HoldingRegisters, IntValue

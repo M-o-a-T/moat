@@ -1,7 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Test for SignalClient.send_message
 """
+
+from __future__ import annotations
 
 import os
 from base64 import b64decode
@@ -45,7 +46,7 @@ async def _send_message_ok(
                 {
                     "recipientAddress": {"uuid": "1337", "number": "+491337"},
                     "type": "SUCCESS",
-                }
+                },
             ],
         },
         "id": "test_send_message_ok",
@@ -66,7 +67,7 @@ async def _send_message_ok(
                         "number": "+491337",
                         "uuid": "1337-42-1337-42-1337",
                         "isRegistered": True,
-                    }
+                    },
                 ],
                 "id": "test_get_user_status_ok",
             },
@@ -126,7 +127,7 @@ async def _send_message_error(
                             "number": "+491337",
                             "uuid": "1337-42-1337-42-1337",
                             "isRegistered": True,
-                        }
+                        },
                     ],
                     "id": "test_get_user_status_ok",
                 },

@@ -28,7 +28,7 @@ try:
     from .msgpack import Proxy
 except ImportError:
     Proxy = None
-from .path import P, path_eval
+from .path import P
 from .yaml import yload
 
 from typing import TYPE_CHECKING

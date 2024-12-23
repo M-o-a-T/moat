@@ -1,7 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Test for SignalClient.bytearray_to_rfc_2397_data_url
 """
+
+from __future__ import annotations
 
 from base64 import b64decode
 

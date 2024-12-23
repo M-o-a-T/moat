@@ -9,59 +9,67 @@ Command contents are described via OpenAPI.
 
 There are no "methods"
 
-Initially both client and server send an "hello" command.
+Initially both client and server send an "i.hello" command.
 
-Further commands may be exchanged once both the "hello" and
-any required authorization is complete.
+Further commands may be exchanged once both the "i.hello" (and
+any authorization required by it) is complete.
+
 
 Command details
 ***************
 
-hello
-+++++
+i.hello
++++++++
 
-The client calls this to tell the server about itself.
-Used for status display.
+Both sides independently call this method to tell the other side about
+them and their requirements for proceeding.
 
-The server replies with its detail/generic status info.
+The message includes a list of auth methods the remote side needs to
+support. Both sides MUST perform one of these schemes successfully before
+replying to this message.
 
-auth
-++++
+A Hello message MAY contain auth data in anticipation of the server's request.
+Thus:
 
-The client sends a sub-command of "auth" to authorize itself.
+	A>B  (1) i.hello(1.1, client_A,server_B, True, token="foobar")
+	B>A  (1) i.hello(1.2, server_B,client_A, "token")
+	A<B  (1) (True)
+	B<A  (1) (True)
 
-Depending on the auth protocol, the message exchange required for
+negotiates protocol version 1.2 and a client that successfully presented
+the token "foobar" for login.
+
+
+i.auth.X
+++++++++
+
+The client sends this subcommand to authorize itself.
+
+Depending on the auth protocol ("X"), the message exchange required for
 authentication may be streamed.
 
-The client may speculatively send e.g. an "auth mqtt" command if it has
-obtained the auth token via MQTT. Otherwise it should wait for the server's
-Hello message, as that tells it about the supported and/or required auth
-methods.
+i.auth.token
+------------
 
-Failed auth may cause the server to disconnect.
-
-auth mqtt
----------
-
-Not streamed.
+Not used.
 
 The single argument is the current magic key, as read from MQTT.
 
 On error the server replies with an error message.
 
-bye
----
+i.bye
+-----
 
 Controlled shutdown. Sent by the server to tell the client to please
-reconnect someplace else. The client should only reply when it is
-ready to tear down the link.
+reconnect to someplace else. The client should delay replying until it has
+connected to a different server.
 
 
-data get
---------
+d.get
+-----
 
 Argument: Path.
 
-Reply: the dataset at this path.
-
+Reply: the dataset at this path, consisting of the actual data and the
+metadata.
 

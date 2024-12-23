@@ -121,6 +121,11 @@ class Path(tuple):  # noqa:SLOT001
 
         if path == "":
             raise SyntaxError("The empty string is not a path")
+
+        def err():
+            nonlocal path, pos
+            raise SyntaxError(f"Cannot parse {path!r} at {pos}")
+
         for e in _PartRE.findall(path):
             if esc:
                 esc = False
@@ -136,10 +141,6 @@ class Path(tuple):  # noqa:SLOT001
                     new(None, True)
                 elif e == "_":
                     add(" ")
-                elif e[0] == "i":
-                    done(None)
-                    part = e[1:]
-                    eval_ = 1
                 elif e[0] == "b":
                     done(None)
                     part = e[1:]
@@ -162,14 +163,14 @@ class Path(tuple):  # noqa:SLOT001
                     eval_ = -3
                 else:
                     if part is None:
-                        raise SyntaxError(f"Cannot parse {path!r} at {pos}")
+                        err()
                     done("")
                     add(e)
                     eval_ = True
             else:
                 if e == ".":
                     if part is None or part is False:
-                        raise SyntaxError(f"Cannot parse {path!r} at {pos}")
+                        err()
                     done(None)
                     pos += 1
                     continue
@@ -178,12 +179,12 @@ class Path(tuple):  # noqa:SLOT001
                     pos += 1
                     continue
                 elif part is True:
-                    raise SyntaxError(f"Cannot parse {path!r} at {pos}")
+                    raise Err(path,pos)
                 else:
                     add(e)
             pos += len(e)
         if esc or part is None:
-            raise SyntaxError(f"Cannot parse {path!r} at {pos}")
+            err()
         done(None)
         return cls(res)
 

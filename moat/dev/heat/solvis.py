@@ -16,6 +16,7 @@ import subprocess
 from enum import IntEnum, auto
 
 import asyncclick as click
+import aionotify
 
 from moat.util import (
     P,
@@ -549,6 +550,23 @@ class Data:
                 await self.cl_set(path, value=r, idem=True)
 
         self.set_flow_pwm = set_flow_pwm
+
+    async def reload_cfg(self, cfgf, *, task_status=anyio.TASK_STATUS_IGNORED):
+        flg = aionotify.Flags.CLOSE_WRITE|aionotify.Flags.MOVE_SELF
+        async with aionotify.Watcher() as watcher:
+            await watcher.awatch(path=cfgf, flags=aionotify.Flags.CLOSE_WRITE)
+            task_status.started()
+            async for evt in watcher:
+                while True:
+                    with anyio.move_on_after(2):
+                        await watcher.get_event()
+                        continue
+                    break
+                print("*** RELOADING ***")
+                with open(cfgf,"r") as cff:
+                    self._cfg = combine_dict(yload(cff, attr=True), self.cfg, cls=attrdict)
+
+        pass
 
     @property
     def time(self):
@@ -1350,9 +1368,6 @@ class Data:
             elif self.m_pellet_state != 4:
                 self.state.t_pellet_on = self.time
             else:
-                self.pid.load.Kd = self.cfg.adj.pellet.pid.load.d
-                self.pid.load.Tf = self.cfg.adj.pellet.pid.load.tf
-
                 if not isinstance(self.state.t_pellet_on, bool):
                     if self.time - self.state.t_pellet_on > self.cfg.lim.pellet.t_min:
                         self.state.t_pellet_on = True
@@ -1361,6 +1376,9 @@ class Data:
                                 await self.cl_set(p, self.cfg.adj.pellet.startup.patch.stop, idem=True)
                         except AttributeError:
                             pass
+
+                self.pid.load.Kd = self.cfg.adj.pellet.pid.load.d
+                self.pid.load.Tf = self.cfg.adj.pellet.pid.load.tf
 
                 t = self.time
                 t_load = min(self.t_adj + self.cfg.adj.pellet.load, self.cfg.adj.pellet.max)
@@ -1402,6 +1420,7 @@ class Data:
                     r = "-"
                     l_buf = pos2val(l_load, w, l_buffer, clamp=True)
                     lim = min(l_buf, l_load)
+
 
                 tt = self.time
                 if o_r == r and not self.wp_on and tt - tlast > 5 and self.r_no is not None:
@@ -1928,7 +1947,7 @@ class fake_cl:
 
 @click.group
 @click.pass_context
-@click.option("-c", "--config", type=click.File("r"), help="config file")
+@click.option("-c", "--config", type=click.Path("r"), help="config file")
 async def cli(ctx, config):
     """
     Manage a Solvis heat pump controller
@@ -1939,8 +1958,10 @@ async def cli(ctx, config):
     ctx.obj = attrdict()
     cfg = yload(CFG, attr=True)
     if config is not None:
-        cfg = combine_dict(yload(config, attr=True), cfg, cls=attrdict)
+        with open(config,"r") as cff:
+            cfg = combine_dict(yload(cff, attr=True), cfg, cls=attrdict)
     ctx.obj.cfg = cfg
+    ctx.obj.cfgf = config
 
     global GPIO
     try:
@@ -1957,6 +1978,7 @@ async def solvis_mon(obj):
     async with open_client(**mcfg.kv) as cl:
         d = Data(obj.cfg, cl, no_op=True)
         await d.run_solvis_mon()
+
 
 @cli.command
 @click.pass_obj
@@ -1984,6 +2006,8 @@ async def run(obj, record, force_on, no_save):
                 d = Data(obj.cfg, cl, record=record, no_op=no_save, state=state)
                 d.force_on = force_on
 
+                if obj.cfgf:
+                    await tg.start(d.reload_cfg, obj.cfgf)
                 await tg.start(d.run_init)
                 await tg.start(d.err_mon)
                 await tg.start(d.run_temp_thresh)

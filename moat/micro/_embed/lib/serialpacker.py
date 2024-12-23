@@ -1,1 +1,1 @@
-../../../../lib/serialpacker/serialpacker/__init__.py
+../../../../ext/serialpacker/serialpacker/__init__.py

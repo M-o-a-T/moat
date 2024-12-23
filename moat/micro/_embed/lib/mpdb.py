@@ -1,1 +1,1 @@
-../../../../lib/mpdb/src/mpdb.py
+../../../../ext/mpdb/src/mpdb.py

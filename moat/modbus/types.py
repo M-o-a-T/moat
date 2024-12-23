@@ -594,7 +594,10 @@ class DataBlock(dict, BaseModbusDataBlock):
                 address += 1
                 count -= 1
             else:
-                res.extend(val.encode())
+                try:
+                    res.extend(val.encode())
+                except TypeError as exc:
+                    raise RuntimeError(f"Cannot encode {val !r}") from exc
                 address += val.len
                 count -= val.len
         if count < 0:

@@ -1,6 +1,7 @@
 """
 Charge/discharge optimizer.
 """
+
 import datetime
 import logging
 import time
@@ -119,7 +120,7 @@ class Model:
             t -= t % t_slot
             if abs(t_now - t) > t_slot / 10:
                 raise ValueError(
-                    f"You're {humandelta(abs(t_now-t))} away "
+                    f"You're {humandelta(abs(t_now - t))} away "
                     f"from {datetime.datetime.fromtimestamp(t).isoformat(sep=' ')}"
                 )
 
@@ -273,7 +274,12 @@ class Model:
 
             async with res2 if res2 is not None else nullcontext():
                 for g_buy, g_sell, b_chg, b_dis, cap, money in zip(
-                    self.g_buys, self.g_sells, self.b_chgs, self.b_diss, self.caps, self.moneys
+                    self.g_buys,
+                    self.g_sells,
+                    self.b_chgs,
+                    self.b_diss,
+                    self.caps,
+                    self.moneys,
                 ):
                     val = dict(
                         grid=(g_buy.solution_value() - g_sell.solution_value()) * cfg.steps,

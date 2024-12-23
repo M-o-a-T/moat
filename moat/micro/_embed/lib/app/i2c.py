@@ -1,6 +1,7 @@
 """
 Access a satellite's i²c bus.
 """
+
 from __future__ import annotations
 
 from functools import partial

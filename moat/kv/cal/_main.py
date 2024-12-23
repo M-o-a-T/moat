@@ -28,11 +28,13 @@ async def cli(obj):
     """
     obj.data = await CalRoot.as_handler(obj.client)
 
+
 @cli.command("run")
 @click.pass_obj
 async def run_(obj):
     """Process calendar alarms"""
     from moat.kv.client import client_scope
+
     kv = await client_scope(**obj.cfg.kv)
     cal_cfg = (await kv.get(P("calendar.test"))).value
     try:
@@ -55,22 +57,24 @@ async def run_(obj):
     else:
         t_al = datetime.fromtimestamp(t_al.value["time"], tz)
 
-    async with caldav.DAVClient(url=cal_cfg["url"],username=cal_cfg["user"],password=cal_cfg["pass"]) as client:
+    async with caldav.DAVClient(
+        url=cal_cfg["url"], username=cal_cfg["user"], password=cal_cfg["pass"]
+    ) as client:
         principal = await client.principal()
         calendar = await principal.calendar(name="privat neu")
         while True:
             t_now = now()
             if t_now < t_scan:
-                await anyio.sleep((t_scan-t_now).total_seconds())
+                await anyio.sleep((t_scan - t_now).total_seconds())
                 cal_cfg = (await kv.get(P("calendar.test"))).value
                 cal_cfg["scan"] = t_scan.timestamp()
                 await kv.set(P("calendar.test"), value=cal_cfg)
                 t_now = t_scan
 
             logger.info("Scan %s", t_scan)
-            ev,v,ev_t = await find_next_alarm(calendar, zone=tz, now=t_scan)
+            ev, v, ev_t = await find_next_alarm(calendar, zone=tz, now=t_scan)
             t_scan += interval
-            t_scan = max(t_now,t_scan).astimezone(tz)
+            t_scan = max(t_now, t_scan).astimezone(tz)
 
             if ev is None:
                 logger.warning("NO EVT")
@@ -79,15 +83,18 @@ async def run_(obj):
                 if t_al != ev_t:
                     # set alarm message
                     logger.warning("ALARM %s %s", v.summary.value, ev_t)
-                    await kv.set(cal_cfg["dst"], value=dict(time=int(ev_t.timestamp()), info=v.summary.value))
+                    await kv.set(
+                        cal_cfg["dst"],
+                        value=dict(time=int(ev_t.timestamp()), info=v.summary.value),
+                    )
                     t_al = ev_t
-                    t_scan = t_now + timedelta(0, cal_cfg.get("interval", 1800)/3)
+                    t_scan = t_now + timedelta(0, cal_cfg.get("interval", 1800) / 3)
             elif ev_t < t_scan:
                 t_scan = ev_t
                 logger.warning("ScanEarly %s", t_scan)
             else:
                 logger.warning("ScanLate %s", t_scan)
-    
+
 
 @cli.command("list")
 @click.pass_obj
@@ -107,22 +114,23 @@ async def list_(obj):
             return Path("%02x.%12x" % (p[0], p[1])) + p[2:]
 
     if obj.meta:
+
         def pm(p):
             return Path(str(prefix + path)) + p
 
     await data_get(obj, prefix + path, as_dict="_", path_mangle=pm)
 
 
-#@cli.command("attr", help="Mirror a device attribute to/from MoaT-KV")
-#@click.option("-d", "--device", help="Device to access.")
-#@click.option("-f", "--family", help="Device family to modify.")
-#@click.option("-i", "--interval", type=float, help="read value every N seconds")
-#@click.option("-w", "--write", is_flag=True, help="Write to the device")
-#@click.option("-a", "--attr", "attr_", help="The node's attribute to use", default=":")
-#@click.argument("attr", nargs=1)
-#@click.argument("path", nargs=1)
-#@click.pass_obj
-#async def attr__(obj, device, family, write, attr, interval, path, attr_):
+# @cli.command("attr", help="Mirror a device attribute to/from MoaT-KV")
+# @click.option("-d", "--device", help="Device to access.")
+# @click.option("-f", "--family", help="Device family to modify.")
+# @click.option("-i", "--interval", type=float, help="read value every N seconds")
+# @click.option("-w", "--write", is_flag=True, help="Write to the device")
+# @click.option("-a", "--attr", "attr_", help="The node's attribute to use", default=":")
+# @click.argument("attr", nargs=1)
+# @click.argument("path", nargs=1)
+# @click.pass_obj
+# async def attr__(obj, device, family, write, attr, interval, path, attr_):
 #    """Show/add/modify an entry to repeatedly read an 1wire device's attribute.
 #
 #    You can only set an interval, not a path, on family codes.
@@ -169,13 +177,13 @@ async def list_(obj):
 #        yprint(res, stream=obj.stdout)
 #
 #
-#@cli.command("set")
-#@click.option("-d", "--device", help="Device to modify.")
-#@click.option("-f", "--family", help="Device family to modify.")
-#@attr_args
-#@click.argument("subpath", nargs=1, type=P, default=P(":"))
-#@click.pass_obj
-#async def set_(obj, device, family, subpath, vars_, eval_, path_):
+# @cli.command("set")
+# @click.option("-d", "--device", help="Device to modify.")
+# @click.option("-f", "--family", help="Device family to modify.")
+# @attr_args
+# @click.argument("subpath", nargs=1, type=P, default=P(":"))
+# @click.pass_obj
+# async def set_(obj, device, family, subpath, vars_, eval_, path_):
 #    """Set or delete some random attribute.
 #
 #    For deletion, use '-e ATTR -'.
@@ -196,13 +204,13 @@ async def list_(obj):
 #        yprint(res, stream=obj.stdout)
 #
 #
-#@cli.command("server")
-#@click.option("-h", "--host", help="Host name of this server.")
-#@click.option("-p", "--port", help="Port of this server.")
-#@click.option("-d", "--delete", is_flag=True, help="Delete this server.")
-#@click.argument("name", nargs=-1)
-#@click.pass_obj
-#async def server_(obj, name, host, port, delete):
+# @cli.command("server")
+# @click.option("-h", "--host", help="Host name of this server.")
+# @click.option("-p", "--port", help="Port of this server.")
+# @click.option("-d", "--delete", is_flag=True, help="Delete this server.")
+# @click.argument("name", nargs=-1)
+# @click.pass_obj
+# async def server_(obj, name, host, port, delete):
 #    """
 #    Configure a server.
 #
@@ -244,10 +252,10 @@ async def list_(obj):
 #        yprint(res, stream=obj.stdout)
 #
 #
-#@cli.command()
-#@click.pass_obj
-#@click.argument("server", nargs=-1)
-#async def monitor(obj, server):
+# @cli.command()
+# @click.pass_obj
+# @click.argument("server", nargs=-1)
+# async def monitor(obj, server):
 #    """Stand-alone task to monitor one or more OWFS servers."""
 #    from .task import task
 #

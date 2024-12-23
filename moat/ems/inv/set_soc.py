@@ -1,6 +1,7 @@
 """
 Inverter mode: go to specific SoC
 """
+
 import logging
 
 from . import InvModeBase

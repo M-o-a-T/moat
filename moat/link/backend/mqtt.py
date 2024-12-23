@@ -46,7 +46,13 @@ class Backend(_Backend):
 
     client = None
 
-    def __init__(self, cfg, will: attrdict | None = None, name:str|None = None, meta: bool = True):
+    def __init__(
+        self,
+        cfg,
+        will: attrdict | None = None,
+        name: str | None = None,
+        meta: bool = True,
+    ):
         """
         Connect to MQTT.
 
@@ -137,7 +143,12 @@ class Backend(_Backend):
                                 self.logger.debug("Property Error", exc_info=exc)
                                 await self.send(
                                     P(":R.error.link.mqtt.meta"),
-                                    dict(topic=top, val=oprop, pattern=topic, msg=repr(exc)),
+                                    dict(
+                                        topic=top,
+                                        val=oprop,
+                                        pattern=topic,
+                                        msg=repr(exc),
+                                    ),
                                 )
                                 err = exc
                             else:
@@ -178,7 +189,13 @@ class Backend(_Backend):
             self.logger.info("Monitor %s end", topic)
 
     def send(
-            self, topic, payload, codec: Codec | str | None = None, meta: MsgMeta | bool | None = None, retain:bool=False, **kw
+        self,
+        topic,
+        payload,
+        codec: Codec | str | None = None,
+        meta: MsgMeta | bool | None = None,
+        retain: bool = False,
+        **kw,
     ) -> Awaitable:  # pylint: disable=invalid-overridden-method
         """
         Send this payload to this topic.
@@ -201,4 +218,6 @@ class Backend(_Backend):
 
         if self.trace:
             self.logger.info("S:%s %r", topic, payload)
-        return self.client.publish(topic.slashed, payload=msg, user_properties=prop, retain=retain, **kw)
+        return self.client.publish(
+            topic.slashed, payload=msg, user_properties=prop, retain=retain, **kw
+        )

@@ -90,3 +90,30 @@ disable = "wrong-import-order,ungrouped-imports,too-many-nested-blocks,use-dict-
 line-length = 99
 
 [tool.moat]
+
+[tool.ruff]
+preview = true
+line-length = 99
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["BLE001","ERA","N","FIX","TD","RET50","C","PLR","EM10","TRY003","FBT","T2","D4","D3","D2","PLW1514","RUF002","RUF001","S101","A003","D107","D105","PERF","PTH","ANN","I001","RUF005","TRY300","TRY301","RUF003","INP001"]
+explicit-preview-rules = true
+
+[tool.ruff.lint.flake8-comprehensions]
+allow-dict-calls-with-keyword-arguments = true
+
+[tool.ruff.lint.flake8-builtins]
+builtins-ignorelist = ["help","id"]
+
+[tool.ruff.lint.isort]
+no-lines-before = ["future"]
+required-imports = ["from __future__ import annotations"]
+section-order = ["third-party","local-folder","moat","upy","first-party","standard-library","typing","future"]
+extra-standard-library = ["anyio","pytest"]
+force-to-top = ["moat.util"]
+
+[tool.ruff.lint.isort.sections]
+moat = ["moat"]
+upy = ["esp","machine","micropython"]
+typing = ["typing"]

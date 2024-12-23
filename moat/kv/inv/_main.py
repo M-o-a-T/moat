@@ -252,7 +252,8 @@ async def host_template(obj, dump, template):
 
     if not dump:
         e = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(os.path.dirname(template[0])), autoescape=False
+            loader=jinja2.FileSystemLoader(os.path.dirname(template[0])),
+            autoescape=False,
         )
         t = e.get_template(os.path.basename(template[0]))
     h = obj.host

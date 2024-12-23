@@ -3,7 +3,13 @@
 # See the file license.txt for copying permission.
 import anyio
 
-from ..codecs import bytes_to_int, decode_string, encode_string, int_to_bytes, read_or_raise
+from ..codecs import (
+    bytes_to_int,
+    decode_string,
+    encode_string,
+    int_to_bytes,
+    read_or_raise,
+)
 from ..errors import MoatMQTTException, NoDataException
 from .packet import (
     SUBSCRIBE,

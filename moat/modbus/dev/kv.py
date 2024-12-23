@@ -82,8 +82,8 @@ class Register(BaseRegister):
     async def to_dkv(self, dest):
         """Copy a Modbus value to MoaT-KV"""
         async for val in self:
-#            if "load.goal" in str(dest):
-#                breakpoint()
+            #            if "load.goal" in str(dest):
+            #                breakpoint()
             logger.debug("%s R %r", self.path, val)
             await self.mt_kv.set(dest, value=val, idem=self.data.get("idem", True))
 
@@ -110,6 +110,7 @@ class Register(BaseRegister):
         """Copy an MQTT value to Modbus, with periodic refresh"""
         evt = anyio.Event()
         val = NotGiven
+
         async def per():
             nonlocal evt, val
             while True:
@@ -138,7 +139,6 @@ class Register(BaseRegister):
                 logger.debug("%s w %r", self.path, val)
                 evt.set()
                 evt = anyio.Event()
-
 
     async def _set(self, value):
         self.value = value

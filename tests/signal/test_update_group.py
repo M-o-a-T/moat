@@ -3,7 +3,6 @@
 Test for SignalClient.update_group
 """
 
-
 import pook
 import pytest
 

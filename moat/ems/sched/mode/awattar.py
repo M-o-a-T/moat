@@ -1,6 +1,7 @@
 """
 Germany: Get next-day prices from awattar.de API
 """
+
 import asks
 
 from . import BaseLoader

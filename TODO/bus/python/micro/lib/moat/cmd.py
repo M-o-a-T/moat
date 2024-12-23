@@ -1,4 +1,16 @@
-from .compat import Event,ticks_ms,ticks_add,ticks_diff,wait_for_ms,print_exc,CancelledError,TaskGroup, idle, ValueEvent, WouldBlock
+from .compat import (
+    Event,
+    ticks_ms,
+    ticks_add,
+    ticks_diff,
+    wait_for_ms,
+    print_exc,
+    CancelledError,
+    TaskGroup,
+    idle,
+    ValueEvent,
+    WouldBlock,
+)
 from .proto import _Stacked, RemoteError, SilentRemoteError as FSError
 from contextlib import asynccontextmanager
 
@@ -32,7 +44,7 @@ import sys
 
 class BaseCmd(_Stacked):
     # Request/response handler (server side)
-    # 
+    #
     # This is attached as a child to the Request object.
     #
     # Incoming requests call `cmd_*` with `*` being the action. If the
@@ -42,7 +54,7 @@ class BaseCmd(_Stacked):
     #
     # If the action is empty, call the `cmd` method instead. Otherwise if
     # no method is found return an error.
-    # 
+    #
     # Attach a sub-base directly to their parents by setting their
     # `cmd_XX` property to it.
     #
@@ -57,25 +69,24 @@ class BaseCmd(_Stacked):
     async def run(self):
         pass
 
-    async def start_sub(self,tg):
+    async def start_sub(self, tg):
         # start my (and my children's) "run" task
         await tg.spawn(self.run)
 
         for k in dir(self):
-            if not k.startswith('dis_'):
+            if not k.startswith("dis_"):
                 continue
-            v = getattr(self,k)
+            v = getattr(self, k)
             if isinstance(v, BaseCmd):
                 await v.start_sub(tg)
 
-
     async def dispatch(self, action, msg):
         async def c(p):
-            if isinstance(msg,dict):
+            if isinstance(msg, dict):
                 r = p(**msg)
             else:
                 r = p(msg)
-            if hasattr(r,"throw"):  # coroutine
+            if hasattr(r, "throw"):  # coroutine
                 r = await r
             return r
 
@@ -83,9 +94,9 @@ class BaseCmd(_Stacked):
             return await c(self.cmd)
             # if there's no "self.cmd", the resulting AttributeError is our reply
 
-        if isinstance(action,str) and len(action) > 1:
+        if isinstance(action, str) and len(action) > 1:
             try:
-                p = getattr(self,"cmd_"+action)
+                p = getattr(self, "cmd_" + action)
             except AttributeError:
                 pass
             else:
@@ -93,13 +104,13 @@ class BaseCmd(_Stacked):
 
         if len(action) > 1:
             try:
-                dis = getattr(self,"dis_"+action[0])
+                dis = getattr(self, "dis_" + action[0])
             except AttributeError:
                 raise AttributeError(action)
             else:
                 return await dis(action[1:], msg)
         else:
-            return await c(getattr(self,"cmd_"+action[0]))
+            return await c(getattr(self, "cmd_" + action[0]))
 
     async def __call__(self, *a, **k):
         return await self.dispatch(*a, **k)
@@ -107,21 +118,21 @@ class BaseCmd(_Stacked):
     async def config_updated(self):
         for k in dir(self):
             if k.startswith("dis_"):
-                v = getattr(self,k)
+                v = getattr(self, k)
                 await v.config_updated()
 
     def cmd__dir(self):
         # rudimentary introspection
-        d=[]
-        c=[]
+        d = []
+        c = []
         res = dict(c=c, d=d)
         for k in dir(self):
-            if k.startswith("cmd_") and k[4] != '_':
+            if k.startswith("cmd_") and k[4] != "_":
                 c.append(k[4:])
-            elif k.startswith("dis_") and k[4] != '_':
+            elif k.startswith("dis_") and k[4] != "_":
                 d.append(k[4:])
             elif k == "cmd":
-                res['j'] = True
+                res["j"] = True
         return res
 
     @property
@@ -148,16 +159,16 @@ class ClientBaseCmd(BaseCmd):
 
 class Request(_Stacked):
     # Request/Response handler (client side)
-    # 
+    #
     # Call "send" with an action (a string or list) to select
     # the function of the recipient. The response is returned / raised.
     # The second argument is expanded by the recipient if it is a dict.
     # Requests are cancelled when the lower layer terminates.
-    # 
+    #
     # The transport must be reliable.
 
     def __init__(self, *a, **k):
-        super().__init__(*a,**k)
+        super().__init__(*a, **k)
         self.reply = {}
         self.seq = 0
 
@@ -188,16 +199,16 @@ class Request(_Stacked):
         for e in self.reply.values():
             e.set_error(CancelledError())
 
-    async def _handle_request(self, a,i,d,msg):
-        res={'i':i}
+    async def _handle_request(self, a, i, d, msg):
+        res = {"i": i}
         try:
-            r = await self.child.dispatch(a,d)
+            r = await self.child.dispatch(a, d)
         except FSError as exc:
             res["e"] = exc.args[0]
         except WouldBlock:
             raise
         except Exception as exc:
-            print("ERROR handling",a,i,d,msg, file=sys.stderr)
+            print("ERROR handling", a, i, d, msg, file=sys.stderr)
             print_exc(exc)
             if i is None:
                 return
@@ -209,40 +220,39 @@ class Request(_Stacked):
         try:
             await self.parent.send(res)
         except TypeError as exc:
-            print("ERROR returning",res, file=sys.stderr)
+            print("ERROR returning", res, file=sys.stderr)
             print_exc(exc)
-            res = {'e':repr(exc),'i':i}
+            res = {"e": repr(exc), "i": i}
             await self.parent.send(res)
 
-
     async def dispatch(self, msg):
-        if not isinstance(msg,dict):
-            print("?3",msg)
+        if not isinstance(msg, dict):
+            print("?3", msg)
             return
-        a = msg.pop("a",None)
-        i = msg.pop("i",None)
-        d = msg.pop("d",None)
+        a = msg.pop("a", None)
+        i = msg.pop("i", None)
+        d = msg.pop("d", None)
 
         if a is not None:
             # request from the other side
             # runs in a separate task
             # TODO create a task pool
-            await self._tg.spawn(self._handle_request,a,i,d,msg)
+            await self._tg.spawn(self._handle_request, a, i, d, msg)
 
-        else: # reply
+        else:  # reply
             if i is None:
                 # No seq#. Dunno what to do about these.
-                print("?4",d,msg)
+                print("?4", d, msg)
                 return
 
-            e = msg.pop("e",None) if d is None else None
+            e = msg.pop("e", None) if d is None else None
             try:
                 evt = self.reply[i]
             except KeyError:
-                print("?5",i,msg)
-                return # errored?
+                print("?5", i, msg)
+                return  # errored?
             if evt.is_set():
-                print("Duplicate reply?",a,i,d,msg)
+                print("Duplicate reply?", a, i, d, msg)
                 return  # duplicate??
             if e is None:
                 evt.set(d)
@@ -259,7 +269,7 @@ class Request(_Stacked):
             msg = kw
         elif kw:
             raise TypeError("cannot use both msg data and keywords")
-        msg = {"a":action,"d":msg,"i":seq}
+        msg = {"a": action, "d": msg, "i": seq}
 
         e = ValueEvent()
         self.reply[seq] = e
@@ -275,6 +285,5 @@ class Request(_Stacked):
             msg = kw
         elif kw:
             raise TypeError("cannot use both msg data and keywords")
-        msg = {"a":action,"d":msg}
+        msg = {"a": action, "d": msg}
         await self.parent.send(msg)
-

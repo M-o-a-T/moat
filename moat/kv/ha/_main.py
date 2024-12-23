@@ -3,7 +3,17 @@
 import os
 import asyncclick as click
 
-from moat.util import yprint, attrdict, combine_dict, NotGiven, P, Path, yload, attr_args, process_args
+from moat.util import (
+    yprint,
+    attrdict,
+    combine_dict,
+    NotGiven,
+    P,
+    Path,
+    yload,
+    attr_args,
+    process_args,
+)
 
 import logging
 
@@ -58,6 +68,7 @@ _DEV_CLS = {
     "wind_speed",
 }
 
+
 @click.group(short_help="Manage Home Assistant.")
 @click.option("-t", "--test", is_flag=True, help="Use test data.")
 @click.pass_obj
@@ -67,9 +78,9 @@ async def cli(obj, test):
     """
     obj.hass_test = test
     if test:
-        obj.hass_name = Path("test","retain")
+        obj.hass_name = Path("test", "retain")
     else:
-        obj.hass_name = Path("home","ass","dyn")
+        obj.hass_name = Path("home", "ass", "dyn")
 
 
 @cli.command("conv")
@@ -89,7 +100,7 @@ async def setup_conv(obj, user):
     n = 0
 
     with open(os.path.join(os.path.dirname(__file__), "schema.yaml")) as f:
-        cfg =  yload(f)
+        cfg = yload(f)
     for k, v in cfg["codec"].items():
         k = k.split(" ")
         r = await obj.client._request(action="get_internal", path=["codec"] + k)
@@ -133,21 +144,46 @@ _types = {
         _payload=True,
     ),
     "switch": attrdict(
-        cmd=(str, "‹prefix›/binary_switch/‹path›/cmd", "topic for commands", "command_topic"),
-        state=(str, "‹prefix›/binary_switch/‹path›/state", "topic for state", "state_topic"),
+        cmd=(
+            str,
+            "‹prefix›/binary_switch/‹path›/cmd",
+            "topic for commands",
+            "command_topic",
+        ),
+        state=(
+            str,
+            "‹prefix›/binary_switch/‹path›/state",
+            "topic for state",
+            "state_topic",
+        ),
         icon=(str, None, "Device icon", "icon"),
         _payload=True,
         _payloads=True,
     ),
     "binary_sensor": attrdict(
-        state=(str, "‹prefix›/binary_sensor/‹path›/state", "topic for state", "state_topic"),
+        state=(
+            str,
+            "‹prefix›/binary_sensor/‹path›/state",
+            "topic for state",
+            "state_topic",
+        ),
         unit=(str, None, "Unit of measurement", "unit_of_measurement"),
         icon=(str, None, "Device icon", "icon"),
         _payload=True,
     ),
     "number": attrdict(
-        cmd=(str, "‹prefix›/number/‹path›/cmd", "topic for writing the value (r/w)", "command_topic"),
-        state=(str, "‹prefix›/number/‹path›/state", "topic for reading a value update", "state_topic"),
+        cmd=(
+            str,
+            "‹prefix›/number/‹path›/cmd",
+            "topic for writing the value (r/w)",
+            "command_topic",
+        ),
+        state=(
+            str,
+            "‹prefix›/number/‹path›/state",
+            "topic for reading a value update",
+            "state_topic",
+        ),
         unit=(str, None, "Unit of measurement", "unit_of_measurement"),
         cls=(str, None, "Device class", "device_class"),
         icon=(str, None, "Device icon", "icon"),
@@ -185,7 +221,12 @@ _types_plus = {
                 "brightness_state_topic",
             ),
             brightscale=(int, 100, "brightness state", "brightness_scale"),
-            cmdtype=(str, "brightness", "Command type: brightness/first/last", "on_command_type"),
+            cmdtype=(
+                str,
+                "brightness",
+                "Command type: brightness/first/last",
+                "on_command_type",
+            ),
         ),
     ),
 }
@@ -220,7 +261,10 @@ Known types: %s
 @click.option("-L", "--list-options", is_flag=True, help="List possible options")
 @click.option("-p", "--plus", multiple=True, help="Add a sub-option")
 @click.option(
-    "-f", "--force", is_flag=True, help="Override some restrictions. Use with extreme caution."
+    "-f",
+    "--force",
+    is_flag=True,
+    help="Override some restrictions. Use with extreme caution.",
 )
 @click.argument("typ", nargs=1)
 @click.argument("path", nargs=1)
@@ -307,16 +351,16 @@ async def set_(obj, typ, path, list_options, force, plus, vars_, eval_, path_):
             logger.warning(f"Key {k!r} may be unknown. Skipping.")
             continue
         vv = i[k]
-#       try:
-#           kk, _ = k.split("_")
-#       except ValueError:
-#           pass
-#       else:
-#           kk = t[kk][3]
-#           if not (i[kk] if kk in i else val.get(kk, False)):
-#               continue
+        #       try:
+        #           kk, _ = k.split("_")
+        #       except ValueError:
+        #           pass
+        #       else:
+        #           kk = t[kk][3]
+        #           if not (i[kk] if kk in i else val.get(kk, False)):
+        #               continue
         if tt is not None:
-            if tt[0] is float and isinstance(vv,int):
+            if tt[0] is float and isinstance(vv, int):
                 pass
             elif not isinstance(vv, tt[0]):
                 raise click.UsageError("Option %r is %r, not a %s" % (k, vv, tt[0].__name__))
@@ -326,8 +370,11 @@ async def set_(obj, typ, path, list_options, force, plus, vars_, eval_, path_):
     v = {k: v for k, v in v.items() if v is not None}
     if "unique_id" not in v:
         import base64
+
         tock = await obj.client.get_tock()
-        tock = str(base64.b32encode(tock.to_bytes((tock.bit_length()+7)//8)),"ascii").rstrip("=")
+        tock = str(base64.b32encode(tock.to_bytes((tock.bit_length() + 7) // 8)), "ascii").rstrip(
+            "="
+        )
         v["unique_id"] = f"dkv_{tock}"
     if v.get("device_class") not in _DEV_CLS:
         raise click.UsageError("Device class %r is unknown" % (v["device_class"],))
@@ -346,9 +393,7 @@ set_.__doc__ = """
 
     Boolean states can be set with "-o NAME" and cleared with "-o -name".
     Known types: %s
-    """ % (
-    " ".join(_types.keys()),
-)
+    """ % (" ".join(_types.keys()),)
 
 
 @cli.command(help="Display a device, list devices")
@@ -383,7 +428,7 @@ async def get(obj, typ, path, cmd):
             print(r.value.name, typ, r.path[:-1])
         return
 
-    res = await obj.client.get(cp|"config", nchain=2)
+    res = await obj.client.get(cp | "config", nchain=2)
     if res.get("value", NotGiven) is NotGiven:
         print("Not found.")
         return
@@ -396,9 +441,7 @@ get.__doc__ = """
     Display a device's configuration.
 
     Known types: %s
-    """ % (
-    " ".join(_types.keys()),
-)
+    """ % (" ".join(_types.keys()),)
 
 
 @cli.command(help="Delete a device")
@@ -406,8 +449,7 @@ get.__doc__ = """
 @click.argument("typ", nargs=1)
 @click.argument("path", nargs=1)
 async def delete(obj, typ, path):
-    """Delete a device.
-    """
+    """Delete a device."""
 
     path = P(path)
     if typ not in _types:
@@ -415,7 +457,7 @@ async def delete(obj, typ, path):
 
     cp = obj.hass_name + (typ, *path)
 
-    res = await obj.client.get(cp|"config", nchain=2)
+    res = await obj.client.get(cp | "config", nchain=2)
     if res.get("value", NotGiven) is NotGiven:
         print("Not found.")
         return

@@ -1,6 +1,7 @@
 """
 Access a satellite's Flash file system.
 """
+
 from __future__ import annotations
 
 import errno

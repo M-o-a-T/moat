@@ -31,6 +31,7 @@ except ImportError:
 
 ensure_cfg("moat.kv")
 
+
 @attr.s
 class S:
     tg = attr.ib()
@@ -93,6 +94,4 @@ class S:
             if isinstance(args, str):
                 args = args.split(" ")
         async with scope.using_scope():
-            return await run(
-                "-VV", "kv", "-h", h, "-p", p, *args, do_stdout=do_stdout
-            )
+            return await run("-VV", "kv", "-h", h, "-p", p, *args, do_stdout=do_stdout)

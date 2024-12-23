@@ -19,9 +19,7 @@ async def test_coro():
 
             await C.publish("data/classified", b"TOP SECRET", qos=0x01)
             await C.publish("data/memes", b"REAL FUN", qos=0x01)
-            await C.publish(
-                "repositories/mqtt/master", b"NEW STABLE RELEASE", qos=0x01
-            )
+            await C.publish("repositories/mqtt/master", b"NEW STABLE RELEASE", qos=0x01)
             await C.publish(
                 "repositories/mqtt/devel", b"THIS NEEDS TO BE CHECKED", qos=0x01
             )

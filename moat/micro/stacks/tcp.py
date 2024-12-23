@@ -1,6 +1,7 @@
 """
 Connection handling for TCP sockets
 """
+
 from __future__ import annotations
 
 import anyio

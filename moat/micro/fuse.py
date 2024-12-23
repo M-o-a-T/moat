@@ -1,6 +1,7 @@
 """
 FUSE operations for MoaT-micro-FS
 """
+
 from __future__ import annotations
 
 import anyio

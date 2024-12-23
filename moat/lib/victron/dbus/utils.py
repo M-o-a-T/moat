@@ -182,9 +182,7 @@ def get_product_id():
         "Octo GX": "C006",
         "EasySolar-II": "C007",
         "MultiPlus-II": "C008",
-    }.get(
-        name, "C003"
-    )  # C003 is Generic
+    }.get(name, "C003")  # C003 is Generic
 
 
 def wrap_dbus_dict(value):
@@ -239,7 +237,7 @@ def wrap_dbus_value(value):
         # keys cannot be wrapped
         # non-string keys are not supported here
         return Variant("a{sv}", {k: wrap_dbus_value(v) for k, v in value.items()})
-    raise ValueError(f"No idea how to encode {value !r} ({type(value).__name__})")
+    raise ValueError(f"No idea how to encode {value!r} ({type(value).__name__})")
 
 
 def unwrap_dbus_dict(value):

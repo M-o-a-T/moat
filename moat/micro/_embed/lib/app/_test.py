@@ -119,7 +119,11 @@ class Cons(BaseCmd):
                 if p is None:
                     self.q.put(buf[:d])
                 else:
-                    log("%s: %s", p, str(memoryview(buf)[: d - (buf[d - 1] == 10)], "utf-8"))
+                    log(
+                        "%s: %s",
+                        p,
+                        str(memoryview(buf)[: d - (buf[d - 1] == 10)], "utf-8"),
+                    )
                 d = 0
 
 

@@ -1,6 +1,6 @@
 # VenusOS module for support of Eastron SDM630-Modbus v1
 # might work also with other Eastron devices > Product code on 0x001c (type u16b) to be added into models overview
-# 
+#
 # Community contribution by Thomas Weichenberger
 # Version 1.4 - 2022-03-13
 #
@@ -14,60 +14,62 @@ from register import *
 
 log = logging.getLogger()
 
+
 class Reg_f32b(Reg_num):
-    coding = ('>f', '>2H')
+    coding = (">f", ">2H")
     count = 2
     rtype = float
-		
-nr_phases = [ 0, 1, 3, 3 ]
+
+
+nr_phases = [0, 1, 3, 3]
 
 phase_configs = [
-    'undefined',
-    '1P',
-    '3P.1',
-    '3P.n',
+    "undefined",
+    "1P",
+    "3P.1",
+    "3P.n",
 ]
 
+
 class Eastron_SDM630v1(device.EnergyMeter):
-    productid = 0xB023 # id assigned by Victron Support
-    productname = 'Eastron SDM630-Modbus v1'
+    productid = 0xB023  # id assigned by Victron Support
+    productname = "Eastron SDM630-Modbus v1"
     min_timeout = 0.5
-    hardwareversion = '1'
-    firmwareversion = '0'
-    serial = '0'
+    hardwareversion = "1"
+    firmwareversion = "0"
+    serial = "0"
 
     def __init__(self, *args):
         super(Eastron_SDM630v1, self).__init__(*args)
 
         self.info_regs = [
-            Reg_u16( 0xfc02, '/HardwareVersion'),
-            Reg_u16( 0xfc03, '/FirmwareVersion'),
-            Reg_f32b( 0x000a, '/PhaseConfig', text=phase_configs, write=(0, 3)),
-            Reg_u32b(0x0014, '/Serial'),
+            Reg_u16(0xFC02, "/HardwareVersion"),
+            Reg_u16(0xFC03, "/FirmwareVersion"),
+            Reg_f32b(0x000A, "/PhaseConfig", text=phase_configs, write=(0, 3)),
+            Reg_u32b(0x0014, "/Serial"),
         ]
 
     def phase_regs(self, n):
         s = 0x0002 * (n - 1)
         return [
-            Reg_f32b(0x0000 + s, '/Ac/L%d/Voltage' % n,        1, '%.1f V'),
-            Reg_f32b(0x0006 + s, '/Ac/L%d/Current' % n,        1, '%.1f A'),
-            Reg_f32b(0x000c + s, '/Ac/L%d/Power' % n,          1, '%.1f W'),
-            Reg_f32b(0x015a + s, '/Ac/L%d/Energy/Forward' % n, 1, '%.1f kWh'),
-            Reg_f32b(0x0160 + s, '/Ac/L%d/Energy/Reverse' % n, 1, '%.1f kWh'),
+            Reg_f32b(0x0000 + s, "/Ac/L%d/Voltage" % n, 1, "%.1f V"),
+            Reg_f32b(0x0006 + s, "/Ac/L%d/Current" % n, 1, "%.1f A"),
+            Reg_f32b(0x000C + s, "/Ac/L%d/Power" % n, 1, "%.1f W"),
+            Reg_f32b(0x015A + s, "/Ac/L%d/Energy/Forward" % n, 1, "%.1f kWh"),
+            Reg_f32b(0x0160 + s, "/Ac/L%d/Energy/Reverse" % n, 1, "%.1f kWh"),
         ]
 
     def device_init(self):
-
         self.read_info()
 
-        phases = nr_phases[int(self.info['/PhaseConfig'])]
+        phases = nr_phases[int(self.info["/PhaseConfig"])]
 
         regs = [
-            Reg_f32b(0x0034, '/Ac/Power',          1, '%.1f W'),
-            Reg_f32b(0x0030, '/Ac/Current',        1, '%.1f A'),
-            Reg_f32b(0x0046, '/Ac/Frequency',      1, '%.1f Hz'),
-            Reg_f32b(0x0048, '/Ac/Energy/Forward', 1, '%.1f kWh'),
-            Reg_f32b(0x004a, '/Ac/Energy/Reverse', 1, '%.1f kWh'),
+            Reg_f32b(0x0034, "/Ac/Power", 1, "%.1f W"),
+            Reg_f32b(0x0030, "/Ac/Current", 1, "%.1f A"),
+            Reg_f32b(0x0046, "/Ac/Frequency", 1, "%.1f Hz"),
+            Reg_f32b(0x0048, "/Ac/Energy/Forward", 1, "%.1f kWh"),
+            Reg_f32b(0x004A, "/Ac/Energy/Reverse", 1, "%.1f kWh"),
         ]
 
         for n in range(1, phases + 1):
@@ -76,26 +78,25 @@ class Eastron_SDM630v1(device.EnergyMeter):
         self.data_regs = regs
 
     def get_ident(self):
-        return 'cg_%s' % self.info['/Serial']
-
+        return "cg_%s" % self.info["/Serial"]
 
 
 # identifier to be checked, if register identical on all SDM630 (only first 16 bytes in u16b of 32 bit register 0xfc02)
 models = {
     16512: {
-        'model':    'SDM630Modbusv1',
-        'handler':  Eastron_SDM630v1,
+        "model": "SDM630Modbusv1",
+        "handler": Eastron_SDM630v1,
     },
     16438: {
-        'model':    'SDM630Modbusv1',
-        'handler':  Eastron_SDM630v1,
+        "model": "SDM630Modbusv1",
+        "handler": Eastron_SDM630v1,
     },
     16384: {
-        'model':    'SDM630Modbusv1',
-        'handler':  Eastron_SDM630v1,
+        "model": "SDM630Modbusv1",
+        "handler": Eastron_SDM630v1,
     },
 }
 
-probe.add_handler(probe.ModelRegister(Reg_u16(0x001c), models,
-                                      methods=['tcp','rtu'],
-                                      units=[1]))
+probe.add_handler(
+    probe.ModelRegister(Reg_u16(0x001C), models, methods=["tcp", "rtu"], units=[1])
+)

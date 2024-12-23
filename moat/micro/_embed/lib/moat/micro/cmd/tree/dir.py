@@ -159,7 +159,9 @@ class BaseSubCmd(BaseSuperCmd):
         "dir: add subdirs"
         res = await super().cmd_dir_(v=v)
         res["d"] = {
-            k: v.__class__.__name__ for k, v in self.sub.items() if not isinstance(k,str) or v is not (k[-1] == "_")
+            k: v.__class__.__name__
+            for k, v in self.sub.items()
+            if not isinstance(k, str) or v is not (k[-1] == "_")
         }
         return res
 
@@ -262,15 +264,15 @@ class Dispatch(DirCmd):
             raise
         return self
 
-    def sub_at(self, p: str|Path):
+    def sub_at(self, p: str | Path):
         """
         Returns a SubDispatch to this path.
 
         You can call this either with a sequence of path elements
         or with a path.
         """
-        if isinstance(p,str):
-            p=P(p)
+        if isinstance(p, str):
+            p = P(p)
         return SubDispatch(self, p)
 
     @property
@@ -333,7 +335,7 @@ class _SubDispatch:
         self._path = path
         self._dest = dest
         self._rem = rem
-        assert isinstance(rem,(tuple,list,Path))
+        assert isinstance(rem, (tuple, list, Path))
 
     @property
     def root(self) -> Dispatch:

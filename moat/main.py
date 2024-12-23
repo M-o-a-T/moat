@@ -45,7 +45,6 @@ This is the main command handler for MoaT, the Master of all Things.
     return ec
 
 
-
 @main_.command(short_help="Import the debugger")
 @click.argument("args", nargs=-1, type=click.UNPROCESSED)
 @click.pass_context

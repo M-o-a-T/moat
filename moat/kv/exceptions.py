@@ -4,7 +4,6 @@ This module affords all MoaT-KV exceptions.
 
 # pylint: disable=unnecessary-pass
 
-
 error_types = {}
 
 

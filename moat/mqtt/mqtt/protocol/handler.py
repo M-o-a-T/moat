@@ -8,7 +8,12 @@ import anyio
 from moat.util import create_queue
 
 from ...adapters import StreamAdapter
-from ...errors import InvalidStateError, MoatMQTTException, MQTTException, NoDataException
+from ...errors import (
+    InvalidStateError,
+    MoatMQTTException,
+    MQTTException,
+    NoDataException,
+)
 from ...plugins.manager import PluginManager
 from ...session import (
     INCOMING,
@@ -488,7 +493,9 @@ class ProtocolHandler:
                         cls = packet_class(fixed_header)
                         packet = await cls.from_stream(self.stream, fixed_header=fixed_header)
                         self.logger.debug(
-                            "< %s %r", "B" if "Broker" in type(self).__name__ else "C", packet
+                            "< %s %r",
+                            "B" if "Broker" in type(self).__name__ else "C",
+                            packet,
                         )
                         self._got_packet.set()  # don't wait for the body
                         await self.plugins_manager.fire_event(
@@ -572,7 +579,9 @@ class ProtocolHandler:
                         await self.handle_write_timeout()
                         continue
                     self.logger.debug(
-                        "%s > %r", "B" if "Broker" in type(self).__name__ else "C", packet
+                        "%s > %r",
+                        "B" if "Broker" in type(self).__name__ else "C",
+                        packet,
                     )
                     try:
                         await packet.to_stream(self.stream)
@@ -604,14 +613,10 @@ class ProtocolHandler:
     async def handle_connect(self, connect: ConnectPacket):  # pylint: disable=unused-argument
         self.logger.debug("%s CONNECT unhandled", self.session.client_id)
 
-    async def handle_subscribe(
-        self, subscribe: SubscribePacket
-    ):  # pylint: disable=unused-argument
+    async def handle_subscribe(self, subscribe: SubscribePacket):  # pylint: disable=unused-argument
         self.logger.debug("%s SUBSCRIBE unhandled", self.session.client_id)
 
-    async def handle_unsubscribe(
-        self, unsubscribe: UnsubscribePacket
-    ):  # pylint: disable=unused-argument
+    async def handle_unsubscribe(self, unsubscribe: UnsubscribePacket):  # pylint: disable=unused-argument
         self.logger.debug("%s UNSUBSCRIBE unhandled", self.session.client_id)
 
     async def handle_suback(self, suback: SubackPacket):  # pylint: disable=unused-argument
@@ -626,9 +631,7 @@ class ProtocolHandler:
     async def handle_pingreq(self, pingreq: PingReqPacket):  # pylint: disable=unused-argument
         self.logger.debug("%s PINGREQ unhandled", self.session.client_id)
 
-    async def _handle_disconnect(
-        self, disconnect: DisconnectPacket
-    ):  # pylint: disable=unused-argument
+    async def _handle_disconnect(self, disconnect: DisconnectPacket):  # pylint: disable=unused-argument
         self.logger.debug("%s DISCONNECT unhandled", self.session.client_id)
 
     async def handle_disconnect(self, disconnect: DisconnectPacket):

@@ -3,6 +3,7 @@
 Basic "modbus" tool: network client and server, serial client
 
 """
+
 import logging  # pylint: disable=wrong-import-position
 from getopt import getopt
 from pprint import pprint
@@ -34,8 +35,8 @@ def _doc(v):
     return v.__doc__.split("\n")[0]
 
 
-_args_kind = "\n".join(f"{k :3s}  {_doc(v)}" for k, v in map_kind.items())
-_args_type = "\n".join(f"{k :3s}  {_doc(v)}" for k, v in map_type.items())
+_args_kind = "\n".join(f"{k:3s}  {_doc(v)}" for k, v in map_kind.items())
+_args_type = "\n".join(f"{k:3s}  {_doc(v)}" for k, v in map_type.items())
 _args_help = f"""\
 \b
 Setting values:
@@ -75,10 +76,12 @@ async def _server(host, port, debug, args):
     reg = 0
 
     kv, a = getopt(
-        args, "u:k:t:r:n:v:", "--unit= --kind= --type= reg= register= num= val= value=".split()
+        args,
+        "u:k:t:r:n:v:",
+        "--unit= --kind= --type= reg= register= num= val= value=".split(),
     )
     if a:
-        raise click.UsageError(f"Unknown argument: {' ' .join(a)}")
+        raise click.UsageError(f"Unknown argument: {' '.join(a)}")
     for k, v in kv:
         pend = True
         if k in ("-u", "--unit"):
@@ -103,7 +106,7 @@ async def _server(host, port, debug, args):
                 reg += typ.len
             pend = False
         else:
-            raise click.UsageError(f"Unknown argument: {k !r}")
+            raise click.UsageError(f"Unknown argument: {k!r}")
     if pend:
         raise click.UsageError("Values must be at the end")
 
@@ -154,11 +157,11 @@ async def _client(host, port, unit, kind, start, num, type_, values, debug, inte
         c["max_rd_len"] = maxlen
         c["max_wr_len"] = maxlen
     async with (
-            ModbusClient() as g,
-            g.host(host, port, **c) as h,
-            h.unit(unit) as u,
-            u.slot("default") as s,
-        ):
+        ModbusClient() as g,
+        g.host(host, port, **c) as h,
+        h.unit(unit) as u,
+        u.slot("default") as s,
+    ):
         k = map_kind[kind[0]]
         t = get_type(type_)
         if values:
@@ -212,7 +215,14 @@ def mk_client(m):
     c = click.option("--port", "-p", type=int, default=502, help="destination port")(c)
     c = click.option("--host", "-h", default="localhost", help="destination host")(c)
     c = click.option("--interval", "-i", type=float, help="loop: read/write every N seconds")(c)
-    c = click.option("--max-len", "-L", "maxlen", type=int, default=30, help="max. modbus words per packet")(c)
+    c = click.option(
+        "--max-len",
+        "-L",
+        "maxlen",
+        type=int,
+        default=30,
+        help="max. modbus words per packet",
+    )(c)
     c = m.command("client", context_settings=dict(show_default=True))(c)
     return c
 
@@ -221,7 +231,18 @@ client = mk_client(main)
 
 
 async def _serclient(
-    port, baudrate, stopbits, parity, unit, kind, start, num, type_, values, debug, maxlen
+    port,
+    baudrate,
+    stopbits,
+    parity,
+    unit,
+    kind,
+    start,
+    num,
+    type_,
+    values,
+    debug,
+    maxlen,
 ):
     """
     Basic Modbus-RTU client.
@@ -295,7 +316,14 @@ def mk_serial_client(m):
     )
     c = add_serial_cfg(c)
     c = click.option("--unit", "-u", type=int, default=1, help="unit to query")(c)
-    c = click.option("--max-len", "-L", "maxlen", type=int, default=30, help="max. modbus words per packet")(c)
+    c = click.option(
+        "--max-len",
+        "-L",
+        "maxlen",
+        type=int,
+        default=30,
+        help="max. modbus words per packet",
+    )(c)
     c = m.command("serial", context_settings=dict(show_default=True))(c)
     return c
 

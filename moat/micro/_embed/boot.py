@@ -1,4 +1,5 @@
 "MoaT satellite boot script"
+
 # from moat import setup
 # setup.run()
 from __future__ import annotations
@@ -12,7 +13,8 @@ except ValueError:
 sys.path.insert(0, "/lib")
 
 import moat  # just for the namespace
-if not hasattr(moat,"SERIAL"):
+
+if not hasattr(moat, "SERIAL"):
     try:
         import os
         import time

@@ -47,9 +47,7 @@ async def cli(ctx, path):
 )
 @click.option("-r", "--recursive", is_flag=True, help="Read a complete subtree")
 @click.option("-e", "--empty", is_flag=True, help="Include empty nodes")
-@click.option(
-    "-R", "--raw", is_flag=True, help="Print string values without quotes etc."
-)
+@click.option("-R", "--raw", is_flag=True, help="Print string values without quotes etc.")
 @click.option("-D", "--add-date", is_flag=True, help="Add *_date entries")
 @click.pass_obj
 async def get(obj, **k):
@@ -156,9 +154,7 @@ class nstr:
 @click.option("-l", "--last", nargs=2, help="Previous change entry (node serial)")
 @click.option("-r", "--recursive", is_flag=True, help="Delete a complete subtree")
 @click.option("--internal", is_flag=True, help="Affect the internal tree. DANGER.")
-@click.option(
-    "-e", "--eval", "eval_", is_flag=True, help="The previous value shall be evaluated."
-)
+@click.option("-e", "--eval", "eval_", is_flag=True, help="The previous value shall be evaluated.")
 @click.pass_obj
 async def delete(obj, prev, last, recursive, eval_, internal):
     """
@@ -178,9 +174,7 @@ async def delete(obj, prev, last, recursive, eval_, internal):
         raise click.UsageError("You need to add a value that can be evaluated")
     if recursive:
         if prev is not NotGiven or last:
-            raise click.UsageError(
-                "You can't use a prev value when deleting recursively."
-            )
+            raise click.UsageError("You can't use a prev value when deleting recursively.")
         if internal:
             raise click.UsageError("'internal' and 'recursive' are mutually exclusive")
     else:
@@ -191,9 +185,7 @@ async def delete(obj, prev, last, recursive, eval_, internal):
         if last:
             args["chain"] = {"node": last[0], "tick": int(last[1])}
 
-    res = await obj.client.delete(
-        path=obj.path, nchain=obj.meta, recursive=recursive, **args
-    )
+    res = await obj.client.delete(path=obj.path, nchain=obj.meta, recursive=recursive, **args)
     if isinstance(res, StreamedRequest):
         pl = PathLongener(obj.path)
         async for r in res:
@@ -221,7 +213,8 @@ async def monitor(obj, state, only, path_only, add_date, ignore):
     async with obj.client.watch(
         obj.path,
         nchain=obj.meta,
-        fetch=state, max_depth=0 if only else -1, 
+        fetch=state,
+        max_depth=0 if only else -1,
         long_path=False,
     ) as res:
         pl = PathLongener(() if path_only else obj.path)
@@ -252,9 +245,7 @@ async def monitor(obj, state, only, path_only, add_date, ignore):
                         continue
             if flushing:
                 r["time"] = time.time()
-                r["_time"] = datetime.datetime.now().isoformat(
-                    sep=" ", timespec="milliseconds"
-                )
+                r["_time"] = datetime.datetime.now().isoformat(sep=" ", timespec="milliseconds")
             yprint(r, stream=obj.stdout)
             print("---", file=obj.stdout)
             if flushing:

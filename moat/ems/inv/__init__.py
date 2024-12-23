@@ -64,7 +64,11 @@ class BusVars(CtxObj):
         async with Dbus(self._bus) as self._intf:
             for k, v in self.VARS_RO.items():
                 for n, p in v.items():
-                    setattr(self, n, (await self._intf.importer(k, p, createsignal=False)).value)
+                    setattr(
+                        self,
+                        n,
+                        (await self._intf.importer(k, p, createsignal=False)).value,
+                    )
             for k, v in self.VARS.items():
                 for n, p in v.items():
                     setattr(self, n, await self._intf.importer(k, p))
@@ -612,14 +616,20 @@ class InvControl(BusVars):
                                     name = name[ni + 3 :]
                                 pp = mon.get_value(chg, "/Yield/Power") or 0
                                 await dkv.set(
-                                    self.distkv_prefix / "solar" / "p" / name, pp, idem=True
+                                    self.distkv_prefix / "solar" / "p" / name,
+                                    pp,
+                                    idem=True,
                                 )
                             await dkv.set(self.distkv_prefix / "solar" / "p", cur_p, idem=True)
                             await dkv.set(
-                                self.distkv_prefix / "solar" / "batt_pct", self.batt_soc, idem=True
+                                self.distkv_prefix / "solar" / "batt_pct",
+                                self.batt_soc,
+                                idem=True,
                             )
                             await dkv.set(
-                                self.distkv_prefix / "solar" / "grid", self.p_grid, idem=True
+                                self.distkv_prefix / "solar" / "grid",
+                                self.p_grid,
+                                idem=True,
                             )
                         t_sol = t + 10
                     await anyio.sleep_until(t)
@@ -699,9 +709,11 @@ class InvControl(BusVars):
 
         name = "org.m-o-a-t.power.inverter"
 
-        async with InvInterface(self) as self._ctrl, self.intf.service(
-            name
-        ) as self._srv, anyio.create_task_group() as self._tg:
+        async with (
+            InvInterface(self) as self._ctrl,
+            self.intf.service(name) as self._srv,
+            anyio.create_task_group() as self._tg,
+        ):
             self._tg.start_soon(self._init_intf)
             if not self.acc_vebus.value:
                 logger.warning("VEBUS not known")
@@ -1095,14 +1107,16 @@ class InvControl(BusVars):
         if self.op.get("fake", False):
             if self.n_phase > 1:
                 logger.error(
-                    "NO-OP SET inverter %.0f ∑ %s", -sum(ps), " ".join(f"{-x :.0f}" for x in ps)
+                    "NO-OP SET inverter %.0f ∑ %s",
+                    -sum(ps),
+                    " ".join(f"{-x:.0f}" for x in ps),
                 )
             else:
                 logger.error("NO-OP SET inverter %.0f", -ps[0])
             return
 
         if self.n_phase > 1:
-            logger.info("SET inverter %.0f ∑ %s", -sum(ps), " ".join(f"{-x :.0f}" for x in ps))
+            logger.info("SET inverter %.0f ∑ %s", -sum(ps), " ".join(f"{-x:.0f}" for x in ps))
         else:
             logger.info("SET inverter %.0f", -ps[0])
 

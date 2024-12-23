@@ -7,7 +7,14 @@ from moat.cmd import BaseCmd
 from moat.util import Queue, attrdict
 from victron.dbus import Dbus
 
-from moat.micro.compat import Event, TaskGroup, sleep_ms, ticks_add, ticks_diff, ticks_ms
+from moat.micro.compat import (
+    Event,
+    TaskGroup,
+    sleep_ms,
+    ticks_add,
+    ticks_diff,
+    ticks_ms,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -205,7 +212,7 @@ class BatteryState:
             await srv.add_mandatory_paths(
                 processname=__file__,
                 processversion="0.1",
-                connection='MoaT ' + self.ctrl.gcfg.port.dev,
+                connection="MoaT " + self.ctrl.gcfg.port.dev,
                 deviceinstance="1",
                 serial="123456",
                 productid=123210,
@@ -216,13 +223,19 @@ class BatteryState:
             )
 
             self.bus.vlo = await srv.add_path(
-                "/Info/BatteryLowVoltage", None, gettextcallback=lambda p, v: "{:0.2f} V".format(v)
+                "/Info/BatteryLowVoltage",
+                None,
+                gettextcallback=lambda p, v: "{:0.2f} V".format(v),
             )
             self.bus.vhi = await srv.add_path(
-                "/Info/MaxChargeVoltage", None, gettextcallback=lambda p, v: "{:0.2f} V".format(v)
+                "/Info/MaxChargeVoltage",
+                None,
+                gettextcallback=lambda p, v: "{:0.2f} V".format(v),
             )
             self.bus.ich = await srv.add_path(
-                "/Info/MaxChargeCurrent", None, gettextcallback=lambda p, v: "{:0.2f} A".format(v)
+                "/Info/MaxChargeCurrent",
+                None,
+                gettextcallback=lambda p, v: "{:0.2f} A".format(v),
             )
             self.bus.idis = await srv.add_path(
                 "/Info/MaxDischargeCurrent",
@@ -241,61 +254,67 @@ class BatteryState:
             self.bus.capi = await srv.add_path("/InstalledCapacity", 5.0)
             self.bus.cons = await srv.add_path("/ConsumedAmphours", 12.3)
 
-            self.bus.soc = await srv.add_path('/Soc', 30)
-            self.bus.soh = await srv.add_path('/Soh', 90)
+            self.bus.soc = await srv.add_path("/Soc", 30)
+            self.bus.soh = await srv.add_path("/Soh", 90)
             self.bus.v0 = await srv.add_path(
-                '/Dc/0/Voltage', None, gettextcallback=lambda p, v: "{:2.2f}V".format(v)
+                "/Dc/0/Voltage", None, gettextcallback=lambda p, v: "{:2.2f}V".format(v)
             )
             self.bus.c0 = await srv.add_path(
-                '/Dc/0/Current', None, gettextcallback=lambda p, v: "{:2.2f}A".format(v)
+                "/Dc/0/Current", None, gettextcallback=lambda p, v: "{:2.2f}A".format(v)
             )
             self.bus.p0 = await srv.add_path(
-                '/Dc/0/Power', None, gettextcallback=lambda p, v: "{:0.0f}W".format(v)
+                "/Dc/0/Power", None, gettextcallback=lambda p, v: "{:0.0f}W".format(v)
             )
-            self.bus.t0 = await srv.add_path('/Dc/0/Temperature', 21.0)
+            self.bus.t0 = await srv.add_path("/Dc/0/Temperature", 21.0)
             self.bus.mv0 = await srv.add_path(
-                '/Dc/0/MidVoltage', None, gettextcallback=lambda p, v: "{:0.2f}V".format(v)
+                "/Dc/0/MidVoltage",
+                None,
+                gettextcallback=lambda p, v: "{:0.2f}V".format(v),
             )
             self.bus.mvd0 = await srv.add_path(
-                '/Dc/0/MidVoltageDeviation',
+                "/Dc/0/MidVoltageDeviation",
                 None,
                 gettextcallback=lambda p, v: "{:0.1f}%".format(v),
             )
 
             # battery extras
-            self.bus.minct = await srv.add_path('/System/MinCellTemperature', None)
-            self.bus.maxct = await srv.add_path('/System/MaxCellTemperature', None)
+            self.bus.minct = await srv.add_path("/System/MinCellTemperature", None)
+            self.bus.maxct = await srv.add_path("/System/MaxCellTemperature", None)
             self.bus.maxcv = await srv.add_path(
-                '/System/MaxCellVoltage', None, gettextcallback=lambda p, v: "{:0.3f}V".format(v)
+                "/System/MaxCellVoltage",
+                None,
+                gettextcallback=lambda p, v: "{:0.3f}V".format(v),
             )
-            self.bus.maxcvi = await srv.add_path('/System/MaxVoltageCellId', None)
+            self.bus.maxcvi = await srv.add_path("/System/MaxVoltageCellId", None)
             self.bus.mincv = await srv.add_path(
-                '/System/MinCellVoltage', None, gettextcallback=lambda p, v: "{:0.3f}V".format(v)
+                "/System/MinCellVoltage",
+                None,
+                gettextcallback=lambda p, v: "{:0.3f}V".format(v),
             )
-            self.bus.mincvi = await srv.add_path('/System/MinVoltageCellId', None)
-            self.bus.mincti = await srv.add_path('/System/MinTemperatureCellId', None)
-            self.bus.maxcti = await srv.add_path('/System/MaxTemperatureCellId', None)
-            self.bus.hcycles = await srv.add_path('/History/ChargeCycles', None)
-            self.bus.htotalah = await srv.add_path('/History/TotalAhDrawn', None)
-            self.bus.bal = await srv.add_path('/Balancing', None)
-            self.bus.okchg = await srv.add_path('/Io/AllowToCharge', 0)
-            self.bus.okdis = await srv.add_path('/Io/AllowToDischarge', 0)
+            self.bus.mincvi = await srv.add_path("/System/MinVoltageCellId", None)
+            self.bus.mincti = await srv.add_path("/System/MinTemperatureCellId", None)
+            self.bus.maxcti = await srv.add_path("/System/MaxTemperatureCellId", None)
+            self.bus.hcycles = await srv.add_path("/History/ChargeCycles", None)
+            self.bus.htotalah = await srv.add_path("/History/TotalAhDrawn", None)
+            self.bus.bal = await srv.add_path("/Balancing", None)
+            self.bus.okchg = await srv.add_path("/Io/AllowToCharge", 0)
+            self.bus.okdis = await srv.add_path("/Io/AllowToDischarge", 0)
             # xx = await srv.add_path('/SystemSwitch',1)
 
             # alarms
-            self.bus.allv = await srv.add_path('/Alarms/LowVoltage', None)
-            self.bus.alhv = await srv.add_path('/Alarms/HighVoltage', None)
-            self.bus.allc = await srv.add_path('/Alarms/LowCellVoltage', None)
-            self.bus.alhc = await srv.add_path('/Alarms/HighCellVoltage', None)
-            self.bus.allow = await srv.add_path('/Alarms/LowSoc', None)
-            self.bus.alhch = await srv.add_path('/Alarms/HighChargeCurrent', None)
-            self.bus.alhdis = await srv.add_path('/Alarms/HighDischargeCurrent', None)
-            self.bus.albal = await srv.add_path('/Alarms/CellImbalance', None)
-            self.bus.alfail = await srv.add_path('/Alarms/InternalFailure', None)
-            self.bus.alhct = await srv.add_path('/Alarms/HighChargeTemperature', None)
-            self.bus.allct = await srv.add_path('/Alarms/LowChargeTemperature', None)
-            self.bus.alht = await srv.add_path('/Alarms/HighTemperature', None)
-            self.bus.allt = await srv.add_path('/Alarms/LowTemperature', None)
+            self.bus.allv = await srv.add_path("/Alarms/LowVoltage", None)
+            self.bus.alhv = await srv.add_path("/Alarms/HighVoltage", None)
+            self.bus.allc = await srv.add_path("/Alarms/LowCellVoltage", None)
+            self.bus.alhc = await srv.add_path("/Alarms/HighCellVoltage", None)
+            self.bus.allow = await srv.add_path("/Alarms/LowSoc", None)
+            self.bus.alhch = await srv.add_path("/Alarms/HighChargeCurrent", None)
+            self.bus.alhdis = await srv.add_path("/Alarms/HighDischargeCurrent", None)
+            self.bus.albal = await srv.add_path("/Alarms/CellImbalance", None)
+            self.bus.alfail = await srv.add_path("/Alarms/InternalFailure", None)
+            self.bus.alhct = await srv.add_path("/Alarms/HighChargeTemperature", None)
+            self.bus.allct = await srv.add_path("/Alarms/LowChargeTemperature", None)
+            self.bus.alht = await srv.add_path("/Alarms/HighTemperature", None)
+            self.bus.allt = await srv.add_path("/Alarms/LowTemperature", None)
 
             if evt is not None:
                 evt.set()

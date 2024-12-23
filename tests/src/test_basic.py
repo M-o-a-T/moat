@@ -13,5 +13,3 @@ def test_nothing():
     pass  # pylint: disable=unnecessary-pass
     with raises(SyntaxError):
         raise SyntaxError("foo")
-
-    

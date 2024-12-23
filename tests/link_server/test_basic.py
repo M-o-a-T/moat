@@ -8,12 +8,14 @@ from moat.link.meta import MsgMeta
 from moat.link._test import Scaffold
 from moat.util import P
 
+
 async def _dump(sf, *, task_status):
     bk = await sf.backend(name="mon")
-    async with bk.monitor(P("#"),qos=0) as mon:
+    async with bk.monitor(P("#"), qos=0) as mon:
         task_status.started()
         async for msg in mon:
             print(msg)
+
 
 @pytest.mark.anyio
 async def test_basic(cfg):
@@ -34,7 +36,7 @@ async def test_basic(cfg):
                     evt.set()
                     break
 
-        srv = await sf.server(init={"Hello":"there!","test":123})
+        srv = await sf.server(init={"Hello": "there!", "test": 123})
         await sf.tg.start(cl)
 
         c = await sf.client()

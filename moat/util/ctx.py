@@ -63,13 +63,15 @@ class CtxObj[T_Ctx](ABC):
         return await ctx.__aenter__()
 
     def __aexit__(
-        self, *tb: *tuple[type[BaseException] | None, BaseException | None, TracebackType | None]
+        self,
+        *tb: *tuple[type[BaseException] | None, BaseException | None, TracebackType | None],
     ) -> Awaitable[bool | None]:
         try:
             assert self.__ctx is not None
             return self.__ctx.__aexit__(*tb)
         finally:
             self.__ctx = None
+
 
 @define
 class timed_ctx(CtxObj):
@@ -79,8 +81,9 @@ class timed_ctx(CtxObj):
 
     Everything else is unaffected.
     """
-    timeout:int|float
-    mgr:AbstractAsyncContextManager
+
+    timeout: int | float
+    mgr: AbstractAsyncContextManager
 
     async def _timer(self, *, task_status):
         with anyio.CancelScope() as sc:

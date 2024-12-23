@@ -11,7 +11,7 @@ import logging
 from abc import ABCMeta, abstractmethod
 from contextlib import asynccontextmanager
 
-from attrs import define,field
+from attrs import define, field
 
 from moat.lib.codec import get_codec as _get_codec
 from moat.util import CtxObj, NotGiven, Path, Root, RootPath, attrdict
@@ -41,21 +41,22 @@ class Message[TData]:
     An incoming message.
     """
 
-    topic:Path = field()
-    data:TData = field()
-    meta:MsgMeta = field()
-    orig:Any = field(repr=False)
+    topic: Path = field()
+    data: TData = field()
+    meta: MsgMeta = field()
+    orig: Any = field(repr=False)
 
-    raw:ClassVar[bool] = False
+    raw: ClassVar[bool] = False
 
     def __class_getitem__(cls, TData):
         return cls  # for now
 
+
 class RawMessage(Message):
     "A message that couldn't be decoded / shouldn't be encoded"
 
-    exc:Exception = field(default=None)
-    raw:ClassVar[bool] = True
+    exc: Exception = field(default=None)
+    raw: ClassVar[bool] = True
 
 
 class Backend(CtxObj, metaclass=ABCMeta):

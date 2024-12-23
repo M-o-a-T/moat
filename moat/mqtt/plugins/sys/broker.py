@@ -186,8 +186,6 @@ class BrokerSysPlugin:
             self._stats[STAT_CLIENTS_MAXIMUM], self._stats[STAT_CLIENTS_CONNECTED]
         )
 
-    async def on_broker_client_disconnected(
-        self, *args, **kwargs
-    ):  # pylint: disable=unused-argument
+    async def on_broker_client_disconnected(self, *args, **kwargs):  # pylint: disable=unused-argument
         self._stats[STAT_CLIENTS_CONNECTED] -= 1
         self._stats[STAT_CLIENTS_DISCONNECTED] += 1

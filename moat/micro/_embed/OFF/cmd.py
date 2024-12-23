@@ -40,14 +40,17 @@ class BMSCmd(BaseCmd):
         if st is NotGiven:
             return self.batt.relay.value(), self.batt.relay_force
         await self.batt.set_relay_force(st)
-    loc_rly=cmd_rly
+
+    loc_rly = cmd_rly
 
     async def cmd_info(self, gen=-1, r=False):
         if self.bms.gen == gen:
             await self.bms.xmit_evt.wait()
         return self.bms.stat(r)
-    loc_info=cmd_info
+
+    loc_info = cmd_info
 
     def cmd_live(self):
         self.bms.set_live()
-    loc_live=cmd_live
+
+    loc_live = cmd_live

@@ -19,18 +19,19 @@ import probe
 from scan import *
 from utils import *
 
-#import carlo_gavazzi
-#import ev_charger
-#import smappee
+# import carlo_gavazzi
+# import ev_charger
+# import smappee
 import TWE_Eastron_SDM120
 
 import logging
+
 log = logging.getLogger()
 
 NAME = os.path.basename(__file__)
-VERSION = '1.13'
+VERSION = "1.13"
 
-__all__ = ['NAME', 'VERSION']
+__all__ = ["NAME", "VERSION"]
 
 pymodbus.constants.Defaults.Timeout = 0.5
 
@@ -45,11 +46,13 @@ SCAN_INTERVAL = 600
 UPDATE_INTERVAL = 250
 
 if_blacklist = [
-    'ap0',
+    "ap0",
 ]
 
+
 def percent(path, val):
-    return '%d%%' % val
+    return "%d%%" % val
+
 
 class Client(object):
     def __init__(self, name):
@@ -68,7 +71,7 @@ class Client(object):
         if self.scanner:
             return
 
-        log.info('Starting background scan')
+        log.info("Starting background scan")
 
         s = self.new_scanner(full)
 
@@ -92,7 +95,7 @@ class Client(object):
                 d.nosave = False
                 self.devices.append(d)
             except Exception:
-                log.info('Error initialising %s, skipping', d)
+                log.info("Error initialising %s, skipping", d)
                 traceback.print_exc()
 
         self.save_devices()
@@ -118,7 +121,7 @@ class Client(object):
         except Exception:
             dev.err_count += 1
             if dev.err_count == MAX_ERRORS:
-                log.info('Device %s failed', dev)
+                log.info("Device %s failed", dev)
                 if self.err_exit:
                     os._exit(1)
                 self.devices.remove(dev)
@@ -143,13 +146,13 @@ class Client(object):
 
     def save_devices(self):
         devs = filter(lambda d: not d.nosave, self.devices)
-        devstr = ','.join(sorted(list(map(str, devs)) + self.failed))
-        if devstr != self.settings['devices']:
-            self.settings['devices'] = devstr
+        devstr = ",".join(sorted(list(map(str, devs)) + self.failed))
+        if devstr != self.settings["devices"]:
+            self.settings["devices"] = devstr
 
     def update_devlist(self, old, new):
-        old = set(old.split(','))
-        new = set(new.split(','))
+        old = set(old.split(","))
+        new = set(new.split(","))
         cur = set(self.devices)
         rem = old - new
 
@@ -157,28 +160,29 @@ class Client(object):
             dd = self.devices.pop(self.devices.index(d))
             dd.destroy()
 
-        self.failed = self.probe_devices(new);
+        self.failed = self.probe_devices(new)
         self.save_devices()
 
     def setting_changed(self, name, old, new):
-        if name == 'devices':
+        if name == "devices":
             self.update_devlist(old, new)
             return
 
     def init(self, force_scan):
-        settings_path = '/Settings/ModbusClient/' + self.name
+        settings_path = "/Settings/ModbusClient/" + self.name
         SETTINGS = {
-            'devices':  [settings_path + '/Devices', '', 0, 0],
-            'autoscan': [settings_path + '/AutoScan', self.auto_scan, 0, 1],
+            "devices": [settings_path + "/Devices", "", 0, 0],
+            "autoscan": [settings_path + "/AutoScan", self.auto_scan, 0, 1],
         }
 
         self.dbusconn = private_bus()
 
-        log.info('Waiting for localsettings')
-        self.settings = SettingsDevice(self.dbusconn, SETTINGS,
-                                       self.setting_changed, timeout=10)
+        log.info("Waiting for localsettings")
+        self.settings = SettingsDevice(
+            self.dbusconn, SETTINGS, self.setting_changed, timeout=10
+        )
 
-        self.update_devlist('', self.settings['devices'])
+        self.update_devlist("", self.settings["devices"])
 
         if not self.keep_failed:
             self.failed = []
@@ -186,7 +190,7 @@ class Client(object):
         scan = force_scan
 
         if not self.devices or self.failed:
-            if self.settings['autoscan']:
+            if self.settings["autoscan"]:
                 scan = True
 
         if scan:
@@ -195,9 +199,8 @@ class Client(object):
     def update(self):
         if self.scanner:
             if self.svc:
-                self.svc['/Scan'] = self.scanner.running
-                self.svc['/ScanProgress'] = \
-                    100 * self.scanner.done / self.scanner.total
+                self.svc["/Scan"] = self.scanner.running
+                self.svc["/ScanProgress"] = 100 * self.scanner.done / self.scanner.total
 
             self.scan_update()
 
@@ -205,7 +208,7 @@ class Client(object):
                 self.scan_complete()
                 self.scanner = None
                 if self.svc:
-                    self.svc['/ScanProgress'] = None
+                    self.svc["/ScanProgress"] = None
 
         for d in self.devices:
             self.update_device(d)
@@ -217,7 +220,7 @@ class Client(object):
                 self.failed = self.probe_devices(self.failed)
                 self.failed_time = now
 
-            if self.settings['autoscan']:
+            if self.settings["autoscan"]:
                 if now - self.scan_time > SCAN_INTERVAL:
                     self.start_scan()
 
@@ -225,10 +228,11 @@ class Client(object):
         try:
             self.update()
         except Exception:
-            log.error('Uncaught exception in update')
+            log.error("Uncaught exception in update")
             traceback.print_exc()
 
         return True
+
 
 class NetClient(Client):
     def __init__(self, proto):
@@ -236,17 +240,17 @@ class NetClient(Client):
         self.proto = proto
 
     def new_scanner(self, full):
-        return NetScanner(self.proto, MODBUS_TCP_PORT, MODBUS_TCP_UNIT,
-                          if_blacklist)
+        return NetScanner(self.proto, MODBUS_TCP_PORT, MODBUS_TCP_UNIT, if_blacklist)
 
     def init(self, *args):
         super(NetClient, self).init(*args)
 
-        svcname = 'com.victronenergy.modbusclient.%s' % self.name
+        svcname = "com.victronenergy.modbusclient.%s" % self.name
         self.svc = VeDbusService(svcname, self.dbusconn)
-        self.svc.add_path('/Scan', False, writeable=True,
-                          onchangecallback=self.set_scan)
-        self.svc.add_path('/ScanProgress', None, gettextcallback=percent)
+        self.svc.add_path(
+            "/Scan", False, writeable=True, onchangecallback=self.set_scan
+        )
+        self.svc.add_path("/ScanProgress", None, gettextcallback=percent)
 
         self.mdns = mdns.MDNS()
         self.mdns.start()
@@ -266,13 +270,14 @@ class NetClient(Client):
             self.mdns_check_time = now
             maddr = self.mdns.get_devices()
             if maddr:
-                units = probe.get_units('tcp')
+                units = probe.get_units("tcp")
                 d = []
                 for a in maddr:
-                    d += ['tcp:%s:%s:%d' % (a[0], a[1], u) for u in units]
+                    d += ["tcp:%s:%s:%d" % (a[0], a[1], u) for u in units]
                 self.probe_devices(d, nosave=True)
 
         return True
+
 
 class SerialClient(Client):
     def __init__(self, tty, rate, mode):
@@ -286,23 +291,26 @@ class SerialClient(Client):
     def new_scanner(self, full):
         return SerialScanner(self.tty, self.rate, self.mode, full=full)
 
+
 def main():
     parser = ArgumentParser(add_help=True)
-    parser.add_argument('-d', '--debug', help='enable debug logging',
-                        action='store_true')
-    parser.add_argument('-f', '--force-scan', action='store_true')
-    parser.add_argument('-m', '--mode', choices=['ascii', 'rtu'], default='rtu')
-    parser.add_argument('-r', '--rate', type=int, action='append')
-    parser.add_argument('-s', '--serial')
-    parser.add_argument('-x', '--exit', action='store_true',
-                        help='exit on error')
+    parser.add_argument(
+        "-d", "--debug", help="enable debug logging", action="store_true"
+    )
+    parser.add_argument("-f", "--force-scan", action="store_true")
+    parser.add_argument("-m", "--mode", choices=["ascii", "rtu"], default="rtu")
+    parser.add_argument("-r", "--rate", type=int, action="append")
+    parser.add_argument("-s", "--serial")
+    parser.add_argument("-x", "--exit", action="store_true", help="exit on error")
 
     args = parser.parse_args()
 
-    logging.basicConfig(format='%(levelname)-8s %(message)s',
-                        level=(logging.DEBUG if args.debug else logging.INFO))
+    logging.basicConfig(
+        format="%(levelname)-8s %(message)s",
+        level=(logging.DEBUG if args.debug else logging.INFO),
+    )
 
-    logging.getLogger('pymodbus.client.sync').setLevel(logging.CRITICAL)
+    logging.getLogger("pymodbus.client.sync").setLevel(logging.CRITICAL)
 
     signal.signal(signal.SIGINT, lambda s, f: os._exit(1))
     faulthandler.register(signal.SIGUSR1)
@@ -315,7 +323,7 @@ def main():
         tty = os.path.basename(args.serial)
         client = SerialClient(tty, args.rate, args.mode)
     else:
-        client = NetClient('tcp')
+        client = NetClient("tcp")
 
     client.err_exit = args.exit
     client.init(args.force_scan)
@@ -323,5 +331,6 @@ def main():
     GLib.timeout_add(UPDATE_INTERVAL, client.update_timer)
     mainloop.run()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

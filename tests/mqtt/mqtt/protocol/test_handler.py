@@ -18,11 +18,16 @@ from moat.mqtt.mqtt.publish import PublishPacket
 from moat.mqtt.mqtt.pubrec import PubrecPacket
 from moat.mqtt.mqtt.pubrel import PubrelPacket
 from moat.mqtt.plugins.manager import PluginManager
-from moat.mqtt.session import IncomingApplicationMessage, OutgoingApplicationMessage, Session
+from moat.mqtt.session import (
+    IncomingApplicationMessage,
+    OutgoingApplicationMessage,
+    Session,
+)
 
 from ... import anyio_run
 
 log = logging.getLogger(__name__)
+
 
 def rand_packet_id():
     return random.randint(0, 65535)

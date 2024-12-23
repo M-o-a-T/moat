@@ -143,9 +143,7 @@ class BrokerTest(unittest.TestCase):
         anyio_run(test_coro, backend="trio")
 
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
-    def test_client_connect_clean_session_false(
-        self, MockPluginManager
-    ):  # pylint: disable=unused-argument
+    def test_client_connect_clean_session_false(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
             async with create_broker(
                 test_config, plugin_namespace="moat.mqtt.test.plugins"
@@ -352,9 +350,7 @@ class BrokerTest(unittest.TestCase):
         anyio_run(test_coro, backend="trio")
 
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
-    def test_client_publish_invalid_topic(
-        self, MockPluginManager
-    ):  # pylint: disable=unused-argument
+    def test_client_publish_invalid_topic(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
             async with create_broker(
                 test_config, plugin_namespace="moat.mqtt.test.plugins"
@@ -427,9 +423,7 @@ class BrokerTest(unittest.TestCase):
         anyio_run(test_coro)
 
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
-    def test_client_publish_retain_delete(
-        self, MockPluginManager
-    ):  # pylint: disable=unused-argument
+    def test_client_publish_retain_delete(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
             async with create_broker(
                 test_config, plugin_namespace="moat.mqtt.test.plugins"
@@ -457,9 +451,11 @@ class BrokerTest(unittest.TestCase):
                 self.assertTrue(broker.transitions.is_started())
                 async with open_mqttclient() as sub_client:
                     await sub_client.connect(URL)
-                    ret = await sub_client.subscribe(
-                        [("/qos0", QOS_0), ("/qos1", QOS_1), ("/qos2", QOS_2)]
-                    )
+                    ret = await sub_client.subscribe([
+                        ("/qos0", QOS_0),
+                        ("/qos1", QOS_1),
+                        ("/qos2", QOS_2),
+                    ])
                     self.assertEqual(ret, [QOS_0, QOS_1, QOS_2])
 
                     await self._client_publish("/qos0", b"data", QOS_0)
@@ -485,14 +481,12 @@ class BrokerTest(unittest.TestCase):
                 self.assertTrue(broker.transitions.is_started())
                 async with open_mqttclient() as sub_client:
                     await sub_client.connect(URL)
-                    ret = await sub_client.subscribe(
-                        [
-                            ("+", QOS_0),
-                            ("+/tennis/#", QOS_0),
-                            ("sport+", QOS_0),
-                            ("sport/+/player1", QOS_0),
-                        ]
-                    )
+                    ret = await sub_client.subscribe([
+                        ("+", QOS_0),
+                        ("+/tennis/#", QOS_0),
+                        ("sport+", QOS_0),
+                        ("sport/+/player1", QOS_0),
+                    ])
                     self.assertEqual(ret, [QOS_0, QOS_0, 0x80, QOS_0])
 
             self.assertTrue(broker.transitions.is_stopped())
@@ -500,9 +494,7 @@ class BrokerTest(unittest.TestCase):
         anyio_run(test_coro, backend="trio")
 
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
-    def test_client_subscribe_publish_dollar_topic_1(
-        self, MockPluginManager
-    ):  # pylint: disable=unused-argument
+    def test_client_subscribe_publish_dollar_topic_1(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
             async with create_broker(
                 test_config, plugin_namespace="moat.mqtt.test.plugins"
@@ -529,9 +521,7 @@ class BrokerTest(unittest.TestCase):
         anyio_run(test_coro)
 
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
-    def test_client_subscribe_publish_dollar_topic_2(
-        self, MockPluginManager
-    ):  # pylint: disable=unused-argument
+    def test_client_subscribe_publish_dollar_topic_2(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
             async with create_broker(
                 test_config, plugin_namespace="moat.mqtt.test.plugins"
@@ -558,9 +548,7 @@ class BrokerTest(unittest.TestCase):
         anyio_run(test_coro)
 
     @patch("moat.mqtt.broker.PluginManager", new_callable=AsyncMock)
-    def test_client_publish_retain_subscribe(
-        self, MockPluginManager
-    ):  # pylint: disable=unused-argument
+    def test_client_publish_retain_subscribe(self, MockPluginManager):  # pylint: disable=unused-argument
         async def test_coro():
             async with create_broker(
                 test_config, plugin_namespace="moat.mqtt.test.plugins"
@@ -570,9 +558,11 @@ class BrokerTest(unittest.TestCase):
                     self.assertTrue(broker.transitions.is_started())
                     async with open_mqttclient() as sub_client:
                         await sub_client.connect(URL, cleansession=False)
-                        ret = await sub_client.subscribe(
-                            [("/qos0", QOS_0), ("/qos1", QOS_1), ("/qos2", QOS_2)]
-                        )
+                        ret = await sub_client.subscribe([
+                            ("/qos0", QOS_0),
+                            ("/qos1", QOS_1),
+                            ("/qos2", QOS_2),
+                        ])
                         self.assertEqual(ret, [QOS_0, QOS_1, QOS_2])
                         await sub_client.disconnect()
 

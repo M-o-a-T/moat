@@ -159,6 +159,7 @@ class NoopCodec(BaseCodec):
 
 class BinaryCodec(NoopCodec):
     "alternate name for no-op codec"
+
     name = "binary"
 
 

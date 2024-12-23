@@ -1,7 +1,16 @@
 # command line interface
 
 import asyncclick as click
-from moat.util import yprint, attrdict, NotGiven, P, Path, as_service, attr_args, ensure_cfg
+from moat.util import (
+    yprint,
+    attrdict,
+    NotGiven,
+    P,
+    Path,
+    as_service,
+    attr_args,
+    ensure_cfg,
+)
 from moat.kv.data import data_get, node_attr
 from .model import OWFSroot
 
@@ -60,6 +69,7 @@ async def list_(obj, device, family):
                 return Path("%02x.%12x" % (p[0], p[1])) + p[2:]
 
     if obj.meta:
+
         def pm(p):
             return Path(str(prefix + path)) + p
 
@@ -165,9 +175,7 @@ async def server_(obj, name, host, port, delete):
     if not name:
         if host or port or delete:
             raise click.UsageError("Use a server name to set parameters")
-        async for r in obj.client.get_tree(
-            prefix | "server", min_depth=1, max_depth=1
-        ):
+        async for r in obj.client.get_tree(prefix | "server", min_depth=1, max_depth=1):
             print(r.path[-1], file=obj.stdout)
         return
     elif len(name) > 1:
@@ -191,8 +199,7 @@ async def server_(obj, name, host, port, delete):
         return
     else:
         value = None
-    res = await node_attr(
-        obj, prefix | "server" | name, ((P("server"), value),),(),())
+    res = await node_attr(obj, prefix | "server" | name, ((P("server"), value),), (), ())
     if res and obj.meta:
         yprint(res, stream=obj.stdout)
 

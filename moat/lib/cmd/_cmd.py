@@ -20,8 +20,18 @@ if TYPE_CHECKING:
     class MsgIn(Protocol):
         def __call__(self, msg: Stream, /) -> Any: ...
 
-__all__ = ["Stream", "CmdHandler", "StreamError",
-           "StopMe","NoStream","NoCmd","NoCmds","WantsStream","MustStream"]
+
+__all__ = [
+    "Stream",
+    "CmdHandler",
+    "StreamError",
+    "StopMe",
+    "NoStream",
+    "NoCmd",
+    "NoCmds",
+    "WantsStream",
+    "MustStream",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +101,7 @@ class StreamError(RuntimeError):
             elif m == E_NO_CMDS:
                 return super().__new__(NoCmds)
             elif m <= E_NO_CMD:
-                return super().__new__(NoCmd,E_NO_CMD - m)
+                return super().__new__(NoCmd, E_NO_CMD - m)
         return super().__new__(cls)
 
     pass
@@ -343,8 +353,8 @@ class Stream:
     """
 
     _cmd: Any  # first element of the message
-    _args:list[Any]
-    _kw:dict[str,Any]
+    _args: list[Any]
+    _kw: dict[str, Any]
 
     def __init__(self, parent: CmdHandler, mid: int, qlen=42, s_in=True, s_out=True):
         self.parent = parent
@@ -370,12 +380,12 @@ class Stream:
         self._initial = False
 
     def __getitem__(self, k):
-        if isinstance(k,int):
+        if isinstance(k, int):
             return self._args[k]
         return self._kw[k]
 
     def __contains__(self, k):
-        if isinstance(k,int):
+        if isinstance(k, int):
             return 0 <= k < len(self._args)
         return k in self._kw
 
@@ -412,7 +422,7 @@ class Stream:
                 r += repr(self._fli)
         msg = self._msg
         if msg is not None:
-            r += " D:"+repr(msg)
+            r += " D:" + repr(msg)
         return r + ">"
 
     async def kill(self, exc=None):
@@ -430,9 +440,7 @@ class Stream:
             elif exc is True:
                 await self._send([E_UNSPEC], err=True, _kill=True)
             elif isinstance(exc, Exception):
-                await self._send(
-                    (exc.__class__.__name__, *exc.args), err=True, _kill=True
-                )
+                await self._send((exc.__class__.__name__, *exc.args), err=True, _kill=True)
             else:  # BaseException
                 await self._send([E_CANCEL], err=True, _kill=True)
                 raise
@@ -501,7 +509,7 @@ class Stream:
             elif self.stream_in == S_NEW and not (msg[0] & B_ERROR):
                 self.stream_in = S_ON
 
-        if isinstance(msg,tuple):
+        if isinstance(msg, tuple):
             breakpoint()
         if msg[0] & B_ERROR:
             self._msg = outcome.Error(StreamError(msg[1:]))
@@ -634,10 +642,7 @@ class Stream:
                 self._fli = 0
                 await self.warn(self._recv_qlen // 4)
 
-        elif (
-            self._recv_q.qsize() <= self._recv_qlen // 4
-            and self._fli > self._recv_qlen // 2
-        ):
+        elif self._recv_q.qsize() <= self._recv_qlen // 4 and self._fli > self._recv_qlen // 2:
             m = self._recv_qlen // 2 + reading
             self._fli -= m
             await self.warn(m)

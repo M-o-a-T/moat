@@ -37,6 +37,7 @@ def _lbc(*a, **k):  # noqa: ARG001
     "block log configuration"
     raise RuntimeError("don't configure logging a second time")
 
+
 cfg = load_cfg(os.environ.get("LOG_CFG", "logging.cfg"))
 logging.basicConfig = _lbc
 

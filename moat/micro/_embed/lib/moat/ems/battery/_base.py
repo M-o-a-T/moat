@@ -1,6 +1,7 @@
 """
 Basic BMS classes
 """
+
 from __future__ import annotations
 
 from moat.util import as_proxy, attrdict, val2pos
@@ -116,6 +117,7 @@ class EnergyHigh(BatteryAlert):
 def _s(r):
     # Helper to create a sequence
     return (x for x in r if x is not None)
+
 
 class BaseCell(BaseCmd):
     """
@@ -270,6 +272,7 @@ class BaseCell(BaseCmd):
             chg *= (1 - soc) / (1 - lc["max"])
         return (chg, dis)
 
+
 class BalBaseCell(BaseCell):
     "A BaseCell with balancing state"
 
@@ -281,7 +284,7 @@ class BalBaseCell(BaseCell):
 
     async def cmd_bal(self):
         "Get Balancer state/data"
-        res = dict(b=self.in_balance,f=self.balance_forced,ot=self.balance_over_temp)
+        res = dict(b=self.in_balance, f=self.balance_forced, ot=self.balance_over_temp)
         if self.balance_pwm is not None:
             res["pwm"] = self.balance_pwm
         if self.balance_threshold is not None:

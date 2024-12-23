@@ -541,7 +541,9 @@ class Broker:
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, self.config["tcp-keepalive"])
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, self.config["tcp-keepalive"])
             sock.setsockopt(
-                socket.IPPROTO_TCP, socket.TCP_KEEPCNT, self.config["tcp-keepalive-count"]
+                socket.IPPROTO_TCP,
+                socket.TCP_KEEPCNT,
+                self.config["tcp-keepalive-count"],
             )
 
         await handler.attach(client_session, adapter)
@@ -806,9 +808,7 @@ class Broker:
             a_filter = tuple(a_filter.split("/"))
         try:
             subscriptions = self._subscriptions[a_filter]
-            for index, (sub_session, _) in enumerate(
-                subscriptions
-            ):  # pylint: disable=unused-variable
+            for index, (sub_session, _) in enumerate(subscriptions):  # pylint: disable=unused-variable
                 if sub_session.client_id == session.client_id:
                     if self.logger.isEnabledFor(logging.DEBUG):
                         self.logger.debug(

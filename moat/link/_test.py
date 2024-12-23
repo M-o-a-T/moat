@@ -12,7 +12,8 @@ from moat.link.client import Link
 from moat.link.server import Server
 from moat.link.backend import get_backend
 from moat.util import (  # pylint:disable=no-name-in-module
-    CFG,ensure_cfg,
+    CFG,
+    ensure_cfg,
     CtxObj,
     attrdict,
     combine_dict,
@@ -71,7 +72,7 @@ class Scaffold(CtxObj):
             yield self
             self.tg.cancel_scope.cancel()
 
-    async def _run_backend(self, cfg: dict|None, kw:dict, *, task_status) -> Backend:
+    async def _run_backend(self, cfg: dict | None, kw: dict, *, task_status) -> Backend:
         """
         Start a backend.
         """

@@ -1,5 +1,5 @@
-#struct PacketHeader
-#{
+# struct PacketHeader
+# {
 #  uint8_t start;
 #  unsigned int _reserved:2;
 #  unsigned int global:1;
@@ -8,7 +8,7 @@
 #  uint8_t hops;
 #  unsigned int cells:5;
 #  unsigned int sequence:3;
-#} __attribute__((packed));
+# } __attribute__((packed));
 
 from dataclasses import dataclass
 from struct import Struct, pack, unpack
@@ -16,49 +16,54 @@ from typing import ClassVar
 from enum import IntEnum
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 __all__ = [
-        "PacketType", "PacketHeader", "requestClass", "replyClass",
-        "MAXCELLS",
-    ]
+    "PacketType",
+    "PacketHeader",
+    "requestClass",
+    "replyClass",
+    "MAXCELLS",
+]
 # more exports added at the end
 
-MAXCELLS=32
+MAXCELLS = 32
 
 try:
     _dc = dataclass(slots=True)
 except TypeError:
     _dc = dataclass()
 
+
 class PacketType(IntEnum):
-    ResetPacketCounters=0
-    ReadVoltageAndStatus=1
-    Identify=2
-    ReadTemperature=3
-    ReadPacketCounters=4
-    ReadSettings=5
-    WriteSettings=6
-    ReadBalancePowerPWM=7
-    Timing=8
-    ReadBalanceCurrentCounter=9
-    ResetBalanceCurrentCounter=10
-    WriteBalanceLevel=11
-    WritePIDconfig=12
-    ReadPIDconfig=13
+    ResetPacketCounters = 0
+    ReadVoltageAndStatus = 1
+    Identify = 2
+    ReadTemperature = 3
+    ReadPacketCounters = 4
+    ReadSettings = 5
+    WriteSettings = 6
+    ReadBalancePowerPWM = 7
+    Timing = 8
+    ReadBalanceCurrentCounter = 9
+    ResetBalanceCurrentCounter = 10
+    WriteBalanceLevel = 11
+    WritePIDconfig = 12
+    ReadPIDconfig = 13
 
 
 @_dc
 class PacketHeader:
-    start:int = 0
-    broadcast:bool = False
-    seen:bool = False
-    command:int = 0
-    hops:int = 0
-    cells:int = 0
-    sequence:int = 0
+    start: int = 0
+    broadcast: bool = False
+    seen: bool = False
+    command: int = 0
+    hops: int = 0
+    cells: int = 0
+    sequence: int = 0
 
-    S:ClassVar = Struct("BBBB")
+    S: ClassVar = Struct("BBBB")
 
     @classmethod
     def from_bytes(cls, data):
@@ -77,7 +82,7 @@ class PacketHeader:
             (self.broadcast << 5) | (self.seen << 4) | (self.command & 0x0F),
             self.hops,
             (self.cells << 3) | (self.sequence & 0x07),
-            )
+        )
 
 
 class FloatUint:
@@ -88,24 +93,26 @@ class FloatUint:
     def F(cls, val):
         self = cls()
         self.f = val
-        self.u = unpack("<I",pack("f", val))[0]
+        self.u = unpack("<I", pack("f", val))[0]
         return self
 
     @classmethod
     def U(cls, val):
         self = cls()
         self.u = val
-        self.f = unpack("f",pack("<I", val))[0]
+        self.f = unpack("f", pack("<I", val))[0]
         return self
 
     def __repr__(self):
         return f"‹FU {self.f}›"
 
+
 class NullStruct:
     size = 0
 
+
 class NullData:
-    S:ClassVar = NullStruct
+    S: ClassVar = NullStruct
 
 
 class _Request(NullData):
@@ -114,7 +121,8 @@ class _Request(NullData):
         return cls()
 
     def to_bytes(self):
-        return b''
+        return b""
+
 
 class _Reply(NullData):
     @classmethod
@@ -127,14 +135,15 @@ class _Reply(NullData):
     def to_cell(self, cell):
         return False
 
+
 @_dc
 class RequestConfig:
     voltageCalibration: FloatUint = FloatUint.U(0)
     bypassTempRaw: int = None
     bypassVoltRaw: int = None
 
-    S:ClassVar = Struct("<IHH")
-    T:ClassVar = PacketType.WriteSettings
+    S: ClassVar = Struct("<IHH")
+    T: ClassVar = PacketType.WriteSettings
 
     @classmethod
     def from_cell(cls, cell):
@@ -148,14 +157,15 @@ class RequestConfig:
         vc = self.voltageCalibration.u
         return self.S.pack(vc, self.bypassTempRaw or 0, self.bypassVoltRaw or 0)
 
+
 @_dc
 class RequestWritePIDconfig:
     kp: int = None
     ki: int = None
     kd: int = None
 
-    S:ClassVar = Struct("<III")
-    T:ClassVar = PacketType.WritePIDconfig
+    S: ClassVar = Struct("<III")
+    T: ClassVar = PacketType.WritePIDconfig
 
     @classmethod
     def from_cell(cls, cell):
@@ -166,16 +176,16 @@ class RequestWritePIDconfig:
         return self
 
     def to_bytes(self):
-        return self.S.pack(self.kp,self.ki,self.kd)
+        return self.S.pack(self.kp, self.ki, self.kd)
+
 
 @_dc
 class ReplyVoltages(_Reply):
     voltRaw: int = None
     bypassRaw: int = None
 
-    S:ClassVar = Struct("<HH")
-    T:ClassVar = PacketType.ReadVoltageAndStatus
-
+    S: ClassVar = Struct("<HH")
+    T: ClassVar = PacketType.ReadVoltageAndStatus
 
     @classmethod
     def from_bytes(cls, data):
@@ -204,18 +214,19 @@ class ReplyVoltages(_Reply):
     def to_bytes(self):
         return self.S.pack(self.voltRaw, self.bypassRaw)
 
+
 @_dc
 class ReplyTemperature(_Reply):
     intRaw: int = None
     extRaw: int = None
 
-    S:ClassVar = Struct("BBB")
-    T:ClassVar = PacketType.ReadTemperature
+    S: ClassVar = Struct("BBB")
+    T: ClassVar = PacketType.ReadTemperature
 
     @classmethod
     def from_bytes(cls, data):
         self = cls()
-        b1,b2,b3 = self.S.unpack(data)
+        b1, b2, b3 = self.S.unpack(data)
         self.intRaw = b1 | ((b2 & 0x0F) << 8)
         self.extRaw = (b2 >> 4) | (b3 << 4)
         return self
@@ -229,14 +240,15 @@ class ReplyTemperature(_Reply):
             chg = True
             cell.external_temp_raw = self.extRaw
         return chg
-    
+
+
 @_dc
 class ReplyCounters(_Reply):
     received: int = None
     bad: int = None
 
-    S:ClassVar = Struct("<HH")
-    T:ClassVar = PacketType.ReadPacketCounters
+    S: ClassVar = Struct("<HH")
+    T: ClassVar = PacketType.ReadPacketCounters
 
     @classmethod
     def from_bytes(cls, data):
@@ -254,23 +266,24 @@ class ReplyCounters(_Reply):
             cell.packets_bad = self.bad
         return chg
 
+
 @_dc
 class ReplySettings(_Reply):
-    gitVersion:int = None
-    boardVersion:int = None
-    dataVersion:int = None
-    mvPerADC:int = None
+    gitVersion: int = None
+    boardVersion: int = None
+    dataVersion: int = None
+    mvPerADC: int = None
 
-    voltageCalibration:FloatUint = FloatUint.U(0)
-    bypassTempRaw:int = None
-    bypassVoltRaw:int = None
-    BCoeffInternal:int = None
-    BCoeffExternal:int = None
-    numSamples:int = None
-    loadResRaw:int = None
+    voltageCalibration: FloatUint = FloatUint.U(0)
+    bypassTempRaw: int = None
+    bypassVoltRaw: int = None
+    BCoeffInternal: int = None
+    BCoeffExternal: int = None
+    numSamples: int = None
+    loadResRaw: int = None
 
-    S:ClassVar = Struct("<LHBBLHHHHBB")
-    T:ClassVar = PacketType.ReadSettings
+    S: ClassVar = Struct("<LHBBLHHHHBB")
+    T: ClassVar = PacketType.ReadSettings
 
     @classmethod
     def from_bytes(cls, data):
@@ -295,7 +308,7 @@ class ReplySettings(_Reply):
     def to_cell(self, cell):
         cell.code_version = self.gitVersion
         cell.board_version = self.boardVersion
-        cell.v_per_ADC = self.mvPerADC/1000/64
+        cell.v_per_ADC = self.mvPerADC / 1000 / 64
         cell.v_calibration = self.voltageCalibration.f
         cell.load_maxtemp_raw = self.bypassTempRaw
         cell.balance_config_threshold_raw = self.bypassVoltRaw
@@ -304,35 +317,38 @@ class ReplySettings(_Reply):
         cell.n_samples = self.numSamples
         cell.load_resistance_raw = self.loadResRaw / 16
 
+
 @_dc
 class RequestTiming:
     timer: int = None
 
-    S:ClassVar = Struct("<H")
-    T:ClassVar = PacketType.Timing
+    S: ClassVar = Struct("<H")
+    T: ClassVar = PacketType.Timing
 
     @classmethod
     def from_bytes(cls, data):
         self = cls()
-        self.timer, = self.S.unpack(data)
+        (self.timer,) = self.S.unpack(data)
         return self
 
     def to_bytes(self):
         return self.S.pack(self.timer)
 
+
 ReplyTiming = RequestTiming
+
 
 @_dc
 class ReplyBalanceCurrentCounter(_Reply):
     counter: int = None
 
-    S:ClassVar = Struct("<I")
-    T:ClassVar = PacketType.ReadBalanceCurrentCounter
+    S: ClassVar = Struct("<I")
+    T: ClassVar = PacketType.ReadBalanceCurrentCounter
 
     @classmethod
     def from_bytes(cls, data):
         self = cls()
-        self.counter, = self.S.unpack(data)
+        (self.counter,) = self.S.unpack(data)
         return self
 
     def to_cell(self, cell):
@@ -342,24 +358,25 @@ class ReplyBalanceCurrentCounter(_Reply):
             cell.balance_current_count = self.counter
         return chg
 
+
 @_dc
 class ReplyReadPIDconfig(_Reply):
     kp: int = None
     ki: int = None
     kd: int = None
 
-    S:ClassVar = Struct("<III")
-    T:ClassVar = PacketType.ReadPIDconfig
+    S: ClassVar = Struct("<III")
+    T: ClassVar = PacketType.ReadPIDconfig
 
     @classmethod
     def from_bytes(cls, data):
         self = cls()
-        self.kp,self.ki,self.kd = self.S.unpack(data)
+        self.kp, self.ki, self.kd = self.S.unpack(data)
         return self
 
     def to_cell(self, cell):
         chg = False
-        if (cell.pid_kp,cell.pid_ki,cell.pid_kd) != (self.kp,self.ki,self.kd):
+        if (cell.pid_kp, cell.pid_ki, cell.pid_kd) != (self.kp, self.ki, self.kd):
             chg = True
             cell.pid_kp = self.kp
             cell.pid_ki = self.ki
@@ -371,8 +388,8 @@ class ReplyReadPIDconfig(_Reply):
 class RequestBalanceLevel:
     levelRaw: int = None
 
-    S:ClassVar = Struct("<H")
-    T:ClassVar = PacketType.WriteBalanceLevel
+    S: ClassVar = Struct("<H")
+    T: ClassVar = PacketType.WriteBalanceLevel
 
     @classmethod
     def from_cell(cls, cell):
@@ -388,67 +405,83 @@ class RequestBalanceLevel:
 class ReplyBalancePower(_Reply):
     pwm: int = None
 
-    S:ClassVar = Struct("B")
-    T:ClassVar = PacketType.ReadBalancePowerPWM
+    S: ClassVar = Struct("B")
+    T: ClassVar = PacketType.ReadBalancePowerPWM
 
     @classmethod
     def from_bytes(cls, data):
         self = cls()
-        self.pwm, = self.S.unpack(data)
+        (self.pwm,) = self.S.unpack(data)
         return self
 
     def to_cell(self, cell):
         chg = False
-        pwm = self.pwm/255
+        pwm = self.pwm / 255
         if cell.balance_pwm != pwm:
             chg = True
             cell.balance_pwm = pwm
         return chg
 
+
 class RequestGetSettings(_Request):
     T = PacketType.ReadSettings
+
 
 class RequestCellTemperature(_Request):
     T = PacketType.ReadTemperature
 
+
 class RequestBalanceCurrentCounter(_Request):
     T = PacketType.ReadBalanceCurrentCounter
+
 
 class RequestPacketCounters(_Request):
     T = PacketType.ReadPacketCounters
 
+
 class RequestBalancePower(_Request):
     T = PacketType.ReadBalancePowerPWM
+
 
 class RequestResetPacketCounters(_Request):
     T = PacketType.ResetPacketCounters
 
+
 class RequestResetBalanceCurrentCounter(_Request):
     T = PacketType.ResetBalanceCurrentCounter
+
 
 class RequestCellVoltage(_Request):
     T = PacketType.ReadVoltageAndStatus
 
+
 class RequestIdentifyModule(_Request):
     T = PacketType.Identify
+
 
 class RequestReadPIDconfig(_Request):
     T = PacketType.ReadPIDconfig
 
+
 class ReplyConfig(_Reply):
     T = PacketType.WriteSettings
+
 
 class ReplyResetBalanceCurrentCounter(_Reply):
     T = PacketType.ResetBalanceCurrentCounter
 
+
 class ReplyResetPacketCounters(_Reply):
     T = PacketType.ResetPacketCounters
+
 
 class ReplyBalanceLevel(_Reply):
     T = PacketType.WriteBalanceLevel
 
+
 class ReplyIdentify(_Reply):
     T = PacketType.Identify
+
 
 class ReplyWritePIDconfig(_Reply):
     T = PacketType.WritePIDconfig

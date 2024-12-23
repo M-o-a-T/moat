@@ -1,6 +1,7 @@
 """
 Apps for Unix socket connectivity
 """
+
 from __future__ import annotations
 
 from moat.micro.compat import AC_use

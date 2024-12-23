@@ -12,7 +12,7 @@ from moat.ems.battery.diy_serial.packet import RequestTiming
 
 from .support import CF, as_attr
 
-pytestmark = [pytest.mark.anyio,pytest.mark.xfail]
+pytestmark = [pytest.mark.anyio, pytest.mark.xfail]
 
 TT = 250  # XXX assume that this is OK
 
@@ -33,15 +33,19 @@ s:
 """
 CFG1 = as_attr(CFG1, c=CF.c)
 
+
 async def test_cell1(tmp_path):
     "Basic fake cell verification"
+
     def tm():
-        return int(time.monotonic()*100000)&0xFFFF
+        return int(time.monotonic() * 100000) & 0xFFFF
+
     async with mpy_stack(tmp_path, CFG1) as d, d.sub_at("s") as s, d.sub_at("bc") as bc:
         p = RequestTiming(timer=tm())
-        x = (await bc(p=p,s=0))[0]
-        td = (tm()-x.timer)&0xFFFF
-        print("Runtime",td/100,"msec")
+        x = (await bc(p=p, s=0))[0]
+        td = (tm() - x.timer) & 0xFFFF
+        print("Runtime", td / 100, "msec")
+
 
 CFG4 = """
 apps:
@@ -63,18 +67,22 @@ ca:
 
 """
 CFG4 = as_attr(CFG4)
-CFG4.ca.cfg=CF.c
+CFG4.ca.cfg = CF.c
+
 
 async def test_cell4(tmp_path):
     "Basic fake cell verification"
+
     def tm():
-        return int(time.monotonic()*100000)&0xFFFF
+        return int(time.monotonic() * 100000) & 0xFFFF
+
     async with mpy_stack(tmp_path, CFG4) as d, d.sub_at("s") as s, d.sub_at("bc") as bc:
         p = RequestTiming(timer=tm())
-        x = await bc(p=p,s=0,bc=True)
-        td = (tm()-x[-1].timer)&0xFFFF
-        print("Runtime",td/100,"msec")
+        x = await bc(p=p, s=0, bc=True)
+        td = (tm() - x[-1].timer) & 0xFFFF
+        print("Runtime", td / 100, "msec")
         assert len(x) == 4
+
 
 CFGC1 = """
 apps:
@@ -95,6 +103,7 @@ s:
   usage: bB
 """
 CFGC1 = as_attr(CFGC1, c=CF.c, bc=CF.c)
+
 
 async def test_cell_link1(tmp_path):
     "Basic fake cell verification via comm"
@@ -209,7 +218,7 @@ async def test_batt(tmp_path):
         nu = min(uu)
         assert xu > 8.3
         assert xu - nu > 0.01
-        log(f"u={xu :.3f} … {nu :.3f}")
+        log(f"u={xu:.3f} … {nu:.3f}")
 
         # now start balancing to lowest cell
         await a.u(h=nu)
@@ -219,7 +228,7 @@ async def test_batt(tmp_path):
         nu2 = min(uu)  # maX and miN-U
         assert xu2 < xu
         assert nu - nu2 < 0.01  # we hope – vagaries of randomness
-        log(f"u={xu2 :.3f} … {nu2 :.3f}")
+        log(f"u={xu2:.3f} … {nu2:.3f}")
 
         # continue until low voltage reached
         for _ in range(10):
@@ -230,7 +239,7 @@ async def test_batt(tmp_path):
             nu2 = min(uu)  # maX and miN-U
             if xu2 == xux:
                 break
-            log(f"u={xu2 :.3f} … {nu2 :.3f}")
+            log(f"u={xu2:.3f} … {nu2:.3f}")
         else:
             raise RuntimeError("Balance?")
 

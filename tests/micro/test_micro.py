@@ -1,6 +1,7 @@
 """
 Basic test using a MicroPython subtask
 """
+
 from __future__ import annotations
 
 import pytest
@@ -185,6 +186,7 @@ class Bar:
 @as_proxy("foo")
 class Foo(Bar):
     "proxied test class"
+
     # pylint:disable=unnecessary-pass
 
 

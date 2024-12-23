@@ -164,11 +164,11 @@ class Link(CtxObj, SubConn, CmdCommon):
         self.tg.cancel_scope.cancel()
 
     async def _process_server_cmd(self, msg):
-        #cmd = msg.cmd if isinstance(msg.cmd, (Sequence,Path)) else (msg.cmd,)
+        # cmd = msg.cmd if isinstance(msg.cmd, (Sequence,Path)) else (msg.cmd,)
         if self._hello is not None and self._hello.auth_data is None:
             return await self._hello.cmd_in(msg)
 
-        cmd="_".join(msg.cmd)
+        cmd = "_".join(msg.cmd)
         return await getattr(self, f"cmd_{cmd}")(msg)
 
     async def _run_server_link(self, *, task_status=anyio.TASK_STATUS_IGNORED):
@@ -185,7 +185,9 @@ class Link(CtxObj, SubConn, CmdCommon):
             except Exception as exc:
                 raise  # XXX
                 await self.backend.send_error(
-                    P("run.service.main") / srv.meta.origin / self.name, data=srv, exc=exc
+                    P("run.service.main") / srv.meta.origin / self.name,
+                    data=srv,
+                    exc=exc,
                 )
             finally:
                 self._server_up = False
@@ -250,7 +252,12 @@ class Link(CtxObj, SubConn, CmdCommon):
         finally:
             self._retry_msgs.discard(cmd)
 
-    async def _connect_server(self, srv: Message[Data[S.run.service.main]], *, task_status=anyio.TASK_STATUS_IGNORED):
+    async def _connect_server(
+        self,
+        srv: Message[Data[S.run.service.main]],
+        *,
+        task_status=anyio.TASK_STATUS_IGNORED,
+    ):
         task_status = TS(task_status)
 
         # Backend connection
@@ -260,21 +267,22 @@ class Link(CtxObj, SubConn, CmdCommon):
 
         for remote in link:
             try:
-                async with timed_ctx(self.cfg.client.init_timeout, self._connect_one(remote, srv)) as conn:
+                async with timed_ctx(
+                    self.cfg.client.init_timeout, self._connect_one(remote, srv)
+                ) as conn:
                     await self._connect_run(task_status=task_status)
             except Exception as exc:
                 self.logger.warning("Link failed: %r", remote, exc_info=exc)
 
     @asynccontextmanager
-    async def _connect_one(self, remote, srv:Message):
+    async def _connect_one(self, remote, srv: Message):
         cmd = CmdHandler(self._process_server_cmd)
-        self._hello = Hello(cmd, me=self.name, auth_out=[TokenAuth("TOT get token"),AnonAuth()])
+        self._hello = Hello(cmd, me=self.name, auth_out=[TokenAuth("TOT get token"), AnonAuth()])
 
         async with TCPConn(cmd, remote_host=remote["host"], remote_port=remote["port"]):
             self._handler = cmd
             await self._hello.run()
             yield cmd
-
 
     async def _cmd_in(self, msg):
         breakpoint()

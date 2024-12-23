@@ -2,6 +2,7 @@
 A heap of compatibility code that adapts CPython and MicroPython
 to something roughly equivalent.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -403,8 +404,10 @@ def shield():
 
 from asyncio import core
 
+
 def _rdq(s):  # async
     yield core._io_queue.queue_read(s)  # noqa:SLF001
+
 
 def _wrq(s):  # async
     yield core._io_queue.queue_write(s)  # noqa:SLF001

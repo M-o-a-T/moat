@@ -14,7 +14,13 @@ from ..codecs import (
 )
 from ..errors import MoatMQTTException, NoDataException
 from ..utils import gen_client_id
-from .packet import CONNECT, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
+from .packet import (
+    CONNECT,
+    MQTTFixedHeader,
+    MQTTPacket,
+    MQTTPayload,
+    MQTTVariableHeader,
+)
 
 
 class ConnectVariableHeader(MQTTVariableHeader):

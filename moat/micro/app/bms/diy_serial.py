@@ -1,4 +1,3 @@
-
 """
 Communicate with diyBMS (MoaT firmware)
 """
@@ -8,6 +7,7 @@ from __future__ import annotations
 import random
 import sys
 
+
 def Comm(cfg):
     """
     Communicator for the serially-connected cell controllers.
@@ -16,7 +16,9 @@ def Comm(cfg):
     to the link, and returns the reply packets.
     """
     from moat.ems.battery.diy_serial.comm import BattComm
+
     return BattComm(cfg)
+
 
 def Cell(cfg):
     """
@@ -28,4 +30,5 @@ def Cell(cfg):
     This BaseCell translates commands to Comm requests.
     """
     from moat.ems.battery.diy_serial.cell import Cell
+
     return Cell(cfg)

@@ -430,9 +430,11 @@ class test_six(_test_out):
 
 
 async def main(label="gpio-mockup-A", host="HosT"):
-    async with test_client() as c, GpioWatcher(interval=0.05).run() as w, c.watch(
-        Path("test","state")
-    ) as ts:
+    async with (
+        test_client() as c,
+        GpioWatcher(interval=0.05).run() as w,
+        c.watch(Path("test", "state")) as ts,
+    ):
         ts = ts.__aiter__()  # currently a NOP but you never know
         server = await GPIOroot.as_handler(c)
         await server.wait_loaded()
@@ -489,7 +491,8 @@ async def main(label="gpio-mockup-A", host="HosT"):
                 continue
             found += 1
             logger.error(
-                "Err %s", " ".join(str(x) for x in err.path),
+                "Err %s",
+                " ".join(str(x) for x in err.path),
             )
             for e in err:
                 logger.error("%s: %r", e.comment, e.data)

@@ -1,6 +1,7 @@
 """
 CPython-specific stream handling.
 """
+
 from __future__ import annotations
 
 import anyio
@@ -155,7 +156,12 @@ class MsgpackMsgBuf(_MsgpackMsgBuf):
     async def setup(self):  # noqa:D102
         await super().setup()
         self.pack = Packer(default=_encode).pack
-        self._unpacker = Unpacker(SyncStream(self.s), strict_map_key=False, ext_hook=_decode, **self.cfg.get("pack", {}))
+        self._unpacker = Unpacker(
+            SyncStream(self.s),
+            strict_map_key=False,
+            ext_hook=_decode,
+            **self.cfg.get("pack", {}),
+        )
 
     async def unpack(self):
         """
@@ -180,7 +186,9 @@ class MsgpackMsgBlk(_MsgpackMsgBlk):
     async def setup(self):  # noqa:D102
         await super().setup()
         self.pack = Packer(default=_encode).pack
-        self.unpacker = partial(unpackb, strict_map_key=False, ext_hook=_decode, **self.cfg.get("pack", {}))
+        self.unpacker = partial(
+            unpackb, strict_map_key=False, ext_hook=_decode, **self.cfg.get("pack", {})
+        )
 
 
 class AnyioBuf(BaseBuf):

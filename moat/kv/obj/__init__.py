@@ -16,7 +16,16 @@ try:
 except ImportError:
     from async_generator import asynccontextmanager
 
-from moat.util import NoLock, NotGiven, Path, PathLongener, combine_dict, yload, ensure_cfg,CFG
+from moat.util import (
+    NoLock,
+    NotGiven,
+    Path,
+    PathLongener,
+    combine_dict,
+    yload,
+    ensure_cfg,
+    CFG,
+)
 
 __all__ = ["ClientEntry", "AttrClientEntry", "ClientRoot"]
 
@@ -261,9 +270,7 @@ class ClientEntry:
             self.chain = r.chain
             return r
 
-    async def delete(
-        self, _locked=False, nchain=0, chain=True, wait=False, recursive=False
-    ):
+    async def delete(self, _locked=False, nchain=0, chain=True, wait=False, recursive=False):
         """Delete this node's value.
 
         This is a coroutine.
@@ -419,9 +426,7 @@ class MirrorRoot(ClientEntry):
             self._seen = dict()
 
     @classmethod
-    async def as_handler(
-        cls, client, cfg=None, key="prefix", subpath=(), name=None, **kw
-    ):
+    async def as_handler(cls, client, cfg=None, key="prefix", subpath=(), name=None, **kw):
         """Return an (or "the") instance of this class.
 
         The handler is created if it doesn't exist.
@@ -448,7 +453,7 @@ class MirrorRoot(ClientEntry):
                 pass
             else:
                 with f:
-                    defcfg = yload(f, attr=True).get("kv",{}).get(cls.CFG)
+                    defcfg = yload(f, attr=True).get("kv", {}).get(cls.CFG)
         if cfg:
             if defcfg:
                 cfg = combine_dict(cfg, defcfg)
@@ -463,9 +468,7 @@ class MirrorRoot(ClientEntry):
             name = str(Path("_moat.kv", client.name, cls.CFG, *subpath))
 
         def make():
-            return client.mirror(
-                cfg[key] + subpath, root_type=cls, need_wait=True, cfg=cfg, **kw
-            )
+            return client.mirror(cfg[key] + subpath, root_type=cls, need_wait=True, cfg=cfg, **kw)
 
         return await client.unique_helper(name, factory=make)
 
@@ -553,9 +556,7 @@ class MirrorRoot(ClientEntry):
                                 pass
 
                             # update entry
-                            entry.chain = (
-                                None if val is NotGiven else r.get("chain", None)
-                            )
+                            entry.chain = None if val is NotGiven else r.get("chain", None)
                             await entry.set_value(val)
 
                             if val is NotGiven and not entry:
@@ -622,7 +623,6 @@ class MirrorRoot(ClientEntry):
 
 
 class ClientRoot(MirrorRoot):
-
     """
     This class represents the root of a subsystem's storage.
 

@@ -1,6 +1,7 @@
 """
 MoaT-KV client data model for Wago
 """
+
 import anyio
 
 from moat.util import Path
@@ -163,7 +164,7 @@ class WAGOoutput(_WAGOnode):
                                 "wago",
                                 self.subpath,
                                 comment="Missing value: %r" % (msg,),
-                                data={"path": self.subpath}
+                                data={"path": self.subpath},
                             )
                         continue
 
@@ -179,7 +180,7 @@ class WAGOoutput(_WAGOnode):
                                 "wago",
                                 self.subpath,
                                 data={"value": val},
-                                comment="Stopped due to bad timer value"
+                                comment="Stopped due to bad timer value",
                             )
                             return
                         except Exception as exc:
@@ -342,9 +343,7 @@ class WAGOoutput(_WAGOnode):
             if t_off is None:
                 logger.info("t_off not set in %s", self.subpath)
                 return
-            await self.tg.start(
-                self.with_output, src, self._pulse_value, state, rest, t_on, t_off
-            )
+            await self.tg.start(self.with_output, src, self._pulse_value, state, rest, t_on, t_off)
         else:
             logger.info("mode not known (%r) in %s", mode, self.subpath)
             return

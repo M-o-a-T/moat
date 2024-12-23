@@ -690,7 +690,7 @@ class DbusItemExport(dbus.ServiceInterface):
             return await call(self._gettextcallback, self._path, self._value)
 
         if self._path == "/ProductId" and isinstance(self._value, int):
-            return f"0x{self._value :X}"
+            return f"0x{self._value:X}"
 
         return str(self._value)
 

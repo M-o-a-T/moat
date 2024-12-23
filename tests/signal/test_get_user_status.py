@@ -3,7 +3,6 @@
 Test for SignalClient.get_user_status
 """
 
-
 import pook
 import pytest
 from jmespath import search as j_search

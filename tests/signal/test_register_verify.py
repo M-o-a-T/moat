@@ -3,7 +3,6 @@
 Test for SignalClient.register
 """
 
-
 import pook
 import pytest
 

@@ -67,9 +67,7 @@ class SignalClient:
     SignalClient
     """
 
-    def __init__(
-            self, endpoint: str, account: str, auth: tuple = (), **kw
-    ):
+    def __init__(self, endpoint: str, account: str, auth: tuple = (), **kw):
         """
         SignalClient
 
@@ -123,9 +121,7 @@ class SignalClient:
             return ret.get("result")
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
-            raise SignalError(
-                f"signal-cli JSON RPC request failed: {error}"
-            ) from err
+            raise SignalError(f"signal-cli JSON RPC request failed: {error}") from err
 
     @property
     async def version(self):
@@ -205,20 +201,18 @@ class SignalClient:
                     t_timestamp = t_res.get("timestamp")
                     if t_timestamp:
                         search_for = f"[*].{response_method_mapping.get(key, key)}"
-                        timestamps.update(
-                            {
-                                t_timestamp: {
-                                    "recipients": list(
-                                        set(
-                                            j_search(
-                                                search_for,
-                                                t_res.get("results"),
-                                            )
+                        timestamps.update({
+                            t_timestamp: {
+                                "recipients": list(
+                                    set(
+                                        j_search(
+                                            search_for,
+                                            t_res.get("results"),
                                         )
                                     )
-                                }
+                                )
                             }
-                        )
+                        })
             return {"timestamps": timestamps}
         finally:
             if cleanup_attachments:
@@ -279,9 +273,7 @@ class SignalClient:
             if version_parse(self.version) < version_parse("0.11.6"):
                 warn("'avatar_as_bytes' not supported (>= 0.11.6), skipping.")
             else:
-                params.update(
-                    {"avatarFile": bytearray_to_rfc_2397_data_url(avatar_as_bytes)}
-                )
+                params.update({"avatarFile": bytearray_to_rfc_2397_data_url(avatar_as_bytes)})
         ret = await self._jsonrpc(method="updateGroup", params=params, **kwargs)
         return ret.get("groupId")
 
@@ -408,9 +400,7 @@ class SignalClient:
             if version_parse(self.version) < version_parse("0.11.6"):
                 warn("'avatar_as_bytes' not supported (>= 0.11.6), skipping.")
             else:
-                params.update(
-                    {"avatar": bytearray_to_rfc_2397_data_url(avatar_as_bytes)}
-                )
+                params.update({"avatar": bytearray_to_rfc_2397_data_url(avatar_as_bytes)})
         if params:
             await self._jsonrpc(method="updateProfile", params=params, **kwargs)
         return True

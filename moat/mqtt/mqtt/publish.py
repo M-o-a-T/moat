@@ -5,7 +5,13 @@ import anyio
 
 from ..codecs import decode_packet_id, decode_string, encode_string, int_to_bytes
 from ..errors import MoatMQTTException, MQTTException
-from .packet import PUBLISH, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
+from .packet import (
+    PUBLISH,
+    MQTTFixedHeader,
+    MQTTPacket,
+    MQTTPayload,
+    MQTTVariableHeader,
+)
 
 
 class PublishVariableHeader(MQTTVariableHeader):

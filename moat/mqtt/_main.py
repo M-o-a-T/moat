@@ -154,14 +154,23 @@ def fix_will(args, cfg):
 @click.option("-t", "--topic", required=True, help="Message topic, '/'-separated")
 @click.option("-m", "--msg", multiple=True, help="Message data (may be repeated)")
 @click.option(
-    "-M", "--msg-eval", multiple=True, help="Message data (Python, evaluated, may be repeated)"
+    "-M",
+    "--msg-eval",
+    multiple=True,
+    help="Message data (Python, evaluated, may be repeated)",
 )
 @click.option(
-    "-f", "--msg-lines", type=click.File("r"), help="File with messages (each line sent separately"
+    "-f",
+    "--msg-lines",
+    type=click.File("r"),
+    help="File with messages (each line sent separately",
 )
 @click.option("-R", "--msg-stdin", is_flag=True, help="Single message from stdin")
 @click.option(
-    "-s", "--msg-stdin-lines", is_flag=True, help="Messages from stdin (each line sent separately"
+    "-s",
+    "--msg-stdin-lines",
+    is_flag=True,
+    help="Messages from stdin (each line sent separately",
 )
 @click.option(
     "-S",

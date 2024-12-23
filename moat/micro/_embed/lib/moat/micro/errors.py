@@ -1,6 +1,7 @@
 """
 FUSE operations for MoaT-micro-FS
 """
+
 from __future__ import annotations
 
 from moat.util import Path, as_proxy
@@ -27,7 +28,7 @@ class NoPathError(KeyError):
     def __str__(self):
         return (
             f"‹NoPath {self.args[0]} {Path.build(self.args[1])}"
-            + f"{' '+' '.join(str(x) for x in self.args[2:]) if len(self.args) > 2 else ''}›"
+            + f"{' ' + ' '.join(str(x) for x in self.args[2:]) if len(self.args) > 2 else ''}›"
         )
 
     def prefixed(self, path):

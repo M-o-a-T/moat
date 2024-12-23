@@ -1,6 +1,7 @@
 """
 More common code
 """
+
 from __future__ import annotations
 
 from moat.util import NotGiven, Path

@@ -1,6 +1,7 @@
 """
 Adapter for MicroPython serial ports.
 """
+
 from __future__ import annotations
 
 import machine as M
@@ -22,6 +23,7 @@ class NamedSerial(FileBuf):
     Interface to a MicroPython serial port that's already open,
     via a module name.
     """
+
     def __init__(self, cfg):
         super().__init__(cfg=cfg, timeout=cfg.get("timeout", 50))
 
@@ -42,6 +44,7 @@ class Serial(NamedSerial):
     """
     Interface to a MicroPython serial port.
     """
+
     # inherits from NamedSerial for __init__ which is the same
 
     max_idle = 100

@@ -288,7 +288,10 @@ class DbusMonitor(CtxObj):
             try:
                 di = await self.call_bus(serviceName, "/DeviceInstance", None, "GetValue")
             except DBusError:
-                logger.info("	   %s was skipped because it has no device instance", serviceName)
+                logger.info(
+                    "	   %s was skipped because it has no device instance",
+                    serviceName,
+                )
                 return False  # Skip it
 
         logger.info("	   %s has device instance %s", serviceName, di)
@@ -586,9 +589,7 @@ class DbusMonitor(CtxObj):
             await intf.on_items_changed(root_tracker)
             return partial(intf.off_items_changed, root_tracker)
 
-        self.serviceWatches[serviceName].extend(
-            (
-                await add_prop_receiver(),
-                await add_root_receiver(),
-            )
-        )
+        self.serviceWatches[serviceName].extend((
+            await add_prop_receiver(),
+            await add_root_receiver(),
+        ))

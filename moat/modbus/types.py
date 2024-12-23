@@ -1,6 +1,7 @@
 """
 Various types
 """
+
 import struct
 from typing import List
 
@@ -31,7 +32,7 @@ from pymodbus.bit_write_message import (
     WriteMultipleCoilsResponse,
 )
 
-MAX_REQ_LEN=30
+MAX_REQ_LEN = 30
 
 import logging
 
@@ -81,11 +82,11 @@ class BaseValue:
         return self._value
 
     @value.setter
-    def value(self, val:int|float):
+    def value(self, val: int | float):
         "sets the value that's read from the bus"
         self._value = self._constrain(val)
 
-    def set(self, val:int|float, idem: bool = False):
+    def set(self, val: int | float, idem: bool = False):
         """Set the value-to-be-written.
 
         Triggers a write unless @idem is set (default: it is not).
@@ -525,14 +526,14 @@ class DataBlock(dict, BaseModbusDataBlock):
         for n in range(1, 8):
             try:
                 if self[offset - n].len > n:
-                    raise ValueError(f"Overlap with {self[offset-n]} @{offset-n}")
+                    raise ValueError(f"Overlap with {self[offset - n]} @{offset - n}")
                 break
             except KeyError:
                 pass
         for n in range(1, val.len):
             try:
                 if offset + n in self:
-                    raise ValueError(f"Overlap with {self[offset+n]} @{offset+n}")
+                    raise ValueError(f"Overlap with {self[offset + n]} @{offset + n}")
                 break
             except KeyError:
                 pass
@@ -597,7 +598,7 @@ class DataBlock(dict, BaseModbusDataBlock):
                 try:
                     res.extend(val.encode())
                 except TypeError as exc:
-                    raise RuntimeError(f"Cannot encode {val !r}") from exc
+                    raise RuntimeError(f"Cannot encode {val!r}") from exc
                 address += val.len
                 count -= val.len
         if count < 0:

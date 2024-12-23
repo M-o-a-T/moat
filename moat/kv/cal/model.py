@@ -1,6 +1,7 @@
 """
 Moat-KV client data model for calendars
 """
+
 import anyio
 
 from moat.util import combine_dict, attrdict
@@ -22,9 +23,11 @@ class CalAlarm(AttrClientEntry):
 
     @src if set overrides the acknowledge source of the calendar.
     """
-    ATTRS = ("cmd","state","delay","src","timeout")
+
+    ATTRS = ("cmd", "state", "delay", "src", "timeout")
 
     cls = ClientEntry
+
 
 class CalEntry(AttrClientEntry):
     """
@@ -36,11 +39,12 @@ class CalEntry(AttrClientEntry):
     @alarms, if set, modify when the entry's alarm sequence should trigger.
     @src if set overrides the acknowledge source of the calendar.
     """
-    ATTRS = ("summary","start","duration","alarms","src")
+
+    ATTRS = ("summary", "start", "duration", "alarms", "src")
 
     @classmethod
     def child_type(cls, name):
-        if isinstance(name,int):
+        if isinstance(name, int):
             return CalAlarm
         return ClientEntry
 
@@ -54,11 +58,12 @@ class CalBase(AttrClientEntry):
     @dst gets the same data, but for the next-most alarm time.
     @src is the signal that the alarm has been acknowledged.
     """
-    ATTRS = ("url","username","password","freq","days", "dst", "src")
+
+    ATTRS = ("url", "username", "password", "freq", "days", "dst", "src")
 
     @classmethod
     def child_type(cls, name):
-        if isinstance(name,int):
+        if isinstance(name, int):
             return CalAlarm
         return CalEntry
 
@@ -89,4 +94,3 @@ class CalRoot(ClientRoot):
     @classmethod
     def child_type(kls, name):
         return CalBase
-

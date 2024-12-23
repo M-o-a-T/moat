@@ -46,9 +46,7 @@ class MoatKVbroker(Broker):
         if self.__topic[: len(self.__base)] == self.__base:
             raise ValueError("'topic' must not start with 'base'")
 
-    async def __read_encap(
-        self, client, cfg: dict, evt: Optional[anyio.abc.Event] = None
-    ):  # pylint: disable=unused-argument
+    async def __read_encap(self, client, cfg: dict, evt: Optional[anyio.abc.Event] = None):  # pylint: disable=unused-argument
         """
         Read encapsulated messages from the real server and forward them
         """
@@ -65,9 +63,7 @@ class MoatKVbroker(Broker):
                         sess = sess[0]
                 await super().broadcast_message(session=sess, **d)
 
-    async def __read_topic(
-        self, topic, client, cfg: dict, evt: Optional[anyio.abc.Event] = None
-    ):  # pylint: disable=unused-argument
+    async def __read_topic(self, topic, client, cfg: dict, evt: Optional[anyio.abc.Event] = None):  # pylint: disable=unused-argument
         """
         Read topical messages from the real server and forward them
         """
@@ -104,9 +100,7 @@ class MoatKVbroker(Broker):
         finally:
             self.__client = None
 
-    async def __retain_reader(
-        self, cfg: dict, evt: Optional[anyio.abc.Event] = None
-    ):  # pylint: disable=unused-argument
+    async def __retain_reader(self, cfg: dict, evt: Optional[anyio.abc.Event] = None):  # pylint: disable=unused-argument
         """
         Read changes from MoaT-KV and broadcast them
         """
@@ -122,7 +116,10 @@ class MoatKVbroker(Broker):
                 data = msg.get("value", b"")
                 if not isinstance(data, (bytes, bytearray)):
                     await err.record_error(
-                        "moat.mqtt", msg.path, data={"data": data}, message="non-binary data"
+                        "moat.mqtt",
+                        msg.path,
+                        data={"data": data},
+                        message="non-binary data",
                     )
                     continue
                 await super().broadcast_message(

@@ -6,8 +6,9 @@ from __future__ import annotations
 
 from moat.util import attrdict
 from .._base import BaseCell
-from ..conv.steinhart import thermistor2celsius,celsius2thermistor
-from .packet import RequestVoltages,RequestReadSettings,RequestTemperature
+from ..conv.steinhart import thermistor2celsius, celsius2thermistor
+from .packet import RequestVoltages, RequestReadSettings, RequestTemperature
+
 
 class Cell(BaseCell):
     """
@@ -18,6 +19,7 @@ class Cell(BaseCell):
 
     This BaseCell translates commands to Comm requests.
     """
+
     code_version = None
     board_version = None
     v_per_ADC = None
@@ -78,12 +80,12 @@ class Cell(BaseCell):
 
     async def cmd_param(self):
         return dict(
-                typ="diy",
-                v=dict(c=self.code_version,b=self.board_version),
-                bal=dict(t=self.load_maxtemp, r=self.load_resist),
-                u=dict(adc=self.v_per_ADC,cal=self.v_calibration,n=self.n_samples),
-                pid=self.cfg.pid,
-            )
+            typ="diy",
+            v=dict(c=self.code_version, b=self.board_version),
+            bal=dict(t=self.load_maxtemp, r=self.load_resist),
+            u=dict(adc=self.v_per_ADC, cal=self.v_calibration, n=self.n_samples),
+            pid=self.cfg.pid,
+        )
 
     async def setup(self):
         await super().setup()
@@ -133,13 +135,16 @@ class Cell(BaseCell):
         if bal_v is not None:
             self.load_volt = v
         if vcal is None and t is None and v is None:
-            return dict(vcal=self.v_calibration, t=self.load_temp,v=self.load_volt)
+            return dict(vcal=self.v_calibration, t=self.load_temp, v=self.load_volt)
         else:
-            await self.comm(p=RequestConfig(self.v_calibration,
-                celsius2thermistor(self.b_coeff_bal, self.load_temp),
-                self._volt2raw(self.load_volt)), s=self.cfg.pos)
-
-
+            await self.comm(
+                p=RequestConfig(
+                    self.v_calibration,
+                    celsius2thermistor(self.b_coeff_bal, self.load_temp),
+                    self._volt2raw(self.load_volt),
+                ),
+                s=self.cfg.pos,
+            )
 
     async def cmd_pid(self, **pid):
         "get/set the balancer PID values"
@@ -166,10 +171,9 @@ class Cell(BaseCell):
         return dict(p=self.bal_power, thr=self.bal_level)
 
     def m_bal_power(self, msg):
-        self.bal_power = res.pwm/255
+        self.bal_power = res.pwm / 255
 
     async def cmd_bd_sum(self):
         "get current counter"
         res = (await self.comm(p=RequestBalanceCurrentCounter(), s=self.cfg.pos))[0]
         return res.counter
-

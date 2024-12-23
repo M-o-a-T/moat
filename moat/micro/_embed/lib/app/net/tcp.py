@@ -1,6 +1,7 @@
 """
 Apps for TCP connectivity
 """
+
 from __future__ import annotations
 
 from moat.micro.compat import AC_use
@@ -36,7 +37,11 @@ def Link(*a, **k):
     class _Link(CmdMsg):
         def __init__(self, cfg):
             stack = console_stack(
-                TcpLink(cfg.get("host", "127.0.0.1"), cfg["port"], retry=cfg.get("retry", {})),
+                TcpLink(
+                    cfg.get("host", "127.0.0.1"),
+                    cfg["port"],
+                    retry=cfg.get("retry", {}),
+                ),
                 cfg,
             )
             super().__init__(stack, cfg)

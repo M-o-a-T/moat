@@ -1,6 +1,7 @@
 """
 Serial port access apps
 """
+
 from __future__ import annotations
 
 from moat.micro.compat import AC_use
@@ -21,6 +22,7 @@ from moat.micro.part.serial import Serial, NamedSerial
 def _KS(cfg):
     Ser = NamedSerial if isinstance(cfg["port"], str) else Serial
     return Ser(cfg)
+
 
 def Raw(*a, **k):
     """Sends/receives raw bytes off a serial port"""

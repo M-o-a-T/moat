@@ -3,7 +3,6 @@
 Test for SignalClient.version
 """
 
-
 import pook
 import pytest
 from packaging import version

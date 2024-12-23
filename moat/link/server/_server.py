@@ -11,18 +11,18 @@ from collections.abc import Sequence
 from pathlib import Path as FPath
 import random
 
-from attrs import define,field
+from attrs import define, field
 from asyncscope import scope
 
 from moat.lib.cmd import CmdHandler
 from moat.lib.cmd.anyio import run as run_cmd_anyio
 from moat.link import protocol_version
-from moat.link.auth import AnonAuth,TokenAuth
+from moat.link.auth import AnonAuth, TokenAuth
 from moat.link.conn import SubConn
 from moat.link.backend import get_backend
 from moat.link.meta import MsgMeta
-from moat.util.cbor import StdCBOR,CBOR_TAG_MOAT_FILE_ID,CBOR_TAG_MOAT_FILE_END
-from moat.lib.codec.cbor import Tag as CBORTag,CBOR_TAG_CBOR_FILEHEADER
+from moat.util.cbor import StdCBOR, CBOR_TAG_MOAT_FILE_ID, CBOR_TAG_MOAT_FILE_END
+from moat.lib.codec.cbor import Tag as CBORTag, CBOR_TAG_CBOR_FILEHEADER
 
 try:
     from contextlib import asynccontextmanager
@@ -68,7 +68,8 @@ from moat.util import (
     run_tcp_server,
     ungroup,
     ValueEvent,
-    yload, Root,
+    yload,
+    Root,
 )
 
 from moat.util.broadcast import Broadcaster
@@ -98,8 +99,10 @@ if TYPE_CHECKING:
 
 # from .types import ACLFinder, ACLStepper, ConvNull, NullACL, RootEntry
 
+
 class BadFile(ValueError):
     pass
+
 
 Stream = anyio.abc.ByteStream
 
@@ -107,8 +110,10 @@ ClosedResourceError = anyio.ClosedResourceError
 
 _client_nr = 0
 
+
 class AuthError(RuntimeError):
     pass
+
 
 def max_n(a, b):
     if a is None:
@@ -152,7 +157,7 @@ class SaveWriter(CtxObj):
     This class writes a MoaT savefile.
 
     Usage::
-    
+
         async with SaveWriter("Started yesterday",
                               type="main", time=time()) as sw:
             for x in data:
@@ -163,13 +168,13 @@ class SaveWriter(CtxObj):
 
     _fn: anyio.Path
     _txt: str
-    _kw: dict[str,Any]
-    _kw2: dict[str,Any]
+    _kw: dict[str, Any]
+    _kw2: dict[str, Any]
     _fd: anyio.File = field(init=False)
     _pl: PathShortener = field(init=False)
     _codec: StdCBOR = field(init=False)
 
-    def __init__(self, fn:anyio.Path, text: str, **kw):
+    def __init__(self, fn: anyio.Path, text: str, **kw):
         self._fn = fn
         self._txt = txt
         self._kw = kw
@@ -182,15 +187,15 @@ class SaveWriter(CtxObj):
         self._pl = PathShortener()
         self._codec = StdCBOR()
         async with await self._fn.open("wb") as self._fd:
-            await self._fd.write(self._codec.encode(gen_start(self._txt,self._kw)))
+            await self._fd.write(self._codec.encode(gen_start(self._txt, self._kw)))
             await self._fd.flush()
             yield self
             await self._fd.write(self._codec.encode(gen_stop(self._kw2)))
             await self._fd.flush()
 
     async def write(self, path, data, meta):
-        d,p = self._pl(path)
-        await self._fd.write(self._codec.encode((d,p,data,meta)))
+        d, p = self._pl(path)
+        await self._fd.write(self._codec.encode((d, p, data, meta)))
 
     async def flush(self):
         await self._fd.flush()
@@ -211,36 +216,36 @@ class MonitorWriter(CtxObj):
             mw["next"] = next_save_name()
         pass # monitor and file are closed here
     """
+
     _sc: anyio.CancelScope
     _mon: Broadcaster
     _a: list
     _kw: dict
-    _wr: SaveWriter|None = None
+    _wr: SaveWriter | None = None
 
-    def __init__(self, mon:Broadcaster, *a, **kw):
+    def __init__(self, mon: Broadcaster, *a, **kw):
         self._a = a
         self._kw = kw
         self._mon = mon
 
-    def __setattr__(self,k,v):
+    def __setattr__(self, k, v):
         self._wr[k] = v
 
     async def _ctx(self):
-        async def _write(it,wr,evt,*,task_status:anyio.TaskStatus):
+        async def _write(it, wr, evt, *, task_status: anyio.TaskStatus):
             with anyio.CancelScope() as sc:
                 task_status.started(sc)
                 try:
-                    async for p,d,m in it:
-                        await wr.write(p,d,m)
+                    async for p, d, m in it:
+                        await wr.write(p, d, m)
                 finally:
                     evt.set()
 
-
         async with (
-                _mon.reader(99999) as it,
-                SaveWriter(*self._a,**self._kw) as self._wr,
-                anyio.create_task_group() as tg,
-                ):
+            _mon.reader(99999) as it,
+            SaveWriter(*self._a, **self._kw) as self._wr,
+            anyio.create_task_group() as tg,
+        ):
             cs = await tg.start(_write, it, wr)
             yield self
             cs.cancel()
@@ -252,8 +257,8 @@ class MonitorWriter(CtxObj):
 class ServerClient(SubConn):
     """Represent one (non-server) client."""
 
-    _hello:Hello|None = None
-    _auth_data:Any=None
+    _hello: Hello | None = None
+    _auth_data: Any = None
 
     def __init__(self, server: Server, name: str, stream: Stream):
         self.server = server
@@ -270,8 +275,10 @@ class ServerClient(SubConn):
         """Main loop for this client connection."""
 
         self.logger.debug("START %s C_%d", self.name, self.client_nr)
-        self._handler=cmd=CmdHandler(self._cmd_in)
-        self._hello = Hello(self, them=f"C_{self.client_nr}", auth_in=[TokenAuth("Duh"),AnonAuth()])
+        self._handler = cmd = CmdHandler(self._cmd_in)
+        self._hello = Hello(
+            self, them=f"C_{self.client_nr}", auth_in=[TokenAuth("Duh"), AnonAuth()]
+        )
         async with (
             anyio.create_task_group() as self.tg,
             run_cmd_anyio(cmd, self.stream),
@@ -302,7 +309,6 @@ class ServerClient(SubConn):
             return self._hello.auth_data
         return self._auth_data
 
-
     def _cmd_in(self, msg) -> Awaitable:
         """
         Process an incoming message.
@@ -310,7 +316,7 @@ class ServerClient(SubConn):
         self.logger.debug("IN %s", msg)
         if self._hello is not None and self._hello.auth_data is None:
             return self._hello.cmd_in(msg)
-        cmd = getattr(self, "cmd_"+"_".join(msg.cmd))
+        cmd = getattr(self, "cmd_" + "_".join(msg.cmd))
         return cmd(msg)
 
     async def cmd_d_get(self, msg):
@@ -334,7 +340,7 @@ class ServerClient(SubConn):
         * path
         * data
         """
-        await self.server.update(msg[1],msg[2],self.name)
+        await self.server.update(msg[1], msg[2], self.name)
 
     async def cmd_d_list(self, msg):
         """Get the child names of a sub-node.
@@ -360,17 +366,17 @@ class ServerClient(SubConn):
         """
 
         ps = PathShortener()
-        async def _writer(p,n):
-            d,sp = ps.short(p)
-            await msg.send(d,sp,n.data,n.meta)
+
+        async def _writer(p, n):
+            d, sp = ps.short(p)
+            await msg.send(d, sp, n.data, n.meta)
 
         d = self.server.data[msg[1]]
         ts = msg[2] if len(msg) > 2 else 0
         xmin = msg[3] if len(msg) > 3 else 0
         xmax = msg[4] if len(msg) > 4 else -1
         async with msg.stream_w:
-            await d.walk(_writer, timestamp=ts,min_depth=xmin,max_depth=xmax)
-
+            await d.walk(_writer, timestamp=ts, min_depth=xmin, max_depth=xmax)
 
     async def cmd_d_set(self, msg, **kw):
         """Set a node's value."""
@@ -657,23 +663,23 @@ class Server:
     """
 
     # pylint: disable=no-member # mis-categorizing cfg as tuple
-    data:Node
-    name:str
-    backend:Link
+    data: Node
+    name: str
+    backend: Link
 
     cfg: attrdict
 
-    service_monitor:Broadcaster[Message[ServerData]]
-    write_monitor:Broadcaster[tuple[Any,MsgMeta,int|float]]
+    service_monitor: Broadcaster[Message[ServerData]]
+    write_monitor: Broadcaster[tuple[Any, MsgMeta, int | float]]
 
     logger: logging.Logger
 
-    last_auth:str|None = None
-    cur_auth:str
+    last_auth: str | None = None
+    cur_auth: str
 
-    _saver: SaveWriter|None = None
+    _saver: SaveWriter | None = None
 
-    def __init__(self, cfg:dict, name: str, init: Any = NotGiven):
+    def __init__(self, cfg: dict, name: str, init: Any = NotGiven):
         self.data = Node()
         self.name = name
         self.cfg = cfg
@@ -684,7 +690,7 @@ class Server:
         self.logger = logging.getLogger("moat.link.server." + name)
 
         # connected clients
-        self._clients:set[ServerClient] = set()
+        self._clients: set[ServerClient] = set()
 
         self.cur_auth = gen_ident(20)
 
@@ -707,7 +713,6 @@ class Server:
             res.append(self.last_auth)
         return res
 
-
     def maybe_update(self, path, data, meta, *, save=True):
         """
         A data item arrives.
@@ -716,14 +721,13 @@ class Server:
         """
         d = self.data.get(path)
         if d.meta is not None and d.meta.timestamp >= meta.timestamp:
-            self.logger.debug("No Update %s: %r / %r", path, d.meta,meta)
+            self.logger.debug("No Update %s: %r / %r", path, d.meta, meta)
             return
         d.data = data
         d.meta = meta
 
         if save:
-            self.write_monitor((path,data,meta))
-
+            self.write_monitor((path, data, meta))
 
     async def monitor(self, action: str, delay: anyio.abc.Event = None, **kw):
         """
@@ -762,8 +766,12 @@ class Server:
         else:
             self.logger.info("Stream ended %s", action)
 
-
-    async def _pinger(self, ready: anyio.Event, *, task_status:anyio.abc.TaskStatus=anyio.TASK_STATUS_IGNORED):
+    async def _pinger(
+        self,
+        ready: anyio.Event,
+        *,
+        task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED,
+    ):
         """
         This task
         * sends PING messages
@@ -787,7 +795,7 @@ class Server:
             task_status.started()
 
             async for msg in actor:
-                self.logger.debug("ACT IN %r",msg)
+                self.logger.debug("ACT IN %r", msg)
 
                 if isinstance(msg, RecoverEvent):
                     await self.spawn(
@@ -814,8 +822,8 @@ class Server:
                     if val is not None:
                         tock, val = val
                         await self.tock_seen(tock)
-                    #node = Node(msg_node, val, cache=self.node_cache)
-                    #if tock is not None:
+                    # node = Node(msg_node, val, cache=self.node_cache)
+                    # if tock is not None:
                     #    node.tock = tock
 
                 elif isinstance(msg, TagEvent):
@@ -827,7 +835,12 @@ class Server:
                     pass
 
     async def set_main_link(self):
-        await self.backend.send(P(":R.run.service.main"),{"link":self.link_data, "auth":{"token":self.cur_auth}}, meta=MsgMeta(origin=self.name), retain=True)
+        await self.backend.send(
+            P(":R.run.service.main"),
+            {"link": self.link_data, "auth": {"token": self.cur_auth}},
+            meta=MsgMeta(origin=self.name),
+            retain=True,
+        )
 
     async def _get_host_port(self, host):
         """Retrieve the remote system to connect to.
@@ -1399,7 +1412,6 @@ class Server:
                 with anyio.CancelScope(shield=True):
                     sd.set()
 
-
     async def run_saver(self, path: anyio.Path = None):
         """
         Start a task that continually saves to disk.
@@ -1447,7 +1459,6 @@ class Server:
                 break
         os.kill(os.getpid(), signal.SIGTERM)
 
-
     @property
     async def is_ready(self):
         """Await this to determine if/when the server is operational."""
@@ -1458,8 +1469,9 @@ class Server:
         """Await this to determine if/when the server is serving clients."""
         await self._ready2.wait()
 
-
-    async def serve(self, *, tg:anyio.abc.TaskGroup =None, task_status=anyio.TASK_STATUS_IGNORED) -> Never:
+    async def serve(
+        self, *, tg: anyio.abc.TaskGroup = None, task_status=anyio.TASK_STATUS_IGNORED
+    ) -> Never:
         """
         The task that opens a backend connection and actually runs the server.
         """
@@ -1477,7 +1489,7 @@ class Server:
 
         async with (
             anyio.create_task_group() as _tg,
-            get_backend(self.cfg, name="main."+self.name, will=will_data) as self.backend,
+            get_backend(self.cfg, name="main." + self.name, will=will_data) as self.backend,
         ):
             if tg is None:
                 tg = _tg
@@ -1491,9 +1503,9 @@ class Server:
                 ports.append(await _tg.start(self._run_server, name, conn))
 
             if len(ports) == 1:
-                link = {"host":ports[0][0],"port":ports[0][1]}
+                link = {"host": ports[0][0], "port": ports[0][1]}
             else:
-                link = [ {"host":h,"port":p} for h,p in ports ]
+                link = [{"host": h, "port": p} for h, p in ports]
             self.link_data = link
 
             await tg.start(self._read_main)
@@ -1523,58 +1535,74 @@ class Server:
         Task to read the main channel
         """
         async with (
-                Broadcaster(send_last=True) as self.service_monitor,
-                self.backend.monitor(P(":R.run.service.main")) as mon,
-            ):
+            Broadcaster(send_last=True) as self.service_monitor,
+            self.backend.monitor(P(":R.run.service.main")) as mon,
+        ):
             task_status.started()
             async for msg in mon:
                 self.service_monitor(msg)
 
-    async def _get_remote_data(self, main:BroadcastReader, ready:anyio.Event):
+    async def _get_remote_data(self, main: BroadcastReader, ready: anyio.Event):
         try:
             with anyio.fail_after(self.cfg.server.timeout.monitor):
                 msg = await anext(main)
         except TimeoutError:
-            return # no entry yet
+            return  # no entry yet
 
         if msg.meta.origin == self.name:
             self.logger.notice("no remote sync: from myself")
             return
-        if msg.meta.timestamp < 1.5*self.cfg.server.timeout.refresh:
+        if msg.meta.timestamp < 1.5 * self.cfg.server.timeout.refresh:
             self.logger.notice("no remote sync: too old")
             return
         if await self._sync_from(msg.meta.origin, msg.data):
             ready.set()
 
-    async def _sync_from(self, name:str, data:dict) -> bool:
+    async def _sync_from(self, name: str, data: dict) -> bool:
         """
         Sync from the server indicated by this message.
 
         Returns True if successful.
         """
         links = msg.data.link
-        if isinstance(links,dict):
-            links=(links,)
+        if isinstance(links, dict):
+            links = (links,)
         for link in links:
             try:
-                async with Conn(me=self.name,them=msg.meta.origin,
-                                host=link["host"], port=link["port"],
-                                token=data.get("token", None)) as conn:
+                async with Conn(
+                    me=self.name,
+                    them=msg.meta.origin,
+                    host=link["host"],
+                    port=link["port"],
+                    token=data.get("token", None),
+                ) as conn:
                     if conn.auth is not True:
                         self.logger.warning("No auth: sync from %s %s", msg.meta.origin, link)
                         continue
                     try:
                         await self._sync_one(conn)
                     except Exception as exc:
-                        self.logger.warning("No sync from %s %s: %r", msg.meta.origin, msg.data, exc, exc_info=exc)
+                        self.logger.warning(
+                            "No sync from %s %s: %r",
+                            msg.meta.origin,
+                            msg.data,
+                            exc,
+                            exc_info=exc,
+                        )
                         return False
                     return True
 
             except Exception as exc:
-                self.logger.warning("No connection to %s %s: %r", msg.meta.origin, link, exc, exc_info=exc)
+                self.logger.warning(
+                    "No connection to %s %s: %r",
+                    msg.meta.origin,
+                    link,
+                    exc,
+                    exc_info=exc,
+                )
         return False
 
-    async def _sync_from(self, conn:Conn):
+    async def _sync_from(self, conn: Conn):
         async with conn.stream_r(P("s.full"), root=P(":")) as feed:
             pl = PathLongener()
             async for msg in feed:
@@ -1587,27 +1615,30 @@ class Server:
         and stop when we got them all.
         """
 
-        incomplete:bool = False
-        expected:str|None = None
+        incomplete: bool = False
+        expected: str | None = None
 
         @define
         class Reader(CtxObj):
             """
             Read a file, returning decoded chunks.
             """
-            fn:anyio.Path
+
+            fn: anyio.Path
 
             async def _ctx(self):
                 async with await fn.open("rb") as self._f:
                     yield self
+
             def __aiter__(self):
                 return self._iter()
+
             async def _iter(self):
                 codec = StdCBOR()
                 while True:
                     for data in codec.feed(await self._f.read(4096)):
                         yield data
-        
+
         async def _read_data(fn):
             try:
                 async with await Reader(fn) as rdr:
@@ -1624,17 +1655,16 @@ class Server:
                         raise ValueError("not from main")
 
                     async for d in it:
-                        if isinstance(d,CBORTag) and d.tag == CBOR_TAG_MOAT_FILE_END:
+                        if isinstance(d, CBORTag) and d.tag == CBOR_TAG_MOAT_FILE_END:
                             return dh, d.value
-                        depth,path,data,meta = d
-                        path = pl.long(depth,path)
-                        self._maybe_update(path,data,meta)
+                        depth, path, data, meta = d
+                        path = pl.long(depth, path)
+                        self._maybe_update(path, data, meta)
 
                 raise ValueError("no end tag")
 
             except Exception as exc:
                 raise BadFile(fn, repr(exc)) from exc
-
 
         async def _read_subdirs(d):
             names = []
@@ -1646,7 +1676,7 @@ class Server:
 
             while names:
                 fn = names.pop()
-                dd = d/fn
+                dd = d / fn
                 if fn.suffix == ".mld":
                     if await _read_data(dd):
                         return True
@@ -1658,8 +1688,6 @@ class Server:
         if await self._read_subdirs(d):
             ready.set()
 
-
-
     async def _read_initial(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
         Read initial data from either file backup or a remote server.
@@ -1668,7 +1696,7 @@ class Server:
         main = aiter(self.service_monitor)
         if self.data:
             task_status.started()
-            task_status=anyio.TASK_STATUS_IGNORED
+            task_status = anyio.TASK_STATUS_IGNORED
             ready.set()
         async with anyio.create_task_group() as tg:
             async with anyio.create_task_group() as tgx:
@@ -1680,13 +1708,12 @@ class Server:
                     try:
                         await self._sync_from(msg.meta.origin, msg.data)
                     finally:
-                        pass # XXX
+                        pass  # XXX
 
-
-    async def _read_saved_data(self, ready:anyio.Event):
+    async def _read_saved_data(self, ready: anyio.Event):
         pass
 
-    async def _get_remote_data(self, main:BroadcastReader, ready:anyio.Event):
+    async def _get_remote_data(self, main: BroadcastReader, ready: anyio.Event):
         pass
 
     async def _run_server(self, name, cfg, *, task_status=anyio.TASK_STATUS_IGNORED):
@@ -1801,7 +1828,6 @@ class old_stuff:
         if self._actor is not None and self._ready.is_set():
             await self._actor.set_value((self._tock, self.node.tick))
 
-
     def drop_old_event(self, evt, old_evt=NotGiven):
         """
         Drop either one event, or any event that is in ``old_evt`` but not
@@ -1841,9 +1867,6 @@ class old_stuff:
             msg["tick"] = self.node.tick
         self.logger.debug("Send %s: %r", action, msg)
         await self.backend.send(*self.cfg.server.root, action, payload=msg)
-
-
-
 
     async def serve_old(self, log_path=None, log_inc=False, force=False, ready_evt=None):
         """Task that opens a backend connection and actually runs the server.
@@ -1906,7 +1929,6 @@ class old_stuff:
             delay2 = anyio.Event()
             delay3 = anyio.Event()
 
-
             if log_path is not None:
                 await self.run_saver(path=log_path, save_state=not log_inc, wait=False)
 
@@ -1964,4 +1986,3 @@ class old_stuff:
             evt.set()
 
         await run_tcp_server(self._connect, tg=tg, _rdy=partial(rdy, n), **cfg)
-

@@ -1,6 +1,7 @@
 """
 A hacked-up copy of some parts of `moat.util`.
 """
+
 from __future__ import annotations
 
 from copy import deepcopy
@@ -12,8 +13,10 @@ from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
 
 _PartRE = re.compile("[^:._]+|_|:|\\.")
 
+
 def P(s):
     return Path.from_str(s)
+
 
 class Path(tuple):  # noqa:SLOT001
     """
@@ -57,7 +60,7 @@ class Path(tuple):  # noqa:SLOT001
         return "".join(res)
 
     @classmethod
-    def from_str(cls, path, *):
+    def from_str(cls, path):
         """
         Constructor to build a Path from its string representation.
         """
@@ -179,7 +182,7 @@ class Path(tuple):  # noqa:SLOT001
                     pos += 1
                     continue
                 elif part is True:
-                    raise Err(path,pos)
+                    raise Err(path, pos)
                 else:
                     add(e)
             pos += len(e)
@@ -506,6 +509,7 @@ class Lockstep:
 
 class NoProxyError(ValueError):
     "Error for nonexistent proxy values"
+
     # pylint:disable=unnecessary-pass
 
 

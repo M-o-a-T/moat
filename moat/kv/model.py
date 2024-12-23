@@ -39,9 +39,7 @@ class Node:
     tick: int = None
     _present: RangeSet = None  # I have these as valid data. Superset of ``._deleted``.
     _deleted: RangeSet = None  # I have these as no-longer-valid data
-    _reported: RangeSet = (
-        None  # somebody else reported these missing data for this node
-    )
+    _reported: RangeSet = None  # somebody else reported these missing data for this node
     _superseded: RangeSet = None  # I know these once existed, but no more.
     entries: dict = None
     tock: int = 0  # tock when node was last observed
@@ -538,9 +536,7 @@ class NodeEvent:
 class UpdateEvent:
     """Represents an event which updates something."""
 
-    def __init__(
-        self, event: NodeEvent, entry: "Entry", new_value, old_value=NotGiven, tock=None
-    ):
+    def __init__(self, event: NodeEvent, entry: "Entry", new_value, old_value=NotGiven, tock=None):
         self.event = event
         self.entry = entry
         self.new_value = new_value
@@ -904,9 +900,7 @@ class Entry:
                 if not loading:
                     logger.warning("*** inconsistency ***")
                     logger.warning("Node: %s", self.path)
-                    logger.warning(
-                        "Current: %s :%s: %r", self.chain, self.tock, self._data
-                    )
+                    logger.warning("Current: %s :%s: %r", self.chain, self.tock, self._data)
                     logger.warning("New: %s :%s: %r", evt.event, evt.tock, evt_val)
                 if evt.tock < self.tock:
                     if not loading:
@@ -934,9 +928,7 @@ class Entry:
             n.seen(t, self)
         await self.updated(evt)
 
-    async def walk(
-        self, proc, acl=None, max_depth=-1, min_depth=0, _depth=0, full=False
-    ):
+    async def walk(self, proc, acl=None, max_depth=-1, min_depth=0, _depth=0, full=False):
         """
         Call coroutine ``proc`` on this node and all its children).
 
@@ -960,9 +952,7 @@ class Entry:
             if k is None and not full:
                 continue
             a = acl.step(k) if acl is not None else None
-            await v.walk(
-                proc, acl=a, max_depth=max_depth, min_depth=min_depth, _depth=_depth
-            )
+            await v.walk(proc, acl=a, max_depth=max_depth, min_depth=min_depth, _depth=_depth)
 
     def serialize(self, chop_path=0, nchain=2, conv=None):
         """Serialize this entry for msgpack.

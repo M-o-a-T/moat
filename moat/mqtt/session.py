@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 
 class ApplicationMessage:
-
     """
     ApplicationMessage and subclasses are used to store published message information flow. These objects can contain different information depending on the way they were created (incoming or outgoing) and the quality of service used between peers.
     """
@@ -99,7 +98,6 @@ class ApplicationMessage:
 
 
 class IncomingApplicationMessage(ApplicationMessage):
-
     """
     Incoming :class:`~moat.mqtt.session.ApplicationMessage`.
     """
@@ -112,7 +110,6 @@ class IncomingApplicationMessage(ApplicationMessage):
 
 
 class OutgoingApplicationMessage(ApplicationMessage):
-
     """
     Outgoing :class:`~moat.mqtt.session.ApplicationMessage`.
     """

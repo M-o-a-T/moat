@@ -3,7 +3,6 @@
 Test for SignalClient.quit_group
 """
 
-
 import pook
 import pytest
 
@@ -33,11 +32,10 @@ async def test_quit_group_ok():
         },
     )
     assert (
-        (await SIGNAL_CLI.quit_group(
+        await SIGNAL_CLI.quit_group(
             groupid="1337",
-        )).get("timestamp")
-        == 1
-    )
+        )
+    ).get("timestamp") == 1
     pook.reset()
 
 

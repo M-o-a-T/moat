@@ -1,6 +1,7 @@
 """
 Test runner
 """
+
 from __future__ import annotations
 
 import anyio
@@ -100,7 +101,7 @@ class MpyBuf(ProcessBuf):
                 elif (ustd / req).exists():
                     rlink(ustd / req, lib)
                 else:
-                    raise FileNotFoundError(std/req)
+                    raise FileNotFoundError(std / req)
 
             aio = Path("lib/micropython/extmod/asyncio").absolute()
             with suppress(FileExistsError):
@@ -214,7 +215,11 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
             return
         try:
             await self.q_wr.send(m)
-        except (anyio.ClosedResourceError, anyio.BrokenResourceError, anyio.EndOfStream) as exc:
+        except (
+            anyio.ClosedResourceError,
+            anyio.BrokenResourceError,
+            anyio.EndOfStream,
+        ) as exc:
             raise EOFError from exc
 
     snd = send
@@ -224,7 +229,11 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
             raise anyio.BrokenResourceError(self)
         try:
             return await self._link.q_rd.receive()
-        except (anyio.ClosedResourceError, anyio.BrokenResourceError, anyio.EndOfStream):
+        except (
+            anyio.ClosedResourceError,
+            anyio.BrokenResourceError,
+            anyio.EndOfStream,
+        ):
             raise EOFError from None
 
     rcv = recv
@@ -284,7 +293,7 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
     async def setup(self):
         p = self.cfg["path"]
         if isinstance(p, str):
-            raise TypeError(f"Need a path, not {p !r}")
+            raise TypeError(f"Need a path, not {p!r}")
         self._link = self.cfg["_cmd"].root.sub_at(p)
 
     def send(self, m) -> Awaitable:

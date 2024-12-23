@@ -7,11 +7,11 @@ from tests.lib_cmd.scaffold import scaffold
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize("a_s", [(),("foo"),(12,34)])
-@pytest.mark.parametrize("a_r", [(),("bar"),(2,3)])
-@pytest.mark.parametrize("k_s", [{},dict(a=42)])
-@pytest.mark.parametrize("k_r", [{},dict(b=21)])
-async def test_basic(a_s,a_r,k_s,k_r):
+@pytest.mark.parametrize("a_s", [(), ("foo"), (12, 34)])
+@pytest.mark.parametrize("a_r", [(), ("bar"), (2, 3)])
+@pytest.mark.parametrize("k_s", [{}, dict(a=42)])
+@pytest.mark.parametrize("k_r", [{}, dict(b=21)])
+async def test_basic(a_s, a_r, k_s, k_r):
     async def handle(msg):
         assert msg.cmd == "Test"
         assert tuple(msg.args) == tuple(a_s)
@@ -19,13 +19,13 @@ async def test_basic(a_s,a_r,k_s,k_r):
             assert not k_s
         else:
             assert msg.kw == k_s
-        await msg.result(*a_r,**k_r)
+        await msg.result(*a_r, **k_r)
 
         return {"C": msg.cmd, "R": tuple(msg.args)}
 
     async with scaffold(handle, None) as (a, b):
         # note the comma
-        res = await b.cmd("Test", *a_s,**k_s)
+        res = await b.cmd("Test", *a_s, **k_s)
         assert tuple(res.args) == tuple(a_r)
         assert res.kw == k_r
 
@@ -39,8 +39,8 @@ async def test_basic_res():
 
     async with scaffold(handle, None) as (a, b):
         # note the comma
-        res, = await b.cmd("Test", 123)
-        assert res == {"C":"Test", "R": (123,)}
+        (res,) = await b.cmd("Test", 123)
+        assert res == {"C": "Test", "R": (123,)}
 
 
 @pytest.mark.anyio
@@ -51,7 +51,7 @@ async def test_error():
     async with scaffold(handle, None) as (a, b):
         with pytest.raises(StreamError) as err:
             res = await b.cmd("Test", 123)
-            print(f"OWCH: result is {res !r}")
+            print(f"OWCH: result is {res!r}")
         assert err.match("123")
         assert err.match("Duh")
 
@@ -136,7 +136,7 @@ async def test_stream_in():
 async def test_stream_out():
     async def handle(msg):
         assert msg.cmd == "Test"
-        assert tuple(msg.args) == (123,456)
+        assert tuple(msg.args) == (123, 456)
         assert msg.kw["answer"] == 42, msg.kw
         async with msg.stream_w("Takeme") as st:
             await st.send(1, "a")

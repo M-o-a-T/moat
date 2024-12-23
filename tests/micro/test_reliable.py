@@ -1,6 +1,7 @@
 """
 Test reliable retransmission, using various parameters.
 """
+
 from __future__ import annotations
 
 import os
@@ -76,7 +77,7 @@ class RecvE(Head):
             self.n += 1
             if msg["n"] == 2:
                 break
-        assert got == 1<<2
+        assert got == 1 << 2
         self.done.set()
 
 
@@ -91,8 +92,8 @@ async def test_basic(qlen1, qlen2, window):
     u1.link(u2)
     u2.link(u1)
     if "TRACE" in os.environ:
-        u1 = LogMsg(u1, dict( txt="L1"))
-        u2 = LogMsg(u2, dict( txt="L2"))
+        u1 = LogMsg(u1, dict(txt="L1"))
+        u2 = LogMsg(u2, dict(txt="L2"))
     u1 = ReliableMsg(u1, dict(_nowait=True, retries=999, window=window, timeout=100, persist=True))
     u2 = ReliableMsg(u2, dict(_nowait=True, retries=999, timeout=100))
     if "TRACE" in os.environ:
@@ -119,8 +120,8 @@ async def test_eph():
     u1.link(u2)
     u2.link(u1)
     if "TRACE" in os.environ:
-        u1 = LogMsg(u1, dict( txt="L1"))
-        u2 = LogMsg(u2, dict( txt="L2"))
+        u1 = LogMsg(u1, dict(txt="L1"))
+        u2 = LogMsg(u2, dict(txt="L2"))
     u1 = ReliableMsg(u1, dict(_nowait=True, retries=999, window=4, timeout=100, persist=True))
     u2 = ReliableMsg(u2, dict(_nowait=True, retries=999, timeout=100))
     if "TRACE" in os.environ:
@@ -149,8 +150,8 @@ async def test_lossy(window, loss):
     u1.link(u2)
     u2.link(u1)
     if "TRACE" in os.environ:
-        u1 = LogMsg(u1, dict( txt="L1"))
-        u2 = LogMsg(u2, dict( txt="L2"))
+        u1 = LogMsg(u1, dict(txt="L1"))
+        u2 = LogMsg(u2, dict(txt="L2"))
     u1 = ReliableMsg(u1, dict(_nowait=True, retries=999, window=window, timeout=100, persist=True))
     u2 = ReliableMsg(u2, dict(_nowait=True, retries=999, timeout=100))
     if "TRACE" in os.environ:

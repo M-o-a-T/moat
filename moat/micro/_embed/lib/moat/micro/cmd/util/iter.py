@@ -248,7 +248,7 @@ class RecvIter(_DelayedIter):
             else:
                 self.cnt += 1
             if n > self.cnt:
-                log(f"Missed {n-self.cnt}")
+                log(f"Missed {n - self.cnt}")
                 self.cnt = n
         self._val.set(val)
 

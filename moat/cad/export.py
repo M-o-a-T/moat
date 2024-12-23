@@ -1,6 +1,7 @@
 """
 Export helpers.
 """
+
 from __future__ import annotations
 
 try:
@@ -13,6 +14,7 @@ __all__ = []
 
 
 if cq is not None:
+
     def _export(self, filename):
         cq.Assembly(name=Path(filename).stem).add(self).save(
             filename,

@@ -36,6 +36,7 @@ DISCONNECT_DELAY = 0.1
 RECONNECT_TIMEOUT = 10
 CHECK_STREAM_TIMEOUT = 0.001
 
+
 class ModbusClient(CtxObj):
     """The main bus handler. Use as
     >>> async with ModbusClient() as bus:
@@ -121,8 +122,8 @@ class ModbusClient(CtxObj):
                 kw["port"] = port
             return self.serial(**kw)
 
-        elif "host" in cfg or ("port" in cfg and isinstance(cfg["port"],int)):
-            for k in ("host","port"):
+        elif "host" in cfg or ("port" in cfg and isinstance(cfg["port"], int)):
+            for k in ("host", "port"):
                 try:
                     kw[k] = cfg[k]
                 except KeyError:
@@ -130,6 +131,7 @@ class ModbusClient(CtxObj):
             return self.host(**kw)
         else:
             raise ValueError("neither serial nor TCP config found")
+
 
 class ModbusError(RuntimeError):
     """Error entry in returned datasets"""
@@ -241,12 +243,22 @@ class Host(CtxObj, _HostCommon):
 
     _tg = None
 
-    def __init__(self, gate, addr, port, timeout=10, cap=1, debug=False, max_rd_len=MAX_REQ_LEN, max_wr_len=MAX_REQ_LEN):
+    def __init__(
+        self,
+        gate,
+        addr,
+        port,
+        timeout=10,
+        cap=1,
+        debug=False,
+        max_rd_len=MAX_REQ_LEN,
+        max_wr_len=MAX_REQ_LEN,
+    ):
         self.addr = addr
         self.port = port
 
-        self.max_rd_len=max_rd_len
-        self.max_wr_len=max_wr_len
+        self.max_rd_len = max_rd_len
+        self.max_wr_len = max_wr_len
 
         log = logging.getLogger(f"modbus.{addr}")
         self._trace = log.info if debug else log.debug
@@ -322,7 +334,9 @@ class Host(CtxObj, _HostCommon):
                 replies = []
 
                 # check for decoding errors
-                self.framer.processIncomingPacket(data, replies.append, slave=0, single=True)  # bah
+                self.framer.processIncomingPacket(
+                    data, replies.append, slave=0, single=True
+                )  # bah
 
             except (
                 IncompleteRead,
@@ -409,12 +423,24 @@ class SerialHost(CtxObj, _HostCommon):
 
     _tg = None
 
-    def __init__(self, gate, /, port, timeout=10, cap=1, debug=False, monitor=None, max_rd_len=MAX_REQ_LEN, max_wr_len=MAX_REQ_LEN, **ser):
+    def __init__(
+        self,
+        gate,
+        /,
+        port,
+        timeout=10,
+        cap=1,
+        debug=False,
+        monitor=None,
+        max_rd_len=MAX_REQ_LEN,
+        max_wr_len=MAX_REQ_LEN,
+        **ser,
+    ):
         self.port = port
         self.ser = ser
         self.framer = ModbusRtuFramer(ClientDecoder(), self)
-        self.max_rd_len=max_rd_len
-        self.max_wr_len=max_wr_len
+        self.max_rd_len = max_rd_len
+        self.max_wr_len = max_wr_len
 
         log = logging.getLogger(f"modbus.{Path(port).name}")
         self._trace = log.info if debug else log.debug
@@ -423,7 +449,7 @@ class SerialHost(CtxObj, _HostCommon):
         super().__init__(gate, timeout, cap)
 
     def __repr__(self):
-        return f"<ModbusHost:{self.port}:{self.ser.get('baudrate',0)}>"
+        return f"<ModbusHost:{self.port}:{self.ser.get('baudrate', 0)}>"
 
     @asynccontextmanager
     async def _ctx(self):
@@ -433,9 +459,10 @@ class SerialHost(CtxObj, _HostCommon):
             raise RuntimeError(f"Host {key} already exists")
 
         try:
-            async with Serial(
-                port=self.port, **self.ser
-            ) as self.stream, anyio.create_task_group() as self._tg:
+            async with (
+                Serial(port=self.port, **self.ser) as self.stream,
+                anyio.create_task_group() as self._tg,
+            ):
                 self._read_scope = self._tg.cancel_scope
                 await self._tg.start(self._reader)
                 self._connected.set()
@@ -481,7 +508,9 @@ class SerialHost(CtxObj, _HostCommon):
                 replies = []
 
                 # check for decoding errors
-                self.framer.processIncomingPacket(data, replies.append, slave=0, single=True)  # bah
+                self.framer.processIncomingPacket(
+                    data, replies.append, slave=0, single=True
+                )  # bah
 
             except (
                 IncompleteRead,
@@ -902,7 +931,7 @@ class Slot(CtxObj):
         await self.run_lock.wait()
         while True:
             await self.write_trigger.wait()
-            await anyio.sleep(1) # self.write_delay)
+            await anyio.sleep(1)  # self.write_delay)
             self.write_trigger = anyio.Event()
             try:
                 await self.write(changed=True)
@@ -921,7 +950,9 @@ class ValueList(DataBlock):
     """
 
     def __init__(self, slot, kind):
-        super().__init__(max_rd_len=slot.unit.host.max_rd_len, max_wr_len=slot.unit.host.max_wr_len)
+        super().__init__(
+            max_rd_len=slot.unit.host.max_rd_len, max_wr_len=slot.unit.host.max_wr_len
+        )
         self.slot = slot
         self.kind = kind
         self.do_write = anyio.Event()

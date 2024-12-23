@@ -79,9 +79,7 @@ class BrokerProtocolHandler(ProtocolHandler):
         }
         await self._pending_subscriptions.put(subscription)
 
-    async def handle_unsubscribe(
-        self, unsubscribe: UnsubscribePacket
-    ):  # pylint: disable=arguments-differ
+    async def handle_unsubscribe(self, unsubscribe: UnsubscribePacket):  # pylint: disable=arguments-differ
         unsubscription = {
             "packet_id": unsubscribe.variable_header.packet_id,
             "topics": unsubscribe.payload.topics,

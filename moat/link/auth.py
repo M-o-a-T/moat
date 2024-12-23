@@ -3,11 +3,13 @@ from __future__ import annotations
 from moat.link import protocol_version
 
 from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from moat.lib.cmd import CmdHandler,Stream
-    from typing import ClassVar,ReadOnly
 
-__all__ = ["AuthMethod","TokenAuth", "FreeAuth", "NeverAuth"]
+if TYPE_CHECKING:
+    from moat.lib.cmd import CmdHandler, Stream
+    from typing import ClassVar, ReadOnly
+
+__all__ = ["AuthMethod", "TokenAuth", "FreeAuth", "NeverAuth"]
+
 
 class AuthMethod:
     name: str
@@ -21,7 +23,7 @@ class AuthMethod:
         """
         return None
 
-    async def hello_in(self, conn:Hello, data:Any) -> bool|None:
+    async def hello_in(self, conn: Hello, data: Any) -> bool | None:
         """
         This may implement "The remote side authorizes itself to me" based
         on data sent in the remote's Hello message.
@@ -37,7 +39,7 @@ class AuthMethod:
 
         return False
 
-    async def chat(self, conn:Hello, data:Any):
+    async def chat(self, conn: Hello, data: Any):
         """
         The recipient of a Hello message whose ``auth`` member includes our
         name calls this method. It's supposed to call ``conn.cmd(i.auth.NAME), …)``
@@ -49,7 +51,7 @@ class AuthMethod:
         """
         return None
 
-    async def handle(self, conn:Hello, msg:Stream):
+    async def handle(self, conn: Hello, msg: Stream):
         """
         The dispatcher calls this method with an incoming ``i.auth.NAME`` message.
 
@@ -61,9 +63,9 @@ class AuthMethod:
 
 
 class TokenAuth(AuthMethod):
-    name:ClassVar[ReadOnly[str]] = "token"
+    name: ClassVar[ReadOnly[str]] = "token"
 
-    def __init__(self, *token:str):
+    def __init__(self, *token: str):
         self._token = token
 
     async def hello_out(self):
@@ -88,7 +90,7 @@ class TokenAuth(AuthMethod):
         # wrong token: kick them off
         return False
 
-    async def handle(self, conn:CmdHandler, msg:Stream):
+    async def handle(self, conn: CmdHandler, msg: Stream):
         """
         The client shouldn't send an `i.auth.token` message.
         """
@@ -99,7 +101,8 @@ class AnonAuth(AuthMethod):
     """
     Auth method of last resort: anonymous login.
     """
-    name:ClassVar[ReadOnly[str]] = "anon"
+
+    name: ClassVar[ReadOnly[str]] = "anon"
 
     async def hello_out(self):
         return None
@@ -108,7 +111,7 @@ class AnonAuth(AuthMethod):
         conn.authorized(self)
         return True
 
-    async def handle(self, conn:CmdHandler, msg:Stream):
+    async def handle(self, conn: CmdHandler, msg: Stream):
         return True
 
 
@@ -116,7 +119,8 @@ class NoAuth(AuthMethod):
     """
     Reject auth attempts.
     """
-    name:ClassVar[ReadOnly[str]] = "no"
+
+    name: ClassVar[ReadOnly[str]] = "no"
 
     async def hello_out(self):
         return None
@@ -125,7 +129,6 @@ class NoAuth(AuthMethod):
         "reject"
         return False
 
-    async def handle(self, conn:CmdHandler, msg:Stream):
+    async def handle(self, conn: CmdHandler, msg: Stream):
         "reject"
         return False
-

@@ -1,6 +1,7 @@
 """
 Inverter mode: set a specific grid power use
 """
+
 import logging
 
 from . import InvModeBase

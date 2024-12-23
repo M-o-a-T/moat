@@ -1,6 +1,7 @@
 """
 Moat-KV client data model for 1wire
 """
+
 import anyio
 
 from moat.util import combine_dict, attrdict
@@ -157,14 +158,20 @@ class OWFSattr(ClientEntry):
                                 "owfs",
                                 self.subpath + ("write",),
                                 comment="Attribute missing",
-                                data={"key": k, "attr": self.watch_src_attr, "msg": msg},
+                                data={
+                                    "key": k,
+                                    "attr": self.watch_src_attr,
+                                    "msg": msg,
+                                },
                             )
                             return
                         else:
                             dev = self.node.dev
                             if dev is None:
                                 await self.root.err.record_error(
-                                    "owfs", self.subpath + ("write",), comment="device missing"
+                                    "owfs",
+                                    self.subpath + ("write",),
+                                    comment="device missing",
                                 )
                                 return
                             await dev.set(*self.attr, value=val)
@@ -237,7 +244,7 @@ class OWFSfamily(ClientEntry):
     def child_type(cls, name):
         if not isinstance(name, int):
             return ClientEntry
-        if name <= 0 or name > 16 ** 12:
+        if name <= 0 or name > 16**12:
             return ClientEntry
         return cls.cls
 
@@ -301,15 +308,20 @@ class OWFSroot(ClientRoot):
             kls.cls[name] = FamilyX
             return FamilyX
 
+
 class BrokenDict:
     def __getattr__(self, k, v=None):
-        import pdb;pdb.set_trace()
-        return object.__getattribute__(self,k,v)
+        import pdb
+
+        pdb.set_trace()
+        return object.__getattribute__(self, k, v)
+
     pass
+
 
 @OWFSroot.register(0x10)
 class TempNode(OWFSnode):
-    CFG = BrokenDict() # {"temperature": 30}
+    CFG = BrokenDict()  # {"temperature": 30}
 
     @classmethod
     def child_type(cls, name):

@@ -10,7 +10,6 @@ PORT = ((os.getpid() + 101) % 9999) + 40000
 
 
 async def server(client, tree={}, options={}, evt=None):  # pylint: disable=dangerous-default-value
-
     async with anyio.create_task_group() as tg:
         listener = await anyio.create_tcp_listener(
             local_host="127.0.0.1", local_port=PORT, reuse_port=True
@@ -25,8 +24,8 @@ async def server(client, tree={}, options={}, evt=None):  # pylint: disable=dang
         addr = listener.extra(anyio.abc.SocketAttribute.raw_socket).getsockname()
         tg.start_soon(may_close)
 
-        cfg={"kv":client._cfg}
-        ensure_cfg("moat.kv.ow",cfg)
+        cfg = {"kv": client._cfg}
+        ensure_cfg("moat.kv.ow", cfg)
 
         await client.set(
             client._cfg.ow.prefix + ("server", "127.0.0.1"),

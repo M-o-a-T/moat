@@ -1,6 +1,7 @@
 """
 Adaptor for MicroPython streams.
 """
+
 from __future__ import annotations
 
 from moat.util import DProxy, NoProxyError, Proxy, get_proxy, name2obj, obj2name

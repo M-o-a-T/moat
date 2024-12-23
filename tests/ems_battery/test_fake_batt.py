@@ -1,6 +1,7 @@
 """
 Basic test using a MicroPython subtask
 """
+
 from __future__ import annotations
 
 import anyio
@@ -11,9 +12,9 @@ from moat.util import yload
 from moat.micro._test import mpy_stack
 from moat.util.compat import log
 
-from.support import as_attr,CF
+from .support import as_attr, CF
 
-pytestmark = [pytest.mark.anyio,pytest.mark.xfail]
+pytestmark = [pytest.mark.anyio, pytest.mark.xfail]
 
 TT = 250  # XXX assume that this is OK
 
@@ -47,14 +48,15 @@ cell: cx
 """
 CFGIC = as_attr(CFGIC, cx=CF.c, c=CF.c)
 
+
 @pytest.mark.parametrize("CFG", [CFGC, CFGIC])
 async def test_cell(tmp_path, CFG):
     "Basic fake cell verification"
     async with (
-            mpy_stack(tmp_path, CFG) as d,
-            d.sub_at("c") as c,
-            d.sub_at(CFG.cell) as cx,
-            ):
+        mpy_stack(tmp_path, CFG) as d,
+        d.sub_at("c") as c,
+        d.sub_at(CFG.cell) as cx,
+    ):
         assert await c.u() == 5
         assert await cx.u(c=0.25) == 2
         assert abs(1.96 - await cx.u(c=0.20)) < 0.00001
@@ -163,7 +165,7 @@ async def test_batt(tmp_path):
         nu = min(uu)
         assert xu > 8.3
         assert xu - nu > 0.01
-        log(f"u={xu :.3f} … {nu :.3f}")
+        log(f"u={xu:.3f} … {nu:.3f}")
 
         # now start balancing to lowest cell
         await a.u(h=nu)
@@ -173,7 +175,7 @@ async def test_batt(tmp_path):
         nu2 = min(uu)  # maX and miN-U
         assert xu2 < xu
         assert nu - nu2 < 0.01  # we hope – vagaries of randomness
-        log(f"u={xu2 :.3f} … {nu2 :.3f}")
+        log(f"u={xu2:.3f} … {nu2:.3f}")
 
         # continue until low voltage reached
         for _ in range(10):
@@ -184,7 +186,7 @@ async def test_batt(tmp_path):
             nu2 = min(uu)  # maX and miN-U
             if xu2 == xux:
                 break
-            log(f"u={xu2 :.3f} … {nu2 :.3f}")
+            log(f"u={xu2:.3f} … {nu2:.3f}")
         else:
             raise RuntimeError("Balance?")
 

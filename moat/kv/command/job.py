@@ -14,9 +14,7 @@ from moat.kv.runner import AllRunnerRoot, AnyRunnerRoot, SingleRunnerRoot
 
 
 @click.group()  # pylint: disable=undefined-variable
-@click.option(
-    "-n", "--node", help="node to run this code on. Empty: any one node, '-': all nodes"
-)
+@click.option("-n", "--node", help="node to run this code on. Empty: any one node, '-': all nodes")
 @click.option("-g", "--group", help="group to run this code on. Empty: default")
 @click.pass_context
 async def cli(ctx, node, group):
@@ -56,9 +54,7 @@ async def cli(ctx, node, group):
     obj.statepath = cfg["state"] + obj.subpath
 
 
-@cli.group(
-    "at", short_help="path of the job to operate on", invoke_without_command=True
-)
+@cli.group("at", short_help="path of the job to operate on", invoke_without_command=True)
 @click.argument("path", nargs=1, type=P)
 @click.pass_context
 async def at_cli(ctx, path):
@@ -70,7 +66,10 @@ async def at_cli(ctx, path):
 
     if ctx.invoked_subcommand is None:
         res = await obj.client.get(obj.path + path, nchain=obj.meta)
-        yprint(res if obj.meta else res.value if 'value' in res else None, stream=obj.stdout)
+        yprint(
+            res if obj.meta else res.value if "value" in res else None,
+            stream=obj.stdout,
+        )
 
 
 @cli.command("info")
@@ -235,9 +234,7 @@ async def list_(obj, state, state_only, table, as_dict):
             obj,
             obj.path + path,
             as_dict=as_dict,
-            item_mangle=partial(
-                _state_fix, obj, state, state_only, None if as_dict else path
-            ),
+            item_mangle=partial(_state_fix, obj, state, state_only, None if as_dict else path),
         )
 
 
@@ -316,18 +313,12 @@ async def delete(obj, force):
             val.target = None
         if val.target is not None:
             val.target = None
-            res = await obj.client.set(
-                obj.path + path, value=val, nchain=3, chain=res.chain
-            )
+            res = await obj.client.set(obj.path + path, value=val, nchain=3, chain=res.chain)
             if not force:
                 res.info = "'target' was set: cleared but not deleted."
         if force or val.target is None:
             sres = await obj.client.get(obj.statepath + path, nchain=3)
-            if (
-                not force
-                and "value" in sres
-                and sres.value.stopped < sres.value.started
-            ):
+            if not force and "value" in sres and sres.value.stopped < sres.value.started:
                 res.info = "Still running, not deleted."
             else:
                 sres = await obj.client.delete(obj.statepath + path, chain=sres.chain)
@@ -350,15 +341,11 @@ async def delete(obj, force):
 @click.option("-r", "--repeat", type=int, help="Seconds the code should re-run after")
 @click.option("-k", "--ok", type=float, help="Code is OK if it ran this many seconds")
 @click.option("-b", "--backoff", type=float, help="Back-off factor. Default: 1.4")
-@click.option(
-    "-d", "--delay", type=int, help="Seconds the code should retry after (w/ backoff)"
-)
+@click.option("-d", "--delay", type=int, help="Seconds the code should retry after (w/ backoff)")
 @click.option("-i", "--info", help="Short human-readable information")
 @attr_args
 @click.pass_obj
-async def set_(
-    obj, code, tm, info, ok, repeat, delay, backoff, copy, vars_, eval_, path_
-):
+async def set_(obj, code, tm, info, ok, repeat, delay, backoff, copy, vars_, eval_, path_):
     """Add or modify a runner.
 
     Code typically requires some input parameters.
@@ -377,9 +364,7 @@ async def set_(
         copy = P(copy)
     path = obj.path + P(path)
 
-    res = await obj.client._request(
-        action="get_value", path=copy or path, iter=False, nchain=3
-    )
+    res = await obj.client._request(action="get_value", path=copy or path, iter=False, nchain=3)
     if "value" not in res:
         if copy:
             raise click.UsageError("--copy: use the complete path to an existing entry")

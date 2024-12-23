@@ -1,6 +1,7 @@
 """
 Access any moat.micro Buf/Blk/Msg device
 """
+
 from __future__ import annotations
 
 from moat.util import import_

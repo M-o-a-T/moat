@@ -40,12 +40,8 @@ class NullObj:
         raise self._exc
 
 
-@load_subgroup(
-    sub_pre="moat.kv.command", sub_post="cli", ext_pre="moat.kv", ext_post="_main.cli"
-)
-@click.option(
-    "-h", "--host", default=None, help=f"Host to use. Default: {CFG.kv.conn.host}"
-)
+@load_subgroup(sub_pre="moat.kv.command", sub_post="cli", ext_pre="moat.kv", ext_post="_main.cli")
+@click.option("-h", "--host", default=None, help=f"Host to use. Default: {CFG.kv.conn.host}")
 @click.option(
     "-p",
     "--port",

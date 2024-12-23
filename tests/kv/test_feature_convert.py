@@ -39,9 +39,7 @@ async def test_71_basic(autojump_clock):  # pylint: disable=unused-argument
                     "decode": "assert isinstance(value,str); return int(value)",
                 },
             )
-            await c._request(
-                "set_internal", path=P("conv.foo.inty.#"), value={"codec": "int"}
-            )
+            await c._request("set_internal", path=P("conv.foo.inty.#"), value={"codec": "int"})
             um = loader("_test", "user", make=True, server=False)
             u = um.build({"name": "std"})
             await u.send(c)

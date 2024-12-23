@@ -1,6 +1,7 @@
 """
 Non-embedded helpers, mainly for the command interpreter
 """
+
 from __future__ import annotations
 
 import hashlib

@@ -3,6 +3,7 @@ This module implements the direct connection to a micropython board.
 
 MoaT uses this to can sync the initial files and get things running.
 """
+
 from __future__ import annotations
 
 import anyio

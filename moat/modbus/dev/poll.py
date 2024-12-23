@@ -15,6 +15,7 @@ from ..server import create_server
 
 logger = logging.getLogger(__name__)
 
+
 async def dev_poll(cfg, mt_kv, *, task_status=None):
     """
     Run a device task on this set of devices, as configured by the config.
@@ -49,6 +50,7 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
 
         if mt_kv is None:
             from .device import Register as Reg  # pylint: disable=import-outside-toplevel
+
             RegS = Reg
         else:
             # The MoaT-KV client must live longer than the taskgroup
@@ -63,21 +65,20 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
             srv = create_server(s)
             servers.append(srv)
 
-            for u,v in s.get("units",{}).items():
+            for u, v in s.get("units", {}).items():
                 dev = ServerDevice(factory=RegS)
                 await dev.load(data=v)
                 srv.add_unit(u, dev)
                 nd += 1
 
-
         def do_attach(v, dev):
             p = v.get("server", None)
             if p is None:
                 return
-            if isinstance(p,int):
-                s,u = servers[p//1000],p%1000
+            if isinstance(p, int):
+                s, u = servers[p // 1000], p % 1000
             else:
-                s,u = servers[p[0]],p[1]
+                s, u = servers[p[0]], p[1]
             s.add_unit(u, dev.unit)
 
             nonlocal nd
@@ -95,7 +96,7 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
                     continue
                 dev = await make_dev(v, Reg, port=h, serial=sp, unit=u)
                 tg.start_soon(dev.poll)
-                do_attach(v,dev)
+                do_attach(v, dev)
 
         # TCP clients
         for h, hv in cfg.get("hosts", {}).items():
@@ -104,7 +105,7 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
                     continue
                 dev = await make_dev(v, Reg, host=h, unit=u)
                 tg.start_soon(dev.poll)
-                do_attach(v,dev)
+                do_attach(v, dev)
 
         # more TCP clients
         for h, hv in cfg.get("hostports", {}).items():
@@ -114,7 +115,7 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
                 for u, v in pv.items():
                     dev = await make_dev(v, Reg, host=h, port=p, unit=u)
                     tg.start_soon(dev.poll)
-                    do_attach(v,dev)
+                    do_attach(v, dev)
 
         for s in servers:
             evt = anyio.Event()

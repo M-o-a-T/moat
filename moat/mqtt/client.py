@@ -169,7 +169,14 @@ async def open_mqttclient(uri=None, client_id=None, config={}, codec=None):
             if uri is not None:
                 config["uri"] = uri
             if "uri" in config:
-                known_keys = ("uri", "cleansession", "cafile", "capath", "cadata", "extra_headers")
+                known_keys = (
+                    "uri",
+                    "cleansession",
+                    "cafile",
+                    "capath",
+                    "cadata",
+                    "extra_headers",
+                )
                 kwargs = {k: v for k, v in config.items() if k in known_keys}
                 await C.connect(**kwargs)
             yield C
@@ -670,7 +677,9 @@ class MQTTClient:
                 if kwargs.pop("autostart_tls", False):
                     try:
                         conn = await anyio.streams.tls.TLSStream.wrap(
-                            conn, ssl_context=kwargs.pop("ssl_context"), server_side=False
+                            conn,
+                            ssl_context=kwargs.pop("ssl_context"),
+                            server_side=False,
                         )
                     except BaseException:
                         with anyio.move_on_after(1, shield=True):

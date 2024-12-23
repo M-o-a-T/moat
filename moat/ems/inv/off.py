@@ -15,6 +15,7 @@ __all__ = ["InvMode_None"]
 
 class InvMode_None(InvModeBase):
     "Set the AC output to zero, then do nothing."
+
     _mode = 0
     _name = "off"
 

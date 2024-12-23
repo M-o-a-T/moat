@@ -86,19 +86,14 @@ async def _send_message_ok(
             response_json=response_json,
         )
         res = await SIGNAL_CLI.send_message(
-                message=message,
-                recipients=recipients,
-                attachments_as_files=attachments_as_files,
-                attachments_as_bytes=attachments_as_bytes,
-                cleanup_attachments=cleanup_attachments,
-                request_id="test_send_message_ok",
-            )
-        assert (res
-            .get("timestamps")
-            .get(1)
-            .get("recipients")
-            == recipients
+            message=message,
+            recipients=recipients,
+            attachments_as_files=attachments_as_files,
+            attachments_as_bytes=attachments_as_bytes,
+            cleanup_attachments=cleanup_attachments,
+            request_id="test_send_message_ok",
         )
+        assert res.get("timestamps").get(1).get("recipients") == recipients
     pook.reset()
 
 
@@ -166,9 +161,7 @@ async def _send_message_error(
                 cleanup_attachments=cleanup_attachments,
                 request_id="test_send_message_error",
             )
-            assert kwargs.get("exception", "Failed to send message") in str(
-                exc_info.value
-            )
+            assert kwargs.get("exception", "Failed to send message") in str(exc_info.value)
     pook.reset()
 
 
@@ -259,9 +252,7 @@ async def test_send_message_error_attachments_as_files():
     """
     Test unsuccessful SignalClient.send_message with attachments_as_files.
     """
-    await _send_message_error(
-        attachments_as_files=["/foo/bar.gif"], exception="FileNotFoundError"
-    )
+    await _send_message_error(attachments_as_files=["/foo/bar.gif"], exception="FileNotFoundError")
 
 
 @pytest.mark.anyio

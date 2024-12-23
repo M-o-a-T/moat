@@ -9,6 +9,7 @@ a single object.
 
 Alarm conditions are subclasses of exceptions.
 """
+
 from __future__ import annotations
 
 from moat.util import merge

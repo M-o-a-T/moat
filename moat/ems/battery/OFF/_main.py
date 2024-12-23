@@ -1,6 +1,7 @@
 """
 Battery management main code
 """
+
 from __future__ import annotations
 
 import logging

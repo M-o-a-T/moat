@@ -24,8 +24,7 @@ async def cli():
 @click.argument("path", nargs=1, type=P)
 @click.pass_obj
 async def dump(obj, path):
-    """Emit the current state as a YAML file.
-    """
+    """Emit the current state as a YAML file."""
     cfg = obj.cfg.kv.gpio
     res = {}
     if len(path) > 3:
@@ -47,8 +46,7 @@ async def dump(obj, path):
 @click.argument("path", nargs=1, type=P)
 @click.pass_obj
 async def list_(obj, path):
-    """List the next stage.
-    """
+    """List the next stage."""
     cfg = obj.cfg.kv.gpio
     res = {}
     if len(path) > 3:
@@ -177,12 +175,12 @@ async def _attr(obj, attr, value, path, eval_, res=None):
         res.chain = None
     if eval_:
         if value is None:
-            pass # value = res_delete(res, attr)
+            pass  # value = res_delete(res, attr)
         else:
             value = eval(value)  # pylint: disable=eval-used
             if isinstance(value, Mapping):
                 # replace
-                pass # value = res_delete(res, attr)
+                pass  # value = res_delete(res, attr)
                 value = value._update(attr, value=value)
             else:
                 value = res_update(res, attr, value=value)
@@ -195,9 +193,7 @@ async def _attr(obj, attr, value, path, eval_, res=None):
             yprint(val, stream=obj.stdout)
             return
         value = res_update(res, attr, value=value)
-    res = await obj.client.set(
-        cfg.prefix + path, value=value, nchain=obj.meta, chain=res.chain
-    )
+    res = await obj.client.set(cfg.prefix + path, value=value, nchain=obj.meta, chain=res.chain)
     if obj.meta:
         yprint(res, stream=obj.stdout)
 

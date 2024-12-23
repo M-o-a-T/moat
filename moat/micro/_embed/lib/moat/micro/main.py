@@ -3,6 +3,7 @@ Main entry point for satellites.
 
 Called from the root "main.py".
 """
+
 from __future__ import annotations
 
 import sys
@@ -60,7 +61,7 @@ def main(cfg: str | dict, i: attrdict, fake_end=False):
                 if isinstance(nm, int):
                     ff = (1 << 32) - 1
                     nm = (ff << (32 - nm)) & ff
-                    nm = f"{(nm>>24)&0xFF}.{(nm>>16)&0xFF}.{(nm>>8)&0xFF}.{nm&0xFF}"
+                    nm = f"{(nm >> 24) & 0xFF}.{(nm >> 16) & 0xFF}.{(nm >> 8) & 0xFF}.{nm & 0xFF}"
                 wlan.ifconfig((n["addr"], n["netmask"], n["router"], n["dns"]))
             wlan.connect(n["ap"], n.get("pwd", ""))  # connect to an AP
         else:

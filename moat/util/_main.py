@@ -102,7 +102,13 @@ y, yr   Year (2023–)
 @click.option("-d", "--dec", "--decode", type=str, help="Source format", default="json")
 @click.option("-e", "--enc", "--encode", type=str, help="Destination format", default="yaml")
 @click.option(
-    "-i", "--in", "--input", "pathi", type=click.File("r"), help="Source file", default=sys.stdin
+    "-i",
+    "--in",
+    "--input",
+    "pathi",
+    type=click.File("r"),
+    help="Source file",
+    default=sys.stdin,
 )
 @click.option(
     "-o",

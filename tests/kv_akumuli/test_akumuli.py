@@ -21,10 +21,10 @@ akumuli_model._test_hook = _hook
 
 async def test_basic():  # no autojump
     async with (
-            stdtest(test_0={"init": 125}, n=1, tocks=200) as st,
-            st.client(0) as client,
-            Tester().run() as t,
-            ):
+        stdtest(test_0={"init": 125}, n=1, tocks=200) as st,
+        st.client(0) as client,
+        Tester().run() as t,
+    ):
         await st.run(f"akumuli test add -h 127.0.0.1 -p {TCP_PORT}")
         await client.set(P("test.one.two"), value=41)
         await st.run("akumuli test at test.foo.bar add test.one.two whatever foo=bar")
@@ -44,7 +44,7 @@ async def test_basic():  # no autojump
         n = 0
         async for x in t.get_data("whatever", tags={}, t_start=time() - 1000, t_end=time() + 1000):
             n += 1
-            assert x.value in (41,42,43)
+            assert x.value in (41, 42, 43)
             assert abs(time() - x.time) < 10
         assert n > 1
         pass

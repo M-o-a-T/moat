@@ -1,6 +1,7 @@
 """
 App and command base classes
 """
+
 from __future__ import annotations
 
 from moat.micro.cmd.base import BaseCmd
@@ -8,6 +9,7 @@ from moat.micro.cmd.base import BaseCmd
 
 class ConfigError(RuntimeError):
     "generic config error exception"
+
     # pylint:disable=unnecessary-pass
 
 

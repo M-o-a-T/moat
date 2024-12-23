@@ -1,6 +1,7 @@
 """
 Basic client/server tests
 """
+
 import pytest
 
 from moat.modbus.client import ModbusClient
@@ -18,9 +19,11 @@ async def test_rw():
         srv3 = sru.add(HoldingRegisters, 38, StringValue(10, "hélþ"))
 
         async with ModbusClient() as cli:
-            async with cli.host("127.0.0.1", srv.port) as clh, clh.unit(12) as clu, clu.slot(
-                "x"
-            ) as cls:
+            async with (
+                cli.host("127.0.0.1", srv.port) as clh,
+                clh.unit(12) as clu,
+                clu.slot("x") as cls,
+            ):
                 clv1 = cls.add(HoldingRegisters, 34, LongValue())
                 clv2 = cls.add(HoldingRegisters, 36, FloatValue())
                 clv3 = cls.add(HoldingRegisters, 38, StringValue(10))

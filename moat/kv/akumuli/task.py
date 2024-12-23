@@ -40,8 +40,8 @@ async def task(client, cfg, server: AkumuliServer, paths=(), evt=None):  # pylin
                 try:
                     msg.setdefault("mode", DS.gauge)
                     tags = msg.setdefault("tags", {})
-                    for k,v in tags.items():
-                        if isinstance(str,bytes):
+                    for k, v in tags.items():
+                        if isinstance(str, bytes):
                             tags[k] = v.decode("utf-8")
                         else:
                             tags[k] = str(v)

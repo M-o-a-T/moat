@@ -74,14 +74,14 @@ class TestStringMethods(unittest.TestCase):
         error, output = zeros_like(time), zeros_like(time)
         for idx, t in enumerate(time):
             # Calculate error signal
-            e = sin(0.5*pi*t)
+            e = sin(0.5 * pi * t)
             # Get PID output signal
             u = pid.integrate(t, e)
             # Record error and output signal
             error[idx] = e
             output[idx] = u
         # Check
-        self.assertTrue(allclose(Kp*error, output, rtol=0.0, atol=1e-08))
+        self.assertTrue(allclose(Kp * error, output, rtol=0.0, atol=1e-08))
 
     def test_integrate_only_i(self):
         # Set Ki gain
@@ -95,14 +95,14 @@ class TestStringMethods(unittest.TestCase):
         error, output = zeros_like(time), zeros_like(time)
         for idx, t in enumerate(time):
             # Calculate error signal
-            e = sin(0.5*pi*t)
+            e = sin(0.5 * pi * t)
             # Get PID output
             u = pid.integrate(t, e)
             # Record error and output signal
             error[idx] = e
             output[idx] = u
         # Check
-        expected = Ki*dt*error.cumsum()
+        expected = Ki * dt * error.cumsum()
         self.assertTrue(allclose(expected, output, rtol=0.0, atol=1e-08))
 
     def test_integrate_only_d(self):
@@ -117,14 +117,14 @@ class TestStringMethods(unittest.TestCase):
         error, output = zeros_like(time), zeros_like(time)
         for idx, t in enumerate(time):
             # Calculate error signal
-            e = cos(0.5*pi*t)
+            e = cos(0.5 * pi * t)
             # Get PID output
             u = pid.integrate(t, e)
             # Record error and output signal
             error[idx] = e
             output[idx] = u
         # Check
-        expected = (1/dt) * insert(diff(error), 0, 0)
+        expected = (1 / dt) * insert(diff(error), 0, 0)
         self.assertTrue(allclose(expected, output, rtol=0.0, atol=1e-01))
 
     def test_integrate_one(self):
@@ -147,7 +147,7 @@ class TestStringMethods(unittest.TestCase):
             output[idx] = u
         # Check
 
-        expected = Kp*error + Ki*dt*(error.cumsum()-error[0])
+        expected = Kp * error + Ki * dt * (error.cumsum() - error[0])
         self.assertTrue(allclose(expected, output, rtol=0.0, atol=1e-08))
 
     def test_integrate_anti_windup(self):
@@ -167,7 +167,7 @@ class TestStringMethods(unittest.TestCase):
         integral = zeros_like(time)
         for idx, t in enumerate(time):
             # Calculate error signal
-            if t < (sim_time/2.0):
+            if t < (sim_time / 2.0):
                 e = +1.0
             else:
                 e = -1.0
@@ -185,5 +185,5 @@ class TestStringMethods(unittest.TestCase):
         self.assertAlmostEqual(upper, integral.max())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

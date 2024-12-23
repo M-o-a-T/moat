@@ -37,7 +37,12 @@ def print_exc(exc, **kw):  # pylint: disable=missing-function-docstring
 @add_serial_cfg
 @click.option("-t", "--timeout", type=float, default=0, help="Error if no more data (seconds)")
 @click.option(
-    "-T", "--initial-timeout", "timeout1", type=float, default=0, help="Error if no data (seconds)"
+    "-T",
+    "--initial-timeout",
+    "timeout1",
+    type=float,
+    default=0,
+    help="Error if no data (seconds)",
 )
 @click.pass_context
 async def monitor(ctx, timeout, timeout1, **params):
@@ -101,12 +106,12 @@ async def to(obj, retry, **params):
             if isinstance(request, WriteSingleRegisterRequest):
                 print(f"> {request}", request.value)
             else:
-                print(f"> {request}", getattr(request,"registers",""))
+                print(f"> {request}", getattr(request, "registers", ""))
             return request
 
         def mon_response(self, response):
             "response monitor"
-            print(f"< {response}", getattr(response,"registers",""))
+            print(f"< {response}", getattr(response, "registers", ""))
             self.__evt.set()
             return response
 
@@ -125,11 +130,11 @@ async def to(obj, retry, **params):
     while True:
         try:
             async with (
-                    ModbusClient() as g_a,
-                    g_a.serial(**obj.A) as A,
-                    Server(client=A, **params) as B,
-                    # anyio.create_task_group() as tg,
-                ):
+                ModbusClient() as g_a,
+                g_a.serial(**obj.A) as A,
+                Server(client=A, **params) as B,
+                # anyio.create_task_group() as tg,
+            ):
                 await B.watch(obj.timeout, obj.timeout1)
         except Exception as exc:  # pylint: disable=broad-exception-caught
             if not retry or not A or not B:

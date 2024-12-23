@@ -1,6 +1,7 @@
 """
 MoaT-KV client data model for Akumuli
 """
+
 import anyio
 from collections.abc import Mapping
 
@@ -52,6 +53,7 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
     """
     Base class for a node with data (possibly).
     """
+
     attr = None
     mode = None
     source = None
@@ -60,7 +62,7 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
     offset = 0
     tags = None
     t_min = None
-    ATTRS = ('source', 'attr', 'mode', 'series', 'tags', 't_min', 'factor', 'offset')
+    ATTRS = ("source", "attr", "mode", "series", "tags", "t_min", "factor", "offset")
 
     _work = None
     _t_last = None
@@ -71,7 +73,7 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
         return self.parent.tg
 
     def __str__(self):
-        return f"N {Path(*self.subpath[1:])} {Path(*self.source)} {Path(*self.attr)} {self.series} {' '.join('%s=%s' % (k,v) for k,v in self.tags.items())}"
+        return f"N {Path(*self.subpath[1:])} {Path(*self.source)} {Path(*self.attr)} {self.series} {' '.join('%s=%s' % (k, v) for k, v in self.tags.items())}"
 
     def _update_disable(self, off):
         self.disabled = off
@@ -100,7 +102,7 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
                         continue
                     if self.t_min is not None:
                         t = anyio.current_time()
-                        if self._t_last is not None and self._t_last+self.t_min < t:
+                        if self._t_last is not None and self._t_last + self.t_min < t:
                             continue
                         self._t_last = t
 
@@ -116,7 +118,7 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
                             )
                             continue
 
-                    val = val*self.factor+self.offset
+                    val = val * self.factor + self.offset
                     e = Entry(series=series, mode=mode, value=val, tags=tags)
                     _test_hook(e)
                     await self.server.put(e)
@@ -160,18 +162,18 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
 
 class AkumuliServer(_AkumuliBase, AttrClientEntry):
     _server = None
-    host:str = None
-    port:int = None
+    host: str = None
+    port: int = None
 
-    topic:str = None
+    topic: str = None
 
-    ATTRS=("topic",)
-    AUX_ATTRS=("host","port")
+    ATTRS = ("topic",)
+    AUX_ATTRS = ("host", "port")
 
     def __str__(self):
         res = f"{self._name}: {self.host}:{self.port}"
         if self.topic:
-            res += " Topic:"+str(self.topic)
+            res += " Topic:" + str(self.topic)
         return res
 
     @classmethod
@@ -189,9 +191,9 @@ class AkumuliServer(_AkumuliBase, AttrClientEntry):
     async def set_value(self, val):
         if val is NotGiven:
             return
-        self.host = val.get("server",{}).get("host",None)
-        self.port = val.get("server",{}).get("port",None)
-        self.topic = val.get("topic",None)
+        self.host = val.get("server", {}).get("host", None)
+        self.port = val.get("server", {}).get("port", None)
+        self.topic = val.get("topic", None)
 
     def get_value(self, **kw):
         res = super().get_value(**kw)
@@ -199,8 +201,8 @@ class AkumuliServer(_AkumuliBase, AttrClientEntry):
             s = res["server"]
         except KeyError:
             res["server"] = s = {}
-        s['host'] = self.host
-        s['port'] = self.port
+        s["host"] = self.host
+        s["port"] = self.port
         return res
 
     async def set_server(self, server):

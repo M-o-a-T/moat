@@ -12,13 +12,15 @@ from ..proto.stream import MsgpackStream
 from ..proto import Logger
 
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 async def unix_stack_iter(path="upy-moat", log=False, *, request_factory=Request):
     # an iterator for Unix-domain connections / their stacks. Yields one t,b
     # pair for each successful connection.
 
-    q=Queue(1)
+    q = Queue(1)
 
     async with TaskGroup() as tg:
         listener = await anyio.create_unix_listener(path)
@@ -32,7 +34,4 @@ async def unix_stack_iter(path="upy-moat", log=False, *, request_factory=Request
             if log:
                 t = t.stack(Logger, txt="U%d" % n)
             t = t.stack(request_factory)
-            yield t,b
-
-
-
+            yield t, b

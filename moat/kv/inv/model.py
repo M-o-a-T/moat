@@ -1,6 +1,7 @@
 """
 DistKV client data model for Inventory
 """
+
 import logging
 import struct
 from collections import deque
@@ -359,7 +360,10 @@ class Network(Cleaner, SkipNone, AttrClientEntry):
                     self._add_host(p)
 
     async def save(self, *, wait=False):  # pylint: disable=arguments-differ
-        if self.name is not None and self.root.net.by_name(self.name) not in (self, None):
+        if self.name is not None and self.root.net.by_name(self.name) not in (
+            self,
+            None,
+        ):
             raise KeyError("Duplicate name", self.name)
         if self.vlan is not None and self.root.vlan.by_name(self.vlan) is None:
             raise KeyError("Unknown VLAN", self.vlan)
@@ -914,7 +918,10 @@ class Host(Cleaner, SkipNone, AttrClientEntry):
         await self.root.cable.unlink(self, wait=wait)
 
     def get_value(self):  # pylint: disable=arguments-differ
-        if self.name is not None and self.root.net.by_name(self.name) not in (self, None):
+        if self.name is not None and self.root.net.by_name(self.name) not in (
+            self,
+            None,
+        ):
             raise KeyError("Duplicate name", self.name)
 
         val = super().get_value()
@@ -1323,7 +1330,10 @@ class Wire(Cleaner, SkipNone, AttrClientEntry):
         self.parent._add_name(self)
 
     def get_value(self):  # pylint: disable=arguments-differ
-        if self.name is not None and self.root.net.by_name(self.name) not in (self, None):
+        if self.name is not None and self.root.net.by_name(self.name) not in (
+            self,
+            None,
+        ):
             raise KeyError("Duplicate name", self.name)
 
         return super().get_value()

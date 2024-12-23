@@ -1,6 +1,7 @@
 """
 Test the whole stack
 """
+
 from __future__ import annotations
 
 import anyio
@@ -86,7 +87,7 @@ micro:
 async def test_stack(tmp_path):
     "full-stack test"
     cfg = yload(CFG, attr=True)
-    ensure_cfg("moat.micro",cfg)
+    ensure_cfg("moat.micro", cfg)
 
     here = Path(".").absolute()
     port = tmp_path / "uport"

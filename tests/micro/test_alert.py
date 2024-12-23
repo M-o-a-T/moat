@@ -1,6 +1,7 @@
 """
 Test the relay implementation
 """
+
 from __future__ import annotations
 
 import pytest
@@ -30,7 +31,7 @@ a:
 
 class Alert(_Alert):
     def __repr__(self):
-        return f"{self.__class__.__name__}:{self.data !r}"
+        return f"{self.__class__.__name__}:{self.data!r}"
 
 
 class AlertA(Alert):

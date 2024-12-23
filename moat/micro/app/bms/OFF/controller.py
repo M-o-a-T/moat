@@ -44,28 +44,28 @@ class ControllerInterface(DbusInterface):
         super().done()
 
     @_dbus.method()
-    async def GetNBatteries(self) -> 'y':
+    async def GetNBatteries(self) -> "y":
         """
         Number of batteries on this controller
         """
         return len(self.ctrl.batt)
 
     @_dbus.method()
-    async def GetVoltages(self) -> 'aa{sd}':
+    async def GetVoltages(self) -> "aa{sd}":
         """
         Voltage data for all batteries
         """
         return [b.get_voltages() for b in self.ctrl.batt]
 
     @_dbus.method()
-    async def GetCurrents(self) -> 'ad':
+    async def GetCurrents(self) -> "ad":
         """
         Voltage data for all batteries
         """
         return [b.current for b in self.ctrl.batt]
 
     @_dbus.method()
-    async def GetConfig(self) -> 'a{sv}':
+    async def GetConfig(self) -> "a{sv}":
         """
         Configuration data
         """
@@ -73,7 +73,7 @@ class ControllerInterface(DbusInterface):
         return wrap_dbus_dict(self.ctrl.cfg)
 
     @_dbus.method()
-    async def GetWork(self, poll: 'b', clear: 'b') -> 'aa{sd}':
+    async def GetWork(self, poll: "b", clear: "b") -> "aa{sd}":
         """
         Return work done
         """

@@ -94,9 +94,7 @@ async def set_(obj, acl, name, path):
     acl = set(acl)
 
     if acl - ACL:
-        raise click.UsageError(
-            f"You're trying to set an unknown ACL flag: {acl - ACL !r}"
-        )
+        raise click.UsageError(f"You're trying to set an unknown ACL flag: {acl - ACL!r}")
 
     res = await obj.client._request(
         action="get_internal",
@@ -106,7 +104,7 @@ async def set_(obj, acl, name, path):
     )
     ov = set(res.get("value", ""))
     if ov - ACL:
-        print(f"Warning: original ACL contains unknown: {ov - acl !r}", file=sys.stderr)
+        print(f"Warning: original ACL contains unknown: {ov - acl!r}", file=sys.stderr)
 
     if mode == "-" and not acl:
         res = await obj.client._request(

@@ -1,6 +1,7 @@
 """
 Inverter mode: set fixed total power
 """
+
 import logging
 
 from . import InvModeBase

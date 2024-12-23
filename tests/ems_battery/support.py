@@ -10,8 +10,10 @@ import pytest
 
 from moat.util import yload, merge
 
+
 def as_attr(d, **kw):  # noqa:D103
     return merge(yload(d, attr=True), kw, replace=True)
+
 
 ## Standard config for tests
 # apps:

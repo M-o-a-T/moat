@@ -17,6 +17,7 @@ Config options:
   Use the singleton hardware watchdog.
 
 """
+
 from __future__ import annotations
 
 import sys
@@ -115,7 +116,11 @@ class WDT:
                 if t is None:
                     raise RuntimeError("no timer")
                 if self.timeout:
-                    t.init(period=self.timeout, mode=T.ONE_SHOT, callback=lambda _: _reset())
+                    t.init(
+                        period=self.timeout,
+                        mode=T.ONE_SHOT,
+                        callback=lambda _: _reset(),
+                    )
                 try:
                     await self._ping.wait()
                 finally:

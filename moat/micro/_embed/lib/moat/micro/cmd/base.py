@@ -120,7 +120,7 @@ class BaseCmd(Base):
             self._stopped = Event()
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.path} {(id(self)>>4)&0xFFF :03x}>"
+        return f"<{self.__class__.__name__}: {self.path} {(id(self) >> 4) & 0xFFF:03x}>"
 
     async def setup(self):
         """
@@ -200,7 +200,7 @@ class BaseCmd(Base):
             """
             self.cfg.pop("_cmd", None)
             if self._starting is not None:
-                raise RuntimeError(f"Ready w/o start {self !r}")
+                raise RuntimeError(f"Ready w/o start {self!r}")
                 # self._starting.set()
                 # self._starting = None
             if self._ready is not None:

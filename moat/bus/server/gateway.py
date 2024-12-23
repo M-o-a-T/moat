@@ -12,7 +12,9 @@ from ..message import BusMessage
 from ..backend.stream import Anyio2TrioStream, StreamBusHandler
 
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 class Gateway:
     """
@@ -24,6 +26,7 @@ class Gateway:
         prefix: if the message ID starts with this it's not forwarded.
                 Required to prevent loops.
     """
+
     def __init__(self, serial, mqtt, prefix):
         if not mqtt.id.startswith(prefix):
             raise RuntimeError("My MQTT ID must start with %r" % (prefix,))
@@ -48,4 +51,3 @@ class Gateway:
                 await self.serial.send(msg)
             except TypeError:
                 logger.exception("Owch: %r", msg)
-

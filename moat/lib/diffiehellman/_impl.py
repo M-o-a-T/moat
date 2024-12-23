@@ -33,6 +33,7 @@ from .primes import PRIMES
 
 try:
     from ssl import RAND_bytes
+
     rng = RAND_bytes
 except (AttributeError, ImportError):
     raise RNGError  # pylint: disable=raise-missing-from
@@ -49,10 +50,7 @@ class DiffieHellman:
     public_key = None
     __private_key = None
 
-    def __init__(self,
-                 group=18,
-                 key_length=640):
-
+    def __init__(self, group=18, key_length=640):
         self.key_length = max(200, key_length)
         self.generator = PRIMES[group]["generator"]
         self.prime = PRIMES[group]["prime"]
@@ -66,13 +64,16 @@ class DiffieHellman:
         """
         key_length = self.key_length // 8 + 8
 
-        self.__private_key = int.from_bytes(rng(key_length), byteorder='big')
+        self.__private_key = int.from_bytes(rng(key_length), byteorder="big")
 
     def verify_public_key(self, other_public_key):
         """
         Some basic key verification
         """
-        return self.prime - 1 > other_public_key > 2 and pow(other_public_key, (self.prime - 1) // 2, self.prime) == 1
+        return (
+            self.prime - 1 > other_public_key > 2
+            and pow(other_public_key, (self.prime - 1) // 2, self.prime) == 1
+        )
 
     @requires_private_key
     def generate_public_key(self):
@@ -82,9 +83,7 @@ class DiffieHellman:
         :return: void
         :rtype: void
         """
-        self.public_key = pow(self.generator,
-                              self.__private_key,
-                              self.prime)
+        self.public_key = pow(self.generator, self.__private_key, self.prime)
 
     @requires_private_key
     def generate_shared_secret(self, other_public_key):
@@ -101,11 +100,11 @@ class DiffieHellman:
         if self.verify_public_key(other_public_key) is False:
             raise MalformedPublicKey
 
-        self.shared_secret = pow(other_public_key,
-                                 self.__private_key,
-                                 self.prime)
+        self.shared_secret = pow(other_public_key, self.__private_key, self.prime)
 
-        shared_secret_as_bytes = self.shared_secret.to_bytes(self.shared_secret.bit_length() // 8 + 1, byteorder='big')
+        shared_secret_as_bytes = self.shared_secret.to_bytes(
+            self.shared_secret.bit_length() // 8 + 1, byteorder="big"
+        )
 
         _h = sha256()
         _h.update(bytes(shared_secret_as_bytes))

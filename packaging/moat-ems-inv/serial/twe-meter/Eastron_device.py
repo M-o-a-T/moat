@@ -2,7 +2,10 @@ from copy import copy
 import dbus
 from functools import partial
 from pymodbus.client import *
-from pymodbus.register_read_message import ReadHoldingRegistersResponse, ReadInputRegistersResponse
+from pymodbus.register_read_message import (
+    ReadHoldingRegistersResponse,
+    ReadInputRegistersResponse,
+)
 import logging
 import os
 import time
@@ -17,6 +20,7 @@ from register import Reg
 from utils import *
 
 log = logging.getLogger()
+
 
 class ModbusDevice(device.ModbusDevice):
     min_timeout = 0.1
@@ -35,8 +39,9 @@ class ModbusDevice(device.ModbusDevice):
         latency = time.time() - now
 
         if rr.isError():
-            log.error('Error reading registers %#04x-%#04x: %s',
-                      start, start + count - 1, rr)
+            log.error(
+                "Error reading registers %#04x-%#04x: %s", start, start + count - 1, rr
+            )
             raise Exception(rr)
 
         for reg in regs:
@@ -56,30 +61,37 @@ class CustomName(device.CustomName):
 
 
 class EnergyMeter(ModbusDevice):
-    allowed_roles = ['grid', 'pvinverter', 'genset', 'acload']
-    default_role = 'grid'
+    allowed_roles = ["grid", "pvinverter", "genset", "acload"]
+    default_role = "grid"
     default_instance = 40
     nr_phases = None
 
     def position_setting_changed(self, service, path, value):
-        self.dbus['/Position'] = value['Value']
+        self.dbus["/Position"] = value["Value"]
 
     def init_device_settings(self, dbus):
         super().init_device_settings(dbus)
 
         self.pos_item = None
-        if self.role == 'pvinverter':
+        if self.role == "pvinverter":
             self.pos_item = self.settings.addSetting(
-                self.settings_path + '/Position', 0, 0, 2,
-                callback=self.position_setting_changed)
+                self.settings_path + "/Position",
+                0,
+                0,
+                2,
+                callback=self.position_setting_changed,
+            )
 
     def device_init_late(self):
         super().device_init_late()
 
         if self.pos_item is not None:
-            self.dbus.add_path('/Position', self.pos_item.get_value(),
-                               writeable=True,
-                               onchangecallback=self.position_changed)
+            self.dbus.add_path(
+                "/Position",
+                self.pos_item.get_value(),
+                writeable=True,
+                onchangecallback=self.position_changed,
+            )
 
     def position_changed(self, path, val):
         if not 0 <= val <= 2:
@@ -87,7 +99,8 @@ class EnergyMeter(ModbusDevice):
         self.pos_item.set_value(val)
         return True
 
+
 __all__ = [
-    'EnergyMeter',
-    'ModbusDevice',
+    "EnergyMeter",
+    "ModbusDevice",
 ]

@@ -95,9 +95,9 @@ class PID:
         """
         self.lower, self.upper = lower, upper
         if lower is None:
-            self.lower = -float('inf')
+            self.lower = -float("inf")
         if upper is None:
-            self.upper = +float('inf')
+            self.upper = +float("inf")
 
     def get_output_limits(self):
         """Get PID controller output limits for anti-windup.
@@ -150,7 +150,7 @@ class PID:
     def __check_monotonic_timestamp(self, t0, t):
         """Check timestamp is monotonic."""
         if t < t0:
-            msg = 'Current timestamp is smaller than initial timestamp.'
+            msg = "Current timestamp is smaller than initial timestamp."
             warn(msg, RuntimeWarning)
             return False
         return True
@@ -183,25 +183,26 @@ class PID:
         # Calculate integral term
         i = i0 + dt * self.Ki * e
         # anti-windup
-        i = min(max(i, self.lower-p), self.upper-p)
+        i = min(max(i, self.lower - p), self.upper - p)
         # Calculate derivative term
         d = 0.0
         if self.Kd != 0.0:
             if self.Tf > 0.0:
                 Kn = 1.0 / self.Tf
                 x = -Kn * self.Kd * e0
-                x = exp(-Kn*dt) * x - Kn * (1.0 - exp(-Kn*dt)) * self.Kd * e
+                x = exp(-Kn * dt) * x - Kn * (1.0 - exp(-Kn * dt)) * self.Kd * e
                 d = x + Kn * self.Kd * e
-                e = -(self.Tf/self.Kd) * x
+                e = -(self.Tf / self.Kd) * x
             else:
-                d = self.Kd * (e-e0) / dt
+                d = self.Kd * (e - e0) / dt
         # Set initial value for next cycle
         self.set_initial_value(t, e, i)
 
-        res = min(max(p+i+d, self.lower), self.upper)
+        res = min(max(p + i + d, self.lower), self.upper)
         if split:
-            res = (res,(p,i,d))
+            res = (res, (p, i, d))
         return res
+
 
 class CPID(PID):
     """
@@ -219,27 +220,28 @@ class CPID(PID):
 
             # setpoint change: adjust integral for best guess
             # input 20, output .8 == 20/.8
-            factor: .04 
+            factor: .04
             offset: 0
 
             state: foo
     """
+
     def __init__(self, cfg, state=None, t=None):
         """
         @cfg: our configuration. See above.
         @state: the state storage. Ours is at ``state[cfg.state]``.
         """
-        super().__init__(cfg.p,cfg.i,cfg.d,cfg.tf)
+        super().__init__(cfg.p, cfg.i, cfg.d, cfg.tf)
         self.cfg = cfg
-        self.set_output_limits(self.cfg.get("min",None),self.cfg.get("max",None))
+        self.set_output_limits(self.cfg.get("min", None), self.cfg.get("max", None))
 
         if "state" in cfg and state is not None:
             s = state.setdefault(cfg.state, attrdict())
         else:
             s = attrdict()
         self.state = s
-        self.set_initial_value(s.get("t", t or time()), s.get("e",0), s.get("i",0))
-        s.setdefault("setpoint",None)
+        self.set_initial_value(s.get("t", t or time()), s.get("e", 0), s.get("i", 0))
+        s.setdefault("setpoint", None)
 
     def setpoint(self, setpoint):
         """
@@ -252,9 +254,9 @@ class CPID(PID):
             i = 0
         osp = self.state.setpoint
         if osp is not None:
-            i -= osp*self.cfg.get("factor",0) + self.cfg.get("offset",0)
+            i -= osp * self.cfg.get("factor", 0) + self.cfg.get("offset", 0)
         self.state.setpoint = nsp = setpoint
-        i += nsp*self.cfg.get("factor",0) + self.cfg.get("offset",0)
+        i += nsp * self.cfg.get("factor", 0) + self.cfg.get("offset", 0)
         self.i0 = i
 
     def move_to(self, i, o, t=None):
@@ -266,15 +268,14 @@ class CPID(PID):
         self.t0 = t
         if self.state.setpoint is not None:
             i -= self.state.setpoint
-            self.i0 = o+i*self.Kp
+            self.i0 = o + i * self.Kp
             self.e0 = i
 
     def __call__(self, i, t=None, split=False):
         if t is None:
             t = time()
-        res = super().integrate(t, e=self.state.setpoint-i, split=split)
-        _t,e,i = self.get_initial_value()
+        res = super().integrate(t, e=self.state.setpoint - i, split=split)
+        _t, e, i = self.get_initial_value()
         self.state.e = e
         self.state.i = i
         return res
-

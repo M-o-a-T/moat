@@ -21,7 +21,11 @@ def chkc(a, b, c):
 def test_merge():
     chkm(dict(a=1, b=2, c=3), dict(b=NotGiven), dict(a=1, c=3))
     chkm(dict(a=1, b=2, c=3), dict(b=4, d=5), dict(a=1, b=4, c=3, d=5))
-    chkm(dict(a=1, b=[1, 2, 3], c=3), dict(b=(4, NotGiven, None, 6)), dict(a=1, b=[4, 3, 6], c=3))
+    chkm(
+        dict(a=1, b=[1, 2, 3], c=3),
+        dict(b=(4, NotGiven, None, 6)),
+        dict(a=1, b=[4, 3, 6], c=3),
+    )
     chkm(
         dict(a=1, b=[1, 2, 3], c=3),
         dict(b={0: 4, 1: NotGiven, 3: 6}),

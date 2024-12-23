@@ -155,6 +155,7 @@ class SerialModbusServer(BaseModbusServer):
         from pymodbus.framer.rtu_framer import (  # pylint: disable=import-outside-toplevel
             ModbusRtuFramer,
         )
+
         class Framer(ModbusRtuFramer):
             def _validate_slave_id(self, unit, single):
                 return True
@@ -183,11 +184,13 @@ class SerialModbusServer(BaseModbusServer):
                 else:
                     data = await ser.receive()
                 t2 = time.monotonic()
-                if t2-t > 0.2:
+                if t2 - t > 0.2:
                     self.framer.resetFrame()
                 t = t2
                 msgs = []
-                self.framer.processIncomingPacket(data=data, unit=0, callback=msgs.append, single=True)
+                self.framer.processIncomingPacket(
+                    data=data, unit=0, callback=msgs.append, single=True
+                )
                 for msg in msgs:
                     with anyio.fail_after(2):
                         await self._process(msg)
@@ -218,8 +221,14 @@ class SerialModbusServer(BaseModbusServer):
         # no response when broadcasting
         response.unit_id = unit
         response.transaction_id = tid
-        if isinstance(response,ExceptionResponse):
-            _logger.error("Source: %r %d %d %d", type(request), request.function_code, request.address, getattr(request,"count",1))
+        if isinstance(response, ExceptionResponse):
+            _logger.error(
+                "Source: %r %d %d %d",
+                type(request),
+                request.function_code,
+                request.address,
+                getattr(request, "count", 1),
+            )
 
         if response.should_respond and not broadcast:
             response.transaction_id = request.transaction_id
@@ -229,36 +238,36 @@ class SerialModbusServer(BaseModbusServer):
                 response, skip_encoding = self.response_manipulator(response)
             if not skip_encoding:
                 response = self.framer.buildPacket(response)
-#           if _logger.isEnabledFor(logging.DEBUG):
-#               _logger.debug("send: [%s]- %s", request, b2a_hex(response))
+            #           if _logger.isEnabledFor(logging.DEBUG):
+            #               _logger.debug("send: [%s]- %s", request, b2a_hex(response))
 
             await self._serial.send(response)
 
 
 def create_server(cfg):
-	"""
-	Create a server (TCP or serial) according to the configuration.
+    """
+    Create a server (TCP or serial) according to the configuration.
 
-	@cfg is a dict with either host/port or port/serial keys.
-	"""
-	if "serial" in cfg:
-		port = cfg.get("port", None)
-		kw = cfg["serial"]
-		if port is not None:
-			kw["port"] = port
-		return SerialModbusServer(**kw)
-	elif "host" in cfg or ("port" in cfg and isinstance(cfg["port"],int)):
-		kw = {}
-		for k,v in cfg.items():
-			if isinstance(k,str):
-				if k == "units":
-					continue
-				if k == "host":
-					k = "address"
-				kw[k] = v
-		return ModbusServer(**kw)
-	else:
-		raise ValueError("neither serial nor TCP config found")
+    @cfg is a dict with either host/port or port/serial keys.
+    """
+    if "serial" in cfg:
+        port = cfg.get("port", None)
+        kw = cfg["serial"]
+        if port is not None:
+            kw["port"] = port
+        return SerialModbusServer(**kw)
+    elif "host" in cfg or ("port" in cfg and isinstance(cfg["port"], int)):
+        kw = {}
+        for k, v in cfg.items():
+            if isinstance(k, str):
+                if k == "units":
+                    continue
+                if k == "host":
+                    k = "address"
+                kw[k] = v
+        return ModbusServer(**kw)
+    else:
+        raise ValueError("neither serial nor TCP config found")
 
 
 class RelayServer:
@@ -315,11 +324,9 @@ class ModbusServer(BaseModbusServer):
         self.decoder = ServerDecoder()
         self.framer = ModbusSocketFramer
         self.address = address or "localhost"
-        self.port = (
-            port if port is not None else 502
-        )
+        self.port = port if port is not None else 502
 
-    async def serve(self, opened:anyio.Event|None=None):
+    async def serve(self, opened: anyio.Event | None = None):
         """Run this server.
         Sets the `opened` event, if given, as soon as the server port is open.
         """

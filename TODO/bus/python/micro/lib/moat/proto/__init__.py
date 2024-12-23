@@ -7,8 +7,10 @@ from ..compat import TaskGroup
 try:
     import anyio
 except ImportError:
+
     class EndOfStream(Exception):
         pass
+
     class BrokenResourceError(Exception):
         pass
 else:
@@ -39,31 +41,36 @@ else:
 # unreliable transport will wait for the message to be confirmed. Sending
 # may fail.
 
+
 class RemoteError(RuntimeError):
     pass
+
 
 class SilentRemoteError(RemoteError):
     pass
 
+
 class ChannelClosed(RuntimeError):
     pass
+
 
 class NotImpl:
     def __init__(self, parent):
         self.parent = parent
 
-    async def dispatch(self,*a):
+    async def dispatch(self, *a):
         raise NotImplementedError(f"{self.parent} {repr(a)}")
 
     async def error(self, exc):
         raise RuntimeError()
 
     async def run(self):
-        print("RUN of",self.__class__.__name__)
+        print("RUN of", self.__class__.__name__)
         pass
 
     async def start_sub(self, tg):
         pass
+
 
 class _Stacked:
     def __init__(self, parent):
@@ -71,7 +78,7 @@ class _Stacked:
         self.child = NotImpl(self)
 
     def stack(self, cls, *a, **k):
-        sup = cls(self, *a,**k)
+        sup = cls(self, *a, **k)
         self.child = sup
         return sup
 
@@ -118,42 +125,41 @@ class Logger(_Stacked):
         else:
             print(f"X:{self.txt} stop")
 
-    async def send(self,a,m=None):
+    async def send(self, a, m=None):
         if m is None:
-            m=a
-            a=None
+            m = a
+            a = None
 
-        if isinstance(m,dict):
-            mm=" ".join(f"{k}={repr(v)}" for k,v in m.items())
+        if isinstance(m, dict):
+            mm = " ".join(f"{k}={repr(v)}" for k, v in m.items())
         else:
-            mm=repr(m)
+            mm = repr(m)
         if a is None:
             print(f"S:{self.txt} {mm}")
             await self.parent.send(m)
         else:
             print(f"S:{self.txt} {a} {mm}")
-            await self.parent.send(a,m)
+            await self.parent.send(a, m)
 
-    async def dispatch(self,a,m=None):
+    async def dispatch(self, a, m=None):
         if m is None:
-            m=a
-            a=None
+            m = a
+            a = None
 
-        mm=" ".join(f"{k}={repr(v)}" for k,v in m.items())
+        mm = " ".join(f"{k}={repr(v)}" for k, v in m.items())
         if a is None:
             print(f"D:{self.txt} {mm}")
             await self.child.dispatch(m)
         else:
             print(f"D:{self.txt} {a} {mm}")
-            await self.child.dispatch(a,m)
+            await self.child.dispatch(a, m)
         print(f"{self.txt}:\n{repr(vars(self.child))}")
 
     async def recv(self):
         msg = await self.parent.recv()
-        if isinstance(msg,dict):
-            mm=" ".join(f"{k}={repr(v)}" for k,v in msg.items())
+        if isinstance(msg, dict):
+            mm = " ".join(f"{k}={repr(v)}" for k, v in msg.items())
         else:
-            mm=msg
+            mm = msg
         print(f"R:{self.txt} {mm}")
         return msg
-

@@ -3,7 +3,6 @@
 Test for SignalClient.update_profile
 """
 
-
 import pook
 import pytest
 

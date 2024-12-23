@@ -60,6 +60,7 @@ hostports:
   
 """
 
+
 @pytest.mark.trio
 async def test_kv_poll(autojump_clock):  # pylint: disable=unused-argument
     cfg1 = yload(cfg1_, attr=True)
@@ -70,10 +71,10 @@ async def test_kv_poll(autojump_clock):  # pylint: disable=unused-argument
     del cfg2.hostports.localhost.PORT
 
     async with (
-            stdtest(args={"init": 123}, tocks=50) as st,
-            st.client() as c,
-            trio.open_nursery() as tg,
-        ):
+        stdtest(args={"init": 123}, tocks=50) as st,
+        st.client() as c,
+        trio.open_nursery() as tg,
+    ):
         assert (await c.get(P(":"))).value == 123
         await c.set(P("a.srv.src"), value=42)
         cfg1 = await tg.start(dev_poll, cfg1, c)
@@ -89,12 +90,12 @@ async def test_kv_poll(autojump_clock):  # pylint: disable=unused-argument
         await trio.sleep(2)
 
         rv = await c.get(P("a.srv.dst"))
-        #assert rv == 43
-        #assert reg.value_w == 44
-        #assert reg.value == 43
+        # assert rv == 43
+        # assert reg.value_w == 44
+        # assert reg.value == 43
 
         tg.cancel_scope.cancel()
-        return # owch
+        return  # owch
 
         async with (
             ModbusClient() as g,
@@ -104,10 +105,6 @@ async def test_kv_poll(autojump_clock):  # pylint: disable=unused-argument
         ):
             v = s.add(HoldingRegisters, 12342, IntValue)
             res = await s.getValues()
-            pass # v,res
+            pass  # v,res
 
-
-        pass # ex
-
-
-
+        pass  # ex

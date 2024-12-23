@@ -3,7 +3,6 @@
 Test for SignalClient.send_reaction
 """
 
-
 import pook
 import pytest
 

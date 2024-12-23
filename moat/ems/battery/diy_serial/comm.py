@@ -3,6 +3,7 @@ Battery communications for diyBMS-MoaT messages
 """
 
 from __future__ import annotations
+
 #
 import logging
 from contextlib import asynccontextmanager
@@ -36,7 +37,8 @@ class BattComm(BaseCmd):
     This app accepts calls with control packets, encodes and forwards them
     to the link, and returns the reply packets.
     """
-    n_cells:int = None
+
+    n_cells: int = None
 
     def __init__(self, cfg):
         super().__init__(cfg)
@@ -56,7 +58,7 @@ class BattComm(BaseCmd):
         self.set_ready()
         await self._read()
 
-    async def cmd(self, p, s=None, e=None, bc:bool=False):
+    async def cmd(self, p, s=None, e=None, bc: bool = False):
         """
         Send message(s) @p to the cells @s through @e.
 
@@ -66,7 +68,7 @@ class BattComm(BaseCmd):
 
         err = None
         max_t = self.n_cells * 300 if self.n_cells else 5000
-        if not isinstance(p,(list,tuple)):
+        if not isinstance(p, (list, tuple)):
             p = (p,)
 
         for n in range(self.retries):
@@ -129,7 +131,7 @@ class BattComm(BaseCmd):
 
             # A byte needs ten bit slots to transmit. However, the modules'
             # baud rates can be slightly off, which increases the delay
-            self.t = t + (10000 + 500*n_cells) * mlen / self.rate
+            self.t = t + (10000 + 500 * n_cells) * mlen / self.rate
             await self.comm.sb(m=msg)
 
         try:

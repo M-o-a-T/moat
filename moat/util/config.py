@@ -10,14 +10,15 @@ from .path import Path
 from .dict import attrdict
 from .merge import merge
 
-__all__ = ["CFG","ensure_cfg"]
+__all__ = ["CFG", "ensure_cfg"]
 CFG = attrdict()
 
-def ensure_cfg(path: str|Path, cfg=CFG) -> dict:
+
+def ensure_cfg(path: str | Path, cfg=CFG) -> dict:
     """
     Ensure that a submodule's default configuration is available.
     """
-    if isinstance(path,str):
+    if isinstance(path, str):
         path = path.split(".")
 
     def _load(cfg, p):
@@ -33,9 +34,8 @@ def ensure_cfg(path: str|Path, cfg=CFG) -> dict:
             if fn.is_file():
                 merge(cfg, yload(fn, attr=True))
 
-
     try:
-        EXT = cfg.setdefault("ext",attrdict())
+        EXT = cfg.setdefault("ext", attrdict())
         EXT["moat"] = cfg
 
         if "logging" not in cfg:
@@ -46,7 +46,7 @@ def ensure_cfg(path: str|Path, cfg=CFG) -> dict:
             cc = cc.setdefault(path[n], attrdict())
             if cc:
                 continue
-            _load(cc, ".".join(path[:n+1]))
+            _load(cc, ".".join(path[: n + 1]))
 
     finally:
         del EXT["moat"]

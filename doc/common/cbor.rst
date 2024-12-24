@@ -107,6 +107,8 @@ to extract metadata (e.g. range of record, file creation date, etc.).
 
 This way, ``file`` can show basic data about the file, using these magic entries:
 
+.. code-block::
+
     0        string/3b  \xd9\xd9\xf7     CBOR
     >3       string/5b  \xdaMoaT         MoaT file
     >>8      string/2b  \x82\x78         

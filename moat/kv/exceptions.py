@@ -3,7 +3,7 @@ This module affords all MoaT-KV exceptions.
 """
 
 # pylint: disable=unnecessary-pass
-
+from __future__ import annotations
 
 error_types = {}
 
@@ -39,8 +39,6 @@ class ClientError(MoaTKVError):
 
     etype: str = None
 
-    pass
-
 
 @_typed
 class ClientChainError(ClientError):
@@ -48,16 +46,12 @@ class ClientChainError(ClientError):
 
     etype = "chain"
 
-    pass
-
 
 @_typed
 class ClientConnectionError(ClientError):
     """Some connection error"""
 
     etype = "conn"
-
-    pass
 
 
 class ServerClosedError(ServerError):

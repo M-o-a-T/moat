@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 import anyio
 
 from ..codecs import decode_string, encode_string
@@ -63,7 +64,7 @@ class UnsubscribePacket(MQTTPacket):
         else:
             if fixed.packet_type != UNSUBSCRIBE:
                 raise MoatMQTTException(
-                    "Invalid fixed packet type %s for UnsubscribePacket init" % fixed.packet_type
+                    "Invalid fixed packet type %s for UnsubscribePacket init" % fixed.packet_type,
                 )
             header = fixed
 

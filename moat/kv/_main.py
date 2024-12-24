@@ -4,11 +4,12 @@ Basic DistKV support
 
 """
 
+from __future__ import annotations
+
 import logging
-from pathlib import Path
 
 import asyncclick as click
-from moat.util import attrdict, combine_dict, load_subgroup, yload
+from moat.util import attrdict, combine_dict, load_subgroup, CFG, ensure_cfg
 
 from moat.kv.auth import gen_auth
 from moat.kv.client import client_scope
@@ -16,7 +17,7 @@ from moat.kv.client import client_scope
 logger = logging.getLogger(__name__)
 
 
-CFG = yload(Path(__file__).parent / "_config.yaml", attr=True)
+ensure_cfg("moat.kv")
 
 
 class NullObj:
@@ -40,12 +41,8 @@ class NullObj:
         raise self._exc
 
 
-@load_subgroup(
-    sub_pre="moat.kv.command", sub_post="cli", ext_pre="moat.kv", ext_post="_main.cli"
-)
-@click.option(
-    "-h", "--host", default=None, help=f"Host to use. Default: {CFG.kv.conn.host}"
-)
+@load_subgroup(sub_pre="moat.kv.command", sub_post="cli", ext_pre="moat.kv", ext_post="_main.cli")
+@click.option("-h", "--host", default=None, help=f"Host to use. Default: {CFG.kv.conn.host}")
 @click.option(
     "-p",
     "--port",

@@ -19,7 +19,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from enum import IntEnum
-from struct import Struct, pack, unpack
+from struct import Struct
 from typing import ClassVar
 
 from moat.util import as_proxy
@@ -43,10 +43,12 @@ try:
 except TypeError:
     _dcc = dataclass()
 
+
 def _dc(name):
     def dch(proc):
         as_proxy(f"eb_ds_{name}", proc)
         return _dcc(proc)
+
     return dch
 
 
@@ -80,18 +82,18 @@ class PacketHeader:
     S: ClassVar = Struct("BBBB")
     n_seq: ClassVar = 8
 
-    def __post_init__(self, *a,**k):
-        if not isinstance(self.start,int):
+    def __post_init__(self, *a, **k):
+        if not isinstance(self.start, int):
             breakpoint()
 
     @classmethod
-    def decode(cls, msg:bytes):
+    def decode(cls, msg: bytes):
         """decode a message to header + rest"""
         off = cls.S.size
         hdr = cls.from_bytes(msg[0:off])
         return hdr, memoryview(msg)[off:]
 
-    def decode_all(self, msg:bytes) -> list[_Reply]:
+    def decode_all(self, msg: bytes) -> list[_Reply]:
         """Decode the packets described by this header.
 
         This method is used by the server.
@@ -117,18 +119,17 @@ class PacketHeader:
             raise MessageError(bytes(msg))
         return pkt
 
-
     def encode(self):
         return self.to_bytes()
 
-    def encode_all(self, pkt:list[_Request]|_Request, end=None):
+    def encode_all(self, pkt: list[_Request] | _Request, end=None):
         "encode me, plus some packets, to a message"
         if not isinstance(pkt, (list, tuple)):
             pkt = (pkt,)
         if self.command is None:
             self.command = pkt[0].T
         for p in pkt:
-            if p.T != self.command:
+            if self.command != p.T:
                 raise ValueError("Needs same type, not %s vs %s", p.T, p)
 
         if self.start is None or self.broadcast:
@@ -139,12 +140,11 @@ class PacketHeader:
             self.cells = end - self.start
             if pkt[0].S.size > 0 and len(pkt) != self.cells + 1:
                 raise ValueError(
-                    "Wrong packet count, %d vs %d for %s" % (len(pkt), self.cells + 1, pkt[0])
+                    "Wrong packet count, %d vs %d for %s" % (len(pkt), self.cells + 1, pkt[0]),
                 )
         else:
             self.cells = len(pkt) - 1
         return self.to_bytes() + b"".join(p.to_bytes() for p in pkt)
-
 
     @classmethod
     def from_bytes(cls, data):
@@ -205,7 +205,7 @@ class _Request(NullData):
         return cls()
 
     def to_bytes(self):
-        return b''
+        return b""
 
     def __setstate__(self, data):
         pass
@@ -231,6 +231,7 @@ class _Reply(NullData):
 
     def __getstate__(self):
         return dict()
+
 
 @_dc("cfg>")
 class RequestConfig:
@@ -261,6 +262,7 @@ class RequestConfig:
     def __getstate__(self):
         return dict(vc=self.voltageCalibration, tr=self.bypassTempRaw, vr=self.bypassVoltRaw)
 
+
 @_dc("pidc>")
 class RequestWritePIDconfig:
     p: int = None
@@ -280,6 +282,7 @@ class RequestWritePIDconfig:
 
     def __getstate__(self):
         return dict(p=self.kp, i=self.ki, d=self.kd)
+
 
 @_dc("v<")
 class ReplyVoltages(_Reply):
@@ -307,7 +310,7 @@ class ReplyVoltages(_Reply):
         # self.bypassRaw = m["br"]
 
     def __getstate__(self):
-        m=dict(vr=self.voltRaw&0x1FFF)
+        m = dict(vr=self.voltRaw & 0x1FFF)
         # if self.bypassRaw:
         #     m["br"] = self.bypassRaw
         if self.voltRaw & 0x8000:
@@ -315,6 +318,7 @@ class ReplyVoltages(_Reply):
         if self.voltRaw & 0x4000:
             m["ot"] = True
         return m
+
 
 @_dc("t<")
 class ReplyTemperature(_Reply):
@@ -372,6 +376,7 @@ class ReplyCounters(_Reply):
 
     def __getstate__(cls):
         return dict(nr=self.received, nb=self.bad)
+
 
 @_dc("set<")
 class ReplyReadSettings(_Reply):
@@ -437,6 +442,7 @@ class ReplyReadSettings(_Reply):
             lR=self.loadResRaw,
         )
 
+
 @_dc("t<")
 class RequestTiming:
     timer: int = None
@@ -453,11 +459,12 @@ class RequestTiming:
     def to_bytes(self):
         return self.S.pack(self.timer & 0xFFFF)
 
-    def __setstate__(self,m):
+    def __setstate__(self, m):
         self.timer = m.get("t", None)
 
     def __getstate__(self):
         return dict(t=self.timer)
+
 
 @_dc("t>")
 class ReplyTiming(RequestTiming):
@@ -485,6 +492,7 @@ class ReplyBalanceCurrentCounter(_Reply):
 
     def __getstate__(self):
         return dict(c=self.counter)
+
 
 @_dc("pid<")
 class ReplyReadPIDconfig(_Reply):

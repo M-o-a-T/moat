@@ -7,6 +7,7 @@ This code is here for support of testing. It does not talk to distkv.
 See ``tests/test_basic.py`` for code that does.
 
 """
+
 import os
 import trio
 import tempfile

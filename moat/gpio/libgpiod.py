@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # Copyright (c) 2018 Matthias Urlichs <matthias@urlichs.de>
 # Based on work Copyright (c) 2018 Steven P. Goldsmith
 """
@@ -9,6 +7,8 @@ libgpiod CFFI interface
 This is a stripped-down version which doesn't do "bulk" access (no point IMHO)
 and doesn't implement an event loop (that's Trio's job).
 """
+
+from __future__ import annotations
 
 from cffi import FFI
 
@@ -312,7 +312,7 @@ struct gpiod_line *
 gpiod_line_iter_next(struct gpiod_line_iter *iter);
 
 const char *gpiod_version_string(void);
-"""
+""",
 )
 
 try:

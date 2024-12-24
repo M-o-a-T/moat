@@ -1,8 +1,3 @@
-__path__ = __import__("pkgutil").extend_path(__path__, __name__)
+from __future__ import annotations
 
-try:
-	from moat._dev_fix import _fix
-except ImportError:
-	pass
-else:
-	_fix()
+__path__ = __import__("pkgutil").extend_path(__path__, __name__)

@@ -1,6 +1,7 @@
 """
 RTC support for main
 """
+
 from __future__ import annotations
 
 import machine

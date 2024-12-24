@@ -1,4 +1,5 @@
 # command line interface helpers for objects
+from __future__ import annotations
 
 import logging
 import sys
@@ -54,9 +55,7 @@ class _InvSub:
     def id_arg(self, proc):
         if self.id_name is None:
             return proc
-        return click.argument(
-            self.id_name, type=self.id_typ, callback=self.id_cb, nargs=1
-        )(proc)
+        return click.argument(self.id_name, type=self.id_typ, callback=self.id_cb, nargs=1)(proc)
 
     def apply_aux(self, proc):
         for t in self.aux:
@@ -106,13 +105,13 @@ def std_command(cli, *a, **kw):
         name=tname,
         invoke_without_command=True,
         short_help=tinv.short_help,
-        help="""\
-            Manager for {tlname}s.
+        help=f"""\
+            Manager for {tinv.long_name}s.
 
             \b
             Use '… {tname} -' to list all entries.
             Use '… {tname} NAME' to show details of a single entry.
-            """.format(tname=tname, tlname=tinv.long_name),
+            """,
     )
     @click.argument("name", type=str, nargs=1)
     @click.pass_context
@@ -123,9 +122,7 @@ def std_command(cli, *a, **kw):
 
         if name == "-":
             if ctx.invoked_subcommand is not None:
-                raise click.BadParameter(
-                    "The name '-' triggers a list and precludes subcommands."
-                )
+                raise click.BadParameter("The name '-' triggers a list and precludes subcommands.")
             cnt = 0
             for n in this(obj).all_children if tinv.list_recursive else this(obj):
                 cnt += 1
@@ -152,9 +149,7 @@ def std_command(cli, *a, **kw):
                                 else:
                                     vv = "-"
                             elif isinstance(vv, dict):
-                                vv = " ".join(
-                                    "%s=%s" % (x, y) for x, y in sorted(vv.items())
-                                )
+                                vv = " ".join("%s=%s" % (x, y) for x, y in sorted(vv.items()))
                             print("%s %s %s" % (k, kk, vv), file=obj.stdout)
                     else:
                         print("%s %s" % (k, v), file=obj.stdout)

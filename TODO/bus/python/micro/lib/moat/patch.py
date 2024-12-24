@@ -1,6 +1,7 @@
 from uasyncio.stream import Stream
 from uasyncio import core as _core
 
+
 async def _write(self, buf):
     # monkeypatch the stream write code
     mv = memoryview(buf)
@@ -11,6 +12,7 @@ async def _write(self, buf):
         if ret is not None:
             off += ret
 
+
 def _patch():
     try:
         del Stream.drain
@@ -18,4 +20,3 @@ def _patch():
         pass
     else:
         Stream.write = _write
-

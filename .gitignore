@@ -67,9 +67,11 @@ __pycache__/
 *.swp
 /.tested.yaml
 /tests/plugins/test.db
+/_test.log
 .tox/
 /*.upload
 /var/
 /.venv
 /venv/
 /wheels/
+/tests/mqtt/plugins/test.db

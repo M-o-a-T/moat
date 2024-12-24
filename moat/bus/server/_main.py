@@ -7,23 +7,23 @@ from __future__ import annotations
 
 import asyncclick as click
 from anyio_serial import Serial
-from contextlib import asynccontextmanager
 from distmqtt.client import open_mqttclient
 from distmqtt.codecs import MsgPackCodec
 
 from .server import Server
-from ..message import BusMessage
 from ..backend.stream import Anyio2TrioStream, StreamBusHandler
 
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 class MqttServer(Server):
     def __init__(self, serial, mqtt_in, topic_out):
         self.serial = serial
         self.mqtt = mqtt_in
         self.topic = topic_out
-        self.bus = StreamBusHandler(serial,"Ser")
+        self.bus = StreamBusHandler(serial, "Ser")
         super().__init__(self.bus)
 
     async def reader(self):
@@ -31,15 +31,29 @@ class MqttServer(Server):
             logger.debug("Reader started")
             async for msg in b:
                 logger.debug("IN: %r", msg)
-                await self.mqtt.publish(topic=self.topic, message=dict(
-                    src=msg.src, dst=msg.dst, code=msg.code, data=msg.data,
-                    ))
+                await self.mqtt.publish(
+                    topic=self.topic,
+                    message=dict(
+                        src=msg.src,
+                        dst=msg.dst,
+                        code=msg.code,
+                        data=msg.data,
+                    ),
+                )
 
-async def run(uri='mqtt://localhost/', topic_in="test/moat/in", topic_out="test/moat/out", server_id=1, port="/dev/ttyUSB0", baud=57600):
+
+async def run(
+    uri="mqtt://localhost/",
+    topic_in="test/moat/in",
+    topic_out="test/moat/out",
+    server_id=1,
+    port="/dev/ttyUSB0",
+    baud=57600,
+):
     async with open_mqttclient() as C:
         await C.connect(uri=uri)
         async with Serial(port=port, baudrate=baud) as S:
-            S=Anyio2TrioStream(S)
+            S = Anyio2TrioStream(S)
             async with C.subscription(topic_in, codec=MsgPackCodec()) as CH:
                 async with MqttServer(S, CH, topic_out) as CM:
                     async with trio.open_nursery() as n:
@@ -50,12 +64,22 @@ async def run(uri='mqtt://localhost/', topic_in="test/moat/in", topic_out="test/
 
 
 @cli.command("server")
-@click.option("-u","--uri", default='mqtt://localhost/', help="URI of MQTT server")
-@click.option("-i","--topic-in", default='test/moat/in', help="Topic to send incoming messages to")
-@click.option("-o","--topic-out", default='test/moat/out', help="Topic to read outgoing messages from")
-@click.option("-p","--port", default='/dev/ttyUSB0', help="Serial port to access")
-@click.option("-b","--baud", type=int, default=57600, help="Serial port baud rate")
-@click.option("-d","--debug", is_flag=True, help="Debug?")
+@click.option("-u", "--uri", default="mqtt://localhost/", help="URI of MQTT server")
+@click.option(
+    "-i",
+    "--topic-in",
+    default="test/moat/in",
+    help="Topic to send incoming messages to",
+)
+@click.option(
+    "-o",
+    "--topic-out",
+    default="test/moat/out",
+    help="Topic to read outgoing messages from",
+)
+@click.option("-p", "--port", default="/dev/ttyUSB0", help="Serial port to access")
+@click.option("-b", "--baud", type=int, default=57600, help="Serial port baud rate")
+@click.option("-d", "--debug", is_flag=True, help="Debug?")
 async def _main(debug, **kw):
     """
     Simple message transfer from MQTT to MoaT-bus-serial and back.

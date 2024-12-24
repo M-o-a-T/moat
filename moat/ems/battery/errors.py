@@ -1,13 +1,17 @@
+from __future__ import annotations
 from moat.util import as_proxy
 
-@as_proxy('err_eb_NSC')
+
+@as_proxy("err_eb_NSC")
 class NoSuchCell(RuntimeError):
-        pass
+    pass
 
-@as_proxy('err_eb_ME')
+
+@as_proxy("err_eb_ME")
 class MessageError(RuntimeError):
-        pass
+    pass
 
-@as_proxy('err_eb_ML')
+
+@as_proxy("err_eb_ML")
 class MessageLost(RuntimeError):
-        pass
+    pass

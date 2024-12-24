@@ -3,6 +3,7 @@ This module's job is to run code, resp. to keep it running.
 
 
 """
+from __future__ import annotations
 
 import time
 from collections.abc import Mapping
@@ -131,6 +132,7 @@ for _c in (
 
 _CLASSES["NotGiven"] = NotGiven  # ellipsis
 
+
 class CallAdmin:
     """
     This class collects some standard tasks which async MoaT-KV-embedded
@@ -169,9 +171,9 @@ class CallAdmin:
         """Called by the runner to actually execute the code."""
         self._logger.debug("Start %s with %s", self._runner._path, self._runner.code)
         async with (
-                anyio.create_task_group() as tg,
-                AsyncExitStack() as stack,
-                ):
+            anyio.create_task_group() as tg,
+            AsyncExitStack() as stack,
+        ):
             self._stack = stack
             self._taskgroup = tg
             self._runner.scope = sc = tg.cancel_scope
@@ -249,7 +251,7 @@ class CallAdmin:
             path = self._path
         r = await self._err.record_error("run", path, **kw)
         await self._err.root.wait_chain(r.chain)
-        raise ErrorRecorded()
+        raise ErrorRecorded
 
     async def open_context(self, ctx):
         return await self._stack.enter_async_context(ctx)
@@ -294,9 +296,7 @@ class CallAdmin:
                         async with slf.client.watch(path, **kw) as watcher:
                             yield watcher
                     else:
-                        raise RuntimeError(
-                            f"What should I do with a path marked {path.mark !r}?"
-                        )
+                        raise RuntimeError(f"What should I do with a path marked {path.mark!r}?")
 
                 with anyio.CancelScope() as sc:
                     slf.scope = sc
@@ -318,9 +318,7 @@ class CallAdmin:
                             elif msg.get("state", "") == "uptodate":
                                 slf.admin._n_watch_seen += 1
                                 if slf.admin._n_watch_seen == slf.admin._n_watch:
-                                    await slf.runner.send_event(
-                                        ReadyMsg(slf.admin._n_watch_seen)
-                                    )
+                                    await slf.runner.send_event(ReadyMsg(slf.admin._n_watch_seen))
 
             def cancel(slf):
                 if slf.scope is None:
@@ -361,7 +359,7 @@ class CallAdmin:
         if path.mark == "r":
             return await self.send(path, value)
         elif path.mark:
-            raise RuntimeError(f"What should I do with a path marked {path.mark !r}")
+            raise RuntimeError(f"What should I do with a path marked {path.mark!r}")
 
         if isinstance(path, (tuple, list)):
             path = Path.build(path)
@@ -556,7 +554,9 @@ class RunnerEntry(AttrClientEntry):
                     raise RuntimeError(f"already running on {state.node}")
                 code = self.root.code.follow(self.code, create=False)
                 data = combine_dict(
-                    self.data or {}, {} if code.value is NotGiven else code.value.get("default", {}), deep=True
+                    self.data or {},
+                    {} if code.value is NotGiven else code.value.get("default", {}),
+                    deep=True,
                 )
 
                 if code.is_async:
@@ -574,9 +574,7 @@ class RunnerEntry(AttrClientEntry):
 
                 await state.save(wait=True)
                 if state.node != state.root.name:
-                    raise RuntimeError(
-                        "Rudely taken away from us.", state.node, state.root.name
-                    )
+                    raise RuntimeError("Rudely taken away from us.", state.node, state.root.name)
 
                 data["_self"] = calls = CallAdmin(self, state, data)
                 res = await calls._run(code, data)
@@ -600,7 +598,7 @@ class RunnerEntry(AttrClientEntry):
             c, self._comment = self._comment, None
             with anyio.move_on_after(5, shield=True):
                 r = await self.root.err.record_error(
-                    "run", self._path, exc=exc, data=self.data, comment=c
+                    "run", self._path, exc=exc, data=self.data, comment=c,
                 )
                 if r is not None:
                     await self.root.err.wait_chain(r.chain)
@@ -803,7 +801,7 @@ class StateEntry(AttrClientEntry):
         self.node = None
         self.backoff = min(20, self.backoff + 1)
         await self.root.runner.err.record_error(
-            "run", self.runner._path, message="Runner restarted"
+            "run", self.runner._path, message="Runner restarted",
         )
         await self.save()
 
@@ -848,7 +846,7 @@ class StateEntry(AttrClientEntry):
             return
         elif self.node is None or n == self.root.runner.name:
             # Owch. Our job got taken away from us.
-            run._comment = f"Cancel: Node set to {self.node !r}"
+            run._comment = f"Cancel: Node set to {self.node!r}"
             run.scope.cancel()
         elif n is not None:
             logger.warning(
@@ -918,7 +916,7 @@ class StateRoot(MirrorRoot):
                 await self.update(val)
             else:
                 await self.client.msg_send(
-                    "run", {"group": self.runner.group, "time": t, "node": self.name}
+                    "run", {"group": self.runner.group, "time": t, "node": self.name},
                 )
 
 
@@ -961,9 +959,7 @@ class _BaseRunnerRoot(ClientRoot):
             cfg_ = client._cfg["runner"]
         else:
             cfg_ = combine_dict(cfg, client._cfg["runner"])
-        return await super().as_handler(
-            client, subpath=subpath, _subpath=subpath, cfg=cfg_, **kw
-        )
+        return await super().as_handler(client, subpath=subpath, _subpath=subpath, cfg=cfg_, **kw)
 
     async def run_starting(self):
         from .code import CodeRoot
@@ -984,7 +980,7 @@ class _BaseRunnerRoot(ClientRoot):
 
     async def _state_runner(self):
         self.state = await StateRoot.as_handler(
-            self.client, cfg=self._cfg, subpath=self._x_subpath, key="state"
+            self.client, cfg=self._cfg, subpath=self._x_subpath, key="state",
         )
 
     @property
@@ -1014,7 +1010,7 @@ class _BaseRunnerRoot(ClientRoot):
 
         Its job is to control which tasks are started.
         """
-        raise RuntimeError("You want to override me." "")
+        raise RuntimeError("You want to override me.")
 
     async def trigger_rescan(self):
         """Tell the _run_actor task to rescan our job list prematurely"""
@@ -1096,9 +1092,7 @@ class AnyRunnerRoot(_BaseRunnerRoot):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         self.group = (
-            P(self.client.config.server["root"]) + P(self._cfg["name"])
-            | "any"
-            | self._path[-1]
+            P(self.client.config.server["root"]) + P(self._cfg["name"]) | "any" | self._path[-1]
         )
 
     def get_node(self, name):
@@ -1116,7 +1110,7 @@ class AnyRunnerRoot(_BaseRunnerRoot):
         Monitor the Actor state, run a :meth:`_run_now` subtask whenever we're 'it'.
         """
         async with ClientActor(
-            self.client, self.name, topic=self.group, cfg=self._cfg["actor"]
+            self.client, self.name, topic=self.group, cfg=self._cfg["actor"],
         ) as act:
             self._act = act
 
@@ -1176,7 +1170,7 @@ class AnyRunnerRoot(_BaseRunnerRoot):
         self._stale_times.append(cur)
         if self._stale_times[0] > cur - self.max_age:
             return
-        if len(self._stale_times) <= 2*self._cfg["actor"]["n_hosts"]+1:
+        if len(self._stale_times) <= 2 * self._cfg["actor"]["n_hosts"] + 1:
             return
         cut = self._stale_times.pop(0)
 
@@ -1278,9 +1272,7 @@ class SingleRunnerRoot(_BaseRunnerRoot):
         async with anyio.create_task_group() as tg:
             age_q = create_queue(1)
 
-            async with ClientActor(
-                self.client, self.name, topic=self.group, cfg=self._cfg
-            ) as act:
+            async with ClientActor(self.client, self.name, topic=self.group, cfg=self._cfg) as act:
                 self._act = act
                 tg.start_soon(self._age_notifier, age_q)
                 await self.spawn(self._run_now)
@@ -1330,9 +1322,7 @@ class AllRunnerRoot(SingleRunnerRoot):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         self.group = (
-            P(self.client.config.server["root"]) + P(self._cfg["name"])
-            | "all"
-            | self._path[-1]
+            P(self.client.config.server["root"]) + P(self._cfg["name"]) | "all" | self._path[-1]
         )
 
     async def _state_runner(self):

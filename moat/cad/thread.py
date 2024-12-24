@@ -19,11 +19,19 @@ __all__ = ["AngledThread", "ISO228_Thread"]
 
 IN = 25.4  # mm per inch
 
+
 def radians(x):
-    return x*pi/180
+    return x * pi / 180
+
 
 def AngledThread(
-    radius, offset, apex=0, angle=45, external: bool = True, simple: bool = False, **kw
+    radius,
+    offset,
+    apex=0,
+    angle=45,
+    external: bool = True,
+    simple: bool = False,
+    **kw,
 ):
     """
     Create a thread with a defined angle.
@@ -50,7 +58,7 @@ def AngledThread(
         radius += offset
     root_width = tan(angle * pi / 180) * offset * 2 + apex
 
-    fin = kw.get("end_finishes", None)
+    fin = kw.get("end_finishes")
     if fin is not None and isinstance(fin, str):
         kw["end_finishes"] = fin.split(",")
 
@@ -58,10 +66,11 @@ def AngledThread(
         apex_radius=apex_radius,
         apex_width=0.1,
         root_radius=radius,
-        root_width=root_width-0.1,
+        root_width=root_width - 0.1,
         simple=simple,
         **kw,
     )
+
 
 class ISO228_Thread(TrapezoidalThread):
     "Threads for fittings. ISO 228."
@@ -76,22 +85,22 @@ class ISO228_Thread(TrapezoidalThread):
         "5/8": (14, 21.749),
         "3/4": (14, 25.279),
         "7/8": (14, 29.039),
-        "1"    : (11, 31.770),
+        "1": (11, 31.770),
         "1 1/8": (11, 36.418),
         "1 1/4": (11, 40.431),
         "1 1/2": (11, 46.324),
         "1 3/4": (11, 52.267),
-        "2"    : (11, 58.135),
+        "2": (11, 58.135),
         "2 1/4": (11, 64.231),
         "2 1/2": (11, 73.705),
         "2 3/4": (11, 80.055),
-        "3"    : (11, 86.405),
+        "3": (11, 86.405),
         "3 1/2": (11, 98.851),
-        "4"    : (11, 111.551),
+        "4": (11, 111.551),
         "4 1/2": (11, 124.251),
-        "5"    : (11, 136.951),
+        "5": (11, 136.951),
         "5 1/2": (11, 149.651),
-        "6"    : (11, 162.351),
+        "6": (11, 162.351),
     }
 
     thread_angle = 27.5  # degrees
@@ -109,21 +118,21 @@ class ISO228_Thread(TrapezoidalThread):
         external: bool = True,
         **kw,
     ):
-        kw.setdefault("end_finishes",("fade","fade"))
+        kw.setdefault("end_finishes", ("fade", "fade"))
 
         self.size = size
         self.external = external
         self.length = length
-        (pitch,diameter) = self.specs[self.size]
+        (pitch, diameter) = self.specs[self.size]
         self.pitch = IN / pitch
-        diameter += 2*adj
+        diameter += 2 * adj
 
         self.adj = adj
 
         # 1/6th of the total height, given the thread angle, is cut off.
         # This corresponds to 1/6th of the total width, i.e. the pitch.
 
-        top = 1/6 * self.pitch
+        top = 1 / 6 * self.pitch
         apex_width = top
         root_width = self.pitch - top  # - bottom really, but top==bottom here
 
@@ -131,15 +140,15 @@ class ISO228_Thread(TrapezoidalThread):
         # adjacent top (or bottom) is spread over 1/6th of the pitch
         # length; the ratio is defined by the angle.
 
-        hd = self.pitch/6 / tan(radians(self.thread_angle))
+        hd = self.pitch / 6 / tan(radians(self.thread_angle))
         if self.external:
             self.apex_radius = diameter / 2 + hd
             self.root_radius = diameter / 2 - hd
-            self.diameter = 2*self.root_radius
+            self.diameter = 2 * self.root_radius
         else:
             self.apex_radius = diameter / 2 - hd
             self.root_radius = diameter / 2 + hd
-            self.diameter = 2*self.apex_radius
+            self.diameter = 2 * self.apex_radius
 
         cq_object = _t.Thread(
             apex_radius=self.apex_radius,
@@ -152,4 +161,4 @@ class ISO228_Thread(TrapezoidalThread):
         )
         self.end_finishes = cq_object.end_finishes
         self.hand = "right" if cq_object.right_hand else "left"
-        cadquery.Solid.__init__(self,cq_object.wrapped)
+        cadquery.Solid.__init__(self, cq_object.wrapped)

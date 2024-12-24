@@ -22,12 +22,13 @@ from .dict import attrdict, to_attrdict
 from .exc import ungroup
 from .impl import NotGiven
 from .merge import merge
+from .config import CFG, ensure_cfg
 
 try:
     from .msgpack import Proxy
 except ImportError:
     Proxy = None
-from .path import P, path_eval
+from .path import P
 from .yaml import yload
 
 from typing import TYPE_CHECKING
@@ -188,7 +189,9 @@ def process_args(val, vars_=(), eval_=(), path_=(), proxy_=(), no_path=False, vs
                 yield k, v
 
     for k, v in data():
-        if not k:
+        if isinstance(k, str):
+            k = P(k)
+        if not len(k):
             if vs is not None:
                 raise click.BadOptionUsage(
                     option_name=k,
@@ -204,8 +207,6 @@ def process_args(val, vars_=(), eval_=(), path_=(), proxy_=(), no_path=False, vs
         elif n < 0:
             raise click.BadOptionUsage(option_name=k, message="Setting a single value conflicts.")
         else:
-            if isinstance(k, str):
-                k = P(k)
             if not isinstance(val, Mapping):
                 val = attrdict()
             if vs is not None:
@@ -295,21 +296,8 @@ def load_cfg(name):
     """
     Load a module's configuration
     """
-    cf = load_ext(name, "_config", "CFG", err=None)
-    if cf is None:
-        cf = load_ext(name, "config", "CFG", err=None)
-    if cf is None:
-        cf = {}
-        ext = sys.modules[name]
-        try:
-            p = ext.__path__
-        except AttributeError:
-            p = (str(FSPath(ext.__file__).parent),)
-        for d in p:
-            fn = FSPath(d) / "_config.yaml"
-            if fn.is_file():
-                merge(cf, yload(fn, attr=True))
-    return cf
+    ensure_cfg(name)
+    return CFG
 
 
 def _namespaces(name):

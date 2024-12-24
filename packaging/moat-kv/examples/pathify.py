@@ -9,18 +9,20 @@ from moat.kv.client import open_client
 from moat.util import P, yload, Path
 import asyncclick as click
 
-def conv(m,s: str) -> bool:
+
+def conv(m, s: str) -> bool:
     try:
         d = m.value[s]
     except KeyError:
         return 0
-    if isinstance(d,Path):
+    if isinstance(d, Path):
         return 0
-    if not isinstance(d,Sequence):
+    if not isinstance(d, Sequence):
         return 0
     d = Path.build(d)
     m.value[s] = d
     return 1
+
 
 @click.command()
 @click.argument("path", type=P)
@@ -34,10 +36,10 @@ async def main(path, keys):
         async for m in client.get_tree(path, nchain=2):
             n = 0
             for k in keys:
-                n += conv(m,k)
+                n += conv(m, k)
             if n:
-                await client.set(ORIG+m.path, value=m.value, chain=m.chain)
+                await client.set(ORIG + m.path, value=m.value, chain=m.chain)
+
 
 if __name__ == "__main__":
     main()
-

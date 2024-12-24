@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+from __future__ import annotations
 
 import trio
 from moatbus.handler import BaseHandler, ERR
@@ -8,8 +9,17 @@ import sys
 import errno
 from distmqtt.utils import Queue
 
+
 class Client(BaseHandler):
-    def __init__(self, wires, timeout=0.01, timeout2=0.005, socket="/tmp/moatbus", verbose=False, dest=None):
+    def __init__(
+        self,
+        wires,
+        timeout=0.01,
+        timeout2=0.005,
+        socket="/tmp/moatbus",
+        verbose=False,
+        dest=None,
+    ):
         self.__socket = socket
         self.__timeout = timeout
         self.__timeout2 = timeout2
@@ -31,10 +41,10 @@ class Client(BaseHandler):
             if self.__t is not None:
                 t1 = time.monotonic()
             if self.__msg is not None:
-                m,self.__msg = self.__msg,None
+                m, self.__msg = self.__msg, None
                 await self.__q.put(m)
             if self.__wire_out is not None:
-                b,self.__wire_out = self.__wire_out,None
+                b, self.__wire_out = self.__wire_out, None
                 await self.__sock.send(bytes((b,)))
 
             try:
@@ -44,12 +54,12 @@ class Client(BaseHandler):
                         self.__kick = c
                         b = await self.__sock.receive(1)
                 else:
-                    with trio.fail_after(max(self.__t/1000,0)) as c:
+                    with trio.fail_after(max(self.__t / 1000, 0)) as c:
                         self.__kick = c
                         b = await self.__sock.receive(1)
             except trio.BrokenResourceError:
                 return
-            except (trio.TooSlowError,TimeoutError):
+            except (trio.TooSlowError, TimeoutError):
                 self.__c = None
                 self.__t = None
                 self.timeout()
@@ -61,12 +71,12 @@ class Client(BaseHandler):
                     sys.exit(1)
                 if self.__t is not None:
                     t2 = time.monotonic()
-                    t1,t2 = t2,t2-t1
+                    t1, t2 = t2, t2 - t1
                     self.__t -= t2
 
                 if b:
                     self.__wire_in = b[0]
-                    self.debug("WIRE %r",b)
+                    self.debug("WIRE %r", b)
                     self.wire(b[0])
                 if self.__t is not None and self.__t <= 0:
                     self.__t = None
@@ -85,21 +95,21 @@ class Client(BaseHandler):
         return self.__wire_in
 
     def set_wire(self, wire):
-        self.debug("OUT! %s",wire)
+        self.debug("OUT! %s", wire)
         self.__wire_out = wire
         if self.__c is not None:
             self.__c.cancel()
 
     def transmitted(self, msg, res):
-        msg.res=res
-        self.debug("SENT %r %s",msg,res)
+        msg.res = res
+        self.debug("SENT %r %s", msg, res)
         mi = id(msg)
         ev = self.__evt.pop(mi)
         self.__evt[mi] = res
         ev.set()
 
     def process(self, msg):
-        self.debug("RCVD %r",msg)
+        self.debug("RCVD %r", msg)
         if self.__dest is not None and self.__dest == msg.dst:
             self.__msg = msg
             return True
@@ -108,12 +118,11 @@ class Client(BaseHandler):
 
     def report_error(self, typ, **kw):
         if kw:
-            self.debug("ERROR %s %s",typ,kw, v=True)
+            self.debug("ERROR %s %s", typ, kw, v=True)
         else:
-            self.debug("ERROR %s",typ)
+            self.debug("ERROR %s", typ)
         if typ == ERR.COLLISION:
-            print("COLL",kw)
-        pass # ERROR
+            print("COLL", kw)
 
     def debug(self, msg, *a, v=False):
         if not v and not self.__v:
@@ -121,7 +130,6 @@ class Client(BaseHandler):
         if a:
             msg %= a
         print(msg)
-        pass
 
     def set_timeout(self, t):
         if t < 0:
@@ -129,13 +137,13 @@ class Client(BaseHandler):
         elif t == 0:
             self.debug("TIME next")
         else:
-            self.debug("TIME %.2f",t)
+            self.debug("TIME %.2f", t)
         if self.__c is not None:
             self.__c.cancel()
         if t < 0:
             self.__t = None
         elif t:
-            self.__t = self.__timeout*t
+            self.__t = self.__timeout * t
         else:
             self.__t = self.__timeout2
 
@@ -153,7 +161,7 @@ class Client(BaseHandler):
                     yield self
                 except trio.BrokenResourceError:
                     pass
-                except EnvironmentError as e:
+                except OSError as e:
                     if e.errno != errno.EBADF:
                         raise
 

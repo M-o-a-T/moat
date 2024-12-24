@@ -9,7 +9,7 @@ from __future__ import annotations
 
 
 # minifloat granularity
-MINI_F = 1/4
+MINI_F = 1 / 4
 
 
 def mini2byte(f: float) -> int:
@@ -30,11 +30,11 @@ def mini2byte(f: float) -> int:
 
     if f < 0:
         raise ValueError("Minifloats can't be negative")
-    f = int(f/MINI_F+0.5)
+    f = int(f / MINI_F + 0.5)
     if f <= 0x20:  # < 0x10: in theory, but the result is the same
         return f  # exponent=0 is denormalized
     exp = 1
-    while f > 0x1F: # scale the result
+    while f > 0x1F:  # scale the result
         f >>= 1
         exp += 1
     if exp > 0x0F:
@@ -42,7 +42,7 @@ def mini2byte(f: float) -> int:
     # The result is normalized: since the top bit is always 1 when the
     # exponent is non-zero, we can simply not transmit it and gain another
     # bit of "accuracy".
-    return (exp<<4) | (f&0x0F)
+    return (exp << 4) | (f & 0x0F)
 
 
 def byte2mini(m: int) -> float:
@@ -52,14 +52,13 @@ def byte2mini(m: int) -> float:
     See `mini2byte` for details.
     """
     if m <= 32:  # or 16, doesn't matter
-        return m*MINI_F
+        return m * MINI_F
 
-    exp = (m>>4)-1
-    m = 0x10+(m&0xf)  # normalization
-    return (1<<exp)*m*MINI_F
+    exp = (m >> 4) - 1
+    m = 0x10 + (m & 0xF)  # normalization
+    return (1 << exp) * m * MINI_F
 
 
 if __name__ == "__main__":
     for x in range(256):
-        print(x,byte2mini(x),mini2byte(byte2mini(x)))
-
+        print(x, byte2mini(x), mini2byte(byte2mini(x)))

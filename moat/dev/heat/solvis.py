@@ -451,7 +451,7 @@ pid:
 """
 
 
-with open("/etc/moat/moat.cfg", "r") as _f:
+with open("/etc/moat/moat.cfg") as _f:
     mcfg = yload(_f, attr=True)
 
 
@@ -542,6 +542,7 @@ class Data:
             async def set_flow_pwm(r):
                 self.state.last_pwm = r
                 port.ChangeDutyCycle(100 * r)
+
         else:
 
             async def set_flow_pwm(r):
@@ -566,7 +567,7 @@ class Data:
     async def cl_set(self, *a, **kw):
         "just calls self.cl.set(), except when running with ``--no-save``"
         if self.no_op:
-            print("SET",a,kw)
+            print("SET", a, kw)
             return
         return await self._cl.set(*a, **kw)
 
@@ -649,17 +650,17 @@ class Data:
 
                 while self.c_bypass:
                     if self.c_flow != cfl:
-                        print("* FLOW",self.c_flow)
+                        print("* FLOW", self.c_flow)
                         cfl = self.c_flow
                     await self.set_flow_pwm(self.c_flow)
 
                     if self.c_bypass_mode != cmode:
-                        print("* MODE",self.c_bypass_mode)
+                        print("* MODE", self.c_bypass_mode)
                         cmode = self.c_bypass_mode
                         await self.cl_set(self.cfg.cmd.mode.path, value=self.c_bypass_mode)
 
                     if self.c_bypass_power != cpwr:
-                        print("* POWER",self.c_bypass_power)
+                        print("* POWER", self.c_bypass_power)
                         cpwr = self.c_bypass_power
                         await self.cl_set(self.cfg.cmd.power, value=self.c_bypass_power)
 
@@ -668,21 +669,7 @@ class Data:
                 print("*** BYPASS OFF ***")
                 run = Run.down
 
-            if orun == run:
-                pass
-            elif orun is None:
-                pass
-            elif run == Run.off:
-                pass
-            elif run == Run.ice:
-                pass
-            elif run.value == orun.value + 1:
-                pass
-            elif orun != Run.off and run == Run.down:
-                pass
-            elif orun == Run.down and run == Run.off:
-                pass
-            elif orun == Run.ice and run in (Run.wait_flow,Run.wait_time):
+            if orun == run or orun is None or run == Run.off or run == Run.ice or run.value == orun.value + 1 or orun != Run.off and run == Run.down or orun == Run.down and run == Run.off or orun == Run.ice and run in (Run.wait_flow, Run.wait_time):
                 pass
             else:
                 raise ValueError(f"Cannot go from {orun.name} to {run.name}")
@@ -693,7 +680,13 @@ class Data:
             if run == Run.off:
                 if orun is None and (self.state.t_pellet_on and not self.cm_pellet):
                     pass
-                elif orun not in (Run.off, Run.wait_time, Run.wait_flow, Run.wait_power, Run.down):
+                elif orun not in (
+                    Run.off,
+                    Run.wait_time,
+                    Run.wait_flow,
+                    Run.wait_power,
+                    Run.down,
+                ):
                     run = Run.down
 
             # Report
@@ -749,7 +742,6 @@ class Data:
                 self.pid.flow.move_to(
                     self.cfg.misc.start.flow.init.rate,
                     self.cfg.misc.start.flow.init.pwm,
-                    t=self.time,
                 )
                 await self.set_flow_pwm(self.cfg.misc.start.flow.init.pwm)
 
@@ -764,7 +756,6 @@ class Data:
                 self.pid.flow.move_to(
                     self.cfg.misc.start.flow.power.rate,
                     self.cfg.misc.start.flow.power.pwm,
-                    t=self.time,
                 )
                 # self.pid.flow.move_to(self.r_flow, self.state.last_pwm)
                 await self.set_load(self.cfg.misc.start.power)
@@ -789,7 +780,7 @@ class Data:
                 else:
                     self.state.setdefault("scaled_low", 1.0)
                     await self.pid.flow.log_value(0)
-                self.pid.pump.move_to(self.t_out, self.state.last_pwm, t=self.time)
+                self.pid.pump.move_to(self.t_out, self.state.last_pwm)
                 self.state.load_last = None
 
             elif run == Run.ice:  # wait for ice condition to stop
@@ -801,9 +792,7 @@ class Data:
                     t_change_max = self.cfg.lim.times.ice
                 heat_off = True
                 await self.pid.flow.setpoint(self.cfg.misc.de_ice.flow)
-                self.pid.flow.move_to(
-                    self.cfg.misc.de_ice.flow, self.cfg.misc.de_ice.pwm, t=self.time
-                )
+                self.pid.flow.move_to(self.cfg.misc.de_ice.flow, self.cfg.misc.de_ice.pwm)
 
                 await self.cl_set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off)
                 await self.cl_set(self.cfg.cmd.power, value=0)
@@ -821,7 +810,7 @@ class Data:
                 await self.cl_set(self.cfg.cmd.power, value=0)
 
             else:
-                raise ValueError(f"State ?? {run !r}")
+                raise ValueError(f"State ?? {run!r}")
 
             if self.state.t_change is not None and self.time - self.state.t_change > t_change_max:
                 raise TimeoutError("Time exceeded. Turning off.")
@@ -929,7 +918,8 @@ class Data:
             f = val2pos(t_nom, t_cur, t_adj, clamp=True)
             max2 = (self.cfg.adj.max_max + self.cfg.adj.max) / 2
             t_limit = min(
-                max2, max(self.tb_low + self.cfg.misc.heat.delta, t_adj + self.cfg.adj.more)
+                max2,
+                max(self.tb_low + self.cfg.misc.heat.delta, t_adj + self.cfg.adj.more),
             )
             tp_limit = min(
                 self.cfg.adj.max_pellet,
@@ -953,14 +943,20 @@ class Data:
             # increase temp settings when starting up
             if self.state.t_pellet_on is not True:
                 try:
-                    tplim = min(self.cfg.adj.max_pellet, self.cfg.adj.pellet.startup.buf+max(self.tb_water,self.tb_heat))
+                    tplim = min(
+                        self.cfg.adj.max_pellet,
+                        self.cfg.adj.pellet.startup.buf + max(self.tb_water, self.tb_heat),
+                    )
                     for p in self.cfg.adj.pellet.startup.patch.path:
                         await self.cl_set(p, tplim, idem=True)
                 except AttributeError:
                     pass
 
-            await self.cl_set(self.cfg.cmd.pellet.temp,
-                    max(self.cfg.lim.pellet.temp.min, tplim), idem=True)
+            await self.cl_set(
+                self.cfg.cmd.pellet.temp,
+                max(self.cfg.lim.pellet.temp.min, tplim),
+                idem=True,
+            )
 
             # on/off thresholds
             # t_set_on = (t_low + t_adj) / 2  # top
@@ -1016,7 +1012,10 @@ class Data:
                     self.r_no = None
                     continue
                 if r != "pell":
-                    print(f"      -{r} cur={t_cur :.1f} on={t_set_on :.1f}       ", end="\r")
+                    print(
+                        f"      -{r} cur={t_cur:.1f} on={t_set_on:.1f}       ",
+                        end="\r",
+                    )
                 sys.stdout.flush()
                 self.r_no = r
 
@@ -1034,16 +1033,16 @@ class Data:
                 if self.r_flow >= self.cfg.misc.start.flow.init.rate * 3 / 4:
                     run = Run.wait_power
                     continue
-                l_flow = await self.pid.flow(self.r_flow, t=self.time)
-                print(f"Flow: {self.r_flow :.1f} : {l_flow :.3f}       ")
+                l_flow = await self.pid.flow(self.r_flow)
+                print(f"Flow: {self.r_flow:.1f} : {l_flow:.3f}       ")
                 await self.set_flow_pwm(l_flow)
 
             elif run == Run.wait_power:  # wait for pump to draw power
                 if self.m_power >= self.cfg.misc.min_power:
                     run = Run.temp
                     continue
-                l_flow = await self.pid.flow(self.r_flow, t=self.time)
-                print(f"Flow: {self.r_flow :.1f} : {l_flow :.3f} p={self.m_power :.1f}       ")
+                l_flow = await self.pid.flow(self.r_flow)
+                print(f"Flow: {self.r_flow:.1f} : {l_flow:.3f} p={self.m_power:.1f}       ")
                 await self.set_flow_pwm(l_flow)
 
             elif run == Run.temp:  # wait for outflow-inflow>2
@@ -1078,7 +1077,7 @@ class Data:
                     continue
 
             else:
-                raise ValueError(f"State ?? {run !r}")
+                raise ValueError(f"State ?? {run!r}")
 
             heat_ok = False
             if self.state.t_pellet_on:
@@ -1101,19 +1100,21 @@ class Data:
             elif heat_off:
                 self.log_hc(8)
             elif (
-
                 self.tb_heat
-                if self.m_switch # or self.state.t_pellet_on
+                if self.m_switch  # or self.state.t_pellet_on
                 else pos2val(
                     self.tb_heat,  # buffer heat
                     (self.state.last_pwm or 0) / self.cfg.adj.low.pwm,
                     self.t_out,  # flow put
                     clamp=True,
                 )
-            ) < self.c_heat+self.cfg.adj.low.pre_heat:
+            ) < self.c_heat + self.cfg.adj.low.pre_heat:
                 if run != Run.run or self.m_switch:
                     self.log_hc(
-                        9, self.m_switch or self.state.t_pellet_on, self.tb_heat, self.c_heat
+                        9,
+                        self.m_switch or self.state.t_pellet_on,
+                        self.tb_heat,
+                        self.c_heat,
                     )
 
             else:
@@ -1202,7 +1203,10 @@ class Data:
                 if t_no_power is None:
                     t_no_power = self.time
                 elif self.time - t_no_power > 30:
-                    print(f"\nNO POWER USE {self.m_power} {self.cfg.misc.min_power}", "    ")
+                    print(
+                        f"\nNO POWER USE {self.m_power} {self.cfg.misc.min_power}",
+                        "    ",
+                    )
                     run = Run.off
                     continue
             else:
@@ -1218,16 +1222,16 @@ class Data:
             if self.t_out > self.cfg.adj.max_max:
                 l_pump = 1
                 i_pump = ()
-                self.pid.pump.move_to(self.t_out, 1.0, t=self.time)
+                self.pid.pump.move_to(self.t_out, 1.0)
                 # emergency handler
             else:
-                l_pump, i_pump = await self.pid.pump(self.t_out, t=self.time, split=True)
-                # self.pid.flow.move_to(self.r_flow, l_pump, t=self.time)
+                l_pump, i_pump = await self.pid.pump(self.t_out, split=True)
+                # self.pid.flow.move_to(self.r_flow, l_pump)
             self.state.last_pwm = l_pump
 
-            l_load, i_load = await self.pid.load(t_cur, t=self.time, split=True)
-            l_buffer, i_buffer = await self.pid.buffer(self.tb_low, t=self.time, split=True)
-            l_limit, i_limit = await self.pid.limit(self.t_out, t=self.time, split=True)
+            l_load, i_load = await self.pid.load(t_cur, split=True)
+            l_buffer, i_buffer = await self.pid.buffer(self.tb_low, split=True)
+            l_limit, i_limit = await self.pid.limit(self.t_out, split=True)
 
             if True or cm_heat and tw_low <= th_adj:
                 w = val2pos(t_adj - self.cfg.adj.more, t_cur, t_adj)
@@ -1246,18 +1250,18 @@ class Data:
             if tt - tlast > 5 or self.t_out > self.cfg.adj.max:
                 tlast = tt
                 pr = (
-                    f"t={int(tt)%1000:03d}",
-                    f"buf={t_cur :.1f}/{self.tb_mid :.1f}/{self.tb_low :.1f}",
-                    f"t={self.t_out :.1f}/{self.t_in :.1f}",
-                    f"P={l_pump :.3f}",
+                    f"t={int(tt) % 1000:03d}",
+                    f"buf={t_cur:.1f}/{self.tb_mid:.1f}/{self.tb_low:.1f}",
+                    f"t={self.t_out:.1f}/{self.t_in:.1f}",
+                    f"P={l_pump:.3f}",
                     # *(f"{x :6.3f}" for x in i_pump),
-                    f"lim{'=' if lim == l_limit else '_'}{l_limit :.3f}",
-                    f"load{'=' if lim == l_load else '_'}{l_load :.3f}",
-                    f"buf{'=' if lim == l_buf else '_'}{l_buf :.3f}",
+                    f"lim{'=' if lim == l_limit else '_'}{l_limit:.3f}",
+                    f"load{'=' if lim == l_load else '_'}{l_load:.3f}",
+                    f"buf{'=' if lim == l_buf else '_'}{l_buf:.3f}",
                     # *(f"{x :6.3f}" for x in i_pump),
                     # *(f"{x :6.3f}" for x in i_buffer),
-                    #*(f"{x :6.3f}" for x in i_load),
-                    f"w={w :.2f} lb={l_buffer :.2f}",
+                    # *(f"{x :6.3f}" for x in i_load),
+                    f"w={w:.2f} lb={l_buffer:.2f}",
                 )
                 print(*pr)
 
@@ -1268,18 +1272,18 @@ class Data:
             # below its setpoint. Otherwise the initial surge would delay heat-up
             print(
                 f" H={self.hc_pos}",
-                f"W={w :.1f}",
+                f"W={w:.1f}",
                 # f"res={l_buf :.2f}",
                 f"lim={lim:.2f}",
-                f"cur={t_cur :.1f}",
-                f"hlow={th_low :.1f}",
-                f"hadj={th_adj :.1f}",
-                f"wlow={tw_low :.1f}",
-                f"buf={t_buffer :.1f}",
+                f"cur={t_cur:.1f}",
+                f"hlow={th_low:.1f}",
+                f"hadj={th_adj:.1f}",
+                f"wlow={tw_low:.1f}",
+                f"buf={t_buffer:.1f}",
                 # f"off={t_set_off :.1f}",
-                f"scl={self.state.scaled_low :.3f}",
-                f"tbh={self.tb_heat :.1f}",
-                f"ch={self.c_heat :.1f}",
+                f"scl={self.state.scaled_low:.3f}",
+                f"tbh={self.tb_heat:.1f}",
+                f"ch={self.c_heat:.1f}",
                 end="\r",
             )
             sys.stdout.flush()
@@ -1347,7 +1351,11 @@ class Data:
                 # starting up
                 continue
 
-            if self.m_pellet_state in (0, 1, 3, 5, 6,7,8,9) or 21 <= self.m_pellet_state <= 35 or self.m_pellet_state >= 43:
+            if (
+                self.m_pellet_state in (0, 1, 3, 5, 6, 7, 8, 9)
+                or 21 <= self.m_pellet_state <= 35
+                or self.m_pellet_state >= 43
+            ):
                 self.state.t_pellet_on = False
                 self.pid.load.Kd = self.cfg.pid.load.d
                 self.pid.load.Tf = self.cfg.pid.load.tf
@@ -1362,7 +1370,9 @@ class Data:
                         self.state.t_pellet_on = True
                         try:
                             for p in self.cfg.adj.pellet.startup.patch.path:
-                                await self.cl_set(p, self.cfg.adj.pellet.startup.patch.stop, idem=True)
+                                await self.cl_set(
+                                    p, self.cfg.adj.pellet.startup.patch.stop, idem=True,
+                                )
                         except AttributeError:
                             pass
 
@@ -1374,15 +1384,15 @@ class Data:
                 await self.pid.p_load.setpoint(t_load)
                 await self.pid.p_buffer.setpoint(t_buffer)
 
-                l_buffer = await self.pid.p_buffer(self.tb_low, t=t)
+                l_buffer = await self.pid.p_buffer(self.tb_low)
                 w = val2pos(self.t_adj - self.cfg.adj.more, self.tb_heat, self.t_adj)
                 l_buf = l_buffer
 
-                l_load, i_load = await self.pid.p_load(t_cur, t=t, split=True)
+                l_load, i_load = await self.pid.p_load(t_cur, split=True)
                 if self.cm_pellet_force is not None:
                     # external forcing input
                     lim = self.cm_pellet_force
-                    self.pid.p_load.move_to(self.tb_heat, lim, t=t)
+                    self.pid.p_load.move_to(self.tb_heat, lim)
                     r = "F"
                 elif t_cur + self.cfg.adj.pellet.low < self.state.pp_load.setpoint:
                     r = "B"
@@ -1393,7 +1403,6 @@ class Data:
                     self.pid.p_load.move_to(
                         self.tb_heat + (t_load - self.tb_heat) * self.cfg.adj.pellet.preload.low,
                         1.0,
-                        t=t,
                     )
                 elif self.wp_on:
                     r = "C"
@@ -1401,7 +1410,6 @@ class Data:
                     self.pid.p_load.move_to(
                         self.tb_heat + (t_load - self.tb_heat) * self.cfg.adj.pellet.preload.wp,
                         1.0,
-                        t=t,
                     )
                     lim = 1.0
                 else:
@@ -1413,22 +1421,25 @@ class Data:
                 if o_r == r and not self.wp_on and tt - tlast > 5 and self.r_no is not None:
                     tlast = tt
                     pr = (
-                        f"t={int(tt)%1000:03d}",
+                        f"t={int(tt) % 1000:03d}",
                         f"r={r}",
-                        f"buf={t_cur :.1f}/{self.tb_mid :.1f}/{self.tb_low :.1f}",
+                        f"buf={t_cur:.1f}/{self.tb_mid:.1f}/{self.tb_low:.1f}",
                         # f"t={self.t_out :.1f}/{self.t_in :.1f}",
                         # f"Pump={l_pump :.3f}",
                         # *(f"{x :6.3f}" for x in i_pump),
-                        f"load{'=' if lim == l_load else '_'}{l_load :.3f}",
-                        f"buf{'=' if lim == l_buffer else '_'}{l_buffer :.3f}",
-                        f"avg_h={self.state.avg_heat :.1f}",
-                        f"{self.state.avg_heat-self.state.avg_heat_t :.1f} ",
+                        f"load{'=' if lim == l_load else '_'}{l_load:.3f}",
+                        f"buf{'=' if lim == l_buffer else '_'}{l_buffer:.3f}",
+                        f"avg_h={self.state.avg_heat:.1f}",
+                        f"{self.state.avg_heat - self.state.avg_heat_t:.1f} ",
                     )
-                    pr += tuple(f"{x :6.3f}" for x in i_load)
+                    pr += tuple(f"{x:6.3f}" for x in i_load)
                     print(*pr, "    ")
                 o_r = r
 
-                if self.m_pellet_state in (31,32,):
+                if self.m_pellet_state in (
+                    31,
+                    32,
+                ):
                     xlim = 1
                 else:
                     xlim = lim
@@ -1447,15 +1458,15 @@ class Data:
                 if not self.wp_on or self.r_no is not None:
                     print(
                         f" H={self.hc_pos}",
-                        f"W={w :.1f}",
+                        f"W={w:.1f}",
                         # f"res={l_buf :.2f}",
                         f"lim={lim:.2f}",
-                        f"cur={t_cur :.1f}",
-                        f"hlow={th_low :.1f}",
-                        f"wlow={tw_low :.1f}",
-                        f"buf={t_buffer :.1f}",
-                        f"tbh={self.tb_heat :.1f}",
-                        f"ch={self.c_heat :.1f}",
+                        f"cur={t_cur:.1f}",
+                        f"hlow={th_low:.1f}",
+                        f"wlow={tw_low:.1f}",
+                        f"buf={t_buffer:.1f}",
+                        f"tbh={self.tb_heat:.1f}",
+                        f"ch={self.c_heat:.1f}",
                         f"{self.r_no}",
                         end="\r",
                     )
@@ -1480,8 +1491,8 @@ class Data:
                 print("  PELLET ON  ")
                 run = True
 
-                self.pid.p_load.move_to(self.tb_heat, 1.0, t=self.time)
-                self.pid.p_buffer.move_to(self.tb_low, 1.0, t=self.time)
+                self.pid.p_load.move_to(self.tb_heat, 1.0)
+                self.pid.p_buffer.move_to(self.tb_low, 1.0)
 
             elif run and (
                 self.m_air > self.cfg.misc.pellet.current
@@ -1600,20 +1611,20 @@ class Data:
         """
         Flow handler while not operational
         """
-        l_flow = await self.pid.flow(self.r_flow, t=self.time)
-        l_temp = await self.pid.pump(self.t_out, t=self.time)
+        l_flow = await self.pid.flow(self.r_flow)
+        l_temp = await self.pid.pump(self.t_out)
         print(
-            f"t={self.time%1000 :03.0f}",
-            f"Pump:{l_flow :.3f}/{l_temp :.3f}",
-            f"flow={self.r_flow :.1f}",
-            f"t={self.t_out :.1f}",
+            f"t={self.time % 1000:03.0f}",
+            f"Pump:{l_flow:.3f}/{l_temp:.3f}",
+            f"flow={self.r_flow:.1f}",
+            f"t={self.t_out:.1f}",
             "      ",
         )
         res = max(l_flow, l_temp)
         if use_min:
             res = max(res, self.cfg.misc.de_ice.min)
-        # self.pid.flow.move_to(self.r_flow, res, t=self.time)
-        # self.pid.pump.move_to(self.t_out, res, t=self.time)
+        # self.pid.flow.move_to(self.r_flow, res)
+        # self.pid.pump.move_to(self.t_out, res)
         await self.set_flow_pwm(res)
         self.state.last_pump = res
 
@@ -1846,7 +1857,7 @@ class Data:
     async def save(self):
         "save the current state"
         logger.debug("Saving")
-        if isinstance(self.cfg.state,Path):
+        if isinstance(self.cfg.state, Path):
             await self.cl.set(self.cfg.state, value=self.state)
         else:
             f = anyio.Path(self.cfg.state)
@@ -1856,7 +1867,6 @@ class Data:
             await fn.write_text(fs.getvalue())
             await fn.rename(f)
 
-
     async def run_solvis_mon(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         again = anyio.Event()
         kick = anyio.Event()
@@ -1865,9 +1875,14 @@ class Data:
         task_status.started()  # well not really but the caller doesn't care
 
         async def s_run():
-            nonlocal again,kick
+            nonlocal again, kick
             while True:
-                async with await anyio.open_process(['moat','modbus','dev','poll',cfg.data], stdin=subprocess.DEVNULL, stdout=sys.stdout, stderr=sys.stderr) as p:
+                async with await anyio.open_process(
+                    ["moat", "modbus", "dev", "poll", cfg.data],
+                    stdin=subprocess.DEVNULL,
+                    stdout=sys.stdout,
+                    stderr=sys.stderr,
+                ) as p:
                     try:
                         kick.set()
                         kick = anyio.Event()
@@ -1901,7 +1916,8 @@ class Data:
                             print("\nRESTART SOLVIS OK")
 
                     else:
-                        print("\nERROR SOLVIS",m.value,file=sys.stderr)
+                        print("\nERROR SOLVIS", m.value, file=sys.stderr)
+
 
 class fake_cl:
     "fake MoaT-KW client, for playbacks"
@@ -1957,12 +1973,14 @@ async def cli(ctx, config):
         GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
 
+
 @cli.command
 @click.pass_obj
 async def solvis_mon(obj):
     async with open_client(**mcfg.kv) as cl:
         d = Data(obj.cfg, cl, no_op=True)
         await d.run_solvis_mon()
+
 
 @cli.command
 @click.pass_obj
@@ -1976,7 +1994,7 @@ async def run(obj, record, force_on, no_save):
         try:
             async with anyio.create_task_group() as tg:
                 try:
-                    if isinstance(obj.cfg.state,Path):
+                    if isinstance(obj.cfg.state, Path):
                         state = await cl.get(obj.cfg.state)
                         try:
                             state = state.value
@@ -1986,7 +2004,7 @@ async def run(obj, record, force_on, no_save):
                         with open(obj.cfg.state) as sf:
                             state = yload(sf, attr=True)
                 except OSError:
-                    state=None
+                    state = None
                 d = Data(obj.cfg, cl, record=record, no_op=no_save, state=state)
                 d.force_on = force_on
 
@@ -2047,10 +2065,10 @@ class t_iter:
         return time.monotonic()
 
     async def sleep(self, dt):
-        await anyio.sleep(max(dt,0))
+        await anyio.sleep(max(dt, 0))
 
     def __aiter__(self):
-        self._t = self.time()-self.interval
+        self._t = self.time() - self.interval
         return self
 
     def __anext__(self):
@@ -2059,12 +2077,12 @@ class t_iter:
         if dt > 0:
             self._t += self.interval
         else:
-            self._t = t+self.interval
+            self._t = t + self.interval
             dt = 0
         return self.sleep(dt)
 
 
-#output:
+# output:
 #    flow:
 #        pin: 4
 #        freq: 200
@@ -2076,28 +2094,30 @@ class t_iter:
 #           GPIO.output(heat_pin, False)
 #           GPIO.setup(heat_pin, GPIO.OUT)
 
+
 async def _run_pwm(cl, k, v):
     GPIO.setup(v.pin, GPIO.OUT)
-#   port = GPIO.PWM(v.pin, v.get("freq", 200))
-#   port.start(0)
+    #   port = GPIO.PWM(v.pin, v.get("freq", 200))
+    #   port.start(0)
 
-    xover=False
-    xval=0
-    val=0
+    xover = False
+    xval = 0
+    val = 0
 
     dly = False
-    lpct=-1
+    lpct = -1
+
     def upd():
-        nonlocal dly,lpct
+        nonlocal dly, lpct
 
         pct = xval if xover else val
         if lpct != pct:
             lpct = pct
             logger.info("Value: %s: %.3f", k, pct)
         if pct < 0.01:
-            dly=False
+            dly = False
         elif pct > 0.99:
-            dly=True
+            dly = True
         else:
             dly = pct / v.freq
 
@@ -2110,7 +2130,7 @@ async def _run_pwm(cl, k, v):
                     continue
                 if "value" not in m:
                     continue
-                xover=m.value
+                xover = m.value
                 upd()
 
     async def mon_pct(*, task_status):
@@ -2122,9 +2142,9 @@ async def _run_pwm(cl, k, v):
                     continue
                 if "value" not in m:
                     continue
-                xval=m.value
+                xval = m.value
                 upd()
-    
+
     async def mon_value(*, task_status):
         nonlocal val
         async with cl.watch(v.path, max_depth=0, fetch=True) as msgs:
@@ -2134,9 +2154,9 @@ async def _run_pwm(cl, k, v):
                     continue
                 if "value" not in m:
                     continue
-                val=m.value
+                val = m.value
                 upd()
-    
+
     async with anyio.create_task_group() as tg:
         GPIO.setup(v.pin, GPIO.OUT)
         GPIO.output(v.pin, False)
@@ -2148,7 +2168,7 @@ async def _run_pwm(cl, k, v):
         await tg.start(mon_value)
 
         try:
-            async for _ in t_iter(1/v.freq):
+            async for _ in t_iter(1 / v.freq):
                 if dly is not False:
                     GPIO.output(v.pin, not inv)
                     if dly is True:
@@ -2157,7 +2177,6 @@ async def _run_pwm(cl, k, v):
                 GPIO.output(v.pin, inv)
         finally:
             GPIO.output(v.pin, inv)
-
 
 
 @cli.command
@@ -2170,8 +2189,9 @@ async def off(obj):
         await d.off()
         tg.cancel_scope.cancel()
 
+
 def vt(tau, ti, cf):
-    if tau>=ti:
+    if tau >= ti:
         return ti
     return ti + (cf.max - ti) * pow((ti - tau) / (ti - cf.min), 1 / cf.exp)
 
@@ -2180,9 +2200,8 @@ def vt(tau, ti, cf):
 @click.pass_obj
 async def curve(obj):
     "show the current heating curve"
-    from math import pow
 
     cf = obj.cfg.adj.curve
 
     for t in range(cf.min, cf.night.dest):
-        print(f"{t :3d} {vt(t,cf.dest,cf) :.1f} {vt(t,cf.night.dest,cf) :.1f}")
+        print(f"{t:3d} {vt(t, cf.dest, cf):.1f} {vt(t, cf.night.dest, cf):.1f}")

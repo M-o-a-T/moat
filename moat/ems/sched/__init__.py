@@ -3,4 +3,7 @@ This module calculates optimal battery charge/discharge based on usage and
 pricing prediction.
 
 """
-from .control import Model
+
+from __future__ import annotations
+
+from .control import Model as Model

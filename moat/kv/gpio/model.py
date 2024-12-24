@@ -1,7 +1,11 @@
 """
 MoaT-KV client data model for GPIO
 """
+
+from __future__ import annotations
+
 import anyio
+
 try:
     from anyio import ClosedResourceError
 except ImportError:
@@ -88,12 +92,9 @@ class _GPIOnode(_GPIObase):
             self._poll.cancel()
             self._poll = None
 
-        pass
-
 
 class GPIOline(_GPIOnode):
-    """Describes one GPIO line.
-    """
+    """Describes one GPIO line."""
 
     _work = None
     _task_scope = None
@@ -135,7 +136,7 @@ class GPIOline(_GPIOnode):
                 "gpio",
                 self.subpath,
                 comment="Line type not set",
-                data={"path": self.subpath, "typ": typ}
+                data={"path": self.subpath, "typ": typ},
             )
 
     async def _task(self, p, *a, **k):
@@ -273,7 +274,7 @@ class GPIOline(_GPIOnode):
                                         "end": inv(e1.value),
                                         "t": bounce,
                                         "flow": True,
-                                    }
+                                    },
                                 )
                             continue
 
@@ -305,7 +306,7 @@ class GPIOline(_GPIOnode):
                                                 "end": inv(e1.value),
                                                 "t": bounce,
                                                 "flow": True,
-                                            }
+                                            },
                                         )
                                 else:
                                     self.logger.debug("NoAdd+: %s %s", ts(e0), ts(e1))
@@ -313,9 +314,7 @@ class GPIOline(_GPIOnode):
 
                         # Now wait until timeout, or next signal
                         try:
-                            with anyio.fail_after(
-                                (idle_h if inv(e1.value) else idle) - bounce
-                            ):
+                            with anyio.fail_after((idle_h if inv(e1.value) else idle) - bounce):
                                 e2 = await mon_iter.__anext__()
                         except TimeoutError:
                             if count is not bool(e1.value):
@@ -344,7 +343,7 @@ class GPIOline(_GPIOnode):
                                     "end": inv(e2.value),
                                     "t": bounce,
                                     "flow": True,
-                                }
+                                },
                             )
                         flow_bounce = flow
 
@@ -365,7 +364,13 @@ class GPIOline(_GPIOnode):
                         continue
 
                     await self.client.set(
-                        dest, value={"start": start_val, "seq": res, "end": end_val, "t": bounce}
+                        dest,
+                        value={
+                            "start": start_val,
+                            "seq": res,
+                            "end": end_val,
+                            "t": bounce,
+                        },
                     )
                     await self.root.err.record_working("gpio", self.subpath)
                     clear = True
@@ -400,7 +405,6 @@ class GPIOline(_GPIOnode):
                     # Somebody probably changed my value. Retry once.
                     self.logger.debug("NOSEND %d", d)
                     try:
-
                         val, ch = await get_value()
                         res = await self.client.set(dest, value=val + d, nchain=2, **ch)
                     except ServerError:
@@ -409,7 +413,7 @@ class GPIOline(_GPIOnode):
                             self.subpath,
                             comment="Server error",
                             data={"path": self.subpath, "value": val, **ch},
-                            exc=exc
+                            exc=exc,
                         )
                     else:
                         self.logger.debug("DIDSEND %d", d)
@@ -479,7 +483,7 @@ class GPIOline(_GPIOnode):
                 self.subpath,
                 comment="mode or dest not set",
                 data={"path": self.subpath},
-                exc=exc
+                exc=exc,
             )
             return
 
@@ -497,7 +501,7 @@ class GPIOline(_GPIOnode):
                 "gpio",
                 self.subpath,
                 comment="mode unknown",
-                data={"path": self.subpath, "mode": mode}
+                data={"path": self.subpath, "mode": mode},
             )
             return
         await evt.wait()
@@ -530,7 +534,7 @@ class GPIOline(_GPIOnode):
                                     "gpio",
                                     self.subpath,
                                     comment="Missing value in msg",
-                                    data={"path": self.subpath, "msg": msg}
+                                    data={"path": self.subpath, "msg": msg},
                                 )
                             continue
 
@@ -546,18 +550,23 @@ class GPIOline(_GPIOnode):
                                     "gpio",
                                     self.subpath,
                                     data={"value": val},
-                                    comment="Stopped due to bad timer value"
+                                    comment="Stopped due to bad timer value",
                                 )
                                 return
                             except Exception as exc:
                                 await self.root.err.record_error(
-                                    "gpio", self.subpath, data={"value": val}, exc=exc
+                                    "gpio",
+                                    self.subpath,
+                                    data={"value": val},
+                                    exc=exc,
                                 )
                             else:
                                 await self.root.err.record_working("gpio", self.subpath)
                         else:
                             await self.root.err.record_error(
-                                "gpio", self.subpath, comment="Bad value: %r" % (val,)
+                                "gpio",
+                                self.subpath,
+                                comment="Bad value: %r" % (val,),
                             )
 
     async def _set_value(self, line, value, state, negate):
@@ -578,9 +587,7 @@ class GPIOline(_GPIOnode):
         if state is not None:
             await self.client.set(state, value=value)
 
-    async def _oneshot_value(
-        self, line, val, state, negate, t_on
-    ):  # pylint: disable=unused-argument
+    async def _oneshot_value(self, line, val, state, negate, t_on):  # pylint: disable=unused-argument
         """
         Task that monitors one entry. Its value is written to the
         controller but if it's = ``direc`` it's reverted autonomously after
@@ -625,9 +632,7 @@ class GPIOline(_GPIOnode):
                 w.cancel()
                 await self._set_value(line, False, state, negate)
 
-    async def _pulse_value(
-        self, line, val, state, negate, t_on, t_off
-    ):  # pylint: disable=unused-argument
+    async def _pulse_value(self, line, val, state, negate, t_on, t_off):  # pylint: disable=unused-argument
         """
         Pulse the value.
 
@@ -681,7 +686,6 @@ class GPIOline(_GPIOnode):
             await self._set_value(line, False, state, negate)
 
     async def _setup_output(self):
-
         try:
             mode = self.find_cfg("mode")
             src = self.find_cfg("src")
@@ -698,26 +702,48 @@ class GPIOline(_GPIOnode):
         evt = anyio.Event()
         if mode == "write":
             self.task_group.start_soon(
-                self._task, self.with_output, evt, src, self._set_value, state, negate
+                self._task,
+                self.with_output,
+                evt,
+                src,
+                self._set_value,
+                state,
+                negate,
             )
         elif mode == "oneshot":
             if t_on is None:
                 await self.root.err.record_error(
-                    "gpio", self.subpath, comment="t_on not set", data={"path": self.subpath}
+                    "gpio",
+                    self.subpath,
+                    comment="t_on not set",
+                    data={"path": self.subpath},
                 )
                 return
             self.task_group.start_soon(
-                self._task, self.with_output, evt, src, self._oneshot_value, state, negate, t_on
+                self._task,
+                self.with_output,
+                evt,
+                src,
+                self._oneshot_value,
+                state,
+                negate,
+                t_on,
             )
         elif mode == "pulse":
             if t_on is None:
                 await self.root.err.record_error(
-                    "gpio", self.subpath, comment="t_on not set", data={"path": self.subpath}
+                    "gpio",
+                    self.subpath,
+                    comment="t_on not set",
+                    data={"path": self.subpath},
                 )
                 return
             if t_off is None:
                 await self.root.err.record_error(
-                    "gpio", self.subpath, comment="t_off not set", data={"path": self.subpath}
+                    "gpio",
+                    self.subpath,
+                    comment="t_off not set",
+                    data={"path": self.subpath},
                 )
                 return
             self.task_group.start_soon(
@@ -736,7 +762,7 @@ class GPIOline(_GPIOnode):
                 "gpio",
                 self.subpath,
                 comment="mode unknown",
-                data={"path": self.subpath, "mode": mode}
+                data={"path": self.subpath, "mode": mode},
             )
             return
         await evt.wait()

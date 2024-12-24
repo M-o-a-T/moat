@@ -1,6 +1,9 @@
 """
 Charge/discharge optimizer.
 """
+
+from __future__ import annotations
+
 import datetime
 import logging
 import time
@@ -119,8 +122,8 @@ class Model:
             t -= t % t_slot
             if abs(t_now - t) > t_slot / 10:
                 raise ValueError(
-                    f"You're {humandelta(abs(t_now-t))} away "
-                    f"from {datetime.datetime.fromtimestamp(t).isoformat(sep=' ')}"
+                    f"You're {humandelta(abs(t_now - t))} away "
+                    f"from {datetime.datetime.fromtimestamp(t).isoformat(sep=' ')}",
                 )
 
         elif t % (3600 / cfg.steps):
@@ -140,7 +143,9 @@ class Model:
 
         # Starting battery charge
         self.cap_init = cap_prev = solver.NumVar(
-            cfg.battery.capacity * 0.05, cfg.battery.capacity * 0.95, "b_init"
+            cfg.battery.capacity * 0.05,
+            cfg.battery.capacity * 0.95,
+            "b_init",
         )
         self.constr_init = solver.Constraint(0, 0)
         self.constr_init.SetCoefficient(self.cap_init, 1)
@@ -214,7 +219,7 @@ class Model:
                 s_in
                 + cfg.battery.efficiency.discharge * b_dis
                 + cfg.inverter.efficiency.charge * i_chg
-                == b_chg + i_dis
+                == b_chg + i_dis,
             )
 
             # AC power bar. power_in == power_out
@@ -227,7 +232,7 @@ class Model:
                 + cap
                 * cfg.battery.soc.value.current
                 / cfg.battery.capacity  # bias for keeping the battery charged
-                == money
+                == money,
             )
 
             self.objective.SetCoefficient(money, 1)
@@ -273,7 +278,13 @@ class Model:
 
             async with res2 if res2 is not None else nullcontext():
                 for g_buy, g_sell, b_chg, b_dis, cap, money in zip(
-                    self.g_buys, self.g_sells, self.b_chgs, self.b_diss, self.caps, self.moneys
+                    self.g_buys,
+                    self.g_sells,
+                    self.b_chgs,
+                    self.b_diss,
+                    self.caps,
+                    self.moneys,
+                    strict=False,
                 ):
                     val = dict(
                         grid=(g_buy.solution_value() - g_sell.solution_value()) * cfg.steps,

@@ -1,6 +1,7 @@
 """
 Helper for building a MoaT stack on top of a byte stream (serial, TCP, …).
 """
+
 from __future__ import annotations
 
 from ..proto.stack import BaseMsg

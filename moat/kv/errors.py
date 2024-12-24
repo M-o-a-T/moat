@@ -79,6 +79,8 @@ of this record.
 
 """
 
+from __future__ import annotations
+
 import logging
 import traceback
 from collections import defaultdict
@@ -212,7 +214,7 @@ class ErrorEntry(AttrClientEntry):
                 try:
                     m = message.format(exc=exc, **data)
                 except Exception as exc:  # pylint: disable=unused-argument  # OH COME ON
-                    m = message + f" (FORMAT {exc !r})"
+                    m = message + f" (FORMAT {exc!r})"
             else:
                 m = message
             if m:
@@ -304,9 +306,7 @@ class ErrorEntry(AttrClientEntry):
         if value is NotGiven:
             if self.value is NotGiven:
                 return
-            keep = await self.root.get_error_record(
-                self.subsystem, self.path, create=False
-            )
+            keep = await self.root.get_error_record(self.subsystem, self.path, create=False)
             if keep is not None:
                 self._real_entry = keep.real_entry
                 await self.move_to_real()
@@ -449,7 +449,13 @@ class ErrorRoot(ClientRoot):
         raise RuntimeError(f"This cannot happen: {entry.node} {entry.tock}")
 
     async def record_working(  # pylint: disable=dangerous-default-value
-        self, subsystem, path, *, comment=None, data={}, force=False
+        self,
+        subsystem,
+        path,
+        *,
+        comment=None,
+        data={},
+        force=False,
     ):
         """This exception has been fixed.
 
@@ -522,7 +528,11 @@ class ErrorRoot(ClientRoot):
             return  # owch, but can't be helped
 
         r = await rec.real_entry.add_exc(
-            self.name, exc=exc, data=data, comment=comment, message=message
+            self.name,
+            exc=exc,
+            data=data,
+            comment=comment,
+            message=message,
         )
         return r
 
@@ -535,9 +545,7 @@ class ErrorRoot(ClientRoot):
             return
 
         try:
-            del (self._done if entry.resolved else self._active)[entry.subsystem][
-                entry.path
-            ]
+            del (self._done if entry.resolved else self._active)[entry.subsystem][entry.path]
         except KeyError:
             pass
 

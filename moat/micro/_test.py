@@ -1,12 +1,11 @@
 """
 Test runner
 """
+
 from __future__ import annotations
 
 import anyio
-import logging
 import os
-import warnings
 from contextlib import asynccontextmanager, suppress
 from contextvars import ContextVar
 from pathlib import Path
@@ -25,23 +24,7 @@ from moat.micro.proto.stream import ProcessBuf
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Awaitable
-
-with warnings.catch_warnings(record=True) as _w:
-    # may already have been done elsewhere
-    warnings.simplefilter("ignore")
-    import sys
-    logging.basicConfig(level=logging.DEBUG, stream=sys.stderr, force=True)
-
-if not len(_w):
-    # … if not, then add our own hook
-    def _lbc(*a, **k):  # noqa: ARG001
-        "block log configuration"
-        raise RuntimeError("don't configure logging a second time")
-
-    logging.basicConfig = _lbc
-
-del _w
+    from collections.abc import Awaitable
 
 temp_dir = ContextVar("temp_dir")
 
@@ -90,12 +73,8 @@ class MpyBuf(ProcessBuf):
     async def setup(self):
         mplex = self.cfg.get("mplex", None)
         if mplex is not None:
-            try:
-                os.stat("micro/lib")
-            except OSError:
-                pre = Path(__file__).parents[2]
-            else:
-                pre = "micro/"
+            pre = Path(__file__).parents[2]
+            upy = pre / "ext/micropython"
 
             root = self.cfg.get("cwd", None)
             if root is None:
@@ -114,15 +93,15 @@ class MpyBuf(ProcessBuf):
                 with suppress(FileExistsError):
                     (root / "tests").symlink_to(Path("tests").absolute())
 
-            std = Path("lib/micropython-lib/python-stdlib").absolute()
-            ustd = Path("lib/micropython-lib/micropython").absolute()
+            std = (upy / "lib/micropython-lib/python-stdlib").absolute()
+            ustd = (upy / "lib/micropython-lib/micropython").absolute()
             for req in required:
                 if (std / req).exists():
                     rlink(std / req, lib)
                 elif (ustd / req).exists():
                     rlink(ustd / req, lib)
                 else:
-                    raise FileNotFoundError(req)
+                    raise FileNotFoundError(std / req)
 
             aio = Path("lib/micropython/extmod/asyncio").absolute()
             with suppress(FileExistsError):
@@ -135,6 +114,7 @@ class MpyBuf(ProcessBuf):
                     libp.append(p)
                 if (p / "lib").exists():
                     libp.append(p / "lib")
+            libp.append(".frozen")
 
             self.env = {
                 "MICROPYPATH": os.pathsep.join(str(x) for x in (lib, lib2, *libp)),
@@ -150,14 +130,14 @@ class MpyBuf(ProcessBuf):
 
             self.argv = [
                 # "strace","-s300","-o/tmp/bla",
-                pre / "lib/micropython/ports/unix/build-standard/micropython",
-                pre / "tests-mpy/mplex.py",
+                upy / "ports/unix/build-standard/micropython",
+                pre / "packaging/moat-micro/tests-mpy/mplex.py",
             ]
             if isinstance(mplex, str):
                 self.argv.append(mplex)
         else:
             self.argv = [
-                pre / "lib/micropython/ports/unix/build-standard/micropython",
+                upy / "ports/unix/build-standard/micropython",
                 "-e",
             ]
 
@@ -235,7 +215,11 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
             return
         try:
             await self.q_wr.send(m)
-        except (anyio.ClosedResourceError, anyio.BrokenResourceError, anyio.EndOfStream) as exc:
+        except (
+            anyio.ClosedResourceError,
+            anyio.BrokenResourceError,
+            anyio.EndOfStream,
+        ) as exc:
             raise EOFError from exc
 
     snd = send
@@ -245,7 +229,11 @@ class Loopback(BaseMsg, BaseBuf, BaseBlk):
             raise anyio.BrokenResourceError(self)
         try:
             return await self._link.q_rd.receive()
-        except (anyio.ClosedResourceError, anyio.BrokenResourceError, anyio.EndOfStream):
+        except (
+            anyio.ClosedResourceError,
+            anyio.BrokenResourceError,
+            anyio.EndOfStream,
+        ):
             raise EOFError from None
 
     rcv = recv
@@ -305,7 +293,7 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
     async def setup(self):
         p = self.cfg["path"]
         if isinstance(p, str):
-            raise TypeError(f"Need a path, not {p !r}")
+            raise TypeError(f"Need a path, not {p!r}")
         self._link = self.cfg["_cmd"].root.sub_at(p)
 
     def send(self, m) -> Awaitable:

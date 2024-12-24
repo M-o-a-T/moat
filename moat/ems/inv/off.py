@@ -2,6 +2,8 @@
 Inverter mode: turn the thing off
 """
 
+from __future__ import annotations
+
 import logging
 
 import anyio
@@ -15,6 +17,7 @@ __all__ = ["InvMode_None"]
 
 class InvMode_None(InvModeBase):
     "Set the AC output to zero, then do nothing."
+
     _mode = 0
     _name = "off"
 

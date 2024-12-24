@@ -59,6 +59,8 @@ The server process is:
 
 """
 
+from __future__ import annotations
+
 import io
 from importlib import import_module
 
@@ -87,7 +89,7 @@ add_schema = {
             "additionalProperties": False,
             "properties": {"key": {type: "string", "minLength": 1}},
         },
-    }
+    },
 }
 
 
@@ -111,7 +113,7 @@ def gen_auth(s: str):
 
     m, *p = s.split()
     if len(p) == 0 and m[0] == "=":
-        with io.open(m[1:], "r", encoding="utf-8") as f:
+        with open(m[1:], encoding="utf-8") as f:
             kw = yload(f)
             m = kw.pop("type")
     else:
@@ -147,7 +149,7 @@ async def null_server_login(stream):
     return stream
 
 
-async def null_client_login(stream, user: "BaseClientAuth"):  # pylint: disable=unused-argument
+async def null_client_login(stream, user: BaseClientAuth):  # pylint: disable=unused-argument
     return stream
 
 
@@ -342,9 +344,7 @@ class BaseServerAuth(_AuthLoaded):
 
         try:
             data = data["conv"].data["key"]
-            res, _ = root.follow_acl(
-                Path(None, "conv", data), create=False, nulls_ok=True
-            )
+            res, _ = root.follow_acl(Path(None, "conv", data), create=False, nulls_ok=True)
             return res
         except (KeyError, AttributeError):
             return ConvNull
@@ -354,9 +354,7 @@ class BaseServerAuth(_AuthLoaded):
             data = data["acl"].data["key"]
             if data == "*":
                 return NullACL
-            acl, _ = root.follow_acl(
-                Path(None, "acl", data), create=False, nulls_ok=True
-            )
+            acl, _ = root.follow_acl(Path(None, "acl", data), create=False, nulls_ok=True)
             return ACLFinder(acl)
         except (KeyError, AttributeError):
             return NullACL
@@ -422,7 +420,7 @@ class BaseServerAuthMaker(_AuthLoaded):
         cls,
         cmd: StreamCommand,
         data: attrdict,  # pylint: disable=unused-argument
-    ) -> "BaseServerAuthMaker":
+    ) -> BaseServerAuthMaker:
         """Create/update a new user by reading the record from the client"""
         dt = data.get("data", None) or {}
         jsonschema.validate(instance=dt, schema=cls.schema)

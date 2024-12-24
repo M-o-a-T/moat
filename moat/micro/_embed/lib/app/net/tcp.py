@@ -1,6 +1,7 @@
 """
 Apps for TCP connectivity
 """
+
 from __future__ import annotations
 
 from moat.micro.compat import AC_use
@@ -10,7 +11,7 @@ from moat.micro.compat import AC_use
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Awaitable
+    from collections.abc import Awaitable
 
 
 def Raw(*a, **k):
@@ -36,7 +37,11 @@ def Link(*a, **k):
     class _Link(CmdMsg):
         def __init__(self, cfg):
             stack = console_stack(
-                TcpLink(cfg.get("host", "127.0.0.1"), cfg["port"], retry=cfg.get("retry", {})),
+                TcpLink(
+                    cfg.get("host", "127.0.0.1"),
+                    cfg["port"],
+                    retry=cfg.get("retry", {}),
+                ),
                 cfg,
             )
             super().__init__(stack, cfg)

@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 from ..adapters import StreamAdapter
 from ..codecs import read_or_raise
 from ..errors import MoatMQTTException
@@ -43,8 +44,9 @@ class ConnackVariableHeader(MQTTVariableHeader):
         return out
 
     def __repr__(self):
-        return type(self).__name__ + "(session_parent={0}, return_code={1})".format(
-            hex(self.session_parent), hex(self.return_code)
+        return (
+            type(self).__name__
+            + f"(session_parent={hex(self.session_parent)}, return_code={hex(self.return_code)})"
         )
 
 
@@ -79,7 +81,7 @@ class ConnackPacket(MQTTPacket):
         else:
             if fixed.packet_type != CONNACK:
                 raise MoatMQTTException(
-                    "Invalid fixed packet type %s for ConnackPacket init" % fixed.packet_type
+                    "Invalid fixed packet type %s for ConnackPacket init" % fixed.packet_type,
                 )
             header = fixed
         super().__init__(header)

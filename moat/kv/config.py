@@ -3,6 +3,8 @@ An online-updated config store
 
 """
 
+from __future__ import annotations
+
 try:
     from contextlib import asynccontextmanager
 except ImportError:  # pragma: no cover

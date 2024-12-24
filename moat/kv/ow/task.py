@@ -2,6 +2,8 @@
 OWFS task for DistKV
 """
 
+from __future__ import annotations
+
 import anyio
 from asyncowfs import OWFS
 from asyncowfs.event import (
@@ -51,7 +53,9 @@ async def mon(ow, hd):
                 if isinstance(msg.attribute, str):
                     attr = (attr,)
                 await node.root.err.record_error(
-                    "onewire", Path.build(node.subpath) + attr, exc=msg.exception
+                    "onewire",
+                    Path.build(node.subpath) + attr,
+                    exc=msg.exception,
                 )
 
             elif isinstance(msg, DeviceValue):
@@ -70,7 +74,7 @@ async def task(client, cfg, server=None, evt=None):
     async with OWFS() as ow:
         hd = await OWFSroot.as_handler(client)
         await ow.add_task(mon, ow, hd)
-        port = cfg.kv.ow.port
+        port = cfg.ow.port
         if not server:
             si = ((s._name, s) for s in hd.server)
         elif isinstance(server, str):

@@ -1,4 +1,5 @@
 # command line interface
+from __future__ import annotations
 
 import asyncclick as click
 from asyncakumuli import DS
@@ -32,10 +33,11 @@ cli = std_command(
     ),
 )
 
+
 @cli.command("dump")
-@click.option("-l","--one-line",is_flag=True,help="single line per entry")
+@click.option("-l", "--one-line", is_flag=True, help="single line per entry")
 @click.pass_obj
-async def dump_(obj,one_line):
+async def dump_(obj, one_line):
     """Emit a server's (sub)state as a list / YAML file."""
     if not one_line:
         await data_get(obj, obj.server._path, recursive=True)
@@ -44,6 +46,7 @@ async def dump_(obj,one_line):
         if n is obj.server:
             continue
         print(n, file=obj.stdout)
+
 
 @cli.group("at", invoke_without_command=True, short_help="create/show/delete an entry")
 @click.argument("path", nargs=1, type=P)
@@ -55,23 +58,26 @@ async def at_cli(ctx, path):
     obj.subpath = path
     obj.node = obj.server.follow(path)
     if ctx.invoked_subcommand is None:
-        await data_get(obj, obj.server._path+obj.subpath, recursive=False)
+        await data_get(obj, obj.server._path + obj.subpath, recursive=False)
+
 
 @at_cli.command("--help", hidden=True)
 @click.pass_context
 def help(ctx):
     print(at_cli.get_help(ctx))
 
+
 @at_cli.command("dump")
 @click.pass_obj
-@click.option("-l","--one-line",is_flag=True,help="single line per entry")
-async def dump_at(obj,one_line):
+@click.option("-l", "--one-line", is_flag=True, help="single line per entry")
+async def dump_at(obj, one_line):
     """Emit a subtree as a list / YAML file."""
     if one_line:
-        await data_get(obj, obj.server._path+obj.subpath, recursive=True)
+        await data_get(obj, obj.server._path + obj.subpath, recursive=True)
         return
     for n in obj.node.all_children:
         print(n, file=obj.stdout)
+
 
 @at_cli.command("add", short_help="Add an entry")
 @click.option("-f", "--force", is_flag=True, help="Allow replacing an existing entry?")
@@ -118,9 +124,9 @@ async def add_(obj, source, mode, attr, series, tags, force):
         res = (await obj.client.get(source)).value
         if attr:
             res = attrdict._get(res, attr)
-        if not isinstance(res,(int,float)):
+        if not isinstance(res, (int, float)):
             raise ValueError(res)
-    except (AttributeError,KeyError):
+    except (AttributeError, KeyError):
         raise click.UsageError("The value at %s does not exist." % (source,)) from None
     except ValueError:
         raise click.UsageError("The value at %s is not a number." % (source,)) from None
@@ -152,8 +158,7 @@ async def delete_(obj):
 @attr_args
 @click.pass_obj
 async def attr_(obj, vars_, eval_, path_):
-    """Modify a given akumuli series (copier).
-    """
+    """Modify a given akumuli series (copier)."""
     if not vars_ and not eval_ and not path_:
         return
 
@@ -174,4 +179,10 @@ async def monitor(obj, paths):
     await server.wait_loaded()
 
     async with as_service(obj) as srv:
-        await task(obj.client, obj.cfg.kv.akumuli, server[obj.server._name], evt=srv, paths=paths)
+        await task(
+            obj.client,
+            obj.cfg.kv.akumuli,
+            server[obj.server._name],
+            evt=srv,
+            paths=paths,
+        )

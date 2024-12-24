@@ -1,6 +1,7 @@
 """
 DistKV client data model for MoaT bus devices
 """
+
 import anyio
 
 import asyncclick as click
@@ -8,6 +9,7 @@ import asyncclick as click
 from distkv.obj import ClientEntry, ClientRoot, AttrClientEntry
 from distkv.util import Path
 from distkv.errors import ErrorRoot
+
 
 class _MOATbase(ClientEntry):
     """
@@ -78,7 +80,9 @@ class MOATnode(_MOATbase):
         if dev is None or dev.bus is None:
             return
 
-        self.val = combine_dict(self.value_or({}, Mapping), self.parent.value_or({}, Mapping))
+        self.val = combine_dict(
+            self.value_or({}, Mapping), self.parent.value_or({}, Mapping)
+        )
 
     async def setup(self, initial=False):
         await super().setup()
@@ -111,6 +115,7 @@ class MOATnode(_MOATbase):
         await self.tg.spawn(_spawn, evt, p, a, k)
         await evt.wait()
 
+
 def conn_backend(name):
     from importlib import import_module
 
@@ -121,15 +126,16 @@ def conn_backend(name):
 
 class MOATconn(_MOATbase, AttrClientEntry):
     """Describes one possible connection to this bus."""
+
     typ = None
     params = None
     host = None
 
-    ATTRS = ("typ","params","host")
+    ATTRS = ("typ", "params", "host")
 
-    def __init__(self,*a,**k):
+    def __init__(self, *a, **k):
         self.params = {}
-        super().__init__(*a,**k)
+        super().__init__(*a, **k)
 
     def __str__(self):
         if self.typ is None:
@@ -165,7 +171,9 @@ class MOATconn(_MOATbase, AttrClientEntry):
                     await process(msg)
         """
         if self.host is not None and self.root.client.client_name != self.host:
-            raise RuntimeError(f"This must run on {self.host}. This is {self.root.client.client_name}")
+            raise RuntimeError(
+                f"This must run on {self.host}. This is {self.root.client.client_name}"
+            )
         return self.handler(self.root.client, **self.params)
 
     @staticmethod
@@ -178,12 +186,16 @@ class MOATconn(_MOATbase, AttrClientEntry):
             raise click.MissingParameter(param_hint="", param_type="type")
         back = conn_backend(typ)
         if back.need_host and host is None:
-            raise click.MissingParameter(param_hint="", param_type="host", message="Required by this type.")
+            raise click.MissingParameter(
+                param_hint="", param_type="host", message="Required by this type."
+            )
         back.check_config(params)
+
 
 class MOATbus(_MOATbase, AttrClientEntry):
     """Describes one bus, i.e. a collection of clients"""
-    ATTRS = ('topic',)
+
+    ATTRS = ("topic",)
     topic: str = None
 
     @classmethod
@@ -209,7 +221,11 @@ class MOATbus(_MOATbase, AttrClientEntry):
 
     async def save(self):
         if self.topic is None:
-            raise click.MissingParameter(param_hint="", param_type="topic", message="You need to specify a topic path.")
+            raise click.MissingParameter(
+                param_hint="",
+                param_type="topic",
+                message="You need to specify a topic path.",
+            )
         await super().save()
 
     @property
@@ -218,7 +234,6 @@ class MOATbus(_MOATbase, AttrClientEntry):
         res.name = self.name
         res.topic = self.topic
         return res
-
 
 
 class MOATbuses(_MOATbase):

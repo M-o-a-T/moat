@@ -2,6 +2,7 @@
 Object interface to moat.kv data
 
 """
+from __future__ import annotations
 
 import heapq
 import weakref
@@ -16,7 +17,16 @@ try:
 except ImportError:
     from async_generator import asynccontextmanager
 
-from moat.util import NoLock, NotGiven, Path, PathLongener, combine_dict, yload
+from moat.util import (
+    NoLock,
+    NotGiven,
+    Path,
+    PathLongener,
+    combine_dict,
+    yload,
+    ensure_cfg,
+    CFG,
+)
 
 __all__ = ["ClientEntry", "AttrClientEntry", "ClientRoot"]
 
@@ -148,7 +158,7 @@ class ClientEntry:
     @property
     def subpath(self):
         """Return the path to this entry, starting with its :class:`ClientRoot` base."""
-        return self._path[len(self.root._path) :]  # noqa: E203
+        return self._path[len(self.root._path) :]
 
     @property
     def all_children(self):
@@ -253,7 +263,7 @@ class ClientEntry:
         """
         async with NoLock if _locked else self._lock:
             r = await self.root.client.set(
-                self._path, chain=self.chain, value=value, nchain=3, idem=True
+                self._path, chain=self.chain, value=value, nchain=3, idem=True,
             )
             if wait:
                 await self.root.wait_chain(r.chain)
@@ -261,9 +271,7 @@ class ClientEntry:
             self.chain = r.chain
             return r
 
-    async def delete(
-        self, _locked=False, nchain=0, chain=True, wait=False, recursive=False
-    ):
+    async def delete(self, _locked=False, nchain=0, chain=True, wait=False, recursive=False):
         """Delete this node's value.
 
         This is a coroutine.
@@ -419,9 +427,7 @@ class MirrorRoot(ClientEntry):
             self._seen = dict()
 
     @classmethod
-    async def as_handler(
-        cls, client, cfg=None, key="prefix", subpath=(), name=None, **kw
-    ):
+    async def as_handler(cls, client, cfg=None, key="prefix", subpath=(), name=None, **kw):
         """Return an (or "the") instance of this class.
 
         The handler is created if it doesn't exist.
@@ -440,13 +446,15 @@ class MirrorRoot(ClientEntry):
             from pathlib import Path as _Path
 
             md = inspect.getmodule(cls)
+            ensure_cfg("moat.kv")
+            defcfg = CFG.kv.get(cls.CFG)
             try:
-                f = (_Path(md.__file__).parent / "_config.yaml").open("r")
-            except EnvironmentError:
+                f = (_Path(md.__file__).parent / "_nconfig.yaml").open("r")
+            except OSError:
                 pass
             else:
                 with f:
-                    defcfg = yload(f, attr=True).get("kv",{}).get(cls.CFG)
+                    defcfg = yload(f, attr=True).get("kv", {}).get(cls.CFG)
         if cfg:
             if defcfg:
                 cfg = combine_dict(cfg, defcfg)
@@ -461,9 +469,7 @@ class MirrorRoot(ClientEntry):
             name = str(Path("_moat.kv", client.name, cls.CFG, *subpath))
 
         def make():
-            return client.mirror(
-                cfg[key] + subpath, root_type=cls, need_wait=True, cfg=cfg, **kw
-            )
+            return client.mirror(cfg[key] + subpath, root_type=cls, need_wait=True, cfg=cfg, **kw)
 
         return await client.unique_helper(name, factory=make)
 
@@ -525,7 +531,7 @@ class MirrorRoot(ClientEntry):
                 pl = PathLongener(())
                 await self.run_starting()
                 async with self.client._stream(
-                    "watch", nchain=3, path=self._path, fetch=True
+                    "watch", nchain=3, path=self._path, fetch=True,
                 ) as w:
                     async for r in w:
                         if "path" not in r:
@@ -551,9 +557,7 @@ class MirrorRoot(ClientEntry):
                                 pass
 
                             # update entry
-                            entry.chain = (
-                                None if val is NotGiven else r.get("chain", None)
-                            )
+                            entry.chain = None if val is NotGiven else r.get("chain", None)
                             await entry.set_value(val)
 
                             if val is NotGiven and not entry:
@@ -620,7 +624,6 @@ class MirrorRoot(ClientEntry):
 
 
 class ClientRoot(MirrorRoot):
-
     """
     This class represents the root of a subsystem's storage.
 

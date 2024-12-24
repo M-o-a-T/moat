@@ -6,19 +6,10 @@ from __future__ import annotations
 
 import random
 import logging
-import sys
-from math import exp
-from functools import partial
 
-from moat.util.compat import TaskGroup, sleep_ms, Event
-from moat.util import pos2val,val2pos,attrdict
-from moat.micro.compat import ticks_ms, Queue
-from moat.micro.cmd.array import ArrayCmd
-from moat.micro.cmd.base import BaseCmd
+from moat.util.compat import sleep_ms
 
-from moat.ems.battery._base import BaseCell, BaseBattery, BaseBalancer
-from moat.ems.battery.diy_serial.packet import PacketHeader,PacketType,replyClass
-from moat.ems.battery.diy_serial.packet import ReplyIdentify,ReplyReadSettings
+from moat.ems.battery._base import BaseBattery, BaseBalancer
 
 logger = logging.getLogger(__name__)
 
@@ -29,15 +20,16 @@ class Batt(BaseBattery):
 
     Additional Config::
         n: 4  # number of cells
-        cfg: {}  # add 
+        cfg: {}  # add
         rnd: 0.1  # random factor for add_p, here 0.9…1.1
 
-    
-    """
-    u_d:float = 1.01
-    i:float = 0
 
-    def __init__(self,cfg):
+    """
+
+    u_d: float = 1.01
+    i: float = 0
+
+    def __init__(self, cfg):
         super().__init__(cfg)
         self._rand = random.Random()
 
@@ -49,7 +41,7 @@ class Batt(BaseBattery):
         "return synthetic voltage, multiplied by u_d"
         return self.u_d * await super().cmd_u()
 
-    async def cmd_u_d(self, *, ud:float):
+    async def cmd_u_d(self, *, ud: float):
         "change delta of battery vs. sum-of-cells voltage"
         self.u_d = ud
 
@@ -59,7 +51,7 @@ class Batt(BaseBattery):
             r += await c.cmd_c()
         return r / self.n
 
-    async def cmd_i(self, i:float=None):
+    async def cmd_i(self, i: float = None):
         if i is not None:
             self.i = i
         return self.i
@@ -69,13 +61,13 @@ class Batt(BaseBattery):
         while True:
             await sleep_ms(s)
             p = (await self.cmd_u()) * (await self.cmd_i())
-        
-            r=self.cfg.get("rnd",0)
-            u=await self.cmd_u()
+
+            r = self.cfg.get("rnd", 0)
+            u = await self.cmd_u()
             for c in self.apps:
-                f=(await c.cmd_u())/u
-                rnd=1+self._random(r*2)-r if r>0 else 1
-                await c.cmd_add_p(p=p*f*rnd,t=s)
+                f = (await c.cmd_u()) / u
+                rnd = 1 + self._random(r * 2) - r if r > 0 else 1
+                await c.cmd_add_p(p=p * f * rnd, t=s)
 
     async def start_tasks(self, tg):
         await super().start_tasks(tg)
@@ -86,5 +78,5 @@ class Bal(BaseBalancer):
     """
     Balancer support for a battery.
     """
-    pass
 
+    pass

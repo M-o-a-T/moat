@@ -1,6 +1,7 @@
 """
 Support code to connect to a TCP server.
 """
+
 from __future__ import annotations
 
 from moat.micro.compat import Event, L, TaskGroup, run_server

@@ -3,6 +3,9 @@
 Basic tool support
 
 """
+
+from __future__ import annotations
+
 import logging
 import time
 from textwrap import dedent as _dedent
@@ -55,7 +58,7 @@ async def cli(obj, config, **attrs):
 
     cfg = obj.cfg.bms.sched
     if config:
-        with open(config, "r") as f:
+        with open(config) as f:
             cc = yload(f)
             merge(cfg, cc)
     obj.cfg.bms.sched = process_args(cfg, **attrs)
@@ -97,7 +100,7 @@ List of known inputs+outputs. Use T.‹name› or ‹mode›.‹name› for deta
                     doc = repr(exc)
                 else:
                     doc = dedent(mm.__doc__).split("\n", 1)[0]
-            print(f"{m :{ml}s}  {doc}")
+            print(f"{m:{ml}s}  {doc}")
         return
     for m in name:
         if m == "T":
@@ -107,7 +110,7 @@ List of known inputs+outputs. Use T.‹name› or ‹mode›.‹name› for deta
                 if m.startswith("_"):
                     continue
                 doc = dedent(getattr(BaseLoader, m).__doc__).split("\n", 1)[0]
-                print(f"{m :{ml}s}  {doc}")
+                print(f"{m:{ml}s}  {doc}")
             continue
         if m.startswith("T."):
             doc = dedent(getattr(BaseLoader, m[2:]).__doc__)
@@ -128,7 +131,7 @@ List of known inputs+outputs. Use T.‹name› or ‹mode›.‹name› for deta
             f"""\
 {m}:
 {doc}
-"""
+""",
         )
 
 
@@ -136,11 +139,15 @@ List of known inputs+outputs. Use T.‹name› or ‹mode›.‹name› for deta
     help="""
 Calculate proposed SoC by analyzing files with assumed future usage and weather / solar input.
 Goal: minimize cost.
-"""
+""",
 )
 @click.pass_obj
 @click.option(
-    "-a", "--all", "all_", is_flag=True, help="emit all outputs (default: first interval)"
+    "-a",
+    "--all",
+    "all_",
+    is_flag=True,
+    help="emit all outputs (default: first interval)",
 )
 @click.option("-f", "--force", is_flag=True, help="Run even if we're not close to the timeslot")
 async def analyze(obj, all_, force):

@@ -3,6 +3,7 @@ Fake RTC, actually writes he state to disk
 
 Linux only
 """
+
 from __future__ import annotations
 
 import moat.micro._rtc as _rtc

@@ -1,6 +1,8 @@
 """
 Data access
 """
+from __future__ import annotations
+
 import datetime
 import os
 import sys
@@ -35,7 +37,7 @@ def add_dates(d):
                 continue
             if start <= v <= stop:
                 d[f"_{k}"] = datetime.datetime.fromtimestamp(v).isoformat(
-                    sep=" ", timespec="milliseconds"
+                    sep=" ", timespec="milliseconds",
                 )
 
     _add(d)
@@ -81,9 +83,7 @@ async def data_get(
             kw.setdefault("nchain", obj.meta)
         y = {}
         if internal:
-            res = await obj.client._request(
-                action="get_tree_internal", path=path, iter=True, **kw
-            )
+            res = await obj.client._request(action="get_tree_internal", path=path, iter=True, **kw)
         else:
             res = obj.client.get_tree(path, **kw)
         async for r in res:

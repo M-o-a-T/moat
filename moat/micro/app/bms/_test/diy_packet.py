@@ -5,7 +5,7 @@ Packet handler for diyBMS-serial mock battery
 from __future__ import annotations
 
 import moat.ems.battery.diy_serial.packet as P
-from moat.micro.conv.steinhart import thermistor2celsius, celsius2thermistor
+from moat.micro.conv.steinhart import celsius2thermistor
 
 __all__ = [
     "PacketType",
@@ -15,7 +15,8 @@ __all__ = [
     "MAXCELLS",
 ]
 
-PacketType=P.PacketType
+PacketType = P.PacketType
+
 
 class PacketHeader(P.PacketHeader):
     def decode_one(self, msg):
@@ -37,38 +38,43 @@ class PacketHeader(P.PacketHeader):
             msg = memoryview(msg)[off:]
         return pkt, msg
 
-    def encode_one(self, msg, pkt:_Reply=None):
-        return self.to_bytes()+msg+(pkt.to_bytes() if pkt is not None else b'')
-    
+    def encode_one(self, msg, pkt: _Reply = None):
+        return self.to_bytes() + msg + (pkt.to_bytes() if pkt is not None else b"")
+
+
 ###
+
 
 class ReplyIdentify(P.ReplyIdentify):
     def to_bytes(self):
         return b""
 
+
 class RequestTiming(P.RequestTiming):
     async def to_cell(self, _cell):
         _cell._dp_t = self.timer
+
 
 class ReplyTiming(P.ReplyTiming):
     async def from_cell(self, _cell):
         self.timer = _cell._dp_t
 
+
 class ReplyReadSettings(P.ReplyReadSettings):
-    async def from_cell(self,cell):
-        bc_i,bc_e = await cell.b_coeff()
+    async def from_cell(self, cell):
+        bc_i, bc_e = await cell.b_coeff()
         s = await cell.settings()
         self.BCoeffInternal = bc_i
         self.BCoeffExternal = bc_e
         self.gitVersion = 0
         self.boardVersion = 0
         self.dataVersion = 0
-        self.mvPerADC = int(s["vpa"] *1000*64)
+        self.mvPerADC = int(s["vpa"] * 1000 * 64)
         self.voltageCalibration = s["vcal"]
         self.bypassTempRaw = 0
         self.bypassVoltRaw = 0
         self.numSamples = s["ns"]
-        self.loadResRaw = int(4.2*16+.5)
+        self.loadResRaw = int(4.2 * 16 + 0.5)
 
     def to_bytes(self):
         return self.S.pack(
@@ -83,7 +89,8 @@ class ReplyReadSettings(P.ReplyReadSettings):
             self.BCoeffExternal,
             self.numSamples,
             self.loadResRaw,
-            )
+        )
+
 
 class ReplyVoltages(P.ReplyVoltages):
     def to_bytes(self):
@@ -95,7 +102,7 @@ class ReplyVoltages(P.ReplyVoltages):
         bal = await cell.bal()
 
         self.voltRaw = await cell.v2raw(u)
-        if bal.get("th",None) is None:
+        if bal.get("th", None) is None:
             self.bypassRaw = 0
         else:
             self.bypassRaw = await cell.v2raw(bal["th"])
@@ -109,15 +116,16 @@ class ReplyTemperature(P.ReplyTemperature):
     async def from_cell(self, cell):
         t = await cell.t()
         tb = await cell.tb()
-        bc_i,bc_e = await cell.b_coeff()
-        self.intRaw = celsius2thermistor(bc_i,tb)
-        self.extRaw = celsius2thermistor(bc_e,t)
+        bc_i, bc_e = await cell.b_coeff()
+        self.intRaw = celsius2thermistor(bc_i, tb)
+        self.extRaw = celsius2thermistor(bc_e, t)
 
     def to_bytes(self):
         b1 = self.intRaw & 0xFF
-        b2 = (self.intRaw >> 8) | ((self.extRaw &0x0F) << 4)
+        b2 = (self.intRaw >> 8) | ((self.extRaw & 0x0F) << 4)
         b3 = self.extRaw >> 4
-        return self.S.pack(b1,b2,b3)
+        return self.S.pack(b1, b2, b3)
+
 
 requestClass = [
     P.RequestResetCounters,  # ResetCounters=0

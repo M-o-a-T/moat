@@ -3,12 +3,12 @@
 """
 Modbus server classes for serial(RTU) and TCP.
 """
+from __future__ import annotations
 
 import logging
 import socket
 from binascii import b2a_hex
 from contextlib import asynccontextmanager
-from typing import Type, Union
 import time
 
 import anyio
@@ -45,7 +45,7 @@ class UnitContext(ModbusSlaveContext):
             server._add_unit(self)
 
     def add(
-        self, typ: TypeCodec, offset: int, val: Union[BaseValue, Type[BaseValue]]
+        self, typ: TypeCodec, offset: int, val: BaseValue | type[BaseValue],
     ) -> BaseValue:
         """Add a field to be served.
 
@@ -118,11 +118,11 @@ class BaseModbusServer(CtxObj):
 
     async def process_request(self, request):
         """Basic request processor"""
-        context = self.context[request.unit_id]
+        context = self.context[request.slave_id]
         if hasattr(context, "process_request"):
             response = await context.process_request(request)
         else:
-            response = request.execute(context)
+            response = await request.execute(context)
         return response
 
     @asynccontextmanager
@@ -155,8 +155,9 @@ class SerialModbusServer(BaseModbusServer):
         from pymodbus.framer.rtu_framer import (  # pylint: disable=import-outside-toplevel
             ModbusRtuFramer,
         )
+
         class Framer(ModbusRtuFramer):
-            def _validate_unit_id(self, unit, single):
+            def _validate_slave_id(self, unit, single):
                 return True
 
         self.decoder = ServerDecoder()  # pylint: disable=no-value-for-parameter ## duh?
@@ -183,11 +184,13 @@ class SerialModbusServer(BaseModbusServer):
                 else:
                     data = await ser.receive()
                 t2 = time.monotonic()
-                if t2-t > 0.2:
+                if t2 - t > 0.2:
                     self.framer.resetFrame()
                 t = t2
                 msgs = []
-                self.framer.processIncomingPacket(data=data, unit=0, callback=msgs.append, single=True)
+                self.framer.processIncomingPacket(
+                    data=data, unit=0, callback=msgs.append, single=True,
+                )
                 for msg in msgs:
                     with anyio.fail_after(2):
                         await self._process(msg)
@@ -218,8 +221,14 @@ class SerialModbusServer(BaseModbusServer):
         # no response when broadcasting
         response.unit_id = unit
         response.transaction_id = tid
-        if isinstance(response,ExceptionResponse):
-            _logger.error("Source: %r %d %d %d", type(request), request.function_code, request.address, getattr(request,"count",1))
+        if isinstance(response, ExceptionResponse):
+            _logger.error(
+                "Source: %r %d %d %d",
+                type(request),
+                request.function_code,
+                request.address,
+                getattr(request, "count", 1),
+            )
 
         if response.should_respond and not broadcast:
             response.transaction_id = request.transaction_id
@@ -229,36 +238,36 @@ class SerialModbusServer(BaseModbusServer):
                 response, skip_encoding = self.response_manipulator(response)
             if not skip_encoding:
                 response = self.framer.buildPacket(response)
-#           if _logger.isEnabledFor(logging.DEBUG):
-#               _logger.debug("send: [%s]- %s", request, b2a_hex(response))
+            #           if _logger.isEnabledFor(logging.DEBUG):
+            #               _logger.debug("send: [%s]- %s", request, b2a_hex(response))
 
             await self._serial.send(response)
 
 
 def create_server(cfg):
-	"""
-	Create a server (TCP or serial) according to the configuration.
+    """
+    Create a server (TCP or serial) according to the configuration.
 
-	@cfg is a dict with either host/port or port/serial keys.
-	"""
-	if "serial" in cfg:
-		port = cfg.get("port", None)
-		kw = cfg["serial"]
-		if port is not None:
-			kw["port"] = port
-		srv = SerialModbusServer(**kw)
-	elif "host" in cfg or ("port" in cfg and isinstance(cfg["port"],int)):
-		kw = {}
-		for k,v in cfg.items():
-			if isinstance(k,str):
-				if k == "units":
-					continue
-				if k == "host":
-					k = "address"
-				kw[k] = v
-		srv = ModbusServer(**kw)
-	else:
-		raise ValueError("neither serial nor TCP config found")
+    @cfg is a dict with either host/port or port/serial keys.
+    """
+    if "serial" in cfg:
+        port = cfg.get("port", None)
+        kw = cfg["serial"]
+        if port is not None:
+            kw["port"] = port
+        return SerialModbusServer(**kw)
+    elif "host" in cfg or ("port" in cfg and isinstance(cfg["port"], int)):
+        kw = {}
+        for k, v in cfg.items():
+            if isinstance(k, str):
+                if k == "units":
+                    continue
+                if k == "host":
+                    k = "address"
+                kw[k] = v
+        return ModbusServer(**kw)
+    else:
+        raise ValueError("neither serial nor TCP config found")
 
 
 class RelayServer:
@@ -315,11 +324,9 @@ class ModbusServer(BaseModbusServer):
         self.decoder = ServerDecoder()
         self.framer = ModbusSocketFramer
         self.address = address or "localhost"
-        self.port = (
-            port if port is not None else 502
-        )
+        self.port = port if port is not None else 502
 
-    async def serve(self, opened:anyio.Event|None=None):
+    async def serve(self, opened: anyio.Event | None = None):
         """Run this server.
         Sets the `opened` event, if given, as soon as the server port is open.
         """
@@ -356,37 +363,37 @@ class ModbusServer(BaseModbusServer):
                     break
                 if _logger.isEnabledFor(logging.DEBUG):
                     _logger.debug(  # pylint: disable=logging-not-lazy
-                        "Handling data: " + hexlify_packets(data)
+                        "Handling data: " + hexlify_packets(data),
                     )
 
                 reqs = []
                 # TODO fix pymodbus
-                framer.processIncomingPacket(data, unit=0, callback=reqs.append, single=True)
+                framer.processIncomingPacket(data, slave=0, callback=reqs.append, single=True)
 
                 for request in reqs:
-                    unit = request.unit_id
+                    unit = request.slave_id
                     tid = request.transaction_id
                     try:
                         response = await self.process_request(request)
                     except NoSuchSlaveException:
-                        _logger.debug("requested slave does not exist: %d", request.unit_id)
+                        _logger.debug("requested slave does not exist: %d", request.slave_id)
                         response = request.doException(merror.GatewayNoResponse)
                     except Exception as exc:  # pylint: disable=broad-except
                         _logger.warning("Datastore unable to fulfill request", exc_info=exc)
                         response = request.doException(merror.SlaveFailure)
                     if response.should_respond:
                         response.transaction_id = tid
-                        response.unit_id = unit
+                        response.slave_id = unit
                         # self.server.control.Counter.BusMessage += 1
                         pdu = framer.buildPacket(response)
                         if _logger.isEnabledFor(logging.DEBUG):
                             _logger.debug("send: %s", b2a_hex(pdu))
                         await conn.send(pdu)
 
-            except socket.timeout as msg:
+            except TimeoutError as msg:
                 _logger.debug("Socket timeout occurred: %r", msg)
                 reset_frame = True
-            except socket.error as msg:
+            except OSError as msg:
                 _logger.error("Socket error occurred: %r", msg)
                 return
             except anyio.get_cancelled_exc_class():

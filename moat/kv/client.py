@@ -4,17 +4,18 @@ Client code.
 Main entry point: :func:`open_client`.
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import socket
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import iscoroutine
-from pathlib import Path
-from typing import Tuple
 
 import anyio
 from asyncscope import Scope, main_scope, scope
 from moat.util import (  # pylint: disable=no-name-in-module
+    CFG,
     DelayedRead,
     DelayedWrite,
     NotGiven,
@@ -25,9 +26,9 @@ from moat.util import (  # pylint: disable=no-name-in-module
     byte2num,
     combine_dict,
     create_queue,
+    ensure_cfg,
     gen_ssl,
     num2byte,
-    yload,
 )
 
 from .codec import packer, stream_unpacker
@@ -117,9 +118,7 @@ async def client_scope(_name=None, **cfg):
             _name = f"_{_cid}"
             # uniqueness required for testing.
             # TODO replace with a dependency on the test server.
-    return await scope.service(
-        f"moat.kv.client.{_name}", _scoped_client, _name=_name, **cfg
-    )
+    return await scope.service(f"moat.kv.client.{_name}", _scoped_client, _name=_name, **cfg)
 
 
 class StreamedRequest:
@@ -155,9 +154,7 @@ class StreamedRequest:
         self._path_long = lambda x: x
         if client.qlen > 0:
             self.dw = DelayedWrite(client.qlen)
-            self.qr = DelayedRead(
-                client.qlen, get_seq=self._get_seq, send_ack=self._send_ack
-            )
+            self.qr = DelayedRead(client.qlen, get_seq=self._get_seq, send_ack=self._send_ack)
         else:
             self.qr = create_queue(client.config.server.buffer)
 
@@ -227,7 +224,7 @@ class StreamedRequest:
 
     async def get(self):
         """Receive a single reply"""
-        pass  # receive reply
+        # receive reply
         if self._reply_stream:
             raise RuntimeError("Unexpected multi stream msg")
         msg = await self.recv()
@@ -411,7 +408,7 @@ class Client:
     qlen: int = 0
 
     def __init__(self, cfg: dict):
-        CFG = yload(Path(__file__).parent / "_config.yaml")
+        ensure_cfg("moat.kv")
         self._cfg = combine_dict(cfg, CFG["kv"], cls=attrdict)
         self.config = ClientConfig(self)
 
@@ -482,11 +479,11 @@ class Client:
 
             k = await anyio.to_thread.run_sync(gen_key)
             res = await self._request(
-                "diffie_hellman", pubkey=num2byte(k.public_key), length=length
+                "diffie_hellman",
+                pubkey=num2byte(k.public_key),
+                length=length,
             )  # length=k.key_length
-            await anyio.to_thread.run_sync(
-                k.generate_shared_secret, byte2num(res.pubkey)
-            )
+            await anyio.to_thread.run_sync(k.generate_shared_secret, byte2num(res.pubkey))
             self._dh_key = num2byte(k.shared_secret)[0:32]
         return self._dh_key
 
@@ -681,16 +678,12 @@ class Client:
         if not sa or not sa[0]:
             # no auth required
             if auth:
-                logger.info(
-                    "Tried to use auth=%s, but not required.", auth._auth_method
-                )
+                logger.info("Tried to use auth=%s, but not required.", auth._auth_method)
             return
         if not auth:
             raise ClientAuthRequiredError("You need to log in using:", sa[0])
         if auth._auth_method != sa[0]:
-            raise ClientAuthMethodError(
-                f"You cannot use {auth._auth_method!r} auth", sa
-            )
+            raise ClientAuthMethodError(f"You cannot use {auth._auth_method!r} auth", sa)
         if getattr(auth, "_DEBUG", False):
             auth._length = 16
         await auth.auth(self)
@@ -736,9 +729,7 @@ class Client:
                         self._server_init = msg = await hello.get()
                         self.logger.debug("Hello %s", msg)
                         self.server_name = msg.node
-                        self.client_name = (
-                            cfg["name"] or socket.gethostname() or self.server_name
-                        )
+                        self.client_name = cfg["name"] or socket.gethostname() or self.server_name
                         if "qlen" in msg:
                             self.qlen = min(msg.qlen, 99)  # self.config.server.buffer
                             await self._send(seq=0, qlen=self.qlen)
@@ -746,13 +737,11 @@ class Client:
 
                     from .config import ConfigRoot
 
-                    self._config = await ConfigRoot.as_handler(
-                        self, require_client=False
-                    )
+                    self._config = await ConfigRoot.as_handler(self, require_client=False)
 
                 except TimeoutError:
                     raise
-                except socket.error as e:
+                except OSError as e:
                     raise ServerConnectionError(host, port) from e
                 else:
                     yield self
@@ -830,7 +819,12 @@ class Client:
             kw["idem"] = idem
 
         return self._request(
-            action="set_value", path=path, value=value, iter=False, nchain=nchain, **kw
+            action="set_value",
+            path=path,
+            value=value,
+            iter=False,
+            nchain=nchain,
+            **kw,
         )
 
     def delete(self, path, *, chain=NotGiven, prev=NotGiven, nchain=0, recursive=False):
@@ -878,9 +872,7 @@ class Client:
             raise RuntimeError("You need a path, not a string")
         if empty is None:
             empty = not with_data
-        res = await self._request(
-            action="enum", path=path, with_data=with_data, empty=empty, **kw
-        )
+        res = await self._request(action="enum", path=path, with_data=with_data, empty=empty, **kw)
         try:
             return res.result
         except AttributeError:
@@ -910,7 +902,11 @@ class Client:
         if long_path:
             lp = PathLongener()
         async for r in await self._request(
-            action="get_tree", path=path, iter=True, long_path=True, **kw
+            action="get_tree",
+            path=path,
+            iter=True,
+            long_path=True,
+            **kw,
         ):
             if long_path:
                 lp(r)
@@ -963,9 +959,7 @@ class Client:
         """
         if isinstance(path, str):
             raise RuntimeError("You need a path, not a string")
-        return self._stream(
-            action="watch", path=path, iter=True, long_path=long_path, **kw
-        )
+        return self._stream(action="watch", path=path, iter=True, long_path=long_path, **kw)
 
     def mirror(self, path, *, root_type=None, **kw):
         """An async context manager that affords an update-able mirror
@@ -997,7 +991,7 @@ class Client:
         root = root_type(self, path, **kw)
         return root.run()
 
-    def msg_monitor(self, topic: Tuple[str], raw: bool = False):
+    def msg_monitor(self, topic: tuple[str], raw: bool = False):
         """
         Return an async iterator of tunneled messages. This receives
         all messages sent using :meth:`msg_send` with the same topic.
@@ -1023,7 +1017,7 @@ class Client:
         """
         return self._stream(action="msg_monitor", topic=topic, raw=raw)
 
-    def msg_send(self, topic: Tuple[str], data=None, raw: bytes = None):
+    def msg_send(self, topic: tuple[str], data=None, raw: bytes = None):
         """
         Tunnel a user-tagged message. This sends the message
         to all active callers of :meth:`msg_monitor` which use the same topic.

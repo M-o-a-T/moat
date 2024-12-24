@@ -1,4 +1,5 @@
 "OS Error map"
+
 from __future__ import annotations
 
 os_error_mapping = {

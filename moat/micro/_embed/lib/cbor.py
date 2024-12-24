@@ -1,6 +1,7 @@
 """
 Minimal CBOR codec. Non-extensible (for now).
 """
+
 from __future__ import annotations
 
 import struct

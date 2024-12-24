@@ -82,7 +82,7 @@ class Path(collections.abc.Sequence):
     Meta elements (delimits elements, SHOULD be in front):
 
     \b
-        :mXX This path is marked with XX
+        :mXX This path is marked with XX (deprecated)
         :R   An alias for the current root
         :Q   An alias for an alternate root
         :P   An alias for another alternate root
@@ -109,6 +109,8 @@ class Path(collections.abc.Sequence):
     """
 
     def __init__(self, *a, mark="", scan=False):
+        if mark:
+            warnings.warn("Marking a path is deprecated")
         if a and scan:
             i = 0
             while i < len(a):
@@ -127,6 +129,8 @@ class Path(collections.abc.Sequence):
     @classmethod
     def build(cls, data, *, mark=""):
         """Optimized shortcut to generate a path from an existing tuple"""
+        if mark:
+            warnings.warn("Marking a path is deprecated")
         if isinstance(data, Path):
             return data
         if not isinstance(data, tuple):
@@ -152,6 +156,8 @@ class Path(collections.abc.Sequence):
 
     def with_mark(self, mark=""):
         """Returns the same path with a different mark"""
+        if mark:
+            warnings.warn("Marking a path is deprecated")
         return type(self).build(self._data, mark=mark)
 
     def __str__(self, slash=False):
@@ -251,6 +257,8 @@ class Path(collections.abc.Sequence):
         return True
 
     def __eq__(self, other):
+        if other is None:
+            return False
         if isinstance(other, Path):
             if self.mark != other.mark:
                 return False
@@ -539,7 +547,7 @@ class Path(collections.abc.Sequence):
                     res.append(path_eval(p[1:]))
 
                 if len(res) != pos + 1 - marks:
-                    raise RuntimeError("Slashed-Path syntax")  # noqa: TRY301
+                    raise RuntimeError("Slashed-Path syntax")
 
         except Exception as exc:
             raise SyntaxError(f"Cannot eval {path!r}, part {pos + 1}") from exc

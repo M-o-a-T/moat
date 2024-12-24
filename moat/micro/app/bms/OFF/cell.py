@@ -1,10 +1,10 @@
-from dataclasses import dataclass
+from __future__ import annotations
 from functools import cached_property
 
 import asyncdbus.service as dbus
 from moat.conv.steinhart import celsius2thermistor, thermistor2celsius
 from moat.dbus import DbusInterface
-from moat.util import Path, attrdict, combine_dict
+from moat.util import attrdict
 from victron.dbus.utils import wrap_dbus_dict, wrap_dbus_value
 
 from moat.micro.compat import sleep
@@ -24,19 +24,19 @@ class CellInterface(DbusInterface):
         super().__init__(dbus, cell.path, "bms")
 
     @dbus.method()
-    def GetData(self) -> 'a{sv}':
+    def GetData(self) -> "a{sv}":
         return wrap_dbus_dict(self.cell._data)
 
     @dbus.signal()
-    def DataChanged(self) -> 'a{sv}':
+    def DataChanged(self) -> "a{sv}":
         return wrap_dbus_dict(self.cell._data)
 
     @dbus.method()
-    def GetConfig(self) -> 'a{sv}':
+    def GetConfig(self) -> "a{sv}":
         return wrap_dbus_dict(self.cell.cfg)
 
     @dbus.method()
-    async def GetVoltage(self) -> 'd':
+    async def GetVoltage(self) -> d:
         h, res = await self.cell.send(RequestCellVoltage())
         if not h.seen:
             return 0
@@ -44,7 +44,7 @@ class CellInterface(DbusInterface):
         return self.cell.voltage
 
     @dbus.method()
-    async def GetTemperature(self) -> 'dd':
+    async def GetTemperature(self) -> dd:
         h, res = await self.cell.send(RequestCellTemperature())
         if not h.seen:
             return (-1000, -1000)
@@ -52,11 +52,11 @@ class CellInterface(DbusInterface):
         return (_t(self.cell.load_temp), _t(self.cell.batt_temp))
 
     @dbus.method()
-    async def GetPIDparams(self) -> 'uuu':
+    async def GetPIDparams(self) -> uuu:
         return await self.cell.get_pid()
 
     @dbus.method()
-    async def GetPIDpwm(self) -> 'd':
+    async def GetPIDpwm(self) -> d:
         h, res = await self.cell.send(RequestBalancePower())
         if not h.seen:
             return -1
@@ -64,24 +64,24 @@ class CellInterface(DbusInterface):
         return self.cell.balance_pwm
 
     @dbus.method()
-    async def SetPIDparams(self, kp: 'u', ki: 'u', kd: 'u') -> 'b':
+    async def SetPIDparams(self, kp: u, ki: u, kd: u) -> b:
         return await self.cell.set_pid(kp, ki, kd)
 
     @dbus.method()
-    def GetTemperatureLimit(self) -> 'd':
+    def GetTemperatureLimit(self) -> d:
         return _t(self.cell.load_maxtemp)
 
     @dbus.method()
-    async def SetTemperatureLimit(self, data: 'd') -> 'b':
+    async def SetTemperatureLimit(self, data: d) -> b:
         return await self.cell.set_loadtemp_limit(data)
 
     @dbus.method()
-    async def Identify(self) -> 'b':
+    async def Identify(self) -> b:
         h, _res = await self.cell.send(RequestIdentifyModule())
         return h.seen
 
     @dbus.method()
-    async def SetBalanceVoltage(self, data: 'd') -> 'b':
+    async def SetBalanceVoltage(self, data: d) -> b:
         if data < 0.1:
             await self.cell.set_force_balancing(None)
             return True
@@ -91,15 +91,15 @@ class CellInterface(DbusInterface):
         return True
 
     @dbus.method()
-    def GetBalanceVoltage(self) -> 'd':
+    def GetBalanceVoltage(self) -> d:
         return self.cell.balance_threshold or 0
 
     @dbus.method()
-    def GetConfig(self) -> 'v':
+    def GetConfig(self) -> v:
         return wrap_dbus_value(self.cell.cfg)
 
     @dbus.method()
-    async def SetVoltage(self, data: 'd') -> 'b':
+    async def SetVoltage(self, data: d) -> b:
         # update the scale appropriately
         c = self.cell
         adj = (data - c.cfg.u.offset) / (c.voltage - c.cfg.u.offset)
@@ -113,7 +113,7 @@ class CellInterface(DbusInterface):
         return True
 
     @dbus.method()
-    async def SetVoltageOffset(self, data: 'd') -> 'i':
+    async def SetVoltageOffset(self, data: d) -> i:
         # update the scale appropriately
         # XXX TODO not stored on the module yet
         c = c.cell
@@ -129,7 +129,7 @@ class CellInterface(DbusInterface):
 
 
 class Cell:
-    batt: "Battery"
+    batt: Battery
     path: str
     nr: int
     cfg: dict
@@ -226,7 +226,7 @@ class Cell:
         self.gcfg = gcfg
 
     def __repr__(self):
-        return f"‹Cell {self.path} u={0 if self.voltage is None else self.voltage :.3f}›"
+        return f"‹Cell {self.path} u={0 if self.voltage is None else self.voltage:.3f}›"
 
     async def config_updated(self):
         pass
@@ -349,7 +349,7 @@ class Cell:
         if val is None or self.n_samples is None:
             return 0
         return int(
-            (val - self.cfg.u.offset) / self.v_per_ADC * self.n_samples / self.v_calibration
+            (val - self.cfg.u.offset) / self.v_per_ADC * self.n_samples / self.v_calibration,
         )
 
     def _raw2volt(self, val):

@@ -4,6 +4,7 @@ plus an unpacker factory for streams.
 """
 
 # compatibility
+from __future__ import annotations
 
 from moat.util import *  # noqa: F403
 

@@ -1,4 +1,5 @@
 # command line interface
+from __future__ import annotations
 
 import asyncclick as click
 
@@ -22,15 +23,14 @@ async def cli():
 @click.argument("path", nargs=1)
 @click.pass_obj
 async def dump(obj, path):
-    """Emit the current state as a YAML file.
-    """
+    """Emit the current state as a YAML file."""
     res = {}
     path = P(path)
     if len(path) > 4:
         raise click.UsageError("Only up to four path elements allowed")
 
     async for r in obj.client.get_tree(
-        obj.cfg.kv.wago.prefix + path, nchain=obj.meta, max_depth=4 - len(path)
+        obj.cfg.kv.wago.prefix + path, nchain=obj.meta, max_depth=4 - len(path),
     ):
         rr = res
         if r.path:
@@ -44,14 +44,13 @@ async def dump(obj, path):
 @click.argument("path", nargs=1)
 @click.pass_obj
 async def list_(obj, path):
-    """List the next stage.
-    """
+    """List the next stage."""
     path = P(path)
     if len(path) > 4:
         raise click.UsageError("Only up to four path elements allowed")
 
     async for r in obj.client.get_tree(
-        obj.cfg.kv.wago.prefix + path, nchain=obj.meta, min_depth=1, max_depth=1
+        obj.cfg.kv.wago.prefix + path, nchain=obj.meta, min_depth=1, max_depth=1,
     ):
         print(r.path[-1], file=obj.stdout)
 
@@ -66,7 +65,7 @@ async def attr_(obj, path, vars_, eval_, path_):
     `--eval` without a value deletes the attribute.
     """
     path = P(path)
-    res = await node_attr(obj, obj.cfg.kv.wago.prefix + path, vars_,eval_,path_)
+    res = await node_attr(obj, obj.cfg.kv.wago.prefix + path, vars_, eval_, path_)
 
     if obj.meta:
         yprint(res, stream=obj.stdout)
@@ -194,7 +193,7 @@ async def server_(obj, name, host, port, delete):
         yprint(res, stream=obj.stdout)
         return
 
-    res = await node_attr(obj, cfg.prefix / name, value, (),() )
+    res = await node_attr(obj, cfg.prefix / name, value, (), ())
     if obj.meta:
         yprint(res, stream=obj.stdout)
 
@@ -203,8 +202,7 @@ async def server_(obj, name, host, port, delete):
 @click.argument("name", nargs=1)
 @click.pass_obj
 async def monitor(obj, name):
-    """Stand-alone task to monitor a single contoller.
-    """
+    """Stand-alone task to monitor a single contoller."""
     from .task import task
     from .model import WAGOroot
 

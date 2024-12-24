@@ -1,6 +1,9 @@
 """
 This module contains code that helps with MoaT-KV testing.
 """
+
+from __future__ import annotations
+
 import os
 from contextlib import asynccontextmanager
 from functools import partial
@@ -20,7 +23,7 @@ class Server(_Server):
         this server.
         """
         async with open_client(
-            conn=dict(host="127.0.0.1", port=self.moat_kv_port, name=name)
+            conn=dict(host="127.0.0.1", port=self.moat_kv_port, name=name),
         ) as c:
             yield c
 
@@ -53,7 +56,7 @@ async def server(mqtt_port: int = None, moat_kv_port: int = None):
             "bind_default": {"host": "127.0.0.1", "port": moat_kv_port},
             "backend": "mqtt",
             "mqtt": {"uri": "mqtt://127.0.0.1:%d/" % mqtt_port},
-        }
+        },
     }
 
     s = Server(name="gpio_test", cfg=server_cfg, init="GPIO")

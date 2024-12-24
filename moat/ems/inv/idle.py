@@ -1,6 +1,9 @@
 """
 Inverter mode: do nothing (fixed value)
 """
+
+from __future__ import annotations
+
 import logging
 
 from . import InvModeBase
@@ -12,6 +15,7 @@ __all__ = ["InvMode_Idle"]
 
 class InvMode_Idle(InvModeBase):
     "Continuously set AC output to zero (or whatever)."
+
     _mode = 1
     _name = "idle"
 

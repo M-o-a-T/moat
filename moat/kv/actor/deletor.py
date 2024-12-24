@@ -3,6 +3,8 @@ This module implements additional code for the server-side DeleteActor,
 which is used to clean up the list of deleted nodes.
 """
 
+from __future__ import annotations
+
 import weakref
 from collections import deque
 
@@ -41,7 +43,7 @@ class DeleteActor:
         self.tags = self.tags[-TAGS:]
         await self.actor.set_value((self.tags[0], self.tags[-1]))
 
-    def add_deleted(self, nodes: "NodeSet"):  # noqa: F821
+    def add_deleted(self, nodes: NodeSet):  # noqa: F821
         """
         These nodes are deleted. Remember them for some time.
         """

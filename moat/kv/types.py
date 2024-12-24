@@ -1,3 +1,4 @@
+from __future__ import annotations
 import logging
 import weakref
 
@@ -302,13 +303,11 @@ class CodecEntry(Entry):
                     r = dec(v)
                 except Exception as exc:
                     raise ValueError(
-                        f"failed decoder at {self.path} on {v!r} with {exc!r}"
+                        f"failed decoder at {self.path} on {v!r} with {exc!r}",
                     ) from exc
                 else:
                     if r != w:
-                        raise ValueError(
-                            f"Decoding at {self.path}: {v!r} got {r!r}, not {w!r}"
-                        )
+                        raise ValueError(f"Decoding at {self.path}: {v!r} got {r!r}, not {w!r}")
 
         if value is not None and value.encode is not None:
             if not value["out"]:
@@ -319,13 +318,11 @@ class CodecEntry(Entry):
                     r = enc(v)
                 except Exception as exc:
                     raise ValueError(
-                        f"failed encoder at {self.path} on {v!r} with {exc!r}"
+                        f"failed encoder at {self.path} on {v!r} with {exc!r}",
                     ) from exc
                 else:
                     if r != w:
-                        raise ValueError(
-                            f"Encoding at {self.path}: {v!r} got {r!r}, not {w!r}"
-                        )
+                        raise ValueError(f"Encoding at {self.path}: {v!r} got {r!r}, not {w!r}")
 
         await super().set(value)
         self._enc = enc

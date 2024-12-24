@@ -2,6 +2,8 @@
 This module contains the entry point to the MOAT command line interface
 """
 
+from __future__ import annotations
+
 import os
 import sys
 import anyio
@@ -43,7 +45,6 @@ This is the main command handler for MoaT, the Master of all Things.
             else:
                 raise
     return ec
-
 
 
 @main_.command(short_help="Import the debugger")

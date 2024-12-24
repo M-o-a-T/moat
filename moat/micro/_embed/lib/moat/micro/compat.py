@@ -2,6 +2,7 @@
 A heap of compatibility code that adapts CPython and MicroPython
 to something roughly equivalent.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -40,8 +41,8 @@ _tg = asyncio.TaskGroup
 CancelledError = asyncio.CancelledError
 
 
-ExceptionGroup = asyncio.ExceptionGroup  # noqa:A001
-BaseExceptionGroup = asyncio.BaseExceptionGroup  # noqa:A001
+ExceptionGroup = asyncio.ExceptionGroup
+BaseExceptionGroup = asyncio.BaseExceptionGroup
 
 DEBUG = const(False)  # noqa:F821
 
@@ -322,9 +323,9 @@ def ACM(obj):
     """
 
     if hasattr(obj, "_AC_"):
-        obj._AC_.append(None)  # noqa:SLF001
+        obj._AC_.append(None)
     else:
-        obj._AC_ = []  # noqa:SLF001
+        obj._AC_ = []
 
     def _ACc(ctx):
         return AC_use(obj, ctx)
@@ -342,7 +343,7 @@ async def AC_use(obj, ctx):
         cm = ctx.__enter__()
     else:
         cm = None
-    obj._AC_.append(ctx)  # noqa:SLF001
+    obj._AC_.append(ctx)
     return cm
 
 
@@ -357,8 +358,8 @@ async def AC_exit(obj, *exc):
 
     suppressed_exc = False
     pending_raise = False
-    while obj._AC_:  # noqa:SLF001
-        cb = obj._AC_.pop()  # noqa:SLF001
+    while obj._AC_:
+        cb = obj._AC_.pop()
         if cb is None:
             break
         try:
@@ -403,8 +404,10 @@ def shield():
 
 from asyncio import core
 
+
 def _rdq(s):  # async
     yield core._io_queue.queue_read(s)  # noqa:SLF001
+
 
 def _wrq(s):  # async
     yield core._io_queue.queue_write(s)  # noqa:SLF001

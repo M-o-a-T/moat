@@ -1,6 +1,7 @@
 """
 When a channel is lossy, this module implements re-sending messages.
 """
+
 from __future__ import annotations
 
 from contextlib import suppress
@@ -27,7 +28,8 @@ from .stack import StackedMsg
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Never, Any
+    from typing import Any
+
 
 class EphemeralMsg:
     """A message that may be replaced while enqueued or in transit.
@@ -36,9 +38,11 @@ class EphemeralMsg:
     delivery. If a channel's message is waiting to be sent, it'll be
     updated.
     """
-    def __init__(self, chan:int, data: Any):
+
+    def __init__(self, chan: int, data: Any):
         self.chan = chan
         self.data = data
+
 
 class ReliableMsg(StackedMsg):
     """
@@ -80,11 +84,11 @@ class ReliableMsg(StackedMsg):
     # If data is a list, they're appended as-is to the message, to save a
     # byte, except when the list is one element long, for data
     # transparency.
-    # 
+    #
     # Sending an EphemeralMsg does not wait for delivery. Instead, the
-    # message is queued. If the message has not been sent by the time the 
+    # message is queued. If the message has not been sent by the time the
     # channel's next message is transmitted, it is updated instead.
-    # 
+    #
     # Connection reset or restart is signalled by `s`<0. Values -2 to -4
     # correspond to restart phases; the following elements contain link
     # configuration data. A value of `-1` indicated that the connection is
@@ -128,7 +132,7 @@ class ReliableMsg(StackedMsg):
         self.s_recv_head = 0  # next expected message. Messages before this are out of sequence
         self.s_recv_tail = 0  # messages before this have been processed
         self.s_q = []
-        self.m_send:dict(int, list[Any,int,Event]) = {}  # mte: message timestamp event
+        self.m_send: dict(int, list[Any, int, Event]) = {}  # mte: message timestamp event
         self.m_recv = {}
         self.t_recv = None
         self.progressed = False
@@ -167,7 +171,7 @@ class ReliableMsg(StackedMsg):
                 x.append(r)
             r = (r + 1) % self.window
         if x:
-            msg.append(-1-self.s_recv_tail)
+            msg.append(-1 - self.s_recv_tail)
             msg.append(x)
         else:
             msg.append(self.s_recv_tail)
@@ -175,7 +179,7 @@ class ReliableMsg(StackedMsg):
             if isinstance(d, EphemeralMsg):
                 d.sent = True
                 d = d.data
-            if isinstance(d,(tuple,list)) and len(d) != 1:
+            if isinstance(d, (tuple, list)) and len(d) != 1:
                 msg.extend(d)
             else:
                 msg.append(d)
@@ -321,11 +325,11 @@ class ReliableMsg(StackedMsg):
                         await self.send_reset()
 
                 if self.closed:
-                    raise EOFError(self)  # noqa: TRY301
+                    raise EOFError(self)
 
                 await idle()
 
-        except Exception:  # noqa:TRY302
+        except Exception:  # noqa:TRY203
             # if not self.persist:
             raise
             # log("Reliable", err=exc)
@@ -376,7 +380,7 @@ class ReliableMsg(StackedMsg):
             level = self.reset_level
         else:
             self.reset_level = level
-        msg = [-1-level]
+        msg = [-1 - level]
         if level:
             msg.extend(self._get_config())
         elif err is not None:
@@ -455,11 +459,11 @@ class ReliableMsg(StackedMsg):
         return self._is_down.is_set()
 
     async def _dispatch(self, msg):
-        if not isinstance(msg,(tuple,list)):
+        if not isinstance(msg, (tuple, list)):
             raise ValueError(msg)
 
         if msg[0] < 0:  # protocol error / reset sequence
-            n = -1-msg[0]
+            n = -1 - msg[0]
             if n == 0:  # closed
                 self._is_down.set()
                 if self._is_up.is_set():
@@ -494,7 +498,7 @@ class ReliableMsg(StackedMsg):
                     await self.send_reset()
                 return
             else:
-                log("Unknown",msg)
+                log("Unknown", msg)
                 return
 
         if self.in_reset:
@@ -508,7 +512,7 @@ class ReliableMsg(StackedMsg):
         r = msg[0]  # swapped, because receiving
         s = msg[1]
         if s < 0:
-            s = -1-s
+            s = -1 - s
             x = msg[2]
             d = msg[3:]
         else:
@@ -560,7 +564,7 @@ class ReliableMsg(StackedMsg):
                 except KeyError:
                     pass
                 else:
-                    if isinstance(m,EphemeralMsg):
+                    if isinstance(m, EphemeralMsg):
                         mo = self._iters.pop(m.chan, None)
                         if not mo.sent:
                             # re-enqueue

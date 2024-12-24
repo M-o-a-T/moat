@@ -1,6 +1,8 @@
 """
 MoaT-KV client data model for Wago
 """
+from __future__ import annotations
+
 import anyio
 
 from moat.util import Path
@@ -100,7 +102,7 @@ class WAGOinput(_WAGOnode):
                 delta = 0
 
             async with self.server.count_input(
-                self.card, self.port, direction=direc, interval=intv
+                self.card, self.port, direction=direc, interval=intv,
             ) as mon:
                 task_status.started()
                 async for val in mon:
@@ -163,7 +165,7 @@ class WAGOoutput(_WAGOnode):
                                 "wago",
                                 self.subpath,
                                 comment="Missing value: %r" % (msg,),
-                                data={"path": self.subpath}
+                                data={"path": self.subpath},
                             )
                         continue
 
@@ -179,18 +181,18 @@ class WAGOoutput(_WAGOnode):
                                 "wago",
                                 self.subpath,
                                 data={"value": val},
-                                comment="Stopped due to bad timer value"
+                                comment="Stopped due to bad timer value",
                             )
                             return
                         except Exception as exc:
                             await self.root.err.record_error(
-                                "wago", self.subpath, data={"value": val}, exc=exc
+                                "wago", self.subpath, data={"value": val}, exc=exc,
                             )
                         else:
                             await self.root.err.record_working("wago", self.subpath)
                     else:
                         await self.root.err.record_error(
-                            "wago", self.subpath, comment="Bad value: %r" % (val,)
+                            "wago", self.subpath, comment="Bad value: %r" % (val,),
                         )
 
     async def _set_value(self, val, preload, state, negate):
@@ -222,7 +224,7 @@ class WAGOoutput(_WAGOnode):
             try:
                 with anyio.CancelScope() as sc:
                     async with self.server.write_timed_output(
-                        self.card, self.port, not negate, t_on
+                        self.card, self.port, not negate, t_on,
                     ) as work:
                         self._work = sc
                         self._work_done = anyio.Event()
@@ -273,7 +275,7 @@ class WAGOoutput(_WAGOnode):
             try:
                 with anyio.CancelScope() as sc:
                     async with self.server.write_pulsed_output(
-                        self.card, self.port, not negate, t_on, t_off
+                        self.card, self.port, not negate, t_on, t_off,
                     ) as work:
                         self._work = sc
                         self._work_done = anyio.Event()
@@ -342,9 +344,7 @@ class WAGOoutput(_WAGOnode):
             if t_off is None:
                 logger.info("t_off not set in %s", self.subpath)
                 return
-            await self.tg.start(
-                self.with_output, src, self._pulse_value, state, rest, t_on, t_off
-            )
+            await self.tg.start(self.with_output, src, self._pulse_value, state, rest, t_on, t_off)
         else:
             logger.info("mode not known (%r) in %s", mode, self.subpath)
             return

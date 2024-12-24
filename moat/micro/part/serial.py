@@ -1,6 +1,7 @@
 """
 Serial ports on Unix
 """
+
 from __future__ import annotations
 
 import anyio
@@ -22,8 +23,10 @@ class Serial(AnyioBuf):
     """
     We don't have numbered serial ports on Unix.
     """
+
     def __init__(self, *a, **k):
         raise NotImplementedError("Use namedSerial on Unix")
+
 
 class NamedSerial(AnyioBuf):
     """

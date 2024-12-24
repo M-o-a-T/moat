@@ -8,6 +8,7 @@ Victron MultiPlus only, for now.
 """
 
 # pylint: disable=too-many-lines
+from __future__ import annotations
 
 import logging
 import os
@@ -64,7 +65,11 @@ class BusVars(CtxObj):
         async with Dbus(self._bus) as self._intf:
             for k, v in self.VARS_RO.items():
                 for n, p in v.items():
-                    setattr(self, n, (await self._intf.importer(k, p, createsignal=False)).value)
+                    setattr(
+                        self,
+                        n,
+                        (await self._intf.importer(k, p, createsignal=False)).value,
+                    )
             for k, v in self.VARS.items():
                 for n, p in v.items():
                     setattr(self, n, await self._intf.importer(k, p))
@@ -99,7 +104,7 @@ class InvInterface(DbusInterface):
         return [m._name for m in InvControl.MODES.values()]
 
     @method()
-    async def GetModeInfo(self, mode: "s") -> "a{ss}":
+    async def GetModeInfo(self, mode: s) -> "a{ss}":
         """
         Return information on a specific method
         """
@@ -107,14 +112,14 @@ class InvInterface(DbusInterface):
         return m._doc
 
     @method()
-    async def SetMode(self, mode: "s", args: "a{sv}") -> "b":
+    async def SetMode(self, mode: s, args: "a{sv}") -> b:
         """
         Change the inverter mode, set parameters
         """
         return await self.ctrl.change_mode(mode, unwrap_dbus_dict(args))
 
     @method()
-    async def SetModeParam(self, param: "s", value: "v") -> "b":
+    async def SetModeParam(self, param: s, value: v) -> b:
         """
         Set a specific parameter
         """
@@ -335,17 +340,19 @@ class InvControl(BusVars):
             for i in range(self.n_phase):
                 i += 1
                 self.p_grid_.append(
-                    await self.intf.importer("com.victronenergy.system", f"/Ac/Grid/L{i}/Power")
+                    await self.intf.importer("com.victronenergy.system", f"/Ac/Grid/L{i}/Power"),
                 )
                 self.p_cons_.append(
                     await self.intf.importer(
-                        "com.victronenergy.system", f"/Ac/Consumption/L{i}/Power"
-                    )
+                        "com.victronenergy.system",
+                        f"/Ac/Consumption/L{i}/Power",
+                    ),
                 )
                 self.p_cur_.append(
                     await self.intf.importer(
-                        "com.victronenergy.system", f"/Ac/ActiveIn/L{i}/Power"
-                    )
+                        "com.victronenergy.system",
+                        f"/Ac/ActiveIn/L{i}/Power",
+                    ),
                 )
             self.load = [0] * self.n_phase
 
@@ -433,13 +440,15 @@ class InvControl(BusVars):
         for i in range(self.n_phase):
             i += 1
             self.p_set_.append(
-                await self.intf.importer(self.acc_vebus.value, f"/Hub4/L{i}/AcPowerSetpoint")
+                await self.intf.importer(self.acc_vebus.value, f"/Hub4/L{i}/AcPowerSetpoint"),
             )
             self.p_run_.append(
-                await self.intf.importer(self.acc_vebus.value, f"/Ac/ActiveIn/L{i}/P")
+                await self.intf.importer(self.acc_vebus.value, f"/Ac/ActiveIn/L{i}/P"),
             )
         self._p_inv = await self.intf.importer(
-            self.acc_vebus.value, "/Ac/ActiveIn/P", eventCallback=self._trigger_step
+            self.acc_vebus.value,
+            "/Ac/ActiveIn/P",
+            eventCallback=self._trigger_step,
         )
 
     def _trigger_step(self, _sender, _path, _values):
@@ -612,14 +621,20 @@ class InvControl(BusVars):
                                     name = name[ni + 3 :]
                                 pp = mon.get_value(chg, "/Yield/Power") or 0
                                 await dkv.set(
-                                    self.distkv_prefix / "solar" / "p" / name, pp, idem=True
+                                    self.distkv_prefix / "solar" / "p" / name,
+                                    pp,
+                                    idem=True,
                                 )
                             await dkv.set(self.distkv_prefix / "solar" / "p", cur_p, idem=True)
                             await dkv.set(
-                                self.distkv_prefix / "solar" / "batt_pct", self.batt_soc, idem=True
+                                self.distkv_prefix / "solar" / "batt_pct",
+                                self.batt_soc,
+                                idem=True,
                             )
                             await dkv.set(
-                                self.distkv_prefix / "solar" / "grid", self.p_grid, idem=True
+                                self.distkv_prefix / "solar" / "grid",
+                                self.p_grid,
+                                idem=True,
                             )
                         t_sol = t + 10
                     await anyio.sleep_until(t)
@@ -699,9 +714,11 @@ class InvControl(BusVars):
 
         name = "org.m-o-a-t.power.inverter"
 
-        async with InvInterface(self) as self._ctrl, self.intf.service(
-            name
-        ) as self._srv, anyio.create_task_group() as self._tg:
+        async with (
+            InvInterface(self) as self._ctrl,
+            self.intf.service(name) as self._srv,
+            anyio.create_task_group() as self._tg,
+        ):
             self._tg.start_soon(self._init_intf)
             if not self.acc_vebus.value:
                 logger.warning("VEBUS not known")
@@ -1095,18 +1112,20 @@ class InvControl(BusVars):
         if self.op.get("fake", False):
             if self.n_phase > 1:
                 logger.error(
-                    "NO-OP SET inverter %.0f ∑ %s", -sum(ps), " ".join(f"{-x :.0f}" for x in ps)
+                    "NO-OP SET inverter %.0f ∑ %s",
+                    -sum(ps),
+                    " ".join(f"{-x:.0f}" for x in ps),
                 )
             else:
                 logger.error("NO-OP SET inverter %.0f", -ps[0])
             return
 
         if self.n_phase > 1:
-            logger.info("SET inverter %.0f ∑ %s", -sum(ps), " ".join(f"{-x :.0f}" for x in ps))
+            logger.info("SET inverter %.0f ∑ %s", -sum(ps), " ".join(f"{-x:.0f}" for x in ps))
         else:
             logger.info("SET inverter %.0f", -ps[0])
 
-        for p, v in zip(self.p_set_, ps):
+        for p, v in zip(self.p_set_, ps, strict=True):
             await p.set_value(-v)
             # Victron Multiplus: negative=inverting: positive=charging
             # This code: negative=takes from AC, positive=feeds to AC power

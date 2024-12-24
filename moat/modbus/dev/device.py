@@ -1,13 +1,13 @@
 """
 Types that describe a modbus device, as read from file
 """
+from __future__ import annotations
 
 import logging
 from collections.abc import Mapping
 from contextlib import asynccontextmanager
 from copy import deepcopy
 from pathlib import Path as FSPath
-from typing import List
 
 import anyio
 from asyncscope import scope
@@ -32,28 +32,31 @@ class NotARegisterError(ValueError):
 
     pass
 
+
 def mark_orig(d):
     if isinstance(d, dict):
         d._is_orig = True
-        for k,v in d.items():
+        for k, v in d.items():
             if k != "default":
                 mark_orig(v)
 
-def fixup(d,this_file=None,**k):
+
+def fixup(d, this_file=None, **k):
     """
     See `fixup_`.
 
     Also marks original data
     """
     mark_orig(d)
-    d = fixup_i(d,this_file=this_file)
+    d = fixup_i(d, this_file=this_file)
     return fixup_(d, **k)
+
 
 def fixup_i(d, this_file=None):
     """
     Run processing instructions: include
     """
-    if isinstance(d,Mapping):
+    if isinstance(d, Mapping):
         try:
             inc = d.pop("include")
         except KeyError:
@@ -77,11 +80,12 @@ def fixup_i(d, this_file=None):
             d = combine_dict(d, *inc, cls=attrdict)
             d._root = True
 
-    for k, v in (d.items() if hasattr(d,"items") else enumerate(d)):
-        if isinstance(v, (Mapping,list,tuple)):
+    for k, v in d.items() if hasattr(d, "items") else enumerate(d):
+        if isinstance(v, (Mapping, list, tuple)):
             d[k] = fixup_i(v)
 
     return d
+
 
 def fixup_(
     d,
@@ -96,7 +100,7 @@ def fixup_(
     """
     Run processing instructions: ref, default, repeat
     """
-    if root is None or getattr(d,"_root",False):
+    if root is None or getattr(d, "_root", False):
         root = d
         set_root = True
     else:
@@ -106,7 +110,7 @@ def fixup_(
 
     reps = set()
 
-    if isinstance(d,Mapping):
+    if isinstance(d, Mapping):
         try:
             defs = d.pop("default")
         except KeyError:
@@ -162,10 +166,10 @@ def fixup_(
                 k += 1
                 off += rep.offset
 
-    for k, v in (d.items() if hasattr(d,"items") else enumerate(d)):
+    for k, v in d.items() if hasattr(d, "items") else enumerate(d):
         if k in reps:
             continue
-        if isinstance(v, (Mapping,list,tuple)):
+        if isinstance(v, (Mapping, list, tuple)):
             d[k] = fixup_(
                 v,
                 root,
@@ -295,7 +299,7 @@ class Register:
         """Encode myself"""
         return self.reg.encode()
 
-    def decode(self, regs: List[int]):
+    def decode(self, regs: list[int]):
         """Encode registers into self"""
         self.reg.decode(regs)
 
@@ -318,7 +322,7 @@ class Register:
 _data = FSPath(__file__).parent / "_data"
 
 
-class BaseDevice(CtxObj):
+class BaseDevice:
     """A modbus device.
 
     The idea is to use the device description file as a template.
@@ -367,10 +371,11 @@ class BaseDevice(CtxObj):
         return dev
 
 
-class ClientDevice(BaseDevice):
+class ClientDevice(CtxObj, BaseDevice):
     """
     A client device, i.e. one that mirrors some Modbus master's unit
     """
+
     unit: Unit = None
 
     def __init__(self, client: ModbusClient, factory=Register):
@@ -383,7 +388,7 @@ class ClientDevice(BaseDevice):
             host = await self.client.host_service(self.cfg.src.host, self.cfg.src.get("port"))
         else:
             host = await self.client.serial_service(
-                port=self.cfg.src.port, **self.cfg.src.get("serial", {})
+                port=self.cfg.src.port, **self.cfg.src.get("serial", {}),
             )
         self.unit = await host.unit_scope(self.cfg.src.unit)
 
@@ -490,6 +495,7 @@ class ServerDevice(BaseDevice):
     """
     A server device, i.e. a unit that's accessed via modbus.
     """
+
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self.unit = UnitContext()
@@ -528,4 +534,3 @@ class ServerDevice(BaseDevice):
             return seen
 
         await a_r(self.cfg)
-

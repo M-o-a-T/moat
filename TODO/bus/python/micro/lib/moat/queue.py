@@ -1,20 +1,27 @@
-__all__ = ('Queue', 'QueueFull', 'QueueEmpty')
-        #'PriorityQueue', 'LifoQueue',
+__all__ = ("Queue", "QueueFull", "QueueEmpty")
+#'PriorityQueue', 'LifoQueue',
 
 from uasyncio import core
 from collections import deque
 
+
 class QueueEmpty(Exception):
     """Raised when Queue.get_nowait() is called on an empty Queue."""
+
     pass
+
 
 class QueueClosed(RuntimeError):
     """Raised when getting from/putting to a closed queue."""
+
     pass
+
 
 class QueueFull(Exception):
     """Raised when the Queue.put_nowait() method is called on a full Queue."""
+
     pass
+
 
 class Queue:
     """A queue, useful for coordinating producer and consumer coroutines.
@@ -53,19 +60,19 @@ class Queue:
             return t
 
     def __repr__(self):
-        return f'<{type(self).__name__} at {id(self):#x} {self._format()}>'
+        return f"<{type(self).__name__} at {id(self):#x} {self._format()}>"
 
     def __str__(self):
-        return f'<{type(self).__name__} {self._format()}>'
+        return f"<{type(self).__name__} {self._format()}>"
 
     def _format(self):
-        result = f'maxsize={repr(self._maxsize)}'
-        if getattr(self, '_queue', None):
-            result += f' _queue={repr(list(self._queue))}'
+        result = f"maxsize={repr(self._maxsize)}"
+        if getattr(self, "_queue", None):
+            result += f" _queue={repr(list(self._queue))}"
         if self._getters:
-            result += f' _get[{len(self._getters)}]'
+            result += f" _get[{len(self._getters)}]"
         if self._putters:
-            result += f' _put[{len(self._putters)}]'
+            result += f" _put[{len(self._putters)}]"
         return result
 
     def qsize(self):
@@ -120,7 +127,6 @@ class Queue:
                 del self._putdata[t]
                 raise QueueClosed
 
-
     def put_nowait(self, item):
         """Put an item into the queue without blocking.
 
@@ -136,7 +142,6 @@ class Queue:
             self._queue.append(item)
         else:
             raise QueueFull
-
 
     async def get(self):
         """Get an item from the queue.
@@ -161,7 +166,6 @@ class Queue:
                 return c[0]
             raise QueueClosed
 
-
     def get_nowait(self):
         """Remove and return an item from the queue.
 
@@ -178,7 +182,6 @@ class Queue:
             return self._queue.popleft()
         else:
             raise QueueEmpty
-
 
     def close(self):
         self._closed = True

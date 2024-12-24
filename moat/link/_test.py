@@ -4,7 +4,6 @@ import anyio
 import logging
 import time
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from mqttproto.async_broker import AsyncMQTTBroker
 
@@ -12,10 +11,10 @@ from moat.link.client import Link
 from moat.link.server import Server
 from moat.link.backend import get_backend
 from moat.util import (  # pylint:disable=no-name-in-module
+    ensure_cfg,
     CtxObj,
     attrdict,
     combine_dict,
-    yload,
     Root,
 )
 
@@ -24,7 +23,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Never
 
-CFG = yload(Path(__file__).parent / "_config.yaml", attr=True)
+ensure_cfg("moat.link")
 
 
 logger = logging.getLogger(__name__)
@@ -70,7 +69,7 @@ class Scaffold(CtxObj):
             yield self
             self.tg.cancel_scope.cancel()
 
-    async def _run_backend(self, cfg: dict|None, kw:dict, *, task_status) -> Backend:
+    async def _run_backend(self, cfg: dict | None, kw: dict, *, task_status) -> Backend:
         """
         Start a backend.
         """

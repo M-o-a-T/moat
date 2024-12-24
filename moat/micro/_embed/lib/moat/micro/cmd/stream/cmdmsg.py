@@ -16,7 +16,8 @@ from moat.micro.errors import NoPathError, RemoteError, SilentRemoteError, Stopp
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any, Awaitable, Mapping
+    from typing import Any
+    from collections.abc import Awaitable, Mapping
 
     from moat.micro.proto.stack import BaseMsg
 
@@ -204,7 +205,7 @@ class BaseCmdMsg(BaseCmd):
                     pass
                 else:
                     log("unknown err %r", msg)
-                    e = StoppedError(f"unknown {msg !r}")
+                    e = StoppedError(f"unknown {msg!r}")
                 r = t.set_error(e)
                 if hasattr(r, "throw"):
                     await r

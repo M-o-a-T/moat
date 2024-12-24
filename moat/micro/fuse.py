@@ -1,6 +1,7 @@
 """
 FUSE operations for MoaT-micro-FS
 """
+
 from __future__ import annotations
 
 import anyio
@@ -417,7 +418,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
                     flags,
                     ctx,
                 )
-                raise FUSEError(errno.ENOSYS)  # noqa:TRY301
+                raise FUSEError(errno.ENOSYS)
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
 

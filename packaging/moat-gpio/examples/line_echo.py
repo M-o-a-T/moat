@@ -1,5 +1,6 @@
 import anyio
 import moat.gpio as gpio
+
 """
 This script toggles a pin and watches another. The two are presumed to be connected (hardware wire).
 """
@@ -21,7 +22,12 @@ async def main():
                 await n.spawn(pling, out_)
                 with in_.monitor(gpio.REQUEST_EVENT_BOTH_EDGES):
                     async for e in in_:
-                        print(e, "on" if e.value else "off", "at", e.time.strftime("%H:%M:%S"))
+                        print(
+                            e,
+                            "on" if e.value else "off",
+                            "at",
+                            e.time.strftime("%H:%M:%S"),
+                        )
 
 
 if __name__ == "__main__":

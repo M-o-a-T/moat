@@ -1,4 +1,5 @@
 # command line interface
+from __future__ import annotations
 
 import logging
 import os
@@ -223,7 +224,7 @@ async def host_port(ctx, name):
                 print(k, v, file=obj.stdout)
     else:
         obj.thing_port = name
-        pass  # click invokes the subcommand for us.
+        # click invokes the subcommand for us.
 
 
 @cmd_host.command(name="template", short_help="Create config file using a template")
@@ -252,7 +253,8 @@ async def host_template(obj, dump, template):
 
     if not dump:
         e = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(os.path.dirname(template[0])), autoescape=False
+            loader=jinja2.FileSystemLoader(os.path.dirname(template[0])),
+            autoescape=False,
         )
         t = e.get_template(os.path.basename(template[0]))
     h = obj.host
@@ -271,7 +273,11 @@ async def host_template(obj, dump, template):
 
     for p in h._ports.values():
         ports[p.name] = pn = attrdict(
-            port=p, untagged=None, tagged=set(), blocked=set(nport.keys()), single=set()
+            port=p,
+            untagged=None,
+            tagged=set(),
+            blocked=set(nport.keys()),
+            single=set(),
         )
         if pn.port.network is None:
             continue
@@ -280,9 +286,9 @@ async def host_template(obj, dump, template):
         a4 = pn.port.network.net.value & 0xFF
         nv = pn.port.netaddr.value & ~pn.port.netaddr.netmask.value
 
-        pn.net6 = IPNetwork("2001:780:107:{net3:02x}{net4:02x}::1/64".format(net3=a3, net4=a4))
+        pn.net6 = IPNetwork(f"2001:780:107:{a3:02x}{a4:02x}::1/64")
         pn.ip6 = IPNetwork(
-            "2001:780:107:{net3:02x}{net4:02x}::{adr:x}/64".format(net3=a3, net4=a4, adr=nv)
+            f"2001:780:107:{a3:02x}{a4:02x}::{nv:x}/64",
         )
 
     for d in ports.values():
@@ -380,7 +386,8 @@ async def host_find(obj, dest):
             # For wires, only the single wire name is interesting.
             for pp in p:
                 if getattr(pp, "host", None) is getattr(px, "host", False) and isinstance(
-                    pp.host, Wire
+                    pp.host,
+                    Wire,
                 ):
                     pr.append(pp.host)
                     px = None
@@ -502,7 +509,7 @@ async def hp_set(obj, name, **kw):
 
 
 async def _hp_mod(obj, p, **kw):
-    net = kw.get("net", None)
+    net = kw.get("net")
 
     if net not in (None, "-"):
         n = p.host.root.net.by_name(net)
@@ -525,7 +532,7 @@ async def _hp_mod(obj, p, **kw):
     if kw.pop("alloc", None):
         if kw.get("num"):
             raise click.BadParameter("'num' and 'alloc' are mutually exclusive'", "alloc")
-        net = kw.get("net", None) or (p.net if p else None)
+        net = kw.get("net") or (p.net if p else None)
         if net is None:
             raise click.BadParameter("Need a network to allocate a number in")
         kw["num"] = obj.host.root.net.by_name(net).alloc()

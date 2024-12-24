@@ -14,30 +14,32 @@ import msgpack
 # once -- work normally now, skip next
 # main -- always work normally
 
+
 def go_moat(state=None, fake_end=True, log=False):
     import uos, utime
-    fallback=False
+
+    fallback = False
 
     uncond = {
-            "test":"fallback",
-            "fbonce":"fallback",
-            "once":"skip",
-            "skiponce":"std",
-            "skipfb":"fallback",
+        "test": "fallback",
+        "fbonce": "fallback",
+        "once": "skip",
+        "skiponce": "std",
+        "skipfb": "fallback",
     }
     crash = {
-            "std":"fallback",
-            "fbskip":"skip",
+        "std": "fallback",
+        "fbskip": "skip",
     }
 
     if state is None:
         try:
-            f=open("moat.state","r")
+            f = open("moat.state", "r")
         except OSError:
             print("No 'moat.state' found")
             return
         else:
-            state=f.read()
+            state = f.read()
             f.close()
 
     try:
@@ -45,7 +47,7 @@ def go_moat(state=None, fake_end=True, log=False):
     except KeyError:
         new_state = state
     else:
-        f=open("moat.state","w")
+        f = open("moat.state", "w")
         f.write(new_state)
         f.close()
 
@@ -53,12 +55,13 @@ def go_moat(state=None, fake_end=True, log=False):
         print(state)
         return
 
-    if state in ("fallback","fbskip","fbonce"):
+    if state in ("fallback", "fbskip", "fbonce"):
         import usys
-        usys.path.insert(0,"/fallback")
+
+        usys.path.insert(0, "/fallback")
         fallback = True
 
-    print("Start MoaT:",state)
+    print("Start MoaT:", state)
     from moat.compat import print_exc
     from moat.main import main
 
@@ -67,7 +70,7 @@ def go_moat(state=None, fake_end=True, log=False):
         main(state=state, fake_end=fake_end, log=log, cfg=cfg, fallback=fallback)
 
     except SystemExit:
-        f=open("moat.state","r")
+        f = open("moat.state", "r")
         new_state = f.read()
         f.close()
         print("REBOOT to", new_state)
@@ -80,7 +83,7 @@ def go_moat(state=None, fake_end=True, log=False):
         except KeyError:
             new_state = state
         else:
-            f=open("moat.state","w")
+            f = open("moat.state", "w")
             f.write(new_state)
             f.close()
 
@@ -91,6 +94,6 @@ def go_moat(state=None, fake_end=True, log=False):
     else:
         print("MoaT Ended.")
 
+
 if __name__ == "__main__":
     go_moat(fake_end=False)
-

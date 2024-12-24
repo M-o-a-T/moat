@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 import logging
 
 import anyio
@@ -108,7 +109,7 @@ def match_topic(topic, subscription):
         return False
     if len(topic) > len(subscription) and subscription[-1] != "#":
         return False
-    for a, b in zip(topic, subscription):
+    for a, b in zip(topic, subscription, strict=False):
         if a != b and b not in ("+", "#"):
             return False
     return True

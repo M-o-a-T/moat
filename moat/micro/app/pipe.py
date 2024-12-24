@@ -1,6 +1,7 @@
 """
 App to open a channel to a process.
 """
+
 from __future__ import annotations
 
 from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM

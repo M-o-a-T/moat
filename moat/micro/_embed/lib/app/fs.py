@@ -1,6 +1,7 @@
 """
 Access a satellite's Flash file system.
 """
+
 from __future__ import annotations
 
 import errno
@@ -164,7 +165,7 @@ class Cmd(BaseCmd):
         _mem = memoryview(bytearray(512))
 
         p = self._fsp(p)
-        with open(p, "rb") as _f:  # noqa:ASYNC101
+        with open(p, "rb") as _f:
             while True:
                 n = _f.readinto(_mem)
                 if not n:

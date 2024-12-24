@@ -9,7 +9,7 @@ from __future__ import annotations
 import weakref
 from collections import defaultdict
 from logging import getLogger
-from typing import Any, List
+from typing import Any
 
 from moat.util import NotGiven, Path, attrdict, create_queue
 from range_set import RangeSet
@@ -39,9 +39,7 @@ class Node:
     tick: int = None
     _present: RangeSet = None  # I have these as valid data. Superset of ``._deleted``.
     _deleted: RangeSet = None  # I have these as no-longer-valid data
-    _reported: RangeSet = (
-        None  # somebody else reported these missing data for this node
-    )
+    _reported: RangeSet = None  # somebody else reported these missing data for this node
     _superseded: RangeSet = None  # I know these once existed, but no more.
     entries: dict = None
     tock: int = 0  # tock when node was last observed
@@ -371,7 +369,7 @@ class NodeEvent:
 
     """
 
-    def __init__(self, node: Node, tick: int = None, prev: "NodeEvent" = None):
+    def __init__(self, node: Node, tick: int = None, prev: NodeEvent = None):
         self.node = node
         if tick is None:
             tick = node.tick
@@ -524,13 +522,15 @@ class NodeEvent:
             self.prev = cls.deserialize(msg["prev"], cache=cache)
         return self
 
-    def attach(self, prev: "NodeEvent" = None, server=None):
+    def attach(self, prev: NodeEvent = None, server=None):
         """Copy this node, if necessary, and attach a filtered `prev` chain to it"""
         if prev is not None:
             prev = prev.filter(self.node, server=server)
         if self.prev is not None or prev is not None:
             self = NodeEvent(  # pylint: disable=self-cls-assignment
-                node=self.node, tick=self.tick, prev=prev
+                node=self.node,
+                tick=self.tick,
+                prev=prev,
             )
         return self
 
@@ -538,9 +538,7 @@ class NodeEvent:
 class UpdateEvent:
     """Represents an event which updates something."""
 
-    def __init__(
-        self, event: NodeEvent, entry: "Entry", new_value, old_value=NotGiven, tock=None
-    ):
+    def __init__(self, event: NodeEvent, entry: Entry, new_value, old_value=NotGiven, tock=None):
         self.event = event
         self.entry = entry
         self.new_value = new_value
@@ -611,10 +609,10 @@ class UpdateEvent:
 class Entry:
     """This class represents one key/value pair"""
 
-    _parent: "Entry" = None
+    _parent: Entry = None
     name: str = None
-    _path: List[str] = None
-    _root: "Entry" = None
+    _path: list[str] = None
+    _root: Entry = None
     chain: NodeEvent = None
     SUBTYPE = None
     SUBTYPES = {}
@@ -622,7 +620,7 @@ class Entry:
 
     monitors = None
 
-    def __init__(self, name: str, parent: "Entry", tock=None):
+    def __init__(self, name: str, parent: Entry, tock=None):
         self.name = name
         self._sub = {}
         self.monitors = set()
@@ -632,7 +630,7 @@ class Entry:
             parent._add_subnode(self)
             self._parent = weakref.ref(parent)
 
-    def _add_subnode(self, child: "Entry"):
+    def _add_subnode(self, child: Entry):
         self._sub[child.name] = child
 
     def __hash__(self):
@@ -904,9 +902,7 @@ class Entry:
                 if not loading:
                     logger.warning("*** inconsistency ***")
                     logger.warning("Node: %s", self.path)
-                    logger.warning(
-                        "Current: %s :%s: %r", self.chain, self.tock, self._data
-                    )
+                    logger.warning("Current: %s :%s: %r", self.chain, self.tock, self._data)
                     logger.warning("New: %s :%s: %r", evt.event, evt.tock, evt_val)
                 if evt.tock < self.tock:
                     if not loading:
@@ -934,9 +930,7 @@ class Entry:
             n.seen(t, self)
         await self.updated(evt)
 
-    async def walk(
-        self, proc, acl=None, max_depth=-1, min_depth=0, _depth=0, full=False
-    ):
+    async def walk(self, proc, acl=None, max_depth=-1, min_depth=0, _depth=0, full=False):
         """
         Call coroutine ``proc`` on this node and all its children).
 
@@ -960,9 +954,7 @@ class Entry:
             if k is None and not full:
                 continue
             a = acl.step(k) if acl is not None else None
-            await v.walk(
-                proc, acl=a, max_depth=max_depth, min_depth=min_depth, _depth=_depth
-            )
+            await v.walk(proc, acl=a, max_depth=max_depth, min_depth=min_depth, _depth=_depth)
 
     def serialize(self, chop_path=0, nchain=2, conv=None):
         """Serialize this entry for msgpack.

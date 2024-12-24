@@ -2,6 +2,8 @@
 Inverter mode: Analyze a battery
 """
 
+from __future__ import annotations
+
 import logging
 
 import anyio
@@ -36,7 +38,7 @@ class InvMode_Analyze(InvModeBase):
 
     @property
     def excess(self):
-        "Additional power to power to the grid if available / battery full." "-1: unlimited"
+        "Additional power to power to the grid if available / battery full.-1: unlimited"
         return self.intf.op.get("excess", None)
 
     @property
@@ -178,7 +180,11 @@ negative when 'use_gid' is on, but positive when off.
         # dis_c == "discharge during charging". Likewise for the others.
 
         inf = dict(
-            chg=self.e_chg, dis=self.e_dis, chg_d=self.e_chg_d, dis_c=self.e_dis_c, loss=loss
+            chg=self.e_chg,
+            dis=self.e_dis,
+            chg_d=self.e_chg_d,
+            dis_c=self.e_dis_c,
+            loss=loss,
         )
         if loss < 0:
             inf["test"] = "chg>dis"
@@ -197,7 +203,8 @@ negative when 'use_gid' is on, but positive when off.
             await intf.change_mode("p_off")
         else:
             await intf.change_mode(
-                "p_grid" if self.use_grid else "p_inv", {"power": 0, "excess": self.excess}
+                "p_grid" if self.use_grid else "p_inv",
+                {"power": 0, "excess": self.excess},
             )
 
     async def balance(self):

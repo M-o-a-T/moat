@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 from ..errors import MoatMQTTException
 from .packet import PUBREL, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
 
@@ -27,7 +28,7 @@ class PubrelPacket(MQTTPacket):
         else:
             if fixed.packet_type != PUBREL:
                 raise MoatMQTTException(
-                    "Invalid fixed packet type %s for PubrelPacket init" % fixed.packet_type
+                    "Invalid fixed packet type %s for PubrelPacket init" % fixed.packet_type,
                 )
             header = fixed
         super().__init__(header)

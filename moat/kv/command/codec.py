@@ -1,4 +1,5 @@
 # command line interface
+from __future__ import annotations
 
 import asyncclick as click
 from moat.util import NotGiven, P, Path, PathLongener, yload, yprint
@@ -11,15 +12,9 @@ async def cli():
 
 
 @cli.command()
-@click.option(
-    "-e", "--encode", type=click.File(mode="w", lazy=True), help="Save the encoder here"
-)
-@click.option(
-    "-d", "--decode", type=click.File(mode="w", lazy=True), help="Save the decoder here"
-)
-@click.option(
-    "-s", "--script", type=click.File(mode="w", lazy=True), help="Save the data here"
-)
+@click.option("-e", "--encode", type=click.File(mode="w", lazy=True), help="Save the encoder here")
+@click.option("-d", "--decode", type=click.File(mode="w", lazy=True), help="Save the decoder here")
+@click.option("-s", "--script", type=click.File(mode="w", lazy=True), help="Save the data here")
 @click.argument("path", nargs=1)
 @click.pass_obj
 async def get(obj, path, script, encode, decode):
@@ -28,7 +23,7 @@ async def get(obj, path, script, encode, decode):
     if not len(path):
         raise click.UsageError("You need a non-empty path.")
     res = await obj.client._request(
-        action="get_internal", path=Path("codec") + path, iter=False, nchain=obj.meta
+        action="get_internal", path=Path("codec") + path, iter=False, nchain=obj.meta,
     )
     if encode and res.get("encode", None) is not None:
         encode.write(res.pop("encode"))
@@ -166,13 +161,11 @@ async def convert(obj, path, codec, name, delete, list_):
                 try:
                     print(f"{r.path} : {Path.build(r.value['codec'])}", file=obj.stdout)
                 except Exception as e:
-                    print(f"{Path(r.path)} {e !r}", file=obj.stdout)
+                    print(f"{Path(r.path)} {e!r}", file=obj.stdout)
 
         return
     if delete:
-        res = await obj.client._request(
-            action="delete_internal", path=Path("conv", name) + path
-        )
+        res = await obj.client._request(action="delete_internal", path=Path("conv", name) + path)
     else:
         msg = {"codec": codec}
         res = await obj.client._request(

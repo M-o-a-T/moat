@@ -25,7 +25,8 @@ from moat.micro.compat import ACM, AC_exit, AC_use, log
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any, AsyncContextManager, Awaitable, Buffer
+    from typing import Any, AsyncContextManager, Buffer
+    from collections.abc import Awaitable
 
 
 class _NullCtx:
@@ -140,7 +141,7 @@ class BaseConn(Base):
         You need to use `AC_use` for setting up an async context
         or to register a cleanup handler.
         """
-        raise NotImplementedError(f"'stream' in {self !r}")
+        raise NotImplementedError(f"'stream' in {self!r}")
 
 
 class BaseMsg(BaseConn):
@@ -154,13 +155,13 @@ class BaseMsg(BaseConn):
         """
         Send a message.
         """
-        raise NotImplementedError(f"'send' in {self !r}")
+        raise NotImplementedError(f"'send' in {self!r}")
 
     async def recv(self) -> Any:
         """
         Receive a message.
         """
-        raise NotImplementedError(f"'recv' in {self !r}")
+        raise NotImplementedError(f"'recv' in {self!r}")
 
 
 class BaseBlk(BaseConn):
@@ -174,13 +175,13 @@ class BaseBlk(BaseConn):
         """
         Send a block of bytes.
         """
-        raise NotImplementedError(f"'send' in {self !r}")
+        raise NotImplementedError(f"'send' in {self!r}")
 
     async def rcv(self) -> Buffer | bytes:
         """
         Receive a block of bytes.
         """
-        raise NotImplementedError(f"'recv' in {self !r}")
+        raise NotImplementedError(f"'recv' in {self!r}")
 
 
 class BaseBuf(BaseConn):
@@ -199,13 +200,13 @@ class BaseBuf(BaseConn):
 
         This method never returns zero. End-of-file raises `EOFError`.
         """
-        raise NotImplementedError(f"'rd' in {self !r}")
+        raise NotImplementedError(f"'rd' in {self!r}")
 
     async def wr(self, buf: Buffer | bytes) -> int:
         """
         Write some bytes.
         """
-        raise NotImplementedError(f"'wr' in {self !r}")
+        raise NotImplementedError(f"'wr' in {self!r}")
 
 
 class StackedConn(BaseConn):
@@ -285,7 +286,7 @@ class StackedBlk(StackedConn, BaseBlk):
     cwr = StackedMsg.cwr
     crd = StackedMsg.crd
 
-    def snd(self, m): # async
+    def snd(self, m):  # async
         "Send. Transmits a structured message"
         return self.s.send(m)
 

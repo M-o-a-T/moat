@@ -11,7 +11,7 @@ from moat.micro.compat import ACM, AC_exit, L, Lock
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Awaitable
+    from collections.abc import Awaitable
 
     from moat.micro.proto.stack import BaseBlk, BaseBuf, BaseMsg
 
@@ -80,7 +80,7 @@ class BaseCmdBBM(BaseCmd):
             await self.wait_ready()
         async with self.w_lock:
             if self.s is None:
-              raise EOFError
+                raise EOFError
             await self.s.wr(b)
 
     # Blk/Msg: Console crd/cwr = .crd/cwr
@@ -89,7 +89,7 @@ class BaseCmdBBM(BaseCmd):
         """read some console data"""
         b = bytearray(n)
         if self.s is None:
-          raise EOFError
+            raise EOFError
         r = await self.s.crd(b)
         if r == n:
             return b
@@ -103,7 +103,7 @@ class BaseCmdBBM(BaseCmd):
         """write some console data"""
         async with self.w_lock:
             if self.s is None:
-              raise EOFError
+                raise EOFError
             await self.s.cwr(b)
 
     # Msg: s/r = .send/.recv
@@ -111,13 +111,13 @@ class BaseCmdBBM(BaseCmd):
     def cmd_s(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """send a message"""
         if self.s is None:
-          raise EOFError
+            raise EOFError
         return self.s.send(m)
 
     def cmd_r(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """receive a message"""
         if self.s is None:
-          raise EOFError
+            raise EOFError
         return self.s.recv()
 
     # Blk: sb/rb = .snd/.rcv
@@ -125,11 +125,11 @@ class BaseCmdBBM(BaseCmd):
     def cmd_sb(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """send a binary message"""
         if self.s is None:
-          raise EOFError
+            raise EOFError
         return self.s.snd(m)
 
     def cmd_rb(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """receive a binary message"""
         if self.s is None:
-          raise EOFError
+            raise EOFError
         return self.s.rcv()

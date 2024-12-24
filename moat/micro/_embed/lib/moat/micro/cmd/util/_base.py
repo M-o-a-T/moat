@@ -15,7 +15,7 @@ from moat.micro.compat import (
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Callable
+    from collections.abc import Callable
 
 
 async def wait_complain(s: str, i: int, p: Callable, *a, **k):

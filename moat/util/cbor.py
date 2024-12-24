@@ -105,7 +105,7 @@ def _enc_datetime_str(codec, value):
 
 
 _timestamp_re = re.compile(
-    r"^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)" r"(?:\.(\d{1,6})\d*)?(?:Z|([+-])(\d\d):(\d\d))$"
+    r"^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)(?:\.(\d{1,6})\d*)?(?:Z|([+-])(\d\d):(\d\d))$",
 )
 
 

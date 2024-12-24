@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 
 from passlib.apps import custom_app_context as pwd_context
 
@@ -26,7 +27,8 @@ class AnonymousAuthPlugin(BaseAuthPlugin):
         authenticated = await super().authenticate(*args, **kwargs)
         if authenticated:
             allow_anonymous = self.auth_config.get(
-                "allow-anonymous", True
+                "allow-anonymous",
+                True,
             )  # allow anonymous by default
             if allow_anonymous:
                 authenticated = True
@@ -41,11 +43,12 @@ class AnonymousAuthPlugin(BaseAuthPlugin):
                     authenticated = True if session and session.username else False
                     if authenticated:
                         self.context.logger.debug(
-                            "Authentication success: user %r", session.username
+                            "Authentication success: user %r",
+                            session.username,
                         )
                     else:
                         self.context.logger.debug(
-                            "Authentication failure: session has an empty username"
+                            "Authentication failure: session has an empty username",
                         )
         return authenticated
 
@@ -67,7 +70,9 @@ class FileAuthPlugin(BaseAuthPlugin):
                         if username:
                             self._users[username] = pwd_hash
             self.context.logger.debug(
-                "%d user(s) read from file '%s'", len(self._users), password_file
+                "%d user(s) read from file '%s'",
+                len(self._users),
+                password_file,
             )
         else:
             self.context.logger.warning("Configuration parameter 'password_file' not found")
@@ -75,7 +80,7 @@ class FileAuthPlugin(BaseAuthPlugin):
     async def authenticate(self, *args, **kwargs):
         authenticated = await super().authenticate(*args, **kwargs)
         if authenticated:
-            session = kwargs.get("session", None)
+            session = kwargs.get("session")
             if session and session.username:
                 name = self._users.get(session.username, None)
                 if not name:

@@ -1,0 +1,15 @@
+power: !P :mr.moat.sew.power
+state: !P :mr.moat.sew.state
+timeout: 1.0
+mqtt:
+  codec: msgpack
+  will:
+    topic: !P :mr.moat.sew.state
+    message: null
+modbus:
+  port: "/dev/null"  # EDIT
+  serial:
+    baudrate: 19200
+    parity: N
+  unit: 1
+  max_wr_len: 1

@@ -11,6 +11,7 @@
 # 		   VeDbusItemImport for a non-, or not yet existing objectpaths as well1
 #
 # Code is used by the vrmLogger, and also the pubsub code. Both are other modules in the dbus_vrm repo.
+from __future__ import annotations
 
 import logging
 from collections import defaultdict
@@ -164,7 +165,7 @@ class DbusMonitor(CtxObj):
                     path="/org/freedesktop/DBus",
                     interface="org.freedesktop.DBus",
                     member="ListNames",
-                )
+                ),
             )
             if reply.message_type == MessageType.ERROR:
                 raise DBusError(reply.error_name, reply.body[0])
@@ -184,13 +185,13 @@ class DbusMonitor(CtxObj):
 
             try:
                 logger.info(
-                    "===== Search on dbus for services that we will monitor starting... ====="
+                    "===== Search on dbus for services that we will monitor starting... =====",
                 )
                 for serviceName in await _list_names():
                     await self.scan_dbus_service(serviceName)
 
                 logger.info(
-                    "===== Search on dbus for services that we will monitor finished ====="
+                    "===== Search on dbus for services that we will monitor finished =====",
                 )
 
                 yield self
@@ -278,17 +279,21 @@ class DbusMonitor(CtxObj):
 
         # for vebus.ttyO1, this is workaround, since VRM Portal expects the main vebus
         # devices at instance 0. Not sure how to fix this yet.
-        if serviceName == "com.victronenergy.vebus.ttyO1" and self.vebusDeviceInstance0:
-            di = 0
-        elif serviceName == "com.victronenergy.settings":
-            di = 0
-        elif serviceName.startswith("com.victronenergy.vecan."):
+        if (
+            serviceName == "com.victronenergy.vebus.ttyO1"
+            and self.vebusDeviceInstance0
+            or serviceName == "com.victronenergy.settings"
+            or serviceName.startswith("com.victronenergy.vecan.")
+        ):
             di = 0
         else:
             try:
                 di = await self.call_bus(serviceName, "/DeviceInstance", None, "GetValue")
             except DBusError:
-                logger.info("	   %s was skipped because it has no device instance", serviceName)
+                logger.info(
+                    "	   %s was skipped because it has no device instance",
+                    serviceName,
+                )
                 return False  # Skip it
 
         logger.info("	   %s has device instance %s", serviceName, di)
@@ -449,7 +454,7 @@ class DbusMonitor(CtxObj):
         try:
             await self.call_bus(serviceName, objectPath, None, "GetValue")
             return True
-        except DBusError as e:
+        except DBusError:
             return False
 
     # Returns if there ever was a successful GetValue or valueChanged event.
@@ -586,9 +591,7 @@ class DbusMonitor(CtxObj):
             await intf.on_items_changed(root_tracker)
             return partial(intf.off_items_changed, root_tracker)
 
-        self.serviceWatches[serviceName].extend(
-            (
-                await add_prop_receiver(),
-                await add_root_receiver(),
-            )
-        )
+        self.serviceWatches[serviceName].extend((
+            await add_prop_receiver(),
+            await add_root_receiver(),
+        ))

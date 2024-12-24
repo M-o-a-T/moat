@@ -2,6 +2,8 @@
 cmdhandler on top of anyio pipe
 """
 
+from __future__ import annotations
+
 import anyio
 from contextlib import asynccontextmanager
 from moat.lib.cmd import CmdHandler
@@ -20,7 +22,7 @@ async def run(cmd: CmdHandler, stream: anyio.abc.ByteStream):
 
     async def rd(conn):
         unpacker = StdCBOR()
-        rd = conn.read if hasattr(conn,"read") else conn.receive
+        rd = conn.read if hasattr(conn, "read") else conn.receive
         while True:
             buf = await rd(4096)
             for msg in unpacker.feed(buf):
@@ -28,7 +30,7 @@ async def run(cmd: CmdHandler, stream: anyio.abc.ByteStream):
 
     async def wr(conn):
         packer = StdCBOR()
-        wr = conn.write if hasattr(conn,"write") else conn.send
+        wr = conn.write if hasattr(conn, "write") else conn.send
         while True:
             msg = await cmd.msg_out()
             buf = packer.encode(msg)

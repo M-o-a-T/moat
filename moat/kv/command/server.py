@@ -1,4 +1,5 @@
 # command line interface
+from __future__ import annotations
 
 import asyncclick as click
 
@@ -99,9 +100,7 @@ async def cli(obj, name, load, save, init, incremental, eval_, auth, force, node
     from moat.util import as_service
 
     if load and nodes:
-        raise click.UsageError(
-            "Either read from a file or fetch from a node. Not both."
-        )
+        raise click.UsageError("Either read from a file or fetch from a node. Not both.")
     if auth and force:
         raise click.UsageError("Using both '-a' and '-f' is redundant. Choose one.")
 

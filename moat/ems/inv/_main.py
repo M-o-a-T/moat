@@ -4,6 +4,8 @@
 Main code for inverter control
 """
 
+from __future__ import annotations
+
 import sys
 
 import asyncclick as click
@@ -31,7 +33,7 @@ Modes:
 for _i, _c in InvControl.MODES.items():
     # pylint:disable=protected-access
     _modes += "\b\n"
-    _modes += f"{_c._name :<15s} {_c.__doc__}\n\n\b\n"
+    _modes += f"{_c._name:<15s} {_c.__doc__}\n\n\b\n"
     _modes += (
         "   "
         + _c._doc["_l"].replace("\n", "\n   ").replace("\n   \n", "\n\n\b\n").rstrip(" ")
@@ -42,7 +44,7 @@ for _i, _c in InvControl.MODES.items():
     for _k, _v in _c._doc.items():
         if _k[0] == "_":
             continue
-        _modes += f"   {_k :<15s} {_v.strip()}\n"
+        _modes += f"   {_k:<15s} {_v.strip()}\n"
 
     _modes += "\n"
 
@@ -52,10 +54,21 @@ for _i, _c in InvControl.MODES.items():
 @click.option("--no-op", "-n", is_flag=True)
 @click.option("--mode", "-m", help="Inverter mode")
 @click.option(
-    "--param", "-p", "param", nargs=2, type=(str, str), multiple=True, help="Parameter (evaluated)"
+    "--param",
+    "-p",
+    "param",
+    nargs=2,
+    type=(str, str),
+    multiple=True,
+    help="Parameter (evaluated)",
 )
 @click.option(
-    "--config", "--cfg", "-c", "config", type=click.File("r"), help="Configuration file (YAML)"
+    "--config",
+    "--cfg",
+    "-c",
+    "config",
+    type=click.File("r"),
+    help="Configuration file (YAML)",
 )
 async def cli(debug, mode, no_op, param, config):
     """

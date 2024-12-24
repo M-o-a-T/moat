@@ -13,7 +13,8 @@ from moat.micro.compat import Event, L, Queue, log, wait_for_ms
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any, Awaitable
+    from typing import Any
+    from collections.abc import Awaitable
 
 
 class Cmd(BaseCmd):
@@ -119,7 +120,11 @@ class Cons(BaseCmd):
                 if p is None:
                     self.q.put(buf[:d])
                 else:
-                    log("%s: %s", p, str(memoryview(buf)[: d - (buf[d - 1] == 10)], "utf-8"))
+                    log(
+                        "%s: %s",
+                        p,
+                        str(memoryview(buf)[: d - (buf[d - 1] == 10)], "utf-8"),
+                    )
                 d = 0
 
 

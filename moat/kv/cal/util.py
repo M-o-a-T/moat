@@ -5,10 +5,14 @@ from dateutil.rrule import rrulestr
 from vobject.icalendar import VAlarm, VEvent
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
-async def find_next_alarm(calendar, future=10, now = None, zone=timezone.utc) -> Tuple(VAlarm,datetime):
+async def find_next_alarm(calendar, future=10, now=None, zone=timezone.utc) -> Tuple(
+    VAlarm,
+    datetime,
+):
     """
     fetch the next alarm in the current calendar
 
@@ -21,7 +25,7 @@ async def find_next_alarm(calendar, future=10, now = None, zone=timezone.utc) ->
     ## expand:
     events_fetched = await calendar.search(
         start=datetime.now(),
-        end=datetime.now()+timedelta(days=future),
+        end=datetime.now() + timedelta(days=future),
         event=True,
         expand=False,
     )
@@ -84,7 +88,7 @@ async def find_next_alarm(calendar, future=10, now = None, zone=timezone.utc) ->
                 ev, ev_v, ev_t = e, vx, t_al
     if ev:
         logger.warning("Next alarm: %s at %s", ev.vobject_instance.vevent.summary.value, ev_t)
-    return ev,ev_v,ev_t
+    return ev, ev_v, ev_t
 
 
 def next_start(v, now):
@@ -95,7 +99,7 @@ def next_start(v, now):
         pass
     else:
         excl = set()
-        for edt in v.contents.get('exdate', ()):
+        for edt in v.contents.get("exdate", ()):
             for ed in edt.value:
                 excl.add(ed)
 
@@ -103,11 +107,9 @@ def next_start(v, now):
         while st in excl:
             st = rule.after(edt, inc=False)
 
-        for edt in v.contents.get('rdate', ()):
+        for edt in v.contents.get("rdate", ()):
             for ed in edt.value:
                 if now <= ed.value < st:
                     st = ed.value
 
     return st
-
-

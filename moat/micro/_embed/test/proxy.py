@@ -1,6 +1,7 @@
 """
 Test module for proxying
 """
+
 from __future__ import annotations
 
 from moat.util import as_proxy

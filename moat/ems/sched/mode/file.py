@@ -1,6 +1,9 @@
 """
 Read data from a file
 """
+
+from __future__ import annotations
+
 import sys
 
 import anyio
@@ -105,7 +108,7 @@ class Loader(BaseLoader):
             async with await anyio.Path(cfg.data.file.result).open("w") as f:
                 await f.write(json.dumps(kw))
         else:
-            print(f"Unknown output format {f !r}. Use yaml/msgpack/json.")
+            print(f"Unknown output format {f!r}. Use yaml/msgpack/json.")
             sys.exit(1)
 
     @staticmethod
@@ -139,5 +142,5 @@ class Loader(BaseLoader):
             async with await anyio.Path(cfg.data.file.result).open("w") as f:
                 await f.write(json.dumps(res))
         else:
-            print(f"Unknown output format {f !r}. Use yaml/msgpack/json.")
+            print(f"Unknown output format {f!r}. Use yaml/msgpack/json.")
             sys.exit(1)

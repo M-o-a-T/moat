@@ -1,0 +1,13 @@
+setup: []
+# port:
+#   dev: "/dev/ttyUSB0"
+#   socket: "moat.test"
+# link:
+#   guarded: false
+#   lossy: false
+# setup: []
+# apps: {}
+#   wdt: app.wdt.WDTCmd
+# wdt:
+#   t: 2000
+#   ext: True

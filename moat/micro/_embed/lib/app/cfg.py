@@ -1,6 +1,7 @@
 """
 R/W access to configuration data.
 """
+
 from __future__ import annotations
 
 from moat.util import NotGiven

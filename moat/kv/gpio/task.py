@@ -2,6 +2,8 @@
 GPIO task for MoaT-KV
 """
 
+from __future__ import annotations
+
 import anyio
 import asyncgpio
 

@@ -1,6 +1,9 @@
 """
 MoaT test support
 """
+
+from __future__ import annotations
+
 import io
 import logging
 import shlex
@@ -23,9 +26,10 @@ async def run(*args, expect_exit=0, do_stdout=True):
     logger.debug(" moat %s", " ".join(shlex.quote(str(x)) for x in args))
     try:
         res = None
-        async with OptCtx(
-            main_scope(name="run") if scope.get() is None else None
-        ), scope.using_scope():
+        async with (
+            OptCtx(main_scope(name="run") if scope.get() is None else None),
+            scope.using_scope(),
+        ):
             res = await wrap_main(
                 args=args,
                 wrap=True,
@@ -43,7 +47,7 @@ async def run(*args, expect_exit=0, do_stdout=True):
         assert exc.code == expect_exit, exc.code
         return exc
     except Exception as exc:
-        while isinstance(exc,ExceptionGroup) and len(exc.exceptions) == 1:
+        while isinstance(exc, ExceptionGroup) and len(exc.exceptions) == 1:
             exc = exc.exceptions[0]
         raise exc
     except BaseException as exc:
@@ -73,12 +77,11 @@ def raises(*exc):
         yield res
     except exc as e:
         res.value = e
-        pass
     except ExceptionGroup as e:
-        while isinstance(e,ExceptionGroup) and len(e.exceptions) == 1:
+        while isinstance(e, ExceptionGroup) and len(e.exceptions) == 1:
             e = e.exceptions[0]
         res.value = e
-        if isinstance(e,exc):
+        if isinstance(e, exc):
             return
         raise
     else:

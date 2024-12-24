@@ -3,6 +3,7 @@ This module implements the direct connection to a micropython board.
 
 MoaT uses this to can sync the initial files and get things running.
 """
+
 from __future__ import annotations
 
 import anyio
@@ -31,7 +32,7 @@ re_oserror = re.compile(r"OSError: (\[Errno )?(\d+)(\] )?")
 re_exceptions = re.compile(r"(ValueError|KeyError|ImportError): (.*)")
 
 
-async def _noop_hook(ser):  # noqa:ARG001 pylint:disable=unused-argument
+async def _noop_hook(ser):
     pass
 
 

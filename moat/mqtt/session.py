@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 import logging
 from collections import OrderedDict
 
@@ -21,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 
 class ApplicationMessage:
-
     """
     ApplicationMessage and subclasses are used to store published message information flow. These objects can contain different information depending on the way they were created (incoming or outgoing) and the quality of service used between peers.
     """
@@ -81,7 +81,12 @@ class ApplicationMessage:
         :return: :class:`moat.mqtt.mqtt.publish.PublishPacket` built from ApplicationMessage instance attributes
         """
         return PublishPacket.build(
-            self.topic, self.data, self.packet_id, dup, self.qos, self.retain
+            self.topic,
+            self.data,
+            self.packet_id,
+            dup,
+            self.qos,
+            self.retain,
         )
 
     def __eq__(self, other):
@@ -99,7 +104,6 @@ class ApplicationMessage:
 
 
 class IncomingApplicationMessage(ApplicationMessage):
-
     """
     Incoming :class:`~moat.mqtt.session.ApplicationMessage`.
     """
@@ -112,7 +116,6 @@ class IncomingApplicationMessage(ApplicationMessage):
 
 
 class OutgoingApplicationMessage(ApplicationMessage):
-
     """
     Outgoing :class:`~moat.mqtt.session.ApplicationMessage`.
     """
@@ -176,11 +179,15 @@ class Session:
         self.transitions.add_transition(trigger="connect", source="new", dest="connected")
         self.transitions.add_transition(trigger="connect", source="disconnected", dest="connected")
         self.transitions.add_transition(
-            trigger="disconnect", source="connected", dest="disconnected"
+            trigger="disconnect",
+            source="connected",
+            dest="disconnected",
         )
         self.transitions.add_transition(trigger="disconnect", source="new", dest="disconnected")
         self.transitions.add_transition(
-            trigger="disconnect", source="disconnected", dest="disconnected"
+            trigger="disconnect",
+            source="disconnected",
+            dest="disconnected",
         )
 
     def __hash__(self):
@@ -213,7 +220,7 @@ class Session:
             )
             raise MQTTException(
                 "[MQTT-4.7.3-1] - %s invalid TOPIC sent in PUBLISH message,closing connection"
-                % self.client_id
+                % self.client_id,
             )
         if "#" in app_message.topic or "+" in app_message.topic:
             self.logger.warning(
@@ -222,7 +229,7 @@ class Session:
             )
             raise MQTTException(
                 "[MQTT-3.3.2-2] - %s invalid TOPIC sent in PUBLISH message, closing connection"
-                % self.client_id
+                % self.client_id,
             )
         if app_message.qos == QOS_0 and self._delivered_message_queue.qsize() >= 9999:
             self.logger.warning("delivered messages queue full. QOS_0 message discarded")
@@ -291,9 +298,7 @@ class Session:
         return self.retained_messages.qsize()
 
     def __repr__(self):
-        return type(self).__name__ + "(clientId={0}, state={1})".format(
-            self.client_id, self.transitions.state
-        )
+        return type(self).__name__ + f"(clientId={self.client_id}, state={self.transitions.state})"
 
     def __getstate__(self):
         state = self.__dict__.copy()

@@ -6,40 +6,53 @@ import sys
 
 from ..cmd import Request
 
-async def console_stack(stream=sys.stdin.buffer, s2=None, reliable=False, log=False, log_bottom=False, console=False, force_write=False, request_factory=Request):
+
+async def console_stack(
+    stream=sys.stdin.buffer,
+    s2=None,
+    reliable=False,
+    log=False,
+    log_bottom=False,
+    console=False,
+    force_write=False,
+    request_factory=Request,
+):
     # Set s2 for a separate write stream.
     #
     # Set force_write if select-for-write doesn't work on your stream.
-    # 
+    #
     # set @reliable if your console already guarantees lossless
     # transmission (e.g. via USB).
 
     if log or log_bottom:
         from ..proto import Logger
-    if hasattr(stream,"aclose"):
+    if hasattr(stream, "aclose"):
         assert s2 is None
         assert not force_write
         s = stream
     else:
         from ..proto.stream import AsyncStream
+
         s = AsyncStream(stream, s2, force_write)
 
     cons_h = None
     if console:
         c_b = bytearray()
+
         def cons_h(b):
             nonlocal c_b
             if b == 10:
-                print("C:", c_b.decode("utf-8","backslashreplace"))
+                print("C:", c_b.decode("utf-8", "backslashreplace"))
                 c_b = bytearray()
             elif b != 13:
                 if 0 <= b <= 255:
                     c_b.append(b)
                 else:
-                    print("Spurious:",b)
+                    print("Spurious:", b)
 
     if reliable:
         from ..proto.stream import MsgpackStream
+
         t = b = MsgpackStream(s, console=console, console_handler=cons_h)
         await b.init()
     else:
@@ -51,10 +64,9 @@ async def console_stack(stream=sys.stdin.buffer, s2=None, reliable=False, log=Fa
         if log_bottom:
             t = t.stack(Logger, txt="Rel")
         from ..proto.reliable import Reliable
+
         t = t.stack(Reliable)
     if log:
         t = t.stack(Logger, txt="Msg" if log is True else log)
     t = t.stack(request_factory)
-    return t,b
-
-
+    return t, b

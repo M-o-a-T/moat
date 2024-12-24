@@ -9,6 +9,7 @@ a single object.
 
 Alarm conditions are subclasses of exceptions.
 """
+
 from __future__ import annotations
 
 from moat.util import merge
@@ -20,7 +21,7 @@ from .compat import AC_use, TaskGroup
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Iterator
+    from collections.abc import Iterator
 
     from moat.util import Path
 

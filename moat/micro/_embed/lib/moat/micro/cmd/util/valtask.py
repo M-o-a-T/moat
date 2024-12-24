@@ -11,7 +11,8 @@ from moat.micro.errors import StoppedError
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Any, Callable, Mapping
+    from typing import Any
+    from collections.abc import Callable, Mapping
 
     from anyio import CancelScope
 

@@ -1,4 +1,5 @@
 # command line interface
+from __future__ import annotations
 
 import sys
 
@@ -32,18 +33,14 @@ async def cli(ctx, path):
 
 
 @cli.command()
-@click.option(
-    "-s", "--script", type=click.File(mode="w", lazy=True), help="Save the code here"
-)
+@click.option("-s", "--script", type=click.File(mode="w", lazy=True), help="Save the code here")
 @click.pass_obj
 async def get(obj, script):
     """Read a code entry"""
     if not len(obj.codepath):
         raise click.UsageError("You need a non-empty path.")
 
-    res = await obj.client._request(
-        action="get_value", path=obj.path, iter=False, nchain=obj.meta
-    )
+    res = await obj.client._request(action="get_value", path=obj.path, iter=False, nchain=obj.meta)
     if "value" not in res:
         if obj.debug:
             print("No entry here.", file=sys.stderr)
@@ -66,14 +63,10 @@ async def get(obj, script):
     help="The code is async / sync (default: async)",
     default=True,
 )
-@click.option(
-    "-t", "--thread", is_flag=True, help="The code should run in a worker thread"
-)
+@click.option("-t", "--thread", is_flag=True, help="The code should run in a worker thread")
 @click.option("-s", "--script", type=click.File(mode="r"), help="File with the code")
 @click.option("-i", "--info", type=str, help="one-liner info about the code")
-@click.option(
-    "-d", "--data", type=click.File(mode="r"), help="load the metadata (YAML)"
-)
+@click.option("-d", "--data", type=click.File(mode="r"), help="load the metadata (YAML)")
 @attr_args
 @click.pass_obj
 async def set_(obj, thread, script, data, vars_, eval_, path_, async_, info):
@@ -141,9 +134,7 @@ async def mod():
 
 
 @mod.command("get")
-@click.option(
-    "-s", "--script", type=click.File(mode="w", lazy=True), help="Save the code here"
-)
+@click.option("-s", "--script", type=click.File(mode="w", lazy=True), help="Save the code here")
 @click.argument("path", nargs=1)
 @click.pass_obj  # pylint: disable=function-redefined
 async def get_mod(obj, path, script):
@@ -172,12 +163,8 @@ async def get_mod(obj, path, script):
 
 
 @mod.command("set")
-@click.option(
-    "-s", "--script", type=click.File(mode="r"), help="File with the module's code"
-)
-@click.option(
-    "-d", "--data", type=click.File(mode="r"), help="load the metadata (YAML)"
-)
+@click.option("-s", "--script", type=click.File(mode="r"), help="File with the module's code")
+@click.option("-d", "--data", type=click.File(mode="r"), help="load the metadata (YAML)")
 @click.argument("path", nargs=1)  # pylint: disable=function-redefined
 @click.pass_obj
 async def set_mod(obj, path, script, data):

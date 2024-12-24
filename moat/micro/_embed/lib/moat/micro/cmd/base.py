@@ -34,7 +34,8 @@ if L:
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import AsyncContextManager, AsyncIterator, Awaitable, Callable
+    from typing import AsyncContextManager
+    from collections.abc import AsyncIterator, Awaitable, Callable
 
     from moat.micro.cmd.tree.dir import BaseSuperCmd, Dispatch
 
@@ -45,7 +46,7 @@ as_proxy("_SCmdErr")
 class ShortCommandError(ValueError):
     "The command path was too short"
 
-    pass  # noqa:PIE790
+    pass
 
 
 as_proxy("_LCmdErr")
@@ -54,7 +55,7 @@ as_proxy("_LCmdErr")
 class LongCommandError(ValueError):
     "The command path was too long"
 
-    pass  # noqa:PIE790
+    pass
 
 
 class ACM_h:
@@ -120,7 +121,7 @@ class BaseCmd(Base):
             self._stopped = Event()
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.path} {(id(self)>>4)&0xFFF :03x}>"
+        return f"<{self.__class__.__name__}: {self.path} {(id(self) >> 4) & 0xFFF:03x}>"
 
     async def setup(self):
         """
@@ -200,7 +201,7 @@ class BaseCmd(Base):
             """
             self.cfg.pop("_cmd", None)
             if self._starting is not None:
-                raise RuntimeError(f"Ready w/o start {self !r}")
+                raise RuntimeError(f"Ready w/o start {self!r}")
                 # self._starting.set()
                 # self._starting = None
             if self._ready is not None:

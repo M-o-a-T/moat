@@ -1,6 +1,9 @@
 """
 Moat-KV client data model for 1wire
 """
+
+from __future__ import annotations
+
 import anyio
 
 from moat.util import combine_dict, attrdict
@@ -67,7 +70,9 @@ class OWFSattr(ClientEntry):
                 await self.root._tg.start(self._watch_src)
             else:
                 await self.root.err.record_working(
-                    "owfs", self.subpath + ("write",), comment="dropped"
+                    "owfs",
+                    self.subpath + ("write",),
+                    comment="dropped",
                 )
 
         # poll OWFS
@@ -88,7 +93,9 @@ class OWFSattr(ClientEntry):
                     await dev.set_polling_interval(self.attr, intv)
                 else:
                     await self.root.err.record_working(
-                        "owfs", self.subpath + ("read",), comment="dropped"
+                        "owfs",
+                        self.subpath + ("read",),
+                        comment="dropped",
                     )
             except RuntimeError as exc:
                 await self.root.err.record_error("owfs", self.subpath + ("read",), exc=exc)
@@ -136,7 +143,10 @@ class OWFSattr(ClientEntry):
         with anyio.CancelScope() as sc:
             try:
                 async with self.client.watch(
-                    self.watch_src, min_depth=0, max_depth=0, fetch=True
+                    self.watch_src,
+                    min_depth=0,
+                    max_depth=0,
+                    fetch=True,
                 ) as wp:
                     if self.watch_src_scope is not None:
                         self.watch_src_scope.cancel()
@@ -157,19 +167,27 @@ class OWFSattr(ClientEntry):
                                 "owfs",
                                 self.subpath + ("write",),
                                 comment="Attribute missing",
-                                data={"key": k, "attr": self.watch_src_attr, "msg": msg},
+                                data={
+                                    "key": k,
+                                    "attr": self.watch_src_attr,
+                                    "msg": msg,
+                                },
                             )
                             return
                         else:
                             dev = self.node.dev
                             if dev is None:
                                 await self.root.err.record_error(
-                                    "owfs", self.subpath + ("write",), comment="device missing"
+                                    "owfs",
+                                    self.subpath + ("write",),
+                                    comment="device missing",
                                 )
                                 return
                             await dev.set(*self.attr, value=val)
                             await self.root.err.record_working(
-                                "owfs", self.subpath + ("write",), comment="write OK"
+                                "owfs",
+                                self.subpath + ("write",),
+                                comment="write OK",
                             )
 
             except Exception as exc:
@@ -237,7 +255,7 @@ class OWFSfamily(ClientEntry):
     def child_type(cls, name):
         if not isinstance(name, int):
             return ClientEntry
-        if name <= 0 or name > 16 ** 12:
+        if name <= 0 or name > 16**12:
             return ClientEntry
         return cls.cls
 
@@ -301,15 +319,18 @@ class OWFSroot(ClientRoot):
             kls.cls[name] = FamilyX
             return FamilyX
 
+
 class BrokenDict:
     def __getattr__(self, k, v=None):
-        import pdb;pdb.set_trace()
-        return object.__getattribute__(self,k,v)
-    pass
+        import pdb
+
+        pdb.set_trace()
+        return object.__getattribute__(self, k, v)
+
 
 @OWFSroot.register(0x10)
 class TempNode(OWFSnode):
-    CFG = BrokenDict() # {"temperature": 30}
+    CFG = BrokenDict()  # {"temperature": 30}
 
     @classmethod
     def child_type(cls, name):

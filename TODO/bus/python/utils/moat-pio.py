@@ -10,9 +10,10 @@ try:
 except Exception:
     projenv = None
 
+
 def skip_fake(node):
     # to ignore file from a build process, just return None
-    if node.get_dir().name in {"fakebus","tests"}:
+    if node.get_dir().name in {"fakebus", "tests"}:
         return None
     mode = env.GetProjectOption("mode")
 
@@ -31,6 +32,7 @@ def skip_fake(node):
             return None
         return node
 
+
 def run_pre():
     env.AddBuildMiddleware(skip_fake, "*")
     mode = env.GetProjectOption("mode")
@@ -38,15 +40,19 @@ def run_pre():
         base = env.GetProjectOption("base")
         # We need to insert the gate addresses after the actual objects
         # so that we won't override them.
-        env.Replace(LINKCOM=[env['LINKCOM'].replace(' $_LIBDIRFLAGS ', ' $LDAUXFLAGS $_LIBDIRFLAGS ')])
-        f = os.path.join(".pio","build",base,"firmware.elf")
-        env.Replace(LDAUXFLAGS=["-Wl,-R,"+ f])
+        env.Replace(
+            LINKCOM=[
+                env["LINKCOM"].replace(" $_LIBDIRFLAGS ", " $LDAUXFLAGS $_LIBDIRFLAGS ")
+            ]
+        )
+        f = os.path.join(".pio", "build", base, "firmware.elf")
+        env.Replace(LDAUXFLAGS=["-Wl,-R," + f])
 
-        ff = os.path.join(".pio","build",env['PIOENV'],"firmware.elf")
-        env.Depends(ff,f)
-        ff = os.path.join(".pio","build",env['PIOENV'],"src","app","base.cpp.o")
-        env.Depends(ff,f)
-        with open(f,"rb") as stream:
+        ff = os.path.join(".pio", "build", env["PIOENV"], "firmware.elf")
+        env.Depends(ff, f)
+        ff = os.path.join(".pio", "build", env["PIOENV"], "src", "app", "base.cpp.o")
+        env.Depends(ff, f)
+        with open(f, "rb") as stream:
             elffile = ELFFile(stream)
 
             s = None
@@ -58,33 +64,35 @@ def run_pre():
                     continue
                 if not (section.header.sh_flags & SH_FLAGS.SHF_ALLOC):
                     continue
-                if section['sh_type'] == 'SHT_NOBITS':
+                if section["sh_type"] == "SHT_NOBITS":
                     continue
                 for seg in elffile.iter_segments():
                     if seg.section_in_segment(section):
-                        section.header.sh_addr += seg['p_paddr']-seg['p_vaddr']
+                        section.header.sh_addr += seg["p_paddr"] - seg["p_vaddr"]
                         break
-                print("%s:x%x" % (section.header.sh_name,section.header.sh_offset))
+                print("%s:x%x" % (section.header.sh_name, section.header.sh_offset))
                 sl.append(section)
 
-            for section in sorted(sl, key=lambda s:s.header.sh_addr):
+            for section in sorted(sl, key=lambda s: s.header.sh_addr):
                 off = section.header.sh_addr
                 if s is not None and s != off:
-                    raise RuntimeError("Wrong offset: x%x vs x%x" % (s,off))
+                    raise RuntimeError("Wrong offset: x%x vs x%x" % (s, off))
                 s = off + section.header.sh_size
 
                 for d in section.data():
                     crc.update(d)
 
-            section = elffile.get_section_by_name('.symtab')
+            section = elffile.get_section_by_name(".symtab")
             ram_end = section.get_symbol_by_name("AppRAMstart")[0].entry.st_value
             ram_start = section.get_symbol_by_name("_sdata")[0].entry.st_value
             flash_start = section.get_symbol_by_name("AppFLASHstart")[0].entry.st_value
-            env.Append(LINKFLAGS=[
-            "-Wl,--defsym=APP_DATA_START=0x%x"%ram_end,
-            "-Wl,--defsym=APP_FLASH_START=0x%x"%flash_start,
-                ])
-            env.Append(CPPFLAGS=["-D BOOT_CRC=0x%x"%crc.finish()])
+            env.Append(
+                LINKFLAGS=[
+                    "-Wl,--defsym=APP_DATA_START=0x%x" % ram_end,
+                    "-Wl,--defsym=APP_FLASH_START=0x%x" % flash_start,
+                ]
+            )
+            env.Append(CPPFLAGS=["-D BOOT_CRC=0x%x" % crc.finish()])
 
 
 def run_post():

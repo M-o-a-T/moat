@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 from ..errors import MoatMQTTException
 from .connack import ConnackPacket
 from .connect import ConnectPacket
@@ -58,5 +59,5 @@ def packet_class(fixed_header: MQTTFixedHeader):
         return cls
     except KeyError:
         raise MoatMQTTException(  # pylint:disable=W0707
-            "Unexpected packet Type '%s'" % fixed_header.packet_type
+            "Unexpected packet Type '%s'" % fixed_header.packet_type,
         )

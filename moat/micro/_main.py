@@ -59,12 +59,12 @@ def catch_errors(fn):
             with ungroup:
                 return await fn(*a, **k)
         except (NoPathError, ConnectionRefusedError) as e:
-            raise click.ClickException(e)  # noqa:TRY200
+            raise click.ClickException(e)  # noqa:B904
         except Exception as e:
             if "bdb" in sys.modules:
                 skip_exc.add(sys.modules["bdb"].BdbQuit)
             if type(e) in skip_exc:
-                raise click.ClickException(RuntimeError(repr(e)))  # noqa:TRY200
+                raise click.ClickException(repr(e))  # noqa:B904
             raise
 
     return wrapper
@@ -273,7 +273,7 @@ async def setup(
         if source:
             await _do_copy(source, dst, dest, cross)
         if state and not watch:
-            await repl.exec(f"f=open('moat.state','w'); f.write({state !r}); f.close(); del f")
+            await repl.exec(f"f=open('moat.state','w'); f.write({state!r}); f.close(); del f")
         if large is True:
             await repl.exec("f=open('moat.lrg','w'); f.close()", quiet=True)
         elif large is False:
@@ -288,10 +288,10 @@ async def setup(
 
             async def hfn(p):
                 res = await repl.exec(
-                    f"import _hash; print(repr(_hash.hash[{p !r}])); del _hash",
+                    f"import _hash; print(repr(_hash.hash[{p!r}])); del _hash",
                     quiet=True,
                 )
-                return eval(res)  # noqa:S307,PGH001
+                return eval(res)  # noqa: S307
 
             await _do_update(dst, MoatDevPath(".").connect_repl(repl), cross, hfn)
         if reset:
@@ -301,7 +301,7 @@ async def setup(
         if run or watch or mount:
             if run and not reset:
                 o, e = await repl.exec_raw(
-                    f"from main import go; go(state={state !r})",
+                    f"from main import go; go(state={state!r})",
                     timeout=None if watch else 30,
                 )
                 if o:
@@ -320,11 +320,14 @@ async def setup(
             if mount:
                 from moat.micro.fuse import wrap
 
-                async with SubDispatch(dsp, cfg["path"] + (f,)) as fs, wrap(
-                    fs,
-                    mount,
-                    blocksize=cfg.get("blocksize", 64),
-                    debug=4,
+                async with (
+                    SubDispatch(dsp, cfg["path"] + (f,)) as fs,
+                    wrap(
+                        fs,
+                        mount,
+                        blocksize=cfg.get("blocksize", 64),
+                        debug=4,
+                    ),
                 ):
                     await idle()
 
@@ -454,7 +457,7 @@ async def cmd(obj, path, **attrs):
     logger.debug(
         "Command: %s %s",
         cfg.remote + path,
-        " ".join(f"{k}={v !r}" for k, v in val.items()),
+        " ".join(f"{k}={v!r}" for k, v in val.items()),
     )
 
     async with Dispatch(cfg, run=True) as dsp, SubDispatch(dsp, cfg.remote) as sd:

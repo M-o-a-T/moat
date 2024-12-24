@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from moat.lib.codec import Codec
 
-    from typing import AsyncIterator, Awaitable
+    from collections.abc import AsyncIterator, Awaitable
 
 
 class MqttMessage:
@@ -46,7 +46,13 @@ class Backend(_Backend):
 
     client = None
 
-    def __init__(self, cfg, will: attrdict | None = None, name:str|None = None, meta: bool = True):
+    def __init__(
+        self,
+        cfg,
+        will: attrdict | None = None,
+        name: str | None = None,
+        meta: bool = True,
+    ):
         """
         Connect to MQTT.
 
@@ -97,7 +103,12 @@ class Backend(_Backend):
 
     @asynccontextmanager
     async def monitor(
-        self, topic, *, codec: str | Codec | None = None, raw: bool | None = False, **kw
+        self,
+        topic,
+        *,
+        codec: str | Codec | None = None,
+        raw: bool | None = False,
+        **kw,
     ) -> AsyncIterator[AsyncIterator[Message]]:
         "watch a topic"
 
@@ -111,19 +122,19 @@ class Backend(_Backend):
                     async for msg in sub:
                         err = None
                         try:
-                            topic = PS(msg.topic)
+                            top = PS(msg.topic)
                         except Exception as exc:
-                            # XXX complain
                             await self.send(
                                 P(":R.error.link.mqtt.topic"),
                                 dict(val=msg.topic, pattern=topic, msg=repr(exc)),
                             )
-                            topic = Path.build(msg.topic.split("/"))
+                            # workaround for undecodeability
+                            top = Path.build(msg.topic.split("/"))
 
-                        prop = oprop = msg.user_properties.get("MoaT")
+                        prop = msg.user_properties.get("MoaT")
                         if not raw:
+                            oprop = prop  # remember for error
                             try:
-                                prop = oprop = msg.user_properties.get("MoaT")
                                 if prop:
                                     prop = MsgMeta.decode(self.name, prop)
                                 else:
@@ -137,7 +148,12 @@ class Backend(_Backend):
                                 self.logger.debug("Property Error", exc_info=exc)
                                 await self.send(
                                     P(":R.error.link.mqtt.meta"),
-                                    dict(topic=topic, val=oprop, pattern=topic, msg=repr(exc)),
+                                    dict(
+                                        topic=top,
+                                        val=oprop,
+                                        pattern=topic,
+                                        msg=repr(exc),
+                                    ),
                                 )
                                 err = exc
                             else:
@@ -165,7 +181,7 @@ class Backend(_Backend):
                             # don't forward undecodeable messages
                             continue
                         if self.trace:
-                            self.logger.info("R:%s %r", topic, msg.payload)
+                            self.logger.info("R:%s R|%r", topic, msg.payload)
                         yield RawMessage(topic, msg.payload, prop, msg, exc=err)
 
                 yield sub_get(sub)
@@ -178,7 +194,13 @@ class Backend(_Backend):
             self.logger.info("Monitor %s end", topic)
 
     def send(
-            self, topic, payload, codec: Codec | str | None = None, meta: MsgMeta | bool | None = None, retain:bool=False,
+        self,
+        topic,
+        payload,
+        codec: Codec | str | None = None,
+        meta: MsgMeta | bool | None = None,
+        retain: bool = False,
+        **kw,
     ) -> Awaitable:  # pylint: disable=invalid-overridden-method
         """
         Send this payload to this topic.
@@ -190,15 +212,21 @@ class Backend(_Backend):
         if meta is None:
             meta = self.meta
         if meta is True:
-            prop["MoaT"] = MsgMeta(origin=self.name)
+            prop["MoaT"] = MsgMeta(origin=self.name).encode()
         elif meta is not False:
             prop["MoaT"] = meta.encode()
         if codec is None:
             codec = self.codec
         elif isinstance(codec, str):
             codec = get_codec(codec)
-        payload = codec.encode(payload)
+        msg = codec.encode(payload)
 
         if self.trace:
             self.logger.info("S:%s %r", topic, payload)
-        return self.client.publish(topic.slashed, payload=payload, user_properties=prop, retain=retain)
+        return self.client.publish(
+            topic.slashed,
+            payload=msg,
+            user_properties=prop,
+            retain=retain,
+            **kw,
+        )

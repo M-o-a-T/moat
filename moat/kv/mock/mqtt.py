@@ -1,3 +1,4 @@
+from __future__ import annotations
 import copy
 import logging
 import os
@@ -6,7 +7,7 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from functools import partial
 
 import anyio
-import mock
+from unittest import mock
 import trio
 from asyncscope import main_scope, scope
 from moat.mqtt.broker import create_broker
@@ -65,7 +66,7 @@ async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):
         pass  # test doesn't have autojump_clock fixture
 
     async def mock_get_host_port(st, host):
-        i = int(host[host.rindex("_") + 1 :])  # noqa: E203
+        i = int(host[host.rindex("_") + 1 :])
         s = st.s[i]
         await s.is_serving
         for host, port, *_ in s.ports:
@@ -122,21 +123,17 @@ async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):
                                 "backend": "mqtt",
                                 "mqtt": {"uri": URI},
                             },
-                        }
+                        },
                     },
                     {"cfg": TESTCFG},
                 )
                 args_def.pop("init", None)
                 s = Server(name, **args)
                 ex.enter_context(
-                    mock.patch.object(
-                        s, "_set_tock", new=partial(mock_set_tock, s, s._set_tock)
-                    )
+                    mock.patch.object(s, "_set_tock", new=partial(mock_set_tock, s, s._set_tock)),
                 )
                 ex.enter_context(
-                    mock.patch.object(
-                        s, "_get_host_port", new=partial(mock_get_host_port, st)
-                    )
+                    mock.patch.object(s, "_get_host_port", new=partial(mock_get_host_port, st)),
                 )
                 st.s.append(s)
 
@@ -147,9 +144,7 @@ async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):
                     await scp.spawn_service(with_broker, st.s[i], ready_evt=evt)
                     evts.append(evt)
                 else:
-                    setattr(
-                        st, f"run_{i}", partial(scp.spawn_service, with_broker, st.s[i])
-                    )
+                    setattr(st, f"run_{i}", partial(scp.spawn_service, with_broker, st.s[i]))
 
             for e in evts:
                 await e.wait()

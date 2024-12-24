@@ -53,6 +53,7 @@ except Exception:  # pragma: no cover
     _version = "0.0.1"
     _version_tuple = (0, 0, 1)
 
-protocol_version = (0, 1)
+protocol_version_min = 0
+protocol_version = 0
 
 __path__ = __import__("pkgutil").extend_path(__path__, __name__)

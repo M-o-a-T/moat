@@ -1,5 +1,6 @@
 # command line interface
 # pylint: disable=missing-module-docstring
+from __future__ import annotations
 
 import io
 import logging
@@ -116,7 +117,7 @@ async def cli():
     """
     This collection of commands is useful for managing and building MoaT itself.
     """
-    pass  # pylint: disable=unnecessary-pass
+    pass
 
 
 def fix_deps(deps: list[str], tags: dict[str, str]) -> bool:
@@ -269,8 +270,9 @@ def encomma(proj, path):
     """list > comma-delimited string"""
     _mangle(proj, path, lambda x: ",".join(x))  # pylint: disable=unnecessary-lambda
 
+
 def apply_hooks(repo, force=False):
-    h = Path(repo.git_dir)/"hooks"
+    h = Path(repo.git_dir) / "hooks"
     drop = set()
     seen = set()
     for f in h.iterdir():
@@ -281,12 +283,12 @@ def apply_hooks(repo, force=False):
     for f in drop:
         f.unlink()
 
-    pt = (Path(__file__).parent / "_hooks")
+    pt = Path(__file__).parent / "_hooks"
     for f in pt.iterdir():
         if not force:
             if f.name in seen:
                 continue
-        t = h/f.name
+        t = h / f.name
         d = f.read_text()
         t.write_text(d)
         t.chmod(0o755)
@@ -382,8 +384,9 @@ def apply_templates(repo):
             txi = "\n" + txi.replace("\n\t", "\n ")
             proj["tool"]["tox"] = dict(
                 legacy_tox_ini=tomlkit.items.String.from_raw(
-                    txi, type_=tomlkit.items.StringType.MLB
-                )
+                    txi,
+                    type_=tomlkit.items.StringType.MLB,
+                ),
             )
 
         projp = Path(repo.working_dir) / "pyproject.toml"
@@ -448,7 +451,7 @@ def path_():
 @cli.command(
     epilog="""\
 By default, changes amend the HEAD commit if the text didn't change.
-"""
+""",
 )
 @click.option("-A", "--amend", is_flag=True, help="Fix previous commit (DANGER)")
 @click.option("-N", "--no-amend", is_flag=True, help="Don't fix prev commit even if same text")
@@ -580,7 +583,7 @@ async def fix_main(repo):
     async def _fix(r):
         if not r.head.is_detached:
             if r.head.ref.name not in {"main", "moat"}:
-                print(f"{r.working_dir}: Head is {r.head.ref.name !r}", file=sys.stderr)
+                print(f"{r.working_dir}: Head is {r.head.ref.name!r}", file=sys.stderr)
             return
         if "moat" in r.refs:
             m = r.refs["moat"]
@@ -588,7 +591,14 @@ async def fix_main(repo):
             m = r.refs["main"]
         if m.commit != r.head.commit:
             ch = await run_process(
-                ["git", "-C", r.working_dir, "merge-base", m.commit.hexsha, r.head.commit.hexsha],
+                [
+                    "git",
+                    "-C",
+                    r.working_dir,
+                    "merge-base",
+                    m.commit.hexsha,
+                    r.head.commit.hexsha,
+                ],
                 input=None,
                 stderr=sys.stderr,
             )
@@ -650,7 +660,14 @@ async def pull(obj, remote, branch):
     repo = Repo(None)
     for r in repo.subrepos():
         try:
-            cmd = ["git", "-C", r.working_dir, "fetch", "--recurse-submodules=no", "--tags"]
+            cmd = [
+                "git",
+                "-C",
+                r.working_dir,
+                "fetch",
+                "--recurse-submodules=no",
+                "--tags",
+            ]
             if not obj.debug:
                 cmd.append("-q")
             elif obj.debug > 1:
@@ -743,7 +760,7 @@ async def build(version, no_test, no_commit, no_dirty, cache):
                 continue
             print("UNTAGGED", t, r.moat_name)
             xt, t = t.name.rsplit(".", 1)
-            t = f"{xt}.{int(t)+1}"
+            t = f"{xt}.{int(t) + 1}"
             # t = r.create_tag(t)
             # do not create the tag yet
         else:
@@ -800,7 +817,7 @@ async def build(version, no_test, no_commit, no_dirty, cache):
                 t = tags[r.moat_name]
                 if not isinstance(t, str):
                     xt, t = t.name.rsplit(".", 1)
-                    t = f"{xt}.{int(t)+1}"
+                    t = f"{xt}.{int(t) + 1}"
                     tags[r.moat_name] = t
                 check = True
 
@@ -811,7 +828,10 @@ async def build(version, no_test, no_commit, no_dirty, cache):
     if not no_commit:
         for r in repo.subrepos(depth=True):
             if not r.is_dirty(
-                index=True, working_tree=True, untracked_files=False, submodules=True
+                index=True,
+                working_tree=True,
+                untracked_files=False,
+                submodules=True,
             ):
                 continue
 

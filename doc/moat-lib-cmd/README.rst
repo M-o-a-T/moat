@@ -37,7 +37,7 @@ Usage
         if msg.cmd[0] == "gimme data":
             async with msg.stream_w("Start") as st:
                 for i in range(10):
-                    await st.send(i+msg.data["x"])
+                    await st.send(i+msg.kw["x"])
                 return "OK I'm done"
 
         if msg.cmd[0] == "alive":
@@ -66,26 +66,26 @@ Usage
 
         def request():
             # streaming data in
-            msg = await tr.cmd("Start", x=123)
+            msg, = await tr.cmd("Start", x=123)
             print("Start", msg)
             async with tr.stream_r("gimme data") as st:
                 print("They are starting", st.msg)
                 async for msg in st:
-                    print("I got", msg)
+                    print("I got", msg.args[0])
             print("They are done", st.msg)
             # may be None if they didn't send a stream
 
         def int_stream():
             # streaming data out
             async with tr.stream_w("alive") as st:
-                print("They replied", st.msg)
+                print("They replied", st.args)
                 i = 0
                 while i < 100:
                     await st.send(i)
                     i += 1
                     anyio.sleep(1/10)
-                st.msg = "The end."
-            print("I am done", st.msg)
+                await st.result("The end.")
+            print("I am done", st.msg[0])
             
             
         tg.start_soon(reader)
@@ -99,26 +99,34 @@ Usage
 Specification
 =============
 
+MoaT-Cmd messages are encoded with CBOR.
+
 All MoaT-Cmd messages are non-empty lists whose first element is a
-small integer, identifying a sub-channel. Messages that don't match this
-description MAY be used for out-of-band communication.
+small integer, identifying a sub-channel.
 
 A transport that enforces message boundaries MAY send each message without
-the leading array mark byte(s).
+the leading array mark byte(s). If this option is not used or not
+available, messages that are not arrays MAY be used for out-of-band
+communication.
 
-MoaT-Cmd messaging is simple by design and basically consists of a command
-(sent from A to B) followed by a reply (sent from B to A). Both directions
-may independently indicate that more, streamed data will follow. The first
-and last message of a streamed command or reply are considered to be
+MoaT-Cmd messaging is simple by design and consists of a command (sent from
+A to B) followed by a reply (sent from B to A). Both directions may
+independently indicate that more, possibly streamed, data will follow. The
+first and last message of a streamed command or reply are considered to be
 out-of-band.
+
+There is no provision for messages that don't have a reply. On the other
+hand, an "empty" reply is just three bytes and the sender isn't required to
+wait for it.
 
 The side opening a sub-channel uses non-negative integers as channel ID.
 Replies carry the ID's bitwise-negated value. Thus the ID spaces of both
 directions are separate.
 
-IDs are allocated with the first message on a sub-channel. They MUST NOT be
-reused until final messages have been exchanged. Exactly one final message
-MUST be sent in both directions.
+IDs are allocated when sending the first message on a sub-channel. They
+MUST NOT be reused until final messages have been exchanged.
+
+Exactly one final message MUST be sent in both directions.
 
 
 Message format

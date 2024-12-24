@@ -14,7 +14,7 @@ from ._test_ import Cmd, Cons  # noqa:F401 pylint:disable=unused-import
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Awaitable
+    from collections.abc import Awaitable
 
 
 def MpyCmd(*a, **k):
@@ -129,7 +129,7 @@ def LoopLink(*a, **k):
         async def setup(self):
             p = self.cfg.get("path", None)
             if isinstance(p, str):
-                raise TypeError(f"Need a path, not {p !r}")
+                raise TypeError(f"Need a path, not {p!r}")
             self.remote = self.root.sub_at(p) if p is not None else None
 
             u = self.cfg.get("usage", "")

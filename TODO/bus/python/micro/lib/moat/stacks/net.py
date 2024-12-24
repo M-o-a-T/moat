@@ -8,6 +8,7 @@ from ..compat import run_server, Event, print_exc
 from ..cmd import Request
 from ..proto.stream import MsgpackHandler
 
+
 async def network_stack_iter(log=False, multiple=False, host="0.0.0.0", port=27176):
     # an iterator for network connections / their stacks. Yields one t,b
     # pair for each successful connection.
@@ -22,8 +23,9 @@ async def network_stack_iter(log=False, multiple=False, host="0.0.0.0", port=271
     if log:
         from .proto import Logger
 
-    q=Queue(2)
-    async def make_stack(s,rs):
+    q = Queue(2)
+
+    async def make_stack(s, rs):
         assert s is rs
         await q.put(s)
 
@@ -34,7 +36,9 @@ async def network_stack_iter(log=False, multiple=False, host="0.0.0.0", port=271
             while True:
                 n += 1
                 if srv is None:
-                    srv = await tg.spawn(uasyncio.run_server, make_stack, self.host,self.port)
+                    srv = await tg.spawn(
+                        uasyncio.run_server, make_stack, self.host, self.port
+                    )
 
                 s = await q.get()
                 if not multiple:
@@ -45,8 +49,8 @@ async def network_stack_iter(log=False, multiple=False, host="0.0.0.0", port=271
                 if log:
                     t = t.stack(Logger, txt="N%d" % n)
                 t = t.stack(request_factory)
-                await q.put((t,b))
-                yield t,b
+                await q.put((t, b))
+                yield t, b
 
     except SystemExit:
         raise
@@ -54,5 +58,3 @@ async def network_stack_iter(log=False, multiple=False, host="0.0.0.0", port=271
         print_exc(exc)
         if srv is not None:
             srv.cancel()
-
-

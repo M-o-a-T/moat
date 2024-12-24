@@ -2,15 +2,16 @@
 Akumuli task for MoaT-KV
 """
 
+from __future__ import annotations
+
 import anyio
 import asyncakumuli as akumuli
-import socket
 from pprint import pformat
 
 try:
     from collections.abc import Mapping
 except ImportError:
-    from collections import Mapping
+    from collections.abc import Mapping
 
 from moat.util import combine_dict
 from moat.kv.exceptions import ClientConnectionError
@@ -40,8 +41,8 @@ async def task(client, cfg, server: AkumuliServer, paths=(), evt=None):  # pylin
                 try:
                     msg.setdefault("mode", DS.gauge)
                     tags = msg.setdefault("tags", {})
-                    for k,v in tags.items():
-                        if isinstance(str,bytes):
+                    for k, v in tags.items():
+                        if isinstance(str, bytes):
                             tags[k] = v.decode("utf-8")
                         else:
                             tags[k] = str(v)
@@ -67,5 +68,5 @@ async def task(client, cfg, server: AkumuliServer, paths=(), evt=None):  # pylin
                     await anyio.sleep(99999)
     except TimeoutError:
         raise
-    except socket.error as e:  # this would eat TimeoutError
+    except OSError as e:  # this would eat TimeoutError
         raise ClientConnectionError(cfg["host"], cfg["port"]) from e

@@ -1,0 +1,6 @@
+paths: {}
+# in your config, add something like:
+#paths:
+#  std: !P r.r.bms.bat1
+# assuming a connection 'r' to the master with a connection 'r'
+# to a satellite with a 'bms' directory with a 'bat1' battery

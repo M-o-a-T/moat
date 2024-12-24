@@ -1,9 +1,9 @@
 """
 Adaptor for MicroPython streams.
 """
+
 from __future__ import annotations
 
-from asyncio import core
 
 from moat.util import DProxy, NoProxyError, Proxy, get_proxy, name2obj, obj2name
 from moat.micro.compat import AC_use

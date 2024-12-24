@@ -1,3 +1,4 @@
+from __future__ import annotations
 import datetime
 import sys
 
@@ -143,7 +144,7 @@ class Line:
             r = gpio.lib.gpiod_line_request_input_flags(self._line, self._consumer, self._flags)
         elif self._direction == gpio.DIRECTION_OUTPUT:
             r = gpio.lib.gpiod_line_request_output_flags(
-                self._line, self._consumer, self._flags, self._default
+                self._line, self._consumer, self._flags, self._default,
             )
         else:
             self.__exit__()
@@ -234,9 +235,7 @@ class Line:
             return None
         return gpio.ffi.string(n).decode("utf-8")
 
-    def monitor(
-        self, type=gpio.REQUEST_EVENT_RISING_EDGE, flags=0
-    ):  # pylint: disable=redefined-builtin
+    def monitor(self, type=gpio.REQUEST_EVENT_RISING_EDGE, flags=0):  # pylint: disable=redefined-builtin
         """
         Monitor events.
 

@@ -1,6 +1,7 @@
 """
 Apps for Unix socket connectivity
 """
+
 from __future__ import annotations
 
 from moat.micro.compat import AC_use
@@ -12,7 +13,7 @@ from moat.micro.stacks.console import console_stack
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
-    from typing import Awaitable
+    from collections.abc import Awaitable
 
 
 def Raw(*a, **k):

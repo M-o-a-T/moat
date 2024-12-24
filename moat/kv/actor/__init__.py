@@ -2,8 +2,9 @@
 This module implements a :class:`asyncactor.Actor` which works on top of
 a MoaT-KV client.
 """
+from __future__ import annotations
 
-from asyncactor import Actor  # noqa
+from asyncactor import Actor
 from asyncactor.abc import MonitorStream, Transport
 
 __all__ = [

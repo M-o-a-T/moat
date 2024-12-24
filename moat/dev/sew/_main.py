@@ -5,7 +5,6 @@ Basic support for SEW motors
 from __future__ import annotations
 
 import logging  # pylint: disable=wrong-import-position
-import anyio
 
 import asyncclick as click
 
@@ -23,15 +22,20 @@ async def cli(obj, sub):
 
     obj.sub = sub
     obj.sew = combine_dict(obj.cfg._get(sub), obj.cfg["dev"]["sew"])
-    merge(obj.sew.setdefault("mqtt", {}), obj.cfg.get("mqtt",{}).get("client",{}), load_cfg("moat.mqtt")["mqtt"]["client"], replace=False)
+    merge(
+        obj.sew.setdefault("mqtt", {}),
+        obj.cfg.get("mqtt", {}).get("client", {}),
+        load_cfg("moat.mqtt")["mqtt"]["client"],
+        replace=False,
+    )
 
-    mqw = obj.sew["mqtt"].get("will",{})
+    mqw = obj.sew["mqtt"].get("will", {})
     try:
         top = mqw["topic"]
     except KeyError:
         pass
     else:
-        if isinstance(top,Path):
+        if isinstance(top, Path):
             mqw["topic"] = "/".join(top)
     try:
         msg = mqw["message"]
@@ -40,6 +44,7 @@ async def cli(obj, sub):
     else:
         codec = get_codec(obj.sew["mqtt"]["codec"])
         mqw["message"] = codec.encode(msg)
+
 
 @cli.command("run")
 @click.pass_obj
@@ -50,7 +55,8 @@ async def run_(obj):
     cfg = obj.sew
 
     from .control import run
-    await run(cfg, name="moat."+str(obj.sub))
+
+    await run(cfg, name="moat." + str(obj.sub))
 
 
 @cli.command("set")
@@ -63,4 +69,5 @@ async def set_(obj, value):
         return
 
     from .control import set
+
     await set(cfg, value)

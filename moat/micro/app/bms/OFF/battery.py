@@ -1,28 +1,20 @@
 #
+from __future__ import annotations
 import logging
 from functools import cached_property
-from pprint import pformat
 
 import anyio
 import asyncdbus.service as dbus
-from asyncdbus.constants import NameFlag
 from asyncdbus.signature import Variant
 from moat.dbus import DbusInterface
-from moat.util import ValueEvent, attrdict, combine_dict
+from moat.util import attrdict, combine_dict
 from victron.dbus.utils import wrap_dbus_dict
 
 from moat.micro.compat import (
-    CancelledError,
     Event,
-    Lock,
     TaskGroup,
-    TimeoutError,
     sleep,
     sleep_ms,
-    ticks_add,
-    ticks_diff,
-    ticks_ms,
-    wait_for_ms,
 )
 
 from .. import ConfigError
@@ -48,20 +40,20 @@ class BatteryInterface(DbusInterface):
         super().done()
 
     @dbus.method()
-    def GetVoltages(self) -> 'a{sd}':
+    def GetVoltages(self) -> "a{sd}":
         return self.batt.get_voltages()
 
     @dbus.method()
-    async def Identify(self) -> 'b':
+    async def Identify(self) -> b:
         h, _res = await self.batt.send(RequestIdentifyModule())
         return h.seen
 
     @dbus.method()
-    def GetCellVoltages(self) -> 'ad':
+    def GetCellVoltages(self) -> ad:
         return [c.voltage for c in self.batt.cells]
 
     @dbus.method()
-    def GetBalancing(self) -> 'a(dbdb)':
+    def GetBalancing(self) -> a(dbdb):
         return [
             (
                 c.balance_threshold or 0,
@@ -73,11 +65,11 @@ class BatteryInterface(DbusInterface):
         ]
 
     @dbus.method()
-    def GetConfig(self) -> 'a{sv}a{sv}':
+    def GetConfig(self) -> "a{sv}a{sv}":
         return wrap_dbus_dict(self.batt.cfg), wrap_dbus_dict(self.batt.ccfg)
 
     @dbus.method()
-    async def SetCapacity(self, cap: 'd', loss: 'd', top: 'b') -> 'b':
+    async def SetCapacity(self, cap: d, loss: d, top: b) -> b:
         """
         The battery capacity is @cap. The battery is currently
         charged (@top is true) or not (@top is False).
@@ -85,75 +77,75 @@ class BatteryInterface(DbusInterface):
         return await self.batt.set_capacity(cap, loss, top)
 
     @dbus.method()
-    async def ForceRelay(self, on: 'b') -> 'b':
+    async def ForceRelay(self, on: b) -> b:
         self.batt.force_off = not on
         await self.batt.victron.update_dc(False)
         await self.batt.ctrl.req.send([self.batt.ctrl.name, "rly"], st=on)
         return True
 
     @dbus.method()
-    def GetSoC(self) -> 'd':
+    def GetSoC(self) -> d:
         return self.batt.get_soc()
 
     @dbus.method()
-    def SetSoC(self, soc: 'd') -> 'b'
+    def SetSoC(self, soc: d) -> b:
         self.batt.set_soc(soc)
         return True
 
     @dbus.method()
-    async def GetRelayState(self) -> 'bb':
+    async def GetRelayState(self) -> bb:
         res = await self.batt.ctrl.req.send([self.batt.ctrl.name, "rly"])
         return bool(res[0]), bool(res[1])
 
     @dbus.method()
-    async def ReleaseRelay(self) -> 'b':
+    async def ReleaseRelay(self) -> b:
         res = await self.batt.ctrl.req.send([self.batt.ctrl.name, "rly"], st=None)
         return True
 
     @dbus.method()
-    def GetTemperatures(self) -> 'a(dd)':
+    def GetTemperatures(self) -> a(dd):
         return [(_t(c.load_temp), _t(c.batt_temp)) for c in self.batt.cells]
 
     @dbus.method()
-    async def SetVoltage(self, data: 'd') -> 'b':
+    async def SetVoltage(self, data: d) -> b:
         # update the scale appropriately
         await self.batt.set_voltage(data)
         return True
 
     @dbus.method()
-    async def SetExternalVoltage(self, data: 'd') -> 'b':
+    async def SetExternalVoltage(self, data: d) -> b:
         # update correction factor
         await self.batt.set_ext_voltage(data)
         return True
 
     @dbus.method()
-    def GetCurrent(self) -> 'd':
+    def GetCurrent(self) -> d:
         return self.batt.current
 
     @dbus.method()
-    async def SetCurrent(self, data: 'd') -> 'b':
+    async def SetCurrent(self, data: d) -> b:
         # update the scale appropriately
         await self.batt.set_current(data)
         return True
 
     @dbus.method()
-    def GetCurrentOffset(self) -> 'd':
+    def GetCurrentOffset(self) -> d:
         return self.batt.cfg.i.offset
 
     @dbus.method()
-    async def SetCurrentOffset(self, data: 'd') -> 'b':
+    async def SetCurrentOffset(self, data: d) -> b:
         await self.batt.set_current_offset(data)
         return True
 
     @dbus.signal()
-    async def CellVoltageChanged(self) -> 'a(db)':
+    async def CellVoltageChanged(self) -> a(db):
         """
         Send cell voltages and bypass flags
         """
         return [(c.voltage, c.in_balance) for c in self.batt.cells]
 
     @dbus.signal()
-    async def VoltageChanged(self) -> 'ddbb':
+    async def VoltageChanged(self) -> ddbb:
         """
         Send pack voltage
         """
@@ -161,32 +153,32 @@ class BatteryInterface(DbusInterface):
         return (batt.voltage, batt.current, batt.chg_set or False, batt.dis_set or False)
 
     @dbus.signal()
-    async def CellTemperatureChanged(self) -> 'a(vv)':
+    async def CellTemperatureChanged(self) -> a(vv):
         """
         Return cell temperatures (load, battery)
 
         False if there is no value
         """
-        F = lambda x: Variant('b', False) if x is None else Variant('d', x)
+        F = lambda x: Variant("b", False) if x is None else Variant("d", x)
 
         return [(F(c.load_temp), F(c.batt_temp)) for c in self.batt.cells]
 
     @dbus.method()
-    async def GetNCells(self) -> 'y':
+    async def GetNCells(self) -> y:
         """
         Number of cells in this battery
         """
         return len(self.batt.cells)
 
     @dbus.method()
-    async def GetName(self) -> 's':
+    async def GetName(self) -> s:
         """
         Number of cells in this battery
         """
         return self.batt.name
 
     @dbus.method()
-    async def GetWork(self, poll: 'b', clear: 'b') -> 'a{sd}':
+    async def GetWork(self, poll: b, clear: b) -> "a{sd}":
         """
         Return work done by this battery
         """
@@ -196,7 +188,7 @@ class BatteryInterface(DbusInterface):
         return w
 
     @dbus.method()
-    async def SetWork(self, work: 'd') -> 'b':
+    async def SetWork(self, work: d) -> b:
         """
         Restore work done by this battery
         """
@@ -254,14 +246,19 @@ class Battery:
                 cf = attrdict()
             ccfg = combine_dict(cf, ccfg, cls=attrdict)
             cell = Cell(
-                self, nr=self.start + c, path=f"/bms/{num}/{c}", cfg=ccfg, bcfg=self.cfg, gcfg=gcfg
+                self,
+                nr=self.start + c,
+                path=f"/bms/{num}/{c}",
+                cfg=ccfg,
+                bcfg=self.cfg,
+                gcfg=gcfg,
             )
             self.ctrl.add_cell(cell)
             self.cells.append(cell)
         self.clear_work()
 
     def __repr__(self):
-        return f"‹Batt {self.path} u={0 if self.voltage is None else self.voltage :.3f} i={0 if self.current is None else self.current :.1f}›"
+        return f"‹Batt {self.path} u={0 if self.voltage is None else self.voltage:.3f} i={0 if self.current is None else self.current:.1f}›"
 
     @property
     def req(self):
@@ -300,13 +297,13 @@ class Battery:
             h, res = await self.send(RequestGetSettings())
             if len(res) != len(self.cells):
                 raise ConfigError(
-                    f"Battery {self.start}:{self.end}: config found {len(res)} modules, not {len(self.cells)}"
+                    f"Battery {self.start}:{self.end}: config found {len(res)} modules, not {len(self.cells)}",
                 )
-            for c, r in zip(self.cells, res):
+            for c, r in zip(self.cells, res, strict=False):
                 r.to_cell(c)
 
             h, res = await self.send(RequestReadPIDconfig())
-            for c, r in zip(self.cells, res):
+            for c, r in zip(self.cells, res, strict=False):
                 r.to_cell(c)
 
             for c in self.cells:
@@ -403,7 +400,7 @@ class Battery:
         if cur:
             # update balancer power levels
             h, res = await self.send(RequestBalancePower())
-            for c, r in zip(self.cells, res):
+            for c, r in zip(self.cells, res, strict=False):
                 r.to_cell(c)
 
         if cur or want:
@@ -552,7 +549,7 @@ class Battery:
         while True:
             hdr, res = await self.send(RequestCellVoltage())
             chg = False
-            for c, r in zip(self.cells, res):
+            for c, r in zip(self.cells, res, strict=False):
                 chg = r.to_cell(c) or chg
             if chg:
                 await self.check_limits(not self.is_ready())
@@ -736,12 +733,16 @@ class Battery:
             else:
                 if not self.msg_vsum and abs(vsum - self.voltage) > vsum * 0.02:
                     logger.warning(
-                        "Voltage doesn't match: reported %.2f, sum %.2f", self.voltage, vsum
+                        "Voltage doesn't match: reported %.2f, sum %.2f",
+                        self.voltage,
+                        vsum,
                     )
                     self.msg_vsum = True
                 elif self.msg_vsum and abs(vsum - self.voltage) < vsum * 0.015:
                     logger.warning(
-                        "Voltage matches again: reported %.2f, sum %.2f", self.voltage, vsum
+                        "Voltage matches again: reported %.2f, sum %.2f",
+                        self.voltage,
+                        vsum,
                     )
                     self.msg_vsum = False
 
@@ -853,7 +854,7 @@ class Battery:
         while True:
             hdr, res = await self.send(RequestCellTemperature())
             chg = False
-            for c, r in zip(self.cells, res):
+            for c, r in zip(self.cells, res, strict=False):
                 chg = r.to_cell(c) or chg
             if chg:
                 await self._intf.CellTemperatureChanged()
@@ -921,11 +922,13 @@ class Battery:
     async def _send_cfg(self, *a, **kv):
         if self.num is None:
             await self.ctrl.cmd.send(
-                ["sys", "cfg"], cfg=attrdict()._update((self.ctrl.name, "batt", *a), kv)
+                ["sys", "cfg"],
+                cfg=attrdict()._update((self.ctrl.name, "batt", *a), kv),
             )
         else:
             await self.ctrl.cmd.send(
-                ["sys", "cfg"], cfg=attrdict()._update((self.ctrl.name, "batt", self.num, *a), kv)
+                ["sys", "cfg"],
+                cfg=attrdict()._update((self.ctrl.name, "batt", self.num, *a), kv),
             )
         return True
 

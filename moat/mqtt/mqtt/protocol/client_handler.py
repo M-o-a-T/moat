@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 import anyio
 from moat.util import create_queue
 
@@ -75,7 +76,9 @@ class ClientProtocolHandler(ProtocolHandler):
         connack = await ConnackPacket.from_stream(self.stream)
         self.logger.debug("< C %r", connack)
         await self.plugins_manager.fire_event(
-            EVENT_MQTT_PACKET_RECEIVED, packet=connack, session=self.session
+            EVENT_MQTT_PACKET_RECEIVED,
+            packet=connack,
+            session=self.session,
         )
         return connack.return_code
 

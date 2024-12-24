@@ -1,6 +1,3 @@
-# coding=utf-8
-
-
 #
 # The MIT License (MIT)
 #
@@ -27,6 +24,8 @@
 decorators declares some decorators that ensure the object has the
 correct keys declared when need be.
 """
+
+from __future__ import annotations
 
 
 def requires_private_key(func):

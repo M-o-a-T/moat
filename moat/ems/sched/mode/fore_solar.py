@@ -2,6 +2,8 @@
 Get solar data from forecast.solar
 """
 
+from __future__ import annotations
+
 from datetime import datetime
 
 import asks
@@ -34,7 +36,7 @@ class Loader(BaseLoader):
 
         url = (
             f"{cfg.data.fore_solar.url}/{cfg.data.fore_solar.api}/estimate/"
-            + f"watts/{cfg.solar.lat}/{cfg.solar.long}/{a['tilt']}/{cmp}/{int(a['peak']*1000)}"
+            + f"watts/{cfg.solar.lat}/{cfg.solar.long}/{a['tilt']}/{cmp}/{int(a['peak'] * 1000)}"
         )
         r = await session.get(
             url,

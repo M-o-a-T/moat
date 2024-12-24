@@ -291,7 +291,7 @@ class Unpacker:
             ret = attrdict()
             for _ in range(n):
                 key = await self.unpack()
-                if type(key) is str and hasattr(sys, "intern"):  # noqa:E721
+                if type(key) is str and hasattr(sys, "intern"):
                     key = sys.intern(key)
                 ret[key] = await self.unpack()
             # if self._object_hook is not None:
@@ -491,7 +491,7 @@ class Packer:
                     _ndefault = False
                     todo.append(res)
                     continue
-            raise TypeError(f"Cannot serialize {obj !r}")
+            raise TypeError(f"Cannot serialize {obj!r}")
 
     def pack(self, obj):
         "Packs a single data item. Returns the bytes."

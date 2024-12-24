@@ -1,9 +1,16 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 import anyio
 
-from ..codecs import bytes_to_int, decode_string, encode_string, int_to_bytes, read_or_raise
+from ..codecs import (
+    bytes_to_int,
+    decode_string,
+    encode_string,
+    int_to_bytes,
+    read_or_raise,
+)
 from ..errors import MoatMQTTException, NoDataException
 from .packet import (
     SUBSCRIBE,
@@ -51,7 +58,7 @@ class SubscribePayload(MQTTPayload):
         return cls(topics)
 
     def __repr__(self):
-        return type(self).__name__ + "(topics={0!r})".format(self.topics)
+        return type(self).__name__ + f"(topics={self.topics!r})"
 
 
 class SubscribePacket(MQTTPacket):
@@ -69,7 +76,7 @@ class SubscribePacket(MQTTPacket):
         else:
             if fixed.packet_type != SUBSCRIBE:
                 raise MoatMQTTException(
-                    "Invalid fixed packet type %s for SubscribePacket init" % fixed.packet_type
+                    "Invalid fixed packet type %s for SubscribePacket init" % fixed.packet_type,
                 )
             header = fixed
 

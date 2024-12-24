@@ -37,23 +37,23 @@ A few. Notable:
   Fixes some bugs and has a more reasonable API. Required for
   `yload`/`yprint`/`yformat`.
 
-* msgpack, obviously required for `pack`/`unpack` and `MsgReader`/`MsgWriter`.
-
 * asyncclick, required for `main_`/`wrap_main`.
+
+* Optionally: msgpack.
 
 MoaT does not depend on:
 
 * cbor2. Our implementation is shared with a version running on
-  MicroPython and thus needs to be minimal. Also we want to support
+  MicroPython and thus needs to be minimal. Also, we want to support
   efficient async streaming.
 
 
 CBOR Tags
 =========
 
-This package uses the following CBOR tags.
+The MoaT software uses the following CBOR tags.
 
-The author presumes that the proposed tags 202 and 203 generally useful
+The author presumes that the proposed tags 202 and 203 are generally useful
 beyond the confines of this specification and has submitted them to IANA.
 
 
@@ -69,28 +69,25 @@ Path
     =============== =============================
 
 A Path is a sequence of object accessors, i.e. a way to reference a
-possibly-deeply nested object. These typically include strings
-(object members, map keys) and numbers (array indices).
+possibly-deeply nested object. These typically include text strings
+(object members, map keys) and integers (array indices).
 
 A recipient can use this tag to distinguish a sequence of lookups from
-a tuple that's directly used as a map key. (Python allows this.)
+a tuple that's directly used as a map key. (Languages like Python allow this.)
 
-Also, a path is typically entered and displayed as a string with dots or
-slashes as separators rather than an explicit list, i.e. ``foo:0.bar``
-(MoaT's representation – indicating that the zero is an integer, not a string)
-or ``foo/0/bar`` (file system, MQTT topic), instead of an explicit array
-like ``["foo", 0, "bar"]``.
+The array SHOULD consist of ASCII text strings and non-negative integers.
+Applications MAY accepted additional data types.
 
-The array SHOULD include only strings and non-negative integers.
-The list of allowed characters in the string(s) is application dependent.
-
+An object SHOULD NOT have more than one distinct path referring to it. Thus
+if ["foo",2] and ["Foo",-1] resolve to the same object, an implementation
+MUST choose a consistent version and SHOULD reject alternate versions.
 
 Object Proxy
 ------------
 
     =============== =============================
     Tag             203
-    Data Item       string, integer, array
+    Data Item       text string, integer, array
     Semantics       reference a well-known or unencodable object
     Reference       https://github.com/M-o-a-T/moat-util/
     Contact         Matthias Urlichs <matthias@urlichs.de>
@@ -101,10 +98,11 @@ system, a sender may cache the object and replace it with a proxy instead
 of throwing an error. The recipient can subsequently refer to the object
 using the same Proxy tag when it sends a message back.
 
-When the proxy's content is an array, it SHOULD consist of two elements:
-a string or integer that uniquely identifies the origin of the proxy object,
-and a string or integer which the originator can use to recover the
-original.
+When the proxy's content is an array, it MUST consist of at least two
+elements. The first is a text string, integer, or (if global uniqueness is
+required) a UUID that uniquely identifies the origin of the proxy object.
+The remainder of the array holds the data which the originator requires
+in order to access or recover the original.
 
 An API to release auto-generated proxies is recommended but out of scope of
 this specification.
@@ -190,3 +188,19 @@ with a tag 55799+1299145044 with matching continuation IDs ("cont") in its
 map part. MoaT uses this element to verify that multiple files have been
 concatenated correctly.
 
+Paths
+=====
+
+MoaT uses `Path` objects as hierarchical object accessors.
+
+A Path is a list of text strings and/or integers that identify an object or
+subroutine. For instance, `moat.micro` may connect to an external node
+named "ext" with three binary outputs, so you'd call ``"ext" -> 1 -> "set"
+(True)`` to turn the second port on.
+
+Since that's somewhat awkward, MoaT paths are typically entered and
+displayed as single strings with dots as separators, ``ext:1.set`` in this
+case. There's also a secondary representation that uses slashes (``ext/:1/set``)
+for interfacing with the file system or MQTT.
+
+See ``pydoc moat.util.path.Path`` for details.

@@ -51,7 +51,7 @@ MoaT does not depend on:
 CBOR tags
 =========
 
-see `ref:cbor.rst`.
+see `ref:../common/cbor.rst`.
 
 
 Paths

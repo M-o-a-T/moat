@@ -14,7 +14,7 @@ Path
     Tag             202
     Data Item       array
     Semantics       mark array as object path
-    Reference       https://github.com/M-o-a-T/moat-util/
+    Reference       https://github.com/M-o-a-T/moat/blob/main/doc/common/cbor.rst
     Contact         Matthias Urlichs <matthias@urlichs.de>
     =============== =============================
 
@@ -41,7 +41,7 @@ Object Proxy
     Tag             203
     Data Item       text string, integer, array
     Semantics       reference a well-known or unencodable object
-    Reference       https://github.com/M-o-a-T/moat-util/
+    Reference       https://github.com/M-o-a-T/moat/blob/main/doc/common/cbor.rst
     Contact         Matthias Urlichs <matthias@urlichs.de>
     =============== =============================
 
@@ -94,7 +94,7 @@ File Identifier
     Tag             1299145044
     Data Item       array
     Semantics       MoaT file identifier / details
-    Reference       https://github.com/M-o-a-T/moat-util/
+    Reference       https://github.com/M-o-a-T/moat/blob/main/doc/common/cbor.rst
     Contact         Matthias Urlichs <matthias@urlichs.de>
     =============== =============================
 
@@ -133,7 +133,7 @@ End of file marker
     Tag             1298493254
     Data Item       map
     Semantics       MoaT end-of-file marker
-    Reference       https://github.com/M-o-a-T/moat-util/
+    Reference       https://github.com/M-o-a-T/moat/blob/main/doc/common/cbor.rst
     Contact         Matthias Urlichs <matthias@urlichs.de>
     =============== =============================
 

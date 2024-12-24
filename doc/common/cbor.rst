@@ -19,18 +19,20 @@ Path
     =============== =============================
 
 A Path is a sequence of object accessors, i.e. a way to reference a
-possibly-deeply nested object. These typically include text strings
-(object members, map keys) and integers (array indices).
+possibly-deeply nested object. Path elements typically include text strings
+(object members, map keys) and non-negative integers (array indices).
 
 A recipient can use this tag to distinguish a sequence of lookups from
 a tuple that's directly used as a map key. (Languages like Python allow this.)
 
-The array SHOULD consist of ASCII text strings and non-negative integers.
-Applications MAY accepted additional data types.
+While the array SHOULD consist of ASCII text strings and non-negative
+integers, Applications MAY use additional data types or values.
 
-An object SHOULD NOT have more than one distinct path referring to it. Thus
-if ["foo",2] and ["Foo",-1] resolve to the same object, an implementation
-MUST choose a consistent version and SHOULD reject alternate versions.
+Applications that generate paths to an object MUST do so in a consistent
+manner. Paths that refer to an object without conforming to the chosen
+scheme (e.g. negative array indices that count from the array's end) MAY be
+rejected.
+
 
 Object Proxy
 ------------
@@ -56,6 +58,10 @@ in order to access or recover the original.
 
 An API to release auto-generated proxies is recommended but out of scope of
 this specification.
+
+An implementation may pre-define some proxy objects, e.g. for classes whose
+objects can be serialized safely. Attempts to release these predefined
+references SHOULD be ignored.
 
 
 Object Constructor

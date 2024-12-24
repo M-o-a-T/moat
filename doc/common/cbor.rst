@@ -101,8 +101,8 @@ File Identifier
 Files with MoaT-compatible messages start with an array that is wrapped with
 tag 1299145044 (0x4d6f6154, "MoaT"), inside tag 55799 (CBOR).
 
-The array has two elements. The first contains a string that describes the
-file's contents. The string MUST be at least 24 bytes long (pad with spaces
+The array has two elements. The first contains a text string that describes the
+file's contents. This string MUST be at least 24 bytes long (pad with spaces
 if necessary), for the benefit of the "file" utility. It is free-format,
 meant to be shown to humans, and MUST be ignored by programs that read the
 file.
@@ -122,7 +122,7 @@ This way, ``file`` can show basic data about the file, using these magic entries
     >>8      string/2b  \x82\x79         
     >>>10    pstring/H  >\0              %s
 
-Shorter file type strings would require 24 additional entries in ``file``'s
+Shorter descriptive strings would require 24 additional entries in ``file``'s
 magic pattern file (as it cannot mask the high bits of a string's length
 field), which seems excessive.
 

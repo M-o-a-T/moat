@@ -46,15 +46,15 @@ Object Proxy
     =============== =============================
 
 A Proxy refers to an object that cannot be encoded in CBOR. In a messaging
-system, a sender may cache the object and replace it with a proxy instead
+system, a sender may cache such an object and send a proxy instead
 of throwing an error. The recipient can subsequently refer to the object
-using the same Proxy tag when it sends a message back.
+using the Proxy tag when it sends another message back.
 
 When the proxy's content is an array, it MUST consist of at least two
 elements. The first is a text string, integer, or (if global uniqueness is
 required) a UUID that uniquely identifies the origin of the proxy object.
 The remainder of the array holds the data which the originator requires
-in order to access or recover the original.
+to access or recover the original.
 
 An API to release auto-generated proxies is recommended but out of scope of
 this specification.

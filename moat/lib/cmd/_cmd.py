@@ -551,7 +551,7 @@ class Stream:
         self.parent._drop(self)  # QA
         self.parent = None
 
-    async def _recv(self, msg):
+    def _recv(self, msg):
         """process an incoming messages on this stream"""
         stream = msg[0] & B_STREAM
         err = msg[0] & B_ERROR

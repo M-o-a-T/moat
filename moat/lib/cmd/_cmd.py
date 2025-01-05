@@ -193,11 +193,7 @@ class CmdHandler(CtxObj):
         Remove a handler for raw incoming messages.
         """
         if proc is None or self._msgs[mid] == proc:
-            try:
-                del self._msgs[mid]
-            except KeyError:
-                breakpoint()
-                raise
+            del self._msgs[mid]
             if mid < 6:
                 self._id1.add(mid)
             elif L and mid < 64:
@@ -551,8 +547,6 @@ class Stream:
             elif self.stream_in == S_NEW and not (msg[0] & B_ERROR):
                 self.stream_in = S_ON
 
-        if isinstance(msg, tuple):
-            breakpoint()
         if msg[0] & B_ERROR:
             self._msg = outcome.Error(StreamError(msg[1:]))
         else:

@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     class MsgIn(Protocol):
         def __call__(self, msg: Stream, /) -> Any: ...
 
+L = True
 
 __all__ = [
     "Stream",
@@ -161,20 +162,48 @@ class CmdHandler(CtxObj):
         self._debug = logger.warning
         self._in_cb = handler
 
+        self._id1 = set()
+        if L:
+            self._id2 = set()
+        self._id3 = set()
+        self._id = 0
+
     def _gen_id(self):
         # Generate the next free ID.
         # TODO
-        i = self._id
-        while i < 6:
-            if i not in self._msgs:
-                self._id = i
-                return i
-            i += 1
-        i = 1
-        while i in self._msgs:
-            i += 1
-        self._id = i
-        return i
+        if self._id1:
+            return self._id1.pop()
+        if L and self._id2:
+            return self._id2.pop()
+        if self._id3:
+            return self._id3.pop()
+        self._id += 1
+        return self._id
+
+    def attach(self, mid, proc):
+        """
+        Attach a handler for raw incoming messages.
+        """
+        if mid in self._msgs:
+            raise ValueError(f"MID {mid} already known")
+        self._msgs[mid] = proc
+
+    def detach(self, mid, proc=None):
+        """
+        Remove a handler for raw incoming messages.
+        """
+        if proc is None or self._msgs[mid] == proc:
+            try:
+                del self._msgs[mid]
+            except KeyError:
+                breakpoint()
+                raise
+            if mid < 6:
+                self._id1.add(mid)
+            elif L and mid < 64:
+                self._id2.add(mid)
+            else:
+                self._id3.add(mid)
 
     def cmd_in(self) -> Awaitable[Stream]:
         """Retrieve new incoming commands"""
@@ -183,8 +212,8 @@ class CmdHandler(CtxObj):
     async def cmd(self, *a, **kw):
         """Send a simple command, receive a simple reply."""
         i = self._gen_id()
-        self._msgs[i] = msg = Stream(self, i, s_in=False, s_out=False)
-        self._add(msg)
+        msg = Stream(self, i, s_in=False, s_out=False)
+        self.attach(i, msg._recv)
         await msg._send(a, kw if kw else None)
         try:
             await msg.replied()
@@ -200,15 +229,10 @@ class CmdHandler(CtxObj):
         finally:
             await msg.kill()
 
-    def _add(self, msg):
-        if msg.stream_in != S_NEW or msg.stream_out != S_NEW:
-            raise RuntimeError(f"Add while not new {msg}")
-        self._msgs[msg.id] = msg
-
     def _drop(self, msg):
         if msg.stream_in != S_END or msg.stream_out != S_END:
             raise RuntimeError(f"Drop while in progress {msg}")
-        del self._msgs[msg.id]
+        self.detach(msg.id)
 
     async def _handle(self, msg):
         assert msg.id < 0, msg
@@ -285,7 +309,8 @@ class CmdHandler(CtxObj):
     async def _stream(self, d, kw, sin, sout):
         "Generic stream handler"
         i = self._gen_id()
-        self._msgs[i] = msg = Stream(self, i)
+        msg = Stream(self, i)
+        self.attach(i, msg._recv)
 
         # avoid creating an inner cancel scope
         async with CancelScope() as cs:
@@ -334,27 +359,28 @@ class CmdHandler(CtxObj):
             elif self._in_cb is None:
                 self._send_nowait((i << 2) | B_ERROR, [E_NO_CMD])
             else:
-                self._msgs[i] = conv = Stream(self, i)
+                conv = Stream(self, i)
+                self.attach(i, conv._recv)
                 conv._recv(msg)
                 await self._handle(conv)
         else:
             try:
-                conv._recv(msg)
+                conv(msg)
             except EOFError:
-                del self._msgs[i]
+                self.detach(i)
 
     @asynccontextmanager
-    async def _ctx(self):
+    async def _ctx(self) -> Self:
         async with TaskGroup() as tg:
             self._tg = tg
             try:
                 yield self
             finally:
                 for conv in self._msgs.values():
-                    conv.kill_nc()
+                    conv(None)
                 tg.cancel()
-        self._msgs = {}
-
+        for k in list(self._msgs.keys()):
+            self.detach(k)
 
 @_exp
 class Stream:
@@ -551,8 +577,12 @@ class Stream:
         self.parent._drop(self)  # QA
         self.parent = None
 
-    def _recv(self, msg):
+    def _recv(self, msg:tuple[int, Any, ...]):
         """process an incoming messages on this stream"""
+        if msg is None:
+            self.kill_nc()
+            return
+
         stream = msg[0] & B_STREAM
         err = msg[0] & B_ERROR
 

@@ -16,6 +16,7 @@ import subprocess
 from enum import IntEnum, auto
 
 import asyncclick as click
+import aionotify
 
 from moat.util import (
     P,
@@ -194,6 +195,10 @@ lim:
         off: .2   # power cutoff if the buffer is warm enough
         time: 300  # must run at least this long
     start: 50
+    defrost:
+        temp: 7  # run pump when below that
+        flow: 5  # don't need much
+    idle: 25  # don't run pump when below that
     low:
         # when we switch off: If the decaying average of the heat pump limiter with "scale"
         # goes below "limit"
@@ -504,6 +509,7 @@ class Data:
     hc_pos = 0
     r_no = "----"
     pellet_load = 0
+    pellet_on:bool = None
 
     # outside temperature average
     t_ext_avg = None
@@ -550,6 +556,23 @@ class Data:
                 await self.cl_set(path, value=r, idem=True)
 
         self.set_flow_pwm = set_flow_pwm
+
+    async def reload_cfg(self, cfgf, *, task_status=anyio.TASK_STATUS_IGNORED):
+        flg = aionotify.Flags.CLOSE_WRITE|aionotify.Flags.MOVE_SELF
+        async with aionotify.Watcher() as watcher:
+            await watcher.awatch(path=cfgf, flags=aionotify.Flags.CLOSE_WRITE)
+            task_status.started()
+            async for evt in watcher:
+                while True:
+                    with anyio.move_on_after(2):
+                        await watcher.get_event()
+                        continue
+                    break
+                print("*** RELOADING ***")
+                with open(cfgf,"r") as cff:
+                    self._cfg = combine_dict(yload(cff, attr=True), self.cfg, cls=attrdict)
+
+        pass
 
     @property
     def time(self):
@@ -669,10 +692,28 @@ class Data:
                 print("*** BYPASS OFF ***")
                 run = Run.down
 
-            if orun == run or orun is None or run == Run.off or run == Run.ice or run.value == orun.value + 1 or orun != Run.off and run == Run.down or orun == Run.down and run == Run.off or orun == Run.ice and run in (Run.wait_flow, Run.wait_time):
+            # fmt: off
+            if orun == run:
+                pass
+            elif orun is None:
+                pass
+            elif run == Run.off:
+                pass
+            elif run == Run.ice:
+                pass
+            elif run.value == orun.value + 1:
+                pass
+            elif orun != Run.off and run == Run.down:
+                pass
+            elif orun == Run.off and run == Run.down:
+                run = Run.off
+            elif orun == Run.down and run == Run.off:
+                pass
+            elif orun == Run.ice and run in (Run.wait_flow,Run.wait_time):
                 pass
             else:
                 raise ValueError(f"Cannot go from {orun.name} to {run.name}")
+            # fmt: on
 
             # Handle state changes
 
@@ -805,7 +846,7 @@ class Data:
                     t_change_max = self.cfg.lim.times.stop
 
                 heat_off = True
-                await self.pid.flow.setpoint(self.cfg.misc.stop.flow)
+                await self.pid.flow.setpoint(self.cfg.misc.stop.flow if orun != Run.off else self.lim.defrost.flow)
                 await self.cl_set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off)
                 await self.cl_set(self.cfg.cmd.power, value=0)
 
@@ -941,7 +982,8 @@ class Data:
 
             tplim = tp_limit
             # increase temp settings when starting up
-            if self.state.t_pellet_on is not True:
+
+            if self.pellet_on is False:
                 try:
                     tplim = min(
                         self.cfg.adj.max_pellet,
@@ -949,6 +991,7 @@ class Data:
                     )
                     for p in self.cfg.adj.pellet.startup.patch.path:
                         await self.cl_set(p, tplim, idem=True)
+                    await self.cl_set(self.cfg.cmd.pellet.load, 1, idem=True)
                 except AttributeError:
                     pass
 
@@ -1011,6 +1054,9 @@ class Data:
                     run = Run.wait_time
                     self.r_no = None
                     continue
+                elif min(self.t_out,self.t_in) < self.cfg.lim.defrost.temp:
+                    run = Run.down
+                    continue
                 if r != "pell":
                     print(
                         f"      -{r} cur={t_cur:.1f} on={t_set_on:.1f}       ",
@@ -1070,8 +1116,11 @@ class Data:
                     continue
 
             elif run == Run.down:  # wait for outflow-inflow<2 for n seconds, cool down
+                if min(self.t_out,self.t_in) > self.cfg.lim.defrost.temp and max(self.t_out,self.t_in) < self.cfg.lim.idle:
+                    run = Run.off
+                    continue
                 await self.handle_flow()
-                if self.t_out - self.t_in < self.cfg.misc.stop.delta:
+                if min(self.t_out,self.t_in) > self.cfg.lim.defrost.temp and self.t_out - self.t_in < self.cfg.misc.stop.delta:
                     # print("OFF 1",self.t_out, self.t_in, "    ")
                     run = Run.off
                     continue
@@ -1179,7 +1228,9 @@ class Data:
 
             # RUNNING ONLY after this point
 
-            if self.state.t_pellet_on:
+            if self.pellet_on and self.tb_heat > t_cur:
+                # if the pellet boiler is (a) on, (b) hot enough
+
                 #               if not self.state.start_p and self.m_pellet >= t_low:
                 #                   # turn off when the pellet burner is warm as it's turned on
                 #                   print("OFF 2",self.m_pellet,t_low,self.state.start_p, "    ")
@@ -1187,7 +1238,6 @@ class Data:
                 #                   continue
 
                 # the next two conditions cut off early.
-                # TODO do so only when the PID output is below whatever
                 if t_cur >= t_nom + self.cfg.lim.pellet.stop.buffer:
                     print("OFF 6", t_cur, t_nom, "    ")
                     run = Run.off
@@ -1357,17 +1407,16 @@ class Data:
                 or self.m_pellet_state >= 43
             ):
                 self.state.t_pellet_on = False
+                self.pellet_on = False
                 self.pid.load.Kd = self.cfg.pid.load.d
                 self.pid.load.Tf = self.cfg.pid.load.tf
-            elif self.m_pellet_state != 4:
+            elif self.m_pellet_state not in (2, 4):
+                self.pellet_on = False
                 self.state.t_pellet_on = self.time
             else:
-                self.pid.load.Kd = self.cfg.adj.pellet.pid.load.d
-                self.pid.load.Tf = self.cfg.adj.pellet.pid.load.tf
-
-                if not isinstance(self.state.t_pellet_on, bool):
-                    if self.time - self.state.t_pellet_on > self.cfg.lim.pellet.t_min:
-                        self.state.t_pellet_on = True
+                if self.m_pellet_state == 4:
+                    if not self.pellet_on:
+                        self.pellet_on = True
                         try:
                             for p in self.cfg.adj.pellet.startup.patch.path:
                                 await self.cl_set(
@@ -1375,6 +1424,12 @@ class Data:
                                 )
                         except AttributeError:
                             pass
+
+                    if self.time - self.state.t_pellet_on > self.cfg.lim.pellet.t_min:
+                        self.state.t_pellet_on = True
+
+                self.pid.load.Kd = self.cfg.adj.pellet.pid.load.d
+                self.pid.load.Tf = self.cfg.adj.pellet.pid.load.tf
 
                 t = self.time
                 t_load = min(self.t_adj + self.cfg.adj.pellet.load, self.cfg.adj.pellet.max)
@@ -1416,6 +1471,7 @@ class Data:
                     r = "-"
                     l_buf = pos2val(l_load, w, l_buffer, clamp=True)
                     lim = min(l_buf, l_load)
+
 
                 tt = self.time
                 if o_r == r and not self.wp_on and tt - tlast > 5 and self.r_no is not None:
@@ -1478,14 +1534,14 @@ class Data:
         run = (await self.cl.get(self.cfg.cmd.pellet.wanted)).value
 
         while True:
-            for _ in range(100):
+            for _ in range(10):
                 await self.wait()
 
-            if not run and (
+            if not run and self.m_pellet_state in (0,30,31,32) and (
                 not self.cm_wp
                 or (
                     self.m_air < self.cfg.misc.pellet.current
-                    and min(self.m_air, self.m_air_pred) < self.cfg.misc.pellet.predict
+                    and min(self.m_air, self.m_air_pred) < self.cfg.misc.pellet.predict-0.15
                 )
             ):
                 print("  PELLET ON  ")
@@ -1496,12 +1552,13 @@ class Data:
 
             elif run and (
                 self.m_air > self.cfg.misc.pellet.current
-                and min(self.m_air, self.m_air_pred) > self.cfg.misc.pellet.predict
+                and min(self.m_air, self.m_air_pred) > self.cfg.misc.pellet.predict+0.15
                 and self.t_low is not None
                 and self.tb_heat > self.t_low
                 and self.t_ext_avg is not None
                 and self.t_ext_avg > self.cfg.misc.pellet.avg_off
                 and isinstance(self.state.t_pellet_on, bool)
+                and self.cm_wp
             ):
                 run = False
                 self.state.t_pellet_on = False
@@ -1950,7 +2007,7 @@ class fake_cl:
 
 @click.group
 @click.pass_context
-@click.option("-c", "--config", type=click.File("r"), help="config file")
+@click.option("-c", "--config", type=click.Path("r"), help="config file")
 async def cli(ctx, config):
     """
     Manage a Solvis heat pump controller
@@ -1961,8 +2018,10 @@ async def cli(ctx, config):
     ctx.obj = attrdict()
     cfg = yload(CFG, attr=True)
     if config is not None:
-        cfg = combine_dict(yload(config, attr=True), cfg, cls=attrdict)
+        with open(config,"r") as cff:
+            cfg = combine_dict(yload(cff, attr=True), cfg, cls=attrdict)
     ctx.obj.cfg = cfg
+    ctx.obj.cfgf = config
 
     global GPIO
     try:
@@ -2008,6 +2067,8 @@ async def run(obj, record, force_on, no_save):
                 d = Data(obj.cfg, cl, record=record, no_op=no_save, state=state)
                 d.force_on = force_on
 
+                if obj.cfgf:
+                    await tg.start(d.reload_cfg, obj.cfgf)
                 await tg.start(d.run_init)
                 await tg.start(d.err_mon)
                 await tg.start(d.run_temp_thresh)
@@ -2022,7 +2083,8 @@ async def run(obj, record, force_on, no_save):
                         await tg.start(d.run_solvis_mon)
 
                     await tg.start(d.saver)
-                await d.run_pump()
+                await tg.start(d.run_pump)
+                print("ALL READY")
         finally:
             if d is not None:
                 with anyio.fail_after(30, shield=True):

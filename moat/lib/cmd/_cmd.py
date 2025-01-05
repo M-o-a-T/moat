@@ -220,7 +220,6 @@ class CmdHandler(CtxObj):
                 err = ()
                 res = None
                 try:
-                    await msg.replied()
                     res = await self._in_cb(msg)
                 except AssertionError:
                     raise
@@ -320,11 +319,11 @@ class CmdHandler(CtxObj):
                 self._send_nowait((i << 2) | B_ERROR, [E_NO_CMD])
             else:
                 self._msgs[i] = conv = Stream(self, i)
+                conv._recv(msg)
                 await self._handle(conv)
-                await conv._recv(msg)
         else:
             try:
-                await conv._recv(msg)
+                conv._recv(msg)
             except EOFError:
                 del self._msgs[i]
 

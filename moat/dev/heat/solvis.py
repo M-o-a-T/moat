@@ -195,6 +195,10 @@ lim:
         off: .2   # power cutoff if the buffer is warm enough
         time: 300  # must run at least this long
     start: 50
+    defrost:
+        temp: 7  # run pump when below that
+        flow: 5  # don't need much
+    idle: 25  # don't run pump when below that
     low:
         # when we switch off: If the decaying average of the heat pump limiter with "scale"
         # goes below "limit"
@@ -699,6 +703,8 @@ class Data:
                 pass
             elif orun != Run.off and run == Run.down:
                 pass
+            elif orun == Run.off and run == Run.down:
+                run = Run.off
             elif orun == Run.down and run == Run.off:
                 pass
             elif orun == Run.ice and run in (Run.wait_flow,Run.wait_time):
@@ -831,7 +837,7 @@ class Data:
                     t_change_max = self.cfg.lim.times.stop
 
                 heat_off = True
-                await self.pid.flow.setpoint(self.cfg.misc.stop.flow)
+                await self.pid.flow.setpoint(self.cfg.misc.stop.flow if orun != Run.off else self.lim.defrost.flow)
                 await self.cl_set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off)
                 await self.cl_set(self.cfg.cmd.power, value=0)
 
@@ -972,6 +978,7 @@ class Data:
                     tplim = min(self.cfg.adj.max_pellet, self.cfg.adj.pellet.startup.buf+max(self.tb_water,self.tb_heat))
                     for p in self.cfg.adj.pellet.startup.patch.path:
                         await self.cl_set(p, tplim, idem=True)
+                    await self.cl_set(self.cfg.cmd.pellet.load, 1, idem=True)
                 except AttributeError:
                     pass
 
@@ -1031,6 +1038,9 @@ class Data:
                     run = Run.wait_time
                     self.r_no = None
                     continue
+                elif min(self.t_out,self.t_in) < self.cfg.lim.defrost.temp:
+                    run = Run.down
+                    continue
                 if r != "pell":
                     print(f"      -{r} cur={t_cur :.1f} on={t_set_on :.1f}       ", end="\r")
                 sys.stdout.flush()
@@ -1087,8 +1097,11 @@ class Data:
                     continue
 
             elif run == Run.down:  # wait for outflow-inflow<2 for n seconds, cool down
+                if min(self.t_out,self.t_in) > self.cfg.lim.defrost.temp and max(self.t_out,self.t_in) < self.cfg.lim.idle:
+                    run = Run.off
+                    continue
                 await self.handle_flow()
-                if self.t_out - self.t_in < self.cfg.misc.stop.delta:
+                if min(self.t_out,self.t_in) > self.cfg.lim.defrost.temp and self.t_out - self.t_in < self.cfg.misc.stop.delta:
                     # print("OFF 1",self.t_out, self.t_in, "    ")
                     run = Run.off
                     continue
@@ -1495,7 +1508,7 @@ class Data:
                 not self.cm_wp
                 or (
                     self.m_air < self.cfg.misc.pellet.current
-                    and min(self.m_air, self.m_air_pred) < self.cfg.misc.pellet.predict
+                    and min(self.m_air, self.m_air_pred) < self.cfg.misc.pellet.predict-0.15
                 )
             ):
                 print("  PELLET ON  ")
@@ -1506,12 +1519,13 @@ class Data:
 
             elif run and (
                 self.m_air > self.cfg.misc.pellet.current
-                and min(self.m_air, self.m_air_pred) > self.cfg.misc.pellet.predict
+                and min(self.m_air, self.m_air_pred) > self.cfg.misc.pellet.predict+0.15
                 and self.t_low is not None
                 and self.tb_heat > self.t_low
                 and self.t_ext_avg is not None
                 and self.t_ext_avg > self.cfg.misc.pellet.avg_off
                 and isinstance(self.state.t_pellet_on, bool)
+                and self.cm_wp
             ):
                 run = False
                 self.state.t_pellet_on = False

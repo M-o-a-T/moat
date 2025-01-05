@@ -692,21 +692,24 @@ class Stream:
             self._recv_skip = False
 
     async def _qsize(self, reading: bool = False):
-        # Queueing strategy:
+        # Incoming message queue handling strategy:
         # - read without flow control until the queue is half full
-        # - send a message announcing 1/4 of the queue space
-        # - then, whenever the queue is at most 1/4 full *and* qlen/2 messages
-        #   have been processed, announce that space
         if self._fli is None:
             if self._recv_q.qsize() >= self._recv_qlen // 2:
                 self._fli = 0
+                # - send a message announcing 1/4 of the queue space
                 await self.warn(self._recv_qlen // 4)
 
+        # - then, whenever the queue is at most 1/4 full *and* qlen/2 messages
+        #   have been processed (which will happen because the queue was
+        #   half-full when we started), announce that space
         elif self._recv_q.qsize() <= self._recv_qlen // 4 and self._fli > self._recv_qlen // 2:
             m = self._recv_qlen // 2 + reading
             self._fli -= m
             await self.warn(m)
 
+        # - additionally, if the max queue is < 10
+        #   we send a bit more aggressively, to reduce lag
         elif reading:
             self._fli += 1
             if self._recv_qlen < 10 and self._fli >= self._recv_qlen // 4:

@@ -24,6 +24,8 @@ async def test_basic(a_s, a_r, k_s, k_r):
 
     async with scaffold(handle, None) as (a, b):
         # note no comma
+        a._id = 9
+        b._id = 12
         res = await b.cmd("Test", *a_s, **k_s)
         assert tuple(res.args) == tuple(a_r)
         assert res.kw == k_r

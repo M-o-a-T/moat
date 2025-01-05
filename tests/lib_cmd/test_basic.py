@@ -23,7 +23,7 @@ async def test_basic(a_s, a_r, k_s, k_r):
 
 
     async with scaffold(handle, None) as (a, b):
-        # note the comma
+        # note no comma
         res = await b.cmd("Test", *a_s, **k_s)
         assert tuple(res.args) == tuple(a_r)
         assert res.kw == k_r
@@ -38,7 +38,7 @@ async def test_basic_res():
 
     async with scaffold(handle, None) as (a, b):
         # note the comma
-        (res,) = await b.cmd("Test", 123)
+        res, = await b.cmd("Test", 123)  # fmt:skip  ## (res,) = …
         assert res == {"C": "Test", "R": (123,)}
 
 

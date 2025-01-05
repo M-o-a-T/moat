@@ -188,7 +188,10 @@ def process_args(val, vars_=(), eval_=(), path_=(), proxy_=(), no_path=False, vs
                 v = Proxy(v)
                 yield k, v
 
-    for k, v in data():
+    dd = [(len(k),k,v) for k,v in data().values()]
+    dd.sort()
+
+    for _l, k, v in dd:
         if isinstance(k, str):
             k = P(k)
         if not len(k):

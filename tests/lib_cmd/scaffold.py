@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def scaffold(ha, hb):
+async def scaffold(ha, hb, key=""):
     async def cp(src, dst, d):
         while True:
             msg = await src.msg_out()
@@ -22,8 +22,8 @@ async def scaffold(ha, hb):
         CmdHandler(ha) as a,
         CmdHandler(hb) as b,
     ):
-        tg.start_soon(cp, a, b, ">")
-        tg.start_soon(cp, b, a, "<")
+        tg.start_soon(cp, a, b, f"{key}>")
+        tg.start_soon(cp, b, a, f"{key}<")
         yield a, b
         tg.cancel_scope.cancel()
     assert not a._msgs, a._msgs

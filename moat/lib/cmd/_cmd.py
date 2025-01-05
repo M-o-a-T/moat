@@ -180,11 +180,11 @@ class CmdHandler(CtxObj):
         self._id += 1
         return self._id
 
-    def attach(self, mid, proc):
+    def attach(self, mid, proc, force:bool=False):
         """
         Attach a handler for raw incoming messages.
         """
-        if mid in self._msgs:
+        if not force and mid in self._msgs:
             raise ValueError(f"MID {mid} already known")
         self._msgs[mid] = proc
 
@@ -200,6 +200,15 @@ class CmdHandler(CtxObj):
                 self._id2.add(mid)
             else:
                 self._id3.add(mid)
+
+    def forward(self, msg, cmd):
+        """
+        Forward an otherwise-unhandled(!!) message to this stream, using
+        this command vector. (Arguments and keywords are copied from the message.)
+
+        This is not a coroutine by design.
+        """
+        return Forward(self,msg,cmd)
 
     def cmd_in(self) -> Awaitable[Stream]:
         """Retrieve new incoming commands"""
@@ -284,7 +293,9 @@ class CmdHandler(CtxObj):
             self._debug("Error for %r suppressed: %r", msg, exc)
             await _final(msg,None,exc)
         else:
-            if callable(res) or hasattr(res, "__await__"):
+            if isinstance(res, Forward):
+                res.start(self)
+            elif callable(res) or hasattr(res, "__await__"):
                 await self._tg.start(_wrap, msg, res)
             else:
                 await _final(msg, res, ())
@@ -812,3 +823,87 @@ class Stream:
             return await self._recv_q.get()
         except EOFError:
             raise StopAsyncIteration
+
+class Forward():
+    """
+    Container for message forwarding
+    """
+    end_src = False
+    end_dst = False
+    src_id: int
+    dst_id: int
+
+    def __init__(self, hdl:CmdHandler, msg:Stream, cmd: tuple[Any, ...]):
+        self.dst = hdl
+        self.msg = msg
+        self.cmd = cmd
+
+    def start(self, hdl: CmdHandler):
+        """
+        Init and orchestrate the forwarding process.
+        """
+        self.src = hdl
+
+        self.src_id = self.msg.id
+        self.dst_id = self.dst._gen_id()
+        self._src_id=self.src_id-(self.src_id>0)
+        self._dst_id=self.dst_id-(self.dst_id>0)
+
+        self.src.attach(self.src_id, self.recv_src, force=True)
+        self.dst.attach(self.dst_id, self.recv_dst)
+
+        self.dst._send_nowait((self._dst_id<<2) | (B_STREAM if self.msg.stream_in != S_END else 0) , (self.cmd,)+tuple(self.msg._args), self.msg._kw)
+
+        del self.msg
+
+    def recv_src(self, msg):
+        """forward an incoming messages on the source stream to the destination"""
+        if msg is None:
+            self._ended(True)
+            return
+
+        stream = msg[0] & B_STREAM
+        err = msg[0] & B_ERROR
+
+        if self.end_src:
+            logger.warning("LATE? %d/%d, %r", self.src_id,self.dst_id, msg)
+            return  # ignore followup
+        elif not stream:
+            self.end_src = True
+
+        kw = msg[-1] if len(msg)>1 and isinstance(msg[-1], dict) else None
+        args = msg[1:-1] if kw is not None else msg[1:]
+        self.dst._send_nowait((self._dst_id<<2) | (B_STREAM if stream else 0) | (B_ERROR if err else 0), args, kw)
+
+        self._ended()
+
+    def recv_dst(self, msg):
+        """forward an incoming messages on the destination stream to the source"""
+        if msg is None:
+            self._ended(True)
+            return
+
+        stream = msg[0] & B_STREAM
+        err = msg[0] & B_ERROR
+
+        if self.end_dst:
+            logger.warning("LATE? %d/%d, %r", self.dst_id,self.src_id, msg)
+            return  # ignore followup
+        elif not stream:
+            self.end_dst = True
+
+        kw = msg[-1] if len(msg)>1 and isinstance(msg[-1], dict) else None
+        args = msg[1:-1] if kw is not None else msg[1:]
+        self.src._send_nowait((self._src_id<<2) | (B_STREAM if stream else 0) | (B_ERROR if err else 0), args, kw)
+
+        self._ended()
+
+
+    def _ended(self, force:bool = False):
+        if force:
+            self.end_src = self.end_dst = True
+        elif not self.end_src or not self.end_dst:
+                return
+
+        self.src.detach(self.src_id)
+        self.dst.detach(self.dst_id)

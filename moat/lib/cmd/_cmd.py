@@ -353,6 +353,8 @@ class CmdHandler(CtxObj):
             elif error:
                 self._debug("Spurious error %r", msg)
             elif self._in_cb is None:
+                if i > 0:
+                    i -= 1
                 self._send_nowait((i << 2) | B_ERROR, [E_NO_CMD])
             else:
                 conv = Stream(self, i)

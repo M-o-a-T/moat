@@ -408,28 +408,34 @@ class Stream:
     _args: list[Any]
     _kw: dict[str, Any]
 
+    _fli = None  # flow control for incoming messages
+    _flo = None  # flow control for outgoing messages
+    _flo_evt = None
+    _recv_skip = False
+    _recv_q = None
+    _recv_qlen = 0
+    scope = None
+    _msg: outcome.Outcome = None
+    msg2 = None
+    _initial = False
+    s_out = False
+
+    stream_out = S_NEW
+    stream_in = S_NEW
+
     def __init__(self, parent: CmdHandler, mid: int, qlen=42, s_in=True, s_out=True):
         self.parent = parent
         self.id = mid
         if mid > 0:
             mid -= 1
         self._i = mid << 2  # ready for sending
-        self.stream_out = S_NEW
-        self.stream_in = S_NEW
         self.cmd_in: Event = Event()
-        self.msg2 = None
 
-        self._msg: outcome.Outcome = None
-
-        self._recv_q = Queue(qlen) if s_in else None
-        self._recv_qlen = qlen
-        self._fli = None  # flow control for incoming messages
-        self._flo = None  # flow control for outgoing messages
-        self._flo_evt = None
-        self._recv_skip = False
-        self.scope = None
-        self.s_out = s_out
-        self._initial = False
+        if s_in:
+            self._recv_q = Queue(qlen)
+            self._recv_qlen = qlen
+        if s_out:
+            self.s_out = s_out
 
     def __getitem__(self, k):
         if isinstance(k, int):

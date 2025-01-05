@@ -213,45 +213,61 @@ class CmdHandler(CtxObj):
     async def _handle(self, msg):
         assert msg.id < 0, msg
 
-        async def _wrap(msg, task_status):
+        async def _final(msg, res, err):
+            if msg.stream_out == S_END:  # already sent last msg!
+                if res is not None:
+                    self._debug("Result for %r suppressed: %r", msg, res)
+                if err:
+                    self._debug("Error for %r suppressed: %r", msg, err)
+            elif err:
+                await msg.error(*err)
+            else:
+                await msg.result(res)
+
+            # Handle termination.
+            if msg.stream_in != S_END:
+                msg._recv_q = None
+            else:
+                assert msg.id < 0, msg
+                msg._ended()
+
+        async def _wrap(msg, res, *, task_status):
             async with CancelScope() as cs:
                 msg.scope = cs
                 task_status.started()
                 err = ()
-                res = None
                 try:
-                    res = await self._in_cb(msg)
+                    if callable(res):
+                        res = res(msg)
+                    if hasattr(res,"__await__"):
+                        res = await res
                 except AssertionError:
                     raise
                 except Exception as exc:
+                    res = None
                     if msg.stream_out == S_END:
                         logger.error("Error not sent (msg=%r)", msg, exc_info=exc)
                     else:
                         err = (exc.__class__.__name__, *exc.args)
                         logger.debug("Error (msg=%r)", msg, exc_info=exc)
                 except BaseException:
+                    res = None
                     err = (E_CANCEL,)
                     raise
                 finally:
                     # terminate outgoing stream, if any
-                    if msg.stream_out == S_END:  # already sent last msg!
-                        if res is not None:
-                            self._debug("Result for %r suppressed: %r", msg, res)
-                        if err:
-                            self._debug("Error for %r suppressed: %r", msg, err)
-                    elif err:
-                        await msg.error(*err)
-                    else:
-                        await msg.result(res)
+                    await _final(msg, res, err)
 
-                    # Handle termination.
-                    if msg.stream_in != S_END:
-                        msg._recv_q = None
-                    else:
-                        assert msg.id < 0, msg
-                        msg._ended()
-
-        await self._tg.start(_wrap, msg)
+        try:
+            res = self._in_cb(msg)
+        except Exception as exc:
+            self._debug("Error for %r suppressed: %r", msg, exc)
+            await _final(msg,None,exc)
+        else:
+            if callable(res) or hasattr(res, "__await__"):
+                await self._tg.start(_wrap, msg, res)
+            else:
+                await _final(msg, res, ())
 
     def stream_r(self, *data, **kw) -> AsyncContextManager[Stream]:
         """Start an incoming stream"""

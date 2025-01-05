@@ -718,7 +718,7 @@ class Stream:
 
     async def send(self, *a, **kw) -> None:
         """
-        Send a reply.
+        Send a (streamed) reply message.
         """
         await self._skipped()
 
@@ -737,17 +737,35 @@ class Stream:
         """
         return self._send(a, kw if kw else None, stream=False, err=True)
 
+    def error_nowait(self, *a, **kw) -> None:
+        """
+        Send an error.
+        """
+        return self._send_nowait(a, kw if kw else None, stream=False, err=True)
+
     def warn(self, *a, **kw) -> Awaitable[None]:
         """
         Send a warning.
         """
         return self._send(a, kw if kw else None, stream=True, err=True)
 
+    def warn_nowait(self, *a, **kw) -> None:
+        """
+        Send a warning.
+        """
+        return self._send_nowait(a, kw if kw else None, stream=True, err=True)
+
     def result(self, *a, **kw) -> Awaitable[None]:
         """
         Send the result.
         """
         return self._send(a, kw if kw else None, stream=False, err=False)
+
+    def result_nowait(self, *a, **kw) -> None:
+        """
+        Send the result.
+        """
+        return self._send_nowait(a, kw if kw else None, stream=False, err=False)
 
     # Stream starters
 

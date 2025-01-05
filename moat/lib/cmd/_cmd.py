@@ -824,6 +824,7 @@ class Stream:
         except EOFError:
             raise StopAsyncIteration
 
+@_exp
 class Forward():
     """
     Container for message forwarding

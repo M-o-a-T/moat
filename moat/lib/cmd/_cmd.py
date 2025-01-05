@@ -791,7 +791,7 @@ class Stream:
     @asynccontextmanager
     async def _stream(self, d, kw, sin, sout):
         if self.stream_out != S_NEW:
-            raise RuntimeError("Stream-out already set")
+            raise RuntimeError("Simple command" if self.stream_out == S_END else "Stream-out already set")
 
         # stream-in depends on what the remote side sent
         if not sin:

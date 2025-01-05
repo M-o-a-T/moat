@@ -7,8 +7,8 @@ from tests.lib_cmd.scaffold import scaffold
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize("a_s", [(), ("foo"), (12, 34)])
-@pytest.mark.parametrize("a_r", [(), ("bar"), (2, 3)])
+@pytest.mark.parametrize("a_s", [(), (None,), ("foo"), (12, 34)])
+@pytest.mark.parametrize("a_r", [(), (None,), ("bar"), (2, 3)])
 @pytest.mark.parametrize("k_s", [{}, dict(a=42)])
 @pytest.mark.parametrize("k_r", [{}, dict(b=21)])
 async def test_basic(a_s, a_r, k_s, k_r):

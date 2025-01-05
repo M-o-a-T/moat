@@ -320,17 +320,17 @@ class CmdHandler(CtxObj):
                 else:
                     await msg.kill()
 
-    def _send(self, i, data, kw=None):
+    def _send(self, i, data, kw=None) -> Awaitable[None]:
         assert isinstance(data, (list, tuple)), data
         assert isinstance(i, int), i
         return self._send_q.put((i, data, kw))
 
-    def _send_nowait(self, i, data, kw=None):
+    def _send_nowait(self, i, data, kw=None) -> None:
         assert isinstance(data, (list, tuple)), data
         assert isinstance(i, int), i
         self._send_q.put_nowait((i, data, kw))
 
-    async def msg_out(self):
+    async def msg_out(self) -> None:
         i, d, kw = await self._send_q.get()
 
         # Handle last-arg-is-dict ambiguity
@@ -338,7 +338,7 @@ class CmdHandler(CtxObj):
             kw = {}
         return (i,) + tuple(d) + ((kw,) if kw is not None else ())
 
-    async def msg_in(self, msg):
+    async def msg_in(self, msg) -> None:
         i = msg[0]
         # stream = i & B_STREAM
         error = i & B_ERROR

@@ -750,7 +750,7 @@ class Stream:
             self._set_msg(self.msg2)
             self.msg2 = None
 
-    async def replied(self) -> Awaitable[None]:
+    async def replied(self) -> None:
         if self._msg is None:
             await self.cmd_in.wait()
 

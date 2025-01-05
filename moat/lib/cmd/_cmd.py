@@ -374,9 +374,10 @@ class CmdHandler(CtxObj):
             try:
                 yield self
             finally:
-                for conv in self._msgs.values():
+                for conv in list(self._msgs.values()):
                     conv(None)
                 tg.cancel()
+
         for k in list(self._msgs.keys()):
             self.detach(k)
 

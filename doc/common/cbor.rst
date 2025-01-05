@@ -1,59 +1,9 @@
-====================
-Utilities for Python
-====================
-
-This is a Python "util" submodule with code that I habitually use in so
-many projects that I decided to split it off into its own git archive.
-
-Feel free to extend and embrace. Patches welcome.
-
-
-Features
-========
-
-A few. Read the code and the subpackages' documentation; I didn't get
-around to documenting all of that yet.
-
-
-License
-=======
-
-No restrictions. CC0 / public domain / MIT / GPLv3 / whatever, as long as
-you don't want anybody (i.e. the author(s)) to pay for the effects of any
-bugs, features or "features" which this code might or might not have.
-
-Please contribute any enhancements.
-
-
-Dependencies
-============
-
-A few. Notable:
-
-* anyio, version 3. Required for `ValueEvent`, `spawn` (obviously) and
-  `as_service`.
-
-* ruyaml. This is a fork of ruamel.yaml which is a fork of pyyaml.
-  Fixes some bugs and has a more reasonable API. Required for
-  `yload`/`yprint`/`yformat`.
-
-* msgpack, obviously required for `pack`/`unpack` and `MsgReader`/`MsgWriter`.
-
-* asyncclick, required for `main_`/`wrap_main`.
-
-MoaT does not depend on:
-
-* cbor2. Our implementation is shared with a version running on
-  MicroPython and thus needs to be minimal. Also we want to support
-  efficient async streaming.
-
-
 CBOR Tags
 =========
 
-This package uses the following CBOR tags.
+The MoaT software uses the following CBOR tags.
 
-The author presumes that the proposed tags 202 and 203 generally useful
+The author presumes that the proposed tags 202 and 203 are generally useful
 beyond the confines of this specification and has submitted them to IANA.
 
 
@@ -64,25 +14,24 @@ Path
     Tag             202
     Data Item       array
     Semantics       mark array as object path
-    Reference       https://github.com/M-o-a-T/moat-util/
+    Reference       https://github.com/M-o-a-T/moat/blob/main/doc/common/cbor.rst
     Contact         Matthias Urlichs <matthias@urlichs.de>
     =============== =============================
 
 A Path is a sequence of object accessors, i.e. a way to reference a
-possibly-deeply nested object. These typically include strings
-(object members, map keys) and numbers (array indices).
+possibly-deeply nested object. Path elements typically include text strings
+(object members, map keys) and non-negative integers (array indices).
 
 A recipient can use this tag to distinguish a sequence of lookups from
-a tuple that's directly used as a map key. (Python allows this.)
+a tuple that's directly used as a map key. (Languages like Python allow this.)
 
-Also, a path is typically entered and displayed as a string with dots or
-slashes as separators rather than an explicit list, i.e. ``foo:0.bar``
-(MoaT's representation – indicating that the zero is an integer, not a string)
-or ``foo/0/bar`` (file system, MQTT topic), instead of an explicit array
-like ``["foo", 0, "bar"]``.
+While the array SHOULD consist of ASCII text strings and non-negative
+integers, Applications MAY use additional data types or values.
 
-The array SHOULD include only strings and non-negative integers.
-The list of allowed characters in the string(s) is application dependent.
+Applications that generate paths to an object MUST do so in a consistent
+manner. Paths that refer to an object without conforming to the chosen
+scheme (e.g. negative array indices that count from the array's end) MAY be
+rejected.
 
 
 Object Proxy
@@ -90,24 +39,29 @@ Object Proxy
 
     =============== =============================
     Tag             203
-    Data Item       string, integer, array
+    Data Item       text string, integer, array
     Semantics       reference a well-known or unencodable object
-    Reference       https://github.com/M-o-a-T/moat-util/
+    Reference       https://github.com/M-o-a-T/moat/blob/main/doc/common/cbor.rst
     Contact         Matthias Urlichs <matthias@urlichs.de>
     =============== =============================
 
 A Proxy refers to an object that cannot be encoded in CBOR. In a messaging
-system, a sender may cache the object and replace it with a proxy instead
+system, a sender may cache such an object and send a proxy instead
 of throwing an error. The recipient can subsequently refer to the object
-using the same Proxy tag when it sends a message back.
+using the Proxy tag when it sends another message back.
 
-When the proxy's content is an array, it SHOULD consist of two elements:
-a string or integer that uniquely identifies the origin of the proxy object,
-and a string or integer which the originator can use to recover the
-original.
+When the proxy's content is an array, it MUST consist of at least two
+elements. The first is a text string, integer, or (if global uniqueness is
+required) a UUID that uniquely identifies the origin of the proxy object.
+The remainder of the array holds the data which the originator requires
+to access or recover the original.
 
 An API to release auto-generated proxies is recommended but out of scope of
 this specification.
+
+An implementation may pre-define some proxy objects, e.g. for classes whose
+objects can be serialized safely. Attempts to release these predefined
+references SHOULD be ignored.
 
 
 Object Constructor
@@ -140,15 +94,15 @@ File Identifier
     Tag             1299145044
     Data Item       array
     Semantics       MoaT file identifier / details
-    Reference       https://github.com/M-o-a-T/moat-util/
+    Reference       https://github.com/M-o-a-T/moat/blob/main/doc/common/cbor.rst
     Contact         Matthias Urlichs <matthias@urlichs.de>
     =============== =============================
 
 Files with MoaT-compatible messages start with an array that is wrapped with
 tag 1299145044 (0x4d6f6154, "MoaT"), inside tag 55799 (CBOR).
 
-The array has two elements. The first contains a string that describes the
-file's contents. The string MUST be at least 24 bytes long (pad with spaces
+The array has two elements. The first contains a text string that describes the
+file's contents. This string MUST be at least 24 bytes long (pad with spaces
 if necessary), for the benefit of the "file" utility. It is free-format,
 meant to be shown to humans, and MUST be ignored by programs that read the
 file.
@@ -159,6 +113,8 @@ to extract metadata (e.g. range of record, file creation date, etc.).
 
 This way, ``file`` can show basic data about the file, using these magic entries:
 
+.. code-block::
+
     0        string/3b  \xd9\xd9\xf7     CBOR
     >3       string/5b  \xdaMoaT         MoaT file
     >>8      string/2b  \x82\x78         
@@ -166,7 +122,7 @@ This way, ``file`` can show basic data about the file, using these magic entries
     >>8      string/2b  \x82\x79         
     >>>10    pstring/H  >\0              %s
 
-Shorter file type strings would require 24 additional entries in ``file``'s
+Shorter descriptive strings would require 24 additional entries in ``file``'s
 magic pattern file (as it cannot mask the high bits of a string's length
 field), which seems excessive.
 
@@ -177,7 +133,7 @@ End of file marker
     Tag             1298493254
     Data Item       map
     Semantics       MoaT end-of-file marker
-    Reference       https://github.com/M-o-a-T/moat-util/
+    Reference       https://github.com/M-o-a-T/moat/blob/main/doc/common/cbor.rst
     Contact         Matthias Urlichs <matthias@urlichs.de>
     =============== =============================
 

@@ -448,9 +448,12 @@ async def cmd(obj, path, **attrs):
 
     The command is prefixed by the "micro.connect.remote" option;
     use "moat micro -R ‹path› cmd …" to change it if necessary.
+
+    The item "_a" is an empty array, for positional arguments.
+    Use `-e/-v/-p _a:n XXX` to append to it.
     """
     cfg = obj.cfg
-    val = {}
+    val = {"_a":[]}
     val = process_args(val, no_path=True, **attrs)
     if len(path) == 0:
         raise click.UsageError("Path cannot be empty")
@@ -459,6 +462,7 @@ async def cmd(obj, path, **attrs):
         cfg.remote + path,
         " ".join(f"{k}={v!r}" for k, v in val.items()),
     )
+    a = val.pop("_a", ())
 
     async with Dispatch(cfg, run=True) as dsp, SubDispatch(dsp, cfg.remote) as sd:
         try:

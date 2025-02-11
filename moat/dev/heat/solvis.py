@@ -509,7 +509,7 @@ class Data:
     hc_pos = 0
     r_no = "----"
     pellet_load = 0
-    pellet_on:bool = None
+    pellet_on: bool = None
 
     # outside temperature average
     t_ext_avg = None
@@ -558,7 +558,7 @@ class Data:
         self.set_flow_pwm = set_flow_pwm
 
     async def reload_cfg(self, cfgf, *, task_status=anyio.TASK_STATUS_IGNORED):
-        flg = aionotify.Flags.CLOSE_WRITE|aionotify.Flags.MOVE_SELF
+        flg = aionotify.Flags.CLOSE_WRITE | aionotify.Flags.MOVE_SELF
         async with aionotify.Watcher() as watcher:
             await watcher.awatch(path=cfgf, flags=aionotify.Flags.CLOSE_WRITE)
             task_status.started()
@@ -569,7 +569,7 @@ class Data:
                         continue
                     break
                 print("*** RELOADING ***")
-                with open(cfgf,"r") as cff:
+                with open(cfgf, "r") as cff:
                     self._cfg = combine_dict(yload(cff, attr=True), self.cfg, cls=attrdict)
 
         pass
@@ -846,7 +846,9 @@ class Data:
                     t_change_max = self.cfg.lim.times.stop
 
                 heat_off = True
-                await self.pid.flow.setpoint(self.cfg.misc.stop.flow if orun != Run.off else self.lim.defrost.flow)
+                await self.pid.flow.setpoint(
+                    self.cfg.misc.stop.flow if orun != Run.off else self.lim.defrost.flow
+                )
                 await self.cl_set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off)
                 await self.cl_set(self.cfg.cmd.power, value=0)
 
@@ -1054,7 +1056,7 @@ class Data:
                     run = Run.wait_time
                     self.r_no = None
                     continue
-                elif min(self.t_out,self.t_in) < self.cfg.lim.defrost.temp:
+                elif min(self.t_out, self.t_in) < self.cfg.lim.defrost.temp:
                     run = Run.down
                     continue
                 if r != "pell":
@@ -1116,11 +1118,17 @@ class Data:
                     continue
 
             elif run == Run.down:  # wait for outflow-inflow<2 for n seconds, cool down
-                if min(self.t_out,self.t_in) > self.cfg.lim.defrost.temp and max(self.t_out,self.t_in) < self.cfg.lim.idle:
+                if (
+                    min(self.t_out, self.t_in) > self.cfg.lim.defrost.temp
+                    and max(self.t_out, self.t_in) < self.cfg.lim.idle
+                ):
                     run = Run.off
                     continue
                 await self.handle_flow()
-                if min(self.t_out,self.t_in) > self.cfg.lim.defrost.temp and self.t_out - self.t_in < self.cfg.misc.stop.delta:
+                if (
+                    min(self.t_out, self.t_in) > self.cfg.lim.defrost.temp
+                    and self.t_out - self.t_in < self.cfg.misc.stop.delta
+                ):
                     # print("OFF 1",self.t_out, self.t_in, "    ")
                     run = Run.off
                     continue
@@ -1420,7 +1428,9 @@ class Data:
                         try:
                             for p in self.cfg.adj.pellet.startup.patch.path:
                                 await self.cl_set(
-                                    p, self.cfg.adj.pellet.startup.patch.stop, idem=True,
+                                    p,
+                                    self.cfg.adj.pellet.startup.patch.stop,
+                                    idem=True,
                                 )
                         except AttributeError:
                             pass
@@ -1471,7 +1481,6 @@ class Data:
                     r = "-"
                     l_buf = pos2val(l_load, w, l_buffer, clamp=True)
                     lim = min(l_buf, l_load)
-
 
                 tt = self.time
                 if o_r == r and not self.wp_on and tt - tlast > 5 and self.r_no is not None:
@@ -1537,11 +1546,15 @@ class Data:
             for _ in range(10):
                 await self.wait()
 
-            if not run and self.m_pellet_state in (0,30,31,32) and (
-                not self.cm_wp
-                or (
-                    self.m_air < self.cfg.misc.pellet.current
-                    and min(self.m_air, self.m_air_pred) < self.cfg.misc.pellet.predict-0.15
+            if (
+                not run
+                and self.m_pellet_state in (0, 30, 31, 32)
+                and (
+                    not self.cm_wp
+                    or (
+                        self.m_air < self.cfg.misc.pellet.current
+                        and min(self.m_air, self.m_air_pred) < self.cfg.misc.pellet.predict - 0.15
+                    )
                 )
             ):
                 print("  PELLET ON  ")
@@ -1552,7 +1565,7 @@ class Data:
 
             elif run and (
                 self.m_air > self.cfg.misc.pellet.current
-                and min(self.m_air, self.m_air_pred) > self.cfg.misc.pellet.predict+0.15
+                and min(self.m_air, self.m_air_pred) > self.cfg.misc.pellet.predict + 0.15
                 and self.t_low is not None
                 and self.tb_heat > self.t_low
                 and self.t_ext_avg is not None
@@ -2018,7 +2031,7 @@ async def cli(ctx, config):
     ctx.obj = attrdict()
     cfg = yload(CFG, attr=True)
     if config is not None:
-        with open(config,"r") as cff:
+        with open(config, "r") as cff:
             cfg = combine_dict(yload(cff, attr=True), cfg, cls=attrdict)
     ctx.obj.cfg = cfg
     ctx.obj.cfgf = config

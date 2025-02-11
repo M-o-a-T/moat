@@ -96,7 +96,10 @@ class ModuleEntry(ClientEntry):
             self._module = None
             logger.warning("Could not compile @%r", self.subpath)
             await self.root.err.record_error(
-                "compile", self.subpath, exc=exc, message="compiler error",
+                "compile",
+                self.subpath,
+                exc=exc,
+                message="compiler error",
             )
         else:
             await self.root.err.record_working("compile", self.subpath)
@@ -208,7 +211,10 @@ class CodeEntry(ClientEntry):
         except Exception as exc:
             logger.warning("Could not compile @%s", self.subpath)
             await self.root.err.record_error(
-                "compile", self.subpath, exc=exc, message="compiler error",
+                "compile",
+                self.subpath,
+                exc=exc,
+                message="compiler error",
             )
             self._code = None
         else:

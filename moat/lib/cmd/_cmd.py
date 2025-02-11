@@ -19,7 +19,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Awaitable
 
     class MsgIn(Protocol):
-        def __call__(self, msg: Stream, /) -> Any: ...
+        def __call__(self, msg: Stream, /) -> Any:
+            ...
+
 
 L = True
 
@@ -180,7 +182,7 @@ class CmdHandler(CtxObj):
         self._id += 1
         return self._id
 
-    def attach(self, mid, proc, force:bool=False):
+    def attach(self, mid, proc, force: bool = False):
         """
         Attach a handler for raw incoming messages.
         """
@@ -208,7 +210,7 @@ class CmdHandler(CtxObj):
 
         This is not a coroutine by design.
         """
-        return Forward(self,msg,cmd)
+        return Forward(self, msg, cmd)
 
     def cmd_in(self) -> Awaitable[Stream]:
         """Retrieve new incoming commands"""
@@ -268,7 +270,7 @@ class CmdHandler(CtxObj):
                 try:
                     if callable(res):
                         res = res(msg)
-                    if hasattr(res,"__await__"):
+                    if hasattr(res, "__await__"):
                         res = await res
                 except AssertionError:
                     raise
@@ -291,7 +293,7 @@ class CmdHandler(CtxObj):
             res = self._in_cb(msg)
         except Exception as exc:
             self._debug("Error for %r suppressed: %r", msg, exc)
-            await _final(msg,None,exc)
+            await _final(msg, None, exc)
         else:
             if isinstance(res, Forward):
                 res.start(self)
@@ -391,6 +393,7 @@ class CmdHandler(CtxObj):
 
         for k in list(self._msgs.keys()):
             self.detach(k)
+
 
 @_exp
 class Stream:
@@ -591,7 +594,7 @@ class Stream:
         self.parent._drop(self)  # QA
         self.parent = None
 
-    def _recv(self, msg:tuple[int, Any, ...]):
+    def _recv(self, msg: tuple[int, Any, ...]):
         """process an incoming messages on this stream"""
         if msg is None:
             self.kill_nc()
@@ -669,7 +672,9 @@ class Stream:
             return
         self._sendfix(stream, err, _kill)
         await self.parent._send(
-            self._i | (B_STREAM if stream else 0) | (B_ERROR if err else 0), d, kw,
+            self._i | (B_STREAM if stream else 0) | (B_ERROR if err else 0),
+            d,
+            kw,
         )
         self._ended()
 
@@ -678,7 +683,9 @@ class Stream:
             return
         self._sendfix(stream, err, _kill)
         self.parent._send_nowait(
-            self._i | (B_STREAM if stream else 0) | (B_ERROR if err else 0), d, kw,
+            self._i | (B_STREAM if stream else 0) | (B_ERROR if err else 0),
+            d,
+            kw,
         )
         self._ended()
 
@@ -791,7 +798,9 @@ class Stream:
     @asynccontextmanager
     async def _stream(self, d, kw, sin, sout):
         if self.stream_out != S_NEW:
-            raise RuntimeError("Simple command" if self.stream_out == S_END else "Stream-out already set")
+            raise RuntimeError(
+                "Simple command" if self.stream_out == S_END else "Stream-out already set"
+            )
 
         # stream-in depends on what the remote side sent
         if not sin:
@@ -851,17 +860,19 @@ class Stream:
         except EOFError:
             raise StopAsyncIteration
 
+
 @_exp
-class Forward():
+class Forward:
     """
     Container for message forwarding
     """
+
     end_src = False
     end_dst = False
     src_id: int
     dst_id: int
 
-    def __init__(self, hdl:CmdHandler, msg:Stream, cmd: tuple[Any, ...]):
+    def __init__(self, hdl: CmdHandler, msg: Stream, cmd: tuple[Any, ...]):
         self.dst = hdl
         self.msg = msg
         self.cmd = cmd
@@ -874,13 +885,17 @@ class Forward():
 
         self.src_id = self.msg.id
         self.dst_id = self.dst._gen_id()
-        self._src_id=self.src_id-(self.src_id>0)
-        self._dst_id=self.dst_id-(self.dst_id>0)
+        self._src_id = self.src_id - (self.src_id > 0)
+        self._dst_id = self.dst_id - (self.dst_id > 0)
 
         self.src.attach(self.src_id, self.recv_src, force=True)
         self.dst.attach(self.dst_id, self.recv_dst)
 
-        self.dst._send_nowait((self._dst_id<<2) | (B_STREAM if self.msg.stream_in != S_END else 0) , (self.cmd,)+tuple(self.msg._args), self.msg._kw)
+        self.dst._send_nowait(
+            (self._dst_id << 2) | (B_STREAM if self.msg.stream_in != S_END else 0),
+            (self.cmd,) + tuple(self.msg._args),
+            self.msg._kw,
+        )
 
         del self.msg
 
@@ -894,14 +909,16 @@ class Forward():
         err = msg[0] & B_ERROR
 
         if self.end_src:
-            logger.warning("LATE? %d/%d, %r", self.src_id,self.dst_id, msg)
+            logger.warning("LATE? %d/%d, %r", self.src_id, self.dst_id, msg)
             return  # ignore followup
         elif not stream:
             self.end_src = True
 
-        kw = msg[-1] if len(msg)>1 and isinstance(msg[-1], dict) else None
+        kw = msg[-1] if len(msg) > 1 and isinstance(msg[-1], dict) else None
         args = msg[1:-1] if kw is not None else msg[1:]
-        self.dst._send_nowait((self._dst_id<<2) | (B_STREAM if stream else 0) | (B_ERROR if err else 0), args, kw)
+        self.dst._send_nowait(
+            (self._dst_id << 2) | (B_STREAM if stream else 0) | (B_ERROR if err else 0), args, kw
+        )
 
         self._ended()
 
@@ -915,23 +932,24 @@ class Forward():
         err = msg[0] & B_ERROR
 
         if self.end_dst:
-            logger.warning("LATE? %d/%d, %r", self.dst_id,self.src_id, msg)
+            logger.warning("LATE? %d/%d, %r", self.dst_id, self.src_id, msg)
             return  # ignore followup
         elif not stream:
             self.end_dst = True
 
-        kw = msg[-1] if len(msg)>1 and isinstance(msg[-1], dict) else None
+        kw = msg[-1] if len(msg) > 1 and isinstance(msg[-1], dict) else None
         args = msg[1:-1] if kw is not None else msg[1:]
-        self.src._send_nowait((self._src_id<<2) | (B_STREAM if stream else 0) | (B_ERROR if err else 0), args, kw)
+        self.src._send_nowait(
+            (self._src_id << 2) | (B_STREAM if stream else 0) | (B_ERROR if err else 0), args, kw
+        )
 
         self._ended()
 
-
-    def _ended(self, force:bool = False):
+    def _ended(self, force: bool = False):
         if force:
             self.end_src = self.end_dst = True
         elif not self.end_src or not self.end_dst:
-                return
+            return
 
         self.src.detach(self.src_id)
         self.dst.detach(self.dst_id)

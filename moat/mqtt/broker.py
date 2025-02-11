@@ -257,27 +257,39 @@ class Broker:
         self.transitions = Machine(states=Broker.states, initial="new")
         self.transitions.add_transition(trigger="start", source="new", dest="starting")
         self.transitions.add_transition(
-            trigger="starting_fail", source="starting", dest="not_started",
+            trigger="starting_fail",
+            source="starting",
+            dest="not_started",
         )
         self.transitions.add_transition(
-            trigger="starting_success", source="starting", dest="started",
+            trigger="starting_success",
+            source="starting",
+            dest="started",
         )
         self.transitions.add_transition(trigger="shutdown", source="starting", dest="not_started")
         self.transitions.add_transition(trigger="shutdown", source="started", dest="stopping")
         self.transitions.add_transition(trigger="shutdown", source="not_started", dest="stopping")
         self.transitions.add_transition(
-            trigger="stopping_success", source="stopped", dest="stopped",
+            trigger="stopping_success",
+            source="stopped",
+            dest="stopped",
         )
         self.transitions.add_transition(
-            trigger="stopping_success", source="not_started", dest="not_started",
+            trigger="stopping_success",
+            source="not_started",
+            dest="not_started",
         )
         self.transitions.add_transition(
-            trigger="stopping_failure", source="stopping", dest="not_stopped",
+            trigger="stopping_failure",
+            source="stopping",
+            dest="not_stopped",
         )
         self.transitions.add_transition(trigger="start", source="stopped", dest="starting")
         self.transitions.add_transition(trigger="shutdown", source="new", dest="stopped")
         self.transitions.add_transition(
-            trigger="stopping_success", source="stopping", dest="stopped",
+            trigger="stopping_success",
+            source="stopping",
+            dest="stopped",
         )
 
     async def start(self):
@@ -355,14 +367,17 @@ class Broker:
                     async def server_task(evt, cb, address, port, ssl_context):
                         with anyio.CancelScope() as scope:
                             sock = await anyio.create_tcp_listener(
-                                local_port=port, local_host=address,
+                                local_port=port,
+                                local_host=address,
                             )
                             await evt.set(scope)
 
                             async def _maybe_wrap(conn):
                                 if ssl_context:
                                     conn = await anyio.streams.tls.TLSStream.wrap(
-                                        conn, ssl_context=ssl_context, server_side=True,
+                                        conn,
+                                        ssl_context=ssl_context,
+                                        server_side=True,
                                     )
                                 await cb(conn)
 
@@ -492,7 +507,8 @@ class Broker:
         # Wait for first packet and expect a CONNECT
         try:
             handler, client_session = await BrokerProtocolHandler.init_from_connect(
-                adapter, self.plugins_manager,
+                adapter,
+                self.plugins_manager,
             )
         except MoatMQTTException as exc:
             self.logger.warning(
@@ -571,7 +587,8 @@ class Broker:
         await handler.mqtt_connack_authorize(authenticated)
 
         await self.plugins_manager.fire_event(
-            EVENT_BROKER_CLIENT_CONNECTED, client_id=client_session.client_id,
+            EVENT_BROKER_CLIENT_CONNECTED,
+            client_id=client_session.client_id,
         )
 
         self.logger.debug("%s Start messages handling", client_session.client_id)
@@ -608,7 +625,8 @@ class Broker:
                         result = await self.add_subscription(subscription, client_session)
                         return_codes.append(result)
                     await handler.mqtt_acknowledge_subscription(
-                        subscriptions["packet_id"], return_codes,
+                        subscriptions["packet_id"],
+                        return_codes,
                     )
                     for index, subscription in enumerate(subscriptions["topics"]):
                         if return_codes[index] != 0x80:
@@ -620,7 +638,8 @@ class Broker:
                             )
                             if self._do_retain:
                                 await self.publish_retained_messages_for_subscription(
-                                    subscription, client_session,
+                                    subscription,
+                                    client_session,
                                 )
                     self.logger.debug(repr(self._subscriptions))
 
@@ -655,7 +674,8 @@ class Broker:
                 await self._stop_handler(handler)
                 client_session.transitions.disconnect()
                 await self.plugins_manager.fire_event(
-                    EVENT_BROKER_CLIENT_DISCONNECTED, client_id=client_session.client_id,
+                    EVENT_BROKER_CLIENT_DISCONNECTED,
+                    client_id=client_session.client_id,
                 )
             finally:
                 with anyio.fail_after(2, shield=True):
@@ -690,7 +710,9 @@ class Broker:
         if auth_config:
             auth_plugins = auth_config.get("plugins", None)
         returns = await self.plugins_manager.map_plugin_coro(
-            "authenticate", session=session, filter_plugins=auth_plugins,
+            "authenticate",
+            session=session,
+            filter_plugins=auth_plugins,
         )
         auth_result = True
         if returns:
@@ -895,7 +917,13 @@ class Broker:
                         await target_session.retained_messages.put(retained_message)
 
     async def broadcast_message(
-        self, session, topic, data, force_qos=None, qos=None, retain=False,
+        self,
+        session,
+        topic,
+        data,
+        force_qos=None,
+        qos=None,
+        retain=False,
     ):
         if not isinstance(data, (bytes, bytearray)):
             self.logger.error("Not bytes %s:%r", topic, data)

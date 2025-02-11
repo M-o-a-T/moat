@@ -542,7 +542,11 @@ class SCmd_watch(StreamCommand):
         client = self.client
         conv = client.conv
         entry, acl = client.root.follow_acl(
-            msg.path, acl=client.acl, acl_key="x", create=True, nulls_ok=client.nulls_ok,
+            msg.path,
+            acl=client.acl,
+            acl_key="x",
+            create=True,
+            nulls_ok=client.nulls_ok,
         )
         nchain = msg.get("nchain", 0)
         max_depth = msg.get("max_depth", -1)
@@ -597,7 +601,9 @@ class SCmd_watch(StreamCommand):
                         a = a.step(p)
                     else:
                         res = m.entry.serialize(
-                            chop_path=client._chop_path, nchain=nchain, conv=conv,
+                            chop_path=client._chop_path,
+                            nchain=nchain,
+                            conv=conv,
                         )
                         shorter(res)
                         if not a.allows("r"):
@@ -841,7 +847,11 @@ class ServerClient:
                 acl2 = root.follow(Path(None, "acl", acl2), create=False, nulls_ok=True)
                 acl2 = ACLFinder(acl2)
                 _entry, acl = root.follow_acl(
-                    msg.path, acl=acl2, acl_key=mode, nulls_ok=False, create=None,
+                    msg.path,
+                    acl=acl2,
+                    acl_key=mode,
+                    nulls_ok=False,
+                    create=None,
                 )
                 if not ok:
                     acl.block("a")
@@ -858,7 +868,11 @@ class ServerClient:
         if with_data is None:
             with_data = msg.get("with_data", False)
         entry, acl = root.follow_acl(
-            msg.path, acl=self.acl, acl_key="e", create=False, nulls_ok=_nulls_ok,
+            msg.path,
+            acl=self.acl,
+            acl_key="e",
+            create=False,
+            nulls_ok=_nulls_ok,
         )
         empty = msg.get("empty", False)
         if with_data:
@@ -901,7 +915,9 @@ class ServerClient:
         if "node" in msg and "path" not in msg:
             n = Node(msg.node, cache=self.server.node_cache, create=False)
             return n[msg.tick].serialize(
-                chop_path=self._chop_path, nchain=msg.get("nchain", 0), conv=self.conv,
+                chop_path=self._chop_path,
+                nchain=msg.get("nchain", 0),
+                conv=self.conv,
             )
 
         if _nulls_ok is None:
@@ -910,7 +926,11 @@ class ServerClient:
             root = self.root
         try:
             entry, _ = root.follow_acl(
-                msg.path, create=False, acl=self.acl, acl_key="r", nulls_ok=_nulls_ok,
+                msg.path,
+                create=False,
+                acl=self.acl,
+                acl_key="r",
+                nulls_ok=_nulls_ok,
             )
         except KeyError:
             entry = {}
@@ -1066,7 +1086,10 @@ class ServerClient:
 
         try:
             entry, acl = self.root.follow_acl(
-                msg.path, acl=self.acl, acl_key="d", nulls_ok=self.nulls_ok,
+                msg.path,
+                acl=self.acl,
+                acl_key="d",
+                nulls_ok=self.nulls_ok,
             )
         except KeyError:
             return False
@@ -1219,7 +1242,9 @@ class ServerClient:
                             msg["etype"] = exc.etype  # pylint: disable=no-member  ### YES IT HAS
                         else:
                             self.logger.exception(
-                                "ERR %d: Client error on %s", self._client_nr, repr(msg),
+                                "ERR %d: Client error on %s",
+                                self._client_nr,
+                                repr(msg),
                             )
                         if seq is not None:
                             msg["seq"] = seq
@@ -1574,7 +1599,10 @@ class Server:
         async def send_nodes():
             nonlocal nodes, n_nodes
             await client._request(  # pylint: disable=cell-var-from-loop
-                "check_deleted", iter=False, nchain=-1, nodes=nodes.serialize(),
+                "check_deleted",
+                iter=False,
+                nchain=-1,
+                nodes=nodes.serialize(),
             )
             nodes.clear()
             n_nodes = 0
@@ -2095,7 +2123,10 @@ class Server:
                     async for r in res:
                         pl(r)
                         r = UpdateEvent.deserialize(
-                            self.root, r, cache=self.node_cache, nulls_ok=True,
+                            self.root,
+                            r,
+                            cache=self.node_cache,
+                            nulls_ok=True,
                         )
                         await r.entry.apply(r, server=self, root=self.paranoid_root)
                     await self.tock_seen(res.end_msg.tock)
@@ -2111,7 +2142,10 @@ class Server:
                     async for r in res:
                         pl(r)
                         r = UpdateEvent.deserialize(
-                            self.root, r, cache=self.node_cache, nulls_ok=True,
+                            self.root,
+                            r,
+                            cache=self.node_cache,
+                            nulls_ok=True,
                         )
                         await r.entry.apply(r, server=self, root=self.paranoid_root)
                     await self.tock_seen(res.end_msg.tock)
@@ -2522,7 +2556,11 @@ class Server:
                             cnt += 1
 
     async def _saver(
-        self, path: str = None, stream=None, done: ValueEvent = None, save_state=False,
+        self,
+        path: str = None,
+        stream=None,
+        done: ValueEvent = None,
+        save_state=False,
     ):
         with anyio.CancelScope() as s:
             sd = anyio.Event()

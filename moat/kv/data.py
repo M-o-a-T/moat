@@ -37,7 +37,8 @@ def add_dates(d):
                 continue
             if start <= v <= stop:
                 d[f"_{k}"] = datetime.datetime.fromtimestamp(v).isoformat(
-                    sep=" ", timespec="milliseconds",
+                    sep=" ",
+                    timespec="milliseconds",
                 )
 
     _add(d)

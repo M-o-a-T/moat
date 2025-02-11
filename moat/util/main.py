@@ -110,7 +110,11 @@ def attr_args(
                 ht.append(":name")
             ht = "|".join(ht)
 
-            args = ("--set",) + (("-"+("s" if isinstance(with_combined,bool) else with_combined),) if with_combined else ())
+            args = ("--set",) + (
+                ("-" + ("s" if isinstance(with_combined, bool) else with_combined),)
+                if with_combined
+                else ()
+            )
             proc = click.option(
                 *args,
                 "set_",
@@ -850,7 +854,9 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     obj.debug = verbose
     obj.DEBUG = debug
 
-    obj.cfg = process_args(obj.cfg, set_=set_, vars_=vars_, eval_=eval_, path_=path_, proxy_=proxy_)
+    obj.cfg = process_args(
+        obj.cfg, set_=set_, vars_=vars_, eval_=eval_, path_=path_, proxy_=proxy_
+    )
 
     if wrap:
         pass

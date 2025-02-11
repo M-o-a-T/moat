@@ -30,7 +30,9 @@ async def dump(obj, path):
         raise click.UsageError("Only up to four path elements allowed")
 
     async for r in obj.client.get_tree(
-        obj.cfg.kv.wago.prefix + path, nchain=obj.meta, max_depth=4 - len(path),
+        obj.cfg.kv.wago.prefix + path,
+        nchain=obj.meta,
+        max_depth=4 - len(path),
     ):
         rr = res
         if r.path:
@@ -50,7 +52,10 @@ async def list_(obj, path):
         raise click.UsageError("Only up to four path elements allowed")
 
     async for r in obj.client.get_tree(
-        obj.cfg.kv.wago.prefix + path, nchain=obj.meta, min_depth=1, max_depth=1,
+        obj.cfg.kv.wago.prefix + path,
+        nchain=obj.meta,
+        min_depth=1,
+        max_depth=1,
     ):
         print(r.path[-1], file=obj.stdout)
 

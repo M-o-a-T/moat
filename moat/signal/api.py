@@ -203,18 +203,20 @@ class SignalClient:
                     t_timestamp = t_res.get("timestamp")
                     if t_timestamp:
                         search_for = f"[*].{response_method_mapping.get(key, key)}"
-                        timestamps.update({
-                            t_timestamp: {
-                                "recipients": list(
-                                    set(
-                                        j_search(
-                                            search_for,
-                                            t_res.get("results"),
+                        timestamps.update(
+                            {
+                                t_timestamp: {
+                                    "recipients": list(
+                                        set(
+                                            j_search(
+                                                search_for,
+                                                t_res.get("results"),
+                                            ),
                                         ),
                                     ),
-                                ),
-                            },
-                        })
+                                },
+                            }
+                        )
             return {"timestamps": timestamps}
         finally:
             if cleanup_attachments:

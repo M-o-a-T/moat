@@ -45,7 +45,10 @@ class UnitContext(ModbusSlaveContext):
             server._add_unit(self)
 
     def add(
-        self, typ: TypeCodec, offset: int, val: BaseValue | type[BaseValue],
+        self,
+        typ: TypeCodec,
+        offset: int,
+        val: BaseValue | type[BaseValue],
     ) -> BaseValue:
         """Add a field to be served.
 
@@ -189,7 +192,10 @@ class SerialModbusServer(BaseModbusServer):
                 t = t2
                 msgs = []
                 self.framer.processIncomingPacket(
-                    data=data, unit=0, callback=msgs.append, single=True,
+                    data=data,
+                    unit=0,
+                    callback=msgs.append,
+                    single=True,
                 )
                 for msg in msgs:
                     with anyio.fail_after(2):

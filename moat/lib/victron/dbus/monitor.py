@@ -591,7 +591,9 @@ class DbusMonitor(CtxObj):
             await intf.on_items_changed(root_tracker)
             return partial(intf.off_items_changed, root_tracker)
 
-        self.serviceWatches[serviceName].extend((
-            await add_prop_receiver(),
-            await add_root_receiver(),
-        ))
+        self.serviceWatches[serviceName].extend(
+            (
+                await add_prop_receiver(),
+                await add_root_receiver(),
+            )
+        )

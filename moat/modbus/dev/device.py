@@ -388,7 +388,8 @@ class ClientDevice(CtxObj, BaseDevice):
             host = await self.client.host_service(self.cfg.src.host, self.cfg.src.get("port"))
         else:
             host = await self.client.serial_service(
-                port=self.cfg.src.port, **self.cfg.src.get("serial", {}),
+                port=self.cfg.src.port,
+                **self.cfg.src.get("serial", {}),
             )
         self.unit = await host.unit_scope(self.cfg.src.unit)
 

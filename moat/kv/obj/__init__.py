@@ -263,7 +263,11 @@ class ClientEntry:
         """
         async with NoLock if _locked else self._lock:
             r = await self.root.client.set(
-                self._path, chain=self.chain, value=value, nchain=3, idem=True,
+                self._path,
+                chain=self.chain,
+                value=value,
+                nchain=3,
+                idem=True,
             )
             if wait:
                 await self.root.wait_chain(r.chain)
@@ -531,7 +535,10 @@ class MirrorRoot(ClientEntry):
                 pl = PathLongener(())
                 await self.run_starting()
                 async with self.client._stream(
-                    "watch", nchain=3, path=self._path, fetch=True,
+                    "watch",
+                    nchain=3,
+                    path=self._path,
+                    fetch=True,
                 ) as w:
                     async for r in w:
                         if "path" not in r:

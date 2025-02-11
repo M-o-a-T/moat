@@ -672,7 +672,8 @@ class MQTTClient:
             # Open connection
             if scheme in ("mqtt", "mqtts"):
                 conn = await anyio.connect_tcp(
-                    self.session.remote_address, self.session.remote_port,
+                    self.session.remote_address,
+                    self.session.remote_port,
                 )
                 if kwargs.pop("autostart_tls", False):
                     try:
@@ -778,7 +779,12 @@ class MQTTClient:
             cancel_tasks()
 
     def _initsession(
-        self, uri=None, cleansession=None, cafile=None, capath=None, cadata=None,
+        self,
+        uri=None,
+        cleansession=None,
+        cafile=None,
+        capath=None,
+        cadata=None,
     ) -> Session:
         # Load config
         broker_conf = self.config.get("broker", dict()).copy()

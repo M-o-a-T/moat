@@ -110,7 +110,8 @@ async def msg_(obj, path):
                     v["_type"] = type(msg).__name__
 
                 v["_timestamp"] = datetime.datetime.now().isoformat(
-                    sep=" ", timespec="milliseconds",
+                    sep=" ",
+                    timespec="milliseconds",
                 )
 
                 yprint(v, stream=obj.stdout)

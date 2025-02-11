@@ -69,7 +69,7 @@ async def get(obj, script):
 @click.option("-d", "--data", type=click.File(mode="r"), help="load the metadata (YAML)")
 @attr_args
 @click.pass_obj
-async def set_(obj, thread, script, data, vars_, eval_, path_, async_, info):
+async def set_(obj, thread, script, data, async_, info, **kw):
     """Save Python code.
 
     The code may have inputs. You specify the inputs and their default
@@ -112,7 +112,7 @@ async def set_(obj, thread, script, data, vars_, eval_, path_, async_, info):
         vs = set()
     vd = msg.setdefault("default", {})
 
-    vd = process_args(vd, vars_, eval_, path_, vs=vs)
+    vd = process_args(vd, vs=vs, **kw)
     msg["vars"] = list(vs)
     msg["default"] = vd
 

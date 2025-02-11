@@ -355,7 +355,7 @@ async def delete(obj, force):
 @click.option("-i", "--info", help="Short human-readable information")
 @attr_args
 @click.pass_obj
-async def set_(obj, code, tm, info, ok, repeat, delay, backoff, copy, vars_, eval_, path_):
+async def set_(obj, code, tm, info, ok, repeat, delay, backoff, copy, **kw):
     """Add or modify a runner.
 
     Code typically requires some input parameters.
@@ -389,7 +389,7 @@ async def set_(obj, code, tm, info, ok, repeat, delay, backoff, copy, vars_, eva
             raise click.UsageError("'--copy' needs a runner entry")
 
     vl = attrdict(**res.setdefault("data", {}))
-    vl = process_args(vl, vars_, eval_, path_)
+    vl = process_args(vl, **kw)
     res["data"] = vl
 
     if code is not None:

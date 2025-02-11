@@ -182,16 +182,16 @@ def res_update(res, attr: Path, value=None, **kw):  # pylint: disable=redefined-
     return val._update(attr, value=value, **kw)
 
 
-async def node_attr(obj, path, vars_, eval_, path_, res=None, chain=None):
+async def node_attr(obj, path, res=None, chain=None, **kw):
     """
     Sub-attr setter.
 
     Args:
         obj: command object
         path: address of the node to change
-        vars_, eval_, path_: the results of `attr_args`
         res: old node, if it has been read already
         chain: change chain of node, copied from res if clear
+        **kw: the results of `attr_args`
 
     Returns the result of setting the attribute.
     """
@@ -207,7 +207,7 @@ async def node_attr(obj, path, vars_, eval_, path_, res=None, chain=None):
     except AttributeError:
         chain = None
         val = NotGiven
-    val = process_args(val, vars_, eval_, path_)
+    val = process_args(val, **kw)
     if val is NotGiven:
         res = await obj.client.delete(path, nchain=obj.meta, chain=chain)
     else:

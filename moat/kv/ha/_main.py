@@ -268,7 +268,7 @@ Known types: %s
 )
 @click.argument("typ", nargs=1)
 @click.argument("path", nargs=1)
-async def set_(obj, typ, path, list_options, force, plus, vars_, eval_, path_):
+async def set_(obj, typ, path, list_options, force, plus, **kw):
     path = P(path)
     if typ == "-":
         t = None
@@ -287,7 +287,7 @@ async def set_(obj, typ, path, list_options, force, plus, vars_, eval_, path_):
                 t.update(p)
 
     if list_options:
-        if vars_ or eval_ or path_:
+        if any(kw.values()):
             raise click.UsageError("Deletion and options at the same time? No.")
 
         if t is None:
@@ -322,7 +322,7 @@ async def set_(obj, typ, path, list_options, force, plus, vars_, eval_, path_):
         val = attrdict(**res.value)
         r.chain = res.chain
 
-    i = process_args(attrdict(), vars_, eval_, path_)
+    i = process_args(attrdict(), **kw)
 
     d = {v[3]: v[1] for v in t.values() if v[1] is not None}
     for k, v in t.items():

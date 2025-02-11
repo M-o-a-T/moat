@@ -110,7 +110,7 @@ def attr_args(
                 ht.append(":name")
             ht = "|".join(ht)
 
-            args = ("--set",) + (("-e,") if with_eval else ())
+            args = ("--set",) + (("-"+("s" if isinstance(with_combined,bool) else with_combined),) if with_combined else ())
             proc = click.option(
                 *args,
                 "set_",
@@ -121,7 +121,7 @@ def attr_args(
                 hidden=not with_eval or not with_combined,
             )(proc)
 
-        args = ("--path",) + (("-p,") if with_path else ())
+        args = ("--path",) + (("-p",) if with_path else ())
         proc = click.option(
             *args,
             "path_",
@@ -132,7 +132,7 @@ def attr_args(
             hidden=not with_path or not with_combined,
         )(proc)
 
-        args = ("--eval",) + (("-e,") if with_eval else ())
+        args = ("--eval",) + (("-e",) if with_eval else ())
         proc = click.option(
             *args,
             "eval_",
@@ -143,7 +143,7 @@ def attr_args(
             hidden=not with_eval or not with_combined,
         )(proc)
 
-        args = ("--var",) + (("-v,") if with_var else ())
+        args = ("--var",) + (("-v",) if with_var else ())
         proc = click.option(
             *args,
             "vars_",
@@ -154,7 +154,7 @@ def attr_args(
             hidden=not with_var or not with_combined,
         )(proc)
 
-        args = ("--proxy",) + (("-P,") if with_proxy else ())
+        args = ("--proxy",) + (("-P",) if with_proxy else ())
         proc = click.option(
             *args,
             "proxy_",
@@ -717,6 +717,7 @@ async def main_(ctx, verbose, quiet, help=False, **kv):  # pylint: disable=redef
 def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statements
     main=main_,
     *,
+    set_=(),
     vars_=(),
     eval_=(),
     path_=(),
@@ -849,7 +850,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     obj.debug = verbose
     obj.DEBUG = debug
 
-    obj.cfg = process_args(obj.cfg, vars_=vars_, eval_=eval_, path_=path_, proxy_=proxy_)
+    obj.cfg = process_args(obj.cfg, set_=set_, vars_=vars_, eval_=eval_, path_=path_, proxy_=proxy_)
 
     if wrap:
         pass

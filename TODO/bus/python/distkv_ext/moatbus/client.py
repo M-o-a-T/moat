@@ -128,13 +128,15 @@ async def monitor(obj):
 
 def set_conn(obj, kw):
     type_ = kw.pop("type_")
+    set_ = kw.pop("set_")
     vars_ = kw.pop("vars_")
     eval_ = kw.pop("eval_")
     path_ = kw.pop("path_")
+    proxy = kw.pop("proxy_")
     host_ = kw.get("host")
 
     type_ = type_ or obj.typ
-    params = process_args(obj.params, vars_, eval_, path_)
+    params = process_args(obj.params, set_=set_, vars_=vars_, eval_=eval_, path_=path_, proxy_=proxy_)
     obj.check_config(type_, host_ or obj.host, params)
     obj.typ = type_
     obj.params = params

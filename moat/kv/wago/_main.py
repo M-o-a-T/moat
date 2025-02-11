@@ -59,13 +59,13 @@ async def list_(obj, path):
 @attr_args
 @click.argument("path", nargs=1)
 @click.pass_obj
-async def attr_(obj, path, vars_, eval_, path_):
+async def attr_(obj, path, **kw):
     """Set/get/delete an attribute on a given Wago element.
 
     `--eval` without a value deletes the attribute.
     """
     path = P(path)
-    res = await node_attr(obj, obj.cfg.kv.wago.prefix + path, vars_, eval_, path_)
+    res = await node_attr(obj, obj.cfg.kv.wago.prefix + path, **kw)
 
     if obj.meta:
         yprint(res, stream=obj.stdout)

@@ -63,7 +63,7 @@ async def list_(obj, path):
 @attr_args
 @click.argument("path", nargs=1, type=P)
 @click.pass_obj
-async def attr_(obj, path, vars_, eval_, path_):
+async def attr_(obj, path, **kw):
     """Set/get/delete attributes of a given GPIO element.
 
     `--eval` without a value deletes the attribute.
@@ -71,7 +71,7 @@ async def attr_(obj, path, vars_, eval_, path_):
     cfg = obj.cfg.kv.gpio
     if len(path) != 3:
         raise click.UsageError("Three path elements (host.controller:pin) required")
-    await node_attr(obj, cfg.prefix + path, vars_, eval_, path_)
+    await node_attr(obj, cfg.prefix + path, **kw)
 
 
 @cli.command()

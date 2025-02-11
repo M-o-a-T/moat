@@ -139,7 +139,7 @@ async def attr__(obj, device, family, write, attr, interval, path, attr_):
 @attr_args
 @click.argument("subpath", nargs=1, type=P, default=P(":"))
 @click.pass_obj
-async def set_(obj, device, family, subpath, vars_, eval_, path_):
+async def set_(obj, device, family, subpath, **kw):
     """Set or delete some random attribute.
 
     For deletion, use '-e ATTR -'.
@@ -155,7 +155,7 @@ async def set_(obj, device, family, subpath, vars_, eval_, path_):
         f, d = device.split(".", 2)[0:2]
         fd = (int(f, 16), int(d, 16))
 
-    res = await node_attr(obj, obj.cfg.kv.ow.prefix + fd + subpath, vars_, eval_, path_)
+    res = await node_attr(obj, obj.cfg.kv.ow.prefix + fd + subpath, **kw)
     if res and obj.meta:
         yprint(res, stream=obj.stdout)
 

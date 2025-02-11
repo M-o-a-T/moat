@@ -30,7 +30,8 @@ new group is returned so you can attach more commands to it if you want.
 `moat.util.attr_args` attaches MoaT-KV's generic parameter+value options.
 
 `moat.util.process_args` takes a dict (usually) and the generic options'
-variables (``vars_``, ``eval_``, ``path_``) and applies them.
+variables (``set_``, ``vars_``, ``eval_``, ``path_``, ``proxy_``)
+and applies them.
 
 It's the caller's job to verify that the result is sane. TODO: support
 using a validation library (probably jsonschema).

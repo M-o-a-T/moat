@@ -108,7 +108,7 @@ async def list_(obj, **k):
 @click.option("-l", "--last", nargs=2, help="Previous change entry (node serial)")
 @click.option("-n", "--new", is_flag=True, help="This is a new entry.")
 @click.pass_obj
-async def set_(obj, vars_, eval_, path_, last, new):
+async def set_(obj, last, new, **kw):
     """
     Store a value at some MoaT-KV position.
 
@@ -122,16 +122,15 @@ async def set_(obj, vars_, eval_, path_, last, new):
     MoaT-KV entries typically are mappings. Use a colon as the path if you
     want to replace the top level.
     """
-    args = {}
     if new:
         if last:
             raise click.UsageError("'new' and 'last' are mutually exclusive")
-        args["chain"] = None
+        kw["chain"] = None
     else:
         if last:
-            args["chain"] = {"node": last[0], "tick": int(last[1])}
+            kw["chain"] = {"node": last[0], "tick": int(last[1])}
 
-    res = await node_attr(obj, obj.path, vars_, eval_, path_, **args)
+    res = await node_attr(obj, obj.path, **kw)
 
     if obj.meta:
         yprint(res, stream=obj.stdout)

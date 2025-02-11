@@ -157,12 +157,12 @@ async def delete_(obj):
 @at_cli.command("set")
 @attr_args
 @click.pass_obj
-async def attr_(obj, vars_, eval_, path_):
+async def attr_(obj, **kw):
     """Modify a given akumuli series (copier)."""
     if not vars_ and not eval_ and not path_:
         return
 
-    res = await node_attr(obj, obj.server._path + obj.subpath, vars_, eval_, path_)
+    res = await node_attr(obj, obj.server._path + obj.subpath, **kw)
     if obj.meta:
         yprint(res, stream=obj.stdout)
 

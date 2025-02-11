@@ -39,10 +39,12 @@ class CtxObj[T_Ctx](ABC):
     __ctx: AbstractAsyncContextManager | None = None
 
     @overload
-    def _ctx(self) -> AsyncIterator[T_Ctx]: ...
+    def _ctx(self) -> AsyncIterator[T_Ctx]:
+        ...
 
     @abstractmethod
-    def _ctx(self) -> AbstractAsyncContextManager[T_Ctx]: ...
+    def _ctx(self) -> AbstractAsyncContextManager[T_Ctx]:
+        ...
 
     async def __aenter__(self) -> T_Ctx:
         if self.__ctx is not None:

@@ -121,13 +121,13 @@ async def sleep_ms(ms):
     await sleep(ms / 1000)
 
 
-async def wait_for(timeout, p, *a, **k):  # noqa:ASYNC109
+async def wait_for(timeout, p, *a, **k):
     "timeout if the call to p(*a,**k) takes longer than @timeout seconds"
     with _anyio.fail_after(timeout):
         return await p(*a, **k)
 
 
-async def wait_for_ms(timeout, p, *a, **k):  # noqa:ASYNC109
+async def wait_for_ms(timeout, p, *a, **k):
     "timeout if the call to p(*a,**k) takes longer than @timeout milliseconds"
     with _anyio.fail_after(timeout / 1000):
         return await p(*a, **k)
@@ -158,7 +158,7 @@ def every(t, p, *a, **k):
 
 async def idle():
     "sleep forever"
-    while True:  # noqa:ASYNC110
+    while True:
         await _anyio.sleep(60 * 60 * 12)  # half a day
 
 
@@ -185,7 +185,7 @@ def TaskGroup():
     "A TaskGroup subclass (generator) that supports `spawn` and `cancel`"
 
     global _tg, _tgt  # noqa:PLW0603 pylint:disable=global-statement
-    if "pytest" in sys.modules or _tgt is None:  # noqa:SIM108
+    if "pytest" in sys.modules or _tgt is None:
         tgt = type(_anyio.create_task_group())
     else:
         tgt = _tgt

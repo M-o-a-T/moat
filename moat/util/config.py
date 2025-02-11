@@ -8,9 +8,13 @@ from importlib import import_module
 from pathlib import Path as FSPath
 
 from .yaml import yload
-from .path import Path
 from .dict import attrdict
 from .merge import merge
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .path import Path
 
 __all__ = ["CFG", "ensure_cfg"]
 CFG = attrdict()

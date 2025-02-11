@@ -162,7 +162,7 @@ class attrdict(dict):
         px = path[-1]
         if value is NotGiven:
             v.pop(px, None)
-        elif isinstance(v,list) and px is None:
+        elif isinstance(v, list) and px is None:
             v.append(value)
         elif not isinstance(value, Mapping):
             v[px] = value

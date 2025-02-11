@@ -30,7 +30,7 @@ class _MsgRW:
         if self.path is not None:
             p = self.path
             if p == "-":
-                if self._mode[0] == "r":  # noqa:SIM108 pylint: disable=unsubscriptable-object
+                if self._mode[0] == "r":  # pylint: disable=unsubscriptable-object
                     p = "/dev/stdin"
                 else:
                     p = "/dev/stdout"

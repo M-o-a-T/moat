@@ -62,7 +62,15 @@ def _no_config(*a, **k):  # noqa:ARG001
     warnings.warn("Call to logging config ignored", stacklevel=2)
 
 
-def attr_args(proc=None, with_combined='s', with_path=True, with_eval=True, with_var=True, with_proxy=False, par_name="Parameter"):
+def attr_args(
+    proc=None,
+    with_combined="s",
+    with_path=True,
+    with_eval=True,
+    with_var=True,
+    with_proxy=False,
+    par_name="Parameter",
+):
     """
     Add an option for setting possibly-hierarchical values to `click.command`.
 
@@ -101,8 +109,8 @@ def attr_args(proc=None, with_combined='s', with_path=True, with_eval=True, with
             if with_proxy:
                 ht.append(":name")
             ht = "|".join(ht)
-            
-            args = ( "--set",) + (("-e,") if with_eval else ())
+
+            args = ("--set",) + (("-e,") if with_eval else ())
             proc = click.option(
                 *args,
                 "set_",
@@ -113,7 +121,7 @@ def attr_args(proc=None, with_combined='s', with_path=True, with_eval=True, with
                 hidden=not with_eval or not with_combined,
             )(proc)
 
-        args = ( "--path",) + (("-p,") if with_path else ())
+        args = ("--path",) + (("-p,") if with_path else ())
         proc = click.option(
             *args,
             "path_",
@@ -124,7 +132,7 @@ def attr_args(proc=None, with_combined='s', with_path=True, with_eval=True, with
             hidden=not with_path or not with_combined,
         )(proc)
 
-        args = ( "--eval",) + (("-e,") if with_eval else ())
+        args = ("--eval",) + (("-e,") if with_eval else ())
         proc = click.option(
             *args,
             "eval_",
@@ -135,7 +143,7 @@ def attr_args(proc=None, with_combined='s', with_path=True, with_eval=True, with
             hidden=not with_eval or not with_combined,
         )(proc)
 
-        args = ( "--var",) + (("-v,") if with_var else ())
+        args = ("--var",) + (("-v,") if with_var else ())
         proc = click.option(
             *args,
             "vars_",
@@ -146,7 +154,7 @@ def attr_args(proc=None, with_combined='s', with_path=True, with_eval=True, with
             hidden=not with_var or not with_combined,
         )(proc)
 
-        args = ( "--proxy",) + (("-P,") if with_proxy else ())
+        args = ("--proxy",) + (("-P,") if with_proxy else ())
         proc = click.option(
             *args,
             "proxy_",
@@ -207,7 +215,7 @@ def process_args(val, set_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=
                 v = P(":")
             elif v[0] == ".":
                 v = P(v[1:])
-            elif v[0 == ":":]:
+            elif v[0 == ":" :]:
                 v = Proxy(v[1:])
             else:
                 try:
@@ -217,7 +225,7 @@ def process_args(val, set_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=
                         v = float(v)
                     except ValueError:
                         try:
-                            if '.' in v:
+                            if "." in v:
                                 v = P(v)
                             else:
                                 raise ValueError("noPath")
@@ -255,9 +263,9 @@ def process_args(val, set_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=
     if set_:
         dd = data()
     else:
-        dd = [(len(k),k,v) for k,v in data()]
+        dd = [(len(k), k, v) for k, v in data()]
         dd.sort()
-        dd = [(k,v) for _l,k,v in dd]
+        dd = [(k, v) for _l, k, v in dd]
 
     for k, v in dd:
         if isinstance(k, str):

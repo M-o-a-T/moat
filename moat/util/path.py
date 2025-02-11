@@ -173,7 +173,7 @@ class Path(collections.abc.Sequence):
 
         def _escol(x, spaces=True):
             x = x.replace(":", "::")
-            if slash:  # noqa: SIM108
+            if slash:
                 x = x.replace("/", ":|")
             else:
                 x = x.replace(".", ":.")

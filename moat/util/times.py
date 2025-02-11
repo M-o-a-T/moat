@@ -487,7 +487,7 @@ def time_until(args, t_now=None, invert=False, back=False):
                 return p.now
             p.res = p.now
             check_day(True)
-            if back:  # noqa:SIM108  # use x-if-y-else-z
+            if back:  # use x-if-y-else-z
                 d = p.res - dt.timedelta(dow - 1)  # until end-of-week
             else:
                 d = p.res + dt.timedelta(7 - dow)  # until end-of-week

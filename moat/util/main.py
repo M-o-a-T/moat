@@ -62,24 +62,58 @@ def _no_config(*a, **k):  # noqa:ARG001
     warnings.warn("Call to logging config ignored", stacklevel=2)
 
 
-def attr_args(proc=None, with_path=True, with_eval=True, with_proxy=False, par_name="Parameter"):
+def attr_args(proc=None, with_combined='s', with_path=True, with_eval=True, with_var=True, with_proxy=False, par_name="Parameter"):
     """
-    Attach the standard ``-v``/``-e``/``-p`` arguments to a ``click.command``.
-    Passes ``vars_``/``eval_``/``path_`` args.
+    Add an option for setting possibly-hierarchical values to `click.command`.
+
+    New behavior (default): use ``-s``/``--set`` with prefix-tagged values:
+    * ~str
+    * =value (``=-``/``=t``/``=f``/``=n`` for ``undefined``/`True`/`False`/`None`)
+    * .path (except for a single ``:`` for an empty path)
+    * :named_proxy
+
+    These are enabled (rather, displayed) by passing ``True`` in
+    ``with_val``, ``with_eval``, ``with_path``, and ``with_proxy``,
+    respectively. The latter defaults to `False`, all others to `True`.
+
+    Old behavior (hidden in new mode): Adds separate
+    ``-v``/``--var``, ``-e``/``--eval``, -p``/``--path, and
+    ``-P``/``--proxy`` arguments.
 
     Use `attr_args(with_path=False)` to skip path arguments. Ditto for
     `with_eval`.
+
+    Use ``with_combined=False`` to get the old behavior.
+    Use ``with_combined=LETTER`` to change the default from ``-s``.
+
+    Old-behavior long options are availabile, but hidden, in "new" mode.
     """
 
     def _proc(proc):
-        args = (
-            (
-                "-p",
-                "--path",
-            )
-            if with_path
-            else ("--hidden_path",)
-        )
+        if with_combined:
+            ht = []
+            if with_var:
+                ht.append("~str")
+            if with_eval:
+                ht.append("=value")
+            if with_path:
+                ht.append(".path")
+            if with_proxy:
+                ht.append(":name")
+            ht = "|".join(ht)
+            
+            args = ( "--set",) + (("-e,") if with_eval else ())
+            proc = click.option(
+                *args,
+                "set_",
+                nargs=2,
+                type=(P, str),
+                multiple=True,
+                help=f"{par_name} (name {ht})",
+                hidden=not with_eval or not with_combined,
+            )(proc)
+
+        args = ( "--path",) + (("-p,") if with_path else ())
         proc = click.option(
             *args,
             "path_",
@@ -87,17 +121,10 @@ def attr_args(proc=None, with_path=True, with_eval=True, with_proxy=False, par_n
             type=(P, P),
             multiple=True,
             help=f"{par_name} (name value), as path",
-            hidden=not with_path,
+            hidden=not with_path or not with_combined,
         )(proc)
 
-        args = (
-            (
-                "-e",
-                "--eval",
-            )
-            if with_eval
-            else ("--hidden_eval",)
-        )
+        args = ( "--eval",) + (("-e,") if with_eval else ())
         proc = click.option(
             *args,
             "eval_",
@@ -105,29 +132,30 @@ def attr_args(proc=None, with_path=True, with_eval=True, with_proxy=False, par_n
             type=(P, str),
             multiple=True,
             help=f"{par_name} (name value), evaluated",
-            hidden=not with_eval,
+            hidden=not with_eval or not with_combined,
         )(proc)
 
+        args = ( "--var",) + (("-v,") if with_var else ())
         proc = click.option(
-            "-v",
-            "--var",
+            *args,
             "vars_",
             nargs=2,
             type=(P, str),
             multiple=True,
             help=f"{par_name} (name value)",
+            hidden=not with_var or not with_combined,
         )(proc)
 
-        if with_proxy:
-            proc = click.option(
-                "-P",
-                "--proxy",
-                "proxy_",
-                nargs=2,
-                type=(P, str),
-                multiple=True,
-                help="Remote proxy (name value)",
-            )(proc)
+        args = ( "--proxy",) + (("-P,") if with_proxy else ())
+        proc = click.option(
+            *args,
+            "proxy_",
+            nargs=2,
+            type=(P, str),
+            multiple=True,
+            help="Remote proxy (name value)",
+            hidden=not with_proxy or not with_combined,
+        )(proc)
 
         return proc
 
@@ -137,19 +165,21 @@ def attr_args(proc=None, with_path=True, with_eval=True, with_proxy=False, par_n
         return _proc(proc)
 
 
-def process_args(val, vars_=(), eval_=(), path_=(), proxy_=(), no_path=False, vs=None):
+def process_args(val, set_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=False, vs=None):
     """
-    process ``vars_``/``eval_``/``path_``/``proxy_`` args.
+    process ``set_``/``vars_``/``eval_``/``path_``/``proxy_`` args.
 
     Arguments:
         vd: dict to modify
-        vars_, eval_, path_, proxy_: via `attr_args`
+        set_, vars_, eval_, path_, proxy_: via `attr_args`
         vs: if given: set of vars
     Returns:
         the new value.
     """
     n = 0
     # otherwise these are assumes to be empty tuples.
+    if isinstance(vars_, Mapping):
+        set_ = set_.items()
     if isinstance(vars_, Mapping):
         vars_ = vars_.items()
     if isinstance(eval_, Mapping):
@@ -160,6 +190,40 @@ def process_args(val, vars_=(), eval_=(), path_=(), proxy_=(), no_path=False, vs
         proxy_ = proxy_.items()
 
     def data():
+        for k, v in set_:
+            if v[0] == "~":
+                v = v[1:]
+            elif v == "=-":
+                v = NotGiven
+            elif v == "=t":
+                v = True
+            elif v == "=f":
+                v = False
+            elif v == "=n":
+                v = None
+            elif v[0] == "=":
+                v = eval(v[1:])  # pylint: disable=W0631
+            elif v == ":":
+                v = P(":")
+            elif v[0] == ".":
+                v = P(v[1:])
+            elif v[0 == ":":]:
+                v = Proxy(v[1:])
+            else:
+                try:
+                    v = int(v)
+                except ValueError:
+                    try:
+                        v = float(v)
+                    except ValueError:
+                        try:
+                            if '.' in v:
+                                v = P(v)
+                            else:
+                                raise ValueError("noPath")
+                        except ValueError:
+                            pass  # leave it as a string
+            yield k, v
         for k, v in vars_:
             yield k, v
         for k, v in eval_:
@@ -188,10 +252,14 @@ def process_args(val, vars_=(), eval_=(), path_=(), proxy_=(), no_path=False, vs
                 v = Proxy(v)
                 yield k, v
 
-    dd = [(len(k),k,v) for k,v in data().values()]
-    dd.sort()
+    if set_:
+        dd = data()
+    else:
+        dd = [(len(k),k,v) for k,v in data()]
+        dd.sort()
+        dd = [(k,v) for _l,k,v in dd]
 
-    for _l, k, v in dd:
+    for k, v in dd:
         if isinstance(k, str):
             k = P(k)
         if not len(k):

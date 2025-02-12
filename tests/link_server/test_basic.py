@@ -26,7 +26,7 @@ async def test_basic(cfg):
         async def cl(*, task_status):
             c = await sf.client()
 
-            async with c.monitor(P("test.here")) as mon:
+            async with c.monitor(P(":R.test.here")) as mon:
                 task_status.started()
                 async for m in mon:
                     assert m.data == "Hello"
@@ -40,10 +40,21 @@ async def test_basic(cfg):
         await sf.tg.start(cl)
 
         c = await sf.client()
-        r = await c.cmd(P("i.ping"),"pling")
+        r = await c.cmd(P("i.乒"),"pling")
         assert r.args == ['乓', 'pling'], r
+        a,b = r  # we can iterate the result to get at the data
+        assert (a,b) == ('乓', 'pling'), (a,b)
 
         om = MsgMeta(origin="me!")
-        await c.send(P("test.here"), "Hello", meta=om)
+        await c.send(P(":R.test.here"), "Hello", meta=om)
         with anyio.fail_after(1):
             await evt.wait()
+
+        r,m = await c.cmd(P("d.get"),P("test.here"))
+        assert r == "Hello"
+        assert m.origin=="me!"
+
+        r,m = await c.cmd(P("d.get"),P(":"))
+        assert r["test"]==123
+        assert m.origin=="INIT"
+

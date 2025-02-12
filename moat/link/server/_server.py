@@ -282,6 +282,7 @@ class ServerClient(SubConn, CmdCommon):
 
             # periodic ping
             while True:
+                # XXX configurable; only when idle
                 await anyio.sleep(30)
                 with anyio.fail_after(self.server.cfg.server.ping_timeout):
                     await cmd.cmd(P("i.ping"))
@@ -317,8 +318,7 @@ class ServerClient(SubConn, CmdCommon):
         * data
         * metadata
         """
-
-        d = self.server.data[msg[1]]
+        d = self.server.data[msg[0]]
         await msg.result(d.data, d.meta)
 
     async def cmd_d_set(self, msg):
@@ -676,7 +676,7 @@ class Server:
         self.cfg = cfg
 
         if init is not NotGiven:
-            self.data.set(Path(), init, MsgMeta(name=name))
+            self.data.set(Path(), init, MsgMeta(origin="INIT"))
 
         self.logger = logging.getLogger("moat.link.server." + name)
 
@@ -720,42 +720,19 @@ class Server:
         if save:
             self.write_monitor((path, data, meta))
 
-    async def monitor(self, action: str, delay: anyio.abc.Event = None, **kw):
+    async def _monitor(self, task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED):
         """
-        The task that hooks to the backend's event stream for receiving messages.
-
-        Args:
-          action: The action name
-          delay: an optional event to wait for, after starting the
-            listener but before actually processing messages. This helps to
-            avoid consistency problems on startup.
+        The task that listens to the backend's message stream and updates
+        the data store.
         """
-        cmd = getattr(self, "user_" + action)
-        try:
-            async with self.backend.monitor(self.cfg.server.root / action, **kw) as stream:
-                if delay is not None:
-                    await delay.wait()
-
-                async for resp in stream:
-                    msg = unpacker(resp.payload)
-                    if not msg:  # None, empty, whatever
-                        continue
-                    self.logger.debug("Recv %s: %r", action, msg)
-                    try:
-                        with anyio.fail_after(15):
-                            await self.tock_seen(msg.get("tock", 0))
-                            await cmd(msg)
-                    except TimeoutError:
-                        self.logger.error("CmdTimeout! %s: %r", action, msg)
-                        raise
-        except (CancelledError, anyio.get_cancelled_exc_class()):
-            # self.logger.warning("Cancelled %s", action)
-            raise
-        except BaseException as exc:
-            self.logger.exception("Died %s: %r", action, exc)
-            raise
-        else:
-            self.logger.info("Stream ended %s", action)
+        self.logger.info("********* Mon start")
+        chop = len(self.cfg.root)
+        async with self.backend.monitor(P(":R.#"), raw=False) as stream:
+            self.logger.info("********* Mon started")
+            task_status.started()
+            async for msg in stream:
+                self.logger.debug("Recv: %r", msg)
+                self.data.set(Path.build(msg.topic[chop:]), msg.data,msg.meta)
 
     async def _pinger(
         self,
@@ -1512,6 +1489,7 @@ class Server:
                 link = [{"host": h, "port": p} for h, p in ports]
             self.link_data = link
 
+            await tg.start(self._monitor)
             await tg.start(self._read_main)
             await tg.start(self._read_initial)
 
@@ -1758,7 +1736,7 @@ class Server:
             if exc is None:
                 exc = "Cancelled"
             try:
-                with anyio.move_on_after(2, shield=True):
+                with anyio.move_on_after(0.02, shield=True):
                     if c is not None:
                         await c.cmd(P("i.error"), str(exc))
             except (anyio.BrokenResourceError, anyio.ClosedResourceError):

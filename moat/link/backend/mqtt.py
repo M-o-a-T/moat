@@ -153,8 +153,8 @@ class Backend(_Backend):
                                     P(":R.error.link.mqtt.meta"),
                                     dict(
                                         topic=top,
-                                        val=oprop,
                                         pattern=topic,
+                                        val=oprop,
                                         msg=repr(exc),
                                     ),
                                 )
@@ -168,7 +168,8 @@ class Backend(_Backend):
                                         P(":R.error.link.mqtt.codec"),
                                         dict(
                                             codec=type(codec).__name__,
-                                            topic=topic,
+                                            topic=top,
+                                            pattern=topic,
                                             val=msg.payload,
                                             msg=repr(exc),
                                         ),
@@ -177,15 +178,15 @@ class Backend(_Backend):
                                 else:
                                     # everything OK
                                     if self.trace:
-                                        self.logger.info("R:%s %r", topic, data)
-                                    yield Message(topic, data, prop, msg)
+                                        self.logger.info("R:%s %r", top, data)
+                                    yield Message(top, data, prop, msg)
                                 continue
                         if raw is False:
                             # don't forward undecodeable messages
                             continue
                         if self.trace:
-                            self.logger.info("R:%s R|%r", topic, msg.payload)
-                        yield RawMessage(topic, msg.payload, prop, msg, exc=err)
+                            self.logger.info("R:%s R|%r", top, msg.payload)
+                        yield RawMessage(top, msg.payload, prop, msg, exc=err)
 
                 yield sub_get(sub)
         except anyio.get_cancelled_exc_class():

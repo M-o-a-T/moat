@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 import time
+from itertools import zip_longest
 
 from moat.link.meta import MsgMeta
 from moat.link.node import Node
@@ -14,7 +15,8 @@ def dump(n):
     """dump a node into a dict"""
     res = {}
     pl = PathLongener()
-    for d, s, da, me in n.dump():
+    for d, s, da, *me in n.dump():
+        me = MsgMeta.restore(me)
         s = pl.long(d, s)  # noqa:PLW2901
         res[s] = (da, me.origin)
     return res
@@ -62,3 +64,18 @@ def test_basic():
     assert n.set(P("a.b.c"), 44, MsgMeta(origin="C", timestamp=9999), force=False) is False
     assert n[P("a.b.c")].data == 43
     assert n[P("a.b.c")].meta.origin == "B"
+
+    assert n.set(P("a.b.e"), 10, MsgMeta(origin="B"))
+    assert n.set(P("a.b.f"), 11, MsgMeta(origin="B"))
+    assert n.set(P("a.b.g.h"), 12, MsgMeta(origin="B"))
+    assert n.set(P("a.b.g.o"), 121, MsgMeta(origin="B"))
+    assert n.set(P("a.b.i"), 13, MsgMeta(origin="B"))
+    assert n.set(P("a.b.j"), 14, MsgMeta(origin="B"))
+    assert n.set(P("a.c"), 15, MsgMeta(origin="B"))
+    assert n.set(P("a.c.d"), 16, MsgMeta(origin="B"))
+    assert n.set(P("a.b.d"), 17, MsgMeta(origin="B"))
+    assert n.set(P("c.b.d"), 18, MsgMeta(origin="B"))
+    assert n.set(P("c.b.f.g"), 19, MsgMeta(origin="B"))
+    assert n.set(P("c.e.t"), 20, MsgMeta(origin="B"))
+    for a,b in zip_longest(n._dump_x(), n.dump()):
+        assert a == b, (a,b)

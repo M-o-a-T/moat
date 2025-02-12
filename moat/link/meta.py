@@ -79,6 +79,18 @@ class MsgMeta:
             setattr(self, k, v)
         self._clean(name)
 
+    def dump(self):
+        if self.kw or self.a and isinstance(self.a[-1],dict):
+            return self.a+[self.kw]
+        return self.a
+
+    @classmethod
+    def restore(cls, a):
+        m = object.__new__(cls)
+        m.kw = pop(a) if a and isinstance(a[-1],dict) else {}
+        m.a = a
+        return m
+
     def __getitem__(self, k):
         if isinstance(k, int):
             return self.a[k]

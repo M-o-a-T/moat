@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from mqttproto._types import PropertyType, ReasonCode
+    from ._types import PropertyType, ReasonCode
 
 
 class MQTTException(Exception):

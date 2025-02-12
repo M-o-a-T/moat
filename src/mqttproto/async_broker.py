@@ -18,8 +18,8 @@ from anyio.abc import (
 from anyio.streams.tls import TLSListener
 from attrs import define, field
 
-from mqttproto._base_client_state_machine import MQTTClientState
-from mqttproto._types import (
+from ._base_client_state_machine import MQTTClientState
+from ._types import (
     MQTTConnectPacket,
     MQTTDisconnectPacket,
     MQTTPacket,
@@ -29,7 +29,7 @@ from mqttproto._types import (
     Pattern,
     ReasonCode,
 )
-from mqttproto.broker_state_machine import (
+from .broker_state_machine import (
     MQTTBrokerClientStateMachine,
     MQTTBrokerStateMachine,
 )

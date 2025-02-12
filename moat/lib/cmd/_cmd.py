@@ -196,7 +196,9 @@ class CmdHandler(CtxObj):
         """
         if proc is None or self._msgs[mid] == proc:
             del self._msgs[mid]
-            if mid < 6:
+            if mid <= 0:
+                pass
+            elif mid < 6:
                 self._id1.add(mid)
             elif L and mid < 64:
                 self._id2.add(mid)

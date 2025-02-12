@@ -101,12 +101,6 @@ class Hello(SubConn, CmdCommon):
         self.auth_data = data
         return True
 
-    async def cmd_i_ping(self, msg) -> bool | None:
-        """
-        乒 ⇒ 乓
-        """
-        await msg.result("乓", *msg.args, **msg.kw)
-
     async def cmd_i_hello(self, msg) -> bool | None:
         """
         Process the remote hello message.

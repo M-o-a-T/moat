@@ -48,8 +48,12 @@ class CmdCommon:
     async def cmd_i_ping(self, msg) -> bool | None:
         """
         乒 ⇒ 乓
+
+        Yes, this is silly, but we gotta test basic UTF-8 compliance *somehow*.
         """
         await msg.result("乓", *msg.args, **msg.kw)
+
+    cmd_i_乒 = cmd_i_ping
 
 
 @asynccontextmanager

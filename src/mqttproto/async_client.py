@@ -422,7 +422,12 @@ class AsyncMQTTClient:
                 MQTTUnsubscribeAckPacket,
             ),
         ):
-            operation = self._pending_operations.pop(packet.packet_id)
+            try:
+                operation = self._pending_operations.pop(packet.packet_id)
+            except KeyError:
+                # happens when shutting down, thus only a warning
+                logger.warning("Operation unknown: %r", packet)
+                return
             operation.response = packet
             operation.event.set()
         elif isinstance(packet, MQTTConnAckPacket):

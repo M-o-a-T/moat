@@ -9,7 +9,10 @@ import logging
 import time
 from contextlib import asynccontextmanager
 
-from mqttproto.async_client import AsyncMQTTClient, Will
+try:
+    from mqttproto.async_client import AsyncMQTTClient, Will
+except ImportError:
+    from moat.lib.mqttproto.async_client import AsyncMQTTClient, Will
 
 from moat.link.meta import MsgMeta
 from moat.mqtt.codecs import NoopCodec

@@ -5,7 +5,10 @@ import logging
 import time
 from contextlib import asynccontextmanager
 
-from mqttproto.async_broker import AsyncMQTTBroker
+try:
+    from mqttproto.async_broker import AsyncMQTTBroker
+except ImportError:
+    from moat.lib.mqttproto.async_broker import AsyncMQTTBroker
 
 from moat.link.client import Link
 from moat.link.server import Server

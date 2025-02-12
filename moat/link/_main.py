@@ -13,7 +13,10 @@ from functools import partial
 from pathlib import Path as FSPath
 
 import asyncclick as click
-from mqttproto import MQTTException
+try:
+    from mqttproto import MQTTException
+except ImportError:
+    from moat.lib.mqttproto import MQTTException
 
 from moat.util import NotGiven, P, Path, load_subgroup
 

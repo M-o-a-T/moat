@@ -9,7 +9,10 @@ import logging
 from contextlib import asynccontextmanager
 
 import outcome
-from mqttproto import RetainHandling
+try:
+    from mqttproto import RetainHandling
+except ImportError:
+    from moat.lib.mqttproto import RetainHandling
 
 from moat.lib.cmd import CmdHandler
 from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx

@@ -60,17 +60,17 @@ class BasicCmd:
         self._result = None
         self._evt = anyio.Event()
 
-    def run(self, link):
+    async def run(self, link):
         "run the command"
         try:
-            res = link.cmd(*self.a, **self.kw)
+            res = await link.cmd(*self.a, **self.kw)
         except anyio.get_cancelled_exc_class():
-            self._result = outcome.Error(CancelledError)
+            self._result = outcome.Error(CancelledError())
             raise
         except Exception as exc:
             self._result = outcome.Error(exc)
         except BaseException:
-            self._result = outcome.Error(CancelledError)
+            self._result = outcome.Error(CancelledError())
             raise
         else:
             self._result = outcome.Value(res)

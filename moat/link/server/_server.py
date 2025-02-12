@@ -14,7 +14,7 @@ from asyncscope import scope
 from moat.lib.cmd import CmdHandler
 from moat.lib.cmd.anyio import run as run_cmd_anyio
 from moat.link.auth import AnonAuth, TokenAuth
-from moat.link.conn import SubConn
+from moat.link.conn import SubConn, CmdCommon
 from moat.link.backend import get_backend
 from moat.link.meta import MsgMeta
 from moat.util.cbor import StdCBOR, CBOR_TAG_MOAT_FILE_ID, CBOR_TAG_MOAT_FILE_END
@@ -240,7 +240,7 @@ class MonitorWriter(CtxObj):
             # bail out if we've been cancelled
 
 
-class ServerClient(SubConn):
+class ServerClient(SubConn, CmdCommon):
     """Represent one (non-server) client."""
 
     _hello: Hello | None = None
@@ -537,7 +537,7 @@ class ServerClient(SubConn):
         else:
             return {"changed": res}
 
-    async def cmd_log(self, msg):
+    async def cmd_i_log(self, msg):
         await self.server.run_saver(path=msg.path, save_state=msg.get("fetch", False))
         return True
 
@@ -547,7 +547,7 @@ class ServerClient(SubConn):
 
         return True
 
-    async def cmd_stop(self, msg):
+    async def cmd_i_stop(self, msg):
         try:
             t = self.tasks[msg.task]
         except KeyError:

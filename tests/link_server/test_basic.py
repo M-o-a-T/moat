@@ -40,6 +40,9 @@ async def test_basic(cfg):
         await sf.tg.start(cl)
 
         c = await sf.client()
+        r = await c.cmd(P("i.ping"),"pling")
+        assert r.args == ['乓', 'pling'], r
+
         om = MsgMeta(origin="me!")
         await c.send(P("test.here"), "Hello", meta=om)
         with anyio.fail_after(1):

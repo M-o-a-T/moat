@@ -293,7 +293,7 @@ class CmdHandler(CtxObj):
             res = self._in_cb(msg)
         except Exception as exc:
             self._debug("Error for %r suppressed: %r", msg, exc)
-            await _final(msg, None, exc)
+            await _final(msg, None, (exc.__class__.__name__, *exc.args))
         else:
             if isinstance(res, Forward):
                 res.start(self)

@@ -9,6 +9,7 @@ from ._base import Codec as _Codec
 from ._base import NoCodecError
 
 import struct
+import ruyaml as yaml
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
@@ -30,6 +31,7 @@ __all__ = ["Codec", "Tag", "ExtraData"]
 
 attrdict = None
 
+SafeRepresenter = yaml.representer.SafeRepresenter
 
 class OutOfData(EOFError):
     "bytes missing"
@@ -52,6 +54,33 @@ class Tag:
 
     def __hash__(self):
         return hash(self.tag) ^ hash(self.value)
+
+
+def _tag_repr(dumper, data):
+    return dumper.represent_list([XTag(data.tag), data.value])
+
+class XTag:
+    def __init__(self, tag):
+        self.tag = tag
+def _xtag_repr(dumper,data):
+    if data.tag>2**28:
+        try:
+            tag = struct.pack(">I",data.tag).decode("ascii")
+            try:
+                int(tag)
+            except ValueError:
+                pass
+            else:
+                tag = str(data.tag)
+        except Exception:
+            breakpoint()
+            tag = str(data.tag)
+    else:
+        tag = str(data.tag)
+    return dumper.represent_scalar("!CBOR",tag)
+
+SafeRepresenter.add_representer(Tag, _tag_repr)
+SafeRepresenter.add_representer(XTag, _xtag_repr)
 
 
 # Original Copyright 2014-2015 Brian Olson

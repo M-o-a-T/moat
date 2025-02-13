@@ -167,7 +167,7 @@ class Codec(_Codec):
             self._buf_pos = 0
 
     def feed(self, data: bytes | bytearray | memoryview) -> Iterator[Any]:
-        "Add additinal input"
+        "Add additional input"
         if not self._buffer:
             self._buffer = data
         else:

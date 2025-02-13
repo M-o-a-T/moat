@@ -126,6 +126,23 @@ Shorter descriptive strings would require 24 additional entries in ``file``'s
 magic pattern file (as it cannot mask the high bits of a string's length
 field), which seems excessive.
 
+Change of status marker
+-----------------------
+
+    =============== =============================
+    Tag             1298360423
+    Data Item       map
+    Semantics       MoaT change-of-status marker
+    Reference       https://github.com/M-o-a-T/moat/blob/main/doc/common/cbor.rst
+    Contact         Matthias Urlichs <matthias@urlichs.de>
+    =============== =============================
+
+This tag ("Mchg") marks a status change in a MoaT message stream.
+
+It is used to note that e.g. an initial state dump is complete, or that the
+switch-over to a new file stream has started.
+
+
 End of file marker
 ------------------
 

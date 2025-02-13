@@ -33,6 +33,7 @@ std_ext = Extension()
 
 CBOR_TAG_MOAT_FILE_ID = 1299145044  # 'MoaT'
 CBOR_TAG_MOAT_FILE_END = 1298493254  # 'MeoF'
+CBOR_TAG_MOAT_CHANGE = 1298493254  # 'Mchg'
 
 
 class StdCBOR(Codec):
@@ -64,6 +65,13 @@ def gen_stop(**kw) -> Tag:
     Generate a MoaT file stop tag
     """
     return Tag(CBOR_TAG_MOAT_FILE_END, kw)
+
+
+def gen_change(**kw) -> Tag:
+    """
+    Generate a MoaT file stop tag
+    """
+    return Tag(CBOR_TAG_MOAT_CHANGE, kw)
 
 
 @std_ext.encoder(27, DProxy)

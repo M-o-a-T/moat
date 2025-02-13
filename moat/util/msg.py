@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import anyio
 
-from .msgpack import packer, stream_unpacker
+from moat.lib.codec import Codec,get_codec
 
 __all__ = ["MsgReader", "MsgWriter"]
 
@@ -20,11 +20,15 @@ class _MsgRW:
 
     _mode: str = None
 
-    def __init__(self, path=None, stream=None):
+    def __init__(self, path=None, stream=None, codec="moat.util.msgpack"):
+        if not isinstance(codec,Codec):
+            codec = get_codec(codec)
+
         if (path is None) == (stream is None):
             raise RuntimeError("You need to specify either path or stream")
         self.path = path
         self.stream = stream
+        self.codec = codec
 
     async def __aenter__(self):
         if self.path is not None:
@@ -44,7 +48,7 @@ class _MsgRW:
 
 
 class MsgReader(_MsgRW):
-    """Read a stream of messages (encoded with MsgPack) from a file.
+    """Read a stream of messages (encoded with some codec) from a file.
 
     Usage::
 
@@ -66,15 +70,13 @@ class MsgReader(_MsgRW):
         super().__init__(*a, **kw)
         self.buflen = buflen
 
-        self.unpack = stream_unpacker()
-
     def __aiter__(self):
         return self
 
     async def __anext__(self):
         while True:
             try:
-                msg = next(self.unpack)
+                msg = next(self.codec)
             except StopIteration:
                 pass
             else:
@@ -83,11 +85,11 @@ class MsgReader(_MsgRW):
             d = await self.stream.read(self.buflen)
             if d == b"":
                 raise StopAsyncIteration
-            self.unpack.feed(d)
+            self.codec.feed(d)
 
 
 class MsgWriter(_MsgRW):
-    """Write a stream of messages to a file (encoded with MsgPack).
+    """Write a stream of messages to a file (encoded with some codec).
 
     Usage::
 
@@ -125,7 +127,7 @@ class MsgWriter(_MsgRW):
         """Write a message (bytes) to the buffer.
 
         Flushing writes a multiple of ``buflen`` bytes."""
-        msg = packer(msg)
+        msg = self.codec.encode(msg)
         self.buf.append(msg)
         self.curlen += len(msg)
         if self.curlen + self.excess >= self.buflen:

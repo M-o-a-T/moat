@@ -442,10 +442,29 @@ class Stream:
         if s_out:
             self.s_out = s_out
 
-    def __getitem__(self, k):
+    def __getitem__(self, k:int|str) -> Any:
+        """
+        Get an item. If the key is numeric, retrieve from the argument
+        list, else from the keywords.
+        """
         if isinstance(k, int):
             return self._args[k]
         return self._kw[k]
+
+    def get(self, k:int|str, default=None) -> Any:
+        """
+        Get an item. Like `__getitem__` but returns a default (None) instead of
+        raising `KeyError` / `IndexError`.
+        """
+        if isinstance(k, int):
+            try:
+                return self._args[k]
+            except IndexError:
+                return default
+        try:
+            return self._kw[k]
+        except KeyError:
+            return default
 
     def __contains__(self, k):
         if isinstance(k, int):
@@ -864,6 +883,7 @@ class Stream:
             raise exc
         await self._skipped()
         await self._qsize(True)
+
 
         try:
             return await self._recv_q.get()

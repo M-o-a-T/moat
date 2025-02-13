@@ -89,6 +89,7 @@ class Scaffold(CtxObj):
         Returns the (first) port the server runs on.
         """
         cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
+        cfg["server"]["ports"]["main"]["port"] = 0
         return (await self.tg.start(self._run_server, cfg, kw))[0]
 
     async def client(self, cfg: dict | None = None):

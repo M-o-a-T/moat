@@ -60,6 +60,8 @@ class MsgMeta:
     You can use indexing to address any other array or keyword value.
     Deleting an array member sets it to ``None``.
 
+    The "source" attribute is used for preventing loops within a program.
+    It is not saved.
     """
 
     a: list[Any] = field(factory=list)
@@ -67,6 +69,8 @@ class MsgMeta:
 
     origin = _gen(0)
     timestamp = _gen(1)
+
+    source:Any = None
 
     def __init__(self, /, name: str | NotGiven | None = None, **kwargs):
         vals = {}

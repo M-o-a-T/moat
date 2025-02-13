@@ -853,6 +853,7 @@ class Stream:
             await self.cmd_in.wait()
 
     def __aiter__(self):
+        self._unwrap()
         return self
 
     async def __anext__(self):

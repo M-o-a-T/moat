@@ -543,6 +543,13 @@ class Stream:
         self._unwrap()
         return self._args
 
+    def __len__(self):
+        self._unwrap()
+        return len(self._args)
+
+    def __bool__(self):
+        return True
+
     @property
     def kw(self):
         "Retrieve the keywords."

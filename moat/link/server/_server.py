@@ -16,8 +16,9 @@ from moat.lib.cmd.anyio import run as run_cmd_anyio
 from moat.link.auth import AnonAuth, TokenAuth
 from moat.link.conn import SubConn, CmdCommon
 from moat.link.backend import get_backend
+from moat.link.exceptions import ClientError
 from moat.link.meta import MsgMeta
-from moat.util.cbor import StdCBOR, CBOR_TAG_MOAT_FILE_ID, CBOR_TAG_MOAT_FILE_END
+from moat.util.cbor import StdCBOR
 from moat.lib.codec.cbor import Tag as CBORTag, CBOR_TAG_CBOR_FILEHEADER
 
 try:
@@ -321,14 +322,6 @@ class ServerClient(SubConn, CmdCommon):
         d = self.server.data[msg[0]]
         await msg.result(d.data, d.meta)
 
-    async def cmd_d_set(self, msg):
-        """Write the data of a sub-node.
-
-        Arguments:
-        * path
-        * data
-        """
-        await self.server.update(msg[1], msg[2], self.name)
 
     async def cmd_d_list(self, msg):
         """Get the child names of a sub-node.
@@ -357,96 +350,37 @@ class ServerClient(SubConn, CmdCommon):
 
         async def _writer(p, n):
             d, sp = ps.short(p)
-            await msg.send(d, sp, n.data, n.meta)
+            await msg.send(d, sp, n.data, *n.meta.dump())
 
-        d = self.server.data[msg[1]]
-        ts = msg[2] if len(msg) > 2 else 0
-        xmin = msg[3] if len(msg) > 3 else 0
-        xmax = msg[4] if len(msg) > 4 else -1
-        async with msg.stream_w:
+        d = self.server.data.get(msg[0], create=False)
+        ts = msg.get(1, 0)
+        xmin = msg.get(2, 0)
+        xmax = msg.get(3, -1)
+        async with msg.stream_w():
             await d.walk(_writer, timestamp=ts, min_depth=xmin, max_depth=xmax)
 
     async def cmd_d_set(self, msg, **kw):
-        """Set a node's value."""
-        if "value" not in msg:
-            raise ClientError("Call 'delete_value' if you want to clear the value")
-        return await self._set_value(msg, value=msg.value, **kw)
+        """Set a node's value.
+        Arguments:
+        * pathname
+        * value
+        * optional: metadata
+
+        You should not call this. Send to the MQTT topic directly.
+        """
+        path = msg[0]
+        value = msg[1]
+        if len(msg) > 2:
+            meta = msg[2]
+        else:
+            meta = MsgMeta(origin=self.name)
+        meta.source="Client"
+
+        self.server.maybe_update(path,value,meta)
 
     async def cmd_d_del(self, msg, **kw):
         """Delete a node's value."""
-        if "value" in msg:
-            raise ClientError("A deleted entry can't have a value")
-
         return await self._set_value(msg, **kw)
-
-    async def _set_value(self, msg, value=NotGiven, root=None, _nulls_ok=False):
-        # TODO drop this as soon as we have server-side user mods
-        if self.user.is_super_root and root is None:
-            _nulls_ok = 2
-
-        if root is None:
-            root = self.root
-            acl = self.acl
-        else:
-            acl = NullACL
-        entry, acl = root.follow_acl(msg.path, acl=acl, acl_key="W", nulls_ok=_nulls_ok)
-        if root is self.root and "match" in self.metaroot:
-            try:
-                self.metaroot["match"].check_value(None if value is NotGiven else value, entry)
-            except ClientError:
-                raise
-            except Exception as exc:
-                self.logger.exception("Err %s: %r", exc, msg)
-                raise ClientError(repr(exc)) from None
-                # TODO pass exceptions to the client
-
-        send_prev = True
-        nchain = msg.get("nchain", 1)
-
-        if msg.get("idem", False) and type(entry.data) is type(value) and entry.data == value:
-            res = attrdict(tock=entry.tock, changed=False)
-            if nchain > 0:
-                res.chain = entry.chain.serialize(nchain=nchain)
-            return res
-
-        if "prev" in msg:
-            if entry.data != msg.prev:
-                raise ClientError(f"Data is {entry.data!r} not {msg.prev!r} at {msg.path}")
-            send_prev = False
-        if "chain" in msg:
-            if msg.chain is None:
-                if entry.data is not NotGiven:
-                    raise ClientChainError(f"Entry already exists at {msg.path}")
-            elif entry.data is NotGiven:
-                raise ClientChainError(f"Entry is new at {msg.path}")
-            elif entry.chain != msg.chain:
-                raise ClientChainError(
-                    f"Chain is {entry.chain!r} not {msg.chain!r} for {msg.path}",
-                )
-            send_prev = False
-
-        res = attrdict()
-        if value is NotGiven:
-            res.changed = entry.data is not NotGiven
-        else:
-            res.changed = entry.data != value
-        if send_prev and entry.data is not NotGiven:
-            res.prev = self.conv.enc_value(entry.data, entry=entry)
-
-        nchain = msg.get("nchain", 1)
-        value = msg.get("value", NotGiven)
-        async with self.server.next_event() as event:
-            await entry.set_data(
-                event,
-                NotGiven if value is NotGiven else self.conv.dec_value(value, entry=entry),
-                server=self.server,
-                tock=self.server.tock,
-            )
-        if nchain != 0:
-            res.chain = entry.chain.serialize(nchain=nchain)
-        res.tock = entry.tock
-
-        return res
 
     async def cmd_d_update(self, msg):
         """
@@ -481,7 +415,7 @@ class ServerClient(SubConn, CmdCommon):
         if deleted:
             await self.server._send_event("info", attrdict(deleted=deleted.serialize()))
 
-    async def cmd_s_state(self, msg):
+    async def cmd_i_state(self, msg):
         """Return some info about this node's internal state"""
         return await self.server.get_state(**msg)
 
@@ -492,24 +426,11 @@ class ServerClient(SubConn, CmdCommon):
         seq = msg.seq
         if not msg.path:
             raise ClientError("You can't delete the root node")
-        nchain = msg.get("nchain", 0)
-        if nchain:
-            await self.send({"seq": seq, "state": "start"})
         ps = PathShortener(msg.path)
-
-        try:
-            entry, acl = self.root.follow_acl(
-                msg.path,
-                acl=self.acl,
-                acl_key="d",
-                nulls_ok=self.nulls_ok,
-            )
-        except KeyError:
-            return False
 
         async def _del(entry, acl):
             res = 0
-            if entry.data is not None and acl.allows("d"):
+            if entry.data is not None:
                 async with self.server.next_event() as event:
                     evt = await entry.set_data(event, NotGiven, server=self, tock=self.server.tock)
                     if nchain:
@@ -542,10 +463,14 @@ class ServerClient(SubConn, CmdCommon):
         return True
 
     async def cmd_s_save(self, msg):
-        full = msg.get("full", False)
-        await self.server.save(path=msg.path, full=full)
+        prefix = msg.get("prefix",P(":"))
+        await self.server.save(path=msg["path"], prefix=prefix)
 
         return True
+
+    async def cmd_s_load(self, msg):
+        prefix = msg.get("prefix",P(":"))
+        return await self.server.load(path=msg["path"], prefix=prefix)
 
     async def cmd_i_stop(self, msg):
         try:
@@ -704,23 +629,20 @@ class Server:
             res.append(self.last_auth)
         return res
 
-    def maybe_update(self, path, data, meta, *, save=True):
+
+    def maybe_update(self, path, data, meta):
         """
         A data item arrives.
 
         Update our store if it's newer.
         """
-        d = self.data.get(path)
-        if d.meta is not None and d.meta.timestamp >= meta.timestamp:
-            self.logger.debug("No Update %s: %r / %r", path, d.meta, meta)
-            return
-        d.data = data
-        d.meta = meta
+        if not self.data.set(path,data,meta):
+            return False
+        self.write_monitor((path, data, meta))
+        return True
 
-        if save:
-            self.write_monitor((path, data, meta))
 
-    async def _monitor(self, task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED):
+    async def _backend_monitor(self, task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED):
         """
         The task that listens to the backend's message stream and updates
         the data store.
@@ -732,7 +654,21 @@ class Server:
             task_status.started()
             async for msg in stream:
                 self.logger.debug("Recv: %r", msg)
-                self.data.set(Path.build(msg.topic[chop:]), msg.data,msg.meta)
+                topic = msg.topic[chop:]
+                if topic and topic[0] == "run":
+                    continue
+
+                msg.meta.source="Mon"
+                self.maybe_update(Path.build(topic), msg.data, msg.meta)
+
+    async def _backend_sender(self, task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED):
+        rdr = self.write_monitor.reader(999)
+        task_status.started()
+        async for p,d,m in rdr:
+            if m.source == "Mon":
+                continue
+            await self.backend.send(topic=P(":R")+p, payload=d, meta=m)
+
 
     async def _pinger(
         self,
@@ -1217,6 +1153,7 @@ class Server:
         path: str = None,
         stream: io.IOBase = None,
         local: bool = False,
+        prefix: Path=P(":"),
         authoritative: bool = False,
     ):
         """Load data from this stream
@@ -1229,32 +1166,26 @@ class Server:
         """
         longer = PathLongener(())
 
-        if local and self.node.tick is not None:
-            raise RuntimeError("This server already has data.")
-        elif not local and self.node.tick is None:
-            raise RuntimeError("This server is not yet operational.")
-        async with MsgReader(path=path, stream=stream) as rdr:
-            async for m in rdr:
-                if "value" in m:
-                    longer(m)
-                    if "tock" in m:
-                        await self.tock_seen(m.tock)
-                    else:
-                        m.tock = self.tock
-                    m = UpdateEvent.deserialize(self.root, m, cache=self.node_cache, nulls_ok=True)
-                    await self.tock_seen(m.tock)
-                    await m.entry.apply(m, server=self, root=self.paranoid_root, loading=True)
-                elif "info" in m:
-                    await self._process_info(m["info"])
-                elif "nodes" in m or "known" in m or "deleted" in m or "tock" in m:  # XXX LEGACY
-                    await self._process_info(m)
-                else:
-                    self.logger.warning("Unknown message in stream: %s", repr(m))
+        upd,skp,met = 0,0,[]
 
-        if authoritative:
-            self._discard_all_missing()
+        async with MsgReader(path=path, stream=stream, codec="moat.util.cbor") as rdr:
+            async for m in rdr:
+                if isinstance(m,CBORTag) and m.tag == CBOR_TAG_CBOR_FILEHEADER:
+                    m = m.value
+                if isinstance(m,CBORTag):
+                    met.append(m)
+                    continue
+                d,p,data,*mt = m
+                path = longer.long(d,p)
+                meta = MsgMeta.restore(mt)
+                meta.source=str(path)
+                if self.maybe_update(prefix+path,data,meta):
+                    upd += 1
+                else:
+                    skp += 1
 
         self.logger.debug("Loading finished.")
+        return (upd,skp,met)
 
     def _discard_all_missing(self):
         for n in self._nodes.values():
@@ -1265,26 +1196,61 @@ class Server:
             if len(lk):
                 n.report_superseded(lk, local=True)
 
-    async def _save(self, writer, shorter, nchain=-1, full=False):
+    async def _save(self, writer:Callable, shorter:PathShortener, hdr:bool|CBORTag=True, ftr:bool|CBORTag=True, prefix=P(":"),**kw):
         """Save the current state."""
-
-        async def saver(entry):
-            if entry.data is NotGiven:
+        async def saver(path, data):
+            if data.data is NotGiven and data.meta is None:
                 return
-            res = entry.serialize(nchain=nchain)
-            shorter(res)
-            await writer(res)
+            d,p = shorter.short(path)
+            await writer([d,p,data.data,*data.meta.dump()])
 
-        msg = await self.get_state(nodes=True, known=True, deleted=True)
+
+        if hdr:
+            if hdr is True:
+                kw["state"] = self.get_state()
+                hdr = self.gen_hdr_start(**kw)
+            await writer(hdr)
+
         # await writer({"info": msg})
-        await writer(msg)  # XXX legacy
-        await self.root.walk(saver, full=full)
+        await self.data[prefix].walk(saver, timestamp=kw.get("timestamp",0))
 
-    async def save(self, path: str = None, stream=None, full=True):
+        if ftr:
+            if ftr is True:
+                ftr = self.gen_hdr_stop()
+            await writer(ftr)
+
+    def gen_hdr_start(self, name, mode="full", **kw):
+        """Return the CBOR tag for a start-of-file record"""
+        from moat.util.cbor import gen_start
+        fn=anyio.Path(name).name
+        mstr = f"MoaT-Link {mode} {fn !r}"
+        mstr += " "*(25-len(mstr))
+        kw["mode"] = mode
+        kw["name"] = name
+
+        return gen_start(mstr,**kw)
+
+    def gen_hdr_stop(self, **kw):
+        """Return the CBOR tag for an end-of-file record"""
+        from moat.util.cbor import gen_stop
+
+        return gen_stop(**kw)
+    
+    def gen_hdr_change(self, **kw):
+        """Return the CBOR tag that describes a change"""
+        from moat.util.cbor import gen_change
+
+        return gen_change(TAG_Mchg, kw)
+    
+
+    def get_state(self):
+        return dict("")
+
+    async def save(self, path: str = None, stream=None, **kw):
         """Save the current state to ``path`` or ``stream``."""
         shorter = PathShortener([])
-        async with MsgWriter(path=path, stream=stream) as mw:
-            await self._save(mw, shorter, full=full)
+        async with MsgWriter(path=path, stream=stream, codec="moat.util.cbor") as mw:
+            await self._save(mw, shorter, name=path, **kw)
 
     async def save_stream(
         self,
@@ -1387,10 +1353,34 @@ class Server:
                     raise
                 done.set_error(err)
             finally:
-                with anyio.CancelScope(shield=True):
-                    sd.set()
+                sd.set()
 
-    async def run_saver(self, path: anyio.Path = None):
+    async def _flush_deleted(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        task_status.started()
+        await anyio.sleep(100)
+
+        async def _walk(d) -> bool:
+            # return True if we need to keep this
+            has_any = False
+            await anyio.sleep(0.1)
+            drop = set()
+            for k,v in d.items():
+                if await _walk(v):
+                    has_any = True
+                else:
+                    drop.add(k)
+            for k in drop:
+                del d[k]
+            if has_any or d._data is not NotGiven:
+                return True
+            return d.meta is None or d.meta.timestamp < self.cfg.timeout.delete
+
+        while True:
+            await _walk(self.data)
+
+            await anyio.sleep(self.cfg.timeout.delete/20)
+
+    async def run_saver(self, path: anyio.Path = None, wait:bool=True):
         """
         Start a task that continually saves to disk.
 
@@ -1470,6 +1460,7 @@ class Server:
 
         async with (
             anyio.create_task_group() as _tg,
+            Broadcaster(send_last=True) as self.write_monitor,
             get_backend(self.cfg, name="main." + self.name, will=will_data) as self.backend,
         ):
             if tg is None:
@@ -1489,7 +1480,8 @@ class Server:
                 link = [{"host": h, "port": p} for h, p in ports]
             self.link_data = link
 
-            await tg.start(self._monitor)
+            await tg.start(self._backend_monitor)
+            await tg.start(self._backend_sender)
             await tg.start(self._read_main)
             await tg.start(self._read_initial)
 
@@ -1503,6 +1495,8 @@ class Server:
 
             task_status.started(ports)
             self.logger.debug("STARTUP DONE")
+
+            await tg.start(self._flush_deleted)
 
             # Auth updating
             while True:
@@ -1641,7 +1635,7 @@ class Server:
                             return dh, d.value
                         depth, path, data, meta = d
                         path = pl.long(depth, path)
-                        self._maybe_update(path, data, meta)
+                        self.maybe_update(path, data, meta)
 
                 raise ValueError("no end tag")
 
@@ -1748,108 +1742,6 @@ class Server:
 
 
 class old_stuff:
-    @asynccontextmanager
-    async def next_event(self):
-        """A context manager which returns the next event under a lock.
-
-        This increments ``tock`` because that increases the chance that the
-        node (or split) where something actually happens wins a collision.
-
-        Rationale: if the event is created and leaks to the environment, it
-        needs to be marked as deleted if incomplete. Otherwise the system
-        sees it as "lost" data.
-        """
-        async with self._evt_lock:
-            n = None
-            try:
-                self.node.tick += 1
-                nt = self.node.tick
-                self._tock += 1
-                await self._set_tock()  # updates actor
-                n = NodeEvent(self.node)
-                yield n
-            except BaseException as exc:
-                if n is not None:
-                    self.logger.warning("Deletion %s %d due to %r", self.node, n.tick, exc)
-                    self.node.report_deleted(
-                        RangeSet((nt,)),
-                        self,  # pylint: disable=used-before-assignment
-                    )
-                    with anyio.move_on_after(2, shield=True):
-                        await self._send_event(
-                            "info",
-                            dict(node="", tick=0, deleted={self.node.name: (nt,)}),
-                        )
-                raise
-            finally:
-                self._tock += 1
-                # does not update actor again, once is sufficient
-
-    @property
-    def tock(self):
-        """Retrieve ``tock``.
-
-        Also increments it because tock values may not be re-used."""
-        self._tock += 1
-        return self._tock
-
-    async def tock_seen(self, value):
-        """
-        Updates the current tock value so that it is at least ``value``.
-
-        Args:
-          value (int): some incoming '`tock``.
-        """
-        if value is None:
-            return
-        if self._tock < value:
-            self._tock = value
-            await self._set_tock()
-
-    async def _set_tock(self):
-        if self._actor is not None and self._ready.is_set():
-            await self._actor.set_value((self._tock, self.node.tick))
-
-    def drop_old_event(self, evt, old_evt=NotGiven):
-        """
-        Drop either one event, or any event that is in ``old_evt`` but not
-        in ``evt``.
-        """
-        if old_evt is None:
-            return
-        if old_evt is NotGiven:
-            evt.node.supersede(evt.tick)
-            return
-
-        nt = {}
-        while evt is not None:
-            assert evt.node.name not in nt
-            nt[evt.node.name] = evt.tick
-            evt = evt.prev
-        while old_evt is not None:
-            if nt.get(old_evt.node.name, 0) != old_evt.tick:
-                old_evt.node.supersede(old_evt.tick)
-            old_evt = old_evt.prev
-
-    async def _send_event(self, action: str, msg: dict):
-        """
-        Helper to send an event to the backend's ``action`` endpoint.
-
-        Args:
-          action (str): the endpoint to send to. Prefixed by ``cfg.root``.
-          msg: the message to send.
-        """
-        if "tock" not in msg:
-            msg["tock"] = self.tock
-        else:
-            await self.tock_seen(msg["tock"])
-        if "node" not in msg:
-            msg["node"] = self.node.name
-        if "tick" not in msg:
-            msg["tick"] = self.node.tick
-        self.logger.debug("Send %s: %r", action, msg)
-        await self.backend.send(*self.cfg.server.root, action, payload=msg)
-
     async def serve_old(self, log_path=None, log_inc=False, force=False, ready_evt=None):
         """Task that opens a backend connection and actually runs the server.
 

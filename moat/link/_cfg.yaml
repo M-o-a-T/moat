@@ -14,3 +14,7 @@ client:
 root: !P XXX
 qos: 0
 
+timeout:
+  # time after which deleted entries are flushed
+  delete: 100000
+

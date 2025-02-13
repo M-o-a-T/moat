@@ -41,7 +41,7 @@ class Node:
             self._data = data
             self._meta = meta
 
-    def set(self, item: Path, data: Any, meta: MsgMeta, force: bool = False) -> None:
+    def set(self, item: Path, data: Any, meta: MsgMeta, force: bool = False) -> bool|None:
         """Save new data below this node.
 
         If @tick is earlier than the item's timestamp, always return False.
@@ -79,6 +79,13 @@ class Node:
     def __bool__(self) -> bool:
         "check if data exist"
         return self._data is not NotGiven
+
+    def __eq__(self, other):
+        if self._data != other._data:
+            return False
+        if self._sub != other._sub:
+            return False
+        return True
 
 
     def _dump_x(self):
@@ -150,6 +157,18 @@ class Node:
         "return current metadata"
         return self._meta
 
+    def __delitem__(self, item) -> None:
+        """
+        Remove an item. (It must be empty.)
+
+        **Warning** Don't call this unless the timeout for deletion has passed.
+        """
+        d = self._subs[item]
+
+        if d._subs or d.data is not NotGiven:
+            raise ValueError(item)
+        del self._subs[item]
+
     def __getitem__(self, item) -> Node:
         """Look up the entry.
 
@@ -166,21 +185,35 @@ class Node:
             raise KeyError(item)
         return s
 
-    def get(self, item) -> Node:
-        """Look up an entry. Create if it doesn't exist."""
+    def get(self, item, create=None) -> Node:
+        """Look up an entry. Create if it doesn't exist.
+
+        Unlike data[key], an "empty" key is not an error.
+        """
         if isinstance(item, Path):
             s = self
-            for k in item:
+            for n,k in enumerate(item):
                 try:
                     s = s._sub[k]  # noqa:SLF001
                 except KeyError:
+                    if create is False:
+                        raise
                     s = s._add(k)  # noqa:SLF001
+                else:
+                    if create is True and n==len(item)-1 and s._data is not NotGiven:
+                        raise KeyError(k)
             return s
 
         try:
-            return self._sub[item]
+            res = self._sub[item]
         except KeyError:
+            if create is False:
+                raise
             return self._add(item)
+        else:
+            if create is True and s._data is not NotGiven:
+                raise KeyError(item)
+            return res
 
     def _add(self, item):
         if isinstance(item, Path):
@@ -228,12 +261,12 @@ class Node:
 
         If `proc` raises `StopAsyncIteration`, chop this subtree.
         """
-        todo = [(_name, self)]
+        todo = [(self, _name)]
 
         while todo:
             s, p = todo.pop()
 
-            if min_depth <= len(p) and s.meta.timestamp >= timestamp:
+            if min_depth <= len(p) and s.meta is not None and s.meta.timestamp >= timestamp:
                 try:
                     await proc(p, s)
                 except StopAsyncIteration:
@@ -241,5 +274,5 @@ class Node:
             if max_depth == len(p):
                 continue
 
-            for k, v in self._sub.items():
-                todo.append((_name / k, v))
+            for k, v in s._sub.items():
+                todo.append((v, p / k))

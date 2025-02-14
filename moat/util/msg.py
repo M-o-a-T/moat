@@ -132,7 +132,7 @@ class MsgWriter(_MsgRW):
         self.curlen += len(msg)
         if self.curlen + self.excess >= self.buflen:
             buf = b"".join(self.buf)
-            pos = self.buflen * int((self.curlen + self.excess) / self.buflen)
+            pos = self.buflen * ((self.curlen + self.excess) // self.buflen) - self.excess
             assert pos > 0
             wb, buf = buf[:pos], buf[pos:]
             self.curlen = len(buf)

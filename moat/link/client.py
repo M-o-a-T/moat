@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .schema import Data
     from .schema import SchemaName as S
+    from .backend import Message
 
     from collections.abc import Awaitable
 
@@ -83,24 +84,10 @@ class BasicCmd:
         return self._result.unwrap()
 
 
-class Link(CtxObj, SubConn, CmdCommon):
-    """
-    This class collects and dispatches a number of MoaT links.
-
-    See `Link` for calling conventions.
-    """
-
-    _server: ValueEvent = None
-    _current_server: dict = None
-    _uptodate: bool = False
-    _hello: Hello = None
-
+class _LinkCommon(CtxObj, SubConn, CmdCommon):
     def __init__(self, cfg, name: str | None = None):
         self.cfg = cfg
         self.name = name
-        self._cmdq_w, self._cmdq_r = anyio.create_memory_object_stream(5)
-        self._retry_msgs: set[BasicCmd] = set()
-
         if name is None:
             name = cfg.get("client_id")
         if name is None:
@@ -109,19 +96,9 @@ class Link(CtxObj, SubConn, CmdCommon):
             name = "c_" + "".join(
                 random.choices("bcdfghjkmnopqrstvwxyzBCDFGHJKMNOPQRSTVWXYZ23456789", k=10),
             )
+
+        self._cmdq_w, self._cmdq_r = anyio.create_memory_object_stream(5)
         self.logger = logging.getLogger(f"moat.link.client.{name}")
-
-    async def _mon_server(self, *, task_status):
-        async with self.mqtt.subscription(self.cfg.root) as sub:
-            self._server = ValueEvent()
-            task_status.started(self._server)
-
-            async for msg in sub:
-                self._current_server = msg.msg
-                self._server.set(msg.msg)
-                self._server = ValueEvent()
-
-        return self._handler.stream_r(*a, **kw)
 
     def stream_r(self, *a, **kw) -> Awaitable:
         """
@@ -140,6 +117,58 @@ class Link(CtxObj, SubConn, CmdCommon):
         Complex command, bidirectional
         """
         return self._handler.stream_rw(*a, **kw)
+
+    async def _process_server_cmd(self, msg):
+        # cmd = msg.cmd if isinstance(msg.cmd, (Sequence,Path)) else (msg.cmd,)
+        if self._hello is not None and self._hello.auth_data is None:
+            return await self._hello.cmd_in(msg)
+
+        cmd = "_".join(msg.cmd)
+        return await getattr(self, f"cmd_{cmd}")(msg)
+
+    @asynccontextmanager
+    async def _connect_one(self, remote, data: dict) -> CmdHandler:
+        cmd = CmdHandler(self._process_server_cmd)
+        auth_out = []
+        try:
+            auth_out.append(TokenAuth(data["auth"]["token"]))
+        except KeyError:
+            pass
+        auth_out.append(AnonAuth())
+        self._hello = Hello(cmd, me=self.name, auth_out=auth_out)
+
+        async with TCPConn(cmd, remote_host=remote["host"], remote_port=remote["port"]):
+            self._handler = cmd
+            await self._hello.run()
+            yield cmd
+
+
+class Link(_LinkCommon):
+    """
+    This class combines the back-end link with a connection to a MoaT-Link server.
+    """
+
+    _server: ValueEvent = None
+    _current_server: dict = None
+    _uptodate: bool = False
+    _hello: Hello = None
+
+    def __init__(self, cfg, name: str | None = None):
+        super().__init__(cfg, name=name)
+        self._retry_msgs: set[BasicCmd] = set()
+
+
+    async def _mon_server(self, *, task_status):
+        async with self.mqtt.subscription(self.cfg.root) as sub:
+            self._server = ValueEvent()
+            task_status.started(self._server)
+
+            async for msg in sub:
+                self._current_server = msg.msg
+                self._server.set(msg.msg)
+                self._server = ValueEvent()
+
+        return self._handler.stream_r(*a, **kw)
 
     @asynccontextmanager
     async def _ctx(self):
@@ -163,14 +192,6 @@ class Link(CtxObj, SubConn, CmdCommon):
     def cancel(self):
         "Stop me"
         self.tg.cancel_scope.cancel()
-
-    async def _process_server_cmd(self, msg):
-        # cmd = msg.cmd if isinstance(msg.cmd, (Sequence,Path)) else (msg.cmd,)
-        if self._hello is not None and self._hello.auth_data is None:
-            return await self._hello.cmd_in(msg)
-
-        cmd = "_".join(msg.cmd)
-        return await getattr(self, f"cmd_{cmd}")(msg)
 
     async def _run_server_link(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         # Manager for the server link channel. Repeats running a server
@@ -203,7 +224,7 @@ class Link(CtxObj, SubConn, CmdCommon):
                 pass
             else:
                 # immediately use the new data
-                srv = self._last_link_seen
+                srv = self._last_link
                 self._last_link_seen = anyio.Event()
 
     async def _read_server_link(self, *, task_status=anyio.TASK_STATUS_IGNORED):
@@ -215,8 +236,8 @@ class Link(CtxObj, SubConn, CmdCommon):
             retain_handling=RetainHandling.SEND_RETAINED,
         ) as mon:
             async for msg in mon:
+                self._last_link = msg
                 if task_status is None:
-                    self._last_link = msg
                     self._last_link_seen.set()
                 else:
                     task_status.started(msg)
@@ -271,21 +292,11 @@ class Link(CtxObj, SubConn, CmdCommon):
             try:
                 async with timed_ctx(
                     self.cfg.client.init_timeout,
-                    self._connect_one(remote, srv),
+                    self._connect_one(remote, srv.data),
                 ) as conn:
                     await self._connect_run(task_status=task_status)
             except Exception as exc:
                 self.logger.warning("Link failed: %r", remote, exc_info=exc)
-
-    @asynccontextmanager
-    async def _connect_one(self, remote, srv: Message):
-        cmd = CmdHandler(self._process_server_cmd)
-        self._hello = Hello(cmd, me=self.name, auth_out=[TokenAuth("TOT get token"), AnonAuth()])
-
-        async with TCPConn(cmd, remote_host=remote["host"], remote_port=remote["port"]):
-            self._handler = cmd
-            await self._hello.run()
-            yield cmd
 
     async def _cmd_in(self, msg):
         breakpoint()
@@ -298,3 +309,37 @@ class Link(CtxObj, SubConn, CmdCommon):
     def send(self, *a, **kw):
         "send to this path; see backend doc"
         return self.backend.send(*a, **kw)
+
+
+class BasicLink(_LinkCommon):
+    """
+    Simple direct link to a server.
+    """
+    def __init__(self, cfg, name:str|None, data:dict):
+        super().__init__(cfg, name=name)
+        self.data = data
+
+    async def _ctx(self):
+        link = self.data["link"]
+        if isinstance(link, dict):
+            link = (link,)
+
+        err = None
+        yielded = False
+        for remote in link:
+            try:
+                async with self._connect_one(remote, self.data) as self._handler:
+                    yielded = True
+                    yield self
+                    return
+            except Exception as exc:
+                if yielded:
+                    raise
+                self.logger.warning("Link failed: %r", remote, exc_info=exc)
+                if err is None:
+                    err = exc
+        else:
+            raise ValueError(f"No links in {self.data !r}")
+        raise err
+
+

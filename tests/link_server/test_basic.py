@@ -135,8 +135,6 @@ async def test_ls_save(cfg,tmp_path):
             n.set(p,v,MsgMeta(origin="Test"))
         await data(s)
         await c.cmd(P("s.save"),path=str(fname))
-        print("ENDING 1")
-    print("RESTARTING")
 
     async with Scaffold(cfg, use_servers=True) as sf:
         srv = await sf.server(init={"Hello": "there!", "test": 1})
@@ -146,4 +144,3 @@ async def test_ls_save(cfg,tmp_path):
         res = await c.cmd(P("s.load"),path=str(fname))
         nn = await fetch(c,"a")
         assert n.get(P("a")) == nn
-    print("ENDED")

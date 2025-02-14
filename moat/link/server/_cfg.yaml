@@ -1,9 +1,12 @@
 save:
   dir: "/var/lib/moat/link/data"
+  name: "%Y-%m/%d-%H-%M.save"
+  interval: 1000
 
 timeout:
   monitor: 0.5
   refresh: 100
+  startup: 30
 standalone: true
 
 # the AsyncActor config for syncing servers

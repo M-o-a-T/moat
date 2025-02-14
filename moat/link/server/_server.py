@@ -10,16 +10,21 @@ from anyio.abc import SocketAttribute
 
 from attrs import define, field
 from asyncscope import scope
+from datetime import datetime, UTC
+from collections import defaultdict
 
 from moat.lib.cmd import CmdHandler
 from moat.lib.cmd.anyio import run as run_cmd_anyio
 from moat.link.auth import AnonAuth, TokenAuth
 from moat.link.conn import SubConn, CmdCommon
+from moat.link.client import BasicLink
 from moat.link.backend import get_backend
 from moat.link.exceptions import ClientError
 from moat.link.meta import MsgMeta
-from moat.util.cbor import StdCBOR
+from moat.util.cbor import StdCBOR, CBOR_TAG_MOAT_FILE_ID, CBOR_TAG_MOAT_FILE_END,CBOR_TAG_MOAT_CHANGE
 from moat.lib.codec.cbor import Tag as CBORTag, CBOR_TAG_CBOR_FILEHEADER
+
+from mqttproto import QoS
 
 try:
     from contextlib import asynccontextmanager
@@ -91,6 +96,14 @@ class BadFile(ValueError):
     pass
 
 
+@asynccontextmanager
+async def EventSetter(evt):
+    try:
+        yield
+    finally:
+        evt.set()
+
+
 Stream = anyio.abc.ByteStream
 
 ClosedResourceError = anyio.ClosedResourceError
@@ -136,109 +149,6 @@ class HelloProc:
 
     async def aclose(self):
         self.client.in_stream.pop(0, None)
-
-
-@define
-class SaveWriter(CtxObj):
-    """
-    This class writes a MoaT savefile.
-
-    Usage::
-
-        async with SaveWriter("Started yesterday",
-                              type="main", time=time()) as sw:
-            for x in data:
-                sw.write(x.path,x.data,x.meta)
-            sw["time"] = time()
-        pass # here the file is closed and properly terminated
-    """
-
-    _fn: anyio.Path
-    _txt: str
-    _kw: dict[str, Any]
-    _kw2: dict[str, Any]
-    _fd: anyio.File = field(init=False)
-    _pl: PathShortener = field(init=False)
-    _codec: StdCBOR = field(init=False)
-
-    def __init__(self, fn: anyio.Path, text: str, **kw):
-        self._fn = fn
-        self._txt = txt
-        self._kw = kw
-        self._kw2 = {}
-
-    def __setattr__(self, k, v):
-        self._kw2[k] = v
-
-    async def _ctx(self):
-        self._pl = PathShortener()
-        self._codec = StdCBOR()
-        async with await self._fn.open("wb") as self._fd:
-            await self._fd.write(self._codec.encode(gen_start(self._txt, self._kw)))
-            await self._fd.flush()
-            yield self
-            await self._fd.write(self._codec.encode(gen_stop(self._kw2)))
-            await self._fd.flush()
-
-    async def write(self, path, data, meta):
-        d, p = self._pl(path)
-        await self._fd.write(self._codec.encode((d, p, data, meta)))
-
-    async def flush(self):
-        await self._fd.flush()
-
-
-class MonitorWriter(CtxObj):
-    """
-    This class monitors the MoaT change stream and writes it to a file.
-
-    Usage:
-
-        async with MonitorWriter(server.write_monitor,
-                                 "see SaveWriter args",
-                                 prev=prev_save_filename) as mw:
-            pass # savefile is opened and hooked up
-            await switch_save_stream.wait()
-            mw["time"] = time()
-            mw["next"] = next_save_name()
-        pass # monitor and file are closed here
-    """
-
-    _sc: anyio.CancelScope
-    _mon: Broadcaster
-    _a: list
-    _kw: dict
-    _wr: SaveWriter | None = None
-
-    def __init__(self, mon: Broadcaster, *a, **kw):
-        self._a = a
-        self._kw = kw
-        self._mon = mon
-
-    def __setattr__(self, k, v):
-        self._wr[k] = v
-
-    async def _ctx(self):
-        async def _write(it, wr, evt, *, task_status: anyio.TaskStatus):
-            with anyio.CancelScope() as sc:
-                task_status.started(sc)
-                try:
-                    async for p, d, m in it:
-                        await wr.write(p, d, m)
-                finally:
-                    evt.set()
-
-        async with (
-            _mon.reader(99999) as it,
-            SaveWriter(*self._a, **self._kw) as self._wr,
-            anyio.create_task_group() as tg,
-        ):
-            cs = await tg.start(_write, it, wr)
-            yield self
-            cs.cancel()
-
-            await anyio.sleep(0.01)
-            # bail out if we've been cancelled
 
 
 class ServerClient(SubConn, CmdCommon):
@@ -459,7 +369,7 @@ class ServerClient(SubConn, CmdCommon):
             return {"changed": res}
 
     async def cmd_i_log(self, msg):
-        await self.server.run_saver(path=msg.path, save_state=msg.get("fetch", False))
+        await self.server.run_saver(path=msg["path"], save_state=msg.get("fetch", False))
         return True
 
     async def cmd_s_save(self, msg):
@@ -591,9 +501,11 @@ class Server:
     logger: logging.Logger
 
     last_auth: str | None = None
-    cur_auth: str
+    cur_auth: str = None
 
-    _saver: SaveWriter | None = None
+    _writing: set[str]
+    _writing_done: anyio.Event
+    _stopped: anyio.Event = None
 
     def __init__(self, cfg: dict, name: str, init: Any = NotGiven):
         self.data = Node()
@@ -604,16 +516,11 @@ class Server:
             self.data.set(Path(), init, MsgMeta(origin="INIT"))
 
         self.logger = logging.getLogger("moat.link.server." + name)
+        self._writing = set()
+        self._writing_done = anyio.Event()
 
         # connected clients
         self._clients: set[ServerClient] = set()
-
-        self.cur_auth = gen_ident(20)
-
-    async def _run_save(self, fn: anyio.Path):
-        with anyio.CancelScope() as sc:
-            async with SaveWriter():
-                pass
 
     def refresh_auth(self):
         """
@@ -647,10 +554,8 @@ class Server:
         The task that listens to the backend's message stream and updates
         the data store.
         """
-        self.logger.info("********* Mon start")
         chop = len(self.cfg.root)
-        async with self.backend.monitor(P(":R.#"), raw=False) as stream:
-            self.logger.info("********* Mon started")
+        async with self.backend.monitor(P(":R.#"), raw=False, qos=QoS.AT_LEAST_ONCE, no_local=True) as stream:
             task_status.started()
             async for msg in stream:
                 self.logger.debug("Recv: %r", msg)
@@ -664,8 +569,11 @@ class Server:
     async def _backend_sender(self, task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED):
         rdr = self.write_monitor.reader(999)
         task_status.started()
-        async for p,d,m in rdr:
-            if m.source == "Mon":
+        async for msg in rdr:
+            if isinstance(msg,CBORTag):
+                continue
+            p,d,m = msg
+            if m.source == "Mon" or m.source[0] == "_":
                 continue
             await self.backend.send(topic=P(":R")+p, payload=d, meta=m)
 
@@ -913,9 +821,6 @@ class Server:
                 # node's state, so we now need to find whatever that
                 # node didn't have.
 
-                if authoritative:
-                    # … or not.
-                    self._discard_all_missing()
                 for nst in self._nodes.values():
                     if nst.tick and len(nst.local_missing):
                         self.fetch_missing.add(nst)
@@ -1187,14 +1092,6 @@ class Server:
         self.logger.debug("Loading finished.")
         return (upd,skp,met)
 
-    def _discard_all_missing(self):
-        for n in self._nodes.values():
-            if not n.tick:
-                continue
-            lk = n.local_missing
-
-            if len(lk):
-                n.report_superseded(lk, local=True)
 
     async def _save(self, writer:Callable, shorter:PathShortener, hdr:bool|CBORTag=True, ftr:bool|CBORTag=True, prefix=P(":"),**kw):
         """Save the current state."""
@@ -1219,6 +1116,7 @@ class Server:
                 ftr = self.gen_hdr_stop()
             await writer(ftr)
 
+
     def gen_hdr_start(self, name, mode="full", **kw):
         """Return the CBOR tag for a start-of-file record"""
         from moat.util.cbor import gen_start
@@ -1240,129 +1138,131 @@ class Server:
         """Return the CBOR tag that describes a change"""
         from moat.util.cbor import gen_change
 
-        return gen_change(TAG_Mchg, kw)
+        return gen_change(**kw)
     
 
     def get_state(self):
-        return dict("")
+        return dict()
 
-    async def save(self, path: str = None, stream=None, **kw):
-        """Save the current state to ``path`` or ``stream``."""
+
+    async def save(self, path: str = None, **kw):
+        """Save the current state to ``path``."""
         shorter = PathShortener([])
-        async with MsgWriter(path=path, stream=stream, codec="moat.util.cbor") as mw:
-            await self._save(mw, shorter, name=path, **kw)
+        try:
+            self._writing.add(str(path))
+            async with MsgWriter(path=path, codec="moat.util.cbor") as mw:
+                await self._save(mw, shorter, name=path, **kw)
+        finally:
+            self._writing.remove(str(path))
 
     async def save_stream(
         self,
         path: str = None,
-        stream: anyio.abc.Stream = None,
         save_state: bool = False,
-        done: ValueEvent = None,
-        done_val=None,
+        task_status= anyio.TASK_STATUS_IGNORED,
     ):
-        """Save the current state to ``path`` or ``stream``.
+        """Save the current state to ``path``.
         Continue writing updates until cancelled.
 
         Args:
           path: The file to save to.
-          stream: the stream to save to.
           save_state: Flag whether to write the current state.
             If ``False`` (the default), only write changes.
-          done: set when writing changes commences, signalling
-            that the old save file (if any) may safely be closed.
 
-        Exactly one of ``stream`` or ``path`` must be set.
-
-        This task flushes the current buffer to disk when one second
-        passes without updates, or every 100 messages.
+        This task flushes the current buffer to disk when five seconds
+        pass without updates, or every 100 messages.
         """
         shorter = PathShortener([])
 
-        async with MsgWriter(path=path, stream=stream) as mw:
-            msg = await self.get_state(nodes=True, known=True, deleted=True)
-            # await mw({"info": msg})
-            await mw(msg)  # XXX legacy
-            last_saved = time.monotonic()
-            last_saved_count = 0
-
-            async with Watcher(self.root, full=True) as updates:
-                await self._ready.wait()
-
-                if save_state:
-                    await self._save(mw, shorter, full=True)
-
-                await mw.flush()
-                if done is not None:
-                    s = done.set(done_val)
-                    if s is not None:
-                        await s
-
-                cnt = 0
-                while True:
-                    # This dance ensures that we save the system state often enough.
-                    t = time.monotonic()
-                    td = t - last_saved
-                    if td >= 60 or last_saved_count > 1000:
-                        msg = await self.get_state(nodes=True, known=True, deleted=True)
-                        # await mw({"info": msg})
-                        await mw(msg)  # XXX legacy
-                        await mw.flush()
-                        last_saved = time.monotonic()
-                        last_saved_count = 0
-                        td = -99999  # translates to something large, below
-                        cnt = 0
-
-                    try:
-                        with anyio.fail_after(1 if cnt else 60 - td):
-                            msg = await updates.__anext__()
-                    except TimeoutError:
-                        await mw.flush()
-                        cnt = 0
-                    else:
-                        msg = msg.serialize()
-                        shorter(msg)
-                        last_saved_count += 1
-                        await mw(msg)
-                        if cnt >= 100:
-                            await mw.flush()
-                            cnt = 0
-                        else:
-                            cnt += 1
-
-    async def _saver(
-        self,
-        path: str = None,
-        stream=None,
-        done: ValueEvent = None,
-        save_state=False,
-    ):
-        with anyio.CancelScope() as s:
-            sd = anyio.Event()
-            state = (s, sd)
-            self._savers.append(state)
+        with anyio.CancelScope() as scope:
             try:
-                await self.save_stream(
-                    path=path,
-                    stream=stream,
-                    done=done,
-                    done_val=s,
-                    save_state=save_state,
-                )
-            except OSError as err:
-                if done is None:
-                    raise
-                done.set_error(err)
+                self._writing.add(str(path))
+                rdr = self.write_monitor.reader(999)
+                async with (
+                        anyio.create_task_group() as tg,
+                        MsgWriter(path=path, codec="moat.util.cbor") as mw,
+                        ):
+                    try:
+                        msg = self.gen_hdr_start(name=str(path), mode="full" if save_state else "incr", state=None if save_state else False)
+                        await mw(msg)
+
+                        msg = self.gen_hdr_stop(name=str(path), mode="restart" if save_state else "next")
+                        self.write_monitor(msg)
+                        task_status.started(scope)
+
+                        if save_state:
+                            tg.start_soon(partial(self._save, mw, shorter, hdr=False,ftr=self.gen_hdr_change(state=False)))
+
+
+                        await self._save_stream(rdr,mw, shorter, msg)
+                    except BaseException as exc:
+                        # 
+                        with anyio.move_on_after(2, shield=True):
+                            await mw(self.gen_hdr_stop(mode="error", error=repr(exc)))
+                        raise
+
+                    finally:
+                        with anyio.move_on_after(2, shield=True):
+                            await mw.flush()
             finally:
-                sd.set()
+                self._writing.remove(str(path))
+                self._writing_done.set()
+
+    @staticmethod
+    async def _save_stream(rdr, mw, shorter, ign):
+        # helper for .save_stream() to keep the indent levels down
+
+        last_saved = time.monotonic()
+        last_saved_count = 0
+        TIMEOUT=5
+        MAXMSG=100
+
+        while True:
+            msg = None
+            if last_saved_count:
+                with anyio.move_on_after(TIMEOUT):
+                    msg = await anext(rdr)
+            else:
+                msg = await anext(rdr)
+            if msg is None or msg is ign:
+                pass
+            elif isinstance(msg, (list,tuple)):
+                path,data,meta = msg
+                d,p = shorter.short(path)
+                await mw([d,p,data,*meta.dump()])
+                last_saved_count += 1
+            elif isinstance(msg,CBORTag) and msg.tag == CBOR_TAG_MOAT_FILE_END:
+                await mw(msg)
+                return
+            else:
+                await mw(msg)  # XXX
+        
+            # Ensure that we save the system state often enough.
+            t = time.monotonic()
+            td = t - last_saved
+            if td >= TIMEOUT or last_saved_count >= MAXMSG:
+                await mw.flush()
+                last_saved = time.monotonic()
+                last_saved_count = 0
+
 
     async def _flush_deleted(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        """
+        Background task to remove deleted nodes from the tree
+        """
         task_status.started()
-        await anyio.sleep(100)
+        await anyio.sleep(self.cfg.timeout.delete/10)
+        t=time.time()
 
         async def _walk(d) -> bool:
             # return True if we need to keep this
+
             has_any = False
             await anyio.sleep(0.1)
+
+            # Drop the Meta entry if the deletion was long enough ago
+            if d._data is NotGiven and d.meta is not None and t-d.meta.timestamp > self.cfg.timeout.delete:
+                d.meta = None
             drop = set()
             for k,v in d.items():
                 if await _walk(v):
@@ -1373,14 +1273,32 @@ class Server:
                 del d[k]
             if has_any or d._data is not NotGiven:
                 return True
-            return d.meta is None or d.meta.timestamp < self.cfg.timeout.delete
+            return d.meta is not None
 
         while True:
             await _walk(self.data)
 
             await anyio.sleep(self.cfg.timeout.delete/20)
 
-    async def run_saver(self, path: anyio.Path = None, wait:bool=True):
+    async def _save_task(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        """
+        Background task to periodically restart the saver task
+        """
+        save = self.cfg.server.save
+        dest = anyio.Path(save.dir)
+        while True:
+            now = datetime.now(UTC)
+            fn = dest/now.strftime(save.name)
+            await fn.parent.mkdir(exist_ok=True,parents=True)
+            await self.run_saver(path=fn)
+            if task_status is not None:
+                task_status.started()
+                task_status = None
+            await anyio.sleep(save.interval)
+
+        task_status.started()
+
+    async def run_saver(self, path: anyio.Path = None, save_state: bool=True):
         """
         Start a task that continually saves to disk.
 
@@ -1391,41 +1309,30 @@ class Server:
         Args:
           path (str): The file to save to. If ``None``, simply stop any
             already-running log.
-          stream (anyio.abc.Stream): the stream to save to.
           save_state (bool): Flag whether to write the current state.
-            If ``False`` (the default), only write changes.
-          wait: wait for the save to really start.
+            If `False` (the default), only write changes.
 
         """
-        done = ValueEvent() if wait else None
         res = None
         if path is not None:
-            await self.spawn(
+            await self._tg.start(
                 partial(
-                    self._saver,
+                    self.save_stream,
                     path=path,
-                    stream=stream,
                     save_state=save_state,
-                    done=done,
                 ),
             )
-            if wait:
-                res = await done.get()
+        else:
+            self.write_monitor(self.gen_hdr_stop(reason="log_end"))
 
-        # At this point the new saver is operational, so we cancel the old one(s).
-        while self._savers is not None and self._savers[0][0] is not res:
-            s, sd = self._savers.pop(0)
-            s.cancel()
-            await sd.wait()
 
-    async def _sigterm(self):
+    async def _sigterm(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         with anyio.open_signal_receiver(signal.SIGTERM) as r:
+            task_status.started()
+
             async for s in r:
-                for s, sd in self._savers:
-                    s.cancel()
-                    await sd.wait()
+                self._stop_flag.set()
                 break
-        os.kill(os.getpid(), signal.SIGTERM)
 
     @property
     async def is_ready(self):
@@ -1440,7 +1347,6 @@ class Server:
     async def serve(
         self,
         *,
-        tg: anyio.abc.TaskGroup = None,
         task_status=anyio.TASK_STATUS_IGNORED,
     ) -> Never:
         """
@@ -1458,21 +1364,52 @@ class Server:
         csr = P(csr) if isinstance(csr, str) else Path.build(csr)
         Root.set(csr)
 
+        self._stop_flag = anyio.Event()
+        self._stopped = anyio.Event()
+
         async with (
-            anyio.create_task_group() as _tg,
+            EventSetter(self._stopped),
             Broadcaster(send_last=True) as self.write_monitor,
             get_backend(self.cfg, name="main." + self.name, will=will_data) as self.backend,
+            anyio.create_task_group() as _tg,
         ):
-            if tg is None:
-                tg = _tg
+            self._tg = _tg
+
+            # Semi-detached taskgroups for clients and listeners
+
+            async def run_tg(task_status):
+                async with anyio.create_task_group() as tg:
+                    task_status.started(tg)
+                    await anyio.sleep_forever()
+            client_tg = await _tg.start(run_tg)
+            listen_tg = await _tg.start(run_tg)
+
+            # basic infrastructure
+
+            await _tg.start(self._auth_update)
+            await _tg.start(self._sigterm)
+
+            # background tasks
+
+            await _tg.start(self._backend_monitor)
+            await _tg.start(self._backend_sender)
+            await _tg.start(self._read_main)
+
+            # retrieve data
+
+            await _tg.start(self._read_initial)
+
+            # save data
+
+            sd = anyio.Path(self.cfg.server.save.dir)
+            if await sd.is_dir():
+                await _tg.start(self._save_task)
+
+            # let clients in
 
             ports = []
-
-            h1 = None
             for name, conn in self.cfg.server.ports.items():
-                if h1 is None:
-                    h1 = conn["host"]
-                ports.append(await _tg.start(self._run_server, name, conn))
+                ports.append(await listen_tg.start(self._run_server, client_tg, name, conn))
 
             if len(ports) == 1:
                 link = {"host": ports[0][0], "port": ports[0][1]}
@@ -1480,35 +1417,87 @@ class Server:
                 link = [{"host": h, "port": p} for h, p in ports]
             self.link_data = link
 
-            await tg.start(self._backend_monitor)
-            await tg.start(self._backend_sender)
-            await tg.start(self._read_main)
-            await tg.start(self._read_initial)
+            # announce us to clients
 
             ping_ready = anyio.Event()
-            _tg.start_soon(self._pinger, ping_ready)
-            if not self.cfg.server.standalone:
-                await ping_ready.wait()
+            await _tg.start(self._pinger, ping_ready)
 
             if self.cfg.server.standalone:
                 await self.set_main_link()
+            else:
+                await ping_ready.wait()
 
-            task_status.started(ports)
+            # done, ready for service
+
+            task_status.started((self,ports))
             self.logger.debug("STARTUP DONE")
 
-            await tg.start(self._flush_deleted)
+            # maintainance
 
-            # Auth updating
-            while True:
-                await anyio.sleep(900)
-                self.refresh_auth()
+            await _tg.start(self._flush_deleted)
 
-                await anyio.sleep(300)
-                self.last_auth = None
+            # wait for some stop signal
+
+            await self._stop_flag.wait()
+
+            # announce that we're going down
+
+            # TODO listen to this message and possibly take over
+            await self.backend.send(topic=P(":R.run.service.down.main"), payload=self.name, retain=False)
+            # TODO if we were "it", wait for some other server's announcement
+
+            # stop listeners
+
+            listen_tg.cancel_scope.cancel()
+
+            # stop active clients
+
+            # TODO tell our clients to reconnect to somewhere else
+            # TODO wait a few seconds OR until they're all gone
+            client_tg.cancel_scope.cancel()
+
+            # stop saving data
+
+            await self._stop_writers()
+            # TODO signal our saver to finish
+            # TODO wait for our saver to finish
+
+            # Stop the rest
+            _tg.cancel_scope.cancel()
+
+    async def _stop_writers(self):
+        """Tell our writers to stop"""
+        self.write_monitor(self.gen_hdr_stop(reason="Shutdown"))
+        while self._writing:
+            try:
+                with anyio.fail_after(0.5):
+                    await self._writing_done.wait()
+                    self._writing_done = anyio.Event()
+            except TimeoutError:
+                for fn in self._writing:
+                    self.logger.error("Shutdown: still writing to %r", fn)
+                return
+
+
+    async def stop(self):
+        """Tell the server to stop"""
+        self._stop_flag.set()
+        await self._stopped.wait()
+
+    async def _auth_update(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        # Background task to refresh the auth data
+        self.refresh_auth()
+        task_status.started()
+        while True:
+            await anyio.sleep(900)
+            self.refresh_auth()
+
+            await anyio.sleep(30)
+            self.last_auth = None
 
     async def _read_main(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
-        Task to read the main channel
+        Task to read the main service monitoring channel
         """
         async with (
             Broadcaster(send_last=True) as self.service_monitor,
@@ -1518,21 +1507,6 @@ class Server:
             async for msg in mon:
                 self.service_monitor(msg)
 
-    async def _get_remote_data(self, main: BroadcastReader, ready: anyio.Event):
-        try:
-            with anyio.fail_after(self.cfg.server.timeout.monitor):
-                msg = await anext(main)
-        except TimeoutError:
-            return  # no entry yet
-
-        if msg.meta.origin == self.name:
-            self.logger.notice("no remote sync: from myself")
-            return
-        if msg.meta.timestamp < 1.5 * self.cfg.server.timeout.refresh:
-            self.logger.notice("no remote sync: too old")
-            return
-        if await self._sync_from(msg.meta.origin, msg.data):
-            ready.set()
 
     async def _sync_from(self, name: str, data: dict) -> bool:
         """
@@ -1540,133 +1514,42 @@ class Server:
 
         Returns True if successful.
         """
-        links = msg.data.link
-        if isinstance(links, dict):
-            links = (links,)
-        for link in links:
+        async with BasicLink(self.cfg,name,data) as conn:
             try:
-                async with Conn(
-                    me=self.name,
-                    them=msg.meta.origin,
-                    host=link["host"],
-                    port=link["port"],
-                    token=data.get("token"),
-                ) as conn:
-                    if conn.auth is not True:
-                        self.logger.warning("No auth: sync from %s %s", msg.meta.origin, link)
-                        continue
-                    try:
-                        await self._sync_one(conn)
-                    except Exception as exc:
-                        self.logger.warning(
-                            "No sync from %s %s: %r",
-                            msg.meta.origin,
-                            msg.data,
-                            exc,
-                            exc_info=exc,
-                        )
-                        return False
-                    return True
-
+                await self._sync_one(conn)
             except Exception as exc:
                 self.logger.warning(
-                    "No connection to %s %s: %r",
-                    msg.meta.origin,
-                    link,
+                    "No sync %r: %r",
+                    data,
                     exc,
                     exc_info=exc,
                 )
+                return False
+            return True
         return False
 
-    async def _sync_from(self, conn: Conn):
-        async with conn.stream_r(P("s.full"), root=P(":")) as feed:
+    async def _sync_one(self, conn: Conn, prefix:Path=P(":")):
+        async with conn.stream_r(P("d.walk"), prefix) as feed:
             pl = PathLongener()
+            upd=0
+            skp=0
             async for msg in feed:
+                d,p,data,*mt = msg
+                path = pl.long(d,p)
+                meta = MsgMeta.restore(mt)
+                meta.source="_Load"
+                if self.maybe_update(prefix+path,data,meta):
+                    upd += 1
+                else:
+                    skp += 1
                 print(msg)
-        raise RuntimeError("TODO")
-
-    async def _read_saved_data(self, ready: anyio.Event):
-        """
-        Scan our save directory. Read all entries in reverse order
-        and stop when we got them all.
-        """
-
-        incomplete: bool = False
-        expected: str | None = None
-
-        @define
-        class Reader(CtxObj):
-            """
-            Read a file, returning decoded chunks.
-            """
-
-            fn: anyio.Path
-
-            async def _ctx(self):
-                async with await fn.open("rb") as self._f:
-                    yield self
-
-            def __aiter__(self):
-                return self._iter()
-
-            async def _iter(self):
-                codec = StdCBOR()
-                while True:
-                    for data in codec.feed(await self._f.read(4096)):
-                        yield data
-
-        async def _read_data(fn):
-            try:
-                async with await Reader(fn) as rdr:
-                    it = aiter(rdr)
-                    pl = PathLongener()
-
-                    head = await anext(it)
-                    if head.tag == CBOR_TAG_CBOR_FILEHEADER:
-                        head = head.value
-                    if head.tag != CBOR_TAG_MOAT_FILE_ID:
-                        raise ValueError("missing start tag")
-                    dh = to_attrdict(head.value)
-                    if dh.source != "main":
-                        raise ValueError("not from main")
-
-                    async for d in it:
-                        if isinstance(d, CBORTag) and d.tag == CBOR_TAG_MOAT_FILE_END:
-                            return dh, d.value
-                        depth, path, data, meta = d
-                        path = pl.long(depth, path)
-                        self.maybe_update(path, data, meta)
-
-                raise ValueError("no end tag")
-
-            except Exception as exc:
-                raise BadFile(fn, repr(exc)) from exc
-
-        async def _read_subdirs(d):
-            names = []
-            async for fn in await d.iterdir():
-                if fn.startswith("."):
-                    continue
-                names.append(fn)
-            names.sort()
-
-            while names:
-                fn = names.pop()
-                dd = d / fn
-                if fn.suffix == ".mld":
-                    if await _read_data(dd):
-                        return True
-                elif await fn.is_dir():
-                    if await _read_subdirs(dd):
-                        return True
-
-        d = anyio.Path(self.cfg.server.save.dir)
-        if await self._read_subdirs(d):
-            ready.set()
+        self.logger.info("Sync finished. %d new, %d existing", upd,skp)
 
     async def _read_initial(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
         Read initial data from either file backup or a remote server.
+
+        Runs in the background if we have initial data.
         """
         ready = anyio.Event()
         main = aiter(self.service_monitor)
@@ -1674,25 +1557,106 @@ class Server:
             task_status.started()
             task_status = anyio.TASK_STATUS_IGNORED
             ready.set()
+
         async with anyio.create_task_group() as tg:
+            @tg.start_soon
+            async def trigger():
+                with anyio.fail_after(self.cfg.server.timeout.startup):
+                    await ready.wait()
+                task_status.started()
+                print(self.name)
+
             async with anyio.create_task_group() as tgx:
-                tg.start_soon(self._get_remote_data, main, ready)
-                tg.start_soon(self._read_saved_data, ready)
+                tgx.start_soon(self._get_remote_data, main, ready)
+                tgx.start_soon(self._read_saved_data, ready)
+
             if not ready.is_set():
-                self.logger.warning("No data. Waiting for supplier.")
-                for msg in main:
-                    try:
-                        await self._sync_from(msg.meta.origin, msg.data)
-                    finally:
-                        pass  # XXX
+                raise RuntimeError("NO DATA")
 
     async def _read_saved_data(self, ready: anyio.Event):
-        pass
+        save = self.cfg.server.save
+        dest = anyio.Path(save.dir)
+        if not await dest.is_dir():
+            self.logger.info("No saved data in %r",str(dest))
+            return
+
+        fs = []
+        async for p,d,f in dest.walk():
+            print("========", p,d,f)
+            for ff in f:
+                fs.append(p/ff)
+        fs.sort()
+
+        tupd = 0
+        while fs:
+            fn = fs.pop()
+            if str(fn) in self._writing:
+                continue
+            try:
+                async with MsgReader(fn, codec="moat.util.cbor") as rdr:
+                    hdr = await anext(rdr)
+                    if isinstance(hdr,CBORTag) and hdr.tag == CBOR_TAG_CBOR_FILEHEADER:
+                        hdr = hdr.value
+                    if not isinstance(hdr,CBORTag) or hdr.tag != CBOR_TAG_MOAT_FILE_ID:
+                        raise ValueError(f"First entry is {hdr !r}")
+
+                    pl = PathLongener()
+                    upd,skp = 0,0
+                    ehdr=None
+                    async for msg in rdr:
+                        if isinstance(msg, CBORTag):
+                            if msg.tag == CBOR_TAG_MOAT_FILE_ID:
+                                # concatenated files?
+                                if ehdr is None:
+                                    raise ValueError("START within file %r",str(fn))
+                                # TODO verify that these belong together
+                                ehdr = None
+
+                            elif msg.tag == CBOR_TAG_MOAT_FILE_END:
+                                if ehdr is not None:
+                                    raise ValueError("Duplicate END in %r",str(fn))
+                                ehdr=msg
+                                break
+                            continue
+                        d,p,data,*mt = msg
+                        path = pl.long(d,p)
+                        meta = MsgMeta.restore(mt)
+                        meta.source="_file"
+                        if self.maybe_update(path,data,meta):
+                            # Entries that have been deleted don't count as updates
+                            if data is not NotGiven:
+                                upd += 1
+                        else:
+                            skp += 1
+
+                    self.logger.info("Restore %r: %d/%d", str(fn),upd,skp)
+                    tupd += upd
+                    if not upd and ehdr is not None and "error" not in ehdr.data:
+                        break
+            except Exception:
+                raise
+
+        if tupd:
+            ready.set()
 
     async def _get_remote_data(self, main: BroadcastReader, ready: anyio.Event):
+        seen = defaultdict(lambda: 0)
+        async for msg in main:
+            if msg.meta.origin == self.name:
+                continue  # XXX stale
+            if await self._sync_from(msg.meta.origin, msg.data):
+                ready.set()
+                return
+            sn = seen[msg.meta.origin]
+            if sn > 2:
+                return
+            seen[msg.meta.origin] = sn+1
+
         pass
 
-    async def _run_server(self, name, cfg, *, task_status=anyio.TASK_STATUS_IGNORED):
+
+    async def _run_server(self, tg, name, cfg, *, task_status=anyio.TASK_STATUS_IGNORED):
+        """runs a listener on a single port"""
         lcfg = attrdict()
         if "host" in cfg:
             lcfg.local_host = cfg.host
@@ -1701,9 +1665,16 @@ class Server:
         # TODO SSL and/or whatnot
         async with await anyio.create_tcp_listener(**lcfg) as listener:
             task_status.started(listener.extra(SocketAttribute.local_address))
-            await listener.serve(partial(self._client_task, name))
+            await listener.serve(partial(self._client_task, name), task_group=tg)
 
     async def _client_task(self, name, stream):
+        """
+        Manager for a single client connection.
+
+        The acctual work happens in `ServerClient.run`. This wrapper
+        mainly tries to send a message to the client that states what went
+        wrong on the server.
+        """
         c = None
         try:
             c = ServerClient(server=self, name=name, stream=stream)
@@ -1739,124 +1710,3 @@ class Server:
         finally:
             with anyio.move_on_after(2, shield=True):
                 await stream.aclose()
-
-
-class old_stuff:
-    async def serve_old(self, log_path=None, log_inc=False, force=False, ready_evt=None):
-        """Task that opens a backend connection and actually runs the server.
-
-        Args:
-          ``setup_done``: optional event that's set when the server is initially set up.
-          ``log_path``: path to a binary file to write changes and initial state to.
-          ``log_inc``: if saving, write changes, not the whole state.
-          ``force``: start up even if entries are missing
-        """
-        # async with ()
-        self.force_startup = force
-        back = get_backend(self.cfg.server.backend)
-        try:
-            conn = self.cfg.server[self.cfg.server.backend]
-        except KeyError:
-            conn = self.cfg.server.connect
-        async with back(**conn) as backend:
-            # pylint: disable=attribute-defined-outside-init
-
-            # Collect all "info/missing" messages seen since the last
-            # healed network split so that they're only sent once.
-            self.seen_missing = {}
-
-            # Is the missing-items-sender running?
-            # None=no, otherwise flag whether it should run another round
-            self.sending_missing = None
-
-            # Nodes which list missing events
-            self.fetch_missing = set()
-
-            # Flag whether do_fetch_missing is running (True)
-            # or do_send_missing is running (False)
-            # or neither (None)
-            self.fetch_running = None
-
-            # Set when self.node.tick is no longer None, i.e. we have some
-            # reasonable state
-            self._ready = anyio.Event()
-
-            # set when we're ready to accept client connections
-            self._ready2 = anyio.Event()
-
-            self.backend = backend
-
-            # Sync recovery steps so that only one node per branch answers
-            self._recover_event1 = None
-            self._recover_event2 = None
-
-            # local and remote node lists
-            self._recover_sources = None
-
-            # Cancel scope; if :meth:`recover_split` is running, use that
-            # to cancel
-            self._recover_tasks = {}
-
-            # used to sync starting up everything so no messages get either
-            # lost, or processed prematurely
-            delay = anyio.Event()
-            delay2 = anyio.Event()
-            delay3 = anyio.Event()
-
-            if log_path is not None:
-                await self.run_saver(path=log_path, save_state=not log_inc, wait=False)
-
-            # Link up our "user_*" code
-            for d in dir(self):
-                if d.startswith("user_"):
-                    await self.spawn(self.monitor, d[5:], delay)
-
-            await delay3.wait()
-
-            if self._init is not NotGiven:
-                assert self.node.tick is None
-                self.node.tick = 0
-                async with self.next_event() as event:
-                    await self.root.set_data(event, self._init, tock=self.tock, server=self)
-
-            await self.spawn(self._sigterm)
-
-            # send initial ping
-            await self.spawn(self._pinger, delay2)
-
-            await anyio.sleep(0.1)
-            delay.set()
-            await self._check_ticked()  # when _init is set
-            await delay2.wait()
-            await self._ready.wait()
-
-            cfgs = self.cfg.server.bind
-            cfg_b = self.cfg.server.bind_default
-            evts = []
-            async with anyio.create_task_group() as tg:
-                for n, cfg in enumerate(cfgs):
-                    cfg = combine_dict(cfg, cfg_b, cls=attrdict)
-                    evt = anyio.Event()
-                    evts.append(evt)
-                    tg.start_soon(self._accept_clients, tg, cfg, n, evt)
-                for evt in evts:
-                    await evt.wait()
-
-                self._ready2.set()
-                if ready_evt is not None:
-                    ready_evt.set()
-                # end of server taskgroup
-            # end of server
-        # end of backend client
-
-    async def _accept_clients(self, tg, cfg, n, evt):
-        ssl_ctx = gen_ssl(cfg["ssl"], server=True)
-        cfg = combine_dict({"ssl": ssl_ctx}, cfg, cls=attrdict)
-
-        def rdy(n, server):
-            if n == 0:
-                port = server.extra(SocketAttribute.local_address)
-            self.ports = [port]
-            evt.set()
-
-        await run_tcp_server(self._connect, tg=tg, _rdy=partial(rdy, n), **cfg)

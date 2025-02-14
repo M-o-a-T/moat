@@ -260,6 +260,8 @@ class Node:
         Call coroutine ``proc(entry,Path)`` on this node and all its children.
 
         If `proc` raises `StopAsyncIteration`, chop this subtree.
+
+        Deleted nodes are passed if they still have a Meta entry.
         """
         todo = [(self, _name)]
 

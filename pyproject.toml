@@ -97,7 +97,7 @@ line-length = 99
 
 [tool.ruff.lint]
 select = ["ALL"]
-ignore = ["BLE001","ERA","N","FIX","TD","RET50","C","PLR","EM10","TRY003","FBT","T2","D4","D3","D2","PLW1514","RUF002","RUF001","S101","A003","D107","D105","PERF","PTH","ANN","I001","RUF005","TRY300","TRY301","RUF003","INP001","PIE790","SIM108","TRY400","UP038","S307","PGH001","B028"]
+ignore = ["BLE001","ERA","N","FIX","TD","RET50","C","PLR","EM10","TRY003","FBT","T2","D4","D3","D2","PLW1514","RUF002","RUF001","S101","A003","D107","D105","PERF","PTH","ANN","I001","RUF005","TRY300","TRY301","RUF003","INP001","PIE790","SIM108","TRY400","UP038","S307","PGH001","B028","PIE790"]
 explicit-preview-rules = true
 
 [tool.ruff.lint.flake8-comprehensions]

@@ -40,3 +40,4 @@ async def run(cmd: CmdHandler, stream: anyio.abc.ByteStream):
         tg.start_soon(rd, stream)
         tg.start_soon(wr, stream)
         yield cmd
+        tg.cancel_scope.cancel()

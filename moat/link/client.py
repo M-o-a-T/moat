@@ -201,6 +201,8 @@ class Link(_LinkCommon):
         with anyio.fail_after(self.cfg.client.init_timeout):
             srv = await self.tg.start(self._read_server_link)
 
+        tm = self.cfg.timeout.connect
+        timeout = tm.initial
         while True:
             try:
                 await self._connect_server(srv, task_status=task_status)
@@ -217,11 +219,11 @@ class Link(_LinkCommon):
             # TODO save (some) currently-running commands for re-execution
             # TODO cancel tasks from the remote side
             try:
-                with anyio.fail_after(5):  # todo: back-off
+                with anyio.fail_after(timeout):
                     await self._last_link_seen.wait()
             except TimeoutError:
                 # try the last-tried connection again
-                pass
+                timeout = min(timeout*tm.factor,tm.max)
             else:
                 # immediately use the new data
                 srv = self._last_link

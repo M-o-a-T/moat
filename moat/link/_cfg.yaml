@@ -18,3 +18,8 @@ timeout:
   # time after which deleted entries are flushed
   delete: 100000
 
+  # client reconnect
+  connect: 
+    initial: 5
+    max: 30
+    factor: 1.3

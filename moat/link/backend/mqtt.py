@@ -22,7 +22,7 @@ from moat.util.path import PS, P, Path
 from . import Backend as _Backend
 from . import Message, RawMessage, get_codec
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
     from moat.lib.codec import Codec
@@ -72,19 +72,19 @@ class Backend(_Backend):
         kw = cfg.copy()
         kw.pop("driver", None)
         self.trace = kw.pop("trace", True)
-        codec = kw.pop("codec", None)
+        codec = kw.pop("codec", NotGiven)
 
         kw["client_id"] = self.name
 
         a = (kw.pop("host"),) if "host" in kw else ()
-        self.codec = NoopCodec() if codec is None else get_codec(codec)
+        self.codec = get_codec(codec)
         self.mcodec = get_codec("std-cbor")
 
         will = will or kw.pop("will", None)
         if will is not None:
             data = will.pop("data", NotGiven)
-            cdc = will.pop("codec", None)
-            cdc = self.codec if cdc is None else get_codec(cdc)
+            cdc = will.pop("codec", NotGiven)
+            cdc = self.codec if cdc is NotGiven else get_codec(cdc)
 
             data = b"" if data is NotGiven else cdc.encode(data)
             kw["will"] = Will(
@@ -109,7 +109,7 @@ class Backend(_Backend):
         self,
         topic,
         *,
-        codec: str | Codec | None = None,
+        codec: str | Codec | None | Literal[NotGiven] = NotGiven,
         raw: bool | None = False,
         **kw,
     ) -> AsyncIterator[AsyncIterator[Message]]:
@@ -117,7 +117,7 @@ class Backend(_Backend):
 
         topic = topic.slashed
         self.logger.info("Monitor %s start", topic)
-        codec = self.codec if codec is None else get_codec(codec)
+        codec = self.codec if codec is NotGiven else get_codec(codec)
         try:
             async with self.client.subscribe(topic, **kw) as sub:
 
@@ -197,11 +197,35 @@ class Backend(_Backend):
         else:
             self.logger.info("Monitor %s end", topic)
 
+    @overload
     def send(
         self,
-        topic,
-        payload,
-        codec: Codec | str | None = None,
+        topic:Path,
+        payload:bytes|bytearray|memoryview,
+        codec: Literal[None],
+        meta: MsgMeta | bool | None = None,
+        retain: bool = False,
+        **kw,
+    ) -> Awaitable:  # pylint: disable=invalid-overridden-method
+        ...
+
+    @overload
+    def send(
+        self,
+        topic:Path,
+        payload: Any,
+        codec: Codec|str|Literal[NotGiven]=NotGiven,
+        meta: MsgMeta | bool | None = None,
+        retain: bool = False,
+        **kw,
+    ) -> Awaitable:  # pylint: disable=invalid-overridden-method
+        ...
+
+    def send(
+        self,
+        topic:Path,
+        payload:Any,
+        codec: Codec|str|None|Literal[NotGiven]=NotGiven,
         meta: MsgMeta | bool | None = None,
         retain: bool = False,
         **kw,
@@ -219,10 +243,14 @@ class Backend(_Backend):
             prop["MoaT"] = MsgMeta(origin=self.name).encode()
         elif meta is not False:
             prop["MoaT"] = meta.encode()
-        if codec is None:
+
+        if codec is NotGiven:
             codec = self.codec
+        elif codec is None:
+            codec = NoopCodec()
         elif isinstance(codec, str):
             codec = get_codec(codec)
+        # else codec is a Codec and used as-is
         msg = codec.encode(payload)
 
         if self.trace:

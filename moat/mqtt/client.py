@@ -54,13 +54,12 @@ for _t in dir(codecs):
             pass
 
 
-def get_codec(codec, fallback=None, config={}):  # pylint: disable=dangerous-default-value
-    if codec is None:
+def get_codec(codec, fallback=NotGiven, config={}):  # pylint: disable=dangerous-default-value
+    if codec is NotGiven:
         codec = fallback
-    if codec is None:
+    if codec is NotGiven:
         codec = config["codec"]
     if isinstance(codec, str):
-        codec = config.get("codec_params", {}).get("name", codec)
         codec = _codecs[codec]
     if isinstance(codec, type):
         codec = codec(**config.get("codec_params", {}).get(codec.name, {}))
@@ -137,7 +136,7 @@ def mqtt_connected(func):
 
 
 @asynccontextmanager
-async def open_mqttclient(uri=None, client_id=None, config={}, codec=None):
+async def open_mqttclient(uri=None, client_id=None, config={}, codec=NotGiven):
     # pylint: disable=dangerous-default-value
     """
     MQTT client implementation.
@@ -162,8 +161,8 @@ async def open_mqttclient(uri=None, client_id=None, config={}, codec=None):
 
     """
     async with anyio.create_task_group() as tg:
-        if codec is None:
-            codec = config.get("codec", None)
+        if codec is NotGiven:
+            codec = config.get("codec", NotGiven)
         C = MQTTClient(tg, client_id, config=config, codec=codec)
         try:
             if uri is not None:
@@ -202,7 +201,7 @@ class MQTTClient:
     this class.
     """
 
-    def __init__(self, tg: anyio.abc.TaskGroup, client_id=None, config=None, codec=None):
+    def __init__(self, tg: anyio.abc.TaskGroup, client_id=None, config=None, codec=NotGiven):
         self.logger = logging.getLogger(__name__)
         self.config = copy.deepcopy(_defaults)
         if config is not None:
@@ -364,7 +363,7 @@ class MQTTClient:
             )
 
     @mqtt_connected
-    async def publish(self, topic, message, qos=None, retain=None, codec=None):
+    async def publish(self, topic, message, qos=None, retain=None, codec=NotGiven):
         """
         Publish a message to the broker.
 
@@ -435,7 +434,7 @@ class MQTTClient:
             return
         await self._handler.mqtt_unsubscribe(topics, self.session.next_packet_id)
 
-    def subscription(self, topic, qos=QOS_0, codec=None):
+    def subscription(self, topic, qos=QOS_0, codec=NotGiven):
         """
         Iterate over a topic.
 
@@ -456,11 +455,11 @@ class MQTTClient:
         """
 
         class _Subscription:
-            def __init__(self, client, topic: str | tuple, qos: int, codec=None):
+            def __init__(self, client, topic: str | tuple, qos: int, codec=NotGiven):
                 self.client = client
                 self.topic = topic if isinstance(topic, str) else "/".join(topic)
                 self.qos = qos
-                if codec is None:
+                if codec is NotGiven:
                     codec = client.codec
                 elif isinstance(codec, str):
                     codec = _codecs[codec]()
@@ -585,7 +584,7 @@ class MQTTClient:
                 self.client_task = None
 
     @mqtt_connected
-    async def deliver_message(self, codec=None):
+    async def deliver_message(self, codec=NotGiven):
         """
         Deliver next received message.
 
@@ -599,7 +598,7 @@ class MQTTClient:
         This method returns ``None`` if it is cancelled by closing the
         connection.
         """
-        if codec is None:
+        if codec is NotGiven:
             codec = self.codec
         elif isinstance(codec, str):
             codec = _codecs[codec]()

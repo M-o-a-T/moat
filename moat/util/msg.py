@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import anyio
 
-from moat.lib.codec import Codec,get_codec
+from moat.lib.codec import Codec
 
 __all__ = ["MsgReader", "MsgWriter"]
 
@@ -22,6 +22,7 @@ class _MsgRW:
 
     def __init__(self, path=None, stream=None, codec="moat.util.msgpack"):
         if not isinstance(codec,Codec):
+            from moat.link.backend import get_codec
             codec = get_codec(codec)
 
         if (path is None) == (stream is None):

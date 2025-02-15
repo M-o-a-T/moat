@@ -543,10 +543,9 @@ class Server:
 
         Update our store if it's newer.
         """
-        if not self.data.set(path,data,meta):
-            return False
-        self.write_monitor((path, data, meta))
-        return True
+        if (res := self.data.set(path,data,meta)):
+            self.write_monitor((path, data, meta))
+        return res
 
 
     async def _backend_monitor(self, task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED):
@@ -564,7 +563,18 @@ class Server:
                     continue
 
                 msg.meta.source="Mon"
-                self.maybe_update(Path.build(topic), msg.data, msg.meta)
+                path = Path.build(topic)
+                if self.maybe_update(path, msg.data, msg.meta) is False:
+                    # This item from outside is stale.
+                    d = self.data.get(path)
+                    try:
+                        data = d.data
+                    except ValueError:
+                        # deleted
+                        await self.backend.send(topic=msg.topic, payload=b'', codec=None, meta=d.meta)
+                    else:
+                        await self.backend.send(topic=msg.topic, payload=data, meta=d.meta)
+
 
     async def _backend_sender(self, task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED):
         rdr = self.write_monitor.reader(999)

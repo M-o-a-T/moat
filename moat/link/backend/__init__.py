@@ -31,7 +31,9 @@ __all__ = ["get_backend", "get_codec", "Backend", "Message", "RawMessage"]
 
 def get_codec(name):
     "Codec loader; replaces 'std-' prefix with 'moat.util.'"
-    if name[0:4] == "std-":
+    if name is None:
+        name = "noop"
+    elif name[0:4] == "std-":
         name = "moat.util." + name[4:]
     return _get_codec(name)
 
@@ -93,7 +95,7 @@ class Backend(CtxObj, metaclass=ABCMeta):
         self,
         topic: Path,
         qos: QoS | None = None,
-        codec: Codec | None = None,
+        codec: Codec | None | Literal[NotGiven] = NotGiven,
         raw: bool | None = False,
         retained: bool = True,
         echo: bool = False,
@@ -109,7 +111,7 @@ class Backend(CtxObj, metaclass=ABCMeta):
         self,
         topic: Path,
         data: Any,
-        codec: Codec | None = None,
+        codec: Codec | None | Literal[NotGiven] = NotGiven,
         **kw: dict[str, Any],
     ) -> None:
         """

@@ -1,5 +1,4 @@
 * moat-link
-  * writing the log still saves with a cancel error
   * we send WILL messages but need to react by writing a new
     designated-server record
   * need to tell active clients to reconnect cleanly

@@ -300,9 +300,13 @@ def _dec_path(codec, val):
     return Path.build(val)
 
 
-@std_ext.decoder(55799)
+@std_ext.decoder(CBOR_TAG_CBOR_FILEHEADER)
 def _dec_file_cbor(codec, val):
     codec  # noqa:B018
+    try:
+        val._cbor_tag = CBOR_TAG_CBOR_FILEHEADER
+    except AttributeError:
+        pass
     return val
 
 

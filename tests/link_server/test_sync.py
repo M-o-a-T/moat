@@ -8,7 +8,10 @@ from moat.link.meta import MsgMeta
 from moat.link._test import Scaffold
 from moat.link.node import Node
 from moat.util import P, PathLongener
+from moat.util.msg import MsgReader
 from moat.lib.cmd import StreamError
+from moat.lib.codec.cbor import Tag as CBORTag,CBOR_TAG_CBOR_FILEHEADER
+from moat.util.cbor import CBOR_TAG_MOAT_FILE_ID,CBOR_TAG_MOAT_FILE_END
 from moat.link.client import BasicLink
 
 
@@ -84,7 +87,23 @@ async def test_lsy_from_file(cfg, tmp_path):
             await c1.cmd(P("d.set"),p,v)
             n.set(p,v,MsgMeta(origin="Test"))
         await data(s)
+        fn = next(iter(srv1[0]._writing))
         await srv1[0].stop()
+
+    # check the file
+
+    async with MsgReader(path=fn,codec="moat.util.cbor") as rdr:
+        msg = await anext(rdr)
+        assert isinstance(msg,CBORTag)
+        assert getattr(msg,"_cbor_tag",None)
+        assert msg.tag == CBOR_TAG_MOAT_FILE_ID
+        async for msg in rdr:
+            pass
+        assert isinstance(msg,CBORTag)
+        assert msg.tag == CBOR_TAG_MOAT_FILE_END
+        assert "error" not in msg.value, msg.value
+
+    # verify that the next stack reads it back
 
     async with Scaffold(cfg, use_servers=True, tempdir=tmp_path) as sf:
         srv2 = await sf.server()

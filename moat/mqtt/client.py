@@ -17,7 +17,7 @@ except ImportError:
     from async_generator import asynccontextmanager
 
 from asyncwebsockets import create_websocket
-from moat.util import create_queue
+from moat.util import create_queue, NotGiven
 from wsproto.utilities import ProtocolError
 
 from . import codecs

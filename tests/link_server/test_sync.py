@@ -112,4 +112,33 @@ async def test_lsy_from_file(cfg, tmp_path):
 
         assert n.get(P("a")) == nn
 
+@pytest.mark.anyio
+async def test_lsy_switch_server_hard(cfg):
+    async with Scaffold(cfg, use_servers=True) as sf:
+        srv1 = await sf.server(init={"Hello": "there!", "test": 123})
+        c1 = await sf.client()
+        n = Node()
+        await c1.cmd(P("d.set"),P("test.one"),123)
+
+        srv2 = await sf.server()
+        await srv1[0].cancel()
+
+        res,meta = await c1.cmd(P("d.get"),P("test.one"))
+        assert res == 123
+
+
+@pytest.mark.anyio
+async def test_lsy_switch_server_soft(cfg):
+    async with Scaffold(cfg, use_servers=True) as sf:
+        srv1 = await sf.server(init={"Hello": "there!", "test": 123})
+        c1 = await sf.client()
+        n = Node()
+        await c1.cmd(P("d.set"),P("test.one"),123)
+
+        srv2 = await sf.server()
+        await srv1[0].stop()
+
+        res,meta = await c1.cmd(P("d.get"),P("test.one"))
+        assert res == 123
+
 

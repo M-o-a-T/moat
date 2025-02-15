@@ -5,6 +5,7 @@ plus an unpacker factory for streams.
 
 from __future__ import annotations
 
+from moat.util import NotGiven
 from ._base import Codec as _Codec
 from ._base import NoCodecError
 
@@ -167,10 +168,18 @@ class Codec(_Codec):
             if attrdict is None:
                 from moat.util import attrdict
 
-    def encode(self, obj: Any) -> bytes:
-        "pack @obj, return the resulting bytes"
+    def encode(self, obj: Any, *, empty_elided:bool=False) -> bytes:
+        """
+        Pack @obj, return the resulting bytes.
+
+        As a special case, if @empty_elided is set, a toplevel NotGiven
+        object encodes to an empty message, signalling deletion to MQTT.
+        """
         if self._buffer:
             raise RuntimeError("Codec is busy")
+
+        if empty_elided and obj is NotGiven:
+            return b''
 
         self._buffer = bytearray()
         try:
@@ -179,10 +188,19 @@ class Codec(_Codec):
         finally:
             self._buffer = b""  # always reset
 
-    def decode(self, data: bytes | bytearray | memoryview) -> Any:
-        "unpack @data, return the resulting object"
+    def decode(self, data: bytes | bytearray | memoryview, *, empty_elided:bool=False) -> Any:
+        """
+        Unpack @data, return the resulting object.
+
+        As a special case, if @empty_elided is set, empty data results in
+        NotGiven: that object is used throughout MoaT to mark things as
+        deleted.
+        """
         if self._buffer:
             raise RuntimeError("Codec is busy")
+
+        if empty_elided and data == b'':
+            return NotGiven
 
         self._buffer = data
         try:

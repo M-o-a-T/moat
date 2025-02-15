@@ -38,12 +38,19 @@ CBOR_TAG_MOAT_CHANGE = 1298360423  # 'Mchg'
 
 class StdCBOR(Codec):
     """
-    CBOR codec with MoaT's standard extensions
+    CBOR codec with MoaT's standard extensions.
+
+    Defaults to empty_elided=True.
     """
 
     def __init__(self):
         super().__init__(ext=std_ext)
 
+    def encode(self, obj:Any, *, empty_elided:bool=True) -> bytes:
+        return super().encode(obj, empty_elided=empty_elided)
+
+    def decode(self, data: bytes | bytearray | memoryview, *, empty_elided:bool=True) -> Any:
+        return super().decode(data, empty_elided=empty_elided)
 
 Codec = StdCBOR
 

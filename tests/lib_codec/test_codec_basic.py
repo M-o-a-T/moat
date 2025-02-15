@@ -5,6 +5,8 @@ Basic codec tests
 from __future__ import annotations
 
 from moat.lib.codec import NoCodecError, get_codec
+from moat.lib.codec.cbor import OutOfData
+from moat.util import NotGiven
 
 import pytest
 
@@ -83,3 +85,23 @@ def test_cbor(obj):
     assert a == b, (obj, a, b)
     assert cbor2.loads(a) == obj, (obj, a)
     assert c.decode(a) == obj, (obj, a)
+
+def test_cbor_ng():
+    """
+    Test special support for top-level NotGiven (Ellipsis).
+    """
+    c = get_codec("cbor")
+
+    a = c.encode(NotGiven, empty_elided=True)
+    assert a == b''
+    assert c.encode(NotGiven) == b'\xf7'
+    b = c.decode(a, empty_elided=True)
+    assert b is NotGiven
+    assert c.decode(b'\xf7') is NotGiven
+    with pytest.raises(OutOfData):
+        c.decode(b'')
+
+    # Embedding NotGiven still results in undef
+    x = c.encode([NotGiven], empty_elided=True)
+    assert x == b'\x81\xf7'
+    assert c.decode(x) == [NotGiven]

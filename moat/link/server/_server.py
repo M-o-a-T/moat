@@ -22,6 +22,7 @@ from moat.link.backend import get_backend
 from moat.link.exceptions import ClientError
 from moat.link.meta import MsgMeta
 from moat.util.cbor import StdCBOR, CBOR_TAG_MOAT_FILE_ID, CBOR_TAG_MOAT_FILE_END,CBOR_TAG_MOAT_CHANGE
+from moat.util.exc import exc_iter
 from moat.lib.codec.cbor import Tag as CBORTag, CBOR_TAG_CBOR_FILEHEADER
 
 from mqttproto import QoS
@@ -1699,6 +1700,9 @@ class Server:
             CancelExc = anyio.get_cancelled_exc_class()
             if hasattr(exc, "split"):
                 exc = exc.split(CancelExc)[1]
+                ex = list(exc_iter(exc))
+                if len(ex) == 1:
+                    exc = ex[0]
             elif hasattr(exc, "filter"):
                 # pylint: disable=no-member
                 exc = exc.filter(lambda e: None if isinstance(e, CancelExc) else e, exc)

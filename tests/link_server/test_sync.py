@@ -92,7 +92,7 @@ async def test_lsy_from_file(cfg, tmp_path):
 
     # check the file
 
-    async with MsgReader(path=fn,codec="moat.util.cbor") as rdr:
+    async with MsgReader(path=fn,codec="std-cbor") as rdr:
         msg = await anext(rdr)
         assert isinstance(msg,CBORTag)
         assert getattr(msg,"_cbor_tag",None)

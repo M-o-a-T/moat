@@ -1073,7 +1073,7 @@ class Server:
 
         upd,skp,met = 0,0,[]
 
-        async with MsgReader(path=path, stream=stream, codec="moat.util.cbor") as rdr:
+        async with MsgReader(path=path, stream=stream, codec="std-cbor") as rdr:
             async for m in rdr:
                 if isinstance(m,CBORTag) and m.tag == CBOR_TAG_CBOR_FILEHEADER:
                     m = m.value
@@ -1150,7 +1150,7 @@ class Server:
         shorter = PathShortener([])
         try:
             self._writing.add(str(path))
-            async with MsgWriter(path=path, codec="moat.util.cbor") as mw:
+            async with MsgWriter(path=path, codec="std-cbor") as mw:
                 await self._save(mw, shorter, name=path, **kw)
         finally:
             self._writing.remove(str(path))
@@ -1180,7 +1180,7 @@ class Server:
                 rdr = self.write_monitor.reader(999)
                 async with (
                         anyio.create_task_group() as tg,
-                        MsgWriter(path=path, codec="moat.util.cbor") as mw,
+                        MsgWriter(path=path, codec="std-cbor") as mw,
                         ):
                     try:
                         msg = self.gen_hdr_start(name=str(path), mode="full" if save_state else "incr", state=None if save_state else False)
@@ -1593,7 +1593,7 @@ class Server:
             if str(fn) in self._writing:
                 continue
             try:
-                async with MsgReader(fn, codec="moat.util.cbor") as rdr:
+                async with MsgReader(fn, codec="std-cbor") as rdr:
                     hdr = await anext(rdr)
                     if isinstance(hdr,CBORTag) and hdr.tag == CBOR_TAG_CBOR_FILEHEADER:
                         hdr = hdr.value

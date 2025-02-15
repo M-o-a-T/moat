@@ -298,7 +298,7 @@ class Link(_LinkCommon):
                 ) as conn:
                     await self._connect_run(task_status=task_status)
             except Exception as exc:
-                self.logger.warning("Link failed: %r", remote, exc_info=exc)
+                self.logger.warning("Link failed: %r %r", remote, exc)
 
     async def _cmd_in(self, msg):
         breakpoint()

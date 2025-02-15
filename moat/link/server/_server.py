@@ -1489,6 +1489,12 @@ class Server:
                     self.logger.error("Shutdown: still writing to %r", fn)
                 return
 
+    async def cancel(self):
+        """Cancel the server task.
+
+        Unlike `stop` this does not allow the server to shut down cleanly.
+        """
+        self._tg.cancel_scope.cancel()
 
     async def stop(self):
         """Tell the server to stop"""

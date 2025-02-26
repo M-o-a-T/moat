@@ -221,6 +221,9 @@ class Capabilities:
     # Does the server support subscription IDs?
     subscription_ids = field(type=bool,default=True)
 
+    # Does the server support subscription IDs?
+    wildcard_subscriptions = field(type=bool,default=True)
+
     # Number of slots for un-acked packets
     receive_queue = field(type=int, default=65535)
 

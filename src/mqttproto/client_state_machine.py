@@ -49,6 +49,11 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
         return self.cap.retain
 
     @property
+    def cap_wildcard_subscriptions(self) -> bool:
+        """Does the server support wildcard subscriptions?"""
+        return self.cap.wildcard_subscriptions
+
+    @property
     def cap_subscription_ids(self) -> bool:
         """Does the server support subscription IDs?"""
         return self.cap.subscription_ids
@@ -82,6 +87,12 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
                     bool,
                     packet.properties.get(
                         PropertyType.SUBSCRIPTION_IDENTIFIER_AVAILABLE, True
+                    ),
+                )
+                self.cap.wildcard_subscriptions = cast(
+                    bool,
+                    packet.properties.get(
+                        PropertyType.WILDCARD_SUBSCRIPTION_AVAILABLE, True
                     ),
                 )
                 self.cap.qos = cast(

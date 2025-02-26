@@ -24,6 +24,7 @@ from anyio import (
 from anyio.abc import ByteReceiveStream, ByteStream, TaskStatus
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 from anyio.streams.tls import TLSStream
+from anyio import ClosedResourceError, BrokenResourceError
 from attr.validators import ge, gt, in_, instance_of, le, lt, optional
 from attrs import define, field
 
@@ -445,6 +446,9 @@ class AsyncMQTTClient:
                         client.send_stream.send_nowait(packet)
                     except WouldBlock:
                         tg.start_soon(client.send_stream.send, packet)
+                    except (ClosedResourceError, BrokenResourceError, EOFError):
+                        # just quit
+                        return
 
             if subscr_ids := packet.properties.get(
                 PropertyType.SUBSCRIPTION_IDENTIFIER

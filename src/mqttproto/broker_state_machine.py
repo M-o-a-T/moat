@@ -161,22 +161,34 @@ class MQTTBrokerStateMachine:
                 self.retained_messages.pop(packet.topic, None)
 
         recipients: set[str] = set()
+        drp = set()
         for pattern, clients in self.shared_subscriptions.items():
+            drop:set[str] = set()
             if pattern.matches(packet):
                 for client_id, subscr in clients.items():
                     client = self.client_state_machines.get(client_id)
                     if client and (
                         not subscr.no_local or source_client_id != client_id
                     ):
-                        client.deliver_publish(
-                            topic=packet.topic,
-                            payload=packet.payload,
-                            retain=packet.retain,
-                            qos=min(packet.qos, subscr.max_qos),
-                            user_properties=packet.user_properties,
-                        )
-                        recipients.add(client.client_id)
+                        try:
+                            client.deliver_publish(
+                                topic=packet.topic,
+                                payload=packet.payload,
+                                retain=packet.retain,
+                                qos=min(packet.qos, subscr.max_qos),
+                                user_properties=packet.user_properties,
+                            )
+                        except MQTTProtocolError:
+                            drop.add(client_id)
+                        else:
+                            recipients.add(client.client_id)
 
+            for client in drop:
+                del clients[client]
+            if not clients:
+                drp.add(pattern)
+        for pattern in drp:
+            del self.shared_subscriptions[pattern]
         return recipients
 
 

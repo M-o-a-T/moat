@@ -93,6 +93,7 @@ class MQTTBrokerStateMachine:
                     retain=packet.retain,
                     qos=min(packet.qos, subscription.max_qos),
                     user_properties=packet.user_properties,
+                    subscription_id=subscription.subscription_id,
                 )
 
     def unsubscribe_session_from(
@@ -177,6 +178,7 @@ class MQTTBrokerStateMachine:
                                 retain=packet.retain,
                                 qos=min(packet.qos, subscr.max_qos),
                                 user_properties=packet.user_properties,
+                                subscription_id=subscr.subscription_id,
                             )
                         except MQTTProtocolError:
                             drop.add(client_id)
@@ -242,6 +244,7 @@ class MQTTBrokerClientStateMachine(BaseMQTTClientStateMachine):
         qos: QoS = QoS.AT_MOST_ONCE,
         retain: bool = False,
         user_properties: dict[str, str] | None = None,
+        subscription_id: list[int] = [],
     ) -> int | None:
         """
         Deliver a ``PUBLISH`` message to this client if the current state allows it.
@@ -263,6 +266,8 @@ class MQTTBrokerClientStateMachine(BaseMQTTClientStateMachine):
             packet_id=packet_id,
             user_properties=user_properties or {},
         )
+        if subscription_id:
+            packet.properties[PropertyType.SUBSCRIPTION_IDENTIFIER] = subscription_id
         packet.encode(self._out_buffer)
         if packet.packet_id is not None:
             self._add_pending_packet(packet, local=True)
@@ -291,7 +296,6 @@ class MQTTBrokerClientStateMachine(BaseMQTTClientStateMachine):
         ack = MQTTConnAckPacket(
             reason_code=reason_code, session_present=session_present
         )
-        ack.properties[PropertyType.SUBSCRIPTION_IDENTIFIER_AVAILABLE] = False
         ack.encode(self._out_buffer)
 
     def acknowledge_subscribe(

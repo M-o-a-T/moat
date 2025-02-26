@@ -21,7 +21,7 @@ pytestmark = [pytest.mark.anyio, pytest.mark.network]
 )
 async def test_publish_subscribe(qos_sub: QoS, qos_pub: QoS) -> None:
     async with AsyncMQTTClient() as client:
-        if qos_pub > client.maximum_qos:
+        if qos_pub > client.cap_qos:
             return  # TODO add pytest.skip
 
         async with client.subscribe("test/+", qos=qos_sub) as messages:

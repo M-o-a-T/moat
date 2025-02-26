@@ -37,7 +37,6 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
 
     client_id: str = field(validator=[instance_of(str), min_len(1)])
     _ping_pending: bool = field(init=False, default=False)
-    _maximum_qos: QoS = field(init=False, default=QoS.EXACTLY_ONCE)
     cap: Capabilities = field(init=False, factory=Capabilities)
 
     def __init__(self, client_id: str | None = None):
@@ -85,7 +84,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
                         PropertyType.SUBSCRIPTION_IDENTIFIER_AVAILABLE, True
                     ),
                 )
-                self._maximum_qos = cast(
+                self.cap.qos = cast(
                     QoS,
                     packet.properties.get(PropertyType.MAXIMUM_QOS, QoS.EXACTLY_ONCE),
                 )
@@ -194,11 +193,11 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
         return packet.packet_id
 
     @property
-    def maximum_qos(self) -> QoS:
+    def cap_qos(self) -> QoS:
         """
         Returns the maximum QoS level that the broker supports.
         """
-        return self._maximum_qos
+        return self.cap.qos
 
     def subscribe(
         self, subscriptions: Sequence[Subscription], max_qos: QoS | None = None

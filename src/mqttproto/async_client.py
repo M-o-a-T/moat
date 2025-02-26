@@ -546,11 +546,11 @@ class AsyncMQTTClient:
             raise operation.exception
 
     @property
-    def maximum_qos(self) -> QoS:
+    def cap_qos(self) -> QoS:
         """
         Returns the maximum QoS level that the broker supports.
         """
-        return self._state_machine.maximum_qos
+        return self._state_machine.cap.qos
 
     async def publish(
         self,

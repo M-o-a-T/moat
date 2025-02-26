@@ -110,7 +110,7 @@ def test_client_limit_qos(qos: QoS) -> None:
     buffer = bytearray()
     packet.encode(buffer)
     client.feed_bytes(buffer)
-    assert client.maximum_qos == qos
+    assert client.cap_qos == qos
 
 
 def test_client_receive_qos0(

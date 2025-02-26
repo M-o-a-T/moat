@@ -314,8 +314,8 @@ class AsyncMQTTClient:
         return self._state_machine.cap.retain
 
     @property
-    def may_subscription_id(self) -> bool:
-        return self._state_machine.may_subscription_id
+    def cap_subscription_ids(self) -> bool:
+        return self._state_machine.cap_subscription_ids
 
     async def __aenter__(self) -> Self:
         ctx: AbstractAsyncContextManager[Self]
@@ -585,7 +585,7 @@ class AsyncMQTTClient:
             await self._run_operation(MQTTQoS0PublishOperation())
 
     def _new_subscr_id(self) -> int:
-        if not self.may_subscription_id:
+        if not self.cap_subscription_ids:
             return 0
 
         sid = self._last_subscr_id

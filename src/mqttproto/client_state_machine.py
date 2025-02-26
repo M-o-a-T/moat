@@ -37,7 +37,6 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
 
     client_id: str = field(validator=[instance_of(str), min_len(1)])
     _ping_pending: bool = field(init=False, default=False)
-    _may_subscription_id: bool = field(init=False, default=True)
     _maximum_qos: QoS = field(init=False, default=QoS.EXACTLY_ONCE)
     cap: Capabilities = field(init=False, factory=Capabilities)
 
@@ -51,9 +50,9 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
         return self.cap.retain
 
     @property
-    def may_subscription_id(self) -> bool:
+    def cap_subscription_ids(self) -> bool:
         """Does the server support subscription IDs?"""
-        return self._may_subscription_id
+        return self.cap.subscription_ids
 
     def reset(self, session_present: bool) -> None:
         self._ping_pending = False
@@ -80,7 +79,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
                 self.cap.retain = cast(
                     bool, packet.properties.get(PropertyType.RETAIN_AVAILABLE, True)
                 )
-                self._may_subscription_id = cast(
+                self.cap.subscription_ids = cast(
                     bool,
                     packet.properties.get(
                         PropertyType.SUBSCRIPTION_IDENTIFIER_AVAILABLE, True
@@ -237,7 +236,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
             packet_id=self._generate_packet_id(),
             max_qos=max_qos,
         )
-        if subscr_id and self.may_subscription_id:
+        if subscr_id and self.cap_subscription_ids:
             packet.properties[PropertyType.SUBSCRIPTION_IDENTIFIER] = subscr_id
         packet.encode(self._out_buffer)
         self._add_pending_packet(packet, local=True)

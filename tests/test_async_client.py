@@ -51,11 +51,11 @@ async def test_publish_overlap() -> None:
             packets: list[MQTTPublishPacket] = []
             async for packet in messages:
                 if (
-                    not client.may_subscription_id
+                    not client.cap_subscription_ids
                     and packets
                     and packets[0].topic == "test/text"
                 ):
-                    assert not client.may_subscription_id
+                    assert not client.cap_subscription_ids
                     # with subscription IDs this won't happen
                     continue
 

@@ -10,6 +10,7 @@ from attrs import define, field
 from ._base_client_state_machine import BaseMQTTClientStateMachine, MQTTClientState
 from ._exceptions import MQTTProtocolError
 from ._types import (
+    Capabilities,
     MQTTConnAckPacket,
     MQTTConnectPacket,
     MQTTDisconnectPacket,
@@ -39,6 +40,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
     _may_retain: bool = field(init=False, default=True)
     _may_subscription_id: bool = field(init=False, default=True)
     _maximum_qos: QoS = field(init=False, default=QoS.EXACTLY_ONCE)
+    cap: Capabilities = field(init=False, factory=Capabilities)
 
     def __init__(self, client_id: str | None = None):
         self.__attrs_init__(client_id=client_id or f"mqttproto-{uuid4().hex}")

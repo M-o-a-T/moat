@@ -37,7 +37,6 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
 
     client_id: str = field(validator=[instance_of(str), min_len(1)])
     _ping_pending: bool = field(init=False, default=False)
-    _may_retain: bool = field(init=False, default=True)
     _may_subscription_id: bool = field(init=False, default=True)
     _maximum_qos: QoS = field(init=False, default=QoS.EXACTLY_ONCE)
     cap: Capabilities = field(init=False, factory=Capabilities)
@@ -47,9 +46,9 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
         self._auto_ack_publishes = True
 
     @property
-    def may_retain(self) -> bool:
+    def cap_retain(self) -> bool:
         """Does the server support RETAINed messages?"""
-        return self._may_retain
+        return self.cap.retain
 
     @property
     def may_subscription_id(self) -> bool:
@@ -78,7 +77,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
                 self._auth_method = cast(
                     str, packet.properties.get(PropertyType.AUTHENTICATION_METHOD)
                 )
-                self._may_retain = cast(
+                self.cap.retain = cast(
                     bool, packet.properties.get(PropertyType.RETAIN_AVAILABLE, True)
                 )
                 self._may_subscription_id = cast(

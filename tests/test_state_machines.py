@@ -320,4 +320,4 @@ def test_client_retain(retain: bool | None) -> None:
     buffer = bytearray()
     packet.encode(buffer)
     client.feed_bytes(buffer)
-    assert client.may_retain == (retain is not False)
+    assert client.cap_retain == (retain is not False)

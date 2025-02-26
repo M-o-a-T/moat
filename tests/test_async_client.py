@@ -72,7 +72,7 @@ async def test_publish_overlap() -> None:
 async def test_retained_message() -> None:
     try:
         async with AsyncMQTTClient() as client:
-            if not client.may_retain:
+            if not client.cap_retain:
                 pytest.skip("Retain not available")
             await client.publish("retainedtest", "test åäö", retain=True)
             async with client.subscribe("retainedtest") as messages:

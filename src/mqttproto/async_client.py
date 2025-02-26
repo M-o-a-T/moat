@@ -310,8 +310,8 @@ class AsyncMQTTClient:
         self._state_machine = MQTTClientStateMachine(client_id=self.client_id)
 
     @property
-    def may_retain(self) -> bool:
-        return self._state_machine.may_retain
+    def cap_retain(self) -> bool:
+        return self._state_machine.cap.retain
 
     @property
     def may_subscription_id(self) -> bool:

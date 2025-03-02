@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 import anyio
 from moat.mqtt.client import MQTTClient
 from moat.mqtt.codecs import NoopCodec
+from moat.util import NotGiven
 
 from . import Backend
 
@@ -25,7 +26,7 @@ class MqttBackend(Backend):
 
     @asynccontextmanager
     async def connect(self, *a, **kw):
-        codec = kw.pop("codec", None)
+        codec = kw.pop("codec", NotGiven)
         C = MQTTClient(self._tg, codec=codec)
         try:
             await C.connect(*a, **kw)

@@ -179,8 +179,7 @@ class StreamUnpacker:
     def __next__(self):
         if not self.res:
             raise StopIteration
-        res, self.res = self.res[0], self.res[1:]
-        return res
+        return self.res.pop(0)
 
     def feed(self, data: bytes):
         self.res.extend(self.codec.feed(data))

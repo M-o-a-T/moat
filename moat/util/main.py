@@ -182,7 +182,7 @@ def process_args(val, set_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=
     process ``set_``/``vars_``/``eval_``/``path_``/``proxy_`` args.
 
     Arguments:
-        vd: dict to modify
+        val: dict to modify
         set_, vars_, eval_, path_, proxy_: via `attr_args`
         vs: if given: set of vars
     Returns:

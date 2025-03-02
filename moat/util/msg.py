@@ -70,23 +70,25 @@ class MsgReader(_MsgRW):
     def __init__(self, *a, buflen=4096, **kw):
         super().__init__(*a, **kw)
         self.buflen = buflen
+        self.it = None
 
     def __aiter__(self):
         return self
 
     async def __anext__(self):
         while True:
-            try:
-                msg = next(self.codec)
-            except StopIteration:
-                pass
-            else:
-                return msg
+            if self.it is not None:
+                try:
+                    msg = next(self.it)
+                except StopIteration:
+                    self.it = None
+                else:
+                    return msg
 
             d = await self.stream.read(self.buflen)
             if d == b"":
                 raise StopAsyncIteration
-            self.codec.feed(d)
+            self.it = self.codec.feed(d)
 
 
 class MsgWriter(_MsgRW):

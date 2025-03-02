@@ -854,6 +854,19 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     obj.debug = verbose
     obj.DEBUG = debug
 
+    # Don't forget to import toplevel config files
+    import moat 
+    try:
+        p = moat.__path__
+    except AttributeError:
+        p = (str(FSPath(ext.__file__).parent),)
+    for fp in p:
+        try:
+            with (FSPath(fp)/"_cfg.yaml").open("r") as f:
+                merge(cfg, yload(f, attr=True), replace=False)
+        except FileNotFoundError:
+            pass
+
     obj.cfg = process_args(
         obj.cfg, set_=set_, vars_=vars_, eval_=eval_, path_=path_, proxy_=proxy_
     )

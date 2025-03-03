@@ -1,0 +1,55 @@
+# all measurements in mm
+#
+printer:
+  _default:
+    scale: [1,1]
+    page: [0,0,0]  # Printer margins. left top right
+    margin: [0,0] # left and top offset between the printer margin and 
+    slot: Manual
+  a4:
+    size: a4
+    name: Laser
+
+format:
+  av270:
+    stepping: [20.25,10]  # distance between labels
+    size: [17.8,10]  # size of actual labels
+    extent: [10,27]  # labels per page
+    margin: [5,13]
+
+  av80:
+    stepping: [38.0,16.9]  # distance between labels
+    size: [35.6,16.9]  # size of actual labels
+    extent: [5,16]  # labels per page
+    margin: [11,13]
+
+label:
+  _default:
+    font:
+      name: Helvetica
+      style: B
+      align: C
+      size: 12
+
+  tray4:
+    alternate: true
+    format: av270
+    font:
+      size: 25
+      align: C
+    bar:
+      line: 1
+    inset: [2,2]
+    base: 1000  # start numbering here
+
+  tray2:
+    alternate: false
+    format: av80
+    font:
+      size: 25
+      align: L
+    bar:
+      line: 0.8
+    inset: [17,2]
+    base: 100000  # start numbering here
+

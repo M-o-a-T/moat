@@ -1,0 +1,5 @@
+schemas:
+  - moat.db.model
+  - moat.label.model
+url:
+  sqlite:////nonexistent/test.db

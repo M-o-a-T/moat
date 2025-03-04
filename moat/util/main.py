@@ -349,14 +349,8 @@ def load_ext(name, *attr, err=False):
     try:
         mod = importlib.import_module(dp)
     except ModuleNotFoundError as exc:
-        if err:
-            raise
-        if err is not None:
-            logger.debug("Err %s: %r", dp, exc)
-        if (
-            exc.name != dp and exc.name != dpe and not exc.name.startswith(f"{dp}._")  # pylint: disable=no-member ## duh?
-        ):
-            raise
+        if err and not exc.name.endswith("._main"):
+            logger.debug("Err %s: %r", dp, exc, exc_info=exc)
         return None
     except FileNotFoundError:
         if err:
@@ -606,7 +600,7 @@ class Loader(click.Group):
                 name = name.rsplit(".", 1)[1]
                 if name[0] == "_":
                     continue
-                if load_ext(sub_pre, name, *sub_post):
+                if load_ext(sub_pre, name, *sub_post, err=ctx.obj.debug_loader):
                     rv.append(name)
 
         if ext_pre:
@@ -624,7 +618,7 @@ class Loader(click.Group):
         sub_pre, sub_post, ext_pre, ext_post = self.get_sub_ext(ctx)
 
         if command is None and ext_pre is not None:
-            command = load_ext(ext_pre, cmd_name, *ext_post)
+            command = load_ext(ext_pre, cmd_name, *ext_post, err=True)
             if command is not None:
                 cf = load_cfg(f"{ext_pre}.{cmd_name}")
                 merge(ctx.obj.cfg, cf, replace=False)
@@ -632,7 +626,7 @@ class Loader(click.Group):
         if command is None:
             if sub_pre is None:
                 return None
-            command = load_ext(sub_pre, cmd_name, *sub_post)
+            command = load_ext(sub_pre, cmd_name, *sub_post, err=True)
             if command is not None:
                 cf = load_cfg(f"{sub_pre}.{cmd_name}")
                 merge(ctx.obj.cfg, cf, replace=False)
@@ -906,6 +900,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         logging.root._MoaT = True
 
     obj.logger = logging.getLogger(name)
+    obj.debug_loader = debug_loader
 
     try:
         # pylint: disable=no-value-for-parameter,unexpected-keyword-arg

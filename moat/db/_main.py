@@ -40,10 +40,10 @@ def init_(obj):
     cfg = obj.cfg.db
 
     meta = load(cfg)
-    with database(cfg) as conn:
-        meta.create_all(conn.bind)
+    with database(cfg) as sess, sess.begin():
+        meta.create_all(sess.bind)
 
-        acfg = alembic_cfg(obj.cfg, conn)
+        acfg = alembic_cfg(obj.cfg, sess)
         command.stamp(acfg, "head")
 
 
@@ -58,8 +58,8 @@ def update(obj):
     cfg = obj.cfg.db
 
     meta = load(cfg)
-    with database(cfg) as sess:
-        acfg = alembic_cfg(cfg, sess)
+    with database(cfg) as sess, sess.begin():
+        acfg = alembic_cfg(obj.cfg, sess)
 
         command.upgrade(acfg, "head")
 
@@ -110,8 +110,8 @@ def mig_init(obj):
     cfg = obj.cfg.db
 
     meta = load(cfg)
-    with database(cfg) as conn:
-        acfg = alembic_cfg(cfg, conn)
+    with database(cfg) as sess, sess.begin():
+        acfg = alembic_cfg(obj.cfg, sess)
         command.stamp(acfg, "head")
 
 

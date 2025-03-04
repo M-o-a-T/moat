@@ -63,7 +63,7 @@ class Box(Base):
 
     typ_id: Mapped[int] = mapped_column(ForeignKey("boxtyp.id", name="fk_box_typ"))
     name: Mapped[str] = mapped_column(unique=True, type_=String(40))
-    container_id: Mapped[int] = mapped_column(ForeignKey("box.id"), nullable=True)
+    container_id: Mapped[int] = mapped_column(ForeignKey("box.id", name="fk_box_container"), nullable=True)
 
     boxtyp: Mapped[BoxTyp] = relationship(back_populates="boxes")
     container: Mapped[Optional["Box"]] = relationship(back_populates="boxes", remote_side=[id])

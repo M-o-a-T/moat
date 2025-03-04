@@ -17,7 +17,7 @@ class LabelTyp(Base):
 
 class Sheet(Base):
     "A (to-be-)printed sheet with labels."
-    typ_id: Mapped[int] = mapped_column(ForeignKey("labeltyp.id"), nullable=True)
+    typ_id: Mapped[int] = mapped_column(ForeignKey("labeltyp.id", name="fk_sheet_labeltyp"), nullable=True)
     start: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0", comment="Position of first label")
 
     typ: Mapped["LabelTyp"] = relationship()
@@ -31,10 +31,10 @@ class Label(Base):
     code: Mapped[int] = mapped_column(unique=True, comment="The numeric code in the primary barcode.")
     rand: Mapped[str] = mapped_column(nullable=True, comment="random characters in the seconrady barcode URL.", type_=String(16))
     text: Mapped[str] = mapped_column(nullable=False, comment="The text on the label. May be numeric.", type_=String(200))
-    typ_id: Mapped[int] = mapped_column(ForeignKey("labeltyp.id"))
-    sheet_id: Mapped[int] = mapped_column(ForeignKey("sheet.id"), nullable=True)
+    typ_id: Mapped[int] = mapped_column(ForeignKey("labeltyp.id", name="fk_label_labeltyp"))
+    sheet_id: Mapped[int] = mapped_column(ForeignKey("sheet.id", name="fk_label_sheet"), nullable=True)
 
-    box_id: Mapped[int] = mapped_column(ForeignKey("box.id"), nullable=True)
+    box_id: Mapped[int] = mapped_column(ForeignKey("box.id", name="fk_label_box"), nullable=True)
     # thing_id
 
     typ: Mapped["LabelTyp"] = relationship()

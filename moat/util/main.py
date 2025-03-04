@@ -361,9 +361,6 @@ def load_ext(name, *attr, err=False):
             try:
                 mod = getattr(mod, attr[-1])
             except AttributeError:
-                if err:
-                    raise
-
                 logger.debug("Err %s.%s", dp, attr[-1])
                 return None
         return mod
@@ -618,7 +615,7 @@ class Loader(click.Group):
         sub_pre, sub_post, ext_pre, ext_post = self.get_sub_ext(ctx)
 
         if command is None and ext_pre is not None:
-            command = load_ext(ext_pre, cmd_name, *ext_post, err=True)
+            command = load_ext(ext_pre, cmd_name, *ext_post)
             if command is not None:
                 cf = load_cfg(f"{ext_pre}.{cmd_name}")
                 merge(ctx.obj.cfg, cf, replace=False)
@@ -626,7 +623,7 @@ class Loader(click.Group):
         if command is None:
             if sub_pre is None:
                 return None
-            command = load_ext(sub_pre, cmd_name, *sub_post, err=True)
+            command = load_ext(sub_pre, cmd_name, *sub_post)
             if command is not None:
                 cf = load_cfg(f"{sub_pre}.{cmd_name}")
                 merge(ctx.obj.cfg, cf, replace=False)

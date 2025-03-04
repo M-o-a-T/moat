@@ -1,0 +1,94 @@
+#!/usr/bin/python3
+
+import sys
+import os
+sys.path.insert(0,os.curdir)
+
+from moat.util import CFG, yload, merge, ensure_cfg
+
+from moat.db import database
+from moat.label.model import LabelTyp,Label
+from moat.box.model import BoxTyp,Box
+from pathlib import Path
+from sqlalchemy import select
+
+ensure_cfg("moat.db")
+
+def main():
+    CFG.db.url="sqlite:////tmp/test.db"
+    data=yload(Path("/mnt/privat/Schleiermacher/Werkkeller.txt").read_text(), attr=True)
+    
+    with database(CFG) as db:
+        for k,v in data.items():
+            if "t" not in v:
+                continue
+            with db.begin() as s:
+                typ = f"tray{v.t%10}"
+                try:
+                    typ=db.one(LabelTyp,name=typ)
+                except KeyError:
+                    typ=LabelTyp(name=typ,code=1000 if v.t%10==4 else 100000)
+                    db.add(typ)
+                    db.flush()
+
+                try:
+                    lab=db.one(Label,typ=typ,code=v.code)
+                except AttributeError:
+                    lab=None
+                except KeyError:
+                    lab=Label(typ=typ,code=v.code,text=str(k))
+                    db.add(lab)
+
+                par = f"mag_{v.t}"
+                cld = f"mag_{v.t}_c"
+                try:
+                    par=db.one(BoxTyp,name=par)
+                except KeyError:
+                    par = BoxTyp(name=par, pos_x=v.t//100, pos_y=(v.t//10)%10, pos_z=1, labeltyp=typ)
+                    db.add(par)
+                    db.flush()
+
+                    if v.t//10 != 11:
+                        cld = BoxTyp(name=cld)
+                        cld.parents.add(par)
+                        db.add(cld)
+                        db.flush()
+                else:
+                    if v.t//10 != 11:
+                        cld = db.one(BoxTyp,name=cld)
+
+                if v.t//10 == 11:
+                    cld=par
+                
+                box=f"mag_{k}"
+                try:
+                    box=db.one(Box,name=box)
+                except KeyError:
+                    box=Box(name=box,label=lab,boxtyp=par)
+                    db.add(box)
+                    db.flush()
+
+        for k,v in data.items():
+            if "t" not in v:
+                continue
+            with db.begin() as s:
+                box=db.one(Box,name=f"mag_{k}")
+                if v.t==111:
+                    ctyp=db.one(BoxTyp,name=f"mag_{v.t}")
+                else:
+                    ctyp=db.one(BoxTyp,name=f"mag_{v.t}_c")
+                for x in range(1,box.boxtyp.pos_x+1):
+                    for y in range(1,box.boxtyp.pos_y+1):
+                        bx = f"mag_{k}_{x}{y}"
+                        try:
+                            bx=db.one(Box,name=bx,container=box)
+                        except KeyError:
+                            bx=Box(name=bx,container=box,boxtyp=ctyp,pos_x=x,pos_y=y)
+                            db.add(bx)
+                        else:
+                            bx.pos_x=x
+                            bx.pos_y=y
+                        db.flush()
+
+
+main()

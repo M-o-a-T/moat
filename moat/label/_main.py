@@ -35,12 +35,11 @@ ensure_cfg("moat.label")
 @click.option("-p","--printer",help="Printer name")
 @click.option("-f","--format",help="Label format")
 @click.option("-t","--type","type_", help="Label type")
-@click.option("-o","--out","output", type=click.Path(dir_okay=False, readable=False, writable=True), help="Destination file", default="/tmp/moat.pdf")
 @click.pass_context
-@click.pass_obj
-async def cli(obj,ctx, printer,format,type_, output):
+def cli(ctx, printer,format,type_):
     """Produce labels."""
-    cfg = obj.cfg = CFG.label
+    obj = ctx.obj
+    cfg = obj.cfg.label
 
     def select(key,label,sel) -> dict:
         pr = cfg[key]
@@ -50,8 +49,7 @@ async def cli(obj,ctx, printer,format,type_, output):
         elif len(pr) == 1:
             pr = next(iter(pr.values()))
         else:
-            print(f"Known {label}:", " ".join(pr.keys()), file=sys.stderr)
-            sys.exit(1)
+            return None
         merge(pr,dpr, replace=False)
         return pr
 
@@ -65,22 +63,60 @@ async def cli(obj,ctx, printer,format,type_, output):
         print("Label Types:\n\t"+ prx(cfg.label))
         return
 
+    if ctx.invoked_subcommand != "test":
+        from moat.db import database
+        from .model import LabelTyp
+        from sqlalchemy import select as sel
+
+        db = ctx.with_resource(database(obj.cfg.db))
+        with db.begin():
+            for name in cfg.label.keys():
+                typ=db.execute(sel(LabelTyp).where(LabelTyp.name==name)).first()
+                if typ is None:
+                    typ=LabelTyp(name=name,code=100000 if name == "tray2" else 1000)
+                    db.add(typ)
+        obj.db = db
+
     if type_:
         if format is None:
             format = cfg.label[type_].format
         elif format != cfg.label[type_]:
             raise ValueError(f"Oops, label {type} has format {cfg.label[type_].format}. not {format}")
-    pr = cfg.printer = select("printer","Printers", printer)
-    fo = cfg.format = select("format","Label Formats", format)
-    la = cfg.label = select("label","Label types", type_)
+    obj.printer = cfg.printer = select("printer","Printers", printer)
+    obj.format = cfg.format = select("format","Label Formats", format)
+    obj.label = cfg.label = select("label","Label types", type_)
 
-    obj.pdf = Labels(pr,fo,la)
+
+@cli.group(name="print")
+@click.pass_obj
+@click.option("-o","--out","output", type=click.Path(dir_okay=False, readable=False, writable=True), help="Destination file", default=None)
+def print_(obj, output):
+    """
+    Subcommands for actual printing
+    """
+    def prx(kk):
+        return " ".join(k for k in kk.keys() if k[0] != "_")
+    if obj.printer is None:
+        print("Printers:\n\t"+ prx(cfg.printer))
+        sys.exit(1)
+    if obj.format is None:
+        print("Formats:\n\t"+ prx(cfg.format))
+        sys.exit(1)
+    if obj.label is None:
+        print("Labels:\n\t"+ prx(cfg.label))
+        sys.exit(1)
+
+    obj.pdf = Labels(obj.printer,obj.format,obj.label)
     obj.filename=output
 
 
-@cli.command(name="test")
+@cli.command()
+def foo():
+    pass
+
+@print_.command(name="test")
 @click.pass_obj
-async def test(obj):
+def test(obj):
     """\
     Create a test PDF that frames first and last labels.
     """
@@ -94,5 +130,5 @@ async def test(obj):
         for y in (0,yy//2,yy-1):
             px,py = p.label_position(x,y)
             p.rect(px, py, w, h, style=None, round_corners=True, corner_radius=2)
-    p.print()
+    p.print(obj.output)
 

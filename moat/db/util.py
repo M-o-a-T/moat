@@ -54,10 +54,12 @@ class Mgr:
         sel = select(table)
         for k,v in kw.items():
             sel = sel.where(getattr(table,k) == v)
-        res = self.__session.execute(sel).first()
-        if res is None:
+        res = self.__session.execute(sel.limit(2)).fetchall()
+        if not res:
             raise KeyError(table.__name__,kw)
-        return res[0]
+        if len(res) != 1:
+            raise ValueError("Not unique", table.__name__,kw)
+        return res[0][0]
 
 
 @contextmanager

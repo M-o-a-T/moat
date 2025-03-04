@@ -9,14 +9,24 @@ from moat.util import ensure_cfg, CFG, merge
 from importlib import import_module
 from contextlib import contextmanager
 
-from sqlalchemy import Connection, create_engine
+from sqlalchemy import Connection, create_engine, event
 from sqlalchemy.orm import Session
+from sqlalchemy.engine import Engine
+
 
 import logging
 logger=logging.getLogger(__name__)
 
 
 ensure_cfg("moat.db")
+
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
 
 _loaded = False
 def load(cfg:attrdict) -> metadata:

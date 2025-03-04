@@ -66,9 +66,11 @@ def main():
                 try:
                     box=db.one(Box,name=box)
                 except KeyError:
-                    box=Box(name=box,label=lab,boxtyp=par)
+                    box=Box(name=box,boxtyp=par)
                     db.add(box)
-                    db.flush()
+                if lab is not None:
+                    lab.box = box
+                db.flush()
 
         for k,v in data.items():
             if "t" not in v:

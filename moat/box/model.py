@@ -43,7 +43,7 @@ class BoxTyp(Base):
     pos_y: Mapped[int] = mapped_column(nullable=True, comment="Max # of Y positions")
     pos_z: Mapped[int] = mapped_column(nullable=True, comment="Max # of Z positions")
 
-    labeltyp_id: Mapped[int] = mapped_column(ForeignKey("labeltyp.id"), nullable=True, comment="Default label")
+    labeltyp_id: Mapped[int] = mapped_column(ForeignKey("labeltyp.id", name="fk_boxtyp_labeltyp"), nullable=True, comment="Default label")
 
     boxes: Mapped[set["Box"]] = relationship(back_populates="boxtyp")
 
@@ -55,13 +55,14 @@ class BoxTyp(Base):
             res["child"] = [p.name for p in self.children]
         return res
 
+from moat.label.model import Label, LabelTyp
+
 class Box(Base):
     "One particular box, possibly with other boxes inside."
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    typ_id: Mapped[int] = mapped_column(ForeignKey("boxtyp.id"))
+    typ_id: Mapped[int] = mapped_column(ForeignKey("boxtyp.id", name="fk_box_typ"))
     name: Mapped[str] = mapped_column(unique=True, type_=String(40))
-    label_id: Mapped[Optional[int]] = mapped_column(ForeignKey("label.id"), nullable=True)
     container_id: Mapped[int] = mapped_column(ForeignKey("box.id"), nullable=True)
 
     boxtyp: Mapped[BoxTyp] = relationship(back_populates="boxes")
@@ -73,9 +74,7 @@ class Box(Base):
     pos_y: Mapped[int] = mapped_column(nullable=True, comment="Y position in parent")
     pos_z: Mapped[int] = mapped_column(nullable=True, comment="Z position in parent")
 
-# recursive usage
+    labels: Mapped[set[Label]] = relationship(back_populates="box")
 
-from moat.label.model import Label, LabelTyp
 
 BoxTyp.labeltyp = relationship(LabelTyp, back_populates="boxtypes")
-Box.label = relationship(Label, back_populates="boxes")

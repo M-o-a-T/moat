@@ -53,8 +53,13 @@ def alembic_cfg(gcfg, sess):
     c = Config()
     c.file_config=RawConfigParser()
     c.set_section_option("alembic","script_location", str(Path(db.__path__[0])/"alembic"))
+    c.set_section_option("alembic","timezone", gcfg.env.timezone)
+    c.set_section_option("alembic","file_template", "%(rev)s")
+    c.set_section_option("alembic","version_path_separator", "os")
+
     c.attributes['session'] = sess
     c.attributes['connection'] = sess.connection()
     c.attributes['metadata'] = load(cfg)
+    c.attributes['config'] = cfg
 
     return c

@@ -1,3 +1,5 @@
+env:
+  timezone: UTC
 logging:
   loggers:
     asyncserf:

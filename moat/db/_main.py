@@ -21,9 +21,12 @@ ensure_cfg("moat.db")
 
 
 @load_subgroup(prefix="moat.db", invoke_without_command=False)
-def cli():
+@click.option("-v","--verbose",is_flag=True,help="Log database commands")
+@click.pass_obj
+def cli(obj, verbose):
     """Database support"""
-    pass
+    cfg = obj.cfg.db
+    cfg.verbose=verbose
 
 
 @cli.command(name="init")

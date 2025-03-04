@@ -44,7 +44,7 @@ def database(cfg:attrdict|None=None) -> Session:
     else:
         merge(cfg,CFG.db, replace=False)
 
-    engine = create_engine(cfg.url, echo=False)
+    engine = create_engine(cfg.url, echo=cfg.get("verbose",False))
     with Session(engine) as conn:
         yield conn
 

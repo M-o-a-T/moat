@@ -8,7 +8,6 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from moat.db.schema import Base
-from moat.box.model import Box
 
 class LabelTyp(Base):
     "One kind of label. Label format data are in the config file."
@@ -22,7 +21,7 @@ class Sheet(Base):
     start: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0", comment="Position of first label")
 
     typ: Mapped["LabelTyp"] = relationship()
-    labels: Mapped[list["Label"]] = relationship(back_populates="sheet")
+    labels: Mapped[set["Label"]] = relationship(back_populates="sheet")
     printed: Mapped[bool] = mapped_column(default=False)
 
     # Sheet 1 is the printed-but-not-on-a-sheet ID.
@@ -38,4 +37,6 @@ class Label(Base):
     typ: Mapped["LabelTyp"] = relationship()
     sheet: Mapped["Sheet"] = relationship(back_populates="labels")
 
-    box: Mapped["Box"] = relationship(back_populates="label")
+from moat.box.model import Box, BoxTyp
+Label.boxes = relationship(Box, back_populates="label")
+LabelTyp.boxtypes = relationship(BoxTyp, back_populates="labeltyp")

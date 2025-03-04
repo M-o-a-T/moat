@@ -53,3 +53,14 @@ label:
     inset: [17,2]
     base: 100000  # start numbering here
 
+  tray1:
+    alternate: false
+    format: av80
+    font:
+      size: 25
+      align: L
+    bar:
+      line: 0.8
+    inset: [17,2]
+    base: 100000  # start numbering here
+

@@ -43,7 +43,7 @@ def init_(obj):
     with database(cfg) as conn:
         meta.create_all(conn.bind)
 
-        acfg = alembic_cfg(cfg, conn)
+        acfg = alembic_cfg(obj.cfg, conn)
         command.stamp(acfg, "head")
 
 
@@ -132,7 +132,7 @@ def mig_rev(obj, message):
 
     meta = load(cfg)
     with database(cfg) as sess:
-        acfg = alembic_cfg(cfg, sess)
+        acfg = alembic_cfg(obj.cfg, sess)
 
         try:
             command.check(acfg)
@@ -153,7 +153,7 @@ def mig_check(obj):
 
     meta = load(cfg)
     with database(cfg) as sess:
-        acfg = alembic_cfg(cfg, sess)
+        acfg = alembic_cfg(obj.cfg, sess)
 
         try:
             command.check(acfg)

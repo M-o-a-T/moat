@@ -19,13 +19,10 @@ logger=logging.getLogger(__name__)
 ensure_cfg("moat.db")
 
 _loaded = False
-def load(cfg:attrdict|None=None) -> metadata:
+def load(cfg:attrdict) -> metadata:
     """Load database models as per config."""
     from moat.db.schema import Base
-    if cfg is None:
-        cfg = CFG.db
-    else:
-        merge(cfg,CFG.db, replace=False)
+    merge(cfg,CFG.db, replace=False)
 
     global _loaded
     if not _loaded:
@@ -36,23 +33,22 @@ def load(cfg:attrdict|None=None) -> metadata:
     return Base.metadata
 
 @contextmanager
-def database(cfg:attrdict|None=None) -> Session:
+def database(cfg:attrdict) -> Session:
     """Start a database session."""
 
-    if cfg is None:
-        cfg = CFG.db
-    else:
-        merge(cfg,CFG.db, replace=False)
+    merge(cfg,CFG.db, replace=False)
 
     engine = create_engine(cfg.url, echo=cfg.get("verbose",False))
     with Session(engine) as conn:
         yield conn
 
-def alembic_cfg(cfg, sess):
+def alembic_cfg(gcfg, sess):
     """Generate a config object for Alembic."""
     from alembic.config import Config
     from configparser import RawConfigParser
     from moat import db
+
+    cfg=gcfg.db
 
     c = Config()
     c.file_config=RawConfigParser()

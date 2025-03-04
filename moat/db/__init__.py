@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
 	from moat.util import attrdict
 
-def load(*a,**kw):
+def load(cfg):
 	from .util import load as load_
-	return load_(*a, **kw)
+	return load_(cfg)
 
-def database(*a,**kw):
+def database(cfg):
 	from .util import database as database_
-	return database_(*a, **kw)
+	return database_(cfg)

@@ -8,6 +8,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from moat.db.schema import Base
+from moat.box.model import Box
 
 class LabelTyp(Base):
     "One kind of label. Label format data are in the config file."
@@ -37,3 +38,4 @@ class Label(Base):
     typ: Mapped["LabelTyp"] = relationship()
     sheet: Mapped["Sheet"] = relationship(back_populates="labels")
 
+    box: Mapped["Box"] = relationship(back_populates="label")

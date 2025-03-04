@@ -1,5 +1,6 @@
 schemas:
   - moat.db.model
   - moat.label.model
+  - moat.box.model
 url:
   sqlite:////nonexistent/test.db

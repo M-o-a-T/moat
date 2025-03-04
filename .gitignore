@@ -7,6 +7,7 @@
 /*.buildinfo
 .cache
 /*.cfg
+!/test.cfg
 /*.changes
 /configs/*.cfg
 *,cover

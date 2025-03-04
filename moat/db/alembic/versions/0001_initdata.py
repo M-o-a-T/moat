@@ -20,7 +20,7 @@ def upgrade() -> None:
 
     meta=load(config.attributes["config"])
 
-    st=sa.insert(meta.tables["sheet"]).values(id=1)
+    st=sa.insert(meta.tables["sheet"]).values(id=1, printed=True)
     op.execute(st)
     op.execute("commit")
 

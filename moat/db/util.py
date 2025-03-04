@@ -9,7 +9,7 @@ from moat.util import ensure_cfg, CFG, merge
 from importlib import import_module
 from contextlib import contextmanager
 
-from sqlalchemy import Connection, create_engine, event
+from sqlalchemy import Connection, create_engine, event, select
 from sqlalchemy.orm import Session
 from sqlalchemy.engine import Engine
 
@@ -42,6 +42,24 @@ def load(cfg:attrdict) -> metadata:
 
     return Base.metadata
 
+class Mgr:
+    def __init__(self, session):
+        self.__session = session
+
+    def __getattr__(self, k):
+        return getattr(self.__session, k)
+
+    def one(self, table, **kw):
+        """Quick way to retrieve a single result"""
+        sel = select(table)
+        for k,v in kw.items():
+            sel = sel.where(getattr(table,k) == v)
+        res = self.__session.execute(sel).first()
+        if res is None:
+            raise KeyError(table.__name__,kw)
+        return res[0]
+
+
 @contextmanager
 def database(cfg:attrdict) -> Session:
     """Start a database session."""
@@ -50,7 +68,7 @@ def database(cfg:attrdict) -> Session:
 
     engine = create_engine(cfg.url, echo=cfg.get("verbose",False))
     with Session(engine) as conn:
-        yield conn
+        yield Mgr(conn)
 
 def alembic_cfg(gcfg, sess):
     """Generate a config object for Alembic."""

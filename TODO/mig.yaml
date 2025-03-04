@@ -9,13 +9,15 @@ from moat.util import CFG, yload, merge, ensure_cfg
 from moat.db import database
 from moat.label.model import LabelTyp,Label
 from moat.box.model import BoxTyp,Box
+from moat.util import yload
 from pathlib import Path
 from sqlalchemy import select
 
 ensure_cfg("moat.db")
 
 def main():
-    CFG.db.url="sqlite:////tmp/test.db"
+    p=Path("test.cfg")
+    merge(CFG,yload(p.read_text(), attr=True), replace=True)
     data=yload(Path("/mnt/privat/Schleiermacher/Werkkeller.txt").read_text(), attr=True)
     
     with database(CFG) as db:

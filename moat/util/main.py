@@ -305,7 +305,7 @@ def process_args(val, set_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=
     return val
 
 
-def read_cfg(name, path):
+def read_cfg(name, path=None):
     """
     Read a YAML config file, either from the specified path
     or from a couple of default paths.

@@ -16,3 +16,11 @@ class Base(DeclarativeBase):
     id = Column(Integer, primary_key=True)
 
 
+    def dump(self):
+        res = dict()
+        for k in self.__table__.c:
+            v = getattr(self, k.name)
+            if v is not None:
+                res[k.name] = v
+        return res
+

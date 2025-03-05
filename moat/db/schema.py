@@ -19,6 +19,8 @@ class Base(DeclarativeBase):
     def dump(self):
         res = dict()
         for k in self.__table__.c:
+            if k.name == "id" or k.name.endswith("_id"):
+                continue
             v = getattr(self, k.name)
             if v is not None:
                 res[k.name] = v

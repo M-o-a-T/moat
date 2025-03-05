@@ -10,7 +10,7 @@ from importlib import import_module
 from contextlib import contextmanager
 
 from sqlalchemy import Connection, create_engine, event, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.engine import Engine
 
 
@@ -30,6 +30,8 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor.close()
 
 
+Session = sessionmaker()
+
 _loaded = False
 def load(cfg:attrdict) -> metadata:
     """Load database models as per config."""
@@ -41,6 +43,9 @@ def load(cfg:attrdict) -> metadata:
         for schema in cfg.schemas:
             import_module(schema)
         _loaded = True
+
+    engine = create_engine(cfg.url, echo=cfg.get("verbose",False))
+    Session.configure(bind=engine)
 
     return Base.metadata
 
@@ -68,10 +73,9 @@ class Mgr:
 def database(cfg:attrdict) -> Session:
     """Start a database session."""
 
-    merge(cfg,CFG.db, replace=False)
+    load(cfg)
 
-    engine = create_engine(cfg.url, echo=cfg.get("verbose",False))
-    with Session(engine) as conn:
+    with Session() as conn:
         yield Mgr(conn)
 
 def alembic_cfg(gcfg, sess):

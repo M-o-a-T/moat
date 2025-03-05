@@ -4,10 +4,11 @@ Database schema for collecting things
 
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, String, Table, Column, Integer
+from sqlalchemy import ForeignKey, String, Table, Column, Integer, event
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from moat.db.schema import Base
+from moat.db.util import Session
 
 from typing import Optional
 
@@ -49,6 +50,11 @@ class BoxTyp(Base):
 
     def dump(self):
         res = super().dump()
+        res.pop("pos_x", None)
+        res.pop("pos_y", None)
+        res.pop("pos_z", None)
+        if self.pos_x or self.pos_y or self.pos_z:
+            res["size"] = [self.pos_x, self.pos_y, self.pos_z]
         if self.parents:
             res["parent"] = [p.name for p in self.parents]
         if self.children:
@@ -56,6 +62,20 @@ class BoxTyp(Base):
         return res
 
 from moat.label.model import Label, LabelTyp
+
+class BoxAssoc(Base):
+    """Associates a collection of boxes
+    with a particular parent.
+
+    """
+
+    __tablename__ = "address_association"
+
+    discriminator = Column(String)
+    """Refers to the type of parent."""
+
+    __mapper_args__ = {"polymorphic_on": discriminator}
+
 
 class Box(Base):
     "One particular box, possibly with other boxes inside."
@@ -74,7 +94,47 @@ class Box(Base):
     pos_y: Mapped[int] = mapped_column(nullable=True, comment="Y position in parent")
     pos_z: Mapped[int] = mapped_column(nullable=True, comment="Z position in parent")
 
-    labels: Mapped[set[Label]] = relationship(back_populates="box")
+    labels: Mapped[set["Label"]] = relationship(back_populates="box")
 
+    def dump(self):
+        res = super().dump()
+        res.pop("pos_x", None)
+        res.pop("pos_y", None)
+        res.pop("pos_z", None)
+        if self.pos_x or self.pos_y or self.pos_z:
+            res["pos"] = [self.pos_x, self.pos_y, self.pos_z]
+        if self.container is not None:
+            res["in"] = self.container.name
+        if self.labels:
+            res["labels"] = [f"{lab.id}:{lab.text}" for lab in self.labels]
+        if self.boxes:
+            res["content"] = sorted([box.name for box in self.boxes])
+        res["typ"] = self.boxtyp.name
+        return res
 
 BoxTyp.labeltyp = relationship(LabelTyp, back_populates="boxtypes")
+
+@event.listens_for(Box, 'before_insert')
+@event.listens_for(Box, 'before_update')
+def validate_box_coords(mapper, connection, model):
+    par = model.container
+    if par is not None:
+        par = par.boxtyp
+
+    def chk(p):
+        pp = f"pos_{p}"
+        ppos = getattr(par,pp,None)
+
+        if (pos := getattr(model,pp)) is None:
+            if ppos is not None and ppos > 1:
+                raise ValueError(f"Box {model.name} needs a value for {p}")
+        elif pos <= 0:
+            raise ValueError(f"Box {model.name} can't set {p} <= 0")
+        elif ppos is None:
+            raise ValueError(f"Box {model.name} can't have a value for {p}")
+        elif ppos < pos:
+            raise ValueError(f"Box {model.name}: {p} is {pos}, max is {ppos}")
+
+    chk("x")
+    chk("y")
+    chk("z")

@@ -38,7 +38,7 @@ def main():
                 except AttributeError:
                     lab=None
                 except KeyError:
-                    lab=Label(typ=typ,code=v.code,text=str(k),sheet_id=1)
+                    lab=Label(typ=typ,code=v.code,text=str(k),sheet_id=-1)
                     db.add(lab)
 
                 par = f"mag_{v.t}"

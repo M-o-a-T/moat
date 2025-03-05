@@ -20,14 +20,14 @@ def upgrade() -> None:
 
     meta=load(config.attributes["config"])
 
-    st=sa.insert(meta.tables["sheet"]).values(id=1, printed=True)
+    st=sa.insert(meta.tables["sheet"]).values(id=-1, printed=True)
     op.execute(st)
     op.execute("commit")
 
 
 def downgrade() -> None:
     S=meta.tables["sheet"]
-    st=sa.delete(S).where(S.id==1)
+    st=sa.delete(S).where(S.id==-1)
     op.execute(st)
     op.execute("commit")
     pass

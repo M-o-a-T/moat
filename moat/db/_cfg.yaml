@@ -2,5 +2,8 @@ schemas:
   - moat.db.model
   - moat.label.model
   - moat.box.model
+    # The underscore modules resolve import cycles
+  - moat.label.model_
+  - moat.box.model_
 url:
   sqlite:////nonexistent/test.db

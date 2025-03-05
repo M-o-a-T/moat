@@ -61,21 +61,6 @@ class BoxTyp(Base):
             res["child"] = [p.name for p in self.children]
         return res
 
-from moat.label.model import Label, LabelTyp
-
-class BoxAssoc(Base):
-    """Associates a collection of boxes
-    with a particular parent.
-
-    """
-
-    __tablename__ = "address_association"
-
-    discriminator = Column(String)
-    """Refers to the type of parent."""
-
-    __mapper_args__ = {"polymorphic_on": discriminator}
-
 
 class Box(Base):
     "One particular box, possibly with other boxes inside."
@@ -94,8 +79,6 @@ class Box(Base):
     pos_y: Mapped[int] = mapped_column(nullable=True, comment="Y position in parent")
     pos_z: Mapped[int] = mapped_column(nullable=True, comment="Z position in parent")
 
-    labels: Mapped[set["Label"]] = relationship(back_populates="box")
-
     def dump(self):
         res = super().dump()
         res.pop("pos_x", None)
@@ -111,8 +94,6 @@ class Box(Base):
             res["content"] = sorted([box.name for box in self.boxes])
         res["typ"] = self.boxtyp.name
         return res
-
-BoxTyp.labeltyp = relationship(LabelTyp, back_populates="boxtypes")
 
 @event.listens_for(Box, 'before_insert')
 @event.listens_for(Box, 'before_update')

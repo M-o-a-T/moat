@@ -39,7 +39,3 @@ class Label(Base):
 
     typ: Mapped["LabelTyp"] = relationship()
     sheet: Mapped["Sheet"] = relationship(back_populates="labels")
-
-from moat.box.model import Box, BoxTyp
-LabelTyp.boxtypes = relationship(BoxTyp, back_populates="labeltyp")
-Label.box = relationship(Box, back_populates="labels")

@@ -12,11 +12,14 @@ from moat.box.model import BoxTyp,Box
 from moat.util import yload
 from pathlib import Path
 from sqlalchemy import select
+import click
 
 ensure_cfg("moat.db")
 
-def main():
-    p=Path("test.cfg")
+@click.command
+@click.argument("config")
+def main(config):
+    p=Path(config)
     merge(CFG,yload(p.read_text(), attr=True), replace=True)
     data=yload(Path("/mnt/privat/Schleiermacher/Werkkeller.txt").read_text(), attr=True)
     
@@ -78,21 +81,21 @@ def main():
             with db.begin() as s:
                 box=db.one(Box,name=f"mag_{k}")
                 if v.t==111:
-                    ctyp=db.one(BoxTyp,name=f"mag_{v.t}")
+                    pass  # already did everything
                 else:
                     ctyp=db.one(BoxTyp,name=f"mag_{v.t}_c")
-                for x in range(1,box.boxtyp.pos_x+1):
-                    for y in range(1,box.boxtyp.pos_y+1):
-                        bx = f"mag_{k}_{x}{y}"
-                        try:
-                            bx=db.one(Box,name=bx,container=box)
-                        except KeyError:
-                            bx=Box(name=bx,container=box,boxtyp=ctyp,pos_x=x,pos_y=y)
-                            db.add(bx)
-                        else:
-                            bx.pos_x=x
-                            bx.pos_y=y
-                        db.flush()
+                    for x in range(1,box.boxtyp.pos_x+1):
+                        for y in range(1,box.boxtyp.pos_y+1):
+                            bx = f"mag_{k}_{x}{y}"
+                            try:
+                                bx=db.one(Box,name=bx,container=box)
+                            except KeyError:
+                                bx=Box(name=bx,container=box,boxtyp=ctyp,pos_x=x,pos_y=y)
+                                db.add(bx)
+                            else:
+                                bx.pos_x=x
+                                bx.pos_y=y
+                            db.flush()
 
 
 main()

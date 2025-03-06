@@ -28,7 +28,11 @@ def main(config):
             if "t" not in v:
                 continue
             with db.begin() as s:
-                typ = f"tray{v.t%10}"
+                if v.t%10 == 4:
+                    typ="av270"
+                else:
+                    typ="av80"
+
                 try:
                     typ=db.one(LabelTyp,name=typ)
                 except KeyError:

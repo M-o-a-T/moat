@@ -24,6 +24,10 @@ class Labels(FPDF):
         self.set_display_mode("real")
         self.viewer_preferences = ViewerPreferences(display_doc_title=False)
 
+    def set_coord(self, cx:int, cy:int) -> None:
+        self.__cx = cx
+        self.__cy = cy
+
     def next_coord(self) -> tuple[int,int]:
         if not self.__paged:
             self.add_page()
@@ -53,7 +57,13 @@ class Labels(FPDF):
         lm=self.__fo.margin
         return pm[0]+(lm[0]+x*stp[0])*scl[0], pm[1]+(lm[1]+y*stp[1])*scl[1]
 
-    def add_page(self):
+    def add_page(self, printer=None,format=None,label=None):
+        if printer is not None:
+            self.__pr = printer
+        if format is not None:
+            self.__fo = format
+        if label is not None:
+            self.__la = label
         super().add_page(format=self.__pr.size)
 
         self.set_auto_page_break(False, margin=0)
@@ -61,12 +71,22 @@ class Labels(FPDF):
         f=self.__la.font
         self.set_font(f.name, style=f.style, size=f.size)
 
-    def print(self, name=None):
-        if name is None:
+    def print(self, file=None):
+        """
+        Generate a PDF.
+
+        If @file is given, write to it, else print directly if the printer
+        is named, else return the PDF's binary data.
+        """
+        if file is None:
             try:
                 name=self.__pr.name
             except AttributeError:
-                raise ValueError("Need a printer name") from None
+                return self.output()
+        else:
+            self.output(file)
+            return
+
         buf=self.output()
 
         from subprocess import run, PIPE

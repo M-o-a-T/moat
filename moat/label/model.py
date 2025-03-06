@@ -14,17 +14,26 @@ class LabelTyp(Base):
     name: Mapped[str] = mapped_column(unique=True, type_=String(40))
     url: Mapped[str] = mapped_column(nullable=True, comment="URL prefix if the label has a random code element", type_=String(100))
     code: Mapped[int] = mapped_column(nullable=False, comment="Initial ID code when no labels exist")
+    count: Mapped[int] = mapped_column(nullable=False, comment="Number of labels per sheet", default=1, server_default="1")
 
 class Sheet(Base):
     "A (to-be-)printed sheet with labels."
     typ_id: Mapped[int] = mapped_column(ForeignKey("labeltyp.id", name="fk_sheet_labeltyp"), nullable=True)
     start: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0", comment="Position of first label")
 
-    typ: Mapped["LabelTyp"] = relationship()
+    labeltyp: Mapped["LabelTyp"] = relationship()
     labels: Mapped[set["Label"]] = relationship(back_populates="sheet")
     printed: Mapped[bool] = mapped_column(default=False)
 
-    # Sheet 1 is the printed-but-not-on-a-sheet ID.
+    def dump(self):
+        res = super().dump()
+        if self.labeltyp is not None:
+            res["typ"] = self.labeltyp.name
+        if self.labels:
+            res["labels"] = [f"{l.code}:{l.text}" for l in self.labels]
+        return res
+
+    # Sheet -1 is the printed-but-not-on-a-sheet ID.
 
 class Label(Base):
     "A single label."
@@ -37,5 +46,16 @@ class Label(Base):
     box_id: Mapped[int] = mapped_column(ForeignKey("box.id", name="fk_label_box"), nullable=True)
     # thing_id
 
-    typ: Mapped["LabelTyp"] = relationship()
+    labeltyp: Mapped["LabelTyp"] = relationship()
     sheet: Mapped["Sheet"] = relationship(back_populates="labels")
+
+    def dump(self):
+        res = super().dump()
+        if self.labeltyp is not None:
+            res["typ"] = self.labeltyp.name
+        if self.sheet is not None:
+            res["sheet"] = self.sheet.id
+        if self.box is not None:
+            res["box"] = self.box.name
+        return res
+

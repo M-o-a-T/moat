@@ -32,7 +32,6 @@ class Base(DeclarativeBase):
     def apply(self, **kw):
         for k,v in kw.items():
             if v is NotGiven:
-                setattr(self,k,None)
-            elif v is not None:
-                setattr(self,k,v)
+                continue
+            setattr(self,k,v)
 

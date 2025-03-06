@@ -38,13 +38,24 @@ def cli(ctx, name):
     obj.name=name
 
 
-@cli.command(name="show")
+@cli.group
+@click.option("--name","-n",type=str,help="Text on the label")
+@click.pass_obj
+def one(obj, name)
+    """
+    Manage boxes.
+    """
+    obj.name=name
+    pass
+
+
+@one.command(name="show")
 @click.pass_obj
 def show_(obj):
     """
     Show box details / list all box types.
 
-    If a name is set, show details for this type.
+    If a name is set, show details for this box.
     Otherwise list all boxes without parents.
     """
     sess = obj.session
@@ -61,16 +72,6 @@ def show_(obj):
         box = sess.one(Box, name=obj.name)
         yprint(box.dump())
 
-def str_(x):
-    if x is NotGiven:
-        return x
-    return str(x)
-
-def int_(x):
-    if x is NotGiven:
-        return x
-    return int(x)
-
 def opts(c):
     c = option_ng("--x","-x","pos_x",type=int,help="X position in parent")(c)
     c = option_ng("--y","-y","pos_y",type=int,help="Y position in parent")(c)
@@ -79,7 +80,7 @@ def opts(c):
     c = option_ng("--typ","-t","boxtyp",type=str,help="Type of the box")(c)
     return c
 
-@cli.command()
+@one.command()
 @opts
 @click.pass_obj
 def add(obj, **kw):
@@ -100,7 +101,7 @@ def add(obj, **kw):
     obj.session.add(box)
     box.apply(**kw)
 
-@cli.command(epilog="Use '-in -' to drop the parent box, -x/-y/-z 0 to clear a position.")
+@one.command(epilog="Use '-in -' to drop the parent box, -x/-y/-z 0 to clear a position.")
 @opts
 @click.pass_obj
 def set(obj, **kw):
@@ -117,7 +118,7 @@ def set(obj, **kw):
         sys.exit(1)
     box.apply(**kw)
 
-@cli.command()
+@one.command()
 @click.pass_obj
 def delete(obj):
     """

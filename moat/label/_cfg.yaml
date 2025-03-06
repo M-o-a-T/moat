@@ -11,6 +11,7 @@ printer:
     name: Laser
 
 format:
+  _default: {}
   av270:
     stepping: [20.25,10]  # distance between labels
     size: [17.8,10]  # size of actual labels

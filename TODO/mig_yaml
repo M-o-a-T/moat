@@ -30,13 +30,15 @@ def main(config):
             with db.begin() as s:
                 if v.t%10 == 4:
                     typ="av270"
+                    n=270
                 else:
                     typ="av80"
+                    n=80
 
                 try:
                     typ=db.one(LabelTyp,name=typ)
                 except KeyError:
-                    typ=LabelTyp(name=typ,code=1000 if v.t%10==4 else 100000)
+                    typ=LabelTyp(name=typ,code=1000 if v.t%10==4 else 100000, count=n)
                     db.add(typ)
                     db.flush()
 

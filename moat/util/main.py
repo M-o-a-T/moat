@@ -13,7 +13,7 @@ from collections import defaultdict
 from collections.abc import Mapping
 from contextlib import suppress
 from contextvars import ContextVar
-from functools import partial
+from functools import partial, wraps
 from pathlib import Path as FSPath
 
 import asyncclick as click
@@ -49,6 +49,7 @@ __all__ = [
     "load_ext",
     "attr_args",
     "process_args",
+    "option_ng",
 ]
 
 this_load = ContextVar("this_load", default=None)
@@ -927,3 +928,15 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         sys.exit(2)
     except click.exceptions.Abort:
         print("Aborted.", file=sys.stderr)
+
+def _ng(type_):
+    @wraps(type_)
+    def gen(data):
+        if data is NotGiven:
+            return data
+        return type_(data)
+    return gen
+
+def option_ng(*a, type=str, **kw):
+    return click.option(*a, **kw, type=_ng(type), default=NotGiven)
+

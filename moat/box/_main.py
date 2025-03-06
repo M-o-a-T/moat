@@ -13,7 +13,7 @@ import sys
 from datetime import datetime
 from functools import partial
 from time import time
-from moat.util import load_subgroup, CFG, ensure_cfg, yprint
+from moat.util import load_subgroup, CFG, ensure_cfg, yprint, NotGiven, option_ng
 from moat.db import database
 import moat.label.model
 from .model import Box,BoxTyp
@@ -45,7 +45,7 @@ def show_(obj):
     Show box details / list all box types.
 
     If a name is set, show details for this type.
-    Otherwise list all boxes withoout parents.
+    Otherwise list all boxes without parents.
     """
     sess = obj.session
 
@@ -61,59 +61,61 @@ def show_(obj):
         box = sess.one(Box, name=obj.name)
         yprint(box.dump())
 
+def str_(x):
+    if x is NotGiven:
+        return x
+    return str(x)
+
+def int_(x):
+    if x is NotGiven:
+        return x
+    return int(x)
+
 def opts(c):
-    c = click.option("--x","-x","pos_x",type=int,help="X position in parent")(c)
-    c = click.option("--y","-y","pos_y",type=int,help="Y position in parent")(c)
-    c = click.option("--z","-z","pos_z",type=int,help="Z position in parent")(c)
-    c = click.option("--in","-i","container",type=str,help="Where is it?")(c)
-    c = click.option("--typ","-t","typ",type=str,help="Type of the box")(c)
+    c = option_ng("--x","-x","pos_x",type=int,help="X position in parent")(c)
+    c = option_ng("--y","-y","pos_y",type=int,help="Y position in parent")(c)
+    c = option_ng("--z","-z","pos_z",type=int,help="Z position in parent")(c)
+    c = option_ng("--in","-i","container",type=str,help="Where is it?")(c)
+    c = option_ng("--typ","-t","boxtyp",type=str,help="Type of the box")(c)
     return c
 
 @cli.command()
 @opts
 @click.pass_obj
-def add(obj, container, typ, **kw):
+def add(obj, **kw):
     """
     Add a box.
     """
     if obj.name is None:
         raise click.UsageError("The box needs a name!")
 
-    if typ is None:
-        raise click.UsageError("A new box needs a type!")
-
+    try:
+        box = obj.session.one(Box, name=obj.name)
+    except KeyError:
+        pass
+    else:
+        print("This box already exists", file=sys.stderr)
+        sys.exit(1)
     box = Box(name=obj.name)
-    for k,v in kw.items():
-        if v is not None:
-            if k.startswith("pos_") and v == 0:
-                v = None
-            setattr(box,k,v)
-    if container:
-        box.container = sess.one(Box,name=p)
-
     obj.session.add(box)
+    box.apply(**kw)
 
 @cli.command(epilog="Use '-in -' to drop the parent box, -x/-y/-z 0 to clear a position.")
 @opts
 @click.pass_obj
-def set(obj, container, **kw):
+def set(obj, **kw):
     """
     Modify a box.
     """
     if obj.name is None:
-        raise click.UsageError("The box type needs a name!")
+        raise click.UsageError("Which box? Use a name")
 
-    box = obj.session.one(Box, name=obj.name)
-
-    for k,v in kw.items():
-        if v is not None:
-            if k.startswith("pos_") and v == 0:
-                v = None
-            setattr(box,k,v)
-
-    if container:
-        box.container = sess.one(Box,name=p)
-
+    try:
+        box = obj.session.one(Box, name=obj.name)
+    except KeyError:
+        print("This box doesn't exist", file=sys.stderr)
+        sys.exit(1)
+    box.apply(**kw)
 
 @cli.command()
 @click.pass_obj
@@ -121,19 +123,26 @@ def delete(obj):
     """
     Remove a box.
     """
-    box = obj.session.one(Box, name=obj.name)
+    if obj.name is None:
+        raise click.UsageError("Which box? Use a name")
+    try:
+        box = obj.session.one(Box, name=obj.name)
+    except KeyError:
+        print("This box doesn't exist", file=sys.stderr)
+        sys.exit(1)
     obj.session.delete(box)
 
 
 @cli.group(name="typ")
 @click.option("--name","-n",type=str,help="Name of the box type")
-@click.pass_obj
-def typ_(obj, name):
+@click.pass_context
+def typ_(ctx, name):
     """\
     Manage box types.
     """
+    obj=ctx.obj
     if obj.name is not None:
-        raise click.UsageError("Name a type with 'moat box typ -n …'")
+        raise click.UsageError("Please use 'box typ -n NAME'")
     obj.name = name
 
 
@@ -161,11 +170,11 @@ def typ_show(obj):
         yprint(box.dump())
 
 def typopts(c):
-    c = click.option("--x","-x","pos_x",type=int,help="Number of X positions for content")(c)
-    c = click.option("--y","-y","pos_y",type=int,help="Number of Y positions for content")(c)
-    c = click.option("--z","-z","pos_z",type=int,help="Number of Z positions for content")(c)
-    c = click.option("--comment","-c","comment",type=str,help="Description of this type")(c)
-    c = click.option("--parent","-p","parent",type=str,multiple=True,help="Where can you put this thing into?")(c)
+    c = option_ng("--x","-x","pos_x",type=int,help="Number of X positions for content")(c)
+    c = option_ng("--y","-y","pos_y",type=int,help="Number of Y positions for content")(c)
+    c = option_ng("--z","-z","pos_z",type=int,help="Number of Z positions for content")(c)
+    c = option_ng("--comment","-c","comment",type=str,help="Description of this type")(c)
+    c = click.option("--in","-i","parent",type=str,multiple=True,help="Where can you put this thing into?")(c)
     return c
 
 @typ_.command(name="add")
@@ -179,35 +188,22 @@ def typ_add(obj, parent, **kw):
         raise click.UsageError("The box type needs a name!")
 
     bt = BoxTyp(name=obj.name)
-    for k,v in kw.items():
-        if v is not None:
-            setattr(bt,k,v)
-    for p in parent:
-        bt.parents.add(sess.one(BoxType,name=p))
     obj.session.add(bt)
-    pass
+    bt.apply(**kw)
 
-@typ_.command(name="set", epilog="Use '-p -NAME' to remove a parent.")
+
+@typ_.command(name="set", epilog="Use '-i -NAME' to remove a containing box type.")
 @typopts
 @click.pass_obj
-def typ_set(obj, parent, **kw):
+def typ_set(obj, **kw):
     """
     Modify a box type.
     """
     if obj.name is None:
-        raise click.UsageError("The box type needs a name!")
+        raise click.UsageError("Which box type? Use a name")
 
     bt = obj.session.one(BoxTyp, name=obj.name)
-
-    for k,v in kw.items():
-        if v is not None:
-            setattr(bt,k,v)
-
-    for p in parent:
-        if p[0] == "-":
-            bt.parents.remove(sess.one(BoxType,name=p[1:]))
-        else:
-            bt.parents.add(sess.one(BoxType,name=p))
+    bt.apply(**kw)
 
 
 @typ_.command(name="delete")
@@ -216,6 +212,8 @@ def typ_delete(obj):
     """
     Remove a box type.
     """
+    if obj.name is None:
+        raise click.UsageError("Which box type? Use a name")
     bt = obj.session.one(BoxTyp, name=obj.name)
     obj.session.delete(bt)
 

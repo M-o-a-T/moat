@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from moat.util import NotGiven
+
 from sqlalchemy import Column, Integer
 from sqlalchemy.orm import DeclarativeBase, declared_attr
 
@@ -25,4 +27,12 @@ class Base(DeclarativeBase):
             if v is not None:
                 res[k.name] = v
         return res
+
+
+    def apply(self, **kw):
+        for k,v in kw.items():
+            if v is NotGiven:
+                setattr(self,k,None)
+            elif v is not None:
+                setattr(self,k,v)
 

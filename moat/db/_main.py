@@ -152,3 +152,52 @@ def mig_check(obj):
             print(exc)
             sys.exit(1)
 
+@mig.command()
+@click.pass_obj
+@click.argument("revision", type=str)
+def to(obj, revision):
+    """
+    Up/downgrade the database to a specific version.
+    """
+    cfg = obj.cfg.db
+
+    meta = load(cfg)
+    with database(cfg) as sess, sess.begin():
+        acfg = alembic_cfg(obj.cfg, sess)
+
+        # Up+downgrade are no-ops when used in the "wrong" direction
+        # thus it's safe to just run both
+        command.upgrade(acfg, revision)
+        command.downgrade(acfg, revision)
+
+
+@mig.command()
+@click.pass_obj
+def history(obj):
+    """
+    Show version history.
+    """
+    cfg = obj.cfg.db
+
+    meta = load(cfg)
+    with database(cfg) as sess, sess.begin():
+        acfg = alembic_cfg(obj.cfg, sess)
+
+        command.history(acfg, verbose=True)
+
+
+@mig.command()
+@click.pass_obj
+def show(obj):
+    """
+    Show current version.
+    """
+    cfg = obj.cfg.db
+
+    meta = load(cfg)
+    with database(cfg) as sess, sess.begin():
+        acfg = alembic_cfg(obj.cfg, sess)
+
+        command.show(acfg, "current")
+
+

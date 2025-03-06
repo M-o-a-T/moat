@@ -92,7 +92,8 @@ class Box(Base):
             res["labels"] = [f"{lab.id}:{lab.text}" for lab in self.labels]
         if self.boxes:
             res["content"] = sorted([box.name for box in self.boxes])
-        res["typ"] = self.boxtyp.name
+        if self.boxtyp:
+            res["typ"] = self.boxtyp.name
         return res
 
 @event.listens_for(Box, 'before_insert')

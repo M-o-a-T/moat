@@ -8,6 +8,7 @@ from pathlib import Path
 from moat.util import ensure_cfg, CFG, merge
 from importlib import import_module
 from contextlib import contextmanager
+from contextvars import ContextVar
 
 from sqlalchemy import Connection, create_engine, event, select
 from sqlalchemy.orm import sessionmaker
@@ -17,6 +18,7 @@ from sqlalchemy.engine import Engine
 import logging
 logger=logging.getLogger(__name__)
 
+__all__ = ["Session","session","load","database","alembic_cfg"]
 
 ensure_cfg("moat.db")
 
@@ -31,6 +33,9 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 
 
 Session = sessionmaker()
+
+session = ContextVar("session")
+
 
 _loaded = False
 def load(cfg:attrdict) -> metadata:
@@ -76,7 +81,12 @@ def database(cfg:attrdict) -> Session:
     load(cfg)
 
     with Session() as conn:
-        yield Mgr(conn)
+        sess = Mgr(conn)
+        token = session.set(sess)
+        try:
+            yield sess
+        finally:
+            session.reset(token)
 
 def alembic_cfg(gcfg, sess):
     """Generate a config object for Alembic."""

@@ -102,6 +102,11 @@ def validate_box_coords(mapper, connection, model):
     par = model.container
     if par is not None:
         par = par.boxtyp
+    if par is not None:
+        par = par.parents
+        if len(par) != 1:
+            return
+        par = next(iter(par))
 
     def chk(p):
         pp = f"pos_{p}"
@@ -112,6 +117,8 @@ def validate_box_coords(mapper, connection, model):
                 raise ValueError(f"Box {model.name} needs a value for {p}")
         elif pos <= 0:
             raise ValueError(f"Box {model.name} can't set {p} <= 0")
+        elif par is None:
+            raise ValueError(f"Box {model.name} is not in a sized container")
         elif ppos is None:
             raise ValueError(f"Box {model.name} can't have a value for {p}")
         elif ppos < pos:

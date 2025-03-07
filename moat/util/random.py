@@ -1,14 +1,35 @@
 # noqa: D100  # compatibility with µPy
 from __future__ import annotations
 
-import random
+import os
 
-alphabet = "bcdfghjkmnopqrstvwxyzBCDFGHJKMNOPQRSTVWXYZ23456789"
+rs = os.environ.get("PYTHONHASHSEED", None)
+if rs is None:
+    import random
+else:  # pragma: no cover
+    try:
+        import trio._core._run as tcr
+    except ImportError:
+        import random
+    else:
+        random = tcr._r
 
-__all__ = ["gen_ident"]
+# Intended to be unambiguous, no special characters
+al_unique = "bcdfghjkmnpqrstvwxyzBCDFGHJKMNPQRSTVWXYZ23456789"
+
+# Lowercase and digits, e.g. for restricted-alphabet labels
+al_lower = "abcdefghijklmnopqrstuvwxyz0123456789"
+
+# everything (except for backslash, just to be safe)
+al_ascii = bytes(x for x in range(33,127) if x != 92).decode("ascii")
+
+# lowercase letters only
+al_az = "abcdefghijklmnopqrstuvwxyz"
+
+__all__ = ["gen_ident","al_unique","al_lower","al_ascii","al_az"]
 
 
-def gen_ident(k=10, /):
+def gen_ident(k=10, /,*, alphabet=al_unique):
     """
     Generate a random identifier / password.
     """

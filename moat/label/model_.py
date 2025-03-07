@@ -8,7 +8,7 @@ from sqlalchemy.orm import relationship
 
 from moat.label.model import LabelTyp, Sheet, Label
 from moat.box.model import Box, BoxTyp
-from moat.util import NotGiven
+from moat.util import NotGiven, gen_ident, al_lower
 from moat.db.util import session
 from moat.db.schema import Base
 import random
@@ -29,7 +29,7 @@ def label_apply(self, randstr=NotGiven, randlen=NotGiven, labeltyp=NotGiven, she
         elif randlen is not NotGiven:
             if randlen is None or randlen == 0:
                 randlen=Label.rand.property.columns[0].type.length
-            self.rand = ''.join(random.choices("0123456789abcdefghijklmnopqrstuvwxyz", k=randlen))
+            self.rand = gen_ident(randlen, alpabet=al_lower)
 
         if labeltyp is None:
             raise ValueError("Labels need a type")

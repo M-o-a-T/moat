@@ -28,6 +28,7 @@ from moat.util import (  # pylint: disable=no-name-in-module
     create_queue,
     ensure_cfg,
     gen_ssl,
+    gen_ident,al_lower,
     num2byte,
 )
 
@@ -45,17 +46,6 @@ from .exceptions import (
 logger = logging.getLogger(__name__)
 
 ClosedResourceError = anyio.ClosedResourceError
-
-rs = os.environ.get("PYTHONHASHSEED", None)
-if rs is None:
-    import random
-else:  # pragma: no cover
-    try:
-        import trio._core._run as tcr
-    except ImportError:
-        import random
-    else:
-        random = tcr._r
 
 __all__ = ["NoData", "ManyData", "open_client", "client_scope", "StreamedRequest"]
 
@@ -416,7 +406,7 @@ class Client:
         self._handlers = {}
         self._send_lock = anyio.Lock()
         self._helpers = {}
-        self._name = "".join(random.choices("abcdefghjkmnopqrstuvwxyz23456789", k=9))
+        self._name = gen_ident(9, alphabet=al_lower)
         self.logger = logging.getLogger(f"moat.kv.client.{self._name}")
 
     @property

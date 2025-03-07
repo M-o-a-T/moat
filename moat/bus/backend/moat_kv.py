@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import random
 from contextlib import asynccontextmanager
 
-
 import typing
-from distkv.util import Path, P
+from moat.util import Path, P, gen_ident,al_lower
 
 if typing.TYPE_CHECKING:
-    from distkv.client import Client
+    from moat.kv.client import Client
 
 from . import BaseBusHandler, UnknownParamError
 from ..message import BusMessage
@@ -16,16 +14,16 @@ from ..message import BusMessage
 
 class Handler(BaseBusHandler):
     """
-    This handler tunnels through DistKV. In contrast, the MQTT handler
+    This handler tunnels through MoaT-KV. In contrast, the MQTT handler
     connects directly.
     """
 
-    short_help = "tunnel through DistKV"
+    short_help = "tunnel through MoaT-KV"
 
     def __init__(self, client: Client, topic: Path):
         super().__init__()
         if id is None:
-            id = "".join(random.choices("abcdefghjkmnopqrstuvwxyz23456789", k=9))
+            id = gen_ident(9, alphabet=al_lower)
         self.client = client
         self.topic = topic
 

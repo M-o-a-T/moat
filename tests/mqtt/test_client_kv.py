@@ -18,6 +18,7 @@ except ImportError:
 from moat.mqtt.broker import create_broker
 from moat.mqtt.client import open_mqttclient
 from moat.mqtt.mqtt.constants import QOS_0
+from moat.util import gen_ident,al_az
 
 try:
     from moat.kv.client import open_client
@@ -46,7 +47,7 @@ log.debug("Ports: moat_kv=%d up=%d low=%d", PORT_D, PORT, PORT_B)
 broker_config = {
     "broker": {"uri": f"mqtt://127.0.0.1:{PORT_B}"},
     "kv": {
-        "topic": "test_" + "".join(random.choices("abcdefghijklmnopqrstuvwxyz", k=7)),
+        "topic": "test_" + gen_ident(7, alphabet="al_az")
         "base": ("test", "retain"),
         "transparent": (("test", "vis"),),
         "conn": {"port": PORT_D},

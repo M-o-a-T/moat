@@ -15,7 +15,7 @@ except ImportError:
     from moat.lib.mqttproto import RetainHandling
 
 from moat.lib.cmd import CmdHandler
-from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx
+from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident,al_unique
 from moat.util.compat import CancelledError
 
 from .conn import TCPConn, CmdCommon, SubConn
@@ -91,11 +91,7 @@ class _LinkCommon(CtxObj, SubConn, CmdCommon):
         if name is None:
             name = cfg.get("client_id")
         if name is None:
-            import random
-
-            name = "c_" + "".join(
-                random.choices("bcdfghjkmnopqrstvwxyzBCDFGHJKMNOPQRSTVWXYZ23456789", k=10),
-            )
+            name = "c_" + gen_ident(10, alphabet_al_unique)
 
         self._cmdq_w, self._cmdq_r = anyio.create_memory_object_stream(5)
         self.logger = logging.getLogger(f"moat.link.client.{name}")

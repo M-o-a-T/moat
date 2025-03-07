@@ -1,6 +1,7 @@
 import asyncclick as click
 import random
 from moatbus.backend.mqtt import MqttBusHandler
+from moat.util import gen_ident,al_lower
 
 
 @click.group(short_help="Display MoatBUS messages", invoke_without_command=True)
@@ -17,7 +18,7 @@ async def cli(ctx, ident):
     obj = ctx.obj
     cfg = obj.cfg
     if ident is None:
-        ident = "".join(random.choices("abcdefghjkmnopqrstuvwxyz23456789", k=9))
+        ident = gen_ident(9, alphabet=al_lower)
 
     if ctx.invoked_subcommand is not None:
         return

@@ -10,12 +10,33 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from moat.db.schema import Base
 from moat.db.util import session
 
+class SheetTyp(Base):
+    "One kind of form for labels. Sizes etc. are in the config file."
+    name: Mapped[str] = mapped_column(unique=True, type_=String(40))
+    count: Mapped[int] = mapped_column(nullable=False, comment="Number of labels per sheet", default=1, server_default="1")
+
+    labeltypes: Mapped[set["LabelTyp"]] = relationship(back_populates="sheettyp")
+    sheets: Mapped[set["Sheet"]] = relationship(back_populates="sheettyp")
+
+    def dump(self):
+        res = super().dump()
+        if self.labeltypes:
+            res["labeltypes"] = [lt.name for lt in self.labeltypes]
+        if self.sheets:
+            res["sheets"] = [sh.id for sh in self.sheets]
+        return res
+
 class LabelTyp(Base):
     "One kind of label. Label format data are in the config file."
     name: Mapped[str] = mapped_column(unique=True, type_=String(40))
     url: Mapped[str] = mapped_column(nullable=True, comment="URL prefix if the label has a random code element", type_=String(100))
     code: Mapped[int] = mapped_column(nullable=False, comment="Initial ID code when no labels exist")
-    count: Mapped[int] = mapped_column(nullable=False, comment="Number of labels per sheet", default=1, server_default="1")
+    count: Mapped[int] = mapped_column(nullable=False, comment="Number of labels per sheet", default=1, server_default="1")  # obsolete
+
+    sheettyp_id: Mapped[int] = mapped_column(ForeignKey("sheettyp.id", name="fk_labeltyp_sheettyp"), nullable=True)
+    sheettyp: Mapped["SheetTyp"] = relationship(back_populates="labeltypes")
+
+    labels: Mapped[set["Label"]] = relationship(back_populates="labeltyp")
 
     def dump(self):
         res = super().dump()
@@ -46,10 +67,13 @@ class LabelTyp(Base):
 
 class Sheet(Base):
     "A (to-be-)printed sheet with labels."
-    typ_id: Mapped[int] = mapped_column(ForeignKey("labeltyp.id", name="fk_sheet_labeltyp"), nullable=True)
+    sheettyp_id: Mapped[int] = mapped_column(ForeignKey("sheettyp.id", name="fk_sheet_sheettyp"), nullable=True)
+    typ_id: Mapped[int] = mapped_column(ForeignKey("labeltyp.id", name="fk_sheet_labeltyp"), nullable=True)  # obsolete
+
     start: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0", comment="Position of first label")
 
-    labeltyp: Mapped["LabelTyp"] = relationship()
+    sheettyp: Mapped["SheetTyp"] = relationship()
+    labeltyp: Mapped["LabelTyp"] = relationship()  # obsolete
     labels: Mapped[set["Label"]] = relationship(back_populates="sheet")
     printed: Mapped[bool] = mapped_column(default=False)
 
@@ -75,7 +99,7 @@ class Label(Base):
     box_id: Mapped[int] = mapped_column(ForeignKey("box.id", name="fk_label_box"), nullable=True)
     # thing_id
 
-    labeltyp: Mapped["LabelTyp"] = relationship()
+    labeltyp: Mapped["LabelTyp"] = relationship(back_populates="labels")
     sheet: Mapped["Sheet"] = relationship(back_populates="labels")
 
     def dump(self):

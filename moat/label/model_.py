@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import relationship
 
-from moat.label.model import LabelTyp, Sheet, Label
+from moat.label.model import LabelTyp, Sheet, Label, SheetTyp
 from moat.box.model import Box, BoxTyp
 from moat.util import NotGiven, gen_ident, al_lower
 from moat.db.util import session
@@ -69,5 +69,24 @@ def sheet_apply(self, labeltyp=NotGiven, force=False, **kw):
                 raise ValueError("A sheet's label type cannot be changed")
 
 Sheet.apply = sheet_apply
+
+
+def labeltyp_apply(self, sheettyp=NotGiven, force=False, **kw):
+    sess = session.get()
+    with sess.no_autoflush:
+        Base.apply(self,**kw)
+
+        if sheettyp is None:
+            raise ValueError("Labels need a paper format")
+        if sheettyp is NotGiven:
+            if self.typ is None:
+                raise ValueError("New sheets need a label type")
+        else:
+            if self.sheettyp is None or force:
+                self.sheettyp = sess.one(SheetTyp,name=sheettyp)
+            elif self.sheettyp.name != sheettyp:
+                raise ValueError("A label's paper format cannot be changed")
+
+LabelTyp.apply = labeltyp_apply
 
 

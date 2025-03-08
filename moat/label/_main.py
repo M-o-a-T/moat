@@ -12,7 +12,7 @@ from functools import partial
 from time import time
 from moat.util import load_subgroup, CFG, ensure_cfg, merge, option_ng, NotGiven, yprint
 from moat.db import database
-from .model import LabelTyp, Label, Sheet
+from .model import LabelTyp, Label, Sheet, SheetTyp, SheetTyp
 from sqlalchemy import select as sel, func
 from contextlib import nullcontext
 
@@ -46,6 +46,9 @@ def cli(ctx):
 
     obj.session = sess
 
+###
+### Labels
+###
 
 @cli.group
 @click.option("--name","-n","text",type=str,help="Text on the label")
@@ -162,6 +165,9 @@ def delete(obj):
     else:
         obj.session.delete(label)
 
+###
+### Printing
+###
 
 @cli.group(name="print")
 @click.pass_obj
@@ -338,9 +344,12 @@ def print_sheet(obj, sheets, test):
     p.print(obj.filename)
 
 
+###
+### Label types
+###
 
 @cli.group
-@click.option("--name","-n","name",type=str,help="Text on the label")
+@click.option("--name","-n","name",type=str,help="Name of the label type")
 @click.pass_obj
 def typ(obj, name):
     """
@@ -377,19 +386,17 @@ def typ_show_(obj):
             sys.exit(1)
         else:
             res = lt.dump()
-            res["config"] = d = {}
             try:
-                d["label"] = lbl = cfg.label[lt.name]
+                res["config"] = cfg.label[lt.name]
             except KeyError:
-                d["label"] = "? label unknown"
-            else:
-                d["format"] = cfg.format.get(lbl.format,"? format unknown")
+                res["config"] = "? label unknown"
             yprint(res)
 
 def typ_opts(c):
     c = option_ng("--url","-u",type=str,help="URL prefix for lookup")(c)
     c = option_ng("--code","-c",type=int,help="Next code to assign")(c)
     c = option_ng("--count","-n",type=int,help="Labels per sheet")(c)
+    c = option_ng("--format","-f","sheettyp",type=str,help="Format to print on")(c)
     return c
 
 @typ.command(name="add")
@@ -441,6 +448,110 @@ def typ_delete(obj):
     else:
         obj.session.delete(lt)
 
+###
+### Sheet formats
+###
+
+@cli.group(name="format")
+@click.option("--name","-n","name",type=str,help="Name of the sheet type")
+@click.pass_obj
+def sheettyp(obj, name):
+    """
+    Label formats, i.e. kinds of pre-cut sheets to print on.
+    """
+    obj.name=name
+    pass
+
+@sheettyp.command(name="show")
+@click.pass_obj
+def sheettyp_show_(obj):
+    """
+    Show format details / list all formats.
+
+    If a name is set, show details for this format.
+    Otherwise list all label formats.
+    """
+    sess = obj.session
+    cfg = obj.cfg.label
+
+    if obj.name is None:
+        seen = False
+        with sess.execute(sel(SheetTyp)) as sheettyps:
+            for lt, in sheettyps:
+                seen = True
+                print(lt.name)
+        if not seen:
+            print("No label types found. Use '--help'?", file=sys.stderr)
+    else:
+        try:
+            lt = sess.one(SheetTyp, name=obj.name)
+        except KeyError:
+            print("No match.", file=sys.stderr)
+            sys.exit(1)
+        else:
+            res = lt.dump()
+            try:
+                res["config"] = cfg.format[lt.name]
+            except KeyError:
+                res["config"] = "? label unknown"
+            yprint(res)
+
+def sheettyp_opts(c):
+    c = option_ng("--count","-n",type=int,help="Labels per sheet")(c)
+    return c
+
+@sheettyp.command(name="add")
+@sheettyp_opts
+@click.pass_obj
+def sheettyp_add(obj, **kw):
+    """
+    Add a sheet type.
+    """
+    if obj.name is None:
+        raise click.UsageError("The format needs a name!")
+
+    lt = SheetTyp(name=obj.name)
+    obj.session.add(lt)
+    lt.apply(**kw)
+
+
+@sheettyp.command(name="set")
+@sheettyp_opts
+@click.pass_obj
+def sheettyp_set(obj, **kw):
+    """
+    Change a label type.
+    """
+    if obj.name is None:
+        raise click.UsageError("Which format? Use a name")
+    try:
+        lt = obj.session.one(SheetTyp, name=obj.name)
+    except KeyError:
+        print("No match.", file=sys.stderr)
+        sys.exit(1)
+    else:
+        lt.apply(**kw)
+
+
+@sheettyp.command(name="delete")
+@click.pass_obj
+def typ_delete(obj):
+    """
+    Delete a label type.
+    """
+    if obj.name is None:
+        raise click.UsageError("Which format? Use a name")
+    try:
+        lt = obj.session.one(SheetTyp, name=obj.name)
+    except KeyError:
+        print("No match.", file=sys.stderr)
+        sys.exit(1)
+    else:
+        obj.session.delete(lt)
+
+###
+### Sheets
+###
 
 @cli.group
 @click.option("--nr","-N",type=str,help="Number of the sheet")

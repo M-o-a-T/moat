@@ -31,7 +31,6 @@ class Labels(FPDF):
     def next_coord(self) -> tuple[int,int]:
         if not self.__paged:
             self.add_page()
-            self.__paged = True
         cx=self.__cx
         cy=self.__cy
 
@@ -70,6 +69,7 @@ class Labels(FPDF):
         self.set_margins(*self.__pr.page)
         f=self.__la.font
         self.set_font(f.name, style=f.style, size=f.size)
+        self.__paged = True
 
     def print(self, file=None):
         """
@@ -90,7 +90,7 @@ class Labels(FPDF):
         buf=self.output()
 
         from subprocess import run, PIPE
-        args = ["lpr","-o page-bottom=0","-o","page-left=0","-o","page-right=0","-o","page-top=0","-o","print-scaling=none"]
+        args = ["lpr","-o page-bottom=0","-o","page-left=0","-o","page-right=0","-o","page-top=0","-o","print-scaling=none","-o","sides=one-sided"]
         if "slot" in self.__pr:
             args.append("-o")
             args.append("InputSlot="+self.__pr.slot)

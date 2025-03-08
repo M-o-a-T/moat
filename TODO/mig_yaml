@@ -29,10 +29,13 @@ def main(config):
                 continue
             with db.begin() as s:
                 if v.t%10 == 4:
-                    typ="av270"
+                    typ="tray4"
                     n=270
+                elif v.t%10 == 2:
+                    typ="tray2"
+                    n=80
                 else:
-                    typ="av80"
+                    typ="tray1"
                     n=80
 
                 try:
@@ -43,12 +46,15 @@ def main(config):
                     db.flush()
 
                 try:
-                    lab=db.one(Label,typ=typ,code=v.code)
-                except AttributeError:
-                    lab=None
+                    if "code" in v:
+                        lab=db.one(Label,labeltyp=typ,code=v.code)
+                    else:
+                        lab=db.one(Label,labeltyp=typ,text=str(k))
                 except KeyError:
-                    lab=Label(typ=typ,code=v.code,text=str(k),sheet_id=-1)
+                    lab=Label(labeltyp=typ,text=str(k),sheet_id=-1)
+                    lab.code=v.code if "code" in v else typ.next_code()
                     db.add(lab)
+                    db.flush()
 
                 par = f"mag_{v.t}"
                 cld = f"mag_{v.t}_c"

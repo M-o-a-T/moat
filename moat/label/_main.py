@@ -13,7 +13,8 @@ from time import time
 from moat.util import load_subgroup, CFG, ensure_cfg, merge, option_ng, NotGiven, yprint
 from moat.db import database
 from .model import LabelTyp, Label, Sheet
-from sqlalchemy import select as sel
+from sqlalchemy import select as sel, func
+from contextlib import nullcontext
 
 import asyncclick as click
 
@@ -180,17 +181,14 @@ def print_(obj, printer, label, output):
         raise ValueError("Duh?")
 
     cfg=obj.cfg.label
-    if printer is None:
-        if len(cfg.printer) != 2:
-            print("Printers:\n\t"+ prx(cfg.printer))
-            sys.exit(1)
+    if printer is None and len(cfg.printer) == 2:
         printer = ndef(cfg.printer)
-    prt = merge(cfg.printer[printer],cfg.printer["_default"], replace=False)
+    if printer is None:
+        prt = None
+    else:
+        prt = merge(cfg.printer[printer],cfg.printer["_default"], replace=False)
 
-    if label is None:
-        if len(cfg.label) == 2:
-            print("Labels:\n\t"+ prx(cfg.label))
-            sys.exit(1)
+    if label is None and len(cfg.label) == 2:
         label = ndef(cfg.label)
 
     if label is None:
@@ -220,21 +218,26 @@ def test(obj):
     """
     p=obj.pdf
     p.add_page()
-    p.set_line_width(0.5)
-    w,h = obj.format.size
-    xx,yy = obj.format.extent
 
-    for x in (0,xx//2,xx-1):
-        for y in (0,yy//2,yy-1):
-            px,py = p.label_position(x,y)
-            p.rect(px, py, w, h, style=None, round_corners=True, corner_radius=2)
+    _testpage(p, obj.format)
     p.print(obj.filename)
 
 
+def _testpage(p:Labels, fmt:attrdict):
+    p.set_line_width(0.5)
+    w,h = fmt.size
+    xx,yy = fmt.extent
+    for x in (0,1,xx//2,xx-1):
+        for y in (0,1,yy//2,yy-1):
+            px,py = p.label_position(x,y)
+            p.rect(px, py, w, h, style=None, round_corners=True, corner_radius=2)
+
+
 @print_.command(name="sheet")
+@click.option("-t","--test", is_flag=True,help="Add test frames")
 @click.argument("sheets", nargs=-1, type=int)
 @click.pass_obj
-def print_sheet(obj, sheets):
+def print_sheet(obj, sheets, test):
     """\
     Print these sheets.
     """
@@ -250,6 +253,14 @@ def print_sheet(obj, sheets):
         except KeyError:
             print(f"Sheet {sheet} does not exist.", file=sys.stderr)
             continue
+        if lbl is None:
+            lbl = cfg.label[sh.labeltyp.name]
+            merge(lbl,cfg.label["_default"], replace=False)
+            lbl.name_ = sh.labeltyp.name
+        if fmt is None:
+            fmt = cfg.format[lbl.format]
+            merge(fmt, cfg.format["_default"], replace=False)
+            fmt.name_ = lbl.format
         if len(sh.labels) == 0:
             print(f"Sheet {sheet} is empty.", file=sys.stderr)
             continue
@@ -259,8 +270,8 @@ def print_sheet(obj, sheets):
         if sh.start+len(sh.labels) > sh.labeltyp.count:
             print(f"Too many labels on sheet {sheet}!", file=sys.stderr)
             continue
-        if sh.labeltyp.name != fmt.name_:
-            print(f"Sheet {sheet} wants format {sh.labeltyp.name}, not {fmt.name_}.", file=sys.stderr)
+        if sh.labeltyp.name != lbl.name_:
+            print(f"Sheet {sheet} wants format {sh.labeltyp.name}, not {lbl.name_}.", file=sys.stderr)
             continue
         if sh.labeltyp.count > (nlab := fmt.extent[0]*fmt.extent[1]):
             print(f"Labeltype {sh.labeltyp.name} wants {sh.labeltyp.count} labels but config supports {nlab}.", file=sys.stderr)
@@ -277,6 +288,8 @@ def print_sheet(obj, sheets):
 
         for alt in (False,True):
             p.add_page(format=fmt,label=lbl)
+            if test:
+                _testpage(p,fmt)
             p.set_line_width(0.5)
 
             xm,ym = fmt.extent
@@ -286,17 +299,42 @@ def print_sheet(obj, sheets):
             for lab in sorted(sh.labels, key=lambda x:x.text):
                 x,y = p.next_coord()
                 px,py = p.label_position(x,y)
-                p.set_xy(px,py)
 
                 if not lbl.alternate or alt:
-                    p.interleaved2of5(str(lab.code),px+lbl.inset[0],py,lbl.bar.line,fmt.size[1]-lbl.inset[1])
+
+                    guard=5
+                    txt=str(lab.code)
+                    width = len(txt)
+                    if width % 1:
+                        width += 1
+                    width = 9*width+10 +2*guard
+                    width = (fmt.size[0]-lbl.bar.margin[0]-lbl.bar.margin[2])/width
+                    # "width" is the space for a narrow strip, but fpdf
+                    # wants a wide strip as 'w' which is 3* the width of
+                    # the narrow one.
+                    p.interleaved2of5(txt,
+                                      x=px+lbl.bar.margin[0]+width*guard, y=py+lbl.bar.margin[1],
+                                      w=width*3, h=fmt.size[1]-lbl.bar.margin[1]-lbl.bar.margin[3])
                 if not lbl.alternate or not alt:
-                    p.cell(*fmt.size, lab.text, align=lbl.font.align)
+                    p.set_xy(px+lbl.text.margin[0],py+lbl.text.margin[1])
+                    w = fmt.size[0]-lbl.text.margin[0]-lbl.text.margin[2]
+                    h = fmt.size[1]-lbl.text.margin[1]-lbl.text.margin[3]
+
+                    f=lbl.font
+                    p.set_font(f.name, style=f.style, size=f.size)
+                    tw = p.get_string_width(lab.text)
+                    if tw > w:
+                        p.set_font(f.name, style=f.style, size=f.size*w/tw)
+                    p.cell(w,h, lab.text, align=lbl.font.align)
 
             if not lbl.alternate:
                 break
         print(f"Printed sheet {sh.id}.")
         sh.printed=True
+
+    if not p.page:
+        print("Nothing printed.", file=sys.stderr)
+        sys.exit(1)
     p.print(obj.filename)
 
 
@@ -321,6 +359,7 @@ def typ_show_(obj):
     Otherwise list all label types.
     """
     sess = obj.session
+    cfg = obj.cfg.label
 
     if obj.name is None:
         seen = False
@@ -337,7 +376,15 @@ def typ_show_(obj):
             print("No match.", file=sys.stderr)
             sys.exit(1)
         else:
-            yprint(lt.dump())
+            res = lt.dump()
+            res["config"] = d = {}
+            try:
+                d["label"] = lbl = cfg.label[lt.name]
+            except KeyError:
+                d["label"] = "? label unknown"
+            else:
+                d["format"] = cfg.format.get(lbl.format,"? format unknown")
+            yprint(res)
 
 def typ_opts(c):
     c = option_ng("--url","-u",type=str,help="URL prefix for lookup")(c)
@@ -407,8 +454,9 @@ def sheet(obj, nr):
 
 
 @sheet.command(name="show")
+@click.option("-l","--labels",is_flag=True,help="show labels")
 @click.pass_obj
-def sheet_show_(obj):
+def sheet_show_(obj, labels):
     """
     Show sheet details / list all unprinted sheets.
 
@@ -432,7 +480,10 @@ def sheet_show_(obj):
             print("No match.", file=sys.stderr)
             sys.exit(1)
         else:
-            yprint(lt.dump())
+            res = lt.dump()
+            if "labels" in res and not labels:
+                res["labels"] = len(res["labels"])
+            yprint(res)
 
 def sheet_opts(c):
     c = click.option("--printed","-p",is_flag=True,help="Set the sheet as printed")(c)
@@ -453,16 +504,23 @@ def _pr(yes,no):
 
 @sheet.command(name="add")
 @sheet_opts
+@click.option("-f","--fill",is_flag=True,help="Fill with un-printed labels")
 @click.pass_obj
-def sheet_add(obj, printed, unprinted, **kw):
+def sheet_add(obj, printed, unprinted, fill, **kw):
     """
     Add a sheet.
     """
+    sess=obj.session
     kw["printed"] = _pr(printed,unprinted)
 
     sh = Sheet(id=obj.nr)  # auto-assigned if not given
-    obj.session.add(sh)
+    sess.add(sh)
     sh.apply(**kw)
+
+    if fill:
+        with sess.execute(sel(Label).where(Label.sheet==None).where(Label.labeltyp==sh.labeltyp).order_by(Label.text).limit(sh.labeltyp.count)) as labels:
+            for lab,*_ in labels:
+                lab.sheet=sh
 
     if obj.nr is None:
         print(sh.id)
@@ -471,7 +529,8 @@ def sheet_add(obj, printed, unprinted, **kw):
 @sheet.command(name="set")
 @sheet_opts
 @click.pass_obj
-def sheet_set(obj, **kw):
+@click.option("--force","-f",is_flag=True,help="Allow changing the label type")
+def sheet_set(obj, printed,unprinted, **kw):
     """
     Change a sheet.
     """
@@ -480,7 +539,7 @@ def sheet_set(obj, **kw):
     kw["printed"] = _pr(printed,unprinted)
 
     try:
-        lt = obj.session.one(Sheet, id=obj.nr)
+        sh = obj.session.one(Sheet, id=obj.nr)
     except KeyError:
         print("No match.", file=sys.stderr)
         sys.exit(1)
@@ -488,11 +547,87 @@ def sheet_set(obj, **kw):
         sh.apply(**kw)
 
 
+@sheet.command(name="gen", epilog="To remove a label, set its sheet# to zero.")
+@click.option("--pattern","-p",type=str,help="Text pattern. Replaces '#'.", default='#')
+@click.option("--file","-f",type=click.File("r"),help="Read texts from this file.")
+@click.option("--start","-s",type=int,help="Initial sequence number (for the text).")
+@click.option("--count","-n",type=int,help="Number of labels. Default: until the sheet is full.")
+@click.option("--typ","-t",type=str,help="Label type; this flag creates a new sheet.")
+@click.pass_obj
+def sheet_place(obj, pattern,file,start,count,typ):
+    """
+    Generate new labels, filling a sheet.
+
+    The label text is either read from a file or generated as a sequence.
+    
+    The label's scancode is autogenerated and cannot be set here.
+    """
+
+    ocount=count
+    if '#' not in pattern:
+        raise click.UsageError("The pattern must include a '#' character")
+    if start and file:
+        raise click.UsageError("Generate a sequence *or* read from a file. Not both.")
+    if start is None and file is None:
+        raise click.UsageError("You need to generate a sequence or read it from a file.")
+
+    if obj.nr is None and typ is None:
+        raise click.UsageError("You need to set the label type or use an existing sheet.")
+
+    sess = obj.session
+    if typ:
+        sh = Sheet(id=obj.nr, labeltyp=sess.one(LabelTyp, name=typ))
+        sess.add(sh)
+        sess.flush()
+        if obj.nr is None:
+            print(f"Added sheet {sh.id}.")
+    else:
+        try:
+            sh = sess.one(Sheet, id=obj.nr)
+        except KeyError:
+            print(f"No match for sheet {obj.nr}.", file=sys.stderr)
+            sys.exit(1)
+
+    maxcount = sh.labeltyp.count-sh.start-len(sh.labels)
+    if count is None:
+        count = maxcount
+        if count <= 0:
+            print(f"Sheet {sh.id} is already full.", file=sys.stderr)
+            sys.exit(1)
+    elif count > maxcount:
+        print(f"Sheet {sh.id} has space for {maxcount} labels.", file=sys.stderr)
+        count = maxcount
+
+    code = sh.labeltyp.next_code()
+
+    with (open(file,"r") if file else nullcontext()) as fd:
+        while count:
+            count -= 1
+            if file:
+                seq = fd.readline().strip()
+            else:
+                seq = str(start)
+                start += 1
+            if pattern:
+                seq = pattern.replace("#",seq)
+            
+            lab=Label(code=code, labeltyp=sh.labeltyp, text=seq)
+            if sh.labeltyp.url is not None:
+                self.rand = gen_ident(Label.rand.property.columns[0].type.length, alpabet=al_lower)
+
+            sh.labels.add(lab)
+            code += 1
+    if start is not None:
+        print(f"Done. Next free seqnum: {start}")
+    else:
+        print(f"Created {ocount} labels.")
+
+
 @sheet.command(name="place", epilog="To remove a label, set its sheet# to zero.")
 @click.option("--num","-n","numeric",is_flag=True,help="Select labels by code. Default: by text")
 @click.argument("labels",nargs=-1)
 @click.pass_obj
-def sheet_set(obj, labels, numeric):
+def sheet_place(obj, labels, numeric):
     """
     Place labels onto a sheet.
     """
@@ -533,7 +668,9 @@ def sheet_set(obj, labels, numeric):
 
 @sheet.command(name="flush")
 @click.pass_obj
-def sheet_flush(obj, force):
+def sheet_flush(obj):
+    sess=obj.session
+
     if obj.nr is None:
         raise click.UsageError("Which sheet? Use a number")
     try:
@@ -573,7 +710,7 @@ def sheet_delete(obj):
         print("No match.", file=sys.stderr)
         sys.exit(1)
     else:
-        if self.labels:
+        if sh.labels:
             print("This sheet still has labels. Not deleting.", file=sys.stderr)
             sys.exit(1)
 

@@ -31,15 +31,18 @@ label:
       style: B
       align: C
       size: 12
-
+    text:
+      margin: [0,0,0,0]  # left top right bottom
+    bar:
+      margin: [1,.5,1,.5]  # left top right bottom
+    qr:
+      margin: [0,0,0,0]  # left top right bottom
   tray4:
     alternate: true
     format: av270
     font:
       size: 25
       align: C
-    bar:
-      line: 1
     inset: [2,2]
     base: 1000  # start numbering here
 
@@ -49,19 +52,20 @@ label:
     font:
       size: 25
       align: L
-    bar:
-      line: 0.8
     inset: [17,2]
     base: 100000  # start numbering here
 
   tray1:
     alternate: false
     format: av80
-    font:
-      size: 25
-      align: L
     bar:
-      line: 0.8
+#     margin: [18,.5,1,.5]  # left top right bottom
+      margin: [1,.5,1,9]  # left top right bottom
+    font:
+      size: 30
+      align: C
+    text:
+      margin: [0,10,0,1]
     inset: [17,2]
     base: 100000  # start numbering here
 

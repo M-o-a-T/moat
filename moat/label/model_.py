@@ -52,7 +52,7 @@ def label_apply(self, randstr=NotGiven, randlen=NotGiven, labeltyp=NotGiven, she
 Label.apply = label_apply
 
 
-def sheet_apply(self, labeltyp=NotGiven, **kw):
+def sheet_apply(self, labeltyp=NotGiven, force=False, **kw):
     sess = session.get()
     with sess.no_autoflush:
         Base.apply(self,**kw)
@@ -63,7 +63,7 @@ def sheet_apply(self, labeltyp=NotGiven, **kw):
             if self.typ is None:
                 raise ValueError("New sheets need a label type")
         else:
-            if self.labeltyp is None:
+            if self.labeltyp is None or force:
                 self.labeltyp = sess.one(LabelTyp,name=labeltyp)
             elif self.labeltyp.name != labeltyp:
                 raise ValueError("A sheet's label type cannot be changed")

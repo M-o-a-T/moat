@@ -4,10 +4,11 @@ Database schema for label printing
 
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, String, func, select
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from moat.db.schema import Base
+from moat.db.util import session
 
 class LabelTyp(Base):
     "One kind of label. Label format data are in the config file."
@@ -15,6 +16,33 @@ class LabelTyp(Base):
     url: Mapped[str] = mapped_column(nullable=True, comment="URL prefix if the label has a random code element", type_=String(100))
     code: Mapped[int] = mapped_column(nullable=False, comment="Initial ID code when no labels exist")
     count: Mapped[int] = mapped_column(nullable=False, comment="Number of labels per sheet", default=1, server_default="1")
+
+    def dump(self):
+        res = super().dump()
+        if self.labels:
+            res["labels"] = len(self.labels)
+            # TODO maybe group by sheet
+        return res
+
+    def next_code(self):
+        """
+        Return the next free code# for this label type.
+
+        Note: After you assign the result of this function to a label, you
+        need to flush to the database before calling `next_code` again.
+        """
+        sess=session.get()
+
+        with sess.no_autoflush:
+            code,=sess.execute(select(func.min(LabelTyp.code)).where(LabelTyp.code>self.code)).first()
+            scmd = select(func.max(Label.code))
+            if code is not None:
+                scmd = scmd.where(Label.code<code)
+            code,=sess.execute(scmd).first()
+            if code is None or code < self.code:
+                return self.code
+            return code+1
+
 
 class Sheet(Base):
     "A (to-be-)printed sheet with labels."
@@ -34,6 +62,7 @@ class Sheet(Base):
         return res
 
     # Sheet -1 is the printed-but-not-on-a-sheet ID.
+
 
 class Label(Base):
     "A single label."

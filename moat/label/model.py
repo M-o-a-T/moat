@@ -31,9 +31,8 @@ class LabelTyp(Base):
     name: Mapped[str] = mapped_column(unique=True, type_=String(40))
     url: Mapped[str] = mapped_column(nullable=True, comment="URL prefix if the label has a random code element", type_=String(100))
     code: Mapped[int] = mapped_column(nullable=False, comment="Initial ID code when no labels exist")
-    count: Mapped[int] = mapped_column(nullable=False, comment="Number of labels per sheet", default=1, server_default="1")  # obsolete
 
-    sheettyp_id: Mapped[int] = mapped_column(ForeignKey("sheettyp.id", name="fk_labeltyp_sheettyp"), nullable=True)
+    sheettyp_id: Mapped[int] = mapped_column(ForeignKey("sheettyp.id", name="fk_labeltyp_sheettyp"), nullable=False)
     sheettyp: Mapped["SheetTyp"] = relationship(back_populates="labeltypes")
 
     labels: Mapped[set["Label"]] = relationship(back_populates="labeltyp")
@@ -68,12 +67,10 @@ class LabelTyp(Base):
 class Sheet(Base):
     "A (to-be-)printed sheet with labels."
     sheettyp_id: Mapped[int] = mapped_column(ForeignKey("sheettyp.id", name="fk_sheet_sheettyp"), nullable=True)
-    typ_id: Mapped[int] = mapped_column(ForeignKey("labeltyp.id", name="fk_sheet_labeltyp"), nullable=True)  # obsolete
 
     start: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0", comment="Position of first label")
 
     sheettyp: Mapped["SheetTyp"] = relationship()
-    labeltyp: Mapped["LabelTyp"] = relationship()  # obsolete
     labels: Mapped[set["Label"]] = relationship(back_populates="sheet")
     printed: Mapped[bool] = mapped_column(default=False)
 

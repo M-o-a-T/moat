@@ -172,9 +172,8 @@ def delete(obj):
 @cli.group(name="print")
 @click.pass_obj
 @click.option("-p","--printer",help="Printer name")
-@click.option("-t","--typ","label", help="Label type")
 @click.option("-o","--out","output", type=click.Path(dir_okay=False, readable=False, writable=True), help="Destination file", default=None)
-def print_(obj, printer, label, output):
+def print_(obj, printer, output):
     """
     Printing!
     """
@@ -193,39 +192,28 @@ def print_(obj, printer, label, output):
         prt = None
     else:
         prt = merge(cfg.printer[printer],cfg.printer["_default"], replace=False)
-
-    if label is None and len(cfg.label) == 2:
-        label = ndef(cfg.label)
-
-    if label is None:
-        lbl = None
-        fmt = None
-    else:
-        lbl = merge(cfg.label[label],cfg.label["_default"], replace=False)
-        fmt = merge(cfg.format[lbl.format], cfg.format["_default"], replace=False)
-
-        lbl.name_=label
-        fmt.name_=lbl.format
     prt.name_=printer
 
-    obj.label = lbl
-    obj.format = fmt
     obj.printer = prt
 
-    obj.pdf = Labels(prt,fmt,lbl)
+    obj.pdf = Labels(prt)
     obj.filename=output
 
 
 @print_.command(name="test")
+@click.option("-f","--format","label", help="Format ")
 @click.pass_obj
-def test(obj):
+def test(obj, label):
     """\
     Create a test PDF that frames first and last labels.
     """
+    cfg=obj.cfg
     p=obj.pdf
-    p.add_page()
 
-    _testpage(p, obj.format)
+    fmt = merge(cfg.format[label], cfg.format["_default"], replace=False)
+
+    p.add_page(format=fmt)
+    _testpage(p, fmt)
     p.print(obj.filename)
 
 
@@ -249,9 +237,8 @@ def print_sheet(obj, sheets, test):
     """
     cfg=obj.cfg.label
     p=obj.pdf
-    fmt = obj.format
-    lbl = obj.label
     sess=obj.session
+    fmt=lab=None
 
     for sheet in sheets:
         try:
@@ -259,41 +246,30 @@ def print_sheet(obj, sheets, test):
         except KeyError:
             print(f"Sheet {sheet} does not exist.", file=sys.stderr)
             continue
-        if lbl is None:
-            lbl = cfg.label[sh.labeltyp.name]
-            merge(lbl,cfg.label["_default"], replace=False)
-            lbl.name_ = sh.labeltyp.name
+
         if fmt is None:
-            fmt = cfg.format[lbl.format]
-            merge(fmt, cfg.format["_default"], replace=False)
-            fmt.name_ = lbl.format
+            print(f"Sheet {sh.id} wants format {sh.sheettyp.name}", file=sys.stderr)
+        elif sh.sheettyp.name != fmt.name_:
+            print(f"Warning: sheet {sh.id} needs {sh.sheettyp.name}, not {fmt.name_}.", file=sys.stderr)
+        if fmt is None or fmt.name_ != sh.sheettyp.name:
+            fmt = merge(cfg.format[sh.sheettyp.name], cfg.format["_default"], replace=False)
+            fmt.name_ = sh.sheettyp.name
+
         if len(sh.labels) == 0:
             print(f"Sheet {sheet} is empty.", file=sys.stderr)
             continue
-        if sh.start >= sh.labeltyp.count:
+        if sh.start >= sh.sheettyp.count:
             print(f"Sheet {sheet} is printed out.", file=sys.stderr)
             continue
-        if sh.start+len(sh.labels) > sh.labeltyp.count:
+        if sh.start+len(sh.labels) > sh.sheettyp.count:
             print(f"Too many labels on sheet {sheet}!", file=sys.stderr)
             continue
-        if sh.labeltyp.name != lbl.name_:
-            print(f"Sheet {sheet} wants format {sh.labeltyp.name}, not {lbl.name_}.", file=sys.stderr)
+        if sh.sheettyp.count > (nlab := fmt.extent[0]*fmt.extent[1]):
+            print(f"Labeltype {sh.labeltyp.name} wants {sh.sheettyp.count} labels but config supports {nlab}.", file=sys.stderr)
             continue
-        if sh.labeltyp.count > (nlab := fmt.extent[0]*fmt.extent[1]):
-            print(f"Labeltype {sh.labeltyp.name} wants {sh.labeltyp.count} labels but config supports {nlab}.", file=sys.stderr)
-            continue
-
-        lbl=cfg.label[sh.labeltyp.name]
-        lbl.name_ = sh.labeltyp.name
-        if fmt is None:
-            print(f"Sheet {sh.id} wants {lbl.format}", file=sys.stderr)
-        elif lbl.format != fmt.name_:
-            print(f"Warning: sheet {sh.id} needs {lbl.format}, not {fmt.name_}.", file=sys.stderr)
-        fmt=cfg.format[lbl.format]
-        fmt.name_ = lbl.format
 
         for alt in (False,True):
-            p.add_page(format=fmt,label=lbl)
+            p.add_page(format=fmt)
             if test:
                 _testpage(p,fmt)
             p.set_line_width(0.5)
@@ -302,38 +278,44 @@ def print_sheet(obj, sheets, test):
             p.set_coord(sh.start%xm, sh.start//xm)
             w,h = fmt.size
 
-            for lab in sorted(sh.labels, key=lambda x:x.text):
-                x,y = p.next_coord()
+            for lbl in sorted(sh.labels, key=lambda x:x.text):
+                if lbl.labeltyp.sheettyp != sh.sheettyp:
+                    raise ValueError(f"Label {lbl.text} on sheet {sh.id} is a {lbl.labeltyp.name !r} label and wants format {lbl.labeltyp.sheettyp.name} not {sh.sheettyp.name}")
+
+                if lab is None or lbl.labeltyp.name != lab.name_:
+                    lab = merge(cfg.label[lbl.labeltyp.name],cfg.label["_default"], replace=False)
+                    lab.name_ = lbl.labeltyp.name
+                x,y = p.next_coord(label=lab)
+
                 px,py = p.label_position(x,y)
 
-                if not lbl.alternate or alt:
-
+                if not lab.alternate or alt:
                     guard=5
-                    txt=str(lab.code)
+                    txt=str(lbl.code)
                     width = len(txt)
                     if width % 1:
                         width += 1
                     width = 9*width+10 +2*guard
-                    width = (fmt.size[0]-lbl.bar.margin[0]-lbl.bar.margin[2])/width
+                    width = (fmt.size[0]-lab.bar.margin[0]-lab.bar.margin[2])/width
                     # "width" is the space for a narrow strip, but fpdf
                     # wants a wide strip as 'w' which is 3* the width of
                     # the narrow one.
                     p.interleaved2of5(txt,
-                                      x=px+lbl.bar.margin[0]+width*guard, y=py+lbl.bar.margin[1],
-                                      w=width*3, h=fmt.size[1]-lbl.bar.margin[1]-lbl.bar.margin[3])
-                if not lbl.alternate or not alt:
-                    p.set_xy(px+lbl.text.margin[0],py+lbl.text.margin[1])
-                    w = fmt.size[0]-lbl.text.margin[0]-lbl.text.margin[2]
-                    h = fmt.size[1]-lbl.text.margin[1]-lbl.text.margin[3]
+                                      x=px+lab.bar.margin[0]+width*guard, y=py+lab.bar.margin[1],
+                                      w=width*3, h=fmt.size[1]-lab.bar.margin[1]-lab.bar.margin[3])
+                if not lab.alternate or not alt:
+                    p.set_xy(px+lab.text.margin[0],py+lab.text.margin[1])
+                    w = fmt.size[0]-lab.text.margin[0]-lab.text.margin[2]
+                    h = fmt.size[1]-lab.text.margin[1]-lab.text.margin[3]
 
-                    f=lbl.font
+                    f=lab.font
                     p.set_font(f.name, style=f.style, size=f.size)
-                    tw = p.get_string_width(lab.text)
+                    tw = p.get_string_width(lbl.text)
                     if tw > w:
                         p.set_font(f.name, style=f.style, size=f.size*w/tw)
-                    p.cell(w,h, lab.text, align=lbl.font.align)
+                    p.cell(w,h, lbl.text, align=lab.font.align)
 
-            if not lbl.alternate:
+            if not lab.alternate:
                 break
         print(f"Printed sheet {sh.id}.")
         sh.printed=True
@@ -599,7 +581,7 @@ def sheet_show_(obj, labels):
 def sheet_opts(c):
     c = click.option("--printed","-p",is_flag=True,help="Set the sheet as printed")(c)
     c = click.option("--unprinted","-P",is_flag=True,help="Set the sheet as not printed")(c)
-    c = option_ng("--typ","-t","labeltyp",type=str,help="Label type")(c)
+    c = option_ng("--format","-f","sheettyp",type=str,help="sheet format")(c)
     c = option_ng("--start","-s",type=int,help="Position to start printing at")(c)
     return c
 
@@ -629,7 +611,7 @@ def sheet_add(obj, printed, unprinted, fill, **kw):
     sh.apply(**kw)
 
     if fill:
-        with sess.execute(sel(Label).where(Label.sheet==None).where(Label.labeltyp==sh.labeltyp).order_by(Label.text).limit(sh.labeltyp.count)) as labels:
+        with sess.execute(sel(Label).where(Label.sheet==None).where(Label.labeltyp==sh.labeltyp).order_by(Label.text).limit(sh.sheettyp.count)) as labels:
             for lab,*_ in labels:
                 lab.sheet=sh
 
@@ -640,7 +622,7 @@ def sheet_add(obj, printed, unprinted, fill, **kw):
 @sheet.command(name="set")
 @sheet_opts
 @click.pass_obj
-@click.option("--force","-f",is_flag=True,help="Allow changing the label type")
+@click.option("--force","-F",is_flag=True,help="Allow changing the paper format")
 def sheet_set(obj, printed,unprinted, **kw):
     """
     Change a sheet.
@@ -699,7 +681,7 @@ def sheet_place(obj, pattern,file,start,count,typ):
             print(f"No match for sheet {obj.nr}.", file=sys.stderr)
             sys.exit(1)
 
-    maxcount = sh.labeltyp.count-sh.start-len(sh.labels)
+    maxcount = sh.sheettyp.count-sh.start-len(sh.labels)
     if count is None:
         count = maxcount
         if count <= 0:
@@ -754,7 +736,7 @@ def sheet_place(obj, labels, numeric):
 
     if sh.printed:
         print("This sheet has been printed. Flush it before continuing.")
-    space = sh.labeltyp.count - sh.start+len(sh.labels)
+    space = sh.sheettyp.count - sh.start+len(sh.labels)
     if space < 0:
         print("This sheet is full.")
     if space < len(labels):
@@ -797,7 +779,7 @@ def sheet_flush(obj):
 
     if not sh.printed:
         print("Cleared.")
-    elif sh.start < sh.labeltyp.count:
+    elif sh.start < sh.sheettyp.count:
         print("Go print more.")
     else:
         print("All done. Deleting.")

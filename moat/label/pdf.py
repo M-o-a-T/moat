@@ -11,7 +11,7 @@ from moat.util import yload,yprint
 
 class Labels(FPDF):
 
-    def __init__(self, printer:attrdict, format: attrdict, label:attrdict, current_x=0, current_y=0):
+    def __init__(self, printer:attrdict, format: attrdict|None=None, label:attrdict|None=None, current_x=0, current_y=0):
         super().__init__()
         self.__pr = printer
         self.__fo = format
@@ -28,7 +28,11 @@ class Labels(FPDF):
         self.__cx = cx
         self.__cy = cy
 
-    def next_coord(self) -> tuple[int,int]:
+    def next_coord(self, format=None,label=None) -> tuple[int,int]:
+        if format is not None:
+            self.__fo = format
+        if label is not None:
+            self.__la = label
         if not self.__paged:
             self.add_page()
         cx=self.__cx
@@ -67,8 +71,9 @@ class Labels(FPDF):
 
         self.set_auto_page_break(False, margin=0)
         self.set_margins(*self.__pr.page)
-        f=self.__la.font
-        self.set_font(f.name, style=f.style, size=f.size)
+        if self.__la is not None:
+            f=self.__la.font
+            self.set_font(f.name, style=f.style, size=f.size)
         self.__paged = True
 
     def print(self, file=None):

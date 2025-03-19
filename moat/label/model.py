@@ -94,6 +94,7 @@ class Label(Base):
     sheet_id: Mapped[int] = mapped_column(ForeignKey("sheet.id", name="fk_label_sheet"), nullable=True)
 
     box_id: Mapped[int] = mapped_column(ForeignKey("box.id", name="fk_label_box"), nullable=True)
+    thing_id: Mapped[int] = mapped_column(ForeignKey("thing.id", name="fk_label_thing"), nullable=True)
     # thing_id
 
     labeltyp: Mapped["LabelTyp"] = relationship(back_populates="labels")

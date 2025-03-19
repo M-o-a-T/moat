@@ -15,25 +15,30 @@ from typing import Optional
 
 from .model import Box, BoxTyp
 from moat.label.model import Label, LabelTyp
+from moat.thing.model import Thing
 from moat.db.schema import Base
 
 BoxTyp.labeltyp = relationship(LabelTyp, back_populates="boxtypes")
 Box.labels = relationship(Label, back_populates="box", collection_class=set)
+Box.things = relationship(Thing, back_populates="container", collection_class=set)
 
 def box_apply(self, container=NotGiven, boxtyp=NotGiven, **kw):
     sess = session.get()
     with sess.no_autoflush:
         Base.apply(self,**kw)
-        if container is not None:
-            if container is NotGiven:
-                self.container = None
-            else:
-                self.container = sess.one(Box,name=container)
-        if boxtyp is None:
-            raise ValueError("Boxes need a type")
+
+        if container is NotGiven:
+            pass
+        elif container is None:
+            self.container = None
+        else:
+            self.container = sess.one(Box,name=container)
+
         if boxtyp is NotGiven:
             if self.boxtyp is None:
                 raise ValueError("New boxes need a type")
+        elif boxtyp is None:
+            raise ValueError("Boxes need a type")
         else:
             if self.boxtyp is None:
                 self.boxtyp = sess.one(BoxTyp,name=boxtyp)
@@ -43,13 +48,20 @@ def box_apply(self, container=NotGiven, boxtyp=NotGiven, **kw):
 Box.apply = box_apply
 
 
-def boxtyp_apply(self, parent=(), **kw):
+def boxtyp_apply(self, usable,unusable,parent=(), **kw):
     Base.apply(self,**kw)
+    if usable:
+        if unusable:
+            raise ValueError("Can't both use and not use this type")
+        self.usable=True
+    elif unusable:
+        self.usable=False
+
     for p in parent:
         if p[0] != "-":
-            bt.parents.add(session.get().one(BoxType,name=p))
+            self.parents.add(session.get().one(BoxTyp,name=p))
         else:
-            bt.parents.remove(session.get().one(BoxType,name=p[1:]))
+            self.parents.remove(session.get().one(BoxTyp,name=p[1:]))
 
 BoxTyp.apply = boxtyp_apply
 

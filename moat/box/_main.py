@@ -26,8 +26,7 @@ ensure_cfg("moat.db")
 
 @load_subgroup(prefix="moat.box", invoke_without_command=False)
 @click.pass_context
-@click.option("--name","-n",type=str,help="Name of the box type")
-def cli(ctx, name):
+def cli(ctx):
     """Boxes for storing things."""
     obj = ctx.obj
 
@@ -35,13 +34,12 @@ def cli(ctx, name):
     ctx.with_resource(sess.begin())
 
     obj.session = sess
-    obj.name=name
 
 
 @cli.group
 @click.option("--name","-n",type=str,help="Text on the label")
 @click.pass_obj
-def one(obj, name)
+def one(obj, name):
     """
     Manage boxes.
     """
@@ -73,6 +71,7 @@ def show_(obj):
         yprint(box.dump())
 
 def opts(c):
+    c = option_ng("--name","-n",type=str,help="Rename this box")(c)
     c = option_ng("--x","-x","pos_x",type=int,help="X position in parent")(c)
     c = option_ng("--y","-y","pos_y",type=int,help="Y position in parent")(c)
     c = option_ng("--z","-z","pos_z",type=int,help="Z position in parent")(c)
@@ -142,8 +141,6 @@ def typ_(ctx, name):
     Manage box types.
     """
     obj=ctx.obj
-    if obj.name is not None:
-        raise click.UsageError("Please use 'box typ -n NAME'")
     obj.name = name
 
 
@@ -171,11 +168,14 @@ def typ_show(obj):
         yprint(box.dump())
 
 def typopts(c):
+    c = option_ng("--name","-n",type=str,help="Rename this type")(c)
     c = option_ng("--x","-x","pos_x",type=int,help="Number of X positions for content")(c)
     c = option_ng("--y","-y","pos_y",type=int,help="Number of Y positions for content")(c)
     c = option_ng("--z","-z","pos_z",type=int,help="Number of Z positions for content")(c)
     c = option_ng("--comment","-c","comment",type=str,help="Description of this type")(c)
     c = click.option("--in","-i","parent",type=str,multiple=True,help="Where can you put this thing into?")(c)
+    c = click.option("--usable","-u",is_flag=True,help="Things can be put into this box")(c)
+    c = click.option("--unusable","-U",is_flag=True,help="The box holds fixed subdividers")(c)
     return c
 
 @typ_.command(name="add")

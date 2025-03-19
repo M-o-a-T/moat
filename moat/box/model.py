@@ -38,6 +38,7 @@ class BoxTyp(Base):
         secondaryjoin= "BoxTyp.id == boxtyp_tree.c.child_id",
         back_populates="parents",
     )
+    usable: Mapped[bool]=mapped_column(nullable=False,default=True,server_default="1", comment="Can you put things directly into this?")
 
     # Possible locations in there
     pos_x: Mapped[int] = mapped_column(nullable=True, comment="Max # of X positions")
@@ -102,11 +103,6 @@ def validate_box_coords(mapper, connection, model):
     par = model.container
     if par is not None:
         par = par.boxtyp
-    if par is not None:
-        par = par.parents
-        if len(par) != 1:
-            return
-        par = next(iter(par))
 
     def chk(p):
         pp = f"pos_{p}"

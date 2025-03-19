@@ -8,6 +8,7 @@ from sqlalchemy.orm import relationship
 
 from moat.label.model import LabelTyp, Sheet, Label, SheetTyp
 from moat.box.model import Box, BoxTyp
+from moat.thing.model import Thing
 from moat.util import NotGiven, gen_ident, al_lower
 from moat.db.util import session
 from moat.db.schema import Base
@@ -15,6 +16,7 @@ import random
 
 LabelTyp.boxtypes = relationship(BoxTyp, back_populates="labeltyp", collection_class=set)
 Label.box = relationship(Box, back_populates="labels")
+Label.thing = relationship(Thing, back_populates="labels")
 
 def label_apply(self, randstr=NotGiven, randlen=NotGiven, labeltyp=NotGiven, sheet=NotGiven, **kw):
     sess = session.get()

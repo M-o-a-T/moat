@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 __all__ = ["CtxObj", "timed_ctx"]
 
 
-class CtxObj[T_Ctx](ABC):
+class CtxObj(ABC):  ## [T_Ctx](ABC):
     """
     Teach a class instance to act as an async context manager, by
     forwarding ``_aenter__````_aexit__`` to a `_ctx` method

@@ -36,19 +36,19 @@ A good Pythonic introduction is [here](https://vorpus.org/blog/notes-on-structur
 
 ## Repository Structure
 
-The MoaT code is built using git submodules, corresponding to separate
-`moat-XXX` packages.
+The MoaT code lives in a single mono-repository.
+
+### History
+
+The MoaT modules once were stored in separate repositories. This however
+caused too many coordination problems. Thus they were all imported into the
+main repo, including their history, which is why this repository has
+way too many initial commits. ;-)
 
 The top module contains the command-line front-end of MoaT. Any
 MoaT code that can reasonably be controlled by a command line hooks into
 it, by way of a `_main` module with a `cli` object, which should be an
 `asyncclick` group (or command).
-
-The only mandatory submodule is "util". It contains a heap of
-semi-structured helper code which the rest of the MoaT infrastructure
-depends on. "moat-util" also has a command line; it serves as a convenient
-example for building your own extension, and exports a
-time-until-absolute-date calculator and a msgpack codec.
 
 
 ## Modules

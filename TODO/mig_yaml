@@ -9,6 +9,7 @@ from moat.util import CFG, yload, merge, ensure_cfg
 from moat.db import database
 from moat.label.model import LabelTyp,Label
 from moat.box.model import BoxTyp,Box
+from moat.thing.model import ThingTyp,Thing
 from moat.util import yload
 from pathlib import Path
 from sqlalchemy import select
@@ -66,6 +67,7 @@ def main(config):
                     db.flush()
 
                     if v.t//10 != 11:
+                        par.usable=False
                         cld = BoxTyp(name=cld)
                         cld.parents.add(par)
                         db.add(cld)
@@ -87,27 +89,61 @@ def main(config):
                     lab.box = box
                 db.flush()
 
+        try:
+            with db.begin() as s:
+                thp = db.one(ThingTyp,name="Bauteil")
+        except KeyError:
+            print("No type 'Bauteil'. Not imported.")
+            thp = None
+        
         for k,v in data.items():
             if "t" not in v:
                 continue
             with db.begin() as s:
                 box=db.one(Box,name=f"mag_{k}")
                 if v.t==111:
+                    bx=box
                     pass  # already did everything
                 else:
                     ctyp=db.one(BoxTyp,name=f"mag_{v.t}_c")
                     for x in range(1,box.boxtyp.pos_x+1):
+                        vs=v[x] if box.boxtyp.pos_x>1 else v
+
                         for y in range(1,box.boxtyp.pos_y+1):
-                            bx = f"mag_{k}_{x}{y}"
                             try:
-                                bx=db.one(Box,name=bx,container=box)
+                                vr=vs[y] if box.boxtyp.pos_y>1 else vs
                             except KeyError:
-                                bx=Box(name=bx,container=box,boxtyp=ctyp,pos_x=x,pos_y=y)
-                                db.add(bx)
+                                continue
+                            except IndexError:
+                                breakpoint()
+                                continue
+
+                            if v.t//10==11:
+                                bx=box
                             else:
-                                bx.pos_x=x
-                                bx.pos_y=y
-                            db.flush()
+                                bx = f"mag_{k}_{x}{y}"
+                                try:
+                                    bx=db.one(Box,name=bx,container=box)
+                                except KeyError:
+                                    bx=Box(name=bx,container=box,boxtyp=ctyp,pos_x=x,pos_y=y)
+                                    db.add(bx)
+                                else:
+                                    bx.pos_x=x
+                                    bx.pos_y=y
+                                db.flush()
+                            
+                            if thp is not None:
+                                if v.t == 111:
+                                    vr=v[1]
+                                if not isinstance(vr,str):
+                                    breakpoint()
+                                elif vr[0] != "_":
+                                    nn=f"c_{k}" if vr is v else f"c_{k}_{x}{y}"
+                                    try:
+                                        th=db.one(Thing,name=nn)
+                                    except KeyError:
+                                        th=Thing(name=nn, thingtyp=thp, container=bx, descr=vr)
+                                        db.add(th)
 
 
 main()

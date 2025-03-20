@@ -6,7 +6,7 @@ import io
 import logging
 import subprocess
 import sys
-from collections import defaultdict
+from collections import defaultdict, deque
 from configparser import RawConfigParser
 from pathlib import Path
 
@@ -16,21 +16,176 @@ import tomlkit
 from anyio import run_process
 from moat.util import P, add_repr, attrdict, make_proc, yload, yprint
 from packaging.requirements import Requirement
+from attrs import define,field
+from shutil import rmtree,copyfile,copytree
 
 logger = logging.getLogger(__name__)
 
+def dash(n:str) -> str:
+    """
+    moat.foo.bar > foo-bar
+    foo.bar > ext-foo-bar
+    """
+    if "." not in n:  # also applies to single-name packages
+        return n
+
+    if n in ("main","moat"):
+        return "main"
+    if not n.startswith("moat."):
+        return "ext-"+n.replace("-",".")
+    return n.replace(".","-")[5:]
+
+def undash(n:str) -> str:
+    """
+    foo-bar > moat.foo.bar
+    ext-foo-bar > foo.bar
+    """
+    if "." in n:
+        return n
+
+    if n in ("main","moat"):
+        return "moat"
+    if n.startswith("ext-"):
+        return n.replace("-",".")[4:]
+    return "moat."+n.replace("-",".")
+
+class ChangedError(RuntimeError):
+    def __init__(subsys,tag,head):
+        self.subsys = subsys
+        self.tag = tag
+        self.head = head
+    def __str__(self):
+        s = self.subsys or "Something"
+        if head is None:
+            head="HEAD"
+        else:
+            head = head.hexsha[:9]
+        return f"{s} changed between {tag.name} and {head}"
+
+@define
+class Package:
+    _repo:Repo = field(repr=False)
+    name:str = field()
+    under:str = field(init=False,repr=False)
+    path:Path = field(init=False,repr=False)
+    files:set(Path) = field(init=False,factory=set,repr=False)
+    subs:dict[str,Package] = field(factory=dict,init=False,repr=False)
+
+    def __init__(self, repo, name):
+        self.__attrs_init__(repo,name)
+        self.under = name.replace(".","_")
+        self.path = Path(*name.split("."))
+
+    @property
+    def dash(self):
+        return dash(self.name)
+
+    def next_tag(self,major:bool=False,minor:bool=False):
+        tag = self.last_tag()
+        try:
+            n = [ int(x) for x in tag.split('.') ]
+            if len(n) != 3:
+                raise ValueError(n)
+        except ValueError:
+            raise ValueError(f"Tag {tag} not in major#.minor#.patch# form.") from None
+
+        if major:
+            n = [n[0]+1,0,0]
+        elif minor:
+            n = [n[0],n[1]+1,0]
+        else:
+            n = [n[0],n[1],n[2]+1]
+        return ".".join(str(x) for x in n)
+
+    def populate(self, path:Path):
+        """
+        Collect this package's file names.
+        """
+        self.path = path
+        for name in path.iterdir():
+            name=name.name
+            if name == "__pycache__":
+                continue
+            if name in self.subs:
+                self.subs[name].populate(path/name)
+            else:
+                self.files.add(name)
+
+    def copy(self) -> None:
+        """
+        Copies the current version of this subsystem to its packaging area.
+        """
+        p = Path("packaging")/self.dash
+        rmtree(p/"moat")
+        dest = p/self.path
+        dest.mkdir(parents=True)
+        for f in self.files:
+            if (self.path/f).is_dir():
+                copytree(self.path/f, dest/f, symlinks=True, ignore_dangling_symlinks=True)
+            else:
+                copyfile(self.path/f, dest/f, follow_symlinks=False)
+
+    def last_tag(self, head:Commit=None, unchanged:bool=False) -> Tag|None:
+        """
+        Return the most-recent tag
+        """
+        for c in self._repo.commits(head):
+            t = self.tagged(c)
+            if t is None:
+                continue
+            if unchanged and self.has_changes(c, head):
+                raise ChangedError(subsys,t,ref)
+            return t
+
+        raise ValueError(f"No tags for {self.name}")
+
+    def has_changes(self, tag:Commit=None, head:Commit=None) -> bool:
+        """
+        Test whether the given subsystem (or any subsystem)
+        changed between @head and @tag commits
+        """
+        if tag is None:
+            tag = self.last_tag(head)
+        if head is None:
+            head = self._repo.head.commit
+        for d in head.diff(f"{self.dash}/{tag}"):
+            if self._repo.repo_for(d.a_path) != self.name and self._repo.repo_for(d.b_path) != self.name:
+                continue
+            return True
+        return False
+
+    def tagged(self, c:Commit=None, subsys:str=None) -> Tag|None:
+        """Return a commit's tag name.
+        Defaults to the head commit.
+        Returns None if no tag, raises ValueError if more than one is found.
+        """
+        if c is None:
+            c = self._repo.head.commit
+        tt = self._repo.tags_of(c)
+
+        n = self.dash+"/"
+        tt = [t for t in tt if t.name.startswith(n)]
+
+        if not tt:
+            return None
+        if len(tt) > 1:
+            raise ValueError(f"Multiple tags for {self.name}: {tt}")
+        return tt[0].name[len(n):]
+
+
 
 class Repo(git.Repo):
-    """Amend git.Repo with submodule and tag caching"""
+    """Amend git.Repo with tag caching and pseudo-submodule splitting"""
 
     moat_tag = None
-    submod = None
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
-        self._subrepo_cache = {}
         self._commit_tags = defaultdict(list)
         self._commit_topo = {}
+
+        self._repos = {}
+        self._make_repos()
 
         for t in self.tags:
             self._commit_tags[t.commit].append(t)
@@ -39,66 +194,112 @@ class Repo(git.Repo):
         mi = p.parts.index("moat")
         self.moat_name = "-".join(p.parts[mi:])
 
-    def subrepos(self, recurse=True, depth=True, same=True):
-        """List subrepositories (and cache them)."""
+    def repo(self, name):
+        return self._repos[dash(name)]
 
-        if same and recurse and not depth:
-            yield self
+    @property
+    def parts(self):
+        return self._repos.values()
 
-        if "/lib/" not in self.working_dir:
-            for r in self.submodules:
-                try:
-                    res = self._subrepo_cache[r.path]
-                except KeyError:
-                    try:
-                        p = Path(self.working_dir) / r.path
-                        self._subrepo_cache[r.path] = res = Repo(p)
-                    except git.exc.InvalidGitRepositoryError:
-                        logger.info("%s: invalid, skipping.", p)
-                        continue
-                    res.submod = r
-                if recurse:
-                    yield from res.subrepos(depth=depth)
-                else:
-                    yield res
+    def tags_of(self, c:Commit) -> Sequence[Tag]:
+        return self._commit_tags[c]
 
-        if same and recurse and depth:
-            yield self
+    def _add_repo(self, name):
+        dn = dash(name)
+        pn = undash(name)
+        if dn in self._repos:
+            return self._repos[dn]
+
+        p = Package(self,pn)
+        self._repos[dn] = p
+        if "." in pn:
+            par,nam = pn.rsplit(".",1)
+            pp = self._add_repo(par)
+            pp.subs[nam] = p
+        return p
+
+    def _make_repos(self) -> dict:
+        """Collect subrepos"""
+        for fn in Path("packaging").iterdir():
+            if fn.name == "main":
+                continue
+            self._add_repo(str(fn.name))
+
+        self._repos["moat"].populate(Path("moat"))
+
+    def repo_for(self, path:Path|str) -> str:
+        """
+        Given a file path, returns the subrepo in question
+        """
+        name = "moat"
+        sc = self._repos["moat"]
+        path=Path(path)
+        try:
+            if path.parts[0] == "packaging":
+                return path.parts[1].replace("-",".")
+        except KeyError:
+            return name
+
+        if path.parts[0] != "moat":
+            return name
+
+        for p in path.parts[1:]:
+            if p in sc.subs:
+                name += "."+p
+                sc = sc.subs[p]
+            else:
+                break
+        return name
 
     def commits(self, ref=None):
-        """Iterate over topo sort of commits following @ref, or HEAD"""
+        """Iterate over topo sort of commits following @ref, or HEAD.
+
+        WARNING: this code does not do a true topological breadth-first
+        search. Doesn't matter much for simple merges that are based on
+        a mostly-current checkout, but don't expect correctness when branches
+        span tags.
+        """
         if ref is None:
             ref = self.head.commit
-        try:
-            res = self._commit_topo[ref]
-        except KeyError:
-            visited = set()
-            res = []
 
-            def _it(c):
-                return iter(sorted(c.parents, key=lambda x: x.committed_date))
+        visited = set()
+        work = deque([ref])
+        while work:
+            ref = work.popleft()
+            if ref in visited:
+                continue
+            visited.add(ref)
+            yield ref
+            work.extend(ref.parents)
 
-            work = [(ref, _it(ref))]
+    def last_tag(self, ref=None, unchanged:bool=False) -> Tag|None:
+        """
+        Return the most-recent tag for the given subsystem (or globally).
+        """
+        for c in self.commits(ref):
+            t = self.tagged(c)
+            if t is None:
+                continue
+            if unchanged and self.has_changes(ref,t.commit):
+                raise ChangedError(subsys,t,ref)
 
-            while work:
-                c, gen = work.pop()
-                visited.add(c)
-                for n in gen:
-                    if n not in visited:
-                        work.append((c, gen))
-                        work.append((n, _it(n)))
-                        break
-                else:
-                    res.append(c)
-            self._commit_topo[ref] = res
+    def has_changes(self, tag:Tag, head:Commit) -> bool:
+        """
+        Test whether any subsystem changed between @head and @tag commits
+        """
+        if head is None:
+            head = self.head.commit
+        if tag is None:
+            tag = self.last_tag(head)
+        for d in head.diff(tag):
+            if repo_for(d.a_name) == "moat" and repo_for(d.b_name) == "moat":
+                continue
+            return True
+        return False
 
-        n = len(res)
-        while n:
-            n -= 1
-            yield res[n]
 
-    def tagged(self, c=None) -> str:
-        """Return a commit's tag.
+    def tagged(self, c:Commit=None, subsys:str=None) -> Tag|None:
+        """Return a commit's tag name.
         Defaults to the head commit.
         Returns None if no tag, raises ValueError if more than one is found.
         """
@@ -107,9 +308,21 @@ class Repo(git.Repo):
         if c not in self._commit_tags:
             return None
         tt = self._commit_tags[c]
+
+        if subsys is None:
+            tt = [t for t in tt if "/" not in t.name]
+        else:
+            n = subsys+"/"
+            tt = [t for t in tt if t.name.startswith(n)]
+
+        if not tt:
+            return None
         if len(tt) > 1:
-            raise ValueError(f"{self.working_dir}: multiple tags: {tt}")
-        return tt[0]
+            if subsys is not None:
+                raise ValueError(f"Multiple tags for {subsys}: {tt}")
+            raise ValueError(f"Multiple tags: {tt}")
+        return tt[0].name
+
 
 
 @click.group(short_help="Manage MoaT itself")
@@ -448,93 +661,94 @@ def path_():
     print(Path(__file__).parent / "_templates")
 
 
-@cli.command(
-    epilog="""\
-By default, changes amend the HEAD commit if the text didn't change.
-""",
-)
-@click.option("-A", "--amend", is_flag=True, help="Fix previous commit (DANGER)")
-@click.option("-N", "--no-amend", is_flag=True, help="Don't fix prev commit even if same text")
-@click.option("-D", "--no-dirty", is_flag=True, help="don't check for dirtiness (DANGER)")
-@click.option("-C", "--no-commit", is_flag=True, help="don't commit")
-@click.option("-s", "--skip", type=str, multiple=True, help="skip this repo")
-@click.option("--hooks", is_flag=True, help="only update hooks")
-@click.option("--HOOKS", "fhooks", is_flag=True, help="force-update hooks")
-@click.option(
-    "-m",
-    "--message",
-    type=str,
-    help="commit message if changed",
-    default="Update from MoaT template",
-)
-@click.option("-o", "--only", type=str, multiple=True, help="affect only this repo")
-async def setup(no_dirty, no_commit, skip, only, message, amend, no_amend, hooks, fhooks):
-    """
-    Set up projects using templates.
+@cli.command()
+@click.option("-s", "--show", is_flag=True, help="Show all tags")
+@click.option("-r", "--run", is_flag=True, help="Update all stale tags")
+def tags(show,run):
+    repo = Repo(None)
 
-    Default: amend if the text is identical and the prev head isn't tagged.
-    """
-    repo = Repo()
-    skip = set(skip)
-    if only:
-        repos = (Repo(x) for x in only)
-    else:
-        repos = (x for x in repo.subrepos(depth=True) if x.moat_name[5:] not in skip)
+    if show:
+        if run:
+            raise click.UsageError("Can't display and change the tag at the same time!")
 
-    for r in repos:
-        apply_hooks(r, fhooks)
-        if hooks or fhooks:
-            print(r.working_dir)
-            continue
-
-        if not is_clean(r, not no_dirty):
-            if not no_dirty:
+        for r in repo.parts:
+            try:
+                tag = r.last_tag()
+            except ValueError:
+                print(f"{r.dash} -")
                 continue
+            if r.has_changes(tag):
+                print(f"{r.dash} {tag} STALE")
+            else:
+                print(tag)
+        return
 
-        proj = Path(r.working_dir) / "pyproject.toml"
-        if proj.is_file():
-            apply_templates(r)
+    if repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=False):
+        print("Repo is dirty. Not tagging globally.", file=sys.stderr)
+        return
+
+    for r in repo.parts:
+        tag = sb.last_tag()
+        if not sb.has_changes(tag):
+            print(repo.dash,tag,"UNCHANGED")
+            continue
+
+        tag = sb.next_tag()
+        print(repo.dash,tag)
+
+        if not run:
+            continue
+        git.TagReference.create(repo, f"{r.dash}/{tag}")
+
+
+@cli.command()
+@click.option("-r", "--run", is_flag=True, help="actually do the tagging")
+@click.option("-m", "--minor", is_flag=True, help="create a new minor version")
+@click.option("-M", "--major", is_flag=True, help="create a new major version")
+@click.option("-s", "--subtree", type=str, help="Tag this partial module")
+@click.option("-t", "--tag", "force", type=str, help="Use this explicit tag value")
+@click.option("-q", "--query","--show","show", is_flag=True, help="Show the latest tag")
+@click.option("-f", "--force","FORCE", is_flag=True, help="replace an existing tag")
+def tag(run,minor,major,subtree,force,FORCE,show):
+    """
+    Tag the repository (or a subtree).
+    """
+    if minor and major:
+        raise click.UsageError("Can't change both minor and major!")
+    if force and (minor or major):
+        raise click.UsageError("Can't use an explicit tag with changing minor or major!")
+    if FORCE and not force:
+        raise click.UsageError("Can't replace autogenerated tags, they don't exist by definition")
+    if show and (run or force or minor or major):
+        raise click.UsageError("Can't display and change the tag at the same time!")
+
+    repo = Repo(None)
+
+    if subtree:
+        sb = repo.repo(subtree)
+    else:
+        sb = repo
+
+    if show:
+        tag = sb.last_tag()
+        if sb.has_changes(tag):
+            print(f"{tag} STALE")
         else:
-            logger.info("%s: no pyproject.toml file. Skipping.", r.working_dir)
-            continue
+            print(tag)
+        return
 
-        if no_commit:
-            continue
+    if force:
+        tag = force
+    else:
+        tag = sb.next_tag(major,minor)
 
-        if r.is_dirty(index=True, working_tree=True, untracked_files=False, submodules=True):
-            if no_amend or r.tagged():
-                a = False
-            elif amend:
-                a = True
-            else:
-                a = r.head.commit.message == message
+    if subtree:
+        tag=f"{sb.dash}/{tag}"
 
-            for rr in r.subrepos(recurse=False):
-                # This part updates the supermodule's SHA entries so they
-                # point to the submodule#s current HEAD, assuming it is
-                # clean
-                if not rr.is_dirty(index=True, working_tree=True, submodules=True):
-                    rrp = rr.submod.path
-                    rri = rr.head.commit.hexsha
-                    ri = r.index.entries[(rrp, 0)].hexsha
-
-                    if rri == ri:
-                        continue
-                    sn = git.objects.submodule.base.Submodule(
-                        r,
-                        rr.head.commit.binsha,
-                        name=rr.submod.name,
-                        path=rr.submod.path,
-                        mode=rr.submod.mode,
-                    )
-                    print("Submodule update:", rrp)
-                    r.index.add([sn])  # doesn't work, SIGH
-            if a:
-                p = r.head.commit.parents
-            else:
-                p = (r.head.commit,)
-
-            r.index.commit(message, parent_commits=p)
+    if run:
+        git.TagReference.create(repo,tag, force=FORCE)
+    else:
+        print(f"{tag} DRY_RUN")
 
 
 @cli.command()

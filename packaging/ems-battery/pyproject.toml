@@ -76,8 +76,8 @@ dependencies = [
   "msgpack",
   "serialpacker",
   "pyfuse3",
-  "moat-util ~= 0.35.0",
-  "moat-micro ~= 0.11.5",
+  "moat-util ~= 0.56.4",
+  "moat-micro ~= 0.15.1",
 ]
 dynamic = ["version"]
 keywords = ["MoaT"]
@@ -86,6 +86,7 @@ name = "moat-ems-battery"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
+version = "0.2.10"
 
 [project.license]
 file = "LICENSE.txt"

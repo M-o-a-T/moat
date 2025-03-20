@@ -14,9 +14,9 @@ classifiers = [
 	]
 dependencies = [
 	"anyio ~= 3.0",
-	"moat-util ~= 0.35.0",
+	"moat-util ~= 0.56.4",
 	]
-version = "0.0.0"
+version = "0.2.10"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-ems"

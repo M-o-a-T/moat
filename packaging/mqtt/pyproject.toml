@@ -22,12 +22,12 @@ dependencies = [
 	"attrs >= 19",
 	"simplejson",
 	"msgpack",
-	"moat-util ~= 0.35",
+	"moat-util ~= 0.56.4",
 	"transitions",
 	"wsproto",
 	"asyncscope >= 0.6.0",
 	]
-version = "0.0.0"
+version = "0.42.2"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-mqtt"

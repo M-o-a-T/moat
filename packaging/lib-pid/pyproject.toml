@@ -12,6 +12,7 @@ name = "moat-lib-pid"
 maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='An advanced PID controller'
 readme = "README.md"
+version = "0.6.1"
 
 [project.license]
 file = "LICENSE.txt"

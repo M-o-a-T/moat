@@ -16,10 +16,10 @@ dependencies = [
 	"anyio ~= 3.0",
 	"pymodbus ~= 3.6.0",
 	"anyio-serial",
-	"moat-util ~= 0.41.5",
+	"moat-util ~= 0.56.4",
 	"asyncscope ~= 0.8.3",
 	]
-version = "0.0.0"
+version = "0.8.2"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-modbus"

@@ -13,11 +13,11 @@ classifiers = [
 	"Topic :: Home Automation",
 ]
 dependencies = [
-	"moat-kv ~= 0.70.2",
-	"moat-util ~= 0.42.0",
+	"moat-kv ~= 0.70.23",
+	"moat-util ~= 0.56.4",
         "aiocaldav",
 ]
-version = "0.0.0"
+version = "0.1.2"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-kv-cal"

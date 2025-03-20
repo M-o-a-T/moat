@@ -6,9 +6,9 @@ requires = ["setuptools-scm","wheel","setuptools"]
 classifiers = ["Development Status :: 4 - Beta","License :: OSI Approved","Framework :: AnyIO","Framework :: Trio","Framework :: AsyncIO","Programming Language :: Python :: 3","Intended Audience :: Developers"]
 dependencies = [
   "anyio ~= 3.0",
-  "moat-util ~= 0.35.0",
-  "moat-modbus ~= 0.6.2",
-  "moat-lib-victron ~= 0.5",
+  "moat-util ~= 0.56.4",
+  "moat-modbus ~= 0.8.2",
+  "moat-lib-victron ~= 0.1.1",
 ]
 dynamic = ["version"]
 keywords = ["MoaT"]
@@ -17,6 +17,7 @@ name = "moat-ems-inv"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
+version = "0.2.10"
 
 [project.license]
 file = "LICENSE.txt"

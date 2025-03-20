@@ -20,10 +20,10 @@ dependencies = [
 	"outcome",
 	"ruyaml",
 	"simpleeval",
-	"moat-util ~= 0.51",
-	"moat-lib-cmd ~= 0.3",
+	"moat-util ~= 0.56.4",
+	"moat-lib-cmd ~= 0.3.3",
 	]
-version = "0.0.0"
+version = "0.1.0"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-link"

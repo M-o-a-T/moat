@@ -304,7 +304,7 @@ def _enc_path(codec, val):
 @std_ext.decoder(39)
 def _dec_path(codec, val):
     codec  # noqa:B018
-    if not isinstance(val,(list,array)):
+    if not isinstance(val,(list,tuple)):
         return Tag(39, val)  # not decodable
     return Path.build(val)
 

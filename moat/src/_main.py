@@ -27,11 +27,11 @@ def dash(n:str) -> str:
     moat.foo.bar > foo-bar
     foo.bar > ext-foo-bar
     """
+    if n in ("main","moat"):
+        return "main"
     if "." not in n:  # also applies to single-name packages
         return n
 
-    if n in ("main","moat"):
-        return "main"
     if not n.startswith("moat."):
         return "ext-"+n.replace("-",".")
     return n.replace(".","-")[5:]

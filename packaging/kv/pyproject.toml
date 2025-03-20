@@ -58,7 +58,7 @@ file = "LICENSE.txt"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"
-repository = "https://github.com/M-o-a-T/moat-kv"
+repository = "https://github.com/M-o-a-T/moat"
 
 [tool.ruff]
 select = ["ALL"]

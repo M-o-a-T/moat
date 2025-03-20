@@ -31,7 +31,7 @@ file = "LICENSE.txt"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"
-repository = "https://github.com/M-o-a-T/moat-cad"
+repository = "https://github.com/M-o-a-T/moat"
 
 [tool.flake8]
 max-line-length = 99

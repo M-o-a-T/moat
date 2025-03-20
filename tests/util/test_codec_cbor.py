@@ -144,7 +144,7 @@ def test_dproxy():
 
 def test_tags():
     t = gen_start("Hello", foo=42)
-    assert t.tag == 55799
+    assert t.tag == 55800
     assert t.value.tag == 1299145044
     tt = t.value.value
     assert len(tt[0]) >= 24

@@ -87,7 +87,7 @@ def _enc_dpr(codec, obj):
     return (obj.name, obj.i, obj.s, obj.a, obj.k)
 
 
-@std_ext.encoder(203, Proxy)
+@std_ext.encoder(32769, Proxy)
 def _enc_pr(codec, obj):
     codec  # noqa:B018
     return obj.name
@@ -274,7 +274,7 @@ def _dec_old_ipnetwork(codec, buf) -> IPv4Network | IPv6Network:
     raise ValueError(f"invalid ipnetwork value {buf!r}")
 
 
-@std_ext.decoder(203)
+@std_ext.decoder(32769)
 def _dec_proxy(codec, val):
     codec  # noqa:B018
     try:
@@ -289,21 +289,23 @@ def _dec_proxy(codec, val):
 def _dec_obj(codec, val):
     codec  # noqa:B018
     if isinstance(val[0], Tag):
-        if val[0].tag != 203:
+        if val[0].tag != 32769:
             return Tag(27, val)  # not decodable
         val[0] = val[0].value
     return unwrap_obj(val)
 
 
-@std_ext.encoder(202, Path)
+@std_ext.encoder(39, Path)
 def _enc_path(codec, val):
     codec  # noqa:B018
     return val.raw
 
 
-@std_ext.decoder(202)
+@std_ext.decoder(39)
 def _dec_path(codec, val):
     codec  # noqa:B018
+    if not isinstance(val,(list,array)):
+        return Tag(39, val)  # not decodable
     return Path.build(val)
 
 
@@ -326,7 +328,7 @@ def enc_any(codec, obj):
     except KeyError:
         pass
     else:
-        return 203, name
+        return 32769, name
 
     try:
         name = obj2name(type(obj))

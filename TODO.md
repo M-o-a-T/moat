@@ -1,3 +1,8 @@
+* CBOR
+  * auto-generated proxies
+  * a way to release them
+  * auto-release afetr some time / max cache size?
+
 * moat-link
   * we send WILL messages but need to react by writing a new
     designated-server record

@@ -83,24 +83,6 @@ class _Common:
             n = [n[0],n[1],n[2]+1]
         return ".".join(str(x) for x in n)
 
-    def last_tag(self, head:Commit=None, unchanged:bool=False) -> Tag|None:
-        """
-        Return the most-recent tag for this subrepo
-        """
-        if head is None and self._last_tag is not None:
-            return self._last_tag
-        for c in self._repo.commits(head):
-            t = self.tagged(c)
-            if t is None:
-                continue
-            if unchanged and self.has_changes(c, head):
-                raise ChangedError(subsys,t,ref)
-            if head is None:
-                self._last_tag = t
-            return t
-
-        raise ValueError(f"No tags for {self.name}")
-
 @define
 class Package(_Common):
     _repo:Repo = field(repr=False)
@@ -156,16 +138,29 @@ class Package(_Common):
             else:
                 copyfile(self.path/f, dest/f, follow_symlinks=False)
 
-    def has_changes(self, tag:Commit=None, head:Commit=None) -> bool:
+    def last_tag(self, unchanged:bool=False) -> Tag|None:
+        """
+        Return the most-recent tag for this subrepo
+        """
+        tag,commit = self._repo.versions[self.dash]
+        if unchanged:
+            if unchanged and self.has_changes(commit):
+                raise ChangedError(subsys,t,ref)
+            if head is None:
+                self._last_tag = t
+            return t
+
+        raise ValueError(f"No tags for {self.name}")
+
+    def has_changes(self, tag:Commit=None) -> bool:
         """
         Test whether the given subsystem (or any subsystem)
-        changed between @head and @tag commits
+        changed between the head and the @tag commit
         """
         if tag is None:
-            tag = self.last_tag(head)
-        if head is None:
-            head = self._repo.head.commit
-        for d in head.diff(f"{self.dash}/{tag}"):
+            tag = self.last_tag()
+        head = self._repo.head.commit
+        for d in head.diff(tag):
             if self._repo.repo_for(d.a_path) != self.name and self._repo.repo_for(d.b_path) != self.name:
                 continue
             return True
@@ -195,6 +190,7 @@ class Repo(git.Repo,_Common):
     """Amend git.Repo with tag caching and pseudo-submodule splitting"""
 
     moat_tag = None
+    _last_tag=None
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
@@ -210,6 +206,31 @@ class Repo(git.Repo,_Common):
         p = Path(self.working_dir)
         mi = p.parts.index("moat")
         self.moat_name = "-".join(p.parts[mi:])
+        self.versions = yload("versions.yaml")
+
+    def write_tags(self):
+        with open("versions.yaml","w") as f:
+            yprint(self.versions,f)
+        self.index.add("versions.yaml")
+
+
+    def last_tag(self, unchanged:bool=False) -> Tag|None:
+        """
+        Return the most-recent tag for this repo
+        """
+        if self._last_tag is not None:
+            return self._last_tag
+        for c in self._repo.commits(head):
+            t = self.tagged(c)
+            if t is None:
+                continue
+
+            self._last_tag = t
+            if unchanged and self.has_changes(c):
+                raise ChangedError(subsys,t)
+            return t
+
+        raise ValueError(f"No tags for {self.name}")
 
     def part(self, name):
         return self._repos[dash(name)]
@@ -293,14 +314,14 @@ class Repo(git.Repo,_Common):
             yield ref
             work.extend(ref.parents)
 
-    def has_changes(self, tag:Tag=None, head:Commit=None) -> bool:
+    def has_changes(self, tag:Tag=None) -> bool:
         """
-        Test whether any subsystem changed between @head and @tag commits
+        Test whether any subsystem changed since the "tagged" commit
+
         """
-        if head is None:
-            head = self.head.commit
         if tag is None:
-            tag = self.last_tag(head)
+            tag = self.last_tag()
+        head = self._repo.head.commit
         for d in head.diff(tag):
             if self.repo_for(d.a_path) == "moat" and self.repo_for(d.b_path) == "moat":
                 continue
@@ -695,25 +716,30 @@ def tags(show,run):
             if r.has_changes(tag):
                 print(f"{r.dash} {tag} STALE")
             else:
-                print(tag)
+                print(f"{r.dash} {tag}")
         return
 
     if repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=False):
         print("Repo is dirty. Not tagging globally.", file=sys.stderr)
         return
 
+    changed=False
     for r in repo.parts:
-        tag = sb.last_tag()
-        if not sb.has_changes(tag):
+        tag = r.last_tag()
+        if not r.has_changes(tag):
             print(repo.dash,tag,"UNCHANGED")
             continue
 
-        tag = sb.next_tag()
+        tag = r.next_tag()
         print(repo.dash,tag)
-
         if not run:
             continue
-        git.TagReference.create(repo, f"{r.dash}/{tag}")
+
+        repo.versions[r.dash] = (tag,repo.head.commit.hexsha[:9])
+        changed=True
+
+    if changed:
+        repo.write_tags()
 
 
 @cli.command()
@@ -761,7 +787,10 @@ def tag(run,minor,major,subtree,force,FORCE,show):
         tag=f"{sb.dash}/{tag}"
 
     if run:
-        git.TagReference.create(repo,tag, force=FORCE)
+        if subtree:
+            repo.write_tags()
+        else:
+            git.TagReference.create(repo,tag, force=FORCE)
     else:
         print(f"{tag} DRY_RUN")
 
@@ -1075,6 +1104,7 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
 
     # Step 8: commit the result
     if not no_commit:
+        repo.write_tags()
         repo.index.commit(f"Build version {forcetag}")
         git.TagReference.create(repo, forcetag)
 

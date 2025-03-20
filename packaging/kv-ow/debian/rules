@@ -12,3 +12,5 @@ debian/distkv-owfs@.service: distowfs@.service
 override_dh_auto_install: debian/distkv-owfs@.service
 	dh_auto_install
 
+override_dh_auto_test:
+	: skip

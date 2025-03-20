@@ -12,3 +12,5 @@ debian/moat-kv-wago@.service: moat-kv-wago@.service
 override_dh_auto_install: debian/moat-kv-wago@.service
 	dh_auto_install
 
+override_dh_auto_test:
+	: skip

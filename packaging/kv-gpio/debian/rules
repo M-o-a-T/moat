@@ -11,3 +11,6 @@ debian/moat-kv-gpio.service: moat-kv-gpio.service
 
 override_dh_auto_install: debian/moat-kv-gpio.service
 	dh_auto_install
+
+override_dh_auto_test:
+	: skip

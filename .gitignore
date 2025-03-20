@@ -76,3 +76,4 @@ __pycache__/
 /venv/
 /wheels/
 /tests/mqtt/plugins/test.db
+/OFF/

@@ -1,0 +1,9 @@
+/*.deb
+/*.build
+/*.buildinfo
+/*.changes
+/*/moat
+/*/build
+/*/.pybuild
+/*/dist
+/*/*.egg-info/

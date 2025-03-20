@@ -77,4 +77,3 @@ __pycache__/
 /wheels/
 /tests/mqtt/plugins/test.db
 /OFF/
-/packaging/*/moat/

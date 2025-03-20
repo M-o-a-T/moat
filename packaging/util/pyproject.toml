@@ -22,7 +22,7 @@ dependencies = [
 	"simpleeval",
 	"moat-lib-codec >= 0.4",
 	]
-version = "0.0.0"
+version = "0.56.3"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-util"
@@ -94,8 +94,6 @@ packages = [ "moat.util",]
 
 [tool.pylint.messages_control]
 disable="wrong-import-order,ungrouped-imports,too-many-nested-blocks,unspecified-encoding,missing-module-docstring,no-else-continue,too-many-instance-attributes,too-many-statements,too-many-return-statements,superfluous-parens,too-few-public-methods,use-dict-literal,too-many-locals,no-else-return,too-many-arguments,too-many-branches,invalid-name,fixme,no-else-raise,duplicate-code,unnecessary-pass"
-
-[tool.setuptools_scm]
 
 [tool.tox]
 legacy_tox_ini = """

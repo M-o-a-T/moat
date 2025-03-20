@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = [ "setuptools", "wheel", "setuptools-scm",]
+requires = [ "setuptools", "wheel",]
 
 [project]
 classifiers = [
@@ -24,7 +24,7 @@ dependencies = [
 	"moat-lib-cmd ~= 0.3",
 	"moat-link ~= 0.2",
 	]
-dynamic = [ "version",]
+version = "0.0.0"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-link-server"

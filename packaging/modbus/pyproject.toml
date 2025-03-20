@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = [ "setuptools", "wheel", "setuptools-scm",]
+requires = [ "setuptools", "wheel",]
 
 [project]
 classifiers = [
@@ -19,7 +19,7 @@ dependencies = [
 	"moat-util ~= 0.41.5",
 	"asyncscope ~= 0.8.3",
 	]
-dynamic = [ "version",]
+version = "0.0.0"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-modbus"

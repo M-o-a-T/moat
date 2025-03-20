@@ -1,0 +1,35 @@
+moat-lib-cmd (0.3.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 18 Nov 2024 19:47:00 +0100
+
+moat-lib-cmd (0.2.4-2) unstable; urgency=medium
+
+  * Ignore nonsense
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 18 Nov 2024 12:12:36 +0100
+
+moat-lib-cmd (0.2.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 18 Nov 2024 12:11:00 +0100
+
+moat-lib-cmd (0.2.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 07 Nov 2024 20:35:35 +0100
+
+moat-lib-cmd (0.2.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 07 Nov 2024 19:32:09 +0100
+
+moat-lib-cmd (0.2.1-1) unstable; urgency=medium
+
+  * Initial Debianization.
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 07 Nov 2024 19:31:47 +0100

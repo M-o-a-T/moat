@@ -1,0 +1,83 @@
+distkv-hass (0.4.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 08 Nov 2022 14:46:45 +0100
+
+distkv-hass (0.4.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 08 Nov 2022 14:45:57 +0100
+
+distkv-hass (0.3.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 04 Feb 2021 11:32:59 +0100
+
+disthass (0.2.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 15 Sep 2020 08:13:57 +0200
+
+disthass (0.2.2-3) unstable; urgency=medium
+
+  * *sigh* fix deb/rules
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 15 Sep 2020 08:10:00 +0200
+
+disthass (0.2.2-2) unstable; urgency=medium
+
+  * Fix ignored files
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 15 Sep 2020 08:00:39 +0200
+
+disthass (0.2.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 15 Sep 2020 08:00:03 +0200
+
+disthass (0.2.1-2) unstable; urgency=medium
+
+  * Renamed binary package
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 15 Sep 2020 07:59:09 +0200
+
+disthass (0.2.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 05 Jul 2020 13:52:20 +0200
+
+disthass (0.2.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 01 Jul 2020 16:14:37 +0200
+
+disthass (0.1.0-4) unstable; urgency=medium
+
+  * More packaging
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 24 May 2020 11:33:31 +0200
+
+disthass (0.1.0-3) unstable; urgency=medium
+
+  * Packaging fixes
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 24 May 2020 11:32:23 +0200
+
+disthass (0.1.0-2) unstable; urgency=medium
+
+  * Add .gitignore
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 24 May 2020 11:31:17 +0200
+
+disthass (0.1.0-1) unstable; urgency=low
+
+  * source package automatically created by stdeb 0.8.5
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 24 May 2020 11:29:04 +0200

@@ -1,0 +1,137 @@
+moat-gpio (0.6.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 18 May 2023 14:52:34 +0200
+
+moat-gpio (0.6.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 18 May 2023 14:49:57 +0200
+
+moat-gpio (0.6.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 18 May 2023 14:46:09 +0200
+
+moat-gpio (0.6.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 03 Jan 2023 14:22:40 +0100
+
+moat-gpio (0.6.0-1) unstable; urgency=medium
+
+  * Renamed
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 06 Sep 2022 09:42:08 +0200
+
+asyncgpio (0.5.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 05 Sep 2022 19:28:18 +0200
+
+asyncgpio (0.5.0-2) unstable; urgency=medium
+
+  * Depend on libgpiod 1.6
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 15 Mar 2021 14:35:21 +0100
+
+asyncgpio (0.5.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 15 Mar 2021 14:33:17 +0100
+
+asyncgpio (0.4.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 01 Jul 2020 11:49:28 +0200
+
+asyncgpio (0.4.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 30 May 2020 16:08:08 +0200
+
+asyncgpio (0.4.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 29 May 2020 05:58:45 +0200
+
+asyncgpio (0.4.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 24 May 2020 16:18:52 +0200
+
+asyncgpio (0.4.0-3) unstable; urgency=medium
+
+  * Use tagged version
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 22 May 2020 21:19:11 +0200
+
+asyncgpio (0.4.0-2) unstable; urgency=medium
+
+  * Edit error
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 22 May 2020 21:12:43 +0200
+
+asyncgpio (0.4.0-1) unstable; urgency=medium
+
+  * Update to libgpiod 1.4.
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 22 May 2020 21:10:25 +0200
+
+asyncgpio (0.3.0-1) unstable; urgency=medium
+
+  * Renamed.
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 20 Jun 2019 13:01:02 +0200
+
+trio-gpio (0.2.4-1) unstable; urgency=medium
+
+  * New release
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 11 Jun 2018 21:29:33 +0200
+
+trio-gpio (0.2.3-2) unstable; urgency=medium
+
+  * TL;DR: didn't RTFM
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 11 Jun 2018 09:08:30 +0200
+
+trio-gpio (0.2.2-1) unstable; urgency=medium
+
+  * Access errno
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 11 Jun 2018 08:29:53 +0200
+
+trio-gpio (0.2.1-1) unstable; urgency=medium
+
+  * Allow (and prefer) the GPIO chip label instead of its number.
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 11 Jun 2018 04:48:44 +0200
+
+trio-gpio (0.1.1-2) unstable; urgency=medium
+
+  * Cleanup 2
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 28 May 2018 02:35:07 +0200
+
+trio-gpio (0.1.1-1) unstable; urgency=medium
+
+  * Cleanup
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 10 Mar 2018 18:36:19 +0100
+
+trio-gpio (0.1.0-1) unstable; urgency=low
+
+  * source package automatically created by stdeb 0.8.5
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 07 Mar 2018 13:34:02 +0100

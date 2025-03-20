@@ -1,0 +1,20 @@
+Source: moat-lib-codec
+Maintainer: "Matthias Urlichs" <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 13),
+  python3-setuptools-scm,
+  python3-wheel,
+  python3-pytest,
+Standards-Version: 3.9.6
+Homepage: https://m-o-a-t.org
+Testsuite: autopkgtest-pkg-pybuild
+
+Package: python3-moat-lib-codec
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  python3-anyio (>= 3.0),
+Description: A simple command/stream multiplexer
+  The MoaT-Codec library packages various codecs used for MoaT protocols
+  in a way that's reason- and stream-able.
+  .

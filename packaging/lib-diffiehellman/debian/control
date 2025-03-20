@@ -1,0 +1,18 @@
+Source: moat-lib-diffiehellman
+Maintainer: "Matthias Urlichs" <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 13),
+  python3-setuptools-scm,
+  python3-wheel,
+  python3-setuptools,
+Standards-Version: 3.9.6
+Homepage: https://github.com/chrisvoncsefalvay/diffiehellman/
+
+Package: python3-moat-lib-diffiehellman
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  python3-anyio (>= 3.0),
+Description: A Pythonic implementation of the Diffie-Hellman key exchange protocol
+  The Python Diffie-Hellman key exchange library.
+

@@ -1,0 +1,23 @@
+Source: moat-kv-akumuli
+Maintainer: Matthias Urlichs <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 13),
+  moat-kv (>= 0.70),
+  python3-anyio (>= 2),
+  python3-asks,
+  python3-asyncakumuli,
+Standards-Version: 3.9.6
+Homepage: https://github.com/smurfix/distakumuli
+
+Package: moat-kv-akumuli
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  moat-kv (>= 0.70),
+  python3-anyio (>= 2),
+  python3-asks,
+  python3-asyncakumuli,
+Conflicts: distkv-akumuli
+Replaces: distkv-akumuli
+Description: Link between MoaT-KV and Akumuli
+  Updates an Akumuli series whenever a MoaT-KV value changes.

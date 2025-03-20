@@ -1,0 +1,8 @@
+/files
+/*.log
+/*.debhelper
+/*.debhelper-build-stamp
+/*.substvars
+/debhelper-build-stamp
+/moat-src
+/*.service

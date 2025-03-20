@@ -1,0 +1,8 @@
+/files
+/*.log
+/*.debhelper
+/*.debhelper-build-stamp
+/*.substvars
+/debhelper-build-stamp
+/moat-kv-akumuli
+/moat-kv-akumuli@.service

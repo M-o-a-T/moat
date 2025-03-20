@@ -1,0 +1,179 @@
+distkv-owfs (0.7.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 30 Nov 2022 16:44:36 +0100
+
+distkv-owfs (0.7.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 19 Nov 2022 20:16:02 +0100
+
+distkv-owfs (0.7.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 19 Nov 2022 15:39:03 +0100
+
+distkv-owfs (0.7.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 19 Nov 2022 15:36:22 +0100
+
+distkv-owfs (0.7.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 19 Nov 2022 15:35:41 +0100
+
+distkv-owfs (0.7.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 04 Nov 2022 18:32:06 +0100
+
+distkv-owfs (0.6.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 28 Aug 2021 14:04:01 +0200
+
+distkv-owfs (0.6.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 07 Feb 2021 18:55:25 +0100
+
+distkv-owfs (0.6.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 07 Feb 2021 18:53:09 +0100
+
+distowfs (0.4.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 30 Jul 2020 03:02:26 +0200
+
+distowfs (0.4.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 29 Jul 2020 16:30:23 +0200
+
+distowfs (0.4.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 11 Jul 2020 13:10:18 +0200
+
+distowfs (0.4.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 11 Jul 2020 11:46:35 +0200
+
+distowfs (0.4.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 11 Jul 2020 10:14:52 +0200
+
+distowfs (0.4.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 10 Jul 2020 19:28:29 +0200
+
+distowfs (0.3.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 07 Jul 2020 19:03:43 +0200
+
+distowfs (0.3.4-2) unstable; urgency=medium
+
+  * Tighten requirements
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 07 Jul 2020 13:54:22 +0200
+
+distowfs (0.3.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 07 Jul 2020 13:52:39 +0200
+
+distowfs (0.3.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 05 Jul 2020 13:51:44 +0200
+
+distowfs (0.3.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 05 Jul 2020 12:09:18 +0200
+
+distowfs (0.3.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 30 Jun 2020 18:11:13 +0200
+
+distowfs (0.2.2-5) unstable; urgency=medium
+
+  * debian/compat, dammit
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 29 Jun 2020 14:24:53 +0200
+
+distowfs (0.2.2-4) unstable; urgency=medium
+
+  * install service file
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 29 Jun 2020 14:09:54 +0200
+
+distowfs (0.2.2-3) unstable; urgency=medium
+
+  * *sigh*
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 29 Jun 2020 13:46:23 +0200
+
+distowfs (0.2.2-2) unstable; urgency=medium
+
+  * Stupidity
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 29 Jun 2020 12:46:52 +0200
+
+distowfs (0.2.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 29 Jun 2020 12:45:52 +0200
+
+distowfs (0.2.1-1) unstable; urgency=medium
+
+  * Merge 0.2.1
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 27 Aug 2019 13:41:06 +0200
+
+distowfs (0.2.0-3) unstable; urgency=medium
+
+  * Rename binary package
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 10 Aug 2019 19:19:32 +0200
+
+distowfs (0.2.0-2) unstable; urgency=medium
+
+  * Deps
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 10 Aug 2019 19:16:23 +0200
+
+distowfs (0.2.0-1) unstable; urgency=low
+
+  * source package automatically created by stdeb 0.8.5
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 10 Aug 2019 19:10:20 +0200

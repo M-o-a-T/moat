@@ -1,0 +1,257 @@
+moat-kv-gpio (0.12.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 08 Mar 2024 13:00:32 +0100
+
+moat-kv-gpio (0.11.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 05 Mar 2024 18:50:19 +0100
+
+moat-kv-gpio (0.11.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 24 Dec 2023 16:53:46 +0100
+
+moat-kv-gpio (0.11.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 30 Nov 2023 17:13:29 +0100
+
+moat-kv-gpio (0.11.0-1) unstable; urgency=medium
+
+  * Moved to moat-kv.
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 30 Nov 2023 16:34:40 +0100
+
+distkv-gpio (0.10.11-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 23 Sep 2022 19:26:23 +0200
+
+distkv-gpio (0.10.10-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 23 Sep 2022 19:25:28 +0200
+
+distkv-gpio (0.10.9-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 23 Sep 2022 12:13:59 +0200
+
+distkv-gpio (0.10.8-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 31 Aug 2021 13:51:26 +0200
+
+distkv-gpio (0.10.7-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 30 Aug 2021 10:10:47 +0200
+
+distkv-gpio (0.10.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 11 Aug 2021 11:26:20 +0200
+
+distkv-gpio (0.10.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 18 May 2021 10:31:17 +0200
+
+distkv-gpio (0.10.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 15 Mar 2021 14:39:25 +0100
+
+distkv-gpio (0.10.2-2) unstable; urgency=medium
+
+  * Fix packaging
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 15 Mar 2021 14:38:23 +0100
+
+distkv-gpio (0.10.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 04 Feb 2021 11:35:03 +0100
+
+distgpio (0.10.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 04 Feb 2021 11:19:29 +0100
+
+distgpio (0.9.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 04 Oct 2020 21:03:00 +0200
+
+distgpio (0.8.3-2) unstable; urgency=medium
+
+  * Revert nonsense
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 13 Jul 2020 10:20:17 +0200
+
+distgpio (0.8.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 13 Jul 2020 10:18:20 +0200
+
+distgpio (0.8.2-2) unstable; urgency=medium
+
+  * distkv may be remote, thus recommends:.
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 13 Jul 2020 10:17:49 +0200
+
+distgpio (0.8.2-2) unstable; urgency=medium
+
+  * distkv may be remote, thus recommends:.
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 13 Jul 2020 10:17:49 +0200
+
+distgpio (0.8.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 07 Jul 2020 17:06:27 +0200
+
+distgpio (0.8.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 01 Jul 2020 13:59:01 +0200
+
+distgpio (0.8.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 01 Jul 2020 12:22:25 +0200
+
+distgpio (0.7.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 13 Jun 2020 04:12:45 +0200
+
+distgpio (0.7.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 04 Jun 2020 19:13:33 +0200
+
+distgpio (0.6.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 04 Jun 2020 08:52:42 +0200
+
+distgpio (0.6.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 02 Jun 2020 20:09:43 +0200
+
+distgpio (0.6.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 31 May 2020 13:02:48 +0200
+
+distgpio (0.6.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 30 May 2020 16:22:49 +0200
+
+distgpio (0.5.9-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 30 May 2020 15:37:52 +0200
+
+distgpio (0.5.8-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 30 May 2020 14:30:15 +0200
+
+distgpio (0.5.7-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 30 May 2020 12:14:25 +0200
+
+distgpio (0.5.6-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 30 May 2020 12:12:07 +0200
+
+distgpio (0.5.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 30 May 2020 11:43:31 +0200
+
+distgpio (0.5.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 30 May 2020 11:42:38 +0200
+
+distgpio (0.5.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 29 May 2020 05:47:26 +0200
+
+distgpio (0.5.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 29 May 2020 05:39:39 +0200
+
+distgpio (0.5.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 29 May 2020 05:33:03 +0200
+
+distgpio (0.5.0-2) unstable; urgency=medium
+
+  * Stupid typo
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 29 May 2020 05:04:12 +0200
+
+distgpio (0.5.0-1) unstable; urgency=medium
+
+  * Merge 0.5.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 29 May 2020 04:32:45 +0200
+
+distgpio (0.4.1-2) unstable; urgency=medium
+
+  * Rename, dammit
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 28 May 2020 14:44:42 +0200
+
+distgpio (0.4.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 28 May 2020 14:42:59 +0200

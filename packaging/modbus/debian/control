@@ -1,0 +1,25 @@
+Source: moat-modbus
+Maintainer: Matthias Urlichs <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 9)
+Standards-Version: 3.9.6
+Homepage: https://github.com/M-o-a-T/asyncwebsockets
+
+Package: moat-modbus
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  moat-util,
+Recommends:
+  moat-main,
+Replaces: python3-moat-modbus
+Conflicts: python3-moat-modbus
+Description: An async modbus client/server library
+ This is an anyio-enabled async frontend for pymodbus.
+ .
+ This module diverges from `pymodbus` in that it does not expose a data
+ store, context to the user. Instead, every bus value is a separate object,
+ with arbitrary length and encapsulating its encoding and decoding rules.
+ .
+ This module was previously named "asyncmodbus".
+

@@ -1,0 +1,21 @@
+Source: moat-util
+Maintainer: Matthias Urlichs <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 13),
+  pybuild-plugin-pyproject,
+  python3-moat-lib-codec,
+Standards-Version: 3.9.6
+Homepage: https://github.com/M-o-a-T/asyncwebsockets
+
+Package: moat-util
+Architecture: all
+Conflicts: python3-moat-util
+Replaces: python3-moat-util
+Recommends:
+  moat-main,
+Depends: ${misc:Depends}, ${python3:Depends},
+  python3-moat-lib-codec,
+Description: Utilities for MoaT
+ This package contains a heap of utility code used by the rest of the MoaT system.
+

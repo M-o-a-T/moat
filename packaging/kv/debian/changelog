@@ -1,0 +1,1417 @@
+moat-kv (0.70.22-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 18 Nov 2024 10:12:07 +0100
+
+moat-kv (0.70.21-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 18 Nov 2024 10:07:20 +0100
+
+moat-kv (0.70.20-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 17 Jul 2024 10:31:57 +0200
+
+moat-kv (0.70.19-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 01 Jul 2024 18:03:37 +0200
+
+moat-kv (0.70.18-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 09 Mar 2024 09:25:50 +0100
+
+moat-kv (0.70.17-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 05 Mar 2024 19:35:02 +0100
+
+moat-kv (0.70.16-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 05 Mar 2024 14:21:09 +0100
+
+moat-kv (0.70.15-2) unstable; urgency=medium
+
+  * Tighten deps
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 31 Jan 2024 10:50:00 +0100
+
+moat-kv (0.70.15-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 07 Jan 2024 19:38:15 +0100
+
+moat-kv (0.70.14-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 16 Nov 2023 18:52:21 +0100
+
+moat-kv (0.70.13-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 15 Nov 2023 22:07:02 +0100
+
+moat-kv (0.70.12-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 15 Nov 2023 21:49:15 +0100
+
+moat-kv (0.70.11-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 15 Nov 2023 20:33:56 +0100
+
+moat-kv (0.70.10-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 15 Nov 2023 17:17:14 +0100
+
+moat-kv (0.70.9-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 15 Nov 2023 17:10:18 +0100
+
+moat-kv (0.70.8-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 15 Nov 2023 16:15:47 +0100
+
+moat-kv (0.70.7-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 15 Nov 2023 15:57:40 +0100
+
+moat-kv (0.70.6-2) unstable; urgency=medium
+
+  * dep update
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 15 Nov 2023 15:46:08 +0100
+
+moat-kv (0.70.6-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 15 Nov 2023 13:56:11 +0100
+
+moat-kv (0.70.5-1) unstable; urgency=medium
+
+  * Merge
+  * Rename to moat-kv
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 15 Nov 2023 13:48:59 +0100
+
+distkv (0.65.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 05 May 2023 16:35:12 +0200
+
+distkv (0.63.6-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 19 Dec 2022 18:36:58 +0100
+
+distkv (0.63.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 19 Dec 2022 18:32:36 +0100
+
+distkv (0.63.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 19 Dec 2022 17:33:57 +0100
+
+distkv (0.63.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 19 Dec 2022 17:08:10 +0100
+
+distkv (0.63.2-2) unstable; urgency=medium
+
+  * Replace outdated distmqtt dependency with moat-mqtt
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 19 Dec 2022 16:24:49 +0100
+
+distkv (0.63.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 17 Nov 2022 07:47:09 +0100
+
+distkv (0.63.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 03 Nov 2022 10:07:49 +0100
+
+distkv (0.63.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 03 Nov 2022 09:50:35 +0100
+
+distkv (0.62.8-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 22 Sep 2022 16:13:16 +0200
+
+distkv (0.62.7-2) unstable; urgency=medium
+
+  * requires moat-lib-diffiehellman
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 22 Sep 2022 15:52:52 +0200
+
+distkv (0.62.7-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 22 Sep 2022 15:15:42 +0200
+
+distkv (0.62.6-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 22 Sep 2022 08:53:15 +0200
+
+distkv (0.62.1-3) unstable; urgency=medium
+
+  * depend on moat-mqtt 
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 19 Sep 2022 18:11:15 +0200
+
+distkv (0.62.1-2) unstable; urgency=medium
+
+  * depend on moat-util
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 19 Sep 2022 17:22:43 +0200
+
+distkv (0.62.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 16 Sep 2022 10:47:52 +0200
+
+distkv (0.62.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 16 Sep 2022 07:37:30 +0200
+
+distkv (0.61.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 13 Sep 2022 15:39:49 +0200
+
+distkv (0.61.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 12 Sep 2022 11:41:43 +0200
+
+distkv (0.60.7-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 12 Aug 2022 02:37:15 +0200
+
+distkv (0.60.6-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 12 Aug 2022 02:16:32 +0200
+
+distkv (0.60.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 12 Aug 2022 01:40:38 +0200
+
+distkv (0.60.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 17 Jun 2022 16:53:51 +0200
+
+distkv (0.60.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 17 Jun 2022 16:19:14 +0200
+
+distkv (0.60.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 17 Jun 2022 15:56:44 +0200
+
+distkv (0.60.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 17 Jun 2022 15:52:30 +0200
+
+distkv (0.60.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 17 Jun 2022 15:48:58 +0200
+
+distkv (0.59.7-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 17 Jun 2022 14:21:02 +0200
+
+distkv (0.59.6-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 13 Jun 2022 18:28:04 +0200
+
+distkv (0.59.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 11 Jun 2022 14:33:46 +0200
+
+distkv (0.59.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 11 Jun 2022 14:15:28 +0200
+
+distkv (0.59.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 08 Jun 2022 04:36:25 +0200
+
+distkv (0.58.12-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 15 Jan 2022 22:25:05 +0100
+
+distkv (0.58.11-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 11 Dec 2021 12:41:42 +0100
+
+distkv (0.58.10-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 31 Aug 2021 11:26:21 +0200
+
+distkv (0.58.9-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 28 Aug 2021 13:58:36 +0200
+
+distkv (0.58.8-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 28 Aug 2021 13:46:42 +0200
+
+distkv (0.58.7-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 28 Aug 2021 13:37:25 +0200
+
+distkv (0.58.6-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 24 Aug 2021 17:54:06 +0200
+
+distkv (0.58.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 24 Aug 2021 12:12:50 +0200
+
+distkv (0.58.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 17 Aug 2021 20:05:12 +0200
+
+distkv (0.58.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 17 Aug 2021 19:51:02 +0200
+
+distkv (0.58.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 03 Aug 2021 18:02:40 +0200
+
+distkv (0.58.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 21 Jul 2021 15:55:11 +0200
+
+distkv (0.58.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 21 Jul 2021 15:37:59 +0200
+
+distkv (0.57.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 29 Apr 2021 18:07:03 +0200
+
+distkv (0.57.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 29 Apr 2021 09:11:25 +0200
+
+distkv (0.57.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 30 Mar 2021 14:14:12 +0200
+
+distkv (0.57.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 30 Mar 2021 11:31:16 +0200
+
+distkv (0.56.8-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 26 Mar 2021 09:08:19 +0100
+
+distkv (0.56.7-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 25 Mar 2021 11:20:47 +0100
+
+distkv (0.56.6-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 25 Mar 2021 11:19:08 +0100
+
+distkv (0.56.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 25 Mar 2021 11:04:56 +0100
+
+distkv (0.56.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 25 Mar 2021 10:31:04 +0100
+
+distkv (0.56.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 24 Mar 2021 14:59:39 +0100
+
+distkv (0.56.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 24 Mar 2021 13:20:18 +0100
+
+distkv (0.56.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 24 Mar 2021 13:18:31 +0100
+
+distkv (0.55.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 22 Mar 2021 03:55:50 +0100
+
+distkv (0.55.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 20 Mar 2021 11:10:47 +0100
+
+distkv (0.54.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 19 Mar 2021 18:08:47 +0100
+
+distkv (0.53.7-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 12 Mar 2021 17:43:25 +0100
+
+distkv (0.53.6-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 12 Mar 2021 15:42:14 +0100
+
+distkv (0.53.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 12 Mar 2021 15:18:43 +0100
+
+distkv (0.53.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 12 Mar 2021 15:14:39 +0100
+
+distkv (0.53.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 11 Mar 2021 11:20:02 +0100
+
+distkv (0.53.2-2) unstable; urgency=medium
+
+  * Drop broken ruamel-yaml dep
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 11 Mar 2021 11:13:01 +0100
+
+distkv (0.53.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 11 Mar 2021 11:08:32 +0100
+
+distkv (0.53.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 17 Feb 2021 11:52:37 +0100
+
+distkv (0.53.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 10 Feb 2021 18:21:21 +0100
+
+distkv (0.52.6-3) unstable; urgency=medium
+
+  * Revert mistake from a2f5be3 and 1bfe9fd
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 10 Feb 2021 18:20:16 +0100
+
+distkv (0.52.6-2) unstable; urgency=medium
+
+  * asyncclick has an epoch, dammit
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 10 Feb 2021 16:35:33 +0100
+
+distkv (0.52.6-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 10 Feb 2021 13:59:35 +0100
+
+distkv (0.52.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 10 Feb 2021 13:45:46 +0100
+
+distkv (0.52.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 10 Feb 2021 12:31:08 +0100
+
+distkv (0.52.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 10 Feb 2021 11:07:50 +0100
+
+distkv (0.52.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 10 Feb 2021 10:33:52 +0100
+
+distkv (0.52.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 09 Feb 2021 16:20:50 +0100
+
+distkv (0.52.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 07 Feb 2021 18:47:44 +0100
+
+distkv (0.51.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 05 Feb 2021 08:42:25 +0100
+
+distkv (0.51.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 04 Feb 2021 18:34:09 +0100
+
+distkv (0.51.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 04 Feb 2021 18:32:13 +0100
+
+distkv (0.50.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 04 Feb 2021 11:58:22 +0100
+
+distkv (0.50.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 04 Feb 2021 11:53:48 +0100
+
+distkv (0.50.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 04 Feb 2021 11:48:43 +0100
+
+distkv (0.50.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 04 Feb 2021 11:04:05 +0100
+
+distkv (0.43.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 25 Dec 2020 14:21:34 +0100
+
+distkv (0.43.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 30 Oct 2020 19:25:06 +0100
+
+distkv (0.42.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 04 Oct 2020 21:05:44 +0200
+
+distkv (0.42.2-2) unstable; urgency=medium
+
+  * Skip testing or now
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 19 Sep 2020 18:40:35 +0200
+
+distkv (0.42.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 18 Sep 2020 10:46:39 +0200
+
+distkv (0.42.1-2) unstable; urgency=medium
+
+  * fix dep
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 18 Sep 2020 10:45:55 +0200
+
+distkv (0.42.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 18 Sep 2020 10:39:57 +0200
+
+distkv (0.42.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 18 Sep 2020 10:11:23 +0200
+
+distkv (0.41.13-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 09 Sep 2020 16:06:26 +0200
+
+distkv (0.41.12-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 09 Sep 2020 15:02:55 +0200
+
+distkv (0.41.11-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 07 Sep 2020 10:01:58 +0200
+
+distkv (0.41.10-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 07 Sep 2020 09:19:18 +0200
+
+distkv (0.41.9-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 07 Sep 2020 08:44:36 +0200
+
+distkv (0.41.8-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 04 Sep 2020 22:14:36 +0200
+
+distkv (0.41.8-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 04 Sep 2020 22:07:50 +0200
+
+distkv (0.41.7-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 04 Sep 2020 21:27:13 +0200
+
+distkv (0.41.6-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 04 Sep 2020 15:32:01 +0200
+
+distkv (0.41.4-3) unstable; urgency=medium
+
+  * Duh
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 25 Aug 2020 08:10:29 +0200
+
+distkv (0.41.4-2) unstable; urgency=medium
+
+  * dep on anyio <2
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 24 Aug 2020 12:58:04 +0200
+
+distkv (0.41.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 24 Aug 2020 02:28:06 +0200
+
+distkv (0.41.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 04 Aug 2020 12:31:17 +0200
+
+distkv (0.41.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 29 Jul 2020 18:40:18 +0200
+
+distkv (0.41.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 29 Jul 2020 18:33:38 +0200
+
+distkv (0.41.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 29 Jul 2020 18:17:29 +0200
+
+distkv (0.40.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 29 Jul 2020 18:00:47 +0200
+
+distkv (0.40.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 29 Jul 2020 15:36:45 +0200
+
+distkv (0.40.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 29 Jul 2020 14:43:38 +0200
+
+distkv (0.40.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 29 Jul 2020 13:10:12 +0200
+
+distkv (0.40.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 23 Jul 2020 09:17:42 +0200
+
+distkv (0.39.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 14 Jul 2020 19:15:08 +0200
+
+distkv (0.39.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 14 Jul 2020 13:35:57 +0200
+
+distkv (0.38.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 13 Jul 2020 22:18:24 +0200
+
+distkv (0.37.7-2) unstable; urgency=medium
+
+  * Kill the damn test.log file
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 13 Jul 2020 15:45:33 +0200
+
+distkv (0.37.7-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 13 Jul 2020 15:41:01 +0200
+
+distkv (0.37.6-3) unstable; urgency=medium
+
+  * double owch
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 13 Jul 2020 02:48:49 +0200
+
+distkv (0.37.6-2) unstable; urgency=medium
+
+  * Owch
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 13 Jul 2020 02:45:12 +0200
+
+distkv (0.37.6-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 12 Jul 2020 15:58:06 +0200
+
+distkv (0.37.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 11 Jul 2020 20:11:22 +0200
+
+distkv (0.37.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 11 Jul 2020 15:32:44 +0200
+
+distkv (0.37.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 11 Jul 2020 13:07:53 +0200
+
+distkv (0.37.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 11 Jul 2020 10:15:42 +0200
+
+distkv (0.37.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 11 Jul 2020 07:10:01 +0200
+
+distkv (0.37.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 10 Jul 2020 19:25:52 +0200
+
+distkv (0.36.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 09 Jul 2020 18:15:56 +0200
+
+distkv (0.36.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 09 Jul 2020 18:15:10 +0200
+
+distkv (0.35.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 09 Jul 2020 12:01:14 +0200
+
+distkv (0.30.14-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 06 Jul 2020 19:53:01 +0200
+
+distkv (0.30.13-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 06 Jul 2020 19:40:30 +0200
+
+distkv (0.30.12-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 05 Jul 2020 13:20:07 +0200
+
+distkv (0.30.11-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 05 Jul 2020 09:03:51 +0200
+
+distkv (0.30.11-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 04 Jul 2020 22:23:48 +0200
+
+distkv (0.30.9-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 04 Jul 2020 11:17:43 +0200
+
+distkv (0.30.8-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 03 Jul 2020 23:06:13 +0200
+
+distkv (0.30.6-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 30 Jun 2020 16:22:31 +0200
+
+distkv (0.30.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 30 Jun 2020 13:55:41 +0200
+
+distkv (0.30.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 30 Jun 2020 13:21:13 +0200
+
+distkv (0.30.3-2) unstable; urgency=medium
+
+  * Re-enable testing when installing
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 30 Jun 2020 13:20:45 +0200
+
+distkv (0.30.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 29 Jun 2020 11:40:10 +0200
+
+distkv (0.30.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 29 Jun 2020 11:18:19 +0200
+
+distkv (0.30.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 29 Jun 2020 10:43:56 +0200
+
+distkv (0.24.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 19 Jun 2020 15:36:12 +0200
+
+distkv (0.23.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 17 Jun 2020 20:41:27 +0200
+
+distkv (0.23.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 15 Jun 2020 15:18:35 +0200
+
+distkv (0.23.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 15 Jun 2020 15:08:45 +0200
+
+distkv (0.23.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 15 Jun 2020 10:08:49 +0200
+
+distkv (0.23.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 15 Jun 2020 09:45:13 +0200
+
+distkv (0.22.6-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 12 Jun 2020 16:14:11 +0200
+
+distkv (0.22.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 12 Jun 2020 14:08:54 +0200
+
+distkv (0.22.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 04 Jun 2020 19:18:10 +0200
+
+distkv (0.22.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 02 Jun 2020 16:36:57 +0200
+
+distkv (0.22.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 29 May 2020 22:08:56 +0200
+
+distkv (0.22.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 29 May 2020 16:01:15 +0200
+
+distkv (0.22.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 29 May 2020 14:54:51 +0200
+
+distkv (0.21.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 29 May 2020 08:19:24 +0200
+
+distkv (0.21.0-2) unstable; urgency=medium
+
+  * Tighten deps
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 29 May 2020 08:02:06 +0200
+
+distkv (0.21.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 29 May 2020 04:02:45 +0200
+
+distkv (0.20.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 28 May 2020 18:31:15 +0200
+
+distkv (0.20.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 28 May 2020 13:23:59 +0200
+
+distkv (0.19.7-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 28 May 2020 10:27:53 +0200
+
+distkv (0.19.6-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 24 May 2020 21:11:17 +0200
+
+distkv (0.19.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 24 May 2020 20:45:31 +0200
+
+distkv (0.19.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 24 May 2020 20:43:40 +0200
+
+distkv (0.19.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 23 May 2020 15:58:36 +0200
+
+distkv (0.19.2-2) unstable; urgency=medium
+
+  * Require setuptools-scm
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 22 May 2020 21:17:04 +0200
+
+distkv (0.19.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 21 May 2020 22:43:21 +0200
+
+distkv (0.19.1-2) unstable; urgency=medium
+
+  * Increase compat level
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 21 May 2020 22:40:49 +0200
+
+distkv (0.19.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 21 May 2020 20:24:07 +0200
+
+distkv (0.19.0-2) unstable; urgency=medium
+
+  * Update dependency
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 21 May 2020 20:23:33 +0200
+
+distkv (0.19.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 20 May 2020 20:22:21 +0200
+
+distkv (0.18.7-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 18 May 2020 18:18:13 +0200
+
+distkv (0.18.6-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 18 May 2020 16:57:06 +0200
+
+distkv (0.18.5-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 18 May 2020 12:57:01 +0200
+
+distkv (0.18.4-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 09 May 2020 15:02:31 +0200
+
+distkv (0.18.3-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 08 May 2020 18:53:08 +0200
+
+distkv (0.18.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 08 May 2020 15:22:18 +0200
+
+distkv (0.18.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 18 Apr 2020 12:36:55 +0200
+
+distkv (0.18.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 20 Feb 2020 20:51:01 +0100
+
+distkv (0.17.0-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 01 Feb 2020 22:15:19 +0100
+
+distkv (0.16.1-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 30 Jan 2020 09:21:23 +0100
+
+distkv (0.16.0-2) unstable; urgency=medium
+
+  * Use the newest saved file, dammit
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 29 Jan 2020 20:59:54 +0100
+
+distkv (0.16.0-1) unstable; urgency=medium
+
+  * Update for asyncactor 0.20
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 29 Jan 2020 20:51:38 +0100
+
+distkv (0.15.0-2) unstable; urgency=medium
+
+  * Update dependencies
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 27 Nov 2019 14:30:48 +0100
+
+distkv (0.15.0-1) unstable; urgency=medium
+
+  * Release 0.15.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 27 Nov 2019 14:28:20 +0100
+
+distkv (0.14.0-1) unstable; urgency=medium
+
+  * Merge 0.14.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 25 Nov 2019 12:42:31 +0100
+
+distkv (0.13.1-1) unstable; urgency=medium
+
+  * Merge 0.13.1
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 31 Aug 2019 21:01:49 +0200
+
+distkv (0.13.0-1) unstable; urgency=medium
+
+  * Merge 0.13.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 30 Aug 2019 14:22:52 +0200
+
+distkv (0.12.0-1) unstable; urgency=medium
+
+  * Merge 0.12.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 29 Aug 2019 20:24:13 +0200
+
+distkv (0.11.10-1) unstable; urgency=medium
+
+  * Merge 0.11.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 27 Aug 2019 10:36:57 +0200
+
+distkv (0.11.9-1) unstable; urgency=medium
+
+  * Merge 0.11.9
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 26 Aug 2019 22:17:14 +0200
+
+distkv (0.11.8-1) unstable; urgency=medium
+
+  * Merge 0.11.8
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 26 Aug 2019 22:12:35 +0200
+
+distkv (0.11.7-1) unstable; urgency=medium
+
+  * Merge 0.11.7
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 26 Aug 2019 19:31:57 +0200
+
+distkv (0.11.6-1) unstable; urgency=medium
+
+  * Merge 0.11.6
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 26 Aug 2019 16:03:26 +0200
+
+distkv (0.11.5-1) unstable; urgency=medium
+
+  * Merge 0.11.5
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 26 Aug 2019 15:15:20 +0200
+
+distkv (0.11.2-3) unstable; urgency=medium
+
+  * Merge 0.11.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 26 Aug 2019 14:26:16 +0200
+
+distkv (0.11.2-2) unstable; urgency=medium
+
+  * Bugfix
+  * Ignore stuff
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 26 Aug 2019 04:31:01 +0200
+
+distkv (0.11.2-1) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 10 Aug 2019 21:39:18 +0200
+
+distkv (0.10.0-1) unstable; urgency=medium
+
+  * Extension mechanism
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 06 Aug 2019 08:01:29 +0200
+
+distkv (0.9.2-1) unstable; urgency=medium
+
+  * Merge to 0.9.2
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 01 Aug 2019 13:06:28 +0200
+
+distkv (0.8.4-3) unstable; urgency=medium
+
+  * Reasonable systemd support
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 27 Jul 2019 11:54:19 +0200
+
+distkv (0.8.4-1) unstable; urgency=medium
+
+  * Reasonable systemd support
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sat, 27 Jul 2019 11:54:19 +0200
+
+distkv (0.7.1-1) unstable; urgency=medium
+
+  * Merge 0.7.1
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 19 Jul 2019 21:52:16 +0200
+
+distkv (0.5.6-1) unstable; urgency=medium
+
+  * Merge 0.5.6
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Thu, 02 May 2019 12:53:57 +0200
+
+distkv (0.5.0-1) unstable; urgency=medium
+
+  * Merge 0.5.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 29 Apr 2019 11:10:42 +0200
+
+distkv (0.4.0-1) unstable; urgency=medium
+
+  * Merge 0.4.0
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 26 Apr 2019 13:55:16 +0200
+
+distkv (0.3.3-1) unstable; urgency=medium
+
+  * Merge 0.3.3
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 22 Apr 2019 19:32:56 +0200
+
+distkv (0.3.2-1) unstable; urgency=medium
+
+  * Merge 0.3.2
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 22 Apr 2019 19:28:12 +0200
+
+distkv (0.3.1-1) unstable; urgency=medium
+
+  * Merge 0.3.1
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 21 Apr 2019 16:28:06 +0200
+
+distkv (0.3.0-4) unstable; urgency=medium
+
+  * Testing. export path to logging config
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 21 Apr 2019 08:31:59 +0200
+
+distkv (0.3.0-3) unstable; urgency=medium
+
+  * Merge
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 21 Apr 2019 08:30:18 +0200
+
+distkv (0.3.0-2) unstable; urgency=medium
+
+  * Depend on asyncserf
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 21 Apr 2019 08:03:41 +0200
+
+distkv (0.3.0-1) unstable; urgency=medium
+
+  * source package automatically created by stdeb 0.8.5
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 21 Apr 2019 07:51:58 +0200

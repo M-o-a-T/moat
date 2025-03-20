@@ -1,0 +1,37 @@
+Source: moat-micro
+Maintainer: Matthias Urlichs <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 9),
+  python3-anyio (>= 4),
+  moat-main,
+  moat-util,
+Standards-Version: 3.9.6
+Homepage: https://github.com/smurfix/moat
+
+Package: moat-micro
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  python3-anyio (>= 4),
+  python3-anyio-serial,
+  python3-asyncclick,
+  python3-asyncactor,
+  python3-asyncscope,
+  python3-attr (>= 19),
+  moat-main,
+  moat-util,
+Recommends:
+  python3-trio (>= 0.22),
+Description: talk to MoaT satellites running MicroPython
+  Satellites run a main task which loads some applications. These apps  
+  might do something locally, e.g. let a LED blink or poll a button, provide
+  a link to a remote system, or call other apps for high-level functions.
+  .
+  Apps are connected hierarchically. They can send messages to each other;
+  a message may return a reply ("read this temperature").
+  .
+  Multiple replies ("read this temperature every ten seconds") are supported.
+  .
+  All app-related code is written in async Python. We use ``anyio`` on the
+  multiplexer and native asyncio on the MCUs; a shallow compatibility layer
+  ensures that most code can be shared.

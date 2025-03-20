@@ -1,0 +1,21 @@
+Source: moat-main
+Maintainer: "Matthias Urlichs" <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 13),
+  python3-setuptools,
+  python3-wheel,
+  python3-setuptools-scm,
+Standards-Version: 3.9.6
+Homepage: https://m-o-a-t.org
+
+Package: python3-moat-main
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  python3-anyio (>= 3.0),
+  python3-moat-util,
+Description: The command line for MoaT
+  # MoaT main
+  .
+  This module contains the command line for (all of) MoaT.
+

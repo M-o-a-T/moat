@@ -69,7 +69,7 @@ class ChangedError(RuntimeError):
 class _Common:
 
     def next_tag(self,major:bool=False,minor:bool=False):
-        tag = self.get_tag()
+        tag = self.last_tag
         try:
             n = [ int(x) for x in tag.split('.') ]
             if len(n) != 3:
@@ -118,9 +118,8 @@ class Package(_Common):
             tag,commit = v
             v = attrdict(
                 tag=tag,
-                tag_rev=commit,
                 pkg=1,
-                pkg_rev=commit,
+                rev=commit,
             )
             self._repo.versions[self.dash] = v
         return v
@@ -137,7 +136,7 @@ class Package(_Common):
 
     @property
     def last_commit(self):
-        return self.vers.tag_rev
+        return self.vers.rev
 
     @property
     def mdash(self):
@@ -790,13 +789,12 @@ def tag(run,minor,major,subtree,force,FORCE,show,build):
             sb = repo.part(r.dash)
             if build:
                 sb.vers.pkg += 1
-                sb.vers.pkg_rev=repo.head.commit.hexsha
+                sb.vers.rev=repo.head.commit.hexsha
             else:
                 sb.vers = attrdict(
                     tag=tag,
-                    tag_rev=repo.head.commit.hexsha,
                     pkg=1,
-                    pkg_rev=repo.head.commit.hexsha,
+                    rev=repo.head.commit.hexsha,
                     )
             repo.write_tags()
         else:
@@ -829,6 +827,7 @@ it is dropped when you use '--dput'.
 @click.option("-m", "--minor", is_flag=True, help="create a new minor version")
 @click.option("-M", "--major", is_flag=True, help="create a new major version")
 @click.option("-t", "--tag", "forcetag", type=str, help="Use this explicit tag value")
+@click.option("-a", "--auto-tag", "autotag", is_flag=True, help="Auto-retag updated packages")
 @click.option(
     "-v",
     "--version",
@@ -837,7 +836,7 @@ it is dropped when you use '--dput'.
     help="Update external dependency",
 )
 @click.argument("parts", nargs=-1)
-async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts, pytest_opts, deb_opts, run, version, no_version, no_deb, skip_, major,minor,forcetag):
+async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts, pytest_opts, deb_opts, run, version, no_version, no_deb, skip_, major,minor,forcetag,autotag):
     """
     Rebuild all modified packages.
     """
@@ -855,6 +854,8 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
         print("Warning: not updating moat versions in pyproject files", file=sys.stderr)
     if minor and major:
         raise click.UsageError("Can't change both minor and major!")
+    if autotag and no_tag:
+        raise click.UsageError("Can't change tags without verifying them!")
     if forcetag and (minor or major):
         raise click.UsageError("Can't use an explicit tag with changing minor or major!")
 
@@ -891,7 +892,19 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
                 return
 
     # Step 1: check for changed files since last tagging
-    if not no_tag:
+    if autotag:
+        for r in repos:
+            if r.has_changes(True):
+                r.vers = attrdict(
+                    tag=r.next_tag(),
+                    pkg=1,
+                    rev=repo.head.commit.hexsha,
+                    )
+            elif r.has_changes(False):
+                r.vers.pkg += 1
+                r.vers.rev=repo.head.commit.hexsha
+
+    elif not no_tag:
         err = set()
         for r in repos:
             try:
@@ -1083,10 +1096,14 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
             return
 
     # Step 8: commit the result
-    if run and not no_commit:
+    if run:
+        for r in repos:
+            r.vers.rev = repo.head.commit.hexsha
         repo.write_tags()
-        repo.index.commit(f"Build version {forcetag}")
-        git.TagReference.create(repo, forcetag)
+
+        if not no_commit:
+            repo.index.commit(f"Build version {forcetag}")
+            git.TagReference.create(repo, forcetag)
 
 
 add_repr(tomlkit.items.String)

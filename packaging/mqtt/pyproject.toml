@@ -9,7 +9,6 @@ classifiers = [
 	"Framework :: AsyncIO",
 	"Framework :: Trio",
 	"Framework :: AnyIO",
-	"License :: OSI Approved",
 	"Development Status :: 4 - Beta",
 	"Topic :: Communications",
 	"Topic :: Internet",
@@ -33,12 +32,11 @@ requires-python = ">=3.8"
 name = "moat-mqtt"
 description = "Async MQTT broker and client, with optional MoaT-KV support"
 readme = "README.rst"
+license-files = ["LICENSE.txt"]
+
 [[project.authors]]
 email = "matthias@urlichs.de"
 name = "Matthias Urlichs"
-
-[project.license]
-file = "LICENSE.txt"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

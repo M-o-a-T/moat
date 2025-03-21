@@ -2,7 +2,9 @@
 /*.build
 /*.buildinfo
 /*.changes
+
 /*/moat
+/*/LICENSE.txt
 /*/build
 /*/.pybuild
 /*/dist

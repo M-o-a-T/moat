@@ -9,7 +9,6 @@ classifiers = [
 	"Framework :: AsyncIO",
 	"Framework :: Trio",
 	"Framework :: AnyIO",
-	"License :: OSI Approved",
 	"Development Status :: 4 - Beta",
 	]
 dependencies = [
@@ -28,12 +27,11 @@ requires-python = ">=3.8"
 name = "moat-thing"
 description = "MoaT support for storing info about things"
 readme = "README.rst"
+license-files = ["LICENSE.txt"]
+
 [[project.authors]]
 name = "Matthias Urlichs"
 email = "matthias@urlichs.de"
-
-[project.license]
-file = "LICENSE.txt"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"
@@ -93,37 +91,6 @@ packages = [ "moat.thing",]
 
 [tool.pylint.messages_control]
 disable="wrong-import-order,ungrouped-imports,too-many-nested-blocks,unspecified-encoding,missing-module-docstring,no-else-continue,too-many-instance-attributes,too-many-statements,too-many-return-statements,superfluous-parens,too-few-public-methods,use-dict-literal,too-many-locals,no-else-return,too-many-arguments,too-many-branches,invalid-name,fixme,no-else-raise,duplicate-code,unnecessary-pass"
-
-[tool.setuptools_scm]
-
-[tool.tox]
-legacy_tox_ini = """
-[tox]
-isolated_build = True
-envlist = py310,check
-
-[testenv]
-setenv = 
-    PYTHONPATH = {env:PYTHONPATH}{:}{toxinidir}
-deps = 
-    trio
-    pytest
-commands = 
-    python3 -mpytest tests/
-
-[testenv:check]
-commands = 
-    pylint moat tests
-    flake8p moat tests
-    black --check moat tests
-deps = 
-    pytest
-    pylint
-    black
-    flake8-pyproject
-    flake8
-
-"""
 
 [tool.black]
 line-length = 99

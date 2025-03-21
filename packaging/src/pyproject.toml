@@ -9,7 +9,6 @@ classifiers = [
 	"Framework :: AsyncIO",
 	"Framework :: Trio",
 	"Framework :: AnyIO",
-	"License :: OSI Approved",
 	"Development Status :: 4 - Beta",
 	]
 dependencies = [
@@ -25,16 +24,11 @@ requires-python = ">=3.8"
 name = "moat-src"
 description = "Tools for managing the MoaT sources"
 readme = "README.rst"
+file = "LICENSE.txt"
 
 [[project.authors]]
 email = "matthias@urlichs.de"
 name = "Matthias Urlichs"
-
-[foo]
-bar = "baz"
-
-[project.license]
-file = "LICENSE.txt"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

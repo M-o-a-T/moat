@@ -1,9 +1,9 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools-scm","wheel","setuptools"]
+requires = ["wheel","setuptools"]
 
 [project]
-classifiers = ["Development Status :: 4 - Beta","License :: OSI Approved","Framework :: AnyIO","Framework :: Trio","Framework :: AsyncIO","Programming Language :: Python :: 3","Intended Audience :: Developers"]
+classifiers = ["Development Status :: 4 - Beta","Framework :: AnyIO","Framework :: Trio","Framework :: AsyncIO","Programming Language :: Python :: 3","Intended Audience :: Developers"]
 dependencies = ["anyio ~= 3.0"]
 dynamic = ["version"]
 keywords = ["MoaT"]
@@ -14,9 +14,7 @@ maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='A Pythonic implementation of the Diffie-Hellman key exchange protocol'
 readme = "README.md"
 version = "0.13.4"
-
-[project.license]
-file = "LICENSE.txt"
+license-files = ["LICENSE.txt"]
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

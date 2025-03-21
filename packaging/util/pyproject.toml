@@ -9,7 +9,6 @@ classifiers = [
 	"Framework :: AsyncIO",
 	"Framework :: Trio",
 	"Framework :: AnyIO",
-	"License :: OSI Approved",
 	"Development Status :: 4 - Beta",
 	]
 dependencies = [
@@ -28,12 +27,11 @@ requires-python = ">=3.8"
 name = "moat-util"
 description = "Utility code for the rest of MoaT"
 readme = "README.rst"
+file = "LICENSE.txt"
+
 [[project.authors]]
 name = "Matthias Urlichs"
 email = "matthias@urlichs.de"
-
-[project.license]
-file = "LICENSE.txt"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

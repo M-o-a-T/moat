@@ -1,9 +1,9 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools-scm","wheel","setuptools"]
+requires = ["wheel","setuptools"]
 
 [project]
-classifiers = ["Development Status :: 4 - Beta","License :: OSI Approved","Framework :: AnyIO","Framework :: Trio","Framework :: AsyncIO","Programming Language :: Python :: 3","Intended Audience :: Developers"]
+classifiers = ["Development Status :: 4 - Beta","Framework :: AnyIO","Framework :: Trio","Framework :: AsyncIO","Programming Language :: Python :: 3","Intended Audience :: Developers"]
 dependencies = ["anyio ~= 3.0"]
 dynamic = ["version"]
 keywords = ["MoaT"]
@@ -13,9 +13,7 @@ authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
 version = "0.1.0"
-
-[project.license]
-file = "LICENSE.txt"
+license-files = ["LICENSE.txt"]
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

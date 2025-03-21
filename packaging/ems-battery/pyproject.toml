@@ -1,11 +1,7 @@
 [build-system]
 requires = [
-  "setuptools-scm",
   "wheel",
-  "setuptools",
   "setuptools >= 42",
-  "setuptools_scm[toml] >= 3.5.0",
-  "setuptools_scm_git_archive >= 1.1",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -70,7 +66,7 @@ packages = ["moat.ems.battery","moat.micro"]
 disable = "wrong-import-order,use-dict-literal,unspecified-encoding,ungrouped-imports,too-many-statements,too-many-return-statements,too-many-nested-blocks,too-many-locals,too-many-instance-attributes,too-many-branches,too-many-arguments,too-few-public-methods,superfluous-parens,no-else-return,no-else-continue,invalid-name,fixme"
 
 [project]
-classifiers = ["Development Status :: 4 - Beta","License :: OSI Approved","Framework :: AnyIO","Framework :: Trio","Framework :: AsyncIO","Programming Language :: Python :: 3","Intended Audience :: Developers"]
+classifiers = ["Development Status :: 4 - Beta","Framework :: AnyIO","Framework :: Trio","Framework :: AsyncIO","Programming Language :: Python :: 3","Intended Audience :: Developers"]
 dependencies = [
   "anyio ~= 3.0",
   "msgpack",
@@ -79,7 +75,6 @@ dependencies = [
   "moat-util ~= 0.56.4",
   "moat-micro ~= 0.15.1",
 ]
-dynamic = ["version"]
 keywords = ["MoaT"]
 requires-python = ">=3.8"
 name = "moat-ems-battery"
@@ -87,9 +82,7 @@ authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
 version = "0.2.10"
-
-[project.license]
-file = "LICENSE.txt"
+license-files = ["LICENSE.txt"]
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

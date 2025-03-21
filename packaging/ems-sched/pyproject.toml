@@ -9,7 +9,6 @@ classifiers = [
 	"Framework :: AsyncIO",
 	"Framework :: Trio",
 	"Framework :: AnyIO",
-	"License :: OSI Approved",
 	"Development Status :: 4 - Beta",
 	]
 dependencies = [
@@ -23,12 +22,11 @@ requires-python = ">=3.8"
 name = "moat-ems-sched"
 description = "A battery scheduler"
 readme = "README.md"
+license-files = ["LICENSE.txt"]
+
 [[project.authors]]
 email = "matthias@urlichs.de"
 name = "Matthias Urlichs"
-
-[project.license]
-file = "LICENSE.txt"
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

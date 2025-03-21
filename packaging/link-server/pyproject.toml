@@ -29,7 +29,7 @@ requires-python = ">=3.8"
 name = "moat-link-server"
 description = "Message exchange between MoaT instances"
 readme = "README.rst"
-license_files = ["LICENSE.txt"]
+license-files = ["LICENSE.txt"]
 
 [[project.authors]]
 name = "Matthias Urlichs"

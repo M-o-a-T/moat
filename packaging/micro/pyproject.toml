@@ -93,7 +93,6 @@ disable = "wrong-import-order,use-dict-literal,unspecified-encoding,ungrouped-im
 
 [project]
 classifiers = ["Development Status :: 4 - Beta","Framework :: AnyIO","Framework :: Trio","Framework :: AsyncIO","Programming Language :: Python :: 3","Intended Audience :: Developers"]
-dynamic = ["version"]
 keywords = ["MoaT"]
 dependencies = [
   "anyio ~= 3.0",
@@ -112,7 +111,7 @@ authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
 version = "0.15.1"
-license_files = ["LICENSE.txt"]
+license-files = ["LICENSE.txt"]
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

@@ -20,7 +20,7 @@ requires-python = ">=3.8"
 name = "moat-kv-wago"
 description = "1wire connector for MoaT-KV"
 readme = "README.rst"
-license_files = ["LICENSE.txt"]
+license-files = ["LICENSE.txt"]
 
 [[project.authors]]
 email = "matthias@urlichs.de"

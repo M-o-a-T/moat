@@ -82,7 +82,7 @@ authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
 version = "0.2.10"
-license_files = ["LICENSE.txt"]
+license-files = ["LICENSE.txt"]
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

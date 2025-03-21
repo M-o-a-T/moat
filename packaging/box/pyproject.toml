@@ -27,7 +27,7 @@ requires-python = ">=3.8"
 name = "moat-box"
 description = "MoaT support for managing containers"
 readme = "README.rst"
-license_files = ["LICENSE.txt"]
+license-files = ["LICENSE.txt"]
 [[project.authors]]
 name = "Matthias Urlichs"
 email = "matthias@urlichs.de"

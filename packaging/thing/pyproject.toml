@@ -27,7 +27,7 @@ requires-python = ">=3.8"
 name = "moat-thing"
 description = "MoaT support for storing info about things"
 readme = "README.rst"
-license_files = ["LICENSE.txt"]
+license-files = ["LICENSE.txt"]
 
 [[project.authors]]
 name = "Matthias Urlichs"

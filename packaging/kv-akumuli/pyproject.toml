@@ -19,7 +19,7 @@ requires-python = ">=3.8"
 name = "moat-kv-akumuli"
 description = "Akumuli storage connector for MoaT-KV"
 readme = "README.rst"
-license_files = ["LICENSE.txt"]
+license-files = ["LICENSE.txt"]
 
 [[project.authors]]
 email = "matthias@urlichs.de"

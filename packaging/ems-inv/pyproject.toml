@@ -10,7 +10,6 @@ dependencies = [
   "moat-modbus ~= 0.8.2",
   "moat-lib-victron ~= 0.1.1",
 ]
-dynamic = ["version"]
 keywords = ["MoaT"]
 requires-python = ">=3.8"
 name = "moat-ems-inv"
@@ -18,7 +17,7 @@ authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
 version = "0.2.10"
-license_files = ["LICENSE.txt"]
+license-files = ["LICENSE.txt"]
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

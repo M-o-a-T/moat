@@ -991,7 +991,7 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
                 tag = res.stdout.strip().decode("utf-8").rsplit("-",1)[0]
                 ltag = r.last_tag
                 if tag != ltag:
-                    subprocess.run(["debchange", "--distribution","unstable", "--newversion",f"{ltag}-{r.vers.rev}",f"New release for {forcetag}"] , cwd=rd, check=True)
+                    subprocess.run(["debchange", "--distribution","unstable", "--newversion",f"{ltag}-{r.vers.pkg}",f"New release for {forcetag}"] , cwd=rd, check=True)
                     repo.index.add(p/"changelog")
 
                 if debversion.get(r.dash,"") != ltag:
@@ -1079,8 +1079,8 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
             ltag = r.last_tag
             if not (PACK/r.dash/"debian").is_dir():
                 continue
-            changes = PACK/f"{r.mdash}_{ltag}-{r.vers.rev}_{ARCH}.changes"
-            done = PACK/f"{r.mdash}_{ltag}-{r.vers.rev}_{ARCH}.done"
+            changes = PACK/f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
+            done = PACK/f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.done"
             if done.exists():
                 continue
             try:

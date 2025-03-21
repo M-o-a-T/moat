@@ -20,8 +20,8 @@ dependencies = [
 	"ruyaml",
 	"simpleeval",
 	"moat-util ~= 0.56.4",
-	"moat-db ~= 0.0",
-	"moat-label ~= 0.0",
+	"moat-db ~= 0.2.0",
+	"moat-label ~= 0.2.0",
 	]
 version = "0.2.0"
 keywords = [ "MoaT",]

@@ -89,14 +89,17 @@ link-server:
 - 0.1.0
 - ddd2a41e5
 main:
-- 0.9.1
-- ddd2a41e5
+- 0.10.0
+- e050f0d41
 micro:
 - 0.15.1
 - ddd2a41e5
 modbus:
 - 0.8.2
 - ddd2a41e5
+modbus-dev-_data:
+- 0.8.0
+- f8b2c5611
 mqtt:
 - 0.42.2
 - ddd2a41e5
@@ -107,8 +110,8 @@ signal:
 - 0.0.1
 - ddd2a41e5
 src:
-- 0.7.0
-- ddd2a41e5
+- 0.8.1
+- f8b2c5611
 thing:
 - 0.2.0
 - ddd2a41e5

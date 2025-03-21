@@ -916,7 +916,7 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
     
     # Step 0: basic check
     if not no_dirty:
-        if repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=False):
+        if repo.is_dirty(index=False, working_tree=True, untracked_files=True, submodules=False):
             if not run:
                 print("*** Repository is not clean.", file=sys.stderr)
             else:

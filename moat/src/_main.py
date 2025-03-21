@@ -937,7 +937,7 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
                 raise
             tags[r.mdash] = tag
             if r.has_changes(commit):
-                err.add(r.name)
+                err.add(r.dash)
         if err:
             if not run:
                 print("*** Untagged changes:", file=sys.stderr)
@@ -945,7 +945,7 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
             else:
                 print("Untagged changes:", file=sys.stderr)
                 print(*err, file=sys.stderr)
-                print("Please tag and try again.", file=sys.stderr)
+                print("Please tag (moat src tag -s PACKAGE) and try again.", file=sys.stderr)
                 return
 
     # Step 2: run tests

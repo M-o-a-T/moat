@@ -16,7 +16,7 @@ dependencies = [
 	"asyncscope",
 	"moat-util ~= 0.56.4",
 	]
-version = "0.9.1"
+version = "0.10.0"
 keywords = [ "MoaT",]
 requires-python = ">=3.10"
 name = "moat"

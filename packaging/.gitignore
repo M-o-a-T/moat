@@ -1,4 +1,6 @@
 /*.deb
+/*.done
+/*.upload
 /*.build
 /*.buildinfo
 /*.changes

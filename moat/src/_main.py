@@ -94,7 +94,7 @@ class Package(_Common):
     path:Path = field(init=False,repr=False)
     files:set(Path) = field(init=False,factory=set,repr=False)
     subs:dict[str,Package] = field(factory=dict,init=False,repr=False)
-    hidden:bool = field(init=False)
+    hidden:bool = field(init=False,repr=False)
 
     def __init__(self, repo, name):
         self.__attrs_init__(repo,name)
@@ -159,7 +159,10 @@ class Package(_Common):
         """
         Return the most-recent tag for this subrepo
         """
-        tag,commit = self._repo.versions[self.dash]
+        try:
+            tag,commit = self._repo.versions[self.dash]
+        except KeyError:
+            raise KeyError(f"No version for {self.dash} found") from None
         if unchanged and self.has_changes(commit):
             raise ChangedError(subsys,t,ref)
         return tag,commit
@@ -281,7 +284,7 @@ class Repo(git.Repo,_Common):
             return name
 
         if path.parts[0] != "moat":
-            return name
+            return None
 
         for p in path.parts[1:]:
             if p in sc.subs:
@@ -1045,7 +1048,6 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
             targz = rd/"dist"/f"{r.under}-{tag}.tar.gz"
             done = rd/"dist"/f"{r.under}-{tag}.done"
             if targz.is_file():
-                print(f"{name}: Source package exists.")
                 if not done.exists():
                     up.add(r)
             else:
@@ -1053,6 +1055,8 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
                     subprocess.run(["python3", "-mbuild", "-snw"], cwd=rd, check=True)
                 except subprocess.CalledProcessError:
                     err.add(r.name)
+                else:
+                    up.add(r)
         if err:
             if not run:
                 print("*** Build errors:", file=sys.stderr)
@@ -1066,7 +1070,7 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
         # Step 6: upload PyPI package
         if run:
             err=set()
-            for p in up:
+            for r in up:
                 rd=PACK/r.dash
                 p = rd / "pyproject.toml"
                 if not p.is_file():
@@ -1077,10 +1081,10 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
                     name=name[4:]
                 else:
                     name="moat-"+r.dash
-                targz = Path("dist")/f"{name}-{tag}.tar.gz"
-                whl = Path("dist")/f"{name}-{tag}-py3-none-any.whl"
+                targz = Path("dist")/f"{r.under}-{tag}.tar.gz"
+                whl = Path("dist")/f"{r.under}-{tag}-py3-none-any.whl"
                 try:
-                    subprocess.run(["twine", "upload", str(targz), str(whl)], cwd=rd, check=True)
+                    res = subprocess.run(["twine", "upload", str(targz), str(whl)], cwd=rd, check=True)
                 except subprocess.CalledProcessError:
                     err.add(r.name)
                 else:
@@ -1099,11 +1103,18 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
             dput_opts = ["-u","ext"]
         for r in repos:
             ltag = r.last_tag()[0]
+            if not (PACK/r.dash/"debian").is_dir():
+                continue
             changes = PACK/f"{r.mdash}_{ltag}-1_{ARCH}.changes"
+            done = PACK/f"{r.mdash}_{ltag}-1_{ARCH}.done"
+            if done.exists():
+                continue
             try:
-                subprocess.run(["dput", *dput_opts, str(changes)], cwd=PACK, check=True)
+                subprocess.run(["dput", *dput_opts, str(changes)], check=True)
             except subprocess.CalledProcessError:
                 err.add(r.name)
+            else:
+                done.touch()
         if err:
             print("Upload errors:", file=sys.stderr)
             print(*err, file=sys.stderr)

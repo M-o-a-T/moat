@@ -5,7 +5,6 @@ Priority: optional
 Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 13), debhelper-compat (= 13),
   libgpiod-dev (>= 1.6),
   python3-cffi,
-  python3-setuptools-scm,
   python3-trio (>= 0.15),
 Standards-Version: 3.9.6
 Homepage: https://github.com/M-o-a-T/moat-gpio

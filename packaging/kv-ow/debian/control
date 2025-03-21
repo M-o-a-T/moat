@@ -1,15 +1,14 @@
-Source: distkv-owfs
+Source: moat-kv-ow
 Maintainer: Matthias Urlichs <matthias@urlichs.de>
 Section: python
 Priority: optional
 Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 13), debhelper-compat (= 13),
-  distkv (>= 0.50),
   owserver,
   python3-asyncowfs (>= 0.12.0),
 Standards-Version: 3.9.6
 Homepage: https://github.com/smurfix/distowfs
 
-Package: distkv-owfs
+Package: moat-kv-ow
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   distkv (>= 0.50),

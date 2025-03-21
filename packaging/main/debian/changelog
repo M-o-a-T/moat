@@ -1,3 +1,9 @@
+moat-main (0.9.1-1) unstable; urgency=medium
+
+  * New release for 25.0.2
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 21 Mar 2025 11:27:22 +0100
+
 moat-main (0.1.1-2) unstable; urgency=medium
 
   * dep generator bug

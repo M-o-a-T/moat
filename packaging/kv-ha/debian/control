@@ -2,15 +2,15 @@ Source: moat-kv-ha
 Maintainer: Matthias Urlichs <matthias@urlichs.de>
 Section: python
 Priority: optional
-Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 13), debhelper-compat (= 13),
-  distkv (>= 0.50),
-Standards-Version: 3.9.6
+Build-Depends: dh-python, python3-all, debhelper (>= 13), debhelper-compat (= 13),
+  python3-setuptools,
+  python3-wheel,
 Homepage: https://github.com/smurfix/disthass
 
 Package: moat-kv-ha
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
-  distkv (>= 0.50),
+  moat-kv (>= 0.50),
 Conflicts: disthass
 Replaces: disthass
 Description: Link between Home Assistant and DistKV

@@ -8,7 +8,7 @@ Build-Depends: dh-python, python3-all, debhelper (>= 13), debhelper-compat (= 13
 Standards-Version: 3.9.6
 Homepage: https://m-o-a-t.org
 
-Package: moat-lib-pid
+Package: python3-moat-lib-pid
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   python3-anyio (>= 3.0),

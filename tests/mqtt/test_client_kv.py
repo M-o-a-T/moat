@@ -47,7 +47,7 @@ log.debug("Ports: moat_kv=%d up=%d low=%d", PORT_D, PORT, PORT_B)
 broker_config = {
     "broker": {"uri": f"mqtt://127.0.0.1:{PORT_B}"},
     "kv": {
-        "topic": "test_" + gen_ident(7, alphabet="al_az")
+        "topic": "test_" + gen_ident(7, alphabet="al_az"),
         "base": ("test", "retain"),
         "transparent": (("test", "vis"),),
         "conn": {"port": PORT_D},

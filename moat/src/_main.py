@@ -67,10 +67,9 @@ class ChangedError(RuntimeError):
         return f"{s} changed between {tag.name} and {head}"
 
 class _Common:
-    _last_tag:str = None
 
     def next_tag(self,major:bool=False,minor:bool=False):
-        tag = self.last_tag()[0]
+        tag = self.get_tag()
         try:
             n = [ int(x) for x in tag.split('.') ]
             if len(n) != 3:
@@ -111,6 +110,34 @@ class Package(_Common):
 
     def __hash__(self):
         return hash(self.name)
+
+    @property
+    def vers(self):
+        v = self._repo.versions[self.dash]
+        if not isinstance(v,dict):
+            tag,commit = v
+            v = attrdict(
+                tag=tag,
+                tag_rev=commit,
+                pkg=1,
+                pkg_rev=commit,
+            )
+            self._repo.versions[self.dash] = v
+        return v
+
+    @vers.setter
+    def vers(self,d):
+        v = self.vers
+        v.update(d)
+        return v
+
+    @property
+    def last_tag(self):
+        return self.vers.tag
+
+    @property
+    def last_commit(self):
+        return self.vers.tag_rev
 
     @property
     def mdash(self):
@@ -155,30 +182,15 @@ class Package(_Common):
         if not licd.exists():
             copyfile("LICENSE.txt", licd)
 
-    def last_tag(self, unchanged:bool=False) -> Tag|None:
+    def has_changes(self, main:bool|None=None) -> bool:
         """
-        Return the most-recent tag for this subrepo
+        Test whether the given subsystem changed
+        between the head and the @tag commit
         """
-        try:
-            tag,commit = self._repo.versions[self.dash]
-        except KeyError:
-            raise KeyError(f"No version for {self.dash} found") from None
-        if unchanged and self.has_changes(commit):
-            raise ChangedError(subsys,t,ref)
-        return tag,commit
-
-    def has_changes(self, tag:Commit=None) -> bool:
-        """
-        Test whether the given subsystem (or any subsystem)
-        changed between the head and the @tag commit
-        """
-        if tag is None:
-            tag,commit = self.last_tag()
-        else:
-            commit = tag
+        commit = self.last_commit
         head = self._repo.head.commit
-        for d in head.diff(commit):
-            if self._repo.repo_for(d.a_path) != self.name and self._repo.repo_for(d.b_path) != self.name:
+        for d in head.diff(self.last_commit):
+            if self._repo.repo_for(d.a_path, main) != self.name and self._repo.repo_for(d.b_path, main) != self.name:
                 continue
             return True
         return False
@@ -205,7 +217,7 @@ class Repo(git.Repo,_Common):
         mi = p.parts.index("moat")
         self.moat_name = "-".join(p.parts[mi:])
         with open("versions.yaml") as f:
-            self.versions = yload(f)
+            self.versions = yload(f, attr=True)
 
     def write_tags(self):
         with open("versions.yaml","w") as f:
@@ -213,23 +225,29 @@ class Repo(git.Repo,_Common):
         self.index.add("versions.yaml")
 
 
-    def last_tag(self, unchanged:bool=False) -> Tag|None:
+    @property
+    def last_tag(self) -> Tag|None:
         """
         Return the most-recent tag for this repo
         """
         if self._last_tag is not None:
-            return self._last_tag,self._last_tag
+            return self._last_tag
+
         for c in self._repo.commits(self.head.commit):
             t = self.tagged(c)
             if t is None:
                 continue
 
             self._last_tag = t
-            if unchanged and self.has_changes(c):
-                raise ChangedError(subsys,t)
-            return t,t
+            return t
 
         raise ValueError(f"No tags found")
+
+    @property
+    def last_commit(self) -> str:
+        t = self.last_tag
+        c = self.tags[t].commit
+        return c.hexsha
 
     def part(self, name):
         return self._repos[dash(name)]
@@ -270,29 +288,31 @@ class Repo(git.Repo,_Common):
 
         self._repos["main"].populate(Path("moat"))
 
-    def repo_for(self, path:Path|str) -> str:
+    def repo_for(self, path:Path|str, main:bool|None) -> str:
         """
         Given a file path, returns the subrepo in question
         """
-        name = "moat"
         sc = self._repos["main"]
         path=Path(path)
-        try:
-            if path.parts[0] == "packaging":
-                return path.parts[1].replace("-",".")
-        except KeyError:
+
+        if main is not False and path.parts[0] == "moat":
+            name = "moat"
+            for p in path.parts[1:]:
+                if p in sc.subs:
+                    name += "."+p
+                    sc = sc.subs[p]
+                else:
+                    break
             return name
 
-        if path.parts[0] != "moat":
-            return None
+        if main is not True and path.parts[0] == "packaging":
+            try:
+                return undash(path.parts[1])
+            except IndexError:
+                return None
 
-        for p in path.parts[1:]:
-            if p in sc.subs:
-                name += "."+p
-                sc = sc.subs[p]
-            else:
-                break
-        return name
+        return None
+
 
     def commits(self, ref=None):
         """Iterate over topo sort of commits following @ref, or HEAD.
@@ -315,16 +335,16 @@ class Repo(git.Repo,_Common):
             yield ref
             work.extend(ref.parents)
 
-    def has_changes(self, tag:Tag=None) -> bool:
+    def has_changes(self, main:bool|None=None) -> bool:
         """
         Test whether any subsystem changed since the "tagged" commit
 
         """
         if tag is None:
-            tag,commit = self.last_tag()
+            tag = self.last_tag
         head = self._repo.head.commit
         for d in head.diff(tag):
-            if self.repo_for(d.a_path) == "moat" and self.repo_for(d.b_path) == "moat":
+            if self.repo_for(d.a_path, main) == "moat" and self.repo_for(d.b_path, main) == "moat":
                 continue
             return True
         return False
@@ -695,49 +715,23 @@ def path_():
 
 
 @cli.command()
-@click.option("-s", "--show", is_flag=True, help="Show all tags")
-@click.option("-r", "--run", is_flag=True, help="Update all stale tags")
-def tags(show,run):
+def tags():
+    """
+    List all tags
+    """
     repo = Repo(None)
 
-    if show:
-        if run:
-            raise click.UsageError("Can't display and change the tag at the same time!")
-
-        for r in repo.parts:
-            try:
-                tag,commit = r.last_tag()
-            except ValueError:
-                print(f"{r.dash} -")
-                continue
-            if r.has_changes(commit):
-                print(f"{r.dash} {tag} STALE")
-            else:
-                print(f"{r.dash} {tag}")
-        return
-
-    if repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=False):
-        print("Repo is dirty. Not tagging globally.", file=sys.stderr)
-        return
-
-    changed=False
     for r in repo.parts:
-        tag,commit = r.last_tag()
-        if not r.has_changes(commit):
-            print(repo.dash,tag,"UNCHANGED")
+        try:
+            tag = r.last_tag
+        except KeyError:
             continue
-
-        tag = r.next_tag()
-        print(repo.dash,tag)
-        if not run:
-            continue
-
-        repo.versions[r.dash] = (tag,repo.head.commit.hexsha[:9])
-        changed=True
-
-    if changed:
-        repo.write_tags()
-
+        if r.has_changes(True):
+            print(f"{r.dash} {tag} STALE")
+        elif r.has_changes(True):
+            print(f"{r.dash} {tag} REBUILD")
+        else:
+            print(f"{r.dash} {tag}")
 
 @cli.command()
 @click.option("-r", "--run", is_flag=True, help="actually do the tagging")
@@ -747,18 +741,27 @@ def tags(show,run):
 @click.option("-v", "--tag", "force", type=str, help="Use this explicit tag value")
 @click.option("-q", "--query","--show","show", is_flag=True, help="Show the latest tag")
 @click.option("-f", "--force","FORCE", is_flag=True, help="replace an existing tag")
-def tag(run,minor,major,subtree,force,FORCE,show):
+@click.option("-b", "--build", is_flag=True, help="set/increment the build number")
+def tag(run,minor,major,subtree,force,FORCE,show,build):
     """
     Tag the repository (or a subtree).
+
+    MoaT versions are of the form ``a.b.c``. Binaries also have a build
+    number. This command auto-increments ``c`` and sets the build to ``1``,
+    except when you use ``-M|-m|-b``.
     """
     if minor and major:
         raise click.UsageError("Can't change both minor and major!")
     if force and (minor or major):
         raise click.UsageError("Can't use an explicit tag with changing minor or major!")
     if FORCE and (minor or major):
-        raise click.UsageError("Can't use an explicit tag with changing minor or major!")
+        raise click.UsageError("Can't reuse a tag and also change minor or major!")
+    if (build or force) and (minor or major or (build and force)):
+        raise click.UsageError("Can't update both build and tag!")
     if show and (run or force or minor or major):
         raise click.UsageError("Can't display and change the tag at the same time!")
+    if build and not subtree:
+        raise click.UsageError("The main release number doesn't have a build")
 
     repo = Repo(None)
 
@@ -768,8 +771,8 @@ def tag(run,minor,major,subtree,force,FORCE,show):
         r = repo
 
     if show:
-        tag,commit = r.last_tag()
-        if r.has_changes(commit):
+        tag = r.last_tag
+        if r.has_changes():
             print(f"{tag} STALE")
         else:
             print(tag)
@@ -777,72 +780,30 @@ def tag(run,minor,major,subtree,force,FORCE,show):
 
     if force:
         tag = force
-    elif FORCE:
-        tag,_ = r.last_tag()
+    elif FORCE or build:
+        tag = r.last_tag
     else:
         tag = r.next_tag(major,minor)
 
     if run or subtree:
         if subtree:
-            repo.versions[r.dash] = (tag,repo.head.commit.hexsha[:9])
+            sb = repo.part(r.dash)
+            if build:
+                sb.vers.pkg += 1
+                sb.vers.pkg_rev=repo.head.commit.hexsha
+            else:
+                sb.vers = attrdict(
+                    tag=tag,
+                    tag_rev=repo.head.commit.hexsha,
+                    pkg=1,
+                    pkg_rev=repo.head.commit.hexsha,
+                    )
             repo.write_tags()
         else:
             git.TagReference.create(repo,tag, force=FORCE)
         print(f"{tag}")
     else:
         print(f"{tag} DRY_RUN")
-
-
-@cli.command()
-@click.option("-P", "--no-pypi", is_flag=True, help="don't push to PyPi")
-@click.option("-D", "--no-deb", is_flag=True, help="don't debianize")
-@click.option("-d", "--deb", type=str, help="Debian archive to push to (from dput.cfg)")
-@click.option("-o", "--only", type=str, multiple=True, help="affect only this package")
-@click.option("-s", "--skip", type=str, multiple=True, help="skip this package")
-async def publish(no_pypi, no_deb, skip, only, deb):
-    """
-    Publish modules to PyPi and/or Debian.
-
-    MoaT modules can be given as shorthand, i.e. with dashes and excluding
-    the "moat-" prefix.
-    """
-    repo = Repo(None)
-    if only and skip:
-        raise click.UsageError("You can't both include and exclude packages.")
-
-    if only:
-        repos = (repo.subrepo(x) for x in only)
-    else:
-        s = set()
-        for sk in skip:
-            s += set(sk.split(","))
-        repos = (x for x in repo.parts if dash(x.name) not in sk)
-
-    deb_args = "-b -us -uc".split()
-
-    for r in repos:
-        t,c = r.last_tag
-        if r.has_changes(c):
-            print(f"Error: changes in {r.name} since tag {t.name}")
-            continue
-
-        print(f"Processing {r.name}, tag: {t.name}")
-        r.copy()
-        rd=PACK/r.dash
-
-        if not no_deb:
-            p = rd / "debian"
-            if not p.is_dir():
-                continue
-            subprocess.run(["debuild"] + deb_args, cwd=rd, check=True)
-
-    if not no_pypi:
-        for r in repos:
-            p = Path(r.working_dir) / "pyproject.toml"
-            if not p.is_file():
-                continue
-            print(r.working_dir)
-            subprocess.run(["make", "pypi"], cwd=r.working_dir, check=True)
 
 
 @cli.command(epilog="""
@@ -934,7 +895,7 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
         err = set()
         for r in repos:
             try:
-                tag,commit = r.last_tag()
+                tag = r.last_tag
             except KeyError:
                 rd = PACK/r.dash
                 p = rd / "pyproject.toml"
@@ -942,7 +903,7 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
                     continue
                 raise
             tags[r.mdash] = tag
-            if r.has_changes(commit):
+            if r.has_changes():
                 err.add(r.dash)
         if err:
             if not run:
@@ -978,7 +939,7 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
             continue
         with p.open("r") as f:
             pr = tomlkit.load(f)
-            pr["project"]["version"] = r.last_tag()[0]
+            pr["project"]["version"] = r.last_tag
 
         if not no_version:
             try:
@@ -1015,9 +976,9 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
             try:
                 res = subprocess.run(["dpkg-parsechangelog","-l","debian/changelog","-S","version"], cwd=rd, check=True, stdout=subprocess.PIPE)
                 tag = res.stdout.strip().decode("utf-8").rsplit("-",1)[0]
-                ltag = r.last_tag()[0]
+                ltag = r.last_tag
                 if tag != ltag:
-                    subprocess.run(["debchange", "--distribution","unstable", "--newversion",ltag+"-1",f"New release for {forcetag}"] , cwd=rd, check=True)
+                    subprocess.run(["debchange", "--distribution","unstable", "--newversion",f"{ltag}-{r.vers.rev}",f"New release for {forcetag}"] , cwd=rd, check=True)
                     repo.index.add(p/"changelog")
 
                 if debversion.get(r.dash,"") != ltag:
@@ -1038,7 +999,7 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
             p = rd / "pyproject.toml"
             if not p.is_file():
                 continue
-            tag = r.last_tag()[0]
+            tag = r.last_tag
             name = r.dash
             if name.startswith("ext-"):
                 name=name[4:]
@@ -1075,7 +1036,7 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
                 p = rd / "pyproject.toml"
                 if not p.is_file():
                     continue
-                tag = r.last_tag()[0]
+                tag = r.last_tag
                 name = r.dash
                 if name.startswith("ext-"):
                     name=name[4:]
@@ -1102,11 +1063,11 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
         if not dput_opts:
             dput_opts = ["-u","ext"]
         for r in repos:
-            ltag = r.last_tag()[0]
+            ltag = r.last_tag
             if not (PACK/r.dash/"debian").is_dir():
                 continue
-            changes = PACK/f"{r.mdash}_{ltag}-1_{ARCH}.changes"
-            done = PACK/f"{r.mdash}_{ltag}-1_{ARCH}.done"
+            changes = PACK/f"{r.mdash}_{ltag}-{r.vers.rev}_{ARCH}.changes"
+            done = PACK/f"{r.mdash}_{ltag}-{r.vers.rev}_{ARCH}.done"
             if done.exists():
                 continue
             try:

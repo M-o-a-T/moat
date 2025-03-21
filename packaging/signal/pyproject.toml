@@ -9,7 +9,7 @@ description = "Python API client for signal-cli JSON-RPC"
 authors = ["Stefan Heitmüller <stefan.heitmueller@gmx.com>"]
 readme = "README.md"
 repository = "https://github.com/M-o-a-T/moat"
-file = "LICENSE.txt"
+license-files = ["LICENSE.txt"]
 
 [tool.poetry.dependencies]
 python = "^3.9"

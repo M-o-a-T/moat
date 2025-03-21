@@ -27,7 +27,7 @@ requires-python = ">=3.8"
 name = "moat-util"
 description = "Utility code for the rest of MoaT"
 readme = "README.rst"
-file = "LICENSE.txt"
+license-files = ["LICENSE.txt"]
 
 [[project.authors]]
 name = "Matthias Urlichs"

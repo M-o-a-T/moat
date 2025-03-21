@@ -81,7 +81,7 @@ name = "moat-ems-battery"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
-version = "0.2.10"
+version = "0.2.11"
 license-files = ["LICENSE.txt"]
 
 [project.urls]

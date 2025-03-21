@@ -20,7 +20,7 @@ dependencies = [
 	"ruyaml",
 	"simpleeval",
 	"moat-util ~= 0.56.4",
-	"moat-lib-cmd ~= 0.3.3",
+	"moat-lib-cmd ~= 0.3.4",
 	"moat-link ~= 0.1.0",
 	]
 version = "0.1.0"

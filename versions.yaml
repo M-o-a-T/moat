@@ -26,8 +26,8 @@ ems:
 - 0.2.10
 - ddd2a41e5
 ems-battery:
-- 0.2.10
-- ddd2a41e5
+- 0.2.11
+- b9c3cd2bf
 ems-inv:
 - 0.2.10
 - ddd2a41e5
@@ -35,8 +35,8 @@ ems-sched:
 - 0.2.10
 - ddd2a41e5
 gpio:
-- 0.6.5
-- ddd2a41e5
+- 0.6.6
+- b9c3cd2bf
 kv:
 - 0.70.23
 - ddd2a41e5
@@ -65,8 +65,8 @@ label:
 - 0.2.0
 - ddd2a41e5
 lib-cmd:
-- 0.3.3
-- ddd2a41e5
+- 0.3.4
+- b9c3cd2bf
 lib-codec:
 - 0.4.1
 - ddd2a41e5
@@ -77,8 +77,8 @@ lib-gpio:
 - 0.6.7
 - ddd2a41e5
 lib-pid:
-- 0.6.1
-- ddd2a41e5
+- 0.6.2
+- b9c3cd2bf
 lib-victron:
 - 0.1.1
 - ddd2a41e5
@@ -101,8 +101,8 @@ modbus-dev-_data:
 - 0.8.0
 - f8b2c5611
 mqtt:
-- 0.42.2
-- ddd2a41e5
+- 0.42.3
+- b9c3cd2bf
 sched:
 - 0.1.4
 - ddd2a41e5
@@ -110,8 +110,8 @@ signal:
 - 0.0.1
 - ddd2a41e5
 src:
-- 0.8.1
-- f8b2c5611
+- 0.8.2
+- 35d59193e
 thing:
 - 0.2.0
 - ddd2a41e5

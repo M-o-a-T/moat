@@ -32,7 +32,7 @@ dependencies = [
 	"moat-lib-diffiehellman ~= 0.13.4",                                           
 	"psutil",
 	"simpleeval >= 0.9.10",                                            
-	"moat-mqtt ~= 0.42.2",
+	"moat-mqtt ~= 0.42.3",
 	"moat-util ~= 0.56.4",
 	"exceptiongroup; python_version<'3.11'",
 ]

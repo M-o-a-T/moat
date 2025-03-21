@@ -67,7 +67,7 @@ Bug reports, patches and suggestions welcome! Just `open an issue`_.
 .. _open an issue: https://github.com/M-o-a-T/moat-mqtt/issues/new
 
 Moat-MQTT? DistMQTT? MoaT-KV? Whatever?
---------------------------------------
+---------------------------------------
 
 MoaT-MQTT is a Python package that includes a stand-alone MQTT server, as
 well as basic client scripts. It is based on hbmqtt and was previously

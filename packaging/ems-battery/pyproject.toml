@@ -57,7 +57,7 @@ deps =
 """
 
 [tool.setuptools]
-packages = ["moat.ems.battery","moat.micro"]
+packages = ["moat.ems.battery"]
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]

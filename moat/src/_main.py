@@ -857,7 +857,7 @@ it is dropped when you use '--dput'.
 @click.option("-o", "--pytest", "pytest_opts", type=str,multiple=True, help="Options for pytest")
 @click.option("-d", "--deb", "deb_opts", type=str,multiple=True, help="Options for debuild")
 @click.option("-p", "--dput", "dput_opts", type=str,multiple=True, help="Options for dput")
-@click.option("-r", "--run", type=str,help="Actually do the work")
+@click.option("-r", "--run", is_flag=True, help="actually do the tagging")
 @click.option("-s", "--skip", "skip_", type=str,multiple=True, help="skip these repos")
 @click.option("-m", "--minor", is_flag=True, help="create a new minor version")
 @click.option("-M", "--major", is_flag=True, help="create a new major version")

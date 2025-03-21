@@ -10,7 +10,7 @@ requires-python = ">=3.8"
 name = "moat-dev-heat"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
-readme = "README.rst"
+readme = "README.md"
 version = "0.1.0"
 license-files = ["LICENSE.txt"]
 
@@ -65,7 +65,7 @@ deps =
 line-length = 99
 
 [tool.setuptools]
-packages = ["moat.dev.heat","moat.heat"]
+packages = ["moat.dev.heat"]
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]

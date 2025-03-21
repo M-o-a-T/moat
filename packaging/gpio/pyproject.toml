@@ -15,7 +15,7 @@ dependencies = [
 	"anyio ~= 3.0",
 	"cffi",
 	]
-version = "0.3.7"
+version = "0.6.5"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-gpio"

@@ -23,6 +23,7 @@ from contextlib import suppress
 logger = logging.getLogger(__name__)
 
 PACK=Path("packaging")
+ARCH=subprocess.check_output(["dpkg","--print-architecture"]).decode("utf-8").strip()
 
 def dash(n:str) -> str:
     """
@@ -922,7 +923,7 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
             if not run:
                 print("*** Repository is not clean.", file=sys.stderr)
             else:
-                print("Please commit top-level changes and try again.", file=sys.stderr)
+                print("Please commit changes and try again.", file=sys.stderr)
                 return
 
     # Step 1: check for changed files since last tagging
@@ -1097,8 +1098,10 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
         if not dput_opts:
             dput_opts = ["-u","ext"]
         for r in repos:
+            ltag = r.last_tag()[0]
+            changes = PACK/f"{r.mdash}_{ltag}-1_{ARCH}.changes"
             try:
-                subprocess.run(["dput", *dput_opts, "upload", str(targz), str(whl)], cwd=PACK, check=True)
+                subprocess.run(["dput", *dput_opts, str(changes)], cwd=PACK, check=True)
             except subprocess.CalledProcessError:
                 err.add(r.name)
         if err:

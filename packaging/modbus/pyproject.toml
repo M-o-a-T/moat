@@ -18,7 +18,7 @@ dependencies = [
 	"moat-util ~= 0.56.4",
 	"asyncscope ~= 0.8.3",
 	]
-version = "0.8.2"
+version = "0.8.3"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-modbus"
@@ -44,7 +44,8 @@ multi_line_output = 3
 profile = "black"
 
 [tool.setuptools]
-packages = [ "moat.modbus","moat.modbus.dev" ]
+[tool.setuptools.packages]
+find = {}
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 

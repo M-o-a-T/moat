@@ -21,7 +21,7 @@ dependencies = [
 	"simpleeval",
 	"moat-util ~= 0.56.4",
 	"moat-lib-cmd ~= 0.3.4",
-	"moat-link ~= 0.1.0",
+	"moat-link ~= 0.1.1",
 	]
 version = "0.1.0"
 keywords = [ "MoaT",]
@@ -87,7 +87,8 @@ multi_line_output = 3
 profile = "black"
 
 [tool.setuptools]
-packages = [ "moat.link.server",]
+[tool.setuptools.packages]
+find = {}
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 

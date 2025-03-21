@@ -65,7 +65,8 @@ deps =
 line-length = 99
 
 [tool.setuptools]
-packages = ["moat.dev"]
+[tool.setuptools.packages]
+find = {}
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]

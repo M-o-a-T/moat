@@ -32,11 +32,11 @@ dependencies = [
 	"moat-lib-diffiehellman ~= 0.13.4",                                           
 	"psutil",
 	"simpleeval >= 0.9.10",                                            
-	"moat-mqtt ~= 0.42.3",
+	"moat-mqtt ~= 0.42.4",
 	"moat-util ~= 0.56.4",
 	"exceptiongroup; python_version<'3.11'",
 ]
-version = "0.70.23"
+version = "0.70.24"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-kv"
@@ -94,7 +94,8 @@ multi_line_output = 3
 profile = "black"
 
 [tool.setuptools]
-packages = [ "moat.kv",]
+[tool.setuptools.packages]
+find = {}
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 

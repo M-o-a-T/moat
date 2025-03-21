@@ -83,7 +83,8 @@ deps =
 """
 
 [tool.setuptools]
-packages = ["moat.micro"]
+[tool.setuptools.packages]
+find = {}
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]

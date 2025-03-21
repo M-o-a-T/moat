@@ -11,7 +11,7 @@ name = "moat-lib-victron"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
-version = "0.1.1"
+version = "0.1.2"
 license-files = ["LICENSE.txt"]
 
 [project.urls]
@@ -65,7 +65,8 @@ deps =
 line-length = 99
 
 [tool.setuptools]
-packages = ["moat.lib.victron"]
+[tool.setuptools.packages]
+find = {}
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]

@@ -22,7 +22,7 @@ dependencies = [
 	"moat-util ~= 0.56.4",
 	"sqlalchemy ~= 2.0",
 	]
-version = "0.2.0"
+version = "0.2.1"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-db"
@@ -86,7 +86,8 @@ multi_line_output = 3
 profile = "black"
 
 [tool.setuptools]
-packages = [ "moat.db",]
+[tool.setuptools.packages]
+find = {}
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 

@@ -41,7 +41,8 @@ multi_line_output = 3
 profile = "black"
 
 [tool.setuptools]
-packages = [ "moat.cad",]
+[tool.setuptools.packages]
+find = {}
 
 [tool.setuptools_scm]
 

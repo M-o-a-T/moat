@@ -20,7 +20,7 @@ dependencies = [
 	"ruyaml",
 	"simpleeval",
 	"moat-util ~= 0.56.4",
-	"moat-db ~= 0.2.0",
+	"moat-db ~= 0.2.1",
 	"moat-label ~= 0.2.0",
 	]
 version = "0.2.0"
@@ -87,7 +87,8 @@ multi_line_output = 3
 profile = "black"
 
 [tool.setuptools]
-packages = [ "moat.box",]
+[tool.setuptools.packages]
+find = {}
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 

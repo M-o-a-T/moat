@@ -11,7 +11,7 @@ classifiers = [
 	"Topic :: Home Automation",
 ]
 dependencies = [
-	"moat-kv ~= 0.70.23",
+	"moat-kv ~= 0.70.24",
 	"moat-util ~= 0.56.4",
         "aiocaldav",
 ]
@@ -41,7 +41,8 @@ multi_line_output = 3
 profile = "black"
 
 [tool.setuptools]
-packages = [ "moat.kv.cal",]
+[tool.setuptools.packages]
+find = {}
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 

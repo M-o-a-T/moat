@@ -7,8 +7,8 @@ classifiers = ["Development Status :: 4 - Beta","Framework :: AnyIO","Framework 
 dependencies = [
   "anyio ~= 3.0",
   "moat-util ~= 0.56.4",
-  "moat-modbus ~= 0.8.2",
-  "moat-lib-victron ~= 0.1.1",
+  "moat-modbus ~= 0.8.3",
+  "moat-lib-victron ~= 0.1.2",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"
@@ -70,7 +70,8 @@ deps =
 line-length = 99
 
 [tool.setuptools]
-packages = ["moat.ems.inv"]
+[tool.setuptools.packages]
+find = {}
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]

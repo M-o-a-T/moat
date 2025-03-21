@@ -11,7 +11,7 @@ classifiers = [
 	"Topic :: Home Automation",
 ]
 dependencies = [
-	"moat-kv ~= 0.70.23",
+	"moat-kv ~= 0.70.24",
 ]
 version = "0.12.1"
 keywords = [ "MoaT",]
@@ -39,7 +39,8 @@ multi_line_output = 3
 profile = "black"
 
 [tool.setuptools]
-packages = [ "moat.kv.gpio",]
+[tool.setuptools.packages]
+find = {}
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 

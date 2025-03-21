@@ -14,7 +14,7 @@ maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='A Pythonic implementation of the Diffie-Hellman key exchange protocol'
 readme = "README.md"
 version = "0.13.4"
-license-files = ["LICENSE.txt"]
+license_files = ["LICENSE.txt"]
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

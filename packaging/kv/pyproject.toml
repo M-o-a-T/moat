@@ -42,7 +42,7 @@ requires-python = ">=3.8"
 name = "moat-kv"
 description = "A distributed no-master key-value store"
 readme = "README.rst"
-license-files = ["LICENSE.txt"]
+license_files = ["LICENSE.txt"]
 
 [[project.authors]]
 email = "matthias@urlichs.de"

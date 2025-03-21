@@ -14,7 +14,7 @@ description='A simple command/stream multiplexer'
 readme = "README.rst"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 version = "0.4.1"
-license-files = ["LICENSE.txt"]
+license_files = ["LICENSE.txt"]
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

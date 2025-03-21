@@ -32,7 +32,7 @@ requires-python = ">=3.8"
 name = "moat-mqtt"
 description = "Async MQTT broker and client, with optional MoaT-KV support"
 readme = "README.rst"
-license-files = ["LICENSE.txt"]
+license_files = ["LICENSE.txt"]
 
 [[project.authors]]
 email = "matthias@urlichs.de"

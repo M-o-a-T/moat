@@ -2,107 +2,139 @@ battery:
 - 0.2.5
 - b442c09472a50fb7faec795348b78dd70675b356
 box:
-- 0.2.0
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.2.0
 bus:
-- 0.7.2
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.7.2
 cad:
-- 0.3.2
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.3.2
 db:
-- 0.2.1
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.2.1
 dev:
-- 0.1.0
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.1.0
 dev-heat:
-- 0.1.0
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.1.0
 dev-sew:
-- 0.1.0
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.1.0
 ems:
-- 0.2.10
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.2.10
 ems-battery:
-- 0.2.12
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.2.12
 ems-inv:
-- 0.2.10
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.2.10
 ems-sched:
-- 0.2.11
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.2.11
 gpio:
-- 0.6.6
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.6.6
 kv:
-- 0.70.24
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.70.24
 kv-akumuli:
-- 0.8.5
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.8.5
 kv-cal:
-- 0.1.2
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.1.2
 kv-gpio:
-- 0.12.1
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.12.1
 kv-ha:
-- 0.5.5
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.5.5
 kv-inv:
-- 0.22.5
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.22.5
 kv-ow:
-- 0.9.5
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.9.5
 kv-wago:
-- 0.8.3
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.8.3
 label:
-- 0.2.0
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.2.0
 lib-cmd:
-- 0.3.4
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.3.4
 lib-codec:
-- 0.4.1
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.4.1
 lib-diffiehellman:
-- 0.13.4
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.13.4
 lib-gpio:
 - 0.6.7
 - b442c09472a50fb7faec795348b78dd70675b356
 lib-pid:
-- 0.6.2
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.6.2
 lib-victron:
-- 0.1.2
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.1.2
 link:
-- 0.1.1
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.1.1
 link-server:
-- 0.1.0
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.1.0
 main:
-- 0.10.0
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.10.0
 micro:
 - 0.15.1
 - b442c09472a50fb7faec795348b78dd70675b356
 modbus:
-- 0.8.3
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.8.3
 modbus-dev-_data:
-- 0.8.0
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.8.0
 mqtt:
-- 0.42.4
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.42.4
 sched:
 - 0.1.4
 - b442c09472a50fb7faec795348b78dd70675b356
@@ -110,11 +142,14 @@ signal:
 - 0.0.1
 - b442c09472a50fb7faec795348b78dd70675b356
 src:
-- 0.8.2
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.8.3
 thing:
-- 0.2.0
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.2.0
 util:
-- 0.56.4
-- b442c09472a50fb7faec795348b78dd70675b356
+  pkg: 1
+  rev: 6888aacdbed9dc30d37cfc067ecc1125373f29a2
+  tag: 0.56.4

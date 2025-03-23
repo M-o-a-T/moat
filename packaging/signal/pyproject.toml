@@ -1,6 +1,6 @@
-[project.urls]
-homepage = "https://m-o-a-t.org"
-repository = "https://github.com/M-o-a-T/moat"
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["wheel","setuptools"]
 
 [project]
 name = "moat.signal"
@@ -10,44 +10,33 @@ authors = ["Stefan Heitmüller <stefan.heitmueller@gmx.com>"]
 readme = "README.md"
 repository = "https://github.com/M-o-a-T/moat"
 license-files = ["LICENSE.txt"]
-
-[tool.poetry.dependencies]
-python = "^3.9"
-requests = "~2"
-python-magic = "~0.4"
-jmespath = "~1"
-packaging = "~23"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.0.0"
-pook = "^1.4.2"
-pytest-cov = "^4.1.0"
-
-
-[tool.poetry.group.docs.dependencies]
-furo = "^2024.1.29"
-sphinx-autobuild = "^2024.2.4"
-sphinx-copybutton = "^0.5.2"
-sphinx-inline-tabs = "^2023.4.21"
-
-[tool.isort]
-profile = "black"
-src_paths = ["moat.signal"]
-
-[tool.pytest.ini_options]
-addopts = "--junitxml=pytest.xml --cov=moat.signal --cov-report=term-missing -v -W ignore::DeprecationWarning"
-testpaths = [
-  "tests",
-]
-pythonpath = [
-  ".",
+dependencies = [
+    "requests ~= 2",
+    "python-magic ~= 0.4",
+    "jmespath ~= 1",
+    "packaging ~= 23",
 ]
 
-[tool.bandit.assert_used]
-skips = ["tests/test_*.py"]
+[project.urls]
+homepage = "https://m-o-a-t.org"
+repository = "https://github.com/M-o-a-T/moat"
 
-[build-system]
-requires = [
-  "poetry-core",
+[project.optional-dependencies]
+dev = [
+    "pytest ~= 8.0"
+    "pook ~= 1.4"
+    "pytest-cov ~= 4.1"
 ]
-build-backend = "poetry.core.masonry.api"
+docs = [
+    "furo ~= 2024.1.29",
+    "sphinx-autobuild ~= 2024.2.4",
+    "sphinx-copybutton ~= 0.5.2",
+    "sphinx-inline-tabs ~= 2023.4.21",
+]
+
+[tool.setuptools]
+[tool.setuptools.packages]
+find = {}
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]

@@ -3,8 +3,17 @@ build-backend = "setuptools.build_meta"
 requires = ["wheel","setuptools"]
 
 [project]
-classifiers = ["Development Status :: 4 - Beta","Framework :: AnyIO","Framework :: Trio","Framework :: AsyncIO","Programming Language :: Python :: 3","Intended Audience :: Developers"]
-dependencies = ["anyio ~= 3.0"]
+classifiers = [
+	"Development Status :: 4 - Beta",
+	"Framework :: AnyIO",
+	"Framework :: Trio",
+	"Framework :: AsyncIO",
+	"Programming Language :: Python :: 3",
+	"Intended Audience :: Developers",
+]
+dependencies = [
+	"anyio ~= 4.2",
+]
 keywords = ["MoaT"]
 requires-python = ">=3.8"
 name = "moat-dev-sew"
@@ -18,50 +27,6 @@ license-files = ["LICENSE.txt"]
 homepage = "https://m-o-a-t.org"
 repository = "https://github.com/M-o-a-T/moat"
 
-[tool]
-[tool.moat]
-
-[tool.flake8]
-max-line-length = 99
-ignore = ["F841","F401","E731","E502","E402","E127","E123","E203","E231","W503"]
-
-[tool.isort]
-line_length = 99
-multi_line_output = 3
-profile = "black"
-
-[tool.tox]
-legacy_tox_ini = """
-[tox]
-isolated_build = True
-envlist = py310,check
-
-[testenv]
-setenv = 
-    PYTHONPATH = {env:PYTHONPATH}{:}{toxinidir}
-deps = 
-    trio
-    pytest
-commands = 
-    python3 -mpytest tests/
-
-[testenv:check]
-commands = 
-    pylint moat tests
-    flake8p moat tests
-    black --check moat tests
-deps = 
-    pytest
-    pylint
-    black
-    flake8-pyproject
-    flake8
-
-"""
-
-[tool.black]
-line-length = 99
-
 [tool.setuptools]
 [tool.setuptools.packages]
 find = {}
@@ -69,33 +34,3 @@ find = {}
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 
-[tool.pylint.messages_control]
-disable = "wrong-import-order,use-dict-literal,unspecified-encoding,ungrouped-imports,too-many-statements,too-many-return-statements,too-many-nested-blocks,too-many-locals,too-many-instance-attributes,too-many-branches,too-many-arguments,too-few-public-methods,superfluous-parens,no-else-return,no-else-continue,invalid-name,fixme"
-
-[tool.pytest.ini_options]
-log_cli_level = "DEBUG"
-
-[tool.ruff]
-select = ["ALL"]
-ignore = ["BLE001","ERA","N","FIX","TD","RET50","C","PLR","EM10","TRY003","FBT","T2","D4","D3","D2","PLW1514","RUF002","RUF001","S101","A003","D107","D105","PERF","PTH","ANN","SIM","DTZ005","PLW0603","COM812", "ISC001","UP015"]
-preview = true
-explicit-preview-rules = true
-line-length = 99
-
-[tool.ruff.flake8-comprehensions]
-allow-dict-calls-with-keyword-arguments = true
-
-[tool.ruff.flake8-builtins]
-builtins-ignorelist = ["help","id"]
-
-[tool.ruff.isort]
-no-lines-before = ["future"]
-required-imports = ["from __future__ import annotations"]
-section-order = ["future","standard-library","first-party","third-party","moat","local-folder","upy","typing"]
-extra-standard-library = ["anyio","pytest"]
-force-to-top = ["moat.util"]
-
-[tool.ruff.isort.sections]
-moat = ["moat"]
-upy = ["esp","machine","micropython"]
-typing = ["typing"]

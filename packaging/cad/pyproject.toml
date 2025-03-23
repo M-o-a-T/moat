@@ -44,8 +44,6 @@ profile = "black"
 [tool.setuptools.packages]
 find = {}
 
-[tool.setuptools_scm]
-
 [tool.black]
 line-length = 99
 

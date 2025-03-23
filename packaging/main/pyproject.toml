@@ -50,8 +50,6 @@ find = {}
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 
-[tool.setuptools_scm]
-
 [tool.tox]
 legacy_tox_ini = """
 [tox]

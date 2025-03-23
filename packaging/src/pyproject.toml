@@ -18,7 +18,7 @@ dependencies = [
 	"gitpython",
 	"packaging",
 	]
-version = "0.8.4"
+version = "0.8.5"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-src"
@@ -48,8 +48,6 @@ profile = "black"
 find = {}
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
-
-[tool.setuptools_scm]
 
 [tool.tox]
 legacy_tox_ini = """

@@ -29,8 +29,6 @@ line_length = 99
 multi_line_output = 3
 profile = "black"
 
-[tool.setuptools_scm]
-
 [tool.tox]
 legacy_tox_ini = """
 [tox]

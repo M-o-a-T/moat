@@ -45,8 +45,6 @@ find = {}
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 
-[tool.setuptools_scm]
-
 [tool.black]
 line-length = 99
 

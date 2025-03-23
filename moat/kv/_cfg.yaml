@@ -26,7 +26,6 @@ runner: # for moat.kv.runner.RunnerRoot
   state: !P :.moat.kv.state"
 
   name: "run"
-  # Serf event name, suffixed by subpath
 
   start_delay: 1
   # time to wait between job starts. Not optional.
@@ -56,9 +55,6 @@ server:
   # default
   mqtt:
     uri: "mqtt://localhost:1883"
-  serf:
-    host: "localhost"
-    port: 7373
 
   # event message path/topic prefix
   root: !P moat.kv
@@ -79,10 +75,10 @@ server:
   ping:
     cycle: 10
     gap: 2
-    # asyncserf.Actor config timing for server sync
+    # asyncactor config timing for server sync
   # ping also controls minimum server startup time
   delete:
-    # asyncserf.Actor config timing for deletion
+    # asyncactor config timing for deletion
     cycle: 100
     gap: 10
     version: 1

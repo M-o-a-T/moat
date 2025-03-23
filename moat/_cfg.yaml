@@ -2,9 +2,7 @@ env:
   timezone: UTC
 logging:
   loggers:
-    asyncserf:
-      level: DEBUG
-    distmqtt:
+    moat.mqtt:
       level: INFO
     transitions:
       level: INFO

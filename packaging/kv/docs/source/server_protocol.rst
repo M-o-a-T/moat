@@ -2,11 +2,10 @@
 MoaT-KV's server protocol
 ========================
 
-MoaT-KV instances broadcast messages via `Serf <http://serf.io>` or
-`MQTT <https://mqtt.org>`.
+MoaT-KV instances broadcast messages via `MQTT <https://mqtt.org>`.
 The payload is encoded with `msgpack
 <https://github.com/msgpack/msgpack/blob/master/spec.md>` and sent 
-as user events (Serf) / to topics (MQTT) with a configurable prefix.
+to topics (MQTT) with a configurable prefix.
 
 
 ++++++++++
@@ -93,9 +92,8 @@ present either in exactly one entry's chain or in that node's ``known``
 range.
 
 Tick values are 63-bit unsigned integers. As this space requires 20 mio
-years to wrap around, assuming ten messages per millisecond (which is way
-above the capacity of a typical Serf network), the MoaT-KV protocol does not
-specify what shall happen if this value overflows.
+years to wrap around, assuming ten messages per millisecond, the MoaT-KV
+protocol does not specify what shall happen if this value overflows.
 
 tock
 ++++
@@ -213,9 +211,9 @@ tock
 ----
 
 This is a global message counter. Each server has one; it is incremented
-every time its node counter is incremented or a Serf message is sent.
+every time its node counter is incremented or a MQTT message is sent.
 A server must not send a message with a smaller (or equal) ``tock`` value
-than any it has received, or previously sent. Since Serf does ot guarantee
+than any it has received, or previously sent. Since MQTT does ot guarantee
 order of delivery, receiving a message with a smaller ``tock`` than the
 preceding one is not an error.
 
@@ -319,14 +317,11 @@ they see a previous node's message first. Resolution of which chain is the
 "real" one shall proceed as above.
 
 ``clock`` is configurable (``ping.clock``); the default is ``5``. It must be at
-least twice the time Serf requires to delivers a message to all nodes.
+least twice the time MQTT requires to delivers a message to all nodes.
 
 The length of the ping chain is likewise configurable (``ping.length``).
 It should be larger than the number of possible network partitions; the
 default is 4.
-
-TODO: Currently, this protocol does not tolerate overloaded Serf networks
-well, if at all.
 
 
 Startup

@@ -33,7 +33,7 @@ participants:
 * broadcast the missed data
 
 MoaT-KV does not have a master node, much less a consensus-based election
-system (Raft, Paxos, …). Instead, MoaT-KV uses an ``asyncserf Actor`` to
+system (Raft, Paxos, …). Instead, MoaT-KV uses an `asyncactor.Actor` to
 compile a short list of available servers that's broadcast every few
 seconds.
 
@@ -49,8 +49,7 @@ disk-based storage backend; snapshots and event logs are used to restore a
 system, if necessary. Feeding old snapshots to a running system is mostly
 benign, but see below.
 
-
-MoaT-KV is based on the gossip system provided by Hashicorp's Serf.
+MoaT-KV runs on top of MQTT.
 It supports all data types that can be transmitted by
 `MsgPack <https://github.com/msgpack/msgpack/blob/master/spec.md>`.
 

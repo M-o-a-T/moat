@@ -1,7 +1,7 @@
 [Unit]
 Description=MoaT-KV main server
-After=serf.service, mosquitto.service
-Wants=serf.service, mosquitto.service
+After=mosquitto.service
+Wants=mosquitto.service
 Conflicts=moat-kv-recover.service
 Conflicts=distkv.service
 OnFailure=moat-kv-recover.service

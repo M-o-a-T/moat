@@ -26,7 +26,6 @@ Thus, bottom to top:
 * Mosquitto on port 51883
 
   * basic installation, does not need persistence or retained messages
-  * Serf would work, but it imposes `additional delays <https://github.com/hashicorp/serf/issues/581>`_
 
 * MoaT-KV, using Mosquitto as a backbone
 

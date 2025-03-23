@@ -11,9 +11,6 @@ from . import Backend
 
 logger = logging.getLogger(__name__)
 
-# Simply setting connect=asyncserf.serf_client interferes with mocking
-# when testing.
-
 
 class MqttMessage:
     def __init__(self, topic, payload):

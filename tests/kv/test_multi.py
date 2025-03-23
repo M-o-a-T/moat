@@ -1,13 +1,14 @@
 from __future__ import annotations
-import asyncserf
 from unittest import mock
 import msgpack
 import pytest
 import trio
 from moat.util import P, Path, attrdict
+from moat.kv.mock.mqtt import stdtest
 
-# doesn't work with MQTT because we can't split
-from moat.kv.mock.serf import stdtest
+
+# doesn't yet work with MQTT because we can't split
+pytestmark = pytest.mark.skip
 
 N = 10
 

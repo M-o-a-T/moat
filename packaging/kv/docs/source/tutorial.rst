@@ -13,13 +13,10 @@ use this script::
    #!/usr/bin/env python3
 
    import sys
-   # sys.path[0:0] = (".", "../asyncserf")  # for development
-
    import moat.__main__
 
 
-You also need a running `Serf <http://serf.io>` or `MQTT
-<https://mqtt.org>` message broker.  When in doubt, use MQTT.)
+You also need a running `MQTT <https://mqtt.org>` message broker.
 
 Start the server
 ================

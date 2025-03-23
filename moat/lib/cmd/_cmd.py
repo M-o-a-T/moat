@@ -195,10 +195,15 @@ class CmdHandler(CtxObj):
         Remove a handler for raw incoming messages.
         """
         if proc is None or self._msgs[mid] == proc:
-            del self._msgs[mid]
+            try:
+                del self._msgs[mid]
+            except KeyError:
+                if mid > 0:
+                    raise
             if mid <= 0:
-                pass
-            elif mid < 6:
+                return
+
+            if mid < 6:
                 self._id1.add(mid)
             elif L and mid < 64:
                 self._id2.add(mid)

@@ -131,7 +131,7 @@ class MpyBuf(ProcessBuf):
             self.argv = [
                 # "strace","-s300","-o/tmp/bla",
                 upy / "ports/unix/build-standard/micropython",
-                pre / "packaging/moat-micro/tests-mpy/mplex.py",
+                pre / "packaging/micro/tests-mpy/mplex.py",
             ]
             if isinstance(mplex, str):
                 self.argv.append(mplex)

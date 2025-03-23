@@ -916,7 +916,7 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
                     continue
                 raise
             tags[r.mdash] = tag
-            if r.has_changes():
+            if r.has_changes(True):
                 err.add(r.dash)
         if err:
             if not run:

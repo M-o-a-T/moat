@@ -51,8 +51,8 @@ gpio:
   tag: 0.6.6
 kv:
   pkg: 1
-  rev: 447979104e8e29b991be3df8d6be944d82c233d5
-  tag: 0.70.24
+  rev: efa42d07f2382439302eab3e6e5c925259996b48
+  tag: 0.71.0
 kv-akumuli:
   pkg: 1
   rev: 447979104e8e29b991be3df8d6be944d82c233d5

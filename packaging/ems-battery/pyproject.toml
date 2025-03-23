@@ -71,7 +71,7 @@ dependencies = [
   "serialpacker",
   "pyfuse3",
   "moat-util ~= 0.56.4",
-  "moat-micro ~= 0.15.1",
+  "moat-micro ~= 0.15.2",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"

@@ -98,8 +98,8 @@ dependencies = [
   "serialpacker >= 0.10.3",
   "pyfuse3 >= 3.2",
   "moat-util ~= 0.56.4",
-  "moat-src ~= 0.7.0",
-  "moat-main ~= 0.9.1",
+  "moat-src ~= 0.8.5",
+  "moat-main ~= 0.10.0",
   "asyncdbus",
   "greenback",
 ]
@@ -108,7 +108,7 @@ name = "moat-micro"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
-version = "0.15.1"
+version = "0.15.2"
 license-files = ["LICENSE.txt"]
 
 [project.urls]

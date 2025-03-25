@@ -116,7 +116,9 @@ SafeConstructor.add_constructor("!env", read_env)
 
 if Proxy is not None:
     SafeRepresenter.add_representer(Proxy, _proxy_repr)
-SafeConstructor.add_constructor("!R", name2obj)
+def _name2obj(constructor, node):
+    return name2obj(node.value)
+SafeConstructor.add_constructor("!R", _name2obj)
 
 
 def _bin_from_ascii(loader, node):

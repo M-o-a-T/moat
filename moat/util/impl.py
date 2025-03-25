@@ -244,11 +244,13 @@ _alphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
 
 def num2id(number, alphabet=_alphabet):
     """
-    Encode a number / object ID in baseXX, or whatever.
+    Encode a number / object ID in base36 (default).
 
-    No, this doesn't care about num2id(739172) or similar.
+    This code doesn't care about num2id(739172) or similar.
 
-    You can pass a different alphabet as the second parameter.
+    To avoid these issues, pass an alphabet without vowels
+    as the second parameter. `moat.util.random` contains some
+    you might consider useful.
     """
     if not isinstance(number, int):
         if isinstance(number, (float, complex, str, bytes, bytearray)):

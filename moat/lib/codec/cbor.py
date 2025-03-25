@@ -384,7 +384,8 @@ class Codec(_Codec):
             data = self._read(8)
             aux = struct.unpack_from("!Q", data, 0)[0]
         else:
-            assert tag_aux == CBOR_VAR_FOLLOWS, f"bogus tag {tb:02x}"
+            if tag_aux != CBOR_VAR_FOLLOWS:
+                raise ValueError(f"bogus tag {tb:02x}")
             aux = None
 
         return tag, aux

@@ -35,6 +35,7 @@ from functools import total_ordering
 import simpleeval
 
 from moat.lib.codec.proxy import as_proxy
+from .impl import NotGiven
 
 __all__ = [
     "Path",
@@ -71,14 +72,17 @@ class Path(collections.abc.Sequence):
         :f   False
         :e   empty string
         :n   None
+        :z   Ellipsis / NotGiven
+        :?   Error, reference to a variable that's not set
+             (will parse as NotGiven, for round-trip type safety)
 
         :xAB Hex integer
         :b01 Binary integer
         :vXY Bytestring, inline
         :yAB Bytestring, hex encoding
         :sAB Bytestring, base64 encoding
-        :iXY evaluate YZ as a Python expression.
-             The 'i' may be missing if YZ does not start with a letter.
+        :iXY evaluate XY as a Python expression.
+             The 'i' may be missing if XY does not start with a letter.
 
     Meta elements (delimits elements, SHOULD be in front):
 
@@ -184,6 +188,8 @@ class Path(collections.abc.Sequence):
         res = []
         if self.mark:
             res.append(":m" + self.mark)
+        if self._data is None:
+            return ":?"
         if not self._data:
             if not slash:
                 res.append(":")
@@ -202,6 +208,8 @@ class Path(collections.abc.Sequence):
                     if res:
                         res.append(".")
                     res.append(_escol(x))
+            elif x is NotGiven:
+                res.append(":z")
             elif x is True:
                 res.append(":t")
             elif x is False:
@@ -419,6 +427,8 @@ class Path(collections.abc.Sequence):
                 esc = False
                 if e in ":.":
                     add(e)
+                elif e in "z?":
+                    new(NotGiven, True)
                 elif e == "e":
                     new("", True)
                 elif e == "t":

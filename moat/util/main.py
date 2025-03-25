@@ -220,7 +220,7 @@ def process_args(val, set_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=
                 v = P(":")
             elif v[0] == ".":
                 v = P(v[1:])
-            elif v[0 == ":" :]:
+            elif v[0] == ":":
                 v = Proxy(v[1:])
             else:
                 try:

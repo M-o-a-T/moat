@@ -22,7 +22,7 @@ def get_part(cur, p: list[str | int], add: bool = False):
                 cur = cur[pp]
             except KeyError:
                 if not add:
-                    raise
+                    raise KeyError(p,pp) from None
                 cur[pp] = nc = []
                 cur = nc
     return cur

@@ -35,7 +35,7 @@ dependencies = [
 	"moat-util ~= 0.56.4",
 	"exceptiongroup; python_version<'3.11'",
 ]
-version = "0.70.24"
+version = "0.71.0"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-kv"

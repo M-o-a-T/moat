@@ -122,8 +122,8 @@ main:
   tag: 0.10.0
 micro:
   pkg: 1
-  rev: 447979104e8e29b991be3df8d6be944d82c233d5
-  tag: 0.15.2
+  rev: 1b21125e6a8f763ba053996057d88d740081f1be
+  tag: 0.16.0
 modbus:
   pkg: 1
   rev: 447979104e8e29b991be3df8d6be944d82c233d5

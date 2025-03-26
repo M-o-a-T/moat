@@ -13,14 +13,32 @@ Overview
 This section offers a brief overview about the sections of the MoaT-micro
 configuration and their uses.
 
++++++++++++++++++++++
+Generic configuration
++++++++++++++++++++++
+
+MoaT-Micro uses a generic scheme for configuring its parts. In the config
+file, this scheme is embodied in the "run", setup", and "client" sections.
+
+It consists of a list of named applications that are to be started, and
+per-app configuration. An app can run more than once, to connect to
+different remote systems.
+
+MoaT systems can be chained. A typical server might run a "sat:
+net.unix.Port" app for client commands to connect to, and a "serial.Link"
+app to talk to a remote system which in turn contains a "fs: fs.Cmd" app.
+The client then uses a "m: net.unix.Link" app to talk to the main app.
+This way it can use e.g. "m.sat.fs.open" to open a file on the satellite's
+Flash file system.
+
 apps
 ====
 
 This section lists the applications that this multiplexer is running.
 
 This is a simple dict, mapping from a unique name to the class that
-implements the application. Class names are relative to "moat.micro.app"
-(on servers) or "app" (on MCUs).
+implements the application. Class names are relative to the Python package
+"moat.micro.app" (on Unix systems) or "app" (on MCUs running MicroPython).
 
 By convention, classes named "Link" connect to remote systems; classes
 named "Port" allow multiple connections by external tools. App names
@@ -32,23 +50,30 @@ are typically very short, in order to reduce communication overhead.
 These sections contain the corresponding app's configuration data.
 
 
+++++++++++++++++++++
+Specific subsections
+++++++++++++++++++++
+
 cfg
 ===
 
-Subsections in this section contain the configuration data for a remote
-system.
+This section contains the configuration data for remote systems.
 
 Consider this example::
 
-    apps:
-      r: serial.Link
-    r:
-      port: "/dev/ttyUSB0"
-      mode: &rs
-        rate: 115200
-      frame: 0xc1
-    cfg:
+    setup:
+      # ...
+      config: !P cfg.sat
+    run:
+      apps:
+        r: serial.Link
       r:
+        port: "/dev/ttyUSB0"
+        mode: &rs
+          rate: 115200
+        frame: 0xc1
+    cfg:
+      sat:
         apps:
           wdt: wdt.Cmd
           r: serial.Link
@@ -56,18 +81,20 @@ Consider this example::
         r: 
           port: 2
           mode: *rs
+          frame: 0xc1
 
-Here, the top-level section ``r`` contains the data that describes how to
-talk to the serial port. ``cfg.r`` is the configuration file that ``moat
+Here, the section ``run.r`` contains the data that describes how to
+talk to the serial port. ``cfg.sat`` is the configuration file that ``moat
 micro setup`` will initially send to the remote side.
 
 On the remote side, ``apps.r`` configures the MCU's serial link back to the
 controlling system.
 
-``s.mode`` is marked as shared data: both sides need to agree on
+``run.r.mode`` is marked as shared data: both sides need to agree on
 details like link speed and communication details, thus it's good practice
 to not duplicate the data. This way you won't accidentally change just one
 side's value and then wonder why nothing works any more …
+
 
 setup
 =====
@@ -77,64 +104,39 @@ initially copying the MoaT main program to the MCU.
 
 .. note::
 
-    While you can use ``setup`` to copy your apps onto the MicroPython
+    While you can use ``setup`` to copy code and data to the MicroPython
     machine, once MoaT is running it's easier / less disruptive to use the
     remote file system app.
 
 The ``setup`` tool uses a serial or network connection and expects a MicroPython
 console at the other end.
 
-The default configuration requires a ``port`` option.
+The default configuration requires a ``remote`` option.
 
-link
-++++
-
-The setup to use for the connection to the remote system.
-
-The default is this structure::
-
-    apps:
-      r: port.Port
-    r:
-      device: moat.micro.part.serial.Serial
-      port: "Specify a port!"
-      mode:
-        rate: 115200
-
-This starts a single "r" app which talks to a serial port.
-
-path
-++++
+remote
+++++++
 
 The path to reach the remote system.
 
 The default is to use "r". More complicated setups are possible; e.g. you
 can tunnel through a MoaT link and use one MoaT peripheral to program another.
 
-param
-+++++
+args
+++++
 
 Other parameters for setup. See "moat micro setup --help"; the
 configuration replaces dashes in the command line parameters with
 underscores.
 
-section
--------
-
-The config file section where the remote system's configuration is located.
-
-The section must have an "apps" entry.
-
 reset
 -----
 
-Perform a (soft) reset after uploading. This typically causes MoaT to
-start.
+Perform a (soft) reset after uploading.
 
 run
 ---
 
-After uploading, start MoaT directly. May or may not be incompatible with
+After uploading, start "moat run". This may or may not be incompatible with
 ``reset``.
 
 source
@@ -153,8 +155,8 @@ dest
 
 Path on the destination system where files shall be copied to.
 
-The default is the source, starting at the ``_embed`` subdirectory if it
-exists.
+The default is the source path, starting at the ``_embed`` subdirectory if
+it exists.
 
 state
 -----
@@ -172,9 +174,14 @@ Start the target in verbose mode.
 cross
 -----
 
-``mpy-cross`` compiler. If set, all files ending in ``.py`` will be
+``mpy-cross`` compiler. If set, files ending in ``.py`` will be
 cross-compiled and uploaded with an extension of ``.mpy``.
 
+run
+===
+
+This configuration is used by "moat micro run". It typically includes apps
+for all connected satellites, as well as one for a TCP and/or Unix socket.
 
 connect
 =======

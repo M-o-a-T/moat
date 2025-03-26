@@ -1,0 +1,12 @@
+#
+# This dance is required because checks from different hierarchy levels
+# can't be combined in one stanza.
+#
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="0005", ENV{.SERIAL}="$attr{serial}",GOTO="upy_if"
+GOTO="upy_end"
+
+LABEL="upy_if"
+ATTRS{bInterfaceNumber}=="00", SYMLINK+="upy-$env{.SERIAL}-console"
+ATTRS{bInterfaceNumber}=="02", SYMLINK+="upy-$env{.SERIAL}-link"
+
+LABEL="upy_end"

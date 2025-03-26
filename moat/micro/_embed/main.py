@@ -78,7 +78,23 @@ def go(state=None, cmd=True):
     import time
 
     if state is None:
-        state = get_rtc("state", default="skip")
+        state = get_rtc("state")
+    if state is None:
+        try:
+            os.stat("moat_fb.cfg")
+        except OSError:
+            pass
+        else:
+            state = "fallback"
+    if state is None:
+        try:
+            os.stat("moat_rom.cfg")
+        except OSError:
+            pass
+        else:
+            state = "rom"
+    if state is None:
+        state = "skip"
 
     uncond = {
         "once": "skip",

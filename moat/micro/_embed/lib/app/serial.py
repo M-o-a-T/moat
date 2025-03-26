@@ -20,7 +20,14 @@ from moat.micro.part.serial import Serial, NamedSerial
 # start: NUM
 #
 def _KS(cfg):
-    Ser = NamedSerial if isinstance(cfg["port"], str) else Serial
+    p = cfg["port"]
+    if not isinstance(p, str):
+        ser = Serial
+    elif p == "USB":
+        from moat.micro.part.serial import USBSerial
+        Ser = USBSerial
+    else:
+        Ser = NamedSerial
     return Ser(cfg)
 
 

@@ -40,6 +40,16 @@ class NamedSerial(FileBuf):
             return await super().wr(buf)
 
 
+class USBSerial(FileBuf):
+    """
+    Interface to a MicroPython serial port that's already open,
+    via a module name.
+    """
+    async def stream(self):
+        import moat
+        return moat.SERIAL
+
+
 class Serial(NamedSerial):
     """
     Interface to a MicroPython serial port.

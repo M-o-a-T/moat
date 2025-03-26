@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import gc
+import sys
 
 import machine
 
-from moat.micro.compat import sleep_ms, ticks_diff, ticks_ms
+from moat.micro.compat import sleep_ms, ticks_diff, ticks_ms, log
 
 from ._sys_ import Cmd as _Cmd
-
 
 class Cmd(_Cmd):
     """
@@ -63,6 +63,24 @@ class Cmd(_Cmd):
         if l is not None:
             res = res[:l]
         return res
+
+    async def cmd_log(self, *a, **k):
+        """
+        Log parameters.
+        """
+        log("Input: %r %r" % (a,k))
+
+    async def cmd_stdout(self, *a, **k):
+        """
+        Print something.
+        """
+        print("Input: %r %r" % (a,k))
+
+    async def cmd_stderr(self, *a, **k):
+        """
+        Print something.
+        """
+        print("Input: %r %r" % (a,k), file=sys.stderr)
 
     async def cmd_boot(self, code, m):
         """

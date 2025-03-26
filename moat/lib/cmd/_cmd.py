@@ -19,8 +19,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Awaitable
 
     class MsgIn(Protocol):
-        def __call__(self, msg: Stream, /) -> Any:
-            ...
+        def __call__(self, msg):
+            pass
 
 
 L = True
@@ -72,7 +72,7 @@ S_OFF = const(6)  # in: we don't want streaming and signalled NO
 __all__ = []
 
 
-def _exp[F: Callable[..., Any]](fn: F) -> F:
+def _exp(fn):  # [F: Callable[..., Any]](fn: F) -> F:
     "export this"
     __all__.append(fn.__name__)
     return fn
@@ -286,7 +286,7 @@ class CmdHandler(CtxObj):
                     if msg.stream_out == S_END:
                         logger.error("Error not sent (msg=%r)", msg, exc_info=exc)
                     else:
-                        err = (exc.__class__.__name__, *exc.args)
+                        err = (exc.__class__.__name__,) + tuple(exc.args)
                         logger.debug("Error (msg=%r)", msg, exc_info=exc)
                 except BaseException:
                     res = None
@@ -300,7 +300,7 @@ class CmdHandler(CtxObj):
             res = self._in_cb(msg)
         except Exception as exc:
             self._debug("Error for %r suppressed: %r", msg, exc)
-            await _final(msg, None, (exc.__class__.__name__, *exc.args))
+            await _final(msg, None, (exc.__class__.__name__,) + tuple(exc.args))
         else:
             if isinstance(res, Forward):
                 res.start(self)
@@ -527,7 +527,7 @@ class Stream:
             elif exc is True:
                 await self._send([E_UNSPEC], err=True, _kill=True)
             elif isinstance(exc, Exception):
-                await self._send((exc.__class__.__name__, *exc.args), err=True, _kill=True)
+                await self._send((exc.__class__.__name__,)+tuple(exc.args), err=True, _kill=True)
             else:  # BaseException
                 await self._send([E_CANCEL], err=True, _kill=True)
                 raise

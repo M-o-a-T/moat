@@ -107,7 +107,7 @@ class _MsgpackMsgBuf(StackedMsg):
         cons = cfg.get("console", False)
 
         if cons or pref is not None:
-            cfg["read_size"] = 1  # XXX
+            cfg.setdefault("unpack",{})["read_size"] = 1
         if cons:
             _CReader.__init__(self, cons)
 

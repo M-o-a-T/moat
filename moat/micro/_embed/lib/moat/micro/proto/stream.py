@@ -112,7 +112,7 @@ class MsgpackMsgBuf(_MsgpackMsgBuf):
     async def setup(self):  # noqa:D102
         await super().setup()
         self.pack = Packer(default=_encode).pack
-        self.unpack = Unpacker(self.s, ext_hook=_decode, **self.cfg.get("pack", {})).unpack
+        self.unpack = Unpacker(self.s, ext_hook=_decode, **self.cfg.get("unpack", {})).unpack
 
 
 class MsgpackMsgBlk(_MsgpackMsgBlk):

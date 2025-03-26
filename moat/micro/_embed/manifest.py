@@ -2,8 +2,7 @@
 
 import os
 
-if "MOAT_PORT" in os.environ:
-    freeze("$(PORT_DIR)/modules")
+freeze("$(PORT_DIR)/modules")
 
 require("copy")
 require("collections")

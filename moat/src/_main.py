@@ -836,12 +836,20 @@ it is dropped when you use '--dput'.
     help="Update external dependency",
 )
 @click.argument("parts", nargs=-1)
-async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts, pytest_opts, deb_opts, run, version, no_version, no_deb, skip_, major,minor,forcetag,autotag):
+@click.pass_obj
+async def build(obj, no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts, pytest_opts, deb_opts, run, version, no_version, no_deb, skip_, major,minor,forcetag,autotag):
     """
     Rebuild all modified packages.
     """
+    cfg = obj.cfg
+    g_done = cfg.get("src",{}).get("done")
+    if g_done is not None:
+        g_done = Path(g_done)
+    else:
+        g_done = Path("/tmp/nonexistent")
     repo = Repo(None)
 
+    from foo:
     tags = dict(version)
     skip = set()
     for s in skip_:
@@ -1021,6 +1029,7 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
 
             targz = rd/"dist"/f"{r.under}-{tag}.tar.gz"
             done = rd/"dist"/f"{r.under}-{tag}.done"
+
             if targz.is_file():
                 if not done.exists():
                     up.add(r)
@@ -1083,6 +1092,10 @@ async def build(no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts,
             done = PACK/f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.done"
             if done.exists():
                 continue
+            if g_done is not None:
+                gdone = g_done/f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.done"
+                if gdone.exists():
+                    continue
             try:
                 subprocess.run(["dput", *dput_opts, str(changes)], check=True)
             except subprocess.CalledProcessError:

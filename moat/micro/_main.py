@@ -40,11 +40,6 @@ import asyncclick as click
 logger = logging.getLogger(__name__)
 
 
-def _clean_cfg(cfg):
-    # cfg = attrdict(apps=cfg["apps"])  # drop all the other stuff
-    return cfg
-
-
 skip_exc = {FileNotFoundError, FileExistsError, ConnectionRefusedError}
 
 
@@ -56,8 +51,7 @@ def catch_errors(fn):
     @wraps(fn)
     async def wrapper(*a, **k):
         try:
-            with ungroup:
-                return await fn(*a, **k)
+            return await fn(*a, **k)
         except (NoPathError, ConnectionRefusedError) as e:
             raise click.ClickException(e)  # noqa:B904
         except Exception as e:
@@ -73,34 +67,35 @@ def catch_errors(fn):
 @load_subgroup(
     prefix="moat.micro",
     epilog="""
-        The 'section' parameter says which part of the configuration to use.
-        for connecting to the remote system. The defaults are:
+        The 'section' parameter says which part of the MoaT configuration
+        (below "moat.micro") to use to connect to the remote system.
+        The defaults are:
 
         \b
         Command  Section
         =======  =======
-        run      :          the config file's root
-        setup    setup
+        run      run        server mode
+        setup,   setup      used for initial non-MoaT access to the device
+         install
         *        connect    used for all other commands
 
-        The 'remote' parameter specifies the prefix that connects to
-        the remote system.
+        The 'remote' parameter specifies the prefix that talks to
+        the remote system. The default is 'r'.
 
-        The '--path NAME P' parameter is a shorthand for
-            "moat -p micro.connect.path.NAME P micro …"
         """,
 )
 @click.pass_context
 @click.option("-S", "--section", type=P, help="Section to use")
-@click.option("-R", "--remote", type=P, help="path to the satellite")
-@click.option("-P", "--path", type=(str, P), multiple=True, help="remote's component")
+@click.option("-R", "--remote", type=P, help="Path for talking to the satellite")
+@click.option("-P", "--path", type=(str, P), multiple=True, help="named remote component")
 async def cli(ctx, section, remote, path):
     """Run MicroPython satellites
 
     'moat micro' configures MoaT satellites and runs the link to them,
     as well as applications using it."""
     obj = ctx.obj
-    obj.ocfg = cfg = obj.cfg["micro"]
+    ocfg = cfg = obj.cfg["micro"]
+
     inv = ctx.invoked_subcommand
     if inv == "run":
         if remote is not None:
@@ -108,10 +103,12 @@ async def cli(ctx, section, remote, path):
         if path:
             raise click.UsageError("You don't use paths with 'moat micro run'")
         if section is None:
-            section = Path()
-    elif inv == "setup":
+            section = Path("run")
+    elif inv in ("setup","install"):
+        if remote is not None:
+            raise click.UsageError("Use '--section' to specify which remote to set up.")
         if path:
-            raise click.UsageError("You don't use paths with 'moat micro run'")
+            raise click.UsageError("You don't use paths with 'moat micro setup|install'")
         if section is None:
             section = Path("setup")
     else:
@@ -120,52 +117,34 @@ async def cli(ctx, section, remote, path):
     try:
         cfg = get_part(cfg, section)
     except KeyError:
-        cfg = {}
+        raise click.UsageError("The config section '{section}' doesn't exist.")
+    try:
+        cfg.args.config = get_part(ocfg, cfg.args.config)
+    except (AttributeError,KeyError):
+        if "args" in cfg and "config" in cfg.args:
+            raise
+        # otherwise no args section thus nothing to copy
 
     if remote is not None:
-        cfg["remote"] = remote
+        cfg.remote = remote
     elif "remote" not in cfg:
-        cfg["remote"] = P("r")
+        cfg.remote = P("r")
     pth = cfg.setdefault("path", {})
     for n, p in path:
-        cfg["path"][n] = p
+        pth[n] = p
     for k, v in pth.items():
         if isinstance(v, str):
             v = P(v)  # noqa:PLW2901
-        pth[k] = cfg["remote"] + v
+        pth[k] = cfg.remote + v
 
-    obj.cfg = to_attrdict(cfg)
-
-
-async def _do_update(dst, root, cross, hfn):
-    await run_update(dst / "lib", cross=cross, hash_fn=hfn)
-
-    # do not use "/". Running micropython tests locally requires
-    # all satellite paths to be relative.
-    import moat.micro._embed
-
-    p = anyio.Path(moat.micro._embed.__path__[0])  # noqa:SLF001
-    await copytree(p / "boot.py", root / "boot.py", cross=None)
-    await copytree(p / "main.py", root / "main.py", cross=None)
-
-
-async def _do_copy(source, dst, dest, cross):
-    from .path import copy_over
-
-    if not dest:
-        dest = str(source)
-        pi = dest.find("/_embed/")
-        if pi > 0:
-            dest = dest[pi + 8 :]
-            dst /= dest
-    else:
-        dst /= dest
-    await copy_over(source, dst, cross=cross)
+    obj.mcfg = to_attrdict(cfg)
 
 
 @cli.command(name="setup", short_help="Copy MoaT to MicroPython")
 @click.pass_context
+@click.option("-i", "--install", is_flag=True, help="Install MicroPython")
 @click.option("-r", "--run", is_flag=True, help="Run MoaT after updating")
+@click.option("--run-section", type=str, help="Section with runtime config (default: 'run')")
 @click.option("-N", "--reset", is_flag=True, help="Reboot after updating")
 @click.option("-K", "--kill", is_flag=True, help="Reboot initially")
 @click.option(
@@ -189,13 +168,15 @@ async def _do_copy(source, dst, dest, cross):
 @click.option("-w", "--watch", is_flag=True, help="monitor the target's output after setup")
 @click.option("-C", "--cross", help="path to mpy-cross")
 @catch_errors
-async def setup_(ctx, **kw):
+async def setup_(ctx, run_section=None, **kw):
     """
     Initial sync of MoaT code to a MicroPython device.
 
     MoaT must not currently run on the target. If it does,
     send `` TBD `` commmands.
     """
+    from .setup import setup
+
     default = {
         k: v
         for k, v in kw.items()
@@ -211,132 +192,20 @@ async def setup_(ctx, **kw):
     if "large" in default:
         default["large"] = None
 
-    obj = ctx.obj
-    cfg = obj.cfg
+    cfg = ctx.obj.mcfg
     st = {
         k: (v if v != "-" else NotGiven) for k, v in cfg.setdefault("args", {}).items() if k in kw
     }
 
     st = combine_dict(param, st, default)
-    return await setup(cfg, obj.ocfg, **st)
 
+    run = st["run"]
+    if run is True:
+        st["run"]=ctx.obj.cfg.micro[run_section or "run"]
+    elif isinstance(run, str):
+        st["run"]=ctx.obj.cfg.micro[run]
 
-async def setup(
-    cfg,
-    ocfg,
-    source=None,
-    root=".",
-    dest="",
-    kill=False,
-    large=None,
-    run=False,
-    reset=False,
-    state=None,
-    config=None,
-    cross=None,
-    update=False,
-    mount=False,
-    watch=False,
-):
-    "sync helper"
-    # 	if not source:
-    # 		source = anyio.Path(__file__).parent / "_embed"
-
-    if bool(watch) + bool(run) + bool(mount) > 1:
-        raise click.UsageError("You can't use 'watch','mount', or 'run' concurrently.")
-
-    from .direct import DirectREPL
-    from .path import ABytes, MoatDevPath, copy_over
-    from .proto.stream import RemoteBufAnyio
-
-    if cross == "-":
-        cross = None
-
-    if kill:
-        async with (
-            Dispatch(cfg, run=True) as dsp,
-            dsp.sub_at(cfg.remote) as sd,
-            RemoteBufAnyio(sd) as ser,
-            DirectREPL(ser) as repl,
-        ):
-            dst = MoatDevPath(root).connect_repl(repl)
-            await repl.reset()
-        await anyio.sleep(2)
-
-    async with (
-        Dispatch(cfg, run=True) as dsp,
-        dsp.sub_at(cfg.remote) as sd,
-        RemoteBufAnyio(sd) as ser,
-        DirectREPL(ser) as repl,
-    ):
-        dst = MoatDevPath(root).connect_repl(repl)
-        if source:
-            await _do_copy(source, dst, dest, cross)
-        if state and not watch:
-            await repl.exec(f"f=open('moat.state','w'); f.write({state!r}); f.close(); del f")
-        if large is True:
-            await repl.exec("f=open('moat.lrg','w'); f.close()", quiet=True)
-        elif large is False:
-            await repl.exec("import os; os.unlink('moat.lrg')", quiet=True)
-
-        if config:
-            config = _clean_cfg(get_part(ocfg, config))
-            f = ABytes(name="moat.cfg", data=packer(config))
-            await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl))
-
-        if update:
-
-            async def hfn(p):
-                res = await repl.exec(
-                    f"import _hash; print(repr(_hash.hash[{p!r}])); del _hash",
-                    quiet=True,
-                )
-                return eval(res)  # noqa: S307
-
-            await _do_update(dst, MoatDevPath(".").connect_repl(repl), cross, hfn)
-        if reset:
-            await repl.soft_reset(run_main=run)
-            # reset with run_main set should boot into MoaT
-
-        if run or watch or mount:
-            if run and not reset:
-                o, e = await repl.exec_raw(
-                    f"from main import go; go(state={state!r})",
-                    timeout=None if watch else 30,
-                )
-                if o:
-                    print(o)
-                if e:
-                    print("ERROR", file=sys.stderr)
-                    print(e, file=sys.stderr)
-                    sys.exit(1)
-
-            if watch:
-                while True:
-                    d = await ser.receive()
-                    sys.stderr.buffer.write(d)
-                    sys.stderr.buffer.flush()
-
-            if mount:
-                from moat.micro.fuse import wrap
-
-                async with (
-                    SubDispatch(dsp, cfg["path"] + (f,)) as fs,
-                    wrap(
-                        fs,
-                        mount,
-                        blocksize=cfg.get("blocksize", 64),
-                        debug=4,
-                    ),
-                ):
-                    await idle()
-
-            if run:
-                log("Reloading.")
-                merge(dsp.cfg, ocfg, drop=True)
-                await dsp.reload()
-                log("Running.")
-                await idle()
+    return await setup(cfg, **st)
 
 
 @cli.command("sync", short_help="Sync MoaT code")
@@ -359,6 +228,7 @@ async def sync_(ctx, **kw):
 
     """
     from .path import MoatFSPath
+    from .setup import do_update, do_copy
 
     obj = ctx.obj
     cfg = obj.cfg
@@ -398,9 +268,9 @@ async def sync_(ctx, **kw):
                 return await rsys.hash(p=p)
 
             if update:
-                await _do_update(dst, root, cross, hsh)
+                await do_update(dst, root, cross, hsh)
             for s in source:
-                await _do_copy(s, root, dest, cross)
+                await do_copy(s, root, dest, cross)
             if boot:
                 await rsys.boot(code="SysBooT", m=1)
 
@@ -452,7 +322,7 @@ async def cmd(obj, path, **attrs):
     The item "_a" is an empty array, for positional arguments.
     Use `-e/-v/-p _a:n XXX` to append to it.
     """
-    cfg = obj.cfg
+    cfg = obj.mcfg
     val = {"_a":[]}
     val = process_args(val, no_path=True, **attrs)
     if len(path) == 0:
@@ -603,7 +473,7 @@ async def run_(obj):
     """
     Run the MoaT stack.
     """
-    async with Dispatch(obj.cfg, run=True, sig=True):
+    async with Dispatch(obj.mcfg, run=True, sig=True):
         await idle()
 
 
@@ -616,7 +486,7 @@ async def mount_(obj, path, blocksize):
     """Mount a controller's file system on the host"""
     from moat.micro.fuse import wrap
 
-    cfg = obj.cfg
+    cfg = obj.mcfg
 
     async with (
         Dispatch(cfg, run=True, sig=True) as dsp,

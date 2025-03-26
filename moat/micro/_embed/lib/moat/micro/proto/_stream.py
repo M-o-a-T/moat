@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from moat.util import NotGiven, as_proxy
 
-from ..compat import Event, Lock
+from ..compat import Event, Lock, log
 from .stack import BaseBuf, StackedBlk, StackedMsg
 
 from msgpack import OutOfData
@@ -45,6 +45,7 @@ class _CReader:
         self.cpos = 0
         self.cbuf = bytearray(cons)
         self.cons = cons
+        self.intr = 0
 
     async def crd(self, buf):
         """read waiting console data"""
@@ -71,6 +72,12 @@ class _CReader:
                 self.cpos = len(bfull)
             else:
                 self.cpos = 0
+        if b != 3:
+            self.intr = 0
+        elif self.intr > 2:
+            raise KeyboardInterrupt
+        else:
+            self.intr += 1
         self.cbuf[self.cpos] = b
         self.cpos += 1
         self.cevt.set()

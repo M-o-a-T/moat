@@ -185,10 +185,10 @@ class StreamUnpacker:
         self.res.extend(self.codec.feed(data))
 
 
-def stream_unpacker():
+def stream_unpacker(**kw):
     """
     Create a streamed MsgPack unpacker.
 
     Deprecated.
     """
-    return StreamUnpacker()
+    return StreamUnpacker(**kw)

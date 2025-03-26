@@ -14,7 +14,7 @@ def console_stack(stream, cfg, cons=False):
 
     Set @lossy if the stream is not 100% reliable.
     Set @frame to control protocol framing.
-    Set @console if incoming ASCII should be
+    Set @console if incoming ASCII should be processed
     Set @msg_prefix to the SerialPacker (or msgpack) lead-in character.
     """
 

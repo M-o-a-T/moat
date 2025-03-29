@@ -62,13 +62,12 @@ def show_(obj, type_):
 
     sel = select(Thing)
     if type_ is None:
-        sel = sel.where(Thing.container == None)
+        sel = sel.where(Thing.container is None)
     else:
         ttyp = obj.session.one(ThingTyp, name=type_)
         sel = sel.where(Thing.thingtyp == ttyp)
-    with sess.execute(select(Thing).where(Thing.container == None)) as things:
+    with sess.execute(select(Thing).where(Thing.container is None)) as things:
         for (thing,) in things:
-            seen = True
             print(thing.name, thing.descr)
 
 
@@ -182,7 +181,10 @@ def typopts(c):
     c = option_ng("--name", "-n", type=str, help="Rename this type")(c)
     c = option_ng("--parent", "-p", type=str, help="Parent of this type")(c)
     c = click.option(
-        "--abstract", "-a", is_flag=True, help="This type can't contain a real thing",
+        "--abstract",
+        "-a",
+        is_flag=True,
+        help="This type can't contain a real thing",
     )(c)
     c = click.option("--real", "-A", is_flag=True, help="This type can have a real thing")(c)
     c = option_ng("--comment", "-c", "comment", type=str, help="Description of this type")(c)

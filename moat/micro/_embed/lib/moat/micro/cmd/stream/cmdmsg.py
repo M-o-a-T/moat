@@ -147,7 +147,7 @@ class BaseCmdMsg(BaseCmd):
         if i is not None:
             i ^= 1
 
-        for k in msg.keys():
+        for k in msg:
             if k not in "aidrenx":
                 log("Unknown %s: %r", k, msg)
                 break

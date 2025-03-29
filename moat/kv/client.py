@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import socket
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager, suppress
 from inspect import iscoroutine
 
 import anyio
@@ -257,10 +257,8 @@ class StreamedRequest:
         except (anyio.BrokenResourceError, anyio.ClosedResourceError, EOFError):
             pass
         else:
-            try:
+            with suppress(ServerClosedError):
                 await self.aclose()
-            except ServerClosedError:
-                pass
 
     async def wait_started(self):
         await self._started.wait()
@@ -274,10 +272,8 @@ class StreamedRequest:
             if self._open:
                 msg = dict(action="stop", task=self.seq)
                 # self._client.logger.debug("SendC %s", msg)
-                try:
+                with suppress(ServerClosedError, anyio.BrokenResourceError):
                     await self._client._request(**msg, _async=True)
-                except (ServerClosedError, anyio.BrokenResourceError):
-                    pass
                 # ignore the reply
         finally:
             self.qr.close_sender()
@@ -639,17 +635,12 @@ class Client:
             yield res
         except BaseException as exc:
             if stream:
-                try:
+                with suppress(anyio.ClosedResourceError):
                     await res.send(error=repr(exc))
-                except anyio.ClosedResourceError:
-                    pass
             raise
         finally:
-            with anyio.fail_after(2, shield=True):
-                try:
-                    await res.aclose()
-                except anyio.ClosedResourceError:
-                    pass
+            with anyio.fail_after(2, shield=True), suppress(anyio.ClosedResourceError):
+                await res.aclose()
 
     async def _run_auth(self, auth=None):
         """
@@ -729,10 +720,8 @@ class Client:
                     yield self
                 finally:
                     # Clean up our hacked config
-                    try:
+                    with suppress(AttributeError):
                         del self._config
-                    except AttributeError:
-                        pass
                     self.config = ClientConfig(self)
         finally:
             self._socket = None
@@ -999,7 +988,7 @@ class Client:
         """
         return self._stream(action="msg_monitor", topic=topic, raw=raw)
 
-    def msg_send(self, topic: tuple[str], data=None, raw: bytes = None):
+    def msg_send(self, topic: tuple[str], data=None, raw: bytes | None = None):
         """
         Tunnel a user-tagged message. This sends the message
         to all active callers of :meth:`msg_monitor` which use the same topic.

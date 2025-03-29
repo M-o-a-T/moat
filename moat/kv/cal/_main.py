@@ -114,7 +114,7 @@ async def list_(obj):
         elif len(p) == 1:
             return Path("%02x" % p[0])
         else:
-            return Path("%02x.%12x" % (p[0], p[1])) + p[2:]
+            return Path(f"{p[0]:02x}.{p[1]:12x}") + p[2:]
 
     if obj.meta:
 

@@ -51,7 +51,7 @@ class Handler(BaseBusHandler):
 
     @staticmethod
     def check_config(cfg: dict):
-        for k, v in cfg.items():
+        for k, _v in cfg.items():
             if k not in ("id", "uri", "topic"):
                 raise UnknownParamError(k)
             # TODO check more

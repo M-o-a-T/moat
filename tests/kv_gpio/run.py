@@ -87,7 +87,7 @@ class _test(metaclass=_test_m):
         except TimeoutError:
             pass
         else:
-            assert False, msg
+            raise AssertionError(msg)
 
     async def assertMsg(self, *data, timeout=1, pick=None):
         """

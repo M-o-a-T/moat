@@ -10,6 +10,7 @@ import time
 from collections.abc import Mapping
 
 from moat.util import NotGiven, Path, attrdict, process_args, yprint
+import contextlib
 
 
 def add_dates(d):
@@ -66,7 +67,10 @@ async def data_get(
     device name. Returning ``None`` causes the entry to be skipped.
     """
     if path_mangle is None:
-        path_mangle = lambda x: x
+
+        def path_mangle(x):
+            return x
+
     if item_mangle is None:
 
         async def item_mangle(x):  # pylint: disable=function-redefined
@@ -199,10 +203,8 @@ async def node_attr(obj, path, res=None, chain=None, **kw):
     if res is None:
         res = await obj.client.get(path, nchain=obj.meta or 2)
     if chain is None:
-        try:
+        with contextlib.suppress(AttributeError):
             chain = res.chain
-        except AttributeError:
-            pass
     try:
         val = res.value
     except AttributeError:

@@ -32,7 +32,7 @@ class Server(_Server):
 
 
 @asynccontextmanager
-async def server(mqtt_port: int = None, moat_kv_port: int = None):
+async def server(mqtt_port: int | None = None, moat_kv_port: int | None = None):
     """
     An async context manager which creates a stand-alone MoaT-KV server.
 
@@ -70,7 +70,7 @@ async def server(mqtt_port: int = None, moat_kv_port: int = None):
 
 
 @asynccontextmanager
-async def client(mqtt_port: int = None, moat_kv_port: int = None):
+async def client(mqtt_port: int | None = None, moat_kv_port: int | None = None):
     """
     An async context manager which creates a stand-alone MoaT-KV client.
     """

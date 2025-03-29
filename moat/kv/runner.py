@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Mapping
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager, suppress
 from weakref import ref
 
 import anyio
@@ -418,10 +418,8 @@ class CallAdmin:
                             if "topic" in msg:
                                 # pylint:disable=attribute-defined-outside-init
                                 chg = cls(msg.get("raw", None))
-                                try:
+                                with suppress(AttributeError):
                                     chg.value = msg.data
-                                except AttributeError:
-                                    pass
                                 chg.path = Path.build(msg.topic)
                                 await self.runner.send_event(chg)
 
@@ -535,7 +533,7 @@ class RunnerEntry(AttrClientEntry):
         self._logger = logger_for(self._path)
 
     def __repr__(self):
-        return "<%s %r:%r>" % (self.__class__.__name__, self.subpath, self.code)
+        return f"<{self.__class__.__name__} {self.subpath!r}:{self.code!r}>"
 
     @property
     def state(self):

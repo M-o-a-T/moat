@@ -8,9 +8,12 @@ from __future__ import annotations
 import weakref
 from collections import deque
 
-import anyio
 from asyncactor import Actor, PingEvent, TagEvent
 from asyncactor.backend import get_transport
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import anyio
 
 TAGS = 4
 

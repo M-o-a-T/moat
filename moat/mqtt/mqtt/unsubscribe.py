@@ -2,10 +2,9 @@
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
-import anyio
 
-from ..codecs import decode_string, encode_string
-from ..errors import MoatMQTTException, NoDataException
+from moat.mqtt.codecs import decode_string, encode_string
+from moat.mqtt.errors import MoatMQTTException, NoDataException
 from .packet import (
     UNSUBSCRIBE,
     MQTTFixedHeader,
@@ -14,6 +13,10 @@ from .packet import (
     MQTTVariableHeader,
     PacketIdVariableHeader,
 )
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import anyio
 
 
 class UnubscribePayload(MQTTPayload):

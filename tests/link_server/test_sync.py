@@ -57,7 +57,7 @@ async def fetch(c, p):
 @pytest.mark.anyio()
 async def test_lsy_from_server(cfg):
     async with Scaffold(cfg, use_servers=True) as sf:
-        srv1 = await sf.server(init={"Hello": "there!", "test": 123})
+        await sf.server(init={"Hello": "there!", "test": 123})
         c1 = await sf.client()
         n = Node()
 
@@ -68,7 +68,7 @@ async def test_lsy_from_server(cfg):
 
         await data(s)
 
-        srv2 = await sf.server()
+        await sf.server()
         async with BasicLink(cfg, "c_test", c1._last_link.data) as c2:
             nn = await fetch(c2, "a")
 
@@ -109,7 +109,7 @@ async def test_lsy_from_file(cfg, tmp_path):
     # verify that the next stack reads it back
 
     async with Scaffold(cfg, use_servers=True, tempdir=tmp_path) as sf:
-        srv2 = await sf.server()
+        await sf.server()
         c2 = await sf.client()
         nn = await fetch(c2, "a")
 
@@ -121,10 +121,10 @@ async def test_lsy_switch_server_hard(cfg):
     async with Scaffold(cfg, use_servers=True) as sf:
         srv1 = await sf.server(init={"Hello": "there!", "test": 123})
         c1 = await sf.client()
-        n = Node()
+        Node()
         await c1.cmd(P("d.set"), P("test.one"), 123)
 
-        srv2 = await sf.server()
+        await sf.server()
         await srv1[0].cancel()
 
         res, meta = await c1.cmd(P("d.get"), P("test.one"))
@@ -136,10 +136,10 @@ async def test_lsy_switch_server_soft(cfg):
     async with Scaffold(cfg, use_servers=True) as sf:
         srv1 = await sf.server(init={"Hello": "there!", "test": 123})
         c1 = await sf.client()
-        n = Node()
+        Node()
         await c1.cmd(P("d.set"), P("test.one"), 123)
 
-        srv2 = await sf.server()
+        await sf.server()
         await srv1[0].stop()
 
         res, meta = await c1.cmd(P("d.get"), P("test.one"))

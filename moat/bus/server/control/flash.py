@@ -8,8 +8,7 @@ import trio
 import msgpack
 from functools import partial
 
-from ...message import BusMessage
-from ...util import byte2mini, Processor
+from moat.bus.util import byte2mini, Processor
 
 packer = msgpack.Packer(
     strict_types=False,
@@ -18,6 +17,10 @@ packer = msgpack.Packer(
 unpacker = partial(msgpack.unpackb, raw=False)
 
 import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.bus.message import BusMessage
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +40,7 @@ class FlashControl(Processor):
     CODE = 0
 
     def __init__(self, server, code=0):
-        self.logger = logging.getLogger("%s.%s" % (__name__, server.my_id))
+        self.logger = logging.getLogger(f"{__name__}.{server.my_id}")
         self.server = server
         super().__init__(server, code)
 
@@ -104,7 +107,7 @@ class FlashControl(Processor):
         """
         m = msg.bytes
         mlen = (m[0] & 0xF) + 1
-        flags = m[0] >> 4
+        m[0] >> 4
         if len(m) - 1 < mlen:
             self.logger.error("Short addr reply %r", msg)
             return
@@ -248,8 +251,8 @@ class FlashControl(Processor):
         """
         m = msg.bytes
         mlen = (m[0] & 0xF) + 1
-        flags = m[0] >> 4
+        m[0] >> 4
         if len(m) - 1 < mlen:
             self.logger.error("Short addr reply %r", msg)
             return
-        o = self.get_serial(s, msg.dest)
+        self.get_serial(s, msg.dest)

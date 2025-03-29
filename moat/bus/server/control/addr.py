@@ -7,8 +7,8 @@ from __future__ import annotations
 import trio
 from dataclasses import dataclass
 
-from ...message import BusMessage, LongMessageError
-from ...util import byte2mini, Processor
+from moat.bus.message import BusMessage, LongMessageError
+from moat.bus.util import byte2mini, Processor
 
 import logging
 
@@ -61,7 +61,7 @@ class aa_record:
     def packet(self):
         ls = len(self.serial) - 1
         if not 0 <= ls <= 0x0F:
-            raise RuntimeError("Serial too long: %r" % (serial,))
+            raise RuntimeError(f"Serial too long: {serial!r}")
         ls <<= 4
         more = []
         flags = self.flags
@@ -102,7 +102,7 @@ class AddrControl(Processor):
     CODE = 0
 
     def __init__(self, server, dkv, timeout=5.0):
-        self.logger = logging.getLogger("%s.%s" % (__name__, server.my_id))
+        self.logger = logging.getLogger(f"{__name__}.{server.my_id}")
         self.timeout = timeout
         super().__init__(server, 0)
 
@@ -155,7 +155,7 @@ class AddrControl(Processor):
         """
         m = msg.bytes
         mlen = (m[0] & 0xF) + 1
-        flags = m[0] >> 4
+        m[0] >> 4
         if len(m) - 1 < mlen:
             self.logger.error("Short addr reply %r", msg)
             return
@@ -278,8 +278,8 @@ class AddrControl(Processor):
         """
         m = msg.bytes
         mlen = (m[0] & 0xF) + 1
-        flags = m[0] >> 4
+        m[0] >> 4
         if len(m) - 1 < mlen:
             self.logger.error("Short addr reply %r", msg)
             return
-        o = self.get_serial(s, msg.dest)
+        self.get_serial(s, msg.dest)

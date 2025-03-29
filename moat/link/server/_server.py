@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import anyio
-import io
 import signal
 import time
 from anyio.abc import SocketAttribute
@@ -83,6 +82,7 @@ from moat.link.hello import Hello
 from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
+    import io
     from typing import Never
 
 # from .types import ACLFinder, ACLStepper, ConvNull, NullACL, RootEntry
@@ -542,7 +542,8 @@ class Server:
         return res
 
     async def _backend_monitor(
-        self, task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED,
+        self,
+        task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED,
     ):
         """
         The task that listens to the backend's message stream and updates
@@ -550,7 +551,10 @@ class Server:
         """
         chop = len(self.cfg.root)
         async with self.backend.monitor(
-            P(":R.#"), raw=False, qos=QoS.AT_LEAST_ONCE, no_local=True,
+            P(":R.#"),
+            raw=False,
+            qos=QoS.AT_LEAST_ONCE,
+            no_local=True,
         ) as stream:
             task_status.started()
             async for msg in stream:
@@ -569,7 +573,10 @@ class Server:
                     except ValueError:
                         # deleted
                         await self.backend.send(
-                            topic=msg.topic, payload=b"", codec=None, meta=d.meta,
+                            topic=msg.topic,
+                            payload=b"",
+                            codec=None,
+                            meta=d.meta,
                         )
                     else:
                         await self.backend.send(topic=msg.topic, payload=data, meta=d.meta)
@@ -1062,8 +1069,8 @@ class Server:
 
     async def load(
         self,
-        path: str = None,
-        stream: io.IOBase = None,
+        path: str | None = None,
+        stream: io.IOBase | None = None,
         local: bool = False,
         prefix: Path = P(":"),
         authoritative: bool = False,
@@ -1157,7 +1164,7 @@ class Server:
     def get_state(self):
         return dict()
 
-    async def save(self, path: str = None, **kw):
+    async def save(self, path: str | None = None, **kw):
         """Save the current state to ``path``."""
         shorter = PathShortener([])
         try:
@@ -1169,7 +1176,7 @@ class Server:
 
     async def save_stream(
         self,
-        path: str = None,
+        path: str | None = None,
         save_state: bool = False,
         task_status=anyio.TASK_STATUS_IGNORED,
     ):
@@ -1203,7 +1210,8 @@ class Server:
                         await mw(msg)
 
                         msg = self.gen_hdr_stop(
-                            name=str(path), mode="restart" if save_state else "next",
+                            name=str(path),
+                            mode="restart" if save_state else "next",
                         )
                         self.write_monitor(msg)
                         task_status.started(scope)
@@ -1341,7 +1349,6 @@ class Server:
             If `False` (the default), only write changes.
 
         """
-        res = None
         if path is not None:
             await self._tg.start(
                 partial(
@@ -1357,7 +1364,7 @@ class Server:
         with anyio.open_signal_receiver(signal.SIGTERM) as r:
             task_status.started()
 
-            async for s in r:
+            async for _s in r:
                 self._stop_flag.set()
                 break
 
@@ -1472,7 +1479,9 @@ class Server:
 
             # TODO listen to this message and possibly take over
             await self.backend.send(
-                topic=P(":R.run.service.down.main"), payload=self.name, retain=False,
+                topic=P(":R.run.service.down.main"),
+                payload=self.name,
+                retain=False,
             )
             # TODO if we were "it", wait for some other server's announcement
 

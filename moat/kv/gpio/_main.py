@@ -9,6 +9,7 @@ from moat.util import yprint, attrdict, as_service, P, attr_args
 from moat.kv.data import res_get, res_update, node_attr
 
 import logging
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,6 @@ async def dump(obj, path):
 async def list_(obj, path):
     """List the next stage."""
     cfg = obj.cfg.kv.gpio
-    res = {}
     if len(path) > 3:
         raise click.UsageError("Only up to three path elements (host.controller:pin) allowed")
 
@@ -143,24 +143,22 @@ async def port(obj, path, typ, mode, attr):
             elif v in "xX*":
                 v = None
             else:
-                raise click.UsageError("'%s' wants one of + - X" % (k,))
+                raise click.UsageError(f"'{k}' wants one of + - X")
         elif k in ("low", "skip", "flow"):
             if v == "+":
                 v = True
             elif v == "-":
                 v = False
             else:
-                raise click.UsageError("'%s' wants one of + -" % (k,))
+                raise click.UsageError(f"'{k}' wants one of + -")
         elif k in {"src", "dest"}:
             v = P(v)
         else:
             try:
                 v = int(v)
             except ValueError:
-                try:
+                with contextlib.suppress(ValueError):
                     v = float(v)
-                except ValueError:
-                    pass
         val[k] = v
 
     await _attr(obj, (), val, path, False, res)
@@ -218,13 +216,15 @@ async def monitor(obj, name, controller):
     sub = server[name]
     if controller:
         sub = (sub[x] for x in controller)
-    async with as_service(obj) as s:
-        async with anyio.create_task_group() as tg:
-            e = []
-            for chip in sub:
-                evt = anyio.Event()
-                tg.start_soon(task, chip, evt)
-                e.append(evt)
-            for evt in e:
-                await evt.wait()
-            s.set()
+    async with (
+        as_service(obj) as s,
+        anyio.create_task_group() as tg,
+    ):
+        e = []
+        for chip in sub:
+            evt = anyio.Event()
+            tg.start_soon(task, chip, evt)
+            e.append(evt)
+        for evt in e:
+            await evt.wait()
+        s.set()

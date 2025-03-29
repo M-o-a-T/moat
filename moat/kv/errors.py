@@ -93,6 +93,7 @@ from moat.lib.codec import get_codec
 
 from .exceptions import ServerError
 from .obj import AttrClientEntry, ClientEntry, ClientRoot
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +151,7 @@ class ErrorEntry(AttrClientEntry):
         self.node, self.tock = self.subpath[-2:]
 
     def __repr__(self):
-        return "<%s: %s %s: %s>" % (
+        return "<{}: {} {}: {}>".format(
             self.__class__.__name__,
             "/".join(str(x) for x in self.subpath),
             self.subsystem,
@@ -487,7 +488,7 @@ class ErrorRoot(ClientRoot):
         severity=0,
         message=None,
         force: bool = False,
-        comment: str = None,
+        comment: str | None = None,
     ):
         """An exception has occurred for this subtype and path.
 
@@ -545,10 +546,8 @@ class ErrorRoot(ClientRoot):
         if rec is not entry:
             return
 
-        try:
+        with contextlib.suppress(KeyError):
             del (self._done if entry.resolved else self._active)[entry.subsystem][entry.path]
-        except KeyError:
-            pass
 
     def _push(self, entry):
         if entry.subsystem is None or entry.path is None:

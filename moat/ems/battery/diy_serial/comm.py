@@ -68,7 +68,7 @@ class BattComm(BaseCmd):
         if not isinstance(p, (list, tuple)):
             p = (p,)
 
-        for n in range(self.retries):
+        for _n in range(self.retries):
             try:
                 return (await self._send(pkt=p, start=s, end=e, broadcast=bc, max_t=max_t))[1]
             except (TimeoutError, MessageLost) as exc:

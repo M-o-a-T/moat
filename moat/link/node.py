@@ -24,7 +24,7 @@ logger = getLogger(__name__)
 
 
 def _keys_repr(x):
-    return ",".join(str(k) for k in x.keys())
+    return ",".join(str(k) for k in x)
 
 
 @define

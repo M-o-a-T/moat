@@ -116,10 +116,9 @@ class SignalClient:
             )
             res.raise_for_status()
             ret = res.json()
-            if ret.get("id") == request_id:
-                if ret.get("error"):
-                    error = ret.get("error").get("message")
-                    raise SignalError(error)
+            if ret.get("id") == request_id and ret.get("error"):
+                error = ret.get("error").get("message")
+                raise SignalError(error)
             return ret.get("result")
         except Exception as err:  # pylint: disable=broad-except
             error = getattr(err, "message", repr(err))
@@ -143,8 +142,8 @@ class SignalClient:
         message: str,
         recipients: list,
         mention: str = "",
-        attachments_as_files: list = None,
-        attachments_as_bytes: list = None,
+        attachments_as_files: list | None = None,
+        attachments_as_bytes: list | None = None,
         cleanup_attachments: bool = False,
         **kwargs,
     ):  # pylint: disable=too-many-arguments,too-many-locals
@@ -230,7 +229,7 @@ class SignalClient:
         add_member_permissions: str = "only-admins",
         edit_group_permissions: str = "only-admins",
         group_link: str = "disabled",
-        admins: list = None,
+        admins: list | None = None,
         description: str = "",
         message_expiration_timer: int = 0,
         avatar_as_bytes: bytearray = bytearray(),

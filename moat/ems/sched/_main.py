@@ -123,9 +123,7 @@ List of known inputs+outputs. Use T.‹name› or ‹mode›.‹name› for deta
         else:
             m = Loader(m)
             doc = dedent(m.__doc__)
-            doc += "\nImplements: " + " ".join(
-                x for x in m.__dict__.keys() if not x.startswith("_")
-            )
+            doc += "\nImplements: " + " ".join(x for x in m.__dict__ if not x.startswith("_"))
 
         print(
             f"""\

@@ -190,10 +190,10 @@ def print_(obj, printer, output):
     """
 
     def prx(kk):
-        return " ".join(k for k in kk.keys() if k[0] != "_")
+        return " ".join(k for k in kk if k[0] != "_")
 
     def ndef(kw):
-        for k in kw.keys():
+        for k in kw:
             if k != "_default":
                 return k
         raise ValueError("Duh?")
@@ -690,7 +690,10 @@ def sheet_set(obj, printed, unprinted, **kw):
 @click.option("--file", "-f", type=click.File("r"), help="Read texts from this file.")
 @click.option("--start", "-s", type=int, help="Initial sequence number (for the text).")
 @click.option(
-    "--count", "-n", type=int, help="Number of labels. Default: until the sheet is full.",
+    "--count",
+    "-n",
+    type=int,
+    help="Number of labels. Default: until the sheet is full.",
 )
 @click.option("--typ", "-t", type=str, help="Label type; this flag creates a new sheet.")
 @click.pass_obj
@@ -765,7 +768,11 @@ def sheet_place(obj, pattern, file, start, count, typ):
 
 @sheet.command(name="place", epilog="To remove a label, set its sheet# to zero.")
 @click.option(
-    "--num", "-n", "numeric", is_flag=True, help="Select labels by code. Default: by text",
+    "--num",
+    "-n",
+    "numeric",
+    is_flag=True,
+    help="Select labels by code. Default: by text",
 )
 @click.argument("labels", nargs=-1)
 @click.pass_obj

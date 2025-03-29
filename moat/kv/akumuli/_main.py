@@ -127,9 +127,9 @@ async def add_(obj, source, mode, attr, series, tags, force):
         if not isinstance(res, (int, float)):
             raise ValueError(res)
     except (AttributeError, KeyError):
-        raise click.UsageError("The value at %s does not exist." % (source,)) from None
+        raise click.UsageError(f"The value at {source} does not exist.") from None
     except ValueError:
-        raise click.UsageError("The value at %s is not a number." % (source,)) from None
+        raise click.UsageError(f"The value at {source} is not a number.") from None
 
     res = await obj.client.set(obj.server._path + obj.subpath, val)
     if obj.meta:

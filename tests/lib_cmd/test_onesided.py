@@ -15,7 +15,7 @@ async def test_no_stream_in(no_s):
         assert tuple(msg.args) == (123,)
         if no_s:
             await msg.no_stream()
-            assert False, "Oops"
+            raise AssertionError("Oops")
         await anyio.sleep(0.1)
         await msg.result("Nope")
 
@@ -30,7 +30,7 @@ async def test_no_stream_in(no_s):
                 await anyio.sleep(0.05)
                 await st.send(2, "bc")
             if no_s:
-                assert False, "Oops"
+                raise AssertionError("Oops")
             assert tuple(st.args) == ("Nope",)
 
 
@@ -42,7 +42,7 @@ async def test_no_stream_out(no_s):
         assert tuple(msg.args) == (123,)
         if no_s:
             await msg.no_stream()
-            assert False, "Oops"
+            raise AssertionError("Oops")
         await anyio.sleep(0.2)
         await msg.result("Nope")
 
@@ -55,7 +55,7 @@ async def test_no_stream_out(no_s):
                     assert len(m[1]) == m[0]
                     n += 1
             if no_s:
-                assert False, "Oops"
+                raise AssertionError("Oops")
             assert tuple(st.args) == ("Nope",)
             assert n == 0
             print("DONE")

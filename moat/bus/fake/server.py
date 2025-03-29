@@ -22,10 +22,9 @@ async def main():
         ) as backend:
             backstream = trio.StapledStream(backend.stdin, backend.stdout)
 
-            async with StreamBusHandler(backstream) as sb:
-                async with Server(sb) as m:
-                    async for evt in m:
-                        print(m)
+            async with StreamBusHandler(backstream) as sb, Server(sb) as m:
+                async for _evt in m:
+                    print(m)
     except trio.ClosedResourceError:
         print("Closed.", file=sys.stderr)
 

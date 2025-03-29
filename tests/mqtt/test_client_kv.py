@@ -117,16 +117,16 @@ class MQTTClientTest(unittest.TestCase):
             async with moat_kv_server(1):
                 async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
                     async with open_mqttclient(config=broker_config["broker"]) as client:
-                        self.assertIsNotNone(client.session)
+                        assert client.session is not None
                         ret = await client.subscribe([("test_topic", QOS_0)])
-                        self.assertEqual(ret[0], QOS_0)
+                        assert ret[0] == QOS_0
                         async with open_mqttclient(config=broker_config["broker"]) as client_pub:
                             await client_pub.publish("test_topic", data, QOS_0, retain=False)
                         with anyio.fail_after(0.5):
                             message = await client.deliver_message()
-                        self.assertIsNotNone(message)
-                        self.assertIsNotNone(message.publish_packet)
-                        self.assertEqual(message.data, data)
+                        assert message is not None
+                        assert message.publish_packet is not None
+                        assert message.data == data
                         pass  # exit client
                     pass  # exit broker
                 pass  # exit server
@@ -141,16 +141,16 @@ class MQTTClientTest(unittest.TestCase):
             async with moat_kv_server(1):
                 async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
                     async with open_mqttclient(config=broker_config["broker"]) as client:
-                        self.assertIsNotNone(client.session)
+                        assert client.session is not None
                         ret = await client.subscribe([("test/vis/foo", QOS_0)])
-                        self.assertEqual(ret[0], QOS_0)
+                        assert ret[0] == QOS_0
                         async with open_mqttclient(config=broker_config["broker"]) as client_pub:
                             await client_pub.publish("test/vis/foo", data, QOS_0, retain=False)
                         with anyio.fail_after(0.5):
                             message = await client.deliver_message()
-                        self.assertIsNotNone(message)
-                        self.assertIsNotNone(message.publish_packet)
-                        self.assertEqual(message.data, data)
+                        assert message is not None
+                        assert message.publish_packet is not None
+                        assert message.data == data
                         pass  # exit client
                     pass  # exit broker
                 pass  # exit server
@@ -165,16 +165,16 @@ class MQTTClientTest(unittest.TestCase):
             async with moat_kv_server(0):
                 async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
                     async with open_mqttclient(config=broker_config["broker"]) as client:
-                        self.assertIsNotNone(client.session)
+                        assert client.session is not None
                         ret = await client.subscribe([("test_topic", QOS_0)])
-                        self.assertEqual(ret[0], QOS_0)
+                        assert ret[0] == QOS_0
                         async with open_mqttclient(config=broker_config["broker"]) as client_pub:
                             await client_pub.publish("test_topic", data, QOS_0, retain=False)
                         with anyio.fail_after(0.5):
                             message = await client.deliver_message()
-                        self.assertIsNotNone(message)
-                        self.assertIsNotNone(message.publish_packet)
-                        self.assertEqual(message.data, data)
+                        assert message is not None
+                        assert message.publish_packet is not None
+                        assert message.data == data
 
         anyio_run(test_coro, backend="trio")
 
@@ -183,10 +183,10 @@ class MQTTClientTest(unittest.TestCase):
             async with moat_kv_server(0):
                 async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
                     async with open_mqttclient(config=broker_config["broker"]) as client:
-                        self.assertIsNotNone(client.session)
+                        assert client.session is not None
                         ret = await client.subscribe([("test_topic", QOS_0)])
-                        self.assertEqual(ret[0], QOS_0)
-                        with self.assertRaises(TimeoutError):
+                        assert ret[0] == QOS_0
+                        with pytest.raises(TimeoutError):
                             with anyio.fail_after(2):
                                 await client.deliver_message()
 

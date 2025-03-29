@@ -3,8 +3,7 @@
 # See the file license.txt for copying permission.
 from __future__ import annotations
 
-from ..adapters import StreamAdapter
-from ..codecs import (
+from moat.mqtt.codecs import (
     bytes_to_int,
     decode_data_with_length,
     decode_string,
@@ -13,8 +12,8 @@ from ..codecs import (
     int_to_bytes,
     read_or_raise,
 )
-from ..errors import MoatMQTTException, NoDataException
-from ..utils import gen_client_id
+from moat.mqtt.errors import MoatMQTTException, NoDataException
+from moat.mqtt.utils import gen_client_id
 from .packet import (
     CONNECT,
     MQTTFixedHeader,
@@ -22,6 +21,10 @@ from .packet import (
     MQTTPayload,
     MQTTVariableHeader,
 )
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.mqtt.adapters import StreamAdapter
 
 
 class ConnectVariableHeader(MQTTVariableHeader):
@@ -52,10 +55,7 @@ class ConnectVariableHeader(MQTTVariableHeader):
             self.flags &= ~mask
 
     def _get_flag(self, mask):
-        if self.flags & mask:
-            return True
-        else:
-            return False
+        return bool(self.flags & mask)
 
     @property
     def username_flag(self) -> bool:

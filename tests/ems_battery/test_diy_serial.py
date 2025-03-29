@@ -10,6 +10,7 @@ from moat.util.compat import log
 from moat.ems.battery.diy_serial.packet import RequestTiming
 
 from .support import CF, as_attr
+import contextlib
 
 pytestmark = [pytest.mark.anyio, pytest.mark.xfail]
 
@@ -39,7 +40,7 @@ async def test_cell1(tmp_path):
     def tm():
         return int(time.monotonic() * 100000) & 0xFFFF
 
-    async with mpy_stack(tmp_path, CFG1) as d, d.sub_at("s") as s, d.sub_at("bc") as bc:
+    async with mpy_stack(tmp_path, CFG1) as d, d.sub_at("s"), d.sub_at("bc") as bc:
         p = RequestTiming(timer=tm())
         x = (await bc(p=p, s=0))[0]
         td = (tm() - x.timer) & 0xFFFF
@@ -75,7 +76,7 @@ async def test_cell4(tmp_path):
     def tm():
         return int(time.monotonic() * 100000) & 0xFFFF
 
-    async with mpy_stack(tmp_path, CFG4) as d, d.sub_at("s") as s, d.sub_at("bc") as bc:
+    async with mpy_stack(tmp_path, CFG4) as d, d.sub_at("s"), d.sub_at("bc") as bc:
         p = RequestTiming(timer=tm())
         x = await bc(p=p, s=0, bc=True)
         td = (tm() - x[-1].timer) & 0xFFFF
@@ -192,10 +193,8 @@ CFGA.b.cfg = CF.c
 
 async def test_batt(tmp_path):
     "Basic BMS test"
-    try:
+    with contextlib.suppress(FileNotFoundError):
         os.unlink("fake.rtc")
-    except FileNotFoundError:
-        pass
     async with mpy_stack(tmp_path, CFGA) as d, d.sub_at("b") as b, d.sub_at("a") as a:
         u = await b.u()
         assert u == 20.2  # 1% plus

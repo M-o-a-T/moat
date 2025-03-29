@@ -633,7 +633,6 @@ class BaseHandler:
         # self.debug("AckBits %02x / %02x due to %02x/%d", self.ack_mask,self.nack_mask,bits,self.settle)
 
     def read_next(self, bits):
-        lb = self.last
         bits ^= self.last
         # print("BIT",self.addr,bits-1)
         if not bits:

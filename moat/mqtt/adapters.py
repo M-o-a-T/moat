@@ -8,8 +8,11 @@ import logging
 import anyio
 import anyio.streams.buffered
 from anyio.abc import SocketAttribute
-from asyncwebsockets import Websocket
 from wsproto.events import BytesMessage, CloseConnection
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from asyncwebsockets import Websocket
 
 try:
     ClosedResourceError = anyio.exceptions.ClosedResourceError

@@ -12,7 +12,6 @@ from ._stream import _MsgpackMsgBlk, _MsgpackMsgBuf
 from .stack import BaseBuf
 
 
-
 class MsgpackMsgBuf(_MsgpackMsgBuf):
     """
     structured messages > stream of bytes

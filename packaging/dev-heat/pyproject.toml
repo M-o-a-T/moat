@@ -13,6 +13,7 @@ classifiers = [
 ]
 dependencies = [
 	"anyio ~= 4.2",
+	"aionotify",
 ]
 keywords = ["MoaT"]
 requires-python = ">=3.8"

@@ -12,6 +12,7 @@ except ImportError:
     from moat.micro._test import machine
 
 from moat.micro.cmd.base import BaseCmd
+import contextlib
 
 
 class Cmd(BaseCmd):
@@ -72,10 +73,8 @@ class Cmd(BaseCmd):
 
     def _teardown(self):
         if self._bus is None:
-            try:
+            with contextlib.suppress(AttributeError):
                 self._bus.deinit()
-            except AttributeError:
-                pass
 
     async def cmd_rd(self, i, n=16):
         "read @n bytes from bus @cd at address @i"

@@ -26,7 +26,7 @@ class TestSQLitePlugin(unittest.TestCase):
         tables = []
         for row in rows:
             tables.append(row[0])
-        self.assertIn("session", tables)
+        assert "session" in tables
 
     # def test_save_session(self):
     #     dbfile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "test.db")

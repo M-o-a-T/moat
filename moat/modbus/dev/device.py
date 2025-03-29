@@ -13,10 +13,13 @@ import anyio
 from asyncscope import scope
 from moat.util import CtxObj, P, Path, attrdict, combine_dict, merge, yload
 
-from ..client import ModbusClient, Slot, Unit
-from ..typemap import get_kind, get_type2
-from ..types import Coils, DiscreteInputs, InputRegisters
-from ..server import UnitContext
+from moat.modbus.typemap import get_kind, get_type2
+from moat.modbus.types import Coils, DiscreteInputs, InputRegisters
+from moat.modbus.server import UnitContext
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.modbus.client import ModbusClient, Slot, Unit
 
 logger = logging.getLogger(__name__)
 
@@ -102,9 +105,8 @@ def fixup_(
     """
     if root is None or getattr(d, "_root", False):
         root = d
-        set_root = True
     else:
-        set_root = root is d
+        pass
     if default is None:
         default = attrdict()
 
@@ -345,7 +347,7 @@ class BaseDevice:
     def __init__(self, factory=Register):
         self.factory = factory
 
-    async def load(self, path: str = None, data: dict = None):
+    async def load(self, path: str | None = None, data: dict | None = None):
         """Load a device description from @path, augmented by @data"""
         if self.cfg is not None:
             raise RuntimeError("already called")
@@ -479,7 +481,7 @@ class ClientDevice(CtxObj, BaseDevice):
         while True:
             await anyio.sleep(99999)
 
-    async def poll(self, slots: set = None, *, task_status=None):
+    async def poll(self, slots: set | None = None, *, task_status=None):
         """Task to periodically poll all slots"""
         if slots is None:
             slots = self.data.slots.keys()
@@ -506,7 +508,7 @@ class ServerDevice(BaseDevice):
         self.getValues = self.unit.getValues
         self.setValues = self.unit.setValues
 
-    async def load(self, path: str = None, data: dict = None):
+    async def load(self, path: str | None = None, data: dict | None = None):
         await super().load(path, data)
         self.data = fixup(self.cfg, root=self.cfg, path=Path(), this_file=self.cfg_path)
         await self.add_registers()

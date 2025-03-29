@@ -14,9 +14,12 @@ except ImportError:
 
 from moat.util import combine_dict, attrdict
 from moat.kv.exceptions import ClientConnectionError
-from .model import WAGOserver
 
 import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .model import WAGOserver
 
 logger = logging.getLogger(__name__)
 

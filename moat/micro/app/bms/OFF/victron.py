@@ -8,6 +8,7 @@ from victron.dbus import Dbus
 from moat.micro.compat import (
     Event,
 )
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -133,14 +134,10 @@ class BatteryState:
         cfg = self.ctrl.batt[0].cfg
 
         async with self.srv as l:
-            try:
+            with contextlib.suppress(AttributeError):
                 await l.set(self.bus.cap, cfg.cap.ah)
-            except AttributeError:
-                pass
-            try:
+            with contextlib.suppress(AttributeError):
                 await l.set(self.bus.capi, cfg.cap.cur / 3600 / cfg.n / cfg.u.nom)
-            except AttributeError:
-                pass
             await l.set(self.bus.ncell, len(self.ctrl.cells) // len(self.ctrl.batt))
 
         await self.update_cells()

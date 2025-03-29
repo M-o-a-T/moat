@@ -5,6 +5,7 @@ import json
 
 import asyncclick as click
 from moat.util import NotGiven, P, Path, PathLongener, yload, yprint
+import contextlib
 
 
 @click.group()  # pylint: disable=undefined-variable
@@ -134,10 +135,8 @@ async def match(obj, path, type_, delete, raw):  # pylint: disable=redefined-bui
             yy = y
             for p in path:
                 yy = yy.setdefault(p, {})
-            try:
+            with contextlib.suppress(KeyError):
                 yy["_"] = r["value"]
-            except KeyError:
-                pass
         yprint(y, stream=obj.stdout)
         return
 
@@ -194,8 +193,6 @@ async def list(obj, path):  # pylint: disable=redefined-builtin
         yy = y
         for p in path:
             yy = yy.setdefault(p, {})
-        try:
+        with contextlib.suppress(KeyError):
             yy["_"] = r["value"]
-        except KeyError:
-            pass
     yprint(y, stream=obj.stdout)

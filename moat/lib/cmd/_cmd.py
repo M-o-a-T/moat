@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from moat.util import Queue, CtxObj, QueueFull
 from moat.util.compat import TaskGroup, CancelScope, const, CancelledError
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 import outcome
 
 try:
@@ -533,10 +533,8 @@ class Stream:
                 raise
 
         if self._recv_q is not None:
-            try:
+            with suppress(EOFError):
                 self._recv_q.put_nowait_error(LinkDown())
-            except EOFError:
-                pass
             if self.stream_in == S_ON:
                 self.stream_in = S_OFF
 
@@ -550,10 +548,8 @@ class Stream:
         self.stream_in = S_OFF
         self.cmd_in.set()
         if self._recv_q is not None:
-            try:
+            with suppress(EOFError):
                 self._recv_q.put_nowait_error(LinkDown())
-            except EOFError:
-                pass
 
     @property
     def cmd(self):
@@ -951,7 +947,9 @@ class Forward:
         kw = msg[-1] if len(msg) > 1 and isinstance(msg[-1], dict) else None
         args = msg[1:-1] if kw is not None else msg[1:]
         self.dst._send_nowait(
-            (self._dst_id << 2) | (B_STREAM if stream else 0) | (B_ERROR if err else 0), args, kw,
+            (self._dst_id << 2) | (B_STREAM if stream else 0) | (B_ERROR if err else 0),
+            args,
+            kw,
         )
 
         self._ended()
@@ -974,7 +972,9 @@ class Forward:
         kw = msg[-1] if len(msg) > 1 and isinstance(msg[-1], dict) else None
         args = msg[1:-1] if kw is not None else msg[1:]
         self.src._send_nowait(
-            (self._src_id << 2) | (B_STREAM if stream else 0) | (B_ERROR if err else 0), args, kw,
+            (self._src_id << 2) | (B_STREAM if stream else 0) | (B_ERROR if err else 0),
+            args,
+            kw,
         )
 
         self._ended()

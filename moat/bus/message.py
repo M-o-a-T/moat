@@ -29,10 +29,10 @@ class BusMessage:
 
     def __init__(
         self,
-        src: int = None,
-        dst: int = None,
-        code: int = None,
-        data: bytes = None,
+        src: int | None = None,
+        dst: int | None = None,
+        code: int | None = None,
+        data: bytes | None = None,
         prio: int = 1,
     ):
         """
@@ -89,18 +89,15 @@ class BusMessage:
         return res
 
     def __eq__(self, other):
-        for a in self._attrs:
-            if getattr(self, a) != getattr(other, a):
-                return False
-        return True
+        return all(getattr(self, a) == getattr(other, a) for a in self._attrs)
 
     def __hash__(self):
         return hash(tuple(getattr(self, a) for a in self._attrs))
 
     def __repr__(self):
-        return "<%s: %s>" % (
+        return "<{}: {}>".format(
             self.__class__.__name__,
-            " ".join("%s=%s" % (k, v) for k, v in vars(self).items()),
+            " ".join(f"{k}={v}" for k, v in vars(self).items()),
         )
 
     def __len__(self):

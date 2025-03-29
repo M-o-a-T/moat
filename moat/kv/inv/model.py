@@ -14,6 +14,7 @@ from moat.kv.errors import ErrorRoot
 from moat.kv.obj import AttrClientEntry, ClientEntry, ClientRoot, NamedRoot
 from moat.util import NotGiven, Path, attrdict, yaml_repr
 from netaddr import EUI, AddrFormatError, IPAddress, IPNetwork
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -173,10 +174,8 @@ class VlanRoot(NamedRoot, ClientEntry):
             return name
         res = super().by_name(name)
         if res is None:
-            try:
+            with contextlib.suppress(ValueError):
                 res = self.get(int(name))
-            except ValueError:
-                pass
         return res
 
     async def update(self, value, _locked=False):  # pylint: disable=arguments-differ
@@ -404,17 +403,17 @@ class Network(Cleaner, SkipNone, AttrClientEntry):
         return self._hosts[num]
 
     def __repr__(self):
-        return "‹Net %s:%s›" % (self.name, self.net)
+        return f"‹Net {self.name}:{self.net}›"
 
     def __str__(self):
         j = {}
         j["vlan"] = self.vlan
         if self.dhcp:
             j["dhcp"] = "%d-%d" % (self.dhcp[0], self.dhcp[0] + self.dhcp[1] - 1)
-        return "%s %s %s" % (
+        return "{} {} {}".format(
             self.name,
             self.net,
-            " ".join("%s=%s" % (k, v) for k, v in j.items() if v),
+            " ".join(f"{k}={v}" for k, v in j.items() if v),
         )
 
 
@@ -604,7 +603,7 @@ class HostPort(Cleaner):
             elif not isinstance(vlan, str):
                 vlan = vlan.name
             elif self.host.root.vlan.by_name(vlan) is None:
-                raise ValueError("VLAN '%s' does not exist" % (vlan,))
+                raise ValueError(f"VLAN '{vlan}' does not exist")
             self.attrs.vlan = vlan
         else:
             self.attrs.pop("vlan", None)
@@ -700,10 +699,10 @@ class HostPort(Cleaner):
         raise RuntimeError("This does not work.")
 
     def __repr__(self):
-        return "<Port %s:%s>" % (self.host.name, self.name)
+        return f"<Port {self.host.name}:{self.name}>"
 
     def __str__(self):
-        return "%s:%s" % (self.host.name, self.name)
+        return f"{self.host.name}:{self.name}"
 
 
 @yaml_repr("host")
@@ -887,7 +886,7 @@ class Host(Cleaner, SkipNone, AttrClientEntry):
             self._ports = {}
             return
 
-        for k in [k for k in self._ports.keys() if k not in ports]:
+        for k in [k for k in self._ports if k not in ports]:
             del self._ports[k]
         for k, v in ports.items():
             self._ports[k] = HostPort(self, k, v)
@@ -938,17 +937,17 @@ class Host(Cleaner, SkipNone, AttrClientEntry):
         return ".".join(self.subpath[-1:0:-1])
 
     def __repr__(self):
-        return "<Host %s: %s %s>" % (self.name, self.domain, self.netaddr)
+        return f"<Host {self.name}: {self.domain} {self.netaddr}>"
 
     def __str__(self):
         j = {}
         if self.net:
             # j['adr'] = list(self.netaddrs)
             j["adr"] = self.netaddr
-        return "%s:%s %s" % (
+        return "{}:{} {}".format(
             self.name,
             self.domain,
-            " ".join("%s=%s" % (k, v) for k, v in j.items()),
+            " ".join(f"{k}={v}" for k, v in j.items()),
         )
 
 
@@ -1087,10 +1086,8 @@ class CableRoot(ClientEntry):
             c[p] = cable
             cable.reg_del(self, "_del__cable", cable, ref(dest))
 
-        try:
+        with contextlib.suppress(Exception):
             aa(cable.dest_a)
-        except Exception:
-            pass
         try:
             aa(cable.dest_b)
         except Exception:
@@ -1203,9 +1200,9 @@ class Cable(Cleaner, AttrClientEntry):
             raise KeyError("Cable already saved")
 
         if len(getattr(dest_a, "port", ())):
-            raise ValueError("Can't link directly to a host: %r" % (dest_a,))
+            raise ValueError(f"Can't link directly to a host: {dest_a!r}")
         if len(getattr(dest_b, "port", ())):
-            raise ValueError("Can't link directly to a host: %r" % (dest_b,))
+            raise ValueError(f"Can't link directly to a host: {dest_b!r}")
         self.dest_a = dest_a
         self.dest_b = dest_b
 
@@ -1258,7 +1255,7 @@ class Cable(Cleaner, AttrClientEntry):
         return False
 
     def __repr__(self):
-        return "<Cable %r %r>" % (self.dest_a, self.dest_b)
+        return f"<Cable {self.dest_a!r} {self.dest_b!r}>"
 
     def __str__(self):
         if hasattr(self.dest_a, "port"):
@@ -1269,7 +1266,7 @@ class Cable(Cleaner, AttrClientEntry):
             b = self.dest_b.name
         else:
             b = str(self.dest_b)
-        return "%s %s" % (a, b)
+        return f"{a} {b}"
 
 
 @yaml_repr("wire")
@@ -1344,7 +1341,7 @@ class Wire(Cleaner, SkipNone, AttrClientEntry):
         return None
 
     def __repr__(self):
-        return "<Wire %s>" % (self.name,)
+        return f"<Wire {self.name}>"
 
     def __str__(self):
         a = self.ports["a"]
@@ -1354,7 +1351,7 @@ class Wire(Cleaner, SkipNone, AttrClientEntry):
         if b is None:
             b = "-"
 
-        return "%s %s %s" % (self.name, a, b)
+        return f"{self.name} {a} {b}"
 
 
 @InventoryRoot.register("wire")

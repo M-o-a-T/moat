@@ -1,6 +1,5 @@
 from __future__ import annotations
+import contextlib
 
-try:
+with contextlib.suppress(ImportError):
     from .lib import *
-except ImportError:
-    pass

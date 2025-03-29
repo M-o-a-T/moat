@@ -6,12 +6,15 @@ Send bus messages to an AnyIO stream
 from __future__ import annotations
 
 import anyio
-from anyio.abc import AnyByteStream
 from contextlib import asynccontextmanager
 
 from . import BaseBusHandler
-from ..serial import SerBus
+from moat.bus.serial import SerBus
 from weakref import ref
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from anyio.abc import AnyByteStream
 
 
 class _Bus(SerBus):

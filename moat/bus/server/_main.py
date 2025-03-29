@@ -11,7 +11,7 @@ from distmqtt.client import open_mqttclient
 from distmqtt.codecs import MsgPackCodec
 
 from .server import Server
-from ..backend.stream import Anyio2TrioStream, StreamBusHandler
+from moat.bus.backend.stream import Anyio2TrioStream, StreamBusHandler
 
 import logging
 

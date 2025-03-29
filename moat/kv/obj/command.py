@@ -149,10 +149,10 @@ def std_command(cli, *a, **kw):
                                 else:
                                     vv = "-"
                             elif isinstance(vv, dict):
-                                vv = " ".join("%s=%s" % (x, y) for x, y in sorted(vv.items()))
-                            print("%s %s %s" % (k, kk, vv), file=obj.stdout)
+                                vv = " ".join(f"{x}={y}" for x, y in sorted(vv.items()))
+                            print(f"{k} {kk} {vv}", file=obj.stdout)
                     else:
-                        print("%s %s" % (k, v), file=obj.stdout)
+                        print(f"{k} {v}", file=obj.stdout)
             if not cnt and ctx.obj.debug:
                 print("exists, no data", file=sys.stderr)
         else:

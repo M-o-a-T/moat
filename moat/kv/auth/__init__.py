@@ -66,11 +66,15 @@ from importlib import import_module
 import jsonschema
 from moat.util import NotGiven, Path, attrdict, split_arg, yload
 
-from ..client import Client, NoData
-from ..exceptions import NoAuthModuleError
-from ..model import Entry
-from ..server import ServerClient, StreamCommand
-from ..types import ACLFinder, NullACL
+from moat.kv.client import Client, NoData
+from moat.kv.exceptions import NoAuthModuleError
+from moat.kv.types import ACLFinder, NullACL
+import contextlib
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.kv.server import ServerClient, StreamCommand
+    from moat.kv.model import Entry
 
 # Empty schema
 null_schema = {"type": "object", "additionalProperties": False}
@@ -210,7 +214,7 @@ class BaseClientAuth(_AuthLoaded):
         """
         Authorizes this record with the server.
         """
-        try:
+        with contextlib.suppress(NoData):
             await client._request(
                 action="auth",
                 typ=self._auth_method,
@@ -219,8 +223,6 @@ class BaseClientAuth(_AuthLoaded):
                 ident=self.ident,
                 data=self.auth_data(),
             )
-        except NoData:
-            pass
 
     def auth_data(self):
         """
@@ -292,7 +294,7 @@ class BaseClientAuthMaker(_AuthLoaded):
 
     async def send(self, client: Client, _kind="user"):
         """Send this user to the server."""
-        try:
+        with contextlib.suppress(NoData):
             await client._request(
                 "auth_set",
                 iter=False,
@@ -302,8 +304,6 @@ class BaseClientAuthMaker(_AuthLoaded):
                 chain=self._chain,
                 data=self.send_data(),
             )
-        except NoData:
-            pass
 
     def send_data(self):
         return {}
@@ -339,7 +339,7 @@ class BaseServerAuth(_AuthLoaded):
         jsonschema.validate(instance=data.get("data", {}), schema=type(self).schema)
 
     def aux_conv(self, data: Entry, root: Entry):
-        from ..types import ConvNull
+        from moat.kv.types import ConvNull
 
         try:
             data = data["conv"].data["key"]

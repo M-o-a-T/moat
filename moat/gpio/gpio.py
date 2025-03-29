@@ -34,7 +34,7 @@ class Chip:
         if self._label is None:
             return "%s(%d)" % (self.__class__.__name__, self._num)
         else:
-            return "%s(%s)" % (self.__class__.__name__, self._label)
+            return f"{self.__class__.__name__}({self._label})"
 
     def __enter__(self):
         if self._label is None:
@@ -324,4 +324,4 @@ class Event:
         return datetime.datetime.fromtimestamp(self._ts_sec + self._ts_nsec / 1000000000)
 
     def __repr__(self):
-        return "<%s @%s>" % (self.value, self.time)
+        return f"<{self.value} @{self.time}>"

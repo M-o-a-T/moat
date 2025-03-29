@@ -52,8 +52,9 @@ async def test(obj, files):
     env = os.environ.copy()
 
     buf = SpooledTemporaryFile(mode="w+")
-    res = await anyio.run_process(
-        [f"{cfg.cad.base}/bin/python3", "-c", "import sys; print(repr(sys.path))"], stdout=buf,
+    await anyio.run_process(
+        [f"{cfg.cad.base}/bin/python3", "-c", "import sys; print(repr(sys.path))"],
+        stdout=buf,
     )
     buf.seek(0)
     pypath = (
@@ -62,7 +63,7 @@ async def test(obj, files):
         + [str(FSPath(p).parent.absolute()) for p in moat.__path__]
     )
     env["PYTHONPATH"] = os.pathsep.join(pypath)
-    res = await anyio.run_process(
+    await anyio.run_process(
         [f"{cfg.cad.base}/bin/python3", "-mcq_editor"] + list(files),
         env=env,
         # stdin=subprocess.DEVNULL,
@@ -97,7 +98,8 @@ async def test(obj, file, args):
 
     buf = SpooledTemporaryFile(mode="w+")
     res = await anyio.run_process(
-        [f"{cfg.cad.base}/bin/python3", "-c", "import sys; print(repr(sys.path))"], stdout=buf,
+        [f"{cfg.cad.base}/bin/python3", "-c", "import sys; print(repr(sys.path))"],
+        stdout=buf,
     )
     buf.seek(0)
     pypath = (

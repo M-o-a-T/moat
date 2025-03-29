@@ -2,16 +2,15 @@
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
-import anyio
 
-from ..codecs import (
+from moat.mqtt.codecs import (
     bytes_to_int,
     decode_string,
     encode_string,
     int_to_bytes,
     read_or_raise,
 )
-from ..errors import MoatMQTTException, NoDataException
+from moat.mqtt.errors import MoatMQTTException, NoDataException
 from .packet import (
     SUBSCRIBE,
     MQTTFixedHeader,
@@ -20,6 +19,10 @@ from .packet import (
     MQTTVariableHeader,
     PacketIdVariableHeader,
 )
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import anyio
 
 
 class SubscribePayload(MQTTPayload):

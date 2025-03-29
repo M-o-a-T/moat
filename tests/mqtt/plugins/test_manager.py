@@ -9,7 +9,7 @@ import pytest
 
 from moat.mqtt.plugins.manager import PluginManager
 
-from .. import anyio_run
+from tests.mqtt import anyio_run
 
 pytestmark = pytest.mark.skip
 
@@ -41,7 +41,7 @@ class TestPluginManager(unittest.TestCase):
         async def coro():
             async with anyio.create_task_group() as tg:
                 manager = PluginManager(tg, "moat.mqtt.test.plugins", context=None)
-                self.assertTrue(len(manager._plugins) > 0)
+                assert len(manager._plugins) > 0
 
         anyio_run(coro)
 
@@ -56,7 +56,7 @@ class TestPluginManager(unittest.TestCase):
                 manager = PluginManager(tg, "moat.mqtt.test.plugins", context=None)
                 await fire_event(manager)
                 plugin = manager.get_plugin("event_plugin")
-                self.assertTrue(plugin.object.test_flag)
+                assert plugin.object.test_flag
 
         anyio_run(coro)
 
@@ -70,7 +70,7 @@ class TestPluginManager(unittest.TestCase):
                 manager = PluginManager(tg, "moat.mqtt.test.plugins", context=None)
                 await fire_event(manager)
                 plugin = manager.get_plugin("event_plugin")
-                self.assertTrue(plugin.object.test_flag)
+                assert plugin.object.test_flag
 
         anyio_run(coro)
 
@@ -83,7 +83,7 @@ class TestPluginManager(unittest.TestCase):
                 manager = PluginManager(tg, "moat.mqtt.test.plugins", context=None)
                 await call_coro(manager)
                 plugin = manager.get_plugin("event_plugin")
-                self.assertTrue(plugin.object.test_coro)
+                assert plugin.object.test_coro
 
         anyio_run(coro)
 
@@ -96,7 +96,7 @@ class TestPluginManager(unittest.TestCase):
                 manager = PluginManager(tg, "moat.mqtt.test.plugins", context=None)
                 ret = await call_coro(manager)
                 plugin = manager.get_plugin("event_plugin")
-                self.assertEqual(ret[plugin], "TEST")
+                assert ret[plugin] == "TEST"
 
         anyio_run(coro)
 
@@ -113,6 +113,6 @@ class TestPluginManager(unittest.TestCase):
             async with anyio.create_task_group() as tg:
                 manager = PluginManager(tg, "moat.mqtt.test.plugins", context=None)
                 ret = await call_coro(manager)
-                self.assertTrue(len(ret) == 0)
+                assert len(ret) == 0
 
         anyio_run(coro)

@@ -82,7 +82,7 @@ class TestStringMethods(unittest.TestCase):
             error[idx] = e
             output[idx] = u
         # Check
-        self.assertTrue(allclose(Kp * error, output, rtol=0.0, atol=1e-08))
+        assert allclose(Kp * error, output, rtol=0.0, atol=1e-08)
 
     def test_integrate_only_i(self):
         # Set Ki gain
@@ -104,7 +104,7 @@ class TestStringMethods(unittest.TestCase):
             output[idx] = u
         # Check
         expected = Ki * dt * error.cumsum()
-        self.assertTrue(allclose(expected, output, rtol=0.0, atol=1e-08))
+        assert allclose(expected, output, rtol=0.0, atol=1e-08)
 
     def test_integrate_only_d(self):
         # Set Kd and Tf gains
@@ -126,7 +126,7 @@ class TestStringMethods(unittest.TestCase):
             output[idx] = u
         # Check
         expected = (1 / dt) * insert(diff(error), 0, 0)
-        self.assertTrue(allclose(expected, output, rtol=0.0, atol=1e-01))
+        assert allclose(expected, output, rtol=0.0, atol=0.1)
 
     def test_integrate_one(self):
         # Set gains
@@ -149,7 +149,7 @@ class TestStringMethods(unittest.TestCase):
         # Check
 
         expected = Kp * error + Ki * dt * (error.cumsum() - error[0])
-        self.assertTrue(allclose(expected, output, rtol=0.0, atol=1e-08))
+        assert allclose(expected, output, rtol=0.0, atol=1e-08)
 
     def test_integrate_anti_windup(self):
         # Set Ki gain

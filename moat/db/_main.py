@@ -50,7 +50,6 @@ def update(obj):
     """
     cfg = obj.cfg.db
 
-    meta = load(cfg)
     with database(cfg) as sess, sess.begin():
         acfg = alembic_cfg(obj.cfg, sess)
 
@@ -67,9 +66,9 @@ def get(obj, args):
     cfg = obj.cfg.db
 
     meta = load(cfg)
-    with database(cfg) as sess:
+    with database(cfg):
         if not args:
-            for t in meta.tables.keys():
+            for t in meta.tables:
                 print(t)
             return
         t = meta.tables[args[0]]
@@ -100,7 +99,7 @@ def mig_init(obj):
 
     cfg = obj.cfg.db
 
-    meta = load(cfg)
+    load(cfg)
     with database(cfg) as sess, sess.begin():
         acfg = alembic_cfg(obj.cfg, sess)
         command.stamp(acfg, "head")
@@ -118,7 +117,7 @@ def mig_rev(obj, message):
     if not message:
         raise click.UsageError("You need to add some change text")
 
-    meta = load(cfg)
+    load(cfg)
     with database(cfg) as sess:
         acfg = alembic_cfg(obj.cfg, sess)
 
@@ -138,7 +137,7 @@ def mig_check(obj):
 
     cfg = obj.cfg.db
 
-    meta = load(cfg)
+    load(cfg)
     with database(cfg) as sess:
         acfg = alembic_cfg(obj.cfg, sess)
 
@@ -158,7 +157,7 @@ def to(obj, revision):
     """
     cfg = obj.cfg.db
 
-    meta = load(cfg)
+    load(cfg)
     with database(cfg) as sess, sess.begin():
         acfg = alembic_cfg(obj.cfg, sess)
 
@@ -176,7 +175,7 @@ def history(obj):
     """
     cfg = obj.cfg.db
 
-    meta = load(cfg)
+    load(cfg)
     with database(cfg) as sess, sess.begin():
         acfg = alembic_cfg(obj.cfg, sess)
 
@@ -191,7 +190,7 @@ def show(obj):
     """
     cfg = obj.cfg.db
 
-    meta = load(cfg)
+    load(cfg)
     with database(cfg) as sess, sess.begin():
         acfg = alembic_cfg(obj.cfg, sess)
 

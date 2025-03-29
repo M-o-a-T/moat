@@ -10,6 +10,7 @@ import anyio
 from moat.util import attrdict
 
 from . import InvModeBase
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -302,24 +303,18 @@ Set to -1 to clear.
                     exc *= self._limit
                 state.p_real = p
                 state.exc = exc
-                try:
+                with contextlib.suppress(AttributeError):
                     del state.p_i
-                except AttributeError:
-                    pass
                 ps = intf.calc_grid_p(
                     -p,  # pylint: disable=invalid-unary-operand-type # WAT
                     excess=exc,
                 )
             else:
                 state.p_i = ip
-                try:
+                with contextlib.suppress(AttributeError):
                     del state.p_real
-                except AttributeError:
-                    pass
-                try:
+                with contextlib.suppress(AttributeError):
                     del state.exc
-                except AttributeError:
-                    pass
                 if dkv:
                     await dkv.set(intf.distkv_prefix / "solar" / "max", 0, idem=True)
                 ps = intf.calc_inv_p(ip, excess=0)

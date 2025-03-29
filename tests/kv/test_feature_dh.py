@@ -15,7 +15,7 @@ async def test_51_dh(autojump_clock):  # pylint: disable=unused-argument
         (s,) = st.s
         async with st.client() as c:
             assert len(s._clients) == 1
-            sc = list(s._clients)[0]
+            sc = next(iter(s._clients))
             assert c._dh_key is None
             assert sc._dh_key is None
             dh = await c.dh_secret(length=10)

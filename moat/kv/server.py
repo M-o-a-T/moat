@@ -1,7 +1,6 @@
 # Local server
 from __future__ import annotations
 
-import io
 import os
 import signal
 import time
@@ -20,7 +19,7 @@ except ImportError:
 import logging
 from functools import partial
 from pprint import pformat
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from asyncactor import (
     Actor,
@@ -67,6 +66,10 @@ from .exceptions import (
 )
 from .model import Node, NodeEvent, NodeSet, UpdateEvent, Watcher
 from .types import ACLFinder, ACLStepper, ConvNull, NullACL, RootEntry
+import contextlib
+
+if TYPE_CHECKING:
+    import io
 
 Stream = anyio.abc.ByteStream
 
@@ -224,10 +227,8 @@ class StreamCommand:
                 await self.send(error=repr(exc))
             finally:
                 with anyio.move_on_after(2, shield=True):
-                    try:
+                    with contextlib.suppress(anyio.BrokenResourceError):
                         await self.send(state="end")
-                    except anyio.BrokenResourceError:
-                        pass
 
         else:
             res = await self.run(**kw)
@@ -549,62 +550,64 @@ class SCmd_watch(StreamCommand):
         min_depth = msg.get("min_depth", 0)
         empty = msg.get("empty", False)
 
-        async with Watcher(entry) as watcher:
-            async with anyio.create_task_group() as tg:
-                tock = client.server.tock
-                shorter = PathShortener(entry.path)
-                if msg.get("fetch", False):
+        async with (
+            Watcher(entry) as watcher,
+            anyio.create_task_group() as tg,
+        ):
+            tock = client.server.tock
+            shorter = PathShortener(entry.path)
+            if msg.get("fetch", False):
 
-                    async def orig_state():
-                        kv = {"max_depth": max_depth, "min_depth": min_depth}
+                async def orig_state():
+                    kv = {"max_depth": max_depth, "min_depth": min_depth}
 
-                        async def worker(entry, acl):
-                            if entry.data is NotGiven and not empty:
-                                return
-                            if entry.tock < tock:
-                                res = entry.serialize(
-                                    chop_path=client._chop_path,
-                                    nchain=nchain,
-                                    conv=conv,
-                                )
-                                shorter(res)
-                                if not acl.allows("r"):
-                                    res.pop("value", None)
-                                await self.send(**res)
+                    async def worker(entry, acl):
+                        if entry.data is NotGiven and not empty:
+                            return
+                        if entry.tock < tock:
+                            res = entry.serialize(
+                                chop_path=client._chop_path,
+                                nchain=nchain,
+                                conv=conv,
+                            )
+                            shorter(res)
+                            if not acl.allows("r"):
+                                res.pop("value", None)
+                            await self.send(**res)
 
-                            if not acl.allows("e"):
-                                raise StopAsyncIteration
-                            if not acl.allows("x"):
-                                acl.block("r")
-
-                        await entry.walk(worker, acl=acl, **kv)
-                        await self.send(state="uptodate")
-
-                    tg.start_soon(orig_state)
-
-                async for m in watcher:
-                    ml = len(m.entry.path) - len(msg.path)
-                    if ml < min_depth:
-                        continue
-                    if max_depth >= 0 and ml > max_depth:
-                        continue
-                    a = acl
-                    for p in getattr(m, "path", [])[shorter.depth :]:
-                        if not a.allows("e"):
-                            break
+                        if not acl.allows("e"):
+                            raise StopAsyncIteration
                         if not acl.allows("x"):
-                            a.block("r")
-                        a = a.step(p)
-                    else:
-                        res = m.entry.serialize(
-                            chop_path=client._chop_path,
-                            nchain=nchain,
-                            conv=conv,
-                        )
-                        shorter(res)
-                        if not a.allows("r"):
-                            res.pop("value", None)
-                        await self.send(**res)
+                            acl.block("r")
+
+                    await entry.walk(worker, acl=acl, **kv)
+                    await self.send(state="uptodate")
+
+                tg.start_soon(orig_state)
+
+            async for m in watcher:
+                ml = len(m.entry.path) - len(msg.path)
+                if ml < min_depth:
+                    continue
+                if max_depth >= 0 and ml > max_depth:
+                    continue
+                a = acl
+                for p in getattr(m, "path", [])[shorter.depth :]:
+                    if not a.allows("e"):
+                        break
+                    if not acl.allows("x"):
+                        a.block("r")
+                    a = a.step(p)
+                else:
+                    res = m.entry.serialize(
+                        chop_path=client._chop_path,
+                        nchain=nchain,
+                        conv=conv,
+                    )
+                    shorter(res)
+                    if not a.allows("r"):
+                        res.pop("value", None)
+                    await self.send(**res)
 
 
 class SCmd_msg_monitor(StreamCommand):
@@ -1376,7 +1379,7 @@ class Server:
     ports = None
     _tock = 0
 
-    def __init__(self, name: str, cfg: dict = None, init: Any = NotGiven):
+    def __init__(self, name: str, cfg: dict | None = None, init: Any = NotGiven):
         self.codec = get_codec("std-msgpack")
         self.root = RootEntry(self, tock=self.tock)
         from moat.util import CFG
@@ -1838,7 +1841,9 @@ class Server:
         cmd = getattr(self, "user_" + action)
         try:
             async with self.backend.monitor(
-                *self.cfg.server.root, action, codec=self.codec,
+                *self.cfg.server.root,
+                action,
+                codec=self.codec,
             ) as stream:
                 if delay is not None:
                     await delay.wait()
@@ -2335,8 +2340,8 @@ class Server:
 
     async def load(
         self,
-        path: str = None,
-        stream: io.IOBase = None,
+        path: str | None = None,
+        stream: io.IOBase | None = None,
         local: bool = False,
         authoritative: bool = False,
     ):
@@ -2401,7 +2406,7 @@ class Server:
         await writer(msg)  # XXX legacy
         await self.root.walk(saver, full=full)
 
-    async def save(self, path: str = None, stream=None, full=True):
+    async def save(self, path: str | None = None, stream=None, full=True):
         """Save the current state to ``path`` or ``stream``."""
         shorter = PathShortener([])
         async with MsgWriter(path=path, stream=stream) as mw:
@@ -2409,7 +2414,7 @@ class Server:
 
     async def save_stream(
         self,
-        path: str = None,
+        path: str | None = None,
         stream: anyio.abc.Stream = None,
         save_state: bool = False,
         done: ValueEvent = None,
@@ -2486,7 +2491,7 @@ class Server:
 
     async def _saver(
         self,
-        path: str = None,
+        path: str | None = None,
         stream=None,
         done: ValueEvent = None,
         save_state=False,
@@ -2511,7 +2516,9 @@ class Server:
                 with anyio.CancelScope(shield=True):
                     sd.set()
 
-    async def run_saver(self, path: str = None, stream=None, save_state=False, wait: bool = True):
+    async def run_saver(
+        self, path: str | None = None, stream=None, save_state=False, wait: bool = True
+    ):
         """
         Start a task that continually saves to disk.
 

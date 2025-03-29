@@ -10,7 +10,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from moat.db.schema import Base
 
 
-
 class ThingTyp(Base):
     "One kind of thing."
 
@@ -19,10 +18,13 @@ class ThingTyp(Base):
     comment: Mapped[str] = mapped_column(type_=String(200), nullable=True)
 
     parent_id: Mapped[int] = mapped_column(
-        ForeignKey("thingtyp.id", name="fk_thingtyp_typ"), nullable=True,
+        ForeignKey("thingtyp.id", name="fk_thingtyp_typ"),
+        nullable=True,
     )
     parent: Mapped[ThingTyp] = relationship(
-        "ThingTyp", back_populates="children", remote_side=[id],
+        "ThingTyp",
+        back_populates="children",
+        remote_side=[id],
     )
 
     abstract: Mapped[bool] = mapped_column(

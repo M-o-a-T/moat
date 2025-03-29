@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import socket
 import struct
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from functools import partial
 from pathlib import Path
 from typing import Any
@@ -126,10 +126,8 @@ class ModbusClient(CtxObj):
 
         elif "host" in cfg or ("port" in cfg and isinstance(cfg["port"], int)):
             for k in ("host", "port"):
-                try:
+                with suppress(KeyError):
                     kw[k] = cfg[k]
-                except KeyError:
-                    pass
             return self.host(**kw)
         else:
             raise ValueError("neither serial nor TCP config found")
@@ -702,9 +700,9 @@ class Slot(CtxObj):
         self,
         unit,
         slot,
-        read_delay: float = None,
+        read_delay: float | None = None,
         read_align: bool = False,
-        write_delay: float = None,
+        write_delay: float | None = None,
         **kw,
     ):
         self.unit = unit
@@ -766,10 +764,7 @@ class Slot(CtxObj):
         """
         Check whether the slot does not contain any registers.
         """
-        for offsets in self.modes.values():
-            if offsets.values:
-                return False
-        return True
+        return all(not offsets.values for offsets in self.modes.values())
 
     def add(self, typ: TypeCodec, offset: int, cls: type[BaseValue] | BaseValue) -> BaseValue:
         """Add a field to this slot.
@@ -1033,7 +1028,7 @@ class ValueList(DataBlock):
         else:
             msg = self.kind.encoder_m(address=start, count=length, slave=u.unit, values=values)
 
-        r = await u.host.execute(msg)  # pylint: disable=unused-variable
+        await u.host.execute(msg)  # pylint: disable=unused-variable
         # raises an error if failed
 
         self.markSent(start, length)

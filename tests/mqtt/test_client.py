@@ -38,7 +38,7 @@ class MQTTClientTest(unittest.TestCase):
         async def test_coro():
             async with open_mqttclient() as client:
                 await client.connect("mqtt://test.mosquitto.org/")
-                self.assertIsNotNone(client.session)
+                assert client.session is not None
 
         try:
             anyio_run(test_coro)
@@ -51,7 +51,7 @@ class MQTTClientTest(unittest.TestCase):
             async with open_mqttclient(config={"check_hostname": False}) as client:
                 ca = os.path.join(os.path.dirname(os.path.realpath(__file__)), "mosquitto.org.crt")
                 await client.connect("mqtts://test.mosquitto.org/", cafile=ca)
-                self.assertIsNotNone(client.session)
+                assert client.session is not None
 
         try:
             with ungroup:
@@ -74,7 +74,7 @@ class MQTTClientTest(unittest.TestCase):
 
         async def test_coro():
             async with open_mqttclient("mqtt://test.mosquitto.org/", config=config) as client:
-                self.assertIsNotNone(client.session)
+                assert client.session is not None
 
         try:
             anyio_run(test_coro)
@@ -86,7 +86,7 @@ class MQTTClientTest(unittest.TestCase):
             async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
                 async with open_mqttclient() as client:
                     await client.connect("ws://127.0.0.1:8080/")
-                    self.assertIsNotNone(client.session)
+                    assert client.session is not None
 
         anyio_run(test_coro, backend="trio")
 
@@ -95,11 +95,11 @@ class MQTTClientTest(unittest.TestCase):
             async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
                 async with open_mqttclient() as client:
                     await client.connect("ws://fred:password@127.0.0.1:8080/")
-                    self.assertIsNotNone(client.session)
+                    assert client.session is not None
                     await client.reconnect()
 
-                    self.assertIsNotNone(client.session.username)
-                    self.assertIsNotNone(client.session.password)
+                    assert client.session.username is not None
+                    assert client.session.password is not None
 
         anyio_run(test_coro, backend="trio")
 
@@ -112,7 +112,7 @@ class MQTTClientTest(unittest.TestCase):
                         "mosquitto.org.crt",
                     )
                     await client.connect("ws://127.0.0.1:8081/", cafile=ca)
-                    self.assertIsNotNone(client.session)
+                    assert client.session is not None
 
         anyio_run(test_coro, backend="trio")
 
@@ -121,7 +121,7 @@ class MQTTClientTest(unittest.TestCase):
             async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
                 async with open_mqttclient() as client:
                     await client.connect(URI)
-                    self.assertIsNotNone(client.session)
+                    assert client.session is not None
                     await client.ping()
 
         anyio_run(test_coro, backend="trio")
@@ -131,7 +131,7 @@ class MQTTClientTest(unittest.TestCase):
             async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
                 async with open_mqttclient() as client:
                     await client.connect(URI)
-                    self.assertIsNotNone(client.session)
+                    assert client.session is not None
                     ret = await client.subscribe(
                         [
                             ("$SYS/broker/uptime", QOS_0),
@@ -139,9 +139,9 @@ class MQTTClientTest(unittest.TestCase):
                             ("$SYS/broker/uptime", QOS_2),
                         ],
                     )
-                    self.assertEqual(ret[0], QOS_0)
-                    self.assertEqual(ret[1], QOS_1)
-                    self.assertEqual(ret[2], QOS_2)
+                    assert ret[0] == QOS_0
+                    assert ret[1] == QOS_1
+                    assert ret[2] == QOS_2
 
         anyio_run(test_coro, backend="trio")
 
@@ -150,9 +150,9 @@ class MQTTClientTest(unittest.TestCase):
             async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
                 async with open_mqttclient() as client:
                     await client.connect(URI)
-                    self.assertIsNotNone(client.session)
+                    assert client.session is not None
                     ret = await client.subscribe([("$SYS/broker/uptime", QOS_0)])
-                    self.assertEqual(ret[0], QOS_0)
+                    assert ret[0] == QOS_0
                     await client.unsubscribe(["$SYS/broker/uptime"])
 
         anyio_run(test_coro, backend="trio")
@@ -164,16 +164,16 @@ class MQTTClientTest(unittest.TestCase):
             async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
                 async with open_mqttclient() as client:
                     await client.connect(URI)
-                    self.assertIsNotNone(client.session)
+                    assert client.session is not None
                     ret = await client.subscribe([("test_topic", QOS_0)])
-                    self.assertEqual(ret[0], QOS_0)
+                    assert ret[0] == QOS_0
                     async with open_mqttclient() as client_pub:
                         await client_pub.connect(URI)
                         await client_pub.publish("test_topic", data, QOS_0)
                     message = await client.deliver_message()
-                    self.assertIsNotNone(message)
-                    self.assertIsNotNone(message.publish_packet)
-                    self.assertEqual(message.data, data)
+                    assert message is not None
+                    assert message.publish_packet is not None
+                    assert message.data == data
                     await client.unsubscribe(["$SYS/broker/uptime"])
 
         anyio_run(test_coro, backend="trio")
@@ -183,12 +183,11 @@ class MQTTClientTest(unittest.TestCase):
             async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
                 async with open_mqttclient() as client:
                     await client.connect(URI)
-                    self.assertIsNotNone(client.session)
+                    assert client.session is not None
                     ret = await client.subscribe([("test_topic", QOS_0)])
-                    self.assertEqual(ret[0], QOS_0)
-                    with self.assertRaises(TimeoutError):
-                        with anyio.fail_after(2):
-                            await client.deliver_message()
+                    assert ret[0] == QOS_0
+                    with pytest.raises(TimeoutError), anyio.fail_after(2):
+                        await client.deliver_message()
                     await client.unsubscribe(["$SYS/broker/uptime"])
 
         anyio_run(test_coro, backend="trio")

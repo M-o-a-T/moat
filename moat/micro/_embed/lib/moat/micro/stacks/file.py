@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.micro.compat import TimeoutError, wait_for_ms, _rdq, _wrq
 
-from ..proto.stack import BaseBuf
+from moat.micro.proto.stack import BaseBuf
 
 
 class FileBuf(BaseBuf):

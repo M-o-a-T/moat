@@ -97,7 +97,6 @@ class ReplyVoltages(P.ReplyVoltages):
         return self.S.pack(self.voltRaw, self.bypassRaw)
 
     async def from_cell(self, cell):
-        chg = False
         u = await cell.u()
         bal = await cell.bal()
 

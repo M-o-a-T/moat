@@ -7,7 +7,7 @@ import unittest
 from moat.mqtt.adapters import BufferAdapter
 from moat.mqtt.mqtt.pubcomp import PacketIdVariableHeader, PubcompPacket
 
-from .. import anyio_run
+from tests.mqtt import anyio_run
 
 
 class PubcompPacketTest(unittest.TestCase):
@@ -15,10 +15,10 @@ class PubcompPacketTest(unittest.TestCase):
         data = b"\x70\x02\x00\x0a"
         stream = BufferAdapter(data)
         message = anyio_run(PubcompPacket.from_stream, stream)
-        self.assertEqual(message.variable_header.packet_id, 10)
+        assert message.variable_header.packet_id == 10
 
     def test_to_bytes(self):
         variable_header = PacketIdVariableHeader(10)
         publish = PubcompPacket(variable_header=variable_header)
         out = publish.to_bytes()
-        self.assertEqual(out, b"\x70\x02\x00\x0a")
+        assert out == b"p\x02\x00\n"

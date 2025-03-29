@@ -346,7 +346,7 @@ def load_ext(name, *attr, err=False):
     path = name.split(".")
     path.extend(attr[:-1])
     dp = ".".join(path)
-    dpe = ".".join(path[:-1])
+    ".".join(path[:-1])
     try:
         mod = importlib.import_module(dp)
     except ModuleNotFoundError as exc:
@@ -861,7 +861,12 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
             pass
 
     obj.cfg = process_args(
-        obj.cfg, set_=set_, vars_=vars_, eval_=eval_, path_=path_, proxy_=proxy_,
+        obj.cfg,
+        set_=set_,
+        vars_=vars_,
+        eval_=eval_,
+        path_=path_,
+        proxy_=proxy_,
     )
 
     if wrap:

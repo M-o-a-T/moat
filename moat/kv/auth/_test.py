@@ -11,7 +11,6 @@ import logging
 
 log = logging.getLogger(__name__)
 
-from ..client import Client
 from . import (
     BaseClientAuth,
     BaseClientAuthMaker,
@@ -20,6 +19,10 @@ from . import (
     null_client_login,
     null_server_login,
 )
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.kv.client import Client
 
 
 def load(typ: str, *, make: bool = False, server: bool):

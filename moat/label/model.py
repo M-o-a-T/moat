@@ -16,7 +16,10 @@ class SheetTyp(Base):
 
     name: Mapped[str] = mapped_column(unique=True, type_=String(40))
     count: Mapped[int] = mapped_column(
-        nullable=False, comment="Number of labels per sheet", default=1, server_default="1",
+        nullable=False,
+        comment="Number of labels per sheet",
+        default=1,
+        server_default="1",
     )
 
     labeltypes: Mapped[set[LabelTyp]] = relationship(back_populates="sheettyp")
@@ -41,11 +44,13 @@ class LabelTyp(Base):
         type_=String(100),
     )
     code: Mapped[int] = mapped_column(
-        nullable=False, comment="Initial ID code when no labels exist",
+        nullable=False,
+        comment="Initial ID code when no labels exist",
     )
 
     sheettyp_id: Mapped[int] = mapped_column(
-        ForeignKey("sheettyp.id", name="fk_labeltyp_sheettyp"), nullable=False,
+        ForeignKey("sheettyp.id", name="fk_labeltyp_sheettyp"),
+        nullable=False,
     )
     sheettyp: Mapped[SheetTyp] = relationship(back_populates="labeltypes")
 
@@ -84,11 +89,15 @@ class Sheet(Base):
     "A (to-be-)printed sheet with labels."
 
     sheettyp_id: Mapped[int] = mapped_column(
-        ForeignKey("sheettyp.id", name="fk_sheet_sheettyp"), nullable=True,
+        ForeignKey("sheettyp.id", name="fk_sheet_sheettyp"),
+        nullable=True,
     )
 
     start: Mapped[int] = mapped_column(
-        nullable=False, default=0, server_default="0", comment="Position of first label",
+        nullable=False,
+        default=0,
+        server_default="0",
+        comment="Position of first label",
     )
 
     sheettyp: Mapped[SheetTyp] = relationship()
@@ -110,22 +119,29 @@ class Label(Base):
     "A single label."
 
     code: Mapped[int] = mapped_column(
-        unique=True, comment="The numeric code in the primary barcode.",
+        unique=True,
+        comment="The numeric code in the primary barcode.",
     )
     rand: Mapped[str] = mapped_column(
-        nullable=True, comment="random characters in the seconrady barcode URL.", type_=String(16),
+        nullable=True,
+        comment="random characters in the seconrady barcode URL.",
+        type_=String(16),
     )
     text: Mapped[str] = mapped_column(
-        nullable=False, comment="The text on the label. May be numeric.", type_=String(200),
+        nullable=False,
+        comment="The text on the label. May be numeric.",
+        type_=String(200),
     )
     typ_id: Mapped[int] = mapped_column(ForeignKey("labeltyp.id", name="fk_label_labeltyp"))
     sheet_id: Mapped[int] = mapped_column(
-        ForeignKey("sheet.id", name="fk_label_sheet"), nullable=True,
+        ForeignKey("sheet.id", name="fk_label_sheet"),
+        nullable=True,
     )
 
     box_id: Mapped[int] = mapped_column(ForeignKey("box.id", name="fk_label_box"), nullable=True)
     thing_id: Mapped[int] = mapped_column(
-        ForeignKey("thing.id", name="fk_label_thing"), nullable=True,
+        ForeignKey("thing.id", name="fk_label_thing"),
+        nullable=True,
     )
     # thing_id
 

@@ -167,9 +167,8 @@ class _Signed:
 
     def _decode(self, regs):
         res = super()._decode(regs)
-        if res is not None:
-            if res & (1 << (self.len * 16 - 1)):
-                res -= 1 << (self.len * 16)
+        if res is not None and res & (1 << (self.len * 16 - 1)):
+            res -= 1 << (self.len * 16)
         return res
 
     def _encode(self, value):

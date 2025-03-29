@@ -5,7 +5,7 @@ Serial port access apps
 from __future__ import annotations
 
 from moat.micro.compat import AC_use
-from moat.micro.part.serial import Serial, NamedSerial
+from moat.micro.part.serial import NamedSerial
 
 
 # Serial packet forwarder
@@ -22,7 +22,7 @@ from moat.micro.part.serial import Serial, NamedSerial
 def _KS(cfg):
     p = cfg["port"]
     if not isinstance(p, str):
-        ser = Serial
+        pass
     elif p == "USB":
         from moat.micro.part.serial import USBSerial
 

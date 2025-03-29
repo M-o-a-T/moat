@@ -7,12 +7,10 @@ import logging
 import anyio
 from moat.util import create_queue
 
-from ...adapters import StreamAdapter
-from ...errors import MQTTException, NoDataException
-from ...plugins.manager import PluginManager
-from ...session import Session
-from ...utils import format_client_message
-from ..connack import (
+from moat.mqtt.errors import MQTTException, NoDataException
+from moat.mqtt.session import Session
+from moat.mqtt.utils import format_client_message
+from moat.mqtt.mqtt.connack import (
     BAD_USERNAME_PASSWORD,
     CONNECTION_ACCEPTED,
     IDENTIFIER_REJECTED,
@@ -20,14 +18,19 @@ from ..connack import (
     UNACCEPTABLE_PROTOCOL_VERSION,
     ConnackPacket,
 )
-from ..connect import ConnectPacket
-from ..pingreq import PingReqPacket
-from ..pingresp import PingRespPacket
-from ..suback import SubackPacket
-from ..subscribe import SubscribePacket
-from ..unsuback import UnsubackPacket
-from ..unsubscribe import UnsubscribePacket
+from moat.mqtt.mqtt.connect import ConnectPacket
+from moat.mqtt.mqtt.pingresp import PingRespPacket
+from moat.mqtt.mqtt.suback import SubackPacket
+from moat.mqtt.mqtt.unsuback import UnsubackPacket
 from .handler import EVENT_MQTT_PACKET_RECEIVED, EVENT_MQTT_PACKET_SENT, ProtocolHandler
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.mqtt.mqtt.unsubscribe import UnsubscribePacket
+    from moat.mqtt.mqtt.subscribe import SubscribePacket
+    from moat.mqtt.mqtt.pingreq import PingReqPacket
+    from moat.mqtt.plugins.manager import PluginManager
+    from moat.mqtt.adapters import StreamAdapter
 
 logger = logging.getLogger(__name__)
 

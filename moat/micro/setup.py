@@ -18,6 +18,7 @@ from moat.lib.codec import get_codec
 from .compat import idle, log
 
 import asyncclick as click
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -217,7 +218,7 @@ def find_p(prog: str):
     for p in os.environ["PATH"].split(os.pathsep):
         try:
             pp = p + os.sep + prog
-            st = os.stat(pp)
+            os.stat(pp)
         except FileNotFoundError:
             continue
         else:
@@ -232,10 +233,8 @@ async def install_(cfg, dest: Path = None, upload: bool = False):
         port = anyio.Path(get_part(cfg, cfg.install.serial))
     except AttributeError:
         port = None
-    try:
-        dir_ = cfg.install.dir
-    except AttributeError:
-        dir_ = ""
+    with contextlib.suppress(AttributeError):
+        pass
     try:
         rate = cfg.install.rate
     except AttributeError:
@@ -305,7 +304,9 @@ async def install_(cfg, dest: Path = None, upload: bool = False):
             print("… found.")
 
         await anyio.to_thread.run_sync(
-            shutil.copy, portdir / "build-RPI_PICO/" / "firmware.uf2", dest,
+            shutil.copy,
+            portdir / "build-RPI_PICO/" / "firmware.uf2",
+            dest,
         )
 
     if port is not None and not await port.exists():

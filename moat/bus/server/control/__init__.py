@@ -6,7 +6,7 @@ Just dispatch them.
 
 from __future__ import annotations
 
-from ...util import SubDispatcher
+from moat.bus.util import SubDispatcher
 
 # import logging
 # logger = logging.getLogger(__name__)

@@ -1,2 +1,2 @@
 from __future__ import annotations
-from .server import Server as Server
+from .server import Server  # noqa:F401

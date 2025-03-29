@@ -10,9 +10,9 @@ import anyio
 from asyncscope import scope
 from moat.util import attrdict, merge, to_attrdict
 
-from ..client import ModbusClient
+from moat.modbus.client import ModbusClient
 from .device import ServerDevice, ClientDevice, fixup
-from ..server import create_server
+from moat.modbus.server import create_server
 
 logger = logging.getLogger(__name__)
 

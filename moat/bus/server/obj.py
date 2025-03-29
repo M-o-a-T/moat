@@ -46,7 +46,6 @@ class BaseObj:
         self.is_ready = trio.Event()
 
     def __repr__(self):
-        r = ""
         if self.client_id:
             return f"<{self.__class__.__name__}: {self.serial} @{self.client_id}>"
         else:
@@ -88,7 +87,9 @@ class BaseObj:
         """
         pass
 
-    async def msg_out(self, code: int, data: bytes, *, src: int = None, dst: int = None):
+    async def msg_out(
+        self, code: int, data: bytes, *, src: int | None = None, dst: int | None = None
+    ):
         """
         Send a message to the device.
         """

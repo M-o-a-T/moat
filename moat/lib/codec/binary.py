@@ -1,2 +1,3 @@
 "Alternate name for the no-op codec"
-from .noop import Codec as Codec
+from __future__ import annotations
+from .noop import Codec  # noqa:F401

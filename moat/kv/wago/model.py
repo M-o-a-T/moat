@@ -167,7 +167,7 @@ class WAGOoutput(_WAGOnode):
                             await self.root.err.record_error(
                                 "wago",
                                 self.subpath,
-                                comment="Missing value: %r" % (msg,),
+                                comment=f"Missing value: {msg!r}",
                                 data={"path": self.subpath},
                             )
                         continue
@@ -200,7 +200,7 @@ class WAGOoutput(_WAGOnode):
                         await self.root.err.record_error(
                             "wago",
                             self.subpath,
-                            comment="Bad value: %r" % (val,),
+                            comment=f"Bad value: {val!r}",
                         )
 
     async def _set_value(self, val, preload, state, negate):

@@ -9,13 +9,15 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from moat.db.schema import Base
 
-from typing import Optional
 
 boxtyp_tree = Table(
     "boxtyp_tree",
     Base.metadata,
     Column(
-        "parent_id", Integer, ForeignKey("boxtyp.id", name="fk_boxtyp_parent"), primary_key=True,
+        "parent_id",
+        Integer,
+        ForeignKey("boxtyp.id", name="fk_boxtyp_parent"),
+        primary_key=True,
     ),
     Column("child_id", Integer, ForeignKey("boxtyp.id", name="fk_boxtyp_child"), primary_key=True),
 )
@@ -83,11 +85,12 @@ class Box(Base):
     typ_id: Mapped[int] = mapped_column(ForeignKey("boxtyp.id", name="fk_box_typ"))
     name: Mapped[str] = mapped_column(unique=True, type_=String(40))
     container_id: Mapped[int] = mapped_column(
-        ForeignKey("box.id", name="fk_box_container"), nullable=True,
+        ForeignKey("box.id", name="fk_box_container"),
+        nullable=True,
     )
 
     boxtyp: Mapped[BoxTyp] = relationship(back_populates="boxes")
-    container: Mapped[Optional[Box]] = relationship(back_populates="boxes", remote_side=[id])
+    container: Mapped[Box | None] = relationship(back_populates="boxes", remote_side=[id])
     boxes: Mapped[set[Box]] = relationship(back_populates="container")
 
     # location within its parent

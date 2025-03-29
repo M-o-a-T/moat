@@ -6,8 +6,11 @@ from __future__ import annotations
 
 import anyio
 from contextlib import asynccontextmanager
-from moat.lib.cmd import CmdHandler
 from moat.util.cbor import StdCBOR
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.lib.cmd import CmdHandler
 
 
 @asynccontextmanager

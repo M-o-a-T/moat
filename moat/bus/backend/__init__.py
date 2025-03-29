@@ -9,8 +9,11 @@ import asyncclick as click
 from contextlib import asynccontextmanager
 from distkv.util import P
 
-from ..message import BusMessage
-from ..util import CtxObj
+from moat.bus.util import CtxObj
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.bus.message import BusMessage
 
 
 class UnknownParamError(RuntimeError):

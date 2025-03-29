@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from functools import partial
 
 import anyio
@@ -310,10 +310,8 @@ class DbusMonitor(CtxObj):
         texts = {}
 
         values.update(await self.call_bus(serviceName, "/", None, "GetValue"))
-        try:
+        with suppress(DBusError):
             texts.update(await self.call_bus(serviceName, "/", None, "GetText"))
-        except DBusError:
-            pass
 
         for path, options in paths.items():
             # path will be the D-Bus path: '/Ac/ActiveIn/L1/V'

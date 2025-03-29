@@ -102,6 +102,8 @@ class Labels(FPDF):
 
         args = [
             "lpr",
+            "-P",
+            name,
             "-o page-bottom=0",
             "-o",
             "page-left=0",

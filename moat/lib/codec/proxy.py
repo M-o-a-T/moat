@@ -24,8 +24,6 @@ from ._proxy import DProxy as _DProxy
 from ._proxy import _CProxy
 
 
-
-
 class NoProxyError(ValueError):
     "Error for nonexistent proxy values"
 

@@ -21,7 +21,7 @@ class Gateway:
 
     def __init__(self, serial, mqtt, prefix):
         if not mqtt.id.startswith(prefix):
-            raise RuntimeError("My MQTT ID must start with %r" % (prefix,))
+            raise RuntimeError(f"My MQTT ID must start with {prefix!r}")
         self.serial = serial
         self.mqtt = mqtt
         self.prefix = prefix

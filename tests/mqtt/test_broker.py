@@ -66,9 +66,9 @@ class BrokerTest(unittest.TestCase):
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
-                self.assertTrue(broker.transitions.is_started())
+                assert broker.transitions.is_started()
                 self.assertDictEqual(broker._sessions, {})
-                self.assertIn("default", broker._servers)
+                assert "default" in broker._servers
                 MockPluginManager.assert_has_calls(
                     [
                         call().fire_event(EVENT_BROKER_PRE_START),
@@ -84,7 +84,7 @@ class BrokerTest(unittest.TestCase):
                 ],
                 any_order=True,
             )
-            self.assertTrue(broker.transitions.is_stopped())
+            assert broker.transitions.is_stopped()
 
         anyio_run(test_coro, backend="trio")
 
@@ -96,14 +96,14 @@ class BrokerTest(unittest.TestCase):
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
-                self.assertTrue(broker.transitions.is_started())
+                assert broker.transitions.is_started()
                 async with open_mqttclient() as client:
                     ret = await client.connect(URL)
-                    self.assertEqual(ret, 0)
-                    self.assertEqual(len(broker._sessions), 1)
-                    self.assertIn(client.session.client_id, broker._sessions)
+                    assert ret == 0
+                    assert len(broker._sessions) == 1
+                    assert client.session.client_id in broker._sessions
                 await anyio.sleep(0.1)  # let the broker task process the packet
-            self.assertTrue(broker.transitions.is_stopped())
+            assert broker.transitions.is_stopped()
             self.assertDictEqual(broker._sessions, {})
 
         anyio_run(test_coro)
@@ -116,7 +116,7 @@ class BrokerTest(unittest.TestCase):
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
-                self.assertTrue(broker.transitions.is_started())
+                assert broker.transitions.is_started()
 
                 async with await anyio.connect_tcp("127.0.0.1", PORT) as conn:
                     stream = StreamAdapter(conn)
@@ -139,7 +139,7 @@ class BrokerTest(unittest.TestCase):
                     disconnect = DisconnectPacket()
                     await disconnect.to_stream(stream)
 
-            self.assertTrue(broker.transitions.is_stopped())
+            assert broker.transitions.is_stopped()
             self.assertDictEqual(broker._sessions, {})
 
         anyio_run(test_coro, backend="trio")
@@ -152,7 +152,7 @@ class BrokerTest(unittest.TestCase):
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
-                self.assertTrue(broker.transitions.is_started())
+                assert broker.transitions.is_started()
                 async with open_mqttclient(
                     client_id="",
                     config={"auto_reconnect": False},
@@ -161,8 +161,8 @@ class BrokerTest(unittest.TestCase):
                     with pytest.raises(ConnectException) as ce:
                         await client.connect(URL, cleansession=False)
                     return_code = ce.value.return_code
-                    self.assertEqual(return_code, 0x02)
-                    self.assertNotIn(client.session.client_id, broker._sessions)
+                    assert return_code == 2
+                    assert client.session.client_id not in broker._sessions
 
         anyio_run(test_coro)
 
@@ -174,20 +174,20 @@ class BrokerTest(unittest.TestCase):
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
-                self.assertTrue(broker.transitions.is_started())
+                assert broker.transitions.is_started()
                 async with open_mqttclient() as client:
                     ret = await client.connect(URL)
-                    self.assertEqual(ret, 0)
+                    assert ret == 0
                     await client.subscribe([("/topic", QOS_0)])
 
                     # Test if the client test client subscription is registered
                     subs = broker._subscriptions[("", "topic")]
-                    self.assertEqual(len(subs), 1)
+                    assert len(subs) == 1
                     (s, qos) = subs[0]
-                    self.assertEqual(s, client.session)
-                    self.assertEqual(qos, QOS_0)
+                    assert s == client.session
+                    assert qos == QOS_0
 
-            self.assertTrue(broker.transitions.is_stopped())
+            assert broker.transitions.is_stopped()
             MockPluginManager.assert_has_calls(
                 [
                     call().fire_event(
@@ -210,26 +210,26 @@ class BrokerTest(unittest.TestCase):
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
-                self.assertTrue(broker.transitions.is_started())
+                assert broker.transitions.is_started()
                 async with open_mqttclient() as client:
                     ret = await client.connect(URL)
-                    self.assertEqual(ret, 0)
+                    assert ret == 0
                     await client.subscribe([("/topic", QOS_0)])
 
                     # Test if the client test client subscription is registered
                     subs = broker._subscriptions[("", "topic")]
-                    self.assertEqual(len(subs), 1)
+                    assert len(subs) == 1
                     (s, qos) = subs[0]
-                    self.assertEqual(s, client.session)
-                    self.assertEqual(qos, QOS_0)
+                    assert s == client.session
+                    assert qos == QOS_0
 
                     await client.subscribe([("/topic", QOS_0)])
-                    self.assertEqual(len(subs), 1)
+                    assert len(subs) == 1
                     (s, qos) = subs[0]
-                    self.assertEqual(s, client.session)
-                    self.assertEqual(qos, QOS_0)
+                    assert s == client.session
+                    assert qos == QOS_0
 
-            self.assertTrue(broker.transitions.is_stopped())
+            assert broker.transitions.is_stopped()
             MockPluginManager.assert_has_calls(
                 [
                     call().fire_event(
@@ -252,22 +252,22 @@ class BrokerTest(unittest.TestCase):
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
-                self.assertTrue(broker.transitions.is_started())
+                assert broker.transitions.is_started()
                 async with open_mqttclient() as client:
                     ret = await client.connect(URL)
-                    self.assertEqual(ret, 0)
+                    assert ret == 0
                     await client.subscribe([("/topic", QOS_0)])
 
                     # Test if the client test client subscription is registered
                     subs = broker._subscriptions[("", "topic")]
-                    self.assertEqual(len(subs), 1)
+                    assert len(subs) == 1
                     (s, qos) = subs[0]
-                    self.assertEqual(s, client.session)
-                    self.assertEqual(qos, QOS_0)
+                    assert s == client.session
+                    assert qos == QOS_0
 
                     await client.unsubscribe(["/topic"])
-                    self.assertEqual(broker._subscriptions[("", "topic")], [])
-            self.assertTrue(broker.transitions.is_stopped())
+                    assert broker._subscriptions["", "topic"] == []
+            assert broker.transitions.is_stopped()
             MockPluginManager.assert_has_calls(
                 [
                     call().fire_event(
@@ -295,16 +295,16 @@ class BrokerTest(unittest.TestCase):
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
-                self.assertTrue(broker.transitions.is_started())
+                assert broker.transitions.is_started()
                 async with open_mqttclient() as pub_client:
                     ret = await pub_client.connect(URL)
-                    self.assertEqual(ret, 0)
+                    assert ret == 0
 
                     ret_message = await pub_client.publish("/topic", b"data", QOS_0)
                 await anyio.sleep(0.1)  # let the broker task process the packet
-                self.assertEqual(broker._retained_messages, {})
+                assert broker._retained_messages == {}
 
-            self.assertTrue(broker.transitions.is_stopped())
+            assert broker.transitions.is_stopped()
             MockPluginManager.assert_has_calls(
                 [
                     call().fire_event(
@@ -326,7 +326,7 @@ class BrokerTest(unittest.TestCase):
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
-                self.assertTrue(broker.transitions.is_started())
+                assert broker.transitions.is_started()
 
                 async with await anyio.connect_tcp("127.0.0.1", PORT) as conn:
                     stream = StreamAdapter(conn)
@@ -366,14 +366,14 @@ class BrokerTest(unittest.TestCase):
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
-                self.assertTrue(broker.transitions.is_started())
+                assert broker.transitions.is_started()
                 async with open_mqttclient() as pub_client:
                     ret = await pub_client.connect(URL)
-                    self.assertEqual(ret, 0)
+                    assert ret == 0
 
                     await pub_client.publish("/+", b"data", QOS_0)
 
-            self.assertTrue(broker.transitions.is_stopped())
+            assert broker.transitions.is_stopped()
 
         anyio_run(test_coro)
 
@@ -385,19 +385,19 @@ class BrokerTest(unittest.TestCase):
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
-                self.assertTrue(broker.transitions.is_started())
+                assert broker.transitions.is_started()
                 async with open_mqttclient() as pub_client:
                     ret = await pub_client.connect(URL)
-                    self.assertEqual(ret, 0)
+                    assert ret == 0
 
                     ret_message = await pub_client.publish(
                         "/topic",
                         bytearray(b"\x99" * 256 * 1024),
                         QOS_2,
                     )
-                self.assertEqual(broker._retained_messages, {})
+                assert broker._retained_messages == {}
 
-            self.assertTrue(broker.transitions.is_stopped())
+            assert broker.transitions.is_stopped()
             MockPluginManager.assert_has_calls(
                 [
                     call().fire_event(
@@ -419,20 +419,20 @@ class BrokerTest(unittest.TestCase):
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
-                self.assertTrue(broker.transitions.is_started())
+                assert broker.transitions.is_started()
 
                 async with open_mqttclient() as pub_client:
                     ret = await pub_client.connect(URL)
-                    self.assertEqual(ret, 0)
+                    assert ret == 0
                     await pub_client.publish("/topic", b"data", QOS_0, retain=True)
                 await anyio.sleep(0.1)  # let the broker task process the packet
-                self.assertIn("/topic", broker._retained_messages)
+                assert "/topic" in broker._retained_messages
                 retained_message = broker._retained_messages["/topic"]
-                self.assertEqual(retained_message.source_session, pub_client.session)
-                self.assertEqual(retained_message.topic, "/topic")
-                self.assertEqual(retained_message.data, b"data")
-                self.assertEqual(retained_message.qos, QOS_0)
-            self.assertTrue(broker.transitions.is_stopped())
+                assert retained_message.source_session == pub_client.session
+                assert retained_message.topic == "/topic"
+                assert retained_message.data == b"data"
+                assert retained_message.qos == QOS_0
+            assert broker.transitions.is_stopped()
 
         anyio_run(test_coro)
 
@@ -444,15 +444,15 @@ class BrokerTest(unittest.TestCase):
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
-                self.assertTrue(broker.transitions.is_started())
+                assert broker.transitions.is_started()
 
                 async with open_mqttclient() as pub_client:
                     ret = await pub_client.connect(URL)
-                    self.assertEqual(ret, 0)
+                    assert ret == 0
                     await pub_client.publish("/topic", b"", QOS_0, retain=True)
                 await anyio.sleep(0.1)  # let the broker task process the packet
-                self.assertNotIn("/topic", broker._retained_messages)
-            self.assertTrue(broker.transitions.is_stopped())
+                assert "/topic" not in broker._retained_messages
+            assert broker.transitions.is_stopped()
 
         anyio_run(test_coro)
 
@@ -464,7 +464,7 @@ class BrokerTest(unittest.TestCase):
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
-                self.assertTrue(broker.transitions.is_started())
+                assert broker.transitions.is_started()
                 async with open_mqttclient() as sub_client:
                     await sub_client.connect(URL)
                     ret = await sub_client.subscribe(
@@ -474,18 +474,18 @@ class BrokerTest(unittest.TestCase):
                             ("/qos2", QOS_2),
                         ],
                     )
-                    self.assertEqual(ret, [QOS_0, QOS_1, QOS_2])
+                    assert ret == [QOS_0, QOS_1, QOS_2]
 
                     await self._client_publish("/qos0", b"data", QOS_0)
                     await self._client_publish("/qos1", b"data", QOS_1)
                     await self._client_publish("/qos2", b"data", QOS_2)
                     for qos in [QOS_0, QOS_1, QOS_2]:
                         message = await sub_client.deliver_message()
-                        self.assertIsNotNone(message)
-                        self.assertEqual(message.topic, "/qos%s" % qos)
-                        self.assertEqual(message.data, b"data")
-                        self.assertEqual(message.qos, qos)
-            self.assertTrue(broker.transitions.is_stopped())
+                        assert message is not None
+                        assert message.topic == "/qos%s" % qos
+                        assert message.data == b"data"
+                        assert message.qos == qos
+            assert broker.transitions.is_stopped()
 
         anyio_run(test_coro)
 
@@ -497,7 +497,7 @@ class BrokerTest(unittest.TestCase):
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
-                self.assertTrue(broker.transitions.is_started())
+                assert broker.transitions.is_started()
                 async with open_mqttclient() as sub_client:
                     await sub_client.connect(URL)
                     ret = await sub_client.subscribe(
@@ -508,9 +508,9 @@ class BrokerTest(unittest.TestCase):
                             ("sport/+/player1", QOS_0),
                         ],
                     )
-                    self.assertEqual(ret, [QOS_0, QOS_0, 0x80, QOS_0])
+                    assert ret == [QOS_0, QOS_0, 128, QOS_0]
 
-            self.assertTrue(broker.transitions.is_stopped())
+            assert broker.transitions.is_stopped()
 
         anyio_run(test_coro, backend="trio")
 
@@ -522,23 +522,22 @@ class BrokerTest(unittest.TestCase):
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
-                self.assertTrue(broker.transitions.is_started())
+                assert broker.transitions.is_started()
                 async with open_mqttclient() as sub_client:
                     await sub_client.connect(URL)
                     ret = await sub_client.subscribe([("#", QOS_0)])
-                    self.assertEqual(ret, [QOS_0])
+                    assert ret == [QOS_0]
 
                     await self._client_publish("/topic", b"data", QOS_0)
                     message = await sub_client.deliver_message()
-                    self.assertIsNotNone(message)
+                    assert message is not None
 
                     await self._client_publish("$topic", b"data", QOS_0)
                     message = None
-                    with self.assertRaises(TimeoutError):
-                        with anyio.fail_after(1):
-                            message = await sub_client.deliver_message()
-                    self.assertIsNone(message)
-            self.assertTrue(broker.transitions.is_stopped())
+                    with pytest.raises(TimeoutError), anyio.fail_after(1):
+                        message = await sub_client.deliver_message()
+                    assert message is None
+            assert broker.transitions.is_stopped()
 
         anyio_run(test_coro)
 
@@ -550,23 +549,22 @@ class BrokerTest(unittest.TestCase):
                 plugin_namespace="moat.mqtt.test.plugins",
             ) as broker:
                 broker.plugins_manager._tg = broker._tg
-                self.assertTrue(broker.transitions.is_started())
+                assert broker.transitions.is_started()
                 async with open_mqttclient() as sub_client:
                     await sub_client.connect(URL)
                     ret = await sub_client.subscribe([("+/monitor/Clients", QOS_0)])
-                    self.assertEqual(ret, [QOS_0])
+                    assert ret == [QOS_0]
 
                     await self._client_publish("test/monitor/Clients", b"data", QOS_0)
                     message = await sub_client.deliver_message()
-                    self.assertIsNotNone(message)
+                    assert message is not None
 
                     await self._client_publish("$SYS/monitor/Clients", b"data", QOS_0)
                     message = None
-                    with self.assertRaises(TimeoutError):
-                        with anyio.fail_after(1):
-                            message = await sub_client.deliver_message()
-                    self.assertIsNone(message)
-            self.assertTrue(broker.transitions.is_stopped())
+                    with pytest.raises(TimeoutError), anyio.fail_after(1):
+                        message = await sub_client.deliver_message()
+                    assert message is None
+            assert broker.transitions.is_stopped()
 
         anyio_run(test_coro)
 
@@ -579,7 +577,7 @@ class BrokerTest(unittest.TestCase):
             ) as broker:
                 with anyio.fail_after(3):
                     broker.plugins_manager._tg = broker._tg
-                    self.assertTrue(broker.transitions.is_started())
+                    assert broker.transitions.is_started()
                     async with open_mqttclient() as sub_client:
                         await sub_client.connect(URL, cleansession=False)
                         ret = await sub_client.subscribe(
@@ -589,7 +587,7 @@ class BrokerTest(unittest.TestCase):
                                 ("/qos2", QOS_2),
                             ],
                         )
-                        self.assertEqual(ret, [QOS_0, QOS_1, QOS_2])
+                        assert ret == [QOS_0, QOS_1, QOS_2]
                         await sub_client.disconnect()
 
                         await self._client_publish("/qos0", b"data", QOS_0, retain=True)
@@ -605,13 +603,13 @@ class BrokerTest(unittest.TestCase):
                             assert message.data == b"data"
                             seen.add(qos)
                         assert seen == set((1, 2))
-            self.assertTrue(broker.transitions.is_stopped())
+            assert broker.transitions.is_stopped()
 
         anyio_run(test_coro)
 
     async def _client_publish(self, topic, data, qos, retain=False):
         async with open_mqttclient() as pub_client:
             ret = await pub_client.connect(URL)
-            self.assertEqual(ret, 0)
+            assert ret == 0
             ret = await pub_client.publish(topic, data, qos, retain)
         return ret

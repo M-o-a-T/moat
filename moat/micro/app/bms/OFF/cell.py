@@ -10,6 +10,7 @@ from victron.dbus.utils import wrap_dbus_dict, wrap_dbus_value
 from moat.micro.compat import sleep
 
 from .packet import *
+import contextlib
 
 
 def _t(x):
@@ -118,7 +119,7 @@ class CellInterface(DbusInterface):
         # XXX TODO not stored on the module yet
         c = c.cell
         adj = data - c.cfg.u.offset
-        cfg = attrdict()
+        attrdict()
         await c.req.send(["sys", "cfg"], attrdict()._update(c.cfgpath | "u", {"offset": data}))
 
         # TODO move this to a config update handler
@@ -256,10 +257,8 @@ class Cell:
                     await sleep(99999)
 
         finally:
-            try:
+            with contextlib.suppress(AttributeError):
                 del self._intf
-            except AttributeError:
-                pass
 
     @cached_property
     def cfg_path(self):

@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 import weakref
 from collections import defaultdict
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 import asyncdbus.service as dbus
 from asyncdbus.constants import NameFlag
@@ -363,9 +363,8 @@ class DbusItemImport:
         instance = object.__new__(cls)
 
         # If signal tracking should be done, also add to root tracker
-        if createsignal:
-            if "_roots" not in cls.__dict__:
-                cls._roots = TrackerDict(lambda k: DbusRootTracker(bus, k))
+        if createsignal and "_roots" not in cls.__dict__:
+            cls._roots = TrackerDict(lambda k: DbusRootTracker(bus, k))
 
         return instance
 
@@ -398,10 +397,8 @@ class DbusItemImport:
         self._interface = await self._proxy.get_interface(BUSITEM_INTF)
 
         if self._createsignal:
-            try:
+            with suppress(AttributeError):
                 await self._interface.on_properties_changed(self._properties_changed_handler)
-            except AttributeError:
-                pass
             self._match = True
             try:
                 r = self._roots[self._serviceName]
@@ -611,7 +608,7 @@ class DbusItemExport(dbus.ServiceInterface):
     async def set_value(self, newvalue):
         changes = await self._set_value(newvalue)
         if changes is not None:
-            res = await self.PropertiesChanged(changes)
+            await self.PropertiesChanged(changes)
 
     async def _set_value(self, newvalue):
         if self._value == newvalue:

@@ -40,7 +40,7 @@ class AnonymousAuthPlugin(BaseAuthPlugin):
                     self.context.logger.warning("Session informations not available")
                     authenticated = False
                 else:
-                    authenticated = True if session and session.username else False
+                    authenticated = bool(session and session.username)
                     if authenticated:
                         self.context.logger.debug(
                             "Authentication success: user %r",

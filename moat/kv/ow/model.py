@@ -315,7 +315,7 @@ class OWFSroot(ClientRoot):
             class FamilyX(OWFSfamily):
                 cls = kls.reg.get(name, OWFSnode)
 
-            FamilyX.__name__ = "OWFSfamily_%02X" % (name,)
+            FamilyX.__name__ = f"OWFSfamily_{name:02X}"
             kls.cls[name] = FamilyX
             return FamilyX
 

@@ -2,7 +2,7 @@
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
-from ..errors import MoatMQTTException
+from moat.mqtt.errors import MoatMQTTException
 from .packet import DISCONNECT, MQTTFixedHeader, MQTTPacket
 
 

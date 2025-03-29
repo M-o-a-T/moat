@@ -2,10 +2,13 @@
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
-from ..adapters import StreamAdapter
-from ..codecs import read_or_raise
-from ..errors import MoatMQTTException
+from moat.mqtt.codecs import read_or_raise
+from moat.mqtt.errors import MoatMQTTException
 from .packet import CONNACK, MQTTFixedHeader, MQTTPacket, MQTTVariableHeader
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.mqtt.adapters import StreamAdapter
 
 CONNECTION_ACCEPTED = 0x00
 UNACCEPTABLE_PROTOCOL_VERSION = 0x01

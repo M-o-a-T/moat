@@ -6,6 +6,7 @@ from asyncowfs.mock import some_server
 from moat.util import ensure_cfg
 
 from .task import task
+import contextlib
 
 PORT = ((os.getpid() + 101) % 9999) + 40000
 
@@ -19,10 +20,8 @@ async def server(client, tree={}, options={}, evt=None):  # pylint: disable=dang
         )
 
         async def may_close():
-            try:
+            with contextlib.suppress(anyio.ClosedResourceError, anyio.BrokenResourceError):
                 await listener.serve(partial(some_server, tree, options))
-            except (anyio.ClosedResourceError, anyio.BrokenResourceError):
-                pass
 
         addr = listener.extra(anyio.abc.SocketAttribute.raw_socket).getsockname()
         tg.start_soon(may_close)

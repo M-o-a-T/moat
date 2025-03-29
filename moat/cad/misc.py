@@ -12,11 +12,10 @@ except ImportError:
 __all__ = ["Slider", "Mount", "Ridge", "WoodScrew"]
 
 from math import tan, pi
+import contextlib
 
-try:
+with contextlib.suppress(ImportError):
     from .things import Cone
-except ImportError:
-    pass
 
 
 def rad(a):
@@ -48,7 +47,6 @@ def Slider(x, y, size=2, inset=0, chamfer=None, back=True, centered=True):
     """
 
     cap = -size if chamfer else size if chamfer is None else 0
-    ifix = 0 if chamfer is None else -inset
 
     # sliders
     def hook(ws, offset, length):

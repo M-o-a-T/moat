@@ -7,6 +7,7 @@ from moat.util import yprint, attrdict, NotGiven, as_service, P, attr_args
 from moat.kv.data import node_attr
 
 import logging
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -139,10 +140,8 @@ async def port_(obj, path, mode, attr):
             try:
                 v = int(v)
             except ValueError:
-                try:
+                with contextlib.suppress(ValueError):
                     v = float(v)
-                except ValueError:
-                    pass
         val[k] = v
 
     res = await node_attr(obj, cfg.prefix + path, val, {}, val_p, res=res)

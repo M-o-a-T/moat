@@ -6,6 +6,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 from moat.util import yload
+import contextlib
 
 
 def load_cfg(cfg):  # pylint: disable=redefined-outer-name
@@ -25,10 +26,8 @@ def load_cfg(cfg):  # pylint: disable=redefined-outer-name
     from logging.config import dictConfig
 
     cfg["disable_existing_loggers"] = False
-    try:
+    with contextlib.suppress(ValueError):
         dictConfig(cfg)
-    except ValueError:
-        pass
     logging.captureWarnings(True)
     logger.debug("Test %s", "starting up")
     return cfg

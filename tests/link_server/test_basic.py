@@ -38,7 +38,7 @@ async def test_ls_basic(cfg):
                     evt.set()
                     break
 
-        srv = await sf.server(init={"Hello": "there!", "test": 123})
+        await sf.server(init={"Hello": "there!", "test": 123})
         await sf.tg.start(cl, "Hello")
 
         c = await sf.client()
@@ -104,7 +104,7 @@ async def fetch(c, p):
 @pytest.mark.anyio()
 async def test_ls_walk(cfg):
     async with Scaffold(cfg, use_servers=True) as sf:
-        srv = await sf.server(init={"Hello": "there!", "test": 123})
+        await sf.server(init={"Hello": "there!", "test": 123})
         c = await sf.client()
 
         n = Node()
@@ -128,7 +128,7 @@ async def test_ls_save(cfg, tmp_path):
 
     n = Node()
     async with Scaffold(cfg, use_servers=True) as sf:
-        srv = await sf.server(init={"Hello": "there!", "test": 1})
+        await sf.server(init={"Hello": "there!", "test": 1})
         c = await sf.client()
 
         async def s(p, v):
@@ -140,10 +140,10 @@ async def test_ls_save(cfg, tmp_path):
         await c.cmd(P("s.save"), path=str(fname))
 
     async with Scaffold(cfg, use_servers=True) as sf:
-        srv = await sf.server(init={"Hello": "there!", "test": 1})
+        await sf.server(init={"Hello": "there!", "test": 1})
         c = await sf.client()
         nn = await fetch(c, "a")
         assert n.get(P("a")) != nn
-        res = await c.cmd(P("s.load"), path=str(fname))
+        await c.cmd(P("s.load"), path=str(fname))
         nn = await fetch(c, "a")
         assert n.get(P("a")) == nn

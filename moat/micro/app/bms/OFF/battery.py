@@ -99,7 +99,7 @@ class BatteryInterface(DbusInterface):
 
     @dbus.method()
     async def ReleaseRelay(self) -> b:
-        res = await self.batt.ctrl.req.send([self.batt.ctrl.name, "rly"], st=None)
+        await self.batt.ctrl.req.send([self.batt.ctrl.name, "rly"], st=None)
         return True
 
     @dbus.method()
@@ -159,7 +159,9 @@ class BatteryInterface(DbusInterface):
 
         False if there is no value
         """
-        F = lambda x: Variant("b", False) if x is None else Variant("d", x)
+
+        def F(x):
+            return Variant("b", False) if x is None else Variant("d", x)
 
         return [(F(c.load_temp), F(c.batt_temp)) for c in self.batt.cells]
 

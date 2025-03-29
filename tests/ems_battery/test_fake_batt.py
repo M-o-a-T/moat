@@ -12,6 +12,7 @@ from moat.micro._test import mpy_stack
 from moat.util.compat import log
 
 from .support import as_attr, CF
+import contextlib
 
 pytestmark = [pytest.mark.anyio, pytest.mark.xfail]
 
@@ -139,10 +140,8 @@ CFGA.b.cfg = CFGC.c
 
 async def test_batt(tmp_path):
     "Basic BMS test"
-    try:
+    with contextlib.suppress(FileNotFoundError):
         os.unlink("fake.rtc")
-    except FileNotFoundError:
-        pass
     async with mpy_stack(tmp_path, CFGA) as d, d.sub_at("b") as b, d.sub_at("a") as a:
         u = await b.u()
         assert u == 20.2  # 1% plus

@@ -2,10 +2,9 @@
 #
 # See the file license.txt for copying permission.
 from __future__ import annotations
-import anyio
 
-from ..codecs import decode_packet_id, decode_string, encode_string, int_to_bytes
-from ..errors import MoatMQTTException, MQTTException
+from moat.mqtt.codecs import decode_packet_id, decode_string, encode_string, int_to_bytes
+from moat.mqtt.errors import MoatMQTTException, MQTTException
 from .packet import (
     PUBLISH,
     MQTTFixedHeader,
@@ -13,12 +12,16 @@ from .packet import (
     MQTTPayload,
     MQTTVariableHeader,
 )
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import anyio
 
 
 class PublishVariableHeader(MQTTVariableHeader):
     __slots__ = ("topic_name", "packet_id")
 
-    def __init__(self, topic_name: str, packet_id: int = None):
+    def __init__(self, topic_name: str, packet_id: int | None = None):
         super().__init__()
         if "*" in topic_name:
             raise MQTTException(
@@ -53,7 +56,7 @@ class PublishVariableHeader(MQTTVariableHeader):
 class PublishPayload(MQTTPayload):
     __slots__ = ("data",)
 
-    def __init__(self, data: bytes = None):
+    def __init__(self, data: bytes | None = None):
         super().__init__()
         self.data = data
 
@@ -119,10 +122,7 @@ class PublishPacket(MQTTPacket):
             self.fixed_header.flags &= ~mask
 
     def _get_header_flag(self, mask):
-        if self.fixed_header.flags & mask:
-            return True
-        else:
-            return False
+        return bool(self.fixed_header.flags & mask)
 
     @property
     def dup_flag(self) -> bool:

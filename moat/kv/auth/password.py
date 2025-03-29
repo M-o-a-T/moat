@@ -9,10 +9,8 @@ from __future__ import annotations
 
 import nacl.secret
 
-from ..client import Client, NoData
-from ..exceptions import AuthFailedError
-from ..model import Entry
-from ..server import StreamCommand
+from moat.kv.client import Client, NoData
+from moat.kv.exceptions import AuthFailedError
 from . import (
     BaseClientAuth,
     BaseClientAuthMaker,
@@ -21,6 +19,12 @@ from . import (
     null_client_login,
     null_server_login,
 )
+import contextlib
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.kv.server import StreamCommand
+    from moat.kv.model import Entry
 
 
 def load(typ: str, *, make: bool = False, server: bool):
@@ -166,10 +170,8 @@ class ClientUserMaker(BaseClientAuthMaker):
         # There's no reason to send the password hash back
         self = cls(_initial=_initial)
         self._name = m.name
-        try:
+        with contextlib.suppress(AttributeError):
             self._chain = m.chain
-        except AttributeError:
-            pass
         return self
 
     async def send(self, client: Client, _kind="user", **msg):  # pylint: disable=unused-argument,arguments-differ

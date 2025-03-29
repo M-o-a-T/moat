@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import anyio
 import logging
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 import outcome
 
@@ -127,10 +127,8 @@ class _LinkCommon(CtxObj, SubConn, CmdCommon):
     async def _connect_one(self, remote, data: dict) -> CmdHandler:
         cmd = CmdHandler(self._process_server_cmd)
         auth_out = []
-        try:
+        with suppress(KeyError):
             auth_out.append(TokenAuth(data["auth"]["token"]))
-        except KeyError:
-            pass
         auth_out.append(AnonAuth())
         self._hello = Hello(cmd, me=self.name, auth_out=auth_out)
 
@@ -291,7 +289,7 @@ class Link(_LinkCommon):
                 async with timed_ctx(
                     self.cfg.client.init_timeout,
                     self._connect_one(remote, srv.data),
-                ) as conn:
+                ):
                     await self._connect_run(task_status=task_status)
             except Exception as exc:
                 self.logger.warning("Link failed: %r %r", remote, exc)

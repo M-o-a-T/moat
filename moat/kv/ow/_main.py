@@ -47,7 +47,7 @@ async def list_(obj, device, family):
         def pm(p):
             if len(p) < 1:
                 return path
-            return Path("%02x.%12x" % (f, p[0]), *p[1:])
+            return Path(f"{f:02x}.{p[0]:12x}", *p[1:])
 
     elif device:
         f, d = device.split(".", 2)[0:2]
@@ -67,7 +67,7 @@ async def list_(obj, device, family):
             elif len(p) == 1:
                 return Path("%02x" % p[0])
             else:
-                return Path("%02x.%12x" % (p[0], p[1])) + p[2:]
+                return Path(f"{p[0]:02x}.{p[1]:12x}") + p[2:]
 
     if obj.meta:
 

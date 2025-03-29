@@ -1,1 +1,2 @@
-from moat.util.msgpack import Codec as Codec
+from __future__ import annotations
+from moat.util.msgpack import Codec  # noqa:F401

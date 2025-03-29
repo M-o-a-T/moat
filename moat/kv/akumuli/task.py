@@ -15,11 +15,14 @@ except ImportError:
 
 from moat.util import combine_dict
 from moat.kv.exceptions import ClientConnectionError
-from .model import AkumuliServer
 
 from asyncakumuli import Entry, DS
 
 import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .model import AkumuliServer
 
 logger = logging.getLogger(__name__)
 
@@ -54,18 +57,20 @@ async def task(client, cfg, server: AkumuliServer, paths=(), evt=None):  # pylin
                     logger.exception("Bad message on %s: \n%s", server.topic, pformat(msg))
 
     try:
-        async with anyio.create_task_group() as tg:
-            async with akumuli.connect(**cfg) as srv:
-                srv._distkv__tg = tg
-                server.set_paths(paths)
-                await server.set_server(srv)
-                if evt is not None:
-                    evt.set()
+        async with (
+            anyio.create_task_group() as tg,
+            akumuli.connect(**cfg) as srv,
+        ):
+            srv._distkv__tg = tg
+            server.set_paths(paths)
+            await server.set_server(srv)
+            if evt is not None:
+                evt.set()
 
-                if server.topic is not None:
-                    await tg.start(process_raw)
-                while True:
-                    await anyio.sleep(99999)
+            if server.topic is not None:
+                await tg.start(process_raw)
+            while True:
+                await anyio.sleep(99999)
     except TimeoutError:
         raise
     except OSError as e:  # this would eat TimeoutError

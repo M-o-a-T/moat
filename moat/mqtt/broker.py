@@ -26,8 +26,12 @@ from .mqtt.constants import QOS_0
 # EVENT_BROKER_MESSAGE_RECEIVED is re-exported
 from .mqtt.protocol.broker_handler import BrokerProtocolHandler
 from .plugins.manager import BaseContext, PluginManager
-from .session import EVENT_BROKER_MESSAGE_RECEIVED, Session  # noqa: F401
+from .session import EVENT_BROKER_MESSAGE_RECEIVED  # noqa: F401
 from .utils import Future, format_client_message, gen_client_id, match_topic
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .session import Session
 
 _defaults = {
     "listeners": {"default": {"type": "tcp", "bind": "0.0.0.0:1883"}},
@@ -351,8 +355,9 @@ class Broker:
                             )
                         except FileNotFoundError as fnfe:
                             raise BrokerException(  # pylint:disable=W0707
-                                "Can't read cert files '%s' or '%s' : %s"
-                                % (listener["certfile"], listener["keyfile"], fnfe),
+                                "Can't read cert files '{}' or '{}' : {}".format(
+                                    listener["certfile"], listener["keyfile"], fnfe
+                                ),
                             )
 
                     address, s_port = listener["bind"].rsplit(":", 1)
@@ -787,11 +792,10 @@ class Broker:
         if "#" in a_filter and not a_filter.endswith("#"):
             # [MQTT-4.7.1-2] Wildcard character '#' is only allowed as last character in filter
             return 0x80
-        if a_filter != "+":
-            if "+" in a_filter:
-                if "/+" not in a_filter and "+/" not in a_filter:
-                    # [MQTT-4.7.1-3] + wildcard character must occupy entire level
-                    return 0x80
+        if a_filter != "+" and "+" in a_filter:
+            if "/+" not in a_filter and "+/" not in a_filter:
+                # [MQTT-4.7.1-3] + wildcard character must occupy entire level
+                return 0x80
 
         # Check if the client is authorised to connect to the topic
         permitted = await self.topic_filtering(session, topic=a_filter)
@@ -883,7 +887,7 @@ class Broker:
 
                 for target_session, qos in targets.items():
                     if target_session.transitions.state == "connected":
-                        if False and self.logger.isEnabledFor(logging.DEBUG):
+                        if False:
                             self.logger.debug(
                                 "broadcasting application message from %s on topic '%s' to %s",
                                 format_client_message(session=broadcast["session"]),

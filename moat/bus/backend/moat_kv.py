@@ -3,13 +3,13 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 import typing
-from moat.util import Path, P, gen_ident, al_lower
+from moat.util import Path, P, al_lower
 
 if typing.TYPE_CHECKING:
     from moat.kv.client import Client
 
 from . import BaseBusHandler, UnknownParamError
-from ..message import BusMessage
+from moat.bus.message import BusMessage
 
 
 class Handler(BaseBusHandler):
@@ -22,8 +22,6 @@ class Handler(BaseBusHandler):
 
     def __init__(self, client: Client, topic: Path):
         super().__init__()
-        if id is None:
-            id = gen_ident(9, alphabet=al_lower)
         self.client = client
         self.topic = topic
 

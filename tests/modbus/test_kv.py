@@ -86,7 +86,7 @@ async def test_kv_poll(autojump_clock):  # pylint: disable=unused-argument
         reg.set(43)
         await trio.sleep(2)
 
-        rv = await c.get(P("a.srv.dst"))
+        await c.get(P("a.srv.dst"))
         # assert rv == 43
         # assert reg.value_w == 44
         # assert reg.value == 43
@@ -100,8 +100,8 @@ async def test_kv_poll(autojump_clock):  # pylint: disable=unused-argument
             h.unit(32) as u,
             u.slot("default") as s,
         ):
-            v = s.add(HoldingRegisters, 12342, IntValue)
-            res = await s.getValues()
+            s.add(HoldingRegisters, 12342, IntValue)
+            await s.getValues()
             pass  # v,res
 
         pass  # ex

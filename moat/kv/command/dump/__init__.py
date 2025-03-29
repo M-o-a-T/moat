@@ -91,29 +91,31 @@ async def msg_(obj, path):
     be = obj.cfg.server.backend
     kw = obj.cfg.server[be]
 
-    async with get_backend(be)(**kw) as conn:
-        async with conn.monitor(*path) as stream:
-            async for msg in stream:
-                v = vars(msg)
-                if isinstance(v.get("payload"), (bytearray, bytes)):
-                    t = msg.topic
-                    v = unpacker(v["payload"])
-                    v = _unpacker(v)
-                    if v is None:
-                        continue
-                    if not isinstance(v, Mapping):
-                        v = {"_data": v}
-                    v["_topic"] = Path.build(t)
-                else:
-                    v["_type"] = type(msg).__name__
+    async with (
+        get_backend(be)(**kw) as conn,
+        conn.monitor(*path) as stream,
+    ):
+        async for msg in stream:
+            v = vars(msg)
+            if isinstance(v.get("payload"), (bytearray, bytes)):
+                t = msg.topic
+                v = unpacker(v["payload"])
+                v = _unpacker(v)
+                if v is None:
+                    continue
+                if not isinstance(v, Mapping):
+                    v = {"_data": v}
+                v["_topic"] = Path.build(t)
+            else:
+                v["_type"] = type(msg).__name__
 
-                v["_timestamp"] = datetime.datetime.now().isoformat(
-                    sep=" ",
-                    timespec="milliseconds",
-                )
+            v["_timestamp"] = datetime.datetime.now().isoformat(
+                sep=" ",
+                timespec="milliseconds",
+            )
 
-                yprint(v, stream=obj.stdout)
-                print("---", file=obj.stdout)
+            yprint(v, stream=obj.stdout)
+            print("---", file=obj.stdout)
 
 
 @cli.command("post")

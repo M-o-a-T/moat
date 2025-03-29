@@ -69,19 +69,19 @@ class Cmd(_Cmd):
         """
         Log parameters.
         """
-        log("Input: %r %r" % (a, k))
+        log(f"Input: {a!r} {k!r}")
 
     async def cmd_stdout(self, *a, **k):
         """
         Print something.
         """
-        print("Input: %r %r" % (a, k))
+        print(f"Input: {a!r} {k!r}")
 
     async def cmd_stderr(self, *a, **k):
         """
         Print something.
         """
-        print("Input: %r %r" % (a, k), file=sys.stderr)
+        print(f"Input: {a!r} {k!r}", file=sys.stderr)
 
     async def cmd_boot(self, code, m):
         """

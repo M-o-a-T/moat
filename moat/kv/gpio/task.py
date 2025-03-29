@@ -7,9 +7,12 @@ from __future__ import annotations
 import anyio
 import asyncgpio
 
-from .model import GPIOchip
 
 import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .model import GPIOchip
 
 logger = logging.getLogger(__name__)
 

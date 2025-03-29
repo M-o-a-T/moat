@@ -58,7 +58,7 @@ def LoopCmd(*a, **k):
                 if "pack" in li and len(li) == 1:
                     s = MsgpackMsgBlk(s, li)
                     if (log := self.cfg.get("log", None)) is not None:
-                        from ..proto.stack import LogMsg
+                        from moat.micro.proto.stack import LogMsg
 
                         s = LogMsg(s, log)
                     s = await AC_use(self, s)

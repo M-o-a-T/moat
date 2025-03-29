@@ -78,7 +78,7 @@ def thingtyp_apply(self, parent=NotGiven, abstract=False, real=False, **kw):
     if parent is None:
         (n,) = sess.execute(
             select(func.count(ThingTyp.id))
-            .where(ThingTyp.parent == None)
+            .where(ThingTyp.parent is None)
             .where(ThingTyp.name != self.name),
         ).first()
         if n:

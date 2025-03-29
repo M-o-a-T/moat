@@ -16,7 +16,7 @@ from moat.link.client import Link
 from moat.link.server import Server
 from moat.link.backend import get_backend
 from moat.util import (  # pylint:disable=no-name-in-module
-    CFG as CFG,
+    CFG,  # noqa:F401
     ensure_cfg,
     CtxObj,
     attrdict,

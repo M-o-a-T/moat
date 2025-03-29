@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import anyio
 import asyncclick as click
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 import time
 import os
 from random import random
@@ -59,7 +59,7 @@ class Main:
 
         n = "%02d" % n if n else "--"
 
-        print("%6.3f %s %02x" % (t, n, val))
+        print(f"{t:6.3f} {n} {val:02x}")
 
     async def run(self):
         last = -1
@@ -132,10 +132,8 @@ async def mainloop(tg, **kw):
 @click.option("-d", "--delay", type=int, help="fixed delay (msec)", default=0)
 @click.option("-D", "--max-delay", type=int, help="random delay (msec)", default=0)
 async def main(sockname, **kw):
-    try:
+    with suppress(OSError):
         os.unlink(sockname)
-    except OSError:
-        pass
 
     listener = await anyio.create_unix_listener(sockname)
     async with listener, anyio.create_task_group() as tg, mainloop(tg, **kw) as loop:

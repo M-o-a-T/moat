@@ -6,4 +6,4 @@ pricing prediction.
 
 from __future__ import annotations
 
-from .control import Model as Model
+from .control import Model  # noqa:F401

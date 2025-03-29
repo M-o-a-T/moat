@@ -223,8 +223,7 @@ async def list_(obj, state, state_only, table, as_dict):
                         st = "-stopped-"
                     else:
                         st = " | ".join(
-                            "%s %s"
-                            % (
+                            "{} {}".format(
                                 Path.build(e.subpath)
                                 if e._path[-2] == ee._path[-1]
                                 else Path.build(ee.subpath),

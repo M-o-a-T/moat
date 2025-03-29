@@ -6,9 +6,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+from .path import P, Path  # noqa:F401
 from moat.micro.compat import Event, log
-from .path import P as P
-from .path import Path as Path
 
 from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
 
@@ -293,7 +292,7 @@ def _merge_dict(d, other, drop=False, replace=True):
 
     if drop:
         keys = []
-        for k in d.keys():
+        for k in d:
             if k not in other:
                 keys.append(k)
         for k in keys:

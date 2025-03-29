@@ -25,6 +25,7 @@ from . import MessageLost, SpuriousData
 from .battery import Battery
 from .packet import *
 from .victron import BatteryState
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -173,14 +174,10 @@ class Controller:
                         await anyio.sleep(99999)
 
         finally:
-            try:
+            with contextlib.suppress(AttributeError):
                 del self._dbus
-            except AttributeError:
-                pass
-            try:
+            with contextlib.suppress(AttributeError):
                 del self._intf
-            except AttributeError:
-                pass
 
     @property
     def dbus(self):
@@ -218,7 +215,7 @@ class Controller:
         """
 
         err = None
-        for n in range(10):
+        for _n in range(10):
             try:
                 with anyio.fail_after(len(self.cells) / 3 if self.cells else 10):
                     return await self._send(*a, **k)

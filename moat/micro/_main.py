@@ -328,7 +328,7 @@ async def cmd(obj, path, **attrs):
         cfg.remote + path,
         " ".join(f"{k}={v!r}" for k, v in val.items()),
     )
-    a = val.pop("_a", ())
+    val.pop("_a", ())
 
     async with Dispatch(cfg, run=True) as dsp, SubDispatch(dsp, cfg.remote) as sd:
         try:

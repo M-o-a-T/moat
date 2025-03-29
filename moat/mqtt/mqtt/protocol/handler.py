@@ -8,28 +8,18 @@ import logging
 import anyio
 from moat.util import create_queue
 
-from ...adapters import StreamAdapter
-from ...errors import (
-    InvalidStateError,
-    MoatMQTTException,
-    MQTTException,
-    NoDataException,
-)
-from ...plugins.manager import PluginManager
-from ...session import (
+from moat.mqtt.errors import InvalidStateError, MoatMQTTException, MQTTException, NoDataException
+from moat.mqtt.session import (
     INCOMING,
     OUTGOING,
     IncomingApplicationMessage,
     OutgoingApplicationMessage,
     Session,
 )
-from ...utils import CancelledError, Future
-from .. import packet_class
-from ..connack import ConnackPacket
-from ..connect import ConnectPacket
-from ..constants import QOS_0, QOS_1, QOS_2
-from ..disconnect import DisconnectPacket
-from ..packet import (
+from moat.mqtt.utils import CancelledError, Future
+from moat.mqtt.mqtt import packet_class
+from moat.mqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
+from moat.mqtt.mqtt.packet import (
     CONNACK,
     DISCONNECT,
     PINGREQ,
@@ -47,17 +37,26 @@ from ..packet import (
     UNSUBSCRIBE,
     MQTTFixedHeader,
 )
-from ..pingreq import PingReqPacket
-from ..pingresp import PingRespPacket
-from ..puback import PubackPacket
-from ..pubcomp import PubcompPacket
-from ..publish import PublishPacket
-from ..pubrec import PubrecPacket
-from ..pubrel import PubrelPacket
-from ..suback import SubackPacket
-from ..subscribe import SubscribePacket
-from ..unsuback import UnsubackPacket
-from ..unsubscribe import UnsubscribePacket
+from moat.mqtt.mqtt.puback import PubackPacket
+from moat.mqtt.mqtt.pubcomp import PubcompPacket
+from moat.mqtt.mqtt.pubrec import PubrecPacket
+from moat.mqtt.mqtt.pubrel import PubrelPacket
+import contextlib
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.mqtt.mqtt.unsubscribe import UnsubscribePacket
+    from moat.mqtt.mqtt.unsuback import UnsubackPacket
+    from moat.mqtt.mqtt.subscribe import SubscribePacket
+    from moat.mqtt.mqtt.suback import SubackPacket
+    from moat.mqtt.mqtt.publish import PublishPacket
+    from moat.mqtt.mqtt.pingresp import PingRespPacket
+    from moat.mqtt.mqtt.pingreq import PingReqPacket
+    from moat.mqtt.mqtt.disconnect import DisconnectPacket
+    from moat.mqtt.mqtt.connect import ConnectPacket
+    from moat.mqtt.mqtt.connack import ConnackPacket
+    from moat.mqtt.plugins.manager import PluginManager
+    from moat.mqtt.adapters import StreamAdapter
 
 try:
     ClosedResourceError = anyio.exceptions.ClosedResourceError
@@ -212,10 +211,8 @@ class ProtocolHandler:
             self._pubrec_waiters.values(),
             self._pubrel_waiters.values(),
         ):
-            try:
+            with contextlib.suppress(InvalidStateError):
                 await waiter.cancel()
-            except InvalidStateError:
-                pass
 
     async def _retry_deliveries(self):
         """
@@ -227,10 +224,8 @@ class ProtocolHandler:
 
         async def process_one(message):
             with anyio.move_on_after(10):
-                try:
+                with contextlib.suppress(CancelledError):
                     await self._handle_message_flow(message)
-                except CancelledError:
-                    pass
 
                 nonlocal done
                 done += 1  # pylint: disable=undefined-variable  ## fixed in 2.5

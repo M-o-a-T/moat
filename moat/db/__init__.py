@@ -5,8 +5,6 @@ MoaT database supprt
 from __future__ import annotations
 
 
-
-
 def load(cfg):
     from .util import load as load_
 

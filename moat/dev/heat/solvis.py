@@ -32,6 +32,7 @@ from moat.util import (
 )
 from moat.kv.client import open_client
 from moat.lib.pid import CPID
+import contextlib
 
 FORMAT = "%(levelname)s %(pathname)-15s %(lineno)-4s %(message)s"
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -474,10 +475,8 @@ class APID(CPID):
             return
         super().setpoint(val)
 
-        try:
+        with contextlib.suppress(AttributeError):
             await self.data.cl.set(self.cfg.log.setpoint, value=val, idem=True)
-        except AttributeError:
-            pass
 
     async def __call__(self, val, **kw):
         "run the PID and log the result"
@@ -489,10 +488,8 @@ class APID(CPID):
         "log the result"
         if not isinstance(res, (int, float)):
             return
-        try:
+        with contextlib.suppress(AttributeError):
             await self.data.cl.set(self.cfg.log.value, value=res, idem=True)
-        except AttributeError:
-            pass
 
 
 class Data:
@@ -560,9 +557,9 @@ class Data:
     async def reload_cfg(self, cfgf, *, task_status=anyio.TASK_STATUS_IGNORED):
         flg = aionotify.Flags.CLOSE_WRITE | aionotify.Flags.MOVE_SELF
         async with aionotify.Watcher() as watcher:
-            await watcher.awatch(path=cfgf, flags=aionotify.Flags.CLOSE_WRITE)
+            await watcher.awatch(path=cfgf, flags=flg)
             task_status.started()
-            async for evt in watcher:
+            async for _evt in watcher:
                 while True:
                     with anyio.move_on_after(2):
                         await watcher.get_event()
@@ -1291,7 +1288,7 @@ class Data:
             l_buffer, i_buffer = await self.pid.buffer(self.tb_low, split=True)
             l_limit, i_limit = await self.pid.limit(self.t_out, split=True)
 
-            if True or cm_heat and tw_low <= th_adj:
+            if True:
                 w = val2pos(t_adj - self.cfg.adj.more, t_cur, t_adj)
             else:
                 # if no heating OR the heating req is lower than the water's,
@@ -1441,7 +1438,6 @@ class Data:
                 self.pid.load.Kd = self.cfg.adj.pellet.pid.load.d
                 self.pid.load.Tf = self.cfg.adj.pellet.pid.load.tf
 
-                t = self.time
                 t_load = min(self.t_adj + self.cfg.adj.pellet.load, self.cfg.adj.pellet.max)
                 t_buffer = self.t_low + self.cfg.adj.low.buffer  # <0
                 t_cur = self.tb_heat

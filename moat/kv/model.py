@@ -25,7 +25,7 @@ class NodeDataSkipped(Exception):
         self.node = node
 
     def __repr__(self):
-        return "<%s:%s>" % (self.__class__.__name__, self.node)
+        return f"<{self.__class__.__name__}:{self.node}>"
 
 
 ConvNull = None  # imported later, if/when needed
@@ -60,9 +60,8 @@ class Node:
             self.entries = {}
             cache[name] = self
         else:
-            if tick is not None:
-                if self.tick is None or self.tick < tick:
-                    self.tick = tick
+            if tick is not None and (self.tick is None or self.tick < tick):
+                self.tick = tick
         return self
 
     # pylint: disable=unused-argument
@@ -102,7 +101,7 @@ class Node:
         return item in self.entries
 
     def __repr__(self):
-        return "<%s: %s @%s>" % (self.__class__.__name__, self.name, self.tick)
+        return f"<{self.__class__.__name__}: {self.name} @{self.tick}>"
 
     def seen(self, tick, entry=None, local=False):
         """An event with this tick was in the entry's chain.
@@ -316,13 +315,10 @@ class NodeSet(defaultdict):
                 self[n] = r
 
     def __repr__(self):
-        return "%s(%s)" % (type(self).__name__, dict.__repr__(self))
+        return f"{type(self).__name__}({dict.__repr__(self)})"
 
     def __bool__(self):
-        for v in self.values():
-            if v:
-                return True
-        return False
+        return any(v for v in self.values())
 
     def serialize(self):
         d = dict()
@@ -369,7 +365,7 @@ class NodeEvent:
 
     """
 
-    def __init__(self, node: Node, tick: int = None, prev: NodeEvent = None):
+    def __init__(self, node: Node, tick: int | None = None, prev: NodeEvent = None):
         self.node = node
         if tick is None:
             tick = node.tick
@@ -553,7 +549,7 @@ class UpdateEvent:
             res = ""
         else:
             res = repr(self.event) + ": "
-        return "<%s:%s%s: %s→%s>" % (
+        return "<{}:{}{}: {}→{}>".format(
             self.__class__.__name__,
             res,
             repr(self.entry),
@@ -792,14 +788,14 @@ class Entry:
 
     def __repr__(self):
         try:
-            res = "<%s:%s" % (self.__class__.__name__, self.path)
+            res = f"<{self.__class__.__name__}:{self.path}"
             if self.chain is not None:
-                res += "@%s" % (repr(self.chain),)
+                res += f"@{self.chain!r}"
             if self.data is not None:
-                res += " =%s" % (repr(self.data),)
+                res += f" ={self.data!r}"
             res += ">"
         except Exception as exc:
-            res = "<%s:%s" % (self.__class__.__name__, str(exc))
+            res = f"<{self.__class__.__name__}:{exc!s}"
         return res
 
     @property
@@ -897,21 +893,20 @@ class Entry:
             logger.info("New: %s :%s: %r", evt.event, evt.tock, evt_val)
             return
 
-        if self._data is not NotGiven:
-            if not (self.chain < evt.event):
+        if self._data is not NotGiven and not (self.chain < evt.event):
+            if not loading:
+                logger.warning("*** inconsistency ***")
+                logger.warning("Node: %s", self.path)
+                logger.warning("Current: %s :%s: %r", self.chain, self.tock, self._data)
+                logger.warning("New: %s :%s: %r", evt.event, evt.tock, evt_val)
+            if evt.tock < self.tock:
                 if not loading:
-                    logger.warning("*** inconsistency ***")
-                    logger.warning("Node: %s", self.path)
-                    logger.warning("Current: %s :%s: %r", self.chain, self.tock, self._data)
-                    logger.warning("New: %s :%s: %r", evt.event, evt.tock, evt_val)
-                if evt.tock < self.tock:
-                    if not loading:
-                        logger.warning("New value ignored")
-                    # also mark the new event's chain as superseded
-                    server.drop_old_event(self.chain, evt.event)
-                    return
-                if not loading:
-                    logger.warning("New value used")
+                    logger.warning("New value ignored")
+                # also mark the new event's chain as superseded
+                server.drop_old_event(self.chain, evt.event)
+                return
+            if not loading:
+                logger.warning("New value used")
 
         if chk is not None and evt_val is not NotGiven:
             chk.check_value(evt_val, self)
@@ -1032,7 +1027,7 @@ class Watcher:
     q = None
     q_len = 100
 
-    def __init__(self, root: Entry, full: bool = False, q_len: int = None):
+    def __init__(self, root: Entry, full: bool = False, q_len: int | None = None):
         self.root = root
         self.full = full
         if q_len is not None:

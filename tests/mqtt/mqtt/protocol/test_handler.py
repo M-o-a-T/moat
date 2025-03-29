@@ -25,7 +25,7 @@ from moat.mqtt.session import (
     Session,
 )
 
-from ... import anyio_run
+from tests.mqtt import anyio_run
 
 log = logging.getLogger(__name__)
 
@@ -92,9 +92,9 @@ class ProtocolHandlerTest(unittest.TestCase):
     def test_publish_qos0(self):
         async def server_mock(stream):
             packet = await PublishPacket.from_stream(stream)
-            self.assertEqual(packet.variable_header.topic_name, "/topic")
-            self.assertEqual(packet.qos, QOS_0)
-            self.assertIsNone(packet.packet_id)
+            assert packet.variable_header.topic_name == "/topic"
+            assert packet.qos == QOS_0
+            assert packet.packet_id is None
 
         async def test_coro(stream_adapted):
             s = Session(None)
@@ -102,12 +102,12 @@ class ProtocolHandlerTest(unittest.TestCase):
             await handler.attach(s, stream_adapted)
             await self.start_handler(handler, s)
             message = await handler.mqtt_publish("/topic", b"test_data", QOS_0, False)
-            self.assertIsInstance(message, OutgoingApplicationMessage)
-            self.assertIsNotNone(message.publish_packet)
-            self.assertIsNone(message.puback_packet)
-            self.assertIsNone(message.pubrec_packet)
-            self.assertIsNone(message.pubrel_packet)
-            self.assertIsNone(message.pubcomp_packet)
+            assert isinstance(message, OutgoingApplicationMessage)
+            assert message.publish_packet is not None
+            assert message.puback_packet is None
+            assert message.pubrec_packet is None
+            assert message.pubrel_packet is None
+            assert message.pubcomp_packet is None
             await self.stop_handler(handler, s)
 
         self.run_(server_mock, test_coro)
@@ -115,11 +115,11 @@ class ProtocolHandlerTest(unittest.TestCase):
     def test_publish_qos1(self):
         async def server_mock(stream):
             packet = await PublishPacket.from_stream(stream)
-            self.assertEqual(packet.variable_header.topic_name, "/topic")
-            self.assertEqual(packet.qos, QOS_1)
-            self.assertIsNotNone(packet.packet_id)
-            self.assertIn(packet.packet_id, self.session.inflight_out)
-            self.assertIn(packet.packet_id, self.handler._puback_waiters)
+            assert packet.variable_header.topic_name == "/topic"
+            assert packet.qos == QOS_1
+            assert packet.packet_id is not None
+            assert packet.packet_id in self.session.inflight_out
+            assert packet.packet_id in self.handler._puback_waiters
             puback = PubackPacket.build(packet.packet_id)
             await puback.to_stream(stream)
 
@@ -129,12 +129,12 @@ class ProtocolHandlerTest(unittest.TestCase):
             await self.handler.attach(self.session, stream_adapted)
             await self.start_handler(self.handler, self.session)
             message = await self.handler.mqtt_publish("/topic", b"test_data", QOS_1, False)
-            self.assertIsInstance(message, OutgoingApplicationMessage)
-            self.assertIsNotNone(message.publish_packet)
-            self.assertIsNotNone(message.puback_packet)
-            self.assertIsNone(message.pubrec_packet)
-            self.assertIsNone(message.pubrel_packet)
-            self.assertIsNone(message.pubcomp_packet)
+            assert isinstance(message, OutgoingApplicationMessage)
+            assert message.publish_packet is not None
+            assert message.puback_packet is not None
+            assert message.pubrec_packet is None
+            assert message.pubrel_packet is None
+            assert message.pubcomp_packet is None
             await self.stop_handler(self.handler, self.session)
 
         self.handler = None
@@ -143,16 +143,16 @@ class ProtocolHandlerTest(unittest.TestCase):
     def test_publish_qos2(self):
         async def server_mock(stream):
             packet = await PublishPacket.from_stream(stream)
-            self.assertEqual(packet.topic_name, "/topic")
-            self.assertEqual(packet.qos, QOS_2)
-            self.assertIsNotNone(packet.packet_id)
-            self.assertIn(packet.packet_id, self.session.inflight_out)
-            self.assertIn(packet.packet_id, self.handler._pubrec_waiters)
+            assert packet.topic_name == "/topic"
+            assert packet.qos == QOS_2
+            assert packet.packet_id is not None
+            assert packet.packet_id in self.session.inflight_out
+            assert packet.packet_id in self.handler._pubrec_waiters
             pubrec = PubrecPacket.build(packet.packet_id)
             await pubrec.to_stream(stream)
 
             await PubrelPacket.from_stream(stream)
-            self.assertIn(packet.packet_id, self.handler._pubcomp_waiters)
+            assert packet.packet_id in self.handler._pubcomp_waiters
             pubcomp = PubcompPacket.build(packet.packet_id)
             await pubcomp.to_stream(stream)
 
@@ -162,12 +162,12 @@ class ProtocolHandlerTest(unittest.TestCase):
             await self.handler.attach(self.session, stream_adapted)
             await self.start_handler(self.handler, self.session)
             message = await self.handler.mqtt_publish("/topic", b"test_data", QOS_2, False)
-            self.assertIsInstance(message, OutgoingApplicationMessage)
-            self.assertIsNotNone(message.publish_packet)
-            self.assertIsNone(message.puback_packet)
-            self.assertIsNotNone(message.pubrec_packet)
-            self.assertIsNotNone(message.pubrel_packet)
-            self.assertIsNotNone(message.pubcomp_packet)
+            assert isinstance(message, OutgoingApplicationMessage)
+            assert message.publish_packet is not None
+            assert message.puback_packet is None
+            assert message.pubrec_packet is not None
+            assert message.pubrel_packet is not None
+            assert message.pubcomp_packet is not None
             await self.stop_handler(self.handler, self.session)
 
         self.handler = None
@@ -192,12 +192,12 @@ class ProtocolHandlerTest(unittest.TestCase):
             await self.handler.attach(self.session, stream_adapted)
             await self.start_handler(self.handler, self.session)
             message = await self.session.get_next_message()
-            self.assertIsInstance(message, IncomingApplicationMessage)
-            self.assertIsNotNone(message.publish_packet)
-            self.assertIsNone(message.puback_packet)
-            self.assertIsNone(message.pubrec_packet)
-            self.assertIsNone(message.pubrel_packet)
-            self.assertIsNone(message.pubcomp_packet)
+            assert isinstance(message, IncomingApplicationMessage)
+            assert message.publish_packet is not None
+            assert message.puback_packet is None
+            assert message.pubrec_packet is None
+            assert message.pubrel_packet is None
+            assert message.pubcomp_packet is None
             await self.stop_handler(self.handler, self.session)
 
         self.handler = None
@@ -215,8 +215,8 @@ class ProtocolHandlerTest(unittest.TestCase):
             )
             await packet.to_stream(stream)
             puback = await PubackPacket.from_stream(stream)
-            self.assertIsNotNone(puback)
-            self.assertEqual(packet.packet_id, puback.packet_id)
+            assert puback is not None
+            assert packet.packet_id == puback.packet_id
 
         async def test_coro(stream_adapted):
             self.session = Session(None)
@@ -225,12 +225,12 @@ class ProtocolHandlerTest(unittest.TestCase):
             await self.start_handler(self.handler, self.session)
             await anyio.sleep(0.1)  # as below
             message = await self.session.get_next_message()
-            self.assertIsInstance(message, IncomingApplicationMessage)
-            self.assertIsNotNone(message.publish_packet)
-            self.assertIsNotNone(message.puback_packet)
-            self.assertIsNone(message.pubrec_packet)
-            self.assertIsNone(message.pubrel_packet)
-            self.assertIsNone(message.pubcomp_packet)
+            assert isinstance(message, IncomingApplicationMessage)
+            assert message.publish_packet is not None
+            assert message.puback_packet is not None
+            assert message.pubrec_packet is None
+            assert message.pubrel_packet is None
+            assert message.pubcomp_packet is None
             await self.stop_handler(self.handler, self.session)
 
         self.handler = None
@@ -248,14 +248,14 @@ class ProtocolHandlerTest(unittest.TestCase):
             )
             await packet.to_stream(stream)
             pubrec = await PubrecPacket.from_stream(stream)
-            self.assertIsNotNone(pubrec)
-            self.assertEqual(packet.packet_id, pubrec.packet_id)
-            self.assertIn(packet.packet_id, self.handler._pubrel_waiters)
+            assert pubrec is not None
+            assert packet.packet_id == pubrec.packet_id
+            assert packet.packet_id in self.handler._pubrel_waiters
             pubrel = PubrelPacket.build(packet.packet_id)
             await pubrel.to_stream(stream)
             pubcomp = await PubcompPacket.from_stream(stream)
-            self.assertIsNotNone(pubcomp)
-            self.assertEqual(packet.packet_id, pubcomp.packet_id)
+            assert pubcomp is not None
+            assert packet.packet_id == pubcomp.packet_id
 
         async def test_coro(stream_adapted):
             self.session = Session(None)
@@ -264,12 +264,12 @@ class ProtocolHandlerTest(unittest.TestCase):
             await self.start_handler(self.handler, self.session)
             await anyio.sleep(0.1)  # the pubcomp packet is built *after* queueing
             message = await self.session.get_next_message()
-            self.assertIsInstance(message, IncomingApplicationMessage)
-            self.assertIsNotNone(message.publish_packet)
-            self.assertIsNone(message.puback_packet)
-            self.assertIsNotNone(message.pubrec_packet)
-            self.assertIsNotNone(message.pubrel_packet)
-            self.assertIsNotNone(message.pubcomp_packet)  # might fail w/o the sleep
+            assert isinstance(message, IncomingApplicationMessage)
+            assert message.publish_packet is not None
+            assert message.puback_packet is None
+            assert message.pubrec_packet is not None
+            assert message.pubrel_packet is not None
+            assert message.pubcomp_packet is not None  # might fail w/o the sleep
             await self.stop_handler(self.handler, self.session)
 
         self.handler = None
@@ -282,28 +282,28 @@ class ProtocolHandlerTest(unittest.TestCase):
 
     async def stop_handler(self, handler, session):
         await handler.stop()
-        self.assertTrue(handler._reader_stopped)
+        assert handler._reader_stopped
         self.check_empty_waiters(handler)
         self.check_no_message(session)
 
     def check_empty_waiters(self, handler):
-        self.assertFalse(handler._puback_waiters)
-        self.assertFalse(handler._pubrec_waiters)
-        self.assertFalse(handler._pubrel_waiters)
-        self.assertFalse(handler._pubcomp_waiters)
+        assert not handler._puback_waiters
+        assert not handler._pubrec_waiters
+        assert not handler._pubrel_waiters
+        assert not handler._pubcomp_waiters
 
     def check_no_message(self, session):
-        self.assertFalse(session.inflight_out)
-        self.assertFalse(session.inflight_in)
+        assert not session.inflight_out
+        assert not session.inflight_in
 
     def test_publish_qos1_retry(self):
         async def server_mock(stream):
             packet = await PublishPacket.from_stream(stream)
-            self.assertEqual(packet.topic_name, "/topic")
-            self.assertEqual(packet.qos, QOS_1)
-            self.assertIsNotNone(packet.packet_id)
-            self.assertIn(packet.packet_id, self.session.inflight_out)
-            self.assertIn(packet.packet_id, self.handler._puback_waiters)
+            assert packet.topic_name == "/topic"
+            assert packet.qos == QOS_1
+            assert packet.packet_id is not None
+            assert packet.packet_id in self.session.inflight_out
+            assert packet.packet_id in self.handler._puback_waiters
             puback = PubackPacket.build(packet.packet_id)
             await puback.to_stream(stream)
 
@@ -331,16 +331,16 @@ class ProtocolHandlerTest(unittest.TestCase):
     def test_publish_qos2_retry(self):
         async def server_mock(stream):
             packet = await PublishPacket.from_stream(stream)
-            self.assertEqual(packet.topic_name, "/topic")
-            self.assertEqual(packet.qos, QOS_2)
-            self.assertIsNotNone(packet.packet_id)
-            self.assertIn(packet.packet_id, self.session.inflight_out)
-            self.assertIn(packet.packet_id, self.handler._pubrec_waiters)
+            assert packet.topic_name == "/topic"
+            assert packet.qos == QOS_2
+            assert packet.packet_id is not None
+            assert packet.packet_id in self.session.inflight_out
+            assert packet.packet_id in self.handler._pubrec_waiters
             pubrec = PubrecPacket.build(packet.packet_id)
             await pubrec.to_stream(stream)
 
             await PubrelPacket.from_stream(stream)
-            self.assertIn(packet.packet_id, self.handler._pubcomp_waiters)
+            assert packet.packet_id in self.handler._pubcomp_waiters
             pubcomp = PubcompPacket.build(packet.packet_id)
             await pubcomp.to_stream(stream)
 

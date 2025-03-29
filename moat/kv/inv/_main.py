@@ -543,9 +543,8 @@ async def _hp_mod(obj, p, **kw):
         if v == "-":
             setattr(p, k, None)
             continue
-        if k == "vlan":
-            if obj.data.vlan.by_name(v) is None:
-                raise click.BadParameter("VLAN does not exist")
+        if k == "vlan" and obj.data.vlan.by_name(v) is None:
+            raise click.BadParameter("VLAN does not exist")
         setattr(p, k, v)
 
 
@@ -577,7 +576,7 @@ async def hp_link(obj, dest, a_end, b_end, force):
     try:
         p = h.port[port]
     except KeyError:
-        raise click.BadParameter("Unknown port %r" % (port,)) from None
+        raise click.BadParameter(f"Unknown port {port!r}") from None
     if not dest:
         print(obj.data.cable.cable_for(p), file=obj.stdout)
         return

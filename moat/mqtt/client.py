@@ -624,7 +624,7 @@ class MQTTClient:
         # Decode URI attributes
         uri_attributes = urlparse(self.session.broker_uri)
         scheme = uri_attributes.scheme
-        secure = True if scheme in ("mqtts", "wss") else False
+        secure = scheme in ("mqtts", "wss")
         self.session.username = (
             self.session.username if self.session.username else uri_attributes.username
         )

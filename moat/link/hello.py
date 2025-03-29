@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from attrs import define, field
 from moat.util import P
-from moat.lib.cmd import CmdHandler
 import anyio
 from . import protocol_version, protocol_version_min
 from .conn import SubConn, CmdCommon
@@ -16,6 +15,7 @@ import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from moat.lib.cmd import CmdHandler
     from collections.abc import Awaitable
 
 logger = logging.getLogger(__name__)
@@ -122,7 +122,6 @@ class Hello(SubConn, CmdCommon):
     async def _cmd_i_hello(self, msg) -> bool | None:
         it = iter(msg.args)
         auth = True
-        token = None
 
         try:
             prot = next(it)

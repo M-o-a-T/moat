@@ -27,6 +27,7 @@ from moat.util import (
     ensure_cfg,
     CFG,
 )
+import contextlib
 
 __all__ = ["ClientEntry", "AttrClientEntry", "ClientRoot"]
 
@@ -364,10 +365,8 @@ class AttrClientEntry(ClientEntry):
             if value is not NotGiven and k in value:
                 setattr(self, k, value[k])
             else:
-                try:
+                with contextlib.suppress(AttributeError):
                     delattr(self, k)
-                except AttributeError:
-                    pass
 
     def get_value(self, skip_none=False, skip_empty=False):
         """

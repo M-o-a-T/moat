@@ -71,7 +71,7 @@ class ActorState:
         self.msg = msg
 
     def __repr__(self):
-        return "<%s:%r>" % (self.__class__.__name__, self.msg)
+        return f"<{self.__class__.__name__}:{self.msg!r}>"
 
 
 class BrokenState(ActorState):

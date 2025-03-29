@@ -7,10 +7,9 @@ import trio
 from contextlib import asynccontextmanager, contextmanager
 from weakref import ref
 
-from ..backend import BaseBusHandler
-from ..message import BusMessage
+from moat.bus.message import BusMessage
 from .obj import Obj
-from ..util import CtxObj, Dispatcher
+from moat.bus.util import CtxObj, Dispatcher
 
 import msgpack
 from functools import partial
@@ -22,6 +21,10 @@ packer = msgpack.Packer(
 unpacker = partial(msgpack.unpackb, raw=False)
 
 import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.bus.backend import BaseBusHandler
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +51,7 @@ class _ClientEvent(ServerEvent):
         self.obj = obj
 
     def __repr__(self):
-        return "<%s %s>" % (self.__class__.__name__.replace("Event", ""), self.obj)
+        return "<{} {}>".format(self.__class__.__name__.replace("Event", ""), self.obj)
 
 
 class NewClientEvent(_ClientEvent):
@@ -199,7 +202,7 @@ class Server(CtxObj, Dispatcher):
     def __init__(self, backend: BaseBusHandler, id=1):
         if id < 1 or id > 3:
             raise RuntimeError("My ID must be within 1…3")
-        self.logger = logging.getLogger("%s.%s" % (__name__, backend.id))
+        self.logger = logging.getLogger(f"{__name__}.{backend.id}")
         self._back = backend
         self.__id = id - 4  # my server ID
         self.objs = ClientStore(self)
@@ -241,7 +244,7 @@ class Server(CtxObj, Dispatcher):
     async def _reader(self, *, task_status=trio.TASK_STATUS_IGNORED):
         task_status.started()
         async for msg in self._back:
-            d = await self.dispatch(msg)
+            await self.dispatch(msg)
 
     def get_code(self, msg):
         """Code zero"""

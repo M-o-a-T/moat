@@ -6,6 +6,7 @@ from collections.abc import Mapping
 import asyncclick as click
 from moat.util import P, PathLongener, yprint
 from range_set import RangeSet
+import contextlib
 
 
 @click.group(short_help="Control internal state.")  # pylint: disable=undefined-variable
@@ -173,10 +174,8 @@ async def dump(obj, path):
         yy = y
         for p in path:
             yy = yy.setdefault(p, {})
-        try:
+        with contextlib.suppress(KeyError):
             yy["_"] = r["value"]
-        except KeyError:
-            pass
     yprint(y, stream=obj.stdout)
 
 

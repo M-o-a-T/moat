@@ -8,8 +8,8 @@ from contextlib import suppress
 
 from moat.micro.errors import ChannelClosed
 
-from ...util import NotGiven, Queue, ValueEvent
-from ..compat import (
+from moat.util import NotGiven, Queue, ValueEvent
+from moat.micro.compat import (
     ACM,
     AC_exit,
     Event,

@@ -110,7 +110,7 @@ class MatchEntry(MetaEntry):
         elif isinstance(value.type, str):
             value.type = P(value.type)
         elif not isinstance(value.type, (Path, list, tuple)):
-            raise ValueError("Type of %r is not a list" % (value.type,))
+            raise ValueError(f"Type of {value.type!r} is not a list")
         try:
             self.metaroot["type"].follow(value.type, create=False)
         except KeyError:
@@ -364,7 +364,7 @@ class ConvEntry(MetaEntry):
             if isinstance(value.codec, str):
                 value.codec = P(value.codec)
             elif not isinstance(value.codec, (Path, list, tuple)):
-                raise ValueError("Codec %r is not a list" % (value.codec,))
+                raise ValueError(f"Codec {value.codec!r} is not a list")
             try:
                 self.metaroot["codec"].follow(value.codec, create=False)
             except KeyError:

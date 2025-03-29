@@ -51,7 +51,7 @@ class Batt(BaseBattery):
             r += await c.cmd_c()
         return r / self.n
 
-    async def cmd_i(self, i: float = None):
+    async def cmd_i(self, i: float | None = None):
         if i is not None:
             self.i = i
         return self.i

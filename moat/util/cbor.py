@@ -24,6 +24,7 @@ from ipaddress import (
 from moat.lib.codec.cbor import CBOR_TAG_CBOR_FILEHEADER, CBOR_TAG_CBOR_LEADER, Codec, Tag
 
 from ._cbor import std_ext, StdCBOR
+import contextlib
 
 __all__ = ["std_ext", "StdCBOR", "gen_start", "gen_stop"]
 
@@ -244,18 +245,14 @@ def _dec_old_ipnetwork(codec, buf) -> IPv4Network | IPv6Network:
 @std_ext.decoder(CBOR_TAG_CBOR_FILEHEADER)
 def _dec_file_cbor(codec, val):
     codec  # noqa:B018
-    try:
+    with contextlib.suppress(AttributeError):
         val._cbor_tag = CBOR_TAG_CBOR_FILEHEADER
-    except AttributeError:
-        pass
     return val
 
 
 @std_ext.decoder(CBOR_TAG_CBOR_LEADER)
 def _dec_file_cbor(codec, val):
     codec  # noqa:B018
-    try:
+    with contextlib.suppress(AttributeError):
         val._cbor_tag = CBOR_TAG_CBOR_LEADER
-    except AttributeError:
-        pass
     return val

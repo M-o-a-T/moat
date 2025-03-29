@@ -166,7 +166,8 @@ def gridbox(x_grid_number=2, y_grid_number=2, unit_height=6, disable_mholes=True
     ]
     pts.pop(0)  # remove first element as not to duplicate existing socket
     f2a = f2.pushPoints(pts).eachpoint(
-        lambda loc: f2.val().moved(loc), combine="a",
+        lambda loc: f2.val().moved(loc),
+        combine="a",
     )  # join all sockets
     f4 = f11.intersect(f2a)  # trim excess socket overhang, approx 0.25mm all sides
     f3 = f7.union(f4)  # join trimmed sockets with walls

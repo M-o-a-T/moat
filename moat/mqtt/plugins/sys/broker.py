@@ -6,8 +6,8 @@ from datetime import datetime
 
 import anyio
 
-from ...codecs import int_to_bytes_str
-from ...mqtt.packet import PUBLISH
+from moat.mqtt.codecs import int_to_bytes_str
+from moat.mqtt.mqtt.packet import PUBLISH
 
 DOLLAR_SYS_ROOT = "$SYS/broker/"
 STAT_BYTES_SENT = "bytes_sent"
@@ -54,7 +54,7 @@ class BrokerSysPlugin:
 
     async def on_broker_post_start(self, *args, **kwargs):  # pylint: disable=unused-argument
         self._stats[STAT_START_TIME] = datetime.now()
-        from ...version import get_version
+        from moat.mqtt.version import get_version
 
         version = "MoaT-MQTT version " + get_version()
         await self.context.broadcast_message(

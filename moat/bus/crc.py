@@ -12,14 +12,14 @@ from __future__ import annotations
 
 def _bitrev(x, n):
     y = 0
-    for i in range(n):
+    for _i in range(n):
         y = (y << 1) | (x & 1)
         x = x >> 1
     return y
 
 
 def _bytecrc_r(crc, poly, depth):
-    for i in range(depth):
+    for _i in range(depth):
         if crc & 1:
             crc = (crc >> 1) ^ poly
         else:

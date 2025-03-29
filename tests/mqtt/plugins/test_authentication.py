@@ -11,7 +11,7 @@ from moat.mqtt.plugins.authentication import AnonymousAuthPlugin, FileAuthPlugin
 from moat.mqtt.plugins.manager import BaseContext
 from moat.mqtt.session import Session
 
-from .. import anyio_run
+from tests.mqtt import anyio_run
 
 
 class TestAnonymousAuthPlugin(unittest.TestCase):
@@ -25,7 +25,7 @@ class TestAnonymousAuthPlugin(unittest.TestCase):
             s.username = ""
             auth_plugin = AnonymousAuthPlugin(context)
             ret = await auth_plugin.authenticate(session=s)
-            self.assertTrue(ret)
+            assert ret
 
         anyio_run(coro)
 
@@ -39,7 +39,7 @@ class TestAnonymousAuthPlugin(unittest.TestCase):
             s.username = ""
             auth_plugin = AnonymousAuthPlugin(context)
             ret = await auth_plugin.authenticate(session=s)
-            self.assertFalse(ret)
+            assert not ret
 
         anyio_run(coro)
 
@@ -53,7 +53,7 @@ class TestAnonymousAuthPlugin(unittest.TestCase):
             s.username = "test"
             auth_plugin = AnonymousAuthPlugin(context)
             ret = await auth_plugin.authenticate(session=s)
-            self.assertTrue(ret)
+            assert ret
 
         anyio_run(coro)
 
@@ -77,7 +77,7 @@ class TestFileAuthPlugin(unittest.TestCase):
             s.password = "test"
             auth_plugin = FileAuthPlugin(context)
             ret = await auth_plugin.authenticate(session=s)
-            self.assertTrue(ret)
+            assert ret
 
         anyio_run(coro)
 
@@ -99,7 +99,7 @@ class TestFileAuthPlugin(unittest.TestCase):
             s.password = "wrong password"
             auth_plugin = FileAuthPlugin(context)
             ret = await auth_plugin.authenticate(session=s)
-            self.assertFalse(ret)
+            assert not ret
 
         anyio_run(coro)
 
@@ -121,6 +121,6 @@ class TestFileAuthPlugin(unittest.TestCase):
             s.password = "some password"
             auth_plugin = FileAuthPlugin(context)
             ret = await auth_plugin.authenticate(session=s)
-            self.assertFalse(ret)
+            assert not ret
 
         anyio_run(coro)

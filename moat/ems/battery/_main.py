@@ -34,7 +34,7 @@ async def cli(obj, bat):
             bat = cfg.ems.battery.paths["bat[0]"]
         except KeyError:
             p = P("ems.battery.paths") / bat[0]
-            raise click.UsageError(f"Couldn't find path at {bat}")
+            raise click.UsageError(f"Couldn't find path at {bat} / {p}")
         else:
             if not isinstance(bat, Path):
                 raise click.UsageError(

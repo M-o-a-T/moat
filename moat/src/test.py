@@ -49,7 +49,7 @@ async def run(*args, expect_exit=0, do_stdout=True):
     except Exception as exc:
         while isinstance(exc, ExceptionGroup) and len(exc.exceptions) == 1:
             exc = exc.exceptions[0]
-        raise exc
+        raise
     except BaseException as exc:
         res = exc
         raise

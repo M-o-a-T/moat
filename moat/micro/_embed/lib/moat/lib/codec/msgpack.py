@@ -28,7 +28,6 @@ from moat.util import attrdict, OutOfData
 from moat.micro.compat import const
 
 
-
 __all__ = ["Codec", "ExtType"]
 
 

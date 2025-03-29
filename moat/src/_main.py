@@ -190,7 +190,6 @@ class Package(_Common):
         Test whether the given subsystem changed
         between the head and the @tag commit
         """
-        commit = self.last_commit
         head = self._repo.head.commit
         for d in head.diff(self.last_commit):
             if (
@@ -559,9 +558,8 @@ def apply_hooks(repo, force=False):
 
     pt = Path(__file__).parent / "_hooks"
     for f in pt.iterdir():
-        if not force:
-            if f.name in seen:
-                continue
+        if not force and f.name in seen:
+            continue
         t = h / f.name
         d = f.read_text()
         t.write_text(d)
@@ -829,7 +827,10 @@ it is dropped when you use '--dput'.
 @click.option("-D", "--no-deb", is_flag=True, help="don't build Debian packages")
 @click.option("-C", "--no-commit", is_flag=True, help="don't commit the result")
 @click.option(
-    "-V", "--no-version", is_flag=True, help="don't update dependency versions in pyproject files",
+    "-V",
+    "--no-version",
+    is_flag=True,
+    help="don't update dependency versions in pyproject files",
 )
 @click.option("-P", "--no-pypi", is_flag=True, help="don't push to PyPI")
 @click.option("-T", "--no-test", is_flag=True, help="don't run tests")
@@ -903,12 +904,11 @@ async def build(
     if forcetag is None:
         forcetag = repo.next_tag(major, minor)
 
-    full = False
     if parts:
         repos = [repo.part(x) for x in parts]
     else:
         if not skip:
-            full = True
+            pass
         repos = [
             x
             for x in repo.parts
@@ -1120,7 +1120,9 @@ async def build(
                 whl = Path("dist") / f"{r.under}-{tag}-py3-none-any.whl"
                 try:
                     res = subprocess.run(
-                        ["twine", "upload", str(targz), str(whl)], cwd=rd, check=True,
+                        ["twine", "upload", str(targz), str(whl)],
+                        cwd=rd,
+                        check=True,
                     )
                 except subprocess.CalledProcessError:
                     err.add(r.name)

@@ -8,7 +8,7 @@ from moat.mqtt.adapters import BufferAdapter
 from moat.mqtt.mqtt.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
 from moat.mqtt.mqtt.packet import CONNECT, MQTTFixedHeader
 
-from .. import anyio_run
+from tests.mqtt import anyio_run
 
 
 class ConnectPacketTest(unittest.TestCase):
@@ -16,20 +16,20 @@ class ConnectPacketTest(unittest.TestCase):
         data = b"\x10\x3e\x00\x04MQTT\x04\xce\x00\x00\x00\x0a0123456789\x00\x09WillTopic\x00\x0bWillMessage\x00\x04user\x00\x08password"
         stream = BufferAdapter(data)
         message = anyio_run(ConnectPacket.from_stream, stream)
-        self.assertEqual(message.variable_header.proto_name, "MQTT")
-        self.assertEqual(message.variable_header.proto_level, 4)
-        self.assertTrue(message.variable_header.username_flag)
-        self.assertTrue(message.variable_header.password_flag)
-        self.assertFalse(message.variable_header.will_retain_flag)
-        self.assertEqual(message.variable_header.will_qos, 1)
-        self.assertTrue(message.variable_header.will_flag)
-        self.assertTrue(message.variable_header.clean_session_flag)
-        self.assertFalse(message.variable_header.reserved_flag)
-        self.assertEqual(message.payload.client_id, "0123456789")
-        self.assertEqual(message.payload.will_topic, "WillTopic")
-        self.assertEqual(message.payload.will_message, b"WillMessage")
-        self.assertEqual(message.payload.username, "user")
-        self.assertEqual(message.payload.password, "password")
+        assert message.variable_header.proto_name == "MQTT"
+        assert message.variable_header.proto_level == 4
+        assert message.variable_header.username_flag
+        assert message.variable_header.password_flag
+        assert not message.variable_header.will_retain_flag
+        assert message.variable_header.will_qos == 1
+        assert message.variable_header.will_flag
+        assert message.variable_header.clean_session_flag
+        assert not message.variable_header.reserved_flag
+        assert message.payload.client_id == "0123456789"
+        assert message.payload.will_topic == "WillTopic"
+        assert message.payload.will_message == b"WillMessage"
+        assert message.payload.username == "user"
+        assert message.payload.password == "password"
 
     def test_decode_ok_will_flag(self):
         data = (
@@ -37,50 +37,50 @@ class ConnectPacketTest(unittest.TestCase):
         )
         stream = BufferAdapter(data)
         message = anyio_run(ConnectPacket.from_stream, stream)
-        self.assertEqual(message.variable_header.proto_name, "MQTT")
-        self.assertEqual(message.variable_header.proto_level, 4)
-        self.assertTrue(message.variable_header.username_flag)
-        self.assertTrue(message.variable_header.password_flag)
-        self.assertFalse(message.variable_header.will_retain_flag)
-        self.assertEqual(message.variable_header.will_qos, 1)
-        self.assertFalse(message.variable_header.will_flag)
-        self.assertTrue(message.variable_header.clean_session_flag)
-        self.assertFalse(message.variable_header.reserved_flag)
-        self.assertEqual(message.payload.client_id, "0123456789")
-        self.assertEqual(message.payload.will_topic, None)
-        self.assertEqual(message.payload.will_message, None)
-        self.assertEqual(message.payload.username, "user")
-        self.assertEqual(message.payload.password, "password")
+        assert message.variable_header.proto_name == "MQTT"
+        assert message.variable_header.proto_level == 4
+        assert message.variable_header.username_flag
+        assert message.variable_header.password_flag
+        assert not message.variable_header.will_retain_flag
+        assert message.variable_header.will_qos == 1
+        assert not message.variable_header.will_flag
+        assert message.variable_header.clean_session_flag
+        assert not message.variable_header.reserved_flag
+        assert message.payload.client_id == "0123456789"
+        assert message.payload.will_topic is None
+        assert message.payload.will_message is None
+        assert message.payload.username == "user"
+        assert message.payload.password == "password"
 
     def test_decode_fail_reserved_flag(self):
         data = b"\x10\x3e\x00\x04MQTT\x04\xcf\x00\x00\x00\x0a0123456789\x00\x09WillTopic\x00\x0bWillMessage\x00\x04user\x00\x08password"
         stream = BufferAdapter(data)
         message = anyio_run(ConnectPacket.from_stream, stream)
-        self.assertTrue(message.variable_header.reserved_flag)
+        assert message.variable_header.reserved_flag
 
     def test_decode_fail_miss_clientId(self):
         data = b"\x10\x0a\x00\x04MQTT\x04\xce\x00\x00"
         stream = BufferAdapter(data)
         message = anyio_run(ConnectPacket.from_stream, stream)
-        self.assertIsNot(message.payload.client_id, None)
+        assert message.payload.client_id is not None
 
     def test_decode_fail_miss_willtopic(self):
         data = b"\x10\x16\x00\x04MQTT\x04\xce\x00\x00\x00\x0a0123456789"
         stream = BufferAdapter(data)
         message = anyio_run(ConnectPacket.from_stream, stream)
-        self.assertIs(message.payload.will_topic, None)
+        assert message.payload.will_topic is None
 
     def test_decode_fail_miss_username(self):
         data = b"\x10\x2e\x00\x04MQTT\x04\xce\x00\x00\x00\x0a0123456789\x00\x09WillTopic\x00\x0bWillMessage"
         stream = BufferAdapter(data)
         message = anyio_run(ConnectPacket.from_stream, stream)
-        self.assertIs(message.payload.username, None)
+        assert message.payload.username is None
 
     def test_decode_fail_miss_password(self):
         data = b"\x10\x34\x00\x04MQTT\x04\xce\x00\x00\x00\x0a0123456789\x00\x09WillTopic\x00\x0bWillMessage\x00\x04user"
         stream = BufferAdapter(data)
         message = anyio_run(ConnectPacket.from_stream, stream)
-        self.assertIs(message.payload.password, None)
+        assert message.payload.password is None
 
     def test_encode(self):
         header = MQTTFixedHeader(CONNECT, 0x00, 0)
@@ -88,40 +88,40 @@ class ConnectPacketTest(unittest.TestCase):
         payload = ConnectPayload("0123456789", "WillTopic", b"WillMessage", "user", "password")
         message = ConnectPacket(header, variable_header, payload)
         encoded = message.to_bytes()
-        self.assertEqual(
-            encoded,
-            b"\x10\x3e\x00\x04MQTT\x04\xce\x00\x00\x00\x0a0123456789\x00\x09WillTopic\x00\x0bWillMessage\x00\x04user\x00\x08password",
+        assert (
+            encoded
+            == b"\x10>\x00\x04MQTT\x04\xce\x00\x00\x00\n0123456789\x00\tWillTopic\x00\x0bWillMessage\x00\x04user\x00\x08password"
         )
 
     def test_getattr_ok(self):
         data = b"\x10\x3e\x00\x04MQTT\x04\xce\x00\x00\x00\x0a0123456789\x00\x09WillTopic\x00\x0bWillMessage\x00\x04user\x00\x08password"
         stream = BufferAdapter(data)
         message = anyio_run(ConnectPacket.from_stream, stream)
-        self.assertEqual(message.variable_header.proto_name, "MQTT")
-        self.assertEqual(message.proto_name, "MQTT")
-        self.assertEqual(message.variable_header.proto_level, 4)
-        self.assertEqual(message.proto_level, 4)
-        self.assertTrue(message.variable_header.username_flag)
-        self.assertTrue(message.username_flag)
-        self.assertTrue(message.variable_header.password_flag)
-        self.assertTrue(message.password_flag)
-        self.assertFalse(message.variable_header.will_retain_flag)
-        self.assertFalse(message.will_retain_flag)
-        self.assertEqual(message.variable_header.will_qos, 1)
-        self.assertEqual(message.will_qos, 1)
-        self.assertTrue(message.variable_header.will_flag)
-        self.assertTrue(message.will_flag)
-        self.assertTrue(message.variable_header.clean_session_flag)
-        self.assertTrue(message.clean_session_flag)
-        self.assertFalse(message.variable_header.reserved_flag)
-        self.assertFalse(message.reserved_flag)
-        self.assertEqual(message.payload.client_id, "0123456789")
-        self.assertEqual(message.client_id, "0123456789")
-        self.assertEqual(message.payload.will_topic, "WillTopic")
-        self.assertEqual(message.will_topic, "WillTopic")
-        self.assertEqual(message.payload.will_message, b"WillMessage")
-        self.assertEqual(message.will_message, b"WillMessage")
-        self.assertEqual(message.payload.username, "user")
-        self.assertEqual(message.username, "user")
-        self.assertEqual(message.payload.password, "password")
-        self.assertEqual(message.password, "password")
+        assert message.variable_header.proto_name == "MQTT"
+        assert message.proto_name == "MQTT"
+        assert message.variable_header.proto_level == 4
+        assert message.proto_level == 4
+        assert message.variable_header.username_flag
+        assert message.username_flag
+        assert message.variable_header.password_flag
+        assert message.password_flag
+        assert not message.variable_header.will_retain_flag
+        assert not message.will_retain_flag
+        assert message.variable_header.will_qos == 1
+        assert message.will_qos == 1
+        assert message.variable_header.will_flag
+        assert message.will_flag
+        assert message.variable_header.clean_session_flag
+        assert message.clean_session_flag
+        assert not message.variable_header.reserved_flag
+        assert not message.reserved_flag
+        assert message.payload.client_id == "0123456789"
+        assert message.client_id == "0123456789"
+        assert message.payload.will_topic == "WillTopic"
+        assert message.will_topic == "WillTopic"
+        assert message.payload.will_message == b"WillMessage"
+        assert message.will_message == b"WillMessage"
+        assert message.payload.username == "user"
+        assert message.username == "user"
+        assert message.payload.password == "password"
+        assert message.password == "password"

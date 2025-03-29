@@ -165,26 +165,27 @@ class _Run:
             g.conn(modbus) as c,
             c.unit(modbus["unit"]) as u,
             anyio.create_task_group() as tg,
+            u.slot("ctrl") as sc,
+            u.slot("stat") as si,
         ):
-            async with u.slot("ctrl") as sc, u.slot("stat") as si:
-                self.u = u
-                self.sc = sc
-                self.si = si
-                self.tg = tg
-                self.bus = bus
+            self.u = u
+            self.sc = sc
+            self.si = si
+            self.tg = tg
+            self.bus = bus
 
-                self.ctrl = sc.add(H, 0, I)
-                self.out_pct = sc.add(H, 1, I)
+            self.ctrl = sc.add(H, 0, I)
+            self.out_pct = sc.add(H, 1, I)
 
-                self.info = si.add(H, 5, I)
-                self.in_pct = si.add(H, 6, I)
-                self.in_power = si.add(H, 7, I)
+            self.info = si.add(H, 5, I)
+            self.in_pct = si.add(H, 6, I)
+            self.in_power = si.add(H, 7, I)
 
-                await self.stop()
-                await self._setup()
+            await self.stop()
+            await self._setup()
 
-                await tg.start(self._report)
-                await tg.start(self._control)
+            await tg.start(self._report)
+            await tg.start(self._control)
 
 
 async def run(*a, **kw):

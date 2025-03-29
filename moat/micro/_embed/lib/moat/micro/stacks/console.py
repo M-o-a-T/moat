@@ -4,7 +4,7 @@ Helper for building a MoaT stack on top of a byte stream (serial, TCP, …).
 
 from __future__ import annotations
 
-from ..proto.stack import BaseMsg
+from moat.micro.proto.stack import BaseMsg
 
 
 def console_stack(stream, cfg, cons=False):
@@ -30,7 +30,7 @@ def console_stack(stream, cfg, cons=False):
     log_rel = cfg.get("log_rel", None)
 
     if log_raw is not None:
-        from ..proto.stack import LogMsg
+        from moat.micro.proto.stack import LogMsg
 
         stream = LogMsg(stream, log_raw)
 
@@ -38,12 +38,12 @@ def console_stack(stream, cfg, cons=False):
         raise NotImplementedError("CBOR")
     else:
         if isinstance(frame, dict):
-            from ..proto.stream import MsgpackMsgBlk, SerialPackerBlkBuf
+            from moat.micro.proto.stream import MsgpackMsgBlk, SerialPackerBlkBuf
 
             stream = SerialPackerBlkBuf(stream, frame=frame, cons=cons)
             stream = MsgpackMsgBlk(stream, cfg)
         else:
-            from ..proto.stream import MsgpackMsgBuf
+            from moat.micro.proto.stream import MsgpackMsgBuf
 
             stream = MsgpackMsgBuf(stream, dict(msg_prefix=frame, console=cons))
 
@@ -52,17 +52,17 @@ def console_stack(stream, cfg, cons=False):
     if lossy:
         if lossy is True:
             lossy = {}
-        from ..proto.reliable import ReliableMsg
+        from moat.micro.proto.reliable import ReliableMsg
 
         if log_rel is not None:
-            from ..proto.stack import LogMsg
+            from moat.micro.proto.stack import LogMsg
 
             stream = LogMsg(stream, log_rel)
 
         stream = ReliableMsg(stream, lossy)
 
     if log is not None:
-        from ..proto.stack import LogMsg
+        from moat.micro.proto.stack import LogMsg
 
         stream = LogMsg(stream, log)
 

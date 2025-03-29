@@ -75,7 +75,7 @@ class AkumuliNode(_AkumuliBase, AttrClientEntry):
         return self.parent.tg
 
     def __str__(self):
-        return f"N {Path(*self.subpath[1:])} {Path(*self.source)} {Path(*self.attr)} {self.series} {' '.join('%s=%s' % (k, v) for k, v in self.tags.items())}"
+        return f"N {Path(*self.subpath[1:])} {Path(*self.source)} {Path(*self.attr)} {self.series} {' '.join(f'{k}={v}' for k, v in self.tags.items())}"
 
     def _update_disable(self, off):
         self.disabled = off

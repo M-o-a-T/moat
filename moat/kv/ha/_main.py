@@ -252,9 +252,8 @@ Boolean states can be set with "-o NAME" and cleared with "-o -name".
 Others can be set with "-o NAME=VALUE" (string), "-O NAME=VALUE" (evaluated),
 or "-O NAME=.VALUE" (split by dots or slashes).
 
-Known types: %s
-"""
-    % (" ".join(_types.keys()),),
+Known types: {}
+""".format(" ".join(_types.keys())),
 )
 @click.pass_obj
 @attr_args
@@ -363,7 +362,7 @@ async def set_(obj, typ, path, list_options, force, plus, **kw):
             if tt[0] is float and isinstance(vv, int):
                 pass
             elif not isinstance(vv, tt[0]):
-                raise click.UsageError("Option %r is %r, not a %s" % (k, vv, tt[0].__name__))
+                raise click.UsageError(f"Option {k!r} is {vv!r}, not a {tt[0].__name__}")
         val[k if tt is None else tt[3]] = vv
 
     v = combine_dict(val, d)
@@ -377,7 +376,7 @@ async def set_(obj, typ, path, list_options, force, plus, **kw):
         )
         v["unique_id"] = f"dkv_{tock}"
     if v.get("device_class") not in _DEV_CLS:
-        raise click.UsageError("Device class %r is unknown" % (v["device_class"],))
+        raise click.UsageError("Device class {!r} is unknown".format(v["device_class"]))
     if "device" in v:
         dv = v["device"]
         if not dv:
@@ -392,8 +391,8 @@ set_.__doc__ = """
     Add or modify a device.
 
     Boolean states can be set with "-o NAME" and cleared with "-o -name".
-    Known types: %s
-    """ % (" ".join(_types.keys()),)
+    Known types: {}
+    """.format(" ".join(_types.keys()))
 
 
 @cli.command(help="Display a device, list devices")
@@ -417,9 +416,14 @@ async def get(obj, typ, path, cmd):
         tt = {}
         for k, v in t.items():
             tt[v[3]] = k
-        cmd = lambda x: tt.get(x, x)
+
+        def cmd(x):
+            return tt.get(x, x)
     else:
-        cmd = lambda x: x
+
+        def cmd(x):
+            return x
+
     cp = obj.hass_name + (typ,) + path
     if not len(path):
         async for r in obj.client.get_tree(cp):
@@ -440,8 +444,8 @@ async def get(obj, typ, path, cmd):
 get.__doc__ = """
     Display a device's configuration.
 
-    Known types: %s
-    """ % (" ".join(_types.keys()),)
+    Known types: {}
+    """.format(" ".join(_types.keys()))
 
 
 @cli.command(help="Delete a device")

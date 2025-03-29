@@ -4,11 +4,14 @@
 from __future__ import annotations
 from datetime import datetime
 
-import anyio
 
-from ..adapters import StreamAdapter
-from ..codecs import bytes_to_hex_str, decode_packet_id, int_to_bytes, read_or_raise
-from ..errors import CodecException, MQTTException, NoDataException
+from moat.mqtt.codecs import bytes_to_hex_str, decode_packet_id, int_to_bytes, read_or_raise
+from moat.mqtt.errors import CodecException, MQTTException, NoDataException
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.mqtt.adapters import StreamAdapter
+    import anyio
 
 RESERVED_0 = 0x00
 CONNECT = 0x01

@@ -15,6 +15,7 @@ import anyio
 from moat.util import NotGiven, P, make_module, make_proc
 
 from .obj import ClientEntry, ClientRoot
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -81,10 +82,8 @@ class ModuleEntry(ClientEntry):
         await super().set_value(value)
         if value is NotGiven:
             self._module = None
-            try:
+            with contextlib.suppress(KeyError):
                 del sys.modules[self.name]
-            except KeyError:
-                pass
             return
 
         try:

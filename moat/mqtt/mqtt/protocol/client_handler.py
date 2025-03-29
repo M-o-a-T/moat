@@ -5,19 +5,22 @@ from __future__ import annotations
 import anyio
 from moat.util import create_queue
 
-from ...plugins.manager import PluginManager
-from ...session import Session
-from ...utils import Future
-from ..connack import ConnackPacket
-from ..connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
-from ..disconnect import DisconnectPacket
-from ..pingreq import PingReqPacket
-from ..pingresp import PingRespPacket
-from ..suback import SubackPacket
-from ..subscribe import SubscribePacket
-from ..unsuback import UnsubackPacket
-from ..unsubscribe import UnsubscribePacket
+from moat.mqtt.utils import Future
+from moat.mqtt.mqtt.connack import ConnackPacket
+from moat.mqtt.mqtt.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
+from moat.mqtt.mqtt.disconnect import DisconnectPacket
+from moat.mqtt.mqtt.pingreq import PingReqPacket
+from moat.mqtt.mqtt.subscribe import SubscribePacket
+from moat.mqtt.mqtt.unsubscribe import UnsubscribePacket
 from .handler import EVENT_MQTT_PACKET_RECEIVED, ProtocolHandler
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.mqtt.mqtt.unsuback import UnsubackPacket
+    from moat.mqtt.mqtt.suback import SubackPacket
+    from moat.mqtt.mqtt.pingresp import PingRespPacket
+    from moat.mqtt.session import Session
+    from moat.mqtt.plugins.manager import PluginManager
 
 
 class ClientProtocolHandler(ProtocolHandler):

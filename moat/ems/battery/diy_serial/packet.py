@@ -529,8 +529,8 @@ class RequestBalanceLevel:
     T: ClassVar = PacketType.WriteBalanceLevel
 
     async def from_cell(self, cell):
-        thr = await cell.bal()
-        thr = await cell.v2raw()
+        await cell.bal()
+        await cell.v2raw()
 
         self.levelRaw = cell.balance_threshold_raw
 
@@ -691,7 +691,7 @@ replyClass = [
 ]
 
 _k = None
-for _k in globals().keys():
-    if _k.startswith("Request") or _k.startswith("Reply"):
+for _k in globals():
+    if _k.startswith(("Request", "Reply")):
         __all__.append(_k)
 del _k

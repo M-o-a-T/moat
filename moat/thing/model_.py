@@ -4,14 +4,13 @@ Database schema for collecting things
 
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, String, Table, Column, Integer, event, select, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import select, func
+from sqlalchemy.orm import relationship
 
 from moat.db.schema import Base
 from moat.db.util import session
 from moat.util import NotGiven
 
-from typing import Optional
 
 from .model import Thing, ThingTyp
 from moat.label.model import Label
@@ -80,7 +79,7 @@ def thingtyp_apply(self, parent=NotGiven, abstract=False, real=False, **kw):
         (n,) = sess.execute(
             select(func.count(ThingTyp.id))
             .where(ThingTyp.parent == None)
-            .where(ThingTyp.name != self.name)
+            .where(ThingTyp.name != self.name),
         ).first()
         if n:
             raise ValueError("Only one top entry allowed")

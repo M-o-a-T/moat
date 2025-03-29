@@ -63,7 +63,7 @@ async def send_evt(self, action: str, msg: dict):
     return await _old_send(self, action, msg)
 
 
-@pytest.mark.trio
+@pytest.mark.trio()
 async def test_10_recover(autojump_clock):  # pylint: disable=unused-argument
     """
     This test starts multiple servers at the same time and checks that

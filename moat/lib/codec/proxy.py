@@ -23,10 +23,7 @@ from ._proxy import Proxy, get_proxy, name2obj, drop_proxy, as_proxy, obj2name
 from ._proxy import DProxy as _DProxy
 from ._proxy import _CProxy
 
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 
 class NoProxyError(ValueError):

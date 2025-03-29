@@ -18,7 +18,6 @@ except ImportError:
     from async_generator import asynccontextmanager
 
 import logging
-from collections.abc import Mapping
 from functools import partial
 from pprint import pformat
 from typing import Any
@@ -714,10 +713,10 @@ class ServerClient:
             if fn is None:
                 fn = StreamCommand(self, msg)
                 if needAuth and not getattr(fn, "noAuth", False):
-                    raise NoAuthError()
+                    raise NoAuthError
             else:
                 if needAuth and not getattr(fn, "noAuth", False):
-                    raise NoAuthError()
+                    raise NoAuthError
                 fn = partial(self._process, fn, msg)
             if evt is not None:
                 evt.set()
@@ -1839,7 +1838,7 @@ class Server:
         cmd = getattr(self, "user_" + action)
         try:
             async with self.backend.monitor(
-                *self.cfg.server.root, action, codec=self.codec
+                *self.cfg.server.root, action, codec=self.codec,
             ) as stream:
                 if delay is not None:
                     await delay.wait()

@@ -7,7 +7,7 @@ from moat.util import ungroup, OptCtx
 from moat.lib.cmd import NoStream
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 @pytest.mark.parametrize("no_s", [False, True])
 async def test_no_stream_in(no_s):
     async def handle(msg):
@@ -34,7 +34,7 @@ async def test_no_stream_in(no_s):
             assert tuple(st.args) == ("Nope",)
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 @pytest.mark.parametrize("no_s", [False, True])
 async def test_no_stream_out(no_s):
     async def handle(msg):
@@ -61,7 +61,7 @@ async def test_no_stream_out(no_s):
             print("DONE")
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_write_both():
     async def handle(msg):
         assert msg.cmd == "Test"

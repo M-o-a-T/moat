@@ -8,12 +8,12 @@ from moat.util import CFG, ensure_cfg
 ensure_cfg("moat.link.server")
 
 
-@pytest.fixture
+@pytest.fixture()
 def anyio_backend():
     return "trio"
 
 
-@pytest.fixture
+@pytest.fixture()
 def cfg():
     c = copy.deepcopy(CFG)
     return c

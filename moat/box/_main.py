@@ -7,15 +7,9 @@ Support for boxes for storing things.
 
 from __future__ import annotations
 
-import anyio
-import logging  # pylint: disable=wrong-import-position
 import sys
-from datetime import datetime
-from functools import partial
-from time import time
-from moat.util import load_subgroup, CFG, ensure_cfg, yprint, NotGiven, option_ng
+from moat.util import load_subgroup, ensure_cfg, yprint, option_ng
 from moat.db import database
-import moat.label.model
 from .model import Box, BoxTyp
 from sqlalchemy import select
 
@@ -179,7 +173,7 @@ def typopts(c):
     c = option_ng("--z", "-z", "pos_z", type=int, help="Number of Z positions for content")(c)
     c = option_ng("--comment", "-c", "comment", type=str, help="Description of this type")(c)
     c = click.option(
-        "--in", "-i", "parent", type=str, multiple=True, help="Where can you put this thing into?"
+        "--in", "-i", "parent", type=str, multiple=True, help="Where can you put this thing into?",
     )(c)
     c = click.option("--usable", "-u", is_flag=True, help="Things can be put into this box")(c)
     c = click.option("--unusable", "-U", is_flag=True, help="The box holds fixed subdividers")(c)

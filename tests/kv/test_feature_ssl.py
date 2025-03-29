@@ -24,7 +24,7 @@ async def collect(i, path=()):
     return res
 
 
-@pytest.mark.trio
+@pytest.mark.trio()
 async def test_41_ssl_basic(autojump_clock):  # pylint: disable=unused-argument
     async with stdtest(ssl=True, args={"init": 123}) as st:
         assert st is not None

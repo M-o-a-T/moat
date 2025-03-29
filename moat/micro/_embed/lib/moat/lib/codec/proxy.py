@@ -5,7 +5,8 @@ A hacked-up copy of some parts of `moat.util`.
 from __future__ import annotations
 
 from ._proxy import *
-from ._proxy import _CProxy, _RProxy
+from ._proxy import _CProxy as _CProxy
+from ._proxy import _RProxy as _RProxy
 
 __all__ = [
     "Proxy",

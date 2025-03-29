@@ -7,13 +7,8 @@ Database support.
 
 from __future__ import annotations
 
-import anyio
-import logging  # pylint: disable=wrong-import-position
 import sys
-from datetime import datetime
-from functools import partial
-from time import time
-from moat.util import load_subgroup, CFG, ensure_cfg
+from moat.util import load_subgroup, ensure_cfg
 from .util import database, load, alembic_cfg
 from alembic import command
 

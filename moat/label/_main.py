@@ -4,16 +4,12 @@ Label printing.
 
 from __future__ import annotations
 
-import anyio
 import logging  # pylint: disable=wrong-import-position
 import sys
-from datetime import datetime
-from functools import partial
-from time import time
-from moat.util import load_subgroup, CFG, ensure_cfg, merge, option_ng, NotGiven, yprint
+from moat.util import load_subgroup, ensure_cfg, merge, option_ng, NotGiven, yprint
 from moat.db import database
 from .model import LabelTyp, Label, Sheet, SheetTyp, SheetTyp
-from sqlalchemy import select as sel, func
+from sqlalchemy import select as sel
 from contextlib import nullcontext
 
 import asyncclick as click
@@ -304,7 +300,7 @@ def print_sheet(obj, sheets, test):
             for lbl in sorted(sh.labels, key=lambda x: x.text):
                 if lbl.labeltyp.sheettyp != sh.sheettyp:
                     raise ValueError(
-                        f"Label {lbl.text} on sheet {sh.id} is a {lbl.labeltyp.name !r} label and wants format {lbl.labeltyp.sheettyp.name} not {sh.sheettyp.name}"
+                        f"Label {lbl.text} on sheet {sh.id} is a {lbl.labeltyp.name !r} label and wants format {lbl.labeltyp.sheettyp.name} not {sh.sheettyp.name}",
                     )
 
                 if lab is None or lbl.labeltyp.name != lab.name_:
@@ -659,7 +655,7 @@ def sheet_add(obj, printed, unprinted, fill, **kw):
             .where(Label.sheet == None)
             .where(Label.labeltyp == sh.labeltyp)
             .order_by(Label.text)
-            .limit(sh.sheettyp.count)
+            .limit(sh.sheettyp.count),
         ) as labels:
             for lab, *_ in labels:
                 lab.sheet = sh
@@ -694,7 +690,7 @@ def sheet_set(obj, printed, unprinted, **kw):
 @click.option("--file", "-f", type=click.File("r"), help="Read texts from this file.")
 @click.option("--start", "-s", type=int, help="Initial sequence number (for the text).")
 @click.option(
-    "--count", "-n", type=int, help="Number of labels. Default: until the sheet is full."
+    "--count", "-n", type=int, help="Number of labels. Default: until the sheet is full.",
 )
 @click.option("--typ", "-t", type=str, help="Label type; this flag creates a new sheet.")
 @click.pass_obj
@@ -769,7 +765,7 @@ def sheet_place(obj, pattern, file, start, count, typ):
 
 @sheet.command(name="place", epilog="To remove a label, set its sheet# to zero.")
 @click.option(
-    "--num", "-n", "numeric", is_flag=True, help="Select labels by code. Default: by text"
+    "--num", "-n", "numeric", is_flag=True, help="Select labels by code. Default: by text",
 )
 @click.argument("labels", nargs=-1)
 @click.pass_obj
@@ -808,7 +804,7 @@ def sheet_place(obj, labels, numeric):
                     print(f"Label {lab.code}:{lab.text} is on sheet {lab.sheet_id}. Skipped.")
             elif lab.labeltyp != sh.labeltyp:
                 print(
-                    f"Label {lab.code}:{lab.text} has type {lab.labeltyp.name}, not {sh.labeltyp.name}. Skipped."
+                    f"Label {lab.code}:{lab.text} has type {lab.labeltyp.name}, not {sh.labeltyp.name}. Skipped.",
                 )
             else:
                 lab.sheet = sh

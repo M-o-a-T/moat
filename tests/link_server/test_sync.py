@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import anyio
 import pytest
-import time
 
 from moat.link.meta import MsgMeta
 from moat.link._test import Scaffold
@@ -56,7 +54,7 @@ async def fetch(c, p):
         return nn
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_lsy_from_server(cfg):
     async with Scaffold(cfg, use_servers=True) as sf:
         srv1 = await sf.server(init={"Hello": "there!", "test": 123})
@@ -77,7 +75,7 @@ async def test_lsy_from_server(cfg):
             assert n.get(P("a")) == nn
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_lsy_from_file(cfg, tmp_path):
     async with Scaffold(cfg, use_servers=True, tempdir=tmp_path) as sf:
         (sf.tempdir / "data").mkdir()
@@ -118,7 +116,7 @@ async def test_lsy_from_file(cfg, tmp_path):
         assert n.get(P("a")) == nn
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_lsy_switch_server_hard(cfg):
     async with Scaffold(cfg, use_servers=True) as sf:
         srv1 = await sf.server(init={"Hello": "there!", "test": 123})
@@ -133,7 +131,7 @@ async def test_lsy_switch_server_hard(cfg):
         assert res == 123
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_lsy_switch_server_soft(cfg):
     async with Scaffold(cfg, use_servers=True) as sf:
         srv1 = await sf.server(init={"Hello": "there!", "test": 123})

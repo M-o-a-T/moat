@@ -21,10 +21,8 @@ from ipaddress import (
 )
 
 # Typing
-from moat.lib.codec import Extension, NoCodecError
 from moat.lib.codec.cbor import CBOR_TAG_CBOR_FILEHEADER, CBOR_TAG_CBOR_LEADER, Codec, Tag
 
-from .path import Path
 from ._cbor import std_ext, StdCBOR
 
 __all__ = ["std_ext", "StdCBOR", "gen_start", "gen_stop"]
@@ -119,7 +117,7 @@ def _dec_datetime_string(codec, value) -> dt.datetime:
             minutes = int(offset_m) * sign
             tz = dt.timezone(dt.timedelta(hours=hours, minutes=minutes))
         else:
-            tz = dt.timezone.utc
+            tz = dt.UTC
 
         return dt.datetime(
             int(year),
@@ -138,7 +136,7 @@ def _dec_datetime_string(codec, value) -> dt.datetime:
 @std_ext.decoder(1)
 def _dec_ts(codec, val):
     codec  # noqa:B018
-    return dt.fromtimestamp(val, dt.timezone.utc)
+    return dt.fromtimestamp(val, dt.UTC)
 
 
 @std_ext.decoder(2)

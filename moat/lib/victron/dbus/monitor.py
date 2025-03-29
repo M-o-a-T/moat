@@ -595,5 +595,5 @@ class DbusMonitor(CtxObj):
             (
                 await add_prop_receiver(),
                 await add_root_receiver(),
-            )
+            ),
         )

@@ -2,6 +2,6 @@ from __future__ import annotations
 import pytest
 
 
-@pytest.fixture
+@pytest.fixture()
 def anyio_backend():
     return "trio"

@@ -861,7 +861,7 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
             pass
 
     obj.cfg = process_args(
-        obj.cfg, set_=set_, vars_=vars_, eval_=eval_, path_=path_, proxy_=proxy_
+        obj.cfg, set_=set_, vars_=vars_, eval_=eval_, path_=path_, proxy_=proxy_,
     )
 
     if wrap:

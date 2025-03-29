@@ -5,9 +5,6 @@ PDF subclass
 from __future__ import annotations
 
 from fpdf import FPDF, ViewerPreferences
-from pystrich.datamatrix import DataMatrixEncoder, DataMatrixRenderer
-import click
-from moat.util import yload, yprint
 
 
 class Labels(FPDF):
@@ -101,7 +98,7 @@ class Labels(FPDF):
 
         buf = self.output()
 
-        from subprocess import run, PIPE
+        from subprocess import run
 
         args = [
             "lpr",

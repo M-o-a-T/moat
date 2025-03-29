@@ -5,7 +5,7 @@ plus an unpacker factory for streams.
 
 from __future__ import annotations
 
-from moat.util import NotGiven, OutOfData, attrdict
+from moat.util import NotGiven, OutOfData
 from ._base import Codec as _Codec
 from ._base import NoCodecError
 

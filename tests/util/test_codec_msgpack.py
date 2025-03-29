@@ -17,7 +17,7 @@ from ipaddress import (
 
 from moat.util import DProxy, as_proxy, attrdict
 from moat.lib.codec import get_codec
-from moat.lib.codec.msgpack import ExtType, Codec as MPack
+from moat.lib.codec.msgpack import ExtType
 
 as_proxy("_ip4", IPv4Address)
 as_proxy("_ip6", IPv6Address)

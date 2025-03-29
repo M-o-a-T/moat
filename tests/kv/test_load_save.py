@@ -14,7 +14,7 @@ from moat.kv.mock.mqtt import stdtest
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.trio
+@pytest.mark.trio()
 async def test_21_load_save(autojump_clock, tmpdir):  # pylint: disable=unused-argument
     """also used to check watching"""
     path = tmpdir.join("foo")
@@ -133,7 +133,7 @@ async def test_21_load_save(autojump_clock, tmpdir):  # pylint: disable=unused-a
     logger.debug("OK")
 
 
-@pytest.mark.trio
+@pytest.mark.trio()
 async def test_02_cmd(autojump_clock):  # pylint: disable=unused-argument
     async with stdtest(args={"init": 123}, tocks=50) as st:
         assert st is not None
@@ -168,7 +168,7 @@ async def test_02_cmd(autojump_clock):  # pylint: disable=unused-argument
                 "present": {
                     "test_0": [
                         [1, 4],
-                    ]
+                    ],
                 },
                 "missing": {},
                 "remote_missing": {},
@@ -207,12 +207,12 @@ async def test_02_cmd(autojump_clock):  # pylint: disable=unused-argument
                 "known": {
                     "test_0": [
                         1,
-                    ]
+                    ],
                 },
                 "present": {
                     "test_0": [
                         [2, 5],
-                    ]
+                    ],
                 },
                 "missing": {},
                 "remote_missing": {},
@@ -221,7 +221,7 @@ async def test_02_cmd(autojump_clock):  # pylint: disable=unused-argument
         pass  # server end
 
 
-@pytest.mark.trio
+@pytest.mark.trio()
 async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
     async with stdtest(test_1={"init": 125}, n=2, tocks=30) as st:
         assert st is not None
@@ -248,7 +248,7 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "present": {
                         "test_1": [
                             1,
-                        ]
+                        ],
                     },
                     "missing": {},
                     "remote_missing": {},
@@ -261,7 +261,7 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "present": {
                         "test_1": [
                             1,
-                        ]
+                        ],
                     },
                     "missing": {},
                     "remote_missing": {},
@@ -274,17 +274,17 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "present": {
                         "test_1": [
                             1,
-                        ]
+                        ],
                     },
                     "missing": {
                         "test_0": [
                             1,
-                        ]
+                        ],
                     },
                     "remote_missing": {
                         "test_0": [
                             1,
-                        ]
+                        ],
                     },
                 }
                 or r
@@ -311,7 +311,7 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "present": {
                         "test_1": [
                             1,
-                        ]
+                        ],
                     },
                     "missing": {},
                     "remote_missing": {},
@@ -339,7 +339,7 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "present": {
                         "test_1": [
                             1,
-                        ]
+                        ],
                     },
                     "missing": {},
                     "remote_missing": {},
@@ -350,7 +350,7 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "present": {
                         "test_1": [
                             1,
-                        ]
+                        ],
                     },
                     "missing": {},
                     "remote_missing": {},
@@ -403,7 +403,7 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "known": {
                         "test_1": [
                             1,
-                        ]
+                        ],
                     },
                     "present": {
                         "test_0": [
@@ -434,7 +434,7 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                 "known": {
                     "test_1": [
                         1,
-                    ]
+                    ],
                 },
                 "present": {
                     "test_0": [

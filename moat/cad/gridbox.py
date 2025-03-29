@@ -5,6 +5,7 @@
 # Source: @jdegs
 # https://www.printables.com/model/174715-basic-undivided-gridfinity-boxes-cadquery-customiz/files
 # License: CC 4.0 Attribution
+from __future__ import annotations
 
 import cadquery as cq
 import math
@@ -160,12 +161,12 @@ def gridbox(x_grid_number=2, y_grid_number=2, unit_height=6, disable_mholes=True
     # only used for socket base(s)
     pts = [
         (x * box_maj_wd, y * box_maj_wd)
-        for x in range(0, x_grid_number)
-        for y in range(0, y_grid_number)
+        for x in range(x_grid_number)
+        for y in range(y_grid_number)
     ]
     pts.pop(0)  # remove first element as not to duplicate existing socket
     f2a = f2.pushPoints(pts).eachpoint(
-        lambda loc: f2.val().moved(loc), combine="a"
+        lambda loc: f2.val().moved(loc), combine="a",
     )  # join all sockets
     f4 = f11.intersect(f2a)  # trim excess socket overhang, approx 0.25mm all sides
     f3 = f7.union(f4)  # join trimmed sockets with walls
@@ -181,8 +182,8 @@ def gridbox(x_grid_number=2, y_grid_number=2, unit_height=6, disable_mholes=True
                 (x * box_maj_wd - mag_dist0 * (1 - 2 * i)),
                 -1 * (y * box_maj_wd - mag_dist0 * (1 - 2 * j)),
             )
-            for x in range(0, x_grid_number)
-            for y in range(0, y_grid_number)
+            for x in range(x_grid_number)
+            for y in range(y_grid_number)
             for i in [0, 1]
             for j in [0, 1]
         ]

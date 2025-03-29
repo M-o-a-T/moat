@@ -13,7 +13,6 @@ from pathlib import Path
 import asyncclick as click
 import git
 import tomlkit
-from anyio import run_process
 from moat.util import P, add_repr, attrdict, make_proc, yload, yprint
 from packaging.requirements import Requirement
 from attrs import define, field
@@ -247,7 +246,7 @@ class Repo(git.Repo, _Common):
             self._last_tag = t
             return t
 
-        raise ValueError(f"No tags found")
+        raise ValueError("No tags found")
 
     @property
     def last_commit(self) -> str:
@@ -823,14 +822,14 @@ The binary-only build is currently unconditional.
 
 The default for uploading to Debian via 'dput' is '--unchecked ext';
 it is dropped when you use '--dput'.
-"""
+""",
 )
 @click.option("-f", "--no-dirty", is_flag=True, help="don't check for dirtiness (DANGER)")
 @click.option("-F", "--no-tag", is_flag=True, help="don't check for tag uptodate-ness (DANGER)")
 @click.option("-D", "--no-deb", is_flag=True, help="don't build Debian packages")
 @click.option("-C", "--no-commit", is_flag=True, help="don't commit the result")
 @click.option(
-    "-V", "--no-version", is_flag=True, help="don't update dependency versions in pyproject files"
+    "-V", "--no-version", is_flag=True, help="don't update dependency versions in pyproject files",
 )
 @click.option("-P", "--no-pypi", is_flag=True, help="don't push to PyPI")
 @click.option("-T", "--no-test", is_flag=True, help="don't run tests")
@@ -981,10 +980,10 @@ async def build(
                 fails.add(p.name)
         if fails:
             if not run:
-                print(f"*** Tests failed:", *fails, file=sys.stderr)
+                print("*** Tests failed:", *fails, file=sys.stderr)
             else:
-                print(f"Failed tests:", *fails, file=sys.stderr)
-                print(f"Fix and try again.", file=sys.stderr)
+                print("Failed tests:", *fails, file=sys.stderr)
+                print("Fix and try again.", file=sys.stderr)
                 return
 
     # Step 3: set version and fix versioned dependencies
@@ -1121,7 +1120,7 @@ async def build(
                 whl = Path("dist") / f"{r.under}-{tag}-py3-none-any.whl"
                 try:
                     res = subprocess.run(
-                        ["twine", "upload", str(targz), str(whl)], cwd=rd, check=True
+                        ["twine", "upload", str(targz), str(whl)], cwd=rd, check=True,
                     )
                 except subprocess.CalledProcessError:
                     err.add(r.name)

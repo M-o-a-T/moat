@@ -11,7 +11,7 @@ from moat.link.meta import MsgMeta
 from moat.util import P
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_simple(cfg):
     "simple client-to-client comm test"
     async with Scaffold(cfg, use_servers=False) as sf:

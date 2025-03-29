@@ -4,13 +4,11 @@ Database schema for collecting things
 
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, String, Table, Column, Integer, event
+from sqlalchemy import ForeignKey, String, event
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from moat.db.schema import Base
-from moat.db.util import Session
 
-from typing import Optional
 
 
 class ThingTyp(Base):
@@ -21,10 +19,10 @@ class ThingTyp(Base):
     comment: Mapped[str] = mapped_column(type_=String(200), nullable=True)
 
     parent_id: Mapped[int] = mapped_column(
-        ForeignKey("thingtyp.id", name="fk_thingtyp_typ"), nullable=True
+        ForeignKey("thingtyp.id", name="fk_thingtyp_typ"), nullable=True,
     )
-    parent: Mapped["ThingTyp"] = relationship(
-        "ThingTyp", back_populates="children", remote_side=[id]
+    parent: Mapped[ThingTyp] = relationship(
+        "ThingTyp", back_populates="children", remote_side=[id],
     )
 
     abstract: Mapped[bool] = mapped_column(
@@ -33,8 +31,8 @@ class ThingTyp(Base):
         server_default="0",
         comment="Must be False for instantiating things with this type",
     )
-    children: Mapped[set["ThingTyp"]] = relationship("ThingTyp", back_populates="parent")
-    things: Mapped[set["Thing"]] = relationship(back_populates="thingtyp")
+    children: Mapped[set[ThingTyp]] = relationship("ThingTyp", back_populates="parent")
+    things: Mapped[set[Thing]] = relationship(back_populates="thingtyp")
 
     def dump(self):
         res = super().dump()

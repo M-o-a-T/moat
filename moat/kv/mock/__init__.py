@@ -1,28 +1,18 @@
 # from asyncclick.testing import CliRunner
 from __future__ import annotations
-import io
 import logging
-import shlex
 import socket
-import sys
-from pathlib import Path
 
 import attr
-from asyncscope import main_scope, scope
+from asyncscope import scope
 from moat.src.test import run  # pylint:disable=import-error,no-name-in-module
 from moat.util import (  # pylint:disable=no-name-in-module
     CFG,
-    OptCtx,
-    attrdict,
     combine_dict,
     ensure_cfg,
-    list_ext,
-    load_ext,
-    wrap_main,
-    yload,
 )
 
-from moat.kv.client import _scoped_client, client_scope
+from moat.kv.client import _scoped_client
 
 logger = logging.getLogger(__name__)
 try:

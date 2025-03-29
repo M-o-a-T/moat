@@ -19,7 +19,7 @@ async def _dump(sf, *, task_status):
             print(msg)
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_ls_basic(cfg):
     evt = anyio.Event()
     async with Scaffold(cfg, use_servers=True) as sf:
@@ -101,7 +101,7 @@ async def fetch(c, p):
         return nn
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_ls_walk(cfg):
     async with Scaffold(cfg, use_servers=True) as sf:
         srv = await sf.server(init={"Hello": "there!", "test": 123})
@@ -122,7 +122,7 @@ async def test_ls_walk(cfg):
         assert n.get(P("a")) != nn
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_ls_save(cfg, tmp_path):
     fname = tmp_path / "test.moat"
 

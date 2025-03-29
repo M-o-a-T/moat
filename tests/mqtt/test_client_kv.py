@@ -4,7 +4,6 @@
 from __future__ import annotations
 import logging
 import os
-import random
 import unittest
 
 import anyio
@@ -18,7 +17,7 @@ except ImportError:
 from moat.mqtt.broker import create_broker
 from moat.mqtt.client import open_mqttclient
 from moat.mqtt.mqtt.constants import QOS_0
-from moat.util import gen_ident, al_az
+from moat.util import gen_ident
 
 try:
     from moat.kv.client import open_client

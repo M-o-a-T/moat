@@ -7,7 +7,7 @@ from moat.util import P
 from moat.mqtt.test import client, server
 
 
-@pytest.mark.trio
+@pytest.mark.trio()
 async def test_basic(autojump_clock):  # pylint: disable=unused-argument
     async with client() as c:
         await c.set(P("test.a.b.c"), value=123)
@@ -15,8 +15,8 @@ async def test_basic(autojump_clock):  # pylint: disable=unused-argument
         assert res.value == 123
 
 
-@pytest.mark.trio
-@pytest.mark.xfail
+@pytest.mark.trio()
+@pytest.mark.xfail()
 async def test_split(autojump_clock):  # pylint: disable=unused-argument
     async with main_scope(), server() as s:
         c1 = await s.test_client_scope(name="c_A")

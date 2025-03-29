@@ -9,7 +9,7 @@ from moat.kv.exceptions import CancelledError
 pytestmark = pytest.mark.skip
 
 
-@pytest.mark.trio
+@pytest.mark.trio()
 async def test_51_passthru(autojump_clock):  # pylint: disable=unused-argument
     async with stdtest(args={"init": 123}) as st:
         assert st is not None
@@ -38,7 +38,7 @@ async def test_51_passthru(autojump_clock):  # pylint: disable=unused-argument
     pass  # closing server
 
 
-@pytest.mark.trio
+@pytest.mark.trio()
 async def test_52_passthru_bin(autojump_clock):  # pylint: disable=unused-argument
     async with stdtest(args={"init": 123}) as st:
         assert st is not None

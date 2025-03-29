@@ -12,12 +12,9 @@ Extension types defined here:
 
 from __future__ import annotations
 
-import moat.lib.codec.msgpack as _msgpack
 
-from moat.lib.codec import Extension, NoCodecError
 from moat.lib.codec.msgpack import Codec
 
-from .path import Path
 from ._msgpack import std_ext, StdMsgpack
 
 __all__ = ["std_ext", "StdMsgpack"]

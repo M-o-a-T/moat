@@ -10,7 +10,7 @@ from importlib import import_module
 from contextlib import contextmanager
 from contextvars import ContextVar
 
-from sqlalchemy import Connection, create_engine, event, select
+from sqlalchemy import create_engine, event, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.engine import Engine
 

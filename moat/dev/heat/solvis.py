@@ -847,7 +847,7 @@ class Data:
 
                 heat_off = True
                 await self.pid.flow.setpoint(
-                    self.cfg.misc.stop.flow if orun != Run.off else self.lim.defrost.flow
+                    self.cfg.misc.stop.flow if orun != Run.off else self.lim.defrost.flow,
                 )
                 await self.cl_set(self.cfg.cmd.mode.path, value=self.cfg.cmd.mode.off)
                 await self.cl_set(self.cfg.cmd.power, value=0)

@@ -1,7 +1,7 @@
 # noqa:D104 pylint:disable=missing-module-docstring
 
 # We need to ensure that the test interpreter exists
-import os
+from __future__ import annotations
 from pathlib import Path
 from subprocess import run
 

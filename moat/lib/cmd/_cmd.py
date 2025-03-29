@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from typing import Any, Protocol, AsyncContextManager
-    from collections.abc import Callable, Awaitable
+    from collections.abc import Awaitable
 
     class MsgIn(Protocol):
         def __call__(self, msg):
@@ -832,7 +832,7 @@ class Stream:
     async def _stream(self, d, kw, sin, sout):
         if self.stream_out != S_NEW:
             raise RuntimeError(
-                "Simple command" if self.stream_out == S_END else "Stream-out already set"
+                "Simple command" if self.stream_out == S_END else "Stream-out already set",
             )
 
         # stream-in depends on what the remote side sent
@@ -951,7 +951,7 @@ class Forward:
         kw = msg[-1] if len(msg) > 1 and isinstance(msg[-1], dict) else None
         args = msg[1:-1] if kw is not None else msg[1:]
         self.dst._send_nowait(
-            (self._dst_id << 2) | (B_STREAM if stream else 0) | (B_ERROR if err else 0), args, kw
+            (self._dst_id << 2) | (B_STREAM if stream else 0) | (B_ERROR if err else 0), args, kw,
         )
 
         self._ended()
@@ -974,7 +974,7 @@ class Forward:
         kw = msg[-1] if len(msg) > 1 and isinstance(msg[-1], dict) else None
         args = msg[1:-1] if kw is not None else msg[1:]
         self.src._send_nowait(
-            (self._src_id << 2) | (B_STREAM if stream else 0) | (B_ERROR if err else 0), args, kw
+            (self._src_id << 2) | (B_STREAM if stream else 0) | (B_ERROR if err else 0), args, kw,
         )
 
         self._ended()

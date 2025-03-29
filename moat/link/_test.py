@@ -73,7 +73,7 @@ class Scaffold(CtxObj):
         Root.set(self.cfg.root)
 
         with nullcontext(
-            self._tempdir
+            self._tempdir,
         ) if self._tempdir is not None else TemporaryDirectory() as tempdir:
             self.tempdir = FSPath(tempdir)
             async with anyio.create_task_group() as self.tg:

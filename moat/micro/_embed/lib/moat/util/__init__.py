@@ -5,10 +5,10 @@ A hacked-up copy of some parts of `moat.util`.
 from __future__ import annotations
 
 from copy import deepcopy
-import re
 
 from moat.micro.compat import Event, log
-from .path import P, Path
+from .path import P as P
+from .path import Path as Path
 
 from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
 

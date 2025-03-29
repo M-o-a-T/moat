@@ -33,4 +33,4 @@ def gen_ident(k=10, /, *, alphabet=al_unique):
     """
     Generate a random identifier / password.
     """
-    return "".join(random.choices(alphabet, k=k))  # noqa:S311
+    return "".join(random.choices(alphabet, k=k))

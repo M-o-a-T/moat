@@ -1,6 +1,7 @@
 """
 Wrapper with yaml support
 """
+from __future__ import annotations
 from ._cbor import *
 from moat.util.compat import const
 

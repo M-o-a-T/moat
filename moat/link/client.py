@@ -16,7 +16,7 @@ except ImportError:
     from moat.lib.mqttproto import RetainHandling
 
 from moat.lib.cmd import CmdHandler
-from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident, al_unique
+from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident
 from moat.util.compat import CancelledError
 
 from .conn import TCPConn, CmdCommon, SubConn

@@ -7,15 +7,9 @@ Support for things.
 
 from __future__ import annotations
 
-import anyio
-import logging  # pylint: disable=wrong-import-position
 import sys
-from datetime import datetime
-from functools import partial
-from time import time
-from moat.util import load_subgroup, CFG, ensure_cfg, yprint, NotGiven, option_ng
+from moat.util import load_subgroup, ensure_cfg, yprint, option_ng
 from moat.db import database
-import moat.label.model
 from .model import Thing, ThingTyp
 from sqlalchemy import select
 
@@ -188,7 +182,7 @@ def typopts(c):
     c = option_ng("--name", "-n", type=str, help="Rename this type")(c)
     c = option_ng("--parent", "-p", type=str, help="Parent of this type")(c)
     c = click.option(
-        "--abstract", "-a", is_flag=True, help="This type can't contain a real thing"
+        "--abstract", "-a", is_flag=True, help="This type can't contain a real thing",
     )(c)
     c = click.option("--real", "-A", is_flag=True, help="This type can have a real thing")(c)
     c = option_ng("--comment", "-c", "comment", type=str, help="Description of this type")(c)

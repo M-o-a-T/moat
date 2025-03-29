@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from moat.util import NotGiven, OutOfData
+from moat.util import NotGiven
 from moat.lib.codec.proxy import as_proxy
 
-from ..compat import Event, Lock, log
+from ..compat import Event, Lock
 from .stack import BaseBuf, StackedBlk, StackedMsg
 
 # Typing

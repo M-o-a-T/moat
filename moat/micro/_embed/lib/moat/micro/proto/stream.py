@@ -5,14 +5,12 @@ Adaptor for MicroPython streams.
 from __future__ import annotations
 
 
-from moat.lib.codec.proxy import DProxy, NoProxyError, Proxy, get_proxy, name2obj, obj2name
 from moat.micro.compat import AC_use
 from moat.lib.codec import get_codec
 
 from ._stream import _MsgpackMsgBlk, _MsgpackMsgBuf
 from .stack import BaseBuf
 
-from moat.lib.codec.msgpack import ExtType, Packer, Unpacker, packb
 
 
 class MsgpackMsgBuf(_MsgpackMsgBuf):

@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from moat.util.broadcast import BroadcastReader
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_example():
     r1 = []
     r2 = []
@@ -39,7 +39,7 @@ async def test_example():
     assert r1 == r2 == [0, 1, 2, 3, 4, 42]
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_basic():
     seen = [0, 0, 0]
 

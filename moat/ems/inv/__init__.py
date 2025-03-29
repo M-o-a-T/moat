@@ -11,9 +11,7 @@ Victron MultiPlus only, for now.
 from __future__ import annotations
 
 import logging
-import os
-import sys
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
 
@@ -30,7 +28,6 @@ from moat.lib.victron.dbus.utils import (
     unwrap_dbus_value,
     wrap_dbus_dict,
 )
-from moat.util import attrdict
 from moat.util.times import time_until
 
 from ._util import balance

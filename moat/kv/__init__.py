@@ -4,9 +4,9 @@ from __future__ import annotations
 __path__ = __import__("pkgutil").extend_path(__path__, __name__)
 
 try:
-    from importlib.metadata import version  
+    from importlib.metadata import version
 
-    _version = version('moat.kv')  
+    _version = version("moat.kv")
     _version_tuple = tuple(int(x) for x in _version.split("."))
 
 except Exception:  # pragma: no cover

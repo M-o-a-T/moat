@@ -329,7 +329,7 @@ class ReliableMsg(StackedMsg):
 
                 await idle()
 
-        except Exception:  # noqa:TRY203
+        except Exception:
             # if not self.persist:
             raise
             # log("Reliable", err=exc)

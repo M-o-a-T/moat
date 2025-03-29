@@ -53,12 +53,12 @@ hostports:
             dest: !P a.cli.dst
             src: !P a.cli.src
             slot: 1sec
-    
-  
+
+
 """
 
 
-@pytest.mark.trio
+@pytest.mark.trio()
 async def test_kv_poll(autojump_clock):  # pylint: disable=unused-argument
     cfg1 = yload(cfg1_, attr=True)
     cfg2 = yload(cfg2_, attr=True)

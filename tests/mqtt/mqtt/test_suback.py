@@ -29,7 +29,7 @@ class SubackPacketTest(unittest.TestCase):
                 SubackPayload.RETURN_CODE_01,
                 SubackPayload.RETURN_CODE_02,
                 SubackPayload.RETURN_CODE_80,
-            ]
+            ],
         )
         suback = SubackPacket(variable_header=variable_header, payload=payload)
         out = suback.to_bytes()

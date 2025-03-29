@@ -472,7 +472,7 @@ class BrokerTest(unittest.TestCase):
                             ("/qos0", QOS_0),
                             ("/qos1", QOS_1),
                             ("/qos2", QOS_2),
-                        ]
+                        ],
                     )
                     self.assertEqual(ret, [QOS_0, QOS_1, QOS_2])
 
@@ -506,7 +506,7 @@ class BrokerTest(unittest.TestCase):
                             ("+/tennis/#", QOS_0),
                             ("sport+", QOS_0),
                             ("sport/+/player1", QOS_0),
-                        ]
+                        ],
                     )
                     self.assertEqual(ret, [QOS_0, QOS_0, 0x80, QOS_0])
 
@@ -587,7 +587,7 @@ class BrokerTest(unittest.TestCase):
                                 ("/qos0", QOS_0),
                                 ("/qos1", QOS_1),
                                 ("/qos2", QOS_2),
-                            ]
+                            ],
                         )
                         self.assertEqual(ret, [QOS_0, QOS_1, QOS_2])
                         await sub_client.disconnect()

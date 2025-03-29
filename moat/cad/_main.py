@@ -8,13 +8,10 @@ import anyio
 
 # pylint: disable=missing-module-docstring
 import logging
-import sys
 import asyncclick as click
-import subprocess
-from functools import partial
 from pathlib import Path as FSPath
 
-from moat.util import NotGiven, P, Path, load_subgroup
+from moat.util import load_subgroup
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +46,6 @@ async def test(obj, files):
     import moat
     import sys
     import os
-    import io
     from tempfile import SpooledTemporaryFile
 
     cfg = obj.cfg
@@ -57,7 +53,7 @@ async def test(obj, files):
 
     buf = SpooledTemporaryFile(mode="w+")
     res = await anyio.run_process(
-        [f"{cfg.cad.base}/bin/python3", "-c", "import sys; print(repr(sys.path))"], stdout=buf
+        [f"{cfg.cad.base}/bin/python3", "-c", "import sys; print(repr(sys.path))"], stdout=buf,
     )
     buf.seek(0)
     pypath = (
@@ -94,7 +90,6 @@ async def test(obj, file, args):
     import moat
     import sys
     import os
-    import io
     from tempfile import SpooledTemporaryFile
 
     cfg = obj.cfg
@@ -102,7 +97,7 @@ async def test(obj, file, args):
 
     buf = SpooledTemporaryFile(mode="w+")
     res = await anyio.run_process(
-        [f"{cfg.cad.base}/bin/python3", "-c", "import sys; print(repr(sys.path))"], stdout=buf
+        [f"{cfg.cad.base}/bin/python3", "-c", "import sys; print(repr(sys.path))"], stdout=buf,
     )
     buf.seek(0)
     pypath = (

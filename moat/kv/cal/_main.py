@@ -7,7 +7,7 @@ from moat.util import P, Path
 from moat.kv.data import data_get
 from .model import CalRoot
 from .util import find_next_alarm
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, UTC
 import pytz
 
 import anyio
@@ -17,7 +17,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-utc = timezone.utc
+utc = UTC
 now = partial(datetime.now, utc)
 
 

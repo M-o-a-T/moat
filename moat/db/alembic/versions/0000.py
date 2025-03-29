@@ -5,7 +5,9 @@ Revises: 0001
 Create Date: 2025-03-05 20:19:53.269117+00:00
 
 """
-from typing import Sequence, Union
+from __future__ import annotations
+from typing import Union
+from collections.abc import Sequence
 
 from alembic import op
 import sqlalchemy as sa
@@ -30,7 +32,7 @@ def upgrade() -> None:
             comment="URL prefix if the label has a random code element",
         ),
         sa.Column(
-            "code", sa.Integer(), nullable=False, comment="Initial ID code when no labels exist"
+            "code", sa.Integer(), nullable=False, comment="Initial ID code when no labels exist",
         ),
         sa.Column("id", sa.Integer(), nullable=False),
         sa.PrimaryKeyConstraint("id"),

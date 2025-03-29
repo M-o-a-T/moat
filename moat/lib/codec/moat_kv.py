@@ -1,1 +1,1 @@
-from moat.util.msgpack import Codec
+from moat.util.msgpack import Codec as Codec

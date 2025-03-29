@@ -1,6 +1,8 @@
 """Add initial data
 """
-from typing import Sequence, Union
+from __future__ import annotations
+from typing import Union
+from collections.abc import Sequence
 
 from alembic import op
 import sqlalchemy as sa

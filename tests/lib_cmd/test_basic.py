@@ -6,7 +6,7 @@ from moat.lib.cmd import StreamError
 from tests.lib_cmd.scaffold import scaffold
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 @pytest.mark.parametrize("a_s", [(), (None,), ("foo"), (12, 34)])
 @pytest.mark.parametrize("a_r", [(), (None,), ("bar"), (2, 3)])
 @pytest.mark.parametrize("k_s", [{}, dict(a=42)])
@@ -30,7 +30,7 @@ async def test_basic(a_s, a_r, k_s, k_r):
         assert res.kw == k_r
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_basic_res():
     async def handle(msg):
         assert msg.cmd == "Test"
@@ -43,7 +43,7 @@ async def test_basic_res():
         assert res == {"C": "Test", "R": (123,)}
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_error():
     async def handle(msg):
         raise RuntimeError("Duh", msg.args)
@@ -56,7 +56,7 @@ async def test_error():
         assert err.match("Duh")
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_more():
     async def handle(msg):
         assert msg.cmd == "X"
@@ -82,7 +82,7 @@ async def test_more():
         assert r == [1, 2, 3, 4, 5]
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_return():
     async def handle(msg):
         assert msg.cmd == "Test"
@@ -95,7 +95,7 @@ async def test_return():
         assert res[0] == ("Foo", 234)
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_return2():
     async def handle(msg):
         assert msg.cmd == "Test"
@@ -109,7 +109,7 @@ async def test_return2():
         print("DONE")
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_stream_in():
     async def handle(msg):
         res = []
@@ -132,7 +132,7 @@ async def test_stream_in():
         print("DONE")
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_stream_out():
     async def handle(msg):
         assert msg.cmd == "Test"

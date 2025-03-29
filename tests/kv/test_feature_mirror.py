@@ -9,7 +9,7 @@ from moat.kv.mock.mqtt import stdtest
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.trio
+@pytest.mark.trio()
 async def test_61_basic(autojump_clock):  # pylint: disable=unused-argument
     async with stdtest(args={"init": 123}, tocks=30) as st:
         assert st is not None

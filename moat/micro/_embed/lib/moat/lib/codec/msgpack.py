@@ -27,11 +27,7 @@ from io import BytesIO
 from moat.util import attrdict, OutOfData
 from moat.micro.compat import const
 
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from typing import Any
-    from collections.abc import Iterator
 
 __all__ = ["Codec", "ExtType"]
 

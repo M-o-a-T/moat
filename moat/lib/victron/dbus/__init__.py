@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import inspect
 import logging
-import os
-import traceback
 import weakref
 from collections import defaultdict
 from contextlib import asynccontextmanager

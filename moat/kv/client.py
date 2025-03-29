@@ -7,7 +7,6 @@ Main entry point: :func:`open_client`.
 from __future__ import annotations
 
 import logging
-import os
 import socket
 from contextlib import AsyncExitStack, asynccontextmanager
 from inspect import iscoroutine
@@ -547,7 +546,7 @@ class Client:
         Any other keywords are forwarded to the server.
         """
         if self._handlers is None:
-            raise ClosedResourceError()
+            raise ClosedResourceError
         if seq is None:
             act = "action"
             self._seq += 1

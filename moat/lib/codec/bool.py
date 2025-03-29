@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from ._base import Codec as _Codec
-from ._base import NoCodecError
 
 
 class Codec(_Codec):

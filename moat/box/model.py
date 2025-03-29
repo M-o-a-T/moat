@@ -8,7 +8,6 @@ from sqlalchemy import ForeignKey, String, Table, Column, Integer, event
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from moat.db.schema import Base
-from moat.db.util import Session
 
 from typing import Optional
 
@@ -16,7 +15,7 @@ boxtyp_tree = Table(
     "boxtyp_tree",
     Base.metadata,
     Column(
-        "parent_id", Integer, ForeignKey("boxtyp.id", name="fk_boxtyp_parent"), primary_key=True
+        "parent_id", Integer, ForeignKey("boxtyp.id", name="fk_boxtyp_parent"), primary_key=True,
     ),
     Column("child_id", Integer, ForeignKey("boxtyp.id", name="fk_boxtyp_child"), primary_key=True),
 )
@@ -28,14 +27,14 @@ class BoxTyp(Base):
     name: Mapped[str] = mapped_column(unique=True, type_=String(40))
     comment: Mapped[str] = mapped_column(type_=String(200), nullable=True)
 
-    parents: Mapped[set["BoxTyp"]] = relationship(
+    parents: Mapped[set[BoxTyp]] = relationship(
         "BoxTyp",
         secondary=boxtyp_tree,
         primaryjoin="BoxTyp.id == boxtyp_tree.c.child_id",
         secondaryjoin="BoxTyp.id == boxtyp_tree.c.parent_id",
         back_populates="children",
     )
-    children: Mapped[set["BoxTyp"]] = relationship(
+    children: Mapped[set[BoxTyp]] = relationship(
         "BoxTyp",
         secondary=boxtyp_tree,
         primaryjoin="BoxTyp.id == boxtyp_tree.c.parent_id",
@@ -60,7 +59,7 @@ class BoxTyp(Base):
         comment="Default label",
     )
 
-    boxes: Mapped[set["Box"]] = relationship(back_populates="boxtyp")
+    boxes: Mapped[set[Box]] = relationship(back_populates="boxtyp")
 
     def dump(self):
         res = super().dump()
@@ -84,12 +83,12 @@ class Box(Base):
     typ_id: Mapped[int] = mapped_column(ForeignKey("boxtyp.id", name="fk_box_typ"))
     name: Mapped[str] = mapped_column(unique=True, type_=String(40))
     container_id: Mapped[int] = mapped_column(
-        ForeignKey("box.id", name="fk_box_container"), nullable=True
+        ForeignKey("box.id", name="fk_box_container"), nullable=True,
     )
 
     boxtyp: Mapped[BoxTyp] = relationship(back_populates="boxes")
-    container: Mapped[Optional["Box"]] = relationship(back_populates="boxes", remote_side=[id])
-    boxes: Mapped[set["Box"]] = relationship(back_populates="container")
+    container: Mapped[Optional[Box]] = relationship(back_populates="boxes", remote_side=[id])
+    boxes: Mapped[set[Box]] = relationship(back_populates="container")
 
     # location within its parent
     pos_x: Mapped[int] = mapped_column(nullable=True, comment="X position in parent")

@@ -20,7 +20,6 @@ from asyncwebsockets import create_websocket
 from moat.util import create_queue, NotGiven
 from wsproto.utilities import ProtocolError
 
-from . import codecs
 from .adapters import StreamAdapter, WebSocketsAdapter
 from .errors import NoDataException
 from .mqtt.connack import CLIENT_ERROR, CONNECTION_ACCEPTED

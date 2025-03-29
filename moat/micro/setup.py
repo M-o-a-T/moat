@@ -8,12 +8,10 @@ import logging
 import os
 import sys
 import shutil
-from functools import wraps
 
 from moat.util import merge, P
 from moat.micro.cmd.tree.dir import Dispatch, SubDispatch
 from moat.micro.cmd.util.part import get_part
-from moat.micro.errors import NoPathError, RemoteError
 from moat.micro.util import run_update
 from moat.lib.codec import get_codec
 
@@ -189,7 +187,7 @@ async def setup(
                         f"import _hash; print(repr(_hash.hash[{p!r}])); del _hash",
                         quiet=True,
                     )
-                    return eval(res)  # noqa: S307
+                    return eval(res)
 
                 await do_update(dst, MoatDevPath(".").connect_repl(repl), cross, hfn)
 
@@ -254,7 +252,7 @@ async def install_(cfg, dest: Path = None, upload: bool = False):
         if idf is None:
             if "ESP" not in os.environ:
                 raise click.UsageError(
-                    "'idf.py' not found: Try ESP=/path/to/src/esp-idf, or source $ESP/export.sh"
+                    "'idf.py' not found: Try ESP=/path/to/src/esp-idf, or source $ESP/export.sh",
                 )
             idf = os.environ["ESP"] + os.sep + "idf.py"
         goal = "deploy"
@@ -307,7 +305,7 @@ async def install_(cfg, dest: Path = None, upload: bool = False):
             print("… found.")
 
         await anyio.to_thread.run_sync(
-            shutil.copy, portdir / "build-RPI_PICO/" / "firmware.uf2", dest
+            shutil.copy, portdir / "build-RPI_PICO/" / "firmware.uf2", dest,
         )
 
     if port is not None and not await port.exists():

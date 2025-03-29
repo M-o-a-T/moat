@@ -102,7 +102,7 @@ def _get_message(args):
     for m in args["msg"]:
         yield m
     for m in args["msg_eval"]:
-        yield eval(m)  # pylint: disable=eval-used  # noqa:S307
+        yield eval(m)  # pylint: disable=eval-used
     if args["msg_lines"]:
         with open(args["msg_lines"]) as f:  # pylint: disable=unspecified-encoding
             for line in f:
@@ -115,7 +115,7 @@ def _get_message(args):
         yield sys.stdin.buffer.read()
     if args["msg_stdin_eval"]:
         message = sys.stdin.read()
-        yield eval(message)  # pylint: disable=eval-used  # noqa:S307
+        yield eval(message)  # pylint: disable=eval-used
 
 
 async def do_pub(client, args, cfg):

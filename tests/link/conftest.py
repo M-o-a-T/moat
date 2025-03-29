@@ -8,13 +8,13 @@ from moat.link._test import CFG
 
 if False:
 
-    @pytest.fixture
+    @pytest.fixture()
     def anyio_backend():
         "restrict anyio backend"
         return "trio"
 
 
-@pytest.fixture
+@pytest.fixture()
 def cfg():
     "fixture for the static config"
     c = copy.deepcopy(CFG)

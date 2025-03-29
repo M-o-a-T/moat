@@ -12,7 +12,6 @@ from moat.thing.model import Thing
 from moat.util import NotGiven, gen_ident, al_lower
 from moat.db.util import session
 from moat.db.schema import Base
-import random
 
 LabelTyp.boxtypes = relationship(BoxTyp, back_populates="labeltyp", collection_class=set)
 Label.box = relationship(Box, back_populates="labels")

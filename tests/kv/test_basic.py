@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 # This is a basic Trio test which we keep around to check that
 # (a) the autojump clock works as advertised
 # (b) we can use trio.
-@pytest.mark.trio
+@pytest.mark.trio()
 async def test_00_trio_clock(autojump_clock):  # pylint: disable=unused-argument
     assert trio.current_time() == 0
     t = time()
@@ -32,7 +32,7 @@ async def test_00_trio_clock(autojump_clock):  # pylint: disable=unused-argument
     assert time() - t < 1
 
 
-@pytest.mark.trio
+@pytest.mark.trio()
 async def test_00_runner(autojump_clock):  # pylint: disable=unused-argument
     with raises(click.exceptions.NoSuchOption):
         await run("--doesnotexist")
@@ -52,7 +52,7 @@ async def collect(i, path=()):
     return res
 
 
-@pytest.mark.trio
+@pytest.mark.trio()
 async def test_01_basic(autojump_clock):  # pylint: disable=unused-argument
     async with stdtest(args={"init": 123}, tocks=50) as st:
         assert st is not None
@@ -125,7 +125,7 @@ async def test_01_basic(autojump_clock):  # pylint: disable=unused-argument
                 "present": {
                     "test_0": [
                         [1, 5],
-                    ]
+                    ],
                 },
                 "missing": {},
                 "remote_missing": {},
@@ -182,7 +182,7 @@ async def test_01_basic(autojump_clock):  # pylint: disable=unused-argument
         pass  # server end
 
 
-@pytest.mark.trio
+@pytest.mark.trio()
 async def test_02_cmd(autojump_clock):  # pylint: disable=unused-argument
     async with stdtest(args={"init": 123}, tocks=50) as st:
         assert st is not None
@@ -218,7 +218,7 @@ async def test_02_cmd(autojump_clock):  # pylint: disable=unused-argument
                 "present": {
                     "test_0": [
                         [1, 4],
-                    ]
+                    ],
                 },
                 "missing": {},
                 "remote_missing": {},
@@ -257,12 +257,12 @@ async def test_02_cmd(autojump_clock):  # pylint: disable=unused-argument
                 "known": {
                     "test_0": [
                         1,
-                    ]
+                    ],
                 },
                 "present": {
                     "test_0": [
                         [2, 5],
-                    ]
+                    ],
                 },
                 "missing": {},
                 "remote_missing": {},
@@ -271,7 +271,7 @@ async def test_02_cmd(autojump_clock):  # pylint: disable=unused-argument
         pass  # server end
 
 
-@pytest.mark.trio
+@pytest.mark.trio()
 async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
     async with stdtest(test_1={"init": 125}, n=2, tocks=30) as st:
         assert st is not None
@@ -298,7 +298,7 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "present": {
                         "test_1": [
                             1,
-                        ]
+                        ],
                     },
                     "missing": {},
                     "remote_missing": {},
@@ -311,7 +311,7 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "present": {
                         "test_1": [
                             1,
-                        ]
+                        ],
                     },
                     "missing": {},
                     "remote_missing": {},
@@ -324,17 +324,17 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "present": {
                         "test_1": [
                             1,
-                        ]
+                        ],
                     },
                     "missing": {
                         "test_0": [
                             1,
-                        ]
+                        ],
                     },
                     "remote_missing": {
                         "test_0": [
                             1,
-                        ]
+                        ],
                     },
                 }
                 or r
@@ -361,7 +361,7 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "present": {
                         "test_1": [
                             1,
-                        ]
+                        ],
                     },
                     "missing": {},
                     "remote_missing": {},
@@ -389,7 +389,7 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "present": {
                         "test_1": [
                             1,
-                        ]
+                        ],
                     },
                     "missing": {},
                     "remote_missing": {},
@@ -400,7 +400,7 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "present": {
                         "test_1": [
                             1,
-                        ]
+                        ],
                     },
                     "missing": {},
                     "remote_missing": {},
@@ -460,7 +460,7 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "known": {
                         "test_1": [
                             1,
-                        ]
+                        ],
                     },
                     "present": {
                         "test_0": [
@@ -490,7 +490,7 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                 "known": {
                     "test_1": [
                         1,
-                    ]
+                    ],
                 },
                 "present": {
                     "test_0": [
@@ -507,7 +507,7 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
         pass  # server end
 
 
-@pytest.mark.trio
+@pytest.mark.trio()
 async def test_03_lots(autojump_clock):  # pylint: disable=unused-argument
     async with stdtest(args={"init": 123}, tocks=1000) as st:
         assert st is not None

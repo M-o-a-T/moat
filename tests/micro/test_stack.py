@@ -58,7 +58,7 @@ micro:
       port: /tmp/moat.test
       log:
         txt: "N"
-  
+
     co:
       cons: !P s
       prefix: "C"
@@ -85,7 +85,7 @@ micro:
 """
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio()
 async def test_stack(tmp_path):
     "full-stack test"
     cfg = yload(CFG, attr=True)

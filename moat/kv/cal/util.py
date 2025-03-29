@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone, date, time
+from datetime import datetime, timedelta, date, time, UTC
 from dateutil.rrule import rrulestr
 from vobject.icalendar import VAlarm, VEvent
 
@@ -9,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-async def find_next_alarm(calendar, future=10, now=None, zone=timezone.utc) -> Tuple(
+async def find_next_alarm(calendar, future=10, now=None, zone=UTC) -> Tuple(
     VAlarm,
     datetime,
 ):
@@ -31,7 +31,7 @@ async def find_next_alarm(calendar, future=10, now=None, zone=timezone.utc) -> T
     )
 
     if now is None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
     ev = None
     ev_v = None
     ev_t = None

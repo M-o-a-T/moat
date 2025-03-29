@@ -19,20 +19,17 @@ from moat.util import (
     merge,
     process_args,
     to_attrdict,
-    ungroup,
     yload,
     yprint,
 )
 from moat.micro.cmd.tree.dir import Dispatch, SubDispatch
 from moat.micro.cmd.util.part import get_part
 from moat.micro.errors import NoPathError, RemoteError
-from moat.micro.path import copytree
 from moat.micro.stacks.util import TEST_MAGIC
-from moat.micro.util import run_update
 from moat.util.main import load_subgroup
 from moat.lib.codec import get_codec
 
-from .compat import idle, log
+from .compat import idle
 
 import asyncclick as click
 

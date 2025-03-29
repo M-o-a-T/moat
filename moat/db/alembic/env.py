@@ -1,5 +1,5 @@
 """
-Alembic environment setup script, lightly edited 
+Alembic environment setup script, lightly edited
 """
 from __future__ import annotations
 

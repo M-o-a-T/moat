@@ -61,7 +61,6 @@ The server process is:
 
 from __future__ import annotations
 
-import io
 from importlib import import_module
 
 import jsonschema

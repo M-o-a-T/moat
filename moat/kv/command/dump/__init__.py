@@ -8,11 +8,9 @@ from collections.abc import Mapping
 import asyncclick as click
 from moat.mqtt.codecs import MsgPackCodec
 from moat.util import (
-    MsgReader,
     MsgWriter,
     P,
     Path,
-    PathLongener,
     load_subgroup,
     yload,
     yprint,

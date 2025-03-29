@@ -15,7 +15,7 @@ from moat.kv.runner import AnyRunnerRoot
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.trio
+@pytest.mark.trio()
 async def test_83_run(autojump_clock):  # pylint: disable=unused-argument
     async with stdtest(args={"init": 123}, tocks=200) as st:
         assert st is not None
@@ -68,7 +68,7 @@ async def test_83_run(autojump_clock):  # pylint: disable=unused-argument
             assert rs.result == 42
 
 
-@pytest.mark.trio
+@pytest.mark.trio()
 async def test_84_mqtt(autojump_clock):  # pylint: disable=unused-argument
     autojump_clock.autojump_threshold = 0.01
     async with stdtest(args={"init": 123}, tocks=200) as st:

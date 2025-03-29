@@ -215,7 +215,7 @@ class SignalClient:
                                         ),
                                     ),
                                 },
-                            }
+                            },
                         )
             return {"timestamps": timestamps}
         finally:

@@ -41,7 +41,7 @@ class Node:
             self._data = data
             self._meta = meta
 
-    def set(self, item: Path, data: Any, meta: MsgMeta, force: bool = False) -> bool|None:
+    def set(self, item: Path, data: Any, meta: MsgMeta, force: bool = False) -> bool | None:
         """Save new data below this node.
 
         If @tick is earlier than the item's timestamp, always return False.
@@ -87,21 +87,21 @@ class Node:
             return False
         return True
 
-
     def _dump_x(self):
         # Iterator that returns a serialization of this node tree.
         ps = PathShortener()
-        for p, d, m in self._dump_x_( () ):
+        for p, d, m in self._dump_x_(()):
             s, p = ps.short(p)
             yield (s, p, d, *m.dump())
- 
+
     def _dump_x_(self, path):
         # Helper for _dump_x
         if self._data is not NotGiven:
             yield path, self._data, self._meta
         for k, v in self._sub.items():
-            yield from v._dump_x_(path + (k,),)
-
+            yield from v._dump_x_(
+                path + (k,),
+            )
 
     def dump(self):
         """
@@ -110,7 +110,7 @@ class Node:
         """
         # The naïve method (in `_dump_x`) creates a full-path tuple for
         # each node, all of which the PathShortener will throw away.
-        # 
+        #
         # This code yields the exact same data – without that overhead.
         # The old code is kept (a) because it's more easily understood,
         # (b) for unit testing.
@@ -119,7 +119,7 @@ class Node:
 
     def _dump(self, path, level):
         if self._data is not NotGiven:
-            ma,mk = self._meta.a,self._meta.kw
+            ma, mk = self._meta.a, self._meta.kw
             yield (level, path, self._data, *self._meta.dump())
             level += len(path)
             path = ()
@@ -145,7 +145,7 @@ class Node:
         pl = PathLongener()
         while True:
             s, p, d, *m = yield
-            m = MsgMeta._moat__restore(m,NotGiven)
+            m = MsgMeta._moat__restore(m, NotGiven)
             p = pl.long(s, p)
             n = self.get(p)
             if force or n.meta is None or n.meta.timestamp < m.timestamp:
@@ -192,7 +192,7 @@ class Node:
         """
         if isinstance(item, Path):
             s = self
-            for n,k in enumerate(item):
+            for n, k in enumerate(item):
                 try:
                     s = s._sub[k]  # noqa:SLF001
                 except KeyError:
@@ -200,7 +200,7 @@ class Node:
                         raise
                     s = s._add(k)  # noqa:SLF001
                 else:
-                    if create is True and n==len(item)-1 and s._data is not NotGiven:
+                    if create is True and n == len(item) - 1 and s._data is not NotGiven:
                         raise KeyError(k)
             return s
 

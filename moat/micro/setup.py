@@ -23,7 +23,7 @@ import asyncclick as click
 
 logger = logging.getLogger(__name__)
 
-all = ["setup","install","do_update","do_copy"]
+all = ["setup", "install", "do_update", "do_copy"]
 
 
 async def do_update(dst, root, cross, hfn):
@@ -93,7 +93,8 @@ async def setup(
     from .direct import DirectREPL
     from .path import ABytes, MoatDevPath, copy_over
     from .proto.stream import RemoteBufAnyio
-    codec=get_codec("std-msgpack")
+
+    codec = get_codec("std-msgpack")
 
     if cross == "-":
         cross = None
@@ -109,12 +110,12 @@ async def setup(
             await repl.reset()
         await anyio.sleep(2)
 
-
     # The following dance is necessary because a reset may or may not kill
     # the whole stack. Fixing this, i.e. making individual apps fault
     # tolerant, is somewhere on the TODO list.
 
-    need_run=False
+    need_run = False
+
     async def part_two():
         nonlocal need_run
         if run or watch or mount:
@@ -156,7 +157,7 @@ async def setup(
                 await dsp.reload()
                 log("Running.")
                 await sd.dispatch(P("_s.ping"))
-                need_run=False
+                need_run = False
                 await idle()
 
     try:
@@ -182,6 +183,7 @@ async def setup(
                 await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl))
 
             if update:
+
                 async def hfn(p):
                     res = await repl.exec(
                         f"import _hash; print(repr(_hash.hash[{p!r}])); del _hash",
@@ -191,7 +193,7 @@ async def setup(
 
                 await do_update(dst, MoatDevPath(".").connect_repl(repl), cross, hfn)
 
-            need_run=True
+            need_run = True
             if reset:
                 await repl.soft_reset(run_main=bool(run))
                 # reset with run_main set should boot into MoaT
@@ -213,11 +215,11 @@ async def setup(
             await part_two()
 
 
-def find_p(prog:str):
+def find_p(prog: str):
     for p in os.environ["PATH"].split(os.pathsep):
         try:
-            pp = p+os.sep+prog
-            st=os.stat(pp)
+            pp = p + os.sep + prog
+            st = os.stat(pp)
         except FileNotFoundError:
             continue
         else:
@@ -226,7 +228,7 @@ def find_p(prog:str):
     return None
 
 
-async def install_(cfg, dest:Path=None, upload:bool=False):
+async def install_(cfg, dest: Path = None, upload: bool = False):
     device = cfg.install.port
     try:
         port = anyio.Path(get_part(cfg, cfg.install.serial))
@@ -251,33 +253,52 @@ async def install_(cfg, dest:Path=None, upload:bool=False):
         idf = find_p("idf.py")
         if idf is None:
             if "ESP" not in os.environ:
-                raise click.UsageError("'idf.py' not found: Try ESP=/path/to/src/esp-idf, or source $ESP/export.sh")
-            idf = os.environ["ESP"]+os.sep+"idf.py"
-        goal="deploy"
+                raise click.UsageError(
+                    "'idf.py' not found: Try ESP=/path/to/src/esp-idf, or source $ESP/export.sh"
+                )
+            idf = os.environ["ESP"] + os.sep + "idf.py"
+        goal = "deploy"
         if board is None:
-            board="esp32_generic"
+            board = "esp32_generic"
 
     elif device == "esp8266":
-        goal="deploy"
+        goal = "deploy"
         if board is None:
-            board="esp8266_generic"
+            board = "esp8266_generic"
 
     else:
-        goal="all"
+        goal = "all"
         if board is None:
-            board="rpi_pico"
+            board = "rpi_pico"
 
     import moat.micro._embed._tag as m
+
     manifest = m.__file__.replace("_tag", "manifest")
 
-    mpydir = anyio.Path("ext")/"micropython"
-    portdir = mpydir/"ports"/device
-    await anyio.run_process(["make", "-j", "ESPTOOL=esptool", "PORT="+str(port), "BAUD="+str(rate), "BOARD="+board.upper(), "FROZEN_MANIFEST="+manifest, goal], cwd=portdir, check=True, stdout=sys.stdout, stderr=sys.stderr, env={"PYTHONPATH":await anyio.Path.cwd()})
+    mpydir = anyio.Path("ext") / "micropython"
+    portdir = mpydir / "ports" / device
+    await anyio.run_process(
+        [
+            "make",
+            "-j",
+            "ESPTOOL=esptool",
+            "PORT=" + str(port),
+            "BAUD=" + str(rate),
+            "BOARD=" + board.upper(),
+            "FROZEN_MANIFEST=" + manifest,
+            goal,
+        ],
+        cwd=portdir,
+        check=True,
+        stdout=sys.stdout,
+        stderr=sys.stderr,
+        env={"PYTHONPATH": await anyio.Path.cwd()},
+    )
 
     if device == "rp2":
-        if isinstance(dest,str):
-            dest=anyio.Path(dest)
-        df=dest/"INFO_UF2.TXT"
+        if isinstance(dest, str):
+            dest = anyio.Path(dest)
+        df = dest / "INFO_UF2.TXT"
         if not await df.exists():
             print(f"Waiting for RPI in {dest} ", end="")
             sys.stdout.flush()
@@ -285,8 +306,10 @@ async def install_(cfg, dest:Path=None, upload:bool=False):
                 await anyio.sleep(1)
             print("… found.")
 
-        await anyio.to_thread.run_sync(shutil.copy, portdir/"build-RPI_PICO/"/"firmware.uf2",dest)
-    
+        await anyio.to_thread.run_sync(
+            shutil.copy, portdir / "build-RPI_PICO/" / "firmware.uf2", dest
+        )
+
     if port is not None and not await port.exists():
         print(f"Waiting for RPI in {dest} ", end="")
         sys.stdout.flush()
@@ -294,7 +317,10 @@ async def install_(cfg, dest:Path=None, upload:bool=False):
             await anyio.sleep(1)
         print("… found.")
 
-    await setup(cfg, run=True, update=True, state="once", cross=mpydir/"mpy-cross"/"build"/"mpy-cross")
-
-
-
+    await setup(
+        cfg,
+        run=True,
+        update=True,
+        state="once",
+        cross=mpydir / "mpy-cross" / "build" / "mpy-cross",
+    )

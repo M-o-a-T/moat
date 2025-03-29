@@ -847,14 +847,15 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     obj.DEBUG = debug
 
     # Don't forget to import toplevel config files
-    import moat 
+    import moat
+
     try:
         p = moat.__path__
     except AttributeError:
         p = (str(FSPath(ext.__file__).parent),)
     for fp in p:
         try:
-            with (FSPath(fp)/"_cfg.yaml").open("r") as f:
+            with (FSPath(fp) / "_cfg.yaml").open("r") as f:
                 merge(cfg, yload(f, attr=True), replace=False)
         except FileNotFoundError:
             pass
@@ -929,14 +930,16 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
     except click.exceptions.Abort:
         print("Aborted.", file=sys.stderr)
 
+
 def _ng(type_):
     @wraps(type_)
     def gen(data):
         if data is NotGiven:
             return data
         return type_(data)
+
     return gen
+
 
 def option_ng(*a, type=str, **kw):
     return click.option(*a, **kw, type=_ng(type), default=NotGiven)
-

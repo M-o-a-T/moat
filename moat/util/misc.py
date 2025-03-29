@@ -6,8 +6,10 @@ from __future__ import annotations
 
 __all__ = ["val2pos", "pos2val", "srepr", "OutOfData"]
 
+
 class OutOfData(EOFError):
     pass
+
 
 def val2pos(a: float, b: float, c: float, /, clamp: bool = False):
     """

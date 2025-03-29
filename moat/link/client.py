@@ -9,13 +9,14 @@ import logging
 from contextlib import asynccontextmanager
 
 import outcome
+
 try:
     from mqttproto import RetainHandling
 except ImportError:
     from moat.lib.mqttproto import RetainHandling
 
 from moat.lib.cmd import CmdHandler
-from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident,al_unique
+from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident, al_unique
 from moat.util.compat import CancelledError
 
 from .conn import TCPConn, CmdCommon, SubConn
@@ -153,7 +154,6 @@ class Link(_LinkCommon):
         super().__init__(cfg, name=name)
         self._retry_msgs: set[BasicCmd] = set()
 
-
     async def _mon_server(self, *, task_status):
         async with self.mqtt.subscription(self.cfg.root) as sub:
             self._server = ValueEvent()
@@ -219,7 +219,7 @@ class Link(_LinkCommon):
                     await self._last_link_seen.wait()
             except TimeoutError:
                 # try the last-tried connection again
-                timeout = min(timeout*tm.factor,tm.max)
+                timeout = min(timeout * tm.factor, tm.max)
             else:
                 # immediately use the new data
                 srv = self._last_link
@@ -313,7 +313,8 @@ class BasicLink(_LinkCommon):
     """
     Simple direct link to a server.
     """
-    def __init__(self, cfg, name:str|None, data:dict):
+
+    def __init__(self, cfg, name: str | None, data: dict):
         super().__init__(cfg, name=name)
         self.data = data
 
@@ -339,5 +340,3 @@ class BasicLink(_LinkCommon):
         else:
             raise ValueError(f"No links in {self.data !r}")
         raise err
-
-

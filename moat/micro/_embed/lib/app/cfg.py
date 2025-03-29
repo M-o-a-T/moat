@@ -70,7 +70,7 @@ class Cmd(BaseCmd):
                     raise
                 cur.append({})
                 cur = cur[pp]
-        log("CFG_W %r %r %r",cur,p,d)
+        log("CFG_W %r %r %r", cur, p, d)
         k = p[-1]
         if d is NotGiven:
             del cur[k]

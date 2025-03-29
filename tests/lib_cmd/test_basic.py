@@ -21,7 +21,6 @@ async def test_basic(a_s, a_r, k_s, k_r):
             assert msg.kw == k_s
         await msg.result(*a_r, **k_r)
 
-
     async with scaffold(handle, None) as (a, b):
         # note no comma
         a._id = 9
@@ -40,7 +39,7 @@ async def test_basic_res():
 
     async with scaffold(handle, None) as (a, b):
         # note the comma
-        res, = await b.cmd("Test", 123)  # fmt:skip  ## (res,) = …
+        (res,) = await b.cmd("Test", 123)  # fmt:skip  ## (res,) = …
         assert res == {"C": "Test", "R": (123,)}
 
 

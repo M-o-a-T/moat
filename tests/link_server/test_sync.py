@@ -11,7 +11,7 @@ from moat.util import P, PathLongener, NotGiven
 from moat.util.msg import MsgReader
 from moat.lib.cmd import StreamError
 from moat.lib.codec.cbor import Tag as CBORTag
-from moat.util.cbor import CBOR_TAG_MOAT_FILE_ID,CBOR_TAG_MOAT_FILE_END
+from moat.util.cbor import CBOR_TAG_MOAT_FILE_ID, CBOR_TAG_MOAT_FILE_END
 from moat.link.client import BasicLink
 
 
@@ -35,11 +35,11 @@ async def data(s):
     await s("a.b.d", 17)
 
 
-async def fetch(c,p):
-    p=P(p)
+async def fetch(c, p):
+    p = P(p)
     nn = Node()
     pl = PathLongener()
-    async with c.stream_r(P("d.walk"),p) as msgs:
+    async with c.stream_r(P("d.walk"), p) as msgs:
         try:
             it = aiter(msgs)
         except StreamError as exc:
@@ -50,10 +50,11 @@ async def fetch(c,p):
                 pass
             raise exc from None
 
-        async for pr,p,d,*m in it:
-            p=pl.long(pr,p)
-            nn.set(p,d,MsgMeta._moat__restore(m,NotGiven))
+        async for pr, p, d, *m in it:
+            p = pl.long(pr, p)
+            nn.set(p, d, MsgMeta._moat__restore(m, NotGiven))
         return nn
+
 
 @pytest.mark.anyio
 async def test_lsy_from_server(cfg):
@@ -61,15 +62,17 @@ async def test_lsy_from_server(cfg):
         srv1 = await sf.server(init={"Hello": "there!", "test": 123})
         c1 = await sf.client()
         n = Node()
-        async def s(p,v):
-            p=P(p)
-            await c1.cmd(P("d.set"),p,v)
-            n.set(p,v,MsgMeta(origin="Test"))
+
+        async def s(p, v):
+            p = P(p)
+            await c1.cmd(P("d.set"), p, v)
+            n.set(p, v, MsgMeta(origin="Test"))
+
         await data(s)
 
         srv2 = await sf.server()
         async with BasicLink(cfg, "c_test", c1._last_link.data) as c2:
-            nn = await fetch(c2,"a")
+            nn = await fetch(c2, "a")
 
             assert n.get(P("a")) == nn
 
@@ -77,29 +80,31 @@ async def test_lsy_from_server(cfg):
 @pytest.mark.anyio
 async def test_lsy_from_file(cfg, tmp_path):
     async with Scaffold(cfg, use_servers=True, tempdir=tmp_path) as sf:
-        (sf.tempdir/"data").mkdir()
+        (sf.tempdir / "data").mkdir()
 
         srv1 = await sf.server(init={"Hello": "there!", "test": 123})
         c1 = await sf.client()
         n = Node()
-        async def s(p,v):
-            p=P(p)
-            await c1.cmd(P("d.set"),p,v)
-            n.set(p,v,MsgMeta(origin="Test"))
+
+        async def s(p, v):
+            p = P(p)
+            await c1.cmd(P("d.set"), p, v)
+            n.set(p, v, MsgMeta(origin="Test"))
+
         await data(s)
         fn = next(iter(srv1[0]._writing))
         await srv1[0].stop()
 
     # check the file
 
-    async with MsgReader(path=fn,codec="std-cbor") as rdr:
+    async with MsgReader(path=fn, codec="std-cbor") as rdr:
         msg = await anext(rdr)
-        assert isinstance(msg,CBORTag)
-        assert getattr(msg,"_cbor_tag",None)
+        assert isinstance(msg, CBORTag)
+        assert getattr(msg, "_cbor_tag", None)
         assert msg.tag == CBOR_TAG_MOAT_FILE_ID
         async for msg in rdr:
             pass
-        assert isinstance(msg,CBORTag)
+        assert isinstance(msg, CBORTag)
         assert msg.tag == CBOR_TAG_MOAT_FILE_END
         assert "error" not in msg.value, msg.value
 
@@ -108,9 +113,10 @@ async def test_lsy_from_file(cfg, tmp_path):
     async with Scaffold(cfg, use_servers=True, tempdir=tmp_path) as sf:
         srv2 = await sf.server()
         c2 = await sf.client()
-        nn = await fetch(c2,"a")
+        nn = await fetch(c2, "a")
 
         assert n.get(P("a")) == nn
+
 
 @pytest.mark.anyio
 async def test_lsy_switch_server_hard(cfg):
@@ -118,12 +124,12 @@ async def test_lsy_switch_server_hard(cfg):
         srv1 = await sf.server(init={"Hello": "there!", "test": 123})
         c1 = await sf.client()
         n = Node()
-        await c1.cmd(P("d.set"),P("test.one"),123)
+        await c1.cmd(P("d.set"), P("test.one"), 123)
 
         srv2 = await sf.server()
         await srv1[0].cancel()
 
-        res,meta = await c1.cmd(P("d.get"),P("test.one"))
+        res, meta = await c1.cmd(P("d.get"), P("test.one"))
         assert res == 123
 
 
@@ -133,12 +139,10 @@ async def test_lsy_switch_server_soft(cfg):
         srv1 = await sf.server(init={"Hello": "there!", "test": 123})
         c1 = await sf.client()
         n = Node()
-        await c1.cmd(P("d.set"),P("test.one"),123)
+        await c1.cmd(P("d.set"), P("test.one"), 123)
 
         srv2 = await sf.server()
         await srv1[0].stop()
 
-        res,meta = await c1.cmd(P("d.get"),P("test.one"))
+        res, meta = await c1.cmd(P("d.get"), P("test.one"))
         assert res == 123
-
-

@@ -16,7 +16,7 @@ from moat.lib.codec.proxy import DProxy, Proxy, name2obj, obj2name, unwrap_obj, 
 
 from .path import Path
 
-__all__ = ["std_ext", "StdCBOR" ]
+__all__ = ["std_ext", "StdCBOR"]
 
 std_ext = Extension()
 
@@ -31,11 +31,12 @@ class StdCBOR(Codec):
     def __init__(self):
         super().__init__(ext=std_ext)
 
-    def encode(self, obj:Any, *, empty_elided:bool=True) -> bytes:
+    def encode(self, obj: Any, *, empty_elided: bool = True) -> bytes:
         return super().encode(obj, empty_elided=empty_elided)
 
-    def decode(self, data: bytes | bytearray | memoryview, *, empty_elided:bool=True) -> Any:
+    def decode(self, data: bytes | bytearray | memoryview, *, empty_elided: bool = True) -> Any:
         return super().decode(data, empty_elided=empty_elided)
+
 
 Codec = StdCBOR
 
@@ -43,8 +44,8 @@ Codec = StdCBOR
 @std_ext.encoder(27, DProxy)
 def _enc_dpr(codec, obj):
     codec  # noqa:B018
-    res=[obj.name]+obj.a
-    if obj.k or res and isinstance(res[-1],dict):
+    res = [obj.name] + obj.a
+    if obj.k or res and isinstance(res[-1], dict):
         res.append(obj.k)
     return res
 
@@ -85,7 +86,7 @@ def _enc_path(codec, val):
 @std_ext.decoder(39)
 def _dec_path(codec, val):
     codec  # noqa:B018
-    if not isinstance(val,(list,tuple)):
+    if not isinstance(val, (list, tuple)):
         return Tag(39, val)  # not decodable
     return Path.build(val)
 
@@ -109,8 +110,8 @@ def enc_any(codec, obj):
         p = wrap_obj(obj, name=name)
         return 27, p
 
-    if isinstance(obj,Exception):
+    if isinstance(obj, Exception):
         # RemoteError, cf. moat.micro.errors
-        return 5, ["_rErr",obj.__class__.__name__]+obj.args
+        return 5, ["_rErr", obj.__class__.__name__] + obj.args
 
     raise NoCodecError(codec, obj)

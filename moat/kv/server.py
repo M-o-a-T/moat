@@ -1838,7 +1838,9 @@ class Server:
         """
         cmd = getattr(self, "user_" + action)
         try:
-            async with self.backend.monitor(*self.cfg.server.root, action, codec=self.codec) as stream:
+            async with self.backend.monitor(
+                *self.cfg.server.root, action, codec=self.codec
+            ) as stream:
                 if delay is not None:
                     await delay.wait()
 

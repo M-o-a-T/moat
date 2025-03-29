@@ -122,7 +122,11 @@ async def test_01_basic(autojump_clock):  # pylint: disable=unused-argument
                 "node": "test_0",
                 "nodes": {"test_0": 4},
                 "known": {},
-                "present": {"test_0": [[1, 5],]},
+                "present": {
+                    "test_0": [
+                        [1, 5],
+                    ]
+                },
                 "missing": {},
                 "remote_missing": {},
             }
@@ -211,7 +215,11 @@ async def test_02_cmd(autojump_clock):  # pylint: disable=unused-argument
                 "node": "test_0",
                 "nodes": {"test_0": 3},
                 "known": {},
-                "present": {"test_0": [[1, 4],]},
+                "present": {
+                    "test_0": [
+                        [1, 4],
+                    ]
+                },
                 "missing": {},
                 "remote_missing": {},
             }
@@ -246,8 +254,16 @@ async def test_02_cmd(autojump_clock):  # pylint: disable=unused-argument
             assert r == {
                 "node": "test_0",
                 "nodes": {"test_0": 4},
-                "known": {"test_0": [1,]},
-                "present": {"test_0": [[2, 5],]},
+                "known": {
+                    "test_0": [
+                        1,
+                    ]
+                },
+                "present": {
+                    "test_0": [
+                        [2, 5],
+                    ]
+                },
                 "missing": {},
                 "remote_missing": {},
             }
@@ -279,7 +295,11 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "node": "test_1",
                     "nodes": {"test_1": 1},
                     "known": {},
-                    "present": {"test_1": [1,]},
+                    "present": {
+                        "test_1": [
+                            1,
+                        ]
+                    },
                     "missing": {},
                     "remote_missing": {},
                 }
@@ -288,7 +308,11 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "node": "test_1",
                     "nodes": {"test_0": None, "test_1": 1},
                     "known": {},
-                    "present": {"test_1": [1,]},
+                    "present": {
+                        "test_1": [
+                            1,
+                        ]
+                    },
                     "missing": {},
                     "remote_missing": {},
                 }
@@ -297,16 +321,35 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "node": "test_1",
                     "nodes": {"test_0": None, "test_1": 1},
                     "known": {},
-                    "present": {"test_1": [1,]},
-                    "missing": {"test_0": [1,]},
-                    "remote_missing": {"test_0": [1,]},
+                    "present": {
+                        "test_1": [
+                            1,
+                        ]
+                    },
+                    "missing": {
+                        "test_0": [
+                            1,
+                        ]
+                    },
+                    "remote_missing": {
+                        "test_0": [
+                            1,
+                        ]
+                    },
                 }
                 or r
                 == {
                     "node": "test_1",
                     "nodes": {"test_1": 1, "test_0": None},
                     "known": {},
-                    "present": {"test_0": [1,], "test_1": [1,]},
+                    "present": {
+                        "test_0": [
+                            1,
+                        ],
+                        "test_1": [
+                            1,
+                        ],
+                    },
                     "missing": {},
                     "remote_missing": {},
                 }
@@ -315,7 +358,11 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "node": "test_1",
                     "nodes": {"test_0": 0, "test_1": 1},
                     "known": {},
-                    "present": {"test_1": [1,]},
+                    "present": {
+                        "test_1": [
+                            1,
+                        ]
+                    },
                     "missing": {},
                     "remote_missing": {},
                 }
@@ -339,14 +386,22 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                     "node": "test_1",
                     "nodes": {"test_0": 0, "test_1": 1},
                     "known": {},
-                    "present": {"test_1": [1,]},
+                    "present": {
+                        "test_1": [
+                            1,
+                        ]
+                    },
                     "missing": {},
                     "remote_missing": {},
                 } or r == {
                     "node": "test_1",
                     "nodes": {"test_0": None, "test_1": 1},
                     "known": {},
-                    "present": {"test_1": [1,]},
+                    "present": {
+                        "test_1": [
+                            1,
+                        ]
+                    },
                     "missing": {},
                     "remote_missing": {},
                 }
@@ -402,8 +457,19 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
                 assert r == {
                     "node": "test_0",
                     "nodes": {"test_0": 1, "test_1": 2},
-                    "known": {"test_1": [1,]},
-                    "present": {"test_0": [1,], "test_1": [2,]},
+                    "known": {
+                        "test_1": [
+                            1,
+                        ]
+                    },
+                    "present": {
+                        "test_0": [
+                            1,
+                        ],
+                        "test_1": [
+                            2,
+                        ],
+                    },
                     "missing": {},
                     "remote_missing": {},
                 }
@@ -421,8 +487,19 @@ async def test_03_three(autojump_clock):  # pylint: disable=unused-argument
             assert r == {
                 "node": "test_1",
                 "nodes": {"test_0": 1, "test_1": 2},
-                "known": {"test_1": [1,]},
-                "present": {"test_0": [1,], "test_1": [2,]},
+                "known": {
+                    "test_1": [
+                        1,
+                    ]
+                },
+                "present": {
+                    "test_0": [
+                        1,
+                    ],
+                    "test_1": [
+                        2,
+                    ],
+                },
                 "missing": {},
                 "remote_missing": {},
             }

@@ -21,8 +21,9 @@ class _MsgRW:
     _mode: str = None
 
     def __init__(self, path=None, stream=None, codec="moat.util.msgpack"):
-        if not isinstance(codec,Codec):
+        if not isinstance(codec, Codec):
             from moat.link.backend import get_codec
+
             codec = get_codec(codec)
 
         if (path is None) == (stream is None):

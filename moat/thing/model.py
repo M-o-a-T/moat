@@ -12,16 +12,27 @@ from moat.db.util import Session
 
 from typing import Optional
 
+
 class ThingTyp(Base):
     "One kind of thing."
+
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(unique=True, type_=String(40))
     comment: Mapped[str] = mapped_column(type_=String(200), nullable=True)
 
-    parent_id: Mapped[int] = mapped_column(ForeignKey("thingtyp.id", name="fk_thingtyp_typ"), nullable=True)
-    parent: Mapped["ThingTyp"] = relationship("ThingTyp", back_populates="children", remote_side=[id])
+    parent_id: Mapped[int] = mapped_column(
+        ForeignKey("thingtyp.id", name="fk_thingtyp_typ"), nullable=True
+    )
+    parent: Mapped["ThingTyp"] = relationship(
+        "ThingTyp", back_populates="children", remote_side=[id]
+    )
 
-    abstract: Mapped[bool] = mapped_column(nullable=False,default=False,server_default="0", comment="Must be False for instantiating things with this type")
+    abstract: Mapped[bool] = mapped_column(
+        nullable=False,
+        default=False,
+        server_default="0",
+        comment="Must be False for instantiating things with this type",
+    )
     children: Mapped[set["ThingTyp"]] = relationship("ThingTyp", back_populates="parent")
     things: Mapped[set["Thing"]] = relationship(back_populates="thingtyp")
 
@@ -38,6 +49,7 @@ class ThingTyp(Base):
 
 class Thing(Base):
     "One particular thing"
+
     id: Mapped[int] = mapped_column(primary_key=True)
 
     typ_id: Mapped[int] = mapped_column(ForeignKey("thingtyp.id", name="fk_thing_typ"))
@@ -69,8 +81,9 @@ class Thing(Base):
             res["typ"] = self.thingtyp.name
         return res
 
-@event.listens_for(Thing, 'before_insert')
-@event.listens_for(Thing, 'before_update')
+
+@event.listens_for(Thing, "before_insert")
+@event.listens_for(Thing, "before_update")
 def validate_thing_coords(mapper, connection, model):
     par = model.container
     if par is not None:
@@ -78,9 +91,9 @@ def validate_thing_coords(mapper, connection, model):
 
     def chk(p):
         pp = f"pos_{p}"
-        ppos = getattr(par,pp,None)
+        ppos = getattr(par, pp, None)
 
-        if (pos := getattr(model,pp)) is None:
+        if (pos := getattr(model, pp)) is None:
             if ppos is not None and ppos > 1:
                 raise ValueError(f"Thing {model.name} needs a value for {p}")
         elif pos <= 0:

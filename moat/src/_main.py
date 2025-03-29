@@ -16,30 +16,32 @@ import tomlkit
 from anyio import run_process
 from moat.util import P, add_repr, attrdict, make_proc, yload, yprint
 from packaging.requirements import Requirement
-from attrs import define,field
-from shutil import rmtree,copyfile,copytree
+from attrs import define, field
+from shutil import rmtree, copyfile, copytree
 from contextlib import suppress
 
 logger = logging.getLogger(__name__)
 
-PACK=Path("packaging")
-ARCH=subprocess.check_output(["dpkg","--print-architecture"]).decode("utf-8").strip()
+PACK = Path("packaging")
+ARCH = subprocess.check_output(["dpkg", "--print-architecture"]).decode("utf-8").strip()
 
-def dash(n:str) -> str:
+
+def dash(n: str) -> str:
     """
     moat.foo.bar > foo-bar
     foo.bar > ext-foo-bar
     """
-    if n in ("main","moat"):
+    if n in ("main", "moat"):
         return "main"
     if "." not in n:  # also applies to single-name packages
         return n
 
     if not n.startswith("moat."):
-        return "ext-"+n.replace("-",".")
-    return n.replace(".","-")[5:]
+        return "ext-" + n.replace("-", ".")
+    return n.replace(".", "-")[5:]
 
-def undash(n:str) -> str:
+
+def undash(n: str) -> str:
     """
     foo-bar > moat.foo.bar
     ext-foo-bar > foo.bar
@@ -47,66 +49,69 @@ def undash(n:str) -> str:
     if "." in n:
         return n
 
-    if n in ("main","moat"):
+    if n in ("main", "moat"):
         return "moat"
     if n.startswith("ext-"):
-        return n.replace("-",".")[4:]
-    return "moat."+n.replace("-",".")
+        return n.replace("-", ".")[4:]
+    return "moat." + n.replace("-", ".")
+
 
 class ChangedError(RuntimeError):
-    def __init__(subsys,tag,head):
+    def __init__(subsys, tag, head):
         self.subsys = subsys
         self.tag = tag
         self.head = head
+
     def __str__(self):
         s = self.subsys or "Something"
         if head is None:
-            head="HEAD"
+            head = "HEAD"
         else:
             head = head.hexsha[:9]
         return f"{s} changed between {tag.name} and {head}"
 
-class _Common:
 
-    def next_tag(self,major:bool=False,minor:bool=False):
+class _Common:
+    def next_tag(self, major: bool = False, minor: bool = False):
         tag = self.last_tag
         try:
-            n = [ int(x) for x in tag.split('.') ]
+            n = [int(x) for x in tag.split(".")]
             if len(n) != 3:
                 raise ValueError(n)
         except ValueError:
             raise ValueError(f"Tag {tag} not in major#.minor#.patch# form.") from None
 
         if major:
-            n = [n[0]+1,0,0]
+            n = [n[0] + 1, 0, 0]
         elif minor:
-            n = [n[0],n[1]+1,0]
+            n = [n[0], n[1] + 1, 0]
         else:
-            n = [n[0],n[1],n[2]+1]
+            n = [n[0], n[1], n[2] + 1]
         return ".".join(str(x) for x in n)
+
 
 @define
 class Package(_Common):
-    _repo:Repo = field(repr=False)
-    name:str = field()
-    under:str = field(init=False,repr=False)
-    path:Path = field(init=False,repr=False)
-    files:set(Path) = field(init=False,factory=set,repr=False)
-    subs:dict[str,Package] = field(factory=dict,init=False,repr=False)
-    hidden:bool = field(init=False,repr=False)
+    _repo: Repo = field(repr=False)
+    name: str = field()
+    under: str = field(init=False, repr=False)
+    path: Path = field(init=False, repr=False)
+    files: set(Path) = field(init=False, factory=set, repr=False)
+    subs: dict[str, Package] = field(factory=dict, init=False, repr=False)
+    hidden: bool = field(init=False, repr=False)
 
     def __init__(self, repo, name):
-        self.__attrs_init__(repo,name)
-        self.under = name.replace(".","_")
+        self.__attrs_init__(repo, name)
+        self.under = name.replace(".", "_")
         self.path = Path(*name.split("."))
-        self.hidden = not (PACK/self.dash).exists()
+        self.hidden = not (PACK / self.dash).exists()
 
     @property
     def dash(self):
         return dash(self.name)
 
     def __eq__(self, other):
-        return self.name==other.name
+        return self.name == other.name
 
     def __hash__(self):
         return hash(self.name)
@@ -114,8 +119,8 @@ class Package(_Common):
     @property
     def vers(self):
         v = self._repo.versions[self.dash]
-        if not isinstance(v,dict):
-            tag,commit = v
+        if not isinstance(v, dict):
+            tag, commit = v
             v = attrdict(
                 tag=tag,
                 pkg=1,
@@ -125,7 +130,7 @@ class Package(_Common):
         return v
 
     @vers.setter
-    def vers(self,d):
+    def vers(self, d):
         v = self.vers
         v.update(d)
         return v
@@ -140,13 +145,13 @@ class Package(_Common):
 
     @property
     def mdash(self):
-        d=dash(self.name)
+        d = dash(self.name)
         if d.startswith("ext-"):
             return d[4:]
         else:
-            return "moat-"+d
+            return "moat-" + d
 
-    def populate(self, path:Path, real=None):
+    def populate(self, path: Path, real=None):
         """
         Collect this package's file names.
         """
@@ -154,7 +159,7 @@ class Package(_Common):
         for fn in path.iterdir():
             if fn.name == "__pycache__":
                 continue
-            if (sb := self.subs.get(fn.name,None)) is not None:
+            if (sb := self.subs.get(fn.name, None)) is not None:
                 sb.populate(fn, real=self if sb.hidden else None)
             else:
                 (real or self).files.add(fn)
@@ -165,23 +170,23 @@ class Package(_Common):
         """
         if not self.files:
             raise ValueError(f"No files in {self.name}?")
-        p = Path("packaging")/self.dash
+        p = Path("packaging") / self.dash
         with suppress(FileNotFoundError):
-            rmtree(p/"moat")
-        dest = p/self.path
+            rmtree(p / "moat")
+        dest = p / self.path
         dest.mkdir(parents=True)
         for f in self.files:
-            pf=p/f
-            pf.parent.mkdir(parents=True,exist_ok=True)
+            pf = p / f
+            pf.parent.mkdir(parents=True, exist_ok=True)
             if f.is_dir():
                 copytree(f, pf, symlinks=False)
             else:
                 copyfile(f, pf, follow_symlinks=True)
-        licd = p/"LICENSE.txt"
+        licd = p / "LICENSE.txt"
         if not licd.exists():
             copyfile("LICENSE.txt", licd)
 
-    def has_changes(self, main:bool|None=None) -> bool:
+    def has_changes(self, main: bool | None = None) -> bool:
         """
         Test whether the given subsystem changed
         between the head and the @tag commit
@@ -189,17 +194,20 @@ class Package(_Common):
         commit = self.last_commit
         head = self._repo.head.commit
         for d in head.diff(self.last_commit):
-            if self._repo.repo_for(d.a_path, main) != self.name and self._repo.repo_for(d.b_path, main) != self.name:
+            if (
+                self._repo.repo_for(d.a_path, main) != self.name
+                and self._repo.repo_for(d.b_path, main) != self.name
+            ):
                 continue
             return True
         return False
 
 
-class Repo(git.Repo,_Common):
+class Repo(git.Repo, _Common):
     """Amend git.Repo with tag caching and pseudo-submodule splitting"""
 
     moat_tag = None
-    _last_tag=None
+    _last_tag = None
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
@@ -219,13 +227,12 @@ class Repo(git.Repo,_Common):
             self.versions = yload(f, attr=True)
 
     def write_tags(self):
-        with open("versions.yaml","w") as f:
-            yprint(self.versions,f)
+        with open("versions.yaml", "w") as f:
+            yprint(self.versions, f)
         self.index.add("versions.yaml")
 
-
     @property
-    def last_tag(self) -> Tag|None:
+    def last_tag(self) -> Tag | None:
         """
         Return the most-recent tag for this repo
         """
@@ -259,7 +266,7 @@ class Repo(git.Repo,_Common):
     def parts(self):
         return self._repos.values()
 
-    def tags_of(self, c:Commit) -> Sequence[Tag]:
+    def tags_of(self, c: Commit) -> Sequence[Tag]:
         return self._commit_tags[c]
 
     def _add_repo(self, name):
@@ -268,10 +275,10 @@ class Repo(git.Repo,_Common):
         if dn in self._repos:
             return self._repos[dn]
 
-        p = Package(self,pn)
+        p = Package(self, pn)
         self._repos[dn] = p
         if "." in pn:
-            par,nam = pn.rsplit(".",1)
+            par, nam = pn.rsplit(".", 1)
             pp = self._add_repo(par)
             pp.subs[nam] = p
         return p
@@ -287,18 +294,18 @@ class Repo(git.Repo,_Common):
 
         self._repos["main"].populate(Path("moat"))
 
-    def repo_for(self, path:Path|str, main:bool|None) -> str:
+    def repo_for(self, path: Path | str, main: bool | None) -> str:
         """
         Given a file path, returns the subrepo in question
         """
         sc = self._repos["main"]
-        path=Path(path)
+        path = Path(path)
 
         if main is not False and path.parts[0] == "moat":
             name = "moat"
             for p in path.parts[1:]:
                 if p in sc.subs:
-                    name += "."+p
+                    name += "." + p
                     sc = sc.subs[p]
                 else:
                     break
@@ -311,7 +318,6 @@ class Repo(git.Repo,_Common):
                 return None
 
         return None
-
 
     def commits(self, ref=None):
         """Iterate over topo sort of commits following @ref, or HEAD.
@@ -334,7 +340,7 @@ class Repo(git.Repo,_Common):
             yield ref
             work.extend(ref.parents)
 
-    def has_changes(self, main:bool|None=None) -> bool:
+    def has_changes(self, main: bool | None = None) -> bool:
         """
         Test whether any subsystem changed since the "tagged" commit
 
@@ -348,8 +354,7 @@ class Repo(git.Repo,_Common):
             return True
         return False
 
-
-    def tagged(self, c:Commit=None) -> Tag|None:
+    def tagged(self, c: Commit = None) -> Tag | None:
         """Return a commit's tag name.
         Defaults to the head commit.
         Returns None if no tag, raises ValueError if more than one is found.
@@ -369,7 +374,6 @@ class Repo(git.Repo,_Common):
                 raise ValueError(f"Multiple tags for {subsys}: {tt}")
             raise ValueError(f"Multiple tags: {tt}")
         return tt[0].name
-
 
 
 @click.group(short_help="Manage MoaT itself")
@@ -393,14 +397,14 @@ def fix_deps(deps: list[str], tags: dict[str, str]) -> bool:
     return work
 
 
-def run_tests(pkg: str|None, *opts) -> bool:
+def run_tests(pkg: str | None, *opts) -> bool:
     """Run subtests for subpackage @pkg."""
 
     if pkg is None:
         tests = Path("tests")
     else:
-        tests = dash(pkg).replace("-","_")
-        tests = Path("tests")/tests
+        tests = dash(pkg).replace("-", "_")
+        tests = Path("tests") / tests
 
     if not Path(tests):
         # No tests. Assume it's OK.
@@ -408,7 +412,13 @@ def run_tests(pkg: str|None, *opts) -> bool:
     try:
         print("\n*** Testing:", pkg)
         # subprocess.run(["python3", "-mtox"], cwd=repo.working_dir, check=True)
-        subprocess.run(["python3","-mpytest", *opts, tests], stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr, check=True)
+        subprocess.run(
+            ["python3", "-mpytest", *opts, tests],
+            stdin=sys.stdin,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            check=True,
+        )
     except subprocess.CalledProcessError:
         return False
     else:
@@ -732,16 +742,17 @@ def tags():
         else:
             print(f"{r.dash} {tag}")
 
+
 @cli.command()
 @click.option("-r", "--run", is_flag=True, help="actually do the tagging")
 @click.option("-m", "--minor", is_flag=True, help="create a new minor version")
 @click.option("-M", "--major", is_flag=True, help="create a new major version")
 @click.option("-s", "--subtree", type=str, help="Tag this partial module")
 @click.option("-v", "--tag", "force", type=str, help="Use this explicit tag value")
-@click.option("-q", "--query","--show","show", is_flag=True, help="Show the latest tag")
-@click.option("-f", "--force","FORCE", is_flag=True, help="replace an existing tag")
+@click.option("-q", "--query", "--show", "show", is_flag=True, help="Show the latest tag")
+@click.option("-f", "--force", "FORCE", is_flag=True, help="replace an existing tag")
 @click.option("-b", "--build", is_flag=True, help="set/increment the build number")
-def tag(run,minor,major,subtree,force,FORCE,show,build):
+def tag(run, minor, major, subtree, force, FORCE, show, build):
     """
     Tag the repository (or a subtree).
 
@@ -782,48 +793,52 @@ def tag(run,minor,major,subtree,force,FORCE,show,build):
     elif FORCE or build:
         tag = r.last_tag
     else:
-        tag = r.next_tag(major,minor)
+        tag = r.next_tag(major, minor)
 
     if run or subtree:
         if subtree:
             sb = repo.part(r.dash)
             if build:
                 sb.vers.pkg += 1
-                sb.vers.rev=repo.head.commit.hexsha
+                sb.vers.rev = repo.head.commit.hexsha
             else:
                 sb.vers = attrdict(
                     tag=tag,
                     pkg=1,
                     rev=repo.head.commit.hexsha,
-                    )
+                )
             repo.write_tags()
         else:
-            git.TagReference.create(repo,tag, force=FORCE)
+            git.TagReference.create(repo, tag, force=FORCE)
         print(f"{tag}")
     else:
         print(f"{tag} DRY_RUN")
 
 
-@cli.command(epilog="""
+@cli.command(
+    epilog="""
 The default for building Debian packages is '--no-sign --build=binary'.
 '--no-sign' is dropped when you use '--deb'.
 The binary-only build is currently unconditional.
 
 The default for uploading to Debian via 'dput' is '--unchecked ext';
 it is dropped when you use '--dput'.
-""")
+"""
+)
 @click.option("-f", "--no-dirty", is_flag=True, help="don't check for dirtiness (DANGER)")
 @click.option("-F", "--no-tag", is_flag=True, help="don't check for tag uptodate-ness (DANGER)")
 @click.option("-D", "--no-deb", is_flag=True, help="don't build Debian packages")
 @click.option("-C", "--no-commit", is_flag=True, help="don't commit the result")
-@click.option("-V", "--no-version", is_flag=True, help="don't update dependency versions in pyproject files")
+@click.option(
+    "-V", "--no-version", is_flag=True, help="don't update dependency versions in pyproject files"
+)
 @click.option("-P", "--no-pypi", is_flag=True, help="don't push to PyPI")
 @click.option("-T", "--no-test", is_flag=True, help="don't run tests")
-@click.option("-o", "--pytest", "pytest_opts", type=str,multiple=True, help="Options for pytest")
-@click.option("-d", "--deb", "deb_opts", type=str,multiple=True, help="Options for debuild")
-@click.option("-p", "--dput", "dput_opts", type=str,multiple=True, help="Options for dput")
+@click.option("-o", "--pytest", "pytest_opts", type=str, multiple=True, help="Options for pytest")
+@click.option("-d", "--deb", "deb_opts", type=str, multiple=True, help="Options for debuild")
+@click.option("-p", "--dput", "dput_opts", type=str, multiple=True, help="Options for dput")
 @click.option("-r", "--run", is_flag=True, help="actually do the tagging")
-@click.option("-s", "--skip", "skip_", type=str,multiple=True, help="skip these repos")
+@click.option("-s", "--skip", "skip_", type=str, multiple=True, help="skip these repos")
 @click.option("-m", "--minor", is_flag=True, help="create a new minor version")
 @click.option("-M", "--major", is_flag=True, help="create a new major version")
 @click.option("-t", "--tag", "forcetag", type=str, help="Use this explicit tag value")
@@ -837,12 +852,32 @@ it is dropped when you use '--dput'.
 )
 @click.argument("parts", nargs=-1)
 @click.pass_obj
-async def build(obj, no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_opts, pytest_opts, deb_opts, run, version, no_version, no_deb, skip_, major,minor,forcetag,autotag):
+async def build(
+    obj,
+    no_commit,
+    no_dirty,
+    no_test,
+    no_tag,
+    no_pypi,
+    parts,
+    dput_opts,
+    pytest_opts,
+    deb_opts,
+    run,
+    version,
+    no_version,
+    no_deb,
+    skip_,
+    major,
+    minor,
+    forcetag,
+    autotag,
+):
     """
     Rebuild all modified packages.
     """
     cfg = obj.cfg
-    g_done = cfg.get("src",{}).get("done")
+    g_done = cfg.get("src", {}).get("done")
     if g_done is not None:
         g_done = Path(g_done)
     else:
@@ -855,7 +890,7 @@ async def build(obj, no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_
         for sn in s.split(","):
             skip.add(dash(sn))
     parts = set(dash(s) for s in parts)
-    debversion={}
+    debversion = {}
 
     if no_tag and not no_version:
         print("Warning: not updating moat versions in pyproject files", file=sys.stderr)
@@ -867,28 +902,31 @@ async def build(obj, no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_
         raise click.UsageError("Can't use an explicit tag with changing minor or major!")
 
     if forcetag is None:
-        forcetag = repo.next_tag(major,minor)
+        forcetag = repo.next_tag(major, minor)
 
     full = False
     if parts:
-        repos = [ repo.part(x) for x in parts ]
+        repos = [repo.part(x) for x in parts]
     else:
         if not skip:
             full = True
-        repos = [ x for x in repo.parts if not x.hidden and x.dash not in skip and not (PACK/x.dash/"SKIP").exists() ]
+        repos = [
+            x
+            for x in repo.parts
+            if not x.hidden and x.dash not in skip and not (PACK / x.dash / "SKIP").exists()
+        ]
 
     for name in PACK.iterdir():
         if name.suffix != ".changes":
             continue
-        name=name.stem
-        name,vers,_ = name.split("_")
+        name = name.stem
+        name, vers, _ = name.split("_")
         if name.startswith("moat-"):
             name = name[5:]
         else:
-            name = "ext-"+name
-        debversion[name]=vers.rsplit("-",1)[0]
+            name = "ext-" + name
+        debversion[name] = vers.rsplit("-", 1)[0]
 
-    
     # Step 0: basic check
     if not no_dirty:
         if repo.is_dirty(index=False, working_tree=True, untracked_files=True, submodules=False):
@@ -906,10 +944,10 @@ async def build(obj, no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_
                     tag=r.next_tag(),
                     pkg=1,
                     rev=repo.head.commit.hexsha,
-                    )
+                )
             elif r.has_changes(False):
                 r.vers.pkg += 1
-                r.vers.rev=repo.head.commit.hexsha
+                r.vers.rev = repo.head.commit.hexsha
 
     elif not no_tag:
         err = set()
@@ -917,7 +955,7 @@ async def build(obj, no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_
             try:
                 tag = r.last_tag
             except KeyError:
-                rd = PACK/r.dash
+                rd = PACK / r.dash
                 p = rd / "pyproject.toml"
                 if not p.is_file():
                     continue
@@ -951,7 +989,7 @@ async def build(obj, no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_
 
     # Step 3: set version and fix versioned dependencies
     for r in repos:
-        rd = PACK/r.dash
+        rd = PACK / r.dash
         p = rd / "pyproject.toml"
         if not p.is_file():
             # bad=True
@@ -982,52 +1020,68 @@ async def build(obj, no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_
     # Step 3: copy to packaging dir
     for r in repos:
         r.copy()
-        
+
     # Step 4: build Debian package
     if not no_deb:
         if not deb_opts:
             deb_opts = ["--no-sign"]
 
         for r in repos:
-            rd=PACK/r.dash
+            rd = PACK / r.dash
             p = rd / "debian"
             if not p.is_dir():
                 continue
             try:
-                res = subprocess.run(["dpkg-parsechangelog","-l","debian/changelog","-S","version"], cwd=rd, check=True, stdout=subprocess.PIPE)
-                tag = res.stdout.strip().decode("utf-8").rsplit("-",1)[0]
+                res = subprocess.run(
+                    ["dpkg-parsechangelog", "-l", "debian/changelog", "-S", "version"],
+                    cwd=rd,
+                    check=True,
+                    stdout=subprocess.PIPE,
+                )
+                tag = res.stdout.strip().decode("utf-8").rsplit("-", 1)[0]
                 ltag = r.last_tag
                 if tag != ltag:
-                    subprocess.run(["debchange", "--distribution","unstable", "--newversion",f"{ltag}-{r.vers.pkg}",f"New release for {forcetag}"] , cwd=rd, check=True)
-                    repo.index.add(p/"changelog")
+                    subprocess.run(
+                        [
+                            "debchange",
+                            "--distribution",
+                            "unstable",
+                            "--newversion",
+                            f"{ltag}-{r.vers.pkg}",
+                            f"New release for {forcetag}",
+                        ],
+                        cwd=rd,
+                        check=True,
+                    )
+                    repo.index.add(p / "changelog")
 
-                if debversion.get(r.dash,"") != ltag:
+                if debversion.get(r.dash, "") != ltag:
                     subprocess.run(["debuild", "--build=binary"] + deb_opts, cwd=rd, check=True)
             except subprocess.CalledProcessError:
                 if not run:
-                    print("*** Failure packaging",r.name,file=sys.stderr)
+                    print("*** Failure packaging", r.name, file=sys.stderr)
                 else:
-                    print("Failure packaging",r.name,file=sys.stderr)
+                    print("Failure packaging", r.name, file=sys.stderr)
                     return
 
     # Step 5: build PyPI package
     if not no_pypi:
-        err=set()
-        up=set()
+        err = set()
+        up = set()
         for r in repos:
-            rd=PACK/r.dash
+            rd = PACK / r.dash
             p = rd / "pyproject.toml"
             if not p.is_file():
                 continue
             tag = r.last_tag
             name = r.dash
             if name.startswith("ext-"):
-                name=name[4:]
+                name = name[4:]
             else:
-                name="moat-"+r.dash
+                name = "moat-" + r.dash
 
-            targz = rd/"dist"/f"{r.under}-{tag}.tar.gz"
-            done = rd/"dist"/f"{r.under}-{tag}.done"
+            targz = rd / "dist" / f"{r.under}-{tag}.tar.gz"
+            done = rd / "dist" / f"{r.under}-{tag}.done"
 
             if targz.is_file():
                 if not done.exists():
@@ -1048,29 +1102,31 @@ async def build(obj, no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_
                 print(*err, file=sys.stderr)
                 print("Please fix and try again.", file=sys.stderr)
                 return
-        
+
         # Step 6: upload PyPI package
         if run:
-            err=set()
+            err = set()
             for r in up:
-                rd=PACK/r.dash
+                rd = PACK / r.dash
                 p = rd / "pyproject.toml"
                 if not p.is_file():
                     continue
                 tag = r.last_tag
                 name = r.dash
                 if name.startswith("ext-"):
-                    name=name[4:]
+                    name = name[4:]
                 else:
-                    name="moat-"+r.dash
-                targz = Path("dist")/f"{r.under}-{tag}.tar.gz"
-                whl = Path("dist")/f"{r.under}-{tag}-py3-none-any.whl"
+                    name = "moat-" + r.dash
+                targz = Path("dist") / f"{r.under}-{tag}.tar.gz"
+                whl = Path("dist") / f"{r.under}-{tag}-py3-none-any.whl"
                 try:
-                    res = subprocess.run(["twine", "upload", str(targz), str(whl)], cwd=rd, check=True)
+                    res = subprocess.run(
+                        ["twine", "upload", str(targz), str(whl)], cwd=rd, check=True
+                    )
                 except subprocess.CalledProcessError:
                     err.add(r.name)
                 else:
-                    done = rd/"dist"/f"{r.under}-{tag}.done"
+                    done = rd / "dist" / f"{r.under}-{tag}.done"
                     done.touch()
             if err:
                 print("Upload errors:", file=sys.stderr)
@@ -1082,17 +1138,17 @@ async def build(obj, no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_
     if run and not no_deb:
         err = set()
         if not dput_opts:
-            dput_opts = ["-u","ext"]
+            dput_opts = ["-u", "ext"]
         for r in repos:
             ltag = r.last_tag
-            if not (PACK/r.dash/"debian").is_dir():
+            if not (PACK / r.dash / "debian").is_dir():
                 continue
-            changes = PACK/f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
-            done = PACK/f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.done"
+            changes = PACK / f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
+            done = PACK / f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.done"
             if done.exists():
                 continue
             if g_done is not None:
-                gdone = g_done/f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.done"
+                gdone = g_done / f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.done"
                 if gdone.exists():
                     continue
             try:

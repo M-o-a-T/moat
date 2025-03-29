@@ -200,8 +200,8 @@ class Backend(_Backend):
     @overload
     def send(
         self,
-        topic:Path,
-        payload:bytes|bytearray|memoryview,
+        topic: Path,
+        payload: bytes | bytearray | memoryview,
         codec: Literal[None],
         meta: MsgMeta | bool | None = None,
         retain: bool = False,
@@ -212,9 +212,9 @@ class Backend(_Backend):
     @overload
     def send(
         self,
-        topic:Path,
+        topic: Path,
         payload: Any,
-        codec: Codec|str|Literal[NotGiven]=NotGiven,
+        codec: Codec | str | Literal[NotGiven] = NotGiven,
         meta: MsgMeta | bool | None = None,
         retain: bool = False,
         **kw,
@@ -223,9 +223,9 @@ class Backend(_Backend):
 
     def send(
         self,
-        topic:Path,
-        payload:Any,
-        codec: Codec|str|None|Literal[NotGiven]=NotGiven,
+        topic: Path,
+        payload: Any,
+        codec: Codec | str | None | Literal[NotGiven] = NotGiven,
         meta: MsgMeta | bool | None = None,
         retain: bool = False,
         **kw,

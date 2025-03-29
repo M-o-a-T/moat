@@ -12,7 +12,7 @@ from moat.util import merge
 from moat.micro.compat import L, TaskGroup, sleep_ms
 from moat.rtc import all_rtc
 
-#from moat.lib.codec.cbor import Codec as CBOR
+# from moat.lib.codec.cbor import Codec as CBOR
 from moat.lib.codec.msgpack import Codec as CBOR
 
 from typing import TYPE_CHECKING  # isort:skip

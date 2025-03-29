@@ -5,7 +5,7 @@ A hacked-up copy of some parts of `moat.util`.
 from __future__ import annotations
 
 from ._proxy import *
-from ._proxy import _CProxy,_RProxy
+from ._proxy import _CProxy, _RProxy
 
 __all__ = [
     "Proxy",
@@ -25,8 +25,8 @@ def wrap_obj(obj, name=None):
     "Serialize an object"
     if name is None:
         name = obj2name(type(obj))
-    if isinstance(obj,Exception):
-        return name,obj.args
+    if isinstance(obj, Exception):
+        return name, obj.args
     try:
         p = obj.__dict__
     except AttributeError:
@@ -35,12 +35,13 @@ def wrap_obj(obj, name=None):
             if n.startswith("_"):
                 continue
             p[n] = getattr(obj, n)
-    return (name,(),p)
+    return (name, (), p)
+
 
 def unwrap_obj(s):
     "Deserialize an object"
     s, *d = list(s)
-    st = d.pop() if d and isinstance(d[-1],dict) else {}
+    st = d.pop() if d and isinstance(d[-1], dict) else {}
     try:
         p = name2obj(s)
         if hasattr(p, "__setstate__"):
@@ -58,4 +59,3 @@ def unwrap_obj(s):
             for k, v in st.items():
                 setattr(o, k, v)
     return o
-

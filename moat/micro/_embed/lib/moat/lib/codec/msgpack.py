@@ -67,7 +67,7 @@ class Codec(_Codec):
         return unpackb(
             data,
             ext_hook=self._decode,  # pylint:disable=protected-access
-            use_attrdict = self.use_attrdict,
+            use_attrdict=self.use_attrdict,
         )
 
     def _decode(self, key, data):
@@ -89,7 +89,7 @@ class Codec(_Codec):
     def unfeed(self, buf) -> int:
         "Take from the decoder's buffer."
         return self.stream.unfeed(buf)
-    
+
 
 # cloned from https://github.com/msgpack/msgpack-python
 
@@ -127,6 +127,7 @@ class ExtType:
 
     def __repr__(self):
         return f"Ext({self.code}:{self.data})"
+
 
 _TYPE_IMMEDIATE = const(0)
 _TYPE_ARRAY = const(1)
@@ -196,13 +197,13 @@ class Unpacker:
             if self._buf_pos == 0:
                 self._buffer += data
                 return
-            data = self._buffer[self._buf_pos:] + data
+            data = self._buffer[self._buf_pos :] + data
         elif isinstance(data, memoryview):
             data = bytearray(data)
         self._buffer = data
         self._buf_pos = 0
 
-    def unfeed(self, buf: bytearray|None) -> int:
+    def unfeed(self, buf: bytearray | None) -> int:
         "take from the buffer"
         if not self._buffer:
             return 0
@@ -214,7 +215,6 @@ class Unpacker:
         buf[:n] = self._buffer[i, i_n]
         self._buf_pos = i_n
         return n
-
 
     def has_extradata(self):
         "are there extra data in the buffer?"
@@ -231,7 +231,7 @@ class Unpacker:
         if i_n > len(self._buffer):
             raise OutOfData
 
-        ret = self._buffer[i : i_n]
+        ret = self._buffer[i:i_n]
         self._buf_pos = i + len(ret)
         return ret
 

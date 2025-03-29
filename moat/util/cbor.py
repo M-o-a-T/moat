@@ -33,7 +33,7 @@ CBOR_TAG_MOAT_FILE_ID = 1299145044  # 'MoaT'
 CBOR_TAG_MOAT_FILE_END = 1298493254  # 'MeoF'
 CBOR_TAG_MOAT_CHANGE = 1298360423  # 'Mchg'
 
-Codec= StdCBOR
+Codec = StdCBOR
 
 
 def gen_start(text: str, /, **kw) -> Tag:
@@ -252,6 +252,7 @@ def _dec_file_cbor(codec, val):
         pass
     return val
 
+
 @std_ext.decoder(CBOR_TAG_CBOR_LEADER)
 def _dec_file_cbor(codec, val):
     codec  # noqa:B018
@@ -260,4 +261,3 @@ def _dec_file_cbor(codec, val):
     except AttributeError:
         pass
     return val
-

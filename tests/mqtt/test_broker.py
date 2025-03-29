@@ -467,11 +467,13 @@ class BrokerTest(unittest.TestCase):
                 self.assertTrue(broker.transitions.is_started())
                 async with open_mqttclient() as sub_client:
                     await sub_client.connect(URL)
-                    ret = await sub_client.subscribe([
-                        ("/qos0", QOS_0),
-                        ("/qos1", QOS_1),
-                        ("/qos2", QOS_2),
-                    ])
+                    ret = await sub_client.subscribe(
+                        [
+                            ("/qos0", QOS_0),
+                            ("/qos1", QOS_1),
+                            ("/qos2", QOS_2),
+                        ]
+                    )
                     self.assertEqual(ret, [QOS_0, QOS_1, QOS_2])
 
                     await self._client_publish("/qos0", b"data", QOS_0)
@@ -498,12 +500,14 @@ class BrokerTest(unittest.TestCase):
                 self.assertTrue(broker.transitions.is_started())
                 async with open_mqttclient() as sub_client:
                     await sub_client.connect(URL)
-                    ret = await sub_client.subscribe([
-                        ("+", QOS_0),
-                        ("+/tennis/#", QOS_0),
-                        ("sport+", QOS_0),
-                        ("sport/+/player1", QOS_0),
-                    ])
+                    ret = await sub_client.subscribe(
+                        [
+                            ("+", QOS_0),
+                            ("+/tennis/#", QOS_0),
+                            ("sport+", QOS_0),
+                            ("sport/+/player1", QOS_0),
+                        ]
+                    )
                     self.assertEqual(ret, [QOS_0, QOS_0, 0x80, QOS_0])
 
             self.assertTrue(broker.transitions.is_stopped())
@@ -578,11 +582,13 @@ class BrokerTest(unittest.TestCase):
                     self.assertTrue(broker.transitions.is_started())
                     async with open_mqttclient() as sub_client:
                         await sub_client.connect(URL, cleansession=False)
-                        ret = await sub_client.subscribe([
-                            ("/qos0", QOS_0),
-                            ("/qos1", QOS_1),
-                            ("/qos2", QOS_2),
-                        ])
+                        ret = await sub_client.subscribe(
+                            [
+                                ("/qos0", QOS_0),
+                                ("/qos1", QOS_1),
+                                ("/qos2", QOS_2),
+                            ]
+                        )
                         self.assertEqual(ret, [QOS_0, QOS_1, QOS_2])
                         await sub_client.disconnect()
 

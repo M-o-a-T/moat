@@ -129,6 +129,7 @@ def convert(enc, dec, pathi, patho, stream):
     class IT:
         def __init__(self, codec):
             self.codec = codec
+
         def __call__(self, buf):
             self.codec.feed(buf)
             return iter(self.codec)

@@ -33,7 +33,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    metadata = config.attributes.get('metadata', None)
+    metadata = config.attributes.get("metadata", None)
 
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
@@ -54,13 +54,10 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = config.attributes.get('connection', None)
-    metadata = config.attributes.get('metadata', None)
+    connectable = config.attributes.get("connection", None)
+    metadata = config.attributes.get("metadata", None)
 
-    context.configure(
-            connection=connectable,
-            target_metadata=metadata
-        )
+    context.configure(connection=connectable, target_metadata=metadata)
 
     with context.begin_transaction():
         context.run_migrations()

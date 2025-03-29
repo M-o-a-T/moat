@@ -25,7 +25,7 @@ class MsgpackMsgBuf(_MsgpackMsgBuf):
 
     async def setup(self):  # noqa:D102
         await super().setup()
-        self.codec = get_codec(self.cfg.get("codec","std-msgpack"))
+        self.codec = get_codec(self.cfg.get("codec", "std-msgpack"))
 
 
 class MsgpackMsgBlk(_MsgpackMsgBlk):
@@ -38,7 +38,7 @@ class MsgpackMsgBlk(_MsgpackMsgBlk):
 
     async def setup(self):  # noqa:D102
         await super().setup()
-        self.codec = get_codec(self.cfg.get("codec","std-msgpack"))
+        self.codec = get_codec(self.cfg.get("codec", "std-msgpack"))
 
 
 class AIOBuf(BaseBuf):

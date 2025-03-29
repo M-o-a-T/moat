@@ -25,6 +25,7 @@ def _KS(cfg):
         ser = Serial
     elif p == "USB":
         from moat.micro.part.serial import USBSerial
+
         Ser = USBSerial
     else:
         Ser = NamedSerial

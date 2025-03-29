@@ -39,10 +39,10 @@ Codec = StdMsgpack
 
 @std_ext.encoder(5, DProxy)
 def _enc_dproxy(codec, obj):
-    a=obj.a[:]
-    if obj.k or a and isinstance(a[-1],dict):
+    a = obj.a[:]
+    if obj.k or a and isinstance(a[-1], dict):
         a.append(obj.k)
-    return codec.encode(obj.name)+b"".join(codec.encode(x) for x in a)
+    return codec.encode(obj.name) + b"".join(codec.encode(x) for x in a)
 
 
 # not actually used
@@ -81,13 +81,15 @@ def _enc_any(codec, obj):
         p = wrap_obj(obj, name=name)
         return 5, b"".join(codec.encode(x) for x in p)
 
-    if isinstance(obj,Exception):
+    if isinstance(obj, Exception):
         # RemoteError, cf. moat.micro.errors
         log("NPFS")
-        for k,v in _CProxy.items():
-            log("NPF %r %r",k,v)
+        for k, v in _CProxy.items():
+            log("NPF %r %r", k, v)
         log("NPFE")
-        return 5, codec.encode("_rErr")+codec.encode(obj.__class__.__name__)+b"".join(codec.encode(x) for x in obj.args)
+        return 5, codec.encode("_rErr") + codec.encode(obj.__class__.__name__) + b"".join(
+            codec.encode(x) for x in obj.args
+        )
 
     raise NoCodecError(codec, obj)
 
@@ -103,7 +105,7 @@ def _dec_path(codec, data):
 @std_ext.decoder(4)
 def _dec_proxy(codec, data):
     codec  # noqa:B018
-    if isinstance(data,memoryview):
+    if isinstance(data, memoryview):
         data = bytearray(data)
     try:
         n = data.decode("utf-8")
@@ -138,4 +140,3 @@ def _dec_marked_path(codec, data):
 @std_ext.decoder(None)
 def _dec_blank(codec, data):
     return ExtType(codec, data)
-

@@ -5,13 +5,15 @@ import os
 from pathlib import Path
 from subprocess import run
 
-def make_upy(force:bool=False):
-	p=Path("ext/micropython/ports/unix")
-	upy = p/"build-standard/micropython"
-	if not force and upy.exists():
-		return
-	if upy.exists():
-		run(["make","clean"], cwd=p, check=True)
-	run(["make"], cwd=p, check=True)
+
+def make_upy(force: bool = False):
+    p = Path("ext/micropython/ports/unix")
+    upy = p / "build-standard/micropython"
+    if not force and upy.exists():
+        return
+    if upy.exists():
+        run(["make", "clean"], cwd=p, check=True)
+    run(["make"], cwd=p, check=True)
+
 
 make_upy()

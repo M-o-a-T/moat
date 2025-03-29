@@ -132,11 +132,13 @@ class MQTTClientTest(unittest.TestCase):
                 async with open_mqttclient() as client:
                     await client.connect(URI)
                     self.assertIsNotNone(client.session)
-                    ret = await client.subscribe([
-                        ("$SYS/broker/uptime", QOS_0),
-                        ("$SYS/broker/uptime", QOS_1),
-                        ("$SYS/broker/uptime", QOS_2),
-                    ])
+                    ret = await client.subscribe(
+                        [
+                            ("$SYS/broker/uptime", QOS_0),
+                            ("$SYS/broker/uptime", QOS_1),
+                            ("$SYS/broker/uptime", QOS_2),
+                        ]
+                    )
                     self.assertEqual(ret[0], QOS_0)
                     self.assertEqual(ret[1], QOS_1)
                     self.assertEqual(ret[2], QOS_2)

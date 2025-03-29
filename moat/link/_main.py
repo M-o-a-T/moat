@@ -13,6 +13,7 @@ from functools import partial
 from pathlib import Path as FSPath
 
 import asyncclick as click
+
 try:
     from mqttproto import MQTTException
 except ImportError:

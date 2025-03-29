@@ -19,6 +19,7 @@ __all__ = [
 ]
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from typing import Any
 
@@ -68,7 +69,7 @@ def get_proxy(obj):
 #     return (type(self), (), self.__dict__)
 
 
-def as_proxy(name, obj:Any=NotImplemented, replace:bool=False):
+def as_proxy(name, obj: Any = NotImplemented, replace: bool = False):
     """
     Export an object as a named proxy.
     Usage:
@@ -110,7 +111,6 @@ def drop_proxy(p):
         raise ValueError("Can't delete a system proxy")
     r = _CProxy.pop(p)
     del _RProxy[id(r)]
-
 
 
 class NoProxyError(ValueError):
@@ -156,11 +156,11 @@ class DProxy(Proxy):
             try:
                 return self.a[i]
             except TypeError:
-                log("*ERR %r",self.k)
+                log("*ERR %r", self.k)
                 raise KeyError(i)
 
     def __eq__(self, other):
-        if not isinstance(other,DProxy):
+        if not isinstance(other, DProxy):
             return NotImplemented
 
         # Split into several lines so we can selectively set breakpoints

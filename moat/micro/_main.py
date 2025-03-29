@@ -103,7 +103,7 @@ async def cli(ctx, section, remote, path):
             raise click.UsageError("You don't use paths with 'moat micro run'")
         if section is None:
             section = Path("run")
-    elif inv in ("setup","install"):
+    elif inv in ("setup", "install"):
         if remote is not None:
             raise click.UsageError("Use '--section' to specify which remote to set up.")
         if path:
@@ -119,7 +119,7 @@ async def cli(ctx, section, remote, path):
         raise click.UsageError("The config section '{section}' doesn't exist.")
     try:
         cfg.args.config = get_part(ocfg, cfg.args.config)
-    except (AttributeError,KeyError):
+    except (AttributeError, KeyError):
         if "args" in cfg and "config" in cfg.args:
             raise
         # otherwise no args section thus nothing to copy
@@ -200,9 +200,9 @@ async def setup_(ctx, run_section=None, **kw):
 
     run = st["run"]
     if run is True:
-        st["run"]=ctx.obj.cfg.micro[run_section or "run"]
+        st["run"] = ctx.obj.cfg.micro[run_section or "run"]
     elif isinstance(run, str):
-        st["run"]=ctx.obj.cfg.micro[run]
+        st["run"] = ctx.obj.cfg.micro[run]
 
     return await setup(cfg, **st)
 
@@ -322,7 +322,7 @@ async def cmd(obj, path, **attrs):
     Use `-e/-v/-p _a:n XXX` to append to it.
     """
     cfg = obj.mcfg
-    val = {"_a":[]}
+    val = {"_a": []}
     val = process_args(val, no_path=True, **attrs)
     if len(path) == 0:
         raise click.UsageError("Path cannot be empty")
@@ -426,7 +426,7 @@ async def cfg_(
         dsp.sub_at(cfg.path.fs) as fs,
     ):
         has_attrs = any(a for a in attrs.values())
-        codec=get_codec("std-msgpack")
+        codec = get_codec("std-msgpack")
 
         if has_attrs and not (read or read_client or write or write_client):
             # No file access at all. Just update the client's RAM.

@@ -45,7 +45,7 @@ class DProxy(_DProxy):
 
     def __init__(self, name, a, k):
         a = list(a) if a else []
-        super().__init__(name,a,k)
+        super().__init__(name, a, k)
 
     def append(self, val):
         "Helper for deserializer"
@@ -80,21 +80,23 @@ def wrap_obj(obj, name=None):
             res = (name, (), p)
         elif hasattr(p[0], "__name__"):  # grah
             if p[0].__name__ == "_reconstructor":
-                _,o,ak = p
+                _, o, ak = p
                 if len(ak) == 1:
                     k = ak
                     a = []
                 else:
-                    a,k = ak
-                res = [name,]+a
-                if k or (a and isinstance(a[-1],dict)):
+                    a, k = ak
+                res = [
+                    name,
+                ] + a
+                if k or (a and isinstance(a[-1], dict)):
                     res.append(k)
             elif p[0].__name__ == "__newobj__":
                 raise NotImplementedError(p)
                 res = (p[1][0], p[1][1:]) + tuple(p[2:])
             else:
                 res = (name,) + p[1]
-                if len(p) == 3 and p[2] or isinstance(p[-1],dict):
+                if len(p) == 3 and p[2] or isinstance(p[-1], dict):
                     res += (p[2],)
                 elif len(p) > 3:
                     raise NotImplementedError(p)
@@ -123,22 +125,22 @@ def unwrap_obj(s):
         try:
             pk = _CProxy[pk]
         except KeyError:
-            kw = a.pop() if a and isinstance(a[-1],dict) else {}
+            kw = a.pop() if a and isinstance(a[-1], dict) else {}
             return DProxy(pk, a, kw)
-    if a and isinstance(a[-1],dict):
-        kw=a.pop()
+    if a and isinstance(a[-1], dict):
+        kw = a.pop()
     else:
-        kw={}
+        kw = {}
 
     if isfunction(pk):
         return pk(*a, **kw)
 
-    if (pkr := getattr(pk,"_moat__restore",None)) is not None:
+    if (pkr := getattr(pk, "_moat__restore", None)) is not None:
         pk = pkr(a, kw)
     else:
         try:
             pk = pk(*a, **kw)
-        except (TypeError,ValueError):
+        except (TypeError, ValueError):
             breakpoint()
             raise
     return pk

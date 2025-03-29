@@ -30,6 +30,7 @@ class Codec:
     Also, `unfeed` must return bytes from the start of the buffer.
 
     """
+
     def __init__(self, ext=None):
         if ext is None:
             ext = Extension()  # empty

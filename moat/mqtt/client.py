@@ -50,13 +50,13 @@ def get_codec(codec, fallback=NotGiven, config={}):  # pylint: disable=dangerous
     if codec is NotGiven:
         codec = fallback
     if codec is NotGiven:
-        codec = config if isinstance(config,str) else config.get("codec","noop")
-    if isinstance(codec,Codec):
+        codec = config if isinstance(config, str) else config.get("codec", "noop")
+    if isinstance(codec, Codec):
         return codec
     if isinstance(codec, type):
-        config.pop("codec",None)
+        config.pop("codec", None)
         return codec(**config.get("codec_params", {}).get(codec.name, {}))
-    if isinstance(codec,str):
+    if isinstance(codec, str):
         return _get_codec(config)
     else:
         return _get_codec(**config)
@@ -219,7 +219,7 @@ class MQTTClient:
         self._connected_state = anyio.Event()
         self._no_more_connections = anyio.Event()
         self.extra_headers = {}
-        self.codec = get_codec(codec, config=self.config.get("codec",{}))
+        self.codec = get_codec(codec, config=self.config.get("codec", {}))
 
         self._subscriptions = None
 
@@ -374,7 +374,7 @@ class MQTTClient:
         :param codec: Codec to encode the message with. Defaults to the connection's.
         """
 
-        codec = get_codec(codec, self.codec, config=self.config.get("codec",{}))
+        codec = get_codec(codec, self.codec, config=self.config.get("codec", {}))
         message = codec.encode(message)
         if not isinstance(topic, str):
             topic = "/".join(topic)

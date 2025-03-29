@@ -20,7 +20,7 @@ class Codec(_Codec):
             raise ValueError("You can't extend the UTF8 codec")
         super().__init__()
         self.dec = Utf8Stream()
-        self._buf:str = ""
+        self._buf: str = ""
 
     def encode(self, obj):
         "Encode UTF-8 to bytestring"

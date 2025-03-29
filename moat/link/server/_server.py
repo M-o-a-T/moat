@@ -21,7 +21,12 @@ from moat.link.client import BasicLink
 from moat.link.backend import get_backend
 from moat.link.exceptions import ClientError
 from moat.link.meta import MsgMeta
-from moat.util.cbor import StdCBOR, CBOR_TAG_MOAT_FILE_ID, CBOR_TAG_MOAT_FILE_END,CBOR_TAG_MOAT_CHANGE
+from moat.util.cbor import (
+    StdCBOR,
+    CBOR_TAG_MOAT_FILE_ID,
+    CBOR_TAG_MOAT_FILE_END,
+    CBOR_TAG_MOAT_CHANGE,
+)
 from moat.util.exc import exc_iter
 from moat.lib.codec.cbor import Tag as CBORTag, CBOR_TAG_CBOR_LEADER
 
@@ -232,7 +237,6 @@ class ServerClient(SubConn, CmdCommon):
         d = self.server.data[msg[0]]
         await msg.result(d.data, d.meta)
 
-
     async def cmd_d_list(self, msg):
         """Get the child names of a sub-node.
         Arguments:
@@ -284,9 +288,9 @@ class ServerClient(SubConn, CmdCommon):
             meta = msg[2]
         else:
             meta = MsgMeta(origin=self.name)
-        meta.source="Client"
+        meta.source = "Client"
 
-        self.server.maybe_update(path,value,meta)
+        self.server.maybe_update(path, value, meta)
 
     async def cmd_d_del(self, msg, **kw):
         """Delete a node's value."""
@@ -373,13 +377,13 @@ class ServerClient(SubConn, CmdCommon):
         return True
 
     async def cmd_s_save(self, msg):
-        prefix = msg.get("prefix",P(":"))
+        prefix = msg.get("prefix", P(":"))
         await self.server.save(path=msg["path"], prefix=prefix)
 
         return True
 
     async def cmd_s_load(self, msg):
-        prefix = msg.get("prefix",P(":"))
+        prefix = msg.get("prefix", P(":"))
         return await self.server.load(path=msg["path"], prefix=prefix)
 
     async def cmd_i_stop(self, msg):
@@ -536,25 +540,27 @@ class Server:
             res.append(self.last_auth)
         return res
 
-
     def maybe_update(self, path, data, meta):
         """
         A data item arrives.
 
         Update our store if it's newer.
         """
-        if (res := self.data.set(path,data,meta)):
+        if res := self.data.set(path, data, meta):
             self.write_monitor((path, data, meta))
         return res
 
-
-    async def _backend_monitor(self, task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED):
+    async def _backend_monitor(
+        self, task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED
+    ):
         """
         The task that listens to the backend's message stream and updates
         the data store.
         """
         chop = len(self.cfg.root)
-        async with self.backend.monitor(P(":R.#"), raw=False, qos=QoS.AT_LEAST_ONCE, no_local=True) as stream:
+        async with self.backend.monitor(
+            P(":R.#"), raw=False, qos=QoS.AT_LEAST_ONCE, no_local=True
+        ) as stream:
             task_status.started()
             async for msg in stream:
                 self.logger.debug("Recv: %r", msg)
@@ -562,7 +568,7 @@ class Server:
                 if topic and topic[0] == "run":
                     continue
 
-                msg.meta.source="Mon"
+                msg.meta.source = "Mon"
                 path = Path.build(topic)
                 if self.maybe_update(path, msg.data, msg.meta) is False:
                     # This item from outside is stale.
@@ -571,22 +577,22 @@ class Server:
                         data = d.data
                     except ValueError:
                         # deleted
-                        await self.backend.send(topic=msg.topic, payload=b'', codec=None, meta=d.meta)
+                        await self.backend.send(
+                            topic=msg.topic, payload=b"", codec=None, meta=d.meta
+                        )
                     else:
                         await self.backend.send(topic=msg.topic, payload=data, meta=d.meta)
-
 
     async def _backend_sender(self, task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED):
         rdr = self.write_monitor.reader(999)
         task_status.started()
         async for msg in rdr:
-            if isinstance(msg,CBORTag):
+            if isinstance(msg, CBORTag):
                 continue
-            p,d,m = msg
+            p, d, m = msg
             if m.source == "Mon" or m.source[0] == "_":
                 continue
-            await self.backend.send(topic=P(":R")+p, payload=d, meta=m)
-
+            await self.backend.send(topic=P(":R") + p, payload=d, meta=m)
 
     async def _pinger(
         self,
@@ -1068,7 +1074,7 @@ class Server:
         path: str = None,
         stream: io.IOBase = None,
         local: bool = False,
-        prefix: Path=P(":"),
+        prefix: Path = P(":"),
         authoritative: bool = False,
     ):
         """Load data from this stream
@@ -1081,36 +1087,43 @@ class Server:
         """
         longer = PathLongener(())
 
-        upd,skp,met = 0,0,[]
+        upd, skp, met = 0, 0, []
 
         async with MsgReader(path=path, stream=stream, codec="std-cbor") as rdr:
             async for m in rdr:
-                if isinstance(m,CBORTag) and m.tag == CBOR_TAG_CBOR_LEADER:
+                if isinstance(m, CBORTag) and m.tag == CBOR_TAG_CBOR_LEADER:
                     m = m.value
-                if isinstance(m,CBORTag):
+                if isinstance(m, CBORTag):
                     met.append(m)
                     continue
-                d,p,data,*mt = m
-                path = longer.long(d,p)
+                d, p, data, *mt = m
+                path = longer.long(d, p)
                 meta = MsgMeta._moat__restore(mt, NotGiven)
-                meta.source=str(path)
-                if self.maybe_update(prefix+path,data,meta):
+                meta.source = str(path)
+                if self.maybe_update(prefix + path, data, meta):
                     upd += 1
                 else:
                     skp += 1
 
         self.logger.debug("Loading finished.")
-        return (upd,skp,met)
+        return (upd, skp, met)
 
-
-    async def _save(self, writer:Callable, shorter:PathShortener, hdr:bool|CBORTag=True, ftr:bool|CBORTag=True, prefix=P(":"),**kw):
+    async def _save(
+        self,
+        writer: Callable,
+        shorter: PathShortener,
+        hdr: bool | CBORTag = True,
+        ftr: bool | CBORTag = True,
+        prefix=P(":"),
+        **kw,
+    ):
         """Save the current state."""
+
         async def saver(path, data):
             if data.data is NotGiven and data.meta is None:
                 return
-            d,p = shorter.short(path)
-            await writer([d,p,data.data,*data.meta.dump()])
-
+            d, p = shorter.short(path)
+            await writer([d, p, data.data, *data.meta.dump()])
 
         if hdr:
             if hdr is True:
@@ -1119,41 +1132,39 @@ class Server:
             await writer(hdr)
 
         # await writer({"info": msg})
-        await self.data[prefix].walk(saver, timestamp=kw.get("timestamp",0))
+        await self.data[prefix].walk(saver, timestamp=kw.get("timestamp", 0))
 
         if ftr:
             if ftr is True:
                 ftr = self.gen_hdr_stop()
             await writer(ftr)
 
-
     def gen_hdr_start(self, name, mode="full", **kw):
         """Return the CBOR tag for a start-of-file record"""
         from moat.util.cbor import gen_start
-        fn=anyio.Path(name).name
+
+        fn = anyio.Path(name).name
         mstr = f"MoaT-Link {mode} {fn !r}"
-        mstr += " "*(25-len(mstr))
+        mstr += " " * (25 - len(mstr))
         kw["mode"] = mode
         kw["name"] = name
 
-        return gen_start(mstr,**kw)
+        return gen_start(mstr, **kw)
 
     def gen_hdr_stop(self, **kw):
         """Return the CBOR tag for an end-of-file record"""
         from moat.util.cbor import gen_stop
 
         return gen_stop(**kw)
-    
+
     def gen_hdr_change(self, **kw):
         """Return the CBOR tag that describes a change"""
         from moat.util.cbor import gen_change
 
         return gen_change(**kw)
-    
 
     def get_state(self):
         return dict()
-
 
     async def save(self, path: str = None, **kw):
         """Save the current state to ``path``."""
@@ -1169,7 +1180,7 @@ class Server:
         self,
         path: str = None,
         save_state: bool = False,
-        task_status= anyio.TASK_STATUS_IGNORED,
+        task_status=anyio.TASK_STATUS_IGNORED,
     ):
         """Save the current state to ``path``.
         Continue writing updates until cancelled.
@@ -1189,24 +1200,37 @@ class Server:
                 self._writing.add(str(path))
                 rdr = self.write_monitor.reader(999)
                 async with (
-                        anyio.create_task_group() as tg,
-                        MsgWriter(path=path, codec="std-cbor") as mw,
-                        ):
+                    anyio.create_task_group() as tg,
+                    MsgWriter(path=path, codec="std-cbor") as mw,
+                ):
                     try:
-                        msg = self.gen_hdr_start(name=str(path), mode="full" if save_state else "incr", state=None if save_state else False)
+                        msg = self.gen_hdr_start(
+                            name=str(path),
+                            mode="full" if save_state else "incr",
+                            state=None if save_state else False,
+                        )
                         await mw(msg)
 
-                        msg = self.gen_hdr_stop(name=str(path), mode="restart" if save_state else "next")
+                        msg = self.gen_hdr_stop(
+                            name=str(path), mode="restart" if save_state else "next"
+                        )
                         self.write_monitor(msg)
                         task_status.started(scope)
 
                         if save_state:
-                            tg.start_soon(partial(self._save, mw, shorter, hdr=False,ftr=self.gen_hdr_change(state=False)))
+                            tg.start_soon(
+                                partial(
+                                    self._save,
+                                    mw,
+                                    shorter,
+                                    hdr=False,
+                                    ftr=self.gen_hdr_change(state=False),
+                                )
+                            )
 
-
-                        await self._save_stream(rdr,mw, shorter, msg)
+                        await self._save_stream(rdr, mw, shorter, msg)
                     except BaseException as exc:
-                        # 
+                        #
                         with anyio.move_on_after(2, shield=True):
                             await mw(self.gen_hdr_stop(mode="error", error=repr(exc)))
                         raise
@@ -1224,8 +1248,8 @@ class Server:
 
         last_saved = time.monotonic()
         last_saved_count = 0
-        TIMEOUT=5
-        MAXMSG=100
+        TIMEOUT = 5
+        MAXMSG = 100
 
         while True:
             msg = None
@@ -1236,17 +1260,17 @@ class Server:
                 msg = await anext(rdr)
             if msg is None or msg is ign:
                 pass
-            elif isinstance(msg, (list,tuple)):
-                path,data,meta = msg
-                d,p = shorter.short(path)
-                await mw([d,p,data,*meta.dump()])
+            elif isinstance(msg, (list, tuple)):
+                path, data, meta = msg
+                d, p = shorter.short(path)
+                await mw([d, p, data, *meta.dump()])
                 last_saved_count += 1
-            elif isinstance(msg,CBORTag) and msg.tag == CBOR_TAG_MOAT_FILE_END:
+            elif isinstance(msg, CBORTag) and msg.tag == CBOR_TAG_MOAT_FILE_END:
                 await mw(msg)
                 return
             else:
                 await mw(msg)  # XXX
-        
+
             # Ensure that we save the system state often enough.
             t = time.monotonic()
             td = t - last_saved
@@ -1255,14 +1279,13 @@ class Server:
                 last_saved = time.monotonic()
                 last_saved_count = 0
 
-
     async def _flush_deleted(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
         Background task to remove deleted nodes from the tree
         """
         task_status.started()
-        await anyio.sleep(self.cfg.timeout.delete/10)
-        t=time.time()
+        await anyio.sleep(self.cfg.timeout.delete / 10)
+        t = time.time()
 
         async def _walk(d) -> bool:
             # return True if we need to keep this
@@ -1271,10 +1294,14 @@ class Server:
             await anyio.sleep(0.1)
 
             # Drop the Meta entry if the deletion was long enough ago
-            if d._data is NotGiven and d.meta is not None and t-d.meta.timestamp > self.cfg.timeout.delete:
+            if (
+                d._data is NotGiven
+                and d.meta is not None
+                and t - d.meta.timestamp > self.cfg.timeout.delete
+            ):
                 d.meta = None
             drop = set()
-            for k,v in d.items():
+            for k, v in d.items():
                 if await _walk(v):
                     has_any = True
                 else:
@@ -1288,7 +1315,7 @@ class Server:
         while True:
             await _walk(self.data)
 
-            await anyio.sleep(self.cfg.timeout.delete/20)
+            await anyio.sleep(self.cfg.timeout.delete / 20)
 
     async def _save_task(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
@@ -1298,8 +1325,8 @@ class Server:
         dest = anyio.Path(save.dir)
         while True:
             now = datetime.now(UTC)
-            fn = dest/now.strftime(save.name)
-            await fn.parent.mkdir(exist_ok=True,parents=True)
+            fn = dest / now.strftime(save.name)
+            await fn.parent.mkdir(exist_ok=True, parents=True)
             await self.run_saver(path=fn)
             if task_status is not None:
                 task_status.started()
@@ -1308,7 +1335,7 @@ class Server:
 
         task_status.started()
 
-    async def run_saver(self, path: anyio.Path = None, save_state: bool=True):
+    async def run_saver(self, path: anyio.Path = None, save_state: bool = True):
         """
         Start a task that continually saves to disk.
 
@@ -1334,7 +1361,6 @@ class Server:
             )
         else:
             self.write_monitor(self.gen_hdr_stop(reason="log_end"))
-
 
     async def _sigterm(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         with anyio.open_signal_receiver(signal.SIGTERM) as r:
@@ -1391,6 +1417,7 @@ class Server:
                 async with anyio.create_task_group() as tg:
                     task_status.started(tg)
                     await anyio.sleep_forever()
+
             client_tg = await _tg.start(run_tg)
             listen_tg = await _tg.start(run_tg)
 
@@ -1439,7 +1466,7 @@ class Server:
 
             # done, ready for service
 
-            task_status.started((self,ports))
+            task_status.started((self, ports))
             self.logger.debug("STARTUP DONE")
 
             # maintainance
@@ -1453,7 +1480,9 @@ class Server:
             # announce that we're going down
 
             # TODO listen to this message and possibly take over
-            await self.backend.send(topic=P(":R.run.service.down.main"), payload=self.name, retain=False)
+            await self.backend.send(
+                topic=P(":R.run.service.down.main"), payload=self.name, retain=False
+            )
             # TODO if we were "it", wait for some other server's announcement
 
             # stop listeners
@@ -1523,14 +1552,13 @@ class Server:
             async for msg in mon:
                 self.service_monitor(msg)
 
-
     async def _sync_from(self, name: str, data: dict) -> bool:
         """
         Sync from the server indicated by this message.
 
         Returns True if successful.
         """
-        async with BasicLink(self.cfg,name,data) as conn:
+        async with BasicLink(self.cfg, name, data) as conn:
             try:
                 await self._sync_one(conn)
             except Exception as exc:
@@ -1544,22 +1572,22 @@ class Server:
             return True
         return False
 
-    async def _sync_one(self, conn: Conn, prefix:Path=P(":")):
+    async def _sync_one(self, conn: Conn, prefix: Path = P(":")):
         async with conn.stream_r(P("d.walk"), prefix) as feed:
             pl = PathLongener()
-            upd=0
-            skp=0
+            upd = 0
+            skp = 0
             async for msg in feed:
-                d,p,data,*mt = msg
-                path = pl.long(d,p)
-                meta = MsgMeta._moat__restore(mt,NotGiven)
-                meta.source="_Load"
-                if self.maybe_update(prefix+path,data,meta):
+                d, p, data, *mt = msg
+                path = pl.long(d, p)
+                meta = MsgMeta._moat__restore(mt, NotGiven)
+                meta.source = "_Load"
+                if self.maybe_update(prefix + path, data, meta):
                     upd += 1
                 else:
                     skp += 1
                 self.logger.debug("Sync Msg %r", msg)
-        self.logger.info("Sync finished. %d new, %d existing", upd,skp)
+        self.logger.info("Sync finished. %d new, %d existing", upd, skp)
 
     async def _read_initial(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
@@ -1575,6 +1603,7 @@ class Server:
             ready.set()
 
         async with anyio.create_task_group() as tg:
+
             @tg.start_soon
             async def trigger():
                 with anyio.fail_after(self.cfg.server.timeout.startup):
@@ -1592,13 +1621,13 @@ class Server:
         save = self.cfg.server.save
         dest = anyio.Path(save.dir)
         if not await dest.is_dir():
-            self.logger.info("No saved data in %r",str(dest))
+            self.logger.info("No saved data in %r", str(dest))
             return
 
         fs = []
-        async for p,d,f in dest.walk():
+        async for p, d, f in dest.walk():
             for ff in f:
-                fs.append(p/ff)
+                fs.append(p / ff)
         fs.sort()
 
         tupd = 0
@@ -1609,41 +1638,41 @@ class Server:
             try:
                 async with MsgReader(fn, codec="std-cbor") as rdr:
                     hdr = await anext(rdr)
-                    if isinstance(hdr,CBORTag) and hdr.tag == CBOR_TAG_CBOR_LEADER:
+                    if isinstance(hdr, CBORTag) and hdr.tag == CBOR_TAG_CBOR_LEADER:
                         hdr = hdr.value
-                    if not isinstance(hdr,CBORTag) or hdr.tag != CBOR_TAG_MOAT_FILE_ID:
+                    if not isinstance(hdr, CBORTag) or hdr.tag != CBOR_TAG_MOAT_FILE_ID:
                         raise ValueError(f"First entry is {hdr !r}")
 
                     pl = PathLongener()
-                    upd,skp = 0,0
-                    ehdr=None
+                    upd, skp = 0, 0
+                    ehdr = None
                     async for msg in rdr:
                         if isinstance(msg, CBORTag):
                             if msg.tag == CBOR_TAG_MOAT_FILE_ID:
                                 # concatenated files?
                                 if ehdr is None:
-                                    raise ValueError("START within file %r",str(fn))
+                                    raise ValueError("START within file %r", str(fn))
                                 # TODO verify that these belong together
                                 ehdr = None
 
                             elif msg.tag == CBOR_TAG_MOAT_FILE_END:
                                 if ehdr is not None:
-                                    raise ValueError("Duplicate END in %r",str(fn))
-                                ehdr=msg
+                                    raise ValueError("Duplicate END in %r", str(fn))
+                                ehdr = msg
                                 break
                             continue
-                        d,p,data,*mt = msg
-                        path = pl.long(d,p)
-                        meta = MsgMeta._moat__restore(mt,NotGiven)
-                        meta.source="_file"
-                        if self.maybe_update(path,data,meta):
+                        d, p, data, *mt = msg
+                        path = pl.long(d, p)
+                        meta = MsgMeta._moat__restore(mt, NotGiven)
+                        meta.source = "_file"
+                        if self.maybe_update(path, data, meta):
                             # Entries that have been deleted don't count as updates
                             if data is not NotGiven:
                                 upd += 1
                         else:
                             skp += 1
 
-                    self.logger.info("Restore %r: %d/%d", str(fn),upd,skp)
+                    self.logger.info("Restore %r: %d/%d", str(fn), upd, skp)
                     tupd += upd
                     if not upd and ehdr is not None and "error" not in ehdr.data:
                         break
@@ -1664,10 +1693,9 @@ class Server:
             sn = seen[msg.meta.origin]
             if sn > 2:
                 return
-            seen[msg.meta.origin] = sn+1
+            seen[msg.meta.origin] = sn + 1
 
         pass
-
 
     async def _run_server(self, tg, name, cfg, *, task_status=anyio.TASK_STATUS_IGNORED):
         """runs a listener on a single port"""

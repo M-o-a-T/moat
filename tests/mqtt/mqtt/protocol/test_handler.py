@@ -177,7 +177,12 @@ class ProtocolHandlerTest(unittest.TestCase):
     def test_receive_qos0(self):
         async def server_mock(stream):
             packet = PublishPacket.build(
-                "/topic", b"test_data", rand_packet_id(), False, QOS_0, False,
+                "/topic",
+                b"test_data",
+                rand_packet_id(),
+                False,
+                QOS_0,
+                False,
             )
             await packet.to_stream(stream)
 
@@ -201,7 +206,12 @@ class ProtocolHandlerTest(unittest.TestCase):
     def test_receive_qos1(self):
         async def server_mock(stream):
             packet = PublishPacket.build(
-                "/topic", b"test_data", rand_packet_id(), False, QOS_1, False,
+                "/topic",
+                b"test_data",
+                rand_packet_id(),
+                False,
+                QOS_1,
+                False,
             )
             await packet.to_stream(stream)
             puback = await PubackPacket.from_stream(stream)
@@ -229,7 +239,12 @@ class ProtocolHandlerTest(unittest.TestCase):
     def test_receive_qos2(self):
         async def server_mock(stream):
             packet = PublishPacket.build(
-                "/topic", b"test_data", rand_packet_id(), False, QOS_2, False,
+                "/topic",
+                b"test_data",
+                rand_packet_id(),
+                False,
+                QOS_2,
+                False,
             )
             await packet.to_stream(stream)
             pubrec = await PubrecPacket.from_stream(stream)
@@ -296,7 +311,12 @@ class ProtocolHandlerTest(unittest.TestCase):
             self.session = Session(None)
             message = OutgoingApplicationMessage(1, "/topic", QOS_1, b"test_data", False)
             message.publish_packet = PublishPacket.build(
-                "/topic", b"test_data", rand_packet_id(), False, QOS_1, False,
+                "/topic",
+                b"test_data",
+                rand_packet_id(),
+                False,
+                QOS_1,
+                False,
             )
             self.session.inflight_out[1] = message
             self.handler = ProtocolHandler(self.plugin_manager)
@@ -328,7 +348,12 @@ class ProtocolHandlerTest(unittest.TestCase):
             self.session = Session(None)
             message = OutgoingApplicationMessage(1, "/topic", QOS_2, b"test_data", False)
             message.publish_packet = PublishPacket.build(
-                "/topic", b"test_data", rand_packet_id(), False, QOS_2, False,
+                "/topic",
+                b"test_data",
+                rand_packet_id(),
+                False,
+                QOS_2,
+                False,
             )
             self.session.inflight_out[1] = message
             self.handler = ProtocolHandler(self.plugin_manager)

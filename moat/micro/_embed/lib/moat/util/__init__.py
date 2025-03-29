@@ -8,12 +8,14 @@ from copy import deepcopy
 import re
 
 from moat.micro.compat import Event, log
-from .path import P,Path
+from .path import P, Path
 
 from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
 
+
 class OutOfData(EOFError):
     pass
+
 
 NotGiven = Ellipsis
 
@@ -166,7 +168,6 @@ def load_from_cfg(cfg, *a, _raise=False, **k):
         return None
     m = import_(cfg.client, off=1)
     return m(cfg, *a, **k)
-
 
 
 class Lockstep:

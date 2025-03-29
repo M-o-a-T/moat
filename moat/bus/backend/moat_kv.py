@@ -3,7 +3,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 import typing
-from moat.util import Path, P, gen_ident,al_lower
+from moat.util import Path, P, gen_ident, al_lower
 
 if typing.TYPE_CHECKING:
     from moat.kv.client import Client

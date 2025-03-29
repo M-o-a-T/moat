@@ -29,7 +29,8 @@ from moat.util import (  # pylint: disable=no-name-in-module
     create_queue,
     ensure_cfg,
     gen_ssl,
-    gen_ident,al_lower,
+    gen_ident,
+    al_lower,
     num2byte,
 )
 

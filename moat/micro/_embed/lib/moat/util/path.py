@@ -8,8 +8,10 @@ import re
 
 _PartRE = re.compile("[^:._]+|_|:|\\.")
 
+
 def P(s):
     return Path.from_str(s)
+
 
 class Path(tuple):  # noqa:SLOT001
     """

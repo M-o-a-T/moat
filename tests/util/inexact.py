@@ -6,8 +6,10 @@ from __future__ import annotations
 
 from moat.util import InexactFloat
 
+
 def I(val):
-    return InexactFloat(val, .1,.5)  # rel, abs
+    return InexactFloat(val, 0.1, 0.5)  # rel, abs
+
 
 def test_inexact():
     """
@@ -27,7 +29,7 @@ def test_inexact():
     assert I(20) <= 19
     assert I(20) >= 19
 
-    assert I(0) == I(.4)
-    assert I(0) < I(.6)
+    assert I(0) == I(0.4)
+    assert I(0) < I(0.6)
 
     # pylint: disable=unnecessary-pass

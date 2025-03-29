@@ -18,7 +18,7 @@ except ImportError:
 from moat.mqtt.broker import create_broker
 from moat.mqtt.client import open_mqttclient
 from moat.mqtt.mqtt.constants import QOS_0
-from moat.util import gen_ident,al_az
+from moat.util import gen_ident, al_az
 
 try:
     from moat.kv.client import open_client
@@ -88,7 +88,8 @@ async def moat_kv_server(n):
                 async def msglog(evt):
                     try:
                         async with cl._stream(
-                            "msg_monitor", topic="*",
+                            "msg_monitor",
+                            topic="*",
                         ) as mon:  # , topic=broker_config['kv']['topic']) as mon:
                             log.info("Monitor Start")
                             evt.set()

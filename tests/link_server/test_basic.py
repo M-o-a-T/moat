@@ -39,31 +39,31 @@ async def test_ls_basic(cfg):
                     break
 
         srv = await sf.server(init={"Hello": "there!", "test": 123})
-        await sf.tg.start(cl,"Hello")
+        await sf.tg.start(cl, "Hello")
 
         c = await sf.client()
-        r = await c.cmd(P("i.乒"),"pling")
-        assert r.args == ['乓', 'pling'], r
-        a,b = r  # we can iterate the result to get at the data
-        assert (a,b) == ('乓', 'pling'), (a,b)
+        r = await c.cmd(P("i.乒"), "pling")
+        assert r.args == ["乓", "pling"], r
+        a, b = r  # we can iterate the result to get at the data
+        assert (a, b) == ("乓", "pling"), (a, b)
 
         om = MsgMeta(origin="me!")
         await c.send(P(":R.test.here"), "Hello", meta=om)
         with anyio.fail_after(1):
             await evt.wait()
 
-        r,m = await c.cmd(P("d.get"),P("test.here"))
+        r, m = await c.cmd(P("d.get"), P("test.here"))
         assert r == "Hello"
-        assert m.origin=="me!"
+        assert m.origin == "me!"
 
-        r,m = await c.cmd(P("d.get"),P(":"))
-        assert r["test"]==123
-        assert m.origin=="INIT"
+        r, m = await c.cmd(P("d.get"), P(":"))
+        assert r["test"] == 123
+        assert m.origin == "INIT"
 
         evt = anyio.Event()
-        await sf.tg.start(cl,999)
+        await sf.tg.start(cl, 999)
         om = MsgMeta(origin="me!")
-        await c.cmd(P("d.set"),P("test.here"),999,om)
+        await c.cmd(P("d.set"), P("test.here"), 999, om)
         with anyio.fail_after(1):
             await evt.wait()
 
@@ -80,11 +80,11 @@ async def data(s):
     await s("a.b.d", 17)
 
 
-async def fetch(c,p):
-    p=P(p)
+async def fetch(c, p):
+    p = P(p)
     nn = Node()
     pl = PathLongener()
-    async with c.stream_r(P("d.walk"),p) as msgs:
+    async with c.stream_r(P("d.walk"), p) as msgs:
         try:
             it = aiter(msgs)
         except StreamError as exc:
@@ -95,10 +95,11 @@ async def fetch(c,p):
                 pass
             raise exc from None
 
-        async for pr,p,d,*m in it:
-            p=pl.long(pr,p)
-            nn.set(p,d,MsgMeta._moat__restore(m, NotGiven))
+        async for pr, p, d, *m in it:
+            p = pl.long(pr, p)
+            nn.set(p, d, MsgMeta._moat__restore(m, NotGiven))
         return nn
+
 
 @pytest.mark.anyio
 async def test_ls_walk(cfg):
@@ -107,13 +108,14 @@ async def test_ls_walk(cfg):
         c = await sf.client()
 
         n = Node()
-        async def s(p,v):
-            p=P(p)
-            await c.cmd(P("d.set"),p,v)
-            n.set(p,v,MsgMeta(origin="Test"))
+
+        async def s(p, v):
+            p = P(p)
+            await c.cmd(P("d.set"), p, v)
+            n.set(p, v, MsgMeta(origin="Test"))
 
         await data(s)
-        nn = await fetch(c,"a")
+        nn = await fetch(c, "a")
 
         assert n.get(P("a")) == nn
         await s("a.b.x", 90)
@@ -121,26 +123,27 @@ async def test_ls_walk(cfg):
 
 
 @pytest.mark.anyio
-async def test_ls_save(cfg,tmp_path):
-    fname=tmp_path/"test.moat"
-    
-    n=Node()
+async def test_ls_save(cfg, tmp_path):
+    fname = tmp_path / "test.moat"
+
+    n = Node()
     async with Scaffold(cfg, use_servers=True) as sf:
         srv = await sf.server(init={"Hello": "there!", "test": 1})
         c = await sf.client()
 
-        async def s(p,v):
-            p=P(p)
-            await c.cmd(P("d.set"),p,v)
-            n.set(p,v,MsgMeta(origin="Test"))
+        async def s(p, v):
+            p = P(p)
+            await c.cmd(P("d.set"), p, v)
+            n.set(p, v, MsgMeta(origin="Test"))
+
         await data(s)
-        await c.cmd(P("s.save"),path=str(fname))
+        await c.cmd(P("s.save"), path=str(fname))
 
     async with Scaffold(cfg, use_servers=True) as sf:
         srv = await sf.server(init={"Hello": "there!", "test": 1})
         c = await sf.client()
-        nn = await fetch(c,"a")
+        nn = await fetch(c, "a")
         assert n.get(P("a")) != nn
-        res = await c.cmd(P("s.load"),path=str(fname))
-        nn = await fetch(c,"a")
+        res = await c.cmd(P("s.load"), path=str(fname))
+        nn = await fetch(c, "a")
         assert n.get(P("a")) == nn

@@ -46,7 +46,7 @@ class _CReader:
         self.cons = cons
         self.intr = 0
 
-    async def crd(self, buf:bytearray):
+    async def crd(self, buf: bytearray):
         """read waiting console data"""
         if not self.cons:
             raise EOFError
@@ -62,7 +62,7 @@ class _CReader:
             self.cpos = 0
         return n
 
-    def cput(self, b:int):
+    def cput(self, b: int):
         """store a byte in the console buffer"""
         if self.cpos == len(self.cbuf):
             if len(self.cbuf) > 10:

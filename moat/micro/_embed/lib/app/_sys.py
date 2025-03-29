@@ -9,6 +9,7 @@ from moat.micro.compat import sleep_ms, ticks_diff, ticks_ms, log
 
 from ._sys_ import Cmd as _Cmd
 
+
 class Cmd(_Cmd):
     """
     System stuff that's satellite specific
@@ -68,19 +69,19 @@ class Cmd(_Cmd):
         """
         Log parameters.
         """
-        log("Input: %r %r" % (a,k))
+        log("Input: %r %r" % (a, k))
 
     async def cmd_stdout(self, *a, **k):
         """
         Print something.
         """
-        print("Input: %r %r" % (a,k))
+        print("Input: %r %r" % (a, k))
 
     async def cmd_stderr(self, *a, **k):
         """
         Print something.
         """
-        print("Input: %r %r" % (a,k), file=sys.stderr)
+        print("Input: %r %r" % (a, k), file=sys.stderr)
 
     async def cmd_boot(self, code, m):
         """

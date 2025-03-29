@@ -36,4 +36,3 @@ def _enc_int(codec, n):
 def _dec_bignum(codec, data):
     codec  # noqa:B018
     return int.from_bytes(data, "big")
-

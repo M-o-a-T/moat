@@ -72,7 +72,7 @@ class MpyBuf(ProcessBuf):
     """
 
     async def setup(self):
-        codec=get_codec("std-msgpack")
+        codec = get_codec("std-msgpack")
         mplex = self.cfg.get("mplex", None)
         if mplex is not None:
             pre = Path(__file__).parents[2]

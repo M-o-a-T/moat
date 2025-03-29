@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 
 __all__ = ["Codec", "Tag", "ExtraData"]
 
+
 class Tag:
     "a random CBOR tag"
 
@@ -116,7 +117,7 @@ class Codec(_Codec):
         "copy me"
         return Codec(use_attrdict=self.use_attrdict, **self.__kw)
 
-    def encode(self, obj: Any, *, empty_elided:bool=False) -> bytes:
+    def encode(self, obj: Any, *, empty_elided: bool = False) -> bytes:
         """
         Pack @obj, return the resulting bytes.
 
@@ -127,7 +128,7 @@ class Codec(_Codec):
             raise RuntimeError("Codec is busy")
 
         if empty_elided and obj is NotGiven:
-            return b''
+            return b""
 
         self._buffer = bytearray()
         try:
@@ -136,7 +137,7 @@ class Codec(_Codec):
         finally:
             self._buffer = b""  # always reset
 
-    def decode(self, data: bytes | bytearray | memoryview, *, empty_elided:bool=False) -> Any:
+    def decode(self, data: bytes | bytearray | memoryview, *, empty_elided: bool = False) -> Any:
         """
         Unpack @data, return the resulting object.
 
@@ -147,7 +148,7 @@ class Codec(_Codec):
         if self._buffer:
             raise RuntimeError("Codec is busy")
 
-        if empty_elided and data == b'':
+        if empty_elided and data == b"":
             return NotGiven
 
         self._buffer = data
@@ -167,7 +168,7 @@ class Codec(_Codec):
             if self._buf_pos == 0:
                 self._buffer += data
                 return
-            data = self._buffer[self._buf_pos:] + data
+            data = self._buffer[self._buf_pos :] + data
         elif isinstance(data, memoryview):
             data = bytearray(data)
         self._buffer = data
@@ -178,7 +179,7 @@ class Codec(_Codec):
         if not self._buffer:
             return 0
         if buf is None:
-            if isinstance(self._buffer,memoryview):
+            if isinstance(self._buffer, memoryview):
                 self._buffer = bytearray(self.buffer)
             return 0
         i = self._buf_pos
@@ -189,7 +190,7 @@ class Codec(_Codec):
         buf[:n] = self._buffer[i, i_n]
         self._buf_pos = i_n
         return n
-    
+
     def _enc_int(self, val):
         "return bytes representing int val in CBOR"
         if val < 0:

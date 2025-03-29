@@ -447,7 +447,7 @@ class Stream:
         if s_out:
             self.s_out = s_out
 
-    def __getitem__(self, k:int|str) -> Any:
+    def __getitem__(self, k: int | str) -> Any:
         """
         Get an item. If the key is numeric, retrieve from the argument
         list, else from the keywords.
@@ -456,7 +456,7 @@ class Stream:
             return self._args[k]
         return self._kw[k]
 
-    def get(self, k:int|str, default=None) -> Any:
+    def get(self, k: int | str, default=None) -> Any:
         """
         Get an item. Like `__getitem__` but returns a default (None) instead of
         raising `KeyError` / `IndexError`.
@@ -527,7 +527,7 @@ class Stream:
             elif exc is True:
                 await self._send([E_UNSPEC], err=True, _kill=True)
             elif isinstance(exc, Exception):
-                await self._send((exc.__class__.__name__,)+tuple(exc.args), err=True, _kill=True)
+                await self._send((exc.__class__.__name__,) + tuple(exc.args), err=True, _kill=True)
             else:  # BaseException
                 await self._send([E_CANCEL], err=True, _kill=True)
                 raise
@@ -888,7 +888,6 @@ class Stream:
             raise exc
         await self._skipped()
         await self._qsize(True)
-
 
         try:
             return await self._recv_q.get()

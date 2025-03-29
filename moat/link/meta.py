@@ -70,7 +70,7 @@ class MsgMeta:
     origin = _gen(0)
     timestamp = _gen(1)
 
-    source:Any = None
+    source: Any = None
 
     def __init__(self, /, name: str | NotGiven | None = None, **kwargs):
         vals = {}
@@ -84,19 +84,19 @@ class MsgMeta:
         self._clean(name)
 
     def dump(self):
-        if self.kw or self.a and isinstance(self.a[-1],dict):
-            return self.a+[self.kw]
+        if self.kw or self.a and isinstance(self.a[-1], dict):
+            return self.a + [self.kw]
         return self.a
 
     @classmethod
     def _moat__restore(cls, a, kw):
         m = object.__new__(cls)
         if kw is NotGiven:
-            if a and isinstance(a[-1],dict):
+            if a and isinstance(a[-1], dict):
                 kw = a.pop()
             else:
                 kw = {}
-        source = kw.pop("source",None)
+        source = kw.pop("source", None)
         m.a = a
         m.kw = kw
         m.source = source

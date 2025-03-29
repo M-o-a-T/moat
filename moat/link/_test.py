@@ -55,15 +55,15 @@ async def run_broker(cfg, *, task_status):
 
 
 class Scaffold(CtxObj):
-    tempdir=None
+    tempdir = None
 
-    def __init__(self, cfg: attrdict, use_servers=True, tempdir:str|None=None):
+    def __init__(self, cfg: attrdict, use_servers=True, tempdir: str | None = None):
         self.cfg = cfg.link
 
         self.cfg.setdefault("backend", attrdict())
         self.cfg.backend.setdefault("driver", "mqtt")
         self.cfg.backend.setdefault("codec", "std-cbor")
-        self._tempdir=tempdir
+        self._tempdir = tempdir
 
         if not use_servers:
             self.cfg.client.init_timeout = None
@@ -72,8 +72,10 @@ class Scaffold(CtxObj):
     async def _ctx(self):
         Root.set(self.cfg.root)
 
-        with nullcontext(self._tempdir) if self._tempdir is not None else TemporaryDirectory() as tempdir:
-            self.tempdir=FSPath(tempdir)
+        with nullcontext(
+            self._tempdir
+        ) if self._tempdir is not None else TemporaryDirectory() as tempdir:
+            self.tempdir = FSPath(tempdir)
             async with anyio.create_task_group() as self.tg:
                 bport = await self.tg.start(run_broker, self.cfg)
 
@@ -91,14 +93,14 @@ class Scaffold(CtxObj):
             await anyio.sleep_forever()
             assert False  # noqa:B011,PT015
 
-    async def server(self, cfg: dict | None = None, **kw) -> tuple[Server,list[dict]]:
+    async def server(self, cfg: dict | None = None, **kw) -> tuple[Server, list[dict]]:
         """
         Start a server.
         Returns the server object and the ports it runs on.
         """
         cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
         cfg["server"]["ports"]["main"]["port"] = 0
-        cfg["server"]["save"]["dir"] = self.tempdir/"data"
+        cfg["server"]["save"]["dir"] = self.tempdir / "data"
         return await self.tg.start(self._run_server, cfg, kw)
 
     async def client(self, cfg: dict | None = None):

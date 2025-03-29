@@ -20,12 +20,6 @@ from inspect import currentframe
 from .queue import Queue as _Queue
 from .queue import QueueEmpty, QueueFull
 
-try:
-    import greenback
-except ImportError:
-    greenback = None
-
-
 logger = logging.getLogger(__name__)
 
 __all__ = [
@@ -204,8 +198,6 @@ def TaskGroup():
                 async def catch(p, a, k, *, task_status):
                     with _anyio.CancelScope() as s:
                         task_status.started(s)
-                        if greenback is not None:
-                            await greenback.ensure_portal()
                         with suppress(CancelledError):  # error from concurrent.futures
                             await p(*a, **k)
 

@@ -145,7 +145,7 @@ class Node:
         pl = PathLongener()
         while True:
             s, p, d, *m = yield
-            m = MsgMeta.restore(m)
+            m = MsgMeta._moat__restore(m,NotGiven)
             p = pl.long(s, p)
             n = self.get(p)
             if force or n.meta is None or n.meta.timestamp < m.timestamp:

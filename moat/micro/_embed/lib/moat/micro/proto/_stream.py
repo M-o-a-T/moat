@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from moat.util import NotGiven, as_proxy
+from moat.util import NotGiven, OutOfData
+from moat.lib.codec.proxy import as_proxy
 
 from ..compat import Event, Lock, log
 from .stack import BaseBuf, StackedBlk, StackedMsg
-
-from msgpack import OutOfData
 
 # Typing
 
@@ -16,7 +15,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable
 
 
-as_proxy("_", NotGiven, replace=True)
+as_proxy("_", NotGiven)
 
 
 #   @asynccontextmanager
@@ -47,7 +46,7 @@ class _CReader:
         self.cons = cons
         self.intr = 0
 
-    async def crd(self, buf):
+    async def crd(self, buf:bytearray):
         """read waiting console data"""
         if not self.cons:
             raise EOFError
@@ -63,7 +62,7 @@ class _CReader:
             self.cpos = 0
         return n
 
-    def cput(self, b):
+    def cput(self, b:int):
         """store a byte in the console buffer"""
         if self.cpos == len(self.cbuf):
             if len(self.cbuf) > 10:
@@ -92,11 +91,10 @@ class _MsgpackMsgBuf(StackedMsg):
 
     If @console is set and a prefix is used, sends data atomically.
     Otherwise two separate write calls are used to save on message copying.
-
-    You need to override .pack and .unpack.
     """
 
     cons = False
+    codec: Codec = None
 
     def __init__(self, stream: BaseBuf, cfg: dict):
         #
@@ -112,19 +110,8 @@ class _MsgpackMsgBuf(StackedMsg):
         self.pref = pref
 
         cons = cfg.get("console", False)
-
-        if cons or pref is not None:
-            cfg.setdefault("unpack",{})["read_size"] = 1
         if cons:
             _CReader.__init__(self, cons)
-
-        # we use a hacked version of msgpack with a stream-y async unpacker
-
-    async def pack(self):
-        raise NotImplementedError(self.__class__.__name__ + ".pack")
-
-    async def unpack(self):
-        raise NotImplementedError(self.__class__.__name__ + ".unpack")
 
     async def cwr(self, buf):
         if not self.cons:
@@ -135,42 +122,57 @@ class _MsgpackMsgBuf(StackedMsg):
         return _CReader.crd(self, buf)
 
     async def send(self, msg: Any) -> None:
-        msg = self.pack(msg)
+        msg = self.codec.encode(msg)
         async with self.w_lock:
             if self.pref is not None:
                 if self.cons:
-                    msg = self.pref + msg  # *sigh* must be atomic
+                    msg = self.pref + msg  # must be atomic
                 else:
                     await self.s.wr(self.pref)
             await self.s.wr(msg)
 
     async def recv(self) -> Any:
-        if self.pref is not None:
-            buf = bytearray(1)
-            while True:
-                if await self.s.rd(buf) != 1:
-                    raise EOFError
-                b = buf[0]
-                if b == self.pref[0]:
-                    try:
-                        res = await self.unpack()
-                    except OutOfData:
-                        raise EOFError
-                    if res is not None:
-                        return res
-                elif self.cons:
-                    _CReader.cput(self, b)
+        """
+        Receive the next object.
+        """
+        # Pre+postcondition: the codec does not have an object in progress.
 
-        else:
+        buf = bytearray(64)
+        if self.pref is None:
+            # easy case
             while True:
                 try:
-                    r = await self.unpack()
-                except OutOfData:
-                    raise EOFError
-                if not isinstance(r, int):
-                    return r
+                    r = next(self.codec)
+                except StopIteration:
+                    n = await self.s.rd(buf)
+                    self.codec.feed(memoryview(buf)[:n])
+                else:
+                    if self.cons and isinstance(r, int) and r >= 0:
+                        _CReader.cput(self, r)
+                    else:
+                        return r
+
+        while True:
+            b = bytearray(1)
+            while True:
+                # read until we get a prefix byte
+                if self.codec.unfeed(b) == 0:
+                    n = await self.s.rd(buf)
+                    self.codec.feed(memoryview(buf)[:n])
+                elif b == self.pref:
+                    break
                 elif self.cons:
-                    _CReader.cput(self, r)
+                    _CReader.cput(self, b[0])
+
+            while True:
+                # read until we get an object
+                try:
+                    return next(self.codec)
+                except StopIteration:
+                    pass
+
+                n = await self.s.rd(buf)
+                self.codec.feed(memoryview(buf)[:n])
 
 
 class _MsgpackMsgBlk(StackedMsg):
@@ -182,11 +184,11 @@ class _MsgpackMsgBlk(StackedMsg):
     """
 
     async def send(self, msg):
-        await self.s.snd(self.pack(msg))
+        await self.s.snd(self.codec.encode(msg))
 
     async def recv(self):
         m = await self.s.rcv()
-        return self.unpacker(m)
+        return self.codec.decode(m)
 
 
 class SerialPackerBlkBuf(StackedBlk):

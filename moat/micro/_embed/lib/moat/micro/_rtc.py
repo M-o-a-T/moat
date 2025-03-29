@@ -16,12 +16,11 @@ except ImportError:
 from moat.util import merge
 from moat.micro.cmd.util.pt import del_p, get_p, set_p
 from moat.micro.compat import log
-from moat.micro.proto.stream import _decode, _encode
 
-import msgpack as mp
+from moat.lib.codec.cbor import Codec as CBOR
 
-_pack = mp.Packer(default=_encode).pack
-_unpack = lambda x: mp.unpackb(x, ext_hook=_decode)  # noqa:E731
+_pack = CBOR().encode
+_unpack = CBOR().decode
 
 _dfn = "moat.rtc"
 

@@ -34,82 +34,82 @@ class BatteryAlert(Alert):
     """
 
 
-@as_proxy("bms_SH", replace=True)
+@as_proxy("bms_SH")
 class HighSOC(BatteryAlert):
     "Charge exceeds limit"
 
 
-@as_proxy("bms_SL", replace=True)
+@as_proxy("bms_SL")
 class LowSOC(BatteryAlert):
     "Charge below limit"
 
 
-@as_proxy("bms_UH", replace=True)
+@as_proxy("bms_UH")
 class HighVoltage(BatteryAlert):
     "Total voltage exceeds limit"
 
 
-@as_proxy("bms_UL", replace=True)
+@as_proxy("bms_UL")
 class LowVoltage(BatteryAlert):
     "Total voltage below limit"
 
 
-@as_proxy("bms_CH", replace=True)
+@as_proxy("bms_CH")
 class HighCellVoltage(BatteryAlert):
     "Cell voltage exceeds limit"
 
 
-@as_proxy("bms_CL", replace=True)
+@as_proxy("bms_CL")
 class LowCellVoltage(BatteryAlert):
     "Cell voltage below limit"
 
 
-@as_proxy("bms_CI", replace=True)
+@as_proxy("bms_CI")
 class CellImbalance(BatteryAlert):
     "Excessive cell imbalance"
 
 
-@as_proxy("bms_UD", replace=True)
+@as_proxy("bms_UD")
 class VoltageDelta(BatteryAlert):
     "High diff between cell sum and total voltage"
 
 
-@as_proxy("bms_IH", replace=True)
+@as_proxy("bms_IH")
 class HighChargeCurrent(BatteryAlert):
     "Charge current exceeds limit"
 
 
-@as_proxy("bms_IL", replace=True)
+@as_proxy("bms_IL")
 class HighDischargeCurrent(BatteryAlert):
     "Discharge current exceeds limit"
 
 
-@as_proxy("bms_TH", replace=True)
+@as_proxy("bms_TH")
 class HighTemperature(BatteryAlert):
     "Temperature exceeds limit"
 
 
-@as_proxy("bms_TL", replace=True)
+@as_proxy("bms_TL")
 class LowTemperature(BatteryAlert):
     "Temperature below operational limit"
 
 
-@as_proxy("bms_NBD", replace=True)
+@as_proxy("bms_NBD")
 class NoBatteryData(BatteryAlert):
     "no battery data seen"
 
 
-@as_proxy("bms_NCD", replace=True)
+@as_proxy("bms_NCD")
 class NoCellData(BatteryAlert):
     "no cell data seen"
 
 
-@as_proxy("bms_EL", replace=True)
+@as_proxy("bms_EL")
 class EnergyLow(BatteryAlert):
     "total energy below zero"
 
 
-@as_proxy("bms_EH", replace=True)
+@as_proxy("bms_EH")
 class EnergyHigh(BatteryAlert):
     "total energy larger than Wmax"
 

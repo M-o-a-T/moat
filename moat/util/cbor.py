@@ -22,37 +22,18 @@ from ipaddress import (
 
 # Typing
 from moat.lib.codec import Extension, NoCodecError
-from moat.lib.codec.cbor import CBOR_TAG_CBOR_FILEHEADER, Codec, Tag
-from moat.lib.codec.proxy import DProxy, Proxy, name2obj, obj2name, unwrap_obj, wrap_obj
+from moat.lib.codec.cbor import CBOR_TAG_CBOR_FILEHEADER, CBOR_TAG_CBOR_LEADER, Codec, Tag
 
 from .path import Path
+from ._cbor import std_ext, StdCBOR
 
 __all__ = ["std_ext", "StdCBOR", "gen_start", "gen_stop"]
-
-std_ext = Extension()
 
 CBOR_TAG_MOAT_FILE_ID = 1299145044  # 'MoaT'
 CBOR_TAG_MOAT_FILE_END = 1298493254  # 'MeoF'
 CBOR_TAG_MOAT_CHANGE = 1298360423  # 'Mchg'
 
-
-class StdCBOR(Codec):
-    """
-    CBOR codec with MoaT's standard extensions.
-
-    Defaults to empty_elided=True.
-    """
-
-    def __init__(self):
-        super().__init__(ext=std_ext)
-
-    def encode(self, obj:Any, *, empty_elided:bool=True) -> bytes:
-        return super().encode(obj, empty_elided=empty_elided)
-
-    def decode(self, data: bytes | bytearray | memoryview, *, empty_elided:bool=True) -> Any:
-        return super().decode(data, empty_elided=empty_elided)
-
-Codec = StdCBOR
+Codec= StdCBOR
 
 
 def gen_start(text: str, /, **kw) -> Tag:
@@ -64,7 +45,7 @@ def gen_start(text: str, /, **kw) -> Tag:
     # add padding if too short
     text += " " * (24 - len(text))
 
-    return Tag(CBOR_TAG_CBOR_FILEHEADER, Tag(CBOR_TAG_MOAT_FILE_ID, (text, kw)))
+    return Tag(CBOR_TAG_CBOR_LEADER, Tag(CBOR_TAG_MOAT_FILE_ID, (text, kw)))
 
 
 def gen_stop(**kw) -> Tag:
@@ -79,18 +60,6 @@ def gen_change(**kw) -> Tag:
     Generate a MoaT file stop tag
     """
     return Tag(CBOR_TAG_MOAT_CHANGE, kw)
-
-
-@std_ext.encoder(27, DProxy)
-def _enc_dpr(codec, obj):
-    codec  # noqa:B018
-    return (obj.name, obj.i, obj.s, obj.a, obj.k)
-
-
-@std_ext.encoder(32769, Proxy)
-def _enc_pr(codec, obj):
-    codec  # noqa:B018
-    return obj.name
 
 
 @std_ext.encoder(1, dt.datetime)
@@ -274,41 +243,6 @@ def _dec_old_ipnetwork(codec, buf) -> IPv4Network | IPv6Network:
     raise ValueError(f"invalid ipnetwork value {buf!r}")
 
 
-@std_ext.decoder(32769)
-def _dec_proxy(codec, val):
-    codec  # noqa:B018
-    try:
-        if isinstance(val, (str, int)):
-            return name2obj(val)
-        return unwrap_obj(val)
-    except KeyError:
-        return Proxy(val)
-
-
-@std_ext.decoder(27)
-def _dec_obj(codec, val):
-    codec  # noqa:B018
-    if isinstance(val[0], Tag):
-        if val[0].tag != 32769:
-            return Tag(27, val)  # not decodable
-        val[0] = val[0].value
-    return unwrap_obj(val)
-
-
-@std_ext.encoder(39, Path)
-def _enc_path(codec, val):
-    codec  # noqa:B018
-    return val.raw
-
-
-@std_ext.decoder(39)
-def _dec_path(codec, val):
-    codec  # noqa:B018
-    if not isinstance(val,(list,tuple)):
-        return Tag(39, val)  # not decodable
-    return Path.build(val)
-
-
 @std_ext.decoder(CBOR_TAG_CBOR_FILEHEADER)
 def _dec_file_cbor(codec, val):
     codec  # noqa:B018
@@ -318,24 +252,12 @@ def _dec_file_cbor(codec, val):
         pass
     return val
 
-
-@std_ext.encoder(None, object)
-def enc_any(codec, obj):
+@std_ext.decoder(CBOR_TAG_CBOR_LEADER)
+def _dec_file_cbor(codec, val):
     codec  # noqa:B018
-
     try:
-        name = obj2name(obj)
-    except KeyError:
+        val._cbor_tag = CBOR_TAG_CBOR_LEADER
+    except AttributeError:
         pass
-    else:
-        return 32769, name
+    return val
 
-    try:
-        name = obj2name(type(obj))
-    except KeyError:
-        pass
-    else:
-        p = wrap_obj(obj, name=name)
-        return 27, p
-
-    raise NoCodecError(codec, obj)

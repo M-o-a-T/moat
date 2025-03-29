@@ -3,6 +3,8 @@
 # We need to ensure that the test interpreter exists
 import os
 from pathlib import Path
+from subprocess import run
+
 def make_upy(force:bool=False):
 	p=Path("ext/micropython/ports/unix")
 	upy = p/"build-standard/micropython"

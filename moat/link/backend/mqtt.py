@@ -15,7 +15,7 @@ except ImportError:
     from moat.lib.mqttproto.async_client import AsyncMQTTClient, Will
 
 from moat.link.meta import MsgMeta
-from moat.mqtt.codecs import NoopCodec
+from moat.lib.codec.noop import Codec as NoopCodec
 from moat.util import NotGiven, attrdict
 from moat.util.path import PS, P, Path
 

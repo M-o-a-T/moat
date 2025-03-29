@@ -74,16 +74,19 @@ class Serial:
                     continue
 
             for i in range(n):
-                p = self.pack.feed(buf[i])
-                if p is None:
+                self.pack.feed(buf[i])
+                try:
+                    p = next(self.pack)
+                except StopIteration:
                     continue
-                if isinstance(p, int):  # console byte
-                    cons.append(p)
-                    if len(cons) > 127 or p == 10:  # linefeed
-                        await self.cmd.send_raw(cons)
-                        cons = bytearray()
-                else:  # "real" message
-                    await self.cmd.send_pkt(p)
+                else:
+                    if isinstance(p, int):  # console byte
+                        cons.append(p)
+                        if len(cons) > 127 or p == 10:  # linefeed
+                            await self.cmd.send_raw(cons)
+                            cons = bytearray()
+                    else:  # "real" message
+                        await self.cmd.send_pkt(p)
 
     async def send(self, data):
         h, data, t = self.pack.frame(data)

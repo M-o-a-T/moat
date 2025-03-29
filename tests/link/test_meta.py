@@ -83,7 +83,7 @@ def test_proxy():
     md = "owch\\" + b85encode(codec.encode({"yes": True, "no": False})).decode("utf-8")
     nn = MsgMeta.decode("duh", md)
     pr = wrap_obj(nn)
-    assert isinstance(pr, tuple)
+    assert isinstance(pr, (list,tuple))
     assert pr[0] == "_MM"
     n = unwrap_obj(pr)
     assert n == nn

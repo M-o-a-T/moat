@@ -9,7 +9,7 @@ from weakref import WeakSet
 from attrs import define, field
 
 from .compat import EndOfStream, WouldBlock
-from .impl import NotGiven
+from . import NotGiven
 from .queue import Queue
 
 from typing import TYPE_CHECKING, cast

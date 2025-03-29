@@ -4,7 +4,8 @@ FUSE operations for MoaT-micro-FS
 
 from __future__ import annotations
 
-from moat.util import Path, as_proxy
+from moat.util import Path
+from moat.lib.codec.proxy import as_proxy
 
 
 @as_proxy("_rErr")

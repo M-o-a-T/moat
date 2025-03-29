@@ -41,7 +41,7 @@ def _Meta(a, kw):
     return res
 
 
-@as_proxy("_MM", factory=_Meta)
+@as_proxy("_MM")
 @define(kw_only=True)
 class MsgMeta:
     """
@@ -89,10 +89,17 @@ class MsgMeta:
         return self.a
 
     @classmethod
-    def restore(cls, a):
+    def _moat__restore(cls, a, kw):
         m = object.__new__(cls)
-        m.kw = pop(a) if a and isinstance(a[-1],dict) else {}
+        if kw is NotGiven:
+            if a and isinstance(a[-1],dict):
+                kw = a.pop()
+            else:
+                kw = {}
+        source = kw.pop("source",None)
         m.a = a
+        m.kw = kw
+        m.source = source
         return m
 
     def __getitem__(self, k):

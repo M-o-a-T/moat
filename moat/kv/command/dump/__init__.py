@@ -18,7 +18,7 @@ from moat.util import (
     yprint,
 )
 
-from moat.kv.codec import unpacker
+from moat.util.mqtt import unpacker
 
 
 @load_subgroup(short_help="Local data mangling", sub_pre="dump")

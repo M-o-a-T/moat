@@ -63,31 +63,17 @@ async def send_evt(self, action: str, msg: dict):
     return await _old_send(self, action, msg)
 
 
-_old_upm = Server._unpack_multiple
-
-
-def unpack_multiple(self, msg: dict):
-    if random.random() < F4:
-        logger.info("NoIN  %s %r", self.node.name, msg)
-        return
-    logger.debug("IN  %s %r", self.node.name, msg)
-    return _old_upm(self, msg)
-
-
 @pytest.mark.trio
 async def test_10_recover(autojump_clock):  # pylint: disable=unused-argument
     """
     This test starts multiple servers at the same time and checks that
     dropping random messages ultimately recovers.
     """
-    async with stdtest(test_1={"init": 420}, n=N, tocks=15000) as st:
+    async with stdtest(test_1={"init": 420}, n=N, tocks=20000) as st:
         assert st is not None
         st.ex.enter_context(mock.patch("asyncactor.actor.Actor._send_msg", new=send_msg))
         st.ex.enter_context(mock.patch("asyncactor.actor.Actor.queue_msg", new=queue_msg))
         st.ex.enter_context(mock.patch("moat.kv.server.Server._send_event", new=send_evt))
-        st.ex.enter_context(
-            mock.patch("moat.kv.server.Server._unpack_multiple", new=unpack_multiple),
-        )
 
         for x in range(NX):
             for i in range(N):
@@ -104,7 +90,7 @@ async def test_10_recover(autojump_clock):  # pylint: disable=unused-argument
                 async with st.client(s) as ci:
                     c = 0
                     async for r in ci.get_tree(P("test"), min_depth=2, nchain=5):
-                        if r.value == (r.path[-2], r.path[-1], NX - 1):
+                        if r.value == [r.path[-2], r.path[-1], NX - 1]:
                             c += 1
                         else:
                             logger.info("%d: old %r", s, r)

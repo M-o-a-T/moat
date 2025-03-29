@@ -5,7 +5,7 @@ from __future__ import annotations
 __all__ = ["merge"]
 
 
-from .impl import NotGiven
+from . import NotGiven
 
 
 def _merge_dict(d, other, drop=False, replace=True):

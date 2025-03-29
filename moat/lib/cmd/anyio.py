@@ -25,7 +25,8 @@ async def run(cmd: CmdHandler, stream: anyio.abc.ByteStream):
         rd = conn.read if hasattr(conn, "read") else conn.receive
         while True:
             buf = await rd(4096)
-            for msg in unpacker.feed(buf):
+            unpacker.feed(buf)
+            for msg in unpacker:
                 await cmd.msg_in(msg)
 
     async def wr(conn):

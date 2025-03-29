@@ -7,7 +7,6 @@ sleep = _anyio.sleep
 import time as _time
 import traceback as _traceback
 import outcome as _outcome
-import greenback
 from moat.util import Queue, ValueEvent
 
 TimeoutError = TimeoutError  # compat

@@ -7,10 +7,10 @@ import time
 from moat.link.meta import MsgMeta
 from moat.link._test import Scaffold
 from moat.link.node import Node
-from moat.util import P, PathLongener
+from moat.util import P, PathLongener, NotGiven
 from moat.util.msg import MsgReader
 from moat.lib.cmd import StreamError
-from moat.lib.codec.cbor import Tag as CBORTag,CBOR_TAG_CBOR_FILEHEADER
+from moat.lib.codec.cbor import Tag as CBORTag
 from moat.util.cbor import CBOR_TAG_MOAT_FILE_ID,CBOR_TAG_MOAT_FILE_END
 from moat.link.client import BasicLink
 
@@ -52,7 +52,7 @@ async def fetch(c,p):
 
         async for pr,p,d,*m in it:
             p=pl.long(pr,p)
-            nn.set(p,d,MsgMeta.restore(m))
+            nn.set(p,d,MsgMeta._moat__restore(m,NotGiven))
         return nn
 
 @pytest.mark.anyio

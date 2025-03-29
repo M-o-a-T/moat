@@ -7,7 +7,8 @@ from __future__ import annotations
 
 import pytest
 
-from moat.util import PS, P, Path, packer, unpacker, yformat, yload
+from moat.util import PS, P, Path, yformat, yload
+from moat.lib.codec import get_codec
 
 _valid = (
     (("a", "b", "c"), "a.b.c"),
@@ -139,6 +140,7 @@ def test_valid_spaths(a, b):
     assert a == tuple(Path.from_slashed(b))
 
 
+@pytest.mark.filterwarnings("ignore")
 @pytest.mark.parametrize("a,b,m", _valid_s2)  # noqa:PT006
 def test_valid_spaths2(a, b, m):
     b, xb = b
@@ -167,6 +169,7 @@ def test_paths():
     assert str(p) == str(pp)
 
 
+@pytest.mark.filterwarnings("ignore")
 def test_tagged():
     p = P(":mfoo:")
     assert p.mark == "foo"
@@ -188,21 +191,22 @@ def test_tagged():
 
 
 def test_msgpack():
+    codec = get_codec("std-msgpack")
     d = ["a", 1, "b"]
-    m = packer(d)
-    mm = unpacker(m)
+    m = codec.encode(d)
+    mm = codec.decode(m)
     assert isinstance(mm, (tuple, list))
     assert list(mm) == d
 
     d = Path("a", 1, "b")
-    m = packer(d)
-    mm = unpacker(m)
+    m = codec.encode(d)
+    mm = codec.decode(m)
     assert type(mm) is Path  # pylint: disable=unidiomatic-typecheck
     assert mm == d
 
     d = {"Hello": d}
-    m = packer(d)
-    mm = unpacker(m)
+    m = codec.encode(d)
+    mm = codec.decode(m)
     assert type(mm["Hello"]) is Path  # pylint: disable=unidiomatic-typecheck
     assert mm == d
 

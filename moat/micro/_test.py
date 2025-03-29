@@ -12,9 +12,10 @@ from pathlib import Path
 from random import random
 
 import moat.micro
-from moat.util import attrdict, combine_dict, packer, yload
+from moat.util import attrdict, combine_dict, yload
 from moat.micro.cmd.tree.dir import Dispatch
 from moat.micro.compat import L, TaskGroup
+from moat.lib.codec import get_codec
 
 # from moat.micro.main import Request, get_link, get_link_serial
 # from moat.micro.proto.multiplex import Multiplexer
@@ -71,6 +72,7 @@ class MpyBuf(ProcessBuf):
     """
 
     async def setup(self):
+        codec=get_codec("std-msgpack")
         mplex = self.cfg.get("mplex", None)
         if mplex is not None:
             pre = Path(__file__).parents[2]
@@ -123,7 +125,7 @@ class MpyBuf(ProcessBuf):
 
         if mplex:
             with (root / "moat.cfg").open("wb") as f:
-                f.write(packer(self.cfg["cfg"]))
+                f.write(codec.encode(self.cfg["cfg"]))
             if self.cfg.get("large", True):
                 with (root / "moat.lrg").open("wb") as f:
                     pass

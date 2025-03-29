@@ -41,9 +41,10 @@ Buffered byte streams also have receive\_exactly and receive\_until.
 Object streams (channels) use send / receive, byte streams
 send\_all / receive\_some.
 
+
 ## MoaT
 
-As per XKCD 927, MoaT uses a new scheme.
+As per XKCD 927, MoaT uses a new naming scheme.
 
 Byte streams use rd/wr. Object streams use send/recv.
 
@@ -52,7 +53,7 @@ Byte streams use rd/wr. Object streams use send/recv.
 ### Type hierarchy
 
 All MoaT streams are running as context managers. This
-simplifies the code structure and allows for easy restarting.
+simplifies the code structure and allows for clean restarting.
 
 As a consequence, non-abstract types need to overide at least the ``_ctx`` method.
 
@@ -89,7 +90,8 @@ Defined in ``moat.micro.proto.stream``.
 
 ##### AnyioBuf
 
-Base implementation for translation of MoaT to AnyIO's streams.
+Base implementation for translation of MoaT to AnyIO's streams, including
+files (via `anyio.Path`).
 
 Your context handler needs to open the stream and assign it to ``s``.
 
@@ -178,7 +180,7 @@ A stream translator that encapsulates structured messages to a MsgPack bytestrea
 
 Console messages are passed through transparently.
 
-Defined in ``moat.micro.proto.msgpack``.
+Defined in ``moat.micro.proto.stream``.
 
 
 #### MsgpackMsgBlk
@@ -201,12 +203,7 @@ Useful mainly in network protocol handlers.
 
 #### Linux specific
 
-##### SyncStream
-
-Wrap a MoaT stream with a minimal Python object with sync read/write methods.
-
-This class uses ``greenback`` to forward ``read/write`` to ``rd/wr``, and thus is
-somewhat expensive in terms of CPU.
+None, currently.
 
 
 # Command handling

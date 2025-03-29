@@ -23,7 +23,7 @@ from moat.link.exceptions import ClientError
 from moat.link.meta import MsgMeta
 from moat.util.cbor import StdCBOR, CBOR_TAG_MOAT_FILE_ID, CBOR_TAG_MOAT_FILE_END,CBOR_TAG_MOAT_CHANGE
 from moat.util.exc import exc_iter
-from moat.lib.codec.cbor import Tag as CBORTag, CBOR_TAG_CBOR_FILEHEADER
+from moat.lib.codec.cbor import Tag as CBORTag, CBOR_TAG_CBOR_LEADER
 
 from mqttproto import QoS
 
@@ -71,7 +71,6 @@ from moat.util.broadcast import Broadcaster
 # from . import _version_tuple
 # from . import client as moat_kv_client  # needs to be mock-able
 # from .actor.deletor import DeleteActor
-# from .codec import packer, stream_unpacker, unpacker
 # from .exceptions import (
 #    ACLError,
 #    CancelledError,
@@ -1086,14 +1085,14 @@ class Server:
 
         async with MsgReader(path=path, stream=stream, codec="std-cbor") as rdr:
             async for m in rdr:
-                if isinstance(m,CBORTag) and m.tag == CBOR_TAG_CBOR_FILEHEADER:
+                if isinstance(m,CBORTag) and m.tag == CBOR_TAG_CBOR_LEADER:
                     m = m.value
                 if isinstance(m,CBORTag):
                     met.append(m)
                     continue
                 d,p,data,*mt = m
                 path = longer.long(d,p)
-                meta = MsgMeta.restore(mt)
+                meta = MsgMeta._moat__restore(mt, NotGiven)
                 meta.source=str(path)
                 if self.maybe_update(prefix+path,data,meta):
                     upd += 1
@@ -1553,13 +1552,13 @@ class Server:
             async for msg in feed:
                 d,p,data,*mt = msg
                 path = pl.long(d,p)
-                meta = MsgMeta.restore(mt)
+                meta = MsgMeta._moat__restore(mt,NotGiven)
                 meta.source="_Load"
                 if self.maybe_update(prefix+path,data,meta):
                     upd += 1
                 else:
                     skp += 1
-                print(msg)
+                self.logger.debug("Sync Msg %r", msg)
         self.logger.info("Sync finished. %d new, %d existing", upd,skp)
 
     async def _read_initial(self, *, task_status=anyio.TASK_STATUS_IGNORED):
@@ -1581,7 +1580,6 @@ class Server:
                 with anyio.fail_after(self.cfg.server.timeout.startup):
                     await ready.wait()
                 task_status.started()
-                print(self.name)
 
             async with anyio.create_task_group() as tgx:
                 tgx.start_soon(self._get_remote_data, main, ready)
@@ -1599,7 +1597,6 @@ class Server:
 
         fs = []
         async for p,d,f in dest.walk():
-            print("========", p,d,f)
             for ff in f:
                 fs.append(p/ff)
         fs.sort()
@@ -1612,7 +1609,7 @@ class Server:
             try:
                 async with MsgReader(fn, codec="std-cbor") as rdr:
                     hdr = await anext(rdr)
-                    if isinstance(hdr,CBORTag) and hdr.tag == CBOR_TAG_CBOR_FILEHEADER:
+                    if isinstance(hdr,CBORTag) and hdr.tag == CBOR_TAG_CBOR_LEADER:
                         hdr = hdr.value
                     if not isinstance(hdr,CBORTag) or hdr.tag != CBOR_TAG_MOAT_FILE_ID:
                         raise ValueError(f"First entry is {hdr !r}")
@@ -1637,7 +1634,7 @@ class Server:
                             continue
                         d,p,data,*mt = msg
                         path = pl.long(d,p)
-                        meta = MsgMeta.restore(mt)
+                        meta = MsgMeta._moat__restore(mt,NotGiven)
                         meta.source="_file"
                         if self.maybe_update(path,data,meta):
                             # Entries that have been deleted don't count as updates

@@ -10,6 +10,7 @@ import anyio
 from anyio.abc import SocketAttribute
 from asyncscope import scope
 from moat.util import DelayedRead, DelayedWrite, create_queue, ensure_cfg
+from moat.lib.codec import get_codec
 
 try:
     from contextlib import asynccontextmanager
@@ -55,7 +56,6 @@ from . import _version_tuple
 from . import client as moat_kv_client  # needs to be mock-able
 from .actor.deletor import DeleteActor
 from .backend import get_backend
-from .codec import packer, stream_unpacker, unpacker
 from .exceptions import (
     ACLError,
     CancelledError,
@@ -74,9 +74,6 @@ Stream = anyio.abc.ByteStream
 ClosedResourceError = anyio.ClosedResourceError
 
 _client_nr = 0
-
-SERF_MAXLEN = 450
-SERF_LEN_DELTA = 15
 
 
 def max_n(a, b):
@@ -621,6 +618,7 @@ class SCmd_msg_monitor(StreamCommand):
     multiline = True
 
     async def run(self):
+        codec = get_codec("std-msgpack")
         msg = self.msg
         raw = msg.get("raw", False)
         topic = msg.topic
@@ -642,7 +640,7 @@ class SCmd_msg_monitor(StreamCommand):
                     res["raw"] = resp.payload
                 else:
                     try:
-                        res["data"] = unpacker(resp.payload)
+                        res["data"] = codec.decode(resp.payload)
                     except Exception as exc:
                         res["raw"] = resp.payload
                         res["error"] = repr(exc)
@@ -1069,7 +1067,7 @@ class ServerClient:
             assert "data" not in msg
             data = msg.raw
         else:
-            data = packer(msg.data)
+            data = self.codec.encode(msg.data)
         await self.server.backend.send(*topic, payload=data)
 
     async def cmd_delete_tree(self, msg):
@@ -1173,7 +1171,7 @@ class ServerClient:
             if "tock" not in msg:
                 msg["tock"] = self.server.tock
             try:
-                await self.stream.send(packer(msg))
+                await self.stream.send(self.codec.encode(msg))
             except ClosedResourceError:
                 self.logger.info("ERO%d %r", self._client_nr, msg)
                 self._send_lock = None
@@ -1189,7 +1187,7 @@ class ServerClient:
 
     async def run(self):
         """Main loop for this client connection."""
-        unpacker_ = stream_unpacker()  # pylint: disable=redefined-outer-name
+        self.codec = get_codec("std-msgpack")  # pylint: disable=redefined-outer-name
 
         async with anyio.create_task_group() as tg:
             self.tg = tg
@@ -1225,7 +1223,7 @@ class ServerClient:
             await self.send(msg)
 
             while True:
-                for msg in unpacker_:
+                for msg in self.codec:
                     seq = None
                     try:
                         seq = msg.seq
@@ -1263,7 +1261,7 @@ class ServerClient:
                 if len(buf) == 0:  # Connection was closed.
                     self.logger.debug("EOF %d", self._client_nr)
                     break
-                unpacker_.feed(buf)
+                self.codec.feed(buf)
 
             tg.cancel_scope.cancel()
 
@@ -1350,7 +1348,7 @@ class _RecoverControl:
 
 class Server:
     """
-    This is the MoaT-KV server. It manages connections to the Serf/MQTT server,
+    This is the MoaT-KV server. It manages connections to the MQTT server,
     the MoaT-KV clients, and (optionally) logs all changes to a file.
 
     Args:
@@ -1380,6 +1378,7 @@ class Server:
     _tock = 0
 
     def __init__(self, name: str, cfg: dict = None, init: Any = NotGiven):
+        self.codec = get_codec("std-msgpack")
         self.root = RootEntry(self, tock=self.tock)
         from moat.util import CFG
 
@@ -1408,11 +1407,7 @@ class Server:
         # connected clients
         self._clients = set()
 
-        # cache for partial messages
-        self._part_len = SERF_MAXLEN - SERF_LEN_DELTA - len(self.node.name)
-        self._part_seq = 0
-        self._part_cache = dict()
-
+        # running saver tasks
         self._savers = []
 
         # This is here, not in _run_del, because _del_actor needs to be accessible early
@@ -1568,8 +1563,7 @@ class Server:
         if "tick" not in msg:
             msg["tick"] = self.node.tick
         self.logger.debug("Send %s: %r", action, msg)
-        for m in self._pack_multiple(msg):
-            await self.backend.send(*self.cfg.server.root, action, payload=m)
+        await self.backend.send(*self.cfg.server.root, action, payload=msg)
 
     async def watcher(self):
         """
@@ -1832,69 +1826,6 @@ class Server:
                 self._del_actor.add_deleted(self._delete_also_nodes)
                 self._delete_also_nodes = NodeSet()
 
-    def _pack_multiple(self, msg):
-        """"""
-        # protect against mistakenly encoded multi-part messages
-        # TODO use a msgpack extension instead
-        if isinstance(msg, Mapping):
-            i = 0
-            while (f"_p{i}") in msg:
-                i += 1
-            j = i
-            while i:
-                i -= 1
-                msg[f"_p{i + 1}"] = msg[f"_p{i}"]
-            if j:
-                msg["_p0"] = ""
-
-        p = packer(msg)
-        pl = self._part_len
-        if len(p) > SERF_MAXLEN:
-            # Owch. We need to split this thing.
-            self._part_seq = seq = self._part_seq + 1
-            i = 0
-            while i >= 0:
-                i += 1
-                px, p = p[:pl], p[pl:]
-                if not p:
-                    i = -i
-                px = {"_p0": (self.node.name, seq, i, px)}
-                yield packer(px)
-            return
-        yield p
-
-    def _unpack_multiple(self, msg):
-        """
-        Undo the effects of _pack_multiple.
-        """
-
-        if isinstance(msg, Mapping) and "_p0" in msg:
-            p = msg["_p0"]
-            if p != "":
-                nn, seq, i, p = p
-                s = self._part_cache.get((nn, seq), None)
-                if s is None:
-                    self._part_cache[(nn, seq)] = s = [None]
-                if i < 0:
-                    i = -i
-                    s[0] = b""
-                while len(s) <= i:
-                    s.append(None)
-                s[i] = p
-                if None in s:
-                    return None
-                p = b"".join(s)
-                del self._part_cache[(nn, seq)]
-                msg = unpacker(p)
-                msg["_p0"] = ""
-
-            i = 0
-            while f"_p{i + 1}" in msg:
-                msg[f"_p{i}"] = msg[f"_p{i + 1}"]
-                i += 1
-            del msg[f"_p{i}"]
-        return msg
-
     async def monitor(self, action: str, delay: anyio.abc.Event = None):
         """
         The task that hooks to the backend's event stream for receiving messages.
@@ -1907,15 +1838,12 @@ class Server:
         """
         cmd = getattr(self, "user_" + action)
         try:
-            async with self.backend.monitor(*self.cfg.server.root, action) as stream:
+            async with self.backend.monitor(*self.cfg.server.root, action, codec=self.codec) as stream:
                 if delay is not None:
                     await delay.wait()
 
                 async for resp in stream:
-                    msg = unpacker(resp.payload)
-                    msg = self._unpack_multiple(msg)
-                    if not msg:  # None, empty, whatever
-                        continue
+                    msg = resp.payload
                     self.logger.debug("Recv %s: %r", action, msg)
                     try:
                         with anyio.fail_after(15):

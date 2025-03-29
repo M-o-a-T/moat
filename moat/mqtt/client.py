@@ -30,6 +30,7 @@ from .mqtt.protocol.handler import ProtocolHandlerException
 from .plugins.manager import BaseContext, PluginManager
 from .session import Session
 from .utils import match_topic
+from moat.lib.codec import Codec, get_codec as _get_codec
 
 _defaults = {
     "keep_alive": 10,
@@ -44,26 +45,21 @@ _defaults = {
 
 QSIZE = 100
 
-_codecs = {}
-for _t in dir(codecs):
-    _c = getattr(codecs, _t)
-    if isinstance(_c, type) and issubclass(_c, codecs.BaseCodec):
-        try:
-            _codecs[_c.name] = _c
-        except AttributeError:
-            pass
-
 
 def get_codec(codec, fallback=NotGiven, config={}):  # pylint: disable=dangerous-default-value
     if codec is NotGiven:
         codec = fallback
     if codec is NotGiven:
-        codec = config["codec"]
-    if isinstance(codec, str):
-        codec = _codecs[codec]
+        codec = config if isinstance(config,str) else config.get("codec","noop")
+    if isinstance(codec,Codec):
+        return codec
     if isinstance(codec, type):
-        codec = codec(**config.get("codec_params", {}).get(codec.name, {}))
-    return codec
+        config.pop("codec",None)
+        return codec(**config.get("codec_params", {}).get(codec.name, {}))
+    if isinstance(codec,str):
+        return _get_codec(config)
+    else:
+        return _get_codec(**config)
 
 
 _handler_id = 0
@@ -206,6 +202,8 @@ class MQTTClient:
         self.config = copy.deepcopy(_defaults)
         if config is not None:
             self.config.update(config)
+        if codec is not NotGiven:
+            self.config["codec"] = codec
         if client_id is not None:
             self.client_id = client_id
         else:
@@ -221,7 +219,7 @@ class MQTTClient:
         self._connected_state = anyio.Event()
         self._no_more_connections = anyio.Event()
         self.extra_headers = {}
-        self.codec = get_codec(codec, config=self.config)
+        self.codec = get_codec(codec, config=self.config.get("codec",{}))
 
         self._subscriptions = None
 
@@ -376,7 +374,7 @@ class MQTTClient:
         :param codec: Codec to encode the message with. Defaults to the connection's.
         """
 
-        codec = get_codec(codec, self.codec, config=self.config)
+        codec = get_codec(codec, self.codec, config=self.config.get("codec",{}))
         message = codec.encode(message)
         if not isinstance(topic, str):
             topic = "/".join(topic)
@@ -462,7 +460,9 @@ class MQTTClient:
                 if codec is NotGiven:
                     codec = client.codec
                 elif isinstance(codec, str):
-                    codec = _codecs[codec]()
+                    codec = get_codec(codec)
+                elif isinstance(codec, dict):
+                    codec = get_codec(**codec)
                 self.codec = codec
                 self._q = None
 
@@ -601,7 +601,9 @@ class MQTTClient:
         if codec is NotGiven:
             codec = self.codec
         elif isinstance(codec, str):
-            codec = _codecs[codec]()
+            codec = get_codec(codec)
+        elif isinstance(codec, dict):
+            codec = get_codec(**codec)
 
         with anyio.CancelScope() as scope:
             if self.session is None:

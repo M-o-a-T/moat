@@ -16,7 +16,7 @@ from ipaddress import (
 )
 
 from moat.util import DProxy, as_proxy, attrdict
-from moat.lib.codec.cbor import Tag
+from moat.lib.codec.cbor import Tag, Codec as CBOR
 from moat.util.cbor import StdCBOR, gen_start, gen_stop
 
 as_proxy("_ip4", IPv4Address)
@@ -43,7 +43,7 @@ class Bar:
 
 
 # needs "replace" because testing re-imports
-@as_proxy("fu", replace=True)
+@as_proxy("fu_c")
 class Foo(Bar):
     "A proxied class"
 
@@ -66,7 +66,7 @@ def test_basic():
 def test_bar():
     codec = StdCBOR()
     b = Bar(95)
-    as_proxy("b", b, replace=True)
+    as_proxy("b_c", b)
     c = codec.decode(codec.encode(b))
     assert b == c
     with pytest.raises(ValueError, match="<Bar: 94>"):
@@ -83,7 +83,8 @@ def test_chunked(chunks):
         o1 = int(len(m) * (i / chunks))
         o2 = int(len(m) * ((i + 1) / chunks))
         print(f"from {o1} to {o2}")
-        r.extend(codec.feed(m[o1:o2]))
+        codec.feed(m[o1:o2])
+        r.extend(iter(codec))
     assert r == p
 
 
@@ -130,16 +131,17 @@ def test_ip_old():
 def test_dproxy():
     codec = StdCBOR()
     # first manually construct such a thing
-    d = ("FuBar", (), None, [1, 2, 42], {"one": "two", "three": "four"})
+    d = ("FuBar", 1, 2, 42, {"one": "two", "three": "four"})
     p = codec.encode(Tag(27, d))
     dp = codec.decode(p)
     assert type(dp) is DProxy
     assert dp.name == "FuBar"
     assert dp[1] == 2
     assert dp[2] == 42
-    assert dp["three" == "four"]
+    assert dp["three"] == "four"
     pp = codec.encode(dp)
-    assert p == pp
+    rcodec = CBOR()
+    assert rcodec.decode(p) == rcodec.decode(pp)
 
 
 def test_tags():

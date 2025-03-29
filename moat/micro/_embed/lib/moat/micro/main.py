@@ -12,7 +12,8 @@ from moat.util import merge
 from moat.micro.compat import L, TaskGroup, sleep_ms
 from moat.rtc import all_rtc
 
-import msgpack
+#from moat.lib.codec.cbor import Codec as CBOR
+from moat.lib.codec.msgpack import Codec as CBOR
 
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -38,7 +39,7 @@ def main(cfg: str | dict, i: attrdict, fake_end=False):
         except OSError:
             raise OSError(cfg) from None
         with f:
-            cfg = msgpack.unpackb(f.read())
+            cfg = CBOR().decode(f.read())
 
     # Update config from RTC memory, if present
     if not i.fb:

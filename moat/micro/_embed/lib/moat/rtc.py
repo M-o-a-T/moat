@@ -6,9 +6,10 @@ from __future__ import annotations
 
 import machine
 
-import msgpack as mp
+from moat.lib.codec.msgpack import Codec as _mp
 
 cfg = {}
+_codec = _mp()
 
 try:
     mem = machine.RTC().memory
@@ -22,12 +23,12 @@ def set_rtc(attr, value=None, fs=None):
     "Setter for a value in RTC / file system"
     if not fs:
         try:
-            s = mp.unpackb(mem())
+            s = _codec.decode(mem())
         except ValueError:
             pass
         else:
             s[attr] = value
-            mem(mp.packb(s))
+            mem(_codec.encode(s))
             return
     if fs is False:
         raise ValueError("no RTC")
@@ -49,7 +50,7 @@ def get_rtc(attr, fs=None, default=None):
     "Getter for a value in RTC / file system"
     if not fs:
         try:
-            s = mp.unpackb(mem())
+            s = _codec.decode(mem())
             return s[attr]
         except (ValueError, KeyError):
             pass
@@ -68,7 +69,7 @@ def get_rtc(attr, fs=None, default=None):
 def all_rtc():
     "Iterate RTC update values"
     try:
-        s = mp.unpackb(mem())
+        s = _codec.decode(mem())
         for k, v in s.items():
             if isinstance(v, dict):
                 yield k, v

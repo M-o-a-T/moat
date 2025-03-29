@@ -39,10 +39,10 @@ r:
         guarded: false
       log:
         txt: "MH"
-#     log_raw:
-#       txt: "ML"
-#     log_rel:
-#       txt: "MR"
+      log_raw:
+        txt: "ML"
+      log_rel:
+        txt: "MR"
     tt:
       a: b
       c: [1,2,3]

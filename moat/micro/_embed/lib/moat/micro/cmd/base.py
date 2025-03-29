@@ -21,7 +21,7 @@ may fail.
 
 from __future__ import annotations
 
-from moat.util import as_proxy
+from moat.lib.codec.proxy import as_proxy
 from moat.micro.cmd.util import run_no_exc, wait_complain
 from moat.micro.cmd.util.part import enc_part, get_part
 from moat.micro.compat import AC_use, Event, L, idle

@@ -15,11 +15,7 @@ packer = msgpack.Packer(
     strict_types=False,
     use_bin_type=True,  # default=_encode
 ).pack
-unpacker = partial(
-    msgpack.unpackb,
-    raw=False,
-    use_list=False,  # object_pairs_hook=attrdict, ext_hook=_decode
-)
+unpacker = partial(msgpack.unpackb, raw=False)
 
 import logging
 

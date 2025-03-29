@@ -17,11 +17,9 @@ from moat.util import (
     attr_args,
     combine_dict,
     merge,
-    packer,
     process_args,
     to_attrdict,
     ungroup,
-    unpacker,
     yload,
     yprint,
 )
@@ -32,6 +30,7 @@ from moat.micro.path import copytree
 from moat.micro.stacks.util import TEST_MAGIC
 from moat.micro.util import run_update
 from moat.util.main import load_subgroup
+from moat.lib.codec import get_codec
 
 from .compat import idle, log
 
@@ -406,27 +405,28 @@ async def cfg_(
     if sync and (write or write_client):
         raise click.UsageError("You're not changing the running config!")
 
-    cfg = obj.cfg
+    cfg = obj.mcfg
 
     if read and write and not (read_client or write_client):
         # local file update: don't talk to the client
         if client or sync:
             raise click.UsageError("You're not talking to the client!")
 
-        cfg = yload(read)
-        cfg = process_args(cfg, **attrs)
-        yprint(cfg, stream=write)
+        rcfg = yload(read)
+        rcfg = process_args(rcfg, **attrs)
+        yprint(rcfg, stream=write)
         return
 
     if read_client or write_client:
         from .path import MoatFSPath
 
     async with (
-        Dispatch(obj.cfg, run=True, sig=True) as dsp,
+        Dispatch(cfg, run=True, sig=True) as dsp,
         dsp.cfg_at(cfg.path.cfg) as cf,
         dsp.sub_at(cfg.path.fs) as fs,
     ):
         has_attrs = any(a for a in attrs.values())
+        codec=get_codec("std-msgpack")
 
         if has_attrs and not (read or read_client or write or write_client):
             # No file access at all. Just update the client's RAM.
@@ -436,34 +436,34 @@ async def cfg_(
             return
 
         if read:
-            cfg = yload(read)
+            rcfg = yload(read)
         if read_client:
             p = MoatFSPath(read_client).connect_repl(fs)
             d = await p.read_bytes(chunk=64)
             if not read:
-                cfg = unpacker(d)
+                rcfg = codec.decode(d)
             elif client:
-                cfg = merge(cfg, unpacker(d), replace=True)
+                rcfg = merge(rcfg, codec.decode(d), replace=True)
             else:
-                cfg = merge(cfg, unpacker(d), replace=False)
+                rcfg = merge(rcfg, codec.decode(d), replace=False)
         if not read and not read_client:
-            cfg = await cf.get()
+            rcfg = await cf.get()
 
-        cfg = process_args(cfg, **attrs)
+        rcfg = process_args(rcfg, **attrs)
         if not write:
-            if "apps" not in cfg:
+            if "apps" not in rcfg:
                 raise click.UsageError("No 'apps' section.")
             if not write_client:
-                await cf.set(cfg, sync=sync, replace=True)
+                await cf.set(rcfg, sync=sync, replace=True)
 
         if write_client:
             p = MoatFSPath(write_client).connect_repl(fs)
-            d = packer(cfg)
+            d = codec.encode(rcfg)
             await p.write_bytes(d, chunk=64)
         if write:
-            yprint(cfg, stream=write)
-        if not has_attrs and not write and not write_client:
-            yprint(cfg, stream=obj.stdout)
+            yprint(rcfg, stream=write)
+        elif not has_attrs and not write_client:
+            yprint(rcfg, stream=obj.stdout)
 
 
 @cli.command("run", short_help="Run the multiplexer")

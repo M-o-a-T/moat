@@ -227,7 +227,7 @@ class Request(_Stacked):
 
     async def dispatch(self, msg):
         if not isinstance(msg, dict):
-            print("?3", msg)
+            print("?3a", msg)
             return
         a = msg.pop("a", None)
         i = msg.pop("i", None)

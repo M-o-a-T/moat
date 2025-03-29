@@ -7,7 +7,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from copy import deepcopy
 
-from .impl import NotGiven
+from . import NotGiven
 
 __all__ = ["combine_dict", "drop_dict", "attrdict", "to_attrdict"]
 

@@ -21,6 +21,7 @@ dependencies = [
 	"simpleeval",
 	"moat-util ~= 0.56.4",
 	"moat-lib-cmd ~= 0.3.4",
+	"mqttproto ~= 0.7.2.13",
 	]
 version = "0.1.1"
 keywords = [ "MoaT",]

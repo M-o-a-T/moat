@@ -110,7 +110,6 @@ async def test_11_split1(autojump_clock, tocky):  # pylint: disable=unused-argum
                             r.data,
                             object_pairs_hook=attrdict,
                             raw=False,
-                            use_list=False,
                         )
                         if msg.get("value", "") == "two":
                             n_two += 1

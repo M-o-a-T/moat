@@ -320,7 +320,7 @@ class ReplyVoltages(_Reply):
         return m
 
 
-@_dc("t<")
+@_dc("tm<")
 class ReplyTemperature(_Reply):
     intRaw: int = None
     extRaw: int = None
@@ -443,7 +443,7 @@ class ReplyReadSettings(_Reply):
         )
 
 
-@_dc("t<")
+@_dc("ti<")
 class RequestTiming:
     timer: int = None
 
@@ -466,7 +466,7 @@ class RequestTiming:
         return dict(t=self.timer)
 
 
-@_dc("t>")
+@_dc("ti>")
 class ReplyTiming(RequestTiming):
     pass
 

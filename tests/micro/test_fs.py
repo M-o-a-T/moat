@@ -29,6 +29,12 @@ r:
     r:
       log:
         txt: "S"
+      log_raw:
+        txt: "B"
+  log:
+    txt: "XD"
+  log_raw:
+    txt: "XB"
 """
 
 

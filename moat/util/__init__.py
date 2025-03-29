@@ -13,6 +13,8 @@ import logging as _logging
 
 _log = _logging.getLogger(__name__)
 
+NotGiven = Ellipsis
+
 from .dict import attrdict  # noqa: E402, F401
 from .config import CFG, ensure_cfg  # noqa: E402, F401
 

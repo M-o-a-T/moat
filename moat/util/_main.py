@@ -123,8 +123,15 @@ y, yr   Year (2023–)
 def convert(enc, dec, pathi, patho, stream):
     """File conversion utility.
 
-    Supported file formats: json yaml cbor msgpack python
+    Supported file formats: json yaml cbor msgpack python std-cbor std-msgpack
     """
+
+    class IT:
+        def __init__(self, codec):
+            self.codec = codec
+        def __call__(self, buf):
+            self.codec.feed(buf)
+            return iter(self.codec)
 
     def get_codec(n):
         if n == "python":
@@ -163,17 +170,29 @@ def convert(enc, dec, pathi, patho, stream):
                 True,
             )
         if n == "cbor":
+            from moat.lib.codec.cbor import Codec as CBOR
+
+            c = CBOR()
+            d = CBOR()
+            return IT(c) if stream else c.decode, d.encode, True, False
+        if n == "std-cbor":
             from moat.util.cbor import StdCBOR
 
             c = StdCBOR()
             d = StdCBOR()
-            return c.feed if stream else c.decode, d.encode, True, False
+            return IT(c) if stream else c.decode, d.encode, True, False
         if n == "msgpack":
+            from moat.lib.codec.msgpack import Codec as Msgpack
+
+            c = Msgpack()
+            d = Msgpack()
+            return IT(c) if stream else c.decode, d.encode, True, False
+        if n == "std-msgpack":
             from moat.util.msgpack import StdMsgpack
 
             c = StdMsgpack()
             d = StdMsgpack()
-            return c.feed if stream else c.decode, d.encode, True, False
+            return IT(c) if stream else c.decode, d.encode, True, False
         raise ValueError("unsupported codec")
 
     dec, _x, bd, csd = get_codec(dec)

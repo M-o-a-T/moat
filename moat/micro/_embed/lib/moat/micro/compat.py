@@ -10,6 +10,7 @@ import sys
 from time import ticks_add, ticks_diff, ticks_ms
 
 from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
+from micropython import const
 
 from typing import TYPE_CHECKING  # isort:skip
 

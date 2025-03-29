@@ -15,7 +15,6 @@ __all__ = [
     "NoneType",
     "singleton",
     "TimeOnlyFormatter",
-    "NotGiven",
     "count",
     "acount",
     "Cache",
@@ -119,9 +118,6 @@ class TimeOnlyFormatter(logging.Formatter):
 
     default_time_format = "%H:%M:%S"
     default_msec_format = "%s.%03d"
-
-
-NotGiven = ...
 
 
 def count(it):

@@ -57,6 +57,8 @@ async def pack_pwd(client, password, length):
 async def unpack_pwd(client, password):
     """Server side: extract password"""
     box = nacl.secret.SecretBox(client.dh_key)
+    if isinstance(password,memoryview):
+        password=bytes(password)
     pwd = box.decrypt(password)
     return pwd
     # TODO check with Argon2

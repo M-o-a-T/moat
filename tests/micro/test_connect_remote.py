@@ -37,11 +37,11 @@ s:
       s: stdio.StdIO
     s:
       link: *link
-#     log:
-#       txt: "S"
+      log:
+        txt: "S"
 
-# log:
-#   txt: "M"
+  log:
+    txt: "M"
 """
 
 

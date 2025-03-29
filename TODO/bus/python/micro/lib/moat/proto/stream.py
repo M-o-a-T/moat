@@ -8,23 +8,9 @@ except ImportError:
 
 import sys
 
-try:
-    import greenback
-except ImportError:
-    greenback = None
 from msgpack import Packer, Unpacker, OutOfData, ExtType
 
 from . import _Stacked
-
-if greenback is not None:
-
-    class SyncReadStream:
-        def __init__(self, stream):
-            self.s = stream
-
-        def read(self, n):
-            return greenback.await_(self.s.read(n))
-
 
 class _Base(_Stacked):
     def __init__(self, stream):
@@ -84,30 +70,9 @@ class MsgpackStream(_Base):
         if isinstance(console, int) and not isinstance(console, bool):
             kw["read_size"] = 1
 
-        if sys.implementation.name == "micropython":
-            # we use a hacked version of msgpack that does async reading
-            self.pack = Packer(default=default_handler).packb
-            self.unpack = Unpacker(stream, **kw).unpack
-        else:
-            # regular Python: msgpack uses a sync read call, so use greenback to async-ize it
-            self.pack = Packer(default=default_handler).pack
-            self.unpacker = Unpacker(SyncReadStream(stream), **kw)
-
-            async def unpack():
-                import anyio
-
-                try:
-                    return self.unpacker.unpack()
-                except OutOfData:
-                    raise anyio.EndOfStream
-
-            self.unpack = unpack
+        self.codec = get_codec("std-msgpack")
         self.console = console
         self.console_handler = console_handler
-
-    async def init(self):
-        if greenback is not None:
-            await greenback.ensure_portal()
 
     async def send(self, msg):
         msg = self.pack(msg)
@@ -118,20 +83,37 @@ class MsgpackStream(_Base):
 
     async def recv(self):
         if isinstance(self.console, int) and not isinstance(self.console, bool):
+
             while True:
-                b = (await self.s.read(1))[0]
-                if b == self.console:
-                    res = await self.unpack()
-                    return res
-                self.console_handler(b)
+                b = bytearray(1)
+                while True:
+                    # read until we get a prefix byte
+                    if self.codec.unfeed(b) == 0:
+                        buf = await self.s.read(1024)
+                        self.codec.feed(buf)
+                    elif b[0] == self.console:
+                        break
+                    else:
+                        self.console_handler(b[0])
+
+                while True:
+                    # read until we get an object
+                    try:
+                        return next(self.codec)
+                    except StopIteration:
+                        pass
+
+                    buf = await self.s.read(1024)
+                    self.codec.feed(buf)
 
         else:
             while True:
-                r = await self.unpack()
-                if self.console is not None and isinstance(r, int):
-                    self.console_handler(r)
-                else:
-                    return r
+                try:
+                    return next(self.codec)
+                except StopIteration:
+                    pass
+                buf = await self.s.read(1024)
+                self.codec.feed(buf)
 
 
 class MsgpackHandler(_Stacked):
@@ -139,15 +121,14 @@ class MsgpackHandler(_Stacked):
 
     def __init__(self, stream, **kw):
         super().__init__(stream)
-        self.unpacker = Unpacker(stream, ext_hook=ext_proxy, **kw).unpackb
-        self.pack = Packer(default=default_handler).packb
+        self.codec = get_codec("std-msgpack")
 
     async def send(self, msg):
-        await super().send(self.pack(msg))
+        await super().send(self.codec.encode(msg))
 
     async def recv(self):
         m = await self.parent.recv()
-        return self.unpacker(m)
+        return self.codec.decode(m)
 
 
 class SerialPackerStream(_Base):
@@ -173,13 +154,18 @@ class SerialPackerStream(_Base):
     async def recv(self):
         while True:
             while self.i < self.n:
-                msg = self.p.feed(c[self.i])
+                self.p.feed(c[self.i])
                 self.i += 1
-                if isinstance(msg, int):
-                    if self.console is not None:
-                        self.console_handler(msg)
-                elif msg is not None:
-                    return msg
+                try:
+                    msg = next(self.p)
+                except StopIteration:
+                    continue
+                else:
+                    if isinstance(msg, int):
+                        if self.console is not None:
+                            self.console_handler(msg)
+                    else:
+                        return msg
 
             n = await self.s.readinto(buf)
             if not n:

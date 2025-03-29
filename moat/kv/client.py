@@ -14,6 +14,7 @@ from inspect import iscoroutine
 
 import anyio
 from asyncscope import Scope, main_scope, scope
+from moat.lib.codec import get_codec
 from moat.util import (  # pylint: disable=no-name-in-module
     CFG,
     DelayedRead,
@@ -32,7 +33,6 @@ from moat.util import (  # pylint: disable=no-name-in-module
     num2byte,
 )
 
-from .codec import packer, stream_unpacker
 from .exceptions import (
     CancelledError,
     ClientAuthMethodError,
@@ -48,13 +48,6 @@ logger = logging.getLogger(__name__)
 ClosedResourceError = anyio.ClosedResourceError
 
 __all__ = ["NoData", "ManyData", "open_client", "client_scope", "StreamedRequest"]
-
-
-class AsyncValueEvent(ValueEvent):
-    def cancel(self):
-        if self.scope is not None:
-            self.scope.cancel()
-        super().set_error(CancelledError())
 
 
 class NoData(ValueError):
@@ -301,7 +294,7 @@ class _SingleReply:
     def __init__(self, conn, seq, params):
         self._conn = conn
         self.seq = seq
-        self.q = AsyncValueEvent()
+        self.q = ValueEvent()
         self._params = params
 
     async def set(self, msg):
@@ -401,6 +394,7 @@ class Client:
         ensure_cfg("moat.kv")
         self._cfg = combine_dict(cfg, CFG["kv"], cls=attrdict)
         self.config = ClientConfig(self)
+        self.codec = get_codec("std-msgpack")
 
         self._seq = 0
         self._handlers = {}
@@ -484,22 +478,20 @@ class Client:
                 raise ServerClosedError("Disconnected")
 
             try:
-                p = packer(params)
+                p = self.codec.encode(params)
             except TypeError as e:
                 raise ValueError(f"Unable to pack: {params!r}") from e
             await sock.send(p)
 
     async def _reader(self, *, evt=None):
         """Main loop for reading"""
-        unpacker = stream_unpacker()
-
         with anyio.CancelScope():
             # XXX store the scope so that the redaer may get cancelled?
             if evt is not None:
                 await evt.set()
             try:
                 while True:
-                    for msg in unpacker:
+                    for msg in self.codec:
                         # self.logger.debug("Recv %s", msg)
                         try:
                             await self._handle_msg(msg)
@@ -518,7 +510,7 @@ class Client:
                         return  # closed by us
                     if len(buf) == 0:  # Connection was closed.
                         raise ServerClosedError("Connection closed by peer")
-                    unpacker.feed(buf)
+                    self.codec.feed(buf)
 
             except BaseException as exc:
                 logger.warning("Reader died: %r", exc, exc_info=exc)
@@ -684,7 +676,7 @@ class Client:
         This async context manager handles the actual TCP connection to
         the MoaT-KV server.
         """
-        hello = AsyncValueEvent()
+        hello = ValueEvent()
         self._handlers[0] = hello
 
         cfg = self._cfg["conn"]

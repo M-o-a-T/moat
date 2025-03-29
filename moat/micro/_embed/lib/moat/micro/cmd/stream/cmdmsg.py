@@ -6,7 +6,8 @@ from __future__ import annotations
 
 import sys
 
-from moat.util import NotGiven, ValueEvent, obj2name
+from moat.util import NotGiven, ValueEvent
+from moat.lib.codec.proxy import obj2name
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util.valtask import ValueTask
 from moat.micro.compat import AC_use, BaseExceptionGroup, L, TaskGroup, log
@@ -119,11 +120,9 @@ class BaseCmdMsg(BaseCmd):
                 except KeyError:
                     res["e"] = "E:" + repr(exc)
                 else:
-                    res["e"] = type(exc)
-                    res["d"] = exc.args
+                    res["e"] = exc
             else:
-                res["e"] = StoppedError
-                res["d"] = (repr(exc), "echo")
+                res["e"] = StoppedError(repr(exc), "echo")
             await self.s.send(res)
         except TypeError as e2:
             log("ERROR returning %r", res, err=e2)
@@ -134,6 +133,7 @@ class BaseCmdMsg(BaseCmd):
         Main handler for incoming messages
         """
         if not isinstance(msg, dict):
+            breakpoint()
             print("?3", msg, file=sys.stderr)
             return
         a: tuple[str | int] | None = msg.get("a", None)  # action

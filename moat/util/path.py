@@ -35,7 +35,7 @@ from functools import total_ordering
 import simpleeval
 
 from moat.lib.codec.proxy import as_proxy
-from .impl import NotGiven
+from . import NotGiven
 
 __all__ = [
     "Path",

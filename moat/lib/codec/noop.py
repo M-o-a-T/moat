@@ -13,11 +13,12 @@ class Codec(_Codec):
         if ext is not None:
             raise ValueError("You can't extend the Null codec")
         super().__init__()
+        self._buf = b""
 
     def encode(self, obj):
         "no-op encode"
         if not isinstance(obj, (bytes, bytearray, memoryview)):
-            raise NoCodecError(self, obj)
+            raise ValueError(obj)
         return obj
 
     def decode(self, data):
@@ -26,4 +27,10 @@ class Codec(_Codec):
 
     def feed(self, data, final: bool = False):  # noqa: ARG002
         "no-op feed"
-        return data
+        self._buf += data
+
+    def __next__(self):
+        if (buf := self._buf) != b"":
+            self._buf = b""
+            return buf
+        raise StopIteration

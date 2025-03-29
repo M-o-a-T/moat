@@ -89,8 +89,8 @@ from weakref import WeakValueDictionary
 
 import anyio
 from moat.util import Cache, NotGiven, Path
+from moat.lib.codec import get_codec
 
-from .codec import packer
 from .exceptions import ServerError
 from .obj import AttrClientEntry, ClientEntry, ClientRoot
 
@@ -231,10 +231,11 @@ class ErrorEntry(AttrClientEntry):
         try:
             r = await res.save()
         except TypeError:
+            codec = get_codec("std-msgpack")
             for k in res.ATTRS:
                 v = getattr(res, k, None)
                 try:
-                    packer(v)
+                    codec.encode(v)
                 except TypeError:
                     setattr(res, k, repr(v))
             r = await res.save()

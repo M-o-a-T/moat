@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager
 
 import anyio
 from moat.mqtt.client import MQTTClient
-from moat.mqtt.codecs import NoopCodec
 from moat.util import NotGiven
 
 from . import Backend
@@ -36,11 +35,11 @@ class MqttBackend(Backend):
                 await C.disconnect()
 
     @asynccontextmanager
-    async def monitor(self, *topic):
+    async def monitor(self, *topic, codec=NotGiven):
         topic = "/".join(str(x) for x in topic)
         logger.info("Monitor %s start", topic)
         try:
-            async with self.client.subscription(topic) as sub:
+            async with self.client.subscription(topic, codec=codec) as sub:
 
                 async def sub_get(sub):
                     async for msg in sub:

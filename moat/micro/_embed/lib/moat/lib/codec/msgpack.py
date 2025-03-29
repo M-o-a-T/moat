@@ -1,41 +1,104 @@
 """
-This is a micropython-asyncio-compatible MsgPack implementation.
+This is a micropython-compatible MsgPack implementation.
 It does not support
 * a "default" fallback encoder
 * encoding binary data to strings (which is legacy nonsense anyway)
 * auto-encoding datetime to the timestamp extension
 * the object_pairs hook
 
-The encoder is synchronous and returns bytes.
-The decoder is async and yields messages.
-You can also decode single messages synchronously.
+The encoder returns bytes.
+The decoder yields messages.
+You can also decode single messages.
 
 The decoder returns binary data as memoryviews if they're larger
 than the threshold (default -1: always copy). Extension objects always
 get a memoryview and must decode or copy it.
 """
-# cloned from https://github.com/msgpack/msgpack-python
 
-# Parts of this have been modified to be compatble with micropython.
 from __future__ import annotations
+
+from ._base import Codec as _Codec
+from ._base import NoCodecError
 
 import struct
 import sys
 from io import BytesIO
 
-from micropython import const
+from moat.util import attrdict, OutOfData
+from moat.micro.compat import const
 
-from moat.util import attrdict
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from typing import Any
+    from collections.abc import Iterator
+
+__all__ = ["Codec", "ExtType"]
+
+
+class Codec(_Codec):
+    "Extensible msgpack codec"
+
+    def __init__(self, use_attrdict: bool = False, **kw):
+        # TODO add keywords for msgpack enc/dec settings
+        super().__init__(**kw)
+        self.use_attrdict = use_attrdict
+        self.__kw = kw
+
+        self.stream = Unpacker(
+            ext_hook=self._decode,  # pylint:disable=protected-access
+            use_attrdict=use_attrdict,
+        )
+
+    def copy(self) -> Codec:
+        "copy me"
+        return Codec(use_attrdict=self.use_attrdict, **self.__kw)
+
+    def encode(self, obj):
+        "object > bytes"
+        return packb(obj, default=self._encode)
+
+    def _encode(self, obj):
+        k, d = self.ext.encode(self, obj)
+        return ExtType(k, d)
+
+    def decode(self, data):
+        "bytes > object"
+        return unpackb(
+            data,
+            ext_hook=self._decode,  # pylint:disable=protected-access
+            use_attrdict = self.use_attrdict,
+        )
+
+    def _decode(self, key, data):
+        try:
+            return self.ext.decode(self, key, data)
+        except NoCodecError:
+            return ExtType(key, data)
+
+    def feed(self, data):
+        "Add more bytes. Returns an iterator for the result."
+        self.stream.feed(data)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return next(self.stream)
+
+    def unfeed(self, buf) -> int:
+        "Take from the decoder's buffer."
+        return self.stream.unfeed(buf)
+    
+
+# cloned from https://github.com/msgpack/msgpack-python
+
+# Parts of this have been modified to be compatble with micropython.
 # ruff:noqa:TRY200
 
 
 class UnpackException(Exception):
     "superclass, not raised"
-
-
-class OutOfData(UnpackException):
-    "missing data in buffer"
 
 
 class FormatError(UnpackException):
@@ -62,6 +125,8 @@ class ExtType:
         self.code = code
         self.data = data
 
+    def __repr__(self):
+        return f"Ext({self.code}:{self.data})"
 
 _TYPE_IMMEDIATE = const(0)
 _TYPE_ARRAY = const(1)
@@ -73,9 +138,8 @@ _TYPE_EXT = const(5)
 DEFAULT_RECURSE_LIMIT = 20
 
 
-_NO_FORMAT_USED = ""
 _MSGPACK_HEADERS = {
-    0xC4: (1, _NO_FORMAT_USED, _TYPE_BIN),
+    0xC4: (1, "", _TYPE_BIN),
     0xC5: (2, ">H", _TYPE_BIN),
     0xC6: (4, ">I", _TYPE_BIN),
     0xC7: (2, "Bb", _TYPE_EXT),
@@ -83,7 +147,7 @@ _MSGPACK_HEADERS = {
     0xC9: (5, ">Ib", _TYPE_EXT),
     0xCA: (4, ">f"),
     0xCB: (8, ">d"),
-    0xCC: (1, _NO_FORMAT_USED),
+    0xCC: (1, ""),
     0xCD: (2, ">H"),
     0xCE: (4, ">I"),
     0xCF: (8, ">Q"),
@@ -96,7 +160,7 @@ _MSGPACK_HEADERS = {
     0xD6: (4, "b4s", _TYPE_EXT),
     0xD7: (8, "b8s", _TYPE_EXT),
     0xD8: (16, "b16s", _TYPE_EXT),
-    0xD9: (1, _NO_FORMAT_USED, _TYPE_RAW),
+    0xD9: (1, "", _TYPE_RAW),
     0xDA: (2, ">H", _TYPE_RAW),
     0xDB: (4, ">I", _TYPE_RAW),
     0xDC: (2, ">H", _TYPE_ARRAY),
@@ -113,90 +177,80 @@ class Unpacker:
 
     def __init__(
         self,
-        stream=None,
-        read_size=64,
-        # use_list=True,
-        # object_hook=None,
-        # list_hook=None,
-        # unicode_errors="strict",
         ext_hook=ExtType,
+        use_attrdict=False,
         min_memview_len=-1,
     ):
-        self._stream = stream
-
         #: array of bytes fed.
         self._buffer = bytearray()
         #: Which position we currently reads
-        self._buff_i = 0
+        self._buf_pos = 0
 
-        self._read_size = read_size
-        # self._unicode_errors = unicode_errors
-        # self._use_list = use_list
-        # self._list_hook = list_hook
-        # self._object_hook = object_hook
         self._ext_hook = ext_hook
         self._min_memview_len = min_memview_len
+        self._use_attrdict = use_attrdict
 
     def feed(self, data):
         "set the buffer"
-        assert self._stream is None
-        self._buffer = memoryview(data)
-        self._buff_i = 0
+        if self._buffer and self._buf_pos < len(self._buffer):
+            if self._buf_pos == 0:
+                self._buffer += data
+                return
+            data = self._buffer[self._buf_pos:] + data
+        elif isinstance(data, memoryview):
+            data = bytearray(data)
+        self._buffer = data
+        self._buf_pos = 0
+
+    def unfeed(self, buf: bytearray|None) -> int:
+        "take from the buffer"
+        if not self._buffer:
+            return 0
+        i = self._buf_pos
+        n = min(len(buf), len(self._buffer) - i)
+        if n == 0:
+            return 0
+        i_n = i + n
+        buf[:n] = self._buffer[i, i_n]
+        self._buf_pos = i_n
+        return n
+
 
     def has_extradata(self):
         "are there extra data in the buffer?"
-        return self._buff_i < len(self._buffer)
+        return self._buf_pos < len(self._buffer)
 
     def get_extradata(self):
         "return extra data, if any"
-        return self._buffer[self._buff_i :]
+        return self._buffer[self._buf_pos :]
 
-    # async def read_bytes(self, n):
-    # ret = await self._read(n, raise_outofdata=False)
-    # self._consume()
-    # return ret
-
-    async def _read(self, n, raise_outofdata=True):
+    def _read(self, n):
         # (int) -> bytearray
-        await self._reserve(n, raise_outofdata=raise_outofdata)
-        i = self._buff_i
-        ret = self._buffer[i : i + n]
-        self._buff_i = i + len(ret)
+        i = self._buf_pos
+        i_n = i + n
+        if i_n > len(self._buffer):
+            raise OutOfData
+
+        ret = self._buffer[i : i_n]
+        self._buf_pos = i + len(ret)
         return ret
 
-    async def _reserve(self, n, raise_outofdata=True):
-        remain_bytes = len(self._buffer) - self._buff_i - n
+    def _reserve(self, n):
+        remain_bytes = len(self._buffer) - self._buf_pos - n
 
         # Fast path: buffer has n bytes already
         if remain_bytes >= 0:
             return
 
-        if not self._stream:
-            raise OutOfData
+        raise OutOfData
 
-        # Read from file
-        remain_bytes = -remain_bytes
-        while remain_bytes > 0:
-            to_read_bytes = max(self._read_size, remain_bytes)
-            # TODO simplify, read into existing buffer
-            b = bytearray(to_read_bytes)
-            read_data = await self._stream.rd(b)
-            if not read_data:
-                break
-            self._buffer += b[:read_data]
-            remain_bytes -= read_data
-
-        if len(self._buffer) < n + self._buff_i and raise_outofdata:
-            self._buff_i = 0  # rollback
-            raise OutOfData
-
-    async def _read_header(self):
+    def _read_header(self):
         typ = _TYPE_IMMEDIATE
         n = 0
         obj = None
-        await self._reserve(1)
-        b = self._buffer[self._buff_i]
-        self._buff_i += 1
+        self._reserve(1)
+        b = self._buffer[self._buf_pos]
+        self._buf_pos += 1
         if b & 0b10000000 == 0:  # x00-x7F
             obj = b
         elif b & 0b11100000 == 0b11100000:  # xE0-xFF
@@ -204,7 +258,7 @@ class Unpacker:
         elif b & 0b11100000 == 0b10100000:  # xA0-xBF
             n = b & 0b00011111
             typ = _TYPE_RAW
-            obj = await self._read(n)
+            obj = self._read(n)
         elif b & 0b11110000 == 0b10010000:  # x90-x9F
             n = b & 0b00001111
             typ = _TYPE_ARRAY
@@ -221,79 +275,84 @@ class Unpacker:
             obj = True
         elif b <= 0xC6:
             size, fmt, typ = _MSGPACK_HEADERS[b]
-            await self._reserve(size)
+            self._reserve(size)
             if len(fmt) > 0:
-                n = struct.unpack_from(fmt, self._buffer, self._buff_i)[0]
+                n = struct.unpack_from(fmt, self._buffer, self._buf_pos)[0]
             else:
-                n = self._buffer[self._buff_i]
-            self._buff_i += size
-            obj = await self._read(n)
+                n = self._buffer[self._buf_pos]
+            self._buf_pos += size
+            obj = self._read(n)
         elif b <= 0xC9:
             size, fmt, typ = _MSGPACK_HEADERS[b]
-            await self._reserve(size)
-            L, n = struct.unpack_from(fmt, self._buffer, self._buff_i)
-            self._buff_i += size
-            obj = await self._read(L)
+            self._reserve(size)
+            L, n = struct.unpack_from(fmt, self._buffer, self._buf_pos)
+            self._buf_pos += size
+            obj = self._read(L)
         elif b <= 0xD3:
             size, fmt = _MSGPACK_HEADERS[b]
-            await self._reserve(size)
+            self._reserve(size)
             if len(fmt) > 0:
-                obj = struct.unpack_from(fmt, self._buffer, self._buff_i)[0]
+                obj = struct.unpack_from(fmt, self._buffer, self._buf_pos)[0]
             else:
-                obj = self._buffer[self._buff_i]
-            self._buff_i += size
+                obj = self._buffer[self._buf_pos]
+            self._buf_pos += size
         elif b <= 0xD8:
             size, fmt, typ = _MSGPACK_HEADERS[b]
-            await self._reserve(size + 1)
-            n, obj = struct.unpack_from(fmt, self._buffer, self._buff_i)
-            self._buff_i += size + 1
+            self._reserve(size + 1)
+            n, obj = struct.unpack_from(fmt, self._buffer, self._buf_pos)
+            self._buf_pos += size + 1
         elif b <= 0xDB:
             size, fmt, typ = _MSGPACK_HEADERS[b]
-            await self._reserve(size)
+            self._reserve(size)
             if len(fmt) > 0:
-                (n,) = struct.unpack_from(fmt, self._buffer, self._buff_i)
+                (n,) = struct.unpack_from(fmt, self._buffer, self._buf_pos)
             else:
-                n = self._buffer[self._buff_i]
-            self._buff_i += size
-            obj = await self._read(n)
+                n = self._buffer[self._buf_pos]
+            self._buf_pos += size
+            obj = self._read(n)
         elif b <= 0xDD:
             size, fmt, typ = _MSGPACK_HEADERS[b]
-            await self._reserve(size)
-            (n,) = struct.unpack_from(fmt, self._buffer, self._buff_i)
-            self._buff_i += size
+            self._reserve(size)
+            (n,) = struct.unpack_from(fmt, self._buffer, self._buf_pos)
+            self._buf_pos += size
         else:  # if b <= 0xDF:  # can't be anything else
             size, fmt, typ = _MSGPACK_HEADERS[b]
-            await self._reserve(size)
-            (n,) = struct.unpack_from(fmt, self._buffer, self._buff_i)
-            self._buff_i += size
+            self._reserve(size)
+            (n,) = struct.unpack_from(fmt, self._buffer, self._buf_pos)
+            self._buf_pos += size
         return typ, n, obj
 
-    async def unpack(self):
+    def unpack(self):
         "extract one (top-level) item from the buffer"
-        res = await self._unpack()
+        i = self._buf_pos
+        try:
+            res = self._unpack()
+        except BaseException:
+            self._buf_pos = i
+            raise
+
         # Buffer management: chop off the part we've read
-        self._buffer = self._buffer[self._buff_i :]
-        self._buff_i = 0
+        self._buffer = self._buffer[self._buf_pos :]
+        self._buf_pos = 0
         return res
 
-    async def _unpack(self):
-        typ, n, obj = await self._read_header()
+    def _unpack(self):
+        typ, n, obj = self._read_header()
 
         if typ == _TYPE_ARRAY:
             ret = []
             for _ in range(n):
-                ret.append(await self.unpack())
+                ret.append(self._unpack())
             # if self._list_hook is not None:
             # ret = self._list_hook(ret)
-            # TODO is the interaction between `list_hook` and `use_list` ok?
-            return ret  # if self._use_list else tuple(ret)
+            return ret
         if typ == _TYPE_MAP:
-            ret = attrdict()
+            ret = attrdict() if self._use_attrdict else dict()
             for _ in range(n):
-                key = await self.unpack()
+                key = self._unpack()
                 if type(key) is str and hasattr(sys, "intern"):
                     key = sys.intern(key)
-                ret[key] = await self.unpack()
+                ret[key] = self._unpack()
             # if self._object_hook is not None:
             # ret = self._object_hook(ret)
             return ret
@@ -320,17 +379,10 @@ class Unpacker:
         return self
 
     def __next__(self):
-        g = self.unpack()
         try:
-            g.send(None)
-        except StopIteration as exc:
-            return exc.value
+            return self.unpack()
         except OutOfData:
             raise StopIteration
-        except BaseException as err:
-            raise RuntimeError(err)
-        else:
-            raise RuntimeError("Needs async")
 
 
 class Packer:
@@ -510,16 +562,6 @@ class Packer:
         return wb(struct.pack(">BI", 0xC6, n))
 
 
-# def pack(o, stream, **kwargs):
-#    """
-#    Pack object `o` and write it to `stream`
-#
-#    See :class:`Packer` for options.
-#    """
-#    packer = Packer(**kwargs)
-#    stream.write(packer.packb(o))
-
-
 def packb(o, **kwargs):
     """
     Pack object `o` and return packed bytes
@@ -527,17 +569,6 @@ def packb(o, **kwargs):
     See :class:`Packer` for options.
     """
     return Packer(**kwargs).pack(o)
-
-
-# def unpack(stream, **kwargs):
-#    """
-#    Unpack an object from `stream`.
-#
-#    Raises `ExtraData` when `stream` contains extra bytes.
-#    See :class:`Unpacker` for options.
-#    """
-#    data = stream.read()
-#    return unpackb(data, **kwargs)
 
 
 def unpackb(packed, **kwargs):
@@ -551,14 +582,10 @@ def unpackb(packed, **kwargs):
 
     See :class:`Unpacker` for options.
     """
-    unpacker = Unpacker(None, **kwargs)
+    unpacker = Unpacker(**kwargs)
     unpacker.feed(packed)
     try:
-        next(unpacker.unpack())
-    except StopIteration as s:
-        if unpacker.has_extradata():
-            raise ExtraData(s.value, bytes(unpacker.get_extradata()))
-        return s.value
+        return unpacker.unpack()
     except OutOfData:
         raise ValueError("incomplete")
     raise RuntimeError("No way")

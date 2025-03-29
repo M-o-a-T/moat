@@ -15,8 +15,9 @@ from ipaddress import (
     IPv6Network,
 )
 
-from moat.util import DProxy, as_proxy, attrdict, packer, stream_unpacker, unpacker
-from moat.util.msgpack import ExtType
+from moat.util import DProxy, as_proxy, attrdict
+from moat.lib.codec import get_codec
+from moat.lib.codec.msgpack import ExtType, Codec as MPack
 
 as_proxy("_ip4", IPv4Address)
 as_proxy("_ip6", IPv6Address)
@@ -42,7 +43,7 @@ class Bar:
 
 
 # needs "replace" because testing re-imports
-@as_proxy("fu", replace=True)
+@as_proxy("fu_m")
 class Foo(Bar):
     "A proxied class"
 
@@ -56,36 +57,39 @@ _val = [
 
 
 def test_basic():
+    codec = get_codec("std-msgpack")
     for v in _val:
-        w = unpacker(packer(v))
+        w = codec.decode(codec.encode(v))
         assert v == w, (v, w)
 
 
 def test_bar():
     b = Bar(95)
-    as_proxy("b", b, replace=True)
-    c = unpacker(packer(b))
+    as_proxy("b_m", b)
+    codec = get_codec("std-msgpack")
+    c = codec.decode(codec.encode(b))
     assert b == c
     with pytest.raises(ValueError, match="<Bar: 94>"):
-        packer(Bar(94))
+        codec.encode(Bar(94))
 
 
 @pytest.mark.parametrize("chunks", [1, 2, 5])
 def test_chunked(chunks):
+    codec = get_codec("std-msgpack")
     p = [(dict(a=1, b=23, c=345, d=6789012345678901234567890, e="duh")), "!"]
-    m = b"".join(packer(x) for x in p)
+    m = b"".join(codec.encode(x) for x in p)
     r = []
-    u = stream_unpacker()
     for i in range(chunks):
         o1 = int(len(m) * (i / chunks))
         o2 = int(len(m) * ((i + 1) / chunks))
-        u.feed(m[o1:o2])
-        for msg in u:
+        codec.feed(m[o1:o2])
+        for msg in codec:
             r.append(msg)
     assert r == p
 
 
 def test_ip():
+    codec = get_codec("std-msgpack")
     adrs = (
         IPv4Address("1.23.45.181"),
         IPv6Address("FE80::12:34:0:0"),
@@ -95,21 +99,22 @@ def test_ip():
         IPv6Interface("FE80::12:36:F:ED/111"),
     )
     for a in adrs:
-        m = packer(a)
-        b = unpacker(m)
+        m = codec.encode(a)
+        b = codec.decode(m)
         assert type(a) is type(b)
         assert str(a) == str(b)
 
 
 def test_dproxy():
     # first manually construct such a thing
-    d = ("FuBar", (), None, [1, 2, 42], {"one": "two", "three": "four"})
-    p = packer(ExtType(5, b"".join(packer(x) for x in d)))
-    dp = unpacker(p)
+    codec = get_codec("std-msgpack")
+    d = ("FuBar", 1, 2, 42, {"one": "two", "three": "four"})
+    p = codec.encode(ExtType(5, b"".join(codec.encode(x) for x in d)))
+    dp = codec.decode(p)
     assert type(dp) is DProxy
     assert dp.name == "FuBar"
     assert dp[1] == 2
     assert dp[2] == 42
     assert dp["three" == "four"]
-    pp = packer(dp)
-    assert p == pp
+    pp = codec.encode(dp)
+    assert codec.decode(p) == codec.decode(pp)

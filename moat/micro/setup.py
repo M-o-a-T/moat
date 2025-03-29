@@ -10,11 +10,12 @@ import sys
 import shutil
 from functools import wraps
 
-from moat.util import merge, packer, P
+from moat.util import merge, P
 from moat.micro.cmd.tree.dir import Dispatch, SubDispatch
 from moat.micro.cmd.util.part import get_part
 from moat.micro.errors import NoPathError, RemoteError
 from moat.micro.util import run_update
+from moat.lib.codec import get_codec
 
 from .compat import idle, log
 
@@ -92,6 +93,7 @@ async def setup(
     from .direct import DirectREPL
     from .path import ABytes, MoatDevPath, copy_over
     from .proto.stream import RemoteBufAnyio
+    codec=get_codec("std-msgpack")
 
     if cross == "-":
         cross = None
@@ -176,7 +178,7 @@ async def setup(
 
             if config:
                 config = _clean_cfg(config)
-                f = ABytes(name="moat.cfg", data=packer(config))
+                f = ABytes(name="moat.cfg", data=codec.encode(config))
                 await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl))
 
             if update:

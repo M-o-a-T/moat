@@ -37,29 +37,31 @@ micro:
       mplex: false
       log:
         txt: "M"
+    remote: !P r
 
   # main service. This could be a serial.Link instead, but this way
   # "moat micro setup --run" keeps the existing link going
-  apps:
-    r: _test.MpyRaw
-    s: remote.Link
-    n: net.unix.Port
-    co: _test.Cons
-  r: *rm
-  s:
-    path: !P r
-    link:
-      console: true
-    log:
-      txt: "S"
-  n: &np
-    port: /tmp/moat.test
-    log:
-      txt: "N"
-
-  co:
-    cons: !P s
-    prefix: "C"
+  run:
+    apps:
+      r: _test.MpyRaw
+      s: remote.Link
+      n: net.unix.Port
+      co: _test.Cons
+    r: *rm
+    s:
+      path: !P r
+      link:
+        console: true
+      log:
+        txt: "S"
+    n: &np
+      port: /tmp/moat.test
+      log:
+        txt: "N"
+  
+    co:
+      cons: !P s
+      prefix: "C"
   cfg:
     r:
       apps:
@@ -95,7 +97,7 @@ async def test_stack(tmp_path):
     cfx = tmp_path / "run.cfg"
     cross = here / "ext" / "micropython" / "mpy-cross" / "build" / "mpy-cross"
     cfg.micro.cfg.r.f.root = str(root)
-    cfg.micro.n.port = str(port)
+    cfg.micro.run.n.port = str(port)
     cfg.micro.setup.args.cross = str(cross)
     cfg.micro.setup.r.cwd = str(root)
     with cfx.open("w") as f:
@@ -143,15 +145,15 @@ async def test_stack(tmp_path):
             assert "fubar" not in res.stdout
 
             # change some config in remote live data
-            res = await rm("cfg -v a.b fubar -e a.ft 42", do_stdout=True)
+            res = await rm("cfg -s a.b ~fubar -s a.ft =42", do_stdout=True)
             assert res.stdout == ""
 
             # change more config but only on local data
-            res = await rm("cfg -e a.ft 44 -S", do_stdout=True)
+            res = await rm("cfg -s a.ft =44 -S", do_stdout=True)
             assert "\n  ft: 44\n" in res.stdout
 
             # change more config but only on remote data
-            res = await rm("cfg -e a.ft 43 -W moat.cf2", do_stdout=True)
+            res = await rm("cfg -s a.ft =43 -W moat.cf2", do_stdout=True)
             assert res.stdout == ""
 
             # now do the same thing sanely

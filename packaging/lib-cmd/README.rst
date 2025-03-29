@@ -28,7 +28,7 @@ Usage
 
 .. code-block:: python
 
-    from moat.util import packer, stream_unpacker
+    from moat.lib.codec import get_codec
 
     async def handle_command(msg):
         if msg.cmd[0] == "Start":
@@ -49,7 +49,7 @@ Usage
         raise ValueError(f"Unknown: {msg !r}")
         
     async with Transport(handle_command) as tr, anyio.create_task_group() as tg:
-        decoder = stream_unpacker(cbor=True)
+        decoder = get_codec("cbor")()
 
         def reader():
             # receive messages from channel

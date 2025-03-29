@@ -7,6 +7,7 @@ from __future__ import annotations
 from moat.util import NotGiven
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util.part import enc_part, get_part
+from moat.micro.compat import log
 
 
 class Cmd(BaseCmd):
@@ -69,15 +70,17 @@ class Cmd(BaseCmd):
                     raise
                 cur.append({})
                 cur = cur[pp]
+        log("CFG_W %r %r %r",cur,p,d)
+        k = p[-1]
         if d is NotGiven:
-            del cur[p[-1]]
-        elif isinstance(cur, list) and p[-1] is None:
+            del cur[k]
+        elif isinstance(cur, list) and k is None:
             cur.append(d)
         else:
             try:
-                cur[p[-1]] = d
+                cur[k] = d
             except IndexError:
-                if len(cur) != p[-1]:
+                if len(cur) != k:
                     raise
                 cur.append(d)
 

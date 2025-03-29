@@ -4,9 +4,8 @@ Basic codec tests
 
 from __future__ import annotations
 
-from moat.lib.codec import NoCodecError, get_codec
-from moat.lib.codec.cbor import OutOfData
-from moat.util import NotGiven
+from moat.lib.codec import get_codec
+from moat.util import NotGiven, OutOfData
 
 import pytest
 
@@ -16,10 +15,11 @@ def test_noop():
     c = get_codec("noop")
     assert c.encode(b"foo\0\ff") == b"foo\0\ff"
     assert c.decode(b"foo\0\ff") == b"foo\0\ff"
-    assert c.feed(b"foo\0\ff") == b"foo\0\ff"
-    with pytest.raises(NoCodecError):
+    c.feed(b"foo\0\ff")
+    assert next(c) == b"foo\0\ff"
+    with pytest.raises(ValueError):
         c.encode("bar")
-    with pytest.raises(NoCodecError):
+    with pytest.raises(ValueError):
         c.encode(42)
 
 
@@ -29,12 +29,14 @@ def test_utf8():
     assert c.encode("foo") == b"foo"
     assert c.decode(b"H\xc3\xaby!") == "Hëy!"
     assert c.encode("Hëy!") == b"H\xc3\xaby!"
-    assert c.feed(b"H\xc3") == "H"
-    assert c.feed(b"\xaby!") == "ëy!"
+    c.feed(b"H\xc3")
+    assert next(c) == "H"
+    c.feed(b"\xaby!")
+    assert next(c) == "ëy!"
 
-    with pytest.raises(NoCodecError):
+    with pytest.raises(ValueError):
         c.encode(b"bar")
-    with pytest.raises(NoCodecError):
+    with pytest.raises(ValueError):
         c.encode(42)
 
 
@@ -69,7 +71,7 @@ def test_msgpack(obj):
 
     c = get_codec("msgpack")
 
-    assert msgpack.unpackb(c.encode(obj), use_list=True) == obj
+    assert msgpack.unpackb(c.encode(obj)) == obj
     assert c.decode(msgpack.packb(obj)) == obj
 
 

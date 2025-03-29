@@ -5,7 +5,7 @@ UTF-8 codec
 from __future__ import annotations
 
 from ._base import Codec as _Codec
-from ._base import NoCodecError, IncompleteData
+from ._base import IncompleteData
 
 from codecs import lookup
 
@@ -20,11 +20,12 @@ class Codec(_Codec):
             raise ValueError("You can't extend the UTF8 codec")
         super().__init__()
         self.dec = Utf8Stream()
+        self._buf:str = ""
 
     def encode(self, obj):
         "Encode UTF-8 to bytestring"
         if not isinstance(obj, str):
-            raise NoCodecError(self, obj)
+            raise ValueError(self, obj)
         return obj.encode("utf-8")
 
     def decode(self, data):
@@ -38,7 +39,13 @@ class Codec(_Codec):
         Returns the string found so far (i.e. without incomplete UTF-8 codes).
         """
         try:
-            return self.dec.decode(data)
+            self._buf += self.dec.decode(data)
         finally:
             if final and (st := self.dec.getstate()) != (b"", 0):
                 raise IncompleteData(self, st)
+
+    def __next__(self):
+        if (buf := self._buf) != "":
+            self._buf = ""
+            return buf
+        raise StopIteration

@@ -849,7 +849,6 @@ async def build(obj, no_commit, no_dirty, no_test, no_tag, no_pypi, parts, dput_
         g_done = Path("/tmp/nonexistent")
     repo = Repo(None)
 
-    from foo:
     tags = dict(version)
     skip = set()
     for s in skip_:

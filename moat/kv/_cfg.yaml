@@ -55,6 +55,7 @@ server:
   # default
   mqtt:
     uri: "mqtt://localhost:1883"
+    codec: std-msgpack
 
   # event message path/topic prefix
   root: !P moat.kv

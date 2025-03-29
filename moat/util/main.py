@@ -20,7 +20,7 @@ import asyncclick as click
 
 from .dict import attrdict, to_attrdict
 from .exc import ungroup
-from .impl import NotGiven
+from . import NotGiven
 from .merge import merge
 from .config import CFG, ensure_cfg
 

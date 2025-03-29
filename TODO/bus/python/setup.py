@@ -48,7 +48,6 @@ setup(
         "asyncclick",
         "anyio",
         "tabulate",
-        "greenback",
         "msgpack",
         "simpleeval",
         "ruyaml",

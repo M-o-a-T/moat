@@ -7,7 +7,7 @@ import time
 from moat.link.meta import MsgMeta
 from moat.link._test import Scaffold
 from moat.link.node import Node
-from moat.util import P, PathLongener
+from moat.util import P, PathLongener, NotGiven
 from moat.lib.cmd import StreamError
 
 
@@ -97,7 +97,7 @@ async def fetch(c,p):
 
         async for pr,p,d,*m in it:
             p=pl.long(pr,p)
-            nn.set(p,d,MsgMeta.restore(m))
+            nn.set(p,d,MsgMeta._moat__restore(m, NotGiven))
         return nn
 
 @pytest.mark.anyio

@@ -36,13 +36,13 @@ async def test_11_kill(autojump_clock):  # pylint: disable=unused-argument
             )
 
             res = await c._request("enum_node", node="test_1", current=True)
-            assert res.result == ()
+            assert res.result == []
 
             res = await c._request("enum_node", node="test_1", current=False)
-            assert res.result == (1, 2)
+            assert res.result == [1, 2]
 
             res = await c._request("enum_node", node="test_2", current=True)
-            assert res.result == (1, 2)
+            assert res.result == [1, 2]
 
             # error
             with raises(ServerError):

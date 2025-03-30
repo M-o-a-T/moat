@@ -375,6 +375,8 @@ class CmdHandler(CtxObj):
             elif self._in_cb is None:
                 if i > 0:
                     i -= 1
+                # intentionally not async here, as that may end up
+                # in a deadlock
                 self._send_nowait((i << 2) | B_ERROR, [E_NO_CMD])
             else:
                 conv = Stream(self, i)
@@ -386,6 +388,10 @@ class CmdHandler(CtxObj):
                 conv(msg)
             except EOFError:
                 self.detach(i)
+                try:
+                    self._send_nowait((i << 2) | B_ERROR, [E_NO_STREAM])
+                except EOFError:
+                    pass
 
     @asynccontextmanager
     async def _ctx(self) -> Self:
@@ -894,7 +900,12 @@ class Stream:
 @_exp
 class Forward:
     """
-    Container for message forwarding
+    Container for message forwarding.
+
+    Note that the message handlers are synchronous and thus depend on the
+    send queues on both sides to never be full. This is unfortunate but
+    cannot be avoided without either possibly deadlocking or arbitrary
+    timeouts, both of which would be worse.
     """
 
     end_src = False

@@ -409,7 +409,6 @@ def run_tests(pkg: str | None, *opts) -> bool:
         return True
     try:
         print("\n*** Testing:", pkg)
-        # subprocess.run(["python3", "-mtox"], cwd=repo.working_dir, check=True)
         subprocess.run(
             ["python3", "-mpytest", *opts, tests],
             stdin=sys.stdin,
@@ -565,10 +564,24 @@ def apply_hooks(repo, force=False):
         t.write_text(d)
         t.chmod(0o755)
 
-
-def apply_templates(repo):
+@cli.command
+@click.argument("part", type=str)
+def setup(part):
     """
-    Apply templates to this repo.
+    Create a new MoaT subcommand.
+    """
+    repo = Repo(None)
+    if '-' in part:
+        part = undash(part)
+
+    (Path("packaging")/dash(part)).mkdir()
+    (Path("packaging")/dash(part)).mkdir()
+    apply_templates(repo, part)
+
+
+def apply_templates(repo:Repo, part):
+    """
+    Apply template files to this component.
     """
     commas = (
         P("tool.tox.tox.envlist"),
@@ -576,14 +589,11 @@ def apply_templates(repo):
         P("tool.pylint.messages_control.disable"),
     )
 
-    rpath = Path(repo.working_dir)
-    mti = rpath.parts.index("moat")
-    mtp = rpath.parts[mti:]
-
-    rname = "-".join(mtp)
-    rdot = ".".join(mtp)
-    rpath = "/".join(mtp)
-    runder = "_".join(mtp)
+    pt = part.split(".")
+    rname = dash(part)
+    rdot = part
+    rpath = "/".join(pt)
+    runder = "_".join(pt)
     repl = Replace(
         SUBNAME=rname,
         SUBDOT=rdot,
@@ -591,7 +601,7 @@ def apply_templates(repo):
         SUBUNDER=runder,
     )
     pt = (Path(__file__).parent / "_templates").joinpath
-    pr = Path(repo.working_dir).joinpath
+    pr = Path.cwd().joinpath
     with pt("pyproject.forced.yaml").open("r") as f:
         t1 = yload(f)
     with pt("pyproject.default.yaml").open("r") as f:
@@ -599,27 +609,13 @@ def apply_templates(repo):
     try:
         with pr("pyproject.toml").open("r") as f:
             proj = tomlkit.load(f)
-        try:
-            tx = proj["tool"]["tox"]["legacy_tox_ini"]
-        except KeyError:
-            pass
-        else:
-            txp = RawConfigParser()
-            txp.read_string(tx)
-            td = {}
-            for k, v in txp.items():
-                td[k] = ttd = dict()
-                for kk, vv in v.items():
-                    if isinstance(vv, str) and vv[0] == "\n":
-                        vv = [x.strip() for x in vv.strip().split("\n")]
-                    ttd[kk] = vv
-            proj["tool"]["tox"] = td
 
         for p in commas:
             decomma(proj, p)
 
     except FileNotFoundError:
         proj = tomlkit.TOMLDocument()
+
     mod = default_dict(t1, proj, t2, repl=repl, cls=tomlkit.items.Table)
     try:
         proc = proj["tool"]["moat"]["fixup"]
@@ -637,31 +633,7 @@ def apply_templates(repo):
         for p in commas:
             encomma(proj, p)
 
-        try:
-            tx = proj["tool"]["tox"]
-        except KeyError:
-            pass
-        else:
-            txi = io.StringIO()
-            txp = RawConfigParser()
-            for k, v in tx.items():
-                if k != "DEFAULT":
-                    txp.add_section(k)
-                for kk, vv in v.items():
-                    if isinstance(vv, (tuple, list)):
-                        vv = "\n   " + "\n   ".join(str(x) for x in vv)
-                    txp.set(k, kk, vv)
-            txp.write(txi)
-            txi = txi.getvalue()
-            txi = "\n" + txi.replace("\n\t", "\n ")
-            proj["tool"]["tox"] = dict(
-                legacy_tox_ini=tomlkit.items.String.from_raw(
-                    txi,
-                    type_=tomlkit.items.StringType.MLB,
-                ),
-            )
-
-        projp = Path(repo.working_dir) / "pyproject.toml"
+        projp = Path("packaging") / rname / "pyproject.toml"
         projp.write_text(proj.as_string())
         repo.index.add(projp)
 
@@ -684,6 +656,11 @@ def apply_templates(repo):
             pr("moat").mkdir(mode=0o755)
         pr("moat", "__init__.py").write_text(init)
         repo.index.add(pr("moat", "__init__.py"))
+
+    if not pr("moat", "_main.py").exists():
+        main = repl(pt("moat", "_main.py").read_text())
+        pr("moat", "_main.py").write_text(main)
+        repo.index.add(pr("moat", "_main.py"))
 
     tst = pr("tests")
     if not tst.is_dir():

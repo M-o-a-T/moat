@@ -1,0 +1,21 @@
+Source: SUBDASH
+Maintainer: GITNAME <GITEMAIL>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-all, debhelper (>= 13), debhelper-compat (= 13),
+  python3-setuptools,
+  python3-wheel,
+Standards-Version: 3.9.6
+Homepage: https://github.com/M-o-a-T/SUBDASH
+
+Package: SUBDASH
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  python3-anyio (>= 2.0),
+  moat-main,
+Recommends:
+  moat-kv (>= 0.32),
+  python3-trio (>= 0.17),
+Description: Describe me!
+  Describe me harder!
+

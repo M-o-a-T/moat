@@ -250,31 +250,27 @@ class Node:
     async def walk(
         self,
         proc: Callable[Awaitable[bool], [Path, Node]],
-        max_depth=-1,
-        min_depth=0,
-        timestamp=0,
-        _depth=0,
-        _name=Path(),  # noqa:B008
+        max_depth: int = 999999,
+        min_depth: int = 0,
+        timestamp: int | float = 0,
+        depth_first: bool = False,
     ):
         """
-        Call coroutine ``proc(entry,Path)`` on this node and all its children.
-
-        If `proc` raises `StopAsyncIteration`, chop this subtree.
+        Calls coroutine ``proc(node,Subpath)`` on this node and all its children.
 
         Deleted nodes are passed if they still have a Meta entry.
         """
-        todo = [(self, _name)]
 
-        while todo:
-            s, p = todo.pop()
+        async def _walk(s, p):
+            if depth_first and max_depth > len(p):
+                for k, v in s._sub.items():
+                    await _walk((v, p / k))
 
             if min_depth <= len(p) and s.meta is not None and s.meta.timestamp >= timestamp:
-                try:
-                    await proc(p, s)
-                except StopAsyncIteration:
-                    continue
-            if max_depth == len(p):
-                continue
+                await proc(p, s)
 
-            for k, v in s._sub.items():
-                todo.append((v, p / k))
+            if not depth_first and max_depth > len(p):
+                for k, v in s._sub.items():
+                    await _walk((v, p / k))
+
+        await _walk(self, Path())

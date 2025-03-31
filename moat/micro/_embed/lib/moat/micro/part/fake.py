@@ -20,10 +20,11 @@ class Pin(BaseCmd):
     Iterating it yields a new value whenever the pin changes.
     """
 
+    flag: Event | None = None
+
     def __init__(self, cfg):
         super().__init__(cfg)
         PINS[cfg["pin"]] = self
-        self.flag = Event()
         self._value = cfg.get("init", False)
 
     def in_value(self, val):
@@ -52,14 +53,17 @@ class Pin(BaseCmd):
     async def cmd_r(self, prev=None):
         "read. Wait for change if @prev (previous value) is not None"
         if prev is self._value:
+            if self.flag is None:
+                self.flag = Event()
             await self.flag.wait()
         return self._value
 
     async def cmd_w(self, v):
         "set fake pin; trigger iter if changed"
         if self._value != v:
-            self.flag.set()
-            self.flag = Event()
+            if self.flag is not None:
+                self.flag.set()
+                self.flag = Event()
             self._value = v
 
 

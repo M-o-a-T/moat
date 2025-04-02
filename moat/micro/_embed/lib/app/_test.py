@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 
 from moat.micro.cmd.base import BaseCmd
-from moat.micro.compat import Event, L, Queue, log, wait_for_ms
+from moat.micro.compat import Event, L, Queue, log, wait_for_ms, sleep_ms
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
@@ -26,14 +26,23 @@ class Cmd(BaseCmd):
     err: Exception = None
     err_evt: Event = None
 
+    doc_echo=dict(_d="Echo. Returns 'm'", m="any", _r=dict(r="any:m"))
     async def cmd_echo(self, m: Any):
         "Basic echo method, returns @m as ``result['r']``"
         return {"r": m}
 
-    def iter_it(self, lim: int | None = None):
-        "returns a `NumIter`"
-        return NumIter(lim)
+    doc_it=dict(_d="Iterator. Sends 0…lim-1.", lim="int:limit", _o="int")
+    def stream_it(self, msg:Msg):
+        "Streams numbers."
+        lim=msg.get("lim",-1)
+        i = 0
+        async with msg.stream_out() as s:
+            while i != lim:
+                s.send(i)
+                i += 1
+                await sleep_ms(100)
 
+    doc_nit=dict(_d="Call counter.", lim="int:limit")
     async def cmd_nit(self, lim: int | None = None):
         "A non-iterator counter; simply counts calls to it."
         self.n += 1
@@ -41,13 +50,16 @@ class Cmd(BaseCmd):
             raise StopAsyncIteration
         return self.n
 
+    doc_clr=dict(_d="Clear the counter.", n="int:new value, default zero")
     async def cmd_clr(self, n: int = 0):
         self.n = n
 
+    doc_print=dict(_d="print string", _0="str:output", e="bool:use stderr")
     async def cmd_print(self, d: str, e: bool = False):
         "print to stdout/stderr"
         print(d, file=sys.stderr if e else sys.stdout)
 
+    doc_error=dict(_d="raise exc", e="exc:raised")
     async def cmd_error(self, e: Exception = RuntimeError):
         "return an exception"
         if isinstance(e, Exception):
@@ -55,6 +67,7 @@ class Cmd(BaseCmd):
         else:
             raise e("UserCrash")
 
+    doc_crash=dict(_d="cause a crash", e="exc:raised")
     async def cmd_crash(self, e: Exception = RuntimeError, a=("UserCrash",)):
         "raise an exception"
         if isinstance(e, Exception):
@@ -95,6 +108,7 @@ class Cons(BaseCmd):
         if self.cfg.get("prefix", None) is None:
             self.q = Queue(self.cfg.get("lines", 10))
 
+    doc_rd=dict(_d="read console data")
     def cmd_rd(self) -> Awaitable:
         return self.q.get()
 
@@ -127,28 +141,3 @@ class Cons(BaseCmd):
                     )
                 d = 0
 
-
-class NumIter:
-    """
-    A test iterator that mimics ``range(0,‹lim›)``.
-    """
-
-    def __init__(self, lim=None):
-        self.lim = lim
-        self.n = 0
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *tb):
-        pass
-
-    def __aiter__(self):
-        return self
-
-    async def __anext__(self):
-        if self.lim is not None and self.n >= self.lim:
-            raise StopAsyncIteration
-        n = self.n
-        self.n += 1
-        return n

@@ -51,10 +51,10 @@ def Fwd(*a, **k):
             await super().setup()
             self.sd = self.root.sub_at(self.cfg["path"])
 
-        def dispatch(self, action, msg, **kw) -> Awaitable:
+        def dispatch(self, *a, **kw) -> Awaitable:
             # pylint:disable=invalid-overridden-method
             "call via the subdispatcher"
-            return self.sd.dispatch(action, msg, **kw)
+            return self.sd.dispatch(*a, **kw)
 
     return _Fwd(*a, **k)
 

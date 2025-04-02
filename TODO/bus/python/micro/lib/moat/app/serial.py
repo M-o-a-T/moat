@@ -1,9 +1,9 @@
 from moat.cmd import BaseCmd
 from moat.compat import wait_for_ms, Event, TimeoutError, Lock
-import machine as M
 from serialpacker import SerialPacker
 from moat.proto.stream import AsyncStream
 
+import machine as M
 
 # Serial packet forwarder
 # cfg:

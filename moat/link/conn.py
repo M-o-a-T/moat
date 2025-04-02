@@ -45,6 +45,7 @@ class SubConn:
 
 
 class CmdCommon:
+    doc_i_ping=dict(_d="Ping, echo", _r="Any: sends all args and keys back")
     async def cmd_i_ping(self, msg) -> bool | None:
         """
         乒 ⇒ 乓

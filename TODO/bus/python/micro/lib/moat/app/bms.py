@@ -10,6 +10,7 @@ from moat.compat import (
     TaskGroup,
 )
 from moat.util import NotGiven
+
 import machine as M
 
 
@@ -247,12 +248,13 @@ class BMSCmd(BaseCmd):
         await super().config_updated()
         await self.bms.config_updated()
 
-    async def cmd_rly(self, st=NotGiven):
+    async def cmd_rly(self, msg:Message):
         """
         Called manually, but also irreversibly when there's a "hard" cell over/undervoltage
         """
-        if st is NotGiven:
+        if not len(msg):
             return self.bms.relay.value(), self.bms.relay_force
+        st:bool=msg[0]
         await self.bms.set_relay_force(st)
 
     async def cmd_info(self, gen=-1, r=False):

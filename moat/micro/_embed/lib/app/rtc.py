@@ -29,6 +29,7 @@ class Cmd(BaseCmd):
 
         super().__init__(cfg)
 
+    doc_r=dict("read data", p="path", _r="parts")
     async def cmd_r(self, p=()):
         """
         Read (part of) the RTC data area.
@@ -46,6 +47,7 @@ class Cmd(BaseCmd):
         """
         return enc_part(get_part(self.st.data, p))
 
+    doc_w=dict("write data", p="path", d="any:deletes if missing")
     async def cmd_w(self, p=(), d=_NotGiven):
         """
         Write (part of) the RTC data area.
@@ -66,7 +68,8 @@ class Cmd(BaseCmd):
         else:
             self.st[p] = d
 
-    async def cmd_x(self, p=()):  # noqa:ARG002
+    doc_x=dict("activate data")
+    async def cmd_x(self):  # noqa:ARG002
         """
         Activate the possibly-mangled config.
 
@@ -74,5 +77,5 @@ class Cmd(BaseCmd):
         """
         dest = self._parent
         if self.st.update(dest.cfg) is not dest.cfg:
-            raise RuntimeError("must be updated inplace")
+            raise RuntimeError("must be updated in-place")
         await dest.reload()

@@ -29,17 +29,11 @@ class Cmd(BaseCmd):
         cx: {}  # additional machine.Pin params for control pin
         dx: {}  # additional machine.Pin params for data pin
         f: 100000  # frequency, Hz
-        s: false  # use bit-banging I²C driver?
-        t: 500 # bus timeout, msec
+        s: false  # soft: use bit-banging I²C driver?
+        t: 1000 # bus timeout, msec
     """
 
     _bus = None
-
-    async def cmd_reset(self, p=None):  # noqa:ARG002
-        "bus reset"
-        # for _ in self._bus_cache.values():
-        #     pass  # XXX b.close()
-        self._bus_cache = dict()
 
     async def setup(self):
         """
@@ -72,18 +66,28 @@ class Cmd(BaseCmd):
         await super().teardown()
 
     def _teardown(self):
-        if self._bus is None:
+        b, self._bus = self._bus, None
+        if b is not None:
             with contextlib.suppress(AttributeError):
-                self._bus.deinit()
+                b.deinit()
 
+    doc_rd=dict(_d="read", _0="int:addr", n="int:nbytes(16)")
     async def cmd_rd(self, i, n=16):
         "read @n bytes from bus @cd at address @i"
         return self._bus.readfrom(i, n)
 
+    doc_wr=dict(_d="write", _0="int:addr", buf="bytes:data", _r="int:nbytes")
     async def cmd_wr(self, i, buf):
         "write @buf to bus @cd at address @i"
         return self._bus.writeto(i, buf)
 
+    doc_wrrd=dict(
+        _d="write+read",
+        _0="int:addr",
+        buf="bytes:data",
+        n="int:nbytes(16)",
+        _r="int|bytes:nbytes short-written|read result",
+    )
     async def cmd_wrrd(self, i, buf, n=16):
         """
         write @buf to bus @cd at address @i, then read @n bytes.
@@ -94,9 +98,10 @@ class Cmd(BaseCmd):
         d = self._bus.writeto(i, buf, False)
         if d < len(buf):
             bus.stop()
-            return -d
+            return d
         return self._bus.readfrom(i, n)
 
+    doc_scan=dict(_d="bus scan")
     async def cmd_scan(self):
         "scan the bus"
         return self._bus.scan()

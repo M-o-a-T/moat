@@ -21,6 +21,7 @@ class Cmd(BaseCmd):
         super().__init__(cfg)
         self.cache = {}
 
+    doc_test=dict(_d="enc test str", _r="str:fancy string")
     async def cmd_test(self):
         """
         Returns a test string: r CR n LF - NUL c ^C e ESC !
@@ -29,6 +30,7 @@ class Cmd(BaseCmd):
         """
         return TEST_MAGIC
 
+    doc_unproxy=dict(_d="drop proxy", _0="Proxy")
     async def cmd_unproxy(self, p):
         """
         Tell the client to forget about a proxy.
@@ -39,6 +41,13 @@ class Cmd(BaseCmd):
             raise RuntimeError("cannot be deleted")
         drop_proxy(p)
 
+    doc_eval=dict(
+        _d="eval",
+        _0="Proxy|str|list",
+        r="str|bool:cache result",
+        a="list:fn args",
+        k="dict:fn kwargs",
+    )
     async def cmd_eval(self, x, r: str | bool = False, a=None, k=None):
         """
         Debugging/Introspection/Evaluation.
@@ -65,7 +74,6 @@ class Cmd(BaseCmd):
         list of indices of complex members). For objects, a third element
         contains the object type's name.
         Otherwise (@r is ``None``), a proxy is returned.
-
         """
         if not self.cache:
             self.cache["self"] = self
@@ -115,17 +123,7 @@ class Cmd(BaseCmd):
                     res = enc_part(rd, res.__class__.__name__)
         return res
 
-    async def cmd_info(self):
-        """
-        Returns some basic system info.
-        """
-        d = {}
-        fb = self.root.is_fallback
-        if fb is not None:
-            d["fallback"] = fb
-        d["path"] = sys.path
-        return d
-
+    doc_ping=dict(_d="Reply test", m="any:Return data", _r=dict(m="any:Return data"))
     async def cmd_ping(self, m=None):
         """
         Echo @m.

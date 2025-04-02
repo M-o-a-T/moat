@@ -183,6 +183,12 @@ class BaseCell(BaseCmd):
         "read cell balancer temperature"
         raise NotImplementedError("no idea how")
 
+    doc_dis=dict(
+        _d="bal discharge",
+        v="float:threshold",
+        f="bool:bypass balancer",
+        _r=["float:current thresh", "bool:current bypass"],
+    )
     async def cmd_dis(self, v: float | None = None, f: bool | None = None):
         """
         balance low: drain cell until below @v.
@@ -204,6 +210,12 @@ class BaseCell(BaseCmd):
         """set discharging balancer"""
         raise NotImplementedError("no idea how")
 
+    doc_chg=dict(
+        _d="bal charge",
+        v="float:threshold",
+        f="bool:bypass balancer",
+        _r=["float:current thresh", "bool:current bypass"],
+    )
     async def cmd_chg(self, v: float | None = None, f: bool | None = None):
         """
         balance high: charge cell until above @v
@@ -226,6 +238,11 @@ class BaseCell(BaseCmd):
         """set charging balancer"""
         raise NotImplementedError("no idea how")
 
+    doc_lim=dict(
+        _d="get limits",
+        soc="float:current SoC,unknown=0.5",
+        _r=["float:charge pct", "float:discharge pct"],
+    )
     async def cmd_lim(self, soc: float = 0.5):
         """
         Limits (as fraction of C) depending on @soc, cell
@@ -282,6 +299,16 @@ class BalBaseCell(BaseCell):
     balance_threshold: float = None
     balance_forced: bool = False
 
+    doc_bal=dict(
+        _d="get balancer state",
+        _r=dict(
+            b="bool:OK",
+            f="bool:forced",
+            ot="bool:overtemp",
+            pwm="dict:pwm data",
+            th="float:threshold",
+        ),
+    )
     async def cmd_bal(self):
         "Get Balancer state/data"
         res = dict(b=self.in_balance, f=self.balance_forced, ot=self.balance_over_temp)
@@ -356,27 +383,32 @@ class BaseCells(ArrayCmd):
         else:
             self.work = attrdict(**w)
 
+    doc_c=dict(_d="charge state", _r="float")
     async def cmd_c(self):
         """fetch charge state"""
         if self.w_max is None:
             return 0.5
         return self.w / self.w_max
 
+    doc_u=dict(_d="voltage sum", _r="float")
     async def cmd_u(self):
         """fetch voltage sum"""
         r = await self.cmd_all("u")
         return sum(r)
 
+    doc_t=dict(_d="min/max bat temp", _r=["float:min", "float:max"])
     async def cmd_t(self):
         """fetch temperature min/max"""
         r = await self.cmd_all("t")
         return min(_s(r), default=None), max(_s(r), default=None)
 
+    doc_tb=dict(_d="min/max balancer temp", _r=["float:min", "float:max"])
     async def cmd_tb(self):
         """fetch balancer temperature min/max"""
         r = await self.cmd_all("tb")
         return min(_s(r), default=None), max(_s(r), default=None)
 
+    doc_lim=dict(_d="chg/dischg limit factors", _r=["float:chg", "float:dischg"])
     async def cmd_lim(self):
         """return charge,discharge limit factors"""
         chg, dis = None, None
@@ -436,6 +468,7 @@ class BaseCells(ArrayCmd):
             self.p = p = i * u
             await self._add_w(p, ticks_diff(t1, t2) / 1000, u > self.u_mid)
 
+    doc_w=dict(_d="energy content", _r="float:current total", w="float:override")
     async def cmd_w(self, w: float | None = None) -> float:
         """get, or manually override, battery energy content"""
         wx = self.w
@@ -531,6 +564,7 @@ class BaseBattery(BaseCells):
         """fetch battery current"""
         raise RuntimeError
 
+    doc_ud=dict(_d="delta current/total V", _r="float:sum(cell)-total")
     async def cmd_ud(self):
         """Get delta between cell voltage sum and battery voltage."""
         u1 = await self.cmd_u()
@@ -608,6 +642,7 @@ class BaseBalancer(BaseCmd):
             await self.start_tasks(tg)
             await super().task()
 
+    doc_u=dict(_d="V limits", h="float:max", l="float:min")
     async def cmd_u(self, h: float | None = None, l: float | None = None):
         "set desired voltage levels"
         if h is not None:

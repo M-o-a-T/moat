@@ -44,6 +44,7 @@ class Relay(BaseCmd):
         async with TaskGroup() as self.__tg:
             await super().run()
 
+    doc_w=dict(_d="change", _0="bool:new value", f="bool|None:force?")
     async def cmd_w(self, v=None, f=NotGiven):
         """
         Change relay state.
@@ -110,6 +111,12 @@ class Relay(BaseCmd):
         "flag whether the relay is delaying a change"
         return self._delay is not None
 
+    doc_r=dict(
+        _d="get state",
+        _r=dict(
+            v="bool:std output", f="bool:forced output", d="int:delay(ms)", p="bool:hardware state"
+        ),
+    )
     async def cmd_r(self):
         """
         Returns the current state, as a mapping.

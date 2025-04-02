@@ -271,6 +271,6 @@ class Node:
 
             if not depth_first and max_depth > len(p):
                 for k, v in s._sub.items():
-                    await _walk((v, p / k))
+                    await _walk(v, p / k)
 
         await _walk(self, Path())

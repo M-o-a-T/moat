@@ -92,8 +92,9 @@ class ADC(BaseCmd):
         "iterate the pin's values"
         return self.adc
 
-    async def cmd_r(self, o=None):
+    doc_r=dict(_d="read", o="any:wait for val to not be this", d="int:delta")
+    async def cmd_r(self, o: int = None, d: int = 0):
         "read. Wait for change if @o (old value) is not None"
-        if o is not None and self.adc.val != o:
+        if o is not None and abs(self.adc.val - o) > d:
             await self.adc.evt.wait()
         return self.adc.val

@@ -101,6 +101,15 @@ class Hello(SubConn, CmdCommon):
         self.auth_data = data
         return True
 
+    doc_i_hello=dict(
+        _d="Process remote Hello msg",
+        _r="auth state",
+        _0="int:protocol",
+        _1="str:remote name",
+        _2="str:local name",
+        _3="bool:server flag",
+        _4=["str:auth method"],
+    )
     async def cmd_i_hello(self, msg) -> bool | None:
         """
         Process the remote hello message.

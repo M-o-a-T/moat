@@ -22,6 +22,7 @@ may fail.
 from __future__ import annotations
 
 from moat.lib.codec.proxy import as_proxy
+from moat.lib.cmd.errors import ShortCommandError,LongCommandError
 from moat.micro.cmd.util import run_no_exc, wait_complain
 from moat.micro.cmd.util.part import enc_part, get_part
 from moat.micro.compat import AC_use, Event, L, idle
@@ -38,24 +39,6 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable
 
     from moat.micro.cmd.tree.dir import BaseSuperCmd, Dispatch
-
-
-as_proxy("_SCmdErr")
-
-
-class ShortCommandError(ValueError):
-    "The command path was too short"
-
-    pass
-
-
-as_proxy("_LCmdErr")
-
-
-class LongCommandError(ValueError):
-    "The command path was too long"
-
-    pass
 
 
 class ACM_h:
@@ -244,6 +227,7 @@ class BaseCmd(Base):
                 await wait_complain(f"Rdy {self.path}", 250, self._ready.wait)
             return None
 
+        doc_rdy_=dict(_d="check readiness", w="bool:wait for it?")
         def cmd_rdy_(self, w=True) -> Awaitable:
             """
             Check if / wait for readiness.
@@ -307,8 +291,8 @@ class BaseCmd(Base):
 
     async def dispatch(
         self,
-        action: list[str],
-        msg: dict,
+        action: Iterator,
+        msg: SubCmd,
         *,
         rep: int | None = None,
         wait: bool = True,
@@ -386,6 +370,11 @@ class BaseCmd(Base):
 
     # globally-available commands
 
+    doc_dir_=dict(
+        _d="directory",
+        v="bool:verbose",
+        _r=dict(c=["str:commands"], d=["str:modules"], j="bool:callable"),
+    )
     async def cmd_dir_(self, v=True):
         """
         Rudimentary introspection. Returns a dict with
@@ -416,6 +405,7 @@ class BaseCmd(Base):
             res["i"] = i
         return res
 
+    doc_cfg_=dict(_d="config", _0="path:subdir", _r="parts")
     async def cmd_cfg_(self, p=()):
         """
         Read this item's config.

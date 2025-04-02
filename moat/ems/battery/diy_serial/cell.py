@@ -78,6 +78,7 @@ class Cell(BaseCell):
         self.load_volt = self._raw2volt(msg.bypassVoltRaw)
         self.load_resist = msg.loadResRaw / 16
 
+    doc_param=dict(_d="read params", _r="dict[dict]:various parameters")
     async def cmd_param(self):
         return dict(
             typ="diy",
@@ -93,6 +94,7 @@ class Cell(BaseCell):
         res = (await self.comm(p=RequestReadSettings(), s=self.cfg.pos))[0]
         self.m_settings(res)
 
+    doc_u=dict(_d="read Vcell", _r="float")
     async def cmd_u(self):
         "read cell voltage"
         if self.val_u is not None:
@@ -108,6 +110,7 @@ class Cell(BaseCell):
             self.v_now = self._raw2volt(vRaw)
         # msg.bypassRaw: legacy, unused
 
+    doc_t=dict(_d="read Tcell", _r="float:degC")
     async def cmd_t(self):
         "read cell temperature"
         if self.load_temp is None:
@@ -127,12 +130,13 @@ class Cell(BaseCell):
         self.cfg.pid.i = msg.ki
         self.cfg.pid.d = msg.kd
 
+    doc_calib=dict(_d="Calibrate (read if no data)", _r="dict:current data", vcal="float:degC", t="")
     async def cmd_calib(self, vcal=None, t=None, v=None):
         if vcal is not None:
             self.v_calibration = vcal
-        if bal_t is not None:
+        if t is not None:
             self.load_temp = t
-        if bal_v is not None:
+        if v is not None:
             self.load_volt = v
         if vcal is None and t is None and v is None:
             return dict(vcal=self.v_calibration, t=self.load_temp, v=self.load_volt)
@@ -146,6 +150,7 @@ class Cell(BaseCell):
                 s=self.cfg.pos,
             )
 
+    doc_pid=doct(_d="r/w PID values", _r="dict:current data", p="float:P", i="float:I", d="float:D")
     async def cmd_pid(self, **pid):
         "get/set the balancer PID values"
         if pid:
@@ -156,6 +161,7 @@ class Cell(BaseCell):
             self.m_pid(res)
         return self.cfg.pid
 
+    doc_bd=dict(_d="balance down", _r="dict:current state", thr="float:thresholdV")
     async def cmd_bd(self, thr=None):
         """
         Balance down: set the balancer level; get balancer level and current PWM power
@@ -173,6 +179,7 @@ class Cell(BaseCell):
     def m_bal_power(self, msg):
         self.bal_power = res.pwm / 255
 
+    doc_bd_sum=dict(_d="balance sum", _r="int:charge count")
     async def cmd_bd_sum(self):
         "get current counter"
         res = (await self.comm(p=RequestBalanceCurrentCounter(), s=self.cfg.pos))[0]

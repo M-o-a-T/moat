@@ -7,16 +7,18 @@ Rationale
 
 MoaT contains some components which require a possibly bidirectional stream
 of asynchronous messaging, including request/reply interactions and data
-streaming.
+streaming, possibly across system boundaries (but should be efficient on
+same-system calls).
 
 This library supports such interactions.
 
 Prerequisites
 =============
 
-The library requires a reliable underlying transport. MoaT uses CBOR, but
-any reliable, non-reordering messsage stream that can encode basic Python
-data structures (plus whatever objects you send/receive) works.
+This library requires a reliable underlying transport for Python objects.
+MoaT uses CBOR, but any reliable, non-reordering messsage stream that can
+encode basic Python data structures (plus whatever objects you
+send/receive) works.
 
 The MoaT-Cmd library does not itself call the transport. Instead it affords
 basic async methods to iterate on messages to send, and to feed incoming
@@ -26,83 +28,68 @@ lower-level data in.
 Usage
 =====
 
+No transport
+++++++++++++
+
 .. code-block:: python
 
     from moat.lib.codec import get_codec
+    from moat.lib.cmd import MsgEndpoint,MsgSender
 
-    async def handle_command(msg):
-        if msg.cmd[0] == "Start":
-            return "OK starting"
+    class Called(MsgEndpoint):
+        async def handle_command(msg):
+            if msg.cmd[0] == "Start":
+                return "OK starting"
 
-        if msg.cmd[0] == "gimme data":
-            async with msg.stream_w("Start") as st:
-                for i in range(10):
-                    await st.send(i+msg.kw["x"])
-                return "OK I'm done"
+            if msg.cmd[0] == "gimme data":
+                async with msg.stream_out("Start") as st:
+                    for i in range(10):
+                        await st.send(i+msg.kw["x"])
+                    return "OK I'm done"
 
-        if msg.cmd[0] == "alive":
-            async with msg.stream_r("Start") as st:
-                async for data in st:
-                    print("We got", data)
-            return "OK nice"
+            if msg.cmd[0] == "alive":
+                async with msg.stream_in("Start") as st:
+                    async for data in st:
+                        print("We got", data)
+                return "OK nice"
 
         raise ValueError(f"Unknown: {msg !r}")
         
-    async with Transport(handle_command) as tr, anyio.create_task_group() as tg:
-        decoder = get_codec("cbor")()
+    srv=Called()
+    client=MsgSender(srv)
 
-        def reader():
-            # receive messages from channel
-            async for msg in channel.receive():
-                decoder.feed(msg)
-                for m in decoder:
-                    await tr.msg_in(m)
+    res, = await client.cmd("Start")
+    assert res.startswith("OK")
 
-        def sender():
-            # send messages to channel
-            while True:
-                msg = await tr.msg_out()
-                await channel.send(packer(msg))
+    async with client.cmd("gimme data",x=5).stream_in(5) as st:
+        async for nr, in st:
+            print(nr)  # 5, 6, .. 14
+        assert st.a[0] == "OK I'm done"
+        
+    async with client.cmd("alive").stream_out() as st:
+        for i in range(3):
+            await st.send(i)
+        assert st.a[0] == "OK nice"
 
-        def request():
-            # streaming data in
-            msg, = await tr.cmd("Start", x=123)
-            print("Start", msg)
-            async with tr.stream_r("gimme data") as st:
-                print("They are starting", st.msg)
-                async for msg in st:
-                    print("I got", msg.args[0])
-            print("They are done", st.msg)
-            # may be None if they didn't send a stream
+Using a transport
++++++++++++++++++
 
-        def int_stream():
-            # streaming data out
-            async with tr.stream_w("alive") as st:
-                print("They replied", st.args)
-                i = 0
-                while i < 100:
-                    await st.send(i)
-                    i += 1
-                    anyio.sleep(1/10)
-                await st.result("The end.")
-            print("I am done", st.msg[0])
-            
-            
-        tg.start_soon(reader)
-        tg.start_soon(sender)
-        tg.start_soon(handler)
-
-        tg.start_soon(request)
-        tg.start_soon(int_stream)
+TODO
 
 
-Specification
-=============
+API Specification
+=================
+
+TODO
+
+    
+Transport Specification
+=======================
 
 MoaT-Cmd messages are encoded with CBOR.
 
 All MoaT-Cmd messages are non-empty lists whose first element is a
-small integer, identifying a sub-channel.
+small(ish) integer.
 
 A transport that enforces message boundaries MAY send each message without
 the leading array mark byte(s). If this option is not used or not
@@ -112,21 +99,21 @@ communication.
 MoaT-Cmd messaging is simple by design and consists of a command (sent from
 A to B) followed by a reply (sent from B to A). Both directions may
 independently indicate that more, possibly streamed, data will follow. The
-first and last message of a streamed command or reply are considered to be
-out-of-band.
+first and (if streaming) last message of a streamed command or reply are
+considered to be out-of-band.
 
 There is no provision for messages that don't have a reply. On the other
 hand, an "empty" reply is just three bytes and the sender isn't required to
 wait for it.
 
-The side opening a sub-channel uses non-negative integers as channel ID.
-Replies carry the ID's bitwise-negated value. Thus the ID spaces of both
-directions are separate.
+The side opening a sub-channel uses a unique non-negative integer as
+channel ID. Replies carry the ID's bitwise-negated value. Thus the ID
+spaces of both directions are separate.
 
 IDs are allocated when sending the first message on a sub-channel. They
-MUST NOT be reused until final messages have been exchanged.
-
-Exactly one final message MUST be sent in both directions.
+MUST NOT be reused until final messages (stream bit off) have been
+exchanged in both directions. Corollary: Exactly one final message MUST be
+sent in both directions.
 
 
 Message format
@@ -141,9 +128,9 @@ The integer is interpreted as follows.
   the message is the final message for this subchannel and direction.
 
 * Bit 1: Error/Warning.
-  If bit 0 is set, the message is a warning or similar information and
-  SHOULD be attached to the following command or reply. Otherwise it is an
-  error.
+  If bit 0 is clear, the message denotes an error which terminates the channel.
+  Otherwise it is a warning or similar information, and SHOULD be attached
+  to the following command or reply.
 
 All other bits contain the message ID, left-shifted by two bits. This
 scheme allows for five concurrent messages per direction before encoding to
@@ -151,7 +138,7 @@ two bytes is required.
 
 Negative integers signal that the ID has been allocated by that message's
 recipient. They are inverted bit-wise, i.e. ``(-1-id)``. Thus an ID of zero
-is legal. The bits described above are not affected by his inversion. Thus
+is legal. The bits described above are not affected by this inversion. Thus
 a command with ID=1 (no streaming, no error) is sent with an initial
 integer of 4; the reply uses -5.
 
@@ -187,9 +174,9 @@ command that might trigger a nontrivial amount of messages, it MAY send a
 specific warning (i.e. a message with both Error and Streaming bits set)
 before its initial command or reply. This warning MUST consist of a single
 non-negative integer that advises the sender of the number of streamed
-messages it may transmit.
+messages it may transmit without acknowledgement.
 
-During stream transmission, the recipient then SHOULD periodically send some
+During stream transmission, the recipient then MUST periodically send some
 more (positive) integers to signal the availability of more buffer space.
 It MUST send such a message if the counter is zero (after space becomes
 available of course) and more messages are expected.
@@ -203,7 +190,7 @@ incoming message gets dropped due to resource exhaustion; likewise, the API
 is required to notify the local side.
 
 Error handling
-++++++++++++++
+==============
 
 The exact semantics of error messages are application specific.
 
@@ -214,8 +201,8 @@ Error messages with the streaming bit set are either flow control
 messages (see above) or warnings.
 
 
-Known errors
-------------
+Well-Known Errors
++++++++++++++++++
 
 * -1: Unspecified
 
@@ -230,7 +217,8 @@ Known errors
 
 * -2: Can't receive this stream
 
-  Sent if a command isn't prepared to receive a streamed reply.
+  Sent if a command isn't prepared to receive a streamed request or reply
+  on this endpoint.
 
 * -3: Cancel
 
@@ -253,8 +241,7 @@ Known errors
 
 * -6: Must stream
 
-  Sent if a command isn't prepared to handle a non-streamed request or
-  reply.
+  Sent if a command will not handle a non-streamed request or reply.
 
 
 * -11 …: No Command
@@ -265,9 +252,14 @@ Known errors
   at the destination, i.e. if the command is ("foo","bahr","baz") and "foo"
   doesn't know about "bahr", the error is -12.
 
+  TODO
+
+Other errors are sent using MoaT's link object encapsulation, i.e. the
+error type (either a proxy or the name of the exception) followed by its
+argument list and keywords (if present).
 
 Examples
-========
+++++++++
 
 .. note::
 
@@ -276,6 +268,8 @@ Examples
     * S: Streaming
     * E: Error
 
+Simple command:
+
 = = = ====
 S E D Data
 = = = ====
@@ -283,12 +277,16 @@ S E D Data
 - - - You too
 = = = ====
 
+Simple command, error reply:
+
 = = = ====
 S E D Data
 = = = ====
 - - + Hello again
 - * - Meh. you already said that
 = = = ====
+
+Receive a data stream:
 
 = = = ====
 S E D Data
@@ -299,10 +297,12 @@ S E D Data
 * - - TWO
 * * - Missed some
 * - - FIVE
-- - + Oops? better stop
+- - + [ 'OopsError' ]
 * - - SIX
 - - - stopped
 = = = ====
+
+Transmit a data stream:
 
 = = = ====
 S E D Data
@@ -315,6 +315,8 @@ S E D Data
 - * + OK OK I'll stop
 = = = ====
 
+Receive with an error:
+
 = = = ====
 S E D Data
 = = = ====
@@ -322,26 +324,30 @@ S E D Data
 * - - OK here they are
 * - - NINE
 * - - TEN
-- * - oops I crashed
+- * - [ 'CrashedError', -42, 'Owch', {'mitigating': 'circumstances'} ]
 - - + *sigh*
 = = = ====
+
+Bidirectional data stream:
 
 = = = ====
 S E D Data
 = = = ====
 * - + Let's talk
 * - - OK
-* - + *voice data* …
-* - - *also voice data* …
+* - + *chat data* …
+* - - *also chat data* …
 - - + hanging up
 - - - oh well
 = = = ====
+
+Data stream with flow control:
 
 = = = ====
 S E D Data
 = = = ====
 * * + 2
-* - + gimme your database
+* - + gimme your data
 * - - OK here they are
 * - - A
 * * + 1

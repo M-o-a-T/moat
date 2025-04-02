@@ -4,11 +4,13 @@ from __future__ import annotations
 import anyio
 import signal
 import time
+import sys
 from anyio.abc import SocketAttribute
 
 from asyncscope import scope
 from datetime import datetime, UTC
 from collections import defaultdict
+from contextlib import nullcontext
 
 from moat.lib.cmd import CmdHandler
 from moat.lib.cmd.anyio import run as run_cmd_anyio
@@ -215,6 +217,7 @@ class ServerClient(SubConn, CmdCommon):
         cmd = getattr(self, "cmd_" + "_".join(msg.cmd))
         return cmd(msg)
 
+    doc_d_get=dict(_d="get subnode data", _r=["Any:Data", "MsgMeta"], _0="Path")
     async def cmd_d_get(self, msg):
         """Get the data of a sub-node.
 
@@ -228,6 +231,7 @@ class ServerClient(SubConn, CmdCommon):
         d = self.server.data[msg[0]]
         await msg.result(d.data, d.meta)
 
+    doc_d_list=dict(_d="get subnode child names", _r=["Any:Data", "MsgMeta"], _o="str")
     async def cmd_d_list(self, msg):
         """Get the child names of a sub-node.
         Arguments:
@@ -241,7 +245,16 @@ class ServerClient(SubConn, CmdCommon):
             for k in list(self.server.data[msg[1]].keys()):
                 await msg.send(k)
 
-    async def cmd_d_walk(self, msg):
+    doc_d_walk=dict(
+        _d="get subtree",
+        _0="Path",
+        _1="float:mintime",
+        _2="int:mindepth",
+        _3="int:maxdepth",
+        _r=dict(_0="int:depth", _1="Path:sub", _2="Any:data", _99="MsgMeta"),
+        _o="str",
+    )
+    async def stream_d_walk(self, msg):
         """
         Get a whole subtree.
         Arguments:
@@ -260,12 +273,18 @@ class ServerClient(SubConn, CmdCommon):
         d = self.server.data.get(msg[0], create=False)
         ts = msg.get(1, 0)
         xmin = msg.get(2, 0)
-        xmax = msg.get(3, -1)
-        async with msg.stream_w():
-            await d.walk(_writer, timestamp=ts, min_depth=xmin, max_depth=xmax)
+        xmax = msg.get(3, 9999999)
+        async with msg.stream_out():
+            try:
+                await d.walk(_writer, timestamp=ts, min_depth=xmin, max_depth=xmax)
+            except Exception as exc:
+                breakpoint()
+                raise
 
-    async def cmd_d_set(self, msg, **kw):
+    doc_d_set=dict(_d="set value", _0="Path", _1="Any", _99="MsgMeta:optional")
+    async def cmd_d_set(self, msg):
         """Set a node's value.
+
         Arguments:
         * pathname
         * value
@@ -283,113 +302,77 @@ class ServerClient(SubConn, CmdCommon):
 
         self.server.maybe_update(path, value, meta)
 
-    async def cmd_d_del(self, msg, **kw):
-        """Delete a node's value."""
-        return await self._set_value(msg, **kw)
+    doc_d_del=dict(_d="delete value", _0="Path", _1="Any", _99="MsgMeta:optional")
+    async def cmd_d_del(self, msg):
+        """Delete a node's value.
 
-    async def cmd_d_update(self, msg):
+        Arguments:
+        * pathname
+        * optional: metadata
         """
-        Apply a stored update.
-
-        You usually do this via a stream command.
-        """
-        msg = UpdateEvent.deserialize(
-            self.root,
-            msg,
-            nulls_ok=self.nulls_ok,
-            conv=self.conv,
-            cache=self.server._nodes,
-        )
-        res = await msg.entry.apply(msg, server=self, root=self.root)
-        if res is None:
-            return False
+        path = msg[0]
+        value = msg[1]
+        if len(msg) > 2:
+            meta = msg[2]
         else:
-            return res.serialize(chop_path=self._chop_path, conv=self.conv)
+            meta = MsgMeta(origin=self.name)
+        meta.source = "Client"
 
-    async def cmd_d_chkdel(self, msg):
-        nodes = msg.nodes
-        deleted = NodeSet()
-        for n, v in nodes.items():
-            n = Node(n, None, cache=self.server.node_cache)
-            r = RangeSet()
-            r.__setstate__(v)
-            for a, b in r:
-                for t in range(a, b):
-                    if t not in n:
-                        deleted.add(n.name, t)
-        if deleted:
-            await self.server._send_event("info", attrdict(deleted=deleted.serialize()))
+        self.server.maybe_update(path, NotGiven, meta)
 
+    doc_i_state=dict(_d="state", _r="MsgMeta:optional")
     async def cmd_i_state(self, msg):
         """Return some info about this node's internal state"""
         return await self.server.get_state(**msg)
 
-    async def cmd_d_deltree(self, msg):
+    doc_d_deltree=dict(_d="drop a subtree", _0="Path", _r="int:#nodes", _o="node data")
+    async def stream_d_deltree(self, msg):
         """Delete a node's value.
         Sub-nodes are cleared (after their parent).
         """
         seq = msg.seq
-        if not msg.path:
+        root = msg[0]
+        if not root:
             raise ClientError("You can't delete the root node")
-        ps = PathShortener(msg.path)
+        ps = PathShortener(root)
+        data = self.server.data[root]
+        res = 0
 
-        async def _del(entry, acl):
-            res = 0
-            if entry.data is not None:
-                async with self.server.next_event() as event:
-                    evt = await entry.set_data(event, NotGiven, server=self, tock=self.server.tock)
-                    if nchain:
-                        r = evt.serialize(
-                            chop_path=self._chop_path,
-                            nchain=nchain,
-                            with_old=True,
-                            conv=self.conv,
-                        )
-                        r["seq"] = seq
-                        r.pop("new_value", None)  # always None
-                        ps(r)
-                        await self.send(r)
+        async with msg.stream_w() if msg.can_stream else nullcontext() as ws:
+
+            async def _del(entry, path):
+                if entry.data is NotGiven:
+                    return
+
+                meta = MsgMeta(origin=self.name)
+                meta.source = "Client"
+
+                data = entry.data
+                if self.server.maybe_update(path, NotGiven, meta) and ws is not None:
+                    await ws.send(*ps.short(path), data, *meta.dump())
+
+                nonlocal res
                 res += 1
-            if not acl.allows("e") or not acl.allows("x"):
-                return
-            for v in entry.values():
-                a = acl.step(v, new=True)
-                res += await _del(v, a)
-            return res
 
-        res = await _del(entry, acl)
-        if nchain:
-            await self.send({"seq": seq, "state": "end"})
-        else:
-            return {"changed": res}
+            await data.walk(_del)
+            await msg.result(res)
 
+    doc_i_log=dict(_d="start logging", _0="str:filename", state="bool:include current state")
     async def cmd_i_log(self, msg):
-        await self.server.run_saver(path=msg["path"], save_state=msg.get("fetch", False))
+        await self.server.run_saver(path=msg[0], save_state=msg.get("state", False))
         return True
 
+    doc_s_save=dict(_d="save current state", _0="str:filename", prefix="path:subtree")
     async def cmd_s_save(self, msg):
         prefix = msg.get("prefix", P(":"))
-        await self.server.save(path=msg["path"], prefix=prefix)
+        await self.server.save(path=msg[0], prefix=prefix)
 
         return True
 
+    doc_s_load=dict(_d="load state", _0="str:filename", prefix="path:subtree")
     async def cmd_s_load(self, msg):
         prefix = msg.get("prefix", P(":"))
-        return await self.server.load(path=msg["path"], prefix=prefix)
-
-    async def cmd_i_stop(self, msg):
-        try:
-            t = self.tasks[msg.task]
-        except KeyError:
-            return False
-        t.cancel()
-        return True
-
-    def drop_old_event(self, evt, old_evt=NotGiven):
-        return self.server.drop_old_event(evt, old_evt)
-
-    def mark_deleted(self, node, tick):
-        return self.server.mark_deleted(node, tick)
+        return await self.server.load(path=msg[0], prefix=prefix)
 
 
 class _RecoverControl:

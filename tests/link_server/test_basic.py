@@ -3,6 +3,7 @@ from __future__ import annotations
 import anyio
 import pytest
 import time
+import sys
 
 from moat.link.meta import MsgMeta
 from moat.link._test import Scaffold
@@ -114,6 +115,7 @@ async def test_ls_walk(cfg):
             await c.cmd(P("d.set"), p, v)
             n.set(p, v, MsgMeta(origin="Test"))
 
+        print("********",file=sys.stderr)
         await data(s)
         nn = await fetch(c, "a")
 
@@ -137,13 +139,13 @@ async def test_ls_save(cfg, tmp_path):
             n.set(p, v, MsgMeta(origin="Test"))
 
         await data(s)
-        await c.cmd(P("s.save"), path=str(fname))
+        await c.cmd(P("s.save"), str(fname))
 
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.server(init={"Hello": "there!", "test": 1})
         c = await sf.client()
         nn = await fetch(c, "a")
         assert n.get(P("a")) != nn
-        await c.cmd(P("s.load"), path=str(fname))
+        await c.cmd(P("s.load"), str(fname))
         nn = await fetch(c, "a")
         assert n.get(P("a")) == nn

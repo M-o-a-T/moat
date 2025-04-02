@@ -14,6 +14,8 @@ import logging
 
 from typing import TYPE_CHECKING
 
+from .const import *
+
 if TYPE_CHECKING:
     from typing import Any, Protocol, AsyncContextManager
     from collections.abc import Awaitable
@@ -38,30 +40,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-# Lib/enum.py is *large*.
-
-# bitfields
-
-B_STREAM = const(1)
-B_ERROR = const(2)
-
-# errors
-
-E_UNSPEC = const(-1)
-E_NO_STREAM = const(-2)
-E_CANCEL = const(-3)
-E_NO_CMDS = const(-4)
-E_SKIP = const(-5)
-E_MUST_STREAM = const(-6)
-E_NO_CMD = const(-11)
-
-# Stream states
-
-S_END = const(3)  # terminal Stream=False message has been sent/received
-S_NEW = const(4)  # No incoming message yet
-S_ON = const(5)  # we're streaming (seen/sent first message)
-S_OFF = const(6)  # in: we don't want streaming and signalled NO
 
 # if S_END, no message may be exchanged
 # else if Stream bit is False, stop streaming if it is on, go to S_END: out-of-band
@@ -158,7 +136,6 @@ class CmdHandler(CtxObj):
 
     def __init__(self, handler: MsgIn):
         self._msgs: dict[int, Stream] = {}
-        self._id = 1
         self._send_q = Queue(9)
         self._recv_q = Queue(99)
         self._debug = logger.warning
@@ -182,7 +159,7 @@ class CmdHandler(CtxObj):
         self._id += 1
         return self._id
 
-    def attach(self, mid, proc, force: bool = False):
+    def attach(self, mid:int, proc, force: bool = False):
         """
         Attach a handler for raw incoming messages.
         """
@@ -190,27 +167,30 @@ class CmdHandler(CtxObj):
             raise ValueError(f"MID {mid} already known")
         self._msgs[mid] = proc
 
-    def detach(self, mid, proc=None):
+    def detach(self, mid:int, proc=None):
         """
         Remove a handler for raw incoming messages.
         """
-        if proc is None or self._msgs[mid] == proc:
-            try:
-                del self._msgs[mid]
-            except KeyError:
-                if mid > 0:
-                    raise
-            if mid <= 0:
-                return
+        if proc is not None and self._msgs[mid] is not proc:
+            # already superseded
+            return
+        try:
+            del self._msgs[mid]
+        except KeyError:
+            if mid > 0:
+                raise
+        if mid <= 0:  # remote
+            return
 
-            if mid < 6:
-                self._id1.add(mid)
-            elif L and mid < 64:
-                self._id2.add(mid)
-            else:
-                self._id3.add(mid)
+        # Optimizing for CBOR integers
+        if mid < 6:
+            self._id1.add(mid)
+        elif L and mid < 64:
+            self._id2.add(mid)
+        else:
+            self._id3.add(mid)
 
-    def forward(self, msg, cmd):
+    def forward(self, msg:Stream, cmd:Path):
         """
         Forward an otherwise-unhandled(!!) message to this stream, using
         this command vector. (Arguments and keywords are copied from the message.)
@@ -409,49 +389,22 @@ class CmdHandler(CtxObj):
 
 
 @_exp
-class Stream:
+class SubCmd:
     """
-    This object handles one conversation.
-    It's also used as a message container.
+    This pseudo stream can be used for command delegation.
 
-    The last non-streamed incoming message's data are available in @msg.
-    The first item of an initial message is stored in @cmd, if the last
-    item is a mapping it's in @kw; the individual items can be accessed
-    directly by indexing the message.
+    Streaming through it is not supported.
     """
 
     _cmd: Any  # first element of the message
     _args: list[Any]
     _kw: dict[str, Any]
+    _res: tuple[tuple, dict] | None = None
 
-    _fli = None  # flow control for incoming messages
-    _flo = None  # flow control for outgoing messages
-    _flo_evt = None
-    _recv_skip = False
-    _recv_q = None
-    _recv_qlen = 0
-    scope = None
-    _msg: outcome.Outcome = None
-    msg2 = None
-    _initial = False
-    s_out = False
-
-    stream_out = S_NEW
-    stream_in = S_NEW
-
-    def __init__(self, parent: CmdHandler, mid: int, qlen=42, s_in=True, s_out=True):
-        self.parent = parent
-        self.id = mid
-        if mid > 0:
-            mid -= 1
-        self._i = mid << 2  # ready for sending
-        self.cmd_in: Event = Event()
-
-        if s_in:
-            self._recv_q = Queue(qlen)
-            self._recv_qlen = qlen
-        if s_out:
-            self.s_out = s_out
+    def __init__(self, p: path, a: list, kw: dict):
+        self._cmd = p
+        self._args = a
+        self._kw = kw
 
     def __getitem__(self, k: int | str) -> Any:
         """
@@ -486,6 +439,94 @@ class Stream:
         if self._kw:
             raise ValueError("This message contains keywords.")
         return iter(self._args)
+
+    def _unwrap(self):
+        pass
+
+    @property
+    def cmd(self) -> Path:
+        "Retrieve the command."
+        self._unwrap()
+        return self._cmd
+
+    @property
+    def args(self):
+        "Retrieve the argument list."
+        self._unwrap()
+        return self._args
+
+    def __len__(self):
+        self._unwrap()
+        return len(self._args)
+
+    def __bool__(self):
+        return True
+
+    @property
+    def kw(self):
+        "Retrieve the keywords."
+        self._unwrap()
+        return self._kw
+
+    def result(self, *a, **kw) -> Awaitable[None]:
+        if self._res is not None:
+            raise RuntimeError("already called")
+        self._res = (a, kw)
+
+    async def __call__(self: dispatcher) -> None:
+        try:
+            res = dispatcher(self)
+            if hasattr(res, "__await__"):
+                res = await res
+        except Exception as exc:
+            res = exc
+        else:
+            if res is not None and self._res is not None:
+                raise RuntimeError("already called")
+            res = ((res,), {})
+
+    def __repr__(self):
+        r = f"<SubCmd:{self._cmd}>"
+
+@_exp
+class Stream(SubCmd):
+    """
+    This object handles one conversation.
+    It's also used as a message container.
+
+    The last non-streamed incoming message's data are available in @msg.
+    The first item of an initial message is stored in @cmd, if the last
+    item is a mapping it's in @kw; the individual items can be accessed
+    directly by indexing the message.
+    """
+
+    _fli = None  # flow control for incoming messages
+    _flo = None  # flow control for outgoing messages
+    _flo_evt = None
+    _recv_skip = False
+    _recv_q = None
+    _recv_qlen = 0
+    scope = None
+    _msg: outcome.Outcome = None
+    _initial = False
+    s_out = False
+
+    stream_out = S_NEW
+    stream_in = S_NEW
+
+    def __init__(self, parent: CmdHandler, mid: int, qlen=42, s_in=True, s_out=True):
+        self.parent = parent
+        self.id = mid
+        if mid > 0:
+            mid -= 1
+        self._i = mid << 2  # ready for sending
+        self.cmd_in: Event = Event()
+
+        if s_in:
+            self._recv_q = Queue(qlen)
+            self._recv_qlen = qlen
+        if s_out:
+            self.s_out = s_out
 
     def __repr__(self):
         r = f"<Stream:{self.id}"
@@ -557,31 +598,6 @@ class Stream:
             with suppress(EOFError):
                 self._recv_q.put_nowait_error(LinkDown())
 
-    @property
-    def cmd(self):
-        "Retrieve the command."
-        self._unwrap()
-        return self._cmd
-
-    @property
-    def args(self):
-        "Retrieve the argument list. NB the command is *not* removed."
-        self._unwrap()
-        return self._args
-
-    def __len__(self):
-        self._unwrap()
-        return len(self._args)
-
-    def __bool__(self):
-        return True
-
-    @property
-    def kw(self):
-        "Retrieve the keywords."
-        self._unwrap()
-        return self._kw
-
     def _unwrap(self):
         # disassemble the message.
         if not isinstance(self._msg, outcome.Outcome):
@@ -597,7 +613,7 @@ class Stream:
         A message has arrived on this stream. Store and set an event.
         """
         if self.stream_in == S_END:
-            pass  # happens when msg2 is set
+            pass  # happens
         else:
             self._initial = msg[0] >= 0 and self.stream_in == S_NEW
             if not (msg[0] & B_STREAM):
@@ -830,6 +846,11 @@ class Stream:
     def stream_rw(self, *data, **kw) -> AsyncContextManager[Stream]:
         return self._stream(data, kw, True, True)
 
+    @property
+    def can_stream(self) -> bool:
+        """check whether this is a stream command"""
+        return self.stream_out != S_NEW
+
     @asynccontextmanager
     async def _stream(self, d, kw, sin, sout):
         if self.stream_out != S_NEW:
@@ -867,12 +888,9 @@ class Stream:
 
         if self.stream_in == S_END:
             pass
-        elif self.msg2 is None:
+        else:
             self._msg = None
             await self.replied()
-        else:
-            self._set_msg(self.msg2)
-            self.msg2 = None
 
     async def replied(self) -> None:
         if self._msg is None:

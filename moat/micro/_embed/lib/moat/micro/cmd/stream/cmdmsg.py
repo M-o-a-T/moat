@@ -159,12 +159,14 @@ class BaseCmdMsg(BaseCmd):
             if d is NotGiven:
                 d = None
             if r is None:
+                log("ValTaskA %r %r %r %r %r %r",i,x,self.root.dispatch,a,d,x)
                 t = ValueTask(self, i, x, self.root.dispatch, a, d, x_err=x)
             else:
                 if not L:
                     raise RuntimeError("not Large")
                 from moat.micro.cmd.util.iter import SendIter
 
+                log("SendIterA %r %r %r %r",i,r,a,d)
                 t = SendIter(self, i, r, a, d)
 
             if i is not None:
@@ -299,6 +301,7 @@ class BaseCmdMsg(BaseCmd):
             finally:
                 self.reply.pop(seq, None)
 
+    doc_crd=dict(_d="read console", _0="int:len (64)")
     async def cmd_crd(self, n=64) -> bytes:
         """read some console data"""
         b = bytearray(n)
@@ -311,6 +314,7 @@ class BaseCmdMsg(BaseCmd):
             b = memoryview(b)
             return b[:r]
 
+    doc_cwr=dict(_d="write console", _0="bytes:data")
     async def cmd_cwr(self, b):
         """write some console data"""
         async with self.w_lock:

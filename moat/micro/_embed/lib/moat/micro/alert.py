@@ -163,6 +163,7 @@ class AlertHandler(BaseCmd):
         """
         return AlertIter(self, s)
 
+    doc_w=dict(_d="set alert", _0="type:class", _1="path", d="any:data, clears if missing")
     async def cmd_w(self, a: type[Alert], p: Path, d: dict | None = None):
         """
         Set an alert.
@@ -192,6 +193,7 @@ class AlertHandler(BaseCmd):
                 self.q.discard(q)
                 q.close_sender()
 
+    doc_cl=dict(_d="close iters")
     async def cmd_cl(self):
         """
         Close all iterators of this alert handler.

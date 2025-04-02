@@ -156,6 +156,7 @@ class BaseSubCmd(BaseSuperCmd):
         action = action[1:]
         return await sub.dispatch(action, msg, **kw)
 
+    doc_dir_=dict(_c=BaseSuperCmd.cmd_dir_, d=["str:subdirs"], v="bool:show hidden")
     async def cmd_dir_(self, v=True):
         "dir: add subdirs"
         res = await super().cmd_dir_(v=v)
@@ -364,7 +365,7 @@ class _SubDispatch:
         return self._dest.dispatch(self._rem + a, msg, **kw)
 
     def _send(self, *a, _x_err=(), **k) -> Awaitable:
-        return self._dest.dispatch(self._rem + a, k, x_err=_x_err)
+        return self._dest.dispatch(self._rem, a, k, x_err=_x_err)
 
     def _send_r(self, _a, _rep, *a, _x_err=(), **kw) -> AsyncContextManager:
         return ACM_h(self._dest.dispatch, self._rem + (_a,) + a, kw, rep=_rep, x_err=_x_err)
@@ -373,9 +374,9 @@ class _SubDispatch:
         if k[0] == "_":
             raise AttributeError(k)
         if k[:3] == "it_":
-            return partial(self._send_r, k[3:])
+            return self.sub_at((k[3:],))
         else:
-            return partial(self._send, k)
+            return self.sub_at((k,))
 
     def __call__(self, *a, _x_err=(), **k) -> Awaitable:
         """

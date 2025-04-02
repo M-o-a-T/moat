@@ -28,6 +28,7 @@ from moat.util.compat import (
     ticks_ms,  # noqa:F401
     wait_for,  # noqa:F401
     wait_for_ms,  # noqa:F401
+    _doc,  # noqa:F401
 )
 
 

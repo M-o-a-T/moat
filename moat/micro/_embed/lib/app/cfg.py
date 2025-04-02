@@ -21,6 +21,7 @@ class Cmd(BaseCmd):
         super().__init__(cfg)
         self.repeats = {}
 
+    doc_r=dict(_d="read cfg", _0="Path:subpart")
     async def cmd_r(self, p=()):
         """
         Read (part of) the configuration.
@@ -38,6 +39,7 @@ class Cmd(BaseCmd):
         """
         return enc_part(get_part(self._parent.cfg, p))
 
+    doc_w=dict(_d="write cfg", _0="Path:subpart", d="any:Data")
     async def cmd_w(self, p=(), d=NotGiven):
         """
         Online configuration mangling.
@@ -53,8 +55,9 @@ class Cmd(BaseCmd):
         omitting the parameter) deletes.
 
         There is no way to write the current config to the file system.
-        You can use app.fs for this, or you can configure a "safe" skeleton
-        setup and update it online after booting.
+        You can assemble it on the server and write using app.fs, or you
+        can configure a "safe" skeleton setup and update it online after
+        booting.
         """
         cur = self._parent.cfg
         if not p:
@@ -84,11 +87,10 @@ class Cmd(BaseCmd):
                     raise
                 cur.append(d)
 
-    async def cmd_x(self, p=()):
+    doc_x=dict(_d="activate new config")
+    async def cmd_x(self):
         """
         Activate the new config.
         """
         dest = self._parent
-        for pp in p:
-            dest = dest.sub[pp]
         await dest.reload()

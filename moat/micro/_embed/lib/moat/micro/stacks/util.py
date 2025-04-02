@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from moat.micro.proto.stack import BaseConn
 
 
-TEST_MAGIC = b"r\x0dn\x0a-\x00x\x0ce\x1b!"
+TEST_MAGIC = b"r\x0dn\x0a-\x00x\x0ce\x1b" + "🖖🏼".encode("utf-8") + b"!"
 
 
 class BaseConnIter:

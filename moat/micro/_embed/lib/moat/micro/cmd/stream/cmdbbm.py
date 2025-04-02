@@ -58,7 +58,8 @@ class BaseCmdBBM(BaseCmd):
 
     # Buf: rd/wr = .rd/.wr
 
-    async def cmd_rd(self, n=64):
+    doc_rd=dict(_d="read bytestream", _0="int:len (64)")
+    async def cmd_rd(self, n=64) -> bytes:
         """read some data"""
         if L:
             await self.wait_ready()
@@ -74,6 +75,7 @@ class BaseCmdBBM(BaseCmd):
             b = memoryview(b)
             return b[:r]
 
+    doc_wr=dict(_d="write bytestream", _0="bytes:data")
     async def cmd_wr(self, b):
         """write some data"""
         if L:
@@ -85,6 +87,7 @@ class BaseCmdBBM(BaseCmd):
 
     # Blk/Msg: Console crd/cwr = .crd/cwr
 
+    doc_crd=dict(_d="read console", _0="int:len (64)")
     async def cmd_crd(self, n=64) -> bytes:
         """read some console data"""
         b = bytearray(n)
@@ -99,6 +102,7 @@ class BaseCmdBBM(BaseCmd):
             b = memoryview(b)
             return b[:r]
 
+    doc_cwr=dict(_d="write console", _0="bytes:data")
     async def cmd_cwr(self, b):
         """write some console data"""
         async with self.w_lock:
@@ -108,12 +112,14 @@ class BaseCmdBBM(BaseCmd):
 
     # Msg: s/r = .send/.recv
 
+    doc_s=dict(_d="write message", _0="any:message")
     def cmd_s(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """send a message"""
         if self.s is None:
             raise EOFError
         return self.s.send(m)
 
+    doc_r=dict(_d="read message", _r="any:message")
     def cmd_r(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """receive a message"""
         if self.s is None:
@@ -122,12 +128,14 @@ class BaseCmdBBM(BaseCmd):
 
     # Blk: sb/rb = .snd/.rcv
 
+    doc_sb=dict(_d="write block", _0="bytes:encoded message")
     def cmd_sb(self, m) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """send a binary message"""
         if self.s is None:
             raise EOFError
         return self.s.snd(m)
 
+    doc_rb=dict(_d="read block", _r="any:encoded message")
     def cmd_rb(self) -> Awaitable:  # pylint:disable=invalid-overridden-method
         """receive a binary message"""
         if self.s is None:

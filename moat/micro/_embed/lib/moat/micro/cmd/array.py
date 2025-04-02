@@ -107,7 +107,7 @@ class ArrayCmd(BaseSuperCmd):
         for app in self.apps:
             await self.start_app(app)
 
-    async def dispatch(self, action: list[str], msg: dict, **kw):
+    async def dispatch(self, action, *a, **kw):
         """
         Dispatch a message to subcommands.
 
@@ -117,7 +117,7 @@ class ArrayCmd(BaseSuperCmd):
         if not action:
             raise RuntimeError("NoCmd")
         if len(action) == 1:
-            return await super().dispatch(action, msg, **kw)
+            return await super().dispatch(action, *a, **kw)
 
         try:
             sub = self.apps[action[0]]
@@ -128,8 +128,9 @@ class ArrayCmd(BaseSuperCmd):
                 self.__class__.__name__,
                 await self.cmd_dir_(v=None),
             ) from None
-        return await sub.dispatch(action[1:], msg, **kw)
+        return await sub.dispatch(action[1:], *a, **kw)
 
+    doc_dir_=dict(_c=BaseSuperCmd.cmd_dir_, na="int:max index")
     async def cmd_dir_(self, **kw):
         "report max index"
         res = await super().cmd_dir_(**kw)
@@ -145,5 +146,31 @@ class ArrayCmd(BaseSuperCmd):
         res = []
         for app in self.apps[s:e]:
             res.append(await app.dispatch(a, d))
+
+        return res
+
+    doc_all=dict(
+        _d="apply to all",
+        _0="path:command",
+        _99="list:args",
+        s="int:start index",
+        e="int:end index",
+    )
+    async def stream_all(self, msg):
+        """
+        Call all sub-apps and collect the result.
+        """
+        res = []
+        s = msg.get("s", 0)
+        e = msg.get("e", len(self.apps))
+
+        async def _reply(i,app,st):
+            sd = MsgSender(app)
+            res = await sd.cmd(*msg.a, **msg.kw)
+            st.send((res.a,res.kw))
+
+        async with msg.stream_out() as st, TaskGroup() as tg:
+            for i,app in enumerate(self.apps[s:e]):
+                tg.start_soon(_reply, i+s, app, st)
 
         return res

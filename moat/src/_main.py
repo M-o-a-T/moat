@@ -564,6 +564,7 @@ def apply_hooks(repo, force=False):
         t.write_text(d)
         t.chmod(0o755)
 
+
 @cli.command
 @click.argument("part", type=str)
 def setup(part):
@@ -571,15 +572,15 @@ def setup(part):
     Create a new MoaT subcommand.
     """
     repo = Repo(None)
-    if '-' in part:
+    if "-" in part:
         part = undash(part)
 
-    (Path("packaging")/dash(part)).mkdir()
-    (Path("packaging")/dash(part)).mkdir()
+    (Path("packaging") / dash(part)).mkdir()
+    (Path("packaging") / dash(part)).mkdir()
     apply_templates(repo, part)
 
 
-def apply_templates(repo:Repo, part):
+def apply_templates(repo: Repo, part):
     """
     Apply template files to this component.
     """

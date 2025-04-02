@@ -52,7 +52,8 @@ class Cmd(BaseCmd):
         self.wdt.setup()
         self.wdt.ping()
 
-    async def cmd_x(self, f=False, n=None):  # noqa:ARG002
+    doc_x=dict(_d="feed watchdog", f="bool:force")
+    async def cmd_x(self, f=False):
         """
         External keepalive.
 
@@ -60,6 +61,7 @@ class Cmd(BaseCmd):
         """
         self.wdt.ping(force=f)
 
+    doc_set=dict(_d="set timeout", t="int:timeout,msec")
     async def cmd_set(self, t=None):
         """
         Set the watchdog timeout.
@@ -68,6 +70,7 @@ class Cmd(BaseCmd):
         """
         return self.wdt.tmo(t)
 
+    doc_info=dict(_d="get state", _r=dict(t="int:timeout", x="bool:external?", h="bool:running"))
     async def cmd_info(self):
         """
         Current watchdog state::

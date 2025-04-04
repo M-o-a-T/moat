@@ -69,6 +69,9 @@ class StreamLoop(StreamHandler):
         async with super()._ctx():
             self.start(self.__send)
             yield self
+            if not self.is_idle:
+                breakpoint() ## NOT IDLE
+            assert self.is_idle
 
 
 @asynccontextmanager

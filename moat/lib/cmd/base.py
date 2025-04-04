@@ -52,7 +52,7 @@ class MsgLink:
         Don't override this.
         """
         if not (flags & B_STREAM):
-            self._end = True
+            self.set_end()
         if self._remote is None:
             log("? No remote %r", self)
             return
@@ -78,8 +78,16 @@ class MsgLink:
     def remote(self):
         return self._remote
 
+    def stream_detach(self):
+        pass
+
     def set_end(self):
+        log("SET END %d",id(self))
         self._end = True
+        if self.end_both:
+            if self._remote:
+                self._remote.stream_detach()
+            self.stream_detach()
 
     def set_remote(self, remote:MsgLink):
         """
@@ -121,6 +129,7 @@ class Caller(CtxObj):
         "helper for __await__ that calls the remote handler"
         msg = self._msg
         await self._handler.handle(msg, self._msg.rcmd)
+        msg.set_end()
         await msg.wait_replied()
         return msg
 

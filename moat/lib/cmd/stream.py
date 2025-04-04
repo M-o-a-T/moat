@@ -41,6 +41,16 @@ class StreamHandler(MsgHandler):
         self._id3 = set()
         self._id = 0
 
+    @property
+    def is_idle(self) -> bool:
+        if self._msgs:
+            return False
+        if self._send_q.qsize():
+            return False
+        if self._recv_q.qsize():
+            return False
+        return True
+
     async def handle(self, msg:Msg, rcmd:list):
         """
         Forward a new message to the other side.
@@ -52,13 +62,16 @@ class StreamHandler(MsgHandler):
             return await super().handle(msg,rcmd)
 
         i = self._gen_id()
-        log("NEWID %d",i)
         link = StreamLink(self, i)
+        log("NEWID1 %d %d",i, id(link))
         msg.replace_with(link)
         self.attach(link)
         args = [msg.cmd]
         args.extend(msg.args)
         self.send(link, args, msg._kw, B_STREAM if msg.can_stream else 0)
+        if not msg.can_stream:
+            msg.set_end()
+        # breakpoint()  # fwd
 
     def _gen_id(self):
         # Generate the next free ID.
@@ -97,7 +110,10 @@ class StreamHandler(MsgHandler):
                 cmd = a.pop(0) if a else Path()
                 rem = Msg.Call(cmd,a,kw,flag)
                 link = StreamLink(self, i)
+                log("NEWID2 %d %d",i,id(link))
                 rem.replace_with(link)
+                if not stream:
+                    link.set_end()
                 self.attach(link)
                 self._tg.start_soon(self._handle, msg, link)
         else:
@@ -115,8 +131,9 @@ class StreamHandler(MsgHandler):
                 else:
                     self.send(link, [E_SKIP], None, B_ERROR)
                     self.detach(link)
+
             else:
-                if not stream and link.end_both:
+                if link.end_both:
                     self.detach(link)
 
     async def _handle(self, msg:list, link:StreamLink):
@@ -130,6 +147,7 @@ class StreamHandler(MsgHandler):
         try:
             await self._handler.handle(rem, rem.rcmd)
             if not link.end_both:
+                breakpoint() # link closed
                 raise RuntimeError("Link was not closed")
         except Exception as exc:
             log("Error handling %r: %r", msg, exc)
@@ -173,11 +191,11 @@ class StreamHandler(MsgHandler):
     def send(self, link:StreamLink, a:list, kw:dict, flag:int) -> Awaitable[None]:
         assert isinstance(a, (list, tuple)), a
         assert 0 <= flag <= 3, flag
-        i = (link.id<<2) | flag
-        self._send_q.put_nowait((i, a, kw))
+        self._send_q.put_nowait((link, a, kw, flag))
 
     async def msg_out(self) -> list:
-        i, a, kw = await self._send_q.get()
+        link, a, kw, flag = await self._send_q.get()
+        i = (link.id<<2) | flag
 
         # Handle last-arg-is-dict ambiguity
         if kw:
@@ -192,6 +210,7 @@ class StreamHandler(MsgHandler):
             res.append(kw)
         elif a and isinstance(a[-1], dict):
             res.extend({})
+
         return res
 
     def start(self, cmd, *a, **kw):
@@ -230,10 +249,14 @@ class StreamLink(MsgLink):
     def ml_recv(self, a:list, kw:dict, flags:int) -> None:
         """data to be forwarded across the link"""
         assert 0 <= flags <= 3, flags
+        log("LR %d %r %r %d",self.id,a,kw,flags)
         self.__handler.send(self, a,kw,flags)
 
     def ml_send(self, a:list, kw:dict, flags:int) -> None:
         """data to be forwarded to our remote"""
+        log("LS %d %r %r %d",self.id,a,kw,flags)
         assert 0 <= flags <= 3, flags
         super().ml_send(a,kw,flags)
 
+    def stream_detach(self):
+        self.__handler.detach(self)

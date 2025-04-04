@@ -8,6 +8,8 @@ from moat.util import CtxObj
 from moat.util.compat import TaskGroup, QueueFull, log
 from .const import *
 
+_link_id = 0
+
 if TYPE_CHECKING:
     from .msg import Msg
     from moat.util import Path
@@ -33,7 +35,9 @@ class MsgLink:
 
         You need to call `set_remote` before this is usable.
         """
-        pass
+        global _link_id
+        _link_id += 1
+        self.link_id = _link_id
 
     def ml_recv(self, a:list, kw:dict, flags:int) -> None:
         """Message Link Receive
@@ -51,12 +55,12 @@ class MsgLink:
 
         Don't override this.
         """
-        if not (flags & B_STREAM):
-            self.set_end()
         if self._remote is None:
             log("? No remote %r", self)
-            return
-        self._remote.ml_recv(a,kw,flags)
+        else:
+            self._remote.ml_recv(a,kw,flags)
+        if not flags & B_STREAM:
+            self.set_end()
 
     @property
     def end_both(self) -> bool:
@@ -82,7 +86,9 @@ class MsgLink:
         pass
 
     def set_end(self):
-        log("SET END %d",id(self))
+        log("SET END L%d",self.link_id)
+        if self._end:  #  or self.link_id in {4,5}:
+            breakpoint() # dup set end
         self._end = True
         if self.end_both:
             if self._remote:
@@ -106,7 +112,7 @@ class MsgLink:
         self._remote = None
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}: {self._remote !r}>"
+        return f"<{self.__class__.__name__}:L{self.link_id} r{'=L'+str(self._remote.link_id) if self._remote else '-'}>"
 
 class Caller(CtxObj):
     """
@@ -129,7 +135,6 @@ class Caller(CtxObj):
         "helper for __await__ that calls the remote handler"
         msg = self._msg
         await self._handler.handle(msg, self._msg.rcmd)
-        msg.set_end()
         await msg.wait_replied()
         return msg
 
@@ -182,6 +187,9 @@ class MsgSender:
         """
         self._root = root
 
+    def handle(self, msg:Msg, rcmd:list) -> Awaitable[None]:
+        return self._root.handle(msg,rcmd)
+
     def cmd(self, cmd:Path, *a:list[Any], **kw:dict[Key,Any]) -> Caller:
         """
         Run a command.
@@ -230,6 +238,12 @@ class SubMsgSender:
         """
         self._root = root
         self._path = path
+        self._rpath = list(path)
+        self._rpath.reverse()
+
+    def handle(self, msg:Msg, rcmd:list) -> Awaitable[None]:
+        rcmd.append(self._rpath)
+        return self._root.handle(msg,rcmd)
 
     def cmd(self, cmd:Path, *a:list[Any], **kw:dict[Key,Any]) -> Caller:
         """

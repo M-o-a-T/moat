@@ -123,6 +123,7 @@ class Msg(MsgLink):
         """
         Set up the message.
         """
+        super().__init__()
         self._msg_in = Event()
 
     @property
@@ -165,10 +166,12 @@ class Msg(MsgLink):
             # we are a straight command handler and don't yet have a remote.
             link.set_remote(self)
             self._remote = link
+            log("Replace1 L%d L%d",self.link_id,link.link_id)
             return
 
         rem.set_remote(link)  # this kills self
         link.set_remote(rem)
+        log("Replace2 L%d L%d",rem.link_id,link.link_id)
 
     def kill(self, new:bool=False):
         """No further communication may happen on this message.
@@ -186,16 +189,9 @@ class Msg(MsgLink):
             self._stream_in = S_END
             self._stream_out = S_END
             if self._msg_in is not None:
-                log("SETK %d",id(self))
+                log("SETK L%d",self.link_id)
                 self._msg_in.set()
             super().kill()
-
-    @property
-    def can_stream(self):
-        """
-        Check if this is a streaming command
-        """
-        return self._stream_in != S_END
 
     def ml_send(self, a:list,kw:dict,flags:int) -> None:
         """
@@ -221,7 +217,7 @@ class Msg(MsgLink):
 
         if self._stream_in == S_END:
             # This is a late-delivered incoming-stream-terminating error.
-            log("LATE? %d %r %r %d", id(self),a,kw,flags)
+            log("LATE? L%d %r %r %d", self.link_id,a,kw,flags)
 
         elif not flags&B_STREAM:
             self._set_msg(a,kw,flags)
@@ -292,7 +288,7 @@ class Msg(MsgLink):
             msg = outcome.Value((a,kw))
 
         if self._msg is None:
-            log("SET1 %d",id(self))
+            log("SET1 L%d",self.link_id)
             self._msg = msg
             self._msg_in.set()
         elif self._msg2 is None:
@@ -360,7 +356,17 @@ class Msg(MsgLink):
     @property
     def can_stream(self) -> bool:
         """check whether this is a streaming command"""
-        return self._stream_out != S_NEW
+        if self._stream_in != S_NEW or self._stream_out != S_NEW:
+            return True
+        if (rem := self.remote) is None:
+            return False
+        try:
+            if rem._stream_in != S_NEW or rem._stream_out != S_NEW:
+                return True
+        except AttributeError:
+            pass
+        return False
+
 
     async def call_simple(self, cmd:Callable) -> None:
         """Handle a non-streamed call endpoint.
@@ -469,7 +475,7 @@ class Msg(MsgLink):
                     raise RuntimeError("Dup call",a)
 
             self._msg = outcome.Value((a,kw))
-            log("SET2 %d",id(self))
+            log("SET2 L%d",self.link_id)
             self._msg_in.set()
             return
 
@@ -546,8 +552,7 @@ class Msg(MsgLink):
         return MsgResult(*res)
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} > {self._remote.__class__.__name__}:{' '+str(self._cmd)
-    if self._cmd else ''} {self._a} {self._kw}>"
+        return f"<{self.__class__.__name__}:L{self.link_id} r{'=L'+str(self._remote.link_id) if self. _remote else '-'}: {' '+str(self._cmd) if self._cmd else ''} {self._a} {self._kw}>"
 
 
 # no multiple inheritance for µPy

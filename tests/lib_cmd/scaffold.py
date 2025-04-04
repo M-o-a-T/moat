@@ -51,7 +51,7 @@ if False:
 
 class StreamLoop(StreamHandler):
     __other:StreamLoop=None
-    def __init__(self,h,s):
+    def __init__(self,h:MsgHandler,s:str):
         super().__init__(h)
         self.__s = s
 
@@ -70,7 +70,10 @@ class StreamLoop(StreamHandler):
             self.start(self.__send)
             yield self
             if not self.is_idle:
-                breakpoint() ## NOT IDLE
+                logger.debug("NOT IDLE")
+                while not self.is_idle:
+                    await anyio.sleep(0.1)
+                logger.debug("NOW IDLE")
             assert self.is_idle
 
 

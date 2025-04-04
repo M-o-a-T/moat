@@ -2,13 +2,18 @@ from __future__ import annotations
 
 import pytest
 import anyio
-from moat.lib.cmd import StreamError
+from moat.lib.cmd.errors import StreamError
 from tests.lib_cmd.scaffold import scaffold
-from functools import partial
+from moat.lib.cmd.base import MsgHandler
+from moat.util import P
 
 
-def fwd(s, msg):
-    return s.forward(msg, msg.cmd)
+class Fwd:
+    def __init__(self, dest:MsgHandler):
+        self._dest = dest
+    
+    async def handle(self, msg:Msg, rcmd:list):
+        return await self._dest.handle(msg,rcmd)
 
 
 @pytest.mark.anyio()
@@ -20,17 +25,17 @@ async def test_basic(a_s, a_r, k_s, k_r):
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
-            assert msg.cmd == "Test"
+            assert msg.cmd == P("Test")
             assert tuple(msg.args) == tuple(a_s)
             if not msg.kw:
                 assert not k_s
             else:
                 assert msg.kw == k_s
-            await msg.result(*a_r, **k_r)
+            msg.result(*a_r, **k_r)
 
     async with (
-        scaffold(handle, None, "A") as (a, b),
-        scaffold(partial(fwd, b), None, "C") as (c, d),
+        scaffold(EP(), None, "A") as (a, b),
+        scaffold(Fwd(b), None, "C") as (c, d),
     ):
         a._id = 9
         b._id = 12
@@ -46,13 +51,13 @@ async def test_basic_res():
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
-            assert msg.cmd == "Test"
+            assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
             return {"C": msg.cmd, "R": tuple(msg.args)}
 
     async with (
-        scaffold(handle, None, "A") as (a, x),
-        scaffold(partial(fwd, x), None, "C") as (y, b),
+        scaffold(EP(), None, "A") as (a, x),
+        scaffold(Fwd(x), None, "C") as (y, b),
     ):
         # note the comma
         (res,) = await b.cmd("Test", 123)  # fmt: skip  ## (res,) = …
@@ -67,8 +72,8 @@ async def test_error():
             raise RuntimeError("Duh", msg.args)
 
     async with (
-        scaffold(handle, None, "A") as (a, x),
-        scaffold(partial(fwd, x), None, "C") as (y, b),
+        scaffold(EP(), None, "A") as (a, x),
+        scaffold(Fwd(x), None, "C") as (y, b),
     ):
         with pytest.raises(StreamError) as err:
             res = await b.cmd("Test", 123)
@@ -87,8 +92,8 @@ async def test_more():
             return msg.args[0]
 
     async with (
-        scaffold(handle, None, "A") as (a, x),
-        scaffold(partial(fwd, x), None, "C") as (y, b),
+        scaffold(EP(), None, "A") as (a, x),
+        scaffold(Fwd(x), None, "C") as (y, b),
     ):
         # note the comma
         r = []
@@ -113,13 +118,13 @@ async def test_return():
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
-            assert msg.cmd == "Test"
+            assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
             return ("Foo", 234)
 
     async with (
-        scaffold(handle, None, "A") as (a, x),
-        scaffold(partial(fwd, x), None, "C") as (y, b),
+        scaffold(EP(), None, "A") as (a, x),
+        scaffold(Fwd(x), None, "C") as (y, b),
     ):
         res = await b.cmd("Test", 123)
         # note the index
@@ -131,13 +136,13 @@ async def test_return2():
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
-            assert msg.cmd == "Test"
+            assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
-            await msg.result("Foo", 234)
+            msg.result("Foo", 234)
 
     async with (
-        scaffold(handle, None, "A") as (a, x),
-        scaffold(partial(fwd, x), None, "C") as (y, b),
+        scaffold(EP(), None, "A") as (a, x),
+        scaffold(Fwd(x), None, "C") as (y, b),
     ):
         # neither a comma nor an index here
         res = await b.cmd("Test", 123)
@@ -151,18 +156,18 @@ async def test_stream_in():
         @staticmethod
         async def handle(msg, rcmd):
             res = []
-            assert msg.cmd == "Test"
+            assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
             async with msg.stream_r() as st:
                 async for m in st:
                     assert len(m[1]) == m[0]
                     res.append(m[0])
-                await msg.result("OK", len(res) + 1)
+                msg.result("OK", len(res) + 1)
             assert res == [1, 3, 2]
 
     async with (
-        scaffold(handle, None, "A") as (a, x),
-        scaffold(partial(fwd, x), None, "C") as (y, b),
+        scaffold(EP(), None, "A") as (a, x),
+        scaffold(Fwd(x), None, "C") as (y, b),
     ):
         async with b.stream_w("Test", 123) as st:
             assert tuple(st.args) == ()
@@ -178,18 +183,18 @@ async def test_stream_out():
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
-            assert msg.cmd == "Test"
+            assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123, 456)
             assert msg.kw["answer"] == 42, msg.kw
             async with msg.stream_w("Takeme") as st:
                 await st.send(1, "a")
                 await st.send(3, "def")
                 await st.send(2, "bc")
-                await msg.result({})
+                msg.result({})
 
     async with (
-        scaffold(handle, None, "A") as (a, x),
-        scaffold(partial(fwd, x), None, "C") as (y, b),
+        scaffold(EP(), None, "A") as (a, x),
+        scaffold(Fwd(x), None, "C") as (y, b),
     ):
         n = 0
         async with b.stream_r("Test", 123, 456, answer=42) as st:

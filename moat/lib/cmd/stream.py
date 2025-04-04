@@ -62,14 +62,15 @@ class StreamHandler(MsgHandler):
             return await super().handle(msg,rcmd)
 
         i = self._gen_id()
+        can_stream = msg.can_stream
         link = StreamLink(self, i)
-        log("NEWID1 %d %d",i, id(link))
+        log("NEWID1 %d L%d",i, link.link_id)
         msg.replace_with(link)
         self.attach(link)
         args = [msg.cmd]
         args.extend(msg.args)
-        self.send(link, args, msg._kw, B_STREAM if msg.can_stream else 0)
-        if not msg.can_stream:
+        self.send(link, args, msg._kw, B_STREAM if can_stream else 0)
+        if not can_stream:
             msg.set_end()
         # breakpoint()  # fwd
 
@@ -110,11 +111,13 @@ class StreamHandler(MsgHandler):
                 cmd = a.pop(0) if a else Path()
                 rem = Msg.Call(cmd,a,kw,flag)
                 link = StreamLink(self, i)
-                log("NEWID2 %d %d",i,id(link))
+                log("NEWID2 %d L%d",i,link.link_id)
                 rem.replace_with(link)
                 if not stream:
                     link.set_end()
                 self.attach(link)
+                if link.remote.cmd is None:
+                    breakpoint() #CMD
                 self._tg.start_soon(self._handle, msg, link)
         else:
             try:
@@ -146,18 +149,24 @@ class StreamHandler(MsgHandler):
         rem=link.remote
         try:
             await self._handler.handle(rem, rem.rcmd)
-            if not link.end_both:
-                breakpoint() # link closed
-                raise RuntimeError("Link was not closed")
         except Exception as exc:
-            log("Error handling %r: %r", msg, exc)
+            log("Error handling A %r: %r", msg, exc)
             logger.exception("Error handling %r: %r", msg, exc)
-            self.send(link, (exc.__class__.__name__,)+exc.args, None, B_ERROR)
+            link.remote.ml_send((exc.__class__.__name__,)+exc.args, None, B_ERROR)
         except BaseException as exc:
-            log("Error handling %r: %r", msg, exc)
+            log("Error handling B %r: %r", msg, exc)
             logger.exception("Error handling %r: %r", msg, exc)
-            self.send(link, (exc.__class__.__name__,)+exc.args, None, B_ERROR)
+            link.remote.ml_send((exc.__class__.__name__,)+exc.args, None, B_ERROR)
             raise
+        else:
+            # may have been replaced by the handler
+            if rem is link.remote and not rem.end_here:
+                self.send(link, [None],None,0)
+
+        if not link.end_both:
+            log("NotClosed L%d L%d",link.link_id,link.remote.link_id if link.remote else -1)
+            # breakpoint() # notclosed
+            pass # raise RuntimeError("Link was not closed")
 
     def attach(self, proc:StreamLink):
         """
@@ -191,6 +200,7 @@ class StreamHandler(MsgHandler):
     def send(self, link:StreamLink, a:list, kw:dict, flag:int) -> Awaitable[None]:
         assert isinstance(a, (list, tuple)), a
         assert 0 <= flag <= 3, flag
+        log("SendQ L%d %r %r %d",link.link_id,a,kw,flag)
         self._send_q.put_nowait((link, a, kw, flag))
 
     async def msg_out(self) -> list:
@@ -209,7 +219,7 @@ class StreamHandler(MsgHandler):
         if kw is not None:
             res.append(kw)
         elif a and isinstance(a[-1], dict):
-            res.extend({})
+            res.append({})
 
         return res
 
@@ -249,12 +259,12 @@ class StreamLink(MsgLink):
     def ml_recv(self, a:list, kw:dict, flags:int) -> None:
         """data to be forwarded across the link"""
         assert 0 <= flags <= 3, flags
-        log("LR %d %r %r %d",self.id,a,kw,flags)
+        log("LR L%d %d %r %r %d",self.link_id, self.id,a,kw,flags)
         self.__handler.send(self, a,kw,flags)
 
     def ml_send(self, a:list, kw:dict, flags:int) -> None:
         """data to be forwarded to our remote"""
-        log("LS %d %r %r %d",self.id,a,kw,flags)
+        log("LS L%d %d %r %r %d",self.link_id, self.id,a,kw,flags)
         assert 0 <= flags <= 3, flags
         super().ml_send(a,kw,flags)
 

@@ -2,27 +2,37 @@
 Message streaming.
 """
 from __future__ import annotations
-from moat.util import Path
+from contextlib import asynccontextmanager
+from moat.util import Path, QueueFull
+from moat.micro.compat import Queue, log, L, TaskGroup
 from functools import partial
+from moat.lib.cmd.base import MsgLink, MsgHandler
+from moat.lib.cmd.const import *
+from moat.lib.cmd.errors import ShortCommandError
+from moat.lib.cmd.msg import Msg
 
-class StreamHandler(MsgEndpoint):
+import logging
+logger=logging.getLogger(__name__)
+
+class StreamHandler(MsgHandler):
     """
     This class transforms handler requests into streamed messages.
 
-    This is a sans-I/O class. You need to provide
+    This is a sans-I/O class. Usage:
 
-    * an async context on your `StreamHandler` instance
-    * a task that reads your external source and feeds the result
+    * open an async context on the ``StreamHandler`` instance
+    * start a task that reads your external source and feeds the result
       to `msg_in`
-    * a task that loops on `msg_out` and sends the result
+    * start a task that loops on `msg_out` and sends the result
 
-    You can use `start` to run these task within the context's taskgroup.
+    You can use the `start` method to run these task within the context's
+    internal taskgroup. They will be auto-cancelled when leaving the
+    context.
     """
-    def __init__(self, handler: MsgEndpoint):
-        self._msgs: dict[int, StreamRemote] = {}
+    def __init__(self, handler: MsgHandler):
+        self._msgs: dict[int, StreamLink] = {}
         self._send_q = Queue(9)
         self._recv_q = Queue(99)
-        self._debug = logger.warning
         self._handler = handler
 
         self._id1 = set()
@@ -32,12 +42,23 @@ class StreamHandler(MsgEndpoint):
         self._id = 0
 
     async def handle(self, msg:Msg, rcmd:list):
+        """
+        Forward a new message to the other side.
+        """
         if not rcmd:
             raise ShortCommandError
         if rcmd[-1] == "!l":
             rcmd.pop()
-            await super().handle()
+            return await super().handle(msg,rcmd)
 
+        i = self._gen_id()
+        log("NEWID %d",i)
+        link = StreamLink(self, i)
+        msg.replace_with(link)
+        self.attach(link)
+        args = [msg.cmd]
+        args.extend(msg.args)
+        self.send(link, args, msg._kw, B_STREAM if msg.can_stream else 0)
 
     def _gen_id(self):
         # Generate the next free ID.
@@ -54,89 +75,89 @@ class StreamHandler(MsgEndpoint):
         """process an incoming message"""
         i = msg[0]
         flag = i&3
+        # flip sign
+        i = -1 - (i >> 2)
+
         a = msg[1:]
         kw = a.pop() if a and isinstance(a[-1],dict) else {}
 
-        # stream = i & B_STREAM
+        stream = flag & B_STREAM
         error = flag & B_ERROR
-        i = -1 - (i >> 2)
-        if i >= 0:
-            i += 1
+
         try:
-            conv = self._msgs[i]
+            link = self._msgs[i]
 
         except KeyError:
             if i > 0:
-                self._debug("Spurious message %r", msg)
+                log("Spurious message %r", msg)
             elif error:
-                self._debug("Spurious error %r", msg)
+                log("Spurious error %r", msg)
             else:
                 # assemble the message
                 cmd = a.pop(0) if a else Path()
-                msg = Msg.Call(cmd,a,kw)
-                conv = StreamRemote(self, i)
-                if not stream:
-                    conv.sd_end |= SD_IN
-                msg.emplace(conv)
-                self.attach(i,conv)
-                self._tg.start_soon(self._handle, msg, i)
+                rem = Msg.Call(cmd,a,kw,flag)
+                link = StreamLink(self, i)
+                rem.replace_with(link)
+                self.attach(link)
+                self._tg.start_soon(self._handle, msg, link)
         else:
-            if not stream:
-                conv.sd_end |= SD_IN
-                if conv.sd_end == SD_BOTH:
-                    self.detach(i,conv)
             try:
-                conv.ml_send(a,kw,flag)
+                link.ml_send(a,kw,flag)
             except EOFError:
-                self.detach(i,conv)
                 try:
-                    self.send((i << 2) | B_ERROR, [E_NO_STREAM])
+                    self.send(link, [E_NO_STREAM], None, B_ERROR)
                 except EOFError:
                     pass
-            except QueueFullError:
+                self.detach(link)
+            except QueueFull:
                 if flag&B_STREAM:
-                    self.send((i << 2) | B_ERROR|B_STREAM, [E_SKIP])
+                    self.send(link, [E_SKIP], None, B_ERROR|B_STREAM)
                 else:
-                    self.detach(i,conv)
-                    self.send((i << 2) | B_ERROR, [E_SKIP])
+                    self.send(link, [E_SKIP], None, B_ERROR)
+                    self.detach(link)
+            else:
+                if not stream and link.end_both:
+                    self.detach(link)
 
-    async def _handle(self, msg, i):
-            elif self._handler is None:
-                if i > 0:
-                    i -= 1
-                # intentionally not async here, as that may end up
-                # in a deadlock
-                self.send((i << 2) | B_ERROR, [E_NO_CMD])
+    async def _handle(self, msg:list, link:StreamLink):
+        if self._handler is None:
+            # intentionally not async here, as that may end up
+            # in a deadlock
+            self.send(link, [E_NO_CMD], None, B_ERROR)
+            return
+
+        rem=link.remote
         try:
-            await self._handler(msg)
+            await self._handler.handle(rem, rem.rcmd)
+            if not link.end_both:
+                raise RuntimeError("Link was not closed")
         except Exception as exc:
-            log("Error handling %r", msg)
+            log("Error handling %r: %r", msg, exc)
+            logger.exception("Error handling %r: %r", msg, exc)
+            self.send(link, (exc.__class__.__name__,)+exc.args, None, B_ERROR)
         except BaseException as exc:
-            log("Error handling %r", msg)
+            log("Error handling %r: %r", msg, exc)
+            logger.exception("Error handling %r: %r", msg, exc)
+            self.send(link, (exc.__class__.__name__,)+exc.args, None, B_ERROR)
             raise
-        finally:
-            self.detach(i)
 
-    def attach(self, mid:int, proc:StreamRemote):
+    def attach(self, proc:StreamLink):
         """
         Attach a handler for incoming messages.
         """
-        if not force and mid in self._msgs:
+        if proc.id in self._msgs:
             raise ValueError(f"MID {mid} already known")
-        self._msgs[mid] = proc
+        self._msgs[proc.id] = proc
 
-    def detach(self, mid:int, proc=None):
+    def detach(self, link:StreamLink):
         """
         Remove a handler for raw incoming messages.
         """
-        if proc is not None and self._msgs[mid] is not proc:
-            # already superseded
+        mid = link.id
+        if self._msgs.get(mid) is not link:
+            # already removed
             return
-        try:
-            del self._msgs[mid]
-        except KeyError:
-            if mid > 0:
-                raise
+        del self._msgs[mid]
         if mid <= 0:  # remote
             return
 
@@ -149,27 +170,25 @@ class StreamHandler(MsgEndpoint):
             self._id3.add(mid)
 
 
-    def send(self, i:int, a:list, kw:dict, flag:int) -> Awaitable[None]:
+    def send(self, link:StreamLink, a:list, kw:dict, flag:int) -> Awaitable[None]:
         assert isinstance(a, (list, tuple)), a
-        assert isinstance(i, int), i
         assert 0 <= flag <= 3, flag
-        assert not i&3, i
-        i |= flag
-        if not (flag&B_STREAM):
-            conv.sd_end |= SD_OUT
-            if conv.sd_end == SD_BOTH:
-                self.detach(i>>2,conv)
-        return self._send_q.put_nowait((i, a, kw))
+        i = (link.id<<2) | flag
+        self._send_q.put_nowait((i, a, kw))
 
     async def msg_out(self) -> list:
         i, a, kw = await self._send_q.get()
 
         # Handle last-arg-is-dict ambiguity
-        if not kw is None and a and isinstance(a[-1], dict):
+        if kw:
+            pass
+        elif not a or not isinstance(a[-1], dict):
+            kw = None
+        elif kw is None:
             kw = {}
         res = [i]
         res.extend(a)
-        if kw:
+        if kw is not None:
             res.append(kw)
         elif a and isinstance(a[-1], dict):
             res.extend({})
@@ -177,9 +196,9 @@ class StreamHandler(MsgEndpoint):
 
     def start(self, cmd, *a, **kw):
         if kw:
-            self._tg.start(partial(cmd,*a,*kw))
+            self._tg.start_soon(partial(cmd,*a,*kw))
         else:
-            self._tg.start(cmd,*a)
+            self._tg.start_soon(cmd,*a)
 
     @asynccontextmanager
     async def _ctx(self) -> Self:
@@ -188,26 +207,33 @@ class StreamHandler(MsgEndpoint):
             try:
                 yield self
             finally:
-                for conv in list(self._msgs.values()):
-                    conv(None)
+                for link in list(self._msgs.values()):
+                    if not link.end_there:
+                        try:
+                            self.send(link, [E_CANCEL], None, B_ERROR)
+                        except Exception:
+                            pass
+                    link.kill()
                 tg.cancel()
 
-        for k in list(self._msgs.keys()):
-            self.detach(k)
+        for link in list(self._msgs.values()):
+            self.detach(link)
 
 
-class StreamRemote(MsgRemote):
-    sd_end:int=SD_NONE
-
+class StreamLink(MsgLink):
+    """This is the handler for messages that forwards them to the stream."""
     def __init__(self, handler:StreamHandler, id:int):
         super().__init__()
-        self._handler = handler
-        self._id = id
+        self.__handler = handler
+        self.id = id
 
     def ml_recv(self, a:list, kw:dict, flags:int) -> None:
         """data to be forwarded across the link"""
         assert 0 <= flags <= 3, flags
-        if not (flags&B_STREAM):
-            self.sd_end |= SD_OUT
-        self._handler.send(self._id|flags, a,kw)
+        self.__handler.send(self, a,kw,flags)
+
+    def ml_send(self, a:list, kw:dict, flags:int) -> None:
+        """data to be forwarded to our remote"""
+        assert 0 <= flags <= 3, flags
+        super().ml_send(a,kw,flags)
 

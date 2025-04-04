@@ -12,7 +12,7 @@ from .const import SD_IN,SD_OUT,SD_BOTH,SD_NONE
 from .const import S_NEW,S_END,S_ON,S_OFF
 from .const import E_NO_STREAM
 from .const import B_STREAM,B_ERROR
-from .errors import StreamError, Flow
+from .errors import StreamError, Flow, NoStream, WantsStream
 
 from typing import TYPE_CHECKING, overload
 if TYPE_CHECKING:
@@ -268,7 +268,7 @@ class Msg(MsgLink):
 
     def send(self, *a, **kw):
         if self._stream_out != S_ON:
-            raise RuntimeError(f"Not streaming")
+            raise NoStream
         self._skipped()
         self.ml_send(a,kw, B_STREAM)
 
@@ -487,7 +487,7 @@ class Msg(MsgLink):
         """
         if self._msg is None:
             if self._stream_in == S_END:
-                raise EOFError
+                raise NoStream()
             await self._msg_in.wait()
             self._msg_in = Event()
         msg = self._msg

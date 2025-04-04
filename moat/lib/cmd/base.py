@@ -87,8 +87,8 @@ class MsgLink:
 
     def set_end(self):
         log("SET END L%d",self.link_id)
-        if self._end:  #  or self.link_id in {4,5}:
-            breakpoint() # dup set end
+#       if self._end:  #  or self.link_id in {4,5}:
+#           breakpoint() # dup set end
         self._end = True
         if self.end_both:
             if self._remote:

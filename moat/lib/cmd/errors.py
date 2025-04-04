@@ -40,7 +40,7 @@ class StreamError(RuntimeError):
                 return super().__new__(NoCmd, E_NO_CMD - m)
         return super().__new__(cls, *msg)
 
-    def __init__(self, msg):
+    def __init__(self, msg=()):
         pass
 
 class Flow:

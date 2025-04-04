@@ -148,7 +148,12 @@ class StreamHandler(MsgHandler):
 
         rem=link.remote
         try:
-            await self._handler.handle(rem, rem.rcmd)
+            res = await self._handler.handle(rem, rem.rcmd)
+            if res is not None:
+                if link.end_there:
+                    raise ValueError(f"Already ended but returned {res !r}")
+                else:
+                    link.remote.ml_send([res], None, 0)
         except Exception as exc:
             log("Error handling A %r: %r", msg, exc)
             logger.exception("Error handling %r: %r", msg, exc)

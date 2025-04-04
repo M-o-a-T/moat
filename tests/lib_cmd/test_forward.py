@@ -61,7 +61,7 @@ async def test_basic_res():
     ):
         # note the comma
         (res,) = await b.cmd("Test", 123)  # fmt: skip  ## (res,) = …
-        assert res == {"C": "Test", "R": (123,)}
+        assert res == {"C": P("Test"), "R": (123,)}
 
 
 @pytest.mark.anyio()
@@ -158,7 +158,7 @@ async def test_stream_in():
             res = []
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
-            async with msg.stream_r() as st:
+            async with msg.stream_in() as st:
                 async for m in st:
                     assert len(m[1]) == m[0]
                     res.append(m[0])
@@ -169,11 +169,11 @@ async def test_stream_in():
         scaffold(EP(), None, "A") as (a, x),
         scaffold(Fwd(x), None, "C") as (y, b),
     ):
-        async with b.stream_w("Test", 123) as st:
+        async with b.cmd("Test", 123).stream_out() as st:
             assert tuple(st.args) == ()
-            await st.send(1, "a")
-            await st.send(3, "def")
-            await st.send(2, "bc")
+            st.send(1, "a")
+            st.send(3, "def")
+            st.send(2, "bc")
         assert tuple(st.args) == ("OK", 4)
         print("DONE")
 
@@ -186,10 +186,10 @@ async def test_stream_out():
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123, 456)
             assert msg.kw["answer"] == 42, msg.kw
-            async with msg.stream_w("Takeme") as st:
-                await st.send(1, "a")
-                await st.send(3, "def")
-                await st.send(2, "bc")
+            async with msg.stream_out("Takeme") as st:
+                st.send(1, "a")
+                st.send(3, "def")
+                st.send(2, "bc")
                 msg.result({})
 
     async with (
@@ -197,7 +197,7 @@ async def test_stream_out():
         scaffold(Fwd(x), None, "C") as (y, b),
     ):
         n = 0
-        async with b.stream_r("Test", 123, 456, answer=42) as st:
+        async with b.cmd("Test", 123, 456, answer=42).stream_in() as st:
             assert tuple(st.args) == ("Takeme",)
             async for m in st:
                 assert len(m[1]) == m[0]

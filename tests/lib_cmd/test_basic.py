@@ -234,4 +234,3 @@ async def test_stream_out():
         assert tuple(st.args) == ({},)
         assert not st.kw
         assert n == 3
-        print("DONE")

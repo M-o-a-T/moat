@@ -185,7 +185,8 @@ async def test_return2():
 
 
 @pytest.mark.anyio()
-async def test_stream_in():
+@pytest.mark.parametrize("use_socket", [False,True])
+async def test_stream_in(use_socket):
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
@@ -200,7 +201,7 @@ async def test_stream_in():
                 msg.result("OK", len(res) + 1)
             assert res == [1, 3, 2]
 
-    async with scaffold(EP(), None) as (a, b):
+    async with scaffold(EP(), None, use_socket=use_socket) as (a, b):
         async with b.cmd("Test", 123).stream_out() as st:
             assert tuple(st.args) == ("LetsGo",)
             st.send(1, "a")
@@ -211,7 +212,8 @@ async def test_stream_in():
 
 
 @pytest.mark.anyio()
-async def test_stream_out():
+@pytest.mark.parametrize("use_socket", [False,True])
+async def test_stream_out(use_socket):
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg,rcmd):
@@ -224,7 +226,7 @@ async def test_stream_out():
                 st.send(2, "bc")
                 msg.result({})
 
-    async with scaffold(EP(), None) as (a, b):
+    async with scaffold(EP(), None, use_socket=use_socket) as (a, b):
         n = 0
         async with b.cmd("Test", 123, 456, answer=42).stream_in() as st:
             assert tuple(st.args) == ("Takeme",)

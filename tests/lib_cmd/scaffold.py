@@ -28,27 +28,6 @@ class LogLink(MsgLink):
         self._remote.ml_recv(a,kw,flags)
 
 
-if False:
-    class SimpleLinkMsg(Msg):
-        def __init__(self, real:Msg, s: str):
-            super().__init__(real.cmd,real,args,real.kw)
-            assert real._remote is not None
-            self._remote = real
-            real._remote = self
-            logger.debug("C:%s %s", self.__s, res_akw(real.args,real.kw))
-            self.__s = s
-
-        def emplace(self, remote: MsgLink):
-            raise RuntimeError("Should not happen")
-
-        def set_remote(self, remote: MsgLink):
-            raise RuntimeError("Should not happen")
-
-        def result(self,*a,**kw):
-            logger.debug("R:%s %s", self.__s, res_akw(a,kw))
-            self.__real.result(*a,**kw)
-
-
 class StreamLoop(StreamHandler):
     __other:StreamLoop=None
     def __init__(self,h:MsgHandler,s:str):
@@ -76,13 +55,60 @@ class StreamLoop(StreamHandler):
                 logger.debug("NOW IDLE")
             assert self.is_idle
 
+async def _wrap_sock(s:Socket) -> anyio.abc.ByteStream:
+    import sniffio
+    if sniffio.current_async_library() == "asyncio":
+        import asyncio
+        return anyio._backends._asyncio.SocketStream(
+            *(
+                await asyncio.get_running_loop().create_connection(
+                    anyio._backends._asyncio.StreamProtocol,
+                    sock=s,
+                )
+            )
+        )
+    elif sniffio.current_async_library() == "trio":
+        import trio
+        return anyio._backends._trio.SocketStream(trio.socket.from_stdlib_socket(s))
+    else:
+        raise RuntimeError("Which anyio backend are you using??")
+
+
+
+class StreamGate(StreamHandler):
+    def __init__(self,h:MsgHandler,so:Socket, s:str):
+        from moat.util.cbor import StdCBOR
+        super().__init__(h)
+        self.__s = s
+        self.__so = so
+
+    @asynccontextmanager
+    async def _ctx(self):
+        from moat.lib.cmd.anyio import run
+        from contextlib import nullcontext
+        async with await _wrap_sock(self.__so) as sock, run(super()._ctx(), sock, debug=self.__s):
+            yield self
+            # await anyio.sleep(0.1)
+            if not self.is_idle:
+                logger.debug("NOT IDLE")
+                while not self.is_idle:
+                    await anyio.sleep(0.1)
+                logger.debug("NOW IDLE")
+            assert self.is_idle
+
 
 @asynccontextmanager
-async def scaffold(ha, hb, key=""):
-    a = StreamLoop(ha,"A")
-    b = StreamLoop(hb,"B")
-    a.attach_remote(b)
-    b.attach_remote(a)
+async def scaffold(ha, hb, key="", use_socket=False):
+    if use_socket:
+        import socket
+        sa,sb=socket.socketpair()
+        a = StreamGate(ha,sa,key+">")
+        b = StreamGate(hb,sb,key+"<")
+    else:
+        a = StreamLoop(ha,key+">")
+        b = StreamLoop(hb,key+"<")
+        a.attach_remote(b)
+        b.attach_remote(a)
     async with a,b:
         yield MsgSender(a), MsgSender(b)
     #assert not a._msgs, a._msgs

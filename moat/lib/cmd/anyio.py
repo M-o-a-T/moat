@@ -8,40 +8,69 @@ import anyio
 from contextlib import asynccontextmanager
 from moat.util.cbor import StdCBOR
 from typing import TYPE_CHECKING
+import logging
 
 if TYPE_CHECKING:
     from moat.lib.cmd import CmdHandler
+    from moat.lib.codec import Codec
 
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
-async def run(cmd: CmdHandler, stream: anyio.abc.ByteStream):
+async def run(cmd: CmdHandler, stream: anyio.abc.ByteStream, *, codec:Codec|None=None, debug:str=None):
     """
-    Run a command handler on top of an anyio stream.
+    Run a command handler on top of an anyio stream, using the given codec.
 
-    The handler must already be set up.
+    @cmd is supposed to be an async context manager. Use `contextlib.nullcontext`
+    if you need to call this from inside its context.
 
     This is an async context manager that yields the command handler.
+
+    The default codec is `moat.util.cbor.Codec`.
     """
 
-    async def rd(conn):
-        unpacker = StdCBOR()
-        rd = conn.read if hasattr(conn, "read") else conn.receive
-        while True:
-            buf = await rd(4096)
-            unpacker.feed(buf)
-            for msg in unpacker:
-                await cmd.msg_in(msg)
+    if codec is None:
+        from moat.util.cbor import StdCBOR
+        codec = StdCBOR()
 
-    async def wr(conn):
-        packer = StdCBOR()
+    async def rd(conn,cmd,*,task_status):
+        with anyio.CancelScope() as sc:
+            task_status.started(sc)
+            rd_ = conn.read if hasattr(conn, "read") else conn.receive
+            while True:
+                try:
+                    if debug:
+                        logger.warning("R%s ?",debug)
+                    buf = await rd_(4096)
+                except anyio.EndOfStream:
+                    return
+                if debug:
+                    logger.warning("R%s %r", debug,buf)
+                codec.feed(buf)
+                for msg in codec:
+                    if debug:
+                        logger.warning("R%s %r", debug,msg)
+                    cmd.msg_in(msg)
+
+    async def wr(conn,cmd):
         wr = conn.write if hasattr(conn, "write") else conn.send
         while True:
-            msg = await cmd.msg_out()
-            buf = packer.encode(msg)
+            try:
+                msg = await cmd.msg_out()
+            except EOFError:
+                return
+            if debug:
+                logger.warning("W%s %r", debug,msg)
+
+            buf = codec.encode(msg)
+            if debug:
+                logger.warning("W%s %r", debug,bytes(buf))
             await wr(buf)
 
-    async with cmd, anyio.create_task_group() as tg:
-        tg.start_soon(rd, stream)
-        tg.start_soon(wr, stream)
-        yield cmd
-        tg.cancel_scope.cancel()
+    async with anyio.create_task_group() as tg:
+        async with cmd as cmd_:
+            rds = await tg.start(rd, stream, cmd_)
+            tg.start_soon(wr, stream, cmd_)
+            yield cmd_
+        rds.cancel()
+        # we wait on the writer

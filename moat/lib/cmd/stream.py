@@ -29,6 +29,8 @@ class StreamHandler(MsgHandler):
     internal taskgroup. They will be auto-cancelled when leaving the
     context.
     """
+    _tg:TaskGroup = None
+
     def __init__(self, handler: MsgHandler):
         self._msgs: dict[int, StreamLink] = {}
         self._send_q = Queue(9)
@@ -252,6 +254,9 @@ class StreamHandler(MsgHandler):
 
         for link in list(self._msgs.values()):
             self.detach(link)
+        self._send_q.close_sender()
+        self._recv_q.close_sender()
+
 
 
 class StreamLink(MsgLink):

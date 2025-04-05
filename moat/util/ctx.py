@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from attrs import define
 import anyio
+import sys
 
 from typing import TYPE_CHECKING, overload
 
@@ -39,12 +40,10 @@ class CtxObj(ABC):  ## [T_Ctx](ABC):
     __ctx: AbstractAsyncContextManager | None = None
 
     @overload
-    def _ctx(self) -> AsyncIterator[T_Ctx]:
-        ...
+    def _ctx(self) -> AsyncIterator[T_Ctx]: ...
 
     @abstractmethod
-    def _ctx(self) -> AbstractAsyncContextManager[T_Ctx]:
-        ...
+    def _ctx(self) -> AbstractAsyncContextManager[T_Ctx]: ...
 
     async def __aenter__(self) -> T_Ctx:
         if self.__ctx is not None:
@@ -53,12 +52,13 @@ class CtxObj(ABC):  ## [T_Ctx](ABC):
         if not isinstance(ctx, AbstractAsyncContextManager):
             # No @asynccontextmanager wrapper on `_ctx`.
             # Kill the "coroutine not awaited" warning.
-            try:
-                await ctx.athrow(StopAsyncIteration)
-            except StopAsyncIteration:
-                pass
-            else:
-                raise RuntimeError(f"Failure to stop {ctx!r}")
+            if sys.version_info > (3, 12):
+                try:
+                    await ctx.athrow(StopAsyncIteration)
+                except StopAsyncIteration:
+                    pass
+                else:
+                    raise RuntimeError(f"Failure to stop {ctx!r}")
 
             ctx = asynccontextmanager(self._ctx)()
         self.__ctx = ctx

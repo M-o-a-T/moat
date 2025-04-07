@@ -66,6 +66,30 @@ class MsgLink:
         if not flags & B_STREAM:
             self.set_end()
 
+    async def ml_send_error(self, exc):
+        """
+        Send an exception.
+        """
+        try:
+            # send the error directly
+            await self.ml_send((exc,), None, B_ERROR)
+        except Exception as exc:
+            try:
+                # that failed? send the error name and arguments
+                await self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
+            except Exception:
+                try:
+                    # that failed too? send just the error name
+                    await self.ml_send((exc.__class__.__name__,), None, B_ERROR)
+                except Exception:
+                    try:
+                        # oh well, just send a naked error indication
+                        await self.ml_send([E_ERROR], None, B_ERROR)
+                    except Exception:
+                        # Give up.
+                        pass
+
+
     @property
     def end_both(self) -> bool:
         if self._remote and not self._remote.end_here:

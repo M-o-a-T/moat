@@ -431,10 +431,9 @@ class Msg(MsgLink, MsgResult):
             await cmd(self)
         except Exception as exc:
             log_exc(exc,"Stream Error %r", self)
-            await self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
+            await self.ml_send_error(exc)
         except BaseException as exc:
-            log_exc(exc,"Stream Error %r", self)
-            await self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
+            await self.ml_send_error(exc)
             raise
 
     @asynccontextmanager

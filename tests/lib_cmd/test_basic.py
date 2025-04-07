@@ -64,9 +64,8 @@ async def test_basic_error():
 
     ep = EP()
     ms = MsgSender(ep)
-    with pytest.raises(StreamError) as err:
+    with pytest.raises(RuntimeError) as err:
         res = await ms.cmd("Err")
-        raise RuntimeError("No error", res.args, res.kw)
 
 
 @pytest.mark.anyio()

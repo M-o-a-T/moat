@@ -191,29 +191,14 @@ class HandlerStream(MsgHandler):
                     raise ValueError(f"Already ended but returned {res!r}")
                 else:
                     await link.remote.ml_send([res], None, 0)
+        except Exception as exc:
+            log_exc(exc,"Error %r: %r", msg, exc)
+            if link.remote is not None:
+                await link.remote.ml_send_error(exc)
         except BaseException as exc:
-            try:
-                # send the error directly
-                await link.remote.ml_send((exc,), None, B_ERROR)
-            except Exception:
-                try:
-                    # that failed? send the error name and arguments
-                    await link.remote.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
-                except Exception:
-                    try:
-                        # that failed too? send just the error name
-                        await link.remote.ml_send((exc.__class__.__name__,), None, B_ERROR)
-                    except Exception:
-                        try:
-                            # oh well, just send a naked error indication
-                            await link.remote.ml_send([E_ERROR], None, B_ERROR)
-                        except Exception:
-                            # Give up.
-                            pass
-            if isinstance(exc,Exception):
-                log_exc(exc,"Error handling B %r", msg)
-            else:
-                raise
+            if link.remote is not None:
+                await link.remote.ml_send_error(exc)
+            raise
         else:
             # may have been replaced by the handler
             if rem is link.remote and not rem.end_here:

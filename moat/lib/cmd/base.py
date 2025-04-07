@@ -275,7 +275,7 @@ class SubMsgSender(MsgSender):
         """
         Process a call with an empty path.
         """
-        return Caller(self._root, msg.Call(self._path, a, kw))
+        return Caller(self._root, Msg.Call(self._path, a, kw))
 
     def sub_at(self, prefix: Path) -> SubMsgSender:
         """

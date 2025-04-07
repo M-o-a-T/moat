@@ -12,10 +12,6 @@ from moat.lib.cmd.const import *
 from moat.lib.cmd.errors import ShortCommandError
 from moat.lib.cmd.msg import Msg
 
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 def i_f2wire(id: int, flag: int) -> int:
     assert id != 0
@@ -41,8 +37,13 @@ class HandlerStream(MsgHandler):
 
     * open an async context on an instance of this class
     * start a task that reads your external source and feeds the result
-      to `msg_in`
-    * start a task that loops on `msg_out` and sends the result
+      to `msg_in`.
+    * start a task that loops on `msg_out` and sends the result. It should
+      terminate on `EOFError` from `msg_out`.
+
+    This class encodes messages as plain Python lists. They consist of
+    integers, lists/dicts, strings, plus any other data type your payload
+    consists of.
 
     You can use the `start` method to run these tasks (and any others you
     might need) within the context's internal taskgroup. They will be
@@ -175,15 +176,17 @@ class HandlerStream(MsgHandler):
                     raise ValueError(f"Already ended but returned {res!r}")
                 else:
                     link.remote.ml_send([res], None, 0)
-        except Exception as exc:
-            log("Error handling A %r: %r", msg, exc)
-            logger.exception("Error handling %r: %r", msg, exc)
-            link.remote.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
         except BaseException as exc:
             log("Error handling B %r: %r", msg, exc)
-            logger.exception("Error handling %r: %r", msg, exc)
-            link.remote.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
-            raise
+            try:
+                link.remote.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
+            except Exception:
+                try:
+                    link.remote.ml_send([E_ERROR], None, B_ERROR)
+                except Exception:
+                    pass
+            if not isinstance(exc, Exception):
+                raise
         else:
             # may have been replaced by the handler
             if rem is link.remote and not rem.end_here:

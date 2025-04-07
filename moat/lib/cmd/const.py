@@ -16,6 +16,7 @@ E_CANCEL = const(-3)
 E_NO_CMDS = const(-4)
 E_SKIP = const(-5)
 E_MUST_STREAM = const(-6)
+E_ERROR = const(-7)
 E_NO_CMD = const(-11)
 
 # Stream states (separate for in/out)

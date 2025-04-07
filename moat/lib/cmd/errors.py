@@ -22,6 +22,13 @@ class LongCommandError(ValueError):
     pass
 
 
+@as_proxy("_LCmdRem")
+class RemoteError(ValueError):
+    "Some remote error that could not be encoded"
+
+    pass
+
+
 class StreamError(RuntimeError):
     def __new__(cls, msg=()):
         if len(msg) == 1 and isinstance((m := msg[0]), int):
@@ -37,6 +44,8 @@ class StreamError(RuntimeError):
                 return super().__new__(SkippedData)
             elif m == E_NO_CMDS:
                 return super().__new__(NoCmds)
+            elif m == E_ERROR:
+                return super().__new__(RemoteError)
             elif m <= E_NO_CMD:
                 return super().__new__(NoCmd, E_NO_CMD - m)
         return super().__new__(cls, *msg)

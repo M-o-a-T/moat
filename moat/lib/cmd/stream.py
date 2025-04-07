@@ -41,19 +41,25 @@ class HandlerStream(MsgHandler):
     * start a task that loops on `msg_out` and sends the result. It should
       terminate on `EOFError` from `msg_out`.
 
-    This class encodes messages as plain Python lists. They consist of
-    integers, lists/dicts, strings, plus any other data type your payload
-    consists of.
-
     You can use the `start` method to run these tasks (and any others you
     might need) within the context's internal taskgroup. They will be
     auto-cancelled when leaving the context.
+
+    Message encoding:
+
+    This class encodes messages as plain Python lists. They consist of
+    integers plus any other data type your payload consists of.
+
+    Error handling uses proxies or strings for the error name, but it will
+    send a plain error indication if it can't encode its data. If your
+    messages contain keywords, the codec needs to support dicts.
+
     """
 
     _tg: TaskGroup = None
     _id = 0
 
-    def __init__(self, handler: MsgHandler):
+    def __init__(self, handler: MsgSender | None):
         self._msgs: dict[int, StreamLink] = {}
         self._send_q = Queue(9)
         self._recv_q = Queue(99)
@@ -180,12 +186,23 @@ class HandlerStream(MsgHandler):
         except BaseException as exc:
             log("Error handling B %r: %r", msg, exc)
             try:
-                link.remote.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
+                # send the error directly
+                link.remote.ml_send((exc,), None, B_ERROR)
             except Exception:
                 try:
-                    link.remote.ml_send([E_ERROR], None, B_ERROR)
+                    # that failed? send the error name and arguments
+                    link.remote.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
                 except Exception:
-                    pass
+                    try:
+                        # that failed too? send just the error name
+                        link.remote.ml_send((exc.__class__.__name__,), None, B_ERROR)
+                    except Exception:
+                        try:
+                            # oh well, just send a naked error indication
+                            link.remote.ml_send([E_ERROR], None, B_ERROR)
+                        except Exception:
+                            # Give up.
+                            pass
             if not isinstance(exc, Exception):
                 raise
         else:

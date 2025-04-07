@@ -184,9 +184,23 @@ class Caller(CtxObj):
         return self
 
 
-class MsgSender:
+class BaseMsgHandler:
     """
-    Something that accepts and dispatches messages.
+    Somewhat-abstract superclass for anythiong that accepts messages.
+    """
+    def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
+        """
+        Handle this message stream.
+
+        @rcmd is the inverted command prefix. Hierarchical handlers chop an
+        element off the end.
+        """
+        raise NotImplementedError
+
+
+class MsgSender(BaseMsgHandler):
+    """
+    This class is the client-side API of the MoaT Command multiplexer.
     """
 
     def __init__(self, root: MsgHandler):
@@ -198,11 +212,14 @@ class MsgSender:
         return self._root
 
     def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
-        return self._root.handle(msg, rcmd)
+        """
+        Redirect to the underlying command handler.
+        """
+        return self.root.handle(msg, rcmd)
 
     def cmd(self, cmd: Path, *a: list[Any], **kw: dict[Key, Any]) -> Caller:
         """
-        Run a command.
+        Run the command at this path.
 
         The result of this call can be used both as an awaitable (straight
         method call) and a context manager (streaming):
@@ -216,21 +233,21 @@ class MsgSender:
         """
         from .msg import Msg
 
-        return Caller(self._root, Msg.Call(cmd, a, kw))
+        return Caller(self, Msg.Call(cmd, a, kw))
 
     def __call__(self, *a: list[Any], **kw: dict[Key, Any]) -> Caller:
         """
-        Run a command with an empty path.
+        Direct call to run a command (empty path).
         """
         from .msg import Msg
 
-        return Caller(self._root, Msg.Call((), a, kw))
+        return Caller(self, Msg.Call((), a, kw))
 
     def sub_at(self, prefix: Path, may_stream: bool = False) -> MsgSender:
         """
         Returns a SubMsgSender if the path cannot be resolved locally.
         """
-        res = self._root.sub_at(prefix, may_stream)
+        res = self._root.find_handler(prefix, may_stream)
         if isinstance(res, tuple):
             root, rem = res
             if rem:
@@ -241,7 +258,7 @@ class MsgSender:
 
 class SubMsgSender(MsgSender):
     """
-    Something that accepts and dispatches messages and prefixes a subpath.
+    This `MsgSender` subclass auto-prefixes a path to all calls.
     """
 
     def __init__(self, root: MsgHandler, path: Path):
@@ -269,13 +286,13 @@ class SubMsgSender(MsgSender):
         ...     async for msg, in m:
         ...         m.send(msg*2)
         """
-        return Caller(self._root, msg.Call(self._path + cmd, a, kw))
+        return Caller(self, msg.Call(self._path + cmd, a, kw))
 
     def __call__(self, *a: list[Any], **kw: dict[Key, Any]) -> Caller:
         """
         Process a call with an empty path.
         """
-        return Caller(self._root, Msg.Call(self._path, a, kw))
+        return Caller(self, Msg.Call(self._path, a, kw))
 
     def sub_at(self, prefix: Path) -> SubMsgSender:
         """
@@ -284,7 +301,7 @@ class SubMsgSender(MsgSender):
         return SubMsgSender(root, self._path + rem)
 
 
-class MsgHandler(CtxObj):
+class MsgHandler(CtxObj, BaseMsgHandler):
     """
     Something that handles messages.
 
@@ -342,12 +359,20 @@ class MsgHandler(CtxObj):
         # Neither of the above: find a subcommand.
         scmd = rcmd.pop()
         if (sub := getattr(self, f"sub{pref}_{scmd}", None)) is not None:
-            return await sub.handle(msg, rcmd)
+            if hasattr(sub,"handle"):
+                sub = sub.handle
+            return await sub(msg, rcmd)
 
         raise KeyError(scmd)
 
-    def sub_at(self, path, may_stream: bool = False) -> tuple[MsgHandler, Path] | Callable:
-        """TODO"""
+    def find_handler(self, path, may_stream: bool = False) -> tuple[MsgHandler, Path] | Callable:
+        """
+        Do a path lookup and find a suitable subcommand.
+
+        This is a shortcut finder that returns either a subroot+prefix
+        tuple or something that's callable directly. Implementing the
+        latter for streams is TODO.
+        """
         return self, path
 
     async def _ctx(self):

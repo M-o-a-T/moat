@@ -1,5 +1,5 @@
 """
-Basic MoaT command multiplexer, sans-IO implementation
+MoaT's command multiplexer.
 """
 
 from __future__ import annotations

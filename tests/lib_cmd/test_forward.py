@@ -75,7 +75,7 @@ async def test_error():
         scaffold(EP(), None, "A") as (a, x),
         scaffold(Fwd(x), None, "C") as (y, b),
     ):
-        with pytest.raises(StreamError) as err:
+        with pytest.raises(RuntimeError) as err:
             res = await b.cmd("Test", 123)
             print(f"OWCH: result is {res!r}")
         assert err.match("123")

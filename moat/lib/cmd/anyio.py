@@ -13,7 +13,7 @@ from .stream import HandlerStream
 import logging
 
 if TYPE_CHECKING:
-    from .base import MsgSender
+    from .base import BaseMsgHandler
     from moat.lib.codec import Codec
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def run(
-    cmd: MsgSender, stream: anyio.abc.ByteStream, *, codec: Codec | None = None, debug: str = None
+    cmd: BaseMsgHandler, stream: anyio.abc.ByteStream, *, codec: Codec | None = None, debug: str = None
 ) -> MsgHandler:
     """
     Run a command handler on top of an anyio stream, using the given codec.

@@ -104,11 +104,10 @@ async def test_error_scaffold():
     async with scaffold(EP(), None) as (a, b):
         a._id = 9
         b._id = 12
-        with pytest.raises(StreamError) as err:
+        with pytest.raises(RuntimeError) as err:
             res = await b.cmd("Err")
-            raise RuntimeError("No error", res.args, res.kw)
+            raise ValueError("No error", res.args, res.kw)
         assert err.value.args == (
-            "RuntimeError",
             "Duh",
         ), err.value
 
@@ -142,7 +141,7 @@ async def test_error():
             raise RuntimeError("Duh", msg.args)
 
     async with scaffold(EP(), None) as (a, b):
-        with pytest.raises(StreamError) as err:
+        with pytest.raises(RuntimeError) as err:
             res = await b.cmd("Test", 123)
             print(f"OWCH: result is {res!r}")
         assert err.match("123")

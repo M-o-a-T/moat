@@ -44,16 +44,16 @@ async def run(
             while True:
                 try:
                     if debug:
-                        logger.warning("R%s ?", debug)
+                        logger.debug("R%s ?", debug)
                     buf = await rd_(4096)
                 except anyio.EndOfStream:
                     return
                 if debug:
-                    logger.warning("R%s %r", debug, buf)
+                    logger.debug("R%s %r", debug, buf)
                 codec.feed(buf)
                 for msg in codec:
                     if debug:
-                        logger.warning("R%s %r", debug, msg)
+                        logger.debug("R%s %r", debug, msg)
                     cmd.msg_in(msg)
 
     async def wr(conn, cmd):
@@ -64,11 +64,11 @@ async def run(
             except EOFError:
                 return
             if debug:
-                logger.warning("W%s %r", debug, msg)
+                logger.debug("W%s %r", debug, msg)
 
             buf = codec.encode(msg)
             if debug:
-                logger.warning("W%s %r", debug, bytes(buf))
+                logger.debug("W%s %r", debug, bytes(buf))
             await wr(buf)
 
     async with anyio.create_task_group() as tg:

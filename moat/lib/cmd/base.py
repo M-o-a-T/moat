@@ -193,6 +193,10 @@ class MsgSender:
         """ """
         self._root = root
 
+    @property
+    def root(self):
+        return self._root
+
     def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
         return self._root.handle(msg, rcmd)
 
@@ -235,14 +239,16 @@ class MsgSender:
         return root
 
 
-class SubMsgSender:
+class SubMsgSender(MsgSender):
     """
     Something that accepts and dispatches messages and prefixes a subpath.
     """
 
     def __init__(self, root: MsgHandler, path: Path):
-        """ """
-        self._root = root
+        """
+        Setup.
+        """
+        super().__init__(root)
         self._path = path
         self._rpath = list(path)
         self._rpath.reverse()
@@ -294,6 +300,10 @@ class MsgHandler(CtxObj):
     inheritance in MicroPython) but doesn't itself contain a context
     manager.
     """
+
+    @property
+    def root(self):
+        return self
 
     async def handle(self, msg: Msg, rcmd: list, *prefix: list[str]):
         """

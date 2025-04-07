@@ -100,10 +100,10 @@ class StreamGate(HandlerStream):
             yield self
             # await anyio.sleep(0.1)
             if not self.is_idle:
-                logger.debug("NOT IDLE")
+                logger.warning("NOT IDLE: Error?")
                 while not self.is_idle:
                     await anyio.sleep(0.1)
-                logger.debug("NOW IDLE")
+                logger.warning("NOT IDLE: OK")
             assert self.is_idle
 
 

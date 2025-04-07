@@ -7,6 +7,7 @@ from __future__ import annotations
 import anyio
 from contextlib import asynccontextmanager
 from moat.util.cbor import StdCBOR
+from moat.util import ungroup
 from typing import TYPE_CHECKING
 from .stream import HandlerStream
 import logging
@@ -47,12 +48,9 @@ async def run(
             task_status.started(sc)
             rd_ = conn.read if hasattr(conn, "read") else conn.receive
             while True:
-                try:
-                    if debug:
-                        logger.debug("R%s ?", debug)
-                    buf = await rd_(4096)
-                except anyio.EndOfStream:
-                    return
+                if debug:
+                    logger.debug("R%s ?", debug)
+                buf = await rd_(4096)
                 if debug:
                     logger.debug("R%s %r", debug, buf)
                 codec.feed(buf)
@@ -76,13 +74,16 @@ async def run(
                 logger.debug("W%s %r", debug, bytes(buf))
             await wr(buf)
 
-    async with stream, anyio.create_task_group() as tg:
-        async with HandlerStream(cmd) as hs:
-            rds = await tg.start(rd, stream, hs)
-            tg.start_soon(wr, stream, hs)
+    try:
+        async with ungroup, stream, anyio.create_task_group() as tg:
+            async with HandlerStream(cmd) as hs:
+                rds = await tg.start(rd, stream, hs)
+                tg.start_soon(wr, stream, hs)
 
-            yield hs
-        # Closing down, the HandlerStream's shutdown might require
-        # exchanging more messages, after which it'll close its send queue.
-        # Thus we don't cancel the writer.
-        rds.cancel()
+                yield hs
+            # Closing down, the HandlerStream's shutdown might require
+            # exchanging more messages, after which it'll close its send queue.
+            # Thus we don't cancel the writer.
+            rds.cancel()
+    except anyio.EndOfStream:
+        pass

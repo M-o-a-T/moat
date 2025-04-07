@@ -14,6 +14,20 @@ from moat.lib.cmd.msg import Msg
 import logging
 logger=logging.getLogger(__name__)
 
+def i_f2wire(id:int,flag:int) -> int:
+    assert id != 0
+    assert 0 <= flag <= 3
+    if id>0:
+        id -= 1
+    return (id<<2) | flag
+
+def wire2i_f(id:int) -> tuple[int,int]:
+    f = id & 3
+    id >>= 2
+    if id >= 0:
+        id += 1
+    return id,f
+
 class StreamHandler(MsgHandler):
     """
     This class transforms handler requests into streamed messages.
@@ -89,10 +103,9 @@ class StreamHandler(MsgHandler):
 
     def msg_in(self, msg:list) -> None:
         """process an incoming message"""
-        i = msg[0]
-        flag = i&3
+        i,flag = wire2i_f(msg[0])
         # flip sign
-        i = -1 - (i >> 2)
+        i = -i
 
         a = msg[1:]
         kw = a.pop() if a and isinstance(a[-1],dict) else {}
@@ -212,7 +225,7 @@ class StreamHandler(MsgHandler):
 
     async def msg_out(self) -> list:
         link, a, kw, flag = await self._send_q.get()
-        i = (link.id<<2) | flag
+        i = i_f2wire(link.id, flag)
 
         # Handle last-arg-is-dict ambiguity
         if kw:

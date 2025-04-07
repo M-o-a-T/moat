@@ -108,6 +108,8 @@ class Codec(_Codec):
     _buffer: bytes | bytearray = b""
     _buf_pos: int = 0
 
+    _buf_out: bytearray|None=None
+
     def __init__(self, use_attrdict: bool = False, **kw):
         super().__init__(**kw)
         self.use_attrdict = use_attrdict
@@ -124,18 +126,18 @@ class Codec(_Codec):
         As a special case, if @empty_elided is set, a toplevel NotGiven
         object encodes to an empty message, signalling deletion to MQTT.
         """
-        if self._buffer:
+        if self._buf_out is not None:
             raise RuntimeError("Codec is busy")
 
         if empty_elided and obj is NotGiven:
             return b""
 
-        self._buffer = bytearray()
+        self._buf_out = bytearray()
         try:
             self._enc_any(obj)
-            return self._buffer
+            return self._buf_out
         finally:
-            self._buffer = b""  # always reset
+            self._buf_out = None  # always reset
 
     def decode(self, data: bytes | bytearray | memoryview, *, empty_elided: bool = False) -> Any:
         """
@@ -285,7 +287,7 @@ class Codec(_Codec):
         self._enc_any(val)
 
     def _w(self, d):
-        self._buffer.extend(d)
+        self._buf_out.extend(d)
 
     def _enc_any(self, ob):
         w = self._w

@@ -87,7 +87,7 @@ async def test_more():
     class EP(MsgHandler):
         @staticmethod
         async def handle(msg, rcmd):
-            assert msg.cmd == "X"
+            assert msg.cmd == ["X"]
             await anyio.sleep(msg.args[0] / 10)
             return msg.args[0]
 

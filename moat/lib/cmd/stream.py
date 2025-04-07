@@ -84,13 +84,14 @@ class HandlerStream(MsgHandler):
             rcmd.pop()
             return await super().handle(msg, rcmd)
 
+        rcmd.reverse()
         i = self._gen_id()
         can_stream = msg.can_stream
         link = StreamLink(self, i)
         log("NEWID1 %d L%d", i, link.link_id)
         msg.replace_with(link)
         self.attach(link)
-        args = [msg.cmd]
+        args = [rcmd]
         args.extend(msg.args)
         self.send(link, args, msg._kw, B_STREAM if can_stream else 0)
         if not can_stream:

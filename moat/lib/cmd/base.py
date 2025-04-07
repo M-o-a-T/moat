@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from typing import Any,Awaitable,Callable
     Key = str|int|bool
 
+
 class MsgLink:
     """
     The "other side" of a message.
@@ -288,13 +289,15 @@ class MsgHandler(CtxObj):
     inheritance in MicroPython) but doesn't itself contain a context
     manager.
     """
-    async def handle(self, msg:Msg, rcmd:list):
+    async def handle(self, msg:Msg, rcmd:list, *prefix:list[str]):
         """
         Process the message.
         """
+        pref = "_"+"_".join(prefix) if prefix else ""
+
         # Process direct calls.
         if not rcmd:
-            if not msg.can_stream and (cmd := getattr(self,"cmd",None)) is not None:
+            if not msg.can_stream and (cmd := getattr(self,f"cmd{pref}",None)) is not None:
                 return await msg.call_simple(cmd)
             else:
                 return await msg.call_stream(self.stream)
@@ -303,19 +306,19 @@ class MsgHandler(CtxObj):
         if len(rcmd) <= 2 and rcmd[0] == "doc_":
             if msg.a or msg.kw:
                 raise TypeError("doc")
-            if (doc := getattr(self, f"doc_{rcmd[1]}" if len(rcmd) > 1 else "doc", None)) is not None:
+            if (doc := getattr(self, f"doc{pref}_{rcmd[1]}" if len(rcmd) > 1 else f"doc{pref}", None)) is not None:
                 return await msg.result(self.doc)
 
         # Process command handlers of this class.
         if len(rcmd) == 1:
-            if not msg.can_stream and (cmd := getattr(self,f"cmd_{rcmd[0]}",None)) is not None:
+            if not msg.can_stream and (cmd := getattr(self,f"cmd{pref}_{rcmd[0]}",None)) is not None:
                 return await msg.call_simple(cmd)
-            if (cmd := getattr(self,f"stream_{rcmd[0]}",None)) is not None:
+            if (cmd := getattr(self,f"stream{pref}_{rcmd[0]}",None)) is not None:
                 return await msg.call_stream(cmd)
 
         # Neither of the above: find a subcommand.
         scmd = rcmd.pop()
-        if (sub := getattr(self,f"sub_{scmd}",None)) is not None:
+        if (sub := getattr(self,f"sub{pref}_{scmd}",None)) is not None:
             return await sub.handle(msg,rcmd)
 
         raise KeyError(scmd)

@@ -8,10 +8,11 @@ import anyio
 from contextlib import asynccontextmanager
 from moat.util.cbor import StdCBOR
 from typing import TYPE_CHECKING
+from .stream import HandlerStream
 import logging
 
 if TYPE_CHECKING:
-    from .base import MsgHandler
+    from .base import MsgSender
     from moat.lib.codec import Codec
 
 logger = logging.getLogger(__name__)
@@ -19,13 +20,12 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def run(
-    cmd: MsgHandler, stream: anyio.abc.ByteStream, *, codec: Codec | None = None, debug: str = None
-):
+    cmd: MsgSender, stream: anyio.abc.ByteStream, *, codec: Codec | None = None, debug: str = None
+) -> MsgHandler:
     """
     Run a command handler on top of an anyio stream, using the given codec.
 
-    @cmd is supposed to be an async context manager. Use `contextlib.nullcontext`
-    if you need to call this from inside its context.
+    @cmd is the handler for incoming messages. It may be `None`.
 
     This is an async context manager that yields the command handler.
 
@@ -39,6 +39,7 @@ async def run(
 
     elif isinstance(codec, str):
         from moat.lib.codec import get_codec
+
         codec = get_codec(codec)
 
     async def rd(conn, cmd, *, task_status):
@@ -75,10 +76,13 @@ async def run(
                 logger.debug("W%s %r", debug, bytes(buf))
             await wr(buf)
 
-    async with anyio.create_task_group() as tg:
-        async with cmd as cmd_:
-            rds = await tg.start(rd, stream, cmd_)
-            tg.start_soon(wr, stream, cmd_)
-            yield cmd_
+    async with stream, anyio.create_task_group() as tg:
+        async with HandlerStream(cmd) as hs:
+            rds = await tg.start(rd, stream, hs)
+            tg.start_soon(wr, stream, hs)
+
+            yield hs
+        # Closing down, the HandlerStream's shutdown might require
+        # exchanging more messages, after which it'll close its send queue.
+        # Thus we don't cancel the writer.
         rds.cancel()
-        # we wait on the writer

@@ -3,7 +3,7 @@ import anyio
 from moat.lib.cmd.base import MsgSender, MsgHandler, MsgLink
 from moat.lib.cmd.msg import Msg
 from moat.lib.cmd.stream import HandlerStream
-from moat.util import Path
+from moat.util import Path, CtxObj
 from contextlib import asynccontextmanager
 import logging
 
@@ -83,28 +83,28 @@ async def _wrap_sock(s: Socket) -> anyio.abc.ByteStream:
         raise RuntimeError("Which anyio backend are you using??")
 
 
-class StreamGate(HandlerStream):
+class StreamGate(CtxObj):
     def __init__(self, h: MsgHandler, so: Socket, s: str):
         from moat.util.cbor import StdCBOR
 
-        super().__init__(h)
-        self.__s = s
-        self.__so = so
+        self.s = s
+        self.so = so
+        self.h = h
 
     @asynccontextmanager
     async def _ctx(self):
         from moat.lib.cmd.anyio import run
         from contextlib import nullcontext
 
-        async with await _wrap_sock(self.__so) as sock, run(super()._ctx(), sock, debug=self.__s):
-            yield self
+        async with await _wrap_sock(self.so) as sock, run(self.h, sock, debug=self.s) as out:
+            yield out
             # await anyio.sleep(0.1)
-            if not self.is_idle:
+            if not out.root.is_idle:
                 logger.warning("NOT IDLE: Error?")
-                while not self.is_idle:
+                while not out.root.is_idle:
                     await anyio.sleep(0.1)
                 logger.warning("NOT IDLE: OK")
-            assert self.is_idle
+            assert out.root.is_idle
 
 
 @asynccontextmanager
@@ -120,7 +120,7 @@ async def scaffold(ha, hb, key="", use_socket=False):
         b = StreamLoop(hb, key + "<")
         a.attach_remote(b)
         b.attach_remote(a)
-    async with a, b:
-        yield MsgSender(a), MsgSender(b)
+    async with a as xa, b as xb:
+        yield MsgSender(xa), MsgSender(xb)
     # assert not a._msgs, a._msgs
     # assert not b._msgs, b._msgs

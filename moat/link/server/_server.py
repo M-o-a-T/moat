@@ -12,11 +12,11 @@ from datetime import datetime, UTC
 from collections import defaultdict
 from contextlib import nullcontext
 
-from moat.lib.cmd import CmdHandler
+from moat.lib.cmd import MsgHandler,MsgSender
 from moat.lib.cmd.anyio import run as run_cmd_anyio
 from moat.link.auth import AnonAuth, TokenAuth
-from moat.link.conn import SubConn, CmdCommon
-from moat.link.client import BasicLink
+from moat.link.common import CmdCommon
+from moat.link.client import BasicLink, LinkCommon
 from moat.link.backend import get_backend
 from moat.link.exceptions import ClientError
 from moat.link.meta import MsgMeta
@@ -149,7 +149,7 @@ class HelloProc:
         self.client.in_stream.pop(0, None)
 
 
-class ServerClient(SubConn, CmdCommon):
+class ServerClient(LinkCommon):
     """Represent one (non-server) client."""
 
     _hello: Hello | None = None
@@ -170,31 +170,33 @@ class ServerClient(SubConn, CmdCommon):
         """Main loop for this client connection."""
 
         self.logger.debug("START %s C_%d", self.name, self.client_nr)
-        self._handler = cmd = CmdHandler(self._cmd_in)
         self._hello = Hello(
-            self,
             them=f"C_{self.client_nr}",
             auth_in=[TokenAuth("Duh"), AnonAuth()],
         )
         async with (
             anyio.create_task_group() as self.tg,
-            run_cmd_anyio(cmd, self.stream),
+            run_cmd_anyio(self, self.stream) as cmd,
         ):
+            self._sender = MsgSender(cmd)
+
             # basic setup
             try:
-                if await self._hello.run() is False or not (auth := self._hello.auth_data):
+                self.logger.warning("HelloSrvStart")
+                if await self._hello.run(MsgSender(cmd)) is False or not (auth := self._hello.auth_data):
                     self.logger.debug("NO %s", self.client_nr)
                     return
             finally:
                 del self._hello
             self._auth_data = auth
+            self.logger.warning("HelloSrvDone")
 
             # periodic ping
             while True:
                 # XXX configurable; only when idle
                 await anyio.sleep(30)
                 with anyio.fail_after(self.server.cfg.server.ping_timeout):
-                    await cmd.cmd(P("i.ping"))
+                    await self._sender.cmd(P("i.ping"))
 
     @property
     def auth_data(self):
@@ -207,18 +209,19 @@ class ServerClient(SubConn, CmdCommon):
             return self._hello.auth_data
         return self._auth_data
 
-    def _cmd_in(self, msg) -> Awaitable:
+    def handle(self, msg, rpath, *sub) -> Awaitable[Any]:
         """
-        Process an incoming message.
+        Message handlers that intercepts commands, as long as no
+        authorization has taken place
         """
         self.logger.debug("IN %s", msg)
         if self._hello is not None and self._hello.auth_data is None:
-            return self._hello.cmd_in(msg)
-        cmd = getattr(self, "cmd_" + "_".join(msg.cmd))
-        return cmd(msg)
+            return self._hello.handle(msg, rpath, *sub)
+
+        return super().handle(msg, rpath, *sub)
 
     doc_d_get=dict(_d="get subnode data", _r=["Any:Data", "MsgMeta"], _0="Path")
-    async def cmd_d_get(self, msg):
+    async def stream_d_get(self, msg):
         """Get the data of a sub-node.
 
         Arguments:
@@ -229,7 +232,17 @@ class ServerClient(SubConn, CmdCommon):
         * metadata
         """
         d = self.server.data[msg[0]]
-        await msg.result(d.data, d.meta)
+        msg.result(d.data, d.meta)
+
+    doc_d=dict(_d="Data access commands")
+    def sub_d(self, msg:Msg,rcmd:list) -> Awaitable:
+        "Local subcommand redirect for 'd'"
+        return self.handle(msg,rcmd,'d')
+
+    doc_s=dict(_d="Data load/save commands")
+    def sub_s(self, msg:Msg,rcmd:list) -> Awaitable:
+        "Local subcommand redirect for 's'"
+        return self.handle(msg,rcmd,'s')
 
     doc_d_list=dict(_d="get subnode child names", _r=["Any:Data", "MsgMeta"], _o="str")
     async def cmd_d_list(self, msg):
@@ -241,8 +254,8 @@ class ServerClient(SubConn, CmdCommon):
         * strings
         """
 
-        async with msg.stream_w():
-            for k in list(self.server.data[msg[1]].keys()):
+        async with msg.stream_out():
+            for k in list(self.server.data[msg[0]].keys()):
                 await msg.send(k)
 
     doc_d_walk=dict(
@@ -275,14 +288,10 @@ class ServerClient(SubConn, CmdCommon):
         xmin = msg.get(2, 0)
         xmax = msg.get(3, 9999999)
         async with msg.stream_out():
-            try:
-                await d.walk(_writer, timestamp=ts, min_depth=xmin, max_depth=xmax)
-            except Exception as exc:
-                breakpoint()
-                raise
+            await d.walk(_writer, timestamp=ts, min_depth=xmin, max_depth=xmax)
 
     doc_d_set=dict(_d="set value", _0="Path", _1="Any", _99="MsgMeta:optional")
-    async def cmd_d_set(self, msg):
+    async def cmd_d_set(self, path, value, meta:MsgMeta|None=None):
         """Set a node's value.
 
         Arguments:
@@ -292,11 +301,7 @@ class ServerClient(SubConn, CmdCommon):
 
         You should not call this. Send to the MQTT topic directly.
         """
-        path = msg[0]
-        value = msg[1]
-        if len(msg) > 2:
-            meta = msg[2]
-        else:
+        if meta is None:
             meta = MsgMeta(origin=self.name)
         meta.source = "Client"
 
@@ -321,9 +326,24 @@ class ServerClient(SubConn, CmdCommon):
         self.server.maybe_update(path, NotGiven, meta)
 
     doc_i_state=dict(_d="state", _r="MsgMeta:optional")
-    async def cmd_i_state(self, msg):
+    async def cmd_i_state(self):
         """Return some info about this node's internal state"""
         return await self.server.get_state(**msg)
+
+    doc_i_error=dict(_d="last disconnect error", _r="Any:error")
+    def cmd_i_error(self, last_name:str=None):
+        """Return some info about the reason my link got disconnected"""
+        return self.server._error_cache.pop(last_name or self.name)
+
+    doc_i_stamp=dict(_d="stamp", _r="int:timestamp sequence#")
+    def cmd_i_stamp(self) -> int:
+        """Return a new timestamp value"""
+        return self.server.new_stamp()
+
+    doc_i_sync=dict(_d="sync", _0="int:timestamp sequence#")
+    def cmd_i_sync(self, stamp) -> Awaitable[None]:
+        """wait until the server received this stamp#"""
+        return self.server.wait_stamp(stamp)
 
     doc_d_deltree=dict(_d="drop a subtree", _0="Path", _r="int:#nodes", _o="node data")
     async def stream_d_deltree(self, msg):
@@ -485,6 +505,12 @@ class Server:
     _writing_done: anyio.Event
     _stopped: anyio.Event = None
 
+    _error_cache:dict[str,Any]
+
+    _stamp_in:int = 0
+    _stamp_out:int = 0
+    _stamp_in_evt:anyio.Event
+
     def __init__(self, cfg: dict, name: str, init: Any = NotGiven):
         self.data = Node()
         self.name = name
@@ -496,6 +522,8 @@ class Server:
         self.logger = logging.getLogger("moat.link.server." + name)
         self._writing = set()
         self._writing_done = anyio.Event()
+        self._error_cache = {}
+        self._stamp_in_evt = anyio.Event()
 
         # connected clients
         self._clients: set[ServerClient] = set()
@@ -733,6 +761,26 @@ class Server:
             self.node.tick = 0
             await self._check_ticked()
         self.fetch_running = None
+
+
+    def new_stamp(self):
+        """
+        Return the next stamp value.
+
+        The idea is for a client to call `new_stamp`, send this value to
+        the server's ``stamp`` channel, then call `wait_stamp` to ensure
+        that the stamp value arrived on the server's MQTT channel.
+        """
+        self._stamp_out += 1
+        return self._stamp_out
+
+    async def wait_stamp(self,stamp):
+        """
+        Wait until the server has seen this stamp value (or better) on its
+        ``stamp`` channel.
+        """
+        while self._stamp_in < stamp:
+            await self._stamp_in_evt.wait()
 
     async def fetch_data(self, nodes, authoritative=False):
         """
@@ -1412,6 +1460,7 @@ class Server:
             await _tg.start(self._backend_monitor)
             await _tg.start(self._backend_sender)
             await _tg.start(self._read_main)
+            await _tg.start(self._read_stamp)
 
             # retrieve data
 
@@ -1534,6 +1583,17 @@ class Server:
             task_status.started()
             async for msg in mon:
                 self.service_monitor(msg)
+
+    async def _read_stamp(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        """
+        Task to read the main service monitoring channel
+        """
+        async with self.backend.monitor(P(":R.run.service.main.stamp")) as mon:
+            task_status.started()
+            async for msg in mon:
+                self._stamp_in = msg.data
+                self._stamp_in_evt.set()
+                self._stamp_in_evt = anyio.Event()
 
     async def _sync_from(self, name: str, data: dict) -> bool:
         """
@@ -1696,9 +1756,11 @@ class Server:
         """
         Manager for a single client connection.
 
-        The acctual work happens in `ServerClient.run`. This wrapper
-        mainly tries to send a message to the client that states what went
-        wrong on the server.
+        The actual work happens in `ServerClient.run`. This wrapper
+        mainly tries to record what went wrong on the server so the next
+        client session can ask.
+
+        TODO, for the most part. The stream is 
         """
         c = None
         try:
@@ -1728,12 +1790,8 @@ class Server:
                     self.logger.exception("Client connection killed", exc_info=exc)
             if exc is None:
                 exc = "Cancelled"
-            try:
-                with anyio.move_on_after(0.02, shield=True):
-                    if c is not None:
-                        await c.cmd(P("i.error"), str(exc))
-            except (anyio.BrokenResourceError, anyio.ClosedResourceError):
-                pass
+            self._error_cache[name] = exc
+            self.logger.debug("XX END XX %d", c.client_nr)
 
         finally:
             with anyio.move_on_after(2, shield=True):

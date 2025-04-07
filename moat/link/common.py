@@ -22,11 +22,11 @@ class CmdCommon:
     doc_i=dict(_d="Internal commands")
     def sub_i(self, msg:Msg,rcmd:list) -> Awaitable:
         "Local subcommand redirect for 'i'"
-        return self.handle(self,msg,rcmd,'i')
+        return self.handle(msg,rcmd,'i')
 
     doc_i_ping=dict(_d="Ping, echo", _r="Any: sends all args and keys back")
     doc_i_乒=doc_i_ping
-    async def cmd_i_ping(self, *a, **kw) -> bool | None:
+    async def stream_i_ping(self, msg:Msg) -> bool | None:
         """
         This handler replies with "pong" and its arguments, for basic
         round-trip tests.
@@ -35,7 +35,7 @@ class CmdCommon:
 
         Yes, this name is silly.
         """
-        await msg.result("乓", *msg.args, **msg.kw)
+        msg.result("乓", *msg.args, **msg.kw)
 
-    cmd_i_乒 = cmd_i_ping
+    stream_i_乒 = stream_i_ping
 

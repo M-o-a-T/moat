@@ -97,6 +97,9 @@ class MsgMeta:
             else:
                 kw = {}
         source = kw.pop("source", None)
+        if isinstance(a,tuple):
+            raise TypeError("why a tuple?")  # XXX
+            a=list(a)
         m.a = a
         m.kw = kw
         m.source = source

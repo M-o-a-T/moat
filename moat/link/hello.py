@@ -8,8 +8,9 @@ from __future__ import annotations
 from attrs import define, field
 from moat.util import P
 import anyio
+from moat.lib.cmd.base import MsgHandler
 from . import protocol_version, protocol_version_min
-from .conn import SubConn, CmdCommon
+from .common import CmdCommon
 import logging
 
 from typing import TYPE_CHECKING
@@ -30,14 +31,14 @@ def _to_dict(x: list[AuthMethod]) -> dict[str, AuthMethod]:
 
 
 @define
-class Hello(SubConn, CmdCommon):
+class Hello(CmdCommon, MsgHandler):
     """
     This object handles the initial handshake between two MoaT links.
 
     Usage:
 
-    * The ``handler`` callback that you supplied to your `CmdHandler` must
-      forward all incoming commands to `Hello.cmd_in` while
+    * The ``handle`` method that you supplied to your `CmdHandler` must
+      forward all incoming commands to `Hello.handler` while
       ``auth_data`' is `None`.
 
     * Call `Hello.run`.
@@ -48,10 +49,8 @@ class Hello(SubConn, CmdCommon):
     Negotiated auth data are in ``.auth_data``.
     """
 
-    _handler: CmdHandler = field()
-
-    me: str | None = field(kw_only=True, default=None)
-    them: str | None = field(kw_only=True, default=None)
+    me: str | None = field(default=None)
+    them: str | None = field(default=None)
 
     auth_data: Any = field(init=False, default=None)
 
@@ -71,21 +70,26 @@ class Hello(SubConn, CmdCommon):
     hello_a: tuple[Any] = field(init=False, default=())
     hello_kw: dict[str, Any] = field(init=False, default={})
 
-    async def cmd_in(self, msg) -> bool | None:
+
+    def __init__(self,*a,**kw):
+        super().__init__()
+        self.__attrs_init__(*a,**kw)
+
+    async def handle(self, msg:Msg, rpath:list[str]) -> bool | None:
         """
-        Dispatch an incoming message
+        Dispatch an incoming "hello" message
         """
-        if msg.cmd[0] != "i":
+        if rpath.pop() != "i":
             raise ValueError("No Hello/Auth")
-        if len(msg.cmd) == 2 and msg.cmd[1] == "hello":
+        if len(rpath) == 1 and rpath[0] == "hello":
             return await self.cmd_i_hello(msg)
-        if len(msg.cmd) != 3 or msg.cmd[1] != "auth":
+        if len(rpath) != 2 or rpath[1] != "auth":
             raise ValueError("No Hello/Auth")
 
         if self.data is not None:
             # Some other method already succeeded
             return False
-        a = self.auth_in.get(msg.cmd[2], None)
+        a = self.auth_in.get(msg.cmd[0], None)
         if a is None:
             return False
         return await a.handle(self, msg)
@@ -195,7 +199,7 @@ class Hello(SubConn, CmdCommon):
         # Nothing matched.
         return False
 
-    async def run(self, **kw):
+    async def run(self, sender:MsgSender, **kw):
         """
         Send our Hello message.
         """
@@ -215,7 +219,7 @@ class Hello(SubConn, CmdCommon):
 
         logger.info("H OUT %r %r", auths, kw)
         self._sync.set()
-        (res,) = await self._handler.cmd(
+        (res,) = await sender.cmd(
             P("i.hello"),
             protocol_version,
             self.me,
@@ -229,19 +233,3 @@ class Hello(SubConn, CmdCommon):
 
         # Wait for the incoming side of the auth/hello dance to succeed
         await self._done.wait()
-
-    def cmd(self, *a, **kw) -> Awaitable:
-        "Forwarded to the link"
-        return self._handler.cmd(*a, **kw)
-
-    def stream_r(self, *a, **kw) -> Awaitable:
-        "Forwarded to the link"
-        return self._handler.stream_r(*a, **kw)
-
-    def stream_w(self, *a, **kw) -> Awaitable:
-        "Forwarded to the link"
-        return self._handler.stream_w(*a, **kw)
-
-    def stream_rw(self, *a, **kw) -> Awaitable:
-        "Forwarded to the link"
-        return self._handler.stream_rw(*a, **kw)

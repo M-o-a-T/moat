@@ -53,6 +53,8 @@ async def test_ls_basic(cfg):
         with anyio.fail_after(1):
             await evt.wait()
 
+        await c.sync()
+
         r, m = await c.cmd(P("d.get"), P("test.here"))
         assert r == "Hello"
         assert m.origin == "me!"
@@ -85,7 +87,7 @@ async def fetch(c, p):
     p = P(p)
     nn = Node()
     pl = PathLongener()
-    async with c.stream_r(P("d.walk"), p) as msgs:
+    async with c.stream_in(P("d.walk"), p) as msgs:
         try:
             it = aiter(msgs)
         except StreamError as exc:

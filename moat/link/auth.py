@@ -5,7 +5,7 @@ from moat.link import protocol_version
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.cmd import CmdHandler, Stream
+    from moat.lib.cmd import MsgHandler, Msg
     from typing import ClassVar, ReadOnly
 
 __all__ = ["AuthMethod", "TokenAuth", "FreeAuth", "NeverAuth"]
@@ -51,7 +51,7 @@ class AuthMethod:
         """
         return None
 
-    async def handle(self, conn: Hello, msg: Stream):
+    async def handle(self, conn: Hello, msg: Msg):
         """
         The dispatcher calls this method with an incoming ``i.auth.NAME`` message.
 
@@ -90,7 +90,7 @@ class TokenAuth(AuthMethod):
         # wrong token: kick them off
         return False
 
-    async def handle(self, conn: CmdHandler, msg: Stream):
+    async def handle(self, conn: MsgHandler, msg: Msg):
         """
         The client shouldn't send an `i.auth.token` message.
         """
@@ -111,7 +111,7 @@ class AnonAuth(AuthMethod):
         conn.authorized(self)
         return True
 
-    async def handle(self, conn: CmdHandler, msg: Stream):
+    async def handle(self, conn: MsgHandler, msg: Msg):
         return True
 
 
@@ -129,6 +129,6 @@ class NoAuth(AuthMethod):
         "reject"
         return False
 
-    async def handle(self, conn: CmdHandler, msg: Stream):
+    async def handle(self, conn: MsgHandler, msg: Msg):
         "reject"
         return False

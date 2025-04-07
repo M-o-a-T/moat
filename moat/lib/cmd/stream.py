@@ -10,8 +10,7 @@ from functools import partial
 from moat.lib.cmd.base import MsgLink, MsgHandler
 from moat.lib.cmd.const import *
 from moat.lib.cmd.errors import ShortCommandError
-from moat.lib.cmd.msg import Msg
-
+from moat.lib.cmd.msg import Msg, log_exc
 
 def i_f2wire(id: int, flag: int) -> int:
     assert id != 0
@@ -99,7 +98,7 @@ class HandlerStream(MsgHandler):
         self.attach(link)
         args = [rcmd]
         args.extend(msg.args)
-        self.send(link, args, msg._kw, B_STREAM if can_stream else 0)
+        await self.send(link, args, msg._kw, B_STREAM if can_stream else 0)
         if not can_stream:
             msg.set_end()
         # breakpoint()  # fwd
@@ -115,7 +114,18 @@ class HandlerStream(MsgHandler):
         self._id += 1
         return self._id
 
-    def msg_in(self, msg: list) -> None:
+    async def closed_input(self) -> None:
+        """
+        Input is down, no more messages
+        """
+        if self._tg is not None:
+            self._tg.cancel_scope.cancel()
+            self._send_q.close_sender()
+        for link in list(self._msgs.values()):
+            link.kill()
+
+
+    async def msg_in(self, msg: list) -> None:
         """process an incoming message"""
         i, flag = wire2i_f(msg[0])
         # flip sign
@@ -150,18 +160,18 @@ class HandlerStream(MsgHandler):
                 self._tg.start_soon(self._handle, msg, link)
         else:
             try:
-                link.ml_send(a, kw, flag)
+                await link.ml_send(a, kw, flag)
             except EOFError:
                 try:
-                    self.send(link, [E_NO_STREAM], None, B_ERROR)
+                    await self.send(link, [E_NO_STREAM], None, B_ERROR)
                 except EOFError:
                     pass
                 self.detach(link)
             except QueueFull:
                 if flag & B_STREAM:
-                    self.send(link, [E_SKIP], None, B_ERROR | B_STREAM)
+                    await self.send(link, [E_SKIP], None, B_ERROR | B_STREAM)
                 else:
-                    self.send(link, [E_SKIP], None, B_ERROR)
+                    await self.send(link, [E_SKIP], None, B_ERROR)
                     self.detach(link)
 
             else:
@@ -172,7 +182,7 @@ class HandlerStream(MsgHandler):
         if self._handler is None:
             # intentionally not async here, as that may end up
             # in a deadlock
-            self.send(link, [E_NO_CMD], None, B_ERROR)
+            await self.send(link, [E_NO_CMD], None, B_ERROR)
             return
 
         rem = link.remote
@@ -182,33 +192,34 @@ class HandlerStream(MsgHandler):
                 if link.end_there:
                     raise ValueError(f"Already ended but returned {res!r}")
                 else:
-                    link.remote.ml_send([res], None, 0)
+                    await link.remote.ml_send([res], None, 0)
         except BaseException as exc:
-            log("Error handling B %r: %r", msg, exc)
             try:
                 # send the error directly
-                link.remote.ml_send((exc,), None, B_ERROR)
+                await link.remote.ml_send((exc,), None, B_ERROR)
             except Exception:
                 try:
                     # that failed? send the error name and arguments
-                    link.remote.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
+                    await link.remote.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
                 except Exception:
                     try:
                         # that failed too? send just the error name
-                        link.remote.ml_send((exc.__class__.__name__,), None, B_ERROR)
+                        await link.remote.ml_send((exc.__class__.__name__,), None, B_ERROR)
                     except Exception:
                         try:
                             # oh well, just send a naked error indication
-                            link.remote.ml_send([E_ERROR], None, B_ERROR)
+                            await link.remote.ml_send([E_ERROR], None, B_ERROR)
                         except Exception:
                             # Give up.
                             pass
-            if not isinstance(exc, Exception):
+            if isinstance(exc,Exception):
+                log_exc(exc,"Error handling B %r", msg)
+            else:
                 raise
         else:
             # may have been replaced by the handler
             if rem is link.remote and not rem.end_here:
-                self.send(link, [None], None, 0)
+                await self.send(link, [None], None, 0)
 
         if not link.end_both:
             log("NotClosed L%d L%d", link.link_id, link.remote.link_id if link.remote else -1)
@@ -243,11 +254,11 @@ class HandlerStream(MsgHandler):
         else:
             self._id3.add(mid)
 
-    def send(self, link: StreamLink, a: list, kw: dict, flag: int) -> None:
+    async def send(self, link: StreamLink, a: list, kw: dict, flag: int) -> None:
         assert isinstance(a, (list, tuple)), a
         assert 0 <= flag <= 3, flag
         log("SendQ L%d %r %r %d", link.link_id, a, kw, flag)
-        self._send_q.put_nowait((link, a, kw, flag))
+        await self._send_q.put((link, a, kw, flag))
 
     async def msg_out(self) -> list:
         link, a, kw, flag = await self._send_q.get()
@@ -282,19 +293,15 @@ class HandlerStream(MsgHandler):
             try:
                 yield self
             finally:
+                self._send_q.close_sender()
+                self._recv_q.close_sender()
                 for link in list(self._msgs.values()):
-                    if not link.end_there:  ## XXX end_here?
-                        try:
-                            self.send(link, [E_CANCEL], None, B_ERROR)
-                        except Exception:
-                            pass
                     link.kill()
+
                 tg.cancel()
 
         for link in list(self._msgs.values()):
             self.detach(link)
-        self._send_q.close_sender()
-        self._recv_q.close_sender()
 
 
 class StreamLink(MsgLink):
@@ -305,17 +312,17 @@ class StreamLink(MsgLink):
         self.__stream = stream
         self.id = id
 
-    def ml_recv(self, a: list, kw: dict, flags: int) -> None:
+    async def ml_recv(self, a: list, kw: dict, flags: int) -> None:
         """data to be forwarded across the link"""
         assert 0 <= flags <= 3, flags
         log("LR L%d %d %r %r %d", self.link_id, self.id, a, kw, flags)
-        self.__stream.send(self, a, kw, flags)
+        await self.__stream.send(self, a, kw, flags)
 
-    def ml_send(self, a: list, kw: dict, flags: int) -> None:
+    async def ml_send(self, a: list, kw: dict, flags: int) -> None:
         """data to be forwarded to our remote"""
         log("LS L%d %d %r %r %d", self.link_id, self.id, a, kw, flags)
         assert 0 <= flags <= 3, flags
-        super().ml_send(a, kw, flags)
+        await super().ml_send(a, kw, flags)
 
     def stream_detach(self) -> None:
         self.__stream.detach(self)

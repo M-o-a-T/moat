@@ -22,16 +22,6 @@ if TYPE_CHECKING:
     from moat.lib.cmd.msg import Msg
 
 
-class LogLink(MsgLink):
-    def __init__(self, rem: MsgLink, s: str):
-        self._s = s
-        self._rem = rem
-
-    def ml_recv(self, a: list, kw: dict, flags: int) -> None:
-        logger.debug("T:%s %s %d", self._s, res_akw(a, kw), flags)
-        self._remote.ml_recv(a, kw, flags)
-
-
 class StreamLoop(HandlerStream):
     __other: StreamLoop = None
 
@@ -44,21 +34,24 @@ class StreamLoop(HandlerStream):
 
     async def __send(self):
         while True:
-            msg = await self.msg_out()
-            logger.warning("%s: %r", self.__s, msg)
-            self.__other.msg_in(msg)
+            try:
+                msg = await self.msg_out()
+            except EOFError:
+                return
+            logger.debug("%s: %r", self.__s, msg)
+            await self.__other.msg_in(msg)
 
     @asynccontextmanager
     async def _ctx(self):
         async with super()._ctx():
             self.start(self.__send)
             yield self
+            await self.__other.closed_input()
+        if not self.is_idle:
+            logger.debug("NOT IDLE")
+            await anyio.sleep(0.1)
             if not self.is_idle:
-                logger.debug("NOT IDLE")
-                while not self.is_idle:
-                    await anyio.sleep(0.1)
-                logger.debug("NOW IDLE")
-            assert self.is_idle
+                breakpoint()
 
 
 async def _wrap_sock(s: Socket) -> anyio.abc.ByteStream:

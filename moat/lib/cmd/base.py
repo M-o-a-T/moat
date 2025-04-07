@@ -43,7 +43,7 @@ class MsgLink:
         _link_id += 1
         self.link_id = _link_id
 
-    def ml_recv(self, a: list, kw: dict, flags: int) -> None:
+    async def ml_recv(self, a: list, kw: dict, flags: int) -> None:
         """Message Link Receive
 
         Called from the other side with whatever data.
@@ -52,7 +52,7 @@ class MsgLink:
         """
         raise NotImplementedError
 
-    def ml_send(self, a: list, kw: dict, flags: int) -> None:
+    async def ml_send(self, a: list, kw: dict, flags: int) -> None:
         """Message Link Send
 
         This method forwards data to the other side.
@@ -62,7 +62,7 @@ class MsgLink:
         if self._remote is None:
             log("? No remote %r", self)
         else:
-            self._remote.ml_recv(a, kw, flags)
+            await self._remote.ml_recv(a, kw, flags)
         if not flags & B_STREAM:
             self.set_end()
 

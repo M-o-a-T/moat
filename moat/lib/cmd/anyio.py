@@ -57,7 +57,7 @@ async def run(
                 for msg in codec:
                     if debug:
                         logger.debug("R%s %r", debug, msg)
-                    cmd.msg_in(msg)
+                    await cmd.msg_in(msg)
 
     async def wr(conn, cmd):
         wr = conn.write if hasattr(conn, "write") else conn.send

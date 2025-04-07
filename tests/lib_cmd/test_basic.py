@@ -44,7 +44,7 @@ async def test_basic_handle(a_s, a_r, k_s, k_r):
                 assert not k_s
             else:
                 assert msg.kw == k_s
-            msg.result(*a_r, **k_r)
+            await msg.result(*a_r, **k_r)
 
     ep = EP()
     ms = MsgSender(ep)
@@ -84,7 +84,7 @@ async def test_basic_scaffold(a_s, a_r, k_s, k_r):
                 assert not k_s
             else:
                 assert msg.kw == k_s
-            msg.result(*a_r, **k_r)
+            await msg.result(*a_r, **k_r)
 
     async with scaffold(EP, None) as (a, b):
         a._id = 9
@@ -123,7 +123,7 @@ async def test_basic_res():
             assert tuple(msg.args) == (123,)
             nonlocal ncall
             ncall += 1
-            msg.result({"C": msg.cmd, "R": tuple(msg.args)})
+            await msg.result({"C": msg.cmd, "R": tuple(msg.args)})
 
     async with scaffold(EP(), None) as (a, b):
         # note the comma
@@ -155,7 +155,7 @@ async def test_more():
         async def handle(msg, rcmd):
             assert msg.cmd == ["X"]
             await anyio.sleep(msg.args[0] / 10)
-            msg.result(msg[0])
+            await msg.result(msg[0])
 
     async with scaffold(EP(), None) as (a, b):
         # note the comma
@@ -183,7 +183,7 @@ async def test_return():
         async def handle(msg, rcmd):
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
-            msg.result(("Foo", 234))
+            await msg.result(("Foo", 234))
 
     async with scaffold(EP(), None) as (a, b):
         res = await b.cmd("Test", 123)
@@ -198,7 +198,7 @@ async def test_return2():
         async def handle(msg, rcmd):
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
-            msg.result("Foo", 234)
+            await msg.result("Foo", 234)
 
     async with scaffold(EP(), None) as (a, b):
         # neither a comma nor an index here
@@ -221,15 +221,15 @@ async def test_stream_in(use_socket):
                 async for m in st:
                     assert len(m[1]) == m[0]
                     res.append(m[0])
-                msg.result("OK", len(res) + 1)
+                await msg.result("OK", len(res) + 1)
             assert res == [1, 3, 2]
 
     async with scaffold(EP(), None, use_socket=use_socket) as (a, b):
         async with b.cmd("Test", 123).stream_out() as st:
             assert tuple(st.args) == ("LetsGo",)
-            st.send(1, "a")
-            st.send(3, "def")
-            st.send(2, "bc")
+            await st.send(1, "a")
+            await st.send(3, "def")
+            await st.send(2, "bc")
         assert tuple(st.args) == ("OK", 4)
         print("DONE")
 
@@ -244,10 +244,10 @@ async def test_stream_out(use_socket):
             assert tuple(msg.args) == (123, 456)
             assert msg.kw["answer"] == 42, msg.kw
             async with msg.stream_out("Takeme") as st:
-                st.send(1, "a")
-                st.send(3, "def")
-                st.send(2, "bc")
-                msg.result({})
+                await st.send(1, "a")
+                await st.send(3, "def")
+                await st.send(2, "bc")
+                await msg.result({})
 
     async with scaffold(EP(), None, use_socket=use_socket) as (a, b):
         n = 0

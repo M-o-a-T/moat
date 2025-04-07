@@ -134,6 +134,7 @@ class Msg(MsgLink, MsgResult):
     _recv_skip: bool = False
 
     _flo_evt: Event | None = None
+    warnings:list
 
     def __init__(self):
         """
@@ -141,6 +142,7 @@ class Msg(MsgLink, MsgResult):
         """
         super().__init__()
         self._msg_in = Event()
+        self.warnings = []  # TODO
 
     @property
     def cmd(self) -> Path:
@@ -206,19 +208,20 @@ class Msg(MsgLink, MsgResult):
                 self._msg_in.set()
             super().kill()
 
-    def ml_send(self, a: list, kw: dict, flags: int) -> None:
+
+    async def ml_send(self, a: list, kw: dict, flags: int) -> None:
         """
         Sender of data to the other side.
         """
         if self._stream_out == S_END:
-            pass
-        elif not flags & B_STREAM:
+            return
+        if not flags & B_STREAM:
             self._stream_out = S_END
         elif self._stream_out == S_NEW and not flags & B_ERROR:
             self._stream_out = S_ON
-        super().ml_send(a, kw, flags)
+        await super().ml_send(a, kw, flags)
 
-    def ml_recv(self, a: list, kw: dict, flags: int) -> None:
+    async def ml_recv(self, a: list, kw: dict, flags: int) -> None:
         """
         Receiver for data from the other side.
         """
@@ -252,44 +255,39 @@ class Msg(MsgLink, MsgResult):
                         self._flo_evt = Event()
                     self._flo += exc.n
                 # otherwise ignore
-            elif isinstance(exc, CancelledError) and self.scope is not None:
-                self.scope.cancel()
             elif self._stream_in == S_ON and self._recv_q is not None:
-                self._recv_q.put_nowait_error(exc)
+                await self._recv_q.put_error(exc)
             else:
-                self.warn.append(exc)
+                self.warnings.append(exc)
 
         elif self._stream_in == S_NEW:
             self._set_msg(a, kw, flags)
             self._stream_in = S_ON
 
         elif self._recv_q is not None:
-            try:
-                self._recv_q.put_nowait((a, kw))
-            except QueueFull:
-                self._recv_skip = True
+            await self._recv_q.put((a, kw))
 
         else:
             log("Unwanted stream: %r/%r/%d", a, kw, flags)
             if self._stream_in == S_ON:
                 self._stream_in = S_OFF
                 if self._stream_out != S_END:
-                    self.ml_send([E_NO_STREAM], None, B_ERROR)
+                    await self.ml_send([E_NO_STREAM], None, B_ERROR)
                     self._stream_out = S_END
 
         self._ended()
 
-    def send(self, *a, **kw) -> None:
+    async def send(self, *a, **kw) -> None:
         if self._stream_out != S_ON:
             raise NoStream
-        self._skipped()
-        self.ml_send(a, kw, B_STREAM)
+        await self._skipped()
+        await self.ml_send(a, kw, B_STREAM)
 
-    def warn(self, *a, **kw) -> None:
-        self.ml_send(a, kw, B_STREAM | B_ERROR)
+    async def warn(self, *a, **kw) -> None:
+        await self.ml_send(a, kw, B_STREAM | B_ERROR)
 
-    def error(self, *a, **kw) -> None:
-        self.ml_send(a, kw, B_ERROR)
+    async def error(self, *a, **kw) -> None:
+        await self.ml_send(a, kw, B_ERROR)
 
     def _set_msg(self, a: list, kw: dict, flags: int) -> None:
         """
@@ -321,7 +319,7 @@ class Msg(MsgLink, MsgResult):
 
     # Stream starters
 
-    def prep_stream(self, flag: int) -> None:
+    async def prep_stream(self, flag: int) -> None:
         """Sets up streaming as per SD_* flags.
 
         Sends an E_NO_STREAM warning if there's no streaming but queued data.
@@ -335,7 +333,7 @@ class Msg(MsgLink, MsgResult):
             q, self._recv_q = self._recv_q, None
             if q is not None and q.qsize() and self._stream_in == S_ON:
                 self._stream_in = S_OFF
-                self.warn(E_NO_STREAM)
+                await self.warn(E_NO_STREAM)
             # whatever has been received will be discarded
 
         self._stream_out = S_ON if flag & SD_OUT else S_OFF
@@ -344,7 +342,7 @@ class Msg(MsgLink, MsgResult):
         """Mark as neither send or receive streaming."""
         if self._stream_in == S_ON:
             if self._stream_out != S_END:
-                self.error(E_NO_STREAM)
+                await self.error(E_NO_STREAM)
             raise WantsStream
         self._recv_q = None
         self._dir = 0
@@ -392,15 +390,15 @@ class Msg(MsgLink, MsgResult):
             log_exc(exc,"Command Error %r", self)
             if self._remote is None:
                 raise
-            self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
+            await self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
         except BaseException as exc:
             if self._remote is None:
                 raise
             log_exc(exc, "Command Error %r", self)
-            self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
+            await self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
             raise
         else:
-            self.result(res)
+            await self.result(res)
 
     @asynccontextmanager
     async def ensure_remote(self):
@@ -433,10 +431,10 @@ class Msg(MsgLink, MsgResult):
             await cmd(self)
         except Exception as exc:
             log_exc(exc,"Stream Error %r", self)
-            self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
+            await self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
         except BaseException as exc:
             log_exc(exc,"Stream Error %r", self)
-            self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
+            await self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
             raise
 
     @asynccontextmanager
@@ -447,16 +445,17 @@ class Msg(MsgLink, MsgResult):
             )
 
         # stream-in depends on what the remote side sent
-        self.prep_stream(flag)
+        await self.prep_stream(flag)
 
         if self._recv_qlen < 10:
             self._fli = 0
-            self.warn(self._recv_qlen)
+            await self.warn(self._recv_qlen)
 
         if initial:
             await self.wait_replied()
         else:
-            self.ml_send(a, kw, B_STREAM)
+            await self.ml_send(a, kw, B_STREAM)
+            # intentionally not async
 
         try:
             yield self
@@ -465,13 +464,13 @@ class Msg(MsgLink, MsgResult):
             # case. Thus we don't need error handling here.
 
             if self._stream_out != S_END:
-                self.ml_send([None], {}, 0)
+                await self.ml_send([None], {}, 0)
 
             await self.wait_replied()
             if self._stream_in != S_END:
                 raise RuntimeError("Stream not ended")
 
-    def result(self, *a, **kw) -> None:
+    async def result(self, *a, **kw) -> None:
         """
         Send (or set) the result.
         """
@@ -486,7 +485,7 @@ class Msg(MsgLink, MsgResult):
             self._msg_in.set()
             return
 
-        self.ml_send(a, kw, 0)
+        await self.ml_send(a, kw, 0)
 
     async def wait_replied(self) -> None:
         """
@@ -507,23 +506,23 @@ class Msg(MsgLink, MsgResult):
     def __aiter__(self) -> Self:
         return self
 
-    def _skipped(self):
+    async def _skipped(self):
         """
         Test whether incoming data could not be delivered due to the
         receive queue getting full.
         """
         if self._recv_q is not None and self._recv_skip and self.stream_out != S_END:
-            self.warn(E_SKIP)
+            await self.warn(E_SKIP)
             self._recv_skip = False
 
-    def _qsize(self) -> None:
+    async def _qsize(self) -> None:
         # Incoming message queue handling strategy:
         # - read without flow control until the queue is half full
         if self._fli is None:
             if self._recv_q.qsize() >= self._recv_qlen // 2:
                 self._fli = 0
                 # - send a message announcing 1/4 of the queue space
-                self.warn(self._recv_qlen // 4)
+                await self.warn(self._recv_qlen // 4)
 
         # - then, whenever the queue is at most 1/4 full *and* qlen/2 messages
         #   have been processed (which will happen because the queue was
@@ -531,7 +530,7 @@ class Msg(MsgLink, MsgResult):
         elif self._recv_q.qsize() <= self._recv_qlen // 4 and self._fli > self._recv_qlen // 2:
             m = self._recv_qlen // 2 + 1
             self._fli -= m
-            self.warn(m)
+            await self.warn(m)
 
         # - additionally, if the max queue is < 10
         #   we send a bit more aggressively, to reduce lag
@@ -539,7 +538,7 @@ class Msg(MsgLink, MsgResult):
             self._fli += 1
             if self._recv_qlen < 10 and self._fli >= self._recv_qlen // 4:
                 m, self._fli = self._fli, 0
-                self.warn(m)
+                await self.warn(m)
 
     async def __anext__(self) -> MsgResult:
         if self._recv_q is None:
@@ -547,14 +546,14 @@ class Msg(MsgLink, MsgResult):
         elif isinstance(self._recv_q, Exception):
             exc, self._recv_q = self._recv_q, None
             raise exc
-        self._skipped()
+        await self._skipped()
 
         try:
             res = await self._recv_q.get()
         except EOFError:
             raise StopAsyncIteration
 
-        self._qsize()
+        await self._qsize()
         return MsgResult(*res)
 
     def __repr__(self):

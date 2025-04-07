@@ -21,6 +21,16 @@ if TYPE_CHECKING:
     from typing import Self, Iterator
 
 
+try:
+    import logging
+except ImportError:
+    def log_exc(e,s,*a):
+        log(s+": %r", *a, e)
+else:
+    logger = logging.getLogger(__name__)
+    def log_exc(e,s,*a):
+        logger.error(s, *a, exc_info=e)
+
 class MsgResult:
     """
     This class encapsulates the result of a message, which is
@@ -172,12 +182,10 @@ class Msg(MsgLink, MsgResult):
             # we are a straight command handler and don't yet have a remote.
             link.set_remote(self)
             self._remote = link
-            log("Replace1 L%d L%d", self.link_id, link.link_id)
             return
 
         rem.set_remote(link)  # this kills self
         link.set_remote(rem)
-        log("Replace2 L%d L%d", rem.link_id, link.link_id)
 
     def kill(self, new: bool = False) -> None:
         """No further communication may happen on this message.
@@ -195,7 +203,6 @@ class Msg(MsgLink, MsgResult):
             self._stream_in = S_END
             self._stream_out = S_END
             if self._msg_in is not None:
-                log("SETK L%d", self.link_id)
                 self._msg_in.set()
             super().kill()
 
@@ -294,7 +301,6 @@ class Msg(MsgLink, MsgResult):
             msg = outcome.Value((a, kw))
 
         if self._msg is None:
-            log("SET1 L%d", self.link_id)
             self._msg = msg
             self._msg_in.set()
         elif self._msg2 is None:
@@ -383,14 +389,14 @@ class Msg(MsgLink, MsgResult):
             if hasattr(res, "__await__"):
                 res = await res
         except Exception as exc:
-            log("Command Error %r %r", self, exc)
+            log_exc(exc,"Command Error %r", self)
             if self._remote is None:
                 raise
             self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
         except BaseException as exc:
             if self._remote is None:
                 raise
-            log("Command Error %r %r", self, exc)
+            log_exc(exc, "Command Error %r", self)
             self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
             raise
         else:
@@ -426,10 +432,10 @@ class Msg(MsgLink, MsgResult):
         try:
             await cmd(self)
         except Exception as exc:
-            log("Stream Error %r %r", self, exc)
+            log_exc(exc,"Stream Error %r", self)
             self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
         except BaseException as exc:
-            log("Stream Error %r %r", self, exc)
+            log_exc(exc,"Stream Error %r", self)
             self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
             raise
 
@@ -477,7 +483,6 @@ class Msg(MsgLink, MsgResult):
                     raise RuntimeError("Dup call", a)
 
             self._msg = outcome.Value((a, kw))
-            log("SET2 L%d", self.link_id)
             self._msg_in.set()
             return
 

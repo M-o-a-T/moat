@@ -33,20 +33,20 @@ def wire2i_f(id: int) -> tuple[int, int]:
     return id, f
 
 
-class StreamHandler(MsgHandler):
+class HandlerStream(MsgHandler):
     """
-    This class transforms handler requests into streamed messages.
+    This class bidirectionally translates MsgHandler calls to streamed messages.
 
     This is a sans-I/O class. Usage:
 
-    * open an async context on the ``StreamHandler`` instance
+    * open an async context on an instance of this class
     * start a task that reads your external source and feeds the result
       to `msg_in`
     * start a task that loops on `msg_out` and sends the result
 
-    You can use the `start` method to run these task within the context's
-    internal taskgroup. They will be auto-cancelled when leaving the
-    context.
+    You can use the `start` method to run these tasks (and any others you
+    might need) within the context's internal taskgroup. They will be
+    auto-cancelled when leaving the context.
     """
 
     _tg: TaskGroup = None
@@ -196,7 +196,7 @@ class StreamHandler(MsgHandler):
 
     def attach(self, proc: StreamLink) -> None:
         """
-        Attach a handler for incoming messages.
+        Attach a link.
         """
         if proc.id in self._msgs:
             raise ValueError(f"MID {mid} already known")
@@ -204,7 +204,7 @@ class StreamHandler(MsgHandler):
 
     def detach(self, link: StreamLink) -> None:
         """
-        Remove a handler for raw incoming messages.
+        Remove a link.
         """
         mid = link.id
         if self._msgs.get(mid) is not link:
@@ -262,7 +262,7 @@ class StreamHandler(MsgHandler):
                 yield self
             finally:
                 for link in list(self._msgs.values()):
-                    if not link.end_there:
+                    if not link.end_there:  ## XXX end_here?
                         try:
                             self.send(link, [E_CANCEL], None, B_ERROR)
                         except Exception:
@@ -279,16 +279,16 @@ class StreamHandler(MsgHandler):
 class StreamLink(MsgLink):
     """This is the handler for messages that forwards them to the stream."""
 
-    def __init__(self, handler: StreamHandler, id: int):
+    def __init__(self, stream: Stream, id: int):
         super().__init__()
-        self.__handler = handler
+        self.__stream = stream
         self.id = id
 
     def ml_recv(self, a: list, kw: dict, flags: int) -> None:
         """data to be forwarded across the link"""
         assert 0 <= flags <= 3, flags
         log("LR L%d %d %r %r %d", self.link_id, self.id, a, kw, flags)
-        self.__handler.send(self, a, kw, flags)
+        self.__stream.send(self, a, kw, flags)
 
     def ml_send(self, a: list, kw: dict, flags: int) -> None:
         """data to be forwarded to our remote"""
@@ -297,4 +297,4 @@ class StreamLink(MsgLink):
         super().ml_send(a, kw, flags)
 
     def stream_detach(self) -> None:
-        self.__handler.detach(self)
+        self.__stream.detach(self)

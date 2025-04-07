@@ -37,6 +37,10 @@ async def run(
 
         codec = StdCBOR()
 
+    elif isinstance(codec, str):
+        from moat.lib.codec import get_codec
+        codec = get_codec(codec)
+
     async def rd(conn, cmd, *, task_status):
         with anyio.CancelScope() as sc:
             task_status.started(sc)

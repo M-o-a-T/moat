@@ -273,7 +273,11 @@ class Path(collections.abc.Sequence):
                 return False
             other = other._data
         else:
-            other = tuple(other)
+            try:
+                other = tuple(other)
+            except TypeError:
+                return NotImplemented
+
         return self._data == other
 
     def __lt__(self, other):

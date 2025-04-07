@@ -1,6 +1,7 @@
 """
 Floats that compare with a delta.
 """
+
 from __future__ import annotations
 
 from math import isclose
@@ -47,4 +48,4 @@ class InexactFloat(float):
         return f"{type(self).__name__}({super().__repr__()})"
 
     def __str__(self):
-        return f"{round(self, self.digits) :.{self.digits}f}"
+        return f"{round(self, self.digits):.{self.digits}f}"

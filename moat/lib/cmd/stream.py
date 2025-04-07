@@ -93,7 +93,6 @@ class HandlerStream(MsgHandler):
         i = self._gen_id()
         can_stream = msg.can_stream
         link = StreamLink(self, i)
-        log("NEWID1 %d L%d", i, link.link_id)
         msg.replace_with(link)
         self.attach(link)
         args = [rcmd]
@@ -150,7 +149,6 @@ class HandlerStream(MsgHandler):
                 cmd = a.pop(0) if a else Path()
                 rem = Msg.Call(cmd, a, kw, flag)
                 link = StreamLink(self, i)
-                log("NEWID2 %d L%d", i, link.link_id)
                 rem.replace_with(link)
                 if not stream:
                     link.set_end()

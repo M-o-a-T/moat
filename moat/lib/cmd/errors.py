@@ -4,6 +4,7 @@ Error classes et al. for moat-lib-cmd.
 
 from __future__ import annotations
 
+from moat.util.compat import CancelledError
 from moat.lib.codec.proxy import as_proxy
 from .const import *
 
@@ -31,7 +32,9 @@ class RemoteError(ValueError):
 
 class StreamError(RuntimeError):
     def __new__(cls, msg=()):
-        if len(msg) == 1 and isinstance((m := msg[0]), int):
+        if len(msg) != 1:
+            pass
+        elif isinstance((m := msg[0]), int):
             if m >= 0:
                 return Flow(m)
             elif m == E_UNSPEC:
@@ -44,10 +47,14 @@ class StreamError(RuntimeError):
                 return super().__new__(SkippedData)
             elif m == E_NO_CMDS:
                 return super().__new__(NoCmds)
+            elif m == E_CANCEL:
+                return CancelledError()
             elif m == E_ERROR:
                 return super().__new__(RemoteError)
             elif m <= E_NO_CMD:
                 return super().__new__(NoCmd, E_NO_CMD - m)
+        elif isinstance(m, Exception):
+            return m
         return super().__new__(cls, *msg)
 
     def __init__(self, msg=()):

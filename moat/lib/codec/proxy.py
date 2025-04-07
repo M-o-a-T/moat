@@ -22,6 +22,7 @@ from moat.util import NotGiven
 from ._proxy import Proxy, get_proxy, name2obj, drop_proxy, as_proxy, obj2name
 from ._proxy import DProxy as _DProxy
 from ._proxy import _CProxy
+import moat.lib.codec._errors as _err
 
 
 class NoProxyError(ValueError):
@@ -136,6 +137,9 @@ def unwrap_obj(s):
         try:
             pk = pk(*a, **kw)
         except (TypeError, ValueError):
-            breakpoint()
-            raise
+            if not issubclass(pk,Exception):
+                raise
+            pk=pk(*a)
+            for k,v in kw.items():
+                setattr(pk,k,v)
     return pk

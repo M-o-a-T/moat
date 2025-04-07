@@ -9,12 +9,13 @@ from moat.lib.cmd.base import MsgHandler
 
 # TODO no_s=False does no longer work for some reason
 
+
 @pytest.mark.anyio()
-@pytest.mark.parametrize("no_s", [ True])
+@pytest.mark.parametrize("no_s", [True])
 async def test_no_stream_in(no_s):
     class EP(MsgHandler):
         @staticmethod
-        async def handle(msg,rcmd):
+        async def handle(msg, rcmd):
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
             if no_s:
@@ -39,11 +40,11 @@ async def test_no_stream_in(no_s):
 
 
 @pytest.mark.anyio()
-@pytest.mark.parametrize("no_s", [ True])
+@pytest.mark.parametrize("no_s", [True])
 async def test_no_stream_out(no_s):
     class EP(MsgHandler):
         @staticmethod
-        async def handle(msg,rcmd):
+        async def handle(msg, rcmd):
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
             if no_s:
@@ -71,7 +72,7 @@ async def test_no_stream_out(no_s):
 async def test_write_both():
     class EP(MsgHandler):
         @staticmethod
-        async def handle(msg,rcmd):
+        async def handle(msg, rcmd):
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
             async with msg.stream_out("Takeme") as st:

@@ -1,5 +1,5 @@
 """
-cmdhandler on top of anyio pipe
+Msghandler on top of anyio pipe
 """
 
 from __future__ import annotations
@@ -11,13 +11,16 @@ from typing import TYPE_CHECKING
 import logging
 
 if TYPE_CHECKING:
-    from moat.lib.cmd import CmdHandler
+    from .base import MsgHandler
     from moat.lib.codec import Codec
 
 logger = logging.getLogger(__name__)
 
+
 @asynccontextmanager
-async def run(cmd: CmdHandler, stream: anyio.abc.ByteStream, *, codec:Codec|None=None, debug:str=None):
+async def run(
+    cmd: MsgHandler, stream: anyio.abc.ByteStream, *, codec: Codec | None = None, debug: str = None
+):
     """
     Run a command handler on top of an anyio stream, using the given codec.
 
@@ -31,28 +34,29 @@ async def run(cmd: CmdHandler, stream: anyio.abc.ByteStream, *, codec:Codec|None
 
     if codec is None:
         from moat.util.cbor import StdCBOR
+
         codec = StdCBOR()
 
-    async def rd(conn,cmd,*,task_status):
+    async def rd(conn, cmd, *, task_status):
         with anyio.CancelScope() as sc:
             task_status.started(sc)
             rd_ = conn.read if hasattr(conn, "read") else conn.receive
             while True:
                 try:
                     if debug:
-                        logger.warning("R%s ?",debug)
+                        logger.warning("R%s ?", debug)
                     buf = await rd_(4096)
                 except anyio.EndOfStream:
                     return
                 if debug:
-                    logger.warning("R%s %r", debug,buf)
+                    logger.warning("R%s %r", debug, buf)
                 codec.feed(buf)
                 for msg in codec:
                     if debug:
-                        logger.warning("R%s %r", debug,msg)
+                        logger.warning("R%s %r", debug, msg)
                     cmd.msg_in(msg)
 
-    async def wr(conn,cmd):
+    async def wr(conn, cmd):
         wr = conn.write if hasattr(conn, "write") else conn.send
         while True:
             try:
@@ -60,11 +64,11 @@ async def run(cmd: CmdHandler, stream: anyio.abc.ByteStream, *, codec:Codec|None
             except EOFError:
                 return
             if debug:
-                logger.warning("W%s %r", debug,msg)
+                logger.warning("W%s %r", debug, msg)
 
             buf = codec.encode(msg)
             if debug:
-                logger.warning("W%s %r", debug,bytes(buf))
+                logger.warning("W%s %r", debug, bytes(buf))
             await wr(buf)
 
     async with anyio.create_task_group() as tg:

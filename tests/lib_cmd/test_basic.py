@@ -6,18 +6,38 @@ from moat.util import P
 from moat.util.compat import log
 from moat.lib.cmd.errors import StreamError
 from tests.lib_cmd.scaffold import scaffold
-from moat.lib.cmd.base import MsgSender,MsgHandler
+from moat.lib.cmd.base import MsgSender, MsgHandler
 from moat.lib.cmd.msg import Msg
 
 
 @pytest.mark.anyio()
-@pytest.mark.parametrize("a_s", [[], [None,], ["foo"], [12, 34]])
-@pytest.mark.parametrize("a_r", [[], [None,], ["bar"], [2, 3]])
+@pytest.mark.parametrize(
+    "a_s",
+    [
+        [],
+        [
+            None,
+        ],
+        ["foo"],
+        [12, 34],
+    ],
+)
+@pytest.mark.parametrize(
+    "a_r",
+    [
+        [],
+        [
+            None,
+        ],
+        ["bar"],
+        [2, 3],
+    ],
+)
 @pytest.mark.parametrize("k_s", [{}, dict(a=42)])
 @pytest.mark.parametrize("k_r", [{}, dict(b=21)])
 async def test_basic_handle(a_s, a_r, k_s, k_r):
     class EP(MsgHandler):
-        async def stream_Test(self,msg):
+        async def stream_Test(self, msg):
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == tuple(a_s)
             if not msg.kw:
@@ -26,7 +46,7 @@ async def test_basic_handle(a_s, a_r, k_s, k_r):
                 assert msg.kw == k_s
             msg.result(*a_r, **k_r)
 
-    ep=EP()
+    ep = EP()
     ms = MsgSender(ep)
     res = await ms.cmd("Test", *a_s, **k_s)
 
@@ -37,15 +57,16 @@ async def test_basic_handle(a_s, a_r, k_s, k_r):
 @pytest.mark.anyio()
 async def test_basic_error():
     "check error handling"
+
     class EP(MsgHandler):
-        async def stream_Err(self,msg):
+        async def stream_Err(self, msg):
             raise RuntimeError("Duh")
 
-    ep=EP()
+    ep = EP()
     ms = MsgSender(ep)
     with pytest.raises(StreamError) as err:
         res = await ms.cmd("Err")
-        raise RuntimeError("No error", res.args,res.kw)
+        raise RuntimeError("No error", res.args, res.kw)
 
 
 @pytest.mark.anyio()
@@ -72,11 +93,12 @@ async def test_basic_scaffold(a_s, a_r, k_s, k_r):
         assert tuple(res.args) == tuple(a_r)
         assert res.kw == k_r
 
+
 @pytest.mark.anyio()
 async def test_error_scaffold():
     class EP(MsgHandler):
         @staticmethod
-        async def handle(msg,rcmd):
+        async def handle(msg, rcmd):
             raise RuntimeError("Duh")
 
     async with scaffold(EP(), None) as (a, b):
@@ -84,9 +106,11 @@ async def test_error_scaffold():
         b._id = 12
         with pytest.raises(StreamError) as err:
             res = await b.cmd("Err")
-            raise RuntimeError("No error", res.args,res.kw)
-        assert err.value.args == ('RuntimeError',"Duh",), err.value
-
+            raise RuntimeError("No error", res.args, res.kw)
+        assert err.value.args == (
+            "RuntimeError",
+            "Duh",
+        ), err.value
 
 
 @pytest.mark.anyio()
@@ -95,7 +119,7 @@ async def test_basic_res():
 
     class EP(MsgHandler):
         @staticmethod
-        async def handle(msg,rcmd):
+        async def handle(msg, rcmd):
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
             nonlocal ncall
@@ -105,7 +129,7 @@ async def test_basic_res():
     async with scaffold(EP(), None) as (a, b):
         # note the comma
         res = await b.cmd("Test", 123)  # fmt:skip  ## (res,) = …
-        res, = res
+        (res,) = res
         assert res == {"C": P("Test"), "R": (123,)}
         assert ncall == 1
 
@@ -114,7 +138,7 @@ async def test_basic_res():
 async def test_error():
     class EP(MsgHandler):
         @staticmethod
-        async def handle(msg,rcmd):
+        async def handle(msg, rcmd):
             raise RuntimeError("Duh", msg.args)
 
     async with scaffold(EP(), None) as (a, b):
@@ -129,7 +153,7 @@ async def test_error():
 async def test_more():
     class EP(MsgHandler):
         @staticmethod
-        async def handle(msg,rcmd):
+        async def handle(msg, rcmd):
             assert msg.cmd == "X"
             await anyio.sleep(msg.args[0] / 10)
             msg.result(msg[0])
@@ -157,7 +181,7 @@ async def test_more():
 async def test_return():
     class EP(MsgHandler):
         @staticmethod
-        async def handle(msg,rcmd):
+        async def handle(msg, rcmd):
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
             msg.result(("Foo", 234))
@@ -172,7 +196,7 @@ async def test_return():
 async def test_return2():
     class EP(MsgHandler):
         @staticmethod
-        async def handle(msg,rcmd):
+        async def handle(msg, rcmd):
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123,)
             msg.result("Foo", 234)
@@ -185,7 +209,7 @@ async def test_return2():
 
 
 @pytest.mark.anyio()
-@pytest.mark.parametrize("use_socket", [False,True])
+@pytest.mark.parametrize("use_socket", [False, True])
 async def test_stream_in(use_socket):
     class EP(MsgHandler):
         @staticmethod
@@ -212,11 +236,11 @@ async def test_stream_in(use_socket):
 
 
 @pytest.mark.anyio()
-@pytest.mark.parametrize("use_socket", [False,True])
+@pytest.mark.parametrize("use_socket", [False, True])
 async def test_stream_out(use_socket):
     class EP(MsgHandler):
         @staticmethod
-        async def handle(msg,rcmd):
+        async def handle(msg, rcmd):
             assert msg.cmd == P("Test")
             assert tuple(msg.args) == (123, 456)
             assert msg.kw["answer"] == 42, msg.kw

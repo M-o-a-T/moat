@@ -1,6 +1,7 @@
 """
 Base classes for command handlers.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -13,8 +14,9 @@ _link_id = 0
 if TYPE_CHECKING:
     from .msg import Msg
     from moat.util import Path
-    from typing import Any,Awaitable,Callable
-    Key = str|int|bool
+    from typing import Any, Awaitable, Callable
+
+    Key = str | int | bool
 
 
 class MsgLink:
@@ -27,8 +29,9 @@ class MsgLink:
     This class is the base implementation, which simply forwards data from
     a message to its sibling.
     """
+
     _remote: MsgLink = None
-    _end:bool=False
+    _end: bool = False
 
     def __init__(self):
         """
@@ -40,7 +43,7 @@ class MsgLink:
         _link_id += 1
         self.link_id = _link_id
 
-    def ml_recv(self, a:list, kw:dict, flags:int) -> None:
+    def ml_recv(self, a: list, kw: dict, flags: int) -> None:
         """Message Link Receive
 
         Called from the other side with whatever data.
@@ -49,7 +52,7 @@ class MsgLink:
         """
         raise NotImplementedError
 
-    def ml_send(self, a:list, kw:dict, flags:int) -> None:
+    def ml_send(self, a: list, kw: dict, flags: int) -> None:
         """Message Link Send
 
         This method forwards data to the other side.
@@ -59,7 +62,7 @@ class MsgLink:
         if self._remote is None:
             log("? No remote %r", self)
         else:
-            self._remote.ml_recv(a,kw,flags)
+            self._remote.ml_recv(a, kw, flags)
         if not flags & B_STREAM:
             self.set_end()
 
@@ -87,16 +90,16 @@ class MsgLink:
         pass
 
     def set_end(self):
-        log("SET END L%d",self.link_id)
-#       if self._end:  #  or self.link_id in {4,5}:
-#           breakpoint() # dup set end
+        log("SET END L%d", self.link_id)
+        #       if self._end:  #  or self.link_id in {4,5}:
+        #           breakpoint() # dup set end
         self._end = True
         if self.end_both:
             if self._remote:
                 self._remote.stream_detach()
             self.stream_detach()
 
-    def set_remote(self, remote:MsgLink):
+    def set_remote(self, remote: MsgLink):
         """
         Set (or change) my remote for @remote.
 
@@ -113,7 +116,8 @@ class MsgLink:
         self._remote = None
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}:L{self.link_id} r{'=L'+str(self._remote.link_id) if self._remote else '-'}>"
+        return f"<{self.__class__.__name__}:L{self.link_id} r{'=L' + str(self._remote.link_id) if self._remote else '-'}>"
+
 
 class Caller(CtxObj):
     """
@@ -121,9 +125,10 @@ class Caller(CtxObj):
 
     You should not instantiate this class directly.
     """
-    _qlen=0
 
-    def __init__(self, handler:MsgHandler, msg:Msg):
+    _qlen = 0
+
+    def __init__(self, handler: MsgHandler, msg: Msg):
         self._msg = msg
         self._handler = handler
         self._dir = SD_NONE
@@ -144,15 +149,15 @@ class Caller(CtxObj):
             self._dir = SD_BOTH
         m1 = self._msg
         async with (
-                TaskGroup() as tg,
-                m1.ensure_remote() as m2,
-            ):
+            TaskGroup() as tg,
+            m1.ensure_remote() as m2,
+        ):
             # m2 is the one with the command data
-            tg.start_soon(self._handler.handle,m2, m2.rcmd)
+            tg.start_soon(self._handler.handle, m2, m2.rcmd)
             async with m1.stream_call(self._dir):
                 yield m1
 
-    def stream(self, size:int=42) -> Self:
+    def stream(self, size: int = 42) -> Self:
         """mark as streaming bidirectionally (the default)
 
         @size: length of the incoming queue
@@ -162,7 +167,7 @@ class Caller(CtxObj):
         self._qlen = size
         return self
 
-    def stream_in(self, size:int=42) -> Self:
+    def stream_in(self, size: int = 42) -> Self:
         """mark as only streaming in.
 
         @size: length of the incoming queue
@@ -172,26 +177,26 @@ class Caller(CtxObj):
         self._qlen = size
         return self
 
-    def stream_out(self, size:int|None=None) -> Self:
+    def stream_out(self, size: int | None = None) -> Self:
         """mark as only streaming out"""
         assert not self._dir
         self._dir = SD_OUT
         return self
 
-    
+
 class MsgSender:
     """
     Something that accepts and dispatches messages.
     """
-    def __init__(self, root:MsgHandler):
-        """
-        """
+
+    def __init__(self, root: MsgHandler):
+        """ """
         self._root = root
 
-    def handle(self, msg:Msg, rcmd:list) -> Awaitable[None]:
-        return self._root.handle(msg,rcmd)
+    def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
+        return self._root.handle(msg, rcmd)
 
-    def cmd(self, cmd:Path, *a:list[Any], **kw:dict[Key,Any]) -> Caller:
+    def cmd(self, cmd: Path, *a: list[Any], **kw: dict[Key, Any]) -> Caller:
         """
         Run a command.
 
@@ -203,29 +208,29 @@ class MsgSender:
         ...     async for msg, in m:
         ...         m.send(msg*2)
 
-                
+
         """
         from .msg import Msg
 
-        return Caller(self._root, Msg.Call(cmd,a,kw))
+        return Caller(self._root, Msg.Call(cmd, a, kw))
 
-    def __call__(self, *a:list[Any], **kw:dict[Key,Any]) -> Caller:
+    def __call__(self, *a: list[Any], **kw: dict[Key, Any]) -> Caller:
         """
         Run a command with an empty path.
         """
         from .msg import Msg
 
-        return Caller(self._root, Msg.Call((),a,kw))
+        return Caller(self._root, Msg.Call((), a, kw))
 
-    def sub_at(self, prefix:Path, may_stream:bool=False) -> MsgSender:
+    def sub_at(self, prefix: Path, may_stream: bool = False) -> MsgSender:
         """
         Returns a SubMsgSender if the path cannot be resolved locally.
         """
         res = self._root.sub_at(prefix, may_stream)
-        if isinstance(res,tuple):
-            root,rem = res
+        if isinstance(res, tuple):
+            root, rem = res
             if rem:
-                return SubMsgSender(root,rem)
+                return SubMsgSender(root, rem)
             return MsgSender(root)
         return root
 
@@ -234,19 +239,19 @@ class SubMsgSender:
     """
     Something that accepts and dispatches messages and prefixes a subpath.
     """
-    def __init__(self, root:MsgHandler, path:Path):
-        """
-        """
+
+    def __init__(self, root: MsgHandler, path: Path):
+        """ """
         self._root = root
         self._path = path
         self._rpath = list(path)
         self._rpath.reverse()
 
-    def handle(self, msg:Msg, rcmd:list) -> Awaitable[None]:
+    def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
         rcmd.append(self._rpath)
-        return self._root.handle(msg,rcmd)
+        return self._root.handle(msg, rcmd)
 
-    def cmd(self, cmd:Path, *a:list[Any], **kw:dict[Key,Any]) -> Caller:
+    def cmd(self, cmd: Path, *a: list[Any], **kw: dict[Key, Any]) -> Caller:
         """
         Run a command.
 
@@ -258,19 +263,19 @@ class SubMsgSender:
         ...     async for msg, in m:
         ...         m.send(msg*2)
         """
-        return Caller(self._root, msg.Call(self._path+cmd,a,kw))
+        return Caller(self._root, msg.Call(self._path + cmd, a, kw))
 
-    def __call__(self, *a:list[Any], **kw:dict[Key,Any]) -> Caller:
+    def __call__(self, *a: list[Any], **kw: dict[Key, Any]) -> Caller:
         """
         Process a call with an empty path.
         """
-        return Caller(self._root, msg.Call(self._path,a,kw))
+        return Caller(self._root, msg.Call(self._path, a, kw))
 
-    def sub_at(self, prefix:Path) -> SubMsgSender:
+    def sub_at(self, prefix: Path) -> SubMsgSender:
         """
         Returns a SubMsgSender
         """
-        return SubMsgSender(root,self._path+rem)
+        return SubMsgSender(root, self._path + rem)
 
 
 class MsgHandler(CtxObj):
@@ -289,15 +294,16 @@ class MsgHandler(CtxObj):
     inheritance in MicroPython) but doesn't itself contain a context
     manager.
     """
-    async def handle(self, msg:Msg, rcmd:list, *prefix:list[str]):
+
+    async def handle(self, msg: Msg, rcmd: list, *prefix: list[str]):
         """
         Process the message.
         """
-        pref = "_"+"_".join(prefix) if prefix else ""
+        pref = "_" + "_".join(prefix) if prefix else ""
 
         # Process direct calls.
         if not rcmd:
-            if not msg.can_stream and (cmd := getattr(self,f"cmd{pref}",None)) is not None:
+            if not msg.can_stream and (cmd := getattr(self, f"cmd{pref}", None)) is not None:
                 return await msg.call_simple(cmd)
             else:
                 return await msg.call_stream(self.stream)
@@ -306,26 +312,33 @@ class MsgHandler(CtxObj):
         if len(rcmd) <= 2 and rcmd[0] == "doc_":
             if msg.a or msg.kw:
                 raise TypeError("doc")
-            if (doc := getattr(self, f"doc{pref}_{rcmd[1]}" if len(rcmd) > 1 else f"doc{pref}", None)) is not None:
+            if (
+                doc := getattr(
+                    self, f"doc{pref}_{rcmd[1]}" if len(rcmd) > 1 else f"doc{pref}", None
+                )
+            ) is not None:
                 return await msg.result(self.doc)
 
         # Process command handlers of this class.
         if len(rcmd) == 1:
-            if not msg.can_stream and (cmd := getattr(self,f"cmd{pref}_{rcmd[0]}",None)) is not None:
+            if (
+                not msg.can_stream
+                and (cmd := getattr(self, f"cmd{pref}_{rcmd[0]}", None)) is not None
+            ):
                 return await msg.call_simple(cmd)
-            if (cmd := getattr(self,f"stream{pref}_{rcmd[0]}",None)) is not None:
+            if (cmd := getattr(self, f"stream{pref}_{rcmd[0]}", None)) is not None:
                 return await msg.call_stream(cmd)
 
         # Neither of the above: find a subcommand.
         scmd = rcmd.pop()
-        if (sub := getattr(self,f"sub{pref}_{scmd}",None)) is not None:
-            return await sub.handle(msg,rcmd)
+        if (sub := getattr(self, f"sub{pref}_{scmd}", None)) is not None:
+            return await sub.handle(msg, rcmd)
 
         raise KeyError(scmd)
 
-    def sub_at(self, path, may_stream:bool=False) -> tuple[MsgHandler,Path]|Callable:
+    def sub_at(self, path, may_stream: bool = False) -> tuple[MsgHandler, Path] | Callable:
         """TODO"""
-        return self,path
+        return self, path
 
     async def _ctx(self):
         raise NotImplementedError

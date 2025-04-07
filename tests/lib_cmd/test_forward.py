@@ -9,11 +9,11 @@ from moat.util import P
 
 
 class Fwd:
-    def __init__(self, dest:MsgHandler):
+    def __init__(self, dest: MsgHandler):
         self._dest = dest
-    
-    async def handle(self, msg:Msg, rcmd:list):
-        return await self._dest.handle(msg,rcmd)
+
+    async def handle(self, msg: Msg, rcmd: list):
+        return await self._dest.handle(msg, rcmd)
 
 
 @pytest.mark.anyio()

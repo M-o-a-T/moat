@@ -1,6 +1,7 @@
 """
 Error classes et al. for moat-lib-cmd.
 """
+
 from __future__ import annotations
 
 from moat.lib.codec.proxy import as_proxy
@@ -43,29 +44,35 @@ class StreamError(RuntimeError):
     def __init__(self, msg=()):
         pass
 
+
 class Flow:
     def __init__(self, n):
         self.n = n
 
+
 class StopMe(StreamError):
     pass
+
 
 class SkippedData(StreamError):
     pass
 
+
 class NoStream(StreamError):
     pass
+
 
 class NoCmds(StreamError):
     pass
 
+
 class NoCmd(StreamError):
     pass
+
 
 class WantsStream(StreamError):
     pass
 
+
 class MustStream(StreamError):
     pass
-
-

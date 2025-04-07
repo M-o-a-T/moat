@@ -2,7 +2,7 @@ from __future__ import annotations
 import anyio
 from moat.lib.cmd.base import MsgSender, MsgHandler, MsgLink
 from moat.lib.cmd.msg import Msg
-from moat.lib.cmd.stream import StreamHandler
+from moat.lib.cmd.stream import HandlerStream
 from moat.util import Path
 from contextlib import asynccontextmanager
 import logging
@@ -32,7 +32,7 @@ class LogLink(MsgLink):
         self._remote.ml_recv(a, kw, flags)
 
 
-class StreamLoop(StreamHandler):
+class StreamLoop(HandlerStream):
     __other: StreamLoop = None
 
     def __init__(self, h: MsgHandler, s: str):
@@ -83,7 +83,7 @@ async def _wrap_sock(s: Socket) -> anyio.abc.ByteStream:
         raise RuntimeError("Which anyio backend are you using??")
 
 
-class StreamGate(StreamHandler):
+class StreamGate(HandlerStream):
     def __init__(self, h: MsgHandler, so: Socket, s: str):
         from moat.util.cbor import StdCBOR
 

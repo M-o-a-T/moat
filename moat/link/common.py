@@ -4,6 +4,7 @@ Common parts
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+import anyio
 
 if TYPE_CHECKING:
     from moat.lib.cmd import Msg
@@ -35,7 +36,77 @@ class CmdCommon:
 
         Yes, this name is silly.
         """
-        msg.result("乓", *msg.args, **msg.kw)
+        await msg.result("乓", *msg.args, **msg.kw)
 
     stream_i_乒 = stream_i_ping
+
+    doc_i_count=dict(_d="count", _o="int:numbers", s="int:start", d="int:delta", e="int:end", t="float:interval")
+    async def stream_i_count(self, msg:Msg) -> bool | None:
+        """
+        This handler replies with a stream of numbers.
+
+        The result is the first value that crossed the line.
+        """
+        s=msg.get("s",0)
+        e=msg.get("e",None)
+        d=msg.get("d",None)
+        t=msg.get("t",1)
+
+        async with msg.stream_out():
+            if e is not None and e<s:
+                if d is None:
+                    d = -1
+                while e<s:
+                    await msg.send(s)
+                    s += d
+                    await anyio.sleep(t)
+            else:
+                if d is None:
+                    d = 1
+                while e is None or e>s:
+                    await msg.send(s)
+                    s += d
+                    await anyio.sleep(t)
+            await msg.result(s)
+
+    doc_i_sink=dict(_d="count up", _i="Any:whatever", n="int:accept this many")
+    async def stream_i_sink(self, msg:Msg) -> bool | None:
+        """
+        This handler swallows an input stream.
+
+        @n is the number of messages that shall be accepted.
+
+        The result is the numebr of messages that arrived.
+        """
+        n=msg.get("n",-1)
+        c=0
+
+        async with msg.stream_in() as st:
+            while True:
+                if c == n:
+                    break
+                _m = await anext(st)
+
+            await msg.result(c)
+
+    doc_i_echo=dict(_d="count up", _i="Any:whatever", _o="Any:whatever", n="int:accept this many")
+    async def stream_i_echo(self, msg:Msg) -> bool | None:
+        """
+        This handler echoes an input stream.
+
+        @n is the number of messages that shall be accepted.
+
+        The result is the number of messages that arrived.
+        """
+        n=msg.get("n",-1)
+        c=0
+
+        async with msg.stream() as st:
+            while True:
+                if c == n:
+                    break
+                m = await anext(st)
+                await msg.send(m)
+
+            await msg.result(c)
 

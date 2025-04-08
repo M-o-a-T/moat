@@ -12,6 +12,8 @@ from moat.lib.codec.cbor import Tag as CBORTag
 from moat.util.cbor import CBOR_TAG_MOAT_FILE_ID, CBOR_TAG_MOAT_FILE_END
 from moat.link.client import BasicLink
 
+import logging
+logger = logging.getLogger(__name__)
 
 async def _dump(sf, *, task_status):
     bk = await sf.backend(name="mon")
@@ -37,7 +39,7 @@ async def fetch(c, p):
     p = P(p)
     nn = Node()
     pl = PathLongener()
-    async with c.stream_r(P("d.walk"), p) as msgs:
+    async with c.cmd(P("d.walk"), p).stream_in() as msgs:
         try:
             it = aiter(msgs)
         except StreamError as exc:
@@ -69,7 +71,10 @@ async def test_lsy_from_server(cfg):
         await data(s)
 
         await sf.server()
-        async with BasicLink(cfg, "c_test", c1._last_link.data) as c2:
+        if c1._link._last_link is None:
+            await c1._link._last_link_seen.wait()
+
+        async with BasicLink(cfg, "c_test", c1._link._last_link.data) as c2:
             nn = await fetch(c2, "a")
 
             assert n.get(P("a")) == nn

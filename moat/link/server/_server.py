@@ -232,7 +232,7 @@ class ServerClient(LinkCommon):
         * metadata
         """
         d = self.server.data[msg[0]]
-        msg.result(d.data, d.meta)
+        await msg.result(d.data, d.meta)
 
     doc_d=dict(_d="Data access commands")
     def sub_d(self, msg:Msg,rcmd:list) -> Awaitable:
@@ -378,21 +378,19 @@ class ServerClient(LinkCommon):
             await msg.result(res)
 
     doc_i_log=dict(_d="start logging", _0="str:filename", state="bool:include current state")
-    async def cmd_i_log(self, msg):
-        await self.server.run_saver(path=msg[0], save_state=msg.get("state", False))
+    async def cmd_i_log(self, path:str, *, state:bool=False):
+        await self.server.run_saver(path, save_state=state)
         return True
 
     doc_s_save=dict(_d="save current state", _0="str:filename", prefix="path:subtree")
-    async def cmd_s_save(self, msg):
-        prefix = msg.get("prefix", P(":"))
-        await self.server.save(path=msg[0], prefix=prefix)
+    async def cmd_s_save(self, path:str, prefix=P(":")):
+        await self.server.save(path, prefix=prefix)
 
         return True
 
     doc_s_load=dict(_d="load state", _0="str:filename", prefix="path:subtree")
-    async def cmd_s_load(self, msg):
-        prefix = msg.get("prefix", P(":"))
-        return await self.server.load(path=msg[0], prefix=prefix)
+    async def cmd_s_load(self, path, *, prefix=P(":")):
+        return await self.server.load(path=path, prefix=prefix)
 
 
 class _RecoverControl:
@@ -1616,7 +1614,7 @@ class Server:
         return False
 
     async def _sync_one(self, conn: Conn, prefix: Path = P(":")):
-        async with conn.stream_r(P("d.walk"), prefix) as feed:
+        async with conn.cmd(P("d.walk"), prefix).stream_in() as feed:
             pl = PathLongener()
             upd = 0
             skp = 0

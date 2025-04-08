@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 @asynccontextmanager
-async def TCPConn(cmd: MsgSender|None, *a, codec: str="std-cbor", **kw):
+async def TCPConn(cmd: MsgSender|None, *a, codec: str="std-cbor", debug=None, **kw):
     """
     Connection to a MoaT server.
 
@@ -28,6 +28,6 @@ async def TCPConn(cmd: MsgSender|None, *a, codec: str="std-cbor", **kw):
     """
     async with (
         await anyio.connect_tcp(*a, **kw) as stream,
-        run_stream(cmd, stream, codec=codec) as hdl,
+        run_stream(cmd, stream, codec=codec, debug=debug) as hdl,
     ):
         yield hdl

@@ -15,8 +15,8 @@ try:
 except ImportError:
     from moat.lib.mqttproto import RetainHandling
 
-from moat.lib.cmd.base import MsgSender, MsgHandler
-from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident
+from moat.lib.cmd.base import MsgSender, MsgHandler, Caller
+from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident, ungroup
 from moat.util.compat import CancelledError
 
 from .common import CmdCommon
@@ -60,10 +60,9 @@ class BasicCmd:
     running.
     """
 
-    def __init__(self, a, kw, idem):
+    def __init__(self, a, kw):
         self.a = a
         self.kw = kw
-        self.idem = idem
         self._result = None
         self._evt = anyio.Event()
 
@@ -139,7 +138,23 @@ class LinkCommon(CmdCommon, MsgHandler, CtxObj):
             yield handler
 
 
+class ClientCaller(Caller):
+    @asynccontextmanager
+    async def _ctx(self):
+        await self.handler._link.get_link()
+        async with super()._ctx() as res:
+            yield res
+
+    async def _call(self):
+        "helper for __await__ that calls the remote handler"
+        link = await self.handler._link.get_link()
+        cmd,a,kw = self.data
+        return await link.root._handler.cmd(cmd,*a,**kw)
+
+
 class _Sender(MsgSender):
+    Caller_ = ClientCaller
+
     def __init__(self, link):
         self._link = link
 
@@ -166,14 +181,6 @@ class _Sender(MsgSender):
         await self.send(P(":R.run.service.main.stamp"), st)
         await self.cmd(P("i.sync"),st)
     
-    def stream(self, *a, **kw):
-        return self.cmd(*a,**kw).stream()
-    
-    def stream_in(self, *a, **kw):
-        return self.cmd(*a,**kw).stream_in()
-    
-    def stream_out(self, *a, **kw):
-        return self.cmd(*a,**kw).stream_out()
 
 class Link(LinkCommon):
     """
@@ -185,6 +192,8 @@ class Link(LinkCommon):
     _hello: Hello = None
     current_server:MsgSender = None
     _server_up:anyio.Event
+    _last_link:Msg|None=None
+    _last_link_seen:anyio.Event
 
     def __init__(self, cfg, name: str | None = None):
         super().__init__(cfg, name=name)
@@ -242,7 +251,8 @@ class Link(LinkCommon):
         timeout = tm.initial
         while True:
             try:
-                await self._connect_server(srv, task_status=task_status)
+                with ungroup:
+                    await self._connect_server(srv, task_status=task_status)
             except Exception as exc:
                 await self.backend.send_error(
                     P("run.service.main") / srv.meta.origin / self.name,
@@ -298,29 +308,30 @@ class Link(LinkCommon):
             async for msg in self._cmdq_r:
                 tg.start_soon(run_, msg)
 
-    async def cmd(self, *a, _idem=True, **kw):
+    async def cmd(self, *a, _idem=False, **kw):
         """
         Queue and run a simple command.
 
         If @_idem is False, the command will error out if the connection
-        ends while it's running. Otherwise (the default) it may be repeated.
+        dies while it's running. Otherwise (the default) it may be repeated.
         """
-        if not _idem:
-            while self.current_server is None:
-                await self._server_up.wait()
-            return await self.current_server.cmd(*a, **kw)
-
-        cmd = BasicCmd(a, kw, _idem)
+        cmd_ = BasicCmd(a, kw)
         try:
+            self._retry_msgs.add(cmd_)
             while True:
-                await self._cmdq_w.send(cmd)
+                while self.current_server is None:
+                    await self._server_up.wait()
+
                 try:
-                    return await cmd.result
+                    with ungroup:
+                        await self._cmdq_w.send(cmd_)
+                        return await cmd_.result
                 except _Requeue:
-                    raise
+                    if _idem:
+                        raise EOFError from None
 
         finally:
-            self._retry_msgs.discard(cmd)
+            self._retry_msgs.discard(cmd_)
 
 
     async def _connect_server(
@@ -367,7 +378,7 @@ class BasicLink(LinkCommon):
             try:
                 async with self._connect_one(remote, self.data) as self._handler:
                     yielded = True
-                    yield self
+                    yield self._handler
                     return
             except Exception as exc:
                 if yielded:

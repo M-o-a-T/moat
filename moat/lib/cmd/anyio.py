@@ -85,5 +85,5 @@ async def run(
             # exchanging more messages, after which it'll close its send queue.
             # Thus we don't cancel the writer.
             rds.cancel()
-    except anyio.EndOfStream:
+    except (anyio.EndOfStream,anyio.BrokenResourceError,anyio.ClosedResourceError):
         pass

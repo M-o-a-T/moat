@@ -3,6 +3,7 @@ Exception handling helpers
 """
 
 from __future__ import annotations
+from anyio import get_cancelled_exc_class
 
 __all__ = ["exc_iter", "ungroup"]
 
@@ -30,6 +31,14 @@ class ungroup:
 
     def one(self, e):
         "convert the exceptiongroup @e to a single exception"
+        if not isinstance(e, BaseExceptionGroup):
+            return e
+
+        Cancel = get_cancelled_exc_class()
+        c,e = e.split(Cancel)
+        if not e:
+            e = c
+
         while isinstance(e, BaseExceptionGroup):
             if len(e.exceptions) != 1:
                 break

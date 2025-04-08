@@ -3,6 +3,7 @@ Base classes for command handlers.
 """
 
 from __future__ import annotations
+from contextlib import asynccontextmanager
 
 from typing import TYPE_CHECKING
 from moat.util import CtxObj
@@ -151,9 +152,9 @@ class Caller(CtxObj):
 
     _qlen = 0
 
-    def __init__(self, handler: MsgHandler, msg: Msg):
-        self._msg = msg
-        self._handler = handler
+    def __init__(self, handler: MsgHandler, data: tuple[str,list,dict]):
+        self.data = data
+        self.handler = handler
         self._dir = SD_NONE
 
     def __await__(self):
@@ -162,21 +163,26 @@ class Caller(CtxObj):
 
     async def _call(self):
         "helper for __await__ that calls the remote handler"
-        msg = self._msg
-        await self._handler.handle(msg, self._msg.rcmd)
+        from .msg import Msg
+
+        msg = Msg.Call(*self.data)
+        await self.handler.handle(msg, msg.rcmd)
         await msg.wait_replied()
         return msg
 
+    @asynccontextmanager
     async def _ctx(self):
         if not self._dir:
             self._dir = SD_BOTH
-        m1 = self._msg
+
+        from .msg import Msg
+        m1 = Msg.Call(*self.data)
         async with (
             TaskGroup() as tg,
             m1.ensure_remote() as m2,
         ):
             # m2 is the one with the command data
-            tg.start_soon(self._handler.handle, m2, m2.rcmd)
+            tg.start_soon(self.handler.handle, m2, m2.rcmd)
             async with m1.stream_call(self._dir):
                 yield m1
 
@@ -226,6 +232,8 @@ class MsgSender(BaseMsgHandler):
     This class is the client-side API of the MoaT Command multiplexer.
     """
 
+    Caller_ = Caller
+
     def __init__(self, root: MsgHandler):
         """ """
         self._root = root
@@ -254,9 +262,7 @@ class MsgSender(BaseMsgHandler):
 
 
         """
-        from .msg import Msg
-
-        return Caller(self, Msg.Call(cmd, a, kw))
+        return self.Caller_(self, (cmd,a,kw))
 
     def __call__(self, *a: list[Any], **kw: dict[Key, Any]) -> Caller:
         """
@@ -264,7 +270,7 @@ class MsgSender(BaseMsgHandler):
         """
         from .msg import Msg
 
-        return Caller(self, Msg.Call((), a, kw))
+        return self._Caller(self, Msg.Call((), a, kw))
 
     def sub_at(self, prefix: Path, may_stream: bool = False) -> MsgSender:
         """

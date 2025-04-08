@@ -200,7 +200,7 @@ class Caller(CtxObj):
         self._qlen = size
         return self
 
-    def stream_out(self, size: int | None = None) -> Self:
+    def stream_out(self) -> Self:
         """mark as only streaming out"""
         assert not self._dir
         self._dir = SD_OUT

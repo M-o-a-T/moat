@@ -57,6 +57,8 @@ class Hello(CmdCommon, MsgHandler):
     auth_in: dict[str, AuthMethod] = field(kw_only=True, default={}, converter=_to_dict)
     auth_out: dict[str, AuthMethod] = field(kw_only=True, default={}, converter=_to_dict)
 
+    me_server: bool = field(default=False)
+
     _sync: anyio.Event | None = field(init=False, factory=anyio.Event)
     _done: anyio.Event | None = field(init=False, factory=anyio.Event)
 
@@ -133,6 +135,7 @@ class Hello(CmdCommon, MsgHandler):
             self._done.set()
 
     async def _cmd_i_hello(self, msg) -> bool | None:
+        logger.info("H IN %r %r", msg.args,msg.kw)
         it = iter(msg.args)
         auth = True
 
@@ -142,26 +145,32 @@ class Hello(CmdCommon, MsgHandler):
                 raise ValueError("Protocol mismatch", prot)
             self.protocol_version = min(prot, self.protocol_max)
 
-            server_name = next(it)
-            if server_name is None:
+            me_server = next(it)
+            if not me_server and not self.me_server:
+                raise RuntimeError("Two clients cannot talk")
+
+            remote_name = next(it)
+            if remote_name is None:
                 pass
             elif self.them is None:
-                self.them = server_name
-            elif self.them != server_name:
-                logger.warning("Server name: %r / %r", server_name, self.them)
+                self.them = remote_name
+            elif self.them != remote_name:
+                logger.warning("Remote name: %r / %r", remote_name, self.them)
 
-            name = next(it)
-            if name is None:
+            local_name = next(it)
+            if local_name is None:
                 pass
             elif self.me is None:
-                self.me = name
-            elif self.me != name:
-                logger.warning("Client name: %r / %r", name, self.me)
+                self.me = local_name
+            elif self.me != local_name:
+                logger.warning("My name: %r / %r", local_name, self.me)
+                if not self.me_server:
+                    self.me = local_name
+
+            auth = next(it)
 
             if not next(it):
                 raise RuntimeError("Not talking to a server")
-
-            auth = next(it)
 
         except StopIteration:
             pass
@@ -217,11 +226,12 @@ class Hello(CmdCommon, MsgHandler):
         elif len(auths) == 1:
             auths = auths[0]
 
-        logger.info("H OUT %r %r", auths, kw)
+        logger.info("H OUT %d %s %s %r %r", protocol_version,self.me,self.them,auths, kw)
         self._sync.set()
         (res,) = await sender.cmd(
             P("i.hello"),
             protocol_version,
+            self.me_server,
             self.me,
             self.them,
             auths,

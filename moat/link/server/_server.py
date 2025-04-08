@@ -172,6 +172,8 @@ class ServerClient(LinkCommon):
         self.logger.debug("START %s C_%d", self.name, self.client_nr)
         self._hello = Hello(
             them=f"C_{self.client_nr}",
+            me=self.name,
+            me_server=True,
             auth_in=[TokenAuth("Duh"), AnonAuth()],
         )
         async with (

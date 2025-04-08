@@ -193,10 +193,10 @@ class ServerClient(LinkCommon):
 
             # periodic ping
             while True:
-                # XXX configurable; only when idle
-                await anyio.sleep(30)
-                with anyio.fail_after(self.server.cfg.server.ping_timeout):
-                    await self._sender.cmd(P("i.ping"))
+                # XXX only when otherwise idle
+                await anyio.sleep(self.server.cfg.server.probe.repeat)
+                with anyio.fail_after(self.server.cfg.server.probe.timeout):
+                    await self._sender.cmd(P("i.乒"))
 
     @property
     def auth_data(self):

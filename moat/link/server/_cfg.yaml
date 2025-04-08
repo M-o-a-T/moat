@@ -15,7 +15,9 @@ ping:
   gap: 5
 
 # the server probing its client
-ping_timeout: 3
+probe:
+  timeout: 3
+  repeat: 30
 
 ports:
   main:

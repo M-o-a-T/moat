@@ -355,15 +355,27 @@ class Msg(MsgLink, MsgResult):
     # Stream reply helpers
 
     def stream_in(self, *data, **kw) -> AsyncContextManager[Msg]:
+        """
+        Reply to a stream, read-only.
+        """
         return self._stream(data, kw, SD_IN)
 
     def stream_out(self, *data, **kw) -> AsyncContextManager[Msg]:
+        """
+        Reply to a stream, write-only.
+        """
         return self._stream(data, kw, SD_OUT)
 
     def stream(self, *data, **kw) -> AsyncContextManager[Msg]:
+        """
+        Reply to a bidirectional stream.
+        """
         return self._stream(data, kw, SD_BOTH)
 
-    def stream_call(self, flag: int) -> AsyncContextManager[Msg]:
+    def _stream_call(self, flag: int) -> AsyncContextManager[Msg]:
+        """
+        Stream startup on the sending side.  Don't call this.
+        """
         return self._stream(None, None, flag, initial=True)
 
     @property

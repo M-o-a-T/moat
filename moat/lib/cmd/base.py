@@ -183,7 +183,7 @@ class Caller(CtxObj):
         ):
             # m2 is the one with the command data
             tg.start_soon(self.handler.handle, m2, m2.rcmd)
-            async with m1.stream_call(self._dir):
+            async with m1._stream_call(self._dir):
                 yield m1
 
     def stream(self, size: int = 42) -> Self:

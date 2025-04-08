@@ -238,6 +238,8 @@ class Msg(MsgLink, MsgResult):
         elif not flags & B_STREAM:
             self._set_msg(a, kw, flags)
             self._stream_in = S_END
+            if self._stream_out == S_ON:
+                self._stream_out = S_OFF
             if self._recv_q is not None:
                 self._recv_q.close_sender()
 
@@ -278,6 +280,8 @@ class Msg(MsgLink, MsgResult):
         self._ended()
 
     async def send(self, *a, **kw) -> None:
+        if not self._dir & SD_OUT:
+            raise RuntimeError("This stream is read only")
         if self._stream_out != S_ON:
             raise NoStream
         await self._skipped()
@@ -503,6 +507,8 @@ class Msg(MsgLink, MsgResult):
         self._a, self._kw = msg.unwrap()
 
     def __aiter__(self) -> Self:
+        if not self._dir&SD_IN:
+            raise RuntimeError("This stream is write only")
         return self
 
     async def _skipped(self):

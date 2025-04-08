@@ -134,13 +134,9 @@ class LinkCommon(CmdCommon, MsgHandler, CtxObj):
 
         async with TCPConn(self, remote_host=remote["host"], remote_port=remote["port"]) as conn:
             handler = MsgSender(conn)
-            self.logger.warning("HelloCliStart")
             if await self._hello.run(handler) is False:
                 raise AuthError("Initial handshake failed")
-            self.logger.warning("HelloCliDone")
             yield handler
-            self.logger.warning("CliDone1")
-        self.logger.warning("CliDone2")
 
 
 class _Sender(MsgSender):
@@ -248,7 +244,6 @@ class Link(LinkCommon):
             try:
                 await self._connect_server(srv, task_status=task_status)
             except Exception as exc:
-                raise  # XXX
                 await self.backend.send_error(
                     P("run.service.main") / srv.meta.origin / self.name,
                     data=srv,

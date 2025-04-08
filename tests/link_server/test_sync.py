@@ -132,6 +132,26 @@ async def test_lsy_switch_server_hard(cfg):
 
 
 @pytest.mark.anyio()
+@pytest.mark.skip
+async def test_lsy_switch_server_hard_break(cfg):
+    async with Scaffold(cfg, use_servers=True) as sf:
+        srv1 = await sf.server(init={"Hello": "there!", "test": 123})
+        c1 = await sf.client()
+        Node()
+        await sf.server()
+
+        async with c1.cmd(P("i.count")).stream_in() as st:
+            n = 0
+            breakpoint()
+            async for m in st:
+                breakpoint()
+                n += 1
+                if n == 3:
+                    breakpoint()
+                    await srv1[0].cancel()
+
+
+@pytest.mark.anyio()
 async def test_lsy_switch_server_soft(cfg):
     async with Scaffold(cfg, use_servers=True) as sf:
         srv1 = await sf.server(init={"Hello": "there!", "test": 123})

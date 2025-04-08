@@ -130,7 +130,7 @@ class Backend(CtxObj, metaclass=ABCMeta):
         Send a somewhat-free-form error message.
         """
         if not isinstance(subpath[0], RootPath):
-            subpath = Root / "error" + subpath
+            subpath = Root.get() / "error" + subpath
         if msg:
             kw["msg"] = msg
         if data is not NotGiven:

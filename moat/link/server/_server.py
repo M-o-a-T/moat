@@ -184,14 +184,12 @@ class ServerClient(LinkCommon):
 
             # basic setup
             try:
-                self.logger.warning("HelloSrvStart")
                 if await self._hello.run(MsgSender(cmd)) is False or not (auth := self._hello.auth_data):
                     self.logger.debug("NO %s", self.client_nr)
                     return
             finally:
                 del self._hello
             self._auth_data = auth
-            self.logger.warning("HelloSrvDone")
 
             # periodic ping
             while True:

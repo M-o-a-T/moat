@@ -480,9 +480,7 @@ class Msg(MsgLink, MsgResult):
             await self.ml_send(a, kw, B_STREAM)
             # intentionally not async
 
-        try:
-            yield self
-        finally:
+        async def _close():
             # This code is running inside the handler, which will process the error
             # case. Thus we don't need error handling here.
 
@@ -492,6 +490,16 @@ class Msg(MsgLink, MsgResult):
             await self.wait_replied()
             if self._stream_in != S_END:
                 raise RuntimeError("Stream not ended")
+
+        try:
+            yield self
+        except Exception as exc:
+            try:
+                await _close()
+            finally:
+                raise exc
+        else:
+            await _close()
 
     async def result(self, *a, **kw) -> None:
         """

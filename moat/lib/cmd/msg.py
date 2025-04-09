@@ -74,7 +74,7 @@ class MsgResult:
         Get an item. If the key is numeric, retrieve from the argument
         list, else from the keywords.
         """
-        if isinstance(k, int):
+        if isinstance(k, (int,slice)):
             return self._a[k]
         return self._kw[k]
 

@@ -100,8 +100,6 @@ class MsgResult:
 
     def __iter__(self) -> Self:
         "Returns an iterator over the list."
-        if self._kw:
-            raise ValueError("This message contains keywords.")
         return iter(self._a)
 
     def keys(self) -> Iterator[str]:

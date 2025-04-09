@@ -15,6 +15,17 @@ classifiers = [
 dependencies = [
 	"anyio ~= 4.5",
 	"asyncscope",
+	"pyfuse3",
+	"outcome",
+	"ruyaml",
+	"trio",
+	"simpleeval",
+	"asyncclick",
+	"asyncscope",
+	"asyncowfs",
+	"asyncactor",
+	"range_set",
+	"mqttproto",
 	]
 dynamic = [ "version",]
 keywords = [ "MoaT",]

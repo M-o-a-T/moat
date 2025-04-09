@@ -47,8 +47,15 @@ class MsgResult:
         self._kw = kw
 
     @property
-    def args(self) -> list:
+    def args(self) -> list|tuple:
         "Retrieve the argument list."
+        return self._a
+
+    @property
+    def args_l(self) -> list:
+        "Retrieve the argument list as a list."
+        if isinstance(self._a,tuple):
+            self._a = list(self._a)
         return self._a
 
     @property

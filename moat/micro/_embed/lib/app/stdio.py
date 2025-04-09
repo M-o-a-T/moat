@@ -10,7 +10,7 @@ from functools import partial
 import micropython
 
 from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
-from moat.micro.compat import AC_use
+from moat.util.compat import AC_use
 from moat.micro.stacks.file import FileBuf
 from moat.micro.stacks.console import console_stack
 

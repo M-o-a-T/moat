@@ -25,7 +25,7 @@ from moat.lib.codec.proxy import as_proxy
 from moat.lib.cmd.errors import ShortCommandError,LongCommandError
 from moat.micro.cmd.util import run_no_exc, wait_complain
 from moat.micro.cmd.util.part import enc_part, get_part
-from moat.micro.compat import AC_use, Event, L, idle
+from moat.util.compat import AC_use, Event, L, idle
 from moat.micro.errors import NoPathError
 from moat.micro.proto.stack import Base
 

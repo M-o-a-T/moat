@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.util import import_
 from moat.micro.cmd.stream import BaseCmdBBM
-from moat.micro.compat import AC_use
+from moat.util.compat import AC_use
 
 
 # Serial packet forwarder

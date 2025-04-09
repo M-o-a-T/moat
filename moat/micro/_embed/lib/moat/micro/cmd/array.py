@@ -5,7 +5,7 @@ A command that accesses a row of mostly-identical subcommands
 from __future__ import annotations
 
 from moat.util import combine_dict, import_
-from moat.micro.compat import L
+from moat.util.compat import L
 from moat.micro.errors import NoPathError
 
 from .tree.dir import BaseSuperCmd

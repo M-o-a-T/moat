@@ -18,7 +18,7 @@ exception is the `Reliable` module, which limits this to commands.
 
 from __future__ import annotations
 
-from moat.micro.compat import ACM, AC_exit, AC_use, log
+from moat.util.compat import ACM, AC_exit, AC_use, log
 
 # Typing
 

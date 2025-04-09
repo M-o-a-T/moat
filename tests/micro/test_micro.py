@@ -8,7 +8,7 @@ import pytest
 
 from moat.util import NotGiven, as_proxy, to_attrdict, P
 from moat.micro._test import mpy_stack
-from moat.micro.compat import ticks_diff, ticks_ms
+from moat.util.compat import ticks_diff, ticks_ms
 
 pytestmark = pytest.mark.anyio
 

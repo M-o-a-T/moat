@@ -7,7 +7,7 @@ from __future__ import annotations
 import asyncio
 import select
 
-from moat.micro.compat import AC_use, log, sleep, wait_for
+from moat.util.compat import AC_use, log, sleep, wait_for
 from moat.micro.proto.stream import AIOBuf
 
 p = select.poll()

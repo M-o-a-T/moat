@@ -8,7 +8,7 @@ from functools import partial
 
 from moat.util import Path, import_, P
 from moat.micro.cmd.base import ACM_h, BaseCmd, ShortCommandError
-from moat.micro.compat import AC_use, Event, L, Lock, TaskGroup, log
+from moat.util.compat import AC_use, Event, L, Lock, TaskGroup, log
 from moat.micro.errors import NoPathError
 
 # Typing

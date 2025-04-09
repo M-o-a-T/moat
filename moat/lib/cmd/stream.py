@@ -5,7 +5,7 @@ Message streaming.
 from __future__ import annotations
 from contextlib import asynccontextmanager
 from moat.util import Path, QueueFull
-from moat.micro.compat import Queue, log, L, TaskGroup
+from moat.util.compat import Queue, log, L, TaskGroup
 from functools import partial
 from moat.lib.cmd.base import MsgLink, MsgHandler
 from moat.lib.cmd.const import *

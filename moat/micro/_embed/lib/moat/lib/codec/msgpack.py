@@ -25,7 +25,7 @@ import sys
 from io import BytesIO
 
 from moat.util import attrdict, OutOfData
-from moat.micro.compat import const
+from moat.util.compat import const
 
 
 __all__ = ["Codec", "ExtType"]

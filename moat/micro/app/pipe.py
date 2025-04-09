@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from moat.micro.cmd.stream.cmdbbm import BaseCmdBBM
 from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
-from moat.micro.compat import AC_use
+from moat.util.compat import AC_use
 from moat.micro.proto.stream import ProcessBuf
 from moat.micro.stacks.console import console_stack
 

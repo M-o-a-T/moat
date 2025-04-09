@@ -4,7 +4,7 @@ Helpers for MoaT command interpreters et al.
 
 from __future__ import annotations
 
-from moat.micro.compat import (
+from moat.util.compat import (
     TimeoutError,  # pylint: disable=redefined-builtin
     log,
     wait_for_ms,

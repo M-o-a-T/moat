@@ -9,7 +9,7 @@ import sys
 from contextlib import asynccontextmanager
 
 from moat.util import CtxObj
-from moat.micro.compat import AC_use
+from moat.util.compat import AC_use
 from moat.lib.codec import get_codec
 
 from ._stream import _MsgpackMsgBlk, _MsgpackMsgBuf

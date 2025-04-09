@@ -18,7 +18,7 @@ import machine
 from moat.util import attrdict
 
 # XXX m.m.compat and msgpack cannot be superseded
-from moat.micro.compat import log
+from moat.util.compat import log
 from moat.rtc import get_rtc, set_rtc
 
 cfg = {}

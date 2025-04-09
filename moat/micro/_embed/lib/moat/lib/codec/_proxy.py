@@ -4,7 +4,7 @@ A hacked-up copy of some parts of `moat.util`.
 
 from __future__ import annotations
 
-from moat.micro.compat import log
+from moat.util.compat import log
 from moat.util import NotGiven
 
 __all__ = [

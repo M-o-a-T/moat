@@ -5,7 +5,7 @@ Adaptor for MicroPython streams.
 from __future__ import annotations
 
 
-from moat.micro.compat import AC_use
+from moat.util.compat import AC_use
 from moat.lib.codec import get_codec
 
 from ._stream import _MsgpackMsgBlk, _MsgpackMsgBuf

@@ -8,7 +8,7 @@ import pytest
 
 from moat.micro._test import mpy_stack
 from moat.micro.alert import Alert as _Alert
-from moat.micro.compat import Event, L, TaskGroup, sleep_ms
+from moat.util.compat import Event, L, TaskGroup, sleep_ms
 from moat.util import P
 
 CFG = """

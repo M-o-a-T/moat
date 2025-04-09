@@ -5,7 +5,7 @@ import anyio
 from moat.util import Queue, attrdict
 from victron.dbus import Dbus
 
-from moat.micro.compat import (
+from moat.util.compat import (
     Event,
 )
 import contextlib

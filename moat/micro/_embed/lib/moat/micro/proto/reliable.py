@@ -9,7 +9,7 @@ from contextlib import suppress
 from moat.micro.errors import ChannelClosed
 
 from moat.util import NotGiven, Queue, ValueEvent
-from moat.micro.compat import (
+from moat.util.compat import (
     ACM,
     AC_exit,
     Event,

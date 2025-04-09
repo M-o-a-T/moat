@@ -14,7 +14,7 @@ from random import random
 import moat.micro
 from moat.util import attrdict, combine_dict, yload
 from moat.micro.cmd.tree.dir import Dispatch
-from moat.micro.compat import L, TaskGroup
+from moat.util.compat import L, TaskGroup
 from moat.lib.codec import get_codec
 
 # from moat.micro.main import Request, get_link, get_link_serial

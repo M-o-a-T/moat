@@ -10,7 +10,7 @@ from pprint import pformat
 
 from moat.util import ValueEvent
 
-from moat.micro.compat import (
+from moat.util.compat import (
     Lock,
     TimeoutError,
     sleep_ms,

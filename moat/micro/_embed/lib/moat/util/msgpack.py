@@ -16,7 +16,7 @@ import moat.lib.codec.msgpack as _msgpack
 from moat.lib.codec import Extension, NoCodecError
 from moat.lib.codec.msgpack import Codec
 from moat.lib.codec.proxy import DProxy, Proxy, _CProxy, obj2name, unwrap_obj, wrap_obj
-from moat.micro.compat import log
+from moat.util.compat import log
 
 from .path import Path
 

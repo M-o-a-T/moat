@@ -9,7 +9,7 @@ from __future__ import annotations
 import sys
 
 from moat.util import merge
-from moat.micro.compat import L, TaskGroup, sleep_ms
+from moat.util.compat import L, TaskGroup, sleep_ms
 from moat.rtc import all_rtc
 
 # from moat.lib.codec.cbor import Codec as CBOR
@@ -88,7 +88,7 @@ def main(cfg: str | dict, i: attrdict, fake_end=False):
         import sys
 
         from moat.micro.cmd.tree.dir import Dispatch
-        from moat.micro.compat import idle
+        from moat.util.compat import idle
 
         async with Dispatch(cfg, i=i) as dsp, TaskGroup() as tg:
             tg.start_soon(dsp.task)
@@ -100,6 +100,6 @@ def main(cfg: str | dict, i: attrdict, fake_end=False):
                 sys.stdout.write("OK\x04\x04>")
             await idle()
 
-    from moat.micro.compat import run
+    from moat.util.compat import run
 
     run(_main)

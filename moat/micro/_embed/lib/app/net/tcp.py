@@ -4,7 +4,7 @@ Apps for TCP connectivity
 
 from __future__ import annotations
 
-from moat.micro.compat import AC_use
+from moat.util.compat import AC_use
 
 # Typing
 

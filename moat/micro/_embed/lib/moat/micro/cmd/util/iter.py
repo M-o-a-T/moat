@@ -5,7 +5,7 @@ Helpers for MoaT command interpreters et al.
 from __future__ import annotations
 
 from moat.util import NotGiven, ValueEvent
-from moat.micro.compat import (
+from moat.util.compat import (
     L,
     log,
     sleep_ms,

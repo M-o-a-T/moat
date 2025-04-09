@@ -7,7 +7,7 @@ from __future__ import annotations
 from copy import deepcopy
 
 from .path import P, Path  # noqa:F401
-from moat.micro.compat import Event, log
+from moat.util.compat import Event, log
 
 from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
 
@@ -215,7 +215,7 @@ def exc_iter(exc):
     """
     iterate over all non-exceptiongroup parts of an exception(group)
     """
-    from moat.micro.compat import BaseExceptionGroup, ExceptionGroup
+    from moat.util.compat import BaseExceptionGroup, ExceptionGroup
 
     if isinstance(exc, (ExceptionGroup, BaseExceptionGroup)):
         for e in exc.exceptions:

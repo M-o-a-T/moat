@@ -8,7 +8,7 @@ import os
 import pytest
 
 from moat.micro._test import Loopback
-from moat.micro.compat import Event, TaskGroup
+from moat.util.compat import Event, TaskGroup
 from moat.micro.proto.reliable import ReliableMsg, EphemeralMsg
 from moat.micro.proto.stack import StackedMsg, LogMsg
 

@@ -7,7 +7,7 @@ from __future__ import annotations
 import anyio
 import errno
 
-from moat.micro.compat import AC_use, log
+from moat.util.compat import AC_use, log
 from moat.micro.proto.stream import AnyioBuf
 
 

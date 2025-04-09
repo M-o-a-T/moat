@@ -10,7 +10,7 @@ from moat.util import NotGiven, ValueEvent
 from moat.lib.codec.proxy import obj2name
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util.valtask import ValueTask
-from moat.micro.compat import AC_use, BaseExceptionGroup, L, TaskGroup, log
+from moat.util.compat import AC_use, BaseExceptionGroup, L, TaskGroup, log
 from moat.micro.errors import NoPathError, RemoteError, SilentRemoteError, StoppedError
 
 # Typing

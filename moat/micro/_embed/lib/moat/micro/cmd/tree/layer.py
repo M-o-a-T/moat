@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from moat.util import import_
-from moat.micro.compat import L, TaskGroup, log
+from moat.util.compat import L, TaskGroup, log
 
 from .dir import BaseSuperCmd
 

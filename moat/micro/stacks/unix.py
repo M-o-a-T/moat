@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import anyio
 
-from moat.micro.compat import L
+from moat.util.compat import L
 from moat.micro.proto.stream import SingleAnyioBuf
 
 from .util import BaseConnIter

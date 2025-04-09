@@ -8,7 +8,7 @@ import os
 import pytest
 
 from moat.micro._test import mpy_stack
-from moat.micro.compat import log, sleep_ms
+from moat.util.compat import log, sleep_ms
 from moat.util import P
 
 pytestmark = pytest.mark.anyio

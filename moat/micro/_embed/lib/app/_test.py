@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 
 from moat.micro.cmd.base import BaseCmd
-from moat.micro.compat import Event, L, Queue, log, wait_for_ms, sleep_ms
+from moat.util.compat import Event, L, Queue, log, wait_for_ms, sleep_ms
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
@@ -32,7 +32,7 @@ class Cmd(BaseCmd):
         return {"r": m}
 
     doc_it=dict(_d="Iterator. Sends 0…lim-1.", lim="int:limit", _o="int")
-    def stream_it(self, msg:Msg):
+    async def stream_it(self, msg:Msg):
         "Streams numbers."
         lim=msg.get("lim",-1)
         i = 0

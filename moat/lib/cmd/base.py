@@ -4,6 +4,7 @@ Base classes for command handlers.
 
 from __future__ import annotations
 from contextlib import asynccontextmanager
+from functools import partial
 
 from typing import TYPE_CHECKING
 from moat.util import CtxObj
@@ -330,6 +331,9 @@ class SubMsgSender(MsgSender):
         """
         return SubMsgSender(root, self._path + rem)
 
+    def __getattr__(self, x):
+        # XXX maybe this should return a submsgsender instead
+        return partial(self.cmd,x)
 
 class MsgHandler(CtxObj, BaseMsgHandler):
     """

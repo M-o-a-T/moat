@@ -414,7 +414,10 @@ class Msg(MsgLink, MsgResult):
             await self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
             raise
         else:
-            await self.result(res)
+            if isinstance(res,dict):
+                await self.result(**res)
+            else:
+                await self.result(res)
 
     @asynccontextmanager
     async def ensure_remote(self):

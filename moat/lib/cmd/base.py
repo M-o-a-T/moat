@@ -153,7 +153,7 @@ class Caller(CtxObj):
 
     _qlen = 0
 
-    def __init__(self, handler: MsgHandler, data: tuple[str,list,dict]):
+    def __init__(self, handler: MsgHandler, data: tuple[str,list|tuple,dict]):
         self.data = data
         self.handler = handler
         self._dir = SD_NONE
@@ -165,8 +165,8 @@ class Caller(CtxObj):
     async def _call(self):
         "helper for __await__ that calls the remote handler"
         from .msg import Msg
-
         msg = Msg.Call(*self.data)
+
         await self.handler.handle(msg, msg.rcmd)
         await msg.wait_replied()
         return msg
@@ -178,6 +178,7 @@ class Caller(CtxObj):
 
         from .msg import Msg
         m1 = Msg.Call(*self.data)
+
         async with (
             TaskGroup() as tg,
             m1.ensure_remote() as m2,
@@ -242,6 +243,11 @@ class MsgSender(BaseMsgHandler):
     @property
     def root(self):
         return self._root
+
+    def set_root(self, root):
+        if type(self) != MsgSender:
+            raise RuntimeError("not in a subclass")
+        self._root = root
 
     def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
         """

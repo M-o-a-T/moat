@@ -82,7 +82,7 @@ def _enc_any(codec, obj):
         return 5, b"".join(codec.encode(x) for x in p)
 
     if isinstance(obj, Exception):
-        # RemoteError, cf. moat.micro.errors
+        # RemoteError, cf. moat.lib.codec.errors
         log("NPFS")
         for k, v in _CProxy.items():
             log("NPF %r %r", k, v)

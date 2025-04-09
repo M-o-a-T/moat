@@ -24,7 +24,7 @@ from moat.util import (
 )
 from moat.micro.cmd.tree.dir import Dispatch, SubDispatch
 from moat.micro.cmd.util.part import get_part
-from moat.micro.errors import NoPathError, RemoteError
+from moat.lib.codec.errors import NoPathError, RemoteError
 from moat.micro.stacks.util import TEST_MAGIC
 from moat.util.main import load_subgroup
 from moat.lib.codec import get_codec

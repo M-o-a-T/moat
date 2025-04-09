@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from contextlib import suppress
 
-from moat.micro.errors import ChannelClosed
+from moat.lib.codec.errors import ChannelClosed
 
 from moat.util import NotGiven, Queue, ValueEvent
 from moat.util.compat import (

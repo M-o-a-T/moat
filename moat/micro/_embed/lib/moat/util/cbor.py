@@ -111,7 +111,7 @@ def enc_any(codec, obj):
         return 27, p
 
     if isinstance(obj, Exception):
-        # RemoteError, cf. moat.micro.errors
+        # RemoteError, cf. moat.lib.codec.errors
         res = ["_rErr", obj.__class__.__name__]
         res.extend(obj.args)
         return 5, res

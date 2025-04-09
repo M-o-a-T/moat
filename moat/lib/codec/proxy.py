@@ -22,7 +22,7 @@ from moat.util import NotGiven
 from ._proxy import Proxy, get_proxy, name2obj, drop_proxy, as_proxy, obj2name
 from ._proxy import DProxy as _DProxy
 from ._proxy import _CProxy
-import moat.lib.codec._errors as _err
+import moat.lib.codec.errors as _err
 
 
 class NoProxyError(ValueError):

@@ -21,7 +21,7 @@ from pathlib import Path
 from subprocess import CalledProcessError
 
 from moat.util import attrdict
-from moat.micro.errors import RemoteError
+from moat.lib.codec.errors import RemoteError
 
 logger = logging.getLogger(__name__)
 

@@ -11,7 +11,7 @@ from moat.lib.codec.proxy import obj2name
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util.valtask import ValueTask
 from moat.util.compat import AC_use, BaseExceptionGroup, L, TaskGroup, log
-from moat.micro.errors import NoPathError, RemoteError, SilentRemoteError, StoppedError
+from moat.lib.codec.errors import NoPathError, RemoteError, SilentRemoteError, StoppedError
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
@@ -40,8 +40,7 @@ class BaseCmdMsg(BaseCmd):
 
     def __init__(self, cfg):
         super().__init__(cfg)
-        self.reply = {}
-        self.seq = 2
+        self.__stream = HandlerStream()
         # locally-generated seqnums must be even
         # also we want them to not be zero
         # TODO: CBOR: use negative seqnums for replies
@@ -62,20 +61,29 @@ class BaseCmdMsg(BaseCmd):
         You typically override `stream`, not this method.
         """
         try:
-            await AC_use(self, self._cleanup_open_commands)
             self.s = await self.stream()
-            async with TaskGroup() as self.tg:
+            async with self.__stream() as st:
+                st.start(self._reader)
                 if L:
                     self.set_ready()
-                while True:
-                    msg = await self.s.recv()
-                    await self._handle(msg)
+                await self._writer()
         # DO NOT eat errors here, that interferes
         # with the sub.Err no-restart-on-success feature
         finally:
             self.s = None
 
-    def _cleanup_open_commands(self):
+    async def _reader(self):
+        str = self.__stream
+        while True:
+            msg = await self.s.recv()
+            await str.msg_in(msg)
+
+    async def _writer(self):
+        str = self.__stream
+        while True:
+            msg = await str.msg_out()
+            await self.s.send(msg)
+
         for e in self.reply.values():
             e.cancel()
 
@@ -94,212 +102,14 @@ class BaseCmdMsg(BaseCmd):
             # reply_error also does this
             self.reply.pop(i, None)
 
-    async def reply_error(self, i, exc, x=()):
+    async def handle(self, msg, rcmd) -> Awaitable[Any]:
         """
-        Reply to message #@i with an error.
-
-        Exception types in @x are expected and will not be logged.
+        Forward a request to some remote side.
         """
-        res = NotGiven
-        self.reply.pop(i, None)
-        try:
-            if isinstance(exc, (SilentRemoteError, OSError)):  # noqa:SIM114
-                pass
-            elif x and isinstance(exc, tuple(x)):
-                pass
-            elif i is None:
-                log("ERROR handling <no-i>: %r", exc, err=exc)
-            else:
-                log("ERROR handling <%d>: %r", i, exc, err=exc)
-            if i is None:
-                return
-            res = {"i": i}
-            if isinstance(exc, Exception):
-                try:
-                    obj2name(type(exc))
-                except KeyError:
-                    res["e"] = "E:" + repr(exc)
-                else:
-                    res["e"] = exc
-            else:
-                res["e"] = StoppedError(repr(exc), "echo")
-            await self.s.send(res)
-        except TypeError as e2:
-            log("ERROR returning %r", res, err=e2)
-            await self.s.send({"e": "T:" + repr(e2), "i": i})
-
-    async def _handle(self, msg):
-        """
-        Main handler for incoming messages
-        """
-        if not isinstance(msg, dict):
-            breakpoint()
-            print("?3", msg, file=sys.stderr)
-            return
-        a: tuple[str | int] | None = msg.get("a", None)  # action
-        i: int | None = msg.get("i", None)  # seqnum
-        d: Mapping[str, Any] | type[NotGiven] = msg.get("d", NotGiven)  # data
-        e: type[Exception] | str = msg.get("e", None)  # error
-        r: int | None = msg.get("r", None)  # repeat
-        n: int | None = msg.get("n", None)  # iter_seq
-        x: list[type[Exception]] = msg.get("x", ())  # exclude_error
-
-        if i is not None:
-            i ^= 1
-
-        for k in msg:
-            if k not in "aidrenx":
-                log("Unknown %s: %r", k, msg)
-                break
-
-        if a is not None:
-            # incoming request
-            # runs in a separate task
-            # XXX create a task pool?
-            if d is NotGiven:
-                d = None
-            if r is None:
-                log("ValTaskA %r %r %r %r %r %r",i,x,self.root.dispatch,a,d,x)
-                t = ValueTask(self, i, x, self.root.dispatch, a, d, x_err=x)
-            else:
-                if not L:
-                    raise RuntimeError("not Large")
-                from moat.micro.cmd.util.iter import SendIter
-
-                log("SendIterA %r %r %r %r",i,r,a,d)
-                t = SendIter(self, i, r, a, d)
-
-            if i is not None:
-                if i in self.reply:
-                    log("msgid known?!? %d", i)
-                    tt = self.reply.pop(i)
-                    tt.i = None
-                    r = tt.set_error(RuntimeError("OldCmd"))
-                    if hasattr(r, "throw"):
-                        await r
-
-                self.reply[i] = t
-            rm = await t.start(self.tg)
-            if rm is not None:  # revised iterator rate
-                await self.s.send({"i": i, "r": rm})
-
-        else:
-            # reply
-            if i is None:
-                log("?? %r", msg)
-                return
-
-            t = self.reply.get(i, None)
-            if t is None:
-                log("unknown %r", msg)
-                return
-
-            if e is not None:
-                if isinstance(e, type):
-                    if d is NotGiven:
-                        d = ()
-                    e = e(*d)
-                elif isinstance(e, str):
-                    e = RemoteError(e)
-                elif isinstance(e, NoPathError):
-                    e = e.prefixed(self.path)
-                elif isinstance(e, Exception):
-                    pass
-                else:
-                    log("unknown err %r", msg)
-                    e = StoppedError(f"unknown {msg!r}")
-                r = t.set_error(e)
-                if hasattr(r, "throw"):
-                    await r
-
-            elif r is not None:
-                if r is False:
-                    r = t.set_error(StopAsyncIteration())
-                    if hasattr(r, "throw"):
-                        await r
-                    del self.reply[i]
-                else:
-                    t.set_r(r)
-
-            elif d is not NotGiven:
-                if getattr(t, "_IT", False):
-                    if n:
-                        t.set(d, n=n)
-                    else:
-                        t.set(d)
-                    return
-                else:
-                    t.set(d)
-                    del self.reply[i]
-
-            else:  # just i
-                t.cancel()
-                del self.reply[i]
-
-    async def dispatch(
-        self,
-        action,
-        msg=None,
-        *,
-        rep: int | None = None,
-        wait=True,
-        x_err=(),
-    ):  # pylint:disable=arguments-differ
-        """
-        Forward a request to the remote side, return the response.
-
-        The message is either the second parameter, or a dict (use any
-        number of keywords).
-
-        If @wait is False, the message doesn't have a sequence number and
-        thus no reply will be expected.
-
-        @rep requests iterated replies.
-        """
-
-        if len(action) == 1:
-            a = action[0]
-            if a[0] == "!":
-                return await super().dispatch((a[1:],), msg, rep=rep, wait=wait, x_err=x_err)
-
-        if L and await self.wait_ready():
-            raise StoppedError("is down")  # already down
-
-        if not wait:
-            msg = {"a": action, "d": msg}
-            await self.s.send(msg)
-            return
-
-        # Find a small-ish but unique *even* seqnum
-        # even seqnums are requests from the other side
-        if self.seq > 10 * (len(self.reply) + 5):
-            self.seq = 10
-        while True:
-            seq = self.seq
-            self.seq += 2
-            if seq not in self.reply:
-                break
-        msg = {"a": action, "d": msg, "i": seq}
-        if x_err:
-            msg["x"] = x_err
-
-        if rep:
-            if L:
-                from moat.micro.cmd.util.iter import RecvIter
-
-                msg["r"] = rep
-                self.reply[seq] = e = RecvIter(self, seq, rep)
-                await self.s.send(msg)
-                return e
-            else:
-                raise RuntimeError("not Large")
-        else:
-            self.reply[seq] = e = ValueEvent()
-            try:
-                await self.s.send(msg)
-                return await e.get()
-            finally:
-                self.reply.pop(seq, None)
+        if rcmd and isinstance(rcmd[-1], str) and rcmd[-1][0] == "!":
+            rcmd[-1] = rcmd[-1][1:]
+            return await super().handle(msg, rcmd)
+        return await self.__stream.handle(msg, rcmd)
 
     doc_crd=dict(_d="read console", _0="int:len (64)")
     async def cmd_crd(self, n=64) -> bytes:

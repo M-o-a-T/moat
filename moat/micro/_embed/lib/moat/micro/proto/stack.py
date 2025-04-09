@@ -48,8 +48,8 @@ class Base:
 
     Usage:
 
-    Override `stream` to create the data link. Use the `AC_use` helper
-    if you need to call an async context manager or to register a destructor.
+    Use the `AC_use` helper if you need to call an async context manager or
+    to register a destructor.
 
     Augment `setup` or `teardown` to add non-stream related features.
 

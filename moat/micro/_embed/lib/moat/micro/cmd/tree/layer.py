@@ -90,17 +90,17 @@ class BaseLayerCmd(BaseSuperCmd):
         """
         return None
 
-    async def dispatch(self, action, msg, **kw):
+    async def handle(self, msg, rcmd):
         """
         Forward to the sub-app unless specifically directed not to.
         """
-        if action and action[0][0] == "!":
-            action = tuple(action[0][1:], *action[1:])
-            return await super().dispatch(action, msg, **kw)
+        if rcmd and isinstance(rcmd[-1],str) and rcmd[-1][0] == '!':
+            rcmd[-1] = rcmd[-1][1:]
+            return await super().handle(msg, rcmd)
 
         if L:
             await self.wait_ready()
-        return await self.app.dispatch(action, msg, **kw)
+        return await self.app.handle(msg, rcmd)
 
     if L:
 

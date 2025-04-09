@@ -70,12 +70,12 @@ def Err(*a, **k):
         t: int = None
         a: bool = None
 
-        async def dispatch(self, *a, **k):
+        async def handle(self, *a, **k):
             if L:
                 if self.app is None:
                     await super().wait_ready()
                 await self.app.wait_ready()
-            return await super().dispatch(*a, **k)
+            return await super().handle(*a, **k)
 
         async def reload(self):
             self._load()

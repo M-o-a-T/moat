@@ -12,11 +12,10 @@ Alarm conditions are subclasses of exceptions.
 
 from __future__ import annotations
 
-from moat.util import merge
-from moat.util.compat import Event, Queue, WouldBlock
+from moat.util import merge, Path
+from moat.util.compat import Event, Queue, WouldBlock, AC_use, TaskGroup
 
 from .cmd.base import BaseCmd
-from .compat import AC_use, TaskGroup
 
 from typing import TYPE_CHECKING  # isort:skip
 
@@ -126,7 +125,7 @@ class AlertHandler(BaseCmd):
     async def _rdr(self, p, evt):
         rem = p["rem"]
         al = p["al"]
-        async with self.root.send_iter(0, *rem, *al, "r") as it:
+        async with self.root.cmd(Path(*rem, *al, "r")).stream_in() as it:
             evt.set()
             async for res in it:
                 await self.cmd_w(a=res["a"], p=rem + res["p"], d=res.get("d", None))
@@ -155,13 +154,17 @@ class AlertHandler(BaseCmd):
     async def reload(self):  # noqa:D102
         await self._start_mon()
 
-    def iter_r(self, s: bool | None = None):
+    doc_r=dict(_d="Stream curren alerts",s="bool:stop(default:wait)",_o="alert")
+    async def stream_r(self, msg:Msg):
         """read open alarms.
 
         If @s ("static") is True, send a snapshot.
         Otherwise iterate on new alerts.
         """
-        return AlertIter(self, s)
+        async with msg.stream_out(), AlertIter(self, msg.get("s",False)) as alit:
+            async for al in alit:
+                await msg.send(**al)
+
 
     doc_w=dict(_d="set alert", _0="type:class", _1="path", d="any:data, clears if missing")
     async def cmd_w(self, a: type[Alert], p: Path, d: dict | None = None):

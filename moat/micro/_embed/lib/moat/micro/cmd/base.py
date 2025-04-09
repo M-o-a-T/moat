@@ -26,7 +26,8 @@ from moat.lib.cmd.errors import ShortCommandError,LongCommandError
 from moat.micro.cmd.util import run_no_exc, wait_complain
 from moat.micro.cmd.util.part import enc_part, get_part
 from moat.util.compat import AC_use, Event, L, idle
-from moat.micro.errors import NoPathError
+from moat.lib.codec.errors import NoPathError
+from moat.lib.cmd import MsgHandler
 from moat.micro.proto.stack import Base
 
 if L:
@@ -72,7 +73,7 @@ class ACM_h:
 
 class BaseCmd(Base):
     """
-    Basic Request/response handler.
+    Basic Request handler.
 
     This class does not accept subcommands.
     """
@@ -105,6 +106,14 @@ class BaseCmd(Base):
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.path} {(id(self) >> 4) & 0xFFF:03x}>"
+
+    async def handle(self, msg: Msg, rcmd: list, *prefix: list[str]):
+        "See `MsgHandler.handle`."
+        ...
+
+    def find_handler(self, path, may_stream: bool = False) -> tuple[MsgHandler, Path] | Callable:
+        "See `MsgHandler.find_handler`."
+        ...
 
     async def setup(self):
         """
@@ -249,127 +258,6 @@ class BaseCmd(Base):
         # XXX cache it?
         return self._parent.path / self._name
 
-    def send(self, *action, _x_err=(), **kw) -> Awaitable:
-        """
-        Send a message, returns a reply.
-
-        Delegates to the root dispatcher.
-
-        Do not override this.
-        """
-        return self.root.dispatch(action, kw, x_err=_x_err)
-
-    def send_iter(self, _rep, *action, **kw) -> AsyncContextManager:
-        """
-        Send a message, receive an iterated reply.
-
-        The first argument is the delay between replies, in msec.
-
-        Usage::
-
-            async with self.iter(250, "foo","bar", baz=123) as it:
-                async for msg in it:
-                    ...
-
-        Delegates to the root dispatcher, using a wrapper so the caller
-        doesn't need to write ``async with await self.iter(…)``.
-
-        Do not override this.
-        """
-        return ACM_h(self.root.dispatch, action, kw, rep=_rep)
-
-    def send_nr(self, *action, _x_err=(), **kw) -> Awaitable:
-        """
-        Send a possibly-lossy message, does not return a reply.
-
-        Delegates to the root dispatcher
-
-        Do not override this.
-        """
-        return self.root.dispatch(action, kw, wait=False, x_err=_x_err)
-        # XXX run in a separate task
-
-    async def dispatch(
-        self,
-        action: Iterator,
-        msg: SubCmd,
-        *,
-        rep: int | None = None,
-        wait: bool = True,
-        x_err=(),
-    ) -> Awaitable | AsyncContextManager[AsyncIterator]:  # pylint:disable=arguments-differ
-        """
-        Process a message.
-
-        @msg is either a dict (keyword+value for the destination handler)
-        or not (single direct argument).
-
-        @action is a list. This dispatcher requires it to have exactly one
-        element: the command name.
-
-        Returns whatever the called command returns/raises, or raises
-        AttributeError if no command is found.
-
-        Warning: All incoming commands wait for the subsystem to be ready.
-
-        If @rep is >0, the requestor wants an async context manager that
-        yields/implements an iterator with (roughly) @rep milliseconds between
-        values. If no `iter_‹name›` method exists, `cmd_‹name›` will be
-        called repeatedly.
-        """
-
-        if not action:
-            raise ShortCommandError(())
-        if len(action) > 1:
-            raise LongCommandError(action)
-
-        a = action[0]
-        if a[0] == "?":
-            wr = False
-            fn = a[1:]
-        else:
-            wr = True
-            fn = a
-
-        if rep is not None:
-            if not L:
-                raise RuntimeError("not Large")
-            if not wait:
-                raise ValueError("can't rep without wait")
-            try:
-                p = getattr(self, f"iter_{fn}")
-            except AttributeError:
-                p = getattr(self, f"cmd_{fn}")
-                r = IterWrap(p, (), msg)
-            else:
-                r = p(**msg)
-                if hasattr(r, "throw"):  # coroutine
-                    raise TypeError("iter is async")
-            return DelayedIter(it=r, t=rep)
-
-        try:
-            p = getattr(self, f"cmd_{fn}")
-        except AttributeError:
-            raise NoPathError(
-                self.path,
-                (fn,),
-                self.__class__.__name__,
-                await self.cmd_dir_(v=None),
-            ) from None
-
-        if not wait:
-            # XXX better idea without forcing a taskgroup on everything?
-            tg = getattr(self, "tg", self.root.tg)
-            tg.spawn(run_no_exc, p, msg, x_err, _name=f"Call:{self.path}/{p}")
-            return
-
-        if L and wr:
-            await self.wait_ready()
-        r = await p(**msg)
-        return r
-
-    # globally-available commands
-
     doc_dir_=dict(
         _d="directory",
         v="bool:verbose",
@@ -421,3 +309,6 @@ class BaseCmd(Base):
         self._parent = parent
         self._name = name
         self.root = parent.root
+
+BaseCmd.handle = MsgHandler.handle
+BaseCmd.find_handler = MsgHandler.find_handler

@@ -4,9 +4,11 @@ A command that accesses a row of mostly-identical subcommands
 
 from __future__ import annotations
 
-from moat.util import combine_dict, import_
+from moat.util import combine_dict, import_, P
 from moat.util.compat import L
-from moat.micro.errors import NoPathError
+from moat.lib.codec.errors import NoPathError
+from moat.lib.cmd.errors import ShortCommandError
+from moat.lib.cmd.base import MsgSender
 
 from .tree.dir import BaseSuperCmd
 from .util.part import set_part
@@ -107,46 +109,42 @@ class ArrayCmd(BaseSuperCmd):
         for app in self.apps:
             await self.start_app(app)
 
-    async def dispatch(self, action, *a, **kw):
+    async def handle(self, msg, rcmd):
         """
         Dispatch a message to subcommands.
 
         See `BaseCmd.dispatch` for details.
         """
 
-        if not action:
-            raise RuntimeError("NoCmd")
-        if len(action) == 1:
-            return await super().dispatch(action, *a, **kw)
+        if not rcmd:
+            raise ShortCommandError(msg.cmd)
+        if isinstance(rcmd[-1],str) and rcmd[-1][0] == "!":
+            rcmd[-1] = rcmd[-1][1:]
+            return await super().handle(msg, rcmd)
+
+        cmd = rcmd.pop()
+        if cmd == "all":
+            if msg.can_stream:
+                return await self._stream_all(msg, rcmd)
+            else:
+                return await self._cmd_all(msg, rcmd)
 
         try:
-            sub = self.apps[action[0]]
+            sub = self.apps[cmd]
         except (TypeError, IndexError):
             raise NoPathError(
                 self.path,
-                action,
+                msg.cmd,
                 self.__class__.__name__,
                 await self.cmd_dir_(v=None),
             ) from None
-        return await sub.dispatch(action[1:], *a, **kw)
+        return await sub.handle(msg, rcmd)
 
     doc_dir_=dict(_c=BaseSuperCmd.cmd_dir_, na="int:max index")
     async def cmd_dir_(self, **kw):
         "report max index"
         res = await super().cmd_dir_(**kw)
         res["na"] = len(self.apps)
-        return res
-
-    async def cmd_all(self, *a, d=None, s=None, e=None):
-        """
-        Call all sub-apps and collect the result.
-        """
-        if d is None:
-            d = {}
-        res = []
-        for app in self.apps[s:e]:
-            res.append(await app.dispatch(a, d))
-
         return res
 
     doc_all=dict(
@@ -156,21 +154,47 @@ class ArrayCmd(BaseSuperCmd):
         s="int:start index",
         e="int:end index",
     )
-    async def stream_all(self, msg):
+
+    async def _cmd_all(self, msg, rcmd):
         """
         Call all sub-apps and collect the result.
         """
+        if rcmd:
+            cmd = rcmd[:]
+            cmd.reverse()
+        else:
+            cmd = msg.args_l.pop(0)
+            if isinstance(cmd,str):
+                cmd = P(cmd)
+            cmd = list(cmd)
+
         res = []
-        s = msg.get("s", 0)
-        e = msg.get("e", len(self.apps))
+        snd = MsgSender(None)
+        for app in self.apps:
+            snd.set_root(app)
+            r = await snd.cmd(cmd, *msg.args, *msg.kw)
+            res.append((r.args,r.kw))
+        await msg.result(*res)
+
+    async def _stream_all(self, msg, rcmd):
+        """
+        Call all sub-apps and send the result.
+        """
+        if not rcmd:
+            cmd = msg.args.pop(0)
+            if isinstance(cmd,str):
+                cmd = P(cmd)
+            cmd = list(cmd)
+            cmd.reverse()
+            rcmd = cmd
 
         async def _reply(i,app,st):
-            sd = MsgSender(app)
-            res = await sd.cmd(*msg.a, **msg.kw)
-            st.send((res.a,res.kw))
+            msg_ = Msg.Call(msg.cmd,msg.args,msg.kw)
+            res = await app.handle(msg_, rcmd[:])
+            await st.send(i, *res.args, **res.kw)
 
         async with msg.stream_out() as st, TaskGroup() as tg:
             for i,app in enumerate(self.apps[s:e]):
-                tg.start_soon(_reply, i+s, app, st)
+                tg.start_soon(_reply, i, app, st)
 
-        return res
+        await msg.result()

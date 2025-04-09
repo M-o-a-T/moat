@@ -9,7 +9,8 @@ from functools import partial
 from moat.util import Path, import_, P
 from moat.micro.cmd.base import ACM_h, BaseCmd, ShortCommandError
 from moat.util.compat import AC_use, Event, L, Lock, TaskGroup, log
-from moat.micro.errors import NoPathError
+from moat.lib.codec.errors import NoPathError
+from moat.lib.cmd import MsgSender
 
 # Typing
 
@@ -132,29 +133,20 @@ class BaseSubCmd(BaseSuperCmd):
         for app in list(self.sub.values()):
             await app.reload()
 
-    async def dispatch(self, action: list[str], msg: dict, **kw):
+    async def handle(self, msg: Msg, rcmd: list, *prefix: list[str]):
         """
         Dispatch a message to subcommands.
 
-        See `BaseCmd.dispatch` for details.
+        See `BaseCmd.handle` for details.
         """
 
-        if not action:
+        if not rcmd:
             raise ShortCommandError
-        if len(action) == 1:
-            return await super().dispatch(action, msg, **kw)
 
-        try:
-            sub = self.sub[action[0]]
-        except KeyError:
-            raise NoPathError(
-                self.path,
-                action,
-                self.__class__.__name__,
-                await self.cmd_dir_(v=None),
-            ) from None
-        action = action[1:]
-        return await sub.dispatch(action, msg, **kw)
+        cmd = rcmd.pop()
+        if not prefix and (sub := self.sub.get(cmd,None)) is not None:
+            return await sub.handle(msg, rcmd)
+        return await super().handle(msg, rcmd, *prefix)
 
     doc_dir_=dict(_c=BaseSuperCmd.cmd_dir_, d=["str:subdirs"], v="bool:show hidden")
     async def cmd_dir_(self, v=True):
@@ -253,6 +245,7 @@ class Dispatch(DirCmd):
         super().__init__(cfg)
         self._run = run
         self.i = i
+        self._sender = MsgSender(self)
 
     async def __aenter__(self):
         await super().__aenter__()
@@ -266,17 +259,6 @@ class Dispatch(DirCmd):
             raise
         return self
 
-    def sub_at(self, p: str | Path):
-        """
-        Returns a SubDispatch to this path.
-
-        You can call this either with a sequence of path elements
-        or with a path.
-        """
-        if isinstance(p, str):
-            p = P(p)
-        return SubDispatch(self, p)
-
     @property
     def root(self) -> Dispatch:
         "root dispatcher"
@@ -287,107 +269,13 @@ class Dispatch(DirCmd):
         "root path"
         return Path()
 
-
-def SubDispatch(dispatch, path):
-    """
-    A Dispatch forwarder that prefixes a path.
-
-    Calls are executed directly if possible.
-
-    Create this object in your ``setup`` method.
-    Using it from ``__init__`` results in ineficient call execution.
-
-    You can then use::
-
-            s = d.get_sub("a","b")
-            await s.c()
-
-    as a fast shorthand for ``await d.send("a","b","c")``.
-
-    Non-keyword arguments access subcommands (or try to do so).
-
-    It's also possible to access iterators this way: an ``it_X`` attribute
-    accesses the destination's ``iter_X`` method. As with
-    `dispatch.send_iter`, the timer is the first argument.
-
-    This is a constructor. The actual class is ``_SubDispatch``.
-    """
-
-    for i, p in enumerate(path):
-        try:
-            dispatch = dispatch.sub[p]
-        except (AttributeError, KeyError):
-            return _SubDispatch(path, dispatch, path[i:])
-
-    # Cache the subdispatcher for this app
-    try:
-        sd = dispatch._subD  # noqa:SLF001
-    except AttributeError:
-        sd = _SubDispatch(path, dispatch, ())
-
-        for k in dir(dispatch):
-            if k.startswith("cmd_"):
-                setattr(sd, k[4:], getattr(dispatch, k))
-        dispatch._subD = sd  # noqa:SLF001
-    return sd
-
-
-class _SubDispatch:
-    def __init__(self, path, dest, rem):
-        self._path = path
-        self._dest = dest
-        self._rem = rem
-        assert isinstance(rem, (tuple, list, Path))
+    @property
+    def cmd(self):
+        "root command sender"
+        return self._sender.cmd
 
     @property
-    def root(self) -> Dispatch:
-        "root dispatcher"
-        return self._dest.root
+    def sub_at(self):
+        "root subcommand resolver"
+        return self._sender.sub_at
 
-    if L:
-
-        def wait_ready(self, wait: bool = True) -> Awaitable:
-            "forwards to the destination"
-            return self._dest.wait_ready(wait=wait)
-
-    def sub_at(self, p: Path):
-        "create a sub-subdispatcher"
-        return SubDispatch(self.root, self._path + p)
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *tb):
-        pass
-
-    def dispatch(self, a, msg, **kw) -> Awaitable:
-        "Forward an explicit dispatch call"
-        return self._dest.dispatch(self._rem + a, msg, **kw)
-
-    def _send(self, *a, _x_err=(), **k) -> Awaitable:
-        return self._dest.dispatch(self._rem, a, k, x_err=_x_err)
-
-    def _send_r(self, _a, _rep, *a, _x_err=(), **kw) -> AsyncContextManager:
-        return ACM_h(self._dest.dispatch, self._rem + (_a,) + a, kw, rep=_rep, x_err=_x_err)
-
-    def __getattr__(self, k):
-        if k[0] == "_":
-            raise AttributeError(k)
-        if k[:3] == "it_":
-            return self.sub_at((k[3:],))
-        else:
-            return self.sub_at((k,))
-
-    def __call__(self, *a, _x_err=(), **k) -> Awaitable:
-        """
-        Enables code like:
-            s = d.get_sub("a","b","c")
-            await s()
-        which calls the subhandler at "a.b"'s `cmd_c` method.
-
-        Note that non-keyword arguments access subcommands (or try to do so).
-        """
-        if self._rem or a:
-            return self._dest.dispatch(self._rem + a, k, x_err=_x_err)
-        else:
-            return self._dest.cmd(**k)

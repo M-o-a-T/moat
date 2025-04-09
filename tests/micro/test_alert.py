@@ -44,7 +44,7 @@ class AlertB(Alert):
 
 async def rd(x, s=False, evt=None):
     res = []
-    async with x.it_r(1, s=s) as it:
+    async with x.r(1, s=s).stream_in() as it:
         if evt is not None:
             evt.set()
         async for r in it:
@@ -54,7 +54,6 @@ async def rd(x, s=False, evt=None):
 
 @pytest.mark.anyio()
 async def test_ary(tmp_path):
-    "fake alert test"
     async with mpy_stack(tmp_path, CFG) as d, TaskGroup() as tg:
         # ruff: noqa: F841
         a = d.sub_at(P("a"))

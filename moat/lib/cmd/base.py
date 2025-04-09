@@ -282,7 +282,7 @@ class MsgSender(BaseMsgHandler):
             if rem:
                 return SubMsgSender(root, rem)
             return MsgSender(root)
-        return root
+        return res
 
 
 class SubMsgSender(MsgSender):
@@ -300,7 +300,7 @@ class SubMsgSender(MsgSender):
         self._rpath.reverse()
 
     def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
-        rcmd.append(self._rpath)
+        rcmd.extend(self._rpath)
         return self._root.handle(msg, rcmd)
 
     def cmd(self, cmd: Path, *a: list[Any], **kw: dict[Key, Any]) -> Caller:
@@ -315,13 +315,14 @@ class SubMsgSender(MsgSender):
         ...     async for msg, in m:
         ...         m.send(msg*2)
         """
-        return Caller(self, msg.Call(self._path + cmd, a, kw))
+        # The path is modified in .handle
+        return Caller(self, (cmd, a, kw))
 
     def __call__(self, *a: list[Any], **kw: dict[Key, Any]) -> Caller:
         """
         Process a call with an empty path.
         """
-        return Caller(self, Msg.Call(self._path, a, kw))
+        return Caller(self, ((), a, kw))
 
     def sub_at(self, prefix: Path) -> SubMsgSender:
         """

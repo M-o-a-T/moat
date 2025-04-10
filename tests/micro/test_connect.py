@@ -80,13 +80,11 @@ async def test_net(tmp_path, server_first, link_in, unix):
         await (set_server if server_first else set_client)(c)
         await sleep_ms(100)
         await (set_client if server_first else set_server)(c)
-        while await d.send("l", "?rdy_"):
-            await sleep_ms(50)
-        while await d.send("r", "?rdy_"):
-            await sleep_ms(50)
-        res = await d.send("l", "a", "echo", m="hello")
-        assert res == dict(r="hello")
+        await d.cmd("l.!rdy_")
+        await d.cmd("r.!rdy_")
+        res = await d.cmd(P("l.a.echo"), m="hello")
+        assert res.kw == dict(r="hello")
 
         if link_in:
-            res = await d.send("r", "a", "echo", m="hello")
-            assert res == dict(r="hello")
+            res = await d.cmd(P("r.a.echo"), m="hello")
+            assert res.kw == dict(r="hello")

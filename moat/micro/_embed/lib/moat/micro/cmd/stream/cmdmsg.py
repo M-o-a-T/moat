@@ -9,6 +9,7 @@ import sys
 from moat.util import NotGiven, ValueEvent
 from moat.lib.codec.proxy import obj2name
 from moat.micro.cmd.base import BaseCmd
+from moat.lib.cmd.stream import HandlerStream
 from moat.micro.cmd.util.valtask import ValueTask
 from moat.util.compat import AC_use, BaseExceptionGroup, L, TaskGroup, log
 from moat.lib.codec.errors import NoPathError, RemoteError, SilentRemoteError, StoppedError
@@ -40,11 +41,6 @@ class BaseCmdMsg(BaseCmd):
 
     def __init__(self, cfg):
         super().__init__(cfg)
-        self.__stream = HandlerStream()
-        # locally-generated seqnums must be even
-        # also we want them to not be zero
-        # TODO: CBOR: use negative seqnums for replies
-        #            instead of flipping the bottom bit
 
     async def stream(self) -> BaseMsg:
         """
@@ -62,7 +58,8 @@ class BaseCmdMsg(BaseCmd):
         """
         try:
             self.s = await self.stream()
-            async with self.__stream() as st:
+            async with HandlerStream(self.root) as st:
+                self.__stream = st
                 st.start(self._reader)
                 if L:
                     self.set_ready()

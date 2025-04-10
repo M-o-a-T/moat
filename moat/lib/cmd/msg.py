@@ -14,6 +14,7 @@ from .const import S_NEW, S_END, S_ON, S_OFF
 from .const import E_NO_STREAM
 from .const import B_STREAM, B_ERROR
 from .errors import StreamError, Flow, NoStream, WantsStream
+from inspect import iscoroutine
 
 from typing import TYPE_CHECKING, overload
 
@@ -405,7 +406,7 @@ class Msg(MsgLink, MsgResult):
         """
         try:
             res = cmd(*self._a, **self._kw)
-            if hasattr(res, "__await__"):
+            if iscoroutine(res):
                 res = await res
         except Exception as exc:
             if not isinstance(exc, ExpectedError):

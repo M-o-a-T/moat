@@ -8,8 +8,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from attrs import define
-import anyio
-import sys
 
 from typing import TYPE_CHECKING, overload
 
@@ -50,16 +48,6 @@ class CtxObj(ABC):  ## [T_Ctx](ABC):
             raise RuntimeError("Nested contexts")
         ctx = self._ctx()  # pylint: disable=E1101,W0201
         if not isinstance(ctx, AbstractAsyncContextManager):
-            # No @asynccontextmanager wrapper on `_ctx`.
-            # Kill the "coroutine not awaited" warning.
-            if sys.version_info > (3, 12):
-                try:
-                    await ctx.athrow(StopAsyncIteration)
-                except StopAsyncIteration:
-                    pass
-                else:
-                    raise RuntimeError(f"Failure to stop {ctx!r}")
-
             ctx = asynccontextmanager(self._ctx)()
         self.__ctx = ctx
         return await ctx.__aenter__()

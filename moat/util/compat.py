@@ -15,7 +15,7 @@ import time as _time
 import traceback as _traceback
 from concurrent.futures import CancelledError
 from contextlib import suppress, AsyncExitStack
-from inspect import currentframe, iscoroutinefunction
+from inspect import currentframe, iscoroutinefunction,iscoroutine
 
 from .queue import Queue as _Queue
 from .queue import QueueEmpty, QueueFull
@@ -325,7 +325,7 @@ def _doc(_c=None, **kw):
 # async context stack
 
 def ACM(obj):
-    """A bare-bones async context manager.
+    """A bare-bones async context manager / async exit stack.
 
     Usage::
 
@@ -335,15 +335,18 @@ def ACM(obj):
                 try:
                     ctx1 = await AC(obj1)
                     ctx2 = await AC_use(self, obj2)  # same thing
+                    ...
+                    return self_or_whatever
+
                 except BaseException:
                     await AC_exit(self, *exc)
                     raise
-                ...
+
             async def __aexit__(self, *exc):
                 return await AC_exit(self, *exc)
 
-    Calls to `ACM` and `AC_exit` can be nested. They **must** balance;
-    hence the above error handling dance.
+    Calls to `ACM` and `AC_exit` can be nested, even on the same object.
+    They **must** balance, hence the above error handling dance.
     """
     # pylint:disable=protected-access
     if not hasattr(obj, "_AC_"):
@@ -385,6 +388,8 @@ async def AC_use(obj, ctx):
         return acm.enter_context(ctx)
     elif iscoroutinefunction(ctx):
         acm.push_async_callback(ctx)
+    elif iscoroutine(ctx):
+        raise ValueError(ctx)
     else:
         acm.callback(ctx)
     return None

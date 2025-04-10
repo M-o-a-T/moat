@@ -40,6 +40,7 @@ required = [
     "contextlib",
     "ucontextlib",
     "collections",
+    "inspect",
 ]
 
 

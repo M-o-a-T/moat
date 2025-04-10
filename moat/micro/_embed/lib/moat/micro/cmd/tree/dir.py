@@ -143,8 +143,11 @@ class BaseSubCmd(BaseSuperCmd):
         if not rcmd:
             raise ShortCommandError
 
-        cmd = rcmd.pop()
-        if not prefix and (sub := self.sub.get(cmd,None)) is not None:
+        cmd = rcmd[-1]
+        if isinstance(cmd,str) and cmd[0] == "!":
+            rcmd[-1] = cmd[1:]
+        elif not prefix and (sub := self.sub.get(cmd,None)) is not None:
+            rcmd.pop()
             return await sub.handle(msg, rcmd)
         return await super().handle(msg, rcmd, *prefix)
 

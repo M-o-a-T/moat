@@ -84,7 +84,7 @@ class HandlerStream(MsgHandler):
         Forward a new message to the other side.
         """
         if not rcmd:
-            raise ShortCommandError
+            raise ShortCommandError(msg.cmd)
         if rcmd[-1] == "!l":
             rcmd.pop()
             return await super().handle(msg, rcmd)

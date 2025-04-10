@@ -3,12 +3,10 @@ Base classes for command handlers.
 """
 
 from __future__ import annotations
-from contextlib import asynccontextmanager
 from functools import partial
 
 from typing import TYPE_CHECKING
-from moat.util import CtxObj
-from moat.util.compat import TaskGroup, QueueFull, log
+from moat.util.compat import TaskGroup, QueueFull, log, ACM, AC_exit
 from .const import *
 
 _link_id = 0
@@ -144,7 +142,7 @@ class MsgLink:
         return f"<{self.__class__.__name__}:L{self.link_id} r{'=L' + str(self._remote.link_id) if self._remote else '-'}>"
 
 
-class Caller(CtxObj):
+class Caller:
     """
     This is the Wrapper returned by `MsgSender.cmd`.
 
@@ -171,22 +169,28 @@ class Caller(CtxObj):
         await msg.wait_replied()
         return msg
 
-    @asynccontextmanager
-    async def _ctx(self):
-        if not self._dir:
-            self._dir = SD_BOTH
+    async def __aenter__(self):
+        acm = ACM(self)
+        try:
+            if not self._dir:
+                self._dir = SD_BOTH
 
-        from .msg import Msg
-        m1 = Msg.Call(*self.data)
+            from .msg import Msg
+            m1 = Msg.Call(*self.data)
 
-        async with (
-            TaskGroup() as tg,
-            m1.ensure_remote() as m2,
-        ):
+            tg = await acm(TaskGroup())
+            m2 = await acm(m1.ensure_remote())
             # m2 is the one with the command data
             tg.start_soon(self.handler.handle, m2, m2.rcmd)
-            async with m1._stream_call(self._dir):
-                yield m1
+            await acm(m1._stream_call(self._dir))
+            return m1
+        except BaseException as exc:
+            return await AC_exit(self, type(exc),exc,None)
+            raise
+
+    async def __aexit__(self, *err):
+        return await AC_exit(self, *err)
+
 
     def stream(self, size: int = 42) -> Self:
         """mark as streaming bidirectionally (the default)
@@ -341,7 +345,7 @@ class SubMsgSender(MsgSender):
         # XXX maybe this should return a submsgsender instead
         return partial(self.cmd,x)
 
-class MsgHandler(CtxObj, BaseMsgHandler):
+class MsgHandler(BaseMsgHandler):
     """
     Something that handles messages.
 
@@ -352,10 +356,6 @@ class MsgHandler(CtxObj, BaseMsgHandler):
     *kw)`` for streamed calls.
 
     Set ``doc`` or ``doc_NAME`` for call documentation strings.
-
-    This class inherits from CtxObj for compatibility (no multiple
-    inheritance in MicroPython) but doesn't itself contain a context
-    manager.
     """
 
     @property

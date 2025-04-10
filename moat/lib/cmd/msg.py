@@ -3,10 +3,9 @@ Basic message block
 """
 
 from __future__ import annotations
-from contextlib import asynccontextmanager
-import outcome
 
-from moat.util.compat import log, Event, Queue
+from moat.util.compat import log, Event, Queue, ACM, AC_exit
+from moat.util import outcome
 from moat.util import Path, P, ExpectedError
 from .base import MsgLink
 from .const import SD_IN, SD_OUT, SD_BOTH, SD_NONE
@@ -409,10 +408,10 @@ class Msg(MsgLink, MsgResult):
             if iscoroutine(res):
                 res = await res
         except Exception as exc:
-            if not isinstance(exc, ExpectedError):
-                log_exc(exc,"Command Error %r", self)
             if self._remote is None:
                 raise
+            if not isinstance(exc, ExpectedError):
+                log_exc(exc,"Command Error %r", self)
             await self.ml_send_error(exc)
         except BaseException as exc:
             if self._remote is None:
@@ -426,21 +425,12 @@ class Msg(MsgLink, MsgResult):
             else:
                 await self.result(res)
 
-    @asynccontextmanager
-    async def ensure_remote(self):
+    def ensure_remote(self):
         """
         A context mamager that adds a remote side to an existing message.
         """
-        if (m := self._remote) is None:
-            m = Msg.Call(self._cmd, self._a, self._kw)
-            self._cmd, self._a, self._kw = None, (), {}
-            m.set_remote(self)
-            self.set_remote(m)
-        try:
-            yield m
-        finally:
-            m.kill()
-            self.kill()
+
+        return _EnsureRemote(self)
 
     async def call_stream(self, cmd: Callable) -> None:
         """Handle a streamed call endpoint.
@@ -463,46 +453,9 @@ class Msg(MsgLink, MsgResult):
             await self.ml_send_error(exc)
             raise
 
-    @asynccontextmanager
-    async def _stream(self, a: list, kw: dict, flag: int, initial: bool = False):
-        if self._stream_out != S_NEW:
-            raise RuntimeError(
-                "Simple command" if self._stream_out == S_END else "Stream-out already set",
-            )
+    def _stream(self, a: list, kw: dict, flag: int, initial: bool = False):
+        return _Stream(self, a,kw,flag,initial=initial)
 
-        # stream-in depends on what the remote side sent
-        await self.prep_stream(flag)
-
-        if self._recv_qlen < 10:
-            self._fli = 0
-            await self.warn(self._recv_qlen)
-
-        if initial:
-            await self.wait_replied()
-        else:
-            await self.ml_send(a, kw, B_STREAM)
-            # intentionally not async
-
-        async def _close():
-            # This code is running inside the handler, which will process the error
-            # case. Thus we don't need error handling here.
-
-            if self._stream_out != S_END:
-                await self.ml_send([None], {}, 0)
-
-            await self.wait_replied()
-            if self._stream_in != S_END:
-                raise RuntimeError("Stream not ended")
-
-        try:
-            yield self
-        except Exception as exc:
-            try:
-                await _close()
-            finally:
-                raise exc
-        else:
-            await _close()
 
     async def result(self, *a, **kw) -> None:
         """
@@ -594,6 +547,71 @@ class Msg(MsgLink, MsgResult):
 
     def __repr__(self):
         return f"<{self.__class__.__name__}:L{self.link_id} r{'=L' + str(self._remote.link_id) if self._remote else '-'}: {' ' + str(self._cmd) if self._cmd else ''} {self._a} {self._kw}>"
+
+class _Stream:
+    def __init__(self, slf, a: list, kw: dict, flag: int, initial: bool = False):
+        self.slf = slf
+        self.a = a
+        self.kw = kw
+        self.flag = flag
+        self.initial = initial
+
+    async def __aenter__(self):
+        slf=self.slf
+        if slf._stream_out != S_NEW:
+            raise RuntimeError(
+                "Simple command" if slf._stream_out == S_END else "Stream-out already set",
+            )
+
+        # stream-in depends on what the remote side sent
+        await slf.prep_stream(self.flag)
+
+        if slf._recv_qlen < 10:
+            slf._fli = 0
+            await slf.warn(slf._recv_qlen)
+
+        if self.initial:
+            await slf.wait_replied()
+        else:
+            await slf.ml_send(self.a, self.kw, B_STREAM)
+            # intentionally not async
+        return slf
+
+    async def _close(self):
+        # This code is running inside the handler, which will process the error
+        # case. Thus we don't need error handling here.
+
+        slf=self.slf
+        if slf._stream_out != S_END:
+            await slf.ml_send([None], {}, 0)
+
+        await slf.wait_replied()
+        if slf._stream_in != S_END:
+            raise RuntimeError("Stream not ended")
+
+    async def __aexit__(self, c,e,t):
+        try:
+            await self._close()
+        finally:
+            if e is not None:
+                raise e
+
+class _EnsureRemote:
+    def __init__(self, slf):
+        self.slf = slf
+    async def __aenter__(self):
+        slf = self.slf
+        if (m := slf._remote) is None:
+            m = Msg.Call(slf._cmd, slf._a, slf._kw)
+            slf._cmd, slf._a, slf._kw = None, (), {}
+            m.set_remote(slf)
+            slf.set_remote(m)
+        self.m = m
+        return m
+
+    async def __aexit__(self, *err):
+        self.m.kill()
+        self.slf.kill()
 
 
 # no multiple inheritance for µPy

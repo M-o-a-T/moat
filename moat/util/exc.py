@@ -45,7 +45,8 @@ class ungroup:
         "Singleton. Returns itself."
         return self
 
-    def one(self, e):
+    @staticmethod
+    def one(e):
         "convert the exceptiongroup @e to a single exception"
         if not isinstance(e, BaseExceptionGroup):
             return e

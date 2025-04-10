@@ -3,7 +3,7 @@ import anyio
 from moat.lib.cmd.base import MsgSender, MsgHandler, MsgLink
 from moat.lib.cmd.msg import Msg
 from moat.lib.cmd.stream import HandlerStream
-from moat.util import Path, CtxObj
+from moat.util import Path, CtxObj, ungroup
 from contextlib import asynccontextmanager
 import logging
 
@@ -41,17 +41,22 @@ class StreamLoop(HandlerStream):
             logger.debug("%s: %r", self.__s, msg)
             await self.__other.msg_in(msg)
 
-    @asynccontextmanager
-    async def _ctx(self):
-        async with super()._ctx():
-            self.start(self.__send)
-            yield self
-            await self.__other.closed_input()
+    async def __aenter__(self):
+        await super().__aenter__()
+        self.start(self.__send)
+        return self
+
+    async def __aexit__(self, *tb):
+        await self.__other.closed_input()
+        await super().__aexit__()
         if not self.is_idle:
             logger.debug("NOT IDLE")
             await anyio.sleep(0.1)
             if not self.is_idle:
                 breakpoint()
+
+        if isinstance(ungroup.one(tb[1]),anyio.get_cancelled_exc_class()):
+            return True
 
 
 async def _wrap_sock(s: Socket) -> anyio.abc.ByteStream:

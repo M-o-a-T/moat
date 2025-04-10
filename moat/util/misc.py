@@ -4,7 +4,7 @@ This module contains various helper functions and classes.
 
 from __future__ import annotations
 
-__all__ = ["val2pos", "pos2val", "srepr", "OutOfData"]
+__all__ = ["val2pos", "pos2val", "srepr", "OutOfData", "_add_obj"]
 
 
 class OutOfData(EOFError):
@@ -88,3 +88,9 @@ def srepr(x):
         return str(x)
     else:
         return f"{type(x).__name__}{srepr(d)}"
+
+def _add_obj(a,b):
+    """add attributes of B to A if they're missing"""
+    for k in dir(b):
+        if not hasattr(a,k):
+            setattr(a,k,getattr(b,k))

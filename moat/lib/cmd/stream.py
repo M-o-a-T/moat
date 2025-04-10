@@ -3,9 +3,8 @@ Message streaming.
 """
 
 from __future__ import annotations
-from contextlib import asynccontextmanager
-from moat.util import Path, QueueFull
-from moat.util.compat import Queue, log, L, TaskGroup
+from moat.util import Path, QueueFull, _add_obj
+from moat.util.compat import Queue, log, L, TaskGroup, ACM,AC_exit
 from functools import partial
 from moat.lib.cmd.base import MsgLink, MsgHandler
 from moat.lib.cmd.const import *
@@ -269,19 +268,22 @@ class HandlerStream(MsgHandler):
         else:
             self._tg.start_soon(cmd, *a)
 
-    @asynccontextmanager
-    async def _ctx(self) -> Self:
-        async with TaskGroup() as tg:
-            self._tg = tg
-            try:
-                yield self
-            finally:
-                self._send_q.close_sender()
-                self._recv_q.close_sender()
-                for link in list(self._msgs.values()):
-                    link.kill()
+    async def __aenter__(self):
+        acm = ACM(self)
+        tg = await acm(TaskGroup())
+        self._tg = tg
+        return self
 
-                tg.cancel()
+    async def __aexit__(self, *exc):
+        try:
+            self._send_q.close_sender()
+            self._recv_q.close_sender()
+            for link in list(self._msgs.values()):
+                link.kill()
+
+            self._tg.cancel()
+        finally:
+            await AC_exit(self, *exc)
 
         for link in list(self._msgs.values()):
             self.detach(link)

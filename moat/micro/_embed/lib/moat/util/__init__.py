@@ -390,3 +390,10 @@ def merge(d, *others, drop=False, replace=True):
     for other in others:
         d = _merge_one(d, other, drop=drop, replace=replace)
     return d
+
+
+def _add_obj(a,b):
+    """add attributes of B to A if they're missing"""
+    for k in dir(b):
+        if not hasattr(a,k):
+            setattr(a,k,getattr(b,k))

@@ -8,6 +8,7 @@ from copy import deepcopy
 
 from .path import P, Path  # noqa:F401
 from moat.util.compat import Event, log
+from .exc import ExpKeyError, ExpAttrError, ExpectedError
 
 from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
 
@@ -19,13 +20,6 @@ class OutOfData(EOFError):
 NotGiven = Ellipsis
 
 
-class ExpKeyError(KeyError):
-    """unreported key error"""
-
-class ExpAttrError(AttributeError):
-    """unreported attribute error"""
-
-ExpectedError = (ExpKeyError, ExpAttrError)
 
 class CancelledError(Exception):
     """

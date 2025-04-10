@@ -7,6 +7,7 @@ from __future__ import annotations
 import pytest
 
 from moat.micro._test import mpy_stack
+from moat.util import P
 
 CFG = """
 apps:
@@ -27,7 +28,7 @@ async def test_fake(seed, tmp_path):
         mdi = 0
         v = None
         for i in range(100):
-            vv = await d.send("x", "r")
+            vv, = await d.cmd(P("x.r"))
             assert 0 < vv < 100
             if v is not None:
                 vd = abs(vv - v)

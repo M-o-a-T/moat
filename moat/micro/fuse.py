@@ -467,7 +467,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             m = "r"
 
         try:
-            fd = await self._link.open(p=str(self.i_path(inode)), m=m)
+            fd, = await self._link.open(p=str(self.i_path(inode)), m=m)
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
         self.f_open(fd, inode)
@@ -486,14 +486,14 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         if size <= self.max_read:
-            return await self._link.rd(f=fh, o=off, n=size)
+            return (await self._link.rd(f=fh, o=off, n=size))[0]
 
         # OWCH. Need to break that large read up.
 
         data = []
         while size > 0:
             dl = min(size, self.max_read)
-            buf = await self._link.rd(f=fh, o=off, n=dl)
+            buf, = await self._link.rd(f=fh, o=off, n=dl)
             if buf == b"":
                 break
             data.append(buf)
@@ -516,12 +516,12 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         if len(buf) <= self.max_write:
-            return await self._link.wr(f=fh, d=buf, o=off)
+            return (await self._link.wr(f=fh, d=buf, o=off))[0]
 
         # OWCH. Break that up.
         sent = 0
         while sent < len(buf):
-            sn = await self._link.wr(
+            sn, = await self._link.wr(
                 f=fh,
                 d=buf[sent : sent + self.max_write],
                 o=off + sent,
@@ -586,7 +586,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         p = self.i_path(inode)
         try:
-            dc = await self._link.ls(p=str(p))
+            dc, = await self._link.ls(p=str(p))
         except Exception as err:  # pylint:disable=broad-exception-caught
             self.raise_error(err)
 
@@ -786,7 +786,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             gen = True
 
         try:
-            r = await self._link.new(p=str(p))
+            r, = await self._link.new(p=str(p))
         except Exception as err:  # pylint: disable=broad-exception-caught
             if gen:
                 self.i_del(i)

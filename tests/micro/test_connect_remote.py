@@ -9,7 +9,7 @@ import pytest
 
 from moat.micro._test import mpy_stack
 from moat.util.compat import log, sleep_ms
-from moat.util import P
+from moat.util import P, Path
 
 pytestmark = pytest.mark.anyio
 
@@ -86,15 +86,13 @@ async def test_net_r(tmp_path, server_first, link_in, remote_first):
         await sleep_ms(100)
         await (set_client if server_first else set_server)(cr)
         if (server_first == remote_first, link_in) != (True, False):
-            while await d.send("s", "r", "?rdy_"):
-                await sleep_ms(100)
+            await d.cmd("s.r.!rdy_")
         if (server_first == remote_first, link_in) != (False, False):
-            while await d.send("r", "?rdy_"):
-                await sleep_ms(100)
+            await d.cmd("r.!rdy_")
 
         async def chk(*p):
-            res = await d.send(*p, "a", "echo", m="hello")
-            assert res == dict(r="hello")
+            res = await d.cmd(Path.build(p)/"a"/"echo", m="hello")
+            assert res.kw == dict(r="hello")
 
         # if link_in is False, the server supports random connections,
         # thus we can't send commands from the server to the client

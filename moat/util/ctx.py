@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 __all__ = ["CtxObj", "timed_ctx"]
 
 
-class CtxObj(ABC):  ## [T_Ctx](ABC):
+class CtxObj:  # (ABC):  ## [T_Ctx](ABC):
     """
     Teach a class instance to act as an async context manager, by
     forwarding ``_aenter__````_aexit__`` to a `_ctx` method
@@ -40,7 +40,7 @@ class CtxObj(ABC):  ## [T_Ctx](ABC):
     @overload
     def _ctx(self) -> AsyncIterator[T_Ctx]: ...
 
-    @abstractmethod
+    # @abstractmethod
     def _ctx(self) -> AbstractAsyncContextManager[T_Ctx]: ...
 
     async def __aenter__(self) -> T_Ctx:

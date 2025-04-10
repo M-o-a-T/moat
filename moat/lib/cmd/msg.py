@@ -412,12 +412,12 @@ class Msg(MsgLink, MsgResult):
                 log_exc(exc,"Command Error %r", self)
             if self._remote is None:
                 raise
-            await self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
+            await self.ml_send_error(exc)
         except BaseException as exc:
             if self._remote is None:
                 raise
             log_exc(exc, "Command Error %r", self)
-            await self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
+            await self.ml_send_error(exc)
             raise
         else:
             if isinstance(res,dict):

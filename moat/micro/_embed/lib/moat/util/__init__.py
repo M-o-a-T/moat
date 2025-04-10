@@ -19,6 +19,12 @@ class OutOfData(EOFError):
 NotGiven = Ellipsis
 
 
+
+class ExpKeyError(KeyError):
+    """unreported key error"""
+
+ExpectedError = (ExpKeyError,)
+
 class CancelledError(Exception):
     """
     Not an asyncio-style cancellation

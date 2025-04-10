@@ -8,6 +8,7 @@ from moat.util import NotGiven
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util.part import enc_part, get_part
 from moat.util.compat import log
+from moat.util import ExpKeyError
 
 
 class Cmd(BaseCmd):
@@ -37,7 +38,10 @@ class Cmd(BaseCmd):
 
         Same for a list.
         """
-        return enc_part(get_part(self._parent.cfg, p))
+        try:
+            return enc_part(get_part(self._parent.cfg, p))
+        except KeyError as exc:
+            raise ExpKeyError(*exc.args)
 
     doc_w=dict(_d="write cfg", _0="Path:subpart", d="any:Data")
     async def cmd_w(self, p=(), d=NotGiven):

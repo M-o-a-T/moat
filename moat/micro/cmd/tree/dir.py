@@ -111,7 +111,7 @@ class CfgStore:
             # current client cfg
             try:
                 try:
-                    ocd = await self.sd.r(p, _x_err=(KeyError,))
+                    ocd = await self.sd.r(p)
                 except TypeError:
                     # local version, not dispatched
                     ocd = await self.sd.r(p=p)

@@ -5,8 +5,20 @@ Exception handling helpers
 from __future__ import annotations
 from anyio import get_cancelled_exc_class
 
-__all__ = ["exc_iter", "ungroup"]
+__all__ = ["exc_iter", "ungroup", "ExpectedError", "ExpKeyError",
+           ]
 
+
+class ExpectedError(Exception):
+    """
+    An error that shouldn't elicit a traceback
+    """
+    def __init__(self, exc):
+        self.exc = exc
+
+class ExpKeyError(KeyError,ExpectedError):
+    "unreported key error"
+    pass
 
 def exc_iter(exc):
     """

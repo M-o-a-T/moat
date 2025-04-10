@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 import outcome
 
 from moat.util.compat import log, Event, Queue
-from moat.util import Path, P
+from moat.util import Path, P, ExpectedError
 from .base import MsgLink
 from .const import SD_IN, SD_OUT, SD_BOTH, SD_NONE
 from .const import S_NEW, S_END, S_ON, S_OFF
@@ -408,7 +408,8 @@ class Msg(MsgLink, MsgResult):
             if hasattr(res, "__await__"):
                 res = await res
         except Exception as exc:
-            log_exc(exc,"Command Error %r", self)
+            if not isinstance(exc, ExpectedError):
+                log_exc(exc,"Command Error %r", self)
             if self._remote is None:
                 raise
             await self.ml_send((exc.__class__.__name__,) + exc.args, None, B_ERROR)
@@ -454,7 +455,8 @@ class Msg(MsgLink, MsgResult):
         try:
             await cmd(self)
         except Exception as exc:
-            log_exc(exc,"Stream Error %r", self)
+            if not isinstance(exc, ExpectedError):
+                log_exc(exc,"Stream Error %r", self)
             await self.ml_send_error(exc)
         except BaseException as exc:
             await self.ml_send_error(exc)

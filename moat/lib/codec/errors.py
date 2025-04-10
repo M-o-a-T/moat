@@ -5,6 +5,7 @@ FUSE operations for MoaT-micro-FS
 from __future__ import annotations
 
 from moat.lib.codec.proxy import as_proxy
+from moat.util.exc import ExpKeyError
 
 
 @as_proxy("_rErr")
@@ -63,6 +64,7 @@ except NameError:
 as_proxy("_FxErr", FileExistsError)
 
 as_proxy("_KyErr", KeyError)
+as_proxy("_EKyErr", ExpKeyError)
 as_proxy("_AtErr", AttributeError)
 as_proxy("_NiErr", NotImplementedError)
 as_proxy("_StpIter", StopAsyncIteration)

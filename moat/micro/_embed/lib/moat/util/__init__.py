@@ -19,11 +19,13 @@ class OutOfData(EOFError):
 NotGiven = Ellipsis
 
 
-
 class ExpKeyError(KeyError):
     """unreported key error"""
 
-ExpectedError = (ExpKeyError,)
+class ExpAttrError(AttributeError):
+    """unreported attribute error"""
+
+ExpectedError = (ExpKeyError, ExpAttrError)
 
 class CancelledError(Exception):
     """

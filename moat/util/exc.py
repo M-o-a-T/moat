@@ -5,7 +5,7 @@ Exception handling helpers
 from __future__ import annotations
 from anyio import get_cancelled_exc_class
 
-__all__ = ["exc_iter", "ungroup", "ExpectedError", "ExpKeyError",
+__all__ = ["exc_iter", "ungroup", "ExpectedError", "ExpKeyError", "ExpAttrError",
            ]
 
 
@@ -17,6 +17,10 @@ class ExpectedError(Exception):
         self.exc = exc
 
 class ExpKeyError(KeyError,ExpectedError):
+    "unreported key error"
+    pass
+
+class ExpAttrError(AttributeError,ExpectedError):
     "unreported key error"
     pass
 

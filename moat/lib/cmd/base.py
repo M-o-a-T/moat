@@ -157,8 +157,13 @@ class Caller:
         self._dir = SD_NONE
 
     def __await__(self):
-        "makes this object awaitable"
+        "makes this object awaitable, CPython"
         return self._call().__await__()
+
+    def __iter__(self):
+        "makes this object awaitable, MicroPython"
+        # this depends on µPy doing the right thing
+        return self._call()
 
     async def _call(self):
         "helper for __await__ that calls the remote handler"

@@ -420,7 +420,9 @@ class Msg(MsgLink, MsgResult):
             await self.ml_send_error(exc)
             raise
         else:
-            if isinstance(res,dict):
+            if isinstance(res,Msg):
+                await self.result(*res.args,**res.kw)
+            elif isinstance(res,dict):
                 await self.result(**res)
             else:
                 await self.result(res)

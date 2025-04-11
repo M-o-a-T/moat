@@ -7,6 +7,7 @@ from functools import partial
 
 from typing import TYPE_CHECKING
 from moat.util.compat import TaskGroup, QueueFull, log, ACM, AC_exit
+from moat.util import Path
 from .const import *
 
 _link_id = 0
@@ -292,13 +293,19 @@ class MsgSender(BaseMsgHandler):
         """
         Returns a SubMsgSender if the path cannot be resolved locally.
         """
-        res = self._root.find_handler(prefix, may_stream)
+        res = self.root.find_handler(prefix, may_stream)
         if isinstance(res, tuple):
             root, rem = res
             if rem:
                 return SubMsgSender(root, rem)
             return MsgSender(root)
         return res
+
+    def __getattr__(self, x):
+        """
+        Returns a SubMsgSender for this name
+        """
+        return self.sub_at(Path(x))
 
 
 class SubMsgSender(MsgSender):
@@ -344,11 +351,13 @@ class SubMsgSender(MsgSender):
         """
         Returns a SubMsgSender
         """
-        return SubMsgSender(root, self._path + rem)
+        return SubMsgSender(self.root, self._path + prefix)
 
     def __getattr__(self, x):
-        # XXX maybe this should return a submsgsender instead
-        return partial(self.cmd,x)
+        """
+        Returns a SubMsgSender for this name
+        """
+        return self.sub_at(Path(x))
 
 class MsgHandler(BaseMsgHandler):
     """

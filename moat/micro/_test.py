@@ -299,40 +299,40 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
             raise TypeError(f"Need a path, not {p!r}")
         self._link = self.cfg["_cmd"].root.sub_at(p)
 
-    def send(self, m) -> Awaitable:
+    async def send(self, m) -> None:
         """Send message data."""
-        return self._link.xs(m=m)
+        await self._link.xs(m=m)
 
-    def recv(self) -> Awaitable:
+    async def recv(self) -> None:
         """Read message data."""
-        return self._link.xr()
+        return (await self._link.xr())[0]
 
-    def snd(self, m) -> Awaitable:
+    async def snd(self, m) -> None:
         """Send block data."""
-        return self._link.xsb(m=m)
+        await self._link.xsb(m=m)
 
-    def rcv(self) -> Awaitable:
-        return self._link.xrb()
+    async def rcv(self) -> bytes|bytearray:
+        return (await self._link.xrb())[0]
         """Read block data."""
 
-    def wr(self, b) -> Awaitable:
+    async def wr(self, b:bytes|bytearray) -> None:
         """Send bytes."""
-        return self._link.xwr(b=b)
+        await self._link.xwr(b=b)
 
     async def rd(self, b):
         """Read bytes."""
-        r = await self._link.xrd(n=len(b))
+        r = (await self._link.xrd(n=len(b)))[0]
         n = len(r)
         b[:n] = r
         return n
 
-    def cwr(self, b) -> Awaitable:
+    async def cwr(self, b: bytes|bytearray|memoryview) -> int:
         """Send bytes."""
-        return self._link.xcwr(b=b)
+        return (await self._link.xcwr(b=b))[0]
 
-    async def crd(self, b):
+    async def crd(self, b) -> bytes|bytearray:
         """Read bytes."""
-        r = await self._link.xcrd(n=len(b))
+        r = (await self._link.xcrd(n=len(b)))[0]
         n = len(r)
         b[:n] = r
         return n

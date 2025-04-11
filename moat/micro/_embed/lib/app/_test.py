@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 
 from moat.micro.cmd.base import BaseCmd
-from moat.util.compat import Event, L, Queue, log, wait_for_ms, sleep_ms
+from moat.util.compat import Event, L, Queue, log, wait_for_ms, sleep_ms, log
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
@@ -31,23 +31,28 @@ class Cmd(BaseCmd):
         "Basic echo method, returns @m as ``result['r']``"
         return {"r": m}
 
-    doc_it=dict(_d="Iterator. Sends 0…lim-1.", lim="int:limit", _o="int")
+    doc_it=dict(_d="Iterator. Sends 0…lim-1.", lim="int:limit", _o="int",delay="float:timer")
     async def stream_it(self, msg:Msg):
         "Streams numbers."
+        log("START")
         lim=msg.get("lim",-1)
         i = 0
+        d=int(msg.get("delay",.1)*1000)
         async with msg.stream_out() as s:
+            log("OUT %d %d",i,lim)
             while i != lim:
-                s.send(i)
+                await sleep_ms(d)
+                await s.send(i)
                 i += 1
-                await sleep_ms(100)
+            log("ENDL")
+        log("END")
 
-    doc_nit=dict(_d="Call counter.", lim="int:limit")
-    async def cmd_nit(self, lim: int | None = None):
+    doc_nit=dict(_d="Call counter.", lim="int:limit",delay="float:timer")
+    async def cmd_nit(self, delay:float=0):
         "A non-iterator counter; simply counts calls to it."
         self.n += 1
-        if lim is not None and self.n > lim:
-            raise StopAsyncIteration
+        d=int(delay*1000)
+        await sleep_ms(d)
         return self.n
 
     doc_clr=dict(_d="Clear the counter.", n="int:new value, default zero")

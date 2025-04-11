@@ -8,6 +8,7 @@ import pytest
 
 from moat.util import NotGiven, as_proxy, to_attrdict, P
 from moat.micro._test import mpy_stack
+import anyio
 from moat.util.compat import ticks_diff, ticks_ms
 
 pytestmark = pytest.mark.anyio
@@ -61,26 +62,27 @@ r:
 async def test_ping(tmp_path):
     "basic connectivity test"
     async with mpy_stack(tmp_path, CFG) as d:
-        res = await d.send("r", "b", "echo", m="hello")
-        assert res == dict(r="hello")
+        res = await d.cmd(P("r.b.echo"), m="hello")
+        assert res.kw == dict(r="hello")
 
 
 async def test_iter_m(tmp_path):
     "basic iterator tests"
     async with mpy_stack(tmp_path, CFG) as d:
+        # await anyio.sleep(30)  ## attach gdb to micropython now
         t1 = ticks_ms()
 
         res = []
-        async with d.send_iter(200, "r", "b", "it", lim=3) as it:
-            async for n in it:
+        async with d.cmd(P("r.b.it"), lim=3).stream_in() as it:
+            async for n, in it:
                 res.append(n)
         assert res == [0, 1, 2]
         t2 = ticks_ms()
-        assert 450 < ticks_diff(t2, t1) < 880
+        assert 300 < ticks_diff(t2, t1) < 880
 
         res = []
-        async with d.send_iter(200, "r", "b", "it") as it:
-            async for n in it:
+        async with d.cmd(P("r.b.it")).stream_in() as it:
+            async for n, in it:
                 if n == 3:
                     break
                 res.append(n)
@@ -88,31 +90,25 @@ async def test_iter_m(tmp_path):
         t1 = ticks_ms()
         assert 450 < ticks_diff(t1, t2) < 880
 
-        res = []
-        async with d.send_iter(200, "r", "b", "nit", lim=3) as it:
-            async for n in it:
-                res.append(n)
-        assert res == [1, 2, 3]
+        for i in range(1,4):
+            assert (await d.cmd(P("r.b.nit")))[0] == i
         t2 = ticks_ms()
-        assert 450 < ticks_diff(t2, t1) < 880
+        assert 300 < ticks_diff(t2, t1) < 880
 
         # now do the same thing with a subdispatcher
         s = d.sub_at(P("r.b"))
 
         res = []
-        async with s.it_it(200, lim=3) as it:
-            async for n in it:
+        async with s.it(delay=.2, lim=3).stream_in() as it:
+            async for n, in it:
                 res.append(n)
         assert res == [0, 1, 2]
         t1 = ticks_ms()
-        assert 450 < ticks_diff(t1, t2) < 880
+        assert 300 < ticks_diff(t1, t2) < 880
 
-        res = []
         await s.clr()
-        async with s.it_nit(200, lim=3) as it:
-            async for n in it:
-                res.append(n)
-        assert res == [1, 2, 3]
+        for i in range(1,4):
+            assert (await s.nit(delay=.2)[0]) == i
         t2 = ticks_ms()
         assert 450 < ticks_diff(t2, t1) < 880
 
@@ -120,19 +116,16 @@ async def test_iter_m(tmp_path):
         s = d.sub_at(P("r"))
 
         res = []
-        async with s.it_b(200, "it", lim=3) as it:
-            async for n in it:
+        async with s.cmd("it", lim=3, delay=.2) as it:
+            async for n, in it:
                 res.append(n)
         assert res == [0, 1, 2]
         t1 = ticks_ms()
-        assert 450 < ticks_diff(t1, t2) < 880
+        assert 300 < ticks_diff(t1, t2) < 880
 
-        res = []
         await s.b("clr")
-        async with s.it_b(200, "nit", lim=3) as it:
-            async for n in it:
-                res.append(n)
-        assert res == [1, 2, 3]
+        for i in range(1,4):
+            assert (await s.cmd(P("b.nit", lim=3)))[0] == i
         t2 = ticks_ms()
         assert 450 < ticks_diff(t2, t1) < 880
 
@@ -148,8 +141,8 @@ async def test_modes(tmp_path, lossy, guarded):
         ),
     )
     async with mpy_stack(tmp_path, CFG, cfu) as d:
-        res = await d.send("r", "b", "echo", m="hi")
-        assert res == {"r": "hi"}
+        res = await d.cmd("r.b.echo", m="hi")
+        assert res.kw == {"r": "hi"}
 
 
 async def test_cfg(tmp_path):
@@ -212,10 +205,10 @@ async def test_eval(tmp_path, cons):
     async with mpy_stack(tmp_path, LCFG, cf2) as d, d.sub_at(P("l._sys.eval")) as req:
         from pprint import pprint  # pylint:disable=import-outside-toplevel
 
-        dr = await d.send("l", "dir_")
-        pprint(dr)
-        dr = await d.send("l", "_sys", "dir_")
-        pprint(dr)
+        dr = await d.cmd("l.dir_")
+        pprint(dr.kw)
+        dr = await d.cmd("l._sys", "dir_")
+        pprint(dr.kw)
 
         f = Foo(42)
         b = Bar(95)

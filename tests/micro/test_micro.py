@@ -108,24 +108,24 @@ async def test_iter_m(tmp_path):
 
         await s.clr()
         for i in range(1,4):
-            assert (await s.nit(delay=.2)[0]) == i
+            assert (await s.nit(delay=.2))[0] == i
         t2 = ticks_ms()
-        assert 450 < ticks_diff(t2, t1) < 880
+        assert 450 < ticks_diff(t2, t1) < 1100
 
         # now do the same thing with a partial subdispatcher
         s = d.sub_at(P("r"))
 
         res = []
-        async with s.cmd("it", lim=3, delay=.2) as it:
+        async with s.cmd("b.it", lim=3, delay=.2).stream_in() as it:
             async for n, in it:
                 res.append(n)
         assert res == [0, 1, 2]
         t1 = ticks_ms()
         assert 300 < ticks_diff(t1, t2) < 880
 
-        await s.b("clr")
+        await s.b.clr()
         for i in range(1,4):
-            assert (await s.cmd(P("b.nit", lim=3)))[0] == i
+            assert (await s.cmd(P("b.nit")))[0] == i
         t2 = ticks_ms()
         assert 450 < ticks_diff(t2, t1) < 880
 

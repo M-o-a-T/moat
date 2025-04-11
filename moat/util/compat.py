@@ -24,6 +24,7 @@ from moat.util.merge import merge
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "is_async",
     "doc",
     "log",
     "const",
@@ -401,3 +402,8 @@ async def AC_exit(obj, *exc):
         exc = (None, None, None)
     return await obj._AC_.pop().__aexit__(*exc)
 
+
+def is_async(obj):
+    if hasattr(obj,"__await__"):
+        return True
+    return False

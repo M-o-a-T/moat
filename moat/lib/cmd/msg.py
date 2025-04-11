@@ -4,9 +4,9 @@ Basic message block
 
 from __future__ import annotations
 
-from moat.util.compat import log, Event, Queue, ACM, AC_exit
-from moat.util import outcome
+from moat.util.compat import log, Event, Queue, ACM, AC_exit, is_async
 from moat.util import Path, P, ExpectedError
+from moat.util import outcome
 from .base import MsgLink
 from .const import SD_IN, SD_OUT, SD_BOTH, SD_NONE
 from .const import S_NEW, S_END, S_ON, S_OFF
@@ -405,7 +405,7 @@ class Msg(MsgLink, MsgResult):
         """
         try:
             res = cmd(*self._a, **self._kw)
-            if iscoroutine(res):
+            if is_async(res):
                 res = await res
         except Exception as exc:
             if self._remote is None:

@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from time import ticks_add, ticks_diff, ticks_ms
+from inspect import iscoroutine
 
 from async_queue import Queue, QueueEmpty, QueueFull  # noqa:F401
 from micropython import const
@@ -412,3 +413,8 @@ def _rdq(s):  # async
 
 def _wrq(s):  # async
     yield core._io_queue.queue_write(s)  # noqa:SLF001
+
+def is_async(obj):
+    if iscoroutine(obj) or hasattr(obj,"__iter__"):
+        return True
+    return False

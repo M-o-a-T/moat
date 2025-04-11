@@ -23,7 +23,7 @@ class Cmd(BaseCmd):
         self.repeats = {}
 
     doc_r=dict(_d="read cfg", _0="Path:subpart")
-    async def cmd_r(self, p=()):
+    async def stream_r(self, msg):
         """
         Read (part of) the configuration.
 
@@ -38,8 +38,13 @@ class Cmd(BaseCmd):
 
         Same for a list.
         """
+        p=msg.get("p",())
         try:
-            return enc_part(get_part(self._parent.cfg, p))
+            res = enc_part(get_part(self._parent.cfg, p))
+            if isinstance(res,(list,tuple)):
+                await msg.result(*res)
+            else:
+                await msg.result(res)
         except KeyError as exc:
             raise ExpKeyError(*exc.args)
 

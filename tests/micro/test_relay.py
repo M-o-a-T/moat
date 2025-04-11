@@ -34,25 +34,25 @@ async def test_rly(tmp_path):
         # this starts the min-on timer 50.
         await p.w(v=True)
         await r.w(v=True)
-        assert True is await p.r()
+        assert True is (await p.r())[0]
 
         await r.w(f=False)
         # this kills the previous timer and starts a min-off-timer 150.
 
-        assert False is await p.r()
+        assert False is (await p.r())[0]
         await r.w(v=True, f=None)  # X
-        assert False is await p.r()
+        assert False is (await p.r())[0]
         await sleep_ms(100)
-        assert False is await p.r()
+        assert False is (await p.r())[0]
         # the off timer runs out after 150, i.e. sometime during the next
         # sleep, and the (X) turns the relay on and starts a new
         # min-on-timer 50.
         await sleep_ms(80)
-        assert True is await p.r()
+        assert True is (await p.r())[0]
         await r.w(False)
         # the min-on timer has ~20 msec remaining at this point, thus the
         # pin is still on.
-        assert True is await p.r()
+        assert True is (await p.r())[0]
         await sleep_ms(40)
         # Now it is not.
-        assert False is await p.r()
+        assert False is (await p.r())[0]

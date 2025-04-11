@@ -7,8 +7,8 @@ from __future__ import annotations
 from moat.util import NotGiven, Path
 from moat.lib.codec.errors import StoppedError
 
-from ..cmd.base import BaseCmd
-from ..compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms
+from moat.micro.cmd.base import BaseCmd
+from moat.util.compat import TaskGroup, sleep_ms, ticks_diff, ticks_ms
 
 
 class Relay(BaseCmd):
@@ -35,7 +35,7 @@ class Relay(BaseCmd):
 
     async def setup(self):  # noqa:D102
         await super().setup()
-        if await self.pin.rdy_():
+        if (await self.pin.rdy_())[0]:
             raise StoppedError("pin")
         await self.cmd_w()
 
@@ -126,7 +126,7 @@ class Relay(BaseCmd):
         d: delay until next change (msec) or None
         p: actual pin state
         """
-        p = await self.pin.r()
+        p = (await self.pin.r())[0]
         return dict(
             v=self.value,
             f=self.force,

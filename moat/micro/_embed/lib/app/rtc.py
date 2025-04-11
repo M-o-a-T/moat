@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util.part import enc_part, get_part
+import sys
 
 
 class _NotGiven:
@@ -29,8 +30,8 @@ class Cmd(BaseCmd):
 
         super().__init__(cfg)
 
-    doc_r=dict("read data", p="path", _r="parts")
-    async def cmd_r(self, p=()):
+    doc_r=dict(_d="read data", p="path", _r="parts")
+    async def stream_r(self, msg):
         """
         Read (part of) the RTC data area.
 
@@ -45,9 +46,19 @@ class Cmd(BaseCmd):
 
         Same for a list.
         """
-        return enc_part(get_part(self.st.data, p))
+        p=msg.get("p",())
+        print("*** GET",self.st.data,p,file=sys.stderr)
 
-    doc_w=dict("write data", p="path", d="any:deletes if missing")
+        try:
+            res = enc_part(get_part(self.st.data, p))
+            if isinstance(res,(list,tuple)):
+                await msg.result(*res)
+            else:
+                await msg.result(res)
+        except KeyError as exc:
+            raise ExpKeyError(*exc.args)
+
+    doc_w=dict(_d="write data", p="path", d="any:deletes if missing")
     async def cmd_w(self, p=(), d=_NotGiven):
         """
         Write (part of) the RTC data area.
@@ -68,7 +79,7 @@ class Cmd(BaseCmd):
         else:
             self.st[p] = d
 
-    doc_x=dict("activate data")
+    doc_x=dict(_d="activate data")
     async def cmd_x(self):  # noqa:ARG002
         """
         Activate the possibly-mangled config.

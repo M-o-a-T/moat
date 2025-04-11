@@ -250,6 +250,11 @@ class MsgSender(BaseMsgHandler):
         """ """
         self._root = root
 
+    async def __aenter__(self):
+        return self
+    async def __aexit__(self, *tb):
+        pass
+
     @property
     def root(self):
         return self._root

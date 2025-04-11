@@ -53,11 +53,13 @@ class Cmd(BaseCmd):
         self.wdt.ping()
 
     doc_x=dict(_d="feed watchdog", f="bool:force")
-    async def cmd_x(self, f=False):
+    async def cmd_x(self, f=False, n:Any=None):
         """
         External keepalive.
 
         @f: "force" param of `WDT.ping`.
+
+        @n: ignored, used to distinguish calls during testing.
         """
         self.wdt.ping(force=f)
 

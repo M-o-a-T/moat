@@ -37,7 +37,7 @@ def set_part(cur, p: list[str | int], v: Any):
         setattr(cur, p[-1], v)
 
 
-def enc_part(cur, name=None):
+def enc_part(cur, name=None) -> tuple[Any,tuple|None]|Any:
     """
     Helper method to encode a larger dict/list partially.
 

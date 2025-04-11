@@ -22,7 +22,7 @@ from moat.util import (
     yload,
     yprint,
 )
-from moat.micro.cmd.tree.dir import Dispatch, SubDispatch
+from moat.micro.cmd.tree.dir import Dispatch
 from moat.micro.cmd.util.part import get_part
 from moat.lib.codec.errors import NoPathError, RemoteError
 from moat.micro.stacks.util import TEST_MAGIC
@@ -113,7 +113,7 @@ async def cli(ctx, section, remote, path):
     try:
         cfg = get_part(cfg, section)
     except KeyError:
-        raise click.UsageError("The config section '{section}' doesn't exist.")
+        raise click.UsageError(f"The config section '{section}' doesn't exist.") from None
     try:
         cfg.args.config = get_part(ocfg, cfg.args.config)
     except (AttributeError, KeyError):
@@ -254,8 +254,8 @@ async def sync_(ctx, **kw):
             raise click.UsageError("Destination cannot be empty")
         async with (
             Dispatch(cfg, run=True) as dsp,
-            SubDispatch(dsp, cfg.path.fs) as rfs,
-            SubDispatch(dsp, cfg.path.sys) as rsys,
+            dsp.sub_at(cfg.path.fs) as rfs,
+            dsp.sub_at(cfg.path.sys) as rsys,
         ):
             root = MoatFSPath("/").connect_repl(rfs)
             dst = MoatFSPath(dest).connect_repl(rfs)
@@ -283,7 +283,7 @@ async def boot(obj, state):
 
     """
     cfg = obj.cfg
-    async with Dispatch(cfg) as dsp, SubDispatch(dsp, cfg.path.sys) as sd:
+    async with Dispatch(cfg) as dsp, dsp.sub_at(cfg.path.sys) as sd:
         if state:
             await sd.state(state=state)
 
@@ -330,7 +330,7 @@ async def cmd(obj, path, **attrs):
     )
     val.pop("_a", ())
 
-    async with Dispatch(cfg, run=True) as dsp, SubDispatch(dsp, cfg.remote) as sd:
+    async with Dispatch(cfg, run=True) as dsp, dsp.sub_at(cfg.remote) as sd:
         try:
             res = await sd.dispatch(tuple(path), val)
         except RemoteError as err:
@@ -487,7 +487,7 @@ async def mount_(obj, path, blocksize):
 
     async with (
         Dispatch(cfg, run=True, sig=True) as dsp,
-        SubDispatch(dsp, cfg.path.fs) as sd,
+        dsp.sub_at(cfg.path.fs) as sd,
         wrap(sd, path, blocksize=blocksize, debug=max(obj.debug - 1, 0)),
     ):
         if obj.debug:

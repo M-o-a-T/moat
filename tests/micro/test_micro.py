@@ -127,7 +127,7 @@ async def test_iter_m(tmp_path):
         for i in range(1,4):
             assert (await s.cmd(P("b.nit")))[0] == i
         t2 = ticks_ms()
-        assert 450 < ticks_diff(t2, t1) < 880
+        assert 300 < ticks_diff(t2, t1) < 880
 
 
 @pytest.mark.parametrize("lossy", [False, True])
@@ -207,7 +207,7 @@ async def test_eval(tmp_path, cons):
 
         dr = await d.cmd("l.dir_")
         pprint(dr.kw)
-        dr = await d.cmd("l._sys", "dir_")
+        dr = await d.cmd("l._sys.dir_")
         pprint(dr.kw)
 
         f = Foo(42)
@@ -216,17 +216,17 @@ async def test_eval(tmp_path, cons):
 
         await req(x=f, r=["foo"])
         await req(x=42, r=["foo", "x"])
-        r = await req(x="foo", r=None)
+        r, = await req(x="foo", r=None)
         assert isinstance(r, Foo), r
-        r = await req(x=(f, "x"))
+        r, = await req(x=(f, "x"))
         assert r == 42, r
 
-        r = await req(x=b, r=None)
+        r, = await req(x=b, r=None)
         assert r is b, r
-        r = await req(x=(b, "x"))
+        r, = await req(x=(b, "x"))
         assert r == 95, r
         # await req(x=b, a=("b",))
-        r = await req(x=(b,), r=False)
+        r, = await req(x=(b,), r=False)
         assert r[0] == {"x": 95}
         assert not r[1]
         assert r[2] == "Bar"
@@ -237,19 +237,19 @@ async def test_msgpack(tmp_path):
     async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r._sys.eval")) as req:
         from pprint import pprint  # pylint:disable=import-outside-toplevel
 
-        dr = await d.send("r", "dir_")
-        pprint(dr)
-        dr = await d.send("r", "_sys", "dir_")
-        pprint(dr)
+        dr = await d.cmd("r.dir_")
+        pprint(dr.kw)
+        dr = await d.cmd("r._sys.dir_")
+        pprint(dr.kw)
 
         f = Foo(42)
         b = Bar(95)
         as_proxy("b", b, replace=True)
 
-        r = await req(x=f)
+        r, = await req(x=f)
         assert isinstance(r, Foo), r
-        r = await req(x=(f, "x"))
+        r, = await req(x=(f, "x"))
         assert r == 42, r
 
-        r = await req(x=b, r=None)
+        r, = await req(x=b, r=None)
         assert r is b

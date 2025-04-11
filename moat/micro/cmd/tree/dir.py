@@ -82,12 +82,14 @@ class CfgStore:
 
         async def _get(p):
             d = await self.sd.r(p=p)
-            if isinstance(d, (list, tuple)):
+            if len(d)==2:
                 d, s = d
                 if isinstance(d, dict):
                     d = attrdict(d)
                 for k in s:
                     d[k] = await _get(p + (k,))
+            else:
+                d = d[0]
             return d
 
         if self.cfg and not again:

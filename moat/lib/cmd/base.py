@@ -406,8 +406,10 @@ class MsgHandler(BaseMsgHandler):
         if not rcmd:
             if not msg.can_stream and (cmd := getattr(self, f"cmd{pref}", None)) is not None:
                 return await msg.call_simple(cmd)
-            else:
+            elif (str := getattr(self,f"stream{pref}",None)) is not None:
                 return await msg.call_stream(self.stream)
+            else:
+                raise ShortCommandError(msg.cmd)
 
         # Process requests for documentation.
         if len(rcmd) <= 2 and rcmd[0] == "doc_":

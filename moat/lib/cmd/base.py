@@ -286,14 +286,6 @@ class MsgSender(BaseMsgHandler):
         """
         return self.Caller_(self, (cmd,a,kw))
 
-    def __call__(self, *a: list[Any], **kw: dict[Key, Any]) -> Caller:
-        """
-        Direct call to run a command (empty path).
-        """
-        from .msg import Msg
-
-        return self._Caller(self, Msg.Call((), a, kw))
-
     def sub_at(self, prefix: Path, may_stream: bool = False) -> MsgSender:
         """
         Returns a SubMsgSender if the path cannot be resolved locally.
@@ -346,11 +338,34 @@ class SubMsgSender(MsgSender):
         # The path is modified in .handle
         return Caller(self, (cmd, a, kw))
 
-    def __call__(self, *a: list[Any], **kw: dict[Key, Any]) -> Caller:
+    def stream(self, *a, **kw):
+        return self.cmd((), *a,**kw).stream()
+
+    def stream_in(self, *a, **kw):
+        return self.cmd((), *a,**kw).stream_in()
+
+    def stream_out(self, *a, **kw):
+        return self.cmd((), *a,**kw).stream_out()
+
+    async def __call__(self, *a: list[Any], _list:bool=False, **kw: dict[Key, Any]) -> Caller:
         """
-        Process a call with an empty path.
+        Process a direct call.
+
+        This makes some kind of best effort to unpack the result.
+        If @_list is False, always returns a dict.
+        If @_list is True, always returns a list.
         """
-        return Caller(self, ((), a, kw))
+        res = await Caller(self, ((), a, kw))
+        if res.kw:
+            if _list:
+                raise ValueError("has dict",res)
+            if res.args:
+                return res
+            return res.kw
+        args = res.args
+        if not _list and len(args) == 1:
+            return args[0]
+        return args
 
     def sub_at(self, prefix: Path) -> SubMsgSender:
         """
@@ -422,7 +437,7 @@ class MsgHandler(BaseMsgHandler):
                 sub = sub.handle
             return await sub(msg, rcmd)
 
-        raise KeyError(scmd)
+        raise KeyError(scmd,msg.cmd,list(self.sub.keys()))
 
     def find_handler(self, path, may_stream: bool = False) -> tuple[MsgHandler, Path] | Callable:
         """

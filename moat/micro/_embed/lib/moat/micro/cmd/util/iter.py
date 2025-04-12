@@ -61,45 +61,6 @@ class IterWrap:
         return r
 
 
-class SendIter(ValueTask):
-    """
-    The sender of outgoing iterated messages.
-
-    It implements a task that iterates the source and forwards the data.
-
-    When the task ends, a cancellation message is sent to the remote side.
-
-    @cmd: the channel to send to
-    @i: seqnum to use
-    @r: msec between messages
-    @a: action to fetch the iterator from
-    @d: data for it
-    """
-
-    _IT = True
-
-    def __init__(self, cmd, i: int, r: int, a: list[str], d: dict):
-        self.r = r
-        self.ac = a
-        self.ad = d
-        super().__init__(cmd, i, (), self._run)
-
-    async def _run(self):
-        try:
-            cnt = 1
-            async with await self.cmd.root.dispatch(self.ac, self.ad, rep=self.r) as it:
-                async for msg in it:
-                    await self.cmd.s.send({"i": self.i, "d": msg, "n": cnt})
-                    cnt += 1
-
-            await self.cmd.s.send({"i": self.i, "r": False})
-        finally:
-            self.cmd.reply.pop(self.i, None)
-
-    async def reply_result(self, res):
-        "no-op; overrides ValueTask's reply sender."
-
-
 class _DelayedIter:
     pass
 

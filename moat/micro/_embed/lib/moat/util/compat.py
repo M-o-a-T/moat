@@ -69,9 +69,11 @@ else:
 WouldBlock = (QueueFull, QueueEmpty)
 
 
-def print_exc(a, b=sys.stderr):
+def print_exc(exc, file=None):
     "forwards to sys.print_exception"
-    sys.print_exception(a, b)
+    if file is None:
+        file = sys.stderr
+    sys.print_exception(exc, file)
 
 
 def log(s, *x, err=None):

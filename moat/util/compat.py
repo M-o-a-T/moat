@@ -113,9 +113,9 @@ def log(s, *x, err=None, nback=1):
         breakpoint()  # noqa:T100 pylint:disable=forgotten-debug-statement
 
 
-def print_exc(exc):
+def print_exc(exc, file=None):
     "print a stack trace to stderr"
-    _traceback.print_exception(type(exc), exc, exc.__traceback__)
+    _traceback.print_exception(type(exc), exc, exc.__traceback__, file=file)
 
 
 def ticks_ms():

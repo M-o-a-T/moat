@@ -17,8 +17,8 @@ from moat.util import CtxObj
 from pymodbus.datastore import ModbusServerContext, ModbusSlaveContext
 from pymodbus.device import ModbusControlBlock, ModbusDeviceIdentification
 from pymodbus.exceptions import NoSuchSlaveException
-from pymodbus.factory import ServerDecoder
-from pymodbus.pdu import ModbusExceptions as merror, ExceptionResponse
+from pymodbus import exceptions as merror
+from pymodbus.pdu import ExceptionResponse, DecodePDU
 from pymodbus.utilities import hexlify_packets
 
 from moat.modbus.types import BaseValue, DataBlock, TypeCodec
@@ -163,7 +163,7 @@ class SerialModbusServer(BaseModbusServer):
             def _validate_slave_id(self, unit, single):
                 return True
 
-        self.decoder = ServerDecoder()  # pylint: disable=no-value-for-parameter ## duh?
+        self.decoder = DecodePDU(False)  # pylint: disable=no-value-for-parameter ## duh?
         self.Framer = Framer
 
     async def serve(self, opened=None):
@@ -327,7 +327,7 @@ class ModbusServer(BaseModbusServer):
             ModbusSocketFramer,
         )
 
-        self.decoder = ServerDecoder()
+        self.decoder = DecodePDU(False)
         self.framer = ModbusSocketFramer
         self.address = address or "localhost"
         self.port = port if port is not None else 502

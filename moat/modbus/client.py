@@ -19,10 +19,9 @@ from anyio_serial import Serial
 from asyncscope import scope
 from moat.util import CtxObj, Queue, ValueEvent, num2id
 from pymodbus.exceptions import ModbusIOException
-from pymodbus.factory import ClientDecoder
-from pymodbus.framer.rtu_framer import ModbusRtuFramer
-from pymodbus.framer.socket_framer import ModbusSocketFramer
-from pymodbus.pdu import ModbusExceptions as merror
+from pymodbus.pdu.decoders import DecodePDU
+from pymodbus.framer import FramerRTU, FramerSocket
+from pymodbus import exceptions as merror
 
 from .types import BaseValue, DataBlock, TypeCodec, MAX_REQ_LEN
 
@@ -263,7 +262,7 @@ class Host(CtxObj, _HostCommon):
         log = logging.getLogger(f"modbus.{addr}")
         self._trace = log.info if debug else log.debug
 
-        self.framer = ModbusSocketFramer(ClientDecoder())
+        self.framer = FramerSocket(DecodePDU(False))
 
         super().__init__(gate, timeout, cap)
 
@@ -443,7 +442,7 @@ class SerialHost(CtxObj, _HostCommon):
     ):
         self.port = port
         self.ser = ser
-        self.framer = ModbusRtuFramer(ClientDecoder(), self)
+        self.framer = FramerRTU(DecodePDU(False), self)
         self.max_rd_len = max_rd_len
         self.max_wr_len = max_wr_len
 

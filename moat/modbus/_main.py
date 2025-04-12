@@ -13,7 +13,7 @@ from moat.util import load_subgroup
 from moat.modbus.client import ModbusClient
 from moat.modbus.server import RelayServer, SerialModbusServer
 
-from pymodbus.register_write_message import WriteSingleRegisterRequest
+from pymodbus.pdu.register_message import WriteSingleRegisterRequest
 
 from .__main__ import add_serial_cfg, mk_client, mk_serial_client, mk_server
 

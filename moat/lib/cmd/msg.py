@@ -24,8 +24,10 @@ if TYPE_CHECKING:
 try:
     import logging
 except ImportError:
+    from moat.util.compat import print_exc
     def log_exc(e,s,*a):
         log(s+": %r", *a, e)
+        print_exc(e)
 else:
     logger = logging.getLogger(__name__)
     def log_exc(e,s,*a):

@@ -12,7 +12,8 @@ import asyncclick as click
 from moat.util import attrdict, combine_dict, yload
 
 from .broker import create_broker
-from .client import CodecError, ConnectException, _codecs, open_mqttclient
+from .client import CodecError, ConnectException, open_mqttclient
+from moat.lib.codec import get_codec
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ def _get_extra_headers(args, cfg):
 
 def _get_message(args):
     codec = args["codec"] or "utf8"
-    codec = _codecs[codec]()
+    codec = get_codec(codec)
 
     for m in args["msg"]:
         yield m.encode(encoding="utf-8")

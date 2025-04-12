@@ -10,12 +10,11 @@ import sys
 import shutil
 
 from moat.util import merge, P
-from moat.micro.cmd.tree.dir import Dispatch, SubDispatch
+from moat.micro.cmd.tree.dir import Dispatch
 from moat.micro.cmd.util.part import get_part
 from moat.micro.util import run_update
 from moat.lib.codec import get_codec
-
-from .compat import idle, log
+from moat.util.compat import idle, log
 
 import asyncclick as click
 import contextlib
@@ -140,7 +139,7 @@ async def setup(
                 from moat.micro.fuse import wrap
 
                 async with (
-                    SubDispatch(dsp, cfg["path"] + (f,)) as fs,
+                    dsp.sub_at(cfg["path"] / f) as fs,
                     wrap(
                         fs,
                         mount,

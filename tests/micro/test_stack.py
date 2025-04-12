@@ -134,7 +134,7 @@ async def test_stack(tmp_path):
             assert "\n  c: Cmd\n" in res.stdout
             assert " wr\n" not in res.stdout
 
-            res = await s("?rdy_")
+            res, = await s.cmd("!rdy_")
             assert not res, "Link is not ready"
 
             res = await rm("cmd f.dir_", do_stdout=True)
@@ -157,9 +157,9 @@ async def test_stack(tmp_path):
             assert res.stdout == ""
 
             # now do the same thing sanely
-            res = await s("f", "dir_")
+            res = await s.cmd("f.dir_")
             assert "rmdir" in res["c"]
-            res = await s.f("dir_")
+            res = await s.f.dir_()
             assert "rmdir" in res["c"]
             cf = await cfg.get()
             assert cf["a"]["b"] == "fubar"

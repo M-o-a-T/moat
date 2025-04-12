@@ -25,11 +25,11 @@ from moat.util import (
 from moat.micro.cmd.tree.dir import Dispatch
 from moat.micro.cmd.util.part import get_part
 from moat.lib.codec.errors import NoPathError, RemoteError
+from moat.lib.cmd.msg import Msg
 from moat.micro.stacks.util import TEST_MAGIC
+from moat.util.compat import idle
 from moat.util.main import load_subgroup
 from moat.lib.codec import get_codec
-
-from .compat import idle
 
 import asyncclick as click
 
@@ -316,26 +316,27 @@ async def cmd(obj, path, **attrs):
     use "moat micro -R ‹path› cmd …" to change it if necessary.
 
     The item "_a" is an empty array, for positional arguments.
-    Use `-e/-v/-p _a:n XXX` to append to it.
+    Use `-s _a:n XXX` to append to it.
     """
     cfg = obj.mcfg
     val = {"_a": []}
     val = process_args(val, no_path=True, **attrs)
-    if len(path) == 0:
-        raise click.UsageError("Path cannot be empty")
+    args = val.pop("_a", ())
     logger.debug(
-        "Command: %s %s",
+        "Command: %s %s %s",
         cfg.remote + path,
-        " ".join(f"{k}={v!r}" for k, v in val.items()),
+        "-" if not args else " ".join(str(a) for a in args),
+        "-" if not val else " ".join(f"{k}={v!r}" for k, v in val.items()),
     )
-    val.pop("_a", ())
 
     async with Dispatch(cfg, run=True) as dsp, dsp.sub_at(cfg.remote) as sd:
         try:
-            res = await sd.dispatch(tuple(path), val)
+            res = await sd.sub_at(path)(*args, **val)
         except RemoteError as err:
             yprint(dict(e=str(err.args[0])), stream=obj.stdout)
         else:
+            if isinstance(res,Msg):
+                res=[msg.args,msg.kw]
             yprint(res, stream=obj.stdout)
 
 

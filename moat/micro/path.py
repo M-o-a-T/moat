@@ -483,8 +483,13 @@ class MoatFSPath(MoatPath):
 
     # methods that access files
 
-    async def _req(self, cmd, **kw):
-        return await self._repl(cmd, **kw)
+    async def _req(self, cmd, *a, **kw):
+        res = await self._repl.cmd(cmd, *a, **kw)
+        if res.kw:
+            return res.kw
+        if len(res) == 1:
+            return res[0]
+        return res.args
 
     # >>> os.stat_result((1,2,3,4,5,6,7,8,9,10))
     # os.stat_result(st_mode=1, st_ino=2, st_dev=3, st_nlink=4,
@@ -496,7 +501,7 @@ class MoatFSPath(MoatPath):
         to speed up operations.
         """
         if self._stat_cache is None:
-            st = await self._req("stat", p=self.as_posix(), v=True)
+            st = await self._req("stat", self.as_posix(), v=True)
             self._stat_cache = os.stat_result(st["d"])
         return self._stat_cache
 
@@ -531,7 +536,7 @@ class MoatFSPath(MoatPath):
         """
         self._stat_cache = None
         try:
-            await self._req("rm", p=self.as_posix())
+            await self._req("rm", self.as_posix())
         except FileNotFoundError:
             if not missing_ok:
                 raise
@@ -547,7 +552,7 @@ class MoatFSPath(MoatPath):
         filesystem.
         """
         self._stat_cache = None
-        await self._req("rm", s=self.as_posix(), d=target.as_posix())
+        await self._req("mv", self.as_posix(), target.as_posix())
         return self.with_name(target)  # XXX, moves across dirs
 
     async def mkdir(self, mode=0o755, parents=False, exist_ok=False):  # noqa:ARG002
@@ -560,11 +565,11 @@ class MoatFSPath(MoatPath):
         """
         self._stat_cache = None
         try:
-            return await self._req("mkdir", p=self.as_posix())
+            return await self._req("mkdir", self.as_posix())
         except FileNotFoundError:
             if parents:
                 await self.parent.mkdir(parents=True)
-                return await self._req("mkdir", p=self.as_posix())
+                return await self._req("mkdir", self.as_posix())
             else:
                 raise
         except FileExistsError:
@@ -579,7 +584,7 @@ class MoatFSPath(MoatPath):
 
         Remove (empty) directory
         """
-        res = await self._req("rmdir", p=self.as_posix())
+        res = await self._req("rmdir", self.as_posix())
         self._stat_cache = None
         return res
 
@@ -590,17 +595,17 @@ class MoatFSPath(MoatPath):
 
         Iterate over blocks (`bytes`) of a remote file.
         """
-        fd = await self._req("open", p=self.as_posix(), m="r")
+        fd = await self._req("open", self.as_posix(), m="r")
         try:
             off = 0
             while True:
-                d = await self._req("rd", f=fd, o=off, n=chunk)
+                d = await self._req("rd", fd, off, n=chunk)
                 if not d:
                     break
                 off += len(d)
                 yield d
         finally:
-            await self._req("cl", f=fd)
+            await self._req("cl", fd)
 
     async def read_bytes(self, chunk=128) -> bytes:
         """
@@ -623,17 +628,17 @@ class MoatFSPath(MoatPath):
         self._stat_cache = None
         if not isinstance(data, (bytes, bytearray, memoryview)):
             raise TypeError(f"contents must be a buffer, got {type(data)} instead")
-        fd = await self._req("open", p=self.as_posix(), m="w")
+        fd = await self._req("open", self.as_posix(), m="w")
         try:
             off = 0
             while off < len(data):
-                n = await self._req("wr", f=fd, o=off, d=data[off : off + chunk])
+                n = await self._req("wr", fd, off, d=data[off : off + chunk])
                 if not n:
                     raise EOFError
                 off += n
 
         finally:
-            await self._req("cl", f=fd)
+            await self._req("cl", fd)
 
     # read_text(), write_text()
 
@@ -643,7 +648,7 @@ class MoatFSPath(MoatPath):
         """
         if not self.is_absolute():
             raise ValueError(f'only absolute paths are supported (beginning with "/"): {self!r}')
-        d = await self._req("dir", p=self.as_posix())
+        d = await self._req("dir", self.as_posix())
         for n in d:
             yield self / n
             # TODO add stat
@@ -654,7 +659,7 @@ class MoatFSPath(MoatPath):
 
         Calculate a SHA256 over the file contents and return the digest.
         """
-        return await self._req("hash", p=self.as_posix(), l=l)
+        return await self._req("hash", self.as_posix(), l=l)
 
 
 async def sha256(p, l: int | None = None):

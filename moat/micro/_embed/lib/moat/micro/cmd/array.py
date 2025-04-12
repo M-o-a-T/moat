@@ -113,7 +113,7 @@ class ArrayCmd(BaseSuperCmd):
         """
         Dispatch a message to subcommands.
 
-        See `BaseCmd.dispatch` for details.
+        See `BaseCmd.handle` for details.
         """
 
         if not rcmd:

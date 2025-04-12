@@ -3,6 +3,7 @@ Server-side dir support
 """
 
 from __future__ import annotations
+import sys
 
 from itertools import chain
 
@@ -81,7 +82,9 @@ class CfgStore:
         """
 
         async def _get(p):
-            d = await self.sd.r(p=p)
+            d = await self.sd.r(p)
+            if isinstance(d,dict):
+                return d
             if len(d)==2:
                 d, s = d
                 if isinstance(d, dict):
@@ -111,12 +114,9 @@ class CfgStore:
 
         async def _set(p, c):
             # current client cfg
+            print("SET",p,c,file=sys.stderr)
             try:
-                try:
-                    ocd = await self.sd.r(p)
-                except TypeError:
-                    # local version, not dispatched
-                    ocd = await self.sd.r(p=p)
+                ocd = await self.sd.r(p)
                 if isinstance(ocd, (list, tuple)):
                     ocd, ocl = ocd
                 else:
@@ -124,19 +124,19 @@ class CfgStore:
             except KeyError:
                 ocd = {}
                 ocl = []
-                await self.sd.w(p=p, d={})
+                await self.sd.w(p, d={})
             for k, v in c.items():
                 if isinstance(v, dict):
                     await _set(p + (k,), v)
                 elif ocd.get(k, _NotGiven) != v:
-                    await self.sd.w(p=p + (k,), d=v)
+                    await self.sd.w(p + (k,), d=v)
 
             if not replace:
                 return
             # drop those client cfg snippets that are not on the server
             for k in chain(ocd.keys(), ocl):
                 if k not in c:
-                    await self.sd.w(p=p + (k,), d=NotGiven)
+                    await self.sd.w(p + (k,), d=NotGiven)
 
         self.cfg = None
         await _set(self.subpath, cfg)

@@ -120,8 +120,10 @@ class Cmd(BaseCmd):
         return fh.read(n)
 
     doc_wr=dict(_d="write file", _0="int:fileid", _1="int:offset", d="bytes:data")
-    async def cmd_wr(self, f, d, o=0):
+    async def cmd_wr(self, f, o=0, d=None):
         "write @d to @f at offset @o"
+        if d is None:
+            raise ValueError("No Data")
         fh = self._fd(f)
         fh.seek(o)
         return fh.write(d)

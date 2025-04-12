@@ -130,7 +130,7 @@ class Cons(BaseCmd):
                 if d:
                     b = await wait_for_ms(200, self.con.crd, n=len(buf) - d)
                 else:
-                    b = await self.con("!crd", n=len(buf))
+                    b = await self.con.crd(n=len(buf))
             except TimeoutError:
                 timed = True
             else:

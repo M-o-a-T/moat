@@ -103,10 +103,13 @@ class BaseCmdMsg(BaseCmd):
         """
         Forward a request to some remote side.
         """
-        if rcmd and isinstance(rcmd[-1], str) and rcmd[-1][0] == "!":
+        if (len(rcmd) == 1 or len(rcmd) == 2 and rcmd[1] == "doc_") and rcmd[0] in {"crd","cwr"}:
+            pass
+        elif rcmd and isinstance(rcmd[-1], str) and rcmd[-1][0] == "!":
             rcmd[-1] = rcmd[-1][1:]
-            return await super().handle(msg, rcmd)
-        return await self.__stream.handle(msg, rcmd)
+        else:
+            return await self.__stream.handle(msg, rcmd)
+        return await super().handle(msg, rcmd)
 
     doc_crd=dict(_d="read console", _0="int:len (64)")
     async def cmd_crd(self, n=64) -> bytes:

@@ -49,7 +49,22 @@ def Fwd(*a, **k):
         async def setup(self):
             "create a subdispatcher"
             await super().setup()
-            self.sd = self.root.sub_at(self.cfg["path"])
+
+            log = self.cfg.get("log", None)
+
+            if not log:
+                self.sd = self.root.sub_at(self.cfg["path"])
+                return
+
+            from moat.lib.cmd._test import StreamLoop
+            from moat.lib.cmd.base import MsgSender
+            a = StreamLoop(self.root, log + ">")
+            b = StreamLoop(None, log + "<")
+            a.attach_remote(b)
+            b.attach_remote(a)
+            xa = await AC_use(self, a)
+            xb = await AC_use(self, b)
+            self.sd = MsgSender(xb)
 
         def handle(self, *a, **kw) -> Awaitable:
             # pylint:disable=invalid-overridden-method

@@ -128,9 +128,10 @@ class MsgLink:
 
     def set_end(self):
         "The send side of this stream has ended."
-
         self._end = True
         if self.end_both:
+            if self._remote is not None:
+                self._remote.stream_detach()
             self.stream_detach()
             self._remote = None
 

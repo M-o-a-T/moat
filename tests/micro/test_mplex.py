@@ -16,6 +16,10 @@ CFG = """
 apps:
   r: _test.MpyCmd
   a: _test.Cmd
+  l: remote.Fwd
+l:
+  path: !P ":"
+  log: LX
 r:
   mplex: true
   cfg:
@@ -23,18 +27,22 @@ r:
 #     w: wdt.Cmd
       r: stdio.StdIO
       b: _test.Cmd
+      l: remote.Fwd
+    l:
+      path: !P ":"
+      log: RX
     r:
       link: &link
         lossy: False
         guarded: False
       log:
-        txt: "MH"
+        txt: "!MH"
 #     log_raw:
 #       txt: "ML"
 
   link: *link
   log:
-    txt: "TH"
+    txt: "!TH"
 # log_raw:
 #   txt: "TL"
 """
@@ -45,17 +53,24 @@ async def test_mplex(tmp_path):
     async with mpy_stack(tmp_path, CFG) as d:
         r = await d.cmd("a.echo", m="He")
         assert r["r"] == "He"
+        r = await d.cmd("l.a.echo", m="Hel")
+        assert r["r"] == "Hel"
         r = await d.cmd("r.b.echo", m="Hi")
         assert r["r"] == "Hi"
-        r = await d.cmd("r.b.echo", m="Ho")
-        assert r["r"] == "Ho"
+        r = await d.cmd("r.l.b.echo", m="Hol")
+        assert r["r"] == "Hol"
         r = await d.cmd("r.r.a.echo", m="Hu")
         assert r["r"] == "Hu"
+        r = await d.cmd("r.r.l.a.echo", m="Hul")
+        assert r["r"] == "Hul"
 
 
-@pytest.mark.parametrize("conn", ["a", "rb", "rra"])
+@pytest.mark.parametrize("conn", ["a", "la", "rlb", "rb", "rra"])
 async def test_iter(tmp_path, conn):
     """Iterator test, direct"""
+    from moat.util._trio import hookup
+    hookup()
+
     conn = list(conn)
     async with mpy_stack(tmp_path, CFG) as d:
         res = []

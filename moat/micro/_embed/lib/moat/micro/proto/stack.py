@@ -19,6 +19,8 @@ exception is the `Reliable` module, which limits this to commands.
 from __future__ import annotations
 
 from moat.util.compat import ACM, AC_exit, AC_use, log
+from moat.lib.cmd.stream import wire2i_f
+from moat.lib.cmd.const import B_ERROR,B_STREAM,B_FLAGSTR
 
 # Typing
 
@@ -328,8 +330,20 @@ class LogMsg(StackedMsg, StackedBuf, StackedBlk):
                 res.append(f"{k}={v!r}")
         return "{" + " ".join(res) + "}"
 
+    def _repr_bang(self, m):
+        m = m[:]
+        i,fl = wire2i_f(m.pop(0))
+        f = B_FLAGSTR[fl]
+        if i >= 0:
+            f += "+"
+        f += str(i)
+        return f,self._repr(m)
+
     async def send(self, m):  # noqa:D102
-        log("S:%s %s", self.txt, self._repr(m, "d"))
+        if self.txt[0] == '!' and isinstance(m,(list,tuple)) and m and isinstance(m[0],int):
+            log("S:%s %s %s", self.txt, *self._repr_bang(m))
+        else:
+            log("S:%s %s", self.txt, self._repr(m, "d"))
         try:
             res = await self.s.send(m)
         except BaseException as exc:

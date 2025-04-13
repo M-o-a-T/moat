@@ -147,18 +147,14 @@ class MsgLink:
         It tries to deliver cancel messages to both sides.
         """
         rem = self._remote
-        if rem is not None:
+        if self._end:
+            pass
+        else:
+            rs = self if rem is None else rem
+            rs.set_end()
             try:
                 with shield():
-                    await rem.ml_recv([E_CANCEL],None,B_ERROR)
-            except Exception as exc:
-                pass
-            rem.set_end()
-        if not self._end:
-            self.set_end()
-            try:
-                with shield():
-                    await self.ml_recv([E_CANCEL],None,B_ERROR)
+                    await rs.ml_recv([E_CANCEL],None,B_ERROR)
             except Exception as exc:
                 pass
 

@@ -200,7 +200,8 @@ class HandlerStream(MsgHandler):
             await self.send(link, [E_NO_CMD], None, B_ERROR)
             return
         if self.closing:
-            await self.send(link, [E_CANCEL], None, B_ERROR)
+            if not self.end_here:
+                await self.send(link, [E_CANCEL], None, B_ERROR)
             return
 
         rem = link.remote

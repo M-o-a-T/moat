@@ -108,6 +108,8 @@ class BaseCmdMsg(BaseCmd):
             pass
         elif rcmd and isinstance(rcmd[-1], str) and rcmd[-1][0] == "!":
             rcmd[-1] = rcmd[-1][1:]
+        elif self.__stream is None:
+            raise EOFError
         else:
             return await self.__stream.handle(msg, rcmd)
         return await super().handle(msg, rcmd)

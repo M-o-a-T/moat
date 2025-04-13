@@ -29,7 +29,7 @@ class MsgStream(HandlerStream):
 
     def __init__(self, handler:MsgSender, stream:BaseCmdMsg):
         self.__stream = stream
-        super().__init__(self, handler)
+        super().__init__(handler)
 
     async def read_stream(self):
         while True:

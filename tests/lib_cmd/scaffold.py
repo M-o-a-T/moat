@@ -2,6 +2,7 @@ from __future__ import annotations
 import anyio
 from moat.lib.cmd.base import MsgSender, MsgHandler, MsgLink
 from moat.lib.cmd.msg import Msg
+from moat.lib.cmd._test import StreamLoop
 from moat.lib.cmd.stream import HandlerStream
 from moat.util import Path, CtxObj, ungroup
 from moat.util.compat import shield
@@ -21,41 +22,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from moat.lib.cmd.msg import Msg
-
-
-class StreamLoop(HandlerStream):
-    __other: StreamLoop = None
-
-    def __init__(self, h: MsgHandler, s: str):
-        super().__init__(h)
-        self.__s = s
-
-    def attach_remote(self, other):
-        self.__other = other
-
-    async def write_stream(self):
-        while True:
-            try:
-                msg = await self.msg_out()
-            except EOFError:
-                return
-            logger.debug("%s: %r", self.__s, msg)
-            await self.__other.msg_in(msg)
-
-    async def read_stream(self):
-        await self.__other.writer_done.wait()
-
-    async def __aexit__(self, *tb):
-        with shield():
-            await self.__other.closed_input()
-        try:
-            with ungroup:
-                await super().__aexit__(*tb)
-        finally:
-            assert self.is_idle
-
-        if isinstance(ungroup.one(tb[1]),anyio.get_cancelled_exc_class()):
-            return True
 
 
 async def _wrap_sock(s: Socket) -> anyio.abc.ByteStream:

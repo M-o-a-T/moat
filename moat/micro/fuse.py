@@ -12,6 +12,7 @@ import stat
 from collections import defaultdict
 from contextlib import asynccontextmanager, suppress
 from pathlib import PosixPath as Path
+from moat.util.compat import print_exc
 
 import pyfuse3
 from pyfuse3 import (  # pylint: disable=E0611
@@ -101,6 +102,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
     def raise_error(self, err, inode=None):
         "translate generic exception to FUSE exception"
+        print_exc(err)
         if isinstance(err, FileNotFoundError):
             if inode is not None:
                 self.i_del(inode)
@@ -134,7 +136,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             return await self.getattr(self._path_inode_map[p], ctx)
         except KeyError:
             try:
-                d = await self._link.stat(p=str(p))
+                d = await self._link.stat(str(p))
             except Exception as err:  # pylint: disable=broad-exception-caught
                 self.raise_error(err)
             else:
@@ -179,7 +181,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         p = self.i_path(inode)
         if _res is None:
             try:
-                d = await self._link.stat(p=str(p))
+                d = await self._link.stat(str(p))
             except Exception as err:  # pylint: disable=broad-exception-caught
                 self.raise_error(err, inode)
         else:
@@ -291,7 +293,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
         p = self.i_path(parent_inode) / name.decode()
         try:
-            await self._link.mkdir(p=str(p))
+            await self._link.mkdir(str(p))
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
         return await self.getattr(self.i_add(p), ctx)
@@ -318,7 +320,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         p = self.i_path(parent_inode) / name.decode()
         try:
-            await self._link.rm(p=str(p))
+            await self._link.rm(str(p))
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
 
@@ -346,7 +348,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         p = self.i_path(parent_inode) / name.decode()
         try:
-            await self._link.rmdir(p=str(p))
+            await self._link.rmdir(str(p))
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
 
@@ -467,7 +469,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             m = "r"
 
         try:
-            fd, = await self._link.open(p=str(self.i_path(inode)), m=m)
+            fd = await self._link.open(str(self.i_path(inode)), m=m)
         except Exception as err:  # pylint: disable=broad-exception-caught
             self.raise_error(err)
         self.f_open(fd, inode)
@@ -486,14 +488,14 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         if size <= self.max_read:
-            return (await self._link.rd(f=fh, o=off, n=size))[0]
+            return await self._link.rd(fh, off, n=size)
 
         # OWCH. Need to break that large read up.
 
         data = []
         while size > 0:
             dl = min(size, self.max_read)
-            buf, = await self._link.rd(f=fh, o=off, n=dl)
+            buf = await self._link.rd(f=fh, o=off, n=dl)
             if buf == b"":
                 break
             data.append(buf)
@@ -516,12 +518,12 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         """
 
         if len(buf) <= self.max_write:
-            return (await self._link.wr(f=fh, d=buf, o=off))[0]
+            return await self._link.wr(fh, off, d=buf)
 
         # OWCH. Break that up.
         sent = 0
         while sent < len(buf):
-            sn, = await self._link.wr(
+            sn = await self._link.wr(
                 f=fh,
                 d=buf[sent : sent + self.max_write],
                 o=off + sent,
@@ -560,7 +562,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
         will be discarded because there is no corresponding client request.
         """
         self.f_close(fh)
-        await self._link.cl(f=fh)
+        await self._link.cl(fh)
 
     async def fsync(self, fh, datasync):
         """Flush buffers for open file *fh*
@@ -586,7 +588,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
 
         p = self.i_path(inode)
         try:
-            dc, = await self._link.ls(p=str(p))
+            dc = await self._link.ls(str(p))
         except Exception as err:  # pylint:disable=broad-exception-caught
             self.raise_error(err)
 
@@ -786,7 +788,7 @@ class Operations(pyfuse3.Operations):  # pylint: disable=I1101
             gen = True
 
         try:
-            r, = await self._link.new(p=str(p))
+            r = await self._link.new(str(p))
         except Exception as err:  # pylint: disable=broad-exception-caught
             if gen:
                 self.i_del(i)

@@ -294,18 +294,23 @@ class HandlerStream(MsgHandler):
 
     async def __aenter__(self):
         acm = ACM(self)
-        tg = await acm(TaskGroup())
-        self._tg = tg
-        self._tgs = await acm(TaskGroup())
+        try:
+            tg = await acm(TaskGroup())
+            self._tg = tg
+            self._tgs = await acm(TaskGroup())
 
-        evt1 = Event()
-        evt2 = Event()
-        self._read_task = await tg.spawn(self._run_read, evt1)
-        self._write_task = await tg.spawn(self._run_write, evt2)
-        await evt1.wait()
-        await evt2.wait()
-        self.closing = False
-        return self
+            evt1 = Event()
+            evt2 = Event()
+            self._read_task = await tg.spawn(self._run_read, evt1)
+            self._write_task = await tg.spawn(self._run_write, evt2)
+            await evt1.wait()
+            await evt2.wait()
+            self.closing = False
+            return self
+
+        except BaseException as exc:
+            await AC_exit(self, type(exc), exc, None)
+            raise
 
     async def _run_read(self, evt):
         try:

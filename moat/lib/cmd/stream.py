@@ -217,7 +217,7 @@ class HandlerStream(MsgHandler):
                 await link.remote.ml_send_error(exc)
         except BaseException as exc:
             if link.remote is not None:
-                with shield:
+                with shield():
                     await link.remote.ml_send_error(exc)
             raise
         else:

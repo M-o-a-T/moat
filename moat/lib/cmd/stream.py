@@ -391,5 +391,9 @@ class StreamLink(MsgLink):
             self.__stream.detach(self)
             self.__stream = None
         if self.task is not None:
-            self.task.cancel()
-            self.task = None
+            try:
+                self.task.cancel()
+            except RuntimeError:
+                pass  # self-cancel on µPy is forbidden
+            else:
+                self.task = None

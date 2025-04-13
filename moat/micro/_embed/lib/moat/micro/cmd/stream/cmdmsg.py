@@ -32,8 +32,9 @@ class MsgStream(HandlerStream):
         super().__init__(handler)
 
     async def read_stream(self):
+        str = self.__stream
         while True:
-            msg = await self.s.recv()
+            msg = await str.recv()
             await self.msg_in(msg)
 
     async def write_stream(self):
@@ -115,6 +116,8 @@ class BaseCmdMsg(BaseCmd):
     async def cmd_crd(self, n=64) -> bytes:
         """read some console data"""
         b = bytearray(n)
+        if self.s is None:
+            raise EOFError
         r = await self.s.crd(b)
         if r == n:
             return b
@@ -128,6 +131,8 @@ class BaseCmdMsg(BaseCmd):
     async def cmd_cwr(self, b):
         """write some console data"""
         async with self.w_lock:
+            if self.s is None:
+                raise EOFError
             await self.s.cwr(b)
 
 

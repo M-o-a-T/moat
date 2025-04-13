@@ -263,7 +263,7 @@ class HandlerStream(MsgHandler):
             raise EOFError
         assert isinstance(a, (list, tuple)), a
         assert 0 <= flag <= 3, flag
-        log("SendQ L%d %r %r %d", link.link_id, a, kw, flag)
+        # log("SendQ L%d %r %r %d", link.link_id, a, kw, flag)
         await self._send_q.put((link, a, kw, flag))
 
     async def msg_out(self) -> list:
@@ -377,12 +377,12 @@ class StreamLink(MsgLink):
         if self.__stream is None:
             raise EOFError
         assert 0 <= flags <= 3, flags
-        log("LR L%d %d %r %r %d", self.link_id, self.id, a, kw, flags)
+        # log("LR L%d %d %r %r %d", self.link_id, self.id, a, kw, flags)
         await self.__stream.send(self, a, kw, flags)
 
     async def ml_send(self, a: list, kw: dict, flags: int) -> None:
         """data to be forwarded to our remote"""
-        log("LS L%d %d %r %r %d", self.link_id, self.id, a, kw, flags)
+        # log("LS L%d %d %r %r %d", self.link_id, self.id, a, kw, flags)
         assert 0 <= flags <= 3, flags
         await super().ml_send(a, kw, flags)
 

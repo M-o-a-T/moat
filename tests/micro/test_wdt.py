@@ -54,7 +54,7 @@ async def test_wdt(tmp_path, guard):
     ended = False
     async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as r, d.cfg_at(P("r.c")) as c:
         res = await r.echo(m="hello")
-        assert res.kw == dict(r="hello")
+        assert res == dict(r="hello")
 
         # XXX unfortunately we can't test ext=False or hw=True on Linux
         await c.set(
@@ -108,7 +108,7 @@ async def test_wdt_off(tmp_path):
         await sleep_ms(TT * 3)
 
         res = await r.echo(m="hello again")
-        assert res.kw == dict(r="hello again")
+        assert res == dict(r="hello again")
         ended = True
     assert ended
 

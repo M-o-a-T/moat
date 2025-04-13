@@ -35,7 +35,7 @@ class Relay(BaseCmd):
 
     async def setup(self):  # noqa:D102
         await super().setup()
-        if (await self.pin.rdy_())[0]:
+        if await self.pin.rdy_():
             raise StoppedError("pin")
         await self.cmd_w()
 
@@ -126,7 +126,7 @@ class Relay(BaseCmd):
         d: delay until next change (msec) or None
         p: actual pin state
         """
-        p = (await self.pin.r())[0]
+        p = await self.pin.r()
         return dict(
             v=self.value,
             f=self.force,

@@ -67,21 +67,21 @@ async def test_loop(tmp_path, cfg):
         await b.sb("ab")
         await c.sb("bb")
 
-        assert (await a.r())[0] == "a"
-        assert (await b.r())[0] == "b"
-        assert (await c.r())[0] == "c"
+        assert await a.r() == "a"
+        assert await b.r() == "b"
+        assert await c.r() == "c"
 
-        assert (await a.rd())[0] == b"as"
-        assert (await b.rd())[0] == b"bs"
-        assert (await c.rd())[0] == b"cs"
+        assert await a.rd() == b"as"
+        assert await b.rd() == b"bs"
+        assert await c.rd() == b"cs"
 
-        assert (await a.crd())[0] == b"ac"
-        assert (await b.crd())[0] == b"bc"
-        assert (await c.crd())[0] == b"cc"
+        assert await a.crd() == b"ac"
+        assert await b.crd() == b"bc"
+        assert await c.crd() == b"cc"
 
-        assert (await a.rb())[0] == "ab"
-        assert (await b.rb())[0] == "bb"
-        assert (await c.rb())[0] == "cb"
+        assert await a.rb() == "ab"
+        assert await b.rb() == "bb"
+        assert await c.rb() == "cb"
 
 
 CFGL = """
@@ -114,14 +114,14 @@ async def test_loopmsg(tmp_path):
         await a.sb("bb")
         await b.sb("ab")
 
-        assert (await a.r())[0] == "a"
-        assert (await b.r())[0] == "b"
+        assert await a.r() == "a"
+        assert await b.r() == "b"
 
-        assert (await a.rd(5))[0] == b"as"
-        assert (await b.rd(5))[0] == b"bs"
+        assert await a.rd(5) == b"as"
+        assert await b.rd(5) == b"bs"
 
-        assert (await a.crd(5))[0] == b"ac"
-        assert (await b.crd(5))[0] == b"bc"
+        assert await a.crd(5) == b"ac"
+        assert await b.crd(5) == b"bc"
 
-        assert (await a.rb())[0] == "ab"
-        assert (await b.rb())[0] == "bb"
+        assert await a.rb() == "ab"
+        assert await b.rb() == "bb"

@@ -68,7 +68,7 @@ async def test_ping(tmp_path):
 
 async def test_iter_m(tmp_path):
     "basic iterator tests"
-    async with mpy_stack(tmp_path, CFG) as d:
+    async with mpy_stack(tmp_path, CFG) as d, d.sub_at(P("r.b")) as drb:
         # await anyio.sleep(30)  ## attach gdb to micropython now
         t1 = ticks_ms()
 
@@ -91,7 +91,7 @@ async def test_iter_m(tmp_path):
         assert 450 < ticks_diff(t1, t2) < 880
 
         for i in range(1,4):
-            assert (await d.cmd(P("r.b.nit")))[0] == i
+            assert await drb.nit() == i
         t2 = ticks_ms()
         assert 300 < ticks_diff(t2, t1) < 880
 
@@ -99,7 +99,7 @@ async def test_iter_m(tmp_path):
         s = d.sub_at(P("r.b"))
 
         res = []
-        async with s.it(delay=.2, lim=3).stream_in() as it:
+        async with s.it.stream_in(delay=.2, lim=3) as it:
             async for n, in it:
                 res.append(n)
         assert res == [0, 1, 2]
@@ -108,7 +108,7 @@ async def test_iter_m(tmp_path):
 
         await s.clr()
         for i in range(1,4):
-            assert (await s.nit(delay=.2))[0] == i
+            assert await s.nit(delay=.2) == i
         t2 = ticks_ms()
         assert 450 < ticks_diff(t2, t1) < 1100
 
@@ -216,17 +216,17 @@ async def test_eval(tmp_path, cons):
 
         await req(x=f, r=["foo"])
         await req(x=42, r=["foo", "x"])
-        r, = await req(x="foo", r=None)
+        r = await req(x="foo", r=None)
         assert isinstance(r, Foo), r
-        r, = await req(x=(f, "x"))
+        r = await req(x=(f, "x"))
         assert r == 42, r
 
-        r, = await req(x=b, r=None)
+        r = await req(x=b, r=None)
         assert r is b, r
-        r, = await req(x=(b, "x"))
+        r = await req(x=(b, "x"))
         assert r == 95, r
         # await req(x=b, a=("b",))
-        r, = await req(x=(b,), r=False)
+        r = await req(x=(b,), r=False)
         assert r[0] == {"x": 95}
         assert not r[1]
         assert r[2] == "Bar"
@@ -246,10 +246,10 @@ async def test_msgpack(tmp_path):
         b = Bar(95)
         as_proxy("b", b, replace=True)
 
-        r, = await req(x=f)
+        r = await req(x=f)
         assert isinstance(r, Foo), r
-        r, = await req(x=(f, "x"))
+        r = await req(x=(f, "x"))
         assert r == 42, r
 
-        r, = await req(x=b, r=None)
+        r = await req(x=b, r=None)
         assert r is b

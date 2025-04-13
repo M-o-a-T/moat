@@ -6,7 +6,7 @@ from __future__ import annotations
 from functools import partial
 
 from typing import TYPE_CHECKING
-from moat.util.compat import TaskGroup, QueueFull, log, ACM, AC_exit, shield
+from moat.util.compat import TaskGroup, QueueFull, log, print_exc, ACM, AC_exit, shield
 from moat.util import Path
 from moat.util.exc import ungroup
 from .const import *
@@ -76,6 +76,10 @@ class MsgLink:
         """
         Send an exception.
         """
+        if self.end_here:
+            log("Err after end: %r",self)
+            print_exc(exc)
+            return
         try:
             # send the error directly
             await self.ml_send((exc,), None, B_ERROR)

@@ -11,7 +11,7 @@ from moat.lib.codec.proxy import obj2name
 from moat.micro.cmd.base import BaseCmd
 from moat.lib.cmd.stream import HandlerStream
 from moat.micro.cmd.util.valtask import ValueTask
-from moat.util.compat import AC_use, BaseExceptionGroup, L, TaskGroup, log
+from moat.util.compat import AC_use, BaseExceptionGroup, L, TaskGroup, log, idle
 from moat.lib.codec.errors import NoPathError, RemoteError, SilentRemoteError, StoppedError
 
 # Typing
@@ -22,6 +22,25 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Mapping
 
     from moat.micro.proto.stack import BaseMsg
+
+
+class MsgStream(HandlerStream):
+    "Stream handler subclass for `BaseCmdMsg`."
+
+    def __init__(self, handler:MsgSender, stream:BaseCmdMsg):
+        self.__stream = stream
+        super().__init__(self, handler)
+
+    async def read_stream(self):
+        while True:
+            msg = await self.s.recv()
+            await self.msg_in(msg)
+
+    async def write_stream(self):
+        str = self.__stream
+        while True:
+            msg = await self.msg_out()
+            await str.send(msg)
 
 
 class BaseCmdMsg(BaseCmd):
@@ -58,31 +77,15 @@ class BaseCmdMsg(BaseCmd):
         """
         try:
             self.s = await self.stream()
-            async with HandlerStream(self.root) as st:
+            async with MsgStream(self.root, self.s) as st:
                 self.__stream = st
-                st.start(self._reader)
                 if L:
                     self.set_ready()
-                await self._writer()
-        # DO NOT eat errors here, that interferes
-        # with the sub.Err no-restart-on-success feature
+                await idle()
+
         finally:
             self.s = None
-
-    async def _reader(self):
-        str = self.__stream
-        while True:
-            msg = await self.s.recv()
-            await str.msg_in(msg)
-
-    async def _writer(self):
-        str = self.__stream
-        while True:
-            msg = await str.msg_out()
-            await self.s.send(msg)
-
-        for e in self.reply.values():
-            e.cancel()
+            self.__stream = None
 
     async def reply_result(self, i, res):
         "send the result back"
@@ -90,14 +93,11 @@ class BaseCmdMsg(BaseCmd):
             return
         try:
             await self.s.send({"i": i, "d": res})
-        except Exception as e:  # pylint:disable=broad-exception-caught
+        except Exception as e:
             await self.reply_error(i, e)
         except BaseException as e:
             await self.reply_error(i, e)
             raise
-        else:
-            # reply_error also does this
-            self.reply.pop(i, None)
 
     async def handle(self, msg, rcmd) -> Awaitable[Any]:
         """

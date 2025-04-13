@@ -4,7 +4,7 @@ Message streaming.
 
 from __future__ import annotations
 from moat.util import Path, QueueFull, _add_obj
-from moat.util.compat import Queue, log, L, TaskGroup, ACM,AC_exit
+from moat.util.compat import Queue, log, L, TaskGroup, ACM,AC_exit, Event, shield
 from functools import partial
 from moat.lib.cmd.base import MsgLink, MsgHandler
 from moat.lib.cmd.const import *
@@ -63,6 +63,10 @@ class HandlerStream(MsgHandler):
         self._recv_q = Queue(99)
         self._handler = handler
 
+        self.reader_done = Event()
+        self.writer_done = Event()
+        self.closing = True
+
         self._id1: set[int] = set()
         if L:
             self._id2: set[int] = set()
@@ -82,6 +86,9 @@ class HandlerStream(MsgHandler):
         """
         Forward a new message to the other side.
         """
+        if self.closing:
+            raise EOFError
+
         if not rcmd:
             raise ShortCommandError(msg.cmd)
         if rcmd[-1] == "!l":
@@ -116,11 +123,21 @@ class HandlerStream(MsgHandler):
         """
         Input is down, no more messages
         """
-        if self._tg is not None:
-            self._tg.cancel_scope.cancel()
+        self.closing = True
+
+        if (tg := self._tg) is not None:
+            self._tg = None
             self._send_q.close_sender()
+            await self.writer_done.wait()
+            self._recv_q.close_sender()
+            if self._read_task is not None:
+                self._read_task.cancel()
+                await self.reader_done.wait()
+
+            tg.cancel_scope.cancel()
+
         for link in list(self._msgs.values()):
-            link.kill()
+            await link.kill()
 
 
     async def msg_in(self, msg: list) -> None:
@@ -154,7 +171,7 @@ class HandlerStream(MsgHandler):
                 self.attach(link)
                 if link.remote.cmd is None:
                     breakpoint()  # CMD
-                self._tg.start_soon(self._handle, msg, link)
+                link.task = await self._tgs.spawn(self._handle, msg, link)
         else:
             try:
                 await link.ml_send(a, kw, flag)
@@ -176,10 +193,14 @@ class HandlerStream(MsgHandler):
                     self.detach(link)
 
     async def _handle(self, msg: list, link: StreamLink) -> None:
+        """
+        Task for a new incoming connection.
+        """
         if self._handler is None:
-            # intentionally not async here, as that may end up
-            # in a deadlock
             await self.send(link, [E_NO_CMD], None, B_ERROR)
+            return
+        if self.closing:
+            await self.send(link, [E_CANCEL], None, B_ERROR)
             return
 
         rem = link.remote
@@ -196,7 +217,8 @@ class HandlerStream(MsgHandler):
                 await link.remote.ml_send_error(exc)
         except BaseException as exc:
             if link.remote is not None:
-                await link.remote.ml_send_error(exc)
+                with shield:
+                    await link.remote.ml_send_error(exc)
             raise
         else:
             # may have been replaced by the handler
@@ -237,6 +259,8 @@ class HandlerStream(MsgHandler):
             self._id3.add(mid)
 
     async def send(self, link: StreamLink, a: list, kw: dict, flag: int) -> None:
+        if self.closing:
+            raise EOFError
         assert isinstance(a, (list, tuple)), a
         assert 0 <= flag <= 3, flag
         log("SendQ L%d %r %r %d", link.link_id, a, kw, flag)
@@ -272,21 +296,66 @@ class HandlerStream(MsgHandler):
         acm = ACM(self)
         tg = await acm(TaskGroup())
         self._tg = tg
+        self._tgs = await acm(TaskGroup())
+
+        evt1 = Event()
+        evt2 = Event()
+        self._read_task = await tg.spawn(self._run_read, evt1)
+        self._write_task = await tg.spawn(self._run_write, evt2)
+        await evt1.wait()
+        await evt2.wait()
+        self.closing = False
         return self
 
-    async def __aexit__(self, *exc):
+    async def _run_read(self, evt):
         try:
-            self._send_q.close_sender()
-            self._recv_q.close_sender()
-            for link in list(self._msgs.values()):
-                link.kill()
+            if self.reader_done.is_set():
+                self.reader_done = Event()
+            evt.set()
+            await self.read_stream()
+        finally:
+            self.reader_done.set()
+            self._read_task = None
 
-            self._tg.cancel()
+    async def _run_write(self, evt):
+        try:
+            if self.writer_done.is_set():
+                self.writer_done = Event()
+            evt.set()
+            await self.write_stream()
+        finally:
+            self.writer_done.set()
+            self._write_task = None
+
+    async def read_stream(self):
+        """
+        Stream reader. Must be overridden.
+        """
+        raise NotImplementedError
+
+    async def write_stream(self):
+        """
+        Stream writer. Must be overridden.
+        """
+        raise NotImplementedError
+
+    
+    async def __aexit__(self, *exc):
+        self._tgs.cancel()
+        try:
+            with shield():
+                await self.closed_input()
+            self._recv_q.close_sender()
+            self._msgs = {}
+
+            with shield():
+                for link in list(self._msgs.values()):
+                    await link.kill()
+            assert not self._msgs
+
         finally:
             await AC_exit(self, *exc)
 
-        for link in list(self._msgs.values()):
-            self.detach(link)
 
 
 class StreamLink(MsgLink):
@@ -296,9 +365,12 @@ class StreamLink(MsgLink):
         super().__init__()
         self.__stream = stream
         self.id = id
+        self.task = None
 
     async def ml_recv(self, a: list, kw: dict, flags: int) -> None:
         """data to be forwarded across the link"""
+        if self.__stream is None:
+            raise EOFError
         assert 0 <= flags <= 3, flags
         log("LR L%d %d %r %r %d", self.link_id, self.id, a, kw, flags)
         await self.__stream.send(self, a, kw, flags)
@@ -310,4 +382,9 @@ class StreamLink(MsgLink):
         await super().ml_send(a, kw, flags)
 
     def stream_detach(self) -> None:
-        self.__stream.detach(self)
+        if self.__stream is not None:
+            self.__stream.detach(self)
+            self.__stream = None
+        if self.task is not None:
+            self.task.cancel()
+            self.task = None

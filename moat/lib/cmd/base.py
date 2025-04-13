@@ -6,8 +6,9 @@ from __future__ import annotations
 from functools import partial
 
 from typing import TYPE_CHECKING
-from moat.util.compat import TaskGroup, QueueFull, log, ACM, AC_exit
+from moat.util.compat import TaskGroup, QueueFull, log, ACM, AC_exit, shield
 from moat.util import Path
+from moat.util.exc import ungroup
 from .const import *
 
 _link_id = 0
@@ -61,11 +62,15 @@ class MsgLink:
         Don't override this.
         """
         if self._remote is None:
-            log("? No remote %r", self)
-        else:
+            raise EOFError
+        try:
             await self._remote.ml_recv(a, kw, flags)
-        if not flags & B_STREAM:
-            self.set_end()
+        except BaseException:
+            await self.kill()
+            raise
+        else:
+            if not flags & B_STREAM:
+                self.set_end()
 
     async def ml_send_error(self, exc):
         """
@@ -112,6 +117,13 @@ class MsgLink:
         return self._remote
 
     def stream_detach(self):
+        """
+        Called when this stream is done.
+
+        Override this method to clean up any related data.
+
+        This method must be idempotent.
+        """
         pass
 
     def set_end(self):
@@ -119,25 +131,44 @@ class MsgLink:
 
         self._end = True
         if self.end_both:
-            if self._remote:
-                self._remote.stream_detach()
             self.stream_detach()
+            self._remote = None
+
+    async def kill(self):
+        """
+        No further communication is possible.
+
+        This must only be called if e.g. a link is down.
+        It tries to deliver cancel messages to both sides.
+        """
+        rem = self._remote
+        if rem is not None:
+            try:
+                with shield():
+                    await rem.ml_recv([E_CANCEL],None,B_ERROR)
+            except Exception as exc:
+                pass
+            rem.set_end()
+        if not self._end:
+            self.set_end()
+            try:
+                with shield():
+                    await self.ml_recv([E_CANCEL],None,B_ERROR)
+            except Exception as exc:
+                pass
 
     def set_remote(self, remote: MsgLink):
         """
         Set (or change) my remote for @remote.
 
-        The old remote, if any is `kill`ed.
+        The old remote, if any, is `kill`ed.
         """
-        if self._remote is not None:
-            self._remote.kill()
+        rem = self._remote
+        if rem is not None:
+            rem._remote = None
+            rem.set_end()
         self._remote = remote
 
-    def kill(self):
-        """
-        This link is getting un-linked, thus should free its data.
-        """
-        self._remote = None
 
     def __repr__(self):
         return f"<{self.__class__.__name__}:L{self.link_id} r{'=L' + str(self._remote.link_id) if self._remote else '-'}>"
@@ -191,7 +222,12 @@ class Caller:
             await acm(m1._stream_call(self._dir))
             return m1
         except BaseException as exc:
-            return await AC_exit(self, type(exc),exc,None)
+            try:
+                await AC_exit(self, type(exc),exc,None)
+            except BaseException as ex:
+                ex = ungroup.one(ex)
+                if ex is not ungroup.one(exc):
+                    raise
             raise
 
     async def __aexit__(self, *err):

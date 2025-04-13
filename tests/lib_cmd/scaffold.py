@@ -4,6 +4,7 @@ from moat.lib.cmd.base import MsgSender, MsgHandler, MsgLink
 from moat.lib.cmd.msg import Msg
 from moat.lib.cmd.stream import HandlerStream
 from moat.util import Path, CtxObj, ungroup
+from moat.util.compat import shield
 from contextlib import asynccontextmanager
 import logging
 
@@ -32,7 +33,7 @@ class StreamLoop(HandlerStream):
     def attach_remote(self, other):
         self.__other = other
 
-    async def __send(self):
+    async def write_stream(self):
         while True:
             try:
                 msg = await self.msg_out()
@@ -41,19 +42,17 @@ class StreamLoop(HandlerStream):
             logger.debug("%s: %r", self.__s, msg)
             await self.__other.msg_in(msg)
 
-    async def __aenter__(self):
-        await super().__aenter__()
-        self.start(self.__send)
-        return self
+    async def read_stream(self):
+        await self.__other.writer_done.wait()
 
     async def __aexit__(self, *tb):
-        await self.__other.closed_input()
-        await super().__aexit__()
-        if not self.is_idle:
-            logger.debug("NOT IDLE")
-            await anyio.sleep(0.1)
-            if not self.is_idle:
-                breakpoint()
+        with shield():
+            await self.__other.closed_input()
+        try:
+            with ungroup:
+                await super().__aexit__(*tb)
+        finally:
+            assert self.is_idle
 
         if isinstance(ungroup.one(tb[1]),anyio.get_cancelled_exc_class()):
             return True

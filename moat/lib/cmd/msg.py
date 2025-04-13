@@ -4,13 +4,13 @@ Basic message block
 
 from __future__ import annotations
 
-from moat.util.compat import log, Event, Queue, ACM, AC_exit, is_async
+from moat.util.compat import log, Event, Queue, ACM, AC_exit, is_async, shield
 from moat.util import Path, P, ExpectedError
 from moat.util import outcome
 from .base import MsgLink
 from .const import SD_IN, SD_OUT, SD_BOTH, SD_NONE
 from .const import S_NEW, S_END, S_ON, S_OFF
-from .const import E_NO_STREAM
+from .const import E_NO_STREAM, E_CANCEL
 from .const import B_STREAM, B_ERROR
 from .errors import StreamError, Flow, NoStream, WantsStream
 from inspect import iscoroutine
@@ -196,7 +196,7 @@ class Msg(MsgLink, MsgResult):
         rem.set_remote(link)  # this kills self
         link.set_remote(rem)
 
-    def kill(self, new: bool = False) -> None:
+    async def kill(self, new: bool = False) -> None:
         """No further communication may happen on this message.
 
         If @new is set, this not being a "new" stream will raise a runtime
@@ -213,7 +213,7 @@ class Msg(MsgLink, MsgResult):
             self._stream_out = S_END
             if self._msg_in is not None:
                 self._msg_in.set()
-            super().kill()
+            await super().kill()
 
 
     async def ml_send(self, a: list, kw: dict, flags: int) -> None:
@@ -240,7 +240,9 @@ class Msg(MsgLink, MsgResult):
 
         if self._stream_in == S_END:
             # This is a late-delivered incoming-stream-terminating error.
-            log("LATE? L%d %r %r %d", self.link_id, a, kw, flags)
+            if not flags&B_ERROR or len(a)!=1 or a[0] != E_CANCEL:
+                # Don't log if cancelled
+                log("LATE? L%d %r %r %d", self.link_id, a, kw, flags)
 
         elif not flags & B_STREAM:
             self._set_msg(a, kw, flags)
@@ -284,7 +286,7 @@ class Msg(MsgLink, MsgResult):
                     await self.ml_send([E_NO_STREAM], None, B_ERROR)
                     self._stream_out = S_END
 
-        self._ended()
+        await self._ended()
 
     async def send(self, *a, **kw) -> None:
         if not self._dir & SD_OUT:
@@ -317,7 +319,7 @@ class Msg(MsgLink, MsgResult):
         else:
             raise RuntimeError("Msg Collision?")
 
-    def _ended(self) -> None:
+    async def _ended(self) -> None:
         """
         If message processing is finished, finalize processing this
         message. Otherwise do nothing.
@@ -326,7 +328,7 @@ class Msg(MsgLink, MsgResult):
             return
         if self._stream_out != S_END:
             return
-        self.kill()
+        await self.kill()
 
     # Stream starters
 
@@ -614,8 +616,9 @@ class _EnsureRemote:
         return m
 
     async def __aexit__(self, *err):
-        self.m.kill()
-        self.slf.kill()
+        with shield():
+            await self.m.kill()
+            await self.slf.kill()
 
 
 # no multiple inheritance for µPy

@@ -7,11 +7,17 @@ from moat.kv.mock.mqtt import stdtest
 
 from asyncakumuli.mock import Tester, TCP_PORT
 
+import subprocess
 task = akumuli_task = load_ext("moat.kv.akumuli.task", "task", err=True)
 
 akumuli_model = load_ext("moat.kv.akumuli.model", err=True)
 AkumuliRoot = akumuli_model.AkumuliRoot
 
+try:
+    res = subprocess.run(["akumulid","--help"])
+except Exception:
+    import pytest
+    pytestmark = pytest.mark.skip
 
 def _hook(e):
     e.ns_time = int(time() * 1000000000)

@@ -53,6 +53,7 @@ micro:
       path: !P r
       link:
         console: true
+        frame: 0xf7
       log:
         txt: "S"
     n: &np
@@ -69,7 +70,13 @@ micro:
         c: cfg.Cmd
         r: stdio.StdIO
         f: fs.Cmd
-      r: *rm
+      r:
+        link:
+          console: true
+          frame: 0xf7
+        mplex: false
+        log:
+          txt: "U"
       f:
         root: /tmp/mpy-test
 

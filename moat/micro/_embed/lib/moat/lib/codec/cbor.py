@@ -189,7 +189,7 @@ class Codec(_Codec):
         if n <= 0:
             return 0
         i_n = i + n
-        buf[:n] = self._buffer[i, i_n]
+        buf[:n] = self._buffer[i:i_n]
         self._buf_pos = i_n
         return n
 

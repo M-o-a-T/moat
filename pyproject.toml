@@ -18,6 +18,7 @@ dependencies = [
 	"alembic",
 	"anyio_serial",
 	"asyncactor",
+	"asyncakumuli ~= 0.6.2",
 	"asyncclick",
 	"asyncowfs",
 	"asyncscope",
@@ -28,8 +29,11 @@ dependencies = [
 	"jmespath",
 	"jsonschema",
 	"mqttproto",
+	"nacl",
 	"outcome",
+	"psutil",
 	"pyfuse3",
+	"pytest-trio",
 	"pymodbus",
 	"range_set",
 	"ruyaml",
@@ -84,6 +88,13 @@ testpaths = [
   "tests",
 ]
 asyncio_default_fixture_loop_scope = "function"
+
+[project.optional-dependencies]
+dev = [
+	"cbor2",
+    "numpy",
+	"passlib",
+]
 
 [tool.ruff.lint]
 select = ["ALL"]

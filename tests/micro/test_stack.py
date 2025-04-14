@@ -56,6 +56,8 @@ micro:
         frame: 0xf7
       log:
         txt: "S"
+#     log_raw:
+#        txt: "SU"
     n: &np
       port: /tmp/moat.test
       log:
@@ -77,6 +79,8 @@ micro:
         mplex: false
         log:
           txt: "U"
+#       log_raw:
+#         txt: "RU"
       f:
         root: /tmp/mpy-test
 

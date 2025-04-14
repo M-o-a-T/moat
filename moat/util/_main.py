@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import anyio
 import logging  # pylint: disable=wrong-import-position
+import io
 import sys
 from datetime import datetime
 from functools import partial
@@ -99,8 +100,8 @@ y, yr   Year (2023–)
 
 
 @cli.command
-@click.option("-d", "--dec", "--decode", type=str, help="Source format", default="json")
-@click.option("-e", "--enc", "--encode", type=str, help="Destination format", default="yaml")
+@click.option("-d", "--dec", "--decoder", type=str, help="Source format", default="json")
+@click.option("-e", "--enc", "--encoder", type=str, help="Destination format", default="yaml")
 @click.option(
     "-i",
     "--in",
@@ -120,7 +121,9 @@ y, yr   Year (2023–)
     default=sys.stdout,
 )
 @click.option("-s", "--stream", is_flag=True, help="Multiple messages")
-def convert(enc, dec, pathi, patho, stream):
+@click.option("-E", "--eval", "eval_", is_flag=True, help="Input line is a Python expr.")
+@click.option("-D", "--dump", "dump_", is_flag=True, help="Output line is a Python repr.")
+def convert(enc, dec, pathi, patho, stream, eval_, dump_):
     """File conversion utility.
 
     Supported file formats: json yaml cbor msgpack python std-cbor std-msgpack
@@ -131,14 +134,26 @@ def convert(enc, dec, pathi, patho, stream):
             self.codec = codec
 
         def __call__(self, buf):
+            if eval_:
+                buf = eval(buf)
             self.codec.feed(buf)
             return iter(self.codec)
+
+    class EV:
+        def __init__(self, codec):
+            self.codec = codec
+
+        def __call__(self, buf):
+            buf = eval(buf)
+            return self.codec(buf)
+
 
     def get_codec(n):
         if n == "python":
             from pprint import pformat
 
             return eval, pformat, False, False
+
         if n == "json":
             import simplejson as json
 
@@ -150,9 +165,13 @@ def convert(enc, dec, pathi, patho, stream):
             else:
 
                 def jdump(d):
+                    if dump_:
+                        res=json.dumps(d, separators=(",", ":"), indent="")
+                        return repr(res)
                     return json.dumps(d, indent="  ") + "\n"
 
             return json.loads, jdump, False, False
+
         if n == "yaml":
             import ruyaml as yaml
 
@@ -161,8 +180,13 @@ def convert(enc, dec, pathi, patho, stream):
             from moat.util import yload
 
             def ypr(d, s):
-                yprint(d, s)
-                s.write("---\n")
+                if dump_:
+                    buf=io.StringIO()
+                    yprint(d, buf)
+                    print(repr(buf.getvalue()), file=s)
+                else:
+                    yprint(d, s)
+                    s.write("---\n")
 
             return (
                 partial(yload, multi=True) if stream else yload,
@@ -170,30 +194,35 @@ def convert(enc, dec, pathi, patho, stream):
                 False,
                 True,
             )
+
         if n == "cbor":
             from moat.lib.codec.cbor import Codec as CBOR
 
             c = CBOR()
             d = CBOR()
-            return IT(c) if stream else c.decode, d.encode, True, False
+            return IT(c) if stream else EV(c.decode) if eval_ else c.decode, d.encode, True, False
+
         if n == "std-cbor":
             from moat.util.cbor import StdCBOR
 
             c = StdCBOR()
             d = StdCBOR()
-            return IT(c) if stream else c.decode, d.encode, True, False
+            return IT(c) if stream else EV(c.decode) if eval_ else c.decode, d.encode, True, False
+
         if n == "msgpack":
             from moat.lib.codec.msgpack import Codec as Msgpack
 
             c = Msgpack()
             d = Msgpack()
-            return IT(c) if stream else c.decode, d.encode, True, False
+            return IT(c) if stream else EV(c.decode) if eval_ else c.decode, d.encode, True, False
+
         if n == "std-msgpack":
             from moat.util.msgpack import StdMsgpack
 
             c = StdMsgpack()
             d = StdMsgpack()
-            return IT(c) if stream else c.decode, d.encode, True, False
+            return IT(c) if stream else EV(c.decode) if eval_ else c.decode, d.encode, True, False
+
         raise ValueError("unsupported codec")
 
     dec, _x, bd, csd = get_codec(dec)
@@ -201,7 +230,13 @@ def convert(enc, dec, pathi, patho, stream):
     if bd:
         pathi = pathi.buffer
     if be:
-        patho = patho.buffer
+        if dump_:
+            bt = io.BytesIO
+        else:
+            patho = patho.buffer
+    else:
+        if dump_:
+            bt = io.StringIO
 
     if stream:
         if csd:
@@ -218,9 +253,16 @@ def convert(enc, dec, pathi, patho, stream):
         for d in in_d():
             for data in dec(d):
                 if cse:
-                    enc(data, patho)
+                    if dump_:
+                        buf = bt()
+                        enc(data, buf)
+                        patho.write(repr(buf.getvalue())+"\n")
+                    else:
+                        enc(data, patho)
                 else:
                     dat = enc(data)
+                    if dump_:
+                        dat=repr(dat)
                     patho.write(dat)
     else:
         if csd:
@@ -229,9 +271,16 @@ def convert(enc, dec, pathi, patho, stream):
             data = pathi.read()
             data = dec(data)
         if cse:
-            enc(data, patho)
+            if dump_:
+                buf = bt()
+                enc(data, buf)
+                patho.write(repr(buf.getvalue())+"\n")
+            else:
+                enc(data, patho)
         else:
             data = enc(data)
+            if dump_:
+                data=repr(data)
             patho.write(data)
     pathi.close()
     patho.close()

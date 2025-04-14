@@ -33,7 +33,6 @@ dependencies = [
 	"outcome",
 	"psutil",
 	"pyfuse3",
-	"pytest-trio",
 	"pymodbus ~= 3.8",
 	"range_set",
 	"ruyaml",
@@ -94,6 +93,7 @@ dev = [
 	"cbor2",
     "numpy",
 	"passlib",
+	"pytest-trio",
 ]
 
 [tool.ruff.lint]

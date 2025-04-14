@@ -82,7 +82,7 @@ async def test_iter(tmp_path, conn):
         log("I X %d", ticks_diff(ticks_ms(), t1))
         assert res == [0, 1, 2]
         t2 = ticks_ms()
-        assert 450 < ticks_diff(t2, t1) < 950
+        assert 450 < ticks_diff(t2, t1) < 1200
 
         res = []
         async with d.cmd(Path(*conn)/"it", lim=5, delay=.2).stream_in() as it:

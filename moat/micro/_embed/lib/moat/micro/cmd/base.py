@@ -30,9 +30,6 @@ from moat.lib.codec.errors import NoPathError
 from moat.lib.cmd import MsgHandler
 from moat.micro.proto.stack import Base
 
-if L:
-    from .util.iter import DelayedIter, IterWrap
-
 from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:

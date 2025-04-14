@@ -300,7 +300,7 @@ async def boot(obj, state):
         res = await sd("ping", m="pong")
         if res != "R:pong":
             raise RuntimeError("wrong reply")
-        print("Success:", res)
+        print("Success:", res, file=sys.stderr)
 
 
 @cli.command(short_help="Send a MoaT command")

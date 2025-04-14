@@ -30,6 +30,6 @@ if not hasattr(moat, "SERIAL"):
             del usb
 
     except Exception as exc:
-        print("No serial", exc)
+        print("No serial", exc, file=sys.stderr)
 
 print("\n*** MoaT ***\n", file=sys.stderr)

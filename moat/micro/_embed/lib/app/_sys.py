@@ -82,14 +82,16 @@ class Cmd(_Cmd):
         """
         Log parameters.
         """
-        log(f"Input: {a!r} {k!r}")
+        log(f"Input: {a!r} {k!r}", file=sys.stderr)
 
     doc_stdout=dict(_d="write stdout", _0="str:text", _99="any:params", _a="any:params")
     async def cmd_stdout(self, *a, **k):
         """
         Print something to stdout.
+
+        WARNING this may disrupt communication if stdout is re-used for the MoaT link.
         """
-        print(f"Input: {a!r} {k!r}")
+        print(f"Input: {a!r} {k!r}", file=sys.stderr)
 
     doc_stderr=dict(_d="write stderr", _0="str:text", _99="any:params", _a="any:params")
     async def cmd_stderr(self, *a, **k):

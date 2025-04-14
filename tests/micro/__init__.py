@@ -13,7 +13,7 @@ def make_upy(force: bool = False):
         return
     if upy.exists():
         run(["make", "clean"], cwd=p, check=True)
-    run(["make"], cwd=p, check=True)
+    run(["make", "STRIP=", "DEBUG=1"], cwd=p, check=True)
 
 
 make_upy()

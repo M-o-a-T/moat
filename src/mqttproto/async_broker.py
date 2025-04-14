@@ -49,7 +49,10 @@ class AsyncMQTTClientSession:
     async def flush_outbound_data(self) -> None:
         async with self.lock:
             if data := self.state_machine.get_outbound_data():
-                await self.stream.send(data)
+                try:
+                    await self.stream.send(data)
+                except anyio.ClosedResourceError:
+                    pass
 
 
 class MQTTAuthenticator(metaclass=ABCMeta):

@@ -2359,7 +2359,7 @@ class Server:
             raise RuntimeError("This server already has data.")
         elif not local and self.node.tick is None:
             raise RuntimeError("This server is not yet operational.")
-        async with MsgReader(path=path, stream=stream) as rdr:
+        async with MsgReader(path=path, stream=stream, codec="std-msgpack") as rdr:
             async for m in rdr:
                 if "value" in m:
                     longer(m)
@@ -2409,7 +2409,7 @@ class Server:
     async def save(self, path: str | None = None, stream=None, full=True):
         """Save the current state to ``path`` or ``stream``."""
         shorter = PathShortener([])
-        async with MsgWriter(path=path, stream=stream) as mw:
+        async with MsgWriter(path=path, stream=stream, codec="std-msgpack") as mw:
             await self._save(mw, shorter, full=full)
 
     async def save_stream(
@@ -2438,7 +2438,7 @@ class Server:
         """
         shorter = PathShortener([])
 
-        async with MsgWriter(path=path, stream=stream) as mw:
+        async with MsgWriter(path=path, stream=stream, codec="std-msgpack") as mw:
             msg = await self.get_state(nodes=True, known=True, deleted=True)
             # await mw({"info": msg})
             await mw(msg)  # XXX legacy

@@ -258,7 +258,7 @@ async def monitor(obj, state, only, path_only, add_date, ignore):
 @click.pass_obj
 async def update(obj, infile):
     """Send a list of updates to a MoaT-KV subtree"""
-    async with MsgReader(path=infile) as reader:
+    async with MsgReader(path=infile,codec="std-msgpack") as reader:
         async for msg in reader:
             if not hasattr(msg, "path"):
                 continue

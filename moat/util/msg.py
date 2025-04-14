@@ -20,7 +20,9 @@ class _MsgRW:
 
     _mode: str = None
 
-    def __init__(self, path=None, stream=None, codec="moat.util.msgpack"):
+    def __init__(self, path=None, stream=None, codec=None):
+        if codec is None:
+            raise ValueError("No default codec")
         if not isinstance(codec, Codec):
             from moat.link.backend import get_codec
 
@@ -93,7 +95,7 @@ class MsgWriter(_MsgRW):
 
     Usage::
 
-        async with MsgWriter("/tmp/msgs.pack") as f:
+        async with MsgWriter("/tmp/msgs.pack", codec="std-cbor") as f:
             for msg in some_source_of_messages():  # or "async for"
                 await f(msg)
 

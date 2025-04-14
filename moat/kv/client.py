@@ -600,7 +600,7 @@ class Client:
 
             async with client._stream("update", path=P("private.storage"),
                     stream=True) as req:
-                with MsgReader("/tmp/msgs.pack") as f:
+                with MsgReader("/tmp/msgs.pack",codec="std-cbor") as f:
                     for msg in f:
                         await req.send(msg)
             # … or …

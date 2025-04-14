@@ -40,7 +40,7 @@ async def init(node, file):
     Using this command, followed by "moat kv server -l <outfile> <node>", is
     equivalent to running "moat kv server -i 'Initial data' <node>.
     """
-    async with MsgWriter(path=file) as f:
+    async with MsgWriter(path=file, codec="std-msgpack") as f:
         await f(
             dict(
                 chain=dict(node=node, tick=1, prev=None),

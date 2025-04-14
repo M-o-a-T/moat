@@ -92,7 +92,7 @@ async def setup(
     from .path import ABytes, MoatDevPath, copy_over
     from .proto.stream import RemoteBufAnyio
 
-    codec = get_codec("std-msgpack")
+    codec = get_codec("std-cbor")
 
     if cross == "-":
         cross = None

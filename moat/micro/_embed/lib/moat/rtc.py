@@ -6,11 +6,11 @@ from __future__ import annotations
 
 import machine
 
-from moat.lib.codec.msgpack import Codec as _mp
+from moat.lib.codec.cbor import Codec as _cbor
 from moat.util import OutOfData
 
 cfg = {}
-_codec = _mp()
+_codec = _cbor()
 
 try:
     mem = machine.RTC().memory

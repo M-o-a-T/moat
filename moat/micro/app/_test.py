@@ -7,7 +7,7 @@ from __future__ import annotations
 import anyio
 
 from moat.util.compat import AC_use
-from moat.micro.proto.stream import MsgpackMsgBlk
+from moat.micro.proto.stream import CBORMsgBlk
 
 from ._test_ import Cmd, Cons  # noqa:F401 pylint:disable=unused-import
 
@@ -44,7 +44,7 @@ def MpyRaw(*a, **k):
 
 
 def LoopCmd(*a, **k):
-    """Full-stack Loopback. This goes through msgpack."""
+    """Full-stack Loopback. This goes through CBOR."""
     from moat.micro._test import Loopback
     from moat.micro.cmd.stream.cmdmsg import BaseCmdMsg
     from moat.micro.stacks.console import console_stack
@@ -56,7 +56,7 @@ def LoopCmd(*a, **k):
             s.link(s)
             if (li := self.cfg.get("link", None)) is not None:
                 if "pack" in li and len(li) == 1:
-                    s = MsgpackMsgBlk(s, li)
+                    s = CBORMsgBlk(s, li)
                     if (log := self.cfg.get("log", None)) is not None:
                         from moat.micro.proto.stack import LogMsg
 

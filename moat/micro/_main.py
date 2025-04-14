@@ -375,7 +375,7 @@ async def cfg_(
     read from the client.
 
     Otherwise, the configuration is read as YAML from stdin (``-r -``) or a
-    file (``-r PATH``), as msgpack from Flash (``-R xx.cfg``), or from the
+    file (``-r PATH``), as CBOR from Flash (``-R xx.cfg``), or from the
     client's memory (``-R -``; this is the default if neither ``-r`` nor
     ``-R`` are used).
 
@@ -424,7 +424,7 @@ async def cfg_(
         dsp.sub_at(cfg.path.fs) as fs,
     ):
         has_attrs = any(a for a in attrs.values())
-        codec = get_codec("std-msgpack")
+        codec = get_codec("std-cbor")
 
         if has_attrs and not (read or read_client or write or write_client):
             # No file access at all. Just update the client's RAM.

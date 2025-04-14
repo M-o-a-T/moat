@@ -15,7 +15,7 @@ def console_stack(stream, cfg, cons=False):
     Set @lossy if the stream is not 100% reliable.
     Set @frame to control protocol framing.
     Set @console if incoming ASCII should be processed
-    Set @msg_prefix to the SerialPacker (or msgpack) lead-in character.
+    Set @msg_prefix to the SerialPacker (or CBOR) lead-in character.
     """
 
     if not hasattr(stream, "rd") or not hasattr(stream, "wr"):
@@ -38,14 +38,14 @@ def console_stack(stream, cfg, cons=False):
         raise NotImplementedError("CBOR")
     else:
         if isinstance(frame, dict):
-            from moat.micro.proto.stream import MsgpackMsgBlk, SerialPackerBlkBuf
+            from moat.micro.proto.stream import CBORMsgBlk, SerialPackerBlkBuf
 
             stream = SerialPackerBlkBuf(stream, frame=frame, cons=cons)
-            stream = MsgpackMsgBlk(stream, cfg)
+            stream = CBORMsgBlk(stream, cfg)
         else:
-            from moat.micro.proto.stream import MsgpackMsgBuf
+            from moat.micro.proto.stream import CBORMsgBuf
 
-            stream = MsgpackMsgBuf(stream, dict(msg_prefix=frame, console=cons))
+            stream = CBORMsgBuf(stream, dict(msg_prefix=frame, console=cons))
 
     assert isinstance(stream, BaseMsg)
 

@@ -8,11 +8,11 @@ from __future__ import annotations
 from moat.util.compat import AC_use
 from moat.lib.codec import get_codec
 
-from ._stream import _MsgpackMsgBlk, _MsgpackMsgBuf
+from ._stream import _CBORMsgBlk, _CBORMsgBuf
 from .stack import BaseBuf
 
 
-class MsgpackMsgBuf(_MsgpackMsgBuf):
+class CBORMsgBuf(_CBORMsgBuf):
     """
     structured messages > stream of bytes
 
@@ -22,10 +22,10 @@ class MsgpackMsgBuf(_MsgpackMsgBuf):
 
     async def setup(self):  # noqa:D102
         await super().setup()
-        self.codec = get_codec(self.cfg.get("codec", "std-msgpack"))
+        self.codec = get_codec(self.cfg.get("codec", "std-cbor"))
 
 
-class MsgpackMsgBlk(_MsgpackMsgBlk):
+class CBORMsgBlk(_CBORMsgBlk):
     """
     structured messages > chunked bytestrings
 
@@ -35,7 +35,7 @@ class MsgpackMsgBlk(_MsgpackMsgBlk):
 
     async def setup(self):  # noqa:D102
         await super().setup()
-        self.codec = get_codec(self.cfg.get("codec", "std-msgpack"))
+        self.codec = get_codec(self.cfg.get("codec", "std-cbor"))
 
 
 class AIOBuf(BaseBuf):

@@ -82,9 +82,9 @@ class _CReader:
         self.cevt.set()
 
 
-class _MsgpackMsgBuf(StackedMsg):
+class _CBORMsgBuf(StackedMsg):
     """
-    structured messages > MsgPack bytestream
+    structured messages > CBOR bytestream
 
     Use this if your stream is reliable (TCP, USB, …) but doesn't support
     message boundaries.
@@ -175,7 +175,7 @@ class _MsgpackMsgBuf(StackedMsg):
                 self.codec.feed(memoryview(buf)[:n])
 
 
-class _MsgpackMsgBlk(StackedMsg):
+class _CBORMsgBlk(StackedMsg):
     """
     structured messages > chunked bytestrings
 
@@ -195,7 +195,7 @@ class SerialPackerBlkBuf(StackedBlk):
     """
     chunked bytestrings > SerialPacker-ized stream
 
-    Use this (and a MsgpackHandler and a Reliable) if your AIO stream
+    Use this (and a CBORHandler and a Reliable) if your AIO stream
     is unreliable (TTL serial).
     """
 

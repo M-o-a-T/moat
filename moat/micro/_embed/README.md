@@ -8,7 +8,7 @@ MoaT for Micropython uses a single serial connection to the controller.
 You can use a basic TTL-serial line, or serial-over-USB, or even a TCP
 connection if the target is an ESP32.
 
-Messages are encoded with "msgpack". They comprise, in effect, a reliable,
+Messages are encoded with CBOR. They comprise, in effect, a reliable,
 asynchronous bidirectional RPC ("Remote procedure Call") system. Thus,
 code on the Micropython system can seamlessly request resources from
 the host.

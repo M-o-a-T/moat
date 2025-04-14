@@ -297,7 +297,7 @@ class Codec(_Codec):
             w(struct.pack("B", CBOR_UNDEFINED))
         elif isinstance(ob, bool):
             self._enc_bool(ob)
-        elif isinstance(ob, (str, bytes)):
+        elif isinstance(ob, (str, bytes, bytearray, memoryview)):
             self._enc_string(ob)
         elif isinstance(ob, (list, tuple)):
             self._enc_array(ob)

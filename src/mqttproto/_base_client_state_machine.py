@@ -72,11 +72,10 @@ class BaseMQTTClientStateMachine:
 
     def _handle_packet(self, packet: MQTTPacket) -> bool:
         if isinstance(packet, MQTTPublishPacket):
-            self._in_require_state(packet, MQTTClientState.CONNECTED)
             if not self._add_pending_packet(packet, local=False):
                 return True
 
-            if packet.packet_id and self._auto_ack_publishes:
+            if self._state == MQTTClientState.CONNECTED and packet.packet_id and self._auto_ack_publishes:
                 self.acknowledge_publish(packet.packet_id, ReasonCode.SUCCESS)
         elif isinstance(packet, MQTTPublishAckPacket):
             self._in_require_state(packet, MQTTClientState.CONNECTED)

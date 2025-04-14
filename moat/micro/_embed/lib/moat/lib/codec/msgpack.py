@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from ._base import Codec as _Codec
 from ._base import NoCodecError
+from moat.util import OutOfData
 
 import struct
 import sys
@@ -571,7 +572,7 @@ def unpackb(packed, **kwargs):
     Unpack an object from `packed`.
 
     Raises ``ExtraData`` when *packed* contains extra bytes.
-    Raises ``ValueError`` when *packed* is incomplete.
+    Raises ``OutOfData`` when *packed* is incomplete.
     Raises ``FormatError`` when *packed* is not valid msgpack.
     Other exceptions can be raised during unpacking.
 
@@ -582,5 +583,5 @@ def unpackb(packed, **kwargs):
     try:
         return unpacker.unpack()
     except OutOfData:
-        raise ValueError("incomplete")
+        raise OutOfData("incomplete")
     raise RuntimeError("No way")

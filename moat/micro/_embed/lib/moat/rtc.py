@@ -7,6 +7,7 @@ from __future__ import annotations
 import machine
 
 from moat.lib.codec.msgpack import Codec as _mp
+from moat.util import OutOfData
 
 cfg = {}
 _codec = _mp()
@@ -24,8 +25,8 @@ def set_rtc(attr, value=None, fs=None):
     if not fs:
         try:
             s = _codec.decode(mem())
-        except ValueError:
-            pass
+        except OutOfData:
+            s = {}
         else:
             s[attr] = value
             mem(_codec.encode(s))
@@ -73,5 +74,5 @@ def all_rtc():
         for k, v in s.items():
             if isinstance(v, dict):
                 yield k, v
-    except (ValueError, KeyError):
+    except (ValueError, KeyError, OutOfData):
         pass

@@ -20,8 +20,8 @@ from asyncscope import scope
 from moat.util import CtxObj, Queue, ValueEvent, num2id
 from pymodbus.exceptions import ModbusIOException
 from pymodbus.pdu.decoders import DecodePDU
+from pymodbus.pdu import ExceptionResponse
 from pymodbus.framer import FramerRTU, FramerSocket
-from pymodbus import exceptions as merror
 
 from .types import BaseValue, DataBlock, TypeCodec, MAX_REQ_LEN
 
@@ -188,7 +188,7 @@ class _HostCommon:
         This is a low-level function. If you are a client, you want to use
         `execute` instead.
         """
-        packet = self.framer.buildPacket(msg)
+        packet = self.framer.buildFrame(msg)
         async with self._send_lock:
             await self.stream.send(packet)
 
@@ -199,7 +199,7 @@ class _HostCommon:
         # pylint: disable=logging-fstring-interpolation,protected-access
 
         request.transaction_id = self._nextTID()
-        packet = self.framer.buildPacket(request)
+        packet = self.framer.buildFrame(request)
 
         packet_info = " ".join([hex(x) for x in packet])
         self._trace("Gateway xmit: %s", packet_info)
@@ -217,6 +217,7 @@ class _HostCommon:
                     res = await request._response_value.get()
 
                 if res.isError():
+                    breakpoint()
                     raise ModbusError(res)
 
                 if hasattr(res, "registers"):
@@ -301,13 +302,15 @@ class Host(CtxObj, _HostCommon):
                 _logger.warning("Resend %d packets", len(tr))
             try:
                 for request in tr:
-                    packet = self.framer.buildPacket(request)
+                    packet = self.framer.buildFrame(request)
                     async with self._send_lock:
                         await self.stream.send(packet)
                 if tr:
                     _logger.warning("Resend done")
             except Exception:  # pylint: disable=broad-except
                 _logger.exception("Re-Write")
+
+        data = bytearray()
 
         while True:
             try:
@@ -326,21 +329,20 @@ class Host(CtxObj, _HostCommon):
                         if task_status is not None:
                             task_status.started()
                             task_status = None
+                    data = bytearray()
 
-                data = await self.stream.receive(4096)
+                data += await self.stream.receive(4096)
                 # pylint: disable=logging-not-lazy
                 self._trace("recv: " + " ".join([hex(x) for x in data]))
 
-                # unit = self.framer.decode_data(data).get("uid", 0)
                 replies = []
 
-                # check for decoding errors
-                self.framer.processIncomingPacket(
-                    data,
-                    replies.append,
-                    slave=0,
-                    single=True,
-                )  # bah
+                while True:
+                    used,pdu = self.framer.processIncomingFrame(data)
+                    data = data[used:]
+                    if pdu is None:
+                        break
+                    replies.append(pdu)
 
             except (
                 IncompleteRead,
@@ -488,7 +490,7 @@ class SerialHost(CtxObj, _HostCommon):
                 _logger.warning("Resend %d packets", len(tr))
             try:
                 for request in tr:
-                    packet = self.framer.buildPacket(request)
+                    packet = self.framer.buildFrame(request)
                     async with self._send_lock:
                         await self.stream.send(packet)
                 if tr:
@@ -502,9 +504,10 @@ class SerialHost(CtxObj, _HostCommon):
         self._trace("recv START")
 
         mon = self._monitor
+        data = bytearray()
         while True:
             try:
-                data = await self.stream.receive(4096)
+                data += await self.stream.receive(4096)
                 # pylint: disable=logging-not-lazy
                 self._trace("recv: " + " ".join([hex(x) for x in data]))
 
@@ -512,12 +515,12 @@ class SerialHost(CtxObj, _HostCommon):
                 replies = []
 
                 # check for decoding errors
-                self.framer.processIncomingPacket(
-                    data,
-                    replies.append,
-                    slave=0,
-                    single=True,
-                )  # bah
+                while True:
+                    used,pdu = self.framer.processIncomingFrame(data)
+                    data = data[used:]
+                    if pdu is None:
+                        break
+                    replies.append(pdu)
 
             except (
                 IncompleteRead,
@@ -661,7 +664,7 @@ class Unit(CtxObj):
             response = await self.host.execute(request)
         except Exception as exc:
             logger.exception("Handler for %d: %r", unit_id, exc)
-            response = request.doException(merror.SlaveFailure)
+            response = ExceptionResponse(request.function_code, ExceptionResponse.SLAVE_FAILURE)
 
         return response
 
@@ -959,6 +962,7 @@ class ValueList(DataBlock):
             max_wr_len=slot.unit.host.max_wr_len,
         )
         self.slot = slot
+        assert hasattr(kind,"encoder_m")
         self.kind = kind
         self.do_write = anyio.Event()
 
@@ -991,7 +995,7 @@ class ValueList(DataBlock):
         if res is None:
             res = {}
         u = self.slot.unit
-        msg = self.kind.encoder(address=start, count=length, slave=u.unit)
+        msg = self.kind.encoder(address=start, count=length, dev_id=u.unit)
 
         r = await u.host.execute(msg)
 
@@ -1023,9 +1027,9 @@ class ValueList(DataBlock):
             off += val.len
             res -= val.len
         if len(values) == 1:
-            msg = self.kind.encoder_s(address=start, slave=u.unit, value=values[0])
+            msg = self.kind.encoder_s(address=start, dev_id=u.unit, registers=values)
         else:
-            msg = self.kind.encoder_m(address=start, count=length, slave=u.unit, values=values)
+            msg = self.kind.encoder_m(address=start, count=length, dev_id=u.unit, registers=values)
 
         await u.host.execute(msg)  # pylint: disable=unused-variable
         # raises an error if failed

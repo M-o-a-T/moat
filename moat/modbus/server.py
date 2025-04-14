@@ -14,10 +14,13 @@ import time
 import anyio
 from anyio.abc import SocketAttribute
 from moat.util import CtxObj
-from pymodbus.datastore import ModbusServerContext, ModbusSlaveContext
+try:
+    from pymodbus.datastore import ModbusServerContext, ModbusDeviceContext
+except ImportError:
+    from pymodbus.datastore import ModbusServerContext
+    from pymodbus.datastore import ModbusSlaveContext as ModbusDeviceContext
 from pymodbus.device import ModbusControlBlock, ModbusDeviceIdentification
 from pymodbus.exceptions import NoSuchSlaveException
-from pymodbus import exceptions as merror
 from pymodbus.pdu import ExceptionResponse, DecodePDU
 from pymodbus.utilities import hexlify_packets
 
@@ -26,7 +29,7 @@ from moat.modbus.types import BaseValue, DataBlock, TypeCodec
 _logger = logging.getLogger(__name__)
 
 
-class UnitContext(ModbusSlaveContext):
+class UnitContext(ModbusDeviceContext):
     """
     This module implements a slave context for servers that stores
     individual variables.
@@ -38,7 +41,6 @@ class UnitContext(ModbusSlaveContext):
             co=DataBlock(),
             ir=DataBlock(),
             hr=DataBlock(),
-            zero_mode=True,
         )
         if server:
             self.unit = unit
@@ -74,7 +76,7 @@ class UnitContext(ModbusSlaveContext):
         Returns the field in question, or none if it doesn't exist.
         """
         k = self.store[typ.key]
-        return k.delete(offset)
+        return k.delete(offset+1)
 
 
 class BaseModbusServer(CtxObj):
@@ -121,11 +123,11 @@ class BaseModbusServer(CtxObj):
 
     async def process_request(self, request):
         """Basic request processor"""
-        context = self.context[request.slave_id]
+        context = self.context[request.dev_id]
         if hasattr(context, "process_request"):
             response = await context.process_request(request)
         else:
-            response = await request.execute(context)
+            response = await request.update_datastore(context)
         return response
 
     @asynccontextmanager
@@ -160,7 +162,7 @@ class SerialModbusServer(BaseModbusServer):
         )
 
         class Framer(ModbusRtuFramer):
-            def _validate_slave_id(self, unit, single):
+            def _validate_dev_id(self, unit, single):
                 return True
 
         self.decoder = DecodePDU(False)  # pylint: disable=no-value-for-parameter ## duh?
@@ -191,12 +193,13 @@ class SerialModbusServer(BaseModbusServer):
                     self.framer.resetFrame()
                 t = t2
                 msgs = []
-                self.framer.processIncomingPacket(
-                    data=data,
-                    unit=0,
-                    callback=msgs.append,
-                    single=True,
-                )
+                while True:
+                    used,pdu = self.framer.processIncomingFrame(data)
+                    data = data[used:]
+                    if pdu is None:
+                        break
+                    msgs.append(pdu)
+
                 for msg in msgs:
                     with anyio.fail_after(2):
                         await self._process(msg)
@@ -220,10 +223,10 @@ class SerialModbusServer(BaseModbusServer):
             _logger.error(txt)
             if self.ignore_missing_slaves:
                 return  # the client will simply timeout waiting for a response
-            response = request.doException(merror.GatewayNoResponse)
+            response = ExceptionResponse(request.function_code,ExceptionResponse.GATEWAY_NO_RESPONSE)
         except Exception:  # pylint: disable=broad-except
             _logger.exception("Unable to fulfill request")
-            response = request.doException(merror.SlaveFailure)
+            response = ExceptionResponse(request.function_code,ExceptionResponse.SLAVE_FAILURE)
         # no response when broadcasting
         response.unit_id = unit
         response.transaction_id = tid
@@ -236,14 +239,14 @@ class SerialModbusServer(BaseModbusServer):
                 getattr(request, "count", 1),
             )
 
-        if response.should_respond and not broadcast:
+        if not broadcast:
             response.transaction_id = request.transaction_id
             response.unit_id = request.unit_id
             skip_encoding = False
             if self.response_manipulator:
                 response, skip_encoding = self.response_manipulator(response)
             if not skip_encoding:
-                response = self.framer.buildPacket(response)
+                response = self.framer.buildFrame(response)
             #           if _logger.isEnabledFor(logging.DEBUG):
             #               _logger.debug("send: [%s]- %s", request, b2a_hex(response))
 
@@ -294,7 +297,7 @@ class RelayServer:
 
         resp.transaction_id = tid
         resp = self.mon_response(resp) or resp
-        resp = self.framer.buildPacket(resp)  # pylint:disable=no-member
+        resp = self.framer.buildFrame(resp)  # pylint:disable=no-member
         await self._serial.send(resp)  # pylint:disable=no-member
 
     def mon_request(self, request):
@@ -323,12 +326,12 @@ class ModbusServer(BaseModbusServer):
     def __init__(self, identity=None, address=None, port=None):
         super().__init__(identity=identity)
 
-        from pymodbus.framer.socket_framer import (  # pylint: disable=import-outside-toplevel
-            ModbusSocketFramer,
+        from pymodbus.framer.socket import (  # pylint: disable=import-outside-toplevel
+            FramerSocket,
         )
 
-        self.decoder = DecodePDU(False)
-        self.framer = ModbusSocketFramer
+        self.decoder = DecodePDU(True)
+        self.framer = FramerSocket
         self.address = address or "localhost"
         self.port = port if port is not None else 502
 
@@ -373,28 +376,31 @@ class ModbusServer(BaseModbusServer):
                     )
 
                 reqs = []
-                # TODO fix pymodbus
-                framer.processIncomingPacket(data, slave=0, callback=reqs.append, single=True)
+                while True:
+                    used,pdu = framer.processIncomingFrame(data)
+                    data = data[used:]
+                    if pdu is None:
+                        break
+                    reqs.append(pdu)
 
                 for request in reqs:
-                    unit = request.slave_id
+                    unit = request.dev_id
                     tid = request.transaction_id
                     try:
                         response = await self.process_request(request)
                     except NoSuchSlaveException:
-                        _logger.debug("requested slave does not exist: %d", request.slave_id)
-                        response = request.doException(merror.GatewayNoResponse)
+                        _logger.debug("requested slave does not exist: %d", request.dev_id)
+                        response = ExceptionResponse(request.function_code, ExceptionResponse.GATEWAY_NO_RESPONSE)
                     except Exception as exc:  # pylint: disable=broad-except
                         _logger.warning("Datastore unable to fulfill request", exc_info=exc)
-                        response = request.doException(merror.SlaveFailure)
-                    if response.should_respond:
-                        response.transaction_id = tid
-                        response.slave_id = unit
-                        # self.server.control.Counter.BusMessage += 1
-                        pdu = framer.buildPacket(response)
-                        if _logger.isEnabledFor(logging.DEBUG):
-                            _logger.debug("send: %s", b2a_hex(pdu))
-                        await conn.send(pdu)
+                        response = ExceptionResponse(request.function_code, ExceptionResponse.SLAVE_FAILURE)
+                    response.transaction_id = tid
+                    response.dev_id = unit
+                    # self.server.control.Counter.BusMessage += 1
+                    pdu = framer.buildFrame(response)
+                    if _logger.isEnabledFor(logging.DEBUG):
+                        _logger.debug("send: %s", b2a_hex(pdu))
+                    await conn.send(pdu)
 
             except TimeoutError as msg:
                 _logger.debug("Socket timeout occurred: %r", msg)

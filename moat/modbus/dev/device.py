@@ -504,7 +504,10 @@ class ServerDevice(BaseDevice):
         self.unit = UnitContext()
 
         # duck-type me
-        self.validate = self.unit.validate
+        try:
+            self.validate = self.unit.validate
+        except AttributeError:
+            pass
         self.getValues = self.unit.getValues
         self.setValues = self.unit.setValues
 

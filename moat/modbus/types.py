@@ -500,6 +500,9 @@ class DataBlock(dict, BaseModbusDataBlock):
         self.max_wr_len = max_wr_len
         self.changed = anyio.Event()
 
+    def __bool__(self):
+        return True
+
     def reset(self):
         """
         Clear all values in this block
@@ -536,18 +539,7 @@ class DataBlock(dict, BaseModbusDataBlock):
         val.block = self
 
     def validate(self, address: int, count: int = 1):
-        """Test whether @count elements exist at @address."""
-        if not count:
-            return False
-        while count:
-            try:
-                val = self[address]
-                if val.len <= 0:
-                    raise RuntimeError("invalid")
-            except (KeyError, RuntimeError):
-                return False
-            address += val.len
-            count -= val.len
+        "does nothing. Compatibility with pymodbus 3.8"
         return True
 
     def ranges(self, changed=False, max_len=MAX_REQ_LEN):
@@ -582,6 +574,7 @@ class DataBlock(dict, BaseModbusDataBlock):
         Called when preparing a Send request.
         """
         res = []
+        address -= 1
         while count > 0:
             try:
                 val = self[address]
@@ -625,6 +618,7 @@ class DataBlock(dict, BaseModbusDataBlock):
 
         Called with the reply of a Read request.
         """
+        address -= 1
         while values:
             try:
                 val = self[address]

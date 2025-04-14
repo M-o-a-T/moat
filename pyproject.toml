@@ -34,7 +34,7 @@ dependencies = [
 	"psutil",
 	"pyfuse3",
 	"pytest-trio",
-	"pymodbus",
+	"pymodbus ~= 3.8",
 	"range_set",
 	"ruyaml",
 	"simpleeval",

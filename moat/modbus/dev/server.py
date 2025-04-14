@@ -14,7 +14,7 @@ import logging
 import anyio
 from pymodbus.exceptions import ModbusIOException
 from pymodbus.factory import ServerDecoder
-from pymodbus.pdu import ModbusExceptions as merror
+from pymodbus.pdu import ExceptionResponse
 from pymodbus.transaction import ModbusSocketFramer
 
 logger = logging.getLogger(__name__)
@@ -40,13 +40,13 @@ class Forwarder:
             try:
                 unit = self.server.units[unit_id]
             except KeyError:
-                response = request.doException(merror.SlaveFailure)
+                response = ExceptionResponse(request.function_code, ExceptionResponse.SLAVE_FAILURE)
             else:
                 response = await unit.process_request(request)
 
             response.unit_id = unit_id
             response.transaction_id = transaction_id
-            response = self.framer.buildPacket(response)
+            response = self.framer.buildFrame(response)
             try:
                 async with self.send_lock:
                     await self.client.send(response)
@@ -67,11 +67,18 @@ class Forwarder:
 
         async with self.client, anyio.create_task_group() as tg:
             try:
+                data = bytearray()
                 while True:
-                    data = await self.client.receive(4096)
+                    data += await self.client.receive(4096)
 
                     msgs = []
-                    self.framer.processIncomingPacket(data, msgs.append, unit=0, single=True)
+
+                    while True:
+                        used,pdu = self.framer.processIncomingFrame(data)
+                        data = data[used:]
+                        if pdu is None:
+                            break
+                        msgs.append(pdu)
 
                     for msg in msgs:
                         await self.sem.acquire()

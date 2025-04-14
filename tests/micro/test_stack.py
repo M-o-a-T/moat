@@ -11,6 +11,7 @@ from pathlib import Path
 from moat.util import yload, yprint, P, ensure_cfg
 from moat.micro._test import mpy_stack
 from moat.src.test import run
+from moat.lib.codec import get_codec
 
 import msgpack
 
@@ -166,9 +167,9 @@ async def test_stack(tmp_path):
             assert cf["a"]["ft"] == 42
 
             with (root / "moat.cf2").open("rb") as f:
-                cfm = msgpack.unpack(f)
-                assert cfm["a"]["ft"] == 43
-                cfm["a"]["ft"] = 42
-                assert cfm == cf
+                cfm = get_codec("cbor").decode(f.read())
+            assert cfm["a"]["ft"] == 43
+            cfm["a"]["ft"] = 42
+            assert cfm == cf
 
         sc.cancel()

@@ -51,12 +51,12 @@ async def test_rtc(tmp_path):
         cf = await cfg.get()
         rt = await rtc.get()
         assert cf.tt.a == "b"
-        assert cf.tt.c.d == "e"
+        assert cf.tt.c["d"] == "e"
         assert cf.tt.z == 99
 
-        rt.tt = attrdict()
-        rt.tt.c = dict(d="f", g={"h": "i"})
-        rt.tt.a = NotGiven
+        rt["tt"] = attrdict()
+        rt["tt"].c = dict(d="f", g={"h": "i"})
+        rt["tt"].a = NotGiven
         await rtc.set(rt, replace=True, sync=True)
 
         cf = to_attrdict(await cfg.get(again=True))

@@ -53,7 +53,7 @@ def get_rtc(attr, fs=None, default=None):
         try:
             s = _codec.decode(mem())
             return s[attr]
-        except (ValueError, KeyError):
+        except (OutOfData, KeyError):
             pass
     if fs is not False:
         try:

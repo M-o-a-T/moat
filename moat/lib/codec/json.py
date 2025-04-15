@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ._base import Codec as _Codec
+from moat.util.compat import byte2utf8
 
 try:
     from json import dumps, loads
@@ -24,7 +25,7 @@ class Codec(_Codec):
 
     def decode(self, data):
         "basic decoder"
-        return loads(data.decode("utf-8"))
+        return loads(byte2utf8(data))
 
     # 'feed' is not implemented:
     # there is no reasonable incremental JSON codec out there

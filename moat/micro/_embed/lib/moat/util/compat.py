@@ -69,6 +69,11 @@ else:
 WouldBlock = (QueueFull, QueueEmpty)
 
 
+def byte2utf8(buf):
+    if not hasattr(buf,"decode"):
+        buf=bytes(buf)
+    return buf.decode("utf-8")
+
 def print_exc(exc, file=None):
     "forwards to sys.print_exception"
     if file is None:

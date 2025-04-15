@@ -16,6 +16,7 @@ import traceback as _traceback
 from concurrent.futures import CancelledError
 from contextlib import suppress, AsyncExitStack
 from inspect import currentframe, iscoroutinefunction,iscoroutine
+from codecs import utf_8_decode
 
 from .queue import Queue as _Queue
 from .queue import QueueEmpty, QueueFull
@@ -41,6 +42,7 @@ __all__ = [
     "ticks_add",
     "ticks_diff",
     "run",
+    "byte2utf8",
     "TaskGroup",
     "run_server",
     "shield",
@@ -74,6 +76,12 @@ L = True
 
 Pin_IN = 0
 Pin_OUT = 1
+
+def byte2utf8(buf: bytes|bytearray|memoryview) -> str:
+    res,n = utf_8_decode(buf)
+    if n != len(buf):
+        raise ValueError("incomplete utf8")
+    return res
 
 class CancelScope:
     """

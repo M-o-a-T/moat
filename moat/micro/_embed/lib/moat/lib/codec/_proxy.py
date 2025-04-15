@@ -8,20 +8,21 @@ from moat.util.compat import log
 from moat.util import NotGiven
 
 __all__ = [
-    "Proxy",
     "DProxy",
     "NoProxyError",
+    "Proxy",
     "as_proxy",
+    "drop_proxy",
+    "get_proxy",
     "name2obj",
     "obj2name",
-    "get_proxy",
-    "drop_proxy",
 ]
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any, overload, TypeVar
+    from collections.abc import Callable
 
 _pkey = 1
 _CProxy = {}  # name > object
@@ -69,7 +70,16 @@ def get_proxy(obj):
 #     return (type(self), (), self.__dict__)
 
 
-def as_proxy(name, obj: Any = NotImplemented, replace: bool = False):
+if TYPE_CHECKING:
+    T = TypeVar("T")
+
+    @overload
+    def as_proxy(name: str) -> Callable[[T], T]: ...
+    @overload
+    def as_proxy(name: str, obj: Any, replace: bool = False) -> None: ...
+
+
+def as_proxy(name: str, obj: Any = NotImplemented, replace: bool = False):
     """
     Export an object as a named proxy.
     Usage:
@@ -157,7 +167,7 @@ class DProxy(Proxy):
                 return self.a[i]
             except TypeError:
                 log("*ERR %r", self.k)
-                raise KeyError(i)
+                raise KeyError(i) from None
 
     def __eq__(self, other):
         if not isinstance(other, DProxy):

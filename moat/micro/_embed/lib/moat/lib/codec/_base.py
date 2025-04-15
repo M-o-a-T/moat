@@ -3,8 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any, Self
     from collections.abc import Callable
+
+    ByteType = bytes | bytearray | memoryview
+    VarByteType = bytearray | memoryview
 
 
 class NoCodecError(ValueError):
@@ -43,20 +46,20 @@ class Codec:
         """
         raise NotImplementedError
 
-    def encode(self, obj: Any) -> bytes:
+    def encode(self, obj: Any) -> ByteType:
         """
         Encode a data structure, yielding some bytes which may or may not
         be self-terminating.
         """
         raise NotImplementedError
 
-    def decode(self, data: Any) -> Any:
+    def decode(self, data: ByteType) -> Any:
         """
         Decode a block of data, which must result in a single message.
         """
         raise NotImplementedError
 
-    def feed(self, data, final: bool = False) -> None:
+    def feed(self, data: ByteType) -> None:
         """
         Add to the codec's buffer.
 
@@ -82,7 +85,7 @@ class Codec:
         """
         raise NotImplementedError
 
-    def unfeed(self, buf: bytearray) -> int:
+    def unfeed(self, buf: VarByteType) -> int:
         """
         Take from the front of the decoder's buffer.
 
@@ -92,11 +95,9 @@ class Codec:
 
 
 class Extension:
-    binary: bool = None
-
     def __init__(self):
         self.enc: dict[type, tuple[int | None, Callable]] = {}
-        self.dec: dict(int, Callable) = {}
+        self.dec: dict[int, Callable] = {}
 
     def copy(self):
         res = type(self)()
@@ -104,7 +105,7 @@ class Extension:
         res.dec.update(self.dec)
         return res
 
-    def encoder(self, key: int | None, cls: type, fn=None) -> None:
+    def encoder(self, key: int | None, cls: type, fn=None) -> None | Callable:
         def _enc(fn):
             self.enc[cls] = (key, fn)
             return fn
@@ -114,7 +115,7 @@ class Extension:
         else:
             _enc(fn)
 
-    def decoder(self, key: int, fn=None) -> None:
+    def decoder(self, key: int, fn=None) -> None | Callable:
         def _dec(fn):
             self.dec[key] = fn
             return fn
@@ -124,7 +125,7 @@ class Extension:
         else:
             _dec(fn)
 
-    def encode(self, codec, obj) -> tuple[int, bytes]:
+    def encode(self, codec: Codec, obj) -> tuple[int, ByteType]:
         try:
             key, fn = self.enc[type(obj)]
         except KeyError:
@@ -138,7 +139,7 @@ class Extension:
             key, res = res
         return key, res
 
-    def decode(self, codec, key, data):
+    def decode(self, codec: Codec, key: int, data: ByteType) -> Any:
         try:
             fn = self.dec[key]
         except KeyError:

@@ -12,6 +12,8 @@ class Codec(_Codec):
     Or maybe three ("null") but you need to tell it to do that.
     """
 
+    null: bytes | None = None
+
     def __init__(self, on="on", off="off", null=None, **kw):
         super().__init__(**kw)
         if on is not None:
@@ -21,16 +23,18 @@ class Codec(_Codec):
         if null is not None:
             self.null = null.encode("utf-8")
 
-    def encode(self, data):
-        if data is None and self.null is not None:
+    def encode(self, obj):
+        "bool > some text"
+        if obj is None and self.null is not None:
             return self.null
-        if data == 0:
+        if obj == 0:
             return self.off
-        if data == 1:
+        if obj == 1:
             return self.on
-        raise ValueError(data)
+        raise ValueError(obj)
 
     def decode(self, data):
+        "some text > bool"
         if data == self.on:
             return True
         if data == self.off:

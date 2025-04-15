@@ -5,11 +5,20 @@ UTF-8 codec
 from __future__ import annotations
 
 from ._base import Codec as _Codec
-from ._base import IncompleteData
 
-from codecs import lookup
+from moat.util.compat import byte2utf8
 
-Utf8Stream = lookup("utf-8").incrementaldecoder
+try:
+    from codecs import lookup
+except ImportError:
+    Utf8Stream = None
+else:
+    Utf8Stream = lookup("utf-8").incrementaldecoder
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from moat.lib.codec import ByteType
 
 
 class Codec(_Codec):
@@ -19,30 +28,27 @@ class Codec(_Codec):
         if ext is not None:
             raise ValueError("You can't extend the UTF8 codec")
         super().__init__()
-        self.dec = Utf8Stream()
+        if Utf8Stream is not None:
+            self.dec = Utf8Stream()
         self._buf: str = ""
 
-    def encode(self, obj):
+    def encode(self, obj) -> ByteType:
         "Encode UTF-8 to bytestring"
         if not isinstance(obj, str):
-            raise ValueError(self, obj)
+            raise ValueError(self, obj)  # noqa:TRY004
         return obj.encode("utf-8")
 
-    def decode(self, data):
+    def decode(self, data: ByteType) -> str:
         "Decode a bytestring to UTF-8"
-        return data.decode("utf-8")
+        return byte2utf8(data)
 
-    def feed(self, data, final: bool = False):
+    def feed(self, data: ByteType):
         """
         Add to-be-decoded data.
 
         Returns the string found so far (i.e. without incomplete UTF-8 codes).
         """
-        try:
-            self._buf += self.dec.decode(data)
-        finally:
-            if final and (st := self.dec.getstate()) != (b"", 0):
-                raise IncompleteData(self, st)
+        self._buf += self.dec.decode(data)
 
     def __next__(self):
         if (buf := self._buf) != "":

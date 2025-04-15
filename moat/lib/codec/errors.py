@@ -27,9 +27,11 @@ class NoPathError(KeyError):
     """An error that marks a nonexisting path"""
 
     def __str__(self):
+        from moat.util import Path
+
         return (
             f"‹NoPath {self.args[0]} {Path.build(self.args[1])}"
-            + f"{' ' + ' '.join(str(x) for x in self.args[2:]) if len(self.args) > 2 else ''}›"
+            f"{' ' + ' '.join(str(x) for x in self.args[2:]) if len(self.args) > 2 else ''}›"
         )
 
     def prefixed(self, path):
@@ -38,7 +40,7 @@ class NoPathError(KeyError):
 
 
 try:
-    FileNotFoundError  # noqa:B018
+    FileNotFoundError  # noqa:B018  # pyright:ignore
 except NameError:
 
     class FileNotFoundError(SilentRemoteError):  # noqa:A001
@@ -51,7 +53,7 @@ except NameError:
 as_proxy("_FnErr", FileNotFoundError)
 
 try:
-    FileExistsError  # noqa:B018
+    FileExistsError  # noqa:B018  # pyright:ignore
 except NameError:
 
     class FileExistsError(SilentRemoteError):  # noqa:A001

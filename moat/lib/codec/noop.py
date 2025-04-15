@@ -17,14 +17,14 @@ class Codec(_Codec):
     def encode(self, obj):
         "no-op encode"
         if not isinstance(obj, (bytes, bytearray, memoryview)):
-            raise ValueError(obj)
+            raise ValueError(obj)  # noqa:TRY004
         return obj
 
     def decode(self, data):
         "no-op decode"
         return data
 
-    def feed(self, data, final: bool = False):  # noqa: ARG002
+    def feed(self, data):
         "no-op feed"
         self._buf += data
 

@@ -19,15 +19,18 @@ from __future__ import annotations
 
 from ._base import Codec as _Codec
 from ._base import NoCodecError
-from moat.util import OutOfData
 
 import struct
 import sys
 from io import BytesIO
 
 from moat.util import attrdict, OutOfData
-from moat.util.compat import const
+from moat.util.compat import byte2utf8, const
 
+from typing import TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    from ._base import ByteType, VarByteType
 
 __all__ = ["Codec", "ExtType"]
 
@@ -42,7 +45,7 @@ class Codec(_Codec):
         self.__kw = kw
 
         self.stream = Unpacker(
-            ext_hook=self._decode,  # pylint:disable=protected-access
+            ext_hook=self._decode,  # pyright:ignore
             use_attrdict=use_attrdict,
         )
 
@@ -58,11 +61,11 @@ class Codec(_Codec):
         k, d = self.ext.encode(self, obj)
         return ExtType(k, d)
 
-    def decode(self, data):
+    def decode(self, data: ByteType):
         "bytes > object"
         return unpackb(
             data,
-            ext_hook=self._decode,  # pylint:disable=protected-access
+            ext_hook=self._decode,
             use_attrdict=self.use_attrdict,
         )
 
@@ -82,7 +85,7 @@ class Codec(_Codec):
     def __next__(self):
         return next(self.stream)
 
-    def unfeed(self, buf) -> int:
+    def unfeed(self, buf: VarByteType | None) -> int:
         "Take from the decoder's buffer."
         return self.stream.unfeed(buf)
 
@@ -90,7 +93,7 @@ class Codec(_Codec):
 # cloned from https://github.com/msgpack/msgpack-python
 
 # Parts of this have been modified to be compatble with micropython.
-# ruff:noqa:TRY200
+# ruff:noqa:B904
 
 
 class UnpackException(Exception):
@@ -199,16 +202,17 @@ class Unpacker:
         self._buffer = data
         self._buf_pos = 0
 
-    def unfeed(self, buf: bytearray | None) -> int:
+    def unfeed(self, buf: VarByteType | None) -> int:
         "take from the buffer"
         if not self._buffer:
             return 0
         i = self._buf_pos
-        n = min(len(buf), len(self._buffer) - i)
+        n = min(len(buf) if buf is not None else 999, len(self._buffer) - i)
         if n == 0:
             return 0
         i_n = i + n
-        buf[:n] = self._buffer[i, i_n]
+        if buf is not None:
+            buf[:n] = self._buffer[i:i_n]
         self._buf_pos = i_n
         return n
 
@@ -348,20 +352,20 @@ class Unpacker:
                 key = self._unpack()
                 if type(key) is str and hasattr(sys, "intern"):
                     key = sys.intern(key)
+                elif isinstance(key, (bytearray, memoryview)):
+                    key = bytes(key)
                 ret[key] = self._unpack()
             # if self._object_hook is not None:
             # ret = self._object_hook(ret)
             return ret
         if typ == _TYPE_RAW:
-            if isinstance(obj, memoryview):  # sigh
-                obj = bytearray(obj)
-            return obj.decode("utf_8")  # , self._unicode_errors)
+            return byte2utf8(cast(bytes, obj))
         if typ == _TYPE_BIN:
-            if self._min_memview_len < 0 and len(obj) < self._min_memview_len:
-                obj = bytearray(obj)
+            if self._min_memview_len < 0 and len(cast(bytes, obj)) < self._min_memview_len:
+                obj = bytes(cast(bytes, obj))
             return obj
         if typ == _TYPE_EXT:
-            return self._ext_hook(n, obj)
+            return self._ext_hook(n, cast(bytes, obj))
         # assert typ == _TYPE_IMMEDIATE
         return obj
 

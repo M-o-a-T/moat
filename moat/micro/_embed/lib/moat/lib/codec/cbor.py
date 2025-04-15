@@ -12,10 +12,10 @@ from ._base import NoCodecError
 import struct
 
 # Typing
-from typing import TYPE_CHECKING  # isort:skip
+from typing import cast, TYPE_CHECKING  # isort:skip
 
 try:
-    from micropython import const
+    from micropython import const  # pyright:ignore
 except ImportError:
 
     def const(x: int) -> int:
@@ -24,10 +24,10 @@ except ImportError:
 
 if TYPE_CHECKING:
     from typing import Any
-    from collections.abc import Iterator
+    from ._base import VarByteType, ByteType
 
 
-__all__ = ["Codec", "Tag", "ExtraData"]
+__all__ = ["Codec", "ExtraData", "Tag"]
 
 
 class Tag:
@@ -108,7 +108,7 @@ class Codec(_Codec):
     _buffer: bytes | bytearray = b""
     _buf_pos: int = 0
 
-    _buf_out: bytearray|None=None
+    _buf_out: bytearray | None = None
 
     def __init__(self, use_attrdict: bool = False, **kw):
         super().__init__(**kw)
@@ -119,7 +119,7 @@ class Codec(_Codec):
         "copy me"
         return Codec(use_attrdict=self.use_attrdict, **self.__kw)
 
-    def encode(self, obj: Any, *, empty_elided: bool = False) -> bytes:
+    def encode(self, obj: Any, *, empty_elided: bool = False) -> ByteType:
         """
         Pack @obj, return the resulting bytes.
 
@@ -139,7 +139,7 @@ class Codec(_Codec):
         finally:
             self._buf_out = None  # always reset
 
-    def decode(self, data: bytes | bytearray | memoryview, *, empty_elided: bool = False) -> Any:
+    def decode(self, data: ByteType, *, empty_elided: bool = False) -> Any:
         """
         Unpack @data, return the resulting object.
 
@@ -153,7 +153,7 @@ class Codec(_Codec):
         if empty_elided and data == b"":
             return NotGiven
 
-        self._buffer = data
+        self._buffer = data  # pyright:ignore  # type mismatch
         try:
             res = self._dec_any()
             # chop off the part we've read
@@ -164,7 +164,7 @@ class Codec(_Codec):
             self._buffer = b""  # always reset
             self._buf_pos = 0
 
-    def feed(self, data: bytes | bytearray | memoryview) -> Iterator[Any]:
+    def feed(self, data: ByteType) -> None:
         "Add additional input"
         if self._buffer and self._buf_pos < len(self._buffer):
             if self._buf_pos == 0:
@@ -176,7 +176,7 @@ class Codec(_Codec):
         self._buffer = data
         self._buf_pos = 0
 
-    def unfeed(self, buf: bytearray) -> int:
+    def unfeed(self, buf: VarByteType) -> int:
         "take from the decoder's buffer"
         if not self._buffer:
             return 0
@@ -287,7 +287,7 @@ class Codec(_Codec):
         self._enc_any(val)
 
     def _w(self, d):
-        self._buf_out.extend(d)
+        self._buf_out.extend(d)  # pyright:ignore[reportOptionalMemberAccess]
 
     def _enc_any(self, ob):
         w = self._w
@@ -311,7 +311,7 @@ class Codec(_Codec):
         elif isinstance(ob, Tag):
             self._enc_tag(ob)
         else:
-            self._enc_tag(*self.ext.encode(self, ob))
+            self._enc_tag(*self.ext.encode(self, ob))  # pyright:ignore
 
     # Decoder
 
@@ -425,7 +425,7 @@ class Codec(_Codec):
         if tag == CBOR_UINT:
             return aux
         elif tag == CBOR_NEGINT:
-            return -1 - aux
+            return -1 - cast(int, aux)
         elif tag == CBOR_BYTES:
             return self._dec_bytes(aux, CBOR_BYTES)
         elif tag == CBOR_TEXT:
@@ -436,12 +436,12 @@ class Codec(_Codec):
             return self._dec_array(aux)
         elif tag == CBOR_MAP:
             if aux is None:
-                return self._var_map()
+                return self._dec_var_map()
             return self._dec_map(aux)
         elif tag == CBOR_TAG:
             ob = self._dec_any()
             try:
-                return self.ext.decode(self, aux, ob)
+                return self.ext.decode(self, cast(int, aux), ob)
             except NoCodecError:
                 return Tag(aux, ob)
         else:

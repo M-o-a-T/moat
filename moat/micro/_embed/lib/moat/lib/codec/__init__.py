@@ -6,11 +6,16 @@ from __future__ import annotations
 
 from ._base import Codec, Extension, NoCodecError
 
+from typing import TYPE_CHECKING
 
-__all__ = ["Codec", "Extension", "get_codec", "NoCodecError"]
+if TYPE_CHECKING:
+    from ._base import ByteType, VarByteType  # noqa:F401
 
 
-def get_codec(codec=None, **kw) -> Codec:
+__all__ = ["Codec", "Extension", "NoCodecError", "get_codec"]
+
+
+def get_codec(codec: str, **kw) -> Codec:
     """
     Loads and initializes the named codec.
     """

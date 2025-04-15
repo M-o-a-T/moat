@@ -1,13 +1,15 @@
 """
-Wrapper with yaml support
+Wrapper for CBOR support
 """
+
 from __future__ import annotations
-from ._cbor import *
-from moat.util.compat import const
+import struct
 
 import ruyaml as yaml
+from ._cbor import Codec, StdCBOR, Tag, XTag  # noqa:F401
+from moat.util.compat import const
 
-SafeRepresenter = yaml.representer.SafeRepresenter
+SafeRepresenter = yaml.representer.SafeRepresenter  # pyright:ignore
 
 CBOR_TAG_CBOR_FILEHEADER = const(55799)  # single CBOR content
 CBOR_TAG_CBOR_LEADER = const(55800)  # header for multiple CBOR items
@@ -15,11 +17,6 @@ CBOR_TAG_CBOR_LEADER = const(55800)  # header for multiple CBOR items
 
 def _tag_repr(dumper, data):
     return dumper.represent_list([XTag(data.tag), data.value])
-
-
-class XTag:
-    def __init__(self, tag):
-        self.tag = tag
 
 
 def _xtag_repr(dumper, data):
@@ -33,7 +30,6 @@ def _xtag_repr(dumper, data):
             else:
                 tag = str(data.tag)
         except Exception:
-            breakpoint()
             tag = str(data.tag)
     else:
         tag = str(data.tag)

@@ -7,14 +7,14 @@ from __future__ import annotations
 from inspect import isfunction
 
 __all__ = [
-    "Proxy",
     "DProxy",
     "NoProxyError",
+    "Proxy",
     "as_proxy",
+    "drop_proxy",
+    "get_proxy",
     "name2obj",
     "obj2name",
-    "get_proxy",
-    "drop_proxy",
 ]
 
 from moat.util import NotGiven
@@ -22,7 +22,6 @@ from moat.util import NotGiven
 from ._proxy import Proxy, get_proxy, name2obj, drop_proxy, as_proxy, obj2name
 from ._proxy import DProxy as _DProxy
 from ._proxy import _CProxy
-import moat.lib.codec.errors as _err
 
 
 class NoProxyError(ValueError):
@@ -92,7 +91,7 @@ def wrap_obj(obj, name=None):
                 res = (p[1][0], p[1][1:]) + tuple(p[2:])
             else:
                 res = (name,) + p[1]
-                if len(p) == 3 and p[2] or isinstance(p[-1], dict):
+                if (len(p) == 3 and p[2]) or isinstance(p[-1], dict):
                     res += (p[2],)
                 elif len(p) > 3:
                     raise NotImplementedError(p)
@@ -137,9 +136,9 @@ def unwrap_obj(s):
         try:
             pk = pk(*a, **kw)
         except (TypeError, ValueError):
-            if not issubclass(pk,Exception):
+            if not issubclass(pk, Exception):
                 raise
-            pk=pk(*a)
-            for k,v in kw.items():
-                setattr(pk,k,v)
+            pk = pk(*a)
+            for k, v in kw.items():
+                setattr(pk, k, v)
     return pk

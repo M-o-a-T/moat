@@ -77,7 +77,7 @@ class MsgLink:
         Send an exception.
         """
         if self.end_here:
-            log("Err after end: %r",self)
+            log("Err after end: %r", self)
             print_exc(exc)
             return
         try:
@@ -98,7 +98,6 @@ class MsgLink:
                     except Exception:
                         # Give up.
                         pass
-
 
     @property
     def end_both(self) -> bool:
@@ -154,7 +153,7 @@ class MsgLink:
             rs.set_end()
             try:
                 with shield():
-                    await rs.ml_recv([E_CANCEL],None,B_ERROR)
+                    await rs.ml_recv([E_CANCEL], None, B_ERROR)
             except Exception as exc:
                 pass
 
@@ -170,7 +169,6 @@ class MsgLink:
             rem.set_end()
         self._remote = remote
 
-
     def __repr__(self):
         return f"<{self.__class__.__name__}:L{self.link_id} r{'=L' + str(self._remote.link_id) if self._remote else '-'}>"
 
@@ -184,7 +182,7 @@ class Caller:
 
     _qlen = 0
 
-    def __init__(self, handler: MsgHandler, data: tuple[str,list|tuple,dict]):
+    def __init__(self, handler: MsgHandler, data: tuple[str, list | tuple, dict]):
         self.data = data
         self.handler = handler
         self._dir = SD_NONE
@@ -201,6 +199,7 @@ class Caller:
     async def _call(self):
         "helper for __await__ that calls the remote handler"
         from .msg import Msg
+
         msg = Msg.Call(*self.data)
 
         await self.handler.handle(msg, msg.rcmd)
@@ -214,6 +213,7 @@ class Caller:
                 self._dir = SD_BOTH
 
             from .msg import Msg
+
             m1 = Msg.Call(*self.data)
 
             tg = await acm(TaskGroup())
@@ -224,7 +224,7 @@ class Caller:
             return m1
         except BaseException as exc:
             try:
-                await AC_exit(self, type(exc),exc,None)
+                await AC_exit(self, type(exc), exc, None)
             except BaseException as ex:
                 ex = ungroup.one(ex)
                 if ex is not ungroup.one(exc):
@@ -233,7 +233,6 @@ class Caller:
 
     async def __aexit__(self, *err):
         return await AC_exit(self, *err)
-
 
     def stream(self, size: int = 42) -> Self:
         """mark as streaming bidirectionally (the default)
@@ -266,6 +265,7 @@ class BaseMsgHandler:
     """
     Somewhat-abstract superclass for anythiong that accepts messages.
     """
+
     def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
         """
         Handle this message stream.
@@ -289,6 +289,7 @@ class MsgSender(BaseMsgHandler):
 
     async def __aenter__(self):
         return self
+
     async def __aexit__(self, *tb):
         pass
 
@@ -321,7 +322,7 @@ class MsgSender(BaseMsgHandler):
 
 
         """
-        return self.Caller_(self, (cmd,a,kw))
+        return self.Caller_(self, (cmd, a, kw))
 
     def sub_at(self, prefix: Path, may_stream: bool = False) -> MsgSender:
         """
@@ -376,15 +377,15 @@ class SubMsgSender(MsgSender):
         return Caller(self, (cmd, a, kw))
 
     def stream(self, *a, **kw):
-        return self.cmd((), *a,**kw).stream()
+        return self.cmd((), *a, **kw).stream()
 
     def stream_in(self, *a, **kw):
-        return self.cmd((), *a,**kw).stream_in()
+        return self.cmd((), *a, **kw).stream_in()
 
     def stream_out(self, *a, **kw):
-        return self.cmd((), *a,**kw).stream_out()
+        return self.cmd((), *a, **kw).stream_out()
 
-    async def __call__(self, *a: list[Any], _list:bool=False, **kw: dict[Key, Any]) -> Caller:
+    async def __call__(self, *a: list[Any], _list: bool = False, **kw: dict[Key, Any]) -> Caller:
         """
         Process a direct call.
 
@@ -395,7 +396,7 @@ class SubMsgSender(MsgSender):
         res = await Caller(self, ((), a, kw))
         if res.kw:
             if _list:
-                raise ValueError("has dict",res)
+                raise ValueError("has dict", res)
             if res.args:
                 return res
             return res.kw
@@ -415,6 +416,7 @@ class SubMsgSender(MsgSender):
         Returns a SubMsgSender for this name
         """
         return self.sub_at(Path(x))
+
 
 class MsgHandler(BaseMsgHandler):
     """
@@ -443,7 +445,7 @@ class MsgHandler(BaseMsgHandler):
         if not rcmd:
             if not msg.can_stream and (cmd := getattr(self, f"cmd{pref}", None)) is not None:
                 return await msg.call_simple(cmd)
-            elif (str := getattr(self,f"stream{pref}",None)) is not None:
+            elif (str := getattr(self, f"stream{pref}", None)) is not None:
                 return await msg.call_stream(self.stream)
             else:
                 raise ShortCommandError(msg.cmd)
@@ -472,11 +474,11 @@ class MsgHandler(BaseMsgHandler):
         # Neither of the above: find a subcommand.
         scmd = rcmd.pop()
         if (sub := getattr(self, f"sub{pref}_{scmd}", None)) is not None:
-            if hasattr(sub,"handle"):
+            if hasattr(sub, "handle"):
                 sub = sub.handle
             return await sub(msg, rcmd)
 
-        raise KeyError(scmd,msg.cmd,list(self.sub.keys()))
+        raise KeyError(scmd, msg.cmd, list(self.sub.keys()))
 
     def find_handler(self, path, may_stream: bool = False) -> tuple[MsgHandler, Path] | Callable:
         """

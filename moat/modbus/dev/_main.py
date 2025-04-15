@@ -1,6 +1,7 @@
 """
 Device file handling, with a basic multi-device client
 """
+
 from __future__ import annotations
 
 import logging

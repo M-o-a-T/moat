@@ -8,12 +8,13 @@ from contextlib import asynccontextmanager
 from moat.lib.cmd.anyio import run as run_stream
 import anyio
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from moat.lib.cmd import Msg
 
 
 @asynccontextmanager
-async def TCPConn(cmd: MsgSender|None, *a, codec: str="std-cbor", debug=None, **kw):
+async def TCPConn(cmd: MsgSender | None, *a, codec: str = "std-cbor", debug=None, **kw):
     """
     Connection to a MoaT server.
 

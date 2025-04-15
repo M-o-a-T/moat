@@ -118,7 +118,7 @@ class ArrayCmd(BaseSuperCmd):
 
         if not rcmd:
             raise ShortCommandError(msg.cmd)
-        if isinstance(rcmd[-1],str) and rcmd[-1][0] == "!":
+        if isinstance(rcmd[-1], str) and rcmd[-1][0] == "!":
             rcmd[-1] = rcmd[-1][1:]
             return await super().handle(msg, rcmd)
 
@@ -140,14 +140,15 @@ class ArrayCmd(BaseSuperCmd):
             ) from None
         return await sub.handle(msg, rcmd)
 
-    doc_dir_=dict(_c=BaseSuperCmd.cmd_dir_, na="int:max index")
+    doc_dir_ = dict(_c=BaseSuperCmd.cmd_dir_, na="int:max index")
+
     async def cmd_dir_(self, **kw):
         "report max index"
         res = await super().cmd_dir_(**kw)
         res["na"] = len(self.apps)
         return res
 
-    doc_all=dict(
+    doc_all = dict(
         _d="apply to all",
         _0="path:command",
         _99="list:args",
@@ -164,7 +165,7 @@ class ArrayCmd(BaseSuperCmd):
             cmd.reverse()
         else:
             cmd = msg.args_l.pop(0)
-            if isinstance(cmd,str):
+            if isinstance(cmd, str):
                 cmd = P(cmd)
             cmd = list(cmd)
 
@@ -173,7 +174,7 @@ class ArrayCmd(BaseSuperCmd):
         for app in self.apps:
             snd.set_root(app)
             r = await snd.cmd(cmd, *msg.args, *msg.kw)
-            res.append((r.args,r.kw))
+            res.append((r.args, r.kw))
         await msg.result(*res)
 
     async def _stream_all(self, msg, rcmd):
@@ -182,19 +183,19 @@ class ArrayCmd(BaseSuperCmd):
         """
         if not rcmd:
             cmd = msg.args.pop(0)
-            if isinstance(cmd,str):
+            if isinstance(cmd, str):
                 cmd = P(cmd)
             cmd = list(cmd)
             cmd.reverse()
             rcmd = cmd
 
-        async def _reply(i,app,st):
-            msg_ = Msg.Call(msg.cmd,msg.args,msg.kw)
+        async def _reply(i, app, st):
+            msg_ = Msg.Call(msg.cmd, msg.args, msg.kw)
             res = await app.handle(msg_, rcmd[:])
             await st.send(i, *res.args, **res.kw)
 
         async with msg.stream_out() as st, TaskGroup() as tg:
-            for i,app in enumerate(self.apps[s:e]):
+            for i, app in enumerate(self.apps[s:e]):
                 tg.start_soon(_reply, i, app, st)
 
         await msg.result()

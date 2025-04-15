@@ -74,7 +74,7 @@ async def test_iter_m(tmp_path):
 
         res = []
         async with d.cmd(P("r.b.it"), lim=3).stream_in() as it:
-            async for n, in it:
+            async for (n,) in it:
                 res.append(n)
         assert res == [0, 1, 2]
         t2 = ticks_ms()
@@ -82,7 +82,7 @@ async def test_iter_m(tmp_path):
 
         res = []
         async with d.cmd(P("r.b.it")).stream_in() as it:
-            async for n, in it:
+            async for (n,) in it:
                 if n == 3:
                     break
                 res.append(n)
@@ -90,7 +90,7 @@ async def test_iter_m(tmp_path):
         t1 = ticks_ms()
         assert 450 < ticks_diff(t1, t2) < 880
 
-        for i in range(1,4):
+        for i in range(1, 4):
             assert await drb.nit() == i
         t2 = ticks_ms()
         assert 300 < ticks_diff(t2, t1) < 880
@@ -99,16 +99,16 @@ async def test_iter_m(tmp_path):
         s = d.sub_at(P("r.b"))
 
         res = []
-        async with s.it.stream_in(delay=.2, lim=3) as it:
-            async for n, in it:
+        async with s.it.stream_in(delay=0.2, lim=3) as it:
+            async for (n,) in it:
                 res.append(n)
         assert res == [0, 1, 2]
         t1 = ticks_ms()
         assert 300 < ticks_diff(t1, t2) < 880
 
         await s.clr()
-        for i in range(1,4):
-            assert await s.nit(delay=.2) == i
+        for i in range(1, 4):
+            assert await s.nit(delay=0.2) == i
         t2 = ticks_ms()
         assert 450 < ticks_diff(t2, t1) < 1100
 
@@ -116,15 +116,15 @@ async def test_iter_m(tmp_path):
         s = d.sub_at(P("r"))
 
         res = []
-        async with s.cmd("b.it", lim=3, delay=.2).stream_in() as it:
-            async for n, in it:
+        async with s.cmd("b.it", lim=3, delay=0.2).stream_in() as it:
+            async for (n,) in it:
                 res.append(n)
         assert res == [0, 1, 2]
         t1 = ticks_ms()
         assert 300 < ticks_diff(t1, t2) < 880
 
         await s.b.clr()
-        for i in range(1,4):
+        for i in range(1, 4):
             assert (await s.cmd(P("b.nit")))[0] == i
         t2 = ticks_ms()
         assert 300 < ticks_diff(t2, t1) < 880

@@ -15,14 +15,16 @@ class Cmd(_Cmd):
     System stuff that's satellite specific
     """
 
-    doc_state=dict(_d="Root info")
+    doc_state = dict(_d="Root info")
+
     async def cmd_state(self):
         """
         Return the root info.
         """
         return self.root.i
 
-    doc_rtc=dict(_d="RTC state access", _0="str:Key", fs="bool:filesystem", v="Any:value to set")
+    doc_rtc = dict(_d="RTC state access", _0="str:Key", fs="bool:filesystem", v="Any:value to set")
+
     async def cmd_rtc(self, k="state", v=None, fs=None):
         """
         Set/return a MoaT state var.
@@ -34,7 +36,7 @@ class Cmd(_Cmd):
         else:
             return get_rtc(k, fs=fs)
 
-    doc_mem=dict(
+    doc_mem = dict(
         _d="memory info",
         _r=dict(
             c="int:bytes freed",
@@ -43,6 +45,7 @@ class Cmd(_Cmd):
             f=["int:free now", "int:free at boot"],
         ),
     )
+
     async def cmd_mem(self):
         """
         Info about memory. Calls `gc.collect`.
@@ -65,7 +68,8 @@ class Cmd(_Cmd):
             c=f2 - f1,
         )
 
-    doc_hash=dict(_d="module hash", _0="str:name", l="int:shortened length", _r="str:hash val")
+    doc_hash = dict(_d="module hash", _0="str:name", l="int:shortened length", _r="str:hash val")
+
     async def cmd_hash(self, p: str, l: int | None = None):
         """
         Get the hash for a built-in module.
@@ -77,14 +81,16 @@ class Cmd(_Cmd):
             res = res[:l]
         return res
 
-    doc_log=dict(_d="call log", _0="str:text", _99="any:params", _a="any:params")
+    doc_log = dict(_d="call log", _0="str:text", _99="any:params", _a="any:params")
+
     async def cmd_log(self, *a, **k):
         """
         Log parameters.
         """
         log(f"Input: {a!r} {k!r}", file=sys.stderr)
 
-    doc_stdout=dict(_d="write stdout", _0="str:text", _99="any:params", _a="any:params")
+    doc_stdout = dict(_d="write stdout", _0="str:text", _99="any:params", _a="any:params")
+
     async def cmd_stdout(self, *a, **k):
         """
         Print something to stdout.
@@ -93,19 +99,21 @@ class Cmd(_Cmd):
         """
         print(f"Input: {a!r} {k!r}", file=sys.stderr)
 
-    doc_stderr=dict(_d="write stderr", _0="str:text", _99="any:params", _a="any:params")
+    doc_stderr = dict(_d="write stderr", _0="str:text", _99="any:params", _a="any:params")
+
     async def cmd_stderr(self, *a, **k):
         """
         Print something to stderr.
         """
         print(f"Input: {a!r} {k!r}", file=sys.stderr)
 
-    doc_boot=dict(
+    doc_boot = dict(
         _d="reboot",
         _0="int:magic",
         _1="int:1=soft,2=hard,3=KbdIntr,4=SysExit",
         _t="int:timeout msec",
     )
+
     async def cmd_boot(self, code, m, t=100):
         """
         Reboot MoaT.
@@ -135,7 +143,8 @@ class Cmd(_Cmd):
         await self.root.tg.start_soon(_boot, t, _name="_sys.boot1")
         return True
 
-    doc_machid=dict(_d="unique machine id", _r="int")
+    doc_machid = dict(_d="unique machine id", _r="int")
+
     async def cmd_machid(self):
         """
         Return the machine's unique ID. This is the bytearray returned by
@@ -143,7 +152,10 @@ class Cmd(_Cmd):
         """
         return machine.unique_id()
 
-    doc_pin=dict(_d="direct digital pin", _0="int:pin#", v="bool:value to set", _r="bool:hw state")
+    doc_pin = dict(
+        _d="direct digital pin", _0="int:pin#", v="bool:value to set", _r="bool:hw state"
+    )
+
     async def cmd_pin(self, n, v=None, **kw):
         """
         Set or read a digital pin.
@@ -153,7 +165,8 @@ class Cmd(_Cmd):
             p.value(v)
         return p.value()
 
-    doc_adc=dict(_d="direct analog pin", _0="int:pin#", _r="int:16-bit value")
+    doc_adc = dict(_d="direct analog pin", _0="int:pin#", _r="int:16-bit value")
+
     async def cmd_adc(self, n):
         """
         Read an analog pin.

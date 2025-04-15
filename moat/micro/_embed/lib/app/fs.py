@@ -91,7 +91,8 @@ class Cmd(BaseCmd):
         # log(f"{fd}!{repr(f)}")
         f.close()
 
-    doc_reset=dict(_d="close all", p="str:set new prefix")
+    doc_reset = dict(_d="close all", p="str:set new prefix")
+
     async def cmd_reset(self, p=None):
         "close all"
         for v in self._fd_cache.values():
@@ -105,21 +106,24 @@ class Cmd(BaseCmd):
         else:
             self._fs_prefix += "/" + p
 
-    doc_open=dict(_d="open file", _0="str:path", m="str:mode (r,w)", _r="int:fileid")
+    doc_open = dict(_d="open file", _0="str:path", m="str:mode (r,w)", _r="int:fileid")
+
     async def cmd_open(self, p, m="r"):
         "open @f in binary mode @m (r,w)"
         p = self._fsp(p)
         f = _efix(open, p, m + "b")
         return self._add_f(f)
 
-    doc_rd=dict(_d="read file", _0="int:fileid", _1="int:offset", n="int:length")
+    doc_rd = dict(_d="read file", _0="int:fileid", _1="int:offset", n="int:length")
+
     async def cmd_rd(self, f, o=0, n=64):
         "read @n bytes from @f at offset @o"
         fh = self._fd(f)
         fh.seek(o)
         return fh.read(n)
 
-    doc_wr=dict(_d="write file", _0="int:fileid", _1="int:offset", d="bytes:data")
+    doc_wr = dict(_d="write file", _0="int:fileid", _1="int:offset", d="bytes:data")
+
     async def cmd_wr(self, f, o=0, d=None):
         "write @d to @f at offset @o"
         if d is None:
@@ -128,12 +132,14 @@ class Cmd(BaseCmd):
         fh.seek(o)
         return fh.write(d)
 
-    doc_cl=dict(_d="close file", _0="int:fileid")
+    doc_cl = dict(_d="close file", _0="int:fileid")
+
     async def cmd_cl(self, f):
         "close @f"
         self._del_f(f)
 
-    doc_ls=dict(_d="list dir", _0="str:path", x="bool:return mapping", _o="str|dict")
+    doc_ls = dict(_d="list dir", _0="str:path", x="bool:return mapping", _o="str|dict")
+
     async def cmd_ls(self, p="", x=False):
         """
         dir of @p.
@@ -158,13 +164,15 @@ class Cmd(BaseCmd):
                 res.append(n)
         return res
 
-    doc_mkdir=dict(_d="make dir", _0="str:path")
+    doc_mkdir = dict(_d="make dir", _0="str:path")
+
     async def cmd_mkdir(self, p):
         "new dir at @p"
         p = self._fsp(p)
         _efix(os.mkdir, p)
 
-    doc_hash=dict(_d="hash file", _0="str:path", l="int:prefixlen", _r="bytes:hash")
+    doc_hash = dict(_d="hash file", _0="str:path", l="int:prefixlen", _r="bytes:hash")
+
     async def cmd_hash(self, p: str, l: int | None = None):
         """
         Hash the contents of @p, sha256
@@ -186,12 +194,13 @@ class Cmd(BaseCmd):
             res = res[:l]
         return res
 
-    doc_stat=dict(
+    doc_stat = dict(
         _d="stat file",
         _0="str:path",
         v="bool:include struct",
         _r=dict(m="int:mode", s="int:size", t="int:modtime", d="list:state struct"),
     )
+
     async def cmd_stat(self, p, v=False):
         """
         State of @p.
@@ -212,13 +221,14 @@ class Cmd(BaseCmd):
             res["d"] = s
         return res
 
-    doc_mv=dict(
+    doc_mv = dict(
         _d="rename/move file",
         _0="str:source",
         _1="str:dest",
         x="str:exchange temp",
         n="bool:dest must be new",
     )
+
     async def cmd_mv(self, s, d, x=None, n=False):
         """
         move file @s to @d.
@@ -253,19 +263,22 @@ class Cmd(BaseCmd):
             os.rename(q, p)
             os.rename(x, q)
 
-    doc_rm=dict(_d="remove file", _0="str:path")
+    doc_rm = dict(_d="remove file", _0="str:path")
+
     async def cmd_rm(self, p):
         "unlink file @p"
         p = self._fsp(p)
         _efix(os.remove, p)
 
-    doc_rmdir=dict(_d="remove dir", _0="str:path")
+    doc_rmdir = dict(_d="remove dir", _0="str:path")
+
     async def cmd_rmdir(self, p):
         "unlink dir @p"
         p = self._fsp(p)
         _efix(os.rmdir, p)
 
-    doc_new=dict(_d="create file", _0="str:path")
+    doc_new = dict(_d="create file", _0="str:path")
+
     async def cmd_new(self, p):
         "new file @p"
         p = self._fsp(p)

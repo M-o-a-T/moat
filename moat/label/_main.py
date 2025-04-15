@@ -300,7 +300,7 @@ def print_sheet(obj, sheets, test):
             for lbl in sorted(sh.labels, key=lambda x: x.text):
                 if lbl.labeltyp.sheettyp != sh.sheettyp:
                     raise ValueError(
-                        f"Label {lbl.text} on sheet {sh.id} is a {lbl.labeltyp.name !r} label and wants format {lbl.labeltyp.sheettyp.name} not {sh.sheettyp.name}",
+                        f"Label {lbl.text} on sheet {sh.id} is a {lbl.labeltyp.name!r} label and wants format {lbl.labeltyp.sheettyp.name} not {sh.sheettyp.name}",
                     )
 
                 if lab is None or lbl.labeltyp.name != lab.name_:
@@ -802,7 +802,7 @@ def sheet_place(obj, labels, numeric):
         try:
             lab = sess.one(Label, code=int(lab)) if numeric else sess.one(Label, text=lab)
         except KeyError:
-            print(f"Label {lab !r} not found. Skipped.")
+            print(f"Label {lab!r} not found. Skipped.")
         else:
             if lab.sheet is not None and lab.sheet_id != -1:
                 if lab.sheet.id == sheet.id:

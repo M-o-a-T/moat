@@ -1,6 +1,7 @@
 """
 Types that describe a modbus device, as read from file
 """
+
 from __future__ import annotations
 
 import logging

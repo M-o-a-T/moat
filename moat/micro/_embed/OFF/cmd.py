@@ -20,7 +20,10 @@ class BMSCmd(BaseCmd):
         await super().config_updated(cfg)
         await self.batt.config_updated(cfg)
 
-    doc_rly=dict(_d="relay get/force-set", st="bool?:forced state", _r=["bool:state", "bool:forced?"])
+    doc_rly = dict(
+        _d="relay get/force-set", st="bool?:forced state", _r=["bool:state", "bool:forced?"]
+    )
+
     async def cmd_rly(self, msg):
         """
         Force the relay (st=bool), un-force it (st=None), or return the
@@ -37,7 +40,8 @@ class BMSCmd(BaseCmd):
 
     loc_rly = cmd_rly
 
-    doc_info=dict(_d="incr status", gen="int:old state", r="bool:reset", _r="dict")
+    doc_info = dict(_d="incr status", gen="int:old state", r="bool:reset", _r="dict")
+
     async def cmd_info(self, msg):
         if self.bms.gen == msg.get("gen", -1):
             await self.bms.xmit_evt.wait()

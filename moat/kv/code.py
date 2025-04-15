@@ -5,6 +5,7 @@ so that it can be called easily.
 "Code" consists of either Python modules or single procedures.
 
 """
+
 from __future__ import annotations
 
 import logging

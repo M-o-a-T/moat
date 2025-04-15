@@ -419,6 +419,7 @@ async def get(obj, typ, path, cmd):
 
         def cmd(x):
             return tt.get(x, x)
+
     else:
 
         def cmd(x):

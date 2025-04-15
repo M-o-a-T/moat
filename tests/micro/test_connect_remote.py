@@ -91,7 +91,7 @@ async def test_net_r(tmp_path, server_first, link_in, remote_first):
             await d.cmd("r.!rdy_")
 
         async def chk(*p):
-            res = await d.cmd(Path.build(p)/"a"/"echo", m="hello")
+            res = await d.cmd(Path.build(p) / "a" / "echo", m="hello")
             assert res.kw == dict(r="hello")
 
         # if link_in is False, the server supports random connections,

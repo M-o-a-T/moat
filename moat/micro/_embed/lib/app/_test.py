@@ -26,20 +26,22 @@ class Cmd(BaseCmd):
     err: Exception = None
     err_evt: Event = None
 
-    doc_echo=dict(_d="Echo. Returns 'm'", m="any", _r=dict(r="any:m"))
+    doc_echo = dict(_d="Echo. Returns 'm'", m="any", _r=dict(r="any:m"))
+
     async def cmd_echo(self, m: Any):
         "Basic echo method, returns @m as ``result['r']``"
         return {"r": m}
 
-    doc_it=dict(_d="Iterator. Sends 0…lim-1.", lim="int:limit", _o="int",delay="float:timer")
-    async def stream_it(self, msg:Msg):
+    doc_it = dict(_d="Iterator. Sends 0…lim-1.", lim="int:limit", _o="int", delay="float:timer")
+
+    async def stream_it(self, msg: Msg):
         "Streams numbers."
         log("START")
-        lim=msg.get("lim",-1)
+        lim = msg.get("lim", -1)
         i = 0
-        d=int(msg.get("delay",.1)*1000)
+        d = int(msg.get("delay", 0.1) * 1000)
         async with msg.stream_out() as s:
-            log("OUT %d %d",i,lim)
+            log("OUT %d %d", i, lim)
             while i != lim:
                 await sleep_ms(d)
                 await s.send(i)
@@ -47,24 +49,28 @@ class Cmd(BaseCmd):
             log("ENDL")
         log("END")
 
-    doc_nit=dict(_d="Call counter.", lim="int:limit",delay="float:timer")
-    async def cmd_nit(self, delay:float=0):
+    doc_nit = dict(_d="Call counter.", lim="int:limit", delay="float:timer")
+
+    async def cmd_nit(self, delay: float = 0):
         "A non-iterator counter; simply counts calls to it."
         self.n += 1
-        d=int(delay*1000)
+        d = int(delay * 1000)
         await sleep_ms(d)
         return self.n
 
-    doc_clr=dict(_d="Clear the counter.", n="int:new value, default zero")
+    doc_clr = dict(_d="Clear the counter.", n="int:new value, default zero")
+
     async def cmd_clr(self, n: int = 0):
         self.n = n
 
-    doc_print=dict(_d="print string", _0="str:output", e="bool:use stderr")
+    doc_print = dict(_d="print string", _0="str:output", e="bool:use stderr")
+
     async def cmd_print(self, d: str, e: bool = False):
         "print to stdout/stderr"
         print(d, file=sys.stderr if e else sys.stdout)
 
-    doc_error=dict(_d="raise exc", e="exc:raised")
+    doc_error = dict(_d="raise exc", e="exc:raised")
+
     async def cmd_error(self, e: Exception = RuntimeError):
         "return an exception"
         if isinstance(e, Exception):
@@ -72,7 +78,8 @@ class Cmd(BaseCmd):
         else:
             raise e("UserCrash")
 
-    doc_crash=dict(_d="cause a crash", e="exc:raised")
+    doc_crash = dict(_d="cause a crash", e="exc:raised")
+
     async def cmd_crash(self, e: Exception = RuntimeError, a=("UserCrash",)):
         "raise an exception"
         if isinstance(e, Exception):
@@ -113,7 +120,8 @@ class Cons(BaseCmd):
         if self.cfg.get("prefix", None) is None:
             self.q = Queue(self.cfg.get("lines", 10))
 
-    doc_rd=dict(_d="read console data")
+    doc_rd = dict(_d="read console data")
+
     def cmd_rd(self) -> Awaitable:
         return self.q.get()
 
@@ -147,4 +155,3 @@ class Cons(BaseCmd):
                         str(memoryview(buf)[: d - (buf[d - 1] == 10)], "utf-8"),
                     )
                 d = 0
-

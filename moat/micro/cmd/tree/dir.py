@@ -83,9 +83,9 @@ class CfgStore:
 
         async def _get(p):
             d = await self.sd.r(p)
-            if isinstance(d,dict):
+            if isinstance(d, dict):
                 return d
-            if len(d)==2:
+            if len(d) == 2:
                 d, s = d
                 if isinstance(d, dict):
                     d = attrdict(d)
@@ -114,7 +114,7 @@ class CfgStore:
 
         async def _set(p, c):
             # current client cfg
-            print("SET",p,c,file=sys.stderr)
+            print("SET", p, c, file=sys.stderr)
             try:
                 ocd = await self.sd.r(p)
                 if isinstance(ocd, (list, tuple)):

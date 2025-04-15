@@ -58,6 +58,7 @@ def Fwd(*a, **k):
 
             from moat.lib.cmd._test import StreamLoop
             from moat.lib.cmd.base import MsgSender
+
             a = StreamLoop(self.root, log + ">")
             b = StreamLoop(None, log + "<")
             a.attach_remote(b)

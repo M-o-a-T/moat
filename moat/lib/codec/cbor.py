@@ -6,7 +6,7 @@ from __future__ import annotations
 import struct
 
 import ruyaml as yaml
-from ._cbor import Codec, StdCBOR, Tag, XTag  # noqa:F401
+from ._cbor import Codec, Tag  # noqa:F401
 from moat.util.compat import const
 
 SafeRepresenter = yaml.representer.SafeRepresenter  # pyright:ignore
@@ -17,6 +17,11 @@ CBOR_TAG_CBOR_LEADER = const(55800)  # header for multiple CBOR items
 
 def _tag_repr(dumper, data):
     return dumper.represent_list([XTag(data.tag), data.value])
+
+
+class XTag:
+    def __init__(self, tag):
+        self.tag = tag
 
 
 def _xtag_repr(dumper, data):

@@ -35,24 +35,28 @@ class Batt(BaseBattery):
         "random number between 0 and @r"
         return self._rand.random() * r
 
-    doc_u=dict(_d="read u", _r="float:voltage")
+    doc_u = dict(_d="read u", _r="float:voltage")
+
     async def cmd_u(self):
         "return synthetic voltage, multiplied by u_d"
         return self.u_d * await super().cmd_u()
 
-    doc_u_d=dict(_d="write u delta", ud="float:voltage delta")
+    doc_u_d = dict(_d="write u delta", ud="float:voltage delta")
+
     async def cmd_u_d(self, *, ud: float):
         "change delta of battery vs. sum-of-cells voltage"
         self.u_d = ud
 
-    doc_c=dict(_d="read charge state", _r="float")
+    doc_c = dict(_d="read charge state", _r="float")
+
     async def cmd_c(self):
         r = 0
         for c in self.apps:
             r += await c.cmd_c()
         return r / self.n
 
-    doc_i=dict(_d="read current", _r="float")
+    doc_i = dict(_d="read current", _r="float")
+
     async def cmd_i(self, i: float | None = None):
         if i is not None:
             self.i = i

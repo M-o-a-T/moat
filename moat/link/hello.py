@@ -72,12 +72,11 @@ class Hello(CmdCommon, MsgHandler):
     hello_a: tuple[Any] = field(init=False, default=())
     hello_kw: dict[str, Any] = field(init=False, default={})
 
-
-    def __init__(self,*a,**kw):
+    def __init__(self, *a, **kw):
         super().__init__()
-        self.__attrs_init__(*a,**kw)
+        self.__attrs_init__(*a, **kw)
 
-    async def handle(self, msg:Msg, rpath:list[str]) -> bool | None:
+    async def handle(self, msg: Msg, rpath: list[str]) -> bool | None:
         """
         Dispatch an incoming "hello" message
         """
@@ -107,7 +106,7 @@ class Hello(CmdCommon, MsgHandler):
         self.auth_data = data
         return True
 
-    doc_i_hello=dict(
+    doc_i_hello = dict(
         _d="Process remote Hello msg",
         _r="auth state",
         _0="int:protocol",
@@ -116,6 +115,7 @@ class Hello(CmdCommon, MsgHandler):
         _3="bool:server flag",
         _4=["str:auth method"],
     )
+
     async def cmd_i_hello(self, msg) -> bool | None:
         """
         Process the remote hello message.
@@ -135,7 +135,7 @@ class Hello(CmdCommon, MsgHandler):
             self._done.set()
 
     async def _cmd_i_hello(self, msg) -> bool | None:
-        logger.info("H IN %r %r", msg.args,msg.kw)
+        logger.info("H IN %r %r", msg.args, msg.kw)
         it = iter(msg.args)
         auth = True
 
@@ -208,7 +208,7 @@ class Hello(CmdCommon, MsgHandler):
         # Nothing matched.
         return False
 
-    async def run(self, sender:MsgSender, **kw):
+    async def run(self, sender: MsgSender, **kw):
         """
         Send our Hello message.
         """
@@ -226,7 +226,7 @@ class Hello(CmdCommon, MsgHandler):
         elif len(auths) == 1:
             auths = auths[0]
 
-        logger.info("H OUT %d %s %s %r %r", protocol_version,self.me,self.them,auths, kw)
+        logger.info("H OUT %d %s %s %r %r", protocol_version, self.me, self.them, auths, kw)
         self._sync.set()
         (res,) = await sender.cmd(
             P("i.hello"),

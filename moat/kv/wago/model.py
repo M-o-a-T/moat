@@ -1,6 +1,7 @@
 """
 MoaT-KV client data model for Wago
 """
+
 from __future__ import annotations
 
 import anyio

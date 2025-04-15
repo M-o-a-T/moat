@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 class MsgStream(HandlerStream):
     "Stream handler subclass for `BaseCmdMsg`."
 
-    def __init__(self, handler:MsgSender, stream:BaseCmdMsg):
+    def __init__(self, handler: MsgSender, stream: BaseCmdMsg):
         self.__stream = stream
         super().__init__(handler)
 
@@ -104,7 +104,7 @@ class BaseCmdMsg(BaseCmd):
         """
         Forward a request to some remote side.
         """
-        if (len(rcmd) == 1 or len(rcmd) == 2 and rcmd[1] == "doc_") and rcmd[0] in {"crd","cwr"}:
+        if (len(rcmd) == 1 or len(rcmd) == 2 and rcmd[1] == "doc_") and rcmd[0] in {"crd", "cwr"}:
             pass
         elif rcmd and isinstance(rcmd[-1], str) and rcmd[-1][0] == "!":
             rcmd[-1] = rcmd[-1][1:]
@@ -114,7 +114,8 @@ class BaseCmdMsg(BaseCmd):
             return await self.__stream.handle(msg, rcmd)
         return await super().handle(msg, rcmd)
 
-    doc_crd=dict(_d="read console", _0="int:len (64)")
+    doc_crd = dict(_d="read console", _0="int:len (64)")
+
     async def cmd_crd(self, n=64) -> bytes:
         """read some console data"""
         b = bytearray(n)
@@ -129,7 +130,8 @@ class BaseCmdMsg(BaseCmd):
             b = memoryview(b)
             return b[:r]
 
-    doc_cwr=dict(_d="write console", _0="bytes:data")
+    doc_cwr = dict(_d="write console", _0="bytes:data")
+
     async def cmd_cwr(self, b):
         """write some console data"""
         async with self.w_lock:

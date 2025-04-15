@@ -24,8 +24,10 @@ from .conn import TCPConn
 from .auth import AnonAuth, TokenAuth
 from .hello import Hello
 
+
 class _Requeue(Exception):
     pass
+
 
 from typing import TYPE_CHECKING
 
@@ -37,7 +39,7 @@ if TYPE_CHECKING:
 
     from collections.abc import Awaitable
 
-__all__ = ["Link","LinkCommon","BasicLink"]
+__all__ = ["Link", "LinkCommon", "BasicLink"]
 
 
 class TS(anyio.abc.TaskStatus):
@@ -148,8 +150,8 @@ class ClientCaller(Caller):
     async def _call(self):
         "helper for __await__ that calls the remote handler"
         link = await self.handler._link.get_link()
-        cmd,a,kw = self.data
-        return await link.root._handler.cmd(cmd,*a,**kw)
+        cmd, a, kw = self.data
+        return await link.root._handler.cmd(cmd, *a, **kw)
 
 
 class _Sender(MsgSender):
@@ -166,7 +168,6 @@ class _Sender(MsgSender):
         srv = await self._link.get_link()
         await srv.handle(msg, rcmd)
 
-
     def monitor(self, *a, **kw):
         "watch this path; see backend doc"
         return self._link.backend.monitor(*a, **kw)
@@ -177,10 +178,10 @@ class _Sender(MsgSender):
 
     async def sync(self):
         "sync with our server"
-        st, = await self.cmd(P("i.stamp"))
+        (st,) = await self.cmd(P("i.stamp"))
         await self.send(P(":R.run.service.main.stamp"), st)
-        await self.cmd(P("i.sync"),st)
-    
+        await self.cmd(P("i.sync"), st)
+
 
 class Link(LinkCommon):
     """
@@ -190,10 +191,10 @@ class Link(LinkCommon):
     _server: ValueEvent = None
     _uptodate: bool = False
     _hello: Hello = None
-    current_server:MsgSender = None
-    _server_up:anyio.Event
-    _last_link:Msg|None=None
-    _last_link_seen:anyio.Event
+    current_server: MsgSender = None
+    _server_up: anyio.Event
+    _last_link: Msg | None = None
+    _last_link_seen: anyio.Event
 
     def __init__(self, cfg, name: str | None = None):
         super().__init__(cfg, name=name)
@@ -333,7 +334,6 @@ class Link(LinkCommon):
         finally:
             self._retry_msgs.discard(cmd_)
 
-
     async def _connect_server(
         self,
         srv: Message[Data[S.run.service.main]],
@@ -350,8 +350,7 @@ class Link(LinkCommon):
         for remote in link:
             try:
                 async with timed_ctx(
-                    self.cfg.client.init_timeout,
-                    self._connect_one(remote, srv.data)
+                    self.cfg.client.init_timeout, self._connect_one(remote, srv.data)
                 ) as rem:
                     await self._connect_run(rem, task_status=task_status)
             except Exception as exc:
@@ -387,5 +386,5 @@ class BasicLink(LinkCommon):
                 if err is None:
                     err = exc
         else:
-            raise ValueError(f"No links in {self.data !r}")
+            raise ValueError(f"No links in {self.data!r}")
         raise err

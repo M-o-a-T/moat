@@ -155,7 +155,8 @@ def LoopLink(*a, **k):
 
         # Messages
 
-        doc_s=dict(_d="q write", _0="any:msg")
+        doc_s = dict(_d="q write", _0="any:msg")
+
         def cmd_s(self, m) -> Awaitable[None]:
             "write to the message queue"
             if self.q_wm:
@@ -163,12 +164,14 @@ def LoopLink(*a, **k):
             else:
                 return self.remote.xs(m=m)
 
-        doc_xs=dict(_d="q write remote", _0="any:msg")
+        doc_xs = dict(_d="q write remote", _0="any:msg")
+
         def cmd_xs(self, m) -> Awaitable[None]:
             "remotely write the message read queue"
             return self.q_rmw.send(m)
 
-        doc_r=dict(_d="q read", _r="any:msg")
+        doc_r = dict(_d="q read", _r="any:msg")
+
         def cmd_r(self) -> Awaitable[Any]:
             "read the message queue"
             if self.q_rm:
@@ -176,14 +179,16 @@ def LoopLink(*a, **k):
             else:
                 return self.remote.xr()
 
-        doc_xr=dict(_d="q read remote", _r="any:msg")
+        doc_xr = dict(_d="q read remote", _r="any:msg")
+
         def cmd_xr(self) -> Awaitable[Any]:
             "remotely read the message write queue"
             return self.q_wmr.receive()
 
         # Blocks
 
-        doc_sb=dict(_d="b write ", _r="bytes:msg")
+        doc_sb = dict(_d="b write ", _r="bytes:msg")
+
         def cmd_sb(self, m) -> Awaitable[None]:
             "write to the block queue"
             if self.q_wb:
@@ -191,12 +196,14 @@ def LoopLink(*a, **k):
             else:
                 return self.remote.xsb(m=m)
 
-        doc_xsb=dict(_d="b write remote", _r="bytes:msg")
+        doc_xsb = dict(_d="b write remote", _r="bytes:msg")
+
         def cmd_xsb(self, m) -> Awaitable[None]:
             "remotely write the block read queue"
             return self.q_rbw.send(m)
 
-        doc_rb=dict(_d="b read ", _0="bytes:msg")
+        doc_rb = dict(_d="b read ", _0="bytes:msg")
+
         def cmd_rb(self) -> Awaitable[bytes]:
             "read the byte queue"
             if self.q_rb:
@@ -204,14 +211,16 @@ def LoopLink(*a, **k):
             else:
                 return self.remote.xrb()
 
-        doc_xrb=dict(_d="b read remote", _0="bytes:msg")
+        doc_xrb = dict(_d="b read remote", _0="bytes:msg")
+
         def cmd_xrb(self) -> Awaitable[bytes]:
             "remotely read the block write queue"
             return self.q_wbr.receive()
 
         # Bytes
 
-        doc_wr=dict(_d="s write", _0="bytes:stream")
+        doc_wr = dict(_d="s write", _0="bytes:stream")
+
         async def cmd_wr(self, b) -> None:
             "write to the byte queue"
             if self.q_wse is not None:
@@ -221,14 +230,16 @@ def LoopLink(*a, **k):
             else:
                 return await self.remote.xwr(b)
 
-        doc_xwr=dict(_d="s write remote", _0="bytes:stream")
+        doc_xwr = dict(_d="s write remote", _0="bytes:stream")
+
         async def cmd_xwr(self, b) -> None:
             "remotely write the byte read queue"
             self.q_rs.extend(b)
             self.q_rse.set()
             self.q_rse = anyio.Event()
 
-        doc_rd=dict(_d="s read", _r="bytes:stream", _0="int:len(64)")
+        doc_rd = dict(_d="s read", _r="bytes:stream", _0="int:len(64)")
+
         async def cmd_rd(self, n=64) -> bytes:
             "read the byte queue"
             if self.q_rse is None:
@@ -240,7 +251,8 @@ def LoopLink(*a, **k):
             self.q_rs[:n] = b""
             return res
 
-        doc_xrd=dict(_d="s read remote", _r="bytes:stream", _0="int:len(64)")
+        doc_xrd = dict(_d="s read remote", _r="bytes:stream", _0="int:len(64)")
+
         async def cmd_xrd(self, n=64) -> bytes:
             "remotely read the byte write queue"
             while not self.q_ws:
@@ -252,7 +264,8 @@ def LoopLink(*a, **k):
 
         # Console
 
-        doc_cwr=dict(_d="s write cons", _0="bytes:stream")
+        doc_cwr = dict(_d="s write cons", _0="bytes:stream")
+
         async def cmd_cwr(self, b) -> None:
             "write to the console queue"
             if self.q_wce is not None:
@@ -262,14 +275,16 @@ def LoopLink(*a, **k):
             else:
                 return await self.remote.xcwr(b)
 
-        doc_xcwr=dict(_d="s write remote cons", _0="bytes:stream")
+        doc_xcwr = dict(_d="s write remote cons", _0="bytes:stream")
+
         async def cmd_xcwr(self, b) -> None:
             "remotely write the console read queue"
             self.q_rc.extend(b)
             self.q_rce.set()
             self.q_rce = anyio.Event()
 
-        doc_crd=dict(_d="s read cons", _r="bytes:stream", _0="int:len(64)")
+        doc_crd = dict(_d="s read cons", _r="bytes:stream", _0="int:len(64)")
+
         async def cmd_crd(self, n=64) -> bytes:
             "read the console queue"
             if self.q_rce is None:
@@ -281,7 +296,8 @@ def LoopLink(*a, **k):
             self.q_rc[:n] = b""
             return res
 
-        doc_xcrd=dict(_d="s read remote cons", _r="bytes:stream", _0="int:len(64)")
+        doc_xcrd = dict(_d="s read remote cons", _r="bytes:stream", _0="int:len(64)")
+
         async def cmd_xcrd(self, n=64) -> bytes:
             "remotely read the console write queue"
             while not self.q_wc:

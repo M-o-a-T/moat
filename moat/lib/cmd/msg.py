@@ -25,13 +25,17 @@ try:
     import logging
 except ImportError:
     from moat.util.compat import print_exc
-    def log_exc(e,s,*a):
-        log(s+": %r", *a, e)
+
+    def log_exc(e, s, *a):
+        log(s + ": %r", *a, e)
         print_exc(e)
+
 else:
     logger = logging.getLogger(__name__)
-    def log_exc(e,s,*a):
+
+    def log_exc(e, s, *a):
         logger.error(s, *a, exc_info=e)
+
 
 class MsgResult:
     """
@@ -49,14 +53,14 @@ class MsgResult:
         self._kw = kw
 
     @property
-    def args(self) -> list|tuple:
+    def args(self) -> list | tuple:
         "Retrieve the argument list."
         return self._a
 
     @property
     def args_l(self) -> list:
         "Retrieve the argument list as a list."
-        if isinstance(self._a,tuple):
+        if isinstance(self._a, tuple):
             self._a = list(self._a)
         return self._a
 
@@ -76,7 +80,7 @@ class MsgResult:
         Get an item. If the key is numeric, retrieve from the argument
         list, else from the keywords.
         """
-        if isinstance(k, (int,slice)):
+        if isinstance(k, (int, slice)):
             return self._a[k]
         return self._kw[k]
 
@@ -141,7 +145,7 @@ class Msg(MsgLink, MsgResult):
     _recv_skip: bool = False
 
     _flo_evt: Event | None = None
-    warnings:list
+    warnings: list
 
     def __init__(self):
         """
@@ -215,7 +219,6 @@ class Msg(MsgLink, MsgResult):
                 self._msg_in.set()
             await super().kill()
 
-
     async def ml_send(self, a: list, kw: dict, flags: int) -> None:
         """
         Sender of data to the other side.
@@ -240,7 +243,7 @@ class Msg(MsgLink, MsgResult):
 
         if self._stream_in == S_END:
             # This is a late-delivered incoming-stream-terminating error.
-            if not flags&B_ERROR or len(a)!=1 or a[0] != E_CANCEL:
+            if not flags & B_ERROR or len(a) != 1 or a[0] != E_CANCEL:
                 # Don't log if cancelled
                 log("LATE? L%d %r %r %d", self.link_id, a, kw, flags)
 
@@ -415,7 +418,7 @@ class Msg(MsgLink, MsgResult):
             if self._remote is None:
                 raise
             if not isinstance(exc, ExpectedError):
-                log_exc(exc,"Command Error %r", self)
+                log_exc(exc, "Command Error %r", self)
             await self.ml_send_error(exc)
         except BaseException as exc:
             if self._remote is None:
@@ -424,9 +427,9 @@ class Msg(MsgLink, MsgResult):
             await self.ml_send_error(exc)
             raise
         else:
-            if isinstance(res,Msg):
-                await self.result(*res.args,**res.kw)
-            elif isinstance(res,dict):
+            if isinstance(res, Msg):
+                await self.result(*res.args, **res.kw)
+            elif isinstance(res, dict):
                 await self.result(**res)
             else:
                 await self.result(res)
@@ -453,15 +456,14 @@ class Msg(MsgLink, MsgResult):
             await cmd(self)
         except Exception as exc:
             if not isinstance(exc, ExpectedError):
-                log_exc(exc,"Stream Error %r", self)
+                log_exc(exc, "Stream Error %r", self)
             await self.ml_send_error(exc)
         except BaseException as exc:
             await self.ml_send_error(exc)
             raise
 
     def _stream(self, a: list, kw: dict, flag: int, initial: bool = False):
-        return _Stream(self, a,kw,flag,initial=initial)
-
+        return _Stream(self, a, kw, flag, initial=initial)
 
     async def result(self, *a, **kw) -> None:
         """
@@ -497,7 +499,7 @@ class Msg(MsgLink, MsgResult):
         self._a, self._kw = msg.unwrap()
 
     def __aiter__(self) -> Self:
-        if not self._dir&SD_IN:
+        if not self._dir & SD_IN:
             raise RuntimeError("This stream is write only")
         return self
 
@@ -554,6 +556,7 @@ class Msg(MsgLink, MsgResult):
     def __repr__(self):
         return f"<{self.__class__.__name__}:L{self.link_id} r{'=L' + str(self._remote.link_id) if self._remote else '-'}: {' ' + str(self._cmd) if self._cmd else ''} {self._a} {self._kw}>"
 
+
 class _Stream:
     def __init__(self, slf, a: list, kw: dict, flag: int, initial: bool = False):
         self.slf = slf
@@ -563,7 +566,7 @@ class _Stream:
         self.initial = initial
 
     async def __aenter__(self):
-        slf=self.slf
+        slf = self.slf
         if slf._stream_out != S_NEW:
             raise RuntimeError(
                 "Simple command" if slf._stream_out == S_END else "Stream-out already set",
@@ -587,7 +590,7 @@ class _Stream:
         # This code is running inside the handler, which will process the error
         # case. Thus we don't need error handling here.
 
-        slf=self.slf
+        slf = self.slf
         if slf._stream_out != S_END:
             await slf.ml_send([None], {}, 0)
 
@@ -595,16 +598,18 @@ class _Stream:
         if slf._stream_in != S_END:
             raise RuntimeError("Stream not ended")
 
-    async def __aexit__(self, c,e,t):
+    async def __aexit__(self, c, e, t):
         try:
             await self._close()
         finally:
             if e is not None:
                 raise e
 
+
 class _EnsureRemote:
     def __init__(self, slf):
         self.slf = slf
+
     async def __aenter__(self):
         slf = self.slf
         if (m := slf._remote) is None:

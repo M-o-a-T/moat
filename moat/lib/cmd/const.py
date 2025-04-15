@@ -8,7 +8,7 @@ B_ERROR = const(2)
 B_INITIAL = const(4)  # pseudo flag
 B_SENDER = const(8)  # pseudo flag
 
-B_FLAGSTR=" SEW"
+B_FLAGSTR = " SEW"
 
 # errors
 

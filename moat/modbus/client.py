@@ -338,7 +338,7 @@ class Host(CtxObj, _HostCommon):
                 replies = []
 
                 while True:
-                    used,pdu = self.framer.processIncomingFrame(data)
+                    used, pdu = self.framer.processIncomingFrame(data)
                     data = data[used:]
                     if pdu is None:
                         break
@@ -516,7 +516,7 @@ class SerialHost(CtxObj, _HostCommon):
 
                 # check for decoding errors
                 while True:
-                    used,pdu = self.framer.processIncomingFrame(data)
+                    used, pdu = self.framer.processIncomingFrame(data)
                     data = data[used:]
                     if pdu is None:
                         break
@@ -962,7 +962,7 @@ class ValueList(DataBlock):
             max_wr_len=slot.unit.host.max_wr_len,
         )
         self.slot = slot
-        assert hasattr(kind,"encoder_m")
+        assert hasattr(kind, "encoder_m")
         self.kind = kind
         self.do_write = anyio.Event()
 

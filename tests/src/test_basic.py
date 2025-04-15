@@ -1,6 +1,7 @@
 """
 Empty test file
 """
+
 from __future__ import annotations
 
 from moat.src.test import raises

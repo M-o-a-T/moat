@@ -94,7 +94,7 @@ class BaseLayerCmd(BaseSuperCmd):
         """
         Forward to the sub-app unless specifically directed not to.
         """
-        if rcmd and isinstance(rcmd[-1],str) and rcmd[-1][0] == '!':
+        if rcmd and isinstance(rcmd[-1], str) and rcmd[-1][0] == "!":
             rcmd[-1] = rcmd[-1][1:]
             return await super().handle(msg, rcmd)
 

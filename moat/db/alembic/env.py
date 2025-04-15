@@ -1,6 +1,7 @@
 """
 Alembic environment setup script, lightly edited
 """
+
 from __future__ import annotations
 
 from alembic import context

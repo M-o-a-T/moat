@@ -40,7 +40,9 @@ class Forwarder:
             try:
                 unit = self.server.units[unit_id]
             except KeyError:
-                response = ExceptionResponse(request.function_code, ExceptionResponse.SLAVE_FAILURE)
+                response = ExceptionResponse(
+                    request.function_code, ExceptionResponse.SLAVE_FAILURE
+                )
             else:
                 response = await unit.process_request(request)
 
@@ -74,7 +76,7 @@ class Forwarder:
                     msgs = []
 
                     while True:
-                        used,pdu = self.framer.processIncomingFrame(data)
+                        used, pdu = self.framer.processIncomingFrame(data)
                         data = data[used:]
                         if pdu is None:
                             break

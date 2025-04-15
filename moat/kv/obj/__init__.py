@@ -2,6 +2,7 @@
 Object interface to moat.kv data
 
 """
+
 from __future__ import annotations
 
 import heapq

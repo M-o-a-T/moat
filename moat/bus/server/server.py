@@ -1,6 +1,7 @@
 """
 This module implements the basics for a bus server.
 """
+
 from __future__ import annotations
 
 import trio

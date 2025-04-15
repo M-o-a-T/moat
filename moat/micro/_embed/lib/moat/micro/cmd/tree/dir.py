@@ -144,14 +144,15 @@ class BaseSubCmd(BaseSuperCmd):
             raise ShortCommandError
 
         cmd = rcmd[-1]
-        if isinstance(cmd,str) and cmd[0] == "!":
+        if isinstance(cmd, str) and cmd[0] == "!":
             rcmd[-1] = cmd[1:]
-        elif not prefix and (sub := self.sub.get(cmd,None)) is not None:
+        elif not prefix and (sub := self.sub.get(cmd, None)) is not None:
             rcmd.pop()
             return await sub.handle(msg, rcmd)
         return await super().handle(msg, rcmd, *prefix)
 
-    doc_dir_=dict(_c=BaseSuperCmd.cmd_dir_, d=["str:subdirs"], v="bool:show hidden")
+    doc_dir_ = dict(_c=BaseSuperCmd.cmd_dir_, d=["str:subdirs"], v="bool:show hidden")
+
     async def cmd_dir_(self, v=True):
         "dir: add subdirs"
         res = await super().cmd_dir_(v=v)
@@ -281,4 +282,3 @@ class Dispatch(DirCmd):
     def sub_at(self):
         "root subcommand resolver"
         return self._sender.sub_at
-

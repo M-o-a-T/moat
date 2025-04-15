@@ -18,8 +18,11 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 class AioStream(HandlerStream):
-    def __init__(self, cmd:MsgSender, stream, debug:bool=False, codec:str|Codec|None=None):
+    def __init__(
+        self, cmd: MsgSender, stream, debug: bool = False, codec: str | Codec | None = None
+    ):
         self.__s = stream
         self.__debug = debug
 
@@ -36,9 +39,8 @@ class AioStream(HandlerStream):
         self.__codec = codec
         super().__init__(cmd)
 
-
     async def read_stream(self):
-        conn=self.__s
+        conn = self.__s
         codec = self.__codec
         rd_ = conn.read if hasattr(conn, "read") else conn.receive
 
@@ -55,7 +57,7 @@ class AioStream(HandlerStream):
                 await self.msg_in(msg)
 
     async def write_stream(self):
-        conn=self.__s
+        conn = self.__s
         codec = self.__codec
         wr = conn.write if hasattr(conn, "write") else conn.send
         while True:
@@ -74,7 +76,11 @@ class AioStream(HandlerStream):
 
 @asynccontextmanager
 async def run(
-    cmd: BaseMsgHandler, stream: anyio.abc.ByteStream, *, codec: Codec | None = None, debug: str = None
+    cmd: BaseMsgHandler,
+    stream: anyio.abc.ByteStream,
+    *,
+    codec: Codec | None = None,
+    debug: str = None,
 ) -> MsgHandler:
     """
     Run a command handler on top of an anyio stream, using the given codec.
@@ -89,5 +95,5 @@ async def run(
     try:
         async with ungroup, stream, AioStream(cmd, stream) as hs:
             yield hs
-    except (anyio.EndOfStream,anyio.BrokenResourceError,anyio.ClosedResourceError):
+    except (anyio.EndOfStream, anyio.BrokenResourceError, anyio.ClosedResourceError):
         pass

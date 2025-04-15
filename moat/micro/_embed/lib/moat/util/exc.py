@@ -4,20 +4,29 @@ Exception handling helpers
 
 from __future__ import annotations
 
-__all__ = ["exc_iter", "ungroup", "ExpectedError", "ExpKeyError", "ExpAttrError",
-           ]
-
+__all__ = [
+    "exc_iter",
+    "ungroup",
+    "ExpectedError",
+    "ExpKeyError",
+    "ExpAttrError",
+]
 
 
 class ExpKeyError(KeyError):
     "unreported key error"
+
     pass
+
 
 class ExpAttrError(AttributeError):
     "unreported key error"
+
     pass
 
-ExpectedError = (ExpKeyError,ExpAttrError)
+
+ExpectedError = (ExpKeyError, ExpAttrError)
+
 
 def exc_iter(exc):
     """

@@ -3,6 +3,7 @@
 """
 Modbus server classes for serial(RTU) and TCP.
 """
+
 from __future__ import annotations
 
 import logging
@@ -14,6 +15,7 @@ import time
 import anyio
 from anyio.abc import SocketAttribute
 from moat.util import CtxObj
+
 try:
     from pymodbus.datastore import ModbusServerContext, ModbusDeviceContext
 except ImportError:
@@ -76,7 +78,7 @@ class UnitContext(ModbusDeviceContext):
         Returns the field in question, or none if it doesn't exist.
         """
         k = self.store[typ.key]
-        return k.delete(offset+1)
+        return k.delete(offset + 1)
 
 
 class BaseModbusServer(CtxObj):
@@ -194,7 +196,7 @@ class SerialModbusServer(BaseModbusServer):
                 t = t2
                 msgs = []
                 while True:
-                    used,pdu = self.framer.processIncomingFrame(data)
+                    used, pdu = self.framer.processIncomingFrame(data)
                     data = data[used:]
                     if pdu is None:
                         break
@@ -223,10 +225,12 @@ class SerialModbusServer(BaseModbusServer):
             _logger.error(txt)
             if self.ignore_missing_slaves:
                 return  # the client will simply timeout waiting for a response
-            response = ExceptionResponse(request.function_code,ExceptionResponse.GATEWAY_NO_RESPONSE)
+            response = ExceptionResponse(
+                request.function_code, ExceptionResponse.GATEWAY_NO_RESPONSE
+            )
         except Exception:  # pylint: disable=broad-except
             _logger.exception("Unable to fulfill request")
-            response = ExceptionResponse(request.function_code,ExceptionResponse.SLAVE_FAILURE)
+            response = ExceptionResponse(request.function_code, ExceptionResponse.SLAVE_FAILURE)
         # no response when broadcasting
         response.unit_id = unit
         response.transaction_id = tid
@@ -377,7 +381,7 @@ class ModbusServer(BaseModbusServer):
 
                 reqs = []
                 while True:
-                    used,pdu = framer.processIncomingFrame(data)
+                    used, pdu = framer.processIncomingFrame(data)
                     data = data[used:]
                     if pdu is None:
                         break
@@ -390,10 +394,14 @@ class ModbusServer(BaseModbusServer):
                         response = await self.process_request(request)
                     except NoSuchSlaveException:
                         _logger.debug("requested slave does not exist: %d", request.dev_id)
-                        response = ExceptionResponse(request.function_code, ExceptionResponse.GATEWAY_NO_RESPONSE)
+                        response = ExceptionResponse(
+                            request.function_code, ExceptionResponse.GATEWAY_NO_RESPONSE
+                        )
                     except Exception as exc:  # pylint: disable=broad-except
                         _logger.warning("Datastore unable to fulfill request", exc_info=exc)
-                        response = ExceptionResponse(request.function_code, ExceptionResponse.SLAVE_FAILURE)
+                        response = ExceptionResponse(
+                            request.function_code, ExceptionResponse.SLAVE_FAILURE
+                        )
                     response.transaction_id = tid
                     response.dev_id = unit
                     # self.server.control.Counter.BusMessage += 1

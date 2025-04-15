@@ -106,9 +106,7 @@ async def test_error_scaffold():
         with pytest.raises(RuntimeError) as err:
             res = await b.cmd("Err")
             raise ValueError("No error", res.args, res.kw)
-        assert err.value.args == (
-            "Duh",
-        ), err.value
+        assert err.value.args == ("Duh",), err.value
 
 
 @pytest.mark.anyio()

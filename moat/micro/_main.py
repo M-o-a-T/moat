@@ -335,8 +335,8 @@ async def cmd(obj, path, **attrs):
         except RemoteError as err:
             yprint(dict(e=str(err.args[0])), stream=obj.stdout)
         else:
-            if isinstance(res,Msg):
-                res=[msg.args,msg.kw]
+            if isinstance(res, Msg):
+                res = [msg.args, msg.kw]
             yprint(res, stream=obj.stdout)
 
 

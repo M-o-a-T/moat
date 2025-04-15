@@ -13,7 +13,9 @@ from moat.util.cbor import CBOR_TAG_MOAT_FILE_ID, CBOR_TAG_MOAT_FILE_END
 from moat.link.client import BasicLink
 
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 async def _dump(sf, *, task_status):
     bk = await sf.backend(name="mon")

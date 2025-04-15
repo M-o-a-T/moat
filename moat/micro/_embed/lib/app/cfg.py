@@ -22,7 +22,8 @@ class Cmd(BaseCmd):
         super().__init__(cfg)
         self.repeats = {}
 
-    doc_r=dict(_d="read cfg", _0="Path:subpart")
+    doc_r = dict(_d="read cfg", _0="Path:subpart")
+
     async def stream_r(self, msg):
         """
         Read (part of) the configuration.
@@ -38,17 +39,18 @@ class Cmd(BaseCmd):
 
         Same for a list.
         """
-        p=msg[0]
+        p = msg[0]
         try:
             res = enc_part(get_part(self._parent.cfg, p))
-            if isinstance(res,(list,tuple)):
+            if isinstance(res, (list, tuple)):
                 await msg.result(*res)
             else:
                 await msg.result(res)
         except KeyError as exc:
             raise ExpKeyError(*exc.args)
 
-    doc_w=dict(_d="write cfg", _0="Path:subpart", d="any:Data")
+    doc_w = dict(_d="write cfg", _0="Path:subpart", d="any:Data")
+
     async def cmd_w(self, p=(), d=NotGiven):
         """
         Online configuration mangling.
@@ -96,7 +98,8 @@ class Cmd(BaseCmd):
                     raise
                 cur.append(d)
 
-    doc_x=dict(_d="activate new config")
+    doc_x = dict(_d="activate new config")
+
     async def cmd_x(self):
         """
         Activate the new config.

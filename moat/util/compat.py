@@ -15,7 +15,7 @@ import time as _time
 import traceback as _traceback
 from concurrent.futures import CancelledError
 from contextlib import suppress, AsyncExitStack
-from inspect import currentframe, iscoroutinefunction,iscoroutine
+from inspect import currentframe, iscoroutinefunction, iscoroutine
 from codecs import utf_8_decode
 
 from .queue import Queue as _Queue
@@ -72,16 +72,19 @@ def const(_x):
     "µPython compatibility"
     return _x
 
+
 L = True
 
 Pin_IN = 0
 Pin_OUT = 1
 
-def byte2utf8(buf: bytes|bytearray|memoryview) -> str:
-    res,n = utf_8_decode(buf)
+
+def byte2utf8(buf: bytes | bytearray | memoryview) -> str:
+    res, n = utf_8_decode(buf)
     if n != len(buf):
         raise ValueError("incomplete utf8")
     return res
+
 
 class CancelScope:
     """
@@ -333,6 +336,7 @@ def _doc(_c=None, **kw):
 
 # async context stack
 
+
 def ACM(obj):
     """A bare-bones async context manager / async exit stack.
 
@@ -375,6 +379,7 @@ def ACM(obj):
         cm = s.value
     else:
         raise RuntimeError("AExS ??")
+
     def _ACc(ctx):
         return AC_use(obj, ctx)
 
@@ -412,6 +417,6 @@ async def AC_exit(obj, *exc):
 
 
 def is_async(obj):
-    if hasattr(obj,"__await__"):
+    if hasattr(obj, "__await__"):
         return True
     return False

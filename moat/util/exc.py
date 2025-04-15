@@ -6,24 +6,35 @@ from __future__ import annotations
 from anyio import get_cancelled_exc_class
 from sniffio import AsyncLibraryNotFoundError
 
-__all__ = ["exc_iter", "ungroup", "ExpectedError", "ExpKeyError", "ExpAttrError",
-           ]
+__all__ = [
+    "exc_iter",
+    "ungroup",
+    "ExpectedError",
+    "ExpKeyError",
+    "ExpAttrError",
+]
 
 
 class ExpectedError(Exception):
     """
     An error that shouldn't elicit a traceback
     """
+
     def __init__(self, exc):
         self.exc = exc
 
-class ExpKeyError(KeyError,ExpectedError):
+
+class ExpKeyError(KeyError, ExpectedError):
     "unreported key error"
+
     pass
 
-class ExpAttrError(AttributeError,ExpectedError):
+
+class ExpAttrError(AttributeError, ExpectedError):
     "unreported key error"
+
     pass
+
 
 def exc_iter(exc):
     """
@@ -57,7 +68,7 @@ class ungroup:
         except AsyncLibraryNotFoundError:
             pass
         else:
-            c,e = e.split(Cancel)
+            c, e = e.split(Cancel)
             if not e:
                 e = c
 

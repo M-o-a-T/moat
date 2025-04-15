@@ -20,7 +20,6 @@ class OutOfData(EOFError):
 NotGiven = Ellipsis
 
 
-
 class CancelledError(Exception):
     """
     Not an asyncio-style cancellation
@@ -386,8 +385,8 @@ def merge(d, *others, drop=False, replace=True):
     return d
 
 
-def _add_obj(a,b):
+def _add_obj(a, b):
     """add attributes of B to A if they're missing"""
     for k in dir(b):
-        if not hasattr(a,k):
-            setattr(a,k,getattr(b,k))
+        if not hasattr(a, k):
+            setattr(a, k, getattr(b, k))

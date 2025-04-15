@@ -311,11 +311,11 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
         """Send block data."""
         return self._link.xsb(m=m)
 
-    def rcv(self) -> Awaitable[bytes|bytearray]:
+    def rcv(self) -> Awaitable[bytes | bytearray]:
         return self._link.xrb()
         """Read block data."""
 
-    def wr(self, b:bytes|bytearray) -> Awaitable[None]:
+    def wr(self, b: bytes | bytearray) -> Awaitable[None]:
         """Send bytes."""
         return self._link.xwr(b=b)
 
@@ -326,11 +326,11 @@ class LoopBBM(BaseMsg, BaseBuf, BaseBlk):
         b[:n] = r
         return n
 
-    def cwr(self, b: bytes|bytearray|memoryview) -> Awaitable[int]:
+    def cwr(self, b: bytes | bytearray | memoryview) -> Awaitable[int]:
         """Send bytes."""
         return self._link.xcwr(b=b)
 
-    async def crd(self, b) -> bytes|bytearray:
+    async def crd(self, b) -> bytes | bytearray:
         """Read bytes."""
         r = await self._link.xcrd(n=len(b))
         n = len(r)

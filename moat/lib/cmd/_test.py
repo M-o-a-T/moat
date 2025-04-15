@@ -1,17 +1,20 @@
 """
 Test support
 """
+
 from __future__ import annotations
 
 from moat.util.exc import ungroup
 from moat.util.compat import shield, log
 from moat.lib.cmd.stream import wire2i_f
-from moat.lib.cmd.const import B_STREAM,B_ERROR,B_FLAGSTR
+from moat.lib.cmd.const import B_STREAM, B_ERROR, B_FLAGSTR
+
 try:
     import anyio
 except ImportError:
     import asyncio
-    cancelled_class = lambda:asyncio.CancelledError
+
+    cancelled_class = lambda: asyncio.CancelledError
 else:
     cancelled_class = anyio.get_cancelled_exc_class
 
@@ -40,7 +43,7 @@ class StreamLoop(HandlerStream):
             except EOFError:
                 return
             m = msg[:]
-            i,fl = wire2i_f(m.pop(0))
+            i, fl = wire2i_f(m.pop(0))
             f = B_FLAGSTR[fl]
             if i >= 0:
                 f += "+"
@@ -63,6 +66,5 @@ class StreamLoop(HandlerStream):
                 log("*** WARNING *** %r: not idle; %r", self, vars(self))
             # assert self.is_idle
 
-        if isinstance(ungroup.one(tb[1]),cancelled_class()):
+        if isinstance(ungroup.one(tb[1]), cancelled_class()):
             return True
-

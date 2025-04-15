@@ -26,9 +26,9 @@ class TestDiffieHellman(unittest.TestCase):
         alices_shared_key = self.alice.generate_shared_secret(self.bob.public_key)
         bobs_shared_key = self.bob.generate_shared_secret(self.alice.public_key)
 
-        assert (
-            alices_shared_key == bobs_shared_key
-        ), "There is a mismatch between two shared secrets. Both shared secrets should be the same. This is bad."
+        assert alices_shared_key == bobs_shared_key, (
+            "There is a mismatch between two shared secrets. Both shared secrets should be the same. This is bad."
+        )
 
     def test_decorators_private_key(self):
         self.alice.generate_public_key()

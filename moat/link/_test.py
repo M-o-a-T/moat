@@ -72,9 +72,13 @@ class Scaffold(CtxObj):
     async def _ctx(self):
         Root.set(self.cfg.root)
 
-        with nullcontext(
-            self._tempdir,
-        ) if self._tempdir is not None else TemporaryDirectory() as tempdir:
+        with (
+            nullcontext(
+                self._tempdir,
+            )
+            if self._tempdir is not None
+            else TemporaryDirectory() as tempdir
+        ):
             self.tempdir = FSPath(tempdir)
             async with anyio.create_task_group() as self.tg:
                 bport = await self.tg.start(run_broker, self.cfg)

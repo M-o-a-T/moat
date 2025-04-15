@@ -30,7 +30,8 @@ class Cmd(BaseCmd):
 
         super().__init__(cfg)
 
-    doc_r=dict(_d="read data", p="path", _r="parts")
+    doc_r = dict(_d="read data", p="path", _r="parts")
+
     async def stream_r(self, msg):
         """
         Read (part of) the RTC data area.
@@ -46,19 +47,20 @@ class Cmd(BaseCmd):
 
         Same for a list.
         """
-        p=msg.get("p",())
-        print("*** GET",self.st.data,p,file=sys.stderr)
+        p = msg.get("p", ())
+        print("*** GET", self.st.data, p, file=sys.stderr)
 
         try:
             res = enc_part(get_part(self.st.data, p))
-            if isinstance(res,(list,tuple)):
+            if isinstance(res, (list, tuple)):
                 await msg.result(*res)
             else:
                 await msg.result(res)
         except KeyError as exc:
             raise ExpKeyError(*exc.args)
 
-    doc_w=dict(_d="write data", p="path", d="any:deletes if missing")
+    doc_w = dict(_d="write data", p="path", d="any:deletes if missing")
+
     async def cmd_w(self, p=(), d=_NotGiven):
         """
         Write (part of) the RTC data area.
@@ -79,7 +81,8 @@ class Cmd(BaseCmd):
         else:
             self.st[p] = d
 
-    doc_x=dict(_d="activate data")
+    doc_x = dict(_d="activate data")
+
     async def cmd_x(self):  # noqa:ARG002
         """
         Activate the possibly-mangled config.

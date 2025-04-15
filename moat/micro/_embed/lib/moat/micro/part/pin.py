@@ -125,14 +125,16 @@ class Pin(BaseCmd):
         "iterate the pin's values"
         return self.pin
 
-    doc_r=dict(_d="read", o="bool:old, wait until not this")
+    doc_r = dict(_d="read", o="bool:old, wait until not this")
+
     async def cmd_r(self, o=None):
         "Wait for change if @o (old value) is not None"
         if o is not None and self.pin() == o:
             await self.pin.evt.wait()
         return self.pin.val
 
-    doc_w=dict(_d="write", _0="bool:new value")
+    doc_w = dict(_d="write", _0="bool:new value")
+
     async def cmd_w(self, v):
         "Set pin value"
         self.pin.value(v)

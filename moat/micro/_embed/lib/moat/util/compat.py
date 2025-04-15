@@ -70,9 +70,10 @@ WouldBlock = (QueueFull, QueueEmpty)
 
 
 def byte2utf8(buf):
-    if not hasattr(buf,"decode"):
-        buf=bytes(buf)
+    if not hasattr(buf, "decode"):
+        buf = bytes(buf)
     return buf.decode("utf-8")
+
 
 def print_exc(exc, file=None):
     "forwards to sys.print_exception"
@@ -421,7 +422,8 @@ def _rdq(s):  # async
 def _wrq(s):  # async
     yield core._io_queue.queue_write(s)  # noqa:SLF001
 
+
 def is_async(obj):
-    if iscoroutine(obj) or hasattr(obj,"__iter__"):
+    if iscoroutine(obj) or hasattr(obj, "__iter__"):
         return True
     return False

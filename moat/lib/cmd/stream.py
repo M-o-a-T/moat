@@ -4,12 +4,13 @@ Message streaming.
 
 from __future__ import annotations
 from moat.util import Path, QueueFull, _add_obj
-from moat.util.compat import Queue, log, L, TaskGroup, ACM,AC_exit, Event, shield
+from moat.util.compat import Queue, log, L, TaskGroup, ACM, AC_exit, Event, shield
 from functools import partial
 from moat.lib.cmd.base import MsgLink, MsgHandler
 from moat.lib.cmd.const import *
 from moat.lib.cmd.errors import ShortCommandError
 from moat.lib.cmd.msg import Msg, log_exc
+
 
 def i_f2wire(id: int, flag: int) -> int:
     assert id != 0
@@ -139,7 +140,6 @@ class HandlerStream(MsgHandler):
         for link in list(self._msgs.values()):
             await link.kill()
 
-
     async def msg_in(self, msg: list) -> None:
         """process an incoming message"""
         i, flag = wire2i_f(msg[0])
@@ -213,7 +213,7 @@ class HandlerStream(MsgHandler):
                 else:
                     await link.remote.ml_send([res], None, 0)
         except Exception as exc:
-            log_exc(exc,"Error %r: %r", msg, exc)
+            log_exc(exc, "Error %r: %r", msg, exc)
             if link.remote is not None:
                 await link.remote.ml_send_error(exc)
         except BaseException as exc:
@@ -345,7 +345,6 @@ class HandlerStream(MsgHandler):
         """
         raise NotImplementedError
 
-    
     async def __aexit__(self, *exc):
         self._tgs.cancel()
         try:
@@ -361,7 +360,6 @@ class HandlerStream(MsgHandler):
 
         finally:
             await AC_exit(self, *exc)
-
 
 
 class StreamLink(MsgLink):

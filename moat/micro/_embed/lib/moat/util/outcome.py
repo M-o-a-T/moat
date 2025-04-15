@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 def capture(sync_fn, *args, **kwargs):
     """Run ``sync_fn(*args, **kwargs)`` and capture the result."""
     try:
@@ -18,7 +19,9 @@ async def acapture(async_fn, *args, **kwargs):
 
 class Outcome:
     """An abstract class representing the result of a Python computation."""
+
     pass
+
 
 class Value(Outcome):
     """Concrete :class:`Outcome` subclass representing a regular value."""
@@ -27,10 +30,11 @@ class Value(Outcome):
         self.value = value
 
     def __repr__(self):
-        return f'Value({self.value!r})'
+        return f"Value({self.value!r})"
 
     def unwrap(self):
         return self.value
+
 
 class Error(Outcome):
     """Concrete :class:`Outcome` subclass representing a raised exception."""
@@ -39,7 +43,7 @@ class Error(Outcome):
         self.error = error
 
     def __repr__(self):
-        return f'Error({self.error!r})'
+        return f"Error({self.error!r})"
 
     def unwrap(self):
         captured_error = self.error
@@ -47,5 +51,3 @@ class Error(Outcome):
             raise captured_error
         finally:
             del captured_error, self
-
-

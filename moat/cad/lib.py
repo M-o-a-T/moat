@@ -233,7 +233,7 @@ def show(obj, name=None, dest=None):
     If "dest" is a file or directory, write a STEP file there.
     """
     if name is None:
-        name = f"{obj}_{(id(obj)/99)%10000}"
+        name = f"{obj}_{(id(obj) / 99) % 10000}"
 
     global s_o
     if s_o is Ellipsis:

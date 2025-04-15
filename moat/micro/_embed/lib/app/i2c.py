@@ -71,23 +71,26 @@ class Cmd(BaseCmd):
             with contextlib.suppress(AttributeError):
                 b.deinit()
 
-    doc_rd=dict(_d="read", _0="int:addr", n="int:nbytes(16)")
+    doc_rd = dict(_d="read", _0="int:addr", n="int:nbytes(16)")
+
     async def cmd_rd(self, i, n=16):
         "read @n bytes from bus @cd at address @i"
         return self._bus.readfrom(i, n)
 
-    doc_wr=dict(_d="write", _0="int:addr", buf="bytes:data", _r="int:nbytes")
+    doc_wr = dict(_d="write", _0="int:addr", buf="bytes:data", _r="int:nbytes")
+
     async def cmd_wr(self, i, buf):
         "write @buf to bus @cd at address @i"
         return self._bus.writeto(i, buf)
 
-    doc_wrrd=dict(
+    doc_wrrd = dict(
         _d="write+read",
         _0="int:addr",
         buf="bytes:data",
         n="int:nbytes(16)",
         _r="int|bytes:nbytes short-written|read result",
     )
+
     async def cmd_wrrd(self, i, buf, n=16):
         """
         write @buf to bus @cd at address @i, then read @n bytes.
@@ -101,7 +104,8 @@ class Cmd(BaseCmd):
             return d
         return self._bus.readfrom(i, n)
 
-    doc_scan=dict(_d="bus scan")
+    doc_scan = dict(_d="bus scan")
+
     async def cmd_scan(self):
         "scan the bus"
         return self._bus.scan()

@@ -22,7 +22,7 @@ may fail.
 from __future__ import annotations
 
 from moat.lib.codec.proxy import as_proxy
-from moat.lib.cmd.errors import ShortCommandError,LongCommandError
+from moat.lib.cmd.errors import ShortCommandError, LongCommandError
 from moat.micro.cmd.util import run_no_exc, wait_complain
 from moat.micro.cmd.util.part import enc_part, get_part
 from moat.util.compat import AC_use, Event, L, idle
@@ -233,7 +233,8 @@ class BaseCmd(Base):
                 await wait_complain(f"Rdy {self.path}", 250, self._ready.wait)
             return None
 
-        doc_rdy_=dict(_d="check readiness", w="bool:wait for it?")
+        doc_rdy_ = dict(_d="check readiness", w="bool:wait for it?")
+
         def cmd_rdy_(self, w=True) -> Awaitable:
             """
             Check if / wait for readiness.
@@ -255,11 +256,12 @@ class BaseCmd(Base):
         # XXX cache it?
         return self._parent.path / self._name
 
-    doc_dir_=dict(
+    doc_dir_ = dict(
         _d="directory",
         v="bool:verbose",
         _r=dict(c=["str:commands"], d=["str:modules"], j="bool:callable"),
     )
+
     async def cmd_dir_(self, v=True):
         """
         Rudimentary introspection. Returns a dict with
@@ -290,7 +292,8 @@ class BaseCmd(Base):
             res["i"] = i
         return res
 
-    doc_cfg_=dict(_d="config", _0="path:subdir", _r="parts")
+    doc_cfg_ = dict(_d="config", _0="path:subdir", _r="parts")
+
     async def cmd_cfg_(self, p=()):
         """
         Read this item's config.
@@ -306,6 +309,7 @@ class BaseCmd(Base):
         self._parent = parent
         self._name = name
         self.root = parent.root
+
 
 BaseCmd.handle = MsgHandler.handle
 BaseCmd.find_handler = MsgHandler.find_handler

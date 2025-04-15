@@ -46,7 +46,8 @@ class Pin(BaseCmd):
         await self.flag.wait()
         return self._value
 
-    doc_r=dict(_d="read", prev="bool:wait if unchanged")
+    doc_r = dict(_d="read", prev="bool:wait if unchanged")
+
     async def cmd_r(self, prev=None):
         "read. Wait for change if @prev (previous value) is not None"
         if prev is self._value:
@@ -55,7 +56,8 @@ class Pin(BaseCmd):
             await self.flag.wait()
         return self._value
 
-    doc_w=dict(_d="write", _0="bool:new state")
+    doc_w = dict(_d="write", _0="bool:new state")
+
     async def cmd_w(self, v):
         "set fake pin; trigger iter if changed"
         if self._value != v:
@@ -100,7 +102,8 @@ class ADC(BaseCmd):
 
             self.rand = Random(cfg["seed"] if "seed" in cfg else random.getrandbits(32))
 
-    doc_r=dict(_d="read")
+    doc_r = dict(_d="read")
+
     async def cmd_r(self):
         "read current value"
         b = self.bias + (self.rand.random() - 0.5) * self.step

@@ -147,7 +147,6 @@ def convert(enc, dec, pathi, patho, stream, eval_, dump_):
             buf = eval(buf)
             return self.codec(buf)
 
-
     def get_codec(n):
         if n == "python":
             from pprint import pformat
@@ -166,7 +165,7 @@ def convert(enc, dec, pathi, patho, stream, eval_, dump_):
 
                 def jdump(d):
                     if dump_:
-                        res=json.dumps(d, separators=(",", ":"), indent="")
+                        res = json.dumps(d, separators=(",", ":"), indent="")
                         return repr(res)
                     return json.dumps(d, indent="  ") + "\n"
 
@@ -181,7 +180,7 @@ def convert(enc, dec, pathi, patho, stream, eval_, dump_):
 
             def ypr(d, s):
                 if dump_:
-                    buf=io.StringIO()
+                    buf = io.StringIO()
                     yprint(d, buf)
                     print(repr(buf.getvalue()), file=s)
                 else:
@@ -256,13 +255,13 @@ def convert(enc, dec, pathi, patho, stream, eval_, dump_):
                     if dump_:
                         buf = bt()
                         enc(data, buf)
-                        patho.write(repr(buf.getvalue())+"\n")
+                        patho.write(repr(buf.getvalue()) + "\n")
                     else:
                         enc(data, patho)
                 else:
                     dat = enc(data)
                     if dump_:
-                        dat=repr(dat)
+                        dat = repr(dat)
                     patho.write(dat)
     else:
         if csd:
@@ -274,13 +273,13 @@ def convert(enc, dec, pathi, patho, stream, eval_, dump_):
             if dump_:
                 buf = bt()
                 enc(data, buf)
-                patho.write(repr(buf.getvalue())+"\n")
+                patho.write(repr(buf.getvalue()) + "\n")
             else:
                 enc(data, patho)
         else:
             data = enc(data)
             if dump_:
-                data=repr(data)
+                data = repr(data)
             patho.write(data)
     pathi.close()
     patho.close()

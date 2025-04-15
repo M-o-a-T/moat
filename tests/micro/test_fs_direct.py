@@ -37,8 +37,8 @@ async def test_fuse(tmp_path):
     r = anyio.Path(tmp_path) / "root"
     async with mpy_stack(tmp_path, CFG, {"r": {"cfg": {"f": {"root": str(r)}}}}) as d:
         await p.mkdir()
-        #async with d.sub_at(P("r.f")) as w:
-        w= d.sub_at(P("r.f"))
+        # async with d.sub_at(P("r.f")) as w:
+        w = d.sub_at(P("r.f"))
         if True:
             await w.new(p="test")
             f = await w.open(p="test", m="w")

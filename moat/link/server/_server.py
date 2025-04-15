@@ -12,7 +12,7 @@ from datetime import datetime, UTC
 from collections import defaultdict
 from contextlib import nullcontext
 
-from moat.lib.cmd import MsgHandler,MsgSender
+from moat.lib.cmd import MsgHandler, MsgSender
 from moat.lib.cmd.anyio import run as run_cmd_anyio
 from moat.link.auth import AnonAuth, TokenAuth
 from moat.link.common import CmdCommon
@@ -184,7 +184,9 @@ class ServerClient(LinkCommon):
 
             # basic setup
             try:
-                if await self._hello.run(MsgSender(cmd)) is False or not (auth := self._hello.auth_data):
+                if await self._hello.run(MsgSender(cmd)) is False or not (
+                    auth := self._hello.auth_data
+                ):
                     self.logger.debug("NO %s", self.client_nr)
                     return
             finally:
@@ -220,7 +222,8 @@ class ServerClient(LinkCommon):
 
         return super().handle(msg, rpath, *sub)
 
-    doc_d_get=dict(_d="get subnode data", _r=["Any:Data", "MsgMeta"], _0="Path")
+    doc_d_get = dict(_d="get subnode data", _r=["Any:Data", "MsgMeta"], _0="Path")
+
     async def stream_d_get(self, msg):
         """Get the data of a sub-node.
 
@@ -234,17 +237,20 @@ class ServerClient(LinkCommon):
         d = self.server.data[msg[0]]
         await msg.result(d.data, d.meta)
 
-    doc_d=dict(_d="Data access commands")
-    def sub_d(self, msg:Msg,rcmd:list) -> Awaitable:
+    doc_d = dict(_d="Data access commands")
+
+    def sub_d(self, msg: Msg, rcmd: list) -> Awaitable:
         "Local subcommand redirect for 'd'"
-        return self.handle(msg,rcmd,'d')
+        return self.handle(msg, rcmd, "d")
 
-    doc_s=dict(_d="Data load/save commands")
-    def sub_s(self, msg:Msg,rcmd:list) -> Awaitable:
+    doc_s = dict(_d="Data load/save commands")
+
+    def sub_s(self, msg: Msg, rcmd: list) -> Awaitable:
         "Local subcommand redirect for 's'"
-        return self.handle(msg,rcmd,'s')
+        return self.handle(msg, rcmd, "s")
 
-    doc_d_list=dict(_d="get subnode child names", _r=["Any:Data", "MsgMeta"], _o="str")
+    doc_d_list = dict(_d="get subnode child names", _r=["Any:Data", "MsgMeta"], _o="str")
+
     async def cmd_d_list(self, msg):
         """Get the child names of a sub-node.
         Arguments:
@@ -258,7 +264,7 @@ class ServerClient(LinkCommon):
             for k in list(self.server.data[msg[0]].keys()):
                 await msg.send(k)
 
-    doc_d_walk=dict(
+    doc_d_walk = dict(
         _d="get subtree",
         _0="Path",
         _1="float:mintime",
@@ -267,6 +273,7 @@ class ServerClient(LinkCommon):
         _r=dict(_0="int:depth", _1="Path:sub", _2="Any:data", _99="MsgMeta"),
         _o="str",
     )
+
     async def stream_d_walk(self, msg):
         """
         Get a whole subtree.
@@ -290,8 +297,9 @@ class ServerClient(LinkCommon):
         async with msg.stream_out():
             await d.walk(_writer, timestamp=ts, min_depth=xmin, max_depth=xmax)
 
-    doc_d_set=dict(_d="set value", _0="Path", _1="Any", _99="MsgMeta:optional")
-    async def cmd_d_set(self, path, value, meta:MsgMeta|None=None):
+    doc_d_set = dict(_d="set value", _0="Path", _1="Any", _99="MsgMeta:optional")
+
+    async def cmd_d_set(self, path, value, meta: MsgMeta | None = None):
         """Set a node's value.
 
         Arguments:
@@ -307,7 +315,8 @@ class ServerClient(LinkCommon):
 
         self.server.maybe_update(path, value, meta)
 
-    doc_d_del=dict(_d="delete value", _0="Path", _1="Any", _99="MsgMeta:optional")
+    doc_d_del = dict(_d="delete value", _0="Path", _1="Any", _99="MsgMeta:optional")
+
     async def cmd_d_del(self, msg):
         """Delete a node's value.
 
@@ -325,27 +334,32 @@ class ServerClient(LinkCommon):
 
         self.server.maybe_update(path, NotGiven, meta)
 
-    doc_i_state=dict(_d="state", _r="MsgMeta:optional")
+    doc_i_state = dict(_d="state", _r="MsgMeta:optional")
+
     async def cmd_i_state(self):
         """Return some info about this node's internal state"""
         return await self.server.get_state(**msg)
 
-    doc_i_error=dict(_d="last disconnect error", _r="Any:error")
-    def cmd_i_error(self, last_name:str=None):
+    doc_i_error = dict(_d="last disconnect error", _r="Any:error")
+
+    def cmd_i_error(self, last_name: str = None):
         """Return some info about the reason my link got disconnected"""
         return self.server._error_cache.pop(last_name or self.name)
 
-    doc_i_stamp=dict(_d="stamp", _r="int:timestamp sequence#")
+    doc_i_stamp = dict(_d="stamp", _r="int:timestamp sequence#")
+
     def cmd_i_stamp(self) -> int:
         """Return a new timestamp value"""
         return self.server.new_stamp()
 
-    doc_i_sync=dict(_d="sync", _0="int:timestamp sequence#")
+    doc_i_sync = dict(_d="sync", _0="int:timestamp sequence#")
+
     def cmd_i_sync(self, stamp) -> Awaitable[None]:
         """wait until the server received this stamp#"""
         return self.server.wait_stamp(stamp)
 
-    doc_d_deltree=dict(_d="drop a subtree", _0="Path", _r="int:#nodes", _o="node data")
+    doc_d_deltree = dict(_d="drop a subtree", _0="Path", _r="int:#nodes", _o="node data")
+
     async def stream_d_deltree(self, msg):
         """Delete a node's value.
         Sub-nodes are cleared (after their parent).
@@ -377,18 +391,21 @@ class ServerClient(LinkCommon):
             await data.walk(_del)
             await msg.result(res)
 
-    doc_i_log=dict(_d="start logging", _0="str:filename", state="bool:include current state")
-    async def cmd_i_log(self, path:str, *, state:bool=False):
+    doc_i_log = dict(_d="start logging", _0="str:filename", state="bool:include current state")
+
+    async def cmd_i_log(self, path: str, *, state: bool = False):
         await self.server.run_saver(path, save_state=state)
         return True
 
-    doc_s_save=dict(_d="save current state", _0="str:filename", prefix="path:subtree")
-    async def cmd_s_save(self, path:str, prefix=P(":")):
+    doc_s_save = dict(_d="save current state", _0="str:filename", prefix="path:subtree")
+
+    async def cmd_s_save(self, path: str, prefix=P(":")):
         await self.server.save(path, prefix=prefix)
 
         return True
 
-    doc_s_load=dict(_d="load state", _0="str:filename", prefix="path:subtree")
+    doc_s_load = dict(_d="load state", _0="str:filename", prefix="path:subtree")
+
     async def cmd_s_load(self, path, *, prefix=P(":")):
         return await self.server.load(path=path, prefix=prefix)
 
@@ -503,11 +520,11 @@ class Server:
     _writing_done: anyio.Event
     _stopped: anyio.Event = None
 
-    _error_cache:dict[str,Any]
+    _error_cache: dict[str, Any]
 
-    _stamp_in:int = 0
-    _stamp_out:int = 0
-    _stamp_in_evt:anyio.Event
+    _stamp_in: int = 0
+    _stamp_out: int = 0
+    _stamp_in_evt: anyio.Event
 
     def __init__(self, cfg: dict, name: str, init: Any = NotGiven):
         self.data = Node()
@@ -760,7 +777,6 @@ class Server:
             await self._check_ticked()
         self.fetch_running = None
 
-
     def new_stamp(self):
         """
         Return the next stamp value.
@@ -772,7 +788,7 @@ class Server:
         self._stamp_out += 1
         return self._stamp_out
 
-    async def wait_stamp(self,stamp):
+    async def wait_stamp(self, stamp):
         """
         Wait until the server has seen this stamp value (or better) on its
         ``stamp`` channel.
@@ -1171,7 +1187,7 @@ class Server:
         from moat.util.cbor import gen_start
 
         fn = anyio.Path(name).name
-        mstr = f"MoaT-Link {mode} {fn !r}"
+        mstr = f"MoaT-Link {mode} {fn!r}"
         mstr += " " * (25 - len(mstr))
         kw["mode"] = mode
         kw["name"] = name
@@ -1682,7 +1698,7 @@ class Server:
                     if isinstance(hdr, CBORTag) and hdr.tag == CBOR_TAG_CBOR_LEADER:
                         hdr = hdr.value
                     if not isinstance(hdr, CBORTag) or hdr.tag != CBOR_TAG_MOAT_FILE_ID:
-                        raise ValueError(f"First entry is {hdr !r}")
+                        raise ValueError(f"First entry is {hdr!r}")
 
                     pl = PathLongener()
                     upd, skp = 0, 0
@@ -1758,7 +1774,7 @@ class Server:
         mainly tries to record what went wrong on the server so the next
         client session can ask.
 
-        TODO, for the most part. The stream is 
+        TODO, for the most part. The stream is
         """
         c = None
         try:
@@ -1778,7 +1794,7 @@ class Server:
                 if len(ex) == 1:
                     exc = ex[0]
             elif hasattr(exc, "filter"):
-                exc = exc.filter(lambda e: None if isinstance(e, CancelExc) else e, exc) # pyright: ignore
+                exc = exc.filter(lambda e: None if isinstance(e, CancelExc) else e, exc)  # pyright: ignore
 
             if exc is not None and not isinstance(exc, CancelExc):
                 if c is not None and isinstance(exc, (ClosedResourceError, anyio.EndOfStream)):

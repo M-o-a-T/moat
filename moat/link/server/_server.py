@@ -1773,23 +1773,22 @@ class Server:
         except BaseException as exc:
             CancelExc = anyio.get_cancelled_exc_class()
             if hasattr(exc, "split"):
-                exc = exc.split(CancelExc)[1]
+                exc = exc.split(CancelExc)[1]  # pyright: ignore
                 ex = list(exc_iter(exc))
                 if len(ex) == 1:
                     exc = ex[0]
             elif hasattr(exc, "filter"):
-                # pylint: disable=no-member
-                exc = exc.filter(lambda e: None if isinstance(e, CancelExc) else e, exc)
+                exc = exc.filter(lambda e: None if isinstance(e, CancelExc) else e, exc) # pyright: ignore
 
             if exc is not None and not isinstance(exc, CancelExc):
-                if isinstance(exc, (ClosedResourceError, anyio.EndOfStream)):
+                if c is not None and isinstance(exc, (ClosedResourceError, anyio.EndOfStream)):
                     self.logger.debug("XX %d closed", c.client_nr)
                 else:
                     self.logger.exception("Client connection killed", exc_info=exc)
             if exc is None:
                 exc = "Cancelled"
             self._error_cache[name] = exc
-            self.logger.debug("XX END XX %d", c.client_nr)
+            self.logger.debug("XX END XX %d", c.client_nr if c is not None else -1)
 
         finally:
             with anyio.move_on_after(2, shield=True):

@@ -7,10 +7,7 @@ from contextlib import asynccontextmanager, nullcontext
 from tempfile import TemporaryDirectory
 from pathlib import Path as FSPath
 
-try:
-    from mqttproto.async_broker import AsyncMQTTBroker
-except ImportError:
-    from moat.lib.mqttproto.async_broker import AsyncMQTTBroker
+from mqttproto.async_broker import AsyncMQTTBroker
 
 from moat.link.client import Link
 from moat.link.server import Server

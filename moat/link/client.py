@@ -10,11 +10,7 @@ from contextlib import asynccontextmanager, suppress, nullcontext
 
 import outcome
 
-try:
-    from mqttproto import RetainHandling
-except ImportError:
-    from moat.lib.mqttproto import RetainHandling
-
+from mqttproto import RetainHandling
 from moat.lib.cmd.base import MsgSender, MsgHandler, Caller
 from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident, ungroup
 from moat.util.compat import CancelledError

@@ -14,10 +14,7 @@ from pathlib import Path as FSPath
 
 import asyncclick as click
 
-try:
-    from mqttproto import MQTTException
-except ImportError:
-    from moat.lib.mqttproto import MQTTException
+from mqttproto import MQTTException
 
 from moat.util import NotGiven, P, Path, load_subgroup
 

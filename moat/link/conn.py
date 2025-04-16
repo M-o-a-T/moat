@@ -10,11 +10,13 @@ import anyio
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.cmd import Msg
+    from typing import AsyncContextManager
+    from moat.lib.cmd import MsgSender
+    from moat.lib.codec import Codec
 
 
 @asynccontextmanager
-async def TCPConn(cmd: MsgSender | None, *a, codec: str = "std-cbor", debug=None, **kw):
+async def TCPConn(cmd: MsgSender | None, *a, codec: str|Codec = "std-cbor", debug:bool=False, **kw) -> AsyncGenerator[..., MsgSender]:
     """
     Connection to a MoaT server.
 
@@ -24,8 +26,8 @@ async def TCPConn(cmd: MsgSender | None, *a, codec: str = "std-cbor", debug=None
     * the MsgHandler to connect to
     * all other arguments go to `anyio.connect_tcp`
 
-    This is an async context manager, wrapping its `MsgHandler`
-    argument.
+    This is an async context manager. It forwards incoming commands to @cmd
+    and yields a `MsgSender` that forwards local to the remote side.
     """
     async with (
         await anyio.connect_tcp(*a, **kw) as stream,

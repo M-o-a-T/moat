@@ -61,7 +61,7 @@ class StreamError(RuntimeError):
         pass
 
 
-class Flow:
+class Flow(BaseException):
     def __init__(self, n):
         self.n = n
 

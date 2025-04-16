@@ -8,16 +8,20 @@ from __future__ import annotations
 from attrs import define, field
 from moat.util import P
 import anyio
-from moat.lib.cmd.base import MsgHandler
-from . import protocol_version, protocol_version_min
+from moat.lib.cmd.base import MsgHandler, MsgSender
+from . import protocol_version as proto_version, protocol_version_min as proto_version_min
 from .common import CmdCommon
+from .auth import AuthMethod
 import logging
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.cmd import CmdHandler
+    from typing import Any
     from collections.abc import Awaitable
+    from moat.lib.cmd.base import MsgHandler
+    from moat.lib.cmd.msg import Msg
+    from moat.lib.cmd import Key
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +35,13 @@ def _to_dict(x: list[AuthMethod]) -> dict[str, AuthMethod]:
 
 
 @define
-class Hello(CmdCommon, MsgHandler):
+class Hello(CmdCommon):
     """
     This object handles the initial handshake between two MoaT links.
 
     Usage:
 
-    * The ``handle`` method that you supplied to your `CmdHandler` must
+    * The ``handle`` method that you supplied to your `MsgHandler` must
       forward all incoming commands to `Hello.handler` while
       ``auth_data`' is `None`.
 
@@ -59,41 +63,47 @@ class Hello(CmdCommon, MsgHandler):
 
     me_server: bool = field(default=False)
 
-    _sync: anyio.Event | None = field(init=False, factory=anyio.Event)
-    _done: anyio.Event | None = field(init=False, factory=anyio.Event)
+    _sync: anyio.Event = field(init=False, factory=anyio.Event)
+    _done: anyio.Event = field(init=False, factory=anyio.Event)
 
     # min and max protocol versions we might accept
-    protocol_min: int = field(kw_only=True, default=protocol_version_min)
-    protocol_max: int = field(kw_only=True, default=protocol_version)
+    protocol_min: int = field(kw_only=True, default=proto_version_min)
+    protocol_max: int = field(kw_only=True, default=proto_version)
 
     # negotiated protocol version
     protocol_version: int = field(init=False, default=0)
     hello_seen: anyio.Event = field(init=False, factory=anyio.Event)
-    hello_a: tuple[Any] = field(init=False, default=())
+    hello_a: tuple[Any, ...] = field(init=False, default=())
     hello_kw: dict[str, Any] = field(init=False, default={})
 
     def __init__(self, *a, **kw):
         super().__init__()
-        self.__attrs_init__(*a, **kw)
+        self.__attrs_init__(*a, **kw)  # pyright:ignore
 
-    async def handle(self, msg: Msg, rpath: list[str]) -> bool | None:
+    async def handle(self, msg: Msg, rcmd: list[Key], *prefix:Key) -> None:
         """
         Dispatch an incoming "hello" message
         """
-        if rpath.pop() != "i":
+        if prefix:
+            raise NotImplementedError
+        if rcmd.pop() != "i":
             raise ValueError("No Hello/Auth")
-        if len(rpath) == 1 and rpath[0] == "hello":
-            return await self.cmd_i_hello(msg)
-        if len(rpath) != 2 or rpath[1] != "auth":
+        if len(rcmd) == 1 and rcmd[0] == "hello":
+            res = await self.do_hello(msg)
+            await msg.result(res)
+            return
+        if len(rcmd) != 2 or rcmd[1] != "auth":
             raise ValueError("No Hello/Auth")
 
-        if self.data is not None:
+        if self.auth_data is not None:
             # Some other method already succeeded
-            return False
-        a = self.auth_in.get(msg.cmd[0], None)
+            await msg.result(False)
+            return
+        a = self.auth_in.get(rcmd[0], None)
         if a is None:
-            return False
-        return await a.handle(self, msg)
+            await msg.result(False)
+        else:
+            await a.handle(self, msg)
 
     def authorized(self, data: Any) -> bool:
         """
@@ -114,27 +124,29 @@ class Hello(CmdCommon, MsgHandler):
         _2="str:local name",
         _3="bool:server flag",
         _4=["str:auth method"],
+        _k="str:auth names",
+        _kw="Any:auth params",
     )
 
-    async def cmd_i_hello(self, msg) -> bool | None:
+    async def do_hello(self, msg) -> bool | None:
         """
         Process the remote hello message.
 
         Returns True if no auth is required.
         """
         try:
-            res = await self._cmd_i_hello(msg)
+            res = await self._do_hello(msg)
         except BaseException:
             self.auth_data = False
             raise
         else:
             if self.auth_data is None:
                 self.auth_data = res
-            return res
+            await msg.result(res)
         finally:
             self._done.set()
 
-    async def _cmd_i_hello(self, msg) -> bool | None:
+    async def _do_hello(self, msg) -> bool | None:
         logger.info("H IN %r %r", msg.args, msg.kw)
         it = iter(msg.args)
         auth = True
@@ -178,7 +190,7 @@ class Hello(CmdCommon, MsgHandler):
         await self._sync.wait()
 
         if auth is False:
-            raise NotAuthorized("Server %r blocks us (%s:%d)", self.them, self.host, self.port)
+            raise NotAuthorized("Server %r blocks us", self.them)
         if auth is True:
             self.auth_data = True
             return True
@@ -187,7 +199,7 @@ class Hello(CmdCommon, MsgHandler):
             auth = (auth,)
 
         # Check for auth data in the Hello
-        for a in self.auth_in:
+        for a in self.auth_in.values():
             res = await a.hello_in(self, msg.kw.get(a.name, None))
             if res is False:
                 return False
@@ -226,11 +238,11 @@ class Hello(CmdCommon, MsgHandler):
         elif len(auths) == 1:
             auths = auths[0]
 
-        logger.info("H OUT %d %s %s %r %r", protocol_version, self.me, self.them, auths, kw)
+        logger.info("H OUT %d %s %s %r %r", proto_version, self.me, self.them, auths, kw)
         self._sync.set()
         (res,) = await sender.cmd(
             P("i.hello"),
-            protocol_version,
+            proto_version,
             self.me_server,
             self.me,
             self.them,
@@ -239,7 +251,7 @@ class Hello(CmdCommon, MsgHandler):
         )
 
         if res is False:
-            raise NotAuthorized("Server %r rejects us (%s:%d)", self.them, self.host, self.port)
+            raise NotAuthorized("Server %r rejects us", self.them)
 
         # Wait for the incoming side of the auth/hello dance to succeed
         await self._done.wait()

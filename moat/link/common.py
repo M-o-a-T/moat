@@ -7,7 +7,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import anyio
 
+from moat.lib.cmd.base import MsgHandler
+
 if TYPE_CHECKING:
+    from typing import Awaitable
     from moat.lib.cmd import Msg
 
 
@@ -15,7 +18,7 @@ class NotAuthorized(RuntimeError):
     pass
 
 
-class CmdCommon:
+class CmdCommon(MsgHandler):
     """
     Commands every handler should know.
 
@@ -24,7 +27,7 @@ class CmdCommon:
 
     doc_i = dict(_d="Internal commands")
 
-    def sub_i(self, msg: Msg, rcmd: list) -> Awaitable:
+    def sub_i(self, msg: Msg, rcmd: list) -> Awaitable[None]:
         "Local subcommand redirect for 'i'"
         return self.handle(msg, rcmd, "i")
 

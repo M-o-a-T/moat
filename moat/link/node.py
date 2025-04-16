@@ -15,10 +15,9 @@ from .meta import MsgMeta
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
-
+    from collections.abc import Awaitable, Callable, Iterator
     from typing import Any
-    from collections.abc import Iterator
+    from moat.lib.cmd import Key
 
 logger = getLogger(__name__)
 
@@ -34,7 +33,7 @@ class Node:
     _data: Any = field(init=False, default=NotGiven)
     _meta: MsgMeta | None = field(init=False, default=None)
 
-    _sub: dict = field(init=False, factory=dict, repr=_keys_repr)  # sub-entries
+    _sub: dict[Key,Node] = field(init=False, factory=dict, repr=_keys_repr)  # sub-entries
 
     def __attrs_post_init__(self, data: Any = NotGiven, meta: MsgMeta | None = None):
         if data is not NotGiven:
@@ -92,7 +91,7 @@ class Node:
         ps = PathShortener()
         for p, d, m in self._dump_x_(()):
             s, p = ps.short(p)
-            yield (s, p, d, *m.dump())
+            yield (s, p, d, *(m.dump() if m is not None else ()))
 
     def _dump_x_(self, path):
         # Helper for _dump_x
@@ -119,8 +118,7 @@ class Node:
 
     def _dump(self, path, level):
         if self._data is not NotGiven:
-            ma, mk = self._meta.a, self._meta.kw
-            yield (level, path, self._data, *self._meta.dump())
+            yield (level, path, self._data, *(self._meta.dump() if self._meta is not None else ()))
             level += len(path)
             path = ()
         for k, v in self._sub.items():
@@ -153,9 +151,14 @@ class Node:
                 n._meta = m
 
     @property
-    def meta(self) -> MsgMeta:
+    def meta(self) -> MsgMeta|None:
         "return current metadata"
         return self._meta
+
+    @meta.deleter
+    def meta(self) -> None:
+        "Clear metadata"
+        del self._meta
 
     def __delitem__(self, item) -> None:
         """
@@ -163,11 +166,11 @@ class Node:
 
         **Warning** Don't call this unless the timeout for deletion has passed.
         """
-        d = self._subs[item]
+        d = self._sub[item]
 
-        if d._subs or d.data is not NotGiven:
+        if d._sub or d.data is not NotGiven:
             raise ValueError(item)
-        del self._subs[item]
+        del self._sub[item]
 
     def __getitem__(self, item) -> Node:
         """Look up the entry.
@@ -211,7 +214,7 @@ class Node:
                 raise
             return self._add(item)
         else:
-            if create is True and s._data is not NotGiven:
+            if create is True and res._data is not NotGiven:
                 raise KeyError(item)
             return res
 
@@ -223,11 +226,11 @@ class Node:
         self._sub[item] = s = Node()
         return s
 
-    def __iter__(self) -> Iterator[str, Node]:
+    def __iter__(self) -> Iterator[tuple[Key, Node]]:
         """
         Return a list of keys under this node.
         """
-        return self._sub.items()
+        return iter(self._sub.items())
 
     def __contains__(self, item) -> bool:
         if isinstance(item, Path):
@@ -249,7 +252,7 @@ class Node:
 
     async def walk(
         self,
-        proc: Callable[Awaitable[bool], [Path, Node]],
+        proc: Callable[[Path, Node], Awaitable[bool|None]],
         max_depth: int = 999999,
         min_depth: int = 0,
         timestamp: int | float = 0,
@@ -259,15 +262,19 @@ class Node:
         Calls coroutine ``proc(node,Subpath)`` on this node and all its children.
 
         Deleted nodes are passed if they still have a Meta entry.
+
+        if @depth_first is not set and @proc explicitly returns False,
+        the subtree is skipped.
         """
 
         async def _walk(s, p):
             if depth_first and max_depth > len(p):
                 for k, v in s._sub.items():
-                    await _walk((v, p / k))
+                    await _walk(v, p / k)
 
             if min_depth <= len(p) and s.meta is not None and s.meta.timestamp >= timestamp:
-                await proc(p, s)
+                if await proc(p, s) is False:
+                    return
 
             if not depth_first and max_depth > len(p):
                 for k, v in s._sub.items():

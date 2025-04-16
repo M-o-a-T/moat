@@ -10,15 +10,22 @@ from moat.util import outcome
 from .base import MsgLink
 from .const import SD_IN, SD_OUT, SD_BOTH, SD_NONE
 from .const import S_NEW, S_END, S_ON, S_OFF
-from .const import E_NO_STREAM, E_CANCEL
+from .const import E_NO_STREAM, E_CANCEL, E_SKIP
 from .const import B_STREAM, B_ERROR
 from .errors import StreamError, Flow, NoStream, WantsStream
 from inspect import iscoroutine
 
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, overload, Iterable, cast
+
+try:
+    from collections.abc import MutableSequence, MutableMapping
+except ImportError:
+    MutableSequence = list  # pyright:ignore
+    MutableMapping = dict  # pyright:ignore
 
 if TYPE_CHECKING:
-    from typing import Self, Iterator
+    from typing import Self, Iterator, Any, Callable, AsyncContextManager, Sequence, KeysView,ValuesView,ItemsView,MutableSequence
+    from .base import OptDict
 
 
 try:
@@ -37,7 +44,7 @@ else:
         logger.error(s, *a, exc_info=e)
 
 
-class MsgResult:
+class MsgResult(Iterable):
     """
     This class encapsulates the result of a message, which is
     simultaneously a list and a dict. Both are read-only.
@@ -45,28 +52,30 @@ class MsgResult:
     You can access mutable versions with `args` and `kw`.
     """
 
-    _a: list | None = None
-    _kw: dict | None = None
+    _a: Sequence
+    _kw: OptDict
 
     def __init__(self, a: list, kw: dict):
         self._a = a
         self._kw = kw
 
     @property
-    def args(self) -> list | tuple:
+    def args(self) -> Sequence:
         "Retrieve the argument list."
         return self._a
 
     @property
-    def args_l(self) -> list:
+    def args_l(self) -> MutableSequence:  # pyright:ignore
         "Retrieve the argument list as a list."
-        if isinstance(self._a, tuple):
+        if not isinstance(self._a, MutableSequence):
             self._a = list(self._a)
         return self._a
 
     @property
-    def kw(self) -> dict:
+    def kw(self) -> dict[str,Any]:
         "Retrieve the keywords."
+        if self._kw is None:
+            return {}
         return self._kw
 
     def __len__(self) -> int:
@@ -82,7 +91,7 @@ class MsgResult:
         """
         if isinstance(k, (int, slice)):
             return self._a[k]
-        return self._kw[k]
+        return self._kw[k]  # pyright:ignore
 
     def get(self, k: int | str, default=None) -> Any:
         """
@@ -95,7 +104,7 @@ class MsgResult:
             except IndexError:
                 return default
         try:
-            return self._kw[k]
+            return self._kw[k]  # pyright:ignore
         except KeyError:
             return default
 
@@ -104,21 +113,21 @@ class MsgResult:
             return 0 <= k < len(self._a)
         return k in self._kw
 
-    def __iter__(self) -> Self:
+    def __iter__(self) -> Iterator:
         "Returns an iterator over the list."
         return iter(self._a)
 
-    def keys(self) -> Iterator[str]:
+    def keys(self) -> KeysView:
         "Returns an iterator over the dict's keys."
-        return self._kw.keys()
+        return self._kw.keys()  # pyright:ignore
 
-    def values(self):
+    def values(self) -> ValuesView:
         "Returns an iterator over the dict's values."
-        return self._kw.values()
+        return self._kw.values()  # pyright:ignore
 
-    def items(self):
+    def items(self) -> ItemsView:
         "Returns an iterator over the dict's keys/value tuples."
-        return self._kw.items()
+        return self._kw.items()  # pyright:ignore
 
 
 class Msg(MsgLink, MsgResult):
@@ -129,8 +138,9 @@ class Msg(MsgLink, MsgResult):
     # The multiple inheritance problem WRT µPy is resolved below.
 
     _cmd: Path | None = None
-    _a: list | None = None
-    _kw: dict | None = None
+    _a: Sequence  # pyright:ignore
+    _kw: OptDict  # pyright:ignore
+    # also in MsgResult
 
     _stream_in: int = S_NEW
     _stream_out: int = S_NEW
@@ -156,7 +166,7 @@ class Msg(MsgLink, MsgResult):
         self.warnings = []  # TODO
 
     @property
-    def cmd(self) -> Path:
+    def cmd(self) -> Path|None:
         "Retrieve the command."
         return self._cmd
 
@@ -165,6 +175,7 @@ class Msg(MsgLink, MsgResult):
         """
         Retrieve a reversed command
         """
+        assert self.cmd is not None
         res = list(self.cmd)
         res.reverse()
         return res
@@ -208,9 +219,9 @@ class Msg(MsgLink, MsgResult):
         """
         try:
             if new:
-                if rrem._stream_in != S_NEW:
+                if self._stream_in != S_NEW:
                     raise RuntimeError("incoming already started")
-                if rrem._stream_out != S_NEW:
+                if self._stream_out != S_NEW:
                     raise RuntimeError("outgoing already started")
         finally:
             self._stream_in = S_END
@@ -219,7 +230,7 @@ class Msg(MsgLink, MsgResult):
                 self._msg_in.set()
             await super().kill()
 
-    async def ml_send(self, a: list, kw: dict, flags: int) -> None:
+    async def ml_send(self, a: Sequence, kw: OptDict|None, flags: int) -> None:
         """
         Sender of data to the other side.
         """
@@ -231,7 +242,7 @@ class Msg(MsgLink, MsgResult):
             self._stream_out = S_ON
         await super().ml_send(a, kw, flags)
 
-    async def ml_recv(self, a: list, kw: dict, flags: int) -> None:
+    async def ml_recv(self, a: Sequence, kw: OptDict|None, flags: int) -> None:
         """
         Receiver for data from the other side.
         """
@@ -257,6 +268,9 @@ class Msg(MsgLink, MsgResult):
 
         elif flags & B_ERROR:
             if kw:
+                if not hasattr(a,"append"):
+                    a=list(a)
+                a=cast(list,a)
                 a.append(kw)
             exc = StreamError(a)
             if isinstance(exc, Flow):
@@ -305,7 +319,7 @@ class Msg(MsgLink, MsgResult):
     async def error(self, *a, **kw) -> None:
         await self.ml_send(a, kw, B_ERROR)
 
-    def _set_msg(self, a: list, kw: dict, flags: int) -> None:
+    def _set_msg(self, a: Sequence, kw: OptDict|None, flags: int) -> None:
         """
         A message has arrived on this stream. Store and set an event.
         """
@@ -366,36 +380,40 @@ class Msg(MsgLink, MsgResult):
 
     # Stream reply helpers
 
-    def stream_in(self, *data, **kw) -> AsyncContextManager[Msg]:
+    def stream_in(self, *a, **kw) -> AsyncContextManager[Msg]:
         """
         Reply to a stream, read-only.
         """
-        return self._stream(data, kw, SD_IN)
+        return self._stream(a, kw, SD_IN)
 
-    def stream_out(self, *data, **kw) -> AsyncContextManager[Msg]:
+    def stream_out(self, *a, **kw) -> AsyncContextManager[Msg]:
         """
         Reply to a stream, write-only.
         """
-        return self._stream(data, kw, SD_OUT)
+        return self._stream(a, kw, SD_OUT)
 
-    def stream(self, *data, **kw) -> AsyncContextManager[Msg]:
+    def stream(self, *a, **kw) -> AsyncContextManager[Msg]:
         """
-        Reply to a bidirectional stream.
+        Reply to a stream, bidirectional.
         """
-        return self._stream(data, kw, SD_BOTH)
+        return self._stream(a, kw, SD_BOTH)
 
     def _stream_call(self, flag: int) -> AsyncContextManager[Msg]:
         """
         Stream startup on the sending side.  Don't call this.
         """
-        return self._stream(None, None, flag, initial=True)
+        return self._stream((), None, flag, initial=True)
 
     @property
     def can_stream(self) -> bool:
         """check whether this is a streaming command"""
+        if self._stream_in == S_END or self._stream_out == S_END:
+            return False
         if self._stream_in != S_NEW or self._stream_out != S_NEW:
             return True
         if (rem := self.remote) is None:
+            return False
+        if not isinstance(rem,Msg):
             return False
         try:
             if rem._stream_in != S_NEW or rem._stream_out != S_NEW:
@@ -411,7 +429,7 @@ class Msg(MsgLink, MsgResult):
         contains (hopefully).
         """
         try:
-            res = cmd(*self._a, **self._kw)
+            res = cmd(*self._a, **self._kw)  # pyright:ignore
             if is_async(res):
                 res = await res
         except Exception as exc:
@@ -428,9 +446,9 @@ class Msg(MsgLink, MsgResult):
             raise
         else:
             if isinstance(res, Msg):
-                await self.result(*res.args, **res.kw)
-            elif isinstance(res, dict):
-                await self.result(**res)
+                await self.result(*res.args, **res.kw)  # pyright:ignore
+            elif isinstance(res, MutableMapping):
+                await self.result(**res)  # pyright:ignore
             else:
                 await self.result(res)
 
@@ -462,7 +480,7 @@ class Msg(MsgLink, MsgResult):
             await self.ml_send_error(exc)
             raise
 
-    def _stream(self, a: list, kw: dict, flag: int, initial: bool = False):
+    def _stream(self, a: Sequence, kw: OptDict, flag: int, initial: bool = False):
         return _Stream(self, a, kw, flag, initial=initial)
 
     async def result(self, *a, **kw) -> None:
@@ -473,7 +491,7 @@ class Msg(MsgLink, MsgResult):
             if self._msg is not None:
                 if kw:
                     raise RuntimeError("Dup call", kw)
-                if a and (len(a) > 1 or a[0] is not None):
+                if a and (len(a) > 1 or a[0] is not None):  # pyright:ignore
                     raise RuntimeError("Dup call", a)
 
             self._msg = outcome.Value((a, kw))
@@ -496,7 +514,7 @@ class Msg(MsgLink, MsgResult):
         self._msg2 = None
         if msg is None:
             raise EOFError
-        self._a, self._kw = msg.unwrap()
+        self._a, self._kw = msg.unwrap()  # pyright:ignore
 
     def __aiter__(self) -> Self:
         if not self._dir & SD_IN:
@@ -515,6 +533,8 @@ class Msg(MsgLink, MsgResult):
     async def _qsize(self) -> None:
         # Incoming message queue handling strategy:
         # - read without flow control until the queue is half full
+        assert self._recv_q is not None  # to shut up pyright
+
         if self._fli is None:
             if self._recv_q.qsize() >= self._recv_qlen // 2:
                 self._fli = 0
@@ -558,7 +578,7 @@ class Msg(MsgLink, MsgResult):
 
 
 class _Stream:
-    def __init__(self, slf, a: list, kw: dict, flag: int, initial: bool = False):
+    def __init__(self, slf, a: Sequence, kw: OptDict|None, flag: int, initial: bool = False):
         self.slf = slf
         self.a = a
         self.kw = kw
@@ -625,9 +645,3 @@ class _EnsureRemote:
             await self.m.kill()
             await self.slf.kill()
 
-
-# no multiple inheritance for µPy
-
-for k in dir(MsgResult):
-    if not hasattr(Msg, k):
-        setattr(Msg, k, getattr(MsgResult, k))

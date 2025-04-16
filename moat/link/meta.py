@@ -16,7 +16,8 @@ from moat.util.cbor import StdCBOR
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any, Self
+    from typing import Any, Self, Literal
+    from types import EllipsisType
 
 _codec = StdCBOR()
 
@@ -72,13 +73,13 @@ class MsgMeta:
 
     source: Any = None
 
-    def __init__(self, /, name: str | NotGiven | None = None, **kwargs):
+    def __init__(self, /, name: str | EllipsisType | None = None, **kwargs):  # pyright: ignore
         vals = {}
         for k in dir(self):
             v = getattr(type(self), k, None)
             if isinstance(v, property) and (val := kwargs.pop(k, NotGiven)) is not NotGiven:
                 vals[k] = val
-        self.__attrs_init__(**kwargs)
+        self.__attrs_init__(**kwargs)  # pyright:ignore
         for k, v in vals.items():
             setattr(self, k, v)
         self._clean(name)
@@ -136,13 +137,14 @@ class MsgMeta:
         else:
             del self.kw[k]
 
-    def _clean(self, name: str | None):
+    def _clean(self, name: str | EllipsisType | None):
         if name is NotGiven:
             return
         if name is None:
             if not self.origin:
                 raise ValueError("You need to set a name")
         elif not self.origin:
+            assert isinstance(name,str)
             if not name.startswith("via:"):
                 name = f"via:{name}"
             self.origin = name
@@ -161,7 +163,7 @@ class MsgMeta:
             res.append(self.kw)
         return res
 
-    def _unmap(self, data: list[any]):
+    def _unmap(self, data: list[Any]):
         if isinstance(data[-1], dict):
             self.kw = data.pop()
         self.a = data
@@ -222,7 +224,7 @@ class MsgMeta:
 
         encoded = False
         while data:
-            next_enc: bool = None
+            next_enc: bool
             cc: int
 
             c1 = data.find("/")
@@ -238,7 +240,7 @@ class MsgMeta:
                 next_enc = cc == c2
 
             if cc == -1:
-                d, data = data, None
+                d, data = data, ""
             else:
                 d, data = data[:cc], data[cc + 1 :]
             if encoded:

@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager, suppress, nullcontext
 import outcome
 
 from mqttproto import RetainHandling
-from moat.lib.cmd.base import MsgSender, MsgHandler, Caller
+from moat.lib.cmd.base import MsgSender, Caller
 from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident, ungroup
 from moat.util.compat import CancelledError
 
@@ -28,12 +28,16 @@ class _Requeue(Exception):
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable
+    from typing import AsyncContextManager,AsyncIterator
+
+    from moat.lib.cmd.base import MsgHandler
+    from moat.lib.cmd.msg import Msg
+
     from .schema import Data
     from .schema import SchemaName as S
     from .backend import Message
-    from moat.lib.cmd.base import MsgHandler
 
-    from collections.abc import Awaitable
 
 __all__ = ["Link", "LinkCommon", "BasicLink"]
 
@@ -88,7 +92,7 @@ class BasicCmd:
         return self._result.unwrap()
 
 
-class LinkCommon(CmdCommon, MsgHandler, CtxObj):
+class LinkCommon(CmdCommon):
     def __init__(self, cfg, name: str | None = None):
         self.cfg = cfg
         self.name = name
@@ -99,27 +103,17 @@ class LinkCommon(CmdCommon, MsgHandler, CtxObj):
 
         self._cmdq_w, self._cmdq_r = anyio.create_memory_object_stream(5)
         self.logger = logging.getLogger(f"moat.link.client.{name}")
-
-    async def _ctx(self):
-        raise RuntimeError("don't use this as a context manager")
+        self.sender = MsgSender(self)
 
     def handle(self, msg, rpath, *add) -> Awaitable[Any]:
         """
-        Message handlers that intercepts commands, as long as no
-        authorization has taken place
+        Message handler that intercepts incoming commands
+        while authorization has not completed
         """
         if self._hello is not None and self._hello.auth_data is None:
             return self._hello.handle(msg, rpath, *add)
 
         return super().handle(msg, rpath, *add)
-
-    def sub_at(self, prefix: Path, may_stream: bool = False) -> tuple[MsgHandler, Path]:
-        """
-        Prevent subpath lookup while auth is incomplete
-        """
-        if self._hello.auth_data is None:
-            return self, path
-        return super().sub_at(prefix, may_stream=may_stream)
 
     @asynccontextmanager
     async def _connect_one(self, remote, data: dict) -> MsgHandler:
@@ -147,7 +141,7 @@ class ClientCaller(Caller):
         "helper for __await__ that calls the remote handler"
         link = await self.handler._link.get_link()
         cmd, a, kw = self.data
-        return await link.root._handler.cmd(cmd, *a, **kw)
+        return await link.root._sender.cmd(cmd, *a, **kw)
 
 
 class _Sender(MsgSender):
@@ -164,11 +158,11 @@ class _Sender(MsgSender):
         srv = await self._link.get_link()
         await srv.handle(msg, rcmd)
 
-    def monitor(self, *a, **kw):
+    def monitor(self, *a, **kw) -> AsyncContextManager[AsyncIterator[Message]]:
         "watch this path; see backend doc"
         return self._link.backend.monitor(*a, **kw)
 
-    def send(self, *a, **kw):
+    def send(self, *a, **kw) -> Awaitable[None]:
         "send to this path; see backend doc"
         return self._link.backend.send(*a, **kw)
 
@@ -179,7 +173,7 @@ class _Sender(MsgSender):
         await self.cmd(P("i.sync"), st)
 
 
-class Link(LinkCommon):
+class Link(LinkCommon, CtxObj):
     """
     This class combines the back-end link with a connection to a MoaT-Link server.
     """
@@ -211,7 +205,7 @@ class Link(LinkCommon):
                 self._server.set(msg.msg)
                 self._server = ValueEvent()
 
-        return self._handler.stream_r(*a, **kw)
+        return self._sender.stream_in(*a, **kw)
 
     @asynccontextmanager
     async def _ctx(self):
@@ -353,7 +347,7 @@ class Link(LinkCommon):
                 self.logger.warning("Link failed: %r", remote, exc_info=exc)
 
 
-class BasicLink(LinkCommon):
+class BasicLink(LinkCommon, CtxObj):
     """
     Simple direct link to a server.
     """
@@ -362,6 +356,7 @@ class BasicLink(LinkCommon):
         super().__init__(cfg, name=name)
         self.data = data
 
+    @asynccontextmanager
     async def _ctx(self):
         link = self.data["link"]
         if isinstance(link, dict):
@@ -371,9 +366,9 @@ class BasicLink(LinkCommon):
         yielded = False
         for remote in link:
             try:
-                async with self._connect_one(remote, self.data) as self._handler:
+                async with self._connect_one(remote, self.data) as self._sender:
                     yielded = True
-                    yield self._handler
+                    yield self._sender
                     return
             except Exception as exc:
                 if yielded:
@@ -381,6 +376,7 @@ class BasicLink(LinkCommon):
                 self.logger.warning("Link failed: %r", remote, exc_info=exc)
                 if err is None:
                     err = exc
-        else:
+
+        if err is None:
             raise ValueError(f"No links in {self.data!r}")
         raise err

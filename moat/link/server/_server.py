@@ -1,58 +1,28 @@
-# Local server
+"""
+The main MoaT-Link Server
+"""
+
 from __future__ import annotations
 
 import anyio
+import logging
 import signal
 import time
-import sys
+import anyio.abc
 from anyio.abc import SocketAttribute
-
-from asyncscope import scope
-from datetime import datetime, UTC
-from collections import defaultdict
-from contextlib import nullcontext
-
-from moat.lib.cmd import MsgHandler, MsgSender
-from moat.lib.cmd.anyio import run as run_cmd_anyio
-from moat.link.auth import AnonAuth, TokenAuth
-from moat.link.common import CmdCommon
-from moat.link.client import BasicLink, LinkCommon
-from moat.link.backend import get_backend
-from moat.link.exceptions import ClientError
-from moat.link.meta import MsgMeta
-from moat.util.cbor import (
-    CBOR_TAG_MOAT_FILE_ID,
-    CBOR_TAG_MOAT_FILE_END,
-)
-from moat.util.exc import exc_iter
-from moat.lib.codec.cbor import Tag as CBORTag, CBOR_TAG_CBOR_LEADER
-
-from mqttproto import QoS
-
-try:
-    from contextlib import asynccontextmanager
-except ImportError:
-    from async_generator import asynccontextmanager
-
-import logging
+from contextlib import asynccontextmanager, nullcontext
+from datetime import UTC, datetime
 from functools import partial
-
 from asyncactor import (
     Actor,
-    DetagEvent,
     GoodNodeEvent,
-    RawMsgEvent,
     RecoverEvent,
     TagEvent,
-    UntagEvent,
 )
 from asyncactor.backend import get_transport
-from range_set import RangeSet
+from mqttproto import QoS
 
 from moat.util import (
-    attrdict,
-    combine_dict,
-    gen_ident,
     MsgReader,
     MsgWriter,
     NotGiven,
@@ -61,33 +31,37 @@ from moat.util import (
     PathLongener,
     PathShortener,
     Root,
+    attrdict,
+    gen_ident,
+    to_attrdict,
 )
-
-from moat.util.broadcast import Broadcaster
-
-# from . import _version_tuple
-# from . import client as moat_kv_client  # needs to be mock-able
-# from .actor.deletor import DeleteActor
-# from .exceptions import (
-#    ACLError,
-#    CancelledError,
-#    ClientChainError,
-#    ClientError,
-#    NoAuthError,
-#    ServerClosedError,
-#    ServerConnectionError,
-#    ServerError,
-# )
-from moat.link.node import Node
+from moat.lib.cmd import MsgSender
+from moat.lib.cmd.anyio import run as run_cmd_anyio
+from moat.lib.codec.cbor import CBOR_TAG_CBOR_LEADER, Tag
+from moat.link.auth import AnonAuth, TokenAuth
+from moat.link.backend import get_backend, Backend
+from moat.link.client import BasicLink, LinkCommon
+from moat.link.exceptions import ClientError
 from moat.link.hello import Hello
+from moat.link.meta import MsgMeta
+from moat.link.node import Node
+from moat.util.broadcast import Broadcaster, BroadcastReader
+from moat.util.cbor import (
+    CBOR_TAG_MOAT_FILE_END,
+    CBOR_TAG_MOAT_FILE_ID,
+)
+from moat.util.exc import exc_iter
 
-from typing import Any, TYPE_CHECKING
+from collections import defaultdict
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
-    import io
-    from typing import Never
+    from collections.abc import Awaitable, Callable
+    from pathlib import Path as FSPath
+    from moat.lib.cmd.msg import Msg
+    from moat.link.backend import Message
 
-# from .types import ACLFinder, ACLStepper, ConvNull, NullACL, RootEntry
+    PathType = anyio.Path|FSPath|str
 
 
 class BadFile(ValueError):
@@ -325,7 +299,6 @@ class ServerClient(LinkCommon):
         * optional: metadata
         """
         path = msg[0]
-        value = msg[1]
         if len(msg) > 2:
             meta = msg[2]
         else:
@@ -338,13 +311,13 @@ class ServerClient(LinkCommon):
 
     async def cmd_i_state(self):
         """Return some info about this node's internal state"""
-        return await self.server.get_state(**msg)
+        return self.server.get_state()
 
     doc_i_error = dict(_d="last disconnect error", _r="Any:error")
 
-    def cmd_i_error(self, last_name: str = None):
+    def cmd_i_error(self, last_name: str|None = None) -> Any:
         """Return some info about the reason my link got disconnected"""
-        return self.server._error_cache.pop(last_name or self.name)
+        return self.server.get_cached_error(last_name or self.name)
 
     doc_i_stamp = dict(_d="stamp", _r="int:timestamp sequence#")
 
@@ -364,7 +337,6 @@ class ServerClient(LinkCommon):
         """Delete a node's value.
         Sub-nodes are cleared (after their parent).
         """
-        seq = msg.seq
         root = msg[0]
         if not root:
             raise ClientError("You can't delete the root node")
@@ -374,7 +346,7 @@ class ServerClient(LinkCommon):
 
         async with msg.stream_w() if msg.can_stream else nullcontext() as ws:
 
-            async def _del(entry, path):
+            async def _del(path:Path, entry:Node):
                 if entry.data is NotGiven:
                     return
 
@@ -399,89 +371,15 @@ class ServerClient(LinkCommon):
 
     doc_s_save = dict(_d="save current state", _0="str:filename", prefix="path:subtree")
 
-    async def cmd_s_save(self, path: str, prefix=P(":")):
+    async def cmd_s_save(self, path: str, prefix=Path()):
         await self.server.save(path, prefix=prefix)
 
         return True
 
     doc_s_load = dict(_d="load state", _0="str:filename", prefix="path:subtree")
 
-    async def cmd_s_load(self, path, *, prefix=P(":")):
+    async def cmd_s_load(self, path, *, prefix=Path()):
         return await self.server.load(path=path, prefix=prefix)
-
-
-class _RecoverControl:
-    _id = 0
-
-    def __init__(
-        self,
-        server,
-        scope,
-        prio,
-        local_history,
-        sources,  # pylint:disable=redefined-outer-name
-    ):
-        self.server = server
-        self.scope = scope
-        self.prio = prio
-
-        local_history = set(local_history)
-        sources = set(sources)
-        self.local_history = local_history - sources
-        self.sources = sources - local_history
-        self.tock = server.tock
-        type(self)._id += 1
-        self._id = type(self)._id
-
-        self._waiters = {}
-
-    async def _start(self):
-        chk = set()
-        rt = self.server._recover_tasks
-        for node in self.local_history:
-            xrc = rt.get(node, None)
-            if xrc is not None:
-                chk.add(xrc)
-            self.server._recover_tasks[node] = self
-        for t in chk:
-            await t._check()
-
-    async def _check(self):
-        lh = []
-        rt = self.server._recover_tasks
-        for n in self.local_history:
-            if rt.get(n, None) is self:
-                lh.append(n)
-            self.local_history = lh
-            if not lh:
-                self.cancel()
-
-    def __hash__(self):
-        return id(self)
-
-    def cancel(self):
-        self.scope.cancel()
-        rt = self.server._recover_tasks
-        for node in self.local_history:
-            if rt.get(node, None) is self:
-                del rt[node]
-        self.local_history = ()
-        for evt in list(self._waiters.values()):
-            evt.set()
-
-    def set(self, n):
-        evt = self._waiters.get(n, None)
-        if evt is None:
-            evt = anyio.Event()
-            self._waiters[n] = evt
-        evt.set()
-
-    async def wait(self, n):
-        evt = self._waiters.get(n, None)
-        if evt is None:
-            evt = anyio.Event()
-            self._waiters[n] = evt
-        await evt.wait()
 
 
 class Server:
@@ -490,37 +388,38 @@ class Server:
     the clients, and (optionally) logs all changes to a file.
 
     Args:
-      name (str): the name of this MoaT-KV server instance.
+      name (str): the name of this MoaT-Link server instance.
         It **must** be unique.
       cfg: configuration.
         See ``_cfg.yaml`` for default values.
         The relevant part is the ``link.server`` sub-dict (mostly).
       init (Any):
         The initial content of the root entry. **Do not use this**, except
-          when setting up an entirely new MoaT-KV network.
+          when setting up an entirely new MoaT-Link cluster.
 
     """
 
     # pylint: disable=no-member # mis-categorizing cfg as tuple
     data: Node
     name: str
-    backend: Link
+    backend:Backend
 
     cfg: attrdict
 
-    service_monitor: Broadcaster[Message[ServerData]]
-    write_monitor: Broadcaster[tuple[Any, MsgMeta, int | float]]
+    service_monitor: Broadcaster[Message]
+    write_monitor: Broadcaster[Tag | tuple[Path, Any, MsgMeta]]
 
     logger: logging.Logger
 
     last_auth: str | None = None
-    cur_auth: str = None
+    cur_auth: str
 
+    _syncing: dict[str,anyio.abc.CancelScope]
     _writing: set[str]
     _writing_done: anyio.Event
-    _stopped: anyio.Event = None
+    _stopped: anyio.Event
 
-    _error_cache: dict[str, Any]
+    _error_cache: dict[str, Exception|str]
 
     _stamp_in: int = 0
     _stamp_out: int = 0
@@ -529,7 +428,7 @@ class Server:
     def __init__(self, cfg: dict, name: str, init: Any = NotGiven):
         self.data = Node()
         self.name = name
-        self.cfg = cfg
+        self.cfg = to_attrdict(cfg)
 
         if init is not NotGiven:
             self.data.set(Path(), init, MsgMeta(origin="INIT"))
@@ -539,6 +438,7 @@ class Server:
         self._writing_done = anyio.Event()
         self._error_cache = {}
         self._stamp_in_evt = anyio.Event()
+        self._syncing = {}
 
         # connected clients
         self._clients: set[ServerClient] = set()
@@ -547,7 +447,10 @@ class Server:
         """
         Generate a new access token (but remember the previous one)
         """
-        self.last_auth = self.cur_auth
+        try:
+            self.last_auth = self.cur_auth
+        except AttributeError:
+            self.last_auth = None
         self.cur_auth = gen_ident(20)
 
     @property
@@ -557,14 +460,15 @@ class Server:
             res.append(self.last_auth)
         return res
 
-    def maybe_update(self, path, data, meta):
+    def maybe_update(self, path, data, meta, local:bool=False):
         """
         A data item arrives.
 
         Update our store if it's newer.
         """
-        if res := self.data.set(path, data, meta):
-            self.write_monitor((path, data, meta))
+        if res := self.data.set(path, data, meta):  # noqa:SIM102
+            if not local:
+                self.write_monitor((path, data, meta))
         return res
 
     async def _backend_monitor(
@@ -600,23 +504,23 @@ class Server:
                         # deleted
                         await self.backend.send(
                             topic=msg.topic,
-                            payload=b"",
+                            data=b"",
                             codec=None,
                             meta=d.meta,
                         )
                     else:
-                        await self.backend.send(topic=msg.topic, payload=data, meta=d.meta)
+                        await self.backend.send(topic=msg.topic, data=data, meta=d.meta)
 
     async def _backend_sender(self, task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED):
         rdr = self.write_monitor.reader(999)
         task_status.started()
         async for msg in rdr:
-            if isinstance(msg, CBORTag):
+            if isinstance(msg, Tag):
                 continue
             p, d, m = msg
             if m.source == "Mon" or m.source[0] == "_":
                 continue
-            await self.backend.send(topic=P(":R") + p, payload=d, meta=m)
+            await self.backend.send(topic=P(":R") + p, data=d, meta=m)
 
     async def _pinger(
         self,
@@ -650,7 +554,7 @@ class Server:
                 self.logger.debug("ACT IN %r", msg)
 
                 if isinstance(msg, RecoverEvent):
-                    await self.spawn(
+                    self._tg.start_soon(
                         self.recover_split,
                         msg.prio,
                         msg.replace,
@@ -659,32 +563,12 @@ class Server:
                     )
 
                 elif isinstance(msg, GoodNodeEvent):
-                    await self.spawn(self.fetch_data, msg.nodes)
+                    self._tg.start_soon(self.fetch_data, msg.nodes)
                     ready.set()
-
-                elif isinstance(msg, RawMsgEvent):
-                    msg = msg.msg
-                    msg_node = msg.get("node", None)
-                    if msg_node is None:
-                        msg_node = msg.get("history", (None,))[0]
-                        if msg_node is None:
-                            continue
-                    val = msg.get("value", None)
-                    tock = None
-                    if val is not None:
-                        tock, val = val
-                        await self.tock_seen(tock)
-                    # node = Node(msg_node, val, cache=self.node_cache)
-                    # if tock is not None:
-                    #    node.tock = tock
 
                 elif isinstance(msg, TagEvent):
                     # We're "it"; find missing data
-                    # await self._send_missing()
                     await self.set_main_link()
-
-                elif isinstance(msg, (UntagEvent, DetagEvent)):
-                    pass
 
     async def set_main_link(self):
         await self.backend.send(
@@ -694,96 +578,16 @@ class Server:
             retain=True,
         )
 
-    async def _get_host_port(self, host):
-        """Retrieve the remote system to connect to.
-
-        WARNING: While this is nice, there'a chicken-and-egg problem here.
-        While you can use the hostmap to temporarily add new hosts with
-        unusual addresses, the new host still needs a config entry.
-        """
-
-        # this is async because the test mock needs that
-
-        port = self.cfg.conn.port
-        domain = self.cfg.domain
-        try:
-            # First try to read the host name from the meta-root's
-            # "hostmap" entry, if any.
-            hme = self.root.follow(Path(None, "hostmap", host), create=False, nulls_ok=True)
-            if hme.data is NotGiven:
-                raise KeyError(host)
-        except KeyError:
-            hostmap = self.cfg.hostmap
-            if host in hostmap:
-                host = hostmap[host]
-                if not isinstance(host, str):
-                    # must be a 2-element tuple
-                    host, port = host
-                else:
-                    # If it's a string, the port may have been passed as
-                    # part of the hostname. (Notably on the command line.)
-                    try:
-                        host, port = host.rsplit(":", 1)
-                    except ValueError:
-                        pass
-                    else:
-                        port = int(port)
-        else:
-            # The hostmap entry in the database must be a tuple
-            host, port = hme.data
-
-        if domain is not None and "." not in host and host != "localhost":
-            host += "." + domain
-        return (host, port)
-
-    async def do_send_missing(self):
-        """Task to periodically send "missing …" messages"""
-        self.logger.debug("send-missing started")
-        clock = self.cfg.server.ping.gap
-        while self.fetch_missing:
-            if self.fetch_running is not False:
-                self.logger.debug("send-missing halted")
-                return
-            clock *= self._actor.random / 2 + 1
-            await anyio.sleep(clock)
-
-            n = 0
-            msg = dict()
-            for n in list(self.fetch_missing):
-                m = n.local_missing
-                nl = len(m)
-                if nl == 0:
-                    self.fetch_missing.remove(n)
-                    continue
-
-                mr = self.seen_missing.get(n.name, None)
-                if mr is not None:
-                    m -= mr
-                if len(m) == 0:
-                    continue
-                msg[n.name] = m.__getstate__()
-            self.seen_missing = {}
-            if not n:  # nothing more to do
-                break
-            if not len(msg):  # others already did the work, this time
-                continue
-            msg = attrdict(missing=msg)
-            self.logger.warning("Missing data: %r", msg)
-            await self._send_event("info", msg)
-
-        self.logger.debug("send-missing ended")
-        if self.node.tick is None:
-            self.node.tick = 0
-            await self._check_ticked()
-        self.fetch_running = None
-
     def new_stamp(self):
         """
         Return the next stamp value.
 
-        The idea is for a client to call `new_stamp`, send this value to
-        the server's ``stamp`` channel, then call `wait_stamp` to ensure
-        that the stamp value arrived on the server's MQTT channel.
+        Usage: a client calls this via `i_stamp`, sends the value to the
+        server's ``stamp`` MQTT channel, then calls `wait_stamp` to ensure
+        that the stamp value arrived there.
+
+        This ensures (absent packet loss, interrupted connections, and
+        similar nonsense) that updates have arrived at the server.
         """
         self._stamp_out += 1
         return self._stamp_out
@@ -796,337 +600,40 @@ class Server:
         while self._stamp_in < stamp:
             await self._stamp_in_evt.wait()
 
-    async def fetch_data(self, nodes, authoritative=False):
+    async def fetch_data(self, nodes):
         """
         We are newly started and don't have any data.
 
         Try to get the initial data from some other node.
         """
-        if self.fetch_running is not None:
-            return
-        self.fetch_running = True
-        for n in nodes:
-            try:
-                host, port = await self._get_host_port(n)
-                cfg = combine_dict(
-                    {"host": host, "port": port, "name": self.node.name},
-                    self.cfg.conn,
-                    cls=attrdict,
-                )
-                auth = cfg.get("auth", None)
-                from .auth import gen_auth
-
-                cfg["auth"] = gen_auth(auth)
-
-                self.logger.info("Sync: connecting: %s", cfg)
-                async with scope.using_scope(f"moat.kv.sync.{self.node.name}"):
-                    client = await moat_kv_client.client_scope(conn=cfg)
-                    # TODO auth this client
-
-                    pl = PathLongener(())
-                    res = await client._request(
-                        "get_tree",
-                        iter=True,
-                        from_server=self.node.name,
-                        nchain=-1,
-                        path=(),
-                    )
-                    async for r in res:
-                        pl(r)
-                        r = UpdateEvent.deserialize(
-                            self.root,
-                            r,
-                            cache=self.node_cache,
-                            nulls_ok=True,
-                        )
-                        await r.entry.apply(r, server=self, root=self.paranoid_root)
-                    await self.tock_seen(res.end_msg.tock)
-
-                    pl = PathLongener((None,))
-                    res = await client._request(
-                        "get_tree_internal",
-                        iter=True,
-                        from_server=self.node.name,
-                        nchain=-1,
-                        path=(),
-                    )
-                    async for r in res:
-                        pl(r)
-                        r = UpdateEvent.deserialize(
-                            self.root,
-                            r,
-                            cache=self.node_cache,
-                            nulls_ok=True,
-                        )
-                        await r.entry.apply(r, server=self, root=self.paranoid_root)
-                    await self.tock_seen(res.end_msg.tock)
-
-                    res = await client._request(
-                        "get_state",
-                        nodes=True,
-                        from_server=self.node.name,
-                        known=True,
-                        deleted=True,
-                        iter=False,
-                    )
-                    await self._process_info(res)
-
-            except (AttributeError, KeyError, ValueError, AssertionError, TypeError):
-                raise
-            except Exception:
-                self.logger.exception("Unable to connect to %s:%d", host, port)
-            else:
-                # At this point we successfully cloned some other
-                # node's state, so we now need to find whatever that
-                # node didn't have.
-
-                for nst in self._nodes.values():
-                    if nst.tick and len(nst.local_missing):
-                        self.fetch_missing.add(nst)
-                if len(self.fetch_missing):
-                    self.fetch_running = False
-                    for nm in self.fetch_missing:
-                        self.logger.error("Sync: missing: %s %s", nm.name, nm.local_missing)
-                    await self.spawn(self.do_send_missing)
-                if self.force_startup or not len(self.fetch_missing):
-                    if self.node.tick is None:
-                        self.node.tick = 0
-                    self.fetch_running = None
-                    await self._check_ticked()
-                return
-
-        self.fetch_running = None
-
-    async def _process_info(self, msg):
-        """
-        Process "info" messages.
-        """
-        await self.tock_seen(msg.get("tock", 0))
-
-        # nodes: list of known nodes and their max ticks
-        for nn, t in msg.get("nodes", {}).items():
-            nn = Node(nn, cache=self.node_cache)
-            nn.tick = max_n(nn.tick, t)
-
-        # known: per-node range of ticks that have been resolved
-        for nn, k in msg.get("known", {}).items():
-            nn = Node(nn, cache=self.node_cache)
-            r = RangeSet()
-            r.__setstate__(k)
-            nn.report_superseded(r, local=True)
-
-        # deleted: per-node range of ticks that have been deleted
-        deleted = msg.get("deleted", {})
-        for nn, k in deleted.items():
-            nn = Node(nn, cache=self.node_cache)
-            r = RangeSet()
-            r.__setstate__(k)
-            nn.report_deleted(r, self)
-
-        # remote_missing: per-node range of ticks that should be re-sent
-        # This is used when loading data from a state file
-        for nn, k in msg.get("remote_missing", {}).items():
-            nn = Node(nn, cache=self.node_cache)
-            r = RangeSet()
-            r.__setstate__(k)
-            nn.report_missing(r)
-
-        # Dropped nodes.
-        for nn in msg.get("node_drop", ()):
-            self._dropped_node(nn)
-
-    async def drop_node(self, name):
-        self._dropped_node(name)
-        await self._send_event("info", attrdict(node_drop=[name]))
-
-    def _dropped_node(self, name):
-        try:
-            nn = Node(name, cache=self.node_cache, create=False)
-        except KeyError:
-            return
-        for _ in nn.enumerate(current=True):
-            break
-        else:  # no item found
-            nn.kill_this_node(self.node_cache)
-
-    async def _check_ticked(self):
-        if self._ready is None:
-            return
-        if self.node.tick is not None:
-            self.logger.debug("Ready")
-            self._ready.set()
-            await self._set_tock()
-        else:
-            # self.logger.debug("Not yet ready.")
-            pass
+        breakpoint()
+        nodes  # noqa:B018  # pyright:ignore
 
     async def recover_split(self, prio, replace, local_history, sources):
         """
         Recover from a network split.
         """
-        with anyio.CancelScope() as cs:
-            for node in sources:
-                if node not in self._recover_tasks:
-                    break
-            else:
-                return
-            t = _RecoverControl(self, cs, prio, local_history, sources)
-            self.logger.debug(
-                "SplitRecover %d: start %d %s local=%r remote=%r",
-                t._id,
-                prio,
-                replace,
-                local_history,
-                sources,
-            )
-            try:
-                await t._start()
-                clock = self.cfg.server.ping.cycle
-
-                # Step 1: send an info/ticks message
-                # for prio=0 this fires immediately. That's intentional.
-                with anyio.move_on_after(clock * (1 - 1 / (1 << prio))) as x:
-                    await t.wait(1)
-                if x.cancel_called:
-                    msg = dict((x.name, x.tick) for x in self._nodes.values())
-
-                    msg = attrdict(ticks=msg)
-                    if self.node_drop:
-                        msg.node_drop = list(self.node_drop)
-                    await self._send_event("info", msg)
-
-                # Step 2: send an info/missing message
-                # for prio=0 this fires after clock/2, so that we get a
-                # chance to wait for other info/ticks messages. We can't
-                # trigger on them because there may be more than one, for a
-                # n-way merge.
-                with anyio.move_on_after(clock * (2 - 1 / (1 << prio)) / 2) as x:
-                    await t.wait(2)
-
-                if x.cancel_called:
-                    await self._send_missing(force=True)
-
-                # wait a bit more before continuing. Again this depends on
-                # `prio` so that there won't be two nodes that send the same
-                # data at the same time, hopefully.
-                await anyio.sleep(clock * (1 - 1 / (1 << prio)))
-
-                # Step 3: start a task that sends stuff
-                await self._run_send_missing(prio)
-
-            finally:
-                with anyio.CancelScope(shield=True):
-                    # Protect against cleaning up when another recovery task has
-                    # been started (because we saw another merge)
-                    self.logger.debug("SplitRecover %d: finished @%d", t._id, t.tock)
-                    self.seen_missing = {}
-                    t.cancel()
-
-    async def _send_missing(self, force=False):
-        msg = dict()
-        for n in list(self._nodes.values()):
-            if not n.tick:
-                continue
-            m = n.local_missing
-            mr = self.seen_missing.get(n.name, None)
-            if mr is not None:
-                m -= mr
-            if len(m) == 0:
-                continue
-            msg[n.name] = m.__getstate__()
-            if mr is None:
-                self.seen_missing[n.name] = m
-            else:
-                mr += m
-
-        if force or msg:
-            msg = attrdict(missing=msg)
-            if self.node_drop:
-                msg.node_drop = list(self.node_drop)
-            await self._send_event("info", msg)
-
-    async def _run_send_missing(self, prio):
-        """Start :meth:`_send_missing_data` if it's not running"""
-
-        if self.sending_missing is None:
-            self.sending_missing = True
-            await self.spawn(self._send_missing_data, prio)
-        elif not self.sending_missing:
-            self.sending_missing = True
-
-    async def _send_missing_data(self, prio):
-        """Step 3 of the re-join protocol.
-        For each node, collect events that somebody has reported as missing,
-        and re-broadcast them. If the event is unavailable, send a "known"
-        / "deleted" message.
-        """
-
-        self.logger.debug("SendMissing %s", prio)
-        clock = self.cfg.server.ping.cycle
-        if prio is None:
-            await anyio.sleep(clock * (1 + self._actor.random / 3))
-        else:
-            await anyio.sleep(clock * (1 - (1 / (1 << prio)) / 2 - self._actor.random / 5))
-
-        self.logger.debug("SendMissingGo %s %s", prio, self.sending_missing)
-        while self.sending_missing:
-            self.sending_missing = False
-            nodes = list(self._nodes.values())
-            self._actor._rand.shuffle(nodes)
-            known = {}
-            deleted = {}
-            for n in nodes:
-                self.logger.debug(
-                    "SendMissingGo %s %r %r",
-                    n.name,
-                    n.remote_missing,
-                    n.local_superseded,
-                )
-                k = n.remote_missing & n.local_superseded
-                for r in n.remote_missing & n.local_present:
-                    for t in range(*r):
-                        if t not in n.remote_missing:
-                            # some other node could have sent this while we worked
-                            await anyio.sleep(self.cfg.server.ping.gap / 3)
-                            continue
-                        if t in n:
-                            # could have been deleted while sleeping
-                            msg = n[t].serialize()
-                            await self._send_event("update", msg)
-                            n.remote_missing.discard(t)
-                if k:
-                    known[n.name] = k.__getstate__()
-
-                d = n.remote_missing & n.local_deleted
-                if d:
-                    deleted[n.name] = d.__getstate__()
-
-            msg = attrdict()
-            if known:
-                msg.known = known
-            if deleted:
-                msg.deleted = deleted
-            if self.node_drop:
-                msg.node_drop = list(self.node_drop)
-            if msg:
-                await self._send_event("info", attrdict(known=known, deleted=deleted))
-        self.sending_missing = None
+        # TODO
+        # The idea is:
+        #  connect to a source
+        #  get all its data changed since timestamp-that-source-was-last-seen
+        #  re-broadcast all data changed since timestamp-that-source-was-last-seen
 
     async def load(
         self,
         path: str | None = None,
-        stream: io.IOBase | None = None,
+        stream: anyio.abc.ByteReceiveStream | None = None,
         local: bool = False,
         prefix: Path = P(":"),
-        authoritative: bool = False,
     ):
         """Load data from this stream
 
         Args:
-          ``fd``: The stream to read.
-          ``local``: Flag whether this file contains initial data and thus
-                     its contents shall not be broadcast. Don't set this if
-                     the server is already operational.
+          @stream: The stream to read.
+          @local: Flag whether this file contains initial data and thus
+                  its contents shall not be broadcast. Don't set this if
+                  the server is already operational.
+          @prefix: load to below this prefix
         """
         longer = PathLongener(())
 
@@ -1134,16 +641,16 @@ class Server:
 
         async with MsgReader(path=path, stream=stream, codec="std-cbor") as rdr:
             async for m in rdr:
-                if isinstance(m, CBORTag) and m.tag == CBOR_TAG_CBOR_LEADER:
-                    m = m.value
-                if isinstance(m, CBORTag):
+                if isinstance(m, Tag) and m.tag == CBOR_TAG_CBOR_LEADER:
+                    m = m.value  # noqa:PLW2901
+                if isinstance(m, Tag):
                     met.append(m)
                     continue
                 d, p, data, *mt = m
-                path = longer.long(d, p)
-                meta = MsgMeta._moat__restore(mt, NotGiven)
-                meta.source = str(path)
-                if self.maybe_update(prefix + path, data, meta):
+                path_ = longer.long(d, p)
+                meta = MsgMeta._moat__restore(mt, NotGiven)  # noqa:SLF001
+                meta.source = path
+                if self.maybe_update(prefix + path_, data, meta, local=local):
                     upd += 1
                 else:
                     skp += 1
@@ -1153,20 +660,28 @@ class Server:
 
     async def _save(
         self,
-        writer: Callable,
+        writer: Callable[[Tag | list[Any]], Awaitable[None]],
         shorter: PathShortener,
-        hdr: bool | CBORTag = True,
-        ftr: bool | CBORTag = True,
+        hdr: bool | Tag = True,
+        ftr: bool | Tag = True,
         prefix=P(":"),
         **kw,
     ):
-        """Save the current state."""
+        """Save the current state.
 
-        async def saver(path, data):
+        @hdr and @ftr are items to prepend/append to the data stream.
+
+        If @timestamp is set, older items will be ignored.
+
+        @writer
+        """
+
+        async def saver(path, data) -> None:
             if data.data is NotGiven and data.meta is None:
                 return
             d, p = shorter.short(path)
             await writer([d, p, data.data, *data.meta.dump()])
+            return
 
         if hdr:
             if hdr is True:
@@ -1221,7 +736,7 @@ class Server:
 
     async def save_stream(
         self,
-        path: str | None = None,
+        path: str | anyio.Path | FSPath | None = None,
         save_state: bool = False,
         task_status=anyio.TASK_STATUS_IGNORED,
     ):
@@ -1309,7 +824,7 @@ class Server:
                 d, p = shorter.short(path)
                 await mw([d, p, data, *meta.dump()])
                 last_saved_count += 1
-            elif isinstance(msg, CBORTag) and msg.tag == CBOR_TAG_MOAT_FILE_END:
+            elif isinstance(msg, Tag) and msg.tag == CBOR_TAG_MOAT_FILE_END:
                 await mw(msg)
                 return
             else:
@@ -1331,7 +846,7 @@ class Server:
         await anyio.sleep(self.cfg.timeout.delete / 10)
         t = time.time()
 
-        async def _walk(d) -> bool:
+        async def _walk(d: Node) -> bool:
             # return True if we need to keep this
 
             has_any = False
@@ -1339,11 +854,11 @@ class Server:
 
             # Drop the Meta entry if the deletion was long enough ago
             if (
-                d._data is NotGiven
+                d._data is NotGiven  # noqa:SLF001
                 and d.meta is not None
                 and t - d.meta.timestamp > self.cfg.timeout.delete
             ):
-                d.meta = None
+                del d.meta
             drop = set()
             for k, v in d.items():
                 if await _walk(v):
@@ -1352,7 +867,7 @@ class Server:
                     drop.add(k)
             for k in drop:
                 del d[k]
-            if has_any or d._data is not NotGiven:
+            if has_any or d._data is not NotGiven:  # noqa:SLF001
                 return True
             return d.meta is not None
 
@@ -1379,7 +894,7 @@ class Server:
 
         task_status.started()
 
-    async def run_saver(self, path: anyio.Path = None, save_state: bool = True):
+    async def run_saver(self, path: PathType|None, save_state: bool = True):
         """
         Start a task that continually saves to disk.
 
@@ -1413,23 +928,15 @@ class Server:
                 self._stop_flag.set()
                 break
 
-    @property
-    async def is_ready(self):
-        """Await this to determine if/when the server is operational."""
-        await self._ready.wait()
-
-    @property
-    async def is_serving(self):
-        """Await this to determine if/when the server is serving clients."""
-        await self._ready2.wait()
-
     async def serve(
         self,
         *,
         task_status=anyio.TASK_STATUS_IGNORED,
-    ) -> Never:
+    ) -> None:
         """
-        The task that opens a backend connection and actually runs the server.
+        The method that opens a backend connection and actually runs the server.
+
+        This will terminate when `stop` is called (in another task).
         """
         will_data = attrdict(
             topic=P(":R.run.service.down.main"),
@@ -1526,7 +1033,7 @@ class Server:
             # TODO listen to this message and possibly take over
             await self.backend.send(
                 topic=P(":R.run.service.down.main"),
-                payload=self.name,
+                data=self.name,
                 retain=False,
             )
             # TODO if we were "it", wait for some other server's announcement
@@ -1548,7 +1055,7 @@ class Server:
             # TODO wait for our saver to finish
 
             # Stop the rest
-            _tg.cancel_scope.cancel()
+            _tg.cancel_scope.cancel()  # pyright:ignore  # ??
 
     async def _stop_writers(self):
         """Tell our writers to stop"""
@@ -1568,7 +1075,7 @@ class Server:
 
         Unlike `stop` this does not allow the server to shut down cleanly.
         """
-        self._tg.cancel_scope.cancel()
+        self._tg.cancel_scope.cancel()  # pyright:ignore  # ??
 
     async def stop(self):
         """Tell the server to stop"""
@@ -1615,9 +1122,15 @@ class Server:
 
         Returns True if successful.
         """
-        async with BasicLink(self.cfg, name, data) as conn:
+        with anyio.CancelScope() as scope:
+            if name in self._syncing:
+                self.logger.warning("Already syncing to %s", name)
+                return False
+            self._syncing[name] = scope
+
             try:
-                await self._sync_one(conn)
+                async with BasicLink(self.cfg, name, data) as conn:
+                    await self._sync_one(conn)
             except Exception as exc:
                 self.logger.warning(
                     "No sync %r: %r",
@@ -1626,10 +1139,11 @@ class Server:
                     exc_info=exc,
                 )
                 return False
-            return True
-        return False
+            finally:
+                del self._syncing[name]
+        return True
 
-    async def _sync_one(self, conn: Conn, prefix: Path = P(":")):
+    async def _sync_one(self, conn: MsgSender, prefix: Path = Path()):
         async with conn.cmd(P("d.walk"), prefix).stream_in() as feed:
             pl = PathLongener()
             upd = 0
@@ -1637,7 +1151,7 @@ class Server:
             async for msg in feed:
                 d, p, data, *mt = msg
                 path = pl.long(d, p)
-                meta = MsgMeta._moat__restore(mt, NotGiven)
+                meta = MsgMeta._moat__restore(mt, NotGiven)  # noqa:SLF001
                 meta.source = "_Load"
                 if self.maybe_update(prefix + path, data, meta):
                     upd += 1
@@ -1682,7 +1196,7 @@ class Server:
             return
 
         fs = []
-        async for p, d, f in dest.walk():
+        async for p, _d, f in dest.walk():
             for ff in f:
                 fs.append(p / ff)
         fs.sort()
@@ -1692,49 +1206,46 @@ class Server:
             fn = fs.pop()
             if str(fn) in self._writing:
                 continue
-            try:
-                async with MsgReader(fn, codec="std-cbor") as rdr:
-                    hdr = await anext(rdr)
-                    if isinstance(hdr, CBORTag) and hdr.tag == CBOR_TAG_CBOR_LEADER:
-                        hdr = hdr.value
-                    if not isinstance(hdr, CBORTag) or hdr.tag != CBOR_TAG_MOAT_FILE_ID:
-                        raise ValueError(f"First entry is {hdr!r}")
+            async with MsgReader(fn, codec="std-cbor") as rdr:
+                hdr = await anext(rdr)
+                if isinstance(hdr, Tag) and hdr.tag == CBOR_TAG_CBOR_LEADER:
+                    hdr = hdr.value
+                if not isinstance(hdr, Tag) or hdr.tag != CBOR_TAG_MOAT_FILE_ID:
+                    raise ValueError(f"First entry is {hdr!r}")
 
-                    pl = PathLongener()
-                    upd, skp = 0, 0
-                    ehdr = None
-                    async for msg in rdr:
-                        if isinstance(msg, CBORTag):
-                            if msg.tag == CBOR_TAG_MOAT_FILE_ID:
-                                # concatenated files?
-                                if ehdr is None:
-                                    raise ValueError("START within file %r", str(fn))
-                                # TODO verify that these belong together
-                                ehdr = None
+                pl = PathLongener()
+                upd, skp = 0, 0
+                ehdr = None
+                async for msg in rdr:
+                    if isinstance(msg, Tag):
+                        if msg.tag == CBOR_TAG_MOAT_FILE_ID:
+                            # concatenated files?
+                            if ehdr is None:
+                                raise ValueError("START within file %r", str(fn))
+                            # TODO verify that these belong together
+                            ehdr = None
 
-                            elif msg.tag == CBOR_TAG_MOAT_FILE_END:
-                                if ehdr is not None:
-                                    raise ValueError("Duplicate END in %r", str(fn))
-                                ehdr = msg
-                                break
-                            continue
-                        d, p, data, *mt = msg
-                        path = pl.long(d, p)
-                        meta = MsgMeta._moat__restore(mt, NotGiven)
-                        meta.source = "_file"
-                        if self.maybe_update(path, data, meta):
-                            # Entries that have been deleted don't count as updates
-                            if data is not NotGiven:
-                                upd += 1
-                        else:
-                            skp += 1
+                        elif msg.tag == CBOR_TAG_MOAT_FILE_END:
+                            if ehdr is not None:
+                                raise ValueError("Duplicate END in %r", str(fn))
+                            ehdr = msg
+                            break
+                        continue
+                    d, p, data, *mt = msg
+                    path = pl.long(d, p)
+                    meta = MsgMeta._moat__restore(mt, NotGiven)  # noqa:SLF001
+                    meta.source = "_file"
+                    if self.maybe_update(path, data, meta):
+                        # Entries that have been deleted don't count as updates
+                        if data is not NotGiven:
+                            upd += 1
+                    else:
+                        skp += 1
 
-                    self.logger.info("Restore %r: %d/%d", str(fn), upd, skp)
-                    tupd += upd
-                    if not upd and ehdr is not None and "error" not in ehdr.data:
-                        break
-            except Exception:
-                raise
+                self.logger.info("Restore %r: %d/%d", str(fn), upd, skp)
+                tupd += upd
+                if not upd and ehdr is not None and "error" not in ehdr.value:
+                    break
 
         if tupd:
             ready.set()
@@ -1753,6 +1264,9 @@ class Server:
             seen[msg.meta.origin] = sn + 1
 
         pass
+
+    def get_cached_error(self, name) -> Exception|str|None:
+        return self._error_cache.pop(name, None)
 
     async def _run_server(self, tg, name, cfg, *, task_status=anyio.TASK_STATUS_IGNORED):
         """runs a listener on a single port"""
@@ -1777,15 +1291,17 @@ class Server:
         TODO, for the most part. The stream is
         """
         c = None
+        cnr = -1
         try:
             c = ServerClient(server=self, name=name, stream=stream)
+            cnr = c.client_nr
             try:
                 self._clients.add(c)
                 await c.run()
             finally:
                 self._clients.remove(c)
         except (ClosedResourceError, anyio.EndOfStream):
-            self.logger.debug("XX %d closed", c.client_nr)
+            self.logger.debug("XX %d closed", cnr)
         except BaseException as exc:
             CancelExc = anyio.get_cancelled_exc_class()
             if hasattr(exc, "split"):
@@ -1797,14 +1313,14 @@ class Server:
                 exc = exc.filter(lambda e: None if isinstance(e, CancelExc) else e, exc)  # pyright: ignore
 
             if exc is not None and not isinstance(exc, CancelExc):
-                if c is not None and isinstance(exc, (ClosedResourceError, anyio.EndOfStream)):
-                    self.logger.debug("XX %d closed", c.client_nr)
+                if isinstance(exc, (ClosedResourceError, anyio.EndOfStream)):
+                    self.logger.debug("XX %d closed", cnr)
                 else:
                     self.logger.exception("Client connection killed", exc_info=exc)
             if exc is None:
                 exc = "Cancelled"
-            self._error_cache[name] = exc
-            self.logger.debug("XX END XX %d", c.client_nr if c is not None else -1)
+            self._error_cache[name] = cast(Exception,exc)
+            self.logger.debug("XX END XX %d", cnr)
 
         finally:
             with anyio.move_on_after(2, shield=True):

@@ -33,7 +33,7 @@ __all__ = ["Codec", "ExtraData", "Tag"]
 class Tag:
     "a random CBOR tag"
 
-    def __init__(self, tag=None, value=None):
+    def __init__(self, tag:int, value:Any=None):
         self.tag = tag
         self.value = value
 
@@ -440,8 +440,9 @@ class Codec(_Codec):
             return self._dec_map(aux)
         elif tag == CBOR_TAG:
             ob = self._dec_any()
+            aux = cast(int, aux)
             try:
-                return self.ext.decode(self, cast(int, aux), ob)
+                return self.ext.decode(self, aux, ob)
             except NoCodecError:
                 return Tag(aux, ob)
         else:

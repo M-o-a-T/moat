@@ -719,8 +719,8 @@ class PathShortener:
     Caution: this shortener ignores path marks.
     """
 
-    def __init__(self, prefix=Path()):  # noqa:B008
-        self.prefix = prefix
+    def __init__(self, prefix:Path|list|tuple=Path()):  # noqa:B008
+        self.prefix = prefix if isinstance(prefix,Path) else Path(prefix)
         self.depth = len(prefix)
         self.path = []
 
@@ -765,7 +765,7 @@ class PathLongener:
 
     cls = Path
 
-    def __init__(self, prefix: Path | tuple = ()):
+    def __init__(self, prefix: Path | tuple | list = ()):
         if isinstance(prefix, Path):
             self.cls = type(prefix)
             prefix = prefix.raw
@@ -806,7 +806,7 @@ path_eval = _eval.eval
 
 # Here we declare our bunch of "root" variables.
 
-Root = ContextVar("Root", default=None)
+Root = ContextVar[Path|None]("Root", default=None)
 
 
 class RootPath(Path):

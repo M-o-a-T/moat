@@ -35,6 +35,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from typing import Awaitable  # noqa:UP035
+    from asyncclick import command
 
 logger = logging.getLogger("_loader")
 
@@ -451,7 +452,7 @@ def load_subgroup(
     ext_pre=None,
     ext_post=None,
     **kw,
-):
+) -> Command:
     """
     A decorator like click.group, enabling loading of subcommands
 

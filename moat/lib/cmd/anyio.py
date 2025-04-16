@@ -20,8 +20,10 @@ logger = logging.getLogger(__name__)
 
 
 class AioStream(HandlerStream):
+    __codec: Codec
+
     def __init__(
-        self, cmd: MsgSender, stream, debug: bool = False, codec: str | Codec | None = None
+        self, cmd: MsgSender, stream, debug: str|None=None, codec: str | Codec | None = None
     ):
         self.__s = stream
         self.__debug = debug
@@ -46,14 +48,14 @@ class AioStream(HandlerStream):
 
         while True:
             if self.__debug:
-                logger.debug("R%s ?", debug)
+                logger.debug("R%s ?", self.__debug)
             buf = await rd_(4096)
             if self.__debug:
-                logger.debug("R%s %r", debug, buf)
+                logger.debug("R%s %r", self.__debug, buf)
             codec.feed(buf)
             for msg in codec:
                 if self.__debug:
-                    logger.debug("R%s %r", debug, msg)
+                    logger.debug("R%s %r", self.__debug, msg)
                 await self.msg_in(msg)
 
     async def write_stream(self):
@@ -66,11 +68,11 @@ class AioStream(HandlerStream):
             except EOFError:
                 return
             if self.__debug:
-                logger.debug("W%s %r", debug, msg)
+                logger.debug("W%s %r", self.__debug, msg)
 
             buf = codec.encode(msg)
             if self.__debug:
-                logger.debug("W%s %r", debug, bytes(buf))
+                logger.debug("W%s %r", self.__debug, bytes(buf))
             await wr(buf)
 
 
@@ -79,8 +81,8 @@ async def run(
     cmd: BaseMsgHandler,
     stream: anyio.abc.ByteStream,
     *,
-    codec: Codec | None = None,
-    debug: str = None,
+    codec: Codec | str | None = None,
+    debug: bool = False,
 ) -> MsgHandler:
     """
     Run a command handler on top of an anyio stream, using the given codec.
@@ -93,7 +95,7 @@ async def run(
     """
 
     try:
-        async with ungroup, stream, AioStream(cmd, stream) as hs:
+        async with ungroup, stream, AioStream(cmd, stream, codec=codec, debug=debug) as hs:
             yield hs
     except (anyio.EndOfStream, anyio.BrokenResourceError, anyio.ClosedResourceError):
         pass

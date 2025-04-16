@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, overload
 if TYPE_CHECKING:
     from moat.lib.codec import Codec
 
-    from collections.abc import AsyncIterator, Awaitable
+    from collections.abc import AsyncIterator, Awaitable, Literal, Any
 
 
 class MqttMessage:
@@ -44,7 +44,7 @@ class Backend(_Backend):
     The MQTT backend driver.
     """
 
-    client = None
+    client:AsyncMQTTClient
 
     def __init__(
         self,
@@ -198,7 +198,7 @@ class Backend(_Backend):
     def send(
         self,
         topic: Path,
-        payload: bytes | bytearray | memoryview,
+        data: bytes | bytearray | memoryview,
         codec: Literal[None],
         meta: MsgMeta | bool | None = None,
         retain: bool = False,
@@ -210,7 +210,7 @@ class Backend(_Backend):
     def send(
         self,
         topic: Path,
-        payload: Any,
+        data: Any,
         codec: Codec | str | Literal[NotGiven] = NotGiven,
         meta: MsgMeta | bool | None = None,
         retain: bool = False,
@@ -221,7 +221,7 @@ class Backend(_Backend):
     def send(
         self,
         topic: Path,
-        payload: Any,
+        data: Any,
         codec: Codec | str | None | Literal[NotGiven] = NotGiven,
         meta: MsgMeta | bool | None = None,
         retain: bool = False,
@@ -248,10 +248,10 @@ class Backend(_Backend):
         elif isinstance(codec, str):
             codec = get_codec(codec)
         # else codec is a Codec and used as-is
-        msg = codec.encode(payload)
+        msg = codec.encode(data)
 
         if self.trace:
-            self.logger.info("S:%s %r", topic, payload)
+            self.logger.info("S:%s %r", topic, data)
         return self.client.publish(
             topic.slashed,
             payload=msg,

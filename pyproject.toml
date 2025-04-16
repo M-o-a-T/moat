@@ -101,8 +101,8 @@ select = ["ALL"]
 ignore = [
     "A003",
     "ANN",
-    "B028",
-	"BLE001",
+    "B008", "B028",
+    "BLE001",
     "C",
     "COM812",
     "D105", "D107",
@@ -117,13 +117,13 @@ ignore = [
     "PERF",
     "PGH003",
     "PIE790",
+    "PLC0414",
     "PLR",
-    "PLW1514",
+    "PLW0603", "PLW1514",
     "PTH",
     "RET50",
-    "RUF001", "RUF002", "RUF003", "RUF005",
-    "S101",
-    "S307",
+    "RUF001", "RUF002", "RUF003", "RUF005", "RUF012",
+    "S101", "S307", "S610",
     "SIM103", "SIM108",
     "T2",
     "TC006",
@@ -142,14 +142,23 @@ builtins-ignorelist = ["help","id"]
 [tool.ruff.lint.isort]
 no-lines-before = ["future"]
 required-imports = ["from __future__ import annotations"]
-section-order = ["third-party","local-folder","moat","upy","first-party","standard-library","typing","future"]
+section-order = [
+    "future",
+    "standard-library",
+    "first-party",
+    "third-party",
+    "upy",
+    "moat",
+    "local-folder",
+    "typing",
+]
 extra-standard-library = ["anyio","pytest"]
 force-to-top = ["moat.util"]
 
 [tool.ruff.lint.isort.sections]
 moat = ["moat"]
-upy = ["esp","machine","micropython"]
-typing = ["typing"]
+upy = ["asyncio","esp","machine","micropython"]
+typing = ["typing","collections"]
 
 [tool.coverage.run]
 branch = true

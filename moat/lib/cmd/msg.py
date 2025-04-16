@@ -15,7 +15,11 @@ from .const import B_STREAM, B_ERROR
 from .errors import StreamError, Flow, NoStream, WantsStream
 from inspect import iscoroutine
 
-from typing import TYPE_CHECKING, overload, Iterable, cast
+from typing import TYPE_CHECKING, overload, cast
+try:
+    from typing import Iterable
+except ImportError:
+    Iterable = object
 
 try:
     from collections.abc import MutableSequence, MutableMapping

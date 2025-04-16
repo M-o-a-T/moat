@@ -4,7 +4,6 @@ Base classes for command handlers.
 
 from __future__ import annotations
 from functools import partial
-from contextlib import asynccontextmanager
 
 from typing import TYPE_CHECKING
 from moat.util.compat import TaskGroup, QueueFull, log, print_exc, ACM, AC_exit, shield
@@ -491,7 +490,3 @@ class MsgHandler(BaseMsgHandler):
         latter for streams is TODO.
         """
         return self, path
-
-    @asynccontextmanager
-    async def _ctx(self):
-        raise NotImplementedError

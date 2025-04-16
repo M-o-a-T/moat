@@ -11,7 +11,14 @@ from moat.lib.cmd.const import *
 from moat.lib.cmd.errors import ShortCommandError
 from moat.lib.cmd.msg import Msg, log_exc
 
-from typing import TYPE_CHECKING, overload, Iterable, Sequence, Mapping, cast
+from typing import TYPE_CHECKING, overload, cast
+
+try:
+    from typing import Iterable,Sequence,Mapping
+except ImportError:
+    Iterable = object
+    Sequence = (list,tuple)
+    Mapping = dict
 
 if TYPE_CHECKING:
     from typing import Sequence, Mapping

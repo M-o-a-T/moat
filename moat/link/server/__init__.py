@@ -1,4 +1,7 @@
-# pylint: disable=W0703,C0103
+"""
+The base of MoaT-Link's server part.
+"""
+
 from __future__ import annotations
 
 __path__ = __import__("pkgutil").extend_path(__path__, __name__)

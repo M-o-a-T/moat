@@ -99,6 +99,7 @@ class Backend(CtxObj, metaclass=ABCMeta):
         raw: bool | None = False,
         retained: bool = True,
         echo: bool = False,
+        no_local: bool = False,
     ) -> AsyncIterator[AsyncIterator[Message]]:
         """
         Return an async iterator that listens to this topic.
@@ -112,7 +113,7 @@ class Backend(CtxObj, metaclass=ABCMeta):
         topic: Path,
         data: Any,
         codec: Codec | None | Literal[NotGiven] = NotGiven,
-        **kw: dict[str, Any],
+        **kw: Any,
     ) -> None:
         """
         Send this payload to this topic.
@@ -124,7 +125,7 @@ class Backend(CtxObj, metaclass=ABCMeta):
         msg: str | None = None,
         data: Any = None,
         exc: Exception | None = None,
-        **kw,
+        **kw: Any,
     ):
         """
         Send a somewhat-free-form error message.

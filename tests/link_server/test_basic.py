@@ -146,11 +146,9 @@ async def test_ls_save(cfg, tmp_path):
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.server(init={"Hello": "there!", "test": 2})
         c = await sf.client()
-        try:
+        with pytest.raises(KeyError):
             nn = await fetch(c, "a")
-            # assert n.get(P("a")) != nn
-        except KeyError:
-            pass
+
         await c.cmd(P("s.load"), str(fname))
         nn = await fetch(c, "a")
         assert n.get(P("a")) == nn

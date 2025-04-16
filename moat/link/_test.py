@@ -24,7 +24,7 @@ from moat.util import (  # pylint:disable=no-name-in-module
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Never
+    from typing import Any, AsyncIterator,Self
 
 ensure_cfg("moat.link")
 
@@ -45,14 +45,14 @@ async def run_broker(cfg, *, task_status):
 
     The task status returns the port we're listening on.
     """
-    cfg  # noqa:B018
+    cfg  # noqa:B018  # pyright:ignore
     broker = AsyncMQTTBroker(("127.0.0.1", 0))
 
     await broker.serve(task_status=task_status)
 
 
 class Scaffold(CtxObj):
-    tempdir = None
+    tempdir:str|None
 
     def __init__(self, cfg: attrdict, use_servers=True, tempdir: str | None = None):
         self.cfg = cfg.link
@@ -66,7 +66,7 @@ class Scaffold(CtxObj):
             self.cfg.client.init_timeout = None
 
     @asynccontextmanager
-    async def _ctx(self):
+    async def _ctx(self) -> AsyncIterator[Self]:
         Root.set(self.cfg.root)
 
         with (
@@ -82,7 +82,7 @@ class Scaffold(CtxObj):
 
                 self.cfg.backend.port = bport
                 yield self
-                self.tg.cancel_scope.cancel()
+                self.tg.cancel_scope.cancel()  # pyright:ignore
 
     async def _run_backend(self, cfg: dict | None, kw: dict, *, task_status) -> Backend:
         """
@@ -100,8 +100,10 @@ class Scaffold(CtxObj):
         Returns the server object and the ports it runs on.
         """
         cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
+        assert cfg is not None  # for pyright
         cfg["server"]["ports"]["main"]["port"] = 0
-        cfg["server"]["save"]["dir"] = self.tempdir / "data"
+        if self.tempdir is not None:
+            cfg["server"]["save"]["dir"] = self.tempdir / "data"
         return await self.tg.start(self._run_server, cfg, kw)
 
     async def client(self, cfg: dict | None = None):
@@ -112,7 +114,7 @@ class Scaffold(CtxObj):
         cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
         return await self.tg.start(self._run_backend, cfg, kw)
 
-    async def _run_server(self, cfg, kw, *, task_status) -> Never:
+    async def _run_server(self, cfg, kw, *, task_status) -> None:
         """
         Runs a basic MoaT-Link server.
         """

@@ -9,6 +9,7 @@ from __future__ import annotations
 import anyio
 
 from moat.lib.codec import Codec
+from pathlib import Path as FSPath
 
 __all__ = ["MsgReader", "MsgWriter"]
 
@@ -20,7 +21,10 @@ class _MsgRW:
 
     _mode: str = None
 
-    def __init__(self, path=None, stream=None, codec=None):
+    def __init__(self, path:anyio.Path|FSPath|str|None=None, stream=None, codec:Codec|str=None):
+        if (path is None) == (stream is None):
+            raise RuntimeError("You need to specify either path or stream")
+
         if codec is None:
             raise ValueError("No default codec")
         if not isinstance(codec, Codec):
@@ -28,9 +32,12 @@ class _MsgRW:
 
             codec = get_codec(codec)
 
-        if (path is None) == (stream is None):
-            raise RuntimeError("You need to specify either path or stream")
+        if isinstance(path,anyio.Path):
+            pass
+        elif path is not None:
+            path = anyio.Path(path)
         self.path = path
+
         self.stream = stream
         self.codec = codec
 

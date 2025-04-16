@@ -31,11 +31,11 @@ class StdCBOR(Codec):
     def __init__(self):
         super().__init__(ext=std_ext)
 
-    def encode(self, obj: Any, *, empty_elided: bool = True) -> bytes:
-        return super().encode(obj, empty_elided=empty_elided)
+#   def encode(self, obj: Any, *, empty_elided: bool = True) -> bytes:
+#       return super().encode(obj, empty_elided=empty_elided)
 
-    def decode(self, data: bytes | bytearray | memoryview, *, empty_elided: bool = True) -> Any:
-        return super().decode(data, empty_elided=empty_elided)
+#   def decode(self, data: bytes | bytearray | memoryview, *, empty_elided: bool = True) -> Any:
+#       return super().decode(data, empty_elided=empty_elided)
 
 
 Codec = StdCBOR
@@ -114,6 +114,6 @@ def enc_any(codec, obj):
         # RemoteError, cf. moat.lib.codec.errors
         res = ["_rErr", obj.__class__.__name__]
         res.extend(obj.args)
-        return 5, res
+        return 27, res
 
     raise NoCodecError(codec, obj)

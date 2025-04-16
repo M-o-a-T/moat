@@ -15,9 +15,6 @@ __all__ = ["Data", "Schema"]
 class Data(dict):
     "Schema-verified data (dict)"
 
-    def __class_getitem__(cls, path: str | Path):
-        return cls  # for now
-
 
 class _SchemaName(str):
     __slots__ = ()

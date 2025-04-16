@@ -11,6 +11,11 @@ from moat.lib.cmd.const import *
 from moat.lib.cmd.errors import ShortCommandError
 from moat.lib.cmd.msg import Msg, log_exc
 
+from typing import TYPE_CHECKING, overload, Iterable, Sequence, Mapping, cast
+
+if TYPE_CHECKING:
+    from typing import Sequence, Mapping
+    from .base import OptDict
 
 def i_f2wire(id: int, flag: int) -> int:
     assert id != 0
@@ -58,11 +63,11 @@ class HandlerStream(MsgHandler):
     _tg: TaskGroup = None
     _id = 0
 
-    def __init__(self, handler: MsgSender | None):
+    def __init__(self, sender: MsgSender | None):
         self._msgs: dict[int, StreamLink] = {}
         self._send_q = Queue(9)
         self._recv_q = Queue(99)
-        self._handler = handler
+        self._sender = sender
 
         self.reader_done = Event()
         self.writer_done = Event()
@@ -196,7 +201,7 @@ class HandlerStream(MsgHandler):
         """
         Task for a new incoming connection.
         """
-        if self._handler is None:
+        if self._sender is None:
             await self.send(link, [E_NO_CMD], None, B_ERROR)
             return
         if self.closing:
@@ -204,9 +209,9 @@ class HandlerStream(MsgHandler):
                 await self.send(link, [E_CANCEL], None, B_ERROR)
             return
 
-        rem = link.remote
+        rem = cast(Msg,link.remote)
         try:
-            res = await self._handler.handle(rem, rem.rcmd)
+            res = await self._sender.handle(rem, rem.rcmd)
             if res is not None:
                 if link.end_there:
                     raise ValueError(f"Already ended but returned {res!r}")
@@ -278,7 +283,7 @@ class HandlerStream(MsgHandler):
             kw = None
         elif kw is None:
             kw = {}
-        res = [i]
+        res:list[Any] = [i]
         res.extend(a)
         if kw is not None:
             res.append(kw)
@@ -296,7 +301,7 @@ class HandlerStream(MsgHandler):
     async def __aenter__(self):
         acm = ACM(self)
         try:
-            tg = await acm(TaskGroup())
+            tg:TaskGroup = await acm(TaskGroup())
             self._tg = tg
             self._tgs = await acm(TaskGroup())
 
@@ -365,13 +370,13 @@ class HandlerStream(MsgHandler):
 class StreamLink(MsgLink):
     """This is the handler for messages that forwards them to the stream."""
 
-    def __init__(self, stream: Stream, id: int):
+    def __init__(self, stream: Msg, id: int):
         super().__init__()
         self.__stream = stream
         self.id = id
         self.task = None
 
-    async def ml_recv(self, a: list, kw: dict, flags: int) -> None:
+    async def ml_recv(self, a: Sequence, kw: OptDict, flags: int) -> None:
         """data to be forwarded across the link"""
         if self.__stream is None:
             raise EOFError
@@ -379,7 +384,7 @@ class StreamLink(MsgLink):
         # log("LR L%d %d %r %r %d", self.link_id, self.id, a, kw, flags)
         await self.__stream.send(self, a, kw, flags)
 
-    async def ml_send(self, a: list, kw: dict, flags: int) -> None:
+    async def ml_send(self, a: Sequence, kw: OptDict, flags: int) -> None:
         """data to be forwarded to our remote"""
         # log("LS L%d %d %r %r %d", self.link_id, self.id, a, kw, flags)
         assert 0 <= flags <= 3, flags

@@ -4,6 +4,7 @@ Base classes for command handlers.
 
 from __future__ import annotations
 from functools import partial
+from contextlib import asynccontextmanager
 
 from typing import TYPE_CHECKING
 from moat.util.compat import TaskGroup, QueueFull, log, print_exc, ACM, AC_exit, shield
@@ -16,9 +17,10 @@ _link_id = 0
 if TYPE_CHECKING:
     from .msg import Msg
     from moat.util import Path
-    from typing import Any, Awaitable, Callable
+    from typing import Any, Awaitable, Callable, Sequence, Mapping
 
     Key = str | int | bool
+    OptDict = Mapping[str,Any]|None
 
 
 class MsgLink:
@@ -45,7 +47,7 @@ class MsgLink:
         _link_id += 1
         self.link_id = _link_id
 
-    async def ml_recv(self, a: list, kw: dict, flags: int) -> None:
+    async def ml_recv(self, a: Sequence, kw: OptDict, flags: int) -> None:
         """Message Link Receive
 
         Called from the other side with whatever data.
@@ -54,7 +56,7 @@ class MsgLink:
         """
         raise NotImplementedError
 
-    async def ml_send(self, a: list, kw: dict, flags: int) -> None:
+    async def ml_send(self, a: Sequence, kw: OptDict, flags: int) -> None:
         """Message Link Send
 
         This method forwards data to the other side.
@@ -308,7 +310,7 @@ class MsgSender(BaseMsgHandler):
         """
         return self.root.handle(msg, rcmd)
 
-    def cmd(self, cmd: Path, *a: list[Any], **kw: dict[Key, Any]) -> Caller:
+    def cmd(self, cmd: Path, *a: Any, **kw: Any) -> Caller:
         """
         Run the command at this path.
 
@@ -405,7 +407,7 @@ class SubMsgSender(MsgSender):
             return args[0]
         return args
 
-    def sub_at(self, prefix: Path) -> SubMsgSender:
+    def sub_at(self, prefix: Path, may_stream:bool=False) -> SubMsgSender:
         """
         Returns a SubMsgSender
         """
@@ -478,7 +480,7 @@ class MsgHandler(BaseMsgHandler):
                 sub = sub.handle
             return await sub(msg, rcmd)
 
-        raise KeyError(scmd, msg.cmd, list(self.sub.keys()))
+        raise KeyError(scmd, msg.cmd, list(self.sub.keys()) if hasattr(self,"sub") else ())
 
     def find_handler(self, path, may_stream: bool = False) -> tuple[MsgHandler, Path] | Callable:
         """
@@ -490,5 +492,6 @@ class MsgHandler(BaseMsgHandler):
         """
         return self, path
 
+    @asynccontextmanager
     async def _ctx(self):
         raise NotImplementedError

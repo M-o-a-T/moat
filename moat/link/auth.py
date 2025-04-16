@@ -5,16 +5,17 @@ from moat.link import protocol_version
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from moat.lib.cmd import MsgHandler, Msg
-    from typing import ClassVar, ReadOnly
+    from typing import ClassVar, ReadOnly, Any
+    from moat.lib.cmd import MsgHandler, Msg, Key
+    from .hello import Hello
 
-__all__ = ["AuthMethod", "TokenAuth", "FreeAuth", "NeverAuth"]
+__all__ = ["AuthMethod", "TokenAuth", "AnonAuth", "NoAuth"]
 
 
 class AuthMethod:
-    name: str
+    name: ClassVar[str]
 
-    async def hello_out(self):
+    async def hello_out(self) -> Any|None:
         """
         Return data that should be included in the Hello message we
         send.
@@ -51,7 +52,7 @@ class AuthMethod:
         """
         return None
 
-    async def handle(self, conn: Hello, msg: Msg):
+    async def handle(self, conn: Hello, msg: Msg) -> None:
         """
         The dispatcher calls this method with an incoming ``i.auth.NAME`` message.
 
@@ -59,7 +60,7 @@ class AuthMethod:
 
         The default is to fail, because the remote shouldn't call us without reason.
         """
-        return False
+        await msg.result(False)
 
 
 class TokenAuth(AuthMethod):
@@ -94,7 +95,7 @@ class TokenAuth(AuthMethod):
         """
         The client shouldn't send an `i.auth.token` message.
         """
-        return False
+        await msg.result(False)
 
 
 class AnonAuth(AuthMethod):
@@ -129,6 +130,6 @@ class NoAuth(AuthMethod):
         "reject"
         return False
 
-    async def handle(self, conn: MsgHandler, msg: Msg):
+    async def handle(self, conn: MsgHandler, msg: Msg, *prefix:Key):
         "reject"
         return False

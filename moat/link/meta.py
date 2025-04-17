@@ -36,12 +36,6 @@ def _gen(i):
     return property(get_, set_)
 
 
-def _Meta(a, kw):
-    res = MsgMeta(name=NotGiven)
-    res.__setstate__((a, kw))
-    return res
-
-
 @as_proxy("_MM")
 @define(kw_only=True)
 class MsgMeta:

@@ -12,6 +12,7 @@ from attrs import define, field
 from moat.lib.codec.proxy import as_proxy
 from moat.util import NotGiven
 from moat.util.cbor import StdCBOR
+from moat.util.times import ts2iso
 
 from typing import TYPE_CHECKING
 
@@ -79,9 +80,22 @@ class MsgMeta:
         self._clean(name)
 
     def dump(self):
+        """
+        Emit this as an array, ready for sending.
+        """
         if self.kw or self.a and isinstance(self.a[-1], dict):
             return self.a + [self.kw]
         return self.a
+
+    def repr(self):
+        """
+        Emit this as a dict, ready for debugging.
+        """
+        kw = dict(self.kw)
+        kw["origin"] = self.origin
+        kw["timestamp"] = self.timestamp
+        kw["_timestamp"] = ts2iso(self.timestamp, delta=True)
+        return kw
 
     @classmethod
     def _moat__restore(cls, a, kw):

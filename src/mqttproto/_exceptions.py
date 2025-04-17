@@ -23,6 +23,20 @@ class MQTTOperationFailed(MQTTException):
         self.reason_code = reason_code
 
 
+class MQTTServerRestarted(MQTTException):
+    """
+    The server lost our subscriptions.
+    """
+    pass
+
+
+class MQTTNoReconnect(MQTTException):
+    """
+    Reconnecting to the server was not possible for some time.
+    """
+    pass
+
+
 class MQTTConnectFailed(MQTTOperationFailed):
     pass
 

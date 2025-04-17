@@ -285,7 +285,11 @@ class MsgSender(BaseMsgHandler):
     Caller_ = Caller
 
     def __init__(self, root: MsgHandler):
-        """ """
+        """
+        This class accepts client-side MoaT-cmd calls and turns them into
+        messages.
+        """
+        assert not isinstance(root,MsgSender)
         self._root = root
 
     async def __aenter__(self):
@@ -301,6 +305,7 @@ class MsgSender(BaseMsgHandler):
     def set_root(self, root):
         if type(self) != MsgSender:
             raise RuntimeError("not in a subclass")
+        assert not isinstance(root,MsgSender)
         self._root = root
 
     def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:

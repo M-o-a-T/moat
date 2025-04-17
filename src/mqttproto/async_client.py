@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import sys
+import anyio
 from collections.abc import AsyncGenerator, Container
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
 from ssl import SSLContext, SSLError
@@ -375,10 +376,26 @@ class AsyncMQTTClient:
                 # Perform the MQTT handshake (send conn + receive connack)
                 await self._do_handshake()
 
+                # Manage keepalives
+                task_group.start_soon(self._keep_alive, stream)
+
                 # Signal that the client is ready
                 if not task_status_sent:
                     task_status.started()
                     task_status_sent = True
+
+
+    async def _keep_alive(self, stream):
+        if not self._state_machine.keep_alive:
+            return
+        try:
+            while True:
+                await anyio.sleep(self._state_machine.keep_alive)
+                self._state_machine.ping()
+                await self._flush_outbound_data()
+        except Exception as exc:
+            logger.debug("Keepalive died: %r", exc, exc_info=exc)
+
 
     async def _do_handshake(self) -> None:
         self._state_machine.connect(

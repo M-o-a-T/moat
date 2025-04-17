@@ -401,7 +401,8 @@ class AsyncMQTTClient:
                 logger.warning("Connection died: %r", exc, exc_info=exc)
 
             # reset the thing
-            await self._stream.aclose()
+            if self._stream is not None:
+                await self._stream.aclose()
             self._state_machine = MQTTClientStateMachine()
 
             # incremental back-off

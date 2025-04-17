@@ -14,6 +14,7 @@ from mqttproto import RetainHandling
 from moat.lib.cmd.base import MsgSender, Caller
 from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident, ungroup
 from moat.util.compat import CancelledError
+from moat.util.random import al_unique
 
 from .common import CmdCommon
 from .conn import TCPConn
@@ -99,7 +100,7 @@ class LinkCommon(CmdCommon):
         if name is None:
             name = cfg.get("client_id")
         if name is None:
-            name = "c_" + gen_ident(10, alphabet_al_unique)
+            name = "c_" + gen_ident(10, alphabet=al_unique)
 
         self._cmdq_w, self._cmdq_r = anyio.create_memory_object_stream(5)
         self.logger = logging.getLogger(f"moat.link.client.{name}")

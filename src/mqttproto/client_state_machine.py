@@ -38,6 +38,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
     client_id: str = field(validator=[instance_of(str), min_len(1)])
     _ping_pending: bool = field(init=False, default=False)
     cap: Capabilities = field(init=False, factory=Capabilities)
+    keep_alive: int = field(init=False, default=0)
 
     def __init__(self, client_id: str | None = None):
         self.__attrs_init__(client_id=client_id or f"mqttproto-{uuid4().hex}")
@@ -80,6 +81,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
                 self._auth_method = cast(
                     str, packet.properties.get(PropertyType.AUTHENTICATION_METHOD)
                 )
+                self.keep_alive = cast(int, packet.properties.get(PropertyType.SERVER_KEEP_ALIVE))
                 self.cap.retain = cast(
                     bool, packet.properties.get(PropertyType.RETAIN_AVAILABLE, True)
                 )
@@ -149,11 +151,13 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
             clean_start=clean_start,
             keep_alive=keep_alive,
         )
+        self.keep_alive = keep_alive
         packet.encode(self._out_buffer)
         self._state = MQTTClientState.CONNECTING
 
     def disconnect(self, reason_code: ReasonCode = ReasonCode.SUCCESS) -> None:
-        self._out_require_state(MQTTClientState.CONNECTED)
+        if self._state == MQTTClientState.DISCONNECTED:
+            return
         packet = MQTTDisconnectPacket(reason_code=reason_code)
         packet.encode(self._out_buffer)
         self._state = MQTTClientState.DISCONNECTED

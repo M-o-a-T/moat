@@ -5,7 +5,7 @@ import pytest
 from moat.link.meta import MsgMeta
 from moat.link._test import Scaffold
 from moat.link.node import Node
-from moat.util import P, PathLongener, NotGiven
+from moat.util import P, PathLongener, NotGiven, ungroup
 from moat.util.msg import MsgReader
 from moat.lib.cmd import StreamError
 from moat.lib.codec.cbor import Tag as CBORTag
@@ -139,23 +139,24 @@ async def test_lsy_switch_server_hard(cfg):
 
 
 @pytest.mark.anyio()
-@pytest.mark.skip
 async def test_lsy_switch_server_hard_break(cfg):
     async with Scaffold(cfg, use_servers=True) as sf:
         srv1 = await sf.server(init={"Hello": "there!", "test": 123})
         c1 = await sf.client()
         Node()
-        await sf.server()
+        await c1.cmd(P("d.set"), P("test.one"), 123)
 
-        async with c1.cmd(P("i.count")).stream_in() as st:
-            n = 0
-            breakpoint()
-            async for m in st:
-                breakpoint()
-                n += 1
-                if n == 3:
-                    breakpoint()
-                    await srv1[0].cancel()
+        await sf.server()
+        n = 0
+        with pytest.raises(EOFError),ungroup:
+            async with c1.cmd(P("i.count")).stream_in() as st:
+                async for m in st:
+                    n += 1
+                    if n == 3:
+                        await srv1[0].cancel()
+        assert n == 3
+        res, meta = await c1.cmd(P("d.get"), P("test.one"))
+        assert res == 123
 
 
 @pytest.mark.anyio()

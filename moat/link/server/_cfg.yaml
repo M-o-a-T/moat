@@ -19,8 +19,7 @@ probe:
   timeout: 3
   repeat: 30
 
-ports:
-  main:
-    host: 127.0.0.1
-    port: 27587
+# TODO Port configuration uses the database.
+# port: 0
+port: 27587
 

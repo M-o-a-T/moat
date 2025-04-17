@@ -64,12 +64,15 @@ class Backend(_Backend):
         super().__init__(cfg, name=name)
         self.cfg = cfg
         self.meta = meta
-        self.logger = logging.getLogger(__name__ + "." + self.name)
+        self.logger = logging.getLogger(__name__ + "." + (self.name or "‹…›"))
 
         kw = cfg.copy()
-        kw.pop("driver", None)
+        sname = kw.pop("driver", None)
         self.trace = kw.pop("trace", True)
-        codec = kw.pop("codec", NotGiven)
+        try:
+            codec = kw.pop("codec")  # intentionally no default
+        except KeyError:
+            raise RuntimeError(f"The {sname} backend requires a codec.") from None
 
         kw["client_id"] = self.name
 

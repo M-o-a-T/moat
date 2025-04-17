@@ -479,6 +479,8 @@ class Server:
         The task that listens to the backend's message stream and updates
         the data store.
         """
+        t_start = anyio.current_time() if self.data else None
+
         chop = len(self.cfg.root)
         async with self.backend.monitor(
             P(":R.#"),
@@ -495,6 +497,12 @@ class Server:
 
                 msg.meta.source = "Mon"
                 path = Path.build(topic)
+                if t_start is not None and not topic:
+                    if anyio.current_time()-t_start > 10:
+                        t_start=None
+                    elif self.data and msg.data != self.data.data:
+                        raise RuntimeError(f"Existing data? {msg} {self.data}")
+
                 if self.maybe_update(path, msg.data, msg.meta) is False:
                     # This item from outside is stale.
                     d = self.data.get(path)
@@ -994,10 +1002,15 @@ class Server:
                 await _tg.start(self._save_task)
 
             # let clients in
+            # TODO config via database
 
             ports = []
-            for name, conn in self.cfg.server.ports.items():
-                ports.append(await listen_tg.start(self._run_server, client_tg, name, conn))
+            if "ports" in self.cfg.server:
+                for name, conn in self.cfg.server.ports.items():
+                    ports.append(await listen_tg.start(self._run_server, client_tg, f"{self.name}-{name}", conn))
+            if not ports:
+                conn = attrdict(host="localhost",port=self.cfg.server.port)
+                ports.append(await listen_tg.start(self._run_server, client_tg, f"{self.name}-default", conn))
 
             if len(ports) == 1:
                 link = {"host": ports[0][0], "port": ports[0][1]}

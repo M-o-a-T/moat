@@ -52,6 +52,9 @@ async def run_broker(cfg, *, task_status):
 
 
 class Scaffold(CtxObj):
+    """
+    Basic testcase runner for testing with an ephemeral MQTT server.
+    """
     tempdir:str|None
 
     def __init__(self, cfg: attrdict, use_servers=True, tempdir: str | None = None):
@@ -101,7 +104,9 @@ class Scaffold(CtxObj):
         """
         cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
         assert cfg is not None  # for pyright
-        cfg["server"]["ports"]["main"]["port"] = 0
+        if "ports" in cfg["server"]:
+            cfg["server"]["ports"]["main"]["port"] = 0
+        cfg["server"]["port"] = 0
         if self.tempdir is not None:
             cfg["server"]["save"]["dir"] = self.tempdir / "data"
         return await self.tg.start(self._run_server, cfg, kw)

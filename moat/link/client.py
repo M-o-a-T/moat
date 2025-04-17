@@ -153,7 +153,7 @@ class _Sender(MsgSender):
 
     @property
     def root(self):
-        return self._link.current_server
+        return self._link.current_server.root
 
     async def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
         srv = await self._link.get_link()

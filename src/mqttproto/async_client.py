@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import sys
+import anyio
 from collections.abc import AsyncGenerator, Container
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
 from ssl import SSLContext, SSLError
@@ -20,10 +21,12 @@ from anyio import (
     connect_unix,
     create_memory_object_stream,
     create_task_group,
+    move_on_after,
 )
 from anyio.abc import ByteReceiveStream, ByteStream, TaskStatus
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 from anyio.streams.tls import TLSStream
+from anyio import ClosedResourceError, BrokenResourceError
 from attr.validators import ge, gt, in_, instance_of, le, lt, optional
 from attrs import define, field
 
@@ -33,6 +36,8 @@ from ._exceptions import (
     MQTTPublishFailed,
     MQTTSubscribeFailed,
     MQTTUnsubscribeFailed,
+    MQTTServerRestarted,
+    MQTTNoReconnect,
 )
 from ._types import (
     MQTTConnAckPacket,
@@ -309,12 +314,12 @@ class AsyncMQTTClient:
         self._state_machine = MQTTClientStateMachine(client_id=self.client_id)
 
     @property
-    def may_retain(self) -> bool:
-        return self._state_machine.may_retain
+    def cap_retain(self) -> bool:
+        return self._state_machine.cap.retain
 
     @property
-    def may_subscription_id(self) -> bool:
-        return self._state_machine.may_subscription_id
+    def cap_subscription_ids(self) -> bool:
+        return self._state_machine.cap_subscription_ids
 
     async def __aenter__(self) -> Self:
         ctx: AbstractAsyncContextManager[Self]
@@ -335,17 +340,19 @@ class AsyncMQTTClient:
             await task_group.start(self._manage_connection)
             try:
                 yield self
-            except BaseException:
-                await self._stream.aclose()
-                raise
-            else:
+
+                self._closed = True
                 self._state_machine.disconnect()
                 operation = MQTTDisconnectOperation()
                 await self._run_operation(operation)
 
-                await self._stream.aclose()
             finally:
                 task_group.cancel_scope.cancel()
+                with move_on_after(2, shield=True):
+                    await self._stream.aclose()
+
+                self._stream = None
+                self._state_machine = MQTTClientStateMachine()
 
     async def _manage_connection(
         self,
@@ -354,30 +361,75 @@ class AsyncMQTTClient:
     ) -> None:
         task_status_sent = False
         while not self._closed:
+            t_conn = 0
+            t_backoff = 0
+
             # Establish the transport stream
-            if self.websocket_path:
-                cm = self._connect_ws()
+            try:
+                if self.websocket_path:
+                    cm = self._connect_ws()
+                else:
+                    cm = self._connect_mqtt()
+
+                async with AsyncExitStack() as exit_stack:
+                    (
+                        stream,
+                        self._ignored_exc_classes,
+                    ) = await exit_stack.enter_async_context(cm)
+                    self._stream = stream
+
+                    # Start handling inbound packets
+                    task_group = await exit_stack.enter_async_context(create_task_group())
+                    task_group.start_soon(self._read_inbound_packets, stream, task_group)
+
+                    # Perform the MQTT handshake (send conn + receive connack)
+                    await self._do_handshake()
+                    t_conn = anyio.current_time()
+
+                    # Manage keepalives
+                    task_group.start_soon(self._keep_alive, stream)
+
+                    # Signal that the client is ready
+                    if not task_status_sent:
+                        task_status.started()
+                        task_status_sent = True
+
+            except* MQTTServerRestarted:
+                raise
+
+            except* Exception as exc:
+                logger.warning("Connection died: %r", exc, exc_info=exc)
+
+            # reset the thing
+            await self._stream.aclose()
+            self._state_machine = MQTTClientStateMachine()
+
+            # incremental back-off
+            if self._closed:
+                return
+            if t_conn and anyio.current_time()-t_conn > 10:
+                t_backoff = 0
+                continue
             else:
-                cm = self._connect_mqtt()
+                t_backoff += .1+t_backoff*1.3
+                if t_backoff > 10:
+                    raise MQTTNoReconnect
+                await anyio.sleep(t_backoff)
 
-            async with AsyncExitStack() as exit_stack:
-                (
-                    stream,
-                    self._ignored_exc_classes,
-                ) = await exit_stack.enter_async_context(cm)
-                self._stream = stream
 
-                # Start handling inbound packets
-                task_group = await exit_stack.enter_async_context(create_task_group())
-                task_group.start_soon(self._read_inbound_packets, stream)
 
-                # Perform the MQTT handshake (send conn + receive connack)
-                await self._do_handshake()
 
-                # Signal that the client is ready
-                if not task_status_sent:
-                    task_status.started()
-                    task_status_sent = True
+    async def _keep_alive(self, stream):
+        if not self._state_machine.keep_alive:
+            return
+        try:
+            while True:
+                await anyio.sleep(self._state_machine.keep_alive)
+                self._state_machine.ping()
+                await self._flush_outbound_data()
+        except Exception as exc:
+            logger.debug("Keepalive died: %r", exc, exc_info=exc)
+
 
     async def _do_handshake(self) -> None:
         self._state_machine.connect(
@@ -395,7 +447,8 @@ class AsyncMQTTClient:
             assert isinstance(client_id, str)
             self.client_id = client_id
 
-    async def _read_inbound_packets(self, stream: ByteReceiveStream) -> None:
+    async def _read_inbound_packets(self, stream: ByteReceiveStream,
+                                    taskgroup: anyio.abc.TaskGroup) -> None:
         # Receives packets from the transport stream and forwards them to interested
         # listeners
         try:
@@ -409,6 +462,8 @@ class AsyncMQTTClient:
                     await self._handle_packet(packet)
         except self._ignored_exc_classes:
             pass
+        finally:
+            taskgroup.cancel_scope.cancel()
 
     async def _handle_packet(self, packet: MQTTPacket) -> None:
         if isinstance(packet, MQTTPublishPacket):
@@ -422,7 +477,12 @@ class AsyncMQTTClient:
                 MQTTUnsubscribeAckPacket,
             ),
         ):
-            operation = self._pending_operations.pop(packet.packet_id)
+            try:
+                operation = self._pending_operations.pop(packet.packet_id)
+            except KeyError:
+                # happens when shutting down, thus only a warning
+                logger.warning("Operation unknown: %r", packet)
+                return
             operation.response = packet
             operation.event.set()
         elif isinstance(packet, MQTTConnAckPacket):
@@ -430,6 +490,10 @@ class AsyncMQTTClient:
             self._pending_connect.response = packet
             self._pending_connect.event.set()
             self._pending_connect = None
+            if not packet.session_present and self._subscriptions:
+                # The server restarted and frogot our session. Owch.
+                raise MQTTServerRestarted
+
 
     async def _deliver_publish(self, packet: MQTTPublishPacket) -> None:
         async with create_task_group() as tg:
@@ -440,6 +504,9 @@ class AsyncMQTTClient:
                         client.send_stream.send_nowait(packet)
                     except WouldBlock:
                         tg.start_soon(client.send_stream.send, packet)
+                    except (ClosedResourceError, BrokenResourceError, EOFError):
+                        # just quit
+                        return
 
             if subscr_ids := packet.properties.get(
                 PropertyType.SUBSCRIPTION_IDENTIFIER
@@ -537,11 +604,11 @@ class AsyncMQTTClient:
             raise operation.exception
 
     @property
-    def maximum_qos(self) -> QoS:
+    def cap_qos(self) -> QoS:
         """
         Returns the maximum QoS level that the broker supports.
         """
-        return self._state_machine.maximum_qos
+        return self._state_machine.cap.qos
 
     async def publish(
         self,
@@ -576,7 +643,7 @@ class AsyncMQTTClient:
             await self._run_operation(MQTTQoS0PublishOperation())
 
     def _new_subscr_id(self) -> int:
-        if not self.may_subscription_id:
+        if not self.cap_subscription_ids:
             return 0
 
         sid = self._last_subscr_id

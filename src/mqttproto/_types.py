@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from abc import ABCMeta, abstractmethod
 from collections.abc import Callable, Sequence
-from enum import Enum, IntEnum, auto
+from enum import Enum, IntEnum, auto, Flag
 from functools import partial
 from itertools import zip_longest
 from typing import Any, ClassVar, cast
@@ -214,6 +214,33 @@ class QoS(IntEnum):
                 return member
 
         raise MQTTDecodeError(f"unknown QoS value: 0x{value:02X}")
+
+
+@define
+class Capabilities:
+    # Does the server support subscription IDs?
+    subscription_ids = field(type=bool,default=True)
+
+    # Does the server support subscription IDs?
+    wildcard_subscriptions = field(type=bool,default=True)
+
+    # Number of slots for un-acked packets
+    receive_queue = field(type=int, default=65535)
+
+    # Time until a closed session expires
+    session_expiry = field(type=int, default=0)
+
+    # Max packet size
+    packet_size=field(type=int, default=0)
+
+    # Max number of topic aliases
+    topic_alias=field(type=int,default=0)
+
+    # Max QOS
+    qos=field(type=QoS,default=QoS.EXACTLY_ONCE)
+
+    # Does the server support RETAINed messages?
+    retain = field(type=bool,default=True)
 
 
 class PublishAckState(Enum):

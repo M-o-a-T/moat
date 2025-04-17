@@ -76,8 +76,8 @@ class MQTTClient:
         )
 
     @property
-    def may_retain(self) -> bool:
-        return self._async_client.may_retain
+    def cap_retain(self) -> bool:
+        return self._async_client.cap_retain
 
     def __enter__(self) -> Self:
         with ExitStack() as exit_stack:

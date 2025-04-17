@@ -21,7 +21,7 @@ pytestmark = [pytest.mark.anyio, pytest.mark.network]
 )
 async def test_publish_subscribe(qos_sub: QoS, qos_pub: QoS) -> None:
     async with AsyncMQTTClient() as client:
-        if qos_pub > client.maximum_qos:
+        if qos_pub > client.cap_qos:
             return  # TODO add pytest.skip
 
         async with client.subscribe("test/+", qos=qos_sub) as messages:
@@ -51,11 +51,11 @@ async def test_publish_overlap() -> None:
             packets: list[MQTTPublishPacket] = []
             async for packet in messages:
                 if (
-                    not client.may_subscription_id
+                    not client.cap_subscription_ids
                     and packets
                     and packets[0].topic == "test/text"
                 ):
-                    assert not client.may_subscription_id
+                    assert not client.cap_subscription_ids
                     # with subscription IDs this won't happen
                     continue
 
@@ -72,7 +72,7 @@ async def test_publish_overlap() -> None:
 async def test_retained_message() -> None:
     try:
         async with AsyncMQTTClient() as client:
-            if not client.may_retain:
+            if not client.cap_retain:
                 pytest.skip("Retain not available")
             await client.publish("retainedtest", "test åäö", retain=True)
             async with client.subscribe("retainedtest") as messages:

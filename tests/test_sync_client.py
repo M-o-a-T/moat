@@ -37,7 +37,7 @@ if sys.version_info < (3, 11):
 def test_retained_message() -> None:
     try:
         with MQTTClient() as client:
-            if not client.may_retain:
+            if not client.cap_retain:
                 pytest.skip("Retain not available")
             client.publish("retainedtest", "test åäö", retain=True)
             with client.subscribe("retainedtest") as messages:

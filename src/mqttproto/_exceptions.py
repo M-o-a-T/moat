@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from mqttproto._types import PropertyType, ReasonCode
+    from ._types import PropertyType, ReasonCode
 
 
 class MQTTException(Exception):
@@ -21,6 +21,20 @@ class MQTTOperationFailed(MQTTException):
     def __init__(self, reason_code: ReasonCode | None = None) -> None:
         super().__init__(reason_code)
         self.reason_code = reason_code
+
+
+class MQTTServerRestarted(MQTTException):
+    """
+    The server lost our subscriptions.
+    """
+    pass
+
+
+class MQTTNoReconnect(MQTTException):
+    """
+    Reconnecting to the server was not possible for some time.
+    """
+    pass
 
 
 class MQTTConnectFailed(MQTTOperationFailed):

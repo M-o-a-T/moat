@@ -90,7 +90,7 @@ async def test_publish_subscribe(qos_sub: QoS, qos_pub: QoS) -> None:
     qos_info = f"{qos_sub}-{qos_pub}"
     async with BrokerTest() as broker:
         client = await broker.client()
-        if qos_pub > client.maximum_qos:
+        if qos_pub > client.cap_qos:
             return  # TODO add pytest.skip
 
         async with client.subscribe("test/+", qos=qos_sub) as messages:

@@ -10,6 +10,7 @@ from attrs import define, field
 from ._base_client_state_machine import BaseMQTTClientStateMachine, MQTTClientState
 from ._exceptions import MQTTProtocolError
 from ._types import (
+    Capabilities,
     MQTTConnAckPacket,
     MQTTConnectPacket,
     MQTTDisconnectPacket,
@@ -36,23 +37,27 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
 
     client_id: str = field(validator=[instance_of(str), min_len(1)])
     _ping_pending: bool = field(init=False, default=False)
-    _may_retain: bool = field(init=False, default=True)
-    _may_subscription_id: bool = field(init=False, default=True)
-    _maximum_qos: QoS = field(init=False, default=QoS.EXACTLY_ONCE)
+    cap: Capabilities = field(init=False, factory=Capabilities)
+    keep_alive: int = field(init=False, default=0)
 
     def __init__(self, client_id: str | None = None):
         self.__attrs_init__(client_id=client_id or f"mqttproto-{uuid4().hex}")
         self._auto_ack_publishes = True
 
     @property
-    def may_retain(self) -> bool:
+    def cap_retain(self) -> bool:
         """Does the server support RETAINed messages?"""
-        return self._may_retain
+        return self.cap.retain
 
     @property
-    def may_subscription_id(self) -> bool:
+    def cap_wildcard_subscriptions(self) -> bool:
+        """Does the server support wildcard subscriptions?"""
+        return self.cap.wildcard_subscriptions
+
+    @property
+    def cap_subscription_ids(self) -> bool:
         """Does the server support subscription IDs?"""
-        return self._may_subscription_id
+        return self.cap.subscription_ids
 
     def reset(self, session_present: bool) -> None:
         self._ping_pending = False
@@ -76,16 +81,23 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
                 self._auth_method = cast(
                     str, packet.properties.get(PropertyType.AUTHENTICATION_METHOD)
                 )
-                self._may_retain = cast(
+                self.keep_alive = cast(int, packet.properties.get(PropertyType.SERVER_KEEP_ALIVE))
+                self.cap.retain = cast(
                     bool, packet.properties.get(PropertyType.RETAIN_AVAILABLE, True)
                 )
-                self._may_subscription_id = cast(
+                self.cap.subscription_ids = cast(
                     bool,
                     packet.properties.get(
                         PropertyType.SUBSCRIPTION_IDENTIFIER_AVAILABLE, True
                     ),
                 )
-                self._maximum_qos = cast(
+                self.cap.wildcard_subscriptions = cast(
+                    bool,
+                    packet.properties.get(
+                        PropertyType.WILDCARD_SUBSCRIPTION_AVAILABLE, True
+                    ),
+                )
+                self.cap.qos = cast(
                     QoS,
                     packet.properties.get(PropertyType.MAXIMUM_QOS, QoS.EXACTLY_ONCE),
                 )
@@ -139,11 +151,13 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
             clean_start=clean_start,
             keep_alive=keep_alive,
         )
+        self.keep_alive = keep_alive
         packet.encode(self._out_buffer)
         self._state = MQTTClientState.CONNECTING
 
     def disconnect(self, reason_code: ReasonCode = ReasonCode.SUCCESS) -> None:
-        self._out_require_state(MQTTClientState.CONNECTED)
+        if self._state == MQTTClientState.DISCONNECTED:
+            return
         packet = MQTTDisconnectPacket(reason_code=reason_code)
         packet.encode(self._out_buffer)
         self._state = MQTTClientState.DISCONNECTED
@@ -194,11 +208,11 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
         return packet.packet_id
 
     @property
-    def maximum_qos(self) -> QoS:
+    def cap_qos(self) -> QoS:
         """
         Returns the maximum QoS level that the broker supports.
         """
-        return self._maximum_qos
+        return self.cap.qos
 
     def subscribe(
         self, subscriptions: Sequence[Subscription], max_qos: QoS | None = None
@@ -236,7 +250,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
             packet_id=self._generate_packet_id(),
             max_qos=max_qos,
         )
-        if subscr_id and self.may_subscription_id:
+        if subscr_id and self.cap_subscription_ids:
             packet.properties[PropertyType.SUBSCRIPTION_IDENTIFIER] = subscr_id
         packet.encode(self._out_buffer)
         self._add_pending_packet(packet, local=True)

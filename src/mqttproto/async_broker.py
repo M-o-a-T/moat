@@ -18,8 +18,8 @@ from anyio.abc import (
 from anyio.streams.tls import TLSListener
 from attrs import define, field
 
-from mqttproto._base_client_state_machine import MQTTClientState
-from mqttproto._types import (
+from ._base_client_state_machine import MQTTClientState
+from ._types import (
     MQTTConnectPacket,
     MQTTDisconnectPacket,
     MQTTPacket,
@@ -27,9 +27,10 @@ from mqttproto._types import (
     MQTTSubscribePacket,
     MQTTUnsubscribePacket,
     Pattern,
+    PropertyType,
     ReasonCode,
 )
-from mqttproto.broker_state_machine import (
+from .broker_state_machine import (
     MQTTBrokerClientStateMachine,
     MQTTBrokerStateMachine,
 )
@@ -48,7 +49,10 @@ class AsyncMQTTClientSession:
     async def flush_outbound_data(self) -> None:
         async with self.lock:
             if data := self.state_machine.get_outbound_data():
-                await self.stream.send(data)
+                try:
+                    await self.stream.send(data)
+                except anyio.ClosedResourceError:
+                    pass
 
 
 class MQTTAuthenticator(metaclass=ABCMeta):
@@ -223,6 +227,10 @@ class AsyncMQTTBroker:
                 )
         elif isinstance(packet, MQTTSubscribePacket):
             if client_state_machine.state is MQTTClientState.CONNECTED:
+                subscr_id = packet.properties.get(
+                        PropertyType.SUBSCRIPTION_IDENTIFIER, 0
+                )
+
                 reason_codes: list[ReasonCode] = []
                 for subscr in packet.subscriptions:
                     reason_codes.append(
@@ -238,6 +246,7 @@ class AsyncMQTTBroker:
 
                 # Ack queued: we can actually process the subscriptions
                 for subscr, res in zip(packet.subscriptions, reason_codes):
+                    subscr.subscription_id = subscr_id
                     if res <= ReasonCode.GRANTED_QOS_2:
                         self._state_machine.subscribe_session_to(
                             client_state_machine, subscr

@@ -69,34 +69,59 @@ units = (
 )  # seconds are handled explicitly, below
 
 
-def humandelta(delta: dt.timedelta) -> str:
+def ts2iso(ts:float, delta=False, msec=1):
+    """
+    Convert a timestamp to a human-readable absolute-time string, optionally with delta.
+    """
+    res = dt.datetime.fromtimestamp(ts,dt.UTC).astimezone().isoformat(sep=" ", timespec="milliseconds")
+    if delta:
+        res += f" ({humandelta(ts-time.time(), ago=True, msec=msec)})"
+    return res
+
+def humandelta(delta: dt.timedelta, ago:bool=False, msec=1) -> str:
     """
     Convert a timedelta into a human-readable string.
     """
     res = []
     res1 = ""
+    res2 = ""
     if isinstance(delta, dt.timedelta):
         if delta.days < 0:
             assert delta.seconds >= 0
             # right now this code only handles positive seconds
             # timedelta(0,-1) => timedelta(-1,24*60*60-1)
-            res1 = "-"
+            if ago:
+                res2=" ago"
+            else:
+                res1 = "-"
             delta = -delta
+        elif ago:
+            res1="in "
         delta = delta.days + 24 * 60 * 60 + delta.seconds + delta.microseconds / 1e6
     elif delta < 0:
         delta = -delta
-        res1 = "-"
+        if ago:
+            res2 = " ago"
+        else:
+            res1 = "-"
+    elif ago:
+        res1 = "in "
     for lim, name in units:
         if delta > lim:
             res.append(f"{delta // lim} {name}")
             delta %= lim
-    if delta >= 0.1:
-        res.append(f"{delta:3.1f} sec")
+    if delta >= 0.1**msec:
+        if delta >= 1:
+            res.append(f"{delta:.{msec}f} sec")
+        elif delta > .001:
+            res.append(f"{delta*1000:.{max(0,msec-3)}f} msec")
+        else:
+            res.append(f"{delta*1000000:.{max(0,msec-6)}f} µsec")
 
     if len(res) < 1:
         return "now"
 
-    return res1 + " ".join(res)
+    return res1 + " ".join(res) + res2
 
 
 def unixtime(tm):

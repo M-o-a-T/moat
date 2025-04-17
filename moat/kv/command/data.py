@@ -6,6 +6,7 @@ import time
 
 import asyncclick as click
 from moat.util import MsgReader, NotGiven, P, PathLongener, attr_args, yprint
+from moat.util.times import ts2iso
 
 from moat.kv.client import StreamedRequest
 from moat.kv.data import add_dates, data_get, node_attr
@@ -244,8 +245,8 @@ async def monitor(obj, state, only, path_only, add_date, ignore):
                         # value has been deleted
                         continue
             if flushing:
-                r["time"] = time.time()
-                r["_time"] = datetime.datetime.now().isoformat(sep=" ", timespec="milliseconds")
+                r["time"] = ts = time.time()
+                r["_time"] = ts2iso(ts)
             yprint(r, stream=obj.stdout)
             print("---", file=obj.stdout)
             if flushing:

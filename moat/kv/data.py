@@ -11,6 +11,7 @@ import time
 from collections.abc import Mapping
 
 from moat.util import NotGiven, Path, attrdict, process_args, yprint
+from moat.util.times import ts2iso
 import contextlib
 
 
@@ -38,10 +39,7 @@ def add_dates(d):
                 _add(v)
                 continue
             if start <= v <= stop:
-                d[f"_{k}"] = datetime.datetime.fromtimestamp(v).isoformat(
-                    sep=" ",
-                    timespec="milliseconds",
-                )
+                d[f"_{k}"] = ts2iso(v)
 
     _add(d)
 

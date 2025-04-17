@@ -11,7 +11,7 @@ from contextlib import nullcontext
 
 import anyio
 from moat.util import attrdict
-from moat.util.times import humandelta
+from moat.util.times import humandelta, ts2iso
 from ortools.linear_solver import pywraplp
 
 from .mode import Loader
@@ -123,7 +123,7 @@ class Model:
             if abs(t_now - t) > t_slot / 10:
                 raise ValueError(
                     f"You're {humandelta(abs(t_now - t))} away "
-                    f"from {datetime.datetime.fromtimestamp(t).isoformat(sep=' ')}",
+                    f"from {ts2iso(t)}",
                 )
 
         elif t % (3600 / cfg.steps):

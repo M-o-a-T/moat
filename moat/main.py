@@ -11,6 +11,7 @@ import asyncclick as click
 from asyncscope import main_scope
 from moat.util import attrdict, main_
 from moat.util import exc_iter, ungroup
+from contextlib import nullcontext
 
 
 def cmd(backend="trio"):
@@ -31,7 +32,7 @@ This is the main command handler for MoaT, the Master of all Things.
 
     ec = 0
     try:
-        with ungroup:
+        with ungroup if "MOAT_TB" not in os.environ else nullcontext():
             anyio.run(runner, backend=backend)
     except BaseException as exc:
         for e in exc_iter(exc):

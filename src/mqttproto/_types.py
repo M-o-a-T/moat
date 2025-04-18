@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import logging
 from abc import ABCMeta, abstractmethod
 from collections.abc import Callable, Sequence
 from enum import Enum, IntEnum, auto, Flag
@@ -29,6 +30,8 @@ if sys.version_info >= (3, 10):
     from typing import TypeAlias
 else:
     from typing_extensions import TypeAlias
+
+logger = logging.getLogger("mqttproto")
 
 PropertyValue: TypeAlias = "str | bytes | int | tuple[str, str] | list[int]"
 
@@ -696,6 +699,7 @@ class MQTTPacket(metaclass=ABCMeta):
     def encode_fixed_header(
         self, flags: int, payload: bytes, buffer: bytearray
     ) -> None:
+        logger.debug("OUT: %r", self)
         assert flags < 16
         encode_fixed_integer(flags | (self.packet_type << 4), buffer, 1)
         encode_variable_integer(len(payload), buffer)

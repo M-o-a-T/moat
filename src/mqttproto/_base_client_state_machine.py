@@ -314,7 +314,7 @@ class BaseMQTTClientStateMachine:
                     f"received unexpected {packet.packet_type._name_} packet"
                 )
 
-            logger.debug("Received packet from broker: %r", packet)
+            logger.debug("IN : %r", packet)
             received_packets.append(packet)
 
         cutoff_offset = len(self._in_buffer) - len(view)

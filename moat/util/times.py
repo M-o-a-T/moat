@@ -106,11 +106,19 @@ def humandelta(delta: dt.timedelta, ago:bool=False, msec=1) -> str:
             res1 = "-"
     elif ago:
         res1 = "in "
+    done = 0
     for lim, name in units:
         if delta > lim:
             res.append(f"{int(delta // lim)} {name}")
             delta %= lim
-    if delta >= 0.1**msec:
+            if lim>100:
+                msec=0
+            elif msec>1:
+                msec=1
+            done += 1
+            if done == 2:
+                break
+    if done < 2 and delta >= 0.1**msec:
         if delta >= 1:
             res.append(f"{delta:.{msec}f} sec")
         elif delta > .001:

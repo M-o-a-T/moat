@@ -47,10 +47,21 @@ __all__ = [
     "path_eval",
     "Root",
     "RootPath",
+    "set_root",
 ]
 
 _PartRE = re.compile("[^:._]+|_|:|\\.")
 _RTagRE = re.compile("^:m[^:._]+:$")
+
+
+def set_root(cfg):
+    """
+    Utility to force-set the root global.
+
+    Used for testing without a "proper" context.
+    """
+    from moat.util.path import Root, S_Root,P_Root,Q_Root
+    Root.set(cfg.root)
 
 
 @total_ordering
@@ -855,6 +866,7 @@ for _idx in "SPQ":  # and R. Yes I know.
     _name = f"{_idx}_Root"
     _ctx = ContextVar(_name, default=None)
     _path = RootPath(_idx, _ctx, _name)
+    _ctx.set(Path("XXX",_idx,"XXX"))
 
     globals()[_name] = _ctx
     __all__ += [_name]  # noqa:PLE0604

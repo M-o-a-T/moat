@@ -205,12 +205,18 @@ class Broadcaster[TData]:
             r(cast("TData", self.value))
         return aiter(r)
 
-    def reader(self, length: int) -> BroadcastReader[TData]:
+    def reader(self, length: int, send_last:bool|None=None) -> BroadcastReader[TData]:
         """Create a reader with an explicit queue length"""
         assert self._rdr is not None
 
+        if send_last is None:
+            send_last = self.send_last
         r: BroadcastReader[TData] = BroadcastReader(self, length)
         self._rdr.add(r)
+        if send_last and self.value is not NotGiven:
+            if not length:
+                raise ValueError("This would deadlock. Use length>0.")
+            r(cast("TData", self.value))
         return aiter(r)
 
     def __call__(self, value: TData) -> None:

@@ -50,9 +50,10 @@ def ensure_cfg(path: str | Path, cfg=CFG) -> dict:
         cc = EXT
         for n in range(len(path)):
             cc = cc.setdefault(path[n], attrdict())
-            if cc:
+            if "_def" in cc:
                 continue
             _load(cc, ".".join(path[: n + 1]))
+            cc._def = True
 
     finally:
         del EXT["moat"]

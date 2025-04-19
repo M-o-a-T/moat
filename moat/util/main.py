@@ -842,6 +842,10 @@ def wrap_main(  # pylint: disable=redefined-builtin,inconsistent-return-statemen
         merge(cfg, obj.CFG, replace=False)
     else:
         cfg = CFG
+
+    if (fn := os.environ.get("MOAT_CFG")) is not None:
+        merge(cfg, read_cfg(name, fn), replace=False)
+
     obj.cfg = cfg = to_attrdict(cfg)
 
     obj.debug = verbose

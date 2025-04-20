@@ -332,10 +332,10 @@ def collect_words(cur, w, back:bool=False):
             if 0 < val < 100:
                 val += p.now.year
             else:
-                if val < p.now.year or val >= p.now.year + 100:
-                    raise SyntaxError(
-                        "WHICH year? Sorry, the time machine module is not available.",
-                    )
+                if ((val < p.now.year-100 or val > p.now.year) if back
+                    else 
+                    (val < p.now.year or val >= p.now.year + 100)):
+                    raise SyntaxError(f"Year {val} would require a time machine.")
             p.yr = val
 
         elif unit in ("w", "wk", "week", "weeks"):

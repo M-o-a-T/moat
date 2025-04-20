@@ -20,6 +20,7 @@ from asyncactor import (
     GoodNodeEvent,
     RecoverEvent,
     TagEvent,
+    PingEvent,
 )
 from asyncactor.backend import get_transport
 from mqttproto import QoS
@@ -434,6 +435,8 @@ class Server:
     _stamp_out: int = 0
     _stamp_in_evt: anyio.Event
 
+    _ping_history:Sequence[str] = ()
+
     def __init__(self, cfg: dict, name: str, init: Any = NotGiven):
         self.data = Node()
         self.name = name
@@ -600,6 +603,12 @@ class Server:
                 elif isinstance(msg, TagEvent):
                     # We're "it"; find missing data
                     await self.set_main_link()
+
+                elif isinstance(msg, PingEvent):
+                    # record history, for recovery
+                    if msg.msg.node == self.name:
+                        continue
+                    self._ping_history = msg.msg.history
 
     async def set_main_link(self):
         await self.backend.send(
@@ -1051,6 +1060,8 @@ class Server:
             else:
                 await ping_ready.wait()
 
+            await _tg.start(self._watch_down)
+
             # done, ready for service
 
             task_status.started((self, ports))
@@ -1128,6 +1139,57 @@ class Server:
 
             await anyio.sleep(30)
             self.last_auth = None
+
+    async def _watch_down(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        """
+        Monitor "down" messages and broadcast a fixup if it's the active node.
+        """
+
+        downed:dict[str,float] = {}
+
+        async def down_one(name:str):
+            # protect against repeats
+            t = anyio.current_time()
+            if name in downed and t-downed[name] < self.cfg.server.ping.cycle:
+                return
+            downed[name] = t
+
+            main = aiter(self.service_monitor.reader(1, send_last=True))
+            try:
+                with anyio.fail_after(0.1):
+                    service = await anext(main)
+            except TimeoutError:
+                return  # no service, nothing to do
+            if service.meta.origin != name:
+                return  # not current
+
+            async with anyio.create_task_group() as tg:
+                @tg.start_soon
+                async def changed():
+                    async for msg in main:
+                        if msg.meta.origin != name:
+                            tg.cancel_scope.cancel()
+                            return
+
+                gap = self.cfg.server.ping.gap
+                try:
+                    n = self._ping_history.index(self.name)
+                except ValueError:
+                    await anyio.sleep(gap*(1.2+random.random()))
+                else:
+                    await anyio.sleep(gap*n/len(self._ping_history))
+                await self.set_main_link()
+
+        async with (
+                self.backend.monitor(P(":R.run.service.down.main")) as mon,
+                anyio.create_task_group() as tg,
+            ):
+            task_status.started()
+            async for msg in mon:
+                name = msg.data
+                if name == self.name:
+                    return
+                tg.start_soon(down_one,msg.data)
 
     async def _read_main(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """

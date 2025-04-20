@@ -56,8 +56,7 @@ class Node:
             if s._data == data:  # noqa:SLF001
                 if force:
                     s._meta = meta  # noqa:SLF001
-                    return None
-                return False
+                return None
         s._data = data  # noqa:SLF001
         s._meta = meta  # noqa:SLF001
         return True

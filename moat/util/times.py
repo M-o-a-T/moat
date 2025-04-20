@@ -295,35 +295,35 @@ def collect_words(cur, w, back:bool=False):
             if p.s is not None:
                 raise SyntaxError("You already specified the second")
             if not (-60 < val < 60):
-                raise SyntaxError("Seconds need to be between 0 and 59")
+                raise ValueError("Seconds need to be between 0 and 59")
             p.s = val
 
         elif unit in ("m", "min", "minute", "minutes"):
             if p.m is not None:
                 raise SyntaxError("You already specified the minute")
             if not (-60 < val < 60):
-                raise SyntaxError("Minutes need to be between 0 and 59")
+                raise ValueError("Minutes need to be between 0 and 59")
             p.m = val
 
         elif unit in ("h", "hr", "hour", "hours"):
             if p.h is not None:
                 raise SyntaxError("You already specified the hour")
             if not (-24 < val < 24):
-                raise SyntaxError("Hours need to be between 0 and 23")
+                raise ValueError("Hours need to be between 0 and 23")
             p.h = val
 
         elif unit in ("d", "dy", "day", "days"):
             if p.dy is not None:
                 raise SyntaxError("You already specified the day")
             if val == 0 or abs(val) > 31:
-                raise SyntaxError("Months only have 31 days max")
+                raise ValueError("Months only have 31 days max")
             p.dy = val
 
         elif unit in ("m", "mo", "month", "months"):
             if p.mn is not None:
                 raise SyntaxError("You already specified the month")
             if val == 0 or abs(val) > 12:
-                raise SyntaxError("Years only have 12 months max")
+                raise ValueError("Years only have 12 months max")
             p.mn = val
 
         elif unit in ("y", "yr", "year", "years"):
@@ -335,14 +335,14 @@ def collect_words(cur, w, back:bool=False):
                 if ((val < p.now.year-100 or val > p.now.year) if back
                     else 
                     (val < p.now.year or val >= p.now.year + 100)):
-                    raise SyntaxError(f"Year {val} would require a time machine.")
+                    raise ValueError(f"Year {val} would require a time machine.")
             p.yr = val
 
         elif unit in ("w", "wk", "week", "weeks"):
             if p.wk is not None:
                 raise SyntaxError("You already specified the week-of-year")
             if val == 0 or abs(val) > 53:
-                raise SyntaxError("Years only have 53 weeks max")
+                raise ValueError("Years only have 53 weeks max")
             p.wk = val
 
         elif unit in weekdays:
@@ -350,7 +350,7 @@ def collect_words(cur, w, back:bool=False):
             if p.dow is not None:
                 raise SyntaxError("You already specified the day of week")
             if val == 0 or abs(val) > 4:
-                raise SyntaxError(
+                raise ValueError(
                     "Months have max. 5 of each weekday; use -1 if you want the last one.",
                 )
             p.dow = weekdays[unit]

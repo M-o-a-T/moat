@@ -100,7 +100,7 @@ async def fetch(c, p):
 
         async for pr, p, d, *m in it:
             p = pl.long(pr, p)
-            nn.set(p, d, MsgMeta._moat__restore(m, NotGiven))
+            nn.set(p, d, MsgMeta.restore(m))
         return nn
 
 

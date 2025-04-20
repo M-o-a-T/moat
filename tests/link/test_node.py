@@ -16,7 +16,7 @@ def dump(n):
     res = {}
     pl = PathLongener()
     for d, s, da, *me in n.dump():
-        me = MsgMeta._moat__restore(me, NotGiven)
+        me = MsgMeta.restore(me)
         s = pl.long(d, s)  # noqa:PLW2901
         res[s] = (da, me.origin)
     return res

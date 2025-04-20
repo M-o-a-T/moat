@@ -679,7 +679,7 @@ class Server:
                     continue
                 d, p, data, *mt = m
                 path_ = longer.long(d, p)
-                meta = MsgMeta._moat__restore(mt, NotGiven)  # noqa:SLF001
+                meta = MsgMeta.restore(mt)  # noqa:SLF001
                 meta.source = path
                 if self.maybe_update(prefix + path_, data, meta, local=local):
                     upd += 1
@@ -1187,7 +1187,7 @@ class Server:
             async for msg in feed:
                 d, p, data, *mt = msg
                 path = pl.long(d, p)
-                meta = MsgMeta._moat__restore(mt, NotGiven)  # noqa:SLF001
+                meta = MsgMeta.restore(mt)  # noqa:SLF001
                 meta.source = "_Load"
                 if self.maybe_update(prefix + path, data, meta):
                     upd += 1
@@ -1269,7 +1269,7 @@ class Server:
                         continue
                     d, p, data, *mt = msg
                     path = pl.long(d, p)
-                    meta = MsgMeta._moat__restore(mt, NotGiven)  # noqa:SLF001
+                    meta = MsgMeta.restore(mt)  # noqa:SLF001
                     meta.source = "_file"
                     if self.maybe_update(path, data, meta):
                         # Entries that have been deleted don't count as updates

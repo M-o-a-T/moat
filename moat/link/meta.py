@@ -101,7 +101,7 @@ class MsgMeta:
         return kw
 
     @classmethod
-    def _moat__restore(cls, a, kw):
+    def restore(cls, a, kw=NotGiven):
         m = object.__new__(cls)
         if kw is NotGiven:
             if a and isinstance(a[-1], dict):
@@ -116,6 +116,7 @@ class MsgMeta:
         m.kw = kw
         m.source = source
         return m
+    _moat__restore = restore
 
     def __getitem__(self, k):
         if isinstance(k, int):

@@ -53,7 +53,7 @@ def ensure_cfg(path: str | Path, cfg=CFG) -> dict:
             if "_def" in cc:
                 continue
             _load(cc, ".".join(path[: n + 1]))
-            cc._def = True
+            cc["_def"] = True
 
     finally:
         del EXT["moat"]

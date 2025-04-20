@@ -603,7 +603,7 @@ class Server:
 
     async def set_main_link(self):
         await self.backend.send(
-            P(":R.run.service.main"),
+            P(":R.run.service.conn.main"),
             {"link": self.link_data, "auth": {"token": self.cur_auth}},
             meta=MsgMeta(origin=self.name),
             retain=True,
@@ -1135,7 +1135,7 @@ class Server:
         """
         async with (
             Broadcaster(send_last=True) as self.service_monitor,
-            self.backend.monitor(P(":R.run.service.main")) as mon,
+            self.backend.monitor(P(":R.run.service.conn.main")) as mon,
         ):
             task_status.started()
             async for msg in mon:
@@ -1145,7 +1145,7 @@ class Server:
         """
         Task to read the main service monitoring channel
         """
-        async with self.backend.monitor(P(":R.run.service.main.stamp")) as mon:
+        async with self.backend.monitor(P(":R.run.service.stamp.main")) as mon:
             task_status.started()
             async for msg in mon:
                 self._stamp_in = msg.data

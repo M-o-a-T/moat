@@ -188,7 +188,7 @@ class _Sender(MsgSender):
     async def sync(self):
         "sync with our server"
         (st,) = await self.cmd(P("i.stamp"))
-        await self.send(P(":R.run.service.main.stamp"), st)
+        await self.send(P(":R.run.service.stamp.main"), st)
         await self.cmd(P("i.sync"), st)
 
     def find_handler(self, path, may_stream: bool = False) -> tuple[MsgHandler, Path]:
@@ -267,7 +267,7 @@ class Link(LinkCommon, CtxObj):
                     await self._connect_server(srv, task_status=task_status)
             except Exception as exc:
                 await self.backend.send_error(
-                    P("run.service.main") / srv.meta.origin / self.name,
+                    P("run.service.conn.main") / srv.meta.origin,
                     data=srv,
                     exc=exc,
                 )
@@ -294,7 +294,7 @@ class Link(LinkCommon, CtxObj):
 
         self._last_link_seen = anyio.Event()
         async with self.backend.monitor(
-            P(":R.run.service.main"),
+            P(":R.run.service.conn.main"),
             retain_handling=RetainHandling.SEND_RETAINED,
         ) as mon:
             async for msg in mon:
@@ -347,7 +347,7 @@ class Link(LinkCommon, CtxObj):
 
     async def _connect_server(
         self,
-        srv: Message[Data[S.run.service.main]],
+        srv: Message[Data[S.run.service.conn.main]],
         *,
         task_status=anyio.TASK_STATUS_IGNORED,
     ):

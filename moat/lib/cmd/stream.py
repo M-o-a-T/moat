@@ -181,8 +181,6 @@ class HandlerStream(MsgHandler):
                 if not stream:
                     link.set_end()
                 self.attach(link)
-                if link.remote.cmd is None:
-                    breakpoint()  # CMD
                 link.task = await self._tgs.spawn(self._handle, msg, link)
         else:
             try:

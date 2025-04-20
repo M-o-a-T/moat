@@ -196,6 +196,9 @@ class Node:
 
         Unlike data[key], an "empty" key is not an error.
         """
+        if item is Ellipsis:
+            return self
+
         if isinstance(item, Path):
             s = self
             for n, k in enumerate(item):

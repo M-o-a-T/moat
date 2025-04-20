@@ -237,12 +237,13 @@ class Link(LinkCommon, CtxObj):
             anyio.create_task_group() as self.tg,
         ):
             self.backend = backend
+            token = Root.set(self.cfg["root"])
             try:
-                token = Root.set(self.cfg["root"])
                 if self.cfg.client.init_timeout:
                     # connect to the main server
                     await self.tg.start(self._run_server_link)
                 yield _Sender(self)
+                self.tg.cancel_scope.cancel()
             finally:
                 Root.reset(token)
             return

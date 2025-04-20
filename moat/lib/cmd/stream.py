@@ -217,7 +217,7 @@ class HandlerStream(MsgHandler):
             await self.send(link, [E_NO_CMD], None, B_ERROR)
             return
         if self.closing:
-            if not self.end_here:
+            if not link.end_here:
                 await self.send(link, [E_CANCEL], None, B_ERROR)
             return
 

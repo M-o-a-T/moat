@@ -541,7 +541,6 @@ class Server:
         """
         t_start = anyio.current_time() if self.data else None
 
-        chop = len(self.cfg.root)
         async with self.backend.monitor(
             P(":R.#"),
             raw=False,
@@ -551,7 +550,7 @@ class Server:
             task_status.started()
             async for msg in stream:
                 self.logger.debug("Recv: %r", msg)
-                topic = msg.topic[chop:]
+                topic = msg.topic[1:]
                 if topic and topic[0] == "run":
                     # Runtime messages don't get stored
                     continue

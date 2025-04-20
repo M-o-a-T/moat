@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncclick as click
 
 import anyio
-from moat.kv.server import Server
+from moat.link.server import Server
 from moat.util import as_service
 
 
@@ -36,10 +36,8 @@ from moat.util import as_service
     help="Initial value to set the root to. Do not use this option unless"
     "setting up a new cluster!",
 )
-@click.argument("name", nargs=1)
-@click.argument("nodes", nargs=-1)
 @click.pass_obj
-async def cli(obj, name, load, save, incremental, init):
+async def cli(obj, load, save, incremental, init):
     """
     Start a MoaT-Link server. It defaults to connecting to the local MQTT
     broker.
@@ -49,8 +47,9 @@ async def cli(obj, name, load, save, incremental, init):
     be accepted until synchronization with the other servers in your MoaT-Link
     network is complete.
 
-    This command requires a unique NAME argument. The name identifies this
-    server on the network. Never start two servers with the same name!
+    This command requires a unique NAME argument ("moat link -n NAME server …").
+    The name identifies this server on the network. Never start two servers
+    with the same name!
     """
 
     kw = {}
@@ -58,11 +57,32 @@ async def cli(obj, name, load, save, incremental, init):
         kw["init"] = None
     elif init is not None:
         kw["init"] = init
+    if load:
+        kw["load"] = load
 
+    if obj.name is None:
+        raise click.UsageError("You need to specify a name ('moat link -n NAME server').")
     async with as_service(obj) as evt:
-        s = Server(name, cfg=obj.cfg["kv"], **kw)
+        s = Server(cfg=obj.cfg.link, name=obj.name, **kw)
+        ev = anyio.Event()
 
         async with anyio.create_task_group() as tg:
+            async def mon():
+                try:
+                    with anyio.fail_after(3):
+                        await ev.wait()
+                except TimeoutError:
+                    print("... waiting for sync")
+                    await ev.wait()
+
+            if obj.debug:
+                tg.start_soon(mon)
             await tg.start(s.serve)
             evt.set()
+            ev.set()
+            if save:
+                if incremental:
+                    await s.save_stream(save, save_state=False)
+                else:
+                    await s.save(save)
 

@@ -208,24 +208,28 @@ async def run_sub(client, topic, args, cfg, lock):
         async for msg in subscr:
             async with lock:
                 if args["yaml"]:
+                    tm = time.time()
                     atm = anyio.current_time()
-                    d = dict(topic = msg.topic, time= (tm := time.time()))
-                    d["_time"] = ts2iso(tm, msec=6)
+
+                    d = dict(topic = msg.topic, time=tm, _prev = humandelta(atm-lock.tm,msec=6),_time = ts2iso(tm, msec=6))
+
                     if isinstance(msg, RawMessage):
                         d["raw"] = msg.data
                         d["error"] = repr(msg.exc)
                     else:
                         d["data"] = msg.data
-                    d["meta"] = msg.meta.repr()
-                    d["_prev"] = humandelta(atm-lock.tm,msec=6)
+                    if msg.meta is not None:
+                        d["meta"] = msg.meta.repr()
 
                     flags = ""
-                    if isinstance(msg.orig,MQTTPublishPacket):
+                    if isinstance(msg.orig, MQTTPublishPacket):
                         if msg.orig.retain:
                             flags += "R"
-                        flags += str(int(msg.orig.qos))
+                        if msg.orig.qos > 0:
+                            flags += f"Q{int(msg.orig.qos)}"
                     if flags:
                         d["_flags"] = flags
+
                     lock.tm=atm
                     yprint(d)
                     print("---")

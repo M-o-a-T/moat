@@ -79,8 +79,7 @@ start "moat link server" in a separate terminal, and try again.
 """
 
 
-
-@load_subgroup(sub_pre="moat.link", sub_post="cli", ext_pre="moat.link", ext_post="_main.cli")
+@load_subgroup(sub_pre="moat.link.cmd", sub_post="cli", ext_pre="moat.link", ext_post="_main.cli")
 @click.option("-n","--name", type=str, help="Name of this client (or server)")
 @click.pass_context
 async def cli(ctx,name):

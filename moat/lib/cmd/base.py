@@ -7,7 +7,7 @@ from functools import partial
 
 from typing import TYPE_CHECKING
 from moat.util.compat import TaskGroup, QueueFull, log, print_exc, ACM, AC_exit, shield
-from moat.util import Path
+from moat.util import Path, NotGiven
 from moat.util.exc import ungroup
 from .const import *
 
@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from .msg import Msg
     from moat.util import Path
     from typing import Any, Awaitable, Callable, Sequence, Mapping
+    from types import EllipsisType
 
     Key = str | int | bool
     OptDict = Mapping[str,Any]|None
@@ -78,8 +79,7 @@ class MsgLink:
         Send an exception.
         """
         if self.end_here:
-            log("Err after end: %r", self)
-            print_exc(exc)
+            log("Err after end: %r %r", self, exc, err=exc if isinstance(exc,Exception) else None)
             return
         try:
             # send the error directly
@@ -183,10 +183,19 @@ class Caller:
 
     _qlen = 0
 
-    def __init__(self, handler: MsgHandler, data: tuple[str, list | tuple, dict]):
+    def __init__(self, sender: MsgSender, data: tuple[str|Path, list | tuple, dict], _list:bool|EllipsisType|None=NotGiven):
+        """
+        @sender: the MsgSender on which we call ``.handle`` to get the result.
+        @data: (cmd,args,kw) tuple.
+        @_list: can be
+          - NotGiven: return the message object
+          - True: return a list
+          - False: return a dict
+        """
         self.data = data
-        self.handler = handler
+        self.sender = sender
         self._dir = SD_NONE
+        self._list = _list
 
     def __await__(self):
         "makes this object awaitable, CPython"
@@ -198,14 +207,43 @@ class Caller:
         return self._call()
 
     async def _call(self):
-        "helper for __await__ that calls the remote handler"
+        "helper for __await__ that calls the remote side"
         from .msg import Msg
 
         msg = Msg.Call(*self.data)
 
-        await self.handler.handle(msg, msg.rcmd)
+        await self.sender.handle(msg, msg.rcmd)
         await msg.wait_replied()
-        return msg
+
+        if self._list is NotGiven:
+            return msg
+
+        if self._list is True:
+            # always return a list
+            if msg.kw:
+                raise ValueError("has dict", msg)
+            return msg.args
+
+        if self._list is False:
+            # always return a dict
+            if msg.args:
+                raise ValueError("has args", msg)
+            return msg.kw
+
+        if (kw := msg.kw):
+            if msg.args:
+                # return the message if both kw and args are set
+                return msg
+            # return a dict if only kw is set
+            return kw
+
+        args = msg.args
+        if len(args) == 1:
+            # return a single arg directly
+            return args[0]
+        # otherwise return all of them (if any)
+        return args
+
 
     async def __aenter__(self):
         acm = ACM(self)
@@ -220,7 +258,7 @@ class Caller:
             tg = await acm(TaskGroup())
             m2 = await acm(m1.ensure_remote())
             # m2 is the one with the command data
-            tg.start_soon(self.handler.handle, m2, m2.rcmd)
+            tg.start_soon(self.sender.handle, m2, m2.rcmd)
             await acm(m1._stream_call(self._dir))
             return m1
         except BaseException as exc:
@@ -282,14 +320,13 @@ class MsgSender(BaseMsgHandler):
     This class is the client-side API of the MoaT Command multiplexer.
     """
 
-    Caller_ = Caller
+    Caller_:type[Caller] = Caller
 
     def __init__(self, root: MsgHandler):
         """
         This class accepts client-side MoaT-cmd calls and turns them into
         messages.
         """
-        assert not isinstance(root,MsgSender)
         self._root = root
 
     async def __aenter__(self):
@@ -330,7 +367,7 @@ class MsgSender(BaseMsgHandler):
         """
         return self.Caller_(self, (cmd, a, kw))
 
-    def sub_at(self, prefix: Path, may_stream: bool = False) -> MsgSender:
+    def sub_at(self, prefix: Path, may_stream: bool = False, caller=None) -> MsgSender:
         """
         Returns a SubMsgSender if the path cannot be resolved locally.
         """
@@ -338,7 +375,7 @@ class MsgSender(BaseMsgHandler):
         if isinstance(res, tuple):
             root, rem = res
             if rem:
-                return SubMsgSender(root, rem)
+                return SubMsgSender(root, rem, caller=caller or self.Caller_)
             return MsgSender(root)
         return res
 
@@ -354,7 +391,7 @@ class SubMsgSender(MsgSender):
     This `MsgSender` subclass auto-prefixes a path to all calls.
     """
 
-    def __init__(self, root: MsgHandler, path: Path):
+    def __init__(self, root: MsgHandler, path: Path, caller=None):
         """
         Setup.
         """
@@ -362,6 +399,8 @@ class SubMsgSender(MsgSender):
         self._path = path
         self._rpath = list(path)
         self._rpath.reverse()
+        if caller is not None:
+            self.Caller_=caller
 
     def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
         rcmd.extend(self._rpath)
@@ -391,7 +430,7 @@ class SubMsgSender(MsgSender):
     def stream_out(self, *a, **kw):
         return self.cmd((), *a, **kw).stream_out()
 
-    async def __call__(self, *a: list[Any], _list: bool = False, **kw: dict[Key, Any]) -> Caller:
+    def __call__(self, *a: list[Any], _list: bool|EllipsisType|None = None, **kw: dict[Key, Any]) -> Caller:
         """
         Process a direct call.
 
@@ -399,23 +438,13 @@ class SubMsgSender(MsgSender):
         If @_list is False, always returns a dict.
         If @_list is True, always returns a list.
         """
-        res = await Caller(self, ((), a, kw))
-        if res.kw:
-            if _list:
-                raise ValueError("has dict", res)
-            if res.args:
-                return res
-            return res.kw
-        args = res.args
-        if not _list and len(args) == 1:
-            return args[0]
-        return args
+        return self.Caller_(self.root, (self._path, a, kw), _list=_list)
 
-    def sub_at(self, prefix: Path, may_stream:bool=False) -> SubMsgSender:
+    def sub_at(self, prefix: Path, may_stream:bool=False, caller=None) -> SubMsgSender:
         """
         Returns a SubMsgSender
         """
-        return SubMsgSender(self.root, self._path + prefix)
+        return SubMsgSender(self.root, self._path + prefix, caller=caller or self.Caller_)
 
     def __getattr__(self, x):
         """

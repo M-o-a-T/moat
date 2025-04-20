@@ -63,6 +63,10 @@ class Scaffold(CtxObj):
         self.cfg.setdefault("backend", attrdict())
         self.cfg.backend.setdefault("driver", "mqtt")
         self.cfg.backend.setdefault("codec", "std-cbor")
+
+        self.cfg.server.ping.cycle=.5
+        self.cfg.server.ping.gap=.15
+
         self._tempdir = tempdir
 
         if not use_servers:

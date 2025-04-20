@@ -17,7 +17,7 @@ dependencies = [
 	"trio",
 	"alembic",
 	"anyio_serial",
-	"asyncactor",
+	"asyncactor ~= 0.26.2",
 	"asyncakumuli ~= 0.6.2",
 	"asyncclick",
 	"asyncowfs",

@@ -73,10 +73,11 @@ async def test_lsy_from_server(cfg):
         await data(s)
 
         await sf.server()
+
         if c1._link._last_link is None:
             await c1._link._last_link_seen.wait()
 
-        async with BasicLink(cfg, "c_test", c1._link._last_link.data) as c2:
+        async with BasicLink(cfg, "_test", c1._link._last_link.data) as c2:
             nn = await fetch(c2, "a")
 
             assert n.get(P("a")) == nn

@@ -92,13 +92,17 @@ class BasicCmd:
 
 
 class LinkCommon(CmdCommon):
-    def __init__(self, cfg, name: str | None = None):
+    protocol_version:int = -1
+    name:str
+
+    def __init__(self, cfg, name: str | None = None, is_server:bool = False):
         self.cfg = cfg
-        self.name = name
         if name is None:
             name = cfg.get("client_id")
         if name is None:
-            name = "c_" + gen_ident(10, alphabet=al_unique)
+            name = "_" + gen_ident(10, alphabet=al_unique)
+        self.name = name
+        self.is_server = is_server
 
         self._cmdq_w, self._cmdq_r = anyio.create_memory_object_stream(5)
         self.logger = logging.getLogger(f"moat.link.client.{name}")
@@ -120,12 +124,24 @@ class LinkCommon(CmdCommon):
         with suppress(KeyError):
             auth_out.append(TokenAuth(data["auth"]["token"]))
         auth_out.append(AnonAuth())
-        self._hello = Hello(me=self.name, auth_out=auth_out)
+        self._hello = Hello(me=self.name, me_server=self.is_server, auth_out=auth_out)
 
         async with TCPConn(self, remote_host=remote["host"], remote_port=remote["port"], logger=self.logger.debug) as conn:
             handler = MsgSender(conn)
-            if await self._hello.run(handler) is False:
+            if (res := await self._hello.run(handler)) is False:
                 raise AuthError("Initial handshake failed")
+
+            if isinstance(res,dict):
+                name = res.pop("name",None)
+                if name is not None:
+                    self.name = name
+                if res:
+                    self.logger.warning("Unknown auth reply: %r", res)
+
+            self.name = self._hello.me
+            self.protocol_version = self._hello.protocol_version
+            self._hello = None  # done with that
+
             yield handler
 
 
@@ -357,8 +373,8 @@ class BasicLink(LinkCommon, CtxObj):
     Simple direct link to a server.
     """
 
-    def __init__(self, cfg, name: str | None, data: dict):
-        super().__init__(cfg, name=name)
+    def __init__(self, cfg, name: str | None, data: dict, **kw):
+        super().__init__(cfg, name=name, **kw)
         self.data = data
 
     @asynccontextmanager

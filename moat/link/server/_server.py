@@ -9,6 +9,8 @@ import logging
 import signal
 import time
 import anyio.abc
+import random
+from base64 import b85encode
 from anyio.abc import SocketAttribute
 from contextlib import asynccontextmanager, nullcontext
 from datetime import UTC, datetime
@@ -128,6 +130,7 @@ class ServerClient(LinkCommon):
 
     _hello: Hello | None = None
     _auth_data: Any = None
+    name: str
 
     def __init__(self, server: Server, name: str, stream: Stream):
         self.server = server
@@ -135,17 +138,21 @@ class ServerClient(LinkCommon):
         self.stream = stream
 
         global _client_nr
-        _client_nr += 1
-        self.client_nr = _client_nr
+        t = int(time.time()*1000-1745000000000)
+        if _client_nr < t:
+            _client_nr = t
+        else:
+            _client_nr += 1
+        self.client_nr = b85encode(_client_nr.to_bytes((_client_nr.bit_length()+7)//8)).decode("ascii")
 
         self.logger = logging.getLogger(f"moat.link.server.{name}.{self.client_nr}")
 
     async def run(self):
         """Main loop for this client connection."""
 
-        self.logger.debug("START %s C_%d", self.name, self.client_nr)
+        self.logger.debug("START %s C_%s", self.name, self.client_nr)
         self._hello = Hello(
-            them=f"C_{self.client_nr}",
+            them=f"{self.name}.C{self.client_nr}",
             me=self.name,
             me_server=True,
             auth_in=[TokenAuth("Duh"), AnonAuth()],
@@ -164,7 +171,9 @@ class ServerClient(LinkCommon):
                     self.logger.debug("NO %s", self.client_nr)
                     return
             finally:
+                self.server.rename_client(self,self._hello.them)
                 del self._hello
+
             self._auth_data = auth
 
             # periodic ping
@@ -441,7 +450,21 @@ class Server:
         self._syncing = {}
 
         # connected clients
-        self._clients: set[ServerClient] = set()
+        self._clients: dict[str,ServerClient] = dict()
+
+
+    def rename_client(self, client:ServerClient, name:str):
+        """
+        Change a client name (result of protocol startup)
+        """
+        if client.name == name:
+            return
+        if name in self._clients:
+            raise ValueError("Client exists")  # XXX kill old instead?
+        del self._clients[client.name]
+        client.name = name
+        self._clients[name] = client
+
 
     def refresh_auth(self):
         """
@@ -1010,7 +1033,7 @@ class Server:
                     ports.append(await listen_tg.start(self._run_server, client_tg, f"{self.name}-{name}", conn))
             if not ports:
                 conn = attrdict(host="localhost",port=self.cfg.server.port)
-                ports.append(await listen_tg.start(self._run_server, client_tg, f"{self.name}-default", conn))
+                ports.append(await listen_tg.start(self._run_server, client_tg, self.name, conn))
 
             if len(ports) == 1:
                 link = {"host": ports[0][0], "port": ports[0][1]}
@@ -1142,7 +1165,7 @@ class Server:
             self._syncing[name] = scope
 
             try:
-                async with BasicLink(self.cfg, name, data) as conn:
+                async with BasicLink(self.cfg, self.name, data, is_server=True) as conn:
                     await self._sync_one(conn)
             except Exception as exc:
                 self.logger.warning(
@@ -1309,10 +1332,10 @@ class Server:
             c = ServerClient(server=self, name=name, stream=stream)
             cnr = c.client_nr
             try:
-                self._clients.add(c)
+                self._clients[name] = c
                 await c.run()
             finally:
-                self._clients.remove(c)
+                del self._clients[c.name]
         except (ClosedResourceError, anyio.EndOfStream):
             self.logger.debug("XX %d closed", cnr)
         except BaseException as exc:
@@ -1331,11 +1354,11 @@ class Server:
                 elif isinstance(exc, TimeoutError):
                     self.logger.warning("Client %s timed out", cnr)
                 else:
-                    self.logger.exception("Client connection killed", exc_info=exc)
+                    self.logger.exception("Client connection %s killed", cnr, exc_info=exc)
             if exc is None:
                 exc = "Cancelled"
             self._error_cache[name] = cast(Exception,exc)
-            self.logger.debug("XX END XX %d", cnr)
+            self.logger.debug("XX END XX %s", cnr)
 
         finally:
             with anyio.move_on_after(2, shield=True):

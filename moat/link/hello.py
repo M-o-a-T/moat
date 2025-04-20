@@ -79,6 +79,8 @@ class Hello(CmdCommon):
     def __init__(self, *a, **kw):
         super().__init__()
         self.__attrs_init__(*a, **kw)  # pyright:ignore
+        if self.me_server and self.me is None:
+            raise ValueError("A server must have a name")
 
     async def handle(self, msg: Msg, rcmd: list[Key], *prefix:Key) -> None:
         """
@@ -120,9 +122,9 @@ class Hello(CmdCommon):
         _d="Process remote Hello msg",
         _r="auth state",
         _0="int:protocol",
-        _1="str:remote name",
-        _2="str:local name",
-        _3="bool:server flag",
+        _1="bool:server flag",
+        _2="str:sender's name",
+        _3="str:recipient's name (temp by sender)",
         _4=["str:auth method"],
         _k="str:auth names",
         _kw="Any:auth params",
@@ -146,10 +148,11 @@ class Hello(CmdCommon):
         finally:
             self._done.set()
 
-    async def _do_hello(self, msg) -> bool | None:
+    async def _do_hello(self, msg) -> bool | dict:
         logger.info("H IN %r %r", msg.args, msg.kw)
         it = iter(msg.args)
         auth = True
+        aux_data = {}
 
         try:
             prot = next(it)
@@ -157,17 +160,37 @@ class Hello(CmdCommon):
                 raise ValueError("Protocol mismatch", prot)
             self.protocol_version = min(prot, self.protocol_max)
 
-            me_server = next(it)
-            if not me_server and not self.me_server:
+            # TODO special auth for servers?
+            they_server = next(it)
+            if not they_server and not self.me_server:
                 raise RuntimeError("Two clients cannot talk")
 
+            # Remote names
+            # If the remote is nameless, use ours.
+            # If the remote is a server, keep its name.
+            # If the name are the same, no problem.
+            # If the remote name starts with an underscore, tell it to use ours.
+            # If the remote is a server, keep its name.
+            # Otherwise prefix with our name.
             remote_name = next(it)
             if remote_name is None:
-                pass
+                if self.them is None:
+                    logger.error("No remote name")
+                    auth=False
+                    raise StopIteration
+                aux_data["name"] = self.them
             elif self.them is None:
                 self.them = remote_name
             elif self.them != remote_name:
-                logger.warning("Remote name: %r / %r", remote_name, self.them)
+                if remote_name.startswith("_"):
+                    logger.debug("Remote name: %r / %r", remote_name, self.them)
+                    aux_data["name"] = self.them
+                elif they_server:
+                    self.them = remote_name
+                else:  # we're the server, so use our name as a prefix
+                    self.them = f"{self.me}.{remote_name}"
+                    logger.debug("Remote name: %r", self.them)
+                    aux_data["name"] = self.them
 
             local_name = next(it)
             if local_name is None:
@@ -175,7 +198,7 @@ class Hello(CmdCommon):
             elif self.me is None:
                 self.me = local_name
             elif self.me != local_name:
-                logger.warning("My name: %r / %r", local_name, self.me)
+                logger.debug("My name: %r / %r", local_name, self.me)
                 if not self.me_server:
                     self.me = local_name
 
@@ -187,13 +210,14 @@ class Hello(CmdCommon):
         except StopIteration:
             pass
 
+        # wait for the outgoing part to start
         await self._sync.wait()
 
         if auth is False:
-            raise NotAuthorized("Server %r blocks us", self.them)
+            raise NotAuthorized("Remote blocks us", self.them)
         if auth is True:
             self.auth_data = True
-            return True
+            return aux_data or True
 
         if isinstance(auth, str):
             auth = (auth,)
@@ -214,8 +238,13 @@ class Hello(CmdCommon):
             if am is None:
                 continue
             res = await am.chat(self, self.hello_kw.get(a, None))
-            if res is not None:
+            if res is None:
+                continue
+            if isinstance(res,dict):
+                aux_data.update(res)
+            if res is False or not aux_data:
                 return res
+            return aux_data
 
         # Nothing matched.
         return False
@@ -240,7 +269,7 @@ class Hello(CmdCommon):
 
         logger.info("H OUT %d %s %s %r %r", proto_version, self.me, self.them, auths, kw)
         self._sync.set()
-        (res,) = await sender.cmd(
+        res = await sender.cmd(
             P("i.hello"),
             proto_version,
             self.me_server,
@@ -249,9 +278,11 @@ class Hello(CmdCommon):
             auths,
             **kw,
         )
+        res = res.kw or res[0]
 
         if res is False:
             raise NotAuthorized("Server %r rejects us", self.them)
 
         # Wait for the incoming side of the auth/hello dance to succeed
         await self._done.wait()
+        return res

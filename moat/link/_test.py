@@ -138,7 +138,7 @@ class Scaffold(CtxObj):
         global _seq  # noqa:PLW0603
         _seq += 1
 
-        async with Link(cfg, f"C{_seq}") as li:
+        async with Link(cfg, f"C_{_seq}") as li:
             task_status.started(li)
             await anyio.sleep_forever()
             assert False  # noqa:B011,PT015

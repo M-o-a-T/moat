@@ -63,6 +63,9 @@ class MsgResult(Iterable):
         self._a = a
         self._kw = kw
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self._a} {self._kw}>"
+
     @property
     def args(self) -> Sequence:
         "Retrieve the argument list."

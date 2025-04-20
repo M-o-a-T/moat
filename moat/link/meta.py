@@ -8,6 +8,7 @@ import time
 from base64 import b85decode, b85encode
 
 from attrs import define, field
+import ruyaml as yaml
 
 from moat.lib.codec.proxy import as_proxy
 from moat.util import NotGiven
@@ -21,6 +22,8 @@ if TYPE_CHECKING:
     from types import EllipsisType
 
 _codec = StdCBOR()
+
+SafeRepresenter = yaml.representer.SafeRepresenter  # pyright:ignore
 
 
 def _gen(i):
@@ -262,3 +265,9 @@ class MsgMeta:
         res._unmap(ddec)  # noqa:SLF001
         res._clean(name)  # noqa:SLF001
         return res
+
+def _meta_repr(dumper, data):
+    return dumper.represent_scalar("!Meta", repr(data))
+
+SafeRepresenter.add_representer(MsgMeta, _meta_repr)
+

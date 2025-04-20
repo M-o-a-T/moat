@@ -77,8 +77,6 @@ class BasicCmd:
             raise
         except Exception as exc:
             self._result = outcome.Error(exc)
-        except BaseException:
-            raise
         else:
             self._result = outcome.Value(res)
         finally:

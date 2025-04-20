@@ -108,7 +108,11 @@ def read_env(loader, node):
     value = loader.construct_scalar(node)
     return os.environ[value]
 
+def _el_repr(dumper, data):
+    return dumper.represent_scalar("!R", "...")
 
+
+SafeRepresenter.add_representer(type(Ellipsis), _el_repr)
 SafeRepresenter.add_representer(Path, _path_repr)
 SafeConstructor.add_constructor("!P", Path._make)
 

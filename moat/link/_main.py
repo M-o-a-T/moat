@@ -41,8 +41,8 @@ usage1 = """
             port: 1883
             user: foo
             pass: bar
+            codec: std-cbor
         root: !P moat.something-unique
-        codec: std-cbor
 
 The MQTT hierarchy below the "root" topic, with slashes instead of dots,
 *must* be empty when you start a new installation.

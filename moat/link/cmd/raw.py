@@ -17,7 +17,8 @@ import asyncclick as click
 
 from mqttproto import MQTTException
 
-from moat.util import NotGiven, P, Path, load_subgroup, yprint, set_root, gen_ident
+from moat.util import NotGiven, P, Path, load_subgroup, yprint, gen_ident
+from moat.util.path import set_root
 from moat.util.times import ts2iso,humandelta
 
 from moat.link.backend import RawMessage, get_backend
@@ -42,6 +43,8 @@ async def cli(ctx):
     cfg = obj.cfg["link"]
     if not obj.name:
         obj.name = "x_"+gen_ident()
+
+    set_root(cfg)
     obj.conn = await ctx.with_async_resource(get_backend(cfg, name=obj.name))
 
 
@@ -177,7 +180,6 @@ async def pub(obj, **args):
         raise UsageError("You must supply a client name")
 
     async with anyio.create_task_group() as tg:
-        set_root(cfg)
         await do_pub(obj.conn, args, cfg)
 
 
@@ -266,5 +268,4 @@ async def sub(obj, **args):
         cfg["keep_alive"] = args["keep_alive"]
 
     async with anyio.create_task_group() as tg:
-        set_root(cfg)
         await do_sub(obj.conn, args, cfg)

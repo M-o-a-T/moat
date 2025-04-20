@@ -100,6 +100,7 @@ class Backend(CtxObj, metaclass=ABCMeta):
         retained: bool = True,
         echo: bool = False,
         no_local: bool = False,
+        subtree: bool = False,
     ) -> AsyncIterator[AsyncIterator[Message]]:
         """
         Return an async iterator that listens to this topic.

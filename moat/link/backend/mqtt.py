@@ -111,12 +111,15 @@ class Backend(_Backend):
         *,
         codec: str | Codec | None | Literal[NotGiven] = NotGiven,
         raw: bool | None = False,
+        subtree: bool = False,
         **kw,
     ) -> AsyncIterator[AsyncIterator[Message]]:
         "watch a topic"
 
         topic = topic.slashed
-        self.logger.info("Monitor %s start", topic)
+        if subtree:
+            topic += "/#"
+        self.logger.debug("Monitor %s start", topic)
         codec = self.codec if codec is NotGiven else get_codec(codec)
         try:
             async with self.client.subscribe(topic, **kw) as sub:

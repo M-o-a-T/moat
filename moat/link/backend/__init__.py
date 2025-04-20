@@ -48,6 +48,7 @@ class Message[TData]:
     data: TData = field()
     meta: MsgMeta = field()
     orig: Any = field(repr=False)
+    retain: bool|None = field(default=False)
 
     raw: ClassVar[bool] = False
 
@@ -97,7 +98,6 @@ class Backend(CtxObj, metaclass=ABCMeta):
         qos: QoS | None = None,
         codec: Codec | None | Literal[NotGiven] = NotGiven,
         raw: bool | None = False,
-        retained: bool = True,
         echo: bool = False,
         no_local: bool = False,
         subtree: bool = False,

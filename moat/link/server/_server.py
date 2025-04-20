@@ -631,17 +631,19 @@ class Server:
                     )
 
                 elif isinstance(msg, GoodNodeEvent):
-                    self._tg.start_soon(self.fetch_data, msg.nodes)
+                    # self._tg.start_soon(self.fetch_data, msg.nodes)
                     ready.set()
 
                 elif isinstance(msg, TagEvent):
-                    # We're "it"; find missing data
+                    # We're "it"
                     await self.set_main_link()
+                    ready.set()
 
                 elif isinstance(msg, PingEvent):
                     # record history, for recovery
                     if msg.msg.node == self.name:
                         continue
+                    ready.set()
                     self._ping_history = msg.msg.history
 
     async def set_main_link(self):
@@ -1067,6 +1069,9 @@ class Server:
             if await sd.is_dir():
                 await _tg.start(self._save_task)
 
+            if self._init is not NotGiven:
+                self.maybe_update(Path(), self._init, MsgMeta(origin="INIT",source="INIT"))
+
             # let clients in
             # TODO config via database
 
@@ -1088,13 +1093,14 @@ class Server:
 
             ping_ready = anyio.Event()
             await _tg.start(self._pinger, ping_ready)
-
-            if self.cfg.server.standalone:
+            if self._init is not NotGiven:
                 await self.set_main_link()
             else:
                 await ping_ready.wait()
 
             await _tg.start(self._watch_down)
+
+            del self._init  # after this point there's no more difference
 
             # done, ready for service
 
@@ -1299,26 +1305,18 @@ class Server:
         Runs in the background if we have initial data.
         """
         ready = anyio.Event()
-        main = aiter(self.service_monitor)
-        if self.data:
-            task_status.started()
-            task_status = anyio.TASK_STATUS_IGNORED
+        if self._init is not NotGiven:
             ready.set()
 
         async with anyio.create_task_group() as tg:
-
             @tg.start_soon
             async def trigger():
                 with anyio.fail_after(self.cfg.server.timeout.startup):
                     await ready.wait()
                 task_status.started()
 
-            async with anyio.create_task_group() as tgx:
-                tgx.start_soon(self._get_remote_data, main, ready)
-                tgx.start_soon(self._read_saved_data, ready)
-
-            if not ready.is_set():
-                raise RuntimeError("NO DATA")
+            tg.start_soon(self._get_remote_data, aiter(self.service_monitor), ready)
+            tg.start_soon(self._read_saved_data, ready)
 
     async def _read_saved_data(self, ready: anyio.Event):
         save = self.cfg.server.save

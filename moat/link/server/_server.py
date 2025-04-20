@@ -273,6 +273,10 @@ class ServerClient(LinkCommon):
         ps = PathShortener()
 
         async def _writer(p, n):
+            try:
+                nd = n.data
+            except ValueError:
+                return
             d, sp = ps.short(p)
             await msg.send(d, sp, nd, *n.meta.dump())
 
@@ -283,15 +287,16 @@ class ServerClient(LinkCommon):
         async with msg.stream_out():
             await d.walk(_writer, timestamp=ts, min_depth=xmin, max_depth=xmax)
 
-    doc_d_set = dict(_d="set value", _0="Path", _1="Any", _99="MsgMeta:optional")
+    doc_d_set = dict(_d="set value", _0="Path", _1="Any", _99="MsgMeta:optional", t="Time of last change")
 
-    async def cmd_d_set(self, path, value, meta: MsgMeta | None = None):
+    async def cmd_d_set(self, path, value, meta: MsgMeta | None = None, t:float|None=None):
         """Set a node's value.
 
         Arguments:
         * pathname
         * value
-        * optional: metadata
+        * optional: new metadata
+        * optional: t: timestamp of last change
 
         You should not call this. Send to the MQTT topic directly.
         """
@@ -299,25 +304,53 @@ class ServerClient(LinkCommon):
             meta = MsgMeta(origin=self.name)
         meta.source = "Client"
 
+        try:
+            node = self.server.data.get(path)
+        except ValueError:
+            res = None
+        else:
+            if t is not None and (node.meta is None or abs(node.meta.timestamp-t) > .001):
+                raise OutOfDateError(node.meta)
+            try:
+                res = node.data,*(node.meta.dump() if node.meta is not None
+                                  else ())
+            except ValueError:
+                res = NotGiven,*(node.meta.dump() if node.meta is not None else ())
         self.server.maybe_update(path, value, meta)
+        return res
 
-    doc_d_del = dict(_d="delete value", _0="Path", _1="Any", _99="MsgMeta:optional")
+    doc_d_delete = dict(_d="delete value", _0="Path", _99="MsgMeta:optional", t="Time of+ last change")
 
-    async def cmd_d_del(self, msg):
+    async def cmd_d_delete(self, path, meta=None, t:float|None=None):
         """Delete a node's value.
 
         Arguments:
         * pathname
-        * optional: metadata
+        * optional: new metadata
+        * optional: t: timestamp of last change
+
+        You should only call this if you don't know whether the data exists.
+        If you do, send an empty value to the MQTT topic directly.
         """
-        path = msg[0]
-        if len(msg) > 2:
-            meta = msg[2]
-        else:
+        if meta is None:
             meta = MsgMeta(origin=self.name)
         meta.source = "Client"
 
-        self.server.maybe_update(path, NotGiven, meta)
+        try:
+            node = self.server.data[path]
+            dv = node.data
+            dm = node.meta
+        except (KeyError,ValueError):
+            node = None
+        else:
+            if t is not None and abs(node.meta.timestamp-t) > .001:
+                raise OutOfDateError(node.meta)
+            self.server.maybe_update(path, NotGiven, meta)
+
+        if node is None:
+            return None
+        else:
+            return dv, *dm.dump()
 
     doc_i_state = dict(_d="state", _r="MsgMeta:optional")
 
@@ -439,13 +472,12 @@ class Server:
 
     _ping_history:Sequence[str] = ()
 
-    def __init__(self, cfg: dict, name: str, init: Any = NotGiven):
+    def __init__(self, cfg: dict, name: str, init: Any = NotGiven, load:anyio.Path|FSPath|str|None=None):
         self.data = Node()
         self.name = name
         self.cfg = to_attrdict(cfg)
 
-        if init is not NotGiven:
-            self.data.set(Path(), init, MsgMeta(origin="INIT"))
+        self._init = init
 
         self.logger = logging.getLogger("moat.link.server." + name)
         self._writing = set()
@@ -521,6 +553,7 @@ class Server:
                 self.logger.debug("Recv: %r", msg)
                 topic = msg.topic[chop:]
                 if topic and topic[0] == "run":
+                    # Runtime messages don't get stored
                     continue
 
                 msg.meta.source = "Mon"
@@ -732,7 +765,7 @@ class Server:
             await writer(hdr)
 
         # await writer({"info": msg})
-        await self.data[prefix].walk(saver, timestamp=kw.get("timestamp", 0))
+        await self.data.get(prefix).walk(saver, timestamp=kw.get("timestamp", 0))
 
         if ftr:
             if ftr is True:

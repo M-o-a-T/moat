@@ -4,7 +4,7 @@ Message streaming.
 
 from __future__ import annotations
 from moat.util import Path, QueueFull, _add_obj
-from moat.util.compat import Queue, log, L, TaskGroup, ACM, AC_exit, Event, shield
+from moat.util.compat import Queue, log, L, TaskGroup, ACM, AC_exit, Event, shield, ticks_ms, ticks_diff, sleep_ms
 from functools import partial
 from moat.lib.cmd.base import MsgLink, MsgHandler
 from moat.lib.cmd.const import *
@@ -262,12 +262,30 @@ class HandlerStream(MsgHandler):
             return
 
         # Optimizing for CBOR integers
-        if mid < 6:
-            self._id1.add(mid)
-        elif L and mid < 64:
-            self._id2.add(mid)
+        if L:
+            self._dly_q.put_nowait((mid,ticks_ms()))
         else:
-            self._id3.add(mid)
+            if mid < 6:
+                self._id1.add(mid)
+            else:
+                self._id3.add(mid)
+
+
+    async def _dly(self):
+        "Delay for message IDs because we don't want to re-use them immediately."
+        while True:
+            mid,t = await self._dly_q.get()
+            tt = ticks_ms()
+            td = ticks_diff(tt,t)
+            if td < 1000:
+                await sleep_ms(1000-td)
+            if mid < 6:
+                self._id1.add(mid)
+            elif mid < 64:
+                self._id2.add(mid)
+            else:
+                self._id3.add(mid)
+
 
     async def send(self, link: StreamLink, a: list, kw: dict, flag: int) -> None:
         if self.closing:
@@ -317,6 +335,10 @@ class HandlerStream(MsgHandler):
             await evt1.wait()
             await evt2.wait()
             self.closing = False
+            if L:
+                self._dly_q = Queue(999)
+                await acm(self._dly_q.close_sender)
+                tg.start_soon(self._dly)
             return self
 
         except BaseException as exc:

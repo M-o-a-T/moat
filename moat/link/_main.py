@@ -48,7 +48,7 @@ The MQTT hierarchy below the "root" topic, with slashes instead of dots,
 *must* be empty when you start a new installation.
 
 Please add this stanza to the file "/etc/moat/moat.cfg" (or "/etc/moat.cfg",
-or "~/.local/moat.cfg") and try again.
+or "~/.config/moat.cfg") and try again.
 """
 
 usage2 = """

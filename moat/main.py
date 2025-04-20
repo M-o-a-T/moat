@@ -9,8 +9,8 @@ import sys
 import anyio
 import asyncclick as click
 from asyncscope import main_scope
-from moat.util import attrdict, main_
-from moat.util import exc_iter, ungroup
+from moat.util import attrdict, main_, exc_iter, ungroup
+from moat.util.exc import ExpectedError
 from contextlib import nullcontext
 
 
@@ -34,6 +34,9 @@ This is the main command handler for MoaT, the Master of all Things.
     try:
         with ungroup if "MOAT_TB" not in os.environ else nullcontext():
             anyio.run(runner, backend=backend)
+    except ExpectedError as exc:
+        print(repr(exc), file=sys.stderr)
+        ec = 1
     except BaseException as exc:
         for e in exc_iter(exc):
             if isinstance(e, KeyboardInterrupt):

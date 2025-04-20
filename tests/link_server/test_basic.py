@@ -55,12 +55,14 @@ async def test_ls_basic(cfg):
 
         await c.sync()
 
-        r, m = await c.cmd(P("d.get"), P("test.here"))
+        r, *m = await c.cmd(P("d.get"), P("test.here"))
         assert r == "Hello"
+        m=MsgMeta.restore(m)
         assert m.origin == "me!"
 
-        r, m = await c.cmd(P("d.get"), P(":"))
+        r, *m = await c.cmd(P("d.get"), P(":"))
         assert r["test"] == 123
+        m=MsgMeta.restore(m)
         assert m.origin == "INIT"
 
         evt = anyio.Event()

@@ -135,7 +135,7 @@ async def test_lsy_switch_server_hard(cfg):
         await sf.server()
         await srv1[0].cancel()
 
-        res, meta = await c1.cmd(P("d.get"), P("test.one"))
+        res, *meta = await c1.cmd(P("d.get"), P("test.one"))
         assert res == 123
 
 
@@ -156,7 +156,7 @@ async def test_lsy_switch_server_hard_break(cfg):
                     if n == 3:
                         await srv1[0].cancel()
         assert n == 3
-        res, meta = await c1.d.get(P("test.one"))
+        res, *meta = await c1.d.get(P("test.one"))
         assert res == 123
 
 
@@ -171,5 +171,5 @@ async def test_lsy_switch_server_soft(cfg):
         await sf.server()
         await srv1[0].stop()
 
-        res, meta = await c1.cmd(P("d.get"), P("test.one"))
+        res, *meta = await c1.cmd(P("d.get"), P("test.one"))
         assert res == 123

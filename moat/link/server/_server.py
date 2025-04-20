@@ -221,7 +221,7 @@ class ServerClient(LinkCommon):
         * metadata
         """
         d = self.server.data[msg[0]]
-        await msg.result(d.data, d.meta)
+        await msg.result(d.data, *d.meta.dump())
 
     doc_d = dict(_d="Data access commands")
 
@@ -274,7 +274,7 @@ class ServerClient(LinkCommon):
 
         async def _writer(p, n):
             d, sp = ps.short(p)
-            await msg.send(d, sp, n.data, *n.meta.dump())
+            await msg.send(d, sp, nd, *n.meta.dump())
 
         d = self.server.data.get(msg[0], create=False)
         ts = msg.get(1, 0)

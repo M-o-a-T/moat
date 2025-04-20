@@ -9,7 +9,7 @@ import logging
 import time
 from contextlib import asynccontextmanager
 
-from mqttproto.async_client import AsyncMQTTClient, Will
+from mqttproto.async_client import AsyncMQTTClient, Will, PropertyType
 
 from moat.link.meta import MsgMeta
 from moat.lib.codec.noop import Codec as NoopCodec
@@ -164,7 +164,13 @@ class Backend(_Backend):
                                 err = exc
                             else:
                                 try:
-                                    data = codec.decode(msg.payload)
+                                    p_i = msg.properties.get(PropertyType.PAYLOAD_FORMAT_INDICATOR, 0)
+                                    if not p_i:
+                                        data = codec.decode(msg.payload)
+                                    elif p_i == 1:
+                                        data = msg.payload  # UTF-8
+                                    else:
+                                        raise ValueError("Unknown payload format {p_i}")
                                 except Exception as exc:
                                     self.logger.debug("Decoding Error", exc_info=exc)
                                     await self.send(

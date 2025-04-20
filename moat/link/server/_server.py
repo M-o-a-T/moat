@@ -682,7 +682,6 @@ class Server:
 
         Try to get the initial data from some other node.
         """
-        breakpoint()
         nodes  # noqa:B018  # pyright:ignore
 
     async def recover_split(self, prio, replace, local_history, sources):

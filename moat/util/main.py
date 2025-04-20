@@ -331,7 +331,6 @@ def read_cfg(name, path=None):
         if path is not None:
             _cfg(path)
         else:
-            _cfg(os.path.expanduser(f"~/config/{name}.cfg"))
             _cfg(os.path.expanduser(f"~/.config/{name}.cfg"))
             _cfg(os.path.expanduser(f"~/.{name}.cfg"))
             _cfg(f"/etc/{name}/{name}.cfg")

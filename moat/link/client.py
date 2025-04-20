@@ -130,15 +130,19 @@ class LinkCommon(CmdCommon):
 
 
 class ClientCaller(Caller):
+    def __init__(self,sender,*a,**kw):
+        self._link = sender._link
+        super().__init__(sender,*a,**kw)
+
     @asynccontextmanager
     async def _ctx(self):
-        await self.handler._link.get_link()
+        await self._link.get_link()
         async with super()._ctx() as res:
             yield res
 
     async def _call(self):
         "helper for __await__ that calls the remote handler"
-        link = await self.handler._link.get_link()
+        link = await self._link.get_link()
         cmd, a, kw = self.data
         return await link.root._sender.cmd(cmd, *a, **kw)
 
@@ -151,7 +155,7 @@ class _Sender(MsgSender):
 
     @property
     def root(self):
-        return self._link.current_server.root
+        return self
 
     async def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
         srv = await self._link.get_link()
@@ -171,6 +175,8 @@ class _Sender(MsgSender):
         await self.send(P(":R.run.service.main.stamp"), st)
         await self.cmd(P("i.sync"), st)
 
+    def find_handler(self, path, may_stream: bool = False) -> tuple[MsgHandler, Path]:
+        return self, path
 
 class Link(LinkCommon, CtxObj):
     """

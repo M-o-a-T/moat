@@ -198,7 +198,7 @@ class Backend(_Backend):
                         yield RawMessage(top, msg.payload, prop, msg, exc=err)
 
                 yield sub_get(sub)
-        except anyio.get_cancelled_exc_class():
+        except (anyio.get_cancelled_exc_class(), KeyboardInterrupt):
             raise
         except BaseException as exc:
             self.logger.exception("Monitor %s end", topic, exc_info=exc)

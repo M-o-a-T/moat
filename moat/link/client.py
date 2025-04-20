@@ -124,7 +124,7 @@ class LinkCommon(CmdCommon):
         auth_out.append(AnonAuth())
         self._hello = Hello(me=self.name, auth_out=auth_out)
 
-        async with TCPConn(self, remote_host=remote["host"], remote_port=remote["port"]) as conn:
+        async with TCPConn(self, remote_host=remote["host"], remote_port=remote["port"], logger=self.logger.debug) as conn:
             handler = MsgSender(conn)
             if await self._hello.run(handler) is False:
                 raise AuthError("Initial handshake failed")

@@ -178,7 +178,7 @@ class Backend(_Backend):
                                 else:
                                     # everything OK
                                     if self.trace:
-                                        self.logger.info("R:%s %r", top, data)
+                                        self.logger.debug("R:%s %r", top, data)
                                     yield Message(top, data, prop, msg)
                                 continue
                         if raw is False:
@@ -195,7 +195,7 @@ class Backend(_Backend):
             self.logger.exception("Monitor %s end", topic, exc_info=exc)
             raise
         else:
-            self.logger.info("Monitor %s end", topic)
+            self.logger.debug("Monitor %s end", topic)
 
     @overload
     def send(

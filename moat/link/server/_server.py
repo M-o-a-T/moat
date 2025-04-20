@@ -559,7 +559,7 @@ class Server:
             task_status.started()
 
             async for msg in actor:
-                self.logger.debug("ACT IN %r", msg)
+                self.logger.info("ACT IN %s", repr(msg))
 
                 if isinstance(msg, RecoverEvent):
                     self._tg.start_soon(
@@ -1031,7 +1031,7 @@ class Server:
             # done, ready for service
 
             task_status.started((self, ports))
-            self.logger.debug("STARTUP DONE")
+            self.logger.info("Startup done")
 
             # maintainance
 
@@ -1327,7 +1327,9 @@ class Server:
 
             if exc is not None and not isinstance(exc, CancelExc):
                 if isinstance(exc, (ClosedResourceError, anyio.EndOfStream)):
-                    self.logger.debug("XX %d closed", cnr)
+                    self.logger.debug("Client %s closed", cnr)
+                elif isinstance(exc, TimeoutError):
+                    self.logger.warning("Client %s timed out", cnr)
                 else:
                     self.logger.exception("Client connection killed", exc_info=exc)
             if exc is None:

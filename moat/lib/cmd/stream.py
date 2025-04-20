@@ -21,6 +21,7 @@ except ImportError:
     Mapping = dict
 
 if TYPE_CHECKING:
+    from logging import Logger
     from typing import Sequence, Mapping
     from .base import OptDict
 
@@ -70,11 +71,13 @@ class HandlerStream(MsgHandler):
     _tg: TaskGroup = None
     _id = 0
 
-    def __init__(self, sender: MsgSender | None):
+    def __init__(self, sender: MsgSender | None, logger:Logger|None=None):
         self._msgs: dict[int, StreamLink] = {}
         self._send_q = Queue(9)
         self._recv_q = Queue(99)
         self._sender = sender
+
+        self._logger = getattr(logger,"debug",logger)
 
         self.reader_done = Event()
         self.writer_done = Event()
@@ -157,6 +160,8 @@ class HandlerStream(MsgHandler):
         i, flag = wire2i_f(msg[0])
         # flip sign
         i = -i
+        if self._logger:
+            self._logger("IN : %r", msg)
 
         a = msg[1:]
         kw = a.pop() if a and isinstance(a[-1], dict) else {}
@@ -176,6 +181,8 @@ class HandlerStream(MsgHandler):
                 # assemble the message
                 cmd = a.pop(0) if a else Path()
                 rem = Msg.Call(cmd, a, kw, flag)
+
+                # … and build a stream for it
                 link = StreamLink(self, i)
                 rem.replace_with(link)
                 if not stream:
@@ -313,6 +320,8 @@ class HandlerStream(MsgHandler):
         elif a and isinstance(a[-1], dict):
             res.append({})
 
+        if self._logger:
+            self._logger("OUT: %r", res)
         return res
 
     def start(self, cmd, *a, **kw) -> None:

@@ -24,7 +24,7 @@ class AioStream(HandlerStream):
 
     def __init__(
         self, cmd: MsgSender, stream, debug: str|None=None, codec: str | Codec | None = None
-    ):
+    , **kw):
         self.__s = stream
         self.__debug = debug
 
@@ -39,7 +39,7 @@ class AioStream(HandlerStream):
             codec = get_codec(codec)
 
         self.__codec = codec
-        super().__init__(cmd)
+        super().__init__(cmd, **kw)
 
     async def read_stream(self):
         conn = self.__s
@@ -83,6 +83,7 @@ async def run(
     *,
     codec: Codec | str | None = None,
     debug: bool = False,
+    logger=None,
 ) -> MsgHandler:
     """
     Run a command handler on top of an anyio stream, using the given codec.
@@ -95,7 +96,7 @@ async def run(
     """
 
     try:
-        async with ungroup, stream, AioStream(cmd, stream, codec=codec, debug=debug) as hs:
+        async with ungroup, stream, AioStream(cmd, stream, codec=codec, debug=debug, logger=logger) as hs:
             yield hs
     except (anyio.EndOfStream, anyio.BrokenResourceError, anyio.ClosedResourceError):
         pass

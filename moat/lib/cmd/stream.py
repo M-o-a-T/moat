@@ -336,6 +336,7 @@ class HandlerStream(MsgHandler):
             tg:TaskGroup = await acm(TaskGroup())
             self._tg = tg
             self._tgs = await acm(TaskGroup())
+            self.closing = False
 
             evt1 = Event()
             evt2 = Event()
@@ -343,7 +344,6 @@ class HandlerStream(MsgHandler):
             self._write_task = await tg.spawn(self._run_write, evt2)
             await evt1.wait()
             await evt2.wait()
-            self.closing = False
             if L:
                 self._dly_q = Queue(999)
                 await acm(self._dly_q.close_sender)

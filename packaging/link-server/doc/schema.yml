@@ -41,7 +41,7 @@ properties:
 required:
 - title
 ---
-_path: !P run.service.main
+_path: !P run.service.conn.main
 title: Address of the main MoaT-Link server
 type: object
 properties:
@@ -66,6 +66,10 @@ required:
 _path: !P run.service.down.main
 title: Notice that a server is down
 type: string
+---
+_path: !P run.service.stamp.main
+title: Sync message
+type: integer
 ---
 _path: !P run.service.ping.main
 title: AsyncActor channel

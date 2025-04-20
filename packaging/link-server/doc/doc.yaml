@@ -38,10 +38,10 @@ doc: |2
   .
   This problem does not convert the message to raw data.
 ---
-path: !P error.run.service.main.*.*:
+path: !P error.run.service.conn.*:
 title: Backend link failed
 doc: |2
-  Client [-1] got an error talking to backend [-2].
+  The sending client got an error talking to backend [-1].
 ---
 path: !P state
 title: System state
@@ -83,22 +83,22 @@ title: Runtime data and related
 _path: !P run.service
 title: Hierarchy for service addresses
 ---
-_path: !P run.service.ping
-title: AsyncActor channels
+_path: !P run.service.ping.*
+title: AsyncActor channel for service [-1]
 ---
-_path: !P run.service.main
+_path: !P run.service.conn.main
 title: Main server announcement
 doc: |2
   This entry points to the main MoaT-Link server. It contains an auth
   token; if a client is allowed to subscribe to this topic, it should be
   allowed to talk to the server.
 ---
-_path: !P run.service.down.main
+_path: !P run.service.down.*
 title: Death notice for the main service
 doc: |2
-  The main server posts a Will message to this topic, a string containing
+  The server [-1] posts a Will message to this topic, a string containing
   its name. Backup servers listen to it and publish their own record to
-  `run.service.main` in order to take over.
+  `run.service.conn.main` in order to take over.
 ---
 path: !P doc
 title: Documentation

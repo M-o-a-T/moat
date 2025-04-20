@@ -131,6 +131,7 @@ class ServerClient(LinkCommon):
 
     _hello: Hello | None = None
     _auth_data: Any = None
+    protocol_version: int = -1
     name: str
 
     def __init__(self, server: Server, name: str, stream: Stream):
@@ -173,6 +174,7 @@ class ServerClient(LinkCommon):
                     return
             finally:
                 self.server.rename_client(self,self._hello.them)
+                self.protocol_version = self._hello.protocol_version
                 del self._hello
 
             self._auth_data = auth

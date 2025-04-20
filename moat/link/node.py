@@ -9,6 +9,7 @@ from logging import getLogger
 from attrs import define, field
 
 from moat.util import NotGiven, Path, PathLongener, PathShortener
+from moat.util.exc import ExpKeyError
 
 from .meta import MsgMeta
 
@@ -179,12 +180,15 @@ class Node:
         if isinstance(item, Path):
             s = self
             for k in item:
-                s = s._sub[k]  # noqa:SLF001
+                try:
+                    s = s._sub[k]  # noqa:SLF001
+                except KeyError:
+                    raise ExpKeyError(k)
         else:
             s = self._sub[item]
 
         if s._data is NotGiven:  # noqa:SLF001
-            raise KeyError(item)
+            raise ExpKeyError(item)
         return s
 
     def get(self, item, create=None) -> Node:

@@ -34,8 +34,9 @@ async def cli():
 @click.option("--now", "-n", is_flag=True, help="Don't advance on match")
 @click.option("--inv", "-i", is_flag=True, help="Time until no match")
 @click.option("--back", "-b", is_flag=True, help="Time since the last (non)-match")
+@click.option("--Human", "-H", "segments", type=int, default=None, help="Parts to print in 'human' mode")
 @click.argument("args", nargs=-1)
-async def to_(args, sleep, human, now, inv, back):
+async def to_(args, sleep, human, now, inv, back, segments):
     """\
 Calculate the time until the start of the next given partial time
 specification.
@@ -91,8 +92,8 @@ y, yr   Year (2023–)
     tt = int(t - time() + 0.9)
     if back:
         tt = -tt
-    if human:
-        print(humandelta(tt))
+    if human or segments:
+        print(humandelta(tt, segments=segments or 3))
     if sleep:
         await anyio.sleep(tt)
     elif not human:

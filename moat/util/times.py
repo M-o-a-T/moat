@@ -78,9 +78,19 @@ def ts2iso(ts:float, delta=False, msec=1):
         res += f" ({humandelta(ts-time.time(), ago=True, msec=msec)})"
     return res
 
-def humandelta(delta: dt.timedelta, ago:bool=False, msec=1) -> str:
+def humandelta(delta: dt.timedelta, ago:bool=False, msec=1, segments=2) -> str:
     """
     Convert a timedelta into a human-readable string.
+
+    Set @ago to report "in X / Y ago" instead of "+/- X".
+
+    @msec specifies the number of digits on seconds. The default is 1. This
+    number is reduced to zero if >1h, or one if >1min.
+
+    @segments is the number of information blocks to print, as usually you
+    don't need to know how many excess minutes a 2-week 3-day 5+hour time
+    segment has. The default is 2. Pass 9 for "everything", zero for "one,
+    but everything shorter than a minute is 'now'"
     """
     res = []
     res1 = ""
@@ -116,9 +126,9 @@ def humandelta(delta: dt.timedelta, ago:bool=False, msec=1) -> str:
             elif msec>1:
                 msec=1
             done += 1
-            if done == 2:
+            if done == segments:
                 break
-    if done < 2 and delta >= 0.1**msec:
+    if done < segments and delta >= 0.1**msec:
         if delta >= 1:
             res.append(f"{delta:.{msec}f} sec")
         elif delta > .001:
@@ -198,7 +208,7 @@ def simple_time_delta(w):
     return s
 
 
-def collect_words(cur, w):
+def collect_words(cur, w, back:bool=False):
     """\
         Build a data structure representing time offset from a specific
         start.
@@ -356,7 +366,7 @@ def time_until(args, t_now=None, invert=False, back=False):
         Find the next time which is in the future and matches the arguments.
         If "invert" is True, find the next time which does *not*.
         """
-    p = collect_words(t_now, args)
+    p = collect_words(t_now, args, back=back)
 
     p.res = p.now
 

@@ -140,6 +140,8 @@ class Path(collections.abc.Sequence):
                 i += 1
 
         self._data: tuple = a
+        if mark is None:
+            raise ValueError("Use an empty mark, not 'None'")
         self._mark = mark
 
     @classmethod
@@ -153,6 +155,8 @@ class Path(collections.abc.Sequence):
             return cls(*data)
         p = object.__new__(cls)
         p._data = tuple(data)  # noqa:SLF001
+        if mark is None:
+            raise ValueError("Use an empty mark, not 'None'")
         p._mark = mark  # noqa:SLF001
         return p
 
@@ -174,6 +178,8 @@ class Path(collections.abc.Sequence):
         """Returns the same path with a different mark"""
         if mark:
             warnings.warn("Marking a path is deprecated")
+        if mark is None:
+            raise ValueError("Use an empty mark, not 'None'")
         return type(self).build(self._data, mark=mark)
 
     def __str__(self, slash=False):

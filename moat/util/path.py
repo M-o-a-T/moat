@@ -834,7 +834,7 @@ class RootPath(Path):
     it must be consistent regardless of its content.
     """
 
-    _mark = None
+    _mark = ""
 
     def __init__(self, key, var, name):
         self._key = key

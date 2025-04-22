@@ -217,17 +217,6 @@ class Link(LinkCommon, CtxObj):
             await self._server_up.wait()
         return self.current_server
 
-    async def _mon_server(self, *, task_status):
-        async with self.mqtt.subscription(self.cfg.root) as sub:
-            self._server = ValueEvent()
-            task_status.started(self._server)
-
-            async for msg in sub:
-                self._server.set(msg.msg)
-                self._server = ValueEvent()
-
-        return self._sender.stream_in(*a, **kw)
-
     @asynccontextmanager
     async def _ctx(self):
         from .backend import get_backend

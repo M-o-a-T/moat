@@ -1,4 +1,4 @@
-base: "/opt/cq"
+base: "/opt/conda"
 paths:
   - "/src/CQ-editor"
   - "/src/build123d/src"

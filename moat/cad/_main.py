@@ -33,7 +33,7 @@ async def cli(ctx):
 @cli.command("edit")
 @click.pass_obj
 @click.argument("files", nargs=-1, default=None)
-async def test(obj, files):
+async def edit_(obj, files):
     "Start the editor."
     #    base: "/opt/cq"
     # paths:
@@ -85,7 +85,7 @@ async def test(obj, files):
 @click.pass_obj
 @click.argument("file", nargs=1)
 @click.argument("args", nargs=-1)
-async def test(obj, file, args):
+async def run_(obj, file, args):
     "Run a script."
 
     import moat

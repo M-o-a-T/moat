@@ -26,7 +26,7 @@ al_ascii = bytes(x for x in range(33, 127) if x != 92).decode("ascii")
 # lowercase letters only
 al_az = "abcdefghijklmnopqrstuvwxyz"
 
-__all__ = ["gen_ident", "al_unique", "al_lower", "al_ascii", "al_az"]
+__all__ = ["id2str", "gen_ident", "al_unique", "al_lower", "al_ascii", "al_az"]
 
 
 def gen_ident(k=10, /, *, alphabet=al_unique):
@@ -34,3 +34,20 @@ def gen_ident(k=10, /, *, alphabet=al_unique):
     Generate a random identifier / password.
     """
     return "".join(random.choices(alphabet, k=k))
+
+
+def id2str(k, /, *, alphabet=al_unique):
+    """
+    Given a non-numeric identifier, returns a string representing it.
+    """
+    assert k > 0
+    if k == 0:
+        return alphabet[0]
+    res = []
+    la = len(alphabet)
+    while k:
+        res.append(alphabet[k%la])
+        k //= la
+    return ''.join(res)
+
+

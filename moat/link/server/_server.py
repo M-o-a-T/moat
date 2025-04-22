@@ -10,7 +10,6 @@ import signal
 import time
 import anyio.abc
 import random
-from base64 import b85encode
 from anyio.abc import SocketAttribute
 from contextlib import asynccontextmanager, nullcontext
 from datetime import UTC, datetime
@@ -37,6 +36,7 @@ from moat.util import (
     attrdict,
     gen_ident,
     to_attrdict,
+    id2str,
 )
 from moat.lib.cmd import MsgSender
 from moat.lib.cmd.anyio import run as run_cmd_anyio
@@ -139,13 +139,17 @@ class ServerClient(LinkCommon):
         self.name = name
         self.stream = stream
 
+        # there sustained rate might be > 10 connections per second.
+        # >100 requires rate limiting.
         global _client_nr
-        t = int(time.time()*1000-1745000000000)
+        t = int(time.time()*100-174500000000)
         if _client_nr < t:
             _client_nr = t
         else:
             _client_nr += 1
-        self.client_nr = b85encode(_client_nr.to_bytes((_client_nr.bit_length()+7)//8)).decode("ascii")
+            if _client_nr > t-1000:
+                raise RuntimeError("The connection rate is too high!")
+        self.client_nr = id2str(_client_nr)
 
         self.logger = logging.getLogger(f"moat.link.server.{name}.{self.client_nr}")
 

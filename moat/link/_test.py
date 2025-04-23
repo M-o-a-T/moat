@@ -18,6 +18,7 @@ from moat.util import (  # pylint:disable=no-name-in-module
     CtxObj,
     attrdict,
     combine_dict,
+    Path,
     Root,
 )
 
@@ -92,53 +93,88 @@ class Scaffold(CtxObj):
                 yield self
                 self.tg.cancel_scope.cancel()  # pyright:ignore
 
-    async def _run_backend(self, cfg: dict | None, kw: dict, *, task_status) -> Backend:
+    async def backend(self, cfg: dict | None = None, **kw):
         """
-        Start a backend.
+        Start a backend (background task)
+        """
+        cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
+        return await self.tg.start(self._run_backend, cfg, kw)
+
+    @asynccontextmanager
+    async def backend_(self, cfg: dict | None, **kw) -> Backend:
+        """
+        Start a backend (async context manager).
         """
         cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
         async with get_backend(cfg, **kw) as bk:
+            yield bk
+
+    async def _run_backend(self, cfg: dict | None, kw: dict, *, task_status) -> Backend:
+        """
+        Start a backend (Helper).
+        """
+        async with self.backend_(cfg, **kw) as bk:
             task_status.started(bk)
             await anyio.sleep_forever()
             assert False  # noqa:B011,PT015
 
     async def server(self, cfg: dict | None = None, **kw) -> tuple[Server, list[dict]]:
         """
-        Start a server.
+        Start a server (background task)
+
         Returns the server object and the ports it runs on.
         """
-        cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
         assert cfg is not None  # for pyright
+        return await self.tg.start(self._run_server, cfg, kw)
+
+    async def _run_server(self, cfg, kw, *, task_status) -> None:
+        """
+        Run a basic MoaT-Link server. (Helper task)
+        """
+        cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
         if "ports" in cfg["server"]:
             cfg["server"]["ports"]["main"]["port"] = 0
         cfg["server"]["port"] = 0
         if self.tempdir is not None:
             cfg["server"]["save"]["dir"] = self.tempdir / "data"
-        return await self.tg.start(self._run_server, cfg, kw)
-
-    async def client(self, cfg: dict | None = None):
-        cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
-        return await self.tg.start(self._run_client, cfg)
-
-    async def backend(self, cfg: dict | None = None, **kw):
-        cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
-        return await self.tg.start(self._run_backend, cfg, kw)
-
-    async def _run_server(self, cfg, kw, *, task_status) -> None:
-        """
-        Runs a basic MoaT-Link server.
-        """
         global _seq  # noqa:PLW0603
         _seq += 1
 
         s = Server(cfg, f"S_{_seq}", **kw)
         await s.serve(task_status=task_status)
 
+    @asynccontextmanager
+    async def server_(self, cfg:dict|None=None, **kw) -> None:
+        """
+        Runs a basic MoaT-Link server. (async context manager)
+        """
+        async with anyio.create_task_group() as tg:
+            yield await tg.start(self._run_server,cfg,kw)
+            tg.cancel_scope.cancel()
+
+    async def client(self, cfg: dict | None = None):
+        """
+        Start a client (background task)
+        """
+        cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
+        cl = await self.tg.start(self._run_client, cfg)
+        cl.enable_path(Path("test"))
+        return cl
+
     async def _run_client(self, cfg, *, task_status) -> Never:
+        async with self.client_(cfg) as li:
+            task_status.started(li)
+            await anyio.sleep_forever()
+            assert False  # noqa:B011,PT015
+
+    @asynccontextmanager
+    async def client_(self, cfg:dict|None=None) -> Never:
+        """
+        Start a client (async context manager)
+        """
+        cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
         global _seq  # noqa:PLW0603
         _seq += 1
 
         async with Link(cfg, f"C_{_seq}") as li:
-            task_status.started(li)
-            await anyio.sleep_forever()
-            assert False  # noqa:B011,PT015
+            yield li

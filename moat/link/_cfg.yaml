@@ -11,7 +11,8 @@ backend_example:
     key: '/path/to/cert.key'
 client:
   init_timeout: 999 # 5  # set to None to not require a server
-root: !P XXX
+# also in moat/link/_main.py
+root: !P XXX.NotConfigured.YZ
 qos: 0
 
 timeout:

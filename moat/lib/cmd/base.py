@@ -379,11 +379,17 @@ class MsgSender(BaseMsgHandler):
             return MsgSender(root)
         return res
 
-    def __getattr__(self, x):
+    def add_sub(self, elem:str):
         """
-        Returns a SubMsgSender for this name
+        Ensures that `self.ELEM` is a SubMsgSender.
         """
-        return self.sub_at(Path(x))
+        if hasattr(self,elem):
+            sb = getattr(self,elem)
+            assert isinstance(sb,SubMsgSender)
+        else:
+            sb = self.sub_at(Path(elem))
+            setattr(self,elem,sb)
+        return sb
 
 
 class SubMsgSender(MsgSender):

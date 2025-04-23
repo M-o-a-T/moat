@@ -231,7 +231,10 @@ class Link(LinkCommon, CtxObj):
                 if self.cfg.client.init_timeout:
                     # connect to the main server
                     await self.tg.start(self._run_server_link)
-                yield _Sender(self)
+                sdr = _Sender(self)
+                sdr.add_sub("d")
+                sdr.add_sub("i")
+                yield sdr
                 self.tg.cancel_scope.cancel()
             finally:
                 Root.reset(token)

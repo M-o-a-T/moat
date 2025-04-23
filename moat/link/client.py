@@ -6,13 +6,16 @@ from __future__ import annotations
 
 import anyio
 import logging
-from contextlib import asynccontextmanager, suppress, nullcontext
+import time
+import sys
+from contextlib import asynccontextmanager, suppress, nullcontext, aclosing
 
 import outcome
+from attrs import define,field
 
 from mqttproto import RetainHandling
 from moat.lib.cmd.base import MsgSender, Caller
-from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident, ungroup
+from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident, ungroup, NotGiven,Path, PathLongener
 from moat.util.compat import CancelledError
 from moat.util.random import al_unique
 
@@ -20,7 +23,12 @@ from .common import CmdCommon
 from .conn import TCPConn
 from .auth import AnonAuth, TokenAuth
 from .hello import Hello
+from .meta import MsgMeta
+from .node import Node
 
+from typing import TYPE_CHECKING,overload
+if TYPE_CHECKING:
+    from typing import Any
 
 class _Requeue(Exception):
     pass
@@ -164,35 +172,166 @@ class ClientCaller(Caller):
 
 
 class _Sender(MsgSender):
+    """
+    This is the client-side front-end to a "standard" MoaT-Link connection.
+    """
     Caller_ = ClientCaller
 
     def __init__(self, link):
         self._link = link
+        self._allowed = set()
+
+    def enable_path(self, path:Path):
+        """
+        This call protects against forgetting to prefix the root path, or
+        similar bugs, when calling to the back-end directly.
+        """
+        self._allowed.add(path)
 
     @property
     def root(self):
         return self
 
     async def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
+        """
+        Standard handler, forwards to the remote side.
+        """
         srv = await self._link.get_link()
         await srv.handle(msg, rcmd)
 
-    def monitor(self, *a, **kw) -> AsyncContextManager[AsyncIterator[Message]]:
-        "watch this path; see backend doc"
-        return self._link.backend.monitor(*a, **kw)
+    def find_handler(self, path, may_stream: bool = False) -> tuple[MsgHandler, Path]:
+        """
+        Standard sub-dispatcher redirector, no-op.
+        """
+        return self, path
 
-    def send(self, *a, **kw) -> Awaitable[None]:
-        "send to this path; see backend doc"
-        return self._link.backend.send(*a, **kw)
+    @overload
+    def d_get(self, path:Path, meta:Literal[True]) -> tuple[Any,MsgMeta]:
+        ...
+
+    @overload
+    def d_get(self, path:Path) -> Any:
+        ...
+
+    async def d_get(self, path:Path, meta:bool=False) -> tuple[Any,MsgMeta]:
+        """
+        Data retrieval. Calls the server's ``d.get`` method.
+
+        Returns a data+metadata tuple if @meta is True, otherwise just the
+        data.
+        """
+        if len(path) and isinstance(path[0],Path):
+            raise ValueError("Don't use a root-prefixed path here.")
+
+        res = await self.d.get(path)
+        if not meta:
+            return res[0]
+        return res[0],MsgMeta.restore(res[1:])
+
+    @overload
+    def d_set(self, path:Path, t:float|None=None, meta:Literal[True]=True) -> tuple[Any,MsgMeta]:
+        ...
+
+    @overload
+    def d_set(self, path:Path, t:float|None=None) -> None:
+        ...
+
+    async def d_set(self, path:Path, data:Any=NotGiven,
+                    meta:MsgMeta|None=None, t:float|None=None,
+                    with_prev:bool=False) -> None|tuple[Any,MsgMeta]:
+        """
+        Data update.
+
+        If a timestamp is passed in @t or the old value+metadata is
+        requested via @with_prev, goes through the server. Otherwise posts to
+        MQTT directly.
+        """
+        if path and isinstance(path[0],Path):
+            raise ValueError("Don't use a root-prefixed path here.")
+
+        if meta is None:
+            meta=MsgMeta(origin=self._link.name)
+        if t is None and not with_prev:
+            await self.send(Root.get()+path, data=data, meta=meta)
+            return
+        tt = {} if t is None else {"t":t}
+        res = await self.d.set(path, data, meta, **tt)
+        if not with_prev:
+            return res[0]
+        meta = MsgMeta.restore(res[1:]) if len(res)>1 else None
+        return res[0],meta
+
+    
+    def d_watch(self, path:Path, meta:bool=False, subtree:bool=False, state:bool|None=None, max_age:float|None=None) -> AsyncContextManager[AsyncIterator[tuple]]:
+        """
+        Monitor a node or subtree.
+        """
+        return _Watcher(self, path, meta, subtree, state, max_age)
+
+
+    def monitor(self, path:Path, *a, **kw) -> AsyncContextManager[AsyncIterator[Message]]:
+        """
+        Watch this path.
+
+        This call forwards directly to the back-end.
+        See `moat.link.backend.Backend.monitor` for call details.
+
+        The caller is responsible for prefixing the Root path.
+        """
+        self._pcheck(path)
+        return self._link.backend.monitor(path, *a, **kw)
+
+    def send(self, path:Path, *a, **kw) -> Awaitable[None]:
+        """
+        Send to this path.
+
+        This call forwards directly to the back-end.
+        See `moat.link.backend.Backend.send` for call details
+
+        The caller is responsible for prefixing the Root path.
+        """
+        self._pcheck(path)
+        return self._link.backend.send(path, *a, **kw)
+
+    def _pcheck(self,path:Path):
+        if not path:
+            raise ValueError("Empty path?")
+        if isinstance(path[0],Path):
+            if path[0] == Root.get():
+                return
+            if path[0] in self._allowed:
+                return
+            raise ValueError("Prefix not allowed",path[0])
+        root = Root.get()
+        if path[:len(root)] == root:
+            return
+        for p in self._allowed:
+            if path[:len(p)] == p:
+                return
+        raise ValueError("Path not allowed",path)
+
 
     async def sync(self):
-        "sync with our server"
+        """
+        This call tries to ensure that the server has processed all
+        incoming MQTT messages.
+
+        It does this by requesting a timestamp from the server, publishing
+        the timestamp to MQTT, and then waiting for the server to
+        acknowledge having received (at least) this number.
+
+        This code assumes that MQTT messages are delivered in the order
+        they are submitted. Depending on the server's multithreading setup
+        this may or may not be true, but in practice it should be
+        sufficiently true-ish to work out.
+
+        It also assumes that if there's more than one server, they all have
+        mostly-accurate time.
+        """
         (st,) = await self.cmd(P("i.stamp"))
         await self.send(P(":R.run.service.stamp.main"), st)
         await self.cmd(P("i.sync"), st)
 
-    def find_handler(self, path, may_stream: bool = False) -> tuple[MsgHandler, Path]:
-        return self, path
 
 class Link(LinkCommon, CtxObj):
     """
@@ -213,6 +352,9 @@ class Link(LinkCommon, CtxObj):
         self._server_up = anyio.Event()
 
     async def get_link(self):
+        """
+        This method refreshes the link to the server if it happens to be down.
+        """
         while self.current_server is None:
             await self._server_up.wait()
         return self.current_server
@@ -245,8 +387,10 @@ class Link(LinkCommon, CtxObj):
         self.tg.cancel_scope.cancel()
 
     async def _run_server_link(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        # Manager for the server link channel. Repeats running a server
-        # connection.
+        """
+        This is the manager task for the server link channel.
+        It starts a server connection (and tries to keep it alive).
+        """
         task_status = TS(task_status)
 
         with anyio.fail_after(self.cfg.client.init_timeout):
@@ -269,13 +413,15 @@ class Link(LinkCommon, CtxObj):
                 if self._server_up.is_set():
                     self._server_up = anyio.Event()
 
-            # TODO save (some) currently-running commands for re-execution
-            # TODO cancel tasks from the remote side
+                # TODO test if tasks from the remote side already get cancelled
+                # TODO and if not, do that
+
+            # Back off to either a new server announcement or the exponential timeout
             try:
                 with anyio.fail_after(timeout):
                     await self._last_link_seen.wait()
             except TimeoutError:
-                # try the last-tried connection again
+                # try the last-reported connection again
                 timeout = min(timeout * tm.factor, tm.max)
             else:
                 # immediately use the new data
@@ -394,3 +540,83 @@ class BasicLink(LinkCommon, CtxObj):
         if err is None:
             raise ValueError(f"No links in {self.data!r}")
         raise err
+
+
+@define(eq=False)
+class _Watcher(CtxObj):
+    """
+    Helper class for monitoring.
+    """
+    link:Link=field()
+    path:Path=field()
+    meta:bool=field()
+    subtree:bool=field()
+    state:bool|None=field()
+    age:float|None=field()
+
+    _qw=field(init=False,repr=False)
+    _qr=field(init=False,repr=False)
+    _tg=field(init=False,repr=False)
+    _node=field(init=False,default=None)
+
+    def __attrs_post_init__(self):
+        self._qw,self._qr = anyio.create_memory_object_stream(99)
+
+    async def _current(self, *, task_status):
+        "get the current state from the server"
+        if self.subtree:
+            pl = PathLongener(())
+            async with self.link.d.walk(self.path) as mon:
+                task_status.started()
+                async for r in mon:
+                    n,p,d,*m = r
+                    p = pl.long(n,p)
+                    m = MsgMeta.restore(m)
+                    await self._qw.send((p,d,m))
+        else:
+            try:
+                r = await self.link.d.get(self.path)
+            except (KeyError,ValueError):
+                pass
+            else:
+                task_status.started()
+                p,d,m = Path(), r[0], MsgMeta.restore(r[1:])
+                await self._qw.send((p,d,m))
+
+    async def _updates(self, *, task_status):
+        "get updates from MQTT"
+        plen = 1+len(self.path)
+        async with self.link.monitor(Root.get()+self.path, subtree=self.subtree) as mon:
+            task_status.started()
+            async for msg in mon:
+                p,d,m = Path.build(msg.topic[plen:]),msg.data,msg.meta
+                await self._qw.send((p,d,m))
+
+    @asynccontextmanager
+    async def _ctx(self):
+        async with anyio.create_task_group() as tg:
+            self._node = Node()
+            self._tg = tg
+            self._qw,self._qr = anyio.create_memory_object_stream(10)
+            if self.state is not False:
+                await tg.start(self._current)
+            if self.state is not True:
+                await tg.start(self._updates)
+            yield self
+            tg.cancel_scope.cancel()
+            await self._qw.aclose()
+            self._node=None
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        while True:
+            try:
+                msg = await self._qr.receive()
+            except anyio.EndOfStream:
+                raise StopAsyncIteration
+            p,d,m = msg
+            if self.age is None or m.timestamp+self.age >= time.time():
+                if self._node.set(p,d,m):
+                    return p,d,m

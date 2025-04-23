@@ -59,6 +59,7 @@ class Scaffold(CtxObj):
     tempdir:str|None
 
     def __init__(self, cfg: attrdict, use_servers=True, tempdir: str | None = None):
+        ensure_cfg("moat.link.server", cfg)
         self.cfg = cfg.link
 
         self.cfg.setdefault("backend", attrdict())
@@ -97,7 +98,6 @@ class Scaffold(CtxObj):
         """
         Start a backend (background task)
         """
-        cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
         return await self.tg.start(self._run_backend, cfg, kw)
 
     @asynccontextmanager
@@ -105,7 +105,7 @@ class Scaffold(CtxObj):
         """
         Start a backend (async context manager).
         """
-        cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
+        cfg = combine_dict(cfg, self.cfg, cls=attrdict) if cfg else self.cfg
         async with get_backend(cfg, **kw) as bk:
             yield bk
 
@@ -124,14 +124,13 @@ class Scaffold(CtxObj):
 
         Returns the server object and the ports it runs on.
         """
-        assert cfg is not None  # for pyright
         return await self.tg.start(self._run_server, cfg, kw)
 
     async def _run_server(self, cfg, kw, *, task_status) -> None:
         """
         Run a basic MoaT-Link server. (Helper task)
         """
-        cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
+        cfg = combine_dict(cfg, self.cfg, cls=attrdict) if cfg else self.cfg
         if "ports" in cfg["server"]:
             cfg["server"]["ports"]["main"]["port"] = 0
         cfg["server"]["port"] = 0
@@ -156,7 +155,7 @@ class Scaffold(CtxObj):
         """
         Start a client (background task)
         """
-        cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
+        cfg = combine_dict(cfg, self.cfg, cls=attrdict) if cfg else self.cfg
         cl = await self.tg.start(self._run_client, cfg)
         cl.enable_path(Path("test"))
         return cl
@@ -172,7 +171,7 @@ class Scaffold(CtxObj):
         """
         Start a client (async context manager)
         """
-        cfg = combine_dict(cfg, self.cfg) if cfg else self.cfg
+        cfg = combine_dict(cfg, self.cfg, cls=attrdict) if cfg else self.cfg
         global _seq  # noqa:PLW0603
         _seq += 1
 

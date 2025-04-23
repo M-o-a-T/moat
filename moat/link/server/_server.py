@@ -206,7 +206,6 @@ class ServerClient(LinkCommon):
         Message handlers that intercepts commands, as long as no
         authorization has taken place
         """
-        self.logger.debug("IN %s", msg)
         if self._hello is not None and self._hello.auth_data is None:
             return self._hello.handle(msg, rpath, *sub)
 

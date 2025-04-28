@@ -23,7 +23,7 @@ dependencies = [
 	]
 version = "0.57.0"
 keywords = [ "MoaT",]
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 name = "moat-util"
 description = "Utility code for the rest of MoaT"
 readme = "README.rst"

@@ -65,7 +65,7 @@ async def test_get_flat_simple(cfg):
         ):
         await c.d_set(P("test.here"), "HiLo")
         await c.d_set(P("test.here.too"), "Ugh")
-        await c.sync()
+        await c.i_sync()
 
         with anyio.fail_after(.2):
             async with do_watch(sf,  "HiLo", state=True) as res:
@@ -83,12 +83,12 @@ async def test_get_flat_dyn(cfg):
         ):
         await c.d_set(P("test.here"), "HiLo")
         await c.d_set(P("test.here.too"), "Ugh2")
-        await c.sync()
+        await c.i_sync()
 
         t=anyio.current_time()
         with anyio.fail_after(.2):
             async with do_watch(sf, "End", state=False) as res:
-                await c.sync()
+                await c.i_sync()
                 await c.d_set(P("test.here.too"), "Ugh3")
                 await c.d_set(P("test.here"), "End")
                 res = await res.get()
@@ -105,12 +105,12 @@ async def test_get_flat_full(cfg):
         ):
         await c.d_set(P("test.here"), "HiLo")
         await c.d_set(P("test.here.too"), "Ugh2")
-        await c.sync()
+        await c.i_sync()
 
         t=anyio.current_time()
         with anyio.fail_after(.2):
             async with do_watch(sf, "End", state=None) as res:
-                await c.sync()
+                await c.i_sync()
                 await c.d_set(P("test.here.too"), "Ugh3")
                 await c.d_set(P("test.here"), "End")
                 res = await res.get()
@@ -129,7 +129,7 @@ async def test_get_tree_simple(cfg):
         ):
         await c.d_set(P("test.here"), "HiLo")
         await c.d_set(P("test.here.too"), "Ugh")
-        await c.sync()
+        await c.i_sync()
 
         with anyio.fail_after(.2):
             async with do_watch(sf,  "HiLo", state=True, subtree=True) as res:
@@ -147,13 +147,13 @@ async def test_get_tree_dyn(cfg):
         ):
         await c.d_set(P("test.here"), "HiLo")
         await c.d_set(P("test.here.too"), "Ugh2")
-        await c.sync()
+        await c.i_sync()
 
         with anyio.fail_after(.2):
             async with do_watch(sf, "End", state=False, subtree=True) as res:
-                await c.sync()
+                await c.i_sync()
                 await c.d_set(P("test.here.too"), "Ugh3")
-                await c.sync()
+                await c.i_sync()
                 await c.d_set(P("test.here"), "End")
                 res = await res.get()
         assert len(res) == 1
@@ -171,13 +171,13 @@ async def test_get_tree_full(cfg):
         ):
         await c.d_set(P("test.here"), "HiLo")
         await c.d_set(P("test.here.too"), "Ugh2")
-        await c.sync()
+        await c.i_sync()
 
         with anyio.fail_after(.2):
             async with do_watch(sf, "End", state=None, subtree=True) as res:
-                await c.sync()
+                await c.i_sync()
                 await c.d_set(P("test.here.too"), "Ugh3")
-                await c.sync()
+                await c.i_sync()
                 await c.d_set(P("test.here"), "End")
                 res = await res.get()
         assert len(res) == 3
@@ -202,15 +202,15 @@ async def test_get_tree_dyn_old(cfg):
 
         await c.d_set(P("test.here"), "HiLo")
         await c.d_set(P("test.here.too"), "Ugh2")
-        await c.sync()
+        await c.i_sync()
 
         t=time.time()
         with anyio.fail_after(.2):
             async with do_watch(sf, "End", state=None, subtree=True) as res:
-                await c.sync()
+                await c.i_sync()
                 await c.d_set(P("test.here.too"), "dead",meta=old)
                 await c.d_set(P("test.here.too"), "Ugh3")
-                await c.sync()
+                await c.i_sync()
                 await c.d_set(P("test.here"), "End")
                 res = await res.get()
         assert len(res) == 3
@@ -232,13 +232,13 @@ async def test_get_tree_drop(cfg):
         ):
         await c.d_set(P("test.here"), "HiLo")
         await c.d_set(P("test.here.too"), "Ugh2")
-        await c.sync()
+        await c.i_sync()
 
         with anyio.fail_after(.2):
             async with do_watch(sf, "End", state=None, subtree=True) as res:
-                await c.sync()
+                await c.i_sync()
                 await c.d_set(P("test.here.too"), NotGiven)
-                await c.sync()
+                await c.i_sync()
                 await c.d_set(P("test.here"), "End")
                 res = await res.get()
         assert len(res) == 3

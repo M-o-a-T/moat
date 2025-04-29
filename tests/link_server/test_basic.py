@@ -53,7 +53,7 @@ async def test_ls_basic(cfg):
         with anyio.fail_after(1):
             await evt.wait()
 
-        await c.sync()
+        await c.i_sync()
 
         r, *m = await c.cmd(P("d.get"), P("test.here"))
         assert r == "Hello"

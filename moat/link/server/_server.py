@@ -232,6 +232,12 @@ class ServerClient(LinkCommon):
         "Local subcommand redirect for 'd'"
         return self.handle(msg, rcmd, "d")
 
+    doc_i = dict(_d="Informational commands")
+
+    def sub_i(self, msg: Msg, rcmd: list) -> Awaitable:
+        "Local subcommand redirect for 'i'"
+        return self.handle(msg, rcmd, "i")
+
     doc_s = dict(_d="Data load/save commands")
 
     def sub_s(self, msg: Msg, rcmd: list) -> Awaitable:

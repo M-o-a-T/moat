@@ -311,7 +311,7 @@ class _Sender(MsgSender):
         raise ValueError("Path not allowed",path)
 
 
-    async def sync(self):
+    async def i_sync(self):
         """
         This call tries to ensure that the server has processed all
         incoming MQTT messages.

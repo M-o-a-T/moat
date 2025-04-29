@@ -577,7 +577,8 @@ class _Watcher(CtxObj):
             try:
                 r = await self.link.d.get(self.path)
             except (KeyError,ValueError):
-                pass
+                task_status.started()
+                # but do not do anything else
             else:
                 task_status.started()
                 p,d,m = Path(), r[0], MsgMeta.restore(r[1:])

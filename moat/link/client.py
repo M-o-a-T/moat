@@ -429,6 +429,7 @@ class Link(LinkCommon, CtxObj):
                     # connect to the main server
                     await self.tg.start(self._run_server_link)
                 sdr = _Sender(self)
+                sdr.add_sub("cl")
                 sdr.add_sub("d")
                 sdr.add_sub("e")
                 sdr.add_sub("i")

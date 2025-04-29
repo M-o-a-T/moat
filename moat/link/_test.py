@@ -6,6 +6,7 @@ import time
 from contextlib import asynccontextmanager, nullcontext
 from tempfile import TemporaryDirectory
 from pathlib import Path as FSPath
+from functools import partial
 
 from mqttproto.async_broker import AsyncMQTTBroker
 
@@ -151,29 +152,33 @@ class Scaffold(CtxObj):
             yield await tg.start(self._run_server,cfg,kw)
             tg.cancel_scope.cancel()
 
-    async def client(self, cfg: dict | None = None):
+    async def client(self, *a, **kw):
         """
         Start a client (background task)
         """
-        cfg = combine_dict(cfg, self.cfg, cls=attrdict) if cfg else self.cfg
-        cl = await self.tg.start(self._run_client, cfg)
+        cl = await self.tg.start(partial(self._run_client, *a, **kw))
         cl.enable_path(Path("test"))
         return cl
 
-    async def _run_client(self, cfg, *, task_status) -> Never:
-        async with self.client_(cfg) as li:
+    async def _run_client(self, *a, task_status, **kw) -> Never:
+        async with self.client_(*a, **kw) as li:
             task_status.started(li)
             await anyio.sleep_forever()
             assert False  # noqa:B011,PT015
 
     @asynccontextmanager
-    async def client_(self, cfg:dict|None=None) -> Never:
+    async def client_(self, cfg:dict|None=None, cli:LinkCommon|None=None, name=None) -> Never:
         """
         Start a client (async context manager)
         """
-        cfg = combine_dict(cfg, self.cfg, cls=attrdict) if cfg else self.cfg
-        global _seq  # noqa:PLW0603
-        _seq += 1
+        if cli is None:
+            cfg = combine_dict(cfg, self.cfg, cls=attrdict) if cfg else self.cfg
 
-        async with Link(cfg, f"C_{_seq}") as li:
+            global _seq  # noqa:PLW0603
+            _seq += 1
+            name = f"C_{_seq}"
+
+            cli = Link(cfg,name)
+
+        async with cli as li:
             yield li

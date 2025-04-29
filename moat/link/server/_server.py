@@ -153,6 +153,10 @@ class ServerClient(LinkCommon):
 
         self.logger = logging.getLogger(f"moat.link.server.{name}.{self.client_nr}")
 
+    @property
+    def sender(self) -> MsgSender:
+        return self._sender
+
     async def run(self):
         """Main loop for this client connection."""
 
@@ -250,6 +254,23 @@ class ServerClient(LinkCommon):
         "Local subcommand redirect for 's'"
         return self.handle(msg, rcmd, "s")
 
+
+    doc_cl = dict(_d="Access to named clients")
+
+    async def sub_cl(self, msg: Msg, rcmd: list) -> None:
+        "Local subcommand redirect for 'cl'"
+        if rcmd:
+            cl = self.server.clients[rcmd.pop()]
+            return await cl.sender.handle(msg,rcmd)
+        raise RuntimeError("Should have streamed")
+
+
+    async def stream_cl(self, msg:Msg) -> None:
+        "Send the list of currently-known clients"
+        cl = list(self.server.clients)
+        async with msg.stream_out(len(cl)) as ml:
+            for cn in cl:
+                await ml.send(cn)
 
     doc_d_list = dict(_d="get subnode child names", _r=["Any:Data", "MsgMeta"], _o="str")
 
@@ -590,6 +611,10 @@ class Server:
         # connected clients
         self._clients: dict[str,ServerClient] = dict()
 
+
+    @property
+    def clients(self) -> dict[str,ServerClient]:
+        return self._clients
 
     def rename_client(self, client:ServerClient, name:str):
         """

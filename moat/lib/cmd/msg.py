@@ -627,6 +627,9 @@ class _Stream:
 
     async def __aexit__(self, c, e, t):
         try:
+            slf = self.slf
+            if e is not None and slf._stream_out != S_END:
+                await slf.ml_send_error(e)
             await self._close()
         finally:
             if e is not None:

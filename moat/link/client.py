@@ -9,6 +9,7 @@ import logging
 import time
 import sys
 from contextlib import asynccontextmanager, suppress, nullcontext, aclosing
+from traceback import format_exception
 
 import outcome
 from attrs import define,field
@@ -174,6 +175,10 @@ class ClientCaller(Caller):
 class _Sender(MsgSender):
     """
     This is the client-side front-end to a "standard" MoaT-Link connection.
+
+    It contains various somewhat-high-level helpers. Most are named like
+    the corresponding backend commands, with an underscore replacing the
+    dot.
     """
     Caller_ = ClientCaller
 
@@ -269,6 +274,56 @@ class _Sender(MsgSender):
         return _Watcher(self, path, meta, subtree, state, max_age)
 
 
+    async def e_exc(self, path:Path, exc:Exception, **kw):
+        """
+        Report an exception, with backtrace.
+        """
+        exc = ungroup.one(exc)
+
+        kw["_bt"]=format_exception(exc)
+        kw["_exc"]=exc
+
+        await self.e.exc(path,repr(exc),**kw)
+
+
+    async def e_info(self, path:Path, txt:str, **kw):
+        """
+        Report a problem that's not an exception.
+        """
+        await self.e.info(path,txt,**kw)
+
+
+    async def e_ack(self, path:Path, **kw):
+        """
+        Report that $USER has been notified of a problem.
+
+        @ack can be True (don't notify any more), False (notify next
+        time it happens), or a timestamp (notify if it happens again after
+        $time).
+        """
+        await self.e.ack(path,**kw)
+
+
+    async def e_ok(self, path:Path, **kw):
+        """
+        Report that something is working.
+        """
+        await self.e.ok(path,**kw)
+
+    @asynccontextmanager
+    async def e_wrap(self, path:Path, **kw):
+        """
+        An error-handling context manager. It opens a stream to the server
+        and reports either success or failure over it.
+
+        Streamed messages can be sent and will be stored as auxiliary
+        information if the command should fail.
+        """
+        async with self.e.mon(path, **kw) as mon:
+            yield mon
+            await mon.send(True)
+
+
     def monitor(self, path:Path, *a, **kw) -> AsyncContextManager[AsyncIterator[Message]]:
         """
         Watch this path.
@@ -276,7 +331,7 @@ class _Sender(MsgSender):
         This call forwards directly to the back-end.
         See `moat.link.backend.Backend.monitor` for call details.
 
-        The caller is responsible for prefixing the Root path.
+        The caller is responsible for prefixing the Root path, if applicable.
         """
         self._pcheck(path)
         return self._link.backend.monitor(path, *a, **kw)
@@ -288,7 +343,7 @@ class _Sender(MsgSender):
         This call forwards directly to the back-end.
         See `moat.link.backend.Backend.send` for call details
 
-        The caller is responsible for prefixing the Root path.
+        The caller is responsible for prefixing the Root path, if applicable.
         """
         self._pcheck(path)
         return self._link.backend.send(path, *a, **kw)
@@ -375,6 +430,7 @@ class Link(LinkCommon, CtxObj):
                     await self.tg.start(self._run_server_link)
                 sdr = _Sender(self)
                 sdr.add_sub("d")
+                sdr.add_sub("e")
                 sdr.add_sub("i")
                 yield sdr
                 self.tg.cancel_scope.cancel()

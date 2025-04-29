@@ -232,6 +232,12 @@ class ServerClient(LinkCommon):
         "Local subcommand redirect for 'd'"
         return self.handle(msg, rcmd, "d")
 
+    doc_e = dict(_d="Error handling commands")
+
+    def sub_e(self, msg: Msg, rcmd: list) -> Awaitable:
+        "Local subcommand redirect for 'e'"
+        return self.handle(msg, rcmd, "e")
+
     doc_i = dict(_d="Informational commands")
 
     def sub_i(self, msg: Msg, rcmd: list) -> Awaitable:
@@ -243,6 +249,7 @@ class ServerClient(LinkCommon):
     def sub_s(self, msg: Msg, rcmd: list) -> Awaitable:
         "Local subcommand redirect for 's'"
         return self.handle(msg, rcmd, "s")
+
 
     doc_d_list = dict(_d="get subnode child names", _r=["Any:Data", "MsgMeta"], _o="str")
 
@@ -289,7 +296,12 @@ class ServerClient(LinkCommon):
             d, sp = ps.short(p)
             await msg.send(d, sp, nd, *n.meta.dump())
 
-        d = self.server.data.get(msg[0], create=False)
+        try:
+            d = self.server.data.get(msg[0], create=False)
+        except KeyError:
+            async with msg.stream_out():
+                return
+
         ts = msg.get(1, 0)
         xmin = msg.get(2, 0)
         xmax = msg.get(3, 9999999)
@@ -361,6 +373,73 @@ class ServerClient(LinkCommon):
         else:
             return dv, *dm.dump()
 
+    doc_e_exc = dict(_d="Report an exception",_0="path:Path", _1="exc:Error", _k="any")
+
+    def stream_e_exc(self, msg:Msg) -> Awaitable:
+        """Report not-an-error"""
+        if len(msg.args) > 2:
+            msg.kw['_args'] = msg.args[2:]
+        return self.server.set_error(msg[0], msg[1], msg.kw, MsgMeta(origin=self.name))
+
+    doc_e_info = dict(_d="Report a non-exceptional anomaly",_0="path:Path", _k="any")
+
+    def stream_e_info(self, msg:Msg) -> Awaitable:
+        """Report not-an-error"""
+        if len(msg.args) > 2:
+            msg.kw['_args'] = msg.args[2:]
+        return self.server.set_error(msg[0], msg[1], msg.kw, MsgMeta(origin=self.name))
+
+    doc_e_ack = dict(_d="Acknowledge an error",_0="path:Path", _k="any",
+                     ack="None|bool|float:")
+
+    def stream_e_info(self, msg:Msg) -> Awaitable:
+        """Report not-an-error"""
+        if len(msg.args) > 2:
+            msg.kw['_args'] = msg.args[2:]
+        return self.server.set_error(msg[0], msg[1], msg.kw, MsgMeta(origin=self.name))
+
+
+    doc_e_ok = dict(_d="State is OK", _0="path:Path", _k="any")
+
+    def stream_e_ok(self, msg:Msg) -> Awaitable:
+        """Report not-an-error"""
+        if len(msg.args) > 1:
+            msg.kw['_args'] = msg.args[1:]
+        return self.server.set_error(msg[0], None, msg.kw, MsgMeta(origin=self.name))
+
+    doc_e_mon = dict(_d="Wrapper", _0="path:Path", _i="logging data", _k="any")
+    async def stream_e_mon(self, msg:Msg):
+        path = msg[0]
+        kw = msg.kw
+        meta = MsgMeta(origin=self.name)
+        kw["_start"]=time.time()
+        kw["_log"] = log = []
+        try:
+            async with msg.stream_in() as mon:
+                async for msg in mon:
+                    if (a := msg.args):
+                        if msg.kw:
+                            a.append(msg.kw)
+                        elif isinstance(a[-1],dict):
+                            a.append({})
+                        log.append(a)
+                    elif msg.kw:
+                        log.append(msg.kw)
+        except Exception as exc:
+            err = exc
+        except BaseException:
+            err = "BaseExc"
+            raise
+        else:
+            err = None
+        finally:
+            kw["_stop"]=time.time()
+            if err is not None:
+                kw["_exc"] = err
+            with anyio.move_on_after(2,shield=True):
+                await self.server.set_error(path,err,kw,MsgMeta(origin=self.name))
+
+
     doc_i_state = dict(_d="state", _r="MsgMeta:optional")
 
     async def cmd_i_state(self):
@@ -417,11 +496,19 @@ class ServerClient(LinkCommon):
             await data.walk(_del)
             await msg.result(res)
 
-    doc_i_log = dict(_d="start logging", _0="str:filename", state="bool:include current state")
 
-    async def cmd_i_log(self, path: str, *, state: bool = False):
+    doc_s_error = dict(_d="save error log", _0="str:filename", state="bool:include current state")
+
+    async def cmd_s_error(self, path: str, *, state: bool = False):
+        await self.server.run_errsaver(path, save_state=state)
+        return True
+
+    doc_s_log = dict(_d="save updates", _0="str:filename", state="bool:include current state")
+
+    async def cmd_s_log(self, path: str, *, state: bool = False):
         await self.server.run_saver(path, save_state=state)
         return True
+
 
     doc_s_save = dict(_d="save current state", _0="str:filename", prefix="path:subtree")
 
@@ -473,7 +560,12 @@ class Server:
     _writing_done: anyio.Event
     _stopped: anyio.Event
 
+    # Client ID > disconnect error
     _error_cache: dict[str, Exception|str]
+
+    # call to log errors
+    _err_log: Callable[tuple[Path,Any,MsgMeta],Awaitable]|None = None
+    _err_task: anyio.CancelScope=None
 
     _stamp_in: int = 0
     _stamp_out: int = 0
@@ -529,7 +621,7 @@ class Server:
             res.append(self.last_auth)
         return res
 
-    def maybe_update(self, path, data, meta, local:bool=False):
+    def maybe_update(self, path:Path, data:Any, meta:MsgMeta, local:bool=False):
         """
         A data item arrives.
 
@@ -540,6 +632,12 @@ class Server:
                 self.write_monitor((path, data, meta))
         return res
 
+    async def _mon_run(self, topic:Path, msg:Message) -> bool:
+        """
+        Messages to run.* are skipped by the main monitor backend.
+        """
+        return False
+
     async def _backend_monitor(
         self,
         task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED,
@@ -547,6 +645,11 @@ class Server:
         """
         The task that listens to the backend's message stream and updates
         the data store.
+
+        If there is a method named ``_mon_{topic[0]}`` it is called with
+        the topic and message.
+
+        Further processing will be inhibited if the result is `False`.
         """
         t_start = anyio.current_time() if self.data else None
 
@@ -559,13 +662,14 @@ class Server:
             task_status.started()
             async for msg in stream:
                 self.logger.debug("Recv: %r", msg)
-                topic = msg.topic[1:]
-                if topic and topic[0] == "run":
-                    # Runtime messages don't get stored
-                    continue
-
                 msg.meta.source = "Mon"
+                topic = msg.topic[1:]
                 path = Path.build(topic)
+
+                if topic and (hdl := getattr(self,"_mon_{topic[0]}", None)) is not None:
+                    if (await hdl(path, msg)) is False:
+                        continue
+
                 if t_start is not None and not topic:
                     if anyio.current_time()-t_start > 10:
                         t_start=None
@@ -595,7 +699,9 @@ class Server:
             if isinstance(msg, Tag):
                 continue
             p, d, m = msg
-            if m.source == "Mon" or m.source[0] == "_":
+            if not m.source:
+                m.source = '?'
+            elif m.source == "Mon" or m.source[0] == "_":
                 continue
             await self.backend.send(topic=P(":R") + p, data=d, meta=m)
 
@@ -696,12 +802,46 @@ class Server:
     async def recover_split(self, prio, replace, local_history, sources):
         """
         Recover from a network split.
+
+        TODO
         """
         # TODO
         # The idea is:
         #  connect to a source
         #  get all its data changed since timestamp-that-source-was-last-seen
         #  re-broadcast all data changed since timestamp-that-source-was-last-seen
+
+    async def set_error(self, path:Path, err:str|BaseException|None, kw:dict[str,Any], meta:MsgMeta):
+        """
+        Update error data.
+        """
+        p = Path("error")+path
+        try:
+            dt = self.data.get(p, create=False if err is None else None)
+        except KeyError:
+            return  # no error exists
+        if (dd := dt.data_) is NotGiven:
+            dd = {}
+        elif not isinstance(dd,dict):
+            dd = {"_data":dd}
+        dd.update(kw)
+
+        if err is None:
+            # Delete, i.e. write the old record to error storage.
+            dd["_ok"] = True
+
+        if self._err_log is not None:
+            await self._err_log((path,dd,meta))
+
+        if err is None:
+            dd = NotGiven
+        else:
+            dd.pop("_bt", None)
+
+        # shortcut maybe_update
+        if dt.set(..., dd, meta):
+            self.write_monitor((p, dd, meta))
+
 
     async def load(
         self,
@@ -885,6 +1025,70 @@ class Server:
                 self._writing.remove(str(path))
                 self._writing_done.set()
 
+    async def save_errstream(
+        self,
+        path: str | anyio.Path | FSPath | None = None,
+        save_state: bool = False,
+        task_status=anyio.TASK_STATUS_IGNORED,
+    ):
+        """Save the current error log to ``path``.
+        Continue writing until cancelled.
+
+        Args:
+          path: The file to save to.
+          save_state: Flag whether to write the current state.
+            If ``False`` (the default), only write changes.
+
+        """
+        shorter = PathShortener([])
+
+        async with MsgWriter(path=path, codec="std-cbor") as mw:
+            try:
+                msg = self.gen_hdr_start(
+                    name=str(path),
+                    mode="error",
+                    state=None if save_state else False,
+                )
+                await mw(msg)
+
+                task_status.started(scope)
+
+                if save_state:
+                    await self._save( mw, shorter, hdr=False,
+                            ftr=self.gen_hdr_change(state=False,mode="error"),
+                            path=Path("error"),
+                    )
+                async def cmd(p,d,m):
+                    n,p = shorter.short(p)
+                    await mw(n,p,d,*m.dump())
+
+                with anyio.CancelScope() as scope:
+                    if self._err_task is not None:
+                        self._err_task.cancel()
+                    try:
+                        self._err_task = scope
+                        self._err_log = cmd
+                        await anyio.sleep_forever()
+                    finally:
+                        if self._err_task is scope:
+                            self._err_task = None
+                            self._err_log = None
+
+            except anyio.get_cancelled_exc_class():
+                with anyio.move_on_after(2, shield=True):
+                    await mw(self.gen_hdr_stop(mode="cancel"))
+                raise
+
+            except BaseException as exc:
+                #
+                with anyio.move_on_after(2, shield=True):
+                    await mw(self.gen_hdr_stop(mode="error", error=repr(exc)))
+                raise
+
+            finally:
+                with anyio.move_on_after(2, shield=True):
+                    await mw.flush()
+
     @staticmethod
     async def _save_stream(rdr, mw, shorter, ign):
         # helper for .save_stream() to keep the indent levels down
@@ -1003,6 +1207,36 @@ class Server:
             )
         else:
             self.write_monitor(self.gen_hdr_stop(reason="log_end"))
+
+    async def run_errsaver(self, path: PathType|None, save_state: bool = True):
+        """
+        Start a task that logs errors.
+
+        At most one one saver runs at a time; if a new one is started,
+        the old saver is cancelled as soon as the new saver's current state
+        is on disk (if told to do so) and it is ready to start writing.
+
+        Args:
+          path (str): The file to save to. If ``None``, simply stop any
+            already-running error log.
+          save_state (bool): Flag whether to write the current state.
+            If `False` (the default), only write changes.
+
+        """
+        if path is not None:
+            await self._tg.start(
+                partial(
+                    self.save_errstream,
+                    path=path,
+                    save_state=save_state,
+                ),
+            )
+        elif self._err_task is not None:
+            self._err_task_cancel()
+
+            self._err_task = None
+            self._err_log = None
+
 
     async def _sigterm(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         with anyio.open_signal_receiver(signal.SIGTERM) as r:

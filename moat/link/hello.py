@@ -170,7 +170,7 @@ class Hello(CmdCommon):
             # If the remote is a server, keep its name.
             # If the name are the same, no problem.
             # If the remote name starts with an underscore, tell it to use ours.
-            # If the remote is a server, keep its name.
+            # If the remote name starts with a bang, strip it.
             # Otherwise prefix with our name.
             remote_name = next(it)
             if remote_name is None:
@@ -187,6 +187,8 @@ class Hello(CmdCommon):
                     aux_data["name"] = self.them
                 elif they_server:
                     self.them = remote_name
+                elif remote_name[0] == "!":
+                    self.them = remote_name[1:]
                 else:  # we're the server, so use our name as a prefix
                     self.them = f"{self.me}.{remote_name}"
                     logger.debug("Remote name: %r", self.them)

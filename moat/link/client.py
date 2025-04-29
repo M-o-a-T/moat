@@ -599,10 +599,10 @@ class _Watcher(CtxObj):
             self._node = Node()
             self._tg = tg
             self._qw,self._qr = anyio.create_memory_object_stream(10)
-            if self.state is not False:
-                await tg.start(self._current)
             if self.state is not True:
                 await tg.start(self._updates)
+            if self.state is not False:
+                await tg.start(self._current)
             yield self
             tg.cancel_scope.cancel()
             await self._qw.aclose()

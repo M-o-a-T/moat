@@ -376,13 +376,17 @@ class HandlerStream(MsgHandler):
 
     async def read_stream(self):
         """
-        Stream reader. Must be overridden.
+        Stream reader.
+
+        Must be overridden: Iterate: call `msg_out` and write its return value.
         """
         raise NotImplementedError
 
     async def write_stream(self):
         """
-        Stream writer. Must be overridden.
+        Stream writer.
+
+        Must be overridden: Iterate: read data and call `msg_in` with the result.
         """
         raise NotImplementedError
 

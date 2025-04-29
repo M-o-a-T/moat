@@ -463,13 +463,13 @@ class MsgHandler(BaseMsgHandler):
     """
     Something that handles messages.
 
-    Implement ``call(self, *a, *kw)`` and/or ``call_NAME(self, *a, *kw)``
+    Implement ``cmd(self, *a, *kw)`` and/or ``cmd_NAME(self, *a, *kw)``
     for simple method calls.
 
-    Implement ``stream(self, *a, *kw)`` and/or ``stream_NAME(self, *a,
-    *kw)`` for streamed calls.
+    Implement ``stream(self, msg)`` and/or ``stream_NAME(self, 
+    msg)`` for streamed calls.
 
-    Set ``doc`` or ``doc_NAME`` for call documentation strings.
+    Use ``doc`` or ``doc_NAME`` for (too-)basic call introspection.
     """
 
     @property

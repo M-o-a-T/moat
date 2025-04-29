@@ -2,7 +2,8 @@ path: !P ':'
 title: System Root
 doc: |2
   This is the root of the MoaT-Link topic structure.
-  The topic itself contains some hints about the data itself.
+  The root topic itself is free-form and typically indicates its owner and
+  purpose.
 ---
 path: !P error
 title: Error messages

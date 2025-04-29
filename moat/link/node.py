@@ -64,9 +64,14 @@ class Node:
 
     @property
     def data(self) -> Any:
-        "return current data"
+        "return current data, raises ValueError if empty"
         if self._data is NotGiven:
             raise ValueError("empty node")
+        return self._data
+
+    @property
+    def data_(self) -> Any:
+        "return current data, returns NotGiven if empty"
         return self._data
 
     def keys(self):

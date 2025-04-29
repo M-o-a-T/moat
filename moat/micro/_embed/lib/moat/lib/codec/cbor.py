@@ -119,18 +119,12 @@ class Codec(_Codec):
         "copy me"
         return Codec(use_attrdict=self.use_attrdict, **self.__kw)
 
-    def encode(self, obj: Any, *, empty_elided: bool = False) -> ByteType:
+    def encode(self, obj: Any) -> ByteType:
         """
         Pack @obj, return the resulting bytes.
-
-        As a special case, if @empty_elided is set, a toplevel NotGiven
-        object encodes to an empty message, signalling deletion to MQTT.
         """
         if self._buf_out is not None:
             raise RuntimeError("Codec is busy")
-
-        if empty_elided and obj is NotGiven:
-            return b""
 
         self._buf_out = bytearray()
         try:
@@ -139,19 +133,12 @@ class Codec(_Codec):
         finally:
             self._buf_out = None  # always reset
 
-    def decode(self, data: ByteType, *, empty_elided: bool = False) -> Any:
+    def decode(self, data: ByteType) -> Any:
         """
         Unpack @data, return the resulting object.
-
-        As a special case, if @empty_elided is set, empty data results in
-        NotGiven: that object is used throughout MoaT to mark things as
-        deleted.
         """
         if self._buffer:
             raise RuntimeError("Codec is busy")
-
-        if empty_elided and data == b"":
-            return NotGiven
 
         self._buffer = data  # pyright:ignore  # type mismatch
         try:

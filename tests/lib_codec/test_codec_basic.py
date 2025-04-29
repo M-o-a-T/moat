@@ -95,16 +95,11 @@ def test_cbor_ng():
     """
     c = get_codec("cbor")
 
-    a = c.encode(NotGiven, empty_elided=True)
-    assert a == b""
     assert c.encode(NotGiven) == b"\xf7"
-    b = c.decode(a, empty_elided=True)
-    assert b is NotGiven
     assert c.decode(b"\xf7") is NotGiven
     with pytest.raises(OutOfData):
         c.decode(b"")
 
-    # Embedding NotGiven still results in undef
-    x = c.encode([NotGiven], empty_elided=True)
+    x = c.encode([NotGiven])
     assert x == b"\x81\xf7"
     assert c.decode(x) == [NotGiven]

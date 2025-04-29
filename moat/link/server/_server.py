@@ -831,7 +831,7 @@ class Server:
             dd["_ok"] = True
 
         if self._err_log is not None:
-            await self._err_log((path,dd,meta))
+            await self._err_log(path,dd,meta)
 
         if err is None:
             dd = NotGiven
@@ -1029,6 +1029,7 @@ class Server:
         self,
         path: str | anyio.Path | FSPath | None = None,
         save_state: bool = False,
+        *,
         task_status=anyio.TASK_STATUS_IGNORED,
     ):
         """Save the current error log to ``path``.
@@ -1051,18 +1052,19 @@ class Server:
                 )
                 await mw(msg)
 
-                task_status.started(scope)
+                task_status.started()
 
-                if save_state:
-                    await self._save( mw, shorter, hdr=False,
-                            ftr=self.gen_hdr_change(state=False,mode="error"),
-                            path=Path("error"),
-                    )
                 async def cmd(p,d,m):
                     n,p = shorter.short(p)
-                    await mw(n,p,d,*m.dump())
+                    await mw((n,p,d,*m.dump()))
 
                 with anyio.CancelScope() as scope:
+                    if save_state:
+                        await self._save( mw, shorter, hdr=False,
+                                ftr=self.gen_hdr_change(state=False,mode="error"),
+                                path=Path("error"),
+                        )
+
                     if self._err_task is not None:
                         self._err_task.cancel()
                     try:
@@ -1304,6 +1306,10 @@ class Server:
             # retrieve data
 
             await _tg.start(self._read_initial)
+
+            # Log errors
+            if "errlog" in self.cfg.server:
+                await _tg.start(self.save_errstream, self.cfg.server.errlog, True)
 
             # save data
 

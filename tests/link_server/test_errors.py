@@ -10,6 +10,7 @@ from moat.link.meta import MsgMeta
 from moat.link._test import Scaffold
 from moat.link.node import Node
 from moat.util import P, PathLongener, NotGiven, ungroup, ValueEvent, Path
+from moat.util.msg import MsgReader
 from moat.lib.cmd import StreamError, RemoteError
 
 
@@ -168,8 +169,11 @@ async def test_wrap_ok(cfg):
             await c.d_get(P("error.test.here"))
 
 @pytest.mark.anyio()
-async def test_wrap_bad(cfg):
-    "Check wrapping an exception"
+async def test_wrap_bad(cfg,tmp_path):
+    "Check wrapping an exception (and clearing it the same way)"
+    epath = tmp_path/"errs"
+    cfg.link.server.errlog = str(epath)
+    epath=anyio.Path(epath)
     async with (
             Scaffold(cfg, use_servers=True) as sf,
             sf.server_(init={"Hello": "there!", "test": 123}),
@@ -217,4 +221,36 @@ async def test_wrap_bad(cfg):
 
         with pytest.raises(KeyError):
             await c.d_get(P("error.test.here"))
+
+    from moat.util.cbor import CBOR_TAG_MOAT_FILE_ID,CBOR_TAG_MOAT_FILE_END,CBOR_TAG_MOAT_CHANGE
+    async with MsgReader(epath, codec="std-cbor") as rd:
+        rdr = aiter(rd)
+        m = await anext(rdr)
+        assert m.tag==CBOR_TAG_MOAT_FILE_ID
+        assert m.value[1]["state"] is None
+        assert m.value[1]["mode"] == "error"
+
+        m = await anext(rdr)
+        assert m.tag==CBOR_TAG_MOAT_CHANGE
+        assert m.value["state"] is False
+        assert m.value["mode"] == "error"
+
+        m = await anext(rdr)
+        assert m[0] == 0
+        assert m[1] == P("test.here")
+        assert m[2]["help"] == "me?"
+        assert "_ok" not in m[2]
+
+        m = await anext(rdr)
+        assert m[0] == 2
+        assert m[1] == []
+        assert m[2]["help"] == "me too"
+        assert m[2]["_ok"] is True
+
+        m = await anext(rdr)
+        assert m.tag==CBOR_TAG_MOAT_FILE_END
+        assert m.value["mode"] == "cancel"
+
+        with pytest.raises(StopAsyncIteration):
+            await anext(rdr)
 

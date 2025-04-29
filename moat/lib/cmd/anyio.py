@@ -95,8 +95,8 @@ async def run(
     The default codec is `moat.util.cbor.Codec`.
     """
 
-    try:
-        async with ungroup, stream, AioStream(cmd, stream, codec=codec, debug=debug, logger=logger) as hs:
+    async with ungroup, stream, AioStream(cmd, stream, codec=codec, debug=debug, logger=logger) as hs:
+        try:
             yield hs
-    except (anyio.EndOfStream, anyio.BrokenResourceError, anyio.ClosedResourceError):
-        pass
+        except (anyio.EndOfStream, anyio.BrokenResourceError, anyio.ClosedResourceError):
+            pass

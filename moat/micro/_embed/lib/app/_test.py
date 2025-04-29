@@ -8,6 +8,7 @@ import sys
 
 from moat.micro.cmd.base import BaseCmd
 from moat.util.compat import Event, L, Queue, log, wait_for_ms, sleep_ms, log
+from moat.lib.cmd.errors import NoStream
 
 # Typing
 from typing import TYPE_CHECKING  # isort:skip
@@ -44,7 +45,10 @@ class Cmd(BaseCmd):
             log("OUT %d %d", i, lim)
             while i != lim:
                 await sleep_ms(d)
-                await s.send(i)
+                try:
+                    await s.send(i)
+                except NoStream:
+                    break
                 i += 1
             log("ENDL")
         log("END")

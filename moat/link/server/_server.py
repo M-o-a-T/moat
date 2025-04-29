@@ -147,7 +147,7 @@ class ServerClient(LinkCommon):
             _client_nr = t
         else:
             _client_nr += 1
-            if _client_nr > t-1000:
+            if _client_nr > t+1000:
                 raise RuntimeError("The connection rate is too high!")
         self.client_nr = id2str(_client_nr)
 

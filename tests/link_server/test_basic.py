@@ -148,8 +148,13 @@ async def test_ls_save(cfg, tmp_path):
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.server(init={"Hello": "there!", "test": 2})
         c = await sf.client()
-        with pytest.raises(KeyError):
+        try:
             nn = await fetch(c, "a")
+        except KeyError:
+            pass # not present
+        else:
+            if nn.data_ is not NotGiven or list(nn.keys()):
+                raise ValueError("Data in node")
 
         await c.cmd(P("s.load"), str(fname))
         nn = await fetch(c, "a")

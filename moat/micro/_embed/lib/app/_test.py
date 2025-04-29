@@ -37,12 +37,10 @@ class Cmd(BaseCmd):
 
     async def stream_it(self, msg: Msg):
         "Streams numbers."
-        log("START")
         lim = msg.get("lim", -1)
         i = 0
         d = int(msg.get("delay", 0.1) * 1000)
         async with msg.stream_out() as s:
-            log("OUT %d %d", i, lim)
             while i != lim:
                 await sleep_ms(d)
                 try:
@@ -50,8 +48,6 @@ class Cmd(BaseCmd):
                 except NoStream:
                     break
                 i += 1
-            log("ENDL")
-        log("END")
 
     doc_nit = dict(_d="Call counter.", lim="int:limit", delay="float:timer")
 

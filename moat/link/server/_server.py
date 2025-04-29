@@ -38,7 +38,7 @@ from moat.util import (
     to_attrdict,
     id2str,
 )
-from moat.lib.cmd import MsgSender
+from moat.lib.cmd.base import MsgSender
 from moat.lib.cmd.anyio import run as run_cmd_anyio
 from moat.lib.codec.cbor import CBOR_TAG_CBOR_LEADER, Tag
 from moat.link.auth import AnonAuth, TokenAuth

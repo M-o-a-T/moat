@@ -6,11 +6,7 @@ from __future__ import annotations
 
 from moat.lib.codec.proxy import as_proxy
 from moat.util.exc import ExpKeyError, ExpAttrError
-
-
-@as_proxy("_rErr")
-class RemoteError(RuntimeError):
-    "Forwarded error from a remote system."
+from moat.lib.cmd.errors import RemoteError
 
 
 @as_proxy("_rErrS")

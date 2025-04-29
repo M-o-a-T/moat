@@ -10,7 +10,7 @@ from moat.util import Path, import_, P
 from moat.micro.cmd.base import ACM_h, BaseCmd, ShortCommandError
 from moat.util.compat import AC_use, Event, L, Lock, TaskGroup, log
 from moat.lib.codec.errors import NoPathError
-from moat.lib.cmd import MsgSender
+from moat.lib.cmd.base import MsgSender
 
 # Typing
 

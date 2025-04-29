@@ -23,9 +23,9 @@ class LongCommandError(ValueError):
     pass
 
 
-@as_proxy("_LCmdRem")
-class RemoteError(ValueError):
-    "Some remote error that could not be encoded"
+@as_proxy("_rErr")
+class RemoteError(RuntimeError):
+    "Some remote error that is not proxied"
 
     pass
 

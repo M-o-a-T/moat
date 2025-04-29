@@ -24,35 +24,22 @@ async def do_watch(sf, exp, n=0, *a, **kw):
     async with anyio.create_task_group() as tg, sf.client_() as c:
         evt = ValueEvent()
         got=0
-        print("INT A",file=sys.stderr)
         @tg.start_soon
         async def work():
-            print("WRK A",file=sys.stderr)
             res=[]
             try:
                 async with c.d_watch(P("test.here"),*a,**kw) as mon:
-                    print("WRK B",file=sys.stderr)
                     async for p,d,m in mon:
-                        print("WRK C",p,d,m,file=sys.stderr)
                         t = time.time()
                         assert t - 1 < m.timestamp < t
                         if not len(p) and d == exp:
-                            print("WRK E",file=sys.stderr)
                             return
                         res.append((p,d,m))
                         if len(res)==n:
-                            print("WRK G",file=sys.stderr)
                             return
             finally:
-                print("WRK Z",sys.exc_info()[1],file=sys.stderr)
                 evt.set(res)
-        print("INT B",file=sys.stderr)
-        try:
-            yield evt
-        except BaseException as exc:
-            print("INT C",exc,file=sys.stderr)
-        else:
-            print("INT D",file=sys.stderr)
+        yield evt
 
 
 @pytest.mark.anyio()

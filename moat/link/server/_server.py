@@ -413,12 +413,12 @@ class ServerClient(LinkCommon):
     doc_e_ack = dict(_d="Acknowledge an error",_0="path:Path", _k="any",
                      ack="None|bool|float:")
 
-    def stream_e_info(self, msg:Msg) -> Awaitable:
-        """Report not-an-error"""
+    def stream_e_ack(self, msg:Msg) -> Awaitable:
+        """Acknowledge an error"""
         if len(msg.args) > 2:
             msg.kw['_args'] = msg.args[2:]
-        return self.server.set_error(msg[0], msg[1], msg.kw, MsgMeta(origin=self.name))
-
+        msg.kw["_ack"]=True
+        return self.server.set_error(msg[0], NotGiven, msg.kw, MsgMeta(origin=self.name))
 
     doc_e_ok = dict(_d="State is OK", _0="path:Path", _k="any")
 
@@ -836,7 +836,7 @@ class Server:
         #  get all its data changed since timestamp-that-source-was-last-seen
         #  re-broadcast all data changed since timestamp-that-source-was-last-seen
 
-    async def set_error(self, path:Path, err:str|BaseException|None, kw:dict[str,Any], meta:MsgMeta):
+    async def set_error(self, path:Path, err:str|BaseException|None|NotGiven, kw:dict[str,Any], meta:MsgMeta):
         """
         Update error data.
         """
@@ -854,6 +854,10 @@ class Server:
         if err is None:
             # Delete, i.e. write the old record to error storage.
             dd["_ok"] = True
+        elif err is not NotGiven:
+            # count
+            dd["_n"] = dd.get("_n",0)+1
+
 
         if self._err_log is not None:
             await self._err_log(path,dd,meta)
@@ -863,8 +867,9 @@ class Server:
         else:
             dd.pop("_bt", None)
 
-        # shortcut maybe_update
-        if dt.set(..., dd, meta):
+        # this shortcuts maybe_update
+        # forcing is required because we just modified the dict in-place
+        if dt.set(..., dd, meta, force=True):
             self.write_monitor((p, dd, meta))
 
 

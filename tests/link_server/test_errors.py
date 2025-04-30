@@ -57,7 +57,7 @@ async def test_simple(cfg):
 
 @pytest.mark.anyio()
 async def test_exc(cfg):
-    "Check sending an exception"
+    "Check sending+acking an exception"
     async with (
             Scaffold(cfg, use_servers=True) as sf,
             sf.server_(init={"Hello": "there!", "test": 123}),
@@ -70,14 +70,27 @@ async def test_exc(cfg):
             except Exception as exc:
                 await c.e_exc(P("test.here"), exc, missing="key")
             await anyio.sleep(0.2)
+            await c.e_ack(P("test.here"), this="that")
+            await anyio.sleep(0.2)
         t2 = time.time()
-        assert len(r) == 1
+        assert len(r) == 2
         p,d,m = r[0]
         assert p == P("test.here")
         assert d["missing"] == "key"
+        assert "this" not in d
+        assert d["_n"]==1
         assert isinstance(d["_exc"],KeyError)
         assert "_bt" not in d
         assert t1<m.timestamp<t2
+        p,d,m2 = r[1]
+        assert p == P("test.here")
+        assert d["missing"] == "key"
+        assert d["this"] == "that"
+        assert d["_ack"]
+        assert d["_n"]==1
+        assert isinstance(d["_exc"],KeyError)
+        assert "_bt" not in d
+        assert m.timestamp<m2.timestamp<t2
 
 
 @pytest.mark.anyio()

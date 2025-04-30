@@ -244,7 +244,7 @@ class HandlerStream(MsgHandler):
                 await self.send(link, [None], None, 0)
 
         if not link.end_both:
-            log("NotClosed L%d L%d", link.link_id, link.remote.link_id if link.remote else -1)
+            # log("NotClosed L%d L%d", link.link_id, link.remote.link_id if link.remote else -1)
             # breakpoint() # notclosed
             pass  # raise RuntimeError("Link was not closed")
 

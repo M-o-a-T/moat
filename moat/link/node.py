@@ -52,11 +52,9 @@ class Node:
         assert isinstance(meta, MsgMeta)
         s = self.get(item)
         if s._meta is not None:  # noqa:SLF001
-            if meta.timestamp < s._meta.timestamp:  # noqa:SLF001
+            if meta.timestamp <= s._meta.timestamp:  # noqa:SLF001
                 return False
-            if s._data == data:  # noqa:SLF001
-                if force:
-                    s._meta = meta  # noqa:SLF001
+            if not force and s._data == data:  # noqa:SLF001
                 return None
         s._data = data  # noqa:SLF001
         s._meta = meta  # noqa:SLF001

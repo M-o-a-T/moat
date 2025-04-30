@@ -58,7 +58,7 @@ def test_basic():
     assert n.set(P("a.b.c"), 42, MsgMeta(origin="A")) is None
     assert n.set(P("a.b.c"), 43, MsgMeta(origin="A"))
     assert n.set(P("a.b.c"), 43, MsgMeta(origin="B")) is None
-    assert n.set(P("a.b.c"), 43, MsgMeta(origin="B"), force=True) is None
+    assert n.set(P("a.b.c"), 43, MsgMeta(origin="B"), force=True) is True
     assert n.set(P("a.b.c"), 43, MsgMeta(origin="B", timestamp=999), force=True) is False
     assert n.set(P("a.b.c"), 44, MsgMeta(origin="C", timestamp=9999), force=True) is False
     assert n.set(P("a.b.c"), 44, MsgMeta(origin="C", timestamp=9999), force=False) is False

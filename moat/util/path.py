@@ -155,7 +155,6 @@ class Path(collections.abc.Sequence):
             return data
         if not isinstance(data, tuple) or any(isinstance(x,list) for x in data):
             return cls(*data)
-        if any(isinstance(x,list) for x in )
         p = object.__new__(cls)
         p._data = tuple(data)  # noqa:SLF001
         if mark is None:

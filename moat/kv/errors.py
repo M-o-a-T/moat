@@ -406,8 +406,7 @@ class ErrorRoot(ClientRoot):
         must be filled and stored by the caller.
         """
 
-        if isinstance(path,list):
-            path=Path.build(path)
+        path=Path.build(path)
         err = self._active[subsystem].get(path, None)
         if err is not None:
             return err

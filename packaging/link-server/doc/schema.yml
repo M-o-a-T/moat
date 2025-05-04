@@ -41,6 +41,51 @@ properties:
 required:
 - title
 ---
+_path: !P error
+title: Error states
+type: object
+properties: TODO
+---
+_path: !P gate.moat._._
+title: Gateway between MQTT and MoaT-Link data
+type: object
+properties:
+  dir:
+    type: str
+    doc: |
+      rd: read from MoaT-Link, send to MQTT
+      wr: read from MQTT, send to MoaT-Link
+      rs: stream from MoaT-Link, send to MQTT
+      ws: read from MQTT, stream to MoaT-Link
+  src:
+    type: Path
+    doc: Source to read from
+  args:
+    type: list
+    doc: Positional arguments for the MoaT-Link call
+  kw:
+    type: dict
+    doc: Keyword arguments for the MoaT-Link call
+  dst:
+    type: Path
+    doc: destination to send to
+  raw:
+    type: bool
+    doc: set if the MQTT path is outside the MoaT root
+  srcpath:
+    type: Path
+    doc: attribute to read from source data
+  dstpath:
+    type: Path
+    doc: attribute to write to dest data
+  t_min:
+    type: float
+    doc: how often to read (non-streaming) / reduce frequency (streaming)
+  t_max:
+    type: float
+    doc: trigger an error if the update didn't work for t_max
+
+---
 _path: !P run.service.conn.main
 title: Address of the main MoaT-Link server
 type: object
@@ -62,6 +107,11 @@ properties:
 
 required:
 - host
+---
+_path: !P run.service.client.main.NAME
+title: Notice that named client NAME has connected/disconnected
+doc: content is the name of the server, or empty when disconnected
+type: string
 ---
 _path: !P run.service.down.main
 title: Notice that a server is down

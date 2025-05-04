@@ -12,18 +12,13 @@ class Instr(Instrument):
     exited = None
 
     def before_task_step(self, task):
-        if isinstance(task._next_send, Error):
-            print("BEF:", task, task._next_send, file=sys.stderr)
+        print("BEF:", task, task._next_send, file=sys.stderr)
 
     def after_task_step(self, task):
-        if self.exited is task:
-            pass  # breakpoint()
-        self.exited = None
+        print("AFT:", task, task._next_send, file=sys.stderr)
 
     def task_exited(self, task, outcome=None):
         print("EXIT", task, outcome, file=sys.stderr)
-        if isinstance(outcome, Error) and not isinstance(outcome.error, Cancelled):
-            self.exited = task
 
 
 def hookup(runner=None):

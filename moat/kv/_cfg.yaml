@@ -21,9 +21,9 @@ modules:
   prefix: !P :.moat.kv.code.module
 runner: # for moat.kv.runner.RunnerRoot
   # storage for runnable commands
-  prefix: !P :.moat.kv.run"
+  prefix: !P :.moat.kv.run
   # storage for runner states
-  state: !P :.moat.kv.state"
+  state: !P :.moat.kv.state
 
   name: "run"
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import signal
 import time
+from collections.abc import Mapping
 
 import anyio
 from anyio.abc import SocketAttribute

@@ -491,7 +491,7 @@ class Client:
                         # self.logger.debug("Recv %s", msg)
                         try:
                             await self._handle_msg(msg)
-                        except ClosedResourceError as exc:
+                        except (ClosedResourceError,EOFError) as exc:
                             logger.warning("Reader closed in handler", exc_info=exc)
                             return
 

@@ -1,0 +1,21 @@
+[Unit]
+Description=Moat-KV KNX connector
+After=moat-kv.service
+Requires=moat-kv.service
+
+ConditionFileNotEmpty=/etc/moat/moat.cfg
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/moat kv knx monitor %I
+
+EnvironmentFile=/etc/moat/moat.env
+
+TimeoutSec=300
+WatchdogSec=10
+
+Restart=always
+RestartSec=30

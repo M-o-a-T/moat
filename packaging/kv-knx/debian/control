@@ -1,0 +1,19 @@
+Source: moat-kv-knx
+Maintainer: Matthias Urlichs <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 13),
+  moat-kv (>= 0.70),
+  python3-xknx (>= 0.11.9.19),
+Standards-Version: 3.9.6
+Homepage: https://github.com/M-o-a-T/moat-kv-knx
+
+Package: moat-kv-knx
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  moat-kv (>= 0.70),
+  python3-xknx (>= 0.11.9.19),
+Conflicts: distkv-knx
+Replaces: distkv-knx
+Description: KNX adapter for MoaT-KV
+ MoaT-KV-KNX is a bidirectional link between a KNX bus and the MoaT-KV distributed storage.

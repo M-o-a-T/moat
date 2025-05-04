@@ -737,7 +737,7 @@ class PathShortener:
     """
 
     def __init__(self, prefix:Path|list|tuple=Path()):  # noqa:B008
-        self.prefix = prefix if isinstance(prefix,Path) else Path(prefix)
+        self.prefix = prefix if isinstance(prefix,Path) else Path.build(prefix)
         self.depth = len(prefix)
         self.path = []
 

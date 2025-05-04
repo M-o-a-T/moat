@@ -120,7 +120,7 @@ class Package(_Common):
         try:
             v = self._repo.versions[self.dash]
         except KeyError:
-            self._repo.versions[self.dash] = v = {}
+            self._repo.versions[self.dash] = v = attrdict()
         else:
             if not isinstance(v, dict):
                 tag, commit = v
@@ -195,6 +195,10 @@ class Package(_Common):
         between the head and the @tag commit
         """
         head = self._repo.head.commit
+        try:
+            lc = self.last_commit
+        except AttributeError:
+            return True
         for d in head.diff(self.last_commit):
             if (
                 self._repo.repo_for(d.a_path, main) != self.name

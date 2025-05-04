@@ -23,13 +23,12 @@ dependencies = [
 	"moat-lib-cmd ~= 0.3.4",
 	"mqttproto ~= 0.7.2.13",
 	]
-version = "0.1.1"
+version = "0.1.2"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-link"
 description = "Message exchange between MoaT instances"
 readme = "README.rst"
-license-files = ["LICENSE.txt"]
 
 [[project.authors]]
 name = "Matthias Urlichs"

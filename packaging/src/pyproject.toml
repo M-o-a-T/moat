@@ -18,13 +18,12 @@ dependencies = [
 	"gitpython",
 	"packaging",
 	]
-version = "0.8.5"
+version = "0.8.6"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-src"
 description = "Tools for managing the MoaT sources"
 readme = "README.rst"
-license-files = ["LICENSE.txt"]
 
 [[project.authors]]
 email = "matthias@urlichs.de"

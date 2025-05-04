@@ -22,7 +22,6 @@ requires-python = ">=3.12"
 name = "moat"
 description = "The command line for MoaT"
 readme = "README.md"
-license-files = ["LICENSE.txt"]
 
 [[project.authors]]
 email = "matthias@urlichs.de"

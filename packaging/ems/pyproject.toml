@@ -21,7 +21,6 @@ requires-python = ">=3.8"
 name = "moat-ems"
 description = "A battery management system for MoaT"
 readme = "README.md"
-license-files = ["LICENSE.txt"]
 
 [[project.authors]]
 email = "matthias@urlichs.de"

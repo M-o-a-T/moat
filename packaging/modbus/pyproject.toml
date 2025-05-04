@@ -18,13 +18,12 @@ dependencies = [
 	"moat-util ~= 0.56.4",
 	"asyncscope ~= 0.8.3",
 	]
-version = "0.8.3"
+version = "0.8.4"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-modbus"
 description = "Modular async modbus client and server"
 readme = "README.rst"
-license-files = ["LICENSE.txt"]
 
 [[project.authors]]
 email = "matthias@urlichs.de"

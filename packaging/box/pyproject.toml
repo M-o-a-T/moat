@@ -23,13 +23,12 @@ dependencies = [
 	"moat-db ~= 0.2.1",
 	"moat-label ~= 0.2.0",
 	]
-version = "0.2.0"
+version = "0.2.1"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-box"
 description = "MoaT support for managing containers"
 readme = "README.rst"
-license-files = ["LICENSE.txt"]
 [[project.authors]]
 name = "Matthias Urlichs"
 email = "matthias@urlichs.de"

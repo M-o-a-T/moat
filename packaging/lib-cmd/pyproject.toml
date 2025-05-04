@@ -21,7 +21,6 @@ maintainers = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description='A simple command/stream multiplexer'
 readme = "README.rst"
 version = "0.3.5"
-license-files = ["LICENSE.txt"]
 
 [project.urls]
 homepage = "https://m-o-a-t.org"

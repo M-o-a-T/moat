@@ -21,13 +21,12 @@ dependencies = [
 	"simpleeval",
 	"moat-lib-codec ~= 0.4.1",
 	]
-version = "0.57.0"
+version = "0.57.1"
 keywords = [ "MoaT",]
 requires-python = ">=3.12"
 name = "moat-util"
 description = "Utility code for the rest of MoaT"
 readme = "README.rst"
-license-files = ["LICENSE.txt"]
 
 [[project.authors]]
 name = "Matthias Urlichs"

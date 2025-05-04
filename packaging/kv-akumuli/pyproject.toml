@@ -13,13 +13,12 @@ classifiers = [
 dependencies = [
 	"moat-kv ~= 0.70.24",
 ]
-version = "0.8.5"
+version = "0.8.6"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-kv-akumuli"
 description = "Akumuli storage connector for MoaT-KV"
 readme = "README.rst"
-license-files = ["LICENSE.txt"]
 
 [[project.authors]]
 email = "matthias@urlichs.de"

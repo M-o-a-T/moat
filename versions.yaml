@@ -35,8 +35,8 @@ ems:
   tag: 0.2.10
 ems-battery:
   pkg: 1
-  rev: 447979104e8e29b991be3df8d6be944d82c233d5
-  tag: 0.2.12
+  rev: 606fe5bded48a0f65ce88c4358f08fe24118f6d5
+  tag: 0.0.1
 ems-inv:
   pkg: 1
   rev: 447979104e8e29b991be3df8d6be944d82c233d5
@@ -110,8 +110,8 @@ lib-victron:
   tag: 0.1.2
 link:
   pkg: 1
-  rev: 447979104e8e29b991be3df8d6be944d82c233d5
-  tag: 0.1.1
+  rev: 606fe5bded48a0f65ce88c4358f08fe24118f6d5
+  tag: 0.1.2
 link-server:
   pkg: 1
   rev: 447979104e8e29b991be3df8d6be944d82c233d5

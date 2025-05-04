@@ -15,13 +15,12 @@ dependencies = [
 	"anyio ~= 4.0",
 	"cadquery ~= 2.0",
 	]
-version = "0.3.2"
+version = "0.3.3"
 keywords = [ "MoaT",]
 requires-python = ">=3.10"
 name = "moat-cad"
 description = "CAD files for various MoaT-related things"
 readme = "README.md"
-license-files = ["LICENSE.txt"]
 [[project.authors]]
 email = "matthias@urlichs.de"
 name = "Matthias Urlichs"

@@ -20,7 +20,7 @@ name = "moat-lib-victron"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.rst"
-version = "0.1.2"
+version = "0.1.3"
 license-files = ["LICENSE.txt"]
 
 [project.urls]

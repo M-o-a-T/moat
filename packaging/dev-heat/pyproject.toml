@@ -21,7 +21,7 @@ name = "moat-dev-heat"
 authors = [{email = "matthias@urlichs.de",name = "Matthias Urlichs"}]
 description = "REPLACE ME"
 readme = "README.md"
-version = "0.1.0"
+version = "0.1.1"
 license-files = ["LICENSE.txt"]
 
 [project.urls]

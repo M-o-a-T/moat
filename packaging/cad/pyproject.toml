@@ -15,7 +15,7 @@ dependencies = [
 	"anyio ~= 4.0",
 	"cadquery ~= 2.0",
 	]
-version = "0.3.2"
+version = "0.3.3"
 keywords = [ "MoaT",]
 requires-python = ">=3.10"
 name = "moat-cad"

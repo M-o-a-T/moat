@@ -9,5 +9,10 @@ export PYBUILD_NAME=moat-lib-diffiehellman
 override_dh_usrlocal:
 	if test -d debian/python3-moat-lib-diffiehellman/usr/local/bin/ ; then 	mkdir -p debian/python3-moat-lib-diffiehellman/usr/bin; 	mv debian/python3-moat-lib-diffiehellman/usr/local/bin/* debian/python3-moat-lib-diffiehellman/usr/bin; 	fi
 
+override_dh_python3:
+	dh_python3
+	rm -f debian/moat-kv/usr/lib/python3/dist-packages/test.log
+	rm -rf debian/moat-kv/usr/lib/python3/dist-packages/debian
+
 override_dh_auto_test:
 	: skip

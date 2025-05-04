@@ -9,37 +9,8 @@ from contextlib import asynccontextmanager
 from moat.link.meta import MsgMeta
 from moat.link._test import Scaffold
 from moat.link.node import Node
-from moat.util import P, PathLongener, NotGiven, ungroup, ValueEvent, Path
+from moat.util import P, PathLongener, NotGiven, ungroup, Path
 from moat.lib.cmd import StreamError
-
-
-@asynccontextmanager
-async def do_watch(sf, exp, n=0, *a, **kw):
-    """
-    Run a client on scaffold @sf that expects @xp and appends all non-exp
-    results to @rd.
-
-    All other args+kw are forwarded to `Link.d_watch`.
-    """
-    async with anyio.create_task_group() as tg, sf.client_() as c:
-        evt = ValueEvent()
-        got=0
-        @tg.start_soon
-        async def work():
-            res=[]
-            try:
-                async with c.d_watch(P("test.here"),*a,**kw) as mon:
-                    async for p,d,m in mon:
-                        t = time.time()
-                        assert t - 1 < m.timestamp < t
-                        if not len(p) and d == exp:
-                            return
-                        res.append((p,d,m))
-                        if len(res)==n:
-                            return
-            finally:
-                evt.set(res)
-        yield evt
 
 
 @pytest.mark.anyio()
@@ -55,7 +26,7 @@ async def test_get_flat_simple(cfg):
         await c.i_sync()
 
         with anyio.fail_after(.2):
-            async with do_watch(sf,  "HiLo", state=True) as res:
+            async with sf.do_watch(P("test.here"),exp="HiLo", state=True) as res:
                 res = await res.get()
         assert res == []
 
@@ -74,7 +45,7 @@ async def test_get_flat_dyn(cfg):
 
         t=anyio.current_time()
         with anyio.fail_after(.2):
-            async with do_watch(sf, "End", state=False) as res:
+            async with sf.do_watch(P("test.here"),exp="End", state=False) as res:
                 await c.i_sync()
                 await c.d_set(P("test.here.too"), "Ugh3")
                 await c.d_set(P("test.here"), "End")
@@ -96,14 +67,14 @@ async def test_get_flat_full(cfg):
 
         t=anyio.current_time()
         with anyio.fail_after(.2):
-            async with do_watch(sf, "End", state=None) as res:
+            async with sf.do_watch(P("test.here"),exp="End", state=None) as res:
                 await c.i_sync()
                 await c.d_set(P("test.here.too"), "Ugh3")
                 await c.d_set(P("test.here"), "End")
                 res = await res.get()
         assert len(res) == 1
         res = res[0]
-        assert res[1] == "HiLo"
+        assert res[0] == "HiLo"
 
 
 @pytest.mark.anyio()
@@ -119,7 +90,7 @@ async def test_get_tree_simple(cfg):
         await c.i_sync()
 
         with anyio.fail_after(.2):
-            async with do_watch(sf,  "HiLo", state=True, subtree=True) as res:
+            async with sf.do_watch(P("test.here"),exp="HiLo", state=True, subtree=True) as res:
                 res = await res.get()
         assert res == []
 
@@ -137,7 +108,7 @@ async def test_get_tree_dyn(cfg):
         await c.i_sync()
 
         with anyio.fail_after(.2):
-            async with do_watch(sf, "End", state=False, subtree=True) as res:
+            async with sf.do_watch(P("test.here"),exp="End", state=False, subtree=True) as res:
                 await c.i_sync()
                 await c.d_set(P("test.here.too"), "Ugh3")
                 await c.i_sync()
@@ -161,7 +132,7 @@ async def test_get_tree_full(cfg):
         await c.i_sync()
 
         with anyio.fail_after(.2):
-            async with do_watch(sf, "End", state=None, subtree=True) as res:
+            async with sf.do_watch(P("test.here"),exp="End", state=None, subtree=True) as res:
                 await c.i_sync()
                 await c.d_set(P("test.here.too"), "Ugh3")
                 await c.i_sync()
@@ -193,7 +164,7 @@ async def test_get_tree_dyn_old(cfg):
 
         t=time.time()
         with anyio.fail_after(.2):
-            async with do_watch(sf, "End", state=None, subtree=True) as res:
+            async with sf.do_watch(P("test.here"),exp="End", state=None, subtree=True) as res:
                 await c.i_sync()
                 await c.d_set(P("test.here.too"), "dead",meta=old)
                 await c.d_set(P("test.here.too"), "Ugh3")
@@ -222,7 +193,7 @@ async def test_get_tree_drop(cfg):
         await c.i_sync()
 
         with anyio.fail_after(.2):
-            async with do_watch(sf, "End", state=None, subtree=True) as res:
+            async with sf.do_watch(P("test.here"),exp="End", state=None, subtree=True) as res:
                 await c.i_sync()
                 await c.d_set(P("test.here.too"), NotGiven)
                 await c.i_sync()

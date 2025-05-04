@@ -19,8 +19,10 @@ from moat.util import (  # pylint:disable=no-name-in-module
     CtxObj,
     attrdict,
     combine_dict,
-    Path,
+    NotGiven,
+    Path,P,
     Root,
+    ValueEvent,
 )
 
 from typing import TYPE_CHECKING
@@ -182,3 +184,38 @@ class Scaffold(CtxObj):
 
         async with cli as li:
             yield li
+
+    @asynccontextmanager
+    async def do_watch(self, path, exp=NotGiven, n=0, *a, **kw):
+        """
+        Run a client that expects @xp and appends all non-exp
+        results to @rd.
+
+        All other args+kw are forwarded to `Link.d_watch`.
+        """
+        async with anyio.create_task_group() as tg, self.client_() as c:
+            evt = ValueEvent()
+            got=0
+            @tg.start_soon
+            async def work():
+                res=[]
+                try:
+                    async with c.d_watch(path,*a,**kw) as mon:
+                        async for r in mon:
+                            if not kw.get("meta") and not kw.get("subtree"):
+                                r = (r,)
+                            if kw.get("meta"):
+                                t = time.time()
+                                assert t - 1 < r[-1].timestamp < t
+                            if exp is not NotGiven and (not kw.get("subtree") or not len(r[0])) and r[kw.get("subtree",0)] == exp:
+                                return
+                            res.append(r)
+                            if len(res)==n:
+                                return
+                finally:
+                    evt.set(res)
+            yield evt
+            tg.cancel_scope.cancel()
+
+
+

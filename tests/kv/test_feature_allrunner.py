@@ -44,7 +44,7 @@ async def test_83_run(autojump_clock):  # pylint: disable=unused-argument
                     await c._test_evt.wait()
             finally:
                 # this might block due to previous error
-                with anyio.fail_after(2):
+                with anyio.fail_after(2, shield=True):
                     await st.run("data : get -rd_", do_stdout=False)
             await trio.sleep(11)
 

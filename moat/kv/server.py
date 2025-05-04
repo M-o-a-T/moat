@@ -2402,6 +2402,8 @@ class Server:
             raise RuntimeError("This server is not yet operational.")
         async with MsgReader(path=path, stream=stream, codec="std-msgpack") as rdr:
             async for m in rdr:
+                if m is None:
+                    continue
                 if "value" in m:
                     longer(m)
                     if "tock" in m:

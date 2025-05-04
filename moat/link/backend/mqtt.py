@@ -253,14 +253,17 @@ class Backend(_Backend):
         elif meta is not False:
             prop["MoaT"] = meta.encode()
 
-        if codec is NotGiven:
-            codec = self.codec
-        elif codec is None:
-            codec = NoopCodec()
-        elif isinstance(codec, str):
-            codec = get_codec(codec)
-        # else codec is a Codec and used as-is
-        msg = codec.encode(data)
+        if isinstance(data,str):
+            msg = data  # utf-8 is pass-thru in MQTT5
+        else:
+            if codec is NotGiven:
+                codec = self.codec
+            elif codec is None:
+                codec = NoopCodec()
+            elif isinstance(codec, str):
+                codec = get_codec(codec)
+            # else codec is a Codec and used as-is
+            msg = codec.encode(data)
 
         if self.trace:
             self.logger.info("S:%s %r", topic, data)

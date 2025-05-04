@@ -563,7 +563,6 @@ class ClientStub:
 
     async def handle(self, msg: Msg, rcmd: list, *prefix: list[str]):
         "Handler that forwards to the remote server"
-        breakpoint()
         srv = self.server.server_link(self.name)
         rcmd.append(self.name)
         rcmd.append("cl")

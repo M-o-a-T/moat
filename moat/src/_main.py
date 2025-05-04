@@ -117,15 +117,19 @@ class Package(_Common):
 
     @property
     def vers(self):
-        v = self._repo.versions[self.dash]
-        if not isinstance(v, dict):
-            tag, commit = v
-            v = attrdict(
-                tag=tag,
-                pkg=1,
-                rev=commit,
-            )
-            self._repo.versions[self.dash] = v
+        try:
+            v = self._repo.versions[self.dash]
+        except KeyError:
+            self._repo.versions[self.dash] = v = {}
+        else:
+            if not isinstance(v, dict):
+                tag, commit = v
+                v = attrdict(
+                    tag=tag,
+                    pkg=1,
+                    rev=commit,
+                )
+                self._repo.versions[self.dash] = v
         return v
 
     @vers.setter

@@ -653,8 +653,6 @@ class Server(MsgHandler):
         """
         if client.name == name:
             return
-        if name in self._clients:
-            raise ValueError("Client exists")  # XXX kill old instead?
         del self._clients[client.name]
         client.name = name
         self._clients[name] = client

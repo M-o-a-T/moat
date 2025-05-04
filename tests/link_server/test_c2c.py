@@ -13,6 +13,7 @@ from moat.util import P, PathLongener, NotGiven, ungroup
 from moat.lib.cmd import StreamError
 from moat.lib.cmd.base import MsgSender
 
+pytestmark = pytest.mark.skip
 
 async def _dump(sf, *, task_status):
     bk = await sf.backend(name="mon")

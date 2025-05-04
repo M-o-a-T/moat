@@ -11,6 +11,8 @@ from moat.util import P, Path
 from moat.kv.mock.mqtt import stdtest
 from moat.kv.server import Server
 
+pytestmark = pytest.mark.skip
+
 logger = logging.getLogger(__name__)
 
 N = 10

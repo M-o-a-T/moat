@@ -318,6 +318,8 @@ class _Sender(MsgSender):
 
         Streamed messages can be sent and will be stored as auxiliary
         information if the command should fail.
+
+        This wrapper does *not* swallow the exception.
         """
         async with self.e.mon(path, **kw) as mon:
             yield mon
@@ -677,4 +679,7 @@ class _Watcher(CtxObj):
             p,d,m = msg
             if self.age is None or m.timestamp+self.age >= time.time():
                 if self._node.set(p,d,m):
-                    return p,d,m
+                    if self.meta:
+                        return (p,d,m) if self.subtree else (d,m)
+                    else:
+                        return (p,d) if self.subtree else d

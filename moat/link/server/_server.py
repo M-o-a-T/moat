@@ -131,12 +131,14 @@ class ServerClient(LinkCommon):
 
     _hello: Hello | None = None
     _auth_data: Any = None
+    is_server:bool = False
     protocol_version: int = -1
+    prefix: str
     name: str
 
-    def __init__(self, server: Server, name: str, stream: Stream):
+    def __init__(self, server: Server, prefix: str, stream: Stream):
         self.server = server
-        self.name = name
+        self.prefix = prefix
         self.stream = stream
 
         # there sustained rate might be > 10 connections per second.
@@ -150,8 +152,9 @@ class ServerClient(LinkCommon):
             if _client_nr > t+1000:
                 raise RuntimeError("The connection rate is too high!")
         self.client_nr = id2str(_client_nr)
+        self.name=f"{self.prefix}.C{self.client_nr}",
 
-        self.logger = logging.getLogger(f"moat.link.server.{name}.{self.client_nr}")
+        self.logger = logging.getLogger(f"moat.link.server.{prefix}.{self.client_nr}")
 
     @property
     def sender(self) -> MsgSender:
@@ -162,8 +165,8 @@ class ServerClient(LinkCommon):
 
         self.logger.debug("START %s C_%s", self.name, self.client_nr)
         self._hello = Hello(
-            them=f"{self.name}.C{self.client_nr}",
-            me=self.name,
+            them=self.name,
+            me=self.server.name,
             me_server=True,
             auth_in=[TokenAuth("Duh"), AnonAuth()],
         )
@@ -174,15 +177,20 @@ class ServerClient(LinkCommon):
             self._sender = MsgSender(cmd)
 
             # basic setup
+            them = None
             try:
                 if await self._hello.run(MsgSender(cmd)) is False or not (
                     auth := self._hello.auth_data
                 ):
                     self.logger.debug("NO %s", self.client_nr)
                     return
-            finally:
-                self.server.rename_client(self,self._hello.them)
+                them = self._hello.them
+                self.is_server = self._hello.they_server
+                if not self.is_server and "." not in them:
+                    await self.server.backend.send(P(":R.run.service.client.main")/them,self.server.name)
+                self.server.rename_client(self,them)
                 self.protocol_version = self._hello.protocol_version
+            finally:
                 del self._hello
 
             self._auth_data = auth
@@ -1307,7 +1315,7 @@ class Server:
         async with (
             EventSetter(self._stopped),
             Broadcaster(send_last=True) as self.write_monitor,
-            get_backend(self.cfg, name="main." + self.name, will=will_data) as self.backend,
+            get_backend(self.cfg, name=self.name, will=will_data) as self.backend,
             anyio.create_task_group() as _tg,
         ):
             self._tg = _tg
@@ -1697,18 +1705,23 @@ class Server:
         mainly tries to record what went wrong on the server so the next
         client session can ask.
 
-        TODO, for the most part. The stream is
+        @name is the name of the link.
         """
         c = None
         cnr = -1
         try:
-            c = ServerClient(server=self, name=name, stream=stream)
+            c = ServerClient(server=self, prefix=name, stream=stream)
             cnr = c.client_nr
             try:
-                self._clients[name] = c
+                self._clients[c.name] = c
                 await c.run()
             finally:
-                del self._clients[c.name]
+                if self._clients.get(c.name,None) is c:
+                    del self._clients[c.name]
+
+                    if not c.is_server and "." not in c.name:
+                        with anyio.move_on_after(2,shield=True):
+                            await self.backend.send(P(":R.run.service.client.main")/c.name,b'',codec=None)
         except (ClosedResourceError, anyio.EndOfStream):
             self.logger.debug("XX %d closed", cnr)
         except BaseException as exc:

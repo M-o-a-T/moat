@@ -152,5 +152,5 @@ thing:
   tag: 0.2.0
 util:
   pkg: 1
-  rev: 4af05e9e3ce2a7c4b270be939055fdd4a4d25feb
-  tag: 0.57.1
+  rev: 407e164abd743fa0cec8a2f9a0fefeed9a4c0141
+  tag: 0.57.2

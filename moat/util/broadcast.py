@@ -44,7 +44,7 @@ class LostData(Exception):
 
 
 @define
-class BroadcastReader[TData]:
+class BroadcastReader: ## TYPE [TData]:
     """
     The read side of a broadcaster.
 
@@ -122,7 +122,7 @@ class BroadcastReader[TData]:
 
 
 @define
-class Broadcaster[TData]:
+class Broadcaster: ## TYPE [TData]:
     """
     A simple broadcaster. Messages will be sent to all readers.
 

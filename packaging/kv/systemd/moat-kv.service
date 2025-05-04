@@ -24,4 +24,4 @@ EnvironmentFile=/usr/lib/moat/kv/env
 EnvironmentFile=-/etc/moat/kv.env
 
 TimeoutSec=300
-WatchdogSec=10
+WatchdogSec=300  # Sigh

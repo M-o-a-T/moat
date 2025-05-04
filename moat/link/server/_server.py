@@ -1540,16 +1540,13 @@ class Server(MsgHandler):
             task_status.started()
 
             async for msg in mon:
-                if len(msg.topic) != 6:
-                    breakpoint()
-                    continue
                 name = msg.topic[-1]
                 rem = self._clients.get(name,None)
                 if msg.data is NotGiven:
                     if rem is None:
                         continue
                     if not isinstance(rem, ClientStub) or rem.name != msg.meta.origin:
-                        breakpoint()
+                        raise ValueError(repr(rem))  # XXX
                         continue
                     del self._clients[name]
                 else:

@@ -169,7 +169,11 @@ class MoatKVbroker(Broker):
 
         if ts[: len(self.__base)] == self.__base:
             # All messages on "base" get stored in MoaT-KV, retained or not.
-            await self.__client.set(ts, value=data)
+            try:
+                await self.__client.set(ts, value=data)
+            except Exception as exc:
+                self.logger.error("Cannot set %s to %r: %r", ts, data, exc)
+
             return
 
         for t in self.__transparent:

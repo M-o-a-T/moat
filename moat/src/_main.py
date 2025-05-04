@@ -925,8 +925,12 @@ async def build(
     if autotag:
         for r in repos:
             if r.has_changes(True):
+                try:
+                    nt = r.next_tag()
+                except AttributeError:
+                    nt = "1.0.0" if major else "0.1.0" if minor else "0.0.1"
                 r.vers = attrdict(
-                    tag=r.next_tag(),
+                    tag=nt,
                     pkg=1,
                     rev=repo.head.commit.hexsha,
                 )

@@ -1027,9 +1027,10 @@ async def build(
                     check=True,
                     stdout=subprocess.PIPE,
                 )
-                tag = res.stdout.strip().decode("utf-8").rsplit("-", 1)[0]
+                tag,ptag = res.stdout.strip().decode("utf-8").rsplit("-", 1)
+                ptag = int(ptag)
                 ltag = r.last_tag
-                if tag != ltag:
+                if tag != ltag or r.vers.pkg != ptag:
                     subprocess.run(
                         [
                             "debchange",
@@ -1044,7 +1045,7 @@ async def build(
                     )
                     repo.index.add(p / "changelog")
 
-                if debversion.get(r.dash, "") != ltag:
+                if debversion.get(r.dash, "") != ltag or r.vers.pkg != ptag:
                     subprocess.run(["debuild", "--build=binary"] + deb_opts, cwd=rd, check=True)
             except subprocess.CalledProcessError:
                 if not run:

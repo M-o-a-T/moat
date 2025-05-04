@@ -56,6 +56,8 @@ def get_codec(codec, fallback=NotGiven, config={}):  # pylint: disable=dangerous
         config.pop("codec", None)
         return codec(**config.get("codec_params", {}).get(codec.name, {}))
     if isinstance(codec, str):
+        return _get_codec(codec)
+    if isinstance(config, str):
         return _get_codec(config)
     else:
         return _get_codec(**config)
@@ -458,6 +460,8 @@ class MQTTClient:
                 self.qos = qos
                 if codec is NotGiven:
                     codec = client.codec
+                elif codec is None:
+                    codec = get_codec("noop")
                 elif isinstance(codec, str):
                     codec = get_codec(codec)
                 elif isinstance(codec, dict):

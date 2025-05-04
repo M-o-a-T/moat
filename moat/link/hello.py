@@ -62,6 +62,7 @@ class Hello(CmdCommon):
     auth_out: dict[str, AuthMethod] = field(kw_only=True, default={}, converter=_to_dict)
 
     me_server: bool = field(default=False)
+    they_server: bool = field(init=False, default=False)
 
     _sync: anyio.Event = field(init=False, factory=anyio.Event)
     _done: anyio.Event = field(init=False, factory=anyio.Event)
@@ -161,8 +162,8 @@ class Hello(CmdCommon):
             self.protocol_version = min(prot, self.protocol_max)
 
             # TODO special auth for servers?
-            they_server = next(it)
-            if not they_server and not self.me_server:
+            self.they_server = next(it)
+            if not self.they_server and not self.me_server:
                 raise RuntimeError("Two clients cannot talk")
 
             # Remote names
@@ -185,7 +186,7 @@ class Hello(CmdCommon):
                 if remote_name.startswith("_"):
                     logger.debug("Remote name: %r / %r", remote_name, self.them)
                     aux_data["name"] = self.them
-                elif they_server:
+                elif self.they_server:
                     self.them = remote_name
                 elif remote_name[0] == "!":
                     self.them = remote_name[1:]

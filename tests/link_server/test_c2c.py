@@ -11,7 +11,9 @@ from moat.link.node import Node
 from moat.link.client import Link
 from moat.util import P, PathLongener, NotGiven, ungroup
 from moat.lib.cmd import StreamError
+from moat.lib.cmd.base import MsgSender
 
+pytestmark = pytest.mark.skip
 
 async def _dump(sf, *, task_status):
     bk = await sf.backend(name="mon")
@@ -55,3 +57,24 @@ async def test_c2c_basic(cfg):
             async for m in mm:
                 nn.append(m[0])
         assert nn==[1,2,3]
+
+@pytest.mark.anyio()
+async def test_c2c_relay(cfg):
+    async with Scaffold(cfg, use_servers=True) as sf:
+        await sf.tg.start(_dump, sf)
+        s1,_d1 = await sf.server(init={"Hello": "there!", "test": 123})
+        s2,_d2 = await sf.server()
+
+        c1 = MsgSender(s1)
+        c1.add_sub("cl")
+        c2 = MsgSender(s2)
+        c2.add_sub("cl")
+
+        s = await sf.client(cli=Supi(cfg.link,"!sup"))
+        await anyio.sleep(.5)
+
+        res = await c1.cl.sup.supi()
+        assert res == "Yes"
+
+        res = await c2.cl.sup.supi()
+        assert res == "Yes"

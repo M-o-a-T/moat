@@ -406,6 +406,7 @@ class ErrorRoot(ClientRoot):
         must be filled and stored by the caller.
         """
 
+        path=Path.build(path)
         err = self._active[subsystem].get(path, None)
         if err is not None:
             return err
@@ -558,4 +559,7 @@ class ErrorRoot(ClientRoot):
             self._latest.keep(entry)
         else:
             dest = self._active
-        dest[entry.subsystem][entry.path] = entry
+        path=entry.path
+        if isinstance(path,list):
+            path=Path.build(path)
+        dest[entry.subsystem][path] = entry

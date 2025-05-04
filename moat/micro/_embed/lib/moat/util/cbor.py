@@ -14,6 +14,7 @@ from moat.lib.codec import Extension, NoCodecError
 from moat.lib.codec.cbor import Codec, Tag
 from moat.lib.codec.proxy import DProxy, Proxy, name2obj, obj2name, unwrap_obj, wrap_obj
 
+from . import NotGiven
 from .path import Path
 
 __all__ = ["std_ext", "StdCBOR"]
@@ -29,6 +30,10 @@ class StdCBOR(Codec):
     def __init__(self):
         super().__init__(ext=std_ext)
 
+    def decode(self, data:bytes):
+        if data == b'':
+            return NotGiven
+        return super().decode(data)
 
 Codec = StdCBOR
 

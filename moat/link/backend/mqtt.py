@@ -13,11 +13,11 @@ from mqttproto.async_client import AsyncMQTTClient, Will, PropertyType
 
 from moat.link.meta import MsgMeta
 from moat.lib.codec.noop import Codec as NoopCodec
-from moat.util import NotGiven, attrdict
+from moat.util import NotGiven, attrdict, get_codec
 from moat.util.path import PS, P, Path
 
 from . import Backend as _Backend
-from . import Message, RawMessage, get_codec
+from . import Message, RawMessage
 
 from typing import TYPE_CHECKING, overload
 
@@ -253,14 +253,17 @@ class Backend(_Backend):
         elif meta is not False:
             prop["MoaT"] = meta.encode()
 
-        if codec is NotGiven:
-            codec = self.codec
-        elif codec is None:
-            codec = NoopCodec()
-        elif isinstance(codec, str):
-            codec = get_codec(codec)
-        # else codec is a Codec and used as-is
-        msg = codec.encode(data)
+        if isinstance(data,str):
+            msg = data  # utf-8 is pass-thru in MQTT5
+        else:
+            if codec is NotGiven:
+                codec = self.codec
+            elif codec is None:
+                codec = NoopCodec()
+            elif isinstance(codec, str):
+                codec = get_codec(codec)
+            # else codec is a Codec and used as-is
+            msg = codec.encode(data)
 
         if self.trace:
             self.logger.info("S:%s %r", topic, data)

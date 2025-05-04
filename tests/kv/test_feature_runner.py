@@ -54,7 +54,8 @@ async def test_83_run(autojump_clock):  # pylint: disable=unused-argument
                 await trio.sleep(2)
                 assert not rs.stopped
                 await trio.sleep(10)
-                await st.run("data : get -rd_", do_stdout=False)
+                with anyio.fail_after(2, shield=True):
+                    await st.run("data : get -rd_", do_stdout=False)
                 assert rs.stopped
                 pass  # end
 

@@ -14,6 +14,7 @@ from anyio.abc import SocketAttribute
 from contextlib import asynccontextmanager, nullcontext
 from datetime import UTC, datetime
 from functools import partial
+from attrs import define,field
 from asyncactor import (
     Actor,
     GoodNodeEvent,
@@ -38,7 +39,7 @@ from moat.util import (
     to_attrdict,
     id2str,
 )
-from moat.lib.cmd.base import MsgSender
+from moat.lib.cmd.base import MsgSender, MsgHandler
 from moat.lib.cmd.anyio import run as run_cmd_anyio
 from moat.lib.codec.cbor import CBOR_TAG_CBOR_LEADER, Tag
 from moat.link.auth import AnonAuth, TokenAuth
@@ -131,12 +132,14 @@ class ServerClient(LinkCommon):
 
     _hello: Hello | None = None
     _auth_data: Any = None
+    is_server:bool = False
     protocol_version: int = -1
+    prefix: str
     name: str
 
-    def __init__(self, server: Server, name: str, stream: Stream):
+    def __init__(self, server: Server, prefix: str, stream: Stream):
         self.server = server
-        self.name = name
+        self.prefix = prefix
         self.stream = stream
 
         # there sustained rate might be > 10 connections per second.
@@ -150,8 +153,9 @@ class ServerClient(LinkCommon):
             if _client_nr > t+1000:
                 raise RuntimeError("The connection rate is too high!")
         self.client_nr = id2str(_client_nr)
+        self.name=f"{self.prefix}.C{self.client_nr}"
 
-        self.logger = logging.getLogger(f"moat.link.server.{name}.{self.client_nr}")
+        self.logger = logging.getLogger(f"moat.link.server.{prefix}.{self.client_nr}")
 
     @property
     def sender(self) -> MsgSender:
@@ -162,8 +166,8 @@ class ServerClient(LinkCommon):
 
         self.logger.debug("START %s C_%s", self.name, self.client_nr)
         self._hello = Hello(
-            them=f"{self.name}.C{self.client_nr}",
-            me=self.name,
+            them=self.name,
+            me=self.server.name,
             me_server=True,
             auth_in=[TokenAuth("Duh"), AnonAuth()],
         )
@@ -174,15 +178,20 @@ class ServerClient(LinkCommon):
             self._sender = MsgSender(cmd)
 
             # basic setup
+            them = None
             try:
                 if await self._hello.run(MsgSender(cmd)) is False or not (
                     auth := self._hello.auth_data
                 ):
                     self.logger.debug("NO %s", self.client_nr)
                     return
-            finally:
-                self.server.rename_client(self,self._hello.them)
+                them = self._hello.them
+                self.is_server = self._hello.they_server
+                if not self.is_server and "." not in them:
+                    await self.server.backend.send(P(":R.run.service.client.main")/them,self.server.name)
+                self.server.rename_client(self,them)
                 self.protocol_version = self._hello.protocol_version
+            finally:
                 del self._hello
 
             self._auth_data = auth
@@ -257,20 +266,14 @@ class ServerClient(LinkCommon):
 
     doc_cl = dict(_d="Access to named clients")
 
-    async def sub_cl(self, msg: Msg, rcmd: list) -> None:
+    def sub_cl(self, msg: Msg, rcmd: list) -> Awaitable:
         "Local subcommand redirect for 'cl'"
-        if rcmd:
-            cl = self.server.clients[rcmd.pop()]
-            return await cl.sender.handle(msg,rcmd)
-        raise RuntimeError("Should have streamed")
+        return self.server.sub_cl(msg,rcmd)
 
-
-    async def stream_cl(self, msg:Msg) -> None:
+    def stream_cl(self, msg:Msg) -> Awaitable:
         "Send the list of currently-known clients"
-        cl = list(self.server.clients)
-        async with msg.stream_out(len(cl)) as ml:
-            for cn in cl:
-                await ml.send(cn)
+        return self.server.stream_cl(msg)
+
 
     doc_d_list = dict(_d="get subnode child names", _r=["Any:Data", "MsgMeta"], _o="str")
 
@@ -544,7 +547,32 @@ class ServerClient(LinkCommon):
         return await self.server.load(path=path, prefix=prefix)
 
 
-class Server:
+@define
+class ClientStub:
+    """
+    This is an entry in the client list that redirects to the server
+    which this client is connected to.
+    """
+    server:Server = field()
+    name:str = field()
+
+    @property
+    def sender(self):
+        "Stub, returns self"
+        return self
+
+    async def handle(self, msg: Msg, rcmd: list, *prefix: list[str]):
+        "Handler that forwards to the remote server"
+        srv = self.server.server_link(self.name)
+        rcmd.append(self.name)
+        rcmd.append("cl")
+        return await srv.handle(msg,rcmd)
+    
+    async def aclose(self):
+        pass
+
+
+class Server(MsgHandler):
     """
     This is the main MoaT-Link server. It manages connections to the MQTT server,
     the clients, and (optionally) logs all changes to a file.
@@ -594,6 +622,8 @@ class Server:
 
     _ping_history:Sequence[str] = ()
 
+    _server_link:dict[str,BasicLink]
+
     def __init__(self, cfg: dict, name: str, init: Any = NotGiven, load:anyio.Path|FSPath|str|None=None):
         self.data = Node()
         self.name = name
@@ -607,9 +637,10 @@ class Server:
         self._error_cache = {}
         self._stamp_in_evt = anyio.Event()
         self._syncing = {}
+        self._server_link = {}
 
         # connected clients
-        self._clients: dict[str,ServerClient] = dict()
+        self._clients: dict[str,ServerClient|ClientStub] = dict()
 
 
     @property
@@ -622,8 +653,6 @@ class Server:
         """
         if client.name == name:
             return
-        if name in self._clients:
-            raise ValueError("Client exists")  # XXX kill old instead?
         del self._clients[client.name]
         client.name = name
         self._clients[name] = client
@@ -679,10 +708,11 @@ class Server:
         t_start = anyio.current_time() if self.data else None
 
         async with self.backend.monitor(
-            P(":R.#"),
+            P(":R"),
             raw=False,
             qos=QoS.AT_LEAST_ONCE,
             no_local=True,
+            subtree=True,
         ) as stream:
             task_status.started()
             async for msg in stream:
@@ -1306,7 +1336,7 @@ class Server:
         async with (
             EventSetter(self._stopped),
             Broadcaster(send_last=True) as self.write_monitor,
-            get_backend(self.cfg, name="main." + self.name, will=will_data) as self.backend,
+            get_backend(self.cfg, name=self.name, will=will_data) as self.backend,
             anyio.create_task_group() as _tg,
         ):
             self._tg = _tg
@@ -1325,6 +1355,9 @@ class Server:
 
             await _tg.start(self._auth_update)
             await _tg.start(self._sigterm)
+
+            # monitor client connects
+            await _tg.start(self._watch_client)
 
             # background tasks
 
@@ -1376,6 +1409,10 @@ class Server:
             else:
                 await ping_ready.wait()
 
+            # create a basic client link to any other servers we see
+            await _tg.start(self._watch_up)
+
+            # watch for Will messages from dying servers that are "it"
             await _tg.start(self._watch_down)
 
             del self._init  # after this point there's no more difference
@@ -1443,12 +1480,18 @@ class Server:
         self._tg.cancel_scope.cancel()  # pyright:ignore  # ??
 
     async def stop(self):
-        """Tell the server to stop"""
+        """
+        Tell the server to shut down cleanly.
+
+        Waits until the server is in fact down.
+        """
         self._stop_flag.set()
         await self._stopped.wait()
 
     async def _auth_update(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        # Background task to refresh the auth data
+        """
+        Background task to refresh the auth data.
+        """
         self.refresh_auth()
         task_status.started()
         while True:
@@ -1457,6 +1500,76 @@ class Server:
 
             await anyio.sleep(30)
             self.last_auth = None
+
+    async def _run_server_link(self,name,data, *, task_status):
+        """
+        Run a single client link to another server.
+        """
+        # TODO: There should be only one TCP link between server A and B, not two
+        # (plus another for syncing).
+
+        conn = NotGiven
+        try:
+            async with BasicLink(self.cfg, self.name, data, is_server=False) as conn:
+                conn.add_sub("cl")
+                task_status.started()
+                task_status = anyio.TASK_STATUS_IGNORED
+                self._server_link[name] = conn
+
+                # ask it about its existing clients
+                async with conn.cl().stream_in() as cld:
+                    async for cl in cld:
+                        cl = cl[0]
+                        if not isinstance(self.clients.get(cl,None), ServerClient):
+                            self._clients[name] = ClientStub(self,name)
+
+                await anyio.sleep_forever()
+        except (EOFError,anyio.ClosedResourceError,anyio.EndOfStream):
+            task_status.started()
+            self.logger.warning("Link to %s closed", name)
+
+        finally:
+            if self._server_link.get(name,None) is conn:
+                del self._server_link[name]
+
+    async def _watch_client(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        async with self.backend.monitor(P(":R.run.service.client.main"),
+            raw=False,
+            qos=QoS.AT_LEAST_ONCE,
+            no_local=True,subtree=True) as mon:
+            task_status.started()
+
+            async for msg in mon:
+                name = msg.topic[-1]
+                rem = self._clients.get(name,None)
+                if msg.data is NotGiven:
+                    if rem is None:
+                        continue
+                    if not isinstance(rem, ClientStub) or rem.name != msg.meta.origin:
+                        raise ValueError(repr(rem))  # XXX
+                        continue
+                    del self._clients[name]
+                else:
+                    if isinstance(rem,ServerClient):
+                        await rem.aclose()
+                    self._clients[name] = ClientStub(self,msg.data)
+
+
+    async def _watch_up(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        """
+        Monitor servers' service announcements and connects to them
+        so that client links can be forwarded.
+        """
+        async with anyio.create_task_group() as tg:
+            task_status.started()
+            async for msg in self.service_monitor:
+                name = msg.meta.origin
+                if name == self.name:
+                    continue
+                if name in self._server_link:
+                    continue
+                await tg.start(self._run_server_link,name,msg.data)
+
 
     async def _watch_down(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
@@ -1696,18 +1809,23 @@ class Server:
         mainly tries to record what went wrong on the server so the next
         client session can ask.
 
-        TODO, for the most part. The stream is
+        @name is the name of the link.
         """
         c = None
         cnr = -1
         try:
-            c = ServerClient(server=self, name=name, stream=stream)
+            c = ServerClient(server=self, prefix=name, stream=stream)
             cnr = c.client_nr
             try:
-                self._clients[name] = c
+                self._clients[c.name] = c
                 await c.run()
             finally:
-                del self._clients[c.name]
+                if self._clients.get(c.name,None) is c:
+                    del self._clients[c.name]
+
+                    if not c.is_server and "." not in c.name:
+                        with anyio.move_on_after(2,shield=True):
+                            await self.backend.send(P(":R.run.service.client.main")/c.name,b'',codec=None)
         except (ClosedResourceError, anyio.EndOfStream):
             self.logger.debug("XX %d closed", cnr)
         except BaseException as exc:
@@ -1735,3 +1853,32 @@ class Server:
         finally:
             with anyio.move_on_after(2, shield=True):
                 await stream.aclose()
+
+
+    # server-to-server crosslinks
+
+    async def sub_cl(self, msg: Msg, rcmd: list) -> None:
+        "Local subcommand redirect for 'cl'"
+        if rcmd:
+            cl = self.clients[rcmd.pop()]
+            return await cl.sender.handle(msg,rcmd)
+        raise RuntimeError("Should have streamed")
+
+    async def stream_cl(self, msg:Msg) -> None:
+        """
+        Send the list of currently-known clients.
+        """
+        cl = list(self.clients)
+# disabled
+#       if msg.args:
+#           srv = msg.args[0]
+#           async with msg.stream_in() as ml:
+#               async for mm in ml:
+#                   name = mm[0]
+#                   if not isinstance(self._clients.get(name,None), ServerClient):
+#                       self._clients[name] = ClientStub(self,srv)
+#           return
+        async with msg.stream_out(len(cl)) as ml:
+            for cn in cl:
+                await ml.send(cn)
+

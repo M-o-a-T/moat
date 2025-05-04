@@ -134,6 +134,7 @@ class LinkCommon(CmdCommon):
             auth_out.append(TokenAuth(data["auth"]["token"]))
         auth_out.append(AnonAuth())
         self._hello = Hello(me=self.name, me_server=self.is_server, auth_out=auth_out)
+        yielded = False
 
         async with TCPConn(self, remote_host=remote["host"], remote_port=remote["port"], logger=self.logger.debug) as conn:
             handler = MsgSender(conn)
@@ -151,7 +152,11 @@ class LinkCommon(CmdCommon):
             self.protocol_version = self._hello.protocol_version
             self._hello = None  # done with that
 
+            yielded = True
             yield handler
+
+        if not yielded:
+            raise EOFError
 
 
 class ClientCaller(Caller):
@@ -318,6 +323,8 @@ class _Sender(MsgSender):
 
         Streamed messages can be sent and will be stored as auxiliary
         information if the command should fail.
+
+        This wrapper does *not* swallow the exception.
         """
         async with self.e.mon(path, **kw) as mon:
             yield mon
@@ -457,8 +464,7 @@ class Link(LinkCommon, CtxObj):
         timeout = tm.initial
         while True:
             try:
-                with ungroup:
-                    await self._connect_server(srv, task_status=task_status)
+                await self._connect_server(srv, task_status=task_status)
             except Exception as exc:
                 await self.backend.send_error(
                     P("run.service.conn.main") / srv.meta.origin,
@@ -593,10 +599,14 @@ class BasicLink(LinkCommon, CtxObj):
                 self.logger.warning("Link failed: %r", remote, exc_info=exc)
                 if err is None:
                     err = exc
+            else:
+                if not yielded and err is None:
+                    err = EOFError
 
-        if err is None:
-            raise ValueError(f"No links in {self.data!r}")
-        raise err
+        if not yielded:
+            if err is None:
+                raise ValueError(f"No links in {self.data!r}")
+            raise err
 
 
 @define(eq=False)
@@ -677,4 +687,7 @@ class _Watcher(CtxObj):
             p,d,m = msg
             if self.age is None or m.timestamp+self.age >= time.time():
                 if self._node.set(p,d,m):
-                    return p,d,m
+                    if self.meta:
+                        return (p,d,m) if self.subtree else (d,m)
+                    else:
+                        return (p,d) if self.subtree else d

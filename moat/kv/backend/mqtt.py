@@ -54,12 +54,12 @@ class MqttBackend(Backend):
         else:
             logger.info("Monitor %s end", topic)
 
-    def send(self, *topic, payload):  # pylint: disable=invalid-overridden-method
+    def send(self, *topic, payload, **kw):  # pylint: disable=invalid-overridden-method
         """
         Send this payload to this topic.
         """
         # client.publish is also async, pass-thru
-        return self.client.publish("/".join(str(x) for x in topic), message=payload)
+        return self.client.publish("/".join(str(x) for x in topic), message=payload, **kw)
 
 
 @asynccontextmanager

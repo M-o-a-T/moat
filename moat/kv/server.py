@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import signal
 import time
+from collections.abc import Mapping
 
 import anyio
 from anyio.abc import SocketAttribute
@@ -1415,6 +1416,10 @@ class Server:
         # This is here, not in _run_del, because _del_actor needs to be accessible early
         self._del_actor = DeleteActor(self)
 
+        # backwards compat
+        self._part_cache = dict()
+        self._part_unpacker = get_codec("std-msgpack").decode
+
     @property
     def node_cache(self):
         """
@@ -1828,6 +1833,38 @@ class Server:
                 self._del_actor.add_deleted(self._delete_also_nodes)
                 self._delete_also_nodes = NodeSet()
 
+    def _unpack_multiple(self, msg):
+        """
+        Undo the effects of _pack_multiple.
+        """
+
+        if isinstance(msg, Mapping) and "_p0" in msg:
+            p = msg["_p0"]
+            if p != "":
+                nn, seq, i, p = p
+                s = self._part_cache.get((nn, seq), None)
+                if s is None:
+                    self._part_cache[(nn, seq)] = s = [None]
+                if i < 0:
+                    i = -i
+                    s[0] = b""
+                while len(s) <= i:
+                    s.append(None)
+                s[i] = p
+                if None in s:
+                    return None
+                p = b"".join(s)
+                del self._part_cache[(nn, seq)]
+                msg = self._part_unpacker(p)
+                msg["_p0"] = ""
+
+            i = 0
+            while f"_p{i + 1}" in msg:
+                msg[f"_p{i}"] = msg[f"_p{i + 1}"]
+                i += 1
+            del msg[f"_p{i}"]
+        return msg
+
     async def monitor(self, action: str, delay: anyio.abc.Event = None):
         """
         The task that hooks to the backend's event stream for receiving messages.
@@ -1850,6 +1887,11 @@ class Server:
 
                 async for resp in stream:
                     msg = resp.payload
+
+                    msg = self._unpack_multiple(msg)
+                    if not msg:  # None, empty, whatever
+                        continue
+
                     self.logger.debug("Recv %s: %r", action, msg)
                     try:
                         with anyio.fail_after(15):
@@ -2361,6 +2403,8 @@ class Server:
             raise RuntimeError("This server is not yet operational.")
         async with MsgReader(path=path, stream=stream, codec="std-msgpack") as rdr:
             async for m in rdr:
+                if m is None:
+                    continue
                 if "value" in m:
                     longer(m)
                     if "tock" in m:

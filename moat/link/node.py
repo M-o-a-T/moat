@@ -232,7 +232,7 @@ class Node:
             raise TypeError("no path")
         if item in self._sub:
             raise ValueError("exists")
-        self._sub[item] = s = Node()
+        self._sub[item] = s = type(self)()
         return s
 
     def __iter__(self) -> Iterator[tuple[Key, Node]]:

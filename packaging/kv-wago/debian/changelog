@@ -1,8 +1,14 @@
+moat-kv-wago (0.8.4-2) unstable; urgency=medium
+
+  * New release for 25.1.8
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 04 May 2025 19:50:24 +0200
+
 moat-kv-wago (0.8.4-1) unstable; urgency=medium
 
-  * New release for 25.2.0
+  * New release for 25.1.2
 
- -- Matthias Urlichs <matthias@urlichs.de>  Sun, 04 May 2025 09:55:11 +0200
+ -- Matthias Urlichs <matthias@urlichs.de>  Sun, 04 May 2025 16:22:31 +0200
 
 moat-kv-wago (0.8.3-1) unstable; urgency=medium
 

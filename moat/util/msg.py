@@ -28,8 +28,7 @@ class _MsgRW:
         if codec is None:
             raise ValueError("No default codec")
         if not isinstance(codec, Codec):
-            from moat.link.backend import get_codec
-
+            from moat.util import get_codec
             codec = get_codec(codec)
 
         if isinstance(path,anyio.Path):

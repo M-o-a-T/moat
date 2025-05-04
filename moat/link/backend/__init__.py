@@ -13,8 +13,7 @@ from contextlib import asynccontextmanager
 
 from attrs import define, field
 
-from moat.lib.codec import get_codec as _get_codec
-from moat.util import CtxObj, NotGiven, Path, Root, RootPath, attrdict
+from moat.util import CtxObj, NotGiven, Path, Root, RootPath, attrdict, get_codec
 
 from typing import TYPE_CHECKING
 
@@ -27,15 +26,6 @@ if TYPE_CHECKING:
 
 
 __all__ = ["get_backend", "get_codec", "Backend", "Message", "RawMessage"]
-
-
-def get_codec(name):
-    "Codec loader; replaces 'std-' prefix with 'moat.util.'"
-    if name is None:
-        name = "noop"
-    elif name[0:4] == "std-":
-        name = "moat.util." + name[4:]
-    return _get_codec(name)
 
 
 @define

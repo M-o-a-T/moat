@@ -13,11 +13,11 @@ from mqttproto.async_client import AsyncMQTTClient, Will, PropertyType
 
 from moat.link.meta import MsgMeta
 from moat.lib.codec.noop import Codec as NoopCodec
-from moat.util import NotGiven, attrdict
+from moat.util import NotGiven, attrdict, get_codec
 from moat.util.path import PS, P, Path
 
 from . import Backend as _Backend
-from . import Message, RawMessage, get_codec
+from . import Message, RawMessage
 
 from typing import TYPE_CHECKING, overload
 

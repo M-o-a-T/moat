@@ -4,11 +4,21 @@ This module contains various helper functions and classes.
 
 from __future__ import annotations
 
-__all__ = ["val2pos", "pos2val", "srepr", "OutOfData", "_add_obj"]
+__all__ = ["val2pos", "pos2val", "srepr", "OutOfData", "_add_obj", "get_codec"]
 
 
 class OutOfData(EOFError):
     pass
+
+def get_codec(name):
+    "Codec loader; replaces 'std-' prefix with 'moat.util.'"
+    from moat.lib.codec import get_codec as _get_codec
+
+    if name is None:
+        name = "noop"
+    elif name[0:4] == "std-":
+        name = "moat.util." + name[4:]
+    return _get_codec(name)
 
 
 def val2pos(a: float, b: float, c: float, /, clamp: bool = False):

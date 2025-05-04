@@ -1513,6 +1513,7 @@ class Server(MsgHandler):
             async with BasicLink(self.cfg, self.name, data, is_server=False) as conn:
                 conn.add_sub("cl")
                 task_status.started()
+                task_status = anyio.TASK_STATUS_IGNORED
                 self._server_link[name] = conn
 
                 # ask it about its existing clients
@@ -1523,6 +1524,10 @@ class Server(MsgHandler):
                             self._clients[name] = ClientStub(self,name)
 
                 await anyio.sleep_forever()
+        except (EOFError,anyio.ClosedResourceError,anyio.EndOfStream):
+            task_status.started()
+            self.logger.warning("Link to %s closed", name)
+
         finally:
             if self._server_link.get(name,None) is conn:
                 del self._server_link[name]

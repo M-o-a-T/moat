@@ -786,6 +786,8 @@ class PathLongener:
         if isinstance(prefix, Path):
             self.cls = type(prefix)
             prefix = prefix.raw
+        elif isinstance(prefix,list):
+            prefix=tuple(prefix)
         self.depth = len(prefix)
         self.path = prefix
 

@@ -679,10 +679,11 @@ class Server:
         t_start = anyio.current_time() if self.data else None
 
         async with self.backend.monitor(
-            P(":R.#"),
+            P(":R"),
             raw=False,
             qos=QoS.AT_LEAST_ONCE,
             no_local=True,
+            subtree=True,
         ) as stream:
             task_status.started()
             async for msg in stream:

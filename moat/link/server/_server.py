@@ -1403,7 +1403,7 @@ class Server(MsgHandler):
             if len(ports) == 1 and isinstance(ports[0],tuple):
                 link = {"host": ports[0][0], "port": ports[0][1]}
             else:
-                link = [ {"host": hp[0], "port": hp[1]} for hp in ports if isinstance(hp,tuple) and hp[0] not in {"0.0.0.0","::1"} ]
+                link = [ {"host": hp[0], "port": hp[1]} for hp in ports if isinstance(hp,tuple) and hp[0] not in {"localhost","127.0.0.1","::1"} ]
 
             if not link:
                 self.logger.warning("No external port")

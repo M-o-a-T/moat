@@ -1023,6 +1023,7 @@ class Server(MsgHandler):
         path: str | anyio.Path | FSPath | None = None,
         save_state: bool = False,
         task_status=anyio.TASK_STATUS_IGNORED,
+        **kw,
     ):
         """Save the current state to ``path``.
         Continue writing updates until cancelled.
@@ -1063,6 +1064,7 @@ class Server(MsgHandler):
                             name=str(path),
                             mode="full" if save_state else "incr",
                             state=None if save_state else False,
+                            **kw,
                         )
                         await mw(msg)
 
@@ -1241,21 +1243,22 @@ class Server(MsgHandler):
         save = self.cfg.server.save
         dest = anyio.Path(save.dir)
         rewrite = 0
+        kw={}
         while True:
             now = datetime.now(UTC)
             fn = dest / now.strftime(save.name)
             await fn.parent.mkdir(exist_ok=True, parents=True)
-            await self.run_saver(path=fn, save_state=rewrite==0)
-            if task_status is not None:
-                task_status.started()
-                task_status = None
+            await self.run_saver(path=fn, save_state=rewrite==0, **kw)
+            
+            task_status.started()
+            task_status = anyio.TASK_STATUS_IGNORED
+
             await anyio.sleep(save.interval)
             rewrite = (rewrite or save.rewrite)-1
             kw["prev"]=fn
 
-        task_status.started()
 
-    async def run_saver(self, path: PathType|None, save_state: bool = True):
+    async def run_saver(self, path: PathType|None, save_state: bool = True, **kw):
         """
         Start a task that continually saves to disk.
 
@@ -1276,6 +1279,7 @@ class Server(MsgHandler):
                     self.save_stream,
                     path=path,
                     save_state=save_state,
+                    **kw,
                 ),
             )
         else:

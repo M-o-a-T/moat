@@ -1845,8 +1845,6 @@ class Server(MsgHandler):
                     skp += 1
 
                 self.logger.info("Restored %r: %d/%d", str(fn), upd, skp)
-                if not upd and ehdr is not None and "error" not in ehdr.value:
-                    break
             return upd, skp, tags
 
     async def _get_remote_data(self, main: BroadcastReader, ready: anyio.Event):

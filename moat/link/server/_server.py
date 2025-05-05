@@ -565,7 +565,7 @@ class ServerClient(LinkCommon):
     doc_s_load = dict(_d="load state", _0="str:filename", prefix="path:subtree")
 
     async def cmd_s_load(self, path, *, prefix=Path()):
-        return await self.server.load_file(path=path, prefix=prefix)
+        return await self.server.load_file(fn=path, prefix=prefix)
 
 
 @define
@@ -1709,7 +1709,7 @@ class Server(MsgHandler):
         self.logger.info("Sync finished. %d new, %d existing", upd, skp)
 
     async def _load_initial(self, fn):
-        upd,skp,tags = await self.load_file(self._f_load)
+        upd,skp,tags = await self.load_file(fn=self._f_load)
         if not upd:
             raise RuntimeError("No data!")
         if not tag_check(tags):

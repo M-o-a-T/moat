@@ -1,5 +1,6 @@
-moat-link-server (0.2.0-1) UNRELEASED; urgency=medium
+moat-link-server (0.2.1-1) unstable; urgency=medium
 
   * Initial release for 25.1.10
+  * New release for 25.1.11
 
- -- Matthias Urlichs <matthias@urlichs.de>  Mon, 05 May 2025 06:46:31 +0200
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 05 May 2025 18:22:28 +0200

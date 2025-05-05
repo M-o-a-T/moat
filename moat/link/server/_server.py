@@ -1594,7 +1594,7 @@ class Server(MsgHandler):
                 return
             downed[name] = t
 
-            main = aiter(self.service_monitor.reader(1, send_last=True))
+            main = aiter(self.service_monitor.reader(5, send_last=True))
             try:
                 with anyio.fail_after(0.1):
                     service = await anext(main)
@@ -1636,7 +1636,7 @@ class Server(MsgHandler):
         Task to read the main service monitoring channel
         """
         async with (
-            Broadcaster(send_last=True) as self.service_monitor,
+            Broadcaster(30, send_last=True) as self.service_monitor,
             self.backend.monitor(P(":R.run.service.conn.main")) as mon,
         ):
             task_status.started()

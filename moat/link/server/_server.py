@@ -43,7 +43,7 @@ from moat.util import (
 from moat.lib.cmd.base import MsgSender, MsgHandler
 from moat.lib.cmd.anyio import run as run_cmd_anyio
 from moat.lib.codec.cbor import CBOR_TAG_CBOR_LEADER, Tag
-from moat.link.auth import AnonAuth, TokenAuth
+from moat.link.auth import AnonAuth
 from moat.link.backend import get_backend, Backend
 from moat.link.client import BasicLink, LinkCommon
 from moat.link.exceptions import ClientError
@@ -52,6 +52,7 @@ from moat.link.meta import MsgMeta
 from moat.link.node import Node
 from moat.util.broadcast import Broadcaster, BroadcastReader
 from moat.util.cbor import (
+    CBOR_TAG_MOAT_CHANGE,
     CBOR_TAG_MOAT_FILE_END,
     CBOR_TAG_MOAT_FILE_ID,
 )
@@ -109,6 +110,25 @@ def cmp_n(a, b):
     if b is None:
         b = -1
     return b - a
+
+def tag_check(tags:Sequence[Tag]) -> bool:
+    """
+    Check that these tags describe a complete dump
+    """
+    if len(tags) < 2:
+        return False
+    t=tags[0]
+    if t.tag != CBOR_TAG_MOAT_FILE_ID:
+        return False
+    t=t.value[1]
+    if t.get("mode","") not in {"full","init"}:
+        return False
+
+    t = tags[-1]
+    if t.tag != CBOR_TAG_MOAT_FILE_END:
+        return False
+
+    return True
 
 
 class HelloProc:
@@ -170,7 +190,7 @@ class ServerClient(LinkCommon):
             them=self.name,
             me=self.server.name,
             me_server=True,
-            auth_in=[TokenAuth("Duh"), AnonAuth()],
+            auth_in=[AnonAuth()],
         )
         async with (
             anyio.create_task_group() as self.tg,
@@ -545,7 +565,7 @@ class ServerClient(LinkCommon):
     doc_s_load = dict(_d="load state", _0="str:filename", prefix="path:subtree")
 
     async def cmd_s_load(self, path, *, prefix=Path()):
-        return await self.server.load(path=path, prefix=prefix)
+        return await self.server.load_file(path=path, prefix=prefix)
 
 
 @define
@@ -625,7 +645,10 @@ class Server(MsgHandler):
 
     _server_link:dict[str,BasicLink]
 
-    def __init__(self, cfg: dict, name: str, init: Any = NotGiven, load:anyio.Path|FSPath|str|None=None):
+    _f_load:anyio.Path|None=None
+    _f_save:anyio.Path|None=None
+
+    def __init__(self, cfg: dict, name: str, init: Any = NotGiven, load:anyio.Path|FSPath|str|None=None, save:anyio.Path|FSPath|str|None=None):
         self.data = Node()
         self.name = name
         self.cfg = to_attrdict(cfg)
@@ -643,6 +666,10 @@ class Server(MsgHandler):
         # connected clients
         self._clients: dict[str,ServerClient|ClientStub] = dict()
 
+        if load is not None:
+            self._f_load = anyio.Path(load)
+        if save is not None:
+            self._f_save = anyio.Path(save)
 
     @property
     def clients(self) -> dict[str,ServerClient]:
@@ -903,45 +930,6 @@ class Server(MsgHandler):
         if dt.set(..., dd, meta, force=True):
             self.write_monitor((p, dd, meta))
 
-
-    async def load(
-        self,
-        path: str | None = None,
-        stream: anyio.abc.ByteReceiveStream | None = None,
-        local: bool = False,
-        prefix: Path = P(":"),
-    ):
-        """Load data from this stream
-
-        Args:
-          @stream: The stream to read.
-          @local: Flag whether this file contains initial data and thus
-                  its contents shall not be broadcast. Don't set this if
-                  the server is already operational.
-          @prefix: load to below this prefix
-        """
-        longer = PathLongener(())
-
-        upd, skp, met = 0, 0, []
-
-        async with MsgReader(path=path, stream=stream, codec="std-cbor") as rdr:
-            async for m in rdr:
-                if isinstance(m, Tag) and m.tag == CBOR_TAG_CBOR_LEADER:
-                    m = m.value  # noqa:PLW2901
-                if isinstance(m, Tag):
-                    met.append(m)
-                    continue
-                d, p, data, *mt = m
-                path_ = longer.long(d, p)
-                meta = MsgMeta.restore(mt)  # noqa:SLF001
-                meta.source = path
-                if self.maybe_update(prefix + path_, data, meta, local=local):
-                    upd += 1
-                else:
-                    skp += 1
-
-        self.logger.debug("Loading finished.")
-        return (upd, skp, met)
 
     async def _save(
         self,
@@ -1664,6 +1652,13 @@ class Server(MsgHandler):
             try:
                 async with BasicLink(self.cfg, self.name, data, is_server=True) as conn:
                     await self._sync_one(conn)
+            except OSError as exc:
+                self.logger.warning(
+                    "No sync %r: %r",
+                    data,
+                    exc,
+                )
+                return False
             except Exception as exc:
                 self.logger.warning(
                     "No sync %r: %r",
@@ -1693,6 +1688,14 @@ class Server(MsgHandler):
                 self.logger.debug("Sync Msg %r", msg)
         self.logger.info("Sync finished. %d new, %d existing", upd, skp)
 
+    async def _load_initial(self, fn):
+        upd,skp,tags = await self.load_file(self._f_load)
+        if not upd:
+            raise RuntimeError("No data!")
+        if not tag_check(tags):
+            raise RuntimeError("No or incomplete tags!")
+        return
+
     async def _read_initial(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
         Read initial data from either file backup or a remote server.
@@ -1702,6 +1705,10 @@ class Server(MsgHandler):
         ready = anyio.Event()
         if self._init is not NotGiven:
             ready.set()
+        if self._f_load is not None:
+            await self._load_initial(self._f_load)
+            task_status.started()
+            return
 
         async with anyio.create_task_group() as tg:
             @tg.start_soon
@@ -1731,49 +1738,72 @@ class Server(MsgHandler):
             fn = fs.pop()
             if str(fn) in self._writing:
                 continue
-            async with MsgReader(fn, codec="std-cbor") as rdr:
-                hdr = await anext(rdr)
-                if isinstance(hdr, Tag) and hdr.tag == CBOR_TAG_CBOR_LEADER:
-                    hdr = hdr.value
-                if not isinstance(hdr, Tag) or hdr.tag != CBOR_TAG_MOAT_FILE_ID:
-                    raise ValueError(f"First entry is {hdr!r}")
+            upd,skp,tags = await self.load_file(fn)
+            breakpoint()
+            if not upd or not tags:
+                continue
+            if not tag_check(t):
+                continue
+            ready.set()
+            return
 
-                pl = PathLongener()
-                upd, skp = 0, 0
-                ehdr = None
-                async for msg in rdr:
-                    if isinstance(msg, Tag):
-                        if msg.tag == CBOR_TAG_MOAT_FILE_ID:
-                            # concatenated files?
-                            if ehdr is None:
-                                raise ValueError("START within file %r", str(fn))
-                            # TODO verify that these belong together
-                            ehdr = None
 
-                        elif msg.tag == CBOR_TAG_MOAT_FILE_END:
-                            if ehdr is not None:
-                                raise ValueError("Duplicate END in %r", str(fn))
-                            ehdr = msg
-                            break
+    async def load_file(self, fn:anyio.Path, prefix:Path=Path(), local:bool=False) -> tuple[int,int,list[Tag]]:
+        """
+        Load a file.
+
+        The result is the number of updated/skipped entries,
+        plus the tags from the file.
+        """
+        async with MsgReader(fn, codec="std-cbor") as rdr:
+            pl = PathLongener(prefix)
+            upd, skp, tags = 0, 0, []
+            ehdr = None
+            async for msg in rdr:
+                if isinstance(msg, Tag) and msg.tag == CBOR_TAG_CBOR_LEADER:
+                    msg = msg.value  # noqa:PLW2901
+                if isinstance(msg, Tag):
+                    tags.append(msg)
+                    if msg.tag == CBOR_TAG_MOAT_FILE_ID:
+                        # concatenated files?
+                        if ehdr is not None:
+                            raise ValueError("START within file %r", str(fn))
+                        # TODO verify that these belong together
+
+                    elif msg.tag == CBOR_TAG_MOAT_CHANGE:
+                        # TODO verify?
                         continue
-                    d, p, data, *mt = msg
-                    path = pl.long(d, p)
-                    meta = MsgMeta.restore(mt)  # noqa:SLF001
-                    meta.source = "_file"
-                    if self.maybe_update(path, data, meta):
-                        # Entries that have been deleted don't count as updates
-                        if data is not NotGiven:
-                            upd += 1
+
+                    elif msg.tag == CBOR_TAG_MOAT_FILE_END:
+                        if ehdr is None:
+                            raise ValueError("END without start in %r", str(fn))
+                            raise ValueError("Duplicate END in %r", str(fn))
                     else:
-                        skp += 1
+                        self.logger.warning("Unknown tag %r", str(fn), msg)
+                        continue
+                    ehdr = msg
+                    continue
+                elif ehdr is None:
+                    raise ValueError("Untagged file")
+                elif ehdr.tag != CBOR_TAG_MOAT_FILE_ID:
+                    raise ValueError("Data %r after tag: %r", msg, ehdr)
+
+                # Any other problems just raise the exception
+                d, p, data, *mt = msg
+                path = pl.long(d, p)
+                meta = MsgMeta.restore(mt)  # noqa:SLF001
+                meta.source = "_file"
+                if self.maybe_update(path, data, meta, local=local):
+                    # Entries that have been deleted don't count as updates
+                    if data is not NotGiven:
+                        upd += 1
+                else:
+                    skp += 1
 
                 self.logger.info("Restore %r: %d/%d", str(fn), upd, skp)
-                tupd += upd
                 if not upd and ehdr is not None and "error" not in ehdr.value:
                     break
-
-        if tupd:
-            ready.set()
+            return upd, skp, tags
 
     async def _get_remote_data(self, main: BroadcastReader, ready: anyio.Event):
         seen = defaultdict(lambda: 0)

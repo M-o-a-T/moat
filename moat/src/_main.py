@@ -1020,6 +1020,21 @@ async def build(
             p = rd / "debian"
             if not p.is_dir():
                 continue
+            if not (rd/"debian"/"changelog").exists():
+                subprocess.run(
+                    [
+                        "debchange",
+                        "--create",
+                        "--newversion", f"{r.last_tag}-{r.vers.pkg}",
+                        "--package", r.mdash,
+                        f"Initial release for {forcetag}",
+                     ],
+                    cwd=rd,
+                    check=True,
+                    stdout=sys.stdout,
+                    stderr=sys.stderr,
+                )
+
             try:
                 res = subprocess.run(
                     ["dpkg-parsechangelog", "-l", "debian/changelog", "-S", "version"],

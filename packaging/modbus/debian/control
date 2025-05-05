@@ -12,7 +12,6 @@ Package: moat-modbus
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   moat-util,
-Recommends:
   moat-main,
 Replaces: python3-moat-modbus
 Conflicts: python3-moat-modbus

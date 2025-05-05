@@ -12,10 +12,9 @@ Package: moat-util
 Architecture: all
 Conflicts: python3-moat-util
 Replaces: python3-moat-util
-Recommends:
-  moat-main,
 Depends: ${misc:Depends}, ${python3:Depends},
   python3-moat-lib-codec,
+  moat-main,
 Description: Utilities for MoaT
  This package contains a heap of utility code used by the rest of the MoaT system.
 

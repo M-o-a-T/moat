@@ -13,9 +13,9 @@ Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   python3-anyio (>= 2.0),
   moat-util,
+  moat-main,
 Recommends:
   moat-kv,
-  moat-main,
   python3-trio (>= 0.22),
 Conflicts: python3-moat-mqtt, distmqtt
 Replaces: python3-moat-mqtt, distmqtt

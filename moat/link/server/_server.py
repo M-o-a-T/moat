@@ -1333,7 +1333,7 @@ class Server(MsgHandler):
 
         async with (
             EventSetter(self._stopped),
-            Broadcaster(send_last=True) as self.write_monitor,
+            Broadcaster(send_last=True, length=100) as self.write_monitor,
             get_backend(self.cfg, name=self.name, will=will_data) as self.backend,
             anyio.create_task_group() as _tg,
         ):

@@ -769,13 +769,14 @@ class Server(MsgHandler):
                     try:
                         data = d.data
                     except ValueError:
-                        # deleted
-                        await self.backend.send(
-                            topic=msg.topic,
-                            data=b"",
-                            codec=None,
-                            meta=d.meta,
-                        )
+                        if msg.data is not NotGiven:
+                            # newly deleted
+                            await self.backend.send(
+                                topic=msg.topic,
+                                data=b"",
+                                codec=None,
+                                meta=d.meta,
+                            )
                     else:
                         await self.backend.send(topic=msg.topic, data=data, meta=d.meta)
 
@@ -1590,6 +1591,8 @@ class Server(MsgHandler):
                     continue
                 if name in self._server_link:
                     continue
+                if msg.data is NotGiven:
+                    continue
                 await tg.start(self._run_server_link,name,msg.data)
 
 
@@ -1854,6 +1857,8 @@ class Server(MsgHandler):
         async for msg in main:
             if msg.meta.origin == self.name:
                 continue  # XXX stale
+            if msg.data is NotGiven:
+                continue  # deleted?
             if await self._sync_from(msg.meta.origin, msg.data):
                 ready.set()
                 return

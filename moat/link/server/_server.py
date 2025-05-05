@@ -709,6 +709,8 @@ class Server(MsgHandler):
 
         Update our store if it's newer.
         """
+        if len(path) and path[0]=="run":
+            return False
         if res := self.data.set(path, data, meta):  # noqa:SIM102
             if not local:
                 self.write_monitor((path, data, meta))
@@ -747,6 +749,8 @@ class Server(MsgHandler):
                 self.logger.debug("Recv: %r", msg)
                 msg.meta.source = "Mon"
                 topic = msg.topic[1:]
+                if topic[0] == "run":
+                    continue
                 path = Path.build(topic)
 
                 if topic and (hdl := getattr(self,"_mon_{topic[0]}", None)) is not None:
@@ -1163,6 +1167,8 @@ class Server(MsgHandler):
                 pass
             elif isinstance(msg, (list, tuple)):
                 path, data, meta = msg
+                if len(path) and path [0]=="run":
+                    continue
                 d, p = shorter.short(path)
                 await mw([d, p, data, *meta.dump()])
                 last_saved_count += 1

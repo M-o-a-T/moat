@@ -1076,7 +1076,7 @@ class Server(MsgHandler):
 
                     finally:
                         with anyio.move_on_after(2, shield=True):
-                            await mw.flush()
+                            await mw.flush(force=True)
             finally:
                 self._writing.remove(str(path))
                 self._writing_done.set()
@@ -1145,7 +1145,7 @@ class Server(MsgHandler):
 
             finally:
                 with anyio.move_on_after(2, shield=True):
-                    await mw.flush()
+                    await mw.flush(force=True)
 
     @staticmethod
     async def _save_stream(rdr, mw, shorter, ign):
@@ -1182,7 +1182,7 @@ class Server(MsgHandler):
             t = time.monotonic()
             td = t - last_saved
             if td >= TIMEOUT or last_saved_count >= MAXMSG:
-                await mw.flush()
+                await mw.flush(force=True)
                 last_saved = time.monotonic()
                 last_saved_count = 0
 

@@ -148,10 +148,15 @@ class MsgWriter(_MsgRW):
             self.excess = 0
             await self.stream.write(wb)
 
-    async def flush(self):
-        """Flush the buffer."""
+    async def flush(self, force=True):
+        """Flush the buffer.
+
+        @force: do write partial data.
+        """
         if self.buf:
             buf = b"".join(self.buf)
             self.buf = []
             self.excess = (self.excess + len(buf)) % self.buflen
             await self.stream.write(buf)
+            if force:
+                await self.stream.flush()

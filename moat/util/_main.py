@@ -11,11 +11,12 @@ import sys
 from datetime import datetime
 from functools import partial
 from time import time
+from collections.abc import Sequence
 
 import asyncclick as click
 
 from .main import load_subgroup
-from .path import P, Path, path_eval
+from .path import P, Path, path_eval, PathLongener,PathShortener
 from .times import humandelta, time_until
 from .yaml import yprint
 
@@ -122,13 +123,24 @@ y, yr   Year (2023–)
     default=sys.stdout,
 )
 @click.option("-s", "--stream", is_flag=True, help="Multiple messages")
+@click.option("-L", "--long", is_flag=True, help="Fix input paths")
+@click.option("-S", "--short", is_flag=True, help="Compress output paths")
 @click.option("-E", "--eval", "eval_", is_flag=True, help="Input line is a Python expr.")
 @click.option("-D", "--dump", "dump_", is_flag=True, help="Output line is a Python repr.")
-def convert(enc, dec, pathi, patho, stream, eval_, dump_):
+def convert(enc, dec, pathi, patho, stream, long, short, eval_, dump_):
     """File conversion utility.
 
     Supported file formats: json yaml cbor msgpack python std-cbor std-msgpack
     """
+
+    if (long or short) and not stream:
+        raise click.UsageError("Path mods only make sense when streaming")
+    if long and short:
+        raise click.UsageError("Both Path mods together are a no-op")
+    if long:
+        long=PathLongener()
+    if short:
+        long=PathShortener()
 
     class IT:
         def __init__(self, codec):
@@ -252,6 +264,15 @@ def convert(enc, dec, pathi, patho, stream, eval_, dump_):
 
         for d in in_d():
             for data in dec(d):
+                if long and isinstance(data,Sequence):
+                    d,p,*x = data
+                    p = long.long(d,p)
+                    data = [p,*x]
+                if short and isinstance(data,Sequence):
+                    p,*x = data
+                    d,p = short.short(p)
+                    data = [d,p,*x]
+
                 if cse:
                     if dump_:
                         buf = bt()

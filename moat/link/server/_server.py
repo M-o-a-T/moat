@@ -979,6 +979,7 @@ class Server(MsgHandler):
         mstr += " " * (25 - len(mstr))
         kw["mode"] = mode
         kw["name"] = name
+        kw["time"] = datetime.now(UTC)
 
         return gen_start(mstr, **kw)
 
@@ -986,12 +987,14 @@ class Server(MsgHandler):
         """Return the CBOR tag for an end-of-file record"""
         from moat.util.cbor import gen_stop
 
+        kw["time"] = datetime.now(UTC)
         return gen_stop(**kw)
 
     def gen_hdr_change(self, **kw):
         """Return the CBOR tag that describes a change"""
         from moat.util.cbor import gen_change
 
+        kw["time"] = datetime.now(UTC)
         return gen_change(**kw)
 
     def get_state(self):

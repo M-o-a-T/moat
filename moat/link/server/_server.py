@@ -10,6 +10,7 @@ import signal
 import time
 import anyio.abc
 import random
+import os
 from anyio.abc import SocketAttribute
 from contextlib import asynccontextmanager, nullcontext
 from datetime import UTC, datetime
@@ -1394,10 +1395,13 @@ class Server(MsgHandler):
                 conn = attrdict(host="localhost",port=self.cfg.server.port)
                 ports.append(await listen_tg.start(self._run_server, client_tg, self.name, conn))
 
-            if len(ports) == 1:
+            if len(ports) == 1 and isinstance(ports[0],tuple):
                 link = {"host": ports[0][0], "port": ports[0][1]}
             else:
-                link = [{"host": h, "port": p} for h, p in ports]
+                link = [ {"host": hp[0], "port": hp[1]} for hp in ports if isinstance(hp,tuple) and hp[0] not in {"0.0.0.0","::1"} ]
+
+            if not link:
+                self.logger.warning("No external port")
             self.link_data = link
 
             # announce us to clients
@@ -1791,15 +1795,38 @@ class Server(MsgHandler):
 
     async def _run_server(self, tg, name, cfg, *, task_status=anyio.TASK_STATUS_IGNORED):
         """runs a listener on a single port"""
-        lcfg = attrdict()
         if "host" in cfg:
-            lcfg.local_host = cfg.host
-        if "port" in cfg:
-            lcfg.local_port = cfg.port
-        # TODO SSL and/or whatnot
-        async with await anyio.create_tcp_listener(**lcfg) as listener:
+            # TODO SSL and/or whatnot
+            lcfg = attrdict()
+            if "host" in cfg:
+                lcfg.local_host = cfg.host
+            if "port" in cfg:
+                lcfg.local_port = cfg.port
+            try:
+                listener = await anyio.create_tcp_listener(**lcfg)
+            except Exception as exc:
+                raise RuntimeError("Could not create socket", cfg) from exc
+
+        elif "port" in cfg:
+            # Unix socket
+            port = cfg.port
+            if port.startswith("RUN/"):
+                port = os.environ["XDG_RUNTIME_DIR"]+port[3:]
+            try:
+                listener = await anyio.create_unix_listener(port)
+            except Exception as exc:
+                raise RuntimeError("Could not create socket", port, cfg) from exc
+
+        else:
+            self.logger.error("No host/port in server cfg %s: %r",name,cfg)
+            task_status.started(False)
+            return
+
+        async with listener:
             task_status.started(listener.extra(SocketAttribute.local_address))
+            task_status = anyio.TASK_STATUS_IGNORED
             await listener.serve(partial(self._client_task, name), task_group=tg)
+
 
     async def _client_task(self, name, stream):
         """

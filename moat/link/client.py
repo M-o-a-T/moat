@@ -21,7 +21,7 @@ from moat.util.compat import CancelledError
 from moat.util.random import al_unique
 
 from .common import CmdCommon
-from .conn import TCPConn
+from .conn import TCPConn, UnixConn
 from .auth import AnonAuth, TokenAuth
 from .hello import Hello
 from .meta import MsgMeta
@@ -127,16 +127,27 @@ class LinkCommon(CmdCommon):
 
         return super().handle(msg, rpath, *add)
 
+    async def _connected_port(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        async with self._connect_one(self._port) as hdl:
+            task_status.started(hdl)
+            await anyio.sleep_forever()
+
     @asynccontextmanager
-    async def _connect_one(self, remote, data: dict) -> MsgHandler:
+    async def _connect_one(self, remote:dict|str, data: dict|None=None) -> MsgHandler:
         auth_out = []
-        with suppress(KeyError):
-            auth_out.append(TokenAuth(data["auth"]["token"]))
+        if isinstance(remote,dict):
+            with suppress(KeyError):
+                auth_out.append(TokenAuth(data["auth"]["token"]))
+            conn_ = TCPConn(self, remote_host=remote["host"], remote_port=remote["port"])
+        else:
+            conn_ = UnixConn(self, path=remote, logger=self.logger.debug)
+
         auth_out.append(AnonAuth())
         self._hello = Hello(me=self.name, me_server=self.is_server, auth_out=auth_out)
         yielded = False
 
-        async with TCPConn(self, remote_host=remote["host"], remote_port=remote["port"], logger=self.logger.debug) as conn:
+
+        async with conn_ as conn:
             handler = MsgSender(conn)
             if (res := await self._hello.run(handler)) is False:
                 raise AuthError("Initial handshake failed")
@@ -407,11 +418,14 @@ class Link(LinkCommon, CtxObj):
     _server_up: anyio.Event
     _last_link: Msg | None = None
     _last_link_seen: anyio.Event
+    _port: str|None=None
 
     def __init__(self, cfg, name: str | None = None):
         super().__init__(cfg, name=name)
         self._retry_msgs: set[BasicCmd] = set()
         self._server_up = anyio.Event()
+        with suppress(AttributeError):
+            self._port = self.cfg.client.port
 
     async def get_link(self):
         """
@@ -432,10 +446,13 @@ class Link(LinkCommon, CtxObj):
             self.backend = backend
             token = Root.set(self.cfg["root"])
             try:
-                if self.cfg.client.init_timeout:
-                    # connect to the main server
-                    await self.tg.start(self._run_server_link)
-                sdr = _Sender(self)
+                if self._port is not None:
+                    sdr = await self.tg.start(self._connected_port)
+                else:
+                    if self.cfg.client.init_timeout:
+                        # connect to the main server
+                        await self.tg.start(self._run_server_link)
+                    sdr = _Sender(self)
                 sdr.add_sub("cl")
                 sdr.add_sub("d")
                 sdr.add_sub("e")

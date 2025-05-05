@@ -110,12 +110,12 @@ lib-victron:
   tag: 0.1.3
 link:
   pkg: 1
-  rev: 5e2558689d0b529b5fe57f931602c1dcccaed322
-  tag: 0.1.3
+  rev: 59ca5fc2998c6a1ecb70dfb63d2a87a386049e08
+  tag: 0.2.0
 link-server:
   pkg: 1
-  rev: 2da892c2c3a592d03727b481c1235fd2eb1fafb3
-  tag: 0.1.1
+  rev: 59ca5fc2998c6a1ecb70dfb63d2a87a386049e08
+  tag: 0.2.0
 main:
   pkg: 2
   rev: 2da892c2c3a592d03727b481c1235fd2eb1fafb3

@@ -821,7 +821,7 @@ class Server(MsgHandler):
             task_status.started()
 
             async for msg in actor:
-                self.logger.info("ACT IN %s", repr(msg))
+                self.logger.debug("ACT IN %s", repr(msg))
 
                 if isinstance(msg, RecoverEvent):
                     self._tg.start_soon(

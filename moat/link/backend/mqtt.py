@@ -68,7 +68,7 @@ class Backend(_Backend):
 
         kw = cfg.copy()
         sname = kw.pop("driver", "mqtt")
-        self.trace = kw.pop("trace", True)
+        self.trace = kw.pop("trace", False)
         try:
             codec = kw.pop("codec")  # intentionally no default
         except KeyError:

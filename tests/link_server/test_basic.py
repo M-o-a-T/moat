@@ -144,6 +144,7 @@ async def test_ls_save(cfg, tmp_path):
 
         await data(s)
         await c.cmd(P("s.save"), str(fname))
+        nnn = await fetch(c, "a")
 
     async with Scaffold(cfg, use_servers=True) as sf:
         await sf.server(init={"Hello": "there!", "test": 2})
@@ -156,6 +157,6 @@ async def test_ls_save(cfg, tmp_path):
             if nn.data_ is not NotGiven or list(nn.keys()):
                 raise ValueError("Data in node")
 
-        await c.cmd(P("s.load"), str(fname))
+        res = await c.cmd(P("s.load"), str(fname))
         nn = await fetch(c, "a")
-        assert n.get(P("a")) == nn
+        assert nn == nnn

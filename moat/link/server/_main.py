@@ -14,20 +14,14 @@ from moat.util import as_service
     "--load",
     type=click.Path(readable=True, exists=True, allow_dash=False),
     default=None,
-    help="Event log to preload.",
+    help="Initial data to preload.",
 )
 @click.option(
     "-s",
     "--save",
     type=click.Path(writable=True, allow_dash=False),
     default=None,
-    help="Event log to write to.",
-)
-@click.option(
-    "-i",
-    "--incremental",
-    default=None,
-    help="Log incremental changes, not the complete state",
+    help="Save a data snapshot after startup.",
 )
 @click.option(
     "-I",
@@ -37,7 +31,7 @@ from moat.util import as_service
     "setting up a new cluster!",
 )
 @click.pass_obj
-async def cli(obj, load, save, incremental, init):
+async def cli(obj, load, save, init):
     """
     Start a MoaT-Link server. It defaults to connecting to the local MQTT
     broker.
@@ -59,6 +53,8 @@ async def cli(obj, load, save, incremental, init):
         kw["init"] = init
     if load:
         kw["load"] = load
+    if save:
+        kw["save"] = save
 
     if obj.name is None:
         raise click.UsageError("You need to specify a name ('moat link -n NAME server').")
@@ -90,9 +86,3 @@ async def cli(obj, load, save, incremental, init):
             await tg.start(s.serve)
             evt.set()
             ev.set()
-            if save:
-                if incremental:
-                    await s.save_stream(save, save_state=False)
-                else:
-                    await s.save(save)
-

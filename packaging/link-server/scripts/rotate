@@ -12,14 +12,14 @@ cd $D
 x=$(ls|sort -rn|head -1)
 if test -n "$x" ; then
 	x=$(expr $(basename $x .db) + 1)
-	I="-i"
+	I="-s state =False"
 else
 	x=0
-	I=""
+	I="-s state =True"
 fi
 
 export PYTHONPATH
-moat -c /etc/moat/moat.cfg link TODO dest $I "$DEST/$D/$x.dkv"
+moat -c /etc/moat/moat.cfg link -p /run/moat/link/socket cmd s.log -s path "~$DEST/$D/$x.db" $i
 if test $x -eq 0 ; then
 	# Now, delete some old backups
 	cd "$DEST"

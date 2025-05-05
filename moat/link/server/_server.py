@@ -1004,13 +1004,14 @@ class Server(MsgHandler):
     def get_state(self):
         return dict()
 
-    async def save(self, path: str | None = None, **kw):
+    async def save(self, path: str|anyio.Path, task_status=anyio.TASK_STATUS_IGNORED, **kw):
         """Save the current state to ``path``."""
         shorter = PathShortener([])
         try:
             self._writing.add(str(path))
             async with MsgWriter(path=path, codec="std-cbor") as mw:
-                await self._save(mw, shorter, name=path, **kw)
+                task_status.started()
+                await self._save(mw, shorter, name=str(path), mode="full", **kw)
         finally:
             self._writing.remove(str(path))
 
@@ -1042,19 +1043,22 @@ class Server(MsgHandler):
                     MsgWriter(path=path, codec="std-cbor") as mw,
                 ):
                     try:
+                        msg = self.gen_hdr_stop(
+                            name=str(path),
+                            mode="restart" if save_state else "next",
+                        )
+                        # This ensures that the Stop message isn't seen by
+                        # the new writer
+                        self.write_monitor(msg)
+                        rdr = self.write_monitor.reader(999, send_last=False)
+                        task_status.started(scope)
+
                         msg = self.gen_hdr_start(
                             name=str(path),
                             mode="full" if save_state else "incr",
                             state=None if save_state else False,
                         )
                         await mw(msg)
-
-                        msg = self.gen_hdr_stop(
-                            name=str(path),
-                            mode="restart" if save_state else "next",
-                        )
-                        self.write_monitor(msg)
-                        task_status.started(scope)
 
                         if save_state:
                             tg.start_soon(
@@ -1152,7 +1156,7 @@ class Server(MsgHandler):
         # helper for .save_stream() to keep the indent levels down
 
         last_saved = time.monotonic()
-        last_saved_count = 0
+        last_saved_count = 1
         TIMEOUT = 5
         MAXMSG = 100
 
@@ -1176,7 +1180,7 @@ class Server(MsgHandler):
                 await mw(msg)
                 return
             else:
-                await mw(msg)  # XXX
+                await mw(msg)
 
             # Ensure that we save the system state often enough.
             t = time.monotonic()
@@ -1380,6 +1384,10 @@ class Server(MsgHandler):
 
             if self._init is not NotGiven:
                 self.maybe_update(Path(), self._init, MsgMeta(origin="INIT",source="INIT"))
+
+            if self._f_save is not None:
+                await _tg.start(self.save, self._f_save)
+                self._f_save=None
 
             # let clients in
             # TODO config via database

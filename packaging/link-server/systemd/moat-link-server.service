@@ -12,6 +12,8 @@ ExecStart=/usr/lib/moat/link/run
 ExecStartPost=/usr/lib/moat/link/success
 SuccessExitStatus=42
 
+RuntimeDirectory=moat/link
+
 User=MoaT-Link
 Group=MoaT
 

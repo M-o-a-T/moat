@@ -137,7 +137,7 @@ def _dec_datetime_string(codec, value) -> dt.datetime:
 @std_ext.decoder(1)
 def _dec_ts(codec, val):
     codec  # noqa:B018
-    return dt.fromtimestamp(val, dt.UTC)
+    return dt.datetime.fromtimestamp(val, dt.UTC)
 
 
 @std_ext.decoder(2)

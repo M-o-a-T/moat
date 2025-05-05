@@ -1,6 +1,6 @@
 save:
   dir: "/var/lib/moat/link/data"
-  name: "%Y-%m/%d-%H-%M.save"
+  name: "%Y-%m/%d/%H-%M.moat"
   interval: 1000
 
 timeout:

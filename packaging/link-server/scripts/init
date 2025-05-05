@@ -12,11 +12,11 @@ grep -qs '^LOCAL=' /etc/moat/link.env || echo LOCAL=no >>/etc/moat/link.env
 if test "$MODE" != "slave" ; then
     mkdir -p "$DEST"
     cd "$DEST"
-    d="$(find . -name \*.db -size +50c | sort | head -1)"
+    d="$(find . -name \*.moat -size +50c | sort | head -1)"
     if test -z "$d" ; then
         d="$(date -d 2025-01-01 +"$DATE")"
         mkdir -p "$d"
-        moat link raw init "$d/0.db"
+        moat link raw init "$d/0.moat"
         chown -R MoaT-Link:MoaT "$DEST"
     fi
 fi

@@ -1008,12 +1008,15 @@ class Server(MsgHandler):
         """Save the current state to ``path``."""
         shorter = PathShortener([])
         try:
-            self._writing.add(str(path))
+            spath = str(path)
+            if spath in self._writing:
+                raise RuntimeError(f"Already writing: {spath!r}")
+            self._writing.add(spath)
             async with MsgWriter(path=path, codec="std-cbor") as mw:
                 task_status.started()
                 await self._save(mw, shorter, name=str(path), mode="full", **kw)
         finally:
-            self._writing.remove(str(path))
+            self._writing.remove(spath)
 
     async def save_stream(
         self,
@@ -1035,8 +1038,11 @@ class Server(MsgHandler):
         shorter = PathShortener([])
 
         with anyio.CancelScope() as scope:
+            spath=str(path)
             try:
-                self._writing.add(str(path))
+                if spath in self._writing:
+                    raise RuntimeError(f"Already writing: {spath!r}")
+                self._writing.add(spath)
                 rdr = self.write_monitor.reader(999)
                 async with (
                     anyio.create_task_group() as tg,
@@ -1082,7 +1088,7 @@ class Server(MsgHandler):
                         with anyio.move_on_after(2, shield=True):
                             await mw.flush(force=True)
             finally:
-                self._writing.remove(str(path))
+                self._writing.remove(spath)
                 self._writing_done.set()
 
     async def save_errstream(

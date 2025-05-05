@@ -1,4 +1,4 @@
-Source: moat-kv
+Source: moat-link
 Maintainer: Matthias Urlichs <matthias@urlichs.de>
 Section: python
 Priority: optional
@@ -8,23 +8,15 @@ Build-Depends: dh-python, python3-all, debhelper (>= 13), debhelper-compat (= 13
 Standards-Version: 3.9.6
 Homepage: https://github.com/smurfix/moat
 
-Package: moat-kv
+Package: moat-link
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   moat-mqtt (>= 0.38),
-  python3-anyio (>= 4),
-  python3-asyncclick (>= 1:8),
-  python3-asyncactor (>= 0.20),
-  python3-asyncscope (>= 0.5.5),
-  python3-attr (>= 19),
-  python3-systemd,
-  python3-range-set (>= 0.3),
-  python3-ruyaml (>= 0.89),
-  python3-simpleeval (>= 0.9.10),
   moat-util,
   moat-mqtt,
   moat-main,
-  python3-moat-lib-diffiehellman,
+  python3-moat-lib-codec,
+  python3-moat-lib-cmd,
   systemd (>= 241),
 Recommends:
   python3-trio (>= 0.22),

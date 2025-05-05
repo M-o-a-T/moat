@@ -1234,15 +1234,18 @@ class Server(MsgHandler):
         """
         save = self.cfg.server.save
         dest = anyio.Path(save.dir)
+        rewrite = 0
         while True:
             now = datetime.now(UTC)
             fn = dest / now.strftime(save.name)
             await fn.parent.mkdir(exist_ok=True, parents=True)
-            await self.run_saver(path=fn)
+            await self.run_saver(path=fn, save_state=rewrite==0)
             if task_status is not None:
                 task_status.started()
                 task_status = None
             await anyio.sleep(save.interval)
+            rewrite = (rewrite or save.rewrite)-1
+            kw["prev"]=fn
 
         task_status.started()
 

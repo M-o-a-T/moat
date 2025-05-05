@@ -2,6 +2,7 @@ save:
   dir: "/var/lib/moat/link/data"
   name: "%Y-%m/%d/%H-%M.moat"
   interval: 1000
+  rewrite: 5
 
 timeout:
   monitor: 0.5

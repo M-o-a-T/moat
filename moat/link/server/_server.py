@@ -1757,22 +1757,36 @@ class Server(MsgHandler):
             self.logger.info("No saved data in %r", str(dest))
             return
 
+        done=set()
         fs = []
         async for p, _d, f in dest.walk():
             for ff in f:
                 fs.append(p / ff)
         fs.sort()
+        fn=None
 
         tupd = 0
         while fs:
-            fn = fs.pop()
-            if str(fn) in self._writing:
+            if fn is None:
+                fn = fs.pop()
+
+            sfn = str(fn)
+            if sfn in done or sfn in self._writing:
+                fn = None
                 continue
-            upd,skp,tags = await self.load_file(fn)
-            breakpoint()
+            done.add(sfn)
+
+            upd,skp,tags = await self.load_file(fn=fn)
             if not upd or not tags:
                 continue
-            if not tag_check(t):
+            if not tag_check(tags):
+                # extract the 
+                tt = tags[0]
+                while isinstance(tt,Tag):
+                    tt=t=tt.value
+                if isinstance(tt,Sequence):
+                    tt=tt[1]
+                fn=tt.get("prev",None)
                 continue
             ready.set()
             return
@@ -1830,7 +1844,7 @@ class Server(MsgHandler):
                 else:
                     skp += 1
 
-                self.logger.info("Restore %r: %d/%d", str(fn), upd, skp)
+                self.logger.info("Restored %r: %d/%d", str(fn), upd, skp)
                 if not upd and ehdr is not None and "error" not in ehdr.value:
                     break
             return upd, skp, tags

@@ -1799,11 +1799,13 @@ class Server(MsgHandler):
         The result is the number of updated/skipped entries,
         plus the tags from the file.
         """
+        self.logger.info("Loading from %r", fn)
         async with MsgReader(fn, codec="std-cbor") as rdr:
             pl = PathLongener(prefix)
             upd, skp, tags = 0, 0, []
             ehdr = None
             async for msg in rdr:
+                self.logger.debug("Load %r",msg)
                 if isinstance(msg, Tag) and msg.tag == CBOR_TAG_CBOR_LEADER:
                     msg = msg.value  # noqa:PLW2901
                 if isinstance(msg, Tag):
@@ -1844,7 +1846,7 @@ class Server(MsgHandler):
                 else:
                     skp += 1
 
-                self.logger.info("Restored %r: %d/%d", str(fn), upd, skp)
+            self.logger.info("Loading from %r done: %d/%d", fn,upd,skp)
             return upd, skp, tags
 
     async def _get_remote_data(self, main: BroadcastReader, ready: anyio.Event):

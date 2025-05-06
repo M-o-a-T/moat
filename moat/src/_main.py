@@ -178,7 +178,7 @@ class Package(_Common):
         """
         if not self.files:
             raise ValueError(f"No files in {self.name}?")
-        p = Path("packaging") / self.dash
+        p = Path("packaging") / self.dash # / "src"
         with suppress(FileNotFoundError):
             rmtree(p / "moat")
         dest = p / self.path
@@ -190,6 +190,8 @@ class Package(_Common):
                 copytree(f, pf, symlinks=False)
             else:
                 copyfile(f, pf, follow_symlinks=True)
+
+        p = Path("packaging") / self.dash
         licd = p / "LICENSE.txt"
         if not licd.exists():
             copyfile("LICENSE.txt", licd)

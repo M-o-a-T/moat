@@ -98,8 +98,8 @@ lib-codec:
   rev: 21a8c51d92b3a25346c5ec8bf4f1733cdd709686
   tag: 0.4.2
 lib-diffiehellman:
-  pkg: 6
-  rev: 41f59ea18b4dd6a772c0a820e5fea142a0231bbc
+  pkg: 7
+  rev: c518f9d2e494ab470f3016285d9dd5ca2a6265f2
   tag: 0.13.4
 lib-gpio:
 - 0.6.7

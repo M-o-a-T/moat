@@ -941,13 +941,13 @@ async def build(
                     pkg=1,
                     rev=repo.head.commit.hexsha,
                 )
-                logger.debug("Changes: %s",r.name,r.verstr)
+                logger.debug("Changes: %s %s",r.name,r.verstr)
             elif r.has_changes(False):
                 r.vers.pkg += 1
                 r.vers.rev = repo.head.commit.hexsha
                 logger.debug("Build Changes: %s %s",r.name,r.verstr)
             else:
-                logger.debug("No Changes: %s",r.name,r.verstr)
+                logger.debug("No Changes: %s %s",r.name,r.verstr)
 
     elif not no_tag:
         err = set()

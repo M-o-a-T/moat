@@ -11,8 +11,6 @@ from moat.util import P, Path
 from moat.kv.mock.mqtt import stdtest
 from moat.kv.server import Server
 
-pytestmark = pytest.mark.skip
-
 logger = logging.getLogger(__name__)
 
 N = 10
@@ -71,7 +69,7 @@ async def test_10_recover(autojump_clock):  # pylint: disable=unused-argument
     This test starts multiple servers at the same time and checks that
     dropping random messages ultimately recovers.
     """
-    async with stdtest(test_1={"init": 420}, n=N, tocks=20000) as st:
+    async with stdtest(test_1={"init": 420}, n=N, tocks=200000) as st:
         assert st is not None
         st.ex.enter_context(mock.patch("asyncactor.actor.Actor._send_msg", new=send_msg))
         st.ex.enter_context(mock.patch("asyncactor.actor.Actor.queue_msg", new=queue_msg))

@@ -155,6 +155,6 @@ thing:
   rev: 41f59ea18b4dd6a772c0a820e5fea142a0231bbc
   tag: 0.2.1
 util:
-  pkg: 3
-  rev: 41f59ea18b4dd6a772c0a820e5fea142a0231bbc
-  tag: 0.57.5
+  pkg: 1
+  rev: fd2cf2cfe932f3ff5be57436e07501f2e44e7d20
+  tag: 0.57.6

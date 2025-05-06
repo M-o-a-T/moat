@@ -8,10 +8,5 @@ export MSGPACK_PUREPYTHON=1
 %:
 	dh $@ --with python3 --buildsystem=pybuild
 
-override_dh_python3:
-	dh_python3
-	rm -f debian/${PYBUILD_NAME}/usr/lib/python3/dist-packages/test.log
-	rm -rf debian/${PYBUILD_NAME}/usr/lib/python3/dist-packages/debian
-
 override_dh_auto_test:
 	: skip

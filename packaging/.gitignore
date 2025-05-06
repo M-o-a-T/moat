@@ -5,6 +5,7 @@
 /*.buildinfo
 /*.changes
 
+/*/src/moat
 /*/moat
 /*/LICENSE.txt
 /*/build

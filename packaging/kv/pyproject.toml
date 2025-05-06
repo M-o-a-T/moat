@@ -53,5 +53,6 @@ repository = "https://github.com/M-o-a-T/moat"
 
 [tool.setuptools]
 packages = [ "moat.kv",]
+
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]

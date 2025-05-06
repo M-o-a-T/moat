@@ -45,8 +45,8 @@ time = [ "calendar",]
 dev = [ "flake8", "isort",]
 
 [tool.setuptools]
-[tool.setuptools.packages]
-find = {}
+packages = [ "moat.kv.label",]
+
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 

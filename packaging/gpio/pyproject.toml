@@ -31,8 +31,8 @@ homepage = "https://m-o-a-t.org"
 repository = "https://github.com/M-o-a-T/moat"
 
 [tool.setuptools]
-[tool.setuptools.packages]
-find = {}
+packages = [ "moat.gpio",]
+
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 

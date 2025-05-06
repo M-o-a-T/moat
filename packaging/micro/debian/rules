@@ -7,14 +7,8 @@ export LOG_CFG=$(shell pwd)/tests/logging.cfg
 %:
 	dh $@ --with python3 --buildsystem=pybuild
 
-override_dh_install:
-	dh_install
+execute_after_dh_install:
 	$(MAKE) install PREFIX=debian/moat-micro
-
-override_dh_python3:
-	dh_python3
-	rm -f debian/${PYBUILD_NAME}/usr/lib/python3/dist-packages/test.log
-	rm -rf debian/${PYBUILD_NAME}/usr/lib/python3/dist-packages/debian
 
 override_dh_auto_test:
 	: skip

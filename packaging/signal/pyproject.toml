@@ -35,8 +35,7 @@ docs = [
 ]
 
 [tool.setuptools]
-[tool.setuptools.packages]
-find = {}
+packages = [ "moat.signal",]
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]

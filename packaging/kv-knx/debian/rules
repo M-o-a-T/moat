@@ -9,11 +9,6 @@ export PYBUILD_NAME=moat-kv-knx
 debian/moat-kv-knx@.service: systemd/moat-kv-knx@.service
 	cp $< $@
 
-override_dh_python3:
-	dh_python3
-	rm -f debian/${PYBUILD_NAME}/usr/lib/python3/dist-packages/test.log
-	rm -rf debian/${PYBUILD_NAME}/usr/lib/python3/dist-packages/debian
-
 override_dh_auto_install: debian/moat-kv-knx@.service
 	dh_auto_install
 

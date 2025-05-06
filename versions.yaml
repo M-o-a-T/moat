@@ -117,8 +117,8 @@ link:
   rev: 8b31273c9f04eb6a8b01e7356b60c75243586a1b
   tag: 0.2.1
 link-server:
-  pkg: 2
-  rev: 8b31273c9f04eb6a8b01e7356b60c75243586a1b
+  pkg: 3
+  rev: 0bfaf173582ac2e023cc82866341ebc2e830c1a9
   tag: 0.2.1
 main:
   pkg: 3

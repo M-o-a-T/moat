@@ -138,7 +138,7 @@ modbus-dev-_data:
   tag: 0.8.0
 mqtt:
   pkg: 3
-  rev: f08fa3f1e753f55df2023d040411cdfa75d939ef
+  rev: 195af9d4d0fd9ee511f770995d187649aef20715
   tag: 0.42.7
 sched:
 - 0.1.4

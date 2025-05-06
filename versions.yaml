@@ -90,12 +90,12 @@ label:
   rev: 41f59ea18b4dd6a772c0a820e5fea142a0231bbc
   tag: 0.2.1
 lib-cmd:
-  pkg: 3
-  rev: 41f59ea18b4dd6a772c0a820e5fea142a0231bbc
+  pkg: 4
+  rev: 21a8c51d92b3a25346c5ec8bf4f1733cdd709686
   tag: 0.3.6
 lib-codec:
-  pkg: 4
-  rev: 41f59ea18b4dd6a772c0a820e5fea142a0231bbc
+  pkg: 5
+  rev: 21a8c51d92b3a25346c5ec8bf4f1733cdd709686
   tag: 0.4.2
 lib-diffiehellman:
   pkg: 6

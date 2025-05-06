@@ -16,7 +16,6 @@ Depends: ${misc:Depends}, ${python3:Depends},
   python3-cffi,
   python3-trio (>= 0.15),
 Conflicts: python3-moat-gpio
-Standards-Version: 3.9.6
 Description: GPIO access via AnyIO and libgpiod
  MoaT-GPIO allows easy access to the GPIO pins on your Raspberry Pi or
  similar embedded computer.

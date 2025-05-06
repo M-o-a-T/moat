@@ -178,7 +178,7 @@ class Package(_Common):
         """
         if not self.files:
             raise ValueError(f"No files in {self.name}?")
-        p = Path("packaging") / self.dash # / "src"
+        p = Path("packaging") / self.dash / "src"
         with suppress(FileNotFoundError):
             rmtree(p / "moat")
         dest = p / self.path

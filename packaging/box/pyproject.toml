@@ -50,6 +50,8 @@ time = [ "calendar",]
 dev = [ "flake8", "isort",]
 
 [tool.setuptools]
-packages = [ "moat.box",]
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]

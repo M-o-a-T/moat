@@ -1,5 +1,7 @@
 """
 Exception handling helpers
+
+This code is *duplicated* in `moat.util.exc`.
 """
 
 from __future__ import annotations

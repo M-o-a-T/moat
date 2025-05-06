@@ -33,42 +33,6 @@ packages = [ "moat.kv.knx",]
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 
-[tool.black]
-line-length = 99
-
-[tool.tox]
-legacy_tox_ini = """
-[tox]
-isolated_build = True
-envlist = py310,check
-
-[testenv]
-setenv = 
-    PYTHONPATH = {env:PYTHONPATH}{:}{toxinidir}
-deps = 
-    anyio
-    asyncwebsockets
-    asyncclick
-    asyncscope
-    trio
-    pytest
-commands = 
-    python3 -mpytest tests/
-
-[testenv:check]
-commands = 
-    pylint moat tests
-    flake8p moat tests
-    black --check moat tests
-deps = 
-    pytest
-    pylint
-    black
-    flake8-pyproject
-    flake8
-
-"""
-
 [tool.pytest]
 filterwarnings = [
     "error",

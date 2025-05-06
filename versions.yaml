@@ -117,8 +117,8 @@ link:
   rev: 41f59ea18b4dd6a772c0a820e5fea142a0231bbc
   tag: 0.2.1
 link-server:
-  pkg: 3
-  rev: 41f59ea18b4dd6a772c0a820e5fea142a0231bbc
+  pkg: 4
+  rev: 4b4838e4932a75b1319979bd93e65521237cdff2
   tag: 0.2.1
 main:
   pkg: 4
@@ -137,8 +137,8 @@ modbus-dev-_data:
   rev: 41f59ea18b4dd6a772c0a820e5fea142a0231bbc
   tag: 0.8.0
 mqtt:
-  pkg: 3
-  rev: 195af9d4d0fd9ee511f770995d187649aef20715
+  pkg: 4
+  rev: 170673da8d4b57966f3a042fb4316142de75dd0c
   tag: 0.42.7
 sched:
 - 0.1.4

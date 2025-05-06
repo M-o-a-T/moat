@@ -116,6 +116,11 @@ class Package(_Common):
         return hash(self.name)
 
     @property
+    def verstr(self):
+        v=self.vers
+        return f"{v.tag}-{v.pkg}"
+
+    @property
     def vers(self):
         try:
             v = self._repo.versions[self.dash]
@@ -820,6 +825,7 @@ it is dropped when you use '--dput'.
 )
 @click.option("-P", "--no-pypi", is_flag=True, help="don't push to PyPI")
 @click.option("-T", "--no-test", is_flag=True, help="don't run tests")
+@click.option("-G", "--test-chg", is_flag=True, help="rebuild if changes file doesn't exist")
 @click.option("-o", "--pytest", "pytest_opts", type=str, multiple=True, help="Options for pytest")
 @click.option("-d", "--deb", "deb_opts", type=str, multiple=True, help="Options for debuild")
 @click.option("-p", "--dput", "dput_opts", type=str, multiple=True, help="Options for dput")
@@ -850,6 +856,7 @@ async def build(
     pytest_opts,
     deb_opts,
     run,
+    test_chg,
     version,
     no_version,
     no_deb,
@@ -934,9 +941,13 @@ async def build(
                     pkg=1,
                     rev=repo.head.commit.hexsha,
                 )
+                logger.debug("Changes: %s",r.name,r.verstr)
             elif r.has_changes(False):
                 r.vers.pkg += 1
                 r.vers.rev = repo.head.commit.hexsha
+                logger.debug("Build Changes: %s %s",r.name,r.verstr)
+            else:
+                logger.debug("No Changes: %s",r.name,r.verstr)
 
     elif not no_tag:
         err = set()
@@ -1060,7 +1071,9 @@ async def build(
                     )
                     repo.index.add(p / "changelog")
 
-                if debversion.get(r.dash, "") != ltag or r.vers.pkg != ptag:
+                changes = PACK / f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
+                if debversion.get(r.dash, "") != ltag or r.vers.pkg != ptag or test_chg and not changes.exists():
+
                     subprocess.run(["debuild", "--build=binary"] + deb_opts, cwd=rd, check=True)
             except subprocess.CalledProcessError:
                 if not run:

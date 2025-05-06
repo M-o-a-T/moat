@@ -5,8 +5,8 @@
 /*.buildinfo
 /*.changes
 
-/*/src/moat
-/*/moat
+/*/src/moat/
+/*/src/moat*.egg-info
 /*/LICENSE.txt
 /*/build
 /*/.pybuild

@@ -175,6 +175,7 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
         *,
         qos: QoS = QoS.AT_MOST_ONCE,
         retain: bool = False,
+        properties: dict[PropertyType, int] | None = None,
         user_properties: dict[str, str] | None = None,
     ) -> int | None:
         """
@@ -201,6 +202,9 @@ class MQTTClientStateMachine(BaseMQTTClientStateMachine):
             packet_id=packet_id,
             user_properties={} if user_properties is None else user_properties,
         )
+        if properties:
+            for prop,val in properties.items():
+                packet.properties[prop] = val
         packet.encode(self._out_buffer)
         if packet_id is not None:
             self._add_pending_packet(packet, local=True)

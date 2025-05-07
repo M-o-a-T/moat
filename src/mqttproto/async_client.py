@@ -634,10 +634,10 @@ class AsyncMQTTClient:
         packet_id = self._state_machine.publish(
             topic, payload, qos=qos, retain=retain, user_properties=user_properties
         )
-        if qos is QoS.EXACTLY_ONCE:
+        if qos == QoS.EXACTLY_ONCE:
             assert packet_id is not None
             await self._run_operation(MQTTQoS2PublishOperation(packet_id))
-        elif qos is QoS.AT_LEAST_ONCE:
+        elif qos == QoS.AT_LEAST_ONCE:
             assert packet_id is not None
             await self._run_operation(MQTTQoS1PublishOperation(packet_id))
         else:

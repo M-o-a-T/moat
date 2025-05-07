@@ -155,7 +155,7 @@ def test_publish_qos1(
     assert isinstance(packet, MQTTPublishPacket)
     assert packet.topic == "test-topic"
     assert packet.payload == "payload"
-    assert packet.qos is QoS.AT_LEAST_ONCE
+    assert packet.qos == QoS.AT_LEAST_ONCE
     assert packet.packet_id == 1
 
     # Send the PUBACK from the client session
@@ -220,7 +220,7 @@ def test_publish_qos2(
     assert isinstance(packet, MQTTPublishPacket)
     assert packet.topic == "test-topic"
     assert packet.payload == "payload"
-    assert packet.qos is QoS.EXACTLY_ONCE
+    assert packet.qos == QoS.EXACTLY_ONCE
     assert packet.packet_id == 1
 
     # Send the PUBREC from the client session

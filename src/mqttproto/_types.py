@@ -383,6 +383,9 @@ class PropertiesMixin:
     def encode_properties(self, buffer: bytearray) -> None:
         internal_buffer = bytearray()
         for identifier, value in self.properties.items():
+            if identifier not in self.allowed_property_types:
+                raise MQTTUnsupportedPropertyType(identifier, self.__class__)
+
             if identifier in multi_properties and isinstance(value, (list, tuple)):
                 for val in value:
                     encode_variable_integer(identifier, internal_buffer)

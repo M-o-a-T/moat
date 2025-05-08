@@ -103,6 +103,7 @@ class BasicCmd:
 class LinkCommon(CmdCommon):
     protocol_version:int = -1
     name:str
+    server_name:str
 
     def __init__(self, cfg, name: str | None = None, is_server:bool = False):
         self.cfg = cfg
@@ -160,6 +161,7 @@ class LinkCommon(CmdCommon):
                     self.logger.warning("Unknown auth reply: %r", res)
 
             self.name = self._hello.me
+            self.server_name = self._hello.them
             self.protocol_version = self._hello.protocol_version
             self._hello = None  # done with that
 
@@ -198,7 +200,7 @@ class _Sender(MsgSender):
     """
     Caller_ = ClientCaller
 
-    def __init__(self, link):
+    def __init__(self, link:LinkCommon):
         self._link = link
         self._allowed = set()
 
@@ -402,7 +404,7 @@ class _Sender(MsgSender):
         mostly-accurate time.
         """
         (st,) = await self.cmd(P("i.stamp"))
-        await self.send(P(":R.run.service.stamp.main"), st)
+        await self.send(P(":R.run.service.main.stamp")/self._link.server_name, st)
         await self.cmd(P("i.sync"), st)
 
 
@@ -484,7 +486,7 @@ class Link(LinkCommon, CtxObj):
                 await self._connect_server(srv, task_status=task_status)
             except Exception as exc:
                 await self.backend.send_error(
-                    P("run.service.conn.main") / srv.meta.origin,
+                    P("run.service.main.server") / srv.meta.origin,
                     data=srv,
                     exc=exc,
                 )
@@ -513,7 +515,7 @@ class Link(LinkCommon, CtxObj):
 
         self._last_link_seen = anyio.Event()
         async with self.backend.monitor(
-            P(":R.run.service.conn.main"),
+            P(":R.run.service.main.conn"),
             retain_handling=RetainHandling.SEND_RETAINED,
         ) as mon:
             async for msg in mon:
@@ -566,7 +568,7 @@ class Link(LinkCommon, CtxObj):
 
     async def _connect_server(
         self,
-        srv: Message[Data[S.run.service.conn.main]],
+        srv: Message[Data[S.run.service.main.conn]],
         *,
         task_status=anyio.TASK_STATUS_IGNORED,
     ):

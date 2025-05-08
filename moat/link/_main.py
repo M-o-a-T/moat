@@ -127,7 +127,7 @@ async def test(obj):
     async def check_server():
         try:
             with anyio.fail_after(1) as sc:
-                async with back.monitor(P(":R.run.service.conn.main")) as mon:
+                async with back.monitor(P(":R.run.service.main.conn")) as mon:
                     async for msg in mon:
                         async with lock:
                             print("# Server link:")

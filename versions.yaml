@@ -1,6 +1,6 @@
 moat:
   pkg: 1
-  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
+  rev: 07c2cc8fadab2ebdd2a8487c3c783d89f9282886
   tag: 0.11.0
 moat-battery:
 - 0.2.5

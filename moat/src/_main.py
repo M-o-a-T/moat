@@ -188,7 +188,7 @@ class Package(_Common):
             lc = self.last_commit
         except AttributeError:
             return True
-        for d in head.diff(self.last_commit):
+        for d in head.diff(self.last_commit, paths=Path("packaging")/self.dash if main else self.path):
             if (
                 self._repo.repo_for(d.a_path, main) != self.name
                 and self._repo.repo_for(d.b_path, main) != self.name
@@ -204,7 +204,11 @@ class Repo(git.Repo, _Common):
     moat_tag = None
     _last_tag = None
 
-    def __init__(self, *a, **k):
+    toplevel:str
+
+    def __init__(self, toplevel:str, *a, **k):
+        self.toplevel = toplevel
+
         super().__init__(*a, **k)
         self._commit_tags = defaultdict(list)
         self._commit_topo = {}
@@ -281,19 +285,17 @@ class Repo(git.Repo, _Common):
     def _make_repos(self) -> dict:
         """Collect subrepos"""
         for fn in Path("packaging").iterdir():
-            if fn.name == "main":
-                continue
             if not fn.is_dir() or "." in fn.name:
                 continue
             self._add_repo(str(fn.name))
 
-        self._repos["main"].populate(Path("moat"))
+        self._repos[self.toplevel].populate(Path(self.toplevel))
 
     def repo_for(self, path: Path | str, main: bool | None) -> str:
         """
         Given a file path, returns the subrepo in question
         """
-        sc = self._repos["main"]
+        sc = self._repos["moat"]
         path = Path(path)
 
         if main is not True and path.parts[0] == "packaging":
@@ -302,8 +304,8 @@ class Repo(git.Repo, _Common):
             except IndexError:
                 return None
 
-        if main is not False:
-            name = path.paths[0]
+        name = path.parts[0]
+        if main is not False and name == self.toplevel:
             for p in path.parts[1:]:
                 if p not in sc.subs:
                     break
@@ -342,8 +344,9 @@ class Repo(git.Repo, _Common):
         if tag is None:
             tag = self.last_tag
         head = self._repo.head.commit
+        print("StartDiff B",self,tag,head,file=sys.stderr)
         for d in head.diff(tag):
-            if self.repo_for(d.a_path, main) == "moat" and self.repo_for(d.b_path, main) == "moat":
+            if self.repo_for(d.a_path, main) == self.toplevel and self.repo_for(d.b_path, main) == self.toplevel:
                 continue
             return True
         return False
@@ -502,21 +505,6 @@ def default_dict(a, b, c, cls=dict, repl=lambda x: x) -> dict:
     return mod
 
 
-def is_clean(repo: Repo, skip: bool = True) -> bool:
-    """Check if this repository is clean."""
-    skips = " Skipping." if skip else ""
-    if repo.head.is_detached:
-        print(f"{repo.working_dir}: detached.{skips}")
-        return False
-    if repo.head.ref.name not in {"main", "moat"}:
-        print(f"{repo.working_dir}: on branch {repo.head.ref.name}.{skips}")
-        return False
-    elif repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=False):
-        print(f"{repo.working_dir}: Dirty.{skips}")
-        return False
-    return True
-
-
 def _mangle(proj, path, mangler):
     try:
         for k in path[:-1]:
@@ -563,11 +551,13 @@ def apply_hooks(repo, force=False):
 
 @cli.command
 @click.argument("part", type=str)
-def setup(part):
+@click.pass_obj
+def setup(obj, part):
     """
     Create a new MoaT subcommand.
     """
-    repo = Repo(None)
+    cfg = obj.cfg
+    repo = Repo(cfg.src.toplevel, None)
     if "-" in part:
         part = undash(part)
 
@@ -695,11 +685,12 @@ def path_():
 
 
 @cli.command()
-def tags():
+@click.pass_obj
+def tags(obj):
     """
     List all tags
     """
-    repo = Repo(None)
+    repo = Repo(obj.cfg.src.toplevel, None)
 
     for r in repo.parts:
         try:
@@ -723,7 +714,8 @@ def tags():
 @click.option("-q", "--query", "--show", "show", is_flag=True, help="Show the latest tag")
 @click.option("-f", "--force", "FORCE", is_flag=True, help="replace an existing tag")
 @click.option("-b", "--build", is_flag=True, help="set/increment the build number")
-def tag(run, minor, major, subtree, force, FORCE, show, build):
+@click.pass_obj
+def tag(obj, run, minor, major, subtree, force, FORCE, show, build):
     """
     Tag the repository (or a subtree).
 
@@ -744,7 +736,7 @@ def tag(run, minor, major, subtree, force, FORCE, show, build):
     if build and not subtree:
         raise click.UsageError("The main release number doesn't have a build")
 
-    repo = Repo(None)
+    repo = Repo(obj.cfg.src.toplevel, None)
 
     if subtree:
         r = repo.part(subtree)
@@ -858,7 +850,7 @@ async def build(
         g_done = Path(g_done)
     else:
         g_done = Path("/tmp/nonexistent")
-    repo = Repo(None)
+    repo = Repo(cfg.src.toplevel, None)
 
     tags = dict(version)
     skip = set()

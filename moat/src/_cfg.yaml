@@ -1,2 +1,2 @@
-src:
-  done: "/src/DONE"
+toplevel: "moat"
+done: "/src/DONE"

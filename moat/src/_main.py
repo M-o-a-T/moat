@@ -744,11 +744,11 @@ def tag(obj, run, minor, major, subtree, force, FORCE, show, build):
         r = repo
 
     if show:
-        tag = r.last_tag
+        tag = r.vers
         if r.has_changes():
-            print(f"{tag} STALE")
+            print(f"{tag.tag}-{tag.pkg} STALE")
         else:
-            print(tag)
+            print(f"{tag.tag}-{tag.pkg}")
         return
 
     if force:
@@ -770,10 +770,11 @@ def tag(obj, run, minor, major, subtree, force, FORCE, show, build):
                     pkg=1,
                     rev=repo.head.commit.hexsha,
                 )
+            print(f"{tag}-{sb.vers.pkg}")
             repo.write_tags()
         else:
             git.TagReference.create(repo, tag, force=FORCE)
-        print(f"{tag}")
+            print(f"{tag}")
     else:
         print(f"{tag} DRY_RUN")
 
@@ -949,7 +950,7 @@ async def build(
         fails = set()
         for p in parts:
             if not run_tests(p, *pytest_opts):
-                fails.add(p.name)
+                fails.add(p)
         if fails:
             if not run:
                 print("*** Tests failed:", *fails, file=sys.stderr)
@@ -1070,9 +1071,10 @@ async def build(
             targz = rd / "dist" / f"{r.under}-{tag}.tar.gz"
             done = rd / "dist" / f"{r.under}-{tag}.done"
 
-            if targz.is_file():
-                if not done.exists():
-                    up.add(r)
+            if done.exists():
+                pass
+            elif targz.is_file():
+                up.add(r)
             else:
                 try:
                     subprocess.run(["python3", "-mbuild", "-snw"], cwd=rd, check=True)

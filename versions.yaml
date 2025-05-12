@@ -148,9 +148,9 @@ moat-signal:
 - 0.0.1
 - b442c09472a50fb7faec795348b78dd70675b356
 moat-src:
-  pkg: 2
-  rev: 1d2d76bbd5d7f2d17da65f7778f63148cc696a6f
-  tag: 0.9.0
+  pkg: 1
+  rev: e17df26acac9ad09154640ee583b178134d6e5fb
+  tag: 0.9.1
 moat-thing:
   pkg: 3
   rev: 1d2d76bbd5d7f2d17da65f7778f63148cc696a6f

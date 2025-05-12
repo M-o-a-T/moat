@@ -596,32 +596,44 @@ class Path(collections.abc.Sequence):
         value = loader.construct_scalar(node)
         return cls.from_str(value)
 
+
     def apply(self, path:Path) -> Path:
         """
-        Construct a new path that replaces pattern tuples in @self with
-        the equivalent entries in @path.
+        Construct a new path that replaces pattern tuples in @path with
+        the referred-to entries in @self.
 
-        Thus
-        >>> p = Path(":1:2:3:4")
-        >>> p.apply(P("a:2,.b"))
-        P("a:3.b")
-        >>> p.apply(P("a:(1,2).b"))
-        P("a:2:3.b")
+        @path is returned unchanged if @self doesn't contain any patterns.
 
-        Use zero in a two-element tuple to designate the first/past
-        element. An empty tuple 
+        Thus:
+
+        >>> p = Path("w.x.y.z")
+        >>> P("a:2,.b").apply(p)
+        P("a.x.b")
+        >>> P("a:3,4.b").apply(p)
+        P("a.y.z.b")
+
+        Elements are numbered starting from 1 (left) or -1 (right).
         """
         if not any(isinstance(x,tuple) for x in self._data):
             return self
 
+        # We might want to cache this …
         res = []
-        for p in self:
+        for p in self._data:
             if not isinstance(p,tuple) or len(p) not in (1,2,3):
                 res.append(p)
                 continue
+
+            p = list(p)
+            if p[0] > 0:
+                p[0] -= 1
             if len(p) == 1:
                 res.append(path[p[0]])
             else:
+                if p[1] < 0:
+                    p[1] += 1
+                    if p[1] == 0:  # was: -1
+                        p[1] = None
                 res.extend(path[slice(*p)])
         return Path.build(res)
 

@@ -253,11 +253,16 @@ def test_root():
     assert pp2 == PS("yes/fuddy/d/::a/e")
 
 _apply = (
-        ("x:(2,).y","x.c.y"),
+        ("x:(3,).y","x.c.y"),
+        ("x.zzz.y","x.zzz.y"),
+        ("x:(3,4).y","x.c.d.y"),
+        ("x:(-3,-2).y","x.c.d.y"),
+        ("x:(-4,-2).y","x.b.c.d.y"),
+        ("x:(-3,-1).y","x.c.d.e.y"),
+        ("x:(4,-1).y","x.d.e.y"),
 )
 
 @pytest.mark.parametrize("a,b", _apply)  # noqa:PT006
 def test_apply(a,b):
     p=P("a.b.c.d.e")
-    breakpoint()
     assert P(a).apply(p) == P(b), (P(a),P(b),P(a).apply(p))

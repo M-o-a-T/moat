@@ -1,0 +1,7 @@
+# shell
+
+PATH=/usr/bin:/bin
+DEST=/var/lib/moat/link/
+DATE="%Y-%m-%d"
+MODE=hybrid
+

@@ -1,9 +1,8 @@
 from __future__ import annotations
 from contextlib import asynccontextmanager
 
-from distmqtt.client import open_mqttclient
-from distmqtt.codecs import MsgPackCodec
-from distkv.util import NotGiven, P
+from moat.link.backend.mqtt import Backend
+from moat.util import NotGiven, P
 
 from moatbus.backend import BaseBusHandler
 from moatbus.message import BusMessage
@@ -19,11 +18,10 @@ class Handler(BaseBusHandler):
 
     _mqtt = None
 
-    def __init__(self, client, id: str, uri: str = "mqtt://localhost/", topic="test/moat/bus"):
+    def __init__(self, cfg, name:str|None=None):
         super().__init__()
-        self.id = id
-        self.uri = uri
-        self.topic = topic
+        self.cfg = cfg
+        self.name=name
 
     PARAMS = {
         "id": (
@@ -58,9 +56,8 @@ class Handler(BaseBusHandler):
 
     @asynccontextmanager
     async def _ctx(self):
-        async with open_mqttclient() as C:
-            await C.connect(uri=self.uri)
-            async with C.subscription(self.topic, codec=MsgPackCodec()) as CH:
+        async with Backend(self.cfg.mqtt, name=self.name) as C:
+            async with C.monitor(self.cfg.topic, codec=StdCodec()) as CH:
                 self._mqtt = CH
                 yield self
 
@@ -71,10 +68,7 @@ class Handler(BaseBusHandler):
     async def __anext__(self):
         while True:
             msg = await self._mqtt_it.__anext__()
-            try:
-                msg = msg.data
-            except AttributeError:
-                continue
+            msg = msg.payload
             try:
                 id = msg.pop("_id")
             except KeyError:
@@ -89,4 +83,4 @@ class Handler(BaseBusHandler):
     async def send(self, msg):
         data = {k: getattr(msg, k) for k in msg._attrs}
         data["_id"] = getattr(msg, "_mqtt_id", self.id)
-        await self._mqtt.publish(topic=None, message=data)
+        await self._mqtt.send(topic=self.cfg.topic, message=data)

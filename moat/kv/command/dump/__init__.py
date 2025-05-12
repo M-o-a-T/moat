@@ -6,7 +6,6 @@ import sys
 from collections.abc import Mapping
 
 import asyncclick as click
-from moat.mqtt.codecs import MsgPackCodec
 from moat.util import (
     MsgWriter,
     P,
@@ -17,6 +16,7 @@ from moat.util import (
 )
 
 from moat.util.mqtt import unpacker
+from moat.util.msgpack import StdMsgpack
 
 
 @load_subgroup(short_help="Local data mangling", sub_pre="dump")
@@ -137,7 +137,7 @@ async def post_(obj, path):
     be = obj.cfg.server.backend
     kw = obj.cfg.server[be]
 
-    async with get_backend(be)(codec=MsgPackCodec, **kw) as conn:
+    async with get_backend(be)(codec=StdMsgpack(), **kw) as conn:
         for d in yload(sys.stdin, multi=True):
             topic = d.pop("_topic", path)
             await conn.send(*topic, payload=d)

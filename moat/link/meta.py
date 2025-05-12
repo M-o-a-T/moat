@@ -82,6 +82,15 @@ class MsgMeta:
             setattr(self, k, v)
         self._clean(name)
 
+    def __repr__(self):
+        res = f"‹{self.__class__.__name__} {self.a!r}"
+        if self.kw:
+            res += ","+repr(self.kw)
+        if self.source is not None:
+            res += " src="+self.source
+        res += "›"
+        return res
+
     def dump(self):
         """
         Emit this as an array, ready for sending.

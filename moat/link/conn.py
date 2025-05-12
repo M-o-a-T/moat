@@ -34,3 +34,23 @@ async def TCPConn(cmd: MsgSender | None, *a, codec: str|Codec = "std-cbor", debu
         run_stream(cmd, stream, codec=codec, debug=debug, logger=logger) as hdl,
     ):
         yield hdl
+
+@asynccontextmanager
+async def UnixConn(cmd: MsgSender | None, *a, codec: str|Codec = "std-cbor", debug:bool=False, logger=None, **kw) -> AsyncGenerator[..., MsgSender]:
+    """
+    Connection to a MoaT server.
+
+    This encapsulates a Unix-domain client link.
+
+    Parameters:
+    * the MsgHandler to connect to
+    * all other arguments go to `anyio.connect_unix`
+
+    This is an async context manager. It forwards incoming commands to @cmd
+    and yields a `MsgSender` that forwards local to the remote side.
+    """
+    async with (
+        await anyio.connect_unix(*a, **kw) as stream,
+        run_stream(cmd, stream, codec=codec, debug=debug, logger=logger) as hdl,
+    ):
+        yield hdl

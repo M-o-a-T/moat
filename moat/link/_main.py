@@ -81,8 +81,9 @@ start "moat link server" in a separate terminal, and try again.
 
 @load_subgroup(sub_pre="moat.link.cmd", sub_post="cli", ext_pre="moat.link", ext_post="_main.cli")
 @click.option("-n","--name", type=str, help="Name of this client (or server)")
+@click.option("-p","--port", type=str, help="Port to use and/or connect to")
 @click.pass_context
-async def cli(ctx,name):
+async def cli(ctx,name,port):
     """
     MoaT's data link
 
@@ -91,6 +92,7 @@ async def cli(ctx,name):
     obj = ctx.obj
     cfg = obj.cfg
     obj.name = name
+    obj.port = port
 
     if "link" not in cfg or "backend" not in cfg["link"]:
         sys.stderr.write(usage1)
@@ -125,7 +127,7 @@ async def test(obj):
     async def check_server():
         try:
             with anyio.fail_after(1) as sc:
-                async with back.monitor(P(":R.run.service.conn.main")) as mon:
+                async with back.monitor(P(":R.run.service.main.conn")) as mon:
                     async for msg in mon:
                         async with lock:
                             print("# Server link:")

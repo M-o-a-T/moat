@@ -1,3 +1,27 @@
+moat-lib-codec (0.4.2-6) unstable; urgency=medium
+
+  * New release for 25.1.24
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 06 May 2025 11:33:29 +0200
+
+moat-lib-codec (0.4.2-5) unstable; urgency=medium
+
+  * New release for 25.1.18
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 06 May 2025 08:14:36 +0200
+
+moat-lib-codec (0.4.2-4) unstable; urgency=medium
+
+  * New release for 25.1.13
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 06 May 2025 02:06:11 +0200
+
+moat-lib-codec (0.4.2-3) unstable; urgency=medium
+
+  * New release for 25.1.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 05 May 2025 06:34:54 +0200
+
 moat-lib-codec (0.4.2-2) unstable; urgency=medium
 
   * New release for 25.1.8

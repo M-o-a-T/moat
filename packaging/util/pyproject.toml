@@ -21,7 +21,7 @@ dependencies = [
 	"simpleeval",
 	"moat-lib-codec ~= 0.4.1",
 	]
-version = "0.57.5"
+version = "0.57.7"
 keywords = [ "MoaT",]
 requires-python = ">=3.12"
 name = "moat-util"
@@ -48,8 +48,9 @@ time = [ "calendar",]
 dev = [ "flake8", "isort",]
 
 [tool.setuptools]
-[tool.setuptools.packages]
-find = {}
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 

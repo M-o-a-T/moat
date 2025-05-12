@@ -16,7 +16,6 @@ try:
     from .msgpack import Proxy
 except ImportError:
     Proxy = None
-from moat.lib.codec.proxy import name2obj
 
 from .path import Path
 
@@ -123,6 +122,7 @@ if Proxy is not None:
 
 
 def _name2obj(constructor, node):
+    from moat.lib.codec.proxy import name2obj
     return name2obj(node.value)
 
 

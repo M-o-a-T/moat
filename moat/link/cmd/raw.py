@@ -48,6 +48,28 @@ async def cli(ctx):
     obj.conn = await ctx.with_async_resource(get_backend(cfg, name=obj.name))
 
 
+@cli.command()
+@click.argument("file", type=click.Path(), nargs=1)
+async def init(file):
+    """Write an initial preload file.
+
+    Usage: moat link raw init <node> <outfile>
+
+    Writes an initial MoaT-Link data file.
+
+    Using this command, followed by "moat kv server -l <outfile> <node>", is
+    equivalent to running "moat kv server -i 'Initial data' <node>.
+    """
+    from moat.link.meta import MsgMeta
+    from moat.util.msg import MsgWriter
+    from moat.util.cbor import gen_start,gen_stop
+
+    meta=MsgMeta(origin="init")
+    async with MsgWriter(path=file, codec="std-cbor") as f:
+        await f(gen_start("Initial link data file",mode="init"))
+        await f([0,P(":"),dict(type="MoaT-Link data"),*meta.dump()])
+        await f(gen_stop(mode="log_end"))
+
 @cli.command("test")
 @click.pass_obj
 async def test(obj):

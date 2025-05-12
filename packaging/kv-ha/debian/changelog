@@ -1,3 +1,21 @@
+moat-kv-ha (0.5.6-6) unstable; urgency=medium
+
+  * New release for 25.1.24
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 06 May 2025 11:32:41 +0200
+
+moat-kv-ha (0.5.6-5) unstable; urgency=medium
+
+  * New release for 25.1.13
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 06 May 2025 02:05:37 +0200
+
+moat-kv-ha (0.5.6-4) unstable; urgency=medium
+
+  * New release for 25.1.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 05 May 2025 06:34:06 +0200
+
 moat-kv-ha (0.5.6-2) unstable; urgency=medium
 
   * New release for 25.1.8

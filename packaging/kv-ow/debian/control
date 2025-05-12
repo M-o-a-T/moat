@@ -11,7 +11,7 @@ Homepage: https://github.com/smurfix/distowfs
 Package: moat-kv-ow
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
-  distkv (>= 0.50),
+  moat-kv,
   python3-asyncowfs (>= 0.12.0),
 Replaces: python3-distowfs
 Conflicts: python3-distowfs

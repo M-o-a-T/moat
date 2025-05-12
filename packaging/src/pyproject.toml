@@ -18,7 +18,7 @@ dependencies = [
 	"gitpython",
 	"packaging",
 	]
-version = "0.8.7"
+version = "0.8.10"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-src"
@@ -34,7 +34,8 @@ homepage = "https://m-o-a-t.org"
 repository = "https://github.com/M-o-a-T/moat"
 
 [tool.setuptools]
-[tool.setuptools.packages]
-find = {}
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]

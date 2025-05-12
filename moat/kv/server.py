@@ -1516,7 +1516,7 @@ class Server:
 
     async def _set_tock(self):
         if self._actor is not None and self._ready.is_set():
-            await self._actor.set_value((self._tock, self.node.tick))
+            await self._actor.set_value([self._tock, self.node.tick])
 
     async def del_check(self, value):
         """

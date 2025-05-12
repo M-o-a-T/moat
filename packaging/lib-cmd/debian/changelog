@@ -1,3 +1,39 @@
+moat-lib-cmd (0.3.6-5) unstable; urgency=medium
+
+  * New release for 25.1.24
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 06 May 2025 11:33:16 +0200
+
+moat-lib-cmd (0.3.6-4) unstable; urgency=medium
+
+  * New release for 25.1.18
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 06 May 2025 08:14:44 +0200
+
+moat-lib-cmd (0.3.6-3) unstable; urgency=medium
+
+  * New release for 25.1.13
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 06 May 2025 02:03:02 +0200
+
+moat-lib-cmd (0.3.6-2) unstable; urgency=medium
+
+  * New release for 25.1.12
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 06 May 2025 01:52:09 +0200
+
+moat-lib-cmd (0.3.6-1) unstable; urgency=medium
+
+  * New release for 25.1.11
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 05 May 2025 18:22:13 +0200
+
+moat-lib-cmd (0.3.5-3) unstable; urgency=medium
+
+  * New release for 25.1.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 05 May 2025 06:34:43 +0200
+
 moat-lib-cmd (0.3.5-2) unstable; urgency=medium
 
   * New release for 25.1.8

@@ -12,7 +12,9 @@ ExecStart=/usr/lib/moat/link/run
 ExecStartPost=/usr/lib/moat/link/success
 SuccessExitStatus=42
 
-User=MoaT-KV
+RuntimeDirectory=moat/link
+
+User=MoaT-Link
 Group=MoaT
 
 EnvironmentFile=/usr/lib/moat/link/env

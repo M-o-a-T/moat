@@ -25,6 +25,8 @@ async def cli(ctx, path,meta):
     """
     obj = ctx.obj
     cfg = obj.cfg["link"]
+    if obj.port is not None:
+        cfg.client.port = obj.port
     obj.conn = await ctx.with_async_resource(Link(cfg))
     obj.meta=meta
     if ctx.invoked_subcommand is None:

@@ -1,0 +1,26 @@
+
+. /usr/lib/moat/link/env
+
+mkdir -p /etc/moat
+test -f /etc/moat/link.env || touch /etc/moat/link.env
+grep -qs '^MODE=' /etc/moat/link.env || echo MODE=hybrid >>/etc/moat/link.env
+grep -qs '^NAME=' /etc/moat/link.env || echo NAME=$(hostname) >>/etc/moat/link.env
+grep -qs '^LOCAL=' /etc/moat/link.env || echo LOCAL=no >>/etc/moat/link.env
+
+. /etc/moat/link.env
+
+if test "$MODE" != "slave" ; then
+    mkdir -p "$DEST"
+    cd "$DEST"
+    d="$(find . -name \*.moat -size +50c | sort | head -1)"
+    if test -z "$d" ; then
+        d="$(date -d 2025-01-01 +"$DATE")"
+        mkdir -p "$d"
+        moat link raw init "$d/0.moat"
+        chown -R MoaT-Link:MoaT "$DEST"
+    fi
+fi
+
+systemctl enable moat-link-server.service
+systemctl enable moat-link-server-rotate.timer || true  # may be masked
+systemctl restart moat-link-server.service &

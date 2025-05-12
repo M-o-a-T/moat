@@ -21,9 +21,9 @@ dependencies = [
 	"simpleeval",
 	"moat-util ~= 0.56.4",
 	"moat-lib-cmd ~= 0.3.4",
-	"mqttproto ~= 0.7.2.13",
+	"mqttproto ~= 0.7.2.17",
 	]
-version = "0.1.4"
+version = "0.2.2"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-link"
@@ -39,7 +39,8 @@ homepage = "https://m-o-a-t.org"
 repository = "https://github.com/M-o-a-T/moat"
 
 [tool.setuptools]
-[tool.setuptools.packages]
-find = {}
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]

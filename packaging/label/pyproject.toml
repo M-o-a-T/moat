@@ -45,8 +45,9 @@ time = [ "calendar",]
 dev = [ "flake8", "isort",]
 
 [tool.setuptools]
-[tool.setuptools.packages]
-find = {}
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 

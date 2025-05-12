@@ -1,12 +1,21 @@
-<<<<<<< HEAD
-moat-kv-gpio (0.12.2-1) unstable; urgency=medium
+moat-kv-gpio (0.12.2-6) unstable; urgency=medium
 
-  * New release for 25.2.0
+  * New release for 25.1.24
 
- -- Matthias Urlichs <matthias@urlichs.de>  Sun, 04 May 2025 09:56:56 +0200
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 06 May 2025 11:32:29 +0200
 
-||||||| 19d615b4
-=======
+moat-kv-gpio (0.12.2-5) unstable; urgency=medium
+
+  * New release for 25.1.13
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 06 May 2025 02:05:26 +0200
+
+moat-kv-gpio (0.12.2-4) unstable; urgency=medium
+
+  * New release for 25.1.10
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 05 May 2025 06:33:53 +0200
+
 moat-kv-gpio (0.12.2-2) unstable; urgency=medium
 
   * New release for 25.1.8
@@ -19,7 +28,6 @@ moat-kv-gpio (0.12.2-1) unstable; urgency=medium
 
  -- Matthias Urlichs <matthias@urlichs.de>  Sun, 04 May 2025 16:21:49 +0200
 
->>>>>>> intern/main
 moat-kv-gpio (0.12.1-1) unstable; urgency=medium
 
   * New release for 25.0.2

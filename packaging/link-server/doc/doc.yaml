@@ -79,27 +79,83 @@ items:
   title: Undocumented link
 ---
 path: !P run
-title: Runtime data and related
+title: Runtime data and related structures
+doc: |2
+  Runtime data is by 
 ---
 _path: !P run.service
 title: Hierarchy for service addresses
 ---
-_path: !P run.service.ping.*
-title: AsyncActor channel for service [-1]
----
-_path: !P run.service.conn.main
-title: Main server announcement
+_path: !P run.service.*.server.*
+title: Service [-3] is provided by [-1]
 doc: |2
-  This entry points to the main MoaT-Link server. It contains an auth
-  token; if a client is allowed to subscribe to this topic, it should be
-  allowed to talk to the server.
+  Service activity: this message indicates that a server is operational.
+  Other servers will connect to it, for exchanging state and forwarding clients.
+  .
+  The data contains information how to connect to this server/service.
+  .
+  This is a retained topic. A WILL message auto-deletes the message
+  when the server dies.
+  .
+  Clients should not subscribe to this topic.
 ---
-_path: !P run.service.down.*
-title: Death notice for the main service
+_path: !P run.service.*.client.*
+title: Client [-1] using service [-3] connects to server [meta.origin]
+retain: true
 doc: |2
-  The server [-1] posts a Will message to this topic, a string containing
-  its name. Backup servers listen to it and publish their own record to
-  `run.service.conn.main` in order to take over.
+  Announcements which server a named client has connected to.
+  .
+  Servers listen to this topic and add forwarding records.
+  .
+  Other clients which need to talk to the named client can
+  do so via any server, which will transparently forward the message.
+  .
+  Clients should not subscribe to this topic.
+---
+_path: !P run.service.*.down
+title: Shutdown alert for service [-2]
+doc: |2
+  A message on this topic indicates that the server [meta.origin]
+  intends to no longer provides service [-2]. Clients should subscribe
+  to this topic and switch to another server transparently.
+  .
+  Servers subscribe to this topic and coordinate publishing a new record on
+  `run.service.[-2].conn` if the currently-active server shuts down.
+---
+_path: !P run.service.*.stamp.*
+title: Timestamp/sync for server [-1] on service [-3]
+doc: |2
+  This topic is used for syncing, to ensure (for the most part) that a
+  server has read all previous messages.
+  .
+  A client sends an ``i.stamp`` command to its server to request a sync token,
+  sends that token to the topic, then sends an ``i.sync`` command to the
+  server. This command waits until the token has arrived on MQTT.
+  .
+  This scheme is not fool-proof, given multi-threaded servers, but it removes
+  enough timing insecurity to be generally useful.
+  .
+  Typically stamp messages are increasing (counter or timestamp) so the server
+  doesn't need to keep a list.
+---
+_path: !P run.service.*.conn
+title: Server announcement for service [-2]
+retain: true
+doc: |2
+  This is the retained topic for a service's current "leading" server.
+  It may contain an access token for delegating permission checks to the MQTT
+  server (which needs them anyway).
+  .
+  Inter-server negotiation is performed on the `run.service.[-2].ping` topic.
+---
+_path: !P run.service.*.ping
+title: Server negotiation for service [-2]
+doc: |2
+  This channel is used for servers to negotiate which is the current leader,
+  i.e. the one to be contacted by new clients (and servers, for data recovery).
+  .
+  The leader elected here is responsible for updating the `run.service.[-2].conn`
+  topic.
 ---
 path: !P doc
 title: Documentation

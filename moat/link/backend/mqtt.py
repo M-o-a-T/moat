@@ -67,8 +67,8 @@ class Backend(_Backend):
         self.logger = logging.getLogger(__name__ + "." + (self.name or "‹…›"))
 
         kw = cfg.copy()
-        sname = kw.pop("driver", None)
-        self.trace = kw.pop("trace", True)
+        sname = kw.pop("driver", "mqtt")
+        self.trace = kw.pop("trace", False)
         try:
             codec = kw.pop("codec")  # intentionally no default
         except KeyError:

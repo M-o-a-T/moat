@@ -217,7 +217,6 @@ class _HostCommon:
                     res = await request._response_value.get()
 
                 if res.isError():
-                    breakpoint()
                     raise ModbusError(res)
 
                 if hasattr(res, "registers"):

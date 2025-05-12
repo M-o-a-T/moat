@@ -493,14 +493,14 @@ class MsgHandler(BaseMsgHandler):
 
         # Process requests for documentation.
         if len(rcmd) <= 2 and rcmd[0] == "doc_":
-            if msg.a or msg.kw:
-                raise TypeError("doc")
+            if msg.args or msg.kw:
+                raise TypeError("doc",msg.args,msg.kw)
             if (
                 doc := getattr(
                     self, f"doc{pref}_{rcmd[1]}" if len(rcmd) > 1 else f"doc{pref}", None
                 )
             ) is not None:
-                return await msg.result(self.doc)
+                return await msg.result(doc)
 
         # Process command handlers of this class.
         if len(rcmd) == 1:

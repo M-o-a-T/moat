@@ -1,0 +1,29 @@
+#!/bin/bash
+set -ex
+
+# This script starts up MoaT-KV.
+
+# Normally, starting MoaT-KV on a host where clients don't connect locally is
+# a bad idea. However, on a system that has more than one network namespace
+# you need to use a specific address. So set LOCAL=yes to force starting
+# anyway.
+
+if test "$LOCAL" != "yes" && test "$(moat util cfg kv.conn.host)" != "127.0.0.1"; then
+    echo "Server is not localhost: not starting."
+    exit 42  # mark as succeeded
+fi
+
+if test "$MODE" = "master" ; then
+    /usr/lib/moat/kv/current "$TEMP"
+fi
+
+if test ! -v NAME ; then
+    echo "NAME is not set. Exiting." >&2
+    exit 1
+fi
+
+if test -v TEMP && test -s "$TEMP" ; then
+    exec moat -c /etc/moat/moat.cfg kv server -a -l "$TEMP" "$NAME"
+else
+    exec moat -c /etc/moat/moat.cfg kv server "$NAME"
+fi

@@ -12,10 +12,5 @@ debian/moat-kv-gpio.service: moat-kv-gpio.service
 override_dh_auto_install: debian/moat-kv-gpio.service
 	dh_auto_install
 
-override_dh_python3:
-	dh_python3
-	rm -f debian/moat-kv/usr/lib/python3/dist-packages/test.log
-	rm -rf debian/moat-kv/usr/lib/python3/dist-packages/debian
-
 override_dh_auto_test:
 	: skip

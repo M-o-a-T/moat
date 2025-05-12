@@ -23,7 +23,7 @@ dependencies = [
 	"moat-link ~= 0.1.1",
 	"mqttproto ~= 0.7.2.13",
 	]
-version = "0.1.1"
+version = "0.2.1"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-link-server"
@@ -39,7 +39,8 @@ homepage = "https://m-o-a-t.org"
 repository = "https://github.com/M-o-a-T/moat"
 
 [tool.setuptools]
-[tool.setuptools.packages]
-find = {}
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]

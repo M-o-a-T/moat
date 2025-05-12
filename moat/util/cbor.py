@@ -67,14 +67,7 @@ def _enc_datetime_ts(codec, value):
     if not value.tzinfo:
         raise ValueError(f"naive datetime {value!r}")
 
-    from calendar import timegm
-
-    if value.microsecond:
-        timestamp = timegm(value.utctimetuple()) + value.microsecond / 1000000
-    else:
-        timestamp: float = timegm(value.utctimetuple())
-
-    return timestamp
+    return value.timestamp()
 
 
 # @std_ext.encoder(0, dt.datetime)
@@ -137,7 +130,7 @@ def _dec_datetime_string(codec, value) -> dt.datetime:
 @std_ext.decoder(1)
 def _dec_ts(codec, val):
     codec  # noqa:B018
-    return dt.fromtimestamp(val, dt.UTC)
+    return dt.datetime.fromtimestamp(val, dt.UTC)
 
 
 @std_ext.decoder(2)

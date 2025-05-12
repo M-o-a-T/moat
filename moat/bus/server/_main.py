@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import asyncclick as click
 from anyio_serial import Serial
-from distmqtt.client import open_mqttclient
-from distmqtt.codecs import MsgPackCodec
+from moat.link.backend.mqtt import Backend
+from moat.util.msgpack import StdMsgpack
 
 from .server import Server
 from moat.bus.backend.stream import Anyio2TrioStream, StreamBusHandler
@@ -43,20 +43,17 @@ class MqttServer(Server):
 
 
 async def run(
-    uri="mqtt://localhost/",
     topic_in="test/moat/in",
     topic_out="test/moat/out",
     server_id=1,
     port="/dev/ttyUSB0",
     baud=57600,
 ):
-    async with open_mqttclient() as C:
-        await C.connect(uri=uri)
+    async with open_mqttclient(dict(host="localhost", codec=StdMsgpack())) as C:
         async with Serial(port=port, baudrate=baud) as S:
-            S = Anyio2TrioStream(S)
-            async with C.subscription(topic_in, codec=MsgPackCodec()) as CH:
+            async with C.monitor(topic_in, codec=StdMsgpack()) as CH:
                 async with MqttServer(S, CH, topic_out) as CM:
-                    async with trio.open_nursery() as n:
+                    async with anyio.create_task_group() as n:
                         n.start_soon(CM.reader)
                         async for msg in CH:
                             logger.debug("OUT: %r", msg.data)

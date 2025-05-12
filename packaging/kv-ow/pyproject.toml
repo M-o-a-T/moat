@@ -13,7 +13,7 @@ classifiers = [
 dependencies = [
 	"moat-kv ~= 0.70.24",
 ]
-version = "0.9.6"
+version = "0.9.7"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-kv-ow"
@@ -29,8 +29,9 @@ homepage = "https://m-o-a-t.org"
 repository = "https://github.com/M-o-a-T/moat"
 
 [tool.setuptools]
-[tool.setuptools.packages]
-find = {}
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
 

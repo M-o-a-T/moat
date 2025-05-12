@@ -1,0 +1,36 @@
+Source: moat-link-server
+Maintainer: Matthias Urlichs <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-all, debhelper (>= 13), debhelper-compat (= 13),
+  python3-setuptools,
+  python3-wheel,
+Standards-Version: 3.9.6
+Homepage: https://github.com/smurfix/moat
+
+Package: moat-link-server
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  moat-mqtt (>= 0.38),
+  moat-util,
+  moat-link,
+  moat-main,
+  python3-moat-lib-codec,
+  python3-moat-lib-cmd,
+  python3-mqttproto,
+  systemd (>= 241),
+Recommends:
+  python3-trio (>= 0.22),
+Replaces: python3-distkv
+Conflicts: python3-distkv
+Description: A distributed no-master key-value store
+ MoaT-KV is a master-less distributed key-value storage system. It
+ circumvents the CAP theorem by assuming that keys are usually only changed
+ by one node. It is resistant to partitioning and intended to be always-on;
+ while it might delay – but will not lose – any updates.
+ .
+ MoaT-KV does not support data partitioning. Every node stores the whole
+ data set and can instantly deliver mostly-uptodate data.
+ .
+ MoaT-KV does not have a disk-based storage backend; periodic snapshots and/or
+ its event log are used to restore a system, if necessary.

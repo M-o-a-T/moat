@@ -1082,7 +1082,9 @@ async def build(
                     print("*** Failure packaging", r.name, file=sys.stderr)
                 else:
                     print("Failure packaging", r.name, file=sys.stderr)
-                    return
+                    no_commit=True
+                    no_deb=True
+                    no_pypi=True
 
     # Step 5: build PyPI package
     if not no_pypi:
@@ -1121,10 +1123,11 @@ async def build(
                 print("Build errors:", file=sys.stderr)
                 print(*err, file=sys.stderr)
                 print("Please fix and try again.", file=sys.stderr)
-                return
+                no_commit=True
+                no_deb=True
 
         # Step 6: upload PyPI package
-        if run:
+        elif run:
             err = set()
             for r in up:
                 rd = PACK / r.dash
@@ -1154,7 +1157,8 @@ async def build(
                 print("Upload errors:", file=sys.stderr)
                 print(*err, file=sys.stderr)
                 print("Please fix(?) and try again.", file=sys.stderr)
-                return
+                no_commit=True
+                no_deb=True
 
     # Step 7: upload Debian package
     if run and not no_deb:
@@ -1183,7 +1187,7 @@ async def build(
             print("Upload errors:", file=sys.stderr)
             print(*err, file=sys.stderr)
             print("Please fix(?) and try again.", file=sys.stderr)
-            return
+            no_commit=True
 
     # Step 8: commit the result
     if run:

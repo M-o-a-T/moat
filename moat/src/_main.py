@@ -27,32 +27,18 @@ ARCH = subprocess.check_output(["dpkg", "--print-architecture"]).decode("utf-8")
 
 def dash(n: str) -> str:
     """
-    moat.foo.bar > foo-bar
-    foo.bar > ext-foo-bar
+    moat.foo.bar > moat-foo-bar
+    foo.bar > foo-bar
     """
-    if n in ("main", "moat"):
-        return "main"
-    if "." not in n:  # also applies to single-name packages
-        return n
-
-    if not n.startswith("moat."):
-        return "ext-" + n.replace("-", ".")
     return n.replace(".", "-")[5:]
 
 
 def undash(n: str) -> str:
     """
-    foo-bar > moat.foo.bar
-    ext-foo-bar > foo.bar
+    moat-foo-bar > moat.foo.bar
+    foo-bar > foo.bar
     """
-    if "." in n:
-        return n
-
-    if n in ("main", "moat"):
-        return "moat"
-    if n.startswith("ext-"):
-        return n.replace("-", ".")[4:]
-    return "moat." + n.replace("-", ".")
+    return n.replace("-", ".")
 
 
 class ChangedError(RuntimeError):
@@ -153,11 +139,7 @@ class Package(_Common):
 
     @property
     def mdash(self):
-        d = dash(self.name)
-        if d.startswith("ext-"):
-            return d[4:]
-        else:
-            return "moat-" + d
+        return dash(self.name)
 
     def populate(self, path: Path, real=None):
         """
@@ -180,7 +162,7 @@ class Package(_Common):
             raise ValueError(f"No files in {self.name}?")
         p = Path("packaging") / self.dash / "src"
         with suppress(FileNotFoundError):
-            rmtree(p / "moat")
+            rmtree(p)
         dest = p / self.path
         dest.mkdir(parents=True)
         for f in self.files:
@@ -314,21 +296,20 @@ class Repo(git.Repo, _Common):
         sc = self._repos["main"]
         path = Path(path)
 
-        if main is not False and path.parts[0] == "moat":
-            name = "moat"
-            for p in path.parts[1:]:
-                if p in sc.subs:
-                    name += "." + p
-                    sc = sc.subs[p]
-                else:
-                    break
-            return name
-
         if main is not True and path.parts[0] == "packaging":
             try:
                 return undash(path.parts[1])
             except IndexError:
                 return None
+
+        if main is not False:
+            name = path.paths[0]
+            for p in path.parts[1:]:
+                if p not in sc.subs:
+                    break
+                name += "." + p
+                sc = sc.subs[p]
+            return name
 
         return None
 
@@ -915,10 +896,6 @@ async def build(
             continue
         name = name.stem
         name, vers, _ = name.split("_")
-        if name.startswith("moat-"):
-            name = name[5:]
-        else:
-            name = "ext-" + name
         debversion[name] = vers.rsplit("-", 1)[0]
 
     # Step 0: basic check
@@ -1097,10 +1074,6 @@ async def build(
                 continue
             tag = r.last_tag
             name = r.dash
-            if name.startswith("ext-"):
-                name = name[4:]
-            else:
-                name = "moat-" + r.dash
 
             targz = rd / "dist" / f"{r.under}-{tag}.tar.gz"
             done = rd / "dist" / f"{r.under}-{tag}.done"
@@ -1136,10 +1109,6 @@ async def build(
                     continue
                 tag = r.last_tag
                 name = r.dash
-                if name.startswith("ext-"):
-                    name = name[4:]
-                else:
-                    name = "moat-" + r.dash
                 targz = Path("dist") / f"{r.under}-{tag}.tar.gz"
                 whl = Path("dist") / f"{r.under}-{tag}-py3-none-any.whl"
                 try:

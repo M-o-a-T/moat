@@ -152,6 +152,8 @@ def _bin_to_ascii(dumper, data):
 
 
 SafeRepresenter.add_representer(bytes, _bin_to_ascii)
+SafeRepresenter.add_representer(bytearray, _bin_to_ascii)
+SafeRepresenter.add_representer(memoryview, _bin_to_ascii)
 
 SafeConstructor.add_constructor("!bin", _bin_from_ascii)
 SafeConstructor.add_constructor("!hex", _bin_from_hex)

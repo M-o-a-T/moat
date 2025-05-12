@@ -30,7 +30,7 @@ def dash(n: str) -> str:
     moat.foo.bar > moat-foo-bar
     foo.bar > foo-bar
     """
-    return n.replace(".", "-")[5:]
+    return n.replace(".", "-")
 
 
 def undash(n: str) -> str:

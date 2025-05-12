@@ -1,144 +1,144 @@
 moat:
   pkg: 1
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.11.0
 moat-battery:
 - 0.2.5
 - b442c09472a50fb7faec795348b78dd70675b356
 moat-box:
   pkg: 3
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.2.1
 moat-bus:
   pkg: 1
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.7.4
 moat-cad:
   pkg: 3
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.3.3
 moat-db:
   pkg: 3
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.2.2
 moat-dev:
   pkg: 4
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.1.0
 moat-dev-heat:
   pkg: 3
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.1.1
 moat-dev-sew:
   pkg: 3
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.1.1
 moat-ems:
   pkg: 4
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.2.10
 moat-ems-battery:
   pkg: 3
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.2.14
 moat-ems-inv:
   pkg: 3
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.2.11
 moat-ems-sched:
   pkg: 3
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.2.12
 moat-gpio:
   pkg: 5
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.6.7
 moat-kv:
   pkg: 2
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.71.6
 moat-kv-akumuli:
   pkg: 6
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.8.6
 moat-kv-cal:
   pkg: 3
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.1.3
 moat-kv-gpio:
   pkg: 6
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.12.2
 moat-kv-ha:
   pkg: 6
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.5.6
 moat-kv-inv:
   pkg: 3
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.22.6
 moat-kv-knx:
   pkg: 4
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.12.1
 moat-kv-ow:
   pkg: 1
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.9.7
 moat-kv-wago:
   pkg: 8
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.8.4
 moat-label:
   pkg: 3
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.2.1
 moat-lib-cmd:
   pkg: 5
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.3.6
 moat-lib-codec:
   pkg: 2
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.4.3
 moat-lib-diffiehellman:
   pkg: 8
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.13.4
 moat-lib-gpio:
 - 0.6.7
 - b442c09472a50fb7faec795348b78dd70675b356
 moat-lib-pid:
   pkg: 6
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.6.2
 moat-lib-victron:
   pkg: 3
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.1.3
 moat-link:
   pkg: 2
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.2.3
 moat-link-server:
   pkg: 2
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.2.2
 moat-micro:
   pkg: 1
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.16.3
 moat-modbus:
   pkg: 2
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.8.5
 moat-modbus-dev-_data:
   pkg: 1
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.8.0
 moat-mqtt:
   pkg: 5
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.42.7
 moat-sched:
 - 0.1.4
@@ -148,13 +148,13 @@ moat-signal:
 - b442c09472a50fb7faec795348b78dd70675b356
 moat-src:
   pkg: 1
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.9.0
 moat-thing:
   pkg: 3
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.2.1
 moat-util:
   pkg: 1
-  rev: b00c125e9f18216178388d7a73f690e17e684823
+  rev: 723c14c1350f78e404ab8860fe2ea6288ec05eb7
   tag: 0.57.7

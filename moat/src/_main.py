@@ -189,7 +189,7 @@ class Package(_Common):
             lc = self.last_commit
         except AttributeError:
             return True
-        for d in head.diff(self.last_commit, paths=Path("packaging")/self.dash if main else self.path):
+        for d in head.diff(self.last_commit, paths=self.path if main else Path("packaging")/self.dash):
             if (
                 self._repo.repo_for(d.a_path, main) != self.name
                 and self._repo.repo_for(d.b_path, main) != self.name

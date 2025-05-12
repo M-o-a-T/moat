@@ -11,16 +11,23 @@ from moat.util import Path, NotGiven, P, t_iter
 UPDATE_TIMEOUT=15
 
 @define
-class GateNode(Node):
-    path:Path=field(init=False,default=Path())
-    node_updated:anyio.Event=field(factory=anyio.Event,init=False)
-    data_updated:anyio.Event=field(factory=anyio.Event,init=False)
+class BaseGateway:
+    src:Node
+    dst:Node
 
-    backoff:float=field(init=False,default=0)
-    tg:anyio.abc.TaskGroup=field=init=False,default=None)
-    _now:bool=field(init=False,default=False)
 
-    def _add(self, k):
+
+    async def update(src:Path, data:Any):
+
+
+
+
+    def updated(self):
+        try:
+            self.dest = Path.build(self.data.dest)
+
+    
+    def send(self, k):
         s=super()._add(k)
         s.path=self.path/k
         s.gate=self.gate

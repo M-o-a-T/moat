@@ -277,18 +277,16 @@ class CodecEntry(Entry):
         if self._enc is not None:
             try:
                 value = self._enc(value, entry=entry, data=self._data, **kv)
-            except TypeError:
-                if value is not None:
-                    raise
+            except (TypeError,ValueError):
+                pass
         return value
 
     def dec_value(self, value, entry=None, **kv):
         if self._dec is not None:
             try:
                 value = self._dec(value, entry=entry, data=self._data, **kv)
-            except TypeError:
-                if value is not None:
-                    raise
+            except (TypeError,ValueError):
+                pass
         return value
 
     async def set(self, value):
@@ -323,8 +321,6 @@ class CodecEntry(Entry):
                     ) from exc
                 else:
                     pass  # float, list/tuple, and similar nonsense
-#                   if r != w:
-#                       raise ValueError(f"Encoding at {self.path}: {v!r} got {r!r}, not {w!r}")
 
         await super().set(value)
         self._enc = enc

@@ -290,3 +290,48 @@ class Node:
                     await _walk(v, p / k)
 
         await _walk(self, Path())
+
+
+    def search(self, path:Path) -> Node:
+        """
+        Find the destination node of a path, including wildcard elements.
+        """
+        nf = NodeFinder(self)
+        for elem in path:
+            nf.step(elem)
+        return nf.result
+
+
+class NodeFinder:
+    """A generic object that can walk down a possibly-wildcard-equipped path.
+
+    Example: given a path `one.two.three` and a root `bar` with subtree `bar.#.three`,
+    `NodeFinder(bar).step(one).step(two).step(three)` will return the node
+    at `bar.#.three` (assuming that nothing more specific hangs off `bar`).
+    """
+
+    def __init__(self, src):
+        self.steps = ((src, False),)
+
+    def step(self, name, new=False):
+        steps = []
+        for path, node, keep in self.steps:
+            if name in node:
+                steps.append((ode[name], False))
+            if "?" in node:
+                steps.append((ode["?"], False))
+            if "*" in node:
+                steps.append((node["*"], True))
+            if keep:
+                steps.append((node, True))
+            # Nodes found with '*' stay on the list
+            # so that they can match multiple entries.
+        if not steps:
+            raise KeyError(name)
+        self.steps = steps
+
+    @property
+    def result(self) -> tuple[Path,Node]:
+        s = self.steps[0]
+        return s[0]
+

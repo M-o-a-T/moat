@@ -252,7 +252,7 @@ class Path(collections.abc.Sequence):
             elif isinstance(x, (Path, tuple)):
                 if len(x):
                     x = ",".join(repr(y) for y in x)  # noqa: PLW2901
-                    res.append(":" + _escol(x))
+                    res.append(":" + _escol(x) + ("," if len(x)==1 else ""))
                 else:
                     x = "()"  # noqa: PLW2901
             else:
@@ -595,6 +595,35 @@ class Path(collections.abc.Sequence):
     def _make(cls, loader, node):
         value = loader.construct_scalar(node)
         return cls.from_str(value)
+
+    def apply(self, path:Path) -> Path:
+        """
+        Construct a new path that replaces pattern tuples in @self with
+        the equivalent entries in @path.
+
+        Thus
+        >>> p = Path(":1:2:3:4")
+        >>> p.apply(P("a:2,.b"))
+        P("a:3.b")
+        >>> p.apply(P("a:(1,2).b"))
+        P("a:2:3.b")
+
+        Use zero in a two-element tuple to designate the first/past
+        element. An empty tuple 
+        """
+        if not any(isinstance(x,tuple) for x in self._data):
+            return self
+
+        res = []
+        for p in self:
+            if not isinstance(p,tuple) or len(p) not in (1,2,3):
+                res.append(p)
+                continue
+            if len(p) == 1:
+                res.append(path[p[0]])
+            else:
+                res.extend(path[slice(*p)])
+        return Path.build(res)
 
 
 class P(Path):

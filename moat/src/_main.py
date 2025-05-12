@@ -9,6 +9,7 @@ import sys
 from collections import defaultdict, deque
 from configparser import RawConfigParser
 from pathlib import Path
+from copy import deepcopy
 
 import asyncclick as click
 import git
@@ -224,11 +225,16 @@ class Repo(git.Repo, _Common):
         self.moat_name = "-".join(p.parts[mi:])
         with open("versions.yaml") as f:
             self.versions = yload(f, attr=True)
+        self.orig_versions = deepcopy(self.versions)
+
 
     def write_tags(self):
+        if self.versions == self.orig_versions:
+            return False
         with open("versions.yaml", "w") as f:
             yprint(self.versions, f)
         self.index.add("versions.yaml")
+        return True
 
     @property
     def last_tag(self) -> Tag | None:
@@ -1154,11 +1160,7 @@ async def build(
 
     # Step 8: commit the result
     if run:
-        for r in repos:
-            r.vers.rev = repo.head.commit.hexsha
-        repo.write_tags()
-
-        if not no_commit:
+        if repo.write_tags() and not no_commit:
             repo.index.commit(f"Build version {forcetag}")
             git.TagReference.create(repo, forcetag)
 

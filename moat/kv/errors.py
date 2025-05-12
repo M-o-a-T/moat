@@ -149,6 +149,8 @@ class ErrorEntry(AttrClientEntry):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         self.node, self.tock = self.subpath[-2:]
+        if isinstance(self.path,list):
+            self.path=Path.build(self.path)
 
     def __repr__(self):
         return "<{}: {} {}: {}>".format(
@@ -508,6 +510,8 @@ class ErrorRoot(ClientRoot):
         if not force and hasattr(rec, "severity") and rec.severity < severity:
             return rec
 
+        if isinstance(path,list):
+            path=Path.build(path)
         rec.severity = severity
         rec.subsystem = subsystem
         rec.path = path

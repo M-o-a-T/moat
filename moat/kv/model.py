@@ -1026,7 +1026,7 @@ class Watcher:
 
     root: Entry = None
     q = None
-    q_len = 100
+    q_len = 10000
 
     def __init__(self, root: Entry, full: bool = False, q_len: int | None = None):
         self.root = root

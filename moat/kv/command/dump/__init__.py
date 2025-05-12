@@ -15,7 +15,6 @@ from moat.util import (
     yprint,
 )
 
-from moat.util.mqtt import unpacker
 from moat.util.msgpack import StdMsgpack
 
 
@@ -77,19 +76,21 @@ async def msg_(obj, path):
             self._part_cache = dict()
 
     import moat.kv.server
+    cfg = obj.cfg.kv
 
     _Unpack._unpack_multiple = moat.kv.server.Server._unpack_multiple
     _unpacker = _Unpack()._unpack_multiple
+    unpacker = StdMsgpack().decode
 
     path = P(path)
     if len(path) == 0:
-        path = P(obj.cfg.server["root"]) | "update"
+        path = P(cfg.server["root"]) | "update"
     elif len(path) == 1 and path[0].startswith("+"):  # pylint: disable=no-member  # owch
         p = path[0][1:]
-        path = P(obj.cfg.server["root"])
+        path = P(cfg.server["root"])
         path |= p or "#"
-    be = obj.cfg.server.backend
-    kw = obj.cfg.server[be]
+    be = cfg.server.backend
+    kw = cfg.server[be]
 
     async with (
         get_backend(be)(**kw) as conn,
@@ -99,6 +100,7 @@ async def msg_(obj, path):
             v = vars(msg)
             if isinstance(v.get("payload"), (bytearray, bytes)):
                 t = msg.topic
+                breakpoint()
                 v = unpacker(v["payload"])
                 v = _unpacker(v)
                 if v is None:

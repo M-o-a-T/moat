@@ -13,7 +13,7 @@ Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   python3-anyio (>= 2.0),
   moat-util,
-  moat-main,
+  moat,
 Recommends:
   moat-kv,
   python3-trio (>= 0.22),

@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 import anyio
 from moat.lib.cmd.errors import StreamError
-from tests.lib_cmd.scaffold import scaffold
+from tests.moat_lib_cmd.scaffold import scaffold
 from moat.lib.cmd.base import MsgHandler
 from moat.util import P
 

@@ -12,7 +12,7 @@ Package: moat-src
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   python3-anyio (>= 2.0),
-  moat-main,
+  moat,
 Recommends:
   moat-kv (>= 0.32),
   python3-trio (>= 0.17),

@@ -8,7 +8,7 @@ from moat.mqtt.adapters import BufferAdapter
 from moat.mqtt.errors import MQTTException
 from moat.mqtt.mqtt.packet import CONNECT, MQTTFixedHeader
 
-from tests.mqtt import anyio_run
+from tests.moat_mqtt import anyio_run
 import pytest
 
 

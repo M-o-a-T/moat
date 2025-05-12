@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 import anyio
-from tests.lib_cmd.scaffold import scaffold
+from tests.moat_lib_cmd.scaffold import scaffold
 from moat.util import ungroup, OptCtx, P
 from moat.lib.cmd.errors import NoStream
 from moat.lib.cmd.base import MsgHandler

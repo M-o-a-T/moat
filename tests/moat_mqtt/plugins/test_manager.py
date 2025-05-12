@@ -9,7 +9,7 @@ import pytest
 
 from moat.mqtt.plugins.manager import PluginManager
 
-from tests.mqtt import anyio_run
+from tests.moat_mqtt import anyio_run
 
 pytestmark = pytest.mark.skip
 

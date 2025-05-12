@@ -17,7 +17,7 @@ Depends: ${misc:Depends}, ${python3:Depends},
   python3-asyncactor,
   python3-asyncscope,
   python3-attr (>= 19),
-  moat-main,
+  moat,
   moat-util,
 Recommends:
   python3-trio (>= 0.22),

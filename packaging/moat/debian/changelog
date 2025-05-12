@@ -1,3 +1,9 @@
+moat (0.11.0-1) unstable; urgency=medium
+
+  * New release for 25.2.1
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 12 May 2025 12:22:41 +0200
+
 moat (0.10.1-5) unstable; urgency=medium
 
   * New release for 25.1.24

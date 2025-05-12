@@ -8,7 +8,7 @@ from moat.mqtt.adapters import BufferAdapter
 from moat.mqtt.mqtt.packet import PacketIdVariableHeader
 from moat.mqtt.mqtt.suback import SubackPacket, SubackPayload
 
-from tests.mqtt import anyio_run
+from tests.moat_mqtt import anyio_run
 
 
 class SubackPacketTest(unittest.TestCase):

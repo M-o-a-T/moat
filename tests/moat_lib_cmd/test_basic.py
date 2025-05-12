@@ -5,7 +5,7 @@ import anyio
 from moat.util import P
 from moat.util.compat import log
 from moat.lib.cmd.errors import StreamError
-from tests.lib_cmd.scaffold import scaffold
+from tests.moat_lib_cmd.scaffold import scaffold
 from moat.lib.cmd.base import MsgSender, MsgHandler
 from moat.lib.cmd.msg import Msg
 

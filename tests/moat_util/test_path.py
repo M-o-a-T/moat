@@ -251,3 +251,13 @@ def test_root():
     assert "fuddy" not in pp2
 
     assert pp2 == PS("yes/fuddy/d/::a/e")
+
+_apply = (
+        ("x:(2,).y","x.c.y"),
+)
+
+@pytest.mark.parametrize("a,b", _apply)  # noqa:PT006
+def test_apply(a,b):
+    p=P("a.b.c.d.e")
+    breakpoint()
+    assert P(a).apply(p) == P(b), (P(a),P(b),P(a).apply(p))

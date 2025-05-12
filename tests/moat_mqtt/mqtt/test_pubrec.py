@@ -7,7 +7,7 @@ import unittest
 from moat.mqtt.adapters import BufferAdapter
 from moat.mqtt.mqtt.pubrec import PacketIdVariableHeader, PubrecPacket
 
-from tests.mqtt import anyio_run
+from tests.moat_mqtt import anyio_run
 
 
 class PubrecPacketTest(unittest.TestCase):

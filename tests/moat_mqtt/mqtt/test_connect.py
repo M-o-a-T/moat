@@ -8,7 +8,7 @@ from moat.mqtt.adapters import BufferAdapter
 from moat.mqtt.mqtt.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
 from moat.mqtt.mqtt.packet import CONNECT, MQTTFixedHeader
 
-from tests.mqtt import anyio_run
+from tests.moat_mqtt import anyio_run
 
 
 class ConnectPacketTest(unittest.TestCase):

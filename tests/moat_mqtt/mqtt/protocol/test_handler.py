@@ -25,7 +25,7 @@ from moat.mqtt.session import (
     Session,
 )
 
-from tests.mqtt import anyio_run
+from tests.moat_mqtt import anyio_run
 
 log = logging.getLogger(__name__)
 

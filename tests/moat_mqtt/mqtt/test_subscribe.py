@@ -9,7 +9,7 @@ from moat.mqtt.mqtt.constants import QOS_1, QOS_2
 from moat.mqtt.mqtt.packet import PacketIdVariableHeader
 from moat.mqtt.mqtt.subscribe import SubscribePacket, SubscribePayload
 
-from tests.mqtt import anyio_run
+from tests.moat_mqtt import anyio_run
 
 
 class SubscribePacketTest(unittest.TestCase):

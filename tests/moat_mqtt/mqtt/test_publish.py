@@ -8,7 +8,7 @@ from moat.mqtt.adapters import BufferAdapter
 from moat.mqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from moat.mqtt.mqtt.publish import PublishPacket, PublishPayload, PublishVariableHeader
 
-from tests.mqtt import anyio_run
+from tests.moat_mqtt import anyio_run
 
 
 class PublishPacketTest(unittest.TestCase):

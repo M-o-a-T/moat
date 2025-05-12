@@ -1,3 +1,9 @@
+moat-kv-akumuli (0.8.6-7) unstable; urgency=medium
+
+  * New release for 25.1.14
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Mon, 12 May 2025 17:39:18 +0200
+
 moat-kv-akumuli (0.8.6-6) unstable; urgency=medium
 
   * New release for 25.1.24

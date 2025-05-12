@@ -589,7 +589,7 @@ class ClientStub:
     async def handle(self, msg: Msg, rcmd: list, *prefix: list[str]):
         "Handler that forwards to the remote server"
         await anyio.sleep(1)
-        srv = self.server.server_link(self.name)
+        srv = self.server.server_link(self.name)[1]
         if isinstance(srv, ClientStub):
             raise RuntimeError("Client dropped, try later")
         rcmd.extend((self.client,"cl"))
@@ -649,7 +649,7 @@ class Server(MsgHandler):
 
     _ping_history:Sequence[str] = ()
 
-    _server_link:dict[str,BasicLink]
+    _server_link:dict[str,tuple[anyio.CancelScope,BasicLink]]
     _server_link_add:anyio.Event
 
     _f_load:anyio.Path|None=None
@@ -1548,42 +1548,59 @@ class Server(MsgHandler):
             await anyio.sleep(30)
             self.last_auth = None
 
-    async def _run_server_link(self,name,data, *, task_status):
+    async def _run_server_link(self,name,data, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
         Run a single client link to another server.
         """
         # TODO: There should be only one TCP link between server A and B, not two
         # (plus another for syncing).
 
-        conn = NotGiven
-        try:
-            async with BasicLink(self.cfg, self.name, data, is_server=True) as conn:
-                conn.add_sub("cl")
-                task_status.started()
-                task_status = anyio.TASK_STATUS_IGNORED
-                self._server_link[name] = conn
-                self._server_link_add.set()
-                self._server_link_add = anyio.Event()
+        backoff=0
 
-                async with anyio.create_task_group() as tg:
-                    # ask it about its existing clients
-                    async with conn.cl().stream_in() as cld:
-                        async for cl in cld:
-                            cl = cl[0]
-                            if cl == name or cl == self.name:
-                                continue
-                            if not isinstance(self.clients.get(cl,None), ServerClient):
-                                self._clients[cl] = ClientStub(self,name,cl)
-
-                    await anyio.sleep_forever()
-
-        except (EOFError,anyio.ClosedResourceError,anyio.EndOfStream):
+        with anyio.CancelScope() as sc:
+            self._server_link[name] = (sc,None)
             task_status.started()
-            self.logger.warning("Link to %s closed", name)
 
-        finally:
-            if self._server_link.get(name,None) is conn:
-                del self._server_link[name]
+            while True:
+                try:
+                    async with BasicLink(self.cfg, self.name, data, is_server=True) as conn:
+                        conn.add_sub("cl")
+                        if self._server_link[name][0] is not sc:
+                            return
+                        self._server_link[name] = (sc,conn)
+                        self._server_link_add.set()
+                        self._server_link_add = anyio.Event()
+
+                        async with anyio.create_task_group() as tg:
+                            # ask it about its existing clients
+                            async with conn.cl().stream_in() as cld:
+                                async for cl in cld:
+                                    cl = cl[0]
+                                    if cl == name or cl == self.name:
+                                        continue
+                                    if not isinstance(self.clients.get(cl,None), ServerClient):
+                                        self._clients[cl] = ClientStub(self,name,cl)
+
+                            await anyio.sleep(30)
+                            backoff=0
+                            await anyio.sleep_forever()
+
+                except* (EOFError,anyio.ClosedResourceError,anyio.EndOfStream):
+                    self.logger.warning("Link to %s closed", name)
+
+                except* Exception as exc:
+                    self.logger.warning("Link to %s died", name, exc_info=exc)
+
+                finally:
+                    if name in self._server_link and self._server_link[name][0] is sc:
+                        self._server_link[name] = (sc,None)
+                    else:
+                        return
+
+                backoff = min(backoff*1.2+.1,30)
+                await anyio.sleep(backoff)
+
+
 
     async def _watch_client(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         # fixed-name client announcements
@@ -1627,6 +1644,10 @@ class Server(MsgHandler):
             task_status.started()
             async for msg in mon:
                 name = msg.topic[-1]
+
+                sl = self._server_link.pop(name,None)
+                if sl is not None:
+                    sl[0].cancel()
 
                 if msg.data is NotGiven:
                     await tg.start(self._down_one,name)
@@ -1725,11 +1746,11 @@ class Server(MsgHandler):
             self._syncing[name] = scope
 
             with anyio.fail_after(5):
-                while name not in self._server_link:
+                while name not in self._server_link or (conn := self._server_link[name][1]) is None:
                     await self._server_link_add.wait()
 
             try:
-                await self._sync_one(self._server_link[name])
+                await self._sync_one(conn)
             except OSError as exc:
                 self.logger.warning(
                     "No sync %r: %r",

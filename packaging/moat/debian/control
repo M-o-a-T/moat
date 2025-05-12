@@ -1,4 +1,4 @@
-Source: moat-main
+Source: moat
 Maintainer: "Matthias Urlichs" <matthias@urlichs.de>
 Section: python
 Priority: optional
@@ -8,12 +8,13 @@ Build-Depends: dh-python, python3-all, debhelper (>= 13), debhelper-compat (= 13
 Standards-Version: 3.9.6
 Homepage: https://m-o-a-t.org
 
-Package: moat-main
+Package: moat
 Architecture: all
-Conflicts: python3-moat-main
 Depends: ${misc:Depends}, ${python3:Depends},
   python3-anyio (>= 3.0),
   moat-util,
+Conflicts: python3-moat-main, moat-main
+Replaces: moat-main
 Description: The command line for MoaT
   # MoaT main
   .

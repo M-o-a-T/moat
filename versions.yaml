@@ -1,3 +1,7 @@
+moat:
+  pkg: 1
+  rev: 9cd1548672f633b39a85b6af0fb5e03c94214e10
+  tag: 0.11.0
 moat-battery:
 - 0.2.5
 - b442c09472a50fb7faec795348b78dd70675b356
@@ -120,10 +124,6 @@ moat-link-server:
   pkg: 2
   rev: 9d4cdb1ca7a1826a0322d3528469ed33072cef1b
   tag: 0.2.2
-moat-main:
-  pkg: 5
-  rev: 9d4cdb1ca7a1826a0322d3528469ed33072cef1b
-  tag: 0.10.1
 moat-micro:
   pkg: 1
   rev: 9d4cdb1ca7a1826a0322d3528469ed33072cef1b
@@ -147,9 +147,9 @@ moat-signal:
 - 0.0.1
 - b442c09472a50fb7faec795348b78dd70675b356
 moat-src:
-  pkg: 2
-  rev: 9d4cdb1ca7a1826a0322d3528469ed33072cef1b
-  tag: 0.8.11
+  pkg: 1
+  rev: 9cd1548672f633b39a85b6af0fb5e03c94214e10
+  tag: 0.9.0
 moat-thing:
   pkg: 3
   rev: 9d4cdb1ca7a1826a0322d3528469ed33072cef1b

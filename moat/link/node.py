@@ -317,9 +317,9 @@ class NodeFinder:
         steps = []
         for path, node, keep in self.steps:
             if name in node:
-                steps.append((ode[name], False))
+                steps.append((node[name], False))
             if "?" in node:
-                steps.append((ode["?"], False))
+                steps.append((node["?"], False))
             if "*" in node:
                 steps.append((node["*"], True))
             if keep:

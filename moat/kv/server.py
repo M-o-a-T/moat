@@ -2136,7 +2136,7 @@ class Server:
                         nodes=True,
                         from_server=self.node.name,
                         known=True,
-                        deleted=True,
+                        deleted=False,
                         iter=False,
                     )
                     await self._process_info(res)
@@ -2450,7 +2450,7 @@ class Server:
             shorter(res)
             await writer(res)
 
-        msg = await self.get_state(nodes=True, known=True, deleted=True)
+        msg = await self.get_state(nodes=True, known=True, deleted=False)
         # await writer({"info": msg})
         await writer(msg)  # XXX legacy
         await self.root.walk(saver, full=full)
@@ -2488,7 +2488,7 @@ class Server:
         shorter = PathShortener([])
 
         async with MsgWriter(path=path, stream=stream, codec="std-msgpack") as mw:
-            msg = await self.get_state(nodes=True, known=True, deleted=True)
+            msg = await self.get_state(nodes=True, known=True, deleted=False)
             # await mw({"info": msg})
             await mw(msg)  # XXX legacy
             last_saved = time.monotonic()
@@ -2512,7 +2512,7 @@ class Server:
                     t = time.monotonic()
                     td = t - last_saved
                     if td >= 60 or last_saved_count > 1000:
-                        msg = await self.get_state(nodes=True, known=True, deleted=True)
+                        msg = await self.get_state(nodes=True, known=True, deleted=False)
                         # await mw({"info": msg})
                         await mw(msg)  # XXX legacy
                         await mw.flush()

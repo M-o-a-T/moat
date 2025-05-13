@@ -225,11 +225,16 @@ class StreamCommand:
             except Exception as exc:
                 if not isinstance(exc, CancelledError):
                     self.client.logger.exception("ERS%d %r", self.client._client_nr, self.msg)
-                await self.send(error=repr(exc))
+                try:
+                    await self.send(error=repr(exc))
+                except Exception:
+                    pass
             finally:
                 with anyio.move_on_after(2, shield=True):
-                    with contextlib.suppress(anyio.BrokenResourceError):
+                    try:
                         await self.send(state="end")
+                    except Exception:
+                        pass
 
         else:
             res = await self.run(**kw)

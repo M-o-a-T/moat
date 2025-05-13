@@ -289,7 +289,7 @@ class _Sender(MsgSender):
         """
         Monitor a node or subtree.
         """
-        return _Watcher(self, path, meta, subtree, state, max_age)
+        return Watcher(self, path, meta, subtree, state, max_age)
 
 
     async def e_exc(self, path:Path, exc:Exception, **kw):
@@ -629,7 +629,7 @@ class BasicLink(LinkCommon, CtxObj):
 
 
 @define(eq=False)
-class _Watcher(CtxObj):
+class Watcher(CtxObj):
     """
     Helper class for monitoring.
     """

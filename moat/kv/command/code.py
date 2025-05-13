@@ -33,7 +33,7 @@ async def cli(ctx, path):
 
 
 @cli.command()
-@click.option("-s", "--script", type=click.File(mode="w", lazy=True), help="Save the code here")
+@click.option("-S", "--script", type=click.File(mode="w", lazy=True), help="Save the code here")
 @click.pass_obj
 async def get(obj, script):
     """Read a code entry"""
@@ -64,7 +64,7 @@ async def get(obj, script):
     default=True,
 )
 @click.option("-t", "--thread", is_flag=True, help="The code should run in a worker thread")
-@click.option("-s", "--script", type=click.File(mode="r"), help="File with the code")
+@click.option("-S", "--script", type=click.File(mode="r"), help="File with the code")
 @click.option("-i", "--info", type=str, help="one-liner info about the code")
 @click.option("-d", "--data", type=click.File(mode="r"), help="load the metadata (YAML)")
 @attr_args

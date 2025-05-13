@@ -294,7 +294,7 @@ class Node:
 
     def search(self, path:Path) -> Node:
         """
-        Find the destination node of a path, including wildcard elements.
+        Find the destination node of a path, including wildcards.
         """
         nf = NodeFinder(self)
         for elem in path:
@@ -305,9 +305,11 @@ class Node:
 class NodeFinder:
     """A generic object that can walk down a possibly-wildcard-equipped path.
 
-    Example: given a path `one.two.three` and a root `bar` with subtree `bar.#.three`,
-    `NodeFinder(bar).step(one).step(two).step(three)` will return the node
-    at `bar.#.three` (assuming that nothing more specific hangs off `bar`).
+    Example: given a path `one.two.three` and a root with subtree `*.three`,
+    `NodeFinder(root).step(one).step(two).step(three)` will return the node
+    at `*.three` (assuming that nothing more specific hangs off `the root`).
+
+    If nothing is found, raises `KeyError`.
     """
 
     def __init__(self, src):
@@ -325,7 +327,7 @@ class NodeFinder:
             if keep:
                 steps.append((node, True))
             # Nodes found with '*' stay on the list
-            # so that they can match multiple entries.
+            # so that they can match multiple path elements.
         if not steps:
             raise KeyError(name)
         self.steps = steps

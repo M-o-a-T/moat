@@ -1,3 +1,9 @@
+moat-kv (0.71.8-1) unstable; urgency=medium
+
+  * New release for 25.1.20
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 13 May 2025 10:47:50 +0200
+
 moat-kv (0.71.7-2) unstable; urgency=medium
 
   * New release for 25.1.19

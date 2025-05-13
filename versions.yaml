@@ -54,9 +54,9 @@ moat-gpio:
   rev: 1d2d76bbd5d7f2d17da65f7778f63148cc696a6f
   tag: 0.6.7
 moat-kv:
-  pkg: 2
-  rev: 1b75a8fe989c829cd4b6d16278bb976bb7db61a7
-  tag: 0.71.7
+  pkg: 1
+  rev: 535af109d7005b73ae23e2254d594fb5e4e28567
+  tag: 0.71.8
 moat-kv-akumuli:
   pkg: 7
   rev: 1d2d76bbd5d7f2d17da65f7778f63148cc696a6f
@@ -148,14 +148,14 @@ moat-signal:
 - 0.0.1
 - b442c09472a50fb7faec795348b78dd70675b356
 moat-src:
-  pkg: 3
-  rev: 1b75a8fe989c829cd4b6d16278bb976bb7db61a7
+  pkg: 4
+  rev: 535af109d7005b73ae23e2254d594fb5e4e28567
   tag: 0.9.2
 moat-thing:
   pkg: 3
   rev: 1d2d76bbd5d7f2d17da65f7778f63148cc696a6f
   tag: 0.2.1
 moat-util:
-  pkg: 2
-  rev: 1b75a8fe989c829cd4b6d16278bb976bb7db61a7
+  pkg: 3
+  rev: 535af109d7005b73ae23e2254d594fb5e4e28567
   tag: 0.57.8

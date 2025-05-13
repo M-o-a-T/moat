@@ -1033,6 +1033,8 @@ class Watcher:
         self.full = full
         if q_len is not None:
             self.q_len = q_len
+        if self.q_len<100000:
+            self.q_len=100000
 
     async def __aenter__(self):
         if self.q is not None:

@@ -15,6 +15,15 @@ client:
 root: !P XXX.NotConfigured.YZ
 qos: 0
 
+target:
+  # Well-known prefixes off the root
+
+  # this subtree is not stored. Hard-coded into the server, cannot be changed.
+  # run: !P run
+
+  # this subtree holds conversion jobs
+  conv: !P convert
+
 timeout:
   # time after which deleted entries are flushed
   delete: 100000

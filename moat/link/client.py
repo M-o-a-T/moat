@@ -645,6 +645,8 @@ class _Watcher(CtxObj):
     _tg=field(init=False,repr=False)
     _node=field(init=False,default=None)
 
+    _current_done:anyio.Event|None=field(init=False,default=None)
+
     def __attrs_post_init__(self):
         self._qw,self._qr = anyio.create_memory_object_stream(99)
 
@@ -670,6 +672,8 @@ class _Watcher(CtxObj):
                 p,d,m = Path(), r[0], MsgMeta.restore(r[1:])
                 await self._qw.send((p,d,m))
 
+        self._current_done.set()
+
     async def _updates(self, *, task_status):
         "get updates from MQTT"
         plen = 1+len(self.path)
@@ -688,6 +692,7 @@ class _Watcher(CtxObj):
             if self.state is not True:
                 await tg.start(self._updates)
             if self.state is not False:
+                self._current_done = anyio.Event()
                 await tg.start(self._current)
             yield self
             tg.cancel_scope.cancel()
@@ -696,6 +701,34 @@ class _Watcher(CtxObj):
 
     def __aiter__(self):
         return self
+
+    async def get_node(self, background=True) -> Node:
+        """
+        Wait until fetching the static data is complete, then return the
+        watched node.
+
+        If @background is set (the default), start a background job that
+        updates the node. In this case you cannot iterate the watcher any
+        more.
+        """
+        if background:
+            await self._tg.start(self._iter)
+        await self._current_done.wait()
+        return self._node
+
+
+    async def _iter(self, *, task_status:anyio.abc.TaskStatus):
+        task_status.started()
+        qr,self._qr = self._qr,None
+
+        while True:
+            try:
+                msg = await qr.receive()
+            except anyio.EndOfStream:
+                return
+            p,d,m = msg
+            if self.age is None or m.timestamp+self.age >= time.time():
+                self._node.set(p,d,m)
 
     async def __anext__(self):
         while True:

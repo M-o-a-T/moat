@@ -2153,14 +2153,15 @@ class Server:
                 if authoritative:
                     # … or not.
                     self._discard_all_missing()
-                for nst in self._nodes.values():
-                    if nst.tick and len(nst.local_missing):
-                        self.fetch_missing.add(nst)
-                if len(self.fetch_missing):
-                    self.fetch_running = False
-                    for nm in self.fetch_missing:
-                        self.logger.error("Sync: missing: %s %s", nm.name, nm.local_missing)
-                    await self.spawn(self.do_send_missing)
+                if False:
+                    for nst in self._nodes.values():
+                        if nst.tick and len(nst.local_missing):
+                            self.fetch_missing.add(nst)
+                    if len(self.fetch_missing):
+                        self.fetch_running = False
+                        for nm in self.fetch_missing:
+                            self.logger.error("Sync: missing: %s %s", nm.name, nm.local_missing)
+                        await self.spawn(self.do_send_missing)
                 if self.force_startup or not len(self.fetch_missing):
                     if self.node.tick is None:
                         self.node.tick = 0

@@ -57,6 +57,8 @@ def get_codec(codec, fallback=NotGiven, config={}):  # pylint: disable=dangerous
         return codec(**config.get("codec_params", {}).get(codec.name, {}))
     if isinstance(codec, str):
         return _get_codec(codec)
+    if config is None:
+        config = "noop"
     if isinstance(config, str):
         return _get_codec(config)
     else:

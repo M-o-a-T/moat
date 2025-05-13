@@ -176,6 +176,17 @@ class Path(collections.abc.Sequence):
         "accessor for the path's mark"
         return self._mark
 
+    def startswith(self,path:Path|tuple|list):
+        """
+        Prefix test
+        """
+        if isinstance(path,Path):
+            path=path._data
+        if not isinstance(path,tuple):
+            path=tuple(path)
+
+        return self._data[:len(path)] == path
+
     def with_mark(self, mark=""):
         """Returns the same path with a different mark"""
         if mark:

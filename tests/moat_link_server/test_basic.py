@@ -119,7 +119,6 @@ async def test_ls_walk(cfg):
             await c.cmd(P("d.set"), p, v)
             n.set(p, v, MsgMeta(origin="Test"))
 
-        print("********", file=sys.stderr)
         await data(s)
         nn = await fetch(c, "a")
 

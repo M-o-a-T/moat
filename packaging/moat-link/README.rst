@@ -22,7 +22,7 @@ with typed binary data.
 .. _CBOR: https://cbor.io/
 .. _msgpack: https://msgpack.org.
 
-MoaT-KV supports this usecase via its own MQTT server, which is based on
+MoaT-KV supported this usecase via its own MQTT server, which is based on
 hbmqtt. Unfortunately hbmqtt is unsupported, high-overhead, and doesn't
 support MQTT 5. MoaT-KV adds its own overhead and doesn't support
 non-retained messages.

@@ -284,6 +284,41 @@ class _Sender(MsgSender):
         meta = MsgMeta.restore(res[1:]) if len(res)>1 else None
         return res[0],meta
 
+    @asynccontextmanager
+    async def d_walk(self, path:Path, meta:bool=False, min_ts:float=0, min_depth:int=0, max_depth:int=255) -> AsyncIterator[tuple[str,Any,MsgMeta]]:
+        """
+        Fetch a (limited) subtree.
+        """
+        args = [path,min_ts,min_depth,max_depth]
+        if args[-1] == 255:
+            args.pop()
+            if args[-1] == 0:
+                args.pop()
+                if args[-1] == 0:
+                    args.pop()
+
+        async with self.d.walk(*args).stream_in() as mon:
+            yield Walker(mon,meta=meta)
+
+class Walker:
+    def __init__(self,mon,meta=False):
+        self.mon=mon
+        self.pl = PathLongener()
+        self.meta=meta
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        msg = await anext(self.mon)
+        n,p,d,*m = msg.args
+        p = self.pl.long(n,p)
+        if self.meta:
+            m = MsgMeta.restore(m)
+            return p,d,m
+        else:
+            return p,d
+
     
     def d_watch(self, path:Path, meta:bool=False, subtree:bool=False, state:bool|None=None, max_age:float|None=None) -> AsyncContextManager[AsyncIterator[tuple]]:
         """

@@ -1,3 +1,9 @@
+moat-src (0.9.2-7) unstable; urgency=medium
+
+  * New release for 25.1.23
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 14 May 2025 07:29:26 +0200
+
 moat-src (0.9.2-6) unstable; urgency=medium
 
   * New release for 25.1.22

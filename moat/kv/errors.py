@@ -551,8 +551,11 @@ class ErrorRoot(ClientRoot):
         if rec is not entry:
             return
 
+        path = entry.path
+        if isinstance(path,list):
+            path=Path.build(path)
         with contextlib.suppress(KeyError):
-            del (self._done if entry.resolved else self._active)[entry.subsystem][entry.path]
+            del (self._done if entry.resolved else self._active)[entry.subsystem][path]
 
     def _push(self, entry):
         if entry.subsystem is None or entry.path is None:

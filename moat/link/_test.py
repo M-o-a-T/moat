@@ -71,6 +71,7 @@ class Scaffold(CtxObj):
 
         self.cfg.server.ping.cycle=.5
         self.cfg.server.ping.gap=.15
+        self.cfg.server.ping.override=True
         self.cfg.server.timeout.startup=3
 
         self._tempdir = tempdir

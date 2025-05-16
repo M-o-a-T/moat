@@ -303,38 +303,31 @@ class _Sender(MsgSender):
 
     # No use marking as Any|None if @mark is set
     @overload
-    def d_watch(self, path:Path, meta:Literal[False],subtree:Literal[False],state:bool|None=None,
-                mark:bool) -> AsyncContextManager[AsyncIterator[Any]]:
+    def d_watch(self, path:Path, mark:bool, meta:Literal[False],subtree:Literal[False],state:bool|None=None) -> AsyncContextManager[AsyncIterator[Any]]:
         ...
 
     @overload
-    def d_watch(self, path:Path, meta:Literal[True],subtree:Literal[False],state:bool|None=None,
-                mark:Literal[False]) -> AsyncContextManager[AsyncIterator[tuple[Any,MsgMeta]]]:
+    def d_watch(self, path:Path, mark:Literal[False], meta:Literal[True],subtree:Literal[False],state:bool|None=None) -> AsyncContextManager[AsyncIterator[tuple[Any,MsgMeta]]]:
         ...
 
     @overload
-    def d_watch(self, path:Path, meta:Literal[True],subtree:Literal[True],state:bool|None=None,
-                mark:Literal[False]) -> AsyncContextManager[AsyncIterator[tuple[Path,Any,MsgMeta]]]:
+    def d_watch(self, path:Path, mark:Literal[False], meta:Literal[True],subtree:Literal[True],state:bool|None=None) -> AsyncContextManager[AsyncIterator[tuple[Path,Any,MsgMeta]]]:
         ...
 
     @overload
-    def d_watch(self, path:Path, meta:Literal[False],subtree:Literal[True],state:bool|None=None,
-                mark:Literal[False]) -> AsyncContextManager[AsyncIterator[tuple[Path,Any]]]:
+    def d_watch(self, path:Path, mark:Literal[False], meta:Literal[False],subtree:Literal[True],state:bool|None=None) -> AsyncContextManager[AsyncIterator[tuple[Path,Any]]]:
         ...
 
     @overload
-    def d_watch(self, path:Path, meta:Literal[True],subtree:Literal[False],state:bool|None=None,
-                mark:Literal[True]) -> AsyncContextManager[AsyncIterator[None|tuple[Any,MsgMeta]]]:
+    def d_watch(self, path:Path, mark:Literal[True], meta:Literal[True],subtree:Literal[False],state:bool|None=None) -> AsyncContextManager[AsyncIterator[None|tuple[Any,MsgMeta]]]:
         ...
 
     @overload
-    def d_watch(self, path:Path, meta:Literal[True],subtree:Literal[True],state:bool|None=None,
-                mark:Literal[True]) -> AsyncContextManager[AsyncIterator[None|tuple[Path,Any,MsgMeta]]]:
+    def d_watch(self, path:Path, mark:Literal[True], meta:Literal[True],subtree:Literal[True],state:bool|None=None) -> AsyncContextManager[AsyncIterator[None|tuple[Path,Any,MsgMeta]]]:
         ...
 
     @overload
-    def d_watch(self, path:Path, meta:Literal[False],subtree:Literal[True],state:bool|None=None,
-                mark:Literal[True]) -> AsyncContextManager[AsyncIterator[None|tuple[Path,Any]]]:
+    def d_watch(self, path:Path, mark:Literal[True], meta:Literal[False],subtree:Literal[True],state:bool|None=None) -> AsyncContextManager[AsyncIterator[None|tuple[Path,Any]]]:
         ...
 
     def d_watch(self, path:Path, meta:bool=False, subtree:bool=False, state:bool|None=None, max_age:float|None=None, mark:bool=False) -> AsyncContextManager[AsyncIterator[tuple[Path,Any,MsgMeta]]]:

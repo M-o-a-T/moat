@@ -150,6 +150,9 @@ class Backend(_Backend):
                                 if not prop.timestamp:
                                     prop.timestamp = time.time()
 
+                                breakpoint()
+                                prop.retain=msg.retained
+
                             except Exception as exc:
                                 self.logger.debug("Property Error", exc_info=exc)
                                 await self.send(

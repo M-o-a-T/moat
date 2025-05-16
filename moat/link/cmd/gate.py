@@ -41,45 +41,34 @@ async def run(obj,name):
     """
     Run a gateway setup.
     """
-    res = await obj.conn.d.get(P(":R.gate")/name)
-    gate = get_gate()
+    res = await obj.conn.d.get(P("gate")/name)
+    gate = get_gate(obj.cfg, res)
+    await gate.run(obj.cfg)
 
-    
 
 
 @cli.command("list")
-@click.option(
-    "-d",
-    "--as-dict",
-    default=None,
-    help="Structure as dictionary. The argument is the key to use "
-    "for values. Default: return as list",
-)
-@click.option(
-    "-m",
-    "--maxdepth",
-    type=int,
-    default=1,
-    help="Limit recursion depth. Default: 1 (single layer).",
-)
-@click.option(
-    "-M",
-    "--mindepth",
-    type=int,
-    default=1,
-    help="Starting depth. Default: 1 (single layer).",
-)
+@click.argument("name",nargs=-1)
 @click.pass_obj
-async def list_(obj, **k):
+async def list_(obj, name:list[str]):
     """
-    List MoaT-KV values.
-
-    This is like "get" but with "--mindepth=1 --maxdepth=1 --recursive --empty"
-
-    If you read a sub-tree recursively, be aware that the whole subtree
-    will be read before anything is printed. Use the "watch --state" subcommand
-    for incremental output.
+    List gates / a gate's data.
     """
+
+    if not name:
+        seen = False
+        async with obj.conn.d_walk(P(":R.gate"),min_depth=1,max_depth=1) as mon:
+            async for p,d in mon:
+                seen = True
+                print(p[-1])
+        if not seen and obj.debug:
+            print("- no data.", file=sys.stderr)
+        return
+
+    for n in name:
+        d = obj.conn.d_get(P(":R.gate")/n)
+        yprint(d)
+
 
     k["recursive"] = True
     k["raw"] = True

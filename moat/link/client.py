@@ -300,31 +300,59 @@ class _Sender(MsgSender):
         async with self.d.walk(*args).stream_in() as mon:
             yield Walker(mon,meta=meta)
 
-class Walker:
-    def __init__(self,mon,meta=False):
-        self.mon=mon
-        self.pl = PathLongener()
-        self.meta=meta
 
-    def __aiter__(self):
-        return self
+    # No use marking as Any|None if @mark is set
+    @overload
+    def d_watch(self, path:Path, meta:Literal[False],subtree:Literal[False],state:bool|None=None,
+                mark:bool) -> AsyncContextManager[AsyncIterator[Any]]:
+        ...
 
-    async def __anext__(self):
-        msg = await anext(self.mon)
-        n,p,d,*m = msg.args
-        p = self.pl.long(n,p)
-        if self.meta:
-            m = MsgMeta.restore(m)
-            return p,d,m
-        else:
-            return p,d
+    @overload
+    def d_watch(self, path:Path, meta:Literal[True],subtree:Literal[False],state:bool|None=None,
+                mark:Literal[False]) -> AsyncContextManager[AsyncIterator[tuple[Any,MsgMeta]]]:
+        ...
 
-    
-    def d_watch(self, path:Path, meta:bool=False, subtree:bool=False, state:bool|None=None, max_age:float|None=None) -> AsyncContextManager[AsyncIterator[tuple]]:
+    @overload
+    def d_watch(self, path:Path, meta:Literal[True],subtree:Literal[True],state:bool|None=None,
+                mark:Literal[False]) -> AsyncContextManager[AsyncIterator[tuple[Path,Any,MsgMeta]]]:
+        ...
+
+    @overload
+    def d_watch(self, path:Path, meta:Literal[False],subtree:Literal[True],state:bool|None=None,
+                mark:Literal[False]) -> AsyncContextManager[AsyncIterator[tuple[Path,Any]]]:
+        ...
+
+    @overload
+    def d_watch(self, path:Path, meta:Literal[True],subtree:Literal[False],state:bool|None=None,
+                mark:Literal[True]) -> AsyncContextManager[AsyncIterator[None|tuple[Any,MsgMeta]]]:
+        ...
+
+    @overload
+    def d_watch(self, path:Path, meta:Literal[True],subtree:Literal[True],state:bool|None=None,
+                mark:Literal[True]) -> AsyncContextManager[AsyncIterator[None|tuple[Path,Any,MsgMeta]]]:
+        ...
+
+    @overload
+    def d_watch(self, path:Path, meta:Literal[False],subtree:Literal[True],state:bool|None=None,
+                mark:Literal[True]) -> AsyncContextManager[AsyncIterator[None|tuple[Path,Any]]]:
+        ...
+
+    def d_watch(self, path:Path, meta:bool=False, subtree:bool=False, state:bool|None=None, max_age:float|None=None, mark:bool=False) -> AsyncContextManager[AsyncIterator[tuple[Path,Any,MsgMeta]]]:
         """
         Monitor a node or subtree.
+
+        @path: what to examine
+        @meta: flag whether to return metadata too
+        @subtree: flag whether to watch a subtree, not just this node
+        @mark: yield `None` when the initial state has been transmitted
+        @state: send the current state (True), updates (False) or both (None)
+
+        This method returns an async context manager which yields an async iterator.
+        The iterator yields node data if neither @subtree nor @meta is set.
+        Otherwise it yields tuples. The first item is the path if @subtree
+        is set; the last item is the metadata if @meta is set.
         """
-        return Watcher(self, path, meta, subtree, state, max_age)
+        return Watcher(self, path, meta, subtree, state, max_age, mark)
 
 
     async def e_exc(self, path:Path, exc:Exception, **kw):
@@ -674,6 +702,7 @@ class Watcher(CtxObj):
     subtree:bool=field()
     state:bool|None=field()
     age:float|None=field()
+    mark:bool=field()
 
     _qw=field(init=False,repr=False)
     _qr=field(init=False,repr=False)
@@ -778,3 +807,26 @@ class Watcher(CtxObj):
                         return (p,d,m) if self.subtree else (d,m)
                     else:
                         return (p,d) if self.subtree else d
+
+class Walker:
+    """
+    A trimmed-down watcher that retrieves a possibly-partial subtree from the server.
+    """
+    def __init__(self,mon,meta=False):
+        self.mon=mon
+        self.pl = PathLongener()
+        self.meta=meta
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        msg = await anext(self.mon)
+        n,p,d,*m = msg.args
+        p = self.pl.long(n,p)
+        if self.meta:
+            m = MsgMeta.restore(m)
+            return p,d,m
+        else:
+            return p,d
+

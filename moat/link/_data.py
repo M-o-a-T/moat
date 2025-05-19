@@ -153,9 +153,9 @@ async def data_get(
 
                     y = simplex(y)
 
-                if isinstance(out,list):
-                    return y
-                yprint(y, stream=out)
+            if isinstance(out,list):
+                return y
+            yprint(y, stream=out)
 
             return out # end "if recursive"
 

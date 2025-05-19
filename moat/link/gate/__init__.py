@@ -11,7 +11,7 @@ import logging
 from moat.link.node import Node
 from moat.link.meta import MsgMeta
 from moat.lib.codec import get_codec
-from moat.util import NotGiven
+from moat.util import NotGiven, P, Path, to_attrdict
 
 from typing import TYPE_CHECKING
 
@@ -41,12 +41,12 @@ class GateNode(Node):
     @property
     def has_src(self):
         "Check whether source data is present"
-        return self.data_ is not NotGiven or self.meta is not in (None,NotGiven)
+        return self.data_ is not NotGiven or self.meta not in (None,NotGiven)
 
     @property
     def has_dst(self):
         "Check whether destination data is present"
-        return self.ext_data is not NotGiven or self.ext_meta is not in (None,NotGiven)
+        return self.ext_data is not NotGiven or self.ext_meta not in (None,NotGiven)
 
     @property
     def has_both(self):
@@ -94,27 +94,31 @@ class Gate:
     _src_done:anyio.Event
     _dst_done:anyio.Event
 
-    def __init__(self, cfg:dict[str,Any], cf:dict[str,Any], name:str, link:Link):
+    cfg:attrdict
+    cf:attrdict
+
+    def __init__(self, cfg:dict[str,Any], cf:dict[str,Any], path:Path, link:Link):
         """
         Setup.
         @cfg: initial data for this gateway.
         """
         self.cfg = cfg
-        self._driver = self.cfg["driver"]
-        self.codec = get_codec(self.cfg("codec", "cbor"))
+        self.cf = to_attrdict(cf)
+        self.codec = get_codec(cf.get("codec", "cbor"))
 
         self.link = link
-        self.name = name
-        self.origin = "GT:"+name
+        self.path = path
+        self.name = path[-1]
+        self.origin = "GT:"+self.name
 
-        self.logger = logging.getLogger(f"moat.link.gate.{name}")
+        self.logger = logging.getLogger(f"moat.link.{path}")
 
     
-    async def get_src(self, *, task_status=anyio.TASK_STATE_IGNORED):
+    async def get_src(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
         Fetch the internal data.
         """
-        async with self.link.d_watch(self.cfg.conv/self.name, subtree=True,meta=True,mark=True) as mon:
+        async with self.link.d_watch(self.cf.src, subtree=True,meta=True,mark=True) as mon:
             async for pdm in mon:
                 if pdm is None:
                     self._src_done.set()
@@ -139,7 +143,7 @@ class Gate:
     def dst_is_current(self):
         self._dst_done.set()
 
-    async def get_dst(self, *, task_status=anyio.TASK_STATE_IGNORED):
+    async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
         Fetch the external data.
 
@@ -204,7 +208,7 @@ class Gate:
         """
         raise NotImplementedError
 
-    async def run(self, *, task_status=anyio.TASK_STATE_IGNORED):
+    async def run(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
         Run a bidirectional copy.
 
@@ -230,26 +234,26 @@ class Gate:
             except* GateVanished:
                 run = False
             else:
-                task_status=anyio.TASK_STATE_IGNORED
+                task_status=anyio.TASK_STATUS_IGNORED
                 await anyio.sleep(1)
 
 
-    async def _restart(self, *, task_status=anyio.TASK_STATE_IGNORED):
+    async def _restart(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         "Restart the thing when the root changes."
-        async with self.link.d_watch(self.cfg.conv/self.name) as mon:
+        async with self.link.d_watch(self.path) as mon:
             task_status.started()
-            for d in mon:
+            async for d in mon:
                 if self.cf == d:
                     continue
                 breakpoint()
-                if d is NotGiven or d.get("driver") != self._driver:
+                if d is NotGiven or d.get("driver") != self.cf.driver:
                     raise GateVanished(self.name)
                 self.cf = d
                 self.tg.cancel_scope.cancel()
                 return
 
 
-    async def run_(self, *, task_status=anyio.TASK_STATE_IGNORED):
+    async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """
         The core runner for the gateway.
 
@@ -320,13 +324,19 @@ class Gate:
         # nothing further to do
 
 
-def get_gate(cfg: dict, cf: dict) -> Gate:
+async def run_gate(cfg: dict, link:Link, cf:Path|str, *, task_status=anyio.TASK_STATUS_IGNORED):
     """
-    Fetch the gate driver named in @cf.
+    Run a gate in @link, described by @name.
     """
     from importlib import import_module
 
-    name = cfg["driver"]
-    if "." not in name:
-        name = "moat.link.gate." + name
-    return import_module(name).Gate(cfg, cf)
+    if isinstance(cf,str):
+        cf = P("gate")/cf
+    path = cf
+    cf = await link.d_get(path)
+
+    drv = cf["driver"]
+    if "." not in drv:
+        drv = "moat.link.gate." + drv
+    gate = import_module(drv).Gate(cfg, cf, path, link)
+    await gate.run(task_status=task_status)

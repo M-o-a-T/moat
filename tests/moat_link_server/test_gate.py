@@ -9,6 +9,7 @@ from moat.link.meta import MsgMeta
 from moat.link._test import Scaffold
 from moat.link.node import Node
 from moat.link.client import Link
+from moat.link.gate import run_gate
 from moat.util import P, PathLongener, NotGiven, ungroup
 from moat.lib.cmd import StreamError
 from moat.lib.cmd.base import MsgSender
@@ -44,56 +45,18 @@ async def test_gate_mqtt(cfg):
         d_src = await sf.tg.start(mon_src)
         d_dst = await sf.tg.start(mon_dst)
 
-        await c.d_set("gate.test", dict(
+        await c.d_set(P("gate.test"), dict(
             driver="mqtt",
             src=P("test.a"),
             dst=P("test.b"),
             codec="json",
             ))
 
-        async def run_gate(task_status):
-            res = await obj.conn.d.get(P("gate.test"))
-            gate = get_gate(cfg, res)
-            await gate.run(task_status=task_status)
+        await sf.tg.start(run_gate,sf.cfg,c,"test")
 
-        sf.tg.start_soon(run_gate)
+        await anyio.sleep(0.2)
+        a= await c.d_get(P("test.a"))
+        b= await c.d_get(P("test.b"))
 
-        s = await sf.client(cli=Supi(cfg.link,"!sup"))
-        await anyio.sleep(.2)
-        cln = set()
-        async with c.cl().stream_in() as mm:
-            async for m in mm:
-                cln.add(m[0])
-        assert len(cln) == 2
-        assert "sup" in cln
+        yprint(dict(a=a,b=b),file=sys.stderr)
 
-        res = await c.cl.sup.supi()
-        assert res[0] == "Yes"
-        # XXX 'res' should not be a message
-
-        nn=[]
-        async with c.cl.sup.supa().stream_in() as mm:
-            async for m in mm:
-                nn.append(m[0])
-        assert nn==[1,2,3]
-
-@pytest.mark.anyio()
-async def test_c2c_relay(cfg):
-    async with Scaffold(cfg, use_servers=True) as sf:
-        await sf.tg.start(_dump, sf)
-        s1,_d1 = await sf.server(init={"Hello": "there!", "test": 123})
-        s2,_d2 = await sf.server()
-
-        c1 = MsgSender(s1)
-        c1.add_sub("cl")
-        c2 = MsgSender(s2)
-        c2.add_sub("cl")
-
-        s = await sf.client(cli=Supi(cfg.link,"!sup"))
-        await anyio.sleep(.5)
-
-        res = await c1.cl.sup.supi()
-        assert res == "Yes"
-
-        res = await c2.cl.sup.supi()
-        assert res == "Yes"

@@ -47,19 +47,21 @@ def add_dates(d):
 
 
 async def data_get(
-    obj,
-    path,
+    conn:Link,
+    path:Path,
     *,
-    recursive=True,
-    as_dict="_",
-    maxdepth=-1,
-    mindepth=0,
-    empty=False,
-    raw=False,
-    internal=False,
+    meta:bool=False,
+    recursive:bool=True,
+    as_dict:str|None="_",
+    maxdepth:int=-1,
+    mindepth:int=0,
+    empty:bool=False,
+    raw:bool=False,
+    internal:bool=False,
     path_mangle=None,
     item_mangle=None,
     add_date=False,
+    out=None,
 ):
     """Generic code to dump a subtree.
 
@@ -77,8 +79,14 @@ async def data_get(
         async def item_mangle(x):  # pylint: disable=function-redefined
             return x
 
+    if out is None:
+        out = sys.stdout
+    elif out is False:
+        out = []
+
     if recursive:
         kw = {}
+        
         if maxdepth is not None and maxdepth >= 0:
             kw["max_depth"] = maxdepth
         if mindepth:
@@ -87,7 +95,7 @@ async def data_get(
             kw["empty"] = True
         y = {}
         pl=PathLongener()
-        async with obj.conn.d.walk(path, **kw).stream_in() as res:
+        async with conn.d.walk(path, **kw).stream_in() as res:
             async for r in res:
                 r = await item_mangle(r)
                 if r is None:
@@ -97,7 +105,10 @@ async def data_get(
                 path = path_mangle(path)
                 if path is None:
                     continue
-                if obj.meta:
+
+                if add_date:
+                    add_dates(d)
+                if meta:
                     m=MsgMeta._moat__restore(m, NotGiven)
                     d = dict(data=d,meta=m.repr())
 
@@ -122,7 +133,10 @@ async def data_get(
                                 y[path] = None
                             else:
                                 continue
-                    yprint([y], stream=obj.stdout)
+                    if isinstance(out,list):
+                        out.append(y)
+                    else:
+                        yprint([y], stream=out)
 
             if as_dict is not None:
                 if maxdepth:
@@ -139,21 +153,29 @@ async def data_get(
                         return d
 
                     y = simplex(y)
-                yprint(y, stream=obj.stdout)
-            return  # end "if recursive"
+
+                if isinstance(out,list):
+                    return y
+                yprint(y, stream=out)
+
+            return out # end "if recursive"
 
     
-    d,*m = await obj.conn.d.get(path)
-    if obj.meta:
+    d,*m = await conn.d.get(path)
+    if add_date:
+        add_dates(d)
+    if meta:
         m=MsgMeta.restore(m)
         d=dict(data=d,meta=m.repr())
 
+    if out is False:
+        return d
     if not raw:
-        yprint(d, stream=obj.stdout)
+        yprint(d, stream=out)
     elif isinstance(d, bytes):
-        os.write(obj.stdout.fileno(), res)
+        os.write(out.fileno(), res)
     else:
-        obj.stdout.write(str(d))
+        out.write(str(d))
     pass  # end get
 
 

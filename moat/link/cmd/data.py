@@ -30,7 +30,7 @@ async def cli(ctx, path,meta):
     obj.conn = await ctx.with_async_resource(Link(cfg))
     obj.meta=meta
     if ctx.invoked_subcommand is None:
-        res = await data_get(obj, path, recursive=False)
+        res = await data_get(obj.conn,path, meta=obj.meta,out=obj.stdout, recursive=False)
     else:
         obj.path = path
 
@@ -72,7 +72,7 @@ async def get(obj, **k):
     for incremental output.
     """
 
-    await data_get(obj, obj.path, **k)
+    await data_get(obj.conn, obj.path, meta=obj.meta, **k)
 
 
 @cli.command("list")
@@ -112,7 +112,7 @@ async def list_(obj, **k):
     k["recursive"] = True
     k["raw"] = True
     k["empty"] = True
-    await data_get(obj, obj.path, **k)
+    await data_get(obj.conn, obj.path, meta=obj.meta, **k)
 
 
 @cli.command("set", short_help="Add or update an entry")

@@ -12,7 +12,7 @@ from moat.util import Path, CFG
 
 class Gate(_Gate):
 
-    async def get_dst(self, task_status=anyio.TASK_STATE_IGNORED):
+    async def get_dst(self, task_status=anyio.TASK_STATUS_IGNORED):
         async with self.link.monitor(self.cfg.dst, subtree=True) as mon:
             task_status.started()
             while True:
@@ -29,8 +29,17 @@ class Gate(_Gate):
 
                 await self.src_setter(msg.path, msg.value, msg)
 
-    async def is_update(self, value:Any,meta:MsgMeta, dst_msg)
-                if node.
+    async def set_dst(self, path:Path, data:Any, meta:MsgMeta):
+        await self.link.send(path,data, retain=meta.retain, codec=self.codec, meta=MsgMeta(origin=self.origin,timestamp=meta.timestamp))
+
+    def newer_dst(self,node):
+        if not node.ext_meta:
+            return True
+        if node.ext_meta.origin == self.origin:
+            return False
+        if abs(node.ext_meta.timestamp-node.meta.timestamp) < .1:
+            return None
+        return node.ext_meta.timestamp > node.meta.timestamp
 
 
 

@@ -76,10 +76,10 @@ async def list_(obj, name:list[str]):
     await data_get(obj, obj.path, **k)
 
 
-@cli.command("set", short_help="Add or update an entry")
+@cli.command("set", short_help="Add or update a gate entry")
 @attr_args
-@click.option("-l", "--last", nargs=2, help="Previous change entry (node serial)")
-@click.option("-n", "--new", is_flag=True, help="This is a new entry.")
+@click.option("-S", "--src", type=P, help="Source (in Moat-Link)")
+@click.option("-D", "--dst", type=P, help="Destinato.")
 @click.pass_obj
 async def set_(obj, last, new, **kw):
     """

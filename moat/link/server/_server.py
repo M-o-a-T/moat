@@ -182,6 +182,12 @@ class ServerClient(LinkCommon):
     def sender(self) -> MsgSender:
         return self._sender
 
+    async def aclose(self):
+        """
+        Shut this client down
+        """
+        self.tg.cancel_scope.cancel()
+
     async def run(self):
         """Main loop for this client connection."""
 
@@ -1626,7 +1632,8 @@ class Server(MsgHandler):
                     del self._clients[name]
                 else:
                     if isinstance(rem,ServerClient):
-                        await rem.aclose()
+                        # we have this connection, so don't listen to them
+                        continue
                     if name == msg.data:
                         self.logger.warning("Got self-ref client: %r %r", name,msg.data)
                         continue

@@ -79,20 +79,12 @@ async def list_(obj, name:list[str]):
 @cli.command("set", short_help="Add or update a gate entry")
 @attr_args
 @click.option("-S", "--src", type=P, help="Source (in Moat-Link)")
-@click.option("-D", "--dst", type=P, help="Destinato.")
+@click.option("-D", "--dst", type=P, help="Destination (driver specific)")
+@click.option("-d", "--ddriver", type=str, help="Driver")
 @click.pass_obj
 async def set_(obj, last, new, **kw):
     """
-    Store a value at some MoaT-KV position.
-
-    If you update a value you can use "--last" to ensure that no other
-    change arrived between reading and writing the entry.
-
-    When adding a new entry use "--new" to ensure that you don't
-    accidentally overwrite something.
-
-    MoaT-KV entries typically are mappings. Use a colon as the path if you
-    want to replace the top level.
+    Add/change a gateway entry.
     """
 
     res = await node_attr(obj, obj.path, **kw)

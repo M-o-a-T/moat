@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import anyio
-import logging
 import time
 from contextlib import asynccontextmanager, nullcontext
 from tempfile import TemporaryDirectory
@@ -32,8 +31,6 @@ if TYPE_CHECKING:
 
 ensure_cfg("moat.link")
 
-
-logger = logging.getLogger(__name__)
 
 otm = time.time
 

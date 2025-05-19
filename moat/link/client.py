@@ -719,6 +719,8 @@ class Watcher(CtxObj):
                     p = pl.long(n,p)
                     m = MsgMeta.restore(m)
                     await self._qw.send((p,d,m))
+                if self.mark:
+                    await self._qw.send(None)
         else:
             try:
                 r = await self.link.d.get(self.path)
@@ -794,6 +796,8 @@ class Watcher(CtxObj):
                 msg = await self._qr.receive()
             except anyio.EndOfStream:
                 raise StopAsyncIteration
+            if msg is None:
+                return None
             p,d,m = msg
             if self.age is None or m.timestamp+self.age >= time.time():
                 if self._node.set(p,d,m):

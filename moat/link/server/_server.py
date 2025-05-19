@@ -213,7 +213,7 @@ class ServerClient(LinkCommon):
                 if not self.is_server and "." not in them:
                     # announce fixed-name client
                     # The condition *must* match the 'vanish' message
-                    await self.server.backend.send(P(":R.run.service.main.client")/them,self.server.name)
+                    await self.server.backend.send(P(":R.run.service.main.client")/them,self.server.name, retain=True)
                 self.protocol_version = self._hello.protocol_version
             finally:
                 del self._hello
@@ -808,7 +808,7 @@ class Server(MsgHandler):
                 m.source = '?'
             elif m.source == "Mon" or m.source[0] == "_":
                 continue
-            await self.backend.send(topic=P(":R") + p, data=d, meta=m)
+            await self.backend.send(topic=P(":R") + p, data=d, meta=m, retain=(len(p) == 0 or p[0] != "run"))
 
     async def _pinger(
         self,
@@ -1483,6 +1483,7 @@ class Server(MsgHandler):
             await self.backend.send(
                 topic=P(":R.run.service.main.down"),
                 data=self.name,
+                retain=False,
             )
             # TODO if we were "it", wait for some other server's announcement
 
@@ -2004,7 +2005,7 @@ class Server(MsgHandler):
                         # announce that client vanished
                         # The condition *must* match the announcement
                         with anyio.move_on_after(2,shield=True):
-                            await self.backend.send(P(":R.run.service.main.client")/c.name,b'',codec=None)
+                            await self.backend.send(P(":R.run.service.main.client")/c.name,b'',codec=None,retain=True)
         except (ClosedResourceError, anyio.EndOfStream):
             self.logger.debug("XX %d closed", cnr)
         except BaseException as exc:

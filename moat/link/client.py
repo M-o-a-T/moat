@@ -261,7 +261,8 @@ class _Sender(MsgSender):
 
     async def d_set(self, path:Path, data:Any=NotGiven,
                     meta:MsgMeta|None=None, t:float|None=None,
-                    with_prev:bool=False) -> None|tuple[Any,MsgMeta]:
+                    with_prev:bool=False, retain:bool|None=None,
+                   ) -> None|tuple[Any,MsgMeta]:
         """
         Data update.
 
@@ -275,7 +276,7 @@ class _Sender(MsgSender):
         if meta is None:
             meta=MsgMeta(origin=self._link.name)
         if t is None and not with_prev:
-            await self.send(Root.get()+path, data=data, meta=meta)
+            await self.send(Root.get()+path, data=data, meta=meta, retain=len(path)==0 or path[0]!="run")
             return
         tt = {} if t is None else {"t":t}
         res = await self.d.set(path, data, meta, **tt)
@@ -460,7 +461,7 @@ class _Sender(MsgSender):
         mostly-accurate time.
         """
         (st,) = await self.cmd(P("i.stamp"))
-        await self.send(P(":R.run.service.main.stamp")/self._link.server_name, st)
+        await self.send(P(":R.run.service.main.stamp")/self._link.server_name, st, retain=False)
         await self.cmd(P("i.sync"), st)
 
 
@@ -734,7 +735,7 @@ class Watcher(CtxObj):
     async def _updates(self, *, task_status):
         "get updates from MQTT"
         plen = 1+len(self.path)
-        async with self.link.monitor(Root.get()+self.path, subtree=self.subtree) as mon:
+        async with self.link.monitor(Root.get()+self.path, subtree=self.subtree, retained=False) as mon:
             task_status.started()
             async for msg in mon:
                 p,d,m = Path.build(msg.topic[plen:]),msg.data,msg.meta

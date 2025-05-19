@@ -44,15 +44,15 @@ async def test_watch_basic(cfg):
         await sf.server(init={"Hello": "there!", "test": 123})
         c = await sf.client()
 
-        await c.send(P(":R.test.here.before"), "One", meta=MsgMeta(origin="me!"))
-        await c.send(P(":R.test.here.both"), "Two", meta=MsgMeta(origin="me!"))
+        await c.send(P(":R.test.here.before"), "One", meta=MsgMeta(origin="me!"), retain=True)
+        await c.send(P(":R.test.here.both"), "Two", meta=MsgMeta(origin="me!"), retain=True)
 
         evt = await sf.tg.start(cl, "End")
 
-        await c.send(P(":R.test.here.both"), "Three", meta=MsgMeta(origin="me!"))
-        await c.send(P(":R.test.here.after"), "Four", meta=MsgMeta(origin="me!"))
+        await c.send(P(":R.test.here.both"), "Three", meta=MsgMeta(origin="me!"), retain=True)
+        await c.send(P(":R.test.here.after"), "Four", meta=MsgMeta(origin="me!"), retain=True)
 
-        await c.send(P(":R.test.here"), "End", meta=MsgMeta(origin="me!"))
+        await c.send(P(":R.test.here"), "End", meta=MsgMeta(origin="me!"), retain=True)
         await evt.wait()
 
 
@@ -80,13 +80,13 @@ async def test_watch_mon(cfg):
         await sf.server(init={"Hello": "there!", "test": 123})
         c = await sf.client()
 
-        await c.send(P(":R.test.here.before"), "One", meta=MsgMeta(origin="me!"))
-        await c.send(P(":R.test.here.both"), "Two", meta=MsgMeta(origin="me!"))
+        await c.send(P(":R.test.here.before"), "One", meta=MsgMeta(origin="me!"), retain=True)
+        await c.send(P(":R.test.here.both"), "Two", meta=MsgMeta(origin="me!"), retain=True)
 
         evt = await sf.tg.start(cl, "End")
 
-        await c.send(P(":R.test.here.both"), "Three", meta=MsgMeta(origin="me!"))
-        await c.send(P(":R.test.here.after"), "Four", meta=MsgMeta(origin="me!"))
+        await c.send(P(":R.test.here.both"), "Three", meta=MsgMeta(origin="me!"), retain=True)
+        await c.send(P(":R.test.here.after"), "Four", meta=MsgMeta(origin="me!"), retain=True)
         await anyio.sleep(0.2)
 
         evt.set()

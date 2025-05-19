@@ -30,7 +30,10 @@ class Gate(_Gate):
                 await self.src_setter(msg.path, msg.value, msg)
 
     async def set_dst(self, path:Path, data:Any, meta:MsgMeta):
-        await self.link.send(path,data, retain=meta.retain, codec=self.codec, meta=MsgMeta(origin=self.origin,timestamp=meta.timestamp))
+        if data is NotGiven:
+            await self.link.send(self.cf.dst+path, b'', retain=True, codec="noop", meta=MsgMeta(origin=self.origin,timestamp=meta.timestamp))
+        else:
+            await self.link.send(self.cf.dst+path, data, retain=True, codec=self.codec, meta=MsgMeta(origin=self.origin,timestamp=meta.timestamp))
 
     def newer_dst(self,node):
         if not node.ext_meta:

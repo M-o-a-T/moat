@@ -49,7 +49,7 @@ async def test_ls_basic(cfg):
         assert (a, b) == ("乓", "pling"), (a, b)
 
         om = MsgMeta(origin="me!")
-        await c.send(P(":R.test.here"), "Hello", meta=om)
+        await c.send(P(":R.test.here"), "Hello", meta=om, retain=False)
         with anyio.fail_after(1):
             await evt.wait()
 

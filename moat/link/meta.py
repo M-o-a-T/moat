@@ -70,7 +70,6 @@ class MsgMeta:
     timestamp = _gen(1)
 
     source: Any = None
-    retain: bool|None = field(default=None)
 
     def __init__(self, /, name: str | EllipsisType | None = None, **kwargs):  # pyright: ignore
         vals = {}

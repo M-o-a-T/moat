@@ -33,6 +33,6 @@ async def test_simple(cfg):
         evt = await sf.tg.start(cl)
         c = await sf.client()
         om = MsgMeta(origin="me!")
-        await c.send(P("test.here"), "Hello", meta=om)
+        await c.send(P("test.here"), "Hello", meta=om, retain=True)
         with anyio.fail_after(1):
             await evt.wait()

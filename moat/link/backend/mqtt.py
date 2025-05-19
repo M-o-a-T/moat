@@ -9,7 +9,7 @@ import logging
 import time
 from contextlib import asynccontextmanager
 
-from mqttproto.async_client import AsyncMQTTClient, Will, PropertyType
+from mqttproto.async_client import AsyncMQTTClient, Will, PropertyType, RetainHandling
 
 from moat.link.meta import MsgMeta
 from moat.lib.codec.noop import Codec as NoopCodec
@@ -113,6 +113,7 @@ class Backend(_Backend):
         raw: bool | None = False,
         subtree: bool = False,
         mine:bool=True,
+        retained:bool=True,
         **kw,
     ) -> AsyncIterator[AsyncIterator[Message]]:
         """
@@ -130,6 +131,7 @@ class Backend(_Backend):
         self.logger.debug("Monitor %s start", tops)
         codec = self.codec if codec is NotGiven else get_codec(codec)
         kw["no_local"] = not mine
+        kw["retain_handling"] = RetainHandling.SEND_RETAINED if retained else RetainHandling.NO_RETAINED
         try:
             async with self.client.subscribe(tops, **kw) as sub:
 

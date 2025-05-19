@@ -57,7 +57,6 @@ async def data_get(
     mindepth:int=0,
     empty:bool=False,
     raw:bool=False,
-    internal:bool=False,
     path_mangle=None,
     item_mangle=None,
     add_date=False,

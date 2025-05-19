@@ -56,9 +56,13 @@ class Node:
                 return False
             if not force and s._data == data:  # noqa:SLF001
                 return None
-        s._data = data  # noqa:SLF001
-        s._meta = meta  # noqa:SLF001
+        s.set_(data,meta)
         return True
+
+    def set_(self, data:Any,meta:MsgMeta):
+        "Low-level node data setter"
+        self._data = data  # noqa:SLF001
+        self._meta = meta  # noqa:SLF001
 
     @property
     def data(self) -> Any:

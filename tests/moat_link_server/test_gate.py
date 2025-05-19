@@ -70,7 +70,21 @@ async def test_gate_mqtt(cfg):
 
         await anyio.sleep(0.2)
         a= await data_get(c,P("test.a"), out=False)
-        b= await backend_get(c,P("test.b"), out=False)
+        assert a==dict(one={"_":1},two={"_":2},three={"_":33})
 
-        yprint(dict(a=a,b=b,ad=d_src,bd=d_dst),stream=sys.stderr)
+        b= await backend_get(c,P("test.b"), out=False)
+        assert b==dict(one={"_":b'1'},two={"_":b'22'},three={"_":b'33'})
+
+        # now change things
+        await c.send(P("test.b.one"),111,codec=codec, retain=True)
+        await c.send(P("test.b.four"),444,codec=codec, retain=True)
+        await c.d_set(P("test.a.three"),333)
+        await c.d_set(P("test.a.five"),555)
+        await anyio.sleep(0.2)
+
+        a= await data_get(c,P("test.a"), out=False)
+        assert a==dict(one={"_":111},two={"_":2},three={"_":333},four={"_":444},five={"_":555})
+
+        b= await backend_get(c,P("test.b"), out=False)
+        assert b==dict(one={"_":b'111'},two={"_":b'22'},three={"_":b'333'},four={"_":b'444'},five={"_":b'555'})
 

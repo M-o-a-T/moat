@@ -82,7 +82,7 @@ async def run_(obj):
             if ev is None:
                 logger.warning("NO EVT")
                 continue
-            if evt <= t_now:
+            if ev_t <= t_now:
                 if t_al != ev_t:
                     # set alarm message
                     logger.warning("ALARM %s %s", v.summary.value, ev_t)

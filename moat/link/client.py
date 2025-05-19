@@ -425,7 +425,7 @@ class _Sender(MsgSender):
         return self._link.backend.send(path, *a, **kw)
 
     def _pcheck(self,path:Path):
-        if not path:
+        if len(path) == 0:
             raise ValueError("Empty path?")
         if isinstance(path[0],Path):
             if path[0] == Root.get():

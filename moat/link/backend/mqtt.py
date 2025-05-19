@@ -112,17 +112,26 @@ class Backend(_Backend):
         codec: str | Codec | None | Literal[NotGiven] = NotGiven,
         raw: bool | None = False,
         subtree: bool = False,
+        mine:bool=True,
         **kw,
     ) -> AsyncIterator[AsyncIterator[Message]]:
-        "watch a topic"
+        """
+        Watch a topic.
 
-        topic = topic.slashed
+        @codec: use this codec.
+        @raw: don't interpret anything.
+        @subtree: also monitor subtopics.
+        @mine: send my own messages back to me.
+        """
+
+        tops = topic.slashed
         if subtree:
-            topic += "/#"
-        self.logger.debug("Monitor %s start", topic)
+            tops += "/#"
+        self.logger.debug("Monitor %s start", tops)
         codec = self.codec if codec is NotGiven else get_codec(codec)
+        kw["no_local"] = not mine
         try:
-            async with self.client.subscribe(topic, **kw) as sub:
+            async with self.client.subscribe(tops, **kw) as sub:
 
                 async def sub_get(sub) -> AsyncIterator[Message]:
                     async for msg in sub:
@@ -132,7 +141,8 @@ class Backend(_Backend):
                         except Exception as exc:
                             await self.send(
                                 P(":R.error.link.mqtt.topic"),
-                                dict(val=msg.topic, pattern=topic, msg=repr(exc)),
+                                dict(val=msg.topic, pattern=tops, msg=repr(exc)),
+                                retain=False,
                             )
                             # workaround for undecodeability
                             top = Path.build(msg.topic.split("/"))
@@ -150,17 +160,15 @@ class Backend(_Backend):
                                 if not prop.timestamp:
                                     prop.timestamp = time.time()
 
-                                prop.retain=msg.retain
-
                             except Exception as exc:
                                 self.logger.debug("Property Error", exc_info=exc)
                                 await self.send(
-                                    P(":R.error.link.mqtt.meta"),
+                                    P(":R.error.link.mqtt.meta")+topic,
                                     dict(
                                         topic=top,
-                                        pattern=topic,
                                         val=oprop,
                                         msg=repr(exc),
+                                        retain=False,
                                     ),
                                 )
                                 err = exc
@@ -174,30 +182,31 @@ class Backend(_Backend):
                                     else:
                                         raise ValueError("Unknown payload format {p_i}")
                                 except Exception as exc:
-                                    self.logger.debug("Decoding Error", exc_info=exc)
+                                    self.logger.warning("Decoding Error %s %s: %r %r", top,codec.__class__.__module__, msg.payload,exc, exc_info=exc)
+                                    breakpoint()
                                     await self.send(
-                                        P(":R.error.link.mqtt.codec"),
+                                        P(":R.error.link.mqtt.codec")+topic,
                                         dict(
                                             codec=type(codec).__name__,
                                             topic=top,
-                                            pattern=topic,
                                             val=msg.payload,
                                             msg=repr(exc),
                                         ),
+                                        retain=False,
                                     )
                                     err = exc
                                 else:
                                     # everything OK
                                     if self.trace:
                                         self.logger.debug("R:%s %r", top, data)
-                                    yield Message(top, data, prop, msg)
+                                    yield Message(top, data, meta=prop, prop=msg.user_properties)
                                 continue
                         if raw is False:
                             # don't forward undecodeable messages
                             continue
                         if self.trace:
                             self.logger.info("R:%s R|%r", top, msg.payload)
-                        yield RawMessage(top, msg.payload, prop, msg, exc=err)
+                        yield RawMessage(top, msg.payload, meta=prop, prop=msg.user_properties, exc=err)
 
                 yield sub_get(sub)
         except (anyio.get_cancelled_exc_class(), KeyboardInterrupt):
@@ -215,7 +224,7 @@ class Backend(_Backend):
         data: bytes | bytearray | memoryview,
         codec: Literal[None],
         meta: MsgMeta | bool | None = None,
-        retain: bool = False,
+        retain: bool|None = None,
         **kw,
     ) -> Awaitable:  # pylint: disable=invalid-overridden-method
         ...
@@ -227,7 +236,7 @@ class Backend(_Backend):
         data: Any,
         codec: Codec | str | Literal[NotGiven] = NotGiven,
         meta: MsgMeta | bool | None = None,
-        retain: bool = False,
+        retain: bool|None=None,
         **kw,
     ) -> Awaitable:  # pylint: disable=invalid-overridden-method
         ...
@@ -238,7 +247,7 @@ class Backend(_Backend):
         data: Any,
         codec: Codec | str | None | Literal[NotGiven] = NotGiven,
         meta: MsgMeta | bool | None = None,
-        retain: bool = False,
+        retain: bool|None=None,
         **kw,
     ) -> Awaitable:  # pylint: disable=invalid-overridden-method
         """
@@ -251,12 +260,21 @@ class Backend(_Backend):
         if meta is None:
             meta = self.meta
         if meta is True:
-            prop["MoaT"] = MsgMeta(origin=self.name).encode()
-        elif meta is not False:
+            meta = MsgMeta(origin=self.name)
+        if meta is False:
+            if retain is None:
+                retain = False
+
+        if meta is not False:
             prop["MoaT"] = meta.encode()
+        if retain is None:
+            raise ValueError("Need to set whether to retain or not")
 
         if isinstance(data,str):
             msg = data  # utf-8 is pass-thru in MQTT5
+        elif data is NotGiven:
+            # delete
+            msg = b''
         else:
             if codec is NotGiven:
                 codec = self.codec

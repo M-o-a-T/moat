@@ -37,7 +37,7 @@ class Message[TData]:
     topic: Path = field()
     data: TData = field()
     meta: MsgMeta = field()
-    orig: Any = field(repr=False)
+    prop: dict[str,Any] = field()
     retain: bool|None = field(default=False)
 
     raw: ClassVar[bool] = False

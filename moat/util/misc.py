@@ -10,10 +10,12 @@ __all__ = ["val2pos", "pos2val", "srepr", "OutOfData", "_add_obj", "get_codec"]
 class OutOfData(EOFError):
     pass
 
-def get_codec(name):
+def get_codec(name:str|Codec):
     "Codec loader; replaces 'std-' prefix with 'moat.util.'"
-    from moat.lib.codec import get_codec as _get_codec
+    from moat.lib.codec import get_codec as _get_codec, Codec
 
+    if isinstance(name,Codec):
+        return name
     if name is None:
         name = "noop"
     elif name[0:4] == "std-":

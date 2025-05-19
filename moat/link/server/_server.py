@@ -772,7 +772,7 @@ class Server(MsgHandler):
                 self.logger.debug("Recv: %r", msg)
                 msg.meta.source = "Mon"
                 topic = msg.topic[1:]
-                if topic[0] == "run":
+                if len(topic) and topic[0] == "run":
                     continue
                 path = Path.build(topic)
 

@@ -266,6 +266,7 @@ class Node:
         min_depth: int = 0,
         timestamp: int | float = 0,
         depth_first: bool = False,
+        force: bool = False,
     ):
         """
         Calls coroutine ``proc(node,Subpath)`` on this node and all its children.
@@ -274,6 +275,8 @@ class Node:
 
         if @depth_first is not set and @proc explicitly returns False,
         the subtree is skipped.
+
+        if @force is set, also visit empty nodes.
         """
 
         async def _walk(s, p):
@@ -281,7 +284,7 @@ class Node:
                 for k, v in s._sub.items():
                     await _walk(v, p / k)
 
-            if min_depth <= len(p) and s.meta is not None and s.meta.timestamp >= timestamp:
+            if min_depth <= len(p) and (force or (s.meta is not None and s.meta.timestamp >= timestamp)):
                 if await proc(p, s) is False:
                     return
 

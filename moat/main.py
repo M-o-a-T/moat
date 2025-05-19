@@ -32,9 +32,11 @@ This is the main command handler for MoaT, the Master of all Things.
 
     ec = 0
     try:
-        with ungroup if "MOAT_TB" not in os.environ else nullcontext():
+        with ungroup:
             anyio.run(runner, backend=backend)
     except ExpectedError as exc:
+        if "MOAT_TB" in os.environ:
+            raise
         print(repr(exc), file=sys.stderr)
         ec = 1
     except BaseException as exc:

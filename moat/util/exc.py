@@ -5,6 +5,7 @@ This code is *duplicated* in moat.micro:_embed/lib/moat/util/exc.py
 """
 
 from __future__ import annotations
+import os
 from anyio import get_cancelled_exc_class
 from sniffio import AsyncLibraryNotFoundError
 
@@ -88,6 +89,8 @@ class ungroup:
 
     def __exit__(self, c, e, t):
         if e is None:
+            return
+        if "MOAT_TB" in os.environ:
             return
         e = self.one(e)
         raise e from None

@@ -36,7 +36,7 @@ class GateNode(Node):
     ext_meta:dict[str,Any]|None=field(init=False,default=None)
     ext_data:Any=field(init=False,default=NotGiven)
 
-    # todo:bool=field(init=False,default=True)
+    todo:bool=field(init=False,default=False)
 
     @property
     def has_src(self):
@@ -118,25 +118,29 @@ class Gate:
         """
         Fetch the internal data.
         """
-        async with self.link.d_watch(self.cf.src, subtree=True,meta=True,mark=True) as mon:
+        async with self.link.d_watch(self.cf.src, subtree=True,state=None,meta=True,mark=True) as mon:
+            task_status.started()
             async for pdm in mon:
                 if pdm is None:
                     self._src_done.set()
                     continue
                 p,d,m = pdm
+                if m.origin == self.origin:
+                    # mine, so skip
+                    continue
 
-                node = self.data.get(path)
+                node = self.data.get(p)
                 if self.running or node.has_src:
                     await self._set_dst(p,node,d,m)
                 else:
-                    self.data_ = d
-                    self.meta = m
+                    node.set_(d,m)
+                    node.todo=True
 
     async def _set_dst(self, path:Path,node:GateNode,data:Any,meta:MsgMeta):
         node.ext_data=NotGiven
         node.ext_meta=NotGiven
-        node.data_ = data
-        node.meta = meta
+        node.set_(data,meta)
+        node.todo=False
 
         await self.set_dst(path,data,meta)
 
@@ -162,12 +166,6 @@ class Gate:
         Update source state (possibly). @aux is additional metadata that
         the destination resolver can use to disambiguate.
         """
-        try:
-            data = self.codec.decode(data)
-        except Exception as exc:
-            self.logger.exception("Remote %s %r/%r: %r", path, data,aux, repr(exc))
-            return
-
         node = self.data.get(path)
 
         if self.running or node.has_dst:
@@ -175,6 +173,7 @@ class Gate:
         else:
             node.ext_data = data
             node.ext_meta = aux or NotGiven
+            node.todo = True
 
     async def _set_src(self, path:Path,node:GateNode,data:Any,aux:dict|None):
         meta = MsgMeta(origin=self.origin)
@@ -183,11 +182,10 @@ class Gate:
 
         await self.link.d_set(path,data,meta)
 
-        node.data_=NotGiven
-        node.meta=NotGiven
-
+        node.set_(NotGiven,NotGiven)
         node.ext_data = data
         node.ext_meta = aux or NotGiven
+        node.todo = False
 
     async def set_dst(self, path:Path, data:Any, meta:MsgMeta):
         """
@@ -293,22 +291,21 @@ class Gate:
 
             if d is False:
                 self.logger.debug("SRC %s %s %r/%r",self.name,path, node.data_,node.meta)
-                await self._set_dst(path,node.data_,node.meta)
+                await self._set_dst(path,node,node.data_,node.meta)
 
             elif d is True:
-                self.logger.debug("DST %s %s %r/%r",self.name,path, node.data_,node.ext_data,node.ext_meta)
+                self.logger.debug("DST %s %s %r/%r",self.name,path, node.ext_data,node.ext_meta)
 
                 meta = MsgMeta(origin=self.origin)
                 if node.ext_meta:
                     meta["gw"] = node.ext_meta
-                await self.link.d_set(path,self.data_,meta)
+                await self.link.d_set(self.cf.src+path,node.ext_data,meta)
 
-            elif self.data_ != self.ext_data:
+            elif node.data_ != node.ext_data:
                 self.logger.warning("Conflict %s %s %r/%r vs %r/%r",self.name,path, node.data_,node.meta,node.ext_data,node.ext_meta)
 
-        await self.data.walk(visit)
+        await self.data.walk(visit, force=True)
         task_status.started()
-
 
 
     async def state_updater(self, mon:Watcher, *, task_status=anyio.TASK_STATUS_IGNORED):

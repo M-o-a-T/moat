@@ -10,16 +10,24 @@ from moat.link._test import Scaffold
 from moat.link.node import Node
 from moat.link.client import Link
 from moat.link.gate import run_gate
-from moat.util import P, PathLongener, NotGiven, ungroup
+from moat.link._data import data_get, backend_get
+from moat.util import P, PathLongener, NotGiven, ungroup, yprint
 from moat.lib.cmd import StreamError
 from moat.lib.cmd.base import MsgSender
+from moat.lib.codec import get_codec
 
 async def _dump(sf, *, task_status):
     bk = await sf.backend(name="mon")
-    async with bk.monitor(P("#"), qos=0) as mon:
+    codec=get_codec("std-cbor")
+    async with bk.monitor(P("#"), qos=0, codec="noop") as mon:
         task_status.started()
         async for msg in mon:
-            print(msg)
+            try:
+                d = codec.decode(msg.data)
+            except Exception:
+                print(msg)
+            else:
+                print(f"Message(topic={msg.topic!r}, data=CBOR:{d!r}, meta={msg.meta} retain={msg.retain})")
 
 @pytest.mark.anyio()
 async def test_gate_mqtt(cfg):
@@ -27,6 +35,12 @@ async def test_gate_mqtt(cfg):
         await sf.tg.start(_dump, sf)
         await sf.server(init={"Hello": "there!", "test": 123})
         c = await sf.client()
+        codec=get_codec("json")
+
+        await c.d_set(P("test.a.one"),1)
+        await c.d_set(P("test.a.two"),2)
+        await c.send(P("test.b.two"),22,codec=codec, retain=True)
+        await c.send(P("test.b.three"),33,codec=codec, retain=True)
 
         async def mon_src(task_status):
             async with c.d_watch(P("test.a")) as mon:
@@ -36,7 +50,7 @@ async def test_gate_mqtt(cfg):
                     got.append((p,d))
 
         async def mon_dst(task_status):
-            async with c.monitor(P("test.b")) as mon:
+            async with c.monitor(P("test.b"),codec=codec) as mon:
                 got = []
                 task_status.started(got)
                 async for m in mon:
@@ -55,8 +69,8 @@ async def test_gate_mqtt(cfg):
         await sf.tg.start(run_gate,sf.cfg,c,"test")
 
         await anyio.sleep(0.2)
-        a= await c.d_get(P("test.a"))
-        b= await c.d_get(P("test.b"))
+        a= await data_get(c,P("test.a"), out=False)
+        b= await backend_get(c,P("test.b"), out=False)
 
-        yprint(dict(a=a,b=b),file=sys.stderr)
+        yprint(dict(a=a,b=b,ad=d_src,bd=d_dst),stream=sys.stderr)
 

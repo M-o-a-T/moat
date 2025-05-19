@@ -4,6 +4,7 @@ Data access
 
 from __future__ import annotations
 
+import anyio
 import datetime
 import os
 import sys
@@ -161,6 +162,129 @@ async def data_get(
 
     
     d,*m = await conn.d.get(path)
+    if add_date:
+        add_dates(d)
+    if meta:
+        m=MsgMeta.restore(m)
+        d=dict(data=d,meta=m.repr())
+
+    if out is False:
+        return d
+    if not raw:
+        yprint(d, stream=out)
+    elif isinstance(d, bytes):
+        os.write(out.fileno(), res)
+    else:
+        out.write(str(d))
+    pass  # end get
+
+
+async def backend_get(
+    conn:Link,
+    path:Path,
+    *,
+    meta:bool=False,
+    recursive:bool=True,
+    as_dict:str|None="_",
+    raw:bool=False,
+    path_mangle=None,
+    item_mangle=None,
+    add_date=False,
+    codec:Codec|None=None,
+    out=None,
+    timeout:float=0.5,
+):
+    """Generic code to dump a backend subtree.
+
+    `path_mangle` accepts a path and the as_dict parameter. It should
+    return the new path. This is used for e.g. prefixing the path with a
+    device name. Returning ``None`` causes the entry to be skipped.
+    """
+    # This is a copy of `data_get` that accesses the backend directly.
+
+    if path_mangle is None:
+
+        def path_mangle(x):
+            return x
+
+    if item_mangle is None:
+
+        async def item_mangle(x):  # pylint: disable=function-redefined
+            return x
+
+    if out is None:
+        out = sys.stdout
+    elif out is False:
+        out = []
+
+    if recursive:
+        kw = {"codec":codec}
+        
+        y = {}
+        async with conn.monitor(path, subtree=True, **kw) as mon:
+            while True:
+                r = None
+                with anyio.move_on_after(timeout):
+                    r = await anext(mon)
+                if r is None:
+                    break
+
+                r = await item_mangle(r)
+                if r is None:
+                    continue
+                p,d,m = r.topic,r.data,r.meta
+                p=p[len(path):]
+                p = path_mangle(p)
+                if p is None:
+                    continue
+
+                if add_date:
+                    add_dates(d)
+                if meta:
+                    m=MsgMeta._moat__restore(m, NotGiven)
+                    d = dict(data=d,meta=m.repr())
+
+                if as_dict is not None:
+                    yy = y
+                    for pp in p:
+                        yy = yy.setdefault(pp, {})
+                    try:
+                        yy[as_dict] = d
+                    except AttributeError:
+                        if empty:
+                            yy[as_dict] = None
+                else:
+                    if raw:
+                        y = p
+                    else:
+                        y = {}
+                        try:
+                            y[p] = d
+                        except AttributeError:
+                            if empty:
+                                y[p] = None
+                            else:
+                                continue
+                    if isinstance(out,list):
+                        out.append(y)
+                    else:
+                        yprint([y], stream=out)
+
+            if isinstance(out,list):
+                return y
+            yprint(y, stream=out)
+
+            return out # end "if recursive"
+
+    
+    async with conn.monitor(path, **kw) as mon:
+        r = None
+        with anyio.move_on_after(timeout):
+            r = await anext(mon)
+        if r is None:
+            raise KeyError(path)
+
+    d,m = r.data,r.meta
     if add_date:
         add_dates(d)
     if meta:

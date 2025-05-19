@@ -786,22 +786,8 @@ class Server(MsgHandler):
                     elif self.data and msg.data != self.data.data:
                         raise RuntimeError(f"Existing data? {msg} {self.data}")
 
-                if self.maybe_update(path, msg.data, msg.meta) is False:
-                    # This item from outside is stale.
-                    d = self.data.get(path)
-                    try:
-                        data = d.data
-                    except ValueError:
-                        if msg.data is not NotGiven:
-                            # newly deleted
-                            await self.backend.send(
-                                topic=msg.topic,
-                                data=b"",
-                                codec=None,
-                                meta=d.meta,
-                            )
-                    else:
-                        await self.backend.send(topic=msg.topic, data=data, meta=d.meta)
+                self.maybe_update(path, msg.data, msg.meta)
+
 
     async def _backend_sender(self, task_status: anyio.abc.TaskStatus = anyio.TASK_STATUS_IGNORED):
         rdr = self.write_monitor.reader(999)

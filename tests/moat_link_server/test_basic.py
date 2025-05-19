@@ -68,7 +68,7 @@ async def test_ls_basic(cfg):
         evt = anyio.Event()
         await sf.tg.start(cl, 999)
         om = MsgMeta(origin="me!")
-        await c.cmd(P("d.set"), P("test.here"), 999, om)
+        await c.d_set(P("test.here"), 999, om)
         with anyio.fail_after(1):
             await evt.wait()
 

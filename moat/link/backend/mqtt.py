@@ -135,82 +135,8 @@ class Backend(_Backend):
         try:
             async with self.client.subscribe(tops, **kw) as sub:
 
-                async def sub_get(sub) -> AsyncIterator[Message]:
-                    async for msg in sub:
-                        err = None
-                        try:
-                            top = PS(msg.topic)
-                        except Exception as exc:
-                            await self.send(
-                                P(":R.error.link.mqtt.topic"),
-                                dict(val=msg.topic, pattern=tops, msg=repr(exc)),
-                                retain=False,
-                            )
-                            # workaround for undecodeability
-                            top = Path.build(msg.topic.split("/"))
 
-                        prop = msg.user_properties.get("MoaT")
-                        if not raw:
-                            oprop = prop  # remember for error
-                            try:
-                                if prop:
-                                    prop = MsgMeta.decode(self.name, prop)
-                                else:
-                                    prop = MsgMeta(name=self.name)
-
-                                assert prop.origin
-                                if not prop.timestamp:
-                                    prop.timestamp = time.time()
-
-                            except Exception as exc:
-                                self.logger.debug("Property Error", exc_info=exc)
-                                await self.send(
-                                    P(":R.error.link.mqtt.meta")+topic,
-                                    dict(
-                                        topic=top,
-                                        val=oprop,
-                                        msg=repr(exc),
-                                        retain=False,
-                                    ),
-                                )
-                                err = exc
-                            else:
-                                try:
-                                    p_i = msg.properties.get(PropertyType.PAYLOAD_FORMAT_INDICATOR, 0)
-                                    if not p_i:
-                                        data = codec.decode(msg.payload)
-                                    elif p_i == 1:
-                                        data = msg.payload  # UTF-8
-                                    else:
-                                        raise ValueError("Unknown payload format {p_i}")
-                                except Exception as exc:
-                                    self.logger.warning("Decoding Error %s %s: %r %r", top,codec.__class__.__module__, msg.payload,exc, exc_info=exc)
-                                    breakpoint()
-                                    await self.send(
-                                        P(":R.error.link.mqtt.codec")+topic,
-                                        dict(
-                                            codec=type(codec).__name__,
-                                            topic=top,
-                                            val=msg.payload,
-                                            msg=repr(exc),
-                                        ),
-                                        retain=False,
-                                    )
-                                    err = exc
-                                else:
-                                    # everything OK
-                                    if self.trace:
-                                        self.logger.debug("R:%s %r", top, data)
-                                    yield Message(top, data, meta=prop, prop=msg.user_properties)
-                                continue
-                        if raw is False:
-                            # don't forward undecodeable messages
-                            continue
-                        if self.trace:
-                            self.logger.info("R:%s R|%r", top, msg.payload)
-                        yield RawMessage(top, msg.payload, meta=prop, prop=msg.user_properties, exc=err)
-
-                yield sub_get(sub)
+                yield _SubGet(self,sub,codec,raw)
         except (anyio.get_cancelled_exc_class(), KeyboardInterrupt):
             raise
         except BaseException as exc:
@@ -296,3 +222,89 @@ class Backend(_Backend):
             retain=retain,
             **kw,
         )
+
+class _SubGet:
+    def __init__(self, back, sub, codec,raw):
+        self.back = back
+        self.sub = sub
+        self.codec = codec
+        self.raw = raw
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        back=self.back
+        err = None
+        while True:
+            msg = await anext(self.sub)
+            try:
+                top = PS(msg.topic)
+            except Exception as exc:
+                await back.send(
+                    P(":R.error.link.mqtt.topic"),
+                    dict(val=msg.topic, pattern=tops, msg=repr(exc)),
+                    retain=False,
+                )
+                # workaround for undecodeability
+                top = Path.build(msg.topic.split("/"))
+
+            prop = msg.user_properties.get("MoaT")
+            if not self.raw:
+                oprop = prop  # remember for error
+                try:
+                    if prop:
+                        prop = MsgMeta.decode(back.name, prop)
+                    else:
+                        prop = MsgMeta(name=back.name)
+
+                    assert prop.origin
+                    if not prop.timestamp:
+                        prop.timestamp = time.time()
+
+                except Exception as exc:
+                    back.logger.debug("Property Error", exc_info=exc)
+                    await back.send(
+                        P(":R.error.link.mqtt.meta")+topic,
+                        dict(
+                            topic=top,
+                            val=oprop,
+                            msg=repr(exc),
+                            retain=False,
+                        ),
+                    )
+                    err = exc
+                else:
+                    try:
+                        p_i = msg.properties.get(PropertyType.PAYLOAD_FORMAT_INDICATOR, 0)
+                        if not p_i:
+                            data = self.codec.decode(msg.payload)
+                        elif p_i == 1:
+                            data = msg.payload  # UTF-8
+                        else:
+                            raise ValueError("Unknown payload format {p_i}")
+                    except Exception as exc:
+                        back.logger.warning("Decoding Error %s %s: %r %r", top,self.codec.__class__.__module__, msg.payload,exc, exc_info=exc)
+                        await back.send(
+                            P(":R.error.link.mqtt.codec")+topic,
+                            dict(
+                                codec=type(self.codec).__name__,
+                                topic=top,
+                                val=msg.payload,
+                                msg=repr(exc),
+                            ),
+                            retain=False,
+                        )
+                        err = exc
+                    else:
+                        # everything OK
+                        if back.trace:
+                            back.logger.debug("R:%s %r", top, data)
+                        return Message(top, data, meta=prop, prop=msg.user_properties, retain=msg.retain)
+                    continue
+            if self.raw is False:
+                # don't forward undecodeable messages
+                continue
+            if back.trace:
+                back.logger.info("R:%s R|%r", top, msg.payload)
+            return RawMessage(top, msg.payload, meta=prop, prop=msg.user_properties, exc=err, retain=msg.retain)

@@ -1005,6 +1005,9 @@ async def build(
             deb_opts = ["--no-sign"]
 
         for r in repos:
+            ltag = r.last_tag
+            if r.vers.get("deb","-") == f"{ltag}-{r.vers.pkg}":
+                continue
             rd = PACK / r.dash
             p = rd / "debian"
             if not p.is_dir():
@@ -1033,7 +1036,6 @@ async def build(
                 )
                 tag,ptag = res.stdout.strip().decode("utf-8").rsplit("-", 1)
                 ptag = int(ptag)
-                ltag = r.last_tag
                 if tag != ltag or r.vers.pkg != ptag:
                     subprocess.run(
                         [
@@ -1073,6 +1075,8 @@ async def build(
                 continue
             tag = r.last_tag
             name = r.dash
+            if r.vers.get("pypi","-") == r.last_tag:
+                continue
 
             targz = rd / "dist" / f"{r.under}-{tag}.tar.gz"
             done = rd / "dist" / f"{r.under}-{tag}.done"
@@ -1128,6 +1132,8 @@ async def build(
                 print("Please fix(?) and try again.", file=sys.stderr)
                 no_commit=True
                 no_deb=True
+            else:
+                r.vers.pypi = r.last_tag
 
     # Step 7: upload Debian package
     if run and not no_deb:
@@ -1136,6 +1142,8 @@ async def build(
             dput_opts = ["-u", "ext"]
         for r in repos:
             ltag = r.last_tag
+            if r.vers.get("deb","-") == f"{ltag}-{r.vers.pkg}":
+                continue
             if not (PACK / r.dash / "debian").is_dir():
                 continue
             changes = PACK / f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
@@ -1157,6 +1165,8 @@ async def build(
             print(*err, file=sys.stderr)
             print("Please fix(?) and try again.", file=sys.stderr)
             no_commit=True
+        else:
+            r.vers.deb = f"{ltag}-{r.vers.pkg}"
 
     # Step 8: commit the result
     if run:

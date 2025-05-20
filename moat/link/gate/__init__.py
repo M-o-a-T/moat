@@ -169,7 +169,7 @@ class Gate:
         node = self.data.get(path)
 
         if self.running or node.has_dst:
-            await self._set_src(path,node,data,aux)
+            await self._set_src(self.cf.src+path,node,data,aux)
         else:
             node.ext_data = data
             node.ext_meta = aux or NotGiven

@@ -177,7 +177,7 @@ class Gate:
 
     async def _set_src(self, path:Path,node:GateNode,data:Any,aux:dict|None):
         meta = MsgMeta(origin=self.origin)
-        if aux not in {None,NotGiven}:
+        if aux not in (None,NotGiven):
             meta["gw"] = aux
 
         await self.link.d_set(path,data,meta)

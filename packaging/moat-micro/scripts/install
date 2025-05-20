@@ -9,14 +9,8 @@ fi
 
 if [ -x "./mt" ] ; then 
     M=./mt
-    S=micro
-    MPY=$S/lib/micropython
+    MPY=ext/micropython
     export PYTHONPATH="$(pwd)"
-elif [ -x "../mt" ] ; then 
-    M=../mt
-    S=.
-    MPY=$S/lib/micropython
-    export PYTHONPATH="$(pwd)/.."
 else
     if test ! -v MPY ; then
         echo "Usage: MPY=/path/to/src/micropython $0 cfg.file" >&2

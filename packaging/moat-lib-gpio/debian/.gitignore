@@ -4,4 +4,4 @@
 /*.debhelper-build-stamp
 /*.substvars
 /debhelper-build-stamp
-/moat-lib-gpio
+/python3-moat-lib-gpio

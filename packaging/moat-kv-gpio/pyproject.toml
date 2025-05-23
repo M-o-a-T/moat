@@ -12,6 +12,7 @@ classifiers = [
 ]
 dependencies = [
 	"moat-kv ~= 0.70.24",
+	"moat-lib-gpio ~= 0.7.0",
 ]
 version = "0.12.2"
 keywords = [ "MoaT",]

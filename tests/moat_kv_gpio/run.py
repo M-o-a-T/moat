@@ -5,7 +5,7 @@ import trio
 import trio.testing
 
 from moat.mqtt.test import test_client
-from asyncgpio.test import GpioWatcher, Pin
+from moat.lib.gpio.test import GpioWatcher, Pin
 
 from moat.util import Path
 from moat.kv.gpio.task import task as GPIOtask

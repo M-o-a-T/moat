@@ -73,12 +73,6 @@ moat-ems-sched:
   pypi: 0.2.12
   rev: 1d2d76bbd5d7f2d17da65f7778f63148cc696a6f
   tag: 0.2.12
-moat-gpio:
-  deb: 0.6.7-5
-  pkg: 5
-  pypi: 0.6.7
-  rev: 1d2d76bbd5d7f2d17da65f7778f63148cc696a6f
-  tag: 0.6.7
 moat-kv:
   deb: 0.71.11-2
   pkg: 2
@@ -158,9 +152,9 @@ moat-lib-diffiehellman:
   rev: 1d2d76bbd5d7f2d17da65f7778f63148cc696a6f
   tag: 0.13.4
 moat-lib-gpio:
-  deb: 0.6.7-1
+  deb: 0
   pkg: 1
-  pypi: 0.6.7
+  pypi: 0
   rev: 7704f2a270bc500d3cdde1dab9139d7ae7a2b6d4
   tag: 0.7.0
 moat-lib-pid:

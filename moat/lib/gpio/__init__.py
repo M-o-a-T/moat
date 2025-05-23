@@ -1,4 +1,4 @@
-"""Top-level package for moat.gpio."""
+"""Top-level package for moat.lib.gpio."""
 
 from __future__ import annotations
 
@@ -18,6 +18,6 @@ def open_chip(num=None, label=None, consumer=sys.argv[0]):
             Defaults to the program's name.
 
     Returns:
-        a :class:`moat.gpio.gpio.Chip` instance.
+        a :class:`moat.lib.gpio.gpio.Chip` instance.
     """
     return Chip(num=num, label=label, consumer=consumer)

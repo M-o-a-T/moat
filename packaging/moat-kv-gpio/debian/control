@@ -12,7 +12,7 @@ Package: moat-kv-gpio
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   moat-kv (>= 0.70),
-  python3-asyncgpio,
+  python3-moat-lib-gpio,
 Replaces: python3-distgpio, distkv-gpio
 Conflicts: python3-distgpio, distkv-gpio
 Description: GPIO access for moat-kv

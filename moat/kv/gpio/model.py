@@ -15,7 +15,7 @@ from moat.util import PathLongener, NotGiven
 from moat.kv.obj import ClientEntry, ClientRoot
 from moat.kv.errors import ErrorRoot
 from moat.kv.exceptions import ServerError
-import asyncgpio as gpio
+import moat.lib.gpio as gpio
 
 import logging
 

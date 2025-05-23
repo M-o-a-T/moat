@@ -4,19 +4,19 @@
    contain the root `toctree` directive.
 
 
-=============================================
-moat-gpio: GPIO access via anyio and libgpiod
-=============================================
+=================================================
+moat-lib-gpio: GPIO access via anyio and libgpiod
+=================================================
 
-MoaT-GPIO is a simple wrapper around ``libgpiod``.
+MoaT-lib-GPIO is a simple wrapper around ``libgpiod``.
 
-You can use MoaT-GPIO to
+You can use MoaT-lib-GPIO to
 * access a GPIO chip
 * get an object describing a GPIO line
 * open the line for input or output
 * monitor the line for events (without polling!)
 
-MoaT-GPIO only supports Linux.
+MoaT-lib-GPIO only supports Linux.
 It uses the "new" GPIO interface, i.e. kernel 4.5 or later is required.
 
 .. toctree::

@@ -1,5 +1,5 @@
 import anyio
-import moat.gpio as gpio
+import moat.lib.gpio as gpio
 
 """
 This script toggles a pin and watches another. The two are presumed to be connected (hardware wire).

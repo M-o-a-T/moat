@@ -1,4 +1,4 @@
-import moat.gpio as gpio
+import moat.lib.gpio as gpio
 import time
 
 """Flash an output manually.

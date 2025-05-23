@@ -1,6 +1,6 @@
 import time
 import anyio
-import moat.gpio as gpio
+import moat.lib.gpio as gpio
 
 """
 This example is taken out of my furnace controller.
@@ -9,7 +9,7 @@ Use at your own risk.
 
 If you aren't sure about how to hook up a button and led to your board, there are a lot of examples online.
 
-Thank you @smurfix, who wrote moat.gpio and @njsmith and other in glitter:python-trio/general room
+Thank you @smurfix, who wrote moat.lib.gpio and @njsmith and other in glitter:python-trio/general room
 who helped me out.
 """
 

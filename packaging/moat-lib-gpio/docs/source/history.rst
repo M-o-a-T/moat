@@ -1,6 +1,6 @@
 Release history
 ===============
 
-.. currentmodule:: moat-gpio
+.. currentmodule:: moat-lib-gpio
 
 .. towncrier release notes start

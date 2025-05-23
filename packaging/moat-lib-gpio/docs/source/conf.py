@@ -29,8 +29,8 @@ nitpicky = True
 nitpick_ignore = [
     # Format is ("sphinx reference type", "string"), e.g.:
     ("py:obj", "bytes-like"),
-    ("py:class", "moat.gpio.gpio.Chip"),
-    ("py:class", "moat.gpio.gpio.Line"),
+    ("py:class", "moat.lib.gpio.gpio.Chip"),
+    ("py:class", "moat.lib.gpio.gpio.Line"),
 ]
 
 autodoc_inherit_docstrings = False
@@ -72,18 +72,18 @@ source_suffix = ".rst"
 master_doc = "index"
 
 # General information about the project.
-project = "moat-gpio"
-copyright = "The moat-gpio authors"
-author = "The moat-gpio authors"
+project = "moat-lib-gpio"
+copyright = "The moat-lib-gpio authors"
+author = "The moat-lib-gpio authors"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
-import moat.gpio
+import moat.lib.gpio
 
-version = moat.gpio.__version__
+version = moat.lib.gpio.__version__
 # The full version, including alpha/beta/rc tags.
 release = version
 
@@ -147,7 +147,7 @@ html_static_path = ["_static"]
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = "asyncgpiodoc"
+htmlhelp_basename = "moatgpiodoc"
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -171,7 +171,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, "asyncgpio.tex", "Trio Documentation", author, "manual"),
+    (master_doc, "moatgpio.tex", "MoaT-lib-GPIO Documentation", author, "manual"),
 ]
 
 
@@ -179,7 +179,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, "asyncgpio", "asyncgpio Documentation", [author], 1)]
+man_pages = [(master_doc, "moat-lib-gpio", "moat-lib-gpio Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output -------------------------------------------
@@ -190,10 +190,10 @@ man_pages = [(master_doc, "asyncgpio", "asyncgpio Documentation", [author], 1)]
 texinfo_documents = [
     (
         master_doc,
-        "asyncgpio",
-        "asyncgpio Documentation",
+        "moat-lib-gpio",
+        "moat-lib-gpio Documentation",
         author,
-        "asyncgpio",
+        "moat-lib-gpio",
         "GPIO access via Trio and libgpiod",
         "Miscellaneous",
     ),

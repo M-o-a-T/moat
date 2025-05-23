@@ -9,7 +9,7 @@ pip install -U pip setuptools wheel
 
 if [ "$CHECK_FORMATTING" = "1" ]; then
     pip install yapf==${YAPF_VERSION}
-    if ! yapf -rpd setup.py moat/gpio; then
+    if ! yapf -rpd setup.py moat/lib/gpio; then
         cat <<EOF
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -17,7 +17,7 @@ if [ "$CHECK_FORMATTING" = "1" ]; then
 Formatting problems were found (listed above). To fix them, run
 
    pip install yapf==${YAPF_VERSION}
-   yapf -rpi setup.py moat/gpio
+   yapf -rpi setup.py moat/lib/gpio
 
 in your local checkout.
 
@@ -45,7 +45,7 @@ else
     mkdir empty
     cd empty
 
-    pytest -W error -ra -v --pyargs moat/gpio --cov=moat/gpio --cov-config=../.coveragerc --verbose
+    pytest -W error -ra -v --pyargs moat/lib/gpio --cov=moat/lib/gpio --cov-config=../.coveragerc --verbose
 
     bash <(curl -s https://codecov.io/bash)
 fi

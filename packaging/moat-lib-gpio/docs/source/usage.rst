@@ -1,10 +1,10 @@
 
-Using MoaT-GPIO
-===============
+Using MoaT-lib-GPIO
+===================
 
-.. module: moat.gpio
+.. module: moat.lib.gpio
 
-Using MoaT-GPIO generally consists of three steps:
+Using MoaT-lib-GPIO generally consists of three steps:
 Accessing the chip, referring to a GPIO line within that chip.
 and actually using the line for input, output, or monitoring.
 
@@ -21,7 +21,7 @@ You need to refer to your hardware's documentation to discover which chip to use
 assuming there's more than one.
 
 ::
-    import moat.gpio as gpio
+    import moat.lib.gpio as gpio
 
     def main():
         with gpio.open_chip(0, consumer="example") as chip:
@@ -45,7 +45,7 @@ You need to refer to your hardware's documentation to discover which line to use
     as an output that's actually an input) may damage your computer or its
     periphera(s).
 
-.. automethod: moat.gpio.Chip.line
+.. automethod: moat.lib.gpio.Chip.line
 
 .. note::
 
@@ -59,7 +59,7 @@ You need to refer to your hardware's documentation to discover which line to use
 Using a line
 ------------
 
-A :class:`moat.gpio.Line` object just describes a GPIO line; before you can actually
+A :class:`moat.lib.gpio.Line` object just describes a GPIO line; before you can actually
 use it, you need to request it from the kernel (which also prevents anybody else from using
 the line).
 
@@ -71,7 +71,7 @@ the line).
    you need to do ``echo 12 >/sys/class/gpio/unexport`` before your program can access
    line 12.
 
-.. automethod: moat.gpio.Line.open
+.. automethod: moat.lib.gpio.Line.open
 
 Output
 ~~~~~~
@@ -126,9 +126,9 @@ Therefore, it's better to let the kernel signal changes to a GPIO device::
                 async for e in in_:
                     print(e, "on" if e.value else "off", "at", e.time.strftime("%H:%M:%S"))
 
-:: automethod: moat.gpio.Line.monitor
+:: automethod: moat.lib.gpio.Line.monitor
 
-:: autoclass: moat.gpio.Event
+:: autoclass: moat.lib.gpio.Event
    :members:
 
 .. note::

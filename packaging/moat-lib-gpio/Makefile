@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-PACKAGE = moat-gpio
+PACKAGE = moat-lib-gpio
 MAKEINCL ?= $(shell python3 -mmoat src path)/make/py
 
 ifneq ($(wildcard $(MAKEINCL)),)

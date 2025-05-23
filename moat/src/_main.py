@@ -190,6 +190,8 @@ class Package(_Common):
         except AttributeError:
             return True
         for d in head.diff(self.last_commit, paths=self.path if main else Path("packaging")/self.dash):
+            if Path(d.b_path).name == "changelog":
+                continue
             if (
                 self._repo.repo_for(d.a_path, main) != self.name
                 and self._repo.repo_for(d.b_path, main) != self.name

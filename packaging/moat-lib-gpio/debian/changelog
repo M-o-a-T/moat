@@ -1,3 +1,9 @@
+moat-lib-gpio (0.7.1-1) unstable; urgency=medium
+
+  * New release for 25.3.1
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 23 May 2025 13:14:06 +0200
+
 moat-lib-gpio (0.7.0-1) unstable; urgency=medium
 
   * Moved to moat-lib-gpio.

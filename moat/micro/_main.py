@@ -107,13 +107,16 @@ async def cli(ctx, section, remote, path):
             raise click.UsageError("You don't use paths with 'moat micro setup|install'")
         if section is None:
             section = Path("setup")
+    elif inv == "path":
+        pass
     else:
         if section is None:
             section = Path("connect")
-    try:
-        cfg = get_part(cfg, section)
-    except KeyError:
-        raise click.UsageError(f"The config section '{section}' doesn't exist.") from None
+    if section is not None:
+        try:
+            cfg = get_part(cfg, section)
+        except KeyError:
+            raise click.UsageError(f"The config section '{section}' doesn't exist.") from None
     try:
         cfg.args.config = get_part(ocfg, cfg.args.config)
     except (AttributeError, KeyError):
@@ -140,6 +143,7 @@ async def cli(ctx, section, remote, path):
 @click.pass_context
 @click.option("-i", "--install", is_flag=True, help="Install MicroPython")
 @click.option("-r", "--run", is_flag=True, help="Run MoaT after updating")
+@click.option("-F", "--rom", is_flag=True, help="Upload to ROM Flash")
 @click.option("--run-section", type=str, help="Section with runtime config (default: 'run')")
 @click.option("-N", "--reset", is_flag=True, help="Reboot after updating")
 @click.option("-K", "--kill", is_flag=True, help="Reboot initially")
@@ -475,24 +479,33 @@ async def run_(obj):
         await idle()
 
 
-@cli.command("mount")
-@click.option("-b", "--blocksize", type=int, help="Max read/write message size", default=256)
+@cli.command("rom")
+@click.option("-d", "--device", type=int, help="ROMFS segment to use", default=0)
 @click.argument("path", type=click.Path(file_okay=False, dir_okay=True), nargs=1)
 @click.pass_obj
 @catch_errors
-async def mount_(obj, path, blocksize):
-    """Mount a controller's file system on the host"""
-    from moat.micro.fuse import wrap
-
+async def rom(obj, path, device):
+    """Send a file system to the device's ROM"""
     cfg = obj.mcfg
 
     async with (
         Dispatch(cfg, run=True, sig=True) as dsp,
-        dsp.sub_at(cfg.path.fs) as sd,
-        wrap(sd, path, blocksize=blocksize, debug=max(obj.debug - 1, 0)),
+        dsp.sub_at(cfg.path.rom) as sd,
     ):
+        res = await sd.n()
+        if device >= res:
+            if res == 1:
+                raise RuntimeError("Device has only one ROMFS.")
+            elif not res:
+                raise RuntimeError("Device does not have ROMFS.")
+            raise RuntimeError("Device 0…{res-1} only.")
+
+        nblk,blksz = await sd.stat()
+
         if obj.debug:
-            print("Mounted.")
+            print("Building ROMFS.")
+
+
         await idle()
 
 

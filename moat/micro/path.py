@@ -693,7 +693,7 @@ async def _nullcheck(p):
     return False
 
 
-async def copytree(src: APath, dst: MoatPath, check=None, drop=None, cross=None):
+async def copytree(src: APath, dst: MoatPath, wdst:MoatPath|None=None, check=None, drop=None, cross=None):
     """
     Copy a file or directory tree from @src to @dst.
     Skip files/subtrees for which "await check(src)" is False.
@@ -706,8 +706,12 @@ async def copytree(src: APath, dst: MoatPath, check=None, drop=None, cross=None)
     @drop is an async function with the destination file as input. If it
     returns `True` the file is deleted unconditionally, `False` (the
     default) does a standard sync-and-update, `None` ignores it.
+
+    If @wdst is set, new files get written there; they will be deleted from @dst.
     """
     n = 0
+    if wdst is None:
+        wdst = dst
     if await src.is_file():
         if src.suffix == ".py":
             # here we replace "src" with a buffer containing the
@@ -726,6 +730,12 @@ async def copytree(src: APath, dst: MoatPath, check=None, drop=None, cross=None)
             if dr is None:
                 return 0
 
+            if wdst is not dst:
+                with suppress(OSError, RemoteError):
+                    await dst.unlink()
+                with suppress(OSError, RemoteError):
+                    await dst.with_suffix(".mpy").unlink()
+
             if cross:
                 try:
                     p = str(src)
@@ -738,11 +748,19 @@ async def copytree(src: APath, dst: MoatPath, check=None, drop=None, cross=None)
                 else:
                     src = ABytes(src.with_suffix(".mpy"), data.stdout)
                     with suppress(OSError, RemoteError):
-                        await dst.unlink()
-                    dst = dst.with_suffix(".mpy")
+                        await wdst.unlink()
+                    wdst = wdst.with_suffix(".mpy")
             else:
                 with suppress(OSError, RemoteError):
                     await dst.with_suffix(".mpy").unlink()
+
+        if wdst is not dst:
+            with suppress(OSError, RemoteError):
+                await dst.unlink()
+            await wdst.parent.mkdir(parents=True, exist_ok=True)
+            await wdst.write_bytes(await src.read_bytes())
+            logger.info("Copy: Added %s > %s", src, dst)
+            return 1
 
         s1 = (await src.stat()).st_size
         try:
@@ -759,8 +777,8 @@ async def copytree(src: APath, dst: MoatPath, check=None, drop=None, cross=None)
             if h1 != h2:
                 s2 = -1
         if s1 != s2:
-            await dst.parent.mkdir(parents=True, exist_ok=True)
-            await dst.write_bytes(await src.read_bytes())
+            await wdst.parent.mkdir(parents=True, exist_ok=True)
+            await wdst.write_bytes(await src.read_bytes())
             logger.info("Copy: updated %s > %s", src, dst)
             return 1
         else:
@@ -781,11 +799,11 @@ async def copytree(src: APath, dst: MoatPath, check=None, drop=None, cross=None)
             if check is not None and not await check(s):
                 continue
             d = dst / s.name
-            n += await copytree(s, d, check=check, cross=cross, drop=drop)
+            n += await copytree(s, d, check=check, cross=cross, drop=drop, wdst=None if wdst is dst else wdst/s.name)
         return n
 
 
-async def copy_over(src, dst, cross=None):
+async def copy_over(src, dst, cross=None, wdst:anyio.Path|None=None):
     """
     Transfer a file tree from @src to @dst.
 
@@ -795,7 +813,7 @@ async def copy_over(src, dst, cross=None):
     if await src.is_file():  # noqa:SIM102
         if await dst.is_dir():
             dst /= src.name
-    while n := await copytree(src, dst, cross=cross):
+    while n := await copytree(src, dst, cross=cross, wdst=wdst):
         tn += n
     #       if n == 1:
     #           logger.info("One file changed. Verifying.")

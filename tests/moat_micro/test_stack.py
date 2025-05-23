@@ -25,7 +25,7 @@ CFG = """
 micro:
   setup:
     args:
-      cross: "lib/micropython/mpy-cross/build/mpy-cross"
+      cross: "ext/micropython/mpy-cross/build/mpy-cross"
       config: !P cfg.r
       update: true
       state: std

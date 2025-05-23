@@ -10,7 +10,7 @@ import sys
 
 from moat.util import merge
 from moat.util.compat import L, TaskGroup, sleep_ms
-from moat.rtc import all_rtc
+from rtc import all_rtc
 
 from moat.lib.codec.cbor import Codec as CBOR
 

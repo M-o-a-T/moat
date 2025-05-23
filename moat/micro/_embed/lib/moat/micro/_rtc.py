@@ -22,8 +22,6 @@ from moat.lib.codec.cbor import Codec as CBOR
 _pack = CBOR().encode
 _unpack = CBOR().decode
 
-_dfn = "moat.rtc"
-
 
 class State:
     """

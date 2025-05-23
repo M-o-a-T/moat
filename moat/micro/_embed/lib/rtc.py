@@ -5,12 +5,9 @@ RTC support for main
 from __future__ import annotations
 
 import machine
-
-from moat.lib.codec.cbor import Codec as _cbor
-from moat.util import OutOfData
+import sys
 
 cfg = {}
-_codec = _cbor()
 
 try:
     mem = machine.RTC().memory
@@ -24,13 +21,20 @@ def set_rtc(attr, value=None, fs=None):
     "Setter for a value in RTC / file system"
     if not fs:
         try:
-            s = _codec.decode(mem())
-        except OutOfData:
+            s = eval(mem().split(b'\0')[0].decode("utf-8"))
+        except Exception as exc:
+            if mem() != b"":
+                print("Memory decode problem:",mem(),repr(exc), file=sys.stderr)
             s = {}
+        if s.get(attr,None) == value:
+            return
+        if value is Ellipsis:
+            if attr in s:
+                del s[attr]
         else:
             s[attr] = value
-            mem(_codec.encode(s))
-            return
+        mem(repr(s).encode("utf-8")+b'\0')
+        return
     if fs is False:
         raise ValueError("no RTC")
     fn = f"moat.{attr}"
@@ -51,9 +55,9 @@ def get_rtc(attr, fs=None, default=None):
     "Getter for a value in RTC / file system"
     if not fs:
         try:
-            s = _codec.decode(mem())
+            s = eval(mem().split(b'\0')[0].decode("utf-8"))
             return s[attr]
-        except (OutOfData, KeyError):
+        except Exception:
             pass
     if fs is not False:
         try:
@@ -70,7 +74,7 @@ def get_rtc(attr, fs=None, default=None):
 def all_rtc():
     "Iterate RTC update values"
     try:
-        s = _codec.decode(mem())
+        s = eval(mem().split(b'\0')[0].decode("utf-8"))
         for k, v in s.items():
             if isinstance(v, dict):
                 yield k, v

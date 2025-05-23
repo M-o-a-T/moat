@@ -39,7 +39,14 @@ async def do_update(dst, root, cross, hfn):
     await copytree(p / "main.py", root / "main.py", cross=None)
 
 
-async def do_copy(source, dst, dest, cross):
+async def do_copy(source:anyio.Path, dst:anyio.Path, dest:str|None, cross:str, wdst:anyio.Path|None=None):
+    """
+    Copy from source to @dst/@dest.
+
+    if @dest is `None`, append the source path behind ``/_embed/`` (if it exists).
+
+    @cross is the path of the mpy-cross executable.
+    """
     from .path import copy_over
 
     if not dest:
@@ -50,7 +57,7 @@ async def do_copy(source, dst, dest, cross):
             dst /= dest
     else:
         dst /= dest
-    await copy_over(source, dst, cross=cross)
+    await copy_over(source, dst, cross=cross, wdst=wdst)
 
 
 def _clean_cfg(cfg):
@@ -60,24 +67,27 @@ def _clean_cfg(cfg):
 
 async def setup(
     cfg,
-    install=False,
-    source=None,
-    root=".",
-    dest="",
-    kill=False,
-    large=None,
-    run=None,
-    reset=False,
-    state=None,
-    config=None,
-    cross=None,
-    update=False,
-    mount=False,
-    watch=False,
+    install:bool=False,
+    source:anyio.Path|None=None,
+    root:str=".",
+    dest:str="",
+    kill:bool=False,
+    large:bool|None=None,
+    run:bool=False,
+    rom:bool=False,
+    reset:bool=False,
+    state:str|None=None,
+    config:dict|None=None,
+    cross:str|None=None,
+    update:bool=False,
+    mount:bool=False,
+    watch:bool=False,
 ):
     """
     Given the serial link to a MicroPython board,
     teach it to run the MoaT loop.
+
+    Parameters: see "moat micro setup --help".
     """
     # 	if not source:
     # 		source = anyio.Path(__file__).parent / "_embed"
@@ -168,7 +178,14 @@ async def setup(
         ):
             dst = MoatDevPath(root).connect_repl(repl)
             if source:
-                await do_copy(source, dst, dest, cross)
+                if rom:
+                    async with anyio.TemporaryDirectory() as wdst:
+                        breakpoint()
+                        await do_copy(source, dst, dest, cross, wdst=tf)
+                        rom = await make_romfs(tf)
+                        await write_rom(tf)
+                else:
+                    await do_copy(source, dst, dest, cross)
             if state and not watch:
                 await repl.exec(f"f=open('moat.state','w'); f.write({state!r}); f.close(); del f")
             if large is True:

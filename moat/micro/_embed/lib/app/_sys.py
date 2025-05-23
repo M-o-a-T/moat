@@ -29,7 +29,7 @@ class Cmd(_Cmd):
         """
         Set/return a MoaT state var.
         """
-        from moat.rtc import get_rtc, set_rtc
+        from rtc import get_rtc, set_rtc
 
         if v is not None:
             set_rtc(k, v, fs=fs)

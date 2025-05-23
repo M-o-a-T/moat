@@ -11,19 +11,6 @@ _gc.collect()
 _fm = _gc.mem_free()
 _fa = _gc.mem_alloc()
 
-from contextlib import suppress
-
-import machine
-
-from moat.util import attrdict
-
-# XXX m.m.compat and msgpack cannot be superseded
-from moat.util.compat import log
-from moat.rtc import get_rtc, set_rtc
-
-cfg = {}
-
-
 def go(state=None, cmd=True):
     """
     Start MoaT.
@@ -35,126 +22,98 @@ def go(state=None, cmd=True):
     processing of error tracebacks. Also, a fake "OK" prompt is emitted, to
     fool the host's command line processing.
 
-    @state can be one of these strings:
+    The state can be a comma-separated list: the next state in the list
+    will be used on reboot.
 
     * skip
-      Do nothing, exit to MicroPython prompt.
+      Do nothing: exit to MicroPython prompt.
 
     * std
-      Work normally. Enter Fallback mode if there's a problem.
-      (Warning: Switching to fallback doesn't always work, esp. when you
-      run out of memory or otherwise hard-crash the system. Always set up a
-      hardware watchdog, if available.)
-
-    * safe
-      Work normally. Unconditionally enter "fallback" mode next time.
-
-    * saferom
-      Work normally. Unconditionally enter "rom" mode next time.
-
-    * fallback
-      Use the `moat_fb.cfg` config file and the `/fallback` library.
-
-    * fbskip
-      Use "fallback" mode once, then "skip".
-
-    * fbrom
-      Use "fallback" mode once, then "rom".
+      Work normally, i.e. load from /lib, /rom/lib, .frozen.
+      mode if there's a problem. (Warning: Switching to fallback doesn't
+      always work, esp. when you run out of memory or otherwise hard-crash
+      the system. Always set up a hardware watchdog, if available.)
 
     * rom
-      Use the `moat_rom.cfg` config file and the library in Flash.
+      As above, but don't use /lib. Uses "moat_rom.cfg" if available.
 
-    * romskip
-      Use "rom" mode once, then "skip".
+    * flash
+      Only use .frozen. Uses "moat_fb.cfg" if available.
 
-    * once
-      Work normally once, then "skip".
+    * norom
+      Uses /lib and .frozen. Uses "moat_nr.cfg" if available.
 
-    * main
-      Always work normally.
+    The default is "fallback" if moat_fb.cfg exists, else "rom" if
+    moat_rom.cfg exists, else whatever is in "moat.cfg" ('mode' key)
     """
 
-    import sys
+    from rtc import get_rtc, set_rtc
     import time
+    import machine
 
+    # copy from moat.util.compat
+    import sys as sys
+    def log(s, *x, err=None):
+        if x:
+            s = s % x
+        print(s, file=sys.stderr)
+        if err is not None:
+            sys.print_exception(err, sys.stderr)
+
+    states = [
+            ("flash","moat_fb.cfg"),
+            ("rom","moat_rom.cfg"),
+            ("std","moat.cfg"),
+    ]
     if state is None:
         state = get_rtc("state")
     if state is None:
-        try:
-            os.stat("moat_fb.cfg")
-        except OSError:
-            pass
-        else:
-            state = "fallback"
-    if state is None:
-        try:
-            os.stat("moat_rom.cfg")
-        except OSError:
-            pass
-        else:
-            state = "rom"
+        for st,fn in states:
+            try:
+                os.stat(fn)
+            except OSError:
+                pass
+            else:
+                state=st
+                break
     if state is None:
         state = "skip"
 
-    uncond = {
-        "once": "skip",
-        "skiponce": "std",
-        "safe": "fallback",
-        "saferom": "rom",
-        "fbskip": "fallback",
-        "fbrom": "rom",
-        "romskip": "rom",
-    }
-    crash = {
-        "std": "fallback",
-        "fbskip": "skip",
-        "romskip": "skip",
-    }
-
     try:
-        new_state = uncond[state]
-    except KeyError:
+        state,new_state = state.split(",",1)
+    except ValueError
         new_state = state
-    else:
-        set_rtc("state", new_state)
 
-    if state[0:4] == "skip":
+    _set_rtc("state", new_state)
+    if state == "skip":
         log(state)
         return
 
-    # no empty path
-    with suppress(ValueError):
-        sys.path.remove("")
-    with suppress(ValueError):
-        sys.path.remove("/")
-    with suppress(ValueError):
-        sys.path.remove(".")
+    fn = dict(states).get(state,"moat.cfg")
 
-    # we do keep the root in the path, but at the end
+    # no empty path
+    for p in ("","/",".","/lib",".frozen","/rom","/rom/lib"):
+        try:
+            sys.path.remove("")
+        except ValueError:
+            pass
+
+    # build path
+    if state in ("norom","std"):
+        sys.path.append("/lib")
+    if state in ("rom","std"):
+        sys.path.append("/rom")
+    if state in ("flash","rom","norom","std"):
+        sys.path.append(".frozen")
+    # keep the root in the path, but at the end
     sys.path.append("/")
 
-    # /lib to the front
+    print("Start MoaT:", state, file=sys.stderr)
 
-    fallback = None
-    if state in ("fallback", "fbskip"):
-        sys.path.insert(0, "/fallback")
-        fallback = "_fb"
-    elif state in ("rom", "romskip"):
-        with suppress(ValueError):
-            sys.path.remove(".frozen")
-        sys.path.insert(0, ".frozen")
-        fallback = "_rom"
-    else:
-        fallback = ""
-        with suppress(ValueError):
-            sys.path.remove("/lib")
-        sys.path.insert(0, "/lib")
-
-    print(f"Start MoaT{fallback}:", state, file=sys.stderr)
     from moat.micro.main import main
 
     cfg = f"moat{fallback}.cfg"
-    i = attrdict(fb=fallback, s=state, ns=new_state, fm=_fm, fa=_fa)
+    i = dict(fb=fallback, s=state, ns=new_state, fm=_fm, fa=_fa)
 
     if cmd:
         main(cfg, i=i, fake_end=True)
@@ -167,7 +126,6 @@ def go(state=None, cmd=True):
         print("MoaT stopped.", file=sys.stderr)
 
     except SystemExit:
-        new_state = get_rtc("state")
         print("REBOOT to", new_state, file=sys.stderr)
         time.sleep_ms(100)
         machine.soft_reset()
@@ -182,9 +140,6 @@ def go(state=None, cmd=True):
                 sys.exit(0)
             log("CRASH! Exiting!", err=exc)
             sys.exit(1)
-
-        new_state = crash.get(state, new_state)
-        set_rtc("state", new_state)
 
         log("CRASH! %r :: REBOOT to %r", exc, new_state, err=exc)
         time.sleep_ms(1000)

@@ -635,7 +635,7 @@ class SCmd_msg_monitor(StreamCommand):
         if len(topic) and topic[0][0] == ":":
             topic = P(self.client.server.cfg.root) + topic
 
-        async with self.client.server.backend.monitor(*topic) as stream:
+        async with self.client.server.backend.monitor(*topic, codec="noop") as stream:
             async for resp in stream:
                 if hasattr(resp, "topic"):
                     t = resp.topic
@@ -1076,7 +1076,7 @@ class ServerClient:
             data = msg.raw
         else:
             data = self.codec.encode(msg.data)
-        await self.server.backend.send(*topic, payload=data)
+        await self.server.backend.send(*topic, payload=data, codec="noop")
 
     async def cmd_delete_tree(self, msg):
         """Delete a node's value.

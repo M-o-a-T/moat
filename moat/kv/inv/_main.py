@@ -34,7 +34,7 @@ async def cli(obj):
 async def dump_(obj, path):
     """Emit the current state as a YAML file."""
     path = P(path)
-    await data_get(obj, obj.cfg.inv.prefix + path)
+    await data_get(obj.client, obj.cfg.inv.prefix + path)
 
 
 std_command(

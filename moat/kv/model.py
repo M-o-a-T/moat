@@ -503,6 +503,18 @@ class NodeEvent:
             res.prev = self.prev.serialize(nchain - 1)
         return res
 
+    def serialize_link(self, nchain=-1) -> dict:
+        "Serialization for gatewaying to moat-link"
+        if not nchain:
+            raise RuntimeError("A chopped-off NodeEvent must not be sent")
+        res = []
+        s = self
+        while s is not None and nchain != 0:
+            res.extend((self.node.name, self.tick))
+            s = s.prev
+            nchain -= 1
+        return res
+
     @classmethod
     def deserialize(cls, msg, cache):
         if msg is None:
@@ -516,6 +528,16 @@ class NodeEvent:
         self = cls(node=Node(msg["node"], tick=tick, cache=cache), tick=tick)
         if "prev" in msg:
             self.prev = cls.deserialize(msg["prev"], cache=cache)
+        return self
+
+    @classmethod
+    def deserialize_link(cls, msg, cache):
+        "Deserialization for gatewaying to moat-link"
+        if not msg:
+            return None
+        node,tick,*msg = msg
+        self = cls(node=Node(node, tick=tick, cache=cache), tick=tick)
+        self.prev = cls.deserialize_link(msg, cache=cache)
         return self
 
     def attach(self, prev: NodeEvent = None, server=None):

@@ -11,7 +11,7 @@ import sys
 from contextlib import contextmanager
 
 from asyncscope import main_scope, scope
-from moat.util import OptCtx, attrdict, wrap_main  # pylint:disable=no-name-in-module
+from moat.util import OptCtx, attrdict, wrap_main, CFG  # pylint:disable=no-name-in-module
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 async def run(*args, expect_exit=0, do_stdout=True):
     """Call a MoaT command handler"""
     args = ("-c", "/dev/null", *args)
-    CFG = {}  # load_cfg("moat")
 
     if do_stdout:
         CFG["_stdout"] = out = io.StringIO()

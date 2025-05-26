@@ -237,7 +237,7 @@ async def list_(obj, state, state_only, table, as_dict):
 
     else:
         await data_get(
-            obj,
+            obj.client,
             obj.path + path,
             as_dict=as_dict,
             item_mangle=partial(_state_fix, obj, state, state_only, None if as_dict else path),

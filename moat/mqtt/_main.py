@@ -14,6 +14,7 @@ from moat.util import attrdict, combine_dict, yload
 from .broker import create_broker
 from .client import CodecError, ConnectException, open_mqttclient
 from moat.lib.codec import get_codec
+from moat.util import NotGiven
 
 logger = logging.getLogger(__name__)
 
@@ -201,7 +202,7 @@ async def pub(obj, **args):
         cfg["keep_alive"] = args["keep_alive"]
 
     fix_will(args, cfg)
-    cfg.codec = "utf8"
+    cfg.codec = args.get("codec","utf8")
 
     async with open_mqttclient(client_id=client_id, config=cfg) as C:
         await do_pub(C, args, cfg)

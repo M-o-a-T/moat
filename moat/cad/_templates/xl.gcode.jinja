@@ -1,0 +1,197 @@
+;; START printer start gcode
+
+M17 ; enable steppers
+M862.3 P "XL" ; printer model check
+M862.5 P2 ; g-code level check
+M862.6 P"Input shaper" ; FW feature check
+M115 U5.1.2+13478
+G90 ; use absolute coordinates
+M83 ; extruder relative mode
+; set print area
+M555 X{first_layer_print_min[0]} Y{first_layer_print_min[1]} W{(first_layer_print_max[0]) - (first_layer_print_min[0])} H{(first_layer_print_max[1]) - (first_layer_print_min[1])}
+
+; inform about nozzle diameter
+{% for n in range(5) %}
+{if (is_extruder_used[{{ n }}])}M862.1 T0 P{nozzle_diameter[{{ n }}]}{endif}
+{% endfor %}
+
+; turn off unused heaters
+{if ! is_extruder_used[0]} M104 T0 S0 {endif}
+{% for n in range(1,5) %}
+{if num_extruders > {{ n }} and ! is_extruder_used[{{ n }}]} M104 T{{ n }} S0 {endif}
+{% endfor %}
+
+M217 Z{max(zhop, 2.0)} ; set toolchange z hop to 2mm, or zhop variable from slicer if higher
+
+G0 Z5 ; add Z clearance
+
+;; 140 set bed
+;; 190 set bed and wait
+;; 104 set extruder
+;; 109 set extruder and wait
+
+; set bed and extruder temp for MBL
+M140 S[first_layer_bed_temperature] ; set bed temp
+M104 T{initial_tool} S{first_layer_temperature[initial_tool]}
+
+; Home XY while heating up
+
+G28 XY
+; picking tool used in print
+G1 F{travel_speed * 60}
+{% for n in range(5) %}
+{if is_extruder_used[{{ n }}] and (initial_tool != {{ n }})}T{{ n }} S1 L0 D0{endif}
+{% endfor %}
+; select tool that will be used to home & MBL
+T{initial_tool} S1 L0 D0
+; home Z with MBL tool
+
+M84 E ; turn off E motor
+G28 Z
+G0 Z5 ; add Z clearance
+
+; go to cleanup area but not straight across
+{% if False %}
+G0 X330 Y360 F{(travel_speed * 60)}
+G2 X360 Y330 R30
+G0 Y33
+G2 X330 Y3 R30
+G0 X320
+G3 X320 Y-7 R5
+{% else %}
+G0 X320 Y-7 F{(travel_speed * 60)}
+{% endif %}
+
+; wait for extrusion target temp but then let it cool off again
+M109 T{initial_tool} S{first_layer_temperature[initial_tool]}
+M104 T{initial_tool} S{((filament_notes[initial_tool]=~/.*HT_MBL10.*/) ? (first_layer_temperature[initial_tool] - 10) : (filament_type[initial_tool] == "PC" or filament_type[initial_tool] == "PA") ? (first_layer_temperature[initial_tool] - 25) : (filament_type[initial_tool] == "FLEX") ? 210 : (filament_type[initial_tool]=~/.*PET.*/) ? 195 : 175)} ; wait for temp
+
+; clean initial tool thoroughly, we need it for levelling
+G0 X360 F{(travel_speed * 60 / 10)}
+G0 X320
+G0 X360
+G0 X320
+G4 S2
+G0 X360
+G0 X320
+G4 S4
+G0 X360
+G0 X320
+; don't bother with cooldown time for this one
+{if (filament_notes[initial_tool]=~/.*HT_MBL10.*/)} {else}
+G4 S6
+G0 X360
+G0 X320
+G4 S8
+G0 X360
+G0 X320
+{if (filament_type[initial_tool] == "PC" or filament_type[initial_tool] == "PA")} {else}
+G4 S10
+G0 X360
+G0 X320
+{endif}{endif}
+
+; go to levelling target temp
+M109 T{initial_tool} S{((filament_notes[initial_tool]=~/.*HT_MBL10.*/) ? (first_layer_temperature[initial_tool] - 10) : (filament_type[initial_tool] == "PC" or filament_type[initial_tool] == "PA") ? (first_layer_temperature[initial_tool] - 25) : (filament_type[initial_tool] == "FLEX") ? 210 : (filament_type[initial_tool]=~/.*PET.*/) ? 195 : 175)} ; wait for temp
+
+
+M190 S[first_layer_bed_temperature] ; wait for bed temp
+
+;; G29 G ; absorb heat
+
+; move to the nozzle cleanup area
+G1 X{(min(((((first_layer_print_min[0] + first_layer_print_max[0]) / 2) < ((print_bed_min[0] + print_bed_max[0]) / 2)) ? (((first_layer_print_min[1] - 7) < -2) ? 70 : (min(print_bed_max[0], first_layer_print_min[0] + 32) - 32)) : (((first_layer_print_min[1] - 7) < -2) ? 260 : (min(print_bed_max[0], first_layer_print_min[0] + 32) - 32))), first_layer_print_min[0])) + 32} Y{(min((first_layer_print_min[1] - 7), first_layer_print_min[1]))} Z{5} F{(travel_speed * 60)}
+M302 S160 ; lower cold extrusion limit to 160C
+G1 E{-(filament_type[0] == "FLEX" ? 4 : 2)} F2400 ; retraction for nozzle cleanup
+; nozzle cleanup
+M84 E ; turn off E motor
+G29 P9 X{((((first_layer_print_min[0] + first_layer_print_max[0]) / 2) < ((print_bed_min[0] + print_bed_max[0]) / 2)) ? (((first_layer_print_min[1] - 7) < -2) ? 70 : (min(print_bed_max[0], first_layer_print_min[0] + 32) - 32)) : (((first_layer_print_min[1] - 7) < -2) ? 260 : (min(print_bed_max[0], first_layer_print_min[0] + 32) - 32)))} Y{(first_layer_print_min[1] - 7)} W{32} H{7}
+G0 Z5 F480 ; move away in Z
+M107 ; turn off the fan
+; MBL
+M84 E ; turn off E motor
+G29 P1 ; invalidate mbl & probe print area
+G29 P1 X30 Y0 W{(((is_extruder_used[4]) or ((is_extruder_used[3]))) ? "230" : ((is_extruder_used[2]) or (is_extruder_used[1]) ? "130" : "50"))} H20 C ; probe near purge place
+G29 P3.2 ; interpolate mbl probes
+G29 P3.13 ; extrapolate mbl outside probe area
+G29 A ; activate mbl
+G1 Z10 F720 ; move away in Z
+G1 F{travel_speed * 60}
+P0 S1 L1 D0; park the tool
+
+; set extruder temp
+{% for n in range(5) %}
+{if is_extruder_used[{{ n }}] and (first_layer_temperature[{{ n }}] > 0)}M104 T{{ n }} S{first_layer_temperature[0]}{endif}
+{% endfor %}
+
+;;
+;; Purge areas. Original start points were 30, 150, 210 (y=-7), and 330 (y=-7 and y=-4.5).
+;; The latter two cannot be used as the cleanup beam is there now.
+;; Thus we stagger them at y=-7 and y=-4.5, and for ease of programming
+;; for tools I,0, 1,2, 3,4 we use x=30,150,210 and y=-7,-4.5, where I=-1 is
+;; the initial tool.
+
+{% macro purge(p) %}
+{% set d=(-1 if p in (1,2) else 1) %}
+{% set x=[30,150,210][(p+1)//2] %}
+{% set y=[-7,-4.5][(p+1)%2] %}
+{% set t=('initial_tool' if p<0 else p) %}
+{% set ti=('{initial_tool}' if p<0 else p) %}
+
+{% if p>=0 %}
+{if (is_extruder_used[{{ p }}]) and initial_tool != {{ p }} }
+{% endif %}
+;
+; purge tool
+;
+G1 F{travel_speed * 60}
+P0 S1 L2 D0; park the current tool
+M109 T{{ ti }} S{first_layer_temperature[{{ t }}]}
+T{{ ti }} S1 L0 D0; pick the tool
+G92 E0 ; reset extruder position
+
+{% if p >= 0 %}
+; clean (somewhat)
+{% if False %}
+G0 X330 Y360 F{(travel_speed * 60)}
+G2 X360 Y330 R30
+G0 Y33
+G2 X330 Y3 R30
+G0 X320
+G3 X320 Y-7 R5
+{% else %}
+G0 X320 Y-7 F{(travel_speed * 60)}
+{% endif %}
+G0 X360 F{(travel_speed * 60 / 10)}
+G0 X320
+G0 X360
+G0 X320
+{% endif %}
+
+
+G0 X{{ x }} Y{{ y }} Z10 F{(travel_speed * 60)} ; move close to the sheet's edge
+G0 E{if is_nil(filament_multitool_ramming[{{ t }}])}10{else}30{endif} X{{ x
++ 10*d }} Z0.2 F{if is_nil(filament_multitool_ramming[{{ t }}])}500{else}170{endif} ; purge while moving towards the sheet
+G0 X{{ x + 40*d }} E9 F800 ; continue purging
+G0 X{{ x + 40*d + 3*d }} Z{0.05} F{8000} ; wipe, move close to the bed
+G0 X{{ x + 40*d + 3*2*d }} Z0.2 F{8000} ; wipe, move quickly away from the bed
+G1 E{- 1.5 * retract_length[{{ t }}]} F2400 ; retract
+{e_retracted[0] = 1.5 * retract_length[{{ t }}]} ; update slicer internal retract variable
+G92 E0 ; reset extruder position
+
+M104 S{(is_nil(idle_temperature[{{ t }}]) ? (first_layer_temperature[{{ t }}] + standby_temperature_delta) : (idle_temperature[{{ t }}]))} T{{ ti }}
+
+{% if p>=0 %}
+{endif}
+{% endif %}
+
+{% endmacro %}
+
+{{ purge(0) }}
+{{ purge(1) }}
+{{ purge(2) }}
+{{ purge(3) }}
+{{ purge(4) }}
+{{ purge(-1) }}
+
+;; END startup gcode

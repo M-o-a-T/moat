@@ -173,7 +173,7 @@ class Cmd(BaseCmd):
     async def stream_wr(self, msg):
         dev=self.dev(msg[0])
         off=msg[1] if len(msg) > 1 else 0
-        def.seek(off)
+        dev.seek(off)
         async with msg.stream_in() as st:
             async for m, in st:
                 dev.write(m)

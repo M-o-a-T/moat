@@ -179,9 +179,9 @@ G1 E{- 1.5 * retract_length[{{ t }}]} F2400 ; retract
 {e_retracted[0] = 1.5 * retract_length[{{ t }}]} ; update slicer internal retract variable
 G92 E0 ; reset extruder position
 
+{% if p>=0 %}
 M104 S{(is_nil(idle_temperature[{{ t }}]) ? (first_layer_temperature[{{ t }}] + standby_temperature_delta) : (idle_temperature[{{ t }}]))} T{{ ti }}
 
-{% if p>=0 %}
 {endif}
 {% endif %}
 

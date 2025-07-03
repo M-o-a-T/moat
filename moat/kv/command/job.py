@@ -241,6 +241,7 @@ async def list_(obj, state, state_only, table, as_dict):
             obj.path + path,
             as_dict=as_dict,
             item_mangle=partial(_state_fix, obj, state, state_only, None if as_dict else path),
+            out=obj.stdout,
         )
 
 

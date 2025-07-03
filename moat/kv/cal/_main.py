@@ -121,7 +121,7 @@ async def list_(obj):
         def pm(p):
             return Path(str(prefix + path)) + p
 
-    await data_get(obj.client, prefix + path, as_dict="_", path_mangle=pm)
+    await data_get(obj.client, prefix + path, as_dict="_", path_mangle=pm, out=obj.stdout)
 
 
 # @cli.command("attr", help="Mirror a device attribute to/from MoaT-KV")

@@ -20,7 +20,7 @@ async def cli(ctx, path):
     This subcommand accesses the actual user data stored in your MoaT-KV tree.
     """
     if ctx.invoked_subcommand is None:
-        await data_get(ctx.obj.client, path, recursive=False)
+        await data_get(ctx.obj.client, path, recursive=False, out=ctx.obj.stdout)
     else:
         ctx.obj.path = path
 
@@ -61,7 +61,7 @@ async def get(obj, **k):
     for incremental output.
     """
 
-    await data_get(obj.client, obj.path, **k)
+    await data_get(obj.client, obj.path, out=obj.stdout, **k)
 
 
 @cli.command("list")
@@ -101,7 +101,7 @@ async def list_(obj, **k):
     k["recursive"] = True
     k["raw"] = True
     k["empty"] = True
-    await data_get(obj.client, obj.path, **k)
+    await data_get(obj.client, obj.path, out=obj.stdout, **k)
 
 
 @cli.command("set", short_help="Add or update an entry")

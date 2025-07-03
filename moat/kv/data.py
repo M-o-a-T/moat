@@ -67,7 +67,6 @@ async def data_get(
     return the new path. This is used for e.g. prefixing the path with a
     device name. Returning ``None`` causes the entry to be skipped.
     """
-    breakpoint()
     if path_mangle is None:
 
         def path_mangle(x):

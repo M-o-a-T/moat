@@ -434,7 +434,6 @@ class SerialHost(CtxObj, _HostCommon):
         /,
         port,
         timeout=10,
-        cap=1,
         debug=False,
         monitor=None,
         max_rd_len=MAX_REQ_LEN,
@@ -451,7 +450,7 @@ class SerialHost(CtxObj, _HostCommon):
         self._trace = log.info if debug else log.debug
         self._monitor = monitor
 
-        super().__init__(gate, timeout, cap)
+        super().__init__(gate, timeout, 1)
 
     def __repr__(self):
         return f"<ModbusHost:{self.port}:{self.ser.get('baudrate', 0)}>"

@@ -5,7 +5,10 @@ import pytest
 import time
 import sys
 from functools import partial
+from contextlib import AsyncExitStack
 import mock
+import trio
+import copy
 
 from moat.link.meta import MsgMeta
 from moat.link._test import Scaffold
@@ -13,7 +16,7 @@ from moat.link.node import Node
 from moat.link.client import Link
 from moat.link.gate import run_gate
 from moat.link._data import data_get, backend_get
-from moat.util import P, PathLongener, NotGiven, ungroup, yprint
+from moat.util import P, PathLongener, NotGiven, ungroup, yprint, combine_dict
 from moat.lib.cmd import StreamError
 from moat.lib.cmd.base import MsgSender
 from moat.lib.codec import get_codec
@@ -78,7 +81,7 @@ async def test_gate_mqtt(cfg):
         a= await data_get(c,P("test.a"), out=False)
         assert a==dict(one={"_":1},two={"_":2},three={"_":33})
 
-        b= await kvdata_get(cc,P("test.b"), out=False)
+        b= await backend_get(cc,P("test.b"), out=False)
         assert b==dict(one={"_":b'1'},two={"_":b'22'},three={"_":b'33'})
 
         # now change things
@@ -109,11 +112,11 @@ async def test_gate_kv(cfg):
 
         sf = await ex.enter_async_context(Scaffold(cfg, use_servers=True))
         await sf.tg.start(_dump, sf)
+        await sf.server(init={"Hello": "there!", "test": 123})
 
-        breakpoint()
-        URI = f"mqtt://127.0.0.1:{sf.port}/"
+        URI = f"mqtt://127.0.0.1:{sf.cfg.backend.port}/"
         async def mock_get_host_port(kvs, host):
-            return "127.0.0.1", sf.port
+            return "127.0.0.1", sf.cfg.backend.port
 
         TESTCFG = copy.deepcopy(CFG["kv"])
         TESTCFG.server.port = None
@@ -137,6 +140,7 @@ async def test_gate_kv(cfg):
                 "mqtt": {"uri": URI},
             },
         }
+        cfg = combine_dict(cfg, TESTCFG)
         kvs=KVServer(name,cfg=cfg)
         ex.enter_context(mock.patch.object(kvs, "_get_host_port", new=partial(mock_get_host_port, st)))
 
@@ -147,7 +151,7 @@ async def test_gate_kv(cfg):
             if host != "::" and host[0] == ":":
                 continue
             ccfg = combine_dict(
-                dict(conn=dict(host=127.0.0.1, port=port, ssl=self.client_ctx, **kv)),
+                dict(conn=dict(host="127.0.0.1", port=port, ssl=self.client_ctx, **kv)),
                 CFG["kv"],
             )
             kvc = await ex.enter_async_context(KVClient("test.client",**ccfg))

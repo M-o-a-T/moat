@@ -13,6 +13,7 @@ Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   python3-anyio (>= 3.0),
   moat-util,
+  python3-trio (>= 0.30),
 Conflicts: python3-moat-main, moat-main
 Replaces: moat-main
 Description: The command line for MoaT

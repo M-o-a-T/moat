@@ -19,8 +19,7 @@ from anyio_serial import Serial
 from asyncscope import scope
 from moat.util import CtxObj, Queue, ValueEvent, num2id
 from pymodbus.exceptions import ModbusIOException
-from pymodbus.pdu.decoders import DecodePDU
-from pymodbus.pdu import ExceptionResponse
+from pymodbus.pdu import DecodePDU, ExceptionResponse
 from pymodbus.framer import FramerRTU, FramerSocket
 
 from .types import BaseValue, DataBlock, TypeCodec, MAX_REQ_LEN
@@ -177,10 +176,6 @@ class _HostCommon:
         """Run a unit in an `AsyncScope`"""
         return await scope.service(f"MH_{num2id(self)}:{unit}", self._unit, unit)
 
-    def _nextTID(self):
-        self._tid = (self._tid + 1) % 0xFFFF
-        return self._tid
-
     async def send(self, msg):
         """
         Send a packet.
@@ -269,6 +264,10 @@ class Host(CtxObj, _HostCommon):
     def __repr__(self):
         return f"<ModbusHost:{self.addr}:{self.port}>"
 
+    def _nextTID(self):
+        self._tid = (self._tid + 1) % 0xFFFF
+        return self._tid
+
     @asynccontextmanager
     async def _ctx(self):
         # might be used to manage the connection
@@ -339,9 +338,10 @@ class Host(CtxObj, _HostCommon):
                 while True:
                     used, pdu = self.framer.processIncomingFrame(data)
                     data = data[used:]
-                    if pdu is None:
+                    if pdu is not None:
+                        replies.append(pdu)
+                    if not used:
                         break
-                    replies.append(pdu)
 
             except (
                 IncompleteRead,
@@ -443,7 +443,7 @@ class SerialHost(CtxObj, _HostCommon):
     ):
         self.port = port
         self.ser = ser
-        self.framer = FramerRTU(DecodePDU(False), self)
+        self.framer = FramerRTU(DecodePDU(False))
         self.max_rd_len = max_rd_len
         self.max_wr_len = max_wr_len
 
@@ -455,6 +455,9 @@ class SerialHost(CtxObj, _HostCommon):
 
     def __repr__(self):
         return f"<ModbusHost:{self.port}:{self.ser.get('baudrate', 0)}>"
+
+    def _nextTID(self):
+        return 0
 
     @asynccontextmanager
     async def _ctx(self):
@@ -482,22 +485,8 @@ class SerialHost(CtxObj, _HostCommon):
     async def _reader(self, *, task_status):
         # pylint: disable=protected-access
 
-        async def _send_trans():
-            tr = list(self._transactions.values())
-            self._transactions = {}
-            if tr:
-                _logger.warning("Resend %d packets", len(tr))
-            try:
-                for request in tr:
-                    packet = self.framer.buildFrame(request)
-                    async with self._send_lock:
-                        await self.stream.send(packet)
-                if tr:
-                    _logger.warning("Resend done")
-            except Exception:  # pylint: disable=broad-except
-                _logger.exception("Re-Write")
-
-        await _send_trans()
+        if self._transactions:
+            raise RuntimeError("Serial: cannot have open transaction on start")
         self._connected.set()
         task_status.started()
         self._trace("recv START")
@@ -510,16 +499,16 @@ class SerialHost(CtxObj, _HostCommon):
                 # pylint: disable=logging-not-lazy
                 self._trace("recv: " + " ".join([hex(x) for x in data]))
 
-                # unit = self.framer.decode_data(data).get("uid", 0)
                 replies = []
 
                 # check for decoding errors
                 while True:
                     used, pdu = self.framer.processIncomingFrame(data)
                     data = data[used:]
-                    if pdu is None:
+                    if pdu is not None:
+                        replies.append(pdu)
+                    if not used:
                         break
-                    replies.append(pdu)
 
             except (
                 IncompleteRead,

@@ -726,11 +726,12 @@ class Watcher(CtxObj):
                 r = await self.link.d.get(self.path)
             except (KeyError,ValueError):
                 task_status.started()
-                # but do not do anything else
             else:
                 task_status.started()
                 p,d,m = Path(), r[0], MsgMeta.restore(r[1:])
                 await self._qw.send((p,d,m))
+            if self.mark:
+                await self._qw.send(None)
 
         self._current_done.set()
 

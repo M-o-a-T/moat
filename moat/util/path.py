@@ -109,7 +109,7 @@ class Path(collections.abc.Sequence):
     one dot followed by a separator) is illegal.
 
     The alternate slash-path representation uses slashes as separators.
-    Colon elements are disallowed within elements.
+    **Path marks are ignored** when generating the slashed representation.
 
     Paths can be concatenated with "+", "/" or "|".
     "% n" removes n items from the end.
@@ -216,7 +216,7 @@ class Path(collections.abc.Sequence):
             return x
 
         res = []
-        if self.mark:
+        if self.mark and not slash:
             res.append(":m" + self.mark)
         if self._data is None:
             return ":?"

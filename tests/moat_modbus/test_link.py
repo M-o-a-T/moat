@@ -4,9 +4,10 @@ import logging
 import pytest
 import trio
 import os
+import copy
 from moat.util import P, yload
 
-from moat.kv.mock.mqtt import stdtest
+from moat.link._test import Scaffold
 from moat.modbus.dev.poll import dev_poll
 from moat.modbus.types import HoldingRegisters, IntValue
 from moat.modbus.client import ModbusClient
@@ -29,8 +30,8 @@ server:
         no_question:
           reg_type: h
           register: 12342
-          dest: !P a.srv.dst
-          src: !P a.srv.src
+          dest: !P :mL.a.srv.dst
+          src: !P :mL.a.srv.src
           type: uint
           len: 1
 """
@@ -50,8 +51,8 @@ hostports:
             register: 12342
             type: uint
             len: 1
-            dest: !P a.cli.dst
-            src: !P a.cli.src
+            dest: !P :mL.a.cli.dst
+            src: !P :mL.a.cli.src
             slot: 1sec
 
 
@@ -67,32 +68,42 @@ async def test_kv_poll(autojump_clock):  # pylint: disable=unused-argument
     cfg2.hostports.localhost[PORT] = cfg2.hostports.localhost.PORT
     del cfg2.hostports.localhost.PORT
 
+    from moat.util import CFG, ensure_cfg
+    ensure_cfg("moat.link.server")
+    cfg = copy.deepcopy(CFG)
+
     async with (
-        stdtest(args={"init": 123}, tocks=50) as st,
-        st.client() as c,
+        Scaffold(cfg, use_servers=True) as sf,
+        sf.server_(init={"Hello": "there!", "value": 123}),
+        sf.client_() as c,
         trio.open_nursery() as tg,
     ):
-        assert (await c.get(P(":"))).value == 123
-        await c.set(P("a.srv.src"), value=42)
-        cfg1 = await tg.start(dev_poll, cfg1, c, None)
+        r=await c.d_get(P(":"))
+        assert r["value"] == 123
+        assert (await c.d_get(P(":")))["value"] == 123
+        await c.d_set(P("a.srv.src"), data=42)
+        cfg1 = await tg.start(dev_poll, cfg1, None, c)
         reg = cfg1.server[0].units[32].regs.no_question
         await trio.sleep(1)
         assert reg.value_w == 42
 
-        await c.set(P("a.srv.src"), value=44)
-        await trio.sleep(1)
+        await c.d_set(P("a.srv.src"), data=44)
+        await trio.sleep(2)
         assert reg.value_w == 44
 
         reg.set(43)
         await trio.sleep(2)
 
-        await c.get(P("a.srv.dst"))
+        try:
+            rv = await c.d_get(P("a.srv.dst"))
+        except KeyError:
+            rv = None
+
         # assert rv == 43
         # assert reg.value_w == 44
         # assert reg.value == 43
-
         tg.cancel_scope.cancel()
-        return  # owch
+        return
 
         async with (
             ModbusClient() as g,
@@ -101,7 +112,7 @@ async def test_kv_poll(autojump_clock):  # pylint: disable=unused-argument
             u.slot("default") as s,
         ):
             s.add(HoldingRegisters, 12342, IntValue)
-            await s.getValues()
+            res = await s.getValues()
             pass  # v,res
 
         pass  # ex

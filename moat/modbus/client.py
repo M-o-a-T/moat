@@ -18,6 +18,7 @@ from anyio.abc import SocketAttribute
 from anyio_serial import Serial
 from asyncscope import scope
 from moat.util import CtxObj, Queue, ValueEvent, num2id
+from moat.util.exc import ungroup
 from pymodbus.exceptions import ModbusIOException
 from pymodbus.pdu import DecodePDU, ExceptionResponse
 from pymodbus.framer import FramerRTU, FramerSocket
@@ -176,6 +177,30 @@ class _HostCommon:
         """Run a unit in an `AsyncScope`"""
         return await scope.service(f"MH_{num2id(self)}:{unit}", self._unit, unit)
 
+    @property
+    def _gate_key(self):
+        raise NotImplementedError
+
+    @asynccontextmanager
+    async def _ctx(self):
+        # might be used to manage the connection
+        key = self._gate_key
+        if key in self.gate.hosts:
+            raise RuntimeError(f"Host {key} already exists")
+        self.gate.hosts[key] = self
+
+        try:
+            async with anyio.create_task_group() as tg:
+                self._tg = tg
+                self._read_scope = tg.cancel_scope
+                await tg.start(self._reader)
+
+                yield self
+                tg.cancel_scope.cancel()
+        finally:
+            if self.gate.hosts.get(key, None) is self:
+                del self.gate.hosts[key]
+
     async def send(self, msg):
         """
         Send a packet.
@@ -184,6 +209,7 @@ class _HostCommon:
         `execute` instead.
         """
         packet = self.framer.buildFrame(msg)
+        await self._connected.wait()
         async with self._send_lock:
             await self.stream.send(packet)
 
@@ -225,7 +251,7 @@ class _HostCommon:
                 self._transactions.pop(request.transaction_id, None)
 
 
-class Host(CtxObj, _HostCommon):
+class Host(_HostCommon, CtxObj):
     """This is a single host which moat-modbus talks to.
     It has a number of modbus units (attribute 'units').
 
@@ -268,29 +294,13 @@ class Host(CtxObj, _HostCommon):
         self._tid = (self._tid + 1) % 0xFFFF
         return self._tid
 
-    @asynccontextmanager
-    async def _ctx(self):
-        # might be used to manage the connection
+    @property
+    def _gate_key(self):
         key = (self.addr, self.port)
-        if key in self.gate.hosts:
-            raise RuntimeError(f"Host {key} already exists")
-        self.gate.hosts[key] = self
-
-        try:
-            async with anyio.create_task_group() as tg:
-                self._tg = tg
-                self._read_scope = tg.cancel_scope
-                await tg.start(self._reader)
-
-                yield self
-                tg.cancel_scope.cancel()
-        finally:
-            if self.gate.hosts.get(key, None) is self:
-                del self.gate.hosts[key]
 
     # reader task #
 
-    async def _reader(self, task_status):
+    async def _reader(self, *, task_status):
         # pylint: disable=protected-access
 
         async def _send_trans():
@@ -416,7 +426,7 @@ class Host(CtxObj, _HostCommon):
             await s.close()
 
 
-class SerialHost(CtxObj, _HostCommon):
+class SerialHost(_HostCommon, CtxObj):
     """This is a "host" that's actually a serial interface.
 
     Do not instantiate directly; instead, use
@@ -458,26 +468,9 @@ class SerialHost(CtxObj, _HostCommon):
     def _nextTID(self):
         return 0
 
-    @asynccontextmanager
-    async def _ctx(self):
-        # might be used to manage the connection
+    @property
+    def _gate_key(self):
         key = self.port
-        if key in self.gate.hosts:
-            raise RuntimeError(f"Host {key} already exists")
-
-        try:
-            async with (
-                Serial(port=self.port, **self.ser) as self.stream,
-                anyio.create_task_group() as self._tg,
-            ):
-                self._read_scope = self._tg.cancel_scope
-                await self._tg.start(self._reader)
-                self._connected.set()
-                yield self
-                self._read_scope.cancel()
-        finally:
-            if self.gate.hosts.get(key) is self:
-                del self.gate.hosts[key]
 
     # reader task #
 
@@ -486,7 +479,6 @@ class SerialHost(CtxObj, _HostCommon):
 
         if self._transactions:
             raise RuntimeError("Serial: cannot have open transaction on start")
-        self._connected.set()
         task_status.started()
         self._trace("recv START")
 
@@ -494,20 +486,42 @@ class SerialHost(CtxObj, _HostCommon):
         data = bytearray()
         while True:
             try:
-                data += await self.stream.receive(4096)
-                # pylint: disable=logging-not-lazy
-                self._trace("recv: " + " ".join([hex(x) for x in data]))
+                async with ungroup, Serial(port=self.port, **self.ser) as self.stream:
+                    self._connected.set()
+                    while True:
 
-                replies = []
+                        if data:
+                            with anyio.fail_after(self.timeout):
+                                data += await self.stream.receive(4096)
+                        else:
+                            data = await self.stream.receive(4096)
 
-                # check for decoding errors
-                while True:
-                    used, pdu = self.framer.processIncomingFrame(data)
-                    data = data[used:]
-                    if pdu is not None:
-                        replies.append(pdu)
-                    if not used:
-                        break
+                        # pylint: disable=logging-not-lazy
+                        self._trace("recv: " + " ".join([hex(x) for x in data]))
+
+                        replies = []
+
+                        # check for decoding errors
+                        while True:
+                            used, pdu = self.framer.processIncomingFrame(data)
+                            if pdu is not None:
+                                replies.append(pdu)
+                            if not used:
+                                break
+                            data = data[used:]
+
+                        if mon:
+                            for reply in replies:
+                                await mon(reply)
+                        else:
+                            for reply in replies:
+                                tid = reply.transaction_id
+                                try:
+                                    request = self._transactions.pop(tid)
+                                except KeyError:
+                                    _logger.info("Unrequested message: %s", reply)
+                                else:
+                                    request._response_value.set(reply)
 
             except (
                 IncompleteRead,
@@ -538,19 +552,6 @@ class SerialHost(CtxObj, _HostCommon):
                     req._response_value.set_error(exc)
                 raise
 
-            else:
-                if mon:
-                    for reply in replies:
-                        await mon(reply)
-                else:
-                    for reply in replies:
-                        tid = reply.transaction_id
-                        try:
-                            request = self._transactions.pop(tid)
-                        except KeyError:
-                            _logger.info("Unrequested message: %s", reply)
-                        else:
-                            request._response_value.set(reply)
 
     async def aclose(self):
         """Stop talking."""

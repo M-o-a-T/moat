@@ -18,7 +18,7 @@ from moat.modbus.server import create_server
 logger = logging.getLogger(__name__)
 
 
-async def dev_poll(cfg, mt_kv, *, task_status=None):
+async def dev_poll(cfg, mt_kv, mt_ln, *, task_status=anyio.TASK_STATUS_IGNORED):
     """
     Run a device task on this set of devices, as configured by the config.
 
@@ -50,7 +50,7 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
 
             return await scope.spawn_service(dev.as_scope)
 
-        if mt_kv is None:
+        if mt_kv is None and mt_ln is None:
             from .device import Register as Reg  # pylint: disable=import-outside-toplevel
 
             RegS = Reg
@@ -58,8 +58,8 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
             # The MoaT-KV client must live longer than the taskgroup
             from .kv import Register  # pylint: disable=import-outside-toplevel
 
-            Reg = partial(Register, mt_kv=mt_kv, tg=tg)
-            RegS = partial(Register, mt_kv=mt_kv, tg=tg, is_server=True)
+            Reg = partial(Register, mt_kv=mt_kv, mt_ln=mt_ln, tg=tg)
+            RegS = partial(Register, mt_kv=mt_kv, mt_ln=mt_ln, tg=tg, is_server=True)
 
         # relay-out server(s)
         servers = []
@@ -124,8 +124,7 @@ async def dev_poll(cfg, mt_kv, *, task_status=None):
             tg.start_soon(partial(s.serve, opened=evt))
             await evt.wait()
 
-        if task_status is not None:
-            task_status.started(cfg)
+        task_status.started(cfg)
 
         if nd:
             logger.info("Running.")

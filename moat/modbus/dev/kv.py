@@ -84,10 +84,14 @@ class Register(BaseRegister):
     async def to_dkv(self, dest):
         """Copy a Modbus value to MoaT-KV"""
         async for val in self:
-            #            if "load.goal" in str(dest):
-            #                breakpoint()
             logger.debug("%s R %r", self.path, val)
             await self.mt_kv.set(dest, value=val, idem=self.data.get("idem", True))
+
+    async def to_dlink(self, dest, retain=False):
+        """Copy a Modbus value to MoaT-Link"""
+        async for val in self:
+            logger.debug("%s L %r", self.path, val)
+            await self.mt_ln.d_set(dest, value=val, retain=retain)
 
     async def to_dkv_raw(self, dest):
         """Copy a Modbus value to MQTT"""

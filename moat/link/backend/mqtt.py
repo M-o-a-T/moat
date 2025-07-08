@@ -291,7 +291,7 @@ class _SubGet:
                     except Exception as exc:
                         back.logger.warning("Decoding Error %s %s: %r %r", top,self.codec.__class__.__module__, msg.payload,exc, exc_info=exc)
                         await back.send(
-                            P(":R.error.link.mqtt.codec")+topic,
+                            P(":R.error.link.mqtt.codec")+top,
                             dict(
                                 codec=type(self.codec).__name__,
                                 topic=top,

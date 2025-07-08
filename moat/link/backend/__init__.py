@@ -46,6 +46,7 @@ class Message[TData]:
         return cls  # for now
 
 
+@define
 class RawMessage(Message):
     "A message that couldn't be decoded / shouldn't be encoded"
 

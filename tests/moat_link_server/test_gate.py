@@ -24,26 +24,22 @@ from moat.kv.server import Server as KVServer
 from moat.kv.client import open_client as KVClient
 from moat.kv.data import data_get as kvdata_get
 
-async def _dump(sf, *, task_status):
-    bk = await sf.backend(name="mon")
-    codec=get_codec("std-cbor")
-    async with bk.monitor(P("#"), qos=0, codec="noop") as mon:
+async def mon(c,*,task_status):
+    async with c.monitor(P(':'),codec="std-cbor",subtree=True,raw=True) as mo:
         task_status.started()
-        async for msg in mon:
-            try:
-                d = codec.decode(msg.data)
-            except Exception:
-                print(msg)
-            else:
-                print(f"Message(topic={msg.topic!r}, data=CBOR:{d!r}, meta={msg.meta} retain={msg.retain})")
+        async for msg in mo:
+            print("*****", msg)
 
 @pytest.mark.anyio()
 async def test_gate_mqtt(cfg):
     async with Scaffold(cfg, use_servers=True) as sf:
-        await sf.tg.start(_dump, sf)
+        # await sf.tg.start(_dump, sf)
         await sf.server(init={"Hello": "there!", "test": 123})
         c = await sf.client()
         cc = await sf.client()
+        cm = await sf.client()
+        await sf.tg.start(mon,cm)
+
         codec=get_codec("json")
 
         await c.d_set(P("test.a.one"),1)

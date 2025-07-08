@@ -48,7 +48,12 @@ async def dev_poll(cfg, mt_kv, mt_ln, *, task_status=anyio.TASK_STATUS_IGNORED):
             dev = ClientDevice(client=cl, factory=Reg)
             await dev.load(data=v)
 
-            return await scope.spawn_service(dev.as_scope)
+            # return await scope.spawn_service(dev.as_scope)
+            async def task(dev, *, task_status):
+                async with dev:
+                    task_status.started(dev)
+                    await anyio.sleep_forever()
+            return await tg.start(task, dev)
 
         if mt_kv is None and mt_ln is None:
             from .device import Register as Reg  # pylint: disable=import-outside-toplevel

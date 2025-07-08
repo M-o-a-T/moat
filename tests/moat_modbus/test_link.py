@@ -40,6 +40,7 @@ cfg2_ = """
 slots:
   1sec:
     read_delay: 1
+    write_delay: 1
     read_align: false
 hostports:
   localhost:
@@ -58,6 +59,10 @@ hostports:
 
 """
 
+async def mon(c):
+    async with c.monitor(P(':'),codec="std-cbor",subtree=True) as mo:
+        async for msg in mo:
+            print("*****", msg)
 
 @pytest.mark.trio()
 async def test_kv_poll(autojump_clock):  # pylint: disable=unused-argument
@@ -78,6 +83,7 @@ async def test_kv_poll(autojump_clock):  # pylint: disable=unused-argument
         sf.client_() as c,
         trio.open_nursery() as tg,
     ):
+        # tg.start_soon(mon,c)
         r=await c.d_get(P(":"))
         assert r["value"] == 123
         assert (await c.d_get(P(":")))["value"] == 123
@@ -91,28 +97,33 @@ async def test_kv_poll(autojump_clock):  # pylint: disable=unused-argument
         await trio.sleep(2)
         assert reg.value_w == 44
 
-        reg.set(43)
+        await c.d_set(P("a.cli.src"), data=144)
+        cfg2 = await tg.start(dev_poll, cfg2, None, c)
         await trio.sleep(2)
+
+        # bidirectional forwarding
+
+        try:
+            rv = await c.d_get(P("a.cli.dst"))
+        except KeyError:
+            rv = None
+        assert rv == 44
 
         try:
             rv = await c.d_get(P("a.srv.dst"))
         except KeyError:
             rv = None
+        assert rv == 144
 
-        # assert rv == 43
-        # assert reg.value_w == 44
-        # assert reg.value == 43
+        # explicit read
+
+        async with ModbusClient() as g:
+            async with g.host("localhost", PORT) as h:
+                async with h.unit(32) as u:
+                    async with u.slot("default") as s:
+                        s.add(HoldingRegisters, 12342, IntValue)
+                        res = await s.getValues()
+                        assert res[HoldingRegisters][12342].value == 44
+
+        # terminate tasks
         tg.cancel_scope.cancel()
-        return
-
-        async with (
-            ModbusClient() as g,
-            g.host("localhost", PORT) as h,
-            h.unit(32) as u,
-            u.slot("default") as s,
-        ):
-            s.add(HoldingRegisters, 12342, IntValue)
-            res = await s.getValues()
-            pass  # v,res
-
-        pass  # ex

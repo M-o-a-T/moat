@@ -17,11 +17,12 @@ class Gate(_Gate):
 
     async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         "Main loop. Overridden to start a Moat-KV client"
-        async with open_client("moat.link.gate.kv", **self.cfg.kv) as self.kv:
+        async with open_client("moat.link.gate.kv", **self.cfg) as self.kv:
             await super().run_(task_status=task_status)
 
     async def get_dst(self, task_status=anyio.TASK_STATUS_IGNORED):
         pl=PathLongener()
+        # This chops the `self.cf.dst` prefix off the resulting path
         async with self.kv.watch(self.cf.dst, fetch=True, long_path=False, nchain=2) as mon:
             task_status.started()
             async for msg in mon:
@@ -29,8 +30,8 @@ class Gate(_Gate):
                     if msg.get("state","")=="uptodate":
                         self.dst_is_current()
                     continue
-                p=pl.long(msg.p)
-                await self.set_src(msg.topic[ld:]), msg.data, msg.meta)
+                path=pl.long(msg.depth,msg.path)
+                await self.set_src(path, msg.value, MsgMeta(origin=msg.chain.node,t=msg.chain.tick))
 
 
     async def set_dst(self, path:Path, data:Any, meta:MsgMeta):

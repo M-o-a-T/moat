@@ -35,7 +35,10 @@ class _Server:
         await self.handler(conn)
 
     async def run(self):  # pylint: disable=missing-function-docstring
-        listener = await anyio.create_tcp_listener(local_port=self.port)
+        try:
+            listener = await anyio.create_tcp_listener(local_port=self.port)
+        except Exception as exc:
+            raise EnvironmentError(f"could not listen to port {self.port}") from exc
         if self._rdy is not None:
             self._rdy(listener)
         async with listener:

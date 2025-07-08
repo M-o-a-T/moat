@@ -16,7 +16,6 @@ import anyio
 from anyio import ClosedResourceError, IncompleteRead
 from anyio.abc import SocketAttribute
 from anyio_serial import Serial
-from asyncscope import scope
 from moat.util import CtxObj, Queue, ValueEvent, num2id
 from moat.util.exc import ungroup
 from pymodbus.exceptions import ModbusIOException
@@ -73,16 +72,17 @@ class ModbusClient(CtxObj):
         h = Host(self, addr, port, **kw)
         return h
 
-    async def _host(self, addr, port=None):
+    async def _host(self, addr, port=None, *, task_status):
         async with self.host(addr, port) as srv:
-            scope.register(srv)
-            await scope.no_more_dependents()
+            task_status.started(srv)
+            await anyio.sleep_forever()
 
     async def host_service(self, addr, port):
         """Run a TCP client in an AsyncScope."""
         if not port:
             port = 502
-        return await scope.service(f"MC_{num2id(self)}:{addr}:{port}", self._host, addr, port)
+        #return await scope.service(f"MC_{num2id(self)}:{addr}:{port}", self._host, addr, port)
+        return await self._tg.start(self._host,addr,port)
 
     def serial(self, /, port, **ser):
         """Return a host object for connections to this serial port."""
@@ -92,14 +92,15 @@ class ModbusClient(CtxObj):
         h = SerialHost(self, port=port, **ser)
         return h
 
-    async def _serial(self, /, port, **ser):
+    async def _serial(self, /, port, ser, *, task_status):
         async with self.serial(port, **ser) as srv:
-            scope.register(srv)
-            await scope.no_more_dependents()
+            task_status.started(srv)
+            await anyio.sleep_forever()
 
     async def serial_service(self, port, **ser):
         """Run a serial client in an AsyncScope."""
-        return await scope.service(f"MC_{num2id(self)}:{port}", self._serial, port, **ser)
+        # return await scope.service(f"MC_{num2id(self)}:{port}", self._serial, port, **ser)
+        return await self._tg.start(self._serial, port, ser)
 
     def conn(self, cfg):
         """Run a serial OR TCP client according to the config.
@@ -168,14 +169,15 @@ class _HostCommon:
         """
         return Unit(self, unit)
 
-    async def _unit(self, unit):
+    async def _unit(self, unit, *, task_status):
         async with self.unit(unit) as srv:
-            scope.register(srv)
-            await scope.no_more_dependents()
+            task_status.started(srv)
+            await anyio.sleep_forever()
 
     async def unit_scope(self, unit):
         """Run a unit in an `AsyncScope`"""
-        return await scope.service(f"MH_{num2id(self)}:{unit}", self._unit, unit)
+        # return await scope.service(f"MH_{num2id(self)}:{unit}", self._unit, unit)
+        return await self._tg.start(self._unit, unit)
 
     @property
     def _gate_key(self):
@@ -198,6 +200,7 @@ class _HostCommon:
                 yield self
                 tg.cancel_scope.cancel()
         finally:
+            self._tg = None
             if self.gate.hosts.get(key, None) is self:
                 del self.gate.hosts[key]
 
@@ -586,6 +589,8 @@ class Unit(CtxObj):
     to access/create a unit.
     """
 
+    _running = False
+
     def __init__(self, host, unit):
         self.host = host
         self.unit = unit
@@ -605,8 +610,19 @@ class Unit(CtxObj):
 
     @asynccontextmanager
     async def _ctx(self):
-        # might be used to manage whatever
-        yield self
+        if self._running:
+            raise RuntimeError(f"Slot {self.slot} already active")
+        self._running = True
+        try:
+            async with anyio.create_task_group() as tg:
+                self._tg = tg
+                yield self
+                tg.cancel_scope.cancel()
+        finally:
+            self._tg = None
+            self._running = False
+            self.host.units.pop(self.unit, None)
+
 
     def slot(self, slot, **kw):
         """
@@ -620,14 +636,15 @@ class Unit(CtxObj):
             self.slots[slot] = sl = Slot(self, slot, **kw)
             return sl
 
-    async def _slot(self, slot, **kw):
+    async def _slot(self, slot, kw, *, task_status):
         async with self.slot(slot, **kw) as srv:
-            scope.register(srv)
-            await scope.no_more_dependents()
+            task_status.started(srv)
+            await anyio.sleep_forever()
 
     async def slot_scope(self, slot, **kw):
         """Run the slot handler in an AsyncScope."""
-        return await scope.service(f"MS_{num2id(self)}:{slot}", self._slot, slot, **kw)
+        # return await scope.service(f"MS_{num2id(self)}:{slot}", self._slot, slot, **kw)
+        return await self._tg.start(self._slot, slot, kw)
 
     async def aclose(self):
         """Stop talking and delete yourself.

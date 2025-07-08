@@ -29,7 +29,6 @@ class Gate(_Gate):
                     if msg.get("state","")=="uptodate":
                         self.dst_is_current()
                     continue
-                breakpoint()
                 p=pl.long(msg.p)
                 await self.set_src(msg.topic[ld:]), msg.data, msg.meta)
 

@@ -95,6 +95,7 @@ class Scaffold(CtxObj):
         self.cfg.setdefault("backend", attrdict())
         self.cfg.backend.setdefault("driver", "mqtt")
         self.cfg.backend.setdefault("codec", "std-cbor")
+        self.cfg.backend.setdefault("keep_alive", 9999)
 
         self.cfg.server.ping.cycle=.5
         self.cfg.server.ping.gap=.15

@@ -70,10 +70,10 @@ async def test_gate_mqtt(cfg):
             dst=P("test.b"),
             codec="json",
             ))
+        await c.i_sync()
 
         await sf.tg.start(run_gate,sf.cfg,c,"test")
 
-        await anyio.sleep(0.2)
         a= await data_get(c,P("test.a"), out=False)
         assert a==dict(one={"_":1},two={"_":2},three={"_":33})
 

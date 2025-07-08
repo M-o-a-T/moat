@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import anyio
 import time
+import os
+import sys
 from contextlib import asynccontextmanager, nullcontext
 from tempfile import TemporaryDirectory
 from pathlib import Path as FSPath
 from functools import partial
-
-from mqttproto.async_broker import AsyncMQTTBroker
 
 from moat.link.client import Link
 from moat.link.server import Server
@@ -46,10 +46,38 @@ async def run_broker(cfg, *, task_status):
 
     The task status returns the port we're listening on.
     """
-    cfg  # noqa:B018  # pyright:ignore
-    broker = AsyncMQTTBroker(("127.0.0.1", 0))
+    #cfg  # noqa:B018  # pyright:ignore
+    #broker = AsyncMQTTBroker(("127.0.0.1", 0))
+    #await broker.serve(task_status=task_status)
+    port=40000+(os.getpid()+123)%10000
+    async with (
+            anyio.NamedTemporaryFile(mode="w+") as tf,
+            anyio.create_task_group() as tg,
+            ):
+        await tf.write(f"""\
+allow_anonymous true
+retained_messages_mode enabled_without_persistence
+listen {{
+    protocol mqtt
+    port { port }
+    inet4_bind_address 127.0.0.1
+}}
+""")
+        await tf.flush()
 
-    await broker.serve(task_status=task_status)
+        tg.start_soon(partial(anyio.run_process,["flashmq","-c",tf.name],stderr=sys.stderr,stdout=sys.stdout))
+        for _ in range(20):
+            try:
+                sock = await anyio.connect_tcp("127.0.0.1",port)
+            except EnvironmentError:
+                await anyio.sleep(0.1)
+            else:
+                await sock.aclose()
+                break
+        else:
+            raise RuntimeError("Could not connect to FlashMQ")
+
+        task_status.started(port)
 
 
 class Scaffold(CtxObj):

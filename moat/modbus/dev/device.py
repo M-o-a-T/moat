@@ -513,11 +513,9 @@ class ServerDevice(BaseDevice):
         self.setValues = self.unit.setValues
 
     def async_getValues(self,*a,**kw):
-        breakpoint()
         return self.unit.async_getValues(*a,**kw)
 
     def async_setValues(self,*a,**kw):
-        breakpoint()
         return self.unit.async_setValues(*a,**kw)
 
     async def load(self, path: str | None = None, data: dict | None = None):

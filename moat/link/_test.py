@@ -57,6 +57,8 @@ async def run_broker(cfg, *, task_status):
         await tf.write(f"""\
 allow_anonymous true
 retained_messages_mode enabled_without_persistence
+thread_count 1
+
 listen {{
     protocol mqtt
     port { port }

@@ -125,9 +125,14 @@ class Backend(_Backend):
         @mine: send my own messages back to me.
         """
 
-        tops = topic.slashed
-        if subtree:
-            tops += "/#"
+        if len(topic):
+            tops = topic.slashed
+            if subtree:
+                tops += "/#"
+        elif subtree:
+            tops="#"
+        else:
+            raise ValueError("empty path")
         self.logger.debug("Monitor %s start", tops)
         codec = self.codec if codec is NotGiven else get_codec(codec)
         kw["no_local"] = not mine

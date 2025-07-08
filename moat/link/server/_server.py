@@ -166,7 +166,9 @@ class ServerClient(LinkCommon):
         # there sustained rate might be > 10 connections per second.
         # >100 requires rate limiting.
         global _client_nr
-        t = int(time.time()*100-174500000000)
+        t = int(time.time()*100-175000000000)
+        if t < 0:  # testing. Revert.
+            t += 175000000000
         if _client_nr < t:
             _client_nr = t
         else:

@@ -50,13 +50,13 @@ class Register(BaseRegister):
                 dest = (dest,)
 
             for d in dest:
-                if d.mark == "r":
+                if d.mark in ("r","R"):
                     if self.mt_ln is not None:
-                        tg.start_soon(self.to_dln_raw, d)
+                        tg.start_soon(self.to_dlink_raw, d, d.mark=="R")
                     else:
                         tg.start_soon(self.to_dkv_raw, d)
-                elif d.mark == "l":
-                    tg.start_soon(self.to_dlink, d)
+                elif d.mark in ("l","L") or self.mt_kv is None:
+                    tg.start_soon(self.to_dlink, d, d.mark!="l")
                 else:
                     tg.start_soon(self.to_dkv, d)
 
@@ -69,8 +69,8 @@ class Register(BaseRegister):
                     mon = self.mt_ln.monitor(self.src)
                 else:
                     mon = self.mt_kv.msg_monitor(self.src)
-            elif self.src.mark in ("l","L"):
-                mon = self.mt_ln.d_watch(self.src, meta=True)
+            elif self.src.mark in ("l","L") or self.mt_kv is None:
+                mon = self.mt_ln.d_watch(self.src, meta=True, mark=self.src.mark!="l")
             else:
                 mon = self.mt_kv.watch(self.src, fetch=True, max_depth=0)
 
@@ -102,7 +102,7 @@ class Register(BaseRegister):
         """Copy a Modbus value to MoaT-Link"""
         async for val in self:
             logger.debug("%s L %r", self.path, val)
-            await self.mt_ln.d_set(dest, value=val, retain=retain)
+            await self.mt_ln.d_set(dest, val, retain=retain)
 
     async def to_dkv_raw(self, dest):
         """Copy a Modbus value to MQTT"""
@@ -110,23 +110,25 @@ class Register(BaseRegister):
             logger.debug("%s r %r", self.path, val)
             await self.mt_kv.msg_send(list(dest), val)
 
-    async def to_dln_raw(self, dest):
+    async def to_dlink_raw(self, dest, retain=False):
         """Copy a Modbus value to MQTT"""
         async for val in self:
             logger.debug("%s r %r", self.path, val)
-            await self.mt_ln.send(list(dest), val)
+            await self.mt_ln.send(list(dest), val, retain=retain)
 
     async def from_dkv(self, mon, *, task_status):
-        """Copy a MoaT-KV value to Modbus"""
+        """Copy an MQTT value to Modbus"""
         async with mon as mon_:
             async for val in mon_:
                 if task_status is not None:
                     task_status.started()
                     task_status = None
-                if isinstance(val,tuple):
+                if val is None:  # Link message
+                    continue
+                if isinstance(val,tuple):  # Link client
                     logger.debug("%s W %r", self.path, val)
                     val=val[0]
-                elif "value" not in val:
+                elif "value" not in val:  # KV message
                     logger.debug("%s Wx", self.path)
                     continue
                 else:
@@ -157,13 +159,16 @@ class Register(BaseRegister):
             tg.start_soon(per)
             first = True
             async for val_ in mon_:
-                try:
-                    val = val_.value
-                except AttributeError:
-                    if first:
-                        first = False
-                        continue
-                    val = NotGiven
+                if isinstance(val,tuple):
+                    val = val[0]
+                else:
+                    try:
+                        val = val_.value
+                    except AttributeError:
+                        if first:
+                            first = False
+                            continue
+                        val = NotGiven
                 logger.debug("%s w %r", self.path, val)
                 evt.set()
                 evt = anyio.Event()
@@ -182,10 +187,8 @@ class Register(BaseRegister):
                     else:
                         await self.mt_kv.msg_send(list(d), self.value)
                 elif d.mark == "R":
-                    await self.mt_ln.send(d, self.value, retain=True)
-                elif d.mark == "l":
-                    await self.mt_ln.d_set(d, self.value)
-                elif d.mark == "L":
-                    await self.mt_ln.d_set(d, self.value, retain=True)
+                    await self.mt_ln.send(d, value, retain=True)
+                elif d.mark in ("l","L") or self.mt_kv is None:
+                    await self.mt_ln.d_set(d, value, retain, d.mark!="l")
                 else:
-                    await self.mt_kv.set(d, value=self.value, idem=self.data.get("idem", True))
+                    await self.mt_kv.set(d, value=value, idem=self.data.get("idem", True))

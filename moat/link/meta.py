@@ -77,7 +77,8 @@ class MsgMeta:
             v = getattr(type(self), k, None)
             if isinstance(v, property) and (val := kwargs.pop(k, NotGiven)) is not NotGiven:
                 vals[k] = val
-        self.__attrs_init__(**kwargs)  # pyright:ignore
+        self.__attrs_init__()  # pyright:ignore
+        self.kw = kwargs
         for k, v in vals.items():
             setattr(self, k, v)
         self._clean(name)

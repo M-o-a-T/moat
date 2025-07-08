@@ -270,7 +270,7 @@ class _SubGet:
                 except Exception as exc:
                     back.logger.debug("Property Error", exc_info=exc)
                     await back.send(
-                        P(":R.error.link.mqtt.meta")+topic,
+                        P(":R.error.link.mqtt.meta")+top,
                         dict(
                             topic=top,
                             val=oprop,

@@ -203,6 +203,8 @@ class Path(collections.abc.Sequence):
         better doubleclickability. Do not depend on this.
 
         If slashed, space escaping is restricted to bytestrings.
+
+        Slash encoding does not work with empty paths; marks are ignored.
         """
 
         def _escol(x, spaces=True):
@@ -221,10 +223,9 @@ class Path(collections.abc.Sequence):
         if self._data is None:
             return ":?"
         if not self._data:
-            if not slash:
-                res.append(":")
-            elif not self.mark:
-                res.append(":m")
+            if slash:
+                raise ValueError("Empty paths cannot be slash-coded")
+            res.append(":")
         for x in self._data:
             if slash and res:
                 res.append("/")

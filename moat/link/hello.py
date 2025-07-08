@@ -150,7 +150,7 @@ class Hello(CmdCommon):
             self._done.set()
 
     async def _do_hello(self, msg) -> bool | dict:
-        logger.info("H IN %r %r", msg.args, msg.kw)
+        logger.debug("H IN %r %r", msg.args, msg.kw)
         it = iter(msg.args)
         auth = True
         aux_data = {}
@@ -270,7 +270,7 @@ class Hello(CmdCommon):
         elif len(auths) == 1:
             auths = auths[0]
 
-        logger.info("H OUT %d %s %s %r %r", proto_version, self.me, self.them, auths, kw)
+        logger.debug("H OUT %d %s %s %r %r", proto_version, self.me, self.them, auths, kw)
         self._sync.set()
         res = await sender.cmd(
             P("i.hello"),

@@ -71,10 +71,12 @@ class Path(collections.abc.Sequence):
     Inline (within an element):
 
     \b
-        ::  escapes a colon
-        :.  escapes a dot (dot-path repr only)
-        :_  escapes a space (dot-path repr only)
-        :|  escapes a slash (slash-path repr only)
+        ::  escapes : colon
+        :.  escapes . dot   (dot-path repr only)
+        :_  escapes   space (dot-path repr only)
+        :|  escapes / slash (slash-path repr only)
+        :h  escapes # hash  (slash-path repr only, optional)
+        :p  escapes + plus  (slash-path repr only, optional)
 
     As separator (starts a new element):
 
@@ -195,7 +197,7 @@ class Path(collections.abc.Sequence):
             raise ValueError("Use an empty mark, not 'None'")
         return type(self).build(self._data, mark=mark)
 
-    def __str__(self, slash=False):
+    def __str__(self, slash:bool|Literal[2]=False):
         """
         Stringify the path to a dotstring.
 
@@ -203,16 +205,20 @@ class Path(collections.abc.Sequence):
         better doubleclickability. Do not depend on this.
 
         If slashed, space escaping is restricted to bytestrings.
+        If slash==2, also escape # and +.
 
         Slash encoding does not work with empty paths; marks are ignored.
         """
 
         def _escol(x, spaces=True):
-            x = x.replace(":", "::")
+            x = x.replace(":", "::")  # must be first
             if slash:
                 x = x.replace("/", ":|")
             else:
                 x = x.replace(".", ":.")
+            if slash == 2:
+                x = x.replace("#", ":h")
+                x = x.replace("+", ":p")
             if spaces:
                 x = x.replace(" ", ":_")
             return x
@@ -280,6 +286,19 @@ class Path(collections.abc.Sequence):
         Stringify the path to a slashed string.
 
         Spaces are not escaped, except in bytestrings.
+        """
+
+        return self.__str__(slash=True)
+
+    @property
+    def slashed2(self):
+        """
+        Stringify the path to a slashed string.
+
+        Spaces are not escaped, except in bytestrings.
+
+        This also escapes + and # characters, for use in MQTT publish
+        (but possibly-maybe NOT subscribe) paths.
         """
 
         return self.__str__(slash=True)
@@ -546,7 +565,9 @@ class Path(collections.abc.Sequence):
             return cls.build(path, mark=mark)
 
         def _decol(s):
-            return s.replace(":|", "/").replace(":_", " ").replace("::", ":")
+            s = s.replace(":|", "/").replace(":_", " ")
+            s = s.replace(":h", "#").replace(":p", "+")
+            return s.replace("::", ":")  # must be last
 
         marks = 0
 
@@ -559,7 +580,7 @@ class Path(collections.abc.Sequence):
                 elif p == ":":
                     pass
 
-                elif p[1] == ":":
+                elif p[1] in (":","h","p"):
                     res.append(_decol(p))
                 elif p[1] == "b":
                     res.append(int(p[2:], 2))

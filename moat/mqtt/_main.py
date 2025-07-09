@@ -201,7 +201,7 @@ async def pub(obj, **args):
         cfg["keep_alive"] = args["keep_alive"]
 
     fix_will(args, cfg)
-    cfg.codec = "utf8"
+    cfg.codec = args.get("codec","utf8")
 
     async with open_mqttclient(client_id=client_id, config=cfg) as C:
         await do_pub(C, args, cfg)

@@ -331,7 +331,7 @@ class _Sender(MsgSender):
     def d_watch(self, path:Path, mark:Literal[True], meta:Literal[False],subtree:Literal[True],state:bool|None=None) -> AsyncContextManager[AsyncIterator[None|tuple[Path,Any]]]:
         ...
 
-    def d_watch(self, path:Path, meta:bool=False, subtree:bool=False, state:bool|None=None, max_age:float|None=None, mark:bool=False) -> AsyncContextManager[AsyncIterator[tuple[Path,Any,MsgMeta]]]:
+    def d_watch(self, path:Path, meta:bool=False, subtree:bool=False, state:bool|None=None, max_age:float|None=None, mark:bool=False, cls:type=Node) -> AsyncContextManager[AsyncIterator[tuple[Path,Any,MsgMeta]]]:
         """
         Monitor a node or subtree.
 
@@ -340,13 +340,14 @@ class _Sender(MsgSender):
         @subtree: flag whether to watch a subtree, not just this node
         @mark: yield `None` when the initial state has been transmitted
         @state: send the current state (True), updates (False) or both (None)
+        @cls: type of root node (default `Node`)
 
         This method returns an async context manager which yields an async iterator.
         The iterator yields node data if neither @subtree nor @meta is set.
         Otherwise it yields tuples. The first item is the path if @subtree
         is set; the last item is the metadata if @meta is set.
         """
-        return Watcher(self, path, meta, subtree, state, max_age, mark)
+        return Watcher(self, path, meta, subtree, state, max_age, mark, cls)
 
 
     async def e_exc(self, path:Path, exc:Exception, **kw):
@@ -697,6 +698,7 @@ class Watcher(CtxObj):
     state:bool|None=field()
     age:float|None=field()
     mark:bool=field()
+    node_cls:type=field()
 
     _qw=field(init=False,repr=False)
     _qr=field(init=False,repr=False)
@@ -746,7 +748,7 @@ class Watcher(CtxObj):
     @asynccontextmanager
     async def _ctx(self):
         async with anyio.create_task_group() as tg:
-            self._node = Node()
+            self._node = self.node_cls()
             self._tg = tg
             self._qw,self._qr = anyio.create_memory_object_stream(10)
             if self.state is not True:

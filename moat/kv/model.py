@@ -702,10 +702,6 @@ class Entry:
 
         first = True
         for name in path:
-            if name is None and not nulls_ok:
-                raise ValueError("Null path element")
-            if nulls_ok == 1:  # root only
-                nulls_ok = False
             child = self._sub.get(name, None) if self is not None else None
             if child is None:
                 if create is False:
@@ -738,10 +734,6 @@ class Entry:
         # KEEP IN SYNC with `follow_acl`, above!
 
         for name in path:
-            if name is None and not nulls_ok:
-                raise ValueError("Null path element")
-            if nulls_ok == 1:  # root only
-                nulls_ok = False
             child = self._sub.get(name, None) if self is not None else None
             if child is None:
                 if create is False:

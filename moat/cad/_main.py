@@ -125,3 +125,21 @@ async def run_(obj, file, args):
         # umask: 'int' = -1
     )
     await res.wait()
+
+
+@cli.command("gcode")
+@click.option("-p","--printer",type=str,default="xl")
+async def gcode(printer):
+    "Emit gcode template"
+    from jinja2 import Environment,PackageLoader
+    from anyio import Path
+
+    f=Path(__file__).parent / "_templates" / f"{printer}.gcode.jinja"
+    env=Environment(
+        keep_trailing_newline=True,
+    )
+    tmpl=env.from_string(await f.read_text())
+    out=tmpl.render()
+    print(out)
+    
+

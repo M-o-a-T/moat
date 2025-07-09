@@ -14,6 +14,7 @@ from moat.util import attrdict, combine_dict, yload
 from .broker import create_broker
 from .client import CodecError, ConnectException, open_mqttclient
 from moat.lib.codec import get_codec
+from moat.util import NotGiven
 
 logger = logging.getLogger(__name__)
 

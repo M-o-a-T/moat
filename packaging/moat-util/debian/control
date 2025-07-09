@@ -5,6 +5,7 @@ Priority: optional
 Build-Depends: dh-python, python3-all, debhelper (>= 13), debhelper-compat (= 13),
   python3-setuptools,
   python3-wheel,
+  python3-attr (>= 22),
 Standards-Version: 3.9.6
 Homepage: https://github.com/M-o-a-T/asyncwebsockets
 
@@ -15,6 +16,7 @@ Replaces: python3-moat-util
 Depends: ${misc:Depends}, ${python3:Depends},
   python3-moat-lib-codec,
   moat,
+  python3-attr (>= 22),
 Description: Utilities for MoaT
  This package contains a heap of utility code used by the rest of the MoaT system.
 

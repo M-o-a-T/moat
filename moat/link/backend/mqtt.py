@@ -88,7 +88,7 @@ class Backend(_Backend):
 
             data = b"" if data is NotGiven else cdc.encode(data)
             kw["will"] = Will(
-                topic=will["topic"].slashed,
+                topic=will["topic"].slashed2,
                 payload=data,
                 qos=will.get("qos", 1),
                 retain=will.get("retain", False),
@@ -125,9 +125,14 @@ class Backend(_Backend):
         @mine: send my own messages back to me.
         """
 
-        tops = topic.slashed
-        if subtree:
-            tops += "/#"
+        if len(topic):
+            tops = topic.slashed
+            if subtree:
+                tops += "/#"
+        elif subtree:
+            tops="#"
+        else:
+            raise ValueError("empty path")
         self.logger.debug("Monitor %s start", tops)
         codec = self.codec if codec is NotGiven else get_codec(codec)
         kw["no_local"] = not mine
@@ -216,7 +221,7 @@ class Backend(_Backend):
         if self.trace:
             self.logger.info("S:%s %r", topic, data)
         return self.client.publish(
-            topic.slashed,
+            topic.slashed2,
             payload=msg,
             user_properties=prop,
             retain=retain,
@@ -265,7 +270,7 @@ class _SubGet:
                 except Exception as exc:
                     back.logger.debug("Property Error", exc_info=exc)
                     await back.send(
-                        P(":R.error.link.mqtt.meta")+topic,
+                        P(":R.error.link.mqtt.meta")+top,
                         dict(
                             topic=top,
                             val=oprop,
@@ -286,7 +291,7 @@ class _SubGet:
                     except Exception as exc:
                         back.logger.warning("Decoding Error %s %s: %r %r", top,self.codec.__class__.__module__, msg.payload,exc, exc_info=exc)
                         await back.send(
-                            P(":R.error.link.mqtt.codec")+topic,
+                            P(":R.error.link.mqtt.codec")+top,
                             dict(
                                 codec=type(self.codec).__name__,
                                 topic=top,

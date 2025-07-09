@@ -36,7 +36,7 @@ async def cli(ctx):
 
 
 @cli.command()
-@cli.argument("name", type=str)
+@click.argument("name", type=str)
 async def run(obj,name):
     """
     Run a gateway setup.

@@ -40,7 +40,7 @@ cli = std_command(
 async def dump_(obj, one_line):
     """Emit a server's (sub)state as a list / YAML file."""
     if not one_line:
-        await data_get(obj, obj.server._path, recursive=True)
+        await data_get(obj.client, obj.server._path, recursive=True, out=obj.stdout)
         return
     for n in obj.server.all_children:
         if n is obj.server:
@@ -58,7 +58,7 @@ async def at_cli(ctx, path):
     obj.subpath = path
     obj.node = obj.server.follow(path)
     if ctx.invoked_subcommand is None:
-        await data_get(obj, obj.server._path + obj.subpath, recursive=False)
+        await data_get(obj.client, obj.server._path + obj.subpath, recursive=False, out=obj.stdout)
 
 
 @at_cli.command("--help", hidden=True)
@@ -73,7 +73,7 @@ def help(ctx):
 async def dump_at(obj, one_line):
     """Emit a subtree as a list / YAML file."""
     if one_line:
-        await data_get(obj, obj.server._path + obj.subpath, recursive=True)
+        await data_get(obj.client, obj.server._path + obj.subpath, recursive=True, out=obj.stdout)
         return
     for n in obj.node.all_children:
         print(n, file=obj.stdout)

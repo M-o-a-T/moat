@@ -13,6 +13,7 @@ Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   moat-util,
   moat,
+  python3-pymodbus (>= 3.7),
 Replaces: python3-moat-modbus
 Conflicts: python3-moat-modbus
 Description: An async modbus client/server library

@@ -18,9 +18,10 @@ class Register(BaseRegister):
     One possibly-complex Modbus register that's mirrored from and/or to MoaT-KV
     """
 
-    def __init__(self, *a, mt_kv=None, tg=None, is_server=False, **kw):
+    def __init__(self, *a, mt_kv=None, mt_ln=None, tg=None, is_server=False, **kw):
         super().__init__(*a, **kw)
         self.mt_kv = mt_kv
+        self.mt_ln = mt_ln
         self.tg = tg
         self.is_server = is_server
 
@@ -49,8 +50,13 @@ class Register(BaseRegister):
                 dest = (dest,)
 
             for d in dest:
-                if d.mark == "r":
-                    tg.start_soon(self.to_dkv_raw, d)
+                if d.mark in ("r","R"):
+                    if self.mt_ln is not None:
+                        tg.start_soon(self.to_dlink_raw, d, d.mark=="R")
+                    else:
+                        tg.start_soon(self.to_dkv_raw, d)
+                elif d.mark in ("l","L") or self.mt_kv is None:
+                    tg.start_soon(self.to_dlink, d, d.mark!="l")
                 else:
                     tg.start_soon(self.to_dkv, d)
 
@@ -58,8 +64,13 @@ class Register(BaseRegister):
             slot = self.data.get("slot", None) if self.dest is None else None
             # if a slot is set AND src is set AND dst is not set,
             # then we want to do a periodic write (keepalive etc.).
-            if self.src.mark == "r":
-                mon = self.mt_kv.msg_monitor(self.src)
+            if self.src.mark in ("r","R"):
+                if self.mt_ln is not None:
+                    mon = self.mt_ln.monitor(self.src)
+                else:
+                    mon = self.mt_kv.msg_monitor(self.src)
+            elif self.src.mark in ("l","L") or self.mt_kv is None:
+                mon = self.mt_ln.d_watch(self.src, meta=True, mark=self.src.mark!="l")
             else:
                 mon = self.mt_kv.watch(self.src, fetch=True, max_depth=0)
 
@@ -84,10 +95,14 @@ class Register(BaseRegister):
     async def to_dkv(self, dest):
         """Copy a Modbus value to MoaT-KV"""
         async for val in self:
-            #            if "load.goal" in str(dest):
-            #                breakpoint()
             logger.debug("%s R %r", self.path, val)
             await self.mt_kv.set(dest, value=val, idem=self.data.get("idem", True))
+
+    async def to_dlink(self, dest, retain=False):
+        """Copy a Modbus value to MoaT-Link"""
+        async for val in self:
+            logger.debug("%s L %r", self.path, val)
+            await self.mt_ln.d_set(dest, val, retain=retain)
 
     async def to_dkv_raw(self, dest):
         """Copy a Modbus value to MQTT"""
@@ -95,18 +110,31 @@ class Register(BaseRegister):
             logger.debug("%s r %r", self.path, val)
             await self.mt_kv.msg_send(list(dest), val)
 
+    async def to_dlink_raw(self, dest, retain=False):
+        """Copy a Modbus value to MQTT"""
+        async for val in self:
+            logger.debug("%s r %r", self.path, val)
+            await self.mt_ln.send(list(dest), val, retain=retain)
+
     async def from_dkv(self, mon, *, task_status):
-        """Copy a MoaT-KV value to Modbus"""
+        """Copy an MQTT value to Modbus"""
         async with mon as mon_:
             async for val in mon_:
                 if task_status is not None:
                     task_status.started()
                     task_status = None
-                if "value" not in val:
+                if val is None:  # Link message
+                    continue
+                if isinstance(val,tuple):  # Link client
+                    logger.debug("%s W %r", self.path, val)
+                    val=val[0]
+                elif "value" not in val:  # KV message
                     logger.debug("%s Wx", self.path)
                     continue
-                logger.debug("%s W %r", self.path, val.value)
-                await self._set(val.value)
+                else:
+                    logger.debug("%s W %r", self.path, val)
+                    val=val.value
+                await self._set(val)
 
     async def from_dkv_p(self, mon, slot):
         """Copy an MQTT value to Modbus, with periodic refresh"""
@@ -131,13 +159,16 @@ class Register(BaseRegister):
             tg.start_soon(per)
             first = True
             async for val_ in mon_:
-                try:
-                    val = val_.value
-                except AttributeError:
-                    if first:
-                        first = False
-                        continue
-                    val = NotGiven
+                if isinstance(val,tuple):
+                    val = val[0]
+                else:
+                    try:
+                        val = val_.value
+                    except AttributeError:
+                        if first:
+                            first = False
+                            continue
+                        val = NotGiven
                 logger.debug("%s w %r", self.path, val)
                 evt.set()
                 evt = anyio.Event()
@@ -151,6 +182,13 @@ class Register(BaseRegister):
 
             for d in dest:
                 if d.mark == "r":
-                    await self.mt_kv.msg_send(list(d), self.value)
+                    if self.mt_ln is not None:
+                        await self.mt_ln.send(d, self.value)
+                    else:
+                        await self.mt_kv.msg_send(list(d), self.value)
+                elif d.mark == "R":
+                    await self.mt_ln.send(d, value, retain=True)
+                elif d.mark in ("l","L") or self.mt_kv is None:
+                    await self.mt_ln.d_set(d, value, retain, d.mark!="l")
                 else:
-                    await self.mt_kv.set(d, value=self.value, idem=self.data.get("idem", True))
+                    await self.mt_kv.set(d, value=value, idem=self.data.get("idem", True))

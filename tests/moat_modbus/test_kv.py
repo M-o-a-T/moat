@@ -74,7 +74,7 @@ async def test_kv_poll(autojump_clock):  # pylint: disable=unused-argument
     ):
         assert (await c.get(P(":"))).value == 123
         await c.set(P("a.srv.src"), value=42)
-        cfg1 = await tg.start(dev_poll, cfg1, c)
+        cfg1 = await tg.start(dev_poll, cfg1, c, None)
         reg = cfg1.server[0].units[32].regs.no_question
         await trio.sleep(1)
         assert reg.value_w == 42

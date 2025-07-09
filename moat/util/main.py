@@ -592,9 +592,9 @@ class Loader(click.Group):
         logger.debug("* List: %s.*.%s / %s.*.%s", sub_pre, sub_post, ext_pre, ext_post)
 
         if sub_pre:
+            logger.debug("Adding sub %s",sub_pre)
             for _finder, name, _ispkg in _namespaces(sub_pre):
                 # ruff:noqa:PLW2901 # var overwritten
-                logger.debug("Sub %s", name)
                 name = name.rsplit(".", 1)[1]
                 if name[0] == "_":
                     continue
@@ -602,9 +602,10 @@ class Loader(click.Group):
                     rv.append(name)
 
         if ext_pre:
+            logger.debug("Adding ext %s",ext_pre)
             for n, _ in list_ext(ext_pre):
-                logger.debug("Ext %s", n)
-                rv.append(n)
+                if load_ext(ext_pre, n, *ext_post, err=ctx.obj.debug_loader):
+                    rv.append(n)
         rv.sort()
         logger.debug("List: %r", rv)
         return rv

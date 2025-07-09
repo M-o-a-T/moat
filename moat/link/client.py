@@ -411,7 +411,7 @@ class _Sender(MsgSender):
 
         The caller is responsible for prefixing the Root path, if applicable.
         """
-        self._pcheck(path)
+        self._pcheck(path, empty_ok=kw.get("subtree",False))
         return self._link.backend.monitor(path, *a, **kw)
 
     def send(self, path:Path, *a, **kw) -> Awaitable[None]:
@@ -426,8 +426,10 @@ class _Sender(MsgSender):
         self._pcheck(path)
         return self._link.backend.send(path, *a, **kw)
 
-    def _pcheck(self,path:Path):
+    def _pcheck(self,path:Path, empty_ok=False):
         if len(path) == 0:
+            if empty_ok:
+                return
             raise ValueError("Empty path?")
         if isinstance(path[0],Path):
             if path[0] == Root.get():
@@ -728,11 +730,12 @@ class Watcher(CtxObj):
                 r = await self.link.d.get(self.path)
             except (KeyError,ValueError):
                 task_status.started()
-                # but do not do anything else
             else:
                 task_status.started()
                 p,d,m = Path(), r[0], MsgMeta.restore(r[1:])
                 await self._qw.send((p,d,m))
+            if self.mark:
+                await self._qw.send(None)
 
         self._current_done.set()
 

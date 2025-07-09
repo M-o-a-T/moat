@@ -45,9 +45,10 @@ def add_dates(d):
 
 
 async def data_get(
-    obj,
+    conn,
     path,
     *,
+    meta=False,
     recursive=True,
     as_dict="_",
     maxdepth=-1,
@@ -58,6 +59,7 @@ async def data_get(
     path_mangle=None,
     item_mangle=None,
     add_date=False,
+    out=None,
 ):
     """Generic code to dump a subtree.
 
@@ -75,6 +77,11 @@ async def data_get(
         async def item_mangle(x):  # pylint: disable=function-redefined
             return x
 
+    if out is None:
+        out = sys.stdout
+    elif out is False:
+        out = []
+
     if recursive:
         kw = {}
         if maxdepth is not None and maxdepth >= 0:
@@ -83,13 +90,13 @@ async def data_get(
             kw["min_depth"] = mindepth
         if empty:
             kw["empty"] = True
-        if obj.meta:
-            kw.setdefault("nchain", obj.meta)
+        if meta:
+            kw.setdefault("nchain", meta)
         y = {}
         if internal:
-            res = await obj.client._request(action="get_tree_internal", path=path, iter=True, **kw)
+            res = await conn._request(action="get_tree_internal", path=path, iter=True, **kw)
         else:
-            res = obj.client.get_tree(path, **kw)
+            res = conn.get_tree(path, **kw)
         async for r in res:
             r = await item_mangle(r)
             if r is None:
@@ -107,7 +114,7 @@ async def data_get(
                 for p in path:
                     yy = yy.setdefault(p, {})
                 try:
-                    yy[as_dict] = r if obj.meta else r.value
+                    yy[as_dict] = r if meta else r.value
                 except AttributeError:
                     if empty:
                         yy[as_dict] = None
@@ -117,13 +124,17 @@ async def data_get(
                 else:
                     y = {}
                     try:
-                        y[path] = r if obj.meta else r.value
+                        y[path] = r if meta else r.value
                     except AttributeError:
                         if empty:
                             y[path] = None
                         else:
                             continue
-                yprint([y], stream=obj.stdout)
+
+                if isinstance(out,list):
+                    out.append(y)
+                else:
+                    yprint([y], stream=out)
 
         if as_dict is not None:
             if maxdepth:
@@ -140,24 +151,30 @@ async def data_get(
                     return d
 
                 y = simplex(y)
-            yprint(y, stream=obj.stdout)
+            if isinstance(out,list):
+                return y
+            yprint(y, stream=out)
         return  # end "if recursive"
 
-    res = await obj.client.get(path, nchain=obj.meta)
-    if not obj.meta:
+    res = await conn.get(path, nchain=meta)
+    if add_date and "value" in res:
+        add_dates(res.value)
+    if not meta:
         try:
             res = res.value
         except AttributeError:
-            if obj.debug:
-                print("No data at", path, file=sys.stderr)
+#           if obj.debug:
+#               print("No data at", path, file=sys.stderr)
             return
 
+    if out is False:
+        return d
     if not raw:
-        yprint(res, stream=obj.stdout)
+        yprint(res, stream=out)
     elif isinstance(res, bytes):
-        os.write(obj.stdout.fileno(), res)
+        os.write(out.fileno(), res)
     else:
-        obj.stdout.write(str(res))
+        out.write(str(res))
     pass  # end get
 
 

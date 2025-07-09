@@ -88,7 +88,7 @@ class Backend(_Backend):
 
             data = b"" if data is NotGiven else cdc.encode(data)
             kw["will"] = Will(
-                topic=will["topic"].slashed,
+                topic=will["topic"].slashed2,
                 payload=data,
                 qos=will.get("qos", 1),
                 retain=will.get("retain", False),
@@ -221,7 +221,7 @@ class Backend(_Backend):
         if self.trace:
             self.logger.info("S:%s %r", topic, data)
         return self.client.publish(
-            topic.slashed,
+            topic.slashed2,
             payload=msg,
             user_properties=prop,
             retain=retain,

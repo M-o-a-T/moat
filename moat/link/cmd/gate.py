@@ -17,9 +17,10 @@ from moat.link.meta import MsgMeta
 from moat.link.node import Node
 
 
-@click.group(short_help="Manage gateways.")  # pylint: disable=undefined-variable
+@click.group(short_help="Manage gateways.", invoke_without_command=True)
+@click.argument("path", type=P, nargs=1)
 @click.pass_context
-async def cli(ctx):
+async def cli(ctx, path):
     """
     This subcommand accesses the data stored in the MoaT-Link server.
     """
@@ -28,9 +29,8 @@ async def cli(ctx):
     if obj.port is not None:
         cfg.client.port = obj.port
     obj.conn = await ctx.with_async_resource(Link(cfg))
-    obj.meta=meta
     if ctx.invoked_subcommand is None:
-        res = await data_get(obj, path, recursive=False)
+        res = await data_get(obj.conn, path, recursive=False)
     else:
         obj.path = path
 

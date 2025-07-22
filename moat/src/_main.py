@@ -191,7 +191,8 @@ class Package(_Common):
         except AttributeError:
             return True
         for d in head.diff(self.last_commit, paths=self.path if main else Path("packaging")/self.dash):
-            if Path(d.b_path).name == "changelog":
+            pp=Path(d.b_path)
+            if pp.name == "changelog" and pp.parent.name == "debian":
                 continue
             if (
                 self._repo.repo_for(d.a_path, main) != self.name

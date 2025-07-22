@@ -57,6 +57,7 @@ _invalid = (
     ":dict",
 )
 
+# standard slash expansion
 _valid_s = (
     (("a", "b", "c"), "a/b/c"),
     (("a", 2, "c"), "a/:2/c"),
@@ -82,8 +83,15 @@ _valid_s = (
     (("a", b"ab\x99"), ("a/:y616299", "a/:sYWKZ")),
     (("a", b"a b"), "a/:va:_b"),
     (("a", b"", "c"), "a/:v/c"),
-    ((), ":m"),
+    (("a", "#123"), "a/#123"),
 )
+
+# extended slash expansion
+_valid_sh = (
+        (("a", "#123"), "a/:h123"),
+)
+
+# slash expansion with marks
 _valid_s2 = (
     (("",), ("", ":e"), ""),
     (("", ""), ("/", ":e:e"), ""),
@@ -95,6 +103,7 @@ _valid_s2 = (
     (("", "a", "b", ""), (":mx//a/b/", ":mx:e.a.b:e"), "x"),
 )
 
+# invalid slash expansion
 _invalid_s = (
     ":w",
     ":t:",
@@ -108,7 +117,6 @@ _invalid_s = (
     #   "a:n",
     ":x1g",
     ":x",
-    "a/:h123",
     ":list",
     ":dict",
 )
@@ -137,6 +145,16 @@ def test_valid_spaths(a, b):
     else:
         xb = b
     assert Path(*a).slashed == xb
+    assert a == tuple(Path.from_slashed(b))
+
+
+@pytest.mark.parametrize("a,b", _valid_sh)  # noqa:PT006
+def test_valid_spaths2(a, b):
+    if isinstance(b, tuple):
+        b, xb = b
+    else:
+        xb = b
+    assert Path(*a).__str__(slash=2) == xb
     assert a == tuple(Path.from_slashed(b))
 
 

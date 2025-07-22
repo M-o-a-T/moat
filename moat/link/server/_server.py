@@ -860,17 +860,20 @@ class Server(MsgHandler):
 
                 elif isinstance(msg, GoodNodeEvent):
                     # self._tg.start_soon(self.fetch_data, msg.nodes)
+                    await actor.set_value(True)
                     ready.set()
 
                 elif isinstance(msg, TagEvent):
                     # We're "it"
                     await self.set_main_link()
+                    await actor.set_value(True)
                     ready.set()
 
                 elif isinstance(msg, PingEvent):
                     # record history, for recovery
                     if msg.msg.node == self.name:
                         continue
+                    await actor.set_value(True)
                     ready.set()
                     self._ping_history = msg.msg.history
 

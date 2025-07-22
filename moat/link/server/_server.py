@@ -1347,7 +1347,7 @@ class Server(MsgHandler):
         """
         will_data = attrdict(
             topic=P(":R.run.service.main.server")/self.name,
-            data=b'',
+            data=NotGiven,
             qos=1,
             retain=True,
         )

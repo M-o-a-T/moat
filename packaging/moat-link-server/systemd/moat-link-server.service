@@ -9,7 +9,6 @@ WantedBy=multi-user.target
 [Service]
 Type=notify
 ExecStart=/usr/lib/moat/link/run
-ExecStartPost=/usr/lib/moat/link/success
 SuccessExitStatus=42
 
 RuntimeDirectory=moat/link

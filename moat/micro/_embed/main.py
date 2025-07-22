@@ -74,17 +74,17 @@ def go(state=None, cmd=True):
             except OSError:
                 pass
             else:
-                state=st
+                state = st
                 break
     if state is None:
         state = "skip"
 
     try:
         state,new_state = state.split(",",1)
-    except ValueError
+    except ValueError:
         new_state = state
 
-    _set_rtc("state", new_state)
+    set_rtc("state", new_state)
     if state == "skip":
         log(state)
         return
@@ -112,15 +112,14 @@ def go(state=None, cmd=True):
 
     from moat.micro.main import main
 
-    cfg = f"moat{fallback}.cfg"
-    i = dict(fb=fallback, s=state, ns=new_state, fm=_fm, fa=_fa)
+    i = dict(cfg=fn, s=state, ns=new_state, fm=_fm, fa=_fa, fb=state != "std")
 
     if cmd:
-        main(cfg, i=i, fake_end=True)
+        main(fn, i=i, fake_end=True)
         return
 
     try:
-        main(cfg, i=i)
+        main(fn, i=i)
 
     except KeyboardInterrupt:
         print("MoaT stopped.", file=sys.stderr)

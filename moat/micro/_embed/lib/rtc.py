@@ -75,8 +75,9 @@ def all_rtc():
     "Iterate RTC update values"
     try:
         s = eval(mem().split(b'\0')[0].decode("utf-8"))
+    except (ValueError, KeyError, EOFError):
+        pass
+    else:
         for k, v in s.items():
             if isinstance(v, dict):
                 yield k, v
-    except (ValueError, KeyError, OutOfData):
-        pass

@@ -41,7 +41,7 @@ def main(cfg: str | dict, i: attrdict, fake_end=False):
             cfg = CBOR().decode(f.read())
 
     # Update config from RTC memory, if present
-    if not i.fb:
+    if not i["fb"]:
         for k, v in all_rtc():
             merge(cfg.setdefault(k, {}), v)
 

@@ -178,9 +178,9 @@ moat-link:
 moat-link-server:
   deb: 0.2.3-1
   pkg: 1
-  pypi: 0.2.8
-  rev: 43eeeae1018bf0931d6cc103924fa196c904b923
-  tag: 0.2.8
+  pypi: 0.2.9
+  rev: 3d63fd8dc4fa49746f2977d9ab6649a1c119955c
+  tag: 0.2.9
 moat-micro:
   deb: 0.16.4-1
   pkg: 2

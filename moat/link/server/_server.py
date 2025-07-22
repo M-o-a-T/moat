@@ -169,7 +169,7 @@ class ServerClient(LinkCommon):
         t = int(time.time()*100-175000000000)
         if t < 0:  # testing. Revert.
             t += 175000000000
-        if _client_nr < t:
+        if _client_nr == 0 or _client_nr < t:
             _client_nr = t
         else:
             _client_nr += 1

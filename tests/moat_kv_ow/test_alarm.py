@@ -47,7 +47,6 @@ async def test_alarm(mock_clock):
     dt = my_tree["bus.0"]["10.345678.90"]
     async with stdtest(test_0={"init": 125}, n=1, tocks=200) as st, st.client(0) as client:
         evt = anyio.Event()
-        obj = attrdict(client=client, meta=0, stdout=sys.stdout)
         st.tg.start_soon(partial(owfs_mock.server, client, tree=my_tree, evt=evt))
         await evt.wait()
         assert dt["foo"]["bar"] == 123
@@ -57,7 +56,7 @@ async def test_alarm(mock_clock):
         await st.run("ow attr -d 10.345678.90 -i 4 -a baz:2 foo.plugh:1 test.foo.this")
         res = await client.set(P("test.foo.this"), value={"this": "is", "baz": {3: 33}})
         await anyio.sleep(10)
-        await data_get(obj, Path())
+        await data_get(client, Path())
 
         await client.set(P("test.foo.low"), 11)
         await client.set(P("test.foo.what.ever"), {"Hello": "No", "bar": {0: 99, 1: 13}})
@@ -69,7 +68,7 @@ async def test_alarm(mock_clock):
         dt["foo"]["plugh.B"] = 22
         await anyio.sleep(6)
         res = await client.get(P("test.foo.temp"))
-        await data_get(obj, Path())
+        await data_get(client, Path())
         assert res.value == 42
         assert dt["foo"]["bar"] == "13"
         res = await client.get(P("test.foo.this"))

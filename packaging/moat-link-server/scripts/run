@@ -18,7 +18,7 @@ if test ! -n "$NAME" ; then
 fi
 
 if test -v TEMP && test -s "$TEMP" ; then
-    exec moat -c /etc/moat/moat.cfg link server -l "$TEMP" "$NAME"
+    exec moat -c /etc/moat/moat.cfg link -n "$NAME" server -l "$TEMP"
 else
-    exec moat -c /etc/moat/moat.cfg link server "$NAME"
+    exec moat -c /etc/moat/moat.cfg link -n "$NAME" server
 fi

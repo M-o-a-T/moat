@@ -48,6 +48,8 @@ This is the main command handler for MoaT, the Master of all Things.
                 break
             elif isinstance(e, SystemExit):
                 ec |= e.code
+            elif isinstance(e, click.exceptions.Exit):
+                ec |= e.exit_code
             else:
                 raise
     return ec

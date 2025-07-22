@@ -1065,6 +1065,9 @@ async def build(
                     )
                     repo.index.add(p / "changelog")
 
+                elif tag == ltag and r.vers.pkg < ptag:
+                    r.vers.pkg = ptag
+
                 changes = PACK / f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
                 if debversion.get(r.dash, "") != ltag or r.vers.pkg != ptag or test_chg and not changes.exists():
 

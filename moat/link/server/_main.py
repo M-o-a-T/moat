@@ -27,7 +27,7 @@ from moat.util import as_service
     "-I",
     "--init",
     default=None,
-    help="Initial value to set the root to. Do not use this option unless"
+    help="Initial value to set the root to. Do not use this option unless "
     "setting up a new cluster!",
 )
 @click.pass_obj

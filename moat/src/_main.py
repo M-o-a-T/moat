@@ -1050,7 +1050,7 @@ async def build(
                 )
                 tag,ptag = res.stdout.strip().decode("utf-8").rsplit("-", 1)
                 ptag = int(ptag)
-                if tag != ltag or r.vers.pkg != ptag:
+                if tag != ltag or r.vers.pkg > ptag:
                     subprocess.run(
                         [
                             "debchange",

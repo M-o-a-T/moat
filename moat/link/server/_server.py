@@ -1658,7 +1658,7 @@ class Server(MsgHandler):
                     sl[0].cancel()
 
                 if msg.data is NotGiven:
-                    await tg.start(self._down_one,name)
+                    tg.start_soon(self._down_one,name)
                     continue
                 self._downed.pop(name,None)
 

@@ -11,6 +11,7 @@ import time
 import anyio.abc
 import random
 import os
+from platform import uname
 from anyio.abc import SocketAttribute
 from contextlib import asynccontextmanager, nullcontext
 from datetime import UTC, datetime
@@ -129,6 +130,19 @@ def tag_check(tags:Sequence[Tag]) -> bool:
         return False
 
     return True
+
+
+def _get_my_ip(ip6:bool=False):
+    """
+    Find my IP address
+    :return:
+    """
+    import socket
+    s = socket.socket(socket.AF_INET6 if ip6 else socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("2606:4700:4700::1111" if ip6 else "1.1.1.1", 53))
+    ip = s.getsockname()[0]
+    s.close()
+    return ip
 
 
 class HelloProc:
@@ -863,7 +877,7 @@ class Server(MsgHandler):
     async def set_main_link(self):
         await self.backend.send(
             P(":R.run.service.main.conn"),
-            {"link": self.link_data, "auth": {"token": self.cur_auth}},
+            {"node": uname().node, "link": self.link_data, "auth": {"token": self.cur_auth}},
             meta=MsgMeta(origin=self.name),
             retain=True,
         )
@@ -1425,13 +1439,11 @@ class Server(MsgHandler):
                 for name, conn in self.cfg.server.ports.items():
                     ports.append(await listen_tg.start(self._run_server, client_tg, f"{self.name}-{name}", conn))
             if not ports:
-                conn = attrdict(host="localhost",port=self.cfg.server.port)
+                conn = attrdict(host="0.0.0.0",port=self.cfg.server.port)
                 ports.append(await listen_tg.start(self._run_server, client_tg, self.name, conn))
 
-            if len(ports) == 1 and isinstance(ports[0],tuple):
-                link = {"host": ports[0][0], "port": ports[0][1]}
-            else:
-                link = [ {"host": hp[0], "port": hp[1]} for hp in ports if isinstance(hp,tuple) and hp[0] not in {"localhost","127.0.0.1","::1"} ]
+            globals = {"0.0.0.0","::"}
+            link = [ {"host": _get_my_ip(hp[0] == "::") if hp[0] in globals else hp[0], "port": hp[1]} for hp in ports if isinstance(hp,tuple) ]
 
             if not link:
                 self.logger.warning("No external port")
@@ -1441,7 +1453,7 @@ class Server(MsgHandler):
 
             await self.backend.send(
                 P(":R.run.service.main.server")/self.name,
-                {"link": self.link_data, "auth": {"token": self.cur_auth}},
+                {"node": uname().node, "link": self.link_data, "auth": {"token": self.cur_auth}},
                 meta=MsgMeta(origin=self.name),
                 retain=True,
                 qos=1,
@@ -1960,7 +1972,7 @@ class Server(MsgHandler):
 
         else:
             self.logger.error("No host/port in server cfg %s: %r",name,cfg)
-            task_status.started(False)
+            task_status.started(None)
             return
 
         async with listener:

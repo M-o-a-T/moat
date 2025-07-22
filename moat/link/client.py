@@ -10,6 +10,7 @@ import time
 import sys
 from contextlib import asynccontextmanager, suppress, nullcontext, aclosing
 from traceback import format_exception
+from platform import uname
 
 import outcome
 from attrs import define,field
@@ -639,7 +640,16 @@ class Link(LinkCommon, CtxObj):
         if isinstance(link, dict):
             link = (link,)
 
+        local_ok = srv.data.get("node","localhost")
+        locals = { "localhost", "127.0.0.1", "::1" }
+
         for remote in link:
+            if local_ok:
+                pass
+            elif "host" not in remote:
+                continue
+            elif remote["host"] in locals:
+                continue
             try:
                 async with timed_ctx(
                     self.cfg.client.init_timeout, self._connect_one(remote, srv.data)

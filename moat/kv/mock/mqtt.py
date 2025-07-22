@@ -42,7 +42,6 @@ async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):
     TESTCFG.server.port = None
     TESTCFG.root = "test"
     if C_OUT is not NotGiven:
-        CFG["_stdout"] = C_OUT
         TESTCFG["_stdout"] = C_OUT
 
     if ssl:

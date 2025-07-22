@@ -59,7 +59,7 @@ async def run(*args, expect_exit=0, do_stdout=True):
         if do_stdout:
             if res is not None:
                 res.stdout = out.getvalue()
-            CFG["_stdout"] = sys.stdout
+        CFG.pop("_stdout", None)
 
 
 class DidNotRaise(Exception):

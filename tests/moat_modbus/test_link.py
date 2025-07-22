@@ -65,7 +65,8 @@ async def mon(c):
             print("*****", msg)
 
 @pytest.mark.trio()
-async def test_kv_poll(autojump_clock):  # pylint: disable=unused-argument
+async def test_kv_poll(autojump_clock):
+    autojump_clock.autojump_threshold = .2
     cfg1 = yload(cfg1_, attr=True)
     cfg2 = yload(cfg2_, attr=True)
     PORT = 40000 + (os.getpid() + 20) % 10000
@@ -103,6 +104,7 @@ async def test_kv_poll(autojump_clock):  # pylint: disable=unused-argument
 
         # bidirectional forwarding
 
+        await c.i_sync()
         try:
             rv = await c.d_get(P("a.cli.dst"))
         except KeyError:

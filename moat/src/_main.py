@@ -10,6 +10,7 @@ from collections import defaultdict, deque
 from configparser import RawConfigParser
 from pathlib import Path
 from copy import deepcopy
+from packaging.version import Version
 
 import asyncclick as click
 import git
@@ -247,15 +248,21 @@ class Repo(git.Repo, _Common):
         if self._last_tag is not None:
             return self._last_tag
 
-        for c in self._repo.commits(self.head.commit):
-            t = self.tagged(c)
-            if t is None:
-                continue
+        tag = None
+        vers = None
+        for tt in self._commit_tags.values():
+            for t in tt:
+                if "/" in t.name:
+                    continue
+                tv = Version(t.name)
+                if tag is None or vers < tv:
+                    tag = t
+                    vers = tv
 
-            self._last_tag = t
-            return t
-
-        raise ValueError("No tags found")
+        if tag is None:
+            raise ValueError("No tags found")
+        self._last_tag = tag.name
+        return tag.name
 
     @property
     def last_commit(self) -> str:

@@ -83,6 +83,7 @@ async def test_watch_mon(cfg):
         await c.send(P(":R.test.here.before"), "One", meta=MsgMeta(origin="me!"), retain=True)
         await c.send(P(":R.test.here.both"), "Two", meta=MsgMeta(origin="me!"), retain=True)
 
+        await c.i_sync()
         evt = await sf.tg.start(cl, "End")
 
         await c.send(P(":R.test.here.both"), "Three", meta=MsgMeta(origin="me!"), retain=True)

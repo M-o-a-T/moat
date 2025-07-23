@@ -1756,11 +1756,11 @@ class Server(MsgHandler):
                 return False
             self._syncing[name] = scope
 
-            with anyio.fail_after(5):
-                while name not in self._server_link or (conn := self._server_link[name][1]) is None:
-                    await self._server_link_add.wait()
-
             try:
+                with anyio.fail_after(5):
+                    while name not in self._server_link or (conn := self._server_link[name][1]) is None:
+                        await self._server_link_add.wait()
+
                 await self._sync_one(conn)
             except OSError as exc:
                 self.logger.warning(

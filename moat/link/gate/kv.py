@@ -17,7 +17,7 @@ class Gate(_Gate):
 
     async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         "Main loop. Overridden to start a Moat-KV client"
-        async with open_client("moat.link.gate.kv", **self.cfg) as self.kv:
+        async with open_client("moat.link.gate.kv", **self.cfg["kv"]) as self.kv:
             await super().run_(task_status=task_status)
 
     async def get_dst(self, task_status=anyio.TASK_STATUS_IGNORED):

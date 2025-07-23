@@ -127,7 +127,7 @@ class Gate:
                     self._src_done.set()
                     continue
                 p,d,m = pdm
-                if m.origin == self.origin:
+                if m is not None and m.origin == self.origin:
                     # mine, so skip
                     continue
 

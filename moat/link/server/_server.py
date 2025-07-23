@@ -1392,6 +1392,7 @@ class Server(MsgHandler):
                     task_status.started(tg)
                     await anyio.sleep_forever()
 
+            self.logger.info("Starting up.")
             client_tg = await _tg.start(run_tg)
             listen_tg = await _tg.start(run_tg)
 
@@ -1415,6 +1416,7 @@ class Server(MsgHandler):
 
             # retrieve data
 
+            self.logger.info("Reading data.")
             await _tg.start(self._read_initial)
 
             # Log errors
@@ -1422,6 +1424,7 @@ class Server(MsgHandler):
                 await _tg.start(self.save_errstream, self.cfg.server.errlog, True)
 
             # save data
+            self.logger.info("Starting services.")
 
             sd = anyio.Path(self.cfg.server.save.dir)
             if await sd.is_dir():
@@ -1453,6 +1456,7 @@ class Server(MsgHandler):
             self.link_data = link
 
             # announce us to clients
+            self.logger.info("Announcing to clients.")
 
             await self.backend.send(
                 P(":R.run.service.main.server")/self.name,
@@ -1477,7 +1481,7 @@ class Server(MsgHandler):
             # done, ready for service
 
             task_status.started((self, ports))
-            self.logger.info("Startup done")
+            self.logger.info("Start done.")
 
             # maintainance
 

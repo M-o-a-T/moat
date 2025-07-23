@@ -1830,6 +1830,17 @@ class Server(MsgHandler):
             tg.start_soon(self._get_remote_data, aiter(self.service_monitor), ready)
             tg.start_soon(self._read_saved_data, ready)
 
+            # Allow for retrieving data from MQTT if no server is running.
+            # This should not be done lightly.
+            if self.cfg.server.timeout.mqtt:
+                rdr = self.write_monitor.reader(10)
+                while True:
+                    with anyio.move_on_after(self.cfg.server.timeout.mqtt):
+                        await anext(rdr)
+                        continue
+                    break
+                ready.set()
+
     async def _read_saved_data(self, ready: anyio.Event):
         save = self.cfg.server.save
         dest = anyio.Path(save.dir)

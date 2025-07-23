@@ -8,6 +8,7 @@ timeout:
   monitor: 0.5
   refresh: 100
   startup: 30
+  mqtt: 0
 
 # the AsyncActor config for syncing servers
 ping:

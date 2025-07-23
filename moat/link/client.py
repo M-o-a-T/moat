@@ -11,6 +11,7 @@ import sys
 from contextlib import asynccontextmanager, suppress, nullcontext, aclosing
 from traceback import format_exception
 from platform import uname
+from functools import partial
 
 import outcome
 from attrs import define,field
@@ -31,6 +32,7 @@ from .node import Node
 from typing import TYPE_CHECKING,overload
 if TYPE_CHECKING:
     from typing import Any
+    from moat.link.node.codec import CodecNode
 
 class _Requeue(Exception):
     pass
@@ -200,6 +202,8 @@ class _Sender(MsgSender):
     dot.
     """
     Caller_ = ClientCaller
+
+    _codec_tree:CodecNode|None = None
 
     def __init__(self, link:LinkCommon):
         self._link = link
@@ -469,6 +473,29 @@ class _Sender(MsgSender):
         await self.cmd(P("i.sync"), st)
 
 
+    async def _get_tree(self, path, *, task_status, **kw):
+        async with self.d_watch(path, **kw) as w:
+            task_status.started(await w.get_node())
+            await anyio.sleep_forever()
+
+    async def get_codec_tree(self):
+        """
+        Returns a common subtree for codecs.
+        """
+
+        if self._codec_tree is None:
+            self._codec_tree = evt = anyio.Event()
+
+            from moat.link.node.codec import CodecNode
+            self._codec_tree = await self._link.tg.start(partial(self._get_tree, P("codec"), subtree=True, state=None,meta=False, cls=CodecNode))
+            evt.set()
+
+        elif isinstance(self._codec_tree,anyio.abc.Event):
+            await self._codec_tree.wait()
+
+        return self._codec_tree
+
+
 class Link(LinkCommon, CtxObj):
     """
     This class combines the back-end link with a connection to a MoaT-Link server.
@@ -529,6 +556,7 @@ class Link(LinkCommon, CtxObj):
     def cancel(self):
         "Stop me"
         self.tg.cancel_scope.cancel()
+
 
     async def _run_server_link(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         """

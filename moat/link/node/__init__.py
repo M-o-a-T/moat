@@ -324,13 +324,13 @@ class NodeFinder:
 
     def step(self, name, new=False):
         steps = []
-        for path, node, keep in self.steps:
+        for node, keep in self.steps:
             if name in node:
-                steps.append((node[name], False))
-            if "?" in node:
-                steps.append((node["?"], False))
-            if "*" in node:
-                steps.append((node["*"], True))
+                steps.append((node.get(name), False))
+            if "+" in node:
+                steps.append((node.get("+"), False))
+            if "#" in node:
+                steps.append((node.get("#"), True))
             if keep:
                 steps.append((node, True))
             # Nodes found with '*' stay on the list

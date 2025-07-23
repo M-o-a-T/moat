@@ -47,7 +47,8 @@ async def as_service(obj=None):
     class RunMsg:
         """A fake event that signals readiness"""
 
-        def __init__(self, obj):
+        def __init__(self, tg, obj):
+            self.tg = tg
             self.obj = obj
 
         def set(self):  # pylint:disable=missing-function-docstring
@@ -61,6 +62,6 @@ async def as_service(obj=None):
         if usec:
             tg.start_soon(run_keepalive, usec)
         try:
-            yield RunMsg(obj)
+            yield RunMsg(tg, obj)
         finally:
             tg.cancel_scope.cancel()

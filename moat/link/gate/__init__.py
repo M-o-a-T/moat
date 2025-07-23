@@ -133,13 +133,13 @@ class Gate:
                 if self.running or node.has_src:
                     await self._set_dst(p,node,d,m)
                 else:
-                    node.set_(d,m)
+                    node.set_(p,d,m)
                     node.todo=True
 
     async def _set_dst(self, path:Path,node:GateNode,data:Any,meta:MsgMeta):
         node.ext_data=NotGiven
         node.ext_meta=NotGiven
-        node.set_(data,meta)
+        node.set_(path,data,meta)
         node.todo=False
 
         await self.set_dst(path,data,meta)
@@ -182,7 +182,7 @@ class Gate:
 
         await self.link.d_set(path,data,meta)
 
-        node.set_(NotGiven,NotGiven)
+        node.set_((),NotGiven,NotGiven)
         node.ext_data = data
         node.ext_meta = aux or NotGiven
         node.todo = False

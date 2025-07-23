@@ -11,7 +11,7 @@ from attrs import define, field
 from moat.util import NotGiven, Path, PathLongener, PathShortener
 from moat.util.exc import ExpKeyError
 
-from .meta import MsgMeta
+from ..meta import MsgMeta
 
 from typing import TYPE_CHECKING
 
@@ -56,13 +56,13 @@ class Node:
                 return False
             if not force and s._data == data:  # noqa:SLF001
                 return None
-        s.set_(data,meta)
+        s.set_(item,data,meta)
         return True
 
-    def set_(self, data:Any,meta:MsgMeta):
-        "Low-level node data setter"
-        self._data = data  # noqa:SLF001
-        self._meta = meta  # noqa:SLF001
+    def set_(self, path:Path, data:Any, meta:MsgMeta):
+        "Low-level node data setter. The (sub)path is not stored by default."
+        self._data = data
+        self._meta = meta
 
     @property
     def data(self) -> Any:

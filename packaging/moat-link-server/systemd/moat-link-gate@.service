@@ -1,0 +1,20 @@
+[Unit]
+Description=MoaT-KV gateway script
+After=moat-kv.service moat-link.service
+
+ConditionFileNotEmpty=/etc/moat/moat.cfg
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/moat link gate %I run
+
+EnvironmentFile=/etc/moat/link.env
+
+TimeoutSec=300
+WatchdogSec=10
+
+Restart=always
+RestartSec=30

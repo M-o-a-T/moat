@@ -15,6 +15,10 @@ installsystemd:
 installscript:
 	mkdir -p $(PREFIX)/usr/lib/moat/link
 	cp scripts/* $(PREFIX)/usr/lib/moat/link/
+	
+	# sigh
+	mkdir -p $(PREFIX)/lib/systemd/system
+	cp systemd/*@.service $(PREFIX)/lib/systemd/system/
 
 
 ifneq ($(wildcard $(MAKEINCL)),)

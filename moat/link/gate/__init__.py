@@ -104,7 +104,9 @@ class Gate:
         """
         self.cfg = cfg
         self.cf = to_attrdict(cf)
-        self.codec = get_codec(cf.get("codec", "cbor"))
+        self.codec = cf.get("codec", "cbor")
+        if isinstance(self.codec, str):
+            self.codec = get_codec(self.codec)
 
         self.link = link
         self.path = path

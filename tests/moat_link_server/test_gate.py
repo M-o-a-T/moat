@@ -121,7 +121,7 @@ def tm():
 
 @pytest.mark.trio()
 async def test_gate_kv(cfg, autojump_clock):
-    autojump_clock.autojump_threshold = .1
+    autojump_clock.autojump_threshold = .2
     async with AsyncExitStack() as ex:
         ex.enter_context(mock.patch("time.time", new=tm))
         ex.enter_context(mock.patch("time.monotonic", new=tm))
@@ -213,7 +213,7 @@ async def test_gate_kv(cfg, autojump_clock):
         cfg["conn"]=dict(host="127.0.0.1",port=cfg["server"]["bind_default"]["port"])
         await sf.tg.start(run_gate,dict(kv=cfg),c,"test")
 
-        await anyio.sleep(0.2)
+        await c.i_sync()
         a= await data_get(c,P("test.a"), out=False)
         assert a==dict(one={"_":1},two={"_":2},three={"_":33})
 

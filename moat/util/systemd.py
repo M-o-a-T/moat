@@ -25,7 +25,7 @@ async def as_service(obj=None):
     Arguments:
         obj: command context. Needs a ``debug`` attribute.
 
-    The CM yields a (duck-typed) event whose async ``set`` method will
+    The CM yields a (duck-typed) event whose ``set`` method will
     trigger a ``READY=1`` mesage to systemd.
     """
 

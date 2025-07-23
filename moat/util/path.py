@@ -301,7 +301,7 @@ class Path(collections.abc.Sequence):
         (but possibly-maybe NOT subscribe) paths.
         """
 
-        return self.__str__(slash=True)
+        return self.__str__(slash=2)
 
     def __getitem__(self, x):
         if isinstance(x, slice) and x.start in (0, None) and x.step in (1, None):

@@ -211,7 +211,7 @@ async def test_gate_kv(cfg, autojump_clock):
         await c.i_sync()
 
         cfg["conn"]=dict(host="127.0.0.1",port=cfg["server"]["bind_default"]["port"])
-        await sf.tg.start(run_gate,cfg,c,"test")
+        await sf.tg.start(run_gate,dict(kv=cfg),c,"test")
 
         await anyio.sleep(0.2)
         a= await data_get(c,P("test.a"), out=False)

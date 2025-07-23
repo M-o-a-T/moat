@@ -1617,7 +1617,9 @@ class Server(MsgHandler):
 
 
     async def _watch_client(self, *, task_status=anyio.TASK_STATUS_IGNORED):
-        # fixed-name client announcements
+        """
+        Monitor fixed-name client announcements.
+        """
         async with self.backend.monitor(
             P(":R.run.service.main.client"),
             raw=False,

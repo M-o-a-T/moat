@@ -156,7 +156,8 @@ async def data_get(
 
             if isinstance(out,list):
                 return y
-            yprint(y, stream=out)
+            if as_dict is not None:
+                yprint(y, stream=out)
 
             return out # end "if recursive"
 

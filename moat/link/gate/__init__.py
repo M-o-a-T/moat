@@ -243,7 +243,6 @@ class Gate:
             async for d in mon:
                 if self.cf == d:
                     continue
-                breakpoint()
                 if d is NotGiven or d.get("driver") != self.cf.driver:
                     raise GateVanished(self.name)
                 self.cf = d

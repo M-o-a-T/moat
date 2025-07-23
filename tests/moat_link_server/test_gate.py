@@ -121,7 +121,7 @@ def tm():
 
 @pytest.mark.trio()
 async def test_gate_kv(cfg, autojump_clock):
-    autojump_clock.autojump_threshold = .2
+    autojump_clock.autojump_threshold = .3
     async with AsyncExitStack() as ex:
         ex.enter_context(mock.patch("time.time", new=tm))
         ex.enter_context(mock.patch("time.monotonic", new=tm))
@@ -234,4 +234,90 @@ async def test_gate_kv(cfg, autojump_clock):
         b= await kvdata_get(kvc,P("test.b"), out=False)
         assert b==dict(one={"_":111},two={"_":22},three={"_":333},four={"_":444},five={"_":555})
 
+
+
+@pytest.mark.anyio()
+async def test_gate_codec(cfg):
+    async with Scaffold(cfg, use_servers=True) as sf:
+        # await sf.tg.start(_dump, sf)
+        await sf.server(init={"Hello": "there!", "test": 123})
+        c = await sf.client()
+        cc = await sf.client()
+        cm = await sf.client()
+        await sf.tg.start(mon,cm)
+
+        await c.d_set(P("codec.foo.bar"),dict(encode="return value.upper()\n", decode="return value.lower()\n"))
+        await c.d_set(P("conv.testing.baz.#.zaz"),dict(codec=P("foo.bar")))
+
+        codec=get_codec("json")
+
+        await c.d_set(P("test.a.baz.foo.bar.zaz"),"AbCd")
+        await c.send(P("test.b.baz.quux.zaz"),"BcDe", retain=True)
+
+        async def mon_src(task_status):
+            async with c.d_watch(P("test.a")) as mon:
+                got = []
+                task_status.started(got)
+                async for p,d in mon:
+                    got.append((p,d))
+
+        async def mon_dst(task_status):
+            async with c.monitor(P("test.b"),codec=codec) as mon:
+                got = []
+                task_status.started(got)
+                async for m in mon:
+                    got.append((m.path,m.data))
+
+        d_src = await sf.tg.start(mon_src)
+        d_dst = await sf.tg.start(mon_dst)
+
+        await c.d_set(P("gate.tester"), dict(
+            driver="mqtt",
+            src=P("test.a"),
+            dst=P("test.b"),
+            codec=P("testing"),
+            ))
+        await c.i_sync()
+
+        await sf.tg.start(run_gate,sf.cfg,c,"tester")
+
+        a= await data_get(c,P("test.a"), out=False)
+        b= await backend_get(cc,P("test.b"), out=False)
+        assert a == {'baz': {'foo': {'bar': {'zaz': {'_': 'AbCd'}}}, 'quux': {'zaz': {'_': 'bcde'}}}}
+        assert b == {'baz': {'foo': {'bar': {'zaz': {'_': 'ABCD'}}}, 'quux': {'zaz': {'_': 'BcDe'}}}}
+
+        # now change things
+        await c.send(P("test.b.baz.one.two"), "OtWo", retain=True)
+        await c.send(P("test.b.baz.one.two.zaz"), "OnE-tWo", retain=True)
+        await c.send(P("test.b.baz.three.zaz"),"ThReE", retain=True)
+        await c.send(P("test.b.baz.foo.bar.zaz"),"FuBaR", retain=True)
+        await c.d_set(P("test.a.baz.four.five"),"FoVe")
+        await c.d_set(P("test.a.baz.six.zaz"),"SiX")
+        await c.d_set(P("test.a.baz.quux.zaz"),"QuuX")
+        await anyio.sleep(0.2)
+
+        a= await data_get(c,P("test.a"), out=False)
+        b= await backend_get(cc,P("test.b"), out=False)
+        assert a == {
+          'baz': {'foo': {'bar': {'zaz': {'_': 'fubar'}}},
+          'four': {'five': {'_': 'FoVe'}},
+          'one': {'two': {'zaz': {'_': 'one-two'}}},
+          'quux': {'zaz': {'_': 'QuuX'}},
+          'six': {'zaz': {'_': 'SiX'}},
+          'three': {'zaz': {'_': 'three'}}},
+        }
+        assert b == {
+          'baz': {'foo': {'bar': {'zaz': {'_': 'FuBaR'}}},
+          'one': {'two': {'_': 'OtWo', 'zaz': {'_': 'OnE-tWo'}}},
+          'quux': {'zaz': {'_': 'QUUX'}},
+          'six': {'zaz': {'_': 'SIX'}},
+          'three': {'zaz': {'_': 'ThReE'}}},
+        }
+
+otm=time.time
+def tm():
+    try:
+        return trio.current_time()
+    except RuntimeError:
+        return otm()
 

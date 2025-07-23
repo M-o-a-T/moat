@@ -5,16 +5,52 @@ MoaT gateway
 from __future__ import annotations
 
 import anyio
+from contextlib import AsyncExitStack
 
 from moat.link.client import LinkCommon
 from . import Gate as _Gate
-from moat.util import Path, CFG, NotGiven
+from moat.util import Path, CFG, NotGiven, P
 from moat.link.meta import MsgMeta
 
-class Gate(_Gate):
+from typing import TYPE_CHECKING,overload                                                      
+if TYPE_CHECKING:
+    from moat.link.node.codec import CodecNode
 
-    async def get_dst(self, task_status=anyio.TASK_STATUS_IGNORED):
-        async with self.link.monitor(self.cf.dst, subtree=True, codec=self.codec) as mon:
+class Gate(_Gate):
+    codecs:CodecNode|None = None
+
+    async def run_(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        "Main loop. Overridden to fetch the codecs"
+        async with AsyncExitStack() as ex:
+            if isinstance(self.cf.codec,Path):
+                cdv = await ex.enter_async_context(self.link.d_watch(P("conv")+self.cf.codec, subtree=True,state=None,meta=False))
+                self.codec_vecs = await cdv.get_node()
+
+                self.codecs = await self.link.get_codec_tree()
+
+            await super().run_(task_status=task_status)
+
+    async def get_dst(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        async with AsyncExitStack() as ex:
+            if self.codecs is not None:
+                codec="noop"
+
+                def conv(p,d):
+                    # two step
+                    # (a) look up the codec type in the vector
+                    try:
+                        vd = self.codec_vecs.search(p)
+                        cd = self.codecs.get(vd.data["codec"])
+                    except ValueError:
+                        return NotGiven
+                    return cd.dec_value(d)
+                    
+            else:
+                codec=self.codec
+                def conv(p,d):
+                    return d
+
+            mon = await ex.enter_async_context(self.link.monitor(self.cf.dst, subtree=True, codec=codec))
             task_status.started()
             ld = len(self.cf.dst)
             while True:
@@ -23,16 +59,35 @@ class Gate(_Gate):
                         msg = await anext(mon)
                 except TimeoutError:
                     break
-                await self.set_src(Path.build(msg.topic[ld:]), msg.data, msg.meta)
+                p=Path.build(msg.topic[ld:])
+                res = conv(p,msg.data)
+                if res is NotGiven:
+                    continue
+                await self.set_src(p, res, msg.meta)
             self.dst_is_current()
 
             async for msg in mon:
-                await self.set_src(Path.build(msg.topic[ld:]), msg.data, msg.meta)
+                if msg.meta is not None and msg.meta.origin == self.origin:
+                    # mine, so skip
+                    continue
+                p=Path.build(msg.topic[ld:])
+                res = conv(p,msg.data)
+                if res is NotGiven:
+                    continue
+                await self.set_src(p, res, msg.meta)
 
 
     async def set_dst(self, path:Path, data:Any, meta:MsgMeta):
         if data is NotGiven:
             await self.link.send(self.cf.dst+path, b'', retain=True, codec="noop", meta=MsgMeta(origin=self.origin,timestamp=meta.timestamp))
+        elif self.codecs is not None:
+            try:
+                vd = self.codec_vecs.search(path)
+                cd = self.codecs.get(vd.data["codec"])
+            except ValueError:
+                return
+            res = cd.enc_value(data)
+            await self.link.send(self.cf.dst+path, res, retain=True, codec="noop",meta=MsgMeta(origin=self.origin,timestamp=meta.timestamp))
         else:
             await self.link.send(self.cf.dst+path, data, retain=True, codec=self.codec, meta=MsgMeta(origin=self.origin,timestamp=meta.timestamp))
 

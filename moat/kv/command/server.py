@@ -63,11 +63,7 @@ from moat.kv.server import Server
 @click.pass_obj
 async def cli(obj, name, load, save, init, incremental, eval_, auth, force, nodes):
     """
-    This command starts a MoaT-KV server. It defaults to connecting to the local Serf
-    agent.
-
-    All MoaT-KV servers must have a unique name. Its uniqueness cannot be
-    verified reliably.
+    This command starts a MoaT-KV server.
 
     One server in your network needs either an initial datum, or a copy of
     a previously-saved MoaT-KV state. Otherwise, no client connections will
@@ -79,14 +75,6 @@ async def cli(obj, name, load, save, init, incremental, eval_, auth, force, node
 
     You can force the server to fetch its data from a specific node, in
     case some data are corrupted. (This should never be necessary.)
-
-    A server will refuse to start up as long as it knows about missing
-    entries. Use the 'force' flag to disable that. You should disable
-    any clients which use this server until the situation is resolved!
-
-    An auhthoritative server doesn't have missing data in its storage by
-    definition. This flag is used in the 'run' script when loading from a
-    file.
     """
 
     kw = {}

@@ -72,17 +72,17 @@ async def cli(obj, load, save, init):
         s = Server(cfg=obj.cfg.link, name=obj.name, **kw)
         ev = anyio.Event()
 
-        async with anyio.create_task_group() as tg:
-            async def mon():
-                try:
-                    with anyio.fail_after(3):
-                        await ev.wait()
-                except TimeoutError:
-                    print("... waiting for sync")
+        async def mon(ev):
+            try:
+                with anyio.fail_after(3):
                     await ev.wait()
+            except TimeoutError:
+                print("… waiting for sync …")
+                await ev.wait()
 
-            if obj.debug:
-                tg.start_soon(mon)
-            await tg.start(s.serve)
-            evt.set()
-            ev.set()
+        if obj.debug:
+            evt.tg.start_soon(mon, ev)
+        await evt.tg.start(s.serve)
+        evt.set()
+        ev.set()
+        await anyio.sleep_forever()

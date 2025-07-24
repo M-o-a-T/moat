@@ -110,8 +110,7 @@ class Gate:
 
         self.link = link
         self.path = path
-        self.name = path[-1]
-        self.origin = "GT:"+self.name
+        self.origin = str(Path("GATE")+self.path[1:])
 
         self.logger = logging.getLogger(f"moat.link.{path}")
 

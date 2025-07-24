@@ -249,9 +249,22 @@ async def run_sub(client, topic, args, cfg):
                     data = repr(bytes(message.data))[2:-1]
                     if data == "":
                         data = "‹empty›"
-                print("R", message.topic, data, sep="\t")
+                print(message.topic, "R", data, sep="\t")
             else:
-                print(message.topic, message.data, sep="\t")
+                if isinstance(message.data,(bytes,bytearray)):
+                    try:
+                        d = message.data.decode("utf-8")
+                    except Exception:
+                        d = repr(message.data)
+                        if d.startswith("bytearray"):
+                            d = d[9:]
+                        elif d.startswith("b"):
+                            d = d[1:]
+                    print(message.topic, "B", d, sep="\t")
+                elif isinstance(message.data, str):
+                    print(message.topic, "U", repr(message.data), sep="\t")
+                else:
+                    print(message.topic, "-", repr(message.data), sep="\t")
             count += 1
             if max_count and count >= max_count:
                 break

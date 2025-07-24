@@ -131,7 +131,7 @@ def _get_message(args):
         yield eval(message)  # pylint: disable=eval-used
 
 
-async def do_pub(client, args, cfg):
+async def do_pub(client, args, cfg, codec):
     logger.info("%s Connected to broker", client.name)
     for k, v in args.items():
         if v is None or v is NotGiven:
@@ -146,7 +146,7 @@ async def do_pub(client, args, cfg):
         async with anyio.create_task_group() as tg:
             for message in _get_message(args):
                 logger.info("%s Publishing to '%s'", client.name, topic)
-                tg.start_soon(partial(client.send, topic, message, qos=qos, retain=retain))
+                tg.start_soon(partial(client.send, topic, message, qos=qos, retain=retain, codec=codec))
         logger.info("%s Disconnected from broker", client.name)
     except KeyboardInterrupt:
         logger.info("%s Disconnected from broker", client.name)
@@ -184,6 +184,7 @@ async def do_pub(client, args, cfg):
     help="Python code that evaluates to the message on stdin",
 )
 @click.option("-k", "--keep-alive", type=float, help="Keep-alive timeout (seconds)")
+@click.option("-c", "--codec", type=str, default="noop", help="codec to use (default: noop)")
 @click.pass_obj
 async def pub(obj, **args):
     """Publish one or more MoaT-Link messages.
@@ -195,6 +196,7 @@ async def pub(obj, **args):
         raise click.UsageError("You can only read from stdin once")
     cfg = obj.cfg.link
     name = args["name"] or cfg.get("name", None)
+    codec = get_codec(args["codec"])
 
     if args["keep_alive"]:
         cfg["keep_alive"] = args["keep_alive"]
@@ -203,7 +205,7 @@ async def pub(obj, **args):
         raise UsageError("You must supply a client name")
 
     async with anyio.create_task_group() as tg:
-        await do_pub(obj.conn, args, cfg)
+        await do_pub(obj.conn, args, cfg, codec)
 
 async def run_kvsub(client, topic, lock):
     """Monitor a MoaT-KV subtree"""

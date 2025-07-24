@@ -132,8 +132,10 @@ class Gate:
 
                 node = self.data.get(p)
                 if self.running or node.has_src:
+                    # self.logger.debug("S NOW %r %r %r",p,d,m)
                     await self._set_dst(p,node,d,m)
                 else:
+                    # self.logger.debug("S DLY %r %r %r",p,d,m)
                     node.set_(p,d,m)
                     node.todo=True
 
@@ -245,7 +247,7 @@ class Gate:
                 if self.cf == d:
                     continue
                 if d is NotGiven or d.get("driver") != self.cf.driver:
-                    raise GateVanished(self.name)
+                    raise GateVanished(str(self.path))
                 self.cf = d
                 self.tg.cancel_scope.cancel()
                 return
@@ -290,11 +292,11 @@ class Gate:
                 d = self.newer_dst(node)
 
             if d is False:
-                self.logger.debug("SRC %s %s %r/%r",self.name,path, node.data_,node.meta)
+                self.logger.debug("SRC %s %s %r/%r",self.path,path, node.data_,node.meta)
                 await self._set_dst(path,node,node.data_,node.meta)
 
             elif d is True:
-                self.logger.debug("DST %s %s %r/%r",self.name,path, node.ext_data,node.ext_meta)
+                self.logger.debug("DST %s %s %r/%r",self.path,path, node.ext_data,node.ext_meta)
 
                 meta = MsgMeta(origin=self.origin)
                 if node.ext_meta:
@@ -302,7 +304,7 @@ class Gate:
                 await self.link.d_set(self.cf.src+path,node.ext_data,meta)
 
             elif node.data_ != node.ext_data:
-                self.logger.warning("Conflict %s %s %r/%r vs %r/%r",self.name,path, node.data_,node.meta,node.ext_data,node.ext_meta)
+                self.logger.warning("Conflict %s %s %r/%r vs %r/%r",self.path,path, node.data_,node.meta,node.ext_data,node.ext_meta)
 
         await self.data.walk(visit, force=True)
         task_status.started()

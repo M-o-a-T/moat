@@ -108,11 +108,13 @@ async def data_get(
 
                 if add_date:
                     add_dates(d)
+
                 if meta:
                     m=MsgMeta._moat__restore(m, NotGiven)
-                    d = dict(data=d,meta=m.repr())
 
                 if as_dict is not None:
+                    if meta:
+                        d = dict(data=d,meta=m.repr())
                     yy = y
                     for p in path:
                         yy = yy.setdefault(p, {})
@@ -124,19 +126,15 @@ async def data_get(
                 else:
                     if raw:
                         y = path
+                    elif meta:
+                        y = [path,d,m.repr()]
                     else:
-                        y = {}
-                        try:
-                            y[path] = d
-                        except AttributeError:
-                            if empty:
-                                y[path] = None
-                            else:
-                                continue
+                        y = [path,d]
                     if isinstance(out,list):
                         out.append(y)
                     else:
-                        yprint([y], stream=out)
+                        yprint(y, stream=out)
+                        out.write("---\n")
 
             if as_dict is not None:
                 if maxdepth:

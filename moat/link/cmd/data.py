@@ -247,12 +247,16 @@ async def monitor(obj, state, only, path_only, add_date, ignore):
 
 
 @cli.command()
-@click.option("-i", "--infile", type=click.Path(), help="File to read (msgpack).")
+@click.option("-i", "--infile", type=click.Path(), help="File to read.")
+@click.option("-C", "--codec", type=str, default="yaml", help="Codec to use (default: yaml).")
 @click.pass_obj
-async def update(obj, infile):
-    """Send a list of updates to a MoaT-KV subtree"""
-    async with MsgReader(path=infile, codec="std-msgpack") as reader:
+async def update(obj, infile, codec):
+    """Write a list of updates to a MoaT-Link subtree"""
+    async with MsgReader(path="/dev/stdin" if infile == "-" else infile, codec=codec) as reader:
         async for msg in reader:
-            if not hasattr(msg, "path"):
-                continue
-            await obj.client.set(obj.path + msg.path, value=msg.value)
+            if isinstance(msg,dict):
+                p = msg["path"]
+                v = msg["value"]
+            else:
+                p,v,*_m = msg
+            await obj.conn.d_set(obj.path + p, v)

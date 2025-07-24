@@ -121,7 +121,7 @@ def tm():
 
 @pytest.mark.trio()
 async def test_gate_kv(cfg, autojump_clock):
-    autojump_clock.autojump_threshold = .3
+    autojump_clock.autojump_threshold = .4
     async with AsyncExitStack() as ex:
         ex.enter_context(mock.patch("time.time", new=tm))
         ex.enter_context(mock.patch("time.monotonic", new=tm))

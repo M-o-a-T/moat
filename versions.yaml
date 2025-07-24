@@ -75,10 +75,10 @@ moat-ems-sched:
   tag: 0.2.12
 moat-kv:
   deb: 0.71.11-2
-  pkg: 2
+  pkg: 1
   pypi: 0.71.12
-  rev: 4603306b4b931dc3280559f434d6f24b10d503f5
-  tag: 0.71.14
+  rev: 338d1e645603906805f0708d2f8782e16b6e77b5
+  tag: 0.71.15
 moat-kv-akumuli:
   deb: 0.8.6-7
   pkg: 2
@@ -141,10 +141,10 @@ moat-lib-cmd:
   tag: 0.3.7
 moat-lib-codec:
   deb: 0.4.3-2
-  pkg: 2
+  pkg: 1
   pypi: 0.4.3
-  rev: 1d2d76bbd5d7f2d17da65f7778f63148cc696a6f
-  tag: 0.4.3
+  rev: 338d1e645603906805f0708d2f8782e16b6e77b5
+  tag: 0.4.4
 moat-lib-diffiehellman:
   deb: 0.13.4-8
   pkg: 8
@@ -173,20 +173,20 @@ moat-link:
   deb: 0.2.5-1
   pkg: 1
   pypi: 0.2.9
-  rev: f7ac2c4c7f5d3ad96767786b95ec21802853ecaa
-  tag: 0.2.9
+  rev: 338d1e645603906805f0708d2f8782e16b6e77b5
+  tag: 0.2.10
 moat-link-server:
   deb: 0.2.3-1
-  pkg: 1
+  pkg: 3
   pypi: 0.2.9
-  rev: 35ceaa2b5f36578c39c383a7f91276b5833b2371
+  rev: 338d1e645603906805f0708d2f8782e16b6e77b5
   tag: 0.3.0
 moat-micro:
   deb: 0.16.4-1
-  pkg: 2
-  pypi: 0.16.6
-  rev: 4603306b4b931dc3280559f434d6f24b10d503f5
-  tag: 0.16.7
+  pkg: 1
+  pypi: 0.16.8
+  rev: 338d1e645603906805f0708d2f8782e16b6e77b5
+  tag: 0.16.8
 moat-modbus:
   deb: 0.8.5-2
   pkg: 2
@@ -201,10 +201,10 @@ moat-modbus-dev-_data:
   tag: 0.8.0
 moat-mqtt:
   deb: 0.42.8-4
-  pkg: 2
+  pkg: 1
   pypi: 0.42.8
-  rev: 3baec6fcb58ba62d104f0f343bb0a56b165b4c86
-  tag: 0.42.9
+  rev: 338d1e645603906805f0708d2f8782e16b6e77b5
+  tag: 0.42.10
 moat-sched:
 - 0.1.4
 - b442c09472a50fb7faec795348b78dd70675b356
@@ -225,7 +225,7 @@ moat-thing:
   tag: 0.2.1
 moat-util:
   deb: 0.57.10-1
-  pkg: 2
+  pkg: 1
   pypi: 0.57.10
-  rev: 3baec6fcb58ba62d104f0f343bb0a56b165b4c86
-  tag: 0.57.11
+  rev: 338d1e645603906805f0708d2f8782e16b6e77b5
+  tag: 0.57.12

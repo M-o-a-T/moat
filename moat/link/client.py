@@ -760,13 +760,15 @@ class Watcher(CtxObj):
     async def _ctx(self):
         async with anyio.create_task_group() as tg:
             self._node = self.node_cls()
+            self._current_done = anyio.Event()
             self._tg = tg
             self._qw,self._qr = anyio.create_memory_object_stream(10)
             if self.state is not True:
                 await tg.start(self._updates)
             if self.state is not False:
-                self._current_done = anyio.Event()
                 await tg.start(self._current)
+            else:
+                self._current_done.set()
             yield self
             tg.cancel_scope.cancel()
             await self._qw.aclose()
@@ -813,7 +815,7 @@ class Watcher(CtxObj):
                 return None
             p,d,m = msg
             if self.age is None or m.timestamp+self.age >= time.time():
-                if self._node.set(p,d,m):
+                if self._node.set(p,d,m, force=self._current_done.is_set()):
                     if self.meta:
                         return (p,d,m) if self.subtree else (d,m)
                     else:

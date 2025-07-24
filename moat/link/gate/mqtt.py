@@ -40,7 +40,7 @@ class Gate(_Gate):
                     # (a) look up the codec type in the vector
                     try:
                         vd = self.codec_vecs.search(p)
-                        cd = self.codecs.get(vd.data["codec"])
+                        cd = self.codecs.get(Path.build(vd.data["codec"]))
                     except ValueError:
                         return NotGiven
                     return cd.dec_value(d)

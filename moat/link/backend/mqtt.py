@@ -91,7 +91,7 @@ class Backend(_Backend):
                 topic=will["topic"].slashed2,
                 payload=data,
                 qos=will.get("qos", 1),
-                retain=will.get("retain", False),
+                retain=will.get("retain", data == b""),
             )
         self.a, self.kw = a, kw
 

@@ -17,7 +17,7 @@ import asyncclick as click
 
 from mqttproto import MQTTException
 
-from moat.util import NotGiven, P, Path, load_subgroup, yprint, gen_ident
+from moat.util import NotGiven, P, Path, load_subgroup, yprint, gen_ident, PathLongener
 from moat.util.path import set_root
 from moat.util.times import ts2iso,humandelta
 
@@ -204,6 +204,41 @@ async def pub(obj, **args):
     async with anyio.create_task_group() as tg:
         await do_pub(obj.conn, args, cfg)
 
+async def run_kvsub(client, topic, lock):
+    """Monitor a MoaT-KV subtree"""
+
+    if topic[-1] == "#":
+        topic = topic.parent
+        depth=-1
+    else:
+        depth=0
+    async with client.watch(
+        topic,
+        nchain=2,
+        fetch=True,
+        max_depth=depth,
+        long_path=False,
+    ) as res:
+        pl = PathLongener(topic)
+        async for r in res:
+            async with lock:
+                tm = time.time()
+                atm = anyio.current_time()
+
+                #if "value" in r:
+                #    add_dates(r.value)
+                pl(r)
+                if r.get("state", "") == "uptodate":
+                    continue
+                del r["seq"]
+
+                r["_prev"] = humandelta(atm-lock.tm,msec=6)
+                r["_time"] = ts2iso(tm, msec=6)
+                r["time"] = tm
+
+                yprint(r)
+                print("---")
+                lock.tm=atm
 
 async def do_sub(client, args, cfg):
     "handle subscriptions"
@@ -212,7 +247,14 @@ async def do_sub(client, args, cfg):
     try:
         async with anyio.create_task_group() as tg:
             for topic in args["topic"]:
-                tg.start_soon(run_sub, client, topic, args, cfg, lock)
+                tg.start_soon(run_sub, client, topic, args, cfg.link, lock)
+            if args["kv_topic"]:
+                from moat.kv.client import open_client as kv_client
+                async with kv_client(**cfg.kv) as kvc:
+                    for topic in args["kv_topic"]:
+                        tg.start_soon(run_kvsub, kvc, topic, lock)
+
+
 
     except KeyboardInterrupt:
         pass
@@ -226,7 +268,7 @@ async def run_sub(client, topic, args, cfg, lock):
     max_count = args["n_msg"]
     count = 0
 
-    async with client.monitor(topic, qos=qos) as subscr:
+    async with client.monitor(topic, qos=qos, codec=args.get("codec","noop")) as subscr:
         async for msg in subscr:
             async with lock:
                 if args["yaml"]:
@@ -244,11 +286,10 @@ async def run_sub(client, topic, args, cfg, lock):
                         d["meta"] = msg.meta.repr()
 
                     flags = ""
-                    if isinstance(msg.orig, MQTTPublishPacket):
-                        if msg.orig.retain:
-                            flags += "R"
-                        if msg.orig.qos > 0:
-                            flags += f"Q{int(msg.orig.qos)}"
+                    if msg.retain:
+                        flags += "R"
+                    #if msg.qos > 0:
+                    #    flags += f"Q{int(msg.qos)}"
                     if flags:
                         d["_flags"] = flags
 
@@ -276,6 +317,13 @@ async def run_sub(client, topic, args, cfg, lock):
     type=P,
     help="Message topic, dot-separated (can be used more than once)",
 )
+@click.option(
+    "-T",
+    "--kv-topic",
+    multiple=True,
+    type=P,
+    help="Message topic from MoaT-KV legacy, dot-separated (can be used more than once)",
+)
 @click.option("-n", "--n_msg", type=int, default=0, help="Number of messages to read (per topic)")
 @click.option("-k", "--keep-alive", type=float, help="Keep-alive timeout (seconds)")
 @click.pass_obj
@@ -286,12 +334,11 @@ async def sub(obj, **args):
     This command directly accesses the MQTT server: it works without a
     working MoaT-Link server.
     """
-    cfg = obj.cfg.link
+    cfg = obj.cfg
 
-    name = args["name"] or cfg.get("id", None)
+    name = args["name"] or cfg.link.get("id", None)
 
     if args["keep_alive"]:
-        cfg["keep_alive"] = args["keep_alive"]
+        cfg.link["keep_alive"] = args["keep_alive"]
 
-    async with anyio.create_task_group() as tg:
-        await do_sub(obj.conn, args, cfg)
+    await do_sub(obj.conn, args, cfg)

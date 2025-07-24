@@ -81,9 +81,10 @@ class Gate(_Gate):
                 await self.set_src(p, res, msg.meta)
 
 
-    async def set_dst(self, path:Path, data:Any, meta:MsgMeta):
+    async def set_dst(self, path:Path, data:Any, meta:MsgMeta, node:GateNode):
+        meta=MsgMeta(origin=self.origin,timestamp=meta.timestamp)
         if data is NotGiven:
-            await self.link.send(self.cf.dst+path, b'', retain=True, codec="noop", meta=MsgMeta(origin=self.origin,timestamp=meta.timestamp))
+            await self.link.send(self.cf.dst+path, b'', retain=True, codec="noop", meta=meta)
         elif self.codecs is not None:
             try:
                 vd = self.codec_vecs.search(path)
@@ -93,12 +94,24 @@ class Gate(_Gate):
                 return
             res = cd.enc_value(data)
             if isinstance(res,(str,bytes,bytearray)):
-                await self.link.send(self.cf.dst+path, res, retain=True, codec="noop",meta=MsgMeta(origin=self.origin,timestamp=meta.timestamp))
+                await self.link.send(self.cf.dst+path, res, retain=True, codec="noop",meta=meta)
             else:
                 self.logger.error("Bad codec: %s %r > %r",path,data,res)
 
         else:
-            await self.link.send(self.cf.dst+path, data, retain=True, codec=self.codec, meta=MsgMeta(origin=self.origin,timestamp=meta.timestamp))
+            await self.link.send(self.cf.dst+path, data, retain=True, codec=self.codec, meta=meta)
+
+        node.ext_meta=meta
+
+    def is_update(self, node:GateNode, data:Any, aux:MsgMeta):
+        "update test"
+        # if the old metadata match the new, it's not an update.
+        try:
+            if node.ext_meta.origin == aux.origin and node.ext_meta.timestamp == aux.timestamp:
+                return False
+        except (AttributeError,KeyError):
+            pass
+        return True
 
     def newer_dst(self,node):
         # If the external message has no metadata, it can't be from us,

@@ -33,8 +33,9 @@ class GateNode(Node):
 
     Data and meta 
     """
-    ext_meta:dict[str,Any]|None=field(init=False,default=None)
-    ext_data:Any=field(init=False,default=NotGiven)
+    ext_meta:dict[str,Any]|None=field(init=False, default=None)
+    ext_data:Any=field(init=False, default=NotGiven)
+    lock:anyio.abc.Lock=field(init=False, factory=anyio.Lock)
 
     todo:bool=field(init=False,default=False)
 
@@ -110,7 +111,7 @@ class Gate:
 
         self.link = link
         self.path = path
-        self.origin = str(Path("GATE")+(Path(cf["name"]) if "name" in cf else self.path[1:]))
+        self.origin = str(Path("GATE")+(P(cf["name"]) if "name" in cf else self.path[1:]))
 
         self.logger = logging.getLogger(f"moat.link.{path}")
 
@@ -145,7 +146,8 @@ class Gate:
         node.set_(path,data,meta)
         node.todo=False
 
-        await self.set_dst(path,data,meta)
+        async with node.lock:
+            await self.set_dst(path,data,meta,node)
 
     def dst_is_current(self):
         self._dst_done.set()
@@ -164,7 +166,7 @@ class Gate:
         raise NotImplementedError
 
 
-    async def set_src(self, path:Path, data:Any, aux:dict|None=None):
+    async def set_src(self, path:Path, data:Any, aux:MsgMeta):
         """
         Update source state (possibly). @aux is additional metadata that
         the destination resolver can use to disambiguate.
@@ -178,25 +180,33 @@ class Gate:
             node.ext_meta = aux or NotGiven
             node.todo = True
 
-    async def _set_src(self, path:Path,node:GateNode,data:Any,aux:dict|None):
-        meta = MsgMeta(origin=self.origin)
-        if aux not in (None,NotGiven):
-            meta["gw"] = aux
+    async def _set_src(self, path:Path,node:GateNode,data:Any,aux:MsgMeta):
+        async with node.lock:
+            if not self.is_update(node,data,aux):
+                return
+            meta = MsgMeta(origin=self.origin)
+            if aux not in (None,NotGiven):
+                meta["gw"] = aux
 
-        await self.link.d_set(path,data,meta)
+            await self.link.d_set(path,data,meta)
 
-        node.set_((),NotGiven,NotGiven)
-        node.ext_data = data
-        node.ext_meta = aux or NotGiven
-        node.todo = False
+            node.set_((),NotGiven,NotGiven)
+            node.ext_data = data
+            node.ext_meta = aux or NotGiven
+            node.todo = False
 
-    async def set_dst(self, path:Path, data:Any, meta:MsgMeta):
+    async def set_dst(self, path:Path, data:Any, meta:MsgMeta, node:GateNode):
         """
         Update destination state. @meta is the source metadata, in case
         it is useful in some way.
         """
         raise NotImplementedError
 
+    def is_update(self, node:GateNode, data:Any,aux:MsgMeta):
+        """
+        Check whether this new destination data is an update.
+        """
+        return True
 
     def newer_dst(self, node) -> bool|None:
         """

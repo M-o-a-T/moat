@@ -121,7 +121,7 @@ class Gate(_Gate):
 
         # If the internal and external metadata match, the message is from
         # us, so nothing to do.
-        if node.meta == node.ext_meta:
+        if self.origin == node.ext_meta.origin:
             return None
 
         # If the internal message has a copy of the outside metadata, it's

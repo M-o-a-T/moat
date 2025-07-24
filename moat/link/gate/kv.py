@@ -60,20 +60,25 @@ class Gate(_Gate):
         # If the internal message has a copy of the outside metadata, it
         # should be either unmodified or older. Test the data to be sure.
         # Otherwise compare the chains.
-        if "kv" in node.meta:
-            chain = NodeEvent.deserialize_link(node.meta["kv"])
-            if chain == node.ext_meta:
-                if node.data_ == node.ext_data:
-                    return None
-                self.logger.warn("Data mismatch: %r %r/%r %r/%r", node.path, node.data_,node.meta, nod.ext_data,node.ext_meta)
-                return True
-            elif chain > node.ext_meta:
-                return False
-            elif chain < node.ext_meta:
-                return True
-            else:
-                return None
+        if node.meta.origin == self.origin:
+            return None
 
-        # Otherwise just assume that our data is newer.
+        if "gw" in node.meta:
+            last_node = node.meta["gw"]
+            if last_node.origin != node.ext_meta.origin:
+                return True
+            if last_node["t"] < node.ext_meta["t"]:
+                return True
+            if last_node["t"] > node.ext_meta["t"]:
+                return False
+            return None
+
+        # same data = nothing to do
+        # XXX may require inexact comparison for floats
+        if node.data == node.ext_data:
+            return None
+
+        # Otherwise assume that the local data is newer because there's no
+        # gateway data in it.
         return False
 

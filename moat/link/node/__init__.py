@@ -327,10 +327,13 @@ class NodeFinder:
         for node, keep in self.steps:
             if name in node:
                 steps.append((node.get(name), False))
+        for node, keep in self.steps:
             if "+" in node:
                 steps.append((node.get("+"), False))
+        for node, keep in self.steps:
             if "#" in node:
                 steps.append((node.get("#"), True))
+        for node, keep in self.steps:
             if keep:
                 steps.append((node, True))
             # Nodes found with '*' stay on the list

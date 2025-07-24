@@ -585,7 +585,10 @@ def unpackb(packed, **kwargs):
     unpacker = Unpacker(**kwargs)
     unpacker.feed(packed)
     try:
-        return unpacker.unpack()
+        res = unpacker.unpack()
+        if unpacker.has_extradata():
+            raise ExtraData
+        return res
     except OutOfData:
         raise OutOfData("incomplete")
     raise RuntimeError("No way")

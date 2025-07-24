@@ -104,6 +104,9 @@ class BasicCmd:
 
 
 class LinkCommon(CmdCommon):
+    """
+    Common code for links to MQTT only (BaseLink) and a MoaT-Link server (Link).
+    """
     protocol_version:int = -1
     name:str
     server_name:str
@@ -659,7 +662,7 @@ class Link(LinkCommon, CtxObj):
 
 class BasicLink(LinkCommon, CtxObj):
     """
-    Simple direct link to a server.
+    Simple direct link to a MQTT server.
     """
 
     def __init__(self, cfg, name: str | None, data: dict, **kw):
@@ -699,7 +702,9 @@ class BasicLink(LinkCommon, CtxObj):
 @define(eq=False)
 class Watcher(CtxObj):
     """
-    Helper class for monitoring.
+    Helper class for monitoring (and coalescint the data of) either-or-both
+    * a MQTT subscription to a subtree of our MoaT-Link hierarchy
+    * a MoaT-Link request to enumerate a subtree
     """
     link:Link=field()
     path:Path=field()
@@ -823,7 +828,11 @@ class Watcher(CtxObj):
 
 class Walker:
     """
-    A trimmed-down watcher that retrieves a possibly-partial subtree from the server.
+    A trimmed-down watcher that retrieves a possibly-partial subtree
+    from our MoaT-Link server.
+
+    This differs from `Watcher` by not tracking updates, nor keeping a node
+    tree in memory.
     """
     def __init__(self,mon,meta=False):
         self.mon=mon

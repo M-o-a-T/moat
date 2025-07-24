@@ -20,6 +20,7 @@ from mqttproto import MQTTException
 from moat.util import NotGiven, P, Path, load_subgroup, yprint, gen_ident, PathLongener
 from moat.util.path import set_root
 from moat.util.times import ts2iso,humandelta
+from moat.lib.codec import get_codec
 
 from moat.link.backend import RawMessage, get_backend
 
@@ -267,6 +268,8 @@ async def run_sub(client, topic, args, cfg, lock):
     qos = args["qos"] or cfg["qos"]
     max_count = args["n_msg"]
     count = 0
+    dcbor=get_codec("std-cbor")
+    dmsgpack=get_codec("std-msgpack")
 
     async with client.monitor(topic, qos=qos, codec=args.get("codec","noop")) as subscr:
         async for msg in subscr:
@@ -284,6 +287,16 @@ async def run_sub(client, topic, args, cfg, lock):
                         d["data"] = msg.data
                     if msg.meta is not None:
                         d["meta"] = msg.meta.repr()
+
+                    try:
+                        d["data_cbor"] = dcbor.decode(msg.data)
+                    except Exception:
+                        pass
+
+                    try:
+                        d["data_msgpack"] = dmsgpack.decode(msg.data)
+                    except Exception:
+                        pass
 
                     flags = ""
                     if msg.retain:

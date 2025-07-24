@@ -46,8 +46,65 @@ title: Error states
 type: object
 properties: TODO
 ---
+_path: !P gate._
+title: Gateway sppecification
+properties:
+  driver:
+    type: str
+    title: Name of driver
+  name:
+    type: str
+    title: Name of gateway
+    doc: |
+      This is used when debugging (to impersonate another gateway)
+      or when different sub-gateways should use the same name for convenience.
+  src:
+    type: Path
+    title: Local path
+    doc: |
+      The MQTT path of the data, relative to the MoaT-Link root.
+  dst:
+    type: Path
+    title: Remote path
+    doc: |
+      The path to the data, relative to the destination which
+      this gate's driver addresses.
+---
+_path: !P conv._._
+title: Data conversion specification
+doc: |
+  Gateways look up the codec to use here, based on the element's subpath.
+  Elements `+` and `#` are wildcards just as in MQTT;
+  `#` does not have to be at the end.
+properties:
+  codec:
+    type: Path|str
+    doc: |
+      if a path, look up in `codec.`
+      if a string, the name of the codec to use.
+---
+_path: !P codec._
+title: Specialized codecs
+properties:
+  decode:
+    type: str
+    doc: |
+      Python script snippet to decode `value`.
+  encode:
+    type: str
+    doc: |
+      Python script snippet to encode `value`.
+  in:
+    type: array
+    doc: |
+      List of test values (source/result) for `decode`.
+  out:
+    type: array
+    doc: |
+      List of test values (source/result) for `encode`.
+---
 _path: !P gate.moat._._
-title: Gateway between MQTT and MoaT-Link data
+title: Gateway between MQTT and MoaT-Link data TODO DRAFT
 type: object
 properties:
   dir:

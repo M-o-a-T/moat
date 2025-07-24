@@ -75,9 +75,12 @@ class Gate(_Gate):
                     # mine, so skip
                     continue
                 p=Path.build(msg.topic[ld:])
-                res = conv(p,msg.data)
-                if res is NotGiven:
-                    continue
+                if msg.data == b'':
+                    res = NotGiven
+                else:
+                    res = conv(p,msg.data)
+                    if res is NotGiven:
+                        continue
                 await self.set_src(p, res, msg.meta)
 
 

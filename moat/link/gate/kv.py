@@ -26,12 +26,12 @@ class Gate(_Gate):
         async with self.kv.watch(self.cf.dst, fetch=True, long_path=False, nchain=2) as mon:
             task_status.started()
             async for msg in mon:
-                if "value" not in msg:
+                if "path" not in msg:
                     if msg.get("state","")=="uptodate":
                         self.dst_is_current()
                     continue
                 path=pl.long(msg.depth,msg.path)
-                await self.set_src(path, msg.value, MsgMeta(origin=msg.chain.node,t=msg.chain.tick))
+                await self.set_src(path, msg.get("value",NotGiven), MsgMeta(origin=msg.chain.node,t=msg.chain.tick))
 
 
     async def set_dst(self, path:Path, data:Any, meta:MsgMeta, node:GateNode):

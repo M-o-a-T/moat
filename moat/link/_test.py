@@ -188,7 +188,6 @@ class Scaffold(CtxObj):
         Start a client (background task)
         """
         cl = await self.tg.start(partial(self._run_client, *a, **kw))
-        cl.enable_path(Path("test"))
         return cl
 
     async def _run_client(self, *a, task_status, **kw) -> Never:

@@ -207,14 +207,6 @@ class _Sender(MsgSender):
 
     def __init__(self, link:LinkCommon):
         self._link = link
-        self._allowed = set()
-
-    def enable_path(self, path:Path):
-        """
-        This call protects against forgetting to prefix the root path, or
-        similar bugs, when calling to the back-end directly.
-        """
-        self._allowed.add(path)
 
     @property
     def root(self):
@@ -416,7 +408,6 @@ class _Sender(MsgSender):
 
         The caller is responsible for prefixing the Root path, if applicable.
         """
-        self._pcheck(path, empty_ok=kw.get("subtree",False))
         return self._link.backend.monitor(path, *a, **kw)
 
     def send(self, path:Path, *a, **kw) -> Awaitable[None]:
@@ -428,28 +419,7 @@ class _Sender(MsgSender):
 
         The caller is responsible for prefixing the Root path, if applicable.
         """
-        self._pcheck(path)
         return self._link.backend.send(path, *a, **kw)
-
-    def _pcheck(self,path:Path, empty_ok=False):
-        if len(path) == 0:
-            if empty_ok:
-                return
-            raise ValueError("Empty path?")
-        if isinstance(path[0],Path):
-            if path[0] == Root.get():
-                return
-            if path[0] in self._allowed:
-                return
-            raise ValueError("Prefix not allowed",path[0])
-        root = Root.get()
-        if path[:len(root)] == root:
-            return
-        for p in self._allowed:
-            if path[:len(p)] == p:
-                return
-        raise ValueError("Path not allowed",path)
-
 
     async def i_sync(self):
         """

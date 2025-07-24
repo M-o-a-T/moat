@@ -43,7 +43,11 @@ class Gate(_Gate):
                         cd = self.codecs.get(Path.build(vd.data["codec"]))
                     except ValueError:
                         return NotGiven
-                    return cd.dec_value(d)
+                    try:
+                        return cd.dec_value(d)
+                    except Exception as exc:
+                        self.logger.error("Decode: %s %r: %r", p,d, exc)
+                        return NotGiven
                     
             else:
                 codec=self.codec
@@ -83,11 +87,16 @@ class Gate(_Gate):
         elif self.codecs is not None:
             try:
                 vd = self.codec_vecs.search(path)
-                cd = self.codecs.get(vd.data["codec"])
-            except ValueError:
+                cd = self.codecs.get(Path.build(vd.data["codec"]))
+            except (ValueError,KeyError) as exc:
+                self.logger.error("No codec: %s %r",path,data)
                 return
             res = cd.enc_value(data)
-            await self.link.send(self.cf.dst+path, res, retain=True, codec="noop",meta=MsgMeta(origin=self.origin,timestamp=meta.timestamp))
+            if isinstance(res,(str,bytes,bytearray)):
+                await self.link.send(self.cf.dst+path, res, retain=True, codec="noop",meta=MsgMeta(origin=self.origin,timestamp=meta.timestamp))
+            else:
+                self.logger.error("Bad codec: %s %r > %r",path,data,res)
+
         else:
             await self.link.send(self.cf.dst+path, data, retain=True, codec=self.codec, meta=MsgMeta(origin=self.origin,timestamp=meta.timestamp))
 

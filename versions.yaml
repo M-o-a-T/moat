@@ -141,10 +141,10 @@ moat-lib-cmd:
   tag: 0.3.7
 moat-lib-codec:
   deb: 0.4.3-2
-  pkg: 4
+  pkg: 1
   pypi: 0.4.3
-  rev: 1ce438efbe32c4a11621b7c2a93cea0850aa583c
-  tag: 0.4.4
+  rev: fef0a9426fccd60c3ac607ad5f98155e5bc879a5
+  tag: 0.4.5
 moat-lib-diffiehellman:
   deb: 0.13.4-8
   pkg: 11
@@ -178,9 +178,9 @@ moat-link:
 moat-link-server:
   deb: 0.2.3-1
   pkg: 1
-  pypi: 0.3.2
-  rev: 32eba1b2a271702a51dccab282c8e12a0ec3ea04
-  tag: 0.3.2
+  pypi: 0.3.4
+  rev: 1534580bcb071273d6e7a63d33af320d3f469a65
+  tag: 0.3.4
 moat-micro:
   deb: 0.16.4-1
   pkg: 4
@@ -227,5 +227,5 @@ moat-util:
   deb: 0.57.10-1
   pkg: 1
   pypi: 0.57.13
-  rev: d58a655a0fd6ba12377832e3cbb57f39b379bcbd
-  tag: 0.57.13
+  rev: fef0a9426fccd60c3ac607ad5f98155e5bc879a5
+  tag: 0.57.14

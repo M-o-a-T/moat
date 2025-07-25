@@ -225,7 +225,7 @@ moat-thing:
   tag: 0.2.1
 moat-util:
   deb: 0.57.10-1
-  pkg: 4
-  pypi: 0.57.10
-  rev: 1ce438efbe32c4a11621b7c2a93cea0850aa583c
-  tag: 0.57.12
+  pkg: 1
+  pypi: 0.57.13
+  rev: d58a655a0fd6ba12377832e3cbb57f39b379bcbd
+  tag: 0.57.13

@@ -5,7 +5,6 @@ import socket
 
 import attr
 from asyncscope import scope
-from moat.src.test import run  # pylint:disable=import-error,no-name-in-module
 from moat.util import (  # pylint:disable=no-name-in-module
     CFG,
     combine_dict,
@@ -75,6 +74,7 @@ class S:
         raise RuntimeError("Duh? no connection")
 
     async def run(self, *args, do_stdout=True):
+        from moat.src.test import run as run_  # pylint:disable=import-error,no-name-in-module
         h = p = None
         for s in self.s:
             for h, p, *_ in s.ports:
@@ -88,4 +88,4 @@ class S:
             if isinstance(args, str):
                 args = args.split(" ")
         async with scope.using_scope():
-            return await run("-VV", "kv", "-h", h, "-p", p, *args, do_stdout=do_stdout)
+            return await run_("-VV", "kv", "-h", h, "-p", p, *args, do_stdout=do_stdout)

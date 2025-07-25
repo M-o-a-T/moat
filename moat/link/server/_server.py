@@ -1605,6 +1605,9 @@ class Server(MsgHandler):
                 except* (EOFError,anyio.ClosedResourceError,anyio.EndOfStream):
                     self.logger.warning("Link to %s closed", name)
 
+                except* EnvironmentError:
+                    self.logger.warning("Link to %s died")
+
                 except* Exception as exc:
                     self.logger.warning("Link to %s died", name, exc_info=exc)
 

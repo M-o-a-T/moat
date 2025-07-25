@@ -1297,7 +1297,7 @@ class Server(MsgHandler):
 
             await anyio.sleep(save.interval)
             rewrite = (rewrite or save.rewrite)-1
-            kw["prev"]=fn
+            kw["prev"]=str(fn)
 
 
     async def run_saver(self, path: PathType|None, save_state: bool = True, **kw):
@@ -1911,6 +1911,8 @@ class Server(MsgHandler):
                 if isinstance(tt,Sequence):
                     tt=tt[1]
                 fn=tt.get("prev",None)
+                if fn is not None:
+                    fn = anyio.Path(fn)
                 continue
             ready.set()
             return

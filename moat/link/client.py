@@ -18,7 +18,7 @@ from attrs import define,field
 
 from mqttproto import RetainHandling
 from moat.lib.cmd.base import MsgSender, Caller
-from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident, ungroup, NotGiven,Path, PathLongener
+from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident, ungroup, NotGiven,Path, PathLongener,srepr
 from moat.util.compat import CancelledError
 from moat.util.random import al_unique
 
@@ -153,8 +153,9 @@ class LinkCommon(CmdCommon):
         self._hello = Hello(me=self.name, me_server=self.is_server, auth_out=auth_out)
         yielded = False
 
-
         async with conn_ as conn:
+            if self.logger.isEnabledFor(logging.INFO):
+                print(f"Connection {self.name} to {srepr(remote)}", file=sys.stderr)
             handler = MsgSender(conn)
             if (res := await self._hello.run(handler)) is False:
                 raise AuthError("Initial handshake failed")

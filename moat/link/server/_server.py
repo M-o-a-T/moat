@@ -230,7 +230,10 @@ class ServerClient(LinkCommon):
                     return
                 them = self._hello.them
                 self.is_server = self._hello.they_server
-                self.server.rename_client(self,them)
+                try:
+                    self.server.rename_client(self,them)
+                except ValueError:
+                    self.logger.warning("Rename to %s failed", them)
 
                 if not self.is_server and "." not in them:
                     # announce fixed-name client

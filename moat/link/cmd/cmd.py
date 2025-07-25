@@ -30,7 +30,7 @@ async def cli(ctx, path, stream, raw, **kw):
     if obj.port is not None:
         cfg.client.port = obj.port
 
-    async with Link(cfg) as conn:
+    async with Link(cfg, name=obj.name) as conn:
         val = process_args(NotGiven, **kw)
         kw = {}
         if isinstance(val,list):

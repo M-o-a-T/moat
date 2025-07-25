@@ -16,6 +16,10 @@ try:
     from .msgpack import Proxy
 except ImportError:
     Proxy = None
+try:
+    from moat.lib.codec.proxy import DProxy
+except ImportError:
+    DProxy = None
 
 from .path import Path
 
@@ -102,6 +106,11 @@ def _proxy_repr(dumper, data):
     # return ScalarNode(tag, value, style=style)
     # return yaml.events.ScalarEvent(anchor=None, tag='!P', implicit=(True, True), value=str(data))
 
+def _dproxy_repr(dumper, data):
+    return dumper.represent_scalar("!DP", repr([data.name,data.a,data.k]))
+    # return ScalarNode(tag, value, style=style)
+    # return yaml.events.ScalarEvent(anchor=None, tag='!P', implicit=(True, True), value=str(data))
+
 
 def read_env(loader, node):
     value = loader.construct_scalar(node)
@@ -119,6 +128,8 @@ SafeConstructor.add_constructor("!env", read_env)
 
 if Proxy is not None:
     SafeRepresenter.add_representer(Proxy, _proxy_repr)
+if DProxy is not None:
+    SafeRepresenter.add_representer(DProxy, _dproxy_repr)
 
 
 def _name2obj(constructor, node):

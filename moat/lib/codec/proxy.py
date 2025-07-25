@@ -17,6 +17,9 @@ __all__ = [
     "obj2name",
 ]
 
+from pathlib import Path as FSPath
+from anyio import Path as AioPath
+
 from moat.util import NotGiven
 
 from ._proxy import Proxy, get_proxy, name2obj, drop_proxy, as_proxy, obj2name
@@ -58,6 +61,8 @@ class DProxy(_DProxy):
 as_proxy("_", NotGiven)
 as_proxy("_p", Proxy)
 
+as_proxy("_fp", FSPath)
+as_proxy("_fpa", AioPath)
 
 def _next(it, dfl=None):
     try:

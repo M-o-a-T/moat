@@ -371,6 +371,8 @@ class Path(collections.abc.Sequence):
             if self.mark != mark:
                 return self.build(self._data, mark=mark)
             return self
+        if isinstance(other[0],Path):
+            return type(self)(*self._data, *other[0], *other[1:], mark=mark)
         return type(self)(*self._data, *other, mark=mark)
 
     def __or__(self, other):

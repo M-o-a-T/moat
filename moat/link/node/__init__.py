@@ -209,6 +209,11 @@ class Node:
         if isinstance(item, Path):
             s = self
             for n, k in enumerate(item):
+                if isinstance(k, Path):
+                    import traceback
+                    logger.warning("Looking up %r\n%s", item, ''.join(traceback.format_stack()))
+                    s = s.get(k, create=create)
+                    continue
                 try:
                     s = s._sub[k]  # noqa:SLF001
                 except KeyError:
@@ -232,8 +237,6 @@ class Node:
             return res
 
     def _add(self, item):
-        if isinstance(item, Path):
-            raise TypeError("no path")
         if item in self._sub:
             raise ValueError("exists")
         self._sub[item] = s = type(self)()

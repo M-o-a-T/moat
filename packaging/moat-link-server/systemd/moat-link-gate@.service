@@ -11,7 +11,8 @@ WantedBy=multi-user.target
 Type=notify
 ExecStart=/usr/bin/moat link gate %I run
 
-EnvironmentFile=/etc/moat/link.env
+EnvironmentFile=/usr/lib/moat/link/env
+EnvironmentFile=-/etc/moat/link.env
 
 TimeoutSec=300
 WatchdogSec=10

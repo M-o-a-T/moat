@@ -1878,7 +1878,8 @@ class Server(MsgHandler):
         fs = []
         async for p, _d, f in dest.walk():
             for ff in f:
-                fs.append(p / ff)
+                if ff.endswith(".moat"):
+                    fs.append(p / ff)
         fs.sort()
         fn=None
 
@@ -1893,7 +1894,13 @@ class Server(MsgHandler):
                 continue
             done.add(sfn)
 
-            upd,skp,tags = await self.load_file(fn=fn)
+            try:
+                upd,skp,tags = await self.load_file(fn=fn)
+            except Exception as exc:
+                self.logger.error("Failed to load %s",fn,exc_info=exc)
+                await fn.rename(fn.with_suffix(".moat.bad"))
+                continue
+
             if not upd or not tags:
                 continue
             if not tag_check(tags):

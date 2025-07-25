@@ -210,8 +210,9 @@ class Node:
             s = self
             for n, k in enumerate(item):
                 if isinstance(k, Path):
-                    import traceback
-                    logger.warning("Looking up %r\n%s", item, ''.join(traceback.format_stack()))
+                    # import traceback
+                    # logger.warning("Looking up %r\n%s", item, ''.join(traceback.format_stack()))
+                    logger.warning("Looking up %r\n", item)
                     s = s.get(k, create=create)
                     continue
                 try:

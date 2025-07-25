@@ -326,7 +326,7 @@ class ServerClient(LinkCommon):
 
     doc_d_list = dict(_d="get subnode child names", _r=["Any:Data", "MsgMeta"], _o="str")
 
-    async def cmd_d_list(self, msg):
+    async def stream_d_list(self, msg):
         """Get the child names of a sub-node.
         Arguments:
         * path

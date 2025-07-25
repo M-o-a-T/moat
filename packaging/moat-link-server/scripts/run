@@ -3,11 +3,6 @@ set -ex
 
 # This script starts up MoaT-Link.
 
-if test "$LOCAL" != "yes" && test "$(moat util cfg link.backend.host)" != "127.0.0.1"; then
-    echo "Server is not localhost: not starting."
-    exit 42  # mark as succeeded
-fi
-
 if test ! -n "$NAME" ; then
     NAME="$(uname -n)"
 fi

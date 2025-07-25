@@ -3,6 +3,7 @@ Maintainer: "Matthias Urlichs" <matthias@urlichs.de>
 Section: python
 Priority: optional
 Build-Depends: dh-python, python3-all, debhelper (>= 13),
+  dh-sequence-installsysusers,
   python3-setuptools,
   python3-wheel,
 Standards-Version: 3.9.6

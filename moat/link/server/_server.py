@@ -1098,7 +1098,17 @@ class Server(MsgHandler):
                             state=None if save_state else False,
                             **kw,
                         )
-                        await mw(msg)
+                        try:
+                            await mw(msg)
+                        except Exception as exc:
+                            self.logger.error("MSG WRITE FAIL %r", msg, exc_info=exc)
+                            msg = self.gen_hdr_start(
+                                name=str(path),
+                                mode="full" if save_state else "incr",
+                                state=None if save_state else False,
+                            )
+                            await mw(msg)
+
 
                         if save_state:
                             tg.start_soon(

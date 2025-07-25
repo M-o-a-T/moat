@@ -1,8 +1,8 @@
 moat:
   deb: 0.11.1-1
-  pkg: 5
+  pkg: 6
   pypi: 0.11.1
-  rev: e2f956552375d920c3a11434ce251349db3e2b64
+  rev: 32eba1b2a271702a51dccab282c8e12a0ec3ea04
   tag: 0.11.3
 moat-battery:
 - 0.2.5
@@ -75,9 +75,9 @@ moat-ems-sched:
   tag: 0.2.12
 moat-kv:
   deb: 0.71.11-2
-  pkg: 2
+  pkg: 3
   pypi: 0.71.16
-  rev: e2f956552375d920c3a11434ce251349db3e2b64
+  rev: 32eba1b2a271702a51dccab282c8e12a0ec3ea04
   tag: 0.71.16
 moat-kv-akumuli:
   deb: 0.8.6-7
@@ -173,14 +173,14 @@ moat-link:
   deb: 0.2.5-1
   pkg: 1
   pypi: 0.2.13
-  rev: af241ef295c81c66bcd8464e921687231eb821c2
-  tag: 0.2.13
+  rev: 32eba1b2a271702a51dccab282c8e12a0ec3ea04
+  tag: 0.2.14
 moat-link-server:
   deb: 0.2.3-1
-  pkg: 4
-  pypi: 0.3.1
-  rev: e2f956552375d920c3a11434ce251349db3e2b64
-  tag: 0.3.1
+  pkg: 1
+  pypi: 0.3.2
+  rev: 32eba1b2a271702a51dccab282c8e12a0ec3ea04
+  tag: 0.3.2
 moat-micro:
   deb: 0.16.4-1
   pkg: 4

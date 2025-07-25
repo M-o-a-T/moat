@@ -1,12 +1,7 @@
 #!/bin/bash
 set -ex
 
-# This script starts up MoaT-KV.
-
-# Normally, starting MoaT-KV on a host where clients don't connect locally is
-# a bad idea. However, on a system that has more than one network namespace
-# you need to use a specific address. So set LOCAL=yes to force starting
-# anyway.
+# This script starts up MoaT-Link.
 
 if test "$LOCAL" != "yes" && test "$(moat util cfg link.backend.host)" != "127.0.0.1"; then
     echo "Server is not localhost: not starting."

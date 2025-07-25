@@ -1473,8 +1473,12 @@ class Server(MsgHandler):
             await _tg.start(self._pinger, ping_ready)
             if self._init is not NotGiven:
                 await self.set_main_link()
-            else:
-                await ping_ready.wait()
+            elif self.cfg.server.timeout.up > 0:
+                with anyio.move_on_after(self.cfg.server.timeout.up):
+                    await ping_ready.wait()
+            elif self.cfg.server.timeout.up < 0:
+                with anyio.fail_after(-self.cfg.server.timeout.up):
+                    await ping_ready.wait()
 
             # watch for Will messages from dying servers that are "it"
             await _tg.start(self._watch_down)

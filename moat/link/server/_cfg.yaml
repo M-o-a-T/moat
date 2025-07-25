@@ -7,8 +7,17 @@ save:
 timeout:
   monitor: 0.5
   refresh: 100
-  startup: 30
+  startup: 90
+  # fail if no data could be retrieved
+
   mqtt: 0
+  # if >0, the server accepts the MQTT hierarchy and considers it DONE
+  # after `mqtt` seconds have gone by without a message. Should generally
+  # be some fraction of a second.
+
+  up: 10
+  # if >0, wait at most this many seconds for the Actor handshake
+  # if <0, fail if unsuccessful after `-up` seconds
 
 # the AsyncActor config for syncing servers
 ping:

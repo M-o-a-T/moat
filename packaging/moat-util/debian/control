@@ -2,12 +2,13 @@ Source: moat-util
 Maintainer: Matthias Urlichs <matthias@urlichs.de>
 Section: python
 Priority: optional
-Build-Depends: dh-python, python3-all, debhelper (>= 13), debhelper-compat (= 13),
+Build-Depends: dh-python, python3-all, debhelper (>= 13),
   python3-setuptools,
   python3-wheel,
   python3-attr (>= 22),
 Standards-Version: 3.9.6
 Homepage: https://github.com/M-o-a-T/asyncwebsockets
+X-DH-Compat: 13
 
 Package: moat-util
 Architecture: all

@@ -2,11 +2,12 @@ Source: moat-kv-knx
 Maintainer: Matthias Urlichs <matthias@urlichs.de>
 Section: python
 Priority: optional
-Build-Depends: dh-python, python3-all, debhelper (>= 13), debhelper-compat (= 13),
+Build-Depends: dh-python, python3-all, debhelper (>= 13),
   python3-setuptools,
   python3-xknx (>= 0.11.9.19),
 Standards-Version: 3.9.6
 Homepage: https://github.com/M-o-a-T/moat-kv-knx
+X-DH-Compat: 13
 
 Package: moat-kv-knx
 Architecture: all

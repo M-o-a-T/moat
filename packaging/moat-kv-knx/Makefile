@@ -1,7 +1,5 @@
 #!/usr/bin/make -f
 
-.PHONY: install
-
 PACKAGE=moat-kv-knx
 MAKEINCL ?= $(shell python3 -mmoat src path)/make/py
 

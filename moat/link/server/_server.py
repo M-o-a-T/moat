@@ -983,14 +983,14 @@ class Server(MsgHandler):
 
         If @timestamp is set, older items will be ignored.
 
-        @writer
+        @writer is an async callback that writes each item.
         """
 
         async def saver(path, data) -> None:
-            if data.data is NotGiven and data.meta is None:
+            if data.data_ is NotGiven and data.meta is None:
                 return
             d, p = shorter.short(path)
-            await writer([d, p, data.data, *data.meta.dump()])
+            await writer([d, p, data.data_, *data.meta.dump()])
             return
 
         if hdr:

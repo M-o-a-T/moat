@@ -17,6 +17,7 @@ from contextlib import asynccontextmanager, nullcontext
 from datetime import UTC, datetime
 from functools import partial
 from attrs import define,field
+from collections.abc import Sequence
 from asyncactor import (
     Actor,
     GoodNodeEvent,
@@ -1904,7 +1905,7 @@ class Server(MsgHandler):
             if not upd or not tags:
                 continue
             if not tag_check(tags):
-                # extract the 
+                # extract the first tag's value
                 tt = tags[0]
                 while isinstance(tt,Tag):
                     tt=t=tt.value

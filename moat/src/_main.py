@@ -983,7 +983,13 @@ async def build(
     for r in repos:
         rd = PACK / r.dash
         p = rd / "pyproject.toml"
-        n = rd / "package.json"
+        skip = rd / "SKIP.build"
+
+        if skip.is_file():
+            # bad=True
+            print("Skip:", r.name, file=sys.stderr)
+            continue
+
         if p.is_file():
             with p.open("r") as f:
                 pr = tomlkit.load(f)
@@ -1004,13 +1010,6 @@ async def build(
                     for v in deps.values():
                         fix_deps(v, tags)
             p.write_text(pr.as_string())
-
-        elif n.is_file():
-            pass
-        else:
-            # bad=True
-            print("Skip:", r.name, file=sys.stderr)
-            continue
 
         repo.index.add(p)
 

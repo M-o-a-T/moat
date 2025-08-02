@@ -983,30 +983,35 @@ async def build(
     for r in repos:
         rd = PACK / r.dash
         p = rd / "pyproject.toml"
-        if not p.is_file():
+        n = rd / "package.json"
+        if p.is_file():
+            with p.open("r") as f:
+                pr = tomlkit.load(f)
+                pr["project"]["version"] = r.last_tag
+
+            if not no_version:
+                try:
+                    deps = pr["project"]["dependencies"]
+                except KeyError:
+                    pass
+                else:
+                    fix_deps(deps, tags)
+                try:
+                    deps = pr["project"]["optional_dependencies"]
+                except KeyError:
+                    pass
+                else:
+                    for v in deps.values():
+                        fix_deps(v, tags)
+            p.write_text(pr.as_string())
+
+        elif n.is_file():
+            pass
+        else:
             # bad=True
             print("Skip:", r.name, file=sys.stderr)
             continue
-        with p.open("r") as f:
-            pr = tomlkit.load(f)
-            pr["project"]["version"] = r.last_tag
 
-        if not no_version:
-            try:
-                deps = pr["project"]["dependencies"]
-            except KeyError:
-                pass
-            else:
-                fix_deps(deps, tags)
-            try:
-                deps = pr["project"]["optional_dependencies"]
-            except KeyError:
-                pass
-            else:
-                for v in deps.values():
-                    fix_deps(v, tags)
-
-        p.write_text(pr.as_string())
         repo.index.add(p)
 
     # Step 3: copy to packaging dir

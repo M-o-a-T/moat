@@ -1011,7 +1011,7 @@ async def build(
                         fix_deps(v, tags)
             p.write_text(pr.as_string())
 
-        repo.index.add(p)
+            repo.index.add(p)
 
     # Step 3: copy to packaging dir
     for r in repos:

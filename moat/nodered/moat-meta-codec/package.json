@@ -1,0 +1,41 @@
+{
+  "name": "moat-meta-codec",
+  "version": "0.1.0",
+  "description": "Metadata codec for MoaT messages",
+  "main": "lib/codec.js",
+  "typings": "lib/codec.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Matthias Urlichs <matthias@urlichs.de>",
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "base85-full": "^3.2.0",
+    "cbor": "^9.0.0"
+  },
+  "devDependencies": {
+    "node-red": "^4.1.0",
+    "node-red-node-test-helper": "^0.3.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/M-o-a-T/moat"
+  },
+  "keywords": [
+    "mqtt",
+    "MoaT"
+  ],
+  "bugs": {
+    "url": "https://github.com/M-o-a-T/moat/issues"
+  },
+  "homepage": "https://github.com/smurfix/M-o-a-T/nodered/moat-meta-codec",
+  "engines": {
+    "node": ">=10.24.1"
+  },
+  "node-red": {
+    "nodes": {
+       "moat-meta-encode": "lib/codec.js",
+       "moat-meta-decode": "lib/codec.js"
+    }
+  }
+}

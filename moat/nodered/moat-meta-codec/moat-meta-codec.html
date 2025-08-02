@@ -1,0 +1,49 @@
+<script type="text/javascript">
+    RED.nodes.registerType('moat-meta-encode',{
+        category: 'function',
+        color: '#a6bbcf',
+        defaults: {
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "file.svg",
+        label: function() {
+            return this.name||"MoaT Metadata encoder";
+        }
+    });
+    RED.nodes.registerType('moat-meta-decode',{
+        category: 'function',
+        color: '#a6bbcf',
+        defaults: {
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "file.svg",
+        label: function() {
+            return this.name||"MoaT Metadata decoder";
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="moat-meta-encode">
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+</script>
+
+<script type="text/html" data-template-name="moat-meta-decode">
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+</script>
+
+<script type="text/html" data-help-name="moat-meta-encode">
+    <p>Encodes MoaT metadata to the 'MoaT' MQTT user property</p>
+</script>
+
+<script type="text/html" data-help-name="moat-meta-decode">
+    <p>Decodes the 'MoaT' MQTT user property to MoaT metadata</p>
+</script>
+

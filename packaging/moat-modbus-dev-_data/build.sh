@@ -1,3 +1,4 @@
-#!/bin/sh
+#!/bin/sh -ex
 
-( cd heating/KWB; sh code/rebuild.sh )
+cd $1/heating/KWB
+. code/rebuild.sh

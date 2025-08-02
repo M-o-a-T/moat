@@ -143,19 +143,6 @@ class Package(_Common):
     def mdash(self):
         return dash(self.name)
 
-    def populate(self, path: Path, real=None):
-        """
-        Collect this package's file names.
-        """
-        self.path = path
-        for fn in path.iterdir():
-            if fn.name == "__pycache__":
-                continue
-            if (sb := self.subs.get(fn.name, None)) is not None:
-                sb.populate(fn, real=self if sb.hidden else None)
-            else:
-                (real or self).files.add(fn)
-
     def copy(self) -> None:
         """
         Copies the current version of this subsystem to its packaging area.
@@ -309,7 +296,24 @@ class Repo(git.Repo, _Common):
                 continue
             self._add_repo(str(fn.name))
 
-        self._repos[self.toplevel].populate(Path(self.toplevel))
+        res = subprocess.run(
+            [ "git","ls-files","-z","--exclude-standard" ],
+            check=True,
+            stdout=subprocess.PIPE,
+        )
+        for fn in res.stdout.split(b"\0"):
+            if not fn:
+                continue
+            fn = Path(fn.decode("utf-8"))
+            if fn.name == ".gitignore":  # heh
+                continue
+            sb = self.repo_for(fn, True)
+            if sb is None:
+                continue
+            sb = dash(sb)
+            if sb not in self._repos:
+                breakpoint()
+            self._repos[sb].files.add(fn)
 
     def repo_for(self, path: Path | str, main: bool | None) -> str:
         """
@@ -326,12 +330,15 @@ class Repo(git.Repo, _Common):
 
         name = path.parts[0]
         if main is not False and name == self.toplevel:
+            res = name
             for p in path.parts[1:]:
                 if p not in sc.subs:
                     break
-                name += "." + p
                 sc = sc.subs[p]
-            return name
+                name += "." + p
+                if not sc.hidden:
+                    res = name
+            return res
 
         return None
 

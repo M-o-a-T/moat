@@ -20,11 +20,9 @@ __all__ = [
 from pathlib import Path as FSPath
 from anyio import Path as AioPath
 
-from moat.util import NotGiven
-
 from ._proxy import Proxy, get_proxy, name2obj, drop_proxy, as_proxy, obj2name
 from ._proxy import DProxy as _DProxy
-from ._proxy import _CProxy
+from ._proxy import _CProxy, NotGiven
 import moat.lib.codec.errors as _err  # noqa:F401
 
 

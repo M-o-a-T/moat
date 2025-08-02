@@ -26,7 +26,10 @@ from .misc import *  # noqa: F403, E402  # isort:skip
 from .random import *  # noqa: F403, E402  # isort:skip
 from .inexact import *  # noqa: F403, E402  # isort:skip
 
-from moat.lib.codec.proxy import *  # noqa: F403, E402  # isort:skip
+from moat.lib.codec.proxy import as_proxy  # noqa: F403, E402  # isort:skip
+
+as_proxy("_", NotGiven)
+
 
 try:
     from .event import *  # noqa: F403

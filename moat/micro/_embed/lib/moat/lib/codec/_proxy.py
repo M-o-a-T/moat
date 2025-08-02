@@ -4,8 +4,7 @@ A hacked-up copy of some parts of `moat.util`.
 
 from __future__ import annotations
 
-from moat.util.compat import log
-from moat.util import NotGiven
+NotGiven = ... # from moat.util import NotGiven
 
 __all__ = [
     "DProxy",
@@ -166,6 +165,7 @@ class DProxy(Proxy):
             try:
                 return self.a[i]
             except TypeError:
+                from moat.util.compat import log
                 log("*ERR %r", self.k)
                 raise KeyError(i) from None
 

@@ -408,6 +408,7 @@ cmd_wire = std_command(
     cli,
     "wire",
     name_cb=rev_wire,
+    id_name=None,
     short_help="Manage wire links",
     aux=(
         click.option("-d", "--desc", type=str, default=None, help="Description"),

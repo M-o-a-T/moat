@@ -1393,7 +1393,7 @@ class Server(MsgHandler):
 
         async with (
             EventSetter(self._stopped),
-            Broadcaster(send_last=True, length=100) as self.write_monitor,
+            Broadcaster(send_last=True, length=1000) as self.write_monitor,
             get_backend(self.cfg, name=self.name, will=will_data) as self.backend,
             anyio.create_task_group() as _tg,
         ):
@@ -1753,7 +1753,7 @@ class Server(MsgHandler):
         Task to read the main service monitoring channel
         """
         async with (
-            Broadcaster(30, send_last=True) as self.service_monitor,
+            Broadcaster(300, send_last=True) as self.service_monitor,
             self.backend.monitor(P(":R.run.service.main.conn")) as mon,
         ):
             task_status.started()
@@ -1860,7 +1860,7 @@ class Server(MsgHandler):
             # Allow for retrieving data from MQTT if no server is running.
             # This should not be done lightly.
             if self.cfg.server.timeout.mqtt:
-                rdr = self.write_monitor.reader(10)
+                rdr = self.write_monitor.reader(10000)
                 while True:
                     with anyio.move_on_after(self.cfg.server.timeout.mqtt):
                         await anext(rdr)

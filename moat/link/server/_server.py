@@ -1621,7 +1621,7 @@ class Server(MsgHandler):
                     self.logger.warning("Link to %s closed", name)
 
                 except* EnvironmentError:
-                    self.logger.warning("Link to %s died")
+                    self.logger.warning("Link to %s died", name)
 
                 except* Exception as exc:
                     self.logger.warning("Link to %s died", name, exc_info=exc)

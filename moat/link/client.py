@@ -657,6 +657,8 @@ class Link(LinkCommon, CtxObj):
                     self.cfg.client.init_timeout, self._connect_one(remote, srv.data)
                 ) as rem:
                     await self._connect_run(rem, task_status=task_status)
+            except EnvironmentError as exc:
+                self.logger.warning("Link failed: %r", remote)
             except Exception as exc:
                 self.logger.warning("Link failed: %r", remote, exc_info=exc)
 
@@ -687,7 +689,7 @@ class BasicLink(LinkCommon, CtxObj):
             except Exception as exc:
                 if yielded:
                     raise
-                self.logger.warning("Link failed: %r", remote, exc_info=exc)
+                self.logger.warning("Link failed: %r", remote, exc_info=None if isinstance(exc,EnvironmentError) else exc)
                 if err is None:
                     err = exc
             else:

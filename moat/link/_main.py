@@ -81,9 +81,8 @@ start "moat link server" in a separate terminal, and try again.
 
 @load_subgroup(sub_pre="moat.link.cmd", sub_post="cli", ext_pre="moat.link", ext_post="_main.cli")
 @click.option("-n","--name", type=str, help="Name of this client (or server)")
-@click.option("-p","--port", type=str, help="Port to use and/or connect to")
 @click.pass_context
-async def cli(ctx,name,port):
+async def cli(ctx,name):
     """
     MoaT's data link
 
@@ -92,7 +91,6 @@ async def cli(ctx,name,port):
     obj = ctx.obj
     cfg = obj.cfg
     obj.name = name
-    obj.port = port
 
     if "link" not in cfg or "backend" not in cfg["link"]:
         sys.stderr.write(usage1)

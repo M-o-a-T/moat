@@ -58,15 +58,6 @@ async def cli(obj, load, save, init):
 
     if obj.name is None:
         raise click.UsageError("You need to specify a name ('moat link -n NAME server').")
-    if obj.port is not None:
-        port = obj.port
-        try:
-            port=int(port)
-        except ValueError:
-            port=dict(port=port)
-        else:
-            port=dict(host="localhost",port=port)
-        obj.cfg.link.server.ports=dict(cfg=port)
 
     async with as_service(obj) as evt:
         s = Server(cfg=obj.cfg.link, name=obj.name, **kw)

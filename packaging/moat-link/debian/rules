@@ -8,5 +8,8 @@ export MSGPACK_PUREPYTHON=1
 %:
 	dh $@ --with python3 --buildsystem=pybuild
 
+execute_after_dh_install:
+	$(MAKE) installscript PREFIX=debian/moat-link
+
 override_dh_auto_test:
 	: skip

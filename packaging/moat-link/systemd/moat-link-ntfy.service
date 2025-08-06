@@ -1,0 +1,22 @@
+[Unit]
+Description=MoaT-Link NTFY forwarder
+
+ConditionFileNotEmpty=/etc/moat/moat.cfg
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/moat link ntfy fwd
+
+RuntimeDirectory=moat/link
+
+User=MoaT-Link
+Group=MoaT
+
+EnvironmentFile=/usr/lib/moat/link/env
+EnvironmentFile=-/etc/moat/link.env
+
+TimeoutSec=300
+WatchdogSec=10

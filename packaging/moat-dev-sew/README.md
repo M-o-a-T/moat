@@ -30,20 +30,21 @@ or breaking something. Check again.
 Now connect the emergency switch. See section 6.3.2 in the documentation.
 DO NOT proceed if this switch is not installed correctly.
 
-The controller should now auto-tune its motor parameters. This takes
+The controller should now auto-tune its motor parameters. This process takes
 up to two minutes and may engage the motor. You can also trigger this process
 manually by setting P4-02 to 1.
 
 Write a config file along these lines::
 
+    link:
+      root: !P moat.com.example
     dev:
       sew:
-        power: !P :mr.moat.sew.power
-        state: !P :mr.moat.sew.state
+        power: !P moat.sew.power
+        state: !P moat.sew.state
         mqtt:
-          codec: msgpack
           will:
-            topic: !P :mr.moat.sew.state
+            topic: !P moat.sew.state
             message: null
         modbus:
           port: "/dev/ttyUSB0"
@@ -54,17 +55,15 @@ Write a config file along these lines::
 
 Run "moat -c CONFIG dev sew run".
 
-You now can operate the motor. Send a percentage to the topic `moat/dev/power`.
-You definitely should use QOS=1.
+You now can operate the motor. Send a percentage to the topic `moat.sew.power`.
+You probably should use QOS=1.
 
-Remember to use the correct encoding. If you don't like msgpack, use json.
+MoaT-Link messages are sent as CBOR-encoded data, under the topic
+configured in `link.root`. If you need them as ASCII or JSON, set up
+a MoaT-Link MQTT gateway.
+
 
 ## TODO
 
-The ":mr" part in the paths means that they are interpreted as MQTT topics;
-messages are sent without MoaT-KV attributes or retain flags.
-
-This currently is (a) the default and (b) the only supported method,
-but that may change.
-
+- Add more control.
 

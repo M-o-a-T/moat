@@ -33,3 +33,30 @@ timeout:
     initial: 5
     max: 30
     factor: 1.3
+
+
+# Notifications are messages below :R.notify.TOPIC topic.
+notify:
+  keepalive:
+    path: !P ping.some_host
+    timeout: 30
+    # topic: my_secret_topic  # must set if not at ntfy.topic
+    title: Server?
+    message: |
+      Der Router pi-c4 sagt nix mehr. (MQTT-Keepalive)
+
+  # Backends
+  ntfy:
+    # See https://docs.nfty.sh/
+    
+    url: https://ntfy.sh.example/
+    # token: tk_whatever
+    path: !P notify
+    # messages are posted to notify.TOPIC.WHATEVER if "topic" is not set
+    # topic: my_secret_topic
+
+    # ignore older messages
+    max_age: 30
+
+
+

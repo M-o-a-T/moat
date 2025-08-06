@@ -30,8 +30,8 @@ server:
         no_question:
           reg_type: h
           register: 12342
-          dest: !P :mL.a.srv.dst
-          src: !P :mL.a.srv.src
+          dest: !P a.srv.dst
+          src: !P a.srv.src
           type: uint
           len: 1
 """
@@ -52,8 +52,8 @@ hostports:
             register: 12342
             type: uint
             len: 1
-            dest: !P :mL.a.cli.dst
-            src: !P :mL.a.cli.src
+            dest: !P a.cli.dst
+            src: !P a.cli.src
             slot: 1sec
 
 
@@ -89,7 +89,7 @@ async def test_kv_poll(autojump_clock):
         assert r["value"] == 123
         assert (await c.d_get(P(":")))["value"] == 123
         await c.d_set(P("a.srv.src"), data=42)
-        cfg1 = await tg.start(dev_poll, cfg1, None, c)
+        cfg1 = await tg.start(dev_poll, cfg1, c)
         reg = cfg1.server[0].units[32].regs.no_question
         await trio.sleep(1)
         assert reg.value_w == 42
@@ -99,7 +99,7 @@ async def test_kv_poll(autojump_clock):
         assert reg.value_w == 44
 
         await c.d_set(P("a.cli.src"), data=144)
-        cfg2 = await tg.start(dev_poll, cfg2, None, c)
+        cfg2 = await tg.start(dev_poll, cfg2, c)
         await trio.sleep(2)
 
         # bidirectional forwarding

@@ -33,15 +33,15 @@ ports:
           L1:
             active:
               slot: 1sec
-              dest: !P :mr.grid.s.heat.l1
+              dest: !P grid.s.heat.l1
           L2:
             active:
               slot: 1sec
-              dest: !P :mr.grid.s.heat.l2
+              dest: !P grid.s.heat.l2
           L3:
             active:
               slot: 1sec
-              dest: !P :mr.grid.s.heat.l3
+              dest: !P grid.s.heat.l3
         energy:
           reset:
             import:

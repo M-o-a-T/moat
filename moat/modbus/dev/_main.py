@@ -45,14 +45,6 @@ async def poll(ctx, path):
 
     cfg = yload(path, attr=True)
 
-    if "kv" in obj.cfg:
-        # pylint: disable=import-outside-toplevel
-        from moat.kv.client import open_client
-
-        kv_ctx = open_client(**obj.cfg.kv)
-    else:
-        kv_ctx = nullcontext(None)
-
     if "link" in obj.cfg:
         # pylint: disable=import-outside-toplevel
         from moat.link.client import Link
@@ -61,8 +53,5 @@ async def poll(ctx, path):
     else:
         ln_ctx = nullcontext(None)
 
-    async with (
-        kv_ctx as mt_kv,
-        ln_ctx as mt_ln,
-    ):
-        await dev_poll(cfg, mt_kv, mt_ln)
+    async with ln_ctx as mt_ln:
+        await dev_poll(cfg, link=mt_ln)

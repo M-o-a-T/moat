@@ -15,10 +15,14 @@ from moat.modbus.client import ModbusClient
 from .device import ServerDevice, ClientDevice, fixup
 from moat.modbus.server import create_server
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from moat.link.client import Link
+
 logger = logging.getLogger(__name__)
 
 
-async def dev_poll(cfg, mt_kv, mt_ln, *, task_status=anyio.TASK_STATUS_IGNORED):
+async def dev_poll(cfg:dict, link:Link, *, task_status=anyio.TASK_STATUS_IGNORED):
     """
     Run a device task on this set of devices, as configured by the config.
 
@@ -55,7 +59,7 @@ async def dev_poll(cfg, mt_kv, mt_ln, *, task_status=anyio.TASK_STATUS_IGNORED):
                     await anyio.sleep_forever()
             return await tg.start(task, dev)
 
-        if mt_kv is None and mt_ln is None:
+        if link is None:
             from .device import Register as Reg  # pylint: disable=import-outside-toplevel
 
             RegS = Reg
@@ -63,8 +67,8 @@ async def dev_poll(cfg, mt_kv, mt_ln, *, task_status=anyio.TASK_STATUS_IGNORED):
             # The MoaT-KV client must live longer than the taskgroup
             from .kv import Register  # pylint: disable=import-outside-toplevel
 
-            Reg = partial(Register, mt_kv=mt_kv, mt_ln=mt_ln, tg=tg)
-            RegS = partial(Register, mt_kv=mt_kv, mt_ln=mt_ln, tg=tg, is_server=True)
+            Reg = partial(Register, link=link, tg=tg)
+            RegS = partial(Register, link=link, tg=tg, is_server=True)
 
         # relay-out server(s)
         servers = []

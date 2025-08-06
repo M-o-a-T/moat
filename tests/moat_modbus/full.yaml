@@ -60,19 +60,19 @@ hosts:
           sum:
             active:
               slot: 1sec
-              dest: !P :mr.grid.s.power.car
+              dest: !P grid.s.power.car
           L1:
             active:
               slot: 1sec
-              dest: !P :mr.grid.s.power.car.l1
+              dest: !P grid.s.power.car.l1
           L2:
             active:
               slot: 1sec
-              dest: !P :mr.grid.s.power.car.l2
+              dest: !P grid.s.power.car.l2
           L3:
             active:
               slot: 1sec
-              dest: !P :mr.grid.s.power.car.l3
+              dest: !P grid.s.power.car.l3
         energy:
           total:
             active:
@@ -86,15 +86,15 @@ hosts:
           L1:
             active:
               slot: 1sec
-              dest: !P :mr.grid.s.power.main.l1
+              dest: !P grid.s.power.main.l1
           L2:
             active:
               slot: 1sec
-              dest: !P :mr.grid.s.power.main.l2
+              dest: !P grid.s.power.main.l2
           L3:
             active:
               slot: 1sec
-              dest: !P :mr.grid.s.power.main.l3
+              dest: !P grid.s.power.main.l3
         energy:
           total:
             abs:
@@ -117,15 +117,15 @@ hosts:
           L1:
             active:
               slot: 1sec
-              dest: !P :mr.grid.s.power.multi.l1
+              dest: !P grid.s.power.multi.l1
           L2:
             active:
               slot: 1sec
-              dest: !P :mr.grid.s.power.multi.l2
+              dest: !P grid.s.power.multi.l2
           L3:
             active:
               slot: 1sec
-              dest: !P :mr.grid.s.power.multi.l3
+              dest: !P grid.s.power.multi.l3
         energy:
           total:
             abs:
@@ -148,19 +148,19 @@ hosts:
           sum:
             active:
               slot: 15sec
-              dest: !P :mr.grid.s.power.wp
+              dest: !P grid.s.power.wp
           L1:
             active:
               slot: 1sec
-              dest: !P :mr.grid.s.power.wp.l1
+              dest: !P grid.s.power.wp.l1
           L2:
             active:
               slot: 1sec
-              dest: !P :mr.grid.s.power.wp.l2
+              dest: !P grid.s.power.wp.l2
           L3:
             active:
               slot: 1sec
-              dest: !P :mr.grid.s.power.wp.l3
+              dest: !P grid.s.power.wp.l3
         energy:
           total:
             abs:

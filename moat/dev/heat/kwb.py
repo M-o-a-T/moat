@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import anyio
 import logging
+from contextlib import nullcontext
 
 import asyncclick as click
 
@@ -58,13 +59,13 @@ async def cli(ctx, cfg, host, port, unit):
     cfg = yload(cfg, attr=True)
 
     obj = ctx.obj
-    if "distkv" in obj.cfg:
+    if "link" in obj.cfg:
         # pylint: disable=import-outside-toplevel
-        from distkv.client import client_scope
+        from moat.link.client import Link
 
-        dkv = await client_scope(**obj.cfg.distkv)
+        ln_ctx = Link(opj.cfg.link)
     else:
-        dkv = None
+        ln_ctx = nullcontext(None)
 
     n = 0
 
@@ -74,8 +75,11 @@ async def cli(ctx, cfg, host, port, unit):
         elif h in d:
             yield d[h]
 
-    async with anyio.create_task_group() as tg:
-        cfg = await tg.start(dev_poll, cfg, dkv)
+    async with (
+        anyio.create_task_group() as tg,
+        ln_ctx as mt_ln,
+    ):
+        cfg = await tg.start(dev_poll, cfg, mt_ln)
 
         def proc(dest):
             try:

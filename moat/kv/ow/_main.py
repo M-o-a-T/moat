@@ -213,4 +213,4 @@ async def monitor(obj, server):
     from .task import task
 
     async with as_service(obj) as srv:
-        await task(obj.client, obj.cfg, server, srv)
+        await task(obj.client, obj.cfg.kv, server, srv)

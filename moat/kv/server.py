@@ -499,7 +499,7 @@ class SCmd_get_tree(StreamCommand):
         min_depth = msg.get("min_depth", None)
         if min_depth is not None:
             kw["min_depth"] = min_depth
-        kw["full"] = empty
+        kw["full"] = True  # empty -- always include `None` keys
 
         async def send_sub(entry, acl):
             if entry.data is NotGiven and not empty:

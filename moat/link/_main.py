@@ -54,12 +54,12 @@ or "~/.config/moat.cfg") and try again.
 usage2 = """
 "moat link" requires a root topic.
 
-This entry should be tagged with '!P' and be some dot-separated names.
+This entry should be tagged with '!P' and be a dot-separated path.
 For clarity it should start with 'moat.', though that's just a
 recommendation.
 
-Your MQTT server cannot contain any retained topics under that name
-(when replacing the dots with slashes) when you start a new installation.
+Your MQTT setup may NOT use any non-MoaT topics under that name
+(replacing the dots with slashes).
 
 Config example:
 

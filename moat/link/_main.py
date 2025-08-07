@@ -4,7 +4,9 @@ This module describes the MoaT data link.
 
 from __future__ import annotations
 
+import os
 import anyio
+from platform import uname
 
 # pylint: disable=missing-module-docstring
 import logging
@@ -17,7 +19,7 @@ import asyncclick as click
 
 from mqttproto import MQTTException
 
-from moat.util import NotGiven, P, Path, load_subgroup, yprint
+from moat.util import NotGiven, P, Path, load_subgroup, yprint, attrdict
 from moat.util.path import set_root
 
 from .backend import RawMessage, get_backend
@@ -98,6 +100,33 @@ async def cli(ctx,name):
     if not isinstance(cfg.link.root, Path) or cfg.link.root == P("XXX.NotConfigured.YZ"):
         sys.stderr.write(usage2)
         raise click.UsageError("badly configured")
+
+
+@cli.command("host")
+@click.option("-m","--main", is_flag=True, help="Main server flag (override)")
+@click.option("-d","--debug", is_flag=True, help="Debug?")
+@click.pass_obj
+async def host(obj, main, debug):
+    """Host management.
+
+    This subcommand should run on each MoaT-Link connected host.
+
+    It provide ping messages and related services.
+    """
+    from .host import cmd_host
+
+    cfg = obj.cfg.link
+    if obj.name is not None:
+        raise click.UsageError("'moat link host' uses the hostname.")
+    name = uname().node
+    if not main:
+        main = name == cfg.main
+    cfg.backend.will = attrdict(
+            topic=P("ping")/name,
+            payload=dict(state="disconnected",up=False)
+            )
+    async with Link(cfg, name="!"+name) as link:
+        await cmd_host(link, cfg, main=main, debug=debug)
 
 
 @cli.command("test")

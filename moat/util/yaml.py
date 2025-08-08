@@ -152,7 +152,7 @@ def _bin_from_hex(loader, node):
 
 def _bin_to_ascii(dumper, data):
     try:
-        data = data.decode("ascii")
+        data = data.decode("utf-8")
     except UnicodeError:
         if len(data) < 33:
             return dumper.represent_scalar("!hex", data.hex(":"))

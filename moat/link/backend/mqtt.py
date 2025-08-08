@@ -192,13 +192,12 @@ class Backend(_Backend):
         prop = {}
         if meta is None:
             meta = self.meta
-        if meta is True:
-            meta = MsgMeta(origin=self.name)
         if meta is False:
             if retain is None:
                 retain = False
-
-        if meta is not False:
+        else:
+            if meta is True:
+                meta = MsgMeta(origin=self.name)
             prop["MoaT"] = meta.encode()
         if retain is None:
             raise ValueError("Need to set whether to retain or not")

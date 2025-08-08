@@ -57,6 +57,12 @@ async def as_service(obj=None):
             if self.obj is not None and self.obj.debug:
                 print("Running.")
 
+        def started(self, data=None):
+            "mock task_status.started"
+            if data is not None:
+                raise ValueError("data is ignored")
+            self.set()
+
     async with anyio.create_task_group() as tg:
         usec = need_keepalive()
         if usec:

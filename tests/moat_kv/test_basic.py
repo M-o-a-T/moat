@@ -9,7 +9,7 @@ from moat.src.test import raises
 from moat.util import P, PathLongener
 
 from moat.kv.client import ServerError
-from moat.kv.mock import run
+from moat.src.test import run
 from moat.kv.mock.mqtt import stdtest
 
 logger = logging.getLogger(__name__)

@@ -15,7 +15,8 @@ from ipaddress import (
     IPv6Network,
 )
 
-from moat.util import DProxy, as_proxy, attrdict
+from moat.util import attrdict
+from moat.lib.codec.proxy import DProxy, as_proxy
 from moat.lib.codec.cbor import Tag, Codec as CBOR
 from moat.util.cbor import StdCBOR, gen_start, gen_stop
 

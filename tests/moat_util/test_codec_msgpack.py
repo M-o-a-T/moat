@@ -15,7 +15,8 @@ from ipaddress import (
     IPv6Network,
 )
 
-from moat.util import DProxy, as_proxy, attrdict
+from moat.util import attrdict
+from moat.lib.codec.proxy import DProxy, as_proxy
 from moat.lib.codec import get_codec
 from moat.lib.codec.msgpack import ExtType
 

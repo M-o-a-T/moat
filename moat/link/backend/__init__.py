@@ -61,9 +61,10 @@ class Backend(CtxObj, metaclass=ABCMeta):
     _njobs: int = 0
     _ended: anyio.Event | None = None
 
-    def __init__(self, cfg: attrdict, name: str):
+    def __init__(self, cfg: attrdict, name: str, id:str):
         self.cfg = cfg
         self.name = name
+        self.id = id
         self.logger = logging.getLogger(f"moat.link.backend.{name}")
 
     @abstractmethod

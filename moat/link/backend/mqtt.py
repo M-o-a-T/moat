@@ -51,6 +51,7 @@ class Backend(_Backend):
         cfg,
         will: attrdict | None = None,
         name: str | None = None,
+        id: str | None = None,
         meta: bool = True,
     ):
         """
@@ -61,7 +62,7 @@ class Backend(_Backend):
         @will: topic+data+retain+qos+codec for on-death message
 
         """
-        super().__init__(cfg, name=name)
+        super().__init__(cfg, name=name, id=id)
         self.cfg = cfg
         self.meta = meta
         self.logger = logging.getLogger(__name__ + "." + (self.name or "‹…›"))

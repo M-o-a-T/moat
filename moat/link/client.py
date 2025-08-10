@@ -113,10 +113,11 @@ class LinkCommon(CmdCommon):
 
     def __init__(self, cfg, name: str | None = None, is_server:bool = False):
         self.cfg = cfg
+        self._id = gen_ident(12, alphabet=al_unique)
         if name is None:
             name = cfg.get("client_id")
         if name is None:
-            name = "_" + gen_ident(10, alphabet=al_unique)
+            name = "_" + self._id
         self.name = name
         self.is_server = is_server
 
@@ -133,6 +134,10 @@ class LinkCommon(CmdCommon):
             return self._hello.handle(msg, rpath, *add)
 
         return super().handle(msg, rpath, *add)
+
+    @property
+    def id(self):
+        return self._id
 
     async def _connected_port(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         async with self._connect_one(self._port) as hdl:

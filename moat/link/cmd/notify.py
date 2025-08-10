@@ -14,7 +14,6 @@ from moat.link.client import Link
 from moat.link._data import data_get, node_attr
 from moat.link.meta import MsgMeta
 from moat.link.node import Node
-from moat.link.ntfy import ntfy_bridge
 
 
 @click.group(short_help="Manage notifications.")  # pylint: disable=undefined-variable
@@ -25,21 +24,24 @@ async def cli(ctx):
     """
     obj = ctx.obj
     cfg = obj.cfg["link"]
-    if obj.port is not None:
-        cfg.client.port = obj.port
     obj.conn = await ctx.with_async_resource(Link(cfg, name=obj.name))
 
 
 
 @cli.command()
+@click.option("-b","--backend",type=str,multiple=True,help="Restrict to this backend")
 @click.pass_obj
-async def fwd(obj, **k):
+async def run(obj, backend):
     """
     Forward notification messages.
 
     This command monitors the 'notify' subpath and forwards messages to
     your ntfy.sh instance.
     """
-    cfg = obj.cfg["link"]["notify"]
-    await ntfy_bridge(obj.conn, cfg["keepalive"], cfg["ntfy"])
+    from moat.link.notify import Notify
+
+    cfg = obj.cfg.link.notify
+    if backend:
+        cfg.backends = backend
+    await Notify(cfg).run(obj.conn)
 

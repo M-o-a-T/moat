@@ -11,9 +11,14 @@ backend_example:
     key: '/path/to/cert.key'
 client:
   init_timeout: 5  # set to None to not require a server
+  # name: foo
+
 # also in moat/link/_main.py
 root: !P XXX.NotConfigured.YZ
 qos: 0
+
+# Hostname of the main server.
+main: some_host
 
 target:
   # Well-known prefixes off the root
@@ -44,14 +49,27 @@ timeout:
 # Notifications are messages below :R.notify.TOPIC topic.
 notify:
   keepalive:
-    path: !P ping.some_host
-    timeout: 30
-    # topic: my_secret_topic  # must set if not at ntfy.topic
-    title: Server?
-    message: |
-      Der Router pi-c4 sagt nix mehr. (MQTT-Keepalive)
+    # timeout: 30  # default: ping *1.5
+    #
+    # topic: my_secret_topic
+    title: Server Link down?
+    msg: |
+      The MoaT system at 'some_host' is silent. (MQTT-Keepalive)
+    prio: fatal
+    ok:
+      title: Server Link OK
+      msg: |
+        The MoaT system at 'some_host' is back up. (MQTT-Keepalive)
+      prio: info
+
+
+  path: !P notify
+  # ignore messages older than … seconds
+  max_age: 30
 
   # Backends
+  backend:
+    - ntfy
   ntfy:
     # See https://docs.nfty.sh/
     
@@ -60,9 +78,6 @@ notify:
     path: !P notify
     # messages are posted to notify.TOPIC.WHATEVER if "topic" is not set
     # topic: my_secret_topic
-
-    # ignore older messages
-    max_age: 30
 
 
 

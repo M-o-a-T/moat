@@ -8,6 +8,7 @@ import anyio
 import logging
 import time
 import sys
+import os
 from contextlib import asynccontextmanager, suppress, nullcontext, aclosing
 from traceback import format_exception
 from platform import uname
@@ -16,9 +17,9 @@ from functools import partial
 import outcome
 from attrs import define,field
 
-from mqttproto import RetainHandling
+from mqttproto import RetainHandling, QoS
 from moat.lib.cmd.base import MsgSender, Caller
-from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident, ungroup, NotGiven,Path, PathLongener,srepr
+from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident, ungroup, NotGiven,Path, PathLongener,srepr, attrdict
 from moat.util.compat import CancelledError
 from moat.util.random import al_unique
 
@@ -500,13 +501,23 @@ class Link(LinkCommon, CtxObj):
     _last_link: Msg | None = None
     _last_link_seen: anyio.Event
     _port: str|None=None
+    _state: str="init"
 
     def __init__(self, cfg, name: str | None = None):
         super().__init__(cfg, name=name)
         self._retry_msgs: set[BasicCmd] = set()
         self._server_up = anyio.Event()
+        self._state_change = anyio.Event()
         with suppress(AttributeError):
             self._port = self.cfg.client.port
+
+    async def set_state(self, state:str):
+        """
+        Set the state string for our ping message
+        """
+        if state != self._state:
+            self._state = state
+            self._state_change.set()
 
     async def get_link(self):
         """
@@ -516,17 +527,52 @@ class Link(LinkCommon, CtxObj):
             await self._server_up.wait()
         return self.current_server
 
+    @property
+    def _ping_path(self):
+        return P("run.ping.id")/self._id
+
+    async def _ping(self, *, task_status=anyio.TASK_STATUS_IGNORED):
+        path = Root.get()+self._ping_path
+        while True:
+            await self.backend.send(path, data=dict(
+                up=True,
+                state=self._state,
+            ), retain=False, meta=False)
+
+            if task_status is not anyio.TASK_STATUS_IGNORED:
+                await self.sdr.d_set(P("run.id")/self.id,data=dict(
+                    host=uname().node,
+                    pid=os.getpid(),
+                ), retain=True)
+                task_status.started()
+                task_status=anyio.TASK_STATUS_IGNORED
+
+            if self._state == "init":
+                self._state = "auto"
+
+            with anyio.move_on_after(self.cfg.timeout.ping):
+                await self._state_change.wait()
+                self._state_change = anyio.Event()
+
     @asynccontextmanager
     async def _ctx(self):
         from .backend import get_backend
 
-        async with (
-            get_backend(self.cfg, name=self.name) as backend,
-            anyio.create_task_group() as self.tg,
-        ):
-            self.backend = backend
-            token = Root.set(self.cfg["root"])
-            try:
+        token = Root.set(self.cfg["root"])
+        try:
+            will=attrdict(
+                data=dict(
+                    up=False,
+                    state="disconnected",
+                    ),
+                topic=P(":R.run.ping.id")/self.id,
+                retain=False,
+                qos=QoS.AT_LEAST_ONCE,
+            )
+            async with (
+                get_backend(self.cfg, name=self.name, will=will) as self.backend,
+                anyio.create_task_group() as self.tg,
+            ):
                 if self._port is not None:
                     sdr = await self.tg.start(self._connected_port)
                 else:
@@ -538,11 +584,16 @@ class Link(LinkCommon, CtxObj):
                 sdr.add_sub("d")
                 sdr.add_sub("e")
                 sdr.add_sub("i")
-                yield sdr
+                try:
+                    self.sdr = sdr
+                    await self.tg.start(self._ping)
+                    yield sdr
+                finally:
+                    del self.sdr
                 self.tg.cancel_scope.cancel()
-            finally:
-                Root.reset(token)
-            return
+                await self.backend.send(Root.get()+self._ping_path, data=dict(up=False,state="closed"), retain=False, meta=False)
+        finally:
+            Root.reset(token)
 
     def cancel(self):
         "Stop me"
@@ -774,7 +825,7 @@ class Watcher(CtxObj):
 
     async def _updates(self, *, task_status):
         "get updates from MQTT"
-        plen = 1+len(self.path)
+        plen = 1+len(self.path)  # add the root tag
         async with self.link.monitor(Root.get()+self.path, subtree=self.subtree, retained=False) as mon:
             task_status.started()
             async for msg in mon:

@@ -28,6 +28,12 @@ timeout:
   # time after which deleted entries are flushed
   delete: 100000
 
+  # Repeater for Ping messages
+  ping: 5
+
+  # Cleanup after ping timeouts
+  no_ping: 17
+
   # client reconnect
   connect: 
     initial: 5

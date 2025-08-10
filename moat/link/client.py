@@ -221,6 +221,18 @@ class _Sender(MsgSender):
     def root(self):
         return self
 
+    @property
+    def name(self) -> str:
+        return self._link.name
+
+    @property
+    def cfg(self) -> attrdict:
+        return self._link.cfg
+
+    @property
+    def id(self) -> str:
+        return self._link.id
+
     async def handle(self, msg: Msg, rcmd: list) -> Awaitable[None]:
         """
         Standard handler, forwards to the remote side.

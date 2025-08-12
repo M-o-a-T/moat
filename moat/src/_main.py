@@ -722,7 +722,7 @@ def tags(obj):
     for r in repo.parts:
         try:
             tag = r.last_tag
-        except KeyError:
+        except AttributeError:
             continue
         if r.has_changes(True):
             print(f"{r.dash} {tag} STALE")

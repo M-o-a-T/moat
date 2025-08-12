@@ -62,7 +62,7 @@ class Register(BaseRegister):
             if self.is_server or slot in (None, "write"):
                 await tg.start(self.from_link, mon)
             else:
-                tg.start_soon(self.from_link, mon, self.slot.write_delay)
+                tg.start_soon(self.from_link_p, mon, self.slot.write_delay)
 
     @property
     def src(self):
@@ -84,10 +84,10 @@ class Register(BaseRegister):
     async def from_link(self, mon, *, task_status):
         """Copy an MQTT value to Modbus"""
         async with mon as mon_:
+            if task_status is not None:
+                task_status.started()
+                task_status = None
             async for val in mon_:
-                if task_status is not None:
-                    task_status.started()
-                    task_status = None
                 if val is None:  # Link message
                     continue
                 if isinstance(val,tuple):  # Link client

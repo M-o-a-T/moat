@@ -1,3 +1,15 @@
+moat-link (0.2.15-2) unstable; urgency=medium
+
+  * New release for 25.3.23
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 12 Aug 2025 18:09:53 +0200
+
+moat-link (0.2.15-1) unstable; urgency=medium
+
+  * New release for 25.3.23
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Tue, 12 Aug 2025 17:46:44 +0200
+
 moat-link (0.2.14-1) unstable; urgency=medium
 
   * New release for 25.3.20

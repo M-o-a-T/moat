@@ -64,8 +64,8 @@ async def dev_poll(cfg:dict, link:Link, *, task_status=anyio.TASK_STATUS_IGNORED
 
             RegS = Reg
         else:
-            # The MoaT-KV client must live longer than the taskgroup
-            from .kv import Register  # pylint: disable=import-outside-toplevel
+            # The MoaT-Link client must live longer than the taskgroup
+            from .link import Register  # pylint: disable=import-outside-toplevel
 
             Reg = partial(Register, link=link, tg=tg)
             RegS = partial(Register, link=link, tg=tg, is_server=True)

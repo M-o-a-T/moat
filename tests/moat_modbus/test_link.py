@@ -89,6 +89,7 @@ async def test_kv_poll(autojump_clock):
         assert r["value"] == 123
         assert (await c.d_get(P(":")))["value"] == 123
         await c.d_set(P("a.srv.src"), data=42)
+        await c.i_sync()
         cfg1 = await tg.start(dev_poll, cfg1, c)
         reg = cfg1.server[0].units[32].regs.no_question
         await trio.sleep(1)

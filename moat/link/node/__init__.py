@@ -36,11 +36,6 @@ class Node:
 
     _sub: dict[Key,Node] = field(init=False, factory=dict, repr=_keys_repr)  # sub-entries
 
-    def __attrs_post_init__(self, data: Any = NotGiven, meta: MsgMeta | None = None):
-        if data is not NotGiven:
-            self._data = data
-            self._meta = meta
-
     def set(self, item: Path, data: Any, meta: MsgMeta, force: bool = False) -> bool | None:
         """Save new data below this node.
 

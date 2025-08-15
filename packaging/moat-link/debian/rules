@@ -11,6 +11,7 @@ export MSGPACK_PUREPYTHON=1
 execute_after_dh_install:
 	$(MAKE) installscript PREFIX=debian/moat-link
 	dh_installsysusers
+	dh_systemd_enable moat-link-hostz
 
 override_dh_auto_test:
 	: skip

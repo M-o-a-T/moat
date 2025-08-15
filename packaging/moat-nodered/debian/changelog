@@ -1,3 +1,9 @@
+moat-nodered (0.1.1-7) unstable; urgency=medium
+
+  * New release for 25.3.23
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Fri, 15 Aug 2025 16:46:18 +0200
+
 moat-nodered (0.1.1-6) unstable; urgency=medium
 
   * New release for 25.3.23

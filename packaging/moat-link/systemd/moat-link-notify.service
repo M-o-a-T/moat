@@ -8,7 +8,7 @@ WantedBy=multi-user.target
 
 [Service]
 Type=notify
-ExecStart=/usr/bin/moat link ntfy fwd
+ExecStart=/usr/bin/moat link notify run
 
 RuntimeDirectory=moat/link
 

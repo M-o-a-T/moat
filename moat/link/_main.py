@@ -102,33 +102,6 @@ async def cli(ctx,name):
         raise click.UsageError("badly configured")
 
 
-@cli.command("host")
-@click.option("-m","--main", is_flag=True, help="Main server flag (override)")
-@click.option("-d","--debug", is_flag=True, help="Debug?")
-@click.pass_obj
-async def host(obj, main, debug):
-    """Host management (background task).
-
-    "moat link host" should run on each MoaT-Link connected host.
-
-    It provides keepalive-style ping messages and related services.
-    """
-    from .host import cmd_host
-
-    cfg = obj.cfg.link
-    if obj.name is not None:
-        raise click.UsageError("'moat link host' uses the hostname.")
-    name = uname().node
-    if not main:
-        main = name == cfg.main
-    cfg.backend.will = attrdict(
-            topic=P("ping")/name,
-            payload=dict(state="disconnected",up=False)
-            )
-    async with Link(cfg, name="!"+name) as link:
-        await cmd_host(link, cfg, main=main, debug=debug)
-
-
 @cli.command("test")
 @click.pass_obj
 async def test(obj):

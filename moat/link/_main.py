@@ -107,11 +107,11 @@ async def cli(ctx,name):
 @click.option("-d","--debug", is_flag=True, help="Debug?")
 @click.pass_obj
 async def host(obj, main, debug):
-    """Host management.
+    """Host management (background task).
 
-    This subcommand should run on each MoaT-Link connected host.
+    "moat link host" should run on each MoaT-Link connected host.
 
-    It provide ping messages and related services.
+    It provides keepalive-style ping messages and related services.
     """
     from .host import cmd_host
 

@@ -1576,6 +1576,13 @@ class Server(MsgHandler):
         while True:
             await anyio.sleep(900)
             self.refresh_auth()
+            await self.backend.send(
+                P(":R.run.service.main.server")/self.name,
+                {"node": uname().node, "link": self.link_data, "auth": {"token": self.cur_auth}},
+                meta=MsgMeta(origin=self.name),
+                retain=True,
+                qos=1,
+            )
 
             await anyio.sleep(30)
             self.last_auth = None

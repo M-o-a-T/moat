@@ -4,7 +4,7 @@ Description=MoaT-Link NTFY forwarder
 ConditionFileNotEmpty=/etc/moat/moat.cfg
 
 [Install]
-WantedBy=multi-user.target
+# WantedBy=multi-user.target
 
 [Service]
 Type=notify

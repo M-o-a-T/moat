@@ -124,7 +124,7 @@ def go(state=None, cmd=True):
 
     try:
         at("main1",i)
-        main(fn, i=i)
+        main(fn, i=i, fake_end=True)
 
     except KeyboardInterrupt:
         at("main3",i)

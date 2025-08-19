@@ -119,12 +119,20 @@ def go(state=None, cmd=True):
 
     if cmd:
         at("main2",i)
-        main(fn, i=i, fake_end=True)
+        try:
+            main(fn, i=i, fake_end=True)
+        except ImportError:
+            print("PATH:",sys.path,file=sys.stderr)
+            raise
         return
 
     try:
         at("main1",i)
         main(fn, i=i, fake_end=True)
+
+    except ImportError:
+        print("PATH:",sys.path,file=sys.stderr)
+        raise
 
     except KeyboardInterrupt:
         at("main3",i)

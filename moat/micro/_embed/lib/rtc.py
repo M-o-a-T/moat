@@ -16,6 +16,8 @@ except AttributeError:
     def mem(x=None):  # noqa:D103,ARG001
         return b""
 
+def at(*a,**kw):
+    set_rtc("debug", (a, kw), fs=False)
 
 def set_rtc(attr, value=None, fs=None):
     "Setter for a value in RTC / file system"

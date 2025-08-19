@@ -28,6 +28,7 @@ __all__ = [
     "is_async",
     "doc",
     "log",
+    "at",
     "const",
     "CancelScope",
     "Queue",
@@ -123,6 +124,8 @@ def log(s, *x, err=None, nback=1):
     if err and int(os.getenv("LOG_BRK", "0")):
         breakpoint()  # noqa:T100 pylint:disable=forgotten-debug-statement
 
+def at(*a,**kw):
+    log_.debug("%r %r",a,kw)
 
 def print_exc(exc, file=None):
     "print a stack trace to stderr"

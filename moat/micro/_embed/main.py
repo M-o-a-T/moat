@@ -111,25 +111,31 @@ def go(state=None, cmd=True):
     print("Start MoaT:", state, file=sys.stderr)
 
     from moat.micro.main import main
+    from moat.util.compat import at
 
     i = dict(cfg=fn, s=state, ns=new_state, fm=_fm, fa=_fa, fb=state != "std")
 
     if cmd:
+        at("main2",i)
         main(fn, i=i, fake_end=True)
         return
 
     try:
+        at("main1",i)
         main(fn, i=i)
 
     except KeyboardInterrupt:
+        at("main3",i)
         print("MoaT stopped.", file=sys.stderr)
 
     except SystemExit:
+        at("main4",i)
         print("REBOOT to", new_state, file=sys.stderr)
         time.sleep_ms(100)
         machine.soft_reset()
 
     except BaseException as exc:
+        at("main5",i)
         del main
         sys.modules.clear()
 
@@ -145,6 +151,7 @@ def go(state=None, cmd=True):
         machine.soft_reset()
 
     else:
+        at("main6",i)
         log("MoaT Ended.")
         sys.exit(0)
 

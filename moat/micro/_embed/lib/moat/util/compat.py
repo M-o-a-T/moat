@@ -15,6 +15,8 @@ from micropython import const
 
 from typing import TYPE_CHECKING  # isort:skip
 
+from rtc import set_rtc
+
 if TYPE_CHECKING:
     from typing import Never
 
@@ -90,6 +92,8 @@ def log(s, *x, err=None):
     if err is not None:
         sys.print_exception(err, sys.stderr)
 
+def at(*a,**kw):
+    set_rtc("debug",a if not kw else kw if not a else (a,kw), fs=False)
 
 async def idle():
     "sleep forever"

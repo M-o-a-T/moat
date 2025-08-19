@@ -9,6 +9,7 @@ import logging
 import os
 import sys
 import shutil
+from pprint import pformat
 
 from moat.util import merge, P
 from moat.micro.cmd.tree.dir import Dispatch
@@ -194,6 +195,7 @@ async def setup(
 
             if config:
                 config = _clean_cfg(config)
+                logger.debug("Config:\n%s", pformat(config))
                 f = ABytes(name="moat.cfg", data=codec.encode(config))
                 await copy_over(f, MoatDevPath("moat.cfg").connect_repl(repl))
 

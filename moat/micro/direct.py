@@ -129,6 +129,7 @@ class DirectREPL(SingleAnyioBuf):
                 data = await self.srbuf.receive_until(b"\x04>", max_bytes=10000)
         except TimeoutError:
             # interrupt, read output again to get the expected traceback message
+            logger.debug("Timeout. Buffer:\n%s\n",self.srbuf.buffer)
             await self.serial.send(b"\x03")  # CTRL+C
             with anyio.fail_after(3):
                 data = await self.srbuf.receive_until(b"\x04>", max_bytes=10000)

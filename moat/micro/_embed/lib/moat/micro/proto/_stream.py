@@ -37,9 +37,14 @@ class _CReader:
     A mix-in that processes incoming console data.
     """
 
-    def __init__(self, cons):
+    def __init__(self, cons:bool|int):
         if cons is True:
-            cons = 128
+            try:
+                import machine
+            except ImportError:
+                cons = 32768
+            else:
+                cons = 240
         self.cevt = Event()
         self.cpos = 0
         self.cbuf = bytearray(cons)
@@ -65,7 +70,7 @@ class _CReader:
     def cput(self, b: int):
         """store a byte in the console buffer"""
         if self.cpos == len(self.cbuf):
-            if len(self.cbuf) > 10:
+            if len(self.cbuf) > 100:
                 bfull = b"\n?BUF\n"
                 self.cbuf[0 : len(bfull)] = bfull
                 self.cpos = len(bfull)

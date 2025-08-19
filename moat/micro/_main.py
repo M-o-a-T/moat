@@ -90,7 +90,8 @@ async def cli(ctx, section, remote, path):
     'moat micro' configures MoaT satellites and runs the link to them,
     as well as applications using it."""
     obj = ctx.obj
-    ocfg = cfg = obj.cfg["micro"]
+    ocfg = cfg = obj.cfg.micro
+    remote2 = None
 
     inv = ctx.invoked_subcommand
     if inv == "run":
@@ -102,7 +103,9 @@ async def cli(ctx, section, remote, path):
             section = Path("run")
     elif inv in ("setup", "install"):
         if remote is not None:
-            raise click.UsageError("Use '--section' to specify which remote to set up.")
+            remote2,remote = remote,None
+        else:
+            remote2 = P("s")
         if path:
             raise click.UsageError("You don't use paths with 'moat micro setup|install'")
         if section is None:
@@ -117,6 +120,8 @@ async def cli(ctx, section, remote, path):
             cfg = get_part(cfg, section)
         except KeyError:
             raise click.UsageError(f"The config section '{section}' doesn't exist.") from None
+    if remote2 is not None:
+        cfg.remote2 = remote2
     try:
         cfg.args.config = get_part(ocfg, cfg.args.config)
     except (AttributeError, KeyError):
@@ -187,6 +192,7 @@ async def setup_(ctx, run_section=None, **kw):
         for k, v in kw.items()
         if ctx.get_parameter_source(k) != click.core.ParameterSource.DEFAULT
     }
+    param.pop("config",None)
 
     # teach the 'large' flag to be ternary
     if "large" in default:
@@ -395,9 +401,8 @@ async def cfg_(
     to the client.
 
     This command assumes that the remote system has a ``cfg.Cmd`` app at
-    path "r.c", and a ``fs.Cmd`` app at path "r.f". You can change the "r"
-    part with the ``moat micro -L ‹name› cfg …``  option, and the others
-    with ``… cfg --fs-path ‹path›`` and ``… cfg --fs-path ‹path›``.
+    path "r.s.cfg_", and a ``fs.Cmd`` app at path "r.s.fs". You can change
+    these paths with ``… cfg -P fs ‹path›`` and ``… cfg -P cfg ‹path›``.
     """
     if write and stdout:
         raise click.UsageError("no -S and -w")
@@ -422,10 +427,13 @@ async def cfg_(
     if read_client or write_client:
         from .path import MoatFSPath
 
+    p_cfg = cfg.path.get("cfg",P("cfg_"))
+    p_fs = cfg.path.get("fs",P("fs"))
     async with (
         Dispatch(cfg, run=True, sig=True) as dsp,
-        dsp.cfg_at(cfg.path.cfg) as cf,
-        dsp.sub_at(cfg.path.fs) as fs,
+        dsp.sub_at(cfg.remote) as cfr,
+        cfr.cfg_at(p_cfg) as cf,
+        cfr.sub_at(p_fs) as fs,
     ):
         has_attrs = any(a for a in attrs.values())
         codec = get_codec("std-cbor")

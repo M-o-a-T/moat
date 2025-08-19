@@ -111,7 +111,9 @@ class HandlerStream(MsgHandler):
             rcmd.pop()
             return await super().handle(msg, rcmd)
 
+        rcmd = rcmd[:]
         rcmd.reverse()
+
         i = self._gen_id()
         can_stream = msg.can_stream
         link = StreamLink(self, i)

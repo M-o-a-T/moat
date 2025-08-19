@@ -180,7 +180,6 @@ async def setup(
             if source:
                 if rom:
                     async with anyio.TemporaryDirectory() as wdst:
-                        breakpoint()
                         await do_copy(source, dst, dest, cross, wdst=tf)
                         rom = await make_romfs(tf)
                         await write_rom(tf)

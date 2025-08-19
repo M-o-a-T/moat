@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import sys
 
-from moat.util import NotGiven, ValueEvent
+from moat.util import NotGiven, ValueEvent, merge
 from moat.lib.codec.proxy import obj2name
 from moat.micro.cmd.base import BaseCmd
 from moat.lib.cmd.stream import HandlerStream
@@ -113,15 +113,25 @@ class BaseCmdMsg(BaseCmd):
         """
         Forward a request to some remote side.
         """
-        if (len(rcmd) == 1 or len(rcmd) == 2 and rcmd[1] == "doc_") and rcmd[0] in {"crd", "cwr"}:
-            pass
-        elif rcmd and isinstance(rcmd[-1], str) and rcmd[-1][0] == "!":
-            rcmd[-1] = rcmd[-1][1:]
-        elif self.__stream is None:
+        # Handle local commands (and documentation) locally
+        if (len(rcmd) == 1 or len(rcmd) == 2 and rcmd[1] == "doc_") and rcmd[0] != "dir_" and hasattr(self, f'cmd_{rcmd[0]}'):
+            return await super().handle(msg, rcmd)
+
+        if self.__stream is None:
             raise EOFError
-        else:
-            return await self.__stream.handle(msg, rcmd)
-        return await super().handle(msg, rcmd)
+
+        # forward to remote
+        res = await self.__stream.handle(msg, rcmd)
+
+        # if it was a directory request, add local data
+        if len(rcmd) == 1 and rcmd[0] == "dir_":
+            # Merge local commands into the remote ones
+            await msg.wait_replied(preload=True)
+            m2 = await self.cmd_dir_()
+            msg._kw["c"] = msg.get("c",()) + tuple(m2.pop("c",()))
+            msg._kw["i"] = msg.get("i",()) + tuple(m2.pop("i",()))
+            merge(msg._kw, m2)
+        return res
 
     doc_crd = dict(_d="read console", _0="int:len (64)")
 

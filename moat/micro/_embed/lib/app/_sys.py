@@ -87,7 +87,7 @@ class Cmd(_Cmd):
         """
         Log parameters.
         """
-        log(f"Input: {a!r} {k!r}", file=sys.stderr)
+        log(f"Input: {a!r} {k!r}")
 
     doc_stdout = dict(_d="write stdout", _0="str:text", _99="any:params", _a="any:params")
 

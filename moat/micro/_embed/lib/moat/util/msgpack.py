@@ -15,7 +15,7 @@ import moat.lib.codec.msgpack as _msgpack
 
 from moat.lib.codec import Extension, NoCodecError
 from moat.lib.codec.msgpack import Codec
-from moat.lib.codec.proxy import DProxy, Proxy, _CProxy, obj2name, unwrap_obj, wrap_obj
+from moat.lib.codec.proxy import DProxy, Proxy, _CProxy, obj2name, unwrap_obj, wrap_obj, get_proxy
 from moat.util.compat import log
 
 from .path import Path
@@ -87,7 +87,7 @@ def _enc_any(codec, obj):
             codec.encode(x) for x in obj.args
         )
 
-    raise NoCodecError(codec, obj)
+    return 4, get_proxy(obj)
 
 
 @std_ext.decoder(3)

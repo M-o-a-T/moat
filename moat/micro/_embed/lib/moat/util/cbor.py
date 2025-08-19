@@ -12,7 +12,7 @@ from __future__ import annotations
 # Typing
 from moat.lib.codec import Extension, NoCodecError
 from moat.lib.codec.cbor import Codec, Tag
-from moat.lib.codec.proxy import DProxy, Proxy, name2obj, obj2name, unwrap_obj, wrap_obj
+from moat.lib.codec.proxy import DProxy, Proxy, name2obj, obj2name, unwrap_obj, wrap_obj, get_proxy
 
 from . import NotGiven
 from .path import Path
@@ -116,4 +116,4 @@ def enc_any(codec, obj):
             pass
         return 27, res
 
-    raise NoCodecError(codec, obj)
+    return 32769, get_proxy(obj)

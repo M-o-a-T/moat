@@ -112,7 +112,7 @@ def wait_for_ms(timeout, p, *a, **k):
     """
     asyncio.wait_for_ms() but with sane calling convention
     """
-    return asyncio.wait_for_ms(p(*a, **k), timeout)
+    return asyncio.wait_for_ms(p(*a, **k), int(timeout))
 
 
 class _MsecIter:

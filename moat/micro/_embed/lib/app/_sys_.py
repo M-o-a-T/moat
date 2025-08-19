@@ -56,26 +56,25 @@ class Cmd(BaseCmd):
         Debugging/Introspection/Evaluation.
 
         @x can be
-        * a string: member of the eval cache
-        * a list: descend into an object
-          the first item must be a proxy, or a string (cache lookup)
+        * a string: evaluated, context is the eval cahce
+        * a list: descend into an object.
+          the first item must be a proxy (object reference)
+          or a string (eval cache lookup)
         * an object (possibly proxied): left as-is
 
-        If @p is a list, @x is replaced by successive attributes or
-        indices in @p.
-
-        Then if a or k is not None, the given function is called.
+        Then if a or k is not None, assume that the result is a function
+        and call it.
 
         If @r is  a string, the result is stored in the eval cache
         under that name. A list is interpreted as an accessor:
         ``x=42, r=('a','b','c')`` assigns ``cache['a'].b.c=42``.
         Nothing is returned in these cases.
 
-        If @r is True, its ``repr`` is returned.
         If @r is False *or* if the result is a dict or array, it is
         returned as a two-element list of (dict/list of simple members;
         list of indices of complex members). For objects, a third element
         contains the object type's name.
+        If @r is True, the result's ``repr`` is returned.
         Otherwise (@r is ``None``), a proxy is returned.
         """
         if not self.cache:
@@ -83,7 +82,7 @@ class Cmd(BaseCmd):
             self.cache["root"] = self.root
 
         if isinstance(x, str):
-            res = self.cache[x]
+            res = eval(x, self.cache) 
         elif isinstance(x, (tuple, list)):
             res = x[0]
             if isinstance(res, str):

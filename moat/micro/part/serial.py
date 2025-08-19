@@ -25,7 +25,7 @@ class Serial(AnyioBuf):
     """
 
     def __init__(self, *a, **k):
-        raise NotImplementedError("Use namedSerial on Unix")
+        raise NotImplementedError("Use NamedSerial on Unix")
 
 
 class NamedSerial(AnyioBuf):

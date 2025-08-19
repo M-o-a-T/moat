@@ -3,7 +3,7 @@ from __future__ import annotations
 from moat.util import NotGiven
 from moat.lib.codec.proxy import as_proxy
 
-from moat.util.compat import Event, Lock
+from moat.util.compat import Event, Lock, log
 from .stack import BaseBuf, StackedBlk, StackedMsg
 
 # Typing
@@ -127,7 +127,11 @@ class _CBORMsgBuf(StackedMsg):
         return _CReader.crd(self, buf)
 
     async def send(self, msg: Any) -> None:
-        msg = self.codec.encode(msg)
+        try:
+            msg = self.codec.encode(msg)
+        except Exception:
+            log("MSG:\n%r", msg)
+            raise
         async with self.w_lock:
             if self.pref is not None:
                 if self.cons:

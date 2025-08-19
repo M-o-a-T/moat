@@ -68,7 +68,7 @@ if ! test -d ports/$dev ; then
     exit 1
 fi
 cd ports/$dev
-make -j ESPTOOL=esptool PORT=$port BAUD=$rate BOARD=${BOARD} FROZEN_MANIFEST="$MANIFEST" $GOAL
+make -j V=1 ESPTOOL=esptool PORT=$port BAUD=$rate BOARD=${BOARD} FROZEN_MANIFEST="$MANIFEST" $GOAL
 if [ $dev = rp2 ] ; then
     if [ ! -s $dir/INFO_UF2.TXT ] ; then
         echo "Waiting for mount: $dir"

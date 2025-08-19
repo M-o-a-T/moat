@@ -164,6 +164,8 @@ class Msg(MsgLink, MsgResult):
     _flo_evt: Event | None = None
     warnings: list
 
+    _loaded:bool=False
+
     def __init__(self):
         """
         Set up the message.
@@ -507,10 +509,14 @@ class Msg(MsgLink, MsgResult):
 
         await self.ml_send(a, kw, 0)
 
-    async def wait_replied(self) -> None:
+    async def wait_replied(self, preload:bool=False) -> None:
         """
         Wait for a (non-streamed) reply.
         """
+        loaded,self._loaded = self._loaded,preload
+        if loaded:
+            return
+
         if self._msg is None:
             if self._stream_in == S_END:
                 raise NoStream()

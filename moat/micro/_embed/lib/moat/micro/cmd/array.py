@@ -140,7 +140,7 @@ class ArrayCmd(BaseSuperCmd):
             ) from None
         return await sub.handle(msg, rcmd)
 
-    doc_dir_ = dict(_c=BaseSuperCmd.cmd_dir_, na="int:max index")
+    doc_dir_ = dict(na="int:max index")
 
     async def cmd_dir_(self, **kw):
         "report max index"

@@ -23,15 +23,20 @@ class BaseCmdBBM(BaseCmd):
 
     Override `stream` to return that instance, possibly wrapped with `AC_use`.
 
-    This is a single class that adapts to any of a `BaseMsg`, `BaseBlk`, or
-    `BaseBuf` stream.
+    This is a single class that adapts `BaseMsg`, `BaseBlk`, and
+    `BaseBuf` streams.
 
-    The difference between this and a `BaseCmdMsg`-derived class is that
-    this class exposes commands that directly access the underlying stream
+    The difference between this and a
+    :moat.micro.cmd.stream.cmdmsg:`BaseCmdMsg`-derived class is that this
+    class exposes commands that directly access the underlying stream
     (of whatever type).
 
-    In contrast, a `BaseCmdMsg` objects encapsulates arbitrary commands,
-    and requires a `BaseCmdMsg` handler on the other side to talk to.
+    In contrast, :moat.micro.cmd.stream.cmdmsg:`BaseCmdMsg` encapsulates
+    arbitrary commands and requires a
+    :moat.micro.cmd.stream.cmdmsg:`BaseCmdMsg` handler on the other side to
+    talk to.
+
+    This class cannot wrap a pre-existing stream, by design.
     """
 
     s = None

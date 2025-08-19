@@ -25,19 +25,25 @@ if TYPE_CHECKING:
 
 
 class MsgStream(HandlerStream):
-    "Stream handler subclass for `BaseCmdMsg`."
+    """
+    This :moat.lib.cmd.stream:`HandlerStream` subclass
+    interfaces with a `BaseCmdMsg` stream.
+
+    """
 
     def __init__(self, handler: MsgSender, stream: BaseCmdMsg):
         self.__stream = stream
         super().__init__(handler)
 
     async def read_stream(self):
+        "Background stream reader. Started from the HandlerStream context manager."
         str = self.__stream
         while True:
             msg = await str.recv()
             await self.msg_in(msg)
 
     async def write_stream(self):
+        "Background stream writer. Started from the HandlerStream context manager."
         str = self.__stream
         while True:
             msg = await self.msg_out()
@@ -49,12 +55,15 @@ class BaseCmdMsg(BaseCmd):
     This is a command handler that relays arbitrary messages between MoaT's
     Cmd tree and a `BaseMsg` stream.
 
-    The difference between this and a `BaseCmdBBM`-derived class is that
-    this class encapsulates any message and requires a `BaseCmdMsg` handler
-    on the other side to talk to.
+    The difference between this and a
+    :moat.micro.cmd.stream:`BaseCmdBBM`-derived class is that this class
+    encapsulates arbitrary message/stream calls and requires a `BaseCmdMsg`
+    handler on the other side to talk to.
 
-    In contrast, a `BaseCmdBBM` exposes commands that directly access the underlying
-    stream (of whatever type).
+    In contrast, a :moat.micro.cmd.stream:`BaseCmdBBM` exposes commands
+    that directly read or write the underlying stream (of whatever type).
+
+    This class cannot wrap a pre-existing stream, by design.
     """
 
     tg: TaskGroup = None

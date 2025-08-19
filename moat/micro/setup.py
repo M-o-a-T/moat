@@ -232,6 +232,9 @@ async def setup(
 
 
 def find_p(prog: str):
+    """
+    Find an executable in the system path.
+    """
     for p in os.environ["PATH"].split(os.pathsep):
         try:
             pp = p + os.sep + prog
@@ -245,6 +248,9 @@ def find_p(prog: str):
 
 
 async def install_(cfg, dest: Path = None, upload: bool = False):
+    """
+    Install our version of MicroPython to a device.
+    """
     device = cfg.install.port
     try:
         port = anyio.Path(get_part(cfg, cfg.install.serial))

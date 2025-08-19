@@ -70,7 +70,7 @@ class Cmd(BaseCmd):
         """
         Set the watchdog timeout.
 
-        Returns the previosu value.
+        Returns the previous value.
         """
         return self.wdt.tmo(t)
 

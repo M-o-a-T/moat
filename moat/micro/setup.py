@@ -163,12 +163,31 @@ async def setup(
 
             if run:
                 log("Reloading.")
-                merge(dsp.cfg, run, drop=True)
+                merge(dsp.cfg.apps, run.apps, drop=True)
+                merge(dsp.cfg, run)
                 await dsp.reload()
                 log("Running.")
-                await sd.dispatch(P("_s.ping"))
-                need_run = False
-                await idle()
+                cons = b""
+                while True:
+                    try:
+                        with anyio.fail_after(3):
+                            m, = await dsp.cmd(P("s.crd"))
+                        cons += m
+                        if cons.endswith(b"\nOK\x04\x04>"):
+                            break
+                    except TimeoutError:
+                        break
+                if cons:
+                    log("Console:\n%s",cons.decode("utf-8",errors="replace"))
+                async with dsp.sub_at(dsp.cfg.remote2) as sr:
+                    try:
+                        print(await sr.dir_())
+                        await sr.s.ping()
+                    except Exception as exc:
+                        logger.error("PROBLEM %r",exc)
+                    need_run = False
+                    log("RUNNING.")
+                    await idle()
 
     try:
         async with (
@@ -221,7 +240,7 @@ async def setup(
         if not need_run:
             raise
 
-        log("Reset: caused %r", exc)
+        logger.warning("Reset: caused %r", exc, exc_info=exc if logger.isEnabledFor(logging.DEBUG) else None)
 
         await anyio.sleep(3)
         async with (

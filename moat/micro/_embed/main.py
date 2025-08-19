@@ -77,12 +77,14 @@ def go(state=None, cmd=True):
                 state = st
                 break
     if state is None:
-        state = "skip"
-
-    try:
-        state,new_state = state.split(",",1)
-    except ValueError:
-        new_state = state
+        state = "once"
+    if state == "once":
+        new_state = "skip"
+    else:
+        try:
+            state,new_state = state.split(",",1)
+        except ValueError:
+            new_state = state
 
     set_rtc("state", new_state)
     if state == "skip":

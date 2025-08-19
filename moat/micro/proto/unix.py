@@ -26,4 +26,8 @@ class Link(AnyioBuf):
         self.port = port
 
     async def stream(self):  # noqa:D102
-        return await AC_use(self, await anyio.connect_unix(self.port))
+        try:
+            return await AC_use(self, await anyio.connect_unix(self.port))
+        except EnvironmentError:
+            log("Trying to connect to %r", self.port)
+            raise

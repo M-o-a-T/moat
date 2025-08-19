@@ -693,6 +693,26 @@ async def _nullcheck(p):
     return False
 
 
+async def f_eq(src,dst):
+    """check whether twofiles are the same"""
+    s1 = (await src.stat()).st_size
+    try:
+        s2 = (await dst.stat()).st_size
+    except FileNotFoundError:
+        s2 = -1
+    except RemoteError as err:
+        if err.args[0] != "fn":
+            raise
+        s2 = -1
+    if s1 == s2:
+        h1 = await sha256(src, 12)
+        h2 = await sha256(dst, 12)
+        if h1 != h2:
+            s2 = -1
+
+    return s1 == s2
+
+
 async def copytree(src: APath, dst: MoatPath, wdst:MoatPath|None=None, check=None, drop=None, cross=None):
     """
     Copy a file or directory tree from @src to @dst.
@@ -747,9 +767,11 @@ async def copytree(src: APath, dst: MoatPath, wdst:MoatPath|None=None, check=Non
                     # copy this file unmodified
                 else:
                     src = ABytes(src.with_suffix(".mpy"), data.stdout)
-                    with suppress(OSError, RemoteError):
-                        await wdst.unlink()
                     wdst = wdst.with_suffix(".mpy")
+                    with suppress(OSError, RemoteError):
+                        if await f_eq(src,wdst):
+                            return 0
+                        await wdst.unlink()
             else:
                 with suppress(OSError, RemoteError):
                     await dst.with_suffix(".mpy").unlink()
@@ -762,28 +784,14 @@ async def copytree(src: APath, dst: MoatPath, wdst:MoatPath|None=None, check=Non
             logger.info("Copy: Added %s > %s", src, dst)
             return 1
 
-        s1 = (await src.stat()).st_size
-        try:
-            s2 = (await dst.stat()).st_size
-        except FileNotFoundError:
-            s2 = -1
-        except RemoteError as err:
-            if err.args[0] != "fn":
-                raise
-            s2 = -1
-        if s1 == s2:
-            h1 = await sha256(src, 12)
-            h2 = await sha256(dst, 12)
-            if h1 != h2:
-                s2 = -1
-        if s1 != s2:
-            await wdst.parent.mkdir(parents=True, exist_ok=True)
-            await wdst.write_bytes(await src.read_bytes())
-            logger.info("Copy: updated %s > %s", src, dst)
-            return 1
-        else:
-            # logger.debug("Copy: unchanged %s > %s", src, dst)
+        if await f_eq(src,dst):
             return 0
+
+        await wdst.parent.mkdir(parents=True, exist_ok=True)
+        await wdst.write_bytes(await src.read_bytes())
+        logger.info("Copy: updated %s > %s", src, dst)
+        return 1
+
     else:
         if dst.name == "__pycache__":
             return 0

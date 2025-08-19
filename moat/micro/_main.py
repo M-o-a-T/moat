@@ -350,6 +350,29 @@ async def cmd(obj, path, **attrs):
             yprint(res, stream=obj.stdout)
 
 
+@cli.command(short_help="Read a console")
+@click.pass_obj
+@click.argument("path", nargs=1, type=P)
+@catch_errors
+async def cons(obj, path):
+    """
+    Read a Moat console.
+
+    The command repeatedly calls the "crd" function on the given path and
+    streams the result.
+    """
+    cfg = obj.mcfg
+    async with Dispatch(cfg, run=True) as dsp, dsp.sub_at(cfg.remote) as sd:
+        crd = sd.sub_at(path).crd
+        while True:
+            try:
+                res = await crd()
+            except RemoteError as err:
+                print(f"\nERR: {err !r}\n")
+            else:
+                print(res.decode("utf-8", errors="replace"), end="")
+
+
 @cli.command("cfg", short_help="Get / Update the configuration")
 @click.pass_obj
 @click.option("-r", "--read", type=click.File("r"), help="Read config from this file")

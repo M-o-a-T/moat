@@ -379,6 +379,10 @@ class MsgSender(BaseMsgHandler):
             return MsgSender(root)
         return res
 
+    def cfg_at(self, p: Path):
+        "returns a CfgStore object at this subpath"
+        return CfgStore(self, p)
+
     def add_sub(self, elem:str):
         """
         Ensures that `self.ELEM` is a SubMsgSender.
@@ -451,6 +455,10 @@ class SubMsgSender(MsgSender):
         Returns a SubMsgSender
         """
         return SubMsgSender(self.root, self._path + prefix, caller=caller or self.Caller_)
+
+    def cfg_at(self, p: Path):
+        "returns a CfgStore object at this subpath"
+        return CfgStore(self, p)
 
     def __getattr__(self, x):
         """

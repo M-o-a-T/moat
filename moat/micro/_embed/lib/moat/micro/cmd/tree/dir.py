@@ -282,3 +282,9 @@ class Dispatch(DirCmd):
     def sub_at(self):
         "root subcommand resolver"
         return self._sender.sub_at
+
+    @property
+    def cfg_at(self, p: Path):
+        "config subcommand resolver"
+        return self._sender.cfg_at
+

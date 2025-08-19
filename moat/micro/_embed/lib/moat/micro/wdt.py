@@ -78,7 +78,7 @@ class WDT:
 
         else:
             if self.cfg.get("hw", False):
-                self.wdt = machine.WDT(t)
+                self.wdt = machine.WDT(0, t)
             self.timeout = t
             self.trigger = self.cfg.get("tt", self.timeout / 2)
         self._ping.set()

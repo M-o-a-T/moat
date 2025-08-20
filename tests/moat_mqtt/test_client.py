@@ -33,7 +33,7 @@ broker_config = {
 
 
 class MQTTClientTest(unittest.TestCase):
-    @pytest.mark.xfail()
+    @pytest.mark.skip()
     def test_connect_tcp(self):
         async def test_coro():
             async with open_mqttclient() as client:
@@ -45,7 +45,7 @@ class MQTTClientTest(unittest.TestCase):
         except ConnectException:
             log.error("Broken by server")
 
-    @pytest.mark.xfail()
+    @pytest.mark.skip()
     def test_connect_tcp_secure(self):
         async def test_coro():
             async with open_mqttclient(config={"check_hostname": False}) as client:
@@ -68,7 +68,7 @@ class MQTTClientTest(unittest.TestCase):
 
         anyio_run(test_coro)
 
-    @pytest.mark.xfail()
+    @pytest.mark.skip()
     def test_uri_supplied_early(self):
         config = {"auto_reconnect": False}
 

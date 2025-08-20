@@ -146,7 +146,7 @@ async def test_stack(tmp_path):
             assert "\n  c: Cmd\n" in res.stdout
             assert " wr\n" not in res.stdout
 
-            (res,) = await s.cmd("!rdy_")
+            (res,) = await s.cmd("rdy_")
             assert not res, "Link is not ready"
 
             res = await rm("cmd f.dir_", do_stdout=True)

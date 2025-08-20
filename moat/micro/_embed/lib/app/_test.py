@@ -128,7 +128,7 @@ class Cons(BaseCmd):
     async def task(self):
         if L:
             self.set_ready()
-        await self.con.cmd("!rdy_")
+        await self.con.cmd("rdy_")
 
         buf = bytearray(200)
         d = 0

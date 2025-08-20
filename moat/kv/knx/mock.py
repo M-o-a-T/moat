@@ -16,13 +16,15 @@ import xknx
 from xknx.io import ConnectionConfig, ConnectionType
 from xknx.devices import Sensor, BinarySensor, Switch, ExposeSensor
 
-TCP_PORT = (os.getpid() + 25) % 10000 + 40000
 
 
 class Tester:
     _client = None
     _server = None
     _socket = None
+
+    def __init__(self, port):
+        self.TCP_PORT = port
 
     @asynccontextmanager
     async def _daemon(self):
@@ -44,7 +46,7 @@ connections = server,A.tcp
 filter = log
 
 [A.tcp]
-port = {TCP_PORT}
+port = {self.TCP_PORT}
 server = knxd_tcp
 systemd-ignore = false
 #filters = log
@@ -52,7 +54,7 @@ systemd-ignore = false
 [server]
 server = ets_router
 tunnel = tunnel
-port = {TCP_PORT}
+port = {self.TCP_PORT}
 discover = false
 
 [tunnel]
@@ -70,7 +72,7 @@ trace-mask = 0x3ff
                 with anyio.fail_after(10):
                     while True:
                         try:
-                            s = await anyio.connect_tcp("127.0.0.1", TCP_PORT)
+                            s = await anyio.connect_tcp("127.0.0.1", self.TCP_PORT)
                             await s.aclose()
                             break
                         except OSError:
@@ -89,7 +91,7 @@ trace-mask = 0x3ff
         ccfg = ConnectionConfig(
             connection_type=ConnectionType.TUNNELING,
             gateway_ip="127.0.0.1",
-            gateway_port=TCP_PORT,
+            gateway_port=self.TCP_PORT,
         )
         async with self._daemon() as server:
             async with xknx.XKNX().run(connection_config=ccfg) as client:

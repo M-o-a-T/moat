@@ -65,13 +65,12 @@ async def mon(c):
             print("*****", msg)
 
 @pytest.mark.trio()
-async def test_kv_poll(autojump_clock):
+async def test_kv_poll(autojump_clock, free_tcp_port):
     autojump_clock.autojump_threshold = .2
     cfg1 = yload(cfg1_, attr=True)
     cfg2 = yload(cfg2_, attr=True)
-    PORT = 40000 + (os.getpid() + 20) % 10000
-    cfg1.server[0].port = PORT
-    cfg2.hostports.localhost[PORT] = cfg2.hostports.localhost.PORT
+    cfg1.server[0].port = free_tcp_port
+    cfg2.hostports.localhost[free_tcp_port] = cfg2.hostports.localhost.PORT
     del cfg2.hostports.localhost.PORT
 
     from moat.util import CFG, ensure_cfg
@@ -121,7 +120,7 @@ async def test_kv_poll(autojump_clock):
         # explicit read
 
         async with ModbusClient() as g:
-            async with g.host("localhost", PORT) as h:
+            async with g.host("localhost", free_tcp_port) as h:
                 async with h.unit(32) as u:
                     async with u.slot("default") as s:
                         s.add(HoldingRegisters, 12342, IntValue)

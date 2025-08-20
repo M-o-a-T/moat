@@ -5,7 +5,7 @@ from time import time
 from moat.util import P, load_ext
 from moat.kv.mock.mqtt import stdtest
 
-from asyncakumuli.mock import Tester, TCP_PORT
+from asyncakumuli.mock import AkumuliTester
 
 import subprocess
 
@@ -29,17 +29,17 @@ def _hook(e):
 akumuli_model._test_hook = _hook
 
 
-async def test_basic():  # no autojump
+async def test_basic(free_tcp_port_factory):  # no autojump
     async with (
         stdtest(test_0={"init": 125}, n=1, tocks=200) as st,
         st.client(0) as client,
-        Tester().run() as t,
+        AkumuliTester(free_tcp_port_factory(),free_tcp_port_factory()).run() as t,
     ):
-        await st.run(f"akumuli test add -h 127.0.0.1 -p {TCP_PORT}")
+        await st.run(f"akumuli test add -h 127.0.0.1 -p {t.TCP_PORT}")
         await client.set(P("test.one.two"), value=41)
         await st.run("akumuli test at test.foo.bar add test.one.two whatever foo=bar")
         aki = await AkumuliRoot.as_handler(client)
-        aki._cfg.server_default.port = TCP_PORT
+        aki._cfg.server_default.port = t.TCP_PORT
         st.tg.start_soon(task, client, aki._cfg, aki["test"])
         await anyio.sleep(1)
         await aki["test"].flush()

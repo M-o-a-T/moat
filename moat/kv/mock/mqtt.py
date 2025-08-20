@@ -5,7 +5,6 @@ import os
 import time
 from contextlib import AsyncExitStack, asynccontextmanager
 from functools import partial
-
 import anyio
 from unittest import mock
 import trio
@@ -22,16 +21,6 @@ logger = logging.getLogger(__name__)
 
 otm = time.time
 
-PORT = 40000 + (os.getpid() + 10) % 10000
-
-broker_cfg = {
-    "listeners": {"default": {"type": "tcp", "bind": f"127.0.0.1:{PORT}"}},
-    "timeout-disconnect-delay": 2,
-    "auth": {"allow-anonymous": True, "password-file": None},
-}
-
-URI = f"mqtt://127.0.0.1:{PORT}/"
-
 
 @asynccontextmanager
 async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):
@@ -43,6 +32,17 @@ async def stdtest(n=1, run=True, ssl=False, tocks=20, **kw):
     TESTCFG.root = "test"
     if C_OUT is not NotGiven:
         TESTCFG["_stdout"] = C_OUT
+
+    from anyio.pytest_plugin import FreePortFactory
+    from socket import SOCK_STREAM
+
+    PORT = FreePortFactory(SOCK_STREAM)()
+    broker_cfg = {
+        "listeners": {"default": {"type": "tcp", "bind": f"127.0.0.1:{PORT}"}},
+        "timeout-disconnect-delay": 2,
+        "auth": {"allow-anonymous": True, "password-file": None},
+    }
+    URI = f"mqtt://127.0.0.1:{PORT}/"
 
     if ssl:
         import ssl

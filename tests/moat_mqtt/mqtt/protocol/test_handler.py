@@ -38,9 +38,6 @@ def adapt(conn):
     return StreamAdapter(conn)
 
 
-PORT = 40000 + (os.getpid() + 8) % 10000
-
-
 class ProtocolHandlerTest(unittest.TestCase):
     handler = session = plugin_manager = None  # appease pylint
     listen_ctx = None
@@ -56,11 +53,11 @@ class ProtocolHandlerTest(unittest.TestCase):
             with anyio.fail_after(1, shield=True):
                 await sock.aclose()
 
-    def run_(self, server_mock, test_coro):
+    def run_(self, server_mock, test_coro, port):
         async def runner():
             async with anyio.create_task_group() as tg:
                 self.plugin_manager = PluginManager(tg, "moat.mqtt.test.plugins", context=None)
-                server = await anyio.create_tcp_listener(local_port=PORT, local_host="127.0.0.1")
+                server = await anyio.create_tcp_listener(local_port=port, local_host="127.0.0.1")
 
                 async def _serve():
                     async with server:
@@ -68,7 +65,7 @@ class ProtocolHandlerTest(unittest.TestCase):
 
                 tg.start_soon(_serve)
 
-                async with await anyio.connect_tcp("127.0.0.1", PORT) as conn:
+                async with await anyio.connect_tcp("127.0.0.1", port) as conn:
                     sr = adapt(conn)
                     await test_coro(sr)
                     tg.cancel_scope.cancel()
@@ -76,7 +73,7 @@ class ProtocolHandlerTest(unittest.TestCase):
 
         anyio_run(runner)
 
-    def test_start_stop(self):
+    def test_start_stop(self, free_tcp_port):
         async def server_mock(stream):  # pylint: disable=unused-argument
             pass
 
@@ -87,9 +84,9 @@ class ProtocolHandlerTest(unittest.TestCase):
             await self.start_handler(handler, s)
             await self.stop_handler(handler, s)
 
-        self.run_(server_mock, test_coro)
+        self.run_(server_mock, test_coro, free_tcp_port)
 
-    def test_publish_qos0(self):
+    def test_publish_qos0(self, free_tcp_port):
         async def server_mock(stream):
             packet = await PublishPacket.from_stream(stream)
             assert packet.variable_header.topic_name == "/topic"
@@ -110,9 +107,9 @@ class ProtocolHandlerTest(unittest.TestCase):
             assert message.pubcomp_packet is None
             await self.stop_handler(handler, s)
 
-        self.run_(server_mock, test_coro)
+        self.run_(server_mock, test_coro, free_tcp_port)
 
-    def test_publish_qos1(self):
+    def test_publish_qos1(self, free_tcp_port):
         async def server_mock(stream):
             packet = await PublishPacket.from_stream(stream)
             assert packet.variable_header.topic_name == "/topic"
@@ -138,9 +135,9 @@ class ProtocolHandlerTest(unittest.TestCase):
             await self.stop_handler(self.handler, self.session)
 
         self.handler = None
-        self.run_(server_mock, test_coro)
+        self.run_(server_mock, test_coro, free_tcp_port)
 
-    def test_publish_qos2(self):
+    def test_publish_qos2(self, free_tcp_port):
         async def server_mock(stream):
             packet = await PublishPacket.from_stream(stream)
             assert packet.topic_name == "/topic"
@@ -172,9 +169,9 @@ class ProtocolHandlerTest(unittest.TestCase):
 
         self.handler = None
 
-        self.run_(server_mock, test_coro)
+        self.run_(server_mock, test_coro, free_tcp_port)
 
-    def test_receive_qos0(self):
+    def test_receive_qos0(self, free_tcp_port):
         async def server_mock(stream):
             packet = PublishPacket.build(
                 "/topic",
@@ -201,9 +198,9 @@ class ProtocolHandlerTest(unittest.TestCase):
             await self.stop_handler(self.handler, self.session)
 
         self.handler = None
-        self.run_(server_mock, test_coro)
+        self.run_(server_mock, test_coro, free_tcp_port)
 
-    def test_receive_qos1(self):
+    def test_receive_qos1(self, free_tcp_port):
         async def server_mock(stream):
             packet = PublishPacket.build(
                 "/topic",
@@ -234,9 +231,9 @@ class ProtocolHandlerTest(unittest.TestCase):
             await self.stop_handler(self.handler, self.session)
 
         self.handler = None
-        self.run_(server_mock, test_coro)
+        self.run_(server_mock, test_coro, free_tcp_port)
 
-    def test_receive_qos2(self):
+    def test_receive_qos2(self, free_tcp_port):
         async def server_mock(stream):
             packet = PublishPacket.build(
                 "/topic",
@@ -273,7 +270,7 @@ class ProtocolHandlerTest(unittest.TestCase):
             await self.stop_handler(self.handler, self.session)
 
         self.handler = None
-        self.run_(server_mock, test_coro)
+        self.run_(server_mock, test_coro, free_tcp_port)
 
     async def start_handler(self, handler, session):
         self.check_empty_waiters(handler)
@@ -296,7 +293,7 @@ class ProtocolHandlerTest(unittest.TestCase):
         assert not session.inflight_out
         assert not session.inflight_in
 
-    def test_publish_qos1_retry(self):
+    def test_publish_qos1_retry(self, free_tcp_port):
         async def server_mock(stream):
             packet = await PublishPacket.from_stream(stream)
             assert packet.topic_name == "/topic"
@@ -326,9 +323,9 @@ class ProtocolHandlerTest(unittest.TestCase):
 
         self.handler = None
 
-        self.run_(server_mock, test_coro)
+        self.run_(server_mock, test_coro, free_tcp_port)
 
-    def test_publish_qos2_retry(self):
+    def test_publish_qos2_retry(self, free_tcp_port):
         async def server_mock(stream):
             packet = await PublishPacket.from_stream(stream)
             assert packet.topic_name == "/topic"
@@ -363,4 +360,4 @@ class ProtocolHandlerTest(unittest.TestCase):
 
         self.handler = None
 
-        self.run_(server_mock, test_coro)
+        self.run_(server_mock, test_coro, free_tcp_port)

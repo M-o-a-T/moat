@@ -12,6 +12,7 @@ classifiers = [
 ]
 dependencies = [
 	"moat-kv ~= 0.70.24",
+	"asyncakumuli ~= 0.6.4",
 ]
 version = "0.8.7"
 keywords = [ "MoaT",]

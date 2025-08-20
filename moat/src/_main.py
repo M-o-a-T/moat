@@ -6,6 +6,7 @@ import io
 import logging
 import subprocess
 import sys
+import re
 from collections import defaultdict, deque
 from configparser import RawConfigParser
 from pathlib import Path
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 PACK = Path("packaging")
 ARCH = subprocess.check_output(["dpkg", "--print-architecture"]).decode("utf-8").strip()
-
+SRC=re.compile(r"^Source:\s+(\S+)\s*$",re.MULTILINE)
 
 def dash(n: str) -> str:
     """
@@ -142,6 +143,13 @@ class Package(_Common):
     @property
     def mdash(self):
         return dash(self.name)
+
+    @property
+    def srcname(self):
+        ctl = PACK / self.dash / "debian" / "control"
+        src = ctl.read_text()
+        sm = SRC.match(src)
+        return sm.group(1)
 
     def copy(self) -> None:
         """
@@ -1079,7 +1087,7 @@ async def build(
                 elif tag == ltag and r.vers.pkg < ptag:
                     r.vers.pkg = ptag
 
-                changes = PACK / f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
+                changes = PACK / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
                 if debversion.get(r.dash, "") != ltag or r.vers.pkg != ptag or test_chg and not changes.exists():
 
                     subprocess.run(["debuild", "--build=binary"] + deb_opts, cwd=rd, check=True)
@@ -1174,8 +1182,8 @@ async def build(
                 continue
             if not (PACK / r.dash / "debian").is_dir():
                 continue
-            changes = PACK / f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
-            done = PACK / f"{r.mdash}_{ltag}-{r.vers.pkg}_{ARCH}.done"
+            changes = PACK / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.changes"
+            done = PACK / f"{r.srcname}_{ltag}-{r.vers.pkg}_{ARCH}.done"
             if done.exists():
                 continue
             if g_done is not None:

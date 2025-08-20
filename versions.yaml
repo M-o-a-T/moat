@@ -112,7 +112,7 @@ moat-kv-inv:
 moat-kv-knx:
   deb: 0.12.1-4
   pkg: 1
-  pypi: 0.12.1
+  pypi: 0.12.2
   rev: ad5565428a406dcdb78cb322356f453fe4dabea2
   tag: 0.12.2
 moat-kv-ow:
@@ -171,9 +171,9 @@ moat-lib-victron:
   tag: 0.1.3
 moat-link:
   deb: 0.2.5-1
-  pkg: 1
+  pkg: 3
   pypi: 0.2.13
-  rev: ad5565428a406dcdb78cb322356f453fe4dabea2
+  rev: 3901e6a2d5a3e160ca101a393a30d26f0eb19e60
   tag: 0.2.17
 moat-link-server:
   deb: 0.2.3-1
@@ -194,7 +194,7 @@ moat-modbus:
   rev: 25aaaeecfd477988ce3da7fcd461c13bd69f849a
   tag: 0.8.7
 moat-modbus-dev-_data:
-  deb: 0.8.0-1
+  deb: 0.8.0-8
   pkg: 8
   pypi: 0.8.0
   rev: 25aaaeecfd477988ce3da7fcd461c13bd69f849a

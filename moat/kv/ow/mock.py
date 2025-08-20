@@ -2,20 +2,20 @@ from __future__ import annotations
 import os
 import anyio
 from functools import partial
+
+from anyio.abc import SocketAttribute
 from asyncowfs.mock import some_server
+
 from moat.util import ensure_cfg
 
 from .task import task
 import contextlib
 
-PORT = ((os.getpid() + 101) % 9999) + 40000
-
-
 async def server(client, tree={}, options={}, evt=None):  # pylint: disable=dangerous-default-value
     async with anyio.create_task_group() as tg:
         listener = await anyio.create_tcp_listener(
             local_host="127.0.0.1",
-            local_port=PORT,
+            local_port=0,
             reuse_port=True,
         )
 

@@ -16,7 +16,7 @@ from ipaddress import (
 )
 
 from moat.util import attrdict
-from moat.lib.codec.proxy import DProxy, as_proxy
+from moat.lib.codec.proxy import DProxy, as_proxy, name2obj
 from moat.lib.codec import get_codec
 from moat.lib.codec.msgpack import ExtType
 
@@ -70,8 +70,12 @@ def test_bar():
     codec = get_codec("std-msgpack")
     c = codec.decode(codec.encode(b))
     assert b == c
-    with pytest.raises(ValueError, match="<Bar: 94>"):
-        codec.encode(Bar(94))
+
+    cc = codec.encode(Bar(94))
+    dec = get_codec("msgpack")
+    cd = dec.decode(cc)
+    assert cd.code == 4
+    assert name2obj(cd.data.decode("utf-8")).x == 94
 
 
 @pytest.mark.parametrize("chunks", [1, 2, 5])

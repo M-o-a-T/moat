@@ -87,7 +87,7 @@ def _enc_any(codec, obj):
             codec.encode(x) for x in obj.args
         )
 
-    return 4, get_proxy(obj)
+    return 4, get_proxy(obj).encode("utf-8")
 
 
 @std_ext.decoder(3)

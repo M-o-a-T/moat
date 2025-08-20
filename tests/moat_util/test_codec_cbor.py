@@ -16,8 +16,9 @@ from ipaddress import (
 )
 
 from moat.util import attrdict
-from moat.lib.codec.proxy import DProxy, as_proxy
+from moat.lib.codec.proxy import DProxy, as_proxy, name2obj
 from moat.lib.codec.cbor import Tag, Codec as CBOR
+from moat.lib.codec import get_codec
 from moat.util.cbor import StdCBOR, gen_start, gen_stop
 
 as_proxy("_ip4", IPv4Address)
@@ -70,8 +71,14 @@ def test_bar():
     as_proxy("b_c", b)
     c = codec.decode(codec.encode(b))
     assert b == c
-    with pytest.raises(ValueError, match="<Bar: 94>"):
-        codec.encode(Bar(94))
+    cc = codec.encode(Bar(94))
+
+    dec = get_codec("cbor")
+    cd = dec.decode(cc)
+    assert isinstance(cd,Tag)
+    assert cd.tag == 32769
+    bb = name2obj(cd.value)
+    assert bb.x == 94
 
 
 @pytest.mark.parametrize("chunks", [1, 2, 5])

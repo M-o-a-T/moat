@@ -128,7 +128,7 @@ def go(state=None, cmd=True):
 
     try:
         at("main1",i)
-        main(fn, i=i, fake_end=True)
+        main(fn, i=i)
 
     except ImportError:
         print("PATH:",sys.path,file=sys.stderr)

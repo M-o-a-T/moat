@@ -55,10 +55,11 @@ async def run_broker(cfg, *, task_status):
     port = FreePortFactory(SOCK_STREAM)()
 
     async with (
-            anyio.NamedTemporaryFile(mode="w+") as tf,
+            anyio.TemporaryDirectory() as td,
             anyio.create_task_group() as tg,
             ):
-        await tf.write(f"""\
+        tf = anyio.Path(td)/"config"
+        await tf.write_text(f"""\
 allow_anonymous true
 retained_messages_mode enabled_without_persistence
 thread_count 1
@@ -69,9 +70,8 @@ listen {{
     inet4_bind_address 127.0.0.1
 }}
 """)
-        await tf.flush()
 
-        tg.start_soon(partial(anyio.run_process,["flashmq","-c",tf.name],stderr=sys.stderr,stdout=sys.stdout))
+        tg.start_soon(partial(anyio.run_process,["flashmq","-c",str(tf)],stderr=sys.stderr,stdout=sys.stdout,env=dict(HOME=td)))
         for _ in range(20):
             try:
                 sock = await anyio.connect_tcp("127.0.0.1",port)

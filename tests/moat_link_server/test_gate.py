@@ -92,6 +92,8 @@ async def test_gate_mqtt(cfg):
         await c.i_sync()
 
         await sf.tg.start(run_gate,sf.cfg,c,"test")
+        await c.i_sync()
+        await anyio.sleep(0.2)
 
         a= await data_get(c,P("test.a"), out=False)
         assert a==dict(one={"_":1},two={"_":2},three={"_":33})
@@ -226,7 +228,9 @@ async def test_gate_kv(cfg, autojump_clock):
         await kvc.set(P("test.b.two"),22)
         await c.d_set(P("test.a.three"),333)
         await c.d_set(P("test.a.five"),555)
+        await c.i_sync()
         await anyio.sleep(0.2)
+        await c.i_sync()
 
         a= await data_get(c,P("test.a"), out=False)
         assert a==dict(one={"_":111},two={"_":22},three={"_":333},four={"_":444},five={"_":555})

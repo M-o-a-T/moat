@@ -13,7 +13,7 @@ classifiers = [
 dependencies = [
 	"moat-kv ~= 0.70.24",
 ]
-version = "0.9.10"
+version = "0.9.11"
 keywords = [ "MoaT",]
 requires-python = ">=3.8"
 name = "moat-kv-ow"

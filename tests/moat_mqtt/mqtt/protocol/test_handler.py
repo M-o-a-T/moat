@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import os
 import random
-import unittest
 from functools import partial
 
 import anyio
@@ -38,7 +37,7 @@ def adapt(conn):
     return StreamAdapter(conn)
 
 
-class ProtocolHandlerTest(unittest.TestCase):
+class TestProtocolHandler:
     handler = session = plugin_manager = None  # appease pylint
     listen_ctx = None
 

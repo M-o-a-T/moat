@@ -32,14 +32,14 @@ apps:
 @pytest.mark.parametrize("server_first", [True, False])
 @pytest.mark.parametrize("link_in", [True, False])
 @pytest.mark.parametrize("unix", [False, True])
-async def test_net(tmp_path, server_first, link_in, unix):
+async def test_net(tmp_path, server_first, link_in, unix, free_tcp_port):
     "basic connectivity test"
     if unix:
         sock = tmp_path / "test.sock"
         with suppress(FileNotFoundError):
             sock.unlink()
     else:
-        port = 50000 + os.getpid() % 10000
+        port = free_tcp_port
 
     async def set_server(c):
         if unix:

@@ -48,10 +48,10 @@ s:
 @pytest.mark.parametrize("server_first", [True, False])
 @pytest.mark.parametrize("link_in", [True, False])
 @pytest.mark.parametrize("remote_first", [True, False])
-async def test_net_r(tmp_path, server_first, link_in, remote_first):
+async def test_net_r(tmp_path, server_first, link_in, remote_first, free_tcp_port):
     "basic connectivity test"
     log(f"SF={server_first} LI={link_in} RF={remote_first}")
-    port = 50000 + os.getpid() % 10000
+    port = free_tcp_port
 
     async def set_server(c):
         await c.set(

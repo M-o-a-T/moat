@@ -13,7 +13,7 @@ classifiers = [
 	"Development Status :: 4 - Beta",
 	]
 dependencies = [
-	"anyio ~= 4.5",
+	"anyio ~= 4.9",
 	"trio",
 	"alembic",
 	"anyio_serial",

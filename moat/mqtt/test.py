@@ -12,6 +12,9 @@ import anyio
 from moat.kv.client import client_scope, open_client
 from moat.kv.server import Server as _Server
 
+from anyio.pytest_plugin import FreePortFactory
+from socket import SOCK_STREAM
+
 from .broker import create_broker
 
 
@@ -42,12 +45,12 @@ async def server(mqtt_port: int | None = None, moat_kv_port: int | None = None):
     Ports are allocated based on the current process's PID.
     """
     if mqtt_port is None:
-        mqtt_port = 40000 + os.getpid() % 10000
+        mqtt_port = FreePortFactory(SOCK_STREAM)()
     if moat_kv_port is None:
-        moat_kv_port = 40000 + (os.getpid() + 1) % 10000
+        moat_kv_port = FreePortFactory(SOCK_STREAM)()
 
     broker_cfg = {
-        "listeners": {"default": {"type": "tcp", "bind": "127.0.0.1:%d" % mqtt_port}},
+        "listeners": {"default": {"type": "tcp", "bind": f"127.0.0.1:{mqtt_port}"}},
         "timeout-disconnect-delay": 2,
         "auth": {"allow-anonymous": True, "password-file": None},
     }
@@ -55,7 +58,7 @@ async def server(mqtt_port: int | None = None, moat_kv_port: int | None = None):
         "server": {
             "bind_default": {"host": "127.0.0.1", "port": moat_kv_port},
             "backend": "mqtt",
-            "mqtt": {"uri": "mqtt://127.0.0.1:%d/" % mqtt_port},
+            "mqtt": {"uri": f"mqtt://127.0.0.1:{mqtt_port}/"},
         },
     }
 

@@ -49,7 +49,11 @@ async def run_broker(cfg, *, task_status):
     #cfg  # noqa:B018  # pyright:ignore
     #broker = AsyncMQTTBroker(("127.0.0.1", 0))
     #await broker.serve(task_status=task_status)
-    port=40000+(os.getpid()+123)%10000
+    from anyio.pytest_plugin import FreePortFactory
+    from socket import SOCK_STREAM
+
+    port = FreePortFactory(SOCK_STREAM)()
+
     async with (
             anyio.NamedTemporaryFile(mode="w+") as tf,
             anyio.create_task_group() as tg,

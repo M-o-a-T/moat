@@ -19,6 +19,9 @@ from moat.mqtt.client import open_mqttclient
 from moat.mqtt.mqtt.constants import QOS_0
 from moat.util import gen_ident
 
+from anyio.pytest_plugin import FreePortFactory
+from socket import SOCK_STREAM
+
 try:
     from moat.kv.client import open_client
     from moat.kv.server import Server
@@ -31,49 +34,50 @@ from . import anyio_run
 
 log = logging.getLogger(__name__)
 
-# Port for moat-kv-based broker
-PORT = 40000 + (os.getpid() + 5) % 10000
-# Port for base broker
-PORT_B = 40000 + (os.getpid() + 6) % 10000
-# Port for moat-kv
-PORT_D = 40000 + (os.getpid() + 7) % 10000
+def _PBD():
+    # Port for moat-kv-based broker
+    PORT = FreePortFactory(SOCK_STREAM)()
+    # Port for base broker
+    PORT_B = FreePortFactory(SOCK_STREAM)()
+    # Port for moat-kv
+    PORT_D = FreePortFactory(SOCK_STREAM)()
 
-URI = f"mqtt://127.0.0.1:{PORT}/"
-URI_B = f"mqtt://127.0.0.1:{PORT_B}/"
+    URI_B = f"mqtt://127.0.0.1:{PORT_B}/"
 
-log.debug("Ports: moat_kv=%d up=%d low=%d", PORT_D, PORT, PORT_B)
+    # log.debug("Ports: moat_kv=%d up=%d low=%d", PORT_D, PORT, PORT_B)
 
-broker_config = {
-    "broker": {"uri": f"mqtt://127.0.0.1:{PORT_B}"},
-    "kv": {
-        "topic": "test_" + gen_ident(7, alphabet="al_az"),
-        "base": ("test", "retain"),
-        "transparent": (("test", "vis"),),
-        "conn": {"port": PORT_D},
-        "server": {
-            "backend": "mqtt",
-            "mqtt": {"uri": URI_B},
-            "bind": [{"host": "localhost", "port": PORT_D, "ssl": False}],
+    broker_config = {
+        "broker": {"uri": f"mqtt://127.0.0.1:{PORT_B}"},
+        "kv": {
+            "topic": "test_" + gen_ident(7, alphabet="al_az"),
+            "base": ("test", "retain"),
+            "transparent": (("test", "vis"),),
+            "conn": {"port": PORT_D},
+            "server": {
+                "backend": "mqtt",
+                "mqtt": {"uri": URI_B},
+                "bind": [{"host": "localhost", "port": PORT_D, "ssl": False}],
+            },
         },
-    },
-    "listeners": {"default": {"type": "tcp", "bind": f"127.0.0.1:{PORT}", "max_connections": 10}},
-    "sys_interval": 0,
-    "auth": {"allow-anonymous": True},
-}
+        "listeners": {"default": {"type": "tcp", "bind": f"127.0.0.1:{PORT}", "max_connections": 10}},
+        "sys_interval": 0,
+        "auth": {"allow-anonymous": True},
+    }
 
 
-test_config = {
-    "listeners": {
-        "default": {"type": "tcp", "bind": f"127.0.0.1:{PORT_B}", "max_connections": 10},
-    },
-    "sys_interval": 0,
-    "retain": False,
-    "auth": {"allow-anonymous": True},
-}
+    test_config = {
+        "listeners": {
+            "default": {"type": "tcp", "bind": f"127.0.0.1:{PORT_B}", "max_connections": 10},
+        },
+        "sys_interval": 0,
+        "retain": False,
+        "auth": {"allow-anonymous": True},
+    }
+    return broker_config,test_config
 
 
 @asynccontextmanager
-async def moat_kv_server(n):
+async def moat_kv_server(n,broker_config,test_config):
     msgs = []
     async with anyio.create_task_group() as tg:
         async with create_broker(test_config, plugin_namespace="moat.mqtt.test.plugins"):
@@ -114,7 +118,8 @@ class MQTTClientTest(unittest.TestCase):
         data = b"data 123 a"
 
         async def test_coro():
-            async with moat_kv_server(1):
+            broker_config,test_config = _PBD()
+            async with moat_kv_server(1,broker_config,test_config):
                 async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
                     async with open_mqttclient(config=broker_config["broker"]) as client:
                         assert client.session is not None
@@ -138,7 +143,8 @@ class MQTTClientTest(unittest.TestCase):
         data = b"data 123 t"
 
         async def test_coro():
-            async with moat_kv_server(1):
+            broker_config,test_config = _PBD()
+            async with moat_kv_server(1,broker_config,test_config):
                 async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
                     async with open_mqttclient(config=broker_config["broker"]) as client:
                         assert client.session is not None
@@ -162,7 +168,8 @@ class MQTTClientTest(unittest.TestCase):
         data = b"data 123 b"
 
         async def test_coro():
-            async with moat_kv_server(0):
+            broker_config,test_config = _PBD()
+            async with moat_kv_server(0,broker_config,test_config):
                 async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
                     async with open_mqttclient(config=broker_config["broker"]) as client:
                         assert client.session is not None
@@ -180,7 +187,8 @@ class MQTTClientTest(unittest.TestCase):
 
     def test_deliver_timeout(self):
         async def test_coro():
-            async with moat_kv_server(0):
+            broker_config,test_config = _PBD()
+            async with moat_kv_server(0,broker_config,test_config):
                 async with create_broker(broker_config, plugin_namespace="moat.mqtt.test.plugins"):
                     async with open_mqttclient(config=broker_config["broker"]) as client:
                         assert client.session is not None

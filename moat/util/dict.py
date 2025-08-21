@@ -166,6 +166,8 @@ class attrdict(dict):
         elif isinstance(v, list) and px is None:
             v.append(value)
         elif not isinstance(value, Mapping):
+            if px>len(v)+10:
+                raise ValueError(f"Won't pad the array (want {px}, has {len(v)}).")
             while len(v) <= px:
                 v.append(NotGiven)
             v[px] = value

@@ -121,10 +121,6 @@ class Pin(BaseCmd):
             self.tg = await AC_use(self, TaskGroup())
         await self.tg.spawn(self.pin.flag_watch)
 
-    def iter_r(self):
-        "iterate the pin's values"
-        return self.pin
-
     doc_r = dict(_d="read", o="bool:old, wait until not this")
 
     async def cmd_r(self, o=None):

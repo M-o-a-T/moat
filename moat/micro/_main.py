@@ -325,13 +325,12 @@ async def cmd(obj, path, **attrs):
     The command is prefixed by the "micro.connect.remote" option;
     use "moat micro -R ‹path› cmd …" to change it if necessary.
 
-    The item "_a" is an empty array, for positional arguments.
-    Use `-s _a:n XXX` to append to it.
+    The key ":n" contains an empty array, for positional arguments.
+    Use `-s :n:n XXX` to append to it.
     """
     cfg = obj.mcfg
-    val = {"_a": []}
-    val = process_args(val, no_path=True, **attrs)
-    args = val.pop("_a", ())
+    val = process_args({None:[]}, no_path=True, **attrs)
+    args = val.pop(None, ())
     logger.debug(
         "Command: %s %s %s",
         cfg.remote + path,

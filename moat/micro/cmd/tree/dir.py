@@ -56,19 +56,14 @@ class Dispatch(_Dispatch):
         "returns a CfgStore object at this subpath"
         return CfgStore(self, p)
 
-
-class CfgStore:
+class SubStore:
     """
-    Config file storage.
-
-    The subpath points to the destination's "cfg.Cmd" app.
+    A helper class to retrieve a possibly-encoded object.
     """
-
     cfg: dict = None
-    subpath = ()
 
     def __init__(self, dispatch, path: Path):
-        self.sd = dispatch.sub_at(path)
+        self.__sd = dispatch.sub_at(path)
 
     async def __aenter__(self):
         return self
@@ -76,28 +71,38 @@ class CfgStore:
     async def __aexit__(self, *tb):
         pass
 
-    async def get(self, again=False):
+    async def get(self, *a, **kw):
         """
-        Collect the client's configuration data.
+        Collect a parts-encoded reply.
         """
+        rp = kw.pop("p", Path())
 
         async def _get(p):
-            d = await self.sd.r(p)
-            if isinstance(d, dict):
-                return d
-            if len(d) == 2:
+            d = await self.sd(*a, p=p, **kw)
+            if isinstance(d, (list,tuple)) and len(d) == 2:
                 d, s = d
-                if isinstance(d, dict):
-                    d = attrdict(d)
                 for k in s:
                     d[k] = await _get(p + (k,))
-            else:
-                d = d[0]
             return d
 
+
+class CfgStore(SubStore):
+    """
+    Config file storage.
+
+    The subpath points to the destination's "cfg.Cmd" app, or a
+    similar class that exposes ``r``, ``w`` and possibly ``x`` commands.
+    """
+
+    def __init__(self, dispatch, path: Path):
+        self.sd = dispatch.sub_at(path)
+        super().__init__(self.sd.r)
+
+    async def get(self, again=False):
+        self.cfg = await super().get()
         if self.cfg and not again:
             return self.cfg
-        cfg = await _get(self.subpath)
+        cfg = await super().get()
         self.cfg = cfg
         return cfg
 
@@ -109,7 +114,7 @@ class CfgStore:
         will be deleted from the client.
 
         If @sync is set, the client will reload apps etc. after updating
-        the config.
+        the config, by calling the ``x`` command.
         """
 
         async def _set(p, c):

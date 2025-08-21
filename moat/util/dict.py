@@ -166,6 +166,8 @@ class attrdict(dict):
         elif isinstance(v, list) and px is None:
             v.append(value)
         elif not isinstance(value, Mapping):
+            while len(v) <= px:
+                v.append(NotGiven)
             v[px] = value
         elif px in v:
             v[px] = combine_dict(value, v[px], cls=type(self))

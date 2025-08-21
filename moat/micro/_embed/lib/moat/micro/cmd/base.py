@@ -272,7 +272,7 @@ class BaseCmd(Base):
         If @v is set (the default), don't return hidden commands.
         """
         c = []
-        i = []
+        s = []
         res = {}
 
         for k in dir(self):
@@ -280,19 +280,19 @@ class BaseCmd(Base):
                 continue
             if k.startswith("cmd_"):
                 c.append(k[4:])
-            elif k.startswith("iter_"):
-                i.append(k[5:])
+            elif k.startswith("stream_"):
+                s.append(k[7:])
             elif k == "cmd":
-                res["j"] = True
-            elif k == "cmd_":
-                res["J"] = True
+                res["C"] = True
+            elif k == "stream":
+                res["S"] = True
         if c:
             res["c"] = c
-        if i:
-            res["i"] = i
+        if s:
+            res["s"] = s
         return res
 
-    doc_cfg_ = dict(_d="config", _0="path:subdir", _r="parts")
+    doc_cfg_ = dict(_d="config", _r="parts")
 
     async def cmd_cfg_(self, p=()):
         """

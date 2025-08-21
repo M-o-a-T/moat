@@ -115,7 +115,7 @@ class BaseCmdMsg(BaseCmd):
         Forward a request to some remote side.
         """
         # Handle local commands (and documentation) locally
-        if (len(rcmd) == 1 or len(rcmd) == 2 and rcmd[1] == "doc_") and rcmd[0] != "dir_" and hasattr(self, f'cmd_{rcmd[0]}'):
+        if (len(rcmd) == 1 or len(rcmd) == 2 and rcmd[1] == "doc_") and rcmd[0] != "dir_" and (hasattr(self, f'cmd_{rcmd[0]}') or hasattr(self, f'stream_{rcmd[0]}')):
             return await super().handle(msg, rcmd)
 
         if self.__stream is None:
@@ -127,10 +127,11 @@ class BaseCmdMsg(BaseCmd):
         # if it was a directory request, add local data
         if len(rcmd) == 1 and rcmd[0] == "dir_":
             # Merge local commands into the remote ones
+            m2 = await self.cmd_dir_(v=msg.get("v",True))
             await msg.wait_replied(preload=True)
-            m2 = await self.cmd_dir_()
-            msg._kw["c"] = msg.get("c",()) + tuple(m2.pop("c",()))
-            msg._kw["i"] = msg.get("i",()) + tuple(m2.pop("i",()))
+
+            msg._kw["c"] = tuple(set(msg.get("c",())) | set(m2.pop("c",())))
+            msg._kw["s"] = tuple(set(msg.get("s",())) | set(m2.pop("s",())))
             merge(msg._kw, m2)
         return res
 

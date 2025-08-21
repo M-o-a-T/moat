@@ -141,7 +141,8 @@ class attrdict(dict):
             raise TypeError(f"Must be a Path/list, not {path!r}")
         if skip_empty:
             path = [p for p in path if p != ""]
-        val = type(self)(**self)
+        val = type(self)()
+        val.update(self)
         v = val
         if not path:
             if isinstance(value, Mapping):

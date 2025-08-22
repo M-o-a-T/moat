@@ -62,33 +62,41 @@ class StreamError(RuntimeError):
 
 
 class Flow(BaseException):
+    "Flow control indication."
     def __init__(self, n):
         self.n = n
 
 
 class StopMe(StreamError):
+    "Unspecified Stop"
     pass
 
 
 class SkippedData(StreamError):
+    "Data skipped, took too long"
     pass
 
 
 class NoStream(StreamError):
+    "No streaming support"
     pass
 
 
 class NoCmds(StreamError):
+    "No support for any commands"
     pass
 
 
 class NoCmd(StreamError):
+    "Unknown command"
     pass
 
 
 class WantsStream(StreamError):
+    "API: NoStream called on a streaming endpoint"
     pass
 
 
 class MustStream(StreamError):
+    "Requires streaming support"
     pass

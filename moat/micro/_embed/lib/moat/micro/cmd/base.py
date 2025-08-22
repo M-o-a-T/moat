@@ -267,7 +267,8 @@ class BaseCmd(Base):
         iterators @i, and submodules @d.
         j=True if callable directly.
 
-        If @v is set (the default), don't return hidden commands.
+        If @v ("visible") is set (the default),
+        this does not return hidden commands.
         """
         c = []
         s = []

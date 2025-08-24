@@ -9,7 +9,7 @@ import sys
 from contextlib import asynccontextmanager
 
 from moat.util import CtxObj
-from moat.util.compat import AC_use
+from moat.util.compat import AC_use, log
 from moat.lib.codec import get_codec
 
 from ._stream import _CBORMsgBlk, _CBORMsgBuf
@@ -64,7 +64,11 @@ class AnyioBuf(BaseBuf):
         """
         The default simply opens the stream and assigns it to ``s``.
         """
-        self.s = await self.stream()
+        try:
+            self.s = await self.stream()
+        except Exception as exc:
+            log("Problem: %s %r %r",type(self),getattr(self,"cfg","?"),exc)
+            raise
 
     async def stream(self) -> anyio.abc.ByteStream:
         """

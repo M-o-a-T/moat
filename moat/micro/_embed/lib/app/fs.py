@@ -63,6 +63,8 @@ class Cmd(BaseCmd):
             if self._pre and self._pre[-1] != "/":
                 self._pre += "/"
 
+    doc = dict(_d="File system access.",_c=dict(root="Path to file system root"))
+
     def _fsp(self, p):
         if self._pre:
             p = self._pre + p

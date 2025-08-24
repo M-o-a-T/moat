@@ -72,6 +72,8 @@ class BaseCmdMsg(BaseCmd):
     def __init__(self, cfg):
         super().__init__(cfg)
 
+    doc = dict(_d="Foo")
+
     async def stream(self) -> BaseMsg:
         """
         Creates the actual data stream.

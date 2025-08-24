@@ -74,7 +74,7 @@ async def setup(
     dest:str="",
     kill:bool=False,
     large:bool|None=None,
-    run:bool=False,
+    run:bool|dict=False,
     rom:bool=False,
     reset:bool=False,
     state:str|None=None,
@@ -163,7 +163,6 @@ async def setup(
 
             if run:
                 log("Reloading.")
-                merge(dsp.cfg.apps, run.apps, drop=True)
                 merge(dsp.cfg, run)
                 await dsp.reload()
                 log("Running.")

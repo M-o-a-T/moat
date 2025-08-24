@@ -160,7 +160,7 @@ async def mpy_stack(temp: Path, cfg: dict | str, cfg2: dict | None = None):
                 cfg = yload(cff, attr=True)
 
     if cfg2 is not None:
-        cfg = combine_dict(cfg2, cfg)
+        cfg = combine_dict(cfg2, cfg, cls=attrdict)
 
     rst = temp_dir.set(temp)
     try:

@@ -48,7 +48,7 @@ r:
 async def test_rtc(tmp_path):
     "test config updating"
     async with mpy_stack(tmp_path, CFG) as d, d.cfg_at(P("r.c")) as cfg, d.cfg_at(P("r.t")) as rtc:
-        cf = await cfg.get()
+        cf = to_attrdict(await cfg.get())
         rt = await rtc.get()
         assert cf.tt.a == "b"
         assert cf.tt.c["d"] == "e"

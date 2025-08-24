@@ -139,7 +139,7 @@ async def cli(ctx, section, remote, path):
     for k, v in pth.items():
         if isinstance(v, str):
             v = P(v)  # noqa:PLW2901
-        pth[k] = cfg.remote + v
+        pth[k] = v
 
     obj.mcfg = to_attrdict(cfg)
 
@@ -149,7 +149,7 @@ async def cli(ctx, section, remote, path):
 @click.option("-i", "--install", is_flag=True, help="Install MicroPython")
 @click.option("-r", "--run", is_flag=True, help="Run MoaT after updating")
 @click.option("-F", "--rom", is_flag=True, help="Upload to ROM Flash")
-@click.option("--run-section", type=str, help="Section with runtime config (default: 'run')")
+@click.option("--run-section", type=P, help="Section with runtime config (default: 'run')")
 @click.option("-N", "--reset", is_flag=True, help="Reboot after updating")
 @click.option("-K", "--kill", is_flag=True, help="Reboot initially")
 @click.option(
@@ -206,10 +206,14 @@ async def setup_(ctx, run_section=None, **kw):
     st = combine_dict(param, st, default)
 
     run = st["run"]
-    if run is True:
-        st["run"] = ctx.obj.cfg.micro[run_section or "run"]
-    elif isinstance(run, str):
-        st["run"] = ctx.obj.cfg.micro[run]
+    if run:
+        if run_section is not None:
+            st["run"] = ctx.obj.cfg.micro._get(run_section)
+        else:
+            try:
+                st["run"] = ctx.obj.cfg.micro._get(P("setup.run"))
+            except KeyError:
+                st["run"] = ctx.obj.cfg.micro["run"]
 
     return await setup(cfg, **st)
 
@@ -264,8 +268,9 @@ async def sync_(ctx, **kw):
             raise click.UsageError("Destination cannot be empty")
         async with (
             Dispatch(cfg, run=True) as dsp,
-            dsp.sub_at(cfg.path.fs) as rfs,
-            dsp.sub_at(cfg.path.sys) as rsys,
+            dsp.sub_at(cfg.remote) as cfr,
+            cfr.sub_at(cfg.path.fs) as rfs,
+            cfr.sub_at(cfg.path.sys) as rsys,
         ):
             root = MoatFSPath("/").connect_repl(rfs)
             dst = MoatFSPath(dest).connect_repl(rfs)
@@ -292,8 +297,12 @@ async def boot(obj, state):
     Restart a MoaT node
 
     """
-    cfg = obj.cfg
-    async with Dispatch(cfg) as dsp, dsp.sub_at(cfg.path.sys) as sd:
+    cfg = obj.mcfg
+    async with (
+        Dispatch(cfg, run=True) as dsp,
+        dsp.sub_at(cfg.remote) as cfr,
+        cfr.sub_at(cfg.path.sys) as sd,
+    ):
         if state:
             await sd.state(state=state)
 
@@ -338,9 +347,14 @@ async def cmd(obj, path, **attrs):
         "-" if not val else " ".join(f"{k}={v!r}" for k, v in val.items()),
     )
 
-    async with Dispatch(cfg, run=True) as dsp, dsp.sub_at(cfg.remote) as sd:
+
+    async with (
+        Dispatch(cfg, run=True) as dsp,
+        dsp.sub_at(cfg.remote) as cfr,
+    ):
         try:
-            res = await sd.sub_at(path)(*args, **val)
+            cmd = cfr.sub_at(path)
+            res = await cmd(*args, **val)
         except RemoteError as err:
             yprint(dict(e=str(err.args[0])), stream=obj.stdout)
         else:
@@ -361,8 +375,11 @@ async def cons(obj, path):
     streams the result.
     """
     cfg = obj.mcfg
-    async with Dispatch(cfg, run=True) as dsp, dsp.sub_at(cfg.remote) as sd:
-        crd = sd.sub_at(path).crd
+    async with (
+        Dispatch(cfg, run=True) as dsp,
+        dsp.sub_at(cfg.remote) as cfr,
+    ):
+        crd = cfr.sub_at(path).crd
         while True:
             try:
                 res = await crd()
@@ -520,7 +537,8 @@ async def rom(obj, path, device):
 
     async with (
         Dispatch(cfg, run=True, sig=True) as dsp,
-        dsp.sub_at(cfg.path.rom) as sd,
+        dsp.sub_at(cfg.remote) as cfr,
+        cfr.sub_at(cfg.path.rom) as sd,
     ):
         res = await sd.n()
         if device >= res:

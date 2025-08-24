@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 
 
 class _NotGiven:
+    # This is distinct from the "real" NotGiven. This is intentional.
     pass
 
 

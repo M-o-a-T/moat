@@ -777,19 +777,26 @@ async def copytree(src: APath, dst: MoatPath, wdst:MoatPath|None=None, check=Non
                     await dst.with_suffix(".mpy").unlink()
 
         if wdst is not dst:
+            print(" Write:", dst, "       ", end="\r", file=sys.stderr)
+            new = True
             with suppress(OSError, RemoteError):
                 await dst.unlink()
+                new = False
             await wdst.parent.mkdir(parents=True, exist_ok=True)
             await wdst.write_bytes(await src.read_bytes())
-            logger.info("Copy: Added %s > %s", src, dst)
+            logger.info("Copy: %s: %s", "new" if new else "update", dst)
             return 1
 
         if await f_eq(src,dst):
             return 0
 
         await wdst.parent.mkdir(parents=True, exist_ok=True)
+        new = True
+        with suppress(OSError, RemoteError):
+            await wdst.unlink()
+            new = False
         await wdst.write_bytes(await src.read_bytes())
-        logger.info("Copy: updated %s > %s", src, dst)
+        logger.info("Copy: %s: %s", "new" if new else "update", wdst)
         return 1
 
     else:
@@ -801,7 +808,7 @@ async def copytree(src: APath, dst: MoatPath, wdst:MoatPath|None=None, check=Non
             s = await dst.stat()
 
         # logger.debug("Copy: dir %s > %s", src, dst)
-        print("  Copy:", dst, "       ", end="\r", file=sys.stderr)
+        print("  Sync:", dst, "       ", end="\r", file=sys.stderr)
         sys.stderr.flush()
         async for s in src.iterdir():
             if check is not None and not await check(s):

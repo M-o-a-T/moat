@@ -324,10 +324,11 @@ async def boot(obj, state):
 
 @cli.command(short_help="Send a MoaT command")
 @click.pass_obj
+@click.option("-t","--time", is_flag=True, help="Time the command")
 @click.argument("path", nargs=1, type=P)
 @attr_args(with_path=True, with_proxy=True)
 @catch_errors
-async def cmd(obj, path, **attrs):
+async def cmd(obj, path, time, **attrs):
     """
     Send a MoaT command.
 
@@ -347,20 +348,29 @@ async def cmd(obj, path, **attrs):
         "-" if not val else " ".join(f"{k}={v!r}" for k, v in val.items()),
     )
 
+    from time import monotonic as tm
+    from moat.util.times import humandelta
 
+    t1 = tm()
     async with (
         Dispatch(cfg, run=True) as dsp,
         dsp.sub_at(cfg.remote) as cfr,
     ):
         try:
+            t2 = tm()
             cmd = cfr.sub_at(path)
             res = await cmd(*args, **val)
         except RemoteError as err:
+            t3 = tm()
             yprint(dict(e=str(err.args[0])), stream=obj.stdout)
         else:
+            t3 = tm()
             if isinstance(res, Msg):
                 res = [msg.args, msg.kw]
             yprint(res, stream=obj.stdout)
+    if time:
+        print(f"{humandelta(t3-t2)} (setup {humandelta(t2-t1)})")
+
 
 
 @cli.command(short_help="Read a console")

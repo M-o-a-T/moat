@@ -65,7 +65,7 @@ class _Pin:
         self.val = self._pin.value()
         self.flag.set()
 
-    def value(self, n=None):
+    def __call__(self, n=None):
         if n is None:
             return self._pin.value()
         else:
@@ -121,16 +121,43 @@ class Pin(BaseCmd):
             self.tg = await AC_use(self, TaskGroup())
         await self.tg.spawn(self.pin.flag_watch)
 
-    doc_r = dict(_d="read", o="bool:old, wait until not this")
+    doc_r = dict(_d="read", _s=[
+            dict(_o="bool:new values"),
+            dict(_r="bool:current value"),
+        ],
+        o="bool:old: wait until pin value differs",
+        )
 
-    async def cmd_r(self, o=None):
+    async def stream_r(self, msg):
         "Wait for change if @o (old value) is not None"
-        if o is not None and self.pin() == o:
+        o = msg.get("o",None)
+        if msg.can_stream:
+            async with msg.stream_out() as m:
+                val = self.pin()
+                if o is None or val != o:
+                    await m.send(val)
+                while True:
+                    await self.pin.evt.wait()
+                    await m.send(self.pin())
+
+        val = self.pin()
+        if val is o:
             await self.pin.evt.wait()
-        return self.pin.val
+            val = self.pin()
+        return val
+        
 
-    doc_w = dict(_d="write", _0="bool:new value")
+    doc_w = dict(_d="write", _s=[
+        dict(_i="bool:new values"),
+        dict(_0="bool:new value"),
+        ])
 
-    async def cmd_w(self, v):
+    async def stream_w(self, msg):
         "Set pin value"
-        self.pin.value(v)
+        if msg.can_stream: 
+            async with msg.stream_in() as m:
+                for mm in m:
+                    self.pin(mm[0])
+            return
+
+        self.pin(msg[0])

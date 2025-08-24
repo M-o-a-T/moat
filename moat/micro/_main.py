@@ -241,7 +241,7 @@ async def sync_(ctx, **kw):
     from .setup import do_update, do_copy
 
     obj = ctx.obj
-    cfg = obj.cfg
+    cfg = obj.mcfg
 
     default = {
         k: v

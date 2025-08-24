@@ -1,107 +1,93 @@
-# MoaT Serial Message Structure
+# MoaT Message Structure
 
-Messages are encoded using CBOR/MsgPack maps. Short keywords are used to
-conserve client memory.
+Links between MoaT devices are always one-to-one and bidirectional.
+There is no master/slave relationship.
 
-## Simple messages
+MoaT uses a multi-level encapsulation strategy. The elements in this
+list are applied in sequence. Any element might be missing.
 
-* a
+## MoaT-Lib-CMD
 
-  Command Action. May be either a string or a list of strings / integers.
+MoaT messaging uses the ``moat.lib.cmd`` library for bidirectional RPC,
+streaming, and error reporting.
 
-  If this field is missing, the message is a reply (`d` present) or a
-  cancellation (`d` also missing).
+## Reliability
 
-  Integer items are used to refer to a list of sub-items, e.g. one of 20
-  thermometers or individual connections of a listening socket.
+If message loss or reordering is possible, a
+:moat.micro.proto.reliable:`ReliableMsg` wrapper is used.
 
-  The first character of an action may be ``!``, indicating that the action
-  should be applied locally instead of getting forwarded.
+## Serialization
 
-  If the first character of an action is ``?``, the command won't wait for
-  the app to be "ready". This is dangerous if applied to any command other
-  than ``rdy``.
+Messages are typically serialized with the ``StdCBOR`` codec.
 
-* d
+TODO: The codec might create object proxies.
+These should be deleted when no longer in use.
 
-  Data. Requests contain a dict: keyword args to the command in question.
-  Replies contain whatever the called command returns.
+## Delimiting
 
-* x
+If the stream might contain non-message traffic (typically: when the packet
+stream is multiplexed onto the serial console), a leading character is
+inserted in front of every message. Obviously the lead character should be
+chosen as not to occur in the console data stream. Ideally it should not
+occur often in the serialized messages, but this is not a requirement.
 
-  List of expected exception types. Commands only.
+## Framing
 
-  If the recipient encounters one of these, it will still send it back to
-  the sender but it won't log them. Use case is e.g. file system errors
-  where "file not found" is not the client's fault, or config updates where
-  a missing key will simply be sent.
+To reject altered messages, a `SerialPacker` is used.
 
-## Request/Reply
+MoaT sends and expects exactly one message per frame.
 
-* i
+# Command structure
 
-  Sequence number. An action with a sequence number *must* be replied to,
-  eventually. Actions without sequence numbers are unsolicited typed status
-  messages. Replies without sequence numbers don't make sense.
-
-  A sequence number generator sets the low bit. On receipt this bit is
-  inverted, thus the sequence number spaces of both sides are kept
-  separate.
-
-* e
-
-  Error, in replies. The content is either a string or a well-known proxy
-  for the error's type.
-
-  The data element of errors must be a list (arguments to the error's
-  constructor).
+MoaT commands are somewhat hierarchical. While there is no global root,
+links to remote devices look just like sub-devices and are used as such.
 
 
-## Cancellations
+## Special commands
 
-A message with only an `i` element cancels the operation.
+### doc\_
 
-## Iteration
+Retrieve an app's or a command's description.
 
-Repeated values, e.g. measurements or remote serial data, should not
-require sending "pull" requests every however-many milliseconds, esp. when
-they end up being larger than the reply.
+This command is appended. If a handler is addresses by ``r.fs.open``, its
+documentation should be available at ``r.fs.open.doc_``.
 
-Thus the MoaT protocol offers a method to set up bidirectional message streams.
+Documentation contents are described below.
 
-* r
+### cfg\_
 
-  Interval between reply messages, in milliseconds. Must be greater than zero, or `False`.
-
-* n
-
-  Counter for iterated messages. A store-and-forward transport (e.g.
-  `Reliable`) uses this sequencer and `i` to update the buffered message
-  instead of storing an unbound amount of stale data that are useless by
-  the time the iterator's recipient gets them.
-
-
-A request for iterated results adds an integer parameter `r`.
-The initial reply also contains this key, possibly modified. If `r` is
-returned as `False` the iterator is empty. Iterator replies don't have `a`
-or `d` elements.
-
-Values will then be sent as normal replies, in both directions.
-
-The originator may send additional messages at will; the recipient will get
-polled as per the Python iteration protocol and is thus rate limited.
-
-The stream is terminated by a message with `r` set to `False`, an
-exception, or a cancellation.
-
-
-## Common commands
+Retrieve the configuration data of an object.
 
 ### dir\_
 
 Retrieve an app's directory, i.e. a list of commands and sub-apps.
 
-Docstrings are not supported.
+Directory entries that end with a trailing underscore are skipped unless
+``v=True``.
+
+The result is a dict with these keys:
+
+* c
+
+  A list of available direct commands.
+
+* s
+
+  A list of available streamed commands.
+
+* d
+
+  A dict of sub-apps. The value is the Python class of the app.
+
+* C
+
+  A flag; if set, the target can be called directly.
+
+* S
+
+  A flag; if set, the target can be called as a stream.
+
+  
 
 ### upd\_
 
@@ -136,3 +122,176 @@ Query stop state.
 
 XXX do we need this?
 
+
+# Documentation
+
+MoaT supports (minimal) discovery. To that end, configuration for sub-apps
+and parameters plus return values of commands are expected to be available
+from the device in question.
+
+Documentation is intentionally terse, as to not require more memory in
+small(ish) satellites than absolutely necessary.
+
+A sub-app's or command's documentation is stored in a dict. The following
+keys are defined:
+
+* ``_d``
+
+  A short string that describes the object or command in question.
+
+  The text does not contain a type.
+
+* ``NAME``
+
+  A named parameter / keyword argument.
+
+
+Commands use these additional keys:
+
+* ``_r``
+
+  The return value. When streaming, the data sent in the terminal response.
+
+* ``_k``
+
+  Any keyword argument not explicitly mentioned.
+
+  If this key is missing, no such keywords may be present.
+
+* ``_NUM``
+
+  A positional argument.
+
+* ``_a`
+
+  Trailing positional arguments.
+
+  If this key is missing, no additional positional arguments may be present.
+
+* ``_m``
+
+  If present, this field must contain an integer. It marks the first
+  positional argument that may be omitted. If this key is absent, all
+  given positional arguments are mandatory.
+
+
+Commands that support streaming use these additional keys:
+
+* ``_i``
+
+  The incoming stream accepted by this command.
+
+* ``_o``
+
+  The outgoing stream sent by this command.
+
+* ``_s``
+
+  This key is present if the command can be invoked with or without
+  streaming. It contains a list with two elements; the first applies to
+  direct commands, the second when streaming. The contents are intended as
+  possibly-recursive updates to the parent dict.
+
+  This value may contain a dict, in which case it applies to the streaming
+  case, i.e. it is equivalent to a list with an empty first element.
+
+* ``_R``
+
+  The data sent in the initial response.
+
+* ``_q``
+
+  The data expected in the terminal command.
+
+One or both of ``_i`` and ``_o`` must be present. String values of ``_i``
+and ``_o`` shall be interpreted as if they were values of a nested ``_0``
+key.
+
+
+If the value of any key (except ``_d`` and ``_m``) is a string, it should
+be of the form ``type:purpose``. ``type`` is used as in Python's `typing`
+module. ``purpose`` is a hopefully-human-readable text.
+
+Otherwise the value can be a dict, in which case the above conventions are
+applied recursively. (Obviously such a sub-dict may not contain ``_r``,
+``_s``, _i`` or ``_o``.)
+
+Documentation for sub-apps describes its configuration keys; the only key
+that starts with an underscore should be ``_d``.
+
+
+## Partial replies
+
+A result of type ``parts`` indicates that the result may be too big to
+comfortably fit in the small message frames typically used by MoaT
+satellites.
+
+In this case the result may be transmitted partially, as a two-element
+list. The first element is a dict or list that contains the "short" members
+of the return value, i.e. those that serialize to just a couple of bytes.
+The second element is a list of keys or offsets that tell the recipient
+which missing entries it should fetch in separate calls.
+
+By convention, the parameter ``p`` contains the path to the sub-reply that
+this call accesses. It must default to ``()`` and is not documented
+explicitly.
+
+
+### Example
+
+Consider this documentation entry to a hypothetical logger:
+
+    _d: Mangle, crumble, and/or log messages.
+    _0: str:log message
+    _1: int:level
+    _2: float:Timestamp
+    _m: 1
+    _r:
+      _d: saved position
+      _0: int:file offset
+      _1: int:sequence#
+
+The reply to a ``doc_`` request might look like this:
+
+    - _0: str:log message
+      _1: int:level
+      _2: float:Timestamp
+      _m: 1
+    - - _r
+      - _d
+
+To reassemble this, the client needs to send two other requests:
+
+    xxx.doc_ (p=P("_d"))
+
+which returns
+
+    "Mangle, crumble, and/or log messages."
+
+and
+
+    xxx.doc_ (p=P("_r"))
+
+resulting in
+
+    _d: saved position
+    _0: int:file offset
+    _1: int:sequence#
+
+Both are used as-is since they are not two-element lists. If they were, the
+process would recurse.
+
+The helper class :moat.micro.cmd.tree.dir:`SubStore` can be used to
+auto-reassemble the results of such a split:
+
+    # standard
+    res = await disp.app.cmd(…)
+
+    # if the return type is "parts:"
+    res = await SubStore(disp.app.cmd).get(…)
+
+
+## Streamed paths
+
+Streams that access a hierarchical structure frequently need to convey
+which part of that structure they refer to.

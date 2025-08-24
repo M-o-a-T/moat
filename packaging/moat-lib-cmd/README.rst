@@ -86,21 +86,11 @@ TODO
 Transport Specification
 =======================
 
-MoaT-Cmd messages are encoded with CBOR.
-
 All MoaT-Cmd messages are non-empty lists whose first element is a
 small(ish) integer.
 
-A transport that enforces message boundaries MAY send each message without
-the leading array mark byte(s). If this option is not used or not
-available, messages that are not arrays MAY be used for out-of-band
-communication.
-
 MoaT-Cmd messaging is simple by design and consists of a command (sent from
-A to B) followed by a reply (sent from B to A). Both directions may
-independently indicate that more, possibly streamed, data will follow. The
-first and (if streaming) last message of a streamed command or reply are
-considered to be out-of-band.
+A to B) followed by a reply (sent from B to A).
 
 There is no provision for messages that don't have a reply. On the other
 hand, an "empty" reply is just three bytes and the sender isn't required to
@@ -108,13 +98,12 @@ wait for it.
 
 The side opening a sub-channel uses a unique non-negative integer as
 channel ID. Replies carry the ID's bitwise-negated value. Thus the ID
-spaces of both directions are separate.
+spaces of both directions are inherently separate.
 
 IDs are allocated when sending the first message on a sub-channel. They
 MUST NOT be reused until final messages (stream bit off) have been
 exchanged in both directions. Corollary: Exactly one final message MUST be
 sent in both directions.
-
 
 Message format
 ++++++++++++++
@@ -147,12 +136,13 @@ Streaming
 +++++++++
 
 Data streams are inherently bidirectional. The command's semantics SHOULD
-specify which side of a stream is supposed to send data. Error -2 will be
-sent (once) if a streamed item is received that won't be handled.
+specify which side is supposed to send data (originator, responer, or
+both). Error -2 will be sent (once) if a streamed item is received that
+won't be handled.
 
 Streaming may start when both sides have exchanged initial messages.
 Sending a stream SHOULD NOT commence before the initial command has been
-replied to.
+replied to (with the Stream bit set).
 
 Messages with both the streaming and error bits set carry out-of-band data
 while the stream is open, e.g. advising the recipient of data loss.
@@ -178,7 +168,7 @@ messages it may transmit without acknowledgement.
 
 During stream transmission, the recipient then MUST periodically send some
 more (positive) integers to signal the availability of more buffer space.
-It MUST send such a message if the counter is zero (after space becomes
+It MUST send such a message if the counter is zero (after buffer space becomes
 available of course) and more messages are expected.
 
 The initial flow control messages SHOULD be sent before the initial command
@@ -188,6 +178,7 @@ A receiver SHOULD start flow control sufficiently early, but that isn't
 always feasible. It MUST notify the remote side (error -5, below) if an
 incoming message gets dropped due to resource exhaustion; likewise, the API
 is required to notify the local side.
+
 
 Error handling
 ==============
@@ -210,7 +201,7 @@ Well-Known Errors
 
   This message MAY be sent as a warning.
 
-  Usage: assume that a sender reads and transmits a block of ten
+  Usage: assume that a sender reads and transmits a sequence of ten
   measurements each second. If a "stop" warning arrives, the sender should
   complete the current block before terminating, while a "stop" error
   forces the current transmission to end immediately.
@@ -243,6 +234,10 @@ Well-Known Errors
 
   Sent if a command will not handle a non-streamed request or reply.
 
+* -7: Error
+
+  Used if the "real" error could not be encoded for some (equaly
+  untransmittable) reason.
 
 * -11 …: No Command
 
@@ -264,9 +259,9 @@ Examples
 .. note::
 
     Legend:
-    * D: direction / sign of message ID
     * S: Streaming
     * E: Error
+    * D: direction / sign of message ID
 
 Simple command:
 
@@ -355,6 +350,7 @@ S E D Data
 * * + 1
 * - - CCC
 * - - DDDD
+      [ time passes until the originator has free buffer(s) ]
 * * + 5
 * - - EEEEE
 * - - FFFFFF

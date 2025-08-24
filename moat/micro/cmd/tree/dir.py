@@ -7,7 +7,7 @@ import sys
 
 from itertools import chain
 
-from moat.util import NotGiven, attrdict
+from moat.util import NotGiven, attrdict, Path
 
 from ._dir import Dispatch as _Dispatch  # isort:skip
 from ._dir import BaseSubCmd, BaseSuperCmd, DirCmd  # noqa:F401
@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING  # isort:skip
 
 if TYPE_CHECKING:
     from moat.util import Path
+    from moat.lib.cmd.base import MsgSender
 
 
 class _NotGiven:
@@ -63,8 +64,8 @@ class SubStore:
     """
     cfg: dict = None
 
-    def __init__(self, dispatch, path: Path):
-        self.__sd = dispatch.sub_at(path)
+    def __init__(self, sd:MsgSender):
+        self.__sd = sd
 
     async def __aenter__(self):
         return self
@@ -79,12 +80,14 @@ class SubStore:
         rp = kw.pop("p", Path())
 
         async def _get(p):
-            d = await self.sd(*a, p=p, **kw)
+            d = await self.__sd(*a, p=p, **kw)
             if isinstance(d, (list,tuple)) and len(d) == 2:
                 d, s = d
                 for k in s:
                     d[k] = await _get(p + (k,))
             return d
+
+        return await _get(rp)
 
 
 class CfgStore(SubStore):

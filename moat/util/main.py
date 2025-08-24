@@ -190,7 +190,6 @@ def process_args(val, set_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=
     Returns:
         the new value.
     """
-    n = 0
     # otherwise these are assumes to be empty tuples.
     if isinstance(vars_, Mapping):
         set_ = set_.items()
@@ -282,28 +281,19 @@ def process_args(val, set_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=
                     option_name=k,
                     message="You can't use empty paths here.",
                 )
-            if n:
-                raise click.BadOptionUsage(
-                    option_name=k,
-                    message="Setting a single value conflicts.",
-                )
             val = v
-            n = -1
-        elif n < 0:
-            raise click.BadOptionUsage(option_name=k, message="Setting a single value conflicts.")
+            continue
+        if not isinstance(val, Mapping):
+            val = attrdict()
+        if vs is not None:
+            vs.add(str(k))
+        if v is NotGiven:
+            val = attrdict._delete(val, k)  # pylint: disable=protected-access
+        elif v is NoneType:
+            val = attrdict._delete(val, k)  # pylint: disable=protected-access
+            vs.discard(str(k))
         else:
-            if not isinstance(val, Mapping):
-                val = attrdict()
-            if vs is not None:
-                vs.add(str(k))
-            if v is NotGiven:
-                val = attrdict._delete(val, k)  # pylint: disable=protected-access
-            elif v is NoneType:
-                val = attrdict._delete(val, k)  # pylint: disable=protected-access
-                vs.discard(str(k))
-            else:
-                val = attrdict._update(val, k, v)  # pylint: disable=protected-access
-            n += 1
+            val = attrdict._update(val, k, v)  # pylint: disable=protected-access
     return val
 
 

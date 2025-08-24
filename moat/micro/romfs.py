@@ -1,7 +1,10 @@
 # MIT license; Copyright (c) 2022 Damien P. George
 # © 2025 Matthias Urlichs
 
-import struct, sys, os
+import struct
+import sys
+import os
+import anyio
 
 try:
     from mpy_cross import run as mpy_cross_run
@@ -74,9 +77,10 @@ class VfsRomWriter:
             payload += self._pack(VfsRomWriter.ROMFS_RECORD_KIND_DATA_VERBATIM, filedata)
         self._dir_stack[-1][1].extend(self._pack(VfsRomWriter.ROMFS_RECORD_KIND_FILE, payload))
 
-    async def copy_in()
+    async def copy_in():
+        pass
 
-    def copy_recursively(self, src_dir):
+    async def copy_recursively(self, src_dir):
         DIR = 1 << 14
         mpy_cross_missed = 0
         dir_contents = sorted(os.listdir(src_dir))

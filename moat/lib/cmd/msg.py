@@ -4,6 +4,7 @@ Basic message block
 
 from __future__ import annotations
 
+from moat.lib.codec.errors import SilentRemoteError
 from moat.util.compat import log, Event, Queue, ACM, AC_exit, is_async, shield
 from moat.util import Path, P, ExpectedError
 from moat.util import outcome
@@ -444,7 +445,7 @@ class Msg(MsgLink, MsgResult):
         except Exception as exc:
             if self._remote is None:
                 raise
-            if not isinstance(exc, ExpectedError):
+            if not isinstance(exc, SilentRemoteError) and not isinstance(exc, ExpectedError):
                 log_exc(exc, "Command Error %r", self)
             await self.ml_send_error(exc)
         except BaseException as exc:

@@ -148,7 +148,7 @@ class CfgStore(SubStore):
                     await self.sd.w(p + (k,), d=NotGiven)
 
         self.cfg = None
-        await _set(self.subpath, cfg)
+        await _set(Path(), cfg)
 
         if sync:
             await self.sd.x()  # runs

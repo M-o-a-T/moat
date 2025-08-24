@@ -514,16 +514,16 @@ async def cfg_(
             rcfg = await cf.get()
 
         rcfg = process_args(rcfg, **attrs)
-        if not write:
-            if "apps" not in rcfg:
-                raise click.UsageError("No 'apps' section.")
-            if not write_client:
-                await cf.set(rcfg, sync=sync, replace=True)
+        if attrs and not write and not write_client:
+            await cf.set(rcfg, sync=sync, replace=True)
 
         if write_client:
-            p = MoatFSPath(write_client).connect_repl(fs)
-            d = codec.encode(rcfg)
-            await p.write_bytes(d, chunk=64)
+            if "apps" in rcfg:
+                p = MoatFSPath(write_client).connect_repl(fs)
+                d = codec.encode(rcfg)
+                await p.write_bytes(d, chunk=64)
+            else:
+                print("No 'apps' section. Not writing.", file=sys.stderr)
         if write:
             yprint(rcfg, stream=write)
         elif not has_attrs and not write_client:

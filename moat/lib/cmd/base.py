@@ -80,7 +80,8 @@ class MsgLink:
         Send an exception.
         """
         if self.end_here:
-            log("Err after end: %r %r", self, exc, err=exc if isinstance(exc,Exception) else None)
+            if isinstance(exc,Exception):
+                log("Err after end: %r %r", self, exc, err=exc)
             return
         try:
             # send the error directly

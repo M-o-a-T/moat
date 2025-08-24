@@ -325,10 +325,11 @@ async def boot(obj, state):
 @cli.command(short_help="Send a MoaT command")
 @click.pass_obj
 @click.option("-t","--time", is_flag=True, help="Time the command")
+@click.option("-p","--parts", is_flag=True, help="Re-assemble a possibly-partial result")
 @click.argument("path", nargs=1, type=P)
 @attr_args(with_path=True, with_proxy=True)
 @catch_errors
-async def cmd(obj, path, time, **attrs):
+async def cmd(obj, path, time, parts, **attrs):
     """
     Send a MoaT command.
 
@@ -359,7 +360,11 @@ async def cmd(obj, path, time, **attrs):
         try:
             t2 = tm()
             cmd = cfr.sub_at(path)
-            res = await cmd(*args, **val)
+            if parts:
+                from moat.micro.cmd.tree.dir import SubStore
+                res = await SubStore(cmd).get(*args, **val)
+            else:
+                res = await cmd(*args, **val)
         except RemoteError as err:
             t3 = tm()
             yprint(dict(e=str(err.args[0])), stream=obj.stdout)

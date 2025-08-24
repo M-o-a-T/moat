@@ -163,14 +163,17 @@ class attrdict(dict):
         px = path[-1]
         if value is NotGiven:
             v.pop(px, None)
-        elif isinstance(v, list) and px is None:
-            v.append(value)
-        elif not isinstance(value, Mapping):
-            if px>len(v)+10:
-                raise ValueError(f"Won't pad the array (want {px}, has {len(v)}).")
-            while len(v) <= px:
-                v.append(NotGiven)
+        elif isinstance(v, list):
+            if px is None:
+                v.append(value)
+                return val
+            if px >= len(v):
+                if px>len(v)+10:
+                    raise ValueError(f"Won't pad the array (want {px}, has {len(v)}).")
+                v.extend([NotGiven]*(1 + px - len(v)))
             v[px] = value
+        elif not isinstance(v, Mapping):
+            raise ValueError((v,px))
         elif px in v:
             v[px] = combine_dict(value, v[px], cls=type(self))
         else:

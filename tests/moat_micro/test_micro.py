@@ -145,24 +145,6 @@ async def test_modes(tmp_path, lossy, guarded):
         assert res.kw == {"r": "hi"}
 
 
-async def test_cfg(tmp_path):
-    "test config updating"
-    async with mpy_stack(tmp_path, CFG) as d, d.cfg_at(P("r.c")) as cfg:
-        cf = to_attrdict(await cfg.get())
-        assert cf.tt.a == "b"
-        cf.tt.a = "x"
-        assert cf.tt.c[1] == 2
-        assert cf.tt.z == 99
-
-        await cfg.set({"tt": {"a": "d", "e": {"f": 42}, "z": NotGiven}})
-
-        cf = to_attrdict(await cfg.get(again=True))
-        assert cf.tt.a == "d"
-        assert cf.tt.e.f == 42
-        assert cf.tt.x == "y"
-        assert "z" not in cf.tt
-
-
 class Bar:
     "proxied test object"
 

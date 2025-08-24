@@ -13,12 +13,9 @@ import ruyaml as yaml
 from .dict import attrdict
 
 try:
-    from .msgpack import Proxy
+    from moat.lib.codec.proxy import DProxy, Proxy
 except ImportError:
     Proxy = None
-try:
-    from moat.lib.codec.proxy import DProxy
-except ImportError:
     DProxy = None
 
 from .path import Path

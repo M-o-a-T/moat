@@ -7,7 +7,8 @@ from __future__ import annotations
 from functools import partial
 
 from moat.util import Path, import_, P
-from moat.micro.cmd.base import ACM_h, BaseCmd, ShortCommandError
+from moat.micro.cmd.base import ACM_h, BaseCmd
+from moat.lib.cmd.errors import ShortCommandError
 from moat.util.compat import AC_use, Event, L, Lock, TaskGroup, log
 from moat.lib.codec.errors import NoPathError
 from moat.lib.cmd.base import MsgSender

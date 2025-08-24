@@ -25,7 +25,7 @@ from .merge import merge
 from .config import CFG, ensure_cfg
 
 try:
-    from .msgpack import Proxy
+    from moat.lib.codec.proxy import Proxy
 except ImportError:
     Proxy = None
 from .path import P
@@ -261,7 +261,7 @@ def process_args(val, set_=(), vars_=(), eval_=(), path_=(), proxy_=(), no_path=
             yield k, v
         if proxy_:
             if Proxy is None:
-                raise ImportError("msgpack")
+                raise ImportError("No Proxy")
             for k, v in proxy_:
                 v = Proxy(v)
                 yield k, v

@@ -10,6 +10,7 @@ from moat.lib.codec.proxy import Proxy, drop_proxy
 from moat.micro.cmd.base import BaseCmd
 from moat.micro.cmd.util.part import enc_part, get_part, set_part
 from moat.micro.stacks.util import TEST_MAGIC
+from moat.util import Path
 
 
 class Cmd(BaseCmd):
@@ -83,7 +84,7 @@ class Cmd(BaseCmd):
 
         if isinstance(x, str):
             res = eval(x, self.cache) 
-        elif isinstance(x, (tuple, list)):
+        elif isinstance(x, (tuple, list, Path)):
             res = x[0]
             if isinstance(res, str):
                 res = self.cache[res]

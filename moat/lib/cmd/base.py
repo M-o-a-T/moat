@@ -10,6 +10,7 @@ from moat.util.compat import TaskGroup, QueueFull, log, print_exc, ACM, AC_exit,
 from moat.util import Path, NotGiven
 from moat.util.exc import ungroup
 from .const import *
+from .errors import ShortCommandError
 
 _link_id = 0
 

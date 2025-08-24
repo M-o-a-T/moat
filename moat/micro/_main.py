@@ -308,7 +308,7 @@ async def boot(obj, state):
 
         # reboot via the multiplexer
         logger.info("Rebooting target.")
-        await sd.boot()
+        await sd.boot(code="SysBooT", m=1)
 
         # await t.send(["sys","boot"], code="SysBooT")
         await anyio.sleep(2)

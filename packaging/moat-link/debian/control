@@ -21,8 +21,8 @@ Depends: ${misc:Depends}, ${python3:Depends},
   python3-mqttproto,
   systemd (>= 241),
 Recommends:
+  python3-httpx,
   python3-trio (>= 0.22),
-  httpx,
 Description: A distributed no-master key-value store
  MoaT-Link is a master-less distributed key-value storage system. It uses
  MQTT as a fast-response backend, and adds metadata to ensure that new records

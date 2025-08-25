@@ -14,7 +14,6 @@ X-DH-Compat: 13
 Package: moat-link
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
-  moat-mqtt (>= 0.38),
   moat-util,
   moat,
   python3-moat-lib-codec,

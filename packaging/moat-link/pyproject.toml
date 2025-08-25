@@ -18,6 +18,7 @@ dependencies = [
 	"msgpack",
 	"outcome",
 	"ruyaml",
+	"httpx",
 	"simpleeval",
 	"moat-util ~= 0.56.4",
 	"moat-lib-cmd ~= 0.3.4",

@@ -26,10 +26,8 @@ Recommends:
   httpx,
 Description: A distributed no-master key-value store
  MoaT-Link is a master-less distributed key-value storage system. It uses
-
- circumvents the CAP theorem by assuming that keys are usually only changed
- by one node. It is resistant to partitioning and intended to be always-on;
- while it might delay – but will not lose – any updates.
+ MQTT as a fast-response backend, and adds metadata to ensure that new records
+ won't be overwritten with stale data. Messages are encoded with CBOR.
  .
  MoaT-Link does not support data partitioning. Every server stores the whole
  data set.

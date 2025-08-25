@@ -181,8 +181,10 @@ G92 E0 ; reset extruder position
 
 {% if p>=0 %}
 M104 S{(is_nil(idle_temperature[{{ t }}]) ? (first_layer_temperature[{{ t }}] + standby_temperature_delta) : (idle_temperature[{{ t }}]))} T{{ ti }}
-
 {endif}
+
+{% else %}
+M109 S{first_layer_temperature[initial_tool]} T{initial_tool}
 {% endif %}
 
 {% endmacro %}
@@ -193,5 +195,6 @@ M104 S{(is_nil(idle_temperature[{{ t }}]) ? (first_layer_temperature[{{ t }}] + 
 {{ purge(3) }}
 {{ purge(4) }}
 {{ purge(-1) }}
+
 
 ;; END startup gcode

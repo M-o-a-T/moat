@@ -21,10 +21,10 @@ moat-bus:
   tag: 0.7.4
 moat-cad:
   deb: 0.3.3-3
-  pkg: 2
+  pkg: 1
   pypi: 0.3.3
-  rev: 3baec6fcb58ba62d104f0f343bb0a56b165b4c86
-  tag: 0.3.4
+  rev: 327eeb383efd44ca2f96076b36f23cd3c66636e3
+  tag: 0.3.5
 moat-db:
   deb: 0.2.2-3
   pkg: 3
@@ -136,9 +136,9 @@ moat-label:
 moat-lib-cmd:
   deb: 0.3.6-5
   pkg: 1
-  pypi: 0.3.6
-  rev: ad5565428a406dcdb78cb322356f453fe4dabea2
-  tag: 0.3.8
+  pypi: 0.3.9
+  rev: 327eeb383efd44ca2f96076b36f23cd3c66636e3
+  tag: 0.3.9
 moat-lib-codec:
   deb: 0.4.3-2
   pkg: 7
@@ -185,8 +185,8 @@ moat-micro:
   deb: 0.16.4-1
   pkg: 1
   pypi: 0.16.9
-  rev: ad5565428a406dcdb78cb322356f453fe4dabea2
-  tag: 0.16.10
+  rev: 327eeb383efd44ca2f96076b36f23cd3c66636e3
+  tag: 0.16.11
 moat-modbus:
   deb: 0.8.5-2
   pkg: 2
@@ -232,5 +232,5 @@ moat-util:
   deb: 0.57.10-1
   pkg: 1
   pypi: 0.57.13
-  rev: ad5565428a406dcdb78cb322356f453fe4dabea2
-  tag: 0.58.1
+  rev: 327eeb383efd44ca2f96076b36f23cd3c66636e3
+  tag: 0.58.2

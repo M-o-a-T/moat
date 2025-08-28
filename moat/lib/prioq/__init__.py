@@ -1,4 +1,3 @@
-import threading
 from typing import Dict, Hashable, List, Optional, Tuple, Union
 
 try:
@@ -31,7 +30,6 @@ class HeapMap(MutableMapping):
         """
         self.heap: List[HeapItem] = []
         self.position: Dict[Key, int] = {}
-        self.lock = threading.Lock()
         # Comparison function determines min or max behavior
         self.compare = (lambda x, y: x < y) if not is_max_heap else (lambda x, y: x > y)
 
@@ -72,17 +70,16 @@ class HeapMap(MutableMapping):
         :return: (key, priority)
         :raises IndexError: If empty.
         """
-        with self.lock:
-            if not self.heap:
-                raise IndexError("popitem from empty heap")
-            key, prio = self.heap[0]
-            last = self.heap.pop()
-            if self.heap:
-                self.heap[0] = last
-                self.position[last[0]] = 0
-                self._sift_down(0)
-            del self.position[key]
-            return key, prio
+        if not self.heap:
+            raise IndexError("popitem from empty heap")
+        key, prio = self.heap[0]
+        last = self.heap.pop()
+        if self.heap:
+            self.heap[0] = last
+            self.position[last[0]] = 0
+            self._sift_down(0)
+        del self.position[key]
+        return key, prio
 
     def peekitem(self) -> Tuple[Key, Priority]:
         """
@@ -90,10 +87,9 @@ class HeapMap(MutableMapping):
 
         :raises IndexError: If empty.
         """
-        with self.lock:
-            if not self.heap:
-                raise IndexError("peekitem from empty heap")
-            return self.heap[0][0], self.heap[0][1]
+        if not self.heap:
+            raise IndexError("peekitem from empty heap")
+        return self.heap[0][0], self.heap[0][1]
 
     def update(self, key: Key, new_priority: Priority) -> None:
         """
@@ -104,26 +100,24 @@ class HeapMap(MutableMapping):
         :raises KeyError: If key not found.
         :raises TypeError: If new_priority invalid.
         """
-        with self.lock:
-            if key not in self.position:
-                raise KeyError(f"Key {key} not found in heap.")
-            if not isinstance(new_priority, PriorityType):
-                raise TypeError("New priority must be int or float.")
-            idx = self.position[key]
-            old = self.heap[idx][1]
-            self.heap[idx][1] = new_priority
-            if self.compare(new_priority, old):
-                self._sift_up(idx)
-            else:
-                self._sift_down(idx)
+        if key not in self.position:
+            raise KeyError(f"Key {key} not found in heap.")
+        if not isinstance(new_priority, PriorityType):
+            raise TypeError("New priority must be int or float.")
+        idx = self.position[key]
+        old = self.heap[idx][1]
+        self.heap[idx][1] = new_priority
+        if self.compare(new_priority, old):
+            self._sift_up(idx)
+        else:
+            self._sift_down(idx)
 
     def clear(self) -> None:
         """
         Remove all items from the heap.
         """
-        with self.lock:
-            self.heap.clear()
-            self.position.clear()
+        self.heap.clear()
+        self.position.clear()
 
     def is_empty(self) -> bool:
         """
@@ -131,8 +125,7 @@ class HeapMap(MutableMapping):
 
         :return: True if no items.
         """
-        with self.lock:
-            return not self.heap
+        return not self.heap
 
     def _swap(self, i: int, j: int) -> None:
         """
@@ -183,10 +176,9 @@ class HeapMap(MutableMapping):
         :return: Associated priority.
         :raises KeyError: If `key` is not present.
         """
-        with self.lock:
-            if key in self.position:
-                return self.heap[self.position[key]][1]
-            raise KeyError(f"Key {key} not found in heap.")
+        if key in self.position:
+            return self.heap[self.position[key]][1]
+        raise KeyError(f"Key {key} not found in heap.")
 
     def __setitem__(self, key: Key, priority: Priority) -> None:
         """
@@ -196,16 +188,15 @@ class HeapMap(MutableMapping):
         :param priority: Priority value (int or float).
         :raises TypeError: If `priority` is not int or float.
         """
-        with self.lock:
-            if not isinstance(priority, PriorityType):
-                raise TypeError("Priority must be int or float.")
-            if key in self.position:
-                self.update(key, priority)
-            else:
-                idx = len(self.heap)
-                self.heap.append([key, priority])
-                self.position[key] = idx
-                self._sift_up(idx)
+        if not isinstance(priority, PriorityType):
+            raise TypeError("Priority must be int or float.")
+        if key in self.position:
+            self.update(key, priority)
+        else:
+            idx = len(self.heap)
+            self.heap.append([key, priority])
+            self.position[key] = idx
+            self._sift_up(idx)
 
     def __delitem__(self, key: Key) -> None:
         """
@@ -214,37 +205,33 @@ class HeapMap(MutableMapping):
         :param key: Key to remove.
         :raises KeyError: If `key` not present.
         """
-        with self.lock:
-            if key not in self.position:
-                raise KeyError(f"Key {key} not found in heap.")
-            idx = self.position.pop(key)
-            last = self.heap.pop()
-            if idx < len(self.heap):
-                self.heap[idx] = last
-                self.position[last[0]] = idx
-                self._sift_down(idx)
-                self._sift_up(idx)
+        if key not in self.position:
+            raise KeyError(f"Key {key} not found in heap.")
+        idx = self.position.pop(key)
+        last = self.heap.pop()
+        if idx < len(self.heap):
+            self.heap[idx] = last
+            self.position[last[0]] = idx
+            self._sift_down(idx)
+            self._sift_up(idx)
 
     def __contains__(self, key: Key) -> bool:
         """
         Check if `key` exists in the heap.
         """
-        with self.lock:
-            return key in self.position
+        return key in self.position
 
     def __len__(self) -> int:
         """
         Return number of items.
         """
-        with self.lock:
-            return len(self.heap)
+        return len(self.heap)
 
     def __str__(self) -> str:
         """
         String representation: list of {key: priority}.
         """
-        with self.lock:
-            return "[" + ", ".join(f"{{{k}: {v}}}" for k, v in self.heap) + "]"
+        return "[" + ", ".join(f"{{{k}: {v}}}" for k, v in self.heap) + "]"
 
     def _create_iterator(self, return_keys=True, return_values=True):
         """
@@ -253,13 +240,12 @@ class HeapMap(MutableMapping):
         :param return_keys: Yield keys if True.
         :param return_values: Yield priorities if True.
         """
-        with self.lock:
-            self._iterator_state = {
-                "index": 0,
-                "heap_len": len(self.heap),
-                "mutations_detected": False,
-                "current_position": self.position.copy(),
-            }
+        self._iterator_state = {
+            "index": 0,
+            "heap_len": len(self.heap),
+            "mutations_detected": False,
+            "current_position": self.position.copy(),
+        }
 
         class SafeIterator:
             def __init__(self, heap_dict, return_keys, return_values):
@@ -276,9 +262,8 @@ class HeapMap(MutableMapping):
                 if s["index"] < s["heap_len"]:
                     key, prio = self.heap_dict.heap[s["index"]]
                     s["index"] += 1
-                    with self.heap_dict.lock:
-                        if s["current_position"] != self.heap_dict.position:
-                            s["mutations_detected"] = True
+                    if s["current_position"] != self.heap_dict.position:
+                        s["mutations_detected"] = True
                     if s["mutations_detected"]:
                         raise RuntimeError("Modification detected during iteration.")
                     out = []

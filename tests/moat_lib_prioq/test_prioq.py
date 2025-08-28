@@ -1,5 +1,5 @@
 import pytest
-from heapmap import HeapMap
+from moat.lib.priomap import PrioMap
 
 
 def test_initialization_min_heap():

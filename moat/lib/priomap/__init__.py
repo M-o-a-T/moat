@@ -58,19 +58,19 @@ class PrioMap(MutableMapping):
         """
         Yield (key, priority) pairs.
         """
-        return self._create_iterator(True, True)
+        return self._create_iterator(None)
 
     def keys(self):
         """
         Yield keys only.
         """
-        return self._create_iterator(True, False)
+        return self._create_iterator(True)
 
     def values(self):
         """
         Yield priorities only.
         """
-        return self._create_iterator(False, True)
+        return self._create_iterator(False)
 
     def popitem(self) -> tuple[Key, Priority]:
         """
@@ -279,4 +279,4 @@ class PrioMap(MutableMapping):
         """
         Iterate over (key, priority) pairs.
         """
-        return self._create_iterator(True, True)
+        return self._create_iterator(None)

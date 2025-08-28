@@ -8,7 +8,8 @@ except ImportError:
     from collections import MutableMapping
 
 # ==== Centralized type aliases ====
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
+
 if TYPE_CHECKING:
     from typing import Hashable, Optional, Union, Protocol
     from abc import abstractmethod
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
             ...
 
     CT = TypeVar("CT", bound=Comparable)
+    RT = TypeVar("RT")
 
     Priority = CT
     Key = Hashable
@@ -84,29 +86,52 @@ class PrioMap(MutableMapping):
         """
         return self._create_iterator(False)
 
+    @overload
     def pop(self) -> tuple[Key, Priority]:
+        ...
+    @overload
+    def pop(self, key:Key) -> Priority:
+        ...
+    @overload
+    def pop(self, key:Key, default:RT) -> Priority|RT:
+        ...
+
+    def pop(self, *a):
         """
-        Remove and return the root (min) item.
+        Remove and return an item.
+
+        Args are passed to dict.pop.
 
         :return: (key, priority)
         :raises IndexError: If empty.
         """
-        try:
-            key, prio = self.heap[0]
-        except IndexError:
-            raise IndexError("Queue is empty") from None
+        if a:
+            if len(a) > 2:
+                raise TypeError("PrioMap.pop([key[,default]])")
+            try:
+                pos = self.position[a[0]]
+            except KeyError:
+                if len(a) > 1:
+                    return a[1]
+                raise
+        else:
+            pos = 0
+
+        key, prio = self.heap[pos]
 
         last = self.heap.pop()
-        if self.heap:
-            self.heap[0] = last
+        if pos < len(self.heap):
+            self.heap[pos] = last
             self.position[last[0]] = 0
-            self._sift_down(0)
+            self._sift_down(pos)
         del self.position[key]
+        if a:
+            return prio
         return key, prio
 
     def peek(self) -> tuple[Key, Priority]:
         """
-        Return root item without removing it.
+        Return the root item without removing it.
 
         :raises IndexError: If empty.
         """
@@ -117,7 +142,7 @@ class PrioMap(MutableMapping):
 
     def update(self, key: Key, new_priority: Priority) -> None:
         """
-        Update priority for existing key and reheapify.
+        Update priority for an existing key, then reheapify.
 
         :param key: Key to update.
         :param new_priority: New priority value.

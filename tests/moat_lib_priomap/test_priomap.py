@@ -50,6 +50,15 @@ def test_delete_item():
     assert h.peek() == ('b', 2)
 
 
+def test_pop_item():
+    h = PrioMap({'a': 1, 'b': 2})
+    assert h.pop('b') == 2
+    assert 'b' not in h
+    # remaining is b
+    assert len(h) == 1
+    assert h.peek() == ('a', 1)
+
+
 def test_update():
     h = PrioMap({'a': 5, 'b': 2})
     h.update('a', 1)

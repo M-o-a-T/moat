@@ -1,0 +1,18 @@
+Source: moat-lib-priomap
+Maintainer: "Matthias Urlichs" <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-all, debhelper (>= 13),
+  python3-setuptools,
+  python3-wheel,
+Standards-Version: 3.9.6
+Homepage: https://m-o-a-t.org
+X-DH-Compat: 13
+
+Package: python3-moat-lib-priomap
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  python3-anyio (>= 3.0),
+Description: A heap that behaves like a dict, but ordered by value.
+  This is a dict whose keys are sorted by value. Keys can be inserted,
+  updated or deleted in O(log n) time.

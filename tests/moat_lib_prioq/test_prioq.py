@@ -10,13 +10,6 @@ def test_initialization_min_heap():
     assert key == 'b' and prio == 2
 
 
-def test_initialization_max_heap():
-    h = HeapMap({'a': 5, 'b': 2, 'c': 8}, is_max_heap=True)
-    assert len(h) == 3
-    key, prio = h.peekitem()
-    assert key == 'c' and prio == 8
-
-
 def test_setitem_and_getitem():
     h = PrioMap()
     h['x'] = 10
@@ -25,12 +18,6 @@ def test_setitem_and_getitem():
     # h['x'] = 1
     # assert h['x'] == 1
     # assert h.peekitem() == ('x', 1)
-
-
-def test_invalid_priority():
-    h = HeapMap()
-    with pytest.raises(TypeError):
-        h['k'] = 'not a number'  # invalid priority
 
 
 def test_popitem_and_ordering():

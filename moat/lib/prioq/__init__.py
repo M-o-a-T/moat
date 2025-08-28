@@ -233,12 +233,11 @@ class HeapMap(MutableMapping):
         """
         return "[" + ", ".join(f"{{{k}: {v}}}" for k, v in self.heap) + "]"
 
-    def _create_iterator(self, return_keys=True, return_values=True):
+    def _create_iterator(self, keys:bool|None=None):
         """
         Internal: return iterator over keys, values, or items, detecting concurrent mods.
 
-        :param return_keys: Yield keys if True.
-        :param return_values: Yield priorities if True.
+        :param keys: Yield keys if True, values if False, both if None
         """
         self._iterator_state = {
             "index": 0,
@@ -247,11 +246,10 @@ class HeapMap(MutableMapping):
         }
 
         class SafeIterator:
-            def __init__(self, heap_dict, return_keys, return_values):
+            def __init__(self, heap_dict, keys):
                 self.heap_dict = heap_dict
                 self.state = heap_dict._iterator_state
-                self.return_keys = return_keys
-                self.return_values = return_values
+                self.keys = keys
 
             def __iter__(self):
                 return self
@@ -263,13 +261,14 @@ class HeapMap(MutableMapping):
                     s["index"] += 1
                     if s["pos"] != self.heap_dict.position:
                         raise RuntimeError("Modification detected during iteration.")
-                    out = []
-                    if self.return_keys: out.append(key)
-                    if self.return_values: out.append(prio)
-                    return tuple(out) if len(out)>1 else out[0]
+                    if self.keys:
+                        return key
+                    if self.keys is False:
+                        return prio
+                    return (key,prio)
                 raise StopIteration
 
-        return SafeIterator(self, return_keys, return_values)
+        return SafeIterator(self, keys)
 
     def __iter__(self):
         """

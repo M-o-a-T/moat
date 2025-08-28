@@ -30,22 +30,19 @@ class PrioMap(MutableMapping):
     """
     A heap that behaves like a dict but maintains heap ordering.
 
-    Supports both min-heap and max-heap modes, dictionary-like access, key updates,
+    Supports dictionary-like access, key updates,
     removals, bulk initialization, and safe iteration (detects concurrent modifications).
     """
 
-    def __init__(self, initial: InitialData = None, is_max_heap: bool = False):
+    def __init__(self, initial: InitialData = None):
         """
         Initialize the HeapDict.
 
         :param initial: Optional mapping of keys to initial priorities.
-        :param is_max_heap: If True, treat as a max-heap; otherwise a min-heap.
         :raises TypeError: If any priority in `initial` is not an int or float.
         """
         self.heap: list[HeapItem] = []
         self.position: dict[Key, int] = {}
-        # Comparison function determines min or max behavior
-        self.compare = (lambda x, y: x < y) if not is_max_heap else (lambda x, y: x > y)
 
         # Bulk initialize if provided
         if initial:
@@ -77,7 +74,7 @@ class PrioMap(MutableMapping):
 
     def popitem(self) -> tuple[Key, Priority]:
         """
-        Remove and return root (min or max) item.
+        Remove and return root (min) item.
 
         :return: (key, priority)
         :raises IndexError: If empty.
@@ -117,7 +114,7 @@ class PrioMap(MutableMapping):
         idx = self.position[key]
         old = self.heap[idx][1]
         self.heap[idx][1] = new_priority
-        if self.compare(new_priority, old):
+        if new_priority < old:
             self._sift_up(idx)
         else:
             self._sift_down(idx)
@@ -151,7 +148,7 @@ class PrioMap(MutableMapping):
         """
         while idx > 0:
             parent = (idx - 1) // 2
-            if self.compare(self.heap[idx][1], self.heap[parent][1]):
+            if self.heap[idx][1] < self.heap[parent][1]:
                 self._swap(idx, parent)
                 idx = parent
             else:
@@ -167,9 +164,9 @@ class PrioMap(MutableMapping):
             right = 2 * idx + 2
             best = idx
 
-            if left < n and self.compare(self.heap[left][1], self.heap[best][1]):
+            if left < n and self.heap[left][1] < self.heap[best][1]:
                 best = left
-            if right < n and self.compare(self.heap[right][1], self.heap[best][1]):
+            if right < n and self.heap[right][1] < self.heap[best][1]:
                 best = right
 
             if best != idx:

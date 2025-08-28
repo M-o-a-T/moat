@@ -242,9 +242,8 @@ class HeapMap(MutableMapping):
         """
         self._iterator_state = {
             "index": 0,
-            "heap_len": len(self.heap),
-            "mutations_detected": False,
-            "current_position": self.position.copy(),
+            "len": len(self.heap),
+            "pos": self.position.copy(),
         }
 
         class SafeIterator:
@@ -259,12 +258,10 @@ class HeapMap(MutableMapping):
 
             def __next__(self):
                 s = self.state
-                if s["index"] < s["heap_len"]:
+                if s["index"] < s["len"]:
                     key, prio = self.heap_dict.heap[s["index"]]
                     s["index"] += 1
-                    if s["current_position"] != self.heap_dict.position:
-                        s["mutations_detected"] = True
-                    if s["mutations_detected"]:
+                    if s["pos"] != self.heap_dict.position:
                         raise RuntimeError("Modification detected during iteration.")
                     out = []
                     if self.return_keys: out.append(key)

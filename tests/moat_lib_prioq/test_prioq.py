@@ -3,7 +3,7 @@ from moat.lib.priomap import PrioMap
 
 
 def test_initialization_min_heap():
-    h = HeapMap({'a': 5, 'b': 2, 'c': 8})
+    h = PrioMap({'a': 5, 'b': 2, 'c': 8})
     assert len(h) == 3
     # peek should return smallest key 'b'
     key, prio = h.peekitem()
@@ -18,7 +18,7 @@ def test_initialization_max_heap():
 
 
 def test_setitem_and_getitem():
-    h = HeapMap()
+    h = PrioMap()
     h['x'] = 10
     assert h['x'] == 10
     # # update via __setitem__ should update and reorder
@@ -34,7 +34,7 @@ def test_invalid_priority():
 
 
 def test_popitem_and_ordering():
-    h = HeapMap({'a': 3, 'b': 1, 'c': 2})
+    h = PrioMap({'a': 3, 'b': 1, 'c': 2})
     popped = []
     while not h.is_empty():
         popped.append(h.popitem())
@@ -42,19 +42,19 @@ def test_popitem_and_ordering():
 
 
 def test_peekitem_empty():
-    h = HeapMap()
+    h = PrioMap()
     with pytest.raises(IndexError):
         h.peekitem()
 
 
 def test_popitem_empty():
-    h = HeapMap()
+    h = PrioMap()
     with pytest.raises(IndexError):
         h.popitem()
 
 
 def test_delete_item():
-    h = HeapMap({'a': 1, 'b': 2})
+    h = PrioMap({'a': 1, 'b': 2})
     del h['a']
     assert 'a' not in h
     # remaining is b
@@ -63,7 +63,7 @@ def test_delete_item():
 
 
 def test_update():
-    h = HeapMap({'a': 5, 'b': 2})
+    h = PrioMap({'a': 5, 'b': 2})
     h.update('a', 1)
     assert h['a'] == 1
     # now a is smallest
@@ -75,13 +75,13 @@ def test_update():
 
 
 def test_clear_and_is_empty():
-    h = HeapMap({'x': 1, 'y': 2})
+    h = PrioMap({'x': 1, 'y': 2})
     h.clear()
     assert h.is_empty()
 
 
 def test_contains_and_len():
-    h = HeapMap()
+    h = PrioMap()
     h['foo'] = 42
     assert 'foo' in h
     assert len(h) == 1
@@ -89,7 +89,7 @@ def test_contains_and_len():
 
 
 def test_keys_items_values_iteration_and_modification_error():
-    h = HeapMap({'a': 1, 'b': 2, 'c': 3})
+    h = PrioMap({'a': 1, 'b': 2, 'c': 3})
     keys = list(h.keys())
     assert set(keys) == {'a', 'b', 'c'}
     items = list(h.items())

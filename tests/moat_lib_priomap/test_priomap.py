@@ -7,7 +7,7 @@ def test_initialization_min_heap():
     h = PrioMap({'a': 5, 'b': 2, 'c': 8})
     assert len(h) == 3
     # peek should return smallest key 'b'
-    key, prio = h.peekitem()
+    key, prio = h.peek()
     assert key == 'b' and prio == 2
 
 
@@ -18,27 +18,27 @@ def test_setitem_and_getitem():
     # # update via __setitem__ should update and reorder
     # h['x'] = 1
     # assert h['x'] == 1
-    # assert h.peekitem() == ('x', 1)
+    # assert h.peek() == ('x', 1)
 
 
-def test_popitem_and_ordering():
+def test_pop_and_ordering():
     h = PrioMap({'a': 3, 'b': 1, 'c': 2})
     popped = []
     while not h.is_empty():
-        popped.append(h.popitem())
+        popped.append(h.pop())
     assert popped == [('b', 1), ('c', 2), ('a', 3)]
 
 
-def test_peekitem_empty():
+def test_peek_empty():
     h = PrioMap()
     with pytest.raises(IndexError):
-        h.peekitem()
+        h.peek()
 
 
-def test_popitem_empty():
+def test_pop_empty():
     h = PrioMap()
     with pytest.raises(IndexError):
-        h.popitem()
+        h.pop()
 
 
 def test_delete_item():
@@ -47,7 +47,7 @@ def test_delete_item():
     assert 'a' not in h
     # remaining is b
     assert len(h) == 1
-    assert h.peekitem() == ('b', 2)
+    assert h.peek() == ('b', 2)
 
 
 def test_update():
@@ -55,7 +55,7 @@ def test_update():
     h.update('a', 1)
     assert h['a'] == 1
     # now a is smallest
-    assert h.peekitem() == ('a', 1)
+    assert h.peek() == ('a', 1)
     with pytest.raises(KeyError):
         h.update('c', 10)
     with pytest.raises(TypeError):
@@ -110,7 +110,7 @@ async def test_aiter():
     async with anyio.create_task_group() as tg:
         tg.start_soon(reader)
         await anyio.sleep(.025)
-        assert h.peekitem()==("b",2)
+        assert h.peek()==("b",2)
         h["y"]=2.5
         h["x"]=1
         while h:

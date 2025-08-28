@@ -84,7 +84,7 @@ class PrioMap(MutableMapping):
         """
         return self._create_iterator(False)
 
-    def popitem(self) -> tuple[Key, Priority]:
+    def pop(self) -> tuple[Key, Priority]:
         """
         Remove and return the root (min) item.
 
@@ -104,7 +104,7 @@ class PrioMap(MutableMapping):
         del self.position[key]
         return key, prio
 
-    def peekitem(self) -> tuple[Key, Priority]:
+    def peek(self) -> tuple[Key, Priority]:
         """
         Return root item without removing it.
 
@@ -325,7 +325,7 @@ class PrioMap(MutableMapping):
         """
         while not self.heap:
             await self.evt.wait()
-        return self.popitem()
+        return self.pop()
 
     async def apeek(self) -> tuple[Key, Priority]:
         """

@@ -1,4 +1,4 @@
-from typing import Dict, Hashable, List, Optional, Tuple, Union
+from __future__ import annotations
 
 try:
     from collections.abc import MutableMapping
@@ -6,15 +6,29 @@ except ImportError:
     from collections import MutableMapping
 
 # ==== Centralized type aliases ====
-Priority = Union[int, float]
-Key = Hashable
-InitialData = Optional[Dict[Key, Priority]]
-HeapItem = List[Union[Key, Priority]]  # Each heap item is [key, priority]
-PriorityType = (int, float)
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from typing import Hashable, Optional, Union, Protocol
+    from abc import abstractmethod
+
+    class Comparable(Protocol):
+        """Protocol for annotating comparable types."""
+
+        @abstractmethod
+        def __lt__(self: CT, other: CT, /) -> bool:
+            ...
+
+    CT = TypeVar("CT", bound=Comparable)
+
+    Priority = CT
+    Key = Hashable
+    InitialData = Optional[Dict[Key, Priority]]
+    HeapItem = List[Union[Key, Priority]]  # Each heap item is [key, priority]
+
 
 class PrioMap(MutableMapping):
     """
-    A thread-safe heap that behaves like a dict but maintains heap ordering.
+    A heap that behaves like a dict but maintains heap ordering.
 
     Supports both min-heap and max-heap modes, dictionary-like access, key updates,
     removals, bulk initialization, and safe iteration (detects concurrent modifications).
@@ -28,16 +42,14 @@ class PrioMap(MutableMapping):
         :param is_max_heap: If True, treat as a max-heap; otherwise a min-heap.
         :raises TypeError: If any priority in `initial` is not an int or float.
         """
-        self.heap: List[HeapItem] = []
-        self.position: Dict[Key, int] = {}
+        self.heap: list[HeapItem] = []
+        self.position: dict[Key, int] = {}
         # Comparison function determines min or max behavior
         self.compare = (lambda x, y: x < y) if not is_max_heap else (lambda x, y: x > y)
 
         # Bulk initialize if provided
         if initial:
             for key, priority in initial.items():
-                if not isinstance(priority, PriorityType):
-                    raise TypeError(f"Priority for key '{key}' must be int or float.")
                 self.heap.append([key, priority])
             # Record positions and heapify
             for idx, (key, _) in enumerate(self.heap):
@@ -63,7 +75,7 @@ class PrioMap(MutableMapping):
         """
         return self._create_iterator(False, True)
 
-    def popitem(self) -> Tuple[Key, Priority]:
+    def popitem(self) -> tuple[Key, Priority]:
         """
         Remove and return root (min or max) item.
 
@@ -81,7 +93,7 @@ class PrioMap(MutableMapping):
         del self.position[key]
         return key, prio
 
-    def peekitem(self) -> Tuple[Key, Priority]:
+    def peekitem(self) -> tuple[Key, Priority]:
         """
         Return root item without removing it.
 
@@ -102,8 +114,6 @@ class PrioMap(MutableMapping):
         """
         if key not in self.position:
             raise KeyError(f"Key {key} not found in heap.")
-        if not isinstance(new_priority, PriorityType):
-            raise TypeError("New priority must be int or float.")
         idx = self.position[key]
         old = self.heap[idx][1]
         self.heap[idx][1] = new_priority
@@ -188,8 +198,6 @@ class PrioMap(MutableMapping):
         :param priority: Priority value (int or float).
         :raises TypeError: If `priority` is not int or float.
         """
-        if not isinstance(priority, PriorityType):
-            raise TypeError("Priority must be int or float.")
         if key in self.position:
             self.update(key, priority)
         else:

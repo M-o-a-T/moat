@@ -1,4 +1,5 @@
 import pytest
+import anyio
 from moat.lib.priomap import PrioMap
 
 
@@ -95,3 +96,29 @@ def test_keys_items_values_iteration_and_modification_error():
     with pytest.raises(RuntimeError):
         h['d'] = 4
         next(it2)
+
+@pytest.mark.anyio
+async def test_aiter():
+    res = []
+    h = PrioMap({'a': 1, 'b': 2, 'c': 3})
+
+    async def reader():
+        async for k,_ in h:
+            res.append(k)
+            await anyio.sleep(0.05)
+
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(reader)
+        await anyio.sleep(.025)
+        assert h.peekitem()==("b",2)
+        h["y"]=2.5
+        h["x"]=1
+        while h:
+            await anyio.sleep(.025)
+        assert not h
+        h["z"]=0
+        await anyio.sleep(.11)
+        tg.cancel_scope.cancel()
+
+    assert "".join(res) == "axbycz"
+

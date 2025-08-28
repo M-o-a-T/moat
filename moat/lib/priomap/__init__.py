@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import anyio
+
 try:
     from collections.abc import MutableMapping
 except ImportError:
@@ -43,6 +45,7 @@ class PrioMap(MutableMapping):
         """
         self.heap: list[HeapItem] = []
         self.position: dict[Key, int] = {}
+        self.evt:anyio.Event = anyio.Event()
 
         # Bulk initialize if provided
         if initial:
@@ -57,31 +60,42 @@ class PrioMap(MutableMapping):
     def items(self):
         """
         Yield (key, priority) pairs.
+
+        Items are heap sorted, i.e. the first result is guaranteed to have
+        the lowest priority, but after that it's anybody's guess.
         """
         return self._create_iterator(None)
 
     def keys(self):
         """
         Yield keys only.
+
+        Items are heap sorted, i.e. the first key is guaranteed to have
+        the lowest priority, but after that it's anybody's guess.
         """
         return self._create_iterator(True)
 
     def values(self):
         """
         Yield priorities only.
+
+        Items are heap sorted, i.e. the first priority is guaranteed to be
+        lowest, but after that it's anybody's guess.
         """
         return self._create_iterator(False)
 
     def popitem(self) -> tuple[Key, Priority]:
         """
-        Remove and return root (min) item.
+        Remove and return the root (min) item.
 
         :return: (key, priority)
         :raises IndexError: If empty.
         """
-        if not self.heap:
-            raise IndexError("popitem from empty heap")
-        key, prio = self.heap[0]
+        try:
+            key, prio = self.heap[0]
+        except IndexError:
+            raise IndexError("Queue is empty") from None
+
         last = self.heap.pop()
         if self.heap:
             self.heap[0] = last
@@ -96,9 +110,10 @@ class PrioMap(MutableMapping):
 
         :raises IndexError: If empty.
         """
-        if not self.heap:
-            raise IndexError("peekitem from empty heap")
-        return self.heap[0][0], self.heap[0][1]
+        try:
+            return self.heap[0][0], self.heap[0][1]
+        except IndexError:
+            raise IndexError("Queue is empty") from None
 
     def update(self, key: Key, new_priority: Priority) -> None:
         """
@@ -133,6 +148,14 @@ class PrioMap(MutableMapping):
         :return: True if no items.
         """
         return not self.heap
+
+    def __bool__(self) -> bool:
+        """
+        Check whether heap is not empty.
+
+        :return: False if no items.
+        """
+        return bool(self.heap)
 
     def _swap(self, i: int, j: int) -> None:
         """
@@ -199,6 +222,9 @@ class PrioMap(MutableMapping):
             self.update(key, priority)
         else:
             idx = len(self.heap)
+            if not idx:
+                self.evt.set()
+                self.evt = anyio.Event()
             self.heap.append([key, priority])
             self.position[key] = idx
             self._sift_up(idx)
@@ -278,5 +304,36 @@ class PrioMap(MutableMapping):
     def __iter__(self):
         """
         Iterate over (key, priority) pairs.
+
+        The contents are *not* consumed.
         """
         return self._create_iterator(None)
+
+    def __aiter__(self):
+        """
+        Iterate asynchronously over (key, priority) pairs.
+
+        Contents are consumed.
+        """
+        return self
+
+    async def __anext__(self) -> tuple[Key, Priority]:
+        """
+        Return the lowest-priority item.
+
+        Waits for the next item if the heap is empty.
+        """
+        while not self.heap:
+            await self.evt.wait()
+        return self.popitem()
+
+    async def apeek(self) -> tuple[Key, Priority]:
+        """
+        Return the root item without removing it.
+
+        This waits for the next item if the heap is empty.
+        """
+        while not self.heap:
+            await self.evt.wait()
+        return self.heap[0][0], self.heap[0][1]
+

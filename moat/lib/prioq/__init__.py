@@ -12,7 +12,7 @@ InitialData = Optional[Dict[Key, Priority]]
 HeapItem = List[Union[Key, Priority]]  # Each heap item is [key, priority]
 PriorityType = (int, float)
 
-class HeapMap(MutableMapping):
+class PrioMap(MutableMapping):
     """
     A thread-safe heap that behaves like a dict but maintains heap ordering.
 

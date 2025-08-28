@@ -6,6 +6,9 @@ MAKEINCL ?= $(shell python3 -mmoat src path)/make/py
 installscript:
 	mkdir -p $(PREFIX)/lib/systemd/system
 	cp systemd/*.service $(PREFIX)/lib/systemd/system/
+	
+	mkdir -p $(PREFIX)/usr/lib/moat/link
+	cp scripts/* $(PREFIX)/usr/lib/moat/link/
 
 ifneq ($(wildcard $(MAKEINCL)),)
 include $(MAKEINCL)

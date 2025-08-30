@@ -550,7 +550,7 @@ class Link(LinkCommon, CtxObj):
             if self._state == "init":
                 self._state = "auto"
 
-            with anyio.move_on_after(self.cfg.timeout.ping):
+            with anyio.move_on_after(self.cfg.timeout.ping.every):
                 await self._state_change.wait()
                 self._state_change = anyio.Event()
 

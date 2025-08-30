@@ -73,8 +73,8 @@ class Mon:
 
     async def _timer(self, *, task_status=anyio.TASK_STATUS_IGNORED):
         # monitor _idq
-        timeout = self.cfg.timeout.no_ping
-        ping = self.cfg.timeout.ping
+        timeout = self.cfg.timeout.ping.timeout
+        ping = self.cfg.timeout.ping.every
         task_status.started()
         while True:
             if not self._idq:

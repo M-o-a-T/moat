@@ -75,7 +75,6 @@ notify:
     
     url: https://ntfy.sh.example/
     # token: tk_whatever
-    path: !P notify
     # messages are posted to notify.TOPIC.WHATEVER if "topic" is not set
     # topic: my_secret_topic
 

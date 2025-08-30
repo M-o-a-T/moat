@@ -8,13 +8,17 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from attrs import define
+from concurrent.futures import CancelledError  # intentionally not asynio/anyio.Cancelled
+from contextlib import asynccontextmanager
 import anyio
+
 
 from typing import TYPE_CHECKING, overload, TypeVar
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable
     from types import TracebackType
+    from typing import Literal
 
 
 __all__ = ["CtxObj", "timed_ctx"]
@@ -91,3 +95,110 @@ class timed_ctx(CtxObj):
             async with self.mgr as mgr:
                 sc.cancel()
                 yield mgr
+
+
+class ContextMgr[CtxType]:
+    """
+    This class manages a context for the caller.
+
+    Useful when entering/leaving the context is triggered from state
+    machine callbacks or similar event handlers.
+    """
+    @asynccontextmanager
+    async def context(self, *args, **kwargs):
+        raise NotImplemented("Override me!")
+
+    exc:Exception|None = None
+    ctx:CtxType|Literal[False]|None = None
+    stopper:anyio.Event=None
+    stopped:anyio.Event=None
+
+    def __init__(self):
+        self.qw,self.qr = anyio.create_memory_object_stream(0)
+
+    async def task(self):
+        """
+        The task that encapsulates the context handler.
+
+        Start this once, when setting up your state machine.
+        """
+        async for evt,args,kwargs in self.qr:
+            self.stopper = anyio.Event()
+            self.stopped = anyio.Event()
+            self.exc = None
+            try:
+                async with self.context(*args,**kwargs) as self.ctx:
+                    evt.set()
+                    evt = self.stopped
+                    await self.stopper.wait()
+                    if self.exc is not None:
+                        raise self.exc
+            except (CancelledError,Exception) as exc:
+                self.exc = exc
+            except BaseException as exc:
+                self.exc = CancelledError()
+                raise
+            finally:
+                evt.set()
+                self.stopped.set()
+                self.ctx = None
+
+    def close(self):
+        """
+        Ends the context task.
+        """
+        self.qw.close()
+        if self.stopper is not None and not self.stopper.is_set():
+            self.exc = CancelledError()
+            self.stopper.set()
+
+
+    async def start(self, *args, **kwargs):
+        """
+        Creates and starts your context, passing the given arguments.
+
+        Raises `RuntimeError` if the context is already open
+        (or starting in a different task).
+        """
+        if self.ctx is not None:
+            raise RuntimeError("Context already entered")
+        self.ctx = False
+        evt=anyio.Event()
+        await self.qw.send((evt,args,kwargs))
+        try:
+            await evt.wait()
+        except BaseException:
+            if self.exc is None:
+                self.exc = CancelledError()
+            self.stopper.set()
+            with anyio.move_on_after(.5,shield=True):
+                await self.stopped.wait()
+            raise
+
+        if self.exc is not None:
+            exc,self.exc = self.exc,None
+            raise exc
+        return self.ctx
+
+    async def stop(self, exc:Exception|None=None):
+        """
+        Stops your context.
+
+        If @exc is set, it is passed into / raised in the context.
+
+        This method waits until the context ends.
+        """
+        if self.ctx is None:
+            raise RuntimeError("Context not entered")
+        if exc is not None:
+            self.exc = exc
+        self.stopper.set()
+        await self.stopped.wait()
+        if self.exc is None:
+            return
+        if self.exc is exc:
+            self.exc = None
+        else:
+            exc,self.exc = self.exc,None
+            raise exc
+

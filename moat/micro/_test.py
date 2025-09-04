@@ -12,7 +12,7 @@ from pathlib import Path
 from random import random
 
 import moat.micro
-from moat.util import attrdict, combine_dict, yload
+from moat.util import attrdict, combine_dict, yload, ctx_as
 from moat.micro.cmd.tree.dir import Dispatch
 from moat.util.compat import L, TaskGroup
 from moat.lib.codec import get_codec
@@ -162,19 +162,15 @@ async def mpy_stack(temp: Path, cfg: dict | str, cfg2: dict | None = None):
     if cfg2 is not None:
         cfg = combine_dict(cfg2, cfg, cls=attrdict)
 
-    rst = temp_dir.set(temp)
-    try:
-        async with TaskGroup() as tg:
-            stack = Dispatch(cfg)
-            try:
-                await tg.spawn(stack.run)
-                if L:
-                    await stack.wait_ready()
-                yield stack
-            finally:
-                tg.cancel()
-    finally:
-        temp_dir.reset(rst)
+    async with ctx_as(temp_dir, temp), TaskGroup() as tg:
+        stack = Dispatch(cfg)
+        try:
+            await tg.spawn(stack.run)
+            if L:
+                await stack.wait_ready()
+            yield stack
+        finally:
+            tg.cancel()
 
 
 class Loopback(BaseMsg, BaseBuf, BaseBlk):

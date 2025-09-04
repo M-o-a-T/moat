@@ -5,7 +5,7 @@ Database support.
 from __future__ import annotations
 
 from pathlib import Path
-from moat.util import ensure_cfg, CFG, merge
+from moat.util import ensure_cfg, CFG, merge, ctx_as
 from importlib import import_module
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -87,11 +87,8 @@ def database(cfg: attrdict) -> Session:
 
     with Session() as conn:
         sess = Mgr(conn)
-        token = session.set(sess)
-        try:
+        with ctx_as(session, sess):
             yield sess
-        finally:
-            session.reset(token)
 
 
 def alembic_cfg(gcfg, sess):

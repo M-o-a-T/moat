@@ -19,7 +19,7 @@ from attrs import define,field
 
 from mqttproto import RetainHandling, QoS
 from moat.lib.cmd.base import MsgSender, Caller
-from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident, ungroup, NotGiven,Path, PathLongener,srepr, attrdict
+from moat.util import CtxObj, P, Root, ValueEvent, timed_ctx, gen_ident, ungroup, NotGiven,Path, PathLongener,srepr, attrdict, ctx_as
 from moat.util.compat import CancelledError
 from moat.util.random import al_unique
 
@@ -558,42 +558,39 @@ class Link(LinkCommon, CtxObj):
     async def _ctx(self):
         from .backend import get_backend
 
-        token = Root.set(self.cfg["root"])
-        try:
-            will=attrdict(
-                data=dict(
-                    up=False,
-                    state="disconnected",
-                    ),
-                topic=P(":R.run.ping.id")/self.id,
-                retain=False,
-                qos=QoS.AT_LEAST_ONCE,
-            )
-            async with (
-                get_backend(self.cfg, name=self.name, will=will) as self.backend,
-                anyio.create_task_group() as self.tg,
-            ):
-                if self._port is not None:
-                    sdr = await self.tg.start(self._connected_port)
-                else:
-                    if self.cfg.client.init_timeout:
-                        # connect to the main server
-                        await self.tg.start(self._run_server_link)
-                    sdr = _Sender(self)
-                sdr.add_sub("cl")
-                sdr.add_sub("d")
-                sdr.add_sub("e")
-                sdr.add_sub("i")
-                try:
-                    self.sdr = sdr
-                    await self.tg.start(self._ping)
-                    yield sdr
-                finally:
-                    del self.sdr
-                self.tg.cancel_scope.cancel()
-                await self.backend.send(Root.get()+self._ping_path, data=dict(up=False,state="closed"), retain=False, meta=False)
-        finally:
-            Root.reset(token)
+        will=attrdict(
+            data=dict(
+                up=False,
+                state="disconnected",
+                ),
+            topic=P(":R.run.ping.id")/self.id,
+            retain=False,
+            qos=QoS.AT_LEAST_ONCE,
+        )
+        async with (
+            ctx_as(Root, self.cfg["root"]),
+            get_backend(self.cfg, name=self.name, will=will) as self.backend,
+            anyio.create_task_group() as self.tg,
+        ):
+            if self._port is not None:
+                sdr = await self.tg.start(self._connected_port)
+            else:
+                if self.cfg.client.init_timeout:
+                    # connect to the main server
+                    await self.tg.start(self._run_server_link)
+                sdr = _Sender(self)
+            sdr.add_sub("cl")
+            sdr.add_sub("d")
+            sdr.add_sub("e")
+            sdr.add_sub("i")
+            try:
+                self.sdr = sdr
+                await self.tg.start(self._ping)
+                yield sdr
+            finally:
+                del self.sdr
+            self.tg.cancel_scope.cancel()
+            await self.backend.send(Root.get()+self._ping_path, data=dict(up=False,state="closed"), retain=False, meta=False)
 
     def cancel(self):
         "Stop me"

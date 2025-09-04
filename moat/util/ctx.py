@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
-from attrs import define
+from attrs import define, field
 from concurrent.futures import CancelledError  # intentionally not asynio/anyio.Cancelled
 from contextlib import asynccontextmanager
 import anyio
@@ -19,9 +19,10 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable
     from types import TracebackType
     from typing import Literal
+    from contextvars import ContextVar, Token
 
 
-__all__ = ["CtxObj", "timed_ctx"]
+__all__ = ["CtxObj", "timed_ctx", "ctx_as"]
 
 T_Ctx = TypeVar("T_Ctx")
 
@@ -97,7 +98,7 @@ class timed_ctx(CtxObj):
                 yield mgr
 
 
-class ContextMgr[CtxType]:
+class ContextMgr:#[CtxType]:
     """
     This class manages a context for the caller.
 
@@ -202,3 +203,36 @@ class ContextMgr[CtxType]:
             exc,self.exc = self.exc,None
             raise exc
 
+@define
+class ctx_as:
+    """
+    Temporary setting of a context variable. This avoids the
+    multi-line try/token=set()/finally/reset(token) dance.
+
+    Usage::
+
+        x = ContextVar("x", default=False)
+        [async] with ctx_as(x,True):
+            assert x.get() is True
+        assert x.get() is False  # or whatever
+    """
+
+    var:ContextVar = field()
+    value:Any = field()
+    token:Token = field(default=None,init=False)
+
+    def __enter__(self) -> None:
+        if self.token is not None:
+            raise ValueError("nested 'ctx_as' contexts ??")
+        self.token = self.var.set(self.value)
+        del self.value
+
+    def __exit__(self, *tb) -> None:
+        self.var.reset(self.token)
+        del self.token
+
+    async def __aenter__(self) -> None:
+        self.__enter__()
+
+    async def __aexit__(self, *tb) -> None:
+        self.__exit__(*tb)

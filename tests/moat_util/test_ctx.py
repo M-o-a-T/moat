@@ -4,7 +4,8 @@ More util functions
 
 from __future__ import annotations
 
-from moat.util.ctx import ContextMgr
+from contextvars import ContextVar
+from moat.util.ctx import ContextMgr, ctx_as
 import pytest
 import anyio
 
@@ -73,3 +74,15 @@ async def test_context_timeout():
         assert ctx.timeout
 
         ctx.close()
+
+@pytest.mark.anyio
+async def test_context_as():
+    v = ContextVar("v") 
+    with ctx_as(v,"yes"):
+        assert v.get() == "yes"
+        async with ctx_as(v,"no"):
+            assert v.get() == "no"
+        assert v.get() == "yes"
+    with pytest.raises(LookupError):
+        v.get()
+

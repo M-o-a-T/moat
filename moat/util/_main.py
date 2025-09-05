@@ -339,8 +339,9 @@ async def path_(encode, decode, path):
 @click.pass_obj
 @click.option("-y", "--yaml", is_flag=True, help="print as YAML")
 @click.option("-e", "--empty", is_flag=True, help="empty string if the key doesn't exist")
+@click.option("-l", "--load", type=str, multiple=True, help="Load this default config")
 @click.argument("path", nargs=-1, type=P)
-async def cfg_(obj, path, yaml, empty):
+async def cfg_(obj, path, yaml, empty, load):
     """Emit the current configuration as a YAML file.
 
     You can limit the output by path elements.
@@ -352,13 +353,19 @@ async def cfg_(obj, path, yaml, empty):
     """
     from .exc import ungroup
 
+    cfg = obj.cfg
+    if load:
+        from .config import ensure_cfg
+        for ld in load:
+            cfg = ensure_cfg(ld, cfg=cfg)
+
     delim = False
     for p in path:
         if delim and yaml:
             print("---", file=obj.stdout)
         with ungroup():
             try:
-                v = obj.cfg._get(p)  # noqa:SLF001
+                v = cfg._get(p)  # noqa:SLF001
             except KeyError:
                 if not empty:
                     print("Unknown:", p, file=sys.stderr)
